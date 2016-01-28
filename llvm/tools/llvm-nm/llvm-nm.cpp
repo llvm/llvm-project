@@ -1240,9 +1240,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
     if (!checkMachOAndArchFlags(O, Filename))
       return;
     dumpSymbolNamesFromObject(*O, true);
-    return;
   }
-  error("unrecognizable file type", Filename);
 }
 
 int main(int argc, char **argv) {

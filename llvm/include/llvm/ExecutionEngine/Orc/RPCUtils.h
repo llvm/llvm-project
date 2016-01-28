@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_RPCUTILS_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ExecutionEngine/Orc/OrcError.h"
 
 namespace llvm {
 namespace orc {

@@ -327,58 +327,59 @@ static Value *SimplifyX86extend(const IntrinsicInst &II,
 
 static Value *SimplifyX86insertps(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
-  if (auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2))) {
-    VectorType *VecTy = cast<VectorType>(II.getType());
-    assert(VecTy->getNumElements() == 4 && "insertps with wrong vector type");
+  auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
+  if (!CInt)
+    return nullptr;
 
-    // The immediate permute control byte looks like this:
-    //    [3:0] - zero mask for each 32-bit lane
-    //    [5:4] - select one 32-bit destination lane
-    //    [7:6] - select one 32-bit source lane
+  VectorType *VecTy = cast<VectorType>(II.getType());
+  assert(VecTy->getNumElements() == 4 && "insertps with wrong vector type");
 
-    uint8_t Imm = CInt->getZExtValue();
-    uint8_t ZMask = Imm & 0xf;
-    uint8_t DestLane = (Imm >> 4) & 0x3;
-    uint8_t SourceLane = (Imm >> 6) & 0x3;
+  // The immediate permute control byte looks like this:
+  //    [3:0] - zero mask for each 32-bit lane
+  //    [5:4] - select one 32-bit destination lane
+  //    [7:6] - select one 32-bit source lane
 
-    ConstantAggregateZero *ZeroVector = ConstantAggregateZero::get(VecTy);
+  uint8_t Imm = CInt->getZExtValue();
+  uint8_t ZMask = Imm & 0xf;
+  uint8_t DestLane = (Imm >> 4) & 0x3;
+  uint8_t SourceLane = (Imm >> 6) & 0x3;
 
-    // If all zero mask bits are set, this was just a weird way to
-    // generate a zero vector.
-    if (ZMask == 0xf)
-      return ZeroVector;
+  ConstantAggregateZero *ZeroVector = ConstantAggregateZero::get(VecTy);
 
-    // Initialize by passing all of the first source bits through.
-    int ShuffleMask[4] = { 0, 1, 2, 3 };
+  // If all zero mask bits are set, this was just a weird way to
+  // generate a zero vector.
+  if (ZMask == 0xf)
+    return ZeroVector;
 
-    // We may replace the second operand with the zero vector.
-    Value *V1 = II.getArgOperand(1);
+  // Initialize by passing all of the first source bits through.
+  int ShuffleMask[4] = { 0, 1, 2, 3 };
 
-    if (ZMask) {
-      // If the zero mask is being used with a single input or the zero mask
-      // overrides the destination lane, this is a shuffle with the zero vector.
-      if ((II.getArgOperand(0) == II.getArgOperand(1)) ||
-          (ZMask & (1 << DestLane))) {
-        V1 = ZeroVector;
-        // We may still move 32-bits of the first source vector from one lane
-        // to another.
-        ShuffleMask[DestLane] = SourceLane;
-        // The zero mask may override the previous insert operation.
-        for (unsigned i = 0; i < 4; ++i)
-          if ((ZMask >> i) & 0x1)
-            ShuffleMask[i] = i + 4;
-      } else {
-        // TODO: Model this case as 2 shuffles or a 'logical and' plus shuffle?
-        return nullptr;
-      }
+  // We may replace the second operand with the zero vector.
+  Value *V1 = II.getArgOperand(1);
+
+  if (ZMask) {
+    // If the zero mask is being used with a single input or the zero mask
+    // overrides the destination lane, this is a shuffle with the zero vector.
+    if ((II.getArgOperand(0) == II.getArgOperand(1)) ||
+        (ZMask & (1 << DestLane))) {
+      V1 = ZeroVector;
+      // We may still move 32-bits of the first source vector from one lane
+      // to another.
+      ShuffleMask[DestLane] = SourceLane;
+      // The zero mask may override the previous insert operation.
+      for (unsigned i = 0; i < 4; ++i)
+        if ((ZMask >> i) & 0x1)
+          ShuffleMask[i] = i + 4;
     } else {
-      // Replace the selected destination lane with the selected source lane.
-      ShuffleMask[DestLane] = SourceLane + 4;
+      // TODO: Model this case as 2 shuffles or a 'logical and' plus shuffle?
+      return nullptr;
     }
-
-    return Builder.CreateShuffleVector(II.getArgOperand(0), V1, ShuffleMask);
+  } else {
+    // Replace the selected destination lane with the selected source lane.
+    ShuffleMask[DestLane] = SourceLane + 4;
   }
-  return nullptr;
+
+  return Builder.CreateShuffleVector(II.getArgOperand(0), V1, ShuffleMask);
 }
 
 /// Attempt to simplify SSE4A EXTRQ/EXTRQI instructions using constant folding
@@ -576,64 +577,65 @@ static Value *SimplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
 /// then ignore that half of the mask and clear that half of the vector.
 static Value *SimplifyX86vperm2(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder) {
-  if (auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2))) {
-    VectorType *VecTy = cast<VectorType>(II.getType());
-    ConstantAggregateZero *ZeroVector = ConstantAggregateZero::get(VecTy);
+  auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
+  if (!CInt)
+    return nullptr;
 
-    // The immediate permute control byte looks like this:
-    //    [1:0] - select 128 bits from sources for low half of destination
-    //    [2]   - ignore
-    //    [3]   - zero low half of destination
-    //    [5:4] - select 128 bits from sources for high half of destination
-    //    [6]   - ignore
-    //    [7]   - zero high half of destination
+  VectorType *VecTy = cast<VectorType>(II.getType());
+  ConstantAggregateZero *ZeroVector = ConstantAggregateZero::get(VecTy);
 
-    uint8_t Imm = CInt->getZExtValue();
+  // The immediate permute control byte looks like this:
+  //    [1:0] - select 128 bits from sources for low half of destination
+  //    [2]   - ignore
+  //    [3]   - zero low half of destination
+  //    [5:4] - select 128 bits from sources for high half of destination
+  //    [6]   - ignore
+  //    [7]   - zero high half of destination
 
-    bool LowHalfZero = Imm & 0x08;
-    bool HighHalfZero = Imm & 0x80;
+  uint8_t Imm = CInt->getZExtValue();
 
-    // If both zero mask bits are set, this was just a weird way to
-    // generate a zero vector.
-    if (LowHalfZero && HighHalfZero)
-      return ZeroVector;
+  bool LowHalfZero = Imm & 0x08;
+  bool HighHalfZero = Imm & 0x80;
 
-    // If 0 or 1 zero mask bits are set, this is a simple shuffle.
-    unsigned NumElts = VecTy->getNumElements();
-    unsigned HalfSize = NumElts / 2;
-    SmallVector<int, 8> ShuffleMask(NumElts);
+  // If both zero mask bits are set, this was just a weird way to
+  // generate a zero vector.
+  if (LowHalfZero && HighHalfZero)
+    return ZeroVector;
 
-    // The high bit of the selection field chooses the 1st or 2nd operand.
-    bool LowInputSelect = Imm & 0x02;
-    bool HighInputSelect = Imm & 0x20;
+  // If 0 or 1 zero mask bits are set, this is a simple shuffle.
+  unsigned NumElts = VecTy->getNumElements();
+  unsigned HalfSize = NumElts / 2;
+  SmallVector<int, 8> ShuffleMask(NumElts);
 
-    // The low bit of the selection field chooses the low or high half
-    // of the selected operand.
-    bool LowHalfSelect = Imm & 0x01;
-    bool HighHalfSelect = Imm & 0x10;
+  // The high bit of the selection field chooses the 1st or 2nd operand.
+  bool LowInputSelect = Imm & 0x02;
+  bool HighInputSelect = Imm & 0x20;
 
-    // Determine which operand(s) are actually in use for this instruction.
-    Value *V0 = LowInputSelect ? II.getArgOperand(1) : II.getArgOperand(0);
-    Value *V1 = HighInputSelect ? II.getArgOperand(1) : II.getArgOperand(0);
+  // The low bit of the selection field chooses the low or high half
+  // of the selected operand.
+  bool LowHalfSelect = Imm & 0x01;
+  bool HighHalfSelect = Imm & 0x10;
 
-    // If needed, replace operands based on zero mask.
-    V0 = LowHalfZero ? ZeroVector : V0;
-    V1 = HighHalfZero ? ZeroVector : V1;
+  // Determine which operand(s) are actually in use for this instruction.
+  Value *V0 = LowInputSelect ? II.getArgOperand(1) : II.getArgOperand(0);
+  Value *V1 = HighInputSelect ? II.getArgOperand(1) : II.getArgOperand(0);
 
-    // Permute low half of result.
-    unsigned StartIndex = LowHalfSelect ? HalfSize : 0;
-    for (unsigned i = 0; i < HalfSize; ++i)
-      ShuffleMask[i] = StartIndex + i;
+  // If needed, replace operands based on zero mask.
+  V0 = LowHalfZero ? ZeroVector : V0;
+  V1 = HighHalfZero ? ZeroVector : V1;
 
-    // Permute high half of result.
-    StartIndex = HighHalfSelect ? HalfSize : 0;
-    StartIndex += NumElts;
-    for (unsigned i = 0; i < HalfSize; ++i)
-      ShuffleMask[i + HalfSize] = StartIndex + i;
+  // Permute low half of result.
+  unsigned StartIndex = LowHalfSelect ? HalfSize : 0;
+  for (unsigned i = 0; i < HalfSize; ++i)
+    ShuffleMask[i] = StartIndex + i;
 
-    return Builder.CreateShuffleVector(V0, V1, ShuffleMask);
-  }
-  return nullptr;
+  // Permute high half of result.
+  StartIndex = HighHalfSelect ? HalfSize : 0;
+  StartIndex += NumElts;
+  for (unsigned i = 0; i < HalfSize; ++i)
+    ShuffleMask[i + HalfSize] = StartIndex + i;
+
+  return Builder.CreateShuffleVector(V0, V1, ShuffleMask);
 }
 
 /// Decode XOP integer vector comparison intrinsics.

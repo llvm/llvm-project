@@ -45,7 +45,7 @@ SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
     // tombstones), rehash.
     Grow(CurArraySize);
   }
-  
+
   // Okay, we know we have space.  Find a hash bucket.
   const void **Bucket = const_cast<const void**>(FindBucketFor(Ptr));
   if (*Bucket == Ptr)
@@ -71,10 +71,10 @@ bool SmallPtrSetImplBase::erase_imp(const void * Ptr) {
         --NumElements;
         return true;
       }
-    
+
     return false;
   }
-  
+
   // Okay, we know we have space.  Find a hash bucket.
   void **Bucket = const_cast<void**>(FindBucketFor(Ptr));
   if (*Bucket != Ptr) return false;  // Not in the set?
@@ -107,7 +107,7 @@ const void * const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
     // prefer to return it than something that would require more probing.
     if (Array[Bucket] == getTombstoneMarker() && !Tombstone)
       Tombstone = Array+Bucket;  // Remember the first tombstone found.
-    
+
     // It's a hash collision or a tombstone. Reprobe.
     Bucket = (Bucket + ProbeAmt++) & (ArraySize-1);
   }
@@ -118,16 +118,16 @@ const void * const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
 void SmallPtrSetImplBase::Grow(unsigned NewSize) {
   // Allocate at twice as many buckets, but at least 128.
   unsigned OldSize = CurArraySize;
-  
+
   const void **OldBuckets = CurArray;
   bool WasSmall = isSmall();
-  
+
   // Install the new array.  Clear all the buckets to empty.
   CurArray = (const void**)malloc(sizeof(void*) * NewSize);
   assert(CurArray && "Failed to allocate memory?");
   CurArraySize = NewSize;
   memset(CurArray, -1, NewSize*sizeof(void*));
-  
+
   // Copy over all the elements.
   if (WasSmall) {
     // Small sets store their elements in order.
@@ -145,14 +145,14 @@ void SmallPtrSetImplBase::Grow(unsigned NewSize) {
       if (Elt != getTombstoneMarker() && Elt != getEmptyMarker())
         *const_cast<void**>(FindBucketFor(Elt)) = const_cast<void*>(Elt);
     }
-    
+
     free(OldBuckets);
     NumTombstones = 0;
   }
 }
 
 SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
-                                 const SmallPtrSetImplBase& that) {
+                                         const SmallPtrSetImplBase &that) {
   SmallArray = SmallStorage;
 
   // If we're becoming small, prepare to insert into our stack space
@@ -163,46 +163,18 @@ SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
     CurArray = (const void**)malloc(sizeof(void*) * that.CurArraySize);
     assert(CurArray && "Failed to allocate memory?");
   }
-  
-  // Copy over the new array size
-  CurArraySize = that.CurArraySize;
 
-  // Copy over the contents from the other set
-  memcpy(CurArray, that.CurArray, sizeof(void*)*CurArraySize);
-  
-  NumElements = that.NumElements;
-  NumTombstones = that.NumTombstones;
+  // Copy over the that array.
+  CopyHelper(that);
 }
 
 SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
                                          unsigned SmallSize,
                                          SmallPtrSetImplBase &&that) {
   SmallArray = SmallStorage;
-
-  // Copy over the basic members.
-  CurArraySize = that.CurArraySize;
-  NumElements = that.NumElements;
-  NumTombstones = that.NumTombstones;
-
-  // When small, just copy into our small buffer.
-  if (that.isSmall()) {
-    CurArray = SmallArray;
-    memcpy(CurArray, that.CurArray, sizeof(void *) * CurArraySize);
-  } else {
-    // Otherwise, we steal the large memory allocation and no copy is needed.
-    CurArray = that.CurArray;
-    that.CurArray = that.SmallArray;
-  }
-
-  // Make the "that" object small and empty.
-  that.CurArraySize = SmallSize;
-  assert(that.CurArray == that.SmallArray);
-  that.NumElements = 0;
-  that.NumTombstones = 0;
+  MoveHelper(SmallSize, std::move(that));
 }
 
-/// CopyFrom - implement operator= from a smallptrset that has the same pointer
-/// type, but may have a different small size.
 void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
   assert(&RHS != this && "Self-copy should be handled by the caller.");
 
@@ -228,23 +200,31 @@ void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
     }
     assert(CurArray && "Failed to allocate memory?");
   }
-  
+
+  CopyHelper(RHS);
+}
+
+void SmallPtrSetImplBase::CopyHelper(const SmallPtrSetImplBase &RHS) {
   // Copy over the new array size
   CurArraySize = RHS.CurArraySize;
 
   // Copy over the contents from the other set
   memcpy(CurArray, RHS.CurArray, sizeof(void*)*CurArraySize);
-  
+
   NumElements = RHS.NumElements;
   NumTombstones = RHS.NumTombstones;
 }
 
 void SmallPtrSetImplBase::MoveFrom(unsigned SmallSize,
                                    SmallPtrSetImplBase &&RHS) {
-  assert(&RHS != this && "Self-move should be handled by the caller.");
-
   if (!isSmall())
     free(CurArray);
+  MoveHelper(SmallSize, std::move(RHS));
+}
+
+void SmallPtrSetImplBase::MoveHelper(unsigned SmallSize,
+                                     SmallPtrSetImplBase &&RHS) {
+  assert(&RHS != this && "Self-move should be handled by the caller.");
 
   if (RHS.isSmall()) {
     // Copy a small RHS rather than moving.
@@ -315,9 +295,4 @@ void SmallPtrSetImplBase::swap(SmallPtrSetImplBase &RHS) {
   std::swap_ranges(this->SmallArray, this->SmallArray+this->CurArraySize,
                    RHS.SmallArray);
   std::swap(this->NumElements, RHS.NumElements);
-}
-
-SmallPtrSetImplBase::~SmallPtrSetImplBase() {
-  if (!isSmall())
-    free(CurArray);
 }

@@ -16,9 +16,9 @@
 
 #include "ManagedStringPool.h"
 #include "NVPTXSubtarget.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
 
 namespace llvm {
 

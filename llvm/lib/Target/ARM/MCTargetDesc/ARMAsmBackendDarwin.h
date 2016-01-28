@@ -10,11 +10,10 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMASMBACKENDDARWIN_H
 #define LLVM_LIB_TARGET_ARM_ARMASMBACKENDDARWIN_H
 
+#include "ARMAsmBackend.h"
 #include "llvm/Support/MachO.h"
 
-using namespace llvm;
-
-namespace {
+namespace llvm {
 class ARMAsmBackendDarwin : public ARMAsmBackend {
   const MCRegisterInfo &MRI;
 public:
@@ -33,6 +32,6 @@ public:
   uint32_t generateCompactUnwindEncoding(
       ArrayRef<MCCFIInstruction> Instrs) const override;
 };
-}
+} // end namespace llvm
 
 #endif

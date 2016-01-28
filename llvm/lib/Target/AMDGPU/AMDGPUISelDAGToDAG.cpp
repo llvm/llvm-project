@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUDiagnosticInfoUnsupported.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUISelLowering.h" // For AMDGPUISD
 #include "AMDGPURegisterInfo.h"
@@ -21,6 +20,7 @@
 #include "SIDefines.h"
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/DiagnosticInfoCodeGen.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1220,7 +1220,7 @@ SDNode *AMDGPUDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
 
   const MachineFunction &MF = CurDAG->getMachineFunction();
   DiagnosticInfoUnsupported NotImplemented(*MF.getFunction(),
-                                           "addrspacecast not implemented");
+                                           "addrspacecast not implemented", DL);
   CurDAG->getContext()->diagnose(NotImplemented);
 
   assert(Subtarget->hasFlatAddressSpace() &&

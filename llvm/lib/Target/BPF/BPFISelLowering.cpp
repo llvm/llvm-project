@@ -17,6 +17,7 @@
 #include "BPFTargetMachine.h"
 #include "BPFSubtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/DiagnosticInfoCodeGen.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -28,65 +29,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "bpf-lower"
-
-namespace {
-
-// Diagnostic information for unimplemented or unsupported feature reporting.
-class DiagnosticInfoUnsupported : public DiagnosticInfo {
-private:
-  // Debug location where this diagnostic is triggered.
-  DebugLoc DLoc;
-  const Twine &Description;
-  const Function &Fn;
-  SDValue Value;
-
-  static int KindID;
-
-  static int getKindID() {
-    if (KindID == 0)
-      KindID = llvm::getNextAvailablePluginDiagnosticKind();
-    return KindID;
-  }
-
-public:
-  DiagnosticInfoUnsupported(SDLoc DLoc, const Function &Fn, const Twine &Desc,
-                            SDValue Value)
-      : DiagnosticInfo(getKindID(), DS_Error), DLoc(DLoc.getDebugLoc()),
-        Description(Desc), Fn(Fn), Value(Value) {}
-
-  void print(DiagnosticPrinter &DP) const override {
-    std::string Str;
-    raw_string_ostream OS(Str);
-
-    if (DLoc) {
-      auto DIL = DLoc.get();
-      StringRef Filename = DIL->getFilename();
-      unsigned Line = DIL->getLine();
-      unsigned Column = DIL->getColumn();
-      OS << Filename << ':' << Line << ':' << Column << ' ';
-    }
-
-    OS << "in function " << Fn.getName() << ' ' << *Fn.getFunctionType() << '\n'
-       << Description;
-    if (Value)
-      Value->print(OS);
-    OS << '\n';
-    OS.flush();
-    DP << Str;
-  }
-
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == getKindID();
-  }
-};
-
-int DiagnosticInfoUnsupported::KindID = 0;
-}
 
 BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
                                      const BPFSubtarget &STI)
@@ -236,16 +181,16 @@ SDValue BPFTargetLowering::LowerFormalArguments(
         InVals.push_back(ArgValue);
       }
     } else {
-      DiagnosticInfoUnsupported Err(DL, *MF.getFunction(),
-                                    "defined with too many args", SDValue());
+      DiagnosticInfoUnsupported Err(
+          *MF.getFunction(), "defined with too many args", DL);
       DAG.getContext()->diagnose(Err);
     }
   }
 
   if (IsVarArg || MF.getFunction()->hasStructRetAttr()) {
     DiagnosticInfoUnsupported Err(
-        DL, *MF.getFunction(),
-        "functions with VarArgs or StructRet are not supported", SDValue());
+        *MF.getFunction(),
+        "functions with VarArgs or StructRet are not supported", DL);
     DAG.getContext()->diagnose(Err);
   }
 
@@ -285,8 +230,8 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   unsigned NumBytes = CCInfo.getNextStackOffset();
 
   if (Outs.size() >= 6) {
-    DiagnosticInfoUnsupported Err(CLI.DL, *MF.getFunction(),
-                                  "too many args to ", Callee);
+    DiagnosticInfoUnsupported Err(*MF.getFunction(), "too many args to ",
+                                  CLI.DL, Callee);
     DAG.getContext()->diagnose(Err);
   }
 
@@ -295,8 +240,8 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (!Flags.isByVal())
       continue;
 
-    DiagnosticInfoUnsupported Err(CLI.DL, *MF.getFunction(),
-                                  "pass by value not supported ", Callee);
+    DiagnosticInfoUnsupported Err(
+        *MF.getFunction(), "pass by value not supported ", CLI.DL, Callee);
     DAG.getContext()->diagnose(Err);
   }
 
@@ -398,8 +343,8 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
   if (MF.getFunction()->getReturnType()->isAggregateType()) {
-    DiagnosticInfoUnsupported Err(DL, *MF.getFunction(),
-                                  "only integer returns supported", SDValue());
+    DiagnosticInfoUnsupported Err(
+        *MF.getFunction(), "only integer returns supported", DL);
     DAG.getContext()->diagnose(Err);
   }
 
@@ -443,8 +388,8 @@ SDValue BPFTargetLowering::LowerCallResult(
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
   if (Ins.size() >= 2) {
-    DiagnosticInfoUnsupported Err(DL, *MF.getFunction(),
-                                  "only small returns supported", SDValue());
+    DiagnosticInfoUnsupported Err(*MF.getFunction(),
+                                  "only small returns supported", DL);
     DAG.getContext()->diagnose(Err);
   }
 

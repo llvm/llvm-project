@@ -16,15 +16,15 @@ add_llvm_library(LLVMCodeGen
   CodeGen.cpp
   CodeGenPrepare.cpp
   CriticalAntiDepBreaker.cpp
-  DFAPacketizer.cpp
   DeadMachineInstructionElim.cpp
+  DFAPacketizer.cpp
+  DiagnosticInfoCodeGen.cpp
   DwarfEHPrepare.cpp
   EarlyIfConversion.cpp
   EdgeBundles.cpp
   ExecutionDepsFix.cpp
   ExpandISelPseudos.cpp
   ExpandPostRAPseudos.cpp
-  LiveDebugValues.cpp
   FaultMaps.cpp
   FuncletLayout.cpp
   GCMetadata.cpp
@@ -38,57 +38,58 @@ add_llvm_library(LLVMCodeGen
   InterferenceCache.cpp
   InterleavedAccessPass.cpp
   IntrinsicLowering.cpp
-  LLVMTargetMachine.cpp
   LatencyPriorityQueue.cpp
   LexicalScopes.cpp
+  LiveDebugValues.cpp
   LiveDebugVariables.cpp
-  LiveInterval.cpp
   LiveIntervalAnalysis.cpp
+  LiveInterval.cpp
   LiveIntervalUnion.cpp
+  LivePhysRegs.cpp
   LiveRangeCalc.cpp
   LiveRangeEdit.cpp
   LiveRegMatrix.cpp
-  LivePhysRegs.cpp
   LiveStackAnalysis.cpp
   LiveVariables.cpp
+  LLVMTargetMachine.cpp
   LocalStackSlotAllocation.cpp
   LowerEmuTLS.cpp
   MachineBasicBlock.cpp
   MachineBlockFrequencyInfo.cpp
   MachineBlockPlacement.cpp
   MachineBranchProbabilityInfo.cpp
-  MachineCSE.cpp
   MachineCombiner.cpp
   MachineCopyPropagation.cpp
-  MachineDominators.cpp
+  MachineCSE.cpp
   MachineDominanceFrontier.cpp
-  MachineFunction.cpp
+  MachineDominators.cpp
   MachineFunctionAnalysis.cpp
+  MachineFunction.cpp
   MachineFunctionPass.cpp
   MachineFunctionPrinterPass.cpp
-  MachineInstr.cpp
   MachineInstrBundle.cpp
+  MachineInstr.cpp
   MachineLICM.cpp
   MachineLoopInfo.cpp
   MachineModuleInfo.cpp
   MachineModuleInfoImpls.cpp
   MachinePassRegistry.cpp
   MachinePostDominators.cpp
-  MachineRegisterInfo.cpp
   MachineRegionInfo.cpp
-  MachineSSAUpdater.cpp
+  MachineRegisterInfo.cpp
   MachineScheduler.cpp
   MachineSink.cpp
+  MachineSSAUpdater.cpp
   MachineTraceMetrics.cpp
   MachineVerifier.cpp
   MIRPrinter.cpp
   MIRPrintingPass.cpp
   OptimizePHIs.cpp
-  PHIElimination.cpp
-  PHIEliminationUtils.cpp
   ParallelCG.cpp
   Passes.cpp
   PeepholeOptimizer.cpp
+  PHIElimination.cpp
+  PHIEliminationUtils.cpp
   PostRASchedulerList.cpp
   ProcessImplicitDefs.cpp
   PrologEpilogInserter.cpp
@@ -102,21 +103,22 @@ add_llvm_library(LLVMCodeGen
   RegisterCoalescer.cpp
   RegisterPressure.cpp
   RegisterScavenging.cpp
+  SafeStack.cpp
   ScheduleDAG.cpp
   ScheduleDAGInstrs.cpp
   ScheduleDAGPrinter.cpp
   ScoreboardHazardRecognizer.cpp
-  ShrinkWrap.cpp
   ShadowStackGCLowering.cpp
+  ShrinkWrap.cpp
   SjLjEHPrepare.cpp
   SlotIndexes.cpp
   SpillPlacement.cpp
   SplitKit.cpp
   StackColoring.cpp
-  StackProtector.cpp
-  StackSlotColoring.cpp
   StackMapLivenessAnalysis.cpp
   StackMaps.cpp
+  StackProtector.cpp
+  StackSlotColoring.cpp
   TailDuplication.cpp
   TargetFrameLoweringImpl.cpp
   TargetInstrInfo.cpp

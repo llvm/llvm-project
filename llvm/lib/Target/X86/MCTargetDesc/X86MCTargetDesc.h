@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/DataTypes.h"
 #include <string>
 
@@ -26,7 +27,6 @@ class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCRelocationInfo;
-class MCStreamer;
 class Target;
 class Triple;
 class StringRef;

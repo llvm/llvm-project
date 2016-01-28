@@ -49,12 +49,13 @@ entry:
 ; CHECK-NEXT: .param     i32{{$}}
 ; CHECK-NEXT: .result    i32{{$}}
 ; CHECK-NEXT: .local     i32{{$}}
-; CHECK-NEXT: i32.load   $1=, 0($0){{$}}
-; CHECK-NEXT: i32.const  $push0=, 4{{$}}
-; CHECK-NEXT: i32.add    $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.store  $discard=, 0($0), $pop1{{$}}
-; CHECK-NEXT: i32.load   $push2=, 0($1){{$}}
-; CHECK-NEXT: return     $pop2{{$}}
+; CHECK-NEXT: i32.load   $push0=, 0($0){{$}}
+; CHECK-NEXT: tee_local  $push4=, $1=, $pop0{{$}}
+; CHECK-NEXT: i32.const  $push1=, 4{{$}}
+; CHECK-NEXT: i32.add    $push2=, $pop4, $pop1{{$}}
+; CHECK-NEXT: i32.store  $discard=, 0($0), $pop2{{$}}
+; CHECK-NEXT: i32.load   $push3=, 0($1){{$}}
+; CHECK-NEXT: return     $pop3{{$}}
 define i8 @arg_i8(i8** %ap) {
 entry:
   %t = va_arg i8** %ap, i8
@@ -71,12 +72,13 @@ entry:
 ; CHECK-NEXT: i32.const  $push1=, 3{{$}}
 ; CHECK-NEXT: i32.add    $push2=, $pop0, $pop1{{$}}
 ; CHECK-NEXT: i32.const  $push3=, -4{{$}}
-; CHECK-NEXT: i32.and    $1=, $pop2, $pop3{{$}}
-; CHECK-NEXT: i32.const  $push4=, 4{{$}}
-; CHECK-NEXT: i32.add    $push5=, $1, $pop4{{$}}
-; CHECK-NEXT: i32.store  $discard=, 0($0), $pop5{{$}}
-; CHECK-NEXT: i32.load   $push6=, 0($1){{$}}
-; CHECK-NEXT: return     $pop6{{$}}
+; CHECK-NEXT: i32.and    $push4=, $pop2, $pop3{{$}}
+; CHECK-NEXT: tee_local  $push8=, $1=, $pop4{{$}}
+; CHECK-NEXT: i32.const  $push5=, 4{{$}}
+; CHECK-NEXT: i32.add    $push6=, $pop8, $pop5{{$}}
+; CHECK-NEXT: i32.store  $discard=, 0($0), $pop6{{$}}
+; CHECK-NEXT: i32.load   $push7=, 0($1){{$}}
+; CHECK-NEXT: return     $pop7{{$}}
 define i32 @arg_i32(i8** %ap) {
 entry:
   %t = va_arg i8** %ap, i32

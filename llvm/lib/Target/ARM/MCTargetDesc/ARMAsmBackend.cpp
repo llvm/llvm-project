@@ -46,6 +46,7 @@ public:
       : MCELFObjectTargetWriter(/*Is64Bit*/ false, OSABI, ELF::EM_ARM,
                                 /*HasRelocationAddend*/ false) {}
 };
+} // end anonymous namespace
 
 const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo InfosLE[ARM::NumTargetFixupKinds] = {
@@ -163,7 +164,6 @@ void ARMAsmBackend::handleAssemblerFlag(MCAssemblerFlag Flag) {
     break;
   }
 }
-} // end anonymous namespace
 
 unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op) const {
   bool HasThumb2 = STI->getFeatureBits()[ARM::FeatureThumb2];

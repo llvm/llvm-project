@@ -44,12 +44,6 @@ static cl::opt<bool>
 PrefetchWrites("ppc-loop-prefetch-writes", cl::Hidden, cl::init(false),
                cl::desc("Prefetch write addresses"));
 
-// This seems like a reasonable default for the BG/Q (this pass is enabled, by
-// default, only on the BG/Q).
-static cl::opt<unsigned>
-PrefDist("ppc-loop-prefetch-distance", cl::Hidden, cl::init(300),
-         cl::desc("The loop prefetch distance"));
-
 namespace llvm {
   void initializePPCLoopDataPrefetchPass(PassRegistry&);
 }
@@ -107,6 +101,8 @@ bool PPCLoopDataPrefetch::runOnFunction(Function &F) {
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   assert(TTI->getCacheLineSize() && "Cache line size is not set for target");
+  assert(TTI->getPrefetchDistance() &&
+         "Prefetch distance is not set for target");
 
   bool MadeChange = false;
 
@@ -147,7 +143,7 @@ bool PPCLoopDataPrefetch::runOnLoop(Loop *L) {
   if (!LoopSize)
     LoopSize = 1;
 
-  unsigned ItersAhead = PrefDist/LoopSize;
+  unsigned ItersAhead = TTI->getPrefetchDistance() / LoopSize;
   if (!ItersAhead)
     ItersAhead = 1;
 

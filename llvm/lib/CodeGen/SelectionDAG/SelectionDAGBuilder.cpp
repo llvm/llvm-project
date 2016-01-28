@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/CallingConv.h"
@@ -62,7 +63,6 @@
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <utility>
@@ -5674,7 +5674,7 @@ bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
     return true;
   }
 
-  const TargetSelectionDAGInfo &TSI = DAG.getSelectionDAGInfo();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
   std::pair<SDValue, SDValue> Res =
     TSI.EmitTargetCodeForMemcmp(DAG, getCurSDLoc(), DAG.getRoot(),
                                 getValue(LHS), getValue(RHS), getValue(Size),
@@ -5771,7 +5771,7 @@ bool SelectionDAGBuilder::visitMemChrCall(const CallInst &I) {
       !I.getType()->isPointerTy())
     return false;
 
-  const TargetSelectionDAGInfo &TSI = DAG.getSelectionDAGInfo();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
   std::pair<SDValue, SDValue> Res =
     TSI.EmitTargetCodeForMemchr(DAG, getCurSDLoc(), DAG.getRoot(),
                                 getValue(Src), getValue(Char), getValue(Length),
@@ -5799,7 +5799,7 @@ bool SelectionDAGBuilder::visitStrCpyCall(const CallInst &I, bool isStpcpy) {
       !I.getType()->isPointerTy())
     return false;
 
-  const TargetSelectionDAGInfo &TSI = DAG.getSelectionDAGInfo();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
   std::pair<SDValue, SDValue> Res =
     TSI.EmitTargetCodeForStrcpy(DAG, getCurSDLoc(), getRoot(),
                                 getValue(Arg0), getValue(Arg1),
@@ -5828,7 +5828,7 @@ bool SelectionDAGBuilder::visitStrCmpCall(const CallInst &I) {
       !I.getType()->isIntegerTy())
     return false;
 
-  const TargetSelectionDAGInfo &TSI = DAG.getSelectionDAGInfo();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
   std::pair<SDValue, SDValue> Res =
     TSI.EmitTargetCodeForStrcmp(DAG, getCurSDLoc(), DAG.getRoot(),
                                 getValue(Arg0), getValue(Arg1),
@@ -5855,7 +5855,7 @@ bool SelectionDAGBuilder::visitStrLenCall(const CallInst &I) {
   if (!Arg0->getType()->isPointerTy() || !I.getType()->isIntegerTy())
     return false;
 
-  const TargetSelectionDAGInfo &TSI = DAG.getSelectionDAGInfo();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
   std::pair<SDValue, SDValue> Res =
     TSI.EmitTargetCodeForStrlen(DAG, getCurSDLoc(), DAG.getRoot(),
                                 getValue(Arg0), MachinePointerInfo(Arg0));
@@ -5882,7 +5882,7 @@ bool SelectionDAGBuilder::visitStrNLenCall(const CallInst &I) {
       !I.getType()->isIntegerTy())
     return false;
 
-  const TargetSelectionDAGInfo &TSI = DAG.getSelectionDAGInfo();
+  const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
   std::pair<SDValue, SDValue> Res =
     TSI.EmitTargetCodeForStrnlen(DAG, getCurSDLoc(), DAG.getRoot(),
                                  getValue(Arg0), getValue(Arg1),

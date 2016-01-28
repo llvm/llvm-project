@@ -10,7 +10,10 @@
 #ifndef LLVM_LIB_TARGET_ARM_ELFARMASMBACKEND_H
 #define LLVM_LIB_TARGET_ARM_ELFARMASMBACKEND_H
 
+#include "ARMAsmBackend.h"
+#include "MCTargetDesc/ARMMCTargetDesc.h"
 using namespace llvm;
+
 namespace {
 class ARMAsmBackendELF : public ARMAsmBackend {
 public:

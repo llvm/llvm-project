@@ -219,6 +219,10 @@ unsigned TargetTransformInfo::getCacheLineSize() const {
   return TTIImpl->getCacheLineSize();
 }
 
+unsigned TargetTransformInfo::getPrefetchDistance() const {
+  return TTIImpl->getPrefetchDistance();
+}
+
 unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {
   return TTIImpl->getMaxInterleaveFactor(VF);
 }

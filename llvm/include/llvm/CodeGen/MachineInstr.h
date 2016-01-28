@@ -343,6 +343,14 @@ public:
     return make_range(operands_begin() + getDesc().getNumDefs(),
                       operands_end());
   }
+  iterator_range<mop_iterator> explicit_uses() {
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_begin() + getNumExplicitOperands() );
+  }
+  iterator_range<const_mop_iterator> explicit_uses() const {
+    return make_range(operands_begin() + getDesc().getNumDefs(),
+                      operands_begin() + getNumExplicitOperands() );
+  }
 
   /// Returns the number of the operand iterator \p I points to.
   unsigned getOperandNo(const_mop_iterator I) const {

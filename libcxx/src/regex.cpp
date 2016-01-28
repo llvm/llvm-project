@@ -69,20 +69,11 @@ regex_error::~regex_error() throw() {}
 
 namespace {
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpadded"
-#endif
-
 struct collationnames
 {
     const char* elem_;
     char char_;
 };
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 const collationnames collatenames[] =
 {
@@ -199,20 +190,11 @@ const collationnames collatenames[] =
     {"zero", 0x30}
 };
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpadded"
-#endif
-
 struct classnames
 {
     const char* elem_;
     regex_traits<char>::char_class_type mask_;
 };
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 const classnames ClassNames[] =
 {

@@ -31,6 +31,7 @@ DerivedData/
 build/
 pyproj/
 llvm-build/
+ninja/
 *xcuserdata
 test/20*
 __pycache__/

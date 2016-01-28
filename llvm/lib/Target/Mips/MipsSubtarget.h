@@ -18,10 +18,10 @@
 #include "MipsFrameLowering.h"
 #include "MipsISelLowering.h"
 #include "MipsInstrInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
 
@@ -152,7 +152,7 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   Triple TargetTriple;
 
-  const TargetSelectionDAGInfo TSInfo;
+  const SelectionDAGTargetInfo TSInfo;
   std::unique_ptr<const MipsInstrInfo> InstrInfo;
   std::unique_ptr<const MipsFrameLowering> FrameLowering;
   std::unique_ptr<const MipsTargetLowering> TLInfo;
@@ -290,7 +290,7 @@ public:
   void setHelperClassesMips16();
   void setHelperClassesMipsSE();
 
-  const TargetSelectionDAGInfo *getSelectionDAGInfo() const override {
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
   const MipsInstrInfo *getInstrInfo() const override { return InstrInfo.get(); }

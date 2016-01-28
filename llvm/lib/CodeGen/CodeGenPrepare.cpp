@@ -5254,7 +5254,7 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool& ModifiedDT) {
     }
   }
   MadeChange |= dupRetToEnableTailCallOpts(&BB);
-  
+
   return MadeChange;
 }
 

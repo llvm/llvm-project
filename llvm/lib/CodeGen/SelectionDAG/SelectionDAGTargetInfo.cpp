@@ -1,4 +1,4 @@
-//===-- TargetSelectionDAGInfo.cpp - SelectionDAG Info --------------------===//
+//===-- SelectionDAGTargetInfo.cpp - SelectionDAG Info --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This implements the TargetSelectionDAGInfo class.
+// This implements the SelectionDAGTargetInfo class.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Target/TargetSelectionDAGInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 using namespace llvm;
 
-TargetSelectionDAGInfo::~TargetSelectionDAGInfo() {
-}
+SelectionDAGTargetInfo::~SelectionDAGTargetInfo() {}

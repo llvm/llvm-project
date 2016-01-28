@@ -550,9 +550,7 @@ void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
   // Find all values that are computed inside the loop, but used outside of it.
   // Because of LCSSA, these values will only occur in LCSSA PHI Nodes.  Scan
   // the exit blocks of the loop to find them.
-  for (unsigned i = 0, e = ExitBlocks.size(); i != e; ++i) {
-    BasicBlock *ExitBB = ExitBlocks[i];
-
+  for (BasicBlock *ExitBB : ExitBlocks) {
     // If there are no PHI nodes in this exit block, then no values defined
     // inside the loop are used on this path, skip it.
     PHINode *PN = dyn_cast<PHINode>(ExitBB->begin());
@@ -566,8 +564,7 @@ void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
       if (PN->use_empty())
         continue; // dead use, don't replace it
 
-      // SCEV only supports integer expressions for now.
-      if (!PN->getType()->isIntegerTy() && !PN->getType()->isPointerTy())
+      if (!SE->isSCEVable(PN->getType()))
         continue;
 
       // It's necessary to tell ScalarEvolution about this explicitly so that
@@ -1786,6 +1783,7 @@ static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
   const SCEV *BestInit = nullptr;
   BasicBlock *LatchBlock = L->getLoopLatch();
   assert(LatchBlock && "needsLFTR should guarantee a loop latch");
+  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
 
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
     PHINode *Phi = cast<PHINode>(I);
@@ -1804,8 +1802,7 @@ static PHINode *FindLoopCounter(Loop *L, const SCEV *BECount,
     // AR may be wider than BECount. With eq/ne tests overflow is immaterial.
     // AR may not be a narrower type, or we may never exit.
     uint64_t PhiWidth = SE->getTypeSizeInBits(AR->getType());
-    if (PhiWidth < BCWidth ||
-        !L->getHeader()->getModule()->getDataLayout().isLegalInteger(PhiWidth))
+    if (PhiWidth < BCWidth || !DL.isLegalInteger(PhiWidth))
       continue;
 
     const SCEV *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));

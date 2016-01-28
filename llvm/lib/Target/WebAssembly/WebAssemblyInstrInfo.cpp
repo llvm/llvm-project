@@ -15,6 +15,7 @@
 
 #include "WebAssemblyInstrInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -73,6 +74,21 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   BuildMI(MBB, I, DL, get(CopyLocalOpcode), DestReg)
       .addReg(SrcReg, KillSrc ? RegState::Kill : 0);
+}
+
+MachineInstr *
+WebAssemblyInstrInfo::commuteInstructionImpl(MachineInstr *MI, bool NewMI,
+                                             unsigned OpIdx1,
+                                             unsigned OpIdx2) const {
+  // If the operands are stackified, we can't reorder them.
+  WebAssemblyFunctionInfo &MFI =
+      *MI->getParent()->getParent()->getInfo<WebAssemblyFunctionInfo>();
+  if (MFI.isVRegStackified(MI->getOperand(OpIdx1).getReg()) ||
+      MFI.isVRegStackified(MI->getOperand(OpIdx2).getReg()))
+    return nullptr;
+
+  // Otherwise use the default implementation.
+  return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
 }
 
 // Branch analysis.

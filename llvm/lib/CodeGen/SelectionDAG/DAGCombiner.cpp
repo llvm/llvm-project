@@ -14756,6 +14756,10 @@ bool DAGCombiner::findBetterNeighborChains(StoreSDNode* St) {
     while (true) {
       if (StoreSDNode *STn = dyn_cast<StoreSDNode>(NextInChain)) {
         // We found a store node. Use it for the next iteration.
+        if (STn->isVolatile() || STn->isIndexed()) {
+          Index = nullptr;
+          break;
+        }
         ChainedStores.push_back(STn);
         Index = STn;
         break;

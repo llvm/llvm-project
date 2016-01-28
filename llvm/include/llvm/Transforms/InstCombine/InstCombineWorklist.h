@@ -11,6 +11,7 @@
 #define LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINEWORKLIST_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"

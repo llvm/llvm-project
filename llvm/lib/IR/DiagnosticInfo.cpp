@@ -138,11 +138,11 @@ void DiagnosticInfoPGOProfile::print(DiagnosticPrinter &DP) const {
   DP << getMsg();
 }
 
-bool DiagnosticInfoOptimizationBase::isLocationAvailable() const {
+bool DiagnosticInfoWithDebugLocBase::isLocationAvailable() const {
   return getDebugLoc();
 }
 
-void DiagnosticInfoOptimizationBase::getLocation(StringRef *Filename,
+void DiagnosticInfoWithDebugLocBase::getLocation(StringRef *Filename,
                                                  unsigned *Line,
                                                  unsigned *Column) const {
   DILocation *L = getDebugLoc();
@@ -152,7 +152,7 @@ void DiagnosticInfoOptimizationBase::getLocation(StringRef *Filename,
   *Column = L->getColumn();
 }
 
-const std::string DiagnosticInfoOptimizationBase::getLocationStr() const {
+const std::string DiagnosticInfoWithDebugLocBase::getLocationStr() const {
   StringRef Filename("<unknown>");
   unsigned Line = 0;
   unsigned Column = 0;

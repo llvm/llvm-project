@@ -2286,8 +2286,7 @@ template <class ELFT> void ELFDumper<ELFT>::printGroupSections() {
         while (Member < Data.size()) {
           auto Sec = errorOrDefault(Obj->getSection(Data[Member]));
           const StringRef Name = errorOrDefault(Obj->getSectionName(Sec));
-          W.startLine() << Name << " (" << std::to_string(Data[Member++])
-                        << ")\n";
+          W.startLine() << Name << " (" << Data[Member++] << ")\n";
         }
       }
     }
