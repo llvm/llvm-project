@@ -491,13 +491,6 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D) {
 Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                                              bool InstantiatingVarTemplate) {
 
-  // If this is the variable for an anonymous struct or union,
-  // instantiate the anonymous struct/union type first.
-  if (const RecordType *RecordTy = D->getType()->getAs<RecordType>())
-    if (RecordTy->getDecl()->isAnonymousStructOrUnion())
-      if (!VisitCXXRecordDecl(cast<CXXRecordDecl>(RecordTy->getDecl())))
-        return nullptr;
-
   // Do substitution on the type of the declaration
   TypeSourceInfo *DI = SemaRef.SubstType(D->getTypeSourceInfo(),
                                          TemplateArgs,
@@ -2672,13 +2665,6 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
     VarTemplateDecl *VarTemplate, VarDecl *D, void *InsertPos,
     const TemplateArgumentListInfo &TemplateArgsInfo,
     ArrayRef<TemplateArgument> Converted) {
-
-  // If this is the variable for an anonymous struct or union,
-  // instantiate the anonymous struct/union type first.
-  if (const RecordType *RecordTy = D->getType()->getAs<RecordType>())
-    if (RecordTy->getDecl()->isAnonymousStructOrUnion())
-      if (!VisitCXXRecordDecl(cast<CXXRecordDecl>(RecordTy->getDecl())))
-        return nullptr;
 
   // Do substitution on the type of the declaration
   TypeSourceInfo *DI =

@@ -414,7 +414,7 @@ static const ObjCIvarDecl *findBackingIvar(const ObjCPropertyDecl *Prop) {
   // is guaranteed to find the shadowing property, if it exists, rather than
   // the shadowed property.
   auto *ShadowingProp = PrimaryInterface->FindPropertyVisibleInPrimaryClass(
-      Prop->getIdentifier());
+      Prop->getIdentifier(), Prop->getQueryKind());
   if (ShadowingProp && ShadowingProp != Prop) {
     IVar = ShadowingProp->getPropertyIvarDecl();
   }

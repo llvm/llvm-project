@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -triple=i686-apple-darwin9
 // RUN: %clang_cc1 %s -fsyntax-only -verify -triple=arm-linux-gnueabihf
 // RUN: %clang_cc1 %s -fsyntax-only -verify -triple=aarch64-linux-gnu
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple=x86_64-pc-linux-gnu
 // expected-no-diagnostics
 #include <stddef.h>
 
@@ -190,7 +191,7 @@ struct g11 {
   __attribute__((aligned(1))) long long b : 62;
   char c;
 };
-#if defined(__arm__) || defined(__aarch64__)
+#if defined(__arm__) || defined(__aarch64__) || defined(__x86_64__)
 CHECK_SIZE(struct, g11, 24);
 CHECK_ALIGN(struct, g11, 8);
 CHECK_OFFSET(struct, g11, c, 16);
@@ -218,6 +219,10 @@ struct g13 {
 CHECK_SIZE(struct, g13, 16);
 CHECK_ALIGN(struct, g13, 8);
 CHECK_OFFSET(struct, g13, c, 8);
+#elif (__x86_64__)
+CHECK_SIZE(struct, g13, 9);
+CHECK_ALIGN(struct, g13, 1);
+CHECK_OFFSET(struct, g13, c, 8);
 #else
 CHECK_SIZE(struct, g13, 5);
 CHECK_ALIGN(struct, g13, 1);
@@ -232,6 +237,10 @@ struct __attribute__((packed)) g14 {
 #if defined(__arm__) || defined(__aarch64__)
 CHECK_SIZE(struct, g14, 16);
 CHECK_ALIGN(struct, g14, 8);
+CHECK_OFFSET(struct, g14, c, 8);
+#elif (__x86_64__)
+CHECK_SIZE(struct, g14, 9);
+CHECK_ALIGN(struct, g14, 1);
 CHECK_OFFSET(struct, g14, c, 8);
 #else
 CHECK_SIZE(struct, g14, 5);

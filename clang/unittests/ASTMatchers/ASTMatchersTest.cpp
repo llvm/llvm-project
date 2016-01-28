@@ -4240,6 +4240,28 @@ TEST(HasAncestor, ImplicitArrayCopyCtorDeclRefExpr) {
                       declRefExpr(to(decl(hasAncestor(decl()))))));
 }
 
+TEST(HasAncestor, AnonymousUnionMemberExpr) {
+  EXPECT_TRUE(matches("int F() {\n"
+                      "  union { int i; };\n"
+                      "  return i;\n"
+                      "}\n",
+                      memberExpr(member(hasAncestor(decl())))));
+  EXPECT_TRUE(matches("void f() {\n"
+                      "  struct {\n"
+                      "    struct { int a; int b; };\n"
+                      "  } s;\n"
+                      "  s.a = 4;\n"
+                      "}\n",
+                      memberExpr(member(hasAncestor(decl())))));
+  EXPECT_TRUE(matches("void f() {\n"
+                      "  struct {\n"
+                      "    struct { int a; int b; };\n"
+                      "  } s;\n"
+                      "  s.a = 4;\n"
+                      "}\n",
+                      declRefExpr(to(decl(hasAncestor(decl()))))));
+}
+
 TEST(HasParent, MatchesAllParents) {
   EXPECT_TRUE(matches(
       "template <typename T> struct C { static void f() { 42; } };"

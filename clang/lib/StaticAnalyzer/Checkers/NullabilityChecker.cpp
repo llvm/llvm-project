@@ -510,23 +510,22 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (!RetSVal)
     return;
 
-  bool IsReturnSelfInObjCInit = false;
+  bool InSuppressedMethodFamily = false;
 
   QualType RequiredRetType;
   AnalysisDeclContext *DeclCtxt =
       C.getLocationContext()->getAnalysisDeclContext();
   const Decl *D = DeclCtxt->getDecl();
   if (auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+    // HACK: This is a big hammer to avoid warning when there are defensive
+    // nil checks in -init and -copy methods. We should add more sophisticated
+    // logic here to suppress on common defensive idioms but still
+    // warn when there is a likely problem.
+    ObjCMethodFamily Family = MD->getMethodFamily();
+    if (OMF_init == Family || OMF_copy == Family || OMF_mutableCopy == Family)
+      InSuppressedMethodFamily = true;
+
     RequiredRetType = MD->getReturnType();
-    // Suppress diagnostics for returns of nil that are syntactic returns of
-    // self in ObjC initializers. This avoids warning under the common idiom of
-    // a defensive check of the result of a call to super:
-    //   if (self = [super init]) {
-    //     ...
-    //   }
-    //   return self; // no-warning
-    IsReturnSelfInObjCInit = (MD->getMethodFamily() == OMF_init) &&
-                              isReturnSelf(S, C);
   } else if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     RequiredRetType = FD->getReturnType();
   } else {
@@ -549,7 +548,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
       Nullness == NullConstraint::IsNull &&
       RetExprTypeLevelNullability != Nullability::Nonnull &&
       RequiredNullability == Nullability::Nonnull &&
-      !IsReturnSelfInObjCInit) {
+      !InSuppressedMethodFamily) {
     static CheckerProgramPointTag Tag(this, "NullReturnedFromNonnull");
     ExplodedNode *N = C.generateErrorNode(State, &Tag);
     if (!N)

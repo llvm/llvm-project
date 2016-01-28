@@ -209,11 +209,15 @@ Parser::ParseSingleDeclarationAfterTemplate(
   if (Tok.is(tok::semi)) {
     ProhibitAttributes(prefixAttrs);
     DeclEnd = ConsumeToken();
+    RecordDecl *AnonRecord = nullptr;
     Decl *Decl = Actions.ParsedFreeStandingDeclSpec(
         getCurScope(), AS, DS,
         TemplateInfo.TemplateParams ? *TemplateInfo.TemplateParams
                                     : MultiTemplateParamsArg(),
-        TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation);
+        TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation,
+        AnonRecord);
+    assert(!AnonRecord &&
+           "Anonymous unions/structs should not be valid with template");
     DS.complete(Decl);
     return Decl;
   }

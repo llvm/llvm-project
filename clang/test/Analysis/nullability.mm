@@ -4,13 +4,26 @@
 #define nil 0
 #define BOOL int
 
+#define NS_ASSUME_NONNULL_BEGIN _Pragma("clang assume_nonnull begin")
+#define NS_ASSUME_NONNULL_END   _Pragma("clang assume_nonnull end")
+
+typedef struct _NSZone NSZone;
+
 @protocol NSObject
 + (id)alloc;
 - (id)init;
 @end
 
+NS_ASSUME_NONNULL_BEGIN
 @protocol NSCopying
+- (id)copyWithZone:(nullable NSZone *)zone;
+
 @end
+
+@protocol NSMutableCopying
+- (id)mutableCopyWithZone:(nullable NSZone *)zone;
+@end
+NS_ASSUME_NONNULL_END
 
 __attribute__((objc_root_class))
 @interface
@@ -332,8 +345,9 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
   // This leaks, but we're not checking for that here.
 
   ClassWithInitializers *other = nil;
-  // Still warn when when not returning via self.
-  return other; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
+  // False negative. Once we have more subtle suppression of defensive checks in
+  // initializers we should warn here.
+  return other;
 }
 @end
 
@@ -349,5 +363,41 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
   }
 
   return self; // no-warning
+}
+
+- (id _Nonnull)initWithNonnullReturnAndSelfCheckingIdiomV2; {
+  // Another common return-checking idiom
+  self = [super initWithNonnullReturnAndSelfCheckingIdiom];
+  if (!self) {
+    return nil; // no-warning
+  }
+
+  return self;
+}
+@end
+
+@interface ClassWithCopyWithZone : NSObject<NSCopying,NSMutableCopying> {
+  id i;
+}
+
+@end
+
+@implementation ClassWithCopyWithZone
+-(id)copyWithZone:(NSZone *)zone {
+  ClassWithCopyWithZone *newInstance = [[ClassWithCopyWithZone alloc] init];
+  if (!newInstance)
+    return nil;
+
+  newInstance->i = i;
+  return newInstance;
+}
+
+-(id)mutableCopyWithZone:(NSZone *)zone {
+  ClassWithCopyWithZone *newInstance = [[ClassWithCopyWithZone alloc] init];
+  if (newInstance) {
+    newInstance->i = i;
+  }
+
+  return newInstance;
 }
 @end

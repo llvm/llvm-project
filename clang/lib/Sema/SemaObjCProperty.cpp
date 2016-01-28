@@ -433,10 +433,13 @@ Sema::HandlePropertyInClassExtension(Scope *S,
     return nullptr;
   }
 
+  bool isClassProperty = (AttributesAsWritten & ObjCDeclSpec::DQ_PR_class) ||
+                         (Attributes & ObjCDeclSpec::DQ_PR_class);
+
   // Find the property in the extended class's primary class or
   // extensions.
-  ObjCPropertyDecl *PIDecl =
-    CCPrimary->FindPropertyVisibleInPrimaryClass(PropertyId);
+  ObjCPropertyDecl *PIDecl = CCPrimary->FindPropertyVisibleInPrimaryClass(
+      PropertyId, ObjCPropertyDecl::getQueryKind(isClassProperty));
 
   // If we found a property in an extension, complain. 
   if (PIDecl && isa<ObjCCategoryDecl>(PIDecl->getDeclContext())) {
@@ -614,8 +617,11 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
                                                      PropertyId, AtLoc, 
                                                      LParenLoc, T, TInfo);
 
-  if (ObjCPropertyDecl *prevDecl =
-        ObjCPropertyDecl::findPropertyDecl(DC, PropertyId)) {
+  bool isClassProperty = (AttributesAsWritten & ObjCDeclSpec::DQ_PR_class) ||
+                         (Attributes & ObjCDeclSpec::DQ_PR_class);
+  // Class property and instance property can have the same name.
+  if (ObjCPropertyDecl *prevDecl = ObjCPropertyDecl::findPropertyDecl(
+          DC, PropertyId, ObjCPropertyDecl::getQueryKind(isClassProperty))) {
     Diag(PDecl->getLocation(), diag::err_duplicate_property);
     Diag(prevDecl->getLocation(), diag::note_property_declare);
     PDecl->setInvalidDecl();
@@ -852,7 +858,8 @@ DiagnosePropertyMismatchDeclInProtocols(Sema &S, SourceLocation AtLoc,
 }
 
 /// Determine whether any storage attributes were written on the property.
-static bool hasWrittenStorageAttribute(ObjCPropertyDecl *Prop) {
+static bool hasWrittenStorageAttribute(ObjCPropertyDecl *Prop,
+                                       ObjCPropertyQueryKind QueryKind) {
   if (Prop->getPropertyAttributesAsWritten() & OwnershipMask) return true;
 
   // If this is a readwrite property in a class extension that refines
@@ -875,8 +882,8 @@ static bool hasWrittenStorageAttribute(ObjCPropertyDecl *Prop) {
 
   // Look through all of the protocols.
   for (const auto *Proto : OrigClass->all_referenced_protocols()) {
-    if (ObjCPropertyDecl *OrigProp =
-          Proto->FindPropertyDeclaration(Prop->getIdentifier()))
+    if (ObjCPropertyDecl *OrigProp = Proto->FindPropertyDeclaration(
+            Prop->getIdentifier(), QueryKind))
       return OrigProp->getPropertyAttributesAsWritten() & OwnershipMask;
   }
 
@@ -893,7 +900,8 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
                                   bool Synthesize,
                                   IdentifierInfo *PropertyId,
                                   IdentifierInfo *PropertyIvar,
-                                  SourceLocation PropertyIvarLoc) {
+                                  SourceLocation PropertyIvarLoc,
+                                  ObjCPropertyQueryKind QueryKind) {
   ObjCContainerDecl *ClassImpDecl =
     dyn_cast<ObjCContainerDecl>(CurContext);
   // Make sure we have a context for the property implementation declaration.
@@ -920,7 +928,7 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
            "ActOnPropertyImplDecl - @implementation without @interface");
 
     // Look for this property declaration in the @implementation's @interface
-    property = IDecl->FindPropertyDeclaration(PropertyId);
+    property = IDecl->FindPropertyDeclaration(PropertyId, QueryKind);
     if (!property) {
       Diag(PropertyLoc, diag::error_bad_property_decl) << IDecl->getDeclName();
       return nullptr;
@@ -998,7 +1006,7 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
     if (!Category)
       return nullptr;
     // Look for this property declaration in @implementation's category
-    property = Category->FindPropertyDeclaration(PropertyId);
+    property = Category->FindPropertyDeclaration(PropertyId, QueryKind);
     if (!property) {
       Diag(PropertyLoc, diag::error_bad_category_property_decl)
       << Category->getDeclName();
@@ -1110,7 +1118,7 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
 
         // It's an error if we have to do this and the user didn't
         // explicitly write an ownership attribute on the property.
-        if (!hasWrittenStorageAttribute(property) &&
+        if (!hasWrittenStorageAttribute(property, QueryKind) &&
             !(kind & ObjCPropertyDecl::OBJC_PR_strong)) {
           Diag(PropertyDiagLoc,
                diag::err_arc_objc_property_default_assign_on_object);
@@ -1345,7 +1353,7 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
       }
 
     if (ObjCPropertyImplDecl *PPIDecl
-        = IC->FindPropertyImplDecl(PropertyId)) {
+        = IC->FindPropertyImplDecl(PropertyId, QueryKind)) {
       Diag(PropertyLoc, diag::error_property_implemented) << PropertyId;
       Diag(PPIDecl->getLocation(), diag::note_previous_declaration);
       return nullptr;
@@ -1384,7 +1392,7 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
       }
 
     if (ObjCPropertyImplDecl *PPIDecl =
-        CatImplClass->FindPropertyImplDecl(PropertyId)) {
+        CatImplClass->FindPropertyImplDecl(PropertyId, QueryKind)) {
       Diag(PropertyDiagLoc, diag::error_property_implemented) << PropertyId;
       Diag(PPIDecl->getLocation(), diag::note_previous_declaration);
       return nullptr;
@@ -1653,7 +1661,8 @@ void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl* IMPDecl,
         Prop->getPropertyImplementation() == ObjCPropertyDecl::Optional)
       continue;
     // Property may have been synthesized by user.
-    if (IMPDecl->FindPropertyImplDecl(Prop->getIdentifier()))
+    if (IMPDecl->FindPropertyImplDecl(
+            Prop->getIdentifier(), Prop->getQueryKind()))
       continue;
     if (IMPDecl->getInstanceMethod(Prop->getGetterName())) {
       if (Prop->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_readonly)
@@ -1712,7 +1721,7 @@ void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl* IMPDecl,
                             true,
                             /* property = */ Prop->getIdentifier(),
                             /* ivar = */ Prop->getDefaultSynthIvarName(Context),
-                            Prop->getLocation()));
+                            Prop->getLocation(), Prop->getQueryKind()));
     if (PIDecl) {
       Diag(Prop->getLocation(), diag::warn_missing_explicit_synthesis);
       Diag(IMPDecl->getLocation(), diag::note_while_in_implementation);
@@ -1942,8 +1951,8 @@ Sema::AtomicPropertySetterGetterRules (ObjCImplDecl* IMPDecl,
     if ((Attributes & ObjCPropertyDecl::OBJC_PR_nonatomic) ||
         !(Attributes & ObjCPropertyDecl::OBJC_PR_readwrite))
       continue;
-    if (const ObjCPropertyImplDecl *PIDecl
-         = IMPDecl->FindPropertyImplDecl(Property->getIdentifier())) {
+    if (const ObjCPropertyImplDecl *PIDecl = IMPDecl->FindPropertyImplDecl(
+            Property->getIdentifier(), Property->getQueryKind())) {
       if (PIDecl->getPropertyImplementation() == ObjCPropertyImplDecl::Dynamic)
         continue;
       if (!LookedUpGetterSetter) {
