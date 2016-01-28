@@ -428,7 +428,7 @@ define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
 
 ; Test the IR CCs that expand to two cond codes.
 
-; CHECK-LABEL: _select_and_olt_one:
+; CHECK-LABEL: select_and_olt_one:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d2, d3, #4, mi
@@ -443,7 +443,7 @@ define i32 @select_and_olt_one(double %v0, double %v1, double %v2, double %v3, i
   ret i32 %sel
 }
 
-; CHECK-LABEL: _select_and_one_olt:
+; CHECK-LABEL: select_and_one_olt:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d0, d1, #1, ne
@@ -458,7 +458,7 @@ define i32 @select_and_one_olt(double %v0, double %v1, double %v2, double %v3, i
   ret i32 %sel
 }
 
-; CHECK-LABEL: _select_and_olt_ueq:
+; CHECK-LABEL: select_and_olt_ueq:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d2, d3, #0, mi
@@ -473,7 +473,7 @@ define i32 @select_and_olt_ueq(double %v0, double %v1, double %v2, double %v3, i
   ret i32 %sel
 }
 
-; CHECK-LABEL: _select_and_ueq_olt:
+; CHECK-LABEL: select_and_ueq_olt:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d0, d1, #8, le
@@ -488,7 +488,7 @@ define i32 @select_and_ueq_olt(double %v0, double %v1, double %v2, double %v3, i
   ret i32 %sel
 }
 
-; CHECK-LABEL: _select_or_olt_one:
+; CHECK-LABEL: select_or_olt_one:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d2, d3, #0, pl
@@ -503,7 +503,7 @@ define i32 @select_or_olt_one(double %v0, double %v1, double %v2, double %v3, i3
   ret i32 %sel
 }
 
-; CHECK-LABEL: _select_or_one_olt:
+; CHECK-LABEL: select_or_one_olt:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d0, d1, #1, ne
@@ -518,7 +518,7 @@ define i32 @select_or_one_olt(double %v0, double %v1, double %v2, double %v3, i3
   ret i32 %sel
 }
 
-; CHECK-LABEL: _select_or_olt_ueq:
+; CHECK-LABEL: select_or_olt_ueq:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d2, d3, #4, pl
@@ -533,7 +533,7 @@ define i32 @select_or_olt_ueq(double %v0, double %v1, double %v2, double %v3, i3
   ret i32 %sel
 }
 
-; CHECK-LABEL: _select_or_ueq_olt:
+; CHECK-LABEL: select_or_ueq_olt:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d0, d1, #8, le
@@ -548,7 +548,7 @@ define i32 @select_or_ueq_olt(double %v0, double %v1, double %v2, double %v3, i3
   ret i32 %sel
 }
 
-; CHECK-LABEL: _select_or_olt_ogt_ueq:
+; CHECK-LABEL: select_or_olt_ogt_ueq:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d2, d3, #0, pl
@@ -566,7 +566,7 @@ define i32 @select_or_olt_ogt_ueq(double %v0, double %v1, double %v2, double %v3
   ret i32 %sel
 }
 
-; CHECK-LABEL: _select_or_olt_ueq_ogt:
+; CHECK-LABEL: select_or_olt_ueq_ogt:
 ; CHECK-LABEL: ; BB#0:
 ; CHECK-NEXT: fcmp d0, d1
 ; CHECK-NEXT: fccmp d2, d3, #4, pl
