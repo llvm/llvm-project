@@ -19,8 +19,8 @@
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitstreamReader.h"
@@ -31,6 +31,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include <memory>
 
@@ -164,9 +165,12 @@ public:
     M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
     Builder.reset(new CodeGen::CodeGenModule(
         *Ctx, HeaderSearchOpts, PreprocessorOpts, CodeGenOpts, *M, Diags));
-    Builder->getModuleDebugInfo()->setModuleMap(MMap);
-    Builder->getModuleDebugInfo()->setPCHDescriptor(
-        {MainFileName, "", OutputFileName, ~1ULL});
+
+    // Prepare CGDebugInfo to emit debug info for a clang module.
+    auto *DI = Builder->getModuleDebugInfo();
+    StringRef ModuleName = llvm::sys::path::filename(MainFileName);
+    DI->setPCHDescriptor({ModuleName, "", OutputFileName, ~1ULL});
+    DI->setModuleMap(MMap);
   }
 
   bool HandleTopLevelDecl(DeclGroupRef D) override {
