@@ -308,7 +308,7 @@ TEST(ObjectTransformLayerTest, Main) {
     ObjectLinkingLayer<> BaseLayer;
     auto IdentityTransform = [](
         std::unique_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>
-            Obj) { return std::move(Obj); };
+            Obj) { return Obj; };
     ObjectTransformLayer<decltype(BaseLayer), decltype(IdentityTransform)>
         TransformLayer(BaseLayer, IdentityTransform);
     auto NullCompiler = [](llvm::Module &) {
