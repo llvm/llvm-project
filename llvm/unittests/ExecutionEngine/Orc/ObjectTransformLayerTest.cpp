@@ -7,9 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/NullResolver.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
+#include "llvm/Object/ObjectFile.h"
 #include "gtest/gtest.h"
 
 using namespace llvm::orc;
@@ -51,7 +56,7 @@ public:
 
   template <typename ObjSetT, typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
-  ObjSetHandleT addObjectSet(ObjSetT &Objects, MemoryManagerPtrT MemMgr,
+  ObjSetHandleT addObjectSet(ObjSetT Objects, MemoryManagerPtrT MemMgr,
                              SymbolResolverPtrT Resolver) {
     EXPECT_EQ(MockManager, *MemMgr) << "MM should pass through";
     EXPECT_EQ(MockResolver, *Resolver) << "Resolver should pass through";
@@ -216,13 +221,14 @@ TEST(ObjectTransformLayerTest, Main) {
   auto MM = llvm::make_unique<MockMemoryManager>(MockManager);
   auto SR = llvm::make_unique<MockSymbolResolver>(MockResolver);
   M.expectAddObjectSet(Objs1, MM.get(), SR.get());
-  auto H = T1.addObjectSet(Objs1, std::move(MM), std::move(SR));
+  auto H = T1.addObjectSet(std::move(Objs1), std::move(MM), std::move(SR));
   M.verifyAddObjectSet(H);
 
   // Test addObjectSet with T2 (mutating, naked pointers)
-  llvm::SmallVector<MockObjectFile *, 2> Objs2;
-  Objs2.push_back(&MockObject1);
-  Objs2.push_back(&MockObject2);
+  llvm::SmallVector<MockObjectFile *, 2> Objs2Vec;
+  Objs2Vec.push_back(&MockObject1);
+  Objs2Vec.push_back(&MockObject2);
+  llvm::MutableArrayRef<MockObjectFile *> Objs2(Objs2Vec);
   M.expectAddObjectSet(Objs2, &MockManager, &MockResolver);
   H = T2.addObjectSet(Objs2, &MockManager, &MockResolver);
   M.verifyAddObjectSet(H);
@@ -271,5 +277,62 @@ TEST(ObjectTransformLayerTest, Main) {
   const auto &T1C = T1;
   OwnedObj = T1C.getTransform()(std::move(OwnedObj));
   EXPECT_EQ(289, *OwnedObj) << "Expected incrementing transform";
+
+  volatile bool RunStaticChecks = false;
+  if (RunStaticChecks) {
+    // Make sure that ObjectTransformLayer implements the object layer concept
+    // correctly by sandwitching one between an ObjectLinkingLayer and an
+    // IRCompileLayer, verifying that it compiles if we have a call to the
+    // IRComileLayer's addModuleSet that should call the transform layer's
+    // addObjectSet, and also calling the other public transform layer methods
+    // directly to make sure the methods they intend to forward to exist on
+    // the ObjectLinkingLayer.
+
+    // We'll need a concrete MemoryManager class.
+    class NullManager : public llvm::RuntimeDyld::MemoryManager {
+    public:
+      uint8_t *allocateCodeSection(uintptr_t, unsigned, unsigned,
+                                   llvm::StringRef) override {
+        return nullptr;
+      }
+      uint8_t *allocateDataSection(uintptr_t, unsigned, unsigned,
+                                   llvm::StringRef, bool) override {
+        return nullptr;
+      }
+      void registerEHFrames(uint8_t *, uint64_t, size_t) override {}
+      void deregisterEHFrames(uint8_t *, uint64_t, size_t) override {}
+      bool finalizeMemory(std::string *) { return false; }
+    };
+
+    // Construct the jit layers.
+    ObjectLinkingLayer<> BaseLayer;
+    auto IdentityTransform = [](
+        std::unique_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>
+            Obj) { return std::move(Obj); };
+    ObjectTransformLayer<decltype(BaseLayer), decltype(IdentityTransform)>
+        TransformLayer(BaseLayer, IdentityTransform);
+    auto NullCompiler = [](llvm::Module &) {
+      return llvm::object::OwningBinary<llvm::object::ObjectFile>();
+    };
+    IRCompileLayer<decltype(TransformLayer)> CompileLayer(TransformLayer,
+                                                          NullCompiler);
+    std::vector<llvm::Module *> Modules;
+
+    // Make sure that the calls from IRCompileLayer to ObjectTransformLayer
+    // compile.
+    NullResolver Resolver;
+    NullManager Manager;
+    CompileLayer.addModuleSet(std::vector<llvm::Module *>(), &Manager,
+                              &Resolver);
+
+    // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
+    // compile.
+    decltype(TransformLayer)::ObjSetHandleT ObjSet;
+    TransformLayer.emitAndFinalize(ObjSet);
+    TransformLayer.findSymbolIn(ObjSet, Name, false);
+    TransformLayer.findSymbol(Name, true);
+    TransformLayer.mapSectionAddress(ObjSet, nullptr, 0);
+    TransformLayer.removeObjectSet(ObjSet);
+  }
 }
 }
