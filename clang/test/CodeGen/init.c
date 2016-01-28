@@ -1,5 +1,16 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
+struct I { int k[3]; };
+struct M { struct I o[2]; };
+struct M v1[1] = { [0].o[0 ... 1].k[0 ... 1] = 4, 5 };
+unsigned v2[2][3] = {[0 ... 1][0 ... 1] = 2222, 3333};
+
+// CHECK-DAG: %struct.M = type { [2 x %struct.I] }
+// CHECK-DAG: %struct.I = type { [3 x i32] }
+
+// CHECK: [1 x %struct.M] [%struct.M { [2 x %struct.I] [%struct.I { [3 x i32] [i32 4, i32 4, i32 0] }, %struct.I { [3 x i32] [i32 4, i32 4, i32 5] }] }],
+// CHECK: [2 x [3 x i32]] {{[[][[]}}3 x i32] [i32 2222, i32 2222, i32 0], [3 x i32] [i32 2222, i32 2222, i32 3333]],
+
 void f1() {
   // Scalars in braces.
   int a = { 1 };
