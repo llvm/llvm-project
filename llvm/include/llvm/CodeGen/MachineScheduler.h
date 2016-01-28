@@ -462,7 +462,7 @@ protected:
 
   void initRegPressure();
 
-  void updatePressureDiffs(ArrayRef<unsigned> LiveUses);
+  void updatePressureDiffs(ArrayRef<RegisterMaskPair> LiveUses);
 
   void updateScheduledPressure(const SUnit *SU,
                                const std::vector<unsigned> &NewMaxPressure);
