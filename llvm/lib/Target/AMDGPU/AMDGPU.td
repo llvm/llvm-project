@@ -169,6 +169,12 @@ def FeatureFP64Denormals : SubtargetFeature<"fp64-denormals",
   [FeatureFP64]
 >;
 
+def FeatureFPExceptions : SubtargetFeature<"fp-exceptions",
+  "FPExceptions",
+  "true",
+  "Enable floating point exceptions"
+>;
+
 def FeatureEnableHugeScratchBuffer : SubtargetFeature<
   "huge-scratch-buffer",
   "EnableHugeScratchBuffer",

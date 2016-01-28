@@ -1695,13 +1695,13 @@ defm V_MAX3_U32 : VOP3Inst <vop3<0x156, 0x1d5>, "v_max3_u32",
   VOP_I32_I32_I32_I32, AMDGPUumax3
 >;
 defm V_MED3_F32 : VOP3Inst <vop3<0x157, 0x1d6>, "v_med3_f32",
-  VOP_F32_F32_F32_F32
+  VOP_F32_F32_F32_F32, AMDGPUfmed3
 >;
 defm V_MED3_I32 : VOP3Inst <vop3<0x158, 0x1d7>, "v_med3_i32",
-  VOP_I32_I32_I32_I32
+  VOP_I32_I32_I32_I32, AMDGPUsmed3
 >;
 defm V_MED3_U32 : VOP3Inst <vop3<0x159, 0x1d8>, "v_med3_u32",
-  VOP_I32_I32_I32_I32
+  VOP_I32_I32_I32_I32, AMDGPUumed3
 >;
 
 //def V_SAD_U8 : VOP3_U8 <0x0000015a, "v_sad_u8", []>;

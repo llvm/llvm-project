@@ -1,4 +1,4 @@
-; RUN: opt %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -S | FileCheck  %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -S | FileCheck  %s
 
 
 define i64 addrspace(1)* @test(<2 x i64 addrspace(1)*> %vec, i32 %idx) gc "statepoint-example" {

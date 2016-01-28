@@ -354,7 +354,7 @@ define <4 x i1> @test11(<4 x i1>%a, <4 x i1>%b, i32 %a1, i32 %b1) {
 ; SKX-NEXT:  LBB17_1:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; SKX-NEXT:  LBB17_3:
-; SKX-NEXT:    vpmovd2m %xmm0, %k0
+; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k0
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0
 ; SKX-NEXT:    retq
   %mask = icmp sgt i32 %a1, %b1
@@ -1415,7 +1415,7 @@ define void @test22(<4 x i1> %a, <4 x i1>* %addr) {
 ; SKX-LABEL: test22:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
-; SKX-NEXT:    vpmovd2m %xmm0, %k0
+; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k0
 ; SKX-NEXT:    kmovb %k0, (%rdi)
 ; SKX-NEXT:    retq
   store <4 x i1> %a, <4 x i1>* %addr
@@ -1436,7 +1436,7 @@ define void @test23(<2 x i1> %a, <2 x i1>* %addr) {
 ; SKX-LABEL: test23:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
-; SKX-NEXT:    vpmovq2m %xmm0, %k0
+; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k0
 ; SKX-NEXT:    kmovb %k0, (%rdi)
 ; SKX-NEXT:    retq
   store <2 x i1> %a, <2 x i1>* %addr
@@ -1484,7 +1484,7 @@ define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
 ; SKX-LABEL: store_v2i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpsllq $63, %xmm0, %xmm0
-; SKX-NEXT:    vpmovq2m %xmm0, %k0
+; SKX-NEXT:    vptestmq %xmm0, %xmm0, %k0
 ; SKX-NEXT:    knotw %k0, %k0
 ; SKX-NEXT:    kmovb %k0, (%rdi)
 ; SKX-NEXT:    retq
@@ -1515,7 +1515,7 @@ define void @store_v4i1(<4 x i1> %c , <4 x i1>* %ptr) {
 ; SKX-LABEL: store_v4i1:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
-; SKX-NEXT:    vpmovd2m %xmm0, %k0
+; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k0
 ; SKX-NEXT:    knotw %k0, %k0
 ; SKX-NEXT:    kmovb %k0, (%rdi)
 ; SKX-NEXT:    retq

@@ -18,8 +18,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>

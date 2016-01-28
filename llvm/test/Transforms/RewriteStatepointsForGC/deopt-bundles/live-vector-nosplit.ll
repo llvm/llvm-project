@@ -1,6 +1,6 @@
 ; Test that we can correctly handle vectors of pointers in statepoint 
 ; rewriting.  
-; RUN: opt %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -rs4gc-split-vector-values=0 -S | FileCheck  %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -rs4gc-split-vector-values=0 -S | FileCheck  %s
 
 ; A non-vector relocation for comparison
 define i64 addrspace(1)* @test(i64 addrspace(1)* %obj) gc "statepoint-example" {

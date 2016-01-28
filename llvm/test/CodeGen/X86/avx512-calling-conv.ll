@@ -102,11 +102,10 @@ define <4 x i1> @test4(<4 x i1>%a, <4 x i1>%b) {
 ;
 ; SKX-LABEL: test4:
 ; SKX:       ## BB#0:
+; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
 ; SKX-NEXT:    vpslld $31, %xmm0, %xmm0
-; SKX-NEXT:    vpmovd2m %xmm0, %k0
-; SKX-NEXT:    vpslld $31, %xmm1, %xmm0
-; SKX-NEXT:    vpmovd2m %xmm0, %k1
-; SKX-NEXT:    kandw %k1, %k0, %k0
+; SKX-NEXT:    vptestmd %xmm0, %xmm0, %k1
+; SKX-NEXT:    vptestmd %xmm1, %xmm1, %k0 {%k1}
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0
 ; SKX-NEXT:    retq
 ;

@@ -1516,7 +1516,7 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
     CntMask = 0x7;
     CntShift = 4;
   } else if (CntName == "lgkmcnt") {
-    CntMask = 0x7;
+    CntMask = 0xf;
     CntShift = 8;
   } else {
     return true;
@@ -1532,8 +1532,8 @@ AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
   // Disable all counters by default.
   // vmcnt   [3:0]
   // expcnt  [6:4]
-  // lgkmcnt [10:8]
-  int64_t CntVal = 0x77f;
+  // lgkmcnt [11:8]
+  int64_t CntVal = 0xf7f;
   SMLoc S = Parser.getTok().getLoc();
 
   switch(getLexer().getKind()) {

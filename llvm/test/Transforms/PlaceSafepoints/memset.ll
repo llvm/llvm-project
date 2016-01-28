@@ -1,4 +1,4 @@
-; RUN: opt -S -place-safepoints %s | FileCheck %s
+; RUN: opt < %s -S -place-safepoints | FileCheck %s
 
 define void @test(i32, i8 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @test

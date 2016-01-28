@@ -1,4 +1,4 @@
-; RUN: opt %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -spp-print-base-pointers  -S 2>&1 | FileCheck %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -spp-print-base-pointers  -S 2>&1 | FileCheck %s
 
 ; CHECK: derived %next base %base_obj
 

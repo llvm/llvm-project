@@ -138,7 +138,7 @@ public:
 
 char SIInsertWaits::ID = 0;
 
-const Counters SIInsertWaits::WaitCounts = { { 15, 7, 7 } };
+const Counters SIInsertWaits::WaitCounts = { { 15, 7, 15 } };
 const Counters SIInsertWaits::ZeroCounts = { { 0, 0, 0 } };
 
 FunctionPass *llvm::createSIInsertWaits(TargetMachine &tm) {
@@ -379,7 +379,7 @@ bool SIInsertWaits::insertWait(MachineBasicBlock &MBB,
   BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
           .addImm((Counts.Named.VM & 0xF) |
                   ((Counts.Named.EXP & 0x7) << 4) |
-                  ((Counts.Named.LGKM & 0x7) << 8));
+                  ((Counts.Named.LGKM & 0xF) << 8));
 
   LastOpcodeType = OTHER;
   LastInstWritesM0 = false;

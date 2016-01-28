@@ -616,12 +616,9 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
                                       raw_ostream &O) {
-  // Note: Mask values are taken from SIInsertWaits.cpp and not from ISA docs
-  // SIInsertWaits.cpp bits usage does not match ISA docs description but it
-  // works so it might be a misprint in docs.
   unsigned SImm16 = MI->getOperand(OpNo).getImm();
   unsigned Vmcnt = SImm16 & 0xF;
-  unsigned Expcnt = (SImm16 >> 4) & 0xF;
+  unsigned Expcnt = (SImm16 >> 4) & 0x7;
   unsigned Lgkmcnt = (SImm16 >> 8) & 0xF;
 
   bool NeedSpace = false;
@@ -638,7 +635,7 @@ void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
     NeedSpace = true;
   }
 
-  if (Lgkmcnt != 0x7) {
+  if (Lgkmcnt != 0xF) {
     if (NeedSpace)
       O << ' ';
     O << "lgkmcnt(" << Lgkmcnt << ')';

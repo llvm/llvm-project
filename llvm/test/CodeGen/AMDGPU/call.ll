@@ -2,7 +2,7 @@
 ; RUN: not llc -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s 2>&1 | FileCheck %s
 ; RUN: not llc -march=r600 -mcpu=cypress < %s 2>&1 | FileCheck %s
 
-; CHECK: in function test_call_external{{.*}}: unsupported call to function external_function
+; CHECK: error: unsupported call to function external_function in test_call_external
 
 
 declare i32 @external_function(i32) nounwind

@@ -137,11 +137,6 @@ public:
     MachineInstr *MIa, MachineInstr *MIb,
     AliasAnalysis *AA = nullptr) const override;
 
-  MachineInstr *buildMovInstr(MachineBasicBlock *MBB,
-                              MachineBasicBlock::iterator I,
-                              unsigned DstReg, unsigned SrcReg) const override;
-  bool isMov(unsigned Opcode) const override;
-
   bool FoldImmediate(MachineInstr *UseMI, MachineInstr *DefMI,
                      unsigned Reg, MachineRegisterInfo *MRI) const final;
 
@@ -465,6 +460,16 @@ public:
 
   bool isLowLatencyInstruction(const MachineInstr *MI) const;
   bool isHighLatencyInstruction(const MachineInstr *MI) const;
+
+  /// \brief Return the descriptor of the target-specific machine instruction
+  /// that corresponds to the specified pseudo or native opcode.
+  const MCInstrDesc &getMCOpcodeFromPseudo(unsigned Opcode) const {
+    return get(pseudoToMCOpcode(Opcode));
+  }
+
+  ArrayRef<std::pair<int, const char *>>
+  getSerializableTargetIndices() const override;
+
 };
 
 namespace AMDGPU {

@@ -476,11 +476,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // register.
   ProgInfo.FloatMode = getFPMode(MF);
 
-  // XXX: Not quite sure what this does, but sc seems to unset this.
   ProgInfo.IEEEMode = 0;
 
-  // Do not clamp NAN to 0.
-  ProgInfo.DX10Clamp = 0;
+  // Make clamp modifier on NaN input returns 0.
+  ProgInfo.DX10Clamp = 1;
 
   const MachineFrameInfo *FrameInfo = MF.getFrameInfo();
   ProgInfo.ScratchSize = FrameInfo->estimateStackSize(MF);

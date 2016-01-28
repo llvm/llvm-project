@@ -1050,7 +1050,51 @@ unsigned int R600InstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 bool R600InstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
 
   switch(MI->getOpcode()) {
-  default: return AMDGPUInstrInfo::expandPostRAPseudo(MI);
+  default: {
+    MachineBasicBlock *MBB = MI->getParent();
+    int OffsetOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
+                                                 AMDGPU::OpName::addr);
+     // addr is a custom operand with multiple MI operands, and only the
+     // first MI operand is given a name.
+    int RegOpIdx = OffsetOpIdx + 1;
+    int ChanOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
+                                               AMDGPU::OpName::chan);
+    if (isRegisterLoad(*MI)) {
+      int DstOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
+                                                AMDGPU::OpName::dst);
+      unsigned RegIndex = MI->getOperand(RegOpIdx).getImm();
+      unsigned Channel = MI->getOperand(ChanOpIdx).getImm();
+      unsigned Address = calculateIndirectAddress(RegIndex, Channel);
+      unsigned OffsetReg = MI->getOperand(OffsetOpIdx).getReg();
+      if (OffsetReg == AMDGPU::INDIRECT_BASE_ADDR) {
+        buildMovInstr(MBB, MI, MI->getOperand(DstOpIdx).getReg(),
+                      getIndirectAddrRegClass()->getRegister(Address));
+      } else {
+        buildIndirectRead(MBB, MI, MI->getOperand(DstOpIdx).getReg(),
+                          Address, OffsetReg);
+      }
+    } else if (isRegisterStore(*MI)) {
+      int ValOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
+                                                AMDGPU::OpName::val);
+      unsigned RegIndex = MI->getOperand(RegOpIdx).getImm();
+      unsigned Channel = MI->getOperand(ChanOpIdx).getImm();
+      unsigned Address = calculateIndirectAddress(RegIndex, Channel);
+      unsigned OffsetReg = MI->getOperand(OffsetOpIdx).getReg();
+      if (OffsetReg == AMDGPU::INDIRECT_BASE_ADDR) {
+        buildMovInstr(MBB, MI, getIndirectAddrRegClass()->getRegister(Address),
+                      MI->getOperand(ValOpIdx).getReg());
+      } else {
+        buildIndirectWrite(MBB, MI, MI->getOperand(ValOpIdx).getReg(),
+                           calculateIndirectAddress(RegIndex, Channel),
+                           OffsetReg);
+      }
+    } else {
+      return false;
+    }
+
+    MBB->erase(MI);
+    return true;
+  }
   case AMDGPU::R600_EXTRACT_ELT_V2:
   case AMDGPU::R600_EXTRACT_ELT_V4:
     buildIndirectRead(MI->getParent(), MI, MI->getOperand(0).getReg(),
@@ -1427,4 +1471,12 @@ void R600InstrInfo::clearFlag(MachineInstr *MI, unsigned Operand,
     InstFlags &= ~(Flag << (NUM_MO_FLAGS * Operand));
     FlagOp.setImm(InstFlags);
   }
+}
+
+bool R600InstrInfo::isRegisterStore(const MachineInstr &MI) const {
+  return get(MI.getOpcode()).TSFlags & AMDGPU_FLAG_REGISTER_STORE;
+}
+
+bool R600InstrInfo::isRegisterLoad(const MachineInstr &MI) const {
+  return get(MI.getOpcode()).TSFlags & AMDGPU_FLAG_REGISTER_LOAD;
 }
