@@ -176,8 +176,8 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter, const bool UnrollProlog,
       // For the first block, add a CFG connection to this newly
       // created block.
       InsertTop->getTerminator()->setSuccessor(0, NewBB);
-
     }
+
     if (Latch == *BB) {
       // For the last block, if UnrollProlog is true, create a direct jump to
       // InsertBot. If not, create a loop back to cloned head.
