@@ -1075,7 +1075,8 @@ bool Darwin::UseSjLjExceptions(const ArgList &Args) const {
     return false;
 
   // Only watchOS uses the new DWARF/Compact unwinding method.
-  return !isTargetWatchOS();
+  llvm::Triple Triple(ComputeLLVMTriple(Args));
+  return !Triple.isWatchABI();
 }
 
 bool MachO::isPICDefault() const { return true; }

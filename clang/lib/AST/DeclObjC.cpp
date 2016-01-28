@@ -122,7 +122,7 @@ bool ObjCContainerDecl::HasUserDeclaredSetterMethod(
       // declaration of this property. If one found, presumably a setter will
       // be provided (properties declared in categories will not get
       // auto-synthesized).
-      for (const auto *P : Cat->instance_properties())
+      for (const auto *P : Cat->properties())
         if (P->getIdentifier() == Property->getIdentifier()) {
           if (P->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_readwrite)
             return true;
@@ -1837,7 +1837,7 @@ void ObjCProtocolDecl::collectInheritedProtocolProperties(
                                                 ProtocolPropertyMap &PM) const {
   if (const ObjCProtocolDecl *PDecl = getDefinition()) {
     bool MatchFound = false;
-    for (auto *Prop : PDecl->instance_properties()) {
+    for (auto *Prop : PDecl->properties()) {
       if (Prop == Property)
         continue;
       if (Prop->getIdentifier() == Property->getIdentifier()) {

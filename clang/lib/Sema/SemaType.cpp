@@ -2183,10 +2183,16 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
 /// Run the required checks for the extended vector type.
 QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
                                   SourceLocation AttrLoc) {
-  // unlike gcc's vector_size attribute, we do not allow vectors to be defined
+  // Unlike gcc's vector_size attribute, we do not allow vectors to be defined
   // in conjunction with complex types (pointers, arrays, functions, etc.).
-  if (!T->isDependentType() &&
-      !T->isIntegerType() && !T->isRealFloatingType()) {
+  //
+  // Additionally, OpenCL prohibits vectors of booleans (they're considered a
+  // reserved data type under OpenCL v2.0 s6.1.4), we don't support selects
+  // on bitvectors, and we have no well-defined ABI for bitvectors, so vectors
+  // of bool aren't allowed.
+  if ((!T->isDependentType() && !T->isIntegerType() &&
+       !T->isRealFloatingType()) ||
+      T->isBooleanType()) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << T;
     return QualType();
   }
@@ -2200,7 +2206,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
       return QualType();
     }
 
-    // unlike gcc's vector_size attribute, the size is specified as the
+    // Unlike gcc's vector_size attribute, the size is specified as the
     // number of elements, not the number of bytes.
     unsigned vectorSize = static_cast<unsigned>(vecSize.getZExtValue());
 
