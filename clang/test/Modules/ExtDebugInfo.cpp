@@ -2,7 +2,8 @@
 // Test that only forward declarations are emitted for types dfined in modules.
 
 // Modules:
-// RUN: %clang_cc1 -x objective-c++ -std=c++11 -debug-info-kind=limited -dwarf-ext-refs -fmodules \
+// RUN: %clang_cc1 -x objective-c++ -std=c++11 -debug-info-kind=limited \
+// RUN:     -dwarf-ext-refs -fmodules                                   \
 // RUN:     -fmodule-format=obj -fimplicit-module-maps -DMODULES \
 // RUN:     -triple %itanium_abi_triple \
 // RUN:     -fmodules-cache-path=%t %s -I %S/Inputs -I %t -emit-llvm -o %t-mod.ll
@@ -12,10 +13,12 @@
 // RUN: %clang_cc1 -x c++ -std=c++11 -fmodule-format=obj -emit-pch -I%S/Inputs \
 // RUN:     -triple %itanium_abi_triple \
 // RUN:     -o %t.pch %S/Inputs/DebugCXX.h
-// RUN: %clang_cc1 -std=c++11 -debug-info-kind=limited -dwarf-ext-refs -fmodule-format=obj \
+// RUN: %clang_cc1 -std=c++11 -debug-info-kind=limited \
+// RUN:     -dwarf-ext-refs -fmodule-format=obj \
 // RUN:     -triple %itanium_abi_triple \
 // RUN:     -include-pch %t.pch %s -emit-llvm -o %t-pch.ll %s
 // RUN: cat %t-pch.ll |  FileCheck %s
+
 
 #ifdef MODULES
 @import DebugCXX;
@@ -101,7 +104,7 @@ void foo() {
 // CHECK-SAME:              name: "InAnonymousNamespace", {{.*}}DIFlagFwdDecl)
 
 
-// CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: !"_ZTSN8DebugCXX6StructE", line: 24)
+// CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: !"_ZTSN8DebugCXX6StructE", line: 27)
 
 // CHECK: !DICompileUnit(
 // CHECK-SAME:           splitDebugFilename:
