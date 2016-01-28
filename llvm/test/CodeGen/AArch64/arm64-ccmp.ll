@@ -426,6 +426,25 @@ define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
   ret i64 %sel
 }
 
+; The following is not possible to implement with a single cmp;ccmp;csel
+; sequence.
+; CHECK-LABEL: select_noccmp3
+define i32 @select_noccmp3(i32 %v0, i32 %v1, i32 %v2) {
+  %c0 = icmp slt i32 %v0, 0
+  %c1 = icmp sgt i32 %v0, 13
+  %c2 = icmp slt i32 %v0, 22
+  %c3 = icmp sgt i32 %v0, 44
+  %c4 = icmp eq i32 %v0, 99
+  %c5 = icmp eq i32 %v0, 77
+  %or0 = or i1 %c0, %c1
+  %or1 = or i1 %c2, %c3
+  %and0 = and i1 %or0, %or1
+  %or2 = or i1 %c4, %c5
+  %and1 = and i1 %and0, %or2
+  %sel = select i1 %and1, i32 %v1, i32 %v2
+  ret i32 %sel
+}
+
 ; Test the IR CCs that expand to two cond codes.
 
 ; CHECK-LABEL: select_and_olt_one:
