@@ -1296,10 +1296,10 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
   else if (RHS.getOpcode() == ISD::SUB) {
     SDValue SubOp0 = RHS.getOperand(0);
     if (isNullConstant(SubOp0) && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-        // See emitComparison() on why we can only do this for SETEQ and SETNE.
-        Opcode = AArch64ISD::CCMN;
-        RHS = RHS.getOperand(1);
-      }
+      // See emitComparison() on why we can only do this for SETEQ and SETNE.
+      Opcode = AArch64ISD::CCMN;
+      RHS = RHS.getOperand(1);
+    }
   }
   if (Opcode == 0)
     Opcode = AArch64ISD::CCMP;
