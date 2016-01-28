@@ -294,7 +294,6 @@ int main(int argc, char **argv) {
     CurrentActivity = "loading file '" + InputFilenames[i] + "'";
     ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
         LTOModule::createFromFile(Context, InputFilenames[i].c_str(), Options);
-    error(ModuleOrErr, "error " + CurrentActivity);
     std::unique_ptr<LTOModule> &Module = *ModuleOrErr;
     CurrentActivity = "";
 

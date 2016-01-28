@@ -81,7 +81,6 @@ static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
     DiagnosticPrinterRawOStream DP(Stream);
     DI.print(DP);
   }
-  sLastErrorString += '\n';
 }
 
 // Initialize the configured targets if they have not been initialized.
@@ -111,7 +110,6 @@ namespace {
 static void handleLibLTODiagnostic(lto_codegen_diagnostic_severity_t Severity,
                                    const char *Msg, void *) {
   sLastErrorString = Msg;
-  sLastErrorString += "\n";
 }
 
 // This derived class owns the native object file. This helps implement the
