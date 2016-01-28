@@ -7363,7 +7363,8 @@ public:
                               bool ImplKind,
                               IdentifierInfo *PropertyId,
                               IdentifierInfo *PropertyIvar,
-                              SourceLocation PropertyIvarLoc);
+                              SourceLocation PropertyIvarLoc,
+                              ObjCPropertyQueryKind QueryKind);
 
   enum ObjCSpecialMethodKind {
     OSMK_None,

@@ -16,6 +16,7 @@
 @property(readonly) int ro, ro2;
 @property (class) int c;
 @property (class) int c2;
+@property (class) int x;
 @end
 
 @implementation A

@@ -4207,7 +4207,8 @@ static void LookupPotentialTypoResult(Sema &SemaRef,
         }
       }
 
-      if (ObjCPropertyDecl *Prop = Class->FindPropertyDeclaration(Name)) {
+      if (ObjCPropertyDecl *Prop = Class->FindPropertyDeclaration(
+              Name, ObjCPropertyQueryKind::OBJC_PR_query_instance)) {
         Res.addDecl(Prop);
         Res.resolveKind();
         return;
