@@ -122,7 +122,7 @@ bool ObjCContainerDecl::HasUserDeclaredSetterMethod(
       // declaration of this property. If one found, presumably a setter will
       // be provided (properties declared in categories will not get
       // auto-synthesized).
-      for (const auto *P : Cat->properties())
+      for (const auto *P : Cat->instance_properties())
         if (P->getIdentifier() == Property->getIdentifier()) {
           if (P->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_readwrite)
             return true;
@@ -341,13 +341,13 @@ ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
 
 void ObjCInterfaceDecl::collectPropertiesToImplement(PropertyMap &PM,
                                                      PropertyDeclOrder &PO) const {
-  for (auto *Prop : properties()) {
+  for (auto *Prop : instance_properties()) {
     PM[Prop->getIdentifier()] = Prop;
     PO.push_back(Prop);
   }
   for (const auto *Ext : known_extensions()) {
     const ObjCCategoryDecl *ClassExt = Ext;
-    for (auto *Prop : ClassExt->properties()) {
+    for (auto *Prop : ClassExt->instance_properties()) {
       PM[Prop->getIdentifier()] = Prop;
       PO.push_back(Prop);
     }
@@ -1218,7 +1218,7 @@ ObjCMethodDecl::findPropertyDecl(bool CheckOverrides) const {
     auto findMatchingProperty =
       [&](const ObjCContainerDecl *Container) -> const ObjCPropertyDecl * {
 
-      for (const auto *I : Container->properties()) {
+      for (const auto *I : Container->instance_properties()) {
         Selector NextSel = IsGetter ? I->getGetterName()
                                     : I->getSetterName();
         if (NextSel == Sel)
@@ -1820,7 +1820,7 @@ void ObjCProtocolDecl::collectPropertiesToImplement(PropertyMap &PM,
                                                     PropertyDeclOrder &PO) const {
   
   if (const ObjCProtocolDecl *PDecl = getDefinition()) {
-    for (auto *Prop : PDecl->properties()) {
+    for (auto *Prop : PDecl->instance_properties()) {
       // Insert into PM if not there already.
       PM.insert(std::make_pair(Prop->getIdentifier(), Prop));
       PO.push_back(Prop);
@@ -1837,7 +1837,7 @@ void ObjCProtocolDecl::collectInheritedProtocolProperties(
                                                 ProtocolPropertyMap &PM) const {
   if (const ObjCProtocolDecl *PDecl = getDefinition()) {
     bool MatchFound = false;
-    for (auto *Prop : PDecl->properties()) {
+    for (auto *Prop : PDecl->instance_properties()) {
       if (Prop == Property)
         continue;
       if (Prop->getIdentifier() == Property->getIdentifier()) {
