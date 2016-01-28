@@ -18,6 +18,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/IR/Instructions.h"
 
 namespace llvm {
 class AllocaInst;

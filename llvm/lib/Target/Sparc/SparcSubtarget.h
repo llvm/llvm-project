@@ -15,11 +15,11 @@
 #define LLVM_LIB_TARGET_SPARC_SPARCSUBTARGET_H
 
 #include "SparcFrameLowering.h"
-#include "SparcInstrInfo.h"
 #include "SparcISelLowering.h"
+#include "SparcInstrInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetFrameLowering.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
 
@@ -39,7 +39,7 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
   bool UsePopc;
   SparcInstrInfo InstrInfo;
   SparcTargetLowering TLInfo;
-  TargetSelectionDAGInfo TSInfo;
+  SelectionDAGTargetInfo TSInfo;
   SparcFrameLowering FrameLowering;
 
 public:
@@ -56,7 +56,7 @@ public:
   const SparcTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const TargetSelectionDAGInfo *getSelectionDAGInfo() const override {
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
 

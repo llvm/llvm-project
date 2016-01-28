@@ -1,6 +1,7 @@
 ; RUN: llc < %s -mtriple=armv7-apple-ios -arm-atomic-cfg-tidy=0 | FileCheck %s -check-prefix=IOS
-; RUN: llc < %s -mtriple=armv7k-apple-ios -arm-atomic-cfg-tidy=0 | FileCheck %s -check-prefix=IOS
-; RUN: llc < %s -mtriple=armv7k-apple-watchos -arm-atomic-cfg-tidy=0 | FileCheck %s -check-prefix=WATCHOS
+; RUN: llc < %s -mtriple=armv7-apple-watchos -arm-atomic-cfg-tidy=0 | FileCheck %s -check-prefix=IOS
+; RUN: llc < %s -mtriple=armv7k-apple-ios -arm-atomic-cfg-tidy=0 | FileCheck %s -check-prefix=WATCHABI
+; RUN: llc < %s -mtriple=armv7k-apple-watchos -arm-atomic-cfg-tidy=0 | FileCheck %s -check-prefix=WATCHABI
 
 declare void @func()
 
@@ -21,4 +22,4 @@ lpad:
 }
 
 ; IOS: __Unwind_SjLj_Resume
-; WATCHOS: __Unwind_Resume
+; WATCHABI: __Unwind_Resume

@@ -32,7 +32,7 @@ class TargetLowering;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
-class TargetSelectionDAGInfo;
+class SelectionDAGTargetInfo;
 struct MachineSchedPolicy;
 template <typename T> class SmallVectorImpl;
 
@@ -79,7 +79,7 @@ public:
     return nullptr;
   }
   virtual const TargetLowering *getTargetLowering() const { return nullptr; }
-  virtual const TargetSelectionDAGInfo *getSelectionDAGInfo() const {
+  virtual const SelectionDAGTargetInfo *getSelectionDAGInfo() const {
     return nullptr;
   }
   /// Target can subclass this hook to select a different DAG scheduler.

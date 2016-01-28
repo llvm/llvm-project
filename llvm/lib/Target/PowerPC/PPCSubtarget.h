@@ -18,9 +18,9 @@
 #include "PPCISelLowering.h"
 #include "PPCInstrInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
 
@@ -132,7 +132,7 @@ protected:
   PPCFrameLowering FrameLowering;
   PPCInstrInfo InstrInfo;
   PPCTargetLowering TLInfo;
-  TargetSelectionDAGInfo TSInfo;
+  SelectionDAGTargetInfo TSInfo;
 
 public:
   /// This constructor initializes the data members to match that
@@ -167,7 +167,7 @@ public:
   const PPCTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const TargetSelectionDAGInfo *getSelectionDAGInfo() const override {
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
   const PPCRegisterInfo *getRegisterInfo() const override {

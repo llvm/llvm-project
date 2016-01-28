@@ -150,10 +150,6 @@ inline ModulePass *createDataFlowSanitizerPassForJIT(
 // checking on loads, stores, and other memory intrinsics.
 FunctionPass *createBoundsCheckingPass();
 
-/// \brief This pass splits the stack into a safe stack and an unsafe stack to
-/// protect against stack-based overflow vulnerabilities.
-FunctionPass *createSafeStackPass(const TargetMachine *TM = nullptr);
-
 /// \brief Calculate what to divide by to scale counts.
 ///
 /// Given the maximum count, calculate a divisor that will scale all the

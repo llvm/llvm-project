@@ -1302,3 +1302,35 @@ l6:
 ; CHECK: entry
 ; CHECK-NEXT: switch
 }
+
+; Speculation depth must be limited to avoid a zero-cost instruction cycle.
+
+; CHECK-LABEL: @PR26308(
+; CHECK:       cleanup4:
+; CHECK-NEXT:  br label %cleanup4
+
+define i32 @PR26308(i1 %B, i64 %load) {
+entry:
+  br label %while.body
+
+while.body:
+  br label %cleanup
+
+cleanup:
+  %cleanup.dest.slot.0 = phi i1 [ false, %while.body ]
+  br i1 %cleanup.dest.slot.0, label %for.cond, label %cleanup4
+
+for.cond:
+  %e.0 = phi i64* [ undef, %cleanup ], [ %incdec.ptr, %for.cond2 ]
+  %pi = ptrtoint i64* %e.0 to i64
+  %incdec.ptr = getelementptr inbounds i64, i64* %e.0, i64 1
+  br label %for.cond2
+
+for.cond2:
+  %storemerge = phi i64 [ %pi, %for.cond ], [ %load, %for.cond2 ]
+  br i1 %B, label %for.cond2, label %for.cond
+
+cleanup4:
+  br label %while.body
+}
+

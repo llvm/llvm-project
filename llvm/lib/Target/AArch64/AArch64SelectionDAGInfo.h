@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the AArch64 subclass for TargetSelectionDAGInfo.
+// This file defines the AArch64 subclass for SelectionDAGTargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SELECTIONDAGINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64SELECTIONDAGINFO_H
 
-#include "llvm/Target/TargetSelectionDAGInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 namespace llvm {
 
-class AArch64SelectionDAGInfo : public TargetSelectionDAGInfo {
+class AArch64SelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
 
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, SDLoc dl, SDValue Chain,

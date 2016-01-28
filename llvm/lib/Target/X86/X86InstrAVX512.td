@@ -3908,13 +3908,6 @@ multiclass avx512_vptest_all_forms<bits<8> opc_wb, bits<8> opc_dq, string Opcode
 defm VPTESTM   : avx512_vptest_all_forms<0x26, 0x27, "vptestm", X86testm>, T8PD;
 defm VPTESTNM  : avx512_vptest_all_forms<0x26, 0x27, "vptestnm", X86testnm>, T8XS;
 
-def : Pat <(i16 (int_x86_avx512_mask_ptestm_d_512 (v16i32 VR512:$src1),
-                 (v16i32 VR512:$src2), (i16 -1))),
-                 (COPY_TO_REGCLASS (VPTESTMDZrr VR512:$src1, VR512:$src2), GR16)>;
-
-def : Pat <(i8 (int_x86_avx512_mask_ptestm_q_512 (v8i64 VR512:$src1),
-                 (v8i64 VR512:$src2), (i8 -1))),
-                 (COPY_TO_REGCLASS (VPTESTMQZrr VR512:$src1, VR512:$src2), GR8)>;
 
 //===----------------------------------------------------------------------===//
 // AVX-512  Shift instructions

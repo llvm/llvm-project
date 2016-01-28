@@ -10,6 +10,7 @@
 #ifndef LLVM_CODEGEN_STACKMAPPARSER_H
 #define LLVM_CODEGEN_STACKMAPPARSER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include <map>

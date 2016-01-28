@@ -19,12 +19,12 @@
 ;       addsd ...
 ;   LBB0_2:
 
-define float @func1(float %x, float %y) nounwind readnone optsize ssp {
-; CHECK:       func1
+; CHECK:       func
 ; CHECK:       jne [[LABEL:.*]]
 ; CHECK-NEXT:  jp  [[LABEL]]
 ; CHECK-NOT:   jmp
-;
+
+define float @func(float %x, float %y) nounwind readnone optsize ssp {
 entry:
   %0 = fpext float %x to double
   %1 = fpext float %y to double
@@ -41,30 +41,3 @@ bb2:
   %.0 = fptrunc double %.0.in to float
   ret float %.0
 }
-
-define float @func2(float %x, float %y) nounwind readnone optsize ssp {
-; CHECK:       func2
-; CHECK:       jne [[LABEL:.*]]
-; CHECK-NEXT:  jp  [[LABEL]]
-; CHECK:       %bb2
-; CHECK:       %bb1
-; CHECK:       jmp
-;
-entry:
-  %0 = fpext float %x to double
-  %1 = fpext float %y to double
-  %2 = fmul double %0, %1
-  %3 = fcmp une double %2, 0.000000e+00
-  br i1 %3, label %bb1, label %bb2, !prof !1
-
-bb1:
-  %4 = fadd double %2, -1.000000e+00
-  br label %bb2
-
-bb2:
-  %.0.in = phi double [ %4, %bb1 ], [ %2, %entry ]
-  %.0 = fptrunc double %.0.in to float
-  ret float %.0
-}
-
-!1 = !{!"branch_weights", i32 1, i32 1000}

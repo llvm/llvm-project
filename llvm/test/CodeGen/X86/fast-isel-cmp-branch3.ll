@@ -17,7 +17,7 @@ define i32 @fcmp_oeq2(float %x) {
 ; CHECK:       xorps    %xmm1, %xmm1
 ; CHECK-NEXT:  ucomiss  %xmm1, %xmm0
 ; CHECK-NEXT:  jne {{LBB.+_1}}
-; CHECK-NEXT:  jp {{LBB.+_1}}
+; CHECK-NEXT:  jnp {{LBB.+_2}}
   %1 = fcmp oeq float %x, 0.000000e+00
   br i1 %1, label %bb1, label %bb2
 bb2:
@@ -338,7 +338,8 @@ define i32 @fcmp_une2(float %x) {
 ; CHECK:       xorps    %xmm1, %xmm1
 ; CHECK-NEXT:  ucomiss  %xmm1, %xmm0
 ; CHECK-NEXT:  jne {{LBB.+_2}}
-; CHECK-NEXT:  jnp {{LBB.+_1}}
+; CHECK-NEXT:  jp {{LBB.+_2}}
+; CHECK-NEXT:  jmp {{LBB.+_1}}
   %1 = fcmp une float %x, 0.000000e+00
   br i1 %1, label %bb1, label %bb2
 bb2:

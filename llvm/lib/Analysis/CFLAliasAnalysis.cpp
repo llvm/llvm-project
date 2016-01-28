@@ -23,9 +23,15 @@
 // Because this algorithm requires a graph search on each query, we execute the
 // algorithm outlined in "Fast algorithms..." (mentioned above)
 // in order to transform the graph into sets of variables that may alias in
-// ~nlogn time (n = number of variables.), which makes queries take constant
+// ~nlogn time (n = number of variables), which makes queries take constant
 // time.
 //===----------------------------------------------------------------------===//
+
+// N.B. AliasAnalysis as a whole is phrased as a FunctionPass at the moment, and
+// CFLAA is interprocedural. This is *technically* A Bad Thing, because
+// FunctionPasses are only allowed to inspect the Function that they're being
+// run on. Realistically, this likely isn't a problem until we allow
+// FunctionPasses to run concurrently.
 
 #include "llvm/Analysis/CFLAliasAnalysis.h"
 #include "StratifiedSets.h"
@@ -200,9 +206,8 @@ public:
   }
 
   void visitPHINode(PHINode &Inst) {
-    for (Value *Val : Inst.incoming_values()) {
+    for (Value *Val : Inst.incoming_values())
       Output.push_back(Edge(&Inst, Val, EdgeType::Assign, AttrNone));
-    }
   }
 
   void visitGetElementPtrInst(GetElementPtrInst &Inst) {
@@ -275,7 +280,7 @@ public:
       Current = &Sets.getLink(Current->Above);
     }
 
-    return NoneType();
+    return None;
   }
 
   bool
@@ -687,7 +692,7 @@ static Optional<Function *> parentFunctionOfValue(Value *Val) {
 
   if (auto *Arg = dyn_cast<Argument>(Val))
     return Arg->getParent();
-  return NoneType();
+  return None;
 }
 
 template <typename Inst>
@@ -731,7 +736,7 @@ static Optional<StratifiedAttr> valueToAttrIndex(Value *Val) {
     // cast, and thus, interaction with them doesn't matter.
     if (!Arg->hasNoAliasAttr() && Arg->getType()->isPointerTy())
       return argNumberToAttrIndex(Arg->getArgNo());
-  return NoneType();
+  return None;
 }
 
 static StratifiedAttr argNumberToAttrIndex(unsigned ArgNum) {

@@ -27,10 +27,10 @@ target triple = "armv7--linux-gnueabihf"
 ; CHECK: select
 ; CHECK-NOT: select
 ; CHECK: br i1 {{.*}}, label %[[L:.*]], label %[[R:.*]]
-; CHECK: [[L]] ; preds = 
+; CHECK: [[L]]: ; preds =
 ; CHECK-NEXT: store
 ; CHECK-NEXT: br label %[[R]]
-; CHECK: [[R]] ; preds = 
+; CHECK: [[R]]: ; preds =
 ; CHECK-NEXT: ret i32 0
 
 define i32 @f(i32* %b) {

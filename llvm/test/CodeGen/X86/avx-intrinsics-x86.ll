@@ -1111,9 +1111,9 @@ declare <4 x float> @llvm.x86.sse41.dpps(<4 x float>, <4 x float>, i8) nounwind 
 define <4 x float> @test_x86_sse41_insertps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse41_insertps:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = zero,zero,zero,xmm0[3]
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm1[0],zero,xmm0[3]
 ; CHECK-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 7) ; <<4 x float>> [#uses=1]
+  %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 21) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
 declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i8) nounwind readnone
@@ -2992,7 +2992,7 @@ declare <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double>, <4 x i64>) no
 define <4 x double> @test_x86_avx_vpermilvar_pd_256_2(<4 x double> %a0) {
 ; CHECK-LABEL: test_x86_avx_vpermilvar_pd_256_2:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpermilpd {{.*}}, %ymm0, %ymm0 ## ymm0 = ymm0[1,0,2,3]
+; CHECK-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3]
 ; CHECK-NEXT:    retl
   %res = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 0, i64 2>) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res

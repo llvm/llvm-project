@@ -17,7 +17,6 @@ pr38151.c
 va-arg-22.c
 
 # TargetRegisterInfo.h:315: static unsigned int llvm::TargetRegisterInfo::virtReg2Index(unsigned int): Assertion `isVirtualRegister(Reg) && "Not a virtual register"' failed.
-struct-ret-1.c
 va-arg-11.c
 va-arg-21.c
 va-arg-24.c
@@ -29,20 +28,10 @@ va-arg-trap-1.c
 930628-1.c
 980707-1.c
 
-# WebAssemblyISelLowering.cpp:316: virtual llvm::SDValue llvm::WebAssemblyTargetLowering::LowerCall(llvm::TargetLowering::CallLoweringInfo&, llvm::SmallVectorImpl<llvm::SDValue>&) const: Assertion `!Out.Flags.isByVal() && "byval is not valid for return values"' failed.
-20030914-2.c
-20040703-1.c
-20081117-1.c
+# Unknown type!
+# UNREACHABLE executed at /s/llvm-upstream/llvm/lib/IR/ValueTypes.cpp:280!
 920625-1.c
-931004-11.c
-931004-13.c
-980223.c
-bitfld-5.c
-complex-7.c
-pr38969.c
-pr51323.c
-pr52129.c
-pr57130.c
+
 
 # These were previously "Cannot select FrameIndex." Now most of them fail
 # because they contain call frame pseudos (e.g. call a vararg func),
@@ -58,7 +47,6 @@ pr57130.c
 20021024-1.c
 
 20030828-1.c
-20030914-1.c
 
 20040302-1.c
 20040625-1.c
@@ -75,7 +63,6 @@ pr57130.c
 20080506-2.c
 20080519-1.c
 
-20081103-1.c
 20090113-1.c
 20090113-2.c
 20090113-3.c
@@ -103,9 +90,6 @@ pr57130.c
 
 991216-2.c
 
-#cbrt.c
-complex-5.c
-complex-6.c
 
 enum-3.c
 fprintf-chk-1.c
@@ -147,10 +131,6 @@ pr47925.c
 pr49390.c
 pr49419.c
 
-#pr51877.c
-
-#pr52979-1.c
-#pr52979-2.c
 pr53645-2.c
 pr53645.c
 
@@ -214,49 +194,6 @@ vla-dealloc-1.c
 comp-goto-1.c
 980526-1.c
 990208-1.c
-
-# WebAssembly hasn't implemented byval arguments.
-20000412-3.c
-20000419-1.c
-20000706-1.c
-20000706-2.c
-20000707-1.c
-20000717-1.c
-20000717-5.c
-20000808-1.c
-20010605-2.c
-20011113-1.c
-20020215-1.c
-20020810-1.c
-20021118-1.c
-20040707-1.c
-20040709-1.c
-20040709-2.c
-20041201-1.c
-20050713-1.c
-20070614-1.c
-920908-2.c
-921112-1.c
-921117-1.c
-921123-2.c
-921204-1.c
-930126-1.c
-930208-1.c
-931004-5.c
-931004-9.c
-931031-1.c
-950607-2.c
-960416-1.c
-990525-1.c
-991118-1.c
-bf64-1.c
-complex-1.c
-complex-2.c
-pr15262-2.c
-pr20621-1.c
-pr23135.c
-pr30185.c
-pr42248.c
 
 # unimplemented operation lowering.
 20010122-1.c

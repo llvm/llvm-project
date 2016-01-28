@@ -5107,6 +5107,53 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
   return true;
 }
 
+/// Check a target shuffle mask's inputs to see if we can set any values to
+/// SM_SentinelZero - this is for elements that are known to be zero
+/// (not just zeroable) from their inputs.
+/// Returns true if the target shuffle mask was decoded.
+static bool setTargetShuffleZeroElements(SDValue N,
+                                         SmallVectorImpl<int> &Mask) {
+  bool IsUnary;
+  if (!isTargetShuffle(N.getOpcode()))
+    return false;
+  if (!getTargetShuffleMask(N.getNode(), N.getSimpleValueType(), true, Mask,
+                            IsUnary))
+    return false;
+
+  SDValue V1 = N.getOperand(0);
+  SDValue V2 = IsUnary ? V1 : N.getOperand(1);
+
+  while (V1.getOpcode() == ISD::BITCAST)
+    V1 = V1->getOperand(0);
+  while (V2.getOpcode() == ISD::BITCAST)
+    V2 = V2->getOperand(0);
+
+  for (int i = 0, Size = Mask.size(); i != Size; ++i) {
+    int M = Mask[i];
+
+    // Already decoded as SM_SentinelZero / SM_SentinelUndef.
+    if (M < 0)
+      continue;
+
+    SDValue V = M < Size ? V1 : V2;
+
+    // We are referencing an UNDEF input.
+    if (V.isUndef()) {
+      Mask[i] = SM_SentinelUndef;
+      continue;
+    }
+
+    // TODO - handle the Size != (int)V.getNumOperands() cases in future.
+    if (V.getOpcode() != ISD::BUILD_VECTOR || Size != (int)V.getNumOperands())
+      continue;
+    if (!X86::isZeroNode(V.getOperand(M % Size)))
+      continue;
+    Mask[i] = SM_SentinelZero;
+  }
+
+  return true;
+}
+
 /// Returns the scalar element that will make up the ith
 /// element of the result of the vector shuffle.
 static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
@@ -23834,52 +23881,6 @@ static bool combineRedundantHalfShuffle(SDValue N, MutableArrayRef<int> Mask,
     // Replace the combinable shuffle with the combined one, updating all users
     // so that we re-evaluate the chain here.
     DCI.CombineTo(Old.getNode(), V, /*AddTo*/ true);
-
-  return true;
-}
-
-/// Check a target shuffle mask's inputs to see if we can set any values to
-/// SM_SentinelZero - this is for elements that are known to be zero
-/// (not just zeroable) from their inputs.
-static bool setTargetShuffleZeroElements(SDValue N,
-                                         SmallVectorImpl<int> &Mask) {
-  bool IsUnary;
-  if (!isTargetShuffle(N.getOpcode()))
-    return false;
-  if (!getTargetShuffleMask(N.getNode(), N.getSimpleValueType(), true, Mask,
-                            IsUnary))
-    return false;
-
-  SDValue V1 = N.getOperand(0);
-  SDValue V2 = IsUnary ? V1 : N.getOperand(1);
-
-  while (V1.getOpcode() == ISD::BITCAST)
-    V1 = V1->getOperand(0);
-  while (V2.getOpcode() == ISD::BITCAST)
-    V2 = V2->getOperand(0);
-
-  for (int i = 0, Size = Mask.size(); i != Size; ++i) {
-    int M = Mask[i];
-
-    // Already decoded as SM_SentinelZero / SM_SentinelUndef.
-    if (M < 0)
-      continue;
-
-    SDValue V = M < Size ? V1 : V2;
-
-    // We are referencing an UNDEF input.
-    if (V.isUndef()) {
-      Mask[i] = SM_SentinelUndef;
-      continue;
-    }
-
-    // TODO - handle the Size != (int)V.getNumOperands() cases in future.
-    if (V.getOpcode() != ISD::BUILD_VECTOR || Size != (int)V.getNumOperands())
-      continue;
-    if (!X86::isZeroNode(V.getOperand(M % Size)))
-      continue;
-    Mask[i] = SM_SentinelZero;
-  }
 
   return true;
 }

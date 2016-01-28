@@ -654,6 +654,23 @@ namespace llvm {
   /// memory accesses to target specific intrinsics.
   ///
   FunctionPass *createInterleavedAccessPass(const TargetMachine *TM);
+
+  /// LowerEmuTLS - This pass generates __emutls_[vt].xyz variables for all
+  /// TLS variables for the emulated TLS model.
+  ///
+  ModulePass *createLowerEmuTLSPass(const TargetMachine *TM);
+
+  /// GlobalMerge - This pass merges internal (by default) globals into structs
+  /// to enable reuse of a base pointer by indexed addressing modes.
+  /// It can also be configured to focus on size optimizations only.
+  ///
+  Pass *createGlobalMergePass(const TargetMachine *TM, unsigned MaximalOffset,
+                              bool OnlyOptimizeForSize = false,
+                              bool MergeExternalByDefault = false);
+
+  /// This pass splits the stack into a safe stack and an unsafe stack to
+  /// protect against stack-based overflow vulnerabilities.
+  FunctionPass *createSafeStackPass(const TargetMachine *TM = nullptr);
 } // End llvm namespace
 
 /// Target machine pass initializer for passes with dependencies. Use with

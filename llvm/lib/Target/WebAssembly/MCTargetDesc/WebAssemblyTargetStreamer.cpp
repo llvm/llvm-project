@@ -16,7 +16,6 @@
 #include "WebAssemblyTargetStreamer.h"
 #include "InstPrinter/WebAssemblyInstPrinter.h"
 #include "WebAssemblyMCTargetDesc.h"
-#include "WebAssemblyTargetObjectFile.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"

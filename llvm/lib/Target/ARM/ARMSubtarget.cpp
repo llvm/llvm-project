@@ -163,7 +163,7 @@ void ARMSubtarget::initializeEnvironment() {
   // MCAsmInfo isn't always present (e.g. in opt) so we can't initialize this
   // directly from it, but we can try to make sure they're consistent when both
   // available.
-  UseSjLjEH = isTargetDarwin() && !isTargetWatchOS();
+  UseSjLjEH = isTargetDarwin() && !isTargetWatchABI();
   assert((!TM.getMCAsmInfo() ||
           (TM.getMCAsmInfo()->getExceptionHandlingType() ==
            ExceptionHandling::SjLj) == UseSjLjEH) &&
@@ -344,7 +344,7 @@ bool ARMSubtarget::useStride4VFPs(const MachineFunction &MF) const {
   // For general targets, the prologue can grow when VFPs are allocated with
   // stride 4 (more vpush instructions). But WatchOS uses a compact unwind
   // format which it's more important to get right.
-  return isTargetWatchOS() || (isSwift() && !MF.getFunction()->optForMinSize());
+  return isTargetWatchABI() || (isSwift() && !MF.getFunction()->optForMinSize());
 }
 
 bool ARMSubtarget::useMovt(const MachineFunction &MF) const {

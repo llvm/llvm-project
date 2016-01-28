@@ -1,6 +1,6 @@
 ; RUN: not llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s 2>&1 | FileCheck %s
 
-; CHECK: error: unsupported non-compute shaders with HSA in pixel_shader
+; CHECK: in function pixel_s{{.*}}: unsupported non-compute shaders with HSA
 define void @pixel_shader() #0 {
   ret void
 }

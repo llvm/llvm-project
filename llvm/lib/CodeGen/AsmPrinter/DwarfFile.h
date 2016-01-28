@@ -16,6 +16,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/Allocator.h"
 #include <memory>
 #include <string>

@@ -1,6 +1,6 @@
 ; RUN: not llc -O0 -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
-; ERROR: unsupported addrspacecast not implemented
+; ERROR: addrspacecast not implemented
 
 ; XUN: llc -O0 -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-NO-PROMOTE %s
 ; XUN: llc -O0 -march=amdgcn -mcpu=bonaire -mattr=+promote-alloca < %s | FileCheck -check-prefix=CHECK -check-prefix=CHECK-PROMOTE %s

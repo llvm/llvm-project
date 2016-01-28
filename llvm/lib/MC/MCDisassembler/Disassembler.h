@@ -19,17 +19,17 @@
 
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
 namespace llvm {
-class MCContext;
-class MCAsmInfo;
-class MCDisassembler;
-class MCInstPrinter; 
-class MCInstrInfo;
-class MCRegisterInfo;
-class MCSubtargetInfo;
 class Target;
 
 //

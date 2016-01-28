@@ -19,10 +19,10 @@
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/DiagnosticInfoCodeGen.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
@@ -34,61 +34,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-lower"
-
-namespace {
-// Diagnostic information for unimplemented or unsupported feature reporting.
-// TODO: This code is copied from BPF and AMDGPU; consider factoring it out
-// and sharing code.
-class DiagnosticInfoUnsupported final : public DiagnosticInfo {
-private:
-  // Debug location where this diagnostic is triggered.
-  DebugLoc DLoc;
-  const Twine &Description;
-  const Function &Fn;
-  SDValue Value;
-
-  static int KindID;
-
-  static int getKindID() {
-    if (KindID == 0)
-      KindID = llvm::getNextAvailablePluginDiagnosticKind();
-    return KindID;
-  }
-
-public:
-  DiagnosticInfoUnsupported(SDLoc DLoc, const Function &Fn, const Twine &Desc,
-                            SDValue Value)
-      : DiagnosticInfo(getKindID(), DS_Error), DLoc(DLoc.getDebugLoc()),
-        Description(Desc), Fn(Fn), Value(Value) {}
-
-  void print(DiagnosticPrinter &DP) const override {
-    std::string Str;
-    raw_string_ostream OS(Str);
-
-    if (DLoc) {
-      auto DIL = DLoc.get();
-      StringRef Filename = DIL->getFilename();
-      unsigned Line = DIL->getLine();
-      unsigned Column = DIL->getColumn();
-      OS << Filename << ':' << Line << ':' << Column << ' ';
-    }
-
-    OS << "in function " << Fn.getName() << ' ' << *Fn.getFunctionType() << '\n'
-       << Description;
-    if (Value)
-      Value->print(OS);
-    OS << '\n';
-    OS.flush();
-    DP << Str;
-  }
-
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == getKindID();
-  }
-};
-
-int DiagnosticInfoUnsupported::KindID = 0;
-} // end anonymous namespace
 
 WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     const TargetMachine &TM, const WebAssemblySubtarget &STI)
@@ -351,16 +296,15 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     fail(DL, DAG, "WebAssembly doesn't support tail call yet");
   CLI.IsTailCall = false;
 
-  SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
-
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
   if (Ins.size() > 1)
     fail(DL, DAG, "WebAssembly doesn't support more than 1 returned value yet");
 
   SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
-  for (const ISD::OutputArg &Out : Outs) {
-    if (Out.Flags.isByVal())
-      fail(DL, DAG, "WebAssembly hasn't implemented byval arguments");
+  SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  for (unsigned i = 0; i < Outs.size(); ++i) {
+    const ISD::OutputArg &Out = Outs[i];
+    SDValue &OutVal = OutVals[i];
     if (Out.Flags.isNest())
       fail(DL, DAG, "WebAssembly hasn't implemented nest arguments");
     if (Out.Flags.isInAlloca())
@@ -369,6 +313,21 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs arguments");
     if (Out.Flags.isInConsecutiveRegsLast())
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs last arguments");
+    if (Out.Flags.isByVal()) {
+      auto *MFI = MF.getFrameInfo();
+      assert(Out.Flags.getByValSize() && "Zero-size byval?");
+      int FI = MFI->CreateStackObject(Out.Flags.getByValSize(),
+                                      Out.Flags.getByValAlign(),
+                                      /*isSS=*/false);
+      SDValue SizeNode =
+          DAG.getConstant(Out.Flags.getByValSize(), DL, MVT::i32);
+      SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+      Chain = DAG.getMemcpy(
+          Chain, DL, FINode, OutVal, SizeNode, Out.Flags.getByValAlign(),
+          /*isVolatile*/ false, /*AlwaysInline=*/true,
+          /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
+      OutVal = FINode;
+    }
   }
 
   bool IsVarArg = CLI.IsVarArg;
@@ -523,8 +482,6 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
   MF.getRegInfo().addLiveIn(WebAssembly::ARGUMENTS);
 
   for (const ISD::InputArg &In : Ins) {
-    if (In.Flags.isByVal())
-      fail(DL, DAG, "WebAssembly hasn't implemented byval arguments");
     if (In.Flags.isInAlloca())
       fail(DL, DAG, "WebAssembly hasn't implemented inalloca arguments");
     if (In.Flags.isNest())

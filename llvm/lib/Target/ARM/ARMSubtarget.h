@@ -390,6 +390,7 @@ public:
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetWatchOS() const { return TargetTriple.isWatchOS(); }
+  bool isTargetWatchABI() const { return TargetTriple.isWatchABI(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
   bool isTargetNetBSD() const { return TargetTriple.isOSNetBSD(); }

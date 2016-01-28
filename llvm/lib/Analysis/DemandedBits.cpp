@@ -20,7 +20,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DemandedBits.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"

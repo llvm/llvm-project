@@ -20,6 +20,8 @@ def llc(args, cmd_args, ir):
   with open(ir) as ir_file:
     stdout = subprocess.check_output(args.llc_binary + ' ' + cmd_args,
                                      shell=True, stdin=ir_file)
+  # Fix line endings to unix CR style.
+  stdout = stdout.replace('\r\n', '\n')
   return stdout
 
 
@@ -211,7 +213,7 @@ def main():
     if args.verbose:
       print>>sys.stderr, 'Writing %d fixed lines to %s...' % (
           len(fixed_lines), test)
-    with open(test, 'w') as f:
+    with open(test, 'wb') as f:
       f.writelines([l + '\n' for l in fixed_lines])
 
 

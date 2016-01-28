@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/IR/BasicBlock.h"
 #include <set>
 #include <vector>
 

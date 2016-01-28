@@ -12,13 +12,12 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 
 namespace llvm {
 
 class MachineFunction;
 class MachineInstr;
-class DILocalVariable;
-class DILocation;
 class TargetRegisterInfo;
 
 // For each user variable, keep a list of instruction ranges where this variable

@@ -9,18 +9,18 @@
 ///
 /// \file
 /// \brief This file defines the WebAssembly subclass for
-/// TargetSelectionDAGInfo.
+/// SelectionDAGTargetInfo.
 ///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYSELECTIONDAGINFO_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYSELECTIONDAGINFO_H
 
-#include "llvm/Target/TargetSelectionDAGInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 namespace llvm {
 
-class WebAssemblySelectionDAGInfo final : public TargetSelectionDAGInfo {
+class WebAssemblySelectionDAGInfo final : public SelectionDAGTargetInfo {
 public:
   ~WebAssemblySelectionDAGInfo() override;
 };

@@ -37,7 +37,7 @@ class MachineFunction;
 class MDNode;
 class SDDbgValue;
 class TargetLowering;
-class TargetSelectionDAGInfo;
+class SelectionDAGTargetInfo;
 
 class SDVTListNode : public FoldingSetNode {
   friend struct FoldingSetTrait<SDVTListNode>;
@@ -178,7 +178,7 @@ void checkForCycles(const SelectionDAG *DAG, bool force = false);
 ///
 class SelectionDAG {
   const TargetMachine &TM;
-  const TargetSelectionDAGInfo *TSI;
+  const SelectionDAGTargetInfo *TSI;
   const TargetLowering *TLI;
   MachineFunction *MF;
   LLVMContext *Context;
@@ -287,7 +287,7 @@ public:
   const TargetMachine &getTarget() const { return TM; }
   const TargetSubtargetInfo &getSubtarget() const { return MF->getSubtarget(); }
   const TargetLowering &getTargetLoweringInfo() const { return *TLI; }
-  const TargetSelectionDAGInfo &getSelectionDAGInfo() const { return *TSI; }
+  const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
   LLVMContext *getContext() const {return Context; }
 
   /// Pop up a GraphViz/gv window with the DAG rendered using 'dot'.

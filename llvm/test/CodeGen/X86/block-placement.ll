@@ -463,23 +463,26 @@ exit:
 }
 
 define void @fpcmp_unanalyzable_branch(i1 %cond) {
-; This function's CFG contains an once-unanalyzable branch (une on floating
-; points). As now it becomes analyzable, we should get best layout in which each
-; edge in 'entry' -> 'entry.if.then_crit_edge' -> 'if.then' -> 'if.end' is
-; fall-through.
+; This function's CFG contains an unanalyzable branch that is likely to be
+; split due to having a different high-probability predecessor.
 ; CHECK: fpcmp_unanalyzable_branch
 ; CHECK: %entry
-; CHECK: %entry.if.then_crit_edge
-; CHECK: %if.then
-; CHECK: %if.end
 ; CHECK: %exit
+; CHECK-NOT: %if.then
+; CHECK-NOT: %if.end
+; CHECK-NOT: jne
+; CHECK-NOT: jnp
 ; CHECK: jne
 ; CHECK-NEXT: jnp
+; CHECK-NEXT: %if.then
 
 entry:
 ; Note that this branch must be strongly biased toward
 ; 'entry.if.then_crit_edge' to ensure that we would try to form a chain for
-; 'entry' -> 'entry.if.then_crit_edge' -> 'if.then' -> 'if.end'.
+; 'entry' -> 'entry.if.then_crit_edge' -> 'if.then'. It is the last edge in that
+; chain which would violate the unanalyzable branch in 'exit', but we won't even
+; try this trick unless 'if.then' is believed to almost always be reached from
+; 'entry.if.then_crit_edge'.
   br i1 %cond, label %entry.if.then_crit_edge, label %lor.lhs.false, !prof !1
 
 entry.if.then_crit_edge:
@@ -491,7 +494,7 @@ lor.lhs.false:
 
 exit:
   %cmp.i = fcmp une double 0.000000e+00, undef
-  br i1 %cmp.i, label %if.then, label %if.end, !prof !3
+  br i1 %cmp.i, label %if.then, label %if.end
 
 if.then:
   %0 = phi i8 [ %.pre14, %entry.if.then_crit_edge ], [ undef, %exit ]
@@ -504,7 +507,6 @@ if.end:
 }
 
 !1 = !{!"branch_weights", i32 1000, i32 1}
-!3 = !{!"branch_weights", i32 1, i32 1000}
 
 declare i32 @f()
 declare i32 @g()
@@ -663,14 +665,11 @@ define void @unanalyzable_branch_to_best_succ(i1 %cond) {
 ; Ensure that we can handle unanalyzable branches where the destination block
 ; gets selected as the optimal successor to merge.
 ;
-; This branch is now analyzable and hence the destination block becomes the
-; hotter one. The right order is entry->bar->exit->foo.
-;
 ; CHECK: unanalyzable_branch_to_best_succ
 ; CHECK: %entry
+; CHECK: %foo
 ; CHECK: %bar
 ; CHECK: %exit
-; CHECK: %foo
 
 entry:
   ; Bias this branch toward bar to ensure we form that chain.

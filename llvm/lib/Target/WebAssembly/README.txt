@@ -32,12 +32,6 @@ Interesting work that remains to be done:
 
 //===---------------------------------------------------------------------===//
 
-set_local instructions have a return value. We should (a) model this,
-and (b) write optimizations which take advantage of it. Keep in mind that
-many set_local instructions are implicit!
-
-//===---------------------------------------------------------------------===//
-
 Br, br_if, and tableswitch instructions can support having a value on the
 expression stack across the jump (sometimes). We should (a) model this, and
 (b) extend the stackifier to utilize it.
@@ -85,5 +79,19 @@ optimizeLoadInstr, and/or getMachineCombinerPatterns.
 
 Find a clean way to fix the problem which leads to the Shrink Wrapping pass
 being run after the WebAssembly PEI pass.
+
+//===---------------------------------------------------------------------===//
+
+When setting multiple local variables to the same constant, we currently get
+code like this:
+
+    i32.const   $4=, 0
+    i32.const   $3=, 0
+
+It could be done with a smaller encoding like this:
+
+    i32.const   $push5=, 0
+    tee_local   $push6=, $4=, $pop5
+    copy_local  $3=, $pop6
 
 //===---------------------------------------------------------------------===//
