@@ -22,10 +22,9 @@ class REPLQuickLookTestCase (REPLTest):
     mydir = REPLTest.compute_mydir(__file__)
 
     def doTest(self):
-        self.command('_reflect(true).quickLookObject!', patterns=['Logical = true'])
-        self.command('_reflect(1.25).quickLookObject!', patterns=['Double = 1.25'])
-        self.command('_reflect(Float(1.25)).quickLookObject!', patterns=['Float = 1.25'])
-        self.command('_reflect("Hello").quickLookObject!', patterns=['Text = \"Hello\"'])
-        self.command('struct S {}; _reflect(S()).quickLookObject', patterns=['PlaygroundQuickLook\\? = nil'])
+        self.command('true.customPlaygroundQuickLook()', patterns=['Logical = true'])
+        self.command('1.25.customPlaygroundQuickLook()', patterns=['Double = 1.25'])
+        self.command('Float(1.25).customPlaygroundQuickLook()', patterns=['Float = 1.25'])
+        self.command('"Hello".customPlaygroundQuickLook()', patterns=['Text = \"Hello\"'])
 
 
