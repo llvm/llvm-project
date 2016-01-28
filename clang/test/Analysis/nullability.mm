@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fobjc-arc -analyze -analyzer-checker=core,nullability -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core,nullability -verify %s
 
 #define nil 0
 #define BOOL int
@@ -279,10 +280,21 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
   return p;
 }
 
-@interface SomeClass : NSObject
+
+@interface SomeClass : NSObject {
+  int instanceVar;
+}
 @end
 
 @implementation SomeClass (MethodReturn)
+- (id)initWithSomething:(int)i {
+  if (self = [super init]) {
+    instanceVar = i;
+  }
+
+  return self;
+}
+
 - (TestObject * _Nonnull)testReturnsNullableInNonnullIndirectly {
   TestObject *local = getNullableTestObject();
   return local; // expected-warning {{Nullable pointer is returned from a function that is expected to return a non-null value}}
@@ -299,5 +311,43 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
     return local; // no-warning
   else
     return p; // no-warning
+}
+@end
+
+@interface ClassWithInitializers : NSObject
+@end
+
+@implementation ClassWithInitializers
+- (instancetype _Nonnull)initWithNonnullReturnAndSelfCheckingIdiom {
+  // This defensive check is a common-enough idiom that we filter don't want
+  // to issue a diagnostic for it,
+  if (self = [super init]) {
+  }
+
+  return self; // no-warning
+}
+
+- (instancetype _Nonnull)initWithNonnullReturnAndNilReturnViaLocal {
+  self = [super init];
+  // This leaks, but we're not checking for that here.
+
+  ClassWithInitializers *other = nil;
+  // Still warn when when not returning via self.
+  return other; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
+}
+@end
+
+@interface SubClassWithInitializers : ClassWithInitializers
+@end
+
+@implementation SubClassWithInitializers
+// Note: Because this is overridding
+// -[ClassWithInitializers initWithNonnullReturnAndSelfCheckingIdiom],
+// the return type of this method becomes implicitly id _Nonnull.
+- (id)initWithNonnullReturnAndSelfCheckingIdiom {
+  if (self = [super initWithNonnullReturnAndSelfCheckingIdiom]) {
+  }
+
+  return self; // no-warning
 }
 @end
