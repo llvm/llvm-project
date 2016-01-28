@@ -39,8 +39,10 @@ TypedefUnion tdu;
 TypedefEnum tde;
 TypedefStruct tds;
 
+InAnonymousNamespace anon;
+
 void foo() {
-  GlobalStruct.i = GlobalUnion.i = GlobalEnum;
+  anon.i = GlobalStruct.i = GlobalUnion.i = GlobalEnum;
 }
 
 // CHECK: ![[NS:.*]] = !DINamespace(name: "DebugCXX", scope: ![[MOD:[0-9]+]],
@@ -92,5 +94,11 @@ void foo() {
 // CHECK-SAME:              type: ![[GLOBAL_STRUCT:[0-9]+]]
 // CHECK: ![[GLOBAL_STRUCT]] = !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:                elements: !{{[0-9]+}})
+
+// CHECK: !DIGlobalVariable(name: "anon",
+// CHECK-SAME:              type: ![[GLOBAL_ANON:[0-9]+]]
+// CHECK: ![[GLOBAL_ANON]] = !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME:              name: "InAnonymousNamespace", {{.*}}DIFlagFwdDecl)
+
 
 // CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: !"_ZTSN8DebugCXX6StructE", line: 24)

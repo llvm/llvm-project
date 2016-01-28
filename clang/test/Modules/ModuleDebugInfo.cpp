@@ -81,4 +81,8 @@
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME-NOT:         name:
 
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME:             name: "InAnonymousNamespace",
+// CHECK-SAME:             elements: !{{[0-9]+}})
+
 // CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"
