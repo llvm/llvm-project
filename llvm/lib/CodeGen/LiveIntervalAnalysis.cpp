@@ -1021,172 +1021,182 @@ private:
   }
 
   /// Update LR to reflect an instruction has been moved downwards from OldIdx
-  /// to NewIdx.
-  ///
-  /// 1. Live def at OldIdx:
-  ///    Move def to NewIdx, assert endpoint after NewIdx.
-  ///
-  /// 2. Live def at OldIdx, killed at NewIdx:
-  ///    Change to dead def at NewIdx.
-  ///    (Happens when bundling def+kill together).
-  ///
-  /// 3. Dead def at OldIdx:
-  ///    Move def to NewIdx, possibly across another live value.
-  ///
-  /// 4. Def at OldIdx AND at NewIdx:
-  ///    Remove segment [OldIdx;NewIdx) and value defined at OldIdx.
-  ///    (Happens when bundling multiple defs together).
-  ///
-  /// 5. Value read at OldIdx, killed before NewIdx:
-  ///    Extend kill to NewIdx.
-  ///
+  /// to NewIdx (OldIdx < NewIdx).
   void handleMoveDown(LiveRange &LR) {
-    // First look for a kill at OldIdx.
-    LiveRange::iterator I = LR.find(OldIdx.getBaseIndex());
     LiveRange::iterator E = LR.end();
-    // Is LR even live at OldIdx?
-    if (I == E || SlotIndex::isEarlierInstr(OldIdx, I->start))
+    // Segment going into OldIdx.
+    LiveRange::iterator OldIdxIn = LR.find(OldIdx.getBaseIndex());
+
+    // No value live before or after OldIdx? Nothing to do.
+    if (OldIdxIn == E || SlotIndex::isEarlierInstr(OldIdx, OldIdxIn->start))
       return;
 
-    // Handle a live-in value.
-    if (!SlotIndex::isSameInstr(I->start, OldIdx)) {
-      bool isKill = SlotIndex::isSameInstr(OldIdx, I->end);
+    LiveRange::iterator OldIdxOut;
+    // Do we have a value live-in to OldIdx?
+    if (SlotIndex::isEarlierInstr(OldIdxIn->start, OldIdx)) {
       // If the live-in value already extends to NewIdx, there is nothing to do.
-      if (!SlotIndex::isEarlierInstr(I->end, NewIdx))
+      if (SlotIndex::isEarlierEqualInstr(NewIdx, OldIdxIn->end))
         return;
       // Aggressively remove all kill flags from the old kill point.
       // Kill flags shouldn't be used while live intervals exist, they will be
       // reinserted by VirtRegRewriter.
-      if (MachineInstr *KillMI = LIS.getInstructionFromIndex(I->end))
+      if (MachineInstr *KillMI = LIS.getInstructionFromIndex(OldIdxIn->end))
         for (MIBundleOperands MO(KillMI); MO.isValid(); ++MO)
           if (MO->isReg() && MO->isUse())
             MO->setIsKill(false);
-      // Adjust I->end to reach NewIdx. This may temporarily make LR invalid by
-      // overlapping ranges. Case 5 above.
-      I->end = NewIdx.getRegSlot(I->end.isEarlyClobber());
-      // If this was a kill, there may also be a def. Otherwise we're done.
+      // Adjust OldIdxIn->end to reach NewIdx. This may temporarily make LR
+      // invalid by overlapping ranges. Case 5 above.
+      bool isKill = SlotIndex::isSameInstr(OldIdx, OldIdxIn->end);
+      OldIdxIn->end = NewIdx.getRegSlot(OldIdxIn->end.isEarlyClobber());
+      // If this was not a kill, then there was no def and we're done.
       if (!isKill)
         return;
-      ++I;
+
+      // Did we have a Def at OldIdx?
+      OldIdxOut = std::next(OldIdxIn);
+      if (OldIdxOut == E || !SlotIndex::isSameInstr(OldIdx, OldIdxOut->start))
+        return;
+    } else {
+      OldIdxOut = OldIdxIn;
     }
 
-    // Check for a def at OldIdx.
-    if (I == E || !SlotIndex::isSameInstr(OldIdx, I->start))
-      return;
-    // We have a def at OldIdx.
-    VNInfo *DefVNI = I->valno;
-    assert(DefVNI->def == I->start && "Inconsistent def");
-    DefVNI->def = NewIdx.getRegSlot(I->start.isEarlyClobber());
-    // If the defined value extends beyond NewIdx, just move the def down.
-    // This is case 1 above.
-    if (SlotIndex::isEarlierInstr(NewIdx, I->end)) {
-      I->start = DefVNI->def;
+    // If we are here then there is a Definition at OldIdx. OldIdxOut points
+    // to the segment starting there.
+    assert(OldIdxOut != E && SlotIndex::isSameInstr(OldIdx, OldIdxOut->start) &&
+           "No def?");
+    VNInfo *OldIdxVNI = OldIdxOut->valno;
+    assert(OldIdxVNI->def == OldIdxOut->start && "Inconsistent def");
+
+    // If the defined value extends beyond NewIdx, just move the beginning
+    // of the segment to NewIdx.
+    SlotIndex NewIdxDef = NewIdx.getRegSlot(OldIdxOut->start.isEarlyClobber());
+    if (SlotIndex::isEarlierInstr(NewIdxDef, OldIdxOut->end)) {
+      OldIdxVNI->def = NewIdxDef;
+      OldIdxOut->start = OldIdxVNI->def;
       return;
     }
-    // The remaining possibilities are now:
-    // 2. Live def at OldIdx, killed at NewIdx: isSameInstr(I->end, NewIdx).
-    // 3. Dead def at OldIdx: I->end = OldIdx.getDeadSlot().
-    // In either case, it is possible that there is an existing def at NewIdx.
-    assert((I->end == OldIdx.getDeadSlot() ||
-            SlotIndex::isSameInstr(I->end, NewIdx)) &&
+
+    // If we are here then we have a Definition at OldIdx which ends before
+    // NewIdx. Moving across unrelated defs is not allowed; That means we either
+    // had a dead-def at OldIdx or the OldIdxOut segment ends at NewIdx.
+    assert((OldIdxOut->end == OldIdx.getDeadSlot() ||
+            SlotIndex::isSameInstr(OldIdxOut->end, NewIdxDef)) &&
             "Cannot move def below kill");
-    LiveRange::iterator NewI = LR.advanceTo(I, NewIdx.getRegSlot());
-    if (NewI != E && SlotIndex::isSameInstr(NewI->start, NewIdx)) {
-      // There is an existing def at NewIdx, case 4 above. The def at OldIdx is
-      // coalesced into that value.
-      assert(NewI->valno != DefVNI && "Multiple defs of value?");
-      LR.removeValNo(DefVNI);
-      return;
+    // Is there an existing Def at NewIdx?
+    LiveRange::iterator AfterNewIdx
+      = LR.advanceTo(OldIdxOut, NewIdx.getRegSlot());
+    if (AfterNewIdx != E &&
+        SlotIndex::isSameInstr(AfterNewIdx->start, NewIdxDef)) {
+      // There is an existing def at NewIdx. The def at OldIdx is coalesced into
+      // that value.
+      assert(AfterNewIdx->valno != OldIdxVNI && "Multiple defs of value?");
+      LR.removeValNo(OldIdxVNI);
+    } else {
+      // There was no existing def at NewIdx. We need to create a dead def
+      // at NewIdx. Shift segments over the old OldIdxOut segment, this frees
+      // a new segment at the place where we want to construct the dead def.
+      //    |- OldIdxOut -| |- X0 -| ... |- Xn -| |- AfterNewIdx -|
+      // => |- X0/OldIdxOut -| ... |- Xn -| |- undef/NewS. -| |- AfterNewIdx -|
+      assert(AfterNewIdx != OldIdxOut && "Inconsistent iterators");
+      std::copy(std::next(OldIdxOut), AfterNewIdx, OldIdxOut);
+      // We can reuse OldIdxVNI now.
+      LiveRange::iterator NewSegment = std::prev(AfterNewIdx);
+      VNInfo *NewSegmentVNI = OldIdxVNI;
+      NewSegmentVNI->def = NewIdxDef;
+      *NewSegment = LiveRange::Segment(NewIdxDef, NewIdxDef.getDeadSlot(),
+                                       NewSegmentVNI);
     }
-    // There was no existing def at NewIdx. Turn *I into a dead def at NewIdx.
-    // If the def at OldIdx was dead, we allow it to be moved across other LR
-    // values. The new range should be placed immediately before NewI, move any
-    // intermediate ranges up.
-    assert(NewI != I && "Inconsistent iterators");
-    std::copy(std::next(I), NewI, I);
-    *std::prev(NewI)
-      = LiveRange::Segment(DefVNI->def, NewIdx.getDeadSlot(), DefVNI);
   }
 
   /// Update LR to reflect an instruction has been moved upwards from OldIdx
-  /// to NewIdx.
-  ///
-  /// 1. Live def at OldIdx:
-  ///    Hoist def to NewIdx.
-  ///
-  /// 2. Dead def at OldIdx:
-  ///    Hoist def+end to NewIdx, possibly move across other values.
-  ///
-  /// 3. Dead def at OldIdx AND existing def at NewIdx:
-  ///    Remove value defined at OldIdx, coalescing it with existing value.
-  ///
-  /// 4. Live def at OldIdx AND existing def at NewIdx:
-  ///    Remove value defined at NewIdx, hoist OldIdx def to NewIdx.
-  ///    (Happens when bundling multiple defs together).
-  ///
-  /// 5. Value killed at OldIdx:
-  ///    Hoist kill to NewIdx, then scan for last kill between NewIdx and
-  ///    OldIdx.
-  ///
+  /// to NewIdx (NewIdx < OldIdx).
   void handleMoveUp(LiveRange &LR, unsigned Reg, LaneBitmask LaneMask) {
-    // First look for a kill at OldIdx.
-    LiveRange::iterator I = LR.find(OldIdx.getBaseIndex());
     LiveRange::iterator E = LR.end();
-    // Is LR even live at OldIdx?
-    if (I == E || SlotIndex::isEarlierInstr(OldIdx, I->start))
+    // Segment going into OldIdx.
+    LiveRange::iterator OldIdxIn = LR.find(OldIdx.getBaseIndex());
+
+    // No value live before or after OldIdx? Nothing to do.
+    if (OldIdxIn == E || SlotIndex::isEarlierInstr(OldIdx, OldIdxIn->start))
       return;
 
-    // Handle a live-in value.
-    if (!SlotIndex::isSameInstr(I->start, OldIdx)) {
-      // If the live-in value isn't killed here, there is nothing to do.
-      if (!SlotIndex::isSameInstr(OldIdx, I->end))
+    LiveRange::iterator OldIdxOut;
+    // Do we have a value live-in to OldIdx?
+    if (SlotIndex::isEarlierInstr(OldIdxIn->start, OldIdx)) {
+      // If the live-in value isn't killed here, then we have no Def at
+      // OldIdx, moreover the value must be live at NewIdx so there is nothing
+      // to do.
+      bool isKill = SlotIndex::isSameInstr(OldIdx, OldIdxIn->end);
+      if (!isKill)
         return;
-      // Adjust I->end to end at NewIdx. If we are hoisting a kill above
-      // another use, we need to search for that use. Case 5 above.
-      I->end = NewIdx.getRegSlot(I->end.isEarlyClobber());
-      ++I;
-      // If OldIdx also defines a value, there couldn't have been another use.
-      if (I == E || !SlotIndex::isSameInstr(I->start, OldIdx)) {
-        // No def, search for the new kill.
+
+      // At this point we have to move OldIdxIn->end back to the nearest
+      // previous use but no further than NewIdx. Moreover OldIdx is a Def then
+      // we cannot have any intermediate uses or the move would be illegal.
+
+      OldIdxOut = std::next(OldIdxIn);
+      // Did we have a Def at OldIdx?
+      if (OldIdxOut == E || !SlotIndex::isSameInstr(OldIdx, OldIdxOut->start)) {
+        // No def, search for the nearest previous use.
         // This can never be an early clobber kill since there is no def.
-        std::prev(I)->end = findLastUseBefore(Reg, LaneMask).getRegSlot();
+        OldIdxIn->end = findLastUseBefore(Reg, LaneMask).getRegSlot();
+        // We are done if there is no def at OldIdx.
         return;
+      } else {
+        // There can't have been any intermediate uses or defs, so move
+        // OldIdxIn->end to NewIdx.
+        OldIdxIn->end = NewIdx.getRegSlot(OldIdxIn->end.isEarlyClobber());
+      }
+    } else {
+      OldIdxOut = OldIdxIn;
+    }
+
+    // If we are here then there is a Definition at OldIdx. OldIdxOut points
+    // to the segment starting there.
+    assert(OldIdxOut != E && SlotIndex::isSameInstr(OldIdx, OldIdxOut->start) &&
+           "No def?");
+    VNInfo *OldIdxVNI = OldIdxOut->valno;
+    assert(OldIdxVNI->def == OldIdxOut->start && "Inconsistent def");
+    bool OldIdxDefIsDead = OldIdxOut->end.isDead();
+
+    // Is there an existing def at NewIdx?
+    SlotIndex NewIdxDef = NewIdx.getRegSlot(OldIdxOut->start.isEarlyClobber());
+    LiveRange::iterator NewIdxOut = LR.find(NewIdx.getRegSlot());
+    if (SlotIndex::isSameInstr(NewIdxOut->start, NewIdx)) {
+      assert(NewIdxOut->valno != OldIdxVNI &&
+             "Same value defined more than once?");
+      // If OldIdx was a dead def remove it.
+      if (!OldIdxDefIsDead) {
+        // Case 3: Remove segment starting at NewIdx and move begin of OldIdxOut
+        // to NewIdx so it can take its place.
+        OldIdxVNI->def = NewIdxDef;
+        OldIdxOut->start = NewIdxDef;
+        LR.removeValNo(NewIdxOut->valno);
+      } else {
+        // Case 4: Remove the dead def at OldIdx.
+        LR.removeValNo(OldIdxVNI);
+      }
+    } else {
+      // Previously nothing was live after NewIdx, so all we have to do now is
+      // move the begin of OldIdxOut to NewIdx.
+      if (!OldIdxDefIsDead) {
+        // Leave the end point of a live def.
+        OldIdxVNI->def = NewIdxDef;
+        OldIdxOut->start = NewIdxDef;
+      } else {
+        // OldIdxVNI is a dead def. It may have been moved across other values
+        // in LR, so move OldIdxOut up to NewIdxOut. Slide [NewIdxOut;OldIdxOut)
+        // down one position.
+        //    |- X0/NewIdxOut -| ... |- Xn-1 -| |- Xn/OldIdxOut -| |- next - |
+        // => |- undef/NewIdxOut -| |- X0 -| ... |- Xn-1 -| |- next -|
+        std::copy_backward(NewIdxOut, OldIdxOut, std::next(OldIdxOut));
+        // OldIdxVNI can be reused now to build a new dead def segment.
+        LiveRange::iterator NewSegment = NewIdxOut;
+        VNInfo *NewSegmentVNI = OldIdxVNI;
+        *NewSegment = LiveRange::Segment(NewIdxDef, NewIdxDef.getDeadSlot(),
+                                         NewSegmentVNI);
+        NewSegmentVNI->def = NewIdxDef;
       }
     }
-
-    // Now deal with the def at OldIdx.
-    assert(I != E && SlotIndex::isSameInstr(I->start, OldIdx) && "No def?");
-    VNInfo *DefVNI = I->valno;
-    assert(DefVNI->def == I->start && "Inconsistent def");
-    DefVNI->def = NewIdx.getRegSlot(I->start.isEarlyClobber());
-
-    // Check for an existing def at NewIdx.
-    LiveRange::iterator NewI = LR.find(NewIdx.getRegSlot());
-    if (SlotIndex::isSameInstr(NewI->start, NewIdx)) {
-      assert(NewI->valno != DefVNI && "Same value defined more than once?");
-      // There is an existing def at NewIdx.
-      if (I->end.isDead()) {
-        // Case 3: Remove the dead def at OldIdx.
-        LR.removeValNo(DefVNI);
-        return;
-      }
-      // Case 4: Replace def at NewIdx with live def at OldIdx.
-      I->start = DefVNI->def;
-      LR.removeValNo(NewI->valno);
-      return;
-    }
-
-    // There is no existing def at NewIdx. Hoist DefVNI.
-    if (!I->end.isDead()) {
-      // Leave the end point of a live def.
-      I->start = DefVNI->def;
-      return;
-    }
-
-    // DefVNI is a dead def. It may have been moved across other values in LR,
-    // so move I up to NewI. Slide [NewI;I) down one position.
-    std::copy_backward(NewI, I, std::next(I));
-    *NewI = LiveRange::Segment(DefVNI->def, NewIdx.getDeadSlot(), DefVNI);
   }
 
   void updateRegMaskSlots() {

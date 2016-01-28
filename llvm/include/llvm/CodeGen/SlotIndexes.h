@@ -213,6 +213,12 @@ namespace llvm {
       return A.listEntry()->getIndex() < B.listEntry()->getIndex();
     }
 
+    /// Return true if A referes to the same or an earlier instruction as B.
+    /// This is equivalent to !isEarlierInstr(B, A).
+    static bool isEarlierEqualInstr(SlotIndex A, SlotIndex B) {
+      return !isEarlierInstr(B, A);
+    }
+
     /// Return the distance from this index to the given one.
     int distance(SlotIndex other) const {
       return other.getIndex() - getIndex();
