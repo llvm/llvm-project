@@ -1378,7 +1378,7 @@ FindObjCPropertyAndIvarDeclsWithOrigin (unsigned int current_id,
     StringRef name(name_str.c_str());
     IdentifierInfo &name_identifier(origin_iface_decl->getASTContext().Idents.get(name));
 
-    DeclFromUser<ObjCPropertyDecl> origin_property_decl(origin_iface_decl->FindPropertyDeclaration(&name_identifier, ObjCPropertyDecl::OBJC_PR_query_instance));
+    DeclFromUser<ObjCPropertyDecl> origin_property_decl(origin_iface_decl->FindPropertyDeclaration(&name_identifier, ObjCPropertyQueryKind::OBJC_PR_query_instance));
 
     bool found = false;
 

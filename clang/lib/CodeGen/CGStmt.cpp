@@ -271,9 +271,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S) {
   case Stmt::OMPTaskLoopSimdDirectiveClass:
     EmitOMPTaskLoopSimdDirective(cast<OMPTaskLoopSimdDirective>(*S));
     break;
-case Stmt::OMPDistributeDirectiveClass:
+  case Stmt::OMPDistributeDirectiveClass:
     EmitOMPDistributeDirective(cast<OMPDistributeDirective>(*S));
-	break;
+    break;
   }
 }
 

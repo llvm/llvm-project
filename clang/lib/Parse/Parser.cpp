@@ -883,8 +883,14 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
   if (Tok.is(tok::semi)) {
     ProhibitAttributes(attrs);
     ConsumeToken();
-    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS, DS);
+    RecordDecl *AnonRecord = nullptr;
+    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
+                                                       DS, AnonRecord);
     DS.complete(TheDecl);
+    if (AnonRecord) {
+      Decl* decls[] = {AnonRecord, TheDecl};
+      return Actions.BuildDeclaratorGroup(decls, /*TypeMayContainAuto=*/false);
+    }
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 

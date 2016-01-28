@@ -615,7 +615,8 @@ ClassImplementsAllMethodsAndProperties(ASTContext &Ctx,
         // or dynamic declaration. Class is implementing a property coming from
         // another protocol. This still makes the target protocol as conforming.
         if (!ImpDecl->FindPropertyImplDecl(
-                                  Property->getDeclName().getAsIdentifierInfo()))
+                                  Property->getDeclName().getAsIdentifierInfo(),
+                                  Property->getQueryKind()))
           return false;
       }
       else if (ObjCPropertyDecl *ClassProperty = dyn_cast<ObjCPropertyDecl>(R[0])) {

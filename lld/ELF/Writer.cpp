@@ -43,7 +43,7 @@ public:
 private:
   void copyLocalSymbols();
   void addReservedSymbols();
-  void createSections();
+  bool createSections();
   void addPredefinedSections();
 
   template <bool isRela>
@@ -156,7 +156,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->DiscardAll)
     copyLocalSymbols();
   addReservedSymbols();
-  createSections();
+  if (!createSections())
+    return;
   assignAddresses();
   fixAbsoluteSymbols();
   openFile(Config->OutputFile);
@@ -382,7 +383,7 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if (Config->NoInhibitExec)
     warning(Msg);
   else
-    fatal(Msg);
+    error(Msg);
 }
 
 template <class ELFT>
@@ -796,7 +797,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
 }
 
 // Create output section objects and add them to OutputSections.
-template <class ELFT> void Writer<ELFT>::createSections() {
+template <class ELFT> bool Writer<ELFT>::createSections() {
   // Add .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
   if (needsInterpSection())
@@ -887,6 +888,11 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (isOutputDynamic() && includeInDynamicSymtab(*Body))
       Out<ELFT>::DynSymTab->addSymbol(Body);
   }
+
+  // Do not proceed if there was an undefined symbol.
+  if (HasError)
+    return false;
+
   addCommonSymbols(CommonSymbols);
   addCopyRelSymbols(CopyRelSymbols);
 
@@ -915,6 +921,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
     if (Sec != Out<ELFT>::DynStrTab)
       Sec->finalize();
+  return true;
 }
 
 // This function add Out<ELFT>::* sections to OutputSections.

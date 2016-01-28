@@ -658,7 +658,8 @@ bool ObjCPropertyOpBuilder::findSetter(bool warn) {
         SmallString<100> PropertyName = thisPropertyName;
         PropertyName[0] = front;
         IdentifierInfo *AltMember = &S.PP.getIdentifierTable().get(PropertyName);
-        if (ObjCPropertyDecl *prop1 = IFace->FindPropertyDeclaration(AltMember))
+        if (ObjCPropertyDecl *prop1 = IFace->FindPropertyDeclaration(
+                AltMember, prop->getQueryKind()))
           if (prop != prop1 && (prop1->getSetterMethodDecl() == setter)) {
             S.Diag(RefExpr->getExprLoc(), diag::error_property_setter_ambiguous_use)
               << prop << prop1 << setter->getSelector();

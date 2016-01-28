@@ -4061,7 +4061,8 @@ Decl *ASTNodeImporter::VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D) {
   }
 
   ObjCPropertyImplDecl *ToImpl
-    = InImpl->FindPropertyImplDecl(Property->getIdentifier());
+    = InImpl->FindPropertyImplDecl(Property->getIdentifier(),
+                                   Property->getQueryKind());
   if (!ToImpl) {    
     ToImpl = ObjCPropertyImplDecl::Create(Importer.getToContext(), DC,
                                           Importer.Import(D->getLocStart()),

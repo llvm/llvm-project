@@ -3607,9 +3607,11 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
 
 /// ParsedFreeStandingDeclSpec - This method is invoked when a declspec with
 /// no declarator (e.g. "struct foo;") is parsed.
-Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
-                                       DeclSpec &DS) {
-  return ParsedFreeStandingDeclSpec(S, AS, DS, MultiTemplateParamsArg());
+Decl *
+Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
+                                 RecordDecl *&AnonRecord) {
+  return ParsedFreeStandingDeclSpec(S, AS, DS, MultiTemplateParamsArg(), false,
+                                    AnonRecord);
 }
 
 // The MS ABI changed between VS2013 and VS2015 with regard to numbers used to
@@ -3715,10 +3717,11 @@ static unsigned GetDiagnosticTypeSpecifierID(DeclSpec::TST T) {
 /// ParsedFreeStandingDeclSpec - This method is invoked when a declspec with
 /// no declarator (e.g. "struct foo;") is parsed. It also accepts template
 /// parameters to cope with template friend declarations.
-Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
-                                       DeclSpec &DS,
-                                       MultiTemplateParamsArg TemplateParams,
-                                       bool IsExplicitInstantiation) {
+Decl *
+Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
+                                 MultiTemplateParamsArg TemplateParams,
+                                 bool IsExplicitInstantiation,
+                                 RecordDecl *&AnonRecord) {
   Decl *TagD = nullptr;
   TagDecl *Tag = nullptr;
   if (DS.getTypeSpecType() == DeclSpec::TST_class ||
@@ -3813,9 +3816,19 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     if (!Record->getDeclName() && Record->isCompleteDefinition() &&
         DS.getStorageClassSpec() != DeclSpec::SCS_typedef) {
       if (getLangOpts().CPlusPlus ||
-          Record->getDeclContext()->isRecord())
+          Record->getDeclContext()->isRecord()) {
+        // If CurContext is a DeclContext that can contain statements,
+        // RecursiveASTVisitor won't visit the decls that
+        // BuildAnonymousStructOrUnion() will put into CurContext.
+        // Also store them here so that they can be part of the
+        // DeclStmt that gets created in this case.
+        // FIXME: Also return the IndirectFieldDecls created by
+        // BuildAnonymousStructOr union, for the same reason?
+        if (CurContext->isFunctionOrMethod())
+          AnonRecord = Record;
         return BuildAnonymousStructOrUnion(S, DS, AS, Record,
                                            Context.getPrintingPolicy());
+      }
 
       DeclaresAnything = false;
     }
@@ -4003,12 +4016,10 @@ static bool CheckAnonMemberRedeclaration(Sema &SemaRef,
 ///
 /// This routine is recursive, injecting the names of nested anonymous
 /// structs/unions into the owning context and scope as well.
-static bool InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S,
-                                         DeclContext *Owner,
-                                         RecordDecl *AnonRecord,
-                                         AccessSpecifier AS,
-                                         SmallVectorImpl<NamedDecl *> &Chaining,
-                                         bool MSAnonStruct) {
+static bool
+InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
+                                    RecordDecl *AnonRecord, AccessSpecifier AS,
+                                    SmallVectorImpl<NamedDecl *> &Chaining) {
   bool Invalid = false;
 
   // Look every FieldDecl and IndirectFieldDecl with a name.
@@ -4351,8 +4362,7 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
   SmallVector<NamedDecl*, 2> Chain;
   Chain.push_back(Anon);
 
-  if (InjectAnonymousStructOrUnionMembers(*this, S, Owner, Record, AS,
-                                          Chain, false))
+  if (InjectAnonymousStructOrUnionMembers(*this, S, Owner, Record, AS, Chain))
     Invalid = true;
 
   if (VarDecl *NewVD = dyn_cast<VarDecl>(Anon)) {
@@ -4424,7 +4434,7 @@ Decl *Sema::BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
   if (RequireCompleteType(Anon->getLocation(), RecTy,
                           diag::err_field_incomplete) ||
       InjectAnonymousStructOrUnionMembers(*this, S, CurContext, RecordDef,
-                                          AS_none, Chain, true)) {
+                                          AS_none, Chain)) {
     Anon->setInvalidDecl();
     ParentDecl->setInvalidDecl();
   }
