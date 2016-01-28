@@ -135,10 +135,10 @@ private:
 
     JITSymbol::GetAddressFtor getSymbolMaterializer(std::string Name) override {
       return
-        [this, Name, &Finalized]() {
+        [this, Name]() {
           // The symbol may be materialized between the creation of this lambda
           // and its execution, so we need to double check.
-          if (!Finalized)
+          if (!this->Finalized)
             finalize();
           return getSymbol(Name, false).getAddress();
         };
