@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ProfileData/CoverageMapping.h"
 #include "llvm/ProfileData/CoverageMappingReader.h"
@@ -932,7 +933,7 @@ void CoverageMappingModuleGen::addFunctionMappingRecord(
   if (!IsUsed)
     FunctionNames.push_back(
         llvm::ConstantExpr::getBitCast(NamePtr, llvm::Type::getInt8PtrTy(Ctx)));
-  CoverageMappings += CoverageMapping;
+  CoverageMappings.push_back(CoverageMapping);
 
   if (CGM.getCodeGenOpts().DumpCoverageMapping) {
     // Dump the coverage mapping data for this function by decoding the
@@ -978,8 +979,10 @@ void CoverageMappingModuleGen::emit() {
   std::string FilenamesAndCoverageMappings;
   llvm::raw_string_ostream OS(FilenamesAndCoverageMappings);
   CoverageFilenamesSectionWriter(FilenameRefs).write(OS);
-  OS << CoverageMappings;
-  size_t CoverageMappingSize = CoverageMappings.size();
+  std::string RawCoverageMappings =
+      llvm::join(CoverageMappings.begin(), CoverageMappings.end(), "");
+  OS << RawCoverageMappings;
+  size_t CoverageMappingSize = RawCoverageMappings.size();
   size_t FilenamesSize = OS.str().size() - CoverageMappingSize;
   // Append extra zeroes if necessary to ensure that the size of the filenames
   // and coverage mappings is a multiple of 8.
