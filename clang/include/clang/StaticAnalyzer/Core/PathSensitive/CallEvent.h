@@ -67,7 +67,7 @@ public:
   /// call. Omit this parameter to match every occurance of call with a given
   /// name regardless the number of arguments.
   CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
-      : FuncName(FuncName), RequiredArgs(RequiredArgs) {}
+      : II(nullptr), FuncName(FuncName), RequiredArgs(RequiredArgs) {}
 };
 
 template<typename T = CallEvent>
