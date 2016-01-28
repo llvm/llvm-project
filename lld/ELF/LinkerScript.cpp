@@ -86,7 +86,7 @@ void LinkerScript::run() {
     } else if (Tok == "SECTIONS") {
       readSections();
     } else {
-      error("unknown directive: " + Tok);
+      fatal("unknown directive: " + Tok);
     }
   }
 }
@@ -103,7 +103,7 @@ std::vector<StringRef> LinkerScript::tokenize(StringRef S) {
     if (S.startswith("\"")) {
       size_t E = S.find("\"", 1);
       if (E == StringRef::npos)
-        error("unclosed quote");
+        fatal("unclosed quote");
       Ret.push_back(S.substr(1, E - 1));
       S = S.substr(E + 1);
       continue;
@@ -128,7 +128,7 @@ StringRef LinkerScript::skipSpace(StringRef S) {
     if (S.startswith("/*")) {
       size_t E = S.find("*/", 2);
       if (E == StringRef::npos)
-        error("unclosed comment in a linker script");
+        fatal("unclosed comment in a linker script");
       S = S.substr(E + 2);
       continue;
     }
@@ -141,13 +141,13 @@ StringRef LinkerScript::skipSpace(StringRef S) {
 
 StringRef LinkerScript::next() {
   if (atEOF())
-    error("unexpected EOF");
+    fatal("unexpected EOF");
   return Tokens[Pos++];
 }
 
 bool LinkerScript::skip(StringRef Tok) {
   if (atEOF())
-    error("unexpected EOF");
+    fatal("unexpected EOF");
   if (Tok != Tokens[Pos])
     return false;
   ++Pos;
@@ -157,7 +157,7 @@ bool LinkerScript::skip(StringRef Tok) {
 void LinkerScript::expect(StringRef Expect) {
   StringRef Tok = next();
   if (Tok != Expect)
-    error(Expect + " expected, but got " + Tok);
+    fatal(Expect + " expected, but got " + Tok);
 }
 
 void LinkerScript::addFile(StringRef S) {
@@ -184,7 +184,7 @@ void LinkerScript::addFile(StringRef S) {
   } else {
     std::string Path = findFromSearchPaths(S);
     if (Path.empty())
-      error("Unable to find " + S);
+      fatal("Unable to find " + S);
     Driver->addFile(Saver.save(Path));
   }
 }
@@ -238,7 +238,7 @@ void LinkerScript::readGroup() {
 void LinkerScript::readInclude() {
   StringRef Tok = next();
   auto MBOrErr = MemoryBuffer::getFile(Tok);
-  error(MBOrErr, "cannot open " + Tok);
+  fatal(MBOrErr, "cannot open " + Tok);
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   StringRef S = Saver.save(MB->getMemBufferRef().getBuffer());
   std::vector<StringRef> V = tokenize(S);
@@ -269,7 +269,7 @@ void LinkerScript::readOutputFormat() {
   if (Tok == ")")
    return;
   if (Tok != ",")
-    error("unexpected token: " + Tok);
+    fatal("unexpected token: " + Tok);
   next();
   expect(",");
   next();

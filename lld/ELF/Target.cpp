@@ -46,28 +46,28 @@ template <unsigned N> static void checkInt(int64_t V, uint32_t Type) {
   if (isInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Relocation " + S + " out of range");
+  fatal("Relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkUInt(uint64_t V, uint32_t Type) {
   if (isUInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Relocation " + S + " out of range");
+  fatal("Relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkIntUInt(uint64_t V, uint32_t Type) {
   if (isInt<N>(V) || isUInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Relocation " + S + " out of range");
+  fatal("Relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
   if ((V & (N - 1)) == 0)
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Improper alignment for relocation " + S);
+  fatal("Improper alignment for relocation " + S);
 }
 
 template <class ELFT> bool isGnuIFunc(const SymbolBody &S) {
@@ -260,7 +260,7 @@ TargetInfo *createTarget() {
     case ELF32BEKind:
       return new MipsTargetInfo<ELF32BE>();
     default:
-      error("Unsupported MIPS target");
+      fatal("Unsupported MIPS target");
     }
   case EM_PPC:
     return new PPCTargetInfo();
@@ -269,7 +269,7 @@ TargetInfo *createTarget() {
   case EM_X86_64:
     return new X86_64TargetInfo();
   }
-  error("Unknown target machine");
+  fatal("Unknown target machine");
 }
 
 TargetInfo::~TargetInfo() {}
@@ -463,7 +463,7 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write32le(Loc, Out<ELF32LE>::TlsPhdr->p_memsz - SA);
     break;
   default:
-    error("unrecognized reloc " + Twine(Type));
+    fatal("unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -926,7 +926,7 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write32le(Loc, SA - P);
     break;
   default:
-    error("unrecognized reloc " + Twine(Type));
+    fatal("unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -969,7 +969,7 @@ void PPCTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write16be(Loc, applyPPCLo(SA));
     break;
   default:
-    error("unrecognized reloc " + Twine(Type));
+    fatal("unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1182,7 +1182,7 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write64be(Loc, SA);
     break;
   default:
-    error("unrecognized reloc " + Twine(Type));
+    fatal("unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1201,7 +1201,7 @@ unsigned AArch64TargetInfo::getDynReloc(unsigned Type) const {
   if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
     return Type;
   StringRef S = getELFRelocationTypeName(EM_AARCH64, Type);
-  error("Relocation " + S + " cannot be used when making a shared object; "
+  fatal("Relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
 }
 
@@ -1421,7 +1421,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     break;
   }
   default:
-    error("unrecognized reloc " + Twine(Type));
+    fatal("unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1472,7 +1472,7 @@ unsigned MipsTargetInfo<ELFT>::getDynReloc(unsigned Type) const {
   if (Type == R_MIPS_32 || Type == R_MIPS_64)
     return R_MIPS_REL32;
   StringRef S = getELFRelocationTypeName(EM_MIPS, Type);
-  error("Relocation " + S + " cannot be used when making a shared object; "
+  fatal("Relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
 }
 
@@ -1600,7 +1600,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     break;
   }
   default:
-    error("unrecognized reloc " + Twine(Type));
+    fatal("unrecognized reloc " + Twine(Type));
   }
 }
 

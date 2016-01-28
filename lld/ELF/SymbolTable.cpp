@@ -41,7 +41,7 @@ static void checkCompatibility(InputFile *FileP) {
   StringRef B = Config->Emulation;
   if (B.empty())
     B = Config->FirstElf->getName();
-  error(A + " is incompatible with " + B);
+  fatal(A + " is incompatible with " + B);
 }
 
 // Add symbols in File to the symbol table.
@@ -182,7 +182,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
   }
 
   if (New->isTls() != Existing->isTls())
-    error("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
+    fatal("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
 
   // compare() returns -1, 0, or 1 if the lhs symbol is less preferable,
   // equivalent (conflicting), or more preferable, respectively.
@@ -190,7 +190,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
   if (Comp == 0) {
     std::string S = "duplicate symbol: " + conflictMsg(Existing, New);
     if (!Config->AllowMultipleDefinition)
-      error(S);
+      fatal(S);
     warning(S);
     return;
   }

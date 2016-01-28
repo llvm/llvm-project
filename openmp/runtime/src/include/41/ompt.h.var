@@ -171,7 +171,10 @@
     macro (ompt_event_destroy_lock,             ompt_wait_callback_t,          59) /* lock destruction */       \
     macro (ompt_event_destroy_nest_lock,        ompt_wait_callback_t,          60) /* nest lock destruction */  \
                                                                                                                 \
-    macro (ompt_event_flush,                    ompt_callback_t,               61) /* after executing flush */
+    macro (ompt_event_flush,                    ompt_callback_t,               61) /* after executing flush */  \
+                                                                                                                \
+    macro (ompt_event_task_dependences,         ompt_task_dependences_callback_t, 69) /* report task dependences  */\
+    macro (ompt_event_task_dependence_pair,     ompt_task_pair_callback_t,     70) /* report task dependence pair */
 
 
 
@@ -204,6 +207,23 @@ typedef struct ompt_frame_s {
     void *exit_runtime_frame;    /* next frame is user code     */
     void *reenter_runtime_frame; /* previous frame is user code */
 } ompt_frame_t;
+
+
+/*---------------------
+ * dependences types
+ *---------------------*/
+
+typedef enum ompt_task_dependence_flag_e {
+    // a two bit field for the dependence type
+    ompt_task_dependence_type_out   = 1,
+    ompt_task_dependence_type_in    = 2,
+    ompt_task_dependence_type_inout = 3,
+} ompt_task_dependence_flag_t;
+
+typedef struct ompt_task_dependence_s {
+    void *variable_addr;
+    uint32_t  dependence_flags;
+} ompt_task_dependence_t;
 
 
 /*****************************************************************************
@@ -323,6 +343,13 @@ typedef void (*ompt_new_task_callback_t) (
     ompt_frame_t *parent_task_frame,  /* frame data for parent task   */
     ompt_task_id_t  new_task_id,      /* id of created task           */
     void *task_function               /* pointer to outlined function */
+);
+
+/* task dependences */
+typedef void (*ompt_task_dependences_callback_t) (
+    ompt_task_id_t task_id,            /* ID of task with dependences */
+    const ompt_task_dependence_t *deps,/* vector of task dependences  */
+    int ndeps                          /* number of dependences       */
 );
 
 /* program */

@@ -66,9 +66,7 @@ git clone http://llvm.org/git/clang.git ${CLANG_SRC}
 </pre>
 <h3 id="build">Build Polly</h3>
 
-To build Polly you can either use the autoconf or the cmake build system. At the
-moment only the autoconf build system allows to run the llvm test-suite and only
-the cmake build system allows to run 'make check-polly'.
+To build Polly use the cmake build system.
 
 <h4>Set the directory layout:</h4>
 <pre>
@@ -81,12 +79,6 @@ cd ${LLVM_BUILD}
 
 <pre>
 cmake ${LLVM_SRC} && make
-</pre>
-
-<h4> Autoconf </h4>
-
-<pre>
-${LLVM_SRC}/configure && make
 </pre>
 
 <h3> Test Polly</h3>
@@ -182,9 +174,7 @@ cd ${BASE}
 
 <h3 id="build">Build Polly</h3>
 
-To build Polly you can either use the autoconf or the cmake build system. At the
-moment only the autoconf build system allows to run the llvm test-suite and only
-the cmake build system allows to run 'make check-polly'.
+To build Polly use the cmake build system.
 
 <h4>Set the directory layout:</h4>
 <pre>
@@ -197,13 +187,6 @@ cd ${LLVM_BUILD}
 
 <pre>
 cmake -DCMAKE_PREFIX_PATH=${ISL_INSTALL} ${LLVM_SRC}
-make
-</pre>
-
-<h4> Autoconf </h4>
-
-<pre>
-${LLVM_SRC}/configure --with-isl=${ISL_INSTALL}
 make
 </pre>
 
@@ -255,7 +238,7 @@ export PATH=$PATH:`pwd`/bin
 </pre>
 
 You also need to install scoplib-0.2.0 and provide its location to
-Polly's cmake or configure call.
+Polly's cmake call.
 
 <pre>
 wget <a

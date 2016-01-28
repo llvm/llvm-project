@@ -43,7 +43,7 @@ public:
 private:
   void copyLocalSymbols();
   void addReservedSymbols();
-  void createSections();
+  bool createSections();
   void addPredefinedSections();
 
   template <bool isRela>
@@ -156,13 +156,14 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->DiscardAll)
     copyLocalSymbols();
   addReservedSymbols();
-  createSections();
+  if (!createSections())
+    return;
   assignAddresses();
   fixAbsoluteSymbols();
   openFile(Config->OutputFile);
   writeHeader();
   writeSections();
-  error(Buffer->commit());
+  fatal(Buffer->commit());
 }
 
 namespace {
@@ -421,7 +422,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
     for (const Elf_Sym &Sym : F->getLocalSymbols()) {
       ErrorOr<StringRef> SymNameOrErr = Sym.getName(F->getStringTable());
-      error(SymNameOrErr);
+      fatal(SymNameOrErr);
       StringRef SymName = *SymNameOrErr;
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
@@ -796,7 +797,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
 }
 
 // Create output section objects and add them to OutputSections.
-template <class ELFT> void Writer<ELFT>::createSections() {
+template <class ELFT> bool Writer<ELFT>::createSections() {
   // Add .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
   if (needsInterpSection())
@@ -887,6 +888,11 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (isOutputDynamic() && includeInDynamicSymtab(*Body))
       Out<ELFT>::DynSymTab->addSymbol(Body);
   }
+
+  // Do not proceed if there was an undefined symbol.
+  if (HasError)
+    return false;
+
   addCommonSymbols(CommonSymbols);
   addCopyRelSymbols(CopyRelSymbols);
 
@@ -915,6 +921,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
     if (Sec != Out<ELFT>::DynStrTab)
       Sec->finalize();
+  return true;
 }
 
 // This function add Out<ELFT>::* sections to OutputSections.
@@ -1318,7 +1325,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 template <class ELFT> void Writer<ELFT>::openFile(StringRef Path) {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Path, FileSize, FileOutputBuffer::F_executable);
-  error(BufferOrErr, "failed to open " + Path);
+  fatal(BufferOrErr, "failed to open " + Path);
   Buffer = std::move(*BufferOrErr);
 }
 

@@ -27,12 +27,6 @@ fi
 mkdir -p ${LLVM_BUILD}
 cd ${LLVM_BUILD}
 
-if which cmake ; then
-    cmake ${LLVM_SRC}
-    make -j$procs -l$procs
-    make check-polly
-else
-    ${LLVM_SRC}/configure
-    make -j$procs -l$procs
-    make check-polly -C tools/polly/test/
-fi
+cmake ${LLVM_SRC}
+make -j$procs -l$procs
+make check-polly

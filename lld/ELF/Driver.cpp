@@ -29,12 +29,14 @@ using namespace lld::elf2;
 Configuration *elf2::Config;
 LinkerDriver *elf2::Driver;
 
-void elf2::link(ArrayRef<const char *> Args) {
+bool elf2::link(ArrayRef<const char *> Args) {
+  HasError = false;
   Configuration C;
   LinkerDriver D;
   Config = &C;
   Driver = &D;
   Driver->main(Args.slice(1));
+  return !HasError;
 }
 
 static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
@@ -53,22 +55,22 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
   if (S == "aarch64linux")
     return {ELF64LEKind, EM_AARCH64};
   if (S == "i386pe" || S == "i386pep" || S == "thumb2pe")
-    error("Windows targets are not supported on the ELF frontend: " + S);
-  error("Unknown emulation: " + S);
+    fatal("Windows targets are not supported on the ELF frontend: " + S);
+  fatal("Unknown emulation: " + S);
 }
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
 static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
   ErrorOr<std::unique_ptr<Archive>> FileOrErr = Archive::create(MB);
-  error(FileOrErr, "Failed to parse archive");
+  fatal(FileOrErr, "Failed to parse archive");
   std::unique_ptr<Archive> File = std::move(*FileOrErr);
 
   std::vector<MemoryBufferRef> V;
   for (const ErrorOr<Archive::Child> &C : File->children()) {
-    error(C, "Could not get the child of the archive " + File->getFileName());
+    fatal(C, "Could not get the child of the archive " + File->getFileName());
     ErrorOr<MemoryBufferRef> MbOrErr = C->getMemoryBufferRef();
-    error(MbOrErr, "Could not get the buffer for a child of the archive " +
+    fatal(MbOrErr, "Could not get the buffer for a child of the archive " +
                        File->getFileName());
     V.push_back(*MbOrErr);
   }
@@ -82,7 +84,7 @@ void LinkerDriver::addFile(StringRef Path) {
   if (Config->Verbose)
     llvm::outs() << Path << "\n";
   auto MBOrErr = MemoryBuffer::getFile(Path);
-  error(MBOrErr, "cannot open " + Path);
+  fatal(MBOrErr, "cannot open " + Path);
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   OwningMBs.push_back(std::move(MB)); // take MB ownership
@@ -114,15 +116,15 @@ static void checkOptions(opt::InputArgList &Args) {
   // of executables or DSOs. We don't support that since the feature
   // does not seem to provide more value than the static archiver.
   if (Args.hasArg(OPT_relocatable))
-    error("-r option is not supported. Use 'ar' command instead.");
+    fatal("-r option is not supported. Use 'ar' command instead.");
 
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (Config->EMachine == EM_MIPS && Config->GnuHash)
-    error("The .gnu.hash section is not compatible with the MIPS target.");
+    fatal("The .gnu.hash section is not compatible with the MIPS target.");
 
   if (Config->EMachine == EM_AMDGPU && !Config->Entry.empty())
-    error("-e option is not valid for AMDGPU.");
+    fatal("-e option is not valid for AMDGPU.");
 }
 
 static StringRef
@@ -161,7 +163,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     link<ELF64BE>(Args);
     return;
   default:
-    error("-m or at least a .o file required");
+    fatal("-m or at least a .o file required");
   }
 }
 
@@ -217,7 +219,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_O)) {
     StringRef Val = Arg->getValue();
     if (Val.getAsInteger(10, Config->Optimize))
-      error("Invalid optimization level");
+      fatal("Invalid optimization level");
   }
 
   if (auto *Arg = Args.getLastArg(OPT_hash_style)) {
@@ -228,7 +230,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     } else if (S == "both") {
       Config->GnuHash = true;
     } else if (S != "sysv")
-      error("Unknown hash style: " + S);
+      fatal("Unknown hash style: " + S);
   }
 
   for (auto *Arg : Args.filtered(OPT_undefined))
@@ -267,7 +269,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
   }
 
   if (Files.empty())
-    error("no input files.");
+    fatal("no input files.");
 }
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {

@@ -20,8 +20,8 @@ namespace elf2 {
 
 extern class LinkerDriver *Driver;
 
-// Entry point of the ELF linker.
-void link(ArrayRef<const char *> Args);
+// Entry point of the ELF linker. Returns true on success.
+bool link(ArrayRef<const char *> Args);
 
 class LinkerDriver {
 public:

@@ -205,8 +205,7 @@ bool UniversalDriver::link(llvm::MutableArrayRef<const char *> args,
   case Flavor::old_gnu_ld:
     return GnuLdDriver::linkELF(args, diagnostics);
   case Flavor::gnu_ld:
-    elf2::link(args);
-    return true;
+    return elf2::link(args);
   case Flavor::darwin_ld:
     return DarwinLdDriver::linkMachO(args, diagnostics);
   case Flavor::win_link:

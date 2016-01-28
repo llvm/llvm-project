@@ -5504,8 +5504,10 @@ __kmp_launch_thread( kmp_info_t *this_thr )
         if ( TCR_SYNC_PTR(*pteam) && !TCR_4(__kmp_global.g.g_done) ) {
 #if OMPT_SUPPORT
             ompt_task_info_t *task_info;
+            ompt_parallel_id_t my_parallel_id;
             if (ompt_enabled) {
                 task_info = __ompt_get_taskinfo(0);
+                my_parallel_id = (*pteam)->t.ompt_team_info.parallel_id;
             }
 #endif
             /* we were just woken up, so run our new task */
@@ -5550,7 +5552,8 @@ __kmp_launch_thread( kmp_info_t *this_thr )
 #if OMPT_SUPPORT && OMPT_TRACE
             if (ompt_enabled) {
                 if (ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)) {
-                    int my_parallel_id = (*pteam)->t.ompt_team_info.parallel_id;
+                    // don't access *pteam here: it may have already been freed
+                    // by the master thread behind the barrier (possible race)
                     ompt_callbacks.ompt_callback(ompt_event_implicit_task_end)(
                         my_parallel_id, task_info->task_id);
                 }

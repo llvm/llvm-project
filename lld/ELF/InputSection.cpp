@@ -29,7 +29,7 @@ InputSectionBase<ELFT>::InputSectionBase(ObjectFile<ELFT> *File,
 
 template <class ELFT> StringRef InputSectionBase<ELFT>::getSectionName() const {
   ErrorOr<StringRef> Name = File->getObj().getSectionName(this->Header);
-  error(Name);
+  fatal(Name);
   return *Name;
 }
 
@@ -37,7 +37,7 @@ template <class ELFT>
 ArrayRef<uint8_t> InputSectionBase<ELFT>::getSectionData() const {
   ErrorOr<ArrayRef<uint8_t>> Ret =
       this->File->getObj().getSectionContents(this->Header);
-  error(Ret);
+  fatal(Ret);
   return *Ret;
 }
 
@@ -325,7 +325,7 @@ SplitInputSection<ELFT>::getRangeAndSize(uintX_t Offset) {
   StringRef Data((const char *)D.data(), D.size());
   uintX_t Size = Data.size();
   if (Offset >= Size)
-    error("Entry is past the end of the section");
+    fatal("Entry is past the end of the section");
 
   // Find the element this offset points to.
   auto I = std::upper_bound(
@@ -369,7 +369,7 @@ MipsReginfoInputSection<ELFT>::MipsReginfoInputSection(ObjectFile<ELFT> *F,
   // Initialize this->Reginfo.
   ArrayRef<uint8_t> D = this->getSectionData();
   if (D.size() != sizeof(Elf_Mips_RegInfo<ELFT>))
-    error("Invalid size of .reginfo section");
+    fatal("Invalid size of .reginfo section");
   Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(D.data());
 }
 

@@ -1384,7 +1384,7 @@ protected:
         
         if (argc == 1)
         {
-            const char* arg = command.GetArgumentAtIndex(1);
+            const char* arg = command.GetArgumentAtIndex(0);
             formatter_regex.reset(new RegularExpression());
             if (!formatter_regex->Compile(arg))
             {
