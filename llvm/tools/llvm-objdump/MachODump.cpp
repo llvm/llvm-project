@@ -7145,6 +7145,10 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
         break;
       }
       break;
+    default:
+      outs() << format(" %7d", cputype);
+      outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
+      break;
     }
     if ((cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64) {
       outs() << " LIB64";
