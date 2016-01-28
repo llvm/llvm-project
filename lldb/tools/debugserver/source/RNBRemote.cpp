@@ -4645,15 +4645,9 @@ RNBRemote::HandlePacket_qHostInfo (const char *p)
     uint64_t major, minor, patch;
     if (DNBGetOSVersionNumbers (&major, &minor, &patch))
     {
-        strm << "osmajor:" << major << ";";
-        strm << "osminor:" << minor << ";";
-        strm << "ospatch:" << patch << ";";
-
-        strm << "version:" << major << "." << minor;
-        if (patch != 0)
-        {
+        strm << "os_version:" << major << "." << minor;
+        if (patch != UINT64_MAX)
             strm << "." << patch;
-        }
         strm << ";";
     }
 

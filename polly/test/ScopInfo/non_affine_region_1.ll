@@ -41,8 +41,6 @@
 ; CHECK-NEXT:             [b] -> { Stmt_bb8[0] : b = 0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [b] -> { Stmt_bb8[i0] -> [0, 0] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [b] -> { Stmt_bb8[i0] -> MemRef_b[] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [b] -> { Stmt_bb8[i0] -> MemRef_x_1__phi[] };
 ; CHECK-NEXT:     Stmt_bb10__TO__bb18

@@ -65,6 +65,8 @@ class Scop;
 class ScopStmt;
 class ScopInfo;
 
+typedef DenseMap<ScopStmt *, Value *> OutgoingValueMapTy;
+
 //===---------------------------------------------------------------------===//
 
 /// @brief Enumeration of assumptions Polly can take.
@@ -1894,7 +1896,7 @@ class ScopInfo : public RegionPass {
   /// @param R          The region on which to build the data access dictionary.
   /// @param BoxedLoops The set of loops that are overapproximated in @p R.
   /// @param ScopRIL    The required invariant loads equivalence classes.
-  void buildMemoryAccess(Instruction *Inst, Loop *L, Region *R,
+  void buildMemoryAccess(MemAccInst Inst, Loop *L, Region *R,
                          const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
                          const InvariantLoadsSetTy &ScopRIL);
 
@@ -1977,7 +1979,7 @@ class ScopInfo : public RegionPass {
   /// @param Sizes       The array dimension's sizes.
   /// @param AccessValue Value read or written.
   /// @see ScopArrayInfo::MemoryKind
-  void addArrayAccess(Instruction *MemAccInst, MemoryAccess::AccessType Type,
+  void addArrayAccess(MemAccInst MemAccInst, MemoryAccess::AccessType Type,
                       Value *BaseAddress, unsigned ElemBytes, bool IsAffine,
                       ArrayRef<const SCEV *> Subscripts,
                       ArrayRef<const SCEV *> Sizes, Value *AccessValue);

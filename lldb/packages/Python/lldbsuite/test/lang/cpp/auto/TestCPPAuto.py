@@ -10,6 +10,7 @@ class CPPAutoTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureGcc("GCC does not generate complete debug info")
+    @expectedFailureAll(oslist=['windows'], bugnumber="llvm.org/pr26339")
     def test_with_run_command(self):
         """Test that auto types work in the expression parser"""
         self.build()

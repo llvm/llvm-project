@@ -758,11 +758,11 @@ bool ScopDetection::hasAffineMemoryAccesses(DetectionContext &Context) const {
   return true;
 }
 
-bool ScopDetection::isValidMemoryAccess(Instruction &Inst,
+bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
                                         DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
-  Value *Ptr = getPointerOperand(Inst);
+  Value *Ptr = Inst.getPointerOperand();
   Loop *L = LI->getLoopFor(Inst.getParent());
   const SCEV *AccessFunction = SE->getSCEVAtScope(Ptr, L);
   const SCEVUnknown *BasePointer;
@@ -771,26 +771,26 @@ bool ScopDetection::isValidMemoryAccess(Instruction &Inst,
   BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFunction));
 
   if (!BasePointer)
-    return invalid<ReportNoBasePtr>(Context, /*Assert=*/true, &Inst);
+    return invalid<ReportNoBasePtr>(Context, /*Assert=*/true, Inst);
 
   BaseValue = BasePointer->getValue();
 
   if (isa<UndefValue>(BaseValue))
-    return invalid<ReportUndefBasePtr>(Context, /*Assert=*/true, &Inst);
+    return invalid<ReportUndefBasePtr>(Context, /*Assert=*/true, Inst);
 
   // Check that the base address of the access is invariant in the current
   // region.
   if (!isInvariant(*BaseValue, CurRegion))
     return invalid<ReportVariantBasePtr>(Context, /*Assert=*/true, BaseValue,
-                                         &Inst);
+                                         Inst);
 
   AccessFunction = SE->getMinusSCEV(AccessFunction, BasePointer);
 
-  const SCEV *Size = SE->getElementSize(&Inst);
+  const SCEV *Size = SE->getElementSize(Inst);
   if (Context.ElementSize.count(BasePointer)) {
     if (Context.ElementSize[BasePointer] != Size)
       return invalid<ReportDifferentArrayElementSize>(Context, /*Assert=*/true,
-                                                      &Inst, BaseValue);
+                                                      Inst, BaseValue);
   } else {
     Context.ElementSize[BasePointer] = Size;
   }
@@ -803,7 +803,7 @@ bool ScopDetection::isValidMemoryAccess(Instruction &Inst,
       isVariantInNonAffineLoop = true;
 
   if (PollyDelinearize && !isVariantInNonAffineLoop) {
-    Context.Accesses[BasePointer].push_back({&Inst, AccessFunction});
+    Context.Accesses[BasePointer].push_back({Inst, AccessFunction});
 
     if (!isAffine(AccessFunction, Context, BaseValue))
       Context.NonAffineAccesses.insert(BasePointer);
@@ -811,7 +811,7 @@ bool ScopDetection::isValidMemoryAccess(Instruction &Inst,
     if (isVariantInNonAffineLoop ||
         !isAffine(AccessFunction, Context, BaseValue))
       return invalid<ReportNonAffineAccess>(Context, /*Assert=*/true,
-                                            AccessFunction, &Inst, BaseValue);
+                                            AccessFunction, Inst, BaseValue);
   }
 
   // FIXME: Think about allowing IntToPtrInst
@@ -853,7 +853,7 @@ bool ScopDetection::isValidMemoryAccess(Instruction &Inst,
       if (CanBuildRunTimeCheck)
         return true;
     }
-    return invalid<ReportAlias>(Context, /*Assert=*/true, &Inst, AS);
+    return invalid<ReportAlias>(Context, /*Assert=*/true, Inst, AS);
   }
 
   return true;
@@ -887,19 +887,14 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
   }
 
   // Check the access function.
-  if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst)) {
-    Context.hasStores |= isa<StoreInst>(Inst);
-    Context.hasLoads |= isa<LoadInst>(Inst);
-    if (auto *Load = dyn_cast<LoadInst>(&Inst))
-      if (!Load->isSimple())
-        return invalid<ReportNonSimpleMemoryAccess>(Context, /*Assert=*/true,
-                                                    &Inst);
-    if (auto *Store = dyn_cast<StoreInst>(&Inst))
-      if (!Store->isSimple())
-        return invalid<ReportNonSimpleMemoryAccess>(Context, /*Assert=*/true,
-                                                    &Inst);
+  if (auto MemInst = MemAccInst::dyn_cast(Inst)) {
+    Context.hasStores |= MemInst.isLoad();
+    Context.hasLoads |= MemInst.isStore();
+    if (!MemInst.isSimple())
+      return invalid<ReportNonSimpleMemoryAccess>(Context, /*Assert=*/true,
+                                                  &Inst);
 
-    return isValidMemoryAccess(Inst, Context);
+    return isValidMemoryAccess(MemInst, Context);
   }
 
   // We do not know this instruction, therefore we assume it is invalid.

@@ -357,7 +357,7 @@ private:
   /// @param Context The context of scop detection.
   ///
   /// @return True if the memory access is valid, false otherwise.
-  bool isValidMemoryAccess(Instruction &Inst, DetectionContext &Context) const;
+  bool isValidMemoryAccess(MemAccInst Inst, DetectionContext &Context) const;
 
   /// @brief Check if an instruction has any non trivial scalar dependencies
   ///        as part of a Scop.

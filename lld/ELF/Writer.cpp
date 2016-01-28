@@ -385,6 +385,34 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
     error(Msg);
 }
 
+template <class ELFT>
+static bool shouldKeepInSymtab(const ObjectFile<ELFT> &File, StringRef SymName,
+                               const typename ELFFile<ELFT>::Elf_Sym &Sym) {
+  if (Sym.getType() == STT_SECTION || Sym.getType() == STT_FILE)
+    return false;
+
+  InputSectionBase<ELFT> *Sec = File.getSection(Sym);
+  // If sym references a section in a discarded group, don't keep it.
+  if (Sec == &InputSection<ELFT>::Discarded)
+    return false;
+
+  if (Config->DiscardNone)
+    return true;
+
+  // In ELF assembly .L symbols are normally discarded by the assembler.
+  // If the assembler fails to do so, the linker discards them if
+  // * --discard-locals is used.
+  // * The symbol is in a SHF_MERGE section, which is normally the reason for
+  //   the assembler keeping the .L symbol.
+  if (!SymName.startswith(".L") && !SymName.empty())
+    return true;
+
+  if (Config->DiscardLocals)
+    return false;
+
+  return !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);
+}
+
 // Local symbols are not in the linker's symbol table. This function scans
 // each object file's symbol table to copy local symbols to the output.
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
@@ -397,7 +425,13 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       StringRef SymName = *SymNameOrErr;
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
+      if (Sym.st_shndx != SHN_ABS) {
+        InputSectionBase<ELFT> *Section = F->getSection(Sym);
+        if (!Section->isLive())
+          continue;
+      }
       Out<ELFT>::SymTab->addLocalSymbol(SymName);
+      F->KeptLocalSyms.push_back(&Sym);
     }
   }
 }

@@ -54,7 +54,6 @@
 # include <pthread_np.h>
 #endif
 
-
 #include <dirent.h>
 #include <ctype.h>
 #include <fcntl.h>
@@ -754,7 +753,6 @@ __kmp_launch_worker( void *thr )
     return exit_val;
 }
 
-
 /* The monitor thread controls all of the threads in the complex */
 
 static void*
@@ -994,117 +992,77 @@ __kmp_create_worker( int gtid, kmp_info_t *th, size_t stack_size )
     KMP_MB();       /* Flush all pending memory write invalidates.  */
 
 #ifdef KMP_THREAD_ATTR
-        {
-            status = pthread_attr_init( &thread_attr );
-            if ( status != 0 ) {
-                __kmp_msg(
-                          kmp_ms_fatal,
-                          KMP_MSG( CantInitThreadAttrs ),
-                          KMP_ERR( status ),
-                          __kmp_msg_null
-                          );
-            }; // if
-            status = pthread_attr_setdetachstate( & thread_attr, PTHREAD_CREATE_JOINABLE );
-            if ( status != 0 ) {
-                __kmp_msg(
-                          kmp_ms_fatal,
-                          KMP_MSG( CantSetWorkerState ),
-                          KMP_ERR( status ),
-                          __kmp_msg_null
-                          );
-            }; // if
+    status = pthread_attr_init( &thread_attr );
+    if ( status != 0 ) {
+        __kmp_msg(kmp_ms_fatal, KMP_MSG( CantInitThreadAttrs ), KMP_ERR( status ), __kmp_msg_null);
+    }; // if
+    status = pthread_attr_setdetachstate( & thread_attr, PTHREAD_CREATE_JOINABLE );
+    if ( status != 0 ) {
+        __kmp_msg(kmp_ms_fatal, KMP_MSG( CantSetWorkerState ), KMP_ERR( status ), __kmp_msg_null);
+    }; // if
 
-            /* Set stack size for this thread now. 
-             * The multiple of 2 is there because on some machines, requesting an unusual stacksize
-             * causes the thread to have an offset before the dummy alloca() takes place to create the
-             * offset.  Since we want the user to have a sufficient stacksize AND support a stack offset, we 
-             * alloca() twice the offset so that the upcoming alloca() does not eliminate any premade
-             * offset, and also gives the user the stack space they requested for all threads */
-            stack_size += gtid * __kmp_stkoffset * 2;
+    /* Set stack size for this thread now. 
+     * The multiple of 2 is there because on some machines, requesting an unusual stacksize
+     * causes the thread to have an offset before the dummy alloca() takes place to create the
+     * offset.  Since we want the user to have a sufficient stacksize AND support a stack offset, we 
+     * alloca() twice the offset so that the upcoming alloca() does not eliminate any premade
+     * offset, and also gives the user the stack space they requested for all threads */
+    stack_size += gtid * __kmp_stkoffset * 2;
 
-            KA_TRACE( 10, ( "__kmp_create_worker: T#%d, default stacksize = %lu bytes, "
-                            "__kmp_stksize = %lu bytes, final stacksize = %lu bytes\n",
-                            gtid, KMP_DEFAULT_STKSIZE, __kmp_stksize, stack_size ) );
+    KA_TRACE( 10, ( "__kmp_create_worker: T#%d, default stacksize = %lu bytes, "
+                    "__kmp_stksize = %lu bytes, final stacksize = %lu bytes\n",
+                    gtid, KMP_DEFAULT_STKSIZE, __kmp_stksize, stack_size ) );
 
 # ifdef _POSIX_THREAD_ATTR_STACKSIZE
-                status = pthread_attr_setstacksize( & thread_attr, stack_size );
+    status = pthread_attr_setstacksize( & thread_attr, stack_size );
 #  ifdef KMP_BACKUP_STKSIZE
-            if ( status != 0 ) {
-                if ( ! __kmp_env_stksize ) {
-                    stack_size = KMP_BACKUP_STKSIZE + gtid * __kmp_stkoffset;
-                    __kmp_stksize = KMP_BACKUP_STKSIZE;
-                    KA_TRACE( 10, ("__kmp_create_worker: T#%d, default stacksize = %lu bytes, "
-                                   "__kmp_stksize = %lu bytes, (backup) final stacksize = %lu "
-                                   "bytes\n",
-                                   gtid, KMP_DEFAULT_STKSIZE, __kmp_stksize, stack_size )
-                              );
-                    status = pthread_attr_setstacksize( &thread_attr, stack_size );
-                }; // if
-            }; // if
+    if ( status != 0 ) {
+        if ( ! __kmp_env_stksize ) {
+            stack_size = KMP_BACKUP_STKSIZE + gtid * __kmp_stkoffset;
+            __kmp_stksize = KMP_BACKUP_STKSIZE;
+            KA_TRACE( 10, ("__kmp_create_worker: T#%d, default stacksize = %lu bytes, "
+                           "__kmp_stksize = %lu bytes, (backup) final stacksize = %lu "
+                           "bytes\n",
+                           gtid, KMP_DEFAULT_STKSIZE, __kmp_stksize, stack_size )
+                      );
+            status = pthread_attr_setstacksize( &thread_attr, stack_size );
+        }; // if
+    }; // if
 #  endif /* KMP_BACKUP_STKSIZE */
-            if ( status != 0 ) {
-                __kmp_msg(
-                          kmp_ms_fatal,
-                          KMP_MSG( CantSetWorkerStackSize, stack_size ),
-                          KMP_ERR( status ),
-                          KMP_HNT( ChangeWorkerStackSize  ),
-                          __kmp_msg_null
-                          );
-            }; // if
+    if ( status != 0 ) {
+        __kmp_msg(kmp_ms_fatal, KMP_MSG( CantSetWorkerStackSize, stack_size ), KMP_ERR( status ),
+                  KMP_HNT( ChangeWorkerStackSize  ), __kmp_msg_null);
+    }; // if
 # endif /* _POSIX_THREAD_ATTR_STACKSIZE */
-        }
+
 #endif /* KMP_THREAD_ATTR */
 
-        {
-            status = pthread_create( & handle, & thread_attr, __kmp_launch_worker, (void *) th );
-            if ( status != 0 || ! handle ) { // ??? Why do we check handle??
+    status = pthread_create( & handle, & thread_attr, __kmp_launch_worker, (void *) th );
+    if ( status != 0 || ! handle ) { // ??? Why do we check handle??
 #ifdef _POSIX_THREAD_ATTR_STACKSIZE
-                if ( status == EINVAL ) {
-                    __kmp_msg(
-                              kmp_ms_fatal,
-                              KMP_MSG( CantSetWorkerStackSize, stack_size ),
-                              KMP_ERR( status ),
-                              KMP_HNT( IncreaseWorkerStackSize ),
-                              __kmp_msg_null
-                              );
-                };
-                if ( status == ENOMEM ) {
-                    __kmp_msg(
-                              kmp_ms_fatal,
-                              KMP_MSG( CantSetWorkerStackSize, stack_size ),
-                              KMP_ERR( status ),
-                              KMP_HNT( DecreaseWorkerStackSize ),
-                              __kmp_msg_null
-                              );
-                };
+        if ( status == EINVAL ) {
+            __kmp_msg(kmp_ms_fatal, KMP_MSG( CantSetWorkerStackSize, stack_size ), KMP_ERR( status ),
+                      KMP_HNT( IncreaseWorkerStackSize ), __kmp_msg_null);
+        };
+        if ( status == ENOMEM ) {
+            __kmp_msg(kmp_ms_fatal, KMP_MSG( CantSetWorkerStackSize, stack_size ), KMP_ERR( status ),
+                      KMP_HNT( DecreaseWorkerStackSize ), __kmp_msg_null);
+        };
 #endif /* _POSIX_THREAD_ATTR_STACKSIZE */
-                if ( status == EAGAIN ) {
-                    __kmp_msg(
-                              kmp_ms_fatal,
-                              KMP_MSG( NoResourcesForWorkerThread ),
-                              KMP_ERR( status ),
-                              KMP_HNT( Decrease_NUM_THREADS ),
-                              __kmp_msg_null
-                              );
-                }; // if
-                KMP_SYSFAIL( "pthread_create", status );
-            }; // if
+        if ( status == EAGAIN ) {
+            __kmp_msg(kmp_ms_fatal, KMP_MSG( NoResourcesForWorkerThread ), KMP_ERR( status ),
+                      KMP_HNT( Decrease_NUM_THREADS ), __kmp_msg_null);
+        }; // if
+        KMP_SYSFAIL( "pthread_create", status );
+    }; // if
 
-            th->th.th_info.ds.ds_thread = handle;
-        }
+    th->th.th_info.ds.ds_thread = handle;
 
 #ifdef KMP_THREAD_ATTR
-        {
-            status = pthread_attr_destroy( & thread_attr );
-            if ( status ) {
-                __kmp_msg(
-                          kmp_ms_warning,
-                          KMP_MSG( CantDestroyThreadAttrs ),
-                          KMP_ERR( status ),
-                          __kmp_msg_null
-                          );
-            }; // if
-        }
+    status = pthread_attr_destroy( & thread_attr );
+    if ( status ) {
+        __kmp_msg(kmp_ms_warning, KMP_MSG( CantDestroyThreadAttrs ), KMP_ERR( status ), __kmp_msg_null);
+    }; // if
 #endif /* KMP_THREAD_ATTR */
 
     KMP_MB();       /* Flush all pending memory write invalidates.  */
@@ -1352,35 +1310,24 @@ __kmp_reap_worker( kmp_info_t *th )
        but if the worker dies after the pthread_kill call and before the pthread_join
        call, it will still hang. */
 
-        {
-            status = pthread_kill( th->th.th_info.ds.ds_thread, 0 );
-            if (status == ESRCH) {
-                KA_TRACE( 10, ("__kmp_reap_worker: worker T#%d does not exist, returning\n",
-                               th->th.th_info.ds.ds_gtid ) );
-            }
-            else {
-                KA_TRACE( 10, ("__kmp_reap_worker: try to join with worker T#%d\n",
-                               th->th.th_info.ds.ds_gtid ) );
-
-                status = pthread_join( th->th.th_info.ds.ds_thread, & exit_val);
+    status = pthread_kill( th->th.th_info.ds.ds_thread, 0 );
+    if (status == ESRCH) {
+        KA_TRACE( 10, ("__kmp_reap_worker: worker T#%d does not exist, returning\n", th->th.th_info.ds.ds_gtid ) );
+    }
+    else {
+        KA_TRACE( 10, ("__kmp_reap_worker: try to join with worker T#%d\n", th->th.th_info.ds.ds_gtid ) );
+        status = pthread_join( th->th.th_info.ds.ds_thread, & exit_val);
 #ifdef KMP_DEBUG
-                /* Don't expose these to the user until we understand when they trigger */
-                if ( status != 0 ) {
-                    __kmp_msg(
-                              kmp_ms_fatal,
-                              KMP_MSG( ReapWorkerError ),
-                              KMP_ERR( status ),
-                              __kmp_msg_null
-                              );
-                }
-                if ( exit_val != th ) {
-                    KA_TRACE( 10, ( "__kmp_reap_worker: worker T#%d did not reap properly, "
-                                    "exit_val = %p\n",
-                                    th->th.th_info.ds.ds_gtid, exit_val ) );
-                }
-#endif /* KMP_DEBUG */
-            }
+        /* Don't expose these to the user until we understand when they trigger */
+        if ( status != 0 ) {
+            __kmp_msg(kmp_ms_fatal, KMP_MSG( ReapWorkerError ), KMP_ERR( status ), __kmp_msg_null);
         }
+        if ( exit_val != th ) {
+            KA_TRACE( 10, ( "__kmp_reap_worker: worker T#%d did not reap properly, exit_val = %p\n",
+                            th->th.th_info.ds.ds_gtid, exit_val ) );
+        }
+#endif /* KMP_DEBUG */
+    }
 
     KA_TRACE( 10, ("__kmp_reap_worker: done reaping T#%d\n", th->th.th_info.ds.ds_gtid ) );
 
@@ -1752,8 +1699,6 @@ static inline void __kmp_suspend_template( int th_gtid, C *flag )
                     KMP_DEBUG_ASSERT( TCR_4(__kmp_thread_pool_active_nth) >= 0 );
                 }
                 deactivated = TRUE;
-
-
             }
 
 #if USE_SUSPEND_TIMEOUT
@@ -1813,7 +1758,6 @@ static inline void __kmp_suspend_template( int th_gtid, C *flag )
     }
 #endif
 
-
     status = pthread_mutex_unlock( &th->th.th_suspend_mx.m_mutex );
     KMP_CHECK_SYSFAIL( "pthread_mutex_unlock", status );
 
@@ -1872,7 +1816,6 @@ static inline void __kmp_resume_template( int target_gtid, C *flag )
             KF_TRACE( 5, ( "__kmp_resume_template: T#%d exiting, thread T#%d already awake: flag(%p): "
                            "%u => %u\n",
                            gtid, target_gtid, flag->get(), old_spin, *flag->get() ) );
-
             status = pthread_mutex_unlock( &th->th.th_suspend_mx.m_mutex );
             KMP_CHECK_SYSFAIL( "pthread_mutex_unlock", status );
             return;
@@ -1891,7 +1834,6 @@ static inline void __kmp_resume_template( int target_gtid, C *flag )
         __kmp_printf( "__kmp_resume_template: T#%d resuming T#%d: %s\n", gtid, target_gtid, buffer );
     }
 #endif
-
 
     status = pthread_cond_signal( &th->th.th_suspend_cv.c_cond );
     KMP_CHECK_SYSFAIL( "pthread_cond_signal", status );

@@ -2,6 +2,8 @@
 Test specific to MIPS 
 """
 
+from __future__ import print_function
+
 import os, time
 import re
 import unittest2
@@ -45,7 +47,7 @@ class AvoidBreakpointInDelaySlotAPITestCase(TestBase):
         """Iterate over instructions in function and place a breakpoint on delay slot instruction"""
         # Get the list of all instructions in the function
         insts = function.GetInstructions(target)
-        print insts
+        print(insts)
         i = 0
         for inst in insts:
             if (inst.HasDelaySlot()):

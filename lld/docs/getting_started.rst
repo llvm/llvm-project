@@ -68,7 +68,7 @@ Using Visual Studio
   * `Python 2.4`_\+ (not 3.x) for running tests.
 
 .. _CMake 2.8: http://www.cmake.org/cmake/resources/software.html
-.. _Visual Studio 11 (2012) or later: http://www.microsoft.com/visualstudio/11/en-us
+.. _Visual Studio 12 (2013) or later: http://www.microsoft.com/visualstudio/11/en-us
 .. _Python 2.4: http://python.org/download/
 
 #. Check out LLVM::

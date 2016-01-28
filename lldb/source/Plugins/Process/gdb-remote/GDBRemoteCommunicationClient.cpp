@@ -2064,7 +2064,8 @@ GDBRemoteCommunicationClient::GetHostInfo (bool force)
                         if (pointer_byte_size != 0)
                             ++num_keys_decoded;
                     }
-                    else if (name.compare("os_version") == 0)
+                    else if ((name.compare("os_version") == 0) ||
+                             (name.compare("version") == 0)) // Older debugserver binaries used the "version" key instead of "os_version"...
                     {
                         Args::StringToVersion (value.c_str(), 
                                                m_os_version_major,

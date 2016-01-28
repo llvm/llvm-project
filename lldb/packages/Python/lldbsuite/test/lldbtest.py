@@ -509,6 +509,9 @@ def check_expected_version(comparison, expected, actual):
 #
 # Decorators for categorizing test cases.
 #
+class DecorateMode:
+    Skip, Xfail = range(2)
+
 from functools import wraps
 
 def add_test_categories(cat):
@@ -600,7 +603,8 @@ def expectedFailure(expected_fn, bugnumber=None):
         def wrapper(*args, **kwargs):
             from unittest2 import case
             self = args[0]
-            if expected_fn(self):
+            xfail, reason = expected_fn(self)
+            if xfail:
                 if configuration.results_formatter_object is not None:
                     # Mark this test as expected to fail.
                     configuration.results_formatter_object.handle_event(
@@ -610,8 +614,11 @@ def expectedFailure(expected_fn, bugnumber=None):
             else:
                 func(*args, **kwargs)
         return wrapper
-    # if bugnumber is not-callable(incluing None), that means decorator function is called with optional arguments
-    # return decorator in this case, so it will be used to decorating original method
+    # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
+    # or with arguments (e.g. @expectedFailureWindows(compilers=['gcc'])).  When called
+    # the first way, the first argument will be the actual function because decorators are
+    # weird like that.  So this is basically a check that says "which syntax was the original
+    # function decorated with?"
     if six.callable(bugnumber):
         return expectedFailure_impl(bugnumber)
     else:
@@ -639,7 +646,7 @@ def check_list_or_lambda(list_or_lambda, value):
 def matchArchitectures(archs, actual_arch):
     retype = type(re.compile('hello, world'))
     list_passes = isinstance(archs, list) and actual_arch in archs
-    basestring_passes = isinstance(archs, basestring) and actual_arch == archs
+    basestring_passes = isinstance(archs, six.string_types) and actual_arch == archs
     regex_passes = isinstance(archs, retype) and re.match(archs, actual_arch)
 
     return (list_passes or basestring_passes or regex_passes)
@@ -650,26 +657,21 @@ def matchArchitectures(archs, actual_arch):
 # @expectedFailureAll, xfail for all platform/compiler/arch,
 # @expectedFailureAll(compiler='gcc'), xfail for gcc on all platform/architecture
 # @expectedFailureAll(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), xfail for gcc>=4.9 on linux with i386
-def expectedFailureAll(bugnumber=None, oslist=None, hostoslist=None, compiler=None, compiler_version=None, archs=None, triple=None, debug_info=None, swig_version=None, py_version=None):
-    def fn(self):
-        oslist_passes = check_list_or_lambda(oslist, self.getPlatform())
-        hostoslist_passes = check_list_or_lambda(hostoslist, getHostPlatform())
-        compiler_passes = check_list_or_lambda(self.getCompiler(), compiler) and self.expectedCompilerVersion(compiler_version)
-        arch_passes = check_list_or_lambda(archs, self.getArchitecture())
-        triple_passes = triple is None or re.match(triple, lldb.DBG.GetSelectedPlatform().GetTriple())
-        debug_info_passes = check_list_or_lambda(debug_info, self.debug_info)
-        swig_version_passes = (swig_version is None) or (not hasattr(lldb, 'swig_version')) or (check_expected_version(swig_version[0], swig_version[1], lldb.swig_version))
-        py_version_passes = (py_version is None) or check_expected_version(py_version[0], py_version[1], sys.version_info)
-
-        return (oslist_passes and
-                hostoslist_passes and
-                compiler_passes and
-                arch_passes and
-                triple_passes and
-                debug_info_passes and
-                swig_version_passes and
-                py_version_passes)
-    return expectedFailure(fn, bugnumber)
+def expectedFailureAll(bugnumber=None,
+                       oslist=None, hostoslist=None,
+                       compiler=None, compiler_version=None,
+                       archs=None, triple=None,
+                       debug_info=None,
+                       swig_version=None, py_version=None,
+                       remote=None):
+    return decorateTest(DecorateMode.Xfail,
+                        bugnumber=bugnumber,
+                        oslist=oslist, hostoslist=hostoslist,
+                        compiler=compiler, compiler_version=compiler_version,
+                        archs=archs, triple=triple,
+                        debug_info=debug_info,
+                        swig_version=swig_version, py_version=py_version,
+                        remote=remote)
 
 def expectedFailureDwarf(bugnumber=None):
     return expectedFailureAll(bugnumber=bugnumber, debug_info="dwarf")
@@ -697,9 +699,7 @@ def expectedFailureIcc(bugnumber=None):
     return expectedFailureCompiler('icc', None, bugnumber)
 
 def expectedFailureArch(arch, bugnumber=None):
-    def fn(self):
-        return arch in self.getArchitecture()
-    return expectedFailure(fn, bugnumber)
+    return decorateTest(DecorateMode.Xfail, archs=arch, bugnumber=bugnumber)
 
 def expectedFailurei386(bugnumber=None):
     return expectedFailureArch('i386', bugnumber)
@@ -708,18 +708,10 @@ def expectedFailurex86_64(bugnumber=None):
     return expectedFailureArch('x86_64', bugnumber)
 
 def expectedFailureOS(oslist, bugnumber=None, compilers=None, debug_info=None, archs=None):
-    def fn(self):
-        return (self.getPlatform() in oslist and
-                self.expectedCompiler(compilers) and
-                (archs is None or self.getArchitecture() in archs) and
-                (debug_info is None or self.debug_info in debug_info))
-    return expectedFailure(fn, bugnumber)
+    return decorateTest(DecorateMode.Xfail, oslist=oslist, bugnumber=bugnumber, compiler=compilers, archs=archs, debug_info=debug_info)
 
 def expectedFailureHostOS(oslist, bugnumber=None, compilers=None):
-    def fn(self):
-        return (getHostPlatform() in oslist and
-                self.expectedCompiler(compilers))
-    return expectedFailure(fn, bugnumber)
+    return decorateTest(DecorateMode.Xfail, hostoslist=oslist, bugnumber=bugnumber)
 
 def expectedFailureDarwin(bugnumber=None, compilers=None, debug_info=None):
     # For legacy reasons, we support both "darwin" and "macosx" as OS X triples.
@@ -743,12 +735,12 @@ def expectedFailureHostWindows(bugnumber=None, compilers=None):
 def matchAndroid(api_levels=None, archs=None):
     def match(self):
         if not target_is_android():
-            return False
+            return (False, "target is not android")
         if archs is not None and self.getArchitecture() not in archs:
-            return False
+            return (False, "invalid architecture")
         if api_levels is not None and android_device_api() not in api_levels:
-            return False
-        return True
+            return (False, "invalid api level")
+        return (True, None)
     return match
 
 
@@ -779,8 +771,11 @@ def expectedFlakey(expected_fn, bugnumber=None):
                         EventBuilder.event_for_mark_test_rerun_eligible(self))
             func(*args, **kwargs)
         return wrapper
-    # if bugnumber is not-callable(incluing None), that means decorator function is called with optional arguments
-    # return decorator in this case, so it will be used to decorating original method
+    # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
+    # or with arguments (e.g. @expectedFailureWindows(compilers=['gcc'])).  When called
+    # the first way, the first argument will be the actual function because decorators are
+    # weird like that.  So this is basically a check that says "which syntax was the original
+    # function decorated with?"
     if six.callable(bugnumber):
         return expectedFailure_impl(bugnumber)
     else:
@@ -1072,30 +1067,74 @@ def skipUnlessPlatform(oslist):
 # @skipIf(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), skip for gcc>=4.9 on linux with i386
 
 # TODO: refactor current code, to make skipIfxxx functions to call this function
-def skipIf(bugnumber=None, oslist=None, compiler=None, compiler_version=None, archs=None, debug_info=None, swig_version=None, py_version=None, remote=None):
+def decorateTest(mode,
+                 bugnumber=None, oslist=None, hostoslist=None,
+                 compiler=None, compiler_version=None,
+                 archs=None, triple=None,
+                 debug_info=None,
+                 swig_version=None, py_version=None,
+                 remote=None):
     def fn(self):
-        oslist_passes = check_list_or_lambda(oslist, self.getPlatform())
-        compiler_passes = check_list_or_lambda(self.getCompiler(), compiler) and self.expectedCompilerVersion(compiler_version)
-        arch_passes = check_list_or_lambda(archs, self.getArchitecture())
-        debug_info_passes = check_list_or_lambda(debug_info, self.debug_info)
-        swig_version_passes = (swig_version is None) or (not hasattr(lldb, 'swig_version')) or (check_expected_version(swig_version[0], swig_version[1], lldb.swig_version))
-        py_version_passes = (py_version is None) or check_expected_version(py_version[0], py_version[1], sys.version_info)
-        remote_passes = (remote is None) or (remote == (lldb.remote_platform is not None))
+        skip_for_os = check_list_or_lambda(oslist, self.getPlatform())
+        skip_for_hostos = check_list_or_lambda(hostoslist, getHostPlatform())
+        skip_for_compiler = check_list_or_lambda(self.getCompiler(), compiler) and self.expectedCompilerVersion(compiler_version)
+        skip_for_arch = check_list_or_lambda(archs, self.getArchitecture())
+        skip_for_debug_info = check_list_or_lambda(debug_info, self.debug_info)
+        skip_for_triple = triple is None or re.match(triple, lldb.DBG.GetSelectedPlatform().GetTriple())
+        skip_for_swig_version = (swig_version is None) or (not hasattr(lldb, 'swig_version')) or (check_expected_version(swig_version[0], swig_version[1], lldb.swig_version))
+        skip_for_py_version = (py_version is None) or check_expected_version(py_version[0], py_version[1], sys.version_info)
+        skip_for_remote = (remote is None) or (remote == (lldb.remote_platform is not None))
 
-        return (oslist_passes and
-                compiler_passes and
-                arch_passes and
-                debug_info_passes and
-                swig_version_passes and
-                py_version_passes and
-                remote_passes)
+        # For the test to be skipped, all specified (e.g. not None) parameters must be True.
+        # An unspecified parameter means "any", so those are marked skip by default.  And we skip
+        # the final test if all conditions are True.
+        conditions = [(oslist, skip_for_os, "target o/s"),
+                      (hostoslist, skip_for_hostos, "host o/s"),
+                      (compiler, skip_for_compiler, "compiler or version"),
+                      (archs, skip_for_arch, "architecture"),
+                      (debug_info, skip_for_debug_info, "debug info format"),
+                      (triple, skip_for_triple, "target triple"),
+                      (swig_version, skip_for_swig_version, "swig version"),
+                      (py_version, skip_for_py_version, "python version"),
+                      (remote, skip_for_remote, "platform locality (remote/local)")]
+        reasons = []
+        final_skip_result = True
+        for this_condition in conditions:
+            final_skip_result = final_skip_result and this_condition[1]
+            if this_condition[0] is not None and this_condition[1]:
+                reasons.append(this_condition[2])
+        reason_str = None
+        if final_skip_result:
+            mode_str = {DecorateMode.Skip : "skipping", DecorateMode.Xfail : "xfailing"}[mode]
+            if len(reasons) > 0:
+                reason_str = ",".join(reasons)
+                reason_str = "{} due to the following parameter(s): {}".format(mode_str, reason_str)
+            else:
+                reason_str = "{} unconditionally"
+        return (final_skip_result, reason_str)
 
-    local_vars = locals()
-    args = [x for x in inspect.getargspec(skipIf).args]
-    arg_vals = [eval(x, globals(), local_vars) for x in args]
-    args = [x for x in zip(args, arg_vals) if x[1] is not None]
-    reasons = ['%s=%s' % (x, str(y)) for (x,y) in args]
-    return skipTestIfFn(fn, bugnumber, skipReason='skipping because ' + ' && '.join(reasons))
+    if mode == DecorateMode.Skip:
+        return skipTestIfFn(fn, bugnumber)
+    elif mode == DecorateMode.Xfail:
+        return expectedFailure(fn, bugnumber)
+    else:
+        return None
+
+def skipIf(bugnumber=None,
+           oslist=None, hostoslist=None,
+           compiler=None, compiler_version=None,
+           archs=None, triple=None,
+           debug_info=None,
+           swig_version=None, py_version=None,
+           remote=None):
+    return decorateTest(DecorateMode.Skip,
+                        bugnumber=bugnumber,
+                        oslist=oslist, hostoslist=hostoslist,
+                        compiler=compiler, compiler_version=compiler_version,
+                        archs=archs, triple=triple,
+                        debug_info=debug_info,
+                        swig_version=swig_version, py_version=py_version,
+                        remote=remote)
 
 def skipIfDebugInfo(bugnumber=None, debug_info=None):
     return skipIf(bugnumber=bugnumber, debug_info=debug_info)
@@ -1109,17 +1148,23 @@ def skipIfDwarf(bugnumber=None):
 def skipIfDsym(bugnumber=None):
     return skipIfDebugInfo(bugnumber, ["dsym"])
 
-def skipTestIfFn(expected_fn, bugnumber=None, skipReason=None):
+def skipTestIfFn(expected_fn, bugnumber=None):
     def skipTestIfFn_impl(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             from unittest2 import case
             self = args[0]
-            if expected_fn(self):
-               self.skipTest(skipReason)
+            skip, reason = expected_fn(self)
+            if skip:
+               self.skipTest(reason)
             else:
                 func(*args, **kwargs)
         return wrapper
+
+    # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
+    # or with arguments (e.g. @expectedFailureWindows(compilers=['gcc'])).  When called
+    # the first way, the first argument will be the actual function because decorators are
+    # weird like that.  So this is basically a check that says "how was the decorator used"
     if six.callable(bugnumber):
         return skipTestIfFn_impl(bugnumber)
     else:
@@ -1186,9 +1231,10 @@ def skipIfTargetAndroid(api_levels=None, archs=None):
         def wrapper(*args, **kwargs):
             from unittest2 import case
             self = args[0]
-            if matchAndroid(api_levels, archs)(self):
-                self.skipTest("skiped on Android target with API %d and architecture %s" %
-                        (android_device_api(), self.getArchitecture()))
+            skip_for_android, reason = matchAndroid(api_levels, archs)(self)
+            if skip_for_android:
+                self.skipTest("skiped on Android target with API %d and architecture %s.  %s" %
+                        (android_device_api(), self.getArchitecture(), reason))
             func(*args, **kwargs)
         return wrapper
     return myImpl
