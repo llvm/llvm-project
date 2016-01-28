@@ -88,14 +88,6 @@ EXTRA_OPTIONS += -Wno-sign-compare
 
 ifeq ($(IS_TOP_LEVEL),1)
 
-ifneq ($(PROJ_SRC_ROOT),$(PROJ_OBJ_ROOT))
-$(RecursiveTargets)::
-	$(Verb) if [ ! -f test/Makefile ]; then \
-	  $(MKDIR) test; \
-	  $(CP) $(PROJ_SRC_DIR)/test/Makefile test/Makefile; \
-	fi
-endif
-
 test::
 	@ $(MAKE) -C test
 
