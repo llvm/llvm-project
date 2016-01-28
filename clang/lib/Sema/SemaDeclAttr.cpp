@@ -3420,7 +3420,7 @@ static void handleModeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
     OldTy = TD->getUnderlyingType();
   else
-    OldTy = cast<VarDecl>(D)->getType();
+    OldTy = cast<ValueDecl>(D)->getType();
 
   // Base type can also be a vector type (see PR17453).
   // Distinguish between base type and base element type.
@@ -3493,7 +3493,7 @@ static void handleModeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(D))
     TD->setModedTypeSourceInfo(TD->getTypeSourceInfo(), NewTy);
   else
-    cast<VarDecl>(D)->setType(NewTy);
+    cast<ValueDecl>(D)->setType(NewTy);
 
   D->addAttr(::new (S.Context)
              ModeAttr(Attr.getRange(), S.Context, Name,
