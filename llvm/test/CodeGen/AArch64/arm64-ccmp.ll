@@ -317,24 +317,6 @@ define i64 @select_or(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
   ret i64 %sel
 }
 
-; CHECK-LABEL: select_complicated
-define i16 @select_complicated(double %v1, double %v2, i16 %a, i16 %b) {
-; CHECK: ldr [[REG:d[0-9]+]],
-; CHECK: fcmp d0, d2
-; CHECK-NEXT: fmov d2, #13.00000000
-; CHECK-NEXT: fccmp d1, d2, #4, ne
-; CHECK-NEXT: fccmp d0, d1, #1, ne
-; CHECK-NEXT: fccmp d0, d1, #4, vc
-; CEHCK-NEXT: csel w0, w0, w1, eq
-  %1 = fcmp one double %v1, %v2
-  %2 = fcmp oeq double %v2, 13.0
-  %3 = fcmp oeq double %v1, 42.0
-  %or0 = or i1 %2, %3
-  %or1 = or i1 %1, %or0
-  %sel = select i1 %or1, i16 %a, i16 %b
-  ret i16 %sel
-}
-
 ; CHECK-LABEL: gccbug
 define i64 @gccbug(i64 %x0, i64 %x1) {
 ; CHECK: cmp x0, #2
@@ -443,3 +425,163 @@ define i64 @select_noccmp2(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
   store volatile i32 %ext, i32* @g
   ret i64 %sel
 }
+
+; Test the IR CCs that expand to two cond codes.
+
+; CHECK-LABEL: _select_and_olt_one:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d2, d3, #4, mi
+; CHECK-NEXT: fccmp d2, d3, #1, ne
+; CHECK-NEXT: csel w0, w0, w1, vc
+; CHECK-NEXT: ret
+define i32 @select_and_olt_one(double %v0, double %v1, double %v2, double %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp olt double %v0, %v1
+  %c1 = fcmp one double %v2, %v3
+  %cr = and i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: _select_and_one_olt:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d0, d1, #1, ne
+; CHECK-NEXT: fccmp d2, d3, #0, vc
+; CHECK-NEXT: csel w0, w0, w1, mi
+; CHECK-NEXT: ret
+define i32 @select_and_one_olt(double %v0, double %v1, double %v2, double %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp one double %v0, %v1
+  %c1 = fcmp olt double %v2, %v3
+  %cr = and i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: _select_and_olt_ueq:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d2, d3, #0, mi
+; CHECK-NEXT: fccmp d2, d3, #8, le
+; CHECK-NEXT: csel w0, w0, w1, pl
+; CHECK-NEXT: ret
+define i32 @select_and_olt_ueq(double %v0, double %v1, double %v2, double %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp olt double %v0, %v1
+  %c1 = fcmp ueq double %v2, %v3
+  %cr = and i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: _select_and_ueq_olt:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d0, d1, #8, le
+; CHECK-NEXT: fccmp d2, d3, #0, pl
+; CHECK-NEXT: csel w0, w0, w1, mi
+; CHECK-NEXT: ret
+define i32 @select_and_ueq_olt(double %v0, double %v1, double %v2, double %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp ueq double %v0, %v1
+  %c1 = fcmp olt double %v2, %v3
+  %cr = and i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: _select_or_olt_one:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d2, d3, #0, pl
+; CHECK-NEXT: fccmp d2, d3, #8, le
+; CHECK-NEXT: csel w0, w0, w1, mi
+; CHECK-NEXT: ret
+define i32 @select_or_olt_one(double %v0, double %v1, double %v2, double %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp olt double %v0, %v1
+  %c1 = fcmp one double %v2, %v3
+  %cr = or i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: _select_or_one_olt:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d0, d1, #1, ne
+; CHECK-NEXT: fccmp d2, d3, #8, vs
+; CHECK-NEXT: csel w0, w0, w1, mi
+; CHECK-NEXT: ret
+define i32 @select_or_one_olt(double %v0, double %v1, double %v2, double %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp one double %v0, %v1
+  %c1 = fcmp olt double %v2, %v3
+  %cr = or i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: _select_or_olt_ueq:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d2, d3, #4, pl
+; CHECK-NEXT: fccmp d2, d3, #1, ne
+; CHECK-NEXT: csel w0, w0, w1, vs
+; CHECK-NEXT: ret
+define i32 @select_or_olt_ueq(double %v0, double %v1, double %v2, double %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp olt double %v0, %v1
+  %c1 = fcmp ueq double %v2, %v3
+  %cr = or i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: _select_or_ueq_olt:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d0, d1, #8, le
+; CHECK-NEXT: fccmp d2, d3, #8, mi
+; CHECK-NEXT: csel w0, w0, w1, mi
+; CHECK-NEXT: ret
+define i32 @select_or_ueq_olt(double %v0, double %v1, double %v2, double %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp ueq double %v0, %v1
+  %c1 = fcmp olt double %v2, %v3
+  %cr = or i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: _select_or_olt_ogt_ueq:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d2, d3, #0, pl
+; CHECK-NEXT: fccmp d4, d5, #4, le
+; CHECK-NEXT: fccmp d4, d5, #1, ne
+; CHECK-NEXT: csel w0, w0, w1, vs
+; CHECK-NEXT: ret
+define i32 @select_or_olt_ogt_ueq(double %v0, double %v1, double %v2, double %v3, double %v4, double %v5, i32 %a, i32 %b) #0 {
+  %c0 = fcmp olt double %v0, %v1
+  %c1 = fcmp ogt double %v2, %v3
+  %c2 = fcmp ueq double %v4, %v5
+  %c3 = or i1 %c1, %c0
+  %cr = or i1 %c2, %c3
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: _select_or_olt_ueq_ogt:
+; CHECK-LABEL: ; BB#0:
+; CHECK-NEXT: fcmp d0, d1
+; CHECK-NEXT: fccmp d2, d3, #4, pl
+; CHECK-NEXT: fccmp d2, d3, #1, ne
+; CHECK-NEXT: fccmp d4, d5, #0, vc
+; CHECK-NEXT: csel w0, w0, w1, gt
+; CHECK-NEXT: ret
+define i32 @select_or_olt_ueq_ogt(double %v0, double %v1, double %v2, double %v3, double %v4, double %v5, i32 %a, i32 %b) #0 {
+  %c0 = fcmp olt double %v0, %v1
+  %c1 = fcmp ueq double %v2, %v3
+  %c2 = fcmp ogt double %v4, %v5
+  %c3 = or i1 %c1, %c0
+  %cr = or i1 %c2, %c3
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+attributes #0 = { nounwind }
