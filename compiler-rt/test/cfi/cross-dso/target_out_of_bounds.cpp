@@ -20,9 +20,13 @@ int main(int argc, char *argv[]) {
   // enough to handle unaddressable vtables. TODO: fix this.
   void *empty = calloc(1, 128);
   uintptr_t v = (uintptr_t)empty + 64;
-  A *volatile p = new A();
-  for (uintptr_t *q = (uintptr_t *)p; q < (uintptr_t *)(p + 1); ++q)
+  char *volatile p = reinterpret_cast<char *>(new A());
+  for (uintptr_t *q = (uintptr_t *)p; q < (uintptr_t *)(p + sizeof(A)); ++q)
     *q = v;
+
+  // CHECK: runtime error: control flow integrity check for type 'A' failed during cast
+  A *volatile pa = reinterpret_cast<A *>(p);
+
   // CHECK: untime error: control flow integrity check for type 'A' failed during virtual call
-  p->f();
+  pa->f();
 }

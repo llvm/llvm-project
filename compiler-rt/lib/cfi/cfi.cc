@@ -306,12 +306,14 @@ ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
     // FIXME: call the ubsan handler if DiagData != nullptr?
     VReport(1, "CFI: invalid memory region for a check target: %p\n", Ptr);
 #ifdef CFI_ENABLE_DIAG
-    if (DiagData)
+    if (DiagData) {
       __ubsan_handle_cfi_check_fail(
           reinterpret_cast<__ubsan::CFICheckFailData *>(DiagData),
           reinterpret_cast<uptr>(Ptr));
-    else
+      return;
+    } else {
       Trap();
+    }
 #else
     Trap();
 #endif
@@ -348,7 +350,8 @@ void InitializeFlags() {
 
   SetVerbosity(common_flags()->verbosity);
 
-  if (Verbosity()) ReportUnrecognizedFlags();
+  if (Verbosity())
+    ReportUnrecognizedFlags();
 
   if (common_flags()->help) {
     cfi_parser.PrintFlagDescriptions();
