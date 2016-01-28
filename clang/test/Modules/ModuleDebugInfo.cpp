@@ -30,7 +30,17 @@
 
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
 // CHECK-SAME-NOT:         name:
+
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME-NOT:         name:
+
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME-NOT:         name:
 // CHECK-SAME:             identifier: "_ZTS11TypedefEnum")
+
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
+// CHECK-SAME-NOT:         name:
+// CHECK: !DIEnumerator(name: "e5", value: 5)
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Struct"
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
@@ -64,5 +74,11 @@
 
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "B",
 // no mangled name here yet.
+
+// CHECK: !DICompositeType(tag: DW_TAG_union_type,
+// CHECK-SAME-NOT:         name:
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-SAME-NOT:         name:
 
 // CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"

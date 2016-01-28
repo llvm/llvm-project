@@ -39,6 +39,10 @@ TypedefUnion tdu;
 TypedefEnum tde;
 TypedefStruct tds;
 
+void foo() {
+  GlobalStruct.i = GlobalUnion.i = GlobalEnum;
+}
+
 // CHECK: ![[NS:.*]] = !DINamespace(name: "DebugCXX", scope: ![[MOD:[0-9]+]],
 // CHECK: ![[MOD]] = !DIModule(scope: null, name: {{.*}}DebugCXX
 
