@@ -420,13 +420,14 @@ private:
     ConstantInt *RHSC;
 
     // Pattern match a special case
-    // (x & ~2^x) == y --> x == y || x == y|2^x
+    // (x & ~2^z) == y --> x == y || x == y|2^z
     // This undoes a transformation done by instcombine to fuse 2 compares.
     if (ICI->getPredicate() == (isEQ ? ICmpInst::ICMP_EQ:ICmpInst::ICMP_NE)) {
       if (match(ICI->getOperand(0),
                 m_And(m_Value(RHSVal), m_ConstantInt(RHSC)))) {
         APInt Not = ~RHSC->getValue();
-        if (Not.isPowerOf2()) {
+        if (Not.isPowerOf2() && C->getValue().isPowerOf2() &&
+            Not != C->getValue()) {
           // If we already have a value for the switch, it has to match!
           if(!setValueOnce(RHSVal))
             return false;
