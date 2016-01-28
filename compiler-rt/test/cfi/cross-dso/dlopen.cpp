@@ -47,6 +47,8 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#include <string>
+
 struct A {
   virtual void f();
 };
@@ -91,9 +93,8 @@ int main(int argc, char *argv[]) {
   const bool test_cast = argc > 1 && strcmp(argv[1], "cast") == 0;
   const bool test_dlclose = argc > 1 && strcmp(argv[1], "dlclose") == 0;
 
-  char name[100];
-  snprintf(name, sizeof(name), "%s-so.so", argv[0]);
-  void *handle = dlopen(name, RTLD_NOW);
+  std::string name = std::string(argv[0]) + "-so.so";
+  void *handle = dlopen(name.c_str(), RTLD_NOW);
   assert(handle);
   void *(*create_B)() = (void *(*)())dlsym(handle, "create_B");
   assert(create_B);

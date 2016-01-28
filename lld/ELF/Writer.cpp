@@ -162,7 +162,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   openFile(Config->OutputFile);
   writeHeader();
   writeSections();
-  error(Buffer->commit());
+  fatal(Buffer->commit());
 }
 
 namespace {
@@ -382,7 +382,7 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if (Config->NoInhibitExec)
     warning(Msg);
   else
-    error(Msg);
+    fatal(Msg);
 }
 
 template <class ELFT>
@@ -421,7 +421,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
     for (const Elf_Sym &Sym : F->getLocalSymbols()) {
       ErrorOr<StringRef> SymNameOrErr = Sym.getName(F->getStringTable());
-      error(SymNameOrErr);
+      fatal(SymNameOrErr);
       StringRef SymName = *SymNameOrErr;
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
@@ -1318,7 +1318,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 template <class ELFT> void Writer<ELFT>::openFile(StringRef Path) {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Path, FileSize, FileOutputBuffer::F_executable);
-  error(BufferOrErr, "failed to open " + Path);
+  fatal(BufferOrErr, "failed to open " + Path);
   Buffer = std::move(*BufferOrErr);
 }
 

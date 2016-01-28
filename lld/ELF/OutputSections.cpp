@@ -770,7 +770,7 @@ EhFrameHeader<ELFT>::getFdePc(uintX_t EhVA, const FdeData &F) {
       return FdeOff + read64<E>(F.PCRel);
     return FdeOff + read32<E>(F.PCRel);
   }
-  error("unknown FDE size encoding");
+  fatal("unknown FDE size encoding");
 }
 
 template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
@@ -813,7 +813,7 @@ void EhFrameHeader<ELFT>::assignEhFrame(EHOutputSection<ELFT> *Sec) {
 template <class ELFT>
 void EhFrameHeader<ELFT>::addFde(uint8_t Enc, size_t Off, uint8_t *PCRel) {
   if (Live && (Enc & 0xF0) == dwarf::DW_EH_PE_datarel)
-    error("DW_EH_PE_datarel encoding unsupported for FDEs by .eh_frame_hdr");
+    fatal("DW_EH_PE_datarel encoding unsupported for FDEs by .eh_frame_hdr");
   FdeList.push_back(FdeData{Enc, Off, PCRel});
 }
 
@@ -904,7 +904,7 @@ elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
       File.getObj().getRelocationSymbol(&RI, File.getSymbolTable());
 
   if (!Sym)
-    error("Unsupported relocation without symbol");
+    fatal("Unsupported relocation without symbol");
 
   InputSectionBase<ELFT> *Section = File.getSection(*Sym);
 
@@ -1001,7 +1001,7 @@ Cie<ELFT>::Cie(EHInputSection<ELFT> *S, unsigned Index)
 // Read a byte and advance D by one byte.
 static uint8_t readByte(ArrayRef<uint8_t> &D) {
   if (D.empty())
-    error("corrupted or unsupported CIE information");
+    fatal("corrupted or unsupported CIE information");
   uint8_t B = D.front();
   D = D.slice(1);
   return B;
@@ -1014,14 +1014,14 @@ static void skipLeb128(ArrayRef<uint8_t> &D) {
     if ((Val & 0x80) == 0)
       return;
   }
-  error("corrupted or unsupported CIE information");
+  fatal("corrupted or unsupported CIE information");
 }
 
 template <class ELFT> static unsigned getSizeForEncoding(unsigned Enc) {
   typedef typename ELFFile<ELFT>::uintX_t uintX_t;
   switch (Enc & 0x0f) {
   default:
-    error("unknown FDE encoding");
+    fatal("unknown FDE encoding");
   case dwarf::DW_EH_PE_absptr:
   case dwarf::DW_EH_PE_signed:
     return sizeof(uintX_t);
@@ -1041,7 +1041,7 @@ template <class ELFT>
 uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
   auto Check = [](bool C) {
     if (!C)
-      error("corrupted or unsupported CIE information");
+      fatal("corrupted or unsupported CIE information");
   };
 
   Check(D.size() >= 8);
@@ -1049,7 +1049,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
 
   uint8_t Version = readByte(D);
   if (Version != 1 && Version != 3)
-    error("FDE version 1 or 3 expected, but got " + Twine((unsigned)Version));
+    fatal("FDE version 1 or 3 expected, but got " + Twine((unsigned)Version));
 
   auto AugEnd = std::find(D.begin() + 1, D.end(), '\0');
   Check(AugEnd != D.end());
@@ -1058,7 +1058,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
 
   // Code alignment factor should always be 1 for .eh_frame.
   if (readByte(D) != 1)
-    error("CIE code alignment must be 1");
+    fatal("CIE code alignment must be 1");
   // Skip data alignment factor
   skipLeb128(D);
 
@@ -1079,7 +1079,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
     case 'P': {
       uint8_t Enc = readByte(D);
       if ((Enc & 0xf0) == dwarf::DW_EH_PE_aligned)
-        error("DW_EH_PE_aligned encoding for address of a personality routine "
+        fatal("DW_EH_PE_aligned encoding for address of a personality routine "
               "handler not supported");
       unsigned EncSize = getSizeForEncoding<ELFT>(Enc);
       Check(D.size() >= EncSize);
@@ -1093,7 +1093,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
       //    handler
       break;
     default:
-      error("unknown .eh_frame augmentation string value");
+      fatal("unknown .eh_frame augmentation string value");
     }
   }
   return dwarf::DW_EH_PE_absptr;
@@ -1159,13 +1159,13 @@ void EHOutputSection<ELFT>::addSectionAux(
       OffsetToIndex[Offset] = P.first->second;
     } else {
       if (!HasReloc)
-        error("FDE doesn't reference another section");
+        fatal("FDE doesn't reference another section");
       InputSectionBase<ELFT> *Target = S->getRelocTarget(*RelI);
       if (Target != &InputSection<ELFT>::Discarded && Target->isLive()) {
         uint32_t CieOffset = Offset + 4 - ID;
         auto I = OffsetToIndex.find(CieOffset);
         if (I == OffsetToIndex.end())
-          error("Invalid CIE reference");
+          fatal("Invalid CIE reference");
         Cies[I->second].Fdes.push_back(EHRegion<ELFT>(S, Index));
         Out<ELFT>::EhFrameHdr->reserveFde();
         this->Header.sh_size += alignTo(Length, sizeof(uintX_t));
@@ -1183,23 +1183,23 @@ EHOutputSection<ELFT>::readEntryLength(ArrayRef<uint8_t> D) {
   const endianness E = ELFT::TargetEndianness;
 
   if (D.size() < 4)
-    error("Truncated CIE/FDE length");
+    fatal("Truncated CIE/FDE length");
   uint64_t Len = read32<E>(D.data());
   if (Len < UINT32_MAX) {
     if (Len > (UINT32_MAX - 4))
-      error("CIE/FIE size is too large");
+      fatal("CIE/FIE size is too large");
     if (Len + 4 > D.size())
-      error("CIE/FIE ends past the end of the section");
+      fatal("CIE/FIE ends past the end of the section");
     return Len + 4;
   }
 
   if (D.size() < 12)
-    error("Truncated CIE/FDE length");
+    fatal("Truncated CIE/FDE length");
   Len = read64<E>(D.data() + 4);
   if (Len > (UINT64_MAX - 12))
-    error("CIE/FIE size is too large");
+    fatal("CIE/FIE size is too large");
   if (Len + 12 > D.size())
-    error("CIE/FIE ends past the end of the section");
+    fatal("CIE/FIE ends past the end of the section");
   return Len + 12;
 }
 
@@ -1307,7 +1307,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
     while (!Data.empty()) {
       size_t End = findNull(Data, EntSize);
       if (End == StringRef::npos)
-        error("String is not null terminated");
+        fatal("String is not null terminated");
       StringRef Entry = Data.substr(0, End + EntSize);
       uintX_t OutputOffset = Builder.add(Entry);
       if (shouldTailMerge())
@@ -1462,7 +1462,7 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   for (const std::unique_ptr<ObjectFile<ELFT>> &File : Table.getObjectFiles()) {
     for (const Elf_Sym *Sym : File->KeptLocalSyms) {
       ErrorOr<StringRef> SymNameOrErr = Sym->getName(File->getStringTable());
-      error(SymNameOrErr);
+      fatal(SymNameOrErr);
       StringRef SymName = *SymNameOrErr;
 
       auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
