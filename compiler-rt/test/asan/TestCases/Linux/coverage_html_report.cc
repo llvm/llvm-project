@@ -1,4 +1,5 @@
 // REQUIRES: has_sancovcc
+// REQUIRES: x86_64-linux
 // RUN: %clangxx_asan -fsanitize-coverage=func %s -o %t
 // RUN: rm -rf %T/coverage_html_report
 // RUN: mkdir -p %T/coverage_html_report
