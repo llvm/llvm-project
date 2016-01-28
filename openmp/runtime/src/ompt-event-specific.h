@@ -141,4 +141,12 @@
 
 #define ompt_event_flush_implemented                    ompt_event_UNIMPLEMENTED
 
+#if OMP_40_ENABLED
+# define ompt_event_task_dependences_implemented         ompt_event_MAY_ALWAYS_TRACE
+# define ompt_event_task_dependence_pair_implemented     ompt_event_MAY_ALWAYS_TRACE
+#else
+# define ompt_event_task_dependences_implemented         ompt_event_UNIMPLEMENTED
+# define ompt_event_task_dependence_pair_implemented     ompt_event_UNIMPLEMENTED
+#endif /* OMP_40_ENABLED */
+
 #endif

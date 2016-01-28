@@ -196,7 +196,8 @@ __kmp_depnode_list_free ( kmp_info_t *thread, kmp_depnode_list *list )
 }
 
 static inline void
-__kmp_track_dependence ( kmp_depnode_t *source, kmp_depnode_t *sink )
+__kmp_track_dependence ( kmp_depnode_t *source, kmp_depnode_t *sink,
+                         kmp_task_t *sink_task )
 {
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
     kmp_taskdata_t * task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
@@ -204,12 +205,27 @@ __kmp_track_dependence ( kmp_depnode_t *source, kmp_depnode_t *sink )
 
     __kmp_printf("%d(%s) -> %d(%s)\n", source->dn.id, task_source->td_ident->psource, sink->dn.id, task_sink->td_ident->psource);
 #endif
+#if OMPT_SUPPORT && OMPT_TRACE
+    /* OMPT tracks dependences between task (a=source, b=sink) in which
+       task a blocks the execution of b through the ompt_new_dependence_callback */
+    if (ompt_enabled &&
+        ompt_callbacks.ompt_callback(ompt_event_task_dependence_pair))
+    {
+        kmp_taskdata_t * task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
+        kmp_taskdata_t * task_sink = KMP_TASK_TO_TASKDATA(sink_task);
+
+        ompt_callbacks.ompt_callback(ompt_event_task_dependence_pair)(
+          task_source->ompt_task_info.task_id,
+          task_sink->ompt_task_info.task_id);
+    }
+#endif /* OMPT_SUPPORT && OMPT_TRACE */
 }
 
 template< bool filter >
 static inline kmp_int32
 __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
-                     bool dep_barrier,kmp_int32 ndeps, kmp_depend_info_t *dep_list)
+                     bool dep_barrier,kmp_int32 ndeps, kmp_depend_info_t *dep_list,
+                     kmp_task_t *task )
 {
     KA_TRACE(30, ("__kmp_process_deps<%d>: T#%d processing %d depencies : dep_barrier = %d\n", filter, gtid, ndeps, dep_barrier ) );
     
@@ -231,7 +247,7 @@ __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
                 if ( indep->dn.task ) {
                     KMP_ACQUIRE_DEPNODE(gtid,indep);
                     if ( indep->dn.task ) {
-                        __kmp_track_dependence(indep,node);
+                        __kmp_track_dependence(indep,node,task);
                         indep->dn.successors = __kmp_add_node(thread, indep->dn.successors, node);
                         KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p\n",
                                  filter,gtid, KMP_TASK_TO_TASKDATA(indep->dn.task), KMP_TASK_TO_TASKDATA(node->dn.task)));
@@ -247,7 +263,7 @@ __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
         } else if ( last_out && last_out->dn.task ) {
             KMP_ACQUIRE_DEPNODE(gtid,last_out);
             if ( last_out->dn.task ) {
-                __kmp_track_dependence(last_out,node);
+                __kmp_track_dependence(last_out,node,task);
                 last_out->dn.successors = __kmp_add_node(thread, last_out->dn.successors, node);
                 KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p\n", 
                              filter,gtid, KMP_TASK_TO_TASKDATA(last_out->dn.task), KMP_TASK_TO_TASKDATA(node->dn.task)));
@@ -312,8 +328,10 @@ __kmp_check_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_task_t *task, kmp_de
     // used to pack all npredecessors additions into a single atomic operation at the end
     int npredecessors;
 
-    npredecessors = __kmp_process_deps<true>(gtid, node, hash, dep_barrier, ndeps, dep_list);
-    npredecessors += __kmp_process_deps<false>(gtid, node, hash, dep_barrier, ndeps_noalias, noalias_dep_list);
+    npredecessors = __kmp_process_deps<true>(gtid, node, hash, dep_barrier,
+      ndeps, dep_list, task);
+    npredecessors += __kmp_process_deps<false>(gtid, node, hash, dep_barrier,
+      ndeps_noalias, noalias_dep_list, task);
 
     node->dn.task = task;
     KMP_MB();
@@ -403,6 +421,51 @@ __kmpc_omp_task_with_deps( ident_t *loc_ref, kmp_int32 gtid, kmp_task_t * new_ta
 
     kmp_info_t *thread = __kmp_threads[ gtid ];
     kmp_taskdata_t * current_task = thread->th.th_current_task;
+
+#if OMPT_SUPPORT && OMPT_TRACE
+    /* OMPT grab all dependences if requested by the tool */
+    if (ompt_enabled && ndeps+ndeps_noalias > 0 &&
+        ompt_callbacks.ompt_callback(ompt_event_task_dependences))
+	{
+        kmp_int32 i;
+
+        new_taskdata->ompt_task_info.ndeps = ndeps+ndeps_noalias;
+        new_taskdata->ompt_task_info.deps = (ompt_task_dependence_t *)
+          KMP_OMPT_DEPS_ALLOC(thread,
+             (ndeps+ndeps_noalias)*sizeof(ompt_task_dependence_t));
+
+        KMP_ASSERT(new_taskdata->ompt_task_info.deps != NULL);
+
+        for (i = 0; i < ndeps; i++)
+        {
+            new_taskdata->ompt_task_info.deps[i].variable_addr =
+              (void*) dep_list[i].base_addr;
+            if (dep_list[i].flags.in && dep_list[i].flags.out)
+                new_taskdata->ompt_task_info.deps[i].dependence_flags =
+                  ompt_task_dependence_type_inout;
+            else if (dep_list[i].flags.out)
+                new_taskdata->ompt_task_info.deps[i].dependence_flags =
+                  ompt_task_dependence_type_out;
+            else if (dep_list[i].flags.in)
+                new_taskdata->ompt_task_info.deps[i].dependence_flags =
+                  ompt_task_dependence_type_in;
+        }
+        for (i = 0; i < ndeps_noalias; i++)
+        {
+            new_taskdata->ompt_task_info.deps[ndeps+i].variable_addr =
+              (void*) noalias_dep_list[i].base_addr;
+            if (noalias_dep_list[i].flags.in && noalias_dep_list[i].flags.out)
+                new_taskdata->ompt_task_info.deps[ndeps+i].dependence_flags =
+                  ompt_task_dependence_type_inout;
+            else if (noalias_dep_list[i].flags.out)
+                new_taskdata->ompt_task_info.deps[ndeps+i].dependence_flags =
+                  ompt_task_dependence_type_out;
+            else if (noalias_dep_list[i].flags.in)
+                new_taskdata->ompt_task_info.deps[ndeps+i].dependence_flags =
+                  ompt_task_dependence_type_in;
+        }
+    }
+#endif /* OMPT_SUPPORT && OMPT_TRACE */
 
     bool serial = current_task->td_flags.team_serial || current_task->td_flags.tasking_ser || current_task->td_flags.final;
 #if OMP_41_ENABLED

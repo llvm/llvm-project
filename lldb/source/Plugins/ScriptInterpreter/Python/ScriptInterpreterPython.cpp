@@ -146,7 +146,7 @@ private:
         size_t size = 0;
         static wchar_t *g_python_home = Py_DecodeLocale(LLDB_PYTHON_HOME, &size);
 #else
-        static char *g_python_home = LLDB_PYTHON_HOME;
+        static char g_python_home[] = LLDB_PYTHON_HOME;
 #endif
         Py_SetPythonHome(g_python_home);
 #endif

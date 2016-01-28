@@ -462,6 +462,22 @@ __kmp_task_start( kmp_int32 gtid, kmp_task_t * task, kmp_taskdata_t * current_ta
             taskdata->ompt_task_info.function);
     }
 #endif
+#if OMP_40_ENABLED && OMPT_SUPPORT && OMPT_TRACE
+    /* OMPT emit all dependences if requested by the tool */
+    if (ompt_enabled && taskdata->ompt_task_info.ndeps > 0 &&
+        ompt_callbacks.ompt_callback(ompt_event_task_dependences))
+	{
+        ompt_callbacks.ompt_callback(ompt_event_task_dependences)(
+            taskdata->ompt_task_info.task_id,
+            taskdata->ompt_task_info.deps,
+            taskdata->ompt_task_info.ndeps
+        );
+		/* We can now free the allocated memory for the dependencies */
+		KMP_OMPT_DEPS_FREE (thread, taskdata->ompt_task_info.deps);
+        taskdata->ompt_task_info.deps = NULL;
+        taskdata->ompt_task_info.ndeps = 0;
+    }
+#endif /* OMP_40_ENABLED && OMPT_SUPPORT && OMPT_TRACE */
 
     return;
 }
@@ -760,6 +776,10 @@ __kmp_task_init_ompt( kmp_taskdata_t * task, int tid, void * function )
         task->ompt_task_info.function = function;
         task->ompt_task_info.frame.exit_runtime_frame = NULL;
         task->ompt_task_info.frame.reenter_runtime_frame = NULL;
+#if OMP_40_ENABLED
+        task->ompt_task_info.ndeps = 0;
+        task->ompt_task_info.deps = NULL;
+#endif /* OMP_40_ENABLED */
     }
 }
 #endif

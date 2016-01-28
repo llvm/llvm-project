@@ -26,9 +26,13 @@ typedef struct ompt_callbacks_s {
 
 
 typedef struct {
-    ompt_frame_t        frame;
-    void*               function;
-    ompt_task_id_t      task_id;
+    ompt_frame_t            frame;
+    void*                   function;
+    ompt_task_id_t          task_id;
+#if OMP_40_ENABLED
+    int                     ndeps;
+    ompt_task_dependence_t  *deps;
+#endif /* OMP_40_ENABLED */
 } ompt_task_info_t;
 
 
@@ -61,6 +65,16 @@ typedef struct {
 
 
 extern ompt_callbacks_t ompt_callbacks;
+
+#if OMP_40_ENABLED && OMPT_SUPPORT && OMPT_TRACE
+#if USE_FAST_MEMORY
+#  define KMP_OMPT_DEPS_ALLOC __kmp_fast_allocate
+#  define KMP_OMPT_DEPS_FREE __kmp_fast_free
+# else
+#  define KMP_OMPT_DEPS_ALLOC __kmp_thread_malloc
+#  define KMP_OMPT_DEPS_FREE __kmp_thread_free
+# endif
+#endif /* OMP_40_ENABLED && OMPT_SUPPORT && OMPT_TRACE */
 
 #ifdef __cplusplus
 extern "C" {

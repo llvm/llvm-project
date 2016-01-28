@@ -161,7 +161,7 @@ class LibcxxTestFormat(object):
                        'expected-error', 'expected-no-diagnostics']
         use_verify = self.use_verify_for_fail and \
                      any([tag in contents for tag in verify_tags])
-        extra_flags = []
+        extra_flags = ['-fsyntax-only']
         if use_verify:
             extra_flags += ['-Xclang', '-verify',
                             '-Xclang', '-verify-ignore-unexpected=note']
