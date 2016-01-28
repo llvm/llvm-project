@@ -303,6 +303,8 @@ makePropertyAttributesAsWritten(unsigned Attributes) {
     attributesAsWritten |= ObjCPropertyDecl::OBJC_PR_nonatomic;
   if (Attributes & ObjCDeclSpec::DQ_PR_atomic)
     attributesAsWritten |= ObjCPropertyDecl::OBJC_PR_atomic;
+  if (Attributes & ObjCDeclSpec::DQ_PR_class)
+    attributesAsWritten |= ObjCPropertyDecl::OBJC_PR_class;
   
   return (ObjCPropertyDecl::PropertyAttributeKind)attributesAsWritten;
 }
@@ -690,6 +692,9 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
 
   if (Attributes & ObjCDeclSpec::DQ_PR_null_resettable)
     PDecl->setPropertyAttributes(ObjCPropertyDecl::OBJC_PR_null_resettable);
+
+ if (Attributes & ObjCDeclSpec::DQ_PR_class)
+    PDecl->setPropertyAttributes(ObjCPropertyDecl::OBJC_PR_class);
 
   return PDecl;
 }
