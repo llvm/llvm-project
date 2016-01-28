@@ -161,6 +161,12 @@ protected:
 
   void CopyFrom(const SmallPtrSetImplBase &RHS);
   void MoveFrom(unsigned SmallSize, SmallPtrSetImplBase &&RHS);
+
+private:
+  /// Code shared by MoveFrom() and move constructor.
+  void MoveHelper(unsigned SmallSize, SmallPtrSetImplBase &&RHS);
+  /// Code shared by CopyFrom() and copy constructor.
+  void CopyHelper(const SmallPtrSetImplBase &RHS);
 };
 
 /// SmallPtrSetIteratorImpl - This is the common base class shared between all
