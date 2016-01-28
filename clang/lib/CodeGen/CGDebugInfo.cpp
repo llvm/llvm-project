@@ -1822,11 +1822,11 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   {
     llvm::SmallPtrSet<const IdentifierInfo*, 16> PropertySet;
     for (const ObjCCategoryDecl *ClassExt : ID->known_extensions())
-      for (auto *PD : ClassExt->instance_properties()) {
+      for (auto *PD : ClassExt->properties()) {
         PropertySet.insert(PD->getIdentifier());
         AddProperty(PD);
       }
-    for (const auto *PD : ID->instance_properties()) {
+    for (const auto *PD : ID->properties()) {
       // Don't emit duplicate metadata for properties that were already in a
       // class extension.
       if (!PropertySet.insert(PD->getIdentifier()).second)

@@ -94,6 +94,40 @@ numbers:
     cov.cc:3
     cov.cc:5
 
+Sancov Tool
+===========
+
+A new experimental ``sancov`` tool is developed to process coverage files.
+The tool is part of LLVM project and is currently supported only on Linux.
+It can handle symbolization tasks autonomously without needed any extra 
+support from environment.
+
+.. code-block:: console
+
+    USAGE: sancov [options] <action> <filenames...>
+
+    Action (required)
+      -print                    - Print coverage addresses
+      -covered-functions        - Print all covered funcions.
+      -not-covered-functions    - Print all not covered funcions.
+      -html-report              - Print HTML coverage report.
+
+    Options
+      -blacklist=<string>         - Blacklist file (sanitizer blacklist format).
+      -demangle                   - Print demangled function name.
+      -obj=<string>               - Path to object file to be symbolized
+      -strip_path_prefix=<string> - Strip this prefix from file paths in reports
+
+
+Automatic HTML Report Generation
+================================
+
+If ``*SAN_OPTIONS`` contains ``html_cov_report=1`` option set, then html
+coverage report would be automatically generated alongside the coverage files.
+The ``sancov`` binary should be present in ``PATH`` or
+``sancov_path=<path_to_sancov`` option can be used to specify tool location.
+
+
 How good is the coverage?
 =========================
 

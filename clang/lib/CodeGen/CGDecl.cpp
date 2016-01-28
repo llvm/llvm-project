@@ -715,8 +715,7 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
     llvm_unreachable("present but none");
 
   case Qualifiers::OCL_ExplicitNone:
-    // nothing to do
-    value = EmitScalarExpr(init);
+    value = EmitARCUnsafeUnretainedScalarExpr(init);
     break;
 
   case Qualifiers::OCL_Strong: {

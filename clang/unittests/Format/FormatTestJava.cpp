@@ -312,6 +312,9 @@ TEST_F(FormatTestJava, Annotations) {
                "      String bbbbbbbbbbbbbbb) {}\n"
                "}",
                getStyleWithColumns(60));
+  verifyFormat("@Annotation(\"Some\"\n"
+               "    + \" text\")\n"
+               "List<Integer> list;");
 }
 
 TEST_F(FormatTestJava, Generics) {

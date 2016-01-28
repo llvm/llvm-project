@@ -9,14 +9,6 @@ typedef unsigned long   vector8ulong   __attribute__((__vector_size__(64)));
 typedef unsigned short  vector8ushort  __attribute__((__vector_size__(16)));
 
 #ifdef __cplusplus
-#define BOOL bool
-#else
-#define BOOL _Bool
-#endif
-
-typedef BOOL vector8bool __attribute__((__ext_vector_type__(8)));
-
-#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -30,13 +22,6 @@ vector8double flt_ext(vector8float x) {
   return __builtin_convertvector(x, vector8double);
   // CHECK-LABEL: @flt_ext
   // CHECK: fpext <8 x float> %{{[^ ]}} to <8 x double>
-}
-
-vector8bool flt_tobool(vector8float x) {
-  return __builtin_convertvector(x, vector8bool);
-  // CHECK-LABEL: @flt_tobool
-  // CHECK-NOT: fptoui <8 x float> %{{[^ ]}} to <8 x i1>
-  // CHECK: fcmp une <8 x float> %{{[^ ]}}, zeroinitializer
 }
 
 vector8long flt_tosi(vector8float x) {
@@ -67,13 +52,6 @@ vector8long int_sext(vector8short x) {
   return __builtin_convertvector(x, vector8long);
   // CHECK-LABEL: @int_sext
   // CHECK: sext <8 x i16> %{{[^ ]}} to <8 x i64>
-}
-
-vector8bool int_tobool(vector8short x) {
-  return __builtin_convertvector(x, vector8bool);
-  // CHECK-LABEL: @int_tobool
-  // CHECK-NOT: trunc <8 x i16> %{{[^ ]}} to <8 x i1>
-  // CHECK: icmp ne <8 x i16> %{{[^ ]}}, zeroinitializer
 }
 
 vector8float int_tofp(vector8short x) {
