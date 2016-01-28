@@ -811,8 +811,10 @@ void CoverageData::DumpOffsets() {
 
   InternalMmapVector<char *> sancov_argv(module_name_vec.size() + 2);
   sancov_argv.push_back(FindPathToBinary(common_flags()->sancov_path));
-  sancov_argv.push_back(internal_strdup("-obj"));
-  sancov_argv.push_back(internal_strdup(GetArgv()[0]));
+  if (GetArgv() != nullptr) {
+    sancov_argv.push_back(internal_strdup("-obj"));
+    sancov_argv.push_back(internal_strdup(GetArgv()[0]));
+  }
   sancov_argv.push_back(internal_strdup("-html-report"));
   auto argv_deleter = at_scope_exit([&] {
     for (uptr i = 0; i < sancov_argv.size(); ++i) {
