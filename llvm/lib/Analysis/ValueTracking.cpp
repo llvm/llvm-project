@@ -36,6 +36,8 @@
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <array>
 #include <cstring>
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -79,35 +81,45 @@ static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
   return DL.getPointerTypeSizeInBits(Ty);
 }
 
-// Many of these functions have internal versions that take an assumption
-// exclusion set. This is because of the potential for mutual recursion to
-// cause computeKnownBits to repeatedly visit the same assume intrinsic. The
-// classic case of this is assume(x = y), which will attempt to determine
-// bits in x from bits in y, which will attempt to determine bits in y from
-// bits in x, etc. Regarding the mutual recursion, computeKnownBits can call
-// isKnownNonZero, which calls computeKnownBits and ComputeSignBit and
-// isKnownToBeAPowerOfTwo (all of which can call computeKnownBits), and so on.
-typedef SmallPtrSet<const Value *, 8> ExclInvsSet;
-
 namespace {
 // Simplifying using an assume can only be done in a particular control-flow
 // context (the context instruction provides that context). If an assume and
 // the context instruction are not in the same block then the DT helps in
 // figuring out if we can use it.
 struct Query {
-  ExclInvsSet ExclInvs;
   const DataLayout &DL;
   AssumptionCache *AC;
   const Instruction *CxtI;
   const DominatorTree *DT;
 
+  /// Set of assumptions that should be excluded from further queries.
+  /// This is because of the potential for mutual recursion to cause
+  /// computeKnownBits to repeatedly visit the same assume intrinsic. The
+  /// classic case of this is assume(x = y), which will attempt to determine
+  /// bits in x from bits in y, which will attempt to determine bits in y from
+  /// bits in x, etc. Regarding the mutual recursion, computeKnownBits can call
+  /// isKnownNonZero, which calls computeKnownBits and ComputeSignBit and
+  /// isKnownToBeAPowerOfTwo (all of which can call computeKnownBits), and so
+  /// on.
+  std::array<const Value*, MaxDepth> Excluded;
+  unsigned NumExcluded;
+
   Query(const DataLayout &DL, AssumptionCache *AC, const Instruction *CxtI,
         const DominatorTree *DT)
-      : DL(DL), AC(AC), CxtI(CxtI), DT(DT) {}
+      : DL(DL), AC(AC), CxtI(CxtI), DT(DT), NumExcluded(0) {}
 
   Query(const Query &Q, const Value *NewExcl)
-      : ExclInvs(Q.ExclInvs), DL(Q.DL), AC(Q.AC), CxtI(Q.CxtI), DT(Q.DT) {
-    ExclInvs.insert(NewExcl);
+      : DL(Q.DL), AC(Q.AC), CxtI(Q.CxtI), DT(Q.DT), NumExcluded(Q.NumExcluded) {
+    Excluded = Q.Excluded;
+    Excluded[NumExcluded++] = NewExcl;
+    assert(NumExcluded <= Excluded.size());
+  }
+
+  bool isExcluded(const Value *Value) const {
+    if (NumExcluded == 0)
+      return false;
+    auto End = Excluded.begin() + NumExcluded;
+    return std::find(Excluded.begin(), End, Value) != End;
   }
 };
 } // end anonymous namespace
@@ -730,7 +742,7 @@ static void computeKnownBitsFromAssume(Value *V, APInt &KnownZero,
     CallInst *I = cast<CallInst>(AssumeVH);
     assert(I->getParent()->getParent() == Q.CxtI->getParent()->getParent() &&
            "Got assumption for the wrong function!");
-    if (Q.ExclInvs.count(I))
+    if (Q.isExcluded(I))
       continue;
 
     // Warning: This loop can end up being somewhat performance sensetive.
