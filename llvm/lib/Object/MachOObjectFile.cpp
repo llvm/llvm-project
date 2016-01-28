@@ -458,7 +458,7 @@ MachOObjectFile::getSymbolSection(DataRefImpl Symb) const {
   DataRefImpl DRI;
   DRI.d.a = index - 1;
   if (DRI.d.a >= Sections.size())
-    report_fatal_error("getSymbolSection: Invalid section index.");
+    return object_error::parse_failed;
   return section_iterator(SectionRef(DRI, this));
 }
 
