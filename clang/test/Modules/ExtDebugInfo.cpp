@@ -18,7 +18,7 @@
 // RUN:     -triple %itanium_abi_triple \
 // RUN:     -include-pch %t.pch %s -emit-llvm -o %t-pch.ll %s
 // RUN: cat %t-pch.ll |  FileCheck %s
-
+// RUN: cat %t-pch.ll |  FileCheck %s --check-prefix=CHECK-PCH
 
 #ifdef MODULES
 @import DebugCXX;
@@ -109,3 +109,4 @@ void foo() {
 // CHECK: !DICompileUnit(
 // CHECK-SAME:           splitDebugFilename:
 // CHECK-SAME:           dwoId:
+// CHECK-PCH:            dwoId: 18446744073709551614
