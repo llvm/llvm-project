@@ -258,12 +258,12 @@ public:
 
       LOSHandleLoad();
 
-      NotifyLoaded(H, Objs, LoadedObjInfos);
+      this->NotifyLoaded(H, Objs, LoadedObjInfos);
 
       RTDyld.finalizeWithMemoryManagerLocking();
 
-      if (NotifyFinalized)
-        NotifyFinalized(H);
+      if (this->NotifyFinalized)
+        this->NotifyFinalized(H);
     };
 
     auto LOS =
