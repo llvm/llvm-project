@@ -190,6 +190,10 @@ public:
     if (D->isFromASTFile())
       return;
 
+    // Anonymous tag decls are deferred until we are building their declcontext.
+    if (D->getName().empty())
+      return;
+
     DebugTypeVisitor DTV(*Builder->getModuleDebugInfo(), *Ctx, false);
     DTV.TraverseDecl(D);
     Builder->UpdateCompletedType(D);
