@@ -960,8 +960,11 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       S.Address = *AddressOrErr;
     }
     S.TypeChar = getNMTypeChar(Obj, Sym);
-    if (error(Sym.printName(OS)))
-      break;
+    std::error_code EC = Sym.printName(OS);
+    if (EC && MachO)
+      OS << "bad string index";
+    else 
+      error(EC);
     OS << '\0';
     S.Sym = Sym;
     SymbolList.push_back(S);

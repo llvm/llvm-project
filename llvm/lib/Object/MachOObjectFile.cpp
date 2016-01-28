@@ -332,8 +332,7 @@ ErrorOr<StringRef> MachOObjectFile::getSymbolName(DataRefImpl Symb) const {
   MachO::nlist_base Entry = getSymbolTableEntryBase(this, Symb);
   const char *Start = &StringTable.data()[Entry.n_strx];
   if (Start < getData().begin() || Start >= getData().end())
-    report_fatal_error(
-        "Symbol name entry points before beginning or past end of file.");
+    return object_error::parse_failed;
   return StringRef(Start);
 }
 
