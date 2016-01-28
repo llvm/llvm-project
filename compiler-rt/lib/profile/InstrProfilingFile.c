@@ -17,10 +17,6 @@
 
 #define UNCONST(ptr) ((void *)(uintptr_t)(ptr))
 
-#ifdef _MSC_VER
-#define snprintf _snprintf
-#endif
-
 /* Return 1 if there is an error, otherwise return  0.  */
 static uint32_t fileWriter(ProfDataIOVec *IOVecs, uint32_t NumIOVecs,
                            void **WriterCtx) {

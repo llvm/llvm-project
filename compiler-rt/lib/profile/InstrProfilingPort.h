@@ -25,6 +25,7 @@
 #if COMPILER_RT_HAS_ATOMICS == 1
 #ifdef _MSC_VER
 #include <windows.h>
+#define snprintf _snprintf
 #if defined(_WIN64)
 #define COMPILER_RT_BOOL_CMPXCHG(Ptr, OldV, NewV)                              \
   (InterlockedCompareExchange64((LONGLONG volatile *)Ptr, (LONGLONG)NewV,      \
