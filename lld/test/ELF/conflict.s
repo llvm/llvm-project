@@ -7,10 +7,14 @@
 # RUN:   FileCheck -check-prefix=NO_DEMANGLE %s
 
 # DEMANGLE:    duplicate symbol: {{mul\(double, double\)|_Z3muldd}} in
-# NO_DEMANGLE: duplicate symbol: _Z3muldd in
+# DEMANGLE:    duplicate symbol: foo in
 
-.globl _Z3muldd
+# NO_DEMANGLE: duplicate symbol: _Z3muldd in
+# NO_DEMANGLE: duplicate symbol: foo in
+
+.globl _Z3muldd, foo
 _Z3muldd:
+foo:
   mov $60, %rax
   mov $42, %rdi
   syscall

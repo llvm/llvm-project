@@ -30,25 +30,26 @@ using namespace lld::elf2;
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
-template <class ELFT>
-static void checkCompatibility(InputFile *FileP) {
+template <class ELFT> static bool isCompatible(InputFile *FileP) {
   auto *F = dyn_cast<ELFFileBase<ELFT>>(FileP);
   if (!F)
-    return;
+    return true;
   if (F->getELFKind() == Config->EKind && F->getEMachine() == Config->EMachine)
-    return;
+    return true;
   StringRef A = F->getName();
   StringRef B = Config->Emulation;
   if (B.empty())
     B = Config->FirstElf->getName();
-  fatal(A + " is incompatible with " + B);
+  error(A + " is incompatible with " + B);
+  return false;
 }
 
 // Add symbols in File to the symbol table.
 template <class ELFT>
 void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   InputFile *FileP = File.get();
-  checkCompatibility<ELFT>(FileP);
+  if (!isCompatible<ELFT>(FileP))
+    return;
 
   // .a file
   if (auto *F = dyn_cast<ArchiveFile>(FileP)) {
@@ -181,17 +182,20 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     return;
   }
 
-  if (New->isTls() != Existing->isTls())
-    fatal("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
+  if (New->isTls() != Existing->isTls()) {
+    error("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
+    return;
+  }
 
   // compare() returns -1, 0, or 1 if the lhs symbol is less preferable,
   // equivalent (conflicting), or more preferable, respectively.
   int Comp = Existing->compare<ELFT>(New);
   if (Comp == 0) {
     std::string S = "duplicate symbol: " + conflictMsg(Existing, New);
-    if (!Config->AllowMultipleDefinition)
-      fatal(S);
-    warning(S);
+    if (Config->AllowMultipleDefinition)
+      warning(S);
+    else
+      error(S);
     return;
   }
   if (Comp < 0)

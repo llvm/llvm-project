@@ -214,8 +214,8 @@ void awesome_f2();
 """ % {"check_name_dashes" : check_name_dashes})
 
 # Recreates the list of checks in the docs/clang-tidy/checks directory.
-def update_checks_list(module_path):
-  docs_dir = os.path.join(module_path, '../../docs/clang-tidy/checks')
+def update_checks_list(clang_tidy_path):
+  docs_dir = os.path.join(clang_tidy_path, '../docs/clang-tidy/checks')
   filename = os.path.normpath(os.path.join(docs_dir, 'list.rst'))
   with open(filename, 'r') as f:
     lines = f.readlines()
@@ -262,9 +262,17 @@ FIXME: Describe what patterns does the check detect and why. Give examples.
        "underline" : "=" * len(check_name_dashes)})
 
 def main():
+  if len(sys.argv) == 2 and sys.argv[1] == '--update-docs':
+    update_checks_list(os.path.dirname(sys.argv[0]))
+    return
+
   if len(sys.argv) != 3:
-    print 'Usage: add_new_check.py <module> <check>, e.g.\n'
-    print 'add_new_check.py misc awesome-functions\n'
+    print """\
+Usage: add_new_check.py <module> <check>, e.g.
+  add_new_check.py misc awesome-functions
+
+Alternatively, run 'add_new_check.py --update-docs' to just update the list of
+documentation files."""
     return
 
   module = sys.argv[1]
@@ -281,7 +289,7 @@ def main():
   adapt_module(module_path, module, check_name, check_name_camel)
   write_test(module_path, module, check_name)
   write_docs(module_path, module, check_name)
-  update_checks_list(module_path)
+  update_checks_list(clang_tidy_path)
   print('Done. Now it\'s your turn!')
 
 if __name__ == '__main__':

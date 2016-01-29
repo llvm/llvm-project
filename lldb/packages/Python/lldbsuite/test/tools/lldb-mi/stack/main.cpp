@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <exception>
+
 struct inner
 {
     int var_d;
@@ -114,6 +116,18 @@ int do_tests_with_args()
     return 0;
 }
 
+void catch_unnamed_test()
+{
+    try
+    {
+        int i = 1, j = 2;
+        throw std::exception(); // BP_catch_unnamed
+    }
+    catch(std::exception&)
+    {
+    }
+}
+
 int
 main(int argc, char const *argv[])
 {
@@ -121,6 +135,7 @@ main(int argc, char const *argv[])
     local_struct_test();
     local_array_test();
     local_pointer_test();
+    catch_unnamed_test();
 
     do_tests_with_args();
     return 0;

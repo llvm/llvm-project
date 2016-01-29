@@ -1,6 +1,8 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyPerformanceModule
+  ForRangeCopyCheck.cpp
+  ImplicitCastInLoopCheck.cpp
   PerformanceTidyModule.cpp
   UnnecessaryCopyInitialization.cpp
 

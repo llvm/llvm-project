@@ -951,8 +951,8 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     if (Config->EMachine == EM_MIPS && !Config->Shared) {
       Out<ELFT>::MipsRldMap = new OutputSection<ELFT>(".rld_map", SHT_PROGBITS,
                                                       SHF_ALLOC | SHF_WRITE);
-      Out<ELFT>::MipsRldMap->setSize(ELFT::Is64Bits ? 8 : 4);
-      Out<ELFT>::MipsRldMap->updateAlign(ELFT::Is64Bits ? 8 : 4);
+      Out<ELFT>::MipsRldMap->setSize(sizeof(uintX_t));
+      Out<ELFT>::MipsRldMap->updateAlign(sizeof(uintX_t));
       OwningSections.emplace_back(Out<ELFT>::MipsRldMap);
       Add(Out<ELFT>::MipsRldMap);
     }
@@ -1204,7 +1204,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   }
 
   // Add space for section headers.
-  SectionHeaderOff = alignTo(FileOff, ELFT::Is64Bits ? 8 : 4);
+  SectionHeaderOff = alignTo(FileOff, sizeof(uintX_t));
   FileSize = SectionHeaderOff + getNumSections() * sizeof(Elf_Shdr);
 
   // Update "_end" and "end" symbols so that they

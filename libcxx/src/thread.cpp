@@ -16,10 +16,15 @@
 #include "future"
 #include "limits"
 #include <sys/types.h>
-#if !defined(_WIN32)
-# if !defined(__sun__) && !defined(__linux__) && !defined(_AIX) && !defined(__native_client__) && !defined(__CloudABI__)
+
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+# include <sys/param.h>
+# if defined(BSD)
 #   include <sys/sysctl.h>
-# endif // !defined(__sun__) && !defined(__linux__) && !defined(_AIX) && !defined(__native_client__) && !defined(__CloudABI__)
+# endif // defined(BSD)
+#endif // defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+
+#if !defined(_WIN32)
 # include <unistd.h>
 #endif // !_WIN32
 
