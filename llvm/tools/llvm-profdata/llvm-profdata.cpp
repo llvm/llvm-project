@@ -107,7 +107,7 @@ typedef SmallVector<WeightedFile, 5> WeightedFileVector;
 
 static void mergeInstrProfile(const WeightedFileVector &Inputs,
                               StringRef OutputFilename,
-                              ProfileFormat OutputFormat) {
+                              ProfileFormat OutputFormat, bool OutputSparse) {
   if (OutputFilename.compare("-") == 0)
     exitWithError("Cannot write indexed profdata format to stdout.");
 
@@ -119,7 +119,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if (EC)
     exitWithErrorCode(EC, OutputFilename);
 
-  InstrProfWriter Writer;
+  InstrProfWriter Writer(OutputSparse);
   SmallSet<std::error_code, 4> WriterErrorCodes;
   for (const auto &Input : Inputs) {
     auto ReaderOrErr = InstrProfReader::create(Input.Filename);
@@ -228,6 +228,9 @@ static int merge_main(int argc, const char *argv[]) {
                             "GCC encoding (only meaningful for -sample)"),
                  clEnumValEnd));
 
+  cl::opt<bool> OutputSparse("sparse", cl::init(false),
+      cl::desc("Generate a sparse profile (only meaningful for -instr)"));
+
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
 
   if (InputFilenames.empty() && WeightedInputFilenames.empty())
@@ -241,7 +244,8 @@ static int merge_main(int argc, const char *argv[]) {
     WeightedInputs.push_back(parseWeightedFile(WeightedFilename));
 
   if (ProfileKind == instr)
-    mergeInstrProfile(WeightedInputs, OutputFilename, OutputFormat);
+    mergeInstrProfile(WeightedInputs, OutputFilename, OutputFormat,
+                      OutputSparse);
   else
     mergeSampleProfile(WeightedInputs, OutputFilename, OutputFormat);
 

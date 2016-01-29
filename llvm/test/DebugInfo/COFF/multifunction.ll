@@ -191,14 +191,14 @@
 ; OBJ32-NEXT:     +0x0 [
 ; OBJ32-NEXT:       LineNumberStart: 4
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:       ColStart: 42
 ; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:     +0x5 [
 ; OBJ32-NEXT:       LineNumberStart: 5
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:       ColStart: 43
 ; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
@@ -213,14 +213,14 @@
 ; OBJ32-NEXT:     +0x0 [
 ; OBJ32-NEXT:       LineNumberStart: 8
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:       ColStart: 52
 ; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:     +0x5 [
 ; OBJ32-NEXT:       LineNumberStart: 9
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:       ColStart: 53
 ; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
@@ -235,28 +235,28 @@
 ; OBJ32-NEXT:     +0x0 [
 ; OBJ32-NEXT:       LineNumberStart: 12
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:       ColStart: 62
 ; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:     +0x5 [
 ; OBJ32-NEXT:       LineNumberStart: 13
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:       ColStart: 63
 ; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:     +0xA [
 ; OBJ32-NEXT:       LineNumberStart: 14
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:       ColStart: 72
 ; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:     +0xF [
 ; OBJ32-NEXT:       LineNumberStart: 15
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:       ColStart: 73
 ; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
@@ -447,21 +447,21 @@
 ; OBJ64-NEXT:     +0x0 [
 ; OBJ64-NEXT:       LineNumberStart: 3
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 0
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0x4 [
 ; OBJ64-NEXT:       LineNumberStart: 4
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 42
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0x9 [
 ; OBJ64-NEXT:       LineNumberStart: 5
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 43
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
@@ -476,21 +476,21 @@
 ; OBJ64-NEXT:     +0x0 [
 ; OBJ64-NEXT:       LineNumberStart: 7
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 0
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0x4 [
 ; OBJ64-NEXT:       LineNumberStart: 8
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 52
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0x9 [
 ; OBJ64-NEXT:       LineNumberStart: 9
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 53
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
@@ -505,35 +505,35 @@
 ; OBJ64-NEXT:     +0x0 [
 ; OBJ64-NEXT:       LineNumberStart: 11
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 0
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0x4 [
 ; OBJ64-NEXT:       LineNumberStart: 12
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 62
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0x9 [
 ; OBJ64-NEXT:       LineNumberStart: 13
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 63
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0xE [
 ; OBJ64-NEXT:       LineNumberStart: 14
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 72
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0x13 [
 ; OBJ64-NEXT:       LineNumberStart: 15
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:       ColStart: 73
 ; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]

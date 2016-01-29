@@ -378,7 +378,7 @@ static Printable PrintNodeId(const SDNode &Node) {
   });
 }
 
-void SDNode::dump() const { dump(nullptr); }
+LLVM_DUMP_METHOD void SDNode::dump() const { dump(nullptr); }
 void SDNode::dump(const SelectionDAG *G) const {
   print(dbgs(), G);
   dbgs() << '\n';
@@ -590,7 +590,7 @@ static void DumpNodes(const SDNode *N, unsigned indent, const SelectionDAG *G) {
   N->dump(G);
 }
 
-void SelectionDAG::dump() const {
+LLVM_DUMP_METHOD void SelectionDAG::dump() const {
   dbgs() << "SelectionDAG has " << AllNodes.size() << " nodes:\n";
 
   for (allnodes_const_iterator I = allnodes_begin(), E = allnodes_end();

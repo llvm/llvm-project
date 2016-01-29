@@ -116,18 +116,36 @@ public:
 
   /// \brief Add a line entry.
   void addLineEntry(const MCCVLineEntry &LineEntry) {
-    MCCVLines[LineEntry.getFunctionId()].push_back(LineEntry);
+    size_t Offset = MCCVLines.size();
+    auto I =
+        MCCVLineStartStop.insert({LineEntry.getFunctionId(), {Offset, Offset}});
+    if (!I.second)
+      I.first->second.second = Offset;
+    MCCVLines.push_back(LineEntry);
   }
 
-  ArrayRef<MCCVLineEntry> getFunctionLineEntries(unsigned FuncId) {
-    assert(MCCVLines.find(FuncId) != MCCVLines.end());
-    return MCCVLines.find(FuncId)->second;
+  std::vector<MCCVLineEntry> getFunctionLineEntries(unsigned FuncId) {
+    auto I = MCCVLineStartStop.find(FuncId);
+    assert(I != MCCVLineStartStop.end());
+
+    std::vector<MCCVLineEntry> FilteredLines;
+    for (size_t Idx = I->second.first, End = I->second.second + 1; Idx != End;
+         ++Idx)
+      if (MCCVLines[Idx].getFunctionId() == FuncId)
+        FilteredLines.push_back(MCCVLines[Idx]);
+    return FilteredLines;
   }
 
   /// Emits a line table substream.
   void emitLineTableForFunction(MCObjectStreamer &OS, unsigned FuncId,
                                 const MCSymbol *FuncBegin,
                                 const MCSymbol *FuncEnd);
+
+  void emitInlineLineTableForFunction(MCObjectStreamer &OS,
+                                      unsigned PrimaryFunctionId,
+                                      unsigned SourceFileId,
+                                      unsigned SourceLineNum,
+                                      ArrayRef<unsigned> SecondaryFunctionIds);
 
   /// Emits the string table substream.
   void emitStringTable(MCObjectStreamer &OS);
@@ -154,8 +172,12 @@ private:
   /// An array of absolute paths. Eventually this may include the file checksum.
   SmallVector<StringRef, 4> Filenames;
 
-  /// A collection of MCDwarfLineEntry for each section.
-  std::map<int, std::vector<MCCVLineEntry>> MCCVLines;
+  /// The offset of the first and last .cv_loc directive for a given function
+  /// id.
+  std::map<unsigned, std::pair<size_t, size_t>> MCCVLineStartStop;
+
+  /// A collection of MCCVLineEntry for each section.
+  std::vector<MCCVLineEntry> MCCVLines;
 };
 
 } // end namespace llvm

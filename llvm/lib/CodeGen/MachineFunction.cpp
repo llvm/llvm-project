@@ -358,7 +358,7 @@ const char *MachineFunction::createExternalSymbolName(StringRef Name) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MachineFunction::dump() const {
+LLVM_DUMP_METHOD void MachineFunction::dump() const {
   print(dbgs());
 }
 #endif
@@ -819,7 +819,7 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MachineJumpTableInfo::dump() const { print(dbgs()); }
+LLVM_DUMP_METHOD void MachineJumpTableInfo::dump() const { print(dbgs()); }
 #endif
 
 
@@ -966,5 +966,5 @@ void MachineConstantPool::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MachineConstantPool::dump() const { print(dbgs()); }
+LLVM_DUMP_METHOD void MachineConstantPool::dump() const { print(dbgs()); }
 #endif

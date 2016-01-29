@@ -119,9 +119,36 @@ define void @allocarray_inbounds() {
 
 ; CHECK-LABEL: dynamic_alloca:
 define void @dynamic_alloca(i32 %alloc) {
- ; TODO: Support frame pointers
- ;%r = alloca i32, i32 %alloc
- ;store i32 0, i32* %r
+ ; CHECK: i32.const [[L0:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.load [[SP:.+]]=, 0([[L0]])
+ ; CHECK-NEXT: copy_local [[FP:.+]]=, [[SP]]
+ ; Target independent codegen bumps the stack pointer
+ ; FIXME: we need to write the value back to memory
+ %r = alloca i32, i32 %alloc
+ ; Target-independent codegen also calculates the store addr
+ store i32 0, i32* %r
+ ; CHECK: i32.const [[L3:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.store [[SP]]=, 0([[L3]]), [[FP]]
+ ret void
+}
+
+
+; CHECK-LABEL: dynamic_static_alloca:
+define void @dynamic_static_alloca(i32 %alloc) {
+ ; CHECK: i32.const [[L0:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.load [[L0]]=, 0([[L0]])
+ ; CHECK-NEXT: i32.const [[L2:.+]]=, 16
+ ; CHECK-NEXT: i32.sub [[SP:.+]]=, [[L0]], [[L2]]
+ ; CHECK-NEXT: copy_local [[FP:.+]]=, [[SP]]
+ ; CHECK-NEXT: i32.const [[L3:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.store {{.*}}=, 0([[L3]]), [[SP]]
+ %r1 = alloca i32
+ %r = alloca i32, i32 %alloc
+ store i32 0, i32* %r
+ ; CHECK: i32.const [[L3:.+]]=, 16
+ ; CHECK: i32.add [[SP]]=, [[FP]], [[L3]]
+ ; CHECK: i32.const [[L4:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.store [[SP]]=, 0([[L4]]), [[SP]]
  ret void
 }
 ; TODO: test aligned alloc

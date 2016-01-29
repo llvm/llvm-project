@@ -1827,7 +1827,7 @@ void PMStack::push(PMDataManager *PM) {
 }
 
 // Dump content of the pass manager stack.
-void PMStack::dump() const {
+LLVM_DUMP_METHOD void PMStack::dump() const {
   for (PMDataManager *Manager : S)
     dbgs() << Manager->getAsPass()->getPassName() << ' ';
 

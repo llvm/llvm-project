@@ -602,6 +602,16 @@ void Use::set(Value *V) {
   if (V) V->addUse(*this);
 }
 
+Value *Use::operator=(Value *RHS) {
+  set(RHS);
+  return RHS;
+}
+
+const Use &Use::operator=(const Use &RHS) {
+  set(RHS.Val);
+  return *this;
+}
+
 template <class Compare> void Value::sortUseList(Compare Cmp) {
   if (!UseList || !UseList->Next)
     // No need to sort 0 or 1 uses.

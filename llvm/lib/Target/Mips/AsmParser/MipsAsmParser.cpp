@@ -233,6 +233,9 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandDRotationImm(MCInst &Inst, SMLoc IDLoc,
                           SmallVectorImpl<MCInst> &Instructions);
 
+  bool expandAbs(MCInst &Inst, SMLoc IDLoc,
+                 SmallVectorImpl<MCInst> &Instructions);
+
   void createNop(bool hasShortDelaySlot, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);
 
@@ -2087,6 +2090,9 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc,
   case Mips::DRORImm:
     return expandDRotationImm(Inst, IDLoc, Instructions) ? MER_Fail
                                                          : MER_Success;
+  case Mips::ABSMacro:
+    return expandAbs(Inst, IDLoc, Instructions) ? MER_Fail
+                                                : MER_Success;
   }
 }
 
@@ -3529,6 +3535,22 @@ bool MipsAsmParser::expandDRotationImm(MCInst &Inst, SMLoc IDLoc,
   }
 
   return true;
+}
+
+bool MipsAsmParser::expandAbs(MCInst &Inst, SMLoc IDLoc,
+                              SmallVectorImpl<MCInst> &Instructions) {
+
+  unsigned FirstRegOp = Inst.getOperand(0).getReg();
+  unsigned SecondRegOp = Inst.getOperand(1).getReg();
+
+  emitRI(Mips::BGEZ, SecondRegOp, 8, IDLoc, Instructions);
+  if (FirstRegOp != SecondRegOp)
+    emitRRR(Mips::ADDu, FirstRegOp, SecondRegOp, Mips::ZERO, IDLoc, Instructions);
+  else
+    createNop(false, IDLoc, Instructions);
+  emitRRR(Mips::SUB, FirstRegOp, Mips::ZERO, SecondRegOp, IDLoc, Instructions);
+
+  return false;
 }
 
 void MipsAsmParser::createNop(bool hasShortDelaySlot, SMLoc IDLoc,

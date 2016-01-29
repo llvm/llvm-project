@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/Support/COFF.h"
@@ -151,11 +152,11 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
   OS.EmitCOFFSectionIndex(FuncBegin);
 
   // Actual line info.
-  ArrayRef<MCCVLineEntry> Locs = getFunctionLineEntries(FuncId);
+  std::vector<MCCVLineEntry> Locs = getFunctionLineEntries(FuncId);
   bool HaveColumns = any_of(Locs, [](const MCCVLineEntry &LineEntry) {
     return LineEntry.getColumn() != 0;
   });
-  OS.EmitIntValue(HaveColumns ? int(codeview::LineFlags::HaveColumns) : 0, 2);
+  OS.EmitIntValue(HaveColumns ? int(LineFlags::HaveColumns) : 0, 2);
   OS.emitAbsoluteSymbolDiff(FuncEnd, FuncBegin, 4);
 
   for (auto I = Locs.begin(), E = Locs.end(); I != E;) {
@@ -180,7 +181,7 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
       OS.emitAbsoluteSymbolDiff(J->getLabel(), FuncBegin, 4);
       unsigned LineData = J->getLine();
       if (J->isStmt())
-        LineData |= codeview::LineInfo::StatementFlag;
+        LineData |= LineInfo::StatementFlag;
       OS.EmitIntValue(LineData, 4);
     }
     if (HaveColumns) {
@@ -192,6 +193,73 @@ void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,
     I = FileSegEnd;
   }
   OS.EmitLabel(LineEnd);
+}
+
+static bool compressAnnotation(uint32_t Data, SmallVectorImpl<char> &Buffer) {
+  if (isUInt<7>(Data)) {
+    Buffer.push_back(Data);
+    return true;
+  }
+
+  if (isUInt<14>(Data)) {
+    Buffer.push_back((Data >> 8) | 0x80);
+    Buffer.push_back(Data & 0xff);
+    return true;
+  }
+
+  if (isUInt<29>(Data)) {
+    Buffer.push_back((Data >> 24) | 0xC0);
+    Buffer.push_back((Data >> 16) & 0xff);
+    Buffer.push_back((Data >> 8) & 0xff);
+    Buffer.push_back(Data & 0xff);
+    return true;
+  }
+
+  return false;
+}
+
+static uint32_t encodeSignedNumber(uint32_t Data) {
+  if (Data >> 31)
+    return ((-Data) << 1) | 1;
+  return Data << 1;
+}
+
+void CodeViewContext::emitInlineLineTableForFunction(
+    MCObjectStreamer &OS, unsigned PrimaryFunctionId, unsigned SourceFileId,
+    unsigned SourceLineNum, ArrayRef<unsigned> SecondaryFunctionIds) {
+  std::vector<MCCVLineEntry> Locs = getFunctionLineEntries(PrimaryFunctionId);
+  std::vector<std::pair<BinaryAnnotationsOpCode, uint32_t>> Annotations;
+
+  const MCCVLineEntry *LastLoc = nullptr;
+  unsigned LastFileId = SourceFileId;
+  unsigned LastLineNum = SourceLineNum;
+
+  for (const MCCVLineEntry &Loc : Locs) {
+    if (!LastLoc) {
+      // TODO ChangeCodeOffset
+      // TODO ChangeCodeLength
+    }
+
+    if (Loc.getFileNum() != LastFileId)
+      Annotations.push_back({ChangeFile, Loc.getFileNum()});
+
+    if (Loc.getLine() != LastLineNum)
+      Annotations.push_back(
+          {ChangeLineOffset, encodeSignedNumber(Loc.getLine() - LastLineNum)});
+
+    LastLoc = &Loc;
+    LastFileId = Loc.getFileNum();
+    LastLineNum = Loc.getLine();
+  }
+
+  SmallString<32> Buffer;
+  for (auto Annotation : Annotations) {
+    BinaryAnnotationsOpCode Opcode = Annotation.first;
+    uint32_t Operand = Annotation.second;
+    compressAnnotation(Opcode, Buffer);
+    compressAnnotation(Operand, Buffer);
+  }
+  OS.EmitBytes(Buffer);
 }
 
 //

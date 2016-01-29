@@ -170,6 +170,7 @@ void initializeLoopInterchangePass(PassRegistry &);
 void initializeLoopInstSimplifyPass(PassRegistry&);
 void initializeLoopRotatePass(PassRegistry&);
 void initializeLoopSimplifyPass(PassRegistry&);
+void initializeLoopSimplifyCFGPass(PassRegistry&);
 void initializeLoopStrengthReducePass(PassRegistry&);
 void initializeGlobalMergePass(PassRegistry&);
 void initializeLoopRerollPass(PassRegistry&);

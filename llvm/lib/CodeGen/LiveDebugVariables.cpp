@@ -1033,7 +1033,7 @@ bool LiveDebugVariables::doInitialization(Module &M) {
 }
 
 #ifndef NDEBUG
-void LiveDebugVariables::dump() {
+LLVM_DUMP_METHOD void LiveDebugVariables::dump() {
   if (pImpl)
     static_cast<LDVImpl*>(pImpl)->print(dbgs());
 }

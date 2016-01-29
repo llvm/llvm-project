@@ -819,6 +819,6 @@ void ConstantRange::print(raw_ostream &OS) const {
 
 /// dump - Allow printing from a debugger easily...
 ///
-void ConstantRange::dump() const {
+LLVM_DUMP_METHOD void ConstantRange::dump() const {
   print(dbgs());
 }

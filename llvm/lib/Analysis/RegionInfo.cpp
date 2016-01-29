@@ -155,7 +155,7 @@ void RegionInfoPass::print(raw_ostream &OS, const Module *) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void RegionInfoPass::dump() const {
+LLVM_DUMP_METHOD void RegionInfoPass::dump() const {
   RI.dump();
 }
 #endif

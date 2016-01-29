@@ -343,7 +343,7 @@ protected:
   }
 
 public:
-  Type *getElementType() const { return ContainedTys[0]; }
+  Type *getElementType() const { return getSequentialElementType(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const Type *T) {
@@ -352,10 +352,6 @@ public:
            T->getTypeID() == VectorTyID;
   }
 };
-
-Type *Type::getSequentialElementType() const {
-  return cast<SequentialType>(this)->getElementType();
-}
 
 /// ArrayType - Class to represent array types.
 ///

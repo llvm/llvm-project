@@ -45,7 +45,7 @@ struct SubMultiClassReference {
   void dump() const;
 };
 
-void SubMultiClassReference::dump() const {
+LLVM_DUMP_METHOD void SubMultiClassReference::dump() const {
   errs() << "Multiclass:\n";
 
   MC->dump();

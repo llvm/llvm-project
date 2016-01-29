@@ -27,7 +27,7 @@ f:
   .cv_loc 0 1 5 2
   incl (%rdi)
   # #include "t.h" start
-  .cv_loc 0 2 0 0
+  .cv_loc 0 2 0 0 is_stmt 1
   incl (%rdi)
   .cv_loc 0 2 1 0
   incl (%rdi)
@@ -50,7 +50,7 @@ f:
 # CHECK:     +0x0 [
 # CHECK:       LineNumberStart: 5
 # CHECK:       LineNumberEndDelta: 0
-# CHECK:       IsStatement: Yes
+# CHECK:       IsStatement: No
 # CHECK:       ColStart: 2
 # CHECK:       ColEnd: 0
 # CHECK:     ]
@@ -67,7 +67,7 @@ f:
 # CHECK:     +0x4 [
 # CHECK:       LineNumberStart: 1
 # CHECK:       LineNumberEndDelta: 0
-# CHECK:       IsStatement: Yes
+# CHECK:       IsStatement: No
 # CHECK:       ColStart: 0
 # CHECK:       ColEnd: 0
 # CHECK:     ]
@@ -77,7 +77,7 @@ f:
 # CHECK:     +0x6 [
 # CHECK:       LineNumberStart: 6
 # CHECK:       LineNumberEndDelta: 0
-# CHECK:       IsStatement: Yes
+# CHECK:       IsStatement: No
 # CHECK:       ColStart: 2
 # CHECK:       ColEnd: 0
 # CHECK:     ]

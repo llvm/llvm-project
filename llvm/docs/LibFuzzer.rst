@@ -62,6 +62,7 @@ The most important flags are::
   mutate_depth                       	5	Apply this number of consecutive mutations to each input.
   timeout                            	1200	Timeout in seconds (if positive). If one unit runs more than this number of seconds the process will abort.
   abort_on_timeout                      0       If positive, call abort on timeout.
+  timeout_exitcode                     77       Unless abort_on_timeout is set, use this exitcode on timeout.
   max_total_time                        0       If positive, indicates the maximal total time in seconds to run the fuzzer.
   help                               	0	Print help.
   merge                                 0       If 1, the 2-nd, 3-rd, etc corpora will be merged into the 1-st corpus. Only interesting units will be taken.

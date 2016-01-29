@@ -1,6 +1,6 @@
+# RUN: llvm-profdata merge -sparse=true %s -o %t.profdata
 
-
-# RUN: llvm-profdata merge %s -o %t.profdata
+# RUN: llvm-profdata merge -sparse=false %s -o %t.profdata.dense
 
 # RUN: llvm-profdata show %t.profdata --function function_count_only --counts | FileCheck %s -check-prefix=FUNC_COUNT_ONLY
 function_count_only
@@ -12,7 +12,8 @@ function_count_only
 # FUNC_COUNT_ONLY-NEXT: Function count: 97531
 # FUNC_COUNT_ONLY-NEXT: Block counts: []
 
-# RUN: llvm-profdata show %t.profdata --function "name with spaces" --counts | FileCheck %s -check-prefix=SPACES
+# RUN: llvm-profdata show %t.profdata.dense --function "name with spaces" --counts | FileCheck %s -check-prefix=SPACES
+# RUN: llvm-profdata show %t.profdata --function "name with spaces" --counts | FileCheck %s --check-prefix=SPARSE_SPACES
 name with spaces
 1024
 2
@@ -22,6 +23,7 @@ name with spaces
 # SPACES-NEXT: Counters: 2
 # SPACES-NEXT: Function count: 0
 # SPACES-NEXT: Block counts: [0]
+# SPARSE_SPACES-NOT: Function count: 0
 
 # RUN: llvm-profdata show %t.profdata --function large_numbers --counts | FileCheck %s -check-prefix=LARGENUM
 large_numbers
@@ -38,7 +40,7 @@ large_numbers
 # LARGENUM-NEXT: Function count: 2305843009213693952
 # LARGENUM-NEXT: Block counts: [1152921504606846976, 576460752303423488, 288230376151711744, 144115188075855872, 72057594037927936]
 
-# RUN: llvm-profdata show %t.profdata --function hex_hash | FileCheck %s -check-prefix=HEX-HASH
+# RUN: llvm-profdata show %t.profdata.dense --function hex_hash | FileCheck %s -check-prefix=HEX-HASH
 hex_hash
 0x1234
 1
@@ -51,19 +53,21 @@ hex_hash
 # NOSUCHFUNC: Functions shown: 0
 
 # RUN: llvm-profdata show %t.profdata --function _ | FileCheck %s -check-prefix=SOMEFUNCS
+# RUN: llvm-profdata show %t.profdata.dense --function _ | FileCheck %s -check-prefix=SOMEFUNCS_DENSE
 # SOMEFUNCS: Counters:
 # SOMEFUNCS: function_count_only:
 # SOMEFUNCS: large_numbers:
-# SOMEFUNCS: Functions shown: 3
+# SOMEFUNCS: Functions shown: 2
+# SOMEFUNCS_DENSE: Functions shown: 3
 
-# RUN: llvm-profdata show %t.profdata | FileCheck %s -check-prefix=SUMMARY
+# RUN: llvm-profdata show %t.profdata.dense | FileCheck %s -check-prefix=SUMMARY
 # SUMMARY-NOT: Counters:
 # SUMMARY-NOT: Functions shown:
 # SUMMARY: Total functions: 4
 # SUMMARY: Maximum function count: 2305843009213693952
 # SUMMARY: Maximum internal block count: 1152921504606846976
 
-# RUN: llvm-profdata show --detailed-summary %t.profdata | FileCheck %s -check-prefix=DETAILED-SUMMARY
+# RUN: llvm-profdata show --detailed-summary %t.profdata.dense | FileCheck %s -check-prefix=DETAILED-SUMMARY
 # DETAILED-SUMMARY: Detailed summary:
 # DETAILED-SUMMARY: Total number of blocks: 10
 # DETAILED-SUMMARY: Total count: 4539628424389557499

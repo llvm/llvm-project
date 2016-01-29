@@ -380,6 +380,23 @@ static void replaceExtractElements(InsertElementInst *InsElt,
     ExtendMask.push_back(UndefValue::get(IntType));
 
   Value *ExtVecOp = ExtElt->getVectorOperand();
+  auto *ExtVecOpInst = dyn_cast<Instruction>(ExtVecOp);
+  BasicBlock *InsertionBlock = (ExtVecOpInst && !isa<PHINode>(ExtVecOpInst))
+                                   ? ExtVecOpInst->getParent()
+                                   : ExtElt->getParent();
+
+  // TODO: This restriction matches the basic block check below when creating
+  // new extractelement instructions. If that limitation is removed, this one
+  // could also be removed. But for now, we just bail out to ensure that we
+  // will replace the extractelement instruction that is feeding our
+  // insertelement instruction. This allows the insertelement to then be
+  // replaced by a shufflevector. If the insertelement is not replaced, we can
+  // induce infinite looping because there's an optimization for extractelement
+  // that will delete our widening shuffle. This would trigger another attempt
+  // here to create that shuffle, and we spin forever.
+  if (InsertionBlock != InsElt->getParent())
+    return;
+
   auto *WideVec = new ShuffleVectorInst(ExtVecOp, UndefValue::get(ExtVecType),
                                         ConstantVector::get(ExtendMask));
 
@@ -387,7 +404,6 @@ static void replaceExtractElements(InsertElementInst *InsElt,
   // (as long as it's not a PHI) or at the start of the basic block of the
   // extract, so any subsequent extracts in the same basic block can use it.
   // TODO: Insert before the earliest ExtractElementInst that is replaced.
-  auto *ExtVecOpInst = dyn_cast<Instruction>(ExtVecOp);
   if (ExtVecOpInst && !isa<PHINode>(ExtVecOpInst))
     WideVec->insertAfter(ExtVecOpInst);
   else

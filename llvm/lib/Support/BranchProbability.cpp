@@ -32,7 +32,7 @@ raw_ostream &BranchProbability::print(raw_ostream &OS) const {
                       Percent);
 }
 
-void BranchProbability::dump() const { print(dbgs()) << '\n'; }
+LLVM_DUMP_METHOD void BranchProbability::dump() const { print(dbgs()) << '\n'; }
 
 BranchProbability::BranchProbability(uint32_t Numerator, uint32_t Denominator) {
   assert(Denominator > 0 && "Denominator cannot be 0!");

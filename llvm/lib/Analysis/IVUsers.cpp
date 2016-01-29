@@ -312,7 +312,7 @@ void IVUsers::print(raw_ostream &OS, const Module *M) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void IVUsers::dump() const {
+LLVM_DUMP_METHOD void IVUsers::dump() const {
   print(dbgs());
 }
 #endif

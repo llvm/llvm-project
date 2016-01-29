@@ -16,12 +16,6 @@ mode-dependent-address.c
 pr38151.c
 va-arg-22.c
 
-# TargetRegisterInfo.h:315: static unsigned int llvm::TargetRegisterInfo::virtReg2Index(unsigned int): Assertion `isVirtualRegister(Reg) && "Not a virtual register"' failed.
-va-arg-11.c
-va-arg-21.c
-va-arg-24.c
-va-arg-trap-1.c
-
 # WebAssemblyCFGStackify.cpp:211: void SortBlocks(llvm::MachineFunction&, const llvm::MachineLoopInfo&): Assertion `L->contains( MLI.getLoopFor(&*prev(MachineFunction::iterator(&MBB)))) && "Loop isn't contiguous"' failed.
 20000815-1.c
 20010129-1.c
@@ -36,7 +30,6 @@ va-arg-trap-1.c
 # These were previously "Cannot select FrameIndex." Now most of them fail
 # because they contain call frame pseudos (e.g. call a vararg func),
 # frame pointers, or similar. This list will be updated again soon.
-20000519-1.c
 20000706-4.c
 20000706-5.c
 20000801-2.c
@@ -52,13 +45,7 @@ va-arg-trap-1.c
 20040625-1.c
 20040823-1.c
 
-20041113-1.c
-
-20041214-1.c
-
 20050826-2.c
-
-20071213-1.c
 
 20080506-2.c
 20080519-1.c
@@ -70,8 +57,7 @@ va-arg-trap-1.c
 20090623-1.c
 
 920501-6.c
-920501-8.c
-920726-1.c
+
 930518-1.c
 
 931004-10.c
@@ -82,34 +68,22 @@ va-arg-trap-1.c
 931004-6.c
 931004-8.c
 
-980205.c
-980608-1.c
 980709-1.c
-980716-1.c
 990127-1.c
-
 991216-2.c
 
-
 enum-3.c
-fprintf-chk-1.c
 frame-address.c
 loop-15.c
 loop-ivopts-2.c
 mayalias-3.c
-
 multi-ix.c
-
 pr20466-1.c
-
-
 pr28778.c
 pr28982b.c
-
 pr30778.c
 pr31448-2.c
 pr31448.c
-
 pr33870-1.c
 pr33870.c
 
@@ -123,7 +97,6 @@ pr43987.c
 
 pr44575.c
 
-pr44942.c
 pr46309.c
 pr47538.c
 pr47925.c
@@ -134,8 +107,6 @@ pr49419.c
 pr53645-2.c
 pr53645.c
 
-pr56205.c
-
 pr56866.c
 
 pr57876.c
@@ -143,47 +114,14 @@ pr58277-1.c
 
 pr59643.c
 
-printf-chk-1.c
 pta-field-1.c
 pta-field-2.c
-
 stdarg-1.c
-stdarg-2.c
 stdarg-3.c
-stdarg-4.c
 strct-stdarg-1.c
 strct-varg-1.c
-
-va-arg-1.c
 va-arg-10.c
-va-arg-12.c
-va-arg-13.c
-va-arg-14.c
-va-arg-15.c
-va-arg-16.c
-va-arg-17.c
-va-arg-18.c
-va-arg-19.c
-va-arg-2.c
-va-arg-20.c
-va-arg-23.c
-va-arg-26.c
-va-arg-4.c
-va-arg-5.c
-va-arg-6.c
-va-arg-7.c
-va-arg-8.c
-va-arg-9.c
 va-arg-pack-1.c
-vfprintf-1.c
-vfprintf-chk-1.c
-vprintf-1.c
-vprintf-chk-1.c
-
-# Cannot select callseq_end.
-20040811-1.c
-pr43220.c
-vla-dealloc-1.c
 
 # Cannot select brind.
 20071210-1.c

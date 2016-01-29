@@ -89,7 +89,7 @@
 ; OBJ32-NEXT:     +0x0 [
 ; OBJ32-NEXT:       LineNumberStart: 1
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT:   FilenameSegment [
@@ -97,7 +97,7 @@
 ; OBJ32-NEXT:     +0x5 [
 ; OBJ32-NEXT:       LineNumberStart: 2
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT:   FilenameSegment [
@@ -105,12 +105,12 @@
 ; OBJ32-NEXT:     +0xA [
 ; OBJ32-NEXT:       LineNumberStart: 7
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:     +0xF [
 ; OBJ32-NEXT:       LineNumberStart: 8
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
-; OBJ32-NEXT:       IsStatement: Yes
+; OBJ32-NEXT:       IsStatement: No
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT: ]
@@ -190,7 +190,7 @@
 ; OBJ64-NEXT:     +0x0 [
 ; OBJ64-NEXT:       LineNumberStart: 3
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT:   FilenameSegment [
@@ -198,7 +198,7 @@
 ; OBJ64-NEXT:     +0x4 [
 ; OBJ64-NEXT:       LineNumberStart: 1
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT:   FilenameSegment [
@@ -206,7 +206,7 @@
 ; OBJ64-NEXT:     +0x9 [
 ; OBJ64-NEXT:       LineNumberStart: 2
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT:   FilenameSegment [
@@ -214,12 +214,12 @@
 ; OBJ64-NEXT:     +0xE [
 ; OBJ64-NEXT:       LineNumberStart: 7
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0x13 [
 ; OBJ64-NEXT:       LineNumberStart: 8
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
-; OBJ64-NEXT:       IsStatement: Yes
+; OBJ64-NEXT:       IsStatement: No
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT: ]

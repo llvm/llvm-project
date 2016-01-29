@@ -82,7 +82,7 @@ void Option::print(raw_ostream &O) const {
   O << ">\n";
 }
 
-void Option::dump() const { print(dbgs()); }
+LLVM_DUMP_METHOD void Option::dump() const { print(dbgs()); }
 
 bool Option::matches(OptSpecifier Opt) const {
   // Aliases are never considered in matching, look through them.

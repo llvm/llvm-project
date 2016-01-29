@@ -1154,7 +1154,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         uint32_t LineNumberEndDelta =
             (LineData & codeview::LineInfo::EndLineDeltaMask) >>
             codeview::LineInfo::EndLineDeltaShift;
-        bool IsStatement = codeview::LineInfo::StatementFlag;
+        bool IsStatement = LineData & codeview::LineInfo::StatementFlag;
         W.printNumber("LineNumberStart", LineNumberStart);
         W.printNumber("LineNumberEndDelta", LineNumberEndDelta);
         W.printBoolean("IsStatement", IsStatement);
