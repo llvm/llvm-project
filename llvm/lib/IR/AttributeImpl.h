@@ -20,6 +20,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <string>
+#include <climits>
 
 namespace llvm {
 
