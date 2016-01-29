@@ -214,6 +214,11 @@ class AttributeSetImpl final
 private:
   LLVMContext &Context;
   unsigned NumAttrs; ///< Number of entries in this set.
+  /// Bitset with a bit for each available attribute Attribute::AttrKind.
+  uint64_t AvailableFunctionAttrs;
+  static_assert(Attribute::EndAttrKinds
+                <= sizeof(AvailableFunctionAttrs)*CHAR_BIT,
+                "Too many attributes");
 
   // Helper fn for TrailingObjects class.
   size_t numTrailingObjects(OverloadToken<IndexAttrPair>) { return NumAttrs; }
@@ -229,7 +234,7 @@ private:
 public:
   AttributeSetImpl(LLVMContext &C,
                    ArrayRef<std::pair<unsigned, AttributeSetNode *> > Attrs)
-      : Context(C), NumAttrs(Attrs.size()) {
+      : Context(C), NumAttrs(Attrs.size()), AvailableFunctionAttrs(0) {
 
 #ifndef NDEBUG
     if (Attrs.size() >= 2) {
@@ -242,6 +247,21 @@ public:
 #endif
     // There's memory after the node where we can store the entries in.
     std::copy(Attrs.begin(), Attrs.end(), getTrailingObjects<IndexAttrPair>());
+
+    // Initialize AvailableFunctionAttrs summary bitset.
+    if (NumAttrs > 0) {
+      static_assert(AttributeSet::FunctionIndex == ~0u,
+                    "FunctionIndex should be biggest possible index");
+      const std::pair<unsigned, AttributeSetNode *> &Last = Attrs.back();
+      if (Last.first == AttributeSet::FunctionIndex) {
+        const AttributeSetNode *Node = Last.second;
+        for (AttributeSetNode::iterator I = Node->begin(), E = Node->end();
+             I != E; ++I) {
+          if (!I->isStringAttribute())
+            AvailableFunctionAttrs |= ((uint64_t)1) << I->getKindAsEnum();
+        }
+      }
+    }
   }
 
   /// \brief Get the context that created this AttributeSetImpl.
@@ -269,6 +289,12 @@ public:
   /// AttrNode list.
   AttributeSetNode *getSlotNode(unsigned Slot) const {
     return getNode(Slot)->second;
+  }
+
+  /// \brief Return true if the AttributeSetNode for the FunctionIndex has an
+  /// enum attribute of the given kind.
+  bool hasFnAttribute(Attribute::AttrKind Kind) const {
+    return AvailableFunctionAttrs & ((uint64_t)1) << Kind;
   }
 
   typedef AttributeSetNode::iterator iterator;
