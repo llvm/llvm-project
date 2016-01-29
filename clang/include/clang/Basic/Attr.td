@@ -1080,6 +1080,12 @@ def ObjCBridgeRelated : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def NSErrorDomain : Attr {
+  let Spellings = [GNU<"ns_error_domain">];
+  let Args = [IdentifierArgument<"ErrorDomain">];
+  let Documentation = [NSErrorDomainDocs];
+}
+
 def NSReturnsRetained : InheritableAttr {
   let Spellings = [GNU<"ns_returns_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
