@@ -5982,7 +5982,7 @@ def : NTStore64Pat<v8i8>;
 def : Pat<(nontemporalstore GPR64:$Rt,
             (am_indexed7s32 GPR64sp:$Rn, simm7s4:$offset)),
           (STNPWi (EXTRACT_SUBREG GPR64:$Rt, sub_32),
-                  (EXTRACT_SUBREG (UBFMXri GPR64:$Rt, 0, 31), sub_32),
+                  (EXTRACT_SUBREG (UBFMXri GPR64:$Rt, 32, 63), sub_32),
                   GPR64sp:$Rn, simm7s4:$offset)>;
 } // AddedComplexity=10
 } // Predicates = [IsLE]
