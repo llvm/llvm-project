@@ -322,7 +322,7 @@ void NestedNameSpecifier::dump(const LangOptions &LO) const {
   print(llvm::errs(), PrintingPolicy(LO));
 }
 
-void NestedNameSpecifier::dump() const {
+LLVM_DUMP_METHOD void NestedNameSpecifier::dump() const {
   LangOptions LO;
   print(llvm::errs(), PrintingPolicy(LO));
 }

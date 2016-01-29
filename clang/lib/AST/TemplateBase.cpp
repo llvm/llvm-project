@@ -422,7 +422,7 @@ void TemplateArgument::dump(raw_ostream &Out) const {
   print(PrintingPolicy(LO), Out);
 }
 
-void TemplateArgument::dump() const { dump(llvm::errs()); }
+LLVM_DUMP_METHOD void TemplateArgument::dump() const { dump(llvm::errs()); }
 
 //===----------------------------------------------------------------------===//
 // TemplateArgumentLoc Implementation

@@ -439,7 +439,7 @@ void ProgramState::printDOT(raw_ostream &Out) const {
   print(Out, "\\l", "\\|");
 }
 
-void ProgramState::dump() const {
+LLVM_DUMP_METHOD void ProgramState::dump() const {
   print(llvm::errs());
 }
 

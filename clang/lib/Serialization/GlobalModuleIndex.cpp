@@ -354,7 +354,7 @@ void GlobalModuleIndex::printStats() {
   std::fprintf(stderr, "\n");
 }
 
-void GlobalModuleIndex::dump() {
+LLVM_DUMP_METHOD void GlobalModuleIndex::dump() {
   llvm::errs() << "*** Global Module Index Dump:\n";
   llvm::errs() << "Module files:\n";
   for (auto &MI : Modules) {
