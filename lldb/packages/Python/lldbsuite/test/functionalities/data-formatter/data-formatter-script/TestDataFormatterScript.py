@@ -52,6 +52,7 @@ class ScriptDataFormatterTestCase(TestBase):
         script = 'a = valobj.GetChildMemberWithName(\'integer\'); a_val = a.GetValue(); str = \'Hello from Python, \' + a_val + \' time\'; return str + (\'!\' if a_val == \'1\' else \'s!\');'
 
         self.runCmd("type summary add i_am_cool --python-script \"%s\"" % script)
+        self.expect('type summary list i_am_cool', substrs=[script])
 
         self.expect("frame variable one",
             substrs = ['Hello from Python',

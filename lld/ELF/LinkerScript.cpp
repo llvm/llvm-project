@@ -178,7 +178,7 @@ void LinkerScript::addFile(StringRef S) {
     else
       Driver->addFile(Saver.save(Config->Sysroot + "/" + S.substr(1)));
   } else if (S.startswith("-l")) {
-    Driver->addFile(searchLibrary(S.substr(2)));
+    Driver->addLibrary(S.substr(2));
   } else if (sys::fs::exists(S)) {
     Driver->addFile(S);
   } else {

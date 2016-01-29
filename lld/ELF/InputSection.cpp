@@ -155,8 +155,8 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     uintX_t AddrLoc = OutSec->getVA() + Offset;
     auto NextRelocs = llvm::make_range(&RI, Rels.end());
 
-    if (Target->isTlsLocalDynamicReloc(Type) &&
-        !Target->isTlsOptimized(Type, nullptr)) {
+    if (Target->isTlsLocalDynamicRel(Type) &&
+        !Target->canRelaxTls(Type, nullptr)) {
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
                           Out<ELFT>::Got->getLocalTlsIndexVA() +
                               getAddend<ELFT>(RI));
@@ -168,19 +168,18 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     if (SymIndex >= SymTab->sh_info)
       Body = File->getSymbolBody(SymIndex)->repl();
 
-    if (Target->isTlsOptimized(Type, Body)) {
+    if (Target->canRelaxTls(Type, Body)) {
       uintX_t SymVA;
       if (!Body)
         SymVA = getLocalRelTarget(*File, RI, 0);
-      else if (Target->relocNeedsGot(Type, *Body))
+      else if (Target->needsGot(Type, *Body))
         SymVA = Out<ELFT>::Got->getEntryAddr(*Body);
       else
         SymVA = getSymVA<ELFT>(*Body);
       // By optimizing TLS relocations, it is sometimes needed to skip
       // relocations that immediately follow TLS relocations. This function
       // knows how many slots we need to skip.
-      I += Target->relocateTlsOptimize(BufLoc, BufEnd, Type, AddrLoc, SymVA,
-                                       Body);
+      I += Target->relaxTls(BufLoc, BufEnd, Type, AddrLoc, SymVA, Body);
       continue;
     }
 
@@ -206,8 +205,8 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
       continue;
     }
 
-    if (Target->isTlsGlobalDynamicReloc(Type) &&
-        !Target->isTlsOptimized(Type, Body)) {
+    if (Target->isTlsGlobalDynamicRel(Type) &&
+        !Target->canRelaxTls(Type, Body)) {
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
                           Out<ELFT>::Got->getGlobalDynAddr(*Body) +
                               getAddend<ELFT>(RI));
@@ -215,9 +214,9 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     }
 
     uintX_t SymVA = getSymVA<ELFT>(*Body);
-    if (Target->relocNeedsPlt(Type, *Body)) {
+    if (Target->needsPlt(Type, *Body)) {
       SymVA = Out<ELFT>::Plt->getEntryAddr(*Body);
-    } else if (Target->relocNeedsGot(Type, *Body)) {
+    } else if (Target->needsGot(Type, *Body)) {
       if (Config->EMachine == EM_MIPS && needsMipsLocalGot(Type, Body))
         // Under some conditions relocations against non-local symbols require
         // entries in the local part of MIPS GOT. In that case we need an entry
@@ -226,13 +225,13 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
       else
         SymVA = Out<ELFT>::Got->getEntryAddr(*Body);
       if (Body->isTls())
-        Type = Target->getTlsGotReloc(Type);
+        Type = Target->getTlsGotRel(Type);
     } else if (!Target->needsCopyRel(Type, *Body) &&
                isa<SharedSymbol<ELFT>>(*Body)) {
       continue;
-    } else if (Target->isTlsDynReloc(Type, *Body)) {
+    } else if (Target->isTlsDynRel(Type, *Body)) {
       continue;
-    } else if (Target->isSizeReloc(Type) && canBePreempted(Body, false)) {
+    } else if (Target->isSizeRel(Type) && canBePreempted(Body, false)) {
       // A SIZE relocation is supposed to set a symbol size, but if a symbol
       // can be preempted, the size at runtime may be different than link time.
       // If that's the case, we leave the field alone rather than filling it

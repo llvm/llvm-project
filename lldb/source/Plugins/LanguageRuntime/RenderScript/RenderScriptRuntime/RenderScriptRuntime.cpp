@@ -2589,19 +2589,6 @@ RSModuleDescriptor::ParseRSInfo()
     return false;
 }
 
-bool
-RenderScriptRuntime::ProbeModules(const ModuleList module_list)
-{
-    bool rs_found = false;
-    size_t num_modules = module_list.GetSize();
-    for (size_t i = 0; i < num_modules; i++)
-    {
-        auto module = module_list.GetModuleAtIndex(i);
-        rs_found |= LoadModule(module);
-    }
-    return rs_found;
-}
-
 void
 RenderScriptRuntime::Status(Stream &strm) const
 {
@@ -3384,44 +3371,6 @@ RSKernelDescriptor::Dump(Stream &strm) const
     strm.EOL();
 }
 
-class CommandObjectRenderScriptRuntimeModuleProbe : public CommandObjectParsed
-{
-public:
-    CommandObjectRenderScriptRuntimeModuleProbe(CommandInterpreter &interpreter)
-        : CommandObjectParsed(interpreter, "renderscript module probe",
-                              "Initiates a Probe of all loaded modules for kernels and other renderscript objects.",
-                              "renderscript module probe",
-                              eCommandRequiresTarget | eCommandRequiresProcess | eCommandProcessMustBeLaunched)
-    {
-    }
-
-    ~CommandObjectRenderScriptRuntimeModuleProbe() override = default;
-
-    bool
-    DoExecute(Args &command, CommandReturnObject &result) override
-    {
-        const size_t argc = command.GetArgumentCount();
-        if (argc == 0)
-        {
-            Target *target = m_exe_ctx.GetTargetPtr();
-            RenderScriptRuntime *runtime =
-                (RenderScriptRuntime *)m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(eLanguageTypeExtRenderScript);
-            auto module_list = target->GetImages();
-            bool new_rs_details = runtime->ProbeModules(module_list);
-            if (new_rs_details)
-            {
-                result.AppendMessage("New renderscript modules added to runtime model.");
-            }
-            result.SetStatus(eReturnStatusSuccessFinishResult);
-            return true;
-        }
-
-        result.AppendErrorWithFormat("'%s' takes no arguments", m_cmd_name.c_str());
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-    }
-};
-
 class CommandObjectRenderScriptRuntimeModuleDump : public CommandObjectParsed
 {
 public:
@@ -3452,7 +3401,6 @@ public:
         : CommandObjectMultiword(interpreter, "renderscript module", "Commands that deal with renderscript modules.",
                                  nullptr)
     {
-        LoadSubCommand("probe", CommandObjectSP(new CommandObjectRenderScriptRuntimeModuleProbe(interpreter)));
         LoadSubCommand("dump", CommandObjectSP(new CommandObjectRenderScriptRuntimeModuleDump(interpreter)));
     }
 
@@ -3730,6 +3678,8 @@ public:
                                  nullptr)
     {
         LoadSubCommand("list", CommandObjectSP(new CommandObjectRenderScriptRuntimeKernelList(interpreter)));
+        LoadSubCommand("coordinate",
+                       CommandObjectSP(new CommandObjectRenderScriptRuntimeKernelCoordinate(interpreter)));
         LoadSubCommand("breakpoint",
                        CommandObjectSP(new CommandObjectRenderScriptRuntimeKernelBreakpoint(interpreter)));
     }

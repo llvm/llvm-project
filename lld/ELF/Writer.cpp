@@ -119,7 +119,7 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   GotSection<ELFT> Got;
   Out<ELFT>::Got = &Got;
   GotPltSection<ELFT> GotPlt;
-  if (Target->supportsLazyRelocations())
+  if (Target->UseLazyBinding)
     Out<ELFT>::GotPlt = &GotPlt;
   PltSection<ELFT> Plt;
   Out<ELFT>::Plt = &Plt;
@@ -140,7 +140,7 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   RelocationSection<ELFT> RelaDyn(IsRela ? ".rela.dyn" : ".rel.dyn", IsRela);
   Out<ELFT>::RelaDyn = &RelaDyn;
   RelocationSection<ELFT> RelaPlt(IsRela ? ".rela.plt" : ".rel.plt", IsRela);
-  if (Target->supportsLazyRelocations())
+  if (Target->UseLazyBinding)
     Out<ELFT>::RelaPlt = &RelaPlt;
   DynamicSection<ELFT> Dynamic(*Symtab);
   Out<ELFT>::Dynamic = &Dynamic;
@@ -200,8 +200,8 @@ template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
 template <class ELFT, class RelT>
 static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
                                 InputSectionBase<ELFT> &C, RelT &RI) {
-  if (Target->isTlsLocalDynamicReloc(Type)) {
-    if (Target->isTlsOptimized(Type, nullptr))
+  if (Target->isTlsLocalDynamicRel(Type)) {
+    if (Target->canRelaxTls(Type, nullptr))
       return true;
     if (Out<ELFT>::Got->addCurrentModuleTlsIndex())
       Out<ELFT>::RelaDyn->addReloc({&C, &RI});
@@ -211,8 +211,8 @@ static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
   if (!Body || !Body->isTls())
     return false;
 
-  if (Target->isTlsGlobalDynamicReloc(Type)) {
-    bool Opt = Target->isTlsOptimized(Type, Body);
+  if (Target->isTlsGlobalDynamicRel(Type)) {
+    bool Opt = Target->canRelaxTls(Type, Body);
     if (!Opt && Out<ELFT>::Got->addDynTlsEntry(Body)) {
       Out<ELFT>::RelaDyn->addReloc({&C, &RI});
       Out<ELFT>::RelaDyn->addReloc({nullptr, nullptr});
@@ -222,7 +222,7 @@ static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
     if (!canBePreempted(Body, true))
       return true;
   }
-  return !Target->isTlsDynReloc(Type, *Body);
+  return !Target->isTlsDynRel(Type, *Body);
 }
 
 // The reason we have to do this early scan is as follows
@@ -246,7 +246,7 @@ void Writer<ELFT>::scanRelocs(
     uint32_t Type = RI.getType(Config->Mips64EL);
 
     // Ignore "hint" relocation because it is for optional code optimization.
-    if (Target->isHintReloc(Type))
+    if (Target->isHintRel(Type))
       continue;
 
     if (Target->isGotRelative(Type))
@@ -263,9 +263,9 @@ void Writer<ELFT>::scanRelocs(
     if (handleTlsRelocation<ELFT>(Type, Body, C, RI))
       continue;
 
-    if (Target->relocNeedsDynRelative(Type)) {
+    if (Target->needsDynRelative(Type)) {
       RelType *Rel = new (Alloc) RelType;
-      Rel->setSymbolAndType(0, Target->getRelativeReloc(), Config->Mips64EL);
+      Rel->setSymbolAndType(0, Target->RelativeRel, Config->Mips64EL);
       Rel->r_offset = RI.r_offset;
       Out<ELFT>::RelaDyn->addReloc({&C, Rel});
     }
@@ -284,15 +284,15 @@ void Writer<ELFT>::scanRelocs(
         if (Target->needsCopyRel(Type, *Body))
           E->NeedsCopy = true;
       }
-      NeedsPlt = Target->relocNeedsPlt(Type, *Body);
+      NeedsPlt = Target->needsPlt(Type, *Body);
       if (NeedsPlt) {
         if (Body->isInPlt())
           continue;
         Out<ELFT>::Plt->addEntry(Body);
       }
-      NeedsGot = Target->relocNeedsGot(Type, *Body);
+      NeedsGot = Target->needsGot(Type, *Body);
       if (NeedsGot) {
-        if (NeedsPlt && Target->supportsLazyRelocations()) {
+        if (NeedsPlt && Target->UseLazyBinding) {
           Out<ELFT>::GotPlt->addEntry(Body);
         } else {
           if (Body->isInGot())
@@ -342,14 +342,14 @@ void Writer<ELFT>::scanRelocs(
     // a relocation from an object file, but some relocations need no
     // load-time fixup when the final target is known. Skip such relocation.
     bool CBP = canBePreempted(Body, NeedsGot);
-    bool NoDynrel = Target->isRelRelative(Type) || Target->isSizeReloc(Type) ||
+    bool NoDynrel = Target->isRelRelative(Type) || Target->isSizeRel(Type) ||
                     !Config->Shared;
     if (!CBP && NoDynrel)
       continue;
 
     if (CBP)
       Body->setUsedInDynamicReloc();
-    if (NeedsPlt && Target->supportsLazyRelocations())
+    if (NeedsPlt && Target->UseLazyBinding)
       Out<ELFT>::RelaPlt->addReloc({&C, &RI});
     else
       Out<ELFT>::RelaDyn->addReloc({&C, &RI});
@@ -431,8 +431,9 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
         if (!Section->isLive())
           continue;
       }
-      Out<ELFT>::SymTab->addLocalSymbol(SymName);
-      F->KeptLocalSyms.push_back(&Sym);
+      ++Out<ELFT>::SymTab->NumLocals;
+      F->KeptLocalSyms.push_back(std::make_pair(
+          &Sym, Out<ELFT>::SymTab->StrTabSec.addString(SymName)));
     }
   }
 }
@@ -680,7 +681,7 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
   return true;
 }
 
-static bool includeInDynamicSymtab(const SymbolBody &B) {
+static bool includeInDynsym(const SymbolBody &B) {
   uint8_t V = B.getVisibility();
   if (V != STV_DEFAULT && V != STV_PROTECTED)
     return false;
@@ -781,16 +782,14 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // If the "_end" symbol is referenced, it is expected to point to the address
   // right after the data segment. Usually, this symbol points to the end
   // of .bss section or to the end of .data section if .bss section is absent.
-  // The order of the sections can be affected by linker script,
-  // so it is hard to predict which section will be the last one.
-  // So, if this symbol is referenced, we just add the placeholder here
-  // and update its value later.
+  // We don't know the final address of _end yet, so just add a symbol here,
+  // and fix ElfSym<ELFT>::End.st_value later.
   if (Symtab.find("_end"))
     Symtab.addAbsolute("_end", ElfSym<ELFT>::End);
 
-  // If there is an undefined symbol "end", we should initialize it
-  // with the same value as "_end". In any other case it should stay intact,
-  // because it is an allowable name for a user symbol.
+  // Define "end" as an alias to "_end" if it is used but not defined.
+  // We don't want to define that unconditionally because we don't want to
+  // break programs that uses "end" as a regular symbol.
   if (SymbolBody *B = Symtab.find("end"))
     if (B->isUndefined())
       Symtab.addAbsolute("end", ElfSym<ELFT>::End);
@@ -885,7 +884,7 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
     if (Out<ELFT>::SymTab)
       Out<ELFT>::SymTab->addSymbol(Body);
 
-    if (isOutputDynamic() && includeInDynamicSymtab(*Body))
+    if (isOutputDynamic() && includeInDynsym(*Body))
       Out<ELFT>::DynSymTab->addSymbol(Body);
   }
 
@@ -909,7 +908,7 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   }
 
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    Out<ELFT>::ShStrTab->reserve(Sec->getName());
+    Sec->setSHName(Out<ELFT>::ShStrTab->addString(Sec->getName()));
 
   // Finalizers fix each section's size.
   // .dynsym is finalized early since that may fill up .gnu.hash.
@@ -1102,7 +1101,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 
   // Add the first PT_LOAD segment for regular output sections.
   setPhdr(&Phdrs[++PhdrIdx], PT_LOAD, PF_R, 0, Target->getVAStart(), FileOff,
-          Target->getPageSize());
+          Target->PageSize);
 
   Elf_Phdr GnuRelroPhdr = {};
   Elf_Phdr TlsPhdr{};
@@ -1116,8 +1115,8 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
       bool InRelRo = Config->ZRelro && (Flags & PF_W) && isRelroSection(Sec);
       bool FirstNonRelRo = GnuRelroPhdr.p_type && !InRelRo && !RelroAligned;
       if (FirstNonRelRo || PH->p_flags != Flags) {
-        VA = alignTo(VA, Target->getPageSize());
-        FileOff = alignTo(FileOff, Target->getPageSize());
+        VA = alignTo(VA, Target->PageSize);
+        FileOff = alignTo(FileOff, Target->PageSize);
         if (FirstNonRelRo)
           RelroAligned = true;
       }
@@ -1127,7 +1126,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
         PH = &Phdrs[++PhdrIdx];
         uint32_t PTType = (Config->EMachine != EM_AMDGPU) ? (uint32_t)PT_LOAD
                                                           : getAmdgpuPhdr(Sec);
-        setPhdr(PH, PTType, Flags, FileOff, VA, 0, Target->getPageSize());
+        setPhdr(PH, PTType, Flags, FileOff, VA, 0, Target->PageSize);
       }
 
       if (Sec->getFlags() & SHF_TLS) {
