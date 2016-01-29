@@ -292,6 +292,10 @@ public:
   /// \brief Return true if attribute exists at the given index.
   bool hasAttributes(unsigned Index) const;
 
+  /// \brief Equivalent to hasAttribute(AttributeSet::FunctionIndex, Kind) but
+  /// may be faster.
+  bool hasFnAttribute(Attribute::AttrKind Kind) const;
+
   /// \brief Return true if the specified attribute is set for at least one
   /// parameter or for the return value.
   bool hasAttrSomewhere(Attribute::AttrKind Attr) const;

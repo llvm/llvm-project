@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCStreamer.h"
@@ -33,18 +34,30 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public AsmPrinterHandler {
   AsmPrinter *Asm;
   DebugLoc PrevInstLoc;
 
+  struct InlineSite {
+    TinyPtrVector<const DILocation *> ChildSites;
+    const DISubprogram *Inlinee = nullptr;
+    unsigned SiteFuncId = 0;
+  };
+
   // For each function, store a vector of labels to its instructions, as well as
   // to the end of the function.
   struct FunctionInfo {
+    /// Map from inlined call site to inlined instructions and child inlined
+    /// call sites. Listed in program order.
+    MapVector<const DILocation *, InlineSite> InlineSites;
+
     DebugLoc LastLoc;
     MCSymbol *End = nullptr;
     unsigned FuncId = 0;
-    unsigned LastFileId;
+    unsigned LastFileId = 0;
     bool HaveLineInfo = false;
   };
   FunctionInfo *CurFn;
 
   unsigned NextFuncId = 0;
+
+  InlineSite &getInlineSite(const DILocation *Loc);
 
   /// Remember some debug info about each function. Keep it in a stable order to
   /// emit at the end of the TU.
@@ -52,6 +65,16 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public AsmPrinterHandler {
 
   /// Map from DIFile to .cv_file id.
   DenseMap<const DIFile *, unsigned> FileIdMap;
+
+  DenseMap<const DISubprogram *, codeview::TypeIndex> SubprogramToFuncId;
+
+  unsigned TypeCount = 0;
+
+  /// Gets the next type index and increments the count of types streamed so
+  /// far.
+  codeview::TypeIndex getNextTypeIndex() {
+    return codeview::TypeIndex(codeview::TypeIndex::FirstNonSimpleIndex + TypeCount++);
+  }
 
   typedef std::map<const DIFile *, std::string> FileToFilepathMapTy;
   FileToFilepathMapTy FileToFilepathMap;
@@ -68,7 +91,12 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public AsmPrinterHandler {
     FileToFilepathMap.clear();
   }
 
+  void emitTypeInformation();
+
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
+
+  void emitInlinedCallSite(const FunctionInfo &FI, const DILocation *InlinedAt,
+                           const InlineSite &Site);
 
 public:
   CodeViewDebug(AsmPrinter *Asm);

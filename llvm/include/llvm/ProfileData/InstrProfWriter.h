@@ -32,13 +32,14 @@ public:
   typedef SmallDenseMap<uint64_t, InstrProfRecord, 1> ProfilingData;
 
 private:
+  bool Sparse;
   StringMap<ProfilingData> FunctionData;
   uint64_t MaxFunctionCount;
   // Use raw pointer here for the incomplete type object.
   InstrProfRecordWriterTrait *InfoObj;
 
 public:
-  InstrProfWriter();
+  InstrProfWriter(bool Sparse = false);
   ~InstrProfWriter();
 
   /// Add function counts for the given function. If there are already counts
@@ -57,8 +58,10 @@ public:
 
   // Internal interface for testing purpose only.
   void setValueProfDataEndianness(support::endianness Endianness);
+  void setOutputSparse(bool Sparse);
 
 private:
+  bool shouldEncodeData(const ProfilingData &PD);
   void writeImpl(ProfOStream &OS);
 };
 

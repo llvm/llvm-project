@@ -15,6 +15,8 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/COFF.h"
@@ -87,6 +89,17 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
   return Insertion.first->second;
 }
 
+CodeViewDebug::InlineSite &CodeViewDebug::getInlineSite(const DILocation *Loc) {
+  const DILocation *InlinedAt = Loc->getInlinedAt();
+  auto Insertion = CurFn->InlineSites.insert({InlinedAt, InlineSite()});
+  if (Insertion.second) {
+    InlineSite &Site = Insertion.first->second;
+    Site.SiteFuncId = NextFuncId++;
+    Site.Inlinee = Loc->getScope()->getSubprogram();
+  }
+  return Insertion.first->second;
+}
+
 void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
                                         const MachineFunction *MF) {
   // Skip this instruction if it has the same location as the previous one.
@@ -115,7 +128,28 @@ void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
   else
     FileId = CurFn->LastFileId = maybeRecordFile(DL->getFile());
   CurFn->LastLoc = DL;
-  Asm->OutStreamer->EmitCVLocDirective(CurFn->FuncId, FileId, DL.getLine(),
+
+  unsigned FuncId = CurFn->FuncId;
+  if (const DILocation *Loc = DL->getInlinedAt()) {
+    // If this location was actually inlined from somewhere else, give it the ID
+    // of the inline call site.
+    FuncId = getInlineSite(DL.get()).SiteFuncId;
+    // Ensure we have links in the tree of inline call sites.
+    const DILocation *ChildLoc = nullptr;
+    while (Loc->getInlinedAt()) {
+      InlineSite &Site = getInlineSite(Loc);
+      if (ChildLoc) {
+        // Record the child inline site if not already present.
+        auto B = Site.ChildSites.begin(), E = Site.ChildSites.end();
+        if (std::find(B, E, Loc) != E)
+          break;
+        Site.ChildSites.push_back(Loc);
+      }
+      ChildLoc = Loc;
+    }
+  }
+
+  Asm->OutStreamer->EmitCVLocDirective(FuncId, FileId, DL.getLine(),
                                        DL.getCol(), /*PrologueEnd=*/false,
                                        /*IsStmt=*/false, DL->getFilename());
 }
@@ -138,6 +172,8 @@ CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
 void CodeViewDebug::endModule() {
   if (FnDebugInfo.empty())
     return;
+
+  emitTypeInformation();
 
   // FIXME: For functions that are comdat, we should emit separate .debug$S
   // sections that are comdat associative with the main function instead of
@@ -167,6 +203,60 @@ void CodeViewDebug::endModule() {
   clear();
 }
 
+template <typename T> static void emitRecord(MCStreamer &OS, const T &Rec) {
+  OS.EmitBytes(StringRef(reinterpret_cast<const char *>(&Rec), sizeof(Rec)));
+}
+
+void CodeViewDebug::emitTypeInformation() {
+  // Start the .debug$T section with 0x4.
+  Asm->OutStreamer->SwitchSection(
+      Asm->getObjFileLowering().getCOFFDebugTypesSection());
+  Asm->EmitInt32(COFF::DEBUG_SECTION_MAGIC);
+
+  NamedMDNode *CU_Nodes =
+      Asm->MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+  if (!CU_Nodes)
+    return;
+
+  // This type info currently only holds function ids for use with inline call
+  // frame info. All functions are assigned a simple 'void ()' type. Emit that
+  // type here.
+  TypeIndex ArgListIdx = getNextTypeIndex();
+  Asm->EmitInt16(2 + sizeof(ArgList));
+  Asm->EmitInt16(LF_ARGLIST);
+  Asm->EmitInt32(0);
+
+  TypeIndex VoidProcIdx = getNextTypeIndex();
+  Asm->EmitInt16(2 + sizeof(ProcedureType));
+  Asm->EmitInt16(LF_PROCEDURE);
+  ProcedureType Proc{}; // Zero initialize.
+  Proc.ReturnType = TypeIndex::Void();
+  Proc.CallConv = CallingConvention::NearC;
+  Proc.Options = FunctionOptions::None;
+  Proc.NumParameters = 0;
+  Proc.ArgListType = ArgListIdx;
+  emitRecord(*Asm->OutStreamer, Proc);
+
+  for (MDNode *N : CU_Nodes->operands()) {
+    auto *CUNode = cast<DICompileUnit>(N);
+    for (auto *SP : CUNode->getSubprograms()) {
+      StringRef DisplayName = SP->getDisplayName();
+      Asm->EmitInt16(2 + sizeof(FuncId) + DisplayName.size() + 1);
+      Asm->EmitInt16(LF_FUNC_ID);
+
+      FuncId Func{}; // Zero initialize.
+      Func.ParentScope = TypeIndex();
+      Func.FunctionType = VoidProcIdx;
+      emitRecord(*Asm->OutStreamer, Func);
+      Asm->OutStreamer->EmitBytes(DisplayName);
+      Asm->EmitInt8(0);
+
+      TypeIndex FuncIdIdx = getNextTypeIndex();
+      SubprogramToFuncId.insert(std::make_pair(SP, FuncIdIdx));
+    }
+  }
+}
+
 static void EmitLabelDiff(MCStreamer &Streamer,
                           const MCSymbol *From, const MCSymbol *To,
                           unsigned int Size = 4) {
@@ -177,6 +267,44 @@ static void EmitLabelDiff(MCStreamer &Streamer,
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, ToRef, FromRef, Context);
   Streamer.EmitValue(AddrDelta, Size);
+}
+
+void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
+                                        const DILocation *InlinedAt,
+                                        const InlineSite &Site) {
+  MCStreamer &OS = *Asm->OutStreamer;
+
+  MCSymbol *InlineBegin = Asm->MMI->getContext().createTempSymbol(),
+           *InlineEnd = Asm->MMI->getContext().createTempSymbol();
+
+  assert(SubprogramToFuncId.count(Site.Inlinee));
+  TypeIndex InlineeIdx = SubprogramToFuncId[Site.Inlinee];
+
+  // SymbolRecord
+  EmitLabelDiff(OS, InlineBegin, InlineEnd, 2);   // RecordLength
+  OS.EmitLabel(InlineBegin);
+  Asm->EmitInt16(SymbolRecordKind::S_INLINESITE); // RecordKind
+
+  InlineSiteSym SiteBytes{};
+  SiteBytes.Inlinee = InlineeIdx;
+  Asm->OutStreamer->EmitBytes(
+      StringRef(reinterpret_cast<const char *>(&SiteBytes), sizeof(SiteBytes)));
+
+  // FIXME: annotations
+
+  OS.EmitLabel(InlineEnd);
+
+  // Recurse on child inlined call sites before closing the scope.
+  for (const DILocation *ChildSite : Site.ChildSites) {
+    auto I = FI.InlineSites.find(ChildSite);
+    assert(I != FI.InlineSites.end() &&
+           "child site not in function inline site map");
+    emitInlinedCallSite(FI, ChildSite, I->second);
+  }
+
+  // Close the scope.
+  Asm->EmitInt16(2);                                  // RecordLength
+  Asm->EmitInt16(SymbolRecordKind::S_INLINESITE_END); // RecordKind
 }
 
 void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
@@ -223,6 +351,15 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     Asm->OutStreamer->EmitBytes(FuncName);
     Asm->EmitInt8(0);
     Asm->OutStreamer->EmitLabel(ProcSegmentEnd);
+
+    // Emit inlined call site information. Only emit functions inlined directly
+    // into the parent function. We'll emit the other sites recursively as part
+    // of their parent inline site.
+    for (auto &KV : FI.InlineSites) {
+      const DILocation *InlinedAt = KV.first;
+      if (!InlinedAt->getInlinedAt())
+        emitInlinedCallSite(FI, InlinedAt, KV.second);
+    }
 
     // We're done with this function.
     Asm->EmitInt16(0x0002);

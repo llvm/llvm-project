@@ -1,4 +1,4 @@
-; RUN: opt < %s -rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S 2>&1 | FileCheck %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
 
 
 declare void @foo()

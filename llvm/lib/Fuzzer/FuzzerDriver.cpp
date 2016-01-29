@@ -269,6 +269,7 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   Options.MaxLen = Flags.max_len;
   Options.UnitTimeoutSec = Flags.timeout;
   Options.AbortOnTimeout = Flags.abort_on_timeout;
+  Options.TimeoutExitCode = Flags.timeout_exitcode;
   Options.MaxTotalTimeSec = Flags.max_total_time;
   Options.DoCrossOver = Flags.cross_over;
   Options.MutateDepth = Flags.mutate_depth;

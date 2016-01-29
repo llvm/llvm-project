@@ -194,7 +194,7 @@ void StackColoring::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-void StackColoring::dump() const {
+LLVM_DUMP_METHOD void StackColoring::dump() const {
   for (MachineBasicBlock *MBB : depth_first(MF)) {
     DEBUG(dbgs() << "Inspecting block #" << BasicBlocks.lookup(MBB) << " ["
                  << MBB->getName() << "]\n");

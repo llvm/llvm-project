@@ -71,14 +71,14 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
-void LineLocation::dump() const { print(dbgs()); }
+LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 
 void CallsiteLocation::print(raw_ostream &OS) const {
   LineLocation::print(OS);
   OS << ": inlined callee: " << CalleeName;
 }
 
-void CallsiteLocation::dump() const { print(dbgs()); }
+LLVM_DUMP_METHOD void CallsiteLocation::dump() const { print(dbgs()); }
 
 inline raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
                                                  const CallsiteLocation &Loc) {
@@ -97,7 +97,7 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
   OS << "\n";
 }
 
-void SampleRecord::dump() const { print(dbgs(), 0); }
+LLVM_DUMP_METHOD void SampleRecord::dump() const { print(dbgs(), 0); }
 
 raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
                                           const SampleRecord &Sample) {

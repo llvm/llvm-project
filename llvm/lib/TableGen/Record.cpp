@@ -86,7 +86,7 @@ IntRecTy IntRecTy::Shared;
 StringRecTy StringRecTy::Shared;
 DagRecTy DagRecTy::Shared;
 
-void RecTy::dump() const { print(errs()); }
+LLVM_DUMP_METHOD void RecTy::dump() const { print(errs()); }
 
 ListRecTy *RecTy::getListTy() {
   if (!ListTy)
@@ -211,7 +211,7 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
 //===----------------------------------------------------------------------===//
 
 void Init::anchor() { }
-void Init::dump() const { return print(errs()); }
+LLVM_DUMP_METHOD void Init::dump() const { return print(errs()); }
 
 UnsetInit *UnsetInit::get() {
   static UnsetInit TheInit;
@@ -1597,7 +1597,7 @@ const std::string &RecordVal::getName() const {
   return cast<StringInit>(getNameInit())->getValue();
 }
 
-void RecordVal::dump() const { errs() << *this; }
+LLVM_DUMP_METHOD void RecordVal::dump() const { errs() << *this; }
 
 void RecordVal::print(raw_ostream &OS, bool PrintSem) const {
   if (getPrefix()) OS << "field ";
@@ -1682,7 +1682,7 @@ void Record::resolveReferencesTo(const RecordVal *RV) {
   }
 }
 
-void Record::dump() const { errs() << *this; }
+LLVM_DUMP_METHOD void Record::dump() const { errs() << *this; }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   OS << R.getNameInitAsString();
@@ -1916,7 +1916,7 @@ DagInit *Record::getValueAsDag(StringRef FieldName) const {
 }
 
 
-void MultiClass::dump() const {
+LLVM_DUMP_METHOD void MultiClass::dump() const {
   errs() << "Record:\n";
   Rec.dump();
 
@@ -1926,7 +1926,7 @@ void MultiClass::dump() const {
 }
 
 
-void RecordKeeper::dump() const { errs() << *this; }
+LLVM_DUMP_METHOD void RecordKeeper::dump() const { errs() << *this; }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
   OS << "------------- Classes -----------------\n";

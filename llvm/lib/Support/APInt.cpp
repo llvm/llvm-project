@@ -2268,7 +2268,7 @@ std::string APInt::toString(unsigned Radix = 10, bool Signed = true) const {
 }
 
 
-void APInt::dump() const {
+LLVM_DUMP_METHOD void APInt::dump() const {
   SmallString<40> S, U;
   this->toStringUnsigned(U);
   this->toStringSigned(S);

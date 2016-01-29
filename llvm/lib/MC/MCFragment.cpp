@@ -311,7 +311,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MCFixup &AF) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MCFragment::dump() {
+LLVM_DUMP_METHOD void MCFragment::dump() {
   raw_ostream &OS = llvm::errs();
 
   OS << "<";
@@ -433,7 +433,7 @@ void MCFragment::dump() {
   OS << ">";
 }
 
-void MCAssembler::dump() {
+LLVM_DUMP_METHOD void MCAssembler::dump() {
   raw_ostream &OS = llvm::errs();
 
   OS << "<MCAssembler\n";

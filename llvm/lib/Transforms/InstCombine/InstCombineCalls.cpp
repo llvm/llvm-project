@@ -197,7 +197,7 @@ Instruction *InstCombiner::SimplifyMemSet(MemSetInst *MI) {
   return nullptr;
 }
 
-static Value *SimplifyX86immshift(const IntrinsicInst &II,
+static Value *simplifyX86immShift(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
   bool LogicalShift = false;
   bool ShiftLeft = false;
@@ -307,7 +307,7 @@ static Value *SimplifyX86immshift(const IntrinsicInst &II,
   return Builder.CreateAShr(Vec, ShiftVec);
 }
 
-static Value *SimplifyX86extend(const IntrinsicInst &II,
+static Value *simplifyX86extend(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder,
                                 bool SignExtend) {
   VectorType *SrcTy = cast<VectorType>(II.getArgOperand(0)->getType());
@@ -325,7 +325,7 @@ static Value *SimplifyX86extend(const IntrinsicInst &II,
                     : Builder.CreateZExt(SV, DstTy);
 }
 
-static Value *SimplifyX86insertps(const IntrinsicInst &II,
+static Value *simplifyX86insertps(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
   auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
   if (!CInt)
@@ -384,7 +384,7 @@ static Value *SimplifyX86insertps(const IntrinsicInst &II,
 
 /// Attempt to simplify SSE4A EXTRQ/EXTRQI instructions using constant folding
 /// or conversion to a shuffle vector.
-static Value *SimplifyX86extrq(IntrinsicInst &II, Value *Op0,
+static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
                                ConstantInt *CILength, ConstantInt *CIIndex,
                                InstCombiner::BuilderTy &Builder) {
   auto LowConstantHighUndef = [&](uint64_t Val) {
@@ -477,7 +477,7 @@ static Value *SimplifyX86extrq(IntrinsicInst &II, Value *Op0,
 
 /// Attempt to simplify SSE4A INSERTQ/INSERTQI instructions using constant
 /// folding or conversion to a shuffle vector.
-static Value *SimplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
+static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
                                  APInt APLength, APInt APIndex,
                                  InstCombiner::BuilderTy &Builder) {
 
@@ -575,7 +575,7 @@ static Value *SimplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
 /// The shuffle mask for a perm2*128 selects any two halves of two 256-bit
 /// source vectors, unless a zero bit is set. If a zero bit is set,
 /// then ignore that half of the mask and clear that half of the vector.
-static Value *SimplifyX86vperm2(const IntrinsicInst &II,
+static Value *simplifyX86vperm2(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder) {
   auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
   if (!CInt)
@@ -639,8 +639,9 @@ static Value *SimplifyX86vperm2(const IntrinsicInst &II,
 }
 
 /// Decode XOP integer vector comparison intrinsics.
-static Value *SimplifyX86vpcom(const IntrinsicInst &II,
-                               InstCombiner::BuilderTy &Builder, bool IsSigned) {
+static Value *simplifyX86vpcom(const IntrinsicInst &II,
+                               InstCombiner::BuilderTy &Builder,
+                               bool IsSigned) {
   if (auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2))) {
     uint64_t Imm = CInt->getZExtValue() & 0x7;
     VectorType *VecTy = cast<VectorType>(II.getType());
@@ -669,7 +670,8 @@ static Value *SimplifyX86vpcom(const IntrinsicInst &II,
       return ConstantInt::getSigned(VecTy, -1); // TRUE
     }
 
-    if (Value *Cmp = Builder.CreateICmp(Pred, II.getArgOperand(0), II.getArgOperand(1)))
+    if (Value *Cmp = Builder.CreateICmp(Pred, II.getArgOperand(0),
+                                        II.getArgOperand(1)))
       return Builder.CreateSExtOrTrunc(Cmp, VecTy);
   }
   return nullptr;
@@ -1137,7 +1139,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_pslli_d:
   case Intrinsic::x86_avx2_pslli_q:
   case Intrinsic::x86_avx2_pslli_w:
-    if (Value *V = SimplifyX86immshift(*II, *Builder))
+    if (Value *V = simplifyX86immShift(*II, *Builder))
       return ReplaceInstUsesWith(*II, V);
     break;
 
@@ -1157,7 +1159,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_psll_d:
   case Intrinsic::x86_avx2_psll_q:
   case Intrinsic::x86_avx2_psll_w: {
-    if (Value *V = SimplifyX86immshift(*II, *Builder))
+    if (Value *V = simplifyX86immShift(*II, *Builder))
       return ReplaceInstUsesWith(*II, V);
 
     // SSE2/AVX2 uses only the first 64-bits of the 128-bit vector
@@ -1180,7 +1182,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_pmovsxdq:
   case Intrinsic::x86_avx2_pmovsxwd:
   case Intrinsic::x86_avx2_pmovsxwq:
-    if (Value *V = SimplifyX86extend(*II, *Builder, true))
+    if (Value *V = simplifyX86extend(*II, *Builder, true))
       return ReplaceInstUsesWith(*II, V);
     break;
 
@@ -1196,12 +1198,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_pmovzxdq:
   case Intrinsic::x86_avx2_pmovzxwd:
   case Intrinsic::x86_avx2_pmovzxwq:
-    if (Value *V = SimplifyX86extend(*II, *Builder, false))
+    if (Value *V = simplifyX86extend(*II, *Builder, false))
       return ReplaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::x86_sse41_insertps:
-    if (Value *V = SimplifyX86insertps(*II, *Builder))
+    if (Value *V = simplifyX86insertps(*II, *Builder))
       return ReplaceInstUsesWith(*II, V);
     break;
 
@@ -1224,7 +1226,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
            : nullptr;
 
     // Attempt to simplify to a constant, shuffle vector or EXTRQI call.
-    if (Value *V = SimplifyX86extrq(*II, Op0, CILength, CIIndex, *Builder))
+    if (Value *V = simplifyX86extrq(*II, Op0, CILength, CIIndex, *Builder))
       return ReplaceInstUsesWith(*II, V);
 
     // EXTRQ only uses the lowest 64-bits of the first 128-bit vector
@@ -1253,7 +1255,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     ConstantInt *CIIndex = dyn_cast<ConstantInt>(II->getArgOperand(2));
 
     // Attempt to simplify to a constant or shuffle vector.
-    if (Value *V = SimplifyX86extrq(*II, Op0, CILength, CIIndex, *Builder))
+    if (Value *V = simplifyX86extrq(*II, Op0, CILength, CIIndex, *Builder))
       return ReplaceInstUsesWith(*II, V);
 
     // EXTRQI only uses the lowest 64-bits of the first 128-bit vector
@@ -1285,7 +1287,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       APInt V11 = CI11->getValue();
       APInt Len = V11.zextOrTrunc(6);
       APInt Idx = V11.lshr(8).zextOrTrunc(6);
-      if (Value *V = SimplifyX86insertq(*II, Op0, Op1, Len, Idx, *Builder))
+      if (Value *V = simplifyX86insertq(*II, Op0, Op1, Len, Idx, *Builder))
         return ReplaceInstUsesWith(*II, V);
     }
 
@@ -1318,7 +1320,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (CILength && CIIndex) {
       APInt Len = CILength->getValue().zextOrTrunc(6);
       APInt Idx = CIIndex->getValue().zextOrTrunc(6);
-      if (Value *V = SimplifyX86insertq(*II, Op0, Op1, Len, Idx, *Builder))
+      if (Value *V = simplifyX86insertq(*II, Op0, Op1, Len, Idx, *Builder))
         return ReplaceInstUsesWith(*II, V);
     }
 
@@ -1472,7 +1474,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx_vperm2f128_ps_256:
   case Intrinsic::x86_avx_vperm2f128_si_256:
   case Intrinsic::x86_avx2_vperm2i128:
-    if (Value *V = SimplifyX86vperm2(*II, *Builder))
+    if (Value *V = simplifyX86vperm2(*II, *Builder))
       return ReplaceInstUsesWith(*II, V);
     break;
 
@@ -1480,7 +1482,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_xop_vpcomd:
   case Intrinsic::x86_xop_vpcomq:
   case Intrinsic::x86_xop_vpcomw:
-    if (Value *V = SimplifyX86vpcom(*II, *Builder, true))
+    if (Value *V = simplifyX86vpcom(*II, *Builder, true))
       return ReplaceInstUsesWith(*II, V);
     break;
 
@@ -1488,7 +1490,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_xop_vpcomud:
   case Intrinsic::x86_xop_vpcomuq:
   case Intrinsic::x86_xop_vpcomuw:
-    if (Value *V = SimplifyX86vpcom(*II, *Builder, false))
+    if (Value *V = simplifyX86vpcom(*II, *Builder, false))
       return ReplaceInstUsesWith(*II, V);
     break;
 
@@ -1769,7 +1771,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // TODO: provide a hook for this in GCStrategy.  There might be some weird
     // collector this property does not hold for.
     if (isa<ConstantPointerNull>(DerivedPtr)) {
-      // gc_relocate is uncasted. Use null-pointer of gc_relocate's type to replace it.
+      // gc_relocate is uncasted. Use null-pointer of gc_relocate's type to
+      // replace it.
       return ReplaceInstUsesWith(*II, ConstantPointerNull::get(GCRelocateType));
     }
 
@@ -1849,7 +1852,7 @@ Instruction *InstCombiner::tryOptimizeCall(CallInst *CI) {
   return nullptr;
 }
 
-static IntrinsicInst *FindInitTrampolineFromAlloca(Value *TrampMem) {
+static IntrinsicInst *findInitTrampolineFromAlloca(Value *TrampMem) {
   // Strip off at most one level of pointer casts, looking for an alloca.  This
   // is good enough in practice and simpler than handling any number of casts.
   Value *Underlying = TrampMem->stripPointerCasts();
@@ -1888,7 +1891,7 @@ static IntrinsicInst *FindInitTrampolineFromAlloca(Value *TrampMem) {
   return InitTrampoline;
 }
 
-static IntrinsicInst *FindInitTrampolineFromBB(IntrinsicInst *AdjustTramp,
+static IntrinsicInst *findInitTrampolineFromBB(IntrinsicInst *AdjustTramp,
                                                Value *TrampMem) {
   // Visit all the previous instructions in the basic block, and try to find a
   // init.trampoline which has a direct path to the adjust.trampoline.
@@ -1910,7 +1913,7 @@ static IntrinsicInst *FindInitTrampolineFromBB(IntrinsicInst *AdjustTramp,
 // call to llvm.init.trampoline if the call to the trampoline can be optimized
 // to a direct call to a function.  Otherwise return NULL.
 //
-static IntrinsicInst *FindInitTrampoline(Value *Callee) {
+static IntrinsicInst *findInitTrampoline(Value *Callee) {
   Callee = Callee->stripPointerCasts();
   IntrinsicInst *AdjustTramp = dyn_cast<IntrinsicInst>(Callee);
   if (!AdjustTramp ||
@@ -1919,9 +1922,9 @@ static IntrinsicInst *FindInitTrampoline(Value *Callee) {
 
   Value *TrampMem = AdjustTramp->getOperand(0);
 
-  if (IntrinsicInst *IT = FindInitTrampolineFromAlloca(TrampMem))
+  if (IntrinsicInst *IT = findInitTrampolineFromAlloca(TrampMem))
     return IT;
-  if (IntrinsicInst *IT = FindInitTrampolineFromBB(AdjustTramp, TrampMem))
+  if (IntrinsicInst *IT = findInitTrampolineFromBB(AdjustTramp, TrampMem))
     return IT;
   return nullptr;
 }
@@ -1941,7 +1944,8 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
   unsigned ArgNo = 0;
 
   for (Value *V : CS.args()) {
-    if (V->getType()->isPointerTy() && !CS.paramHasAttr(ArgNo+1, Attribute::NonNull) &&
+    if (V->getType()->isPointerTy() &&
+        !CS.paramHasAttr(ArgNo + 1, Attribute::NonNull) &&
         isKnownNonNullAt(V, CS.getInstruction(), DT, TLI))
       Indices.push_back(ArgNo + 1);
     ArgNo++;
@@ -2012,7 +2016,7 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
     return EraseInstFromFunction(*CS.getInstruction());
   }
 
-  if (IntrinsicInst *II = FindInitTrampoline(Callee))
+  if (IntrinsicInst *II = findInitTrampoline(Callee))
     return transformCallThroughTrampoline(CS, II);
 
   PointerType *PTy = cast<PointerType>(Callee->getType());

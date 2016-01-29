@@ -1808,6 +1808,9 @@ def : MipsInstAlias<"dror $rd, $rs",
 def : MipsInstAlias<"dror $rd, $imm",
                     (DRORImm GPR32Opnd:$rd, GPR32Opnd:$rd, simm16:$imm), 0>, ISA_MIPS64;
 
+def ABSMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd), (ins GPR32Opnd:$rs),
+                                 "abs\t$rd, $rs">;
+
 //===----------------------------------------------------------------------===//
 // Instruction aliases
 //===----------------------------------------------------------------------===//

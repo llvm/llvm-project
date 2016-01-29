@@ -476,6 +476,13 @@ FunctionPass *createLoopDistributePass();
 //
 FunctionPass *createLoopLoadEliminationPass();
 
+//===----------------------------------------------------------------------===//
+//
+// LoopSimplifyCFG - This pass performs basic CFG simplification on loops,
+// primarily to help other loop passes.
+//
+Pass *createLoopSimplifyCFGPass();
+
 } // End llvm namespace
 
 #endif

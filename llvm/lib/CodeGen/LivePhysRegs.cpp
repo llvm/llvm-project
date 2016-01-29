@@ -120,7 +120,7 @@ void LivePhysRegs::print(raw_ostream &OS) const {
 }
 
 /// Dumps the currently live registers to the debug output.
-void LivePhysRegs::dump() const {
+LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "  " << *this;
 #endif

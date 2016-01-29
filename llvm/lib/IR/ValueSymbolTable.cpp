@@ -97,7 +97,7 @@ ValueName *ValueSymbolTable::createValueName(StringRef Name, Value *V) {
 
 // dump - print out the symbol table
 //
-void ValueSymbolTable::dump() const {
+LLVM_DUMP_METHOD void ValueSymbolTable::dump() const {
   //DEBUG(dbgs() << "ValueSymbolTable:\n");
   for (const_iterator I = begin(), E = end(); I != E; ++I) {
     //DEBUG(dbgs() << "  '" << I->getKeyData() << "' = ");

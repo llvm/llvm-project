@@ -86,7 +86,7 @@ MCSection::getSubsectionInsertionPoint(unsigned Subsection) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MCSection::dump() {
+LLVM_DUMP_METHOD void MCSection::dump() {
   raw_ostream &OS = llvm::errs();
 
   OS << "<MCSection";

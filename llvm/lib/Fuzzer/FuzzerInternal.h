@@ -175,6 +175,7 @@ public:
     int MaxLen = 0;
     int UnitTimeoutSec = 300;
     bool AbortOnTimeout = false;
+    int TimeoutExitCode = 77;
     int MaxTotalTimeSec = 0;
     bool DoCrossOver = true;
     int MutateDepth = 5;

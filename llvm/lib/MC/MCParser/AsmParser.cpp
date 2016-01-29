@@ -357,8 +357,8 @@ private:
     DK_IFNB, DK_IFC, DK_IFEQS, DK_IFNC, DK_IFNES, DK_IFDEF, DK_IFNDEF,
     DK_IFNOTDEF, DK_ELSEIF, DK_ELSE, DK_ENDIF,
     DK_SPACE, DK_SKIP, DK_FILE, DK_LINE, DK_LOC, DK_STABS,
-    DK_CV_FILE, DK_CV_LOC, DK_CV_LINETABLE, DK_CV_STRINGTABLE,
-    DK_CV_FILECHECKSUMS,
+    DK_CV_FILE, DK_CV_LOC, DK_CV_LINETABLE, DK_CV_INLINE_LINETABLE,
+    DK_CV_STRINGTABLE, DK_CV_FILECHECKSUMS,
     DK_CFI_SECTIONS, DK_CFI_STARTPROC, DK_CFI_ENDPROC, DK_CFI_DEF_CFA,
     DK_CFI_DEF_CFA_OFFSET, DK_CFI_ADJUST_CFA_OFFSET, DK_CFI_DEF_CFA_REGISTER,
     DK_CFI_OFFSET, DK_CFI_REL_OFFSET, DK_CFI_PERSONALITY, DK_CFI_LSDA,
@@ -396,10 +396,11 @@ private:
   bool parseDirectiveLoc();
   bool parseDirectiveStabs();
 
-  // ".cv_file", ".cv_loc", ".cv_linetable"
+  // ".cv_file", ".cv_loc", ".cv_linetable", "cv_inline_linetable"
   bool parseDirectiveCVFile();
   bool parseDirectiveCVLoc();
   bool parseDirectiveCVLinetable();
+  bool parseDirectiveCVInlineLinetable();
   bool parseDirectiveCVStringTable();
   bool parseDirectiveCVFileChecksums();
 
@@ -1655,6 +1656,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCVLoc();
     case DK_CV_LINETABLE:
       return parseDirectiveCVLinetable();
+    case DK_CV_INLINE_LINETABLE:
+      return parseDirectiveCVInlineLinetable();
     case DK_CV_STRINGTABLE:
       return parseDirectiveCVStringTable();
     case DK_CV_FILECHECKSUMS:
@@ -3227,6 +3230,51 @@ bool AsmParser::parseDirectiveCVLinetable() {
   return false;
 }
 
+/// parseDirectiveCVInlineLinetable
+/// ::= .cv_inline_linetable PrimaryFunctionId FileId LineNum
+///          ("contains" SecondaryFunctionId+)?
+bool AsmParser::parseDirectiveCVInlineLinetable() {
+  int64_t PrimaryFunctionId = getTok().getIntVal();
+  if (PrimaryFunctionId < 0)
+    return TokError(
+        "function id less than zero in '.cv_inline_linetable' directive");
+  Lex();
+
+  int64_t SourceFileId = getTok().getIntVal();
+  if (SourceFileId <= 0)
+    return TokError(
+        "File id less than zero in '.cv_inline_linetable' directive");
+  Lex();
+
+  int64_t SourceLineNum = getTok().getIntVal();
+  if (SourceLineNum < 0)
+    return TokError(
+        "Line number less than zero in '.cv_inline_linetable' directive");
+  Lex();
+
+  SmallVector<unsigned, 8> SecondaryFunctionIds;
+  if (getLexer().is(AsmToken::Identifier)) {
+    if (getTok().getIdentifier() != "contains")
+      return TokError(
+          "unexpected identifier in '.cv_inline_linetable' directive");
+    Lex();
+
+    while (getLexer().isNot(AsmToken::EndOfStatement)) {
+      int64_t SecondaryFunctionId = getTok().getIntVal();
+      if (SecondaryFunctionId < 0)
+        return TokError(
+            "function id less than zero in '.cv_inline_linetable' directive");
+      Lex();
+
+      SecondaryFunctionIds.push_back(SecondaryFunctionId);
+    }
+  }
+
+  getStreamer().EmitCVInlineLinetableDirective(
+      PrimaryFunctionId, SourceFileId, SourceLineNum, SecondaryFunctionIds);
+  return false;
+}
+
 /// parseDirectiveCVStringTable
 /// ::= .cv_stringtable
 bool AsmParser::parseDirectiveCVStringTable() {
@@ -4556,6 +4604,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cv_file"] = DK_CV_FILE;
   DirectiveKindMap[".cv_loc"] = DK_CV_LOC;
   DirectiveKindMap[".cv_linetable"] = DK_CV_LINETABLE;
+  DirectiveKindMap[".cv_inline_linetable"] = DK_CV_INLINE_LINETABLE;
   DirectiveKindMap[".cv_stringtable"] = DK_CV_STRINGTABLE;
   DirectiveKindMap[".cv_filechecksums"] = DK_CV_FILECHECKSUMS;
   DirectiveKindMap[".sleb128"] = DK_SLEB128;

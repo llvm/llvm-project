@@ -17,7 +17,7 @@ void MCLabel::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MCLabel::dump() const {
+LLVM_DUMP_METHOD void MCLabel::dump() const {
   print(dbgs());
 }
 #endif

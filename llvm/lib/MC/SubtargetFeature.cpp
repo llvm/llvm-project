@@ -284,7 +284,7 @@ void SubtargetFeatures::print(raw_ostream &OS) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump feature info.
 ///
-void SubtargetFeatures::dump() const {
+LLVM_DUMP_METHOD void SubtargetFeatures::dump() const {
   print(dbgs());
 }
 #endif

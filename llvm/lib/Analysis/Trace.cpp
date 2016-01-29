@@ -46,7 +46,7 @@ void Trace::print(raw_ostream &O) const {
 /// dump - Debugger convenience method; writes trace to standard error
 /// output stream.
 ///
-void Trace::dump() const {
+LLVM_DUMP_METHOD void Trace::dump() const {
   print(dbgs());
 }
 #endif

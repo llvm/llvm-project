@@ -139,7 +139,7 @@ void VirtRegMap::print(raw_ostream &OS, const Module*) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VirtRegMap::dump() const {
+LLVM_DUMP_METHOD void VirtRegMap::dump() const {
   print(dbgs());
 }
 #endif

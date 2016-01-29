@@ -239,3 +239,20 @@ define void @test_well_formed_dag(i32 %in1, i32 %in2, i32* %addr) {
   store i32 %add, i32* %addr
   ret void
 }
+
+define { i32, i32 } @test_multi_use_add(i32 %base, i32 %offset) {
+; CHECK-LABEL: test_multi_use_add:
+; CHECK-THUMB: movs [[CONST:r[0-9]+]], #28
+; CHECK-THUMB: movt [[CONST]], #1
+
+  %prod = mul i32 %offset, 65564
+  %sum = add i32 %base, %prod
+
+  %ptr = inttoptr i32 %sum to i32*
+  %loaded = load i32, i32* %ptr
+
+  %ret.tmp = insertvalue { i32, i32 } undef, i32 %sum, 0
+  %ret = insertvalue { i32, i32 } %ret.tmp, i32 %loaded, 1
+
+  ret { i32, i32 } %ret
+}

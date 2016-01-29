@@ -402,7 +402,7 @@ unsigned ValueEnumerator::getValueID(const Value *V) const {
   return I->second-1;
 }
 
-void ValueEnumerator::dump() const {
+LLVM_DUMP_METHOD void ValueEnumerator::dump() const {
   print(dbgs(), ValueMap, "Default");
   dbgs() << '\n';
   print(dbgs(), MetadataMap, "MetaData");

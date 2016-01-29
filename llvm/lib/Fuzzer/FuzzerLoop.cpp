@@ -114,7 +114,7 @@ void Fuzzer::AlarmCallback() {
     Printf("SUMMARY: libFuzzer: timeout\n");
     if (Options.AbortOnTimeout)
       abort();
-    exit(1);
+    exit(Options.TimeoutExitCode);
   }
 }
 

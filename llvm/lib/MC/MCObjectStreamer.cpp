@@ -384,6 +384,16 @@ void MCObjectStreamer::EmitCVLinetableDirective(unsigned FunctionId,
   this->MCStreamer::EmitCVLinetableDirective(FunctionId, Begin, End);
 }
 
+void MCObjectStreamer::EmitCVInlineLinetableDirective(
+    unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+    ArrayRef<unsigned> SecondaryFunctionIds) {
+  getContext().getCVContext().emitInlineLineTableForFunction(
+      *this, PrimaryFunctionId, SourceFileId, SourceLineNum,
+      SecondaryFunctionIds);
+  this->MCStreamer::EmitCVInlineLinetableDirective(
+      PrimaryFunctionId, SourceFileId, SourceLineNum, SecondaryFunctionIds);
+}
+
 void MCObjectStreamer::EmitCVStringTableDirective() {
   getContext().getCVContext().emitStringTable(*this);
 }

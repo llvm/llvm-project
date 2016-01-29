@@ -205,6 +205,9 @@ public:
                           StringRef FileName) override;
   void EmitCVLinetableDirective(unsigned FunctionId, const MCSymbol *FnStart,
                                 const MCSymbol *FnEnd) override;
+  void EmitCVInlineLinetableDirective(
+      unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+      ArrayRef<unsigned> SecondaryFunctionIds) override;
   void EmitCVStringTableDirective() override;
   void EmitCVFileChecksumsDirective() override;
 
@@ -1015,6 +1018,21 @@ void MCAsmStreamer::EmitCVLinetableDirective(unsigned FunctionId,
   FnEnd->print(OS, MAI);
   EmitEOL();
   this->MCStreamer::EmitCVLinetableDirective(FunctionId, FnStart, FnEnd);
+}
+
+void MCAsmStreamer::EmitCVInlineLinetableDirective(
+    unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+    ArrayRef<unsigned> SecondaryFunctionIds) {
+  OS << "\t.cv_inline_linetable\t" << PrimaryFunctionId << ' ' << SourceFileId
+     << ' ' << SourceLineNum;
+  if (!SecondaryFunctionIds.empty()) {
+    OS << " contains";
+    for (unsigned SecondaryFunctionId : SecondaryFunctionIds)
+      OS << ' ' << SecondaryFunctionId;
+  }
+  EmitEOL();
+  this->MCStreamer::EmitCVInlineLinetableDirective(
+      PrimaryFunctionId, SourceFileId, SourceLineNum, SecondaryFunctionIds);
 }
 
 void MCAsmStreamer::EmitCVStringTableDirective() {

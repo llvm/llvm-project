@@ -127,6 +127,9 @@ public:
                           StringRef FileName) override;
   void EmitCVLinetableDirective(unsigned FunctionId, const MCSymbol *Begin,
                                 const MCSymbol *End) override;
+  void EmitCVInlineLinetableDirective(
+      unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+      ArrayRef<unsigned> SecondaryFunctionIds) override;
   void EmitCVStringTableDirective() override;
   void EmitCVFileChecksumsDirective() override;
   void EmitGPRel32Value(const MCExpr *Value) override;

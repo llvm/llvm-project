@@ -608,8 +608,8 @@ void AliasSetTracker::print(raw_ostream &OS) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void AliasSet::dump() const { print(dbgs()); }
-void AliasSetTracker::dump() const { print(dbgs()); }
+LLVM_DUMP_METHOD void AliasSet::dump() const { print(dbgs()); }
+LLVM_DUMP_METHOD void AliasSetTracker::dump() const { print(dbgs()); }
 #endif
 
 //===----------------------------------------------------------------------===//

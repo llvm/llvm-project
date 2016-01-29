@@ -101,14 +101,8 @@ public:
 
   inline void set(Value *Val);
 
-  Value *operator=(Value *RHS) {
-    set(RHS);
-    return RHS;
-  }
-  const Use &operator=(const Use &RHS) {
-    set(RHS.Val);
-    return *this;
-  }
+  inline Value *operator=(Value *RHS);
+  inline const Use &operator=(const Use &RHS);
 
   Value *operator->() { return Val; }
   const Value *operator->() const { return Val; }

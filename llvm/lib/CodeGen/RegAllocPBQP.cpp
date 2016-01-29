@@ -839,7 +839,7 @@ void PBQP::RegAlloc::PBQPRAGraph::dump(raw_ostream &OS) const {
   }
 }
 
-void PBQP::RegAlloc::PBQPRAGraph::dump() const { dump(dbgs()); }
+LLVM_DUMP_METHOD void PBQP::RegAlloc::PBQPRAGraph::dump() const { dump(dbgs()); }
 
 void PBQP::RegAlloc::PBQPRAGraph::printDot(raw_ostream &OS) const {
   OS << "graph {\n";

@@ -113,7 +113,7 @@ void Pass::print(raw_ostream &O,const Module*) const {
 }
 
 // dump - call print(cerr);
-void Pass::dump() const {
+LLVM_DUMP_METHOD void Pass::dump() const {
   print(dbgs(), nullptr);
 }
 

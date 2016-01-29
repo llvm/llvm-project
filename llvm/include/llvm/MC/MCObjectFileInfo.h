@@ -127,6 +127,7 @@ protected:
   MCSection *DwarfGnuPubTypesSection;
 
   MCSection *COFFDebugSymbolsSection;
+  MCSection *COFFDebugTypesSection;
 
   /// Extra TLS Variable Data section.
   ///
@@ -274,6 +275,10 @@ public:
   MCSection *getCOFFDebugSymbolsSection() const {
     return COFFDebugSymbolsSection;
   }
+  MCSection *getCOFFDebugTypesSection() const {
+    return COFFDebugTypesSection;
+  }
+
 
   MCSection *getTLSExtraDataSection() const { return TLSExtraDataSection; }
   const MCSection *getTLSDataSection() const { return TLSDataSection; }

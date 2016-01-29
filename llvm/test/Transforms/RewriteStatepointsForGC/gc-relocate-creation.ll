@@ -1,4 +1,4 @@
-; RUN: opt < %s -rewrite-statepoints-for-gc -S 2>&1 | FileCheck %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -S | FileCheck %s
 
 ; This test is to verify gc.relocate can handle pointer to vector of
 ; pointers (<2 x i32 addrspace(1)*> addrspace(1)* in this case).

@@ -379,7 +379,7 @@ BasicBlock *Loop::getUniqueExitBlock() const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void Loop::dump() const {
+LLVM_DUMP_METHOD void Loop::dump() const {
   print(dbgs());
 }
 #endif
