@@ -1569,7 +1569,7 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   if (VTable)
     return VTable;
 
-  // Queue up this v-table for possible deferred emission.
+  // Queue up this vtable for possible deferred emission.
   CGM.addDeferredVTable(RD);
 
   SmallString<256> Name;

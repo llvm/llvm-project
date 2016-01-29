@@ -719,7 +719,7 @@ static bool shouldEmitAvailableExternallyVTable(const CodeGenModule &CGM,
          CGM.getCXXABI().canSpeculativelyEmitVTable(RD);
 }
 
-/// Compute the required linkage of the v-table for the given class.
+/// Compute the required linkage of the vtable for the given class.
 ///
 /// Note that we only call this at the end of the translation unit.
 llvm::GlobalVariable::LinkageTypes 
@@ -804,7 +804,7 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   llvm_unreachable("Invalid TemplateSpecializationKind!");
 }
 
-/// This is a callback from Sema to tell us that that a particular v-table is
+/// This is a callback from Sema to tell us that that a particular vtable is
 /// required to be emitted in this translation unit.
 ///
 /// This is only called for vtables that _must_ be emitted (mainly due to key
@@ -832,38 +832,38 @@ CodeGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
 /// the translation unit.
 ///
 /// The only semantic restriction here is that the object file should
-/// not contain a v-table definition when that v-table is defined
+/// not contain a vtable definition when that vtable is defined
 /// strongly elsewhere.  Otherwise, we'd just like to avoid emitting
-/// v-tables when unnecessary.
+/// vtables when unnecessary.
 bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
   assert(RD->isDynamicClass() && "Non-dynamic classes have no VTable.");
 
   // If we have an explicit instantiation declaration (and not a
-  // definition), the v-table is defined elsewhere.
+  // definition), the vtable is defined elsewhere.
   TemplateSpecializationKind TSK = RD->getTemplateSpecializationKind();
   if (TSK == TSK_ExplicitInstantiationDeclaration)
     return true;
 
   // Otherwise, if the class is an instantiated template, the
-  // v-table must be defined here.
+  // vtable must be defined here.
   if (TSK == TSK_ImplicitInstantiation ||
       TSK == TSK_ExplicitInstantiationDefinition)
     return false;
 
   // Otherwise, if the class doesn't have a key function (possibly
-  // anymore), the v-table must be defined here.
+  // anymore), the vtable must be defined here.
   const CXXMethodDecl *keyFunction = CGM.getContext().getCurrentKeyFunction(RD);
   if (!keyFunction)
     return false;
 
   // Otherwise, if we don't have a definition of the key function, the
-  // v-table must be defined somewhere else.
+  // vtable must be defined somewhere else.
   return !keyFunction->hasBody();
 }
 
 /// Given that we're currently at the end of the translation unit, and
-/// we've emitted a reference to the v-table for this class, should
-/// we define that v-table?
+/// we've emitted a reference to the vtable for this class, should
+/// we define that vtable?
 static bool shouldEmitVTableAtEndOfTranslationUnit(CodeGenModule &CGM,
                                                    const CXXRecordDecl *RD) {
   // If vtable is internal then it has to be done.
@@ -875,7 +875,7 @@ static bool shouldEmitVTableAtEndOfTranslationUnit(CodeGenModule &CGM,
 }
 
 /// Given that at some point we emitted a reference to one or more
-/// v-tables, and that we are now at the end of the translation unit,
+/// vtables, and that we are now at the end of the translation unit,
 /// decide whether we should emit them.
 void CodeGenModule::EmitDeferredVTables() {
 #ifndef NDEBUG
@@ -889,7 +889,7 @@ void CodeGenModule::EmitDeferredVTables() {
       VTables.GenerateClassData(RD);
 
   assert(savedSize == DeferredVTables.size() &&
-         "deferred extra v-tables during v-table emission?");
+         "deferred extra vtables during vtable emission?");
   DeferredVTables.clear();
 }
 

@@ -95,7 +95,7 @@ CodeGenModule::getDynamicOffsetAlignment(CharUnits actualBaseAlign,
   // unless we someday add some sort of attribute to change the
   // assumed alignment of 'this'.  So our goal here is pretty much
   // just to allow the user to explicitly say that a pointer is
-  // under-aligned and then safely access its fields and v-tables.
+  // under-aligned and then safely access its fields and vtables.
   if (actualBaseAlign >= expectedBaseAlign) {
     return expectedTargetAlign;
   }

@@ -239,7 +239,7 @@ public:
   /// \brief Can an out-of-line inline function serve as a key function?
   ///
   /// This flag is only useful in ABIs where type data (for example,
-  /// v-tables and type_info objects) are emitted only after processing
+  /// vtables and type_info objects) are emitted only after processing
   /// the definition of a special "key" virtual function.  (This is safe
   /// because the ODR requires that every virtual function be defined
   /// somewhere in a program.)  This usually permits such data to be
