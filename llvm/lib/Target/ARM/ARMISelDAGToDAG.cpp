@@ -747,7 +747,7 @@ bool ARMDAGToDAGISel::SelectLdStSOReg(SDValue N, SDValue &Base, SDValue &Offset,
 
   // If Offset is a multiply-by-constant and it's profitable to extract a shift
   // and use it in a shifted operand do so.
-  if (Offset.getOpcode() == ISD::MUL) {
+  if (Offset.getOpcode() == ISD::MUL && N.hasOneUse()) {
     unsigned PowerOfTwo = 0;
     SDValue NewMulConst;
     if (canExtractShiftFromMul(Offset, 31, PowerOfTwo, NewMulConst)) {
@@ -1422,7 +1422,7 @@ bool ARMDAGToDAGISel::SelectT2AddrModeSoReg(SDValue N,
 
   // If OffReg is a multiply-by-constant and it's profitable to extract a shift
   // and use it in a shifted operand do so.
-  if (OffReg.getOpcode() == ISD::MUL) {
+  if (OffReg.getOpcode() == ISD::MUL && N.hasOneUse()) {
     unsigned PowerOfTwo = 0;
     SDValue NewMulConst;
     if (canExtractShiftFromMul(OffReg, 3, PowerOfTwo, NewMulConst)) {
