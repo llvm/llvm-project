@@ -37,6 +37,8 @@ struct InstrProfTest : ::testing::Test {
   InstrProfWriter Writer;
   std::unique_ptr<IndexedInstrProfReader> Reader;
 
+  void SetUp() { Writer.setOutputSparse(false); }
+
   void readProfile(std::unique_ptr<MemoryBuffer> Profile) {
     auto ReaderOrErr = IndexedInstrProfReader::create(std::move(Profile));
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
@@ -44,13 +46,24 @@ struct InstrProfTest : ::testing::Test {
   }
 };
 
-TEST_F(InstrProfTest, write_and_read_empty_profile) {
+struct SparseInstrProfTest : public InstrProfTest {
+  void SetUp() { Writer.setOutputSparse(true); }
+};
+
+struct MaybeSparseInstrProfTest : public InstrProfTest,
+                                  public ::testing::WithParamInterface<bool> {
+  void SetUp() {
+    Writer.setOutputSparse(GetParam());
+  }
+};
+
+TEST_P(MaybeSparseInstrProfTest, write_and_read_empty_profile) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
   ASSERT_TRUE(Reader->begin() == Reader->end());
 }
 
-TEST_F(InstrProfTest, write_and_read_one_function) {
+TEST_P(MaybeSparseInstrProfTest, write_and_read_one_function) {
   InstrProfRecord Record("foo", 0x1234, {1, 2, 3, 4});
   Writer.addRecord(std::move(Record));
   auto Profile = Writer.writeBuffer();
@@ -68,7 +81,7 @@ TEST_F(InstrProfTest, write_and_read_one_function) {
   ASSERT_TRUE(++I == E);
 }
 
-TEST_F(InstrProfTest, get_instr_prof_record) {
+TEST_P(MaybeSparseInstrProfTest, get_instr_prof_record) {
   InstrProfRecord Record1("foo", 0x1234, {1, 2});
   InstrProfRecord Record2("foo", 0x1235, {3, 4});
   Writer.addRecord(std::move(Record1));
@@ -95,7 +108,7 @@ TEST_F(InstrProfTest, get_instr_prof_record) {
   ASSERT_TRUE(ErrorEquals(instrprof_error::unknown_function, R.getError()));
 }
 
-TEST_F(InstrProfTest, get_function_counts) {
+TEST_P(MaybeSparseInstrProfTest, get_function_counts) {
   InstrProfRecord Record1("foo", 0x1234, {1, 2});
   InstrProfRecord Record2("foo", 0x1235, {3, 4});
   Writer.addRecord(std::move(Record1));
@@ -122,7 +135,7 @@ TEST_F(InstrProfTest, get_function_counts) {
   ASSERT_TRUE(ErrorEquals(instrprof_error::unknown_function, EC));
 }
 
-TEST_F(InstrProfTest, get_icall_data_read_write) {
+TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {
   InstrProfRecord Record1("caller", 0x1234, {1, 2});
   InstrProfRecord Record2("callee1", 0x1235, {3, 4});
   InstrProfRecord Record3("callee2", 0x1235, {3, 4});
@@ -169,7 +182,7 @@ TEST_F(InstrProfTest, get_icall_data_read_write) {
   ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
 }
 
-TEST_F(InstrProfTest, get_icall_data_read_write_with_weight) {
+TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_with_weight) {
   InstrProfRecord Record1("caller", 0x1234, {1, 2});
   InstrProfRecord Record2("callee1", 0x1235, {3, 4});
   InstrProfRecord Record3("callee2", 0x1235, {3, 4});
@@ -215,7 +228,7 @@ TEST_F(InstrProfTest, get_icall_data_read_write_with_weight) {
   ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
 }
 
-TEST_F(InstrProfTest, get_icall_data_read_write_big_endian) {
+TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_big_endian) {
   InstrProfRecord Record1("caller", 0x1234, {1, 2});
   InstrProfRecord Record2("callee1", 0x1235, {3, 4});
   InstrProfRecord Record3("callee2", 0x1235, {3, 4});
@@ -267,7 +280,7 @@ TEST_F(InstrProfTest, get_icall_data_read_write_big_endian) {
   Writer.setValueProfDataEndianness(support::little);
 }
 
-TEST_F(InstrProfTest, get_icall_data_merge1) {
+TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {
   static const char caller[] = "caller";
   static const char callee1[] = "callee1";
   static const char callee2[] = "callee2";
@@ -382,7 +395,7 @@ TEST_F(InstrProfTest, get_icall_data_merge1) {
   ASSERT_EQ(2U, VD_4[2].Count);
 }
 
-TEST_F(InstrProfTest, get_icall_data_merge1_saturation) {
+TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   static const char bar[] = "bar";
 
   const uint64_t Max = std::numeric_limits<uint64_t>::max();
@@ -436,7 +449,7 @@ TEST_F(InstrProfTest, get_icall_data_merge1_saturation) {
 // This test tests that when there are too many values
 // for a given site, the merged results are properly
 // truncated.
-TEST_F(InstrProfTest, get_icall_data_merge_site_trunc) {
+TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge_site_trunc) {
   static const char caller[] = "caller";
 
   InstrProfRecord Record11(caller, 0x1234, {1, 2});
@@ -504,7 +517,7 @@ ValueProfNode Site4Values[2] = {{{uint64_t("callee2"), 1800}, &Site4Values[1]},
 static ValueProfNode *ValueProfNodes[5] = {&Site1Values[0], &Site2Values[0],
                                            &Site3Values[0], &Site4Values[0], 0};
 static uint16_t NumValueSites[IPVK_Last + 1] = {5};
-TEST_F(InstrProfTest, runtime_value_prof_data_read_write) {
+TEST_P(MaybeSparseInstrProfTest, runtime_value_prof_data_read_write) {
   ValueProfRuntimeRecord RTRecord;
   initializeValueProfRuntimeRecord(&RTRecord, &NumValueSites[0],
                                    &ValueProfNodes[0]);
@@ -574,7 +587,7 @@ TEST_F(InstrProfTest, runtime_value_prof_data_read_write) {
   free(VPData);
 }
 
-TEST_F(InstrProfTest, get_max_function_count) {
+TEST_P(MaybeSparseInstrProfTest, get_max_function_count) {
   InstrProfRecord Record1("foo", 0x1234, {1ULL << 31, 2});
   InstrProfRecord Record2("bar", 0, {1ULL << 63});
   InstrProfRecord Record3("baz", 0x5678, {0, 0, 0, 0});
@@ -587,7 +600,7 @@ TEST_F(InstrProfTest, get_max_function_count) {
   ASSERT_EQ(1ULL << 63, Reader->getMaximumFunctionCount());
 }
 
-TEST_F(InstrProfTest, get_weighted_function_counts) {
+TEST_P(MaybeSparseInstrProfTest, get_weighted_function_counts) {
   InstrProfRecord Record1("foo", 0x1234, {1, 2});
   InstrProfRecord Record2("foo", 0x1235, {3, 4});
   Writer.addRecord(std::move(Record1), 3);
@@ -607,7 +620,7 @@ TEST_F(InstrProfTest, get_weighted_function_counts) {
   ASSERT_EQ(20U, Counts[1]);
 }
 
-TEST_F(InstrProfTest, instr_prof_symtab_test) {
+TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
   std::vector<StringRef> FuncNames;
   FuncNames.push_back("func1");
   FuncNames.push_back("func2");
@@ -658,7 +671,7 @@ TEST_F(InstrProfTest, instr_prof_symtab_test) {
   ASSERT_EQ(StringRef("bar3"), R);
 }
 
-TEST_F(InstrProfTest, instr_prof_symtab_compression_test) {
+TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
   std::vector<std::string> FuncNames1;
   std::vector<std::string> FuncNames2;
   for (int I = 0; I < 10 * 1024; I++) {
@@ -730,5 +743,23 @@ TEST_F(InstrProfTest, instr_prof_symtab_compression_test) {
     }
   }
 }
+
+TEST_F(SparseInstrProfTest, preserve_no_records) {
+  InstrProfRecord Record1("foo", 0x1234, {0});
+  InstrProfRecord Record2("bar", 0x4321, {0, 0});
+  InstrProfRecord Record3("bar", 0x4321, {0, 0, 0});
+
+  Writer.addRecord(std::move(Record1));
+  Writer.addRecord(std::move(Record2));
+  Writer.addRecord(std::move(Record3));
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  auto I = Reader->begin(), E = Reader->end();
+  ASSERT_TRUE(I == E);
+}
+
+INSTANTIATE_TEST_CASE_P(MaybeSparse, MaybeSparseInstrProfTest,
+                        ::testing::Bool());
 
 } // end anonymous namespace

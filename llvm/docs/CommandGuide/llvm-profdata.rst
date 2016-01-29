@@ -90,6 +90,12 @@ OPTIONS
 
  Emit the profile using GCC's gcov format (Not yet supported).
 
+ .. option:: -sparse[=true|false]
+
+ Do not emit function records with 0 execution count. Can only be used in
+ conjunction with -instr. Defaults to false, since it can inhibit compiler
+ optimization during PGO.
+
 EXAMPLES
 ^^^^^^^^
 Basic Usage
