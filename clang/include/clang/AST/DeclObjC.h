@@ -1023,7 +1023,9 @@ public:
   FindPropertyDeclaration(const IdentifierInfo *PropertyId,
                           ObjCPropertyQueryKind QueryKind) const;
 
-  typedef llvm::DenseMap<IdentifierInfo*, ObjCPropertyDecl*> PropertyMap;
+  typedef llvm::DenseMap<std::pair<IdentifierInfo*,
+                                   unsigned/*isClassProperty*/>,
+                         ObjCPropertyDecl*> PropertyMap;
   
   typedef llvm::DenseMap<const ObjCProtocolDecl *, ObjCPropertyDecl*>
             ProtocolPropertyMap;

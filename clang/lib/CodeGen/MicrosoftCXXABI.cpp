@@ -1642,7 +1642,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
 
   if (DeferredVFTables.insert(RD).second) {
     // We haven't processed this record type before.
-    // Queue up this v-table for possible deferred emission.
+    // Queue up this vtable for possible deferred emission.
     CGM.addDeferredVTable(RD);
 
 #ifndef NDEBUG

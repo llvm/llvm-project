@@ -1534,8 +1534,9 @@ static void CollectImmediateProperties(ObjCContainerDecl *CDecl,
                                        bool IncludeProtocols = true) {
 
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(CDecl)) {
-    for (auto *Prop : IDecl->instance_properties())
-      PropMap[Prop->getIdentifier()] = Prop;
+    for (auto *Prop : IDecl->properties())
+      PropMap[std::make_pair(Prop->getIdentifier(), Prop->isClassProperty())] =
+          Prop;
 
     // Collect the properties from visible extensions.
     for (auto *Ext : IDecl->visible_extensions())
@@ -1548,8 +1549,9 @@ static void CollectImmediateProperties(ObjCContainerDecl *CDecl,
     }
   }
   if (ObjCCategoryDecl *CATDecl = dyn_cast<ObjCCategoryDecl>(CDecl)) {
-    for (auto *Prop : CATDecl->instance_properties())
-      PropMap[Prop->getIdentifier()] = Prop;
+    for (auto *Prop : CATDecl->properties())
+      PropMap[std::make_pair(Prop->getIdentifier(), Prop->isClassProperty())] =
+          Prop;
     if (IncludeProtocols) {
       // Scan through class's protocols.
       for (auto *PI : CATDecl->protocols())
@@ -1557,13 +1559,17 @@ static void CollectImmediateProperties(ObjCContainerDecl *CDecl,
     }
   }
   else if (ObjCProtocolDecl *PDecl = dyn_cast<ObjCProtocolDecl>(CDecl)) {
-    for (auto *Prop : PDecl->instance_properties()) {
-      ObjCPropertyDecl *PropertyFromSuper = SuperPropMap[Prop->getIdentifier()];
+    for (auto *Prop : PDecl->properties()) {
+      ObjCPropertyDecl *PropertyFromSuper =
+          SuperPropMap[std::make_pair(Prop->getIdentifier(),
+                                      Prop->isClassProperty())];
       // Exclude property for protocols which conform to class's super-class, 
       // as super-class has to implement the property.
       if (!PropertyFromSuper || 
           PropertyFromSuper->getIdentifier() != Prop->getIdentifier()) {
-        ObjCPropertyDecl *&PropEntry = PropMap[Prop->getIdentifier()];
+        ObjCPropertyDecl *&PropEntry =
+            PropMap[std::make_pair(Prop->getIdentifier(),
+                                   Prop->isClassProperty())];
         if (!PropEntry)
           PropEntry = Prop;
       }
@@ -1658,6 +1664,7 @@ void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl* IMPDecl,
     ObjCPropertyDecl *Prop = PropertyOrder[i];
     // Is there a matching property synthesize/dynamic?
     if (Prop->isInvalidDecl() ||
+        Prop->isClassProperty() ||
         Prop->getPropertyImplementation() == ObjCPropertyDecl::Optional)
       continue;
     // Property may have been synthesized by user.
@@ -1678,7 +1685,9 @@ void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl* IMPDecl,
         Diag(PID->getLocation(), diag::note_property_synthesize);
       continue;
     }
-    ObjCPropertyDecl *PropInSuperClass = SuperPropMap[Prop->getIdentifier()];
+    ObjCPropertyDecl *PropInSuperClass =
+        SuperPropMap[std::make_pair(Prop->getIdentifier(),
+                                    Prop->isClassProperty())];
     if (ObjCProtocolDecl *Proto =
           dyn_cast<ObjCProtocolDecl>(Prop->getDeclContext())) {
       // We won't auto-synthesize properties declared in protocols.
@@ -1821,10 +1830,12 @@ void Sema::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl* IMPDecl,
       }
       // Add the properties of 'PDecl' to the list of properties that
       // need to be implemented.
-      for (auto *PropDecl : PDecl->instance_properties()) {
-        if ((*LazyMap)[PropDecl->getIdentifier()])
+      for (auto *PropDecl : PDecl->properties()) {
+        if ((*LazyMap)[std::make_pair(PropDecl->getIdentifier(),
+                                      PropDecl->isClassProperty())])
           continue;
-        PropMap[PropDecl->getIdentifier()] = PropDecl;
+        PropMap[std::make_pair(PropDecl->getIdentifier(),
+                               PropDecl->isClassProperty())] = PropDecl;
       }
     }
   }
@@ -1838,7 +1849,7 @@ void Sema::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl* IMPDecl,
 
   SelectorSet InsMap;
   // Collect property accessors implemented in current implementation.
-  for (const auto *I : IMPDecl->instance_methods())
+  for (const auto *I : IMPDecl->methods())
     InsMap.insert(I->getSelector());
   
   ObjCCategoryDecl *C = dyn_cast<ObjCCategoryDecl>(CDecl);
@@ -1850,7 +1861,7 @@ void Sema::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl* IMPDecl,
         // When reporting on missing setter/getters, do not report when
         // setter/getter is implemented in category's primary class
         // implementation.
-        for (const auto *I : IMP->instance_methods())
+        for (const auto *I : IMP->methods())
           InsMap.insert(I->getSelector());
       }
 
@@ -1908,11 +1919,11 @@ Sema::AtomicPropertySetterGetterRules (ObjCImplDecl* IMPDecl,
   if (getLangOpts().getGC() != LangOptions::NonGC)
     return;
   ObjCContainerDecl::PropertyMap PM;
-  for (auto *Prop : IDecl->instance_properties())
-    PM[Prop->getIdentifier()] = Prop;
+  for (auto *Prop : IDecl->properties())
+    PM[std::make_pair(Prop->getIdentifier(), Prop->isClassProperty())] = Prop;
   for (const auto *Ext : IDecl->known_extensions())
-    for (auto *Prop : Ext->instance_properties())
-      PM[Prop->getIdentifier()] = Prop;
+    for (auto *Prop : Ext->properties())
+      PM[std::make_pair(Prop->getIdentifier(), Prop->isClassProperty())] = Prop;
     
   for (ObjCContainerDecl::PropertyMap::iterator I = PM.begin(), E = PM.end();
        I != E; ++I) {

@@ -199,15 +199,18 @@ namespace {
     }
 
     void HandleTranslationUnit(ASTContext &Ctx) override {
+      // Release the Builder when there is no error.
+      if (!Diags.hasErrorOccurred() && Builder)
+        Builder->Release();
+
+      // If there are errors before or when releasing the Builder, reset
+      // the module to stop here before invoking the backend.
       if (Diags.hasErrorOccurred()) {
         if (Builder)
           Builder->clear();
         M.reset();
         return;
       }
-
-      if (Builder)
-        Builder->Release();
     }
 
     void AssignInheritanceModel(CXXRecordDecl *RD) override {

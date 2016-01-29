@@ -470,22 +470,6 @@ static const Expr *lookThroughImplicitCasts(const Expr *E) {
   return E;
 }
 
-/// Returns true when the return statement is a syntactic 'return self' in
-/// Objective-C.
-static bool isReturnSelf(const ReturnStmt *RS, CheckerContext &C) {
-  const ImplicitParamDecl *SelfDecl =
-    C.getCurrentAnalysisDeclContext()->getSelfDecl();
-  if (!SelfDecl)
-    return false;
-
-  const Expr *ReturnExpr = lookThroughImplicitCasts(RS->getRetValue());
-  auto *RefExpr = dyn_cast<DeclRefExpr>(ReturnExpr);
-  if (!RefExpr)
-    return false;
-
-  return RefExpr->getDecl() == SelfDecl;
-}
-
 /// This method check when nullable pointer or null value is returned from a
 /// function that has nonnull return type.
 ///
