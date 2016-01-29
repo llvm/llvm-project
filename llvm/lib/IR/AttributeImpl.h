@@ -148,10 +148,21 @@ class AttributeSetNode final
   friend TrailingObjects;
 
   unsigned NumAttrs; ///< Number of attributes in this node.
+  /// Bitset with a bit for each available attribute Attribute::AttrKind.
+  uint64_t AvailableAttrs;
+  static_assert(Attribute::EndAttrKinds <= sizeof(AvailableAttrs)*CHAR_BIT,
+                "Too many attributes for AvailableAttrs");
 
-  AttributeSetNode(ArrayRef<Attribute> Attrs) : NumAttrs(Attrs.size()) {
+  AttributeSetNode(ArrayRef<Attribute> Attrs)
+    : NumAttrs(Attrs.size()), AvailableAttrs(0) {
     // There's memory after the node where we can store the entries in.
     std::copy(Attrs.begin(), Attrs.end(), getTrailingObjects<Attribute>());
+
+    for (iterator I = begin(), E = end(); I != E; ++I) {
+      if (!I->isStringAttribute()) {
+        AvailableAttrs |= ((uint64_t)1) << I->getKindAsEnum();
+      }
+    }
   }
 
   // AttributesSetNode is uniqued, these should not be publicly available.
@@ -160,7 +171,9 @@ class AttributeSetNode final
 public:
   static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
-  bool hasAttribute(Attribute::AttrKind Kind) const;
+  bool hasAttribute(Attribute::AttrKind Kind) const {
+    return AvailableAttrs & ((uint64_t)1) << Kind;
+  }
   bool hasAttribute(StringRef Kind) const;
   bool hasAttributes() const { return NumAttrs != 0; }
 
