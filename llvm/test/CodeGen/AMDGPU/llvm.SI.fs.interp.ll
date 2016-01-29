@@ -1,5 +1,6 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=GCN %s
 ;RUN: llc < %s -march=amdgcn -mcpu=kabini -verify-machineinstrs | FileCheck --check-prefix=GCN --check-prefix=16BANK %s
+;RUN: llc < %s -march=amdgcn -mcpu=stoney -verify-machineinstrs | FileCheck --check-prefix=GCN --check-prefix=16BANK %s
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN %s
 
 ;GCN-LABEL: {{^}}main:

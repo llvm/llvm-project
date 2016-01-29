@@ -253,7 +253,7 @@ def FeatureSeaIslands : SubtargetFeatureGeneration<"SEA_ISLANDS",
 def FeatureVolcanicIslands : SubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
         [Feature64BitPtr, FeatureFP64, FeatureLocalMemorySize65536,
          FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
-         FeatureGCN3Encoding, FeatureCIInsts, FeatureLDSBankCount32]>;
+         FeatureGCN3Encoding, FeatureCIInsts]>;
 
 //===----------------------------------------------------------------------===//
 
