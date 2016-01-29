@@ -21,16 +21,19 @@ using llvm::support::ulittle32_t;
 
 class LineInfo {
 public:
-  static const uint32_t AlwaysStepIntoLineNumber = 0xfeefee;
-  static const uint32_t NeverStepIntoLineNumber = 0xf00f00;
+  enum : uint32_t {
+    AlwaysStepIntoLineNumber = 0xfeefee,
+    NeverStepIntoLineNumber = 0xf00f00
+  };
 
-private:
-  static const uint32_t StartLineMask = 0x00ffffff;
-  static const uint32_t EndLineDeltaMask = 0x7f000000;
-  static const int EndLineDeltaShift = 24;
-  static const uint32_t StatementFlag = 0x80000000u;
+  enum : int { EndLineDeltaShift = 24 };
 
-public:
+  enum : uint32_t {
+    StartLineMask = 0x00ffffff,
+    EndLineDeltaMask = 0x7f000000,
+    StatementFlag = 0x80000000u
+  };
+
   LineInfo(uint32_t StartLine, uint32_t EndLine, bool IsStatement);
 
   uint32_t getStartLine() const { return LineData & StartLineMask; }
@@ -149,6 +152,10 @@ struct FileChecksum {
   uint8_t ChecksumSize;
   uint8_t ChecksumKind; // FileChecksumKind
   // Checksum bytes follow.
+};
+
+enum LineFlags : uint32_t {
+  HaveColumns = 1, // CV_LINES_HAVE_COLUMNS
 };
 
 } // namespace codeview

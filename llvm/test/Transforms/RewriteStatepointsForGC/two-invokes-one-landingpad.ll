@@ -1,12 +1,12 @@
-; RUN: opt %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -S | FileCheck %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -S | FileCheck %s
 
 declare void @some_call(i64 addrspace(1)*)
 
-declare i32 @"dummy_personality_function"()
+declare i32 @dummy_personality_function()
 
 define i64 addrspace(1)* @test(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1)
   gc "statepoint-example"
-  personality i32 ()* @"dummy_personality_function" {
+  personality i32 ()* @dummy_personality_function {
 entry:
   invoke void @some_call(i64 addrspace(1)* %obj) [ "deopt"() ]
           to label %second_invoke unwind label %exceptional_return

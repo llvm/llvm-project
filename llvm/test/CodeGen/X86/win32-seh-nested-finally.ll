@@ -56,7 +56,6 @@ attributes #3 = { noinline }
 ; CHECK: LBB0_[[inner:[0-9]+]]: # %ehcleanup
 ; CHECK: pushl %ebp
 ; CHECK: addl $12, %ebp
-; CHECK: movl $0, -[[state]](%ebp)
 ; CHECK: movl $2, (%esp)
 ; CHECK: calll _f
 ; CHECK: popl %ebp
@@ -65,7 +64,6 @@ attributes #3 = { noinline }
 ; CHECK: LBB0_[[outer:[0-9]+]]: # %ehcleanup.3
 ; CHECK: pushl %ebp
 ; CHECK: addl $12, %ebp
-; CHECK: movl $-1, -[[state]](%ebp)
 ; CHECK: movl $3, (%esp)
 ; CHECK: calll _f
 ; CHECK: popl %ebp

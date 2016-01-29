@@ -573,16 +573,16 @@ bool CallAnalyzer::isKnownNonNullInCallee(Value *V) {
 }
 
 void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
-  // If -inline-threshold is not given, listen to the optsize attribute when it
-  // would decrease the threshold.
+  // If -inline-threshold is not given, listen to the optsize and minsize
+  // attributes when they would decrease the threshold.
   Function *Caller = CS.getCaller();
 
-  // FIXME: Use Function::optForSize()
-  bool OptSize = Caller->hasFnAttribute(Attribute::OptimizeForSize);
-
-  if (!(DefaultInlineThreshold.getNumOccurrences() > 0) && OptSize &&
-      OptSizeThreshold < Threshold)
-    Threshold = OptSizeThreshold;
+  if (!(DefaultInlineThreshold.getNumOccurrences() > 0)) {
+    if (Caller->optForMinSize() && OptMinSizeThreshold < Threshold)
+      Threshold = OptMinSizeThreshold;
+    else if (Caller->optForSize() && OptSizeThreshold < Threshold)
+      Threshold = OptSizeThreshold;
+  }
 
   // If profile information is available, use that to adjust threshold of hot
   // and cold functions.

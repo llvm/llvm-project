@@ -27,6 +27,8 @@ private:
   size_t Size = 0;
   Kind K;
 
+  void finalizeStringTable(bool Optimize);
+
 public:
   StringTableBuilder(Kind K);
 
@@ -38,6 +40,10 @@ public:
   /// \brief Analyze the strings and build the final table. No more strings can
   /// be added after this point.
   void finalize();
+
+  /// Finalize the string table without reording it. In this mode, offsets
+  /// returned by add will still be valid.
+  void finalizeInOrder();
 
   /// \brief Retrieve the string table data. Can only be used after the table
   /// is finalized.

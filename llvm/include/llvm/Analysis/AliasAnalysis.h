@@ -450,11 +450,11 @@ public:
   ModRefInfo getModRefInfo(const Instruction *I) {
     if (auto CS = ImmutableCallSite(I)) {
       auto MRB = getModRefBehavior(CS);
-      if (MRB & MRI_ModRef)
+      if ((MRB & MRI_ModRef) == MRI_ModRef)
         return MRI_ModRef;
-      else if (MRB & MRI_Ref)
+      if (MRB & MRI_Ref)
         return MRI_Ref;
-      else if (MRB & MRI_Mod)
+      if (MRB & MRI_Mod)
         return MRI_Mod;
       return MRI_NoModRef;
     }

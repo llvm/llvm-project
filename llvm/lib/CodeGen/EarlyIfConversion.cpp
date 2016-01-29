@@ -480,7 +480,7 @@ void SSAIfConv::rewritePHIOperands() {
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i) {
     PHIInfo &PI = PHIs[i];
     unsigned DstReg = 0;
-    
+
     DEBUG(dbgs() << "If-converting " << *PI.PHI);
     if (PI.TReg == PI.FReg) {
       // We do not need the select instruction if both incoming values are

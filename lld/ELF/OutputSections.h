@@ -12,7 +12,6 @@
 
 #include "lld/Core/LLVM.h"
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELF.h"
 
@@ -73,6 +72,7 @@ public:
   void setVA(uintX_t VA) { Header.sh_addr = VA; }
   uintX_t getVA() const { return Header.sh_addr; }
   void setFileOffset(uintX_t Off) { Header.sh_offset = Off; }
+  void setSHName(unsigned Val) { Header.sh_name = Val; }
   void writeHeaderTo(Elf_Shdr *SHdr);
   StringRef getName() { return Name; }
 
@@ -195,12 +195,16 @@ public:
 
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
-  void addLocalSymbol(StringRef Name);
   void addSymbol(SymbolBody *Body);
   StringTableSection<ELFT> &getStrTabSec() const { return StrTabSec; }
   unsigned getNumSymbols() const { return NumLocals + Symbols.size() + 1; }
 
-  ArrayRef<SymbolBody *> getSymbols() const { return Symbols; }
+  ArrayRef<std::pair<SymbolBody *, unsigned>> getSymbols() const {
+    return Symbols;
+  }
+
+  unsigned NumLocals = 0;
+  StringTableSection<ELFT> &StrTabSec;
 
 private:
   void writeLocalSymbols(uint8_t *&Buf);
@@ -209,9 +213,7 @@ private:
   static uint8_t getSymbolBinding(SymbolBody *Body);
 
   SymbolTable<ELFT> &Table;
-  StringTableSection<ELFT> &StrTabSec;
-  std::vector<SymbolBody *> Symbols;
-  unsigned NumLocals = 0;
+  std::vector<std::pair<SymbolBody *, unsigned>> Symbols;
 };
 
 template <class ELFT>
@@ -328,18 +330,17 @@ class StringTableSection final : public OutputSectionBase<ELFT> {
 public:
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
   StringTableSection(StringRef Name, bool Dynamic);
-  void reserve(StringRef S);
-  size_t addString(StringRef S);
+  unsigned addString(StringRef S, bool HashIt = true);
   void writeTo(uint8_t *Buf) override;
-  size_t getSize() const { return Used + Reserved; }
+  unsigned getSize() const { return Size; }
   void finalize() override { this->Header.sh_size = getSize(); }
   bool isDynamic() const { return Dynamic; }
 
 private:
   const bool Dynamic;
+  llvm::DenseMap<StringRef, unsigned> StringMap;
   std::vector<StringRef> Strings;
-  size_t Used = 1; // ELF string tables start with a NUL byte, so 1.
-  size_t Reserved = 0;
+  unsigned Size = 1; // ELF string tables start with a NUL byte, so 1.
 };
 
 template <class ELFT>
@@ -367,7 +368,7 @@ public:
 
   // Adds symbols to the hash table.
   // Sorts the input to satisfy GNU hash section requirements.
-  void addSymbols(std::vector<SymbolBody *> &Symbols);
+  void addSymbols(std::vector<std::pair<SymbolBody *, unsigned>> &Symbols);
 
 private:
   static unsigned calcNBuckets(unsigned NumHashed);
@@ -379,6 +380,7 @@ private:
 
   struct HashedSymbolData {
     SymbolBody *Body;
+    unsigned STName;
     uint32_t Hash;
   };
 

@@ -120,7 +120,6 @@ try.cont4:                                        ; preds = %try.cont
 ehcleanup:                                        ; preds = %catch.dispatch1
   %4 = cleanuppad within %1 []
   ; CHECK: ehcleanup:
-  ; CHECK:   store i32 -1
   ; CHECK:   call void @dtor()
   call void @dtor() #3 [ "funclet"(token %4) ]
   cleanupret from %4 unwind to caller

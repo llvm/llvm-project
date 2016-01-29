@@ -1,4 +1,4 @@
-; RUN: opt -S -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles < %s | FileCheck %s
+; RUN: opt -S -rewrite-statepoints-for-gc < %s | FileCheck %s
 
 declare void @f()
 declare i32 @personality_function()

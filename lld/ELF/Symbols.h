@@ -92,7 +92,7 @@ public:
 
   uint8_t getVisibility() const { return Visibility; }
 
-  unsigned DynamicSymbolTableIndex = 0;
+  unsigned DynsymIndex = 0;
   uint32_t GlobalDynIndex = -1;
   uint32_t GotIndex = -1;
   uint32_t GotPltIndex = -1;

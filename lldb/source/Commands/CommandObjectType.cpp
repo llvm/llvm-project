@@ -1282,9 +1282,12 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
             {
                 case 'w':
                     m_category_regex.SetCurrentValue(option_arg);
+                    m_category_regex.SetOptionWasSet();
                     break;
                 case 'l':
                     error = m_category_language.SetValueFromString(option_arg);
+                    if (error.Success())
+                        m_category_language.SetOptionWasSet();
                     break;
                 default:
                     error.SetErrorStringWithFormat ("unrecognized option '%c'", short_option);

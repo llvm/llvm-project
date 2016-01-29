@@ -18,13 +18,15 @@
 
 ; X86-LABEL: _f:
 ; X86:      # BB
-; X86-NEXT: [[CALL_LINE_1:.*]]:{{$}}
+; X86:      .cv_file 1 "D:\\one.c"
+; X86:      .cv_loc 0 1 1 0 is_stmt 0 # one.c:1:0
 ; X86:      calll   _g
-; X86-NEXT: [[CALL_LINE_2:.*]]:{{$}}
+; X86:      .cv_file 2 "D:\\two.c"
+; X86:      .cv_loc 0 2 2 0 # two.c:2:0
 ; X86:      calll   _g
-; X86-NEXT: [[CALL_LINE_3:.*]]:{{$}}
+; X86:      .cv_loc 0 1 7 0 # one.c:7:0
 ; X86:      calll   _g
-; X86-NEXT: [[RETURN_STMT:.*]]:
+; X86:      .cv_loc 0 1 8 0 # one.c:8:0
 ; X86:      ret
 ; X86-NEXT: [[END_OF_F:.*]]:
 ;
@@ -52,68 +54,15 @@
 ; Padding
 ; X86-NEXT: .zero   3
 ; Line table
-; X86-NEXT: .long   242
-; X86-NEXT: .long [[F2_END:.*]]-[[F2_START:.*]]
-; X86-NEXT: [[F2_START]]:
-; X86-NEXT: .secrel32 _f
-; X86-NEXT: .secidx _f
-; X86-NEXT: .short 1
-; X86-NEXT: .long [[END_OF_F]]-_f
-; Segment for file 'D:\\one.c' begins
-; X86-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X86-NEXT: .long   0
-; X86-NEXT: .long   1
-; X86-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X86-NEXT: .long [[CALL_LINE_1]]-_f
-; X86-NEXT: .long   -2147483647
-; X86-NEXT: .short  0
-; X86-NEXT: .short  0
-; X86-NEXT: [[FILE_SEGMENT_END]]:
-; Segment for file 'D:\\two.c' begins
-; X86-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X86-NEXT: .long   8
-; X86-NEXT: .long   1
-; X86-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X86-NEXT: .long [[CALL_LINE_2]]-_f
-; X86-NEXT: .long   -2147483646
-; X86-NEXT: .short  0
-; X86-NEXT: .short  0
-; X86-NEXT: [[FILE_SEGMENT_END]]:
-; A new segment for file 'D:\\one.c' begins
-; X86-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X86-NEXT: .long   0
-; X86-NEXT: .long   2
-; X86-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X86-NEXT: .long [[CALL_LINE_3]]-_f
-; X86-NEXT: .long   -2147483641
-; X86-NEXT: .long [[RETURN_STMT]]-_f
-; X86-NEXT: .long   -2147483640
-; X86-NEXT: .short  0
-; X86-NEXT: .short  0
-; X86-NEXT: .short  0
-; X86-NEXT: .short  0
-; X86-NEXT: [[FILE_SEGMENT_END]]:
-; X86-NEXT: [[F2_END]]:
+; X86-NEXT: .cv_linetable 0, _f, [[END_OF_F]]
 ; File index to string table offset subsection
-; X86-NEXT: .long   244
-; X86-NEXT: .long   16
-; X86-NEXT: .long   1
-; X86-NEXT: .long   0
-; X86-NEXT: .long   10
-; X86-NEXT: .long   0
+; X86-NEXT: .cv_filechecksums
 ; String table
-; X86-NEXT: .long   243
-; X86-NEXT: .long   19
-; X86-NEXT: .byte   0
-; X86-NEXT: .ascii  "D:\\one.c"
-; X86-NEXT: .byte   0
-; X86-NEXT: .ascii  "D:\\two.c"
-; X86-NEXT: .byte   0
-; X86-NEXT: .zero   1
+; X86-NEXT: .cv_stringtable
 
 ; OBJ32:    Section {
 ; OBJ32:      Name: .debug$S (2E 64 65 62 75 67 24 53)
-; OBJ32:      Characteristics [ (0x42100040)
+; OBJ32:      Characteristics [ (0x42300040)
 ; OBJ32:      ]
 ; OBJ32:      Relocations [
 ; OBJ32-NEXT:   0x2C IMAGE_REL_I386_SECREL _f
@@ -133,7 +82,7 @@
 ; OBJ32-NEXT: ]
 ; OBJ32:      FunctionLineTable [
 ; OBJ32-NEXT:   Name: _f
-; OBJ32-NEXT:   Flags: 0x1
+; OBJ32-NEXT:   Flags: 0x0
 ; OBJ32-NEXT:   CodeSize: 0x10
 ; OBJ32-NEXT:   FilenameSegment [
 ; OBJ32-NEXT:     Filename: D:\one.c
@@ -141,8 +90,6 @@
 ; OBJ32-NEXT:       LineNumberStart: 1
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
 ; OBJ32-NEXT:       IsStatement: Yes
-; OBJ32-NEXT:       ColStart: 0
-; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT:   FilenameSegment [
@@ -151,8 +98,6 @@
 ; OBJ32-NEXT:       LineNumberStart: 2
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
 ; OBJ32-NEXT:       IsStatement: Yes
-; OBJ32-NEXT:       ColStart: 0
-; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT:   FilenameSegment [
@@ -161,31 +106,30 @@
 ; OBJ32-NEXT:       LineNumberStart: 7
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
 ; OBJ32-NEXT:       IsStatement: Yes
-; OBJ32-NEXT:       ColStart: 0
-; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:     +0xF [
 ; OBJ32-NEXT:       LineNumberStart: 8
 ; OBJ32-NEXT:       LineNumberEndDelta: 0
 ; OBJ32-NEXT:       IsStatement: Yes
-; OBJ32-NEXT:       ColStart: 0
-; OBJ32-NEXT:       ColEnd: 0
 ; OBJ32-NEXT:     ]
 ; OBJ32-NEXT:   ]
 ; OBJ32-NEXT: ]
 
 ; X64-LABEL: f:
 ; X64-NEXT: .L{{.*}}:{{$}}
-; X64-NEXT: [[START:.*]]:{{$}}
+; X64:      .cv_file 1 "D:\\input.c"
+; X64:      .cv_loc 0 1 3 0 is_stmt 0 # input.c:3:0
 ; X64:      # BB
 ; X64:      subq    $40, %rsp
-; X64-NEXT: [[CALL_LINE_1:.*]]:{{$}}
+; X64:      .cv_file 2 "D:\\one.c"
+; X64:      .cv_loc 0 2 1 0 # one.c:1:0
 ; X64:      callq   g
-; X64-NEXT: [[CALL_LINE_2:.*]]:{{$}}
+; X64:      .cv_file 3 "D:\\two.c"
+; X64:      .cv_loc 0 3 2 0 # two.c:2:0
 ; X64:      callq   g
-; X64-NEXT: [[CALL_LINE_3:.*]]:{{$}}
+; X64:      .cv_loc 0 2 7 0 # one.c:7:0
 ; X64:      callq   g
-; X64-NEXT: [[EPILOG_AND_RET:.*]]:
+; X64:      .cv_loc 0 2 8 0 # one.c:8:0
 ; X64:      addq    $40, %rsp
 ; X64-NEXT: ret
 ; X64-NEXT: [[END_OF_F:.*]]:
@@ -213,83 +157,13 @@
 ; X64-NEXT: [[F1_END]]:
 ; Padding
 ; X64-NEXT: .zero   3
-; Line table
-; X64-NEXT: .long   242
-; X64-NEXT: .long [[F2_END:.*]]-[[F2_START:.*]]
-; X64-NEXT: [[F2_START]]:
-; X64-NEXT: .secrel32 f
-; X64-NEXT: .secidx f
-; X64-NEXT: .short 1
-; X64-NEXT: .long [[END_OF_F]]-f
-; Segment for file 'D:\\input.c' begins
-; X64-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X64-NEXT: .long   0
-; X64-NEXT: .long   1
-; X64-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X64-NEXT: .long [[START]]-f
-; X64-NEXT: .long   -2147483645
-; X64-NEXT: .short  0
-; X64-NEXT: .short  0
-; X64-NEXT: [[FILE_SEGMENT_END]]:
-; Segment for file 'D:\\one.c' begins
-; X64-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X64-NEXT: .long   8
-; X64-NEXT: .long   1
-; X64-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X64-NEXT: .long [[CALL_LINE_1]]-f
-; X64-NEXT: .long   -2147483647
-; X64-NEXT: .short  0
-; X64-NEXT: .short  0
-; X64-NEXT: [[FILE_SEGMENT_END]]:
-; Segment for file 'D:\\two.c' begins
-; X64-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X64-NEXT: .long   16
-; X64-NEXT: .long   1
-; X64-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X64-NEXT: .long [[CALL_LINE_2]]-f
-; X64-NEXT: .long   -2147483646
-; X64-NEXT: .short  0
-; X64-NEXT: .short  0
-; X64-NEXT: [[FILE_SEGMENT_END]]:
-; A new segment for file 'D:\\one.c' begins
-; X64-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X64-NEXT: .long   8
-; X64-NEXT: .long   2
-; X64-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X64-NEXT: .long [[CALL_LINE_3]]-f
-; X64-NEXT: .long   -2147483641
-; X64-NEXT: .long [[EPILOG_AND_RET]]-f
-; X64-NEXT: .long   -2147483640
-; X64-NEXT: .short  0
-; X64-NEXT: .short  0
-; X64-NEXT: .short  0
-; X64-NEXT: .short  0
-; X64-NEXT: [[FILE_SEGMENT_END]]:
-; X64-NEXT: [[F2_END]]:
-; File index to string table offset subsection
-; X64-NEXT: .long   244
-; X64-NEXT: .long   24
-; X64-NEXT: .long   1
-; X64-NEXT: .long   0
-; X64-NEXT: .long   12
-; X64-NEXT: .long   0
-; X64-NEXT: .long   21
-; X64-NEXT: .long   0
-; String table
-; X64-NEXT: .long   243
-; X64-NEXT: .long   30
-; X64-NEXT: .byte   0
-; X64-NEXT: .ascii  "D:\\input.c"
-; X64-NEXT: .byte   0
-; X64-NEXT: .ascii  "D:\\one.c"
-; X64-NEXT: .byte   0
-; X64-NEXT: .ascii  "D:\\two.c"
-; X64-NEXT: .byte   0
-; X64-NEXT: .zero   2
+; X64: .cv_linetable 0, f, [[END_OF_F]]
+; X64: .cv_filechecksums
+; X64: .cv_stringtable
 
 ; OBJ64:    Section {
 ; OBJ64:      Name: .debug$S (2E 64 65 62 75 67 24 53)
-; OBJ64:      Characteristics [ (0x42100040)
+; OBJ64:      Characteristics [ (0x42300040)
 ; OBJ64:      ]
 ; OBJ64:      Relocations [
 ; OBJ64-NEXT:   0x2C IMAGE_REL_AMD64_SECREL f
@@ -309,7 +183,7 @@
 ; OBJ64-NEXT: ]
 ; OBJ64:      FunctionLineTable [
 ; OBJ64-NEXT:   Name: f
-; OBJ64-NEXT:   Flags: 0x1
+; OBJ64-NEXT:   Flags: 0x0
 ; OBJ64-NEXT:   CodeSize: 0x18
 ; OBJ64-NEXT:   FilenameSegment [
 ; OBJ64-NEXT:     Filename: D:\input.c
@@ -317,8 +191,6 @@
 ; OBJ64-NEXT:       LineNumberStart: 3
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
 ; OBJ64-NEXT:       IsStatement: Yes
-; OBJ64-NEXT:       ColStart: 0
-; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT:   FilenameSegment [
@@ -327,8 +199,6 @@
 ; OBJ64-NEXT:       LineNumberStart: 1
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
 ; OBJ64-NEXT:       IsStatement: Yes
-; OBJ64-NEXT:       ColStart: 0
-; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT:   FilenameSegment [
@@ -337,8 +207,6 @@
 ; OBJ64-NEXT:       LineNumberStart: 2
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
 ; OBJ64-NEXT:       IsStatement: Yes
-; OBJ64-NEXT:       ColStart: 0
-; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT:   FilenameSegment [
@@ -347,15 +215,11 @@
 ; OBJ64-NEXT:       LineNumberStart: 7
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
 ; OBJ64-NEXT:       IsStatement: Yes
-; OBJ64-NEXT:       ColStart: 0
-; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:     +0x13 [
 ; OBJ64-NEXT:       LineNumberStart: 8
 ; OBJ64-NEXT:       LineNumberEndDelta: 0
 ; OBJ64-NEXT:       IsStatement: Yes
-; OBJ64-NEXT:       ColStart: 0
-; OBJ64-NEXT:       ColEnd: 0
 ; OBJ64-NEXT:     ]
 ; OBJ64-NEXT:   ]
 ; OBJ64-NEXT: ]

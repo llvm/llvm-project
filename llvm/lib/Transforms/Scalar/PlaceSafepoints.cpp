@@ -95,9 +95,6 @@ static cl::opt<int> CountedLoopTripWidth("spp-counted-loop-trip-width",
 static cl::opt<bool> SplitBackedge("spp-split-backedge", cl::Hidden,
                                    cl::init(false));
 
-// Print tracing output
-static cl::opt<bool> TraceLSP("spp-trace", cl::Hidden, cl::init(false));
-
 namespace {
 
 /// An analysis pass whose purpose is to identify each of the backedges in
@@ -320,8 +317,7 @@ bool PlaceBackedgeSafepointsImpl::runOnLoop(Loop *L) {
     // avoiding the runtime cost of the actual safepoint.
     if (!AllBackedges) {
       if (mustBeFiniteCountedLoop(L, SE, Pred)) {
-        if (TraceLSP)
-          errs() << "skipping safepoint placement in finite loop\n";
+        DEBUG(dbgs() << "skipping safepoint placement in finite loop\n");
         FiniteExecution++;
         continue;
       }
@@ -330,8 +326,7 @@ bool PlaceBackedgeSafepointsImpl::runOnLoop(Loop *L) {
         // Note: This is only semantically legal since we won't do any further
         // IPO or inlining before the actual call insertion..  If we hadn't, we
         // might latter loose this call safepoint.
-        if (TraceLSP)
-          errs() << "skipping safepoint placement due to unconditional call\n";
+        DEBUG(dbgs() << "skipping safepoint placement due to unconditional call\n");
         CallInLoop++;
         continue;
       }
@@ -347,10 +342,7 @@ bool PlaceBackedgeSafepointsImpl::runOnLoop(Loop *L) {
     // variables) and branches to the true header
     TerminatorInst *Term = Pred->getTerminator();
 
-    if (TraceLSP) {
-      errs() << "[LSP] terminator instruction: ";
-      Term->dump();
-    }
+    DEBUG(dbgs() << "[LSP] terminator instruction: " << *Term);
 
     PollLocations.push_back(Term);
   }

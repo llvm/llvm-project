@@ -66,7 +66,7 @@ opt::InputArgList elf2::parseArgs(llvm::BumpPtrAllocator *A,
   // Parse options and then do error checking.
   opt::InputArgList Args = Table.ParseArgs(Vec, MissingIndex, MissingCount);
   if (MissingCount)
-    fatal(Twine("missing arg value for \"") + Args.getArgString(MissingIndex) +
+    error(Twine("missing arg value for \"") + Args.getArgString(MissingIndex) +
           "\", expected " + Twine(MissingCount) +
           (MissingCount == 1 ? " argument.\n" : " arguments"));
 
@@ -74,8 +74,7 @@ opt::InputArgList elf2::parseArgs(llvm::BumpPtrAllocator *A,
   for (auto *Arg : Unknowns)
     warning("warning: unknown argument: " + Arg->getSpelling());
   if (Unknowns.begin() != Unknowns.end())
-    fatal("unknown argument(s) found");
-
+    error("unknown argument(s) found");
   return Args;
 }
 
@@ -104,7 +103,7 @@ std::string elf2::searchLibrary(StringRef Path) {
     if (!S.empty())
       return S;
   }
-  fatal("Unable to find library -l" + Path);
+  return "";
 }
 
 // Makes a path by concatenating Dir and File.

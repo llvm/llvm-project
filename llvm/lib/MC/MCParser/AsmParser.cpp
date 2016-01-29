@@ -357,6 +357,8 @@ private:
     DK_IFNB, DK_IFC, DK_IFEQS, DK_IFNC, DK_IFNES, DK_IFDEF, DK_IFNDEF,
     DK_IFNOTDEF, DK_ELSEIF, DK_ELSE, DK_ENDIF,
     DK_SPACE, DK_SKIP, DK_FILE, DK_LINE, DK_LOC, DK_STABS,
+    DK_CV_FILE, DK_CV_LOC, DK_CV_LINETABLE, DK_CV_STRINGTABLE,
+    DK_CV_FILECHECKSUMS,
     DK_CFI_SECTIONS, DK_CFI_STARTPROC, DK_CFI_ENDPROC, DK_CFI_DEF_CFA,
     DK_CFI_DEF_CFA_OFFSET, DK_CFI_ADJUST_CFA_OFFSET, DK_CFI_DEF_CFA_REGISTER,
     DK_CFI_OFFSET, DK_CFI_REL_OFFSET, DK_CFI_PERSONALITY, DK_CFI_LSDA,
@@ -393,6 +395,13 @@ private:
   bool parseDirectiveLine();
   bool parseDirectiveLoc();
   bool parseDirectiveStabs();
+
+  // ".cv_file", ".cv_loc", ".cv_linetable"
+  bool parseDirectiveCVFile();
+  bool parseDirectiveCVLoc();
+  bool parseDirectiveCVLinetable();
+  bool parseDirectiveCVStringTable();
+  bool parseDirectiveCVFileChecksums();
 
   // .cfi directives
   bool parseDirectiveCFIRegister(SMLoc DirectiveLoc);
@@ -1640,6 +1649,16 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveLoc();
     case DK_STABS:
       return parseDirectiveStabs();
+    case DK_CV_FILE:
+      return parseDirectiveCVFile();
+    case DK_CV_LOC:
+      return parseDirectiveCVLoc();
+    case DK_CV_LINETABLE:
+      return parseDirectiveCVLinetable();
+    case DK_CV_STRINGTABLE:
+      return parseDirectiveCVStringTable();
+    case DK_CV_FILECHECKSUMS:
+      return parseDirectiveCVFileChecksums();
     case DK_CFI_SECTIONS:
       return parseDirectiveCFISections();
     case DK_CFI_STARTPROC:
@@ -3072,6 +3091,156 @@ bool AsmParser::parseDirectiveStabs() {
   return TokError("unsupported directive '.stabs'");
 }
 
+/// parseDirectiveCVFile
+/// ::= .cv_file number filename
+bool AsmParser::parseDirectiveCVFile() {
+  SMLoc FileNumberLoc = getLexer().getLoc();
+  if (getLexer().isNot(AsmToken::Integer))
+    return TokError("expected file number in '.cv_file' directive");
+
+  int64_t FileNumber = getTok().getIntVal();
+  Lex();
+
+  if (FileNumber < 1)
+    return TokError("file number less than one");
+
+  if (getLexer().isNot(AsmToken::String))
+    return TokError("unexpected token in '.cv_file' directive");
+
+  // Usually the directory and filename together, otherwise just the directory.
+  // Allow the strings to have escaped octal character sequence.
+  std::string Filename;
+  if (parseEscapedString(Filename))
+    return true;
+  Lex();
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in '.cv_file' directive");
+
+  if (getStreamer().EmitCVFileDirective(FileNumber, Filename) == 0)
+    Error(FileNumberLoc, "file number already allocated");
+
+  return false;
+}
+
+/// parseDirectiveCVLoc
+/// ::= .cv_loc FunctionId FileNumber [LineNumber] [ColumnPos] [prologue_end]
+///                                [is_stmt VALUE]
+/// The first number is a file number, must have been previously assigned with
+/// a .file directive, the second number is the line number and optionally the
+/// third number is a column position (zero if not specified).  The remaining
+/// optional items are .loc sub-directives.
+bool AsmParser::parseDirectiveCVLoc() {
+  if (getLexer().isNot(AsmToken::Integer))
+    return TokError("unexpected token in '.cv_loc' directive");
+
+  int64_t FunctionId = getTok().getIntVal();
+  if (FunctionId < 0)
+    return TokError("function id less than zero in '.cv_loc' directive");
+  Lex();
+
+  int64_t FileNumber = getTok().getIntVal();
+  if (FileNumber < 1)
+    return TokError("file number less than one in '.cv_loc' directive");
+  if (!getContext().isValidCVFileNumber(FileNumber))
+    return TokError("unassigned file number in '.cv_loc' directive");
+  Lex();
+
+  int64_t LineNumber = 0;
+  if (getLexer().is(AsmToken::Integer)) {
+    LineNumber = getTok().getIntVal();
+    if (LineNumber < 0)
+      return TokError("line number less than zero in '.cv_loc' directive");
+    Lex();
+  }
+
+  int64_t ColumnPos = 0;
+  if (getLexer().is(AsmToken::Integer)) {
+    ColumnPos = getTok().getIntVal();
+    if (ColumnPos < 0)
+      return TokError("column position less than zero in '.cv_loc' directive");
+    Lex();
+  }
+
+  bool PrologueEnd = false;
+  uint64_t IsStmt = 0;
+  while (getLexer().isNot(AsmToken::EndOfStatement)) {
+    StringRef Name;
+    SMLoc Loc = getTok().getLoc();
+    if (parseIdentifier(Name))
+      return TokError("unexpected token in '.cv_loc' directive");
+
+    if (Name == "prologue_end")
+      PrologueEnd = true;
+    else if (Name == "is_stmt") {
+      Loc = getTok().getLoc();
+      const MCExpr *Value;
+      if (parseExpression(Value))
+        return true;
+      // The expression must be the constant 0 or 1.
+      IsStmt = ~0ULL;
+      if (const auto *MCE = dyn_cast<MCConstantExpr>(Value))
+        IsStmt = MCE->getValue();
+
+      if (IsStmt > 1)
+        return Error(Loc, "is_stmt value not 0 or 1");
+    } else {
+      return Error(Loc, "unknown sub-directive in '.cv_loc' directive");
+    }
+  }
+
+  getStreamer().EmitCVLocDirective(FunctionId, FileNumber, LineNumber,
+                                   ColumnPos, PrologueEnd, IsStmt, StringRef());
+  return false;
+}
+
+/// parseDirectiveCVLinetable
+/// ::= .cv_linetable FunctionId, FnStart, FnEnd
+bool AsmParser::parseDirectiveCVLinetable() {
+  int64_t FunctionId = getTok().getIntVal();
+  if (FunctionId < 0)
+    return TokError("function id less than zero in '.cv_linetable' directive");
+  Lex();
+
+  if (Lexer.isNot(AsmToken::Comma))
+    return TokError("unexpected token in '.cv_linetable' directive");
+  Lex();
+
+  SMLoc Loc = getLexer().getLoc();
+  StringRef FnStartName;
+  if (parseIdentifier(FnStartName))
+    return Error(Loc, "expected identifier in directive");
+
+  if (Lexer.isNot(AsmToken::Comma))
+    return TokError("unexpected token in '.cv_linetable' directive");
+  Lex();
+
+  Loc = getLexer().getLoc();
+  StringRef FnEndName;
+  if (parseIdentifier(FnEndName))
+    return Error(Loc, "expected identifier in directive");
+
+  MCSymbol *FnStartSym = getContext().getOrCreateSymbol(FnStartName);
+  MCSymbol *FnEndSym = getContext().getOrCreateSymbol(FnEndName);
+
+  getStreamer().EmitCVLinetableDirective(FunctionId, FnStartSym, FnEndSym);
+  return false;
+}
+
+/// parseDirectiveCVStringTable
+/// ::= .cv_stringtable
+bool AsmParser::parseDirectiveCVStringTable() {
+  getStreamer().EmitCVStringTableDirective();
+  return false;
+}
+
+/// parseDirectiveCVFileChecksums
+/// ::= .cv_filechecksums
+bool AsmParser::parseDirectiveCVFileChecksums() {
+  getStreamer().EmitCVFileChecksumsDirective();
+  return false;
+}
+
 /// parseDirectiveCFISections
 /// ::= .cfi_sections section [, section]
 bool AsmParser::parseDirectiveCFISections() {
@@ -4384,6 +4553,11 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".line"] = DK_LINE;
   DirectiveKindMap[".loc"] = DK_LOC;
   DirectiveKindMap[".stabs"] = DK_STABS;
+  DirectiveKindMap[".cv_file"] = DK_CV_FILE;
+  DirectiveKindMap[".cv_loc"] = DK_CV_LOC;
+  DirectiveKindMap[".cv_linetable"] = DK_CV_LINETABLE;
+  DirectiveKindMap[".cv_stringtable"] = DK_CV_STRINGTABLE;
+  DirectiveKindMap[".cv_filechecksums"] = DK_CV_FILECHECKSUMS;
   DirectiveKindMap[".sleb128"] = DK_SLEB128;
   DirectiveKindMap[".uleb128"] = DK_ULEB128;
   DirectiveKindMap[".cfi_sections"] = DK_CFI_SECTIONS;

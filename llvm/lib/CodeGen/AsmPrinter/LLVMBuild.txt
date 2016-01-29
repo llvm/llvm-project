@@ -19,4 +19,4 @@
 type = Library
 name = AsmPrinter
 parent = Libraries
-required_libraries = Analysis CodeGen Core MC MCParser Support Target TransformUtils
+required_libraries = Analysis CodeGen Core DebugInfoCodeView MC MCParser Support Target TransformUtils

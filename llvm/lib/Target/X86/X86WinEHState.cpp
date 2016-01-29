@@ -425,6 +425,10 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     BasicBlock *FuncletEntryBB = BBColors.front();
     if (auto *FuncletPad =
             dyn_cast<FuncletPadInst>(FuncletEntryBB->getFirstNonPHI())) {
+      // We do not support nesting funclets within cleanuppads.
+      if (isa<CleanupPadInst>(FuncletPad))
+        continue;
+
       auto BaseStateI = FuncInfo.FuncletBaseStateMap.find(FuncletPad);
       if (BaseStateI != FuncInfo.FuncletBaseStateMap.end())
         BaseState = BaseStateI->second;

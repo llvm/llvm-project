@@ -24,3 +24,7 @@ class TypeSummaryListArgumentTestCase(TestBase):
         """Test that the 'type summary list' command handles command line arguments properly"""
         self.expect('type summary list Foo', substrs=['Category: default', 'Category: system'])
         self.expect('type summary list char', substrs=['char *', 'unsigned char'])
+
+        self.expect('type summary list -w default', substrs=['system'], matching=False)
+        self.expect('type summary list -w system unsigned', substrs=['default', '0-9'], matching=False)
+        self.expect('type summary list -w system char', substrs=['unsigned char *'], matching=True)

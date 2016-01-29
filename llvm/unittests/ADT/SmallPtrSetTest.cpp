@@ -167,13 +167,29 @@ TEST(SmallPtrSetTest, SwapTest) {
   a.insert(&buf[1]);
   b.insert(&buf[2]);
 
+  EXPECT_EQ(2U, a.size());
+  EXPECT_EQ(1U, b.size());
+  EXPECT_TRUE(a.count(&buf[0]));
+  EXPECT_TRUE(a.count(&buf[1]));
+  EXPECT_FALSE(a.count(&buf[2]));
+  EXPECT_FALSE(a.count(&buf[3]));
+  EXPECT_FALSE(b.count(&buf[0]));
+  EXPECT_FALSE(b.count(&buf[1]));
+  EXPECT_TRUE(b.count(&buf[2]));
+  EXPECT_FALSE(b.count(&buf[3]));
+
   std::swap(a, b);
 
   EXPECT_EQ(1U, a.size());
   EXPECT_EQ(2U, b.size());
+  EXPECT_FALSE(a.count(&buf[0]));
+  EXPECT_FALSE(a.count(&buf[1]));
   EXPECT_TRUE(a.count(&buf[2]));
+  EXPECT_FALSE(a.count(&buf[3]));
   EXPECT_TRUE(b.count(&buf[0]));
   EXPECT_TRUE(b.count(&buf[1]));
+  EXPECT_FALSE(b.count(&buf[2]));
+  EXPECT_FALSE(b.count(&buf[3]));
 
   b.insert(&buf[3]);
   std::swap(a, b);
@@ -182,16 +198,24 @@ TEST(SmallPtrSetTest, SwapTest) {
   EXPECT_EQ(1U, b.size());
   EXPECT_TRUE(a.count(&buf[0]));
   EXPECT_TRUE(a.count(&buf[1]));
+  EXPECT_FALSE(a.count(&buf[2]));
   EXPECT_TRUE(a.count(&buf[3]));
+  EXPECT_FALSE(b.count(&buf[0]));
+  EXPECT_FALSE(b.count(&buf[1]));
   EXPECT_TRUE(b.count(&buf[2]));
+  EXPECT_FALSE(b.count(&buf[3]));
 
   std::swap(a, b);
 
   EXPECT_EQ(1U, a.size());
   EXPECT_EQ(3U, b.size());
+  EXPECT_FALSE(a.count(&buf[0]));
+  EXPECT_FALSE(a.count(&buf[1]));
   EXPECT_TRUE(a.count(&buf[2]));
+  EXPECT_FALSE(a.count(&buf[3]));
   EXPECT_TRUE(b.count(&buf[0]));
   EXPECT_TRUE(b.count(&buf[1]));
+  EXPECT_FALSE(b.count(&buf[2]));
   EXPECT_TRUE(b.count(&buf[3]));
 
   a.insert(&buf[4]);
@@ -209,4 +233,43 @@ TEST(SmallPtrSetTest, SwapTest) {
   EXPECT_TRUE(a.count(&buf[0]));
   EXPECT_TRUE(a.count(&buf[1]));
   EXPECT_TRUE(a.count(&buf[3]));
+}
+
+void checkEraseAndIterators(SmallPtrSetImpl<int*> &S) {
+  int buf[3];
+
+  S.insert(&buf[0]);
+  S.insert(&buf[1]);
+  S.insert(&buf[2]);
+
+  // Iterators must still be valid after erase() calls;
+  auto B = S.begin();
+  auto M = std::next(B);
+  auto E = S.end();
+  EXPECT_TRUE(*B == &buf[0] || *B == &buf[1] || *B == &buf[2]);
+  EXPECT_TRUE(*M == &buf[0] || *M == &buf[1] || *M == &buf[2]);
+  EXPECT_TRUE(*B != *M);
+  int *Removable = *std::next(M);
+  // No iterator points to Removable now.
+  EXPECT_TRUE(Removable == &buf[0] || Removable == &buf[1] ||
+              Removable == &buf[2]);
+  EXPECT_TRUE(Removable != *B && Removable != *M);
+
+  S.erase(Removable);
+
+  // B,M,E iterators should still be valid
+  EXPECT_EQ(B, S.begin());
+  EXPECT_EQ(M, std::next(B));
+  EXPECT_EQ(E, S.end());
+  EXPECT_EQ(std::next(M), E);
+}
+
+TEST(SmallPtrSetTest, EraseTest) {
+  // Test when set stays small.
+  SmallPtrSet<int *, 8> B;
+  checkEraseAndIterators(B);
+
+  // Test when set grows big.
+  SmallPtrSet<int *, 2> A;
+  checkEraseAndIterators(A);
 }

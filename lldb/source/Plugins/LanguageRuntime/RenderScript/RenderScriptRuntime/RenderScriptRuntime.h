@@ -194,9 +194,6 @@ public:
     bool
     LoadModule(const lldb::ModuleSP &module_sp);
 
-    bool
-    ProbeModules(const ModuleList module_list);
-
     void
     DumpModules(Stream &strm) const;
 
