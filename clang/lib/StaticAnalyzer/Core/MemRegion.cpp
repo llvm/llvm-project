@@ -1406,9 +1406,9 @@ void BlockDataRegion::LazyInitializeReferencedVars() {
   BumpVectorContext BC(A);
 
   typedef BumpVector<const MemRegion*> VarVec;
-  VarVec *BV = (VarVec*) A.Allocate<VarVec>();
+  VarVec *BV = A.Allocate<VarVec>();
   new (BV) VarVec(BC, NumBlockVars);
-  VarVec *BVOriginal = (VarVec*) A.Allocate<VarVec>();
+  VarVec *BVOriginal = A.Allocate<VarVec>();
   new (BVOriginal) VarVec(BC, NumBlockVars);
 
   for (const VarDecl *VD : ReferencedBlockVars) {
