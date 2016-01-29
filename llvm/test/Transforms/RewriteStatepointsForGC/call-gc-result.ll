@@ -1,4 +1,4 @@
-;; RUN: opt < %s -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -S | FileCheck %s
+;; RUN: opt < %s -rewrite-statepoints-for-gc -S | FileCheck %s
 
 ;; This test is to verify that gc_result from a call statepoint
 ;; can have preceding phis in its parent basic block. Unlike

@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SectionKind.h"
@@ -42,6 +43,7 @@ namespace llvm {
   class MCSectionMachO;
   class MCSectionELF;
   class MCSectionCOFF;
+  class CodeViewContext;
 
   /// Context object for machine code objects.  This class owns all of the
   /// sections that it creates.
@@ -65,6 +67,8 @@ namespace llvm {
 
     /// The MCObjectFileInfo for this target.
     const MCObjectFileInfo *MOFI;
+
+    std::unique_ptr<CodeViewContext> CVContext;
 
     /// Allocator object used for creating machine code objects.
     ///
@@ -134,6 +138,10 @@ namespace llvm {
     /// The current dwarf line information from the last dwarf .loc directive.
     MCDwarfLoc CurrentDwarfLoc;
     bool DwarfLocSeen;
+
+    /// The current CodeView line information from the last .cv_loc directive.
+    MCCVLoc CurrentCVLoc = MCCVLoc(0, 0, 0, 0, false, true);
+    bool CVLocSeen = false;
 
     /// Generate dwarf debugging info for assembly source files.
     bool GenDwarfForAssembly;
@@ -236,6 +244,8 @@ namespace llvm {
     const MCRegisterInfo *getRegisterInfo() const { return MRI; }
 
     const MCObjectFileInfo *getObjectFileInfo() const { return MOFI; }
+
+    CodeViewContext &getCVContext();
 
     void setAllowTemporaryLabels(bool Value) { AllowTemporaryLabels = Value; }
     void setUseNamesOnTempLabels(bool Value) { UseNamesOnTempLabels = Value; }
@@ -503,6 +513,35 @@ namespace llvm {
     void setDwarfVersion(uint16_t v) { DwarfVersion = v; }
     uint16_t getDwarfVersion() const { return DwarfVersion; }
 
+    /// @}
+
+
+    /// \name CodeView Management
+    /// @{
+
+    /// Creates an entry in the cv file table.
+    unsigned getCVFile(StringRef FileName, unsigned FileNumber);
+
+    /// Saves the information from the currently parsed .cv_loc directive
+    /// and sets CVLocSeen.  When the next instruction is assembled an entry
+    /// in the line number table with this information and the address of the
+    /// instruction will be created.
+    void setCurrentCVLoc(unsigned FunctionId, unsigned FileNo, unsigned Line,
+                         unsigned Column, bool PrologueEnd, bool IsStmt) {
+      CurrentCVLoc.setFunctionId(FunctionId);
+      CurrentCVLoc.setFileNum(FileNo);
+      CurrentCVLoc.setLine(Line);
+      CurrentCVLoc.setColumn(Column);
+      CurrentCVLoc.setPrologueEnd(PrologueEnd);
+      CurrentCVLoc.setIsStmt(IsStmt);
+      CVLocSeen = true;
+    }
+    void clearCVLocSeen() { CVLocSeen = false; }
+
+    bool getCVLocSeen() { return CVLocSeen; }
+    const MCCVLoc &getCurrentCVLoc() { return CurrentCVLoc; }
+
+    bool isValidCVFileNumber(unsigned FileNumber);
     /// @}
 
     char *getSecureLogFile() { return SecureLogFile; }

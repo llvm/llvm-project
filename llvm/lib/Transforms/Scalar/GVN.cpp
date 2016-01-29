@@ -1109,6 +1109,11 @@ static int AnalyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr,
       LoadBase, LoadOffs, LoadSize, DepLI);
   if (Size == 0) return -1;
 
+  // Check non-obvious conditions enforced by MDA which we rely on for being
+  // able to materialize this potentially available value
+  assert(DepLI->isSimple() && "Cannot widen volatile/atomic load!");
+  assert(DepLI->getType()->isIntegerTy() && "Can't widen non-integer load");
+
   return AnalyzeLoadFromClobberingWrite(LoadTy, LoadPtr, DepPtr, Size*8, DL);
 }
 

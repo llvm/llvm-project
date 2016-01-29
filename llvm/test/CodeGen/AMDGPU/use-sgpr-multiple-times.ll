@@ -4,7 +4,7 @@
 declare float @llvm.fma.f32(float, float, float) #1
 declare double @llvm.fma.f64(double, double, double) #1
 declare float @llvm.fmuladd.f32(float, float, float) #1
-declare i32 @llvm.AMDGPU.imad24(i32, i32, i32) #1
+declare float @llvm.amdgcn.div.fixup.f32(float, float, float) #1
 
 
 ; GCN-LABEL: {{^}}test_sgpr_use_twice_binop:
@@ -118,11 +118,11 @@ define void @test_sgpr_use_twice_ternary_op_a_imm_a(float addrspace(1)* %out, fl
 ; Don't use fma since fma c, x, y is canonicalized to fma x, c, y
 ; GCN-LABEL: {{^}}test_sgpr_use_twice_ternary_op_imm_a_a:
 ; GCN: s_load_dword [[SGPR:s[0-9]+]]
-; GCN: v_mad_i32_i24 [[RESULT:v[0-9]+]], 2, [[SGPR]], [[SGPR]]
+; GCN: v_div_fixup_f32 [[RESULT:v[0-9]+]], 2.0, [[SGPR]], [[SGPR]]
 ; GCN: buffer_store_dword [[RESULT]]
-define void @test_sgpr_use_twice_ternary_op_imm_a_a(i32 addrspace(1)* %out, i32 %a) #0 {
-  %fma = call i32 @llvm.AMDGPU.imad24(i32 2, i32 %a, i32 %a) #1
-  store i32 %fma, i32 addrspace(1)* %out, align 4
+define void @test_sgpr_use_twice_ternary_op_imm_a_a(float addrspace(1)* %out, float %a) #0 {
+  %val = call float @llvm.amdgcn.div.fixup.f32(float 2.0, float %a, float %a) #1
+  store float %val, float addrspace(1)* %out, align 4
   ret void
 }
 

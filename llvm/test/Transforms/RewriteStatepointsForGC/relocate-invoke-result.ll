@@ -1,5 +1,5 @@
 
-;; RUN: opt -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles -verify -S < %s | FileCheck %s
+;; RUN: opt -rewrite-statepoints-for-gc -verify -S < %s | FileCheck %s
 ;; This test is to verify that RewriteStatepointsForGC correctly relocates values
 ;; defined by invoke instruction results. 
 

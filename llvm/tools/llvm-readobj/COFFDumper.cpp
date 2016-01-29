@@ -1116,8 +1116,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
     uint32_t Offset = 6;  // Skip relocations.
     uint16_t Flags = DE.getU16(&Offset);
     W.printHex("Flags", Flags);
-    bool HasColumnInformation =
-        Flags & COFF::DEBUG_LINE_TABLES_HAVE_COLUMN_RECORDS;
+    bool HasColumnInformation = Flags & codeview::LineFlags::HaveColumns;
     uint32_t FunctionSize = DE.getU32(&Offset);
     W.printHex("CodeSize", FunctionSize);
     while (DE.isValidOffset(Offset)) {
@@ -1151,11 +1150,11 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         char Buffer[32];
         format("+0x%X", PC).snprint(Buffer, 32);
         ListScope PCScope(W, Buffer);
-        uint32_t LineNumberStart = LineData & COFF::CVL_MaxLineNumber;
+        uint32_t LineNumberStart = LineData & codeview::LineInfo::StartLineMask;
         uint32_t LineNumberEndDelta =
-            (LineData >> COFF::CVL_LineNumberStartBits) &
-            COFF::CVL_LineNumberEndDeltaMask;
-        bool IsStatement = LineData & COFF::CVL_IsStatement;
+            (LineData & codeview::LineInfo::EndLineDeltaMask) >>
+            codeview::LineInfo::EndLineDeltaShift;
+        bool IsStatement = codeview::LineInfo::StatementFlag;
         W.printNumber("LineNumberStart", LineNumberStart);
         W.printNumber("LineNumberEndDelta", LineNumberEndDelta);
         W.printBoolean("IsStatement", IsStatement);

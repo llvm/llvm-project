@@ -72,8 +72,6 @@ static cl::opt<bool, true> ClobberNonLiveOverride("rs4gc-clobber-non-live",
                                                   cl::location(ClobberNonLive),
                                                   cl::Hidden);
 
-static cl::opt<bool> UseDeoptBundles("rs4gc-use-deopt-bundles", cl::Hidden,
-                                     cl::init(false));
 static cl::opt<bool>
     AllowStatepointWithNoDeoptInfo("rs4gc-allow-statepoint-with-no-deopt-info",
                                    cl::Hidden, cl::init(true));
@@ -199,8 +197,6 @@ struct PartiallyConstructedSafepointRecord {
 }
 
 static ArrayRef<Use> GetDeoptBundleOperands(ImmutableCallSite CS) {
-  assert(UseDeoptBundles && "Should not be called otherwise!");
-
   Optional<OperandBundleUse> DeoptBundle =
       CS.getOperandBundle(LLVMContext::OB_deopt);
 
@@ -1381,8 +1377,6 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
                            PartiallyConstructedSafepointRecord &Result,
                            std::vector<DeferredReplacement> &Replacements) {
   assert(BasePtrs.size() == LiveVariables.size());
-  assert((UseDeoptBundles || isStatepoint(CS)) &&
-         "This method expects to be rewriting a statepoint");
 
   // Then go ahead and use the builder do actually do the inserts.  We insert
   // immediately before the previous instruction under the assumption that all
@@ -1396,47 +1390,26 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
 
-  ArrayRef<Use> CallArgs;
-  ArrayRef<Use> DeoptArgs;
+  ArrayRef<Use> CallArgs(CS.arg_begin(), CS.arg_end());
+  ArrayRef<Use> DeoptArgs = GetDeoptBundleOperands(CS);
   ArrayRef<Use> TransitionArgs;
-
-  Value *CallTarget = nullptr;
-
-  if (UseDeoptBundles) {
-    CallArgs = {CS.arg_begin(), CS.arg_end()};
-    DeoptArgs = GetDeoptBundleOperands(CS);
-    if (auto TransitionBundle =
-            CS.getOperandBundle(LLVMContext::OB_gc_transition)) {
-      Flags |= uint32_t(StatepointFlags::GCTransition);
-      TransitionArgs = TransitionBundle->Inputs;
-    }
-    AttributeSet OriginalAttrs = CS.getAttributes();
-
-    Attribute AttrID = OriginalAttrs.getAttribute(AttributeSet::FunctionIndex,
-                                                  "statepoint-id");
-    if (AttrID.isStringAttribute())
-      AttrID.getValueAsString().getAsInteger(10, StatepointID);
-
-    Attribute AttrNumPatchBytes = OriginalAttrs.getAttribute(
-        AttributeSet::FunctionIndex, "statepoint-num-patch-bytes");
-    if (AttrNumPatchBytes.isStringAttribute())
-      AttrNumPatchBytes.getValueAsString().getAsInteger(10, NumPatchBytes);
-
-    CallTarget = CS.getCalledValue();
-  } else {
-    // This branch will be gone soon, and we will soon only support the
-    // UseDeoptBundles == true configuration.
-    Statepoint OldSP(CS);
-    StatepointID = OldSP.getID();
-    NumPatchBytes = OldSP.getNumPatchBytes();
-    Flags = OldSP.getFlags();
-
-    CallArgs = {OldSP.arg_begin(), OldSP.arg_end()};
-    DeoptArgs = {OldSP.vm_state_begin(), OldSP.vm_state_end()};
-    TransitionArgs = {OldSP.gc_transition_args_begin(),
-                      OldSP.gc_transition_args_end()};
-    CallTarget = OldSP.getCalledValue();
+  if (auto TransitionBundle =
+      CS.getOperandBundle(LLVMContext::OB_gc_transition)) {
+    Flags |= uint32_t(StatepointFlags::GCTransition);
+    TransitionArgs = TransitionBundle->Inputs;
   }
+
+  Value *CallTarget = CS.getCalledValue();
+  AttributeSet OriginalAttrs = CS.getAttributes();
+  Attribute AttrID = OriginalAttrs.getAttribute(AttributeSet::FunctionIndex,
+                                                "statepoint-id");
+  if (AttrID.isStringAttribute())
+    AttrID.getValueAsString().getAsInteger(10, StatepointID);
+
+  Attribute AttrNumPatchBytes = OriginalAttrs.getAttribute(
+    AttributeSet::FunctionIndex, "statepoint-num-patch-bytes");
+  if (AttrNumPatchBytes.isStringAttribute())
+    AttrNumPatchBytes.getValueAsString().getAsInteger(10, NumPatchBytes);
 
   // Create the statepoint given all the arguments
   Instruction *Token = nullptr;
@@ -1518,38 +1491,22 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
   }
   assert(Token && "Should be set in one of the above branches!");
 
-  if (UseDeoptBundles) {
-    Token->setName("statepoint_token");
-    if (!CS.getType()->isVoidTy() && !CS.getInstruction()->use_empty()) {
-      StringRef Name =
-          CS.getInstruction()->hasName() ? CS.getInstruction()->getName() : "";
-      CallInst *GCResult = Builder.CreateGCResult(Token, CS.getType(), Name);
-      GCResult->setAttributes(CS.getAttributes().getRetAttributes());
+  Token->setName("statepoint_token");
+  if (!CS.getType()->isVoidTy() && !CS.getInstruction()->use_empty()) {
+    StringRef Name =
+      CS.getInstruction()->hasName() ? CS.getInstruction()->getName() : "";
+    CallInst *GCResult = Builder.CreateGCResult(Token, CS.getType(), Name);
+    GCResult->setAttributes(CS.getAttributes().getRetAttributes());
 
-      // We cannot RAUW or delete CS.getInstruction() because it could be in the
-      // live set of some other safepoint, in which case that safepoint's
-      // PartiallyConstructedSafepointRecord will hold a raw pointer to this
-      // llvm::Instruction.  Instead, we defer the replacement and deletion to
-      // after the live sets have been made explicit in the IR, and we no longer
-      // have raw pointers to worry about.
-      Replacements.emplace_back(CS.getInstruction(), GCResult);
-    } else {
-      Replacements.emplace_back(CS.getInstruction(), nullptr);
-    }
+    // We cannot RAUW or delete CS.getInstruction() because it could be in the
+    // live set of some other safepoint, in which case that safepoint's
+    // PartiallyConstructedSafepointRecord will hold a raw pointer to this
+    // llvm::Instruction.  Instead, we defer the replacement and deletion to
+    // after the live sets have been made explicit in the IR, and we no longer
+    // have raw pointers to worry about.
+    Replacements.emplace_back(CS.getInstruction(), GCResult);
   } else {
-    assert(!CS.getInstruction()->hasNUsesOrMore(2) &&
-           "only valid use before rewrite is gc.result");
-    assert(!CS.getInstruction()->hasOneUse() ||
-           isGCResult(cast<Instruction>(*CS.getInstruction()->user_begin())));
-
-    // Take the name of the original statepoint token if there was one.
-    Token->takeName(CS.getInstruction());
-
-    // Update the gc.result of the original statepoint (if any) to use the newly
-    // inserted statepoint.  This is safe to do here since the token can't be
-    // considered a live reference.
-    CS.getInstruction()->replaceAllUsesWith(Token);
-    CS.getInstruction()->eraseFromParent();
+    Replacements.emplace_back(CS.getInstruction(), nullptr);
   }
 
   Result.StatepointToken = Token;
@@ -2260,11 +2217,8 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   Uniqued.insert(ToUpdate.begin(), ToUpdate.end());
   assert(Uniqued.size() == ToUpdate.size() && "no duplicates please!");
 
-  for (CallSite CS : ToUpdate) {
-    assert(CS.getInstruction()->getParent()->getParent() == &F);
-    assert((UseDeoptBundles || isStatepoint(CS)) &&
-           "expected to already be a deopt statepoint");
-  }
+  for (CallSite CS : ToUpdate)
+    assert(CS.getInstruction()->getFunction() == &F);
 #endif
 
   // When inserting gc.relocates for invokes, we need to be able to insert at
@@ -2290,12 +2244,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   for (CallSite CS : ToUpdate) {
     SmallVector<Value *, 64> DeoptValues;
 
-    iterator_range<const Use *> DeoptStateRange =
-        UseDeoptBundles
-            ? iterator_range<const Use *>(GetDeoptBundleOperands(CS))
-            : iterator_range<const Use *>(Statepoint(CS).vm_state_args());
-
-    for (Value *Arg : DeoptStateRange) {
+    for (Value *Arg : GetDeoptBundleOperands(CS)) {
       assert(!isUnhandledGCPointerType(Arg->getType()) &&
              "support for FCA unimplemented");
       if (isHandledGCPointerType(Arg->getType()))
@@ -2595,13 +2544,9 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F) {
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   auto NeedsRewrite = [](Instruction &I) {
-    if (UseDeoptBundles) {
-      if (ImmutableCallSite CS = ImmutableCallSite(&I))
-        return !callsGCLeafFunction(CS);
-      return false;
-    }
-
-    return isStatepoint(I);
+    if (ImmutableCallSite CS = ImmutableCallSite(&I))
+      return !callsGCLeafFunction(CS);
+    return false;
   };
 
   // Gather all the statepoints which need rewritten.  Be careful to only

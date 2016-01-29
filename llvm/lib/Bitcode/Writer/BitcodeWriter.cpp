@@ -2969,10 +2969,6 @@ static void WriteModule(const Module *M, BitstreamWriter &Stream,
 ///   uint32_t CPUType;       // CPU specifier.
 ///   ... potentially more later ...
 /// };
-enum {
-  DarwinBCSizeFieldOffset = 3*4, // Offset to bitcode_size.
-  DarwinBCHeaderSize = 5*4
-};
 
 static void WriteInt32ToBuffer(uint32_t Value, SmallVectorImpl<char> &Buffer,
                                uint32_t &Position) {
@@ -3008,10 +3004,10 @@ static void EmitDarwinBCHeaderAndTrailer(SmallVectorImpl<char> &Buffer,
     CPUType = DARWIN_CPU_TYPE_ARM;
 
   // Traditional Bitcode starts after header.
-  assert(Buffer.size() >= DarwinBCHeaderSize &&
+  assert(Buffer.size() >= BWH_HeaderSize &&
          "Expected header size to be reserved");
-  unsigned BCOffset = DarwinBCHeaderSize;
-  unsigned BCSize = Buffer.size()-DarwinBCHeaderSize;
+  unsigned BCOffset = BWH_HeaderSize;
+  unsigned BCSize = Buffer.size() - BWH_HeaderSize;
 
   // Write the magic and version.
   unsigned Position = 0;
@@ -3049,7 +3045,7 @@ void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out,
   // header.
   Triple TT(M->getTargetTriple());
   if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
-    Buffer.insert(Buffer.begin(), DarwinBCHeaderSize, 0);
+    Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
   // Emit the module into the buffer.
   {

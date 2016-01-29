@@ -180,6 +180,22 @@ void MCStreamer::EnsureValidDwarfFrame() {
     report_fatal_error("No open frame");
 }
 
+unsigned MCStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename) {
+  return getContext().getCVFile(Filename, FileNo);
+}
+
+void MCStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
+                                    unsigned Line, unsigned Column,
+                                    bool PrologueEnd, bool IsStmt,
+                                    StringRef FileName) {
+  getContext().setCurrentCVLoc(FunctionId, FileNo, Line, Column, PrologueEnd,
+                               IsStmt);
+}
+
+void MCStreamer::EmitCVLinetableDirective(unsigned FunctionId,
+                                          const MCSymbol *Begin,
+                                          const MCSymbol *End) {}
+
 void MCStreamer::EmitEHSymAttributes(const MCSymbol *Symbol,
                                      MCSymbol *EHSymbol) {
 }

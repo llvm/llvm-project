@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -rewrite-statepoints-for-gc -rs4gc-use-deopt-bundles | FileCheck %s
+; RUN: opt < %s -S -rewrite-statepoints-for-gc | FileCheck %s
 
 ; Basic test to make sure that safepoints are placed
 ; for CoreCLR GC

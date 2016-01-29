@@ -51,7 +51,6 @@ def : RsqPat<RECIPSQRT_IEEE_cm, f32>;
 def : POW_Common <LOG_IEEE_cm, EXP_IEEE_cm, MUL>;
 
 defm DIV_cm : DIV_Common<RECIP_IEEE_cm>;
-defm : Expand24UBitOps<MULLO_UINT_cm, ADD_INT>;
 
 // RECIP_UINT emulation for Cayman
 // The multiplication scales from [0,1] to the unsigned integer range

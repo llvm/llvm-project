@@ -125,6 +125,7 @@ void MCObjectStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
+  MCCVLineEntry::Make(this);
   MCDwarfLineEntry::Make(this, getCurrentSection().first);
 
   // Avoid fixups when possible.
@@ -232,6 +233,7 @@ void MCObjectStreamer::EmitInstruction(const MCInst &Inst,
 
   // Now that a machine instruction has been assembled into this section, make
   // a line entry for any .loc directive that has been seen.
+  MCCVLineEntry::Make(this);
   MCDwarfLineEntry::Make(this, getCurrentSection().first);
 
   // If this instruction doesn't need relaxation, just emit it as data.
@@ -362,7 +364,36 @@ void MCObjectStreamer::EmitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
   insert(new MCDwarfCallFrameFragment(*AddrDelta));
 }
 
+void MCObjectStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
+                                          unsigned Line, unsigned Column,
+                                          bool PrologueEnd, bool IsStmt,
+                                          StringRef FileName) {
+  // In case we see two .cv_loc directives in a row, make sure the
+  // first one gets a line entry.
+  MCCVLineEntry::Make(this);
+
+  this->MCStreamer::EmitCVLocDirective(FunctionId, FileNo, Line, Column,
+                                       PrologueEnd, IsStmt, FileName);
+}
+
+void MCObjectStreamer::EmitCVLinetableDirective(unsigned FunctionId,
+                                                const MCSymbol *Begin,
+                                                const MCSymbol *End) {
+  getContext().getCVContext().emitLineTableForFunction(*this, FunctionId, Begin,
+                                                       End);
+  this->MCStreamer::EmitCVLinetableDirective(FunctionId, Begin, End);
+}
+
+void MCObjectStreamer::EmitCVStringTableDirective() {
+  getContext().getCVContext().emitStringTable(*this);
+}
+void MCObjectStreamer::EmitCVFileChecksumsDirective() {
+  getContext().getCVContext().emitFileChecksums(*this);
+}
+
+
 void MCObjectStreamer::EmitBytes(StringRef Data) {
+  MCCVLineEntry::Make(this);
   MCDwarfLineEntry::Make(this, getCurrentSection().first);
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());

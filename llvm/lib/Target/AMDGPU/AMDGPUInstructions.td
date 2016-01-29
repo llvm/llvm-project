@@ -597,30 +597,6 @@ class UMad24Pat<Instruction Inst> : Pat <
   (Inst $src0, $src1, $src2)
 >;
 
-multiclass Expand24IBitOps<Instruction MulInst, Instruction AddInst> {
-  def _expand_imad24 : Pat <
-    (AMDGPUmad_i24 i32:$src0, i32:$src1, i32:$src2),
-    (AddInst (MulInst $src0, $src1), $src2)
-  >;
-
-  def _expand_imul24 : Pat <
-    (AMDGPUmul_i24 i32:$src0, i32:$src1),
-    (MulInst $src0, $src1)
-  >;
-}
-
-multiclass Expand24UBitOps<Instruction MulInst, Instruction AddInst> {
-  def _expand_umad24 : Pat <
-    (AMDGPUmad_u24 i32:$src0, i32:$src1, i32:$src2),
-    (AddInst (MulInst $src0, $src1), $src2)
-  >;
-
-  def _expand_umul24 : Pat <
-    (AMDGPUmul_u24 i32:$src0, i32:$src1),
-    (MulInst $src0, $src1)
-  >;
-}
-
 class RcpPat<Instruction RcpInst, ValueType vt> : Pat <
   (fdiv FP_ONE, vt:$src),
   (RcpInst $src)

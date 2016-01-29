@@ -15,10 +15,10 @@
 ; The bar function happens to have no lexical scopes, yet it has one instruction
 ; with debug information available.  This used to be PR19239.
 
+; X86:      .cv_file 1 "D:\\test.cpp"
+
 ; X86-LABEL: {{^}}"?bar@@YAXHZZ":
-; X86-NEXT: L{{.*}}:
-; X86-NEXT: # BB
-; X86-NEXT: [[JMP_LINE:^L.*]]:{{$}}
+; X86:      .cv_loc  1 1 4 0
 ; X86:      jmp "?foo@@YAXXZ"
 ; X86-NEXT: [[END_OF_BAR:^L.*]]:{{$}}
 ; X86-NOT:  ret
@@ -26,13 +26,9 @@
 ; X86-LABEL: .section        .debug$S,"dr"
 ; X86:       .secrel32 "?bar@@YAXHZZ"
 ; X86-NEXT:  .secidx   "?bar@@YAXHZZ"
-; X86:       .long   0
-; X86-NEXT:  .long   1
-; X86-NEXT:  .long {{.*}}
-; X86-NEXT:  .long [[JMP_LINE]]-"?bar@@YAXHZZ"
-; X86-NEXT:  .long   -2147483644
-
-; X86-LABEL: .long   244
+; X86:       .cv_linetable 1, "?bar@@YAXHZZ", [[END_OF_BAR]]
+; X86:       .cv_filechecksums
+; X86:       .cv_stringtable
 
 ; ModuleID = 'test.cpp'
 target datalayout = "e-m:w-p:32:32-i64:64-f80:32-n8:16:32-S32"

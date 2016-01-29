@@ -640,6 +640,27 @@ public:
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName);
 
+  /// \brief Associate a filename with a specified logical file number.  This
+  /// implements the '.cv_file 4 "foo.c"' assembler directive.
+  virtual unsigned EmitCVFileDirective(unsigned FileNo, StringRef Filename);
+
+  /// \brief This implements the CodeView '.cv_loc' assembler directive.
+  virtual void EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
+                                  unsigned Line, unsigned Column,
+                                  bool PrologueEnd, bool IsStmt,
+                                  StringRef FileName);
+
+  /// \brief This implements the CodeView '.cv_linetable' assembler directive.
+  virtual void EmitCVLinetableDirective(unsigned FunctionId,
+                                        const MCSymbol *FnStart,
+                                        const MCSymbol *FnEnd);
+
+  /// \brief This implements the CodeView '.cv_stringtable' assembler directive.
+  virtual void EmitCVStringTableDirective() {}
+
+  /// \brief This implements the CodeView '.cv_filechecksums' assembler directive.
+  virtual void EmitCVFileChecksumsDirective() {}
+
   /// Emit the absolute difference between two symbols.
   ///
   /// \pre Offset of \c Hi is greater than the offset \c Lo.

@@ -12,6 +12,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCLabel.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -89,6 +90,8 @@ void MCContext::reset() {
   DwarfDebugFlags = StringRef();
   DwarfCompileUnitID = 0;
   CurrentDwarfLoc = MCDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0);
+
+  CVContext.reset();
 
   MachOUniquingMap.clear();
   ELFUniquingMap.clear();
@@ -472,6 +475,20 @@ bool MCContext::isValidDwarfFileNumber(unsigned FileNumber, unsigned CUID) {
 void MCContext::finalizeDwarfSections(MCStreamer &MCOS) {
   SectionsForRanges.remove_if(
       [&](MCSection *Sec) { return !MCOS.mayHaveInstructions(*Sec); });
+}
+
+CodeViewContext &MCContext::getCVContext() {
+  if (!CVContext.get())
+    CVContext.reset(new CodeViewContext);
+  return *CVContext.get();
+}
+
+unsigned MCContext::getCVFile(StringRef FileName, unsigned FileNumber) {
+  return getCVContext().addFile(FileNumber, FileName) ? FileNumber : 0;
+}
+
+bool MCContext::isValidCVFileNumber(unsigned FileNumber) {
+  return getCVContext().isValidFileNumber(FileNumber);
 }
 
 //===----------------------------------------------------------------------===//

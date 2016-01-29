@@ -24,29 +24,30 @@
 
 ; X86-LABEL: _x:
 ; X86:      # BB
-; X86-NEXT: [[X_CALL:.*]]:{{$}}
+; X86:      .cv_file 1 "D:\\source.c"
+; X86:      .cv_loc 0 1 4 42 is_stmt 0 # source.c:4:42
 ; X86:      calll   _z
-; X86-NEXT: [[X_RETURN:.*]]:
+; X86:      .cv_loc 0 1 5 43 # source.c:5:43
 ; X86:      ret
 ; X86-NEXT: [[END_OF_X:.*]]:
 ;
 ; X86-LABEL: _y:
 ; X86:      # BB
-; X86-NEXT: [[Y_CALL:.*]]:{{$}}
+; X86:      .cv_loc 1 1 8 52 # source.c:8:52
 ; X86:      calll   _z
-; X86-NEXT: [[Y_RETURN:.*]]:
+; X86:      .cv_loc 1 1 9 53 # source.c:9:53
 ; X86:      ret
 ; X86-NEXT: [[END_OF_Y:.*]]:
 ;
 ; X86-LABEL: _f:
 ; X86:      # BB
-; X86-NEXT: [[F_CALLS_X:.*]]:{{$}}
+; X86:      .cv_loc 2 1 12 62 # source.c:12:62
 ; X86:      calll   _x
-; X86-NEXT: [[F_CALLS_Y:.*]]:
+; X86:      .cv_loc 2 1 13 63 # source.c:13:63
 ; X86:      calll   _y
-; X86-NEXT: [[F_CALLS_Z:.*]]:
+; X86:      .cv_loc 2 1 14 72 # source.c:14:72
 ; X86:      calll   _z
-; X86-NEXT: [[F_RETURN:.*]]:
+; X86:      .cv_loc 2 1 15 73 # source.c:15:73
 ; X86:      ret
 ; X86-NEXT: [[END_OF_F:.*]]:
 ;
@@ -74,27 +75,7 @@
 ; Padding
 ; X86-NEXT: .zero   3
 ; Line table subsection for x
-; X86-NEXT: .long   242
-; X86-NEXT: .long [[F2_END:.*]]-[[F2_START:.*]]
-; X86-NEXT: [[F2_START]]:
-; X86-NEXT: .secrel32       _x
-; X86-NEXT: .secidx _x
-; X86-NEXT: .short 1
-; X86-NEXT: .long [[END_OF_X]]-_x
-; X86-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X86-NEXT: .long   0
-; X86-NEXT: .long   2
-; X86-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X86-NEXT: .long [[X_CALL]]-_x
-; X86-NEXT: .long   -2147483644
-; X86-NEXT: .long [[X_RETURN]]-_x
-; X86-NEXT: .long   -2147483643
-; X86-NEXT: .short 42
-; X86-NEXT: .short 0
-; X86-NEXT: .short 43
-; X86-NEXT: .short 0
-; X86-NEXT: [[FILE_SEGMENT_END]]:
-; X86-NEXT: [[F2_END]]:
+; X86: .cv_linetable 0, _x, [[END_OF_X]]
 ; Symbol subsection for y
 ; X86-NEXT: .long   241
 ; X86-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]]
@@ -117,27 +98,7 @@
 ; Padding
 ; X86-NEXT: .zero   3
 ; Line table subsection for y
-; X86-NEXT: .long   242
-; X86-NEXT: .long [[F2_END:.*]]-[[F2_START:.*]]
-; X86-NEXT: [[F2_START]]:
-; X86-NEXT: .secrel32       _y
-; X86-NEXT: .secidx _y
-; X86-NEXT: .short 1
-; X86-NEXT: .long [[END_OF_Y]]-_y
-; X86-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X86-NEXT: .long   0
-; X86-NEXT: .long   2
-; X86-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X86-NEXT: .long [[Y_CALL]]-_y
-; X86-NEXT: .long   -2147483640
-; X86-NEXT: .long [[Y_RETURN]]-_y
-; X86-NEXT: .long   -2147483639
-; X86-NEXT: .short 52
-; X86-NEXT: .short 0
-; X86-NEXT: .short 53
-; X86-NEXT: .short 0
-; X86-NEXT: [[FILE_SEGMENT_END]]:
-; X86-NEXT: [[F2_END]]:
+; X86: .cv_linetable 1, _y, [[END_OF_Y]]
 ; Symbol subsection for f
 ; X86-NEXT: .long   241
 ; X86-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]]
@@ -160,51 +121,13 @@
 ; Padding
 ; X86-NEXT: .zero   3
 ; Line table subsection for f
-; X86-NEXT: .long   242
-; X86-NEXT: .long [[F2_END:.*]]-[[F2_START:.*]]
-; X86-NEXT: [[F2_START]]:
-; X86-NEXT: .secrel32 _f
-; X86-NEXT: .secidx _f
-; X86-NEXT: .short 1
-; X86-NEXT: .long [[END_OF_F]]-_f
-; X86-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X86-NEXT: .long   0
-; X86-NEXT: .long   4
-; X86-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X86-NEXT: .long [[F_CALLS_X]]-_f
-; X86-NEXT: .long   -2147483636
-; X86-NEXT: .long [[F_CALLS_Y]]-_f
-; X86-NEXT: .long   -2147483635
-; X86-NEXT: .long [[F_CALLS_Z]]-_f
-; X86-NEXT: .long   -2147483634
-; X86-NEXT: .long [[F_RETURN]]-_f
-; X86-NEXT: .long   -2147483633
-; X86-NEXT: .short 62
-; X86-NEXT: .short 0
-; X86-NEXT: .short 63
-; X86-NEXT: .short 0
-; X86-NEXT: .short 72
-; X86-NEXT: .short 0
-; X86-NEXT: .short 73
-; X86-NEXT: .short 0
-; X86-NEXT: [[FILE_SEGMENT_END]]:
-; X86-NEXT: [[F2_END]]:
-; File index to string table offset subsection
-; X86-NEXT: .long   244
-; X86-NEXT: .long   8
-; X86-NEXT: .long   1
-; X86-NEXT: .long   0
-; String table
-; X86-NEXT: .long   243
-; X86-NEXT: .long   13
-; X86-NEXT: .byte   0
-; X86-NEXT: .ascii  "D:\\source.c"
-; X86-NEXT: .byte   0
-; X86-NEXT: .zero   3
+; X86: .cv_linetable 2, _f, [[END_OF_F]]
+; X86: .cv_filechecksums
+; X86: .cv_stringtable
 
 ; OBJ32:    Section {
 ; OBJ32:      Name: .debug$S (2E 64 65 62 75 67 24 53)
-; OBJ32:      Characteristics [ (0x42100040)
+; OBJ32:      Characteristics [ (0x42300040)
 ; OBJ32:      ]
 ; OBJ32:      Relocations [
 ; OBJ32-NEXT:   0x2C IMAGE_REL_I386_SECREL _x
@@ -343,40 +266,41 @@
 
 ; X64-LABEL: x:
 ; X64-NEXT: .L{{.*}}:
-; X64-NEXT: [[X_START:.*]]:{{$}}
+; X64:      .cv_file 1 "D:\\source.c"
+; X64:      .cv_loc 0 1 3 0 is_stmt 0 # source.c:3:0
 ; X64:      # BB
 ; X64:      subq    $40, %rsp
-; X64-NEXT: [[X_CALL_LINE:.*]]:{{$}}
+; X64:      .cv_loc 0 1 4 42 # source.c:4:42
 ; X64-NEXT: callq   z
-; X64-NEXT: [[X_EPILOG_AND_RET:.*]]:
+; X64:      .cv_loc 0 1 5 43 # source.c:5:43
 ; X64:      addq    $40, %rsp
 ; X64-NEXT: ret
 ; X64-NEXT: [[END_OF_X:.*]]:
 ;
 ; X64-LABEL: y:
 ; X64-NEXT: .L{{.*}}:
-; X64-NEXT: [[Y_START:.*]]:{{$}}
+; X64:      .cv_loc 1 1 7 0 # source.c:7:0
 ; X64:      # BB
 ; X64:      subq    $40, %rsp
-; X64-NEXT: [[Y_CALL_LINE:.*]]:{{$}}
+; X64:      .cv_loc 1 1 8 52 # source.c:8:52
 ; X64-NEXT: callq   z
-; X64-NEXT: [[Y_EPILOG_AND_RET:.*]]:
+; X64:      .cv_loc 1 1 9 53 # source.c:9:53
 ; X64:      addq    $40, %rsp
 ; X64-NEXT: ret
 ; X64-NEXT: [[END_OF_Y:.*]]:
 ;
 ; X64-LABEL: f:
 ; X64-NEXT: .L{{.*}}:
-; X64-NEXT: [[F_START:.*]]:{{$}}
+; X64:      .cv_loc 2 1 11 0 # source.c:11:0
 ; X64:      # BB
 ; X64:      subq    $40, %rsp
-; X64-NEXT: [[F_CALLS_X:.*]]:{{$}}
+; X64:      .cv_loc 2 1 12 62 # source.c:12:62
 ; X64-NEXT: callq   x
-; X64-NEXT: [[F_CALLS_Y:.*]]:
+; X64:      .cv_loc 2 1 13 63 # source.c:13:63
 ; X64:      callq   y
-; X64-NEXT: [[F_CALLS_Z:.*]]:
+; X64:      .cv_loc 2 1 14 72 # source.c:14:72
 ; X64:      callq   z
-; X64-NEXT: [[F_EPILOG_AND_RET:.*]]:
+; X64:      .cv_loc 2 1 15 73 # source.c:15:73
 ; X64:      addq    $40, %rsp
 ; X64-NEXT: ret
 ; X64-NEXT: [[END_OF_F:.*]]:
@@ -405,31 +329,7 @@
 ; Padding
 ; X64-NEXT: .zero   3
 ; Line table subsection for x
-; X64-NEXT: .long   242
-; X64-NEXT: .long [[F2_END:.*]]-[[F2_START:.*]]
-; X64-NEXT: [[F2_START]]:
-; X64-NEXT: .secrel32 x
-; X64-NEXT: .secidx x
-; X64-NEXT: .short 1
-; X64-NEXT: .long [[END_OF_X]]-x
-; X64-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X64-NEXT: .long   0
-; X64-NEXT: .long   3
-; X64-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X64-NEXT: .long [[X_START]]-x
-; X64-NEXT: .long   -2147483645
-; X64-NEXT: .long [[X_CALL_LINE]]-x
-; X64-NEXT: .long   -2147483644
-; X64-NEXT: .long [[X_EPILOG_AND_RET]]-x
-; X64-NEXT: .long   -2147483643
-; X64-NEXT: .short 0
-; X64-NEXT: .short 0
-; X64-NEXT: .short 42
-; X64-NEXT: .short 0
-; X64-NEXT: .short 43
-; X64-NEXT: .short 0
-; X64-NEXT: [[FILE_SEGMENT_END]]:
-; X64-NEXT: [[F2_END]]:
+; X64: .cv_linetable 0, x, [[END_OF_X]]
 ; Symbol subsection for y
 ; X64-NEXT: .long   241
 ; X64-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]]
@@ -452,31 +352,7 @@
 ; Padding
 ; X64-NEXT: .zero   3
 ; Line table subsection for y
-; X64-NEXT: .long   242
-; X64-NEXT: .long [[F2_END:.*]]-[[F2_START:.*]]
-; X64-NEXT: [[F2_START]]:
-; X64-NEXT: .secrel32 y
-; X64-NEXT: .secidx y
-; X64-NEXT: .short 1
-; X64-NEXT: .long [[END_OF_Y]]-y
-; X64-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X64-NEXT: .long   0
-; X64-NEXT: .long   3
-; X64-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X64-NEXT: .long [[Y_START]]-y
-; X64-NEXT: .long   -2147483641
-; X64-NEXT: .long [[Y_CALL_LINE]]-y
-; X64-NEXT: .long   -2147483640
-; X64-NEXT: .long [[Y_EPILOG_AND_RET]]-y
-; X64-NEXT: .long   -2147483639
-; X64-NEXT: .short 0
-; X64-NEXT: .short 0
-; X64-NEXT: .short 52
-; X64-NEXT: .short 0
-; X64-NEXT: .short 53
-; X64-NEXT: .short 0
-; X64-NEXT: [[FILE_SEGMENT_END]]:
-; X64-NEXT: [[F2_END]]:
+; X64: .cv_linetable 1, y, [[END_OF_Y]]
 ; Symbol subsection for f
 ; X64-NEXT: .long   241
 ; X64-NEXT: .long [[F1_END:.*]]-[[F1_START:.*]]
@@ -499,55 +375,15 @@
 ; Padding
 ; X64-NEXT: .zero   3
 ; Line table subsection for f
-; X64-NEXT: .long   242
-; X64-NEXT: .long [[F2_END:.*]]-[[F2_START:.*]]
-; X64-NEXT: [[F2_START]]:
-; X64-NEXT: .secrel32 f
-; X64-NEXT: .secidx f
-; X64-NEXT: .short 1
-; X64-NEXT: .long [[END_OF_F]]-f
-; X64-NEXT: [[FILE_SEGMENT_START:[^:]*]]:
-; X64-NEXT: .long   0
-; X64-NEXT: .long   5
-; X64-NEXT: .long [[FILE_SEGMENT_END:.*]]-[[FILE_SEGMENT_START]]
-; X64-NEXT: .long [[F_START]]-f
-; X64-NEXT: .long   -2147483637
-; X64-NEXT: .long [[F_CALLS_X]]-f
-; X64-NEXT: .long   -2147483636
-; X64-NEXT: .long [[F_CALLS_Y]]-f
-; X64-NEXT: .long   -2147483635
-; X64-NEXT: .long [[F_CALLS_Z]]-f
-; X64-NEXT: .long   -2147483634
-; X64-NEXT: .long [[F_EPILOG_AND_RET]]-f
-; X64-NEXT: .long   -2147483633
-; X64-NEXT: .short 0
-; X64-NEXT: .short 0
-; X64-NEXT: .short 62
-; X64-NEXT: .short 0
-; X64-NEXT: .short 63
-; X64-NEXT: .short 0
-; X64-NEXT: .short 72
-; X64-NEXT: .short 0
-; X64-NEXT: .short 73
-; X64-NEXT: .short 0
-; X64-NEXT: [[FILE_SEGMENT_END]]:
-; X64-NEXT: [[F2_END]]:
+; X64: .cv_linetable 2, f, [[END_OF_F]]
 ; File index to string table offset subsection
-; X64-NEXT: .long   244
-; X64-NEXT: .long   8
-; X64-NEXT: .long   1
-; X64-NEXT: .long   0
+; X64: .cv_filechecksums
 ; String table
-; X64-NEXT: .long   243
-; X64-NEXT: .long   13
-; X64-NEXT: .byte   0
-; X64-NEXT: .ascii  "D:\\source.c"
-; X64-NEXT: .byte   0
-; X64-NEXT: .zero   3
+; X64: .cv_stringtable
 
 ; OBJ64:    Section {
 ; OBJ64:      Name: .debug$S (2E 64 65 62 75 67 24 53)
-; OBJ64:      Characteristics [ (0x42100040)
+; OBJ64:      Characteristics [ (0x42300040)
 ; OBJ64:      ]
 ; OBJ64:      Relocations [
 ; OBJ64-NEXT:   0x2C IMAGE_REL_AMD64_SECREL x

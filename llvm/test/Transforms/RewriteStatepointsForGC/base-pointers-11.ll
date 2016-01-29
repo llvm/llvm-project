@@ -1,4 +1,4 @@
-; RUN: opt %s -rewrite-statepoints-for-gc -spp-print-base-pointers  -S 2>&1 | FileCheck %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -spp-print-base-pointers  -S 2>&1 | FileCheck %s
 
 ; CHECK: derived %next base %base_obj
 
@@ -19,8 +19,6 @@ loop:                                             ; preds = %loop, %entry
 ; CHECK-DAG:  [ %next.relocated.casted, %loop ]
   %current = phi i64 addrspace(1)* [ %obj, %entry ], [ %next, %loop ]
   %next = getelementptr i64, i64 addrspace(1)* %current, i32 1
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0)
+  call void @do_safepoint() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   br label %loop
 }
-
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
