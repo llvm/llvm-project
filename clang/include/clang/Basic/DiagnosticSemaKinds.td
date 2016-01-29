@@ -2076,6 +2076,10 @@ def err_concept_decl_invalid_specifiers : Error<
   "'%select{thread_local|inline|friend|constexpr}1'">;
 def err_function_concept_with_params : Error<
   "function concept cannot have any parameters">;
+def err_function_concept_bool_ret : Error<
+  "declared return type of function concept must be 'bool'">;
+def err_variable_concept_bool_decl : Error<
+  "declared type of variable concept must be 'bool'">;
 
 // C++11 char16_t/char32_t
 def warn_cxx98_compat_unicode_type : Warning<

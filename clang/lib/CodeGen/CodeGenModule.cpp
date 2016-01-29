@@ -1236,13 +1236,13 @@ void CodeGenModule::EmitDeferred() {
   if (!DeferredVTables.empty()) {
     EmitDeferredVTables();
 
-    // Emitting a v-table doesn't directly cause more v-tables to
+    // Emitting a vtable doesn't directly cause more vtables to
     // become deferred, although it can cause functions to be
-    // emitted that then need those v-tables.
+    // emitted that then need those vtables.
     assert(DeferredVTables.empty());
   }
 
-  // Stop if we're out of both deferred v-tables and deferred declarations.
+  // Stop if we're out of both deferred vtables and deferred declarations.
   if (DeferredDeclsToEmit.empty())
     return;
 

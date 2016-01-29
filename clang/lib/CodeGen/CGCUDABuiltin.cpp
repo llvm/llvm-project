@@ -52,10 +52,13 @@ static llvm::Function *GetVprintfDeclaration(llvm::Module &M) {
 //
 // is converted into something resembling
 //
-//   char* buf = alloca(...);
-//   *reinterpret_cast<Arg1*>(buf) = arg1;
-//   *reinterpret_cast<Arg2*>(buf + ...) = arg2;
-//   *reinterpret_cast<Arg3*>(buf + ...) = arg3;
+//   struct Tmp {
+//     Arg1 a1;
+//     Arg2 a2;
+//     Arg3 a3;
+//   };
+//   char* buf = alloca(sizeof(Tmp));
+//   *(Tmp*)buf = {a1, a2, a3};
 //   vprintf("format string", buf);
 //
 // buf is aligned to the max of {alignof(Arg1), ...}.  Furthermore, each of the
@@ -80,48 +83,24 @@ CodeGenFunction::EmitCUDADevicePrintfCallExpr(const CallExpr *E,
                E->arguments(), E->getDirectCallee(),
                /* ParamsToSkip = */ 0);
 
-  // Figure out how large of a buffer we need to hold our varargs and how
-  // aligned the buffer needs to be.  We start iterating at Arg[1], because
-  // that's our first vararg.
-  unsigned BufSize = 0;
-  unsigned BufAlign = 0;
-  for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I) {
-    const RValue& RV = Args[I].RV;
-    llvm::Type* Ty = RV.getScalarVal()->getType();
-
-    auto Align = DL.getPrefTypeAlignment(Ty);
-    BufAlign = std::max(BufAlign, Align);
-    // Add padding required to keep the current arg aligned.
-    BufSize = llvm::alignTo(BufSize, Align);
-    BufSize += DL.getTypeAllocSize(Ty);
-  }
-
-  // Construct and fill the buffer.
-  llvm::Value* BufferPtr = nullptr;
-  if (BufSize == 0) {
+  // Construct and fill the args buffer that we'll pass to vprintf.
+  llvm::Value *BufferPtr;
+  if (Args.size() <= 1) {
     // If there are no args, pass a null pointer to vprintf.
     BufferPtr = llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(Ctx));
   } else {
-    BufferPtr = Builder.Insert(new llvm::AllocaInst(
-        llvm::Type::getInt8Ty(Ctx), llvm::ConstantInt::get(Int32Ty, BufSize),
-        BufAlign, "printf_arg_buf"));
+    llvm::SmallVector<llvm::Type *, 8> ArgTypes;
+    for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I)
+      ArgTypes.push_back(Args[I].RV.getScalarVal()->getType());
+    llvm::Type *AllocaTy = llvm::StructType::create(ArgTypes, "printf_args");
+    llvm::Value *Alloca = CreateTempAlloca(AllocaTy);
 
-    unsigned Offset = 0;
     for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I) {
+      llvm::Value *P = Builder.CreateStructGEP(AllocaTy, Alloca, I - 1);
       llvm::Value *Arg = Args[I].RV.getScalarVal();
-      llvm::Type *Ty = Arg->getType();
-      auto Align = DL.getPrefTypeAlignment(Ty);
-
-      // Pad the buffer to Arg's alignment.
-      Offset = llvm::alignTo(Offset, Align);
-
-      // Store Arg into the buffer at Offset.
-      llvm::Value *GEP =
-          Builder.CreateGEP(BufferPtr, llvm::ConstantInt::get(Int32Ty, Offset));
-      llvm::Value *Cast = Builder.CreateBitCast(GEP, Ty->getPointerTo());
-      Builder.CreateAlignedStore(Arg, Cast, Align);
-      Offset += DL.getTypeAllocSize(Ty);
+      Builder.CreateAlignedStore(Arg, P, DL.getPrefTypeAlignment(Arg->getType()));
     }
+    BufferPtr = Builder.CreatePointerCast(Alloca, llvm::Type::getInt8PtrTy(Ctx));
   }
 
   // Invoke vprintf and return.

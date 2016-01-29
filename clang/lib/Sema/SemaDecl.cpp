@@ -6007,6 +6007,15 @@ Sema::ActOnVariableDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             << 0 << 3;
         NewVD->setInvalidDecl(true);
       }
+
+      // C++ Concepts TS [dcl.spec.concept]p6: A variable concept has the
+      // following restrictions:
+      // - The declared type shall have the type bool.
+      if (!Context.hasSameType(NewVD->getType(), Context.BoolTy) &&
+          !NewVD->isInvalidDecl()) {
+        Diag(D.getIdentifierLoc(), diag::err_variable_concept_bool_decl);
+        NewVD->setInvalidDecl(true);
+      }
     }
   }
 
@@ -7685,6 +7694,14 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           NewFD->setInvalidDecl();
         } else {
           Context.adjustExceptionSpec(NewFD, EST_BasicNoexcept);
+        }
+
+        // C++ Concepts TS [dcl.spec.concept]p5: A function concept has the
+        // following restrictions:
+        // - The declared return type shall have the type bool.
+        if (!Context.hasSameType(FPT->getReturnType(), Context.BoolTy)) {
+          Diag(D.getIdentifierLoc(), diag::err_function_concept_bool_ret);
+          NewFD->setInvalidDecl();
         }
 
         // C++ Concepts TS [dcl.spec.concept]p5: A function concept has the

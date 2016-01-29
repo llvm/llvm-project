@@ -369,14 +369,14 @@ ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
 
 void ObjCInterfaceDecl::collectPropertiesToImplement(PropertyMap &PM,
                                                      PropertyDeclOrder &PO) const {
-  for (auto *Prop : instance_properties()) {
-    PM[Prop->getIdentifier()] = Prop;
+  for (auto *Prop : properties()) {
+    PM[std::make_pair(Prop->getIdentifier(), Prop->isClassProperty())] = Prop;
     PO.push_back(Prop);
   }
   for (const auto *Ext : known_extensions()) {
     const ObjCCategoryDecl *ClassExt = Ext;
-    for (auto *Prop : ClassExt->instance_properties()) {
-      PM[Prop->getIdentifier()] = Prop;
+    for (auto *Prop : ClassExt->properties()) {
+      PM[std::make_pair(Prop->getIdentifier(), Prop->isClassProperty())] = Prop;
       PO.push_back(Prop);
     }
   }
@@ -1848,9 +1848,11 @@ void ObjCProtocolDecl::collectPropertiesToImplement(PropertyMap &PM,
                                                     PropertyDeclOrder &PO) const {
   
   if (const ObjCProtocolDecl *PDecl = getDefinition()) {
-    for (auto *Prop : PDecl->instance_properties()) {
+    for (auto *Prop : PDecl->properties()) {
       // Insert into PM if not there already.
-      PM.insert(std::make_pair(Prop->getIdentifier(), Prop));
+      PM.insert(std::make_pair(
+          std::make_pair(Prop->getIdentifier(), Prop->isClassProperty()),
+          Prop));
       PO.push_back(Prop);
     }
     // Scan through protocol's protocols.

@@ -61,7 +61,6 @@ class SourceManager;
 class FileManager;
 class FileEntry;
 class LineTableInfo;
-class LangOptions;
 class ASTWriter;
 class ASTReader;
 
