@@ -1758,6 +1758,13 @@ arguments, with arbitrary offsets.
   }];
 }
 
+def NSErrorDomainDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``ns_error_domain`` attribute indicates a global constant representing the error domain.
+  }];
+}
+
 def SwiftDocs : DocumentationCategory<"Controlling Swift Import"> {
   let Content = [{
 Clang supports additional attributes for controlling how APIs are imported into Swift.

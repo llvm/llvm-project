@@ -7514,6 +7514,13 @@ def err_nsconsumed_attribute_mismatch : Error<
 def err_nsreturns_retained_attribute_mismatch : Error<
   "overriding method has mismatched ns_returns_%select{not_retained|retained}0"
   " attributes">;
+
+def err_nserrordomain_not_tagdecl : Error<
+  "ns_error_domain attribute only valid on enum/struct/union/class">;
+def err_nserrordomain_invalid_decl : Error<
+  "domain argument %0 not valid top-level declaration">;
+def err_nserrordomain_requires_identifier : Error<
+  "domain argument must be an identifier">;
   
 def note_getter_unavailable : Note<
   "or because setter is declared here, but no getter method %0 is found">;
