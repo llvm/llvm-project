@@ -1657,50 +1657,51 @@ OpenMPDirectiveKind
 CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
   auto *Stmt = cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt();
   auto *CS = dyn_cast<CompoundStmt>(Stmt);
-  if (CS && CS->size() > 1) {
-    bool HasLastprivates = false;
-    auto &&CodeGen = [&S, CS, &HasLastprivates](CodeGenFunction &CGF) {
-      auto &C = CGF.CGM.getContext();
-      auto KmpInt32Ty = C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
-      // Emit helper vars inits.
-      LValue LB = createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.lb.",
-                                    CGF.Builder.getInt32(0));
-      auto *GlobalUBVal = CGF.Builder.getInt32(CS->size() - 1);
-      LValue UB =
-          createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.ub.", GlobalUBVal);
-      LValue ST = createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.st.",
-                                    CGF.Builder.getInt32(1));
-      LValue IL = createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.il.",
-                                    CGF.Builder.getInt32(0));
-      // Loop counter.
-      LValue IV = createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.iv.");
-      OpaqueValueExpr IVRefExpr(S.getLocStart(), KmpInt32Ty, VK_LValue);
-      CodeGenFunction::OpaqueValueMapping OpaqueIV(CGF, &IVRefExpr, IV);
-      OpaqueValueExpr UBRefExpr(S.getLocStart(), KmpInt32Ty, VK_LValue);
-      CodeGenFunction::OpaqueValueMapping OpaqueUB(CGF, &UBRefExpr, UB);
-      // Generate condition for loop.
-      BinaryOperator Cond(&IVRefExpr, &UBRefExpr, BO_LE, C.BoolTy, VK_RValue,
-                          OK_Ordinary, S.getLocStart(),
-                          /*fpContractable=*/false);
-      // Increment for loop counter.
-      UnaryOperator Inc(&IVRefExpr, UO_PreInc, KmpInt32Ty, VK_RValue,
-                        OK_Ordinary, S.getLocStart());
-      auto BodyGen = [CS, &S, &IV](CodeGenFunction &CGF) {
-        // Iterate through all sections and emit a switch construct:
-        // switch (IV) {
-        //   case 0:
-        //     <SectionStmt[0]>;
-        //     break;
-        // ...
-        //   case <NumSection> - 1:
-        //     <SectionStmt[<NumSection> - 1]>;
-        //     break;
-        // }
-        // .omp.sections.exit:
-        auto *ExitBB = CGF.createBasicBlock(".omp.sections.exit");
-        auto *SwitchStmt = CGF.Builder.CreateSwitch(
-            CGF.EmitLoadOfLValue(IV, S.getLocStart()).getScalarVal(), ExitBB,
-            CS->size());
+  bool HasLastprivates = false;
+  auto &&CodeGen = [&S, Stmt, CS, &HasLastprivates](CodeGenFunction &CGF) {
+    auto &C = CGF.CGM.getContext();
+    auto KmpInt32Ty = C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
+    // Emit helper vars inits.
+    LValue LB = createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.lb.",
+                                  CGF.Builder.getInt32(0));
+    auto *GlobalUBVal = CS != nullptr ? CGF.Builder.getInt32(CS->size() - 1)
+                                      : CGF.Builder.getInt32(0);
+    LValue UB =
+        createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.ub.", GlobalUBVal);
+    LValue ST = createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.st.",
+                                  CGF.Builder.getInt32(1));
+    LValue IL = createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.il.",
+                                  CGF.Builder.getInt32(0));
+    // Loop counter.
+    LValue IV = createSectionLVal(CGF, KmpInt32Ty, ".omp.sections.iv.");
+    OpaqueValueExpr IVRefExpr(S.getLocStart(), KmpInt32Ty, VK_LValue);
+    CodeGenFunction::OpaqueValueMapping OpaqueIV(CGF, &IVRefExpr, IV);
+    OpaqueValueExpr UBRefExpr(S.getLocStart(), KmpInt32Ty, VK_LValue);
+    CodeGenFunction::OpaqueValueMapping OpaqueUB(CGF, &UBRefExpr, UB);
+    // Generate condition for loop.
+    BinaryOperator Cond(&IVRefExpr, &UBRefExpr, BO_LE, C.BoolTy, VK_RValue,
+                        OK_Ordinary, S.getLocStart(),
+                        /*fpContractable=*/false);
+    // Increment for loop counter.
+    UnaryOperator Inc(&IVRefExpr, UO_PreInc, KmpInt32Ty, VK_RValue, OK_Ordinary,
+                      S.getLocStart());
+    auto BodyGen = [Stmt, CS, &S, &IV](CodeGenFunction &CGF) {
+      // Iterate through all sections and emit a switch construct:
+      // switch (IV) {
+      //   case 0:
+      //     <SectionStmt[0]>;
+      //     break;
+      // ...
+      //   case <NumSection> - 1:
+      //     <SectionStmt[<NumSection> - 1]>;
+      //     break;
+      // }
+      // .omp.sections.exit:
+      auto *ExitBB = CGF.createBasicBlock(".omp.sections.exit");
+      auto *SwitchStmt = CGF.Builder.CreateSwitch(
+          CGF.EmitLoadOfLValue(IV, S.getLocStart()).getScalarVal(), ExitBB,
+          CS == nullptr ? 1 : CS->size());
+      if (CS) {
         unsigned CaseNumber = 0;
         for (auto *SubStmt : CS->children()) {
           auto CaseBB = CGF.createBasicBlock(".omp.sections.case");
@@ -1710,99 +1711,72 @@ CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
           CGF.EmitBranch(ExitBB);
           ++CaseNumber;
         }
-        CGF.EmitBlock(ExitBB, /*IsFinished=*/true);
-      };
-
-      CodeGenFunction::OMPPrivateScope LoopScope(CGF);
-      if (CGF.EmitOMPFirstprivateClause(S, LoopScope)) {
-        // Emit implicit barrier to synchronize threads and avoid data races on
-        // initialization of firstprivate variables.
-        CGF.CGM.getOpenMPRuntime().emitBarrierCall(
-            CGF, S.getLocStart(), OMPD_unknown, /*EmitChecks=*/false,
-            /*ForceSimpleCall=*/true);
+      } else {
+        auto CaseBB = CGF.createBasicBlock(".omp.sections.case");
+        CGF.EmitBlock(CaseBB);
+        SwitchStmt->addCase(CGF.Builder.getInt32(0), CaseBB);
+        CGF.EmitStmt(Stmt);
+        CGF.EmitBranch(ExitBB);
       }
-      CGF.EmitOMPPrivateClause(S, LoopScope);
-      HasLastprivates = CGF.EmitOMPLastprivateClauseInit(S, LoopScope);
-      CGF.EmitOMPReductionClauseInit(S, LoopScope);
-      (void)LoopScope.Privatize();
-
-      // Emit static non-chunked loop.
-      CGF.CGM.getOpenMPRuntime().emitForStaticInit(
-          CGF, S.getLocStart(), OMPC_SCHEDULE_static, /*IVSize=*/32,
-          /*IVSigned=*/true, /*Ordered=*/false, IL.getAddress(),
-          LB.getAddress(), UB.getAddress(), ST.getAddress());
-      // UB = min(UB, GlobalUB);
-      auto *UBVal = CGF.EmitLoadOfScalar(UB, S.getLocStart());
-      auto *MinUBGlobalUB = CGF.Builder.CreateSelect(
-          CGF.Builder.CreateICmpSLT(UBVal, GlobalUBVal), UBVal, GlobalUBVal);
-      CGF.EmitStoreOfScalar(MinUBGlobalUB, UB);
-      // IV = LB;
-      CGF.EmitStoreOfScalar(CGF.EmitLoadOfScalar(LB, S.getLocStart()), IV);
-      // while (idx <= UB) { BODY; ++idx; }
-      CGF.EmitOMPInnerLoop(S, /*RequiresCleanup=*/false, &Cond, &Inc, BodyGen,
-                           [](CodeGenFunction &) {});
-      // Tell the runtime we are done.
-      CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, S.getLocStart());
-      CGF.EmitOMPReductionClauseFinal(S);
-
-      // Emit final copy of the lastprivate variables if IsLastIter != 0.
-      if (HasLastprivates)
-        CGF.EmitOMPLastprivateClauseFinal(
-            S, CGF.Builder.CreateIsNotNull(
-                   CGF.EmitLoadOfScalar(IL, S.getLocStart())));
+      CGF.EmitBlock(ExitBB, /*IsFinished=*/true);
     };
 
-    bool HasCancel = false;
-    if (auto *OSD = dyn_cast<OMPSectionsDirective>(&S))
-      HasCancel = OSD->hasCancel();
-    else if (auto *OPSD = dyn_cast<OMPParallelSectionsDirective>(&S))
-      HasCancel = OPSD->hasCancel();
-    CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_sections, CodeGen,
-                                                HasCancel);
-    // Emit barrier for lastprivates only if 'sections' directive has 'nowait'
-    // clause. Otherwise the barrier will be generated by the codegen for the
-    // directive.
-    if (HasLastprivates && S.getSingleClause<OMPNowaitClause>()) {
+    CodeGenFunction::OMPPrivateScope LoopScope(CGF);
+    if (CGF.EmitOMPFirstprivateClause(S, LoopScope)) {
       // Emit implicit barrier to synchronize threads and avoid data races on
       // initialization of firstprivate variables.
-      CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getLocStart(),
-                                             OMPD_unknown);
+      CGF.CGM.getOpenMPRuntime().emitBarrierCall(
+          CGF, S.getLocStart(), OMPD_unknown, /*EmitChecks=*/false,
+          /*ForceSimpleCall=*/true);
     }
-    return OMPD_sections;
-  }
-  // If only one section is found - no need to generate loop, emit as a single
-  // region.
-  bool HasFirstprivates;
-  // No need to generate reductions for sections with single section region, we
-  // can use original shared variables for all operations.
-  bool HasReductions = S.hasClausesOfKind<OMPReductionClause>();
-  // No need to generate lastprivates for sections with single section region,
-  // we can use original shared variable for all calculations with barrier at
-  // the end of the sections.
-  bool HasLastprivates = S.hasClausesOfKind<OMPLastprivateClause>();
-  auto &&CodeGen = [Stmt, &S, &HasFirstprivates](CodeGenFunction &CGF) {
-    CodeGenFunction::OMPPrivateScope SingleScope(CGF);
-    HasFirstprivates = CGF.EmitOMPFirstprivateClause(S, SingleScope);
-    CGF.EmitOMPPrivateClause(S, SingleScope);
-    (void)SingleScope.Privatize();
+    CGF.EmitOMPPrivateClause(S, LoopScope);
+    HasLastprivates = CGF.EmitOMPLastprivateClauseInit(S, LoopScope);
+    CGF.EmitOMPReductionClauseInit(S, LoopScope);
+    (void)LoopScope.Privatize();
 
-    CGF.EmitStmt(Stmt);
+    // Emit static non-chunked loop.
+    CGF.CGM.getOpenMPRuntime().emitForStaticInit(
+        CGF, S.getLocStart(), OMPC_SCHEDULE_static, /*IVSize=*/32,
+        /*IVSigned=*/true, /*Ordered=*/false, IL.getAddress(), LB.getAddress(),
+        UB.getAddress(), ST.getAddress());
+    // UB = min(UB, GlobalUB);
+    auto *UBVal = CGF.EmitLoadOfScalar(UB, S.getLocStart());
+    auto *MinUBGlobalUB = CGF.Builder.CreateSelect(
+        CGF.Builder.CreateICmpSLT(UBVal, GlobalUBVal), UBVal, GlobalUBVal);
+    CGF.EmitStoreOfScalar(MinUBGlobalUB, UB);
+    // IV = LB;
+    CGF.EmitStoreOfScalar(CGF.EmitLoadOfScalar(LB, S.getLocStart()), IV);
+    // while (idx <= UB) { BODY; ++idx; }
+    CGF.EmitOMPInnerLoop(S, /*RequiresCleanup=*/false, &Cond, &Inc, BodyGen,
+                         [](CodeGenFunction &) {});
+    // Tell the runtime we are done.
+    CGF.CGM.getOpenMPRuntime().emitForStaticFinish(CGF, S.getLocStart());
+    CGF.EmitOMPReductionClauseFinal(S);
+
+    // Emit final copy of the lastprivate variables if IsLastIter != 0.
+    if (HasLastprivates)
+      CGF.EmitOMPLastprivateClauseFinal(
+          S, CGF.Builder.CreateIsNotNull(
+                 CGF.EmitLoadOfScalar(IL, S.getLocStart())));
   };
-  CGM.getOpenMPRuntime().emitSingleRegion(*this, CodeGen, S.getLocStart(),
-                                          llvm::None, llvm::None, llvm::None,
-                                          llvm::None);
-  // Emit barrier for firstprivates, lastprivates or reductions only if
-  // 'sections' directive has 'nowait' clause. Otherwise the barrier will be
-  // generated by the codegen for the directive.
-  if ((HasFirstprivates || HasLastprivates || HasReductions) &&
-      S.getSingleClause<OMPNowaitClause>()) {
+
+  bool HasCancel = false;
+  if (auto *OSD = dyn_cast<OMPSectionsDirective>(&S))
+    HasCancel = OSD->hasCancel();
+  else if (auto *OPSD = dyn_cast<OMPParallelSectionsDirective>(&S))
+    HasCancel = OPSD->hasCancel();
+  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_sections, CodeGen,
+                                              HasCancel);
+  // Emit barrier for lastprivates only if 'sections' directive has 'nowait'
+  // clause. Otherwise the barrier will be generated by the codegen for the
+  // directive.
+  if (HasLastprivates && S.getSingleClause<OMPNowaitClause>()) {
     // Emit implicit barrier to synchronize threads and avoid data races on
     // initialization of firstprivate variables.
-    CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getLocStart(), OMPD_unknown,
-                                           /*EmitChecks=*/false,
-                                           /*ForceSimpleCall=*/true);
+    CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getLocStart(),
+                                           OMPD_unknown);
   }
-  return OMPD_single;
+  return OMPD_sections;
 }
 
 void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {

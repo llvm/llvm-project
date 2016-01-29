@@ -483,7 +483,7 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
     if (ThreadID != nullptr)
       return ThreadID;
   }
-  if (auto OMPRegionInfo =
+  if (auto *OMPRegionInfo =
           dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
     if (OMPRegionInfo->getThreadIDVariable()) {
       // Check if this an outlined function with thread id passed as argument.
@@ -1356,7 +1356,7 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
 // return the address of that temp.
 Address CGOpenMPRuntime::emitThreadIDAddress(CodeGenFunction &CGF,
                                              SourceLocation Loc) {
-  if (auto OMPRegionInfo =
+  if (auto *OMPRegionInfo =
           dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo))
     if (OMPRegionInfo->getThreadIDVariable())
       return OMPRegionInfo->getThreadIDVariableLValue(CGF).getAddress();
@@ -1717,15 +1717,10 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
   }
   // Build call __kmpc_cancel_barrier(loc, thread_id) or __kmpc_barrier(loc,
   // thread_id);
-  auto *OMPRegionInfo =
-      dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
-  // Do not emit barrier call in the single directive emitted in some rare cases
-  // for sections directives.
-  if (OMPRegionInfo && OMPRegionInfo->getDirectiveKind() == OMPD_single)
-    return;
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc, Flags),
                          getThreadID(CGF, Loc)};
-  if (OMPRegionInfo) {
+  if (auto *OMPRegionInfo =
+          dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
     if (!ForceSimpleCall && OMPRegionInfo->hasCancel()) {
       auto *Result = CGF.EmitRuntimeCall(
           createRuntimeFunction(OMPRTL__kmpc_cancel_barrier), Args);
@@ -3649,8 +3644,6 @@ void CGOpenMPRuntime::emitCancellationPointCall(
   // global_tid, kmp_int32 cncl_kind);
   if (auto *OMPRegionInfo =
           dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
-    if (OMPRegionInfo->getDirectiveKind() == OMPD_single)
-      return;
     if (OMPRegionInfo->hasCancel()) {
       llvm::Value *Args[] = {
           emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
@@ -3687,8 +3680,6 @@ void CGOpenMPRuntime::emitCancelCall(CodeGenFunction &CGF, SourceLocation Loc,
   // kmp_int32 cncl_kind);
   if (auto *OMPRegionInfo =
           dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
-    if (OMPRegionInfo->getDirectiveKind() == OMPD_single)
-      return;
     auto &&ThenGen = [this, Loc, CancelRegion,
                       OMPRegionInfo](CodeGenFunction &CGF) {
       llvm::Value *Args[] = {
