@@ -354,6 +354,12 @@ public:
   /// \brief Print this template argument to the given output stream.
   void print(const PrintingPolicy &Policy, raw_ostream &Out) const;
              
+  /// \brief Debugging aid that dumps the template argument.
+  void dump(raw_ostream &Out) const;
+
+  /// \brief Debugging aid that dumps the template argument to standard error.
+  void dump() const;
+             
   /// \brief Used to insert TemplateArguments into FoldingSets.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) const;
 };
