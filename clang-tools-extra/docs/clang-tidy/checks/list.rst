@@ -76,6 +76,8 @@ Clang-Tidy Checks
    modernize-use-default
    modernize-use-nullptr
    modernize-use-override
+   performance-for-range-copy
+   performance-implicit-cast-in-loop
    readability-braces-around-statements
    readability-container-size-empty
    readability-else-after-return

@@ -13,7 +13,6 @@
 #include "ClangModulesDeclVendor.h"
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclObjC.h"
 #include "clang/AST/RecordLayout.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"

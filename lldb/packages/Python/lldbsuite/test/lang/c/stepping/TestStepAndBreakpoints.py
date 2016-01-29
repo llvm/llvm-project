@@ -155,9 +155,14 @@ class TestCStepping(TestBase):
         current_file = frame.GetLineEntry().GetFileSpec()
 
         break_in_b.SetEnabled(True)
-        frame.EvaluateExpression ("b (4)", lldb.eNoDynamicValues, False)
+        options = lldb.SBExpressionOptions()
+        options.SetIgnoreBreakpoints(False)
+        options.SetFetchDynamicValue(False)
+        options.SetUnwindOnError(False)
+        frame.EvaluateExpression ("b (4)", options)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint (process, break_in_b)
+
         if len(threads) != 1:
             self.fail ("Failed to stop at breakpoint in b when calling b.")
         thread = threads[0]

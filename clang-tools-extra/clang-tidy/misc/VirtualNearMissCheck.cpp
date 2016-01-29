@@ -19,6 +19,12 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+
+AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
+  return Node.isOverloadedOperator();
+}
+
 /// Finds out if the given method overrides some method.
 static bool isOverrideMethod(const CXXMethodDecl *MD) {
   return MD->size_overridden_methods() > 0 || MD->hasAttr<OverrideAttr>();
@@ -32,10 +38,14 @@ static bool isOverrideMethod(const CXXMethodDecl *MD) {
 static bool checkOverridingFunctionReturnType(const ASTContext *Context,
                                               const CXXMethodDecl *BaseMD,
                                               const CXXMethodDecl *DerivedMD) {
-  QualType BaseReturnTy =
-      BaseMD->getType()->getAs<FunctionType>()->getReturnType();
-  QualType DerivedReturnTy =
-      DerivedMD->getType()->getAs<FunctionType>()->getReturnType();
+  QualType BaseReturnTy = BaseMD->getType()
+                              ->getAs<FunctionType>()
+                              ->getReturnType()
+                              .getCanonicalType();
+  QualType DerivedReturnTy = DerivedMD->getType()
+                                 ->getAs<FunctionType>()
+                                 ->getReturnType()
+                                 .getCanonicalType();
 
   if (DerivedReturnTy->isDependentType() || BaseReturnTy->isDependentType())
     return false;
@@ -54,8 +64,8 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
   /// BTy is the class type in return type of BaseMD. For example,
   ///    B* Base::md()
   /// While BRD is the declaration of B.
-  QualType DTy = DerivedReturnTy->getPointeeType();
-  QualType BTy = BaseReturnTy->getPointeeType();
+  QualType DTy = DerivedReturnTy->getPointeeType().getCanonicalType();
+  QualType BTy = BaseReturnTy->getPointeeType().getCanonicalType();
 
   const CXXRecordDecl *DRD = DTy->getAsCXXRecordDecl();
   const CXXRecordDecl *BRD = BTy->getAsCXXRecordDecl();
@@ -81,7 +91,8 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
     // Check accessibility.
     // FIXME: We currently only support checking if B is accessible base class
     // of D, or D is the same class which DerivedMD is in.
-    bool IsItself = DRD == DerivedMD->getParent();
+    bool IsItself =
+        DRD->getCanonicalDecl() == DerivedMD->getParent()->getCanonicalDecl();
     bool HasPublicAccess = false;
     for (const auto &Path : Paths) {
       if (Path.Access == AS_public)
@@ -121,8 +132,9 @@ static bool checkParamTypes(const CXXMethodDecl *BaseMD,
     return false;
 
   for (unsigned I = 0; I < NumParamA; I++) {
-    if (getDecayedType(BaseMD->getParamDecl(I)->getType()) !=
-        getDecayedType(DerivedMD->getParamDecl(I)->getType()))
+    if (getDecayedType(BaseMD->getParamDecl(I)->getType().getCanonicalType()) !=
+        getDecayedType(
+            DerivedMD->getParamDecl(I)->getType().getCanonicalType()))
       return false;
   }
   return true;
@@ -152,27 +164,20 @@ static bool checkOverrideWithoutName(const ASTContext *Context,
 /// DerivedMD is in.
 static bool checkOverrideByDerivedMethod(const CXXMethodDecl *BaseMD,
                                          const CXXMethodDecl *DerivedMD) {
-  if (BaseMD->getNameAsString() != DerivedMD->getNameAsString())
-    return false;
+  for (CXXMethodDecl::method_iterator I = DerivedMD->begin_overridden_methods(),
+                                      E = DerivedMD->end_overridden_methods();
+       I != E; ++I) {
+    const CXXMethodDecl *OverriddenMD = *I;
+    if (BaseMD->getCanonicalDecl() == OverriddenMD->getCanonicalDecl())
+      return true;
+  }
 
-  if (!checkParamTypes(BaseMD, DerivedMD))
-    return false;
-
-  return true;
-}
-
-/// Generate unique ID for given MethodDecl.
-///
-/// The Id is used as key for 'PossibleMap'.
-/// Typical Id: "Base::func void (void)"
-static std::string generateMethodId(const CXXMethodDecl *MD) {
-  return MD->getQualifiedNameAsString() + " " + MD->getType().getAsString();
+  return false;
 }
 
 bool VirtualNearMissCheck::isPossibleToBeOverridden(
     const CXXMethodDecl *BaseMD) {
-  std::string Id = generateMethodId(BaseMD);
-  auto Iter = PossibleMap.find(Id);
+  auto Iter = PossibleMap.find(BaseMD);
   if (Iter != PossibleMap.end())
     return Iter->second;
 
@@ -180,14 +185,13 @@ bool VirtualNearMissCheck::isPossibleToBeOverridden(
                     !isa<CXXDestructorDecl>(BaseMD) && BaseMD->isVirtual() &&
                     !BaseMD->isOverloadedOperator() &&
                     !isa<CXXConversionDecl>(BaseMD);
-  PossibleMap[Id] = IsPossible;
+  PossibleMap[BaseMD] = IsPossible;
   return IsPossible;
 }
 
 bool VirtualNearMissCheck::isOverriddenByDerivedClass(
     const CXXMethodDecl *BaseMD, const CXXRecordDecl *DerivedRD) {
-  auto Key = std::make_pair(generateMethodId(BaseMD),
-                            DerivedRD->getQualifiedNameAsString());
+  auto Key = std::make_pair(BaseMD, DerivedRD);
   auto Iter = OverriddenMap.find(Key);
   if (Iter != OverriddenMap.end())
     return Iter->second;
@@ -213,7 +217,8 @@ void VirtualNearMissCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(
           unless(anyOf(isOverride(), isImplicit(), cxxConstructorDecl(),
-                       cxxDestructorDecl(), cxxConversionDecl())))
+                       cxxDestructorDecl(), cxxConversionDecl(), isStatic(),
+                       isOverloadedOperator())))
           .bind("method"),
       this);
 }
@@ -222,15 +227,10 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DerivedMD = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
   assert(DerivedMD);
 
-  if (DerivedMD->isStatic())
-    return;
-
-  if (DerivedMD->isOverloadedOperator())
-    return;
-
   const ASTContext *Context = Result.Context;
 
-  const auto *DerivedRD = DerivedMD->getParent();
+  const auto *DerivedRD = DerivedMD->getParent()->getDefinition();
+  assert(DerivedRD);
 
   for (const auto &BaseSpec : DerivedRD->bases()) {
     if (const auto *BaseRD = BaseSpec.getType()->getAsCXXRecordDecl()) {

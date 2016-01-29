@@ -33,24 +33,19 @@ add_lldb_executable(lldb-server
     LLDBServerUtilities.cpp
 )
 
-if (BUILD_SHARED_LIBS )
-  target_link_libraries(lldb-server liblldb)
-  target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
+# The Darwin linker doesn't understand --start-group/--end-group.
+if (LLDB_LINKER_SUPPORTS_GROUPS)
+  target_link_libraries(lldb-server
+                        -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
+  target_link_libraries(lldb-server
+                        -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
 else()
-  # The Darwin linker doesn't understand --start-group/--end-group.
-  if (LLDB_LINKER_SUPPORTS_GROUPS)
-    target_link_libraries(lldb-server
-                          -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
-    target_link_libraries(lldb-server
-                          -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
-  else()
-    target_link_libraries(lldb-server ${LLDB_USED_LIBS})
-    target_link_libraries(lldb-server ${CLANG_USED_LIBS})
-  endif()
-  llvm_config(lldb-server ${LLVM_LINK_COMPONENTS})
-
-  target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
+  target_link_libraries(lldb-server ${LLDB_USED_LIBS})
+  target_link_libraries(lldb-server ${CLANG_USED_LIBS})
 endif()
+llvm_config(lldb-server ${LLVM_LINK_COMPONENTS})
+
+target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
 
 set_target_properties(lldb-server PROPERTIES VERSION ${LLDB_VERSION})
 

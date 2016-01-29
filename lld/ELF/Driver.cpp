@@ -114,7 +114,7 @@ void LinkerDriver::addFile(StringRef Path) {
 
 // Add a given library by searching it from input search paths.
 void LinkerDriver::addLibrary(StringRef Name) {
-  StringRef Path = searchLibrary(Name);
+  std::string Path = searchLibrary(Name);
   if (Path.empty())
     error("Unable to find library -l" + Name);
   else
@@ -335,6 +335,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   for (std::unique_ptr<InputFile> &F : Files)
     Symtab.addFile(std::move(F));
+  if (HasError)
+    return; // There were duplicate symbols or incompatible files
 
   for (StringRef S : Config->Undefined)
     Symtab.addUndefinedOpt(S);

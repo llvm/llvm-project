@@ -26,12 +26,15 @@ struct Derived : Base {
   Derived &operator==(const Base &); // Should not warn: operators are ignored.
 };
 
+typedef Derived derived_type;
+
 class Father {
 public:
   Father();
   virtual void func();
   virtual Father *create(int i);
   virtual Base &&generate();
+  virtual Base *canonical(Derived D);
 };
 
 class Mother {
@@ -70,6 +73,10 @@ public:
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Child::decaz' has {{.*}} 'Mother::decay'
 
   operator bool();
+
+  derived_type *canonica(derived_type D);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Child::canonica' has {{.*}} 'Father::canonical'
+
 private:
   void funk();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Child::funk' has {{.*}} 'Father::func'

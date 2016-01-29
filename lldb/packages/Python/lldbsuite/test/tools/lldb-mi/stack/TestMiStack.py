@@ -199,7 +199,20 @@ class MiStackTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^done,locals=\[{name=\"test_str\",type=\"const char \*\",value=\".*?Rakaposhi.*?\"},{name=\"var_e\",type=\"int\",value=\"24\"},{name=\"ptr\",type=\"int \*\",value=\".*?\"}\]")
         self.runCmd("-stack-list-locals --simple-values")
         self.expect("\^done,locals=\[{name=\"test_str\",type=\"const char \*\",value=\".*?Rakaposhi.*?\"},{name=\"var_e\",type=\"int\",value=\"24\"},{name=\"ptr\",type=\"int \*\",value=\".*?\"}\]")
+        
+        # Test -stack-list-locals in a function with catch clause, 
+        # having unnamed parameter
+        # Run to BP_catch_unnamed
+        line = line_number('main.cpp', '// BP_catch_unnamed')
+        self.runCmd("-break-insert --file main.cpp:%d" % line)
+        self.expect("\^done,bkpt={number=\"6\"")
+        self.runCmd("-exec-continue")
+        self.expect("\^running")
+        self.expect("\*stopped,reason=\"breakpoint-hit\"")
 
+        # Test -stack-list-locals: use --no-values
+        self.runCmd("-stack-list-locals --no-values")
+        self.expect("\^done,locals=\[name=\"i\",name=\"j\"\]")
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_stack_list_variables(self):
