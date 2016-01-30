@@ -11,6 +11,7 @@ import lldbsuite.test.lldbutil as lldbutil
 import subprocess
 import unittest2
 
+@unittest2.skip("rdar://problem/23640718")  # sometimes causing TIMEOUT
 class SBBreakpointCallbackCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
