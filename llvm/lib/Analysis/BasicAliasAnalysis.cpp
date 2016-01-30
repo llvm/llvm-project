@@ -327,7 +327,7 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
 static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
   assert(PointerSize <= 64 && "Invalid PointerSize!");
   unsigned ShiftBits = 64 - PointerSize;
-  return (uint64_t)Offset << ShiftBits >> ShiftBits;
+  return (int64_t)((uint64_t)Offset << ShiftBits) >> ShiftBits;
 }
 
 /// If V is a symbolic pointer expression, decompose it into a base pointer
