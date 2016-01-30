@@ -713,7 +713,7 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_module_test) {
 TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
   std::vector<std::string> FuncNames1;
   std::vector<std::string> FuncNames2;
-  for (int I = 0; I < 10 * 1024; I++) {
+  for (int I = 0; I < 128; I++) {
     std::string str;
     raw_string_ostream OS(str);
     OS << "func_" << I;
@@ -758,15 +758,11 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
       ASSERT_EQ(StringRef("func_0"), R);
       R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames1[1]));
       ASSERT_EQ(StringRef("fooooooooooooooo_0"), R);
-      R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames1[998]));
-      ASSERT_EQ(StringRef("func_499"), R);
-      R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames1[999]));
-      ASSERT_EQ(StringRef("fooooooooooooooo_499"), R);
       R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames2[100]));
       ASSERT_EQ(StringRef("BAR_50"), R);
       R = Symtab.getFuncName(IndexedInstrProf::ComputeHash(FuncNames2[101]));
       ASSERT_EQ(StringRef("BlahblahBlahblahBar_50"), R);
-      for (int I = 0; I < 10 * 1024; I++) {
+      for (int I = 0; I < 128; I++) {
         std::string N[4];
         N[0] = FuncNames1[2 * I];
         N[1] = FuncNames1[2 * I + 1];

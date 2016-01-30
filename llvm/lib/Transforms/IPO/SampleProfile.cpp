@@ -163,10 +163,10 @@ protected:
   EdgeWeightMap EdgeWeights;
 
   /// \brief Set of visited blocks during propagation.
-  SmallPtrSet<const BasicBlock *, 128> VisitedBlocks;
+  SmallPtrSet<const BasicBlock *, 32> VisitedBlocks;
 
   /// \brief Set of visited edges during propagation.
-  SmallSet<Edge, 128> VisitedEdges;
+  SmallSet<Edge, 32> VisitedEdges;
 
   /// \brief Equivalence classes for block weights.
   ///

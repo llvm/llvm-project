@@ -35,7 +35,7 @@ D: parts of code generator not covered by someone else
 
 N: Eric Christopher
 E: echristo@gmail.com
-D: Debug Information, autotools/configure/make build, inline assembly
+D: Debug Information, inline assembly
 
 N: Greg Clayton
 E: gclayton@apple.com

@@ -854,7 +854,7 @@ MemoryDependenceAnalysis::getNonLocalCallDependency(CallSite QueryCS) {
   // isReadonlyCall - If this is a read-only call, we can be more aggressive.
   bool isReadonlyCall = AA->onlyReadsMemory(QueryCS);
 
-  SmallPtrSet<BasicBlock*, 64> Visited;
+  SmallPtrSet<BasicBlock*, 32> Visited;
 
   unsigned NumSortedEntries = Cache.size();
   DEBUG(AssertSorted(Cache));

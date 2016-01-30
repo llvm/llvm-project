@@ -949,9 +949,9 @@ bb6:
 ; CHECK-NEXT:  block{{$}}
 ; CHECK-NEXT:  block{{$}}
 ; CHECK:       br_if        {{[^,]+}}, 0{{$}}
-; CHECK-NEXT:  block{{$}}
 ; CHECK-NOT:   block
-; CHECK:       br_if        {{[^,]+}}, 0{{$}}
+; CHECK:       block{{$}}
+; CHECK-NEXT:  br_if        {{[^,]+}}, 0{{$}}
 ; CHECK-NOT:   block
 ; CHECK:       br_if        {{[^,]+}}, 2{{$}}
 ; CHECK-NEXT:  .LBB20_3:
@@ -980,9 +980,9 @@ bb6:
 ; OPT:       block{{$}}
 ; OPT-NEXT:  block{{$}}
 ; OPT:       br_if        $pop{{[0-9]+}}, 0{{$}}
-; OPT-NEXT:  block{{$}}
 ; OPT-NOT:   block
-; OPT:       br_if        $0, 0{{$}}
+; OPT:       block{{$}}
+; OPT-NEXT:  br_if        $0, 0{{$}}
 ; OPT-NOT:   block
 ; OPT:       br_if        {{[^,]+}}, 2{{$}}
 ; OPT-NEXT:  .LBB20_3:

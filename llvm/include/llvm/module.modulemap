@@ -184,9 +184,6 @@ module LLVM_Utils {
     // Exclude this; it's only included on Solaris.
     exclude header "Support/Solaris.h"
 
-    // Exclude this; it's only included on AIX and fundamentally non-modular.
-    exclude header "Support/AIXDataTypesFix.h"
-
     // Exclude this; it's fundamentally non-modular.
     exclude header "Support/PluginLoader.h"
 

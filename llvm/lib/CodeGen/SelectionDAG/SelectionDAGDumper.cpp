@@ -630,7 +630,7 @@ static bool printOperand(raw_ostream &OS, const SelectionDAG *G,
   }
 }
 
-typedef SmallPtrSet<const SDNode *, 128> VisitedSDNodeSet;
+typedef SmallPtrSet<const SDNode *, 32> VisitedSDNodeSet;
 static void DumpNodesr(raw_ostream &OS, const SDNode *N, unsigned indent,
                        const SelectionDAG *G, VisitedSDNodeSet &once) {
   if (!once.insert(N).second) // If we've been here before, return now.

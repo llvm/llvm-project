@@ -21,8 +21,6 @@
 
 /* Please leave this file C-compatible. */
 
-/* Please keep this file in sync with DataTypes.h.in */
-
 #ifndef SUPPORT_DATATYPES_H
 #define SUPPORT_DATATYPES_H
 
@@ -66,7 +64,9 @@
 #include <sys/types.h>
 
 #ifdef _AIX
-#include "llvm/Support/AIXDataTypesFix.h"
+// GCC is strict about defining large constants: they must have LL modifier.
+#undef INT64_MAX
+#undef INT64_MIN
 #endif
 
 /* Handle incorrect definition of uint64_t as u_int64_t */

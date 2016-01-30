@@ -2718,7 +2718,7 @@ static void checkBasicSSA(DominatorTree &DT, GCPtrLivenessData &Data,
 static void computeLiveInValues(DominatorTree &DT, Function &F,
                                 GCPtrLivenessData &Data) {
 
-  SmallSetVector<BasicBlock *, 200> Worklist;
+  SmallSetVector<BasicBlock *, 32> Worklist;
   auto AddPredsToWorklist = [&](BasicBlock *BB) {
     // We use a SetVector so that we don't have duplicates in the worklist.
     Worklist.insert(pred_begin(BB), pred_end(BB));

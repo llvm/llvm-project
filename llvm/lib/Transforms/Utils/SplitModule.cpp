@@ -138,7 +138,7 @@ static void findPartitions(Module *M, ClusterIDMapType &ClusterIDMap,
 
   typedef std::pair<unsigned, ClusterMapType::iterator> SortType;
   SmallVector<SortType, 64> Sets;
-  SmallPtrSet<const GlobalValue *, 64> Visited;
+  SmallPtrSet<const GlobalValue *, 32> Visited;
 
   // To guarantee determinism, we have to sort SCC according to size.
   // When size is the same, use leader's name.

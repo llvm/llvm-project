@@ -27,6 +27,7 @@
 
 #include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -266,12 +267,26 @@ static bool ExplicitlyBranchesTo(MachineBasicBlock *Pred,
   return false;
 }
 
+/// Test whether MI is a child of some other node in an expression tree.
+static bool IsChild(const MachineInstr *MI,
+                    const WebAssemblyFunctionInfo &MFI) {
+  if (MI->getNumOperands() == 0)
+    return false;
+  const MachineOperand &MO = MI->getOperand(0);
+  if (!MO.isReg() || MO.isImplicit() || !MO.isDef())
+    return false;
+  unsigned Reg = MO.getReg();
+  return TargetRegisterInfo::isVirtualRegister(Reg) &&
+         MFI.isVRegStackified(Reg);
+}
+
 /// Insert a BLOCK marker for branches to MBB (if needed).
 static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
                              SmallVectorImpl<MachineBasicBlock *> &ScopeTops,
                              const WebAssemblyInstrInfo &TII,
                              const MachineLoopInfo &MLI,
-                             MachineDominatorTree &MDT) {
+                             MachineDominatorTree &MDT,
+                             WebAssemblyFunctionInfo &MFI) {
   // First compute the nearest common dominator of all forward non-fallthrough
   // predecessors so that we minimize the time that the BLOCK is on the stack,
   // which reduces overall stack height.
@@ -326,7 +341,7 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     // beginning of the local expression tree and any nested BLOCKs.
     InsertPos = Header->getFirstTerminator();
     while (InsertPos != Header->begin() &&
-           prev(InsertPos)->definesRegister(WebAssembly::EXPR_STACK) &&
+           IsChild(prev(InsertPos), MFI) &&
            prev(InsertPos)->getOpcode() != WebAssembly::LOOP &&
            prev(InsertPos)->getOpcode() != WebAssembly::END_BLOCK &&
            prev(InsertPos)->getOpcode() != WebAssembly::END_LOOP)
@@ -409,7 +424,8 @@ GetDepth(const SmallVectorImpl<const MachineBasicBlock *> &Stack,
 /// Insert LOOP and BLOCK markers at appropriate places.
 static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
                          const WebAssemblyInstrInfo &TII,
-                         MachineDominatorTree &MDT) {
+                         MachineDominatorTree &MDT,
+                         WebAssemblyFunctionInfo &MFI) {
   // For each block whose label represents the end of a scope, record the block
   // which holds the beginning of the scope. This will allow us to quickly skip
   // over scoped regions when walking blocks. We allocate one more than the
@@ -425,7 +441,7 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
     PlaceLoopMarker(MBB, MF, ScopeTops, LoopTops, TII, MLI);
 
     // Place the BLOCK for MBB if MBB is branched to from above.
-    PlaceBlockMarker(MBB, MF, ScopeTops, TII, MLI, MDT);
+    PlaceBlockMarker(MBB, MF, ScopeTops, TII, MLI, MDT, MFI);
   }
 
   // Now rewrite references to basic blocks to be depth immediates.
@@ -478,6 +494,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   auto &MDT = getAnalysis<MachineDominatorTree>();
   // Liveness is not tracked for EXPR_STACK physreg.
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   MF.getRegInfo().invalidateLiveness();
 
   // RPO sorting needs all loops to be single-entry.
@@ -487,7 +504,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   SortBlocks(MF, MLI);
 
   // Place the BLOCK and LOOP markers to indicate the beginnings of scopes.
-  PlaceMarkers(MF, MLI, TII, MDT);
+  PlaceMarkers(MF, MLI, TII, MDT, MFI);
 
   return true;
 }

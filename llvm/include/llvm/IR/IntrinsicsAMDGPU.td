@@ -17,25 +17,21 @@ class AMDGPUReadPreloadRegisterIntrinsic<string name>
 
 let TargetPrefix = "r600" in {
 
-class R600ReadPreloadRegisterIntrinsic<string name>
-  : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-    GCCBuiltin<name>;
-
-multiclass R600ReadPreloadRegisterIntrinsic_xyz<string prefix> {
-  def _x : R600ReadPreloadRegisterIntrinsic<!strconcat(prefix, "_x")>;
-  def _y : R600ReadPreloadRegisterIntrinsic<!strconcat(prefix, "_y")>;
-  def _z : R600ReadPreloadRegisterIntrinsic<!strconcat(prefix, "_z")>;
+multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz<string prefix> {
+  def _x : AMDGPUReadPreloadRegisterIntrinsic<!strconcat(prefix, "_x")>;
+  def _y : AMDGPUReadPreloadRegisterIntrinsic<!strconcat(prefix, "_y")>;
+  def _z : AMDGPUReadPreloadRegisterIntrinsic<!strconcat(prefix, "_z")>;
 }
 
-defm int_r600_read_global_size : R600ReadPreloadRegisterIntrinsic_xyz <
+defm int_r600_read_global_size : AMDGPUReadPreloadRegisterIntrinsic_xyz <
                                        "__builtin_r600_read_global_size">;
-defm int_r600_read_local_size : R600ReadPreloadRegisterIntrinsic_xyz <
+defm int_r600_read_local_size : AMDGPUReadPreloadRegisterIntrinsic_xyz <
                                        "__builtin_r600_read_local_size">;
-defm int_r600_read_ngroups : R600ReadPreloadRegisterIntrinsic_xyz <
+defm int_r600_read_ngroups : AMDGPUReadPreloadRegisterIntrinsic_xyz <
                                        "__builtin_r600_read_ngroups">;
-defm int_r600_read_tgid : R600ReadPreloadRegisterIntrinsic_xyz <
+defm int_r600_read_tgid : AMDGPUReadPreloadRegisterIntrinsic_xyz <
                                        "__builtin_r600_read_tgid">;
-defm int_r600_read_tidig : R600ReadPreloadRegisterIntrinsic_xyz <
+defm int_r600_read_tidig : AMDGPUReadPreloadRegisterIntrinsic_xyz <
                                        "__builtin_r600_read_tidig">;
 
 def int_r600_rat_store_typed :
@@ -63,6 +59,11 @@ def int_AMDGPU_ldexp : Intrinsic<
 }
 
 let TargetPrefix = "amdgcn" in {
+
+defm int_amdgcn_workitem_id : AMDGPUReadPreloadRegisterIntrinsic_xyz <
+  "__builtin_amdgcn_workitem_id">;
+defm int_amdgcn_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz <
+  "__builtin_amdgcn_workgroup_id">;
 
 def int_amdgcn_s_barrier : GCCBuiltin<"__builtin_amdgcn_s_barrier">,
   Intrinsic<[], [], [IntrConvergent]>;

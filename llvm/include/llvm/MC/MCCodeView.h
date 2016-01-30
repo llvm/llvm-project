@@ -125,14 +125,14 @@ public:
   }
 
   std::vector<MCCVLineEntry> getFunctionLineEntries(unsigned FuncId) {
-    auto I = MCCVLineStartStop.find(FuncId);
-    assert(I != MCCVLineStartStop.end());
-
     std::vector<MCCVLineEntry> FilteredLines;
-    for (size_t Idx = I->second.first, End = I->second.second + 1; Idx != End;
-         ++Idx)
-      if (MCCVLines[Idx].getFunctionId() == FuncId)
-        FilteredLines.push_back(MCCVLines[Idx]);
+
+    auto I = MCCVLineStartStop.find(FuncId);
+    if (I != MCCVLineStartStop.end())
+      for (size_t Idx = I->second.first, End = I->second.second + 1; Idx != End;
+           ++Idx)
+        if (MCCVLines[Idx].getFunctionId() == FuncId)
+          FilteredLines.push_back(MCCVLines[Idx]);
     return FilteredLines;
   }
 

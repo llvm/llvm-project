@@ -18,9 +18,9 @@
 
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <climits>
-#include <cstdint>
 #include <string>
 
 namespace llvm {

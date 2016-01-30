@@ -70,7 +70,10 @@ void initializeSILoadStoreOptimizerPass(PassRegistry &);
 extern char &SILoadStoreOptimizerID;
 
 // Passes common to R600 and SI
-FunctionPass *createAMDGPUPromoteAlloca(const AMDGPUSubtarget &ST);
+FunctionPass *createAMDGPUPromoteAlloca(const TargetMachine *TM = nullptr);
+void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
+extern char &AMDGPUPromoteAllocaID;
+
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &tm);
 ModulePass *createAMDGPUAlwaysInlinePass();
