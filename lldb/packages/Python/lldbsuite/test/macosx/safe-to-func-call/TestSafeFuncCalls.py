@@ -21,7 +21,6 @@ class TestSafeFuncCalls(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
-    @expectedFailureDarwin("rdar://23589995")
     def test_with_python_api(self):
         """Test function call thread safety."""
         self.build()

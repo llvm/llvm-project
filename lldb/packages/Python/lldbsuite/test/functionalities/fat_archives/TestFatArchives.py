@@ -25,7 +25,6 @@ class FatArchiveTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
-    @expectedFailureDarwin("rdar://23589961")
     def test (self):
         if self.getArchitecture() == 'x86_64':
             execute_command ("make CC='%s'" % (os.environ["CC"]))
