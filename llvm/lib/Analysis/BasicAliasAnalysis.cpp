@@ -465,6 +465,9 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
       }
     }
 
+    // Take care of wrap-arounds
+    BaseOffs = adjustToPointerSize(BaseOffs, PointerSize);
+
     // Analyze the base pointer next.
     V = GEPOp->getOperand(0);
   } while (--MaxLookup);
