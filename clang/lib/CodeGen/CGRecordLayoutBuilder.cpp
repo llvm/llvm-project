@@ -842,7 +842,7 @@ void CGRecordLayout::print(raw_ostream &OS) const {
   OS << "]>\n";
 }
 
-void CGRecordLayout::dump() const {
+LLVM_DUMP_METHOD void CGRecordLayout::dump() const {
   print(llvm::errs());
 }
 
@@ -855,6 +855,6 @@ void CGBitFieldInfo::print(raw_ostream &OS) const {
      << " StorageOffset:" << StorageOffset.getQuantity() << ">";
 }
 
-void CGBitFieldInfo::dump() const {
+LLVM_DUMP_METHOD void CGBitFieldInfo::dump() const {
   print(llvm::errs());
 }

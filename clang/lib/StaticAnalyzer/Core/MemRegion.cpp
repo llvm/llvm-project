@@ -438,7 +438,7 @@ void SubRegion::anchor() { }
 // Region pretty-printing.
 //===----------------------------------------------------------------------===//
 
-void MemRegion::dump() const {
+LLVM_DUMP_METHOD void MemRegion::dump() const {
   dumpToStream(llvm::errs());
 }
 
@@ -525,7 +525,7 @@ void VarRegion::dumpToStream(raw_ostream &os) const {
   os << *cast<VarDecl>(D);
 }
 
-void RegionRawOffset::dump() const {
+LLVM_DUMP_METHOD void RegionRawOffset::dump() const {
   dumpToStream(llvm::errs());
 }
 
@@ -1406,9 +1406,9 @@ void BlockDataRegion::LazyInitializeReferencedVars() {
   BumpVectorContext BC(A);
 
   typedef BumpVector<const MemRegion*> VarVec;
-  VarVec *BV = (VarVec*) A.Allocate<VarVec>();
+  VarVec *BV = A.Allocate<VarVec>();
   new (BV) VarVec(BC, NumBlockVars);
-  VarVec *BVOriginal = (VarVec*) A.Allocate<VarVec>();
+  VarVec *BVOriginal = A.Allocate<VarVec>();
   new (BVOriginal) VarVec(BC, NumBlockVars);
 
   for (const VarDecl *VD : ReferencedBlockVars) {

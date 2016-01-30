@@ -933,6 +933,10 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
       Diag(PropertyLoc, diag::error_bad_property_decl) << IDecl->getDeclName();
       return nullptr;
     }
+    if (property->isClassProperty() && Synthesize) {
+      Diag(PropertyLoc, diag::error_synthesize_on_class_property) << PropertyId;
+      return nullptr;
+    }
     unsigned PIkind = property->getPropertyAttributesAsWritten();
     if ((PIkind & (ObjCPropertyDecl::OBJC_PR_atomic |
                    ObjCPropertyDecl::OBJC_PR_nonatomic) ) == 0) {

@@ -188,7 +188,7 @@ void CallGraph::print(raw_ostream &OS) const {
   OS.flush();
 }
 
-void CallGraph::dump() const {
+LLVM_DUMP_METHOD void CallGraph::dump() const {
   print(llvm::errs());
 }
 
@@ -202,7 +202,7 @@ void CallGraphNode::print(raw_ostream &os) const {
   os << "< >";
 }
 
-void CallGraphNode::dump() const {
+LLVM_DUMP_METHOD void CallGraphNode::dump() const {
   print(llvm::errs());
 }
 

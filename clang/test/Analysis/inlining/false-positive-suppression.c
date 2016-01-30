@@ -93,6 +93,74 @@ int triggerDivZero () {
   return 5/y; // expected-warning {{Division by zero}}
 }
 
+// Treat a function-like macro similarly to an inlined function, so suppress
+// warnings along paths resulting from inlined checks.
+#define MACRO_WITH_CHECK(a) ( ((a) != 0) ? *a : 17)
+void testInlineCheckInMacro(int *p) {
+  int i = MACRO_WITH_CHECK(p);
+  (void)i;
+
+  *p = 1; // no-warning
+}
+
+#define MACRO_WITH_NESTED_CHECK(a) ( { int j = MACRO_WITH_CHECK(a); j; } )
+void testInlineCheckInNestedMacro(int *p) {
+  int i = MACRO_WITH_NESTED_CHECK(p);
+  (void)i;
+
+  *p = 1; // no-warning
+}
+
+// If there is a check in a macro that is not function-like, don't treat
+// it like a function so don't suppress.
+#define NON_FUNCTION_MACRO_WITH_CHECK ( ((p) != 0) ? *p : 17)
+void testNonFunctionMacro(int *p) {
+  int i = NON_FUNCTION_MACRO_WITH_CHECK ;
+  (void)i;
+
+  *p = 1; // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}
+}
+
+
+// This macro will dereference its argument if the argument is NULL.
+#define MACRO_WITH_ERROR(a) ( ((a) != 0) ? 0 : *a)
+void testErrorInMacro(int *p) {
+  int i = MACRO_WITH_ERROR(p); // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}
+  (void)i;
+}
+
+// Here the check (the "if") is not in a macro, so we should still warn.
+#define MACRO_IN_GUARD(a) (!(a))
+void testMacroUsedAsGuard(int *p) {
+  if (MACRO_IN_GUARD(p))
+    *p = 1; // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}
+}
+
+// When a nil case split is introduced in a macro and the macro is in a guard,
+// we still shouldn't warn.
+int isNull(int *p);
+int isEqual(int *p, int *q);
+#define ISNULL(ptr)    ((ptr) == 0 || isNull(ptr))
+#define ISEQUAL(a, b)    ((int *)(a) == (int *)(b) || (ISNULL(a) && ISNULL(b)) || isEqual(a,b))
+#define ISNOTEQUAL(a, b)   (!ISEQUAL(a, b))
+void testNestedDisjunctiveMacro(int *p, int *q) {
+  if (ISNOTEQUAL(p,q)) {
+    (void)*p; // no-warning
+    (void)*q; // no-warning
+  }
+
+  (void)*p; // no-warning
+  (void)*q; // no-warning
+}
+
+// Here the check is entirely in non-macro code even though the code itself
+// is a macro argument.
+#define MACRO_DO_IT(a) (a)
+void testErrorInArgument(int *p) {
+  int i = MACRO_DO_IT((p ? 0 : *p)); // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}c
+  (void)i;
+}
+
 // --------------------------
 // "Suppression suppression"
 // --------------------------

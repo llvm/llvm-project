@@ -236,7 +236,7 @@ SVal loc::ConcreteInt::evalBinOp(BasicValueFactory& BasicVals,
 // Pretty-Printing.
 //===----------------------------------------------------------------------===//
 
-void SVal::dump() const { dumpToStream(llvm::errs()); }
+LLVM_DUMP_METHOD void SVal::dump() const { dumpToStream(llvm::errs()); }
 
 void SVal::dumpToStream(raw_ostream &os) const {
   switch (getBaseKind()) {

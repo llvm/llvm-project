@@ -333,7 +333,7 @@ DeclarationName DeclarationName::getUsingDirectiveName() {
   return DeclarationName(Ptr);
 }
 
-void DeclarationName::dump() const {
+LLVM_DUMP_METHOD void DeclarationName::dump() const {
   llvm::errs() << *this << '\n';
 }
 

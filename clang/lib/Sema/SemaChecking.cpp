@@ -7578,7 +7578,7 @@ void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     // If the source is a constant, use a default-on diagnostic.
     // TODO: this should happen for bitfield stores, too.
     llvm::APSInt Value(32);
-    if (E->isIntegerConstantExpr(Value, S.Context)) {
+    if (E->EvaluateAsInt(Value, S.Context, Expr::SE_AllowSideEffects)) {
       if (S.SourceMgr.isInSystemMacro(CC))
         return;
 
@@ -7601,6 +7601,42 @@ void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       return DiagnoseImpCast(S, E, T, CC, diag::warn_impcast_integer_64_32,
                              /* pruneControlFlow */ true);
     return DiagnoseImpCast(S, E, T, CC, diag::warn_impcast_integer_precision);
+  }
+
+  if (TargetRange.Width == SourceRange.Width && !TargetRange.NonNegative &&
+      SourceRange.NonNegative && Source->isSignedIntegerType()) {
+    // Warn when doing a signed to signed conversion, warn if the positive
+    // source value is exactly the width of the target type, which will
+    // cause a negative value to be stored.
+
+    llvm::APSInt Value;
+    if (E->EvaluateAsInt(Value, S.Context, Expr::SE_AllowSideEffects)) {
+      if (!S.SourceMgr.isInSystemMacro(CC)) {
+
+        IntegerLiteral *IntLit =
+            dyn_cast<IntegerLiteral>(E->IgnoreParenImpCasts());
+
+        // If initializing from a constant, and the constant starts with '0',
+        // then it is a binary, octal, or hexadecimal.  Allow these constants
+        // to fill all the bits, even if there is a sign change.
+        if (!IntLit ||
+            *(S.getSourceManager().getCharacterData(IntLit->getLocStart())) !=
+                '0') {
+
+          std::string PrettySourceValue = Value.toString(10);
+          std::string PrettyTargetValue =
+              PrettyPrintInRange(Value, TargetRange);
+
+          S.DiagRuntimeBehavior(
+              E->getExprLoc(), E,
+              S.PDiag(diag::warn_impcast_integer_precision_constant)
+                  << PrettySourceValue << PrettyTargetValue << E->getType() << T
+                  << E->getSourceRange() << clang::SourceRange(CC));
+          return;
+        }
+      }
+    }
+    // Fall through for non-constants to give a sign conversion warning.
   }
 
   if ((TargetRange.NonNegative && !SourceRange.NonNegative) ||
