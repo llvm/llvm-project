@@ -22,9 +22,7 @@
 
 using namespace clang;
 
-// The number of ValueDecls we want to keep track of by default (per-function)
-#define VARDECL_SET_SIZE 256
-typedef llvm::SmallPtrSet<const VarDecl*, VARDECL_SET_SIZE> VarDeclSet;
+typedef llvm::SmallPtrSet<const VarDecl*, 32> VarDeclSet;
 
 PseudoConstantAnalysis::PseudoConstantAnalysis(const Stmt *DeclBody) :
       DeclBody(DeclBody), Analyzed(false) {
