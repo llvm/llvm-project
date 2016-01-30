@@ -89,25 +89,26 @@ bool AMDGPUAnnotateKernelFeatures::runOnModule(Module &M) {
 
   static const StringRef IntrinsicToAttr[][2] = {
     // .x omitted
+    { "llvm.amdgcn.workitem.id.y", "amdgpu-work-item-id-y" },
+    { "llvm.amdgcn.workitem.id.z", "amdgpu-work-item-id-z" },
+
+    { "llvm.amdgcn.workgroup.id.y", "amdgpu-work-group-id-y" },
+    { "llvm.amdgcn.workgroup.id.z", "amdgpu-work-group-id-z" },
+
     { "llvm.r600.read.tgid.y", "amdgpu-work-group-id-y" },
     { "llvm.r600.read.tgid.z", "amdgpu-work-group-id-z" },
 
     // .x omitted
     { "llvm.r600.read.tidig.y", "amdgpu-work-item-id-y" },
     { "llvm.r600.read.tidig.z", "amdgpu-work-item-id-z" }
-
   };
 
   static const StringRef HSAIntrinsicToAttr[][2] = {
-    { "llvm.r600.read.local.size.x", "amdgpu-dispatch-ptr" },
-    { "llvm.r600.read.local.size.y", "amdgpu-dispatch-ptr" },
-    { "llvm.r600.read.local.size.z", "amdgpu-dispatch-ptr" },
-
-    { "llvm.r600.read.global.size.x", "amdgpu-dispatch-ptr" },
-    { "llvm.r600.read.global.size.y", "amdgpu-dispatch-ptr" },
-    { "llvm.r600.read.global.size.z", "amdgpu-dispatch-ptr" },
-    { "llvm.amdgcn.dispatch.ptr",     "amdgpu-dispatch-ptr" }
+    { "llvm.amdgcn.dispatch.ptr", "amdgpu-dispatch-ptr" }
   };
+
+  // TODO: We should not add the attributes if the known compile time workgroup
+  // size is 1 for y/z.
 
   // TODO: Intrinsics that require queue ptr.
 

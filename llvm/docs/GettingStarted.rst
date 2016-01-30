@@ -76,8 +76,7 @@ Here's the short story for getting up and running quickly with LLVM:
 
 #. Configure and build LLVM and Clang:
 
-   The usual build uses `CMake <CMake.html>`_. If you would rather use
-   autotools, see `Building LLVM with autotools <BuildingLLVMWithAutotools.html>`_.
+   The build uses `CMake <CMake.html>`_.
    Although the build is known to work with CMake >= 2.8.8, we recommend CMake
    >= v3.2, especially if you're generating Ninja build files.
 
@@ -713,9 +712,8 @@ Local LLVM Configuration
 ------------------------
 
 Once checked out from the Subversion repository, the LLVM suite source code must
-be configured before being built. For instructions using autotools please see
-`Building LLVM With Autotools <BuildingLLVMWithAutotools.html>`_. The
-recommended process uses CMake. Unlinke the normal ``configure`` script, CMake
+be configured before being built. This process uses CMake.
+Unlinke the normal ``configure`` script, CMake
 generates the build files in whatever format you request as well as various
 ``*.inc`` files, and ``llvm/include/Config/config.h``.
 

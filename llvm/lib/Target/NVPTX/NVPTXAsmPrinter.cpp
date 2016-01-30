@@ -802,6 +802,13 @@ void NVPTXAsmPrinter::recordAndEmitFilenames(Module &M) {
   }
 }
 
+static bool isEmptyXXStructor(GlobalVariable *GV) {
+  if (!GV) return true;
+  const ConstantArray *InitList = dyn_cast<ConstantArray>(GV->getInitializer());
+  if (!InitList) return true;  // Not an array; we don't know how to parse.
+  return InitList->getNumOperands() == 0;
+}
+
 bool NVPTXAsmPrinter::doInitialization(Module &M) {
   // Construct a default subtarget off of the TargetMachine defaults. The
   // rest of NVPTX isn't friendly to change subtargets per function and
@@ -815,6 +822,16 @@ bool NVPTXAsmPrinter::doInitialization(Module &M) {
   if (M.alias_size()) {
     report_fatal_error("Module has aliases, which NVPTX does not support.");
     return true; // error
+  }
+  if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_ctors"))) {
+    report_fatal_error(
+        "Module has a nontrivial global ctor, which NVPTX does not support.");
+    return true;  // error
+  }
+  if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_dtors"))) {
+    report_fatal_error(
+        "Module has a nontrivial global dtor, which NVPTX does not support.");
+    return true;  // error
   }
 
   SmallString<128> Str1;

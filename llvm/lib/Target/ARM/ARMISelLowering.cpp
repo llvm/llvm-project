@@ -7185,7 +7185,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
 
   // Get an ordered list of the machine basic blocks for the jump table.
   std::vector<MachineBasicBlock*> LPadList;
-  SmallPtrSet<MachineBasicBlock*, 64> InvokeBBs;
+  SmallPtrSet<MachineBasicBlock*, 32> InvokeBBs;
   LPadList.reserve(CallSiteNumToLPad.size());
   for (unsigned I = 1; I <= MaxCSNum; ++I) {
     SmallVectorImpl<MachineBasicBlock*> &MBBList = CallSiteNumToLPad[I];

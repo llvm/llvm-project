@@ -17,6 +17,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -26,20 +27,42 @@ using namespace llvm;
 
 namespace {
 
+// FIXME: This can create globals so should be a module pass.
 class AMDGPUPromoteAlloca : public FunctionPass,
-                       public InstVisitor<AMDGPUPromoteAlloca> {
-
-  static char ID;
+                            public InstVisitor<AMDGPUPromoteAlloca> {
+private:
+  const TargetMachine *TM;
   Module *Mod;
-  const AMDGPUSubtarget &ST;
+  MDNode *MaxWorkGroupSizeRange;
+
+  // FIXME: This should be per-kernel.
   int LocalMemAvailable;
 
+  bool IsAMDGCN;
+  bool IsAMDHSA;
+
+  std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
+  Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
+
 public:
-  AMDGPUPromoteAlloca(const AMDGPUSubtarget &st) : FunctionPass(ID), ST(st),
-                                                   LocalMemAvailable(0) { }
+  static char ID;
+
+  AMDGPUPromoteAlloca(const TargetMachine *TM_ = nullptr) :
+    FunctionPass(ID),
+    TM(TM_),
+    Mod(nullptr),
+    MaxWorkGroupSizeRange(nullptr),
+    LocalMemAvailable(0),
+    IsAMDGCN(false),
+    IsAMDHSA(false) { }
+
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
-  const char *getPassName() const override { return "AMDGPU Promote Alloca"; }
+
+  const char *getPassName() const override {
+    return "AMDGPU Promote Alloca";
+  }
+
   void visitAlloca(AllocaInst &I);
 };
 
@@ -47,15 +70,40 @@ public:
 
 char AMDGPUPromoteAlloca::ID = 0;
 
+INITIALIZE_TM_PASS(AMDGPUPromoteAlloca, DEBUG_TYPE,
+                   "AMDGPU promote alloca to vector or LDS", false, false)
+
+char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
+
+
 bool AMDGPUPromoteAlloca::doInitialization(Module &M) {
+  if (!TM)
+    return false;
+
   Mod = &M;
+
+  // The maximum workitem id.
+  //
+  // FIXME: Should get as subtarget property. Usually runtime enforced max is
+  // 256.
+  MDBuilder MDB(Mod->getContext());
+  MaxWorkGroupSizeRange = MDB.createRange(APInt(32, 0), APInt(32, 2048));
+
+  const Triple &TT = TM->getTargetTriple();
+
+  IsAMDGCN = TT.getArch() == Triple::amdgcn;
+  IsAMDHSA = TT.getOS() == Triple::AMDHSA;
+
   return false;
 }
 
 bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
+  if (!TM)
+    return false;
+
+  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
 
   FunctionType *FTy = F.getFunctionType();
-
   LocalMemAvailable = ST.getLocalMemorySize();
 
 
@@ -98,6 +146,119 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
   visit(F);
 
   return false;
+}
+
+std::pair<Value *, Value *>
+AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
+  if (!IsAMDHSA) {
+    Function *LocalSizeYFn
+      = Intrinsic::getDeclaration(Mod, Intrinsic::r600_read_local_size_y);
+    Function *LocalSizeZFn
+      = Intrinsic::getDeclaration(Mod, Intrinsic::r600_read_local_size_z);
+
+    CallInst *LocalSizeY = Builder.CreateCall(LocalSizeYFn, {});
+    CallInst *LocalSizeZ = Builder.CreateCall(LocalSizeZFn, {});
+
+    LocalSizeY->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+    LocalSizeZ->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+
+    return std::make_pair(LocalSizeY, LocalSizeZ);
+  }
+
+  // We must read the size out of the dispatch pointer.
+  assert(IsAMDGCN);
+
+  // We are indexing into this struct, and want to extract the workgroup_size_*
+  // fields.
+  //
+  //   typedef struct hsa_kernel_dispatch_packet_s {
+  //     uint16_t header;
+  //     uint16_t setup;
+  //     uint16_t workgroup_size_x ;
+  //     uint16_t workgroup_size_y;
+  //     uint16_t workgroup_size_z;
+  //     uint16_t reserved0;
+  //     uint32_t grid_size_x ;
+  //     uint32_t grid_size_y ;
+  //     uint32_t grid_size_z;
+  //
+  //     uint32_t private_segment_size;
+  //     uint32_t group_segment_size;
+  //     uint64_t kernel_object;
+  //
+  // #ifdef HSA_LARGE_MODEL
+  //     void *kernarg_address;
+  // #elif defined HSA_LITTLE_ENDIAN
+  //     void *kernarg_address;
+  //     uint32_t reserved1;
+  // #else
+  //     uint32_t reserved1;
+  //     void *kernarg_address;
+  // #endif
+  //     uint64_t reserved2;
+  //     hsa_signal_t completion_signal; // uint64_t wrapper
+  //   } hsa_kernel_dispatch_packet_t
+  //
+  Function *DispatchPtrFn
+    = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_dispatch_ptr);
+
+  CallInst *DispatchPtr = Builder.CreateCall(DispatchPtrFn, {});
+  DispatchPtr->addAttribute(AttributeSet::ReturnIndex, Attribute::NoAlias);
+  DispatchPtr->addAttribute(AttributeSet::ReturnIndex, Attribute::NonNull);
+
+  // Size of the dispatch packet struct.
+  DispatchPtr->addDereferenceableAttr(AttributeSet::ReturnIndex, 64);
+
+  Type *I32Ty = Type::getInt32Ty(Mod->getContext());
+  Value *CastDispatchPtr = Builder.CreateBitCast(
+    DispatchPtr, PointerType::get(I32Ty, AMDGPUAS::CONSTANT_ADDRESS));
+
+  // We could do a single 64-bit load here, but it's likely that the basic
+  // 32-bit and extract sequence is already present, and it is probably easier
+  // to CSE this. The loads should be mergable later anyway.
+  Value *GEPXY = Builder.CreateConstInBoundsGEP1_64(CastDispatchPtr, 1);
+  LoadInst *LoadXY = Builder.CreateAlignedLoad(GEPXY, 4);
+
+  Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(CastDispatchPtr, 2);
+  LoadInst *LoadZU = Builder.CreateAlignedLoad(GEPZU, 4);
+
+  MDNode *MD = llvm::MDNode::get(Mod->getContext(), None);
+  LoadXY->setMetadata(LLVMContext::MD_invariant_load, MD);
+  LoadZU->setMetadata(LLVMContext::MD_invariant_load, MD);
+  LoadZU->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+
+  // Extract y component. Upper half of LoadZU should be zero already.
+  Value *Y = Builder.CreateLShr(LoadXY, 16);
+
+  return std::make_pair(Y, LoadZU);
+}
+
+Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
+  Intrinsic::ID IntrID = Intrinsic::ID::not_intrinsic;
+
+  switch (N) {
+  case 0:
+    IntrID = IsAMDGCN ? Intrinsic::amdgcn_workitem_id_x
+      : Intrinsic::r600_read_tidig_x;
+    break;
+  case 1:
+    IntrID = IsAMDGCN ? Intrinsic::amdgcn_workitem_id_y
+      : Intrinsic::r600_read_tidig_y;
+    break;
+
+  case 2:
+    IntrID = IsAMDGCN ? Intrinsic::amdgcn_workitem_id_z
+      : Intrinsic::r600_read_tidig_z;
+    break;
+  default:
+    llvm_unreachable("invalid dimension");
+  }
+
+  Function *WorkitemIdFn = Intrinsic::getDeclaration(Mod, IntrID);
+  CallInst *CI = Builder.CreateCall(WorkitemIdFn);
+  CI->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+
+  return CI;
 }
 
 static VectorType *arrayTypeToVecType(Type *ArrayTy) {
@@ -317,27 +478,12 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
       *Mod, GVTy, false, GlobalValue::ExternalLinkage, 0, I.getName(), 0,
       GlobalVariable::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS);
 
-  FunctionType *FTy = FunctionType::get(
-      Type::getInt32Ty(Mod->getContext()), false);
-  AttributeSet AttrSet;
-  AttrSet.addAttribute(Mod->getContext(), 0, Attribute::ReadNone);
+  Value *TCntY, *TCntZ;
 
-  Value *ReadLocalSizeY = Mod->getOrInsertFunction(
-      "llvm.r600.read.local.size.y", FTy, AttrSet);
-  Value *ReadLocalSizeZ = Mod->getOrInsertFunction(
-      "llvm.r600.read.local.size.z", FTy, AttrSet);
-  Value *ReadTIDIGX = Mod->getOrInsertFunction(
-      "llvm.r600.read.tidig.x", FTy, AttrSet);
-  Value *ReadTIDIGY = Mod->getOrInsertFunction(
-      "llvm.r600.read.tidig.y", FTy, AttrSet);
-  Value *ReadTIDIGZ = Mod->getOrInsertFunction(
-      "llvm.r600.read.tidig.z", FTy, AttrSet);
-
-  Value *TCntY = Builder.CreateCall(ReadLocalSizeY, {});
-  Value *TCntZ = Builder.CreateCall(ReadLocalSizeZ, {});
-  Value *TIdX = Builder.CreateCall(ReadTIDIGX, {});
-  Value *TIdY = Builder.CreateCall(ReadTIDIGY, {});
-  Value *TIdZ = Builder.CreateCall(ReadTIDIGZ, {});
+  std::tie(TCntY, TCntZ) = getLocalSizeYZ(Builder);
+  Value *TIdX = getWorkitemID(Builder, 0);
+  Value *TIdY = getWorkitemID(Builder, 1);
+  Value *TIdZ = getWorkitemID(Builder, 2);
 
   Value *Tmp0 = Builder.CreateMul(TCntY, TCntZ);
   Tmp0 = Builder.CreateMul(Tmp0, TIdX);
@@ -427,6 +573,6 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
   }
 }
 
-FunctionPass *llvm::createAMDGPUPromoteAlloca(const AMDGPUSubtarget &ST) {
-  return new AMDGPUPromoteAlloca(ST);
+FunctionPass *llvm::createAMDGPUPromoteAlloca(const TargetMachine *TM) {
+  return new AMDGPUPromoteAlloca(TM);
 }

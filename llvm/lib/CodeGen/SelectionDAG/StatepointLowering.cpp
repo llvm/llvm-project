@@ -258,7 +258,7 @@ static void removeDuplicatesGCPtrs(SmallVectorImpl<const Value *> &Bases,
                                    SelectionDAGBuilder &Builder) {
 
   // This is horribly inefficient, but I don't care right now
-  SmallSet<SDValue, 64> Seen;
+  SmallSet<SDValue, 32> Seen;
 
   SmallVector<const Value *, 64> NewBases, NewPtrs, NewRelocs;
   for (size_t i = 0; i < Ptrs.size(); i++) {

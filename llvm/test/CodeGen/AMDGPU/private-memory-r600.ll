@@ -1,14 +1,7 @@
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
+; RUN: opt -S -mtriple=r600-unknown-unknown -mcpu=redwood -amdgpu-promote-alloca < %s | FileCheck -check-prefix=OPT %s
 
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -amdgpu-promote-alloca < %s | FileCheck -check-prefix=HSAOPT %s
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -mcpu=kaveri -amdgpu-promote-alloca < %s | FileCheck -check-prefix=NOHSAOPT %s
-
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}mova_same_clause:
 
@@ -17,46 +10,12 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; R600: LDS_READ
 ; R600: LDS_READ
 
-; HSA-PROMOTE: .amd_kernel_code_t
-; HSA-PROMOTE: workgroup_group_segment_byte_size = 5120
-; HSA-PROMOTE: .end_amd_kernel_code_t
+; OPT: call i32 @llvm.r600.read.local.size.y(), !range !0
+; OPT: call i32 @llvm.r600.read.local.size.z(), !range !0
+; OPT: call i32 @llvm.r600.read.tidig.x(), !range !0
+; OPT: call i32 @llvm.r600.read.tidig.y(), !range !0
+; OPT: call i32 @llvm.r600.read.tidig.z(), !range !0
 
-; FIXME: These should be merged
-; HSA-PROMOTE: s_load_dword s{{[0-9]+}}, s[4:5], 0x1
-; HSA-PROMOTE: s_load_dword s{{[0-9]+}}, s[4:5], 0x2
-
-; SI-PROMOTE: ds_write_b32
-; SI-PROMOTE: ds_write_b32
-; SI-PROMOTE: ds_read_b32
-; SI-PROMOTE: ds_read_b32
-
-; HSA-ALLOCA: .amd_kernel_code_t
-; FIXME: Creating the emergency stack slots causes us to over-estimate scratch
-; by 4 bytes.
-; HSA-ALLOCA: workitem_private_segment_byte_size = 24
-; HSA-ALLOCA: .end_amd_kernel_code_t
-
-; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x70,0xe0
-; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x70,0xe0
-
-
-; HSAOPT: [[DISPATCH_PTR:%[0-9]+]] = call noalias nonnull dereferenceable(64) i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
-; HSAOPT: [[CAST_DISPATCH_PTR:%[0-9]+]] = bitcast i8 addrspace(2)* [[DISPATCH_PTR]] to i32 addrspace(2)*
-; HSAOPT: [[GEP0:%[0-9]+]] = getelementptr inbounds i32, i32 addrspace(2)* [[CAST_DISPATCH_PTR]], i64 1
-; HSAOPT: [[LDXY:%[0-9]+]] = load i32, i32 addrspace(2)* [[GEP0]], align 4, !invariant.load !0
-; HSAOPT: [[GEP1:%[0-9]+]] = getelementptr inbounds i32, i32 addrspace(2)* [[CAST_DISPATCH_PTR]], i64 2
-; HSAOPT: [[LDZU:%[0-9]+]] = load i32, i32 addrspace(2)* [[GEP1]], align 4, !range !1, !invariant.load !0
-; HSAOPT: [[EXTRACTY:%[0-9]+]] = lshr i32 [[LDXY]], 16
-
-; HSAOPT: call i32 @llvm.amdgcn.workitem.id.x(), !range !1
-; HSAOPT: call i32 @llvm.amdgcn.workitem.id.y(), !range !1
-; HSAOPT: call i32 @llvm.amdgcn.workitem.id.z(), !range !1
-
-; NOHSAOPT: call i32 @llvm.r600.read.local.size.y(), !range !0
-; NOHSAOPT: call i32 @llvm.r600.read.local.size.z(), !range !0
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.x(), !range !0
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.y(), !range !0
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.z(), !range !0
 define void @mova_same_clause(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 entry:
   %stack = alloca [5 x i32], align 4
@@ -86,8 +45,6 @@ entry:
 
 ; FUNC-LABEL: {{^}}multiple_structs:
 ; R600-NOT: MOVA_INT
-; SI-NOT: v_movrel
-; SI-NOT: v_movrel
 %struct.point = type { i32, i32 }
 
 define void @multiple_structs(i32 addrspace(1)* %out) {
@@ -117,7 +74,6 @@ entry:
 
 ; FUNC-LABEL: {{^}}direct_loop:
 ; R600-NOT: MOVA_INT
-; SI-NOT: v_movrel
 
 define void @direct_loop(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 entry:
@@ -154,10 +110,6 @@ for.end:
 ; FUNC-LABEL: {{^}}short_array:
 
 ; R600: MOVA_INT
-
-; SI-PROMOTE-DAG: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x68,0xe0
-; SI-PROMOTE-DAG: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:2 ; encoding: [0x02,0x10,0x68,0xe0
-; SI-PROMOTE: buffer_load_sshort v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}
 define void @short_array(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %0 = alloca [2 x i16]
@@ -175,9 +127,6 @@ entry:
 ; FUNC-LABEL: {{^}}char_array:
 
 ; R600: MOVA_INT
-
-; SI-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x60,0xe0
-; SI-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:1 ; encoding: [0x01,0x10,0x60,0xe0
 define void @char_array(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %0 = alloca [2 x i8]
@@ -199,8 +148,6 @@ entry:
 ; R600-NOT: MOV T0.X
 ; Additional check in case the move ends up in the last slot
 ; R600-NOT: MOV * TO.X
-
-; SI-NOT: v_mov_b32_e{{(32|64)}} v0
 define void @work_item_info(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %0 = alloca [2 x i32]
@@ -210,7 +157,7 @@ entry:
   store i32 1, i32* %2
   %3 = getelementptr [2 x i32], [2 x i32]* %0, i32 0, i32 %in
   %4 = load i32, i32* %3
-  %5 = call i32 @llvm.amdgcn.workitem.id.x()
+  %5 = call i32 @llvm.r600.read.tidig.x()
   %6 = add i32 %4, %5
   store i32 %6, i32 addrspace(1)* %out
   ret void
@@ -222,7 +169,6 @@ entry:
 ; R600_CHECK: MOV
 ; R600_CHECK: [[CHAN:[XYZW]]]+
 ; R600-NOT: [[CHAN]]+
-; SI: v_mov_b32_e32 v3
 define void @no_overlap(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %0 = alloca [3 x i8], align 1
@@ -349,7 +295,4 @@ define void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) {
   ret void
 }
 
-; HSAOPT: !0 = !{}
-; HSAOPT: !1 = !{i32 0, i32 2048}
-
-; NOHSAOPT: !0 = !{i32 0, i32 2048}
+; OPT: !0 = !{i32 0, i32 2048}

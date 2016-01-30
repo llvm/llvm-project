@@ -70,7 +70,6 @@ representation.
    CommandGuide/index
    GettingStarted
    GettingStartedVS
-   BuildingLLVMWithAutotools
    FAQ
    Lexicon
    HowToAddABuilder
@@ -106,10 +105,6 @@ representation.
 :doc:`GettingStartedVS`
    An addendum to the main Getting Started guide for those using Visual Studio
    on Windows.
-
-:doc:`BuildingLLVMWithAutotools`
-   An addendum to the Getting Started guide with instructions for building LLVM
-   with the Autotools build system.
 
 :doc:`tutorial/index`
    Tutorials about using LLVM. Includes a tutorial about making a custom

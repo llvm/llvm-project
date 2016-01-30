@@ -1465,7 +1465,7 @@ void llvm::removeUnwindEdge(BasicBlock *BB) {
 /// if they are in a dead cycle.  Return true if a change was made, false
 /// otherwise.
 bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
-  SmallPtrSet<BasicBlock*, 128> Reachable;
+  SmallPtrSet<BasicBlock*, 16> Reachable;
   bool Changed = markAliveBlocks(F, Reachable);
 
   // If there are unreachable blocks in the CFG...

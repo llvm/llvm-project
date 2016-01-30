@@ -1304,6 +1304,13 @@ SDValue SITargetLowering::lowerImplicitZextParam(SelectionDAG &DAG,
                      DAG.getValueType(VT));
 }
 
+static SDValue emitNonHSAIntrinsicError(SelectionDAG& DAG, EVT VT) {
+  DiagnosticInfoUnsupported BadIntrin(*DAG.getMachineFunction().getFunction(),
+                                      "non-hsa intrinsic with hsa target");
+  DAG.getContext()->diagnose(BadIntrin);
+  return DAG.getUNDEF(VT);
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -1349,30 +1356,57 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        DAG.getConstantFP(Min, DL, VT));
   }
   case Intrinsic::r600_read_ngroups_x:
+    if (Subtarget->isAmdHsaOS())
+      return emitNonHSAIntrinsicError(DAG, VT);
+
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::NGROUPS_X, false);
   case Intrinsic::r600_read_ngroups_y:
+    if (Subtarget->isAmdHsaOS())
+      return emitNonHSAIntrinsicError(DAG, VT);
+
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::NGROUPS_Y, false);
   case Intrinsic::r600_read_ngroups_z:
+    if (Subtarget->isAmdHsaOS())
+      return emitNonHSAIntrinsicError(DAG, VT);
+
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::NGROUPS_Z, false);
   case Intrinsic::r600_read_global_size_x:
+    if (Subtarget->isAmdHsaOS())
+      return emitNonHSAIntrinsicError(DAG, VT);
+
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::GLOBAL_SIZE_X, false);
   case Intrinsic::r600_read_global_size_y:
+    if (Subtarget->isAmdHsaOS())
+      return emitNonHSAIntrinsicError(DAG, VT);
+
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::GLOBAL_SIZE_Y, false);
   case Intrinsic::r600_read_global_size_z:
+    if (Subtarget->isAmdHsaOS())
+      return emitNonHSAIntrinsicError(DAG, VT);
+
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::GLOBAL_SIZE_Z, false);
   case Intrinsic::r600_read_local_size_x:
+    if (Subtarget->isAmdHsaOS())
+      return emitNonHSAIntrinsicError(DAG, VT);
+
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_X);
   case Intrinsic::r600_read_local_size_y:
+    if (Subtarget->isAmdHsaOS())
+      return emitNonHSAIntrinsicError(DAG, VT);
+
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Y);
   case Intrinsic::r600_read_local_size_z:
+    if (Subtarget->isAmdHsaOS())
+      return emitNonHSAIntrinsicError(DAG, VT);
+
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Z);
   case Intrinsic::amdgcn_read_workdim:
@@ -1380,21 +1414,27 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     // Really only 2 bits.
     return lowerImplicitZextParam(DAG, Op, MVT::i8,
                                   getImplicitParameterOffset(MFI, GRID_DIM));
+  case Intrinsic::amdgcn_workgroup_id_x:
   case Intrinsic::r600_read_tgid_x:
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::WORKGROUP_ID_X), VT);
+  case Intrinsic::amdgcn_workgroup_id_y:
   case Intrinsic::r600_read_tgid_y:
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::WORKGROUP_ID_Y), VT);
+  case Intrinsic::amdgcn_workgroup_id_z:
   case Intrinsic::r600_read_tgid_z:
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::WORKGROUP_ID_Z), VT);
+  case Intrinsic::amdgcn_workitem_id_x:
   case Intrinsic::r600_read_tidig_x:
     return CreateLiveInRegister(DAG, &AMDGPU::VGPR_32RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_X), VT);
+  case Intrinsic::amdgcn_workitem_id_y:
   case Intrinsic::r600_read_tidig_y:
     return CreateLiveInRegister(DAG, &AMDGPU::VGPR_32RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_Y), VT);
+  case Intrinsic::amdgcn_workitem_id_z:
   case Intrinsic::r600_read_tidig_z:
     return CreateLiveInRegister(DAG, &AMDGPU::VGPR_32RegClass,
       TRI->getPreloadedValue(MF, SIRegisterInfo::WORKITEM_ID_Z), VT);

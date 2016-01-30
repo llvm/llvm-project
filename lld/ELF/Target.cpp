@@ -76,11 +76,6 @@ template <class ELFT> bool isGnuIFunc(const SymbolBody &S) {
   return false;
 }
 
-template bool isGnuIFunc<ELF32LE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF32BE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF64LE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF64BE>(const SymbolBody &S);
-
 namespace {
 class X86TargetInfo final : public TargetInfo {
 public:
@@ -1579,6 +1574,11 @@ bool needsMipsLocalGot(uint32_t Type, SymbolBody *Body) {
     return true;
   return !Config->Shared;
 }
+
+template bool isGnuIFunc<ELF32LE>(const SymbolBody &S);
+template bool isGnuIFunc<ELF32BE>(const SymbolBody &S);
+template bool isGnuIFunc<ELF64LE>(const SymbolBody &S);
+template bool isGnuIFunc<ELF64BE>(const SymbolBody &S);
 
 template uint32_t getMipsGpAddr<ELF32LE>();
 template uint32_t getMipsGpAddr<ELF32BE>();
