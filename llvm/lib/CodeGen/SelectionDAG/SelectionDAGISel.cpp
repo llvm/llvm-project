@@ -669,7 +669,7 @@ void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
 }
 
 void SelectionDAGISel::ComputeLiveOutVRegInfo() {
-  SmallPtrSet<SDNode*, 128> VisitedNodes;
+  SmallPtrSet<SDNode*, 16> VisitedNodes;
   SmallVector<SDNode*, 128> Worklist;
 
   Worklist.push_back(CurDAG->getRoot().getNode());

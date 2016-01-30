@@ -63,7 +63,7 @@ private:
   bool Analyzed;
 
   // The set of visited instructions (non-integer-typed only).
-  SmallPtrSet<Instruction*, 128> Visited;
+  SmallPtrSet<Instruction*, 32> Visited;
   DenseMap<Instruction *, APInt> AliveBits;
 };
 

@@ -269,7 +269,7 @@ GlobalsAAResult::getFunctionInfo(const Function *F) {
 /// (really, their address passed to something nontrivial), record this fact,
 /// and record the functions that they are used directly in.
 void GlobalsAAResult::AnalyzeGlobals(Module &M) {
-  SmallPtrSet<Function *, 64> TrackedFunctions;
+  SmallPtrSet<Function *, 32> TrackedFunctions;
   for (Function &F : M)
     if (F.hasLocalLinkage())
       if (!AnalyzeUsesOfPointer(&F)) {
@@ -281,7 +281,7 @@ void GlobalsAAResult::AnalyzeGlobals(Module &M) {
         ++NumNonAddrTakenFunctions;
       }
 
-  SmallPtrSet<Function *, 64> Readers, Writers;
+  SmallPtrSet<Function *, 16> Readers, Writers;
   for (GlobalVariable &GV : M.globals())
     if (GV.hasLocalLinkage()) {
       if (!AnalyzeUsesOfPointer(&GV, &Readers,

@@ -1249,7 +1249,7 @@ int FunctionComparator::compare() {
   // functions, then takes each block from each terminator in order. As an
   // artifact, this also means that unreachable blocks are ignored.
   SmallVector<const BasicBlock *, 8> FnLBBs, FnRBBs;
-  SmallSet<const BasicBlock *, 128> VisitedBBs; // in terms of F1.
+  SmallPtrSet<const BasicBlock *, 32> VisitedBBs; // in terms of F1.
 
   FnLBBs.push_back(&FnL->getEntryBlock());
   FnRBBs.push_back(&FnR->getEntryBlock());
