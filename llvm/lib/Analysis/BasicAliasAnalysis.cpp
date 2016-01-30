@@ -37,16 +37,17 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
+
+#define DEBUG_TYPE "basicaa"
+
 using namespace llvm;
 
 /// Enable analysis of recursive PHI nodes.
 static cl::opt<bool> EnableRecPhiAnalysis("basicaa-recphi", cl::Hidden,
                                           cl::init(false));
-
 /// SearchLimitReached / SearchTimes shows how often the limit of
 /// to decompose GEPs is reached. It will affect the precision
 /// of basic alias analysis.
-#define DEBUG_TYPE "basicaa"
 STATISTIC(SearchLimitReached, "Number of times the limit to "
                               "decompose GEPs is reached");
 STATISTIC(SearchTimes, "Number of times a GEP is decomposed");
@@ -319,6 +320,16 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
   return V;
 }
 
+/// To ensure a pointer offset fits in an integer of size PointerSize
+/// (in bits) when that size is smaller than 64. This is an issue in
+/// particular for 32b programs with negative indices that rely on two's
+/// complement wrap-arounds for correct alias information.
+static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
+  assert(PointerSize <= 64 && "Invalid PointerSize!");
+  unsigned ShiftBits = 64 - PointerSize;
+  return (uint64_t)Offset << ShiftBits >> ShiftBits;
+}
+
 /// If V is a symbolic pointer expression, decompose it into a base pointer
 /// with a constant offset and a number of scaled symbolic offsets.
 ///
@@ -387,6 +398,7 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
     unsigned AS = GEPOp->getPointerAddressSpace();
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
+    unsigned PointerSize = DL.getPointerSizeInBits(AS);
     for (User::const_op_iterator I = GEPOp->op_begin() + 1, E = GEPOp->op_end();
          I != E; ++I) {
       const Value *Index = *I;
@@ -415,7 +427,6 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
       // If the integer type is smaller than the pointer size, it is implicitly
       // sign extended to pointer size.
       unsigned Width = Index->getType()->getIntegerBitWidth();
-      unsigned PointerSize = DL.getPointerSizeInBits(AS);
       if (PointerSize > Width)
         SExtBits += PointerSize - Width;
 
@@ -445,10 +456,7 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
 
       // Make sure that we have a scale that makes sense for this target's
       // pointer size.
-      if (unsigned ShiftBits = 64 - PointerSize) {
-        Scale <<= ShiftBits;
-        Scale = (int64_t)Scale >> ShiftBits;
-      }
+      Scale = adjustToPointerSize(Scale, PointerSize);
 
       if (Scale) {
         VariableGEPIndex Entry = {Index, ZExtBits, SExtBits,
