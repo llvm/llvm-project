@@ -976,6 +976,8 @@ def note_property_synthesize : Note<
   "property synthesized here">;
 def error_synthesize_category_decl : Error<
   "@synthesize not allowed in a category's implementation">;
+def error_synthesize_on_class_property : Error<
+  "@synthesize not allowed on a class property %0">;
 def error_reference_property : Error<
   "property of reference type is not supported">;
 def error_missing_property_interface : Error<

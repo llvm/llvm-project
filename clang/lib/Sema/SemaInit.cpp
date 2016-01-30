@@ -2928,7 +2928,7 @@ unsigned InitializedEntity::dumpImpl(raw_ostream &OS) const {
   return Depth + 1;
 }
 
-void InitializedEntity::dump() const {
+LLVM_DUMP_METHOD void InitializedEntity::dump() const {
   dumpImpl(llvm::errs());
 }
 

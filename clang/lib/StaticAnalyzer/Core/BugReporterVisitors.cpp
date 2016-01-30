@@ -828,8 +828,33 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
     // Check if this is inlined defensive checks.
     const LocationContext *CurLC =Succ->getLocationContext();
     const LocationContext *ReportLC = BR.getErrorNode()->getLocationContext();
-    if (CurLC != ReportLC && !CurLC->isParentOf(ReportLC))
+    if (CurLC != ReportLC && !CurLC->isParentOf(ReportLC)) {
       BR.markInvalid("Suppress IDC", CurLC);
+      return nullptr;
+    }
+
+    // Treat defensive checks in function-like macros as if they were an inlined
+    // defensive check.
+    auto CurPoint = Succ->getLocation().getAs<BlockEdge>();
+    auto BugPoint = BR.getErrorNode()->getLocation().getAs<StmtPoint>();
+
+    if (!CurPoint || !BugPoint)
+      return nullptr;
+
+    SourceLocation CurLoc =
+        CurPoint->getSrc()->getTerminator().getStmt()->getLocStart();
+    SourceLocation BugLoc = BugPoint->getStmt()->getLocStart();
+
+    if (CurLoc.isMacroID() && !BugLoc.isMacroID()) {
+      const SourceManager &SMgr = BRC.getSourceManager();
+      std::pair<FileID, unsigned> CLInfo = SMgr.getDecomposedLoc(CurLoc);
+      SrcMgr::SLocEntry SE = SMgr.getSLocEntry(CLInfo.first);
+      const SrcMgr::ExpansionInfo &EInfo = SE.getExpansion();
+      if (EInfo.isFunctionMacroExpansion()) {
+        BR.markInvalid("Suppress Macro IDC", CurLC);
+        return nullptr;
+      }
+    }
   }
   return nullptr;
 }

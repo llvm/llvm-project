@@ -31,18 +31,18 @@ void testBasicRules() {
   Dummy *q = 0;
   if (getRandom()) {
     takesNullable(q);
-    takesNonnull(q); // expected-warning {{}}
+    takesNonnull(q); // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
   }
 }
 
 Dummy *_Nonnull testNullReturn() {
   Dummy *p = 0;
-  return p; // expected-warning {{}}
+  return p; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
 }
 
 void onlyReportFirstPreconditionViolationOnPath() {
   Dummy *p = 0;
-  takesNonnull(p); // expected-warning {{}}
+  takesNonnull(p); // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
   takesNonnull(p); // No warning.
   // Passing null to nonnull is a sink. Stop the analysis.
   int i = 0;
@@ -143,7 +143,7 @@ TestObject * _Nonnull returnsNilObjCInstanceDirectlyWithSuppressingCast() {
 @implementation SomeClass (MethodReturn)
 - (SomeClass * _Nonnull)testReturnsNilInNonnull {
   SomeClass *local = nil;
-  return local; // expected-warning {{Null is returned from a function that is expected to return a non-null value}}
+  return local; // expected-warning {{Null is returned from a method that is expected to return a non-null value}}
 }
 
 - (SomeClass * _Nonnull)testReturnsCastSuppressedNilInNonnull {

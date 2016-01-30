@@ -230,7 +230,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
     // dereference.
     if (ExplodedNode *N = C.generateSink(nullState, C.getPredecessor())) {
       ImplicitNullDerefEvent event = {l, isLoad, N, &C.getBugReporter(),
-                                      /*IsDirectDereference=*/false};
+                                      /*IsDirectDereference=*/true};
       dispatchEvent(event);
     }
   }
@@ -272,7 +272,7 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
     if (ExplodedNode *N = C.generateSink(StNull, C.getPredecessor())) {
       ImplicitNullDerefEvent event = {V, /*isLoad=*/true, N,
                                       &C.getBugReporter(),
-                                      /*IsDirectDereference=*/false};
+                                      /*IsDirectDereference=*/true};
       dispatchEvent(event);
     }
   }

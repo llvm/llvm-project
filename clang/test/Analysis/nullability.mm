@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -fobjc-arc -analyze -analyzer-checker=core,nullability -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,nullability -verify %s
+// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,nullability -verify %s
 
 #define nil 0
 #define BOOL int
@@ -72,16 +71,16 @@ void testBasicRules() {
   // Make every dereference a different path to avoid sinks after errors.
   switch (getRandom()) {
   case 0: {
-    Dummy &r = *p; // expected-warning {{}}
+    Dummy &r = *p; // expected-warning {{Nullable pointer is dereferenced}}
   } break;
   case 1: {
-    int b = p->val; // expected-warning {{}}
+    int b = p->val; // expected-warning {{Nullable pointer is dereferenced}}
   } break;
   case 2: {
-    int stuff = *ptr; // expected-warning {{}}
+    int stuff = *ptr; // expected-warning {{Nullable pointer is dereferenced}}
   } break;
   case 3:
-    takesNonnull(p); // expected-warning {{}}
+    takesNonnull(p); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
     break;
   case 4: {
     Dummy d;
@@ -103,11 +102,11 @@ void testBasicRules() {
   Dummy *q = 0;
   if (getRandom()) {
     takesNullable(q);
-    takesNonnull(q); // expected-warning {{}}
+    takesNonnull(q); // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
   }
   Dummy a;
   Dummy *_Nonnull nonnull = &a;
-  nonnull = q; // expected-warning {{}}
+  nonnull = q; // expected-warning {{Null is assigned to a pointer which is expected to have non-null value}}
   q = &a;
   takesNullable(q);
   takesNonnull(q);
@@ -120,14 +119,14 @@ void testArgumentTracking(Dummy *_Nonnull nonnull, Dummy *_Nullable nullable) {
   Dummy *p = nullable;
   Dummy *q = nonnull;
   switch(getRandom()) {
-  case 1: nonnull = p; break; // expected-warning {{}}
+  case 1: nonnull = p; break; // expected-warning {{Nullable pointer is assigned to a pointer which is expected to have non-null value}}
   case 2: p = 0; break;
   case 3: q = p; break;
   case 4: testMultiParamChecking(nonnull, nullable, nonnull); break;
   case 5: testMultiParamChecking(nonnull, nonnull, nonnull); break;
-  case 6: testMultiParamChecking(nonnull, nullable, nullable); break; // expected-warning {{}}
-  case 7: testMultiParamChecking(nullable, nullable, nonnull); // expected-warning {{}}
-  case 8: testMultiParamChecking(nullable, nullable, nullable); // expected-warning {{}}
+  case 6: testMultiParamChecking(nonnull, nullable, nullable); break; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 3rd parameter}}
+  case 7: testMultiParamChecking(nullable, nullable, nonnull); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+  case 8: testMultiParamChecking(nullable, nullable, nullable); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
   case 9: testMultiParamChecking((Dummy *_Nonnull)0, nullable, nonnull); break;
   }
 }
@@ -161,20 +160,20 @@ void testObjCMessageResultNullability() {
     break;
   case 3:
     shouldBeNullable = [eraseNullab(getNullableTestObject()) returnsNullable];
-    [o takesNonnull:shouldBeNullable]; // expected-warning {{}}
+    [o takesNonnull:shouldBeNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
     break;
   case 4:
     shouldBeNullable = [eraseNullab(getNonnullTestObject()) returnsNullable];
-    [o takesNonnull:shouldBeNullable]; // expected-warning {{}}
+    [o takesNonnull:shouldBeNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
     break;
   case 5:
     shouldBeNullable =
         [eraseNullab(getUnspecifiedTestObject()) returnsNullable];
-    [o takesNonnull:shouldBeNullable]; // expected-warning {{}}
+    [o takesNonnull:shouldBeNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
     break;
   case 6:
     shouldBeNullable = [eraseNullab(getNullableTestObject()) returnsNullable];
-    [o takesNonnull:shouldBeNullable]; // expected-warning {{}}
+    [o takesNonnull:shouldBeNullable]; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
     break;
   case 7: {
     int *shouldBeNonnull = [eraseNullab(getNonnullTestObject()) returnsNonnull];
@@ -203,7 +202,18 @@ Dummy * _Nonnull testDirectCastNilToNonnull() {
 void testIndirectCastNilToNonnullAndPass() {
   Dummy *p = (Dummy * _Nonnull)0;
   // FIXME: Ideally the cast above would suppress this warning.
-  takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null argument}}
+  takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
+}
+
+void testIndirectNilPassToNonnull() {
+  Dummy *p = 0;
+  takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
+}
+
+void testConditionalNilPassToNonnull(Dummy *p) {
+  if (!p) {
+    takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
+  }
 }
 
 Dummy * _Nonnull testIndirectCastNilToNonnullAndReturn() {
@@ -220,7 +230,7 @@ void testInvalidPropagation() {
 
 void onlyReportFirstPreconditionViolationOnPath() {
   Dummy *p = returnsNullable();
-  takesNonnull(p); // expected-warning {{}}
+  takesNonnull(p); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
   takesNonnull(p); // No warning.
   // The first warning was not a sink. The analysis expected to continue.
   int i = 0;
@@ -269,6 +279,14 @@ void inlinedUnspecified(Dummy *p) {
   if (p) return;
 }
 
+void testNilReturnWithBlock(Dummy *p) {
+  p = 0;
+  Dummy *_Nonnull (^myblock)(void) = ^Dummy *_Nonnull(void) {
+    return p; // TODO: We should warn in blocks.
+  };
+  myblock();
+}
+
 Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
   switch (getRandom()) {
   case 1: inlinedNullable(p); break;
@@ -310,7 +328,7 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
 
 - (TestObject * _Nonnull)testReturnsNullableInNonnullIndirectly {
   TestObject *local = getNullableTestObject();
-  return local; // expected-warning {{Nullable pointer is returned from a function that is expected to return a non-null value}}
+  return local; // expected-warning {{Nullable pointer is returned from a method that is expected to return a non-null value}}
 }
 
 - (TestObject * _Nonnull)testReturnsCastSuppressedNullableInNonnullIndirectly {

@@ -174,7 +174,7 @@ const char *HeaderMap::getString(unsigned StrTabIdx) const {
 //===----------------------------------------------------------------------===//
 
 /// dump - Print the contents of this headermap to stderr.
-void HeaderMap::dump() const {
+LLVM_DUMP_METHOD void HeaderMap::dump() const {
   const HMapHeader &Hdr = getHeader();
   unsigned NumBuckets = getEndianAdjustedWord(Hdr.NumBuckets);
 

@@ -302,7 +302,8 @@ void X86TargetInfo::writeGotPltHeader(uint8_t *Buf) const {
 }
 
 void X86TargetInfo::writeGotPlt(uint8_t *Buf, uint64_t Plt) const {
-  // Skip 6 bytes of "pushl (GOT+4)"
+  // Entries in .got.plt initially points back to the corresponding
+  // PLT entries with a fixed offset to skip the first instruction.
   write32le(Buf, Plt + 6);
 }
 
@@ -335,8 +336,8 @@ void X86TargetInfo::writePltZero(uint8_t *Buf) const {
   if (Config->Shared) {
     const uint8_t V[] = {
         0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx)
-        0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp *8(%ebx)
-        0x90, 0x90, 0x90, 0x90              // nop;nop;nop;nop
+        0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp   *8(%ebx)
+        0x90, 0x90, 0x90, 0x90              // nop; nop; nop; nop
     };
     memcpy(Buf, V, sizeof(V));
     return;
@@ -344,13 +345,13 @@ void X86TargetInfo::writePltZero(uint8_t *Buf) const {
 
   const uint8_t PltData[] = {
       0xff, 0x35, 0x00, 0x00, 0x00, 0x00, // pushl (GOT+4)
-      0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp *(GOT+8)
-      0x90, 0x90, 0x90, 0x90              // nop;nop;nop;nop
+      0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp   *(GOT+8)
+      0x90, 0x90, 0x90, 0x90              // nop; nop; nop; nop
   };
   memcpy(Buf, PltData, sizeof(PltData));
   uint32_t Got = Out<ELF32LE>::GotPlt->getVA();
-  write32le(Buf + 2, Got + 4); // GOT+4
-  write32le(Buf + 8, Got + 8); // GOT+8
+  write32le(Buf + 2, Got + 4);
+  write32le(Buf + 8, Got + 8);
 }
 
 void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
@@ -609,7 +610,7 @@ void X86_64TargetInfo::writeGotPltHeader(uint8_t *Buf) const {
 }
 
 void X86_64TargetInfo::writeGotPlt(uint8_t *Buf, uint64_t Plt) const {
-  // Skip 6 bytes of "jmpq *got(%rip)"
+  // See comments in X86TargetInfo::writeGotPlt.
   write32le(Buf, Plt + 6);
 }
 
