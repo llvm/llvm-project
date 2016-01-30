@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-config suppress-null-return-paths=false -verify %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -verify -DSUPPRESSED=1 %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core -analyzer-config avoid-suppressing-null-argument-paths=true -DSUPPRESSED=1 -DNULL_ARGS=1 -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-eagerly-assume -analyzer-checker=core -analyzer-config suppress-null-return-paths=false -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-eagerly-assume -analyzer-checker=core -verify -DSUPPRESSED=1 %s
+// RUN: %clang_cc1 -analyze -analyzer-eagerly-assume -analyzer-checker=core -analyzer-config avoid-suppressing-null-argument-paths=true -DSUPPRESSED=1 -DNULL_ARGS=1 -verify %s
 
 int opaquePropertyCheck(void *object);
 int coin();
@@ -145,13 +145,23 @@ int isEqual(int *p, int *q);
 #define ISNOTEQUAL(a, b)   (!ISEQUAL(a, b))
 void testNestedDisjunctiveMacro(int *p, int *q) {
   if (ISNOTEQUAL(p,q)) {
-    (void)*p; // no-warning
-    (void)*q; // no-warning
+    *p = 1; // no-warning
+    *q = 1; // no-warning
   }
 
-  (void)*p; // no-warning
-  (void)*q; // no-warning
+  *p = 1; // no-warning
+  *q = 1; // no-warning
 }
+
+void testNestedDisjunctiveMacro2(int *p, int *q) {
+  if (ISEQUAL(p,q)) {
+    return;
+  }
+
+  *p = 1; // no-warning
+  *q = 1; // no-warning
+}
+
 
 // Here the check is entirely in non-macro code even though the code itself
 // is a macro argument.

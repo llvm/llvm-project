@@ -476,3 +476,14 @@ int main() {
 
 A<int> a;
 }
+
+// rdar://22032373
+namespace rdar22032373 {
+void foo() {
+  auto blk = [](bool b) {
+    if (b)
+      return undeclared_error; // expected-error {{use of undeclared identifier}}
+    return 0;
+  };
+}
+}

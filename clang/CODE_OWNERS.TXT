@@ -23,7 +23,7 @@ D: CMake, library layering
 
 N: Eric Christopher
 E: echristo@gmail.com
-D: Debug Information, autotools/configure/make build, inline assembly
+D: Debug Information, inline assembly
 
 N: Doug Gregor
 E: dgregor@apple.com

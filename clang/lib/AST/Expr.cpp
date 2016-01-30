@@ -985,7 +985,7 @@ void StringLiteral::setString(const ASTContext &C, StringRef Str,
       break;
     }
     default:
-      assert(false && "unsupported CharByteWidth");
+      llvm_unreachable("unsupported CharByteWidth");
   }
 }
 
