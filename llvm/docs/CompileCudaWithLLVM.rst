@@ -18,9 +18,11 @@ familiarity with CUDA. Information about CUDA programming can be found in the
 How to Build LLVM with CUDA Support
 ===================================
 
-Below is a quick summary of downloading and building LLVM. Consult the `Getting
-Started <http://llvm.org/docs/GettingStarted.html>`_ page for more details on
-setting up LLVM.
+CUDA support is still in development and works the best in the trunk version
+of LLVM. Below is a quick summary of downloading and building the trunk
+version. Consult the `Getting Started
+<http://llvm.org/docs/GettingStarted.html>`_ page for more details on setting
+up LLVM.
 
 #. Checkout LLVM
 
@@ -60,8 +62,6 @@ which multiplies a ``float`` array by a ``float`` scalar (AXPY).
 
 .. code-block:: c++
 
-  #include <helper_cuda.h> // for checkCudaErrors
-
   #include <iostream>
 
   __global__ void axpy(float a, float* x, float* y) {
@@ -78,25 +78,25 @@ which multiplies a ``float`` array by a ``float`` scalar (AXPY).
     // Copy input data to device.
     float* device_x;
     float* device_y;
-    checkCudaErrors(cudaMalloc(&device_x, kDataLen * sizeof(float)));
-    checkCudaErrors(cudaMalloc(&device_y, kDataLen * sizeof(float)));
-    checkCudaErrors(cudaMemcpy(device_x, host_x, kDataLen * sizeof(float),
-                               cudaMemcpyHostToDevice));
+    cudaMalloc(&device_x, kDataLen * sizeof(float));
+    cudaMalloc(&device_y, kDataLen * sizeof(float));
+    cudaMemcpy(device_x, host_x, kDataLen * sizeof(float),
+               cudaMemcpyHostToDevice);
 
     // Launch the kernel.
     axpy<<<1, kDataLen>>>(a, device_x, device_y);
 
     // Copy output data to host.
-    checkCudaErrors(cudaDeviceSynchronize());
-    checkCudaErrors(cudaMemcpy(host_y, device_y, kDataLen * sizeof(float),
-                               cudaMemcpyDeviceToHost));
+    cudaDeviceSynchronize();
+    cudaMemcpy(host_y, device_y, kDataLen * sizeof(float),
+               cudaMemcpyDeviceToHost);
 
     // Print the results.
     for (int i = 0; i < kDataLen; ++i) {
       std::cout << "y[" << i << "] = " << host_y[i] << "\n";
     }
 
-    checkCudaErrors(cudaDeviceReset());
+    cudaDeviceReset();
     return 0;
   }
 
@@ -104,16 +104,20 @@ The command line for compilation is similar to what you would use for C++.
 
 .. code-block:: console
 
-  $ clang++ -o axpy -I<CUDA install path>/samples/common/inc -L<CUDA install path>/<lib64 or lib> axpy.cu -lcudart_static -lcuda -ldl -lrt -pthread
+  $ clang++ axpy.cu -o axpy --cuda-gpu-arch=<GPU arch>  \
+      -L<CUDA install path>/<lib64 or lib>              \
+      -lcudart_static -ldl -lrt -pthread
   $ ./axpy
   y[0] = 2
   y[1] = 4
   y[2] = 6
   y[3] = 8
 
-Note that ``helper_cuda.h`` comes from the CUDA samples, so you need the
-samples installed for this example. ``<CUDA install path>`` is the root
-directory where you installed CUDA SDK, typically ``/usr/local/cuda``.
+``<CUDA install path>`` is the root directory where you installed CUDA SDK,
+typically ``/usr/local/cuda``. ``<GPU arch>`` is `the compute capability of
+your GPU <https://developer.nvidia.com/cuda-gpus>`_. For example, if you want
+to run your program on a GPU with compute capability of 3.5, you should specify
+``--cuda-gpu-arch=sm_35``.
 
 Optimizations
 =============

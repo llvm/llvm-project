@@ -134,10 +134,17 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::STORE_F64:
       case WebAssembly::STORE_I32:
       case WebAssembly::STORE_I64: {
-        unsigned ToReg = MI.getOperand(0).getReg();
-        unsigned FromReg =
-            MI.getOperand(WebAssembly::StoreValueOperandNo).getReg();
-        Changed |= ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
+        const auto &Stored = MI.getOperand(WebAssembly::StoreValueOperandNo);
+        if (Stored.isReg()) {
+          unsigned ToReg = MI.getOperand(0).getReg();
+          unsigned FromReg = Stored.getReg();
+          Changed |= ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
+        } else if (Stored.isFI()) {
+          break;
+        } else {
+          report_fatal_error(
+              "Store results: store not consuming reg or frame index");
+        }
         break;
       }
       case WebAssembly::CALL_I32:

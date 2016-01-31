@@ -59,3 +59,13 @@ for.body5.i:
 for.cond.cleanup4.i:
   ret void
 }
+
+; CHECK-LABEL: fi_ret:
+; CHECK: i32.store $discard=,
+define hidden i8* @fi_ret(i8** %addr) {
+entry:
+  %buf = alloca [27 x i8], align 16
+  %0 = getelementptr inbounds [27 x i8], [27 x i8]* %buf, i32 0, i32 0
+  store i8* %0, i8** %addr
+  ret i8* %0
+}

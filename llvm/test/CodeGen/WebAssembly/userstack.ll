@@ -78,9 +78,10 @@ define void @allocarray() {
 
 declare void @ext_func(i64* %ptr)
 ; CHECK-LABEL: non_mem_use
-define void @non_mem_use() {
- ; CHECK: i32.const [[L2:.+]]=, 16
+define void @non_mem_use(i8** %addr) {
+ ; CHECK: i32.const [[L2:.+]]=, 48
  ; CHECK-NEXT: i32.sub [[SP:.+]]=, {{.+}}, [[L2]]
+ %buf = alloca [27 x i8], align 16
  %r = alloca i64
  %r2 = alloca i64
  ; %r is at SP+8
@@ -91,6 +92,13 @@ define void @non_mem_use() {
  ; %r2 is at SP+0, no add needed
  ; CHECK-NEXT: call ext_func@FUNCTION, [[SP]]
  call void @ext_func(i64* %r2)
+ ; Use as a value, but in a store
+ ; %buf is at SP+16
+ ; CHECK: i32.const [[OFF:.+]]=, 16
+ ; CHECK-NEXT: i32.add [[VAL:.+]]=, [[SP]], [[OFF]]
+ ; CHECK-NEXT: i32.store {{.*}}=, 0($0), [[VAL]]
+ %gep = getelementptr inbounds [27 x i8], [27 x i8]* %buf, i32 0, i32 0
+ store i8* %gep, i8** %addr
  ret void
 }
 
@@ -151,4 +159,5 @@ define void @dynamic_static_alloca(i32 %alloc) {
  ; CHECK-NEXT: i32.store [[SP]]=, 0([[L4]]), [[SP]]
  ret void
 }
-; TODO: test aligned alloc
+
+; TODO: test over-aligned alloca

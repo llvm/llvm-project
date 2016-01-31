@@ -732,15 +732,15 @@ void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
       OS.indent(Indentation) << "MCD::OPC_FilterValue, ";
       // The filter value is ULEB128 encoded.
       while (*I >= 128)
-        OS << utostr(*I++) << ", ";
-      OS << utostr(*I++) << ", ";
+        OS << (unsigned)*I++ << ", ";
+      OS << (unsigned)*I++ << ", ";
 
       // 16-bit numtoskip value.
       uint8_t Byte = *I++;
       uint32_t NumToSkip = Byte;
-      OS << utostr(Byte) << ", ";
+      OS << (unsigned)Byte << ", ";
       Byte = *I++;
-      OS << utostr(Byte) << ", ";
+      OS << (unsigned)Byte << ", ";
       NumToSkip |= Byte << 8;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
@@ -753,14 +753,14 @@ void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
         << Len << ", ";// << Val << ", " << NumToSkip << ",\n";
       // ULEB128 encoded field value.
       for (; *I >= 128; ++I)
-        OS << utostr(*I) << ", ";
-      OS << utostr(*I++) << ", ";
+        OS << (unsigned)*I << ", ";
+      OS << (unsigned)*I++ << ", ";
       // 16-bit numtoskip value.
       uint8_t Byte = *I++;
       uint32_t NumToSkip = Byte;
-      OS << utostr(Byte) << ", ";
+      OS << (unsigned)Byte << ", ";
       Byte = *I++;
-      OS << utostr(Byte) << ", ";
+      OS << (unsigned)Byte << ", ";
       NumToSkip |= Byte << 8;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
@@ -769,15 +769,15 @@ void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
       ++I;
       OS.indent(Indentation) << "MCD::OPC_CheckPredicate, ";
       for (; *I >= 128; ++I)
-        OS << utostr(*I) << ", ";
-      OS << utostr(*I++) << ", ";
+        OS << (unsigned)*I << ", ";
+      OS << (unsigned)*I++ << ", ";
 
       // 16-bit numtoskip value.
       uint8_t Byte = *I++;
       uint32_t NumToSkip = Byte;
-      OS << utostr(Byte) << ", ";
+      OS << (unsigned)Byte << ", ";
       Byte = *I++;
-      OS << utostr(Byte) << ", ";
+      OS << (unsigned)Byte << ", ";
       NumToSkip |= Byte << 8;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
@@ -796,13 +796,13 @@ void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
       OS.indent(Indentation) << "MCD::OPC_" << (IsTry ? "Try" : "")
         << "Decode, ";
       for (p = Buffer; *p >= 128; ++p)
-        OS << utostr(*p) << ", ";
-      OS << utostr(*p) << ", ";
+        OS << (unsigned)*p << ", ";
+      OS << (unsigned)*p << ", ";
 
       // Decoder index.
       for (; *I >= 128; ++I)
-        OS << utostr(*I) << ", ";
-      OS << utostr(*I++) << ", ";
+        OS << (unsigned)*I << ", ";
+      OS << (unsigned)*I++ << ", ";
 
       if (!IsTry) {
         OS << "// Opcode: "
@@ -815,9 +815,9 @@ void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
       // 16-bit numtoskip value.
       uint8_t Byte = *I++;
       uint32_t NumToSkip = Byte;
-      OS << utostr(Byte) << ", ";
+      OS << (unsigned)Byte << ", ";
       Byte = *I++;
-      OS << utostr(Byte) << ", ";
+      OS << (unsigned)Byte << ", ";
       NumToSkip |= Byte << 8;
 
       OS << "// Opcode: "
@@ -832,22 +832,28 @@ void FixedLenDecoderEmitter::emitTable(formatted_raw_ostream &OS,
       uint64_t Value = 0;
       unsigned Shift = 0;
       do {
-        OS << ", " << utostr(*I);
+        OS << ", " << (unsigned)*I;
         Value += (*I & 0x7f) << Shift;
         Shift += 7;
       } while (*I++ >= 128);
-      if (Value > 127)
-        OS << " /* 0x" << utohexstr(Value) << " */";
+      if (Value > 127) {
+        OS << " /* 0x";
+        OS.write_hex(Value);
+        OS << " */";
+      }
       // Negative mask
       Value = 0;
       Shift = 0;
       do {
-        OS << ", " << utostr(*I);
+        OS << ", " << (unsigned)*I;
         Value += (*I & 0x7f) << Shift;
         Shift += 7;
       } while (*I++ >= 128);
-      if (Value > 127)
-        OS << " /* 0x" << utohexstr(Value) << " */";
+      if (Value > 127) {
+        OS << " /* 0x";
+        OS.write_hex(Value);
+        OS << " */";
+      }
       OS << ",\n";
       break;
     }
