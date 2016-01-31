@@ -1854,10 +1854,10 @@ void DwarfLinker::startDebugObject(DWARFContext &Dwarf, DebugMapObject &Obj) {
   // -gline-tables-only on Darwin.
   for (const auto &Entry : Obj.symbols()) {
     const auto &Mapping = Entry.getValue();
-    if (Mapping.Size)
-      Ranges[Mapping.ObjectAddress] = std::make_pair(
-          Mapping.ObjectAddress + Mapping.Size,
-          int64_t(Mapping.BinaryAddress) - Mapping.ObjectAddress);
+    if (Mapping.Size && Mapping.ObjectAddress)
+      Ranges[*Mapping.ObjectAddress] = std::make_pair(
+          *Mapping.ObjectAddress + Mapping.Size,
+          int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
   }
 }
 
@@ -1988,14 +1988,16 @@ hasValidRelocation(uint32_t StartOffset, uint32_t EndOffset,
 
   const auto &ValidReloc = ValidRelocs[NextValidReloc++];
   const auto &Mapping = ValidReloc.Mapping->getValue();
+  uint64_t ObjectAddress =
+      Mapping.ObjectAddress ? uint64_t(*Mapping.ObjectAddress) : UINT64_MAX;
   if (Linker.Options.Verbose)
     outs() << "Found valid debug map entry: " << ValidReloc.Mapping->getKey()
-           << " " << format("\t%016" PRIx64 " => %016" PRIx64,
-                            uint64_t(Mapping.ObjectAddress),
+           << " " << format("\t%016" PRIx64 " => %016" PRIx64, ObjectAddress,
                             uint64_t(Mapping.BinaryAddress));
 
-  Info.AddrAdjust = int64_t(Mapping.BinaryAddress) + ValidReloc.Addend -
-                    Mapping.ObjectAddress;
+  Info.AddrAdjust = int64_t(Mapping.BinaryAddress) + ValidReloc.Addend;
+  if (Mapping.ObjectAddress)
+    Info.AddrAdjust -= ObjectAddress;
   Info.InDebugMap = true;
   return true;
 }
