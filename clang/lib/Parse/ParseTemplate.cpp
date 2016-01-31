@@ -831,6 +831,7 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
   }
 
   // Strip the initial '>' from the token.
+  Token PrevTok = Tok;
   if (RemainingToken == tok::equal && Next.is(tok::equal) &&
       areTokensAdjacent(Tok, Next)) {
     // Join two adjacent '=' tokens into one, for cases like:
@@ -846,6 +847,17 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
   Tok.setLocation(Lexer::AdvanceToTokenCharacter(RAngleLoc, 1,
                                                  PP.getSourceManager(),
                                                  getLangOpts()));
+
+  // The advance from '>>' to '>' in a ObjectiveC template argument list needs
+  // to be properly reflected in the token cache to allow correct interaction
+  // between annotation and backtracking.
+  if (ObjCGenericList && PrevTok.getKind() == tok::greatergreater &&
+      RemainingToken == tok::greater && PP.IsPreviousCachedToken(PrevTok)) {
+    PrevTok.setKind(RemainingToken);
+    PrevTok.setLength(1);
+    Token NewToks[] = {PrevTok, Tok};
+    PP.ReplacePreviousCachedToken(NewToks);
+  }
 
   if (!ConsumeLastToken) {
     // Since we're not supposed to consume the '>' token, we need to push

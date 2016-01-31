@@ -43,10 +43,6 @@ bool ASTNodeKind::isBaseOf(ASTNodeKind Other, unsigned *Distance) const {
   return isBaseOf(KindId, Other.KindId, Distance);
 }
 
-bool ASTNodeKind::isSame(ASTNodeKind Other) const {
-  return KindId != NKI_None && KindId == Other.KindId;
-}
-
 bool ASTNodeKind::isBaseOf(NodeKindId Base, NodeKindId Derived,
                            unsigned *Distance) {
   if (Base == NKI_None || Derived == NKI_None) return false;

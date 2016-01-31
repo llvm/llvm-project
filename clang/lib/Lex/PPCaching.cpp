@@ -116,3 +116,29 @@ void Preprocessor::AnnotatePreviousCachedTokens(const Token &Tok) {
     }
   }
 }
+
+bool Preprocessor::IsPreviousCachedToken(const Token &Tok) const {
+  // There's currently no cached token...
+  if (!CachedLexPos)
+    return false;
+
+  const Token LastCachedTok = CachedTokens[CachedLexPos - 1];
+  if (LastCachedTok.getKind() != Tok.getKind())
+    return false;
+
+  int RelOffset = 0;
+  if ((!getSourceManager().isInSameSLocAddrSpace(
+          Tok.getLocation(), getLastCachedTokenLocation(), &RelOffset)) ||
+      RelOffset)
+    return false;
+
+  return true;
+}
+
+void Preprocessor::ReplacePreviousCachedToken(ArrayRef<Token> NewToks) {
+  assert(CachedLexPos != 0 && "Expected to have some cached tokens");
+  CachedTokens.insert(CachedTokens.begin() + CachedLexPos - 1, NewToks.begin(),
+                      NewToks.end());
+  CachedTokens.erase(CachedTokens.begin() + CachedLexPos - 1 + NewToks.size());
+  CachedLexPos += NewToks.size() - 1;
+}
