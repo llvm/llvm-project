@@ -125,6 +125,8 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   }
 }
 
+/// The operand number of the load or store address in load/store instructions.
+static const unsigned MemOpAddressOperandNo = 2;
 /// The operand number of the stored value in a store instruction.
 static const unsigned StoreValueOperandNo = 4;
 

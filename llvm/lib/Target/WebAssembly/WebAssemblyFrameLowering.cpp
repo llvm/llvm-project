@@ -155,10 +155,10 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineMemOperand::MOLoad, 4, 4);
   // Load the SP value.
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::LOAD_I32),
-          StackSize ? SPReg : WebAssembly::SP32)
-      .addImm(0) // offset
+          StackSize ? SPReg : (unsigned)WebAssembly::SP32)
+      .addImm(0)     // offset
       .addReg(SPReg) // addr
-      .addImm(2) // p2align
+      .addImm(2)     // p2align
       .addMemOperand(LoadMMO);
 
   unsigned OffsetReg = 0;

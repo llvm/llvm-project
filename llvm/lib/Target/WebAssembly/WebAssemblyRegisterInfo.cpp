@@ -63,9 +63,9 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
   const MachineFrameInfo &MFI = *MF.getFrameInfo();
   int64_t FrameOffset = MFI.getStackSize() + MFI.getObjectOffset(FrameIndex);
 
-  if (MI.mayLoadOrStore()) {
-    // If this is a load or store, make it relative to SP and fold the frame
-    // offset directly in.
+  if (MI.mayLoadOrStore() && FIOperandNum == WebAssembly::MemOpAddressOperandNo) {
+    // If this is the address operand of a load or store, make it relative to SP
+    // and fold the frame offset directly in.
     assert(FrameOffset >= 0 && MI.getOperand(1).getImm() >= 0);
     int64_t Offset = MI.getOperand(1).getImm() + FrameOffset;
 
@@ -74,8 +74,9 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
       // generate broken code.
       report_fatal_error("Memory offset field overflow");
     }
-    MI.getOperand(1).setImm(Offset);
-    MI.getOperand(2).ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
+    MI.getOperand(FIOperandNum - 1).setImm(Offset);
+    MI.getOperand(FIOperandNum)
+        .ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
   } else {
     // Otherwise create an i32.add SP, offset and make it the operand.
     auto &MRI = MF.getRegInfo();
