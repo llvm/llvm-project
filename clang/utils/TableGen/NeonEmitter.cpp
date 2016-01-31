@@ -1195,12 +1195,12 @@ void Intrinsic::emitReverseVariable(Variable &Dest, Variable &Src) {
     emitNewLine();
 
     for (unsigned K = 0; K < Dest.getType().getNumVectors(); ++K) {
-      OS << "  " << Dest.getName() << ".val[" << utostr(K) << "] = "
+      OS << "  " << Dest.getName() << ".val[" << K << "] = "
          << "__builtin_shufflevector("
-         << Src.getName() << ".val[" << utostr(K) << "], "
-         << Src.getName() << ".val[" << utostr(K) << "]";
+         << Src.getName() << ".val[" << K << "], "
+         << Src.getName() << ".val[" << K << "]";
       for (int J = Dest.getType().getNumElements() - 1; J >= 0; --J)
-        OS << ", " << utostr(J);
+        OS << ", " << J;
       OS << ");";
       emitNewLine();
     }
@@ -1208,7 +1208,7 @@ void Intrinsic::emitReverseVariable(Variable &Dest, Variable &Src) {
     OS << "  " << Dest.getName()
        << " = __builtin_shufflevector(" << Src.getName() << ", " << Src.getName();
     for (int J = Dest.getType().getNumElements() - 1; J >= 0; --J)
-      OS << ", " << utostr(J);
+      OS << ", " << J;
     OS << ");";
     emitNewLine();
   }

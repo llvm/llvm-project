@@ -1788,7 +1788,7 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals) {
     if (Context.getASTContext().addressSpaceMapManglingFor(AS)) {
       //  <target-addrspace> ::= "AS" <address-space-number>
       unsigned TargetAS = Context.getASTContext().getTargetAddressSpace(AS);
-      ASString = "AS" + llvm::utostr_32(TargetAS);
+      ASString = "AS" + llvm::utostr(TargetAS);
     } else {
       switch (AS) {
       default: llvm_unreachable("Not a language specific address space");

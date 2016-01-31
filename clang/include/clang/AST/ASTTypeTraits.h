@@ -62,7 +62,9 @@ public:
   /// \}
 
   /// \brief Returns \c true if \c this and \c Other represent the same kind.
-  bool isSame(ASTNodeKind Other) const;
+  bool isSame(ASTNodeKind Other) const {
+    return KindId != NKI_None && KindId == Other.KindId;
+  }
 
   /// \brief Returns \c true only for the default \c ASTNodeKind()
   bool isNone() const { return KindId == NKI_None; }
