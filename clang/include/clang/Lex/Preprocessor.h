@@ -1185,6 +1185,17 @@ public:
     return CachedTokens[CachedLexPos-1].getLastLoc();
   }
 
+  /// \brief Whether \p Tok is the most recent token (`CachedLexPos - 1`) in
+  /// CachedTokens.
+  bool IsPreviousCachedToken(const Token &Tok) const;
+
+  /// \brief Replace token in `CachedLexPos - 1` in CachedTokens by the tokens
+  /// in \p NewToks.
+  ///
+  /// Useful when a token needs to be split in smaller ones and CachedTokens
+  /// most recent token must to be updated to reflect that.
+  void ReplacePreviousCachedToken(ArrayRef<Token> NewToks);
+
   /// \brief Replace the last token with an annotation token.
   ///
   /// Like AnnotateCachedTokens(), this routine replaces an
