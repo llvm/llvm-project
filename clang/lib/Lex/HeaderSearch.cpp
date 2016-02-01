@@ -14,7 +14,6 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderMap.h"
 #include "clang/Lex/HeaderSearchOptions.h"

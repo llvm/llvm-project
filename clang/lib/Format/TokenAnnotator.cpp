@@ -887,8 +887,8 @@ private:
            Previous && Previous->isOneOf(tok::star, tok::amp);
            Previous = Previous->Previous)
         Previous->Type = TT_PointerOrReference;
-      if (Line.MustBeDeclaration)
-        Contexts.back().IsExpression = Contexts.front().InCtorInitializer;
+      if (Line.MustBeDeclaration && !Contexts.front().InCtorInitializer)
+        Contexts.back().IsExpression = false;
     } else if (Current.Previous &&
                Current.Previous->is(TT_CtorInitializerColon)) {
       Contexts.back().IsExpression = true;
@@ -1034,6 +1034,9 @@ private:
       return false;
 
     if (Tok.Previous->isOneOf(TT_LeadingJavaAnnotation, Keywords.kw_instanceof))
+      return false;
+    if (Style.Language == FormatStyle::LK_JavaScript &&
+        Tok.Previous->is(Keywords.kw_in))
       return false;
 
     // Skip "const" as it does not have an influence on whether this is a name.
@@ -1389,6 +1392,9 @@ private:
       if ((Style.Language == FormatStyle::LK_Java ||
            Style.Language == FormatStyle::LK_JavaScript) &&
           Current->is(Keywords.kw_instanceof))
+        return prec::Relational;
+      if (Style.Language == FormatStyle::LK_JavaScript &&
+          Current->is(Keywords.kw_in))
         return prec::Relational;
       if (Current->is(TT_BinaryOperator) || Current->is(tok::comma))
         return Current->getPrecedence();
@@ -2277,6 +2283,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return true;
     if (Right.NestingLevel == 0 && Right.is(Keywords.kw_is))
       return false;
+    if (Left.is(Keywords.kw_in))
+      return Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None;
+    if (Right.is(Keywords.kw_in))
+      return Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None;
   }
 
   if (Left.is(tok::at))

@@ -2666,12 +2666,12 @@ void foo() {
   }
 #pragma omp target
   {
-#pragma omp target
+#pragma omp target // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
   {
-#pragma omp target parallel
+#pragma omp target parallel // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
@@ -2699,11 +2699,11 @@ void foo() {
   }
 #pragma omp target
   {
-#pragma omp target enter data map(to: a)
+#pragma omp target enter data map(to: a) // expected-error {{region cannot be nested inside 'target' region}}
   }
 #pragma omp target
   {
-#pragma omp target exit data map(from: a)
+#pragma omp target exit data map(from: a) // expected-error {{region cannot be nested inside 'target' region}}
   }
 
 // TARGET PARALLEL DIRECTIVE
@@ -2796,12 +2796,12 @@ void foo() {
   }
 #pragma omp target parallel
   {
-#pragma omp target
+#pragma omp target // expected-error {{region cannot be nested inside 'target parallel' region}}
     ++a;
   }
 #pragma omp target parallel
   {
-#pragma omp target parallel
+#pragma omp target parallel // expected-error {{region cannot be nested inside 'target parallel' region}}
     ++a;
   }
 #pragma omp target parallel
@@ -2829,11 +2829,11 @@ void foo() {
   }
 #pragma omp target parallel
   {
-#pragma omp target enter data map(to: a)
+#pragma omp target enter data map(to: a) // expected-error {{region cannot be nested inside 'target parallel' region}}
   }
 #pragma omp target parallel
   {
-#pragma omp target exit data map(from: a)
+#pragma omp target exit data map(from: a) // expected-error {{region cannot be nested inside 'target parallel' region}}
   }
 
 // TEAMS DIRECTIVE
@@ -2952,7 +2952,7 @@ void foo() {
 #pragma omp target
 #pragma omp teams
   {
-#pragma omp target parallel
+#pragma omp target parallel // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
@@ -3337,28 +3337,28 @@ void foo() {
 #pragma omp teams
 #pragma omp distribute
   for (int i = 0; i < 10; ++i) {
-#pragma omp target
+#pragma omp target // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute
   for (int i = 0; i < 10; ++i) {
-#pragma omp target parallel
+#pragma omp target parallel // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute
   for (int i = 0; i < 10; ++i) {
-#pragma omp target enter data map(to: a)
+#pragma omp target enter data map(to: a) // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute
   for (int i = 0; i < 10; ++i) {
-#pragma omp target exit data map(from: a)
+#pragma omp target exit data map(from: a) // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
@@ -5807,21 +5807,21 @@ void foo() {
   }
 #pragma omp target
   {
-#pragma omp target
+#pragma omp target // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
   {
-#pragma omp target parallel
+#pragma omp target parallel // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
   {
-#pragma omp target enter data map(to: a)
+#pragma omp target enter data map(to: a) // expected-error {{region cannot be nested inside 'target' region}}
   }
 #pragma omp target
   {
-#pragma omp target exit data map(from: a)
+#pragma omp target exit data map(from: a) // expected-error {{region cannot be nested inside 'target' region}}
   }
 #pragma omp target
   {
@@ -5937,12 +5937,12 @@ void foo() {
   }
 #pragma omp target parallel
   {
-#pragma omp target
+#pragma omp target // expected-error {{region cannot be nested inside 'target parallel' region}}
     ++a;
   }
 #pragma omp target parallel
   {
-#pragma omp target parallel
+#pragma omp target parallel // expected-error {{region cannot be nested inside 'target parallel' region}}
     ++a;
   }
 #pragma omp target parallel
@@ -5970,11 +5970,11 @@ void foo() {
   }
 #pragma omp target parallel
   {
-#pragma omp target enter data map(to: a)
+#pragma omp target enter data map(to: a) // expected-error {{region cannot be nested inside 'target parallel' region}}
   }
 #pragma omp target parallel
   {
-#pragma omp target exit data map(from: a)
+#pragma omp target exit data map(from: a) // expected-error {{region cannot be nested inside 'target parallel' region}}
   }
 
 // TEAMS DIRECTIVE
@@ -6093,7 +6093,7 @@ void foo() {
 #pragma omp target
 #pragma omp teams
   {
-#pragma omp target parallel
+#pragma omp target parallel // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
@@ -6477,14 +6477,14 @@ void foo() {
 #pragma omp teams
 #pragma omp distribute
   for (int i = 0; i < 10; ++i) {
-#pragma omp target
+#pragma omp target // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute
   for (int i = 0; i < 10; ++i) {
-#pragma omp target parallel
+#pragma omp target parallel // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
@@ -6499,14 +6499,14 @@ void foo() {
 #pragma omp teams
 #pragma omp distribute
   for (int i = 0; i < 10; ++i) {
-#pragma omp target enter data map(to: a)
+#pragma omp target enter data map(to: a) // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute
   for (int i = 0; i < 10; ++i) {
-#pragma omp target exit data map(from: a)
+#pragma omp target exit data map(from: a) // expected-error {{region cannot be nested inside 'target' region}}
     ++a;
   }
 }

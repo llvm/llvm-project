@@ -1308,6 +1308,18 @@ c and d.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('functionProtoType0')"><a name="functionProtoType0Anchor">functionProtoType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionProtoType.html">FunctionProtoType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="functionProtoType0"><pre>Matches FunctionProtoType nodes.
+
+Given
+  int (*f)(int);
+  void g();
+functionProtoType()
+  matches "int (*f)(int)" and the type of "g" in C++ mode.
+  In C mode, "g" is not matched because it does not contain a prototype.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('functionType0')"><a name="functionType0Anchor">functionType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionType.html">FunctionType</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="functionType0"><pre>Matches FunctionType nodes.
 
@@ -2335,13 +2347,40 @@ compiled in C mode.
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('parameterCountIs0')"><a name="parameterCountIs0Anchor">parameterCountIs</a></td><td>unsigned N</td></tr>
-<tr><td colspan="4" class="doc" id="parameterCountIs0"><pre>Matches FunctionDecls that have a specific parameter count.
+<tr><td colspan="4" class="doc" id="parameterCountIs0"><pre>Matches FunctionDecls and FunctionProtoTypes that have a
+specific parameter count.
 
 Given
   void f(int i) {}
   void g(int i, int j) {}
+  void h(int i, int j);
+  void j(int i);
+  void k(int x, int y, int z, ...);
 functionDecl(parameterCountIs(2))
-  matches g(int i, int j) {}
+  matches void g(int i, int j) {}
+functionProtoType(parameterCountIs(2))
+  matches void h(int i, int j)
+functionProtoType(parameterCountIs(3))
+  matches void k(int x, int y, int z, ...);
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionProtoType.html">FunctionProtoType</a>&gt;</td><td class="name" onclick="toggle('parameterCountIs1')"><a name="parameterCountIs1Anchor">parameterCountIs</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="parameterCountIs1"><pre>Matches FunctionDecls and FunctionProtoTypes that have a
+specific parameter count.
+
+Given
+  void f(int i) {}
+  void g(int i, int j) {}
+  void h(int i, int j);
+  void j(int i);
+  void k(int x, int y, int z, ...);
+functionDecl(parameterCountIs(2))
+  matches void g(int i, int j) {}
+functionProtoType(parameterCountIs(2))
+  matches void h(int i, int j)
+functionProtoType(parameterCountIs(3))
+  matches void k(int x, int y, int z, ...);
 </pre></td></tr>
 
 
@@ -3995,8 +4034,8 @@ actual casts "explicit" casts.)
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('hasType2')"><a name="hasType2Anchor">hasType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasType2"><pre>Overloaded to match the declaration of the expression's or value
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('hasType3')"><a name="hasType3Anchor">hasType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType3"><pre>Overloaded to match the declaration of the expression's or value
 declaration's type.
 
 In case of a value declaration (for example a variable declaration),
@@ -4020,8 +4059,10 @@ matcher.
 
 Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
+            and U (matcher = typedefDecl(hasType(asString("int")))
  class X {};
  void y(X &amp;x) { x; X z; }
+ typedef int U;
 </pre></td></tr>
 
 
@@ -4796,6 +4837,19 @@ Usable as: Any Matcher
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefDecl.html">TypedefDecl</a>&gt;</td><td class="name" onclick="toggle('hasType1')"><a name="hasType1Anchor">hasType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType1"><pre>Matches if the expression's or declaration's type matches a type
+matcher.
+
+Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
+            and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
+            and U (matcher = typedefDecl(hasType(asString("int")))
+ class X {};
+ void y(X &amp;x) { x; X z; }
+ typedef int U;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration1')"><a name="hasDeclaration1Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasDeclaration1"><pre>Matches a node if the declaration associated with that node
 matches the given matcher.
@@ -4881,8 +4935,8 @@ usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(functionDecl())))
   matches using X::b but not using X::a </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt;</td><td class="name" onclick="toggle('hasType3')"><a name="hasType3Anchor">hasType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasType3"><pre>Overloaded to match the declaration of the expression's or value
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt;</td><td class="name" onclick="toggle('hasType4')"><a name="hasType4Anchor">hasType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType4"><pre>Overloaded to match the declaration of the expression's or value
 declaration's type.
 
 In case of a value declaration (for example a variable declaration),
@@ -4900,14 +4954,16 @@ Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt;</td><td class="name" onclick="toggle('hasType1')"><a name="hasType1Anchor">hasType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasType1"><pre>Matches if the expression's or declaration's type matches a type
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt;</td><td class="name" onclick="toggle('hasType2')"><a name="hasType2Anchor">hasType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasType2"><pre>Matches if the expression's or declaration's type matches a type
 matcher.
 
 Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
+            and U (matcher = typedefDecl(hasType(asString("int")))
  class X {};
  void y(X &amp;x) { x; X z; }
+ typedef int U;
 </pre></td></tr>
 
 

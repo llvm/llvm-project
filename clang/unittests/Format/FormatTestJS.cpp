@@ -86,6 +86,17 @@ TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {
 
   verifyFormat("var b = a.map((x) => x + 1);");
   verifyFormat("return ('aaa') in bbbb;");
+  verifyFormat("var x = aaaaaaaaaaaaaaaaaaaaaaaaa() in\n"
+               "    aaaa.aaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;");
+  FormatStyle Style = getGoogleJSStyleWithColumns(80);
+  Style.AlignOperands = true;
+  verifyFormat("var x = aaaaaaaaaaaaaaaaaaaaaaaaa() in\n"
+               "        aaaa.aaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
+               Style);
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat("var x = aaaaaaaaaaaaaaaaaaaaaaaaa()\n"
+               "            in aaaa.aaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;",
+               Style);
 
   // ES6 spread operator.
   verifyFormat("someFunction(...a);");

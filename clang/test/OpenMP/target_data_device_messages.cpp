@@ -21,8 +21,8 @@ int main(int argc, char **argv) {
   #pragma omp target data map(to: a) device (argc), device (argc+1) // expected-error {{directive '#pragma omp target data' cannot contain more than one 'device' clause}}
   #pragma omp target data map(to: a) device (S1) // expected-error {{'S1' does not refer to a value}}
   #pragma omp target data map(to: a) device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
-  #pragma omp target map(to: a) device (-10u)
-  #pragma omp target map(to: a) device (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
+  #pragma omp target data map(to: a) device (-10u)
+  #pragma omp target data map(to: a) device (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
 
   return 0;

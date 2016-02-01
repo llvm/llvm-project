@@ -413,10 +413,10 @@ public:
   }
 
   // Return the size of unwind_word for this target.
-  unsigned getUnwindWordWidth() const { return getPointerWidth(0); }
+  virtual unsigned getUnwindWordWidth() const { return getPointerWidth(0); }
 
   /// \brief Return the "preferred" register width on this target.
-  unsigned getRegisterWidth() const {
+  virtual unsigned getRegisterWidth() const {
     // Currently we assume the register width on the target matches the pointer
     // width, we can introduce a new variable for this if/when some target wants
     // it.

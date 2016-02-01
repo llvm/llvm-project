@@ -1061,7 +1061,8 @@ unsigned ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
     // FIXME: String literal breaking is currently disabled for Java and JS, as
     // it requires strings to be merged using "+" which we don't support.
     if (Style.Language == FormatStyle::LK_Java ||
-        Style.Language == FormatStyle::LK_JavaScript)
+        Style.Language == FormatStyle::LK_JavaScript ||
+        !Style.BreakStringLiterals)
       return 0;
 
     // Don't break string literals inside preprocessor directives (except for

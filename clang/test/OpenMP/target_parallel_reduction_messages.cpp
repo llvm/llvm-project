@@ -131,7 +131,7 @@ T tmain(T argc) {
   foo();
 #pragma omp target parallel private(i), reduction(+ : j), reduction(+ : q) // expected-error 4 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   foo();
-#pragma omp target parallel private(k)
+#pragma omp parallel private(k)
 #pragma omp target parallel reduction(+ : p), reduction(+ : p) // expected-error 2 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   foo();
 #pragma omp target parallel reduction(+ : p), reduction(+ : p) // expected-error 3 {{variable can appear only once in OpenMP 'reduction' clause}} expected-note 3 {{previously referenced here}}
@@ -139,17 +139,20 @@ T tmain(T argc) {
 #pragma omp target parallel reduction(+ : r) // expected-error 2 {{const-qualified list item cannot be reduction}}
   foo();
 #pragma omp target parallel shared(i)
-#pragma omp target parallel reduction(min : i)
+  foo();
+#pragma omp parallel reduction(min : i)
 #pragma omp target parallel reduction(max : j) // expected-error 2 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   foo();
 #pragma omp target parallel
 #pragma omp for private(fl)
   for (int i = 0; i < 10; ++i)
+  {}
 #pragma omp target parallel reduction(+ : fl)
     foo();
 #pragma omp target parallel
 #pragma omp for reduction(- : fl)
   for (int i = 0; i < 10; ++i)
+  {}
 #pragma omp target parallel reduction(+ : fl)
     foo();
 
@@ -228,7 +231,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target parallel private(i), reduction(+ : j), reduction(+ : q) // expected-error 2 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   foo();
-#pragma omp target parallel private(k)
+#pragma omp parallel private(k)
 #pragma omp target parallel reduction(+ : p), reduction(+ : p) // expected-error 2 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   foo();
 #pragma omp target parallel reduction(+ : p), reduction(+ : p) // expected-error {{variable can appear only once in OpenMP 'reduction' clause}} expected-note {{previously referenced here}}
@@ -236,17 +239,20 @@ int main(int argc, char **argv) {
 #pragma omp target parallel reduction(+ : r) // expected-error {{const-qualified list item cannot be reduction}}
   foo();
 #pragma omp target parallel shared(i)
-#pragma omp target parallel reduction(min : i)
+  foo();
+#pragma omp parallel reduction(min : i)
 #pragma omp target parallel reduction(max : j) // expected-error {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   foo();
 #pragma omp target parallel
 #pragma omp for private(fl)
   for (int i = 0; i < 10; ++i)
+  {}
 #pragma omp target parallel reduction(+ : fl)
     foo();
 #pragma omp target parallel
 #pragma omp for reduction(- : fl)
   for (int i = 0; i < 10; ++i)
+  {}
 #pragma omp target parallel reduction(+ : fl)
     foo();
   static int m;

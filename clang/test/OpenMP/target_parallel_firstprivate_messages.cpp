@@ -64,27 +64,47 @@ int main(int argc, char **argv) {
   int &j = i;
   static int m;
   #pragma omp target parallel firstprivate // expected-error {{expected '(' after 'firstprivate'}}
+  foo();
   #pragma omp target parallel firstprivate ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
   #pragma omp target parallel firstprivate () // expected-error {{expected expression}}
+  foo();
   #pragma omp target parallel firstprivate (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
   #pragma omp target parallel firstprivate (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
   #pragma omp target parallel firstprivate (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
+  foo();
   #pragma omp target parallel firstprivate (argc)
+  foo();
   #pragma omp target parallel firstprivate (S1) // expected-error {{'S1' does not refer to a value}}
+  foo();
   #pragma omp target parallel firstprivate (a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}}
+  foo();
   #pragma omp target parallel firstprivate (argv[1]) // expected-error {{expected variable name}}
+  foo();
   #pragma omp target parallel firstprivate(ba)
+  foo();
   #pragma omp target parallel firstprivate(ca)
+  foo();
   #pragma omp target parallel firstprivate(da)
+  foo();
   #pragma omp target parallel firstprivate(S2::S2s)
+  foo();
   #pragma omp target parallel firstprivate(S2::S2sc)
+  foo();
   #pragma omp target parallel firstprivate(e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}}
+  foo();
   #pragma omp target parallel firstprivate(h, B::x) // expected-error 2 {{threadprivate or thread local variable cannot be firstprivate}}
+  foo();
   #pragma omp target parallel private(i), firstprivate(i) // expected-error {{private variable cannot be firstprivate}} expected-note{{defined as private}}
   foo();
   #pragma omp target parallel shared(i)
+  foo();
   #pragma omp target parallel firstprivate(i)
+  foo();
   #pragma omp target parallel firstprivate(j)
+  foo();
   #pragma omp target parallel firstprivate(m)
   foo();
 

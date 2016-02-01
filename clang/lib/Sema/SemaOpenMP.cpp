@@ -809,7 +809,7 @@ bool Sema::IsOpenMPCapturedByRef(ValueDecl *D,
   auto DKind = DSAStack->getDirectiveForScope(RSI->TheScope);
   auto Ty = D->getType();
 
-  if (isOpenMPTargetDirective(DKind)) {
+  if (isOpenMPTargetExecutionDirective(DKind)) {
     // This table summarizes how a given variable should be passed to the device
     // given its type and the clauses where it appears. This table is based on
     // the description in OpenMP 4.5 [2.10.4, target Construct] and
@@ -907,7 +907,7 @@ bool Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
         DSAStack->hasDirective(
             [](OpenMPDirectiveKind K, const DeclarationNameInfo &DNI,
                SourceLocation Loc) -> bool {
-              return isOpenMPTargetDirective(K);
+              return isOpenMPTargetExecutionDirective(K);
             },
             false)) {
       return true;
@@ -944,7 +944,8 @@ bool Sema::isOpenMPTargetCapturedDecl(ValueDecl *D, unsigned Level) {
 
   auto *VD = dyn_cast<VarDecl>(D);
   return VD && !VD->hasLocalStorage() &&
-         DSAStack->hasExplicitDirective(isOpenMPTargetDirective, Level);
+         DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective,
+                                        Level);
 }
 
 void Sema::DestroyDataSharingAttributesStack() { delete DSAStack; }
@@ -2313,11 +2314,11 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | target           | flush           | *                                  |
   // | target           | ordered         | *                                  |
   // | target           | atomic          | *                                  |
-  // | target           | target          | *                                  |
-  // | target           | target parallel | *                                  |
-  // | target           | target enter    | *                                  |
+  // | target           | target          |                                    |
+  // | target           | target parallel |                                    |
+  // | target           | target enter    |                                    |
   // |                  | data            |                                    |
-  // | target           | target exit     | *                                  |
+  // | target           | target exit     |                                    |
   // |                  | data            |                                    |
   // | target           | teams           | *                                  |
   // | target           | cancellation    |                                    |
@@ -2347,11 +2348,11 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | target parallel  | flush           | *                                  |
   // | target parallel  | ordered         | *                                  |
   // | target parallel  | atomic          | *                                  |
-  // | target parallel  | target          | *                                  |
-  // | target parallel  | target parallel | *                                  |
-  // | target parallel  | target enter    | *                                  |
+  // | target parallel  | target          |                                    |
+  // | target parallel  | target parallel |                                    |
+  // | target parallel  | target enter    |                                    |
   // |                  | data            |                                    |
-  // | target parallel  | target exit     | *                                  |
+  // | target parallel  | target exit     |                                    |
   // |                  | data            |                                    |
   // | target parallel  | teams           |                                    |
   // | target parallel  | cancellation    |                                    |
@@ -2498,6 +2499,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // +------------------+-----------------+------------------------------------+
   if (Stack->getCurScope()) {
     auto ParentRegion = Stack->getParentDirective();
+    auto OffendingRegion = ParentRegion;
     bool NestingProhibited = false;
     bool CloseNesting = true;
     enum {
@@ -2658,10 +2660,32 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       NestingProhibited = !isOpenMPTeamsDirective(ParentRegion);
       Recommend = ShouldBeInTeamsRegion;
     }
+    if (!NestingProhibited &&
+        (isOpenMPTargetExecutionDirective(CurrentRegion) ||
+         isOpenMPTargetDataManagementDirective(CurrentRegion))) {
+      // OpenMP 4.5 [2.17 Nesting of Regions]
+      // If a target, target update, target data, target enter data, or
+      // target exit data construct is encountered during execution of a
+      // target region, the behavior is unspecified.
+      OpenMPDirectiveKind PreviousTargetExecutionDirective;
+      NestingProhibited = Stack->hasDirective(
+          [&PreviousTargetExecutionDirective](OpenMPDirectiveKind K,
+                                              const DeclarationNameInfo &DNI,
+                                              SourceLocation Loc) -> bool {
+            if (isOpenMPTargetExecutionDirective(K)) {
+              PreviousTargetExecutionDirective = K;
+              return true;
+            } else
+              return false;
+          },
+          false /* don't skip top directive */);
+      CloseNesting = false;
+      OffendingRegion = PreviousTargetExecutionDirective;
+    }
     if (NestingProhibited) {
       SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
-          << CloseNesting << getOpenMPDirectiveName(ParentRegion) << Recommend
-          << getOpenMPDirectiveName(CurrentRegion);
+          << CloseNesting << getOpenMPDirectiveName(OffendingRegion)
+          << Recommend << getOpenMPDirectiveName(CurrentRegion);
       return true;
     }
   }

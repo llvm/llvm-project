@@ -90,28 +90,39 @@ int foomain(I argc, C **argv) {
   int i;
   int &j = i;
 #pragma omp target private // expected-error {{expected '(' after 'private'}}
+{}
 #pragma omp target private( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+{}
 #pragma omp target private() // expected-error {{expected expression}}
+{}
 #pragma omp target private(argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
+{}
 #pragma omp target private(argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+{}
 #pragma omp target private(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
+{}
 #pragma omp target private(argc)
+{}
 #pragma omp target private(S1) // expected-error {{'S1' does not refer to a value}}
+{}
 #pragma omp target private(a, b) // expected-error {{private variable with incomplete type 'S1'}}
+{}
 #pragma omp target private(argv[1]) // expected-error {{expected variable name}}
+{}
 #pragma omp target private(e, g)
+{}
 #pragma omp target private(h) // expected-error {{threadprivate or thread local variable cannot be private}}
+{}
 #pragma omp target shared(i) // expected-error {{unexpected OpenMP clause 'shared' in directive '#pragma omp target'}}
 #pragma omp parallel
   {
     int v = 0;
     int i;
-#pragma omp target private(i)
-    {}
   }
 #pragma omp parallel shared(i)
 #pragma omp parallel private(i)
 #pragma omp target private(j)
+{}
 #pragma omp target private(i)
   {}
   return 0;
@@ -139,28 +150,40 @@ int main(int argc, char **argv) {
   int i;
   int &j = i;
 #pragma omp target private // expected-error {{expected '(' after 'private'}}
+{}
 #pragma omp target private( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+{}
 #pragma omp target private() // expected-error {{expected expression}}
+{}
 #pragma omp target private(argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
+{}
 #pragma omp target private(argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+{}
 #pragma omp target private(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
+{}
 #pragma omp target private(argc)
+{}
 #pragma omp target private(S1) // expected-error {{'S1' does not refer to a value}}
+{}
 #pragma omp target private(a, b) // expected-error {{private variable with incomplete type 'S1'}}
+{}
 #pragma omp target private(argv[1]) // expected-error {{expected variable name}}
+{}
 #pragma omp target private(e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}}
+{}
 #pragma omp target private(h) // expected-error {{threadprivate or thread local variable cannot be private}}
+{}
 #pragma omp target private(B::x) // expected-error {{threadprivate or thread local variable cannot be private}}
+{}
 #pragma omp target shared(i) // expected-error {{unexpected OpenMP clause 'shared' in directive '#pragma omp target'}}
 #pragma omp parallel
   {
     int i;
-#pragma omp target private(i)
-    {}
   }
 #pragma omp parallel shared(i)
 #pragma omp parallel private(i)
 #pragma omp target private(j)
+{}
 #pragma omp target private(i)
   {}
   static int si;
