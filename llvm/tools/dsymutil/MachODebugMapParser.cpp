@@ -391,7 +391,7 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
                    Twine(Name));
   if (!ObjectSymIt->getValue())
     return;
-  if (!CurrentDebugMapObject->addSymbol(Name, *ObjectSymIt->getValue(), Value,
+  if (!CurrentDebugMapObject->addSymbol(Name, ObjectSymIt->getValue(), Value,
                                         Size))
     return Warning(Twine("failed to insert symbol '") + Name +
                    "' in the debug map.");
