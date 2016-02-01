@@ -65,13 +65,21 @@ T tmain(T argc) {
 
 
 #pragma omp target parallel map // expected-error {{expected '(' after 'map'}}
+  foo();
 #pragma omp target parallel map( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
+  foo();
 #pragma omp target parallel map() // expected-error {{expected expression}}
+  foo();
 #pragma omp target parallel map(alloc) // expected-error {{use of undeclared identifier 'alloc'}}
+  foo();
 #pragma omp target parallel map(to argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected ',' or ')' in 'map' clause}}
+  foo();
 #pragma omp target parallel map(to:) // expected-error {{expected expression}}
+  foo();
 #pragma omp target parallel map(from: argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
 #pragma omp target parallel map(x: y) // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+  foo();
 #pragma omp target parallel map(x)
   foo();
 #pragma omp target parallel map(tofrom: t[:I])
@@ -97,38 +105,62 @@ T tmain(T argc) {
 #pragma omp target parallel map(to, x)
   foo();
 #pragma omp target parallel map(to x) // expected-error {{expected ',' or ')' in 'map' clause}}
+  foo();
 #pragma omp target parallel map(tofrom: argc > 0 ? x : y) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}} 
+  foo();
 #pragma omp target parallel map(argc)
+  foo();
 #pragma omp target parallel map(S1) // expected-error {{'S1' does not refer to a value}}
+  foo();
 #pragma omp target parallel map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} expected-error 2 {{type 'S2' is not mappable to target}}
+  foo();
 #pragma omp target parallel map(ba) // expected-error 2 {{type 'S2' is not mappable to target}}
+  foo();
 #pragma omp target parallel map(ca)
+  foo();
 #pragma omp target parallel map(da)
+  foo();
 #pragma omp target parallel map(S2::S2s)
+  foo();
 #pragma omp target parallel map(S2::S2sc)
+  foo();
 #pragma omp target parallel map(e, g)
+  foo();
 #pragma omp target parallel map(h) // expected-error {{threadprivate variables are not allowed in map clause}}
+  foo();
 #pragma omp target parallel map(k), map(k) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
+  foo();
 #pragma omp target parallel map(k), map(k[:5]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}} expected-note 2 {{used here}}
   foo();
 #pragma omp target parallel map(da)
+  foo();
 #pragma omp target parallel map(da[:4])
   foo();
-#pragma omp target parallel map(k, j, l) // expected-note 2 {{used here}}
+#pragma omp target data map(k, j, l) // expected-note 2 {{used here}}
 #pragma omp target parallel map(k[:4]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}}
+  foo();
 #pragma omp target parallel map(j)
+  foo();
 #pragma omp target parallel map(l) map(l[:5]) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
   foo();
-#pragma omp target parallel map(k[:4], j, l[:5]) // expected-note 4 {{used here}}
+#pragma omp target data map(k[:4], j, l[:5]) // expected-note 4 {{used here}}
+{
 #pragma omp target parallel map(k) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}}
+  foo();
 #pragma omp target parallel map(j)
+  foo();
 #pragma omp target parallel map(l) // expected-error 2 {{original storage of expression in data environment is shared but data environment do not fully contain mapped expression storage}}
   foo();
+}
 
 #pragma omp target parallel map(always, tofrom: x)
+  foo();
 #pragma omp target parallel map(always: x) // expected-error {{missing map type}}
+  foo();
 #pragma omp target parallel map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always'}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+  foo();
 #pragma omp target parallel map(always, tofrom: always, tofrom, x)
+  foo();
 #pragma omp target parallel map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   foo();
 
@@ -148,13 +180,21 @@ int main(int argc, char **argv) {
   int to, tofrom, always;
   const int (&l)[5] = da;
 #pragma omp target parallel map // expected-error {{expected '(' after 'map'}}
+  foo();
 #pragma omp target parallel map( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}}
+  foo();
 #pragma omp target parallel map() // expected-error {{expected expression}}
+  foo();
 #pragma omp target parallel map(alloc) // expected-error {{use of undeclared identifier 'alloc'}}
+  foo();
 #pragma omp target parallel map(to argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected ',' or ')' in 'map' clause}}
+  foo();
 #pragma omp target parallel map(to:) // expected-error {{expected expression}}
+  foo();
 #pragma omp target parallel map(from: argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
 #pragma omp target parallel map(x: y) // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+  foo();
 #pragma omp target parallel map(x)
   foo();
 #pragma omp target parallel map(to: x)
@@ -166,39 +206,64 @@ int main(int argc, char **argv) {
 #pragma omp target parallel map(to, x)
   foo();
 #pragma omp target parallel map(to x) // expected-error {{expected ',' or ')' in 'map' clause}}
+  foo();
 #pragma omp target parallel map(tofrom: argc > 0 ? argv[1] : argv[2]) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  foo();
 #pragma omp target parallel map(argc)
+  foo();
 #pragma omp target parallel map(S1) // expected-error {{'S1' does not refer to a value}}
+  foo();
 #pragma omp target parallel map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} expected-error 2 {{type 'S2' is not mappable to target}}
+  foo();
 #pragma omp target parallel map(argv[1])
+  foo();
 #pragma omp target parallel map(ba) // expected-error 2 {{type 'S2' is not mappable to target}}
+  foo();
 #pragma omp target parallel map(ca)
+  foo();
 #pragma omp target parallel map(da)
+  foo();
 #pragma omp target parallel map(S2::S2s)
+  foo();
 #pragma omp target parallel map(S2::S2sc)
+  foo();
 #pragma omp target parallel map(e, g)
+  foo();
 #pragma omp target parallel map(h) // expected-error {{threadprivate variables are not allowed in map clause}}
+  foo();
 #pragma omp target parallel map(k), map(k) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
+  foo();
 #pragma omp target parallel map(k), map(k[:5]) // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
   foo();
 #pragma omp target parallel map(da)
+  foo();
 #pragma omp target parallel map(da[:4])
   foo();
-#pragma omp target parallel map(k, j, l) // expected-note {{used here}}
+#pragma omp target data map(k, j, l) // expected-note {{used here}}
 #pragma omp target parallel map(k[:4]) // expected-error {{pointer cannot be mapped along with a section derived from itself}}
+  foo();
 #pragma omp target parallel map(j)
+  foo();
 #pragma omp target parallel map(l) map(l[:5]) // expected-error 1 {{variable already marked as mapped in current construct}} expected-note 1 {{used here}}
   foo();
-#pragma omp target parallel map(k[:4], j, l[:5]) // expected-note 2 {{used here}}
+#pragma omp target data map(k[:4], j, l[:5]) // expected-note 2 {{used here}}
+{
 #pragma omp target parallel map(k) // expected-error {{pointer cannot be mapped along with a section derived from itself}}
+  foo();
 #pragma omp target parallel map(j)
+  foo();
 #pragma omp target parallel map(l) // expected-error {{original storage of expression in data environment is shared but data environment do not fully contain mapped expression storage}}
   foo();
+}
 
 #pragma omp target parallel map(always, tofrom: x)
+  foo();
 #pragma omp target parallel map(always: x) // expected-error {{missing map type}}
+  foo();
 #pragma omp target parallel map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always'}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+  foo();
 #pragma omp target parallel map(always, tofrom: always, tofrom, x)
+  foo();
 #pragma omp target parallel map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   foo();
 

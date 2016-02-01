@@ -4,6 +4,8 @@
 // RUN:   -verify %s
 // RUN: %clang_cc1 -triple powerpc64-pc-linux-gnu -DTEST_64BIT_PPC64 -fsyntax-only \
 // RUN:   -verify %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnux32 -DTEST_64BIT_X86 -fsyntax-only \
+// RUN:   -verify %s
 
 typedef int i16_1 __attribute((mode(HI)));
 int i16_1_test[sizeof(i16_1) == 2 ? 1 : -1];
@@ -63,8 +65,17 @@ void test_int_to_ui32(unsigned int* y) { f_ui32_arg(y); }
 void test_long_to_i64(long long* y) { f_i64_arg(y); }
 void test_long_to_ui64(unsigned long long* y) { f_ui64_arg(y); }
 #elif TEST_64BIT_X86
+#ifdef __ILP32__
+typedef unsigned int gcc_word __attribute__((mode(word)));
+int foo[sizeof(gcc_word) == 8 ? 1 : -1];
+typedef unsigned int gcc_unwind_word __attribute__((mode(unwind_word)));
+int foo[sizeof(gcc_unwind_word) == 8 ? 1 : -1];
+void test_long_to_i64(long long* y) { f_i64_arg(y); }
+void test_long_to_ui64(unsigned long long* y) { f_ui64_arg(y); }
+#else
 void test_long_to_i64(long* y) { f_i64_arg(y); }
 void test_long_to_ui64(unsigned long* y) { f_ui64_arg(y); }
+#endif
 typedef          float f128ibm __attribute__ ((mode (TF)));     // expected-error{{unsupported machine mode 'TF'}}
 #elif TEST_64BIT_PPC64
 typedef          float f128ibm __attribute__ ((mode (TF)));

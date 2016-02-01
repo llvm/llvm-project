@@ -1091,6 +1091,16 @@ TEST(HasType, TakesDeclMatcherAndMatchesValueDecl) {
       notMatches("class X {}; void y() { X *x; }", varDecl(hasType(ClassX))));
 }
 
+TEST(HasType, MatchesTypedefDecl) {
+  EXPECT_TRUE(matches("typedef int X;", typedefDecl(hasType(asString("int")))));
+  EXPECT_TRUE(matches("typedef const int T;",
+                      typedefDecl(hasType(asString("const int")))));
+  EXPECT_TRUE(notMatches("typedef const int T;",
+                         typedefDecl(hasType(asString("int")))));
+  EXPECT_TRUE(matches("typedef int foo; typedef foo bar;",
+                      typedefDecl(hasType(asString("foo")), hasName("bar"))));
+}
+
 TEST(HasTypeLoc, MatchesDeclaratorDecls) {
   EXPECT_TRUE(matches("int x;",
                       varDecl(hasName("x"), hasTypeLoc(loc(asString("int"))))));
@@ -1563,6 +1573,9 @@ TEST(Function, MatchesFunctionDeclarations) {
                          functionDecl(isVariadic())));
   EXPECT_TRUE(notMatches("void f();", functionDecl(isVariadic())));
   EXPECT_TRUE(notMatchesC("void f();", functionDecl(isVariadic())));
+  EXPECT_TRUE(matches("void f(...);", functionDecl(parameterCountIs(0))));
+  EXPECT_TRUE(matchesC("void f();", functionDecl(parameterCountIs(0))));
+  EXPECT_TRUE(matches("void f(int, ...);", functionDecl(parameterCountIs(1))));
 }
 
 TEST(FunctionTemplate, MatchesFunctionTemplateDeclarations) {
@@ -1719,6 +1732,7 @@ TEST(Matcher, ParameterCount) {
   EXPECT_TRUE(matches("class X { void f(int i) {} };", Function1Arg));
   EXPECT_TRUE(notMatches("void f() {}", Function1Arg));
   EXPECT_TRUE(notMatches("void f(int i, int j, int k) {}", Function1Arg));
+  EXPECT_TRUE(matches("void f(int i, ...) {};", Function1Arg));
 }
 
 TEST(Matcher, References) {
@@ -4447,6 +4461,15 @@ TEST(TypeMatching, MatchesFunctionTypes) {
   EXPECT_TRUE(matches("void f(int i) {}", functionType()));
 }
 
+TEST(TypeMatching, MatchesFunctionProtoTypes) {
+  EXPECT_TRUE(matches("int (*f)(int);", functionProtoType()));
+  EXPECT_TRUE(matches("void f(int i);", functionProtoType()));
+  EXPECT_TRUE(matches("void f();", functionProtoType(parameterCountIs(0))));
+  EXPECT_TRUE(notMatchesC("void f();", functionProtoType()));
+  EXPECT_TRUE(
+      matchesC("void f(void);", functionProtoType(parameterCountIs(0))));
+}
+
 TEST(TypeMatching, MatchesParenType) {
   EXPECT_TRUE(
       matches("int (*array)[4];", varDecl(hasType(pointsTo(parenType())))));
@@ -5148,7 +5171,8 @@ TEST(IsInlineMatcher, IsInline) {
                       namespaceDecl(isInline(), hasName("m"))));
 }
 
-// FIXME: Figure out how to specify paths so the following tests pass on Windows.
+// FIXME: Figure out how to specify paths so the following tests pass on
+// Windows.
 #ifndef LLVM_ON_WIN32
 
 TEST(Matcher, IsExpansionInMainFileMatcher) {

@@ -576,8 +576,15 @@ bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
          // TODO add next directives.
 }
 
-bool clang::isOpenMPTargetDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_target; // TODO add next directives.
+bool clang::isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind) {
+  // TODO add next directives.
+  return DKind == OMPD_target || DKind == OMPD_target_parallel;
+}
+
+bool clang::isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind) {
+  // TODO add target update directive check.
+  return DKind == OMPD_target_data || DKind == OMPD_target_enter_data ||
+         DKind == OMPD_target_exit_data;
 }
 
 bool clang::isOpenMPTeamsDirective(OpenMPDirectiveKind DKind) {

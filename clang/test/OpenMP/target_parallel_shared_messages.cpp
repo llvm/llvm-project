@@ -60,30 +60,49 @@ int main(int argc, char **argv) {
   int i;
   int &j = i;
   #pragma omp target parallel shared // expected-error {{expected '(' after 'shared'}}
+  foo();
   #pragma omp target parallel shared ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
   #pragma omp target parallel shared () // expected-error {{expected expression}}
+  foo();
   #pragma omp target parallel shared (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
   #pragma omp target parallel shared (argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
   #pragma omp target parallel shared (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
+  foo();
   #pragma omp target parallel shared (argc)
+  foo();
   #pragma omp target parallel shared (S1) // expected-error {{'S1' does not refer to a value}}
+  foo();
   #pragma omp target parallel shared (a, b, c, d, f)
+  foo();
   #pragma omp target parallel shared (argv[1]) // expected-error {{expected variable name}}
+  foo();
   #pragma omp target parallel shared(ba)
+  foo();
   #pragma omp target parallel shared(ca)
+  foo();
   #pragma omp target parallel shared(da)
+  foo();
   #pragma omp target parallel shared(e, g)
+  foo();
   #pragma omp target parallel shared(h, B::x) // expected-error 2 {{threadprivate or thread local variable cannot be shared}}
+  foo();
   #pragma omp target parallel private(i), shared(i) // expected-error {{private variable cannot be shared}} expected-note {{defined as private}}
   foo();
   #pragma omp target parallel firstprivate(i), shared(i) // expected-error {{firstprivate variable cannot be shared}} expected-note {{defined as firstprivate}}
   foo();
   #pragma omp target parallel private(i)
+  foo();
   #pragma omp target parallel shared(i)
+  foo();
   #pragma omp target parallel shared(j)
   foo();
   #pragma omp target parallel firstprivate(i)
+  foo();
   #pragma omp target parallel shared(i)
+  foo();
   #pragma omp target parallel shared(j)
   foo();
 

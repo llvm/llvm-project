@@ -421,7 +421,7 @@ TEST_F(RegistryTest, Errors) {
                        constructMatcher("parameterCountIs", 3), Error.get())
           .isNull());
   EXPECT_EQ("Incorrect type for arg 2. (Expected = Matcher<CXXRecordDecl>) != "
-            "(Actual = Matcher<FunctionDecl>)",
+            "(Actual = Matcher<FunctionDecl|FunctionProtoType>)",
             Error->toString());
 
   // Bad argument type with variadic.

@@ -60,6 +60,17 @@ class BoundNodes;
 
 namespace internal {
 
+/// \brief Unifies obtaining the underlying type of a regular node through
+/// `getType` and a TypedefNameDecl node through `getUnderlyingType`.
+template <typename NodeType>
+inline QualType getUnderlyingType(const NodeType &Node) {
+  return Node.getType();
+}
+
+template <> inline QualType getUnderlyingType(const TypedefDecl &Node) {
+  return Node.getUnderlyingType();
+}
+
 /// \brief Internal version of BoundNodes. Holds all the bound nodes.
 class BoundNodesMap {
 public:

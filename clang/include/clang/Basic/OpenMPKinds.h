@@ -156,11 +156,20 @@ bool isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind);
 /// parallel', otherwise - false.
 bool isOpenMPParallelDirective(OpenMPDirectiveKind DKind);
 
-/// \brief Checks if the specified directive is a target-kind directive.
+/// \brief Checks if the specified directive is a target code offload directive.
 /// \param DKind Specified directive.
-/// \return true - the directive is a target-like directive like 'omp target',
+/// \return true - the directive is a target code offload directive like
+/// 'omp target', 'omp target parallel', 'omp target xxx'
 /// otherwise - false.
-bool isOpenMPTargetDirective(OpenMPDirectiveKind DKind);
+bool isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind);
+
+/// \brief Checks if the specified directive is a target data offload directive.
+/// \param DKind Specified directive.
+/// \return true - the directive is a target data offload directive like
+/// 'omp target data', 'omp target update', 'omp target enter data',
+/// 'omp target exit data'
+/// otherwise - false.
+bool isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind);
 
 /// \brief Checks if the specified directive is a teams-kind directive.
 /// \param DKind Specified directive.

@@ -3360,7 +3360,7 @@ static void parseModeAttrArg(Sema &S, StringRef Str, unsigned &DestWidth,
     // FIXME: glibc uses 'word' to define register_t; this is narrower than a
     // pointer on PIC16 and other embedded platforms.
     if (Str == "word")
-      DestWidth = S.Context.getTargetInfo().getPointerWidth(0);
+      DestWidth = S.Context.getTargetInfo().getRegisterWidth();
     else if (Str == "byte")
       DestWidth = S.Context.getTargetInfo().getCharWidth();
     break;

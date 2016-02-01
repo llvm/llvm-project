@@ -4029,6 +4029,8 @@ public:
 
   // for x32 we need it here explicitly
   bool hasInt128Type() const override { return true; }
+  unsigned getUnwindWordWidth() const override { return 64; }
+  unsigned getRegisterWidth() const override { return 64; }
 
   bool validateGlobalRegisterVariable(StringRef RegName,
                                       unsigned RegSize,
