@@ -1849,7 +1849,7 @@ static unsigned getTestUnderMaskCond(unsigned BitSize, unsigned CCMask,
     if (CCMask == SystemZ::CCMASK_CMP_NE)
       return SystemZ::CCMASK_TM_SOME_1;
   }
-  if (EffectivelyUnsigned && CmpVal <= Low) {
+  if (EffectivelyUnsigned && CmpVal > 0 && CmpVal <= Low) {
     if (CCMask == SystemZ::CCMASK_CMP_LT)
       return SystemZ::CCMASK_TM_ALL_0;
     if (CCMask == SystemZ::CCMASK_CMP_GE)
