@@ -3484,15 +3484,6 @@ void Scop::buildSchedule(
   while (L && NumVisited == L->getNumBlocks()) {
     auto *PL = L->getParentLoop();
 
-    // Either we have a proper loop and we also build a schedule for the
-    // parent loop or we have a infinite loop that does not have a proper
-    // parent loop. In the former case this conditional will be skipped, in
-    // the latter case however we will break here as we do not build a domain
-    // nor a schedule for a infinite loop.
-    assert(LoopSchedules.count(PL) || LSchedule == nullptr);
-    if (!LoopSchedules.count(PL))
-      break;
-
     auto &PSchedulePair = LoopSchedules[PL];
 
     if (LSchedule) {

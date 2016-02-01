@@ -425,27 +425,27 @@ private:
   void visitCatchSwitchInst(CatchSwitchInst &CatchSwitch);
   void visitCleanupReturnInst(CleanupReturnInst &CRI);
 
-  void VerifyCallSite(CallSite CS);
+  void verifyCallSite(CallSite CS);
   void verifyMustTailCall(CallInst &CI);
-  bool PerformTypeCheck(Intrinsic::ID ID, Function *F, Type *Ty, int VT,
+  bool performTypeCheck(Intrinsic::ID ID, Function *F, Type *Ty, int VT,
                         unsigned ArgNo, std::string &Suffix);
-  bool VerifyIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
+  bool verifyIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
                            SmallVectorImpl<Type *> &ArgTys);
-  bool VerifyIntrinsicIsVarArg(bool isVarArg,
+  bool verifyIntrinsicIsVarArg(bool isVarArg,
                                ArrayRef<Intrinsic::IITDescriptor> &Infos);
-  bool VerifyAttributeCount(AttributeSet Attrs, unsigned Params);
-  void VerifyAttributeTypes(AttributeSet Attrs, unsigned Idx, bool isFunction,
+  bool verifyAttributeCount(AttributeSet Attrs, unsigned Params);
+  void verifyAttributeTypes(AttributeSet Attrs, unsigned Idx, bool isFunction,
                             const Value *V);
-  void VerifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
+  void verifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
                             bool isReturnValue, const Value *V);
-  void VerifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
+  void verifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
                            const Value *V);
-  void VerifyFunctionMetadata(
+  void verifyFunctionMetadata(
       const SmallVector<std::pair<unsigned, MDNode *>, 4> MDs);
 
   void visitConstantExprsRecursively(const Constant *EntryC);
   void visitConstantExpr(const ConstantExpr *CE);
-  void VerifyStatepoint(ImmutableCallSite CS);
+  void verifyStatepoint(ImmutableCallSite CS);
   void verifyFrameRecoverIndices();
   void verifySiblingFuncletUnwinds();
 
@@ -1263,7 +1263,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
   }
 }
 
-void Verifier::VerifyAttributeTypes(AttributeSet Attrs, unsigned Idx,
+void Verifier::verifyAttributeTypes(AttributeSet Attrs, unsigned Idx,
                                     bool isFunction, const Value *V) {
   unsigned Slot = ~0U;
   for (unsigned I = 0, E = Attrs.getNumSlots(); I != E; ++I)
@@ -1333,12 +1333,12 @@ void Verifier::VerifyAttributeTypes(AttributeSet Attrs, unsigned Idx,
 
 // VerifyParameterAttrs - Check the given attributes for an argument or return
 // value of the specified type.  The value V is printed in error messages.
-void Verifier::VerifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
+void Verifier::verifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
                                     bool isReturnValue, const Value *V) {
   if (!Attrs.hasAttributes(Idx))
     return;
 
-  VerifyAttributeTypes(Attrs, Idx, false, V);
+  verifyAttributeTypes(Attrs, Idx, false, V);
 
   if (isReturnValue)
     Assert(!Attrs.hasAttribute(Idx, Attribute::ByVal) &&
@@ -1418,9 +1418,9 @@ void Verifier::VerifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
   }
 }
 
-// VerifyFunctionAttrs - Check parameter attributes against a function type.
+// Check parameter attributes against a function type.
 // The value V is printed in error messages.
-void Verifier::VerifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
+void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
                                    const Value *V) {
   if (Attrs.isEmpty())
     return;
@@ -1442,7 +1442,7 @@ void Verifier::VerifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
     else
       break;  // VarArgs attributes, verified elsewhere.
 
-    VerifyParameterAttrs(Attrs, Idx, Ty, Idx == 0, V);
+    verifyParameterAttrs(Attrs, Idx, Ty, Idx == 0, V);
 
     if (Idx == 0)
       continue;
@@ -1489,7 +1489,7 @@ void Verifier::VerifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
   if (!Attrs.hasAttributes(AttributeSet::FunctionIndex))
     return;
 
-  VerifyAttributeTypes(Attrs, AttributeSet::FunctionIndex, true, V);
+  verifyAttributeTypes(Attrs, AttributeSet::FunctionIndex, true, V);
 
   Assert(
       !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone) &&
@@ -1535,7 +1535,7 @@ void Verifier::VerifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
   }
 }
 
-void Verifier::VerifyFunctionMetadata(
+void Verifier::verifyFunctionMetadata(
     const SmallVector<std::pair<unsigned, MDNode *>, 4> MDs) {
   if (MDs.empty())
     return;
@@ -1608,7 +1608,7 @@ void Verifier::visitConstantExpr(const ConstantExpr *CE) {
          "Invalid bitcast", CE);
 }
 
-bool Verifier::VerifyAttributeCount(AttributeSet Attrs, unsigned Params) {
+bool Verifier::verifyAttributeCount(AttributeSet Attrs, unsigned Params) {
   if (Attrs.getNumSlots() == 0)
     return true;
 
@@ -1622,8 +1622,8 @@ bool Verifier::VerifyAttributeCount(AttributeSet Attrs, unsigned Params) {
   return false;
 }
 
-/// \brief Verify that statepoint intrinsic is well formed.
-void Verifier::VerifyStatepoint(ImmutableCallSite CS) {
+/// Verify that statepoint intrinsic is well formed.
+void Verifier::verifyStatepoint(ImmutableCallSite CS) {
   assert(CS.getCalledFunction() &&
          CS.getCalledFunction()->getIntrinsicID() ==
            Intrinsic::experimental_gc_statepoint);
@@ -1846,11 +1846,11 @@ void Verifier::visitFunction(const Function &F) {
 
   AttributeSet Attrs = F.getAttributes();
 
-  Assert(VerifyAttributeCount(Attrs, FT->getNumParams()),
+  Assert(verifyAttributeCount(Attrs, FT->getNumParams()),
          "Attribute after last parameter!", &F);
 
   // Check function attributes.
-  VerifyFunctionAttrs(FT, Attrs, &F);
+  verifyFunctionAttrs(FT, Attrs, &F);
 
   // On function declarations/definitions, we do not support the builtin
   // attribute. We do not check this in VerifyFunctionAttrs since that is
@@ -1904,7 +1904,7 @@ void Verifier::visitFunction(const Function &F) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   F.getAllMetadata(MDs);
   assert(F.hasMetadata() != MDs.empty() && "Bit out-of-sync");
-  VerifyFunctionMetadata(MDs);
+  verifyFunctionMetadata(MDs);
 
   // Check validity of the personality function
   if (F.hasPersonalityFn()) {
@@ -2422,7 +2422,7 @@ void Verifier::visitPHINode(PHINode &PN) {
   visitInstruction(PN);
 }
 
-void Verifier::VerifyCallSite(CallSite CS) {
+void Verifier::verifyCallSite(CallSite CS) {
   Instruction *I = CS.getInstruction();
 
   Assert(CS.getCalledValue()->getType()->isPointerTy(),
@@ -2453,11 +2453,11 @@ void Verifier::VerifyCallSite(CallSite CS) {
 
   AttributeSet Attrs = CS.getAttributes();
 
-  Assert(VerifyAttributeCount(Attrs, CS.arg_size()),
+  Assert(verifyAttributeCount(Attrs, CS.arg_size()),
          "Attribute after last parameter!", I);
 
   // Verify call attributes.
-  VerifyFunctionAttrs(FTy, Attrs, I);
+  verifyFunctionAttrs(FTy, Attrs, I);
 
   // Conservatively check the inalloca argument.
   // We have a bug if we can find that there is an underlying alloca without
@@ -2494,7 +2494,7 @@ void Verifier::VerifyCallSite(CallSite CS) {
     // Check attributes on the varargs part.
     for (unsigned Idx = 1 + FTy->getNumParams(); Idx <= CS.arg_size(); ++Idx) {
       Type *Ty = CS.getArgument(Idx-1)->getType();
-      VerifyParameterAttrs(Attrs, Idx, Ty, false, I);
+      verifyParameterAttrs(Attrs, Idx, Ty, false, I);
 
       if (Attrs.hasAttribute(Idx, Attribute::Nest)) {
         Assert(!SawNest, "More than one parameter has attribute nest!", I);
@@ -2656,14 +2656,14 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
 }
 
 void Verifier::visitCallInst(CallInst &CI) {
-  VerifyCallSite(&CI);
+  verifyCallSite(&CI);
 
   if (CI.isMustTailCall())
     verifyMustTailCall(CI);
 }
 
 void Verifier::visitInvokeInst(InvokeInst &II) {
-  VerifyCallSite(&II);
+  verifyCallSite(&II);
 
   // Verify that the first non-PHI instruction of the unwind destination is an
   // exception handling instruction.
@@ -3597,12 +3597,12 @@ void Verifier::visitInstruction(Instruction &I) {
   InstsInThisBlock.insert(&I);
 }
 
-/// VerifyIntrinsicType - Verify that the specified type (which comes from an
-/// intrinsic argument or return value) matches the type constraints specified
-/// by the .td file (e.g. an "any integer" argument really is an integer).
+/// Verify that the specified type (which comes from an intrinsic argument or
+/// return value) matches the type constraints specified by the .td file (e.g.
+/// an "any integer" argument really is an integer).
 ///
-/// This return true on error but does not print a message.
-bool Verifier::VerifyIntrinsicType(Type *Ty,
+/// This returns true on error but does not print a message.
+bool Verifier::verifyIntrinsicType(Type *Ty,
                                    ArrayRef<Intrinsic::IITDescriptor> &Infos,
                                    SmallVectorImpl<Type*> &ArgTys) {
   using namespace Intrinsic;
@@ -3625,12 +3625,12 @@ bool Verifier::VerifyIntrinsicType(Type *Ty,
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
     return !VT || VT->getNumElements() != D.Vector_Width ||
-           VerifyIntrinsicType(VT->getElementType(), Infos, ArgTys);
+           verifyIntrinsicType(VT->getElementType(), Infos, ArgTys);
   }
   case IITDescriptor::Pointer: {
     PointerType *PT = dyn_cast<PointerType>(Ty);
     return !PT || PT->getAddressSpace() != D.Pointer_AddressSpace ||
-           VerifyIntrinsicType(PT->getElementType(), Infos, ArgTys);
+           verifyIntrinsicType(PT->getElementType(), Infos, ArgTys);
   }
 
   case IITDescriptor::Struct: {
@@ -3639,7 +3639,7 @@ bool Verifier::VerifyIntrinsicType(Type *Ty,
       return true;
 
     for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
-      if (VerifyIntrinsicType(ST->getElementType(i), Infos, ArgTys))
+      if (verifyIntrinsicType(ST->getElementType(i), Infos, ArgTys))
         return true;
     return false;
   }
@@ -3710,7 +3710,7 @@ bool Verifier::VerifyIntrinsicType(Type *Ty,
         (ReferenceType->getVectorNumElements() !=
          ThisArgType->getVectorNumElements()))
       return true;
-    return VerifyIntrinsicType(ThisArgType->getVectorElementType(),
+    return verifyIntrinsicType(ThisArgType->getVectorElementType(),
                                Infos, ArgTys);
   }
   case IITDescriptor::PtrToArgument: {
@@ -3741,13 +3741,12 @@ bool Verifier::VerifyIntrinsicType(Type *Ty,
   llvm_unreachable("unhandled");
 }
 
-/// \brief Verify if the intrinsic has variable arguments.
-/// This method is intended to be called after all the fixed arguments have been
-/// verified first.
+/// Verify if the intrinsic has variable arguments. This method is intended to
+/// be called after all the fixed arguments have been verified first.
 ///
 /// This method returns true on error and does not print an error message.
 bool
-Verifier::VerifyIntrinsicIsVarArg(bool isVarArg,
+Verifier::verifyIntrinsicIsVarArg(bool isVarArg,
                                   ArrayRef<Intrinsic::IITDescriptor> &Infos) {
   using namespace Intrinsic;
 
@@ -3784,18 +3783,18 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
   SmallVector<Type *, 4> ArgTys;
-  Assert(!VerifyIntrinsicType(IFTy->getReturnType(), TableRef, ArgTys),
+  Assert(!verifyIntrinsicType(IFTy->getReturnType(), TableRef, ArgTys),
          "Intrinsic has incorrect return type!", IF);
   for (unsigned i = 0, e = IFTy->getNumParams(); i != e; ++i)
-    Assert(!VerifyIntrinsicType(IFTy->getParamType(i), TableRef, ArgTys),
+    Assert(!verifyIntrinsicType(IFTy->getParamType(i), TableRef, ArgTys),
            "Intrinsic has incorrect argument type!", IF);
 
   // Verify if the intrinsic call matches the vararg property.
   if (IsVarArg)
-    Assert(!VerifyIntrinsicIsVarArg(IsVarArg, TableRef),
+    Assert(!verifyIntrinsicIsVarArg(IsVarArg, TableRef),
            "Intrinsic was not defined with variable arguments!", IF);
   else
-    Assert(!VerifyIntrinsicIsVarArg(IsVarArg, TableRef),
+    Assert(!verifyIntrinsicIsVarArg(IsVarArg, TableRef),
            "Callsite was not defined with variable arguments!", IF);
 
   // All descriptors should be absorbed by now.
@@ -3938,7 +3937,7 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
     Assert(CS.getParent()->getParent()->hasGC(),
            "Enclosing function does not use GC.", CS);
 
-    VerifyStatepoint(CS);
+    verifyStatepoint(CS);
     break;
   case Intrinsic::experimental_gc_result: {
     Assert(CS.getParent()->getParent()->hasGC(),
@@ -3988,18 +3987,18 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
     else {
       // In all other cases relocate should be tied to the statepoint directly.
       // This covers relocates on a normal return path of invoke statepoint and
-      // relocates of a call statepoint
+      // relocates of a call statepoint.
       auto Token = CS.getArgOperand(0);
       Assert(isa<Instruction>(Token) && isStatepoint(cast<Instruction>(Token)),
              "gc relocate is incorrectly tied to the statepoint", CS, Token);
     }
 
-    // Verify rest of the relocate arguments
+    // Verify rest of the relocate arguments.
 
     ImmutableCallSite StatepointCS(
         cast<GCRelocateInst>(*CS.getInstruction()).getStatepoint());
 
-    // Both the base and derived must be piped through the safepoint
+    // Both the base and derived must be piped through the safepoint.
     Value* Base = CS.getArgOperand(1);
     Assert(isa<ConstantInt>(Base),
            "gc.relocate operand #2 must be integer offset", CS);
@@ -4017,7 +4016,7 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            "gc.relocate: statepoint derived index out of bounds", CS);
 
     // Check that BaseIndex and DerivedIndex fall within the 'gc parameters'
-    // section of the statepoint's argument
+    // section of the statepoint's argument.
     Assert(StatepointCS.arg_size() > 0,
            "gc.statepoint: insufficient arguments");
     Assert(isa<ConstantInt>(StatepointCS.getArgument(3)),
@@ -4037,7 +4036,8 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            "gc.statepoint: number of deoptimization arguments must be "
            "a constant integer");
     const int NumDeoptArgs =
-      cast<ConstantInt>(StatepointCS.getArgument(DeoptArgsStart))->getZExtValue();
+        cast<ConstantInt>(StatepointCS.getArgument(DeoptArgsStart))
+            ->getZExtValue();
     const int GCParamArgsStart = DeoptArgsStart + 1 + NumDeoptArgs;
     const int GCParamArgsEnd = StatepointCS.arg_size();
     Assert(GCParamArgsStart <= BaseIndex && BaseIndex < GCParamArgsEnd,
@@ -4060,10 +4060,13 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
     auto ResultType = CS.getType();
     auto DerivedType = Relocate.getDerivedPtr()->getType();
     Assert(ResultType->isVectorTy() == DerivedType->isVectorTy(),
-           "gc.relocate: vector relocates to vector and pointer to pointer", CS);
-    Assert(ResultType->getPointerAddressSpace() ==
-           DerivedType->getPointerAddressSpace(),
-           "gc.relocate: relocating a pointer shouldn't change its address space", CS);
+           "gc.relocate: vector relocates to vector and pointer to pointer",
+           CS);
+    Assert(
+        ResultType->getPointerAddressSpace() ==
+            DerivedType->getPointerAddressSpace(),
+        "gc.relocate: relocating a pointer shouldn't change its address space",
+        CS);
     break;
   }
   case Intrinsic::eh_exceptioncode:

@@ -320,6 +320,7 @@ HANDLE_DW_LANG(0x0021, C_plus_plus_14)
 HANDLE_DW_LANG(0x0022, Fortran03)
 HANDLE_DW_LANG(0x0023, Fortran08)
 HANDLE_DW_LANG(0x8001, Mips_Assembler)
+HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript)
 HANDLE_DW_LANG(0xb000, BORLAND_Delphi)
 
 // DWARF attribute type encodings.
