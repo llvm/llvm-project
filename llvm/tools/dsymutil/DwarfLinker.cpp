@@ -1875,6 +1875,26 @@ void DwarfLinker::endDebugObject() {
   DIEAlloc.Reset();
 }
 
+static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch) {
+  switch (Arch) {
+  case Triple::x86:
+    return RelocType == MachO::GENERIC_RELOC_SECTDIFF ||
+           RelocType == MachO::GENERIC_RELOC_LOCAL_SECTDIFF;
+  case Triple::x86_64:
+    return RelocType == MachO::X86_64_RELOC_SUBTRACTOR;
+  case Triple::arm:
+  case Triple::thumb:
+    return RelocType == MachO::ARM_RELOC_SECTDIFF ||
+           RelocType == MachO::ARM_RELOC_LOCAL_SECTDIFF ||
+           RelocType == MachO::ARM_RELOC_HALF ||
+           RelocType == MachO::ARM_RELOC_HALF_SECTDIFF;
+  case Triple::aarch64:
+    return RelocType == MachO::ARM64_RELOC_SUBTRACTOR;
+  default:
+    return false;
+  }
+}
+
 /// \brief Iterate over the relocations of the given \p Section and
 /// store the ones that correspond to debug map entries into the
 /// ValidRelocs array.
@@ -1885,10 +1905,24 @@ findValidRelocsMachO(const object::SectionRef &Section,
   StringRef Contents;
   Section.getContents(Contents);
   DataExtractor Data(Contents, Obj.isLittleEndian(), 0);
+  bool SkipNext = false;
 
   for (const object::RelocationRef &Reloc : Section.relocations()) {
+    if (SkipNext) {
+      SkipNext = false;
+      continue;
+    }
+
     object::DataRefImpl RelocDataRef = Reloc.getRawDataRefImpl();
     MachO::any_relocation_info MachOReloc = Obj.getRelocation(RelocDataRef);
+
+    if (isMachOPairedReloc(Obj.getAnyRelocationType(MachOReloc),
+                           Obj.getArch())) {
+      SkipNext = true;
+      Linker.reportWarning(" unsupported relocation in debug_info section.");
+      continue;
+    }
+
     unsigned RelocSize = 1 << Obj.getAnyRelocationLength(MachOReloc);
     uint64_t Offset64 = Reloc.getOffset();
     if ((RelocSize != 4 && RelocSize != 8)) {
