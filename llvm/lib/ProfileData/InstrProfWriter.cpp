@@ -139,8 +139,8 @@ public:
 };
 }
 
-InstrProfWriter::InstrProfWriter()
-    : FunctionData(), MaxFunctionCount(0),
+InstrProfWriter::InstrProfWriter(bool Sparse)
+    : Sparse(Sparse), FunctionData(), MaxFunctionCount(0),
       InfoObj(new InstrProfRecordWriterTrait()) {}
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
@@ -149,6 +149,9 @@ InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 void InstrProfWriter::setValueProfDataEndianness(
     support::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
+}
+void InstrProfWriter::setOutputSparse(bool Sparse) {
+  this->Sparse = Sparse;
 }
 
 std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
@@ -184,11 +187,24 @@ std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
   return Result;
 }
 
+bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {
+  if (!Sparse)
+    return true;
+  for (const auto &Func : PD) {
+    const InstrProfRecord &IPR = Func.second;
+    if (std::any_of(IPR.Counts.begin(), IPR.Counts.end(),
+                    [](uint64_t Count) { return Count > 0; }))
+      return true;
+  }
+  return false;
+}
+
 void InstrProfWriter::writeImpl(ProfOStream &OS) {
   OnDiskChainedHashTableGenerator<InstrProfRecordWriterTrait> Generator;
   // Populate the hash table generator.
   for (const auto &I : FunctionData)
-    Generator.insert(I.getKey(), &I.getValue());
+    if (shouldEncodeData(I.getValue()))
+      Generator.insert(I.getKey(), &I.getValue());
   // Write the header.
   IndexedInstrProf::Header Header;
   Header.Magic = IndexedInstrProf::Magic;
@@ -279,10 +295,12 @@ void InstrProfWriter::writeRecordInText(const InstrProfRecord &Func,
 void InstrProfWriter::writeText(raw_fd_ostream &OS) {
   InstrProfSymtab Symtab;
   for (const auto &I : FunctionData)
-    Symtab.addFuncName(I.getKey());
+    if (shouldEncodeData(I.getValue()))
+      Symtab.addFuncName(I.getKey());
   Symtab.finalizeSymtab();
 
   for (const auto &I : FunctionData)
-    for (const auto &Func : I.getValue())
-      writeRecordInText(Func.second, Symtab, OS);
+    if (shouldEncodeData(I.getValue()))
+      for (const auto &Func : I.getValue())
+        writeRecordInText(Func.second, Symtab, OS);
 }
