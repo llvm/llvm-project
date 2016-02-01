@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=SSE --check-prefix=SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX --check-prefix=AVX2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefix=AVX --check-prefix=AVX512F
 
 define <2 x double> @merge_2f64_f64_23(double* %ptr) nounwind uwtable noinline ssp {
 ; SSE-LABEL: merge_2f64_f64_23:
@@ -73,10 +74,20 @@ define <4 x float> @merge_4f32_f32_3zuu(float* %ptr) nounwind uwtable noinline s
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: merge_4f32_f32_3zuu:
-; AVX:       # BB#0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    retq
+; AVX1-LABEL: merge_4f32_f32_3zuu:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: merge_4f32_f32_3zuu:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: merge_4f32_f32_3zuu:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vmovss 12(%rdi), %xmm0
+; AVX512F-NEXT:    retq
   %ptr0 = getelementptr inbounds float, float* %ptr, i64 3
   %val0 = load float, float* %ptr0
   %res0 = insertelement <4 x float> undef, float %val0, i32 0
@@ -111,12 +122,26 @@ define <4 x float> @merge_4f32_f32_34z6(float* %ptr) nounwind uwtable noinline s
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[1,0]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: merge_4f32_f32_34z6:
-; AVX:       # BB#0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[1,0]
-; AVX-NEXT:    retq
+; AVX1-LABEL: merge_4f32_f32_34z6:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[1,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: merge_4f32_f32_34z6:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[1,0]
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: merge_4f32_f32_34z6:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vmovss 24(%rdi), %xmm1
+; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[1,0]
+; AVX512F-NEXT:    retq
   %ptr0 = getelementptr inbounds float, float* %ptr, i64 3
   %ptr1 = getelementptr inbounds float, float* %ptr, i64 4
   %ptr3 = getelementptr inbounds float, float* %ptr, i64 6
@@ -163,11 +188,23 @@ define <4 x float> @merge_4f32_f32_012u(float* %ptr) nounwind uwtable noinline s
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: merge_4f32_f32_012u:
-; AVX:       # BB#0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX-NEXT:    retq
+; AVX1-LABEL: merge_4f32_f32_012u:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: merge_4f32_f32_012u:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: merge_4f32_f32_012u:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vinsertps $32, 8(%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    retq
   %ptr0 = getelementptr inbounds float, float* %ptr, i64 0
   %ptr1 = getelementptr inbounds float, float* %ptr, i64 1
   %ptr2 = getelementptr inbounds float, float* %ptr, i64 2
@@ -197,11 +234,23 @@ define <4 x float> @merge_4f32_f32_019u(float* %ptr) nounwind uwtable noinline s
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: merge_4f32_f32_019u:
-; AVX:       # BB#0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; AVX-NEXT:    retq
+; AVX1-LABEL: merge_4f32_f32_019u:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: merge_4f32_f32_019u:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: merge_4f32_f32_019u:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vinsertps $32, 36(%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    retq
   %ptr0 = getelementptr inbounds float, float* %ptr, i64 0
   %ptr1 = getelementptr inbounds float, float* %ptr, i64 1
   %ptr2 = getelementptr inbounds float, float* %ptr, i64 9
@@ -243,10 +292,20 @@ define <4 x i32> @merge_4i32_i32_3zuu(i32* %ptr) nounwind uwtable noinline ssp {
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: merge_4i32_i32_3zuu:
-; AVX:       # BB#0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    retq
+; AVX1-LABEL: merge_4i32_i32_3zuu:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: merge_4i32_i32_3zuu:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: merge_4i32_i32_3zuu:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vmovd 12(%rdi), %xmm0
+; AVX512F-NEXT:    retq
   %ptr0 = getelementptr inbounds i32, i32* %ptr, i64 3
   %val0 = load i32, i32* %ptr0
   %res0 = insertelement <4 x i32> undef, i32 %val0, i32 0

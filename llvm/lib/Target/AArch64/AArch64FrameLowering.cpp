@@ -310,7 +310,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // Move past the saves of the callee-saved registers.
   MachineBasicBlock::iterator End = MBB.end();
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup))
-    ++MBBI;
+     ++MBBI;
   NumBytes -= AFI->getCalleeSavedStackSize();
   assert(NumBytes >= 0 && "Negative stack allocation size!?");
   if (HasFP) {
@@ -535,7 +535,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   //      ---------------------|        ---           |
   //      |                    |         |            |
   //      |   CalleeSavedReg   |         |            |
-  //      | (CalleeSavedStackSize)|      |            |
+  //      | (CalleeSavedStackSize8)|     |            |
   //      |                    |         |            |
   //      ---------------------|         |         NumBytes
   //      |                    |     StackSize  (StackAdjustUp)

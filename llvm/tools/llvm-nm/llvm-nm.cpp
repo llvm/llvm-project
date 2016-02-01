@@ -260,15 +260,11 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
       // use 1, 2 and 3 for section numbers.  See below where they are used to
       // print out fake section names.
       NType |= MachO::N_SECT;
-      if(SymFlags & SymbolRef::SF_Const)
+      if (SymFlags & SymbolRef::SF_Const)
         NSect = 3;
       else {
         IRObjectFile *IRobj = dyn_cast<IRObjectFile>(&Obj);
-        char c = getSymbolNMTypeChar(*IRobj, I->Sym);
-        if (c == 't')
-          NSect = 1;
-        else
-          NSect = 2;
+        NSect = (getSymbolNMTypeChar(*IRobj, I->Sym) == 't') ? 1 : 2;
       }
     }
     if (SymFlags & SymbolRef::SF_Weak)

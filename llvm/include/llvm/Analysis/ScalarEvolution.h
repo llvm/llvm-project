@@ -733,8 +733,8 @@ namespace llvm {
     /// Test if the given expression is known to satisfy the condition described
     /// by Pred and the known constant ranges of LHS and RHS.
     ///
-    bool isKnownPredicateWithRanges(ICmpInst::Predicate Pred,
-                                    const SCEV *LHS, const SCEV *RHS);
+    bool isKnownPredicateViaConstantRanges(ICmpInst::Predicate Pred,
+                                           const SCEV *LHS, const SCEV *RHS);
 
     /// Try to prove the condition described by "LHS Pred RHS" by ruling out
     /// integer overflow.
