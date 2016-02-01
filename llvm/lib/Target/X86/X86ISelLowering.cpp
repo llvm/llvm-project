@@ -23873,9 +23873,19 @@ static SDValue PerformTargetShuffleCombine(SDValue N, SelectionDAG &DAG,
     SDValue Op1 = N.getOperand(1);
     SDValue Op2 = N.getOperand(2);
     unsigned InsertPSMask = cast<ConstantSDNode>(Op2)->getZExtValue();
-    unsigned DstIdx = (InsertPSMask >> 4) & 3;
+    unsigned DstIdx = (InsertPSMask >> 4) & 0x3;
+    unsigned ZeroMask = InsertPSMask & 0xF;
 
-    // Attempt to merge insertps with an inner target shuffle node.
+    // If we zero out all elements from Op0 then we don't need to reference it.
+    if (((ZeroMask | (1u << DstIdx)) == 0xF) && !Op0.isUndef())
+      return DAG.getNode(X86ISD::INSERTPS, DL, VT, DAG.getUNDEF(VT), Op1,
+                         DAG.getConstant(InsertPSMask, DL, MVT::i8));
+
+    // If we zero out the element from Op1 then we don't need to reference it.
+    if ((ZeroMask & (1u << DstIdx)) && !Op1.isUndef())
+      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, DAG.getUNDEF(VT),
+                         DAG.getConstant(InsertPSMask, DL, MVT::i8));
+
     SmallVector<int, 8> TargetMask;
     if (!setTargetShuffleZeroElements(Op0, TargetMask))
       return SDValue();
@@ -23915,7 +23925,7 @@ static SDValue PerformTargetShuffleCombine(SDValue N, SelectionDAG &DAG,
     }
 
     if (Updated)
-      return DAG.getNode(X86ISD::INSERTPS, DL, MVT::v4f32, Op0, Op1,
+      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
                          DAG.getConstant(InsertPSMask, DL, MVT::i8));
 
     return SDValue();
