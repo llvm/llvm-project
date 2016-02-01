@@ -104,6 +104,63 @@ static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
   return Changed;
 }
 
+static bool optimizeStore(MachineBasicBlock &MBB, MachineInstr &MI,
+                          const MachineRegisterInfo &MRI,
+                          MachineDominatorTree &MDT) {
+  const auto &Stored = MI.getOperand(WebAssembly::StoreValueOperandNo);
+  switch (Stored.getType()) {
+  case MachineOperand::MO_Register: {
+    unsigned ToReg = MI.getOperand(0).getReg();
+    unsigned FromReg = Stored.getReg();
+    return ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
+  }
+  case MachineOperand::MO_FrameIndex:
+    // TODO: optimize.
+    return false;
+  default:
+    report_fatal_error("Store results: store not consuming reg or frame index");
+  }
+}
+
+static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
+                         const MachineRegisterInfo &MRI,
+                         MachineDominatorTree &MDT,
+                         const WebAssemblyTargetLowering &TLI,
+                         const TargetLibraryInfo &LibInfo) {
+  MachineOperand &Op1 = MI.getOperand(1);
+  if (!Op1.isSymbol())
+    return false;
+
+  StringRef Name(Op1.getSymbolName());
+  bool callReturnsInput = Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
+                          Name == TLI.getLibcallName(RTLIB::MEMMOVE) ||
+                          Name == TLI.getLibcallName(RTLIB::MEMSET);
+  if (!callReturnsInput)
+    return false;
+
+  LibFunc::Func Func;
+  if (!LibInfo.getLibFunc(Name, Func))
+    return false;
+
+  const auto &Op2 = MI.getOperand(2);
+  switch (Op2.getType()) {
+  case MachineOperand::MO_Register: {
+    unsigned FromReg = Op2.getReg();
+    unsigned ToReg = MI.getOperand(0).getReg();
+    if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
+      report_fatal_error("Store results: call to builtin function with wrong "
+                         "signature, from/to mismatch");
+    return ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
+  }
+  case MachineOperand::MO_FrameIndex:
+    // TODO: optimize.
+    return false;
+  default:
+    report_fatal_error("Store results: call to builtin function with wrong "
+                       "signature, not consuming reg or frame index");
+  }
+}
+
 bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
   DEBUG({
     dbgs() << "********** Store Results **********\n"
@@ -114,7 +171,7 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
   MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
   const WebAssemblyTargetLowering &TLI =
       *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
-  auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  const auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   bool Changed = false;
 
   assert(MRI.isSSA() && "StoreResults depends on SSA form");
@@ -133,50 +190,13 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::STORE_F32:
       case WebAssembly::STORE_F64:
       case WebAssembly::STORE_I32:
-      case WebAssembly::STORE_I64: {
-        const auto &Stored = MI.getOperand(WebAssembly::StoreValueOperandNo);
-        if (Stored.isReg()) {
-          unsigned ToReg = MI.getOperand(0).getReg();
-          unsigned FromReg = Stored.getReg();
-          Changed |= ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
-        } else if (Stored.isFI()) {
-          break;
-        } else {
-          report_fatal_error(
-              "Store results: store not consuming reg or frame index");
-        }
+      case WebAssembly::STORE_I64:
+        Changed |= optimizeStore(MBB, MI, MRI, MDT);
         break;
-      }
       case WebAssembly::CALL_I32:
-      case WebAssembly::CALL_I64: {
-        MachineOperand &Op1 = MI.getOperand(1);
-        if (Op1.isSymbol()) {
-          StringRef Name(Op1.getSymbolName());
-          if (Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
-              Name == TLI.getLibcallName(RTLIB::MEMMOVE) ||
-              Name == TLI.getLibcallName(RTLIB::MEMSET)) {
-            LibFunc::Func Func;
-            if (LibInfo.getLibFunc(Name, Func)) {
-              const auto &Op2 = MI.getOperand(2);
-              if (Op2.isReg()) {
-                unsigned FromReg = Op2.getReg();
-                unsigned ToReg = MI.getOperand(0).getReg();
-                if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
-                  report_fatal_error("Store results: call to builtin function "
-                                     "with wrong signature, from/to mismatch");
-                Changed |=
-                    ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT);
-              } else if (Op2.isFI()) {
-                break;
-              } else {
-                report_fatal_error("Store results: call to builtin function "
-                                   "with wrong signature, not consuming reg or "
-                                   "frame index");
-              }
-            }
-          }
-        }
-      }
+      case WebAssembly::CALL_I64:
+        Changed |= optimizeCall(MBB, MI, MRI, MDT, TLI, LibInfo);
+        break;
       }
   }
 

@@ -227,7 +227,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
   // For little-endian instruction bit encodings, reverse the bit order
   Target.reverseBitsForLittleEndianEncoding();
 
-  const std::vector<const CodeGenInstruction*> &NumberedInstructions =
+  ArrayRef<const CodeGenInstruction*> NumberedInstructions =
     Target.getInstructionsByEnumValue();
 
   // Emit function declaration
@@ -238,11 +238,7 @@ void CodeEmitterGen::run(raw_ostream &o) {
 
   // Emit instruction base values
   o << "  static const uint64_t InstBits[] = {\n";
-  for (std::vector<const CodeGenInstruction*>::const_iterator
-          IN = NumberedInstructions.begin(),
-          EN = NumberedInstructions.end();
-       IN != EN; ++IN) {
-    const CodeGenInstruction *CGI = *IN;
+  for (const CodeGenInstruction *CGI : NumberedInstructions) {
     Record *R = CGI->TheDef;
 
     if (R->getValueAsString("Namespace") == "TargetOpcode" ||

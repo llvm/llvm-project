@@ -1613,11 +1613,11 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   case Hexagon::A2_tfrp: {
     MCOperand &MO = Inst.getOperand(1);
     unsigned int RegPairNum = RI->getEncodingValue(MO.getReg());
-    std::string R1 = r + llvm::utostr_32(RegPairNum + 1);
+    std::string R1 = r + llvm::utostr(RegPairNum + 1);
     StringRef Reg1(R1);
     MO.setReg(MatchRegisterName(Reg1));
     // Add a new operand for the second register in the pair.
-    std::string R2 = r + llvm::utostr_32(RegPairNum);
+    std::string R2 = r + llvm::utostr(RegPairNum);
     StringRef Reg2(R2);
     Inst.addOperand(MCOperand::createReg(MatchRegisterName(Reg2)));
     Inst.setOpcode(Hexagon::A2_combinew);
@@ -1628,11 +1628,11 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   case Hexagon::A2_tfrpf: {
     MCOperand &MO = Inst.getOperand(2);
     unsigned int RegPairNum = RI->getEncodingValue(MO.getReg());
-    std::string R1 = r + llvm::utostr_32(RegPairNum + 1);
+    std::string R1 = r + llvm::utostr(RegPairNum + 1);
     StringRef Reg1(R1);
     MO.setReg(MatchRegisterName(Reg1));
     // Add a new operand for the second register in the pair.
-    std::string R2 = r + llvm::utostr_32(RegPairNum);
+    std::string R2 = r + llvm::utostr(RegPairNum);
     StringRef Reg2(R2);
     Inst.addOperand(MCOperand::createReg(MatchRegisterName(Reg2)));
     Inst.setOpcode((Inst.getOpcode() == Hexagon::A2_tfrpt)
@@ -1644,11 +1644,11 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   case Hexagon::A2_tfrpfnew: {
     MCOperand &MO = Inst.getOperand(2);
     unsigned int RegPairNum = RI->getEncodingValue(MO.getReg());
-    std::string R1 = r + llvm::utostr_32(RegPairNum + 1);
+    std::string R1 = r + llvm::utostr(RegPairNum + 1);
     StringRef Reg1(R1);
     MO.setReg(MatchRegisterName(Reg1));
     // Add a new operand for the second register in the pair.
-    std::string R2 = r + llvm::utostr_32(RegPairNum);
+    std::string R2 = r + llvm::utostr(RegPairNum);
     StringRef Reg2(R2);
     Inst.addOperand(MCOperand::createReg(MatchRegisterName(Reg2)));
     Inst.setOpcode((Inst.getOpcode() == Hexagon::A2_tfrptnew)
@@ -1965,11 +1965,11 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     if (Value == 0) { // convert to $Rdd = combine ($Rs[0], $Rs[1])
       MCInst TmpInst;
       unsigned int RegPairNum = RI->getEncodingValue(Rss.getReg());
-      std::string R1 = r + llvm::utostr_32(RegPairNum + 1);
+      std::string R1 = r + llvm::utostr(RegPairNum + 1);
       StringRef Reg1(R1);
       Rss.setReg(MatchRegisterName(Reg1));
       // Add a new operand for the second register in the pair.
-      std::string R2 = r + llvm::utostr_32(RegPairNum);
+      std::string R2 = r + llvm::utostr(RegPairNum);
       StringRef Reg2(R2);
       TmpInst.setOpcode(Hexagon::A2_combinew);
       TmpInst.addOperand(Rdd);
@@ -1990,13 +1990,13 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     if (RegNum & 1) { // Odd mapped to raw:hi, regpair is rodd:odd-1, like r3:2
       Inst.setOpcode(Hexagon::A4_boundscheck_hi);
       std::string Name =
-          r + llvm::utostr_32(RegNum) + Colon + llvm::utostr_32(RegNum - 1);
+          r + llvm::utostr(RegNum) + Colon + llvm::utostr(RegNum - 1);
       StringRef RegPair = Name;
       Rs.setReg(MatchRegisterName(RegPair));
     } else { // raw:lo
       Inst.setOpcode(Hexagon::A4_boundscheck_lo);
       std::string Name =
-          r + llvm::utostr_32(RegNum + 1) + Colon + llvm::utostr_32(RegNum);
+          r + llvm::utostr(RegNum + 1) + Colon + llvm::utostr(RegNum);
       StringRef RegPair = Name;
       Rs.setReg(MatchRegisterName(RegPair));
     }
@@ -2009,13 +2009,13 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     if (RegNum & 1) { // Odd mapped to raw:hi
       Inst.setOpcode(Hexagon::A2_addsph);
       std::string Name =
-          r + llvm::utostr_32(RegNum) + Colon + llvm::utostr_32(RegNum - 1);
+          r + llvm::utostr(RegNum) + Colon + llvm::utostr(RegNum - 1);
       StringRef RegPair = Name;
       Rs.setReg(MatchRegisterName(RegPair));
     } else { // Even mapped raw:lo
       Inst.setOpcode(Hexagon::A2_addspl);
       std::string Name =
-          r + llvm::utostr_32(RegNum + 1) + Colon + llvm::utostr_32(RegNum);
+          r + llvm::utostr(RegNum + 1) + Colon + llvm::utostr(RegNum);
       StringRef RegPair = Name;
       Rs.setReg(MatchRegisterName(RegPair));
     }
@@ -2028,13 +2028,13 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     if (RegNum & 1) { // Odd mapped to sat:raw:hi
       Inst.setOpcode(Hexagon::M2_vrcmpys_s1_h);
       std::string Name =
-          r + llvm::utostr_32(RegNum) + Colon + llvm::utostr_32(RegNum - 1);
+          r + llvm::utostr(RegNum) + Colon + llvm::utostr(RegNum - 1);
       StringRef RegPair = Name;
       Rt.setReg(MatchRegisterName(RegPair));
     } else { // Even mapped sat:raw:lo
       Inst.setOpcode(Hexagon::M2_vrcmpys_s1_l);
       std::string Name =
-          r + llvm::utostr_32(RegNum + 1) + Colon + llvm::utostr_32(RegNum);
+          r + llvm::utostr(RegNum + 1) + Colon + llvm::utostr(RegNum);
       StringRef RegPair = Name;
       Rt.setReg(MatchRegisterName(RegPair));
     }
@@ -2050,13 +2050,13 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     if (RegNum & 1) { // Odd mapped to sat:raw:hi
       TmpInst.setOpcode(Hexagon::M2_vrcmpys_acc_s1_h);
       std::string Name =
-          r + llvm::utostr_32(RegNum) + Colon + llvm::utostr_32(RegNum - 1);
+          r + llvm::utostr(RegNum) + Colon + llvm::utostr(RegNum - 1);
       StringRef RegPair = Name;
       Rt.setReg(MatchRegisterName(RegPair));
     } else { // Even mapped sat:raw:lo
       TmpInst.setOpcode(Hexagon::M2_vrcmpys_acc_s1_l);
       std::string Name =
-          r + llvm::utostr_32(RegNum + 1) + Colon + llvm::utostr_32(RegNum);
+          r + llvm::utostr(RegNum + 1) + Colon + llvm::utostr(RegNum);
       StringRef RegPair = Name;
       Rt.setReg(MatchRegisterName(RegPair));
     }
@@ -2075,13 +2075,13 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     if (RegNum & 1) { // Odd mapped to rnd:sat:raw:hi
       Inst.setOpcode(Hexagon::M2_vrcmpys_s1rp_h);
       std::string Name =
-          r + llvm::utostr_32(RegNum) + Colon + llvm::utostr_32(RegNum - 1);
+          r + llvm::utostr(RegNum) + Colon + llvm::utostr(RegNum - 1);
       StringRef RegPair = Name;
       Rt.setReg(MatchRegisterName(RegPair));
     } else { // Even mapped rnd:sat:raw:lo
       Inst.setOpcode(Hexagon::M2_vrcmpys_s1rp_l);
       std::string Name =
-          r + llvm::utostr_32(RegNum + 1) + Colon + llvm::utostr_32(RegNum);
+          r + llvm::utostr(RegNum + 1) + Colon + llvm::utostr(RegNum);
       StringRef RegPair = Name;
       Rt.setReg(MatchRegisterName(RegPair));
     }
@@ -2115,11 +2115,11 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     if (Value == 0) {
       MCInst TmpInst;
       unsigned int RegPairNum = RI->getEncodingValue(Rss.getReg());
-      std::string R1 = r + llvm::utostr_32(RegPairNum + 1);
+      std::string R1 = r + llvm::utostr(RegPairNum + 1);
       StringRef Reg1(R1);
       Rss.setReg(MatchRegisterName(Reg1));
       // Add a new operand for the second register in the pair.
-      std::string R2 = r + llvm::utostr_32(RegPairNum);
+      std::string R2 = r + llvm::utostr(RegPairNum);
       StringRef Reg2(R2);
       TmpInst.setOpcode(Hexagon::A2_combinew);
       TmpInst.addOperand(Rdd);

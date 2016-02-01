@@ -81,7 +81,6 @@ private:
   void cloneCommonBlocks(Function &F);
   void removeImplausibleInstructions(Function &F);
   void cleanupPreparedFunclets(Function &F);
-  void fixupNoReturnCleanupPads(Function &F);
   void verifyPreparedFunclets(Function &F);
 
   // All fields are reset by runOnFunction.
@@ -657,7 +656,6 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
 
 void WinEHPrepare::colorFunclets(Function &F) {
   BlockColors = colorEHFunclets(F);
-  FuncletBlocks.clear();
 
   // Invert the map from BB to colors to color to BBs.
   for (BasicBlock &BB : F) {
@@ -1003,115 +1001,6 @@ void WinEHPrepare::cleanupPreparedFunclets(Function &F) {
   removeUnreachableBlocks(F);
 }
 
-// Cleanuppads which are postdominated by unreachable will not unwind to any
-// catchswitches, making them dead.  This is problematic if the original source
-// had a catch clause which could legitimately catch the exception, causing the
-// cleanup to run.
-//
-// This is only a problem for C++ where down-stream catches cause cleanups to
-// run.
-void WinEHPrepare::fixupNoReturnCleanupPads(Function &F) {
-  // We only need to do this for C++ personality routines,
-  // skip this work for all others.
-  if (Personality != EHPersonality::MSVC_CXX)
-    return;
-
-  // Do a quick sanity check on the color map before we throw it away so as to
-  // avoid hiding latent bugs.
-  DEBUG(verifyPreparedFunclets(F));
-  // Re-color the funclets because cleanupPreparedFunclets might have
-  // invalidated FuncletBlocks.
-  colorFunclets(F);
-
-  // We create a unique catchswitch for each parent it will be nested within.
-  SmallDenseMap<Value *, CatchSwitchInst *> NewCatchSwitches;
-  // Create a new catchswitch+catchpad where the catchpad is post-dominated by
-  // unreachable.
-  auto GetOrCreateCatchSwitch = [&](Value *ParentPad) {
-    auto &CatchSwitch = NewCatchSwitches[ParentPad];
-    if (CatchSwitch)
-      return CatchSwitch;
-
-    auto *ParentBB = isa<ConstantTokenNone>(ParentPad)
-                         ? &F.getEntryBlock()
-                         : cast<Instruction>(ParentPad)->getParent();
-
-    StringRef NameSuffix = ParentBB->getName();
-
-    BasicBlock *CatchSwitchBB = BasicBlock::Create(
-        F.getContext(), Twine("catchswitchbb.for.", NameSuffix));
-    CatchSwitchBB->insertInto(&F, ParentBB->getNextNode());
-    CatchSwitch = CatchSwitchInst::Create(ParentPad, /*UnwindDest=*/nullptr,
-                                          /*NumHandlers=*/1,
-                                          Twine("catchswitch.for.", NameSuffix),
-                                          CatchSwitchBB);
-
-    BasicBlock *CatchPadBB = BasicBlock::Create(
-        F.getContext(), Twine("catchpadbb.for.", NameSuffix));
-    CatchPadBB->insertInto(&F, CatchSwitchBB->getNextNode());
-    Value *CatchPadArgs[] = {
-        Constant::getNullValue(Type::getInt8PtrTy(F.getContext())),
-        ConstantInt::get(Type::getInt32Ty(F.getContext()), 64),
-        Constant::getNullValue(Type::getInt8PtrTy(F.getContext())),
-    };
-    CatchPadInst::Create(CatchSwitch, CatchPadArgs,
-                         Twine("catchpad.for.", NameSuffix), CatchPadBB);
-    new UnreachableInst(F.getContext(), CatchPadBB);
-
-    CatchSwitch->addHandler(CatchPadBB);
-
-    return CatchSwitch;
-  };
-
-  // Look for all basic blocks which are within cleanups which are postdominated
-  // by unreachable.
-  for (auto &Funclets : FuncletBlocks) {
-    BasicBlock *FuncletPadBB = Funclets.first;
-    auto *CleanupPad = dyn_cast<CleanupPadInst>(FuncletPadBB->getFirstNonPHI());
-    // Skip over any non-cleanup funclets.
-    if (!CleanupPad)
-      continue;
-    // Skip over any cleanups have unwind targets, they do not need this.
-    if (any_of(CleanupPad->users(),
-               [](const User *U) { return isa<CleanupReturnInst>(U); }))
-      continue;
-    // Walk the blocks within the cleanup which end in 'unreachable'.
-    // We will replace the unreachable instruction with a cleanupret;
-    // this cleanupret will unwind to a catchswitch with a lone catch-all
-    // catchpad.
-    std::vector<BasicBlock *> &BlocksInFunclet = Funclets.second;
-    for (BasicBlock *BB : BlocksInFunclet) {
-      auto *UI = dyn_cast<UnreachableInst>(BB->getTerminator());
-      if (!UI)
-        continue;
-      // Remove the unreachable instruction.
-      UI->eraseFromParent();
-
-      // Add our new cleanupret.
-      auto *ParentPad = CleanupPad->getParentPad();
-      CatchSwitchInst *CatchSwitch = GetOrCreateCatchSwitch(ParentPad);
-      CleanupReturnInst::Create(CleanupPad, CatchSwitch->getParent(), BB);
-    }
-  }
-
-  // Update BlockColors and FuncletBlocks to maintain WinEHPrepare's
-  // invariants.
-  for (auto CatchSwitchKV : NewCatchSwitches) {
-    CatchSwitchInst *CatchSwitch = CatchSwitchKV.second;
-    BasicBlock *CatchSwitchBB = CatchSwitch->getParent();
-
-    assert(CatchSwitch->getNumSuccessors() == 1);
-    BasicBlock *CatchPadBB = CatchSwitch->getSuccessor(0);
-    assert(isa<CatchPadInst>(CatchPadBB->getFirstNonPHI()));
-
-    BlockColors.insert({CatchSwitchBB, ColorVector(CatchSwitchBB)});
-    FuncletBlocks[CatchSwitchBB] = {CatchSwitchBB};
-
-    BlockColors.insert({CatchPadBB, ColorVector(CatchPadBB)});
-    FuncletBlocks[CatchPadBB] = {CatchPadBB};
-  }
-}
-
 void WinEHPrepare::verifyPreparedFunclets(Function &F) {
   for (BasicBlock &BB : F) {
     size_t NumColors = BlockColors[&BB].size();
@@ -1146,8 +1035,6 @@ bool WinEHPrepare::prepareExplicitEH(Function &F) {
     DEBUG(verifyFunction(F));
     cleanupPreparedFunclets(F);
   }
-
-  fixupNoReturnCleanupPads(F);
 
   DEBUG(verifyPreparedFunclets(F));
   // Recolor the CFG to verify that all is well.

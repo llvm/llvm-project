@@ -3043,14 +3043,11 @@ combineInstructionsOverFunction(Function &F, InstCombineWorklist &Worklist,
     DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                  << F.getName() << "\n");
 
-    bool Changed = false;
-    if (prepareICWorklistFromFunction(F, DL, &TLI, Worklist))
-      Changed = true;
+    bool Changed = prepareICWorklistFromFunction(F, DL, &TLI, Worklist);
 
-    InstCombiner IC(Worklist, &Builder, F.optForMinSize(),
-                    AA, &AC, &TLI, &DT, DL, LI);
-    if (IC.run())
-      Changed = true;
+    InstCombiner IC(Worklist, &Builder, F.optForMinSize(), AA, &AC, &TLI, &DT,
+                    DL, LI);
+    Changed |= IC.run();
 
     if (!Changed)
       break;
