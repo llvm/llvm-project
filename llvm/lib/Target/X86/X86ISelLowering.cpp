@@ -4316,6 +4316,11 @@ static bool isUndefOrEqual(int Val, int CmpVal) {
   return (Val < 0 || Val == CmpVal);
 }
 
+/// Val is either the undef or zero sentinel value.
+static bool isUndefOrZero(int Val) {
+  return (Val == SM_SentinelUndef || Val == SM_SentinelZero);
+}
+
 /// Return true if every element in Mask, beginning
 /// from position Pos and ending in Pos+Size, falls within the specified
 /// sequential range (Low, Low+Size]. or is undef.
@@ -23873,6 +23878,7 @@ static SDValue PerformTargetShuffleCombine(SDValue N, SelectionDAG &DAG,
     SDValue Op1 = N.getOperand(1);
     SDValue Op2 = N.getOperand(2);
     unsigned InsertPSMask = cast<ConstantSDNode>(Op2)->getZExtValue();
+    unsigned SrcIdx = (InsertPSMask >> 6) & 0x3;
     unsigned DstIdx = (InsertPSMask >> 4) & 0x3;
     unsigned ZeroMask = InsertPSMask & 0xF;
 
@@ -23886,19 +23892,38 @@ static SDValue PerformTargetShuffleCombine(SDValue N, SelectionDAG &DAG,
       return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, DAG.getUNDEF(VT),
                          DAG.getConstant(InsertPSMask, DL, MVT::i8));
 
-    SmallVector<int, 8> TargetMask;
-    if (!setTargetShuffleZeroElements(Op0, TargetMask))
+    // Attempt to merge insertps Op1 with an inner target shuffle node.
+    SmallVector<int, 8> TargetMask1;
+    if (setTargetShuffleZeroElements(Op1, TargetMask1)) {
+      int M = TargetMask1[SrcIdx];
+      if (isUndefOrZero(M)) {
+        // Zero/UNDEF insertion - zero out element and remove dependency.
+        InsertPSMask |= (1u << DstIdx);
+        return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, DAG.getUNDEF(VT),
+                           DAG.getConstant(InsertPSMask, DL, MVT::i8));
+      }
+      // Update insertps mask srcidx and reference the source input directly.
+      assert(0 <= M && M < 8 && "Shuffle index out of range");
+      InsertPSMask = (InsertPSMask & 0x3f) | ((M & 0x3) << 6);
+      Op1 = Op1.getOperand(M < 4 ? 0 : 1);
+      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
+                         DAG.getConstant(InsertPSMask, DL, MVT::i8));
+    }
+
+    // Attempt to merge insertps Op0 with an inner target shuffle node.
+    SmallVector<int, 8> TargetMask0;
+    if (!setTargetShuffleZeroElements(Op0, TargetMask0))
       return SDValue();
 
     bool Updated = false;
     bool UseInput00 = false;
     bool UseInput01 = false;
     for (int i = 0; i != 4; ++i) {
-      int M = TargetMask[i];
+      int M = TargetMask0[i];
       if ((InsertPSMask & (1u << i)) || (i == (int)DstIdx)) {
         // No change if element is already zero or the inserted element.
         continue;
-      } else if (M < 0) {
+      } else if (isUndefOrZero(M)) {
         // If the target mask is undef/zero then we must zero the element.
         InsertPSMask |= (1u << i);
         Updated = true;
