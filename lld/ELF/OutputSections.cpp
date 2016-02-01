@@ -230,7 +230,7 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool IsRela)
     : OutputSectionBase<ELFT>(Name, IsRela ? SHT_RELA : SHT_REL, SHF_ALLOC),
       IsRela(IsRela) {
   this->Header.sh_entsize = IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-  this->Header.sh_addralign = ELFT::Is64Bits ? 8 : 4;
+  this->Header.sh_addralign = sizeof(uintX_t);
 }
 
 // Applies corresponding symbol and type for dynamic tls relocation.
@@ -444,7 +444,7 @@ template <class ELFT>
 GnuHashTableSection<ELFT>::GnuHashTableSection()
     : OutputSectionBase<ELFT>(".gnu.hash", SHT_GNU_HASH, SHF_ALLOC) {
   this->Header.sh_entsize = ELFT::Is64Bits ? 0 : 4;
-  this->Header.sh_addralign = ELFT::Is64Bits ? 8 : 4;
+  this->Header.sh_addralign = sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -588,7 +588,7 @@ DynamicSection<ELFT>::DynamicSection(SymbolTable<ELFT> &SymTab)
     : OutputSectionBase<ELFT>(".dynamic", SHT_DYNAMIC, SHF_ALLOC | SHF_WRITE),
       SymTab(SymTab) {
   Elf_Shdr &Header = this->Header;
-  Header.sh_addralign = ELFT::Is64Bits ? 8 : 4;
+  Header.sh_addralign = sizeof(uintX_t);
   Header.sh_entsize = ELFT::Is64Bits ? 16 : 8;
 
   // .dynamic section is not writable on MIPS.
@@ -826,8 +826,7 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   Sections.push_back(S);
   S->OutSec = this;
   uint32_t Align = S->getAlign();
-  if (Align > this->Header.sh_addralign)
-    this->Header.sh_addralign = Align;
+  this->updateAlign(Align);
 
   uintX_t Off = this->Header.sh_size;
   Off = alignTo(Off, Align);
@@ -1098,10 +1097,7 @@ void EHOutputSection<ELFT>::addSectionAux(
   const endianness E = ELFT::TargetEndianness;
 
   S->OutSec = this;
-  uint32_t Align = S->getAlign();
-  if (Align > this->Header.sh_addralign)
-    this->Header.sh_addralign = Align;
-
+  this->updateAlign(S->getAlign());
   Sections.push_back(S);
 
   ArrayRef<uint8_t> SecData = S->getSectionData();
@@ -1285,14 +1281,13 @@ template <class ELFT>
 void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *S = cast<MergeInputSection<ELFT>>(C);
   S->OutSec = this;
-  uint32_t Align = S->getAlign();
-  if (Align > this->Header.sh_addralign)
-    this->Header.sh_addralign = Align;
+  this->updateAlign(S->getAlign());
 
   ArrayRef<uint8_t> D = S->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   uintX_t EntSize = S->getSectionHdr()->sh_entsize;
 
+  // If this is of type string, the contents are null-terminated strings.
   if (this->Header.sh_flags & SHF_STRINGS) {
     uintX_t Offset = 0;
     while (!Data.empty()) {
@@ -1308,12 +1303,14 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
       Data = Data.substr(Size);
       Offset += Size;
     }
-  } else {
-    for (unsigned I = 0, N = Data.size(); I != N; I += EntSize) {
-      StringRef Entry = Data.substr(I, EntSize);
-      size_t OutputOffset = Builder.add(Entry);
-      S->Offsets.push_back(std::make_pair(I, OutputOffset));
-    }
+    return;
+  }
+
+  // If this is not of type string, every entry has the same size.
+  for (unsigned I = 0, N = Data.size(); I != N; I += EntSize) {
+    StringRef Entry = Data.substr(I, EntSize);
+    size_t OutputOffset = Builder.add(Entry);
+    S->Offsets.push_back(std::make_pair(I, OutputOffset));
   }
 }
 
@@ -1374,7 +1371,7 @@ SymbolTableSection<ELFT>::SymbolTableSection(
                               StrTabSec.isDynamic() ? (uintX_t)SHF_ALLOC : 0),
       StrTabSec(StrTabSec), Table(Table) {
   this->Header.sh_entsize = sizeof(Elf_Sym);
-  this->Header.sh_addralign = ELFT::Is64Bits ? 8 : 4;
+  this->Header.sh_addralign = sizeof(uintX_t);
 }
 
 // Orders symbols according to their positions in the GOT,

@@ -1620,7 +1620,7 @@ __isl_give isl_id *Scop::getIdForParam(const SCEV *Parameter) {
 
   std::string ParameterName;
 
-  ParameterName = "p_" + utostr_32(IdIter->second);
+  ParameterName = "p_" + utostr(IdIter->second);
 
   if (const SCEVUnknown *ValueParameter = dyn_cast<SCEVUnknown>(Parameter)) {
     Value *Val = ValueParameter->getValue();
@@ -1987,13 +1987,8 @@ static inline unsigned getNumBlocksInRegionNode(RegionNode *RN) {
   if (!RN->isSubRegion())
     return 1;
 
-  unsigned NumBlocks = 0;
   Region *R = RN->getNodeAs<Region>();
-  for (auto BB : R->blocks()) {
-    (void)BB;
-    NumBlocks++;
-  }
-  return NumBlocks;
+  return std::distance(R->block_begin(), R->block_end());
 }
 
 static bool containsErrorBlock(RegionNode *RN, const Region &R, LoopInfo &LI,

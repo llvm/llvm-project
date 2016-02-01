@@ -34,8 +34,7 @@ The basic steps needed to build libc++ are:
 
 #. Configure and build libc++ with libc++abi:
 
-   CMake is the only supported configuration system. Unlike other LLVM
-   projects autotools is not supported for either libc++ or libc++abi.
+   CMake is the only supported configuration system.
 
    Clang is the preferred compiler when building and using libc++.
 

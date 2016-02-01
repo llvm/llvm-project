@@ -31,10 +31,7 @@ class DynamicValueChildCountTestCase(TestBase):
         self.main_sixth_call_line = line_number('pass-to-base.cpp',
                                                        '// Break here and check b has 0 children again')
 
-    @expectedFailureLinux("llvm.org/pr23039")
-    @expectedFailureFreeBSD("llvm.org/pr19311") # continue at a breakpoint does not work
     @expectedFailureWindows("llvm.org/pr24663")
-    @expectedFailurei386("to be figured out")
     @add_test_categories(['pyapi'])
     def test_get_dynamic_vals(self):
         """Test fetching C++ dynamic values from pointers & references."""
