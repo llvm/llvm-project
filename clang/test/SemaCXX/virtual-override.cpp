@@ -289,15 +289,3 @@ namespace PR8168 {
     static void foo() {} // expected-error{{'static' member function 'foo' overrides a virtual function}}
   };
 }
-
-namespace PR26297 {
-struct Incomplete;
-
-struct Base {
-  virtual const Incomplete *meow() = 0;
-};
-
-struct Derived : Base {
-  virtual Incomplete *meow() override { return nullptr; }
-};
-}

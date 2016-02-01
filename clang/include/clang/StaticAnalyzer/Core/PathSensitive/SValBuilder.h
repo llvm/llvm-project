@@ -65,7 +65,7 @@ public:
       SymMgr(context, BasicVals, alloc),
       MemMgr(context, alloc),
       StateMgr(stateMgr),
-      ArrayIndexTy(context.IntTy),
+      ArrayIndexTy(context.LongLongTy),
       ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
 
   virtual ~SValBuilder() {}
