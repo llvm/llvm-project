@@ -55,10 +55,8 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
   if (S == "aarch64linux")
     return {ELF64LEKind, EM_AARCH64};
   if (S == "i386pe" || S == "i386pep" || S == "thumb2pe")
-    error("Windows targets are not supported on the ELF frontend: " + S);
-  else
-    error("Unknown emulation: " + S);
-  return {ELFNoneKind, 0};
+    fatal("Windows targets are not supported on the ELF frontend: " + S);
+  fatal("Unknown emulation: " + S);
 }
 
 // Returns slices of MB by parsing MB as an archive file.
@@ -86,8 +84,7 @@ void LinkerDriver::addFile(StringRef Path) {
   if (Config->Verbose)
     llvm::outs() << Path << "\n";
   auto MBOrErr = MemoryBuffer::getFile(Path);
-  if (error(MBOrErr, "cannot open " + Path))
-    return;
+  fatal(MBOrErr, "cannot open " + Path);
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   OwningMBs.push_back(std::move(MB)); // take MB ownership
@@ -112,15 +109,6 @@ void LinkerDriver::addFile(StringRef Path) {
   }
 }
 
-// Add a given library by searching it from input search paths.
-void LinkerDriver::addLibrary(StringRef Name) {
-  std::string Path = searchLibrary(Name);
-  if (Path.empty())
-    error("Unable to find library -l" + Name);
-  else
-    addFile(Path);
-}
-
 // Some command line options or some combinations of them are not allowed.
 // This function checks for such errors.
 static void checkOptions(opt::InputArgList &Args) {
@@ -128,15 +116,15 @@ static void checkOptions(opt::InputArgList &Args) {
   // of executables or DSOs. We don't support that since the feature
   // does not seem to provide more value than the static archiver.
   if (Args.hasArg(OPT_relocatable))
-    error("-r option is not supported. Use 'ar' command instead.");
+    fatal("-r option is not supported. Use 'ar' command instead.");
 
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (Config->EMachine == EM_MIPS && Config->GnuHash)
-    error("The .gnu.hash section is not compatible with the MIPS target.");
+    fatal("The .gnu.hash section is not compatible with the MIPS target.");
 
   if (Config->EMachine == EM_AMDGPU && !Config->Entry.empty())
-    error("-e option is not valid for AMDGPU.");
+    fatal("-e option is not valid for AMDGPU.");
 }
 
 static StringRef
@@ -160,8 +148,6 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   readConfigs(Args);
   createFiles(Args);
   checkOptions(Args);
-  if (HasError)
-    return;
 
   switch (Config->EKind) {
   case ELF32LEKind:
@@ -177,7 +163,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     link<ELF64BE>(Args);
     return;
   default:
-    error("-m or at least a .o file required");
+    fatal("-m or at least a .o file required");
   }
 }
 
@@ -233,7 +219,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_O)) {
     StringRef Val = Arg->getValue();
     if (Val.getAsInteger(10, Config->Optimize))
-      error("Invalid optimization level");
+      fatal("Invalid optimization level");
   }
 
   if (auto *Arg = Args.getLastArg(OPT_hash_style)) {
@@ -244,7 +230,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     } else if (S == "both") {
       Config->GnuHash = true;
     } else if (S != "sysv")
-      error("Unknown hash style: " + S);
+      fatal("Unknown hash style: " + S);
   }
 
   for (auto *Arg : Args.filtered(OPT_undefined))
@@ -255,7 +241,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
   for (auto *Arg : Args) {
     switch (Arg->getOption().getID()) {
     case OPT_l:
-      addLibrary(Arg->getValue());
+      addFile(searchLibrary(Arg->getValue()));
       break;
     case OPT_INPUT:
     case OPT_script:
@@ -282,8 +268,8 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     }
   }
 
-  if (Files.empty() && !HasError)
-    error("no input files.");
+  if (Files.empty())
+    fatal("no input files.");
 }
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {

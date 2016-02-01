@@ -101,6 +101,15 @@ public:
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
 
+  template <class ELFT>
+  typename llvm::object::ELFFile<ELFT>::uintX_t getVA() const;
+  template <class ELFT>
+  typename llvm::object::ELFFile<ELFT>::uintX_t getGotVA() const;
+  template <class ELFT>
+  typename llvm::object::ELFFile<ELFT>::uintX_t getGotPltVA() const;
+  template <class ELFT>
+  typename llvm::object::ELFFile<ELFT>::uintX_t getPltVA() const;
+
   // A SymbolBody has a backreference to a Symbol. Originally they are
   // doubly-linked. A backreference will never change. But the pointer
   // in the Symbol may be mutated by the resolver. If you have a

@@ -24,18 +24,14 @@ void error(const Twine &Msg) {
   HasError = true;
 }
 
-bool error(std::error_code EC, const Twine &Prefix) {
-  if (!EC)
-    return false;
-  error(Prefix + ": " + EC.message());
-  return true;
+void error(std::error_code EC, const Twine &Prefix) {
+  if (EC)
+    error(Prefix + ": " + EC.message());
 }
 
-bool error(std::error_code EC) {
-  if (!EC)
-    return false;
-  error(EC.message());
-  return true;
+void error(std::error_code EC) {
+  if (EC)
+    error(EC.message());
 }
 
 void fatal(const Twine &Msg) {

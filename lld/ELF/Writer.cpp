@@ -1257,8 +1257,8 @@ static uint32_t getELFFlags() {
 template <class ELFT>
 static typename ELFFile<ELFT>::uintX_t getEntryAddr() {
   if (Config->EntrySym) {
-    if (SymbolBody *E = Config->EntrySym->repl())
-      return getSymVA<ELFT>(*E);
+    if (SymbolBody *B = Config->EntrySym->repl())
+      return B->getVA<ELFT>();
     return 0;
   }
   if (Config->EntryAddr != uint64_t(-1))

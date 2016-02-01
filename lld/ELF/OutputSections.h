@@ -47,9 +47,6 @@ getAddend(const typename llvm::object::ELFFile<ELFT>::Elf_Rela &Rel) {
   return Rel.r_addend;
 }
 
-template <class ELFT>
-typename llvm::object::ELFFile<ELFT>::uintX_t getSymVA(const SymbolBody &S);
-
 template <class ELFT, bool IsRela>
 typename llvm::object::ELFFile<ELFT>::uintX_t
 getLocalRelTarget(const ObjectFile<ELFT> &File,
@@ -118,7 +115,6 @@ public:
   bool addDynTlsEntry(SymbolBody *Sym);
   bool addCurrentModuleTlsIndex();
   bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }
-  uintX_t getEntryAddr(const SymbolBody &B) const;
   uintX_t getMipsLocalFullAddr(const SymbolBody &B);
   uintX_t getMipsLocalPageAddr(uintX_t Addr);
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
@@ -155,7 +151,6 @@ public:
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody *Sym);
   bool empty() const;
-  uintX_t getEntryAddr(const SymbolBody &B) const;
 
 private:
   std::vector<const SymbolBody *> Entries;
@@ -171,7 +166,6 @@ public:
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody *Sym);
   bool empty() const { return Entries.empty(); }
-  uintX_t getEntryAddr(const SymbolBody &B) const;
 
 private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
