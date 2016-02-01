@@ -489,17 +489,8 @@ static void writeFragment(const MCAssembler &Asm, const MCAsmLayout &Layout,
     ++stats::EmittedFillFragments;
     const MCFillFragment &FF = cast<MCFillFragment>(F);
 
-    assert(FF.getValueSize() && "Invalid virtual align in concrete fragment!");
-
-    for (uint64_t i = 0, e = FF.getSize() / FF.getValueSize(); i != e; ++i) {
-      switch (FF.getValueSize()) {
-      default: llvm_unreachable("Invalid size!");
-      case 1: OW->write8 (uint8_t (FF.getValue())); break;
-      case 2: OW->write16(uint16_t(FF.getValue())); break;
-      case 4: OW->write32(uint32_t(FF.getValue())); break;
-      case 8: OW->write64(uint64_t(FF.getValue())); break;
-      }
-    }
+    for (uint64_t I = 0, E = FF.getSize(); I != E; ++I)
+      OW->write8(FF.getValue());
     break;
   }
 
@@ -578,8 +569,7 @@ void MCAssembler::writeSectionData(const MCSection *Sec,
                "Invalid align in virtual section!");
         break;
       case MCFragment::FT_Fill:
-        assert((cast<MCFillFragment>(F).getValueSize() == 0 ||
-                cast<MCFillFragment>(F).getValue() == 0) &&
+        assert((cast<MCFillFragment>(F).getValue() == 0) &&
                "Invalid fill in virtual section!");
         break;
       }
