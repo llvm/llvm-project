@@ -13,6 +13,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/StringPrinter.h"
@@ -1268,13 +1269,115 @@ GoASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type, const
 //----------------------------------------------------------------------
 // Dumping types
 //----------------------------------------------------------------------
+#define DEPTH_INCREMENT 2
+
 void
 GoASTContext::DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s, lldb::Format format,
-                        const DataExtractor &data, lldb::offset_t data_offset, size_t data_byte_size,
+                        const DataExtractor &data, lldb::offset_t data_byte_offset, size_t data_byte_size,
                         uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset, bool show_types, bool show_summary,
                         bool verbose, uint32_t depth)
 {
-    assert(false);
+    if (IsTypedefType(type))
+        type = GetTypedefedType(type).GetOpaqueQualType();
+    if (!type)
+        return;
+    GoType *t = static_cast<GoType *>(type);
+    
+    if (GoStruct *st = t->GetStruct())
+    {
+        if (GetCompleteType(type))
+        {
+            uint32_t field_idx = 0;
+            for (auto* field = st->GetField(field_idx); field != nullptr; field_idx++)
+            {
+                // Print the starting squiggly bracket (if this is the
+                // first member) or comma (for member 2 and beyond) for
+                // the struct/union/class member.
+                if (field_idx == 0)
+                    s->PutChar('{');
+                else
+                    s->PutChar(',');
+                
+                // Indent
+                s->Printf("\n%*s", depth + DEPTH_INCREMENT, "");
+                
+                // Print the member type if requested
+                if (show_types)
+                {
+                    ConstString field_type_name = field->m_type.GetTypeName();
+                    s->Printf("(%s) ", field_type_name.AsCString());
+                }
+                // Print the member name and equal sign
+                s->Printf("%s = ", field->m_name.AsCString());
+                
+                
+                // Dump the value of the member
+                CompilerType field_type = field->m_type;
+                field_type.DumpValue (exe_ctx,
+                                         s,                              // Stream to dump to
+                                         field_type.GetFormat(),         // The format with which to display the member
+                                         data,                           // Data buffer containing all bytes for this type
+                                         data_byte_offset + field->m_byte_offset,// Offset into "data" where to grab value from
+                                         field->m_type.GetByteSize(exe_ctx->GetBestExecutionContextScope()),      // Size of this type in bytes
+                                         0,                              // Bitfield bit size
+                                         0,                              // Bitfield bit offset
+                                         show_types,                     // Boolean indicating if we should show the variable types
+                                         show_summary,                   // Boolean indicating if we should show a summary for the current type
+                                         verbose,                        // Verbose output?
+                                         depth + DEPTH_INCREMENT);       // Scope depth for any types that have children
+            }
+
+            // Indent the trailing squiggly bracket
+            if (field_idx > 0)
+                s->Printf("\n%*s}", depth, "");
+            
+        }
+    }
+    
+    if (GoArray *a = t->GetArray()) {
+        CompilerType element_clang_type = a->GetElementType();
+        lldb::Format element_format = element_clang_type.GetFormat();
+        uint32_t element_byte_size = element_clang_type.GetByteSize(exe_ctx->GetBestExecutionContextScope());
+        
+        uint64_t element_idx;
+        for (element_idx = 0; element_idx < a->GetLength(); ++element_idx)
+        {
+            // Print the starting squiggly bracket (if this is the
+            // first member) or comman (for member 2 and beyong) for
+            // the struct/union/class member.
+            if (element_idx == 0)
+                s->PutChar('{');
+            else
+                s->PutChar(',');
+            
+            // Indent and print the index
+            s->Printf("\n%*s[%" PRIu64 "] ", depth + DEPTH_INCREMENT, "", element_idx);
+            
+            // Figure out the field offset within the current struct/union/class type
+            uint64_t element_offset = element_idx * element_byte_size;
+            
+            // Dump the value of the member
+            element_clang_type.DumpValue (exe_ctx,
+                                          s,                              // Stream to dump to
+                                          element_format,                 // The format with which to display the element
+                                          data,                           // Data buffer containing all bytes for this type
+                                          data_byte_offset + element_offset,// Offset into "data" where to grab value from
+                                          element_byte_size,              // Size of this type in bytes
+                                          0,                              // Bitfield bit size
+                                          0,                              // Bitfield bit offset
+                                          show_types,                     // Boolean indicating if we should show the variable types
+                                          show_summary,                   // Boolean indicating if we should show a summary for the current type
+                                          verbose,                        // Verbose output?
+                                          depth + DEPTH_INCREMENT);       // Scope depth for any types that have children
+        }
+        
+        // Indent the trailing squiggly bracket
+        if (element_idx > 0)
+            s->Printf("\n%*s}", depth, "");
+    }
+    
+    if (show_summary)
+        DumpSummary (type, exe_ctx, s, data, data_byte_offset, data_byte_size);
 }
 
 bool
@@ -1371,19 +1474,55 @@ void
 GoASTContext::DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s, const DataExtractor &data,
                           lldb::offset_t data_offset, size_t data_byte_size)
 {
-    assert(false);
+    if (type && GoType::KIND_STRING == static_cast<GoType *>(type)->GetGoKind())
+    {
+        // TODO(ribrdb): read length and data
+    }
 }
 
 void
 GoASTContext::DumpTypeDescription(lldb::opaque_compiler_type_t type)
 {
-    assert(false);
-} // Dump to stdout
+    // Dump to stdout
+    StreamFile s (stdout, false);
+    DumpTypeDescription (type, &s);
+}
 
 void
 GoASTContext::DumpTypeDescription(lldb::opaque_compiler_type_t type, Stream *s)
 {
-    assert(false);
+    if (!type)
+        return;
+    ConstString name = GetTypeName(type);
+    GoType *t = static_cast<GoType *>(type);
+    
+    if (GoStruct *st = t->GetStruct())
+    {
+        if (GetCompleteType(type))
+        {
+            if (NULL == strchr(name.AsCString(), '{'))
+                s->Printf("type %s ", name.AsCString());
+            s->PutCString("struct {");
+            if (st->GetNumFields() == 0) {
+                s->PutChar('}');
+                return;
+            }
+            s->IndentMore();
+            uint32_t field_idx = 0;
+            for (auto* field = st->GetField(field_idx); field != nullptr; field_idx++)
+            {
+                s->PutChar('\n');
+                s->Indent();
+                s->Printf("%s %s", field->m_name.AsCString(), field->m_type.GetTypeName().AsCString());
+            }
+            s->IndentLess();
+            s->PutChar('\n');
+            s->Indent("}");
+            return;
+        }
+    }
+
+    s->PutCString(name.AsCString());
 }
 
 CompilerType
