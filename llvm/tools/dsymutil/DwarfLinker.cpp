@@ -1898,6 +1898,19 @@ findValidRelocsMachO(const object::SectionRef &Section,
     uint32_t Offset = Offset64;
     // Mach-o uses REL relocations, the addend is at the relocation offset.
     uint64_t Addend = Data.getUnsigned(&Offset, RelocSize);
+    uint64_t SymAddress;
+    int64_t SymOffset;
+
+    if (Obj.isRelocationScattered(MachOReloc)) {
+      // The address of the base symbol for scattered relocations is
+      // stored in the reloc itself. The actual addend will store the
+      // base address plus the offset.
+      SymAddress = Obj.getScatteredRelocationValue(MachOReloc);
+      SymOffset = int64_t(Addend) - SymAddress;
+    } else {
+      SymAddress = Addend;
+      SymOffset = 0;
+    }
 
     auto Sym = Reloc.getSymbol();
     if (Sym != Obj.symbol_end()) {
@@ -1908,11 +1921,11 @@ findValidRelocsMachO(const object::SectionRef &Section,
       }
       if (const auto *Mapping = DMO.lookupSymbol(*SymbolName))
         ValidRelocs.emplace_back(Offset64, RelocSize, Addend, Mapping);
-    } else if (const auto *Mapping = DMO.lookupObjectAddress(Addend)) {
+    } else if (const auto *Mapping = DMO.lookupObjectAddress(SymAddress)) {
       // Do not store the addend. The addend was the address of the
       // symbol in the object file, the address in the binary that is
       // stored in the debug map doesn't need to be offseted.
-      ValidRelocs.emplace_back(Offset64, RelocSize, 0, Mapping);
+      ValidRelocs.emplace_back(Offset64, RelocSize, SymOffset, Mapping);
     }
   }
 }
