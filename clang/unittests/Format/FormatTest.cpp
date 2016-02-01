@@ -962,6 +962,14 @@ TEST_F(FormatTest, UnderstandsSingleLineComments) {
                    "// at start\n"
                    "otherLine();"));
   EXPECT_EQ("lineWith(); // comment\n"
+            "/*\n"
+            " * at start */\n"
+            "otherLine();",
+            format("lineWith();   // comment\n"
+                   "/*\n"
+                   " * at start */\n"
+                   "otherLine();"));
+  EXPECT_EQ("lineWith(); // comment\n"
             "            // at start\n"
             "otherLine();",
             format("lineWith();   // comment\n"
