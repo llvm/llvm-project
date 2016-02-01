@@ -231,7 +231,7 @@ class ProcessAPITestCase(TestBase):
 
         # The bytearray_to_int utility function expects a little endian bytearray.
         if byteOrder == lldb.eByteOrderBig:
-            new_bytes.reverse()
+            content.reverse()
 
         new_value = bytearray_to_int(content, byteSize)
         if new_value != 256:
@@ -239,7 +239,7 @@ class ProcessAPITestCase(TestBase):
 
         # Dump the memory content....
         if self.TraceOn():
-            for i in new_bytes:
+            for i in content:
                 print("byte:", i)
 
     @add_test_categories(['pyapi'])

@@ -34,7 +34,8 @@ class MemoryReadTestCase(TestBase):
             error = lldb.SBError()
             memory = process.ReadMemory(pc, size, error)
             self.assertTrue(error.Success())
-            self.match("process plugin packet send x%x,%x" % (pc, size), ["response:", memory])
+            # Results in trying to write non-printable characters to the session log.
+            # self.match("process plugin packet send x%x,%x" % (pc, size), ["response:", memory])
             self.match("process plugin packet send m%x,%x" % (pc, size), ["response:", binascii.hexlify(memory)])
 
         process.Continue()

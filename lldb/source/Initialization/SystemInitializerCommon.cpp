@@ -97,7 +97,6 @@ SystemInitializerCommon::Initialize()
 
     Log::Initialize();
     HostInfo::Initialize();
-    Timer::Initialize();
     Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
 
     llvm::install_fatal_error_handler(fatal_error_handler, 0);
