@@ -846,16 +846,12 @@ define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, float* nocap
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: insertps_from_broadcast_loadf32:
 ; X64:       ## BB#0:
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X64-NEXT:    retq
   %1 = getelementptr inbounds float, float* %fb, i64 %index
   %2 = load float, float* %1, align 4
@@ -871,16 +867,12 @@ define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float
 ; X32-LABEL: insertps_from_broadcast_loadv4f32:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movups (%eax), %xmm1
-; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: insertps_from_broadcast_loadv4f32:
 ; X64:       ## BB#0:
-; X64-NEXT:    movups (%rdi), %xmm1
-; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X64-NEXT:    retq
   %1 = load <4 x float>, <4 x float>* %b, align 4
   %2 = extractelement <4 x float> %1, i32 0
@@ -892,14 +884,12 @@ define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float
   ret <4 x float> %7
 }
 
-;; FIXME: We're emitting an extraneous pshufd/vbroadcast.
 define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, float* nocapture readonly %fb, i64 %index) {
 ; X32-LABEL: insertps_from_broadcast_multiple_use:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; X32-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,0,0,0]
 ; X32-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[0]
 ; X32-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
 ; X32-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm4[0]
@@ -912,7 +902,6 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X64-LABEL: insertps_from_broadcast_multiple_use:
 ; X64:       ## BB#0:
 ; X64-NEXT:    movss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; X64-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,0,0,0]
 ; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm4[0]
 ; X64-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm4[0]
 ; X64-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm4[0]
