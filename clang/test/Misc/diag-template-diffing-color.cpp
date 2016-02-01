@@ -1,5 +1,5 @@
-// RUN: not %clang_cc1 -fsyntax-only -fcolor-diagnostics %s 2>&1 | FileCheck %s
-// RUN: not %clang_cc1 -fsyntax-only -fcolor-diagnostics -fdiagnostics-show-template-tree %s 2>&1 | FileCheck %s -check-prefix=TREE
+// RUN: not %clang_cc1 -fsyntax-only -std=c++11 -fcolor-diagnostics %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fsyntax-only -std=c++11 -fcolor-diagnostics -fdiagnostics-show-template-tree %s 2>&1 | FileCheck %s -check-prefix=TREE
 // REQUIRES: ansi-escape-sequences
 template<typename> struct foo {};
 void func(foo<int>);
@@ -82,5 +82,23 @@ namespace default_args {
     // CHECK: no viable conversion from 'A<[2 * ...], (default) [[CYAN]]2[[RESET]][[BOLD]]>' to 'A<[2 * ...], [[CYAN]]0[[RESET]][[BOLD]]>'
     A<0, 2, 0> N2 = M;
   }
+}
 
+namespace MixedDeclarationIntegerArgument {
+  template<typename T, T n = 5> class A{};
+  int x;
+  int y[5];
+  A<int> a1 = A<int&, x>();
+  // CHECK: no viable conversion from 'A<[[CYAN]]int &[[RESET]][[BOLD]], [[CYAN]]x[[RESET]][[BOLD]]>' to 'A<[[CYAN]]int[[RESET]][[BOLD]], (default) [[CYAN]]5[[RESET]][[BOLD]]>'
+  // TREE: no viable conversion
+  // TREE:   A<
+  // TREE:     {{\[}}[[CYAN]]int &[[RESET]][[BOLD]] != [[CYAN]]int[[RESET]][[BOLD]]],
+  // TREE:     {{\[}}[[CYAN]]x[[RESET]][[BOLD]] != (default) [[CYAN]]5[[RESET]][[BOLD]]]>
+
+  A<int**, nullptr> a2 = A<int, 3 + 1>();
+  // CHECK-ELIDE-NOTREE: error: no viable conversion from 'A<[[CYAN]]int[[RESET]][[BOLD]], [[CYAN]]3 + 1[[RESET]][[BOLD]] aka [[CYAN]]4[[RESET]][[BOLD]]>' to 'A<[[CYAN]]int **[[RESET]][[BOLD]], [[CYAN]]nullptr[[RESET]][[BOLD]]>'
+  // TREE: no viable conversion
+  // TREE:   A<
+  // TREE:     {{\[}}[[CYAN]]int[[RESET]][[BOLD]] != [[CYAN]]int **[[RESET]][[BOLD]]],
+  // TREE:     {{\[}}[[CYAN]]3 + 1[[RESET]][[BOLD]] aka [[CYAN]]4[[RESET]][[BOLD]] != [[CYAN]]nullptr[[RESET]][[BOLD]]]>
 }
