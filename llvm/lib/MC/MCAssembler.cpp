@@ -488,9 +488,20 @@ static void writeFragment(const MCAssembler &Asm, const MCAsmLayout &Layout,
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
     const MCFillFragment &FF = cast<MCFillFragment>(F);
+    uint8_t V = FF.getValue();
+    const unsigned MaxChunkSize = 16;
+    char Data[MaxChunkSize];
+    memcpy(Data, &V, 1);
+    for (unsigned I = 1; I < MaxChunkSize; ++I)
+      Data[I] = Data[0];
 
-    for (uint64_t I = 0, E = FF.getSize(); I != E; ++I)
-      OW->write8(FF.getValue());
+    uint64_t Size = FF.getSize();
+    for (unsigned ChunkSize = MaxChunkSize; ChunkSize; ChunkSize /= 2) {
+      StringRef Ref(Data, ChunkSize);
+      for (uint64_t I = 0, E = Size / ChunkSize; I != E; ++I)
+        OW->writeBytes(Ref);
+      Size = Size % ChunkSize;
+    }
     break;
   }
 
