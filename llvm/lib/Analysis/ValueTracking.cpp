@@ -2074,6 +2074,12 @@ bool isKnownNonZero(Value *V, unsigned Depth, const Query &Q) {
         }
       }
     }
+    // Check if all incoming values are non-zero constant.
+    bool AllNonZeroConstants = all_of(PN->operands(), [](Value *V) {
+      return isa<ConstantInt>(V) && !cast<ConstantInt>(V)->isZeroValue();
+    });
+    if (AllNonZeroConstants)
+      return true;
   }
 
   if (!BitWidth) return false;

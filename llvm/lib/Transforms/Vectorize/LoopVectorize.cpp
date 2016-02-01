@@ -3263,15 +3263,14 @@ void InnerLoopVectorizer::vectorizeLoop() {
   //===------------------------------------------------===//
   Constant *Zero = Builder.getInt32(0);
 
-  // In order to support reduction variables we need to be able to vectorize
-  // Phi nodes. Phi nodes have cycles, so we need to vectorize them in two
-  // stages. First, we create a new vector PHI node with no incoming edges.
-  // We use this value when we vectorize all of the instructions that use the
-  // PHI. Next, after all of the instructions in the block are complete we
-  // add the new incoming edges to the PHI. At this point all of the
-  // instructions in the basic block are vectorized, so we can use them to
-  // construct the PHI.
-  PhiVector RdxPHIsToFix;
+  // In order to support recurrences we need to be able to vectorize Phi nodes.
+  // Phi nodes have cycles, so we need to vectorize them in two stages. First,
+  // we create a new vector PHI node with no incoming edges. We use this value
+  // when we vectorize all of the instructions that use the PHI. Next, after
+  // all of the instructions in the block are complete we add the new incoming
+  // edges to the PHI. At this point all of the instructions in the basic block
+  // are vectorized, so we can use them to construct the PHI.
+  PhiVector PHIsToFix;
 
   // Scan the loop in a topological order to ensure that defs are vectorized
   // before users.
@@ -3281,31 +3280,25 @@ void InnerLoopVectorizer::vectorizeLoop() {
   // Vectorize all of the blocks in the original loop.
   for (LoopBlocksDFS::RPOIterator bb = DFS.beginRPO(),
        be = DFS.endRPO(); bb != be; ++bb)
-    vectorizeBlockInLoop(*bb, &RdxPHIsToFix);
+    vectorizeBlockInLoop(*bb, &PHIsToFix);
 
   // Insert truncates and extends for any truncated instructions as hints to
   // InstCombine.
   if (VF > 1)
     truncateToMinimalBitwidths();
-  
-  // At this point every instruction in the original loop is widened to
-  // a vector form. We are almost done. Now, we need to fix the PHI nodes
-  // that we vectorized. The PHI nodes are currently empty because we did
-  // not want to introduce cycles. Notice that the remaining PHI nodes
-  // that we need to fix are reduction variables.
 
-  // Create the 'reduced' values for each of the induction vars.
-  // The reduced values are the vector values that we scalarize and combine
-  // after the loop is finished.
-  for (PhiVector::iterator it = RdxPHIsToFix.begin(), e = RdxPHIsToFix.end();
-       it != e; ++it) {
-    PHINode *RdxPhi = *it;
-    assert(RdxPhi && "Unable to recover vectorized PHI");
+  // At this point every instruction in the original loop is widened to a
+  // vector form. Now we need to fix the recurrences in PHIsToFix. These PHI
+  // nodes are currently empty because we did not want to introduce cycles.
+  // This is the second stage of vectorizing recurrences.
+  for (PHINode *Phi : PHIsToFix) {
+    assert(Phi && "Unable to recover vectorized PHI");
 
-    // Find the reduction variable descriptor.
-    assert(Legal->isReductionVariable(RdxPhi) &&
+    // We currently only handle reductions. Ensure the PHI node to be fixed is
+    // a reduction, and get its reduction variable descriptor.
+    assert(Legal->isReductionVariable(Phi) &&
            "Unable to find the reduction variable");
-    RecurrenceDescriptor RdxDesc = (*Legal->getReductionVars())[RdxPhi];
+    RecurrenceDescriptor RdxDesc = (*Legal->getReductionVars())[Phi];
 
     RecurrenceDescriptor::RecurrenceKind RK = RdxDesc.getRecurrenceKind();
     TrackingVH<Value> ReductionStartValue = RdxDesc.getRecurrenceStartValue();
@@ -3360,9 +3353,9 @@ void InnerLoopVectorizer::vectorizeLoop() {
 
     // Reductions do not have to start at zero. They can start with
     // any loop invariant values.
-    VectorParts &VecRdxPhi = WidenMap.get(RdxPhi);
+    VectorParts &VecRdxPhi = WidenMap.get(Phi);
     BasicBlock *Latch = OrigLoop->getLoopLatch();
-    Value *LoopVal = RdxPhi->getIncomingValueForBlock(Latch);
+    Value *LoopVal = Phi->getIncomingValueForBlock(Latch);
     VectorParts &Val = getVectorValue(LoopVal);
     for (unsigned part = 0; part < UF; ++part) {
       // Make sure to add the reduction stat value only to the
@@ -3386,7 +3379,7 @@ void InnerLoopVectorizer::vectorizeLoop() {
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
     // entire expression in the smaller type.
-    if (VF > 1 && RdxPhi->getType() != RdxDesc.getRecurrenceType()) {
+    if (VF > 1 && Phi->getType() != RdxDesc.getRecurrenceType()) {
       Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
       Builder.SetInsertPoint(LoopVectorBody.back()->getTerminator());
       for (unsigned part = 0; part < UF; ++part) {
@@ -3460,16 +3453,16 @@ void InnerLoopVectorizer::vectorizeLoop() {
 
       // If the reduction can be performed in a smaller type, we need to extend
       // the reduction to the wider type before we branch to the original loop.
-      if (RdxPhi->getType() != RdxDesc.getRecurrenceType())
+      if (Phi->getType() != RdxDesc.getRecurrenceType())
         ReducedPartRdx =
             RdxDesc.isSigned()
-                ? Builder.CreateSExt(ReducedPartRdx, RdxPhi->getType())
-                : Builder.CreateZExt(ReducedPartRdx, RdxPhi->getType());
+                ? Builder.CreateSExt(ReducedPartRdx, Phi->getType())
+                : Builder.CreateZExt(ReducedPartRdx, Phi->getType());
     }
 
     // Create a phi node that merges control-flow from the backedge-taken check
     // block and the middle block.
-    PHINode *BCBlockPhi = PHINode::Create(RdxPhi->getType(), 2, "bc.merge.rdx",
+    PHINode *BCBlockPhi = PHINode::Create(Phi->getType(), 2, "bc.merge.rdx",
                                           LoopScalarPreHeader->getTerminator());
     for (unsigned I = 0, E = LoopBypassBlocks.size(); I != E; ++I)
       BCBlockPhi->addIncoming(ReductionStartValue, LoopBypassBlocks[I]);
@@ -3500,13 +3493,13 @@ void InnerLoopVectorizer::vectorizeLoop() {
     // Fix the scalar loop reduction variable with the incoming reduction sum
     // from the vector body and from the backedge value.
     int IncomingEdgeBlockIdx =
-    (RdxPhi)->getBasicBlockIndex(OrigLoop->getLoopLatch());
+        Phi->getBasicBlockIndex(OrigLoop->getLoopLatch());
     assert(IncomingEdgeBlockIdx >= 0 && "Invalid block index");
     // Pick the other block.
     int SelfEdgeBlockIdx = (IncomingEdgeBlockIdx ? 0 : 1);
-    (RdxPhi)->setIncomingValue(SelfEdgeBlockIdx, BCBlockPhi);
-    (RdxPhi)->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
-  }// end of for each redux variable.
+    Phi->setIncomingValue(SelfEdgeBlockIdx, BCBlockPhi);
+    Phi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
+  } // end of for each Phi in PHIsToFix.
 
   fixLCSSAPHIs();
 

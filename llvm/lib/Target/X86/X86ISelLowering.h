@@ -327,6 +327,8 @@ namespace llvm {
       // Vector integer comparisons, the result is in a mask vector.
       PCMPEQM, PCMPGTM,
 
+      MULTISHIFT,
+
       /// Vector comparison generating mask bits for fp and
       /// integer signed and unsigned data types.
       CMPM,

@@ -414,11 +414,9 @@ class DwarfDebug : public AsmPrinterHandler {
 
   /// Emit macros into a debug macinfo section.
   void emitDebugMacinfo();
-  unsigned emitMacro(AsmStreamerBase *AS, DIMacro &M);
-  unsigned emitMacroFile(AsmStreamerBase *AS, DIMacroFile &F,
-                         DwarfCompileUnit &U);
-  unsigned handleMacroNodes(AsmStreamerBase *AS, DIMacroNodeArray Nodes,
-                            DwarfCompileUnit &U);
+  void emitMacro(DIMacro &M);
+  void emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U);
+  void handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U);
 
   /// DWARF 5 Experimental Split Dwarf Emitters
 

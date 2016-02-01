@@ -760,3 +760,27 @@ epilog:
 ; CHECK-NEXT: ret i1 %[[RES]]
 }
 
+; CHECK-LABEL: phi_allnonzeroconstant
+; CHECK-NOT: phi i32
+; CHECK: ret i1 false
+define i1 @phi_allnonzeroconstant(i1 %c, i32 %a, i32 %b) {
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  br label %if.end
+
+if.else:                                          ; preds = %entry
+  call void @dummy()
+
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  %x.0 = phi i32 [ 1, %if.then ], [ 2, %if.else ]
+  %or = or i32 %x.0, %a
+  %cmp1 = icmp eq i32 %or, 0
+  ret i1 %cmp1
+}
+
+declare void @dummy()
+

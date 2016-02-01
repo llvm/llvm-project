@@ -40,6 +40,40 @@ define <32 x i8>@test_int_x86_avx512_mask_permvar_qi_256(<32 x i8> %x0, <32 x i8
   ret <32 x i8> %res4
 }
 
+declare <16 x i8> @llvm.x86.avx512.mask.pmultishift.qb.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
+
+define <16 x i8>@test_int_x86_avx512_mask_pmultishift_qb_128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_pmultishift_qb_128:
+; CHECK: vpmultishiftqb  %xmm1, %xmm0, %xmm2 {%k1}
+; CHECK: vpmultishiftqb  %xmm1, %xmm0, %xmm3 {%k1} {z}
+; CHECK: vpmultishiftqb  %xmm1, %xmm0, %xmm0
+; CHECK: vpaddb  %xmm3, %xmm2, %xmm1
+; CHECK: vpaddb  %xmm0, %xmm1, %xmm0
+  %res = call <16 x i8> @llvm.x86.avx512.mask.pmultishift.qb.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3)
+  %res1 = call <16 x i8> @llvm.x86.avx512.mask.pmultishift.qb.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> zeroinitializer, i16 %x3)
+  %res2 = call <16 x i8> @llvm.x86.avx512.mask.pmultishift.qb.128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 -1)
+  %res3 = add <16 x i8> %res, %res1
+  %res4 = add <16 x i8> %res3, %res2
+  ret <16 x i8> %res4
+}
+
+declare <32 x i8> @llvm.x86.avx512.mask.pmultishift.qb.256(<32 x i8>, <32 x i8>, <32 x i8>, i32)
+
+define <32 x i8>@test_int_x86_avx512_mask_pmultishift_qb_256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_pmultishift_qb_256:
+; CHECK: vpmultishiftqb  %ymm1, %ymm0, %ymm2 {%k1}
+; CHECK: vpmultishiftqb  %ymm1, %ymm0, %ymm3 {%k1} {z}
+; CHECK: vpmultishiftqb  %ymm1, %ymm0, %ymm0
+; CHECK: vpaddb  %ymm3, %ymm2, %ymm1
+; CHECK: vpaddb  %ymm0, %ymm1, %ymm0
+  %res = call <32 x i8> @llvm.x86.avx512.mask.pmultishift.qb.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 %x3)
+  %res1 = call <32 x i8> @llvm.x86.avx512.mask.pmultishift.qb.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> zeroinitializer, i32 %x3)
+  %res2 = call <32 x i8> @llvm.x86.avx512.mask.pmultishift.qb.256(<32 x i8> %x0, <32 x i8> %x1, <32 x i8> %x2, i32 -1)
+  %res3 = add <32 x i8> %res, %res1
+  %res4 = add <32 x i8> %res3, %res2
+  ret <32 x i8> %res4
+}
+
 declare <16 x i8> @llvm.x86.avx512.mask.vpermi2var.qi.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
 
 define <16 x i8>@test_int_x86_avx512_mask_vpermi2var_qi_128(<16 x i8> %x0, <16 x i8> %x1, <16 x i8> %x2, i16 %x3) {

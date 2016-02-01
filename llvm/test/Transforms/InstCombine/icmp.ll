@@ -1672,3 +1672,15 @@ define i1 @cmp_slt_rhs_inc(float %x, i32 %i) {
   %cmp = icmp slt i32 %conv, %inc
   ret i1 %cmp
 }
+
+; CHECK-LABEL: @PR26407
+; CHECK-NEXT: %[[addx:.*]] = add i32 %x, 2147483647
+; CHECK-NEXT: %[[addy:.*]] = add i32 %y, 2147483647
+; CHECK-NEXT: %[[cmp:.*]] = icmp uge i32 %[[addx]], %[[addy]]
+; CHECK-NEXT: ret i1 %[[cmp]]
+define i1 @PR26407(i32 %x, i32 %y) {
+  %addx = add i32 %x, 2147483647
+  %addy = add i32 %y, 2147483647
+  %cmp = icmp uge i32 %addx, %addy
+  ret i1 %cmp
+}

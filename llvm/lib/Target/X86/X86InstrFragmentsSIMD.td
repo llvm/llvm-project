@@ -95,6 +95,9 @@ def X86dbpsadbw : SDNode<"X86ISD::DBPSADBW",
 def X86andnp   : SDNode<"X86ISD::ANDNP",
                  SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                       SDTCisSameAs<0,2>]>>;
+def X86multishift   : SDNode<"X86ISD::MULTISHIFT",
+                 SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                                      SDTCisSameAs<1,2>]>>;
 def X86psign   : SDNode<"X86ISD::PSIGN",
                  SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                       SDTCisSameAs<0,2>]>>;

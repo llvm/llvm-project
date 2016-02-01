@@ -48,6 +48,9 @@ class AArch64FunctionInfo : public MachineFunctionInfo {
   /// \brief Amount of stack frame size, not including callee-saved registers.
   unsigned LocalStackSize;
 
+  /// \brief Amount of stack frame size used for saving callee-saved registers.
+  unsigned CalleeSavedStackSize;
+
   /// \brief Number of TLS accesses using the special (combinable)
   /// _TLS_MODULE_BASE_ symbol.
   unsigned NumLocalDynamicTLSAccesses;
@@ -107,6 +110,9 @@ public:
 
   void setLocalStackSize(unsigned Size) { LocalStackSize = Size; }
   unsigned getLocalStackSize() const { return LocalStackSize; }
+
+  void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
+  unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {

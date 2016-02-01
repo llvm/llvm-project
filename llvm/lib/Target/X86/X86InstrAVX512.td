@@ -3370,7 +3370,8 @@ multiclass avx512_binop_rm_vl_all<bits<8> opc_b, bits<8> opc_w,
 
 multiclass avx512_binop_rm2<bits<8> opc, string OpcodeStr, OpndItins itins,
                             SDNode OpNode,X86VectorVTInfo _Src,
-                            X86VectorVTInfo _Dst, bit IsCommutable = 0> {
+                            X86VectorVTInfo _Dst, X86VectorVTInfo _Brdct,
+                            bit IsCommutable = 0> {
   defm rr : AVX512_maskable<opc, MRMSrcReg, _Dst, (outs _Dst.RC:$dst),
                             (ins _Src.RC:$src1, _Src.RC:$src2), OpcodeStr,
                             "$src2, $src1","$src1, $src2",
@@ -3391,11 +3392,11 @@ multiclass avx512_binop_rm2<bits<8> opc, string OpcodeStr, OpndItins itins,
       defm rmb : AVX512_maskable<opc, MRMSrcMem, _Dst, (outs _Dst.RC:$dst),
                         (ins _Src.RC:$src1, _Dst.ScalarMemOp:$src2),
                         OpcodeStr,
-                        "${src2}"##_Dst.BroadcastStr##", $src1",
+                        "${src2}"##_Brdct.BroadcastStr##", $src1",
                          "$src1, ${src2}"##_Dst.BroadcastStr,
                         (_Dst.VT (OpNode (_Src.VT _Src.RC:$src1), (bitconvert
-                                     (_Dst.VT (X86VBroadcast
-                                              (_Dst.ScalarLdFrag addr:$src2)))))),
+                                     (_Brdct.VT (X86VBroadcast
+                                              (_Brdct.ScalarLdFrag addr:$src2)))))),
                         itins.rm>,
                         AVX512BIBase, EVEX_4V, EVEX_B;
   }
@@ -3428,26 +3429,35 @@ defm VPMULHRSW : avx512_binop_rm_vl_w<0x0B, "vpmulhrsw", X86mulhrs, SSE_INTMUL_I
 defm VPAVG : avx512_binop_rm_vl_bw<0xE0, 0xE3, "vpavg", X86avg,
                                    SSE_INTALU_ITINS_P, HasBWI, 1>;
 
-multiclass avx512_binop_all<bits<8> opc, string OpcodeStr, OpndItins itins,
-                            SDNode OpNode, bit IsCommutable = 0> {
-
-  defm NAME#Z : avx512_binop_rm2<opc, OpcodeStr, itins, OpNode,
-                                 v16i32_info, v8i64_info, IsCommutable>,
-                                EVEX_V512, EVEX_CD8<64, CD8VF>, VEX_W;
-  let Predicates = [HasVLX] in {
+multiclass avx512_binop_all<bits<8> opc, string OpcodeStr, OpndItins itins, 
+                            AVX512VLVectorVTInfo _SrcVTInfo, AVX512VLVectorVTInfo _DstVTInfo,
+                            SDNode OpNode, Predicate prd,  bit IsCommutable = 0> {
+  let Predicates = [prd] in
+    defm NAME#Z : avx512_binop_rm2<opc, OpcodeStr, itins, OpNode,
+                                 _SrcVTInfo.info512, _DstVTInfo.info512,
+                                 v8i64_info, IsCommutable>,
+                                  EVEX_V512, EVEX_CD8<64, CD8VF>, VEX_W;
+  let Predicates = [HasVLX, prd] in {
     defm NAME#Z256 : avx512_binop_rm2<opc, OpcodeStr, itins, OpNode,
-                                      v8i32x_info, v4i64x_info, IsCommutable>,
-                                     EVEX_V256, EVEX_CD8<64, CD8VF>, VEX_W;
+                                      _SrcVTInfo.info256, _DstVTInfo.info256, 
+                                      v4i64x_info, IsCommutable>,
+                                      EVEX_V256, EVEX_CD8<64, CD8VF>, VEX_W;
     defm NAME#Z128 : avx512_binop_rm2<opc, OpcodeStr, itins, OpNode,
-                                      v4i32x_info, v2i64x_info, IsCommutable>,
+                                      _SrcVTInfo.info128, _DstVTInfo.info128, 
+                                      v2i64x_info, IsCommutable>,
                                      EVEX_V128, EVEX_CD8<64, CD8VF>, VEX_W;
   }
 }
 
 defm VPMULDQ : avx512_binop_all<0x28, "vpmuldq", SSE_INTALU_ITINS_P,
-                   X86pmuldq, 1>,T8PD;
-defm VPMULUDQ : avx512_binop_all<0xF4, "vpmuludq", SSE_INTMUL_ITINS_P,
-                   X86pmuludq, 1>;
+                                avx512vl_i32_info, avx512vl_i64_info,
+                                X86pmuldq, HasAVX512, 1>,T8PD;
+defm VPMULUDQ : avx512_binop_all<0xF4, "vpmuludq", SSE_INTMUL_ITINS_P, 
+                                avx512vl_i32_info, avx512vl_i64_info,
+                                X86pmuludq, HasAVX512, 1>;
+defm VPMULTISHIFTQB : avx512_binop_all<0x83, "vpmultishiftqb", SSE_INTALU_ITINS_P,
+                                avx512vl_i8_info, avx512vl_i8_info,
+                                X86multishift, HasVBMI, 0>, T8PD;
 
 multiclass avx512_packs_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                             X86VectorVTInfo _Src, X86VectorVTInfo _Dst> {

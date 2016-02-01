@@ -561,8 +561,6 @@ void DwarfDebug::finalizeModuleInfo() {
   // Collect info for variables that were optimized out.
   collectDeadVariables();
 
-  unsigned MacroOffset = 0;
-  std::unique_ptr<AsmStreamerBase> AS(new SizeReporterAsmStreamer(Asm));
   // Handle anything that needs to be done on a per-unit basis after
   // all other generation.
   for (const auto &P : CUMap) {
@@ -617,13 +615,11 @@ void DwarfDebug::finalizeModuleInfo() {
     }
 
     auto *CUNode = cast<DICompileUnit>(P.first);
-    if (CUNode->getMacros()) {
-      // Compile Unit has macros, emit "DW_AT_macro_info" attribute.
-      U.addUInt(U.getUnitDie(), dwarf::DW_AT_macro_info,
-                dwarf::DW_FORM_sec_offset, MacroOffset);
-      // Update macro section offset
-      MacroOffset += handleMacroNodes(AS.get(), CUNode->getMacros(), U);
-    }
+    // If compile Unit has macros, emit "DW_AT_macro_info" attribute.
+    if (CUNode->getMacros())
+      U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_macro_info,
+                        U.getMacroLabelBegin(),
+                        TLOF.getDwarfMacinfoSection()->getBeginSymbol());
   }
 
   // Compute DIE offsets and sizes.
@@ -1865,65 +1861,56 @@ void DwarfDebug::emitDebugRanges() {
   }
 }
 
-unsigned DwarfDebug::handleMacroNodes(AsmStreamerBase *AS,
-                                      DIMacroNodeArray Nodes,
-                                      DwarfCompileUnit &U) {
-  unsigned Size = 0;
+void DwarfDebug::handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U) {
   for (auto *MN : Nodes) {
     if (auto *M = dyn_cast<DIMacro>(MN))
-      Size += emitMacro(AS, *M);
+      emitMacro(*M);
     else if (auto *F = dyn_cast<DIMacroFile>(MN))
-      Size += emitMacroFile(AS, *F, U);
+      emitMacroFile(*F, U);
     else
       llvm_unreachable("Unexpected DI type!");
   }
-  return Size;
 }
 
-unsigned DwarfDebug::emitMacro(AsmStreamerBase *AS, DIMacro &M) {
-  int Size = 0;
-  Size += AS->emitULEB128(M.getMacinfoType());
-  Size += AS->emitULEB128(M.getLine());
+void DwarfDebug::emitMacro(DIMacro &M) {
+  Asm->EmitULEB128(M.getMacinfoType());
+  Asm->EmitULEB128(M.getLine());
   StringRef Name = M.getName();
   StringRef Value = M.getValue();
-  Size += AS->emitBytes(Name);
+  Asm->OutStreamer->EmitBytes(Name);
   if (!Value.empty()) {
     // There should be one space between macro name and macro value.
-    Size += AS->emitInt8(' ');
-    Size += AS->emitBytes(Value);
+    Asm->EmitInt8(' ');
+    Asm->OutStreamer->EmitBytes(Value);
   }
-  Size += AS->emitInt8('\0');
-  return Size;
+  Asm->EmitInt8('\0');
 }
 
-unsigned DwarfDebug::emitMacroFile(AsmStreamerBase *AS, DIMacroFile &F,
-                                   DwarfCompileUnit &U) {
-  int Size = 0;
+void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
   assert(F.getMacinfoType() == dwarf::DW_MACINFO_start_file);
-  Size += AS->emitULEB128(dwarf::DW_MACINFO_start_file);
-  Size += AS->emitULEB128(F.getLine());
+  Asm->EmitULEB128(dwarf::DW_MACINFO_start_file);
+  Asm->EmitULEB128(F.getLine());
   DIFile *File = F.getFile();
   unsigned FID =
       U.getOrCreateSourceID(File->getFilename(), File->getDirectory());
-  Size += AS->emitULEB128(FID);
-  Size += handleMacroNodes(AS, F.getElements(), U);
-  Size += AS->emitULEB128(dwarf::DW_MACINFO_end_file);
-  return Size;
+  Asm->EmitULEB128(FID);
+  handleMacroNodes(F.getElements(), U);
+  Asm->EmitULEB128(dwarf::DW_MACINFO_end_file);
 }
 
 /// Emit macros into a debug macinfo section.
 void DwarfDebug::emitDebugMacinfo() {
-  if (MCSection *Macinfo = Asm->getObjFileLowering().getDwarfMacinfoSection()) {
-    // Start the dwarf macinfo section.
-    Asm->OutStreamer->SwitchSection(Macinfo);
-  }
-  std::unique_ptr<AsmStreamerBase> AS(new EmittingAsmStreamer(Asm));
+  // Start the dwarf macinfo section.
+  Asm->OutStreamer->SwitchSection(
+      Asm->getObjFileLowering().getDwarfMacinfoSection());
+
   for (const auto &P : CUMap) {
     auto &TheCU = *P.second;
     auto *SkCU = TheCU.getSkeleton();
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
     auto *CUNode = cast<DICompileUnit>(P.first);
-    handleMacroNodes(AS.get(), CUNode->getMacros(), U);
+    Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
+    handleMacroNodes(CUNode->getMacros(), U);
   }
   Asm->OutStreamer->AddComment("End Of Macro List Mark");
   Asm->EmitInt8(0);

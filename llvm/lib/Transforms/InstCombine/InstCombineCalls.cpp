@@ -753,6 +753,26 @@ static Value *simplifyMinnumMaxnum(const IntrinsicInst &II) {
   return nullptr;
 }
 
+static Value *simplifyMaskedLoad(const IntrinsicInst &II,
+                                 InstCombiner::BuilderTy &Builder) {
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
+  if (!ConstMask)
+    return nullptr;
+
+  // If the mask is all zeros, the "passthru" argument is the result.
+  if (ConstMask->isNullValue())
+    return II.getArgOperand(3);
+
+  // If the mask is all ones, this is a plain vector load of the 1st argument.
+  if (ConstMask->isAllOnesValue()) {
+    Value *LoadPtr = II.getArgOperand(0);
+    unsigned Alignment = cast<ConstantInt>(II.getArgOperand(1))->getZExtValue();
+    return Builder.CreateAlignedLoad(LoadPtr, Alignment, "unmaskedload");
+  }
+
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallSite to do the heavy
 /// lifting.
@@ -876,6 +896,16 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return ReplaceInstUsesWith(CI, X);
     break;
   }
+
+  case Intrinsic::masked_load:
+    if (Value *SimplifiedMaskedOp = simplifyMaskedLoad(*II, *Builder))
+      return ReplaceInstUsesWith(CI, SimplifiedMaskedOp);
+    break;
+
+  // TODO: Handle the other masked ops.
+  // case Intrinsic::masked_store:
+  // case Intrinsic::masked_gather:
+  // case Intrinsic::masked_scatter:
 
   case Intrinsic::powi:
     if (ConstantInt *Power = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
