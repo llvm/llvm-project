@@ -504,12 +504,12 @@ class DIVU_MMR6_DESC : ArithLogicR<"divu", GPR32Opnd>;
 class MOD_MMR6_DESC : ArithLogicR<"mod", GPR32Opnd>;
 class MODU_MMR6_DESC : ArithLogicR<"modu", GPR32Opnd>;
 class AND_MMR6_DESC : ArithLogicR<"and", GPR32Opnd>;
-class ANDI_MMR6_DESC : ArithLogicI<"andi", simm16, GPR32Opnd>;
+class ANDI_MMR6_DESC : ArithLogicI<"andi", uimm16, GPR32Opnd>;
 class NOR_MMR6_DESC : ArithLogicR<"nor", GPR32Opnd>;
 class OR_MMR6_DESC : ArithLogicR<"or", GPR32Opnd>;
-class ORI_MMR6_DESC : ArithLogicI<"ori", simm16, GPR32Opnd>;
+class ORI_MMR6_DESC : ArithLogicI<"ori", uimm16, GPR32Opnd>;
 class XOR_MMR6_DESC : ArithLogicR<"xor", GPR32Opnd>;
-class XORI_MMR6_DESC : ArithLogicI<"xori", simm16, GPR32Opnd>;
+class XORI_MMR6_DESC : ArithLogicI<"xori", uimm16, GPR32Opnd>;
 
 class SWE_MMR6_DESC_BASE<string opstr, DAGOperand RO, DAGOperand MO,
                   SDPatternOperator OpNode = null_frag,

@@ -681,7 +681,7 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
                  ADDI_FM_MM<0x14>;
   def XORi_MM  : MMRel, ArithLogicI<"xori", uimm16, GPR32Opnd>,
                  ADDI_FM_MM<0x1c>;
-  def LUi_MM   : MMRel, LoadUpper<"lui", GPR32Opnd, uimm16>, LUI_FM_MM;
+  def LUi_MM   : MMRel, LoadUpper<"lui", GPR32Opnd, uimm16_relaxed>, LUI_FM_MM;
 
   def LEA_ADDiu_MM : MMRel, EffectiveAddress<"addiu", GPR32Opnd>,
                      LW_FM_MM<0xc>;
@@ -901,12 +901,12 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
                    ISA_MIPS32R2;
 
   /// Trap Instructions
-  def TEQ_MM  : MMRel, TEQ_FT<"teq", GPR32Opnd>, TEQ_FM_MM<0x0>;
-  def TGE_MM  : MMRel, TEQ_FT<"tge", GPR32Opnd>, TEQ_FM_MM<0x08>;
-  def TGEU_MM : MMRel, TEQ_FT<"tgeu", GPR32Opnd>, TEQ_FM_MM<0x10>;
-  def TLT_MM  : MMRel, TEQ_FT<"tlt", GPR32Opnd>, TEQ_FM_MM<0x20>;
-  def TLTU_MM : MMRel, TEQ_FT<"tltu", GPR32Opnd>, TEQ_FM_MM<0x28>;
-  def TNE_MM  : MMRel, TEQ_FT<"tne", GPR32Opnd>, TEQ_FM_MM<0x30>;
+  def TEQ_MM  : MMRel, TEQ_FT<"teq", GPR32Opnd, uimm4>, TEQ_FM_MM<0x0>;
+  def TGE_MM  : MMRel, TEQ_FT<"tge", GPR32Opnd, uimm4>, TEQ_FM_MM<0x08>;
+  def TGEU_MM : MMRel, TEQ_FT<"tgeu", GPR32Opnd, uimm4>, TEQ_FM_MM<0x10>;
+  def TLT_MM  : MMRel, TEQ_FT<"tlt", GPR32Opnd, uimm4>, TEQ_FM_MM<0x20>;
+  def TLTU_MM : MMRel, TEQ_FT<"tltu", GPR32Opnd, uimm4>, TEQ_FM_MM<0x28>;
+  def TNE_MM  : MMRel, TEQ_FT<"tne", GPR32Opnd, uimm4>, TEQ_FM_MM<0x30>;
 
   def TEQI_MM  : MMRel, TEQI_FT<"teqi", GPR32Opnd>, TEQI_FM_MM<0x0e>;
   def TGEI_MM  : MMRel, TEQI_FT<"tgei", GPR32Opnd>, TEQI_FM_MM<0x09>;

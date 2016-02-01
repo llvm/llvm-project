@@ -58,11 +58,13 @@ from six.moves.urllib import parse as urlparse
 import six
 
 # LLDB modules
+import use_lldb_suite
 import lldb
 from . import configuration
 from . import lldbtest_config
 from . import lldbutil
 from . import test_categories
+from lldbsuite.support import encoded_file
 
 from .result_formatter import EventBuilder
 
@@ -1489,7 +1491,7 @@ class Base(unittest2.TestCase):
 
         session_file = "{}.log".format(self.log_basename)
         # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        self.session = open(session_file, "w")
+        self.session = encoded_file.open(session_file, "utf-8", mode="w")
 
         # Optimistically set __errored__, __failed__, __expected__ to False
         # initially.  If the test errored/failed, the session info

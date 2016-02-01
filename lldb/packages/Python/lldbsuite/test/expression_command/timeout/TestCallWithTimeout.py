@@ -23,7 +23,6 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
 
 
     @expectedFlakeyFreeBSD("llvm.org/pr19605")
-    @expectedFlakeyLinux("llvm.org/pr20275")
     @expectedFailureWindows("llvm.org/pr21765")
     def test(self):
         """Test calling std::String member function."""

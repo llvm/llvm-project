@@ -15,11 +15,6 @@
 // Mips Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
-// Unsigned Operand
-def uimm16_64      : Operand<i64> {
-  let PrintMethod = "printUnsignedImm";
-}
-
 // Signed Operand
 def simm10_64 : Operand<i64>;
 
@@ -113,7 +108,7 @@ def ORi64   : ArithLogicI<"ori", uimm16_64, GPR64Opnd, II_OR, immZExt16, or>,
               ADDI_FM<0xd>;
 def XORi64  : ArithLogicI<"xori", uimm16_64, GPR64Opnd, II_XOR, immZExt16, xor>,
               ADDI_FM<0xe>;
-def LUi64   : LoadUpper<"lui", GPR64Opnd, uimm16_64>, LUI_FM;
+def LUi64   : LoadUpper<"lui", GPR64Opnd, uimm16_64_relaxed>, LUI_FM;
 }
 
 /// Arithmetic Instructions (3-Operand, R-Type)

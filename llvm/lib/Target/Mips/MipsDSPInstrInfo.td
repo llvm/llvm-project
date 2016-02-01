@@ -16,7 +16,6 @@ def immZExt1 : ImmLeaf<i32, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<i32, [{return isUInt<2>(Imm);}]>;
 def immZExt3 : ImmLeaf<i32, [{return isUInt<3>(Imm);}]>;
 def immZExt4 : ImmLeaf<i32, [{return isUInt<4>(Imm);}]>;
-def immZExt7 : ImmLeaf<i32, [{return isUInt<7>(Imm);}]>;
 def immZExt8 : ImmLeaf<i32, [{return isUInt<8>(Imm);}]>;
 def immZExt10 : ImmLeaf<i32, [{return isUInt<10>(Imm);}]>;
 def immSExt6 : ImmLeaf<i32, [{return isInt<6>(Imm);}]>;
@@ -324,9 +323,10 @@ class ABSQ_S_PH_R2_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
 }
 
 class REPL_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
-                     ImmLeaf immPat, InstrItinClass itin, RegisterOperand RO> {
+                     Operand ImmOp, ImmLeaf immPat, InstrItinClass itin,
+                     RegisterOperand RO> {
   dag OutOperandList = (outs RO:$rd);
-  dag InOperandList = (ins uimm16:$imm);
+  dag InOperandList = (ins ImmOp:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rd, $imm");
   list<dag> Pattern = [(set RO:$rd, (OpNode immPat:$imm))];
   InstrItinClass Itinerary = itin;
@@ -401,7 +401,7 @@ class EXTR_W_TY1_R2_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
 class EXTR_W_TY1_R1_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                               InstrItinClass itin> {
   dag OutOperandList = (outs GPR32Opnd:$rt);
-  dag InOperandList = (ins ACC64DSPOpnd:$ac, uimm16:$shift_rs);
+  dag InOperandList = (ins ACC64DSPOpnd:$ac, uimm5:$shift_rs);
   string AsmString = !strconcat(instr_asm, "\t$rt, $ac, $shift_rs");
   InstrItinClass Itinerary = itin;
   string BaseOpcode = instr_asm;
@@ -440,7 +440,7 @@ class MTHLIP_DESC_BASE<string instr_asm, SDPatternOperator OpNode> {
 class RDDSP_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
                       InstrItinClass itin> {
   dag OutOperandList = (outs GPR32Opnd:$rd);
-  dag InOperandList = (ins uimm16:$mask);
+  dag InOperandList = (ins uimm10:$mask);
   string AsmString = !strconcat(instr_asm, "\t$rd, $mask");
   list<dag> Pattern = [(set GPR32Opnd:$rd, (OpNode immZExt10:$mask))];
   InstrItinClass Itinerary = itin;
@@ -845,11 +845,11 @@ class BITREV_DESC : ABSQ_S_PH_R2_DESC_BASE<"bitrev", int_mips_bitrev,
 class PACKRL_PH_DESC : CMP_EQ_QB_R3_DESC_BASE<"packrl.ph", int_mips_packrl_ph,
                                               NoItinerary, DSPROpnd, DSPROpnd>;
 
-class REPL_QB_DESC : REPL_DESC_BASE<"repl.qb", int_mips_repl_qb, immZExt8,
-                                    NoItinerary, DSPROpnd>;
+class REPL_QB_DESC : REPL_DESC_BASE<"repl.qb", int_mips_repl_qb, uimm8,
+                                    immZExt8, NoItinerary, DSPROpnd>;
 
-class REPL_PH_DESC : REPL_DESC_BASE<"repl.ph", int_mips_repl_ph, immZExt10,
-                                    NoItinerary, DSPROpnd>;
+class REPL_PH_DESC : REPL_DESC_BASE<"repl.ph", int_mips_repl_ph, uimm10,
+                                    immZExt10, NoItinerary, DSPROpnd>;
 
 class REPLV_QB_DESC : ABSQ_S_PH_R2_DESC_BASE<"replv.qb", int_mips_repl_qb,
                                              NoItinerary, DSPROpnd, GPR32Opnd>;

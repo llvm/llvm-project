@@ -339,15 +339,15 @@ class RADDU_W_QB_MM_DESC {
 
 class RDDSP_MM_DESC {
   dag OutOperandList = (outs GPR32Opnd:$rt);
-  dag InOperandList = (ins uimm16:$mask);
+  dag InOperandList = (ins uimm7:$mask);
   string AsmString = !strconcat("rddsp", "\t$rt, $mask");
-  list<dag> Pattern = [(set GPR32Opnd:$rt, (int_mips_rddsp immZExt10:$mask))];
+  list<dag> Pattern = [(set GPR32Opnd:$rt, (int_mips_rddsp immZExt7:$mask))];
   InstrItinClass Itinerary = NoItinerary;
 }
 
 class REPL_QB_MM_DESC {
   dag OutOperandList = (outs DSPROpnd:$rt);
-  dag InOperandList = (ins uimm16:$imm);
+  dag InOperandList = (ins uimm8:$imm);
   string AsmString = !strconcat("repl.qb", "\t$rt, $imm");
   list<dag> Pattern = [(set DSPROpnd:$rt, (int_mips_repl_qb immZExt8:$imm))];
   InstrItinClass Itinerary = NoItinerary;

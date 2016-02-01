@@ -3444,61 +3444,129 @@ void Scop::addScopStmt(BasicBlock *BB, Region *R) {
 }
 
 void Scop::buildSchedule() {
-  DenseMap<Loop *, std::pair<isl_schedule *, unsigned>> LoopSchedules;
   Loop *L = getLoopSurroundingRegion(getRegion(), LI);
-  LoopSchedules[L];
-  buildSchedule(getRegion().getNode(), LoopSchedules);
-  Schedule = LoopSchedules[L].first;
+  LoopStackTy LoopStack({LoopStackElementTy(L, nullptr, 0)});
+  buildSchedule(getRegion().getNode(), LoopStack);
+  assert(LoopStack.size() == 1 && LoopStack.back().L == L);
+  Schedule = LoopStack[0].Schedule;
 }
 
-void Scop::buildSchedule(
-    RegionNode *RN,
-    DenseMap<Loop *, std::pair<isl_schedule *, unsigned>> &LoopSchedules) {
+/// To generate a schedule for the elements in a Region we traverse the Region
+/// in reverse-post-order and add the contained RegionNodes in traversal order
+/// to the schedule of the loop that is currently at the top of the LoopStack.
+/// For loop-free codes, this results in a correct sequential ordering.
+///
+/// Example:
+///           bb1(0)
+///         /     \.
+///      bb2(1)   bb3(2)
+///         \    /  \.
+///          bb4(3)  bb5(4)
+///             \   /
+///              bb6(5)
+///
+/// Including loops requires additional processing. Whenever a loop header is
+/// encountered, the corresponding loop is added to the @p LoopStack. Starting
+/// from an empty schedule, we first process all RegionNodes that are within
+/// this loop and complete the sequential schedule at this loop-level before
+/// processing about any other nodes. To implement this
+/// loop-nodes-first-processing, the reverse post-order traversal is
+/// insufficient. Hence, we additionally check if the traversal yields
+/// sub-regions or blocks that are outside the last loop on the @p LoopStack.
+/// These region-nodes are then queue and only traverse after the all nodes
+/// within the current loop have been processed.
+void Scop::buildSchedule(Region *R, LoopStackTy &LoopStack) {
+  Loop *OuterScopLoop = getLoopSurroundingRegion(getRegion(), LI);
+
+  ReversePostOrderTraversal<Region *> RTraversal(R);
+  std::deque<RegionNode *> WorkList(RTraversal.begin(), RTraversal.end());
+  std::deque<RegionNode *> DelayList;
+  bool LastRNWaiting = false;
+
+  // Iterate over the region @p R in reverse post-order but queue
+  // sub-regions/blocks iff they are not part of the last encountered but not
+  // completely traversed loop. The variable LastRNWaiting is a flag to indicate
+  // that we queued the last sub-region/block from the reverse post-order
+  // iterator. If it is set we have to explore the next sub-region/block from
+  // the iterator (if any) to guarantee progress. If it is not set we first try
+  // the next queued sub-region/blocks.
+  while (!WorkList.empty() || !DelayList.empty()) {
+    RegionNode *RN;
+
+    if ((LastRNWaiting && !WorkList.empty()) || DelayList.size() == 0) {
+      RN = WorkList.front();
+      WorkList.pop_front();
+      LastRNWaiting = false;
+    } else {
+      RN = DelayList.front();
+      DelayList.pop_front();
+    }
+
+    Loop *L = getRegionNodeLoop(RN, LI);
+    if (!getRegion().contains(L))
+      L = OuterScopLoop;
+
+    Loop *LastLoop = LoopStack.back().L;
+    if (LastLoop != L) {
+      if (!LastLoop->contains(L)) {
+        LastRNWaiting = true;
+        DelayList.push_back(RN);
+        continue;
+      }
+      LoopStack.push_back({L, nullptr, 0});
+    }
+    buildSchedule(RN, LoopStack);
+  }
+
+  return;
+}
+
+void Scop::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack) {
 
   if (RN->isSubRegion()) {
     auto *LocalRegion = RN->getNodeAs<Region>();
     if (!SD.isNonAffineSubRegion(LocalRegion, &getRegion())) {
-      ReversePostOrderTraversal<Region *> RTraversal(LocalRegion);
-      for (auto *Child : RTraversal)
-        buildSchedule(Child, LoopSchedules);
+      buildSchedule(LocalRegion, LoopStack);
       return;
     }
   }
 
-  Loop *L = getRegionNodeLoop(RN, LI);
-  if (!getRegion().contains(L))
-    L = getLoopSurroundingRegion(getRegion(), LI);
-
-  int LD = getRelativeLoopDepth(L);
-  auto &LSchedulePair = LoopSchedules[L];
-  LSchedulePair.second += getNumBlocksInRegionNode(RN);
+  auto &LoopData = LoopStack.back();
+  LoopData.NumBlocksProcessed += getNumBlocksInRegionNode(RN);
 
   if (auto *Stmt = getStmtForRegionNode(RN)) {
     auto *UDomain = isl_union_set_from_set(Stmt->getDomain());
     auto *StmtSchedule = isl_schedule_from_domain(UDomain);
-    LSchedulePair.first = combineInSequence(LSchedulePair.first, StmtSchedule);
+    LoopData.Schedule = combineInSequence(LoopData.Schedule, StmtSchedule);
   }
 
-  isl_schedule *LSchedule = LSchedulePair.first;
-  unsigned NumVisited = LSchedulePair.second;
-  while (L && NumVisited == L->getNumBlocks()) {
-    auto *PL = L->getParentLoop();
+  // Check if we just processed the last node in this loop. If we did, finalize
+  // the loop by:
+  //
+  //   - adding new schedule dimensions
+  //   - folding the resulting schedule into the parent loop schedule
+  //   - dropping the loop schedule from the LoopStack.
+  //
+  // Then continue to check surrounding loops, which might also have been
+  // completed by this node.
+  while (LoopData.L &&
+         LoopData.NumBlocksProcessed == LoopData.L->getNumBlocks()) {
+    auto Schedule = LoopData.Schedule;
+    auto NumBlocksProcessed = LoopData.NumBlocksProcessed;
 
-    auto &PSchedulePair = LoopSchedules[PL];
+    LoopStack.pop_back();
+    auto &NextLoopData = LoopStack.back();
 
-    if (LSchedule) {
-      auto *LDomain = isl_schedule_get_domain(LSchedule);
-      auto *MUPA = mapToDimension(LDomain, LD + 1);
-      LSchedule = isl_schedule_insert_partial_schedule(LSchedule, MUPA);
-      PSchedulePair.first = combineInSequence(PSchedulePair.first, LSchedule);
+    if (Schedule) {
+      auto *Domain = isl_schedule_get_domain(Schedule);
+      auto *MUPA = mapToDimension(Domain, LoopStack.size());
+      Schedule = isl_schedule_insert_partial_schedule(Schedule, MUPA);
+      NextLoopData.Schedule =
+          combineInSequence(NextLoopData.Schedule, Schedule);
     }
 
-    PSchedulePair.second += NumVisited;
-
-    L = PL;
-    LD--;
-    NumVisited = PSchedulePair.second;
-    LSchedule = PSchedulePair.first;
+    NextLoopData.NumBlocksProcessed += NumBlocksProcessed;
+    LoopData = NextLoopData;
   }
 }
 
