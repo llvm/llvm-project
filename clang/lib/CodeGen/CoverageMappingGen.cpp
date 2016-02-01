@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ProfileData/CoverageMapping.h"
@@ -153,14 +154,13 @@ public:
   void gatherFileIDs(SmallVectorImpl<unsigned> &Mapping) {
     FileIDMapping.clear();
 
-    SmallVector<FileID, 8> Visited;
+    llvm::SmallSet<FileID, 8> Visited;
     SmallVector<std::pair<SourceLocation, unsigned>, 8> FileLocs;
     for (const auto &Region : SourceRegions) {
       SourceLocation Loc = Region.getStartLoc();
       FileID File = SM.getFileID(Loc);
-      if (std::find(Visited.begin(), Visited.end(), File) != Visited.end())
+      if (!Visited.insert(File).second)
         continue;
-      Visited.push_back(File);
 
       unsigned Depth = 0;
       for (SourceLocation Parent = getIncludeOrExpansionLoc(Loc);
