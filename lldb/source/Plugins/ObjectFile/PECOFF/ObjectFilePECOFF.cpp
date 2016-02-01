@@ -169,6 +169,18 @@ ObjectFilePECOFF::MagicBytesMatch (DataBufferSP& data_sp)
     return magic == IMAGE_DOS_SIGNATURE;
 }
 
+lldb::SymbolType
+ObjectFilePECOFF::MapSymbolType(uint16_t coff_symbol_type)
+{
+    // TODO:  We need to complete this mapping of COFF symbol types to LLDB ones.
+    // For now, here's a hack to make sure our function have types.
+    const auto complex_type = coff_symbol_type >> llvm::COFF::SCT_COMPLEX_TYPE_SHIFT;
+    if (complex_type == llvm::COFF::IMAGE_SYM_DTYPE_FUNCTION)
+    {
+        return lldb::eSymbolTypeCode;
+    }
+    return lldb::eSymbolTypeInvalid;
+}
 
 ObjectFilePECOFF::ObjectFilePECOFF (const lldb::ModuleSP &module_sp, 
                                     DataBufferSP& data_sp,
@@ -534,8 +546,8 @@ ObjectFilePECOFF::GetSymtab()
             {
                 const uint32_t symbol_size = 18;
                 const uint32_t addr_byte_size = GetAddressByteSize ();
-                const size_t symbol_data_size = num_syms * symbol_size; 
-                // Include the 4 bytes string table size at the end of the symbols
+                const size_t symbol_data_size = num_syms * symbol_size;
+                // Include the 4-byte string table size at the end of the symbols
                 DataBufferSP symtab_data_sp(m_file.ReadFileContents (m_coff_header.symoff, symbol_data_size + 4));
                 DataExtractor symtab_data (symtab_data_sp, GetByteOrder(), addr_byte_size);
                 lldb::offset_t offset = symbol_data_size;
@@ -556,8 +568,8 @@ ObjectFilePECOFF::GetSymtab()
                     coff_symbol_t symbol;
                     const uint32_t symbol_offset = offset;
                     const char *symbol_name_cstr = NULL;
-                    // If the first 4 bytes of the symbol string are zero, then we
-                    // it is followed by a 4 byte string table offset. Else these
+                    // If the first 4 bytes of the symbol string are zero, then they
+                    // are followed by a 4-byte string table offset. Else these
                     // 8 bytes contain the symbol name
                     if (symtab_data.GetU32 (&offset) == 0)
                     {
@@ -586,6 +598,7 @@ ObjectFilePECOFF::GetSymtab()
                     {
                         Address symbol_addr(sect_list->GetSectionAtIndex(symbol.sect-1), symbol.value);
                         symbols[i].GetAddressRef() = symbol_addr;
+                        symbols[i].SetType(MapSymbolType(symbol.type));
                     }
 
                     if (symbol.naux > 0)

@@ -24,7 +24,6 @@ class SymbolAPITestCase(TestBase):
         self.line2 = line_number('main.c', '// Find the line number for breakpoint 2 here.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24778")
     def test(self):
         """Exercise some SBSymbol and SBAddress APIs."""
         self.build()
