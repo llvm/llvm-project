@@ -389,8 +389,6 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   if (ObjectSymIt == CurrentObjectAddresses.end())
     return Warning("could not find object file symbol for symbol " +
                    Twine(Name));
-  if (!ObjectSymIt->getValue())
-    return;
   if (!CurrentDebugMapObject->addSymbol(Name, ObjectSymIt->getValue(), Value,
                                         Size))
     return Warning(Twine("failed to insert symbol '") + Name +
@@ -407,12 +405,15 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
     ErrorOr<StringRef> Name = Sym.getName();
     if (!Name)
       continue;
-    // Objective-C on i386 uses artificial absolute symbols to
-    // perform some link time checks. Those symbols have a fixed 0
-    // address that might conflict with real symbols in the object
-    // file. As I cannot see a way for absolute symbols to find
-    // their way into the debug information, let's just ignore those.
-    if (Sym.getFlags() & SymbolRef::SF_Absolute)
+    // The value of some categories of symbols isn't meaningful. For
+    // example common symbols store their size in the value field, not
+    // their address. Absolute symbols have a fixed address that can
+    // conflict with standard symbols. These symbols (especially the
+    // common ones), might still be referenced by relocations. These
+    // relocations will use the symbol itself, and won't need an
+    // object file address. The object file address field is optional
+    // in the DebugMap, leave it unassigned for these symbols.
+    if (Sym.getFlags() & (SymbolRef::SF_Absolute | SymbolRef::SF_Common))
       CurrentObjectAddresses[*Name] = None;
     else
       CurrentObjectAddresses[*Name] = Addr;

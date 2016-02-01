@@ -229,7 +229,8 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
     for (const auto &Sym : ErrOrObjectFile->symbols()) {
       uint64_t Address = Sym.getValue();
       ErrorOr<StringRef> Name = Sym.getName();
-      if (!Name)
+      if (!Name ||
+          (Sym.getFlags() & (SymbolRef::SF_Absolute | SymbolRef::SF_Common)))
         continue;
       SymbolAddresses[*Name] = Address;
     }
