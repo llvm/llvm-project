@@ -558,22 +558,49 @@ FreeBSDThread::WatchNotify(const ProcessMessage &message)
 void
 FreeBSDThread::TraceNotify(const ProcessMessage &message)
 {
-    POSIXBreakpointProtocol* reg_ctx = GetPOSIXBreakpointProtocol();
-    if (reg_ctx)
+    Log *log (ProcessPOSIXLog::GetLogIfAllCategoriesSet (POSIX_LOG_THREAD));
+
+    // Try to resolve the breakpoint object corresponding to the current PC.
+    assert(GetRegisterContext());
+    lldb::addr_t pc = GetRegisterContext()->GetPC();
+    if (log)
+        log->Printf ("FreeBSDThread::%s () PC=0x%8.8" PRIx64, __FUNCTION__, pc);
+    lldb::BreakpointSiteSP bp_site(GetProcess()->GetBreakpointSiteList().FindByAddress(pc));
+
+    // If the current pc is a breakpoint site then set the StopInfo to Breakpoint.
+    // Otherwise, set the StopInfo to Watchpoint or Trace.
+    if (bp_site)
     {
-        uint32_t num_hw_wps = reg_ctx->NumSupportedHardwareWatchpoints();
-        uint32_t wp_idx;
-        for (wp_idx = 0; wp_idx < num_hw_wps; wp_idx++)
+        lldb::break_id_t bp_id = bp_site->GetID();
+        // If we have an operating system plug-in, we might have set a thread specific breakpoint using the
+        // operating system thread ID, so we can't make any assumptions about the thread ID so we must always
+        // report the breakpoint regardless of the thread.
+        if (bp_site->ValidForThisThread(this) || GetProcess()->GetOperatingSystem () != NULL)
+            SetStopInfo (StopInfo::CreateStopReasonWithBreakpointSiteID(*this, bp_id));
+        else
         {
-            if (reg_ctx->IsWatchpointHit(wp_idx))
-            {
-                WatchNotify(message);
-                return;
-            }
+            const bool should_stop = false;
+            SetStopInfo (StopInfo::CreateStopReasonWithBreakpointSiteID(*this, bp_id, should_stop));
         }
     }
-
-    SetStopInfo (StopInfo::CreateStopReasonToTrace(*this));
+    else
+    {
+        POSIXBreakpointProtocol* reg_ctx = GetPOSIXBreakpointProtocol();
+        if (reg_ctx)
+        {
+            uint32_t num_hw_wps = reg_ctx->NumSupportedHardwareWatchpoints();
+            uint32_t wp_idx;
+            for (wp_idx = 0; wp_idx < num_hw_wps; wp_idx++)
+            {
+                if (reg_ctx->IsWatchpointHit(wp_idx))
+                {
+                    WatchNotify(message);
+                    return;
+                }
+            }
+        }
+        SetStopInfo (StopInfo::CreateStopReasonToTrace(*this));
+    }
 }
 
 void

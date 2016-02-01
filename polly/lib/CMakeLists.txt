@@ -66,6 +66,13 @@ if (BUILD_SHARED_LIBS)
     LLVMAnalysis
     LLVMipo
     LLVMMC
+# The libraries below are required for darwin: http://PR26392
+    LLVMBitReader
+    LLVMMCParser
+    LLVMObject
+    LLVMProfileData
+    LLVMTarget
+    LLVMVectorize
   )
   link_directories(
     ${LLVM_LIBRARY_DIR}
