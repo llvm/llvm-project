@@ -56,7 +56,7 @@ struct ELFNote
     size_t
     GetByteSize() const
     {
-        return 12 + llvm::RoundUpToAlignment (n_namesz, 4) + llvm::RoundUpToAlignment (n_descsz, 4);
+        return 12 + llvm::alignTo (n_namesz, 4) + llvm::alignTo (n_descsz, 4);
     }
 };
 
