@@ -19,7 +19,6 @@
 
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemStatCache.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ADT/STLExtras.h"
@@ -564,7 +563,3 @@ void FileManager::PrintStats() const {
 
   //llvm::errs() << PagesMapped << BytesOfPagesMapped << FSLookups;
 }
-
-// Virtual destructors for abstract base classes that need live in Basic.
-PCHContainerWriter::~PCHContainerWriter() {}
-PCHContainerReader::~PCHContainerReader() {}
