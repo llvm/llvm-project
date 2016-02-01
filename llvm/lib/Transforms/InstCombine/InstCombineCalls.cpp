@@ -773,6 +773,25 @@ static Value *simplifyMaskedLoad(const IntrinsicInst &II,
   return nullptr;
 }
 
+static Instruction *simplifyMaskedStore(IntrinsicInst &II, InstCombiner &IC) {
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
+  if (!ConstMask)
+    return nullptr;
+
+  // If the mask is all zeros, this instruction does nothing.
+  if (ConstMask->isNullValue())
+    return IC.EraseInstFromFunction(II);
+
+  // If the mask is all ones, this is a plain vector store of the 1st argument.
+  if (ConstMask->isAllOnesValue()) {
+    Value *StorePtr = II.getArgOperand(1);
+    unsigned Alignment = cast<ConstantInt>(II.getArgOperand(2))->getZExtValue();
+    return new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
+  }
+
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallSite to do the heavy
 /// lifting.
@@ -901,9 +920,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (Value *SimplifiedMaskedOp = simplifyMaskedLoad(*II, *Builder))
       return ReplaceInstUsesWith(CI, SimplifiedMaskedOp);
     break;
+  case Intrinsic::masked_store:
+    return simplifyMaskedStore(*II, *this);
 
   // TODO: Handle the other masked ops.
-  // case Intrinsic::masked_store:
   // case Intrinsic::masked_gather:
   // case Intrinsic::masked_scatter:
 

@@ -371,21 +371,76 @@ define i32 @select_andor(i32 %v1, i32 %v2, i32 %v3) {
   ret i32 %sel
 }
 
+; CHECK-LABEL: single_noselect
+define i32 @single_noselect(i32 %A, i32 %B) #0 {
+; CHECK: cmp w1, #1
+; CHECK-NEXT: ccmp w0, #1, #8, ge
+; CHECK-NEXT: cset w0, lt
+; CHECK-NEXT: ret
+  %notlhs = icmp slt i32 %A, 1
+  %notrhs = icmp slt i32 %B, 1
+  %lnot = or i1 %notlhs, %notrhs
+  %conv = zext i1 %lnot to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: single_and_ext
+define i32 @single_and_ext(i32 %A, i32 %B, i32 %C) #0 {
+; CHECK: cmp w1, #2
+; CHECK-NEXT: ccmp w0, #4, #0, lt
+; CHECK-NEXT: cinc w0, w2, lt
+; CHECK-NEXT: ret
+  %cmp = icmp slt i32 %A, 4
+  %cmp1 = icmp slt i32 %B, 2
+  %and1 = and i1 %cmp, %cmp1
+  %conv = zext i1 %and1 to i32
+  %add = add nsw i32 %conv, %C
+  ret i32 %add
+}
+
+; CHECK-LABEL: single_noselect_phi
+define i32 @single_noselect_phi(i32 %A, i32 %B, i32 %C) #0 {
+; CHECK: cmp w1, #0
+; CHECK-NEXT: ccmp w0, #0, #4, gt
+; CHECK-NEXT: cset [[REG1:w[0-9]+]], gt
+; CHECK-NEXT: cmp w1, #2
+; CHECK-NEXT: ccmp w0, #4, #8, ge
+; CHECK-NEXT: cset [[REG2:w[0-9]+]], lt
+; CHECK-NEXT: cmp w2, #0
+; CHECK-NEXT: csel w0, [[REG1]], [[REG2]], eq
+; CHECK-NEXT: ret
+entry:
+  %tobool = icmp eq i32 %C, 0
+  br i1 %tobool, label %if.else, label %if.then
+
+if.then:                                          ; preds = %entry
+  %cmp = icmp slt i32 %A, 4
+  %cmp1 = icmp slt i32 %B, 2
+  %0 = or i1 %cmp, %cmp1
+  br label %if.end
+
+if.else:                                          ; preds = %entry
+  %cmp2 = icmp sgt i32 %A, 0
+  %cmp3 = icmp sgt i32 %B, 0
+  %1 = and i1 %cmp2, %cmp3
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  %b.0.in = phi i1 [ %0, %if.then ], [ %1, %if.else ]
+  %conv = zext i1 %b.0.in to i32
+  ret i32 %conv
+}
+
 ; CHECK-LABEL: select_noccmp1
 define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
-; CHECK: cmp x0, #0
-; CHECK-NEXT: cset [[REG0:w[0-9]+]], lt
-; CHECK-NEXT: cmp x0, #13
-; CHECK-NOT: ccmp
-; CHECK-NEXT: cset [[REG1:w[0-9]+]], gt
-; CHECK-NEXT: cmp x2, #2
-; CHECK-NEXT: cset [[REG2:w[0-9]+]], lt
+; CHECK: cmp x0, #13
+; CHECK-NEXT: ccmp x0, #0, #0, gt
+; CHECK-NEXT: cset [[REG1:w[0-9]+]], lt
 ; CHECK-NEXT: cmp x2, #4
-; CHECK-NEXT: cset [[REG3:w[0-9]+]], gt
-; CHECK-NEXT: and [[REG4:w[0-9]+]], [[REG0]], [[REG1]]
-; CHECK-NEXT: and [[REG5:w[0-9]+]], [[REG2]], [[REG3]]
-; CHECK-NEXT: orr [[REG6:w[0-9]+]], [[REG4]], [[REG5]]
-; CHECK-NEXT: cmp [[REG6]], #0
+; CHECK-NEXT: ccmp x2, #2, #0, gt
+; CHECK-NEXT: cset [[REG2:w[0-9]+]], lt
+; CHECK-NEXT: orr [[REG3:w[0-9]+]], [[REG1]], [[REG2]]
+; CHECK-NEXT: cmp [[REG3]], #0
 ; CHECK-NEXT: csel x0, xzr, x3, ne
 ; CHECK-NEXT: ret
   %c0 = icmp slt i64 %v1, 0

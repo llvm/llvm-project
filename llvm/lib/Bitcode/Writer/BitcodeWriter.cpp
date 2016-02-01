@@ -2803,16 +2803,22 @@ static void WritePerModuleFunctionSummary(
   unsigned FSAbbrev = Stream.EmitAbbrev(Abbv);
 
   SmallVector<unsigned, 64> NameVals;
-  for (auto &I : FunctionIndex) {
+  // Iterate over the list of functions instead of the FunctionIndex map to
+  // ensure the ordering is stable.
+  for (const Function &F : *M) {
+    if (F.isDeclaration())
+      continue;
     // Skip anonymous functions. We will emit a function summary for
     // any aliases below.
-    if (!I.first->hasName())
+    if (!F.hasName())
       continue;
 
+    assert(FunctionIndex.count(&F) == 1);
+
     WritePerModuleFunctionSummaryRecord(
-        NameVals, I.second->functionSummary(),
-        VE.getValueID(M->getValueSymbolTable().lookup(I.first->getName())),
-        FSAbbrev, Stream);
+        NameVals, FunctionIndex[&F]->functionSummary(),
+        VE.getValueID(M->getValueSymbolTable().lookup(F.getName())), FSAbbrev,
+        Stream);
   }
 
   for (const GlobalAlias &A : M->aliases()) {

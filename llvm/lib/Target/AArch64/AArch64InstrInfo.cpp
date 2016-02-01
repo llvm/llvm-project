@@ -1420,7 +1420,7 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   case AArch64::STRBBui:
     Scale = Width = 1;
     break;
-  };
+  }
 
   BaseReg = LdSt->getOperand(1).getReg();
   Offset = LdSt->getOperand(2).getImm() * Scale;
