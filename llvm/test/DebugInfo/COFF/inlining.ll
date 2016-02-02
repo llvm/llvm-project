@@ -41,13 +41,15 @@
 
 ; ASM: .section .debug$S,"dr"
 ; ASM: .long   246                     # Inlinee lines subsection
-; ASM: .long   [[inline_end:.*]]-[[inline_beg:.*]]
+; ASM: .long   [[inline_end:.*]]-[[inline_beg:.*]] #
 ; ASM: [[inline_beg]]:
 ; ASM: .long   0
-; ASM: .long   4099                    # Inlined function bar starts at t.cpp:8
+; ASM: # Inlined function bar starts at t.cpp:8
+; ASM: .long   4099
 ; ASM: .long   0
 ; ASM: .long   8
-; ASM: .long   4100                    # Inlined function foo starts at t.cpp:2
+; ASM: # Inlined function foo starts at t.cpp:2
+; ASM: .long   4100
 ; ASM: .long   0
 ; ASM: .long   2
 ; ASM: [[inline_end]]:
@@ -55,10 +57,14 @@
 ; ASM: .long   241                     # Symbol subsection for baz
 ; ASM: .long   Ltmp3-Ltmp2
 ; ASM: .short 4429
-; ASM: .asciz
+; ASM: .long
+; ASM: .long
+; ASM: .long
 ; ASM: .cv_inline_linetable 1 1 8 Lfunc_begin0 Lfunc_end0 contains 2
 ; ASM: .short 4429
-; ASM: .asciz
+; ASM: .long
+; ASM: .long
+; ASM: .long
 ; ASM: .cv_inline_linetable 2 1 2 Lfunc_begin0 Lfunc_end0
 ; ASM: .short  4430
 ; ASM: .short  4430

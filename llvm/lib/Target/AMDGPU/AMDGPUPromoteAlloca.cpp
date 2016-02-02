@@ -447,6 +447,13 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
     if (!User->getType()->isPointerTy())
       continue;
 
+    if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(UseInst)) {
+      // Be conservative if an address could be computed outside the bounds of
+      // the alloca.
+      if (!GEP->isInBounds())
+        return false;
+    }
+
     WorkList.push_back(User);
     if (!collectUsesWithPtrTypes(User, WorkList))
       return false;

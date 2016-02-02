@@ -26,6 +26,7 @@ add_llvm_library(LLVMTransformUtils
   LowerInvoke.cpp
   LowerSwitch.cpp
   Mem2Reg.cpp
+  MemorySSA.cpp
   MetaRenamer.cpp
   ModuleUtils.cpp
   PromoteMemoryToRegister.cpp

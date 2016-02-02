@@ -5,12 +5,13 @@
 ; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
 ; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
 
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -amdgpu-promote-alloca < %s | FileCheck -check-prefix=HSAOPT %s
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -mcpu=kaveri -amdgpu-promote-alloca < %s | FileCheck -check-prefix=NOHSAOPT %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -amdgpu-promote-alloca < %s | FileCheck -check-prefix=HSAOPT -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-unknown-unknown -mcpu=kaveri -amdgpu-promote-alloca < %s | FileCheck -check-prefix=NOHSAOPT -check-prefix=OPT %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}mova_same_clause:
+; OPT-LABEL: @mova_same_clause(
 
 ; R600: LDS_WRITE
 ; R600: LDS_WRITE
@@ -90,6 +91,31 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}no_replace_inbounds_gep:
+; OPT-LABEL: @no_replace_inbounds_gep(
+; OPT: alloca [5 x i32]
+
+; SI-NOT: ds_write
+define void @no_replace_inbounds_gep(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
+entry:
+  %stack = alloca [5 x i32], align 4
+  %0 = load i32, i32 addrspace(1)* %in, align 4
+  %arrayidx1 = getelementptr [5 x i32], [5 x i32]* %stack, i32 0, i32 %0
+  store i32 4, i32* %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 1
+  %1 = load i32, i32 addrspace(1)* %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [5 x i32], [5 x i32]* %stack, i32 0, i32 %1
+  store i32 5, i32* %arrayidx3, align 4
+  %arrayidx10 = getelementptr inbounds [5 x i32], [5 x i32]* %stack, i32 0, i32 0
+  %2 = load i32, i32* %arrayidx10, align 4
+  store i32 %2, i32 addrspace(1)* %out, align 4
+  %arrayidx12 = getelementptr inbounds [5 x i32], [5 x i32]* %stack, i32 0, i32 1
+  %3 = load i32, i32* %arrayidx12
+  %arrayidx13 = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 1
+  store i32 %3, i32 addrspace(1)* %arrayidx13
+  ret void
+}
+
 ; This test checks that the stack offset is calculated correctly for structs.
 ; All register loads/stores should be optimized away, so there shouldn't be
 ; any MOVA instructions.
@@ -98,6 +124,8 @@ entry:
 ; this.
 
 ; FUNC-LABEL: {{^}}multiple_structs:
+; OPT-LABEL: @multiple_structs(
+
 ; R600-NOT: MOVA_INT
 ; SI-NOT: v_movrel
 ; SI-NOT: v_movrel
@@ -137,19 +165,19 @@ entry:
   %prv_array_const = alloca [2 x i32]
   %prv_array = alloca [2 x i32]
   %a = load i32, i32 addrspace(1)* %in
-  %b_src_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
+  %b_src_ptr = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 1
   %b = load i32, i32 addrspace(1)* %b_src_ptr
-  %a_dst_ptr = getelementptr [2 x i32], [2 x i32]* %prv_array_const, i32 0, i32 0
+  %a_dst_ptr = getelementptr inbounds [2 x i32], [2 x i32]* %prv_array_const, i32 0, i32 0
   store i32 %a, i32* %a_dst_ptr
-  %b_dst_ptr = getelementptr [2 x i32], [2 x i32]* %prv_array_const, i32 0, i32 1
+  %b_dst_ptr = getelementptr inbounds [2 x i32], [2 x i32]* %prv_array_const, i32 0, i32 1
   store i32 %b, i32* %b_dst_ptr
   br label %for.body
 
 for.body:
   %inc = phi i32 [0, %entry], [%count, %for.body]
-  %x_ptr = getelementptr [2 x i32], [2 x i32]* %prv_array_const, i32 0, i32 0
+  %x_ptr = getelementptr inbounds [2 x i32], [2 x i32]* %prv_array_const, i32 0, i32 0
   %x = load i32, i32* %x_ptr
-  %y_ptr = getelementptr [2 x i32], [2 x i32]* %prv_array, i32 0, i32 0
+  %y_ptr = getelementptr inbounds [2 x i32], [2 x i32]* %prv_array, i32 0, i32 0
   %y = load i32, i32* %y_ptr
   %xy = add i32 %x, %y
   store i32 %xy, i32* %y_ptr
@@ -158,7 +186,7 @@ for.body:
   br i1 %done, label %for.end, label %for.body
 
 for.end:
-  %value_ptr = getelementptr [2 x i32], [2 x i32]* %prv_array, i32 0, i32 0
+  %value_ptr = getelementptr inbounds [2 x i32], [2 x i32]* %prv_array, i32 0, i32 0
   %value = load i32, i32* %value_ptr
   store i32 %value, i32 addrspace(1)* %out
   ret void
@@ -174,11 +202,11 @@ for.end:
 define void @short_array(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %0 = alloca [2 x i16]
-  %1 = getelementptr [2 x i16], [2 x i16]* %0, i32 0, i32 0
-  %2 = getelementptr [2 x i16], [2 x i16]* %0, i32 0, i32 1
+  %1 = getelementptr inbounds [2 x i16], [2 x i16]* %0, i32 0, i32 0
+  %2 = getelementptr inbounds [2 x i16], [2 x i16]* %0, i32 0, i32 1
   store i16 0, i16* %1
   store i16 1, i16* %2
-  %3 = getelementptr [2 x i16], [2 x i16]* %0, i32 0, i32 %index
+  %3 = getelementptr inbounds [2 x i16], [2 x i16]* %0, i32 0, i32 %index
   %4 = load i16, i16* %3
   %5 = sext i16 %4 to i32
   store i32 %5, i32 addrspace(1)* %out
@@ -194,11 +222,11 @@ entry:
 define void @char_array(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %0 = alloca [2 x i8]
-  %1 = getelementptr [2 x i8], [2 x i8]* %0, i32 0, i32 0
-  %2 = getelementptr [2 x i8], [2 x i8]* %0, i32 0, i32 1
+  %1 = getelementptr inbounds [2 x i8], [2 x i8]* %0, i32 0, i32 0
+  %2 = getelementptr inbounds [2 x i8], [2 x i8]* %0, i32 0, i32 1
   store i8 0, i8* %1
   store i8 1, i8* %2
-  %3 = getelementptr [2 x i8], [2 x i8]* %0, i32 0, i32 %index
+  %3 = getelementptr inbounds [2 x i8], [2 x i8]* %0, i32 0, i32 %index
   %4 = load i8, i8* %3
   %5 = sext i8 %4 to i32
   store i32 %5, i32 addrspace(1)* %out

@@ -94,7 +94,7 @@ public:
   /// @brief Get a pointer to the stub at the given index, which must be in
   ///        the range 0 .. getNumStubs() - 1.
   void *getStub(unsigned Idx) const {
-    return static_cast<uint64_t *>(StubsMem.base()) + Idx;
+    return static_cast<char *>(StubsMem.base()) + Idx * StubSize;
   }
 
   /// @brief Get a pointer to the implementation-pointer at the given index,

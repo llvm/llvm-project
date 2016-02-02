@@ -1,2 +1,28 @@
 RUN: llvm-size %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
+#1.o source
+#int x ; int y ; int z;
+#
+#int main () {
+#  x = 1;
+#  y = 1;
+#  z = 1;
+#  return x + y + z;
+#}
+#Compilation: clang -c -O0
+RUN: llvm-size -A %p/Inputs/1.o | FileCheck --check-prefix="SYSV" %s
+RUN: llvm-size -B %p/Inputs/1.o | FileCheck --check-prefix="BSD" %s
+
 ENOENT: {{.*}}llvm-size{{(\.EXE|\.exe)?}}: {{.*}}.blah: {{[Nn]}}o such file or directory
+SYSV:    {{[ -\(\)_A-Za-z0-9.\\/:]+}}  :
+SYSV-NEXT:    section             size   addr
+SYSV-NEXT:    .text                 67      0
+SYSV-NEXT:    .data                  0      0
+SYSV-NEXT:    .bss                   0      0
+SYSV-NEXT:    .comment              46      0
+SYSV-NEXT:    .note.GNU-stack        0      0
+SYSV-NEXT:    .eh_frame             56      0
+SYSV-NEXT:    Total                169
+
+BSD:        text    data     bss     dec     hex filename
+BSD-NEXT:     67      56       0     123      7b {{[ -\(\)_A-Za-z0-9.\\/:]+}}
+
