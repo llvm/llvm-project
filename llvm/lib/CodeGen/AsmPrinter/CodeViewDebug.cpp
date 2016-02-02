@@ -96,6 +96,7 @@ CodeViewDebug::InlineSite &CodeViewDebug::getInlineSite(const DILocation *Loc) {
     InlineSite &Site = Insertion.first->second;
     Site.SiteFuncId = NextFuncId++;
     Site.Inlinee = Loc->getScope()->getSubprogram();
+    InlinedSubprograms.insert(Loc->getScope()->getSubprogram());
   }
   return Insertion.first->second;
 }
@@ -188,6 +189,9 @@ void CodeViewDebug::endModule() {
   // of the payload followed by the payload itself.  The subsections are 4-byte
   // aligned.
 
+  // Make a subsection for all the inlined subprograms.
+  emitInlineeLinesSubsection();
+
   // Emit per-function debug information.
   for (auto &P : FnDebugInfo)
     emitDebugInfoForFunction(P.first, P.second);
@@ -257,6 +261,39 @@ void CodeViewDebug::emitTypeInformation() {
   }
 }
 
+void CodeViewDebug::emitInlineeLinesSubsection() {
+  if (InlinedSubprograms.empty())
+    return;
+
+  MCStreamer &OS = *Asm->OutStreamer;
+  MCSymbol *InlineBegin = Asm->MMI->getContext().createTempSymbol(),
+           *InlineEnd = Asm->MMI->getContext().createTempSymbol();
+
+  OS.AddComment("Inlinee lines subsection");
+  OS.EmitIntValue(unsigned(ModuleSubstreamKind::InlineeLines), 4);
+  OS.emitAbsoluteSymbolDiff(InlineEnd, InlineBegin, 4);
+  OS.EmitLabel(InlineBegin);
+
+  // We don't provide any extra file info.
+  // FIXME: Find out if debuggers use this info.
+  OS.EmitIntValue(unsigned(InlineeLinesSignature::Normal), 4);
+
+  for (const DISubprogram *SP : InlinedSubprograms) {
+    TypeIndex TypeId = SubprogramToFuncId[SP];
+    unsigned FileId = maybeRecordFile(SP->getFile());
+    OS.AddComment("Inlined function " + SP->getDisplayName() + " starts at " +
+                  SP->getFilename() + Twine(':') + Twine(SP->getLine()));
+    // The filechecksum table uses 8 byte entries for now, and file ids start at
+    // 1.
+    unsigned FileOffset = (FileId - 1) * 8;
+    OS.EmitIntValue(TypeId.getIndex(), 4);
+    OS.EmitIntValue(FileOffset, 4);
+    OS.EmitIntValue(SP->getLine(), 4);
+  }
+
+  OS.EmitLabel(InlineEnd);
+}
+
 static void EmitLabelDiff(MCStreamer &Streamer,
                           const MCSymbol *From, const MCSymbol *To,
                           unsigned int Size = 4) {
@@ -267,6 +304,18 @@ static void EmitLabelDiff(MCStreamer &Streamer,
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, ToRef, FromRef, Context);
   Streamer.EmitValue(AddrDelta, Size);
+}
+
+void CodeViewDebug::collectInlineSiteChildren(
+    SmallVectorImpl<unsigned> &Children, const FunctionInfo &FI,
+    const InlineSite &Site) {
+  for (const DILocation *ChildSiteLoc : Site.ChildSites) {
+    auto I = FI.InlineSites.find(ChildSiteLoc);
+    assert(I != FI.InlineSites.end());
+    const InlineSite &ChildSite = I->second;
+    Children.push_back(ChildSite.SiteFuncId);
+    collectInlineSiteChildren(Children, FI, ChildSite);
+  }
 }
 
 void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
@@ -290,7 +339,13 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   Asm->OutStreamer->EmitBytes(
       StringRef(reinterpret_cast<const char *>(&SiteBytes), sizeof(SiteBytes)));
 
-  // FIXME: annotations
+  unsigned FileId = maybeRecordFile(Site.Inlinee->getFile());
+  unsigned StartLineNum = Site.Inlinee->getLine();
+  SmallVector<unsigned, 3> SecondaryFuncIds;
+  collectInlineSiteChildren(SecondaryFuncIds, FI, Site);
+
+  OS.EmitCVInlineLinetableDirective(Site.SiteFuncId, FileId, StartLineNum,
+                                    FI.Begin, FI.End, SecondaryFuncIds);
 
   OS.EmitLabel(InlineEnd);
 
@@ -367,7 +422,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   }
   Asm->OutStreamer->EmitLabel(SymbolsEnd);
   // Every subsection must be aligned to a 4-byte boundary.
-  Asm->OutStreamer->EmitFill((-FuncName.size()) % 4, 0);
+  Asm->OutStreamer->EmitValueToAlignment(4);
 
   // We have an assembler directive that takes care of the whole line table.
   Asm->OutStreamer->EmitCVLinetableDirective(FI.FuncId, Fn, FI.End);
@@ -383,6 +438,7 @@ void CodeViewDebug::beginFunction(const MachineFunction *MF) {
   assert(FnDebugInfo.count(GV) == false);
   CurFn = &FnDebugInfo[GV];
   CurFn->FuncId = NextFuncId++;
+  CurFn->Begin = Asm->getFunctionBegin();
 
   // Find the end of the function prolog.
   // FIXME: is there a simpler a way to do this? Can we just search

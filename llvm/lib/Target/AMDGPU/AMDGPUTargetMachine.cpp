@@ -229,7 +229,7 @@ void AMDGPUPassConfig::addIRPasses() {
 void AMDGPUPassConfig::addCodeGenPrepare() {
   const AMDGPUTargetMachine &TM = getAMDGPUTargetMachine();
   const AMDGPUSubtarget &ST = *TM.getSubtargetImpl();
-  if (ST.isPromoteAllocaEnabled()) {
+  if (TM.getOptLevel() > CodeGenOpt::None && ST.isPromoteAllocaEnabled()) {
     addPass(createAMDGPUPromoteAlloca(&TM));
     addPass(createSROAPass());
   }

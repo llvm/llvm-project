@@ -162,20 +162,10 @@ define <4 x i64> @merge_4i64_i64_1234(i64* %ptr) nounwind uwtable noinline ssp {
 }
 
 define <4 x i64> @merge_4i64_i64_1zzu(i64* %ptr) nounwind uwtable noinline ssp {
-; AVX1-LABEL: merge_4i64_i64_1zzu:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: merge_4i64_i64_1zzu:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: merge_4i64_i64_1zzu:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vmovq 8(%rdi), %xmm0
-; AVX512F-NEXT:    retq
+; AVX-LABEL: merge_4i64_i64_1zzu:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    retq
   %ptr0 = getelementptr inbounds i64, i64* %ptr, i64 1
   %val0 = load i64, i64* %ptr0
   %res0 = insertelement <4 x i64> undef, i64 %val0, i32 0

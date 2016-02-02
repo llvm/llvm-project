@@ -1212,20 +1212,10 @@ define <4 x i64> @insert_reg_and_zero_v4i64(i64 %a) {
 }
 
 define <4 x i64> @insert_mem_and_zero_v4i64(i64* %ptr) {
-; AVX1-LABEL: insert_mem_and_zero_v4i64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_mem_and_zero_v4i64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: insert_mem_and_zero_v4i64:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovq (%rdi), %xmm0
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: insert_mem_and_zero_v4i64:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    retq
   %a = load i64, i64* %ptr
   %v = insertelement <4 x i64> undef, i64 %a, i64 0
   %shuffle = shufflevector <4 x i64> %v, <4 x i64> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
@@ -1248,7 +1238,7 @@ define <4 x double> @insert_reg_and_zero_v4f64(double %a) {
 ; AVX512VL-LABEL: insert_reg_and_zero_v4f64:
 ; AVX512VL:       # BB#0:
 ; AVX512VL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovsd %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX512VL-NEXT:    retq
   %v = insertelement <4 x double> undef, double %a, i32 0
   %shuffle = shufflevector <4 x double> %v, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
@@ -1256,20 +1246,10 @@ define <4 x double> @insert_reg_and_zero_v4f64(double %a) {
 }
 
 define <4 x double> @insert_mem_and_zero_v4f64(double* %ptr) {
-; AVX1-LABEL: insert_mem_and_zero_v4f64:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_mem_and_zero_v4f64:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: insert_mem_and_zero_v4f64:
-; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovsd (%rdi), %xmm0
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: insert_mem_and_zero_v4f64:
+; ALL:       # BB#0:
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    retq
   %a = load double, double* %ptr
   %v = insertelement <4 x double> undef, double %a, i32 0
   %shuffle = shufflevector <4 x double> %v, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>

@@ -48,7 +48,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public AsmPrinterHandler {
     MapVector<const DILocation *, InlineSite> InlineSites;
 
     DebugLoc LastLoc;
-    MCSymbol *End = nullptr;
+    const MCSymbol *Begin = nullptr;
+    const MCSymbol *End = nullptr;
     unsigned FuncId = 0;
     unsigned LastFileId = 0;
     bool HaveLineInfo = false;
@@ -59,12 +60,18 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public AsmPrinterHandler {
 
   InlineSite &getInlineSite(const DILocation *Loc);
 
+  static void collectInlineSiteChildren(SmallVectorImpl<unsigned> &Children,
+                                        const FunctionInfo &FI,
+                                        const InlineSite &Site);
+
   /// Remember some debug info about each function. Keep it in a stable order to
   /// emit at the end of the TU.
   MapVector<const Function *, FunctionInfo> FnDebugInfo;
 
   /// Map from DIFile to .cv_file id.
   DenseMap<const DIFile *, unsigned> FileIdMap;
+
+  SmallSetVector<const DISubprogram *, 4> InlinedSubprograms;
 
   DenseMap<const DISubprogram *, codeview::TypeIndex> SubprogramToFuncId;
 
@@ -92,6 +99,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public AsmPrinterHandler {
   }
 
   void emitTypeInformation();
+
+  void emitInlineeLinesSubsection();
 
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
 

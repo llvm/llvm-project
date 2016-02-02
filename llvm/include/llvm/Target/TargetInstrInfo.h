@@ -45,7 +45,6 @@ class DFAPacketizer;
 
 template<class T> class SmallVectorImpl;
 
-
 //---------------------------------------------------------------------------
 ///
 /// TargetInstrInfo - Interface to description of machine instruction set
@@ -850,8 +849,7 @@ public:
   virtual void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
                                      MachineInstr &NewMI1,
                                      MachineInstr &NewMI2) const {
-    return;
-  };
+  }
 
   /// Return true when a target supports MachineCombiner.
   virtual bool useMachineCombiner() const { return false; }
@@ -1250,7 +1248,6 @@ public:
   /// getExecutionDomain(MI).
   virtual void setExecutionDomain(MachineInstr *MI, unsigned Domain) const {}
 
-
   /// Returns the preferred minimum clearance
   /// before an instruction with an unwanted partial register update.
   ///
@@ -1435,6 +1432,6 @@ struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
   }
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TARGET_TARGETINSTRINFO_H

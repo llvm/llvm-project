@@ -84,13 +84,20 @@ Ltmp3:
 Ltmp4:
 	.short	4429
 	.asciz	"\000\000\000\000\000\000\000\000\003\020\000"
-	.cv_inline_linetable	1 1 9 contains 2
+	.cv_inline_linetable	1 1 9 Lfunc_begin0 Lfunc_end0 contains 2
 # CHECK:    InlineSite {
 # CHECK:      PtrParent: 0x0
 # CHECK:      PtrEnd: 0x0
 # CHECK:      Inlinee: bar (0x1003)
 # CHECK:      BinaryAnnotations [
-# CHECK:        ChangeLineOffset: 2
+# CHECK:        ChangeLineOffset: -6
+# CHECK:        ChangeCodeOffset: 0xF
+# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xA, LineOffset: 1}
+# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
+# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
+# CHECK:        ChangeLineOffset: 5
+# CHECK:        ChangeCodeOffset: 0x7
+# CHECK:        ChangeCodeLength: 0x7
 # CHECK:      ]
 # CHECK:    }
 Ltmp5:
@@ -98,26 +105,32 @@ Ltmp5:
 Ltmp6:
 	.short	4429
 	.asciz	"\000\000\000\000\000\000\000\000\004\020\000"
-	.cv_inline_linetable	2 1 3
+	.cv_inline_linetable	2 1 3 Lfunc_begin0 Lfunc_end0
 # CHECK:    InlineSite {
 # CHECK:      PtrParent: 0x0
 # CHECK:      PtrEnd: 0x0
 # CHECK:      Inlinee: foo (0x1004)
 # CHECK:      BinaryAnnotations [
 # CHECK:        ChangeLineOffset: 1
-# CHECK:        ChangeLineOffset: 1
-# CHECK:        ChangeLineOffset: 1
+# CHECK:        ChangeCodeOffset: 0x19
+# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
+# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
+# CHECK:        ChangeCodeLength: 0x7
 # CHECK:      ]
 # CHECK:    }
 Ltmp7:
 	.short	2
 	.short	4430
+# CHECK:    InlineSiteEnd {
+# CHECK:    }
 	.short	2
 	.short	4430
+# CHECK:    InlineSiteEnd {
+# CHECK:    }
 	.short	2
 	.short	4431
 Ltmp1:
-	.zero	1
+	.p2align 2
 	.cv_linetable	0, "?baz@@YAXXZ", Lfunc_end0
 	.cv_filechecksums               # File index to string table offset subsection
 	.cv_stringtable                 # String table

@@ -40,6 +40,7 @@ public:
     FT_DwarfFrame,
     FT_LEB,
     FT_SafeSEH,
+    FT_CVInlineLines,
     FT_Dummy
   };
 
@@ -481,6 +482,50 @@ public:
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_SafeSEH;
+  }
+};
+
+/// Fragment representing the binary annotations produced by the
+/// .cv_inline_linetable directive.
+class MCCVInlineLineTableFragment : public MCFragment {
+  unsigned SiteFuncId;
+  unsigned StartFileId;
+  unsigned StartLineNum;
+  const MCSymbol *FnStartSym;
+  const MCSymbol *FnEndSym;
+  SmallVector<unsigned, 3> SecondaryFuncs;
+  SmallString<8> Contents;
+
+  /// CodeViewContext has the real knowledge about this format, so let it access
+  /// our members.
+  friend class CodeViewContext;
+
+public:
+  MCCVInlineLineTableFragment(unsigned SiteFuncId, unsigned StartFileId,
+                              unsigned StartLineNum, const MCSymbol *FnStartSym,
+                              const MCSymbol *FnEndSym,
+                              ArrayRef<unsigned> SecondaryFuncs,
+                              MCSection *Sec = nullptr)
+      : MCFragment(FT_CVInlineLines, false, 0, Sec), SiteFuncId(SiteFuncId),
+        StartFileId(StartFileId), StartLineNum(StartLineNum),
+        FnStartSym(FnStartSym), FnEndSym(FnEndSym),
+        SecondaryFuncs(SecondaryFuncs.begin(), SecondaryFuncs.end()) {
+    Contents.push_back(0);
+  }
+
+  /// \name Accessors
+  /// @{
+
+  const MCSymbol *getFnStartSym() const { return FnStartSym; }
+  const MCSymbol *getFnEndSym() const { return FnEndSym; }
+
+  SmallString<8> &getContents() { return Contents; }
+  const SmallString<8> &getContents() const { return Contents; }
+
+  /// @}
+
+  static bool classof(const MCFragment *F) {
+    return F->getKind() == MCFragment::FT_CVInlineLines;
   }
 };
 

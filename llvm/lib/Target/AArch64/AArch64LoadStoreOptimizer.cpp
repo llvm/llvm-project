@@ -88,6 +88,9 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   const TargetRegisterInfo *TRI;
   const AArch64Subtarget *Subtarget;
 
+  // Track which registers have been modified and used.
+  BitVector ModifiedRegs, UsedRegs;
+
   // Scan the instructions looking for a load/store that can be combined
   // with the current instruction into a load/store pair.
   // Return the matching instruction if one is found, else MBB->end().
@@ -1015,10 +1018,11 @@ bool AArch64LoadStoreOpt::findMatchingStore(
 
   // Track which registers have been modified and used between the first insn
   // and the second insn.
-  BitVector ModifiedRegs, UsedRegs;
-  ModifiedRegs.resize(TRI->getNumRegs());
-  UsedRegs.resize(TRI->getNumRegs());
+  ModifiedRegs.reset();
+  UsedRegs.reset();
 
+  // FIXME: We miss the case where the matching store is the first instruction
+  // in the basic block.
   for (unsigned Count = 0; MBBI != E && Count < Limit;) {
     --MBBI;
     MachineInstr *MI = MBBI;
@@ -1096,9 +1100,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
   // Track which registers have been modified and used between the first insn
   // (inclusive) and the second insn.
-  BitVector ModifiedRegs, UsedRegs;
-  ModifiedRegs.resize(TRI->getNumRegs());
-  UsedRegs.resize(TRI->getNumRegs());
+  ModifiedRegs.reset();
+  UsedRegs.reset();
 
   // Remember any instructions that read/write memory between FirstMI and MI.
   SmallVector<MachineInstr *, 4> MemInsns;
@@ -1378,9 +1381,8 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
 
   // Track which registers have been modified and used between the first insn
   // (inclusive) and the second insn.
-  BitVector ModifiedRegs, UsedRegs;
-  ModifiedRegs.resize(TRI->getNumRegs());
-  UsedRegs.resize(TRI->getNumRegs());
+  ModifiedRegs.reset();
+  UsedRegs.reset();
   ++MBBI;
   for (; MBBI != E; ++MBBI) {
     MachineInstr *MI = MBBI;
@@ -1428,9 +1430,8 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
 
   // Track which registers have been modified and used between the first insn
   // (inclusive) and the second insn.
-  BitVector ModifiedRegs, UsedRegs;
-  ModifiedRegs.resize(TRI->getNumRegs());
-  UsedRegs.resize(TRI->getNumRegs());
+  ModifiedRegs.reset();
+  UsedRegs.reset();
   --MBBI;
   for (; MBBI != B; --MBBI) {
     MachineInstr *MI = MBBI;
@@ -1783,6 +1784,12 @@ bool AArch64LoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   Subtarget = &static_cast<const AArch64Subtarget &>(Fn.getSubtarget());
   TII = static_cast<const AArch64InstrInfo *>(Subtarget->getInstrInfo());
   TRI = Subtarget->getRegisterInfo();
+
+  // Resize the modified and used register bitfield trackers.  We do this once
+  // per function and then clear the bitfield each time we optimize a load or
+  // store.
+  ModifiedRegs.resize(TRI->getNumRegs());
+  UsedRegs.resize(TRI->getNumRegs());
 
   bool Modified = false;
   bool enableNarrowLdOpt = enableNarrowLdMerge(Fn);

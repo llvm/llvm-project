@@ -53,7 +53,6 @@ struct ContextDecision {
 #define debug(s) do { } while (0)
 #endif
 
-
 /*
  * contextForAttrs - Client for the instruction context table.  Takes a set of
  *   attributes and returns the appropriate decode context.
@@ -276,8 +275,6 @@ static void dbgprintf(struct InternalInstruction* insn,
   va_end(ap);
 
   insn->dlog(insn->dlogArg, buffer);
-
-  return;
 }
 
 /*

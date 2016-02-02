@@ -85,7 +85,7 @@ public:
 /// created at the current address in the current section and the info from
 /// the last .cv_loc directive seen as stored in the context.
 class MCCVLineEntry : public MCCVLoc {
-  MCSymbol *Label;
+  const MCSymbol *Label;
 
 private:
   // Allow the default copy constructor and assignment operator to be used
@@ -93,10 +93,10 @@ private:
 
 public:
   // Constructor to create an MCCVLineEntry given a symbol and the dwarf loc.
-  MCCVLineEntry(MCSymbol *label, const MCCVLoc loc)
-      : MCCVLoc(loc), Label(label) {}
+  MCCVLineEntry(const MCSymbol *Label, const MCCVLoc loc)
+      : MCCVLoc(loc), Label(Label) {}
 
-  MCSymbol *getLabel() const { return Label; }
+  const MCSymbol *getLabel() const { return Label; }
 
   // This is called when an instruction is assembled into the specified
   // section and if there is information from the last .cv_loc directive that
@@ -117,10 +117,10 @@ public:
   /// \brief Add a line entry.
   void addLineEntry(const MCCVLineEntry &LineEntry) {
     size_t Offset = MCCVLines.size();
-    auto I =
-        MCCVLineStartStop.insert({LineEntry.getFunctionId(), {Offset, Offset}});
+    auto I = MCCVLineStartStop.insert(
+        {LineEntry.getFunctionId(), {Offset, Offset + 1}});
     if (!I.second)
-      I.first->second.second = Offset;
+      I.first->second.second = Offset + 1;
     MCCVLines.push_back(LineEntry);
   }
 
@@ -129,11 +129,27 @@ public:
 
     auto I = MCCVLineStartStop.find(FuncId);
     if (I != MCCVLineStartStop.end())
-      for (size_t Idx = I->second.first, End = I->second.second + 1; Idx != End;
+      for (size_t Idx = I->second.first, End = I->second.second; Idx != End;
            ++Idx)
         if (MCCVLines[Idx].getFunctionId() == FuncId)
           FilteredLines.push_back(MCCVLines[Idx]);
     return FilteredLines;
+  }
+
+  std::pair<size_t, size_t> getLineExtent(unsigned FuncId) {
+    auto I = MCCVLineStartStop.find(FuncId);
+    // Return an empty extent if there are no cv_locs for this function id.
+    if (I == MCCVLineStartStop.end())
+      return {~0ULL, 0};
+    return I->second;
+  }
+
+  ArrayRef<MCCVLineEntry> getLinesForExtent(size_t L, size_t R) {
+    if (R <= L)
+      return None;
+    if (L >= MCCVLines.size())
+      return None;
+    return makeArrayRef(&MCCVLines[L], R - L);
   }
 
   /// Emits a line table substream.
@@ -141,11 +157,14 @@ public:
                                 const MCSymbol *FuncBegin,
                                 const MCSymbol *FuncEnd);
 
-  void emitInlineLineTableForFunction(MCObjectStreamer &OS,
-                                      unsigned PrimaryFunctionId,
-                                      unsigned SourceFileId,
-                                      unsigned SourceLineNum,
-                                      ArrayRef<unsigned> SecondaryFunctionIds);
+  void emitInlineLineTableForFunction(
+      MCObjectStreamer &OS, unsigned PrimaryFunctionId, unsigned SourceFileId,
+      unsigned SourceLineNum, const MCSymbol *FnStartSym,
+      const MCSymbol *FnEndSym, ArrayRef<unsigned> SecondaryFunctionIds);
+
+  /// Encodes the binary annotations once we have a layout.
+  void encodeInlineLineTable(MCAsmLayout &Layout,
+                             MCCVInlineLineTableFragment &F);
 
   /// Emits the string table substream.
   void emitStringTable(MCObjectStreamer &OS);

@@ -41,8 +41,7 @@
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
 ; X86-NEXT: [[F1_END]]:
-; Padding
-; X86-NEXT: .zero   3
+; X86-NEXT: .p2align 2
 ; Line table
 ; X86-NEXT: .cv_linetable 0, _f, [[END_OF_F]]
 ; File index to string table offset subsection
@@ -127,8 +126,7 @@
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
 ; X64-NEXT: [[F1_END]]:
-; Padding
-; X64-NEXT: .zero   3
+; X64-NEXT: .p2align   2
 ; Line table
 ; X64-NEXT: .cv_linetable 0, f, [[END_OF_F]]
 ; File index to string table offset subsection

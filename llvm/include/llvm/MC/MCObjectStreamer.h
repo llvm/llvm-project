@@ -129,6 +129,7 @@ public:
                                 const MCSymbol *End) override;
   void EmitCVInlineLinetableDirective(
       unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+      const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
       ArrayRef<unsigned> SecondaryFunctionIds) override;
   void EmitCVStringTableDirective() override;
   void EmitCVFileChecksumsDirective() override;

@@ -657,10 +657,10 @@ public:
 
   /// \brief This implements the CodeView '.cv_inline_linetable' assembler
   /// directive.
-  virtual void
-  EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
-                                 unsigned SourceFileId, unsigned SourceLineNum,
-                                 ArrayRef<unsigned> SecondaryFunctionIds);
+  virtual void EmitCVInlineLinetableDirective(
+      unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+      const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
+      ArrayRef<unsigned> SecondaryFunctionIds);
 
   /// \brief This implements the CodeView '.cv_stringtable' assembler directive.
   virtual void EmitCVStringTableDirective() {}

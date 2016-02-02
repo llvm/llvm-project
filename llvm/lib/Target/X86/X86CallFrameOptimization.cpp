@@ -110,7 +110,7 @@ private:
 };
 
 char X86CallFrameOptimization::ID = 0;
-}
+} // end anonymous namespace
 
 FunctionPass *llvm::createX86CallFrameOptimization() {
   return new X86CallFrameOptimization();
@@ -440,7 +440,6 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
       return;
 
   Context.UsePush = true;
-  return;
 }
 
 bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
