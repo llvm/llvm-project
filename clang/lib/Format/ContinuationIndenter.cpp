@@ -353,7 +353,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // disallowing any further line breaks if there is no line break after the
   // opening parenthesis. Don't break if it doesn't conserve columns.
   if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak &&
-      Previous.is(tok::l_paren) && State.Column > getNewLineColumn(State) &&
+      Previous.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
+      State.Column > getNewLineColumn(State) &&
       (!Previous.Previous ||
        !Previous.Previous->isOneOf(tok::kw_for, tok::kw_while, tok::kw_switch)))
     State.Stack.back().NoLineBreak = true;

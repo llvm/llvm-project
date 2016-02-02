@@ -4276,6 +4276,17 @@ TEST(HasAncestor, AnonymousUnionMemberExpr) {
                       declRefExpr(to(decl(hasAncestor(decl()))))));
 }
 
+TEST(HasAncestor, NonParmDependentTemplateParmVarDeclRefExpr) {
+  EXPECT_TRUE(matches("struct PartitionAllocator {\n"
+                      "  template<typename T>\n"
+                      "  static int quantizedSize(int count) {\n"
+                      "    return count;\n"
+                      "  }\n"
+                      "  void f() { quantizedSize<int>(10); }\n"
+                      "};",
+                      declRefExpr(to(decl(hasAncestor(decl()))))));
+}
+
 TEST(HasParent, MatchesAllParents) {
   EXPECT_TRUE(matches(
       "template <typename T> struct C { static void f() { 42; } };"

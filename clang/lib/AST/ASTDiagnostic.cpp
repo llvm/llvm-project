@@ -497,7 +497,7 @@ class TemplateDiff {
     enum DiffKind {
       /// Incomplete or invalid node.
       Invalid,
-      /// Another level of templates, requires that
+      /// Another level of templates
       Template,
       /// Type difference, all type differences except those falling under
       /// the Template difference.
@@ -1523,12 +1523,14 @@ class TemplateDiff {
         OS << FromTD->getNameAsString() << '<';
         Tree.MoveToChild();
         unsigned NumElideArgs = 0;
+        bool AllArgsElided = true;
         do {
           if (ElideType) {
             if (Tree.NodeIsSame()) {
               ++NumElideArgs;
               continue;
             }
+            AllArgsElided = false;
             if (NumElideArgs > 0) {
               PrintElideArgs(NumElideArgs, Indent);
               NumElideArgs = 0;
@@ -1539,8 +1541,12 @@ class TemplateDiff {
           if (Tree.HasNextSibling())
             OS << ", ";
         } while (Tree.AdvanceSibling());
-        if (NumElideArgs > 0)
-          PrintElideArgs(NumElideArgs, Indent);
+        if (NumElideArgs > 0) {
+          if (AllArgsElided)
+            OS << "...";
+          else
+            PrintElideArgs(NumElideArgs, Indent);
+        }
 
         Tree.Parent();
         OS << ">";

@@ -496,6 +496,8 @@ protected:
     return TargetVersion < VersionTuple(V0, V1, V2);
   }
 
+  StringRef getOSLibraryNameSuffix() const;
+
 public:
   /// }
   /// @name ToolChain Implementation
