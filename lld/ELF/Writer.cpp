@@ -247,6 +247,11 @@ static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
 // * Apply relocations, recording which ones require a dynamic reloc.
 // * Write the dynamic relocations.
 // * Write the rest of the file.
+// This would have some drawbacks. For example, we would only know if .rela.dyn
+// is needed after applying relocations. If it is, it will go after rw and rx
+// sections. Given that it is ro, we will need an extra PT_LOAD. This
+// complicates things for the dynamic linker and means we would have to reserve
+// space for the extra PT_LOAD even if we end up not using it.
 template <class ELFT>
 template <bool isRela>
 void Writer<ELFT>::scanRelocs(

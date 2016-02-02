@@ -372,9 +372,8 @@ SBTarget::Launch
 
     log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API);
     if (log)
-        log->Printf ("SBTarget(%p)::Launch (...) => SBProcess(%p)",
-                     static_cast<void*>(target_sp.get()),
-                     static_cast<void*>(sb_process.GetSP().get()));
+        log->Printf("SBTarget(%p)::Launch (...) => SBProcess(%p), SBError(%s)", static_cast<void *>(target_sp.get()),
+                    static_cast<void *>(sb_process.GetSP().get()), error.GetCString());
 
     return sb_process;
 }
