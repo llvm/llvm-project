@@ -425,7 +425,7 @@ void EmitAssemblyHelper::CreatePasses(FunctionInfoIndex *FunctionIndex) {
         !CodeGenOpts.CoverageNoFunctionNamesInData;
     Options.ExitBlockBeforeBody = CodeGenOpts.CoverageExitBlockBeforeBody;
     MPM->add(createGCOVProfilerPass(Options));
-    if (CodeGenOpts.getDebugInfo() == CodeGenOptions::NoDebugInfo)
+    if (CodeGenOpts.getDebugInfo() == codegenoptions::NoDebugInfo)
       MPM->add(createStripSymbolsPass(true));
   }
 
