@@ -1,8 +1,4 @@
 // RUN: %clang_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
-
-// This test is flaky on Darwin, once in a while it fails with EXC_I386_GPFLT.
-// UNSUPPORTED: darwin
-
 #include "test.h"
 #include <errno.h>
 #include <sys/mman.h>
