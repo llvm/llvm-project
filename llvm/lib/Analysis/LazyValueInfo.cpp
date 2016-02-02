@@ -1079,6 +1079,14 @@ LVILatticeVal LazyValueInfoCache::getValueAt(Value *V, Instruction *CxtI) {
     Result = getFromRangeMetadata(I);
   mergeAssumeBlockValueConstantRange(V, Result, CxtI);
 
+  // Note: What's actually happening here is that we're starting at overdefined
+  // and then intersecting two different types of facts.  The code is not
+  // structured that way (FIXME), and we need to take particular care to not
+  // let the undefined state escape since we have *not* proven the particular
+  // value to be unreachable at the context instruction.
+  if (Result.isUndefined())
+    Result.markOverdefined();
+
   DEBUG(dbgs() << "  Result = " << Result << "\n");
   return Result;
 }
