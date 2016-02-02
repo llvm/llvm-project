@@ -395,6 +395,10 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
 
+  // The .dynamic section contains information for the dynamic linker.
+  // The section consists of fixed size entries, which consist of
+  // type and value fields. Value are one of plain integers, symbol
+  // addresses, or section addresses. This struct represents the entry.
   struct Entry {
     int32_t Tag;
     union {
@@ -409,6 +413,10 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
     Entry(int32_t Tag, const SymbolBody *Sym)
         : Tag(Tag), Sym(Sym), Kind(SymAddr) {}
   };
+
+  // finalize() fills this vector with the section contents. finalize()
+  // cannot directly create final section contents because when the
+  // function is called, symbol or section addresses are not fixed yet.
   std::vector<Entry> Entries;
 
 public:

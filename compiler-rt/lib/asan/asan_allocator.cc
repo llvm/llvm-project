@@ -457,18 +457,25 @@ struct Allocator {
     return res;
   }
 
-  void AtomicallySetQuarantineFlag(AsanChunk *m, void *ptr,
+  // Set quarantine flag if chunk is allocated, issue ASan error report on
+  // available and quarantined chunks. Return true on success, false otherwise.
+  bool AtomicallySetQuarantineFlagIfAllocated(AsanChunk *m, void *ptr,
                                    BufferedStackTrace *stack) {
     u8 old_chunk_state = CHUNK_ALLOCATED;
     // Flip the chunk_state atomically to avoid race on double-free.
-    if (!atomic_compare_exchange_strong((atomic_uint8_t*)m, &old_chunk_state,
-                                        CHUNK_QUARANTINE, memory_order_acquire))
+    if (!atomic_compare_exchange_strong((atomic_uint8_t *)m, &old_chunk_state,
+                                        CHUNK_QUARANTINE,
+                                        memory_order_acquire)) {
       ReportInvalidFree(ptr, old_chunk_state, stack);
+      // It's not safe to push a chunk in quarantine on invalid free.
+      return false;
+    }
     CHECK_EQ(CHUNK_ALLOCATED, old_chunk_state);
+    return true;
   }
 
   // Expects the chunk to already be marked as quarantined by using
-  // AtomicallySetQuarantineFlag.
+  // AtomicallySetQuarantineFlagIfAllocated.
   void QuarantineChunk(AsanChunk *m, void *ptr, BufferedStackTrace *stack,
                        AllocType alloc_type) {
     CHECK_EQ(m->chunk_state, CHUNK_QUARANTINE);
@@ -522,7 +529,8 @@ struct Allocator {
     }
     ASAN_FREE_HOOK(ptr);
     // Must mark the chunk as quarantined before any changes to its metadata.
-    AtomicallySetQuarantineFlag(m, ptr, stack);
+    // Do not quarantine given chunk if we failed to set CHUNK_QUARANTINE flag.
+    if (!AtomicallySetQuarantineFlagIfAllocated(m, ptr, stack)) return;
     QuarantineChunk(m, ptr, stack, alloc_type);
   }
 
