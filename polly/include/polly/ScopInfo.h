@@ -263,7 +263,11 @@ public:
   };
 
   /// @brief Return the number of dimensions.
-  unsigned getNumberOfDimensions() const { return DimensionSizes.size(); }
+  unsigned getNumberOfDimensions() const {
+    if (Kind == MK_PHI || Kind == MK_ExitPHI || Kind == MK_Value)
+      return 0;
+    return DimensionSizes.size() + 1;
+  }
 
   /// @brief Return the size of dimension @p dim as SCEV*.
   //
@@ -1926,6 +1930,46 @@ class ScopInfo : public RegionPass {
 
   // Build the SCoP for Region @p R.
   void buildScop(Region &R, AssumptionCache &AC);
+
+  /// @brief Try to build a multi-dimensional fixed sized MemoryAccess from
+  ///        the Load/Store instruction.
+  ///
+  /// @param Inst       The Load/Store instruction that access the memory
+  /// @param L          The parent loop of the instruction
+  /// @param R          The region on which to build the data access dictionary.
+  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
+  /// @param ScopRIL    The required invariant loads equivalence classes.
+  /// @returns True if the access could be built, False otherwise.
+  bool
+  buildAccessMultiDimFixed(MemAccInst Inst, Loop *L, Region *R,
+                           const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
+                           const InvariantLoadsSetTy &ScopRIL);
+
+  /// @brief Try to build a multi-dimensional parameteric sized MemoryAccess
+  ///        from the Load/Store instruction.
+  ///
+  /// @param Inst       The Load/Store instruction that access the memory
+  /// @param L          The parent loop of the instruction
+  /// @param R          The region on which to build the data access dictionary.
+  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
+  /// @param ScopRIL    The required invariant loads equivalence classes.
+  /// @returns True if the access could be built, False otherwise.
+  bool
+  buildAccessMultiDimParam(MemAccInst Inst, Loop *L, Region *R,
+                           const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
+                           const InvariantLoadsSetTy &ScopRIL);
+
+  /// @brief Build a single-dimensional parameteric sized MemoryAccess
+  ///        from the Load/Store instruction.
+  ///
+  /// @param Inst       The Load/Store instruction that access the memory
+  /// @param L          The parent loop of the instruction
+  /// @param R          The region on which to build the data access dictionary.
+  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
+  /// @param ScopRIL    The required invariant loads equivalence classes.
+  void buildAccessSingleDim(MemAccInst Inst, Loop *L, Region *R,
+                            const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
+                            const InvariantLoadsSetTy &ScopRIL);
 
   /// @brief Build an instance of MemoryAccess from the Load/Store instruction.
   ///
