@@ -45,33 +45,36 @@ Optimizations</span></h2>
   </div>
 
   <div class="submenu2">
-  <label>polyhedral.info news</label>
+  <label><a href="http://polyhedral.info" style="color: white">polyhedral.info - News</a></label>
   <script language="JavaScript"
-  src="http://feed2js.org//feed2js.php?src=http%3A%2F%2Fpolyhedral.info%2Frss.xml&num=5&utf=y"
+  src="http://feed2js.org//feed2js.php?src=http%3A%2F%2Fpolyhedral.info%2Frss.xml&num=5&date=y&utf=y&desc=200"
   charset="UTF-8" type="text/javascript"></script>
 
   <noscript>
   <a
-  href="http://feed2js.org//feed2js.php?src=http%3A%2F%2Fpolyhedral.info%2Frss.xml&num=5&utf=y&html=y">View
+  href="http://feed2js.org//feed2js.php?src=http%3A%2F%2Fpolyhedral.info%2Frss.xml&num=5&date=y&utf=y&html=y">View
   RSS feed</a>
   </noscript>
+<script src="http://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
+<script type='text/javascript'>
+function myFormat(dateTime) {
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var dateString = months[dateTime.getMonth()] + ' ' + dateTime.getDate() + ', ' + dateTime.getFullYear();
+    return dateString;
+}
+$(document).ready(function() {$('.rss-date').each(function() {$(this).text(myFormat(new Date($(this).text())));});});
+</script>
  </div>
 </div>
 
-<script type="text/javascript">
-  var _paq = _paq || [];
-  _paq.push(["trackPageView"]);
-  _paq.push(["enableLinkTracking"]);
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
-  (function() {
-    var u=(("https:" == document.location.protocol) ? "https" : "http") + "://www.grosser.es/piwik/piwik/";
-    _paq.push(["setTrackerUrl", u+"piwik.php"]);
-    _paq.push(["setSiteId", "3"]);
-    var d=document, g=d.createElement("script"), s=d.getElementsByTagName("script")[0]; g.type="text/javascript";
-    g.defer=true; g.async=true; g.src=u+"piwik.js"; s.parentNode.insertBefore(g,s);
-  })();
+  ga('create', 'UA-66123869-2', 'auto');
+  ga('send', 'pageview');
+
 </script>
-<noscript>
-<img src="http://www.grosser.es/piwik/piwik/piwik.php?idsite=3&amp;rec=1" style="border:0" alt="" />
-</noscript>
 

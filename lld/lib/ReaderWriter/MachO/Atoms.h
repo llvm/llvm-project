@@ -61,15 +61,6 @@ public:
 
   bool isThumb() const { return _thumb; }
 
-  void addReference(uint32_t offsetInAtom, uint16_t relocType,
-                    const Atom *target, Reference::Addend addend,
-                    Reference::KindArch arch = Reference::KindArch::x86_64,
-                    Reference::KindNamespace ns
-                     = Reference::KindNamespace::mach_o) {
-    SimpleDefinedAtom::addReference(ns, arch, relocType, offsetInAtom, target,
-                                    addend);
-  }
-
 private:
   const StringRef _name;
   const ArrayRef<uint8_t> _content;

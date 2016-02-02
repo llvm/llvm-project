@@ -46,28 +46,28 @@ template <unsigned N> static void checkInt(int64_t V, uint32_t Type) {
   if (isInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  fatal("Relocation " + S + " out of range");
+  error("Relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkUInt(uint64_t V, uint32_t Type) {
   if (isUInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  fatal("Relocation " + S + " out of range");
+  error("Relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkIntUInt(uint64_t V, uint32_t Type) {
   if (isInt<N>(V) || isUInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  fatal("Relocation " + S + " out of range");
+  error("Relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
   if ((V & (N - 1)) == 0)
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  fatal("Improper alignment for relocation " + S);
+  error("Improper alignment for relocation " + S);
 }
 
 template <class ELFT> bool isGnuIFunc(const SymbolBody &S) {
@@ -1156,8 +1156,10 @@ unsigned AArch64TargetInfo::getDynRel(unsigned Type) const {
   if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
     return Type;
   StringRef S = getELFRelocationTypeName(EM_AARCH64, Type);
-  fatal("Relocation " + S + " cannot be used when making a shared object; "
+  error("Relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
+  // Keep it going with a dummy value so that we can find more reloc errors.
+  return R_AARCH64_ABS32;
 }
 
 void AArch64TargetInfo::writeGotPlt(uint8_t *Buf, uint64_t Plt) const {
@@ -1397,8 +1399,10 @@ unsigned MipsTargetInfo<ELFT>::getDynRel(unsigned Type) const {
   if (Type == R_MIPS_32 || Type == R_MIPS_64)
     return R_MIPS_REL32;
   StringRef S = getELFRelocationTypeName(EM_MIPS, Type);
-  fatal("Relocation " + S + " cannot be used when making a shared object; "
+  error("Relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
+  // Keep it going with a dummy value so that we can find more reloc errors.
+  return R_MIPS_32;
 }
 
 template <class ELFT>

@@ -173,9 +173,9 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
       if (!Body)
         SymVA = getLocalRelTarget(*File, RI, 0);
       else if (Target->needsGot(Type, *Body))
-        SymVA = Out<ELFT>::Got->getEntryAddr(*Body);
+        SymVA = Body->getGotVA<ELFT>();
       else
-        SymVA = getSymVA<ELFT>(*Body);
+        SymVA = Body->getVA<ELFT>();
       // By optimizing TLS relocations, it is sometimes needed to skip
       // relocations that immediately follow TLS relocations. This function
       // knows how many slots we need to skip.
@@ -213,9 +213,9 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
       continue;
     }
 
-    uintX_t SymVA = getSymVA<ELFT>(*Body);
+    uintX_t SymVA = Body->getVA<ELFT>();
     if (Target->needsPlt(Type, *Body)) {
-      SymVA = Out<ELFT>::Plt->getEntryAddr(*Body);
+      SymVA = Body->getPltVA<ELFT>();
     } else if (Target->needsGot(Type, *Body)) {
       if (Config->EMachine == EM_MIPS && needsMipsLocalGot(Type, Body))
         // Under some conditions relocations against non-local symbols require
@@ -223,7 +223,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
         // initialized by full address of the symbol.
         SymVA = Out<ELFT>::Got->getMipsLocalFullAddr(*Body);
       else
-        SymVA = Out<ELFT>::Got->getEntryAddr(*Body);
+        SymVA = Body->getGotVA<ELFT>();
       if (Body->isTls())
         Type = Target->getTlsGotRel(Type);
     } else if (!Target->needsCopyRel(Type, *Body) &&

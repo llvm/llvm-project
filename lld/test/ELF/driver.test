@@ -1,9 +1,0 @@
-# RUN: not ld.lld -unknown1 -unknown2 -m foo /no/such/file -lnosuchlib \
-# RUN:   2>&1 | FileCheck %s
-
-# CHECK: warning: unknown argument: -unknown1
-# CHECK: warning: unknown argument: -unknown2
-# CHECK: unknown argument(s) found
-# CHECK: Unknown emulation: foo
-# CHECK: cannot open /no/such/file
-# CHECK: Unable to find library -lnosuchlib

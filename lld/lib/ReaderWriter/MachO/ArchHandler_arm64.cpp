@@ -120,6 +120,10 @@ public:
     return unwindInfoToEhFrame;
   }
 
+  Reference::KindValue pointerKind() override {
+    return pointer64;
+  }
+
   uint32_t dwarfCompactUnwindType() override {
     return 0x03000000;
   }

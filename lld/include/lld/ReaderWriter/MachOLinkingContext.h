@@ -129,6 +129,8 @@ public:
   void setKeepPrivateExterns(bool v) { _keepPrivateExterns = v; }
   bool demangleSymbols() const { return _demangle; }
   void setDemangleSymbols(bool d) { _demangle = d; }
+  bool mergeObjCCategories() const { return _mergeObjCCategories; }
+  void setMergeObjCCategories(bool v) { _mergeObjCCategories = v; }
   /// Create file at specified path which will contain a binary encoding
   /// of all input and output file paths.
   std::error_code createDependencyFile(StringRef path);
@@ -427,6 +429,7 @@ private:
   bool _testingFileUsage;
   bool _keepPrivateExterns;
   bool _demangle;
+  bool _mergeObjCCategories = true;
   StringRef _bundleLoader;
   mutable std::unique_ptr<mach_o::ArchHandler> _archHandler;
   mutable std::unique_ptr<Writer> _writer;

@@ -89,6 +89,7 @@ const MachORelocatableSectionToAtomType sectsToAtomType[] = {
   ENTRY("__DATA", "__thread_bss",     S_THREAD_LOCAL_ZEROFILL,
                                                         typeTLVInitialZeroFill),
   ENTRY("__DATA", "__objc_imageinfo", S_REGULAR,          typeObjCImageInfo),
+  ENTRY("__DATA", "__objc_catlist",   S_REGULAR,          typeObjC2CategoryList),
   ENTRY("",       "",                 S_INTERPOSING,      typeInterposingTuples),
   ENTRY("__LD",   "__compact_unwind", S_REGULAR,
                                                          typeCompactUnwindInfo),
@@ -180,6 +181,8 @@ void sectionParseInfo(DefinedAtom::ContentType atomType,
     ENTRY(typeCompactUnwindInfo, 4, scopeTranslationUnit, mergeNo,
                                                             atomizeCU),
     ENTRY(typeGOT,               4, scopeLinkageUnit,     mergeByContent,
+                                                            atomizePointerSize),
+    ENTRY(typeObjC2CategoryList, 4, scopeTranslationUnit, mergeByContent,
                                                             atomizePointerSize),
     ENTRY(typeUnknown,           1, scopeGlobal,          mergeNo,
                                                             atomizeAtSymbols)
@@ -361,9 +364,9 @@ std::error_code processSymboledSection(DefinedAtom::ContentType atomType,
     file.eachAtomInSection(section,
                            [&](MachODefinedAtom *atom, uint64_t offset)->void {
       if (prevAtom)
-        prevAtom->addReference(0, Reference::kindLayoutAfter, atom, 0,
+        prevAtom->addReference(Reference::KindNamespace::all,
                                Reference::KindArch::all,
-                               Reference::KindNamespace::all);
+                               Reference::kindLayoutAfter, 0, atom, 0);
       prevAtom = atom;
     });
   }
@@ -660,8 +663,9 @@ std::error_code convertRelocs(const Section &section,
       }
     }
     // Instantiate an lld::Reference object and add to its atom.
-    inAtom->addReference(offsetInAtom, kind, target, addend,
-                         handler.kindArch());
+    inAtom->addReference(Reference::KindNamespace::mach_o,
+                         handler.kindArch(),
+                         kind, offsetInAtom, target, addend);
   }
 
   return std::error_code();
@@ -774,8 +778,8 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
   Reference::Addend addend;
   const MachODefinedAtom *cie =
     findAtomCoveringAddress(normalizedFile, file, cieAddress, &addend);
-  atom->addReference(cieFieldInFDE, handler.unwindRefToCIEKind(), cie,
-                     addend, handler.kindArch());
+  atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
+                     handler.unwindRefToCIEKind(), cieFieldInFDE, cie, addend);
 
   assert(cie && cie->contentType() == DefinedAtom::typeCFI && !addend &&
          "FDE's CIE field does not point at the start of a CIE.");
@@ -795,8 +799,9 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
 
   const Atom *func =
     findAtomCoveringAddress(normalizedFile, file, rangeStart, &addend);
-  atom->addReference(rangeFieldInFDE, handler.unwindRefToFunctionKind(),
-                     func, addend, handler.kindArch());
+  atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
+                     handler.unwindRefToFunctionKind(), rangeFieldInFDE, func,
+                     addend);
 
   // Handle the augmentation data if there is any.
   if (cieInfo._augmentationDataPresent) {
@@ -821,9 +826,9 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
         lsdaFromFDE;
       const Atom *lsda =
         findAtomCoveringAddress(normalizedFile, file, lsdaStart, &addend);
-      atom->addReference(augmentationDataFieldInFDE,
+      atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
                          handler.unwindRefToFunctionKind(),
-                         lsda, addend, handler.kindArch());
+                         augmentationDataFieldInFDE, lsda, addend);
     }
   }
 
@@ -1031,9 +1036,9 @@ normalizedObjectToAtoms(MachOFile *file,
                                      + ") crosses atom boundary."));
     }
     // Add reference that marks start of data-in-code.
-    atom->addReference(offsetInAtom,
-                       handler->dataInCodeTransitionStart(*atom), atom,
-                       entry.kind, handler->kindArch());
+    atom->addReference(Reference::KindNamespace::mach_o, handler->kindArch(),
+                       handler->dataInCodeTransitionStart(*atom),
+                       offsetInAtom, atom, entry.kind);
 
     // Peek at next entry, if it starts where this one ends, skip ending ref.
     if (nextIndex < normalizedFile.dataInCode.size()) {
@@ -1047,9 +1052,9 @@ normalizedObjectToAtoms(MachOFile *file,
       continue;
 
     // Add reference that marks end of data-in-code.
-    atom->addReference(offsetInAtom+entry.length,
-                       handler->dataInCodeTransitionEnd(*atom), atom, 0,
-                       handler->kindArch());
+    atom->addReference(Reference::KindNamespace::mach_o, handler->kindArch(),
+                       handler->dataInCodeTransitionEnd(*atom),
+                       offsetInAtom+entry.length, atom, 0);
   }
 
   // Cache some attributes on the file for use later.

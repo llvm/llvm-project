@@ -15,6 +15,7 @@ variable.
 import os, sys
 import platform
 import lldbsuite.test.lldbtest as lldbtest
+import lldbsuite.test.lldbutil as lldbutil
 
 def getArchitecture():
     """Returns the architecture in effect the test suite is running with."""
@@ -22,7 +23,9 @@ def getArchitecture():
 
 def getCompiler():
     """Returns the compiler in effect the test suite is running with."""
-    return os.environ["CC"] if "CC" in os.environ else "clang"
+    compiler = os.environ.get("CC", "clang")
+    compiler = lldbutil.which(compiler)
+    return os.path.realpath(compiler)
 
 def getArchFlag():
     """Returns the flag required to specify the arch"""

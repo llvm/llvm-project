@@ -114,6 +114,8 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   StringTableSection<ELFT> StrTab(".strtab", false);
   if (!Config->StripAll)
     Out<ELFT>::StrTab = &StrTab;
+  else
+    Out<ELFT>::StrTab = nullptr;
   StringTableSection<ELFT> DynStrTab(".dynstr", true);
   Out<ELFT>::DynStrTab = &DynStrTab;
   GotSection<ELFT> Got;
@@ -121,27 +123,37 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   GotPltSection<ELFT> GotPlt;
   if (Target->UseLazyBinding)
     Out<ELFT>::GotPlt = &GotPlt;
+  else
+    Out<ELFT>::GotPlt = nullptr;
   PltSection<ELFT> Plt;
   Out<ELFT>::Plt = &Plt;
   std::unique_ptr<SymbolTableSection<ELFT>> SymTab;
   if (!Config->StripAll) {
     SymTab.reset(new SymbolTableSection<ELFT>(*Symtab, *Out<ELFT>::StrTab));
     Out<ELFT>::SymTab = SymTab.get();
+  } else {
+    Out<ELFT>::SymTab = nullptr;
   }
   SymbolTableSection<ELFT> DynSymTab(*Symtab, *Out<ELFT>::DynStrTab);
   Out<ELFT>::DynSymTab = &DynSymTab;
   HashTableSection<ELFT> HashTab;
   if (Config->SysvHash)
     Out<ELFT>::HashTab = &HashTab;
+  else
+    Out<ELFT>::HashTab = nullptr;
   GnuHashTableSection<ELFT> GnuHashTab;
   if (Config->GnuHash)
     Out<ELFT>::GnuHashTab = &GnuHashTab;
+  else
+    Out<ELFT>::GnuHashTab = nullptr;
   bool IsRela = shouldUseRela<ELFT>();
   RelocationSection<ELFT> RelaDyn(IsRela ? ".rela.dyn" : ".rel.dyn", IsRela);
   Out<ELFT>::RelaDyn = &RelaDyn;
   RelocationSection<ELFT> RelaPlt(IsRela ? ".rela.plt" : ".rel.plt", IsRela);
   if (Target->UseLazyBinding)
     Out<ELFT>::RelaPlt = &RelaPlt;
+  else
+    Out<ELFT>::RelaPlt = nullptr;
   DynamicSection<ELFT> Dynamic(*Symtab);
   Out<ELFT>::Dynamic = &Dynamic;
   EhFrameHeader<ELFT> EhFrameHdr;
@@ -163,6 +175,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   openFile(Config->OutputFile);
   writeHeader();
   writeSections();
+  if (HasError)
+    return;
   fatal(Buffer->commit());
 }
 
@@ -270,35 +284,25 @@ void Writer<ELFT>::scanRelocs(
       Out<ELFT>::RelaDyn->addReloc({&C, Rel});
     }
 
-    bool NeedsGot = false;
-    bool NeedsMipsLocalGot = false;
-    bool NeedsPlt = false;
+    // MIPS has a special rule to create GOTs for local symbols.
     if (Config->EMachine == EM_MIPS && needsMipsLocalGot(Type, Body)) {
-      NeedsMipsLocalGot = true;
       // FIXME (simon): Do not add so many redundant entries.
       Out<ELFT>::Got->addMipsLocalEntry();
-    } else if (Body) {
-      if (auto *E = dyn_cast<SharedSymbol<ELFT>>(Body)) {
-        if (E->NeedsCopy)
-          continue;
-        if (Target->needsCopyRel(Type, *Body))
-          E->NeedsCopy = true;
-      }
-      NeedsPlt = Target->needsPlt(Type, *Body);
-      if (NeedsPlt) {
-        if (Body->isInPlt())
-          continue;
-        Out<ELFT>::Plt->addEntry(Body);
-      }
-      NeedsGot = Target->needsGot(Type, *Body);
-      if (NeedsGot) {
-        if (NeedsPlt && Target->UseLazyBinding) {
-          Out<ELFT>::GotPlt->addEntry(Body);
-        } else {
-          if (Body->isInGot())
-            continue;
-          Out<ELFT>::Got->addEntry(Body);
-        }
+      if (Body)
+        Body->setUsedInDynamicReloc();
+      continue;
+    }
+
+    // If a symbol in a DSO is referenced directly instead of through GOT,
+    // we need to create a copy relocation for the symbol.
+    if (auto *B = dyn_cast_or_null<SharedSymbol<ELFT>>(Body)) {
+      if (B->NeedsCopy)
+        continue;
+      if (Target->needsCopyRel(Type, *B)) {
+        B->NeedsCopy = true;
+        B->setUsedInDynamicReloc();
+        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+        continue;
       }
     }
 
@@ -307,7 +311,62 @@ void Writer<ELFT>::scanRelocs(
     // symbol, although local symbols normally do not require PLT entries.
     if (Body && isGnuIFunc<ELFT>(*Body)) {
       Body->setUsedInDynamicReloc();
-      Out<ELFT>::RelaPlt->addReloc({&C, &RI});
+      if (Body->isInGot())
+        continue;
+      Out<ELFT>::Plt->addEntry(Body);
+      if (Target->UseLazyBinding) {
+        Out<ELFT>::GotPlt->addEntry(Body);
+        Out<ELFT>::RelaPlt->addReloc({&C, &RI});
+      } else {
+        Out<ELFT>::Got->addEntry(Body);
+        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+      }
+      continue;
+    }
+
+    // If a relocation needs PLT, we create a PLT and a GOT slot
+    // for the symbol.
+    if (Body && Target->needsPlt(Type, *Body)) {
+      if (Body->isInPlt())
+        continue;
+      Out<ELFT>::Plt->addEntry(Body);
+
+      if (Target->UseLazyBinding) {
+        Out<ELFT>::GotPlt->addEntry(Body);
+        Out<ELFT>::RelaPlt->addReloc({&C, &RI});
+      } else {
+        if (Body->isInGot())
+          continue;
+        Out<ELFT>::Got->addEntry(Body);
+        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+      }
+
+      if (canBePreempted(Body, /*NeedsGot=*/true))
+        Body->setUsedInDynamicReloc();
+      continue;
+    }
+
+    // If a relocation needs GOT, we create a GOT slot for the symbol.
+    if (Body && Target->needsGot(Type, *Body)) {
+      if (Body->isInGot())
+        continue;
+      Out<ELFT>::Got->addEntry(Body);
+
+      if (Config->EMachine == EM_MIPS)
+        // MIPS ABI has special rules to process GOT entries
+        // and doesn't require relocation entries for them.
+        // See "Global Offset Table" in Chapter 5 in the following document
+        // for detailed description:
+        // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+        continue;
+
+      bool CBP = canBePreempted(Body, /*NeedsGot=*/true);
+      bool Dynrel = Config->Shared && !Target->isRelRelative(Type) &&
+                    !Target->isSizeRel(Type);
+      if (CBP)
+        Body->setUsedInDynamicReloc();
+      if (CBP || Dynrel)
+        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
       continue;
     }
 
@@ -321,16 +380,6 @@ void Writer<ELFT>::scanRelocs(
         // relocation too because that case is possible for executable file
         // linking only.
         continue;
-      if (NeedsGot || NeedsMipsLocalGot) {
-        // MIPS ABI has special rules to process GOT entries
-        // and doesn't require relocation entries for them.
-        // See "Global Offset Table" in Chapter 5 in the following document
-        // for detailed description:
-        // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-        if (NeedsGot)
-          Body->setUsedInDynamicReloc();
-        continue;
-      }
       if (Body == Config->MipsGpDisp)
         // MIPS _gp_disp designates offset between start of function and gp
         // pointer into GOT therefore any relocations against it do not require
@@ -338,20 +387,23 @@ void Writer<ELFT>::scanRelocs(
         continue;
     }
 
-    // Here we are creating a relocation for the dynamic linker based on
-    // a relocation from an object file, but some relocations need no
-    // load-time fixup when the final target is known. Skip such relocation.
-    bool CBP = canBePreempted(Body, NeedsGot);
-    bool NoDynrel = Target->isRelRelative(Type) || Target->isSizeRel(Type) ||
-                    !Config->Shared;
-    if (!CBP && NoDynrel)
-      continue;
-
-    if (CBP)
+    // We get here if a program was not compiled as PIC.
+    if (canBePreempted(Body, /*NeedsGot=*/false)) {
       Body->setUsedInDynamicReloc();
-    if (NeedsPlt && Target->UseLazyBinding)
-      Out<ELFT>::RelaPlt->addReloc({&C, &RI});
-    else
+      Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+      continue;
+    }
+
+    // If we get here, the code we are handling is not PIC. We need to copy
+    // relocations from object files to the output file, so that the
+    // dynamic linker can fix up addresses. But there are a few exceptions.
+    // If the relocation will not change at runtime, we don't need to copy
+    // them. For example, we don't copy PC-relative relocations because
+    // the distance between two symbols won't change whereever they are
+    // loaded. Likewise, if we are linking an executable, it will be loaded
+    // at a fixed address, so we don't copy relocations.
+    if (Config->Shared && !Target->isRelRelative(Type) &&
+        !Target->isSizeRel(Type))
       Out<ELFT>::RelaDyn->addReloc({&C, &RI});
   }
 }
@@ -915,11 +967,17 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   if (isOutputDynamic())
     Out<ELFT>::DynSymTab->finalize();
 
-  // Fill other section headers. The dynamic string table in finalized
-  // once the .dynamic finalizer has added a few last strings.
+  // Fill other section headers. The dynamic table is finalized
+  // at the end because some tags like RELSZ depend on result
+  // of finalizing other sections. The dynamic string table is
+  // finalized once the .dynamic finalizer has added a few last
+  // strings. See DynamicSection::finalize()
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    if (Sec != Out<ELFT>::DynStrTab)
+    if (Sec != Out<ELFT>::DynStrTab && Sec != Out<ELFT>::Dynamic)
       Sec->finalize();
+
+  if (isOutputDynamic())
+    Out<ELFT>::Dynamic->finalize();
   return true;
 }
 
@@ -1257,8 +1315,8 @@ static uint32_t getELFFlags() {
 template <class ELFT>
 static typename ELFFile<ELFT>::uintX_t getEntryAddr() {
   if (Config->EntrySym) {
-    if (SymbolBody *E = Config->EntrySym->repl())
-      return getSymVA<ELFT>(*E);
+    if (SymbolBody *B = Config->EntrySym->repl())
+      return B->getVA<ELFT>();
     return 0;
   }
   if (Config->EntryAddr != uint64_t(-1))
@@ -1339,17 +1397,8 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
     Sec->writeTo(Buf + Sec->getFileOff());
   }
 
-  // Write all sections but string table sections. We know the sizes of the
-  // string tables already, but they may not have actual strings yet (only
-  // room may be reserved), because writeTo() is allowed to add actual
-  // strings to the string tables.
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Opd && Sec->getType() != SHT_STRTAB)
-      Sec->writeTo(Buf + Sec->getFileOff());
-
-  // Write string table sections.
-  for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Opd && Sec->getType() == SHT_STRTAB)
+    if (Sec != Out<ELFT>::Opd)
       Sec->writeTo(Buf + Sec->getFileOff());
 }
 

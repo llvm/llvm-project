@@ -91,7 +91,9 @@ class GOTPass : public Pass {
 public:
   GOTPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _file("<mach-o GOT Pass>") {}
+        _file("<mach-o GOT Pass>") {
+    _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
+  }
 
 private:
   std::error_code perform(SimpleFile &mergedFile) override {

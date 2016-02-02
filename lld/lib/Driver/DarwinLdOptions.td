@@ -68,6 +68,10 @@ def undefined : Separate<["-"], "undefined">,
                 MetaVarName<"<undefined>">,
                 HelpText<"Determines how undefined symbols are handled.">,
                 Group<grp_opts>;
+def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
+     HelpText<"Disables the optimisation which merges Objective-C categories "
+              "on a class in to the class itself.">,
+     Group<grp_opts>;
 
 // main executable options
 def grp_main : OptionGroup<"opts">, HelpText<"MAIN EXECUTABLE OPTIONS">;

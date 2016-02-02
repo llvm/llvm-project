@@ -45,18 +45,18 @@ public:
         "readability-implicit-bool-cast");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(
         "readability-inconsistent-declaration-parameter-name");
-    CheckFactories.registerCheck<RedundantControlFlowCheck>(
-        "readability-redundant-control-flow");
-    CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(
-        "readability-uniqueptr-delete-release");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(
         "readability-named-parameter");
+    CheckFactories.registerCheck<RedundantControlFlowCheck>(
+        "readability-redundant-control-flow");
     CheckFactories.registerCheck<RedundantSmartptrGetCheck>(
         "readability-redundant-smartptr-get");
     CheckFactories.registerCheck<RedundantStringCStrCheck>(
         "readability-redundant-string-cstr");
     CheckFactories.registerCheck<SimplifyBooleanExprCheck>(
         "readability-simplify-boolean-expr");
+    CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(
+        "readability-uniqueptr-delete-release");
   }
 };
 

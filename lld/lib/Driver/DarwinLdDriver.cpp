@@ -817,6 +817,10 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
     ctx.setUndefinedMode(UndefMode);
   }
 
+  // Handle -no_objc_category_merging.
+  if (parsedArgs.getLastArg(OPT_no_objc_category_merging))
+    ctx.setMergeObjCCategories(false);
+
   // Handle -rpath <path>
   if (parsedArgs.hasArg(OPT_rpath)) {
     switch (ctx.outputMachOType()) {

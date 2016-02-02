@@ -38,6 +38,11 @@ public:
 
   StringRef getName() const { return MB.getBufferIdentifier(); }
 
+  // Filename of .a which contained this file. If this file was
+  // not in an archive file, it is the empty string. We use this
+  // string for creating error messages.
+  std::string ArchiveName;
+
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
   MemoryBufferRef MB;
@@ -208,7 +213,8 @@ public:
   bool isNeeded() const { return !AsNeeded || IsUsed; }
 };
 
-std::unique_ptr<InputFile> createObjectFile(MemoryBufferRef MB);
+std::unique_ptr<InputFile> createObjectFile(MemoryBufferRef MB,
+                                            StringRef ArchiveName = "");
 std::unique_ptr<InputFile> createSharedFile(MemoryBufferRef MB);
 
 } // namespace elf2

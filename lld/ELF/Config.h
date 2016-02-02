@@ -53,6 +53,7 @@ struct Configuration {
   bool AllowMultipleDefinition;
   bool AsNeeded = false;
   bool Bsymbolic;
+  bool BsymbolicFunctions;
   bool Demangle = true;
   bool DiscardAll;
   bool DiscardLocals;

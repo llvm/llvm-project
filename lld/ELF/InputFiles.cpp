@@ -452,8 +452,11 @@ static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
   fatal("Invalid file class: " + MB.getBufferIdentifier());
 }
 
-std::unique_ptr<InputFile> elf2::createObjectFile(MemoryBufferRef MB) {
-  return createELFFile<ObjectFile>(MB);
+std::unique_ptr<InputFile> elf2::createObjectFile(MemoryBufferRef MB,
+                                                  StringRef ArchiveName) {
+  std::unique_ptr<InputFile> F = createELFFile<ObjectFile>(MB);
+  F->ArchiveName = ArchiveName;
+  return F;
 }
 
 std::unique_ptr<InputFile> elf2::createSharedFile(MemoryBufferRef MB) {

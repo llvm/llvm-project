@@ -274,7 +274,9 @@ public:
   CompactUnwindPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
         _file("<mach-o Compact Unwind Pass>"),
-        _isBig(MachOLinkingContext::isBigEndian(_ctx.arch())) {}
+        _isBig(MachOLinkingContext::isBigEndian(_ctx.arch())) {
+    _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
+  }
 
 private:
   std::error_code perform(SimpleFile &mergedFile) override {
