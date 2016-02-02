@@ -14,28 +14,9 @@ else()
   set(TSAN_HAS_LIBCXX False)
 endif()
 
-set(TSAN_TESTSUITES)
-
-foreach(arch ${TSAN_SUPPORTED_ARCH})
-  string(TOLOWER "-${arch}" TSAN_TEST_CONFIG_SUFFIX)
-  if(ANDROID OR ${arch} MATCHES "arm|aarch64")
-    # This is only true if we are cross-compiling.
-    # Build all tests with host compiler and use host tools.
-    set(TSAN_TEST_TARGET_CC ${COMPILER_RT_TEST_COMPILER})
-    set(TSAN_TEST_TARGET_CFLAGS ${COMPILER_RT_TEST_COMPILER_CFLAGS})
-  else()
-    get_target_flags_for_arch(${arch} TSAN_TEST_TARGET_CFLAGS)
-    string(REPLACE ";" " " TSAN_TEST_TARGET_CFLAGS "${TSAN_TEST_TARGET_CFLAGS}")
-  endif()
-
-  string(TOUPPER ${arch} ARCH_UPPER_CASE)
-  set(CONFIG_NAME ${ARCH_UPPER_CASE}Config)
-
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)
-  list(APPEND TSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
-endforeach()
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
 
 if(COMPILER_RT_INCLUDE_TESTS)
   configure_lit_site_cfg(
@@ -45,6 +26,6 @@ if(COMPILER_RT_INCLUDE_TESTS)
 endif()
 
 add_lit_testsuite(check-tsan "Running ThreadSanitizer tests"
-  ${TSAN_TESTSUITES}
+  ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${TSAN_TEST_DEPS})
 set_target_properties(check-tsan PROPERTIES FOLDER "TSan tests")
