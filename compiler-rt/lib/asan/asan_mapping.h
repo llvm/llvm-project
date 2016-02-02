@@ -138,8 +138,6 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 #    define SHADOW_OFFSET kFreeBSD_ShadowOffset32
 #  elif SANITIZER_WINDOWS
 #    define SHADOW_OFFSET kWindowsShadowOffset32
-#  elif SANITIZER_IOSSIM
-#    define SHADOW_OFFSET kIosSimShadowOffset32
 #  elif SANITIZER_IOS
 #    if SANITIZER_IOSSIM
 #      define SHADOW_OFFSET kIosSimShadowOffset32

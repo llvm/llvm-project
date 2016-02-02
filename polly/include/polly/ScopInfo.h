@@ -243,7 +243,7 @@ public:
   ///  @param A vector of array sizes where the rightmost array sizes need to
   ///         match the innermost array sizes already defined in SAI.
   ///  @returns Returns true if the update was successful, otherwise false.
-  bool updateSizes(ArrayRef<const SCEV *> Sizes);
+  bool updateSizes(ArrayRef<const SCEV *> Sizes, Type *ElementType);
 
   /// @brief Destructor to free the isl id of the base pointer.
   ~ScopArrayInfo();
@@ -524,7 +524,26 @@ private:
   /// @brief Subscript expression for each dimension.
   SmallVector<const SCEV *, 4> Subscripts;
 
-  /// @brief Relation from statment instances to the accessed array elements.
+  /// @brief Relation from statement instances to the accessed array elements.
+  ///
+  /// In the common case this relation is a function that maps a set of loop
+  /// indices to the memory address from which a value is loaded.
+  ///
+  /// For example:
+  ///   for i
+  ///     for j
+  /// S:     A[i + 3 j] = ...
+  ///
+  /// => { S[i,j] -> A[i + 3j] }
+  ///
+  /// For cases where the access function is not known, the access relation may
+  /// also be a one to all mapping { S[i,j] -> A[o] } describing that any
+  /// element accessible through A might be accessed.
+  ///
+  /// In case a larger element is loaded from an array that may also contain
+  /// smaller elements, the access function may relate model multiple smaller
+  /// reads. In this case, the lexicograph smallest element is the memory
+  /// address from which the largest element needs to be loaded from.
   isl_map *AccessRelation;
 
   /// @brief Updated access relation read from JSCOP file.

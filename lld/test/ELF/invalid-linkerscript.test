@@ -1,3 +1,12 @@
+## Different "echo" commands on Windows interpret quoted strings and
+## wildcards in similar but different way (On Windows, ARGV tokenization
+## and wildcard expansion are not done by the shell but by each command.)
+## Because of that reason, this test fails on some Windows environment.
+## We can't write quoted strings that are interpreted the same way
+## by all echo commands. So, we don't want to run this on Windows.
+
+# REQUIRES: shell
+
 # RUN: mkdir -p %t.dir
 
 ## Note that we are using "-r option is not supported" as a marker

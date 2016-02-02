@@ -787,13 +787,7 @@ bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
   AccessFunction = SE->getMinusSCEV(AccessFunction, BasePointer);
 
   const SCEV *Size = SE->getElementSize(Inst);
-  if (Context.ElementSize.count(BasePointer)) {
-    if (Context.ElementSize[BasePointer] != Size)
-      return invalid<ReportDifferentArrayElementSize>(Context, /*Assert=*/true,
-                                                      Inst, BaseValue);
-  } else {
-    Context.ElementSize[BasePointer] = Size;
-  }
+  Context.ElementSize[BasePointer] = Size;
 
   bool isVariantInNonAffineLoop = false;
   SetVector<const Loop *> Loops;
