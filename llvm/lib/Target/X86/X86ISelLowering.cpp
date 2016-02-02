@@ -1335,6 +1335,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::BR_CC,              MVT::i1,    Expand);
     setOperationAction(ISD::SETCC,              MVT::i1,    Custom);
+    setOperationAction(ISD::SETCCE,             MVT::i1,    Custom);
     setOperationAction(ISD::SELECT_CC,          MVT::i1,    Expand);
     setOperationAction(ISD::XOR,                MVT::i1,    Legal);
     setOperationAction(ISD::OR,                 MVT::i1,    Legal);
@@ -14975,8 +14976,11 @@ SDValue X86TargetLowering::LowerSETCCE(SDValue Op, SelectionDAG &DAG) const {
   assert(Carry.getOpcode() != ISD::CARRY_FALSE);
   SDVTList VTs = DAG.getVTList(LHS.getValueType(), MVT::i32);
   SDValue Cmp = DAG.getNode(X86ISD::SBB, DL, VTs, LHS, RHS, Carry);
-  return DAG.getNode(X86ISD::SETCC, DL, Op.getValueType(),
-                     DAG.getConstant(CC, DL, MVT::i8), Cmp.getValue(1));
+  SDValue SetCC = DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
+                              DAG.getConstant(CC, DL, MVT::i8), Cmp.getValue(1));
+  if (Op.getSimpleValueType() == MVT::i1)
+      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
+  return SetCC;
 }
 
 // isX86LogicalCmp - Return true if opcode is a X86 logical comparison.
