@@ -18,14 +18,14 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
 class ArrayType;
 class Constant;
-class Function;
 class FunctionType;
 class GlobalVariable;
 class StructType;
@@ -530,7 +530,7 @@ private:
                                               const llvm::Twine &Name);
 
   /// \brief Set of threadprivate variables with the generated initializer.
-  llvm::DenseSet<const VarDecl *> ThreadPrivateWithDefinition;
+  llvm::SmallPtrSet<const VarDecl *, 4> ThreadPrivateWithDefinition;
 
   /// \brief Emits initialization code for the threadprivate variables.
   /// \param VDAddr Address of the global variable \a VD.

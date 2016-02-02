@@ -137,9 +137,8 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
 
   // If debug info or coverage generation is enabled, create the CGDebugInfo
   // object.
-  if (CodeGenOpts.getDebugInfo() != CodeGenOptions::NoDebugInfo ||
-      CodeGenOpts.EmitGcovArcs ||
-      CodeGenOpts.EmitGcovNotes)
+  if (CodeGenOpts.getDebugInfo() != codegenoptions::NoDebugInfo ||
+      CodeGenOpts.EmitGcovArcs || CodeGenOpts.EmitGcovNotes)
     DebugInfo = new CGDebugInfo(*this);
 
   Block.GlobalUniqueCount = 0;
@@ -1703,7 +1702,7 @@ void CodeGenModule::CompleteDIClassType(const CXXMethodDecl* D) {
     return;
 
   if (CGDebugInfo *DI = getModuleDebugInfo())
-    if (getCodeGenOpts().getDebugInfo() >= CodeGenOptions::LimitedDebugInfo) {
+    if (getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo) {
       const auto *ThisPtr = cast<PointerType>(D->getThisType(getContext()));
       DI->getOrCreateRecordType(ThisPtr->getPointeeType(), D->getLocation());
     }
@@ -2507,7 +2506,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   // Emit global variable debug information.
   if (CGDebugInfo *DI = getModuleDebugInfo())
-    if (getCodeGenOpts().getDebugInfo() >= CodeGenOptions::LimitedDebugInfo)
+    if (getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo)
       DI->EmitGlobalVariable(GV, D);
 }
 
@@ -3665,7 +3664,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     ObjCRuntime->GenerateClass(OMD);
     // Emit global variable debug information.
     if (CGDebugInfo *DI = getModuleDebugInfo())
-      if (getCodeGenOpts().getDebugInfo() >= CodeGenOptions::LimitedDebugInfo)
+      if (getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo)
         DI->getOrCreateInterfaceType(getContext().getObjCInterfaceType(
             OMD->getClassInterface()), OMD->getLocation());
     break;

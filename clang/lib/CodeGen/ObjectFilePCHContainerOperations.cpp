@@ -151,7 +151,7 @@ public:
     CodeGenOpts.CodeModel = "default";
     CodeGenOpts.ThreadModel = "single";
     CodeGenOpts.DebugTypeExtRefs = true;
-    CodeGenOpts.setDebugInfo(CodeGenOptions::FullDebugInfo);
+    CodeGenOpts.setDebugInfo(codegenoptions::FullDebugInfo);
   }
 
   ~PCHContainerGenerator() override = default;

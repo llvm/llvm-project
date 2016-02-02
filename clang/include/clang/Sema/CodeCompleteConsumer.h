@@ -15,6 +15,7 @@
 
 #include "clang-c/Index.h"
 #include "clang/AST/CanonicalType.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "llvm/ADT/DenseMap.h"

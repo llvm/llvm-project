@@ -18,6 +18,9 @@ void f() {
   for (struct S { S(int) {} } s : arr) { // expected-error {{types may not be defined in a for range declaration}}
   }
 
+  for (struct S { S(int) {} } s : Undeclared); // expected-error{{types may not be defined in a for range declaration}}
+                                               // expected-error@-1{{use of undeclared identifier 'Undeclared'}}
+
   new struct T {}; // expected-error {{'T' cannot be defined in a type specifier}}
   new struct A {}; // expected-error {{'A' cannot be defined in a type specifier}}
 
