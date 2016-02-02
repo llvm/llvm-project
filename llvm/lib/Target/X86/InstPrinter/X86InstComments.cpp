@@ -687,6 +687,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::MOVZQI2PQIrm:
   case X86::MOVZPQILo2PQIrm:
   case X86::VMOVQI2PQIrm:
+  case X86::VMOVQI2PQIZrm:
   case X86::VMOVZQI2PQIrm:
   case X86::VMOVZPQILo2PQIrm:
   case X86::VMOVZPQILo2PQIZrm:

@@ -1423,7 +1423,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
           W.printHex("ChangeCodeOffset", GetCompressedAnnotation());
           break;
         case ChangeCodeLength:
-          W.printNumber("ChangeCodeLength", GetCompressedAnnotation());
+          W.printHex("ChangeCodeLength", GetCompressedAnnotation());
           break;
         case ChangeFile:
           printFileNameForOffset("ChangeFile", GetCompressedAnnotation());

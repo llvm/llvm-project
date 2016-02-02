@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCCodeView.h"
+#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
@@ -226,40 +227,123 @@ static uint32_t encodeSignedNumber(uint32_t Data) {
 
 void CodeViewContext::emitInlineLineTableForFunction(
     MCObjectStreamer &OS, unsigned PrimaryFunctionId, unsigned SourceFileId,
-    unsigned SourceLineNum, ArrayRef<unsigned> SecondaryFunctionIds) {
-  std::vector<MCCVLineEntry> Locs = getFunctionLineEntries(PrimaryFunctionId);
-  std::vector<std::pair<BinaryAnnotationsOpCode, uint32_t>> Annotations;
+    unsigned SourceLineNum, const MCSymbol *FnStartSym,
+    const MCSymbol *FnEndSym, ArrayRef<unsigned> SecondaryFunctionIds) {
+  // Create and insert a fragment into the current section that will be encoded
+  // later.
+  new MCCVInlineLineTableFragment(
+      PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym,
+      SecondaryFunctionIds, OS.getCurrentSectionOnly());
+}
 
-  const MCCVLineEntry *LastLoc = nullptr;
-  unsigned LastFileId = SourceFileId;
-  unsigned LastLineNum = SourceLineNum;
+unsigned computeLabelDiff(MCAsmLayout &Layout, const MCSymbol *Begin,
+                          const MCSymbol *End) {
+  MCContext &Ctx = Layout.getAssembler().getContext();
+  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
+  const MCExpr *BeginRef = MCSymbolRefExpr::create(Begin, Variant, Ctx),
+               *EndRef = MCSymbolRefExpr::create(End, Variant, Ctx);
+  const MCExpr *AddrDelta =
+      MCBinaryExpr::create(MCBinaryExpr::Sub, EndRef, BeginRef, Ctx);
+  int64_t Result;
+  bool Success = AddrDelta->evaluateKnownAbsolute(Result, Layout);
+  assert(Success && "failed to evaluate label difference as absolute");
+  (void)Success;
+  assert(Result >= 0 && "negative label difference requested");
+  assert(Result < UINT_MAX && "label difference greater than 2GB");
+  return unsigned(Result);
+}
 
+void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
+                                            MCCVInlineLineTableFragment &Frag) {
+  size_t LocBegin;
+  size_t LocEnd;
+  std::tie(LocBegin, LocEnd) = getLineExtent(Frag.SiteFuncId);
+  for (unsigned SecondaryId : Frag.SecondaryFuncs) {
+    auto Extent = getLineExtent(SecondaryId);
+    LocBegin = std::min(LocBegin, Extent.first);
+    LocEnd = std::max(LocEnd, Extent.second);
+  }
+  if (LocBegin >= LocEnd)
+    return;
+  ArrayRef<MCCVLineEntry> Locs = getLinesForExtent(LocBegin, LocEnd);
+  if (Locs.empty())
+    return;
+
+  SmallSet<unsigned, 8> InlinedFuncIds;
+  InlinedFuncIds.insert(Frag.SiteFuncId);
+  InlinedFuncIds.insert(Frag.SecondaryFuncs.begin(), Frag.SecondaryFuncs.end());
+
+  // Make an artificial start location using the function start and the inlinee
+  // lines start location information. All deltas start relative to this
+  // location.
+  MCCVLineEntry StartLoc(Frag.getFnStartSym(), MCCVLoc(Locs.front()));
+  StartLoc.setFileNum(Frag.StartFileId);
+  StartLoc.setLine(Frag.StartLineNum);
+  const MCCVLineEntry *LastLoc = &StartLoc;
+  bool WithinFunction = true;
+
+  SmallVectorImpl<char> &Buffer = Frag.getContents();
+  Buffer.clear(); // Clear old contents if we went through relaxation.
   for (const MCCVLineEntry &Loc : Locs) {
-    if (!LastLoc) {
-      // TODO ChangeCodeOffset
-      // TODO ChangeCodeLength
+    if (!InlinedFuncIds.count(Loc.getFunctionId())) {
+      // We've hit a cv_loc not attributed to this inline call site. Use this
+      // label to end the PC range.
+      if (WithinFunction) {
+        unsigned Length =
+            computeLabelDiff(Layout, LastLoc->getLabel(), Loc.getLabel());
+        compressAnnotation(ChangeCodeLength, Buffer);
+        compressAnnotation(Length, Buffer);
+      }
+      WithinFunction = false;
+      continue;
+    }
+    WithinFunction = true;
+
+    if (Loc.getFileNum() != LastLoc->getFileNum()) {
+      compressAnnotation(ChangeFile, Buffer);
+      compressAnnotation(Loc.getFileNum(), Buffer);
     }
 
-    if (Loc.getFileNum() != LastFileId)
-      Annotations.push_back({ChangeFile, Loc.getFileNum()});
+    int LineDelta = Loc.getLine() - LastLoc->getLine();
+    if (LineDelta == 0)
+      continue;
 
-    if (Loc.getLine() != LastLineNum)
-      Annotations.push_back(
-          {ChangeLineOffset, encodeSignedNumber(Loc.getLine() - LastLineNum)});
+    unsigned EncodedLineDelta = encodeSignedNumber(LineDelta);
+    unsigned CodeDelta =
+        computeLabelDiff(Layout, LastLoc->getLabel(), Loc.getLabel());
+    if (CodeDelta == 0) {
+      compressAnnotation(ChangeLineOffset, Buffer);
+      compressAnnotation(EncodedLineDelta, Buffer);
+    } else if (EncodedLineDelta < 0x8 && CodeDelta <= 0xf) {
+      // The ChangeCodeOffsetAndLineOffset combination opcode is used when the
+      // encoded line delta uses 3 or fewer set bits and the code offset fits
+      // in one nibble.
+      unsigned Operand = (EncodedLineDelta << 4) | CodeDelta;
+      compressAnnotation(ChangeCodeOffsetAndLineOffset, Buffer);
+      compressAnnotation(Operand, Buffer);
+    } else {
+      // Otherwise use the separate line and code deltas.
+      compressAnnotation(ChangeLineOffset, Buffer);
+      compressAnnotation(EncodedLineDelta, Buffer);
+      compressAnnotation(ChangeCodeOffset, Buffer);
+      compressAnnotation(CodeDelta, Buffer);
+    }
 
     LastLoc = &Loc;
-    LastFileId = Loc.getFileNum();
-    LastLineNum = Loc.getLine();
   }
 
-  SmallString<32> Buffer;
-  for (auto Annotation : Annotations) {
-    BinaryAnnotationsOpCode Opcode = Annotation.first;
-    uint32_t Operand = Annotation.second;
-    compressAnnotation(Opcode, Buffer);
-    compressAnnotation(Operand, Buffer);
-  }
-  OS.EmitBytes(Buffer);
+  assert(WithinFunction);
+
+  unsigned EndSymLength =
+      computeLabelDiff(Layout, LastLoc->getLabel(), Frag.getFnEndSym());
+  unsigned LocAfterLength = ~0U;
+  ArrayRef<MCCVLineEntry> LocAfter = getLinesForExtent(LocEnd, LocEnd + 1);
+  if (!LocAfter.empty())
+    LocAfterLength =
+        computeLabelDiff(Layout, LastLoc->getLabel(), LocAfter[0].getLabel());
+
+  compressAnnotation(ChangeCodeLength, Buffer);
+  compressAnnotation(std::min(EndSymLength, LocAfterLength), Buffer);
 }
 
 //

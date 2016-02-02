@@ -137,7 +137,7 @@ define <8 x i64> @merge_8i64_i64_56zz9uzz(i64* %ptr) nounwind uwtable noinline s
 ; ALL-NEXT:    vmovdqu 40(%rdi), %xmm0
 ; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vmovq 72(%rdi), %xmm1
+; ALL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; ALL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %ptr0 = getelementptr inbounds i64, i64* %ptr, i64 5
@@ -159,11 +159,11 @@ define <8 x i64> @merge_8i64_i64_56zz9uzz(i64* %ptr) nounwind uwtable noinline s
 define <8 x i64> @merge_8i64_i64_1u3u5zu8(i64* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8i64_i64_1u3u5zu8:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovq 40(%rdi), %xmm0
+; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vpbroadcastq 64(%rdi), %xmm1
 ; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vmovq 8(%rdi), %xmm1
-; ALL-NEXT:    vmovq 24(%rdi), %xmm2
+; ALL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; ALL-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; ALL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; ALL-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; ALL-NEXT:    retq

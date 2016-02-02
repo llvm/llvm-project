@@ -72,8 +72,7 @@
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
 ; X86-NEXT: [[F1_END]]:
-; Padding
-; X86-NEXT: .zero   3
+; X86-NEXT: .p2align 2
 ; Line table subsection for x
 ; X86: .cv_linetable 0, _x, [[END_OF_X]]
 ; Symbol subsection for y
@@ -95,8 +94,7 @@
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
 ; X86-NEXT: [[F1_END]]:
-; Padding
-; X86-NEXT: .zero   3
+; X86-NEXT: .p2align 2
 ; Line table subsection for y
 ; X86: .cv_linetable 1, _y, [[END_OF_Y]]
 ; Symbol subsection for f
@@ -118,8 +116,7 @@
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
 ; X86-NEXT: [[F1_END]]:
-; Padding
-; X86-NEXT: .zero   3
+; X86-NEXT: .p2align 2
 ; Line table subsection for f
 ; X86: .cv_linetable 2, _f, [[END_OF_F]]
 ; X86: .cv_filechecksums
@@ -326,8 +323,7 @@
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
 ; X64-NEXT: [[F1_END]]:
-; Padding
-; X64-NEXT: .zero   3
+; X64-NEXT: .p2align 2
 ; Line table subsection for x
 ; X64: .cv_linetable 0, x, [[END_OF_X]]
 ; Symbol subsection for y
@@ -349,8 +345,7 @@
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
 ; X64-NEXT: [[F1_END]]:
-; Padding
-; X64-NEXT: .zero   3
+; X64-NEXT: .p2align 2
 ; Line table subsection for y
 ; X64: .cv_linetable 1, y, [[END_OF_Y]]
 ; Symbol subsection for f
@@ -372,8 +367,7 @@
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
 ; X64-NEXT: [[F1_END]]:
-; Padding
-; X64-NEXT: .zero   3
+; X64-NEXT: .p2align 2
 ; Line table subsection for f
 ; X64: .cv_linetable 2, f, [[END_OF_F]]
 ; File index to string table offset subsection

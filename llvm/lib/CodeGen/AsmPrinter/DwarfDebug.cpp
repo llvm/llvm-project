@@ -54,6 +54,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "dwarfdebug"
@@ -297,7 +298,6 @@ static void getObjCClassCategory(StringRef In, StringRef &Class,
 
   Class = In.slice(In.find('[') + 1, In.find('('));
   Category = In.slice(In.find('[') + 1, In.find(' '));
-  return;
 }
 
 static StringRef getObjCMethodName(StringRef In) {
@@ -529,7 +529,6 @@ void DwarfDebug::finishSubprogramDefinitions() {
       CU.finishSubprogramDefinition(cast<DISubprogram>(P.first));
     });
 }
-
 
 // Collect info for variables that were optimized out.
 void DwarfDebug::collectDeadVariables() {

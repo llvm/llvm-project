@@ -34,6 +34,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -356,7 +357,7 @@ static bool contains(Value *Expr, Value *V) {
   SmallPtrSet<ConstantExpr *, 4> Cache;
   return contains(Cache, CE, C);
 }
-#endif
+#endif // NDEBUG
 
 void Value::replaceAllUsesWith(Value *New) {
   assert(New && "Value::replaceAllUsesWith(<null>) is invalid!");
@@ -408,7 +409,6 @@ void Value::replaceUsesOutsideBlock(Value *New, BasicBlock *BB) {
       continue;
     U.set(New);
   }
-  return;
 }
 
 namespace {
@@ -463,7 +463,7 @@ static Value *stripPointerCastsAndOffsets(Value *V) {
 
   return V;
 }
-} // namespace
+} // end anonymous namespace
 
 Value *Value::stripPointerCasts() {
   return stripPointerCastsAndOffsets<PSK_ZeroIndicesAndAliases>(this);
@@ -642,7 +642,6 @@ void ValueHandleBase::RemoveFromUseList() {
   }
 }
 
-
 void ValueHandleBase::ValueIsDeleted(Value *V) {
   assert(V->HasValueHandle && "Should only be called if ValueHandles present");
 
@@ -698,7 +697,6 @@ void ValueHandleBase::ValueIsDeleted(Value *V) {
     llvm_unreachable("All references to V were not removed?");
   }
 }
-
 
 void ValueHandleBase::ValueIsRAUWd(Value *Old, Value *New) {
   assert(Old->HasValueHandle &&"Should only be called if ValueHandles present");

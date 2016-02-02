@@ -98,54 +98,51 @@ bool AMDGPUPromoteAlloca::doInitialization(Module &M) {
 }
 
 bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
-  if (!TM)
+  if (!TM || F.hasFnAttribute(Attribute::OptimizeNone))
     return false;
 
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
-
   FunctionType *FTy = F.getFunctionType();
-  LocalMemAvailable = ST.getLocalMemorySize();
-
 
   // If the function has any arguments in the local address space, then it's
   // possible these arguments require the entire local memory space, so
   // we cannot use local memory in the pass.
-  for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
-    Type *ParamTy = FTy->getParamType(i);
-    if (ParamTy->isPointerTy() &&
-        ParamTy->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+  for (Type *ParamTy : FTy->params()) {
+    PointerType *PtrTy = dyn_cast<PointerType>(ParamTy);
+    if (PtrTy && PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
       LocalMemAvailable = 0;
       DEBUG(dbgs() << "Function has local memory argument.  Promoting to "
                       "local memory disabled.\n");
-      break;
+      return false;
     }
   }
 
-  if (LocalMemAvailable > 0) {
-    // Check how much local memory is being used by global objects
-    for (Module::global_iterator I = Mod->global_begin(),
-                                 E = Mod->global_end(); I != E; ++I) {
-      GlobalVariable *GV = &*I;
-      if (GV->getType()->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
+  LocalMemAvailable = ST.getLocalMemorySize();
+  if (LocalMemAvailable == 0)
+    return false;
+
+  // Check how much local memory is being used by global objects
+  for (GlobalVariable &GV : Mod->globals()) {
+    if (GV.getType()->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+      continue;
+
+    for (Use &U : GV.uses()) {
+      Instruction *Use = dyn_cast<Instruction>(U);
+      if (!Use)
         continue;
-      for (Value::use_iterator U = GV->use_begin(),
-                               UE = GV->use_end(); U != UE; ++U) {
-        Instruction *Use = dyn_cast<Instruction>(*U);
-        if (!Use)
-          continue;
-        if (Use->getParent()->getParent() == &F)
-          LocalMemAvailable -=
-              Mod->getDataLayout().getTypeAllocSize(GV->getValueType());
-      }
+
+      if (Use->getParent()->getParent() == &F)
+        LocalMemAvailable -=
+          Mod->getDataLayout().getTypeAllocSize(GV.getValueType());
     }
   }
 
   LocalMemAvailable = std::max(0, LocalMemAvailable);
-  DEBUG(dbgs() << LocalMemAvailable << "bytes free in local memory.\n");
+  DEBUG(dbgs() << LocalMemAvailable << " bytes free in local memory.\n");
 
   visit(F);
 
-  return false;
+  return true;
 }
 
 std::pair<Value *, Value *>
@@ -311,17 +308,16 @@ static bool canVectorizeInst(Instruction *Inst, User *User) {
 }
 
 static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
-  Type *AllocaTy = Alloca->getAllocatedType();
+  ArrayType *AllocaTy = dyn_cast<ArrayType>(Alloca->getAllocatedType());
 
-  DEBUG(dbgs() << "Alloca Candidate for vectorization \n");
+  DEBUG(dbgs() << "Alloca candidate for vectorization\n");
 
   // FIXME: There is no reason why we can't support larger arrays, we
   // are just being conservative for now.
-  if (!AllocaTy->isArrayTy() ||
-      AllocaTy->getArrayElementType()->isVectorTy() ||
-      AllocaTy->getArrayNumElements() > 4) {
-
-    DEBUG(dbgs() << "  Cannot convert type to vector");
+  if (!AllocaTy ||
+      AllocaTy->getElementType()->isVectorTy() ||
+      AllocaTy->getNumElements() > 4) {
+    DEBUG(dbgs() << "  Cannot convert type to vector\n");
     return false;
   }
 
@@ -360,9 +356,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
   DEBUG(dbgs() << "  Converting alloca to vector "
         << *AllocaTy << " -> " << *VectorTy << '\n');
 
-  for (std::vector<Value*>::iterator I = WorkList.begin(),
-                                     E = WorkList.end(); I != E; ++I) {
-    Instruction *Inst = cast<Instruction>(*I);
+  for (Value *V : WorkList) {
+    Instruction *Inst = cast<Instruction>(V);
     IRBuilder<> Builder(Inst);
     switch (Inst->getOpcode()) {
     case Instruction::Load: {
@@ -399,15 +394,39 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
   return true;
 }
 
+static bool isCallPromotable(CallInst *CI) {
+  // TODO: We might be able to handle some cases where the callee is a
+  // constantexpr bitcast of a function.
+  if (!CI->getCalledFunction())
+    return false;
+
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
+  if (!II)
+    return false;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::memcpy:
+  case Intrinsic::memmove:
+  case Intrinsic::memset:
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+  case Intrinsic::invariant_start:
+  case Intrinsic::invariant_end:
+  case Intrinsic::invariant_group_barrier:
+  case Intrinsic::objectsize:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
-  bool Success = true;
   for (User *User : Val->users()) {
-    if(std::find(WorkList.begin(), WorkList.end(), User) != WorkList.end())
+    if (std::find(WorkList.begin(), WorkList.end(), User) != WorkList.end())
       continue;
+
     if (CallInst *CI = dyn_cast<CallInst>(User)) {
-      // TODO: We might be able to handle some cases where the callee is a
-      // constantexpr bitcast of a function.
-      if (!CI->getCalledFunction())
+      if (!isCallPromotable(CI))
         return false;
 
       WorkList.push_back(User);
@@ -429,10 +448,11 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
       continue;
 
     WorkList.push_back(User);
-
-    Success &= collectUsesWithPtrTypes(User, WorkList);
+    if (!collectUsesWithPtrTypes(User, WorkList))
+      return false;
   }
-  return Success;
+
+  return true;
 }
 
 void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
@@ -485,24 +505,23 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
   Value *TIdY = getWorkitemID(Builder, 1);
   Value *TIdZ = getWorkitemID(Builder, 2);
 
-  Value *Tmp0 = Builder.CreateMul(TCntY, TCntZ);
+  Value *Tmp0 = Builder.CreateMul(TCntY, TCntZ, "", true, true);
   Tmp0 = Builder.CreateMul(Tmp0, TIdX);
-  Value *Tmp1 = Builder.CreateMul(TIdY, TCntZ);
+  Value *Tmp1 = Builder.CreateMul(TIdY, TCntZ, "", true, true);
   Value *TID = Builder.CreateAdd(Tmp0, Tmp1);
   TID = Builder.CreateAdd(TID, TIdZ);
 
-  std::vector<Value*> Indices;
-  Indices.push_back(Constant::getNullValue(Type::getInt32Ty(Mod->getContext())));
-  Indices.push_back(TID);
+  Value *Indices[] = {
+    Constant::getNullValue(Type::getInt32Ty(Mod->getContext())),
+    TID
+  };
 
-  Value *Offset = Builder.CreateGEP(GVTy, GV, Indices);
+  Value *Offset = Builder.CreateInBoundsGEP(GVTy, GV, Indices);
   I.mutateType(Offset->getType());
   I.replaceAllUsesWith(Offset);
   I.eraseFromParent();
 
-  for (std::vector<Value*>::iterator i = WorkList.begin(),
-                                     e = WorkList.end(); i != e; ++i) {
-    Value *V = *i;
+  for (Value *V : WorkList) {
     CallInst *Call = dyn_cast<CallInst>(V);
     if (!Call) {
       Type *EltTy = V->getType()->getPointerElementType();
@@ -520,6 +539,11 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
 
     IntrinsicInst *Intr = dyn_cast<IntrinsicInst>(Call);
     if (!Intr) {
+      // FIXME: What is this for? It doesn't make sense to promote arbitrary
+      // function calls. If the call is to a defined function that can also be
+      // promoted, we should be able to do this once that function is also
+      // rewritten.
+
       std::vector<Type*> ArgTypes;
       for (unsigned ArgIdx = 0, ArgEnd = Call->getNumArgOperands();
                                 ArgIdx != ArgEnd; ++ArgIdx) {
@@ -550,6 +574,14 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
       Intr->eraseFromParent();
       continue;
     }
+    case Intrinsic::memmove: {
+      MemMoveInst *MemMove = cast<MemMoveInst>(Intr);
+      Builder.CreateMemMove(MemMove->getRawDest(), MemMove->getRawSource(),
+                            MemMove->getLength(), MemMove->getAlignment(),
+                            MemMove->isVolatile());
+      Intr->eraseFromParent();
+      continue;
+    }
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
       Builder.CreateMemSet(MemSet->getRawDest(), MemSet->getValue(),
@@ -566,6 +598,20 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
       // but the intrinsics need to be changed to accept pointers with any
       // address space.
       continue;
+    case Intrinsic::objectsize: {
+      Value *Src = Intr->getOperand(0);
+      Type *SrcTy = Src->getType()->getPointerElementType();
+      Function *ObjectSize = Intrinsic::getDeclaration(Mod,
+        Intrinsic::objectsize,
+        { Intr->getType(), PointerType::get(SrcTy, AMDGPUAS::LOCAL_ADDRESS) }
+      );
+
+      CallInst *NewCall
+        = Builder.CreateCall(ObjectSize, { Src, Intr->getOperand(1) });
+      Intr->replaceAllUsesWith(NewCall);
+      Intr->eraseFromParent();
+      continue;
+    }
     default:
       Intr->dump();
       llvm_unreachable("Don't know how to promote alloca intrinsic use.");

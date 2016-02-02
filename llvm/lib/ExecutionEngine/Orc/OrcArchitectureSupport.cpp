@@ -161,8 +161,7 @@ std::error_code OrcX86_64::emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
   for (unsigned I = 0; I < NumStubs; ++I)
     Ptr[I] = InitialPtrVal;
 
-  StubsInfo.NumStubs = NumStubs;
-  StubsInfo.StubsMem = std::move(StubsMem);
+  StubsInfo = IndirectStubsInfo(NumStubs, std::move(StubsMem));
 
   return std::error_code();
 }

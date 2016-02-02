@@ -22,6 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <system_error>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -496,7 +497,7 @@ public:
     OS << format("%5u:", LineNum) << Line << "\n";
   }
 };
-}
+} // end anonymous namespace
 
 /// Convert a path to a gcov filename. If PreservePaths is true, this
 /// translates "/" to "#", ".." to "^", and drops ".", to match gcov.
@@ -683,7 +684,6 @@ void FileInfo::print(raw_ostream &InfoOS, StringRef MainFilename,
   if (Options.FuncCoverage)
     printFuncCoverage(InfoOS);
   printFileCoverage(InfoOS);
-  return;
 }
 
 /// printFunctionSummary - Print function and block summary.

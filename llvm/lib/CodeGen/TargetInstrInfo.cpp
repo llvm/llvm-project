@@ -31,6 +31,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include <cctype>
+
 using namespace llvm;
 
 static cl::opt<bool> DisableHazardRecognizer(
@@ -76,8 +77,6 @@ void TargetInstrInfo::insertNoop(MachineBasicBlock &MBB,
 /// may be overloaded in the target code to do that.
 unsigned TargetInstrInfo::getInlineAsmLength(const char *Str,
                                              const MCAsmInfo &MAI) const {
-
-
   // Count the number of instructions in the asm.
   bool atInsnStart = true;
   unsigned Length = 0;
@@ -637,7 +636,6 @@ bool TargetInstrInfo::isReassociationCandidate(const MachineInstr &Inst,
 bool TargetInstrInfo::getMachineCombinerPatterns(
     MachineInstr &Root,
     SmallVectorImpl<MachineCombinerPattern> &Patterns) const {
-
   bool Commute;
   if (isReassociationCandidate(Root, Commute)) {
     // We found a sequence of instructions that may be suitable for a
@@ -768,7 +766,6 @@ void TargetInstrInfo::genAlternativeCodeSequence(
   assert(Prev && "Unknown pattern for machine combiner");
 
   reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, InstIdxForVirtReg);
-  return;
 }
 
 /// foldMemoryOperand - Same as the previous version except it allows folding

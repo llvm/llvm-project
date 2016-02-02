@@ -60,6 +60,7 @@ enum DiagnosticKind {
   DK_OptimizationFailure,
   DK_MIRParser,
   DK_PGOProfile,
+  DK_Unsupported,
   DK_FirstPluginKind
 };
 
@@ -275,32 +276,16 @@ private:
   const Twine &Msg;
 };
 
-/// Common features for diagnostics dealing with optimization remarks.
-class DiagnosticInfoOptimizationBase : public DiagnosticInfo {
+/// Common features for diagnostics with an associated DebugLoc
+class DiagnosticInfoWithDebugLocBase : public DiagnosticInfo {
 public:
-  /// \p PassName is the name of the pass emitting this diagnostic.
   /// \p Fn is the function where the diagnostic is being emitted. \p DLoc is
-  /// the location information to use in the diagnostic. If line table
-  /// information is available, the diagnostic will include the source code
-  /// location. \p Msg is the message to show. Note that this class does not
-  /// copy this message, so this reference must be valid for the whole life time
-  /// of the diagnostic.
-  DiagnosticInfoOptimizationBase(enum DiagnosticKind Kind,
+  /// the location information to use in the diagnostic.
+  DiagnosticInfoWithDebugLocBase(enum DiagnosticKind Kind,
                                  enum DiagnosticSeverity Severity,
-                                 const char *PassName, const Function &Fn,
-                                 const DebugLoc &DLoc, const Twine &Msg)
-      : DiagnosticInfo(Kind, Severity), PassName(PassName), Fn(Fn), DLoc(DLoc),
-        Msg(Msg) {}
-
-  /// \see DiagnosticInfo::print.
-  void print(DiagnosticPrinter &DP) const override;
-
-  /// Return true if this optimization remark is enabled by one of
-  /// of the LLVM command line flags (-pass-remarks, -pass-remarks-missed,
-  /// or -pass-remarks-analysis). Note that this only handles the LLVM
-  /// flags. We cannot access Clang flags from here (they are handled
-  /// in BackendConsumer::OptimizationRemarkHandler).
-  virtual bool isEnabled() const = 0;
+                                 const Function &Fn,
+                                 const DebugLoc &DLoc)
+      : DiagnosticInfo(Kind, Severity), Fn(Fn), DLoc(DLoc) {}
 
   /// Return true if location information is available for this diagnostic.
   bool isLocationAvailable() const;
@@ -314,9 +299,45 @@ public:
   /// the source file name, line number and column.
   void getLocation(StringRef *Filename, unsigned *Line, unsigned *Column) const;
 
-  const char *getPassName() const { return PassName; }
   const Function &getFunction() const { return Fn; }
   const DebugLoc &getDebugLoc() const { return DLoc; }
+
+private:
+  /// Function where this diagnostic is triggered.
+  const Function &Fn;
+
+  /// Debug location where this diagnostic is triggered.
+  DebugLoc DLoc;
+};
+
+/// Common features for diagnostics dealing with optimization remarks.
+class DiagnosticInfoOptimizationBase : public DiagnosticInfoWithDebugLocBase {
+public:
+  /// \p PassName is the name of the pass emitting this diagnostic.
+  /// \p Fn is the function where the diagnostic is being emitted. \p DLoc is
+  /// the location information to use in the diagnostic. If line table
+  /// information is available, the diagnostic will include the source code
+  /// location. \p Msg is the message to show. Note that this class does not
+  /// copy this message, so this reference must be valid for the whole life time
+  /// of the diagnostic.
+  DiagnosticInfoOptimizationBase(enum DiagnosticKind Kind,
+                                 enum DiagnosticSeverity Severity,
+                                 const char *PassName, const Function &Fn,
+                                 const DebugLoc &DLoc, const Twine &Msg)
+      : DiagnosticInfoWithDebugLocBase(Kind, Severity, Fn, DLoc),
+        PassName(PassName), Msg(Msg) {}
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  /// Return true if this optimization remark is enabled by one of
+  /// of the LLVM command line flags (-pass-remarks, -pass-remarks-missed,
+  /// or -pass-remarks-analysis). Note that this only handles the LLVM
+  /// flags. We cannot access Clang flags from here (they are handled
+  /// in BackendConsumer::OptimizationRemarkHandler).
+  virtual bool isEnabled() const = 0;
+
+  const char *getPassName() const { return PassName; }
   const Twine &getMsg() const { return Msg; }
 
 private:
@@ -324,12 +345,6 @@ private:
   /// regular expression given in -Rpass=regexp, then the remark will
   /// be emitted.
   const char *PassName;
-
-  /// Function where this diagnostic is triggered.
-  const Function &Fn;
-
-  /// Debug location where this diagnostic is triggered.
-  DebugLoc DLoc;
 
   /// Message to report.
   const Twine &Msg;
@@ -570,6 +585,33 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override;
+};
+
+/// Diagnostic information for unsupported feature in backend.
+class DiagnosticInfoUnsupported
+    : public DiagnosticInfoWithDebugLocBase {
+private:
+  const Twine &Msg;
+
+public:
+  /// \p Fn is the function where the diagnostic is being emitted. \p DLoc is
+  /// the location information to use in the diagnostic. If line table
+  /// information is available, the diagnostic will include the source code
+  /// location. \p Msg is the message to show. Note that this class does not
+  /// copy this message, so this reference must be valid for the whole life time
+  /// of the diagnostic.
+  DiagnosticInfoUnsupported(const Function &Fn, const Twine &Msg,
+                            DebugLoc DLoc = DebugLoc())
+      : DiagnosticInfoWithDebugLocBase(DK_Unsupported, DS_Error, Fn, DLoc),
+        Msg(Msg) {}
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_Unsupported;
+  }
+
+  const Twine &getMessage() const { return Msg; }
+
+  void print(DiagnosticPrinter &DP) const;
 };
 
 /// Emit a warning when loop vectorization is specified but fails. \p Fn is the

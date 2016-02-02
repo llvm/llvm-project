@@ -321,8 +321,6 @@ void FAddendCoef::operator*=(const FAddendCoef &That) {
                 APFloat::rmNearestTiesToEven);
   else
     F0.multiply(That.getFpVal(), APFloat::rmNearestTiesToEven);
-
-  return;
 }
 
 void FAddendCoef::negate() {

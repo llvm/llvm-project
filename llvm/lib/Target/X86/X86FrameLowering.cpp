@@ -376,10 +376,15 @@ int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
   int Offset = 0;
 
   if ((Opc == X86::ADD64ri32 || Opc == X86::ADD64ri8 ||
-       Opc == X86::ADD32ri || Opc == X86::ADD32ri8 ||
-       Opc == X86::LEA32r || Opc == X86::LEA64_32r) &&
+       Opc == X86::ADD32ri || Opc == X86::ADD32ri8) &&
       PI->getOperand(0).getReg() == StackPtr){
     Offset += PI->getOperand(2).getImm();
+    MBB.erase(PI);
+    if (!doMergeWithPrevious) MBBI = NI;
+  } else if ((Opc == X86::LEA32r || Opc == X86::LEA64_32r) &&
+             PI->getOperand(0).getReg() == StackPtr) {
+    // For LEAs we have: def = lea SP, FI, noreg, Offset, noreg.
+    Offset += PI->getOperand(4).getImm();
     MBB.erase(PI);
     if (!doMergeWithPrevious) MBBI = NI;
   } else if ((Opc == X86::SUB64ri32 || Opc == X86::SUB64ri8 ||

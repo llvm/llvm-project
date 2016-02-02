@@ -207,6 +207,7 @@ public:
                                 const MCSymbol *FnEnd) override;
   void EmitCVInlineLinetableDirective(
       unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+      const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
       ArrayRef<unsigned> SecondaryFunctionIds) override;
   void EmitCVStringTableDirective() override;
   void EmitCVFileChecksumsDirective() override;
@@ -1020,9 +1021,13 @@ void MCAsmStreamer::EmitCVLinetableDirective(unsigned FunctionId,
 
 void MCAsmStreamer::EmitCVInlineLinetableDirective(
     unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+    const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
     ArrayRef<unsigned> SecondaryFunctionIds) {
   OS << "\t.cv_inline_linetable\t" << PrimaryFunctionId << ' ' << SourceFileId
-     << ' ' << SourceLineNum;
+     << ' ' << SourceLineNum << ' ';
+  FnStartSym->print(OS, MAI);
+  OS << ' ';
+  FnEndSym->print(OS, MAI);
   if (!SecondaryFunctionIds.empty()) {
     OS << " contains";
     for (unsigned SecondaryFunctionId : SecondaryFunctionIds)
@@ -1030,7 +1035,8 @@ void MCAsmStreamer::EmitCVInlineLinetableDirective(
   }
   EmitEOL();
   this->MCStreamer::EmitCVInlineLinetableDirective(
-      PrimaryFunctionId, SourceFileId, SourceLineNum, SecondaryFunctionIds);
+      PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym,
+      SecondaryFunctionIds);
 }
 
 void MCAsmStreamer::EmitCVStringTableDirective() {

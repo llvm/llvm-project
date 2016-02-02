@@ -48,9 +48,22 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; HSAOPT: [[LDZU:%[0-9]+]] = load i32, i32 addrspace(2)* [[GEP1]], align 4, !range !1, !invariant.load !0
 ; HSAOPT: [[EXTRACTY:%[0-9]+]] = lshr i32 [[LDXY]], 16
 
-; HSAOPT: call i32 @llvm.amdgcn.workitem.id.x(), !range !1
-; HSAOPT: call i32 @llvm.amdgcn.workitem.id.y(), !range !1
-; HSAOPT: call i32 @llvm.amdgcn.workitem.id.z(), !range !1
+; HSAOPT: [[WORKITEM_ID_X:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.x(), !range !1
+; HSAOPT: [[WORKITEM_ID_Y:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.y(), !range !1
+; HSAOPT: [[WORKITEM_ID_Z:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.z(), !range !1
+
+; HSAOPT: [[Y_SIZE_X_Z_SIZE:%[0-9]+]] = mul nuw nsw i32 [[EXTRACTY]], [[LDZU]]
+; HSAOPT: [[YZ_X_XID:%[0-9]+]] = mul i32 [[Y_SIZE_X_Z_SIZE]], [[WORKITEM_ID_X]]
+; HSAOPT: [[Y_X_Z_SIZE:%[0-9]+]] = mul nuw nsw i32 [[WORKITEM_ID_Y]], [[LDZU]]
+; HSAOPT: [[ADD_YZ_X_X_YZ_SIZE:%[0-9]+]] = add i32 [[YZ_X_XID]], [[Y_X_Z_SIZE]]
+; HSAOPT: [[ADD_ZID:%[0-9]+]] = add i32 [[ADD_YZ_X_X_YZ_SIZE]], [[WORKITEM_ID_Z]]
+
+; HSAOPT: [[LOCAL_GEP:%[0-9]+]] = getelementptr inbounds [256 x [5 x i32]], [256 x [5 x i32]] addrspace(3)* @stack, i32 0, i32 [[ADD_ZID]]
+; HSAOPT: %arrayidx1 = getelementptr inbounds [5 x i32], [5 x i32] addrspace(3)* [[LOCAL_GEP]], i32 0, i32 {{%[0-9]+}}
+; HSAOPT: %arrayidx3 = getelementptr inbounds [5 x i32], [5 x i32] addrspace(3)* [[LOCAL_GEP]], i32 0, i32 {{%[0-9]+}}
+; HSAOPT: %arrayidx10 = getelementptr inbounds [5 x i32], [5 x i32] addrspace(3)* [[LOCAL_GEP]], i32 0, i32 0
+; HSAOPT: %arrayidx12 = getelementptr inbounds [5 x i32], [5 x i32] addrspace(3)* [[LOCAL_GEP]], i32 0, i32 1
+
 
 ; NOHSAOPT: call i32 @llvm.r600.read.local.size.y(), !range !0
 ; NOHSAOPT: call i32 @llvm.r600.read.local.size.z(), !range !0

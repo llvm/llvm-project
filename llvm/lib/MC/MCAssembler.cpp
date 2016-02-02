@@ -15,6 +15,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
@@ -300,6 +301,8 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
     return cast<MCDwarfLineAddrFragment>(F).getContents().size();
   case MCFragment::FT_DwarfFrame:
     return cast<MCDwarfCallFrameFragment>(F).getContents().size();
+  case MCFragment::FT_CVInlineLines:
+    return cast<MCCVInlineLineTableFragment>(F).getContents().size();
   case MCFragment::FT_Dummy:
     llvm_unreachable("Should not have been added");
   }
@@ -535,6 +538,11 @@ static void writeFragment(const MCAssembler &Asm, const MCAsmLayout &Layout,
   case MCFragment::FT_DwarfFrame: {
     const MCDwarfCallFrameFragment &CF = cast<MCDwarfCallFrameFragment>(F);
     OW->writeBytes(CF.getContents());
+    break;
+  }
+  case MCFragment::FT_CVInlineLines: {
+    const auto &OF = cast<MCCVInlineLineTableFragment>(F);
+    OW->writeBytes(OF.getContents());
     break;
   }
   case MCFragment::FT_Dummy:
@@ -813,6 +821,13 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCAsmLayout &Layout,
   return OldSize != Data.size();
 }
 
+bool MCAssembler::relaxCVInlineLineTable(MCAsmLayout &Layout,
+                                         MCCVInlineLineTableFragment &F) {
+  unsigned OldSize = F.getContents().size();
+  getContext().getCVContext().encodeInlineLineTable(Layout, F);
+  return OldSize != F.getContents().size();
+}
+
 bool MCAssembler::layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec) {
   // Holds the first fragment which needed relaxing during this layout. It will
   // remain NULL if none were relaxed.
@@ -843,6 +858,10 @@ bool MCAssembler::layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec) {
       break;
     case MCFragment::FT_LEB:
       RelaxedFrag = relaxLEB(Layout, *cast<MCLEBFragment>(I));
+      break;
+    case MCFragment::FT_CVInlineLines:
+      RelaxedFrag =
+          relaxCVInlineLineTable(Layout, *cast<MCCVInlineLineTableFragment>(I));
       break;
     }
     if (RelaxedFrag && !FirstRelaxedFragment)
