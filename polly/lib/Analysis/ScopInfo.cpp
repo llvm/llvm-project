@@ -2975,13 +2975,13 @@ void Scop::hoistInvariantLoads() {
 }
 
 const ScopArrayInfo *
-Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *AccessType,
+Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
                                ArrayRef<const SCEV *> Sizes,
                                ScopArrayInfo::MemoryKind Kind) {
   auto &SAI = ScopArrayInfoMap[std::make_pair(BasePtr, Kind)];
   if (!SAI) {
     auto &DL = getRegion().getEntry()->getModule()->getDataLayout();
-    SAI.reset(new ScopArrayInfo(BasePtr, AccessType, getIslCtx(), Sizes, Kind,
+    SAI.reset(new ScopArrayInfo(BasePtr, ElementType, getIslCtx(), Sizes, Kind,
                                 DL, this));
   } else {
     // In case of mismatching array sizes, we bail out by setting the run-time
@@ -3764,7 +3764,7 @@ void ScopInfo::buildMemoryAccess(
   Value *Address = Inst.getPointerOperand();
   Value *Val = Inst.getValueOperand();
   Type *SizeType = Val->getType();
-  unsigned Size = TD->getTypeAllocSize(SizeType);
+  unsigned Size = DL->getTypeAllocSize(SizeType);
   enum MemoryAccess::AccessType Type =
       Inst.isLoad() ? MemoryAccess::READ : MemoryAccess::MUST_WRITE;
 
@@ -3851,7 +3851,7 @@ void ScopInfo::buildMemoryAccess(
   // FIXME: Size of the number of bytes of an array element, not the number of
   // elements as probably intended here.
   const SCEV *SizeSCEV =
-      SE->getConstant(TD->getIntPtrType(Inst.getContext()), Size);
+      SE->getConstant(DL->getIntPtrType(Inst.getContext()), Size);
 
   if (!IsAffine && Type == MemoryAccess::MUST_WRITE)
     Type = MemoryAccess::MAY_WRITE;
@@ -3876,17 +3876,16 @@ void ScopInfo::buildAccessFunctions(Region &R, Region &SR) {
       buildAccessFunctions(R, *I->getNodeAs<BasicBlock>());
 }
 
-void ScopInfo::buildStmts(Region &SR) {
-  Region *R = getRegion();
+void ScopInfo::buildStmts(Region &R, Region &SR) {
 
-  if (SD->isNonAffineSubRegion(&SR, R)) {
+  if (SD->isNonAffineSubRegion(&SR, &R)) {
     scop->addScopStmt(nullptr, &SR);
     return;
   }
 
   for (auto I = SR.element_begin(), E = SR.element_end(); I != E; ++I)
     if (I->isSubRegion())
-      buildStmts(*I->getNodeAs<Region>());
+      buildStmts(R, *I->getNodeAs<Region>());
     else
       scop->addScopStmt(I->getNodeAs<BasicBlock>(), nullptr);
 }
@@ -3896,8 +3895,7 @@ void ScopInfo::buildAccessFunctions(Region &R, BasicBlock &BB,
                                     bool IsExitBlock) {
   // We do not build access functions for error blocks, as they may contain
   // instructions we can not model.
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  if (isErrorBlock(BB, R, *LI, DT) && !IsExitBlock)
+  if (isErrorBlock(BB, R, *LI, *DT) && !IsExitBlock)
     return;
 
   Loop *L = LI->getLoopFor(&BB);
@@ -4068,7 +4066,7 @@ void ScopInfo::buildScop(Region &R, AssumptionCache &AC) {
   unsigned MaxLoopDepth = getMaxLoopDepthInRegion(R, *LI, *SD);
   scop = new Scop(R, AccFuncMap, *SD, *SE, *DT, *LI, ctx, MaxLoopDepth);
 
-  buildStmts(R);
+  buildStmts(R, R);
   buildAccessFunctions(R, R);
 
   // In case the region does not have an exiting block we will later (during
@@ -4133,7 +4131,7 @@ bool ScopInfo::runOnRegion(Region *R, RGPassManager &RGM) {
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  TD = &F->getParent()->getDataLayout();
+  DL = &F->getParent()->getDataLayout();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F);
 

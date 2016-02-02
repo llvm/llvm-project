@@ -1893,23 +1893,23 @@ class ScopInfo : public RegionPass {
   ScopInfo(const ScopInfo &) = delete;
   const ScopInfo &operator=(const ScopInfo &) = delete;
 
-  // The ScalarEvolution to help building Scop.
-  ScalarEvolution *SE;
-
-  // LoopInfo for information about loops
-  LoopInfo *LI;
-
-  // The AliasAnalysis to build AliasSetTracker.
+  /// @brief The AliasAnalysis to build AliasSetTracker.
   AliasAnalysis *AA;
 
-  // Valid Regions for Scop
+  /// @brief Target data for element size computing.
+  const DataLayout *DL;
+
+  /// @brief DominatorTree to reason about guaranteed execution.
+  DominatorTree *DT;
+
+  /// @brief LoopInfo for information about loops
+  LoopInfo *LI;
+
+  /// @biref Valid Regions for Scop
   ScopDetection *SD;
 
-  // Target data for element size computing.
-  const DataLayout *TD;
-
-  // DominatorTree to reason about guaranteed execution.
-  DominatorTree *DT;
+  /// @brief The ScalarEvolution to help building Scop.
+  ScalarEvolution *SE;
 
   // Access function of statements (currently BasicBlocks) .
   //
@@ -1920,13 +1920,6 @@ class ScopInfo : public RegionPass {
   // The Scop
   Scop *scop;
   isl_ctx *ctx;
-
-  /// @brief Return the SCoP region that is currently processed.
-  Region *getRegion() const {
-    if (!scop)
-      return nullptr;
-    return &scop->getRegion();
-  }
 
   // Clear the context.
   void clear();
@@ -1974,9 +1967,12 @@ class ScopInfo : public RegionPass {
 
   /// @brief Create ScopStmt for all BBs and non-affine subregions of @p SR.
   ///
+  /// @param R  The SCoP region.
+  /// @param SR A subregion of @p R.
+  ///
   /// Some of the statments might be optimized away later when they do not
   /// access any memory and thus have no effect.
-  void buildStmts(Region &SR);
+  void buildStmts(Region &R, Region &SR);
 
   /// @brief Build the access functions for the basic block @p BB
   ///
