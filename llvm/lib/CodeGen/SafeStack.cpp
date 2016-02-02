@@ -144,7 +144,8 @@ class SafeStack : public FunctionPass {
   Value *moveStaticAllocasToUnsafeStack(IRBuilder<> &IRB, Function &F,
                                         ArrayRef<AllocaInst *> StaticAllocas,
                                         ArrayRef<Argument *> ByValArguments,
-                                        ArrayRef<ReturnInst *> Returns);
+                                        ArrayRef<ReturnInst *> Returns,
+                                        Instruction *BasePointer);
 
   /// \brief Generate code to restore the stack after all stack restore points
   /// in \p StackRestorePoints.
@@ -431,6 +432,8 @@ AllocaInst *
 SafeStack::createStackRestorePoints(IRBuilder<> &IRB, Function &F,
                                     ArrayRef<Instruction *> StackRestorePoints,
                                     Value *StaticTop, bool NeedDynamicTop) {
+  assert(StaticTop && "The stack top isn't set.");
+
   if (StackRestorePoints.empty())
     return nullptr;
 
@@ -441,19 +444,13 @@ SafeStack::createStackRestorePoints(IRBuilder<> &IRB, Function &F,
   // runtime itself.
 
   AllocaInst *DynamicTop = nullptr;
-  if (NeedDynamicTop)
+  if (NeedDynamicTop) {
     // If we also have dynamic alloca's, the stack pointer value changes
     // throughout the function. For now we store it in an alloca.
     DynamicTop = IRB.CreateAlloca(StackPtrTy, /*ArraySize=*/nullptr,
                                   "unsafe_stack_dynamic_ptr");
-
-  if (!StaticTop)
-    // We need the original unsafe stack pointer value, even if there are
-    // no unsafe static allocas.
-    StaticTop = IRB.CreateLoad(UnsafeStackPtr, false, "unsafe_stack_ptr");
-
-  if (NeedDynamicTop)
     IRB.CreateStore(StaticTop, DynamicTop);
+  }
 
   // Restore current stack pointer after longjmp/exception catch.
   for (Instruction *I : StackRestorePoints) {
@@ -467,28 +464,17 @@ SafeStack::createStackRestorePoints(IRBuilder<> &IRB, Function &F,
   return DynamicTop;
 }
 
+/// We explicitly compute and set the unsafe stack layout for all unsafe
+/// static alloca instructions. We save the unsafe "base pointer" in the
+/// prologue into a local variable and restore it in the epilogue.
 Value *SafeStack::moveStaticAllocasToUnsafeStack(
     IRBuilder<> &IRB, Function &F, ArrayRef<AllocaInst *> StaticAllocas,
-    ArrayRef<Argument *> ByValArguments, ArrayRef<ReturnInst *> Returns) {
+    ArrayRef<Argument *> ByValArguments, ArrayRef<ReturnInst *> Returns,
+    Instruction *BasePointer) {
   if (StaticAllocas.empty() && ByValArguments.empty())
-    return nullptr;
+    return BasePointer;
 
   DIBuilder DIB(*F.getParent());
-
-  // We explicitly compute and set the unsafe stack layout for all unsafe
-  // static alloca instructions. We save the unsafe "base pointer" in the
-  // prologue into a local variable and restore it in the epilogue.
-
-  // Load the current stack pointer (we'll also use it as a base pointer).
-  // FIXME: use a dedicated register for it ?
-  Instruction *BasePointer =
-      IRB.CreateLoad(UnsafeStackPtr, false, "unsafe_stack_ptr");
-  assert(BasePointer->getType() == StackPtrTy);
-
-  for (ReturnInst *RI : Returns) {
-    IRB.SetInsertPoint(RI);
-    IRB.CreateStore(BasePointer, UnsafeStackPtr);
-  }
 
   // Compute maximum alignment among static objects on the unsafe stack.
   unsigned MaxAlignment = 0;
@@ -726,9 +712,16 @@ bool SafeStack::runOnFunction(Function &F) {
   IRBuilder<> IRB(&F.front(), F.begin()->getFirstInsertionPt());
   UnsafeStackPtr = getOrCreateUnsafeStackPtr(IRB, F);
 
+  // Load the current stack pointer (we'll also use it as a base pointer).
+  // FIXME: use a dedicated register for it ?
+  Instruction *BasePointer =
+    IRB.CreateLoad(UnsafeStackPtr, false, "unsafe_stack_ptr");
+  assert(BasePointer->getType() == StackPtrTy);
+
   // The top of the unsafe stack after all unsafe static allocas are allocated.
   Value *StaticTop = moveStaticAllocasToUnsafeStack(IRB, F, StaticAllocas,
-                                                    ByValArguments, Returns);
+                                                    ByValArguments, Returns,
+                                                    BasePointer);
 
   // Safe stack object that stores the current unsafe stack top. It is updated
   // as unsafe dynamic (non-constant-sized) allocas are allocated and freed.
@@ -742,6 +735,12 @@ bool SafeStack::runOnFunction(Function &F) {
   // Handle dynamic allocas.
   moveDynamicAllocasToUnsafeStack(F, UnsafeStackPtr, DynamicTop,
                                   DynamicAllocas);
+
+  // Restore the unsafe stack pointer before each return.
+  for (ReturnInst *RI : Returns) {
+    IRB.SetInsertPoint(RI);
+    IRB.CreateStore(BasePointer, UnsafeStackPtr);
+  }
 
   DEBUG(dbgs() << "[SafeStack]     safestack applied\n");
   return true;

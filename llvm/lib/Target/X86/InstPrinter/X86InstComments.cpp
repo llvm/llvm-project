@@ -278,10 +278,12 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   case X86::INSERTPSrr:
   case X86::VINSERTPSrr:
+  case X86::VINSERTPSzrr:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     // FALL THROUGH.
   case X86::INSERTPSrm:
   case X86::VINSERTPSrm:
+  case X86::VINSERTPSzrm:
     DestName = getRegName(MI->getOperand(0).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
     if (MI->getOperand(MI->getNumOperands() - 1).isImm())
@@ -650,22 +652,26 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   case X86::MOVSDrr:
   case X86::VMOVSDrr:
+  case X86::VMOVSDZrr:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
     // FALL THROUGH.
   case X86::MOVSDrm:
   case X86::VMOVSDrm:
+  case X86::VMOVSDZrm:
     DecodeScalarMoveMask(MVT::v2f64, nullptr == Src2Name, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
   case X86::MOVSSrr:
   case X86::VMOVSSrr:
+  case X86::VMOVSSZrr:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
     // FALL THROUGH.
   case X86::MOVSSrm:
   case X86::VMOVSSrm:
+  case X86::VMOVSSZrm:
     DecodeScalarMoveMask(MVT::v4f32, nullptr == Src2Name, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
@@ -690,6 +696,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   case X86::MOVDI2PDIrm:
   case X86::VMOVDI2PDIrm:
+  case X86::VMOVDI2PDIZrm:
     DecodeZeroMoveLowMask(MVT::v4i32, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;

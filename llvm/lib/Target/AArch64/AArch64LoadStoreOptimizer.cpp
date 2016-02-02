@@ -1521,7 +1521,7 @@ bool AArch64LoadStoreOpt::tryToMergeLdStInst(
 bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
                                         bool enableNarrowLdOpt) {
   bool Modified = false;
-  // Three tranformations to do here:
+  // Four tranformations to do here:
   // 1) Find loads that directly read from stores and promote them by
   //    replacing with mov instructions. If the store is wider than the load,
   //    the load will be replaced with a bitfield extract.
@@ -1531,30 +1531,6 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   //        ; becomes
   //        str w1, [x0, #4]
   //        lsr	w2, w1, #16
-  // 2) Find narrow loads that can be converted into a single wider load
-  //    with bitfield extract instructions.
-  //      e.g.,
-  //        ldrh w0, [x2]
-  //        ldrh w1, [x2, #2]
-  //        ; becomes
-  //        ldr w0, [x2]
-  //        ubfx w1, w0, #16, #16
-  //        and w0, w0, #ffff
-  // 3) Find loads and stores that can be merged into a single load or store
-  //    pair instruction.
-  //      e.g.,
-  //        ldr x0, [x2]
-  //        ldr x1, [x2, #8]
-  //        ; becomes
-  //        ldp x0, x1, [x2]
-  // 4) Find base register updates that can be merged into the load or store
-  //    as a base-reg writeback.
-  //      e.g.,
-  //        ldr x0, [x2]
-  //        add x2, x2, #4
-  //        ; becomes
-  //        ldr x0, [x2], #4
-
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        MBBI != E;) {
     MachineInstr *MI = MBBI;
@@ -1582,7 +1558,15 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
     }
     }
   }
-
+  // 2) Find narrow loads that can be converted into a single wider load
+  //    with bitfield extract instructions.
+  //      e.g.,
+  //        ldrh w0, [x2]
+  //        ldrh w1, [x2, #2]
+  //        ; becomes
+  //        ldr w0, [x2]
+  //        ubfx w1, w0, #16, #16
+  //        and w0, w0, #ffff
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        enableNarrowLdOpt && MBBI != E;) {
     MachineInstr *MI = MBBI;
@@ -1614,7 +1598,13 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
     }
     }
   }
-
+  // 3) Find loads and stores that can be merged into a single load or store
+  //    pair instruction.
+  //      e.g.,
+  //        ldr x0, [x2]
+  //        ldr x1, [x2, #8]
+  //        ; becomes
+  //        ldp x0, x1, [x2]
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        MBBI != E;) {
     MachineInstr *MI = MBBI;
@@ -1656,12 +1646,18 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
     }
     }
   }
-
+  // 4) Find base register updates that can be merged into the load or store
+  //    as a base-reg writeback.
+  //      e.g.,
+  //        ldr x0, [x2]
+  //        add x2, x2, #4
+  //        ; becomes
+  //        ldr x0, [x2], #4
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        MBBI != E;) {
     MachineInstr *MI = MBBI;
     // Do update merging. It's simpler to keep this separate from the above
-    // switch, though not strictly necessary.
+    // switchs, though not strictly necessary.
     unsigned Opc = MI->getOpcode();
     switch (Opc) {
     default:

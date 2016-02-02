@@ -20,6 +20,13 @@
 
 namespace fuzzer {
 
+bool IsFile(const std::string &Path) {
+  struct stat St;
+  if (stat(Path.c_str(), &St))
+    return false;
+  return S_ISREG(St.st_mode);
+}
+
 static long GetEpoch(const std::string &Path) {
   struct stat St;
   if (stat(Path.c_str(), &St))
@@ -32,7 +39,7 @@ static std::vector<std::string> ListFilesInDir(const std::string &Dir,
   std::vector<std::string> V;
   if (Epoch) {
     auto E = GetEpoch(Dir);
-    if (*Epoch >= E) return V;
+    if (E && *Epoch >= E) return V;
     *Epoch = E;
   }
   DIR *D = opendir(Dir.c_str());

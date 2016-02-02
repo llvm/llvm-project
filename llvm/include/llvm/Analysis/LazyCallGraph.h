@@ -104,9 +104,79 @@ class LazyCallGraph {
 public:
   class Node;
   class SCC;
-  class iterator;
-  typedef SmallVector<PointerUnion<Function *, Node *>, 4> NodeVectorT;
-  typedef SmallVectorImpl<PointerUnion<Function *, Node *>> NodeVectorImplT;
+  class edge_iterator;
+
+  /// A class used to represent edges in the call graph.
+  ///
+  /// The lazy call graph models both *call* edges and *reference* edges. Call
+  /// edges are much what you would expect, and exist when there is a 'call' or
+  /// 'invoke' instruction of some function. Reference edges are also tracked
+  /// along side these, and exist whenever any instruction (transitively
+  /// through its operands) references a function. All call edges are
+  /// inherently reference edges, and so the reference graph forms a superset
+  /// of the formal call graph.
+  ///
+  /// Furthermore, edges also may point to raw \c Function objects when those
+  /// functions have not been scanned and incorporated into the graph (yet).
+  /// This is one of the primary ways in which the graph can be lazy. When
+  /// functions are scanned and fully incorporated into the graph, all of the
+  /// edges referencing them are updated to point to the graph \c Node objects
+  /// instead of to the raw \c Function objects. This class even provides
+  /// methods to trigger this scan on-demand by attempting to get the target
+  /// node of the graph and providing a reference back to the graph in order to
+  /// lazily build it if necessary.
+  ///
+  /// All of these forms of edges are fundamentally represented as outgoing
+  /// edges. The edges are stored in the source node and point at the target
+  /// node. This allows the edge structure itself to be a very compact data
+  /// structure: essentially a tagged pointer.
+  class Edge {
+  public:
+    /// The kind of edge in the graph.
+    enum Kind : bool { Ref = false, Call = true };
+
+    Edge();
+    explicit Edge(Function &F, Kind K);
+    explicit Edge(Node &N, Kind K);
+
+    /// Test whether the edge is null.
+    ///
+    /// This happens when an edge has been deleted. We leave the edge objects
+    /// around but clear them.
+    operator bool() const;
+
+    /// Test whether the edge represents a direct call to a function.
+    ///
+    /// This requires that the edge is not null.
+    bool isCall() const;
+
+    /// Get the function referenced by this edge.
+    ///
+    /// This requires that the edge is not null, but will succeed whether we
+    /// have built a graph node for the function yet or not.
+    Function &getFunction() const;
+
+    /// Get the call graph node referenced by this edge if one exists.
+    ///
+    /// This requires that the edge is not null. If we have built a graph node
+    /// for the function this edge points to, this will return that node,
+    /// otherwise it will return null.
+    Node *getNode() const;
+
+    /// Get the call graph node for this edge, building it if necessary.
+    ///
+    /// This requires that the edge is not null. If we have not yet built
+    /// a graph node for the function this edge points to, this will first ask
+    /// the graph to build that node, inserting it into all the relevant
+    /// structures.
+    Node &getNode(LazyCallGraph &G);
+
+  private:
+    PointerIntPair<PointerUnion<Function *, Node *>, 1, Kind> Value;
+  };
+
+  typedef SmallVector<Edge, 4> EdgeVectorT;
+  typedef SmallVectorImpl<Edge> EdgeVectorImplT;
 
   /// A node in the call graph.
   ///
@@ -125,31 +195,33 @@ public:
     int DFSNumber;
     int LowLink;
 
-    mutable NodeVectorT Callees;
-    DenseMap<Function *, size_t> CalleeIndexMap;
+    mutable EdgeVectorT Edges;
+    DenseMap<Function *, size_t> EdgeIndexMap;
 
-    /// Basic constructor implements the scanning of F into Callees and
-    /// CalleeIndexMap.
+    /// Basic constructor implements the scanning of F into Edges and
+    /// EdgeIndexMap.
     Node(LazyCallGraph &G, Function &F);
 
-    /// Internal helper to insert a callee.
-    void insertEdgeInternal(Function &Callee);
+    /// Internal helper to insert an edge to a function.
+    void insertEdgeInternal(Function &ChildF, Edge::Kind EK);
 
-    /// Internal helper to insert a callee.
-    void insertEdgeInternal(Node &CalleeN);
+    /// Internal helper to insert an edge to a node.
+    void insertEdgeInternal(Node &ChildN, Edge::Kind EK);
 
-    /// Internal helper to remove a callee from this node.
-    void removeEdgeInternal(Function &Callee);
+    /// Internal helper to remove the edge to the given function.
+    void removeEdgeInternal(Function &ChildF);
 
   public:
-    typedef LazyCallGraph::iterator iterator;
+    typedef LazyCallGraph::edge_iterator edge_iterator;
+
+    LazyCallGraph &getGraph() const { return *G; }
 
     Function &getFunction() const { return F; }
 
-    iterator begin() const {
-      return iterator(*G, Callees.begin(), Callees.end());
+    edge_iterator begin() const {
+      return edge_iterator(Edges.begin(), Edges.end());
     }
-    iterator end() const { return iterator(*G, Callees.end(), Callees.end()); }
+    edge_iterator end() const { return edge_iterator(Edges.end(), Edges.end()); }
 
     /// Equality is defined as address equality.
     bool operator==(const Node &N) const { return this == &N; }
@@ -162,42 +234,68 @@ public:
   /// be scanned for "calls" or uses of functions and its child information
   /// will be constructed. All of these results are accumulated and cached in
   /// the graph.
-  class iterator
-      : public iterator_adaptor_base<iterator, NodeVectorImplT::iterator,
-                                     std::forward_iterator_tag, Node> {
+  class edge_iterator
+      : public iterator_adaptor_base<edge_iterator, EdgeVectorImplT::iterator,
+                                     std::forward_iterator_tag> {
     friend class LazyCallGraph;
     friend class LazyCallGraph::Node;
 
-    LazyCallGraph *G;
-    NodeVectorImplT::iterator E;
+    EdgeVectorImplT::iterator E;
 
-    // Build the iterator for a specific position in a node list.
-    iterator(LazyCallGraph &G, NodeVectorImplT::iterator NI,
-             NodeVectorImplT::iterator E)
-        : iterator_adaptor_base(NI), G(&G), E(E) {
-      while (I != E && I->isNull())
+    // Build the iterator for a specific position in the edge list.
+    edge_iterator(EdgeVectorImplT::iterator BaseI,
+                  EdgeVectorImplT::iterator E)
+        : iterator_adaptor_base(BaseI), E(E) {
+      while (I != E && !*I)
         ++I;
     }
 
   public:
-    iterator() {}
+    edge_iterator() {}
 
     using iterator_adaptor_base::operator++;
-    iterator &operator++() {
+    edge_iterator &operator++() {
       do {
         ++I;
-      } while (I != E && I->isNull());
+      } while (I != E && !*I);
       return *this;
     }
+  };
 
-    reference operator*() const {
-      if (I->is<Node *>())
-        return *I->get<Node *>();
+  /// A lazy iterator over specifically call edges.
+  ///
+  /// This has the same iteration properties as the \c edge_iterator, but
+  /// restricts itself to edges which represent actual calls.
+  class call_edge_iterator
+      : public iterator_adaptor_base<call_edge_iterator,
+                                     EdgeVectorImplT::iterator,
+                                     std::forward_iterator_tag> {
+    friend class LazyCallGraph;
+    friend class LazyCallGraph::Node;
 
-      Function *F = I->get<Function *>();
-      Node &ChildN = G->get(*F);
-      *I = &ChildN;
-      return ChildN;
+    EdgeVectorImplT::iterator E;
+
+    /// Advance the iterator to the next valid, call edge.
+    void advanceToNextEdge() {
+      while (I != E && (!*I || !I->isCall()))
+        ++I;
+    }
+
+    // Build the iterator for a specific position in the edge list.
+    call_edge_iterator(EdgeVectorImplT::iterator BaseI,
+                       EdgeVectorImplT::iterator E)
+        : iterator_adaptor_base(BaseI), E(E) {
+      advanceToNextEdge();
+    }
+
+  public:
+    call_edge_iterator() {}
+
+    using iterator_adaptor_base::operator++;
+    call_edge_iterator &operator++() {
+      ++I;
+      advanceToNextEdge();
+      return *this;
     }
   };
 
@@ -219,7 +317,7 @@ public:
     void insert(Node &N);
 
     void
-    internalDFS(SmallVectorImpl<std::pair<Node *, Node::iterator>> &DFSStack,
+    internalDFS(SmallVectorImpl<std::pair<Node *, Node::edge_iterator>> &DFSStack,
                 SmallVectorImpl<Node *> &PendingSCCStack, Node *N,
                 SmallVectorImpl<SCC *> &ResultSCCs);
 
@@ -271,14 +369,14 @@ public:
     ///
     /// By the definition of an SCC, this does not change the nature or make-up
     /// of any SCCs.
-    void insertIntraSCCEdge(Node &CallerN, Node &CalleeN);
+    void insertIntraSCCEdge(Node &ParentN, Node &ChildN, Edge::Kind EK);
 
     /// Insert an edge whose tail is in this SCC and head is in some child SCC.
     ///
     /// There must be an existing path from the caller to the callee. This
     /// operation is inexpensive and does not change the set of SCCs in the
     /// graph.
-    void insertOutgoingEdge(Node &CallerN, Node &CalleeN);
+    void insertOutgoingEdge(Node &ParentN, Node &ChildN, Edge::Kind EK);
 
     /// Insert an edge whose tail is in a descendant SCC and head is in this
     /// SCC.
@@ -294,7 +392,8 @@ public:
     /// FIXME: We could possibly optimize this quite a bit for cases where the
     /// caller and callee are very nearby in the graph. See comments in the
     /// implementation for details, but that use case might impact users.
-    SmallVector<SCC *, 1> insertIncomingEdge(Node &CallerN, Node &CalleeN);
+    SmallVector<SCC *, 1> insertIncomingEdge(Node &ParentN, Node &ChildN,
+                                             Edge::Kind EK);
 
     /// Remove an edge whose source is in this SCC and target is *not*.
     ///
@@ -306,11 +405,11 @@ public:
     /// SCCs and so is very inexpensive. It may change the connectivity graph
     /// of the SCCs though, so be careful calling this while iterating over
     /// them.
-    void removeInterSCCEdge(Node &CallerN, Node &CalleeN);
+    void removeInterSCCEdge(Node &ParentN, Node &ChildN);
 
     /// Remove an edge which is entirely within this SCC.
     ///
-    /// Both the \a Caller and the \a Callee must be within this SCC. Removing
+    /// Both the \a ParentN and the \a ChildN must be within this SCC. Removing
     /// such an edge make break cycles that form this SCC and thus this
     /// operation may change the SCC graph significantly. In particular, this
     /// operation will re-form new SCCs based on the remaining connectivity of
@@ -340,7 +439,7 @@ public:
     /// this SCC and edges from this SCC to child SCCs. Some effort has been
     /// made to minimize the overhead of common cases such as self-edges and
     /// edge removals which result in a spanning tree with no more cycles.
-    SmallVector<SCC *, 1> removeIntraSCCEdge(Node &CallerN, Node &CalleeN);
+    SmallVector<SCC *, 1> removeIntraSCCEdge(Node &ParentN, Node &ChildN);
 
     ///@}
   };
@@ -396,10 +495,12 @@ public:
   LazyCallGraph(LazyCallGraph &&G);
   LazyCallGraph &operator=(LazyCallGraph &&RHS);
 
-  iterator begin() {
-    return iterator(*this, EntryNodes.begin(), EntryNodes.end());
+  edge_iterator begin() {
+    return edge_iterator(EntryEdges.begin(), EntryEdges.end());
   }
-  iterator end() { return iterator(*this, EntryNodes.end(), EntryNodes.end()); }
+  edge_iterator end() {
+    return edge_iterator(EntryEdges.end(), EntryEdges.end());
+  }
 
   postorder_scc_iterator postorder_scc_begin() {
     return postorder_scc_iterator(*this);
@@ -442,11 +543,11 @@ public:
   /// mutation of the graph via the SCC methods.
 
   /// Update the call graph after inserting a new edge.
-  void insertEdge(Node &Caller, Function &Callee);
+  void insertEdge(Node &Caller, Function &Callee, Edge::Kind EK);
 
   /// Update the call graph after inserting a new edge.
-  void insertEdge(Function &Caller, Function &Callee) {
-    return insertEdge(get(Caller), Callee);
+  void insertEdge(Function &Caller, Function &Callee, Edge::Kind EK) {
+    return insertEdge(get(Caller), Callee, EK);
   }
 
   /// Update the call graph after deleting an edge.
@@ -470,9 +571,9 @@ private:
   ///
   /// These nodes are reachable through "external" means. Put another way, they
   /// escape at the module scope.
-  NodeVectorT EntryNodes;
+  EdgeVectorT EntryEdges;
 
-  /// Map of the entry nodes in the graph to their indices in \c EntryNodes.
+  /// Map of the entry nodes in the graph to their indices in \c EntryEdges.
   DenseMap<Function *, size_t> EntryIndexMap;
 
   /// Allocator that holds all the call graph SCCs.
@@ -487,7 +588,7 @@ private:
   SmallVector<SCC *, 4> LeafSCCs;
 
   /// Stack of nodes in the DFS walk.
-  SmallVector<std::pair<Node *, iterator>, 4> DFSStack;
+  SmallVector<std::pair<Node *, edge_iterator>, 4> DFSStack;
 
   /// Set of entry nodes not-yet-processed into SCCs.
   SmallVector<Function *, 4> SCCEntryNodes;
@@ -513,10 +614,52 @@ private:
   SCC *getNextSCCInPostOrder();
 };
 
+inline LazyCallGraph::Edge::Edge() : Value() {}
+inline LazyCallGraph::Edge::Edge(Function &F, Kind K) : Value(&F, K) {}
+inline LazyCallGraph::Edge::Edge(Node &N, Kind K) : Value(&N, K) {}
+
+inline LazyCallGraph::Edge::operator bool() const {
+  return !Value.getPointer().isNull();
+}
+
+inline bool LazyCallGraph::Edge::isCall() const {
+  assert(*this && "Queried a null edge!");
+  return Value.getInt() == Call;
+}
+
+inline Function &LazyCallGraph::Edge::getFunction() const {
+  assert(*this && "Queried a null edge!");
+  auto P = Value.getPointer();
+  if (auto *F = P.dyn_cast<Function *>())
+    return *F;
+
+  return P.get<Node *>()->getFunction();
+}
+
+inline LazyCallGraph::Node *LazyCallGraph::Edge::getNode() const {
+  assert(*this && "Queried a null edge!");
+  auto P = Value.getPointer();
+  if (auto *N = P.dyn_cast<Node *>())
+    return N;
+
+  return nullptr;
+}
+
+inline LazyCallGraph::Node &LazyCallGraph::Edge::getNode(LazyCallGraph &G) {
+  assert(*this && "Queried a null edge!");
+  auto P = Value.getPointer();
+  if (auto *N = P.dyn_cast<Node *>())
+    return *N;
+
+  Node &N = G.get(*P.get<Function *>());
+  Value.setPointer(&N);
+  return N;
+}
+
 // Provide GraphTraits specializations for call graphs.
 template <> struct GraphTraits<LazyCallGraph::Node *> {
   typedef LazyCallGraph::Node NodeType;
-  typedef LazyCallGraph::iterator ChildIteratorType;
+  typedef LazyCallGraph::edge_iterator ChildIteratorType;
 
   static NodeType *getEntryNode(NodeType *N) { return N; }
   static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }
@@ -524,7 +667,7 @@ template <> struct GraphTraits<LazyCallGraph::Node *> {
 };
 template <> struct GraphTraits<LazyCallGraph *> {
   typedef LazyCallGraph::Node NodeType;
-  typedef LazyCallGraph::iterator ChildIteratorType;
+  typedef LazyCallGraph::edge_iterator ChildIteratorType;
 
   static NodeType *getEntryNode(NodeType *N) { return N; }
   static ChildIteratorType child_begin(NodeType *N) { return N->begin(); }

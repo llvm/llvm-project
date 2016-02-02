@@ -217,6 +217,9 @@ namespace {
                         LaneBitmask LaneMask) const;
     void report_context(const LiveRange::Segment &S) const;
     void report_context(const VNInfo &VNI) const;
+    void report_context(SlotIndex Pos) const;
+    void report_context_liverange(const LiveRange &LR) const;
+    void report_context_regunit(unsigned RegUnit) const;
 
     void verifyInlineAsm(const MachineInstr *MI);
 
@@ -435,16 +438,20 @@ void MachineVerifier::report(const char *msg,
   errs() << "\n";
 }
 
+void MachineVerifier::report_context(SlotIndex Pos) const {
+  errs() << "- at:          " << Pos << '\n';
+}
+
 void MachineVerifier::report_context(const LiveInterval &LI) const {
   errs() << "- interval:    " << LI << '\n';
 }
 
 void MachineVerifier::report_context(const LiveRange &LR, unsigned Reg,
                                      LaneBitmask LaneMask) const {
+  report_context_liverange(LR);
   errs() << "- register:    " << PrintReg(Reg, TRI) << '\n';
   if (LaneMask != 0)
     errs() << "- lanemask:    " << PrintLaneMask(LaneMask) << '\n';
-  errs() << "- liverange:   " << LR << '\n';
 }
 
 void MachineVerifier::report_context(const LiveRange::Segment &S) const {
@@ -453,6 +460,14 @@ void MachineVerifier::report_context(const LiveRange::Segment &S) const {
 
 void MachineVerifier::report_context(const VNInfo &VNI) const {
   errs() << "- ValNo:       " << VNI.id << " (def " << VNI.def << ")\n";
+}
+
+void MachineVerifier::report_context_liverange(const LiveRange &LR) const {
+  errs() << "- liverange:   " << LR << '\n';
+}
+
+void MachineVerifier::report_context_regunit(unsigned RegUnit) const {
+  errs() << "- regunit:     " << PrintRegUnit(RegUnit, TRI) << '\n';
 }
 
 void MachineVerifier::markReachable(const MachineBasicBlock *MBB) {
@@ -1057,12 +1072,15 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             LiveQueryResult LRQ = LR->Query(UseIdx);
             if (!LRQ.valueIn()) {
               report("No live segment at use", MO, MONum);
-              errs() << UseIdx << " is not live in " << PrintRegUnit(*Units, TRI)
-                  << ' ' << *LR << '\n';
+              report_context_liverange(*LR);
+              report_context_regunit(*Units);
+              report_context(UseIdx);
             }
             if (MO->isKill() && !LRQ.isKill()) {
               report("Live range continues after kill flag", MO, MONum);
-              errs() << PrintRegUnit(*Units, TRI) << ' ' << *LR << '\n';
+              report_context_liverange(*LR);
+              report_context_regunit(*Units);
+              report_context(UseIdx);
             }
           }
         }
@@ -1075,13 +1093,15 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
           LiveQueryResult LRQ = LI.Query(UseIdx);
           if (!LRQ.valueIn()) {
             report("No live segment at use", MO, MONum);
-            errs() << UseIdx << " is not live in " << LI << '\n';
+            report_context(LI);
+            report_context(UseIdx);
           }
           // Check for extra kill flags.
           // Note that we allow missing kill flags for now.
           if (MO->isKill() && !LRQ.isKill()) {
             report("Live range continues after kill flag", MO, MONum);
-            errs() << "Live range: " << LI << '\n';
+            report_context(LI);
+            report_context(UseIdx);
           }
         } else {
           report("Virtual register has no live interval", MO, MONum);
@@ -1164,19 +1184,21 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
           assert(VNI && "NULL valno is not allowed");
           if (VNI->def != DefIdx) {
             report("Inconsistent valno->def", MO, MONum);
-            errs() << "Valno " << VNI->id << " is not defined at "
-              << DefIdx << " in " << LI << '\n';
+            report_context(LI);
+            report_context(*VNI);
+            report_context(DefIdx);
           }
         } else {
           report("No live segment at def", MO, MONum);
-          errs() << DefIdx << " is not live in " << LI << '\n';
+          report_context(LI);
+          report_context(DefIdx);
         }
         // Check that, if the dead def flag is present, LiveInts agree.
         if (MO->isDead()) {
           LiveQueryResult LRQ = LI.Query(DefIdx);
           if (!LRQ.isDeadDef()) {
             report("Live range continues after dead def flag", MO, MONum);
-            errs() << "Live range: " << LI << '\n';
+            report_context(LI);
           }
         }
       } else {

@@ -70,8 +70,14 @@ static std::vector<std::string> *Inputs;
 static std::string *ProgName;
 
 static void PrintHelp() {
-  Printf("Usage: %s [-flag1=val1 [-flag2=val2 ...] ] [dir1 [dir2 ...] ]\n",
-         ProgName->c_str());
+  Printf("Usage:\n");
+  auto Prog = ProgName->c_str();
+  Printf("\nTo run fuzzing pass 0 or more directories.\n");
+  Printf("%s [-flag1=val1 [-flag2=val2 ...] ] [dir1 [dir2 ...] ]\n", Prog);
+
+  Printf("\nTo run individual tests without fuzzing pass 1 or more files:\n");
+  Printf("%s [-flag1=val1 [-flag2=val2 ...] ] file1 [file2 ...]\n", Prog);
+
   Printf("\nFlags: (strictly in form -flag=value)\n");
   size_t MaxFlagLen = 0;
   for (size_t F = 0; F < kNumFlags; F++)
@@ -227,6 +233,14 @@ int RunOneTest(Fuzzer *F, const char *InputFilePath) {
   return 0;
 }
 
+static bool AllInputsAreFiles() {
+  if (Inputs->empty()) return false;
+  for (auto &Path : *Inputs)
+    if (!IsFile(Path))
+      return false;
+  return true;
+}
+
 int FuzzerDriver(int argc, char **argv, UserCallback Callback) {
   FuzzerRandom_mt19937 Rand(0);
   SimpleUserSuppliedFuzzer SUSF(&Rand, Callback);
@@ -317,6 +331,18 @@ int FuzzerDriver(const std::vector<std::string> &Args,
 
   if (Flags.test_single_input) {
     RunOneTest(&F, Flags.test_single_input);
+    exit(0);
+  }
+
+  if (AllInputsAreFiles()) {
+    Printf("%s: Running %zd inputs.\n", ProgName->c_str(), Inputs->size());
+    for (auto &Path : *Inputs) {
+      auto StartTime = system_clock::now();
+      RunOneTest(&F, Path.c_str());
+      auto StopTime = system_clock::now();
+      auto MS = duration_cast<milliseconds>(StopTime - StartTime).count();
+      Printf("%s: %zd ms\n", Path.c_str(), (long)MS);
+    }
     exit(0);
   }
 

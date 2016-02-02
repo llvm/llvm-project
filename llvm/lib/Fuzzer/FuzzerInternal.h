@@ -62,6 +62,7 @@ private:
 
 typedef FixedWord<27> Word; // 28 bytes.
 
+bool IsFile(const std::string &Path);
 std::string FileToString(const std::string &Path);
 Unit FileToVector(const std::string &Path);
 void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V,

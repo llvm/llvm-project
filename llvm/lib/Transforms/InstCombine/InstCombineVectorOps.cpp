@@ -125,19 +125,19 @@ Instruction *InstCombiner::scalarizePHI(ExtractElementInst &EI, PHINode *PN) {
       scalarPHI->addIncoming(newEI, inBB);
     }
   }
-  return ReplaceInstUsesWith(EI, scalarPHI);
+  return replaceInstUsesWith(EI, scalarPHI);
 }
 
 Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
   if (Value *V = SimplifyExtractElementInst(
           EI.getVectorOperand(), EI.getIndexOperand(), DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(EI, V);
+    return replaceInstUsesWith(EI, V);
 
   // If vector val is constant with all elements the same, replace EI with
   // that element.  We handle a known element # below.
   if (Constant *C = dyn_cast<Constant>(EI.getOperand(0)))
     if (cheapToScalarize(C, false))
-      return ReplaceInstUsesWith(EI, C->getAggregateElement(0U));
+      return replaceInstUsesWith(EI, C->getAggregateElement(0U));
 
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
@@ -198,7 +198,7 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
     } else if (InsertElementInst *IE = dyn_cast<InsertElementInst>(I)) {
       // Extracting the inserted element?
       if (IE->getOperand(2) == EI.getOperand(1))
-        return ReplaceInstUsesWith(EI, IE->getOperand(1));
+        return replaceInstUsesWith(EI, IE->getOperand(1));
       // If the inserted and extracted elements are constants, they must not
       // be the same value, extract from the pre-inserted value instead.
       if (isa<Constant>(IE->getOperand(2)) && isa<Constant>(EI.getOperand(1))) {
@@ -216,7 +216,7 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
           SVI->getOperand(0)->getType()->getVectorNumElements();
 
         if (SrcIdx < 0)
-          return ReplaceInstUsesWith(EI, UndefValue::get(EI.getType()));
+          return replaceInstUsesWith(EI, UndefValue::get(EI.getType()));
         if (SrcIdx < (int)LHSWidth)
           Src = SVI->getOperand(0);
         else {
@@ -417,7 +417,7 @@ static void replaceExtractElements(InsertElementInst *InsElt,
       continue;
     auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
     NewExt->insertAfter(WideVec);
-    IC.ReplaceInstUsesWith(*OldExt, NewExt);
+    IC.replaceInstUsesWith(*OldExt, NewExt);
   }
 }
 
@@ -546,7 +546,7 @@ Instruction *InstCombiner::visitInsertValueInst(InsertValueInst &I) {
   }
 
   if (IsRedundant)
-    return ReplaceInstUsesWith(I, I.getOperand(0));
+    return replaceInstUsesWith(I, I.getOperand(0));
   return nullptr;
 }
 
@@ -557,7 +557,7 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
 
   // Inserting an undef or into an undefined place, remove this.
   if (isa<UndefValue>(ScalarOp) || isa<UndefValue>(IdxOp))
-    ReplaceInstUsesWith(IE, VecOp);
+    replaceInstUsesWith(IE, VecOp);
 
   // If the inserted element was extracted from some other vector, and if the
   // indexes are constant, try to turn this into a shufflevector operation.
@@ -571,15 +571,15 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
       unsigned InsertedIdx = cast<ConstantInt>(IdxOp)->getZExtValue();
 
       if (ExtractedIdx >= NumExtractVectorElts) // Out of range extract.
-        return ReplaceInstUsesWith(IE, VecOp);
+        return replaceInstUsesWith(IE, VecOp);
 
       if (InsertedIdx >= NumInsertVectorElts)  // Out of range insert.
-        return ReplaceInstUsesWith(IE, UndefValue::get(IE.getType()));
+        return replaceInstUsesWith(IE, UndefValue::get(IE.getType()));
 
       // If we are extracting a value from a vector, then inserting it right
       // back into the same place, just use the input vector.
       if (EI->getOperand(0) == VecOp && ExtractedIdx == InsertedIdx)
-        return ReplaceInstUsesWith(IE, VecOp);
+        return replaceInstUsesWith(IE, VecOp);
 
       // If this insertelement isn't used by some other insertelement, turn it
       // (and any insertelements it points to), into one big shuffle.
@@ -605,7 +605,7 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
   APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
   if (Value *V = SimplifyDemandedVectorElts(&IE, AllOnesEltMask, UndefElts)) {
     if (V != &IE)
-      return ReplaceInstUsesWith(IE, V);
+      return replaceInstUsesWith(IE, V);
     return &IE;
   }
 
@@ -910,7 +910,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
 
   // Undefined shuffle mask -> undefined value.
   if (isa<UndefValue>(SVI.getOperand(2)))
-    return ReplaceInstUsesWith(SVI, UndefValue::get(SVI.getType()));
+    return replaceInstUsesWith(SVI, UndefValue::get(SVI.getType()));
 
   unsigned VWidth = cast<VectorType>(SVI.getType())->getNumElements();
 
@@ -918,7 +918,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));
   if (Value *V = SimplifyDemandedVectorElts(&SVI, AllOnesEltMask, UndefElts)) {
     if (V != &SVI)
-      return ReplaceInstUsesWith(SVI, V);
+      return replaceInstUsesWith(SVI, V);
     LHS = SVI.getOperand(0);
     RHS = SVI.getOperand(1);
     MadeChange = true;
@@ -933,7 +933,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       // shuffle(undef,undef,mask) -> undef.
       Value *Result = (VWidth == LHSWidth)
                       ? LHS : UndefValue::get(SVI.getType());
-      return ReplaceInstUsesWith(SVI, Result);
+      return replaceInstUsesWith(SVI, Result);
     }
 
     // Remap any references to RHS to use LHS.
@@ -967,13 +967,13 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     recognizeIdentityMask(Mask, isLHSID, isRHSID);
 
     // Eliminate identity shuffles.
-    if (isLHSID) return ReplaceInstUsesWith(SVI, LHS);
-    if (isRHSID) return ReplaceInstUsesWith(SVI, RHS);
+    if (isLHSID) return replaceInstUsesWith(SVI, LHS);
+    if (isRHSID) return replaceInstUsesWith(SVI, RHS);
   }
 
   if (isa<UndefValue>(RHS) && CanEvaluateShuffled(LHS, Mask)) {
     Value *V = EvaluateInDifferentElementOrder(LHS, Mask);
-    return ReplaceInstUsesWith(SVI, V);
+    return replaceInstUsesWith(SVI, V);
   }
 
   // SROA generates shuffle+bitcast when the extracted sub-vector is bitcast to
@@ -1060,7 +1060,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
           NewBC, ConstantInt::get(Int32Ty, BegIdx), SVI.getName() + ".extract");
       // The shufflevector isn't being replaced: the bitcast that used it
       // is. InstCombine will visit the newly-created instructions.
-      ReplaceInstUsesWith(*BC, Ext);
+      replaceInstUsesWith(*BC, Ext);
       MadeChange = true;
     }
   }
@@ -1251,8 +1251,8 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   // corresponding argument.
   bool isLHSID, isRHSID;
   recognizeIdentityMask(newMask, isLHSID, isRHSID);
-  if (isLHSID && VWidth == LHSOp0Width) return ReplaceInstUsesWith(SVI, newLHS);
-  if (isRHSID && VWidth == RHSOp0Width) return ReplaceInstUsesWith(SVI, newRHS);
+  if (isLHSID && VWidth == LHSOp0Width) return replaceInstUsesWith(SVI, newLHS);
+  if (isRHSID && VWidth == RHSOp0Width) return replaceInstUsesWith(SVI, newRHS);
 
   return MadeChange ? &SVI : nullptr;
 }

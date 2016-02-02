@@ -1651,8 +1651,8 @@ void CppWriter::printFunctionUses(const Function* F) {
 
   // Print type definitions for every type referenced by an instruction and
   // make a note of any global values or constants that are referenced
-  SmallPtrSet<GlobalValue*,64> gvs;
-  SmallPtrSet<Constant*,64> consts;
+  SmallPtrSet<GlobalValue*,32> gvs;
+  SmallPtrSet<Constant*,32> consts;
   for (Function::const_iterator BB = F->begin(), BE = F->end();
        BB != BE; ++BB){
     for (BasicBlock::const_iterator I = BB->begin(), E = BB->end();

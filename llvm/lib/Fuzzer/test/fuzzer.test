@@ -42,3 +42,18 @@ RUN: not LLVMFuzzer-InitializeTest 2>&1 | FileCheck %s
 
 RUN: LLVMFuzzer-SimpleCmpTest -seed=-1 -runs=0 2>&1 | FileCheck %s --check-prefix=CHECK_SEED_MINUS_ONE
 CHECK_SEED_MINUS_ONE: Seed: 4294967295
+
+RUN: not LLVMFuzzer-SimpleTest NONEXISTENT_DIR 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR
+NONEXISTENT_DIR: No such directory: NONEXISTENT_DIR; exiting
+
+
+RUN: rm -rf  %tmp/SINGLE_INPUTS
+RUN: mkdir -p  %tmp/SINGLE_INPUTS
+RUN: echo aaa > %tmp/SINGLE_INPUTS/aaa
+RUN: echo bbb > %tmp/SINGLE_INPUTS/bbb
+RUN: LLVMFuzzer-SimpleTest %tmp/SINGLE_INPUTS/aaa %tmp/SINGLE_INPUTS/bbb 2>&1 | FileCheck %s --check-prefix=SINGLE_INPUTS
+RUN: rm -rf  %tmp/SINGLE_INPUTS
+SINGLE_INPUTS: LLVMFuzzer-SimpleTest: Running 2 inputs.
+SINGLE_INPUTS: aaa:
+SINGLE_INPUTS: bbb:
+

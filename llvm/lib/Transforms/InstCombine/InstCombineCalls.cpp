@@ -780,7 +780,7 @@ static Instruction *simplifyMaskedStore(IntrinsicInst &II, InstCombiner &IC) {
 
   // If the mask is all zeros, this instruction does nothing.
   if (ConstMask->isNullValue())
-    return IC.EraseInstFromFunction(II);
+    return IC.eraseInstFromFunction(II);
 
   // If the mask is all ones, this is a plain vector store of the 1st argument.
   if (ConstMask->isAllOnesValue()) {
@@ -792,6 +792,24 @@ static Instruction *simplifyMaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   return nullptr;
 }
 
+static Instruction *simplifyMaskedGather(IntrinsicInst &II, InstCombiner &IC) {
+  // If the mask is all zeros, return the "passthru" argument of the gather.
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
+  if (ConstMask && ConstMask->isNullValue())
+    return IC.replaceInstUsesWith(II, II.getArgOperand(3));
+
+  return nullptr;
+}
+
+static Instruction *simplifyMaskedScatter(IntrinsicInst &II, InstCombiner &IC) {
+  // If the mask is all zeros, a scatter does nothing.
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(3));
+  if (ConstMask && ConstMask->isNullValue())
+    return IC.eraseInstFromFunction(II);
+
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallSite to do the heavy
 /// lifting.
@@ -799,7 +817,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   auto Args = CI.arg_operands();
   if (Value *V = SimplifyCall(CI.getCalledValue(), Args.begin(), Args.end(), DL,
                               TLI, DT, AC))
-    return ReplaceInstUsesWith(CI, V);
+    return replaceInstUsesWith(CI, V);
 
   if (isFreeCall(&CI, TLI))
     return visitFree(CI);
@@ -823,7 +841,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // memmove/cpy/set of zero bytes is a noop.
     if (Constant *NumBytes = dyn_cast<Constant>(MI->getLength())) {
       if (NumBytes->isNullValue())
-        return EraseInstFromFunction(CI);
+        return eraseInstFromFunction(CI);
 
       if (ConstantInt *CI = dyn_cast<ConstantInt>(NumBytes))
         if (CI->getZExtValue() == 1) {
@@ -856,7 +874,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
       // memmove(x,x,size) -> noop.
       if (MTI->getSource() == MTI->getDest())
-        return EraseInstFromFunction(CI);
+        return eraseInstFromFunction(CI);
     }
 
     // If we can determine a pointer alignment that is bigger than currently
@@ -884,7 +902,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::objectsize: {
     uint64_t Size;
     if (getObjectSize(II->getArgOperand(0), Size, DL, TLI))
-      return ReplaceInstUsesWith(CI, ConstantInt::get(CI.getType(), Size));
+      return replaceInstUsesWith(CI, ConstantInt::get(CI.getType(), Size));
     return nullptr;
   }
   case Intrinsic::bswap: {
@@ -893,7 +911,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // bswap(bswap(x)) -> x
     if (match(IIOperand, m_BSwap(m_Value(X))))
-        return ReplaceInstUsesWith(CI, X);
+        return replaceInstUsesWith(CI, X);
 
     // bswap(trunc(bswap(x))) -> trunc(lshr(x, c))
     if (match(IIOperand, m_Trunc(m_BSwap(m_Value(X))))) {
@@ -912,29 +930,29 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // bitreverse(bitreverse(x)) -> x
     if (match(IIOperand, m_Intrinsic<Intrinsic::bitreverse>(m_Value(X))))
-      return ReplaceInstUsesWith(CI, X);
+      return replaceInstUsesWith(CI, X);
     break;
   }
 
   case Intrinsic::masked_load:
     if (Value *SimplifiedMaskedOp = simplifyMaskedLoad(*II, *Builder))
-      return ReplaceInstUsesWith(CI, SimplifiedMaskedOp);
+      return replaceInstUsesWith(CI, SimplifiedMaskedOp);
     break;
   case Intrinsic::masked_store:
     return simplifyMaskedStore(*II, *this);
-
-  // TODO: Handle the other masked ops.
-  // case Intrinsic::masked_gather:
-  // case Intrinsic::masked_scatter:
+  case Intrinsic::masked_gather:
+    return simplifyMaskedGather(*II, *this);
+  case Intrinsic::masked_scatter:
+    return simplifyMaskedScatter(*II, *this);
 
   case Intrinsic::powi:
     if (ConstantInt *Power = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
       // powi(x, 0) -> 1.0
       if (Power->isZero())
-        return ReplaceInstUsesWith(CI, ConstantFP::get(CI.getType(), 1.0));
+        return replaceInstUsesWith(CI, ConstantFP::get(CI.getType(), 1.0));
       // powi(x, 1) -> x
       if (Power->isOne())
-        return ReplaceInstUsesWith(CI, II->getArgOperand(0));
+        return replaceInstUsesWith(CI, II->getArgOperand(0));
       // powi(x, -1) -> 1/x
       if (Power->isAllOnesValue())
         return BinaryOperator::CreateFDiv(ConstantFP::get(CI.getType(), 1.0),
@@ -954,7 +972,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     unsigned TrailingZeros = KnownOne.countTrailingZeros();
     APInt Mask(APInt::getLowBitsSet(BitWidth, TrailingZeros));
     if ((Mask & KnownZero) == Mask)
-      return ReplaceInstUsesWith(CI, ConstantInt::get(IT,
+      return replaceInstUsesWith(CI, ConstantInt::get(IT,
                                  APInt(BitWidth, TrailingZeros)));
 
     }
@@ -972,7 +990,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     unsigned LeadingZeros = KnownOne.countLeadingZeros();
     APInt Mask(APInt::getHighBitsSet(BitWidth, LeadingZeros));
     if ((Mask & KnownZero) == Mask)
-      return ReplaceInstUsesWith(CI, ConstantInt::get(IT,
+      return replaceInstUsesWith(CI, ConstantInt::get(IT,
                                  APInt(BitWidth, LeadingZeros)));
 
     }
@@ -1018,7 +1036,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return II;
     }
     if (Value *V = simplifyMinnumMaxnum(*II))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
     break;
   }
   case Intrinsic::ppc_altivec_lvx:
@@ -1129,7 +1147,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // Constant folding: Convert to generic half to single conversion.
     if (isa<ConstantAggregateZero>(Arg))
-      return ReplaceInstUsesWith(*II, ConstantAggregateZero::get(RetType));
+      return replaceInstUsesWith(*II, ConstantAggregateZero::get(RetType));
 
     if (isa<ConstantDataVector>(Arg)) {
       auto VectorHalfAsShorts = Arg;
@@ -1146,7 +1164,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       auto VectorHalfs =
           Builder->CreateBitCast(VectorHalfAsShorts, VectorHalfType);
       auto VectorFloats = Builder->CreateFPExt(VectorHalfs, RetType);
-      return ReplaceInstUsesWith(*II, VectorFloats);
+      return replaceInstUsesWith(*II, VectorFloats);
     }
 
     // We only use the lowest lanes of the argument.
@@ -1196,7 +1214,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_pslli_q:
   case Intrinsic::x86_avx2_pslli_w:
     if (Value *V = simplifyX86immShift(*II, *Builder))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::x86_sse2_psra_d:
@@ -1216,7 +1234,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_psll_q:
   case Intrinsic::x86_avx2_psll_w: {
     if (Value *V = simplifyX86immShift(*II, *Builder))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
 
     // SSE2/AVX2 uses only the first 64-bits of the 128-bit vector
     // operand to compute the shift amount.
@@ -1239,7 +1257,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_pmovsxwd:
   case Intrinsic::x86_avx2_pmovsxwq:
     if (Value *V = simplifyX86extend(*II, *Builder, true))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::x86_sse41_pmovzxbd:
@@ -1255,12 +1273,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx2_pmovzxwd:
   case Intrinsic::x86_avx2_pmovzxwq:
     if (Value *V = simplifyX86extend(*II, *Builder, false))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::x86_sse41_insertps:
     if (Value *V = simplifyX86insertps(*II, *Builder))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::x86_sse4a_extrq: {
@@ -1283,7 +1301,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // Attempt to simplify to a constant, shuffle vector or EXTRQI call.
     if (Value *V = simplifyX86extrq(*II, Op0, CILength, CIIndex, *Builder))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
 
     // EXTRQ only uses the lowest 64-bits of the first 128-bit vector
     // operands and the lowest 16-bits of the second.
@@ -1312,7 +1330,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // Attempt to simplify to a constant or shuffle vector.
     if (Value *V = simplifyX86extrq(*II, Op0, CILength, CIIndex, *Builder))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
 
     // EXTRQI only uses the lowest 64-bits of the first 128-bit vector
     // operand.
@@ -1344,7 +1362,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       APInt Len = V11.zextOrTrunc(6);
       APInt Idx = V11.lshr(8).zextOrTrunc(6);
       if (Value *V = simplifyX86insertq(*II, Op0, Op1, Len, Idx, *Builder))
-        return ReplaceInstUsesWith(*II, V);
+        return replaceInstUsesWith(*II, V);
     }
 
     // INSERTQ only uses the lowest 64-bits of the first 128-bit vector
@@ -1377,7 +1395,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       APInt Len = CILength->getValue().zextOrTrunc(6);
       APInt Idx = CIIndex->getValue().zextOrTrunc(6);
       if (Value *V = simplifyX86insertq(*II, Op0, Op1, Len, Idx, *Builder))
-        return ReplaceInstUsesWith(*II, V);
+        return replaceInstUsesWith(*II, V);
     }
 
     // INSERTQI only uses the lowest 64-bits of the first two 128-bit vector
@@ -1411,11 +1429,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // fold (blend A, A, Mask) -> A
     if (Op0 == Op1)
-      return ReplaceInstUsesWith(CI, Op0);
+      return replaceInstUsesWith(CI, Op0);
 
     // Zero Mask - select 1st argument.
     if (isa<ConstantAggregateZero>(Mask))
-      return ReplaceInstUsesWith(CI, Op0);
+      return replaceInstUsesWith(CI, Op0);
 
     // Constant Mask - select 1st/2nd argument lane based on top bit of mask.
     if (auto C = dyn_cast<ConstantDataVector>(Mask)) {
@@ -1483,7 +1501,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     auto V1 = II->getArgOperand(0);
     auto V2 = Constant::getNullValue(II->getType());
     auto Shuffle = Builder->CreateShuffleVector(V1, V2, NewC);
-    return ReplaceInstUsesWith(CI, Shuffle);
+    return replaceInstUsesWith(CI, Shuffle);
   }
 
   case Intrinsic::x86_avx_vpermilvar_ps:
@@ -1523,7 +1541,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     auto V1 = II->getArgOperand(0);
     auto V2 = UndefValue::get(V1->getType());
     auto Shuffle = Builder->CreateShuffleVector(V1, V2, NewC);
-    return ReplaceInstUsesWith(CI, Shuffle);
+    return replaceInstUsesWith(CI, Shuffle);
   }
 
   case Intrinsic::x86_avx_vperm2f128_pd_256:
@@ -1531,7 +1549,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx_vperm2f128_si_256:
   case Intrinsic::x86_avx2_vperm2i128:
     if (Value *V = simplifyX86vperm2(*II, *Builder))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::x86_xop_vpcomb:
@@ -1539,7 +1557,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_xop_vpcomq:
   case Intrinsic::x86_xop_vpcomw:
     if (Value *V = simplifyX86vpcom(*II, *Builder, true))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::x86_xop_vpcomub:
@@ -1547,7 +1565,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_xop_vpcomuq:
   case Intrinsic::x86_xop_vpcomuw:
     if (Value *V = simplifyX86vpcom(*II, *Builder, false))
-      return ReplaceInstUsesWith(*II, V);
+      return replaceInstUsesWith(*II, V);
     break;
 
   case Intrinsic::ppc_altivec_vperm:
@@ -1644,7 +1662,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // Handle mul by zero first:
     if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1)) {
-      return ReplaceInstUsesWith(CI, ConstantAggregateZero::get(II->getType()));
+      return replaceInstUsesWith(CI, ConstantAggregateZero::get(II->getType()));
     }
 
     // Check for constant LHS & RHS - in this case we just simplify.
@@ -1656,7 +1674,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         CV0 = ConstantExpr::getIntegerCast(CV0, NewVT, /*isSigned=*/!Zext);
         CV1 = ConstantExpr::getIntegerCast(CV1, NewVT, /*isSigned=*/!Zext);
 
-        return ReplaceInstUsesWith(CI, ConstantExpr::getMul(CV0, CV1));
+        return replaceInstUsesWith(CI, ConstantExpr::getMul(CV0, CV1));
       }
 
       // Couldn't simplify - canonicalize constant to the RHS.
@@ -1683,7 +1701,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       // Only do this if it was exact and therefore not dependent on the
       // rounding mode.
       if (Status == APFloat::opOK)
-        return ReplaceInstUsesWith(CI, ConstantFP::get(II->getContext(), Val));
+        return replaceInstUsesWith(CI, ConstantFP::get(II->getContext(), Val));
     }
 
     break;
@@ -1694,7 +1712,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (IntrinsicInst *SS = dyn_cast<IntrinsicInst>(II->getArgOperand(0))) {
       if (SS->getIntrinsicID() == Intrinsic::stacksave) {
         if (&*++SS->getIterator() == II)
-          return EraseInstFromFunction(CI);
+          return eraseInstFromFunction(CI);
       }
     }
 
@@ -1712,7 +1730,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(BCI)) {
           // If there is a stackrestore below this one, remove this one.
           if (II->getIntrinsicID() == Intrinsic::stackrestore)
-            return EraseInstFromFunction(CI);
+            return eraseInstFromFunction(CI);
           // Otherwise, ignore the intrinsic.
         } else {
           // If we found a non-intrinsic call, we can't remove the stack
@@ -1727,7 +1745,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // are no allocas or calls between the restore and the return, nuke the
     // restore.
     if (!CannotRemove && (isa<ReturnInst>(TI) || isa<ResumeInst>(TI)))
-      return EraseInstFromFunction(CI);
+      return eraseInstFromFunction(CI);
     break;
   }
   case Intrinsic::lifetime_start: {
@@ -1743,8 +1761,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         if (LTE->getIntrinsicID() == Intrinsic::lifetime_end) {
           if (II->getOperand(0) == LTE->getOperand(0) &&
               II->getOperand(1) == LTE->getOperand(1)) {
-            EraseInstFromFunction(*LTE);
-            return EraseInstFromFunction(*II);
+            eraseInstFromFunction(*LTE);
+            return eraseInstFromFunction(*II);
           }
           continue;
         }
@@ -1762,7 +1780,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (match(IIOperand, m_And(m_Value(A), m_Value(B)))) {
       Builder->CreateCall(AssumeIntrinsic, A, II->getName());
       Builder->CreateCall(AssumeIntrinsic, B, II->getName());
-      return EraseInstFromFunction(*II);
+      return eraseInstFromFunction(*II);
     }
     // assume(!(a || b)) -> assume(!a); assume(!b);
     if (match(IIOperand, m_Not(m_Or(m_Value(A), m_Value(B))))) {
@@ -1770,7 +1788,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
                           II->getName());
       Builder->CreateCall(AssumeIntrinsic, Builder->CreateNot(B),
                           II->getName());
-      return EraseInstFromFunction(*II);
+      return eraseInstFromFunction(*II);
     }
 
     // assume( (load addr) != null ) -> add 'nonnull' metadata to load
@@ -1787,7 +1805,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         if (isValidAssumeForContext(II, LI, DT)) {
           MDNode *MD = MDNode::get(II->getContext(), None);
           LI->setMetadata(LLVMContext::MD_nonnull, MD);
-          return EraseInstFromFunction(*II);
+          return eraseInstFromFunction(*II);
         }
       }
       // TODO: apply nonnull return attributes to calls and invokes
@@ -1798,7 +1816,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     APInt KnownZero(1, 0), KnownOne(1, 0);
     computeKnownBits(IIOperand, KnownZero, KnownOne, 0, II);
     if (KnownOne.isAllOnesValue())
-      return EraseInstFromFunction(*II);
+      return eraseInstFromFunction(*II);
 
     break;
   }
@@ -1812,7 +1830,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Remove the relocation if unused, note that this check is required
     // to prevent the cases below from looping forever.
     if (II->use_empty())
-      return EraseInstFromFunction(*II);
+      return eraseInstFromFunction(*II);
 
     // Undef is undef, even after relocation.
     // TODO: provide a hook for this in GCStrategy.  This is clearly legal for
@@ -1820,7 +1838,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // about whether it was legal for all possible collectors.
     if (isa<UndefValue>(DerivedPtr)) {
       // gc_relocate is uncasted. Use undef of gc_relocate's type to replace it.
-      return ReplaceInstUsesWith(*II, UndefValue::get(GCRelocateType));
+      return replaceInstUsesWith(*II, UndefValue::get(GCRelocateType));
     }
 
     // The relocation of null will be null for most any collector.
@@ -1829,7 +1847,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (isa<ConstantPointerNull>(DerivedPtr)) {
       // gc_relocate is uncasted. Use null-pointer of gc_relocate's type to
       // replace it.
-      return ReplaceInstUsesWith(*II, ConstantPointerNull::get(GCRelocateType));
+      return replaceInstUsesWith(*II, ConstantPointerNull::get(GCRelocateType));
     }
 
     // isKnownNonNull -> nonnull attribute
@@ -1897,12 +1915,12 @@ Instruction *InstCombiner::tryOptimizeCall(CallInst *CI) {
   if (!CI->getCalledFunction()) return nullptr;
 
   auto InstCombineRAUW = [this](Instruction *From, Value *With) {
-    ReplaceInstUsesWith(*From, With);
+    replaceInstUsesWith(*From, With);
   };
   LibCallSimplifier Simplifier(DL, TLI, InstCombineRAUW);
   if (Value *With = Simplifier.optimizeCall(CI)) {
     ++NumSimplified;
-    return CI->use_empty() ? CI : ReplaceInstUsesWith(*CI, With);
+    return CI->use_empty() ? CI : replaceInstUsesWith(*CI, With);
   }
 
   return nullptr;
@@ -2039,9 +2057,9 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
       // If OldCall does not return void then replaceAllUsesWith undef.
       // This allows ValueHandlers and custom metadata to adjust itself.
       if (!OldCall->getType()->isVoidTy())
-        ReplaceInstUsesWith(*OldCall, UndefValue::get(OldCall->getType()));
+        replaceInstUsesWith(*OldCall, UndefValue::get(OldCall->getType()));
       if (isa<CallInst>(OldCall))
-        return EraseInstFromFunction(*OldCall);
+        return eraseInstFromFunction(*OldCall);
 
       // We cannot remove an invoke, because it would change the CFG, just
       // change the callee to a null pointer.
@@ -2054,7 +2072,7 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
     // If CS does not return void then replaceAllUsesWith undef.
     // This allows ValueHandlers and custom metadata to adjust itself.
     if (!CS.getInstruction()->getType()->isVoidTy())
-      ReplaceInstUsesWith(*CS.getInstruction(),
+      replaceInstUsesWith(*CS.getInstruction(),
                           UndefValue::get(CS.getInstruction()->getType()));
 
     if (isa<InvokeInst>(CS.getInstruction())) {
@@ -2069,7 +2087,7 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
                   UndefValue::get(Type::getInt1PtrTy(Callee->getContext())),
                   CS.getInstruction());
 
-    return EraseInstFromFunction(*CS.getInstruction());
+    return eraseInstFromFunction(*CS.getInstruction());
   }
 
   if (IntrinsicInst *II = findInitTrampoline(Callee))
@@ -2104,7 +2122,7 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
     Instruction *I = tryOptimizeCall(CI);
     // If we changed something return the result, etc. Otherwise let
     // the fallthrough check.
-    if (I) return EraseInstFromFunction(*I);
+    if (I) return eraseInstFromFunction(*I);
   }
 
   return Changed ? CS.getInstruction() : nullptr;
@@ -2371,7 +2389,7 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
   }
 
   if (!Caller->use_empty())
-    ReplaceInstUsesWith(*Caller, NV);
+    replaceInstUsesWith(*Caller, NV);
   else if (Caller->hasValueHandle()) {
     if (OldRetTy == NV->getType())
       ValueHandleBase::ValueIsRAUWd(Caller, NV);
@@ -2381,7 +2399,7 @@ bool InstCombiner::transformConstExprCastCall(CallSite CS) {
       ValueHandleBase::ValueIsDeleted(Caller);
   }
 
-  EraseInstFromFunction(*Caller);
+  eraseInstFromFunction(*Caller);
   return true;
 }
 

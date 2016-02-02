@@ -61,7 +61,7 @@ bool InstCombiner::SimplifyDemandedInstructionBits(Instruction &Inst) {
                                      0, &Inst);
   if (!V) return false;
   if (V == &Inst) return true;
-  ReplaceInstUsesWith(Inst, V);
+  replaceInstUsesWith(Inst, V);
   return true;
 }
 

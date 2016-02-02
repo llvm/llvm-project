@@ -1052,15 +1052,15 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyAddInst(LHS, RHS, I.hasNoSignedWrap(),
                                  I.hasNoUnsignedWrap(), DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
    // (A*B)+(A*C) -> A*(B+C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
     // X + (signbit) --> X ^ signbit
@@ -1157,7 +1157,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
       return BinaryOperator::CreateSub(LHS, V);
 
   if (Value *V = checkForNegativeOperand(I, Builder))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // A+B --> A|B iff A and B have no bits set in common.
   if (haveNoCommonBitsSet(LHS, RHS, DL, AC, &I, DT))
@@ -1317,11 +1317,11 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (Value *V =
           SimplifyFAddInst(LHS, RHS, I.getFastMathFlags(), DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (isa<Constant>(RHS)) {
     if (isa<PHINode>(LHS))
@@ -1415,7 +1415,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
 
   if (I.hasUnsafeAlgebra()) {
     if (Value *V = FAddCombine(Builder).simplify(&I))
-      return ReplaceInstUsesWith(I, V);
+      return replaceInstUsesWith(I, V);
   }
 
   return Changed ? &I : nullptr;
@@ -1493,15 +1493,15 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifySubInst(Op0, Op1, I.hasNoSignedWrap(),
                                  I.hasNoUnsignedWrap(), DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // (A*B)-(A*C) -> A*(B-C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // If this is a 'B = x-(-A)', change to B = x+A.
   if (Value *V = dyn_castNegVal(Op1)) {
@@ -1667,13 +1667,13 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   if (match(Op0, m_PtrToInt(m_Value(LHSOp))) &&
       match(Op1, m_PtrToInt(m_Value(RHSOp))))
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType()))
-      return ReplaceInstUsesWith(I, Res);
+      return replaceInstUsesWith(I, Res);
 
   // trunc(p)-trunc(q) -> trunc(p-q)
   if (match(Op0, m_Trunc(m_PtrToInt(m_Value(LHSOp)))) &&
       match(Op1, m_Trunc(m_PtrToInt(m_Value(RHSOp)))))
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType()))
-      return ReplaceInstUsesWith(I, Res);
+      return replaceInstUsesWith(I, Res);
 
   bool Changed = false;
   if (!I.hasNoSignedWrap() && WillNotOverflowSignedSub(Op0, Op1, I)) {
@@ -1692,11 +1692,11 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (Value *V =
           SimplifyFSubInst(Op0, Op1, I.getFastMathFlags(), DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // fsub nsz 0, X ==> fsub nsz -0.0, X
   if (I.getFastMathFlags().noSignedZeros() && match(Op0, m_Zero())) {
@@ -1736,7 +1736,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
 
   if (I.hasUnsafeAlgebra()) {
     if (Value *V = FAddCombine(Builder).simplify(&I))
-      return ReplaceInstUsesWith(I, V);
+      return replaceInstUsesWith(I, V);
   }
 
   return nullptr;

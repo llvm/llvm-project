@@ -8,7 +8,7 @@ define private void @f() {
 }
 
 define void @calls_statepoint(i8 addrspace(1)* %arg) gc "statepoint-example" {
-; CHECK: Call edges in function: calls_statepoint
+; CHECK: Edges in function: calls_statepoint
 ; CHECK-NEXT:  -> f
 entry:
   %cast = bitcast i8 addrspace(1)* %arg to i64 addrspace(1)*
@@ -17,7 +17,7 @@ entry:
 }
 
 define void @calls_patchpoint() {
-; CHECK:  Call edges in function: calls_patchpoint
+; CHECK:  Edges in function: calls_patchpoint
 ; CHECK-NEXT:    -> f
 entry:
   %c = bitcast void()* @f to i8*

@@ -29,6 +29,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-reg-coloring"
 
+static cl::opt<bool>
+    DisableRegColoring("disable-wasm-reg-coloring", cl::Hidden, cl::init(false),
+                       cl::desc("Disable WebAssembly register coloring"));
+
 namespace {
 class WebAssemblyRegColoring final : public MachineFunctionPass {
 public:
@@ -75,6 +79,9 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     dbgs() << "********** Register Coloring **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });
+
+  if (DisableRegColoring)
+    return false;
 
   // If there are calls to setjmp or sigsetjmp, don't perform coloring. Virtual
   // registers could be modified before the longjmp is executed, resulting in
