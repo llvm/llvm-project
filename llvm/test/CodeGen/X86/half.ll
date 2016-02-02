@@ -102,7 +102,7 @@ define void @test_sitofp_i64(i64 %a, half* %p) #0 {
 ; CHECK_LIBCALL-NEXT: retq
 
 ; CHECK-F16C-NEXT: vcvtsi2ssq %rdi, [[REG0:%[a-z0-9]+]], [[REG0]]
-; CHECK-F16C-NEXT: vcvtps2ph $0, [[REG0]], [[REG0]]
+; CHECK-F16C-NEXT: vcvtps2ph $4, [[REG0]], [[REG0]]
 ; CHECK-F16C-NEXT: vmovd [[REG0]], %eax
 ; CHECK-F16C-NEXT: movw %ax, (%rsi)
 ; CHECK-F16C-NEXT: retq
@@ -175,7 +175,7 @@ define void @test_uitofp_i64(i64 %a, half* %p) #0 {
 ; CHECK-LIBCALL-NEXT: callq __gnu_f2h_ieee
 ; CHECK-LIBCALL-NEXT: movw %ax, ([[ADDR]])
 ; CHECK-LIBCALL-NEXT: popq [[ADDR]]
-; CHECK-F16C-NEXT: vcvtps2ph $0, [[REG1]], [[REG4:%[a-z0-9]+]]
+; CHECK-F16C-NEXT: vcvtps2ph $4, [[REG1]], [[REG4:%[a-z0-9]+]]
 ; CHECK-F16C-NEXT: vmovd [[REG4]], %eax
 ; CHECK-F16C-NEXT: movw %ax, (%rsi)
 ; CHECK-NEXT: retq
