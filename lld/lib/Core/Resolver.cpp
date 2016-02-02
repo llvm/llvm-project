@@ -343,6 +343,7 @@ bool Resolver::resolveUndefines() {
     case File::kindMachObject:
     case File::kindELFObject:
     case File::kindCEntryObject:
+    case File::kindHeaderObject:
     case File::kindEntryObject:
     case File::kindUndefinedSymsObject:
     case File::kindAliasSymsObject:

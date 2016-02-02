@@ -20,11 +20,11 @@
 
 /// GROUP directive is the same as --as-needed.
 
-// RUN: echo 'GROUP("'%t2.so'" "'%t3.so'" "'%t4.so'")' > %t.script
+// RUN: echo "GROUP(\"%t2.so\" \"%t3.so\" \"%t4.so\")" > %t.script
 // RUN: ld.lld %t.o %t.script -o %t2
 // RUN: llvm-readobj -dynamic-table %t2 | FileCheck %s
 
-// RUN: echo 'GROUP(AS_NEEDED("'%t2.so'" "'%t3.so'" "'%t4.so'"))' > %t.script
+// RUN: echo "GROUP(AS_NEEDED(\"%t2.so\" \"%t3.so\" \"%t4.so\"))" > %t.script
 // RUN: ld.lld %t.o %t.script -o %t2
 // RUN: llvm-readobj -dynamic-table %t2 | FileCheck -check-prefix=CHECK2 %s
 

@@ -16,7 +16,7 @@ class JITLoaderGDBTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipTestIfFn(lambda x: (True, "Skipped because the test crashes the test runner"), bugnumber="llvm.org/pr24702")
+    @skipTestIfFn(lambda : "Skipped because the test crashes the test runner", bugnumber="llvm.org/pr24702")
     @unittest2.expectedFailure("llvm.org/pr24702")
     def test_bogus_values(self):
         """Test that we handle inferior misusing the GDB JIT interface"""

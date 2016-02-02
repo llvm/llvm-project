@@ -182,7 +182,7 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
       getIslCompatibleName("MemRef_", BasePtr, Kind == MK_PHI ? "__phi" : "");
   Id = isl_id_alloc(Ctx, BasePtrName.c_str(), this);
 
-  updateSizes(Sizes);
+  updateSizes(Sizes, ElementType);
   BasePtrOriginSAI = identifyBasePtrOriginSAI(S, BasePtr);
   if (BasePtrOriginSAI)
     const_cast<ScopArrayInfo *>(BasePtrOriginSAI)->addDerivedSAI(this);
@@ -195,7 +195,23 @@ __isl_give isl_space *ScopArrayInfo::getSpace() const {
   return Space;
 }
 
-bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes) {
+bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
+                                Type *NewElementType) {
+  auto OldElementSize = DL.getTypeAllocSize(ElementType);
+  auto NewElementSize = DL.getTypeAllocSize(NewElementType);
+
+  if (OldElementSize != NewElementSize) {
+    if (OldElementSize < NewElementSize &&
+        NewElementSize % OldElementSize == 0) {
+      ; // fallthrough
+    } else if (NewElementSize < OldElementSize &&
+               OldElementSize % NewElementSize == 0) {
+      ElementType = NewElementType;
+    } else {
+      return false;
+    }
+  }
+
   int SharedDims = std::min(NewSizes.size(), DimensionSizes.size());
   int ExtraDimsNew = NewSizes.size() - SharedDims;
   int ExtraDimsOld = DimensionSizes.size() - SharedDims;
@@ -283,8 +299,9 @@ void MemoryAccess::updateDimensionality() {
   auto DimsAccess = isl_space_dim(AccessSpace, isl_dim_set);
   auto DimsMissing = DimsArray - DimsAccess;
 
-  auto Map = isl_map_from_domain_and_range(isl_set_universe(AccessSpace),
-                                           isl_set_universe(ArraySpace));
+  auto Map = isl_map_from_domain_and_range(
+      isl_set_universe(AccessSpace),
+      isl_set_universe(isl_space_copy(ArraySpace)));
 
   for (unsigned i = 0; i < DimsMissing; i++)
     Map = isl_map_fix_si(Map, isl_dim_out, i, 0);
@@ -293,6 +310,45 @@ void MemoryAccess::updateDimensionality() {
     Map = isl_map_equate(Map, isl_dim_in, i - DimsMissing, isl_dim_out, i);
 
   AccessRelation = isl_map_apply_range(AccessRelation, Map);
+
+  // Introduce multi-element accesses in case the type loaded by this memory
+  // access is larger than the canonical element type of the array.
+  //
+  // An access ((float *)A)[i] to an array char *A is modeled as
+  // {[i] -> A[o] : 4 i <= o <= 4 i + 3
+  unsigned ArrayElemSize = getScopArrayInfo()->getElemSizeInBytes();
+  if (ElemBytes > ArrayElemSize && ElemBytes % ArrayElemSize == 0) {
+    auto Map = isl_map_from_domain_and_range(
+        isl_set_universe(isl_space_copy(ArraySpace)),
+        isl_set_universe(isl_space_copy(ArraySpace)));
+    for (unsigned i = 0; i < DimsArray - 1; i++)
+      Map = isl_map_equate(Map, isl_dim_in, i, isl_dim_out, i);
+
+    isl_ctx *Ctx;
+    isl_constraint *C;
+    isl_local_space *LS;
+
+    LS = isl_local_space_from_space(isl_map_get_space(Map));
+    Ctx = isl_map_get_ctx(Map);
+    int Num = ElemBytes / getScopArrayInfo()->getElemSizeInBytes();
+
+    C = isl_constraint_alloc_inequality(isl_local_space_copy(LS));
+    C = isl_constraint_set_constant_val(C, isl_val_int_from_si(Ctx, Num - 1));
+    C = isl_constraint_set_coefficient_si(C, isl_dim_in,
+                                          DimsArray - 1 - DimsMissing, Num);
+    C = isl_constraint_set_coefficient_si(C, isl_dim_out, DimsArray - 1, -1);
+    Map = isl_map_add_constraint(Map, C);
+
+    C = isl_constraint_alloc_inequality(LS);
+    C = isl_constraint_set_coefficient_si(C, isl_dim_in,
+                                          DimsArray - 1 - DimsMissing, -Num);
+    C = isl_constraint_set_coefficient_si(C, isl_dim_out, DimsArray - 1, 1);
+    C = isl_constraint_set_constant_val(C, isl_val_int_from_si(Ctx, 0));
+    Map = isl_map_add_constraint(Map, C);
+    AccessRelation = isl_map_apply_range(AccessRelation, Map);
+  }
+
+  isl_space_free(ArraySpace);
 
   assumeNoOutOfBound();
 }
@@ -437,6 +493,10 @@ __isl_give isl_pw_multi_aff *MemoryAccess::applyScheduleToAccessRelation(
   USchedule = isl_union_map_intersect_domain(USchedule, UDomain);
   Schedule = isl_map_from_union_map(USchedule);
   ScheduledAccRel = isl_map_apply_domain(getAccessRelation(), Schedule);
+
+  // For multi-element accesses we always use the lowest memory location as the
+  // actual element that is accessed.
+  ScheduledAccRel = isl_map_lexmin(ScheduledAccRel);
   return isl_pw_multi_aff_from_map(ScheduledAccRel);
 }
 
@@ -2986,7 +3046,7 @@ Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
   } else {
     // In case of mismatching array sizes, we bail out by setting the run-time
     // context to false.
-    if (!SAI->updateSizes(Sizes))
+    if (!SAI->updateSizes(Sizes, ElementType))
       invalidate(DELINEARIZATION, DebugLoc());
   }
   return SAI.get();

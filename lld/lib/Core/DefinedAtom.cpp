@@ -79,6 +79,7 @@ DefinedAtom::ContentPermissions DefinedAtom::permissions(ContentType type) {
   case typeUnknown:
   case typeTempLTO:
   case typeSectCreate:
+  case typeDSOHandle:
     return permUnknown;
   }
   llvm_unreachable("unknown content type");
