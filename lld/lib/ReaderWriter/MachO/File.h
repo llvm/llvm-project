@@ -252,7 +252,7 @@ private:
   MachOLinkingContext::ObjCConstraint _objcConstraint =
       MachOLinkingContext::objc_unknown;
   uint32_t                       _swiftVersion = 0;
-  normalized::FileFlags          _flags = 0;
+  normalized::FileFlags        _flags = llvm::MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
 };
 
 class MachODylibFile : public SharedLibraryFile {

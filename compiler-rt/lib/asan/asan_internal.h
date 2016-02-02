@@ -36,9 +36,9 @@
 // If set, values like allocator chunk size, as well as defaults for some flags
 // will be changed towards less memory overhead.
 #ifndef ASAN_LOW_MEMORY
-#if SANITIZER_WORDSIZE == 32
+# if SANITIZER_IOS || (SANITIZER_WORDSIZE == 32)
 #  define ASAN_LOW_MEMORY 1
-#else
+# else
 #  define ASAN_LOW_MEMORY 0
 # endif
 #endif

@@ -700,7 +700,7 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   // FIXME: Decide what to do on Windows.
 }
 
-bool IsDeadlySignal(int signum) {
+bool IsHandledDeadlySignal(int signum) {
   // FIXME: Decide what to do on Windows.
   return false;
 }

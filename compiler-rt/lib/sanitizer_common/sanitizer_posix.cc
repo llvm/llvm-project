@@ -89,7 +89,11 @@ static uptr GetKernelAreaSize() {
 
 uptr GetMaxVirtualAddress() {
 #if SANITIZER_WORDSIZE == 64
-# if defined(__powerpc64__) || defined(__aarch64__)
+# if defined(__aarch64__) && SANITIZER_IOS && !SANITIZER_IOSSIM
+  // Ideally, we would derive the upper bound from MACH_VM_MAX_ADDRESS. The
+  // upper bound can change depending on the device.
+  return 0x200000000 - 1;
+# elif defined(__powerpc64__) || defined(__aarch64__)
   // On PowerPC64 we have two different address space layouts: 44- and 46-bit.
   // We somehow need to figure out which one we are using now and choose
   // one of 0x00000fffffffffffUL and 0x00003fffffffffffUL.

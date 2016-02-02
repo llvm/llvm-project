@@ -420,6 +420,8 @@ template <> struct ScalarEnumerationTraits<lld::DefinedAtom::ContentType> {
                                           DefinedAtom::typeObjC2CategoryList);
     io.enumCase(value, "objc-image-info",
                                           DefinedAtom::typeObjCImageInfo);
+    io.enumCase(value, "objc-method-list",
+                                          DefinedAtom::typeObjCMethodList);
     io.enumCase(value, "objc-class1",     DefinedAtom::typeObjC1Class);
     io.enumCase(value, "dtraceDOF",       DefinedAtom::typeDTraceDOF);
     io.enumCase(value, "interposing-tuples",
@@ -885,6 +887,16 @@ template <> struct MappingTraits<const lld::DefinedAtom *> {
       uintptr_t index = reinterpret_cast<uintptr_t>(it);
       ++index;
       it = reinterpret_cast<const void *>(index);
+    }
+
+    void addReference(Reference::KindNamespace ns,
+                      Reference::KindArch arch,
+                      Reference::KindValue kindValue, uint64_t off,
+                      const Atom *target, Reference::Addend a) override {
+      assert(target && "trying to create reference to nothing");
+      auto node = new (file().allocator()) SimpleReference(ns, arch, kindValue,
+                                                           off, target, a);
+      _references.push_back(node);
     }
 
     const lld::File                    &_file;

@@ -170,6 +170,8 @@ public:
   DefinedAtom::reference_iterator end() const override;
   const Reference *derefIterator(const void *It) const override;
   void incrementIterator(const void *&It) const override;
+
+  using DefinedAtom::addReference;
   void addReference(ELFReference<ELFT> *reference);
 
   virtual void setOrdinal(uint64_t ord) { _ordinal = ord; }

@@ -1119,7 +1119,7 @@ AndroidApiLevel AndroidGetApiLevel() {
 
 #endif
 
-bool IsDeadlySignal(int signum) {
+bool IsHandledDeadlySignal(int signum) {
   if (common_flags()->handle_abort && signum == SIGABRT)
     return true;
   if (common_flags()->handle_sigill && signum == SIGILL)

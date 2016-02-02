@@ -199,7 +199,9 @@ class StubsPass : public Pass {
 public:
   StubsPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _stubInfo(_archHandler.stubInfo()), _file("<mach-o Stubs pass>") {}
+        _stubInfo(_archHandler.stubInfo()), _file("<mach-o Stubs pass>") {
+    _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
+  }
 
   std::error_code perform(SimpleFile &mergedFile) override {
     // Skip this pass if output format uses text relocations instead of stubs.

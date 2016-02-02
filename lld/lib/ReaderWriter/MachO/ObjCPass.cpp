@@ -24,9 +24,9 @@
 namespace lld {
 namespace mach_o {
 
-//
-// ObjC Image Info Atom created by the ObjC pass.
-//
+///
+/// ObjC Image Info Atom created by the ObjC pass.
+///
 class ObjCImageInfoAtom : public SimpleDefinedAtom {
 public:
   ObjCImageInfoAtom(const File &file,

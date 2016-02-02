@@ -92,6 +92,10 @@ public:
   /// __eh_frame.
   virtual Reference::KindValue unwindRefToEhFrameKind() = 0;
 
+  /// Returns a pointer sized reference kind.  On 64-bit targets this will
+  /// likely be something like pointer64, and pointer32 on 32-bit targets.
+  virtual Reference::KindValue pointerKind() = 0;
+
   virtual const Atom *fdeTargetFunction(const DefinedAtom *fde);
 
   /// Used by normalizedFromAtoms() to know where to generated rebasing and

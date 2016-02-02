@@ -42,7 +42,9 @@ class ShimPass : public Pass {
 public:
   ShimPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _stubInfo(_archHandler.stubInfo()), _file("<mach-o shim pass>") {}
+        _stubInfo(_archHandler.stubInfo()), _file("<mach-o shim pass>") {
+    _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
+  }
 
   std::error_code perform(SimpleFile &mergedFile) override {
     // Scan all references in all atoms.

@@ -36,6 +36,12 @@
 #include <sys/ucontext.h>
 #include <unistd.h>
 
+// from <crt_externs.h>, but we don't have that file on iOS
+extern "C" {
+  extern char ***_NSGetArgv(void);
+  extern char ***_NSGetEnviron(void);
+}
+
 namespace __asan {
 
 void InitializePlatformInterceptors() {}

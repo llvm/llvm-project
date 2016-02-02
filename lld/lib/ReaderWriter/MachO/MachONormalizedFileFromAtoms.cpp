@@ -377,11 +377,11 @@ void Util::processDefinedAtoms(const lld::File &atomFile) {
 }
 
 void Util::processAtomAttributes(const DefinedAtom *atom) {
-  auto *machoFile = static_cast<const mach_o::MachOFile *>(&atom->file());
   // If the file doesn't use subsections via symbols, then make sure we don't
   // add that flag to the final output file if we have a relocatable file.
-  if (!machoFile->subsectionsViaSymbols())
-    _subsectionsViaSymbols = false;
+  if (auto *machoFile = dyn_cast<mach_o::MachOFile>(&atom->file()))
+    if (!machoFile->subsectionsViaSymbols())
+      _subsectionsViaSymbols = false;
 }
 
 void Util::assignAtomToSection(const DefinedAtom *atom) {

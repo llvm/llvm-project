@@ -114,6 +114,8 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   StringTableSection<ELFT> StrTab(".strtab", false);
   if (!Config->StripAll)
     Out<ELFT>::StrTab = &StrTab;
+  else
+    Out<ELFT>::StrTab = nullptr;
   StringTableSection<ELFT> DynStrTab(".dynstr", true);
   Out<ELFT>::DynStrTab = &DynStrTab;
   GotSection<ELFT> Got;
@@ -121,27 +123,37 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   GotPltSection<ELFT> GotPlt;
   if (Target->UseLazyBinding)
     Out<ELFT>::GotPlt = &GotPlt;
+  else
+    Out<ELFT>::GotPlt = nullptr;
   PltSection<ELFT> Plt;
   Out<ELFT>::Plt = &Plt;
   std::unique_ptr<SymbolTableSection<ELFT>> SymTab;
   if (!Config->StripAll) {
     SymTab.reset(new SymbolTableSection<ELFT>(*Symtab, *Out<ELFT>::StrTab));
     Out<ELFT>::SymTab = SymTab.get();
+  } else {
+    Out<ELFT>::SymTab = nullptr;
   }
   SymbolTableSection<ELFT> DynSymTab(*Symtab, *Out<ELFT>::DynStrTab);
   Out<ELFT>::DynSymTab = &DynSymTab;
   HashTableSection<ELFT> HashTab;
   if (Config->SysvHash)
     Out<ELFT>::HashTab = &HashTab;
+  else
+    Out<ELFT>::HashTab = nullptr;
   GnuHashTableSection<ELFT> GnuHashTab;
   if (Config->GnuHash)
     Out<ELFT>::GnuHashTab = &GnuHashTab;
+  else
+    Out<ELFT>::GnuHashTab = nullptr;
   bool IsRela = shouldUseRela<ELFT>();
   RelocationSection<ELFT> RelaDyn(IsRela ? ".rela.dyn" : ".rel.dyn", IsRela);
   Out<ELFT>::RelaDyn = &RelaDyn;
   RelocationSection<ELFT> RelaPlt(IsRela ? ".rela.plt" : ".rel.plt", IsRela);
   if (Target->UseLazyBinding)
     Out<ELFT>::RelaPlt = &RelaPlt;
+  else
+    Out<ELFT>::RelaPlt = nullptr;
   DynamicSection<ELFT> Dynamic(*Symtab);
   Out<ELFT>::Dynamic = &Dynamic;
   EhFrameHeader<ELFT> EhFrameHdr;
@@ -163,6 +175,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   openFile(Config->OutputFile);
   writeHeader();
   writeSections();
+  if (HasError)
+    return;
   fatal(Buffer->commit());
 }
 
@@ -1339,17 +1353,8 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
     Sec->writeTo(Buf + Sec->getFileOff());
   }
 
-  // Write all sections but string table sections. We know the sizes of the
-  // string tables already, but they may not have actual strings yet (only
-  // room may be reserved), because writeTo() is allowed to add actual
-  // strings to the string tables.
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Opd && Sec->getType() != SHT_STRTAB)
-      Sec->writeTo(Buf + Sec->getFileOff());
-
-  // Write string table sections.
-  for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Opd && Sec->getType() == SHT_STRTAB)
+    if (Sec != Out<ELFT>::Opd)
       Sec->writeTo(Buf + Sec->getFileOff());
 }
 

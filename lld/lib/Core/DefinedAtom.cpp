@@ -44,6 +44,7 @@ DefinedAtom::ContentPermissions DefinedAtom::permissions(ContentType type) {
   case typeRONote:
   case typeNoAlloc:
   case typeObjCImageInfo:
+  case typeObjCMethodList:
     return permR__;
 
   case typeData:

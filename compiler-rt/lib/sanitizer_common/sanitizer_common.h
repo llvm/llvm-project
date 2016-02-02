@@ -367,7 +367,7 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded));
 
 // Functions related to signal handling.
 typedef void (*SignalHandlerType)(int, void *, void *);
-bool IsDeadlySignal(int signum);
+bool IsHandledDeadlySignal(int signum);
 void InstallDeadlySignalHandlers(SignalHandlerType handler);
 // Alternative signal stack (POSIX-only).
 void SetAlternateSignalStack();
