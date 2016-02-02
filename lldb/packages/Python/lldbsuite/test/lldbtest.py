@@ -636,7 +636,7 @@ def check_list_or_lambda(list_or_lambda, value):
 def matchArchitectures(archs, actual_arch):
     retype = type(re.compile('hello, world'))
     list_passes = isinstance(archs, list) and actual_arch in archs
-    basestring_passes = isinstance(archs, basestring) and actual_arch == archs
+    basestring_passes = isinstance(archs, six.string_types) and actual_arch == archs
     regex_passes = isinstance(archs, retype) and re.match(archs, actual_arch)
 
     return (list_passes or basestring_passes or regex_passes)
