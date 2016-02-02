@@ -3406,6 +3406,8 @@ mapToDimension(__isl_take isl_union_set *USet, int N) {
 
   auto Res = isl_union_set_foreach_set(USet, &mapToDimension_AddSet, &Data);
 
+  (void)Res;
+
   assert(Res == isl_stat_ok);
 
   isl_union_set_free(USet);
