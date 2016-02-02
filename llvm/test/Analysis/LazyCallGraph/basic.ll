@@ -3,7 +3,7 @@
 ; Basic validation of the call graph analysis used in the new pass manager.
 
 define void @f() {
-; CHECK-LABEL: Call edges in function: f
+; CHECK-LABEL: Edges in function: f
 ; CHECK-NOT: ->
 
 entry:
@@ -51,8 +51,8 @@ define void @f12() {
 declare i32 @__gxx_personality_v0(...)
 
 define void @test0() {
-; CHECK-LABEL: Call edges in function: test0
-; CHECK-NEXT: -> f
+; CHECK-LABEL: Edges in function: test0
+; CHECK-NEXT: call -> f
 ; CHECK-NOT: ->
 
 entry:
@@ -64,19 +64,19 @@ entry:
 }
 
 define void ()* @test1(void ()** %x) personality i32 (...)* @__gxx_personality_v0 {
-; CHECK-LABEL: Call edges in function: test1
-; CHECK-NEXT: -> f12
-; CHECK-NEXT: -> f11
-; CHECK-NEXT: -> f10
-; CHECK-NEXT: -> f7
-; CHECK-NEXT: -> f9
-; CHECK-NEXT: -> f8
-; CHECK-NEXT: -> f6
-; CHECK-NEXT: -> f5
-; CHECK-NEXT: -> f4
-; CHECK-NEXT: -> f3
-; CHECK-NEXT: -> f2
-; CHECK-NEXT: -> f1
+; CHECK-LABEL: Edges in function: test1
+; CHECK-NEXT: call -> f6
+; CHECK-NEXT: call -> f10
+; CHECK-NEXT: ref -> f12
+; CHECK-NEXT: ref -> f11
+; CHECK-NEXT: ref -> f7
+; CHECK-NEXT: ref -> f9
+; CHECK-NEXT: ref -> f8
+; CHECK-NEXT: ref -> f5
+; CHECK-NEXT: ref -> f4
+; CHECK-NEXT: ref -> f3
+; CHECK-NEXT: ref -> f2
+; CHECK-NEXT: ref -> f1
 ; CHECK-NOT: ->
 
 entry:
@@ -108,14 +108,14 @@ unwind:
 @h = constant void ()* @f7
 
 define void @test2() {
-; CHECK-LABEL: Call edges in function: test2
-; CHECK-NEXT: -> f7
-; CHECK-NEXT: -> f6
-; CHECK-NEXT: -> f5
-; CHECK-NEXT: -> f4
-; CHECK-NEXT: -> f3
-; CHECK-NEXT: -> f2
-; CHECK-NEXT: -> f1
+; CHECK-LABEL: Edges in function: test2
+; CHECK-NEXT: ref -> f7
+; CHECK-NEXT: ref -> f6
+; CHECK-NEXT: ref -> f5
+; CHECK-NEXT: ref -> f4
+; CHECK-NEXT: ref -> f3
+; CHECK-NEXT: ref -> f2
+; CHECK-NEXT: ref -> f1
 ; CHECK-NOT: ->
 
   load i8*, i8** bitcast (void ()** @g to i8**)
@@ -152,13 +152,13 @@ define void @test2() {
 ; CHECK-NEXT:    test2
 ;
 ; CHECK-LABEL: SCC with 1 functions:
+; CHECK-NEXT:    f10
+;
+; CHECK-LABEL: SCC with 1 functions:
 ; CHECK-NEXT:    f12
 ;
 ; CHECK-LABEL: SCC with 1 functions:
 ; CHECK-NEXT:    f11
-;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f10
 ;
 ; CHECK-LABEL: SCC with 1 functions:
 ; CHECK-NEXT:    f9

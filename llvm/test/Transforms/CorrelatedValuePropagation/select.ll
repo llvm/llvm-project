@@ -73,3 +73,97 @@ if.end:
   ret i32 %sel
 ; CHECK: ret i32 1
 }
+
+define i1 @test1(i32* %p, i1 %unknown) {
+; CHECK-LABEL: @test1
+  %pval = load i32, i32* %p
+  %cmp1 = icmp slt i32 %pval, 255
+  br i1 %cmp1, label %next, label %exit
+
+next:
+  %min = select i1 %unknown, i32 %pval, i32 5
+  ;; TODO: This pointless branch shouldn't be neccessary
+  br label %next2
+next2:
+; CHECK-LABEL: next2:
+; CHECK: ret i1 false
+  %res = icmp eq i32 %min, 255
+  ret i1 %res
+
+exit:
+; CHECK-LABEL: exit:
+; CHECK: ret i1 true
+  ret i1 true
+}
+
+; Check that we take a conservative meet
+define i1 @test2(i32* %p, i32 %qval, i1 %unknown) {
+; CHECK-LABEL: test2
+  %pval = load i32, i32* %p
+  %cmp1 = icmp slt i32 %pval, 255
+  br i1 %cmp1, label %next, label %exit
+
+next:
+  %min = select i1 %unknown, i32 %pval, i32 %qval
+  ;; TODO: This pointless branch shouldn't be neccessary
+  br label %next2
+next2:
+; CHECK-LABEL: next2
+; CHECK: ret i1 %res
+  %res = icmp eq i32 %min, 255
+  ret i1 %res
+
+exit:
+; CHECK-LABEL: exit:
+; CHECK: ret i1 true
+  ret i1 true
+}
+
+; Same as @test2, but for the opposite select input
+define i1 @test3(i32* %p, i32 %qval, i1 %unknown) {
+; CHECK-LABEL: test3
+  %pval = load i32, i32* %p
+  %cmp1 = icmp slt i32 %pval, 255
+  br i1 %cmp1, label %next, label %exit
+
+next:
+  %min = select i1 %unknown, i32 %qval, i32 %pval
+  ;; TODO: This pointless branch shouldn't be neccessary
+  br label %next2
+next2:
+; CHECK-LABEL: next2
+; CHECK: ret i1 %res
+  %res = icmp eq i32 %min, 255
+  ret i1 %res
+
+exit:
+; CHECK-LABEL: exit:
+; CHECK: ret i1 true
+  ret i1 true
+}
+
+; Conflicting constants (i.e. isOverdefined result)
+; NOTE: Using doubles in this version is a bit of a hack.  This
+; is to get around the fact that all integers (including constants
+; and non-constants) are actually represented as constant-ranges.
+define i1 @test4(i32* %p, i32 %qval, i1 %unknown) {
+; CHECK-LABEL: test4
+  %pval = load i32, i32* %p
+  %cmp1 = icmp slt i32 %pval, 255
+  br i1 %cmp1, label %next, label %exit
+
+next:
+  %min = select i1 %unknown, double 1.0, double 0.0
+  ;; TODO: This pointless branch shouldn't be neccessary
+  br label %next2
+next2:
+; CHECK-LABEL: next2
+; CHECK: ret i1 %res
+  %res = fcmp oeq double %min, 300.0
+  ret i1 %res
+
+exit:
+; CHECK-LABEL: exit:
+; CHECK: ret i1 true
+  ret i1 true
+}

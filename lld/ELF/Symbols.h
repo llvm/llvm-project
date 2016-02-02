@@ -86,6 +86,7 @@ public:
   bool isUsedInDynamicReloc() const { return IsUsedInDynamicReloc; }
   void setUsedInDynamicReloc() { IsUsedInDynamicReloc = true; }
   bool isTls() const { return IsTls; }
+  bool isFunc() const { return IsFunc; }
 
   // Returns the symbol name.
   StringRef getName() const { return Name; }
@@ -127,9 +128,9 @@ public:
 
 protected:
   SymbolBody(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
-             bool IsTls)
+             bool IsTls, bool IsFunc)
       : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility), IsTls(IsTls),
-        Name(Name) {
+        IsFunc(IsFunc), Name(Name) {
     IsUsedInRegularObj = K != SharedKind && K != LazyKind;
     IsUsedInDynamicReloc = 0;
   }
@@ -148,6 +149,7 @@ protected:
   unsigned IsUsedInDynamicReloc : 1;
 
   unsigned IsTls : 1;
+  unsigned IsFunc : 1;
   StringRef Name;
   Symbol *Backref = nullptr;
 };
@@ -155,7 +157,8 @@ protected:
 // The base class for any defined symbols.
 class Defined : public SymbolBody {
 public:
-  Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility, bool IsTls);
+  Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility, bool IsTls,
+          bool IsFunction);
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
@@ -167,7 +170,8 @@ protected:
 public:
   DefinedElf(Kind K, StringRef N, const Elf_Sym &Sym)
       : Defined(K, N, Sym.getBinding() == llvm::ELF::STB_WEAK,
-                Sym.getVisibility(), Sym.getType() == llvm::ELF::STT_TLS),
+                Sym.getVisibility(), Sym.getType() == llvm::ELF::STT_TLS,
+                Sym.getType() == llvm::ELF::STT_FUNC),
         Sym(Sym) {}
 
   const Elf_Sym &Sym;
@@ -289,7 +293,8 @@ public:
 class Lazy : public SymbolBody {
 public:
   Lazy(ArchiveFile *F, const llvm::object::Archive::Symbol S)
-      : SymbolBody(LazyKind, S.getName(), false, llvm::ELF::STV_DEFAULT, false),
+      : SymbolBody(LazyKind, S.getName(), false, llvm::ELF::STV_DEFAULT,
+                   /*IsTls*/ false, /*IsFunction*/ false),
         File(F), Sym(S) {}
 
   static bool classof(const SymbolBody *S) { return S->kind() == LazyKind; }

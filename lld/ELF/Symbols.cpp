@@ -146,12 +146,13 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
 }
 
 Defined::Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
-                 bool IsTls)
-    : SymbolBody(K, Name, IsWeak, Visibility, IsTls) {}
+                 bool IsTls, bool IsFunction)
+    : SymbolBody(K, Name, IsWeak, Visibility, IsTls, IsFunction) {}
 
 Undefined::Undefined(SymbolBody::Kind K, StringRef N, bool IsWeak,
                      uint8_t Visibility, bool IsTls)
-    : SymbolBody(K, N, IsWeak, Visibility, IsTls), CanKeepUndefined(false) {}
+    : SymbolBody(K, N, IsWeak, Visibility, IsTls, /*IsFunction*/ false),
+      CanKeepUndefined(false) {}
 
 Undefined::Undefined(StringRef N, bool IsWeak, uint8_t Visibility,
                      bool CanKeepUndefined)
@@ -170,12 +171,14 @@ UndefinedElf<ELFT>::UndefinedElf(StringRef N, const Elf_Sym &Sym)
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
                                          OutputSectionBase<ELFT> &Section)
-    : Defined(SymbolBody::DefinedSyntheticKind, N, false, STV_DEFAULT, false),
+    : Defined(SymbolBody::DefinedSyntheticKind, N, false, STV_DEFAULT,
+              /*IsTls*/ false, /*IsFunction*/ false),
       Value(Value), Section(Section) {}
 
 DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
                              bool IsWeak, uint8_t Visibility)
-    : Defined(SymbolBody::DefinedCommonKind, N, IsWeak, Visibility, false) {
+    : Defined(SymbolBody::DefinedCommonKind, N, IsWeak, Visibility,
+              /*IsTls*/ false, /*IsFunction*/ false) {
   MaxAlignment = Alignment;
   this->Size = Size;
 }
@@ -187,7 +190,7 @@ std::unique_ptr<InputFile> Lazy::getMember() {
   // read from the library.
   if (MBRef.getBuffer().empty())
     return std::unique_ptr<InputFile>(nullptr);
-  return createObjectFile(MBRef);
+  return createObjectFile(MBRef, File->getName());
 }
 
 template <class ELFT> static void doInitSymbols() {

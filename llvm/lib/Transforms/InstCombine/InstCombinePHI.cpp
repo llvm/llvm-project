@@ -768,7 +768,7 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
 
   // If we have no users, they must be all self uses, just nuke the PHI.
   if (PHIUsers.empty())
-    return ReplaceInstUsesWith(FirstPhi, UndefValue::get(FirstPhi.getType()));
+    return replaceInstUsesWith(FirstPhi, UndefValue::get(FirstPhi.getType()));
 
   // If this phi node is transformable, create new PHIs for all the pieces
   // extracted out of it.  First, sort the users by their offset and size.
@@ -864,22 +864,22 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
     }
 
     // Replace the use of this piece with the PHI node.
-    ReplaceInstUsesWith(*PHIUsers[UserI].Inst, EltPHI);
+    replaceInstUsesWith(*PHIUsers[UserI].Inst, EltPHI);
   }
 
   // Replace all the remaining uses of the PHI nodes (self uses and the lshrs)
   // with undefs.
   Value *Undef = UndefValue::get(FirstPhi.getType());
   for (unsigned i = 1, e = PHIsToSlice.size(); i != e; ++i)
-    ReplaceInstUsesWith(*PHIsToSlice[i], Undef);
-  return ReplaceInstUsesWith(FirstPhi, Undef);
+    replaceInstUsesWith(*PHIsToSlice[i], Undef);
+  return replaceInstUsesWith(FirstPhi, Undef);
 }
 
 // PHINode simplification
 //
 Instruction *InstCombiner::visitPHINode(PHINode &PN) {
   if (Value *V = SimplifyInstruction(&PN, DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(PN, V);
+    return replaceInstUsesWith(PN, V);
 
   if (Instruction *Result = FoldPHIArgZextsIntoPHI(PN))
     return Result;
@@ -905,7 +905,7 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
       SmallPtrSet<PHINode*, 16> PotentiallyDeadPHIs;
       PotentiallyDeadPHIs.insert(&PN);
       if (DeadPHICycle(PU, PotentiallyDeadPHIs))
-        return ReplaceInstUsesWith(PN, UndefValue::get(PN.getType()));
+        return replaceInstUsesWith(PN, UndefValue::get(PN.getType()));
     }
 
     // If this phi has a single use, and if that use just computes a value for
@@ -917,7 +917,7 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
     if (PHIUser->hasOneUse() &&
         (isa<BinaryOperator>(PHIUser) || isa<GetElementPtrInst>(PHIUser)) &&
         PHIUser->user_back() == &PN) {
-      return ReplaceInstUsesWith(PN, UndefValue::get(PN.getType()));
+      return replaceInstUsesWith(PN, UndefValue::get(PN.getType()));
     }
   }
 
@@ -951,7 +951,7 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
       if (InValNo == NumIncomingVals) {
         SmallPtrSet<PHINode*, 16> ValueEqualPHIs;
         if (PHIsEqualValue(&PN, NonPhiInVal, ValueEqualPHIs))
-          return ReplaceInstUsesWith(PN, NonPhiInVal);
+          return replaceInstUsesWith(PN, NonPhiInVal);
       }
     }
   }

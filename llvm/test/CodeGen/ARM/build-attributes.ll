@@ -1192,7 +1192,7 @@
 ; CORTEX-R7:  .eabi_attribute 7, 82
 ; CORTEX-R7:  .eabi_attribute 8, 1
 ; CORTEX-R7:  .eabi_attribute 9, 2
-; CORTEX-R7:  .fpu vfpv3xd
+; CORTEX-R7:  .fpu vfpv3-d16-fp16
 ; CORTEX-R7-NOT:   .eabi_attribute 19
 ;; We default to IEEE 754 compliance
 ; CORTEX-R7:  .eabi_attribute 20, 1
@@ -1201,7 +1201,6 @@
 ; CORTEX-R7:  .eabi_attribute 23, 3
 ; CORTEX-R7:  .eabi_attribute 24, 1
 ; CORTEX-R7:  .eabi_attribute 25, 1
-; CORTEX-R7:  .eabi_attribute 27, 1
 ; CORTEX-R7-NOT:  .eabi_attribute 28
 ; CORTEX-R7:  .eabi_attribute 36, 1
 ; CORTEX-R7:  .eabi_attribute 38, 1

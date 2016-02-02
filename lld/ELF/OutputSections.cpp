@@ -600,7 +600,6 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
 
   Out<ELFT>::DynStrTab->finalize();
 
-
   if (Out<ELFT>::RelaDyn->hasRelocs()) {
     bool IsRela = Out<ELFT>::RelaDyn->isRela();
     Add({IsRela ? DT_RELA : DT_REL, Out<ELFT>::RelaDyn});
@@ -896,7 +895,11 @@ bool elf2::canBePreempted(const SymbolBody *Body, bool NeedsGot) {
   }
   if (!Config->Shared)
     return false;
-  return Body->getVisibility() == STV_DEFAULT;
+  if (Body->getVisibility() != STV_DEFAULT)
+    return false;
+  if (Config->Bsymbolic || (Config->BsymbolicFunctions && Body->isFunc()))
+    return false;
+  return true;
 }
 
 template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {

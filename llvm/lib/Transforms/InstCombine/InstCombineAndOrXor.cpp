@@ -243,7 +243,7 @@ Instruction *InstCombiner::OptAndOp(Instruction *Op,
 
     if (CI->getValue() == ShlMask)
       // Masking out bits that the shift already masks.
-      return ReplaceInstUsesWith(TheAnd, Op);   // No need for the and.
+      return replaceInstUsesWith(TheAnd, Op);   // No need for the and.
 
     if (CI != AndRHS) {                  // Reducing bits set in and.
       TheAnd.setOperand(1, CI);
@@ -263,7 +263,7 @@ Instruction *InstCombiner::OptAndOp(Instruction *Op,
 
     if (CI->getValue() == ShrMask)
       // Masking out bits that the shift already masks.
-      return ReplaceInstUsesWith(TheAnd, Op);
+      return replaceInstUsesWith(TheAnd, Op);
 
     if (CI != AndRHS) {
       TheAnd.setOperand(1, CI);  // Reduce bits set in and cst.
@@ -1248,14 +1248,14 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyAndInst(Op0, Op1, DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // (A|B)&(A|C) -> A|(B&C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
@@ -1263,7 +1263,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     return &I;
 
   if (Value *V = SimplifyBSwap(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (ConstantInt *AndRHS = dyn_cast<ConstantInt>(Op1)) {
     const APInt &AndRHSMask = AndRHS->getValue();
@@ -1451,7 +1451,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
     if (LHS && RHS)
       if (Value *Res = FoldAndOfICmps(LHS, RHS))
-        return ReplaceInstUsesWith(I, Res);
+        return replaceInstUsesWith(I, Res);
 
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'and' instructions might have to be created.
@@ -1459,18 +1459,18 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     if (LHS && match(Op1, m_OneUse(m_And(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
         if (Value *Res = FoldAndOfICmps(LHS, Cmp))
-          return ReplaceInstUsesWith(I, Builder->CreateAnd(Res, Y));
+          return replaceInstUsesWith(I, Builder->CreateAnd(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
         if (Value *Res = FoldAndOfICmps(LHS, Cmp))
-          return ReplaceInstUsesWith(I, Builder->CreateAnd(Res, X));
+          return replaceInstUsesWith(I, Builder->CreateAnd(Res, X));
     }
     if (RHS && match(Op0, m_OneUse(m_And(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
         if (Value *Res = FoldAndOfICmps(Cmp, RHS))
-          return ReplaceInstUsesWith(I, Builder->CreateAnd(Res, Y));
+          return replaceInstUsesWith(I, Builder->CreateAnd(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
         if (Value *Res = FoldAndOfICmps(Cmp, RHS))
-          return ReplaceInstUsesWith(I, Builder->CreateAnd(Res, X));
+          return replaceInstUsesWith(I, Builder->CreateAnd(Res, X));
     }
   }
 
@@ -1478,7 +1478,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
     if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
       if (Value *Res = FoldAndOfFCmps(LHS, RHS))
-        return ReplaceInstUsesWith(I, Res);
+        return replaceInstUsesWith(I, Res);
 
 
   if (CastInst *Op0C = dyn_cast<CastInst>(Op0)) {
@@ -2055,14 +2055,14 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyOrInst(Op0, Op1, DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // (A&B)|(A&C) -> A&(B|C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
@@ -2070,7 +2070,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     return &I;
 
   if (Value *V = SimplifyBSwap(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (ConstantInt *RHS = dyn_cast<ConstantInt>(Op1)) {
     ConstantInt *C1 = nullptr; Value *X = nullptr;
@@ -2335,7 +2335,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
     if (LHS && RHS)
       if (Value *Res = FoldOrOfICmps(LHS, RHS, &I))
-        return ReplaceInstUsesWith(I, Res);
+        return replaceInstUsesWith(I, Res);
 
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'or' instructions might have to be created.
@@ -2343,18 +2343,18 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     if (LHS && match(Op1, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
         if (Value *Res = FoldOrOfICmps(LHS, Cmp, &I))
-          return ReplaceInstUsesWith(I, Builder->CreateOr(Res, Y));
+          return replaceInstUsesWith(I, Builder->CreateOr(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
         if (Value *Res = FoldOrOfICmps(LHS, Cmp, &I))
-          return ReplaceInstUsesWith(I, Builder->CreateOr(Res, X));
+          return replaceInstUsesWith(I, Builder->CreateOr(Res, X));
     }
     if (RHS && match(Op0, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
         if (Value *Res = FoldOrOfICmps(Cmp, RHS, &I))
-          return ReplaceInstUsesWith(I, Builder->CreateOr(Res, Y));
+          return replaceInstUsesWith(I, Builder->CreateOr(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
         if (Value *Res = FoldOrOfICmps(Cmp, RHS, &I))
-          return ReplaceInstUsesWith(I, Builder->CreateOr(Res, X));
+          return replaceInstUsesWith(I, Builder->CreateOr(Res, X));
     }
   }
 
@@ -2362,7 +2362,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
     if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
       if (Value *Res = FoldOrOfFCmps(LHS, RHS))
-        return ReplaceInstUsesWith(I, Res);
+        return replaceInstUsesWith(I, Res);
 
   // fold (or (cast A), (cast B)) -> (cast (or A, B))
   if (CastInst *Op0C = dyn_cast<CastInst>(Op0)) {
@@ -2440,14 +2440,14 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (Value *V = SimplifyXorInst(Op0, Op1, DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // (A&B)^(A&C) -> A&(B^C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
@@ -2455,7 +2455,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     return &I;
 
   if (Value *V = SimplifyBSwap(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // Is this a ~ operation?
   if (Value *NotOp = dyn_castNotVal(&I)) {
@@ -2724,7 +2724,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
           Value *Op0 = LHS->getOperand(0), *Op1 = LHS->getOperand(1);
           unsigned Code = getICmpCode(LHS) ^ getICmpCode(RHS);
           bool isSigned = LHS->isSigned() || RHS->isSigned();
-          return ReplaceInstUsesWith(I,
+          return replaceInstUsesWith(I,
                                getNewICmpValue(isSigned, Code, Op0, Op1,
                                                Builder));
         }

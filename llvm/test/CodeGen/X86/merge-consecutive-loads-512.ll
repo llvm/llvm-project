@@ -95,11 +95,11 @@ define <8 x double> @merge_8f64_f64_12zzuuzz(double* %ptr) nounwind uwtable noin
 define <8 x double> @merge_8f64_f64_1u3u5zu8(double* %ptr) nounwind uwtable noinline ssp {
 ; ALL-LABEL: merge_8f64_f64_1u3u5zu8:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vmovsd 40(%rdi), %xmm0
+; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; ALL-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vmovsd 8(%rdi), %xmm1
-; ALL-NEXT:    vmovsd 24(%rdi), %xmm2
+; ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; ALL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; ALL-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; ALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; ALL-NEXT:    retq
@@ -249,7 +249,7 @@ define <16 x float> @merge_16f32_f32_0uu3zzuuuuuzCuEF(float* %ptr) nounwind uwta
 ; ALL-LABEL: merge_16f32_f32_0uu3zzuuuuuzCuEF:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vmovss 48(%rdi), %xmm1
+; ALL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ALL-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; ALL-NEXT:    vmovupd (%rdi), %xmm1
@@ -344,7 +344,7 @@ define <16 x i32> @merge_16i32_i32_0uu3zzuuuuuzCuEF(i32* %ptr) nounwind uwtable 
 ; ALL-LABEL: merge_16i32_i32_0uu3zzuuuuuzCuEF:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vmovd 48(%rdi), %xmm1
+; ALL-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ALL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; ALL-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; ALL-NEXT:    vmovdqu (%rdi), %xmm1

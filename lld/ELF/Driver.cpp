@@ -95,8 +95,9 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   case file_magic::archive:
     if (WholeArchive) {
+      StringRef S = MBRef.getBufferIdentifier();
       for (MemoryBufferRef MB : getArchiveMembers(MBRef))
-        Files.push_back(createObjectFile(MB));
+        Files.push_back(createObjectFile(MB, S));
       return;
     }
     Files.push_back(make_unique<ArchiveFile>(MBRef));
@@ -187,6 +188,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
+  Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
   Config->Demangle = !Args.hasArg(OPT_no_demangle);
   Config->DiscardAll = Args.hasArg(OPT_discard_all);
   Config->DiscardLocals = Args.hasArg(OPT_discard_locals);

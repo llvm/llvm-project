@@ -993,9 +993,9 @@ def masked_load_unaligned : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   return isa<MaskedLoadSDNode>(N);
 }]>;
 
-// masked store fragments.
+// Masked store fragments.
 // X86mstore can't be implemented in core DAG files because some targets
-// doesn't support vector type ( llvm-tblgen will fail)
+// do not support vector types (llvm-tblgen will fail).
 def X86mstore : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                         (masked_store node:$src1, node:$src2, node:$src3), [{
   return !cast<MaskedStoreSDNode>(N)->isTruncatingStore();

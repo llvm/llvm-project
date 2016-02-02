@@ -51,8 +51,16 @@ and is used to fuzz various parts of LLVM,
 but the Fuzzer itself does not (and should not) depend on any
 part of LLVM and can be used for other projects w/o requiring the rest of LLVM.
 
-Flags
-=====
+Usage:
+======
+To run fuzzing pass 0 or more directories::
+
+./fuzzer [-flag1=val1 [-flag2=val2 ...] ] [dir1 [dir2 ...] ]
+
+To run individual tests without fuzzing pass 1 or more files::
+
+./fuzzer [-flag1=val1 [-flag2=val2 ...] ] file1 [file2 ...]
+
 The most important flags are::
 
   seed                               	0	Random seed. If 0, seed is generated.
@@ -72,7 +80,6 @@ The most important flags are::
   sync_timeout                       	600	Minimum timeout between syncs.
   use_traces                            0       Experimental: use instruction traces
   only_ascii                            0       If 1, generate only ASCII (isprint+isspace) inputs.
-  test_single_input                     ""      Use specified file content as test input. Test will be run only once. Useful for debugging a particular case.
   artifact_prefix                       ""      Write fuzzing artifacts (crash, timeout, or slow inputs) as $(artifact_prefix)file
   exact_artifact_path                   ""      Write the single artifact on failure (crash, timeout) as $(exact_artifact_path). This overrides -artifact_prefix and will not use checksum in the file name. Do not use the same path for several parallel processes.
 

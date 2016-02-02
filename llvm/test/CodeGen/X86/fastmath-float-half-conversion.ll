@@ -5,7 +5,7 @@ define zeroext i16 @test1_fast(double %d) #0 {
 ; ALL-LABEL: test1_fast:
 ; F16C-NOT: callq {{_+}}truncdfhf2
 ; F16C: vcvtsd2ss %xmm0, %xmm0, %xmm0
-; F16C-NEXT: vcvtps2ph $0, %xmm0, %xmm0
+; F16C-NEXT: vcvtps2ph $4, %xmm0, %xmm0
 ; AVX: callq {{_+}}truncdfhf2
 ; ALL: ret
 entry:
@@ -19,7 +19,7 @@ define zeroext i16 @test2_fast(x86_fp80 %d) #0 {
 ; F16C: fldt
 ; F16C-NEXT: fstps
 ; F16C-NEXT: vmovss
-; F16C-NEXT: vcvtps2ph $0, %xmm0, %xmm0
+; F16C-NEXT: vcvtps2ph $4, %xmm0, %xmm0
 ; AVX: callq {{_+}}truncxfhf2
 ; ALL: ret
 entry:

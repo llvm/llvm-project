@@ -4604,7 +4604,11 @@ bool X86InstrInfo::getMemOpBaseRegImmOfs(MachineInstr *MemOp, unsigned &BaseReg,
 
   MemRefBegin += X86II::getOperandBias(Desc);
 
-  BaseReg = MemOp->getOperand(MemRefBegin + X86::AddrBaseReg).getReg();
+  MachineOperand &BaseMO = MemOp->getOperand(MemRefBegin + X86::AddrBaseReg);
+  if (!BaseMO.isReg()) // Can be an MO_FrameIndex
+    return false;
+
+  BaseReg = BaseMO.getReg();
   if (MemOp->getOperand(MemRefBegin + X86::AddrScaleAmt).getImm() != 1)
     return false;
 

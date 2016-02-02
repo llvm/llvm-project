@@ -354,6 +354,8 @@ namespace {
       if (!BlockValueSet.insert(BV).second)
         return false;  // It's already in the stack.
 
+      DEBUG(dbgs() << "PUSH: " << *BV.second << " in " << BV.first->getName()
+                   << "\n");
       BlockValueStack.push(BV);
       return true;
     }
@@ -389,6 +391,8 @@ namespace {
                                  Value *Val, BasicBlock *BB);
     bool solveBlockValuePHINode(LVILatticeVal &BBLV,
                                 PHINode *PN, BasicBlock *BB);
+    bool solveBlockValueSelect(LVILatticeVal &BBLV,
+                               SelectInst *S, BasicBlock *BB);
     bool solveBlockValueConstantRange(LVILatticeVal &BBLV,
                                       Instruction *BBI, BasicBlock *BB);
     void mergeAssumeBlockValueConstantRange(Value *Val, LVILatticeVal &BBLV,
@@ -508,6 +512,9 @@ void LazyValueInfoCache::solve() {
       assert(hasCachedValueInfo(e.second, e.first) &&
              "Result should be in cache!");
 
+      DEBUG(dbgs() << "POP " << *e.second << " in " << e.first->getName()
+                   << " = " << lookup(e.second)[e.first] << "\n");
+
       BlockValueStack.pop();
       BlockValueSet.erase(e);
     } else {
@@ -582,6 +589,13 @@ bool LazyValueInfoCache::solveBlockValue(Value *Val, BasicBlock *BB) {
 
   if (PHINode *PN = dyn_cast<PHINode>(BBI)) {
     if (!solveBlockValuePHINode(Res, PN, BB))
+      return false;
+    insertResult(Val, BB, Res);
+    return true;
+  }
+
+  if (auto *SI = dyn_cast<SelectInst>(BBI)) {
+    if (!solveBlockValueSelect(Res, SI, BB))
       return false;
     insertResult(Val, BB, Res);
     return true;
@@ -809,6 +823,45 @@ void LazyValueInfoCache::mergeAssumeBlockValueConstantRange(Value *Val,
   }
 }
 
+bool LazyValueInfoCache::solveBlockValueSelect(LVILatticeVal &BBLV,
+                                               SelectInst *SI, BasicBlock *BB) {
+
+  // Recurse on our inputs if needed
+  if (!hasBlockValue(SI->getTrueValue(), BB)) {
+    if (pushBlockValue(std::make_pair(BB, SI->getTrueValue())))
+      return false;
+    BBLV.markOverdefined();
+    return true;
+  }
+  LVILatticeVal TrueVal = getBlockValue(SI->getTrueValue(), BB);
+  // If we hit overdefined, don't ask more queries.  We want to avoid poisoning
+  // extra slots in the table if we can.
+  if (TrueVal.isOverdefined()) {
+    BBLV.markOverdefined();
+    return true;
+  }
+
+  if (!hasBlockValue(SI->getFalseValue(), BB)) {
+    if (pushBlockValue(std::make_pair(BB, SI->getFalseValue())))
+      return false;
+    BBLV.markOverdefined();
+    return true;
+  }
+  LVILatticeVal FalseVal = getBlockValue(SI->getFalseValue(), BB);
+  // If we hit overdefined, don't ask more queries.  We want to avoid poisoning
+  // extra slots in the table if we can.
+  if (FalseVal.isOverdefined()) {
+    BBLV.markOverdefined();
+    return true;
+  }
+
+  LVILatticeVal Result;  // Start Undefined.
+  Result.mergeIn(TrueVal, DL);
+  Result.mergeIn(FalseVal, DL);
+  BBLV = Result;
+  return true;
+}
+
 bool LazyValueInfoCache::solveBlockValueConstantRange(LVILatticeVal &BBLV,
                                                       Instruction *BBI,
                                                       BasicBlock *BB) {
@@ -935,7 +988,8 @@ bool getValueFromFromCondition(Value *Val, ICmpInst *ICI,
 }
 
 /// \brief Compute the value of Val on the edge BBFrom -> BBTo. Returns false if
-/// Val is not constrained on the edge.
+/// Val is not constrained on the edge.  Result is unspecified if return value
+/// is false.
 static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
                               BasicBlock *BBTo, LVILatticeVal &Result) {
   // TODO: Handle more complex conditionals. If (v == 0 || v2 < 1) is false, we
@@ -991,6 +1045,69 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
   return false;
 }
 
+/// Returns true if this lattice value represents at most one possible value.
+/// This is as precise as any lattice value can get while still representing
+/// reachable code.
+static bool hasSingleValue(LVILatticeVal Val) {
+  if (Val.isConstantRange() &&
+      Val.getConstantRange().isSingleElement())
+    // Integer constants are single element ranges
+    return true;
+  if (Val.isConstant())
+    // Non integer constants
+    return true;
+  return false;
+}
+
+/// Combine two sets of facts about the same value into a single set of
+/// facts.  Note that this method is not suitable for merging facts along
+/// different paths in a CFG; that's what the mergeIn function is for.  This
+/// is for merging facts gathered about the same value at the same location
+/// through two independent means.
+/// Notes:
+/// * This method does not promise to return the most precise possible lattice
+///   value implied by A and B.  It is allowed to return any lattice element
+///   which is at least as strong as *either* A or B (unless our facts
+///   conflict, see below).  
+/// * Due to unreachable code, the intersection of two lattice values could be
+///   contradictory.  If this happens, we return some valid lattice value so as
+///   not confuse the rest of LVI.  Ideally, we'd always return Undefined, but
+///   we do not make this guarantee.  TODO: This would be a useful enhancement.
+static LVILatticeVal intersect(LVILatticeVal A, LVILatticeVal B) {
+  // Undefined is the strongest state.  It means the value is known to be along
+  // an unreachable path.
+  if (A.isUndefined())
+    return A;
+  if (B.isUndefined())
+    return B;
+
+  // If we gave up for one, but got a useable fact from the other, use it.
+  if (A.isOverdefined())
+    return B;
+  if (B.isOverdefined())
+    return A;
+
+  // Can't get any more precise than constants.
+  if (hasSingleValue(A))
+    return A;
+  if (hasSingleValue(B))
+    return B;
+
+  // Could be either constant range or not constant here.
+  if (!A.isConstantRange() || !B.isConstantRange()) {
+    // TODO: Arbitrary choice, could be improved
+    return A;
+  }
+
+  // Intersect two constant ranges
+  ConstantRange Range =
+    A.getConstantRange().intersectWith(B.getConstantRange());
+  // Note: An empty range is implicitly converted to overdefined internally.
+  // TODO: We could instead use Undefined here since we've proven a conflict
+  // and thus know this path must be unreachable. 
+  return LVILatticeVal::getRange(Range);
+}
+
 /// \brief Compute the value of Val on the edge BBFrom -> BBTo or the value at
 /// the basic block if the edge does not constrain Val.
 bool LazyValueInfoCache::getEdgeValue(Value *Val, BasicBlock *BBFrom,
@@ -1002,46 +1119,29 @@ bool LazyValueInfoCache::getEdgeValue(Value *Val, BasicBlock *BBFrom,
     return true;
   }
 
-  if (getEdgeValueLocal(Val, BBFrom, BBTo, Result)) {
-    if (!Result.isConstantRange() ||
-        Result.getConstantRange().getSingleElement())
-      return true;
-
-    // FIXME: this check should be moved to the beginning of the function when
-    // LVI better supports recursive values. Even for the single value case, we
-    // can intersect to detect dead code (an empty range).
-    if (!hasBlockValue(Val, BBFrom)) {
-      if (pushBlockValue(std::make_pair(BBFrom, Val)))
-        return false;
-      Result.markOverdefined();
-      return true;
-    }
-
-    // Try to intersect ranges of the BB and the constraint on the edge.
-    LVILatticeVal InBlock = getBlockValue(Val, BBFrom);
-    mergeAssumeBlockValueConstantRange(Val, InBlock, BBFrom->getTerminator());
-    // See note on the use of the CxtI with mergeAssumeBlockValueConstantRange,
-    // and caching, below.
-    mergeAssumeBlockValueConstantRange(Val, InBlock, CxtI);
-    if (!InBlock.isConstantRange())
-      return true;
-
-    ConstantRange Range =
-      Result.getConstantRange().intersectWith(InBlock.getConstantRange());
-    Result = LVILatticeVal::getRange(Range);
+  LVILatticeVal LocalResult;
+  if (!getEdgeValueLocal(Val, BBFrom, BBTo, LocalResult))
+    // If we couldn't constrain the value on the edge, LocalResult doesn't
+    // provide any information.
+    LocalResult.markOverdefined();
+  
+  if (hasSingleValue(LocalResult)) {
+    // Can't get any more precise here
+    Result = LocalResult;
     return true;
   }
 
   if (!hasBlockValue(Val, BBFrom)) {
     if (pushBlockValue(std::make_pair(BBFrom, Val)))
       return false;
-    Result.markOverdefined();
+    // No new information.
+    Result = LocalResult;
     return true;
   }
 
-  // If we couldn't compute the value on the edge, use the value from the BB.
-  Result = getBlockValue(Val, BBFrom);
-  mergeAssumeBlockValueConstantRange(Val, Result, BBFrom->getTerminator());
+  // Try to intersect ranges of the BB and the constraint on the edge.
+  LVILatticeVal InBlock = getBlockValue(Val, BBFrom);
+  mergeAssumeBlockValueConstantRange(Val, InBlock, BBFrom->getTerminator());
   // We can use the context instruction (generically the ultimate instruction
   // the calling pass is trying to simplify) here, even though the result of
   // this function is generally cached when called from the solve* functions
@@ -1050,7 +1150,9 @@ bool LazyValueInfoCache::getEdgeValue(Value *Val, BasicBlock *BBFrom,
   // functions, the context instruction is not provided. When called from
   // LazyValueInfoCache::getValueOnEdge, the context instruction is provided,
   // but then the result is not cached.
-  mergeAssumeBlockValueConstantRange(Val, Result, CxtI);
+  mergeAssumeBlockValueConstantRange(Val, InBlock, CxtI);
+
+  Result = intersect(LocalResult, InBlock);
   return true;
 }
 
@@ -1078,6 +1180,14 @@ LVILatticeVal LazyValueInfoCache::getValueAt(Value *V, Instruction *CxtI) {
   if (auto *I = dyn_cast<Instruction>(V))
     Result = getFromRangeMetadata(I);
   mergeAssumeBlockValueConstantRange(V, Result, CxtI);
+
+  // Note: What's actually happening here is that we're starting at overdefined
+  // and then intersecting two different types of facts.  The code is not
+  // structured that way (FIXME), and we need to take particular care to not
+  // let the undefined state escape since we have *not* proven the particular
+  // value to be unreachable at the context instruction.
+  if (Result.isUndefined())
+    Result.markOverdefined();
 
   DEBUG(dbgs() << "  Result = " << Result << "\n");
   return Result;

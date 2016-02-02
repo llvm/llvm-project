@@ -128,29 +128,29 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   // the IR, and everything in our module is an entry node, so just directly
   // build variables for each node.
   auto I = CG.begin();
-  LazyCallGraph::Node &A1 = *I++;
+  LazyCallGraph::Node &A1 = (I++)->getNode(CG);
   EXPECT_EQ("a1", A1.getFunction().getName());
-  LazyCallGraph::Node &A2 = *I++;
+  LazyCallGraph::Node &A2 = (I++)->getNode(CG);
   EXPECT_EQ("a2", A2.getFunction().getName());
-  LazyCallGraph::Node &A3 = *I++;
+  LazyCallGraph::Node &A3 = (I++)->getNode(CG);
   EXPECT_EQ("a3", A3.getFunction().getName());
-  LazyCallGraph::Node &B1 = *I++;
+  LazyCallGraph::Node &B1 = (I++)->getNode(CG);
   EXPECT_EQ("b1", B1.getFunction().getName());
-  LazyCallGraph::Node &B2 = *I++;
+  LazyCallGraph::Node &B2 = (I++)->getNode(CG);
   EXPECT_EQ("b2", B2.getFunction().getName());
-  LazyCallGraph::Node &B3 = *I++;
+  LazyCallGraph::Node &B3 = (I++)->getNode(CG);
   EXPECT_EQ("b3", B3.getFunction().getName());
-  LazyCallGraph::Node &C1 = *I++;
+  LazyCallGraph::Node &C1 = (I++)->getNode(CG);
   EXPECT_EQ("c1", C1.getFunction().getName());
-  LazyCallGraph::Node &C2 = *I++;
+  LazyCallGraph::Node &C2 = (I++)->getNode(CG);
   EXPECT_EQ("c2", C2.getFunction().getName());
-  LazyCallGraph::Node &C3 = *I++;
+  LazyCallGraph::Node &C3 = (I++)->getNode(CG);
   EXPECT_EQ("c3", C3.getFunction().getName());
-  LazyCallGraph::Node &D1 = *I++;
+  LazyCallGraph::Node &D1 = (I++)->getNode(CG);
   EXPECT_EQ("d1", D1.getFunction().getName());
-  LazyCallGraph::Node &D2 = *I++;
+  LazyCallGraph::Node &D2 = (I++)->getNode(CG);
   EXPECT_EQ("d2", D2.getFunction().getName());
-  LazyCallGraph::Node &D3 = *I++;
+  LazyCallGraph::Node &D3 = (I++)->getNode(CG);
   EXPECT_EQ("d3", D3.getFunction().getName());
   EXPECT_EQ(CG.end(), I);
 
@@ -158,8 +158,8 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   // independent of order.
   std::vector<std::string> Nodes;
 
-  for (LazyCallGraph::Node &N : A1)
-    Nodes.push_back(N.getFunction().getName());
+  for (LazyCallGraph::Edge &E : A1)
+    Nodes.push_back(E.getFunction().getName());
   std::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ("a2", Nodes[0]);
   EXPECT_EQ("b2", Nodes[1]);
@@ -171,8 +171,8 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   EXPECT_EQ(A3.end(), std::next(A3.begin()));
   EXPECT_EQ("a1", A3.begin()->getFunction().getName());
 
-  for (LazyCallGraph::Node &N : B1)
-    Nodes.push_back(N.getFunction().getName());
+  for (LazyCallGraph::Edge &E : B1)
+    Nodes.push_back(E.getFunction().getName());
   std::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ("b2", Nodes[0]);
   EXPECT_EQ("d3", Nodes[1]);
@@ -183,8 +183,8 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   EXPECT_EQ(B3.end(), std::next(B3.begin()));
   EXPECT_EQ("b1", B3.begin()->getFunction().getName());
 
-  for (LazyCallGraph::Node &N : C1)
-    Nodes.push_back(N.getFunction().getName());
+  for (LazyCallGraph::Edge &E : C1)
+    Nodes.push_back(E.getFunction().getName());
   std::sort(Nodes.begin(), Nodes.end());
   EXPECT_EQ("c2", Nodes[0]);
   EXPECT_EQ("d2", Nodes[1]);
@@ -298,23 +298,23 @@ TEST(LazyCallGraphTest, BasicGraphMutation) {
   EXPECT_EQ(2, std::distance(A.begin(), A.end()));
   EXPECT_EQ(0, std::distance(B.begin(), B.end()));
 
-  CG.insertEdge(B, lookupFunction(*M, "c"));
+  CG.insertEdge(B, lookupFunction(*M, "c"), LazyCallGraph::Edge::Call);
   EXPECT_EQ(1, std::distance(B.begin(), B.end()));
-  LazyCallGraph::Node &C = *B.begin();
+  LazyCallGraph::Node &C = B.begin()->getNode(CG);
   EXPECT_EQ(0, std::distance(C.begin(), C.end()));
 
-  CG.insertEdge(C, B.getFunction());
+  CG.insertEdge(C, B.getFunction(), LazyCallGraph::Edge::Call);
   EXPECT_EQ(1, std::distance(C.begin(), C.end()));
-  EXPECT_EQ(&B, &*C.begin());
+  EXPECT_EQ(&B, C.begin()->getNode());
 
-  CG.insertEdge(C, C.getFunction());
+  CG.insertEdge(C, C.getFunction(), LazyCallGraph::Edge::Call);
   EXPECT_EQ(2, std::distance(C.begin(), C.end()));
-  EXPECT_EQ(&B, &*C.begin());
-  EXPECT_EQ(&C, &*std::next(C.begin()));
+  EXPECT_EQ(&B, C.begin()->getNode());
+  EXPECT_EQ(&C, std::next(C.begin())->getNode());
 
   CG.removeEdge(C, B.getFunction());
   EXPECT_EQ(1, std::distance(C.begin(), C.end()));
-  EXPECT_EQ(&C, &*C.begin());
+  EXPECT_EQ(&C, C.begin()->getNode());
 
   CG.removeEdge(C, C.getFunction());
   EXPECT_EQ(0, std::distance(C.begin(), C.end()));
@@ -417,7 +417,7 @@ TEST(LazyCallGraphTest, OutgoingSCCEdgeInsertion) {
   EXPECT_TRUE(DC.isDescendantOf(CC));
 
   EXPECT_EQ(2, std::distance(A.begin(), A.end()));
-  AC.insertOutgoingEdge(A, D);
+  AC.insertOutgoingEdge(A, D, LazyCallGraph::Edge::Call);
   EXPECT_EQ(3, std::distance(A.begin(), A.end()));
   EXPECT_TRUE(AC.isParentOf(DC));
   EXPECT_EQ(&AC, CG.lookupSCC(A));
@@ -489,7 +489,7 @@ TEST(LazyCallGraphTest, IncomingSCCEdgeInsertion) {
   //        a1          |
   //       /  \         |
   //      a3--a2        |
-  CC.insertIncomingEdge(D2, C2);
+  CC.insertIncomingEdge(D2, C2, LazyCallGraph::Edge::Call);
   // Make sure we connected the nodes.
   EXPECT_EQ(2, std::distance(D2.begin(), D2.end()));
 
@@ -551,7 +551,7 @@ TEST(LazyCallGraphTest, IncomingSCCEdgeInsertionMidTraversal) {
   ASSERT_EQ(&DC, CG.lookupSCC(D3));
   ASSERT_EQ(1, std::distance(D2.begin(), D2.end()));
 
-  CC.insertIncomingEdge(D2, C2);
+  CC.insertIncomingEdge(D2, C2, LazyCallGraph::Edge::Call);
   EXPECT_EQ(2, std::distance(D2.begin(), D2.end()));
 
   // Make sure we have the correct nodes in the SCC sets.
@@ -646,14 +646,14 @@ TEST(LazyCallGraphTest, IntraSCCEdgeInsertion) {
   EXPECT_EQ(&SCC, CG1.lookupSCC(C));
 
   // Insert an edge from 'a' to 'c'. Nothing changes about the SCCs.
-  SCC.insertIntraSCCEdge(A, C);
+  SCC.insertIntraSCCEdge(A, C, LazyCallGraph::Edge::Call);
   EXPECT_EQ(2, std::distance(A.begin(), A.end()));
   EXPECT_EQ(&SCC, CG1.lookupSCC(A));
   EXPECT_EQ(&SCC, CG1.lookupSCC(B));
   EXPECT_EQ(&SCC, CG1.lookupSCC(C));
 
   // Insert a self edge from 'a' back to 'a'.
-  SCC.insertIntraSCCEdge(A, A);
+  SCC.insertIntraSCCEdge(A, A, LazyCallGraph::Edge::Call);
   EXPECT_EQ(3, std::distance(A.begin(), A.end()));
   EXPECT_EQ(&SCC, CG1.lookupSCC(A));
   EXPECT_EQ(&SCC, CG1.lookupSCC(B));

@@ -4,13 +4,13 @@
 # RUN: ld.lld -shared %t-be.o -o %t-be.so
 # RUN: llvm-objdump -t %t-be.so | FileCheck %s
 # RUN: llvm-objdump -s %t-be.so | FileCheck -check-prefix=BE %s
-# RUN: llvm-readobj -relocations %t-be.so | FileCheck -check-prefix=REL %s
+# RUN: llvm-readobj -r -dynamic-table %t-be.so | FileCheck -check-prefix=REL %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t-el.o
 # RUN: ld.lld -shared %t-el.o -o %t-el.so
 # RUN: llvm-objdump -t %t-el.so | FileCheck %s
 # RUN: llvm-objdump -s %t-el.so | FileCheck -check-prefix=EL %s
-# RUN: llvm-readobj -relocations %t-el.so | FileCheck -check-prefix=REL %s
+# RUN: llvm-readobj -r -dynamic-table %t-el.so | FileCheck -check-prefix=REL %s
 
 # REQUIRES: mips
 
@@ -49,3 +49,8 @@ v2:
 # REL-NEXT:     0x30008 R_MIPS_REL32 - 0x0
 # REL-NEXT:   }
 # REL-NEXT: ]
+
+# REL: DynamicSection [
+# REL:   Tag        Type                 Name/Value
+# REL:   0x00000012 RELSZ                16 (bytes)
+# REL:   0x00000013 RELENT               8 (bytes)

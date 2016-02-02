@@ -149,17 +149,23 @@ ELFFileBase<ELFT> *SymbolTable<ELFT>::findFile(SymbolBody *B) {
   return nullptr;
 }
 
+// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
+template <class ELFT> static std::string getFilename(ELFFileBase<ELFT> *F) {
+  if (!F)
+    return "(internal)";
+  if (!F->ArchiveName.empty())
+    return (F->ArchiveName + "(" + F->getName() + ")").str();
+  return F->getName();
+}
+
 // Construct a string in the form of "Sym in File1 and File2".
 // Used to construct an error message.
 template <class ELFT>
 std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Old, SymbolBody *New) {
-  ELFFileBase<ELFT> *OldFile = findFile(Old);
-  ELFFileBase<ELFT> *NewFile = findFile(New);
-
+  ELFFileBase<ELFT> *F1 = findFile(Old);
+  ELFFileBase<ELFT> *F2 = findFile(New);
   StringRef Sym = Old->getName();
-  StringRef F1 = OldFile ? OldFile->getName() : "(internal)";
-  StringRef F2 = NewFile ? NewFile->getName() : "(internal)";
-  return (demangle(Sym) + " in " + F1 + " and " + F2).str();
+  return demangle(Sym) + " in " + getFilename(F1) + " and " + getFilename(F2);
 }
 
 // This function resolves conflicts if there's an existing symbol with
