@@ -16,7 +16,12 @@ endif()
 
 set(TSAN_TESTSUITES)
 
-foreach(arch ${TSAN_SUPPORTED_ARCH})
+set(TSAN_TEST_ARCH ${TSAN_SUPPORTED_ARCH})
+if(APPLE)
+  darwin_filter_host_archs(TSAN_SUPPORTED_ARCH TSAN_TEST_ARCH)
+endif()
+
+foreach(arch ${TSAN_TEST_ARCH})
   string(TOLOWER "-${arch}" TSAN_TEST_CONFIG_SUFFIX)
   if(ANDROID OR ${arch} MATCHES "arm|aarch64")
     # This is only true if we are cross-compiling.

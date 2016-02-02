@@ -725,6 +725,8 @@ uint16_t Util::descBits(const DefinedAtom* atom) {
   }
   if (atom->contentType() == lld::DefinedAtom::typeResolver)
     desc |= N_SYMBOL_RESOLVER;
+  if (atom->contentType() == lld::DefinedAtom::typeMachHeader)
+    desc |= REFERENCED_DYNAMICALLY;
   if (_archHandler.isThumbFunction(*atom))
     desc |= N_ARM_THUMB_DEF;
   if (atom->deadStrip() == DefinedAtom::deadStripNever) {

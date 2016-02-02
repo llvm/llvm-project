@@ -540,7 +540,7 @@ def add_test_categories(cat):
 def benchmarks_test(func):
     """Decorate the item as a benchmarks test."""
     def should_skip_benchmarks_test():
-        return (True, "benchmarks test")
+        return "benchmarks test"
 
     # Mark this function as such to separate them from the regular tests.
     result = skipTestIfFn(should_skip_benchmarks_test)(func)
@@ -563,19 +563,19 @@ def no_debug_info_test(func):
 def debugserver_test(func):
     """Decorate the item as a debugserver test."""
     def should_skip_debugserver_test():
-        return (configuration.dont_do_debugserver_test, "debugserver tests")
+        return "debugserver tests" if configuration.dont_do_debugserver_test else None
     return skipTestIfFn(should_skip_debugserver_test)(func)
 
 def llgs_test(func):
     """Decorate the item as a lldb-server test."""
     def should_skip_llgs_tests():
-        return (configuration.dont_do_llgs_test, "llgs tests")
+        return "llgs tests" if configuration.dont_do_llgs_test else None
     return skipTestIfFn(should_skip_llgs_tests)(func)
 
 def not_remote_testsuite_ready(func):
     """Decorate the item as a test which is not ready yet for remote testsuite."""
     def is_remote():
-        return (lldb.remote_platform, "Not ready for remote testsuite")
+        return "Not ready for remote testsuite" if lldb.remote_platform else None
     return skipTestIfFn(is_remote)(func)
 
 def expectedFailure(expected_fn, bugnumber=None):
@@ -586,8 +586,8 @@ def expectedFailure(expected_fn, bugnumber=None):
         def wrapper(*args, **kwargs):
             from unittest2 import case
             self = args[0]
-            xfail, reason = expected_fn(self)
-            if xfail:
+            xfail_reason = expected_fn(self)
+            if xfail_reason is not None:
                 if configuration.results_formatter_object is not None:
                     # Mark this test as expected to fail.
                     configuration.results_formatter_object.handle_event(
@@ -718,12 +718,14 @@ def expectedFailureHostWindows(bugnumber=None, compilers=None):
 def matchAndroid(api_levels=None, archs=None):
     def match(self):
         if not target_is_android():
-            return (False, "target is not android")
+            return None     # Doesn't match, return false
         if archs is not None and self.getArchitecture() not in archs:
-            return (False, "invalid architecture")
+            return None     # Invalid architecture, return false
         if api_levels is not None and android_device_api() not in api_levels:
-            return (False, "invalid api level")
-        return (True, None)
+            return None     # API level doesn't match, return false
+
+        # This is a matching android distribution, return true
+        return "Android [arch={}] [api_level={}]".format(self.getArchitecture(), android_device_api())
     return match
 
 
@@ -814,7 +816,7 @@ def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
     def is_remote():
-        return (lldb.remote_platform, "skip on remote platform")
+        return "skip on remote platform" if lldb.remote_platform else None
     return skipTestIfFn(is_remote)(func)
 
 def skipUnlessListedRemote(remote_list=None):
@@ -823,16 +825,16 @@ def skipUnlessListedRemote(remote_list=None):
             triple = self.dbg.GetSelectedPlatform().GetTriple()
             for r in remote_list:
                 if r in triple:
-                    return (False, None)
-            return (True, "skipping because remote is not listed")
+                    return None
+            return "skipping because remote is not listed"
         else:
-            return (False, None)
+            return None
     return skipTestIfFn(is_remote_unlisted)
 
 def skipIfRemoteDueToDeadlock(func):
     """Decorate the item to skip tests if testing remotely due to the test deadlocking."""
     def is_remote():
-        return (lldb.remote_platform, "skip on remote platform (deadlocks)")
+        return "skip on remote platform (deadlocks)" if lldb.remote_platform else None
     return skipTestIfFn(is_remote)(func)
 
 def skipIfNoSBHeaders(func):
@@ -844,15 +846,15 @@ def skipIfNoSBHeaders(func):
             header = os.path.join(os.environ["LLDB_SRC"], "include", "lldb", "API", "LLDB.h")
         platform = sys.platform
         if not os.path.exists(header):
-            return (True, "skip because LLDB.h header not found")
+            return "skip because LLDB.h header not found"
+        return None
 
-        return (False, None)
     return skipTestIfFn(are_sb_headers_missing)(func)
 
 def skipIfiOSSimulator(func):
     """Decorate the item to skip tests that should be skipped on the iOS Simulator."""
     def is_ios_simulator():
-        return (configuration.lldb_platform_name == 'ios-simulator', "skip on the iOS Simulator")
+        return "skip on the iOS Simulator" if configuration.lldb_platform_name == 'ios-simulator' else None
     return skipTestIfFn(is_ios_simulator)(func)
 
 def skipIfFreeBSD(func):
@@ -899,19 +901,19 @@ def skipUnlessGoInstalled(func):
     def is_go_missing(self):
         compiler = self.getGoCompilerVersion()
         if not compiler:
-            return (True, "skipping because go compiler not found")
+            return "skipping because go compiler not found"
         match_version = re.search(r"(\d+\.\d+(\.\d+)?)", compiler)
         if not match_version:
             # Couldn't determine version.
-            return (True, "skipping because go version could not be parsed out of {}".format(compiler))
+            return "skipping because go version could not be parsed out of {}".format(compiler)
         else:
             from distutils.version import StrictVersion
             min_strict_version = StrictVersion("1.4.0")
             compiler_strict_version = StrictVersion(match_version.group(1))
             if compiler_strict_version < min_strict_version:
-                return (True, "skipping because available version ({}) does not meet minimum required version ({})"
-                               .format(compiler_strict_version, min_strict_version))
-        return (False, None)
+                return "skipping because available version ({}) does not meet minimum required version ({})".format(
+                    compiler_strict_version, min_strict_version)
+        return None
     return skipTestIfFn(is_go_missing)(func)
 
 def getPlatform():
@@ -951,10 +953,10 @@ def skipIfHostIncompatibleWithRemote(func):
         target_arch = self.getArchitecture()
         target_platform = 'darwin' if self.platformIsDarwin() else self.getPlatform()
         if not (target_arch == 'x86_64' and host_arch == 'i386') and host_arch != target_arch:
-            return (True, "skipping because target %s is not compatible with host architecture %s" % (target_arch, host_arch))
+            return "skipping because target %s is not compatible with host architecture %s" % (target_arch, host_arch)
         elif target_platform != host_platform:
-            return (True, "skipping because target is %s but host is %s" % (target_platform, host_platform))
-        return (False, None)
+            return "skipping because target is %s but host is %s" % (target_platform, host_platform)
+        return None
     return skipTestIfFn(is_host_incompatible_with_remote)(func)
 
 def skipIfHostPlatform(oslist):
@@ -1050,7 +1052,7 @@ def decorateTest(mode,
                 reason_str = "{} due to the following parameter(s): {}".format(mode_str, reason_str)
             else:
                 reason_str = "{} unconditionally"
-        return (final_skip_result, reason_str)
+        return reason_str
 
     if mode == DecorateMode.Skip:
         return skipTestIfFn(fn, bugnumber)
@@ -1097,10 +1099,10 @@ def skipTestIfFn(expected_fn, bugnumber=None):
             from unittest2 import case
             self = args[0]
             if does_function_require_self(expected_fn):
-                skip, reason = expected_fn(self)
+                reason = expected_fn(self)
             else:
-                skip, reason = expected_fn()
-            if skip:
+                reason = expected_fn()
+            if reason is not None:
                self.skipTest(reason)
             else:
                 func(*args, **kwargs)
@@ -1144,7 +1146,7 @@ def skipUnlessCompilerRt(func):
     """Decorate the item to skip tests if testing remotely."""
     def is_compiler_rt_missing():
         compilerRtPath = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "llvm","projects","compiler-rt")
-        return (not os.path.exists(compilerRtPath), "compiler-rt not found")
+        return "compiler-rt not found" if not os.path.exists(compilerRtPath) else None
     return skipTestIfFn(is_compiler_rt_missing)(func)
 
 class _PlatformContext(object):

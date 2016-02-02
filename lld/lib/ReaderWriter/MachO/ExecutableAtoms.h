@@ -70,6 +70,8 @@ public:
   MachHeaderAliasFile(const MachOLinkingContext &context)
     : SimpleFile("mach_header symbols", kindHeaderObject) {
     StringRef machHeaderSymbolName;
+    DefinedAtom::Scope symbolScope = DefinedAtom::scopeLinkageUnit;
+    bool noDeadStrip = false;
     StringRef dsoHandleName;
     switch (context.outputMachOType()) {
     case llvm::MachO::MH_OBJECT:
@@ -77,6 +79,8 @@ public:
       break;
     case llvm::MachO::MH_EXECUTE:
       machHeaderSymbolName = "__mh_execute_header";
+      symbolScope = DefinedAtom::scopeGlobal;
+      noDeadStrip = true;
       dsoHandleName = "___dso_handle";
       break;
     case llvm::MachO::MH_FVMLIB:
@@ -107,8 +111,8 @@ public:
     }
     if (!machHeaderSymbolName.empty())
       _definedAtoms.push_back(new (allocator()) MachODefinedAtom(
-          *this, machHeaderSymbolName, DefinedAtom::scopeLinkageUnit,
-          DefinedAtom::typeMachHeader, DefinedAtom::mergeNo, false, false,
+          *this, machHeaderSymbolName, symbolScope,
+          DefinedAtom::typeMachHeader, DefinedAtom::mergeNo, false, noDeadStrip,
           ArrayRef<uint8_t>(), DefinedAtom::Alignment(4096)));
 
     if (!dsoHandleName.empty())

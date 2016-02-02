@@ -299,9 +299,6 @@ set(ALL_CFI_SUPPORTED_ARCH ${X86} ${X86_64})
 if(APPLE)
   include(CompilerRTDarwinUtils)
 
-  # tsan fails almost everything for x86_64h
-  list(REMOVE_ITEM ALL_TSAN_SUPPORTED_ARCH x86_64h)
-
   # On Darwin if /usr/include doesn't exist, the user probably has Xcode but not
   # the command line tools. If this is the case, we need to find the OS X
   # sysroot to pass to clang.
