@@ -569,20 +569,11 @@ FreeBSDThread::TraceNotify(const ProcessMessage &message)
 
     // If the current pc is a breakpoint site then set the StopInfo to Breakpoint.
     // Otherwise, set the StopInfo to Watchpoint or Trace.
-    if (bp_site)
-    {
-        lldb::break_id_t bp_id = bp_site->GetID();
-        // If we have an operating system plug-in, we might have set a thread specific breakpoint using the
-        // operating system thread ID, so we can't make any assumptions about the thread ID so we must always
-        // report the breakpoint regardless of the thread.
-        if (bp_site->ValidForThisThread(this) || GetProcess()->GetOperatingSystem () != NULL)
-            SetStopInfo (StopInfo::CreateStopReasonWithBreakpointSiteID(*this, bp_id));
-        else
-        {
-            const bool should_stop = false;
-            SetStopInfo (StopInfo::CreateStopReasonWithBreakpointSiteID(*this, bp_id, should_stop));
-        }
-    }
+    // If we have an operating system plug-in, we might have set a thread specific breakpoint using the
+    // operating system thread ID, so we can't make any assumptions about the thread ID so we must always
+    // report the breakpoint regardless of the thread.
+    if (bp_site && (bp_site->ValidForThisThread(this) || GetProcess()->GetOperatingSystem () != NULL))
+        SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(*this, bp_site->GetID()));
     else
     {
         POSIXBreakpointProtocol* reg_ctx = GetPOSIXBreakpointProtocol();
