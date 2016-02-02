@@ -270,6 +270,9 @@ void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createExecutionDependencyFixPass(&X86::VR128RegClass));
 
+  if (TM->getTargetTriple().isPS4CPU())
+    UseVZeroUpper = false;
+
   if (UseVZeroUpper)
     addPass(createX86IssueVZeroUpperPass());
 

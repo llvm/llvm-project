@@ -65,8 +65,11 @@ using namespace llvm;
 
 static const uint64_t kDefaultShadowScale = 3;
 static const uint64_t kDefaultShadowOffset32 = 1ULL << 29;
-static const uint64_t kIOSShadowOffset32 = 1ULL << 30;
 static const uint64_t kDefaultShadowOffset64 = 1ULL << 44;
+static const uint64_t kIOSShadowOffset32 = 1ULL << 30;
+static const uint64_t kIOSShadowOffset64 = 0x120200000;
+static const uint64_t kIOSSimShadowOffset32 = 1ULL << 30;
+static const uint64_t kIOSSimShadowOffset64 = kDefaultShadowOffset64;
 static const uint64_t kSmallX86_64ShadowOffset = 0x7FFF8000;  // < 2G.
 static const uint64_t kLinuxKasan_ShadowOffset64 = 0xdffffc0000000000;
 static const uint64_t kPPC64_ShadowOffset64 = 1ULL << 41;
@@ -334,11 +337,12 @@ struct ShadowMapping {
 static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
                                       bool IsKasan) {
   bool IsAndroid = TargetTriple.isAndroid();
-  bool IsIOS = TargetTriple.isiOS();
+  bool IsIOS = TargetTriple.isiOS() || TargetTriple.isWatchOS();
   bool IsFreeBSD = TargetTriple.isOSFreeBSD();
   bool IsLinux = TargetTriple.isOSLinux();
   bool IsPPC64 = TargetTriple.getArch() == llvm::Triple::ppc64 ||
                  TargetTriple.getArch() == llvm::Triple::ppc64le;
+  bool IsX86 = TargetTriple.getArch() == llvm::Triple::x86;
   bool IsX86_64 = TargetTriple.getArch() == llvm::Triple::x86_64;
   bool IsMIPS32 = TargetTriple.getArch() == llvm::Triple::mips ||
                   TargetTriple.getArch() == llvm::Triple::mipsel;
@@ -359,7 +363,8 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
     else if (IsFreeBSD)
       Mapping.Offset = kFreeBSD_ShadowOffset32;
     else if (IsIOS)
-      Mapping.Offset = kIOSShadowOffset32;
+      // If we're targeting iOS and x86, the binary is built for iOS simulator.
+      Mapping.Offset = IsX86 ? kIOSSimShadowOffset32 : kIOSShadowOffset32;
     else if (IsWindows)
       Mapping.Offset = kWindowsShadowOffset32;
     else
@@ -376,6 +381,9 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
         Mapping.Offset = kSmallX86_64ShadowOffset;
     } else if (IsMIPS64)
       Mapping.Offset = kMIPS64_ShadowOffset64;
+    else if (IsIOS)
+      // If we're targeting iOS and x86, the binary is built for iOS simulator.
+      Mapping.Offset = IsX86_64 ? kIOSSimShadowOffset64 : kIOSShadowOffset64;
     else if (IsAArch64)
       Mapping.Offset = kAArch64_ShadowOffset64;
     else

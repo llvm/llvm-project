@@ -259,6 +259,22 @@ class TraceState {
     Signed >>= 16;
     return Signed == 0 || Signed == -1L;
   }
+
+  // We don't want to create too many trace-based mutations as it is both
+  // expensive and useless. So after some number of mutations is collected,
+  // start rejecting some of them. The more there are mutations the more we
+  // reject.
+  bool WantToHandleOneMoreMutation() {
+    const size_t FirstN = 64;
+    // Gladly handle first N mutations.
+    if (NumMutations <= FirstN) return true;
+    size_t Diff = NumMutations - FirstN;
+    size_t DiffLog = sizeof(long) * 8 - __builtin_clzl((long)Diff);
+    assert(DiffLog > 0 && DiffLog < 64);
+    bool WantThisOne = USF.GetRand()(1 << DiffLog) == 0;  // 1 out of DiffLog.
+    return WantThisOne;
+  }
+
   static const size_t kMaxMutations = 1 << 16;
   size_t NumMutations;
   TraceBasedMutation Mutations[kMaxMutations];
@@ -362,7 +378,7 @@ void TraceState::DFSanSwitchCallback(uint64_t PC, size_t ValSizeInBits,
 
 int TraceState::TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
                                     size_t DataSize) {
-  if (NumMutations >= kMaxMutations) return 0;
+  if (NumMutations >= kMaxMutations || !WantToHandleOneMoreMutation()) return 0;
   int Res = 0;
   const uint8_t *Beg = *CurrentUnitData;
   const uint8_t *End = Beg + *CurrentUnitSize;
@@ -383,7 +399,7 @@ int TraceState::TryToAddDesiredData(uint64_t PresentData, uint64_t DesiredData,
 int TraceState::TryToAddDesiredData(const uint8_t *PresentData,
                                     const uint8_t *DesiredData,
                                     size_t DataSize) {
-  if (NumMutations >= kMaxMutations) return 0;
+  if (NumMutations >= kMaxMutations || !WantToHandleOneMoreMutation()) return 0;
   int Res = 0;
   const uint8_t *Beg = *CurrentUnitData;
   const uint8_t *End = Beg + *CurrentUnitSize;

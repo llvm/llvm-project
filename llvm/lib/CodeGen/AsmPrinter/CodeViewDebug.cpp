@@ -182,6 +182,7 @@ void CodeViewDebug::endModule() {
   assert(Asm != nullptr);
   Asm->OutStreamer->SwitchSection(
       Asm->getObjFileLowering().getCOFFDebugSymbolsSection());
+  Asm->OutStreamer->AddComment("Debug section magic");
   Asm->EmitInt32(COFF::DEBUG_SECTION_MAGIC);
 
   // The COFF .debug$S section consists of several subsections, each starting
@@ -207,14 +208,11 @@ void CodeViewDebug::endModule() {
   clear();
 }
 
-template <typename T> static void emitRecord(MCStreamer &OS, const T &Rec) {
-  OS.EmitBytes(StringRef(reinterpret_cast<const char *>(&Rec), sizeof(Rec)));
-}
-
 void CodeViewDebug::emitTypeInformation() {
   // Start the .debug$T section with 0x4.
   Asm->OutStreamer->SwitchSection(
       Asm->getObjFileLowering().getCOFFDebugTypesSection());
+  Asm->OutStreamer->AddComment("Debug section magic");
   Asm->EmitInt32(COFF::DEBUG_SECTION_MAGIC);
 
   NamedMDNode *CU_Nodes =
@@ -226,34 +224,49 @@ void CodeViewDebug::emitTypeInformation() {
   // frame info. All functions are assigned a simple 'void ()' type. Emit that
   // type here.
   TypeIndex ArgListIdx = getNextTypeIndex();
+  Asm->OutStreamer->AddComment("Type record length");
   Asm->EmitInt16(2 + sizeof(ArgList));
+  Asm->OutStreamer->AddComment("Leaf type: LF_ARGLIST");
   Asm->EmitInt16(LF_ARGLIST);
+  Asm->OutStreamer->AddComment("Number of arguments");
   Asm->EmitInt32(0);
 
   TypeIndex VoidProcIdx = getNextTypeIndex();
+  Asm->OutStreamer->AddComment("Type record length");
   Asm->EmitInt16(2 + sizeof(ProcedureType));
+  Asm->OutStreamer->AddComment("Leaf type: LF_PROCEDURE");
   Asm->EmitInt16(LF_PROCEDURE);
-  ProcedureType Proc{}; // Zero initialize.
-  Proc.ReturnType = TypeIndex::Void();
-  Proc.CallConv = CallingConvention::NearC;
-  Proc.Options = FunctionOptions::None;
-  Proc.NumParameters = 0;
-  Proc.ArgListType = ArgListIdx;
-  emitRecord(*Asm->OutStreamer, Proc);
+  Asm->OutStreamer->AddComment("Return type index");
+  Asm->EmitInt32(TypeIndex::Void().getIndex());
+  Asm->OutStreamer->AddComment("Calling convention");
+  Asm->EmitInt8(char(CallingConvention::NearC));
+  Asm->OutStreamer->AddComment("Function options");
+  Asm->EmitInt8(char(FunctionOptions::None));
+  Asm->OutStreamer->AddComment("# of parameters");
+  Asm->EmitInt16(0);
+  Asm->OutStreamer->AddComment("Argument list type index");
+  Asm->EmitInt32(ArgListIdx.getIndex());
 
   for (MDNode *N : CU_Nodes->operands()) {
     auto *CUNode = cast<DICompileUnit>(N);
     for (auto *SP : CUNode->getSubprograms()) {
       StringRef DisplayName = SP->getDisplayName();
+      Asm->OutStreamer->AddComment("Type record length");
       Asm->EmitInt16(2 + sizeof(FuncId) + DisplayName.size() + 1);
+      Asm->OutStreamer->AddComment("Leaf type: LF_FUNC_ID");
       Asm->EmitInt16(LF_FUNC_ID);
 
-      FuncId Func{}; // Zero initialize.
-      Func.ParentScope = TypeIndex();
-      Func.FunctionType = VoidProcIdx;
-      emitRecord(*Asm->OutStreamer, Func);
-      Asm->OutStreamer->EmitBytes(DisplayName);
-      Asm->EmitInt8(0);
+      Asm->OutStreamer->AddComment("Scope type index");
+      Asm->EmitInt32(TypeIndex().getIndex());
+      Asm->OutStreamer->AddComment("Function type");
+      Asm->EmitInt32(VoidProcIdx.getIndex());
+      {
+        SmallString<32> NullTerminatedString(DisplayName);
+        if (NullTerminatedString.empty() || NullTerminatedString.back() != '\0')
+          NullTerminatedString.push_back('\0');
+        Asm->OutStreamer->AddComment("Function name");
+        Asm->OutStreamer->EmitBytes(NullTerminatedString);
+      }
 
       TypeIndex FuncIdIdx = getNextTypeIndex();
       SubprogramToFuncId.insert(std::make_pair(SP, FuncIdIdx));
@@ -271,23 +284,30 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
 
   OS.AddComment("Inlinee lines subsection");
   OS.EmitIntValue(unsigned(ModuleSubstreamKind::InlineeLines), 4);
+  OS.AddComment("Subsection size");
   OS.emitAbsoluteSymbolDiff(InlineEnd, InlineBegin, 4);
   OS.EmitLabel(InlineBegin);
 
   // We don't provide any extra file info.
   // FIXME: Find out if debuggers use this info.
+  OS.AddComment("Inlinee lines signature");
   OS.EmitIntValue(unsigned(InlineeLinesSignature::Normal), 4);
 
   for (const DISubprogram *SP : InlinedSubprograms) {
+    OS.AddBlankLine();
     TypeIndex TypeId = SubprogramToFuncId[SP];
     unsigned FileId = maybeRecordFile(SP->getFile());
     OS.AddComment("Inlined function " + SP->getDisplayName() + " starts at " +
                   SP->getFilename() + Twine(':') + Twine(SP->getLine()));
+    OS.AddBlankLine();
     // The filechecksum table uses 8 byte entries for now, and file ids start at
     // 1.
     unsigned FileOffset = (FileId - 1) * 8;
+    OS.AddComment("Type index of inlined function");
     OS.EmitIntValue(TypeId.getIndex(), 4);
+    OS.AddComment("Offset into filechecksum table");
     OS.EmitIntValue(FileOffset, 4);
+    OS.AddComment("Starting line number");
     OS.EmitIntValue(SP->getLine(), 4);
   }
 
@@ -330,14 +350,18 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   TypeIndex InlineeIdx = SubprogramToFuncId[Site.Inlinee];
 
   // SymbolRecord
+  Asm->OutStreamer->AddComment("Record length");
   EmitLabelDiff(OS, InlineBegin, InlineEnd, 2);   // RecordLength
   OS.EmitLabel(InlineBegin);
+  Asm->OutStreamer->AddComment("Record kind: S_INLINESITE");
   Asm->EmitInt16(SymbolRecordKind::S_INLINESITE); // RecordKind
 
-  InlineSiteSym SiteBytes{};
-  SiteBytes.Inlinee = InlineeIdx;
-  Asm->OutStreamer->EmitBytes(
-      StringRef(reinterpret_cast<const char *>(&SiteBytes), sizeof(SiteBytes)));
+  Asm->OutStreamer->AddComment("PtrParent");
+  Asm->OutStreamer->EmitIntValue(0, 4);
+  Asm->OutStreamer->AddComment("PtrEnd");
+  Asm->OutStreamer->EmitIntValue(0, 4);
+  Asm->OutStreamer->AddComment("Inlinee type index");
+  Asm->EmitInt32(InlineeIdx.getIndex());
 
   unsigned FileId = maybeRecordFile(Site.Inlinee->getFile());
   unsigned StartLineNum = Site.Inlinee->getLine();
@@ -358,7 +382,9 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   }
 
   // Close the scope.
+  Asm->OutStreamer->AddComment("Record length");
   Asm->EmitInt16(2);                                  // RecordLength
+  Asm->OutStreamer->AddComment("Record kind: S_INLINESITE_END");
   Asm->EmitInt16(SymbolRecordKind::S_INLINESITE_END); // RecordKind
 }
 
@@ -382,30 +408,51 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
            *SymbolsEnd = Asm->MMI->getContext().createTempSymbol();
   Asm->OutStreamer->AddComment("Symbol subsection for " + Twine(FuncName));
   Asm->EmitInt32(unsigned(ModuleSubstreamKind::Symbols));
+  Asm->OutStreamer->AddComment("Subsection size");
   EmitLabelDiff(*Asm->OutStreamer, SymbolsBegin, SymbolsEnd);
   Asm->OutStreamer->EmitLabel(SymbolsBegin);
   {
-    MCSymbol *ProcSegmentBegin = Asm->MMI->getContext().createTempSymbol(),
-             *ProcSegmentEnd = Asm->MMI->getContext().createTempSymbol();
-    EmitLabelDiff(*Asm->OutStreamer, ProcSegmentBegin, ProcSegmentEnd, 2);
-    Asm->OutStreamer->EmitLabel(ProcSegmentBegin);
+    MCSymbol *ProcRecordBegin = Asm->MMI->getContext().createTempSymbol(),
+             *ProcRecordEnd = Asm->MMI->getContext().createTempSymbol();
+    Asm->OutStreamer->AddComment("Record length");
+    EmitLabelDiff(*Asm->OutStreamer, ProcRecordBegin, ProcRecordEnd, 2);
+    Asm->OutStreamer->EmitLabel(ProcRecordBegin);
 
+    Asm->OutStreamer->AddComment("Record kind: S_GPROC32_ID");
     Asm->EmitInt16(unsigned(SymbolRecordKind::S_GPROC32_ID));
 
-    // Some bytes of this segment don't seem to be required for basic debugging,
-    // so just fill them with zeroes.
-    Asm->OutStreamer->EmitFill(12, 0);
+    // These fields are filled in by tools like CVPACK which run after the fact.
+    Asm->OutStreamer->AddComment("PtrParent");
+    Asm->OutStreamer->EmitIntValue(0, 4);
+    Asm->OutStreamer->AddComment("PtrEnd");
+    Asm->OutStreamer->EmitIntValue(0, 4);
+    Asm->OutStreamer->AddComment("PtrNext");
+    Asm->OutStreamer->EmitIntValue(0, 4);
     // This is the important bit that tells the debugger where the function
     // code is located and what's its size:
+    Asm->OutStreamer->AddComment("Code size");
     EmitLabelDiff(*Asm->OutStreamer, Fn, FI.End);
-    Asm->OutStreamer->EmitFill(12, 0);
+    Asm->OutStreamer->AddComment("Offset after prologue");
+    Asm->OutStreamer->EmitIntValue(0, 4);
+    Asm->OutStreamer->AddComment("Offset before epilogue");
+    Asm->OutStreamer->EmitIntValue(0, 4);
+    Asm->OutStreamer->AddComment("Function type index");
+    Asm->OutStreamer->EmitIntValue(0, 4);
+    Asm->OutStreamer->AddComment("Function section relative address");
     Asm->OutStreamer->EmitCOFFSecRel32(Fn);
+    Asm->OutStreamer->AddComment("Function section index");
     Asm->OutStreamer->EmitCOFFSectionIndex(Fn);
+    Asm->OutStreamer->AddComment("Flags");
     Asm->EmitInt8(0);
     // Emit the function display name as a null-terminated string.
-    Asm->OutStreamer->EmitBytes(FuncName);
-    Asm->EmitInt8(0);
-    Asm->OutStreamer->EmitLabel(ProcSegmentEnd);
+    Asm->OutStreamer->AddComment("Function name");
+    {
+      SmallString<32> NullTerminatedString(FuncName);
+      if (NullTerminatedString.empty() || NullTerminatedString.back() != '\0')
+        NullTerminatedString.push_back('\0');
+      Asm->OutStreamer->EmitBytes(NullTerminatedString);
+    }
+    Asm->OutStreamer->EmitLabel(ProcRecordEnd);
 
     // Emit inlined call site information. Only emit functions inlined directly
     // into the parent function. We'll emit the other sites recursively as part
@@ -417,7 +464,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     }
 
     // We're done with this function.
+    Asm->OutStreamer->AddComment("Record length");
     Asm->EmitInt16(0x0002);
+    Asm->OutStreamer->AddComment("Record kind: S_PROC_ID_END");
     Asm->EmitInt16(unsigned(SymbolRecordKind::S_PROC_ID_END));
   }
   Asm->OutStreamer->EmitLabel(SymbolsEnd);

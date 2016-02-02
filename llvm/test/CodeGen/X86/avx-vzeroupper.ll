@@ -1,4 +1,13 @@
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-apple-darwin -mattr=+avx | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-scei-ps4 -mattr=+avx | FileCheck --check-prefix=PS4 %s
+
+; The Jaguar (AMD Family 16h) cores in the PS4 don't benefit from vzeroupper.
+; At most, the benefit is "garbage collecting" def'd upper parts of the ymm
+; registers, but the core has so many FP phys regs that this benefit of freeing
+; up the upper parts is for now not worth it. Unlike Intel, there is no
+; performance hazard to def'ing the lower parts of a ymm without clearing the
+; upper part.
+; PS4-NOT: vzeroupper
 
 declare i32 @foo()
 declare <4 x float> @do_sse(<4 x float>)

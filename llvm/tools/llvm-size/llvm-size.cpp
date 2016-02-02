@@ -15,11 +15,13 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -111,6 +113,20 @@ static const char *getRadixFmt() {
   return nullptr;
 }
 
+/// @brief Remove unneeded ELF sections from calculation
+static bool ConsiderForSize(ObjectFile *Obj, SectionRef Section) {
+  if (Obj->isELF()) {
+    switch (static_cast<ELFSectionRef>(Section).getType()) {
+    case ELF::SHT_NULL:
+    case ELF::SHT_SYMTAB:
+    case ELF::SHT_STRTAB:
+    case ELF::SHT_REL:
+    case ELF::SHT_RELA:
+      return false;
+    }
+  }
+  return true;
+}
 /// @brief Print the size of each Mach-O segment and section in @p MachO.
 ///
 /// This is when used when @c OutputFormat is darwin and produces the same
@@ -285,6 +301,8 @@ static void PrintObjectSectionSizes(ObjectFile *Obj) {
     std::size_t max_size_len = strlen("size");
     std::size_t max_addr_len = strlen("addr");
     for (const SectionRef &Section : Obj->sections()) {
+      if (!ConsiderForSize(Obj, Section))
+        continue;
       uint64_t size = Section.getSize();
       total += size;
 
@@ -320,6 +338,8 @@ static void PrintObjectSectionSizes(ObjectFile *Obj) {
 
     // Print each section.
     for (const SectionRef &Section : Obj->sections()) {
+      if (!ConsiderForSize(Obj, Section))
+        continue;
       StringRef name;
       if (error(Section.getName(name)))
         return;
