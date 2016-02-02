@@ -824,7 +824,10 @@ def VREINTERPRET
 ////////////////////////////////////////////////////////////////////////////////
 // Vector fused multiply-add operations
 
-def VFMA : SInst<"vfma", "dddd", "fQf">;
+let ArchGuard = "defined(__ARM_FEATURE_FMA)" in {
+  def VFMA : SInst<"vfma", "dddd", "fQf">;
+  def VFMS : SInst<"vfms", "dddd", "fQf">;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // fp16 vector operations
@@ -908,7 +911,7 @@ def FDIV : IOpInst<"vdiv", "ddd",  "fdQfQd", OP_DIV>;
 ////////////////////////////////////////////////////////////////////////////////
 // Vector fused multiply-add operations
 def FMLA : SInst<"vfma", "dddd", "dQd">;
-def FMLS : SInst<"vfms", "dddd", "fdQfQd">;
+def FMLS : SInst<"vfms", "dddd", "dQd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // MUL, MLA, MLS, FMA, FMS definitions with scalar argument
