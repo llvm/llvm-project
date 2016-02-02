@@ -2442,18 +2442,18 @@ Target::GetBreakableLoadAddress (lldb::addr_t addr)
             SymbolContext sc;
             uint32_t resolve_scope = eSymbolContextFunction | eSymbolContextSymbol;
             temp_addr_module_sp->ResolveSymbolContextForAddress(resolved_addr, resolve_scope, sc);
+            Address sym_addr;
             if (sc.function)
-            {
-                function_start = sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(this);
-                if (function_start == LLDB_INVALID_ADDRESS)
-                    function_start = sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
-            }
+                sym_addr = sc.function->GetAddressRange().GetBaseAddress();
             else if (sc.symbol)
-            {
-                Address sym_addr = sc.symbol->GetAddress();
+                sym_addr = sc.symbol->GetAddress();
+
+            function_start = sym_addr.GetLoadAddress(this);
+            if (function_start == LLDB_INVALID_ADDRESS)
                 function_start = sym_addr.GetFileAddress();
-            }
-            current_offset = addr - function_start;
+
+            if (function_start)
+                current_offset = addr - function_start;
         }
 
         // If breakpoint address is start of function then we dont have to do anything.
