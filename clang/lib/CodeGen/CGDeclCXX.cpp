@@ -304,6 +304,17 @@ void
 CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
                                             llvm::GlobalVariable *Addr,
                                             bool PerformInit) {
+
+  // According to E.2.3.1 in CUDA-7.5 Programming guide: __device__,
+  // __constant__ and __shared__ variables defined in namespace scope,
+  // that are of class type, cannot have a non-empty constructor. All
+  // the checks have been done in Sema by now. Whatever initializers
+  // are allowed are empty and we just need to ignore them here.
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+      (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
+       D->hasAttr<CUDASharedAttr>()))
+    return;
+
   // Check if we've already initialized this decl.
   auto I = DelayedCXXInitPosition.find(D);
   if (I != DelayedCXXInitPosition.end() && I->second == ~0U)
