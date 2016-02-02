@@ -6461,6 +6461,11 @@ def err_variadic_device_fn : Error<
 def err_va_arg_in_device : Error<
   "CUDA device code does not support va_arg">;
 def err_alias_not_supported_on_nvptx : Error<"CUDA does not support aliases">;
+def err_dynamic_var_init : Error<
+    "dynamic initialization is not supported for "
+    "__device__, __constant__, and __shared__ variables.">;
+def err_shared_var_init : Error<
+    "initialization is not supported for __shared__ variables.">;
 
 def warn_non_pod_vararg_with_format_string : Warning<
   "cannot pass %select{non-POD|non-trivial}0 object of type %1 to variadic "

@@ -2334,18 +2334,13 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   const VarDecl *InitDecl;
   const Expr *InitExpr = D->getAnyInitializer(InitDecl);
 
-  // CUDA E.2.4.1 "__shared__ variables cannot have an initialization as part
-  // of their declaration."
-  if (getLangOpts().CPlusPlus && getLangOpts().CUDAIsDevice
-      && D->hasAttr<CUDASharedAttr>()) {
-    if (InitExpr) {
-      const auto *C = dyn_cast<CXXConstructExpr>(InitExpr);
-      if (C == nullptr || !C->getConstructor()->hasTrivialBody())
-        Error(D->getLocation(),
-              "__shared__ variable cannot have an initialization.");
-    }
+  // CUDA E.2.4.1 "__shared__ variables cannot have an initialization
+  // as part of their declaration."  Sema has already checked for
+  // error cases, so we just need to set Init to UndefValue.
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+      D->hasAttr<CUDASharedAttr>())
     Init = llvm::UndefValue::get(getTypes().ConvertType(ASTTy));
-  } else if (!InitExpr) {
+  else if (!InitExpr) {
     // This is a tentative definition; tentative definitions are
     // implicitly initialized with { 0 }.
     //

@@ -1,3 +1,5 @@
+# REQUIRES: x86
+
 # RUN: not ld.lld -unknown1 -unknown2 -m foo /no/such/file -lnosuchlib \
 # RUN:   2>&1 | FileCheck %s
 
@@ -7,3 +9,12 @@
 # CHECK: Unknown emulation: foo
 # CHECK: cannot open /no/such/file
 # CHECK: Unable to find library -lnosuchlib
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
+# RUN: not ld.lld %t -o /dev/null 2>&1 | FileCheck -check-prefix=CHECK2 %s
+
+# CHECK2: failed to open
+
+.globl _start
+_start:
+  nop

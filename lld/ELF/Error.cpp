@@ -16,11 +16,12 @@ namespace lld {
 namespace elf2 {
 
 bool HasError;
+llvm::raw_ostream *ErrorOS;
 
 void warning(const Twine &Msg) { llvm::errs() << Msg << "\n"; }
 
 void error(const Twine &Msg) {
-  llvm::errs() << Msg << "\n";
+  *ErrorOS << Msg << "\n";
   HasError = true;
 }
 

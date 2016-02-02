@@ -125,7 +125,7 @@ void link(llvm::ArrayRef<const char *> args);
 }
 
 namespace elf2 {
-bool link(llvm::ArrayRef<const char *> args);
+bool link(llvm::ArrayRef<const char *> args, raw_ostream &diag = llvm::errs());
 }
 
 /// Driver for lld unit tests
