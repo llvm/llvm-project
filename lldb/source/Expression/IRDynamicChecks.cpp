@@ -35,12 +35,12 @@ using namespace lldb_private;
 
 static char ID;
 
-#define VALID_POINTER_CHECK_NAME "$__lldb_valid_pointer_check"
+#define VALID_POINTER_CHECK_NAME "_$__lldb_valid_pointer_check"
 #define VALID_OBJC_OBJECT_CHECK_NAME "$__lldb_objc_object_check"
 
 static const char g_valid_pointer_check_text[] =
 "extern \"C\" void\n"
-"$__lldb_valid_pointer_check (unsigned char *$__lldb_arg_ptr)\n"
+"_$__lldb_valid_pointer_check (unsigned char *$__lldb_arg_ptr)\n"
 "{\n"
 "    unsigned char $__lldb_local_val = *$__lldb_arg_ptr;\n"
 "}";
