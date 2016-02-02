@@ -155,7 +155,7 @@ void ShadowBuilder::Install() {
   if (main_shadow) {
     // Update.
     void *res = mremap((void *)shadow_, GetShadowSize(), GetShadowSize(),
-                       MREMAP_MAYMOVE | MREMAP_FIXED, main_shadow);
+                       MREMAP_MAYMOVE | MREMAP_FIXED, (void *)main_shadow);
     CHECK(res != MAP_FAILED);
   } else {
     // Initial setup.
