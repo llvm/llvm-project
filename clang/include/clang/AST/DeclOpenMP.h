@@ -17,6 +17,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/TrailingObjects.h"
 
 namespace clang {
 class Expr;

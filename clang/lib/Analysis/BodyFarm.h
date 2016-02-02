@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_LIB_ANALYSIS_BODYFARM_H
 #define LLVM_CLANG_LIB_ANALYSIS_BODYFARM_H
 
+#include "clang/AST/DeclBase.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
@@ -22,7 +23,6 @@
 namespace clang {
 
 class ASTContext;
-class Decl;
 class FunctionDecl;
 class ObjCMethodDecl;
 class ObjCPropertyDecl;

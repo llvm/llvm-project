@@ -7768,6 +7768,10 @@ public:
   void AddLaunchBoundsAttr(SourceRange AttrRange, Decl *D, Expr *MaxThreads,
                            Expr *MinBlocks, unsigned SpellingListIndex);
 
+  /// AddModeAttr - Adds a mode attribute to a particular declaration.
+  void AddModeAttr(SourceRange AttrRange, Decl *D, IdentifierInfo *Name,
+                   unsigned SpellingListIndex, bool InInstantiation = false);
+
   //===--------------------------------------------------------------------===//
   // C++ Coroutines TS
   //

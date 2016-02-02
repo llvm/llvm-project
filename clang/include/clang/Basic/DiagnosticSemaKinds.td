@@ -2450,7 +2450,7 @@ def warn_attribute_wrong_decl_type : Warning<
   "variables, functions and classes|Objective-C protocols|"
   "functions and global variables|structs, unions, and typedefs|structs and typedefs|"
   "interface or protocol declarations|kernel functions|non-K&R-style functions|"
-  "variables, fields and typedefs}1">,
+  "variables, enums, fields and typedefs}1">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Text>;
 def warn_type_attribute_wrong_type : Warning<
@@ -2863,6 +2863,8 @@ def warn_vector_mode_deprecated : Warning<
   InGroup<DeprecatedAttributes>;
 def err_complex_mode_vector_type : Error<
   "type of machine mode does not support base vector types">;
+def err_enum_mode_vector_type : Error<
+  "mode %0 is not supported for enumeration types">;
 def warn_attribute_nonnull_no_pointers : Warning<
   "'nonnull' attribute applied to function with no pointer arguments">,
   InGroup<IgnoredAttributes>;

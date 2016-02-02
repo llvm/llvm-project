@@ -227,6 +227,14 @@ static void instantiateDependentCUDALaunchBoundsAttr(
                         Attr.getSpellingListIndex());
 }
 
+static void
+instantiateDependentModeAttr(Sema &S,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             const ModeAttr &Attr, Decl *New) {
+  S.AddModeAttr(Attr.getRange(), New, Attr.getMode(),
+                Attr.getSpellingListIndex(), /*InInstantiation=*/true);
+}
+
 void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                             const Decl *Tmpl, Decl *New,
                             LateInstantiatedAttrVec *LateAttrs,
@@ -262,6 +270,11 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             dyn_cast<CUDALaunchBoundsAttr>(TmplAttr)) {
       instantiateDependentCUDALaunchBoundsAttr(*this, TemplateArgs,
                                                *CUDALaunchBounds, New);
+      continue;
+    }
+
+    if (const ModeAttr *Mode = dyn_cast<ModeAttr>(TmplAttr)) {
+      instantiateDependentModeAttr(*this, TemplateArgs, *Mode, New);
       continue;
     }
 

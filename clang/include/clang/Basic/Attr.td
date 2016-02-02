@@ -883,8 +883,8 @@ def MipsInterrupt : InheritableAttr, TargetSpecificAttr<TargetMips> {
 
 def Mode : Attr {
   let Spellings = [GCC<"mode">];
-  let Subjects = SubjectList<[Var, TypedefName, Field], ErrorDiag,
-                             "ExpectedVariableFieldOrTypedef">;
+  let Subjects = SubjectList<[Var, Enum, TypedefName, Field], ErrorDiag,
+                             "ExpectedVariableEnumFieldOrTypedef">;
   let Args = [IdentifierArgument<"Mode">];
   let Documentation = [Undocumented];
 }
