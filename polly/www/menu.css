@@ -55,6 +55,9 @@
         color: #3b4567;
 }
 
+a.rss-item {
+        margin-bottom: -1.2em;
+}
 #menu a:visited {
 }
 
@@ -71,15 +74,19 @@
 }
 
 li.rss-item {
-  padding-bottom: 0em;
+  padding-bottom: 1em;
 }
 
 .rss_item {
   padding-top: 1em;
 }
 
-.rss_date {
+.rss-date {
   font-size: 0.8em;
   color: #f35555;
   padding-left: 0.4em;
+  margin-bottom: 2em;
+  padding-bottom: 2em;
+  text-align: right;
+  float: right;
 }

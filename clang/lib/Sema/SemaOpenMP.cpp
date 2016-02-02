@@ -1925,7 +1925,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | simd             | for simd        |                                    |
   // | simd             | master          |                                    |
   // | simd             | critical        |                                    |
-  // | simd             | simd            |                                    |
+  // | simd             | simd            | *                                  |
   // | simd             | sections        |                                    |
   // | simd             | section         |                                    |
   // | simd             | single          |                                    |
@@ -1959,7 +1959,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | for simd         | for simd        |                                    |
   // | for simd         | master          |                                    |
   // | for simd         | critical        |                                    |
-  // | for simd         | simd            |                                    |
+  // | for simd         | simd            | *                                  |
   // | for simd         | sections        |                                    |
   // | for simd         | section         |                                    |
   // | for simd         | single          |                                    |
@@ -1993,7 +1993,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | parallel for simd| for simd        |                                    |
   // | parallel for simd| master          |                                    |
   // | parallel for simd| critical        |                                    |
-  // | parallel for simd| simd            |                                    |
+  // | parallel for simd| simd            | *                                  |
   // | parallel for simd| sections        |                                    |
   // | parallel for simd| section         |                                    |
   // | parallel for simd| single          |                                    |
@@ -2434,7 +2434,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | taskloop simd    | for simd        |                                    |
   // | taskloop simd    | master          |                                    |
   // | taskloop simd    | critical        |                                    |
-  // | taskloop simd    | simd            |                                    |
+  // | taskloop simd    | simd            | *                                  |
   // | taskloop simd    | sections        |                                    |
   // | taskloop simd    | section         |                                    |
   // | taskloop simd    | single          |                                    |
@@ -2509,7 +2509,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       ShouldBeInTargetRegion,
       ShouldBeInTeamsRegion
     } Recommend = NoRecommend;
-    if (isOpenMPSimdDirective(ParentRegion) && CurrentRegion != OMPD_ordered) {
+    if (isOpenMPSimdDirective(ParentRegion) && CurrentRegion != OMPD_ordered &&
+        CurrentRegion != OMPD_simd) {
       // OpenMP [2.16, Nesting of Regions]
       // OpenMP constructs may not be nested inside a simd region.
       // OpenMP [2.8.1,simd Construct, Restrictions]
@@ -2667,20 +2668,18 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       // If a target, target update, target data, target enter data, or
       // target exit data construct is encountered during execution of a
       // target region, the behavior is unspecified.
-      OpenMPDirectiveKind PreviousTargetExecutionDirective;
       NestingProhibited = Stack->hasDirective(
-          [&PreviousTargetExecutionDirective](OpenMPDirectiveKind K,
-                                              const DeclarationNameInfo &DNI,
-                                              SourceLocation Loc) -> bool {
+          [&OffendingRegion](OpenMPDirectiveKind K,
+                             const DeclarationNameInfo &DNI,
+                             SourceLocation Loc) -> bool {
             if (isOpenMPTargetExecutionDirective(K)) {
-              PreviousTargetExecutionDirective = K;
+              OffendingRegion = K;
               return true;
             } else
               return false;
           },
           false /* don't skip top directive */);
       CloseNesting = false;
-      OffendingRegion = PreviousTargetExecutionDirective;
     }
     if (NestingProhibited) {
       SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)

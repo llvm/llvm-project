@@ -319,6 +319,26 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+StringRef Darwin::getOSLibraryNameSuffix() const {
+  switch(TargetPlatform) {
+  case DarwinPlatformKind::MacOS:
+    return "osx";
+  case DarwinPlatformKind::IPhoneOS:
+    return "ios";
+  case DarwinPlatformKind::IPhoneOSSimulator:
+    return "iossim";
+  case DarwinPlatformKind::TvOS:
+    return "tvos";
+  case DarwinPlatformKind::TvOSSimulator:
+    return "tvossim";
+  case DarwinPlatformKind::WatchOS:
+    return "watchos";
+  case DarwinPlatformKind::WatchOSSimulator:
+    return "watchossim";
+  }
+  llvm_unreachable("Unsupported platform");
+}
+
 void Darwin::addProfileRTLibs(const ArgList &Args,
                               ArgStringList &CmdArgs) const {
   if (!needsProfileRT(Args)) return;
@@ -363,12 +383,11 @@ void DarwinClang::AddLinkSanitizerLibArgs(const ArgList &Args,
     // Sanitizer runtime libraries requires C++.
     AddCXXStdlibLibArgs(Args, CmdArgs);
   }
-  // ASan is not supported on watchOS.
-  assert(isTargetMacOS() || isTargetIOSSimulator());
-  StringRef OS = isTargetMacOS() ? "osx" : "iossim";
+
   AddLinkRuntimeLib(
       Args, CmdArgs,
-      (Twine("libclang_rt.") + Sanitizer + "_" + OS + "_dynamic.dylib").str(),
+      (Twine("libclang_rt.") + Sanitizer + "_" +
+       getOSLibraryNameSuffix() + "_dynamic.dylib").str(),
       /*AlwaysLink*/ true, /*IsEmbedded*/ false,
       /*AddRPath*/ true);
 
@@ -1221,8 +1240,7 @@ void Darwin::CheckObjCARC() const {
 
 SanitizerMask Darwin::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
-  if (isTargetMacOS() || isTargetIOSSimulator())
-    Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::Address;
   if (isTargetMacOS()) {
     if (!isMacosxVersionLT(10, 9))
       Res |= SanitizerKind::Vptr;

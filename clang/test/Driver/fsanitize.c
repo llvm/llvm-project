@@ -230,7 +230,7 @@
 // CHECK-VPTR-DARWIN-NEW: -fsanitize=alignment,vptr
 
 // RUN: %clang -target armv7-apple-ios7 -miphoneos-version-min=7.0 -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-IOS
-// CHECK-ASAN-IOS: unsupported option '-fsanitize=address' for target 'arm-apple-ios7'
+// CHECK-ASAN-IOS: -fsanitize=address
 
 // RUN: %clang -target i386-pc-openbsd -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-OPENBSD
 // CHECK-ASAN-OPENBSD: unsupported option '-fsanitize=address' for target 'i386-pc-openbsd'

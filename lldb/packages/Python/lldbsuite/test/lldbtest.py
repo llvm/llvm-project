@@ -1945,11 +1945,10 @@ class Base(unittest2.TestCase):
         """ Returns a string that represents the compiler version.
             Supports: llvm, clang.
         """
-        from .lldbutil import which
         version = 'unknown'
 
         compiler = self.getCompilerBinary()
-        version_output = system([[which(compiler), "-v"]])[1]
+        version_output = system([[compiler, "-v"]])[1]
         for line in version_output.split(os.linesep):
             m = re.search('version ([0-9\.]+)', line)
             if m:

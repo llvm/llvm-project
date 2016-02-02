@@ -137,7 +137,7 @@ void foo() {
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp simd
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -468,7 +468,7 @@ void foo() {
   }
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp simd
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -1730,7 +1730,7 @@ void foo() {
   }
 #pragma omp parallel for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd// expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp simd
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -3504,7 +3504,7 @@ void foo() {
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp simd
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -3818,7 +3818,7 @@ void foo() {
   }
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp simd
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -5053,7 +5053,7 @@ void foo() {
   }
 #pragma omp parallel for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd// expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp simd
     for (int i = 0; i < 10; ++i)
       ;
   }
