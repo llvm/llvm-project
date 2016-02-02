@@ -49,6 +49,18 @@
 # define SANITIZER_IOSSIM  0
 #endif
 
+#if defined(__APPLE__) && TARGET_OS_IPHONE && TARGET_OS_WATCH
+# define SANITIZER_WATCHOS 1
+#else
+# define SANITIZER_WATCHOS 0
+#endif
+
+#if defined(__APPLE__) && TARGET_OS_IPHONE && TARGET_OS_TV
+# define SANITIZER_TVOS 1
+#else
+# define SANITIZER_TVOS 0
+#endif
+
 #if defined(_WIN32)
 # define SANITIZER_WINDOWS 1
 #else

@@ -72,6 +72,12 @@ extern "C" {
 #include <unistd.h>
 #include <util.h>
 
+// from <crt_externs.h>, but we don't have that file on iOS
+extern "C" {
+  extern char ***_NSGetArgv(void);
+  extern char ***_NSGetEnviron(void);
+}
+
 namespace __sanitizer {
 
 #include "sanitizer_syscall_generic.inc"
@@ -361,7 +367,10 @@ uptr GetListOfModules(LoadedModule *modules, uptr max_modules,
   return memory_mapping.DumpListOfModules(modules, max_modules, filter);
 }
 
-bool IsDeadlySignal(int signum) {
+bool IsHandledDeadlySignal(int signum) {
+  if ((SANITIZER_WATCHOS || SANITIZER_TVOS) && !(SANITIZER_IOSSIM))
+    // Handling fatal signals on watchOS and tvOS devices is disallowed.
+    return false;
   return (signum == SIGSEGV || signum == SIGBUS) && common_flags()->handle_segv;
 }
 

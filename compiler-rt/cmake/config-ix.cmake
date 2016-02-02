@@ -275,7 +275,7 @@ set(WASM64 wasm64)
 
 if(APPLE)
   set(ARM64 arm64)
-  set(ARM32 armv7 armv7s)
+  set(ARM32 armv7 armv7s armv7k)
   set(X86_64 x86_64 x86_64h)
 endif()
 
@@ -310,7 +310,7 @@ if(APPLE)
     set(OSX_SYSROOT_FLAG "-isysroot${OSX_SYSROOT}")
   endif()
 
-  option(COMPILER_RT_ENABLE_IOS "Enable building for iOS - Experimental" Off)
+  option(COMPILER_RT_ENABLE_IOS "Enable building for iOS" Off)
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
 

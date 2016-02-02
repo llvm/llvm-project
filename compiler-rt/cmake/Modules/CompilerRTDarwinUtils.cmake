@@ -64,7 +64,7 @@ function(darwin_test_archs os valid_archs)
   # The simple program will build for x86_64h on the simulator because it is 
   # compatible with x86_64 libraries (mostly), but since x86_64h isn't actually
   # a valid or useful architecture for the iOS simulator we should drop it.
-  if(${os} STREQUAL "iossim")
+  if(${os} MATCHES "^(iossim|tvossim|watchossim)$")
     list(REMOVE_ITEM archs "x86_64h")
   endif()
 

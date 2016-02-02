@@ -169,7 +169,7 @@ void UnsetAlternateSignalStack() {
 typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
 static void MaybeInstallSigaction(int signum,
                                   SignalHandlerType handler) {
-  if (!IsDeadlySignal(signum))
+  if (!IsHandledDeadlySignal(signum))
     return;
   struct sigaction sigact;
   internal_memset(&sigact, 0, sizeof(sigact));
