@@ -35,6 +35,13 @@ StringRef CheckerContext::getCalleeName(const FunctionDecl *FunDecl) const {
   return funI->getName();
 }
 
+StringRef CheckerContext::getDeclDescription(const Decl *D) {
+  if (isa<ObjCMethodDecl>(D) || isa<CXXMethodDecl>(D))
+    return "method";
+  if (isa<BlockDecl>(D))
+    return "anonymous block";
+  return "function";
+}
 
 bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
                                         StringRef Name) {

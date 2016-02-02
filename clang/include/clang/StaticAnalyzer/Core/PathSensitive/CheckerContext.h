@@ -263,6 +263,10 @@ public:
     Eng.getBugReporter().emitReport(std::move(R));
   }
 
+  /// \brief Returns the word that should be used to refer to the declaration
+  /// in the report.
+  StringRef getDeclDescription(const Decl *D);
+
   /// \brief Get the declaration of the called function (path-sensitive).
   const FunctionDecl *getCalleeDecl(const CallExpr *CE) const;
 
