@@ -15,34 +15,26 @@ class ExitDuringStepTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
-    @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
-    def test_thread_state_is_stopped(self):
-        """Test thread exit during step handling."""
-        self.build(dictionary=self.getBuildFlags())
-        self.exit_during_step_base("thread step-in -m all-threads", 'stop reason = step in', True)
-
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
     @expectedFlakeyAndroid("llvm.org/pr26206")
     def test(self):
         """Test thread exit during step handling."""
         self.build(dictionary=self.getBuildFlags())
-        self.exit_during_step_base("thread step-inst -m all-threads", 'stop reason = instruction step', False)
+        self.exit_during_step_base("thread step-inst -m all-threads", 'stop reason = instruction step')
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
     @expectedFlakeyAndroid("llvm.org/pr26206")
     def test_step_over(self):
         """Test thread exit during step-over handling."""
         self.build(dictionary=self.getBuildFlags())
-        self.exit_during_step_base("thread step-over -m all-threads", 'stop reason = step over', False)
+        self.exit_during_step_base("thread step-over -m all-threads", 'stop reason = step over')
 
     @skipIfFreeBSD # llvm.org/pr21411: test is hanging
     @expectedFlakeyAndroid("llvm.org/pr26206")
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build(dictionary=self.getBuildFlags())
-        self.exit_during_step_base("thread step-in -m all-threads", 'stop reason = step in', False)
+        self.exit_during_step_base("thread step-in -m all-threads", 'stop reason = step in')
 
     def setUp(self):
         # Call super's setUp().
@@ -51,7 +43,7 @@ class ExitDuringStepTestCase(TestBase):
         self.breakpoint = line_number('main.cpp', '// Set breakpoint here')
         self.continuepoint = line_number('main.cpp', '// Continue from here')
 
-    def exit_during_step_base(self, step_cmd, step_stop_reason, test_thread_state):
+    def exit_during_step_base(self, step_cmd, step_stop_reason):
         """Test thread exit during step handling."""
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)

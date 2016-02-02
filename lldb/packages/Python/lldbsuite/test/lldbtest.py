@@ -440,6 +440,14 @@ def builder_module():
         return __import__("builder_netbsd")
     return __import__("builder_" + sys.platform)
 
+def does_function_require_self(func):
+    import inspect
+    func_argc = len(inspect.getargspec(func).args)
+    if func_argc == 0 or (getattr(func,'im_self',None) is not None) or (hasattr(func, '__self__')):
+        return False
+    else:
+        return True
+
 def run_adb_command(cmd, device_id):
     device_id_args = []
     if device_id:
@@ -531,16 +539,13 @@ def add_test_categories(cat):
 
 def benchmarks_test(func):
     """Decorate the item as a benchmarks test."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@benchmarks_test can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        self.skipTest("benchmarks test")
-        return func(self, *args, **kwargs)
+    def should_skip_benchmarks_test():
+        return (True, "benchmarks test")
 
     # Mark this function as such to separate them from the regular tests.
-    wrapper.__benchmarks_test__ = True
-    return wrapper
+    result = skipTestIfFn(should_skip_benchmarks_test)(func)
+    result.__benchmarks_test__ = True
+    return result
 
 def no_debug_info_test(func):
     """Decorate the item as a test what don't use any debug info. If this annotation is specified
@@ -557,45 +562,21 @@ def no_debug_info_test(func):
 
 def debugserver_test(func):
     """Decorate the item as a debugserver test."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@debugserver_test can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        if configuration.dont_do_debugserver_test:
-            self.skipTest("debugserver tests")
-        return func(self, *args, **kwargs)
-
-    # Mark this function as such to separate them from the regular tests.
-    wrapper.__debugserver_test__ = True
-    return wrapper
+    def should_skip_debugserver_test():
+        return (configuration.dont_do_debugserver_test, "debugserver tests")
+    return skipTestIfFn(should_skip_debugserver_test)(func)
 
 def llgs_test(func):
     """Decorate the item as a lldb-server test."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@llgs_test can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        if configuration.dont_do_llgs_test:
-            self.skipTest("llgs tests")
-        return func(self, *args, **kwargs)
-
-    # Mark this function as such to separate them from the regular tests.
-    wrapper.__llgs_test__ = True
-    return wrapper
+    def should_skip_llgs_tests():
+        return (configuration.dont_do_llgs_test, "llgs tests")
+    return skipTestIfFn(should_skip_llgs_tests)(func)
 
 def not_remote_testsuite_ready(func):
     """Decorate the item as a test which is not ready yet for remote testsuite."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@not_remote_testsuite_ready can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        if lldb.remote_platform:
-            self.skipTest("not ready for remote testsuite")
-        return func(self, *args, **kwargs)
-
-    # Mark this function as such to separate them from the regular tests.
-    wrapper.__not_ready_for_remote_testsuite_test__ = True
-    return wrapper
+    def is_remote():
+        return (lldb.remote_platform, "Not ready for remote testsuite")
+    return skipTestIfFn(is_remote)(func)
 
 def expectedFailure(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):
@@ -832,76 +813,47 @@ def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
 
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@skipIfRemote can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        from unittest2 import case
-        if lldb.remote_platform:
-            self = args[0]
-            self.skipTest("skip on remote platform")
-        else:
-            func(*args, **kwargs)
-    return wrapper
+    def is_remote():
+        return (lldb.remote_platform, "skip on remote platform")
+    return skipTestIfFn(is_remote)(func)
 
 def skipUnlessListedRemote(remote_list=None):
-    def myImpl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-            raise Exception("@skipIfRemote can only be used to decorate a "
-                            "test method")
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if remote_list and lldb.remote_platform:
-                self = args[0]
-                triple = self.dbg.GetSelectedPlatform().GetTriple()
-                for r in remote_list:
-                    if r in triple:
-                        func(*args, **kwargs)
-                        return
-                self.skipTest("skip on remote platform %s" % str(triple))
-            else:
-                func(*args, **kwargs)
-        return wrapper
-
-    return myImpl
+    def is_remote_unlisted(self):
+        if remote_list and lldb.remote_platform:
+            triple = self.dbg.GetSelectedPlatform().GetTriple()
+            for r in remote_list:
+                if r in triple:
+                    return (False, None)
+            return (True, "skipping because remote is not listed")
+        else:
+            return (False, None)
+    return skipTestIfFn(is_remote_unlisted)
 
 def skipIfRemoteDueToDeadlock(func):
     """Decorate the item to skip tests if testing remotely due to the test deadlocking."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@skipIfRemote can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        from unittest2 import case
-        if lldb.remote_platform:
-            self = args[0]
-            self.skipTest("skip on remote platform (deadlocks)")
-        else:
-            func(*args, **kwargs)
-    return wrapper
+    def is_remote():
+        return (lldb.remote_platform, "skip on remote platform (deadlocks)")
+    return skipTestIfFn(is_remote)(func)
 
 def skipIfNoSBHeaders(func):
     """Decorate the item to mark tests that should be skipped when LLDB is built with no SB API headers."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@skipIfNoSBHeaders can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        from unittest2 import case
-        self = args[0]
+    def are_sb_headers_missing():
         if sys.platform.startswith("darwin"):
             header = os.path.join(os.environ["LLDB_LIB_DIR"], 'LLDB.framework', 'Versions','Current','Headers','LLDB.h')
         else:
             header = os.path.join(os.environ["LLDB_SRC"], "include", "lldb", "API", "LLDB.h")
         platform = sys.platform
         if not os.path.exists(header):
-            self.skipTest("skip because LLDB.h header not found")
-        else:
-            func(*args, **kwargs)
-    return wrapper
+            return (True, "skip because LLDB.h header not found")
+
+        return (False, None)
+    return skipTestIfFn(are_sb_headers_missing)(func)
 
 def skipIfiOSSimulator(func):
     """Decorate the item to skip tests that should be skipped on the iOS Simulator."""
-    return unittest2.skipIf(configuration.lldb_platform_name == 'ios-simulator', 'skip on the iOS Simulator')(func)
+    def is_ios_simulator():
+        return (configuration.lldb_platform_name == 'ios-simulator', "skip on the iOS Simulator")
+    return skipTestIfFn(is_ios_simulator)(func)
 
 def skipIfFreeBSD(func):
     """Decorate the item to skip tests that should be skipped on FreeBSD."""
@@ -944,36 +896,23 @@ def skipUnlessDarwin(func):
 
 def skipUnlessGoInstalled(func):
     """Decorate the item to skip tests when no Go compiler is available."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@skipIfGcc can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        from unittest2 import case
-        self = args[0]
+    def is_go_missing(self):
         compiler = self.getGoCompilerVersion()
         if not compiler:
-            self.skipTest("skipping because go compiler not found")
+            return (True, "skipping because go compiler not found")
+        match_version = re.search(r"(\d+\.\d+(\.\d+)?)", compiler)
+        if not match_version:
+            # Couldn't determine version.
+            return (True, "skipping because go version could not be parsed out of {}".format(compiler))
         else:
-            # Ensure the version is the minimum version supported by
-            # the LLDB go support.
-            match_version = re.search(r"(\d+\.\d+(\.\d+)?)", compiler)
-            if not match_version:
-                # Couldn't determine version.
-                self.skipTest(
-                    "skipping because go version could not be parsed "
-                    "out of {}".format(compiler))
-            else:
-                from distutils.version import StrictVersion
-                min_strict_version = StrictVersion("1.4.0")
-                compiler_strict_version = StrictVersion(match_version.group(1))
-                if compiler_strict_version < min_strict_version:
-                    self.skipTest(
-                        "skipping because available go version ({}) does "
-                        "not meet minimum required go version ({})".format(
-                            compiler_strict_version,
-                            min_strict_version))
-            func(*args, **kwargs)
-    return wrapper
+            from distutils.version import StrictVersion
+            min_strict_version = StrictVersion("1.4.0")
+            compiler_strict_version = StrictVersion(match_version.group(1))
+            if compiler_strict_version < min_strict_version:
+                return (True, "skipping because available version ({}) does not meet minimum required version ({})"
+                               .format(compiler_strict_version, min_strict_version))
+        return (False, None)
+    return skipTestIfFn(is_go_missing)(func)
 
 def getPlatform():
     """Returns the target platform which the tests are running on."""
@@ -1006,36 +945,30 @@ def platformIsDarwin():
 
 def skipIfHostIncompatibleWithRemote(func):
     """Decorate the item to skip tests if binaries built on this host are incompatible."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@skipIfHostIncompatibleWithRemote can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        from unittest2 import case
-        self = args[0]
+    def is_host_incompatible_with_remote(self):
         host_arch = self.getLldbArchitecture()
         host_platform = getHostPlatform()
         target_arch = self.getArchitecture()
         target_platform = 'darwin' if self.platformIsDarwin() else self.getPlatform()
         if not (target_arch == 'x86_64' and host_arch == 'i386') and host_arch != target_arch:
-            self.skipTest("skipping because target %s is not compatible with host architecture %s" % (target_arch, host_arch))
+            return (True, "skipping because target %s is not compatible with host architecture %s" % (target_arch, host_arch))
         elif target_platform != host_platform:
-            self.skipTest("skipping because target is %s but host is %s" % (target_platform, host_platform))
-        else:
-            func(*args, **kwargs)
-    return wrapper
+            return (True, "skipping because target is %s but host is %s" % (target_platform, host_platform))
+        return (False, None)
+    return skipTestIfFn(is_host_incompatible_with_remote)(func)
 
 def skipIfHostPlatform(oslist):
     """Decorate the item to skip tests if running on one of the listed host platforms."""
-    return unittest2.skipIf(getHostPlatform() in oslist,
-                            "skip on %s" % (", ".join(oslist)))
+    return skipIf(hostoslist=oslist)
 
 def skipUnlessHostPlatform(oslist):
     """Decorate the item to skip tests unless running on one of the listed host platforms."""
-    return unittest2.skipUnless(getHostPlatform() in oslist,
-                                "requires on of %s" % (", ".join(oslist)))
+    return skipIf(hostoslist=not_in(oslist))
 
 def skipUnlessArch(archs):
     """Decorate the item to skip tests unless running on one of the listed architectures."""
+    # This decorator cannot be ported to `skipIf` yet because it is uused with regular
+    # expressions, which the common matcher does not yet support.
     def myImpl(func):
         if isinstance(func, type) and issubclass(func, unittest2.TestCase):
             raise Exception("@skipUnlessArch can only be used to decorate a test method")
@@ -1053,11 +986,15 @@ def skipUnlessArch(archs):
 
 def skipIfPlatform(oslist):
     """Decorate the item to skip tests if running on one of the listed platforms."""
+    # This decorator cannot be ported to `skipIf` yet because it is used on entire
+    # classes, which `skipIf` explicitly forbids.
     return unittest2.skipIf(getPlatform() in oslist,
                             "skip on %s" % (", ".join(oslist)))
 
 def skipUnlessPlatform(oslist):
     """Decorate the item to skip tests unless running on one of the listed platforms."""
+    # This decorator cannot be ported to `skipIf` yet because it is used on entire
+    # classes, which `skipIf` explicitly forbids.
     return unittest2.skipUnless(getPlatform() in oslist,
                                 "requires on of %s" % (", ".join(oslist)))
 
@@ -1152,11 +1089,17 @@ def skipIfDsym(bugnumber=None):
 
 def skipTestIfFn(expected_fn, bugnumber=None):
     def skipTestIfFn_impl(func):
+        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+            raise Exception("@skipTestIfFn can only be used to decorate a test method")
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             from unittest2 import case
             self = args[0]
-            skip, reason = expected_fn(self)
+            if does_function_require_self(expected_fn):
+                skip, reason = expected_fn(self)
+            else:
+                skip, reason = expected_fn()
             if skip:
                self.skipTest(reason)
             else:
@@ -1174,47 +1117,15 @@ def skipTestIfFn(expected_fn, bugnumber=None):
 
 def skipIfGcc(func):
     """Decorate the item to skip tests that should be skipped if building with gcc ."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@skipIfGcc can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        from unittest2 import case
-        self = args[0]
-        compiler = self.getCompiler()
-        if "gcc" in compiler:
-            self.skipTest("skipping because gcc is the test compiler")
-        else:
-            func(*args, **kwargs)
-    return wrapper
+    return skipIf(compiler="gcc")(func)
 
 def skipIfIcc(func):
     """Decorate the item to skip tests that should be skipped if building with icc ."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@skipIfIcc can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        from unittest2 import case
-        self = args[0]
-        compiler = self.getCompiler()
-        if "icc" in compiler:
-            self.skipTest("skipping because icc is the test compiler")
-        else:
-            func(*args, **kwargs)
-    return wrapper
+    return skipIf(compiler="icc")(func)
 
 def skipIfi386(func):
     """Decorate the item to skip tests that should be skipped if building 32-bit."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@skipIfi386 can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        from unittest2 import case
-        self = args[0]
-        if "i386" == self.getArchitecture():
-            self.skipTest("skipping because i386 is not a supported architecture")
-        else:
-            func(*args, **kwargs)
-    return wrapper
+    return skipIf(archs="i386")(func)
 
 def skipIfTargetAndroid(api_levels=None, archs=None):
     """Decorator to skip tests when the target is Android.
@@ -1225,38 +1136,16 @@ def skipIfTargetAndroid(api_levels=None, archs=None):
         arch - A sequence of architecture names specifying the architectures
             for which a test is skipped. None means all architectures.
     """
-    def myImpl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-            raise Exception("@skipIfTargetAndroid can only be used to "
-                            "decorate a test method")
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            from unittest2 import case
-            self = args[0]
-            skip_for_android, reason = matchAndroid(api_levels, archs)(self)
-            if skip_for_android:
-                self.skipTest("skiped on Android target with API %d and architecture %s.  %s" %
-                        (android_device_api(), self.getArchitecture(), reason))
-            func(*args, **kwargs)
-        return wrapper
-    return myImpl
+    def is_target_android(self):
+        return matchAndroid(api_levels, archs)(self)
+    return skipTestIfFn(is_target_android)
 
 def skipUnlessCompilerRt(func):
     """Decorate the item to skip tests if testing remotely."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@skipUnless can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        from unittest2 import case
-        import os.path
+    def is_compiler_rt_missing():
         compilerRtPath = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "llvm","projects","compiler-rt")
-        print(compilerRtPath)
-        if not os.path.exists(compilerRtPath):
-            self = args[0]
-            self.skipTest("skip if compiler-rt not found")
-        else:
-            func(*args, **kwargs)
-    return wrapper
+        return (not os.path.exists(compilerRtPath), "compiler-rt not found")
+    return skipTestIfFn(is_compiler_rt_missing)(func)
 
 class _PlatformContext(object):
     """Value object class which contains platform-specific options."""
@@ -1685,11 +1574,7 @@ class Base(unittest2.TestCase):
         for hook in reversed(self.hooks):
             with recording(self, traceAlways) as sbuf:
                 print("Executing tearDown hook:", getsource_if_available(hook), file=sbuf)
-            import inspect
-            hook_argc = len(inspect.getargspec(hook).args)
-            if hook_argc == 0 or (getattr(hook,'im_self',None) is not None) or (hasattr(hook, '__self__')):
-                hook()
-            elif hook_argc == 1:
+            if does_function_require_self(hook):
                 hook(self)
             else:
                 hook() # try the plain call and hope it works

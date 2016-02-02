@@ -129,7 +129,7 @@ public:
   ///
   /// @returns The alloca for @p Access or a replacement value taken from
   ///          GlobalMap.
-  Value *getOrCreateAlloca(MemoryAccess &Access);
+  Value *getOrCreateAlloca(const MemoryAccess &Access);
 
   /// @brief Return the alloca for @p Array
   ///

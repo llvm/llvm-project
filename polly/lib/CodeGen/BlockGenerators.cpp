@@ -344,7 +344,7 @@ Value *BlockGenerator::getOrCreateAlloca(Value *ScalarBase,
   return Addr;
 }
 
-Value *BlockGenerator::getOrCreateAlloca(MemoryAccess &Access) {
+Value *BlockGenerator::getOrCreateAlloca(const MemoryAccess &Access) {
   if (Access.isPHIKind())
     return getOrCreatePHIAlloca(Access.getBaseAddr());
   else

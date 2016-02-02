@@ -38,6 +38,7 @@ Clang-Tidy Checks
    google-runtime-member-string-references
    google-runtime-memset
    google-runtime-operator
+   google-runtime-references
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment

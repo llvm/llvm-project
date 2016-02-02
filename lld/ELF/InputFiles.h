@@ -41,7 +41,7 @@ public:
   // Filename of .a which contained this file. If this file was
   // not in an archive file, it is the empty string. We use this
   // string for creating error messages.
-  std::string ArchiveName;
+  StringRef ArchiveName;
 
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}

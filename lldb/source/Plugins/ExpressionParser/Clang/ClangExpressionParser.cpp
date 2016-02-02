@@ -305,9 +305,9 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     m_compiler->getCodeGenOpts().DisableFPElim = true;
     m_compiler->getCodeGenOpts().OmitLeafFramePointer = false;
     if (generate_debug_info)
-        m_compiler->getCodeGenOpts().setDebugInfo(CodeGenOptions::FullDebugInfo);
+        m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
     else
-        m_compiler->getCodeGenOpts().setDebugInfo(CodeGenOptions::NoDebugInfo);
+        m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::NoDebugInfo);
 
     // Disable some warnings.
     m_compiler->getDiagnostics().setSeverityForGroup(clang::diag::Flavor::WarningOrError,
@@ -397,7 +397,7 @@ ClangExpressionParser::Parse (Stream &stream)
 
     clang::SourceManager &SourceMgr = m_compiler->getSourceManager();
     bool created_main_file = false;
-    if (m_compiler->getCodeGenOpts().getDebugInfo() == CodeGenOptions::FullDebugInfo)
+    if (m_compiler->getCodeGenOpts().getDebugInfo() == codegenoptions::FullDebugInfo)
     {
         std::string temp_source_path;
 

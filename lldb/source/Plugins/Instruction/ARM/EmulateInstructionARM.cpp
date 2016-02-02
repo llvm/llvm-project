@@ -13062,6 +13062,15 @@ EmulateInstructionARM::ReadInstruction ()
                 m_opcode_mode = eModeARM;
                 m_opcode.SetOpcode32 (MemARead(read_inst_context, pc, 4, 0, &success), GetByteOrder());
             }
+
+            if (!m_ignore_conditions)
+            {
+                // If we are not ignoreing the conditions then init the it session from the current
+                // value of cpsr.
+                uint32_t it = (Bits32(m_opcode_cpsr, 15, 10) << 2) | Bits32(m_opcode_cpsr, 26, 25);
+                if (it != 0)
+                    m_it_session.InitIT(it);
+            }
         }
     }
     if (!success)
@@ -13572,10 +13581,6 @@ EmulateInstructionARM::WriteFlags (Context &context,
 bool
 EmulateInstructionARM::EvaluateInstruction (uint32_t evaluate_options)
 {
-    // Advance the ITSTATE bits to their values for the next instruction.
-    if (m_opcode_mode == eModeThumb && m_it_session.InITBlock())
-        m_it_session.ITAdvance();
-
     ARMOpcode *opcode_data = NULL;
    
     if (m_opcode_mode == eModeThumb)
@@ -13614,7 +13619,13 @@ EmulateInstructionARM::EvaluateInstruction (uint32_t evaluate_options)
     success = (this->*opcode_data->callback) (m_opcode.GetOpcode32(), opcode_data->encoding);  
     if (!success)
         return false;
-        
+
+    // Advance the ITSTATE bits to their values for the next instruction if we haven't just executed
+    // an IT instruction what initialized it.
+    if (m_opcode_mode == eModeThumb && m_it_session.InITBlock() &&
+        opcode_data->callback != &EmulateInstructionARM::EmulateIT)
+        m_it_session.ITAdvance();
+
     if (auto_advance_pc)
     {
         uint32_t after_pc_value = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc, 0, &success);

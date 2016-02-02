@@ -39,6 +39,7 @@ class ProcessIOTestCase(TestBase):
 
     @skipIfWindows # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
+    @expectedFlakeyAndroid(bugnumber="llvm.org/pr26437", archs=["aarch64"], api_levels=[21])
     def test_stdin_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDIN without specifying STDOUT or STDERR."""
         self.build()
