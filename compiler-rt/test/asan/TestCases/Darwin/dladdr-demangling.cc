@@ -16,7 +16,7 @@ class MyClass {
     // CHECK: {{.*ERROR: AddressSanitizer: heap-use-after-free on address}}
     // CHECK: {{READ of size 1 at 0x.* thread T0}}
     // CHECK-DLADDR: Using dladdr symbolizer
-    // CHECK-DLADDR: failed to fork external symbolizer
+    // CHECK-DLADDR: failed to fork
     // CHECK: {{    #0 0x.* in MyClass::my_function\(int\)}}
     // CHECK: {{freed by thread T0 here:}}
     // CHECK: {{    #0 0x.* in wrap_free}}
