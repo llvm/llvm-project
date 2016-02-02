@@ -27,6 +27,7 @@ class LinkerDriver {
 public:
   void main(ArrayRef<const char *> Args);
   void addFile(StringRef Path);
+  void addLibrary(StringRef Name);
 
 private:
   void readConfigs(llvm::opt::InputArgList &Args);

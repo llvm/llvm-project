@@ -2,7 +2,7 @@
 # RUN: lld -flavor darwin -arch armv7 -r -print_atoms %s -o %t  | FileCheck %s
 # RUN: lld -flavor darwin -arch armv7 -dylib -print_atoms %t -o %t2 \
 # RUN:     %p/Inputs/libSystem.yaml -sectalign __TEXT __text 0x1000  | FileCheck %s
-# RUN: llvm-objdump -d -macho %t2 | FileCheck -check-prefix=CODE %s
+# RUN: llvm-objdump -d -macho -no-symbolic-operands %t2 | FileCheck -check-prefix=CODE %s
 #
 # Test thumb and arm branches round trip through -r.
 # Test movw/movt pairs have low bit set properly for thumb vs arm.
@@ -330,7 +330,7 @@ local-symbols:
 # CODE-NEXT:                   movt	r0, #0
 # CODE-NEXT:                   movw	r1, #1
 # CODE-NEXT:                   movt	r1, #0
-# CODE-NEXT:                   movw	r2, _a2
+# CODE-NEXT:                   movw	r2, #4174
 # CODE-NEXT:                   movt	r2, #0
 # CODE-NEXT:                   movw	r3, #42
 # CODE-NEXT:                   movt	r3, #0
@@ -341,7 +341,7 @@ local-symbols:
 # CODE-NEXT:                   movt	r0, #0
 # CODE-NEXT:                   movw	r1, #65495
 # CODE-NEXT:                   movt	r1, #65535
-# CODE-NEXT:                   movw	r2, _a2
+# CODE-NEXT:                   movw	r2, #4174
 # CODE-NEXT:                   movt	r2, #0
 # CODE-NEXT:                   movw	r3, #0
 # CODE-NEXT:                   movt	r3, #0

@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %s -o %t.o
-// RUN: echo '.global __progname' > %t2.s
+// RUN: echo .global __progname > %t2.s
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %t2.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 // RUN: ld.lld -o %t %t.o %t2.so

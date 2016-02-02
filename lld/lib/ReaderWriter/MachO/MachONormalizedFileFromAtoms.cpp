@@ -242,6 +242,7 @@ struct MachOFinalSectionFromAtomType {
 
 const MachOFinalSectionFromAtomType sectsToAtomType[] = {
   ENTRY("__TEXT", "__text",           S_REGULAR,          typeCode),
+  ENTRY("__TEXT", "__text",           S_REGULAR,          typeMachHeader),
   ENTRY("__TEXT", "__cstring",        S_CSTRING_LITERALS, typeCString),
   ENTRY("__TEXT", "__ustring",        S_REGULAR,          typeUTF16String),
   ENTRY("__TEXT", "__const",          S_REGULAR,          typeConstant),
@@ -385,7 +386,12 @@ void Util::processAtomAttributes(const DefinedAtom *atom) {
 }
 
 void Util::assignAtomToSection(const DefinedAtom *atom) {
-  if (atom->contentType() == DefinedAtom::typeMachHeader)
+  if (atom->contentType() == DefinedAtom::typeMachHeader) {
+    _machHeaderAliasAtoms.push_back(atom);
+    // Assign atom to this section with this offset.
+    AtomInfo ai = {atom, 0};
+    sectionForAtom(atom)->atomsAndOffsets.push_back(ai);
+  } else if (atom->contentType() == DefinedAtom::typeDSOHandle)
     _machHeaderAliasAtoms.push_back(atom);
   else
     appendAtom(sectionForAtom(atom), atom);

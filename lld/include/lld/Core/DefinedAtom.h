@@ -147,6 +147,7 @@ public:
     typeTLVInitialZeroFill, // TLV initial zero fill data [Darwin]
     typeTLVInitializerPtr,  // pointer to thread local initializer [Darwin]
     typeMachHeader,         // atom representing mach_header [Darwin]
+    typeDSOHandle,          // atom representing DSO handle [Darwin]
     typeThreadZeroFill,     // Uninitialized thread local data(TBSS) [ELF]
     typeThreadData,         // Initialized thread local data(TDATA) [ELF]
     typeRONote,             // Identifies readonly note sections [ELF]
