@@ -1966,13 +1966,8 @@ static inline unsigned getNumBlocksInRegionNode(RegionNode *RN) {
   if (!RN->isSubRegion())
     return 1;
 
-  unsigned NumBlocks = 0;
   Region *R = RN->getNodeAs<Region>();
-  for (auto BB : R->blocks()) {
-    (void)BB;
-    NumBlocks++;
-  }
-  return NumBlocks;
+  return std::distance(R->block_begin(), R->block_end());
 }
 
 static bool containsErrorBlock(RegionNode *RN, const Region &R, LoopInfo &LI,
