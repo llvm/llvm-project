@@ -441,6 +441,7 @@ std::vector<CodeGenIntrinsic> llvm::LoadIntrinsics(const RecordKeeper &RC,
   std::vector<Record*> I = RC.getAllDerivedDefinitions("Intrinsic");
 
   std::vector<CodeGenIntrinsic> Result;
+  Result.reserve(I.size());
 
   for (unsigned i = 0, e = I.size(); i != e; ++i) {
     bool isTarget = I[i]->getValueAsBit("isTarget");
@@ -448,7 +449,7 @@ std::vector<CodeGenIntrinsic> llvm::LoadIntrinsics(const RecordKeeper &RC,
       Result.push_back(CodeGenIntrinsic(I[i]));
   }
   std::sort(Result.begin(), Result.end(),
-            [](CodeGenIntrinsic LHS, CodeGenIntrinsic RHS) {
+            [](const CodeGenIntrinsic& LHS, const CodeGenIntrinsic& RHS) {
               return LHS.Name < RHS.Name;
             });
   return Result;

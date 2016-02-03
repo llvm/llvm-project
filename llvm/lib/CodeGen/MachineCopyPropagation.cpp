@@ -182,7 +182,8 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
         }
       }
 
-      // If Src is defined by a previous copy, it cannot be eliminated.
+      // If Src is defined by a previous copy, the previous copy cannot be
+      // eliminated.
       for (MCRegAliasIterator AI(Src, TRI, true); AI.isValid(); ++AI) {
         CI = CopyMap.find(*AI);
         if (CI != CopyMap.end()) {
@@ -196,7 +197,7 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       // Copy is now a candidate for deletion.
       MaybeDeadCopies.insert(MI);
 
-      // If 'Src' is previously source of another copy, then this earlier copy's
+      // If 'Def' is previously source of another copy, then this earlier copy's
       // source is no longer available. e.g.
       // %xmm9<def> = copy %xmm2
       // ...

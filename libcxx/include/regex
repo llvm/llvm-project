@@ -5387,8 +5387,8 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __out,
                 if ('0' <= *__fmt_first && *__fmt_first <= '9')
                 {
                     size_t __i = *__fmt_first - '0';
-                    __out = _VSTD::copy(__matches_[__i].first,
-                                       __matches_[__i].second, __out);
+                    __out = _VSTD::copy((*this)[__i].first,
+                                        (*this)[__i].second, __out);
                 }
                 else
                 {
@@ -5439,8 +5439,8 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __out,
                             ++__fmt_first;
                             __i = 10 * __i + *__fmt_first - '0';
                         }
-                        __out = _VSTD::copy(__matches_[__i].first,
-                                           __matches_[__i].second, __out);
+                        __out = _VSTD::copy((*this)[__i].first,
+                                            (*this)[__i].second, __out);
                     }
                     else
                     {

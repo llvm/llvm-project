@@ -72,14 +72,14 @@ entry:
   %yo107 = call i64 @llvm.objectsize.i64.p0i8(i8* %b, i1 false)
   %call50 = call i8* @__memmove_chk(i8* %b, i8* %a, i64 %add180, i64 %yo107)
 ; CHECK: %strlen = call i64 @strlen(i8* %b)
-; CHECK-NEXT: %strchr2 = getelementptr i8, i8* %b, i64 %strlen
+; CHECK-NEXT: [[STRCHR:%[0-9a-zA-Z_-]+]] = getelementptr i8, i8* %b, i64 %strlen
   %call51i = call i8* @strrchr(i8* %b, i32 0)
   %d = load i8*, i8** %c, align 8
   %sub182 = ptrtoint i8* %d to i64
   %sub183 = ptrtoint i8* %b to i64
   %sub184 = sub i64 %sub182, %sub183
   %add52.i.i = add nsw i64 %sub184, 1
-; CHECK: call void @llvm.memset.p0i8.i64(i8* %strchr2
+; CHECK: call void @llvm.memset.p0i8.i64(i8* [[STRCHR]]
   %call185 = call i8* @__memset_chk(i8* %call51i, i32 0, i64 %add52.i.i, i64 -1)
   ret i32 4
 }

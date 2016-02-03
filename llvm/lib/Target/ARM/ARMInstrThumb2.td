@@ -3906,6 +3906,8 @@ def : T2Pat<(ARMWrapper tglobaltlsaddr:$dst),
 
 // ConstantPool, GlobalAddress, and JumpTable
 def : T2Pat<(ARMWrapper  tconstpool  :$dst), (t2LEApcrel tconstpool  :$dst)>;
+def : T2Pat<(ARMWrapper texternalsym :$dst), (t2MOVi32imm texternalsym : $dst)>,
+          Requires<[IsThumb, HasV8MBaseline, UseMovt]>;
 def : T2Pat<(ARMWrapper  tglobaladdr :$dst), (t2MOVi32imm tglobaladdr :$dst)>,
            Requires<[IsThumb, HasV8MBaseline, UseMovt]>;
 
