@@ -1550,7 +1550,8 @@ bool UnwrappedLineParser::parseEnum() {
   // In TypeScript, "enum" can also be used as property name, e.g. in interface
   // declarations. An "enum" keyword followed by a colon would be a syntax
   // error and thus assume it is just an identifier.
-  if (Style.Language == FormatStyle::LK_JavaScript && FormatTok->is(tok::colon))
+  if (Style.Language == FormatStyle::LK_JavaScript &&
+      FormatTok->isOneOf(tok::colon, tok::question))
     return false;
 
   // Eat up enum class ...
