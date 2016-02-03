@@ -1904,8 +1904,8 @@ Sema::AtomicPropertySetterGetterRules (ObjCImplDecl* IMPDecl,
     for (auto *Prop : Ext->instance_properties())
       PM[Prop->getIdentifier()] = Prop;
     
-    for (ObjCContainerDecl::PropertyMap::iterator I = PM.begin(), E = PM.end();
-         I != E; ++I) {
+  for (ObjCContainerDecl::PropertyMap::iterator I = PM.begin(), E = PM.end();
+       I != E; ++I) {
     const ObjCPropertyDecl *Property = I->second;
     ObjCMethodDecl *GetterMethod = nullptr;
     ObjCMethodDecl *SetterMethod = nullptr;
