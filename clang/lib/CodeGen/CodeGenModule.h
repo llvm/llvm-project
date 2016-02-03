@@ -1128,6 +1128,9 @@ public:
   /// Create a bitset entry for the given function and add it to BitsetsMD.
   void CreateFunctionBitSetEntry(const FunctionDecl *FD, llvm::Function *F);
 
+  /// Returns whether this module needs the "all-vtables" bitset.
+  bool NeedAllVtablesBitSet() const;
+
   /// Create a bitset entry for the given vtable and add it to BitsetsMD.
   void CreateVTableBitSetEntry(llvm::NamedMDNode *BitsetsMD,
                                llvm::GlobalVariable *VTable, CharUnits Offset,

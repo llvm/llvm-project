@@ -22,13 +22,15 @@ void caller(void (*f)()) {
 // CHECK:   %[[A:.*]] = bitcast i8* %[[DATA]] to { i8, { i8*, i32, i32 }, i8* }*
 // CHECK:   %[[KINDPTR:.*]] = getelementptr {{.*}} %[[A]], i32 0, i32 0
 // CHECK:   %[[KIND:.*]] = load i8, i8* %[[KINDPTR]], align 4
+// CHECK:   %[[VTVALID0:.*]] = call i1 @llvm.bitset.test(i8* %[[ADDR]], metadata !"all-vtables")
+// CHECK:   %[[VTVALID:.*]] = zext i1 %[[VTVALID0]] to i64
 // CHECK:   %[[NOT_0:.*]] = icmp ne i8 %[[KIND]], 0
 // CHECK:   br i1 %[[NOT_0]], label %[[CONT1:.*]], label %[[HANDLE0:.*]], !prof
 
 // CHECK: [[HANDLE0]]:
 // CHECK:   %[[DATA0:.*]] = ptrtoint i8* %[[DATA]] to i64,
 // CHECK:   %[[ADDR0:.*]] = ptrtoint i8* %[[ADDR]] to i64,
-// CHECK:   call void @__ubsan_handle_cfi_check_fail(i64 %[[DATA0]], i64 %[[ADDR0]])
+// CHECK:   call void @__ubsan_handle_cfi_check_fail(i64 %[[DATA0]], i64 %[[ADDR0]], i64 %[[VTVALID]])
 // CHECK:   br label %[[CONT1]]
 
 // CHECK: [[CONT1]]:
@@ -46,7 +48,7 @@ void caller(void (*f)()) {
 // CHECK: [[HANDLE2]]:
 // CHECK:   %[[DATA2:.*]] = ptrtoint i8* %[[DATA]] to i64,
 // CHECK:   %[[ADDR2:.*]] = ptrtoint i8* %[[ADDR]] to i64,
-// CHECK:   call void @__ubsan_handle_cfi_check_fail_abort(i64 %[[DATA2]], i64 %[[ADDR2]])
+// CHECK:   call void @__ubsan_handle_cfi_check_fail_abort(i64 %[[DATA2]], i64 %[[ADDR2]], i64 %[[VTVALID]])
 // CHECK:   unreachable
 
 // CHECK: [[CONT3]]:
@@ -56,7 +58,7 @@ void caller(void (*f)()) {
 // CHECK: [[HANDLE3]]:
 // CHECK:   %[[DATA3:.*]] = ptrtoint i8* %[[DATA]] to i64,
 // CHECK:   %[[ADDR3:.*]] = ptrtoint i8* %[[ADDR]] to i64,
-// CHECK:   call void @__ubsan_handle_cfi_check_fail(i64 %[[DATA3]], i64 %[[ADDR3]])
+// CHECK:   call void @__ubsan_handle_cfi_check_fail(i64 %[[DATA3]], i64 %[[ADDR3]], i64 %[[VTVALID]])
 // CHECK:   br label %[[CONT4]]
 
 // CHECK: [[CONT4]]:

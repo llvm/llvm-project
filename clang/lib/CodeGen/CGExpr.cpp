@@ -2636,6 +2636,14 @@ void CodeGenFunction::EmitCfiCheckFail() {
   Address CheckKindAddr(V, getIntAlign());
   llvm::Value *CheckKind = Builder.CreateLoad(CheckKindAddr);
 
+  llvm::Value *AllVtables = llvm::MetadataAsValue::get(
+      CGM.getLLVMContext(),
+      llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
+  llvm::Value *ValidVtable = Builder.CreateZExt(
+      Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::bitset_test),
+                         {Addr, AllVtables}),
+      IntPtrTy);
+
   const std::pair<int, SanitizerMask> CheckKinds[] = {
       {CFITCK_VCall, SanitizerKind::CFIVCall},
       {CFITCK_NVCall, SanitizerKind::CFINVCall},
@@ -2649,7 +2657,8 @@ void CodeGenFunction::EmitCfiCheckFail() {
     SanitizerMask Mask = CheckKindMaskPair.second;
     llvm::Value *Cond =
         Builder.CreateICmpNE(CheckKind, llvm::ConstantInt::get(Int8Ty, Kind));
-    EmitCheck(std::make_pair(Cond, Mask), "cfi_check_fail", {}, {Data, Addr});
+    EmitCheck(std::make_pair(Cond, Mask), "cfi_check_fail", {},
+              {Data, Addr, ValidVtable});
   }
 
   FinishFunction();
@@ -3970,7 +3979,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, llvm::Value *Callee,
                            CastedCallee, StaticData);
     } else {
       EmitCheck(std::make_pair(BitSetTest, SanitizerKind::CFIICall),
-                "cfi_check_fail", StaticData, CastedCallee);
+                "cfi_check_fail", StaticData,
+                {CastedCallee, llvm::UndefValue::get(IntPtrTy)});
     }
   }
 

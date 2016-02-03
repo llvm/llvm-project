@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM --check-prefix=NDIAG %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM --check-prefix=ITANIUM-NDIAG --check-prefix=NDIAG %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=MS --check-prefix=NDIAG %s
 
@@ -55,13 +55,14 @@ void D::h() {
 
 // DIAG: @[[SRC:.*]] = private unnamed_addr constant [{{.*}} x i8] c"{{.*}}cfi-vcall.cpp\00", align 1
 // DIAG: @[[TYPE:.*]] = private unnamed_addr constant { i16, i16, [4 x i8] } { i16 -1, i16 0, [4 x i8] c"'A'\00" }
-// DIAG: @[[BADTYPESTATIC:.*]] = private unnamed_addr global { i8, { [{{.*}} x i8]*, i32, i32 }, { i16, i16, [4 x i8] }* } { i8 0, { [{{.*}} x i8]*, i32, i32 } { [{{.*}} x i8]* @[[SRC]], i32 [[@LINE+21]], i32 3 }, { i16, i16, [4 x i8] }* @[[TYPE]] }
+// DIAG: @[[BADTYPESTATIC:.*]] = private unnamed_addr global { i8, { [{{.*}} x i8]*, i32, i32 }, { i16, i16, [4 x i8] }* } { i8 0, { [{{.*}} x i8]*, i32, i32 } { [{{.*}} x i8]* @[[SRC]], i32 [[@LINE+23]], i32 3 }, { i16, i16, [4 x i8] }* @[[TYPE]] }
 
 // ITANIUM: define void @_Z2afP1A
 // MS: define void @"\01?af@@YAXPEAUA@@@Z"
 void af(A *a) {
   // ITANIUM: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* [[VT:%[^ ]*]], metadata !"_ZTS1A")
   // MS: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* [[VT:%[^ ]*]], metadata !"?AUA@@")
+  // DIAG-NEXT: [[VTVALID0:%[^ ]*]] = call i1 @llvm.bitset.test(i8* [[VT]], metadata !"all-vtables")
   // CHECK-NEXT: br i1 [[P]], label %[[CONTBB:[^ ,]*]], label %[[TRAPBB:[^ ,]*]]
   // CHECK-NEXT: {{^$}}
 
@@ -69,9 +70,10 @@ void af(A *a) {
   // NDIAG-NEXT: call void @llvm.trap()
   // NDIAG-NEXT: unreachable
   // DIAG-NEXT: [[VTINT:%[^ ]*]] = ptrtoint i8* [[VT]] to i64
-  // DIAG-ABORT-NEXT: call void @__ubsan_handle_cfi_check_fail_abort(i8* getelementptr inbounds ({{.*}} @[[BADTYPESTATIC]], i32 0, i32 0), i64 [[VTINT]])
+  // DIAG-NEXT: [[VTVALID:%[^ ]*]] = zext i1 [[VTVALID0]] to i64
+  // DIAG-ABORT-NEXT: call void @__ubsan_handle_cfi_check_fail_abort(i8* getelementptr inbounds ({{.*}} @[[BADTYPESTATIC]], i32 0, i32 0), i64 [[VTINT]], i64 [[VTVALID]])
   // DIAG-ABORT-NEXT: unreachable
-  // DIAG-RECOVER-NEXT: call void @__ubsan_handle_cfi_check_fail(i8* getelementptr inbounds ({{.*}} @[[BADTYPESTATIC]], i32 0, i32 0), i64 [[VTINT]])
+  // DIAG-RECOVER-NEXT: call void @__ubsan_handle_cfi_check_fail(i8* getelementptr inbounds ({{.*}} @[[BADTYPESTATIC]], i32 0, i32 0), i64 [[VTINT]], i64 [[VTVALID]])
   // DIAG-RECOVER-NEXT: br label %[[CONTBB]]
 
   // CHECK: [[CONTBB]]
@@ -157,20 +159,28 @@ void f(D *d) {
 
 }
 
-// Check for the expected number of elements (9 or 15 respectively).
-// MS: !llvm.bitsets = !{[[X:[^,]*(,[^,]*){8}]]}
-// ITANIUM: !llvm.bitsets = !{[[X:[^,]*(,[^,]*){14}]]}
+// Check for the expected number of elements (15 or 23 respectively).
+// MS-NDIAG: !llvm.bitsets = !{[[X:[^,]*(,[^,]*){9}]]}
+// MS-DIAG: !llvm.bitsets = !{[[X:[^,]*(,[^,]*){15}]]}
+// ITANIUM-NDIAG: !llvm.bitsets = !{[[X:[^,]*(,[^,]*){14}]]}
+// ITANIUM-DIAG: !llvm.bitsets = !{[[X:[^,]*(,[^,]*){23}]]}
 
 // ITANIUM-DAG: !{!"_ZTS1A", [3 x i8*]* @_ZTV1A, i64 16}
+// ITANIUM-DIAG-DAG: !{!"all-vtables", [3 x i8*]* @_ZTV1A, i64 16}
 // ITANIUM-DAG: !{!"_ZTS1A", [7 x i8*]* @_ZTCN12_GLOBAL__N_11DE0_1B, i64 32}
+// ITANIUM-DIAG-DAG: !{!"all-vtables", [7 x i8*]* @_ZTCN12_GLOBAL__N_11DE0_1B, i64 32}
 // ITANIUM-DAG: !{!"_ZTS1B", [7 x i8*]* @_ZTCN12_GLOBAL__N_11DE0_1B, i64 32}
 // ITANIUM-DAG: !{!"_ZTS1A", [9 x i8*]* @_ZTCN12_GLOBAL__N_11DE8_1C, i64 64}
+// ITANIUM-DIAG-DAG: !{!"all-vtables", [9 x i8*]* @_ZTCN12_GLOBAL__N_11DE8_1C, i64 64}
 // ITANIUM-DAG: !{!"_ZTS1C", [9 x i8*]* @_ZTCN12_GLOBAL__N_11DE8_1C, i64 32}
 // ITANIUM-DAG: !{!"_ZTS1A", [12 x i8*]* @_ZTVN12_GLOBAL__N_11DE, i64 32}
+// ITANIUM-DIAG-DAG: !{!"all-vtables", [12 x i8*]* @_ZTVN12_GLOBAL__N_11DE, i64 32}
 // ITANIUM-DAG: !{!"_ZTS1B", [12 x i8*]* @_ZTVN12_GLOBAL__N_11DE, i64 32}
 // ITANIUM-DAG: !{!"_ZTS1C", [12 x i8*]* @_ZTVN12_GLOBAL__N_11DE, i64 88}
+// ITANIUM-DIAG-DAG: !{!"all-vtables", [12 x i8*]* @_ZTVN12_GLOBAL__N_11DE, i64 88}
 // ITANIUM-DAG: !{![[DTYPE]], [12 x i8*]* @_ZTVN12_GLOBAL__N_11DE, i64 32}
 // ITANIUM-DAG: !{!"_ZTS1A", [7 x i8*]* @_ZTV1B, i64 32}
+// ITANIUM-DIAG-DAG: !{!"all-vtables", [7 x i8*]* @_ZTV1B, i64 32}
 // ITANIUM-DAG: !{!"_ZTS1B", [7 x i8*]* @_ZTV1B, i64 32}
 // ITANIUM-DAG: !{!"_ZTS1A", [5 x i8*]* @_ZTV1C, i64 32}
 // ITANIUM-DAG: !{!"_ZTS1C", [5 x i8*]* @_ZTV1C, i64 32}
@@ -178,11 +188,18 @@ void f(D *d) {
 // ITANIUM-DAG: !{!{{[0-9]+}}, [3 x i8*]* @_ZTVZ3foovE2FA, i64 16}
 
 // MS-DAG: !{!"?AUA@@", [2 x i8*]* @[[VTA]], i64 8}
+// MS-DIAG-DAG: !{!"all-vtables", [2 x i8*]* @[[VTA]], i64 8}
 // MS-DAG: !{!"?AUB@@", [3 x i8*]* @[[VTB]], i64 8}
+// MS-DIAG-DAG: !{!"all-vtables", [3 x i8*]* @[[VTB]], i64 8}
 // MS-DAG: !{!"?AUA@@", [2 x i8*]* @[[VTAinB]], i64 8}
+// MS-DIAG-DAG: !{!"all-vtables", [2 x i8*]* @[[VTAinB]], i64 8}
 // MS-DAG: !{!"?AUA@@", [2 x i8*]* @[[VTAinC]], i64 8}
+// MS-DIAG-DAG: !{!"all-vtables", [2 x i8*]* @[[VTAinC]], i64 8}
 // MS-DAG: !{!"?AUB@@", [3 x i8*]* @[[VTBinD]], i64 8}
+// MS-DIAG-DAG: !{!"all-vtables", [3 x i8*]* @[[VTBinD]], i64 8}
 // MS-DAG: !{![[DTYPE]], [3 x i8*]* @[[VTBinD]], i64 8}
 // MS-DAG: !{!"?AUA@@", [2 x i8*]* @[[VTAinBinD]], i64 8}
+// MS-DIAG-DAG: !{!"all-vtables", [2 x i8*]* @[[VTAinBinD]], i64 8}
 // MS-DAG: !{!"?AUA@@", [2 x i8*]* @[[VTFA]], i64 8}
+// MS-DIAG-DAG: !{!"all-vtables", [2 x i8*]* @[[VTFA]], i64 8}
 // MS-DAG: !{!{{[0-9]+}}, [2 x i8*]* @[[VTFA]], i64 8}

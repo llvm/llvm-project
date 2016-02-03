@@ -2607,10 +2607,22 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   auto TypeId = CGM.CreateCfiIdForTypeMetadata(MD);
   if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && TypeId) {
     EmitCfiSlowPathCheck(M, BitSetTest, TypeId, CastedVTable, StaticData);
-  } else {
-    EmitCheck(std::make_pair(BitSetTest, M), "cfi_check_fail", StaticData,
-              CastedVTable);
+    return;
   }
+
+  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
+    EmitTrapCheck(BitSetTest);
+    return;
+  }
+
+  llvm::Value *AllVtables = llvm::MetadataAsValue::get(
+      CGM.getLLVMContext(),
+      llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
+  llvm::Value *ValidVtable =
+      Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::bitset_test),
+                         {CastedVTable, AllVtables});
+  EmitCheck(std::make_pair(BitSetTest, M), "cfi_check_fail", StaticData,
+            {CastedVTable, ValidVtable});
 }
 
 // FIXME: Ideally Expr::IgnoreParenNoopCasts should do this, but it doesn't do
