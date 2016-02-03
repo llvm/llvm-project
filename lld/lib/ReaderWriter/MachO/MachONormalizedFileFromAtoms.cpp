@@ -1244,6 +1244,15 @@ normalizedFromAtoms(const lld::File &atomFile,
   normFile.installName = context.installName();
   normFile.currentVersion = context.currentVersion();
   normFile.compatVersion = context.compatibilityVersion();
+  normFile.os = context.os();
+  normFile.minOSverson = context.osMinVersion();
+  // FIXME: We need to get the SDK version from the system.  For now the min
+  // OS version is better than nothing.
+  normFile.sdkVersion = context.osMinVersion();
+
+  if (context.generateVersionLoadCommand() &&
+      context.os() != MachOLinkingContext::OS::unknown)
+    normFile.hasMinVersionLoadCommand = true;
   normFile.pageSize = context.pageSize();
   normFile.rpaths = context.rpaths();
   util.addDependentDylibs(atomFile, normFile);

@@ -4023,6 +4023,20 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierForType(QualType T) {
   return InternalId;
 }
 
+/// Returns whether this module needs the "all-vtables" bitset.
+bool CodeGenModule::NeedAllVtablesBitSet() const {
+  // Returns true if at least one of vtable-based CFI checkers is enabled and
+  // is not in the trapping mode.
+  return ((LangOpts.Sanitize.has(SanitizerKind::CFIVCall) &&
+           !CodeGenOpts.SanitizeTrap.has(SanitizerKind::CFIVCall)) ||
+          (LangOpts.Sanitize.has(SanitizerKind::CFINVCall) &&
+           !CodeGenOpts.SanitizeTrap.has(SanitizerKind::CFINVCall)) ||
+          (LangOpts.Sanitize.has(SanitizerKind::CFIDerivedCast) &&
+           !CodeGenOpts.SanitizeTrap.has(SanitizerKind::CFIDerivedCast)) ||
+          (LangOpts.Sanitize.has(SanitizerKind::CFIUnrelatedCast) &&
+           !CodeGenOpts.SanitizeTrap.has(SanitizerKind::CFIUnrelatedCast)));
+}
+
 void CodeGenModule::CreateVTableBitSetEntry(llvm::NamedMDNode *BitsetsMD,
                                             llvm::GlobalVariable *VTable,
                                             CharUnits Offset,
@@ -4044,6 +4058,17 @@ void CodeGenModule::CreateVTableBitSetEntry(llvm::NamedMDNode *BitsetsMD,
               llvm::ConstantInt::get(Int64Ty, Offset.getQuantity()))};
       BitsetsMD->addOperand(llvm::MDTuple::get(getLLVMContext(), BitsetOps2));
     }
+  }
+
+  if (NeedAllVtablesBitSet()) {
+    llvm::Metadata *MD = llvm::MDString::get(getLLVMContext(), "all-vtables");
+    llvm::Metadata *BitsetOps[] = {
+        MD, llvm::ConstantAsMetadata::get(VTable),
+        llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(Int64Ty, Offset.getQuantity()))};
+    // Avoid adding a node to BitsetsMD twice.
+    if (!llvm::MDTuple::getIfExists(getLLVMContext(), BitsetOps))
+      BitsetsMD->addOperand(llvm::MDTuple::get(getLLVMContext(), BitsetOps));
   }
 }
 

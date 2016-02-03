@@ -80,17 +80,15 @@
 // definitions from .hpp files.
 #define __DEVICE_FUNCTIONS_H__
 #define __MATH_FUNCTIONS_H__
+#define __COMMON_FUNCTIONS_H__
 
 #undef __CUDACC__
 #define __CUDABE__
 // Disables definitions of device-side runtime support stubs in
 // cuda_device_runtime_api.h
-#define __CUDADEVRT_INTERNAL__
 #include "host_config.h"
 #include "host_defines.h"
 #include "driver_types.h"
-#include "common_functions.h"
-#undef __CUDADEVRT_INTERNAL__
 
 #undef __CUDABE__
 #define __CUDACC__
@@ -211,12 +209,41 @@ extern "C" __device__ __attribute__((const)) int __nvvm_reflect(const void *);
 static __device__ __attribute__((used)) int __nvvm_reflect_anchor() {
   return __nvvm_reflect("NONE");
 }
-
-// The nvptx vprintf syscall.  This doesn't actually need to be declared, but we
-// declare it so that if someone else declares it with a different signature,
-// we'll throw an error.
-extern "C" __device__ int vprintf(const char*, const char*);
 #endif
+
+extern "C" {
+// Device-side CUDA system calls.
+// http://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/index.html#system-calls
+// We need these declarations and wrappers for device-side
+// malloc/free/printf calls to work without relying on
+// -fcuda-disable-target-call-checks option.
+__device__ int vprintf(const char*, const char*);
+__device__ void free(void *) __attribute((nothrow));
+__device__ void *malloc(size_t) __attribute((nothrow)) __attribute__((malloc));
+__device__ void __assertfail(const char *message, const char *file,
+                             unsigned line, const char *function,
+                             size_t charSize) __attribute__((noreturn));
+
+// In order for standard assert() macro on linux to work we need to
+// provide device-side __assert_fail()
+__device__ static inline void __assert_fail(const char *message,
+                                            const char *file, unsigned line,
+                                            const char *function) {
+  __assertfail(message, file, line, function, sizeof(char));
+}
+
+// Clang will convert printf into vprintf, but we still need
+// device-side declaration for it.
+__device__ int printf(const char *, ...);
+} // extern "C"
+
+// We also need device-side std::malloc and std::free.
+namespace std {
+__device__ static inline void free(void *__ptr) { ::free(__ptr); }
+__device__ static inline void *malloc(size_t __size) {
+  return ::malloc(__size);
+}
+} // namespace std
 
 #include <__clang_cuda_cmath.h>
 

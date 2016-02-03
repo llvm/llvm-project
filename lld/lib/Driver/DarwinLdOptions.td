@@ -33,6 +33,10 @@ def iphoneos_version_min : Separate<["-"], "iphoneos_version_min">,
 def ios_simulator_version_min : Separate<["-"], "ios_simulator_version_min">,
      MetaVarName<"<version>">,
      HelpText<"Minimum iOS simulator version">, Group<grp_opts>;
+def version_load_command : Flag<["-"], "version_load_command">,
+     HelpText<"Force generation of a version load command">, Group<grp_opts>;
+def no_version_load_command : Flag<["-"], "no_version_load_command">,
+     HelpText<"Disable generation of a version load command">, Group<grp_opts>;
 def mllvm : Separate<["-"], "mllvm">,
      MetaVarName<"<option>">,
      HelpText<"Options to pass to LLVM during LTO">, Group<grp_opts>;

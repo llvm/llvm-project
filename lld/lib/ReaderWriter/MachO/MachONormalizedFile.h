@@ -245,6 +245,7 @@ struct NormalizedFile {
   PackedVersion               compatVersion = 0;  // dylibs only
   PackedVersion               currentVersion = 0; // dylibs only
   bool                        hasUUID = false;
+  bool                        hasMinVersionLoadCommand = false;
   std::vector<StringRef>      rpaths;
   Hex64                       entryAddress = 0;
   Hex64                       stackSize = 0;
