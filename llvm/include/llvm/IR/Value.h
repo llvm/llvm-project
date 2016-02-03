@@ -280,11 +280,7 @@ public:
   // when using them since you might not get all uses.
   // The methods that don't start with materialized_ assert that modules is
   // fully materialized.
-#ifdef NDEBUG
-  void assertModuleIsMaterialized() const {}
-#else
   void assertModuleIsMaterialized() const;
-#endif
 
   bool use_empty() const {
     assertModuleIsMaterialized();

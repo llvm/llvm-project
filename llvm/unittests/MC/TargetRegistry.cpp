@@ -1,4 +1,4 @@
-//===- unittests/Support/TargetRegistry.cpp - -----------------------------===//
+//===- unittests/MC/TargetRegistry.cpp ------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,6 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// The target registry code lives in Support, but it relies on linking in all
+// LLVM targets. We keep this test with the MC tests, which already do that, to
+// keep the SupportTests target small.
 
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"

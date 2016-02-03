@@ -9593,6 +9593,10 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
       return false;
   }
 
+  // Caches for hasPredecessorHelper.
+  SmallPtrSet<const SDNode *, 32> Visited;
+  SmallVector<const SDNode *, 16> Worklist;
+
   // If the offset is a constant, there may be other adds of constants that
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
@@ -9607,7 +9611,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
       if (Use.getUser() == Ptr.getNode() || Use != BasePtr)
         continue;
 
-      if (Use.getUser()->isPredecessorOf(N))
+      if (N->hasPredecessorHelper(Use.getUser(), Visited, Worklist))
         continue;
 
       if (Use.getUser()->getOpcode() != ISD::ADD &&
@@ -9636,10 +9640,6 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
 
   // Now check for #3 and #4.
   bool RealUse = false;
-
-  // Caches for hasPredecessorHelper
-  SmallPtrSet<const SDNode *, 32> Visited;
-  SmallVector<const SDNode *, 16> Worklist;
 
   for (SDNode *Use : Ptr.getNode()->uses()) {
     if (Use == N)

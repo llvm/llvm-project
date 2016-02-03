@@ -26589,7 +26589,6 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// PerformLOADCombine - Do target-specific dag combines on LOAD nodes.
 static SDValue PerformLOADCombine(SDNode *N, SelectionDAG &DAG,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const X86Subtarget &Subtarget) {
@@ -26641,7 +26640,6 @@ static SDValue PerformLOADCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// PerformMLOADCombine - Resolve extending loads
 static SDValue PerformMLOADCombine(SDNode *N, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const X86Subtarget &Subtarget) {
@@ -26649,6 +26647,7 @@ static SDValue PerformMLOADCombine(SDNode *N, SelectionDAG &DAG,
   if (Mld->getExtensionType() != ISD::SEXTLOAD)
     return SDValue();
 
+  // Resolve extending loads.
   EVT VT = Mld->getValueType(0);
   unsigned NumElems = VT.getVectorNumElements();
   EVT LdVT = Mld->getMemoryVT();
@@ -26657,19 +26656,19 @@ static SDValue PerformMLOADCombine(SDNode *N, SelectionDAG &DAG,
   assert(LdVT != VT && "Cannot extend to the same type");
   unsigned ToSz = VT.getVectorElementType().getSizeInBits();
   unsigned FromSz = LdVT.getVectorElementType().getSizeInBits();
-  // From, To sizes and ElemCount must be pow of two
+  // From/To sizes and ElemCount must be pow of two.
   assert (isPowerOf2_32(NumElems * FromSz * ToSz) &&
     "Unexpected size for extending masked load");
 
   unsigned SizeRatio  = ToSz / FromSz;
   assert(SizeRatio * NumElems * FromSz == VT.getSizeInBits());
 
-  // Create a type on which we perform the shuffle
+  // Create a type on which we perform the shuffle.
   EVT WideVecVT = EVT::getVectorVT(*DAG.getContext(),
           LdVT.getScalarType(), NumElems*SizeRatio);
   assert(WideVecVT.getSizeInBits() == VT.getSizeInBits());
 
-  // Convert Src0 value
+  // Convert Src0 value.
   SDValue WideSrc0 = DAG.getBitcast(WideVecVT, Mld->getSrc0());
   if (Mld->getSrc0().getOpcode() != ISD::UNDEF) {
     SmallVector<int, 16> ShuffleVec(NumElems * SizeRatio, -1);
@@ -26682,11 +26681,11 @@ static SDValue PerformMLOADCombine(SDNode *N, SelectionDAG &DAG,
     WideSrc0 = DAG.getVectorShuffle(WideVecVT, dl, WideSrc0,
                                     DAG.getUNDEF(WideVecVT), &ShuffleVec[0]);
   }
-  // Prepare the new mask
+  // Prepare the new mask.
   SDValue NewMask;
   SDValue Mask = Mld->getMask();
   if (Mask.getValueType() == VT) {
-    // Mask and original value have the same type
+    // Mask and original value have the same type.
     NewMask = DAG.getBitcast(WideVecVT, Mask);
     SmallVector<int, 16> ShuffleVec(NumElems * SizeRatio, -1);
     for (unsigned i = 0; i != NumElems; ++i)
@@ -26696,8 +26695,7 @@ static SDValue PerformMLOADCombine(SDNode *N, SelectionDAG &DAG,
     NewMask = DAG.getVectorShuffle(WideVecVT, dl, NewMask,
                                    DAG.getConstant(0, dl, WideVecVT),
                                    &ShuffleVec[0]);
-  }
-  else {
+  } else {
     assert(Mask.getValueType().getVectorElementType() == MVT::i1);
     unsigned WidenNumElts = NumElems*SizeRatio;
     unsigned MaskNumElts = VT.getVectorNumElements();
@@ -26721,6 +26719,7 @@ static SDValue PerformMLOADCombine(SDNode *N, SelectionDAG &DAG,
   SDValue NewVec = DAG.getNode(X86ISD::VSEXT, dl, VT, WideLd);
   return DCI.CombineTo(N, NewVec, WideLd.getValue(1), true);
 }
+
 /// PerformMSTORECombine - Resolve truncating stores
 static SDValue PerformMSTORECombine(SDNode *N, SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
@@ -26746,7 +26745,7 @@ static SDValue PerformMSTORECombine(SDNode *N, SelectionDAG &DAG,
   if (TLI.isTruncStoreLegal(VT, StVT))
     return SDValue();
 
-  // From, To sizes and ElemCount must be pow of two
+  // From/To sizes and ElemCount must be pow of two.
   assert (isPowerOf2_32(NumElems * FromSz * ToSz) &&
     "Unexpected size for truncating masked store");
   // We are going to use the original vector elt for storing.
@@ -26757,7 +26756,7 @@ static SDValue PerformMSTORECombine(SDNode *N, SelectionDAG &DAG,
   unsigned SizeRatio  = FromSz / ToSz;
   assert(SizeRatio * NumElems * ToSz == VT.getSizeInBits());
 
-  // Create a type on which we perform the shuffle
+  // Create a type on which we perform the shuffle.
   EVT WideVecVT = EVT::getVectorVT(*DAG.getContext(),
           StVT.getScalarType(), NumElems*SizeRatio);
 
@@ -26779,7 +26778,7 @@ static SDValue PerformMSTORECombine(SDNode *N, SelectionDAG &DAG,
   SDValue NewMask;
   SDValue Mask = Mst->getMask();
   if (Mask.getValueType() == VT) {
-    // Mask and original value have the same type
+    // Mask and original value have the same type.
     NewMask = DAG.getBitcast(WideVecVT, Mask);
     for (unsigned i = 0; i != NumElems; ++i)
       ShuffleVec[i] = i * SizeRatio;
@@ -26788,8 +26787,7 @@ static SDValue PerformMSTORECombine(SDNode *N, SelectionDAG &DAG,
     NewMask = DAG.getVectorShuffle(WideVecVT, dl, NewMask,
                                    DAG.getConstant(0, dl, WideVecVT),
                                    &ShuffleVec[0]);
-  }
-  else {
+  } else {
     assert(Mask.getValueType().getVectorElementType() == MVT::i1);
     unsigned WidenNumElts = NumElems*SizeRatio;
     unsigned MaskNumElts = VT.getVectorNumElements();
@@ -26810,7 +26808,7 @@ static SDValue PerformMSTORECombine(SDNode *N, SelectionDAG &DAG,
                             Mst->getBasePtr(), NewMask, StVT,
                             Mst->getMemOperand(), false);
 }
-/// PerformSTORECombine - Do target-specific dag combines on STORE nodes.
+
 static SDValue PerformSTORECombine(SDNode *N, SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
   StoreSDNode *St = cast<StoreSDNode>(N);

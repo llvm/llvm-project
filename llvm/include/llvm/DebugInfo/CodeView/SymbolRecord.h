@@ -19,6 +19,7 @@ namespace codeview {
 
 using llvm::support::ulittle16_t;
 using llvm::support::ulittle32_t;
+using llvm::support::little32_t;
 
 /// Distinguishes individual records in the Symbols subsection of a .debug$S
 /// section. Equivalent to SYM_ENUM_e in cvinfo.h.
@@ -109,6 +110,58 @@ struct LocalSym {
     IsEnregisteredStatic = 1 << 10,
   };
   // Name: The null-terminated name follows.
+};
+
+struct LocalVariableAddrRange {
+  ulittle32_t OffsetStart;
+  ulittle16_t ISectStart;
+  ulittle16_t Range;
+};
+
+struct LocalVariableAddrGap {
+  ulittle16_t GapStartOffset;
+  ulittle16_t Range;
+};
+
+// S_DEFRANGE_REGISTER
+struct DefRangeRegisterSym {
+  ulittle16_t Register;
+  ulittle16_t MayHaveNoName;
+  LocalVariableAddrRange Range;
+  // LocalVariableAddrGap Gaps[];
+};
+
+// S_DEFRANGE_SUBFIELD_REGISTER
+struct DefRangeSubfieldRegisterSym {
+  ulittle16_t Register; // Register to which the variable is relative
+  ulittle16_t MayHaveNoName;
+  ulittle32_t OffsetInParent;
+  LocalVariableAddrRange Range;
+  // LocalVariableAddrGap Gaps[];
+};
+
+// S_DEFRANGE_FRAMEPOINTER_REL
+struct DefRangeFramePointerRelSym {
+  little32_t Offset; // Offset from the frame pointer register
+  LocalVariableAddrRange Range;
+  // LocalVariableAddrGap Gaps[];
+};
+
+// S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
+struct DefRangeFramePointerRelFullScopeSym {
+  little32_t Offset; // Offset from the frame pointer register
+};
+
+// S_DEFRANGE_REGISTER_REL
+struct DefRangeRegisterRelSym {
+  ulittle16_t BaseRegister;
+  ulittle16_t Flags;
+  ulittle32_t BasePointerOffset;
+  LocalVariableAddrRange Range;
+  // LocalVariableAddrGap Gaps[];
+
+  bool hasSpilledUDTMember() const { return Flags & 1; }
+  uint16_t offsetInParent() const { return Flags >> 4; }
 };
 
 // S_BLOCK32
@@ -219,7 +272,7 @@ struct BuildInfoSym {
 
 // S_BPREL32
 struct BPRelativeSym {
-  ulittle32_t Offset; // Offset from the base pointer register
+  little32_t Offset;  // Offset from the base pointer register
   TypeIndex Type;     // Type of the variable
   // Name: The null-terminated name follows.
 };

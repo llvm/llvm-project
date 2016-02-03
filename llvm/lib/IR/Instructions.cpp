@@ -393,7 +393,7 @@ static Instruction *createMalloc(Instruction *InsertBefore,
   // malloc(type) becomes: 
   //       bitcast (i8* malloc(typeSize)) to type*
   // malloc(type, arraySize) becomes:
-  //       bitcast (i8 *malloc(typeSize*arraySize)) to type*
+  //       bitcast (i8* malloc(typeSize*arraySize)) to type*
   if (!ArraySize)
     ArraySize = ConstantInt::get(IntPtrTy, 1);
   else if (ArraySize->getType() != IntPtrTy) {
@@ -426,8 +426,8 @@ static Instruction *createMalloc(Instruction *InsertBefore,
 
   assert(AllocSize->getType() == IntPtrTy && "malloc arg is wrong size");
   // Create the call to Malloc.
-  BasicBlock* BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
-  Module* M = BB->getParent()->getParent();
+  BasicBlock *BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
+  Module *M = BB->getParent()->getParent();
   Type *BPTy = Type::getInt8PtrTy(BB->getContext());
   Value *MallocFunc = MallocF;
   if (!MallocFunc)
@@ -470,7 +470,7 @@ static Instruction *createMalloc(Instruction *InsertBefore,
 Instruction *CallInst::CreateMalloc(Instruction *InsertBefore,
                                     Type *IntPtrTy, Type *AllocTy,
                                     Value *AllocSize, Value *ArraySize,
-                                    Function * MallocF,
+                                    Function *MallocF,
                                     const Twine &Name) {
   return createMalloc(InsertBefore, nullptr, IntPtrTy, AllocTy, AllocSize,
                       ArraySize, MallocF, Name);
@@ -492,21 +492,21 @@ Instruction *CallInst::CreateMalloc(BasicBlock *InsertAtEnd,
                       ArraySize, MallocF, Name);
 }
 
-static Instruction* createFree(Value* Source, Instruction *InsertBefore,
+static Instruction *createFree(Value *Source, Instruction *InsertBefore,
                                BasicBlock *InsertAtEnd) {
   assert(((!InsertBefore && InsertAtEnd) || (InsertBefore && !InsertAtEnd)) &&
          "createFree needs either InsertBefore or InsertAtEnd");
   assert(Source->getType()->isPointerTy() &&
          "Can not free something of nonpointer type!");
 
-  BasicBlock* BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
-  Module* M = BB->getParent()->getParent();
+  BasicBlock *BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
+  Module *M = BB->getParent()->getParent();
 
   Type *VoidTy = Type::getVoidTy(M->getContext());
   Type *IntPtrTy = Type::getInt8PtrTy(M->getContext());
   // prototype free as "void free(void*)"
   Value *FreeFunc = M->getOrInsertFunction("free", VoidTy, IntPtrTy, nullptr);
-  CallInst* Result = nullptr;
+  CallInst *Result = nullptr;
   Value *PtrCast = Source;
   if (InsertBefore) {
     if (Source->getType() != IntPtrTy)
@@ -525,15 +525,15 @@ static Instruction* createFree(Value* Source, Instruction *InsertBefore,
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
-Instruction * CallInst::CreateFree(Value* Source, Instruction *InsertBefore) {
+Instruction *CallInst::CreateFree(Value *Source, Instruction *InsertBefore) {
   return createFree(Source, InsertBefore, nullptr);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
 /// Note: This function does not add the call to the basic block, that is the
 /// responsibility of the caller.
-Instruction* CallInst::CreateFree(Value* Source, BasicBlock *InsertAtEnd) {
-  Instruction* FreeCall = createFree(Source, nullptr, InsertAtEnd);
+Instruction *CallInst::CreateFree(Value *Source, BasicBlock *InsertAtEnd) {
+  Instruction *FreeCall = createFree(Source, nullptr, InsertAtEnd);
   assert(FreeCall && "CreateFree did not create a CallInst");
   return FreeCall;
 }
@@ -2101,7 +2101,7 @@ static inline bool isConstantAllOnes(const Value *V) {
 bool BinaryOperator::isNeg(const Value *V) {
   if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(V))
     if (Bop->getOpcode() == Instruction::Sub)
-      if (Constant* C = dyn_cast<Constant>(Bop->getOperand(0)))
+      if (Constant *C = dyn_cast<Constant>(Bop->getOperand(0)))
         return C->isNegativeZeroValue();
   return false;
 }
@@ -2109,7 +2109,7 @@ bool BinaryOperator::isNeg(const Value *V) {
 bool BinaryOperator::isFNeg(const Value *V, bool IgnoreZeroSign) {
   if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(V))
     if (Bop->getOpcode() == Instruction::FSub)
-      if (Constant* C = dyn_cast<Constant>(Bop->getOperand(0))) {
+      if (Constant *C = dyn_cast<Constant>(Bop->getOperand(0))) {
         if (!IgnoreZeroSign)
           IgnoreZeroSign = cast<Instruction>(V)->hasNoSignedZeros();
         return !IgnoreZeroSign ? C->isNegativeZeroValue() : C->isZeroValue();
@@ -2269,8 +2269,8 @@ bool CastInst::isLosslessCast() const {
     return false;
 
   // Identity cast is always lossless
-  Type* SrcTy = getOperand(0)->getType();
-  Type* DstTy = getType();
+  Type *SrcTy = getOperand(0)->getType();
+  Type *DstTy = getType();
   if (SrcTy == DstTy)
     return true;
   
