@@ -13,7 +13,6 @@
 
 #include "MipsFrameLowering.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
-#include "MipsAnalyzeImmediate.h"
 #include "MipsInstrInfo.h"
 #include "MipsMachineFunction.h"
 #include "MipsTargetMachine.h"

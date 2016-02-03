@@ -279,60 +279,59 @@ TEST(ObjectTransformLayerTest, Main) {
   EXPECT_EQ(289, *OwnedObj) << "Expected incrementing transform";
 
   volatile bool RunStaticChecks = false;
-  if (RunStaticChecks) {
-    // Make sure that ObjectTransformLayer implements the object layer concept
-    // correctly by sandwitching one between an ObjectLinkingLayer and an
-    // IRCompileLayer, verifying that it compiles if we have a call to the
-    // IRComileLayer's addModuleSet that should call the transform layer's
-    // addObjectSet, and also calling the other public transform layer methods
-    // directly to make sure the methods they intend to forward to exist on
-    // the ObjectLinkingLayer.
+  if (!RunStaticChecks)
+    return;
 
-    // We'll need a concrete MemoryManager class.
-    class NullManager : public llvm::RuntimeDyld::MemoryManager {
-    public:
-      uint8_t *allocateCodeSection(uintptr_t, unsigned, unsigned,
-                                   llvm::StringRef) override {
-        return nullptr;
-      }
-      uint8_t *allocateDataSection(uintptr_t, unsigned, unsigned,
-                                   llvm::StringRef, bool) override {
-        return nullptr;
-      }
-      void registerEHFrames(uint8_t *, uint64_t, size_t) override {}
-      void deregisterEHFrames(uint8_t *, uint64_t, size_t) override {}
-      bool finalizeMemory(std::string *) override { return false; }
-    };
+  // Make sure that ObjectTransformLayer implements the object layer concept
+  // correctly by sandwitching one between an ObjectLinkingLayer and an
+  // IRCompileLayer, verifying that it compiles if we have a call to the
+  // IRComileLayer's addModuleSet that should call the transform layer's
+  // addObjectSet, and also calling the other public transform layer methods
+  // directly to make sure the methods they intend to forward to exist on
+  // the ObjectLinkingLayer.
 
-    // Construct the jit layers.
-    ObjectLinkingLayer<> BaseLayer;
-    auto IdentityTransform = [](
-        std::unique_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>
-            Obj) { return Obj; };
-    ObjectTransformLayer<decltype(BaseLayer), decltype(IdentityTransform)>
-        TransformLayer(BaseLayer, IdentityTransform);
-    auto NullCompiler = [](llvm::Module &) {
-      return llvm::object::OwningBinary<llvm::object::ObjectFile>();
-    };
-    IRCompileLayer<decltype(TransformLayer)> CompileLayer(TransformLayer,
-                                                          NullCompiler);
-    std::vector<llvm::Module *> Modules;
+  // We'll need a concrete MemoryManager class.
+  class NullManager : public llvm::RuntimeDyld::MemoryManager {
+  public:
+    uint8_t *allocateCodeSection(uintptr_t, unsigned, unsigned,
+                                 llvm::StringRef) override {
+      return nullptr;
+    }
+    uint8_t *allocateDataSection(uintptr_t, unsigned, unsigned, llvm::StringRef,
+                                 bool) override {
+      return nullptr;
+    }
+    void registerEHFrames(uint8_t *, uint64_t, size_t) override {}
+    void deregisterEHFrames(uint8_t *, uint64_t, size_t) override {}
+    bool finalizeMemory(std::string *) override { return false; }
+  };
 
-    // Make sure that the calls from IRCompileLayer to ObjectTransformLayer
-    // compile.
-    NullResolver Resolver;
-    NullManager Manager;
-    CompileLayer.addModuleSet(std::vector<llvm::Module *>(), &Manager,
-                              &Resolver);
+  // Construct the jit layers.
+  ObjectLinkingLayer<> BaseLayer;
+  auto IdentityTransform = [](
+      std::unique_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>
+          Obj) { return Obj; };
+  ObjectTransformLayer<decltype(BaseLayer), decltype(IdentityTransform)>
+      TransformLayer(BaseLayer, IdentityTransform);
+  auto NullCompiler = [](llvm::Module &) {
+    return llvm::object::OwningBinary<llvm::object::ObjectFile>();
+  };
+  IRCompileLayer<decltype(TransformLayer)> CompileLayer(TransformLayer,
+                                                        NullCompiler);
 
-    // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
-    // compile.
-    decltype(TransformLayer)::ObjSetHandleT ObjSet;
-    TransformLayer.emitAndFinalize(ObjSet);
-    TransformLayer.findSymbolIn(ObjSet, Name, false);
-    TransformLayer.findSymbol(Name, true);
-    TransformLayer.mapSectionAddress(ObjSet, nullptr, 0);
-    TransformLayer.removeObjectSet(ObjSet);
-  }
+  // Make sure that the calls from IRCompileLayer to ObjectTransformLayer
+  // compile.
+  NullResolver Resolver;
+  NullManager Manager;
+  CompileLayer.addModuleSet(std::vector<llvm::Module *>(), &Manager, &Resolver);
+
+  // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
+  // compile.
+  decltype(TransformLayer)::ObjSetHandleT ObjSet;
+  TransformLayer.emitAndFinalize(ObjSet);
+  TransformLayer.findSymbolIn(ObjSet, Name, false);
+  TransformLayer.findSymbol(Name, true);
+  TransformLayer.mapSectionAddress(ObjSet, nullptr, 0);
+  TransformLayer.removeObjectSet(ObjSet);
 }
 }

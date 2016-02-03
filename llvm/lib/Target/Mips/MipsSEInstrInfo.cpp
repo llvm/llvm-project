@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsSEInstrInfo.h"
+#include "MipsAnalyzeImmediate.h"
 #include "InstPrinter/MipsInstPrinter.h"
 #include "MipsMachineFunction.h"
 #include "MipsTargetMachine.h"

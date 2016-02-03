@@ -41,10 +41,12 @@ void MipsTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
   InitializeELF(TM.Options.UseInitArray);
 
   SmallDataSection = getContext().getELFSection(
-      ".sdata", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
+      ".sdata", ELF::SHT_PROGBITS,
+      ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_MIPS_GPREL);
 
   SmallBSSSection = getContext().getELFSection(".sbss", ELF::SHT_NOBITS,
-                                               ELF::SHF_WRITE | ELF::SHF_ALLOC);
+                                               ELF::SHF_WRITE | ELF::SHF_ALLOC |
+                                                   ELF::SHF_MIPS_GPREL);
   this->TM = &static_cast<const MipsTargetMachine &>(TM);
 }
 

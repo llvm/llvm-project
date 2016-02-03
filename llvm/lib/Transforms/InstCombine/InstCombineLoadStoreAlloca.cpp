@@ -495,17 +495,12 @@ static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
   }
 
   // Fold away bit casts of the loaded value by loading the desired type.
-  // We can do this for BitCastInsts as well as casts from and to pointer types,
-  // as long as those are noops (i.e., the source or dest type have the same
-  // bitwidth as the target's pointers).
   if (LI.hasOneUse())
-    if (auto* CI = dyn_cast<CastInst>(LI.user_back())) {
-      if (CI->isNoopCast(DL)) {
-        LoadInst *NewLoad = combineLoadToNewType(IC, LI, CI->getDestTy());
-        CI->replaceAllUsesWith(NewLoad);
-        IC.eraseInstFromFunction(*CI);
-        return &LI;
-      }
+    if (auto *BC = dyn_cast<BitCastInst>(LI.user_back())) {
+      LoadInst *NewLoad = combineLoadToNewType(IC, LI, BC->getDestTy());
+      BC->replaceAllUsesWith(NewLoad);
+      IC.eraseInstFromFunction(*BC);
+      return &LI;
     }
 
   // FIXME: We should also canonicalize loads of vectors when their elements are

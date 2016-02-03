@@ -13,7 +13,6 @@
 
 #include "MipsInstrInfo.h"
 #include "InstPrinter/MipsInstPrinter.h"
-#include "MipsAnalyzeImmediate.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/STLExtras.h"

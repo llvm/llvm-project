@@ -623,6 +623,7 @@ bool ARMDAGToDAGISel::SelectAddrModeImm12(SDValue N,
 
     if (N.getOpcode() == ARMISD::Wrapper &&
         N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
+        N.getOperand(0).getOpcode() != ISD::TargetExternalSymbol &&
         N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
       Base = N.getOperand(0);
     } else
@@ -803,6 +804,7 @@ AddrMode2Type ARMDAGToDAGISel::SelectAddrMode2Worker(SDValue N,
           FI, TLI->getPointerTy(CurDAG->getDataLayout()));
     } else if (N.getOpcode() == ARMISD::Wrapper &&
                N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
+               N.getOperand(0).getOpcode() != ISD::TargetExternalSymbol &&
                N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
       Base = N.getOperand(0);
     }
@@ -1070,6 +1072,7 @@ bool ARMDAGToDAGISel::SelectAddrMode5(SDValue N,
           FI, TLI->getPointerTy(CurDAG->getDataLayout()));
     } else if (N.getOpcode() == ARMISD::Wrapper &&
                N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
+               N.getOperand(0).getOpcode() != ISD::TargetExternalSymbol &&
                N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
       Base = N.getOperand(0);
     }
@@ -1190,6 +1193,7 @@ ARMDAGToDAGISel::SelectThumbAddrModeImm5S(SDValue N, unsigned Scale,
       return false; // We want to select register offset instead
     } else if (N.getOpcode() == ARMISD::Wrapper &&
         N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
+        N.getOperand(0).getOpcode() != ISD::TargetExternalSymbol &&
         N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
       Base = N.getOperand(0);
     } else {
@@ -1297,6 +1301,7 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm12(SDValue N,
 
     if (N.getOpcode() == ARMISD::Wrapper &&
         N.getOperand(0).getOpcode() != ISD::TargetGlobalAddress &&
+        N.getOperand(0).getOpcode() != ISD::TargetExternalSymbol &&
         N.getOperand(0).getOpcode() != ISD::TargetGlobalTLSAddress) {
       Base = N.getOperand(0);
       if (Base.getOpcode() == ISD::TargetConstantPool)

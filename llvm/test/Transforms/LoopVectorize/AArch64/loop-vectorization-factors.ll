@@ -205,39 +205,5 @@ for.body:                                         ; preds = %for.body, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-; CHECK-LABEL: @add_g
-; CHECK: load <16 x i8>
-; CHECK: xor <16 x i8>
-; CHECK: icmp ult <16 x i8>
-; CHECK: select <16 x i1> {{.*}}, <16 x i8>
-; CHECK: store <16 x i8>
-define void @add_g(i8* noalias nocapture readonly %p, i8* noalias nocapture readonly %q, i8* noalias nocapture %r, i8 %arg1, i32 %len) #0 {
-  %1 = icmp sgt i32 %len, 0
-  br i1 %1, label %.lr.ph, label %._crit_edge
-
-.lr.ph:                                           ; preds = %0
-  %2 = sext i8 %arg1 to i64
-  br label %3
-
-._crit_edge:                                      ; preds = %3, %0
-  ret void
-
-; <label>:3                                       ; preds = %3, %.lr.ph
-  %indvars.iv = phi i64 [ 0, %.lr.ph ], [ %indvars.iv.next, %3 ]
-  %x4 = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
-  %x5 = load i8, i8* %x4
-  %x7 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
-  %x8 = load i8, i8* %x7
-  %x9 = zext i8 %x5 to i32
-  %x10 = xor i32 %x9, 255
-  %x11 = icmp ult i32 %x10, 24
-  %x12 = select i1 %x11, i32 %x10, i32 24
-  %x13 = trunc i32 %x12 to i8
-  store i8 %x13, i8* %x4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-  %exitcond = icmp eq i32 %lftr.wideiv, %len
-  br i1 %exitcond, label %._crit_edge, label %3
-}
 
 attributes #0 = { nounwind }

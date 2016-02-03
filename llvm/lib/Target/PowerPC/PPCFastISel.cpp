@@ -2105,7 +2105,7 @@ unsigned PPCFastISel::PPCMaterializeInt(const ConstantInt *CI, MVT VT,
   }
 
   // Construct the constant piecewise.
-  int64_t Imm = CI->getZExtValue();
+  int64_t Imm = UseSExt ? CI->getSExtValue() : CI->getZExtValue();
   if (VT == MVT::i64)
     return PPCMaterialize64BitInt(Imm, RC);
   else if (VT == MVT::i32)

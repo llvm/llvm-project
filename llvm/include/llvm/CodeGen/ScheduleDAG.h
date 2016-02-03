@@ -396,6 +396,17 @@ namespace llvm {
     /// specified node.
     bool addPred(const SDep &D, bool Required = true);
 
+    /// addPredBarrier - This adds a barrier edge to SU by calling
+    /// addPred(), with latency 0 generally or latency 1 for a store
+    /// followed by a load.
+    bool addPredBarrier(SUnit *SU) {
+      SDep Dep(SU, SDep::Barrier);
+      unsigned TrueMemOrderLatency =
+        ((SU->getInstr()->mayStore() && this->getInstr()->mayLoad()) ? 1 : 0);
+      Dep.setLatency(TrueMemOrderLatency);
+      return addPred(Dep);
+    }
+
     /// removePred - This removes the specified edge as a pred of the current
     /// node if it exists.  It also removes the current node as a successor of
     /// the specified node.

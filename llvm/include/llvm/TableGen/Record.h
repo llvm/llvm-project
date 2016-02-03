@@ -1307,9 +1307,14 @@ public:
   }
 
   bool isSubClassOf(StringRef Name) const {
-    for (const auto &SCPair : SuperClasses)
-      if (SCPair.first->getNameInitAsString() == Name)
+    for (const auto &SCPair : SuperClasses) {
+      if (const auto *SI = dyn_cast<StringInit>(SCPair.first->getNameInit())) {
+        if (SI->getValue() == Name)
+          return true;
+      } else if (SCPair.first->getNameInitAsString() == Name) {
         return true;
+      }
+    }
     return false;
   }
 

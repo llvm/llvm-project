@@ -5453,6 +5453,8 @@ def : Pat<(load (ARMWrapperPIC tglobaltlsaddr:$addr)),
 def : ARMPat<(ARMWrapper  tconstpool  :$dst), (LEApcrel tconstpool  :$dst)>;
 def : ARMPat<(ARMWrapper  tglobaladdr :$dst), (MOVi32imm tglobaladdr :$dst)>,
             Requires<[IsARM, UseMovt]>;
+def : ARMPat<(ARMWrapper texternalsym :$dst), (MOVi32imm texternalsym :$dst)>,
+            Requires<[IsARM, UseMovt]>;
 def : ARMPat<(ARMWrapperJT tjumptable:$dst),
              (LEApcrelJT tjumptable:$dst)>;
 

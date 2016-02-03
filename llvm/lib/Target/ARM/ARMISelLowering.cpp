@@ -784,7 +784,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SREM,  MVT::i32, Expand);
   setOperationAction(ISD::UREM,  MVT::i32, Expand);
   // Register based DivRem for AEABI (RTABI 4.2)
-  if (Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid()) {
+  if (Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
+      Subtarget->isTargetGNUAEABI()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
 
@@ -2613,6 +2614,55 @@ ARMTargetLowering::LowerGlobalTLSAddressDarwin(SDValue Op,
   return DAG.getCopyFromReg(Chain, DL, ARM::R0, MVT::i32, Chain.getValue(1));
 }
 
+SDValue
+ARMTargetLowering::LowerGlobalTLSAddressWindows(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  assert(Subtarget->isTargetWindows() && "Windows specific TLS lowering");
+  SDValue Chain = DAG.getEntryNode();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDLoc DL(Op);
+
+  // Load the current TEB (thread environment block)
+  SDValue Ops[] = {Chain,
+                   DAG.getConstant(Intrinsic::arm_mrc, DL, MVT::i32),
+                   DAG.getConstant(15, DL, MVT::i32),
+                   DAG.getConstant(0, DL, MVT::i32),
+                   DAG.getConstant(13, DL, MVT::i32),
+                   DAG.getConstant(0, DL, MVT::i32),
+                   DAG.getConstant(2, DL, MVT::i32)};
+  SDValue CurrentTEB = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL,
+                                   DAG.getVTList(MVT::i32, MVT::Other), Ops);
+
+  SDValue TEB = CurrentTEB.getValue(0);
+  Chain = CurrentTEB.getValue(1);
+
+  // Load the ThreadLocalStoragePointer from the TEB
+  // A pointer to the TLS array is located at offset 0x2c from the TEB.
+  SDValue TLSArray =
+      DAG.getNode(ISD::ADD, DL, PtrVT, TEB, DAG.getIntPtrConstant(0x2c, DL));
+  TLSArray = DAG.getLoad(PtrVT, DL, Chain, TLSArray, MachinePointerInfo(),
+                         false, false, false, 0);
+
+  // The pointer to the thread's TLS data area is at the TLS Index scaled by 4
+  // offset into the TLSArray.
+
+  // Load the TLS index from the C runtime
+  SDValue TLSIndex =
+      DAG.getTargetExternalSymbol("_tls_index", PtrVT, ARMII::MO_NO_FLAG);
+  TLSIndex = DAG.getNode(ARMISD::Wrapper, DL, PtrVT, TLSIndex);
+  TLSIndex = DAG.getLoad(PtrVT, DL, Chain, TLSIndex, MachinePointerInfo(),
+                         false, false, false, 0);
+
+  SDValue Slot = DAG.getNode(ISD::SHL, DL, PtrVT, TLSIndex,
+                              DAG.getConstant(2, DL, MVT::i32));
+  SDValue TLS = DAG.getLoad(PtrVT, DL, Chain,
+                            DAG.getNode(ISD::ADD, DL, PtrVT, TLSArray, Slot),
+                            MachinePointerInfo(), false, false, false, 0);
+
+  return DAG.getNode(ISD::ADD, DL, PtrVT, TLS,
+                     LowerGlobalAddressWindows(Op, DAG));
+}
+
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model
 SDValue
 ARMTargetLowering::LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
@@ -2716,6 +2766,9 @@ SDValue
 ARMTargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget->isTargetDarwin())
     return LowerGlobalTLSAddressDarwin(Op, DAG);
+
+  if (Subtarget->isTargetWindows())
+    return LowerGlobalTLSAddressWindows(Op, DAG);
 
   // TODO: implement the "local dynamic" model
   assert(Subtarget->isTargetELF() && "Only ELF implemented here");
@@ -11643,7 +11696,8 @@ static TargetLowering::ArgListTy getDivRemArgList(
 }
 
 SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
-  assert((Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid()) &&
+  assert((Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
+          Subtarget->isTargetGNUAEABI()) &&
          "Register-based DivRem lowering only");
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIVREM || Opcode == ISD::UDIVREM) &&

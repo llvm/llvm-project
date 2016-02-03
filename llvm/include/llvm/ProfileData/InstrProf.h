@@ -735,8 +735,9 @@ struct Summary {
         MinBlockCount;  ///< The minimum execution count for this percentile.
     uint64_t NumBlocks; ///< Number of blocks >= the minumum execution count.
   };
-  // New field kind to existing enum value mapping should remain unchanged
-  // when new kind is added in the future.
+  // The field kind enumerator to assigned value mapping should remain
+  // unchanged  when a new kind is added or an old kind gets deleted in
+  // the future.
   enum SummaryFieldKind {
     /// The total number of functions instrumented.
     TotalNumFunctions = 0,
