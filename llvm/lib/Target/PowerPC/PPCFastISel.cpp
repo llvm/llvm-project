@@ -2099,7 +2099,9 @@ unsigned PPCFastISel::PPCMaterializeInt(const ConstantInt *CI, MVT VT,
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ImmReg)
         .addImm(CI->getSExtValue());
     return ImmReg;
-  } else if (!UseSExt && isUInt<16>(CI->getZExtValue())) {
+  } else if (!UseSExt && isUInt<16>(CI->getSExtValue())) {
+    // Since LI will sign extend the constant we need to make sure that for
+    // our zeroext constants that the sign extended constant fits into 16-bits.
     unsigned Opc = (VT == MVT::i64) ? PPC::LI8 : PPC::LI;
     unsigned ImmReg = createResultReg(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ImmReg)
@@ -2109,7 +2111,6 @@ unsigned PPCFastISel::PPCMaterializeInt(const ConstantInt *CI, MVT VT,
 
   // Construct the constant piecewise.
   int64_t Imm = UseSExt ? CI->getSExtValue() : CI->getZExtValue();
-
   if (VT == MVT::i64)
     return PPCMaterialize64BitInt(Imm, RC);
   else if (VT == MVT::i32)
