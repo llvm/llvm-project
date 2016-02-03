@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 @interface Root
 -(id) alloc;
@@ -22,7 +21,7 @@
 @implementation A
 @dynamic x; // refers to the instance property
 @dynamic (class) x; // refers to the class property
-@synthesize z;
+@synthesize z, c2; // expected-error {{@synthesize not allowed on a class property 'c2'}}
 @dynamic c; // refers to the class property
 @end
 
