@@ -551,31 +551,33 @@ namespace __ubsan {
 #ifdef UBSAN_CAN_USE_CXXABI
 SANITIZER_WEAK_ATTRIBUTE
 void HandleCFIBadType(CFICheckFailData *Data, ValueHandle Vtable,
-                      ReportOptions Opts);
+                      bool ValidVtable, ReportOptions Opts);
 #else
 static void HandleCFIBadType(CFICheckFailData *Data, ValueHandle Vtable,
-                             ReportOptions Opts) {
+                             bool ValidVtable, ReportOptions Opts) {
   Die();
 }
 #endif
 }  // namespace __ubsan
 
 void __ubsan::__ubsan_handle_cfi_check_fail(CFICheckFailData *Data,
-                                           ValueHandle Value) {
+                                            ValueHandle Value,
+                                            uptr ValidVtable) {
   GET_REPORT_OPTIONS(false);
   if (Data->CheckKind == CFITCK_ICall)
     handleCFIBadIcall(Data, Value, Opts);
   else
-    HandleCFIBadType(Data, Value, Opts);
+    HandleCFIBadType(Data, Value, ValidVtable, Opts);
 }
 
 void __ubsan::__ubsan_handle_cfi_check_fail_abort(CFICheckFailData *Data,
-                                                 ValueHandle Value) {
+                                                  ValueHandle Value,
+                                                  uptr ValidVtable) {
   GET_REPORT_OPTIONS(true);
   if (Data->CheckKind == CFITCK_ICall)
     handleCFIBadIcall(Data, Value, Opts);
   else
-    HandleCFIBadType(Data, Value, Opts);
+    HandleCFIBadType(Data, Value, ValidVtable, Opts);
   Die();
 }
 

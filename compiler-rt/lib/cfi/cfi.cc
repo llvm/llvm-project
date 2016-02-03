@@ -307,7 +307,7 @@ ALWAYS_INLINE void CfiSlowPathCommon(u64 CallSiteTypeId, void *Ptr,
 #ifdef CFI_ENABLE_DIAG
     if (DiagData) {
       __ubsan_handle_cfi_check_fail(
-          reinterpret_cast<__ubsan::CFICheckFailData *>(DiagData), Addr);
+          reinterpret_cast<__ubsan::CFICheckFailData *>(DiagData), Addr, false);
       return;
     }
 #endif

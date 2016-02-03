@@ -135,6 +135,7 @@ GDBRemoteCommunicationServerPlatform::LaunchGDBServer(const lldb_private::Args& 
     assert(ok);
 
     std::ostringstream url;
+    url << m_socket_scheme << "://";
     uint16_t* port_ptr = &port;
     if (m_socket_protocol == Socket::ProtocolTcp)
         url << platform_ip << ":" << port;
