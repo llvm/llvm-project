@@ -20,9 +20,10 @@
 @end
 
 @implementation A
-@dynamic x;
+@dynamic x; // refers to the instance property
+@dynamic (class) x; // refers to the class property
 @synthesize z;
-@dynamic c;
+@dynamic c; // refers to the class property
 @end
 
 int test() {
