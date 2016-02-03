@@ -83,7 +83,7 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
   if (Insertion.second) {
     // We have to compute the full filepath and emit a .cv_file directive.
     StringRef FullPath = getFullFilepath(F);
-    NextId = Asm->OutStreamer->EmitCVFileDirective(NextId, FullPath);
+    NextId = OS.EmitCVFileDirective(NextId, FullPath);
     assert(NextId == FileIdMap.size() && ".cv_file directive failed");
   }
   return Insertion.first->second;
@@ -150,24 +150,25 @@ void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
     }
   }
 
-  Asm->OutStreamer->EmitCVLocDirective(FuncId, FileId, DL.getLine(),
-                                       DL.getCol(), /*PrologueEnd=*/false,
-                                       /*IsStmt=*/false, DL->getFilename());
+  OS.EmitCVLocDirective(FuncId, FileId, DL.getLine(), DL.getCol(),
+                        /*PrologueEnd=*/false,
+                        /*IsStmt=*/false, DL->getFilename());
 }
 
 CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
-    : Asm(nullptr), CurFn(nullptr) {
+    : Asm(AP), OS(*Asm->OutStreamer), CurFn(nullptr) {
   MachineModuleInfo *MMI = AP->MMI;
 
   // If module doesn't have named metadata anchors or COFF debug section
   // is not available, skip any debug info related stuff.
   if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
-      !AP->getObjFileLowering().getCOFFDebugSymbolsSection())
+      !AP->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+    Asm = nullptr;
     return;
+  }
 
   // Tell MMI that we have debug info.
   MMI->setDebugInfoAvailability(true);
-  Asm = AP;
 }
 
 void CodeViewDebug::endModule() {
@@ -180,10 +181,9 @@ void CodeViewDebug::endModule() {
   // sections that are comdat associative with the main function instead of
   // having one big .debug$S section.
   assert(Asm != nullptr);
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getCOFFDebugSymbolsSection());
-  Asm->OutStreamer->AddComment("Debug section magic");
-  Asm->EmitInt32(COFF::DEBUG_SECTION_MAGIC);
+  OS.SwitchSection(Asm->getObjFileLowering().getCOFFDebugSymbolsSection());
+  OS.AddComment("Debug section magic");
+  OS.EmitIntValue(COFF::DEBUG_SECTION_MAGIC, 4);
 
   // The COFF .debug$S section consists of several subsections, each starting
   // with a 4-byte control code (e.g. 0xF1, 0xF2, etc) and then a 4-byte length
@@ -198,22 +198,21 @@ void CodeViewDebug::endModule() {
     emitDebugInfoForFunction(P.first, P.second);
 
   // This subsection holds a file index to offset in string table table.
-  Asm->OutStreamer->AddComment("File index to string table offset subsection");
-  Asm->OutStreamer->EmitCVFileChecksumsDirective();
+  OS.AddComment("File index to string table offset subsection");
+  OS.EmitCVFileChecksumsDirective();
 
   // This subsection holds the string table.
-  Asm->OutStreamer->AddComment("String table");
-  Asm->OutStreamer->EmitCVStringTableDirective();
+  OS.AddComment("String table");
+  OS.EmitCVStringTableDirective();
 
   clear();
 }
 
 void CodeViewDebug::emitTypeInformation() {
   // Start the .debug$T section with 0x4.
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getCOFFDebugTypesSection());
-  Asm->OutStreamer->AddComment("Debug section magic");
-  Asm->EmitInt32(COFF::DEBUG_SECTION_MAGIC);
+  OS.SwitchSection(Asm->getObjFileLowering().getCOFFDebugTypesSection());
+  OS.AddComment("Debug section magic");
+  OS.EmitIntValue(COFF::DEBUG_SECTION_MAGIC, 4);
 
   NamedMDNode *CU_Nodes =
       Asm->MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
@@ -224,48 +223,48 @@ void CodeViewDebug::emitTypeInformation() {
   // frame info. All functions are assigned a simple 'void ()' type. Emit that
   // type here.
   TypeIndex ArgListIdx = getNextTypeIndex();
-  Asm->OutStreamer->AddComment("Type record length");
-  Asm->EmitInt16(2 + sizeof(ArgList));
-  Asm->OutStreamer->AddComment("Leaf type: LF_ARGLIST");
-  Asm->EmitInt16(LF_ARGLIST);
-  Asm->OutStreamer->AddComment("Number of arguments");
-  Asm->EmitInt32(0);
+  OS.AddComment("Type record length");
+  OS.EmitIntValue(2 + sizeof(ArgList), 2);
+  OS.AddComment("Leaf type: LF_ARGLIST");
+  OS.EmitIntValue(LF_ARGLIST, 2);
+  OS.AddComment("Number of arguments");
+  OS.EmitIntValue(0, 4);
 
   TypeIndex VoidProcIdx = getNextTypeIndex();
-  Asm->OutStreamer->AddComment("Type record length");
-  Asm->EmitInt16(2 + sizeof(ProcedureType));
-  Asm->OutStreamer->AddComment("Leaf type: LF_PROCEDURE");
-  Asm->EmitInt16(LF_PROCEDURE);
-  Asm->OutStreamer->AddComment("Return type index");
-  Asm->EmitInt32(TypeIndex::Void().getIndex());
-  Asm->OutStreamer->AddComment("Calling convention");
-  Asm->EmitInt8(char(CallingConvention::NearC));
-  Asm->OutStreamer->AddComment("Function options");
-  Asm->EmitInt8(char(FunctionOptions::None));
-  Asm->OutStreamer->AddComment("# of parameters");
-  Asm->EmitInt16(0);
-  Asm->OutStreamer->AddComment("Argument list type index");
-  Asm->EmitInt32(ArgListIdx.getIndex());
+  OS.AddComment("Type record length");
+  OS.EmitIntValue(2 + sizeof(ProcedureType), 2);
+  OS.AddComment("Leaf type: LF_PROCEDURE");
+  OS.EmitIntValue(LF_PROCEDURE, 2);
+  OS.AddComment("Return type index");
+  OS.EmitIntValue(TypeIndex::Void().getIndex(), 4);
+  OS.AddComment("Calling convention");
+  OS.EmitIntValue(char(CallingConvention::NearC), 1);
+  OS.AddComment("Function options");
+  OS.EmitIntValue(char(FunctionOptions::None), 1);
+  OS.AddComment("# of parameters");
+  OS.EmitIntValue(0, 2);
+  OS.AddComment("Argument list type index");
+  OS.EmitIntValue(ArgListIdx.getIndex(), 4);
 
   for (MDNode *N : CU_Nodes->operands()) {
     auto *CUNode = cast<DICompileUnit>(N);
     for (auto *SP : CUNode->getSubprograms()) {
       StringRef DisplayName = SP->getDisplayName();
-      Asm->OutStreamer->AddComment("Type record length");
-      Asm->EmitInt16(2 + sizeof(FuncId) + DisplayName.size() + 1);
-      Asm->OutStreamer->AddComment("Leaf type: LF_FUNC_ID");
-      Asm->EmitInt16(LF_FUNC_ID);
+      OS.AddComment("Type record length");
+      OS.EmitIntValue(2 + sizeof(FuncId) + DisplayName.size() + 1, 2);
+      OS.AddComment("Leaf type: LF_FUNC_ID");
+      OS.EmitIntValue(LF_FUNC_ID, 2);
 
-      Asm->OutStreamer->AddComment("Scope type index");
-      Asm->EmitInt32(TypeIndex().getIndex());
-      Asm->OutStreamer->AddComment("Function type");
-      Asm->EmitInt32(VoidProcIdx.getIndex());
+      OS.AddComment("Scope type index");
+      OS.EmitIntValue(TypeIndex().getIndex(), 4);
+      OS.AddComment("Function type");
+      OS.EmitIntValue(VoidProcIdx.getIndex(), 4);
       {
         SmallString<32> NullTerminatedString(DisplayName);
         if (NullTerminatedString.empty() || NullTerminatedString.back() != '\0')
           NullTerminatedString.push_back('\0');
-        Asm->OutStreamer->AddComment("Function name");
-        Asm->OutStreamer->EmitBytes(NullTerminatedString);
+        OS.AddComment("Function name");
+        OS.EmitBytes(NullTerminatedString);
       }
 
       TypeIndex FuncIdIdx = getNextTypeIndex();
@@ -278,7 +277,6 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
   if (InlinedSubprograms.empty())
     return;
 
-  MCStreamer &OS = *Asm->OutStreamer;
   MCSymbol *InlineBegin = Asm->MMI->getContext().createTempSymbol(),
            *InlineEnd = Asm->MMI->getContext().createTempSymbol();
 
@@ -314,18 +312,6 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
   OS.EmitLabel(InlineEnd);
 }
 
-static void EmitLabelDiff(MCStreamer &Streamer,
-                          const MCSymbol *From, const MCSymbol *To,
-                          unsigned int Size = 4) {
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  MCContext &Context = Streamer.getContext();
-  const MCExpr *FromRef = MCSymbolRefExpr::create(From, Variant, Context),
-               *ToRef   = MCSymbolRefExpr::create(To, Variant, Context);
-  const MCExpr *AddrDelta =
-      MCBinaryExpr::create(MCBinaryExpr::Sub, ToRef, FromRef, Context);
-  Streamer.EmitValue(AddrDelta, Size);
-}
-
 void CodeViewDebug::collectInlineSiteChildren(
     SmallVectorImpl<unsigned> &Children, const FunctionInfo &FI,
     const InlineSite &Site) {
@@ -341,8 +327,6 @@ void CodeViewDebug::collectInlineSiteChildren(
 void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
                                         const DILocation *InlinedAt,
                                         const InlineSite &Site) {
-  MCStreamer &OS = *Asm->OutStreamer;
-
   MCSymbol *InlineBegin = Asm->MMI->getContext().createTempSymbol(),
            *InlineEnd = Asm->MMI->getContext().createTempSymbol();
 
@@ -350,18 +334,18 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   TypeIndex InlineeIdx = SubprogramToFuncId[Site.Inlinee];
 
   // SymbolRecord
-  Asm->OutStreamer->AddComment("Record length");
-  EmitLabelDiff(OS, InlineBegin, InlineEnd, 2);   // RecordLength
+  OS.AddComment("Record length");
+  OS.emitAbsoluteSymbolDiff(InlineEnd, InlineBegin, 2);   // RecordLength
   OS.EmitLabel(InlineBegin);
-  Asm->OutStreamer->AddComment("Record kind: S_INLINESITE");
-  Asm->EmitInt16(SymbolRecordKind::S_INLINESITE); // RecordKind
+  OS.AddComment("Record kind: S_INLINESITE");
+  OS.EmitIntValue(SymbolRecordKind::S_INLINESITE, 2); // RecordKind
 
-  Asm->OutStreamer->AddComment("PtrParent");
-  Asm->OutStreamer->EmitIntValue(0, 4);
-  Asm->OutStreamer->AddComment("PtrEnd");
-  Asm->OutStreamer->EmitIntValue(0, 4);
-  Asm->OutStreamer->AddComment("Inlinee type index");
-  Asm->EmitInt32(InlineeIdx.getIndex());
+  OS.AddComment("PtrParent");
+  OS.EmitIntValue(0, 4);
+  OS.AddComment("PtrEnd");
+  OS.EmitIntValue(0, 4);
+  OS.AddComment("Inlinee type index");
+  OS.EmitIntValue(InlineeIdx.getIndex(), 4);
 
   unsigned FileId = maybeRecordFile(Site.Inlinee->getFile());
   unsigned StartLineNum = Site.Inlinee->getLine();
@@ -382,10 +366,10 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   }
 
   // Close the scope.
-  Asm->OutStreamer->AddComment("Record length");
-  Asm->EmitInt16(2);                                  // RecordLength
-  Asm->OutStreamer->AddComment("Record kind: S_INLINESITE_END");
-  Asm->EmitInt16(SymbolRecordKind::S_INLINESITE_END); // RecordKind
+  OS.AddComment("Record length");
+  OS.EmitIntValue(2, 2);                                  // RecordLength
+  OS.AddComment("Record kind: S_INLINESITE_END");
+  OS.EmitIntValue(SymbolRecordKind::S_INLINESITE_END, 2); // RecordKind
 }
 
 void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
@@ -406,53 +390,53 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   // Emit a symbol subsection, required by VS2012+ to find function boundaries.
   MCSymbol *SymbolsBegin = Asm->MMI->getContext().createTempSymbol(),
            *SymbolsEnd = Asm->MMI->getContext().createTempSymbol();
-  Asm->OutStreamer->AddComment("Symbol subsection for " + Twine(FuncName));
-  Asm->EmitInt32(unsigned(ModuleSubstreamKind::Symbols));
-  Asm->OutStreamer->AddComment("Subsection size");
-  EmitLabelDiff(*Asm->OutStreamer, SymbolsBegin, SymbolsEnd);
-  Asm->OutStreamer->EmitLabel(SymbolsBegin);
+  OS.AddComment("Symbol subsection for " + Twine(FuncName));
+  OS.EmitIntValue(unsigned(ModuleSubstreamKind::Symbols), 4);
+  OS.AddComment("Subsection size");
+  OS.emitAbsoluteSymbolDiff(SymbolsEnd, SymbolsBegin, 4);
+  OS.EmitLabel(SymbolsBegin);
   {
     MCSymbol *ProcRecordBegin = Asm->MMI->getContext().createTempSymbol(),
              *ProcRecordEnd = Asm->MMI->getContext().createTempSymbol();
-    Asm->OutStreamer->AddComment("Record length");
-    EmitLabelDiff(*Asm->OutStreamer, ProcRecordBegin, ProcRecordEnd, 2);
-    Asm->OutStreamer->EmitLabel(ProcRecordBegin);
+    OS.AddComment("Record length");
+    OS.emitAbsoluteSymbolDiff(ProcRecordEnd, ProcRecordBegin, 2);
+    OS.EmitLabel(ProcRecordBegin);
 
-    Asm->OutStreamer->AddComment("Record kind: S_GPROC32_ID");
-    Asm->EmitInt16(unsigned(SymbolRecordKind::S_GPROC32_ID));
+    OS.AddComment("Record kind: S_GPROC32_ID");
+    OS.EmitIntValue(unsigned(SymbolRecordKind::S_GPROC32_ID), 2);
 
     // These fields are filled in by tools like CVPACK which run after the fact.
-    Asm->OutStreamer->AddComment("PtrParent");
-    Asm->OutStreamer->EmitIntValue(0, 4);
-    Asm->OutStreamer->AddComment("PtrEnd");
-    Asm->OutStreamer->EmitIntValue(0, 4);
-    Asm->OutStreamer->AddComment("PtrNext");
-    Asm->OutStreamer->EmitIntValue(0, 4);
+    OS.AddComment("PtrParent");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("PtrEnd");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("PtrNext");
+    OS.EmitIntValue(0, 4);
     // This is the important bit that tells the debugger where the function
     // code is located and what's its size:
-    Asm->OutStreamer->AddComment("Code size");
-    EmitLabelDiff(*Asm->OutStreamer, Fn, FI.End);
-    Asm->OutStreamer->AddComment("Offset after prologue");
-    Asm->OutStreamer->EmitIntValue(0, 4);
-    Asm->OutStreamer->AddComment("Offset before epilogue");
-    Asm->OutStreamer->EmitIntValue(0, 4);
-    Asm->OutStreamer->AddComment("Function type index");
-    Asm->OutStreamer->EmitIntValue(0, 4);
-    Asm->OutStreamer->AddComment("Function section relative address");
-    Asm->OutStreamer->EmitCOFFSecRel32(Fn);
-    Asm->OutStreamer->AddComment("Function section index");
-    Asm->OutStreamer->EmitCOFFSectionIndex(Fn);
-    Asm->OutStreamer->AddComment("Flags");
-    Asm->EmitInt8(0);
+    OS.AddComment("Code size");
+    OS.emitAbsoluteSymbolDiff(FI.End, Fn, 4);
+    OS.AddComment("Offset after prologue");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("Offset before epilogue");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("Function type index");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("Function section relative address");
+    OS.EmitCOFFSecRel32(Fn);
+    OS.AddComment("Function section index");
+    OS.EmitCOFFSectionIndex(Fn);
+    OS.AddComment("Flags");
+    OS.EmitIntValue(0, 1);
     // Emit the function display name as a null-terminated string.
-    Asm->OutStreamer->AddComment("Function name");
+    OS.AddComment("Function name");
     {
       SmallString<32> NullTerminatedString(FuncName);
       if (NullTerminatedString.empty() || NullTerminatedString.back() != '\0')
         NullTerminatedString.push_back('\0');
-      Asm->OutStreamer->EmitBytes(NullTerminatedString);
+      OS.EmitBytes(NullTerminatedString);
     }
-    Asm->OutStreamer->EmitLabel(ProcRecordEnd);
+    OS.EmitLabel(ProcRecordEnd);
 
     // Emit inlined call site information. Only emit functions inlined directly
     // into the parent function. We'll emit the other sites recursively as part
@@ -464,17 +448,17 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     }
 
     // We're done with this function.
-    Asm->OutStreamer->AddComment("Record length");
-    Asm->EmitInt16(0x0002);
-    Asm->OutStreamer->AddComment("Record kind: S_PROC_ID_END");
-    Asm->EmitInt16(unsigned(SymbolRecordKind::S_PROC_ID_END));
+    OS.AddComment("Record length");
+    OS.EmitIntValue(0x0002, 2);
+    OS.AddComment("Record kind: S_PROC_ID_END");
+    OS.EmitIntValue(unsigned(SymbolRecordKind::S_PROC_ID_END), 2);
   }
-  Asm->OutStreamer->EmitLabel(SymbolsEnd);
+  OS.EmitLabel(SymbolsEnd);
   // Every subsection must be aligned to a 4-byte boundary.
-  Asm->OutStreamer->EmitValueToAlignment(4);
+  OS.EmitValueToAlignment(4);
 
   // We have an assembler directive that takes care of the whole line table.
-  Asm->OutStreamer->EmitCVLinetableDirective(FI.FuncId, Fn, FI.End);
+  OS.EmitCVLinetableDirective(FI.FuncId, Fn, FI.End);
 }
 
 void CodeViewDebug::beginFunction(const MachineFunction *MF) {

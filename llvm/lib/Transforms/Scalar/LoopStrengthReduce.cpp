@@ -4799,6 +4799,17 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       DEBUG(dbgs() << "LSR skipping loop, too many IV Users in " << U << "\n");
       return;
     }
+    // Bail out if we have a PHI on an EHPad that gets a value from a
+    // CatchSwitchInst.  Because the CatchSwitchInst cannot be split, there is
+    // no good place to stick any instructions.
+    if (auto *PN = dyn_cast<PHINode>(U.getUser())) {
+       auto *FirstNonPHI = PN->getParent()->getFirstNonPHI();
+       if (isa<FuncletPadInst>(FirstNonPHI) ||
+           isa<CatchSwitchInst>(FirstNonPHI))
+         for (BasicBlock *PredBB : PN->blocks())
+           if (isa<CatchSwitchInst>(PredBB->getFirstNonPHI()))
+             return;
+    }
   }
 
 #ifndef NDEBUG

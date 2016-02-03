@@ -1,5 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
   Support
   )
 
@@ -39,7 +38,6 @@ add_llvm_unittest(SupportTests
   StreamingMemoryObject.cpp
   StringPool.cpp
   SwapByteOrderTest.cpp
-  TargetRegistry.cpp
   ThreadLocalTest.cpp
   ThreadPool.cpp
   TimerTest.cpp

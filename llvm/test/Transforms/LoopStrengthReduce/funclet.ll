@@ -214,3 +214,32 @@ try.cont.7:                                       ; preds = %try.cont
 
 ; CHECK: catch.dispatch.2:
 ; CHECK: %e.0 = phi i32* [ %c, %try.cont ], [ %b, %catch.dispatch ]
+
+define i32 @test2() personality i32 (...)* @_except_handler3 {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.inc, %entry
+  %phi = phi i32 [ %inc, %for.inc ], [ 0, %entry ]
+  invoke void @reserve()
+          to label %for.inc unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %for.body
+  %tmp18 = catchswitch within none [label %catch.handler] unwind to caller
+
+catch.handler:                                    ; preds = %catch.dispatch
+  %phi.lcssa = phi i32 [ %phi, %catch.dispatch ]
+  %tmp19 = catchpad within %tmp18 [i8* null]
+  catchret from %tmp19 to label %done
+
+done:
+  ret i32 %phi.lcssa
+
+for.inc:                                          ; preds = %for.body
+  %inc = add i32 %phi, 1
+  br label %for.body
+}
+
+; CHECK-LABEL: define i32 @test2(
+; CHECK:      %phi.lcssa = phi i32 [ %phi, %catch.dispatch ]
+; CHECK-NEXT: catchpad within

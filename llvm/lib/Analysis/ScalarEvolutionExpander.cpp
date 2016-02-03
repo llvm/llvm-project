@@ -95,14 +95,12 @@ static BasicBlock::iterator findInsertPointAfter(Instruction *I,
   while (isa<PHINode>(IP))
     ++IP;
 
-  while (IP->isEHPad()) {
-    if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
-      ++IP;
-    } else if (isa<CatchSwitchInst>(IP)) {
-      IP = MustDominate->getFirstInsertionPt();
-    } else {
-      llvm_unreachable("unexpected eh pad!");
-    }
+  if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
+    ++IP;
+  } else if (isa<CatchSwitchInst>(IP)) {
+    IP = MustDominate->getFirstInsertionPt();
+  } else {
+    assert(!IP->isEHPad() && "unexpected eh pad!");
   }
 
   return IP;

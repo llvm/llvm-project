@@ -788,16 +788,27 @@ static DebugLocEntry::Value getDebugLocValue(const MachineInstr *MI) {
   llvm_unreachable("Unexpected 4-operand DBG_VALUE instruction!");
 }
 
-/// Determine whether two variable pieces overlap.
-static bool piecesOverlap(const DIExpression *P1, const DIExpression *P2) {
-  if (!P1->isBitPiece() || !P2->isBitPiece())
-    return true;
+// Determine the relative position of the pieces described by P1 and P2.
+// Returns  -1 if P1 is entirely before P2, 0 if P1 and P2 overlap,
+// 1 if P1 is entirely after P2.
+static int pieceCmp(const DIExpression *P1, const DIExpression *P2) {
   unsigned l1 = P1->getBitPieceOffset();
   unsigned l2 = P2->getBitPieceOffset();
   unsigned r1 = l1 + P1->getBitPieceSize();
   unsigned r2 = l2 + P2->getBitPieceSize();
-  // True where [l1,r1[ and [r1,r2[ overlap.
-  return (l1 < r2) && (l2 < r1);
+  if (r1 <= l2)
+    return -1;
+  else if (r2 <= l1)
+    return 1;
+  else
+    return 0;
+}
+
+/// Determine whether two variable pieces overlap.
+static bool piecesOverlap(const DIExpression *P1, const DIExpression *P2) {
+  if (!P1->isBitPiece() || !P2->isBitPiece())
+    return true;
+  return pieceCmp(P1, P2) == 0;
 }
 
 /// \brief If this and Next are describing different pieces of the same
@@ -806,14 +817,32 @@ static bool piecesOverlap(const DIExpression *P1, const DIExpression *P2) {
 /// Return true if the merge was successful.
 bool DebugLocEntry::MergeValues(const DebugLocEntry &Next) {
   if (Begin == Next.Begin) {
-    auto *Expr = cast_or_null<DIExpression>(Values[0].Expression);
-    auto *NextExpr = cast_or_null<DIExpression>(Next.Values[0].Expression);
-    if (Expr->isBitPiece() && NextExpr->isBitPiece() &&
-        !piecesOverlap(Expr, NextExpr)) {
-      addValues(Next.Values);
-      End = Next.End;
-      return true;
+    auto *FirstExpr = cast<DIExpression>(Values[0].Expression);
+    auto *FirstNextExpr = cast<DIExpression>(Next.Values[0].Expression);
+    if (!FirstExpr->isBitPiece() || !FirstNextExpr->isBitPiece())
+      return false;
+
+    // We can only merge entries if none of the pieces overlap any others.
+    // In doing so, we can take advantage of the fact that both lists are
+    // sorted.
+    for (unsigned i = 0, j = 0; i < Values.size(); ++i) {
+      for (; j < Next.Values.size(); ++j) {
+        int res = pieceCmp(cast<DIExpression>(Values[i].Expression),
+                           cast<DIExpression>(Next.Values[j].Expression));
+        if (res == 0) // The two expressions overlap, we can't merge.
+          return false;
+        // Values[i] is entirely before Next.Values[j],
+        // so go back to the next entry of Values.
+        else if (res == -1)
+          break;
+        // Next.Values[j] is entirely before Values[i], so go on to the
+        // next entry of Next.Values.
+      }
     }
+
+    addValues(Next.Values);
+    End = Next.End;
+    return true;
   }
   return false;
 }

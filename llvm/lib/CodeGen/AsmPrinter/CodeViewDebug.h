@@ -32,6 +32,7 @@ namespace llvm {
 /// \brief Collects and handles line tables information in a CodeView format.
 class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public AsmPrinterHandler {
   AsmPrinter *Asm;
+  MCStreamer &OS;
   DebugLoc PrevInstLoc;
 
   struct InlineSite {

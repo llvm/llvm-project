@@ -6949,13 +6949,16 @@ SDNode::hasPredecessorHelper(const SDNode *N,
   // Haven't visited N yet. Continue the search.
   while (!Worklist.empty()) {
     const SDNode *M = Worklist.pop_back_val();
+    bool Found = false;
     for (const SDValue &OpV : M->op_values()) {
       SDNode *Op = OpV.getNode();
       if (Visited.insert(Op).second)
         Worklist.push_back(Op);
       if (Op == N)
-        return true;
+        Found = true;
     }
+    if (Found)
+      return true;
   }
 
   return false;

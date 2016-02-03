@@ -223,7 +223,7 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
   ProcessInfo PI1 = ExecuteNoWait(Executable, argv, getEnviron(), nullptr, 0,
                                   &Error, &ExecutionFailed);
   ASSERT_FALSE(ExecutionFailed) << Error;
-  ASSERT_NE(PI1.Pid, 0) << "Invalid process id";
+  ASSERT_NE(PI1.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
 
   unsigned LoopCount = 0;
 
@@ -242,7 +242,7 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
   ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(), nullptr, 0,
                                   &Error, &ExecutionFailed);
   ASSERT_FALSE(ExecutionFailed) << Error;
-  ASSERT_NE(PI2.Pid, 0) << "Invalid process id";
+  ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
 
   // Test that Wait() with SecondsToWait=0 performs a non-blocking wait. In this
   // cse, LoopCount should be greater than 1 (more than one increment occurs).
@@ -304,7 +304,7 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     ProcessInfo PI = ExecuteNoWait(Executable, argv, nullptr, nullptr, 0,
                                    &Error, &ExecutionFailed);
-    ASSERT_EQ(PI.Pid, 0)
+    ASSERT_EQ(PI.Pid, ProcessInfo::InvalidPid)
         << "On error ExecuteNoWait should return an invalid ProcessInfo";
     ASSERT_TRUE(ExecutionFailed);
     ASSERT_FALSE(Error.empty());
