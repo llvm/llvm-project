@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mcpu=pwr7 -mattr=+vsx | FileCheck %s
 ; RUN: llc < %s -mcpu=pwr7 -mattr=+vsx -fast-isel -O0 | FileCheck -check-prefix=CHECK-FISL %s
+; XFAIL: *
 
 ; Also run with -schedule-ppc-vsx-fma-mutation-early as a stress test for the
 ; live-interval-updating logic.

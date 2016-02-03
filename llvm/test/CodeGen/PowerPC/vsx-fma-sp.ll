@@ -1,5 +1,7 @@
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=+vsx | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=+vsx -fast-isel -O0 | FileCheck -check-prefix=CHECK-FISL %s
+; XFAIL: *
+
 define void @test1sp(float %a, float %b, float %c, float %e, float* nocapture %d) #0 {
 entry:
   %0 = tail call float @llvm.fma.f32(float %b, float %c, float %a)
