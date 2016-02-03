@@ -554,11 +554,25 @@ ProcessWindowsLive::RefreshStateAfterStop()
     {
         case EXCEPTION_SINGLE_STEP:
         {
-            stop_info = StopInfo::CreateStopReasonToTrace(*stop_thread);
-            stop_thread->SetStopInfo(stop_info);
-            WINLOG_IFANY(WINDOWS_LOG_EXCEPTION | WINDOWS_LOG_STEP, "RefreshStateAfterStop single stepping thread %u",
-                         stop_thread->GetID());
-            stop_thread->SetStopInfo(stop_info);
+            RegisterContextSP register_context = stop_thread->GetRegisterContext();
+            const uint64_t pc = register_context->GetPC();
+            BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
+            if (site && site->ValidForThisThread(stop_thread.get()))
+            {
+                WINLOG_IFANY(WINDOWS_LOG_BREAKPOINTS | WINDOWS_LOG_EXCEPTION | WINDOWS_LOG_STEP,
+                             "Single-stepped onto a breakpoint in process %I64u at "
+                             "address 0x%I64x with breakpoint site %d",
+                             m_session_data->m_debugger->GetProcess().GetProcessId(), pc, site->GetID());
+                stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(*stop_thread, site->GetID());
+                stop_thread->SetStopInfo(stop_info);
+            }
+            else
+            {
+                WINLOG_IFANY(WINDOWS_LOG_EXCEPTION | WINDOWS_LOG_STEP,
+                             "RefreshStateAfterStop single stepping thread %u", stop_thread->GetID());
+                stop_info = StopInfo::CreateStopReasonToTrace(*stop_thread);
+                stop_thread->SetStopInfo(stop_info);
+            }
             return;
         }
 

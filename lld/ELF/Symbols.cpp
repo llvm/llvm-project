@@ -89,6 +89,13 @@ typename ELFFile<ELFT>::uintX_t SymbolBody::getPltVA() const {
          PltIndex * Target->PltEntrySize;
 }
 
+template <class ELFT>
+typename ELFFile<ELFT>::uintX_t SymbolBody::getSize() const {
+  if (auto *B = dyn_cast<DefinedElf<ELFT>>(this))
+    return B->Sym.st_size;
+  return 0;
+}
+
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   if (VA == STV_DEFAULT)
     return VB;
@@ -251,6 +258,11 @@ template uint32_t SymbolBody::template getPltVA<ELF32LE>() const;
 template uint32_t SymbolBody::template getPltVA<ELF32BE>() const;
 template uint64_t SymbolBody::template getPltVA<ELF64LE>() const;
 template uint64_t SymbolBody::template getPltVA<ELF64BE>() const;
+
+template uint32_t SymbolBody::template getSize<ELF32LE>() const;
+template uint32_t SymbolBody::template getSize<ELF32BE>() const;
+template uint64_t SymbolBody::template getSize<ELF64LE>() const;
+template uint64_t SymbolBody::template getSize<ELF64BE>() const;
 
 template int SymbolBody::compare<ELF32LE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF32BE>(SymbolBody *Other);

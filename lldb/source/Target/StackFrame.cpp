@@ -597,7 +597,7 @@ StackFrame::GetInScopeVariableList (bool get_file_globals)
                                      var_list_sp.get());
     }
                      
-    if (m_sc.comp_unit)
+    if (m_sc.comp_unit && get_file_globals)
     {
         VariableListSP global_variable_list_sp (m_sc.comp_unit->GetVariableList(true));
         if (global_variable_list_sp)

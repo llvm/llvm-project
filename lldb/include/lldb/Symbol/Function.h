@@ -574,6 +574,14 @@ public:
     CompilerType
     GetCompilerType ();
 
+    //------------------------------------------------------------------
+    /// Get the size of the prologue instructions for this function.  The "prologue"
+    /// instructions include any instructions given line number 0 immediately following
+    /// the prologue end.
+    ///
+    /// @return
+    ///     The size of the prologue.
+    //------------------------------------------------------------------
     uint32_t
     GetPrologueByteSize ();
 
