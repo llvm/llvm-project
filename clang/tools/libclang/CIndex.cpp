@@ -1077,7 +1077,8 @@ bool CursorVisitor::VisitObjCPropertyDecl(ObjCPropertyDecl *PD) {
 
   IdentifierInfo *PropertyId = PD->getIdentifier();
   ObjCPropertyDecl *prevDecl =
-    ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(ID), PropertyId);
+    ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(ID), PropertyId,
+                                       PD->getQueryKind());
 
   if (!prevDecl)
     return false;

@@ -1778,7 +1778,8 @@ HandleExprPropertyRefExpr(const ObjCObjectPointerType *OPT,
                           MemberName, BaseRange))
     return ExprError();
  
-  if (ObjCPropertyDecl *PD = IFace->FindPropertyDeclaration(Member)) {
+  if (ObjCPropertyDecl *PD = IFace->FindPropertyDeclaration(
+          Member, ObjCPropertyQueryKind::OBJC_PR_query_instance)) {
     // Check whether we can reference this property.
     if (DiagnoseUseOfDecl(PD, MemberLoc))
       return ExprError();
@@ -1793,7 +1794,8 @@ HandleExprPropertyRefExpr(const ObjCObjectPointerType *OPT,
   }
   // Check protocols on qualified interfaces.
   for (const auto *I : OPT->quals())
-    if (ObjCPropertyDecl *PD = I->FindPropertyDeclaration(Member)) {
+    if (ObjCPropertyDecl *PD = I->FindPropertyDeclaration(
+            Member, ObjCPropertyQueryKind::OBJC_PR_query_instance)) {
       // Check whether we can reference this property.
       if (DiagnoseUseOfDecl(PD, MemberLoc))
         return ExprError();
@@ -1852,8 +1854,9 @@ HandleExprPropertyRefExpr(const ObjCObjectPointerType *OPT,
   // Special warning if member name used in a property-dot for a setter accessor
   // does not use a property with same name; e.g. obj.X = ... for a property with
   // name 'x'.
-  if (Setter && Setter->isImplicit() && Setter->isPropertyAccessor()
-      && !IFace->FindPropertyDeclaration(Member)) {
+  if (Setter && Setter->isImplicit() && Setter->isPropertyAccessor() &&
+      !IFace->FindPropertyDeclaration(
+          Member, ObjCPropertyQueryKind::OBJC_PR_query_instance)) {
       if (const ObjCPropertyDecl *PDecl = Setter->findPropertyDecl()) {
         // Do not warn if user is using property-dot syntax to make call to
         // user named setter.

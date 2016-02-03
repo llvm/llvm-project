@@ -152,7 +152,8 @@ bool ObjCContainerDecl::HasUserDeclaredSetterMethod(
 
 ObjCPropertyDecl *
 ObjCPropertyDecl::findPropertyDecl(const DeclContext *DC,
-                                   const IdentifierInfo *propertyID) {
+                                   const IdentifierInfo *propertyID,
+                                   ObjCPropertyQueryKind queryKind) {
   // If this context is a hidden protocol definition, don't find any
   // property.
   if (const ObjCProtocolDecl *Proto = dyn_cast<ObjCProtocolDecl>(DC)) {
@@ -166,15 +167,33 @@ ObjCPropertyDecl::findPropertyDecl(const DeclContext *DC,
   if (auto *IDecl = dyn_cast<ObjCInterfaceDecl>(DC)) {
     for (const auto *Ext : IDecl->known_extensions())
       if (ObjCPropertyDecl *PD = ObjCPropertyDecl::findPropertyDecl(Ext,
-                                                                    propertyID))
+                                                       propertyID,
+                                                       queryKind))
         return PD;
   }
 
   DeclContext::lookup_result R = DC->lookup(propertyID);
+  ObjCPropertyDecl *classProp = nullptr;
   for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E;
        ++I)
-    if (ObjCPropertyDecl *PD = dyn_cast<ObjCPropertyDecl>(*I))
-      return PD;
+    if (ObjCPropertyDecl *PD = dyn_cast<ObjCPropertyDecl>(*I)) {
+      // If queryKind is unknown, we return the instance property if one
+      // exists; otherwise we return the class property.
+      if ((queryKind == ObjCPropertyQueryKind::OBJC_PR_query_unknown &&
+           !PD->isClassProperty()) ||
+          (queryKind == ObjCPropertyQueryKind::OBJC_PR_query_class &&
+           PD->isClassProperty()) ||
+          (queryKind == ObjCPropertyQueryKind::OBJC_PR_query_instance &&
+           !PD->isClassProperty()))
+        return PD;
+
+      if (PD->isClassProperty())
+        classProp = PD;
+    }
+
+  if (queryKind == ObjCPropertyQueryKind::OBJC_PR_query_unknown)
+    // We can't find the instance property, return the class property.
+    return classProp;
 
   return nullptr;
 }
@@ -192,7 +211,8 @@ ObjCPropertyDecl::getDefaultSynthIvarName(ASTContext &Ctx) const {
 /// FindPropertyDeclaration - Finds declaration of the property given its name
 /// in 'PropertyId' and returns it. It returns 0, if not found.
 ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
-    const IdentifierInfo *PropertyId) const {
+    const IdentifierInfo *PropertyId,
+    ObjCPropertyQueryKind QueryKind) const {
   // Don't find properties within hidden protocol definitions.
   if (const ObjCProtocolDecl *Proto = dyn_cast<ObjCProtocolDecl>(this)) {
     if (const ObjCProtocolDecl *Def = Proto->getDefinition())
@@ -204,13 +224,14 @@ ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
   // the class itself.
   if (const auto *ClassDecl = dyn_cast<ObjCInterfaceDecl>(this)) {
     for (const auto *Ext : ClassDecl->visible_extensions()) {
-      if (auto *P = Ext->FindPropertyDeclaration(PropertyId))
+      if (auto *P = Ext->FindPropertyDeclaration(PropertyId, QueryKind))
         return P;
     }
   }
 
   if (ObjCPropertyDecl *PD =
-        ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(this), PropertyId))
+        ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(this), PropertyId,
+                                           QueryKind))
     return PD;
 
   switch (getKind()) {
@@ -219,7 +240,8 @@ ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
     case Decl::ObjCProtocol: {
       const ObjCProtocolDecl *PID = cast<ObjCProtocolDecl>(this);
       for (const auto *I : PID->protocols())
-        if (ObjCPropertyDecl *P = I->FindPropertyDeclaration(PropertyId))
+        if (ObjCPropertyDecl *P = I->FindPropertyDeclaration(PropertyId,
+                                                             QueryKind))
           return P;
       break;
     }
@@ -228,18 +250,20 @@ ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
       // Look through categories (but not extensions; they were handled above).
       for (const auto *Cat : OID->visible_categories()) {
         if (!Cat->IsClassExtension())
-          if (ObjCPropertyDecl *P = Cat->FindPropertyDeclaration(PropertyId))
+          if (ObjCPropertyDecl *P = Cat->FindPropertyDeclaration(
+                                             PropertyId, QueryKind))
             return P;
       }
 
       // Look through protocols.
       for (const auto *I : OID->all_referenced_protocols())
-        if (ObjCPropertyDecl *P = I->FindPropertyDeclaration(PropertyId))
+        if (ObjCPropertyDecl *P = I->FindPropertyDeclaration(PropertyId,
+                                                             QueryKind))
           return P;
 
       // Finally, check the super class.
       if (const ObjCInterfaceDecl *superClass = OID->getSuperClass())
-        return superClass->FindPropertyDeclaration(PropertyId);
+        return superClass->FindPropertyDeclaration(PropertyId, QueryKind);
       break;
     }
     case Decl::ObjCCategory: {
@@ -247,7 +271,8 @@ ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
       // Look through protocols.
       if (!OCD->IsClassExtension())
         for (const auto *I : OCD->protocols())
-          if (ObjCPropertyDecl *P = I->FindPropertyDeclaration(PropertyId))
+          if (ObjCPropertyDecl *P = I->FindPropertyDeclaration(PropertyId,
+                                                               QueryKind))
             return P;
       break;
     }
@@ -319,7 +344,8 @@ SourceLocation ObjCInterfaceDecl::getSuperClassLoc() const {
 ///
 ObjCPropertyDecl *
 ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
-                                            IdentifierInfo *PropertyId) const {
+                       IdentifierInfo *PropertyId,
+                       ObjCPropertyQueryKind QueryKind) const {
   // FIXME: Should make sure no callers ever do this.
   if (!hasDefinition())
     return nullptr;
@@ -328,12 +354,14 @@ ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
     LoadExternalDefinition();
 
   if (ObjCPropertyDecl *PD =
-      ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(this), PropertyId))
+      ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(this), PropertyId,
+                                         QueryKind))
     return PD;
 
   // Look through protocols.
   for (const auto *I : all_referenced_protocols())
-    if (ObjCPropertyDecl *P = I->FindPropertyDeclaration(PropertyId))
+    if (ObjCPropertyDecl *P = I->FindPropertyDeclaration(PropertyId,
+                                                         QueryKind))
       return P;
 
   return nullptr;
@@ -2011,10 +2039,29 @@ FindPropertyImplIvarDecl(IdentifierInfo *ivarId) const {
 /// category \@implementation block.
 ///
 ObjCPropertyImplDecl *ObjCImplDecl::
-FindPropertyImplDecl(IdentifierInfo *Id) const {
+FindPropertyImplDecl(IdentifierInfo *Id,
+                     ObjCPropertyQueryKind QueryKind) const {
+  ObjCPropertyImplDecl *ClassPropImpl = nullptr;
   for (auto *PID : property_impls())
-    if (PID->getPropertyDecl()->getIdentifier() == Id)
-      return PID;
+    // If queryKind is unknown, we return the instance property if one
+    // exists; otherwise we return the class property.
+    if (PID->getPropertyDecl()->getIdentifier() == Id) {
+      if ((QueryKind == ObjCPropertyQueryKind::OBJC_PR_query_unknown &&
+           !PID->getPropertyDecl()->isClassProperty()) ||
+          (QueryKind == ObjCPropertyQueryKind::OBJC_PR_query_class &&
+           PID->getPropertyDecl()->isClassProperty()) ||
+          (QueryKind == ObjCPropertyQueryKind::OBJC_PR_query_instance &&
+           !PID->getPropertyDecl()->isClassProperty()))
+        return PID;
+
+      if (PID->getPropertyDecl()->isClassProperty())
+        ClassPropImpl = PID;
+    }
+
+  if (QueryKind == ObjCPropertyQueryKind::OBJC_PR_query_unknown)
+    // We can't find the instance property, return the class property.
+    return ClassPropImpl;
+
   return nullptr;
 }
 

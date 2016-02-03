@@ -6189,7 +6189,7 @@ void Sema::CodeCompleteObjCPropertySynthesizeIvar(Scope *S,
   // Figure out which interface we're looking into.
   ObjCInterfaceDecl *Class = nullptr;
   if (ObjCImplementationDecl *ClassImpl
-                                 = dyn_cast<ObjCImplementationDecl>(Container))  
+                                 = dyn_cast<ObjCImplementationDecl>(Container))
     Class = ClassImpl->getClassInterface();
   else
     Class = cast<ObjCCategoryImplDecl>(Container)->getCategoryDecl()
@@ -6198,8 +6198,8 @@ void Sema::CodeCompleteObjCPropertySynthesizeIvar(Scope *S,
   // Determine the type of the property we're synthesizing.
   QualType PropertyType = Context.getObjCIdType();
   if (Class) {
-    if (ObjCPropertyDecl *Property
-                              = Class->FindPropertyDeclaration(PropertyName)) {
+    if (ObjCPropertyDecl *Property = Class->FindPropertyDeclaration(
+            PropertyName, ObjCPropertyQueryKind::OBJC_PR_query_instance)) {
       PropertyType 
         = Property->getType().getNonReferenceType().getUnqualifiedType();
       

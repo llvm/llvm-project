@@ -689,6 +689,12 @@ public:
   friend TrailingObjects;
 };
 
+enum class ObjCPropertyQueryKind : uint8_t {
+  OBJC_PR_query_unknown = 0x00,
+  OBJC_PR_query_instance,
+  OBJC_PR_query_class
+};
+
 /// \brief Represents one property declaration in an Objective-C interface.
 ///
 /// For example:
@@ -826,6 +832,14 @@ public:
 
   bool isInstanceProperty() const { return !isClassProperty(); }
   bool isClassProperty() const { return PropertyAttributes & OBJC_PR_class; }
+  ObjCPropertyQueryKind getQueryKind() const {
+    return isClassProperty() ? ObjCPropertyQueryKind::OBJC_PR_query_class :
+                               ObjCPropertyQueryKind::OBJC_PR_query_instance;
+  }
+  static ObjCPropertyQueryKind getQueryKind(bool isClassProperty) {
+    return isClassProperty ? ObjCPropertyQueryKind::OBJC_PR_query_class :
+                             ObjCPropertyQueryKind::OBJC_PR_query_instance;
+  }
 
   /// getSetterKind - Return the method used for doing assignment in
   /// the property setter. This is only valid if the property has been
@@ -878,7 +892,8 @@ public:
 
   /// Lookup a property by name in the specified DeclContext.
   static ObjCPropertyDecl *findPropertyDecl(const DeclContext *DC,
-                                            const IdentifierInfo *propertyID);
+                                            const IdentifierInfo *propertyID,
+                                            ObjCPropertyQueryKind queryKind);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCProperty; }
@@ -1005,7 +1020,8 @@ public:
   ObjCIvarDecl *getIvarDecl(IdentifierInfo *Id) const;
 
   ObjCPropertyDecl *
-  FindPropertyDeclaration(const IdentifierInfo *PropertyId) const;
+  FindPropertyDeclaration(const IdentifierInfo *PropertyId,
+                          ObjCPropertyQueryKind QueryKind) const;
 
   typedef llvm::DenseMap<IdentifierInfo*, ObjCPropertyDecl*> PropertyMap;
   
@@ -1688,7 +1704,8 @@ public:
   }
 
   ObjCPropertyDecl
-    *FindPropertyVisibleInPrimaryClass(IdentifierInfo *PropertyId) const;
+    *FindPropertyVisibleInPrimaryClass(IdentifierInfo *PropertyId,
+                                       ObjCPropertyQueryKind QueryKind) const;
 
   void collectPropertiesToImplement(PropertyMap &PM,
                                     PropertyDeclOrder &PO) const override;
@@ -2325,7 +2342,8 @@ public:
 
   void addPropertyImplementation(ObjCPropertyImplDecl *property);
 
-  ObjCPropertyImplDecl *FindPropertyImplDecl(IdentifierInfo *propertyId) const;
+  ObjCPropertyImplDecl *FindPropertyImplDecl(IdentifierInfo *propertyId,
+                            ObjCPropertyQueryKind queryKind) const;
   ObjCPropertyImplDecl *FindPropertyImplIvarDecl(IdentifierInfo *ivarId) const;
 
   // Iterator access to properties.
