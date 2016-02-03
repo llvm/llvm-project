@@ -110,6 +110,8 @@ public:
   typename llvm::object::ELFFile<ELFT>::uintX_t getGotPltVA() const;
   template <class ELFT>
   typename llvm::object::ELFFile<ELFT>::uintX_t getPltVA() const;
+  template <class ELFT>
+  typename llvm::object::ELFFile<ELFT>::uintX_t getSize() const;
 
   // A SymbolBody has a backreference to a Symbol. Originally they are
   // doubly-linked. A backreference will never change. But the pointer

@@ -56,7 +56,7 @@ private:
   void assignAddresses();
   void buildSectionMap();
   void fixAbsoluteSymbols();
-  void openFile(StringRef OutputPath);
+  bool openFile();
   void writeHeader();
   void writeSections();
   bool isDiscarded(InputSectionBase<ELFT> *IS) const;
@@ -172,7 +172,8 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
   assignAddresses();
   fixAbsoluteSymbols();
-  openFile(Config->OutputFile);
+  if (!openFile())
+    return;
   writeHeader();
   writeSections();
   if (HasError)
@@ -1384,11 +1385,14 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
     Sec->writeHeaderTo(++SHdrs);
 }
 
-template <class ELFT> void Writer<ELFT>::openFile(StringRef Path) {
+template <class ELFT> bool Writer<ELFT>::openFile() {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-      FileOutputBuffer::create(Path, FileSize, FileOutputBuffer::F_executable);
-  fatal(BufferOrErr, "failed to open " + Path);
+      FileOutputBuffer::create(Config->OutputFile, FileSize,
+                               FileOutputBuffer::F_executable);
+  if (error(BufferOrErr, "failed to open " + Config->OutputFile))
+    return false;
   Buffer = std::move(*BufferOrErr);
+  return true;
 }
 
 // Write section contents to a mmap'ed file.

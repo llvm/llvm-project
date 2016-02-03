@@ -12,10 +12,15 @@
 
 #include "lld/Core/LLVM.h"
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace lld {
 namespace elf2 {
 
 extern bool HasError;
+extern llvm::raw_ostream *ErrorOS;
 
 void warning(const Twine &Msg);
 

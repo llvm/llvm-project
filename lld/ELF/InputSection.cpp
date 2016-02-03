@@ -130,14 +130,6 @@ InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t SymIndex,
 }
 
 template <class ELFT>
-static typename llvm::object::ELFFile<ELFT>::uintX_t
-getSymSize(SymbolBody &Body) {
-  if (auto *SS = dyn_cast<DefinedElf<ELFT>>(&Body))
-    return SS->Sym.st_size;
-  return 0;
-}
-
-template <class ELFT>
 template <bool isRela>
 void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
                                       RelIteratorRange<isRela> Rels) {
@@ -243,7 +235,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
       else if (Type == R_MIPS_LO16 && Body == Config->MipsGpDisp)
         SymVA = getMipsGpAddr<ELFT>() - AddrLoc + 4;
     }
-    uintX_t Size = getSymSize<ELFT>(*Body);
+    uintX_t Size = Body->getSize<ELFT>();
     Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA + A, Size + A,
                         findMipsPairedReloc(Buf, SymIndex, Type, NextRelocs));
   }

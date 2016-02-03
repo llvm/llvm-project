@@ -29,8 +29,9 @@ using namespace lld::elf2;
 Configuration *elf2::Config;
 LinkerDriver *elf2::Driver;
 
-bool elf2::link(ArrayRef<const char *> Args) {
+bool elf2::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   HasError = false;
+  ErrorOS = &Error;
   Configuration C;
   LinkerDriver D;
   Config = &C;
