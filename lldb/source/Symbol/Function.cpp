@@ -570,6 +570,8 @@ Function::GetPrologueByteSize ()
     {
         m_flags.Set(flagsCalculatedPrologueSize);
         LineTable* line_table = m_comp_unit->GetLineTable ();
+        uint32_t prologue_end_line_idx = 0;
+        
         if (line_table)
         {
             LineEntry first_line_entry;
@@ -578,9 +580,12 @@ Function::GetPrologueByteSize ()
             {
                 // Make sure the first line entry isn't already the end of the prologue
                 addr_t prologue_end_file_addr = LLDB_INVALID_ADDRESS;
+                addr_t line_zero_end_file_addr = LLDB_INVALID_ADDRESS;
+                
                 if (first_line_entry.is_prologue_end)
                 {
                     prologue_end_file_addr = first_line_entry.range.GetBaseAddress().GetFileAddress();
+                    prologue_end_line_idx = first_line_entry_idx;
                 }
                 else
                 {
@@ -595,6 +600,7 @@ Function::GetPrologueByteSize ()
                             if (line_entry.is_prologue_end)
                             {
                                 prologue_end_file_addr = line_entry.range.GetBaseAddress().GetFileAddress();
+                                prologue_end_line_idx = idx;
                                 break;
                             }
                         }
@@ -607,7 +613,7 @@ Function::GetPrologueByteSize ()
                 {
                     // Check the first few instructions and look for one that has
                     // a line number that's different than the first entry.
-                    const uint32_t last_line_entry_idx = first_line_entry_idx + 6;
+                    uint32_t last_line_entry_idx = first_line_entry_idx + 6;
                     for (uint32_t idx = first_line_entry_idx + 1; idx < last_line_entry_idx; ++idx)
                     {
                         LineEntry line_entry;
@@ -616,6 +622,7 @@ Function::GetPrologueByteSize ()
                             if (line_entry.line != first_line_entry.line)
                             {
                                 prologue_end_file_addr = line_entry.range.GetBaseAddress().GetFileAddress();
+                                prologue_end_line_idx = idx;
                                 break;
                             }
                         }
@@ -624,10 +631,37 @@ Function::GetPrologueByteSize ()
                     if (prologue_end_file_addr == LLDB_INVALID_ADDRESS)
                     {
                         prologue_end_file_addr = first_line_entry.range.GetBaseAddress().GetFileAddress() + first_line_entry.range.GetByteSize();
+                        prologue_end_line_idx = first_line_entry_idx;
                     }
                 }
+                    
                 const addr_t func_start_file_addr = m_range.GetBaseAddress().GetFileAddress();
                 const addr_t func_end_file_addr = func_start_file_addr + m_range.GetByteSize();
+                
+                // Now calculate the offset to pass the subsequent line 0 entries.
+                uint32_t first_non_zero_line = prologue_end_line_idx;
+                while (1)
+                {
+                    LineEntry line_entry;
+                    if (line_table->GetLineEntryAtIndex(first_non_zero_line, line_entry))
+                    {
+                        if (line_entry.line != 0)
+                            break;
+                    }
+                    if (line_entry.range.GetBaseAddress().GetFileAddress() >= func_end_file_addr)
+                        break;
+
+                    first_non_zero_line++;
+                }
+                
+                if (first_non_zero_line > prologue_end_line_idx)
+                {
+                    LineEntry first_non_zero_entry;
+                    if (line_table->GetLineEntryAtIndex(first_non_zero_line, first_non_zero_entry))
+                    {
+                        line_zero_end_file_addr = first_non_zero_entry.range.GetBaseAddress().GetFileAddress();
+                    }
+                }
 
                 // Verify that this prologue end file address in the function's
                 // address range just to be sure
@@ -635,10 +669,16 @@ Function::GetPrologueByteSize ()
                 {
                     m_prologue_byte_size = prologue_end_file_addr - func_start_file_addr;
                 }
+                
+                if (prologue_end_file_addr < line_zero_end_file_addr && line_zero_end_file_addr < func_end_file_addr)
+                {
+                    m_prologue_byte_size += line_zero_end_file_addr - prologue_end_file_addr;
+                }
             }
         }
     }
-    return m_prologue_byte_size;
+    
+        return m_prologue_byte_size;
 }
 
 lldb::LanguageType
