@@ -2066,7 +2066,7 @@ void Scop::buildDomains(Region *R) {
 }
 
 void Scop::buildDomainsWithBranchConstraints(Region *R) {
-  RegionInfo &RI = *R->getRegionInfo();
+  auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
 
   // To create the domain for each block in R we iterate over all blocks and
   // subregions in R and propagate the conditions under which the current region
@@ -2141,10 +2141,8 @@ void Scop::buildDomainsWithBranchConstraints(Region *R) {
       // Do not adjust the number of dimensions if we enter a boxed loop or are
       // in a non-affine subregion or if the surrounding loop stays the same.
       Loop *SuccBBLoop = LI.getLoopFor(SuccBB);
-      Region *SuccRegion = RI.getRegionFor(SuccBB);
-      if (SD.isNonAffineSubRegion(SuccRegion, &getRegion()))
-        while (SuccBBLoop && SuccRegion->contains(SuccBBLoop))
-          SuccBBLoop = SuccBBLoop->getParentLoop();
+      while (BoxedLoops.count(SuccBBLoop))
+        SuccBBLoop = SuccBBLoop->getParentLoop();
 
       if (BBLoop != SuccBBLoop) {
 
