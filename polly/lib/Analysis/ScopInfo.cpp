@@ -2035,11 +2035,12 @@ void Scop::removeErrorBlockDomains() {
 
 void Scop::buildDomains(Region *R) {
 
+  bool IsOnlyNonAffineRegion = SD.isNonAffineSubRegion(R, R);
   auto *EntryBB = R->getEntry();
-  int LD = getRelativeLoopDepth(LI.getLoopFor(EntryBB));
+  auto *L = IsOnlyNonAffineRegion ? nullptr : LI.getLoopFor(EntryBB);
+  int LD = getRelativeLoopDepth(L);
   auto *S = isl_set_universe(isl_space_set_alloc(getIslCtx(), 0, LD + 1));
 
-  Loop *L = LI.getLoopFor(EntryBB);
   while (LD-- >= 0) {
     S = addDomainDimId(S, LD + 1, L);
     L = L->getParentLoop();
@@ -2047,7 +2048,7 @@ void Scop::buildDomains(Region *R) {
 
   DomainMap[EntryBB] = S;
 
-  if (SD.isNonAffineSubRegion(R, R))
+  if (IsOnlyNonAffineRegion)
     return;
 
   buildDomainsWithBranchConstraints(R);
