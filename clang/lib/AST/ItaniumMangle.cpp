@@ -2111,7 +2111,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << "20ocl_image2dmsaadepth";
     break;
   case BuiltinType::OCLImage2dArrayMSAADepth:
-    Out << "35ocl_image2darraymsaadepth";
+    Out << "25ocl_image2darraymsaadepth";
     break;
   case BuiltinType::OCLImage3d:
     Out << "11ocl_image3d";

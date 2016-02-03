@@ -34,7 +34,7 @@ void test1(id x) {
 void NSLog(id, ...);
 
 // CHECK-LABEL: define void @test2(
-// CHECK: invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.NSConstantString* @_unnamed_cfstring_ to i8*), i32* %{{.*}})
+// CHECK: invoke void (i8*, ...) @NSLog(i8* bitcast (%struct.__NSConstantString* @_unnamed_cfstring_ to i8*), i32* %{{.*}})
 // CHECK:   to label %{{.*}} unwind label %{{.*}}, !clang.arc.no_objc_arc_exceptions !
 // NO-METADATA-LABEL: define void @test2(
 // NO-METADATA-NOT: !clang.arc.no_objc_arc_exceptions

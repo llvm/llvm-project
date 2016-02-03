@@ -11137,22 +11137,26 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FD) {
     FD->setBody(Body);
 
-    if (getLangOpts().CPlusPlus14 && !FD->isInvalidDecl() && Body &&
-        !FD->isDependentContext() && FD->getReturnType()->isUndeducedType()) {
-      // If the function has a deduced result type but contains no 'return'
-      // statements, the result type as written must be exactly 'auto', and
-      // the deduced result type is 'void'.
-      if (!FD->getReturnType()->getAs<AutoType>()) {
-        Diag(dcl->getLocation(), diag::err_auto_fn_no_return_but_not_auto)
-            << FD->getReturnType();
-        FD->setInvalidDecl();
-      } else {
-        // Substitute 'void' for the 'auto' in the type.
-        TypeLoc ResultType = getReturnTypeLoc(FD);
-        Context.adjustDeducedFunctionResultType(
-            FD, SubstAutoType(ResultType.getType(), Context.VoidTy));
+    if (getLangOpts().CPlusPlus14) {
+      if (!FD->isInvalidDecl() && Body && !FD->isDependentContext() &&
+          FD->getReturnType()->isUndeducedType()) {
+        // If the function has a deduced result type but contains no 'return'
+        // statements, the result type as written must be exactly 'auto', and
+        // the deduced result type is 'void'.
+        if (!FD->getReturnType()->getAs<AutoType>()) {
+          Diag(dcl->getLocation(), diag::err_auto_fn_no_return_but_not_auto)
+              << FD->getReturnType();
+          FD->setInvalidDecl();
+        } else {
+          // Substitute 'void' for the 'auto' in the type.
+          TypeLoc ResultType = getReturnTypeLoc(FD);
+          Context.adjustDeducedFunctionResultType(
+              FD, SubstAutoType(ResultType.getType(), Context.VoidTy));
+        }
       }
     } else if (getLangOpts().CPlusPlus11 && isLambdaCallOperator(FD)) {
+      // In C++11, we don't use 'auto' deduction rules for lambda call
+      // operators because we don't support return type deduction.
       auto *LSI = getCurLambda();
       if (LSI->HasImplicitReturnType) {
         deduceClosureReturnType(*LSI);

@@ -1010,15 +1010,24 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
     //   unary-expression:
     //     ++ cast-expression
     //     -- cast-expression
-    SourceLocation SavedLoc = ConsumeToken();
+    Token SavedTok = Tok;
+    ConsumeToken();
     // One special case is implicitly handled here: if the preceding tokens are
     // an ambiguous cast expression, such as "(T())++", then we recurse to
     // determine whether the '++' is prefix or postfix.
     Res = ParseCastExpression(!getLangOpts().CPlusPlus,
                               /*isAddressOfOperand*/false, NotCastExpr,
-                              NotTypeCast);
+                              isTypeCast);
+    if (NotCastExpr) {
+      // If we return with NotCastExpr = true, we must not consume any tokens,
+      // so put the token back where we found it.
+      assert(Res.isInvalid());
+      UnconsumeToken(SavedTok);
+      return ExprError();
+    }
     if (!Res.isInvalid())
-      Res = Actions.ActOnUnaryOp(getCurScope(), SavedLoc, SavedKind, Res.get());
+      Res = Actions.ActOnUnaryOp(getCurScope(), SavedTok.getLocation(),
+                                 SavedKind, Res.get());
     return Res;
   }
   case tok::amp: {         // unary-expression: '&' cast-expression

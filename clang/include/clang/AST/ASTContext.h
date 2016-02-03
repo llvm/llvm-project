@@ -1385,6 +1385,7 @@ public:
     return QualType();
   }
   void setCFConstantStringType(QualType T);
+  TagDecl *getCFConstantStringDecl() const;
 
   // This setter/getter represents the ObjC type for an NSConstantString.
   void setObjCConstantStringInterface(ObjCInterfaceDecl *Decl);
