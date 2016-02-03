@@ -592,7 +592,7 @@ void ProfileSummary::computeDetailedSummary() {
   std::sort(DetailedSummaryCutoffs.begin(), DetailedSummaryCutoffs.end());
 
   uint32_t BlocksSeen = 0;
-  uint64_t CurrSum = 0, Count;
+  uint64_t CurrSum = 0, Count = 0;
 
   for (uint32_t Cutoff : DetailedSummaryCutoffs) {
     assert(Cutoff <= 999999);
