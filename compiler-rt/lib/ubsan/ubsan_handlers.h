@@ -165,8 +165,8 @@ struct CFICheckFailData {
 };
 
 /// \brief Handle control flow integrity failures.
-RECOVERABLE(cfi_check_fail, CFICheckFailData *Data, ValueHandle Function)
-
+RECOVERABLE(cfi_check_fail, CFICheckFailData *Data, ValueHandle Function,
+            uptr VtableIsValid)
 }
 
 #endif // UBSAN_HANDLERS_H
