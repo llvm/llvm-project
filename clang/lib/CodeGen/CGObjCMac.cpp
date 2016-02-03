@@ -3047,6 +3047,7 @@ CGObjCMac::EmitMethodDescList(Twine Name, const char *Section,
   struct _objc_protocol_list *protocols;
   uint32_t size; // <rdar://4585769>
   struct _objc_property_list *instance_properties;
+  struct _objc_property_list *class_properties;
   };
 */
 void CGObjCMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
@@ -3073,7 +3074,7 @@ void CGObjCMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
     // Class methods should always be defined.
     ClassMethods.push_back(GetMethodConstant(I));
 
-  llvm::Constant *Values[7];
+  llvm::Constant *Values[8];
   Values[0] = GetClassName(OCD->getName());
   Values[1] = GetClassName(Interface->getObjCRuntimeNameAsString());
   LazySymbols.insert(Interface->getIdentifier());
@@ -3096,8 +3097,11 @@ void CGObjCMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   if (Category) {
     Values[6] = EmitPropertyList("\01l_OBJC_$_PROP_LIST_" + ExtName.str(),
                                  OCD, Category, ObjCTypes, false);
+    Values[7] = EmitPropertyList("\01l_OBJC_$_CLASS_PROP_LIST_" + ExtName.str(),
+                                 OCD, Category, ObjCTypes, true);
   } else {
     Values[6] = llvm::Constant::getNullValue(ObjCTypes.PropertyListPtrTy);
+    Values[7] = llvm::Constant::getNullValue(ObjCTypes.PropertyListPtrTy);
   }
 
   llvm::Constant *Init = llvm::ConstantStruct::get(ObjCTypes.CategoryTy,
@@ -4482,7 +4486,8 @@ enum ImageInfoFlags {
   // A flag indicating that the module has no instances of a @synthesize of a
   // superclass variable. <rdar://problem/6803242>
   eImageInfo_CorrectedSynthesize = (1 << 4), // This flag is no longer set by clang.
-  eImageInfo_ImageIsSimulated    = (1 << 5)
+  eImageInfo_ImageIsSimulated    = (1 << 5),
+  eImageInfo_ClassProperties     = (1 << 6)
 };
 
 void CGObjCCommonMac::EmitImageInfo() {
@@ -4534,6 +4539,10 @@ void CGObjCCommonMac::EmitImageInfo() {
        Triple.getArch() == llvm::Triple::x86_64))
     Mod.addModuleFlag(llvm::Module::Error, "Objective-C Is Simulated",
                       eImageInfo_ImageIsSimulated);
+
+  // Indicate whether we are generating class properties.
+  Mod.addModuleFlag(llvm::Module::Error, "Objective-C Class Properties",
+                    eImageInfo_ClassProperties);
 }
 
 // struct objc_module {
@@ -5389,12 +5398,14 @@ ObjCTypesHelper::ObjCTypesHelper(CodeGen::CodeGenModule &cgm)
   //   struct _objc_protocol_list *protocols;
   //   uint32_t size;  // sizeof(struct _objc_category)
   //   struct _objc_property_list *instance_properties;// category's @property
+  //   struct _objc_property_list *class_properties;
   // }
   CategoryTy =
     llvm::StructType::create("struct._objc_category",
                              Int8PtrTy, Int8PtrTy, MethodListPtrTy,
                              MethodListPtrTy, ProtocolListPtrTy,
-                             IntTy, PropertyListPtrTy, nullptr);
+                             IntTy, PropertyListPtrTy, PropertyListPtrTy,
+                             nullptr);
 
   // Global metadata structures
 
@@ -5567,12 +5578,14 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(CodeGen::CodeGenModul
   //   const struct _method_list_t * const class_methods;
   //   const struct _protocol_list_t * const protocols;
   //   const struct _prop_list_t * const properties;
+  //   const struct _prop_list_t * const class_properties;
   // }
   CategorynfABITy = llvm::StructType::create("struct._category_t",
                                              Int8PtrTy, ClassnfABIPtrTy,
                                              MethodListnfABIPtrTy,
                                              MethodListnfABIPtrTy,
                                              ProtocolListnfABIPtrTy,
+                                             PropertyListPtrTy,
                                              PropertyListPtrTy,
                                              nullptr);
 
@@ -6134,6 +6147,7 @@ llvm::Value *CGObjCNonFragileABIMac::GenerateProtocolRef(CodeGenFunction &CGF,
 ///   const struct _method_list_t * const class_methods;
 ///   const struct _protocol_list_t * const protocols;
 ///   const struct _prop_list_t * const properties;
+///   const struct _prop_list_t * const class_properties;
 /// }
 ///
 void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
@@ -6148,7 +6162,7 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   llvm::SmallString<64> ExtClassName(getClassSymbolPrefix());
   ExtClassName += Interface->getObjCRuntimeNameAsString();
 
-  llvm::Constant *Values[6];
+  llvm::Constant *Values[7];
   Values[0] = GetClassName(OCD->getIdentifier()->getName());
   // meta-class entry symbol
   llvm::Constant *ClassGV = GetClassGlobal(ExtClassName.str(),
@@ -6199,9 +6213,12 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
                                    Category->protocol_end());
     Values[5] = EmitPropertyList("\01l_OBJC_$_PROP_LIST_" + ExtName.str(),
                                  OCD, Category, ObjCTypes, false);
+    Values[6] = EmitPropertyList("\01l_OBJC_$_CLASS_PROP_LIST_" + ExtName.str(),
+                                 OCD, Category, ObjCTypes, true);
   } else {
     Values[4] = llvm::Constant::getNullValue(ObjCTypes.ProtocolListnfABIPtrTy);
     Values[5] = llvm::Constant::getNullValue(ObjCTypes.PropertyListPtrTy);
+    Values[6] = llvm::Constant::getNullValue(ObjCTypes.PropertyListPtrTy);
   }
 
   llvm::Constant *Init =
