@@ -285,6 +285,18 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     bool NeedsGot = Body && Target->needsGot(Type, *Body);
     bool CBP = canBePreempted(Body, NeedsGot);
 
+    if (IsRela) {
+      auto R = static_cast<const Elf_Rela &>(RI);
+      auto S = static_cast<Elf_Rela *>(P);
+      uintX_t A = NeedsGot ? 0 : R.r_addend;
+      if (CBP)
+        S->r_addend = A;
+      else if (Body)
+        S->r_addend = Body->getVA<ELFT>() + A;
+      else
+        S->r_addend = getLocalRelTarget(File, R, A);
+    }
+
     // For a symbol with STT_GNU_IFUNC type, we always create a PLT and
     // a GOT entry for the symbol, and emit an IRELATIVE reloc rather than
     // the usual JUMP_SLOT reloc for the GOT entry. For the details, you
@@ -318,19 +330,6 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       P->r_offset = Body->getGotVA<ELFT>();
     else
       P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
-
-    if (!IsRela)
-      continue;
-
-    auto R = static_cast<const Elf_Rela &>(RI);
-    auto S = static_cast<Elf_Rela *>(P);
-    uintX_t A = NeedsGot ? 0 : R.r_addend;
-    if (CBP)
-      S->r_addend = A;
-    else if (Body)
-      S->r_addend = Body->getVA<ELFT>() + A;
-    else
-      S->r_addend = getLocalRelTarget(File, R, A);
   }
 }
 

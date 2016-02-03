@@ -149,6 +149,12 @@ public:
   const StringRefVector &sysLibRoots() const { return _syslibRoots; }
   bool PIE() const { return _pie; }
   void setPIE(bool pie) { _pie = pie; }
+  bool generateVersionLoadCommand() const {
+    return _generateVersionLoadCommand;
+  }
+  void setGenerateVersionLoadCommand(bool v) {
+    _generateVersionLoadCommand = v;
+  }
 
   uint64_t stackSize() const { return _stackSize; }
   void setStackSize(uint64_t stackSize) { _stackSize = stackSize; }
@@ -157,6 +163,8 @@ public:
   void setBaseAddress(uint64_t baseAddress) { _baseAddress = baseAddress; }
 
   ObjCConstraint objcConstraint() const { return _objcConstraint; }
+
+  uint32_t osMinVersion() const { return _osMinVersion; }
 
   uint32_t swiftVersion() const { return _swiftVersion; }
 
@@ -430,6 +438,7 @@ private:
   bool _keepPrivateExterns;
   bool _demangle;
   bool _mergeObjCCategories = true;
+  bool _generateVersionLoadCommand = false;
   StringRef _bundleLoader;
   mutable std::unique_ptr<mach_o::ArchHandler> _archHandler;
   mutable std::unique_ptr<Writer> _writer;

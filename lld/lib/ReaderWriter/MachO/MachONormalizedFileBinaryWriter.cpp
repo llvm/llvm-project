@@ -450,10 +450,21 @@ uint32_t MachOFileLayout::loadCommandsSize(uint32_t &count) {
     ++count;
   }
 
-  // If main executable add LC_LOAD_DYLINKER and LC_MAIN
+  // If main executable add LC_LOAD_DYLINKER
   if (_file.fileType == llvm::MachO::MH_EXECUTE) {
     size += pointerAlign(sizeof(dylinker_command) + dyldPath().size()+1);
     ++count;
+  }
+
+  // Add LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_WATCHOS,
+  // LC_VERSION_MIN_TVOS
+  if (_file.hasMinVersionLoadCommand) {
+    size += sizeof(version_min_command);
+    ++count;
+  }
+
+  // If main executable add LC_MAIN
+  if (_file.fileType == llvm::MachO::MH_EXECUTE) {
     size += sizeof(entry_point_command);
     ++count;
   }
@@ -844,7 +855,7 @@ std::error_code MachOFileLayout::writeLoadCommands() {
       lc += sizeof(dysymtab_command);
     }
 
-    // If main executable, add LC_LOAD_DYLINKER and LC_MAIN.
+    // If main executable, add LC_LOAD_DYLINKER
     if (_file.fileType == llvm::MachO::MH_EXECUTE) {
       // Build LC_LOAD_DYLINKER load command.
       uint32_t size=pointerAlign(sizeof(dylinker_command)+dyldPath().size()+1);
@@ -857,6 +868,39 @@ std::error_code MachOFileLayout::writeLoadCommands() {
       memcpy(lc+sizeof(dylinker_command), dyldPath().data(), dyldPath().size());
       lc[sizeof(dylinker_command)+dyldPath().size()] = '\0';
       lc += size;
+    }
+
+    // Add LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_WATCHOS,
+    // LC_VERSION_MIN_TVOS
+    if (_file.hasMinVersionLoadCommand) {
+      version_min_command *vm = reinterpret_cast<version_min_command*>(lc);
+      switch (_file.os) {
+        case MachOLinkingContext::OS::unknown:
+          // TODO: We need to emit the load command if we managed to derive
+          // a platform from one of the files we are linking.
+          llvm_unreachable("Version commands for unknown OS aren't supported");
+          break;
+        case MachOLinkingContext::OS::macOSX:
+          vm->cmd     = LC_VERSION_MIN_MACOSX;
+          vm->cmdsize = sizeof(version_min_command);
+          vm->version = _file.minOSverson;
+          vm->sdk     = _file.sdkVersion;
+          break;
+        case MachOLinkingContext::OS::iOS:
+        case MachOLinkingContext::OS::iOS_simulator:
+          vm->cmd     = LC_VERSION_MIN_MACOSX;
+          vm->cmdsize = sizeof(version_min_command);
+          vm->version = _file.minOSverson;
+          vm->sdk     = _file.sdkVersion;
+          break;
+      }
+      if (_swap)
+        swapStruct(*vm);
+      lc += sizeof(version_min_command);
+    }
+
+    // If main executable, add LC_MAIN.
+    if (_file.fileType == llvm::MachO::MH_EXECUTE) {
       // Build LC_MAIN load command.
       entry_point_command* ep = reinterpret_cast<entry_point_command*>(lc);
       ep->cmd       = LC_MAIN;

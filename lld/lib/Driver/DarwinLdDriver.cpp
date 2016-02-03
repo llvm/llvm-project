@@ -299,6 +299,7 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
 
   // Figure out output kind ( -dylib, -r, -bundle, -preload, or -static )
   llvm::MachO::HeaderFileType fileType = llvm::MachO::MH_EXECUTE;
+  bool isStaticExecutable = false;
   if (llvm::opt::Arg *kind = parsedArgs.getLastArg(
           OPT_dylib, OPT_relocatable, OPT_bundle, OPT_static, OPT_preload)) {
     switch (kind->getOption().getID()) {
@@ -313,6 +314,7 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
       break;
     case OPT_static:
       fileType = llvm::MachO::MH_EXECUTE;
+      isStaticExecutable = true;
       break;
     case OPT_preload:
       fileType = llvm::MachO::MH_PRELOAD;
@@ -739,6 +741,54 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
                   << " can only used when linking main executables\n";
       return false;
       break;
+    }
+  }
+
+  // Handle -version_load_command or -no_version_load_command
+  {
+    bool flagOn = false;
+    bool flagOff = false;
+    if (auto *arg = parsedArgs.getLastArg(OPT_version_load_command,
+                                          OPT_no_version_load_command)) {
+      flagOn = arg->getOption().getID() == OPT_version_load_command;
+      flagOff = arg->getOption().getID() == OPT_no_version_load_command;
+    }
+
+    // default to adding version load command for dynamic code,
+    // static code must opt-in
+    switch (ctx.outputMachOType()) {
+      case llvm::MachO::MH_OBJECT:
+        ctx.setGenerateVersionLoadCommand(false);
+        break;
+      case llvm::MachO::MH_EXECUTE:
+        // dynamic executables default to generating a version load command,
+        // while static exectuables only generate it if required.
+        if (isStaticExecutable) {
+          if (flagOn)
+            ctx.setGenerateVersionLoadCommand(true);
+        } else {
+          if (!flagOff)
+            ctx.setGenerateVersionLoadCommand(true);
+        }
+        break;
+      case llvm::MachO::MH_PRELOAD:
+      case llvm::MachO::MH_KEXT_BUNDLE:
+        if (flagOn)
+          ctx.setGenerateVersionLoadCommand(true);
+        break;
+      case llvm::MachO::MH_DYLINKER:
+      case llvm::MachO::MH_DYLIB:
+      case llvm::MachO::MH_BUNDLE:
+        if (!flagOff)
+          ctx.setGenerateVersionLoadCommand(true);
+        break;
+      case llvm::MachO::MH_FVMLIB:
+      case llvm::MachO::MH_DYLDLINK:
+      case llvm::MachO::MH_DYLIB_STUB:
+      case llvm::MachO::MH_DSYM:
+        // We don't generate load commands for these file types, even if
+        // forced on.
+        break;
     }
   }
 
