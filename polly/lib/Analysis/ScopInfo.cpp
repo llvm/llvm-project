@@ -3458,8 +3458,7 @@ void Scop::buildSchedule(
   auto &LSchedulePair = LoopSchedules[L];
   LSchedulePair.second += getNumBlocksInRegionNode(RN);
 
-  ScopStmt *Stmt = getStmtForRegionNode(RN);
-  if (Stmt) {
+  if (auto *Stmt = getStmtForRegionNode(RN)) {
     auto *UDomain = isl_union_set_from_set(Stmt->getDomain());
     auto *StmtSchedule = isl_schedule_from_domain(UDomain);
     LSchedulePair.first = combineInSequence(LSchedulePair.first, StmtSchedule);
