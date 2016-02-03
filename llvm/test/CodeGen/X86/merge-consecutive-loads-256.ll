@@ -239,26 +239,10 @@ define <8 x float> @merge_8f32_4f32_z2(<4 x float>* %ptr) nounwind uwtable noinl
 }
 
 define <8 x float> @merge_8f32_f32_12zzuuzz(float* %ptr) nounwind uwtable noinline ssp {
-; AVX1-LABEL: merge_8f32_f32_12zzuuzz:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: merge_8f32_f32_12zzuuzz:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: merge_8f32_f32_12zzuuzz:
-; AVX512F:       # BB#0:
-; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
+; AVX-LABEL: merge_8f32_f32_12zzuuzz:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    retq
   %ptr0 = getelementptr inbounds float, float* %ptr, i64 1
   %ptr1 = getelementptr inbounds float, float* %ptr, i64 2
   %val0 = load float, float* %ptr0

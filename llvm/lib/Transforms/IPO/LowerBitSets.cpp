@@ -920,7 +920,7 @@ void LowerBitSets::buildBitSetsFromDisjointSet(
 bool LowerBitSets::buildBitSets() {
   Function *BitSetTestFunc =
       M->getFunction(Intrinsic::getName(Intrinsic::bitset_test));
-  if (!BitSetTestFunc)
+  if (!BitSetTestFunc || BitSetTestFunc->use_empty())
     return false;
 
   // Equivalence class set containing bitsets and the globals they reference.

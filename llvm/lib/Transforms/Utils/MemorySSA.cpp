@@ -416,6 +416,7 @@ void MemorySSA::verifyDomination(Function &F) {
         } else {
           UseBlock = cast<MemoryAccess>(U)->getBlock();
         }
+        (void)UseBlock;
         assert(DT->dominates(MP->getBlock(), UseBlock) &&
                "Memory PHI does not dominate it's uses");
       }
@@ -587,10 +588,9 @@ void MemorySSAPrinterPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool MemorySSAPrinterPass::doInitialization(Module &M) {
-  VerifyMemorySSA =
-      M.getContext()
-          .template getOption<bool, MemorySSAPrinterPass,
-                              &MemorySSAPrinterPass::VerifyMemorySSA>();
+  VerifyMemorySSA = M.getContext()
+                        .getOption<bool, MemorySSAPrinterPass,
+                                   &MemorySSAPrinterPass::VerifyMemorySSA>();
   return false;
 }
 

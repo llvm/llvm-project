@@ -5639,11 +5639,12 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       (1 + LastLoadedElt - FirstLoadedElt) * LDBaseVT.getStoreSizeInBits();
 
   // VZEXT_LOAD - consecutive load/undefs followed by zeros/undefs.
-  // TODO: The code below fires only for for loading the low 64-bits of a
-  // of a 128-bit vector. It's probably worth generalizing more.
   if (IsConsecutiveLoad && FirstLoadedElt == 0 && LoadSize == 64 &&
-      (VT.is128BitVector() && TLI.isTypeLegal(MVT::v2i64))) {
-    SDVTList Tys = DAG.getVTList(MVT::v2i64, MVT::Other);
+      ((VT.is128BitVector() && TLI.isTypeLegal(MVT::v2i64)) ||
+       (VT.is256BitVector() && TLI.isTypeLegal(MVT::v4i64)) ||
+       (VT.is512BitVector() && TLI.isTypeLegal(MVT::v8i64)))) {
+    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+    SDVTList Tys = DAG.getVTList(VecVT, MVT::Other);
     SDValue Ops[] = { LDBase->getChain(), LDBase->getBasePtr() };
     SDValue ResNode =
         DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, DL, Tys, Ops, MVT::i64,

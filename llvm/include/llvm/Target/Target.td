@@ -941,6 +941,14 @@ class AsmParser {
   // written register name matcher
   bit ShouldEmitMatchRegisterName = 1;
 
+  // Set to true if the target needs a generated 'alternative register name'
+  // matcher.
+  //
+  // This generates a function which can be used to lookup registers from
+  // their aliases. This function will fail when called on targets where
+  // several registers share the same alias (i.e. not a 1:1 mapping).
+  bit ShouldEmitMatchRegisterAltName = 0;
+
   // HasMnemonicFirst - Set to false if target instructions don't always
   // start with a mnemonic as the first token.
   bit HasMnemonicFirst = 1;

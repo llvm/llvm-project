@@ -1180,7 +1180,7 @@ DWARFCompileUnit::LanguageTypeFromDWARF(uint64_t val)
     {
     case DW_LANG_Mips_Assembler:
         return eLanguageTypeMipsAssembler;
-    case 0x8e57: // FIXME: needs to be added to llvm
+    case DW_LANG_GOOGLE_RenderScript:
         return eLanguageTypeExtRenderScript;
     default:
         return static_cast<LanguageType>(val);

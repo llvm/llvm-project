@@ -483,6 +483,12 @@ FunctionPass *createLoopLoadEliminationPass();
 //
 Pass *createLoopSimplifyCFGPass();
 
+//===----------------------------------------------------------------------===//
+//
+// LoopVersioning - Perform loop multi-versioning.
+//
+FunctionPass *createLoopVersioningPass();
+
 } // End llvm namespace
 
 #endif

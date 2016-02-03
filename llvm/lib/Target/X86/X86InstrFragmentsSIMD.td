@@ -685,11 +685,6 @@ def alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   return cast<LoadSDNode>(N)->getAlignment() >= 16;
 }]>;
 
-// Like 'X86vzload', but always requires 128-bit vector alignment.
-def alignedX86vzload : PatFrag<(ops node:$ptr), (X86vzload node:$ptr), [{
-  return cast<MemSDNode>(N)->getAlignment() >= 16;
-}]>;
-
 // Like 'load', but always requires 256-bit vector alignment.
 def alignedload256 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   return cast<LoadSDNode>(N)->getAlignment() >= 32;
