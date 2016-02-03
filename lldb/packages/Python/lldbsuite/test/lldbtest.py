@@ -819,18 +819,6 @@ def skipIfRemote(func):
         return "skip on remote platform" if lldb.remote_platform else None
     return skipTestIfFn(is_remote)(func)
 
-def skipUnlessListedRemote(remote_list=None):
-    def is_remote_unlisted(self):
-        if remote_list and lldb.remote_platform:
-            triple = self.dbg.GetSelectedPlatform().GetTriple()
-            for r in remote_list:
-                if r in triple:
-                    return None
-            return "skipping because remote is not listed"
-        else:
-            return None
-    return skipTestIfFn(is_remote_unlisted)
-
 def skipIfRemoteDueToDeadlock(func):
     """Decorate the item to skip tests if testing remotely due to the test deadlocking."""
     def is_remote():

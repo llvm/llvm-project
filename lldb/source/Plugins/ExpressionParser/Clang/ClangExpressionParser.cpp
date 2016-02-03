@@ -64,6 +64,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StringList.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRDynamicChecks.h"
@@ -76,6 +77,7 @@
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/Language.h"
 
 using namespace clang;
 using namespace llvm;
@@ -166,37 +168,54 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     m_code_generator (),
     m_pp_callbacks(nullptr)
 {
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+
     // 1. Create a new compiler instance.
     m_compiler.reset(new CompilerInstance());
-
-    // 2. Install the target.
-
+    lldb::LanguageType frame_lang = expr.Language(); // defaults to lldb::eLanguageTypeUnknown
+    bool overridden_target_opts = false;
+    lldb_private::LanguageRuntime *lang_rt = nullptr;
     lldb::TargetSP target_sp;
     if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
 
-    // TODO: figure out what to really do when we don't have a valid target.
-    // Sometimes this will be ok to just use the host target triple (when we
-    // evaluate say "2+3", but other expressions like breakpoint conditions
-    // and other things that _are_ target specific really shouldn't just be
-    // using the host triple. This needs to be fixed in a better way.
+    // If the expression is being evaluated in the context of an existing
+    // stack frame, we introspect to see if the language runtime is available.
+    auto frame = exe_scope->CalculateStackFrame();
+
+    // Make sure the user hasn't provided a preferred execution language
+    // with `expression --language X -- ...`
+    if (frame && frame_lang == lldb::eLanguageTypeUnknown)
+        frame_lang = frame->GetLanguage();
+
+    if (frame_lang != lldb::eLanguageTypeUnknown)
+    {
+        lang_rt = exe_scope->CalculateProcess()->GetLanguageRuntime(frame_lang);
+        if (log)
+            log->Printf("Frame has language of type %s", Language::GetNameForLanguageType(frame_lang));
+    }
+
+    // 2. Configure the compiler with a set of default options that are appropriate
+    // for most situations.
     if (target_sp && target_sp->GetArchitecture().IsValid())
     {
         std::string triple = target_sp->GetArchitecture().GetTriple().str();
         m_compiler->getTargetOpts().Triple = triple;
+        if (log)
+            log->Printf("Using %s as the target triple", m_compiler->getTargetOpts().Triple.c_str());
     }
     else
     {
+        // If we get here we don't have a valid target and just have to guess.
+        // Sometimes this will be ok to just use the host target triple (when we evaluate say "2+3", but other
+        // expressions like breakpoint conditions and other things that _are_ target specific really shouldn't just be
+        // using the host triple. In such a case the language runtime should expose an overridden options set (3),
+        // below.
         m_compiler->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
+        if (log)
+            log->Printf("Using default target triple of %s", m_compiler->getTargetOpts().Triple.c_str());
     }
-
-    if (target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86 ||
-        target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
-    {
-        m_compiler->getTargetOpts().Features.push_back("+sse");
-        m_compiler->getTargetOpts().Features.push_back("+sse2");
-    }
-
+    // Now add some special fixes for known architectures:
     // Any arm32 iOS environment, but not on arm64
     if (m_compiler->getTargetOpts().Triple.find("arm64") == std::string::npos &&
         m_compiler->getTargetOpts().Triple.find("arm") != std::string::npos &&
@@ -204,17 +223,51 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     {
         m_compiler->getTargetOpts().ABI = "apcs-gnu";
     }
+    // Supported subsets of x86
+    if (target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86 ||
+        target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
+    {
+        m_compiler->getTargetOpts().Features.push_back("+sse");
+        m_compiler->getTargetOpts().Features.push_back("+sse2");
+    }
 
+    // 3. Now allow the runtime to provide custom configuration options for the target.
+    // In this case, a specialized language runtime is available and we can query it for extra options.
+    // For 99% of use cases, this will not be needed and should be provided when basic platform detection is not enough.
+    if (lang_rt)
+        overridden_target_opts = lang_rt->GetOverrideExprOptions(m_compiler->getTargetOpts());
+
+    if (overridden_target_opts)
+        if (log)
+        {
+            log->Debug("Using overridden target options for the expression evaluation");
+
+            auto opts = m_compiler->getTargetOpts();
+            log->Debug("Triple: '%s'", opts.Triple.c_str());
+            log->Debug("CPU: '%s'", opts.CPU.c_str());
+            log->Debug("FPMath: '%s'", opts.FPMath.c_str());
+            log->Debug("ABI: '%s'", opts.ABI.c_str());
+            log->Debug("LinkerVersion: '%s'", opts.LinkerVersion.c_str());
+            StringList::LogDump(log, opts.FeaturesAsWritten, "FeaturesAsWritten");
+            StringList::LogDump(log, opts.Features, "Features");
+            StringList::LogDump(log, opts.Reciprocals, "Reciprocals");
+        }
+
+    // 4. Create and install the target on the compiler.
     m_compiler->createDiagnostics();
-
-    // Create the target instance.
-    m_compiler->setTarget(TargetInfo::CreateTargetInfo(
-        m_compiler->getDiagnostics(), m_compiler->getInvocation().TargetOpts));
+    auto target_info = TargetInfo::CreateTargetInfo(m_compiler->getDiagnostics(), m_compiler->getInvocation().TargetOpts);
+    if (log)
+    {
+        log->Printf("Using SIMD alignment: %d", target_info->getSimdDefaultAlign());
+        log->Printf("Target datalayout string: '%s'", target_info->getDataLayoutString());
+        log->Printf("Target ABI: '%s'", target_info->getABI().str().c_str());
+        log->Printf("Target vector alignment: %d", target_info->getMaxVectorAlign());
+    }
+    m_compiler->setTarget(target_info);
 
     assert (m_compiler->hasTarget());
 
-    // 3. Set options.
-
+    // 5. Set language options.
     lldb::LanguageType language = expr.Language();
 
     switch (language)
@@ -321,11 +374,11 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     // created. This complexity should be lifted elsewhere.
     m_compiler->getTarget().adjust(m_compiler->getLangOpts());
 
-    // 4. Set up the diagnostic buffer for reporting errors
+    // 6. Set up the diagnostic buffer for reporting errors
 
     m_compiler->getDiagnostics().setClient(new clang::TextDiagnosticBuffer);
 
-    // 5. Set up the source management objects inside the compiler
+    // 7. Set up the source management objects inside the compiler
 
     clang::FileSystemOptions file_system_options;
     m_file_manager.reset(new clang::FileManager(file_system_options));
@@ -344,7 +397,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
         m_compiler->getPreprocessor().addPPCallbacks(std::move(pp_callbacks));
     }
         
-    // 6. Most of this we get from the CompilerInstance, but we
+    // 8. Most of this we get from the CompilerInstance, but we
     // also want to give the context an ExternalASTSource.
     m_selector_table.reset(new SelectorTable());
     m_builtin_context.reset(new Builtin::Context());

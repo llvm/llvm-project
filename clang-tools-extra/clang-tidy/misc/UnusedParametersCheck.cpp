@@ -104,7 +104,8 @@ void UnusedParametersCheck::warnOnUnusedParameter(
 void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("function");
   if (!Function->doesThisDeclarationHaveABody() ||
-      !Function->hasWrittenPrototype())
+      !Function->hasWrittenPrototype() ||
+      Function->isTemplateInstantiation())
     return;
   if (const auto *Method = dyn_cast<CXXMethodDecl>(Function))
     if (Method->isLambdaStaticInvoker())

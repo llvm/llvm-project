@@ -22,6 +22,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Target/ExecutionContextScope.h"
+#include "clang/Basic/TargetOptions.h"
 
 namespace lldb_private {
 
@@ -145,6 +146,15 @@ public:
     virtual void
     ModulesDidLoad (const ModuleList &module_list)
     {
+    }
+
+    // Called by the Clang expression evaluation engine to allow runtimes to alter the set of target options provided to
+    // the compiler.
+    // If the options prototype is modified, runtimes must return true, false otherwise.
+    virtual bool
+    GetOverrideExprOptions(clang::TargetOptions &prototype)
+    {
+        return false;
     }
 
 protected:
