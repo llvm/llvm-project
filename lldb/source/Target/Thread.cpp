@@ -701,7 +701,6 @@ Thread::SetupForResume ()
                     ThreadPlanSP step_bp_plan_sp (new ThreadPlanStepOverBreakpoint (*this));
                     if (step_bp_plan_sp)
                     {
-                        ;
                         step_bp_plan_sp->SetPrivate (true);
 
                         if (GetCurrentPlan()->RunState() != eStateStepping)

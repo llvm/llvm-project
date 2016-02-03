@@ -133,3 +133,28 @@ const char* const g = "foo"; // OK: internal linkage variable definition.
 static int h = 1; // OK: internal linkage variable definition.
 const int i = 1; // OK: internal linkage variable definition.
 extern int j; // OK: internal linkage variable definition.
+
+template <typename T, typename U>
+struct CD {
+  int f();
+};
+
+template <typename T>
+struct CD<T, int> {
+  int f();
+};
+
+template <>
+struct CD<int, int> {
+  int f();
+};
+
+int CD<int, int>::f() {
+// CHECK-MESSAGES: :[[@LINE-1]]:19: warning: function 'f' defined in a header file;
+  return 0;
+}
+
+template <typename T>
+int CD<T, int>::f() { // OK: partial template specialization.
+  return 0;
+}

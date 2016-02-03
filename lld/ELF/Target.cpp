@@ -873,9 +873,6 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   case R_X86_64_DTPOFF32:
     write32le(Loc, SA);
     break;
-  case R_X86_64_DTPOFF64:
-    write64le(Loc, SA);
-    break;
   case R_X86_64_GOTPCREL:
   case R_X86_64_PC32:
   case R_X86_64_PLT32:

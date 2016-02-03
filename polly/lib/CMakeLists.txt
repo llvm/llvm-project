@@ -77,6 +77,13 @@ if (BUILD_SHARED_LIBS)
   link_directories(
     ${LLVM_LIBRARY_DIR}
   )
+elseif (LLVM_LINK_LLVM_DYLIB)
+  target_link_libraries(Polly
+    LLVM
+  )
+  link_directories(
+    ${LLVM_LIBRARY_DIR}
+  )
 endif()
 
 # Build a monolithic Polly.a and a thin module LLVMPolly.moduleext that links to

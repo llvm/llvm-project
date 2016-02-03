@@ -91,9 +91,12 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
       const auto *DC = MD->getDeclContext();
       while (DC->isRecord()) {
-        if (const auto *RD = dyn_cast<CXXRecordDecl>(DC))
+        if (const auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
+          if (isa<ClassTemplatePartialSpecializationDecl>(RD))
+            return;
           if (RD->getDescribedClassTemplate())
             return;
+        }
         DC = DC->getParent();
       }
     }

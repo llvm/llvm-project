@@ -527,9 +527,7 @@ private:
   /// @brief Relation from statement instances to the accessed array elements.
   ///
   /// In the common case this relation is a function that maps a set of loop
-  /// indices to the memory address from which a value is loaded/stored.
-  ///
-  /// For example:
+  /// indices to the memory address from which a value is loaded/stored:
   ///
   ///      for i
   ///        for j

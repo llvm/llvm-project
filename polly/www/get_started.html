@@ -14,7 +14,7 @@
 
 <div id="content">
 
-<h1>Getting Started: Building and Installing Polly</h1>
+<h1>Building and Installing Polly</h1>
 
 <h2> Automatic </h2>
 
@@ -30,62 +30,31 @@ chmod +x polly.sh
 ./polly.sh
 </pre>
 
-<h2> Manual [after 3.6]</h2>
+<h2> Manual </h2>
 <h3 id="source"> Get the code </h3>
 
-The Polly source code is available in the LLVM SVN repository as well as through
-an official git mirror. It is added to the <em>tools</em>
-directory of the llvm sources.
-<b>Polly and LLVM need to be checked out at the same time. Checkouts
-   from different dates may not work!</b>
-<h4>Set the directory layout:</h4>
+<p><b>Warning:</b> Polly/LLVM/clang need to be checked out at the same time.</p>
+
 <pre>
-export BASE=`pwd`
-export LLVM_SRC=${BASE}/llvm
-export POLLY_SRC=${LLVM_SRC}/tools/polly
+git clone http://llvm.org/git/llvm.git llvm_git
+git clone http://llvm.org/git/polly.git llvm_git/tools/polly
 
 # Also build the matching clang-version (optional)
-export CLANG_SRC=${LLVM_SRC}/tools/clang
-</pre>
-
-<h4>SVN</h4>
-<pre>
-svn checkout http://llvm.org/svn/llvm-project/llvm/trunk ${LLVM_SRC}
-svn checkout http://llvm.org/svn/llvm-project/polly/trunk ${POLLY_SRC}
-
-# Also build the matching clang-version (optional)
-svn checkout http://llvm.org/svn/llvm-project/cfe/trunk ${CLANG_SRC}
-</pre>
-<h4>GIT</h4>
-<pre>
-git clone http://llvm.org/git/llvm.git ${LLVM_SRC}
-git clone http://llvm.org/git/polly.git ${POLLY_SRC}
-
-# Also build the matching clang-version (optional)
-git clone http://llvm.org/git/clang.git ${CLANG_SRC}
+git clone http://llvm.org/git/clang.git llvm_git/tools/clang
 </pre>
 <h3 id="build">Build Polly</h3>
 
-To build Polly use the cmake build system.
-
-<h4>Set the directory layout:</h4>
 <pre>
-export LLVM_BUILD=${BASE}/llvm_build
-mkdir ${LLVM_BUILD}
-cd ${LLVM_BUILD}
-</pre>
-
-<h4>CMake</h4>
-
-<pre>
-cmake ${LLVM_SRC} && make
+mkdir llvm_build && cd llvm_build
+cmake ../llvm_git && make
 </pre>
 
 <h3> Test Polly</h3>
 
-<p>To check if Polly works correctly you can run <em>make check-polly</em> for the
-cmake build or <em>make check-polly -C tools/polly/test/</em> for the autoconf
-build.
+<pre>make check-polly</pre>
+
+
+<h3> Troubleshooting</h3>
 
 <p>If you get an error in one of the python files, your system probably uses python3
 as default python interpreter. This is the case, for instance, under Arch Linux.
@@ -95,160 +64,6 @@ with the location of the python2 interpreter under your system).
 
 <pre>cmake -DCMAKE_PREFIX_PATH=${ISL_INSTALL} -DPYTHON_EXECUTABLE=/usr/bin/python2 ${LLVM_SRC}</pre>
 
-<h2> Manual [before and including 3.6]</h2>
-<h3 id="source"> Get the code </h3>
-
-The Polly source code is available in the LLVM SVN repository as well as through
-an official git mirror. It is added to the <em>tools</em>
-directory of the llvm sources.
-<b>Polly and LLVM need to be checked out at the same time. Checkouts
-   from different dates may not work!</b>
-<h4>Set the directory layout:</h4>
-<pre>
-export BASE=`pwd`
-export LLVM_SRC=${BASE}/llvm
-export POLLY_SRC=${LLVM_SRC}/tools/polly
-
-# Also build the matching clang-version (optional)
-export CLANG_SRC=${LLVM_SRC}/tools/clang
-</pre>
-
-<h4>SVN</h4>
-<pre>
-svn checkout http://llvm.org/svn/llvm-project/llvm/trunk ${LLVM_SRC}
-svn checkout http://llvm.org/svn/llvm-project/polly/trunk ${POLLY_SRC}
-
-# Also build the matching clang-version (optional)
-svn checkout http://llvm.org/svn/llvm-project/cfe/trunk ${CLANG_SRC}
-</pre>
-<h4>GIT</h4>
-<pre>
-git clone http://llvm.org/git/llvm.git ${LLVM_SRC}
-git clone http://llvm.org/git/polly.git ${POLLY_SRC}
-
-# Also build the matching clang-version (optional)
-git clone http://llvm.org/git/clang.git ${CLANG_SRC}
-</pre>
-<h3 id="prerequisites"> Prerequisites </h3>
-<ul>
-<li>libgmp</li>
-<li>isl</li>
-</ul>
-
-<h4> libgmp </h4>
-Install libgmp (library + developer package) through the package management
-system of your operating system.
-
-<h4> isl</h4>
-
-Polly is tested with a fixed version of isl. To obtain the source code of isl
-use checkout_isl.sh as available in ${POLLY_SRC}/utils/checkout_isl.sh.
-
-<h4>Set the directory layout:</h4>
-<pre>
-export ISL_SRC=${BASE}/isl_src
-export ISL_INSTALL=${BASE}/isl_install
-</pre>
-
-<h4> First installation</h4>
-<pre>
-${POLLY_SRC}/utils/checkout_isl.sh ${ISL_SRC}
-cd ${ISL_SRC}
-./configure --prefix=${ISL_INSTALL}
-make
-make install
-cd ${BASE}
-</pre>
-
-<h4> Update the installation</h4>
-
-Updating isl may become necessary, if Polly uses a feature
-only available in a recent version of isl.
-<pre>
-${POLLY_SRC}/utils/checkout_isl.sh ${ISL_SRC}
-cd ${ISL_SRC}
-make
-make install
-cd ${BASE}
-</pre>
-
-<h3 id="build">Build Polly</h3>
-
-To build Polly use the cmake build system.
-
-<h4>Set the directory layout:</h4>
-<pre>
-export LLVM_BUILD=${BASE}/llvm_build
-mkdir ${LLVM_BUILD}
-cd ${LLVM_BUILD}
-</pre>
-
-<h4>CMake</h4>
-
-<pre>
-cmake -DCMAKE_PREFIX_PATH=${ISL_INSTALL} ${LLVM_SRC}
-make
-</pre>
-
-<h3> Test Polly</h3>
-
-<p>To check if Polly works correctly you can run <em>make check-polly</em> for the
-cmake build or <em>make check-polly -C tools/polly/test/</em> for the autoconf
-build.
-
-<p>If you get something like <em>"... libisl.so.9: cannot open shared object file .."</em>,
-it is because you installed isl to a non-standard path, and libisl
-could not be found. To solve this issue, you need to append the path of parent
-directory of libisl, i.e. ${ISL_INSTALL}/lib, to LD_LIBRARY_PATH by:
-
-<pre>export LD_LIBRARY_PATH=${ISL_INSTALL}/lib:$LD_LIBRARY_PATH</pre>
-
-<p>Also try the above command if you get errors such as:
-<code>undefined symbol: isl_ctx_get_max_operations</code>
-
-<p>If you get an error in one of the python files, your system probably uses python3
-as default python interpreter. This is the case, for instance, under Arch Linux.
-To solve this issue, run <code>cmake</code> again, but with the added argument:
-<code>-DPYTHON_EXECUTABLE=/usr/bin/python2</code> (replace <code>/usr/bin/python2</code>
-with the location of the python2 interpreter under your system).
-
-<pre>cmake -DCMAKE_PREFIX_PATH=${ISL_INSTALL} -DPYTHON_EXECUTABLE=/usr/bin/python2 ${LLVM_SRC}</pre>
-
-<h2> Optional Features </h2>
-
-<h3> Pocc [Supported until <a href="http://llvm.org/releases/download.html#3.4.2">LLVM 3.4.2</a>]</h3>
-
-<p>Polly can use <a href="http://www.cse.ohio-state.edu/~pouchet/software/pocc">
-PoCC</a> as an external optimizer. PoCC is a research project that provides
-an integrated version of <a href="http://pluto-compiler.sf.net">Pluto</a>, an
-advanced data-locality and tileability optimizer. Polly includes internally
-already a similar optimizer, such that in general PoCC is not needed. It is
-only recommended for people who want to compare against a different
-optimizer.</a>
-<br/>
-To use it install PoCC 1.0-rc3.1 (the one with Polly support) and add it to your PATH.
-
-<pre>
-wget <a
-href="http://www.cse.ohio-state.edu/~pouchet/software/pocc/download/pocc-1.0-rc3.1-full.tar.gz">http://www.cse.ohio-state.edu/~pouchet/software/pocc/download/pocc-1.0-rc3.1-full.tar.gz</a>
-tar xzf pocc-1.0-rc3.1-full.tar.gz
-cd pocc-1.0-rc3.1
-./install.sh
-export PATH=$PATH:`pwd`/bin
-</pre>
-
-You also need to install scoplib-0.2.0 and provide its location to
-Polly's cmake call.
-
-<pre>
-wget <a
-href="http://www.cse.ohio-state.edu/~pouchet/software/pocc/download/modules/scoplib-0.2.0.tar.gz"
->http://www.cse.ohio-state.edu/~pouchet/software/pocc/download/modules/scoplib-0.2.0.tar.gz</a>
-tar xzf  scoplib-0.2.0.tar.gz
-cd scoplib-0.2.0
-./configure --enable-mp-version --prefix=/path/to/scoplib/installation
-make && make install
-</pre>
 </div>
 </div>
 

@@ -848,16 +848,12 @@ elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
   if (Section == &InputSection<ELFT>::Discarded || !Section->isLive())
     return Addend;
 
-  uintX_t VA = Section->OutSec->getVA();
-  if (isa<InputSection<ELFT>>(Section))
-    return VA + Section->getOffset(*Sym) + Addend;
-
   uintX_t Offset = Sym->st_value;
   if (Sym->getType() == STT_SECTION) {
     Offset += Addend;
     Addend = 0;
   }
-  return VA + Section->getOffset(Offset) + Addend;
+  return Section->OutSec->getVA() + Section->getOffset(Offset) + Addend;
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
