@@ -288,6 +288,40 @@ static llvm::Value *EmitOverflowIntrinsic(CodeGenFunction &CGF,
   return CGF.Builder.CreateExtractValue(Tmp, 0);
 }
 
+// Emit a simple mangled intrinsic that has 1 argument and a return type
+// matching the argument type.
+static Value *emitUnaryBuiltin(CodeGenFunction &CGF,
+                               const CallExpr *E,
+                               unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+
+  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, Src0);
+}
+
+// Emit an intrinsic that has 3 float or double operands.
+static Value *emitTernaryFPBuiltin(CodeGenFunction &CGF,
+                                   const CallExpr *E,
+                                   unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
+
+  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, {Src0, Src1, Src2});
+}
+
+// Emit an intrinsic that has 1 float or double operand, and 1 integer.
+static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
+                               const CallExpr *E,
+                               unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+
+  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, {Src0, Src1});
+}
+
 namespace {
   struct WidthAndSignedness {
     unsigned Width;
@@ -645,10 +679,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64: {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    Value *F = CGM.getIntrinsic(Intrinsic::bswap, ArgType);
-    return RValue::get(Builder.CreateCall(F, ArgValue));
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::bswap));
+  }
+  case Builtin::BI__builtin_bitreverse16:
+  case Builtin::BI__builtin_bitreverse32:
+  case Builtin::BI__builtin_bitreverse64: {
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::bitreverse));
   }
   case Builtin::BI__builtin_object_size: {
     unsigned Type =
@@ -6990,39 +7026,6 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   }
 }
 
-// Emit an intrinsic that has 1 float or double.
-static Value *emitUnaryFPBuiltin(CodeGenFunction &CGF,
-                                 const CallExpr *E,
-                                 unsigned IntrinsicID) {
-  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
-
-  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, Src0);
-}
-
-// Emit an intrinsic that has 3 float or double operands.
-static Value *emitTernaryFPBuiltin(CodeGenFunction &CGF,
-                                   const CallExpr *E,
-                                   unsigned IntrinsicID) {
-  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
-  llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
-
-  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, {Src0, Src1, Src2});
-}
-
-// Emit an intrinsic that has 1 float or double operand, and 1 integer.
-static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
-                               const CallExpr *E,
-                               unsigned IntrinsicID) {
-  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
-
-  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, {Src0, Src1});
-}
-
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   switch (BuiltinID) {
@@ -7072,13 +7075,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_trig_preop);
   case AMDGPU::BI__builtin_amdgcn_rcp:
   case AMDGPU::BI__builtin_amdgcn_rcpf:
-    return emitUnaryFPBuiltin(*this, E, Intrinsic::amdgcn_rcp);
+    return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rcp);
   case AMDGPU::BI__builtin_amdgcn_rsq:
   case AMDGPU::BI__builtin_amdgcn_rsqf:
-    return emitUnaryFPBuiltin(*this, E, Intrinsic::amdgcn_rsq);
+    return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rsq);
   case AMDGPU::BI__builtin_amdgcn_rsq_clamped:
   case AMDGPU::BI__builtin_amdgcn_rsq_clampedf:
-    return emitUnaryFPBuiltin(*this, E, Intrinsic::amdgcn_rsq_clamped);
+    return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rsq_clamped);
   case AMDGPU::BI__builtin_amdgcn_ldexp:
   case AMDGPU::BI__builtin_amdgcn_ldexpf:
     return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_ldexp);
@@ -7090,8 +7093,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgpu_rsq:
   case AMDGPU::BI__builtin_amdgpu_rsqf: {
     if (getTarget().getTriple().getArch() == Triple::amdgcn)
-      return emitUnaryFPBuiltin(*this, E, Intrinsic::amdgcn_rsq);
-    return emitUnaryFPBuiltin(*this, E, Intrinsic::r600_rsq);
+      return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_rsq);
+    return emitUnaryBuiltin(*this, E, Intrinsic::r600_rsq);
   }
   case AMDGPU::BI__builtin_amdgpu_ldexp:
   case AMDGPU::BI__builtin_amdgpu_ldexpf: {

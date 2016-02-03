@@ -6,8 +6,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
-import lldbsuite.test.lldbplatformutil as lldbplatformutil
+from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbplatformutil
 from lldbsuite.test.lldbtest import *
 
 class AssertingInferiorTestCase(TestBase):
@@ -60,8 +60,8 @@ class AssertingInferiorTestCase(TestBase):
         lldbutil.run_break_set_by_file_and_line (self, "main.c", line, num_expected_locations=1, loc_exact=True)
 
     def check_stop_reason(self):
-        match_result = matchAndroid(api_levels=list(range(1, 16+1)))(self)
-        if match_result is not None:
+        matched = lldbplatformutil.match_android_device(self.getArchitecture(), valid_api_levels=list(range(1, 16+1)))
+        if matched:
             # On android until API-16 the abort() call ended in a sigsegv instead of in a sigabrt
             stop_reason = 'stop reason = signal SIGSEGV'
         else:

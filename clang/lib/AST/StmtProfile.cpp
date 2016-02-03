@@ -599,6 +599,11 @@ void StmtProfiler::VisitOMPTargetParallelDirective(
   VisitOMPExecutableDirective(S);
 }
 
+void StmtProfiler::VisitOMPTargetParallelForDirective(
+    const OMPTargetParallelForDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
 void StmtProfiler::VisitOMPTeamsDirective(const OMPTeamsDirective *S) {
   VisitOMPExecutableDirective(S);
 }

@@ -5050,6 +5050,15 @@ TEST(MatchFinder, InterceptsEndOfTranslationUnit) {
   EXPECT_TRUE(VerifyCallback.Called);
 }
 
+TEST(Matcher, matchOverEntireASTContext) {
+  std::unique_ptr<ASTUnit> AST =
+      clang::tooling::buildASTFromCode("struct { int *foo; };");
+  ASSERT_TRUE(AST.get());
+  auto PT = selectFirst<PointerType>(
+      "x", match(pointerType().bind("x"), AST->getASTContext()));
+  EXPECT_NE(nullptr, PT);
+}
+
 TEST(EqualsBoundNodeMatcher, QualType) {
   EXPECT_TRUE(matches(
       "int i = 1;", varDecl(hasType(qualType().bind("type")),
@@ -5276,7 +5285,6 @@ TEST(ObjCMessageExprMatcher, SimpleExprs) {
       objcMessageExpr(matchesSelector("uppercase*"),
                       argumentCountIs(0)
                       )));
-  
 }
 
 } // end namespace ast_matchers

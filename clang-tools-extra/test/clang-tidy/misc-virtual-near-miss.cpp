@@ -1,10 +1,14 @@
 // RUN: %check_clang_tidy %s misc-virtual-near-miss %t
 
+class NoDefinedClass1;
+class NoDefinedClass2;
+
 struct Base {
   virtual void func();
   virtual void gunk();
   virtual ~Base();
   virtual Base &operator=(const Base &);
+  virtual NoDefinedClass1 *f();
 };
 
 struct Derived : Base {
@@ -24,6 +28,8 @@ struct Derived : Base {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: method 'Derived::fun' has {{.*}} 'Base::func'
 
   Derived &operator==(const Base &); // Should not warn: operators are ignored.
+
+  virtual NoDefinedClass2 *f1(); // Should not crash: non-defined class return type is ignored.
 };
 
 typedef Derived derived_type;

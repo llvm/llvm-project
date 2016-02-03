@@ -3505,6 +3505,9 @@ LexNextToken:
     if (Char == '=') {
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::caretequal;
+    } else if (LangOpts.OpenCL && Char == '^') {
+      CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
+      Kind = tok::caretcaret;
     } else {
       Kind = tok::caret;
     }

@@ -2715,6 +2715,11 @@ void CodeGenFunction::EmitOMPTargetParallelDirective(
   // TODO: codegen for target parallel.
 }
 
+void CodeGenFunction::EmitOMPTargetParallelForDirective(
+    const OMPTargetParallelForDirective &S) {
+  // TODO: codegen for target parallel for.
+}
+
 void CodeGenFunction::EmitOMPTaskLoopDirective(const OMPTaskLoopDirective &S) {
   // emit the code inside the construct for now
   auto CS = cast<CapturedStmt>(S.getAssociatedStmt());

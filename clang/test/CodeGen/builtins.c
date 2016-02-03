@@ -116,6 +116,14 @@ int main() {
   P(bswap16, (N));
   P(bswap32, (N));
   P(bswap64, (N));
+
+  // CHECK: @llvm.bitreverse.i16
+  // CHECK: @llvm.bitreverse.i32
+  // CHECK: @llvm.bitreverse.i64
+  P(bitreverse16, (N));
+  P(bitreverse32, (N));
+  P(bitreverse64, (N));
+
   // FIXME
   // V(clear_cache, (&N, &N+1));
   V(trap, ());

@@ -1089,6 +1089,12 @@ void StmtPrinter::VisitOMPTargetParallelDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPTargetParallelForDirective(
+    OMPTargetParallelForDirective *Node) {
+  Indent() << "#pragma omp target parallel for ";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
   Indent() << "#pragma omp teams ";
   PrintOMPExecutableDirective(Node);

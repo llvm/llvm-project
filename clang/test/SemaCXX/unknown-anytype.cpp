@@ -45,3 +45,14 @@ namespace test4 {
     int x = (int) test1; // expected-error {{function 'test1' with unknown type must be given a function type}}
   }
 }
+
+// rdar://problem/23959960
+namespace test5 {
+  template<typename T> struct X; // expected-note{{template is declared here}}
+
+  extern __unknown_anytype test0(...);
+
+  void test() {
+    (X<int>)test0(); // expected-error{{implicit instantiation of undefined template 'test5::X<int>'}}
+  }
+}

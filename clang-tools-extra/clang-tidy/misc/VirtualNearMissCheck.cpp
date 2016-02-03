@@ -72,6 +72,9 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
   if (DRD == nullptr || BRD == nullptr)
     return false;
 
+  if (!DRD->hasDefinition() || !BRD->hasDefinition())
+    return false;
+
   if (DRD == BRD)
     return true;
 

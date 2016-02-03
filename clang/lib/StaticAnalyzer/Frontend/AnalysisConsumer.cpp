@@ -274,7 +274,7 @@ public:
       llvm::errs() << ": " << Loc.getFilename();
       if (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)) {
         const NamedDecl *ND = cast<NamedDecl>(D);
-        llvm::errs() << ' ' << *ND << '\n';
+        llvm::errs() << ' ' << ND->getQualifiedNameAsString() << '\n';
       }
       else if (isa<BlockDecl>(D)) {
         llvm::errs() << ' ' << "block(line:" << Loc.getLine() << ",col:"

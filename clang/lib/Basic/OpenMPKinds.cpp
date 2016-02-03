@@ -465,6 +465,16 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
       break;
     }
     break;
+  case OMPD_target_parallel_for:
+    switch (CKind) {
+#define OPENMP_TARGET_PARALLEL_FOR_CLAUSE(Name)                                \
+  case OMPC_##Name:                                                            \
+    return true;
+#include "clang/Basic/OpenMPKinds.def"
+    default:
+      break;
+    }
+    break;
   case OMPD_teams:
     switch (CKind) {
 #define OPENMP_TEAMS_CLAUSE(Name)                                              \
@@ -552,17 +562,17 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
 bool clang::isOpenMPLoopDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_simd || DKind == OMPD_for || DKind == OMPD_for_simd ||
          DKind == OMPD_parallel_for || DKind == OMPD_parallel_for_simd ||
-         DKind == OMPD_taskloop ||
-         DKind == OMPD_taskloop_simd ||
-         DKind == OMPD_distribute; // TODO add next directives.
+         DKind == OMPD_taskloop || DKind == OMPD_taskloop_simd ||
+         DKind == OMPD_distribute ||
+         DKind == OMPD_target_parallel_for; // TODO add next directives.
 }
 
 bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_for || DKind == OMPD_for_simd ||
          DKind == OMPD_sections || DKind == OMPD_section ||
          DKind == OMPD_single || DKind == OMPD_parallel_for ||
-         DKind == OMPD_parallel_for_simd ||
-         DKind == OMPD_parallel_sections; // TODO add next directives.
+         DKind == OMPD_parallel_for_simd || DKind == OMPD_parallel_sections ||
+         DKind == OMPD_target_parallel_for; // TODO add next directives.
 }
 
 bool clang::isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind) {
@@ -571,14 +581,15 @@ bool clang::isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind) {
 
 bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_parallel || DKind == OMPD_parallel_for ||
-         DKind == OMPD_parallel_for_simd ||
-         DKind == OMPD_parallel_sections || DKind == OMPD_target_parallel;
-         // TODO add next directives.
+         DKind == OMPD_parallel_for_simd || DKind == OMPD_parallel_sections ||
+         DKind == OMPD_target_parallel || DKind == OMPD_target_parallel_for;
+  // TODO add next directives.
 }
 
 bool clang::isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind) {
   // TODO add next directives.
-  return DKind == OMPD_target || DKind == OMPD_target_parallel;
+  return DKind == OMPD_target || DKind == OMPD_target_parallel ||
+         DKind == OMPD_target_parallel_for;
 }
 
 bool clang::isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind) {

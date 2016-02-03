@@ -54,13 +54,13 @@ import types
 import unittest2
 from six import add_metaclass
 from six import StringIO as SixStringIO
-from six.moves.urllib import parse as urlparse
 import six
 
 # LLDB modules
 import use_lldb_suite
 import lldb
 from . import configuration
+from . import lldbplatformutil
 from . import lldbtest_config
 from . import lldbutil
 from . import test_categories
@@ -448,51 +448,6 @@ def does_function_require_self(func):
     else:
         return True
 
-def run_adb_command(cmd, device_id):
-    device_id_args = []
-    if device_id:
-        device_id_args = ["-s", device_id]
-    full_cmd = ["adb"] + device_id_args + cmd
-    p = Popen(full_cmd, stdout=PIPE, stderr=PIPE)
-    stdout, stderr = p.communicate()
-    return p.returncode, stdout, stderr
-
-def append_android_envs(dictionary):
-    if dictionary is None:
-        dictionary = {}
-    dictionary["OS"] = "Android"
-    if android_device_api() >= 16:
-        dictionary["PIE"] = 1
-    return dictionary
-
-def target_is_android():
-    if not hasattr(target_is_android, 'result'):
-        triple = lldb.DBG.GetSelectedPlatform().GetTriple()
-        match = re.match(".*-.*-.*-android", triple)
-        target_is_android.result = match is not None
-    return target_is_android.result
-
-def android_device_api():
-    if not hasattr(android_device_api, 'result'):
-        assert configuration.lldb_platform_url is not None
-        device_id = None
-        parsed_url = urlparse.urlparse(configuration.lldb_platform_url)
-        host_name = parsed_url.netloc.split(":")[0]
-        if host_name != 'localhost':
-            device_id = host_name
-            if device_id.startswith('[') and device_id.endswith(']'):
-                device_id = device_id[1:-1]
-        retcode, stdout, stderr = run_adb_command(
-            ["shell", "getprop", "ro.build.version.sdk"], device_id)
-        if retcode == 0:
-            android_device_api.result = int(stdout)
-        else:
-            raise LookupError(
-                ">>> Unable to determine the API level of the Android device.\n"
-                ">>> stdout:\n%s\n"
-                ">>> stderr:\n%s\n" % (stdout, stderr))
-    return android_device_api.result
-
 def check_expected_version(comparison, expected, actual):
     def fn_leq(x,y): return x <= y
     def fn_less(x,y): return x < y
@@ -523,6 +478,12 @@ class DecorateMode:
     Skip, Xfail = range(2)
 
 from functools import wraps
+
+def skip_for_android(reason, api_levels, archs):
+    def impl(obj):
+        result = lldbplatformutil.match_android_device(obj.getArchitecture(), valid_archs=archs, valid_api_levels=api_levels)
+        return reason if result else None
+    return impl
 
 def add_test_categories(cat):
     """Add test categories to a TestCase method"""
@@ -715,20 +676,6 @@ def expectedFailureWindows(bugnumber=None, compilers=None, debug_info=None):
 def expectedFailureHostWindows(bugnumber=None, compilers=None):
     return expectedFailureHostOS(['windows'], bugnumber, compilers)
 
-def matchAndroid(api_levels=None, archs=None):
-    def match(self):
-        if not target_is_android():
-            return None     # Doesn't match, return false
-        if archs is not None and self.getArchitecture() not in archs:
-            return None     # Invalid architecture, return false
-        if api_levels is not None and android_device_api() not in api_levels:
-            return None     # API level doesn't match, return false
-
-        # This is a matching android distribution, return true
-        return "Android [arch={}] [api_level={}]".format(self.getArchitecture(), android_device_api())
-    return match
-
-
 def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
     """ Mark a test as xfail for Android.
 
@@ -739,7 +686,7 @@ def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
         arch - A sequence of architecture names specifying the architectures
             for which a test is expected to fail. None means all architectures.
     """
-    return expectedFailure(matchAndroid(api_levels, archs), bugnumber)
+    return expectedFailure(skip_for_android("xfailing on android", api_levels, archs), bugnumber)
 
 # Flakey tests get two chances to run. If they fail the first time round, the result formatter
 # makes sure it is run one more time.
@@ -811,7 +758,7 @@ def expectedFlakeyGcc(bugnumber=None, compiler_version=None):
     return expectedFlakeyCompiler('gcc', compiler_version, bugnumber)
 
 def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
-    return expectedFlakey(matchAndroid(api_levels, archs), bugnumber)
+    return expectedFlakey(skip_for_android("flakey on android", api_levels, archs), bugnumber)
 
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
@@ -1126,9 +1073,7 @@ def skipIfTargetAndroid(api_levels=None, archs=None):
         arch - A sequence of architecture names specifying the architectures
             for which a test is skipped. None means all architectures.
     """
-    def is_target_android(self):
-        return matchAndroid(api_levels, archs)(self)
-    return skipTestIfFn(is_target_android)
+    return skipTestIfFn(skip_for_android("skipping for android", api_levels, archs))
 
 def skipUnlessCompilerRt(func):
     """Decorate the item to skip tests if testing remotely."""
@@ -2004,8 +1949,7 @@ class Base(unittest2.TestCase):
     def buildDefault(self, architecture=None, compiler=None, dictionary=None, clean=True):
         """Platform specific way to build the default binaries."""
         module = builder_module()
-        if target_is_android():
-            dictionary = append_android_envs(dictionary)
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDefault(self, architecture, compiler, dictionary, clean):
             raise Exception("Don't know how to build default binary")
 
@@ -2018,16 +1962,14 @@ class Base(unittest2.TestCase):
     def buildDwarf(self, architecture=None, compiler=None, dictionary=None, clean=True):
         """Platform specific way to build binaries with dwarf maps."""
         module = builder_module()
-        if target_is_android():
-            dictionary = append_android_envs(dictionary)
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDwarf(self, architecture, compiler, dictionary, clean):
             raise Exception("Don't know how to build binary with dwarf")
 
     def buildDwo(self, architecture=None, compiler=None, dictionary=None, clean=True):
         """Platform specific way to build binaries with dwarf maps."""
         module = builder_module()
-        if target_is_android():
-            dictionary = append_android_envs(dictionary)
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if not module.buildDwo(self, architecture, compiler, dictionary, clean):
             raise Exception("Don't know how to build binary with dwo")
 
@@ -2630,8 +2572,7 @@ class TestBase(Base):
     def build(self, architecture=None, compiler=None, dictionary=None, clean=True):
         """Platform specific way to build the default binaries."""
         module = builder_module()
-        if target_is_android():
-            dictionary = append_android_envs(dictionary)
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
         if self.debug_info is None:
             return self.buildDefault(architecture, compiler, dictionary, clean)
         elif self.debug_info == "dsym":

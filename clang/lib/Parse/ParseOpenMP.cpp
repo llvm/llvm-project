@@ -45,7 +45,8 @@ static OpenMPDirectiveKind ParseOpenMPDirectiveKind(Parser &P) {
       {OMPD_parallel_for, OMPD_simd, OMPD_parallel_for_simd},
       {OMPD_parallel, OMPD_sections, OMPD_parallel_sections},
       {OMPD_taskloop, OMPD_simd, OMPD_taskloop_simd},
-      {OMPD_target, OMPD_parallel, OMPD_target_parallel}};
+      {OMPD_target, OMPD_parallel, OMPD_target_parallel},
+      {OMPD_target_parallel, OMPD_for, OMPD_target_parallel_for}};
   auto Tok = P.getCurToken();
   auto DKind =
       Tok.isAnnotation()
@@ -155,6 +156,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
   case OMPD_target_enter_data:
   case OMPD_target_exit_data:
   case OMPD_target_parallel:
+  case OMPD_target_parallel_for:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
   case OMPD_distribute:
@@ -178,9 +180,9 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
 ///         'parallel for' | 'parallel sections' | 'task' | 'taskyield' |
 ///         'barrier' | 'taskwait' | 'flush' | 'ordered' | 'atomic' |
 ///         'for simd' | 'parallel for simd' | 'target' | 'target data' |
-///         'taskgroup' | 'teams' | 'taskloop' | 'taskloop simd' {clause} |
+///         'taskgroup' | 'teams' | 'taskloop' | 'taskloop simd' |
 ///         'distribute' | 'target enter data' | 'target exit data' |
-///         'target parallel'
+///         'target parallel' | 'target parallel for' {clause}
 ///         annot_pragma_openmp_end
 ///
 StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
@@ -263,6 +265,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_taskgroup:
   case OMPD_target_data:
   case OMPD_target_parallel:
+  case OMPD_target_parallel_for:
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
   case OMPD_distribute: {

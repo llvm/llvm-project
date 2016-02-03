@@ -2344,6 +2344,8 @@ public:
   void EmitOMPTargetEnterDataDirective(const OMPTargetEnterDataDirective &S);
   void EmitOMPTargetExitDataDirective(const OMPTargetExitDataDirective &S);
   void EmitOMPTargetParallelDirective(const OMPTargetParallelDirective &S);
+  void
+  EmitOMPTargetParallelForDirective(const OMPTargetParallelForDirective &S);
   void EmitOMPTeamsDirective(const OMPTeamsDirective &S);
   void
   EmitOMPCancellationPointDirective(const OMPCancellationPointDirective &S);
