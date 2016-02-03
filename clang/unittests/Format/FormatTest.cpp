@@ -4694,6 +4694,10 @@ TEST_F(FormatTest, BreaksConditionalExpressionsAfterOperator) {
                "                       ccccccccccccccc :\n"
                "                       ddddddddddddddd);",
                Style);
+  verifyFormat("int i = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ?\n"
+               "            /*bbbbbbbbbbbbbbb=*/bbbbbbbbbbbbbbbbbbbbbbbbb :\n"
+               "            ccccccccccccccccccccccccccc;",
+               Style);
 }
 
 TEST_F(FormatTest, DeclarationsOfMultipleVariables) {

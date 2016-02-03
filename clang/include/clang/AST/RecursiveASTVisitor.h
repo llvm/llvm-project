@@ -2447,6 +2447,9 @@ DEF_TRAVERSE_STMT(OMPTargetExitDataDirective,
 DEF_TRAVERSE_STMT(OMPTargetParallelDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPTargetParallelForDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPTeamsDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 

@@ -265,6 +265,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S) {
   case Stmt::OMPTargetParallelDirectiveClass:
     EmitOMPTargetParallelDirective(cast<OMPTargetParallelDirective>(*S));
     break;
+  case Stmt::OMPTargetParallelForDirectiveClass:
+    EmitOMPTargetParallelForDirective(cast<OMPTargetParallelForDirective>(*S));
+    break;
   case Stmt::OMPTaskLoopDirectiveClass:
     EmitOMPTaskLoopDirective(cast<OMPTaskLoopDirective>(*S));
     break;

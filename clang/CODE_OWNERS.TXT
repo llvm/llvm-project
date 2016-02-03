@@ -52,3 +52,7 @@ D: Clang LLVM IR generation
 N: Richard Smith
 E: richard@metafoo.co.uk
 D: All parts of Clang not covered by someone else
+
+N: Anastasia Stulova
+E: anastasia.stulova@arm.com
+D: OpenCL support

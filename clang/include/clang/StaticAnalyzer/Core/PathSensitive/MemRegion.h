@@ -1320,8 +1320,8 @@ public:
 
   void setTrait(SymbolRef Sym, InvalidationKinds IK);
   void setTrait(const MemRegion *MR, InvalidationKinds IK);
-  bool hasTrait(SymbolRef Sym, InvalidationKinds IK);
-  bool hasTrait(const MemRegion *MR, InvalidationKinds IK);
+  bool hasTrait(SymbolRef Sym, InvalidationKinds IK) const;
+  bool hasTrait(const MemRegion *MR, InvalidationKinds IK) const;
 };
   
 } // end GR namespace

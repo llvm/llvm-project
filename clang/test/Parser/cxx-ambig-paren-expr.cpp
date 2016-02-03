@@ -28,6 +28,7 @@ void f() {
   int &postfix_incr = (X()[3])++;
   (X())++ ++; // ok, not a C-style cast
   (X())++ ++X(); // expected-error {{C-style cast from 'int' to 'X ()'}}
+  int q = (int)++(x);
 }
 
 // Make sure we do tentative parsing correctly in conditions.

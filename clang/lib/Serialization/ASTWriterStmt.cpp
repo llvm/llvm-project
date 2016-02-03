@@ -2246,6 +2246,13 @@ void ASTStmtWriter::VisitOMPTargetParallelDirective(
   Code = serialization::STMT_OMP_TARGET_PARALLEL_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPTargetParallelForDirective(
+    OMPTargetParallelForDirective *D) {
+  VisitOMPLoopDirective(D);
+  Record.push_back(D->hasCancel() ? 1 : 0);
+  Code = serialization::STMT_OMP_TARGET_PARALLEL_FOR_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPTaskyieldDirective(OMPTaskyieldDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);

@@ -705,11 +705,15 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   if (Current.is(TT_ArraySubscriptLSquare) &&
       State.Stack.back().StartOfArraySubscripts == 0)
     State.Stack.back().StartOfArraySubscripts = State.Column;
-  if ((Current.is(tok::question) && Style.BreakBeforeTernaryOperators) ||
-      (Current.getPreviousNonComment() && Current.isNot(tok::colon) &&
-       Current.getPreviousNonComment()->is(tok::question) &&
-       !Style.BreakBeforeTernaryOperators))
+  if (Style.BreakBeforeTernaryOperators && Current.is(tok::question))
     State.Stack.back().QuestionColumn = State.Column;
+  if (!Style.BreakBeforeTernaryOperators && Current.isNot(tok::colon)) {
+    const FormatToken *Previous = Current.Previous;
+    while (Previous && Previous->isTrailingComment())
+      Previous = Previous->Previous;
+    if (Previous && Previous->is(tok::question))
+      State.Stack.back().QuestionColumn = State.Column;
+  }
   if (!Current.opensScope() && !Current.closesScope())
     State.LowestLevelOnLine =
         std::min(State.LowestLevelOnLine, Current.NestingLevel);
