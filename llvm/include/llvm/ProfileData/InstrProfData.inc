@@ -694,7 +694,7 @@ serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
 
 /* Raw profile format version. */
 #define INSTR_PROF_RAW_VERSION 2
-#define INSTR_PROF_INDEX_VERSION 3
+#define INSTR_PROF_INDEX_VERSION 4
 #define INSTR_PROF_COVMAP_VERSION 0
 
 /* Profile version is always of type uint64_t. Reserve the upper 8 bits in the

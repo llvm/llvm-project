@@ -617,7 +617,7 @@ void ProfileSummary::computeDetailedSummary() {
   std::sort(DetailedSummaryCutoffs.begin(), DetailedSummaryCutoffs.end());
 
   uint32_t BlocksSeen = 0;
-  uint64_t CurrSum = 0, Count;
+  uint64_t CurrSum = 0, Count = 0;
 
   for (uint32_t Cutoff : DetailedSummaryCutoffs) {
     assert(Cutoff <= 999999);
@@ -638,6 +638,21 @@ void ProfileSummary::computeDetailedSummary() {
     assert(CurrSum >= DesiredCount);
     ProfileSummaryEntry PSE = {Cutoff, Count, BlocksSeen};
     DetailedSummary.push_back(PSE);
+  }
+}
+
+ProfileSummary::ProfileSummary(const IndexedInstrProf::Summary &S)
+    : TotalCount(S.get(IndexedInstrProf::Summary::TotalBlockCount)),
+      MaxBlockCount(S.get(IndexedInstrProf::Summary::MaxBlockCount)),
+      MaxInternalBlockCount(
+          S.get(IndexedInstrProf::Summary::MaxInternalBlockCount)),
+      MaxFunctionCount(S.get(IndexedInstrProf::Summary::MaxFunctionCount)),
+      NumBlocks(S.get(IndexedInstrProf::Summary::TotalNumBlocks)),
+      NumFunctions(S.get(IndexedInstrProf::Summary::TotalNumFunctions)) {
+  for (unsigned I = 0; I < S.NumCutoffEntries; I++) {
+    const IndexedInstrProf::Summary::Entry &Ent = S.getEntry(I);
+    DetailedSummary.emplace_back((uint32_t)Ent.Cutoff, Ent.MinBlockCount,
+                                 Ent.NumBlocks);
   }
 }
 

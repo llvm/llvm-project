@@ -16,6 +16,7 @@
 #define LLVM_IR_DIAGNOSTICINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
@@ -28,7 +29,6 @@ class DiagnosticPrinter;
 class Function;
 class Instruction;
 class LLVMContextImpl;
-class Twine;
 class Value;
 class DebugLoc;
 class SMDiagnostic;
@@ -591,7 +591,7 @@ public:
 class DiagnosticInfoUnsupported
     : public DiagnosticInfoWithDebugLocBase {
 private:
-  const Twine &Msg;
+  Twine Msg;
 
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p DLoc is

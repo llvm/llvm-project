@@ -5058,19 +5058,14 @@ let Predicates = [UseAVX], AddedComplexity = 20 in {
   def : Pat<(v4i64 (X86vzmovl (insert_subvector undef,
               (v2i64 (scalar_to_vector (loadi64 addr:$src))), (iPTR 0)))),
             (SUBREG_TO_REG (i64 0), (VMOVZQI2PQIrm addr:$src), sub_xmm)>;
+  def : Pat<(v4i64 (X86vzload addr:$src)),
+            (SUBREG_TO_REG (i64 0), (VMOVZQI2PQIrm addr:$src), sub_xmm)>;
 }
 
 let Predicates = [UseSSE2], AddedComplexity = 20 in {
   def : Pat<(v2i64 (X86vzmovl (bc_v2i64 (loadv4f32 addr:$src)))),
             (MOVZQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzload addr:$src)), (MOVZQI2PQIrm addr:$src)>;
-}
-
-let Predicates = [HasAVX] in {
-def : Pat<(v4i64 (alignedX86vzload addr:$src)),
-          (SUBREG_TO_REG (i32 0), (VMOVAPSrm addr:$src), sub_xmm)>;
-def : Pat<(v4i64 (X86vzload addr:$src)),
-          (SUBREG_TO_REG (i32 0), (VMOVUPSrm addr:$src), sub_xmm)>;
 }
 
 //===---------------------------------------------------------------------===//

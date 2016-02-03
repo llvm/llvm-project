@@ -187,10 +187,6 @@ define <16 x float> @merge_16f32_f32_89zzzuuuuuuuuuuuz(float* %ptr) nounwind uwt
 ; ALL-LABEL: merge_16f32_f32_89zzzuuuuuuuuuuuz:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
-; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %ptr0 = getelementptr inbounds float, float* %ptr, i64 8
   %ptr1 = getelementptr inbounds float, float* %ptr, i64 9
@@ -282,10 +278,6 @@ define <16 x i32> @merge_16i32_i32_12zzzuuuuuuuuuuuz(i32* %ptr) nounwind uwtable
 ; ALL-LABEL: merge_16i32_i32_12zzzuuuuuuuuuuuz:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; ALL-NEXT:    vpxor %ymm1, %ymm1, %ymm1
-; ALL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
   %ptr0 = getelementptr inbounds i32, i32* %ptr, i64 1
   %ptr1 = getelementptr inbounds i32, i32* %ptr, i64 2
@@ -383,8 +375,6 @@ define <32 x i16> @merge_32i16_i16_12u4uuuuuuuuuuuuuuuuuuuuuuuuuuzz(i16* %ptr) n
 ; AVX512BW-LABEL: merge_32i16_i16_12u4uuuuuuuuuuuuuuuuuuuuuuuuuuzz:
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512BW-NEXT:    vpxor %ymm1, %ymm1, %ymm1
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %ptr0 = getelementptr inbounds i16, i16* %ptr, i64 1
   %ptr1 = getelementptr inbounds i16, i16* %ptr, i64 2
@@ -454,18 +444,12 @@ define <64 x i8> @merge_64i8_i8_12u4uuu8uuuuuuzzzzuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
 ; AVX512F-LABEL: merge_64i8_i8_12u4uuu8uuuuuuzzzzuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuz:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: merge_64i8_i8_12u4uuu8uuuuuuzzzzuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuz:
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpxor %ymm1, %ymm1, %ymm1
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %ptr0 = getelementptr inbounds i8, i8* %ptr, i64 1
   %ptr1 = getelementptr inbounds i8, i8* %ptr, i64 2

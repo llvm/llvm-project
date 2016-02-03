@@ -137,6 +137,45 @@ TEST_P(MaybeSparseInstrProfTest, get_function_counts) {
   ASSERT_TRUE(ErrorEquals(instrprof_error::unknown_function, EC));
 }
 
+// Profile data is copied from general.proftext
+TEST_F(InstrProfTest, get_profile_summary) {
+  InstrProfRecord Record1("func1", 0x1234, {97531});
+  InstrProfRecord Record2("func2", 0x1234, {0, 0});
+  InstrProfRecord Record3("func3", 0x1234,
+                          {2305843009213693952, 1152921504606846976,
+                           576460752303423488, 288230376151711744,
+                           144115188075855872, 72057594037927936});
+  InstrProfRecord Record4("func4", 0x1234, {0});
+  Writer.addRecord(std::move(Record1));
+  Writer.addRecord(std::move(Record2));
+  Writer.addRecord(std::move(Record3));
+  Writer.addRecord(std::move(Record4));
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  ProfileSummary &PS = Reader->getSummary();
+  ASSERT_EQ(2305843009213693952U, PS.getMaxFunctionCount());
+  ASSERT_EQ(2305843009213693952U, PS.getMaxBlockCount());
+  ASSERT_EQ(10U, PS.getNumBlocks());
+  ASSERT_EQ(4539628424389557499U, PS.getTotalCount());
+  std::vector<ProfileSummaryEntry> &Details = PS.getDetailedSummary();
+  uint32_t Cutoff = 800000;
+  auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
+    return PE.Cutoff == Cutoff;
+  };
+  auto EightyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
+  Cutoff = 900000;
+  auto NinetyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
+  Cutoff = 950000;
+  auto NinetyFivePerc = std::find_if(Details.begin(), Details.end(), Predicate);
+  Cutoff = 990000;
+  auto NinetyNinePerc = std::find_if(Details.begin(), Details.end(), Predicate);
+  ASSERT_EQ(576460752303423488U, EightyPerc->MinBlockCount);
+  ASSERT_EQ(288230376151711744U, NinetyPerc->MinBlockCount);
+  ASSERT_EQ(288230376151711744U, NinetyFivePerc->MinBlockCount);
+  ASSERT_EQ(72057594037927936U, NinetyNinePerc->MinBlockCount);
+}
+
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {
   InstrProfRecord Record1("caller", 0x1234, {1, 2});
   InstrProfRecord Record2("callee1", 0x1235, {3, 4});

@@ -576,6 +576,10 @@ ValueProfData *
 serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
                              ValueProfData *Dst);
 
+namespace IndexedInstrProf {
+struct Summary;
+}
+
 ///// Profile summary computation ////
 // The 'show' command displays richer summary of the profile data. The profile
 // summary is one or more (Cutoff, MinBlockCount, NumBlocks) triplets. Given a
@@ -585,6 +589,10 @@ struct ProfileSummaryEntry {
   uint32_t Cutoff;        ///< The required percentile of total execution count.
   uint64_t MinBlockCount; ///< The minimum execution count for this percentile.
   uint64_t NumBlocks;     ///< Number of blocks >= the minumum execution count.
+  ProfileSummaryEntry(uint32_t TheCutoff, uint64_t TheMinBlockCount,
+                      uint64_t TheNumBlocks)
+      : Cutoff(TheCutoff), MinBlockCount(TheMinBlockCount),
+        NumBlocks(TheNumBlocks) {}
 };
 
 class ProfileSummary {
@@ -598,15 +606,17 @@ class ProfileSummary {
   uint64_t MaxBlockCount, MaxInternalBlockCount, MaxFunctionCount;
   uint32_t NumBlocks, NumFunctions;
   inline void addCount(uint64_t Count, bool IsEntry);
-  void computeDetailedSummary();
 
 public:
   static const int Scale = 1000000;
   ProfileSummary(std::vector<uint32_t> Cutoffs)
       : DetailedSummaryCutoffs(Cutoffs), TotalCount(0), MaxBlockCount(0),
-        MaxInternalBlockCount(0), MaxFunctionCount(0), NumBlocks(0), NumFunctions(0) {}
+        MaxInternalBlockCount(0), MaxFunctionCount(0), NumBlocks(0),
+        NumFunctions(0) {}
+  ProfileSummary(const IndexedInstrProf::Summary &S);
   inline void addRecord(const InstrProfRecord &);
   inline std::vector<ProfileSummaryEntry> &getDetailedSummary();
+  void computeDetailedSummary();
   uint32_t getNumBlocks() { return NumBlocks; }
   uint64_t getTotalCount() { return TotalCount; }
   uint32_t getNumFunctions() { return NumFunctions; }
@@ -684,7 +694,10 @@ enum ProfVersion {
   // Version 3 supports value profile data. The value profile data is expected
   // to follow the block counter profile data.
   Version3 = 3,
-  // The current version is 3.
+  // In this version, profile summary data \c IndexedInstrProf::Summary is
+  // stored after the profile header.
+  Version4 = 4,
+  // The current version is 4.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -698,11 +711,100 @@ inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 struct Header {
   uint64_t Magic;
   uint64_t Version;
-  uint64_t MaxFunctionCount;
+  uint64_t Unused; // Becomes unused since version 4
   uint64_t HashType;
   uint64_t HashOffset;
 };
 
+static const uint32_t SummaryCutoffs[] = {
+    10000,  /*  1% */
+    100000, /* 10% */
+    200000, 300000, 400000, 500000, 600000, 500000, 600000, 700000,
+    800000, 900000, 950000, 990000, 999000, 999900, 999990, 999999};
+static const uint32_t NumSummaryCutoffs =
+    sizeof(SummaryCutoffs) / sizeof(*SummaryCutoffs);
+
+// Profile summary data recorded in the profile data file in indexed
+// format. It is introduced in version 4. The summary data follows
+// right after the profile file header.
+struct Summary {
+
+  struct Entry {
+    uint64_t Cutoff; ///< The required percentile of total execution count.
+    uint64_t
+        MinBlockCount;  ///< The minimum execution count for this percentile.
+    uint64_t NumBlocks; ///< Number of blocks >= the minumum execution count.
+  };
+  // New field kind to existing enum value mapping should remain unchanged
+  // when new kind is added in the future.
+  enum SummaryFieldKind {
+    /// The total number of functions instrumented.
+    TotalNumFunctions = 0,
+    /// Total number of instrumented blocks/edges.
+    TotalNumBlocks = 1,
+    /// The maximal execution count among all functions.
+    /// This field does not exist for profile data from IR based
+    /// instrumentation.
+    MaxFunctionCount = 2,
+    /// Max block count of the program.
+    MaxBlockCount = 3,
+    /// Max internal block count of the program (excluding entry blocks).
+    MaxInternalBlockCount = 4,
+    /// The sum of all instrumented block counts.
+    TotalBlockCount = 5,
+    NumKinds = TotalBlockCount + 1
+  };
+
+  // The number of summmary fields following the summary header.
+  uint64_t NumSummaryFields;
+  // The number of Cutoff Entries (Summary::Entry) following summary fields.
+  uint64_t NumCutoffEntries;
+
+  static uint32_t getSize(uint32_t NumSumFields, uint32_t NumCutoffEntries) {
+    return sizeof(Summary) + NumCutoffEntries * sizeof(Entry) +
+           NumSumFields * sizeof(uint64_t);
+  }
+
+  const uint64_t *getSummaryDataBase() const {
+    return reinterpret_cast<const uint64_t *>(this + 1);
+  }
+  uint64_t *getSummaryDataBase() {
+    return reinterpret_cast<uint64_t *>(this + 1);
+  }
+  const Entry *getCutoffEntryBase() const {
+    return reinterpret_cast<const Entry *>(
+        &getSummaryDataBase()[NumSummaryFields]);
+  }
+  Entry *getCutoffEntryBase() {
+    return reinterpret_cast<Entry *>(&getSummaryDataBase()[NumSummaryFields]);
+  }
+
+  uint64_t get(SummaryFieldKind K) const {
+    return getSummaryDataBase()[K];
+  }
+
+  void set(SummaryFieldKind K, uint64_t V) {
+    getSummaryDataBase()[K] = V;
+  }
+
+  const Entry &getEntry(uint32_t I) const { return getCutoffEntryBase()[I]; }
+  void setEntry(uint32_t I, const ProfileSummaryEntry &E) {
+    Entry &ER = getCutoffEntryBase()[I];
+    ER.Cutoff = E.Cutoff;
+    ER.MinBlockCount = E.MinBlockCount;
+    ER.NumBlocks = E.NumBlocks;
+  }
+
+  Summary(uint32_t Size) { memset(this, 0, Size); }
+  void operator delete(void *ptr) { ::operator delete(ptr); }
+
+  Summary() = delete;
+};
+
+inline std::unique_ptr<Summary> allocSummary(uint32_t TotalSize) {
+  return std::unique_ptr<Summary>(new (::operator new(TotalSize))
+                                      Summary(TotalSize));
+}
 } // end namespace IndexedInstrProf
 
 namespace RawInstrProf {

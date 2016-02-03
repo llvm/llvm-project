@@ -72,7 +72,7 @@ public:
 /// unary * and -> operators provide pointer like access to the value. Accessing
 /// the value when there is an error has undefined behavior.
 ///
-/// When T is a reference type the behaivor is slightly different. The reference
+/// When T is a reference type the behavior is slightly different. The reference
 /// is held in a std::reference_wrapper<std::remove_reference<T>::type>, and
 /// there is special handling to make operator -> work as if T was not a
 /// reference.

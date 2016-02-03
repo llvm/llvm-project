@@ -2276,6 +2276,37 @@ static void emitMatchRegisterName(CodeGenTarget &Target, Record *AsmParser,
   OS << "}\n\n";
 }
 
+/// Emit the function to match a string to the target
+/// specific register enum.
+static void emitMatchRegisterAltName(CodeGenTarget &Target, Record *AsmParser,
+                                     raw_ostream &OS) {
+  // Construct the match list.
+  std::vector<StringMatcher::StringPair> Matches;
+  const auto &Regs = Target.getRegBank().getRegisters();
+  for (const CodeGenRegister &Reg : Regs) {
+
+    auto AltNames = Reg.TheDef->getValueAsListOfStrings("AltNames");
+
+    for (auto AltName : AltNames) {
+      AltName = StringRef(AltName).trim();
+
+      // don't handle empty alternative names
+      if (AltName.empty())
+        continue;
+
+      Matches.emplace_back(AltName,
+                           "return " + utostr(Reg.EnumValue) + ";");
+    }
+  }
+
+  OS << "static unsigned MatchRegisterAltName(StringRef Name) {\n";
+
+  StringMatcher("Name", Matches, OS).Emit();
+
+  OS << "  return 0;\n";
+  OS << "}\n\n";
+}
+
 static const char *getMinimalTypeForRange(uint64_t Range) {
   assert(Range <= 0xFFFFFFFFFFFFFFFFULL && "Enum too large");
   if (Range > 0xFFFFFFFFULL)
@@ -2815,6 +2846,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // This should be omitted for Mips target
   if (AsmParser->getValueAsBit("ShouldEmitMatchRegisterName"))
     emitMatchRegisterName(Target, AsmParser, OS);
+
+  if (AsmParser->getValueAsBit("ShouldEmitMatchRegisterAltName"))
+    emitMatchRegisterAltName(Target, AsmParser, OS);
 
   OS << "#endif // GET_REGISTER_MATCHER\n\n";
 

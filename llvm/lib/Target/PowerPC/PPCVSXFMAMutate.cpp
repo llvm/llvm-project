@@ -168,21 +168,32 @@ protected:
         if (OtherUsers || KillsAddendSrc)
           continue;
 
-        // Find one of the product operands that is killed by this instruction.
 
+        // The transformation doesn't work well with things like:
+        //    %vreg5 = A-form-op %vreg5, %vreg11, %vreg5;
+        // unless vreg11 is also a kill, so skip when it is not,
+        // and check operand 3 to see it is also a kill to handle the case:
+        //   %vreg5 = A-form-op %vreg5, %vreg5, %vreg11;
+        // where vreg5 and vreg11 are both kills. This case would be skipped
+        // otherwise.
+        unsigned OldFMAReg = MI->getOperand(0).getReg();
+
+        // Find one of the product operands that is killed by this instruction.
         unsigned KilledProdOp = 0, OtherProdOp = 0;
-        if (LIS->getInterval(MI->getOperand(2).getReg())
-                     .Query(FMAIdx).isKill()) {
+        unsigned Reg2 = MI->getOperand(2).getReg();
+        unsigned Reg3 = MI->getOperand(3).getReg();
+        if (LIS->getInterval(Reg2).Query(FMAIdx).isKill()
+            && Reg2 != OldFMAReg) {
           KilledProdOp = 2;
           OtherProdOp  = 3;
-        } else if (LIS->getInterval(MI->getOperand(3).getReg())
-                     .Query(FMAIdx).isKill()) {
+        } else if (LIS->getInterval(Reg3).Query(FMAIdx).isKill()
+            && Reg3 != OldFMAReg) {
           KilledProdOp = 3;
           OtherProdOp  = 2;
         }
 
-        // If there are no killed product operands, then this transformation is
-        // likely not profitable.
+        // If there are no usable killed product operands, then this
+        // transformation is likely not profitable.
         if (!KilledProdOp)
           continue;
 
@@ -212,14 +223,6 @@ protected:
         bool KilledProdRegUndef = MI->getOperand(KilledProdOp).isUndef();
         bool OtherProdRegUndef  = MI->getOperand(OtherProdOp).isUndef();
 
-        unsigned OldFMAReg = MI->getOperand(0).getReg();
-
-        // The transformation doesn't work well with things like:
-        //    %vreg5 = A-form-op %vreg5, %vreg11, %vreg5;
-        // so leave such things alone.
-        if (OldFMAReg == KilledProdReg)
-          continue;
-
         // If there isn't a class that fits, we can't perform the transform.
         // This is needed for correctness with a mixture of VSX and Altivec
         // instructions to make sure that a low VSX register is not assigned to
@@ -236,22 +239,32 @@ protected:
         MI->getOperand(0).setReg(KilledProdReg);
         MI->getOperand(1).setReg(KilledProdReg);
         MI->getOperand(3).setReg(AddendSrcReg);
-        MI->getOperand(2).setReg(OtherProdReg);
 
         MI->getOperand(0).setSubReg(KilledProdSubReg);
         MI->getOperand(1).setSubReg(KilledProdSubReg);
         MI->getOperand(3).setSubReg(AddSubReg);
-        MI->getOperand(2).setSubReg(OtherProdSubReg);
 
         MI->getOperand(1).setIsKill(KilledProdRegKill);
         MI->getOperand(3).setIsKill(AddRegKill);
-        MI->getOperand(2).setIsKill(OtherProdRegKill);
 
         MI->getOperand(1).setIsUndef(KilledProdRegUndef);
         MI->getOperand(3).setIsUndef(AddRegUndef);
-        MI->getOperand(2).setIsUndef(OtherProdRegUndef);
 
         MI->setDesc(TII->get(AltOpc));
+
+        // If the addend is also a multiplicand, replace it with the addend
+        // source in both places.
+        if (OtherProdReg == AddendMI->getOperand(0).getReg()) {
+          MI->getOperand(2).setReg(AddendSrcReg);
+          MI->getOperand(2).setSubReg(AddSubReg);
+          MI->getOperand(2).setIsKill(AddRegKill);
+          MI->getOperand(2).setIsUndef(AddRegUndef);
+        } else {
+          MI->getOperand(2).setReg(OtherProdReg);
+          MI->getOperand(2).setSubReg(OtherProdSubReg);
+          MI->getOperand(2).setIsKill(OtherProdRegKill);
+          MI->getOperand(2).setIsUndef(OtherProdRegUndef);
+        }
 
         DEBUG(dbgs() << " -> " << *MI);
 

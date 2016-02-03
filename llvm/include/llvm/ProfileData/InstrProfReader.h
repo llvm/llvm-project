@@ -336,11 +336,16 @@ private:
   std::unique_ptr<MemoryBuffer> DataBuffer;
   /// The index into the profile data.
   std::unique_ptr<InstrProfReaderIndexBase> Index;
-  /// The maximal execution count among all functions.
-  uint64_t MaxFunctionCount;
+  /// Profile summary data.
+  std::unique_ptr<ProfileSummary> Summary;
 
   IndexedInstrProfReader(const IndexedInstrProfReader &) = delete;
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
+
+  // Read the profile summary. Return a pointer pointing to one byte past the
+  // end of the summary data if it exists or the input \c Cur.
+  const unsigned char *readSummary(IndexedInstrProf::ProfVersion Version,
+                                   const unsigned char *Cur);
 
 public:
   uint64_t getVersion() const { return Index->getVersion(); }
@@ -365,7 +370,7 @@ public:
                                     std::vector<uint64_t> &Counts);
 
   /// Return the maximum of all known function counts.
-  uint64_t getMaximumFunctionCount() { return MaxFunctionCount; }
+  uint64_t getMaximumFunctionCount() { return Summary->getMaxFunctionCount(); }
 
   /// Factory method to create an indexed reader.
   static ErrorOr<std::unique_ptr<IndexedInstrProfReader>>
@@ -383,6 +388,7 @@ public:
   // to be used by llvm-profdata (for dumping). Avoid using this when
   // the client is the compiler.
   InstrProfSymtab &getSymtab() override;
+  ProfileSummary &getSummary() { return *(Summary.get()); }
 };
 
 } // end namespace llvm
