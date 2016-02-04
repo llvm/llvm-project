@@ -491,6 +491,10 @@ void LogFullErrorReport(const char *buffer) {
   // The report is added to CrashLog as part of logging all of Printf output.
 }
 
+bool GetSigContextWriteFlag(void *context) {
+  return false;  // FIXME: implement this.
+}
+
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   ucontext_t *ucontext = (ucontext_t*)context;
 # if defined(__aarch64__)

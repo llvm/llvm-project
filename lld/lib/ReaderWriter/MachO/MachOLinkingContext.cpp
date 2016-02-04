@@ -163,22 +163,27 @@ void MachOLinkingContext::configure(HeaderFileType type, Arch arch, OS os,
   _osMinVersion = minOSVersion;
 
   // If min OS not specified on command line, use reasonable defaults.
-  if (minOSVersion == 0) {
-    switch (_arch) {
-    case arch_x86_64:
-    case arch_x86:
-      parsePackedVersion("10.8", _osMinVersion);
-      _os = MachOLinkingContext::OS::macOSX;
-      break;
-    case arch_armv6:
-    case arch_armv7:
-    case arch_armv7s:
-    case arch_arm64:
-      parsePackedVersion("7.0", _osMinVersion);
-      _os = MachOLinkingContext::OS::iOS;
-      break;
-    default:
-      break;
+  // Note that we only do sensible defaults when emitting something other than
+  // object and preload.
+  if (_outputMachOType != llvm::MachO::MH_OBJECT &&
+      _outputMachOType != llvm::MachO::MH_PRELOAD) {
+    if (minOSVersion == 0) {
+      switch (_arch) {
+      case arch_x86_64:
+      case arch_x86:
+        parsePackedVersion("10.8", _osMinVersion);
+        _os = MachOLinkingContext::OS::macOSX;
+        break;
+      case arch_armv6:
+      case arch_armv7:
+      case arch_armv7s:
+      case arch_arm64:
+        parsePackedVersion("7.0", _osMinVersion);
+        _os = MachOLinkingContext::OS::iOS;
+        break;
+      default:
+        break;
+      }
     }
   }
 
@@ -376,9 +381,10 @@ bool MachOLinkingContext::minOS(StringRef mac, StringRef iOS) const {
       return false;
     return _osMinVersion >= parsedVersion;
   case OS::unknown:
-    break;
+    // If we don't know the target, then assume that we don't meet the min OS.
+    // This matches the ld64 behaviour
+    return false;
   }
-  llvm_unreachable("target not configured for iOS or MacOSX");
 }
 
 bool MachOLinkingContext::addEntryPointLoadCommand() const {

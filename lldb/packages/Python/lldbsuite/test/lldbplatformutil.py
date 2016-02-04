@@ -35,7 +35,7 @@ def _run_adb_command(cmd, device_id):
     if device_id:
         device_id_args = ["-s", device_id]
     full_cmd = ["adb"] + device_id_args + cmd
-    p = subprocess.Popen(full_cmd, stdout=PIPE, stderr=PIPE)
+    p = subprocess.Popen(full_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     return p.returncode, stdout, stderr
 

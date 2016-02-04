@@ -1248,7 +1248,7 @@ normalizedFromAtoms(const lld::File &atomFile,
   normFile.minOSverson = context.osMinVersion();
   // FIXME: We need to get the SDK version from the system.  For now the min
   // OS version is better than nothing.
-  normFile.sdkVersion = context.osMinVersion();
+  normFile.sdkVersion = context.sdkVersion();
 
   if (context.generateVersionLoadCommand() &&
       context.os() != MachOLinkingContext::OS::unknown)

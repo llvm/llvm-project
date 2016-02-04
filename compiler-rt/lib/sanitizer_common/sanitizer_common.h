@@ -749,15 +749,20 @@ struct SignalContext {
   uptr pc;
   uptr sp;
   uptr bp;
+  bool is_memory_access;
+  bool is_write;
 
-  SignalContext(void *context, uptr addr, uptr pc, uptr sp, uptr bp) :
-      context(context), addr(addr), pc(pc), sp(sp), bp(bp) {
-  }
+  SignalContext(void *context, uptr addr, uptr pc, uptr sp, uptr bp,
+                bool is_memory_access, bool is_write)
+      : context(context), addr(addr), pc(pc), sp(sp), bp(bp),
+      is_memory_access(is_memory_access), is_write(is_write) {}
 
   // Creates signal context in a platform-specific manner.
   static SignalContext Create(void *siginfo, void *context);
 };
 
+// Returns true if the "context" indicates a memory write.
+bool GetSigContextWriteFlag(void *context);
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp);
 
 void DisableReexec();

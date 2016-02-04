@@ -166,6 +166,9 @@ public:
 
   uint32_t osMinVersion() const { return _osMinVersion; }
 
+  uint32_t sdkVersion() const { return _sdkVersion; }
+  void setSdkVersion(uint64_t v) { _sdkVersion = v; }
+
   uint32_t swiftVersion() const { return _swiftVersion; }
 
   /// \brief Checks whether a given path on the filesystem exists.
@@ -420,6 +423,7 @@ private:
   Arch _arch;
   OS _os;
   uint32_t _osMinVersion;
+  uint32_t _sdkVersion = 0;
   uint64_t _pageZeroSize;
   uint64_t _pageSize;
   uint64_t _baseAddress;

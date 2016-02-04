@@ -1,8 +1,11 @@
 # RUN: lld -flavor darwin -arch x86_64 -macosx_version_min 10.8 %s -o %t -dylib %p/Inputs/libSystem.yaml && llvm-objdump -private-headers %t | FileCheck %s
+# RUN: lld -flavor darwin -arch x86_64 -macosx_version_min 10.8 %s -o %t -dylib %p/Inputs/libSystem.yaml 2>&1 | FileCheck %s --check-prefix=WARNING
 # RUN: lld -flavor darwin -arch x86_64 -macosx_version_min 10.8 %s -o %t -dylib %p/Inputs/libSystem.yaml -static -version_load_command && llvm-objdump -private-headers %t | FileCheck %s
 # RUN: lld -flavor darwin -arch x86_64 -macosx_version_min 10.8 %s -o %t -dylib %p/Inputs/libSystem.yaml -no_version_load_command && llvm-objdump -private-headers %t | FileCheck %s --check-prefix=NO_VERSION_MIN
 # RUN: lld -flavor darwin -arch x86_64 -macosx_version_min 10.8 %s -o %t -dylib %p/Inputs/libSystem.yaml -static -version_load_command -no_version_load_command && llvm-objdump -private-headers %t | FileCheck %s --check-prefix=NO_VERSION_MIN
 # RUN: lld -flavor darwin -arch x86_64 -macosx_version_min 10.8 %s -o %t -dylib %p/Inputs/libSystem.yaml -static && llvm-objdump -private-headers %t | FileCheck %s --check-prefix=NO_VERSION_MIN
+
+# RUN: lld -flavor darwin -arch x86_64 -macosx_version_min 10.8 -sdk_version 10.9 %s -o %t -dylib %p/Inputs/libSystem.yaml && llvm-objdump -private-headers %t | FileCheck %s --check-prefix=SDK_VERSION
 
 --- !mach-o
 arch:            x86_64
@@ -28,5 +31,13 @@ global-symbols:
 # CHECK:   cmdsize 16
 # CHECK:   version 10.8
 # CHECK:   sdk 10.8
+
+# SDK_VERSION: Load command {{[0-9]*}}
+# SDK_VERSION:   cmd LC_VERSION_MIN_MACOSX
+# SDK_VERSION:   cmdsize 16
+# SDK_VERSION:   version 10.8
+# SDK_VERSION:   sdk 10.9
+
+# WARNING: warning: -sdk_version is required when emitting min version load command.  Setting sdk version to match provided min version
 
 # NO_VERSION_MIN-NOT: LC_VERSION_MIN_MACOSX

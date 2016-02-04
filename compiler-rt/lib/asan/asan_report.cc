@@ -761,10 +761,15 @@ void ReportDeadlySignal(const char *description, const SignalContext &sig) {
       " (pc %p bp %p sp %p T%d)\n",
       description, (void *)sig.addr, (void *)sig.pc, (void *)sig.bp,
       (void *)sig.sp, GetCurrentTidOrInvalid());
-  if (sig.pc < GetPageSizeCached()) {
-    Report("Hint: pc points to the zero page.\n");
-  }
   Printf("%s", d.EndWarning());
+  if (sig.pc < GetPageSizeCached())
+    Report("Hint: pc points to the zero page.\n");
+  if (sig.is_memory_access) {
+    Report("The signal is caused by a %s memory access.\n",
+           sig.is_write ? "WRITE" : "READ");
+    if (sig.addr < GetPageSizeCached())
+      Report("Hint: address points to the zero page.\n");
+  }
   GET_STACK_TRACE_SIGNAL(sig);
   stack.Print();
   MaybeDumpInstructionBytes(sig.pc);

@@ -3433,12 +3433,15 @@ protected:
     void
     ResumePrivateStateThread ();
 
+private:
     struct PrivateStateThreadArgs
     {
+        PrivateStateThreadArgs(Process *p, bool s) : process(p), is_secondary_thread(s) {};
         Process *process;
         bool is_secondary_thread;
     };
-
+    
+    // arg is a pointer to a new'ed PrivateStateThreadArgs structure.  PrivateStateThread will free it for you.
     static lldb::thread_result_t
     PrivateStateThread (void *arg);
 
@@ -3450,6 +3453,7 @@ protected:
     lldb::thread_result_t
     RunPrivateStateThread (bool is_secondary_thread);
 
+protected:
     void
     HandlePrivateEvent (lldb::EventSP &event_sp);
 
