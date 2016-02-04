@@ -32,12 +32,11 @@ static inline void _inlineFunction() {
 @end
 
 // CHECK: @__CFConstantStringClassReference = common global [24 x i32] zeroinitializer, align 16
-// CHECK: @_unnamed_cfstring_{{.*}} = private constant %struct.__NSConstantString { i32* getelementptr inbounds ([24 x i32], [24 x i32]* @__CFConstantStringClassReference, i32 0, i32 0)
+// CHECK: @_unnamed_cfstring_{{.*}} = private constant %struct.__NSConstantString_tag { i32* getelementptr inbounds ([24 x i32], [24 x i32]* @__CFConstantStringClassReference, i32 0, i32 0)
 
 // CHECK-LABEL: define internal void @_inlineFunction()
 // CHECK:  [[ZERO:%.*]] = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_REFERENCES_
 // CHECK-NEXT:   [[ONE:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK-NEXT:   [[TWO:%.*]] = bitcast %struct._class_t* [[ZERO]] to i8*
-// CHECK-NEXT:   call void (i8*, i8*, [[T:%.*]]*, ...) bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, [[T:%.*]]*, ...)*)(i8* [[TWO]], i8* [[ONE]], [[T:%.*]]* bitcast (%struct.__NSConstantString* @_unnamed_cfstring_{{.*}} to [[T:%.*]]*))
+// CHECK-NEXT:   call void (i8*, i8*, [[T:%.*]]*, ...) bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, [[T:%.*]]*, ...)*)(i8* [[TWO]], i8* [[ONE]], [[T:%.*]]* bitcast (%struct.__NSConstantString_tag* @_unnamed_cfstring_{{.*}} to [[T:%.*]]*))
 // CHECK-NEXT:   ret void
-

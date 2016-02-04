@@ -3884,13 +3884,14 @@ static struct isl_basic_map *coalesce_divs(struct isl_basic_map *bmap,
 			continue;
 		if (isl_int_is_zero(bmap->ineq[i][1 + dim + div2]))
 			continue;
-		if (isl_int_is_zero(bmap->ineq[i][1 + dim + div1]))
+		if (isl_int_is_zero(bmap->ineq[i][1 + dim + div1])) {
 			if (isl_int_is_pos(bmap->ineq[i][1 + dim + div2]))
 				isl_seq_combine(bmap->ineq[i], m, bmap->ineq[i],
 						ctx->one, bmap->ineq[l], total);
 			else
 				isl_seq_combine(bmap->ineq[i], m, bmap->ineq[i],
 						ctx->one, bmap->ineq[u], total);
+		}
 		isl_int_set(bmap->ineq[i][1 + dim + div2],
 			    bmap->ineq[i][1 + dim + div1]);
 		isl_int_set_si(bmap->ineq[i][1 + dim + div1], 0);

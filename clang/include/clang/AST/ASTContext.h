@@ -253,8 +253,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable IdentifierInfo *MakeIntegerSeqName = nullptr;
 
   QualType ObjCConstantStringType;
-  mutable RecordDecl *CFConstantStringTypeDecl;
-  
+  mutable RecordDecl *CFConstantStringTagDecl;
+  mutable TypedefDecl *CFConstantStringTypeDecl;
+
   mutable QualType ObjCSuperType;
   
   QualType ObjCNSStringType;
@@ -1381,11 +1382,12 @@ public:
   /// if it hasn't yet been built.
   QualType getRawCFConstantStringType() const {
     if (CFConstantStringTypeDecl)
-      return getTagDeclType(CFConstantStringTypeDecl);
+      return getTypedefType(CFConstantStringTypeDecl);
     return QualType();
   }
   void setCFConstantStringType(QualType T);
-  TagDecl *getCFConstantStringDecl() const;
+  TypedefDecl *getCFConstantStringDecl() const;
+  RecordDecl *getCFConstantStringTagDecl() const;
 
   // This setter/getter represents the ObjC type for an NSConstantString.
   void setObjCConstantStringInterface(ObjCInterfaceDecl *Decl);
