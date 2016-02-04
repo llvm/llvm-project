@@ -1156,8 +1156,12 @@ void internal_join_thread(void *th) {}
 #endif
 
 bool GetSigContextWriteFlag(void *context) {
+#if defined(__x86_64__) || defined(__i386__)
   ucontext_t *ucontext = (ucontext_t*)context;
   return ucontext->uc_mcontext.gregs[REG_ERR] & 2;
+#else
+  return false;  // FIXME: Implement.
+#endif
 }
 
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {

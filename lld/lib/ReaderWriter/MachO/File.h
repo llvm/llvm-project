@@ -201,6 +201,16 @@ public:
     _objcConstraint = v;
   }
 
+  uint32_t minVersion() const { return _minVersion; }
+  void setMinVersion(uint32_t v) { _minVersion = v; }
+
+  LoadCommandType minVersionLoadCommandKind() const {
+    return _minVersionLoadCommandKind;
+  }
+  void setMinVersionLoadCommandKind(LoadCommandType v) {
+    _minVersionLoadCommandKind = v;
+  }
+
   uint32_t swiftVersion() const { return _swiftVersion; }
   void setSwiftVersion(uint32_t v) { _swiftVersion = v; }
 
@@ -249,6 +259,8 @@ private:
   NameToAtom                     _undefAtoms;
   MachOLinkingContext::Arch      _arch = MachOLinkingContext::arch_unknown;
   MachOLinkingContext::OS        _os = MachOLinkingContext::OS::unknown;
+  uint32_t                       _minVersion = 0;
+  LoadCommandType               _minVersionLoadCommandKind = (LoadCommandType)0;
   MachOLinkingContext::ObjCConstraint _objcConstraint =
       MachOLinkingContext::objc_unknown;
   uint32_t                       _swiftVersion = 0;

@@ -1061,6 +1061,8 @@ normalizedObjectToAtoms(MachOFile *file,
   file->setFlags(normalizedFile.flags);
   file->setArch(normalizedFile.arch);
   file->setOS(normalizedFile.os);
+  file->setMinVersion(normalizedFile.minOSverson);
+  file->setMinVersionLoadCommandKind(normalizedFile.minOSVersionKind);
 
   // Sort references in each atom to their canonical order.
   for (const DefinedAtom* defAtom : file->defined()) {

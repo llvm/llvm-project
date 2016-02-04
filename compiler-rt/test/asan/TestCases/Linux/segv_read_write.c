@@ -1,6 +1,7 @@
 // RUN: %clangxx_asan -O0 %s -o %t
 // RUN: not %run %t       2>&1 | FileCheck %s --check-prefix=READ
 // RUN: not %run %t write 2>&1 | FileCheck %s --check-prefix=WRITE
+// REQUIRES: x86_64-supported-target
 
 static volatile int sink;
 __attribute__((noinline)) void Read(int *ptr) { sink = *ptr; }
