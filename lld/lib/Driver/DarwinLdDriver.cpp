@@ -812,6 +812,17 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
     ctx.setSdkVersion(ctx.osMinVersion());
   }
 
+  // Handle source_version
+  if (llvm::opt::Arg *arg = parsedArgs.getLastArg(OPT_source_version)) {
+    uint64_t version = 0;
+    if (MachOLinkingContext::parsePackedVersion(arg->getValue(),
+                                                version)) {
+      diagnostics << "error: malformed source_version value\n";
+      return false;
+    }
+    ctx.setSourceVersion(version);
+  }
+
   // Handle stack_size
   if (llvm::opt::Arg *stackSize = parsedArgs.getLastArg(OPT_stack_size)) {
     uint64_t stackSizeVal;

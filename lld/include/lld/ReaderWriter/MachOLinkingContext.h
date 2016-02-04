@@ -169,6 +169,9 @@ public:
   uint32_t sdkVersion() const { return _sdkVersion; }
   void setSdkVersion(uint64_t v) { _sdkVersion = v; }
 
+  uint64_t sourceVersion() const { return _sourceVersion; }
+  void setSourceVersion(uint64_t v) { _sourceVersion = v; }
+
   uint32_t swiftVersion() const { return _swiftVersion; }
 
   /// \brief Checks whether a given path on the filesystem exists.
@@ -371,6 +374,10 @@ public:
   /// bits are xxxx.yy.zz.  Largest number is 65535.255.255
   static bool parsePackedVersion(StringRef str, uint32_t &result);
 
+  /// Construct 64-bit value from string "A.B.C.D.E" where
+  /// bits are aaaa.bb.cc.dd.ee.  Largest number is 16777215.1023.1023.1023.1023
+  static bool parsePackedVersion(StringRef str, uint64_t &result);
+
   void finalizeInputFiles() override;
 
   std::error_code handleLoadedFile(File &file) override;
@@ -424,6 +431,7 @@ private:
   OS _os;
   uint32_t _osMinVersion;
   uint32_t _sdkVersion = 0;
+  uint64_t _sourceVersion = 0;
   uint64_t _pageZeroSize;
   uint64_t _pageSize;
   uint64_t _baseAddress;

@@ -467,6 +467,10 @@ uint32_t MachOFileLayout::loadCommandsSize(uint32_t &count) {
     ++count;
   }
 
+  // Add LC_SOURCE_VERSION
+  size += sizeof(source_version_command);
+  ++count;
+
   // If main executable add LC_MAIN
   if (_file.fileType == llvm::MachO::MH_EXECUTE) {
     size += sizeof(entry_point_command);
@@ -914,6 +918,17 @@ std::error_code MachOFileLayout::writeLoadCommands() {
     // Add LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_WATCHOS,
     // LC_VERSION_MIN_TVOS
     writeVersionMinLoadCommand(_file, _swap, lc);
+
+    // Add LC_SOURCE_VERSION
+    {
+      source_version_command* sv = reinterpret_cast<source_version_command*>(lc);
+      sv->cmd       = LC_SOURCE_VERSION;
+      sv->cmdsize   = sizeof(source_version_command);
+      sv->version   = _file.sourceVersion;
+      if (_swap)
+        swapStruct(*sv);
+      lc += sizeof(source_version_command);
+    }
 
     // If main executable, add LC_MAIN.
     if (_file.fileType == llvm::MachO::MH_EXECUTE) {

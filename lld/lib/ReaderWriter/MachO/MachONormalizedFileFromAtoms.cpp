@@ -1285,6 +1285,7 @@ normalizedFromAtoms(const lld::File &atomFile,
   normFile.minOSVersionKind = util.minVersionCommandType();
 
   normFile.sdkVersion = context.sdkVersion();
+  normFile.sourceVersion = context.sourceVersion();
 
   if (context.generateVersionLoadCommand() &&
       context.os() != MachOLinkingContext::OS::unknown)

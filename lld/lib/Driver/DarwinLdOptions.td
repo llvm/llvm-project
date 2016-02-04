@@ -36,6 +36,9 @@ def ios_simulator_version_min : Separate<["-"], "ios_simulator_version_min">,
 def sdk_version : Separate<["-"], "sdk_version">,
      MetaVarName<"<version>">,
      HelpText<"SDK version">, Group<grp_opts>;
+def source_version : Separate<["-"], "source_version">,
+     MetaVarName<"<version>">,
+     HelpText<"Source version">, Group<grp_opts>;
 def version_load_command : Flag<["-"], "version_load_command">,
      HelpText<"Force generation of a version load command">, Group<grp_opts>;
 def no_version_load_command : Flag<["-"], "no_version_load_command">,

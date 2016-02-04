@@ -76,6 +76,35 @@ bool MachOLinkingContext::parsePackedVersion(StringRef str, uint32_t &result) {
   return false;
 }
 
+bool MachOLinkingContext::parsePackedVersion(StringRef str, uint64_t &result) {
+  result = 0;
+
+  if (str.empty())
+    return false;
+
+  SmallVector<StringRef, 5> parts;
+  llvm::SplitString(str, parts, ".");
+
+  unsigned long long num;
+  if (llvm::getAsUnsignedInteger(parts[0], 10, num))
+    return true;
+  if (num > 0xFFFFFF)
+    return true;
+  result = num << 40;
+
+  unsigned Shift = 30;
+  for (StringRef str : llvm::makeArrayRef(parts).slice(1)) {
+    if (llvm::getAsUnsignedInteger(str, 10, num))
+      return true;
+    if (num > 0x3FF)
+      return true;
+    result |= (num << Shift);
+    Shift -= 10;
+  }
+
+  return false;
+}
+
 MachOLinkingContext::ArchInfo MachOLinkingContext::_s_archInfos[] = {
   { "x86_64", arch_x86_64, true,  CPU_TYPE_X86_64,  CPU_SUBTYPE_X86_64_ALL },
   { "i386",   arch_x86,    true,  CPU_TYPE_I386,    CPU_SUBTYPE_X86_ALL },
