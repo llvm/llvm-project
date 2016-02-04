@@ -19,6 +19,7 @@
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
@@ -163,6 +164,7 @@ ProcessMachCore::GetPluginVersion()
 bool
 ProcessMachCore::GetDynamicLoaderAddress (lldb::addr_t addr)
 {
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER | LIBLLDB_LOG_PROCESS));
     llvm::MachO::mach_header header;
     Error error;
     if (DoReadMemory (addr, &header, sizeof(header), error) != sizeof(header))
@@ -194,6 +196,8 @@ ProcessMachCore::GetDynamicLoaderAddress (lldb::addr_t addr)
         case llvm::MachO::MH_DYLINKER:
             //printf("0x%16.16" PRIx64 ": file_type = MH_DYLINKER\n", vaddr);
             // Address of dyld "struct mach_header" in the core file
+            if (log)
+                log->Printf ("ProcessMachCore::GetDynamicLoaderAddress found a user process dyld binary image at 0x%" PRIx64, addr);
             m_dyld_addr = addr;
             return true;
 
@@ -203,6 +207,8 @@ ProcessMachCore::GetDynamicLoaderAddress (lldb::addr_t addr)
             // is NOT set. If it isn't, then we have a mach_kernel.
             if ((header.flags & llvm::MachO::MH_DYLDLINK) == 0)
             {
+                if (log)
+                    log->Printf ("ProcessMachCore::GetDynamicLoaderAddress found a mach kernel binary image at 0x%" PRIx64, addr);
                 // Address of the mach kernel "struct mach_header" in the core file.
                 m_mach_kernel_addr = addr;
                 return true;
@@ -219,6 +225,7 @@ ProcessMachCore::GetDynamicLoaderAddress (lldb::addr_t addr)
 Error
 ProcessMachCore::DoLoadCore ()
 {
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER | LIBLLDB_LOG_PROCESS));
     Error error;
     if (!m_core_module_sp)
     {
@@ -314,9 +321,7 @@ ProcessMachCore::DoLoadCore ()
         // later if both are present.
 
         const size_t num_core_aranges = m_core_aranges.GetSize();
-        for (size_t i = 0; 
-             i < num_core_aranges && (m_dyld_addr == LLDB_INVALID_ADDRESS || m_mach_kernel_addr == LLDB_INVALID_ADDRESS); 
-             ++i)
+        for (size_t i = 0; i < num_core_aranges; ++i)
         {
             const VMRangeToFileOffset::Entry *entry = m_core_aranges.GetEntryAtIndex(i);
             lldb::addr_t section_vm_addr_start = entry->GetRangeBase();
@@ -336,10 +341,14 @@ ProcessMachCore::DoLoadCore ()
     {
         if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS)
         {
+            if (log)
+                log->Printf ("ProcessMachCore::DoLoadCore: Using kernel corefile image at 0x%" PRIx64, m_mach_kernel_addr);
             m_dyld_plugin_name = DynamicLoaderDarwinKernel::GetPluginNameStatic();
         }
         else if (m_dyld_addr != LLDB_INVALID_ADDRESS)
         {
+            if (log)
+                log->Printf ("ProcessMachCore::DoLoadCore: Using user process dyld image at 0x%" PRIx64, m_dyld_addr);
             m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
         }
     }
@@ -347,10 +356,14 @@ ProcessMachCore::DoLoadCore ()
     {
         if (m_dyld_addr != LLDB_INVALID_ADDRESS)
         {
+            if (log)
+                log->Printf ("ProcessMachCore::DoLoadCore: Using user process dyld image at 0x%" PRIx64, m_dyld_addr);
             m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
         }
         else if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS)
         {
+            if (log)
+                log->Printf ("ProcessMachCore::DoLoadCore: Using kernel corefile image at 0x%" PRIx64, m_mach_kernel_addr);
             m_dyld_plugin_name = DynamicLoaderDarwinKernel::GetPluginNameStatic();
         }
     }
