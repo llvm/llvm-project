@@ -5127,7 +5127,6 @@ class WindowsARMTargetInfo : public WindowsTargetInfo<ARMleTargetInfo> {
 public:
   WindowsARMTargetInfo(const llvm::Triple &Triple)
     : WindowsTargetInfo<ARMleTargetInfo>(Triple), Triple(Triple) {
-    TLSSupported = false;
     WCharType = UnsignedShort;
     SizeType = UnsignedInt;
     UserLabelPrefix = "";
