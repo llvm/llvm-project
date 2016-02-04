@@ -13660,7 +13660,7 @@ static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
                                        DAG.getConstant(ShiftInx, DL, ExtVT));
       ShiftNode = DAG.getBitcast(InVT, ShiftNode);
       return DAG.getNode(X86ISD::CVT2MASK, DL, VT, ShiftNode);
-    } 
+    }
     // Use TESTD/Q, extended vector to packed dword/qword.
     assert((InVT.is256BitVector() || InVT.is128BitVector()) &&
            "Unexpected vector type.");
@@ -27721,14 +27721,92 @@ static SDValue getDivRem8(SDNode *N, SelectionDAG &DAG) {
   return R.getValue(1);
 }
 
-static SDValue PerformSExtCombine(SDNode *N, SelectionDAG &DAG,
-                                  TargetLowering::DAGCombinerInfo &DCI,
-                                  const X86Subtarget &Subtarget) {
+/// Convert a SEXT of a vector to a SIGN_EXTEND_VECTOR_INREG, this requires
+/// the splitting (or concatenating with UNDEFs) of the input to vectors of the
+/// same size as the target type which then extends the lowest elements.
+static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
+                                          TargetLowering::DAGCombinerInfo &DCI,
+                                          const X86Subtarget &Subtarget) {
+  if (N->getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+  if (!DCI.isBeforeLegalizeOps())
+    return SDValue();
+  if (!Subtarget.hasSSE2())
+    return SDValue();
+
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
   EVT InVT = N0.getValueType();
   EVT InSVT = InVT.getScalarType();
+
+  // Input type must be a vector and we must be extending legal integer types.
+  if (!VT.isVector())
+    return SDValue();
+  if (SVT != MVT::i64 && SVT != MVT::i32 && SVT != MVT::i16)
+    return SDValue();
+  if (InSVT != MVT::i32 && InSVT != MVT::i16 && InSVT != MVT::i8)
+    return SDValue();
+
+  SDLoc DL(N);
+
+  auto ExtendVecSize = [&DAG](SDLoc DL, SDValue N, unsigned Size) {
+    EVT InVT = N.getValueType();
+    EVT OutVT = EVT::getVectorVT(*DAG.getContext(), InVT.getScalarType(),
+                                 Size / InVT.getScalarSizeInBits());
+    SmallVector<SDValue, 8> Opnds(Size / InVT.getSizeInBits(),
+                                  DAG.getUNDEF(InVT));
+    Opnds[0] = N;
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Opnds);
+  };
+
+  // If target-size is less than 128-bits, extend to a type that would extend
+  // to 128 bits, extend that and extract the original target vector.
+  if (VT.getSizeInBits() < 128 && !(128 % VT.getSizeInBits())) {
+    unsigned Scale = 128 / VT.getSizeInBits();
+    EVT ExVT =
+        EVT::getVectorVT(*DAG.getContext(), SVT, 128 / SVT.getSizeInBits());
+    SDValue Ex = ExtendVecSize(DL, N0, Scale * InVT.getSizeInBits());
+    SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, ExVT, Ex);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SExt,
+                       DAG.getIntPtrConstant(0, DL));
+  }
+
+  // If target-size is 128-bits, then convert to ISD::SIGN_EXTEND_VECTOR_INREG
+  // which ensures lowering to X86ISD::VSEXT (pmovsx*).
+  if (VT.getSizeInBits() == 128) {
+    SDValue ExOp = ExtendVecSize(DL, N0, 128);
+    return DAG.getSignExtendVectorInReg(ExOp, DL, VT);
+  }
+
+  // On pre-AVX2 targets, split into 128-bit nodes of
+  // ISD::SIGN_EXTEND_VECTOR_INREG.
+  if (!Subtarget.hasInt256() && !(VT.getSizeInBits() % 128)) {
+    unsigned NumVecs = VT.getSizeInBits() / 128;
+    unsigned NumSubElts = 128 / SVT.getSizeInBits();
+    EVT SubVT = EVT::getVectorVT(*DAG.getContext(), SVT, NumSubElts);
+    EVT InSubVT = EVT::getVectorVT(*DAG.getContext(), InSVT, NumSubElts);
+
+    SmallVector<SDValue, 8> Opnds;
+    for (unsigned i = 0, Offset = 0; i != NumVecs; ++i, Offset += NumSubElts) {
+      SDValue SrcVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InSubVT, N0,
+                                   DAG.getIntPtrConstant(Offset, DL));
+      SrcVec = ExtendVecSize(DL, SrcVec, 128);
+      SrcVec = DAG.getSignExtendVectorInReg(SrcVec, DL, SubVT);
+      Opnds.push_back(SrcVec);
+    }
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Opnds);
+  }
+
+  return SDValue();
+}
+
+static SDValue PerformSExtCombine(SDNode *N, SelectionDAG &DAG,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const X86Subtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  EVT InVT = N0.getValueType();
   SDLoc DL(N);
 
   if (SDValue DivRem8 = getDivRem8(N, DAG))
@@ -27738,68 +27816,14 @@ static SDValue PerformSExtCombine(SDNode *N, SelectionDAG &DAG,
     if (InVT == MVT::i1) {
       SDValue Zero = DAG.getConstant(0, DL, VT);
       SDValue AllOnes =
-        DAG.getConstant(APInt::getAllOnesValue(VT.getSizeInBits()), DL, VT);
+          DAG.getConstant(APInt::getAllOnesValue(VT.getSizeInBits()), DL, VT);
       return DAG.getNode(ISD::SELECT, DL, VT, N0, AllOnes, Zero);
     }
     return SDValue();
   }
 
-  if (VT.isVector() && Subtarget.hasSSE2()) {
-    auto ExtendVecSize = [&DAG](SDLoc DL, SDValue N, unsigned Size) {
-      EVT InVT = N.getValueType();
-      EVT OutVT = EVT::getVectorVT(*DAG.getContext(), InVT.getScalarType(),
-                                   Size / InVT.getScalarSizeInBits());
-      SmallVector<SDValue, 8> Opnds(Size / InVT.getSizeInBits(),
-                                    DAG.getUNDEF(InVT));
-      Opnds[0] = N;
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Opnds);
-    };
-
-    // If target-size is less than 128-bits, extend to a type that would extend
-    // to 128 bits, extend that and extract the original target vector.
-    if (VT.getSizeInBits() < 128 && !(128 % VT.getSizeInBits()) &&
-        (SVT == MVT::i64 || SVT == MVT::i32 || SVT == MVT::i16) &&
-        (InSVT == MVT::i32 || InSVT == MVT::i16 || InSVT == MVT::i8)) {
-      unsigned Scale = 128 / VT.getSizeInBits();
-      EVT ExVT =
-          EVT::getVectorVT(*DAG.getContext(), SVT, 128 / SVT.getSizeInBits());
-      SDValue Ex = ExtendVecSize(DL, N0, Scale * InVT.getSizeInBits());
-      SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, ExVT, Ex);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SExt,
-                         DAG.getIntPtrConstant(0, DL));
-    }
-
-    // If target-size is 128-bits, then convert to ISD::SIGN_EXTEND_VECTOR_INREG
-    // which ensures lowering to X86ISD::VSEXT (pmovsx*).
-    if (VT.getSizeInBits() == 128 &&
-        (SVT == MVT::i64 || SVT == MVT::i32 || SVT == MVT::i16) &&
-        (InSVT == MVT::i32 || InSVT == MVT::i16 || InSVT == MVT::i8)) {
-      SDValue ExOp = ExtendVecSize(DL, N0, 128);
-      return DAG.getSignExtendVectorInReg(ExOp, DL, VT);
-    }
-
-    // On pre-AVX2 targets, split into 128-bit nodes of
-    // ISD::SIGN_EXTEND_VECTOR_INREG.
-    if (!Subtarget.hasInt256() && !(VT.getSizeInBits() % 128) &&
-        (SVT == MVT::i64 || SVT == MVT::i32 || SVT == MVT::i16) &&
-        (InSVT == MVT::i32 || InSVT == MVT::i16 || InSVT == MVT::i8)) {
-      unsigned NumVecs = VT.getSizeInBits() / 128;
-      unsigned NumSubElts = 128 / SVT.getSizeInBits();
-      EVT SubVT = EVT::getVectorVT(*DAG.getContext(), SVT, NumSubElts);
-      EVT InSubVT = EVT::getVectorVT(*DAG.getContext(), InSVT, NumSubElts);
-
-      SmallVector<SDValue, 8> Opnds;
-      for (unsigned i = 0, Offset = 0; i != NumVecs;
-           ++i, Offset += NumSubElts) {
-        SDValue SrcVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InSubVT, N0,
-                                     DAG.getIntPtrConstant(Offset, DL));
-        SrcVec = ExtendVecSize(DL, SrcVec, 128);
-        SrcVec = DAG.getSignExtendVectorInReg(SrcVec, DL, SubVT);
-        Opnds.push_back(SrcVec);
-      }
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Opnds);
-    }
-  }
+  if (SDValue V = combineToExtendVectorInReg(N, DAG, DCI, Subtarget))
+    return V;
 
   if (Subtarget.hasAVX() && VT.is256BitVector())
     if (SDValue R = WidenMaskArithmetic(N, DAG, DCI, Subtarget))

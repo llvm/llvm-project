@@ -343,7 +343,7 @@ typedef struct ValueProfRecordClosure {
    */
   uint64_t (*RemapValueData)(uint32_t, uint64_t Value);
   void (*GetValueForSite)(const void *R, InstrProfValueData *Dst, uint32_t K,
-                          uint32_t S, uint64_t (*Mapper)(uint32_t, uint64_t));
+                          uint32_t S);
   ValueProfData *(*AllocValueProfData)(size_t TotalSizeInBytes);
 } ValueProfRecordClosure;
 
@@ -506,8 +506,7 @@ void serializeValueProfRecordFrom(ValueProfRecord *This,
   for (S = 0; S < NumValueSites; S++) {
     uint32_t ND = Closure->GetNumValueDataForSite(Record, ValueKind, S);
     This->SiteCountArray[S] = ND;
-    Closure->GetValueForSite(Record, DstVD, ValueKind, S,
-                             Closure->RemapValueData);
+    Closure->GetValueForSite(Record, DstVD, ValueKind, S);
     DstVD += ND;
   }
 }
@@ -617,7 +616,7 @@ uint32_t getNumValueDataRT(const void *R, uint32_t VK) {
 }
 
 void getValueForSiteRT(const void *R, InstrProfValueData *Dst, uint32_t VK,
-                       uint32_t S, uint64_t (*Mapper)(uint32_t, uint64_t)) {
+                       uint32_t S) {
   unsigned I, N = 0;
   const ValueProfRuntimeRecord *Record = (const ValueProfRuntimeRecord *)R;
   N = getNumValueDataForSiteRT(R, VK, S);

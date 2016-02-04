@@ -300,19 +300,9 @@ GetInstByName(const char *Name,
 /// \brief Return all of the instructions defined by the target, ordered by
 /// their enum value.
 void CodeGenTarget::ComputeInstrsByEnum() const {
-  // The ordering here must match the ordering in TargetOpcodes.h.
-  // FIXME: It would be nice to have the opcode directly extracted
-  // to avoid potential errors. At the very, least a compile time
-  // error would be appreciated if the order does not match.
   static const char *const FixedInstrs[] = {
-      "PHI",          "INLINEASM",     "CFI_INSTRUCTION",  "EH_LABEL",
-      "GC_LABEL",     "KILL",          "EXTRACT_SUBREG",   "INSERT_SUBREG",
-      "IMPLICIT_DEF", "SUBREG_TO_REG", "COPY_TO_REGCLASS", "DBG_VALUE",
-      "REG_SEQUENCE", "COPY",          "BUNDLE",           "LIFETIME_START",
-      "LIFETIME_END", "STACKMAP",      "PATCHPOINT",       "LOAD_STACK_GUARD",
-      "STATEPOINT",   "LOCAL_ESCAPE",   "FAULTING_LOAD_OP",
-      // Generic opcodes for GlobalISel start here.
-      "G_ADD",
+#define HANDLE_TARGET_OPCODE(OPC, NUM) #OPC,
+#include "llvm/Target/TargetOpcodes.def"
       nullptr};
   const auto &Insts = getInstructions();
   for (const char *const *p = FixedInstrs; *p; ++p) {

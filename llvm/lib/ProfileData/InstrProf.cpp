@@ -430,10 +430,9 @@ uint32_t getNumValueDataForSiteInstrProf(const void *R, uint32_t VK,
 }
 
 void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
-                              uint32_t K, uint32_t S,
-                              uint64_t (*Mapper)(uint32_t, uint64_t)) {
-  return reinterpret_cast<const InstrProfRecord *>(R)->getValueForSite(
-      Dst, K, S, Mapper);
+                              uint32_t K, uint32_t S) {
+  reinterpret_cast<const InstrProfRecord *>(R)->getValueForSite(Dst, K, S);
+  return;
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
