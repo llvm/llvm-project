@@ -823,9 +823,7 @@ ModRefInfo AAResultBase<DerivedT>::getModRefInfo(ImmutableCallSite CS,
     bool DoesAlias = false;
     ModRefInfo AllArgsMask = MRI_NoModRef;
     if (AAResults::doesAccessArgPointees(MRB)) {
-      for (ImmutableCallSite::arg_iterator AI = CS.arg_begin(),
-                                           AE = CS.arg_end();
-           AI != AE; ++AI) {
+      for (auto AI = CS.arg_begin(), AE = CS.arg_end(); AI != AE; ++AI) {
         const Value *Arg = *AI;
         if (!Arg->getType()->isPointerTy())
           continue;
@@ -887,9 +885,7 @@ ModRefInfo AAResultBase<DerivedT>::getModRefInfo(ImmutableCallSite CS1,
   if (AAResults::onlyAccessesArgPointees(CS2B)) {
     ModRefInfo R = MRI_NoModRef;
     if (AAResults::doesAccessArgPointees(CS2B)) {
-      for (ImmutableCallSite::arg_iterator I = CS2.arg_begin(),
-                                           E = CS2.arg_end();
-           I != E; ++I) {
+      for (auto I = CS2.arg_begin(), E = CS2.arg_end(); I != E; ++I) {
         const Value *Arg = *I;
         if (!Arg->getType()->isPointerTy())
           continue;
@@ -921,9 +917,7 @@ ModRefInfo AAResultBase<DerivedT>::getModRefInfo(ImmutableCallSite CS1,
   if (AAResults::onlyAccessesArgPointees(CS1B)) {
     ModRefInfo R = MRI_NoModRef;
     if (AAResults::doesAccessArgPointees(CS1B)) {
-      for (ImmutableCallSite::arg_iterator I = CS1.arg_begin(),
-                                           E = CS1.arg_end();
-           I != E; ++I) {
+      for (auto I = CS1.arg_begin(), E = CS1.arg_end(); I != E; ++I) {
         const Value *Arg = *I;
         if (!Arg->getType()->isPointerTy())
           continue;
