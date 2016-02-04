@@ -30,9 +30,6 @@ class GdbRemoteTestCaseBase(TestBase):
 
     _GDBREMOTE_KILL_PACKET = "$k#6b"
 
-    _LOGGING_LEVEL = logging.WARNING
-    # _LOGGING_LEVEL = logging.DEBUG
-
     # Start the inferior separately, attach to the inferior on the stub command line.
     _STARTUP_ATTACH = "attach"
     # Start the inferior separately, start the stub without attaching, allow the test to attach to the inferior however it wants (e.g. $vAttach;pid).
@@ -48,12 +45,42 @@ class GdbRemoteTestCaseBase(TestBase):
     TARGET_EXC_SOFTWARE        = 0x95
     TARGET_EXC_BREAKPOINT      = 0x96
 
+    _verbose_log_handler = None
+    _log_formatter = logging.Formatter(fmt='%(asctime)-15s %(levelname)-8s %(message)s')
+
+    def setUpBaseLogging(self):
+        self.logger = logging.getLogger(__name__)
+
+        if len(self.logger.handlers) > 0:
+            return # We have set up this handler already
+
+        self.logger.propagate = False
+        self.logger.setLevel(logging.DEBUG)
+
+        # log all warnings to stderr
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.WARNING)
+        handler.setFormatter(self._log_formatter)
+        self.logger.addHandler(handler)
+
+
+    def isVerboseLoggingRequested(self):
+        # We will report our detailed logs if the user requested that the "gdb-remote" channel is
+        # logged.
+        return any(("gdb-remote" in channel) for channel in lldbtest_config.channels)
+
     def setUp(self):
         TestBase.setUp(self)
-        FORMAT = '%(asctime)-15s %(levelname)-8s %(message)s'
-        logging.basicConfig(format=FORMAT)
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(self._LOGGING_LEVEL)
+
+        self.setUpBaseLogging()
+
+        if self.isVerboseLoggingRequested():
+            # If requested, full logs go to a log file
+            self._verbose_log_handler = logging.FileHandler(self.log_basename + "-host.log")
+            self._verbose_log_handler.setFormatter(self._log_formatter)
+            self._verbose_log_handler.setLevel(logging.DEBUG)
+            self.logger.addHandler(self._verbose_log_handler)
+
         self.test_sequence = GdbRemoteTestSequence(self.logger)
         self.set_inferior_startup_launch()
         self.port = self.get_next_port()
@@ -75,6 +102,11 @@ class GdbRemoteTestCaseBase(TestBase):
                 self.stub_hostname = host
         else:
             self.stub_hostname = "localhost"
+
+    def tearDown(self):
+        self.logger.removeHandler(self._verbose_log_handler)
+        self._verbose_log_handler = None
+        TestBase.tearDown(self)
 
     def get_next_port(self):
         return 12000 + random.randint(0,3999)

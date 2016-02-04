@@ -6,6 +6,7 @@ from __future__ import absolute_import
 # System modules
 import re
 import subprocess
+import sys
 
 # Third-party modules
 from six.moves.urllib import parse as urlparse
@@ -85,3 +86,19 @@ def finalize_build_dictionary(dictionary):
         if android_device_api() >= 16:
             dictionary["PIE"] = 1
     return dictionary
+
+def getHostPlatform():
+    """Returns the host platform running the test suite."""
+    # Attempts to return a platform name matching a target Triple platform.
+    if sys.platform.startswith('linux'):
+        return 'linux'
+    elif sys.platform.startswith('win32'):
+        return 'windows'
+    elif sys.platform.startswith('darwin'):
+        return 'darwin'
+    elif sys.platform.startswith('freebsd'):
+        return 'freebsd'
+    elif sys.platform.startswith('netbsd'):
+        return 'netbsd'
+    else:
+        return sys.platform

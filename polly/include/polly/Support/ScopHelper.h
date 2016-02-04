@@ -138,6 +138,15 @@ public:
     I->getAAMetadata(N, Merge);
   }
 
+  /// @brief Get the debug location of this instruction.
+  ///
+  /// @returns The debug location of this instruction.
+  const llvm::DebugLoc &getDebugLoc() const {
+    if (I)
+      return I->getDebugLoc();
+    llvm_unreachable("Operation not supported on nullptr");
+  }
+
   llvm::Value *getValueOperand() const {
     if (isLoad())
       return asLoad();

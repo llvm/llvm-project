@@ -75,7 +75,6 @@ enum RejectReasonKind {
   rrkUndefBasePtr,
   rrkVariantBasePtr,
   rrkNonAffineAccess,
-  rrkDifferentElementSize,
   rrkLastAffFunc,
 
   rrkLoopBound,
@@ -507,30 +506,6 @@ public:
         BaseValue(V) {}
 
   const SCEV *get() { return AccessFunction; }
-
-  /// @name LLVM-RTTI interface
-  //@{
-  static bool classof(const RejectReason *RR);
-  //@}
-
-  /// @name RejectReason interface
-  //@{
-  virtual std::string getMessage() const override;
-  virtual std::string getEndUserMessage() const override;
-  //@}
-};
-
-//===----------------------------------------------------------------------===//
-/// @brief Report array accesses with differing element size.
-class ReportDifferentArrayElementSize : public ReportAffFunc {
-  //===--------------------------------------------------------------------===//
-
-  // The base pointer of the memory access.
-  const Value *BaseValue;
-
-public:
-  ReportDifferentArrayElementSize(const Instruction *Inst, const Value *V)
-      : ReportAffFunc(rrkDifferentElementSize, Inst), BaseValue(V) {}
 
   /// @name LLVM-RTTI interface
   //@{

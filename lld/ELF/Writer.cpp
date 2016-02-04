@@ -291,12 +291,12 @@ void Writer<ELFT>::scanRelocs(
     }
 
     // MIPS has a special rule to create GOTs for local symbols.
-    if (Config->EMachine == EM_MIPS && needsMipsLocalGot(Type, Body)) {
-      // FIXME (simon): Do not add so many redundant entries.
-      Out<ELFT>::Got->addMipsLocalEntry();
-      if (Body)
-        Body->setUsedInDynamicReloc();
-      continue;
+    if (Config->EMachine == EM_MIPS && !canBePreempted(Body, true)) {
+      if (Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16) {
+        // FIXME (simon): Do not add so many redundant entries.
+        Out<ELFT>::Got->addMipsLocalEntry();
+        continue;
+      }
     }
 
     // If a symbol in a DSO is referenced directly instead of through GOT,
@@ -358,13 +358,15 @@ void Writer<ELFT>::scanRelocs(
         continue;
       Out<ELFT>::Got->addEntry(Body);
 
-      if (Config->EMachine == EM_MIPS)
+      if (Config->EMachine == EM_MIPS) {
         // MIPS ABI has special rules to process GOT entries
         // and doesn't require relocation entries for them.
         // See "Global Offset Table" in Chapter 5 in the following document
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+        Body->setUsedInDynamicReloc();
         continue;
+      }
 
       bool CBP = canBePreempted(Body, /*NeedsGot=*/true);
       bool Dynrel = Config->Shared && !Target->isRelRelative(Type) &&
@@ -386,7 +388,7 @@ void Writer<ELFT>::scanRelocs(
         // relocation too because that case is possible for executable file
         // linking only.
         continue;
-      if (Body == Config->MipsGpDisp)
+      if (Body == Config->MipsGpDisp || Body == Config->MipsLocalGp)
         // MIPS _gp_disp designates offset between start of function and gp
         // pointer into GOT therefore any relocations against it do not require
         // dynamic relocation.

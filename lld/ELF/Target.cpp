@@ -1437,16 +1437,17 @@ bool MipsTargetInfo<ELFT>::needsPlt(uint32_t Type, const SymbolBody &S) const {
 
 static uint16_t mipsHigh(uint64_t V) { return (V + 0x8000) >> 16; }
 
-template <endianness E, uint8_t BSIZE>
+template <endianness E, uint8_t BSIZE, uint8_t SHIFT>
 static void applyMipsPcReloc(uint8_t *Loc, uint32_t Type, uint64_t P,
                              uint64_t SA) {
-  uint32_t Mask = ~(0xffffffff << BSIZE);
+  uint32_t Mask = 0xffffffff >> (32 - BSIZE);
   uint32_t Instr = read32<E>(Loc);
-  int64_t A = SignExtend64<BSIZE + 2>((Instr & Mask) << 2);
-  checkAlignment<4>(SA + A, Type);
+  int64_t A = SignExtend64<BSIZE + SHIFT>((Instr & Mask) << SHIFT);
+  if (SHIFT > 0)
+    checkAlignment<(1 << SHIFT)>(SA + A, Type);
   int64_t V = SA + A - P;
-  checkInt<BSIZE + 2>(V, Type);
-  write32<E>(Loc, (Instr & ~Mask) | ((V >> 2) & Mask));
+  checkInt<BSIZE + SHIFT>(V, Type);
+  write32<E>(Loc, (Instr & ~Mask) | ((V >> SHIFT) & Mask));
 }
 
 template <class ELFT>
@@ -1498,16 +1499,19 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     break;
   }
   case R_MIPS_PC16:
-    applyMipsPcReloc<E, 16>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 16, 2>(Loc, Type, P, SA);
     break;
   case R_MIPS_PC19_S2:
-    applyMipsPcReloc<E, 19>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 19, 2>(Loc, Type, P, SA);
     break;
   case R_MIPS_PC21_S2:
-    applyMipsPcReloc<E, 21>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 21, 2>(Loc, Type, P, SA);
     break;
   case R_MIPS_PC26_S2:
-    applyMipsPcReloc<E, 26>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 26, 2>(Loc, Type, P, SA);
+    break;
+  case R_MIPS_PC32:
+    applyMipsPcReloc<E, 32, 0>(Loc, Type, P, SA);
     break;
   case R_MIPS_PCHI16: {
     uint32_t Instr = read32<E>(Loc);
@@ -1546,6 +1550,7 @@ bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
   case R_MIPS_PC19_S2:
   case R_MIPS_PC21_S2:
   case R_MIPS_PC26_S2:
+  case R_MIPS_PC32:
   case R_MIPS_PCHI16:
   case R_MIPS_PCLO16:
     return true;
@@ -1560,20 +1565,6 @@ template <class ELFT> typename ELFFile<ELFT>::uintX_t getMipsGpAddr() {
   if (uint64_t V = Out<ELFT>::Got->getVA())
     return V + GPOffset;
   return 0;
-}
-
-bool needsMipsLocalGot(uint32_t Type, SymbolBody *Body) {
-  // The R_MIPS_GOT16 relocation requires creation of entry in the local part
-  // of GOT if its target is a local symbol or non-local symbol with 'local'
-  // visibility.
-  if (Type != R_MIPS_GOT16)
-    return false;
-  if (!Body)
-    return true;
-  uint8_t V = Body->getVisibility();
-  if (V != STV_DEFAULT && V != STV_PROTECTED)
-    return true;
-  return !Config->Shared;
 }
 
 template bool isGnuIFunc<ELF32LE>(const SymbolBody &S);

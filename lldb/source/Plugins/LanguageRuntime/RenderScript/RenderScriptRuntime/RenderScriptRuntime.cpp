@@ -2861,6 +2861,30 @@ RenderScriptRuntime::DumpAllocation(Stream &strm, StackFrame *frame_ptr, const u
     return true;
 }
 
+// Function recalculates all our cached information about allocations by jitting the
+// RS runtime regarding each allocation we know about.
+// Returns true if all allocations could be recomputed, false otherwise.
+bool
+RenderScriptRuntime::RecomputeAllAllocations(Stream &strm, StackFrame *frame_ptr)
+{
+    bool success = true;
+    for (auto &alloc : m_allocations)
+    {
+        // JIT current allocation information
+        if (!RefreshAllocation(alloc.get(), frame_ptr))
+        {
+            strm.Printf("Error: Couldn't evaluate details for allocation %" PRIu32 "\n", alloc->id);
+            success = false;
+        }
+    }
+
+    if (success)
+        strm.Printf("All allocations successfully recomputed");
+    strm.EOL();
+
+    return success;
+}
+
 // Prints information regarding currently loaded allocations.
 // These details are gathered by jitting the runtime, which has as latency.
 // Index parameter specifies a single allocation ID to print, or a zero value to print them all
@@ -4036,6 +4060,39 @@ public:
     }
 };
 
+class CommandObjectRenderScriptRuntimeAllocationRefresh : public CommandObjectParsed
+{
+public:
+    CommandObjectRenderScriptRuntimeAllocationRefresh(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "renderscript allocation refresh",
+                              "Recomputes the details of all allocations.", "renderscript allocation refresh",
+                              eCommandRequiresProcess | eCommandProcessMustBeLaunched)
+    {
+    }
+
+    ~CommandObjectRenderScriptRuntimeAllocationRefresh() override = default;
+
+    bool
+    DoExecute(Args &command, CommandReturnObject &result) override
+    {
+        RenderScriptRuntime *runtime = static_cast<RenderScriptRuntime *>(
+            m_exe_ctx.GetProcessPtr()->GetLanguageRuntime(eLanguageTypeExtRenderScript));
+
+        bool success = runtime->RecomputeAllAllocations(result.GetOutputStream(), m_exe_ctx.GetFramePtr());
+
+        if (success)
+        {
+            result.SetStatus(eReturnStatusSuccessFinishResult);
+            return true;
+        }
+        else
+        {
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+        }
+    }
+};
+
 class CommandObjectRenderScriptRuntimeAllocation : public CommandObjectMultiword
 {
 public:
@@ -4047,6 +4104,7 @@ public:
         LoadSubCommand("dump", CommandObjectSP(new CommandObjectRenderScriptRuntimeAllocationDump(interpreter)));
         LoadSubCommand("save", CommandObjectSP(new CommandObjectRenderScriptRuntimeAllocationSave(interpreter)));
         LoadSubCommand("load", CommandObjectSP(new CommandObjectRenderScriptRuntimeAllocationLoad(interpreter)));
+        LoadSubCommand("refresh", CommandObjectSP(new CommandObjectRenderScriptRuntimeAllocationRefresh(interpreter)));
     }
 
     ~CommandObjectRenderScriptRuntimeAllocation() override = default;
