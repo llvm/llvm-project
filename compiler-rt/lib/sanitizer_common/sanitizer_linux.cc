@@ -1155,6 +1155,11 @@ void *internal_start_thread(void (*func)(void *), void *arg) { return 0; }
 void internal_join_thread(void *th) {}
 #endif
 
+bool GetSigContextWriteFlag(void *context) {
+  ucontext_t *ucontext = (ucontext_t*)context;
+  return ucontext->uc_mcontext.gregs[REG_ERR] & 2;
+}
+
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #if defined(__arm__)
   ucontext_t *ucontext = (ucontext_t*)context;
