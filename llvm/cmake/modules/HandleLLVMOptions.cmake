@@ -656,6 +656,13 @@ append_if(LLVM_BUILD_INSTRUMENTED "-fprofile-instr-generate"
   CMAKE_EXE_LINKER_FLAGS
   CMAKE_SHARED_LINKER_FLAGS)
 
+option(LLVM_ENABLE_LTO "Enable link-time optimization" OFF)
+append_if(LLVM_ENABLE_LTO "-flto"
+  CMAKE_CXX_FLAGS
+  CMAKE_C_FLAGS
+  CMAKE_EXE_LINKER_FLAGS
+  CMAKE_SHARED_LINKER_FLAGS)
+
 # Plugin support
 # FIXME: Make this configurable.
 if(WIN32 OR CYGWIN)

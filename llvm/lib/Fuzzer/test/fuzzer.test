@@ -57,3 +57,6 @@ SINGLE_INPUTS: LLVMFuzzer-SimpleTest: Running 2 inputs.
 SINGLE_INPUTS: aaa:
 SINGLE_INPUTS: bbb:
 
+RUN: not LLVMFuzzer-LeakTest -runs=10 2>&1 | FileCheck %s --check-prefix=LEAK
+LEAK: ERROR: LeakSanitizer: detected memory leaks
+LEAK-NOT: DEATH:

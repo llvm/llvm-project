@@ -236,8 +236,8 @@ void CodeViewContext::emitInlineLineTableForFunction(
       SecondaryFunctionIds, OS.getCurrentSectionOnly());
 }
 
-unsigned computeLabelDiff(MCAsmLayout &Layout, const MCSymbol *Begin,
-                          const MCSymbol *End) {
+static unsigned computeLabelDiff(MCAsmLayout &Layout, const MCSymbol *Begin,
+                                 const MCSymbol *End) {
   MCContext &Ctx = Layout.getAssembler().getContext();
   MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
   const MCExpr *BeginRef = MCSymbolRefExpr::create(Begin, Variant, Ctx),
@@ -338,9 +338,15 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
       computeLabelDiff(Layout, LastLoc->getLabel(), Frag.getFnEndSym());
   unsigned LocAfterLength = ~0U;
   ArrayRef<MCCVLineEntry> LocAfter = getLinesForExtent(LocEnd, LocEnd + 1);
-  if (!LocAfter.empty())
-    LocAfterLength =
-        computeLabelDiff(Layout, LastLoc->getLabel(), LocAfter[0].getLabel());
+  if (!LocAfter.empty()) {
+    // Only try to compute this difference if we're in the same section.
+    const MCCVLineEntry &Loc = LocAfter[0];
+    if (&Loc.getLabel()->getSection(false) ==
+        &LastLoc->getLabel()->getSection(false)) {
+      LocAfterLength =
+          computeLabelDiff(Layout, LastLoc->getLabel(), Loc.getLabel());
+    }
+  }
 
   compressAnnotation(ChangeCodeLength, Buffer);
   compressAnnotation(std::min(EndSymLength, LocAfterLength), Buffer);

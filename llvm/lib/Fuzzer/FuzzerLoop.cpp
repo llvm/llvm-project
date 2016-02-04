@@ -75,6 +75,7 @@ void Fuzzer::StaticDeathCallback() {
 }
 
 void Fuzzer::DeathCallback() {
+  if (!CurrentUnitSize) return;
   Printf("DEATH:\n");
   if (CurrentUnitSize <= kMaxUnitSizeToPrint) {
     PrintHexArray(CurrentUnitData, CurrentUnitSize, "\n");

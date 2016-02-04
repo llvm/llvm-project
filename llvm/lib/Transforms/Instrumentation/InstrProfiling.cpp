@@ -277,7 +277,7 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
 static inline Comdat *getOrCreateProfileComdat(Module &M,
                                                InstrProfIncrementInst *Inc) {
   // COFF format requires a COMDAT section to have a key symbol with the same
-  // name. The linker targeting COFF also requires that the COMDAT section
+  // name. The linker targeting COFF also requires that the COMDAT
   // a section is associated to must precede the associating section. For this
   // reason, we must choose the name var's name as the name of the comdat.
   StringRef ComdatPrefix = (Triple(M.getTargetTriple()).isOSBinFormatCOFF()

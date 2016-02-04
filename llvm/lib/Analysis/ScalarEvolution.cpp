@@ -115,6 +115,10 @@ MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
 static cl::opt<bool>
 VerifySCEV("verify-scev",
            cl::desc("Verify ScalarEvolution's backedge taken counts (slow)"));
+static cl::opt<bool>
+    VerifySCEVMap("verify-scev-maps",
+                  cl::desc("Verify no dangling value in ScalarEvolution's"
+                           "ExprValueMap (slow)"));
 
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
@@ -3310,6 +3314,73 @@ bool ScalarEvolution::checkValidity(const SCEV *S) const {
   return !F.FindOne;
 }
 
+namespace {
+// Helper class working with SCEVTraversal to figure out if a SCEV contains
+// a sub SCEV of scAddRecExpr type.  FindInvalidSCEVUnknown::FoundOne is set
+// iff if such sub scAddRecExpr type SCEV is found.
+struct FindAddRecurrence {
+  bool FoundOne;
+  FindAddRecurrence() : FoundOne(false) {}
+
+  bool follow(const SCEV *S) {
+    switch (static_cast<SCEVTypes>(S->getSCEVType())) {
+    case scAddRecExpr:
+      FoundOne = true;
+    case scConstant:
+    case scUnknown:
+    case scCouldNotCompute:
+      return false;
+    default:
+      return true;
+    }
+  }
+  bool isDone() const { return FoundOne; }
+};
+}
+
+bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
+  HasRecMapType::iterator I = HasRecMap.find_as(S);
+  if (I != HasRecMap.end())
+    return I->second;
+
+  FindAddRecurrence F;
+  SCEVTraversal<FindAddRecurrence> ST(F);
+  ST.visitAll(S);
+  HasRecMap.insert(std::make_pair(S, F.FoundOne));
+  return F.FoundOne;
+}
+
+/// getSCEVValues - Return the Value set from S.
+SetVector<Value *> *ScalarEvolution::getSCEVValues(const SCEV *S) {
+  ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
+  if (SI == ExprValueMap.end())
+    return nullptr;
+#ifndef NDEBUG
+  if (VerifySCEVMap) {
+    // Check there is no dangling Value in the set returned.
+    for (const auto &VE : SI->second)
+      assert(ValueExprMap.count(VE));
+  }
+#endif
+  return &SI->second;
+}
+
+/// eraseValueFromMap - Erase Value from ValueExprMap and ExprValueMap.
+/// If ValueExprMap.erase(V) is not used together with forgetMemoizedResults(S),
+/// eraseValueFromMap should be used instead to ensure whenever V->S is removed
+/// from ValueExprMap, V is also removed from the set of ExprValueMap[S].
+void ScalarEvolution::eraseValueFromMap(Value *V) {
+  ValueExprMapType::iterator I = ValueExprMap.find_as(V);
+  if (I != ValueExprMap.end()) {
+    const SCEV *S = I->second;
+    SetVector<Value *> *SV = getSCEVValues(S);
+    // Remove V from the set of ExprValueMap[S]
+    if (SV)
+      SV->remove(V);
+    ValueExprMap.erase(V);
+  }
+}
+
 /// getSCEV - Return an existing SCEV if it exists, otherwise analyze the
 /// expression and create a new one.
 const SCEV *ScalarEvolution::getSCEV(Value *V) {
@@ -3318,7 +3389,13 @@ const SCEV *ScalarEvolution::getSCEV(Value *V) {
   const SCEV *S = getExistingSCEV(V);
   if (S == nullptr) {
     S = createSCEV(V);
-    ValueExprMap.insert(std::make_pair(SCEVCallbackVH(V, this), S));
+    // During PHI resolution, it is possible to create two SCEVs for the same
+    // V, so it is needed to double check whether V->S is inserted into
+    // ValueExprMap before insert S->V into ExprValueMap.
+    std::pair<ValueExprMapType::iterator, bool> Pair =
+        ValueExprMap.insert(std::make_pair(SCEVCallbackVH(V, this), S));
+    if (Pair.second)
+      ExprValueMap[S].insert(V);
   }
   return S;
 }
@@ -3331,6 +3408,7 @@ const SCEV *ScalarEvolution::getExistingSCEV(Value *V) {
     const SCEV *S = I->second;
     if (checkValidity(S))
       return S;
+    forgetMemoizedResults(S);
     ValueExprMap.erase(I);
   }
   return nullptr;
@@ -8967,7 +9045,7 @@ void ScalarEvolution::SCEVCallbackVH::deleted() {
   assert(SE && "SCEVCallbackVH called with a null ScalarEvolution!");
   if (PHINode *PN = dyn_cast<PHINode>(getValPtr()))
     SE->ConstantEvolutionLoopExitValue.erase(PN);
-  SE->ValueExprMap.erase(getValPtr());
+  SE->eraseValueFromMap(getValPtr());
   // this now dangles!
 }
 
@@ -8990,13 +9068,13 @@ void ScalarEvolution::SCEVCallbackVH::allUsesReplacedWith(Value *V) {
       continue;
     if (PHINode *PN = dyn_cast<PHINode>(U))
       SE->ConstantEvolutionLoopExitValue.erase(PN);
-    SE->ValueExprMap.erase(U);
+    SE->eraseValueFromMap(U);
     Worklist.insert(Worklist.end(), U->user_begin(), U->user_end());
   }
   // Delete the Old value.
   if (PHINode *PN = dyn_cast<PHINode>(Old))
     SE->ConstantEvolutionLoopExitValue.erase(PN);
-  SE->ValueExprMap.erase(Old);
+  SE->eraseValueFromMap(Old);
   // this now dangles!
 }
 
@@ -9046,7 +9124,9 @@ ScalarEvolution::~ScalarEvolution() {
   }
   FirstUnknown = nullptr;
 
+  ExprValueMap.clear();
   ValueExprMap.clear();
+  HasRecMap.clear();
 
   // Free any extra memory created for ExitNotTakenInfo in the unlikely event
   // that a loop had multiple computable exits.
@@ -9375,6 +9455,8 @@ void ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
   BlockDispositions.erase(S);
   UnsignedRanges.erase(S);
   SignedRanges.erase(S);
+  ExprValueMap.erase(S);
+  HasRecMap.erase(S);
 
   for (DenseMap<const Loop*, BackedgeTakenInfo>::iterator I =
          BackedgeTakenCounts.begin(), E = BackedgeTakenCounts.end(); I != E; ) {
