@@ -27,9 +27,14 @@
  * If xyz has non-zero initial value, __emutls_v.xyz's "value"
  * will point to __emutls_t.xyz, which has the initial value.
  */
+typedef unsigned int gcc_word __attribute__((mode(word)));
 typedef struct __emutls_control {
-    size_t size;  /* size of the object in bytes */
-    size_t align;  /* alignment of the object in bytes */
+    /* Must use gcc_word here, instead of size_t, to match GCC.  When
+       gcc_word is larger than size_t, the upper extra bits are all
+       zeros.  We can use variables of size_t to operate on size and
+       align.  */
+    gcc_word size;  /* size of the object in bytes */
+    gcc_word align;  /* alignment of the object in bytes */
     union {
         uintptr_t index;  /* data[index-1] is the object address */
         void* address;  /* object address, when in single thread env */
@@ -67,21 +72,20 @@ static __inline void emutls_memalign_free(void *base) {
 /* Emulated TLS objects are always allocated at run-time. */
 static __inline void *emutls_allocate_object(__emutls_control *control) {
     /* Use standard C types, check with gcc's emutls.o. */
-    typedef unsigned int gcc_word __attribute__((mode(word)));
     typedef unsigned int gcc_pointer __attribute__((mode(pointer)));
-    COMPILE_TIME_ASSERT(sizeof(size_t) == sizeof(gcc_word));
     COMPILE_TIME_ASSERT(sizeof(uintptr_t) == sizeof(gcc_pointer));
     COMPILE_TIME_ASSERT(sizeof(uintptr_t) == sizeof(void*));
 
     size_t size = control->size;
     size_t align = control->align;
+    void* base;
     if (align < sizeof(void*))
         align = sizeof(void*);
     /* Make sure that align is power of 2. */
     if ((align & (align - 1)) != 0)
         abort();
 
-    void* base = emutls_memalign_alloc(align, size);
+    base = emutls_memalign_alloc(align, size);
     if (control->value)
         memcpy(base, control->value, size);
     else
