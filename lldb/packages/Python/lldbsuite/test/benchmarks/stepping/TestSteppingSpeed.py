@@ -7,6 +7,9 @@ import lldb
 from lldbsuite.test import configuration
 from lldbsuite.test import lldbtest_config
 from lldbsuite.test.lldbbench import *
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class SteppingSpeedBench(BenchBase):
 

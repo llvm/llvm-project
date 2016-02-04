@@ -9,7 +9,9 @@ from __future__ import print_function
 import os, time
 import lldb
 from lldbsuite.test.lldbbench import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class TestBenchmarkLibcxxMap(BenchBase):
 

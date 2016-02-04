@@ -4,10 +4,10 @@ Test that the lldb-mi driver exits properly.
 
 from __future__ import print_function
 
-
-
 import lldbmi_testcase
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
 

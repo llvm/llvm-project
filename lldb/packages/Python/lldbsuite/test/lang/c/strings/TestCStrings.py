@@ -2,8 +2,9 @@
 Tests that C strings work as expected in expressions
 """
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class CStringsTestCase(TestBase):
     

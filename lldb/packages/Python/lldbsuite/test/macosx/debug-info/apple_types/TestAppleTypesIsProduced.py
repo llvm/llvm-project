@@ -8,7 +8,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbutil import symbol_type_to_str
 
 class AppleTypesTestCase(TestBase):

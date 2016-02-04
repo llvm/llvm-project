@@ -5,10 +5,12 @@ from __future__ import print_function
 
 
 import os, re
-from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
-import lldb
 import subprocess
+
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class TestMultipleSimultaneousDebuggers(TestBase):
 

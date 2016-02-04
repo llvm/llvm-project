@@ -8,6 +8,7 @@ import os, time
 import lldb
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbplatformutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 class AssertingInferiorTestCase(TestBase):

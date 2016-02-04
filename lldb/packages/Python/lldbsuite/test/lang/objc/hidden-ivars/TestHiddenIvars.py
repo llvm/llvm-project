@@ -5,11 +5,14 @@ from __future__ import print_function
 
 
 import unittest2
-import os, time
-import lldb
-from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+import os
 import subprocess
+import time
+
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class HiddenIvarsTestCase(TestBase):
 

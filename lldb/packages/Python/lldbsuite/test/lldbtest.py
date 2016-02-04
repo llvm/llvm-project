@@ -37,6 +37,7 @@ from __future__ import absolute_import
 # System modules
 import abc
 import collections
+from functools import wraps
 import gc
 import glob
 import inspect
@@ -441,438 +442,6 @@ def builder_module():
         return __import__("builder_netbsd")
     return __import__("builder_" + sys.platform)
 
-#
-# Decorators for categorizing test cases.
-#
-from functools import wraps
-
-def skip_for_android(reason, api_levels, archs):
-    def impl(obj):
-        result = lldbplatformutil.match_android_device(obj.getArchitecture(), valid_archs=archs, valid_api_levels=api_levels)
-        return reason if result else None
-    return impl
-
-def add_test_categories(cat):
-    """Add test categories to a TestCase method"""
-    cat = test_categories.validate(cat, True)
-    def impl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-            raise Exception("@add_test_categories can only be used to decorate a test method")
-        if hasattr(func, "categories"):
-            cat.extend(func.categories)
-        func.categories = cat
-        return func
-
-    return impl
-
-def benchmarks_test(func):
-    """Decorate the item as a benchmarks test."""
-    def should_skip_benchmarks_test():
-        return "benchmarks test"
-
-    # Mark this function as such to separate them from the regular tests.
-    result = decorators.skipTestIfFn(should_skip_benchmarks_test)(func)
-    result.__benchmarks_test__ = True
-    return result
-
-def no_debug_info_test(func):
-    """Decorate the item as a test what don't use any debug info. If this annotation is specified
-       then the test runner won't generate a separate test for each debug info format. """
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-        raise Exception("@no_debug_info_test can only be used to decorate a test method")
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        return func(self, *args, **kwargs)
-
-    # Mark this function as such to separate them from the regular tests.
-    wrapper.__no_debug_info_test__ = True
-    return wrapper
-
-def debugserver_test(func):
-    """Decorate the item as a debugserver test."""
-    def should_skip_debugserver_test():
-        return "debugserver tests" if configuration.dont_do_debugserver_test else None
-    return decorators.skipTestIfFn(should_skip_debugserver_test)(func)
-
-def llgs_test(func):
-    """Decorate the item as a lldb-server test."""
-    def should_skip_llgs_tests():
-        return "llgs tests" if configuration.dont_do_llgs_test else None
-    return decorators.skipTestIfFn(should_skip_llgs_tests)(func)
-
-def not_remote_testsuite_ready(func):
-    """Decorate the item as a test which is not ready yet for remote testsuite."""
-    def is_remote():
-        return "Not ready for remote testsuite" if lldb.remote_platform else None
-    return decorators.skipTestIfFn(is_remote)(func)
-
-# You can also pass not_in(list) to reverse the sense of the test for the arguments that
-# are simple lists, namely oslist, compiler, and debug_info.
-
-def not_in(iterable):
-    return lambda x : x not in iterable
-
-def matchArchitectures(archs, actual_arch):
-    retype = type(re.compile('hello, world'))
-    list_passes = isinstance(archs, list) and actual_arch in archs
-    basestring_passes = isinstance(archs, six.string_types) and actual_arch == archs
-    regex_passes = isinstance(archs, retype) and re.match(archs, actual_arch)
-
-    return (list_passes or basestring_passes or regex_passes)
-
-def expectedFailureDwarf(bugnumber=None):
-    return decorators.expectedFailureAll(bugnumber=bugnumber, debug_info="dwarf")
-
-def expectedFailureDwo(bugnumber=None):
-    return decorators.expectedFailureAll(bugnumber=bugnumber, debug_info="dwo")
-
-def expectedFailureDsym(bugnumber=None):
-    return decorators.expectedFailureAll(bugnumber=bugnumber, debug_info="dsym")
-
-def expectedFailureCompiler(compiler, compiler_version=None, bugnumber=None):
-    if compiler_version is None:
-        compiler_version=['=', None]
-    return decorators.expectedFailureAll(bugnumber=bugnumber, compiler=compiler, compiler_version=compiler_version)
-
-# to XFAIL a specific clang versions, try this
-# @expectedFailureClang('bugnumber', ['<=', '3.4'])
-def expectedFailureClang(bugnumber=None, compiler_version=None):
-    return expectedFailureCompiler('clang', compiler_version, bugnumber)
-
-def expectedFailureGcc(bugnumber=None, compiler_version=None):
-    return expectedFailureCompiler('gcc', compiler_version, bugnumber)
-
-def expectedFailureIcc(bugnumber=None):
-    return expectedFailureCompiler('icc', None, bugnumber)
-
-def expectedFailureArch(arch, bugnumber=None):
-    return decorators.expectedFailureAll(archs=arch, bugnumber=bugnumber)
-
-def expectedFailurei386(bugnumber=None):
-    return expectedFailureArch('i386', bugnumber)
-
-def expectedFailurex86_64(bugnumber=None):
-    return expectedFailureArch('x86_64', bugnumber)
-
-def expectedFailureOS(oslist, bugnumber=None, compilers=None, debug_info=None, archs=None):
-    return decorators.expectedFailureAll(oslist=oslist, bugnumber=bugnumber, compiler=compilers, archs=archs, debug_info=debug_info)
-
-def expectedFailureHostOS(oslist, bugnumber=None, compilers=None):
-    return decorators.expectedFailureAll(hostoslist=oslist, bugnumber=bugnumber)
-
-def expectedFailureDarwin(bugnumber=None, compilers=None, debug_info=None):
-    # For legacy reasons, we support both "darwin" and "macosx" as OS X triples.
-    return expectedFailureOS(getDarwinOSTriples(), bugnumber, compilers, debug_info=debug_info)
-
-def expectedFailureFreeBSD(bugnumber=None, compilers=None, debug_info=None):
-    return expectedFailureOS(['freebsd'], bugnumber, compilers, debug_info=debug_info)
-
-def expectedFailureLinux(bugnumber=None, compilers=None, debug_info=None, archs=None):
-    return expectedFailureOS(['linux'], bugnumber, compilers, debug_info=debug_info, archs=archs)
-
-def expectedFailureNetBSD(bugnumber=None, compilers=None, debug_info=None):
-    return expectedFailureOS(['netbsd'], bugnumber, compilers, debug_info=debug_info)
-
-def expectedFailureWindows(bugnumber=None, compilers=None, debug_info=None):
-    return expectedFailureOS(['windows'], bugnumber, compilers, debug_info=debug_info)
-
-def expectedFailureHostWindows(bugnumber=None, compilers=None):
-    return expectedFailureHostOS(['windows'], bugnumber, compilers)
-
-def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
-    """ Mark a test as xfail for Android.
-
-    Arguments:
-        bugnumber - The LLVM pr associated with the problem.
-        api_levels - A sequence of numbers specifying the Android API levels
-            for which a test is expected to fail. None means all API level.
-        arch - A sequence of architecture names specifying the architectures
-            for which a test is expected to fail. None means all architectures.
-    """
-    return decorators.expectedFailure(skip_for_android("xfailing on android", api_levels, archs), bugnumber)
-
-# Flakey tests get two chances to run. If they fail the first time round, the result formatter
-# makes sure it is run one more time.
-def expectedFlakey(expected_fn, bugnumber=None):
-    def expectedFailure_impl(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            self = args[0]
-            if expected_fn(self):
-                # Send event marking test as explicitly eligible for rerunning.
-                if configuration.results_formatter_object is not None:
-                    # Mark this test as rerunnable.
-                    configuration.results_formatter_object.handle_event(
-                        EventBuilder.event_for_mark_test_rerun_eligible(self))
-            func(*args, **kwargs)
-        return wrapper
-    # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
-    # or with arguments (e.g. @expectedFailureWindows(compilers=['gcc'])).  When called
-    # the first way, the first argument will be the actual function because decorators are
-    # weird like that.  So this is basically a check that says "which syntax was the original
-    # function decorated with?"
-    if six.callable(bugnumber):
-        return expectedFailure_impl(bugnumber)
-    else:
-        return expectedFailure_impl
-
-def expectedFlakeyDwarf(bugnumber=None):
-    def fn(self):
-        return self.debug_info == "dwarf"
-    return expectedFlakey(fn, bugnumber)
-
-def expectedFlakeyDsym(bugnumber=None):
-    def fn(self):
-        return self.debug_info == "dwarf"
-    return expectedFlakey(fn, bugnumber)
-
-def expectedFlakeyOS(oslist, bugnumber=None, compilers=None):
-    def fn(self):
-        return (self.getPlatform() in oslist and
-                self.expectedCompiler(compilers))
-    return expectedFlakey(fn, bugnumber)
-
-def expectedFlakeyDarwin(bugnumber=None, compilers=None):
-    # For legacy reasons, we support both "darwin" and "macosx" as OS X triples.
-    return expectedFlakeyOS(getDarwinOSTriples(), bugnumber, compilers)
-
-def expectedFlakeyFreeBSD(bugnumber=None, compilers=None):
-    return expectedFlakeyOS(['freebsd'], bugnumber, compilers)
-
-def expectedFlakeyLinux(bugnumber=None, compilers=None):
-    return expectedFlakeyOS(['linux'], bugnumber, compilers)
-
-def expectedFlakeyNetBSD(bugnumber=None, compilers=None):
-    return expectedFlakeyOS(['netbsd'], bugnumber, compilers)
-
-def expectedFlakeyCompiler(compiler, compiler_version=None, bugnumber=None):
-    if compiler_version is None:
-        compiler_version=['=', None]
-    def fn(self):
-        return compiler in self.getCompiler() and self.expectedCompilerVersion(compiler_version)
-    return expectedFlakey(fn, bugnumber)
-
-# @expectedFlakeyClang('bugnumber', ['<=', '3.4'])
-def expectedFlakeyClang(bugnumber=None, compiler_version=None):
-    return expectedFlakeyCompiler('clang', compiler_version, bugnumber)
-
-# @expectedFlakeyGcc('bugnumber', ['<=', '3.4'])
-def expectedFlakeyGcc(bugnumber=None, compiler_version=None):
-    return expectedFlakeyCompiler('gcc', compiler_version, bugnumber)
-
-def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
-    return expectedFlakey(skip_for_android("flakey on android", api_levels, archs), bugnumber)
-
-def skipIfRemote(func):
-    """Decorate the item to skip tests if testing remotely."""
-    def is_remote():
-        return "skip on remote platform" if lldb.remote_platform else None
-    return decorators.skipTestIfFn(is_remote)(func)
-
-def skipIfRemoteDueToDeadlock(func):
-    """Decorate the item to skip tests if testing remotely due to the test deadlocking."""
-    def is_remote():
-        return "skip on remote platform (deadlocks)" if lldb.remote_platform else None
-    return decorators.skipTestIfFn(is_remote)(func)
-
-def skipIfNoSBHeaders(func):
-    """Decorate the item to mark tests that should be skipped when LLDB is built with no SB API headers."""
-    def are_sb_headers_missing():
-        if sys.platform.startswith("darwin"):
-            header = os.path.join(os.environ["LLDB_LIB_DIR"], 'LLDB.framework', 'Versions','Current','Headers','LLDB.h')
-        else:
-            header = os.path.join(os.environ["LLDB_SRC"], "include", "lldb", "API", "LLDB.h")
-        platform = sys.platform
-        if not os.path.exists(header):
-            return "skip because LLDB.h header not found"
-        return None
-
-    return decorators.skipTestIfFn(are_sb_headers_missing)(func)
-
-def skipIfiOSSimulator(func):
-    """Decorate the item to skip tests that should be skipped on the iOS Simulator."""
-    def is_ios_simulator():
-        return "skip on the iOS Simulator" if configuration.lldb_platform_name == 'ios-simulator' else None
-    return decorators.skipTestIfFn(is_ios_simulator)(func)
-
-def skipIfFreeBSD(func):
-    """Decorate the item to skip tests that should be skipped on FreeBSD."""
-    return skipIfPlatform(["freebsd"])(func)
-
-def skipIfNetBSD(func):
-    """Decorate the item to skip tests that should be skipped on NetBSD."""
-    return skipIfPlatform(["netbsd"])(func)
-
-def getDarwinOSTriples():
-    return ['darwin', 'macosx', 'ios']
-
-def skipIfDarwin(func):
-    """Decorate the item to skip tests that should be skipped on Darwin."""
-    return skipIfPlatform(getDarwinOSTriples())(func)
-
-def skipIfLinux(func):
-    """Decorate the item to skip tests that should be skipped on Linux."""
-    return skipIfPlatform(["linux"])(func)
-
-def skipUnlessHostLinux(func):
-    """Decorate the item to skip tests that should be skipped on any non Linux host."""
-    return skipUnlessHostPlatform(["linux"])(func)
-
-def skipIfWindows(func):
-    """Decorate the item to skip tests that should be skipped on Windows."""
-    return skipIfPlatform(["windows"])(func)
-
-def skipIfHostWindows(func):
-    """Decorate the item to skip tests that should be skipped on Windows."""
-    return skipIfHostPlatform(["windows"])(func)
-
-def skipUnlessWindows(func):
-    """Decorate the item to skip tests that should be skipped on any non-Windows platform."""
-    return skipUnlessPlatform(["windows"])(func)
-
-def skipUnlessDarwin(func):
-    """Decorate the item to skip tests that should be skipped on any non Darwin platform."""
-    return skipUnlessPlatform(getDarwinOSTriples())(func)
-
-def skipUnlessGoInstalled(func):
-    """Decorate the item to skip tests when no Go compiler is available."""
-    def is_go_missing(self):
-        compiler = self.getGoCompilerVersion()
-        if not compiler:
-            return "skipping because go compiler not found"
-        match_version = re.search(r"(\d+\.\d+(\.\d+)?)", compiler)
-        if not match_version:
-            # Couldn't determine version.
-            return "skipping because go version could not be parsed out of {}".format(compiler)
-        else:
-            from distutils.version import StrictVersion
-            min_strict_version = StrictVersion("1.4.0")
-            compiler_strict_version = StrictVersion(match_version.group(1))
-            if compiler_strict_version < min_strict_version:
-                return "skipping because available version ({}) does not meet minimum required version ({})".format(
-                    compiler_strict_version, min_strict_version)
-        return None
-    return decorators.skipTestIfFn(is_go_missing)(func)
-
-def getPlatform():
-    """Returns the target platform which the tests are running on."""
-    platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
-    if platform.startswith('freebsd'):
-        platform = 'freebsd'
-    elif platform.startswith('netbsd'):
-        platform = 'netbsd'
-    return platform
-
-def platformIsDarwin():
-    """Returns true if the OS triple for the selected platform is any valid apple OS"""
-    return getPlatform() in getDarwinOSTriples()
-
-def skipIfHostIncompatibleWithRemote(func):
-    """Decorate the item to skip tests if binaries built on this host are incompatible."""
-    def is_host_incompatible_with_remote(self):
-        host_arch = self.getLldbArchitecture()
-        host_platform = lldbplatformutil.getHostPlatform()
-        target_arch = self.getArchitecture()
-        target_platform = 'darwin' if self.platformIsDarwin() else self.getPlatform()
-        if not (target_arch == 'x86_64' and host_arch == 'i386') and host_arch != target_arch:
-            return "skipping because target %s is not compatible with host architecture %s" % (target_arch, host_arch)
-        elif target_platform != host_platform:
-            return "skipping because target is %s but host is %s" % (target_platform, host_platform)
-        return None
-    return decorators.skipTestIfFn(is_host_incompatible_with_remote)(func)
-
-def skipIfHostPlatform(oslist):
-    """Decorate the item to skip tests if running on one of the listed host platforms."""
-    return decorators.skipIf(hostoslist=oslist)
-
-def skipUnlessHostPlatform(oslist):
-    """Decorate the item to skip tests unless running on one of the listed host platforms."""
-    return decorators.skipIf(hostoslist=not_in(oslist))
-
-def skipUnlessArch(archs):
-    """Decorate the item to skip tests unless running on one of the listed architectures."""
-    # This decorator cannot be ported to `skipIf` yet because it is uused with regular
-    # expressions, which the common matcher does not yet support.
-    def myImpl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-            raise Exception("@skipUnlessArch can only be used to decorate a test method")
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            self = args[0]
-            if not matchArchitectures(archs, self.getArchitecture()):
-                self.skipTest("skipping for architecture %s" % (self.getArchitecture())) 
-            else:
-                func(*args, **kwargs)
-        return wrapper
-
-    return myImpl
-
-def skipIfPlatform(oslist):
-    """Decorate the item to skip tests if running on one of the listed platforms."""
-    # This decorator cannot be ported to `skipIf` yet because it is used on entire
-    # classes, which `skipIf` explicitly forbids.
-    return unittest2.skipIf(getPlatform() in oslist,
-                            "skip on %s" % (", ".join(oslist)))
-
-def skipUnlessPlatform(oslist):
-    """Decorate the item to skip tests unless running on one of the listed platforms."""
-    # This decorator cannot be ported to `skipIf` yet because it is used on entire
-    # classes, which `skipIf` explicitly forbids.
-    return unittest2.skipUnless(getPlatform() in oslist,
-                                "requires on of %s" % (", ".join(oslist)))
-
-
-def skipIfDebugInfo(bugnumber=None, debug_info=None):
-    return decorators.skipIf(bugnumber=bugnumber, debug_info=debug_info)
-
-def skipIfDWO(bugnumber=None):
-    return skipIfDebugInfo(bugnumber, ["dwo"])
-
-def skipIfDwarf(bugnumber=None):
-    return skipIfDebugInfo(bugnumber, ["dwarf"])
-
-def skipIfDsym(bugnumber=None):
-    return skipIfDebugInfo(bugnumber, ["dsym"])
-
-def skipIfGcc(func):
-    """Decorate the item to skip tests that should be skipped if building with gcc ."""
-    return decorators.skipIf(compiler="gcc")(func)
-
-def skipIfIcc(func):
-    """Decorate the item to skip tests that should be skipped if building with icc ."""
-    return decorators.skipIf(compiler="icc")(func)
-
-def skipIfi386(func):
-    """Decorate the item to skip tests that should be skipped if building 32-bit."""
-    return decorators.skipIf(archs="i386")(func)
-
-def skipIfTargetAndroid(api_levels=None, archs=None):
-    """Decorator to skip tests when the target is Android.
-
-    Arguments:
-        api_levels - The API levels for which the test should be skipped. If
-            it is None, then the test will be skipped for all API levels.
-        arch - A sequence of architecture names specifying the architectures
-            for which a test is skipped. None means all architectures.
-    """
-    return decorators.skipTestIfFn(skip_for_android("skipping for android", api_levels, archs))
-
-def skipUnlessCompilerRt(func):
-    """Decorate the item to skip tests if testing remotely."""
-    def is_compiler_rt_missing():
-        compilerRtPath = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "llvm","projects","compiler-rt")
-        return "compiler-rt not found" if not os.path.exists(compilerRtPath) else None
-    return decorators.skipTestIfFn(is_compiler_rt_missing)(func)
-
-class _PlatformContext(object):
-    """Value object class which contains platform-specific options."""
-
-    def __init__(self, shlib_environment_var, shlib_prefix, shlib_extension):
-        self.shlib_environment_var = shlib_environment_var
-        self.shlib_prefix = shlib_prefix
-        self.shlib_extension = shlib_extension
-
 
 class Base(unittest2.TestCase):
     """
@@ -938,12 +507,7 @@ class Base(unittest2.TestCase):
                 raise ioerror
 
         # Set platform context.
-        if platformIsDarwin():
-            cls.platformContext = _PlatformContext('DYLD_LIBRARY_PATH', 'lib', 'dylib')
-        elif getPlatform() in ("freebsd", "linux", "netbsd"):
-            cls.platformContext = _PlatformContext('LD_LIBRARY_PATH', 'lib', 'so')
-        else:
-            cls.platformContext = None
+        cls.platformContext = lldbplatformutil.createPlatformContext()
 
     @classmethod
     def tearDownClass(cls):
@@ -1572,11 +1136,11 @@ class Base(unittest2.TestCase):
 
     def platformIsDarwin(self):
         """Returns true if the OS triple for the selected platform is any valid apple OS"""
-        return platformIsDarwin()
+        return lldbplatformutil.platformIsDarwin()
 
     def getPlatform(self):
         """Returns the target platform the test suite is running on."""
-        return getPlatform()
+        return lldbplatformutil.getPlatform()
 
     def isIntelCompiler(self):
         """ Returns true if using an Intel (ICC) compiler, false otherwise. """
@@ -1871,7 +1435,7 @@ class LLDBTestCaseFactory(type):
                 supported_categories = [x for x in categories 
                                         if test_categories.is_supported_on_platform(x, target_platform)]
                 if "dsym" in supported_categories:
-                    @add_test_categories(["dsym"])
+                    @decorators.add_test_categories(["dsym"])
                     @wraps(attrvalue)
                     def dsym_test_method(self, attrvalue=attrvalue):
                         self.debug_info = "dsym"
@@ -1881,7 +1445,7 @@ class LLDBTestCaseFactory(type):
                     newattrs[dsym_method_name] = dsym_test_method
 
                 if "dwarf" in supported_categories:
-                    @add_test_categories(["dwarf"])
+                    @decorators.add_test_categories(["dwarf"])
                     @wraps(attrvalue)
                     def dwarf_test_method(self, attrvalue=attrvalue):
                         self.debug_info = "dwarf"
@@ -1891,7 +1455,7 @@ class LLDBTestCaseFactory(type):
                     newattrs[dwarf_method_name] = dwarf_test_method
 
                 if "dwo" in supported_categories:
-                    @add_test_categories(["dwo"])
+                    @decorators.add_test_categories(["dwo"])
                     @wraps(attrvalue)
                     def dwo_test_method(self, attrvalue=attrvalue):
                         self.debug_info = "dwo"

@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
 
 class ProcessAPITestCase(TestBase):
 

@@ -8,10 +8,12 @@ from __future__ import print_function
 
 import os
 import re
-import lldb
-import lldbsuite.test.lldbutil as lldbutil
 import sys
+
+import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class ReturnValueTestCase(TestBase):
 

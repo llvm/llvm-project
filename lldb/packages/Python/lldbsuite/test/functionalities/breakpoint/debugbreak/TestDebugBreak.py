@@ -27,7 +27,7 @@ class DebugBreakTestCase(TestBase):
 
         # We've hit the first stop, so grab the frame.
         self.assertEqual(process.GetState(), lldb.eStateStopped)
-        stop_reason = lldb.eStopReasonException if (getPlatform()=="windows") else lldb.eStopReasonSignal
+        stop_reason = lldb.eStopReasonException if (lldbplatformutil.getPlatform()=="windows") else lldb.eStopReasonSignal
         thread = lldbutil.get_stopped_thread(process, stop_reason)
         self.assertIsNotNone(thread, "Unable to find thread stopped at the __debugbreak()")
         frame = thread.GetFrameAtIndex(0)

@@ -8,7 +8,9 @@ from __future__ import print_function
 
 import os, time, re
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class SettingsCommandTestCase(TestBase):
 

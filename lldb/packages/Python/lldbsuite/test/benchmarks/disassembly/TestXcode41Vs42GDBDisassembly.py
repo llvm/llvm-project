@@ -6,8 +6,11 @@ from __future__ import print_function
 
 import os, sys
 import lldb
-from lldbsuite.test import configuration
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import configuration
+from lldbsuite.test import lldbutil
 
 class XCode41Vs42GDBDisassembly(BenchBase):
 

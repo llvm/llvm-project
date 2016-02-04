@@ -6,9 +6,10 @@ from __future__ import print_function
 
 import os, time
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
-import lldbsuite.test.lldbplatformutil as lldbplatformutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbplatformutil
+from lldbsuite.test import lldbutil
 
 class CrashingRecursiveInferiorTestCase(TestBase):
 
