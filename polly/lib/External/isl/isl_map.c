@@ -11090,7 +11090,8 @@ __isl_give isl_map *isl_map_flatten_range(__isl_take isl_map *map)
 }
 
 /* Reorder the dimensions of "bmap" according to the given dim_map
- * and set the dimension specification to "dim".
+ * and set the dimension specification to "dim" and
+ * perform Gaussian elimination on the result.
  */
 __isl_give isl_basic_map *isl_basic_map_realign(__isl_take isl_basic_map *bmap,
 	__isl_take isl_space *dim, __isl_take struct isl_dim_map *dim_map)
@@ -11111,6 +11112,7 @@ __isl_give isl_basic_map *isl_basic_map_realign(__isl_take isl_basic_map *bmap,
 	res = isl_basic_map_add_constraints_dim_map(res, bmap, dim_map);
 	if (res)
 		res->flags = flags;
+	res = isl_basic_map_gauss(res, NULL);
 	res = isl_basic_map_finalize(res);
 	return res;
 error:

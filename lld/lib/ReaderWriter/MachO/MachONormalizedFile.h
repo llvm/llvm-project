@@ -253,6 +253,7 @@ struct NormalizedFile {
   Hex64                       sourceVersion = 0;
   PackedVersion               minOSverson = 0;
   PackedVersion               sdkVersion = 0;
+  LoadCommandType             minOSVersionKind = (LoadCommandType)0;
 
   // Maps to load commands with LINKEDIT content (final linked images only).
   Hex32                       pageSize = 0;

@@ -236,12 +236,13 @@ public:
 
   ///  @brief Update the sizes of the ScopArrayInfo object.
   ///
-  ///  A ScopArrayInfo object may with certain outer dimensions not being added
-  ///  on the first creation. This function allows to update the sizes of the
-  ///  ScopArrayInfo object by adding additional outer array dimensions.
+  ///  A ScopArrayInfo object may be created without all outer dimensions being
+  ///  available. This function is called when new memory accesses are added for
+  ///  this ScopArrayInfo object. It verifies that sizes are compatible and adds
+  ///  additional outer array dimensions, if needed.
   ///
-  ///  @param A vector of array sizes where the rightmost array sizes need to
-  ///         match the innermost array sizes already defined in SAI.
+  ///  @param Sizes A vector of array sizes where the rightmost array sizes need
+  ///               to match the innermost array sizes already defined in SAI.
   ///  @returns Returns true if the update was successful, otherwise false.
   bool updateSizes(ArrayRef<const SCEV *> Sizes);
 
@@ -291,7 +292,9 @@ public:
     return isl_pw_aff_copy(DimensionSizesPw[Dim - 1]);
   }
 
-  /// @brief Get the type of the elements stored in this array.
+  /// @brief Get the canonical element type of this array.
+  ///
+  /// @returns The canonical element type of this array.
   Type *getElementType() const { return ElementType; }
 
   /// @brief Get element size in bytes.
@@ -347,7 +350,12 @@ private:
   /// @brief The base pointer.
   AssertingVH<Value> BasePtr;
 
-  /// @brief The type of the elements stored in this array.
+  /// @brief The canonical element type of this array.
+  ///
+  /// The canonical element type describes the minimal accessible element in
+  /// this array. Not all elements accessed, need to be of the very same type,
+  /// but the allocation size of the type of the elements loaded/stored from/to
+  /// this array needs to match the allocation size of the canonical type.
   Type *ElementType;
 
   /// @brief The isl id for the base pointer.
@@ -776,8 +784,8 @@ public:
   /// @brief Update the dimensionality of the memory access.
   ///
   /// During scop construction some memory accesses may not be constructed with
-  /// their full dimensionality, but outer dimensions that may have been omitted
-  /// if they took the value 'zero'. By updating the dimensionality of the
+  /// their full dimensionality, but outer dimensions may have been omitted if
+  /// they took the value 'zero'. By updating the dimensionality of the
   /// statement we add additional zero-valued dimensions to match the
   /// dimensionality of the ScopArrayInfo object that belongs to this memory
   /// access.

@@ -128,6 +128,18 @@ public:
   void      copyEntryPointAddress(NormalizedFile &file);
   void      copySectionContent(NormalizedFile &file);
 
+  bool allSourceFilesHaveMinVersions() const {
+    return _allSourceFilesHaveMinVersions;
+  }
+
+  uint32_t minVersion() const {
+    return _minVersion;
+  }
+
+  LoadCommandType minVersionCommandType() const {
+    return _minVersionCommandType;
+  }
+
 private:
   typedef std::map<DefinedAtom::ContentType, SectionInfo*> TypeToSection;
   typedef llvm::DenseMap<const Atom*, uint64_t> AtomToAddress;
@@ -183,6 +195,9 @@ private:
   std::vector<const Atom *>     _machHeaderAliasAtoms;
   bool                          _hasTLVDescriptors;
   bool                          _subsectionsViaSymbols;
+  bool                          _allSourceFilesHaveMinVersions = true;
+  LoadCommandType               _minVersionCommandType = (LoadCommandType)0;
+  uint32_t                      _minVersion = 0;
 };
 
 Util::~Util() {
@@ -287,7 +302,7 @@ SectionInfo *Util::getFinalSection(DefinedAtom::ContentType atomType) {
     case DefinedAtom::typeCode:
     case DefinedAtom::typeStub:
     case DefinedAtom::typeStubHelper:
-      sectionAttrs = S_ATTR_PURE_INSTRUCTIONS;
+      sectionAttrs = S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS;
       break;
     case DefinedAtom::typeThunkTLV:
       _hasTLVDescriptors = true;
@@ -378,11 +393,25 @@ void Util::processDefinedAtoms(const lld::File &atomFile) {
 }
 
 void Util::processAtomAttributes(const DefinedAtom *atom) {
-  // If the file doesn't use subsections via symbols, then make sure we don't
-  // add that flag to the final output file if we have a relocatable file.
-  if (auto *machoFile = dyn_cast<mach_o::MachOFile>(&atom->file()))
+  if (auto *machoFile = dyn_cast<mach_o::MachOFile>(&atom->file())) {
+    // If the file doesn't use subsections via symbols, then make sure we don't
+    // add that flag to the final output file if we have a relocatable file.
     if (!machoFile->subsectionsViaSymbols())
       _subsectionsViaSymbols = false;
+
+    // All the source files must have min versions for us to output an object
+    // file with a min version.
+    if (auto v = machoFile->minVersion())
+      _minVersion = std::max(_minVersion, v);
+    else
+      _allSourceFilesHaveMinVersions = false;
+
+    // If we don't have a platform load command, but one of the source files
+    // does, then take the one from the file.
+    if (!_minVersionCommandType)
+      if (auto v = machoFile->minVersionLoadCommandKind())
+        _minVersionCommandType = v;
+  }
 }
 
 void Util::assignAtomToSection(const DefinedAtom *atom) {
@@ -1245,14 +1274,32 @@ normalizedFromAtoms(const lld::File &atomFile,
   normFile.currentVersion = context.currentVersion();
   normFile.compatVersion = context.compatibilityVersion();
   normFile.os = context.os();
-  normFile.minOSverson = context.osMinVersion();
-  // FIXME: We need to get the SDK version from the system.  For now the min
-  // OS version is better than nothing.
-  normFile.sdkVersion = context.osMinVersion();
+
+  // If we are emitting an object file, then the min version is the maximum
+  // of the min's of all the source files and the cmdline.
+  if (normFile.fileType == llvm::MachO::MH_OBJECT)
+    normFile.minOSverson = std::max(context.osMinVersion(), util.minVersion());
+  else
+    normFile.minOSverson = context.osMinVersion();
+
+  normFile.minOSVersionKind = util.minVersionCommandType();
+
+  normFile.sdkVersion = context.sdkVersion();
+  normFile.sourceVersion = context.sourceVersion();
 
   if (context.generateVersionLoadCommand() &&
       context.os() != MachOLinkingContext::OS::unknown)
     normFile.hasMinVersionLoadCommand = true;
+  else if (normFile.fileType == llvm::MachO::MH_OBJECT &&
+           util.allSourceFilesHaveMinVersions() &&
+           ((normFile.os != MachOLinkingContext::OS::unknown) ||
+            util.minVersionCommandType())) {
+    // If we emit an object file, then it should contain a min version load
+    // command if all of the source files also contained min version commands.
+    // Also, we either need to have a platform, or found a platform from the
+    // source object files.
+    normFile.hasMinVersionLoadCommand = true;
+  }
   normFile.pageSize = context.pageSize();
   normFile.rpaths = context.rpaths();
   util.addDependentDylibs(atomFile, normFile);

@@ -373,6 +373,9 @@ struct isl_basic_set *isl_basic_set_preimage(struct isl_basic_set *bset,
 	struct isl_mat *mat);
 struct isl_set *isl_set_preimage(struct isl_set *set, struct isl_mat *mat);
 
+__isl_give isl_basic_map *isl_basic_map_transform_dims(
+	__isl_take isl_basic_map *bmap, enum isl_dim_type type, unsigned first,
+	__isl_take isl_mat *trans);
 __isl_give isl_basic_set *isl_basic_set_transform_dims(
 	__isl_take isl_basic_set *bset, enum isl_dim_type type, unsigned first,
 	__isl_take isl_mat *trans);

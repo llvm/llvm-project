@@ -209,6 +209,9 @@ public:
     void
     ListAllocations(Stream &strm, StackFrame *frame_ptr, const uint32_t index);
 
+    bool
+    RecomputeAllAllocations(Stream &strm, StackFrame *frame_ptr);
+
     void
     PlaceBreakpointOnKernel(Stream &strm, const char *name, const std::array<int, 3> coords, Error &error,
                             lldb::TargetSP target);

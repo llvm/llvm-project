@@ -524,6 +524,14 @@ struct ScalarEnumerationTraits<LoadCommandType> {
                         llvm::MachO::LC_LOAD_UPWARD_DYLIB);
     io.enumCase(value, "LC_LAZY_LOAD_DYLIB",
                         llvm::MachO::LC_LAZY_LOAD_DYLIB);
+    io.enumCase(value, "LC_VERSION_MIN_MACOSX",
+                        llvm::MachO::LC_VERSION_MIN_MACOSX);
+    io.enumCase(value, "LC_VERSION_MIN_IPHONEOS",
+                        llvm::MachO::LC_VERSION_MIN_IPHONEOS);
+    io.enumCase(value, "LC_VERSION_MIN_TVOS",
+                        llvm::MachO::LC_VERSION_MIN_TVOS);
+    io.enumCase(value, "LC_VERSION_MIN_WATCHOS",
+                        llvm::MachO::LC_VERSION_MIN_WATCHOS);
   }
 };
 
@@ -692,6 +700,7 @@ struct MappingTraits<NormalizedFile> {
     io.mapOptional("source-version",   file.sourceVersion,  Hex64(0));
     io.mapOptional("OS",               file.os);
     io.mapOptional("min-os-version",   file.minOSverson,    PackedVersion(0));
+    io.mapOptional("min-os-version-kind",   file.minOSVersionKind, (LoadCommandType)0);
     io.mapOptional("sdk-version",      file.sdkVersion,     PackedVersion(0));
     io.mapOptional("segments",         file.segments);
     io.mapOptional("sections",         file.sections);

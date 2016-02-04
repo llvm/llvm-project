@@ -317,6 +317,10 @@ MachOFileLayout::MachOFileLayout(const NormalizedFile &file)
                                + file.sections.size() * sectsSize
                                + sizeof(symtab_command);
     _countOfLoadCommands = 2;
+    if (file.hasMinVersionLoadCommand) {
+      _endOfLoadCommands += sizeof(version_min_command);
+      _countOfLoadCommands++;
+    }
     if (!_file.dataInCode.empty()) {
       _endOfLoadCommands += sizeof(linkedit_data_command);
       _countOfLoadCommands++;
@@ -462,6 +466,10 @@ uint32_t MachOFileLayout::loadCommandsSize(uint32_t &count) {
     size += sizeof(version_min_command);
     ++count;
   }
+
+  // Add LC_SOURCE_VERSION
+  size += sizeof(source_version_command);
+  ++count;
 
   // If main executable add LC_MAIN
   if (_file.fileType == llvm::MachO::MH_EXECUTE) {
@@ -738,6 +746,38 @@ std::error_code MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
   return std::error_code();
 }
 
+static void writeVersionMinLoadCommand(const NormalizedFile &_file,
+                                       bool _swap,
+                                       uint8_t *&lc) {
+  if (!_file.hasMinVersionLoadCommand)
+    return;
+  version_min_command *vm = reinterpret_cast<version_min_command*>(lc);
+  switch (_file.os) {
+    case MachOLinkingContext::OS::unknown:
+      vm->cmd     = _file.minOSVersionKind;
+      vm->cmdsize = sizeof(version_min_command);
+      vm->version = _file.minOSverson;
+      vm->sdk     = 0;
+      break;
+    case MachOLinkingContext::OS::macOSX:
+      vm->cmd     = LC_VERSION_MIN_MACOSX;
+      vm->cmdsize = sizeof(version_min_command);
+      vm->version = _file.minOSverson;
+      vm->sdk     = _file.sdkVersion;
+      break;
+    case MachOLinkingContext::OS::iOS:
+    case MachOLinkingContext::OS::iOS_simulator:
+      vm->cmd     = LC_VERSION_MIN_IPHONEOS;
+      vm->cmdsize = sizeof(version_min_command);
+      vm->version = _file.minOSverson;
+      vm->sdk     = _file.sdkVersion;
+      break;
+  }
+  if (_swap)
+    swapStruct(*vm);
+  lc += sizeof(version_min_command);
+}
+
 std::error_code MachOFileLayout::writeLoadCommands() {
   std::error_code ec;
   uint8_t *lc = &_buffer[_startOfLoadCommands];
@@ -759,6 +799,11 @@ std::error_code MachOFileLayout::writeLoadCommands() {
     if (_swap)
       swapStruct(*st);
     lc += sizeof(symtab_command);
+
+    // Add LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS,
+    // LC_VERSION_MIN_WATCHOS, LC_VERSION_MIN_TVOS
+    writeVersionMinLoadCommand(_file, _swap, lc);
+
     // Add LC_DATA_IN_CODE if needed.
     if (_dataInCodeSize != 0) {
       linkedit_data_command* dl = reinterpret_cast<linkedit_data_command*>(lc);
@@ -872,31 +917,17 @@ std::error_code MachOFileLayout::writeLoadCommands() {
 
     // Add LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_WATCHOS,
     // LC_VERSION_MIN_TVOS
-    if (_file.hasMinVersionLoadCommand) {
-      version_min_command *vm = reinterpret_cast<version_min_command*>(lc);
-      switch (_file.os) {
-        case MachOLinkingContext::OS::unknown:
-          // TODO: We need to emit the load command if we managed to derive
-          // a platform from one of the files we are linking.
-          llvm_unreachable("Version commands for unknown OS aren't supported");
-          break;
-        case MachOLinkingContext::OS::macOSX:
-          vm->cmd     = LC_VERSION_MIN_MACOSX;
-          vm->cmdsize = sizeof(version_min_command);
-          vm->version = _file.minOSverson;
-          vm->sdk     = _file.sdkVersion;
-          break;
-        case MachOLinkingContext::OS::iOS:
-        case MachOLinkingContext::OS::iOS_simulator:
-          vm->cmd     = LC_VERSION_MIN_MACOSX;
-          vm->cmdsize = sizeof(version_min_command);
-          vm->version = _file.minOSverson;
-          vm->sdk     = _file.sdkVersion;
-          break;
-      }
+    writeVersionMinLoadCommand(_file, _swap, lc);
+
+    // Add LC_SOURCE_VERSION
+    {
+      source_version_command* sv = reinterpret_cast<source_version_command*>(lc);
+      sv->cmd       = LC_SOURCE_VERSION;
+      sv->cmdsize   = sizeof(source_version_command);
+      sv->version   = _file.sourceVersion;
       if (_swap)
-        swapStruct(*vm);
-      lc += sizeof(version_min_command);
+        swapStruct(*sv);
+      lc += sizeof(source_version_command);
     }
 
     // If main executable, add LC_MAIN.
