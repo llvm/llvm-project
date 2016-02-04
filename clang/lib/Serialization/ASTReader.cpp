@@ -6447,6 +6447,9 @@ static Decl *getPredefinedDecl(ASTContext &Context, PredefinedDeclIDs ID) {
 
   case PREDEF_DECL_CF_CONSTANT_STRING_ID:
     return Context.getCFConstantStringDecl();
+
+  case PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID:
+    return Context.getCFConstantStringTagDecl();
   }
   llvm_unreachable("PredefinedDeclIDs unknown enum value");
 }

@@ -738,12 +738,13 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       BuiltinVaListDecl(nullptr), BuiltinMSVaListDecl(nullptr),
       ObjCIdDecl(nullptr), ObjCSelDecl(nullptr), ObjCClassDecl(nullptr),
       ObjCProtocolClassDecl(nullptr), BOOLDecl(nullptr),
-      CFConstantStringTypeDecl(nullptr), ObjCInstanceTypeDecl(nullptr),
-      FILEDecl(nullptr), jmp_bufDecl(nullptr), sigjmp_bufDecl(nullptr),
-      ucontext_tDecl(nullptr), BlockDescriptorType(nullptr),
-      BlockDescriptorExtendedType(nullptr), cudaConfigureCallDecl(nullptr),
-      FirstLocalImport(), LastLocalImport(), ExternCContext(nullptr),
-      MakeIntegerSeqDecl(nullptr), SourceMgr(SM), LangOpts(LOpts),
+      CFConstantStringTagDecl(nullptr), CFConstantStringTypeDecl(nullptr),
+      ObjCInstanceTypeDecl(nullptr), FILEDecl(nullptr), jmp_bufDecl(nullptr),
+      sigjmp_bufDecl(nullptr), ucontext_tDecl(nullptr),
+      BlockDescriptorType(nullptr), BlockDescriptorExtendedType(nullptr),
+      cudaConfigureCallDecl(nullptr), FirstLocalImport(), LastLocalImport(),
+      ExternCContext(nullptr), MakeIntegerSeqDecl(nullptr), SourceMgr(SM),
+      LangOpts(LOpts),
       SanitizerBL(new SanitizerBlacklist(LangOpts.SanitizerBlacklistFiles, SM)),
       AddrSpaceMap(nullptr), Target(nullptr), AuxTarget(nullptr),
       PrintingPolicy(LOpts), Idents(idents), Selectors(sels),
@@ -4868,12 +4869,12 @@ int ASTContext::getIntegerTypeOrder(QualType LHS, QualType RHS) const {
   return 1;
 }
 
-TagDecl *ASTContext::getCFConstantStringDecl() const {
+TypedefDecl *ASTContext::getCFConstantStringDecl() const {
   if (!CFConstantStringTypeDecl) {
-    // This type is designed to be compatible with NSConstantString, but cannot
-    // use the same name, since NSConstantString is an interface.
-    CFConstantStringTypeDecl = buildImplicitRecord("__NSConstantString");
-    CFConstantStringTypeDecl->startDefinition();
+    assert(!CFConstantStringTagDecl &&
+           "tag and typedef should be initialized together");
+    CFConstantStringTagDecl = buildImplicitRecord("__NSConstantString_tag");
+    CFConstantStringTagDecl->startDefinition();
 
     QualType FieldTypes[4];
 
@@ -4888,7 +4889,7 @@ TagDecl *ASTContext::getCFConstantStringDecl() const {
 
     // Create fields
     for (unsigned i = 0; i < 4; ++i) {
-      FieldDecl *Field = FieldDecl::Create(*this, CFConstantStringTypeDecl,
+      FieldDecl *Field = FieldDecl::Create(*this, CFConstantStringTagDecl,
                                            SourceLocation(),
                                            SourceLocation(), nullptr,
                                            FieldTypes[i], /*TInfo=*/nullptr,
@@ -4896,18 +4897,29 @@ TagDecl *ASTContext::getCFConstantStringDecl() const {
                                            /*Mutable=*/false,
                                            ICIS_NoInit);
       Field->setAccess(AS_public);
-      CFConstantStringTypeDecl->addDecl(Field);
+      CFConstantStringTagDecl->addDecl(Field);
     }
 
-    CFConstantStringTypeDecl->completeDefinition();
+    CFConstantStringTagDecl->completeDefinition();
+    // This type is designed to be compatible with NSConstantString, but cannot
+    // use the same name, since NSConstantString is an interface.
+    auto tagType = getTagDeclType(CFConstantStringTagDecl);
+    CFConstantStringTypeDecl =
+        buildImplicitTypedef(tagType, "__NSConstantString");
   }
 
   return CFConstantStringTypeDecl;
 }
 
+RecordDecl *ASTContext::getCFConstantStringTagDecl() const {
+  if (!CFConstantStringTagDecl)
+    getCFConstantStringDecl(); // Build the tag and the typedef.
+  return CFConstantStringTagDecl;
+}
+
 // getCFConstantStringType - Return the type used for constant CFStrings.
 QualType ASTContext::getCFConstantStringType() const {
-  return getTagDeclType(getCFConstantStringDecl());
+  return getTypedefType(getCFConstantStringDecl());
 }
 
 QualType ASTContext::getObjCSuperType() const {
@@ -4920,9 +4932,13 @@ QualType ASTContext::getObjCSuperType() const {
 }
 
 void ASTContext::setCFConstantStringType(QualType T) {
-  const RecordType *Rec = T->getAs<RecordType>();
-  assert(Rec && "Invalid CFConstantStringType");
-  CFConstantStringTypeDecl = Rec->getDecl();
+  const TypedefType *TD = T->getAs<TypedefType>();
+  assert(TD && "Invalid CFConstantStringType");
+  CFConstantStringTypeDecl = cast<TypedefDecl>(TD->getDecl());
+  auto TagType =
+      CFConstantStringTypeDecl->getUnderlyingType()->getAs<RecordType>();
+  assert(TagType && "Invalid CFConstantStringType");
+  CFConstantStringTagDecl = TagType->getDecl();
 }
 
 QualType ASTContext::getBlockDescriptorType() const {
