@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL2.0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -O0 -cl-std=CL2.0 -o - %s | FileCheck %s
 
 // CHECK: %opencl.pipe_t = type opaque
 typedef unsigned char __attribute__((ext_vector_type(3))) uchar3;
