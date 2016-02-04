@@ -219,7 +219,9 @@ static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
     if (Target->canRelaxTls(Type, nullptr))
       return true;
     if (Out<ELFT>::Got->addCurrentModuleTlsIndex())
-      Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+      Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel,
+                                    DynamicReloc<ELFT>::Off_LTlsIndex,
+                                    nullptr});
     return true;
   }
 
@@ -229,8 +231,10 @@ static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
   if (Target->isTlsGlobalDynamicRel(Type)) {
     bool Opt = Target->canRelaxTls(Type, Body);
     if (!Opt && Out<ELFT>::Got->addDynTlsEntry(Body)) {
-      Out<ELFT>::RelaDyn->addReloc({&C, &RI});
-      Out<ELFT>::RelaDyn->addReloc({nullptr, nullptr});
+      Out<ELFT>::RelaDyn->addReloc(
+          {Target->TlsModuleIndexRel, DynamicReloc<ELFT>::Off_GTlsIndex, Body});
+      Out<ELFT>::RelaDyn->addReloc(
+          {Target->TlsOffsetRel, DynamicReloc<ELFT>::Off_GTlsOffset, Body});
       Body->setUsedInDynamicReloc();
       return true;
     }
@@ -283,12 +287,9 @@ void Writer<ELFT>::scanRelocs(
     if (handleTlsRelocation<ELFT>(Type, Body, C, RI))
       continue;
 
-    if (Target->needsDynRelative(Type)) {
-      RelType *Rel = new (Alloc) RelType;
-      Rel->setSymbolAndType(0, Target->RelativeRel, Config->Mips64EL);
-      Rel->r_offset = RI.r_offset;
-      Out<ELFT>::RelaDyn->addReloc({&C, Rel});
-    }
+    if (Target->needsDynRelative(Type))
+      Out<ELFT>::RelaDyn->addReloc({Target->RelativeRel, &C, RI.r_offset, true,
+                                    Body, getAddend<ELFT>(RI)});
 
     // MIPS has a special rule to create GOTs for local symbols.
     if (Config->EMachine == EM_MIPS && !canBePreempted(Body, true)) {
@@ -307,7 +308,8 @@ void Writer<ELFT>::scanRelocs(
       if (Target->needsCopyRel(Type, *B)) {
         B->NeedsCopy = true;
         B->setUsedInDynamicReloc();
-        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+        Out<ELFT>::RelaDyn->addReloc(
+            {Target->CopyRel, DynamicReloc<ELFT>::Off_Bss, B});
         continue;
       }
     }
@@ -320,12 +322,17 @@ void Writer<ELFT>::scanRelocs(
       if (Body->isInGot())
         continue;
       Out<ELFT>::Plt->addEntry(Body);
+      bool CBP = canBePreempted(Body, /*NeedsGot=*/true);
       if (Target->UseLazyBinding) {
         Out<ELFT>::GotPlt->addEntry(Body);
-        Out<ELFT>::RelaPlt->addReloc({&C, &RI});
+        Out<ELFT>::RelaPlt->addReloc(
+            {CBP ? Target->PltRel : Target->IRelativeRel,
+             DynamicReloc<ELFT>::Off_GotPlt, !CBP, Body});
       } else {
         Out<ELFT>::Got->addEntry(Body);
-        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+        Out<ELFT>::RelaDyn->addReloc(
+            {CBP ? Target->PltRel : Target->IRelativeRel,
+             DynamicReloc<ELFT>::Off_Got, !CBP, Body});
       }
       continue;
     }
@@ -339,12 +346,14 @@ void Writer<ELFT>::scanRelocs(
 
       if (Target->UseLazyBinding) {
         Out<ELFT>::GotPlt->addEntry(Body);
-        Out<ELFT>::RelaPlt->addReloc({&C, &RI});
+        Out<ELFT>::RelaPlt->addReloc(
+            {Target->PltRel, DynamicReloc<ELFT>::Off_GotPlt, Body});
       } else {
         if (Body->isInGot())
           continue;
         Out<ELFT>::Got->addEntry(Body);
-        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+        Out<ELFT>::RelaDyn->addReloc(
+            {Target->GotRel, DynamicReloc<ELFT>::Off_Got, Body});
       }
 
       if (canBePreempted(Body, /*NeedsGot=*/true))
@@ -373,8 +382,15 @@ void Writer<ELFT>::scanRelocs(
                     !Target->isSizeRel(Type);
       if (CBP)
         Body->setUsedInDynamicReloc();
-      if (CBP || Dynrel)
-        Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+      if (CBP || Dynrel) {
+        uint32_t DynType;
+        if (CBP)
+          DynType = Body->isTls() ? Target->getTlsGotRel() : Target->GotRel;
+        else
+          DynType = Target->RelativeRel;
+        Out<ELFT>::RelaDyn->addReloc(
+            {DynType, DynamicReloc<ELFT>::Off_Got, !CBP, Body});
+      }
       continue;
     }
 
@@ -395,24 +411,48 @@ void Writer<ELFT>::scanRelocs(
         continue;
     }
 
-    // We get here if a program was not compiled as PIC.
     if (canBePreempted(Body, /*NeedsGot=*/false)) {
+      // We don't know anything about the finaly symbol. Just ask the dynamic
+      // linker to handle the relocation for us.
       Body->setUsedInDynamicReloc();
-      Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+      Out<ELFT>::RelaDyn->addReloc({Target->getDynRel(Type), &C, RI.r_offset,
+                                    false, Body, getAddend<ELFT>(RI)});
       continue;
     }
 
-    // If we get here, the code we are handling is not PIC. We need to copy
-    // relocations from object files to the output file, so that the
-    // dynamic linker can fix up addresses. But there are a few exceptions.
-    // If the relocation will not change at runtime, we don't need to copy
-    // them. For example, we don't copy PC-relative relocations because
-    // the distance between two symbols won't change whereever they are
-    // loaded. Likewise, if we are linking an executable, it will be loaded
-    // at a fixed address, so we don't copy relocations.
-    if (Config->Shared && !Target->isRelRelative(Type) &&
-        !Target->isSizeRel(Type))
-      Out<ELFT>::RelaDyn->addReloc({&C, &RI});
+    // We know that this is the final symbol. If the program being produced
+    // is position independent, the final value is still not known.
+    // If the relocation depends on the symbol value (not the size or distances
+    // in the output), we still need some help from the dynamic linker.
+    // We can however do better than just copying the incoming relocation. We
+    // can process some of it and and just ask the dynamic linker to add the
+    // load address.
+    if (!Config->Shared || Target->isRelRelative(Type) ||
+        Target->isSizeRel(Type))
+      continue;
+
+    uintX_t Addend = getAddend<ELFT>(RI);
+    if (Config->EMachine == EM_PPC64 && RI.getType(false) == R_PPC64_TOC) {
+      Out<ELFT>::RelaDyn->addReloc({R_PPC64_RELATIVE, &C, RI.r_offset, false,
+                                    nullptr,
+                                    (uintX_t)getPPC64TocBase() + Addend});
+      continue;
+    }
+    if (Body) {
+      Out<ELFT>::RelaDyn->addReloc(
+          {Target->RelativeRel, &C, RI.r_offset, true, Body, Addend});
+      continue;
+    }
+    const Elf_Sym *Sym =
+        File.getObj().getRelocationSymbol(&RI, File.getSymbolTable());
+    InputSectionBase<ELFT> *Section = File.getSection(*Sym);
+    uintX_t Offset = Sym->st_value;
+    if (Sym->getType() == STT_SECTION) {
+      Offset += Addend;
+      Addend = 0;
+    }
+    Out<ELFT>::RelaDyn->addReloc(
+        {Target->RelativeRel, &C, RI.r_offset, Section, Offset, Addend});
   }
 }
 
@@ -906,6 +946,9 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   for (OutputSectionBase<ELFT> *Sec : RegularSections)
     addStartStopSymbols(Sec);
 
+  // Define __rel[a]_iplt_{start,end} symbols if needed.
+  addRelIpltSymbols();
+
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
@@ -919,9 +962,6 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
           scanRelocs(*S, *S->RelocSection);
     }
   }
-
-  // Define __rel[a]_iplt_{start,end} symbols if needed.
-  addRelIpltSymbols();
 
   // Now that we have defined all possible symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.

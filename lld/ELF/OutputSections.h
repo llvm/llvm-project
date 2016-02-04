@@ -172,9 +172,46 @@ private:
 };
 
 template <class ELFT> struct DynamicReloc {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  InputSectionBase<ELFT> *C;
-  const Elf_Rel *RI;
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  uint32_t Type;
+
+  // Where the relocation is.
+  enum OffsetKind {
+    Off_Got,       // The got entry of Sym.
+    Off_GotPlt,    // The got.plt entry of Sym.
+    Off_Bss,       // The bss entry of Sym (copy reloc).
+    Off_Sec,       // The final position of the given input section and offset.
+    Off_LTlsIndex, // The local tls index.
+    Off_GTlsIndex, // The global tls index of Sym.
+    Off_GTlsOffset // The global tls offset of Sym.
+  } OKind;
+
+  SymbolBody *Sym = nullptr;
+  InputSectionBase<ELFT> *OffsetSec = nullptr;
+  uintX_t OffsetInSec = 0;
+  bool UseSymVA = false;
+  InputSectionBase<ELFT> *TargetSec = nullptr;
+  uintX_t OffsetInTargetSec = 0;
+  uintX_t Addend = 0;
+
+  DynamicReloc(uint32_t Type, OffsetKind OKind, SymbolBody *Sym)
+      : Type(Type), OKind(OKind), Sym(Sym) {}
+
+  DynamicReloc(uint32_t Type, OffsetKind OKind, bool UseSymVA, SymbolBody *Sym)
+      : Type(Type), OKind(OKind), Sym(Sym), UseSymVA(UseSymVA) {}
+
+  DynamicReloc(uint32_t Type, InputSectionBase<ELFT> *OffsetSec,
+               uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
+               uintX_t Addend)
+      : Type(Type), OKind(Off_Sec), Sym(Sym), OffsetSec(OffsetSec),
+        OffsetInSec(OffsetInSec), UseSymVA(UseSymVA), Addend(Addend) {}
+
+  DynamicReloc(uint32_t Type, InputSectionBase<ELFT> *OffsetSec,
+               uintX_t OffsetInSec, InputSectionBase<ELFT> *TargetSec,
+               uintX_t OffsetInTargetSec, uintX_t Addend)
+      : Type(Type), OKind(Off_Sec), OffsetSec(OffsetSec),
+        OffsetInSec(OffsetInSec), TargetSec(TargetSec),
+        OffsetInTargetSec(OffsetInTargetSec), Addend(Addend) {}
 };
 
 template <class ELFT>
@@ -228,9 +265,6 @@ public:
   bool Static = false;
 
 private:
-  bool applyTlsDynamicReloc(SymbolBody *Body, uint32_t Type, Elf_Rel *P,
-                            Elf_Rel *N);
-
   std::vector<DynamicReloc<ELFT>> Relocs;
   const bool IsRela;
 };

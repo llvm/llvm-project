@@ -214,6 +214,11 @@ void ObjectFile<ELFT>::initializeSections(DenseSet<StringRef> &ComdatGroups) {
         fatal("Invalid relocated section index");
       InputSectionBase<ELFT> *RelocatedSection =
           Sections[RelocatedSectionIndex];
+      // Strictly speaking, a relocation section must be included in the
+      // group of the section it relocates. However, LLVM 3.3 and earlier
+      // would fail to do so, so we gracefully handle that case.
+      if (RelocatedSection == &InputSection<ELFT>::Discarded)
+        continue;
       if (!RelocatedSection)
         fatal("Unsupported relocation reference");
       if (auto *S = dyn_cast<InputSection<ELFT>>(RelocatedSection)) {

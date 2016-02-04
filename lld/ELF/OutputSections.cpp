@@ -213,123 +213,50 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool IsRela)
   this->Header.sh_addralign = sizeof(uintX_t);
 }
 
-// Applies corresponding symbol and type for dynamic tls relocation.
-// Returns true if relocation was handled.
 template <class ELFT>
-bool RelocationSection<ELFT>::applyTlsDynamicReloc(SymbolBody *Body,
-                                                   uint32_t Type, Elf_Rel *P,
-                                                   Elf_Rel *N) {
-  if (Target->isTlsLocalDynamicRel(Type)) {
-    P->setSymbolAndType(0, Target->TlsModuleIndexRel, Config->Mips64EL);
-    P->r_offset = Out<ELFT>::Got->getLocalTlsIndexVA();
-    return true;
+static typename ELFFile<ELFT>::uintX_t
+getOffset(const DynamicReloc<ELFT> &Rel) {
+  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  SymbolBody *Sym = Rel.Sym;
+  switch (Rel.OKind) {
+  case DynamicReloc<ELFT>::Off_GTlsIndex:
+    return Out<ELFT>::Got->getGlobalDynAddr(*Sym);
+  case DynamicReloc<ELFT>::Off_GTlsOffset:
+    return Out<ELFT>::Got->getGlobalDynAddr(*Sym) + sizeof(uintX_t);
+  case DynamicReloc<ELFT>::Off_LTlsIndex:
+    return Out<ELFT>::Got->getLocalTlsIndexVA();
+  case DynamicReloc<ELFT>::Off_Sec:
+    return Rel.OffsetSec->getOffset(Rel.OffsetInSec) +
+           Rel.OffsetSec->OutSec->getVA();
+  case DynamicReloc<ELFT>::Off_Bss:
+    return cast<SharedSymbol<ELFT>>(Sym)->OffsetInBss + Out<ELFT>::Bss->getVA();
+  case DynamicReloc<ELFT>::Off_Got:
+    return Sym->getGotVA<ELFT>();
+  case DynamicReloc<ELFT>::Off_GotPlt:
+    return Sym->getGotPltVA<ELFT>();
   }
-
-  if (!Body || !Target->isTlsGlobalDynamicRel(Type))
-    return false;
-
-  if (Target->canRelaxTls(Type, Body)) {
-    P->setSymbolAndType(Body->DynsymIndex, Target->getTlsGotRel(),
-                        Config->Mips64EL);
-    P->r_offset = Body->getGotVA<ELFT>();
-    return true;
-  }
-
-  P->setSymbolAndType(Body->DynsymIndex, Target->TlsModuleIndexRel,
-                      Config->Mips64EL);
-  P->r_offset = Out<ELFT>::Got->getGlobalDynAddr(*Body);
-  N->setSymbolAndType(Body->DynsymIndex, Target->TlsOffsetRel,
-                      Config->Mips64EL);
-  N->r_offset = Out<ELFT>::Got->getGlobalDynAddr(*Body) + sizeof(uintX_t);
-  return true;
+  llvm_unreachable("Invalid offset kind");
 }
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const DynamicReloc<ELFT> &Rel : Relocs) {
     auto *P = reinterpret_cast<Elf_Rel *>(Buf);
     Buf += IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-
-    // Skip placeholder for global dynamic TLS relocation pair. It was already
-    // handled by the previous relocation.
-    if (!Rel.C)
-      continue;
-
-    InputSectionBase<ELFT> &C = *Rel.C;
-    const Elf_Rel &RI = *Rel.RI;
-    uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
-    const ObjectFile<ELFT> &File = *C.getFile();
-    SymbolBody *Body = File.getSymbolBody(SymIndex);
-    if (Body)
-      Body = Body->repl();
-
-    uint32_t Type = RI.getType(Config->Mips64EL);
-    if (applyTlsDynamicReloc(Body, Type, P, reinterpret_cast<Elf_Rel *>(Buf)))
-      continue;
-
-    // Writer::scanRelocs creates a RELATIVE reloc for some type of TLS reloc.
-    // We want to write it down as is.
-    if (Type == Target->RelativeRel) {
-      P->setSymbolAndType(0, Type, Config->Mips64EL);
-      P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
-      continue;
-    }
-
-    // Emit a copy relocation.
-    auto *SS = dyn_cast_or_null<SharedSymbol<ELFT>>(Body);
-    if (SS && SS->NeedsCopy) {
-      P->setSymbolAndType(Body->DynsymIndex, Target->CopyRel, Config->Mips64EL);
-      P->r_offset = Out<ELFT>::Bss->getVA() + SS->OffsetInBss;
-      continue;
-    }
-
-    bool NeedsGot = Body && Target->needsGot(Type, *Body);
-    bool CBP = canBePreempted(Body, NeedsGot);
+    SymbolBody *Sym = Rel.Sym;
 
     if (IsRela) {
-      auto R = static_cast<const Elf_Rela &>(RI);
-      auto S = static_cast<Elf_Rela *>(P);
-      uintX_t A = NeedsGot ? 0 : R.r_addend;
-      if (CBP)
-        S->r_addend = A;
-      else if (Body)
-        S->r_addend = Body->getVA<ELFT>() + A;
-      else
-        S->r_addend = getLocalRelTarget(File, R, A);
+      uintX_t VA = 0;
+      if (Rel.UseSymVA)
+        VA = Sym->getVA<ELFT>();
+      else if (Rel.TargetSec)
+        VA = Rel.TargetSec->getOffset(Rel.OffsetInTargetSec) +
+             Rel.TargetSec->OutSec->getVA();
+      reinterpret_cast<Elf_Rela *>(P)->r_addend = Rel.Addend + VA;
     }
 
-    // For a symbol with STT_GNU_IFUNC type, we always create a PLT and
-    // a GOT entry for the symbol, and emit an IRELATIVE reloc rather than
-    // the usual JUMP_SLOT reloc for the GOT entry. For the details, you
-    // want to read http://www.airs.com/blog/archives/403
-    if (!CBP && Body && isGnuIFunc<ELFT>(*Body)) {
-      P->setSymbolAndType(0, Target->IRelativeRel, Config->Mips64EL);
-      if (Out<ELFT>::GotPlt)
-        P->r_offset = Body->getGotPltVA<ELFT>();
-      else
-        P->r_offset = Body->getGotVA<ELFT>();
-      continue;
-    }
-
-    bool LazyReloc =
-        Body && Target->UseLazyBinding && Target->needsPlt(Type, *Body);
-
-    unsigned Reloc;
-    if (!CBP)
-      Reloc = Target->RelativeRel;
-    else if (LazyReloc)
-      Reloc = Target->PltRel;
-    else if (NeedsGot)
-      Reloc = Body->isTls() ? Target->getTlsGotRel() : Target->GotRel;
-    else
-      Reloc = Target->getDynRel(Type);
-    P->setSymbolAndType(CBP ? Body->DynsymIndex : 0, Reloc, Config->Mips64EL);
-
-    if (LazyReloc)
-      P->r_offset = Body->getGotPltVA<ELFT>();
-    else if (NeedsGot)
-      P->r_offset = Body->getGotVA<ELFT>();
-    else
-      P->r_offset = C.getOffset(RI.r_offset) + C.OutSec->getVA();
+    P->r_offset = getOffset(Rel);
+    uint32_t SymIdx = (!Rel.UseSymVA && Sym) ? Sym->DynsymIndex : 0;
+    P->setSymbolAndType(SymIdx, Rel.Type, Config->Mips64EL);
   }
 }
 

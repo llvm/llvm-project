@@ -607,10 +607,23 @@ size_t MachOFileLayout::size() const {
 }
 
 void MachOFileLayout::writeMachHeader() {
+  auto cpusubtype = MachOLinkingContext::cpuSubtypeFromArch(_file.arch);
+  // dynamic x86 executables on newer OS version should also set the
+  // CPU_SUBTYPE_LIB64 mask in the CPU subtype.
+  // FIXME: Check that this is a dynamic executable, not a static one.
+  if (_file.fileType == llvm::MachO::MH_EXECUTE &&
+      cpusubtype == CPU_SUBTYPE_X86_64_ALL &&
+      _file.os == MachOLinkingContext::OS::macOSX) {
+    uint32_t version;
+    bool failed = MachOLinkingContext::parsePackedVersion("10.5", version);
+    if (!failed && _file.minOSverson >= version)
+      cpusubtype |= CPU_SUBTYPE_LIB64;
+  }
+
   mach_header *mh = reinterpret_cast<mach_header*>(_buffer);
   mh->magic = _is64 ? llvm::MachO::MH_MAGIC_64 : llvm::MachO::MH_MAGIC;
   mh->cputype =  MachOLinkingContext::cpuTypeFromArch(_file.arch);
-  mh->cpusubtype = MachOLinkingContext::cpuSubtypeFromArch(_file.arch);
+  mh->cpusubtype = cpusubtype;
   mh->filetype = _file.fileType;
   mh->ncmds = _countOfLoadCommands;
   mh->sizeofcmds = _endOfLoadCommands - _startOfLoadCommands;
