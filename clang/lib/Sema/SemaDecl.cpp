@@ -14793,9 +14793,15 @@ void Sema::ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
       TUKind == TU_Module &&
       getSourceManager().isWrittenInMainFile(DirectiveLoc);
 
+  // Similarly, if this module is specified by -fmodule-implementation-of
+  // don't actually synthesize an illegal module import.
+  bool ShouldAddImport = !IsInModuleIncludes &&
+    (getLangOpts().ImplementationOfModule.empty() ||
+     getLangOpts().ImplementationOfModule != Mod->getTopLevelModuleName());
+
   // If this module import was due to an inclusion directive, create an 
   // implicit import declaration to capture it in the AST.
-  if (!IsInModuleIncludes) {
+  if (ShouldAddImport) {
     TranslationUnitDecl *TU = getASTContext().getTranslationUnitDecl();
     ImportDecl *ImportD = ImportDecl::CreateImplicit(getASTContext(), TU,
                                                      DirectiveLoc, Mod,

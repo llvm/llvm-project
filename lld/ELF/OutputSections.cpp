@@ -88,12 +88,14 @@ template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody *Sym) {
   return true;
 }
 
-template <class ELFT> bool GotSection<ELFT>::addCurrentModuleTlsIndex() {
-  if (LocalTlsIndexOff != uint32_t(-1))
+// Reserves TLS entries for a TLS module ID and a TLS block offset.
+// In total it takes two GOT slots.
+template <class ELFT> bool GotSection<ELFT>::addTlsIndex() {
+  if (TlsIndexOff != uint32_t(-1))
     return false;
+  TlsIndexOff = Entries.size() * sizeof(uintX_t);
   Entries.push_back(nullptr);
   Entries.push_back(nullptr);
-  LocalTlsIndexOff = (Entries.size() - 2) * sizeof(uintX_t);
   return true;
 }
 
@@ -224,7 +226,7 @@ getOffset(const DynamicReloc<ELFT> &Rel) {
   case DynamicReloc<ELFT>::Off_GTlsOffset:
     return Out<ELFT>::Got->getGlobalDynAddr(*Sym) + sizeof(uintX_t);
   case DynamicReloc<ELFT>::Off_LTlsIndex:
-    return Out<ELFT>::Got->getLocalTlsIndexVA();
+    return Out<ELFT>::Got->getTlsIndexVA();
   case DynamicReloc<ELFT>::Off_Sec:
     return Rel.OffsetSec->getOffset(Rel.OffsetInSec) +
            Rel.OffsetSec->OutSec->getVA();

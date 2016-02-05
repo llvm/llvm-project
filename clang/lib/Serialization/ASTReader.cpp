@@ -768,6 +768,15 @@ IdentID ASTIdentifierLookupTrait::ReadIdentifierID(const unsigned char *d) {
   return Reader.getGlobalIdentifierID(F, RawID >> 1);
 }
 
+static void markIdentifierFromAST(ASTReader &Reader, IdentifierInfo &II) {
+  if (!II.isFromAST()) {
+    II.setIsFromAST();
+    bool IsModule = Reader.getPreprocessor().getCurrentModule() != nullptr;
+    if (isInterestingIdentifier(Reader, II, IsModule))
+      II.setChangedSinceDeserialization();
+  }
+}
+
 IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
                                                    const unsigned char* d,
                                                    unsigned DataLen) {
@@ -784,12 +793,7 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
     II = &Reader.getIdentifierTable().getOwn(k);
     KnownII = II;
   }
-  if (!II->isFromAST()) {
-    II->setIsFromAST();
-    bool IsModule = Reader.PP.getCurrentModule() != nullptr;
-    if (isInterestingIdentifier(Reader, *II, IsModule))
-      II->setChangedSinceDeserialization();
-  }
+  markIdentifierFromAST(Reader, *II);
   Reader.markIdentifierUpToDate(II);
 
   IdentID ID = Reader.getGlobalIdentifierID(F, RawID);
@@ -3560,12 +3564,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(const std::string &FileName,
 
       // Mark this identifier as being from an AST file so that we can track
       // whether we need to serialize it.
-      if (!II.isFromAST()) {
-        II.setIsFromAST();
-        bool IsModule = PP.getCurrentModule() != nullptr;
-        if (isInterestingIdentifier(*this, II, IsModule))
-          II.setChangedSinceDeserialization();
-      }
+      markIdentifierFromAST(*this, II);
 
       // Associate the ID with the identifier so that the writer can reuse it.
       auto ID = Trait.ReadIdentifierID(Data + KeyDataLen.first);
@@ -7455,10 +7454,11 @@ IdentifierInfo *ASTReader::DecodeIdentifierInfo(IdentifierID ID) {
     const unsigned char *StrLenPtr = (const unsigned char*) Str - 2;
     unsigned StrLen = (((unsigned) StrLenPtr[0])
                        | (((unsigned) StrLenPtr[1]) << 8)) - 1;
-    IdentifiersLoaded[ID]
-      = &PP.getIdentifierTable().get(StringRef(Str, StrLen));
+    auto &II = PP.getIdentifierTable().get(StringRef(Str, StrLen));
+    IdentifiersLoaded[ID] = &II;
+    markIdentifierFromAST(*this,  II);
     if (DeserializationListener)
-      DeserializationListener->IdentifierRead(ID + 1, IdentifiersLoaded[ID]);
+      DeserializationListener->IdentifierRead(ID + 1, &II);
   }
 
   return IdentifiersLoaded[ID];

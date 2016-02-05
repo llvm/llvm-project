@@ -429,7 +429,7 @@ void EmitAssemblyHelper::CreatePasses(FunctionInfoIndex *FunctionIndex) {
       MPM->add(createStripSymbolsPass(true));
   }
 
-  if (CodeGenOpts.ProfileInstrGenerate) {
+  if (CodeGenOpts.hasProfileClangInstr()) {
     InstrProfOptions Options;
     Options.NoRedZone = CodeGenOpts.DisableRedZone;
     Options.InstrProfileOutput = CodeGenOpts.InstrProfileOutput;

@@ -1,6 +1,6 @@
 // Test instrumentation of general constructs in C.
 
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instr-generate | FileCheck -check-prefix=PGOGEN %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -check-prefix=PGOGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/c-general.proftext -o %t.profdata
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instr-use=%t.profdata | FileCheck -check-prefix=PGOUSE %s

@@ -477,9 +477,28 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DisableIntegratedAS = Args.hasArg(OPT_fno_integrated_as);
   Opts.Autolink = !Args.hasArg(OPT_fno_autolink);
   Opts.SampleProfileFile = Args.getLastArgValue(OPT_fprofile_sample_use_EQ);
-  Opts.ProfileInstrGenerate = Args.hasArg(OPT_fprofile_instr_generate) ||
-      Args.hasArg(OPT_fprofile_instr_generate_EQ);
-  Opts.InstrProfileOutput = Args.getLastArgValue(OPT_fprofile_instr_generate_EQ);
+
+  enum PGOInstrumentor { Unknown, None, Clang };
+  if (Arg *A = Args.getLastArg(OPT_fprofile_instrument_EQ)) {
+    StringRef Value = A->getValue();
+    PGOInstrumentor Method = llvm::StringSwitch<PGOInstrumentor>(Value)
+                                 .Case("clang", Clang)
+                                 .Case("none", None)
+                                 .Default(Unknown);
+    switch (Method) {
+    case Clang:
+      Opts.setProfileInstr(CodeGenOptions::ProfileClangInstr);
+      break;
+    case None:
+      break;
+    case Unknown:
+      Diags.Report(diag::err_drv_invalid_pgo_instrumentor)
+          << A->getAsString(Args) << Value;
+      break;
+    }
+  }
+
+  Opts.InstrProfileOutput = Args.getLastArgValue(OPT_fprofile_instrument_path_EQ);
   Opts.InstrProfileInput = Args.getLastArgValue(OPT_fprofile_instr_use_EQ);
   Opts.CoverageMapping =
       Args.hasFlag(OPT_fcoverage_mapping, OPT_fno_coverage_mapping, false);

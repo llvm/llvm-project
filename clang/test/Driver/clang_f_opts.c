@@ -97,11 +97,11 @@
 // RUN: %clang -### -S -fcoverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-COVERAGE-AND-GEN %s
 // RUN: %clang -### -S -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
 // RUN: %clang -### -S -fprofile-instr-generate -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
-// CHECK-PROFILE-GENERATE: "-fprofile-instr-generate"
-// CHECK-PROFILE-GENERATE-DIR: "-fprofile-instr-generate=/some/dir{{/|\\\\}}default.profraw"
-// CHECK-PROFILE-GENERATE-FILE: "-fprofile-instr-generate=/tmp/somefile.profraw"
+// CHECK-PROFILE-GENERATE: "-fprofile-instrument=clang"
+// CHECK-PROFILE-GENERATE-DIR: "-fprofile-instrument-path=/some/dir{{/|\\\\}}default.profraw"
+// CHECK-PROFILE-GENERATE-FILE: "-fprofile-instrument-path=/tmp/somefile.profraw"
 // CHECK-NO-MIX-GEN-USE: '{{[a-z=-]*}}' not allowed with '{{[a-z=-]*}}'
-// CHECK-DISABLE-GEN-NOT: "-fprofile-instr-generate"
+// CHECK-DISABLE-GEN-NOT: "-fprofile-instrument=clang"
 // CHECK-DISABLE-USE-NOT: "-fprofile-instr-use"
 // CHECK-COVERAGE-AND-GEN: '-fcoverage-mapping' only allowed with '-fprofile-instr-generate'
 // CHECK-DISABLE-COVERAGE-NOT: "-fcoverage-mapping"

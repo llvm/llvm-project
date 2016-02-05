@@ -952,7 +952,7 @@ private:
 public:
   /// Increment the profiler's counter for the given statement.
   void incrementProfileCounter(const Stmt *S) {
-    if (CGM.getCodeGenOpts().ProfileInstrGenerate)
+    if (CGM.getCodeGenOpts().hasProfileClangInstr())
       PGO.emitCounterIncrement(Builder, S);
     PGO.setCurrentStmt(S);
   }
@@ -1573,6 +1573,10 @@ public:
   Address EmitLoadOfReference(Address Ref, const ReferenceType *RefTy,
                               AlignmentSource *Source = nullptr);
   LValue EmitLoadOfReferenceLValue(Address Ref, const ReferenceType *RefTy);
+
+  Address EmitLoadOfPointer(Address Ptr, const PointerType *PtrTy,
+                            AlignmentSource *Source = nullptr);
+  LValue EmitLoadOfPointerLValue(Address Ptr, const PointerType *PtrTy);
 
   /// CreateTempAlloca - This creates a alloca and inserts it into the entry
   /// block. The caller is responsible for setting an appropriate alignment on

@@ -113,7 +113,7 @@ public:
   void addEntry(SymbolBody *Sym);
   void addMipsLocalEntry();
   bool addDynTlsEntry(SymbolBody *Sym);
-  bool addCurrentModuleTlsIndex();
+  bool addTlsIndex();
   bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }
   uintX_t getMipsLocalFullAddr(const SymbolBody &B);
   uintX_t getMipsLocalPageAddr(uintX_t Addr);
@@ -130,11 +130,11 @@ public:
   // the number of reserved entries. This method is MIPS-specific.
   unsigned getMipsLocalEntriesNum() const;
 
-  uint32_t getLocalTlsIndexVA() { return Base::getVA() + LocalTlsIndexOff; }
+  uintX_t getTlsIndexVA() { return Base::getVA() + TlsIndexOff; }
 
 private:
   std::vector<const SymbolBody *> Entries;
-  uint32_t LocalTlsIndexOff = -1;
+  uint32_t TlsIndexOff = -1;
   uint32_t MipsLocalEntries = 0;
   llvm::DenseMap<uintX_t, size_t> MipsLocalGotPos;
 

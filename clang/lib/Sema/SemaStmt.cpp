@@ -3069,6 +3069,11 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
   QualType DeducedT = AT->getDeducedType();
   if (!DeducedT.isNull() && !FD->isInvalidDecl()) {
     AutoType *NewAT = Deduced->getContainedAutoType();
+    // It is possible that NewAT->getDeducedType() is null. When that happens,
+    // we should not crash, instead we ignore this deduction.
+    if (NewAT->getDeducedType().isNull())
+      return false;
+
     CanQualType OldDeducedType = Context.getCanonicalFunctionResultType(
                                    DeducedT);
     CanQualType NewDeducedType = Context.getCanonicalFunctionResultType(

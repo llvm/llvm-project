@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9.0 -emit-llvm -main-file-name cxx-linkage.cpp %s -o - -fprofile-instr-generate | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9.0 -emit-llvm -main-file-name cxx-linkage.cpp %s -o - -fprofile-instrument=clang | FileCheck %s
 
 // CHECK: @__profc__Z3foov = private global
 // CHECK: @__profd__Z3foov = private global

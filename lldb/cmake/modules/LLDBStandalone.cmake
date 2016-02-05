@@ -34,7 +34,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
       set(CLANG_MAIN_INCLUDE_DIR "${CLANG_MAIN_SRC_DIR}/include")
   endif()
 
-  list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_LLVM_BUILD}/share/llvm/cmake")
+  list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_LLVM_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
 
   if (LLDB_PATH_TO_LLVM_BUILD)
     get_filename_component(PATH_TO_LLVM_BUILD ${LLDB_PATH_TO_LLVM_BUILD}
@@ -73,9 +73,9 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     message("-- Found PythonInterp: ${PYTHON_EXECUTABLE}")
   endif()
   # Import CMake library targets from LLVM and Clang.
-  include("${LLDB_PATH_TO_LLVM_BUILD}/share/llvm/cmake/LLVMConfig.cmake")
-  if (EXISTS "${LLDB_PATH_TO_CLANG_BUILD}/share/clang/cmake/ClangConfig.cmake")
-      include("${LLDB_PATH_TO_CLANG_BUILD}/share/clang/cmake/ClangConfig.cmake")
+  include("${LLDB_PATH_TO_LLVM_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm/LLVMConfig.cmake")
+  if (EXISTS "${LLDB_PATH_TO_CLANG_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang/ClangConfig.cmake")
+      include("${LLDB_PATH_TO_CLANG_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang/ClangConfig.cmake")
   endif()
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")

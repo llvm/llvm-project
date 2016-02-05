@@ -120,15 +120,15 @@ int main() {
 // CHECK: store i64 4, i64*
 // CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 2
 // CHECK: store i8 3, i8*
+// CHECK: [[B_VAL:%.+]] = load i8, i8* [[B]]
+// CHECK: [[IDX2:%.+]] = sext i8 [[B_VAL]] to i64
 // CHECK: [[IDX1:%.+]] = mul nsw i64 4, [[A_VAL]]
 // CHECK: [[START:%.+]] = getelementptr inbounds i32, i32* %{{.+}}, i64 [[IDX1]]
+// CHECK: [[START1:%.+]] = getelementptr inbounds i32, i32* [[START]], i64 [[IDX2]]
 // CHECK: [[B_VAL:%.+]] = load i8, i8* [[B]]
 // CHECK: [[IDX2:%.+]] = sext i8 [[B_VAL]] to i64
-// CHECK: [[START1:%.+]] = getelementptr inbounds i32, i32* [[START]], i64 [[IDX2]]
 // CHECK: [[IDX1:%.+]] = mul nsw i64 9, [[A_VAL]]
 // CHECK: [[END:%.+]] = getelementptr inbounds i32, i32* %{{.+}}, i64 [[IDX1]]
-// CHECK: [[B_VAL:%.+]] = load i8, i8* [[B]]
-// CHECK: [[IDX2:%.+]] = sext i8 [[B_VAL]] to i64
 // CHECK: [[END1:%.+]] = getelementptr inbounds i32, i32* [[END]], i64 [[IDX2]]
 // CHECK: [[END2:%.+]] = getelementptr i32, i32* [[END1]], i32 1
 // CHECK: [[START_INT:%.+]] = ptrtoint i32* [[START1]] to i64
@@ -173,12 +173,12 @@ int main() {
 // CHECK: [[START1:%.+]] = getelementptr inbounds i32, i32* [[START]], i64 3
 // CHECK: [[NEW_A_VAL:%.+]] = load i32, i32* @{{.+}},
 // CHECK: [[NEW_A_VAL_I64:%.+]] = sext i32 [[NEW_A_VAL]] to i64
+// CHECK: [[IDX2:%.+]] = sub nsw i64 [[NEW_A_VAL_I64]], 1
+// CHECK: [[NEW_A_VAL:%.+]] = load i32, i32* @{{.+}},
+// CHECK: [[NEW_A_VAL_I64:%.+]] = sext i32 [[NEW_A_VAL]] to i64
 // CHECK: [[SUB:%.+]] = add nsw i64 -1, [[NEW_A_VAL_I64]]
 // CHECK: [[IDX1:%.+]] = mul nsw i64 [[SUB]], [[A_VAL]]
 // CHECK: [[END:%.+]] = getelementptr inbounds i32, i32* %{{.+}}, i64 [[IDX1]]
-// CHECK: [[NEW_A_VAL:%.+]] = load i32, i32* @{{.+}},
-// CHECK: [[NEW_A_VAL_I64:%.+]] = sext i32 [[NEW_A_VAL]] to i64
-// CHECK: [[IDX2:%.+]] = sub nsw i64 [[NEW_A_VAL_I64]], 1
 // CHECK: [[END1:%.+]] = getelementptr inbounds i32, i32* [[END]], i64 [[IDX2]]
 // CHECK: [[END2:%.+]] = getelementptr i32, i32* [[END1]], i32 1
 // CHECK: [[START_INT:%.+]] = ptrtoint i32* [[START1]] to i64

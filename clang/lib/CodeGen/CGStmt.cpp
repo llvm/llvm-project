@@ -1159,7 +1159,7 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S) {
   // If the body of the case is just a 'break', try to not emit an empty block.
   // If we're profiling or we're not optimizing, leave the block in for better
   // debug and coverage analysis.
-  if (!CGM.getCodeGenOpts().ProfileInstrGenerate &&
+  if (!CGM.getCodeGenOpts().hasProfileClangInstr() &&
       CGM.getCodeGenOpts().OptimizationLevel > 0 &&
       isa<BreakStmt>(S.getSubStmt())) {
     JumpDest Block = BreakContinueStack.back().BreakBlock;
@@ -1206,7 +1206,7 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S) {
 
     if (SwitchWeights)
       SwitchWeights->push_back(getProfileCount(NextCase));
-    if (CGM.getCodeGenOpts().ProfileInstrGenerate) {
+    if (CGM.getCodeGenOpts().hasProfileClangInstr()) {
       CaseDest = createBasicBlock("sw.bb");
       EmitBlockWithFallThrough(CaseDest, &S);
     }

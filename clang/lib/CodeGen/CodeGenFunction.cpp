@@ -883,7 +883,7 @@ void CodeGenFunction::EmitFunctionBody(FunctionArgList &Args,
 void CodeGenFunction::EmitBlockWithFallThrough(llvm::BasicBlock *BB,
                                                const Stmt *S) {
   llvm::BasicBlock *SkipCountBB = nullptr;
-  if (HaveInsertPoint() && CGM.getCodeGenOpts().ProfileInstrGenerate) {
+  if (HaveInsertPoint() && CGM.getCodeGenOpts().hasProfileClangInstr()) {
     // When instrumenting for profiling, the fallthrough to certain
     // statements needs to skip over the instrumentation code so that we
     // get an accurate count.

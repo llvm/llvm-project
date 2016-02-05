@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -main-file-name cxx-virtual-destructor-calls.cpp %s -o - -fprofile-instr-generate | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -main-file-name cxx-virtual-destructor-calls.cpp %s -o - -fprofile-instrument=clang | FileCheck %s
 
 struct Member {
   ~Member();

@@ -1,4 +1,5 @@
 @import category_top;
+#import "category_right_sub.h"
 
 @interface Foo(Right1)
 -(void)right1;

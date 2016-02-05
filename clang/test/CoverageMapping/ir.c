@@ -1,5 +1,5 @@
 // Check the data structures emitted by coverage mapping
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name ir.c %s -o - -emit-llvm -fprofile-instr-generate -fcoverage-mapping | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name ir.c %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping | FileCheck %s
 
 
 void foo(void) { }

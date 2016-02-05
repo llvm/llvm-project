@@ -150,7 +150,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     if (Target->isTlsLocalDynamicRel(Type) &&
         !Target->canRelaxTls(Type, nullptr)) {
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
-                          Out<ELFT>::Got->getLocalTlsIndexVA() +
+                          Out<ELFT>::Got->getTlsIndexVA() +
                               getAddend<ELFT>(RI));
       continue;
     }
