@@ -92,7 +92,7 @@ endif()
 check_cxx_compiler_flag("-Wl,-order_file,${CLANG_ORDER_FILE}"
   LINKER_HAS_ORDER_FILE_FLAG)
 
-if(LINKER_HAS_ORDER_FILE_FLAG)
+if(LINKER_HAS_ORDER_FILE_FLAG AND CLANG_ORDER_FILE)
   target_link_libraries(clang "-Wl,-order_file,${CLANG_ORDER_FILE}")
   set_target_properties(clang PROPERTIES LINK_DEPENDS ${CLANG_ORDER_FILE})
 endif()
