@@ -1652,10 +1652,17 @@ Value *SCEVExpander::expand(const SCEV *S) {
     // If S is scConstant, it may be worse to reuse an existing Value.
     if (S->getSCEVType() != scConstant && Set) {
       // Choose a Value from the set which dominates the insertPt.
+      // insertPt should be inside the Value's parent loop so as not to break
+      // the LCSSA form.
       for (auto const &Ent : *Set) {
-        if (Ent && isa<Instruction>(Ent) && S->getType() == Ent->getType() &&
-            cast<Instruction>(Ent)->getFunction() == InsertPt->getFunction() &&
-            SE.DT.dominates(cast<Instruction>(Ent), InsertPt)) {
+        Instruction *EntInst = nullptr;
+        if (Ent && isa<Instruction>(Ent) &&
+            (EntInst = cast<Instruction>(Ent)) &&
+            S->getType() == Ent->getType() &&
+            EntInst->getFunction() == InsertPt->getFunction() &&
+            SE.DT.dominates(EntInst, InsertPt) &&
+            (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
+             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt))) {
           V = Ent;
           break;
         }

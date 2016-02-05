@@ -126,6 +126,31 @@ FoldBlockIntoPredecessor(BasicBlock *BB, LoopInfo* LI, ScalarEvolution *SE,
   return OnlyPred;
 }
 
+/// Check if unrolling created a situation where we need to insert phi nodes to
+/// preserve LCSSA form.
+/// \param Blocks is a vector of basic blocks representing unrolled loop.
+/// \param L is the outer loop.
+/// It's possible that some of the blocks are in L, and some are not. In this
+/// case, if there is a use is outside L, and definition is inside L, we need to
+/// insert a phi-node, otherwise LCSSA will be broken.
+/// The function is just a helper function for llvm::UnrollLoop that returns
+/// true if this situation occurs, indicating that LCSSA needs to be fixed.
+static bool needToInsertPhisForLCSSA(Loop *L, std::vector<BasicBlock *> Blocks,
+                                     LoopInfo *LI) {
+  for (BasicBlock *BB : Blocks) {
+    if (LI->getLoopFor(BB) == L)
+      continue;
+    for (Instruction &I : *BB) {
+      for (Use &U : I.operands()) {
+        if (auto Def = dyn_cast<Instruction>(U))
+          if (LI->getLoopFor(Def->getParent()) == L)
+            return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Unroll the given loop by Count. The loop must be in LCSSA form. Returns true
 /// if unrolling was successful, or false if the loop was unmodified. Unrolling
 /// can only fail when the loop's latch block is not terminated by a conditional
@@ -218,10 +243,16 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   bool CompletelyUnroll = Count == TripCount;
   SmallVector<BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
-  Loop *ParentL = L->getParentLoop();
-  bool AllExitsAreInsideParentLoop = !ParentL ||
-      std::all_of(ExitBlocks.begin(), ExitBlocks.end(),
-                  [&](BasicBlock *BB) { return ParentL->contains(BB); });
+
+  // Go through all exits of L and see if there are any phi-nodes there. We just
+  // conservatively assume that they're inserted to preserve LCSSA form, which
+  // means that complete unrolling might break this form. We need to either fix
+  // it in-place after the transformation, or entirely rebuild LCSSA. TODO: For
+  // now we just recompute LCSSA for the outer loop, but it should be possible
+  // to fix it in-place.
+  bool NeedToFixLCSSA = PreserveLCSSA && CompletelyUnroll &&
+      std::any_of(ExitBlocks.begin(), ExitBlocks.end(),
+                  [&](BasicBlock *BB) { return isa<PHINode>(BB->begin()); });
 
   // We assume a run-time trip count if the compiler cannot
   // figure out the loop trip count and the unroll-runtime
@@ -308,6 +339,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   LoopBlocksDFS::RPOIterator BlockBegin = DFS.beginRPO();
   LoopBlocksDFS::RPOIterator BlockEnd = DFS.endRPO();
 
+  std::vector<BasicBlock*> UnrolledLoopBlocks = L->getBlocks();
   for (unsigned It = 1; It != Count; ++It) {
     std::vector<BasicBlock*> NewBlocks;
     SmallDenseMap<const Loop *, Loop *, 4> NewLoops;
@@ -387,6 +419,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
         Latches.push_back(New);
 
       NewBlocks.push_back(New);
+      UnrolledLoopBlocks.push_back(New);
     }
 
     // Remap all instructions in the most recent iteration
@@ -476,8 +509,13 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
     if (Term->isUnconditional()) {
       BasicBlock *Dest = Term->getSuccessor(0);
       if (BasicBlock *Fold = FoldBlockIntoPredecessor(Dest, LI, SE,
-                                                      ForgottenLoops))
+                                                      ForgottenLoops)) {
+        // Dest has been folded into Fold. Update our worklists accordingly.
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
+        UnrolledLoopBlocks.erase(std::remove(UnrolledLoopBlocks.begin(),
+                                             UnrolledLoopBlocks.end(), Dest),
+                                 UnrolledLoopBlocks.end());
+      }
     }
   }
 
@@ -530,6 +568,17 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   if (CompletelyUnroll)
     LI->markAsRemoved(L);
 
+  // After complete unrolling most of the blocks should be contained in OuterL.
+  // However, some of them might happen to be out of OuterL (e.g. if they
+  // precede a loop exit). In this case we might need to insert PHI nodes in
+  // order to preserve LCSSA form.
+  // We don't need to check this if we already know that we need to fix LCSSA
+  // form.
+  // TODO: For now we just recompute LCSSA for the outer loop in this case, but
+  // it should be possible to fix it in-place.
+  if (PreserveLCSSA && OuterL && CompletelyUnroll && !NeedToFixLCSSA)
+    NeedToFixLCSSA |= ::needToInsertPhisForLCSSA(OuterL, UnrolledLoopBlocks, LI);
+
   // If we have a pass and a DominatorTree we should re-simplify impacted loops
   // to ensure subsequent analyses can rely on this form. We want to simplify
   // at least one layer outside of the loop that was unrolled so that any
@@ -538,7 +587,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
     if (!OuterL && !CompletelyUnroll)
       OuterL = L;
     if (OuterL) {
-      bool Simplified = simplifyLoop(OuterL, DT, LI, SE, AC, PreserveLCSSA);
+      simplifyLoop(OuterL, DT, LI, SE, AC, PreserveLCSSA);
 
       // LCSSA must be performed on the outermost affected loop. The unrolled
       // loop's last loop latch is guaranteed to be in the outermost loop after
@@ -548,7 +597,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
         while (OuterL->getParentLoop() != LatchLoop)
           OuterL = OuterL->getParentLoop();
 
-      if (CompletelyUnroll && (!AllExitsAreInsideParentLoop || Simplified))
+      if (NeedToFixLCSSA)
         formLCSSARecursively(*OuterL, *DT, LI, SE);
       else
         assert(OuterL->isLCSSAForm(*DT) &&

@@ -166,6 +166,18 @@ namespace llvm {
       return (NoWrapFlags)(SubclassData & Mask);
     }
 
+    bool hasNoUnsignedWrap() const {
+      return getNoWrapFlags(SCEV::FlagNUW) != SCEV::FlagAnyWrap;
+    }
+
+    bool hasNoSignedWrap() const {
+      return getNoWrapFlags(SCEV::FlagNSW) != SCEV::FlagAnyWrap;
+    }
+
+    bool hasNoSelfWrap() const {
+      return getNoWrapFlags(SCEV::FlagNW) != SCEV::FlagAnyWrap;
+    }
+
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
     static inline bool classof(const SCEV *S) {
       return S->getSCEVType() == scAddExpr ||

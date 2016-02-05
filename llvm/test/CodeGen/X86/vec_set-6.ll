@@ -1,6 +1,6 @@
 ; RUN: llc < %s -march=x86 -mattr=+sse2 -o %t
 ; RUN: grep movss    %t | count 1
-; RUN: grep movq     %t | count 1
+; RUN: grep movsd    %t | count 1
 ; RUN: grep shufps   %t | count 1
 
 define <4 x float> @test(float %a, float %b, float %c) nounwind {

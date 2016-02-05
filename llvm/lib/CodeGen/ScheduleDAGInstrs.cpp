@@ -893,20 +893,20 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
   // from bottom to top.
 
   // Each MIs' memory operand(s) is analyzed to a list of underlying
-  // objects. The SU is then inserted in the SUList(s) mapped from
-  // that Value(s). Each Value thus gets mapped to a list of SUs
-  // depending on it, defs and uses kept separately. Two SUs are
-  // non-aliasing to each other if they depend on different Values
-  // exclusively.
+  // objects. The SU is then inserted in the SUList(s) mapped from the
+  // Value(s). Each Value thus gets mapped to lists of SUs depending
+  // on it, stores and loads kept separately. Two SUs are trivially
+  // non-aliasing if they both depend on only identified Values and do
+  // not share any common Value.
   Value2SUsMap Stores, Loads(1 /*TrueMemOrderLatency*/);
 
   // Certain memory accesses are known to not alias any SU in Stores
   // or Loads, and have therefore their own 'NonAlias'
   // domain. E.g. spill / reload instructions never alias LLVM I/R
-  // Values. It is assumed that this type of memory accesses always
-  // have a proper memory operand modelling, and are therefore never
-  // unanalyzable. This means they are non aliasing against all nodes
-  // in Stores and Loads, including the unanalyzable ones.
+  // Values. It would be nice to assume that this type of memory
+  // accesses always have a proper memory operand modelling, and are
+  // therefore never unanalyzable, but this is conservatively not
+  // done.
   Value2SUsMap NonAliasStores, NonAliasLoads(1 /*TrueMemOrderLatency*/);
 
   // Always reduce a huge region with half of the elements, except

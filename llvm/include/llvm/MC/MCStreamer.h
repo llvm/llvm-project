@@ -662,6 +662,12 @@ public:
       const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
       ArrayRef<unsigned> SecondaryFunctionIds);
 
+  /// \brief This implements the CodeView '.cv_def_range' assembler
+  /// directive.
+  virtual void EmitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      StringRef FixedSizePortion);
+
   /// \brief This implements the CodeView '.cv_stringtable' assembler directive.
   virtual void EmitCVStringTableDirective() {}
 

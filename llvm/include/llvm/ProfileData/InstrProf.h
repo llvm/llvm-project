@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/InstrProfData.inc"
+#include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -178,8 +179,8 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName);
 /// The first field is the legnth of the uncompressed strings, and the
 /// the second field is the length of the zlib-compressed string.
 /// Both fields are encoded in ULEB128.  If \c doCompress is false, the
-///  third field is the uncompressed strings; otherwise it is the 
-/// compressed string. When the string compression is off, the 
+///  third field is the uncompressed strings; otherwise it is the
+/// compressed string. When the string compression is off, the
 /// second field will have value zero.
 int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
                               bool doCompression, std::string &Result);
@@ -192,6 +193,27 @@ class InstrProfSymtab;
 /// the format described above. The substrings are seperated by 0 or more zero
 /// bytes. This method decodes the string and populates the \c Symtab.
 int readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
+
+enum InstrProfValueKind : uint32_t {
+#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
+struct InstrProfRecord;
+
+/// Get the value profile data for value site \p SiteIdx from \p InstrProfR
+/// and annotate the instruction \p Inst with the value profile meta data.
+void annotateValueSite(Module &M, Instruction &Inst,
+                       const InstrProfRecord &InstrProfR,
+                       InstrProfValueKind ValueKind, uint32_t SiteIndx);
+/// Extract the value profile data from \p Inst which is annotated with
+/// value profile meta data. Return false if there is no value data annotated,
+/// otherwise  return true.
+bool getValueProfDataFromInst(const Instruction &Inst,
+                              InstrProfValueKind ValueKind,
+                              uint32_t MaxNumValueData,
+                              InstrProfValueData ValueData[],
+                              uint32_t &ActualNumValueData, uint64_t &TotalC);
 
 const std::error_category &instrprof_category();
 
@@ -226,11 +248,6 @@ inline instrprof_error MergeResult(instrprof_error &Accumulator,
     Accumulator = Result;
   return Accumulator;
 }
-
-enum InstrProfValueKind : uint32_t {
-#define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
-#include "llvm/ProfileData/InstrProfData.inc"
-};
 
 namespace object {
 class SectionRef;
@@ -586,81 +603,6 @@ uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record);
 ValueProfData *
 serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
                              ValueProfData *Dst);
-
-namespace IndexedInstrProf {
-struct Summary;
-}
-
-///// Profile summary computation ////
-// The 'show' command displays richer summary of the profile data. The profile
-// summary is one or more (Cutoff, MinBlockCount, NumBlocks) triplets. Given a
-// target execution count percentile, we compute the minimum number of blocks
-// needed to reach this target and the minimum execution count of these blocks.
-struct ProfileSummaryEntry {
-  uint32_t Cutoff;        ///< The required percentile of total execution count.
-  uint64_t MinBlockCount; ///< The minimum execution count for this percentile.
-  uint64_t NumBlocks;     ///< Number of blocks >= the minumum execution count.
-  ProfileSummaryEntry(uint32_t TheCutoff, uint64_t TheMinBlockCount,
-                      uint64_t TheNumBlocks)
-      : Cutoff(TheCutoff), MinBlockCount(TheMinBlockCount),
-        NumBlocks(TheNumBlocks) {}
-};
-
-class ProfileSummary {
-  // We keep track of the number of times a count appears in the profile and
-  // keep the map sorted in the descending order of counts.
-  std::map<uint64_t, uint32_t, std::greater<uint64_t>> CountFrequencies;
-  std::vector<ProfileSummaryEntry> DetailedSummary;
-  std::vector<uint32_t> DetailedSummaryCutoffs;
-  // Sum of all counts.
-  uint64_t TotalCount;
-  uint64_t MaxBlockCount, MaxInternalBlockCount, MaxFunctionCount;
-  uint32_t NumBlocks, NumFunctions;
-  inline void addCount(uint64_t Count, bool IsEntry);
-
-public:
-  static const int Scale = 1000000;
-  ProfileSummary(std::vector<uint32_t> Cutoffs)
-      : DetailedSummaryCutoffs(Cutoffs), TotalCount(0), MaxBlockCount(0),
-        MaxInternalBlockCount(0), MaxFunctionCount(0), NumBlocks(0),
-        NumFunctions(0) {}
-  ProfileSummary(const IndexedInstrProf::Summary &S);
-  inline void addRecord(const InstrProfRecord &);
-  inline std::vector<ProfileSummaryEntry> &getDetailedSummary();
-  void computeDetailedSummary();
-  uint32_t getNumBlocks() { return NumBlocks; }
-  uint64_t getTotalCount() { return TotalCount; }
-  uint32_t getNumFunctions() { return NumFunctions; }
-  uint64_t getMaxFunctionCount() { return MaxFunctionCount; }
-  uint64_t getMaxBlockCount() { return MaxBlockCount; }
-  uint64_t getMaxInternalBlockCount() { return MaxInternalBlockCount; }
-};
-
-// This is called when a count is seen in the profile.
-void ProfileSummary::addCount(uint64_t Count, bool IsEntry) {
-  TotalCount += Count;
-  if (Count > MaxBlockCount)
-    MaxBlockCount = Count;
-  if (!IsEntry && Count > MaxInternalBlockCount)
-    MaxInternalBlockCount = Count;
-  NumBlocks++;
-  CountFrequencies[Count]++;
-}
-
-void ProfileSummary::addRecord(const InstrProfRecord &R) {
-  NumFunctions++;
-  if (R.Counts[0] > MaxFunctionCount)
-    MaxFunctionCount = R.Counts[0];
-
-  for (size_t I = 0, E = R.Counts.size(); I < E; ++I)
-    addCount(R.Counts[I], (I == 0));
-}
-
-std::vector<ProfileSummaryEntry> &ProfileSummary::getDetailedSummary() {
-  if (!DetailedSummaryCutoffs.empty() && DetailedSummary.empty())
-    computeDetailedSummary();
-  return DetailedSummary;
-}
 
 namespace IndexedInstrProf {
 

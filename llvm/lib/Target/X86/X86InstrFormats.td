@@ -845,7 +845,7 @@ class AVXPCLMULIi8<bits<8> o, Format F, dag outs, dag ins, string asm,
 class FMA3<bits<8> o, Format F, dag outs, dag ins, string asm,
            list<dag>pattern, InstrItinClass itin = NoItinerary>
       : I<o, F, outs, ins, asm, pattern, itin>, T8PD,
-        VEX_4V, FMASC, Requires<[HasFMA]>;
+        VEX_4V, FMASC, Requires<[HasFMA, NoVLX]>;
 
 // FMA4 Instruction Templates
 class FMA4<bits<8> o, Format F, dag outs, dag ins, string asm,

@@ -1,4 +1,4 @@
-set(LLVM_INSTALL_PACKAGE_DIR share/llvm/cmake)
+set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
 set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
 
 get_property(LLVM_EXPORTS GLOBAL PROPERTY LLVM_EXPORTS)

@@ -201,6 +201,10 @@ void MCStreamer::EmitCVInlineLinetableDirective(
     const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
     ArrayRef<unsigned> SecondaryFunctionIds) {}
 
+void MCStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    StringRef FixedSizePortion) {}
+
 void MCStreamer::EmitEHSymAttributes(const MCSymbol *Symbol,
                                      MCSymbol *EHSymbol) {
 }

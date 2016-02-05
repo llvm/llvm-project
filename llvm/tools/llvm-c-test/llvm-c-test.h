@@ -14,11 +14,17 @@
 #define LLVM_C_TEST_H
 
 #include <stdbool.h>
+#include "llvm-c/Core.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // helpers.c
 void tokenize_stdin(void (*cb)(char **tokens, int ntokens));
 
 // module.c
+LLVMModuleRef load_module(bool Lazy, bool New);
 int module_dump(bool Lazy, bool New);
 int module_list_functions(void);
 int module_list_globals(void);
@@ -39,5 +45,12 @@ int object_list_symbols(void);
 
 // targets.c
 int targets_list(void);
+
+// echo.c
+int echo(void);
+
+#ifdef __cplusplus
+}
+#endif /* !defined(__cplusplus) */
 
 #endif

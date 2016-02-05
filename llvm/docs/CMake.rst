@@ -536,16 +536,16 @@ The ``find_package(...)`` directive when used in CONFIG mode (as in the above
 example) will look for the ``LLVMConfig.cmake`` file in various locations (see
 cmake manual for details).  It creates a ``LLVM_DIR`` cache entry to save the
 directory where ``LLVMConfig.cmake`` is found or allows the user to specify the
-directory (e.g. by passing ``-DLLVM_DIR=/usr/share/llvm/cmake`` to
+directory (e.g. by passing ``-DLLVM_DIR=/usr/lib/cmake/llvm`` to
 the ``cmake`` command or by setting it directly in ``ccmake`` or ``cmake-gui``).
 
 This file is available in two different locations.
 
-* ``<INSTALL_PREFIX>/share/llvm/cmake/LLVMConfig.cmake`` where
+* ``<INSTALL_PREFIX>/lib/cmake/llvm/LLVMConfig.cmake`` where
   ``<INSTALL_PREFIX>`` is the install prefix of an installed version of LLVM.
-  On Linux typically this is ``/usr/share/llvm/cmake/LLVMConfig.cmake``.
+  On Linux typically this is ``/usr/lib/cmake/llvm/LLVMConfig.cmake``.
 
-* ``<LLVM_BUILD_ROOT>/share/llvm/cmake/LLVMConfig.cmake`` where
+* ``<LLVM_BUILD_ROOT>/lib/cmake/llvm/LLVMConfig.cmake`` where
   ``<LLVM_BUILD_ROOT>`` is the root of the LLVM build tree. **Note: this is only
   available when building LLVM with CMake.**
 

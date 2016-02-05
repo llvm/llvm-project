@@ -465,9 +465,16 @@ public:
       return false;
     }
 
-    // Point of no-return, start the transformation.  First, version the loop if
-    // necessary.
     if (!Checks.empty() || !LAI.PSE.getUnionPredicate().isAlwaysTrue()) {
+      if (L->getHeader()->getParent()->optForSize()) {
+        DEBUG(dbgs() << "Versioning is needed but not allowed when optimizing "
+                        "for size.\n");
+        return false;
+      }
+
+      // Point of no-return, start the transformation.  First, version the loop
+      // if necessary.
+
       LoopVersioning LV(LAI, L, LI, DT, PSE.getSE(), false);
       LV.setAliasChecks(std::move(Checks));
       LV.setSCEVChecks(LAI.PSE.getUnionPredicate());

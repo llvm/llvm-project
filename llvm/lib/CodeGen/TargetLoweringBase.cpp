@@ -231,6 +231,8 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::COPYSIGN_F80] = "copysignl";
   Names[RTLIB::COPYSIGN_F128] = "copysignl";
   Names[RTLIB::COPYSIGN_PPCF128] = "copysignl";
+  Names[RTLIB::FPEXT_F32_PPCF128] = "__gcc_stoq";
+  Names[RTLIB::FPEXT_F64_PPCF128] = "__gcc_dtoq";
   Names[RTLIB::FPEXT_F64_F128] = "__extenddftf2";
   Names[RTLIB::FPEXT_F32_F128] = "__extendsftf2";
   Names[RTLIB::FPEXT_F32_F64] = "__extendsfdf2";
@@ -243,10 +245,10 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::FPROUND_F64_F32] = "__truncdfsf2";
   Names[RTLIB::FPROUND_F80_F32] = "__truncxfsf2";
   Names[RTLIB::FPROUND_F128_F32] = "__trunctfsf2";
-  Names[RTLIB::FPROUND_PPCF128_F32] = "__trunctfsf2";
+  Names[RTLIB::FPROUND_PPCF128_F32] = "__gcc_qtos";
   Names[RTLIB::FPROUND_F80_F64] = "__truncxfdf2";
   Names[RTLIB::FPROUND_F128_F64] = "__trunctfdf2";
-  Names[RTLIB::FPROUND_PPCF128_F64] = "__trunctfdf2";
+  Names[RTLIB::FPROUND_PPCF128_F64] = "__gcc_qtod";
   Names[RTLIB::FPTOSINT_F32_I32] = "__fixsfsi";
   Names[RTLIB::FPTOSINT_F32_I64] = "__fixsfdi";
   Names[RTLIB::FPTOSINT_F32_I128] = "__fixsfti";
@@ -259,7 +261,7 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::FPTOSINT_F128_I32] = "__fixtfsi";
   Names[RTLIB::FPTOSINT_F128_I64] = "__fixtfdi";
   Names[RTLIB::FPTOSINT_F128_I128] = "__fixtfti";
-  Names[RTLIB::FPTOSINT_PPCF128_I32] = "__fixtfsi";
+  Names[RTLIB::FPTOSINT_PPCF128_I32] = "__gcc_qtou";
   Names[RTLIB::FPTOSINT_PPCF128_I64] = "__fixtfdi";
   Names[RTLIB::FPTOSINT_PPCF128_I128] = "__fixtfti";
   Names[RTLIB::FPTOUINT_F32_I32] = "__fixunssfsi";
@@ -281,7 +283,7 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::SINTTOFP_I32_F64] = "__floatsidf";
   Names[RTLIB::SINTTOFP_I32_F80] = "__floatsixf";
   Names[RTLIB::SINTTOFP_I32_F128] = "__floatsitf";
-  Names[RTLIB::SINTTOFP_I32_PPCF128] = "__floatsitf";
+  Names[RTLIB::SINTTOFP_I32_PPCF128] = "__gcc_itoq";
   Names[RTLIB::SINTTOFP_I64_F32] = "__floatdisf";
   Names[RTLIB::SINTTOFP_I64_F64] = "__floatdidf";
   Names[RTLIB::SINTTOFP_I64_F80] = "__floatdixf";
@@ -296,7 +298,7 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::UINTTOFP_I32_F64] = "__floatunsidf";
   Names[RTLIB::UINTTOFP_I32_F80] = "__floatunsixf";
   Names[RTLIB::UINTTOFP_I32_F128] = "__floatunsitf";
-  Names[RTLIB::UINTTOFP_I32_PPCF128] = "__floatunsitf";
+  Names[RTLIB::UINTTOFP_I32_PPCF128] = "__gcc_utoq";
   Names[RTLIB::UINTTOFP_I64_F32] = "__floatundisf";
   Names[RTLIB::UINTTOFP_I64_F64] = "__floatundidf";
   Names[RTLIB::UINTTOFP_I64_F80] = "__floatundixf";
@@ -310,27 +312,35 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::OEQ_F32] = "__eqsf2";
   Names[RTLIB::OEQ_F64] = "__eqdf2";
   Names[RTLIB::OEQ_F128] = "__eqtf2";
+  Names[RTLIB::OEQ_PPCF128] = "__gcc_qeq";
   Names[RTLIB::UNE_F32] = "__nesf2";
   Names[RTLIB::UNE_F64] = "__nedf2";
   Names[RTLIB::UNE_F128] = "__netf2";
+  Names[RTLIB::UNE_PPCF128] = "__gcc_qne";
   Names[RTLIB::OGE_F32] = "__gesf2";
   Names[RTLIB::OGE_F64] = "__gedf2";
   Names[RTLIB::OGE_F128] = "__getf2";
+  Names[RTLIB::OGE_PPCF128] = "__gcc_qge";
   Names[RTLIB::OLT_F32] = "__ltsf2";
   Names[RTLIB::OLT_F64] = "__ltdf2";
   Names[RTLIB::OLT_F128] = "__lttf2";
+  Names[RTLIB::OLT_PPCF128] = "__gcc_qlt";
   Names[RTLIB::OLE_F32] = "__lesf2";
   Names[RTLIB::OLE_F64] = "__ledf2";
   Names[RTLIB::OLE_F128] = "__letf2";
+  Names[RTLIB::OLE_PPCF128] = "__gcc_qle";
   Names[RTLIB::OGT_F32] = "__gtsf2";
   Names[RTLIB::OGT_F64] = "__gtdf2";
   Names[RTLIB::OGT_F128] = "__gttf2";
+  Names[RTLIB::OGT_PPCF128] = "__gcc_qgt";
   Names[RTLIB::UO_F32] = "__unordsf2";
   Names[RTLIB::UO_F64] = "__unorddf2";
   Names[RTLIB::UO_F128] = "__unordtf2";
+  Names[RTLIB::UO_PPCF128] = "__gcc_qunord";
   Names[RTLIB::O_F32] = "__unordsf2";
   Names[RTLIB::O_F64] = "__unorddf2";
   Names[RTLIB::O_F128] = "__unordtf2";
+  Names[RTLIB::O_PPCF128] = "__gcc_qunord";
   Names[RTLIB::MEMCPY] = "memcpy";
   Names[RTLIB::MEMMOVE] = "memmove";
   Names[RTLIB::MEMSET] = "memset";
@@ -446,9 +456,13 @@ RTLIB::Libcall RTLIB::getFPEXT(EVT OpVT, EVT RetVT) {
       return FPEXT_F32_F64;
     if (RetVT == MVT::f128)
       return FPEXT_F32_F128;
+    if (RetVT == MVT::ppcf128)
+      return FPEXT_F32_PPCF128;
   } else if (OpVT == MVT::f64) {
     if (RetVT == MVT::f128)
       return FPEXT_F64_F128;
+    else if (RetVT == MVT::ppcf128)
+      return FPEXT_F64_PPCF128;
   }
 
   return UNKNOWN_LIBCALL;
@@ -698,27 +712,35 @@ static void InitCmpLibcallCCs(ISD::CondCode *CCs) {
   CCs[RTLIB::OEQ_F32] = ISD::SETEQ;
   CCs[RTLIB::OEQ_F64] = ISD::SETEQ;
   CCs[RTLIB::OEQ_F128] = ISD::SETEQ;
+  CCs[RTLIB::OEQ_PPCF128] = ISD::SETEQ;
   CCs[RTLIB::UNE_F32] = ISD::SETNE;
   CCs[RTLIB::UNE_F64] = ISD::SETNE;
   CCs[RTLIB::UNE_F128] = ISD::SETNE;
+  CCs[RTLIB::UNE_PPCF128] = ISD::SETNE;
   CCs[RTLIB::OGE_F32] = ISD::SETGE;
   CCs[RTLIB::OGE_F64] = ISD::SETGE;
   CCs[RTLIB::OGE_F128] = ISD::SETGE;
+  CCs[RTLIB::OGE_PPCF128] = ISD::SETGE;
   CCs[RTLIB::OLT_F32] = ISD::SETLT;
   CCs[RTLIB::OLT_F64] = ISD::SETLT;
   CCs[RTLIB::OLT_F128] = ISD::SETLT;
+  CCs[RTLIB::OLT_PPCF128] = ISD::SETLT;
   CCs[RTLIB::OLE_F32] = ISD::SETLE;
   CCs[RTLIB::OLE_F64] = ISD::SETLE;
   CCs[RTLIB::OLE_F128] = ISD::SETLE;
+  CCs[RTLIB::OLE_PPCF128] = ISD::SETLE;
   CCs[RTLIB::OGT_F32] = ISD::SETGT;
   CCs[RTLIB::OGT_F64] = ISD::SETGT;
   CCs[RTLIB::OGT_F128] = ISD::SETGT;
+  CCs[RTLIB::OGT_PPCF128] = ISD::SETGT;
   CCs[RTLIB::UO_F32] = ISD::SETNE;
   CCs[RTLIB::UO_F64] = ISD::SETNE;
   CCs[RTLIB::UO_F128] = ISD::SETNE;
+  CCs[RTLIB::UO_PPCF128] = ISD::SETNE;
   CCs[RTLIB::O_F32] = ISD::SETEQ;
   CCs[RTLIB::O_F64] = ISD::SETEQ;
   CCs[RTLIB::O_F128] = ISD::SETEQ;
+  CCs[RTLIB::O_PPCF128] = ISD::SETEQ;
 }
 
 /// NOTE: The TargetMachine owns TLOF.
@@ -1250,10 +1272,17 @@ void TargetLoweringBase::computeRegisterProperties(
 
   // ppcf128 type is really two f64's.
   if (!isTypeLegal(MVT::ppcf128)) {
-    NumRegistersForVT[MVT::ppcf128] = 2*NumRegistersForVT[MVT::f64];
-    RegisterTypeForVT[MVT::ppcf128] = MVT::f64;
-    TransformToType[MVT::ppcf128] = MVT::f64;
-    ValueTypeActions.setTypeAction(MVT::ppcf128, TypeExpandFloat);
+    if (isTypeLegal(MVT::f64)) {
+      NumRegistersForVT[MVT::ppcf128] = 2*NumRegistersForVT[MVT::f64];
+      RegisterTypeForVT[MVT::ppcf128] = MVT::f64;
+      TransformToType[MVT::ppcf128] = MVT::f64;
+      ValueTypeActions.setTypeAction(MVT::ppcf128, TypeExpandFloat);
+    } else {
+      NumRegistersForVT[MVT::ppcf128] = NumRegistersForVT[MVT::i128];
+      RegisterTypeForVT[MVT::ppcf128] = RegisterTypeForVT[MVT::i128];
+      TransformToType[MVT::ppcf128] = MVT::i128;
+      ValueTypeActions.setTypeAction(MVT::ppcf128, TypeSoftenFloat);
+    }
   }
 
   // Decide how to handle f128. If the target does not have native f128 support,

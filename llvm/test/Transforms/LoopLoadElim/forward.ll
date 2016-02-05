@@ -1,6 +1,6 @@
 ; RUN: opt -loop-load-elim -S < %s | FileCheck %s
 
-; Simple st->ld forwarding derived from a lexical forwrad dep.
+; Simple st->ld forwarding derived from a lexical forward dep.
 ;
 ;   for (unsigned i = 0; i < 100; i++) {
 ;     A[i+1] = B[i] + 2;

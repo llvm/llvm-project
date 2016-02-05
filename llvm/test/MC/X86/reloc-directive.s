@@ -20,7 +20,7 @@ foo:
 	.reloc 16, dir32,   foo@imgrel   # ASM: .reloc 16, dir32, foo@IMGREL
 
 # OBJ-32-LABEL: Name: .text
-# OBJ-32:       0000: 04000000 00000000 08000000
+# OBJ-32:       0000: 04000000 00000000 00000000
 # OBJ-32-LABEL: }
 # OBJ-32-LABEL: Relocations [
 # OBJ-32:       0x4  IMAGE_REL_I386_DIR32   foo
@@ -30,7 +30,7 @@ foo:
 # OBJ-32:       0x10 IMAGE_REL_I386_DIR32NB foo
 
 # OBJ-64-LABEL: Name: .text
-# OBJ-64:       0000: 04000000 00000000 08000000
+# OBJ-64:       0000: 04000000 00000000 00000000
 # OBJ-64-LABEL: }
 # OBJ-64-LABEL: Relocations [
 # OBJ-64:       0x4  IMAGE_REL_AMD64_ADDR32   foo

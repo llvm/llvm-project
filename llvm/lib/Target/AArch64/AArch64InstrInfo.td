@@ -528,6 +528,12 @@ def i64imm_32bit : ImmLeaf<i64, [{
   return (Imm & 0xffffffffULL) == static_cast<uint64_t>(Imm);
 }]>;
 
+def s64imm_32bit : ImmLeaf<i64, [{
+  int64_t Imm64 = static_cast<int64_t>(Imm);
+  return Imm64 >= std::numeric_limits<int32_t>::min() &&
+         Imm64 <= std::numeric_limits<int32_t>::max();
+}]>;
+
 def trunc_imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
@@ -734,6 +740,40 @@ def : Pat<(i64 (ineg (mul (sext GPR32:$Rn), (sext GPR32:$Rm)))),
           (SMSUBLrrr GPR32:$Rn, GPR32:$Rm, XZR)>;
 def : Pat<(i64 (ineg (mul (zext GPR32:$Rn), (zext GPR32:$Rm)))),
           (UMSUBLrrr GPR32:$Rn, GPR32:$Rm, XZR)>;
+
+def : Pat<(i64 (mul (sext GPR32:$Rn), (s64imm_32bit:$C))),
+          (SMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), XZR)>;
+def : Pat<(i64 (mul (zext GPR32:$Rn), (i64imm_32bit:$C))),
+          (UMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), XZR)>;
+def : Pat<(i64 (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C))),
+          (SMADDLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
+                     (MOVi32imm (trunc_imm imm:$C)), XZR)>;
+
+def : Pat<(i64 (ineg (mul (sext GPR32:$Rn), (s64imm_32bit:$C)))),
+          (SMSUBLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), XZR)>;
+def : Pat<(i64 (ineg (mul (zext GPR32:$Rn), (i64imm_32bit:$C)))),
+          (UMSUBLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), XZR)>;
+def : Pat<(i64 (ineg (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)))),
+          (SMSUBLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
+                     (MOVi32imm (trunc_imm imm:$C)), XZR)>;
+
+def : Pat<(i64 (add (mul (sext GPR32:$Rn), (s64imm_32bit:$C)), GPR64:$Ra)),
+          (SMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
+def : Pat<(i64 (add (mul (zext GPR32:$Rn), (i64imm_32bit:$C)), GPR64:$Ra)),
+          (UMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
+def : Pat<(i64 (add (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
+                    GPR64:$Ra)),
+          (SMADDLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
+                     (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
+
+def : Pat<(i64 (sub (mul (sext GPR32:$Rn), (s64imm_32bit:$C)), GPR64:$Ra)),
+          (SMSUBLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
+def : Pat<(i64 (sub (mul (zext GPR32:$Rn), (i64imm_32bit:$C)), GPR64:$Ra)),
+          (UMSUBLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
+def : Pat<(i64 (sub (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
+                    GPR64:$Ra)),
+          (SMSUBLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
+                     (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
 } // AddedComplexity = 5
 
 def : MulAccumWAlias<"mul", MADDWrrr>;

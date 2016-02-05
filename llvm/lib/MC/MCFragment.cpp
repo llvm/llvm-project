@@ -292,6 +292,9 @@ void MCFragment::destroy() {
     case FT_CVInlineLines:
       delete cast<MCCVInlineLineTableFragment>(this);
       return;
+    case FT_CVDefRange:
+      delete cast<MCCVDefRangeFragment>(this);
+      return;
     case FT_Dummy:
       delete cast<MCDummyFragment>(this);
       return;
@@ -331,6 +334,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
   case MCFragment::FT_LEB:   OS << "MCLEBFragment"; break;
   case MCFragment::FT_SafeSEH:    OS << "MCSafeSEHFragment"; break;
   case MCFragment::FT_CVInlineLines: OS << "MCCVInlineLineTableFragment"; break;
+  case MCFragment::FT_CVDefRange: OS << "MCCVDefRangeTableFragment"; break;
   case MCFragment::FT_Dummy: OS << "MCDummyFragment"; break;
   }
 
@@ -433,6 +437,16 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
     const auto *F = cast<MCCVInlineLineTableFragment>(this);
     OS << "\n       ";
     OS << " Sym:" << *F->getFnStartSym();
+    break;
+  }
+  case MCFragment::FT_CVDefRange: {
+    const auto *F = cast<MCCVDefRangeFragment>(this);
+    OS << "\n       ";
+    for (std::pair<const MCSymbol *, const MCSymbol *> RangeStartEnd :
+         F->getRanges()) {
+      OS << " RangeStart:" << RangeStartEnd.first;
+      OS << " RangeEnd:" << RangeStartEnd.second;
+    }
     break;
   }
   case MCFragment::FT_Dummy:

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProfReader.h"
@@ -223,6 +224,60 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {
   ASSERT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
   ASSERT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
   ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
+}
+
+TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
+  InstrProfRecord Record("caller", 0x1234, {1, 2});
+  Record.reserveSites(IPVK_IndirectCallTarget, 1);
+  InstrProfValueData VD0[] = {{1000, 1}, {2000, 2}, {3000, 3}};
+  Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 3, nullptr);
+  Writer.addRecord(std::move(Record));
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+  ErrorOr<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  ASSERT_TRUE(NoError(R.getError()));
+
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx),
+                                        /*isVarArg=*/false);
+  Function *F =
+      Function::Create(FTy, Function::ExternalLinkage, "caller", M.get());
+  BasicBlock *BB = BasicBlock::Create(Ctx, "", F);
+
+  IRBuilder<> Builder(BB);
+  BasicBlock *TBB = BasicBlock::Create(Ctx, "", F);
+  BasicBlock *FBB = BasicBlock::Create(Ctx, "", F);
+
+  // Use branch instruction to annotate with value profile data for simplicity
+  Instruction *Inst = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
+  Instruction *Inst2 = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
+  annotateValueSite(*M.get(), *Inst, R.get(), IPVK_IndirectCallTarget, 0);
+
+  InstrProfValueData ValueData[5];
+  uint32_t N;
+  uint64_t T;
+  bool Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
+                                      ValueData, N, T);
+  ASSERT_TRUE(Res);
+  ASSERT_EQ(3U, N);
+  ASSERT_EQ(6U, T);
+  // The result should be sorted already:
+  ASSERT_EQ(3000U, ValueData[0].Value);
+  ASSERT_EQ(3U, ValueData[0].Count);
+  ASSERT_EQ(2000U, ValueData[1].Value);
+  ASSERT_EQ(2U, ValueData[1].Count);
+  ASSERT_EQ(1000U, ValueData[2].Value);
+  ASSERT_EQ(1U, ValueData[2].Count);
+  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 1, ValueData,
+                                 N, T);
+  ASSERT_TRUE(Res);
+  ASSERT_EQ(1U, N);
+  ASSERT_EQ(6U, T);
+
+  Res = getValueProfDataFromInst(*Inst2, IPVK_IndirectCallTarget, 5, ValueData,
+                                 N, T);
+  ASSERT_FALSE(Res);
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_with_weight) {
