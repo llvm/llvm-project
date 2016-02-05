@@ -266,6 +266,16 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints (Process *process)
         {
             return addr;
         }
+        addr = process->ReadUnsignedIntegerFromMemory (0xfffffff000002010ULL, 8, LLDB_INVALID_ADDRESS, read_err);
+        if (CheckForKernelImageAtAddress (addr, process).IsValid())
+        {
+            return addr;
+        }
+        addr = process->ReadUnsignedIntegerFromMemory (0xfffffff000004010ULL, 8, LLDB_INVALID_ADDRESS, read_err);
+        if (CheckForKernelImageAtAddress (addr, process).IsValid())
+        {
+            return addr;
+        }
     }
     else
     {
@@ -397,8 +407,12 @@ DynamicLoaderDarwinKernel::SearchForKernelViaExhaustiveSearch (Process *process)
 lldb_private::UUID
 DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress (lldb::addr_t addr, Process *process)
 {
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
     if (addr == LLDB_INVALID_ADDRESS)
         return UUID();
+
+    if (log)
+        log->Printf ("DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress: looking for kernel binary at 0x%" PRIx64, addr);
 
     // First try a quick test -- read the first 4 bytes and see if there is a valid Mach-O magic field there
     // (the first field of the mach_header/mach_header_64 struct).
@@ -450,6 +464,8 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress (lldb::addr_t addr, Proc
             {
                 process->GetTarget().SetArchitecture (kernel_arch);
             }
+            if (log)
+                log->Printf ("DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress: kernel binary image found at 0x%" PRIx64, addr);
             return memory_module_sp->GetUUID();
         }
     }
