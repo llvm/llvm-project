@@ -89,8 +89,12 @@ if (APPLE)
   set(TOOL_INFO_BUILD_VERSION)
 endif()
 
-if(CLANG_ORDER_FILE)
+check_cxx_compiler_flag("-Wl,-order_file,${CLANG_ORDER_FILE}"
+  LINKER_HAS_ORDER_FILE_FLAG)
+
+if(LINKER_HAS_ORDER_FILE_FLAG)
   target_link_libraries(clang "-Wl,-order_file,${CLANG_ORDER_FILE}")
+  set_target_properties(clang PROPERTIES LINK_DEPENDS ${CLANG_ORDER_FILE})
 endif()
 
 if(WITH_POLLY AND LINK_POLLY_INTO_TOOLS)
