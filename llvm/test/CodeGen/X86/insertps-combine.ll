@@ -133,12 +133,12 @@ define <4 x float> @insertps_undef_input1(<4 x float> %a0, <4 x float> %a1) {
 define <4 x float> @consecutive_load_insertps_04zz(float* %p) {
 ; SSE-LABEL: consecutive_load_insertps_04zz:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: consecutive_load_insertps_04zz:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
   %p0 = getelementptr inbounds float, float* %p, i64 1
   %p1 = getelementptr inbounds float, float* %p, i64 2

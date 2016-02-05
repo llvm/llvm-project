@@ -230,7 +230,7 @@ class Test:
                 return True
 
             # If this is a part of the target triple, it fails.
-            if item in self.suite.config.target_triple:
+            if item and item in self.suite.config.target_triple:
                 return True
 
         return False

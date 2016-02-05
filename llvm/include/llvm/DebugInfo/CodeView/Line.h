@@ -35,6 +35,7 @@ public:
   };
 
   LineInfo(uint32_t StartLine, uint32_t EndLine, bool IsStatement);
+  LineInfo(uint32_t LineData) : LineData(LineData) {}
 
   uint32_t getStartLine() const { return LineData & StartLineMask; }
 

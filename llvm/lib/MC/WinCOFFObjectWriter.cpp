@@ -785,6 +785,10 @@ void WinCOFFObjectWriter::recordRelocation(
     }
   }
 
+  // The fixed value never makes sense for section indicies, ignore it.
+  if (Fixup.getKind() == FK_SecRel_2)
+    FixedValue = 0;
+
   if (TargetObjectWriter->recordRelocation(Fixup))
     coff_section->Relocations.push_back(Reloc);
 }

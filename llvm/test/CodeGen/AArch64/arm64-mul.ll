@@ -88,3 +88,55 @@ entry:
   %tmp4 = sub i64 0, %tmp3
   ret i64 %tmp4
 }
+
+define i64 @t9(i32 %a) nounwind {
+entry:
+; CHECK-LABEL: t9:
+; CHECK: umull {{x[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}
+  %tmp1 = zext i32 %a to i64
+  %tmp2 = mul i64 %tmp1, 139968
+  ret i64 %tmp2
+}
+
+; Check 64-bit multiplication is used for constants > 32 bits.
+define i64 @t10(i32 %a) nounwind {
+entry:
+; CHECK-LABEL: t10:
+; CHECK: mul {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
+  %tmp1 = sext i32 %a to i64
+  %tmp2 = mul i64 %tmp1, 2147483650 ; = 2^31 + 2
+  ret i64 %tmp2
+}
+
+; Check the sext_inreg case.
+define i64 @t11(i64 %a) nounwind {
+entry:
+; CHECK-LABEL: t11:
+; CHECK: smnegl {{x[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}
+  %tmp1 = trunc i64 %a to i32
+  %tmp2 = sext i32 %tmp1 to i64
+  %tmp3 = mul i64 %tmp2, -2395238
+  %tmp4 = sub i64 0, %tmp3
+  ret i64 %tmp4
+}
+
+define i64 @t12(i64 %a, i64 %b) nounwind {
+entry:
+; CHECK-LABEL: t12:
+; CHECK: smaddl {{x[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, {{x[0-9]+}}
+  %tmp1 = trunc i64 %a to i32
+  %tmp2 = sext i32 %tmp1 to i64
+  %tmp3 = mul i64 %tmp2, -34567890
+  %tmp4 = add i64 %b, %tmp3
+  ret i64 %tmp4
+}
+
+define i64 @t13(i32 %a, i64 %b) nounwind {
+entry:
+; CHECK-LABEL: t13:
+; CHECK: umsubl {{x[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, {{x[0-9]+}}
+  %tmp1 = zext i32 %a to i64
+  %tmp3 = mul i64 %tmp1, 12345678
+  %tmp4 = sub i64 %tmp3, %b
+  ret i64 %tmp4
+}

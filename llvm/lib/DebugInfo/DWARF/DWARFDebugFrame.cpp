@@ -640,9 +640,8 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
             Offset + static_cast<uint32_t>(AugmentationLength);
 
           // Decode the LSDA if the CIE augmentation string said we should.
-          uint64_t LSDA = 0;
           if (Cie->getLSDAPointerEncoding() != DW_EH_PE_omit)
-            LSDA = readPointer(Data, Offset, Cie->getLSDAPointerEncoding());
+            readPointer(Data, Offset, Cie->getLSDAPointerEncoding());
 
           if (Offset != EndAugmentationOffset)
             ReportError("Parsing augmentation data at %lx failed");

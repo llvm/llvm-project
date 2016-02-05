@@ -124,7 +124,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
                                          SDValue &NewLHS, SDValue &NewRHS,
                                          ISD::CondCode &CCCode,
                                          SDLoc dl) const {
-  assert((VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128)
+  assert((VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128 || VT == MVT::ppcf128)
          && "Unsupported setcc type!");
 
   // Expand into one or more soft-fp libcall(s).
@@ -134,53 +134,65 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   case ISD::SETEQ:
   case ISD::SETOEQ:
     LC1 = (VT == MVT::f32) ? RTLIB::OEQ_F32 :
-          (VT == MVT::f64) ? RTLIB::OEQ_F64 : RTLIB::OEQ_F128;
+          (VT == MVT::f64) ? RTLIB::OEQ_F64 :
+          (VT == MVT::f128) ? RTLIB::OEQ_F128 : RTLIB::OEQ_PPCF128;
     break;
   case ISD::SETNE:
   case ISD::SETUNE:
     LC1 = (VT == MVT::f32) ? RTLIB::UNE_F32 :
-          (VT == MVT::f64) ? RTLIB::UNE_F64 : RTLIB::UNE_F128;
+          (VT == MVT::f64) ? RTLIB::UNE_F64 :
+          (VT == MVT::f128) ? RTLIB::UNE_F128 : RTLIB::UNE_PPCF128;
     break;
   case ISD::SETGE:
   case ISD::SETOGE:
     LC1 = (VT == MVT::f32) ? RTLIB::OGE_F32 :
-          (VT == MVT::f64) ? RTLIB::OGE_F64 : RTLIB::OGE_F128;
+          (VT == MVT::f64) ? RTLIB::OGE_F64 :
+          (VT == MVT::f128) ? RTLIB::OGE_F128 : RTLIB::OGE_PPCF128;
     break;
   case ISD::SETLT:
   case ISD::SETOLT:
     LC1 = (VT == MVT::f32) ? RTLIB::OLT_F32 :
-          (VT == MVT::f64) ? RTLIB::OLT_F64 : RTLIB::OLT_F128;
+          (VT == MVT::f64) ? RTLIB::OLT_F64 :
+          (VT == MVT::f128) ? RTLIB::OLT_F128 : RTLIB::OLT_PPCF128;
     break;
   case ISD::SETLE:
   case ISD::SETOLE:
     LC1 = (VT == MVT::f32) ? RTLIB::OLE_F32 :
-          (VT == MVT::f64) ? RTLIB::OLE_F64 : RTLIB::OLE_F128;
+          (VT == MVT::f64) ? RTLIB::OLE_F64 :
+          (VT == MVT::f128) ? RTLIB::OLE_F128 : RTLIB::OLE_PPCF128;
     break;
   case ISD::SETGT:
   case ISD::SETOGT:
     LC1 = (VT == MVT::f32) ? RTLIB::OGT_F32 :
-          (VT == MVT::f64) ? RTLIB::OGT_F64 : RTLIB::OGT_F128;
+          (VT == MVT::f64) ? RTLIB::OGT_F64 :
+          (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
     break;
   case ISD::SETUO:
     LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
-          (VT == MVT::f64) ? RTLIB::UO_F64 : RTLIB::UO_F128;
+          (VT == MVT::f64) ? RTLIB::UO_F64 :
+          (VT == MVT::f128) ? RTLIB::UO_F128 : RTLIB::UO_PPCF128;
     break;
   case ISD::SETO:
     LC1 = (VT == MVT::f32) ? RTLIB::O_F32 :
-          (VT == MVT::f64) ? RTLIB::O_F64 : RTLIB::O_F128;
+          (VT == MVT::f64) ? RTLIB::O_F64 :
+          (VT == MVT::f128) ? RTLIB::O_F128 : RTLIB::O_PPCF128;
     break;
   case ISD::SETONE:
     // SETONE = SETOLT | SETOGT
     LC1 = (VT == MVT::f32) ? RTLIB::OLT_F32 :
-          (VT == MVT::f64) ? RTLIB::OLT_F64 : RTLIB::OLT_F128;
+          (VT == MVT::f64) ? RTLIB::OLT_F64 :
+          (VT == MVT::f128) ? RTLIB::OLT_F128 : RTLIB::OLT_PPCF128;
     LC2 = (VT == MVT::f32) ? RTLIB::OGT_F32 :
-          (VT == MVT::f64) ? RTLIB::OGT_F64 : RTLIB::OGT_F128;
+          (VT == MVT::f64) ? RTLIB::OGT_F64 :
+          (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
     break;
   case ISD::SETUEQ:
     LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
-          (VT == MVT::f64) ? RTLIB::UO_F64 : RTLIB::UO_F128;
+          (VT == MVT::f64) ? RTLIB::UO_F64 :
+          (VT == MVT::f128) ? RTLIB::UO_F64 : RTLIB::UO_PPCF128;
     LC2 = (VT == MVT::f32) ? RTLIB::OEQ_F32 :
-          (VT == MVT::f64) ? RTLIB::OEQ_F64 : RTLIB::OEQ_F128;
+          (VT == MVT::f64) ? RTLIB::OEQ_F64 :
+          (VT == MVT::f128) ? RTLIB::OEQ_F128 : RTLIB::OEQ_PPCF128;
     break;
   default:
     // Invert CC for unordered comparisons
@@ -188,19 +200,23 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     switch (CCCode) {
     case ISD::SETULT:
       LC1 = (VT == MVT::f32) ? RTLIB::OGE_F32 :
-            (VT == MVT::f64) ? RTLIB::OGE_F64 : RTLIB::OGE_F128;
+            (VT == MVT::f64) ? RTLIB::OGE_F64 :
+            (VT == MVT::f128) ? RTLIB::OGE_F128 : RTLIB::OGE_PPCF128;
       break;
     case ISD::SETULE:
       LC1 = (VT == MVT::f32) ? RTLIB::OGT_F32 :
-            (VT == MVT::f64) ? RTLIB::OGT_F64 : RTLIB::OGT_F128;
+            (VT == MVT::f64) ? RTLIB::OGT_F64 :
+            (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
       break;
     case ISD::SETUGT:
       LC1 = (VT == MVT::f32) ? RTLIB::OLE_F32 :
-            (VT == MVT::f64) ? RTLIB::OLE_F64 : RTLIB::OLE_F128;
+            (VT == MVT::f64) ? RTLIB::OLE_F64 :
+            (VT == MVT::f128) ? RTLIB::OLE_F128 : RTLIB::OLE_PPCF128;
       break;
     case ISD::SETUGE:
       LC1 = (VT == MVT::f32) ? RTLIB::OLT_F32 :
-            (VT == MVT::f64) ? RTLIB::OLT_F64 : RTLIB::OLT_F128;
+            (VT == MVT::f64) ? RTLIB::OLT_F64 :
+            (VT == MVT::f128) ? RTLIB::OLT_F128 : RTLIB::OLT_PPCF128;
       break;
     default: llvm_unreachable("Do not know how to soften this setcc!");
     }

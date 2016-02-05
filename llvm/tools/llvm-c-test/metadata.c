@@ -13,7 +13,6 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c-test.h"
-#include "llvm-c/Core.h"
 
 int add_named_metadata_operand(void) {
   LLVMModuleRef m = LLVMModuleCreateWithName("Mod");

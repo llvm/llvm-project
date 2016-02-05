@@ -166,6 +166,13 @@ public:
   void encodeInlineLineTable(MCAsmLayout &Layout,
                              MCCVInlineLineTableFragment &F);
 
+  void
+  emitDefRange(MCObjectStreamer &OS,
+               ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+               StringRef FixedSizePortion);
+
+  void encodeDefRange(MCAsmLayout &Layout, MCCVDefRangeFragment &F);
+
   /// Emits the string table substream.
   void emitStringTable(MCObjectStreamer &OS);
 

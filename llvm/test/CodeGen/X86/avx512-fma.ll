@@ -78,16 +78,11 @@ define double @test_x86_fmsub_213(double %a0, double %a1, double %a2) {
 }
 
 define double @test_x86_fmsub_213_m(double %a0, double %a1, double * %a2_ptr) {
-; KNL-LABEL: test_x86_fmsub_213_m:
-; KNL:       ## BB#0:
-; KNL-NEXT:    vfmsub213sd (%rdi), %xmm0, %xmm1
-; KNL-NEXT:    vmovaps %zmm1, %zmm0
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: test_x86_fmsub_213_m:
-; SKX:       ## BB#0:
-; SKX-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0
-; SKX-NEXT:    retq
+; ALL-LABEL: test_x86_fmsub_213_m:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vfmsub213sd (%rdi), %xmm0, %xmm1
+; ALL-NEXT:    vmovaps %zmm1, %zmm0
+; ALL-NEXT:    retq
   %a2 = load double , double *%a2_ptr
   %x = fmul double %a0, %a1
   %res = fsub double %x, %a2

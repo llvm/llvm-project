@@ -5601,6 +5601,24 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     }
   }
 
+  auto CreateLoad = [&DAG, &DL](EVT VT, LoadSDNode *LDBase) {
+    SDValue NewLd = DAG.getLoad(VT, DL, LDBase->getChain(),
+                                LDBase->getBasePtr(), LDBase->getPointerInfo(),
+                                LDBase->isVolatile(), LDBase->isNonTemporal(),
+                                LDBase->isInvariant(), LDBase->getAlignment());
+
+    if (LDBase->hasAnyUseOfValue(1)) {
+      SDValue NewChain =
+          DAG.getNode(ISD::TokenFactor, DL, MVT::Other, SDValue(LDBase, 1),
+                      SDValue(NewLd.getNode(), 1));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LDBase, 1), NewChain);
+      DAG.UpdateNodeOperands(NewChain.getNode(), SDValue(LDBase, 1),
+                             SDValue(NewLd.getNode(), 1));
+    }
+
+    return NewLd;
+  };
+
   // LOAD - all consecutive load/undefs (must start/end with a load).
   // If we have found an entire vector of loads and undefs, then return a large
   // load of the entire vector width starting at the base pointer.
@@ -5616,23 +5634,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     if (isAfterLegalize && !TLI.isOperationLegal(ISD::LOAD, VT))
       return SDValue();
 
-    SDValue NewLd = SDValue();
-
-    NewLd = DAG.getLoad(VT, DL, LDBase->getChain(), LDBase->getBasePtr(),
-                        LDBase->getPointerInfo(), LDBase->isVolatile(),
-                        LDBase->isNonTemporal(), LDBase->isInvariant(),
-                        LDBase->getAlignment());
-
-    if (LDBase->hasAnyUseOfValue(1)) {
-      SDValue NewChain =
-          DAG.getNode(ISD::TokenFactor, DL, MVT::Other, SDValue(LDBase, 1),
-                      SDValue(NewLd.getNode(), 1));
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LDBase, 1), NewChain);
-      DAG.UpdateNodeOperands(NewChain.getNode(), SDValue(LDBase, 1),
-                             SDValue(NewLd.getNode(), 1));
-    }
-
-    return NewLd;
+    return CreateLoad(VT, LDBase);
   }
 
   int LoadSize =
@@ -5640,33 +5642,48 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // VZEXT_LOAD - consecutive load/undefs followed by zeros/undefs.
   if (IsConsecutiveLoad && FirstLoadedElt == 0 && LoadSize == 64 &&
-      ((VT.is128BitVector() && TLI.isTypeLegal(MVT::v2i64)) ||
-       (VT.is256BitVector() && TLI.isTypeLegal(MVT::v4i64)) ||
-       (VT.is512BitVector() && TLI.isTypeLegal(MVT::v8i64)))) {
-    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    SDVTList Tys = DAG.getVTList(VecVT, MVT::Other);
-    SDValue Ops[] = { LDBase->getChain(), LDBase->getBasePtr() };
-    SDValue ResNode =
-        DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, DL, Tys, Ops, MVT::i64,
-                                LDBase->getPointerInfo(),
-                                LDBase->getAlignment(),
-                                false/*isVolatile*/, true/*ReadMem*/,
-                                false/*WriteMem*/);
+      ((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))) {
+    MVT VecSVT = VT.isFloatingPoint() ? MVT::f64 : MVT::i64;
+    MVT VecVT = MVT::getVectorVT(VecSVT, VT.getSizeInBits() / 64);
+    if (TLI.isTypeLegal(VecVT)) {
+      SDVTList Tys = DAG.getVTList(VecVT, MVT::Other);
+      SDValue Ops[] = { LDBase->getChain(), LDBase->getBasePtr() };
+      SDValue ResNode =
+          DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, DL, Tys, Ops, VecSVT,
+                                  LDBase->getPointerInfo(),
+                                  LDBase->getAlignment(),
+                                  false/*isVolatile*/, true/*ReadMem*/,
+                                  false/*WriteMem*/);
 
-    // Make sure the newly-created LOAD is in the same position as LDBase in
-    // terms of dependency. We create a TokenFactor for LDBase and ResNode, and
-    // update uses of LDBase's output chain to use the TokenFactor.
-    if (LDBase->hasAnyUseOfValue(1)) {
-      SDValue NewChain =
-          DAG.getNode(ISD::TokenFactor, DL, MVT::Other, SDValue(LDBase, 1),
-                      SDValue(ResNode.getNode(), 1));
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LDBase, 1), NewChain);
-      DAG.UpdateNodeOperands(NewChain.getNode(), SDValue(LDBase, 1),
-                             SDValue(ResNode.getNode(), 1));
+      // Make sure the newly-created LOAD is in the same position as LDBase in
+      // terms of dependency. We create a TokenFactor for LDBase and ResNode,
+      // and update uses of LDBase's output chain to use the TokenFactor.
+      if (LDBase->hasAnyUseOfValue(1)) {
+        SDValue NewChain =
+            DAG.getNode(ISD::TokenFactor, DL, MVT::Other, SDValue(LDBase, 1),
+                        SDValue(ResNode.getNode(), 1));
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LDBase, 1), NewChain);
+        DAG.UpdateNodeOperands(NewChain.getNode(), SDValue(LDBase, 1),
+                               SDValue(ResNode.getNode(), 1));
+      }
+
+      return DAG.getBitcast(VT, ResNode);
     }
-
-    return DAG.getBitcast(VT, ResNode);
   }
+
+  // VZEXT_MOVL - consecutive 32-bit load/undefs followed by zeros/undefs.
+  if (IsConsecutiveLoad && FirstLoadedElt == 0 && LoadSize == 32 &&
+      ((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))) {
+    MVT VecSVT = VT.isFloatingPoint() ? MVT::f32 : MVT::i32;
+    MVT VecVT = MVT::getVectorVT(VecSVT, VT.getSizeInBits() / 32);
+    if (TLI.isTypeLegal(VecVT)) {
+      SDValue V = CreateLoad(VecSVT, LDBase);
+      V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, V);
+      V = DAG.getNode(X86ISD::VZEXT_MOVL, DL, VecVT, V);
+      return DAG.getBitcast(VT, V);
+    }
+  }
+
   return SDValue();
 }
 
@@ -16936,6 +16953,30 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0,
                                               dl, Op.getValueType(),
                                               Src1, Src2, Src3),
+                                  Mask, PassThru, Subtarget, DAG);
+    }
+    case FMA_OP_SCALAR_MASK:
+    case FMA_OP_SCALAR_MASK3:
+    case FMA_OP_SCALAR_MASKZ: {
+      SDValue Src1 = Op.getOperand(1);
+      SDValue Src2 = Op.getOperand(2);
+      SDValue Src3 = Op.getOperand(3);
+      SDValue Mask = Op.getOperand(4);
+      MVT VT = Op.getSimpleValueType();
+      SDValue PassThru = SDValue();
+
+      // set PassThru element
+      if (IntrData->Type == FMA_OP_SCALAR_MASKZ)
+        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
+      else if (IntrData->Type == FMA_OP_SCALAR_MASK3)
+        PassThru = Src3;
+      else
+        PassThru = Src1;
+
+      SDValue Rnd = Op.getOperand(5);
+      return getScalarMaskingNode(DAG.getNode(IntrData->Opc0, dl,
+                                              Op.getValueType(), Src1, Src2,
+                                              Src3, Rnd),
                                   Mask, PassThru, Subtarget, DAG);
     }
     case TERLOG_OP_MASK:

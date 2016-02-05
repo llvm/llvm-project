@@ -3046,6 +3046,22 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v4f64 (X86vzmovl (insert_subvector undef,
                    (v2f64 (scalar_to_vector (loadf64 addr:$src))), (iPTR 0)))),
             (SUBREG_TO_REG (i32 0), (VMOVSDZrm addr:$src), sub_xmm)>;
+  def : Pat<(v4f64 (X86vzload addr:$src)),
+            (SUBREG_TO_REG (i32 0), (VMOVSDZrm addr:$src), sub_xmm)>;
+
+  // Represent the same patterns above but in the form they appear for
+  // 512-bit types
+  def : Pat<(v16i32 (X86vzmovl (insert_subvector undef,
+                   (v4i32 (scalar_to_vector (loadi32 addr:$src))), (iPTR 0)))),
+            (SUBREG_TO_REG (i32 0), (VMOVDI2PDIZrm addr:$src), sub_xmm)>;
+  def : Pat<(v16f32 (X86vzmovl (insert_subvector undef,
+                   (v4f32 (scalar_to_vector (loadf32 addr:$src))), (iPTR 0)))),
+            (SUBREG_TO_REG (i32 0), (VMOVSSZrm addr:$src), sub_xmm)>;
+  def : Pat<(v8f64 (X86vzmovl (insert_subvector undef,
+                   (v2f64 (scalar_to_vector (loadf64 addr:$src))), (iPTR 0)))),
+            (SUBREG_TO_REG (i32 0), (VMOVSDZrm addr:$src), sub_xmm)>;
+  def : Pat<(v8f64 (X86vzload addr:$src)),
+            (SUBREG_TO_REG (i32 0), (VMOVSDZrm addr:$src), sub_xmm)>;
   }
   def : Pat<(v8f32 (X86vzmovl (insert_subvector undef,
                    (v4f32 (scalar_to_vector FR32X:$src)), (iPTR 0)))),
@@ -4713,9 +4729,9 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                                                                   string SUFF> {
 
   defm NAME#213#SUFF: avx512_fma3s_common<opc213, OpcodeStr#"213"#_.Suffix , _ ,
-                (_.VT (OpNode _.RC:$src2, _.RC:$src1, _.RC:$src3)),
-                (_.VT (OpNode _.RC:$src2, _.RC:$src1,
-                         (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))))),
+                (_.VT (OpNodeRnd _.RC:$src2, _.RC:$src1, _.RC:$src3, (i32 FROUND_CURRENT))),
+                (_.VT (OpNodeRnd _.RC:$src2, _.RC:$src1,
+                         (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))), (i32 FROUND_CURRENT))),
                 (_.VT ( OpNodeRnd _.RC:$src2, _.RC:$src1, _.RC:$src3,
                          (i32 imm:$rc))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src1,
@@ -4724,10 +4740,10 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                          (_.ScalarLdFrag addr:$src3))))>;
 
   defm NAME#231#SUFF: avx512_fma3s_common<opc231, OpcodeStr#"231"#_.Suffix , _ ,
-                (_.VT (OpNode _.RC:$src2, _.RC:$src3, _.RC:$src1)),
-                (_.VT (OpNode _.RC:$src2,
+                (_.VT (OpNodeRnd _.RC:$src2, _.RC:$src3, _.RC:$src1, (i32 FROUND_CURRENT))),
+                (_.VT (OpNodeRnd _.RC:$src2,
                        (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))),
-                              _.RC:$src1)),
+                              _.RC:$src1, (i32 FROUND_CURRENT))),
                 (_.VT ( OpNodeRnd _.RC:$src2, _.RC:$src3, _.RC:$src1,
                                   (i32 imm:$rc))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src3,
@@ -4736,10 +4752,10 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                             (_.ScalarLdFrag addr:$src3), _.FRC:$src1)))>;
 
   defm NAME#132#SUFF: avx512_fma3s_common<opc132, OpcodeStr#"132"#_.Suffix , _ ,
-                (_.VT (OpNode _.RC:$src1, _.RC:$src3, _.RC:$src2)),
-                (_.VT (OpNode _.RC:$src1,
+                (_.VT (OpNodeRnd _.RC:$src1, _.RC:$src3, _.RC:$src2, (i32 FROUND_CURRENT))),
+                (_.VT (OpNodeRnd _.RC:$src1,
                        (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))),
-                              _.RC:$src2)),
+                              _.RC:$src2, (i32 FROUND_CURRENT))),
                 (_.VT ( OpNodeRnd _.RC:$src1, _.RC:$src3, _.RC:$src2,
                          (i32 imm:$rc))),
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src1, _.FRC:$src3,

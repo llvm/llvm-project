@@ -1617,11 +1617,10 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
 
 // Helper function for the "relocationViaAlloca". Similar to the
 // "insertRelocationStores" but works for rematerialized values.
-static void
-insertRematerializationStores(
-  RematerializedValueMapTy RematerializedValues,
-  DenseMap<Value *, Value *> &AllocaMap,
-  DenseSet<Value *> &VisitedLiveValues) {
+static void insertRematerializationStores(
+    const RematerializedValueMapTy &RematerializedValues,
+    DenseMap<Value *, Value *> &AllocaMap,
+    DenseSet<Value *> &VisitedLiveValues) {
 
   for (auto RematerializedValuePair: RematerializedValues) {
     Instruction *RematerializedValue = RematerializedValuePair.first;

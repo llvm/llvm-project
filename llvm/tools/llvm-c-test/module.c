@@ -14,7 +14,6 @@
 
 #include "llvm-c-test.h"
 #include "llvm-c/BitReader.h"
-#include "llvm-c/Core.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +25,7 @@ static void diagnosticHandler(LLVMDiagnosticInfoRef DI, void *C) {
   exit(1);
 }
 
-static LLVMModuleRef load_module(bool Lazy, bool New) {
+LLVMModuleRef load_module(bool Lazy, bool New) {
   LLVMMemoryBufferRef MB;
   LLVMModuleRef M;
   char *msg = NULL;

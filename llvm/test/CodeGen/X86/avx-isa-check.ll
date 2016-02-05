@@ -575,3 +575,9 @@ entry:
   %C = zext <8 x i8> %B to <8 x i16>
   ret <8 x i16> %C
 }
+
+define <4 x float> @test_x86_fmsub_ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) {
+  %x = fmul <4 x float> %a0, %a1
+  %res = fsub <4 x float> %x, %a2
+  ret <4 x float> %res
+}

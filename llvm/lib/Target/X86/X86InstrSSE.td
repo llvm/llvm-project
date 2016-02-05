@@ -649,6 +649,8 @@ let Predicates = [UseAVX] in {
   def : Pat<(v4f64 (X86vzmovl (insert_subvector undef,
                    (v2f64 (scalar_to_vector (loadf64 addr:$src))), (iPTR 0)))),
             (SUBREG_TO_REG (i32 0), (VMOVSDrm addr:$src), sub_xmm)>;
+  def : Pat<(v4f64 (X86vzload addr:$src)),
+            (SUBREG_TO_REG (i32 0), (VMOVSDrm addr:$src), sub_xmm)>;
   }
 
   // Extract and store.

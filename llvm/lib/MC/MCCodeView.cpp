@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/COFF.h"
 
 using namespace llvm;
@@ -236,6 +237,16 @@ void CodeViewContext::emitInlineLineTableForFunction(
       SecondaryFunctionIds, OS.getCurrentSectionOnly());
 }
 
+void CodeViewContext::emitDefRange(
+    MCObjectStreamer &OS,
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    StringRef FixedSizePortion) {
+  // Create and insert a fragment into the current section that will be encoded
+  // later.
+  new MCCVDefRangeFragment(Ranges, FixedSizePortion,
+                           OS.getCurrentSectionOnly());
+}
+
 static unsigned computeLabelDiff(MCAsmLayout &Layout, const MCSymbol *Begin,
                                  const MCSymbol *End) {
   MCContext &Ctx = Layout.getAssembler().getContext();
@@ -350,6 +361,58 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
 
   compressAnnotation(ChangeCodeLength, Buffer);
   compressAnnotation(std::min(EndSymLength, LocAfterLength), Buffer);
+}
+
+void CodeViewContext::encodeDefRange(MCAsmLayout &Layout,
+                                     MCCVDefRangeFragment &Frag) {
+  MCContext &Ctx = Layout.getAssembler().getContext();
+  SmallVectorImpl<char> &Contents = Frag.getContents();
+  Contents.clear();
+  SmallVectorImpl<MCFixup> &Fixups = Frag.getFixups();
+  Fixups.clear();
+  raw_svector_ostream OS(Contents);
+
+  // Write down each range where the variable is defined.
+  for (std::pair<const MCSymbol *, const MCSymbol *> Range : Frag.getRanges()) {
+    unsigned RangeSize = computeLabelDiff(Layout, Range.first, Range.second);
+    unsigned Bias = 0;
+    // We must split the range into chunks of MaxDefRange, this is a fundamental
+    // limitation of the file format.
+    do {
+      uint16_t Chunk = std::min((uint32_t)MaxDefRange, RangeSize);
+
+      const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Range.first, Ctx);
+      const MCBinaryExpr *BE =
+          MCBinaryExpr::createAdd(SRE, MCConstantExpr::create(Bias, Ctx), Ctx);
+      MCValue Res;
+      BE->evaluateAsRelocatable(Res, &Layout, /*Fixup=*/nullptr);
+
+      // Each record begins with a 2-byte number indicating how large the record
+      // is.
+      StringRef FixedSizePortion = Frag.getFixedSizePortion();
+      // Our record is a fixed sized prefix and a LocalVariableAddrRange that we
+      // are artificially constructing.
+      size_t RecordSize =
+          FixedSizePortion.size() + sizeof(LocalVariableAddrRange);
+      // Write out the recrod size.
+      support::endian::Writer<support::little>(OS).write<uint16_t>(RecordSize);
+      // Write out the fixed size prefix.
+      OS << FixedSizePortion;
+      // Make space for a fixup that will eventually have a section relative
+      // relocation pointing at the offset where the variable becomes live.
+      Fixups.push_back(MCFixup::create(Contents.size(), BE, FK_SecRel_4));
+      Contents.resize(Contents.size() + 4); // Fixup for code start.
+      // Make space for a fixup that will record the section index for the code.
+      Fixups.push_back(MCFixup::create(Contents.size(), BE, FK_SecRel_2));
+      Contents.resize(Contents.size() + 2); // Fixup for section index.
+      // Write down the range's extent.
+      support::endian::Writer<support::little>(OS).write<uint16_t>(Chunk);
+
+      // Move on to the next range.
+      Bias += Chunk;
+      RangeSize -= Chunk;
+    } while (RangeSize > 0);
+  }
 }
 
 //

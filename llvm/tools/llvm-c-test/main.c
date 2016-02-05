@@ -13,7 +13,6 @@
 
 #include "llvm-c-test.h"
 #include "llvm-c/BitReader.h"
-#include "llvm-c/Core.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +46,9 @@ static void print_usage(void) {
   fprintf(stderr, "    Read lines of triple, hex ascii machine code from stdin "
                   "- print disassembly\n\n");
   fprintf(stderr, "  * --calc\n");
+  fprintf(stderr, "  * --echo\n");
+  fprintf(stderr,
+          "    Read object file form stdin - and print it back out\n\n");
   fprintf(
       stderr,
       "    Read lines of name, rpn from stdin - print generated module\n\n");
@@ -83,6 +85,8 @@ int main(int argc, char **argv) {
     return add_named_metadata_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--set-metadata")) {
     return set_metadata();
+  } else if (argc == 2 && !strcmp(argv[1], "--echo")) {
+    return echo();
   } else {
     print_usage();
   }

@@ -14,7 +14,6 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c-test.h"
-#include "llvm-c/Core.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

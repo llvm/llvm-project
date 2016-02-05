@@ -396,6 +396,13 @@ void MCObjectStreamer::EmitCVInlineLinetableDirective(
       SecondaryFunctionIds);
 }
 
+void MCObjectStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    StringRef FixedSizePortion) {
+  getContext().getCVContext().emitDefRange(*this, Ranges, FixedSizePortion);
+  this->MCStreamer::EmitCVDefRangeDirective(Ranges, FixedSizePortion);
+}
+
 void MCObjectStreamer::EmitCVStringTableDirective() {
   getContext().getCVContext().emitStringTable(*this);
 }

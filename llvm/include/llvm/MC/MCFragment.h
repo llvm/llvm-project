@@ -41,6 +41,7 @@ public:
     FT_LEB,
     FT_SafeSEH,
     FT_CVInlineLines,
+    FT_CVDefRange,
     FT_Dummy
   };
 
@@ -211,7 +212,8 @@ public:
 
   static bool classof(const MCFragment *F) {
     MCFragment::FragmentType Kind = F->getKind();
-    return Kind == MCFragment::FT_Relaxable || Kind == MCFragment::FT_Data;
+    return Kind == MCFragment::FT_Relaxable || Kind == MCFragment::FT_Data ||
+           Kind == MCFragment::FT_CVDefRange;
   }
 };
 
@@ -509,9 +511,7 @@ public:
       : MCFragment(FT_CVInlineLines, false, 0, Sec), SiteFuncId(SiteFuncId),
         StartFileId(StartFileId), StartLineNum(StartLineNum),
         FnStartSym(FnStartSym), FnEndSym(FnEndSym),
-        SecondaryFuncs(SecondaryFuncs.begin(), SecondaryFuncs.end()) {
-    Contents.push_back(0);
-  }
+        SecondaryFuncs(SecondaryFuncs.begin(), SecondaryFuncs.end()) {}
 
   /// \name Accessors
   /// @{
@@ -526,6 +526,37 @@ public:
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_CVInlineLines;
+  }
+};
+
+/// Fragment representing the .cv_def_range directive.
+class MCCVDefRangeFragment : public MCEncodedFragmentWithFixups<32, 4> {
+  SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 2> Ranges;
+  SmallString<32> FixedSizePortion;
+
+  /// CodeViewContext has the real knowledge about this format, so let it access
+  /// our members.
+  friend class CodeViewContext;
+
+public:
+  MCCVDefRangeFragment(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      StringRef FixedSizePortion, MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<32, 4>(FT_CVDefRange, false, Sec),
+        Ranges(Ranges.begin(), Ranges.end()),
+        FixedSizePortion(FixedSizePortion) {}
+
+  /// \name Accessors
+  /// @{
+  ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> getRanges() const {
+    return Ranges;
+  }
+
+  StringRef getFixedSizePortion() const { return FixedSizePortion; }
+  /// @}
+
+  static bool classof(const MCFragment *F) {
+    return F->getKind() == MCFragment::FT_CVDefRange;
   }
 };
 
