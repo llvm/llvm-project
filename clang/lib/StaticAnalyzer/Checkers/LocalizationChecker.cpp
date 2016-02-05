@@ -619,10 +619,45 @@ void NonLocalizedStringChecker::setNonLocalizedState(const SVal S,
   }
 }
 
+
+static bool isDebuggingName(std::string name) {
+  return StringRef(name).lower().find("debug") != StringRef::npos;
+}
+
+/// Returns true when, heuristically, the analyzer may be analyzing debugging
+/// code. We use this to suppress localization diagnostics in un-localized user
+/// interfaces that are only used for debugging and are therefore not user
+/// facing.
+static bool isDebuggingContext(CheckerContext &C) {
+  const Decl *D = C.getCurrentAnalysisDeclContext()->getDecl();
+  if (!D)
+    return false;
+
+  if (auto *ND = dyn_cast<NamedDecl>(D)) {
+    if (isDebuggingName(ND->getNameAsString()))
+      return true;
+  }
+
+  const DeclContext *DC = D->getDeclContext();
+
+  if (auto *CD = dyn_cast<ObjCContainerDecl>(DC)) {
+    if (isDebuggingName(CD->getNameAsString()))
+      return true;
+  }
+
+  return false;
+}
+
+
 /// Reports a localization error for the passed in method call and SVal
 void NonLocalizedStringChecker::reportLocalizationError(
     SVal S, const ObjCMethodCall &M, CheckerContext &C,
     int argumentNumber) const {
+
+  // Don't warn about localization errors in classes and methods that
+  // may be debug code.
+  if (isDebuggingContext(C))
+    return;
 
   ExplodedNode *ErrNode = C.getPredecessor();
   static CheckerProgramPointTag Tag("NonLocalizedStringChecker",
