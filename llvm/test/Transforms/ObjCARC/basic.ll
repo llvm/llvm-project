@@ -4,6 +4,7 @@ target datalayout = "e-p:64:64:64"
 
 declare i8* @objc_retain(i8*)
 declare i8* @objc_retainAutoreleasedReturnValue(i8*)
+declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8*)
 declare void @objc_release(i8*)
 declare i8* @objc_autorelease(i8*)
 declare i8* @objc_autoreleaseReturnValue(i8*)
@@ -2565,6 +2566,27 @@ entry:
 if.then:                                          ; preds = %entry
   %c = call i8* @returner()
   %s = call i8* @objc_retainAutoreleasedReturnValue(i8* %c) nounwind
+  br label %return
+
+return:                                           ; preds = %if.then, %entry
+  %retval = phi i8* [ %s, %if.then ], [ null, %entry ]
+  %q = call i8* @objc_autoreleaseReturnValue(i8* %retval) nounwind
+  ret i8* %retval
+}
+
+; CHECK-LABEL: define i8* @test65d(
+; CHECK: if.then:
+; CHECK-NOT: @objc_autorelease
+; CHECK: return:
+; CHECK:   call i8* @objc_autoreleaseReturnValue(
+; CHECK: }
+define i8* @test65d(i1 %x) {
+entry:
+  br i1 %x, label %return, label %if.then
+
+if.then:                                          ; preds = %entry
+  %c = call i8* @returner()
+  %s = call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %c) nounwind
   br label %return
 
 return:                                           ; preds = %if.then, %entry
