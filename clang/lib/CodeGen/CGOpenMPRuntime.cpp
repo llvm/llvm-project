@@ -272,18 +272,10 @@ public:
 
 } // anonymous namespace
 
-static LValue emitLoadOfPointerLValue(CodeGenFunction &CGF, Address PtrAddr,
-                                      QualType Ty) {
-  AlignmentSource Source;
-  CharUnits Align = CGF.getNaturalPointeeTypeAlignment(Ty, &Source);
-  return CGF.MakeAddrLValue(Address(CGF.Builder.CreateLoad(PtrAddr), Align),
-                            Ty->getPointeeType(), Source);
-}
-
 LValue CGOpenMPRegionInfo::getThreadIDVariableLValue(CodeGenFunction &CGF) {
-  return emitLoadOfPointerLValue(CGF,
-                                 CGF.GetAddrOfLocalVar(getThreadIDVariable()),
-                                 getThreadIDVariable()->getType());
+  return CGF.EmitLoadOfPointerLValue(
+      CGF.GetAddrOfLocalVar(getThreadIDVariable()),
+      getThreadIDVariable()->getType()->castAs<PointerType>());
 }
 
 void CGOpenMPRegionInfo::EmitBody(CodeGenFunction &CGF, const Stmt * /*S*/) {
@@ -2567,8 +2559,9 @@ emitProxyTaskFunction(CodeGenModule &CGM, SourceLocation Loc,
   // tt->task_data.shareds);
   auto *GtidParam = CGF.EmitLoadOfScalar(
       CGF.GetAddrOfLocalVar(&GtidArg), /*Volatile=*/false, KmpInt32Ty, Loc);
-  LValue TDBase = emitLoadOfPointerLValue(
-      CGF, CGF.GetAddrOfLocalVar(&TaskTypeArg), KmpTaskTWithPrivatesPtrQTy);
+  LValue TDBase = CGF.EmitLoadOfPointerLValue(
+      CGF.GetAddrOfLocalVar(&TaskTypeArg),
+      KmpTaskTWithPrivatesPtrQTy->castAs<PointerType>());
   auto *KmpTaskTWithPrivatesQTyRD =
       cast<RecordDecl>(KmpTaskTWithPrivatesQTy->getAsTagDecl());
   LValue Base =
@@ -2632,8 +2625,9 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
   CGF.StartFunction(GlobalDecl(), KmpInt32Ty, DestructorFn, DestructorFnInfo,
                     Args);
 
-  LValue Base = emitLoadOfPointerLValue(
-      CGF, CGF.GetAddrOfLocalVar(&TaskTypeArg), KmpTaskTWithPrivatesPtrQTy);
+  LValue Base = CGF.EmitLoadOfPointerLValue(
+      CGF.GetAddrOfLocalVar(&TaskTypeArg),
+      KmpTaskTWithPrivatesPtrQTy->castAs<PointerType>());
   auto *KmpTaskTWithPrivatesQTyRD =
       cast<RecordDecl>(KmpTaskTWithPrivatesQTy->getAsTagDecl());
   auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
@@ -2711,16 +2705,17 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
                     TaskPrivatesMapFnInfo, Args);
 
   // *privi = &.privates.privi;
-  LValue Base = emitLoadOfPointerLValue(
-      CGF, CGF.GetAddrOfLocalVar(&TaskPrivatesArg), TaskPrivatesArg.getType());
+  LValue Base = CGF.EmitLoadOfPointerLValue(
+      CGF.GetAddrOfLocalVar(&TaskPrivatesArg),
+      TaskPrivatesArg.getType()->castAs<PointerType>());
   auto *PrivatesQTyRD = cast<RecordDecl>(PrivatesQTy->getAsTagDecl());
   Counter = 0;
   for (auto *Field : PrivatesQTyRD->fields()) {
     auto FieldLVal = CGF.EmitLValueForField(Base, Field);
     auto *VD = Args[PrivateVarsPos[Privates[Counter].second.Original]];
     auto RefLVal = CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(VD), VD->getType());
-    auto RefLoadLVal =
-        emitLoadOfPointerLValue(CGF, RefLVal.getAddress(), RefLVal.getType());
+    auto RefLoadLVal = CGF.EmitLoadOfPointerLValue(
+        RefLVal.getAddress(), RefLVal.getType()->castAs<PointerType>());
     CGF.EmitStoreOfScalar(FieldLVal.getPointer(), RefLoadLVal);
     ++Counter;
   }

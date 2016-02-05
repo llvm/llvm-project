@@ -1,5 +1,5 @@
 // Check the data structures emitted by instrumentation.
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-indirect-call.c %s -o - -emit-llvm -fprofile-instr-generate -mllvm -enable-value-profiling | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-indirect-call.c %s -o - -emit-llvm -fprofile-instrument=clang -mllvm -enable-value-profiling | FileCheck %s
 
 void (*foo)(void);
 

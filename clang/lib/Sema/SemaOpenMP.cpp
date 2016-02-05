@@ -7745,9 +7745,9 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
     if (DE) {
       auto D = DE->getDecl();
       VD = cast<VarDecl>(D);
-      Type = Context.getBaseElementType(VD->getType());
+      Type = Context.getBaseElementType(VD->getType().getNonReferenceType());
     } else if (ASE) {
-      Type = ASE->getType();
+      Type = ASE->getType().getNonReferenceType();
       auto *Base = ASE->getBase()->IgnoreParenImpCasts();
       while (auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base))
         Base = TempASE->getBase()->IgnoreParenImpCasts();
@@ -7765,6 +7765,7 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
         Type = ATy->getElementType();
       else
         Type = BaseType->getPointeeType();
+      Type = Type.getNonReferenceType();
       auto *Base = OASE->getBase()->IgnoreParenImpCasts();
       while (auto *TempOASE = dyn_cast<OMPArraySectionExpr>(Base))
         Base = TempOASE->getBase()->IgnoreParenImpCasts();
@@ -7806,7 +7807,7 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
     //  for all threads of the team.
     if (!ASE && !OASE) {
       VarDecl *VDDef = VD->getDefinition();
-      if (Type->isReferenceType() && VDDef) {
+      if (VD->getType()->isReferenceType() && VDDef) {
         DSARefChecker Check(DSAStack);
         if (Check.Visit(VDDef->getInit())) {
           Diag(ELoc, diag::err_omp_reduction_ref_type_arg) << ERange;
@@ -8737,8 +8738,12 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
         auto *OASE = dyn_cast<OMPArraySectionExpr>(SimpleExpr);
         if (!RefExpr->IgnoreParenImpCasts()->isLValue() ||
             (!ASE && !DE && !OASE) || (DE && !isa<VarDecl>(DE->getDecl())) ||
-            (ASE && !ASE->getBase()->getType()->isAnyPointerType() &&
-             !ASE->getBase()->getType()->isArrayType())) {
+            (ASE &&
+             !ASE->getBase()
+                  ->getType()
+                  .getNonReferenceType()
+                  ->isPointerType() &&
+             !ASE->getBase()->getType().getNonReferenceType()->isArrayType())) {
           Diag(ELoc, diag::err_omp_expected_var_name_member_expr_or_array_item)
               << 0 << RefExpr->getSourceRange();
           continue;

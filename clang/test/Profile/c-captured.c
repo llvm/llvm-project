@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-captured.c %s -o - -emit-llvm -fprofile-instr-generate | FileCheck -check-prefix=PGOGEN -check-prefix=PGOALL %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-captured.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -check-prefix=PGOGEN -check-prefix=PGOALL %s
 
 // RUN: llvm-profdata merge %S/Inputs/c-captured.proftext -o %t.profdata
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-captured.c %s -o - -emit-llvm -fprofile-instr-use=%t.profdata | FileCheck -check-prefix=PGOUSE -check-prefix=PGOALL %s

@@ -85,6 +85,12 @@ public:
     SRCK_InRegs    // Small structs in registers (-freg-struct-return).
   };
 
+  enum ProfileInstrKind {
+    ProfileNoInstr,    // No instrumentation.
+    ProfileClangInstr  // Clang instrumentation to generate execution counts
+                       // to use with PGO.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -217,6 +223,11 @@ public:
 
   const std::vector<std::string> &getNoBuiltinFuncs() const {
     return NoBuiltinFuncs;
+  }
+
+  /// \brief Check if Clang profile instrumenation is on.
+  bool hasProfileClangInstr() const {
+    return getProfileInstr() == ProfileClangInstr;
   }
 };
 

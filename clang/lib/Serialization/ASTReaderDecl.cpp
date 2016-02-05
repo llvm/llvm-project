@@ -3016,6 +3016,8 @@ static void inheritDefaultTemplateArguments(ASTContext &Context,
 
   for (unsigned I = 0, N = FromTP->size(); I != N; ++I) {
     NamedDecl *FromParam = FromTP->getParam(N - I - 1);
+    if (FromParam->isParameterPack())
+      continue;
     NamedDecl *ToParam = ToTP->getParam(N - I - 1);
 
     if (auto *FTTP = dyn_cast<TemplateTypeParmDecl>(FromParam)) {

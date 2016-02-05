@@ -1949,6 +1949,21 @@ LValue CodeGenFunction::EmitLoadOfReferenceLValue(Address RefAddr,
   return MakeAddrLValue(Addr, RefTy->getPointeeType(), Source);
 }
 
+Address CodeGenFunction::EmitLoadOfPointer(Address Ptr,
+                                           const PointerType *PtrTy,
+                                           AlignmentSource *Source) {
+  llvm::Value *Addr = Builder.CreateLoad(Ptr);
+  return Address(Addr, getNaturalTypeAlignment(PtrTy->getPointeeType(), Source,
+                                               /*forPointeeType=*/true));
+}
+
+LValue CodeGenFunction::EmitLoadOfPointerLValue(Address PtrAddr,
+                                                const PointerType *PtrTy) {
+  AlignmentSource Source;
+  Address Addr = EmitLoadOfPointer(PtrAddr, PtrTy, &Source);
+  return MakeAddrLValue(Addr, PtrTy->getPointeeType(), Source);
+}
+
 static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
                                       const Expr *E, const VarDecl *VD) {
   QualType T = E->getType();
@@ -2934,21 +2949,54 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
   return LV;
 }
 
+static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
+                                       AlignmentSource &AlignSource,
+                                       QualType BaseTy, QualType ElTy,
+                                       bool IsLowerBound) {
+  LValue BaseLVal;
+  if (auto *ASE = dyn_cast<OMPArraySectionExpr>(Base->IgnoreParenImpCasts())) {
+    BaseLVal = CGF.EmitOMPArraySectionExpr(ASE, IsLowerBound);
+    if (BaseTy->isArrayType()) {
+      Address Addr = BaseLVal.getAddress();
+      AlignSource = BaseLVal.getAlignmentSource();
+
+      // If the array type was an incomplete type, we need to make sure
+      // the decay ends up being the right type.
+      llvm::Type *NewTy = CGF.ConvertType(BaseTy);
+      Addr = CGF.Builder.CreateElementBitCast(Addr, NewTy);
+
+      // Note that VLA pointers are always decayed, so we don't need to do
+      // anything here.
+      if (!BaseTy->isVariableArrayType()) {
+        assert(isa<llvm::ArrayType>(Addr.getElementType()) &&
+               "Expected pointer to array");
+        Addr = CGF.Builder.CreateStructGEP(Addr, 0, CharUnits::Zero(),
+                                           "arraydecay");
+      }
+
+      return CGF.Builder.CreateElementBitCast(Addr,
+                                              CGF.ConvertTypeForMem(ElTy));
+    }
+    CharUnits Align = CGF.getNaturalTypeAlignment(ElTy, &AlignSource);
+    return Address(CGF.Builder.CreateLoad(BaseLVal.getAddress()), Align);
+  }
+  return CGF.EmitPointerWithAlignment(Base, &AlignSource);
+}
+
 LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
                                                 bool IsLowerBound) {
-  LValue Base;
+  QualType BaseTy;
   if (auto *ASE =
           dyn_cast<OMPArraySectionExpr>(E->getBase()->IgnoreParenImpCasts()))
-    Base = EmitOMPArraySectionExpr(ASE, IsLowerBound);
+    BaseTy = OMPArraySectionExpr::getBaseOriginalType(ASE);
   else
-    Base = EmitLValue(E->getBase());
-  QualType BaseTy = Base.getType();
-  llvm::Value *Idx = nullptr;
+    BaseTy = E->getBase()->getType();
   QualType ResultExprTy;
   if (auto *AT = getContext().getAsArrayType(BaseTy))
     ResultExprTy = AT->getElementType();
   else
     ResultExprTy = BaseTy->getPointeeType();
+  llvm::Value *Idx = nullptr;
   if (IsLowerBound || (!IsLowerBound && E->getColonLoc().isInvalid())) {
     // Requesting lower bound or upper bound, but without provided length and
     // without ':' symbol for the default length -> length = 1.
@@ -2960,9 +3008,9 @@ LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
     } else
       Idx = llvm::ConstantInt::getNullValue(IntPtrTy);
   } else {
-    // Try to emit length or lower bound as constant. If this is possible, 1 is
-    // subtracted from constant length or lower bound. Otherwise, emit LLVM IR
-    // (LB + Len) - 1.
+    // Try to emit length or lower bound as constant. If this is possible, 1
+    // is subtracted from constant length or lower bound. Otherwise, emit LLVM
+    // IR (LB + Len) - 1.
     auto &C = CGM.getContext();
     auto *Length = E->getLength();
     llvm::APSInt ConstLength;
@@ -3008,12 +3056,15 @@ LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
         Idx = llvm::ConstantInt::get(IntPtrTy, ConstLength + ConstLowerBound);
     } else {
       // Idx = ArraySize - 1;
-      if (auto *VAT = C.getAsVariableArrayType(BaseTy)) {
+      QualType ArrayTy = BaseTy->isPointerType()
+                             ? E->getBase()->IgnoreParenImpCasts()->getType()
+                             : BaseTy;
+      if (auto *VAT = C.getAsVariableArrayType(ArrayTy)) {
         Length = VAT->getSizeExpr();
         if (Length->isIntegerConstantExpr(ConstLength, C))
           Length = nullptr;
       } else {
-        auto *CAT = C.getAsConstantArrayType(BaseTy);
+        auto *CAT = C.getAsConstantArrayType(ArrayTy);
         ConstLength = CAT->getSize();
       }
       if (Length) {
@@ -3032,52 +3083,56 @@ LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
   }
   assert(Idx);
 
-  llvm::Value *EltPtr;
-  QualType FixedSizeEltType = ResultExprTy;
+  Address EltPtr = Address::invalid();
+  AlignmentSource AlignSource;
   if (auto *VLA = getContext().getAsVariableArrayType(ResultExprTy)) {
+    // The base must be a pointer, which is not an aggregate.  Emit
+    // it.  It needs to be emitted first in case it's what captures
+    // the VLA bounds.
+    Address Base =
+        emitOMPArraySectionBase(*this, E->getBase(), AlignSource, BaseTy,
+                                VLA->getElementType(), IsLowerBound);
     // The element count here is the total number of non-VLA elements.
-    llvm::Value *numElements = getVLASize(VLA).first;
-    FixedSizeEltType = getFixedSizeElementType(getContext(), VLA);
+    llvm::Value *NumElements = getVLASize(VLA).first;
 
     // Effectively, the multiply by the VLA size is part of the GEP.
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    if (getLangOpts().isSignedOverflowDefined()) {
-      Idx = Builder.CreateMul(Idx, numElements);
-      EltPtr = Builder.CreateGEP(Base.getPointer(), Idx, "arrayidx");
-    } else {
-      Idx = Builder.CreateNSWMul(Idx, numElements);
-      EltPtr = Builder.CreateInBoundsGEP(Base.getPointer(), Idx, "arrayidx");
-    }
-  } else if (BaseTy->isConstantArrayType()) {
-    llvm::Value *ArrayPtr = Base.getPointer();
-    llvm::Value *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
-    llvm::Value *Args[] = {Zero, Idx};
+    if (getLangOpts().isSignedOverflowDefined())
+      Idx = Builder.CreateMul(Idx, NumElements);
+    else
+      Idx = Builder.CreateNSWMul(Idx, NumElements);
+    EltPtr = emitArraySubscriptGEP(*this, Base, Idx, VLA->getElementType(),
+                                   !getLangOpts().isSignedOverflowDefined());
+  } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
+    // If this is A[i] where A is an array, the frontend will have decayed the
+    // base to be a ArrayToPointerDecay implicit cast.  While correct, it is
+    // inefficient at -O0 to emit a "gep A, 0, 0" when codegen'ing it, then a
+    // "gep x, i" here.  Emit one "gep A, 0, i".
+    assert(Array->getType()->isArrayType() &&
+           "Array to pointer decay must have array source type!");
+    LValue ArrayLV;
+    // For simple multidimensional array indexing, set the 'accessed' flag for
+    // better bounds-checking of the base expression.
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
+      ArrayLV = EmitArraySubscriptExpr(ASE, /*Accessed*/ true);
+    else
+      ArrayLV = EmitLValue(Array);
 
-    if (getLangOpts().isSignedOverflowDefined())
-      EltPtr = Builder.CreateGEP(ArrayPtr, Args, "arrayidx");
-    else
-      EltPtr = Builder.CreateInBoundsGEP(ArrayPtr, Args, "arrayidx");
+    // Propagate the alignment from the array itself to the result.
+    EltPtr = emitArraySubscriptGEP(
+        *this, ArrayLV.getAddress(), {CGM.getSize(CharUnits::Zero()), Idx},
+        ResultExprTy, !getLangOpts().isSignedOverflowDefined());
+    AlignSource = ArrayLV.getAlignmentSource();
   } else {
-    // The base must be a pointer, which is not an aggregate.  Emit it.
-    if (getLangOpts().isSignedOverflowDefined())
-      EltPtr = Builder.CreateGEP(Base.getPointer(), Idx, "arrayidx");
-    else
-      EltPtr = Builder.CreateInBoundsGEP(Base.getPointer(), Idx, "arrayidx");
+    Address Base = emitOMPArraySectionBase(*this, E->getBase(), AlignSource,
+                                           BaseTy, ResultExprTy, IsLowerBound);
+    EltPtr = emitArraySubscriptGEP(*this, Base, Idx, ResultExprTy,
+                                   !getLangOpts().isSignedOverflowDefined());
   }
 
-  CharUnits EltAlign =
-    Base.getAlignment().alignmentOfArrayElement(
-                          getContext().getTypeSizeInChars(FixedSizeEltType));
-
-  // Limit the alignment to that of the result type.
-  LValue LV = MakeAddrLValue(Address(EltPtr, EltAlign), ResultExprTy,
-                             Base.getAlignmentSource());
-
-  LV.getQuals().setAddressSpace(BaseTy.getAddressSpace());
-
-  return LV;
+  return MakeAddrLValue(EltPtr, ResultExprTy, AlignSource);
 }
 
 LValue CodeGenFunction::

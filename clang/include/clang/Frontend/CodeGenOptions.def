@@ -103,8 +103,8 @@ CODEGENOPT(OmitLeafFramePointer , 1, 0) ///< Set when -momit-leaf-frame-pointer 
 VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
 VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
 
-CODEGENOPT(ProfileInstrGenerate , 1, 0) ///< Instrument code to generate
-                                        ///< execution counts to use with PGO.
+/// \brief Choose profile instrumenation kind or no instrumentation.
+ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 2, ProfileNoInstr)
 CODEGENOPT(CoverageMapping , 1, 0) ///< Generate coverage mapping regions to
                                    ///< enable code coverage analysis.
 CODEGENOPT(DumpCoverageMapping , 1, 0) ///< Dump the generated coverage mapping

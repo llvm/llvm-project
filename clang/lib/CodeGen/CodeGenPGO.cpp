@@ -37,7 +37,7 @@ void CodeGenPGO::setFuncName(StringRef Name,
       PGOReader ? PGOReader->getVersion() : llvm::IndexedInstrProf::Version);
 
   // If we're generating a profile, create a variable for the name.
-  if (CGM.getCodeGenOpts().ProfileInstrGenerate)
+  if (CGM.getCodeGenOpts().hasProfileClangInstr())
     FuncNameVar = llvm::createPGOFuncNameVar(CGM.getModule(), Linkage, FuncName);
 }
 
@@ -610,7 +610,7 @@ uint64_t PGOHash::finalize() {
 
 void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   const Decl *D = GD.getDecl();
-  bool InstrumentRegions = CGM.getCodeGenOpts().ProfileInstrGenerate;
+  bool InstrumentRegions = CGM.getCodeGenOpts().hasProfileClangInstr();
   llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
   if (!InstrumentRegions && !PGOReader)
     return;
@@ -729,7 +729,7 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
 }
 
 void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
-  if (!CGM.getCodeGenOpts().ProfileInstrGenerate || !RegionCounterMap)
+  if (!CGM.getCodeGenOpts().hasProfileClangInstr() || !RegionCounterMap)
     return;
   if (!Builder.GetInsertBlock())
     return;
@@ -754,7 +754,7 @@ void CodeGenPGO::valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,
   if (!ValuePtr || !ValueSite || !Builder.GetInsertBlock())
     return;
 
-  bool InstrumentValueSites = CGM.getCodeGenOpts().ProfileInstrGenerate;
+  bool InstrumentValueSites = CGM.getCodeGenOpts().hasProfileClangInstr();
   if (InstrumentValueSites && RegionCounterMap) {
     llvm::LLVMContext &Ctx = CGM.getLLVMContext();
     auto *I8PtrTy = llvm::Type::getInt8PtrTy(Ctx);
@@ -780,35 +780,11 @@ void CodeGenPGO::valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,
     // pairs for each function.
     if (NumValueSites[ValueKind] >= ProfRecord->getNumValueSites(ValueKind))
       return;
-    uint32_t NV = ProfRecord->getNumValueDataForSite(ValueKind,
-                                                     NumValueSites[ValueKind]);
-    std::unique_ptr<InstrProfValueData[]> VD =
-        ProfRecord->getValueForSite(ValueKind, NumValueSites[ValueKind]);
 
-    uint64_t Sum = 0;
-    for (uint32_t I = 0; I < NV; ++I)
-      Sum += VD[I].Count;
+    llvm::annotateValueSite(CGM.getModule(), *ValueSite, *ProfRecord,
+                            (llvm::InstrProfValueKind)ValueKind,
+                            NumValueSites[ValueKind]);
 
-    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-    llvm::MDBuilder MDHelper(Ctx);
-    SmallVector<llvm::Metadata*, 3> Vals;
-    Vals.push_back(MDHelper.createString("VP"));
-    Vals.push_back(MDHelper.createConstant(
-        llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), ValueKind)));
-    Vals.push_back(MDHelper.createConstant(
-        llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), Sum)));
-
-    uint32_t MDCount = 3;
-    for (uint32_t I = 0; I < NV; ++I) {
-      Vals.push_back(MDHelper.createConstant(
-          llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), VD[I].Value)));
-      Vals.push_back(MDHelper.createConstant(
-          llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), VD[I].Count)));
-      if (--MDCount == 0)
-        break;
-    }
-    ValueSite->setMetadata(
-        llvm::LLVMContext::MD_prof, llvm::MDNode::get(Ctx, Vals));
     NumValueSites[ValueKind]++;
   }
 }

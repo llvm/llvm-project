@@ -3908,6 +3908,7 @@ public:
     LongDoubleWidth = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble;
     UserLabelPrefix = "";
+    WIntType = UnsignedInt;
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {

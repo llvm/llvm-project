@@ -89,7 +89,7 @@ if (APPLE)
   set(TOOL_INFO_BUILD_VERSION)
 endif()
 
-if(CLANG_ORDER_FILE)
+if(CLANG_ORDER_FILE AND EXISTS CLANG_ORDER_FILE)
   target_link_libraries(clang "-Wl,-order_file,${CLANG_ORDER_FILE}")
 endif()
 

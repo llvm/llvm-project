@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fprofile-instr-generate -fcoverage-mapping -emit-llvm -main-file-name unused_names.c -o - %s > %t
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -emit-llvm -main-file-name unused_names.c -o - %s > %t
 // RUN: FileCheck -input-file %t %s
 // RUN: FileCheck -check-prefix=SYSHEADER -input-file %t %s
 

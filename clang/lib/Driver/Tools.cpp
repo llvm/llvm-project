@@ -3224,15 +3224,17 @@ static void addPGOAndCoverageFlags(Compilation &C, const Driver &D,
   if (ProfileGenerateArg) {
     if (ProfileGenerateArg->getOption().matches(
             options::OPT_fprofile_instr_generate_EQ))
-      ProfileGenerateArg->render(Args, CmdArgs);
+      CmdArgs.push_back(Args.MakeArgString(Twine("-fprofile-instrument-path=") +
+                                           ProfileGenerateArg->getValue()));
     else if (ProfileGenerateArg->getOption().matches(
                  options::OPT_fprofile_generate_EQ)) {
       SmallString<128> Path(ProfileGenerateArg->getValue());
       llvm::sys::path::append(Path, "default.profraw");
       CmdArgs.push_back(
-          Args.MakeArgString(Twine("-fprofile-instr-generate=") + Path));
-    } else
-      Args.AddAllArgs(CmdArgs, options::OPT_fprofile_instr_generate);
+          Args.MakeArgString(Twine("-fprofile-instrument-path=") + Path));
+    }
+    // The default is to use Clang Instrumentation.
+    CmdArgs.push_back("-fprofile-instrument=clang");
   }
 
   if (ProfileUseArg) {

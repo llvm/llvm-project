@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fexceptions -fcxx-exceptions -fprofile-instr-generate -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name trycatch.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fexceptions -fcxx-exceptions -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name trycatch.cpp %s | FileCheck %s
 
 class Error {
 };

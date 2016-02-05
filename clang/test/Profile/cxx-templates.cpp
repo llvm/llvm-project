@@ -1,7 +1,7 @@
 // Tests for instrumentation of templated code. Each instantiation of a template
 // should be instrumented separately.
 
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-templates.cpp -std=c++11 -o - -emit-llvm -fprofile-instr-generate > %tgen
+// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-templates.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument=clang > %tgen
 // RUN: FileCheck --input-file=%tgen -check-prefix=T0GEN -check-prefix=ALL %s
 // RUN: FileCheck --input-file=%tgen -check-prefix=T100GEN -check-prefix=ALL %s
 
