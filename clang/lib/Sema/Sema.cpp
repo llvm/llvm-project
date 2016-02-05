@@ -189,6 +189,10 @@ void Sema::Initialize() {
     DeclarationName Protocol = &Context.Idents.get("Protocol");
     if (IdResolver.begin(Protocol) == IdResolver.end())
       PushOnScopeChains(Context.getObjCProtocolDecl(), TUScope);
+
+    DeclarationName ConstantString = &Context.Idents.get("NSConstantString");
+    if (IdResolver.begin(ConstantString) == IdResolver.end())
+      PushOnScopeChains(Context.getCFConstantStringDecl(), TUScope);
   }
 
   // Initialize Microsoft "predefined C++ types".
