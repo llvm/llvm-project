@@ -1264,7 +1264,8 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
               .addOperand(getLdStRegOp(Update))
               .addOperand(getLdStRegOp(I))
               .addOperand(getLdStBaseOp(I))
-              .addImm(Value);
+              .addImm(Value)
+              .setMemRefs(I->memoperands_begin(), I->memoperands_end());
   } else {
     // Paired instruction.
     int Scale = getMemScale(I);
@@ -1273,7 +1274,8 @@ AArch64LoadStoreOpt::mergeUpdateInsn(MachineBasicBlock::iterator I,
               .addOperand(getLdStRegOp(I, 0))
               .addOperand(getLdStRegOp(I, 1))
               .addOperand(getLdStBaseOp(I))
-              .addImm(Value / Scale);
+              .addImm(Value / Scale)
+              .setMemRefs(I->memoperands_begin(), I->memoperands_end());
   }
   (void)MIB;
 
