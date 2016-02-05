@@ -7,7 +7,9 @@ from __future__ import print_function
 
 
 import lldbmi_testcase
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
@@ -55,7 +57,6 @@ class MiInterpreterExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureLinux  # Failing in ~9/600 dosep runs (build 3120-3122)
     def test_lldbmi_settings_set_target_run_args_before(self):
         """Test that 'lldb-mi --interpreter' can set target arguments by 'setting set target.run-args' command before than target was created."""
 

@@ -150,7 +150,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     if (Target->isTlsLocalDynamicRel(Type) &&
         !Target->canRelaxTls(Type, nullptr)) {
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
-                          Out<ELFT>::Got->getLocalTlsIndexVA() +
+                          Out<ELFT>::Got->getTlsIndexVA() +
                               getAddend<ELFT>(RI));
       continue;
     }
@@ -209,7 +209,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     if (Target->needsPlt(Type, *Body)) {
       SymVA = Body->getPltVA<ELFT>();
     } else if (Target->needsGot(Type, *Body)) {
-      if (Config->EMachine == EM_MIPS && needsMipsLocalGot(Type, Body))
+      if (Config->EMachine == EM_MIPS && !canBePreempted(Body, true))
         // Under some conditions relocations against non-local symbols require
         // entries in the local part of MIPS GOT. In that case we need an entry
         // initialized by full address of the symbol.
@@ -234,6 +234,8 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
         SymVA = getMipsGpAddr<ELFT>() - AddrLoc;
       else if (Type == R_MIPS_LO16 && Body == Config->MipsGpDisp)
         SymVA = getMipsGpAddr<ELFT>() - AddrLoc + 4;
+      else if (Body == Config->MipsLocalGp)
+        SymVA = getMipsGpAddr<ELFT>();
     }
     uintX_t Size = Body->getSize<ELFT>();
     Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA + A, Size + A,

@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mcpu=mips32r6 %S/Inputs/mips-dynamic.s -o %t2.o
 # RUN: ld.lld %t1.o %t2.o -o %t.exe
-# RUN: llvm-objdump -mcpu=mips32r6 -d -t %t.exe | FileCheck %s
+# RUN: llvm-objdump -mcpu=mips32r6 -d -t -s %t.exe | FileCheck %s
 
 # REQUIRES: mips
 
@@ -18,6 +18,9 @@ __start:
   bc        _foo                    # R_MIPS_PC26_S2
   aluipc    $2, %pcrel_hi(_foo)     # R_MIPS_PCHI16
   addiu     $2, $2, %pcrel_lo(_foo) # R_MIPS_PCLO16
+
+  .data
+  .word _foo+8-.                    # R_MIPS_PC32
 
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: __start:
@@ -33,6 +36,10 @@ __start:
 #                                      ^-- %hi(0x20020-0x20010)
 # CHECK-NEXT:    20014:       24 42 00 0c     addiu   $2, $2, 12
 #                                      ^-- %lo(0x20020-0x20014)
+
+# CHECK: Contents of section .data:
+# CHECK-NEXT: 30000 ffff0028 00000000 00000000 00000000
+#                   ^-- 0x20020 + 8 - 0x30000
 
 # CHECK: 00020000         .text           00000000 __start
 # CHECK: 00020020         .text           00000000 _foo

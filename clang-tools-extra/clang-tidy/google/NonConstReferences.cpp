@@ -108,9 +108,16 @@ void NonConstReferences::check(const MatchFinder::MatchResult &Result) {
   if (StringRef(ReferencedType.getAsString()).endswith("stream"))
     return;
 
-  diag(Parameter->getLocation(),
-       "non-const reference parameter '%0', make it const or use a pointer")
-      << Parameter->getName();
+  if (Parameter->getName().empty()) {
+    diag(Parameter->getLocation(),
+         "non-const reference parameter at index %0, "
+         "make it const or use a pointer")
+        << Parameter->getFunctionScopeIndex();
+  } else {
+    diag(Parameter->getLocation(),
+         "non-const reference parameter '%0', make it const or use a pointer")
+        << Parameter->getName();
+  }
 }
 
 } // namespace runtime

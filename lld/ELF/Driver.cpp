@@ -328,6 +328,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // start of function and gp pointer into GOT. Use 'strong' variant of
     // the addIgnored to prevent '_gp_disp' substitution.
     Config->MipsGpDisp = Symtab.addIgnored("_gp_disp");
+    Config->MipsLocalGp = Symtab.addIgnored("__gnu_local_gp");
 
     // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
     // so that it points to an absolute address which is relative to GOT.

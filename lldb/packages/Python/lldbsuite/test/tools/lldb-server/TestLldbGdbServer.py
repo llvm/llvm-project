@@ -19,7 +19,9 @@ import gdbremote_testcase
 import lldbgdbserverutils
 import platform
 import signal
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
 

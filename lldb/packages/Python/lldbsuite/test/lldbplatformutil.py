@@ -6,6 +6,7 @@ from __future__ import absolute_import
 # System modules
 import re
 import subprocess
+import sys
 
 # Third-party modules
 from six.moves.urllib import parse as urlparse
@@ -85,3 +86,52 @@ def finalize_build_dictionary(dictionary):
         if android_device_api() >= 16:
             dictionary["PIE"] = 1
     return dictionary
+
+def getHostPlatform():
+    """Returns the host platform running the test suite."""
+    # Attempts to return a platform name matching a target Triple platform.
+    if sys.platform.startswith('linux'):
+        return 'linux'
+    elif sys.platform.startswith('win32'):
+        return 'windows'
+    elif sys.platform.startswith('darwin'):
+        return 'darwin'
+    elif sys.platform.startswith('freebsd'):
+        return 'freebsd'
+    elif sys.platform.startswith('netbsd'):
+        return 'netbsd'
+    else:
+        return sys.platform
+
+
+def getDarwinOSTriples():
+    return ['darwin', 'macosx', 'ios']
+
+def getPlatform():
+    """Returns the target platform which the tests are running on."""
+    platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    if platform.startswith('freebsd'):
+        platform = 'freebsd'
+    elif platform.startswith('netbsd'):
+        platform = 'netbsd'
+    return platform
+
+def platformIsDarwin():
+    """Returns true if the OS triple for the selected platform is any valid apple OS"""
+    return getPlatform() in getDarwinOSTriples()
+
+class _PlatformContext(object):
+    """Value object class which contains platform-specific options."""
+
+    def __init__(self, shlib_environment_var, shlib_prefix, shlib_extension):
+        self.shlib_environment_var = shlib_environment_var
+        self.shlib_prefix = shlib_prefix
+        self.shlib_extension = shlib_extension
+
+def createPlatformContext():
+    if platformIsDarwin():
+        return _PlatformContext('DYLD_LIBRARY_PATH', 'lib', 'dylib')
+    elif getPlatform() in ("freebsd", "linux", "netbsd"):
+        return _PlatformContext('LD_LIBRARY_PATH', 'lib', 'so')
+    else:
+        return None

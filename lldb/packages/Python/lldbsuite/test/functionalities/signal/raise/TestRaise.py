@@ -6,9 +6,10 @@ from __future__ import print_function
 
 import os
 import lldb
-from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
 import re
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 
 @skipIfWindows # signals do not exist on Windows

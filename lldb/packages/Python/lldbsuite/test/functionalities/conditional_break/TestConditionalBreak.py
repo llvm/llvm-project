@@ -9,8 +9,9 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 # rdar://problem/8532131
 # lldb not able to digest the clang-generated debug info correctly with respect to function name

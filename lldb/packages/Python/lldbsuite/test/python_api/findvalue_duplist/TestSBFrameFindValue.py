@@ -6,8 +6,9 @@ from __future__ import print_function
 
 import os, sys, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class SBFrameFindValueTestCase(TestBase):
 

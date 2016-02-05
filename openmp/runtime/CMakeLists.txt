@@ -277,6 +277,14 @@ if(LIBOMP_STATS)
   set(LIBOMP_USE_STDCPPLIB TRUE)
 endif()
 
+# Shared library can be switched to a static library
+set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
+  "Shared library instead of static library?")
+
+if(WIN32 AND NOT LIBOMP_ENABLE_SHARED)
+  libomp_error_say("Static libraries requested but not available on Windows")
+endif()
+
 # OMPT-support
 set(LIBOMP_OMPT_DEBUG FALSE CACHE BOOL
   "Trace OMPT initialization?")
@@ -304,7 +312,18 @@ if(${STUBS_LIBRARY})
   set(LIBOMP_DEFAULT_LIB_NAME ${LIBOMP_DEFAULT_LIB_NAME}stubs)
 endif()
 set(LIBOMP_LIB_NAME ${LIBOMP_DEFAULT_LIB_NAME} CACHE STRING "Base OMP library name")
-set(LIBOMP_LIB_FILE ${LIBOMP_LIB_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+
+if(${LIBOMP_ENABLE_SHARED})
+  set(LIBOMP_LIBRARY_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
+  set(LIBOMP_LIBRARY_KIND SHARED) 
+  set(LIBOMP_INSTALL_KIND LIBRARY) 
+else()
+  set(LIBOMP_LIBRARY_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
+  set(LIBOMP_LIBRARY_KIND STATIC) 
+  set(LIBOMP_INSTALL_KIND ARCHIVE) 
+endif()
+
+set(LIBOMP_LIB_FILE ${LIBOMP_LIB_NAME}${LIBOMP_LIBRARY_SUFFIX})
 
 # Print configuration after all variables are set.
 if(${LIBOMP_STANDALONE_BUILD})
@@ -315,7 +334,8 @@ if(${LIBOMP_STANDALONE_BUILD})
   endif()
   libomp_say("Build Type           -- ${CMAKE_BUILD_TYPE}")
   libomp_say("OpenMP Version       -- ${LIBOMP_OMP_VERSION}")
-  libomp_say("Lib Type             -- ${LIBOMP_LIB_TYPE}")
+  libomp_say("Library Kind         -- ${LIBOMP_LIBRARY_KIND}")
+  libomp_say("Library Type         -- ${LIBOMP_LIB_TYPE}")
   libomp_say("Fortran Modules      -- ${LIBOMP_FORTRAN_MODULES}")
   # will say development if all zeros
   if(${LIBOMP_VERSION_BUILD} STREQUAL 00000000)

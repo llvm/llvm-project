@@ -6,11 +6,14 @@ from __future__ import print_function
 
 
 
-import os, time
+import os
 import re
+import time
+
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class WatchpointIteratorTestCase(TestBase):
 

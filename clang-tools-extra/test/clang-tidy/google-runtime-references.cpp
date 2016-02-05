@@ -40,7 +40,7 @@ void g3(ref a);
 void g4(int &a, int &b, int &);
 // CHECK-MESSAGES: [[@LINE-1]]:14: warning: non-const reference parameter 'a', {{.*}}
 // CHECK-MESSAGES: [[@LINE-2]]:22: warning: non-const reference parameter 'b', {{.*}}
-// CHECK-MESSAGES: [[@LINE-3]]:30: warning: non-const reference parameter '', {{.*}}
+// CHECK-MESSAGES: [[@LINE-3]]:30: warning: non-const reference parameter at index 2, {{.*}}
 
 class B {
   B(B& a) {}
@@ -60,7 +60,7 @@ void B::g(int &b) {}
 
 // Don't warn on the first parameter of stream inserters.
 A& operator<<(A& s, int&) { return s; }
-// CHECK-MESSAGES: [[@LINE-1]]:25: warning: non-const reference parameter '', {{.*}}
+// CHECK-MESSAGES: [[@LINE-1]]:25: warning: non-const reference parameter at index 1, {{.*}}
 
 // Don't warn on either parameter of stream extractors. Both need to be
 // non-const references by convention.

@@ -189,7 +189,7 @@ ProcessWindowsLive::DisableBreakpointSite(BreakpointSite *bp_site)
 {
     WINLOG_IFALL(WINDOWS_LOG_BREAKPOINTS, "DisableBreakpointSite called with bp_site 0x%p "
                                           "(id=%d, addr=0x%x)",
-                 bp_site->GetID(), bp_site->GetLoadAddress());
+                 bp_site, bp_site->GetID(), bp_site->GetLoadAddress());
 
     Error error = DisableSoftwareBreakpoint(bp_site);
 
