@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/MachO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1040,12 +1041,24 @@ file_magic identify_magic(StringRef Magic) {
           Magic[2] == char(0xFA) &&
           (Magic[3] == char(0xCE) || Magic[3] == char(0xCF))) {
         /* Native endian */
-        if (Magic.size() >= 16) type = Magic[14] << 8 | Magic[15];
+        size_t MinSize;
+        if (Magic[3] == char(0xCE))
+          MinSize = sizeof(MachO::mach_header);
+        else
+          MinSize = sizeof(MachO::mach_header_64);
+        if (Magic.size() >= MinSize)
+          type = Magic[12] << 24 | Magic[13] << 12 | Magic[14] << 8 | Magic[15];
       } else if ((Magic[0] == char(0xCE) || Magic[0] == char(0xCF)) &&
                  Magic[1] == char(0xFA) && Magic[2] == char(0xED) &&
                  Magic[3] == char(0xFE)) {
         /* Reverse endian */
-        if (Magic.size() >= 14) type = Magic[13] << 8 | Magic[12];
+        size_t MinSize;
+        if (Magic[0] == char(0xCE))
+          MinSize = sizeof(MachO::mach_header);
+        else
+          MinSize = sizeof(MachO::mach_header_64);
+        if (Magic.size() >= MinSize)
+          type = Magic[15] << 24 | Magic[14] << 12 |Magic[13] << 8 | Magic[12];
       }
       switch (type) {
         default: break;

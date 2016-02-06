@@ -1854,10 +1854,10 @@ void DwarfLinker::startDebugObject(DWARFContext &Dwarf, DebugMapObject &Obj) {
   // -gline-tables-only on Darwin.
   for (const auto &Entry : Obj.symbols()) {
     const auto &Mapping = Entry.getValue();
-    if (Mapping.Size)
-      Ranges[Mapping.ObjectAddress] = std::make_pair(
-          Mapping.ObjectAddress + Mapping.Size,
-          int64_t(Mapping.BinaryAddress) - Mapping.ObjectAddress);
+    if (Mapping.Size && Mapping.ObjectAddress)
+      Ranges[*Mapping.ObjectAddress] = std::make_pair(
+          *Mapping.ObjectAddress + Mapping.Size,
+          int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
   }
 }
 
@@ -1875,6 +1875,26 @@ void DwarfLinker::endDebugObject() {
   DIEAlloc.Reset();
 }
 
+static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch) {
+  switch (Arch) {
+  case Triple::x86:
+    return RelocType == MachO::GENERIC_RELOC_SECTDIFF ||
+           RelocType == MachO::GENERIC_RELOC_LOCAL_SECTDIFF;
+  case Triple::x86_64:
+    return RelocType == MachO::X86_64_RELOC_SUBTRACTOR;
+  case Triple::arm:
+  case Triple::thumb:
+    return RelocType == MachO::ARM_RELOC_SECTDIFF ||
+           RelocType == MachO::ARM_RELOC_LOCAL_SECTDIFF ||
+           RelocType == MachO::ARM_RELOC_HALF ||
+           RelocType == MachO::ARM_RELOC_HALF_SECTDIFF;
+  case Triple::aarch64:
+    return RelocType == MachO::ARM64_RELOC_SUBTRACTOR;
+  default:
+    return false;
+  }
+}
+
 /// \brief Iterate over the relocations of the given \p Section and
 /// store the ones that correspond to debug map entries into the
 /// ValidRelocs array.
@@ -1885,10 +1905,24 @@ findValidRelocsMachO(const object::SectionRef &Section,
   StringRef Contents;
   Section.getContents(Contents);
   DataExtractor Data(Contents, Obj.isLittleEndian(), 0);
+  bool SkipNext = false;
 
   for (const object::RelocationRef &Reloc : Section.relocations()) {
+    if (SkipNext) {
+      SkipNext = false;
+      continue;
+    }
+
     object::DataRefImpl RelocDataRef = Reloc.getRawDataRefImpl();
     MachO::any_relocation_info MachOReloc = Obj.getRelocation(RelocDataRef);
+
+    if (isMachOPairedReloc(Obj.getAnyRelocationType(MachOReloc),
+                           Obj.getArch())) {
+      SkipNext = true;
+      Linker.reportWarning(" unsupported relocation in debug_info section.");
+      continue;
+    }
+
     unsigned RelocSize = 1 << Obj.getAnyRelocationLength(MachOReloc);
     uint64_t Offset64 = Reloc.getOffset();
     if ((RelocSize != 4 && RelocSize != 8)) {
@@ -1898,6 +1932,19 @@ findValidRelocsMachO(const object::SectionRef &Section,
     uint32_t Offset = Offset64;
     // Mach-o uses REL relocations, the addend is at the relocation offset.
     uint64_t Addend = Data.getUnsigned(&Offset, RelocSize);
+    uint64_t SymAddress;
+    int64_t SymOffset;
+
+    if (Obj.isRelocationScattered(MachOReloc)) {
+      // The address of the base symbol for scattered relocations is
+      // stored in the reloc itself. The actual addend will store the
+      // base address plus the offset.
+      SymAddress = Obj.getScatteredRelocationValue(MachOReloc);
+      SymOffset = int64_t(Addend) - SymAddress;
+    } else {
+      SymAddress = Addend;
+      SymOffset = 0;
+    }
 
     auto Sym = Reloc.getSymbol();
     if (Sym != Obj.symbol_end()) {
@@ -1908,11 +1955,11 @@ findValidRelocsMachO(const object::SectionRef &Section,
       }
       if (const auto *Mapping = DMO.lookupSymbol(*SymbolName))
         ValidRelocs.emplace_back(Offset64, RelocSize, Addend, Mapping);
-    } else if (const auto *Mapping = DMO.lookupObjectAddress(Addend)) {
+    } else if (const auto *Mapping = DMO.lookupObjectAddress(SymAddress)) {
       // Do not store the addend. The addend was the address of the
       // symbol in the object file, the address in the binary that is
       // stored in the debug map doesn't need to be offseted.
-      ValidRelocs.emplace_back(Offset64, RelocSize, 0, Mapping);
+      ValidRelocs.emplace_back(Offset64, RelocSize, SymOffset, Mapping);
     }
   }
 }
@@ -1988,14 +2035,16 @@ hasValidRelocation(uint32_t StartOffset, uint32_t EndOffset,
 
   const auto &ValidReloc = ValidRelocs[NextValidReloc++];
   const auto &Mapping = ValidReloc.Mapping->getValue();
+  uint64_t ObjectAddress =
+      Mapping.ObjectAddress ? uint64_t(*Mapping.ObjectAddress) : UINT64_MAX;
   if (Linker.Options.Verbose)
     outs() << "Found valid debug map entry: " << ValidReloc.Mapping->getKey()
-           << " " << format("\t%016" PRIx64 " => %016" PRIx64,
-                            uint64_t(Mapping.ObjectAddress),
+           << " " << format("\t%016" PRIx64 " => %016" PRIx64, ObjectAddress,
                             uint64_t(Mapping.BinaryAddress));
 
-  Info.AddrAdjust = int64_t(Mapping.BinaryAddress) + ValidReloc.Addend -
-                    Mapping.ObjectAddress;
+  Info.AddrAdjust = int64_t(Mapping.BinaryAddress) + ValidReloc.Addend;
+  if (Mapping.ObjectAddress)
+    Info.AddrAdjust -= ObjectAddress;
   Info.InDebugMap = true;
   return true;
 }

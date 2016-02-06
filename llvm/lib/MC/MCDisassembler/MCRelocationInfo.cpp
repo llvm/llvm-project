@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCRelocationInfo.h"
+#include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/TargetRegistry.h"

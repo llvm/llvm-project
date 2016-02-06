@@ -102,7 +102,23 @@ protected:
   /// insert_imp - This returns true if the pointer was new to the set, false if
   /// it was already in the set.  This is hidden from the client so that the
   /// derived class can check that the right type of pointer is passed in.
-  std::pair<const void *const *, bool> insert_imp(const void *Ptr);
+  std::pair<const void *const *, bool> insert_imp(const void *Ptr) {
+    if (isSmall()) {
+      // Check to see if it is already in the set.
+      for (const void **APtr = SmallArray, **E = SmallArray+NumElements;
+           APtr != E; ++APtr)
+        if (*APtr == Ptr)
+          return std::make_pair(APtr, false);
+
+      // Nope, there isn't.  If we stay small, just 'pushback' now.
+      if (NumElements < CurArraySize) {
+        SmallArray[NumElements++] = Ptr;
+        return std::make_pair(SmallArray + (NumElements - 1), true);
+      }
+      // Otherwise, hit the big set case, which will call grow.
+    }
+    return insert_imp_big(Ptr);
+  }
 
   /// erase_imp - If the set contains the specified pointer, remove it and
   /// return true, otherwise return false.  This is hidden from the client so
@@ -126,6 +142,8 @@ protected:
 
 private:
   bool isSmall() const { return CurArray == SmallArray; }
+
+  std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
   const void * const *FindBucketFor(const void *Ptr) const;
   void shrink_and_clear();

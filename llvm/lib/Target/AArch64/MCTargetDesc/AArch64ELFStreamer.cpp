@@ -112,9 +112,21 @@ public:
     MCELFStreamer::EmitInstruction(Inst, STI);
   }
 
+  /// Emit a 32-bit value as an instruction. This is only used for the .inst
+  /// directive, EmitInstruction should be used in other cases.
   void emitInst(uint32_t Inst) {
+    char Buffer[4];
+
+    // We can't just use EmitIntValue here, as that will emit a data mapping
+    // symbol, and swap the endianness on big-endian systems (instructions are
+    // always little-endian).
+    for (unsigned I = 0; I < 4; ++I) {
+      Buffer[I] = uint8_t(Inst);
+      Inst >>= 8;
+    }
+
     EmitA64MappingSymbol();
-    MCELFStreamer::EmitIntValue(Inst, 4);
+    MCELFStreamer::EmitBytes(StringRef(Buffer, 4));
   }
 
   /// This is one of the functions used to emit data into an ELF section, so the

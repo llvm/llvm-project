@@ -30,7 +30,7 @@ static bool useCompactUnwind(const Triple &T) {
     return true;
 
   // armv7k always has it.
-  if (T.isWatchOS())
+  if (T.isWatchABI())
     return true;
 
   // Use it on newer version of OS X.
@@ -58,7 +58,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
   if (T.isOSDarwin() && T.getArch() == Triple::aarch64)
     SupportsCompactUnwindWithoutEHFrame = true;
 
-  if (T.isWatchOS())
+  if (T.isWatchABI())
     OmitDwarfIfHaveCompactUnwind = true;
 
   PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel

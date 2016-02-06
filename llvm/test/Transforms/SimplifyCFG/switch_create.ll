@@ -554,3 +554,28 @@ bb20:                                             ; preds = %bb19, %bb8
 ; CHECK: %arg.off = add i32 %arg, -8
 ; CHECK: icmp ult i32 %arg.off, 11
 }
+
+define void @PR26323(i1 %tobool23, i32 %tmp3) {
+entry:
+  %tobool5 = icmp ne i32 %tmp3, 0
+  %neg14 = and i32 %tmp3, -2
+  %cmp17 = icmp ne i32 %neg14, -1
+  %or.cond = and i1 %tobool5, %tobool23
+  %or.cond1 = and i1 %cmp17, %or.cond
+  br i1 %or.cond1, label %if.end29, label %if.then27
+
+if.then27:                                        ; preds = %entry
+  call void @foo1()
+  unreachable
+
+if.end29:                                         ; preds = %entry
+  ret void
+}
+
+; CHECK-LABEL: define void @PR26323(
+; CHECK:  %tobool5 = icmp ne i32 %tmp3, 0
+; CHECK:  %neg14 = and i32 %tmp3, -2
+; CHECK:  %cmp17 = icmp ne i32 %neg14, -1
+; CHECK:  %or.cond = and i1 %tobool5, %tobool23
+; CHECK:  %or.cond1 = and i1 %cmp17, %or.cond
+; CHECK:  br i1 %or.cond1, label %if.end29, label %if.then27

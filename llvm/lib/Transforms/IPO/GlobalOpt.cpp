@@ -499,6 +499,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
                                                GV->getThreadLocalMode(),
                                               GV->getType()->getAddressSpace());
       NGV->setExternallyInitialized(GV->isExternallyInitialized());
+      NGV->copyAttributesFrom(GV);
       Globals.push_back(NGV);
       NewGlobals.push_back(NGV);
 
@@ -533,6 +534,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
                                                GV->getThreadLocalMode(),
                                               GV->getType()->getAddressSpace());
       NGV->setExternallyInitialized(GV->isExternallyInitialized());
+      NGV->copyAttributesFrom(GV);
       Globals.push_back(NGV);
       NewGlobals.push_back(NGV);
 
@@ -1291,6 +1293,7 @@ static GlobalVariable *PerformHeapAllocSRoA(GlobalVariable *GV, CallInst *CI,
         *GV->getParent(), PFieldTy, false, GlobalValue::InternalLinkage,
         Constant::getNullValue(PFieldTy), GV->getName() + ".f" + Twine(FieldNo),
         nullptr, GV->getThreadLocalMode());
+    NGV->copyAttributesFrom(GV);
     FieldGlobals.push_back(NGV);
 
     unsigned TypeSize = DL.getTypeAllocSize(FieldTy);
@@ -1610,6 +1613,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
                                              GV->getName()+".b",
                                              GV->getThreadLocalMode(),
                                              GV->getType()->getAddressSpace());
+  NewGV->copyAttributesFrom(GV);
   GV->getParent()->getGlobalList().insert(GV->getIterator(), NewGV);
 
   Constant *InitVal = GV->getInitializer();

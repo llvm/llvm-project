@@ -35,22 +35,7 @@ void SmallPtrSetImplBase::shrink_and_clear() {
 }
 
 std::pair<const void *const *, bool>
-SmallPtrSetImplBase::insert_imp(const void *Ptr) {
-  if (isSmall()) {
-    // Check to see if it is already in the set.
-    for (const void **APtr = SmallArray, **E = SmallArray+NumElements;
-         APtr != E; ++APtr)
-      if (*APtr == Ptr)
-        return std::make_pair(APtr, false);
-
-    // Nope, there isn't.  If we stay small, just 'pushback' now.
-    if (NumElements < CurArraySize) {
-      SmallArray[NumElements++] = Ptr;
-      return std::make_pair(SmallArray + (NumElements - 1), true);
-    }
-    // Otherwise, hit the big set case, which will call grow.
-  }
-
+SmallPtrSetImplBase::insert_imp_big(const void *Ptr) {
   if (LLVM_UNLIKELY(NumElements * 4 >= CurArraySize * 3)) {
     // If more than 3/4 of the array is full, grow.
     Grow(CurArraySize < 64 ? 128 : CurArraySize*2);

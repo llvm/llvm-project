@@ -2320,8 +2320,10 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       // register class VR128 by method 'constrainOperandRegClass' which is
       // directly called by 'fastEmitInst_ri'.
       // Instruction VCVTPS2PHrr takes an extra immediate operand which is
-      // used to provide rounding control.
-      InputReg = fastEmitInst_ri(X86::VCVTPS2PHrr, RC, InputReg, false, 0);
+      // used to provide rounding control: use MXCSR.RC, encoded as 0b100.
+      // It's consistent with the other FP instructions, which are usually
+      // controlled by MXCSR.
+      InputReg = fastEmitInst_ri(X86::VCVTPS2PHrr, RC, InputReg, false, 4);
 
       // Move the lower 32-bits of ResultReg to another register of class GR32.
       ResultReg = createResultReg(&X86::GR32RegClass);

@@ -85,7 +85,7 @@ computeTargetABI(const Triple &TT, StringRef CPU,
         (TT.getOS() == llvm::Triple::UnknownOS && TT.isOSBinFormatMachO()) ||
         CPU.startswith("cortex-m")) {
       TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
-    } else if (TT.isWatchOS()) {
+    } else if (TT.isWatchABI()) {
       TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS16;
     } else {
       TargetABI = ARMBaseTargetMachine::ARM_ABI_APCS;

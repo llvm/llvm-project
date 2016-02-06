@@ -75,7 +75,7 @@
 #define LLVM_LIB_TARGET_X86_DISASSEMBLER_X86DISASSEMBLER_H
 
 #include "X86DisassemblerDecoderCommon.h"
-#include "llvm/MC/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 
 namespace llvm {
 

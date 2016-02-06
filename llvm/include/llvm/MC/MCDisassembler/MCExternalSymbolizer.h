@@ -13,11 +13,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_MCEXTERNALSYMBOLIZER_H
-#define LLVM_MC_MCEXTERNALSYMBOLIZER_H
+#ifndef LLVM_MC_MCDISASSEMBLER_MCEXTERNALSYMBOLIZER_H
+#define LLVM_MC_MCDISASSEMBLER_MCEXTERNALSYMBOLIZER_H
 
 #include "llvm-c/Disassembler.h"
-#include "llvm/MC/MCSymbolizer.h"
+#include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include <memory>
 
 namespace llvm {

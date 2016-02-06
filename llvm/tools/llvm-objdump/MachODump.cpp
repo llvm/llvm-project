@@ -22,7 +22,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -7144,6 +7144,10 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
         outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
         break;
       }
+      break;
+    default:
+      outs() << format(" %7d", cputype);
+      outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);
       break;
     }
     if ((cpusubtype & MachO::CPU_SUBTYPE_MASK) == MachO::CPU_SUBTYPE_LIB64) {

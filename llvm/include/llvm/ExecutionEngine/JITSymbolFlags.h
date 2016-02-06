@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_JITSYMBOLFLAGS_H
 
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Object/SymbolicFile.h"
 
 namespace llvm {
 
@@ -69,7 +70,16 @@ public:
     if (!GV.hasLocalLinkage() && !GV.hasHiddenVisibility())
       Flags |= JITSymbolFlags::Exported;
     return Flags;
+  }
 
+  static JITSymbolFlags
+  flagsFromObjectSymbol(const object::BasicSymbolRef &Symbol) {
+    JITSymbolFlags Flags = JITSymbolFlags::None;
+    if (Symbol.getFlags() & object::BasicSymbolRef::SF_Weak)
+      Flags |= JITSymbolFlags::Weak;
+    if (Symbol.getFlags() & object::BasicSymbolRef::SF_Exported)
+      Flags |= JITSymbolFlags::Exported;
+    return Flags;
   }
 
 private:

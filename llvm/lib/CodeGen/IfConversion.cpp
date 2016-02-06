@@ -595,15 +595,19 @@ bool IfConverter::ValidDiamond(BBInfo &TrueBBI, BBInfo &FalseBBI,
 
   // Now, in preparation for counting duplicate instructions at the ends of the
   // blocks, move the end iterators up past any branch instructions.
-  while (TIE != TIB) {
-    --TIE;
-    if (!TIE->isBranch())
-      break;
-  }
-  while (FIE != FIB) {
-    --FIE;
-    if (!FIE->isBranch())
-      break;
+  // If both blocks are returning don't skip the branches, since they will
+  // likely be both identical return instructions. In such cases the return
+  // can be left unpredicated.
+  // Check for already containing all of the block.
+  if (TIB == TIE || FIB == FIE)
+    return true;
+  --TIE;
+  --FIE;
+  if (!TrueBBI.BB->succ_empty() || !FalseBBI.BB->succ_empty()) {
+    while (TIE != TIB && TIE->isBranch())
+      --TIE;
+    while (FIE != FIB && FIE->isBranch())
+      --FIE;
   }
 
   // If Dups1 includes all of a block, then don't count duplicate
@@ -1395,8 +1399,13 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
   BBI.BB->splice(BBI.BB->end(), BBI1->BB, BBI1->BB->begin(), DI1);
   BBI2->BB->erase(BBI2->BB->begin(), DI2);
 
-  // Remove branch from 'true' block and remove duplicated instructions.
-  BBI1->NonPredSize -= TII->RemoveBranch(*BBI1->BB);
+  // Remove branch from the 'true' block, unless it was not analyzable.
+  // Non-analyzable branches need to be preserved, since in such cases,
+  // the CFG structure is not an actual diamond (the join block may not
+  // be present).
+  if (BBI1->IsBrAnalyzable)
+    BBI1->NonPredSize -= TII->RemoveBranch(*BBI1->BB);
+  // Remove duplicated instructions.
   DI1 = BBI1->BB->end();
   for (unsigned i = 0; i != NumDups2; ) {
     // NumDups2 only counted non-dbg_value instructions, so this won't
@@ -1413,8 +1422,10 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
   // must be removed.
   RemoveKills(BBI1->BB->begin(), BBI1->BB->end(), DontKill, *TRI);
 
-  // Remove 'false' block branch and find the last instruction to predicate.
-  BBI2->NonPredSize -= TII->RemoveBranch(*BBI2->BB);
+  // Remove 'false' block branch (unless it was not analyzable), and find
+  // the last instruction to predicate.
+  if (BBI2->IsBrAnalyzable)
+    BBI2->NonPredSize -= TII->RemoveBranch(*BBI2->BB);
   DI2 = BBI2->BB->end();
   while (NumDups2 != 0) {
     // NumDups2 only counted non-dbg_value instructions, so this won't
@@ -1473,6 +1484,18 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
   // Predicate the 'true' block.
   PredicateBlock(*BBI1, BBI1->BB->end(), *Cond1, &RedefsByFalse);
 
+  // After predicating BBI1, if there is a predicated terminator in BBI1 and
+  // a non-predicated in BBI2, then we don't want to predicate the one from
+  // BBI2. The reason is that if we merged these blocks, we would end up with
+  // two predicated terminators in the same block.
+  if (!BBI2->BB->empty() && (DI2 == BBI2->BB->end())) {
+    MachineBasicBlock::iterator BBI1T = BBI1->BB->getFirstTerminator();
+    MachineBasicBlock::iterator BBI2T = BBI2->BB->getFirstTerminator();
+    if ((BBI1T != BBI1->BB->end()) && TII->isPredicated(BBI1T) &&
+       ((BBI2T != BBI2->BB->end()) && !TII->isPredicated(BBI2T)))
+      --DI2;
+  }
+
   // Predicate the 'false' block.
   PredicateBlock(*BBI2, DI2, *Cond2);
 
@@ -1488,6 +1511,12 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
     BBInfo &TailBBI = BBAnalysis[TailBB->getNumber()];
     bool CanMergeTail = !TailBBI.HasFallThrough &&
       !TailBBI.BB->hasAddressTaken();
+    // The if-converted block can still have a predicated terminator
+    // (e.g. a predicated return). If that is the case, we cannot merge
+    // it with the tail block.
+    MachineBasicBlock::const_iterator TI = BBI.BB->getFirstTerminator();
+    if (TI != BBI.BB->end() && TII->isPredicated(TI))
+      CanMergeTail = false;
     // There may still be a fall-through edge from BBI1 or BBI2 to TailBB;
     // check if there are any other predecessors besides those.
     unsigned NumPreds = TailBB->pred_size();
@@ -1659,8 +1688,16 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   assert(!FromBBI.BB->hasAddressTaken() &&
          "Removing a BB whose address is taken!");
 
-  ToBBI.BB->splice(ToBBI.BB->end(),
-                   FromBBI.BB, FromBBI.BB->begin(), FromBBI.BB->end());
+  // In case FromBBI.BB contains terminators (e.g. return instruction),
+  // first move the non-terminator instructions, then the terminators.
+  MachineBasicBlock::iterator FromTI = FromBBI.BB->getFirstTerminator();
+  MachineBasicBlock::iterator ToTI = ToBBI.BB->getFirstTerminator();
+  ToBBI.BB->splice(ToTI, FromBBI.BB, FromBBI.BB->begin(), FromTI);
+
+  // If FromBB has non-predicated terminator we should copy it at the end.
+  if ((FromTI != FromBBI.BB->end()) && !TII->isPredicated(FromTI))
+    ToTI = ToBBI.BB->end();
+  ToBBI.BB->splice(ToTI, FromBBI.BB, FromTI, FromBBI.BB->end());
 
   // Force normalizing the successors' probabilities of ToBBI.BB to convert all
   // unknown probabilities into known ones.

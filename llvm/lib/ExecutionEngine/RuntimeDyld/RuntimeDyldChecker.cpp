@@ -12,7 +12,7 @@
 #include "RuntimeDyldImpl.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Path.h"
 #include <cctype>

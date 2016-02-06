@@ -46,7 +46,7 @@ public:
     if (TM) {
       // If we found a TargetMachine, check that it's one that Orc supports.
       const Triple& TT = TM->getTargetTriple();
-      if (TT.getArch() != Triple::x86_64 || !TT.isOSDarwin())
+      if (TT.getArch() != Triple::x86_64 || TT.isOSWindows())
         TM = nullptr;
     }
   };

@@ -215,6 +215,10 @@ unsigned TargetTransformInfo::getRegisterBitWidth(bool Vector) const {
   return TTIImpl->getRegisterBitWidth(Vector);
 }
 
+unsigned TargetTransformInfo::getCacheLineSize() const {
+  return TTIImpl->getCacheLineSize();
+}
+
 unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {
   return TTIImpl->getMaxInterleaveFactor(VF);
 }

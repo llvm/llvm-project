@@ -54,6 +54,7 @@ inline bool ModuleHasARC(const Module &M) {
     M.getNamedValue("objc_release") ||
     M.getNamedValue("objc_autorelease") ||
     M.getNamedValue("objc_retainAutoreleasedReturnValue") ||
+    M.getNamedValue("objc_unsafeClaimAutoreleasedReturnValue") ||
     M.getNamedValue("objc_retainBlock") ||
     M.getNamedValue("objc_autoreleaseReturnValue") ||
     M.getNamedValue("objc_autoreleasePoolPush") ||

@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
+#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetAsmParser.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;

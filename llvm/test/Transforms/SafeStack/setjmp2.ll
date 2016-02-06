@@ -12,8 +12,8 @@
 ; CHECK: @foo(i32 %[[ARG:.*]])
 define i32 @foo(i32 %size) nounwind uwtable safestack {
 entry:
-  ; CHECK: %[[DYNPTR:.*]] = alloca i8*
-  ; CHECK-NEXT: %[[SP:.*]] = load i8*, i8** @__safestack_unsafe_stack_ptr
+  ; CHECK: %[[SP:.*]] = load i8*, i8** @__safestack_unsafe_stack_ptr
+  ; CHECK-NEXT: %[[DYNPTR:.*]] = alloca i8*
   ; CHECK-NEXT: store i8* %[[SP]], i8** %[[DYNPTR]]
 
   ; CHECK-NEXT: %[[ZEXT:.*]] = zext i32 %[[ARG]] to i64
@@ -35,6 +35,7 @@ entry:
 
   ; CHECK: call void @funcall(i32* %[[ALLOCA]])
   call void @funcall(i32* %a)
+  ; CHECK-NEXT: store i8* %[[SP:.*]], i8** @__safestack_unsafe_stack_ptr
   ret i32 0
 }
 

@@ -71,12 +71,8 @@ public:
   raw_ostream &OS;
   support::endian::Writer<support::little> LE;
 };
-}
 
-namespace {
-static support::endianness ValueProfDataEndianness = support::little;
-
-class InstrProfRecordTrait {
+class InstrProfRecordWriterTrait {
 public:
   typedef StringRef key_type;
   typedef StringRef key_type_ref;
@@ -87,6 +83,9 @@ public:
   typedef uint64_t hash_value_type;
   typedef uint64_t offset_type;
 
+  support::endianness ValueProfDataEndianness;
+
+  InstrProfRecordWriterTrait() : ValueProfDataEndianness(support::little) {}
   static hash_value_type ComputeHash(key_type_ref K) {
     return IndexedInstrProf::ComputeHash(K);
   }
@@ -114,12 +113,11 @@ public:
     return std::make_pair(N, M);
   }
 
-  static void EmitKey(raw_ostream &Out, key_type_ref K, offset_type N){
+  void EmitKey(raw_ostream &Out, key_type_ref K, offset_type N) {
     Out.write(K.data(), N);
   }
 
-  static void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V,
-                       offset_type) {
+  void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
     using namespace llvm::support;
     endian::Writer<little> LE(Out);
     for (const auto &ProfileData : *V) {
@@ -141,10 +139,19 @@ public:
 };
 }
 
+InstrProfWriter::InstrProfWriter(bool Sparse)
+    : Sparse(Sparse), FunctionData(), MaxFunctionCount(0),
+      InfoObj(new InstrProfRecordWriterTrait()) {}
+
+InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
+
 // Internal interface for testing purpose only.
 void InstrProfWriter::setValueProfDataEndianness(
     support::endianness Endianness) {
-  ValueProfDataEndianness = Endianness;
+  InfoObj->ValueProfDataEndianness = Endianness;
+}
+void InstrProfWriter::setOutputSparse(bool Sparse) {
+  this->Sparse = Sparse;
 }
 
 std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
@@ -180,11 +187,24 @@ std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
   return Result;
 }
 
+bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {
+  if (!Sparse)
+    return true;
+  for (const auto &Func : PD) {
+    const InstrProfRecord &IPR = Func.second;
+    if (std::any_of(IPR.Counts.begin(), IPR.Counts.end(),
+                    [](uint64_t Count) { return Count > 0; }))
+      return true;
+  }
+  return false;
+}
+
 void InstrProfWriter::writeImpl(ProfOStream &OS) {
-  OnDiskChainedHashTableGenerator<InstrProfRecordTrait> Generator;
+  OnDiskChainedHashTableGenerator<InstrProfRecordWriterTrait> Generator;
   // Populate the hash table generator.
   for (const auto &I : FunctionData)
-    Generator.insert(I.getKey(), &I.getValue());
+    if (shouldEncodeData(I.getValue()))
+      Generator.insert(I.getKey(), &I.getValue());
   // Write the header.
   IndexedInstrProf::Header Header;
   Header.Magic = IndexedInstrProf::Magic;
@@ -205,7 +225,7 @@ void InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Reserve the space for HashOffset field.
   OS.write(0);
   // Write the hash table.
-  uint64_t HashTableStart = Generator.Emit(OS.OS);
+  uint64_t HashTableStart = Generator.Emit(OS.OS, *InfoObj);
 
   // Now do the final patch:
   PatchItem PatchItems[1] = {{HashTableStartLoc, &HashTableStart, 1}};
@@ -275,10 +295,12 @@ void InstrProfWriter::writeRecordInText(const InstrProfRecord &Func,
 void InstrProfWriter::writeText(raw_fd_ostream &OS) {
   InstrProfSymtab Symtab;
   for (const auto &I : FunctionData)
-    Symtab.addFuncName(I.getKey());
+    if (shouldEncodeData(I.getValue()))
+      Symtab.addFuncName(I.getKey());
   Symtab.finalizeSymtab();
 
   for (const auto &I : FunctionData)
-    for (const auto &Func : I.getValue())
-      writeRecordInText(Func.second, Symtab, OS);
+    if (shouldEncodeData(I.getValue()))
+      for (const auto &Func : I.getValue())
+        writeRecordInText(Func.second, Symtab, OS);
 }

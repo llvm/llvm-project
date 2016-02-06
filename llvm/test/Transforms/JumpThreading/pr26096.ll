@@ -10,19 +10,24 @@ entry:
   br i1 %B, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  call void @fn2()
+  call void @fn2(i1 %B)
   ret void
 
 if.end:                                           ; preds = %entry
-  call void @fn2()
+  call void @fn2(i1 %B)
   ret void
 }
 
-define internal void @fn2() unnamed_addr {
+define internal void @fn2(i1 %B) unnamed_addr {
 entry:
   call void @fn1()
   call void @fn1()
   call void @fn1()
+  br i1 %B, label %if.end, label %if.then
+if.then:
+  unreachable
+
+if.end:
   unreachable
 }
 

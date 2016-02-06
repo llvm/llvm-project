@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_MCRELOCATIONINFO_H
-#define LLVM_MC_MCRELOCATIONINFO_H
+#ifndef LLVM_MC_MCDISASSEMBLER_MCRELOCATIONINFO_H
+#define LLVM_MC_MCDISASSEMBLER_MCRELOCATIONINFO_H
 
 #include "llvm/Support/Compiler.h"
 

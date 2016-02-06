@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86AsmInstrumentation.h"
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86Operand.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
@@ -18,9 +18,9 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
+#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetAsmParser.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CommandLine.h"
 #include <algorithm>

@@ -1156,6 +1156,10 @@ public:
   /// either of the specified value types.
   SDValue CreateStackTemporary(EVT VT1, EVT VT2);
 
+  SDValue FoldSymbolOffset(unsigned Opcode, EVT VT,
+                           const GlobalAddressSDNode *GA,
+                           const SDNode *N2);
+
   SDValue FoldConstantArithmetic(unsigned Opcode, SDLoc DL, EVT VT,
                                  SDNode *Cst1, SDNode *Cst2);
 
@@ -1266,6 +1270,9 @@ public:
                              unsigned Start = 0, unsigned Count = 0);
 
   unsigned getEVTAlignment(EVT MemoryVT) const;
+
+  /// Test whether the given value is a constant int or similar node.
+  SDNode *isConstantIntBuildVectorOrConstantInt(SDValue N);
 
 private:
   void InsertNode(SDNode *N);

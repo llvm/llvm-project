@@ -327,9 +327,9 @@ void SIScheduleBlock::initRegPressure(MachineBasicBlock::iterator BeginBlock,
   BotRPTracker.addLiveRegs(RPTracker.getPressure().LiveOutRegs);
 
   // Do not Track Physical Registers, because it messes up.
-  for (unsigned Reg : RPTracker.getPressure().LiveInRegs) {
-    if (TargetRegisterInfo::isVirtualRegister(Reg))
-      LiveInRegs.insert(Reg);
+  for (const auto &RegMaskPair : RPTracker.getPressure().LiveInRegs) {
+    if (TargetRegisterInfo::isVirtualRegister(RegMaskPair.RegUnit))
+      LiveInRegs.insert(RegMaskPair.RegUnit);
   }
   LiveOutRegs.clear();
   // There is several possibilities to distinguish:
@@ -354,7 +354,8 @@ void SIScheduleBlock::initRegPressure(MachineBasicBlock::iterator BeginBlock,
   // The RPTracker's LiveOutRegs has 1, 3, (some correct or incorrect)4, 5, 7
   // Comparing to LiveInRegs is not sufficient to differenciate 4 vs 5, 7
   // The use of findDefBetween removes the case 4.
-  for (unsigned Reg : RPTracker.getPressure().LiveOutRegs) {
+  for (const auto &RegMaskPair : RPTracker.getPressure().LiveOutRegs) {
+    unsigned Reg = RegMaskPair.RegUnit;
     if (TargetRegisterInfo::isVirtualRegister(Reg) &&
         isDefBetween(Reg, LIS->getInstructionIndex(BeginBlock).getRegSlot(),
                        LIS->getInstructionIndex(EndBlock).getRegSlot(),

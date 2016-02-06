@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_MCSYMBOLIZER_H
-#define LLVM_MC_MCSYMBOLIZER_H
+#ifndef LLVM_MC_MCDISASSEMBLER_MCSYMBOLIZER_H
+#define LLVM_MC_MCDISASSEMBLER_MCSYMBOLIZER_H
 
-#include "llvm/MC/MCRelocationInfo.h"
+#include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>

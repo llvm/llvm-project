@@ -970,15 +970,34 @@ static Value *valueHasFloatPrecision(Value *Val) {
   return nullptr;
 }
 
-//===----------------------------------------------------------------------===//
-// Double -> Float Shrinking Optimizations for Unary Functions like 'floor'
+/// Any floating-point library function that we're trying to simplify will have
+/// a signature of the form: fptype foo(fptype param1, fptype param2, ...).
+/// CheckDoubleTy indicates that 'fptype' must be 'double'.
+static bool matchesFPLibFunctionSignature(const Function *F, unsigned NumParams,
+                                          bool CheckDoubleTy) {
+  FunctionType *FT = F->getFunctionType();
+  if (FT->getNumParams() != NumParams)
+    return false;
 
-Value *LibCallSimplifier::optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
-                                                bool CheckRetType) {
+  // The return type must match what we're looking for.
+  Type *RetTy = FT->getReturnType();
+  if (CheckDoubleTy ? !RetTy->isDoubleTy() : !RetTy->isFloatingPointTy())
+    return false;
+
+  // Each parameter must match the return type, and therefore, match every other
+  // parameter too.
+  for (const Type *ParamTy : FT->params())
+    if (ParamTy != RetTy)
+      return false;
+
+  return true;
+}
+
+/// Shrink double -> float for unary functions like 'floor'.
+static Value *optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
+                                    bool CheckRetType) {
   Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  if (FT->getNumParams() != 1 || !FT->getReturnType()->isDoubleTy() ||
-      !FT->getParamType(0)->isDoubleTy())
+  if (!matchesFPLibFunctionSignature(Callee, 1, true))
     return nullptr;
 
   if (CheckRetType) {
@@ -1013,15 +1032,10 @@ Value *LibCallSimplifier::optimizeUnaryDoubleFP(CallInst *CI, IRBuilder<> &B,
   return B.CreateFPExt(V, B.getDoubleTy());
 }
 
-// Double -> Float Shrinking Optimizations for Binary Functions like 'fmin/fmax'
-Value *LibCallSimplifier::optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
+/// Shrink double -> float for binary functions like 'fmin/fmax'.
+static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  FunctionType *FT = Callee->getFunctionType();
-  // Just make sure this has 2 arguments of the same FP type, which match the
-  // result type.
-  if (FT->getNumParams() != 2 || FT->getReturnType() != FT->getParamType(0) ||
-      FT->getParamType(0) != FT->getParamType(1) ||
-      !FT->getParamType(0)->isFloatingPointTy())
+  if (!matchesFPLibFunctionSignature(Callee, 2, true))
     return nullptr;
 
   // If this is something like 'fmin((double)floatval1, (double)floatval2)',
@@ -1394,11 +1408,20 @@ Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {
 
 Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
   Function *Callee = CI->getCalledFunction();
-  
+
   Value *Ret = nullptr;
   if (TLI->has(LibFunc::sqrtf) && (Callee->getName() == "sqrt" ||
                                    Callee->getIntrinsicID() == Intrinsic::sqrt))
     Ret = optimizeUnaryDoubleFP(CI, B, true);
+
+  // FIXME: Refactor - this check is repeated all over this file and even in the
+  // preceding call to shrink double -> float.
+
+  // Make sure this has 1 argument of FP type, which matches the result type.
+  FunctionType *FT = Callee->getFunctionType();
+  if (FT->getNumParams() != 1 || FT->getReturnType() != FT->getParamType(0) ||
+      !FT->getParamType(0)->isFloatingPointTy())
+    return Ret;
 
   if (!CI->hasUnsafeAlgebra())
     return Ret;

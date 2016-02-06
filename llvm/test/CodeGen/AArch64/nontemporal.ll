@@ -112,7 +112,7 @@ define void @test_stnp_v1i64(<1 x i64>* %p, <1 x i64> %v) #0 {
 
 define void @test_stnp_i64(i64* %p, i64 %v) #0 {
 ; CHECK-LABEL: test_stnp_i64:
-; CHECK-NEXT:  ubfx x[[HI:[0-9]+]], x1, #0, #32
+; CHECK-NEXT:  lsr x[[HI:[0-9]+]], x1, #32
 ; CHECK-NEXT:  stnp w1, w[[HI]], [x0]
 ; CHECK-NEXT:  ret
   store i64 %v, i64* %p, align 1, !nontemporal !0
@@ -162,7 +162,7 @@ define void @test_stnp_v2f32_offset_neg(<2 x float>* %p, <2 x float> %v) #0 {
 
 define void @test_stnp_i64_offset(i64* %p, i64 %v) #0 {
 ; CHECK-LABEL: test_stnp_i64_offset:
-; CHECK-NEXT:  ubfx x[[HI:[0-9]+]], x1, #0, #32
+; CHECK-NEXT:  lsr x[[HI:[0-9]+]], x1, #32
 ; CHECK-NEXT:  stnp w1, w[[HI]], [x0, #8]
 ; CHECK-NEXT:  ret
   %tmp0 = getelementptr i64, i64* %p, i32 1
@@ -172,7 +172,7 @@ define void @test_stnp_i64_offset(i64* %p, i64 %v) #0 {
 
 define void @test_stnp_i64_offset_neg(i64* %p, i64 %v) #0 {
 ; CHECK-LABEL: test_stnp_i64_offset_neg:
-; CHECK-NEXT:  ubfx x[[HI:[0-9]+]], x1, #0, #32
+; CHECK-NEXT:  lsr x[[HI:[0-9]+]], x1, #32
 ; CHECK-NEXT:  stnp w1, w[[HI]], [x0, #-8]
 ; CHECK-NEXT:  ret
   %tmp0 = getelementptr i64, i64* %p, i32 -1

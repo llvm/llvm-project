@@ -1,7 +1,14 @@
 // RUN: llvm-mc %s -triple=aarch64-none-linux-gnu -filetype=asm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ASM
-// RUN: llvm-mc %s -triple=aarch64-none-linux-gnu -filetype=obj -o - \
-// RUN:   | llvm-readobj -s -sd | FileCheck %s  --check-prefix=CHECK-OBJ
+// RUN: llvm-mc %s -triple=aarch64-none-linux-gnu -filetype=obj -o %t
+// RUN: llvm-readobj -s -sd %t | FileCheck %s  --check-prefix=CHECK-OBJ
+// RUN: llvm-objdump -t %t | FileCheck %s  --check-prefix=CHECK-SYMS
+
+// RUN: llvm-mc %s -triple=aarch64_be-none-linux-gnu -filetype=asm -o - \
+// RUN:   | FileCheck %s --check-prefix=CHECK-ASM
+// RUN: llvm-mc %s -triple=aarch64_be-none-linux-gnu -filetype=obj -o %t
+// RUN: llvm-readobj -s -sd %t | FileCheck %s  --check-prefix=CHECK-OBJ
+// RUN: llvm-objdump -t %t | FileCheck %s  --check-prefix=CHECK-SYMS
 
     .section    .inst.aarch64_inst
 
@@ -22,3 +29,7 @@ aarch64_inst:
 // CHECK-OBJ:   SectionData (
 // CHECK-OBJ-NEXT: 0000: 2040105E
 // CHECK-OBJ-NEXT: )
+
+// CHECK-SYMS-NOT: 0000000000000000         .inst.aarch64_inst              00000000 $d
+// CHECK-SYMS:     0000000000000000         .inst.aarch64_inst              00000000 $x
+// CHECK-SYMS-NOT: 0000000000000000         .inst.aarch64_inst              00000000 $d

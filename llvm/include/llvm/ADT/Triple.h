@@ -430,6 +430,10 @@ public:
     return getOS() == Triple::WatchOS;
   }
 
+  bool isWatchABI() const {
+    return getSubArch() == Triple::ARMSubArch_v7k;
+  }
+
   /// isOSDarwin - Is this a "Darwin" OS (OS X, iOS, or watchOS).
   bool isOSDarwin() const {
     return isMacOSX() || isiOS() || isWatchOS();

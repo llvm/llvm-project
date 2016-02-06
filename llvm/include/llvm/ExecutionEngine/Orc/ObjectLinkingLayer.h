@@ -26,7 +26,6 @@ namespace orc {
 
 class ObjectLinkingLayerBase {
 protected:
-
   /// @brief Holds a set of objects to be allocated/linked as a unit in the JIT.
   ///
   /// An instance of this class will be created for each set of objects added
@@ -38,38 +37,32 @@ protected:
     LinkedObjectSet(const LinkedObjectSet&) = delete;
     void operator=(const LinkedObjectSet&) = delete;
   public:
-    LinkedObjectSet(RuntimeDyld::MemoryManager &MemMgr,
-                    RuntimeDyld::SymbolResolver &Resolver,
-                    bool ProcessAllSections)
-        : RTDyld(llvm::make_unique<RuntimeDyld>(MemMgr, Resolver)),
-          State(Raw) {
-      RTDyld->setProcessAllSections(ProcessAllSections);
-    }
-
+    LinkedObjectSet() = default;
     virtual ~LinkedObjectSet() {}
 
-    std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
-    addObject(const object::ObjectFile &Obj) {
-      return RTDyld->loadObject(Obj);
+    virtual void finalize() = 0;
+
+    virtual JITSymbol::GetAddressFtor
+    getSymbolMaterializer(std::string Name) = 0;
+
+    virtual void mapSectionAddress(const void *LocalAddress,
+                                   TargetAddress TargetAddr) const = 0;
+
+    JITSymbol getSymbol(StringRef Name, bool ExportedSymbolsOnly) {
+      auto SymEntry = SymbolTable.find(Name);
+      if (SymEntry == SymbolTable.end())
+        return nullptr;
+      if (!SymEntry->second.isExported() && ExportedSymbolsOnly)
+        return nullptr;
+      if (!Finalized)
+        return JITSymbol(getSymbolMaterializer(Name),
+                         SymEntry->second.getFlags());
+      return JITSymbol(SymEntry->second.getAddress(),
+                       SymEntry->second.getFlags());
     }
-
-    RuntimeDyld::SymbolInfo getSymbol(StringRef Name) const {
-      return RTDyld->getSymbol(Name);
-    }
-
-    bool NeedsFinalization() const { return (State == Raw); }
-
-    virtual void Finalize() = 0;
-
-    void mapSectionAddress(const void *LocalAddress, TargetAddress TargetAddr) {
-      assert((State != Finalized) &&
-             "Attempting to remap sections for finalized objects.");
-      RTDyld->mapSectionAddress(LocalAddress, TargetAddr);
-    }
-
   protected:
-    std::unique_ptr<RuntimeDyld> RTDyld;
-    enum { Raw, Finalizing, Finalized } State;
+    StringMap<RuntimeDyld::SymbolInfo> SymbolTable;
+    bool Finalized = false;
   };
 
   typedef std::list<std::unique_ptr<LinkedObjectSet>> LinkedObjectSetListT;
@@ -78,6 +71,7 @@ public:
   /// @brief Handle to a set of loaded objects.
   typedef LinkedObjectSetListT::iterator ObjSetHandleT;
 };
+
 
 /// @brief Default (no-op) action to perform when loading objects.
 class DoNothingOnNotifyLoaded {
@@ -95,34 +89,124 @@ public:
 /// symbols.
 template <typename NotifyLoadedFtor = DoNothingOnNotifyLoaded>
 class ObjectLinkingLayer : public ObjectLinkingLayerBase {
+public:
+
+  /// @brief Functor for receiving finalization notifications.
+  typedef std::function<void(ObjSetHandleT)> NotifyFinalizedFtor;
+
 private:
 
-  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
+  template <typename ObjSetT, typename MemoryManagerPtrT,
+            typename SymbolResolverPtrT, typename FinalizerFtor>
   class ConcreteLinkedObjectSet : public LinkedObjectSet {
   public:
-    ConcreteLinkedObjectSet(MemoryManagerPtrT MemMgr,
+    ConcreteLinkedObjectSet(ObjSetT Objects, MemoryManagerPtrT MemMgr,
                             SymbolResolverPtrT Resolver,
+                            FinalizerFtor Finalizer,
                             bool ProcessAllSections)
-      : LinkedObjectSet(*MemMgr, *Resolver, ProcessAllSections),
-        MemMgr(std::move(MemMgr)), Resolver(std::move(Resolver)) { }
+      : MemMgr(std::move(MemMgr)),
+        PFC(llvm::make_unique<PreFinalizeContents>(std::move(Objects),
+                                                   std::move(Resolver),
+                                                   std::move(Finalizer),
+                                                   ProcessAllSections)) {
+      buildInitialSymbolTable(PFC->Objects);
+    }
 
-    void Finalize() override {
-      State = Finalizing;
-      RTDyld->finalizeWithMemoryManagerLocking();
-      State = Finalized;
+    void setHandle(ObjSetHandleT H) {
+      PFC->Handle = H;
+    }
+
+    void finalize() override {
+      assert(PFC && "mapSectionAddress called on finalized LinkedObjectSet");
+
+      RuntimeDyld RTDyld(*MemMgr, *PFC->Resolver);
+      RTDyld.setProcessAllSections(PFC->ProcessAllSections);
+      PFC->RTDyld = &RTDyld;
+
+      PFC->Finalizer(PFC->Handle, RTDyld, std::move(PFC->Objects),
+                     [&]() {
+                       this->updateSymbolTable(RTDyld);
+                       this->Finalized = true;
+                     });
+
+      // Release resources.
+      PFC = nullptr;
+    }
+
+    JITSymbol::GetAddressFtor getSymbolMaterializer(std::string Name) override {
+      return
+        [this, Name]() {
+          // The symbol may be materialized between the creation of this lambda
+          // and its execution, so we need to double check.
+          if (!this->Finalized)
+            this->finalize();
+          return this->getSymbol(Name, false).getAddress();
+        };
+    }
+
+    void mapSectionAddress(const void *LocalAddress,
+                           TargetAddress TargetAddr) const override {
+      assert(PFC && "mapSectionAddress called on finalized LinkedObjectSet");
+      assert(PFC->RTDyld && "mapSectionAddress called on raw LinkedObjectSet");
+      PFC->RTDyld->mapSectionAddress(LocalAddress, TargetAddr);
     }
 
   private:
+
+    void buildInitialSymbolTable(const ObjSetT &Objects) {
+      for (const auto &Obj : Objects)
+        for (auto &Symbol : getObject(*Obj).symbols()) {
+          if (Symbol.getFlags() & object::SymbolRef::SF_Undefined)
+            continue;
+          ErrorOr<StringRef> SymbolName = Symbol.getName();
+          // FIXME: Raise an error for bad symbols.
+          if (!SymbolName)
+            continue;
+          auto Flags = JITSymbol::flagsFromObjectSymbol(Symbol);
+          SymbolTable.insert(
+            std::make_pair(*SymbolName, RuntimeDyld::SymbolInfo(0, Flags)));
+        }
+    }
+
+    void updateSymbolTable(const RuntimeDyld &RTDyld) {
+      for (auto &SymEntry : SymbolTable)
+        SymEntry.second = RTDyld.getSymbol(SymEntry.first());
+    }
+
+    // Contains the information needed prior to finalization: the object files,
+    // memory manager, resolver, and flags needed for RuntimeDyld.
+    struct PreFinalizeContents {
+      PreFinalizeContents(ObjSetT Objects, SymbolResolverPtrT Resolver,
+                          FinalizerFtor Finalizer, bool ProcessAllSections)
+        : Objects(std::move(Objects)), Resolver(std::move(Resolver)),
+          Finalizer(std::move(Finalizer)),
+          ProcessAllSections(ProcessAllSections) {}
+
+      ObjSetT Objects;
+      SymbolResolverPtrT Resolver;
+      FinalizerFtor Finalizer;
+      bool ProcessAllSections;
+      ObjSetHandleT Handle;
+      RuntimeDyld *RTDyld;
+    };
+
     MemoryManagerPtrT MemMgr;
-    SymbolResolverPtrT Resolver;
+    std::unique_ptr<PreFinalizeContents> PFC;
   };
 
-  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
-  std::unique_ptr<LinkedObjectSet>
-  createLinkedObjectSet(MemoryManagerPtrT MemMgr, SymbolResolverPtrT Resolver,
+  template <typename ObjSetT, typename MemoryManagerPtrT,
+            typename SymbolResolverPtrT, typename FinalizerFtor>
+  std::unique_ptr<
+    ConcreteLinkedObjectSet<ObjSetT, MemoryManagerPtrT,
+                            SymbolResolverPtrT, FinalizerFtor>>
+  createLinkedObjectSet(ObjSetT Objects, MemoryManagerPtrT MemMgr,
+                        SymbolResolverPtrT Resolver,
+                        FinalizerFtor Finalizer,
                         bool ProcessAllSections) {
-    typedef ConcreteLinkedObjectSet<MemoryManagerPtrT, SymbolResolverPtrT> LOS;
-    return llvm::make_unique<LOS>(std::move(MemMgr), std::move(Resolver),
+    typedef ConcreteLinkedObjectSet<ObjSetT, MemoryManagerPtrT,
+                                    SymbolResolverPtrT, FinalizerFtor> LOS;
+    return llvm::make_unique<LOS>(std::move(Objects), std::move(MemMgr),
+                                  std::move(Resolver), std::move(Finalizer),
                                   ProcessAllSections);
   }
 
@@ -132,9 +216,6 @@ public:
   ///        RuntimeDyld::LoadedObjectInfo instances.
   typedef std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>
       LoadedObjInfoList;
-
-  /// @brief Functor for receiving finalization notifications.
-  typedef std::function<void(ObjSetHandleT)> NotifyFinalizedFtor;
 
   /// @brief Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
@@ -158,33 +239,44 @@ public:
   /// @brief Add a set of objects (or archives) that will be treated as a unit
   ///        for the purposes of symbol lookup and memory management.
   ///
-  /// @return A pair containing (1) A handle that can be used to free the memory
-  ///         allocated for the objects, and (2) a LoadedObjInfoList containing
-  ///         one LoadedObjInfo instance for each object at the corresponding
-  ///         index in the Objects list.
-  ///
-  ///   This version of this method allows the client to pass in an
-  /// RTDyldMemoryManager instance that will be used to allocate memory and look
-  /// up external symbol addresses for the given objects.
+  /// @return A handle that can be used to refer to the loaded objects (for 
+  ///         symbol searching, finalization, freeing memory, etc.).
   template <typename ObjSetT,
             typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
-  ObjSetHandleT addObjectSet(const ObjSetT &Objects,
+  ObjSetHandleT addObjectSet(ObjSetT Objects,
                              MemoryManagerPtrT MemMgr,
                              SymbolResolverPtrT Resolver) {
-    ObjSetHandleT Handle =
-      LinkedObjSetList.insert(
-        LinkedObjSetList.end(),
-        createLinkedObjectSet(std::move(MemMgr), std::move(Resolver),
-                              ProcessAllSections));
 
-    LinkedObjectSet &LOS = **Handle;
-    LoadedObjInfoList LoadedObjInfos;
+    auto Finalizer = [&](ObjSetHandleT H, RuntimeDyld &RTDyld,
+                         const ObjSetT &Objs,
+                         std::function<void()> LOSHandleLoad) {
+      LoadedObjInfoList LoadedObjInfos;
 
-    for (auto &Obj : Objects)
-      LoadedObjInfos.push_back(LOS.addObject(*Obj));
+      for (auto &Obj : Objs)
+        LoadedObjInfos.push_back(RTDyld.loadObject(this->getObject(*Obj)));
 
-    NotifyLoaded(Handle, Objects, LoadedObjInfos);
+      LOSHandleLoad();
+
+      this->NotifyLoaded(H, Objs, LoadedObjInfos);
+
+      RTDyld.finalizeWithMemoryManagerLocking();
+
+      if (this->NotifyFinalized)
+        this->NotifyFinalized(H);
+    };
+
+    auto LOS =
+      createLinkedObjectSet(std::move(Objects), std::move(MemMgr),
+                            std::move(Resolver), std::move(Finalizer),
+                            ProcessAllSections);
+    // LOS is an owning-ptr. Keep a non-owning one so that we can set the handle
+    // below.
+    auto *LOSPtr = LOS.get();
+
+    ObjSetHandleT Handle = LinkedObjSetList.insert(LinkedObjSetList.end(),
+                                                   std::move(LOS));
+    LOSPtr->setHandle(Handle);
 
     return Handle;
   }
@@ -224,33 +316,7 @@ public:
   ///         given object set.
   JITSymbol findSymbolIn(ObjSetHandleT H, StringRef Name,
                          bool ExportedSymbolsOnly) {
-    if (auto Sym = (*H)->getSymbol(Name)) {
-      if (Sym.isExported() || !ExportedSymbolsOnly) {
-        auto Addr = Sym.getAddress();
-        auto Flags = Sym.getFlags();
-        if (!(*H)->NeedsFinalization()) {
-          // If this instance has already been finalized then we can just return
-          // the address.
-          return JITSymbol(Addr, Flags);
-        } else {
-          // If this instance needs finalization return a functor that will do
-          // it. The functor still needs to double-check whether finalization is
-          // required, in case someone else finalizes this set before the
-          // functor is called.
-          auto GetAddress =
-            [this, Addr, H]() {
-              if ((*H)->NeedsFinalization()) {
-                (*H)->Finalize();
-                if (NotifyFinalized)
-                  NotifyFinalized(H);
-              }
-              return Addr;
-            };
-          return JITSymbol(std::move(GetAddress), Flags);
-        }
-      }
-    }
-    return nullptr;
+    return (*H)->getSymbol(Name, ExportedSymbolsOnly);
   }
 
   /// @brief Map section addresses for the objects associated with the handle H.
@@ -263,12 +329,21 @@ public:
   ///        given handle.
   /// @param H Handle for object set to emit/finalize.
   void emitAndFinalize(ObjSetHandleT H) {
-    (*H)->Finalize();
-    if (NotifyFinalized)
-      NotifyFinalized(H);
+    (*H)->finalize();
   }
 
 private:
+
+  static const object::ObjectFile& getObject(const object::ObjectFile &Obj) {
+    return Obj;
+  }
+
+  template <typename ObjT>
+  static const object::ObjectFile&
+  getObject(const object::OwningBinary<ObjT> &Obj) {
+    return *Obj.getBinary();
+  }
+
   LinkedObjectSetListT LinkedObjSetList;
   NotifyLoadedFtor NotifyLoaded;
   NotifyFinalizedFtor NotifyFinalized;

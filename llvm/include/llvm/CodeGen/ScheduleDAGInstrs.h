@@ -214,6 +214,7 @@ namespace llvm {
     void buildSchedGraph(AliasAnalysis *AA,
                          RegPressureTracker *RPTracker = nullptr,
                          PressureDiffs *PDiffs = nullptr,
+                         LiveIntervals *LIS = nullptr,
                          bool TrackLaneMasks = false);
 
     /// addSchedBarrierDeps - Add dependencies from instructions in the current

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_MCTARGETASMPARSER_H
-#define LLVM_MC_MCTARGETASMPARSER_H
+#ifndef LLVM_MC_MCPARSER_MCTARGETASMPARSER_H
+#define LLVM_MC_MCPARSER_MCTARGETASMPARSER_H
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"

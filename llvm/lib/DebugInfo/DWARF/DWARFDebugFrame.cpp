@@ -160,18 +160,26 @@ void FrameEntry::parseInstructions(DataExtractor Data, uint32_t *Offset,
         case DW_CFA_offset_extended:
         case DW_CFA_register:
         case DW_CFA_def_cfa:
-        case DW_CFA_val_offset:
+        case DW_CFA_val_offset: {
           // Operands: ULEB128, ULEB128
-          addInstruction(Opcode, Data.getULEB128(Offset),
-                                 Data.getULEB128(Offset));
+          // Note: We can not embed getULEB128 directly into function
+          // argument list. getULEB128 changes Offset and order of evaluation
+          // for arguments is unspecified.
+          auto op1 = Data.getULEB128(Offset);
+          auto op2 = Data.getULEB128(Offset);
+          addInstruction(Opcode, op1, op2);
           break;
+        }
         case DW_CFA_offset_extended_sf:
         case DW_CFA_def_cfa_sf:
-        case DW_CFA_val_offset_sf:
+        case DW_CFA_val_offset_sf: {
           // Operands: ULEB128, SLEB128
-          addInstruction(Opcode, Data.getULEB128(Offset),
-                                 Data.getSLEB128(Offset));
+          // Note: see comment for the previous case
+          auto op1 = Data.getULEB128(Offset);
+          auto op2 = (uint64_t)Data.getSLEB128(Offset);
+          addInstruction(Opcode, op1, op2);
           break;
+        }
         case DW_CFA_def_cfa_expression:
         case DW_CFA_expression:
         case DW_CFA_val_expression:

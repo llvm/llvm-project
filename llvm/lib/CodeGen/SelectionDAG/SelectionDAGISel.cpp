@@ -1621,7 +1621,7 @@ SelectionDAGISel::FinishBasicBlock() {
 
     // CodeGen Failure MBB if we have not codegened it yet.
     MachineBasicBlock *FailureMBB = SDB->SPDescriptor.getFailureMBB();
-    if (!FailureMBB->size()) {
+    if (FailureMBB->empty()) {
       FuncInfo->MBB = FailureMBB;
       FuncInfo->InsertPt = FailureMBB->end();
       SDB->visitSPDescriptorFailure(SDB->SPDescriptor);
@@ -2227,8 +2227,9 @@ enum ChainResult {
 /// already selected nodes "below" us.
 static ChainResult
 WalkChainUsers(const SDNode *ChainedNode,
-               SmallVectorImpl<SDNode*> &ChainedNodesInPattern,
-               SmallVectorImpl<SDNode*> &InteriorChainedNodes) {
+               SmallVectorImpl<SDNode *> &ChainedNodesInPattern,
+               DenseMap<const SDNode *, ChainResult> &TokenFactorResult,
+               SmallVectorImpl<SDNode *> &InteriorChainedNodes) {
   ChainResult Result = CR_Simple;
 
   for (SDNode::use_iterator UI = ChainedNode->use_begin(),
@@ -2309,7 +2310,15 @@ WalkChainUsers(const SDNode *ChainedNode,
     // as a new TokenFactor.
     //
     // To distinguish these two cases, do a recursive walk down the uses.
-    switch (WalkChainUsers(User, ChainedNodesInPattern, InteriorChainedNodes)) {
+    auto MemoizeResult = TokenFactorResult.find(User);
+    bool Visited = MemoizeResult != TokenFactorResult.end();
+    // Recursively walk chain users only if the result is not memoized.
+    if (!Visited) {
+      auto Res = WalkChainUsers(User, ChainedNodesInPattern, TokenFactorResult,
+                                InteriorChainedNodes);
+      MemoizeResult = TokenFactorResult.insert(std::make_pair(User, Res)).first;
+    }
+    switch (MemoizeResult->second) {
     case CR_Simple:
       // If the uses of the TokenFactor are just already-selected nodes, ignore
       // it, it is "below" our pattern.
@@ -2329,8 +2338,10 @@ WalkChainUsers(const SDNode *ChainedNode,
     // ultimate chain result of the generated code.  We will also add its chain
     // inputs as inputs to the ultimate TokenFactor we create.
     Result = CR_LeadsToInteriorNode;
-    ChainedNodesInPattern.push_back(User);
-    InteriorChainedNodes.push_back(User);
+    if (!Visited) {
+      ChainedNodesInPattern.push_back(User);
+      InteriorChainedNodes.push_back(User);
+    }
     continue;
   }
 
@@ -2346,12 +2357,16 @@ WalkChainUsers(const SDNode *ChainedNode,
 static SDValue
 HandleMergeInputChains(SmallVectorImpl<SDNode*> &ChainNodesMatched,
                        SelectionDAG *CurDAG) {
+  // Used for memoization. Without it WalkChainUsers could take exponential
+  // time to run.
+  DenseMap<const SDNode *, ChainResult> TokenFactorResult;
   // Walk all of the chained nodes we've matched, recursively scanning down the
   // users of the chain result. This adds any TokenFactor nodes that are caught
   // in between chained nodes to the chained and interior nodes list.
   SmallVector<SDNode*, 3> InteriorChainedNodes;
   for (unsigned i = 0, e = ChainNodesMatched.size(); i != e; ++i) {
     if (WalkChainUsers(ChainNodesMatched[i], ChainNodesMatched,
+                       TokenFactorResult,
                        InteriorChainedNodes) == CR_InducesCycle)
       return SDValue(); // Would induce a cycle.
   }

@@ -89,13 +89,14 @@ public:
   OrcCBindingsStack(TargetMachine &TM,
 		    std::unique_ptr<CompileCallbackMgr> CCMgr, 
                     IndirectStubsManagerBuilder IndirectStubsMgrBuilder)
-    : DL(TM.createDataLayout()), CCMgr(std::move(CCMgr)),
+    : DL(TM.createDataLayout()),
+      IndirectStubsMgr(IndirectStubsMgrBuilder()),
+      CCMgr(std::move(CCMgr)),
       ObjectLayer(),
       CompileLayer(ObjectLayer, orc::SimpleCompiler(TM)),
       CODLayer(CompileLayer,
                [](Function &F) { std::set<Function*> S; S.insert(&F); return S; },
                *this->CCMgr, std::move(IndirectStubsMgrBuilder), false),
-      IndirectStubsMgr(IndirectStubsMgrBuilder()),
       CXXRuntimeOverrides([this](const std::string &S) { return mangle(S); }) {}
 
   ~OrcCBindingsStack() {
@@ -264,12 +265,12 @@ private:
   DataLayout DL;
   SectionMemoryManager CCMgrMemMgr;
 
+  std::unique_ptr<orc::IndirectStubsManager> IndirectStubsMgr;
+
   std::unique_ptr<CompileCallbackMgr> CCMgr;
   ObjLayerT ObjectLayer;
   CompileLayerT CompileLayer;
   CODLayerT CODLayer;
-
-  std::unique_ptr<orc::IndirectStubsManager> IndirectStubsMgr;
 
   std::vector<std::unique_ptr<GenericHandle>> GenericHandles;
   std::vector<unsigned> FreeHandleIndexes;

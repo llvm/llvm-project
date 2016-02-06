@@ -421,4 +421,88 @@ define <8 x i16> @fptoui_i16(<8 x half> %a) #0 {
   ret <8 x i16> %1
 }
 
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_une(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp une <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 16 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_ueq(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp ueq <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_ugt(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp ugt <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_uge(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp uge <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_ult(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp ult <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_ule(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp ule <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_uno(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp uno <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_one(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp one <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_oeq(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp oeq <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_ogt(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp ogt <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_oge(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp oge <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_olt(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp olt <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_ole(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp ole <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
+; FileCheck checks are unwieldy with 16 fcvt and 8 csel tests.  Skipped.
+define <8 x i1> @test_fcmp_ord(<8 x half> %a, <8 x half> %b) #0 {
+  %1 = fcmp ord <8 x half> %a, %b
+  ret <8 x i1> %1
+}
+
 attributes #0 = { nounwind }

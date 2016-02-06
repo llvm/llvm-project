@@ -386,8 +386,7 @@ void MCFragment::dump() {
   }
   case MCFragment::FT_Fill:  {
     const MCFillFragment *FF = cast<MCFillFragment>(this);
-    OS << " Value:" << FF->getValue() << " ValueSize:" << FF->getValueSize()
-       << " Size:" << FF->getSize();
+    OS << " Value:" << FF->getValue() << " Size:" << FF->getSize();
     break;
   }
   case MCFragment::FT_Relaxable:  {
