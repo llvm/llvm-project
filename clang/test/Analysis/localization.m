@@ -90,6 +90,13 @@ NSString *KHLocalizedString(NSString* key, NSString* comment) {
   [testLabel setText:bar]; // no-warning
 }
 
+
+// Suppress diagnostic about user-facing string constants when the method name
+// contains the term "Debug".
+- (void)debugScreen:(UILabel *)label {
+  label.text = @"Unlocalized";
+}
+
 // Plural Misuse Checker Tests
 // These tests are modeled off incorrect uses of the many-one pattern
 // from real projects. 
@@ -204,4 +211,16 @@ NSString *KHLocalizedString(NSString* key, NSString* comment) {
 //     return title;
 // }
 
+@end
+
+
+// Suppress diagnostic about user-facing string constants when the class name
+// contains "Debug"
+@interface MyDebugView : NSObject
+@end
+
+@implementation MyDebugView
+- (void)setupScreen:(UILabel *)label {
+  label.text = @"Unlocalized";
+}
 @end
