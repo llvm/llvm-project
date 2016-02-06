@@ -19,8 +19,16 @@
 // RUN: not %run %t 15 2>&1 | FileCheck %s --check-prefix=CHECK15
 // RUN: not %run %t 16 2>&1 | FileCheck %s --check-prefix=CHECK16
 // RUN: not %run %t 17 2>&1 | FileCheck %s --check-prefix=CHECK17
-// RUN: not %run %t 18 2>&1 | FileCheck %s --check-prefix=CHECK18
+// Stack overflow may not trigger under GNU make.
+// DISABLED: not %run %t 18 2>&1 | FileCheck %s --check-prefix=CHECK18
 // RUN: not %run %t 19 2>&1 | FileCheck %s --check-prefix=CHECK19
+// RUN: not %run %t 20 2>&1 | FileCheck %s --check-prefix=CHECK20
+// RUN: not %run %t 21 2>&1 | FileCheck %s --check-prefix=CHECK21
+// RUN: not %run %t 22 2>&1 | FileCheck %s --check-prefix=CHECK22
+// RUN: not %run %t 23 2>&1 | FileCheck %s --check-prefix=CHECK23
+// RUN: not %run %t 24 2>&1 | FileCheck %s --check-prefix=CHECK24
+// RUN: not %run %t 25 2>&1 | FileCheck %s --check-prefix=CHECK25
+// RUN: not %run %t 26 2>&1 | FileCheck %s --check-prefix=CHECK26
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
