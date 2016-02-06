@@ -920,6 +920,11 @@ public:
                    ('T' << 24);
     return llvm::ConstantInt::get(CGM.Int32Ty, Sig);
   }
+
+  StringRef getARCRetainAutoreleasedReturnValueMarker() const override {
+    return "movl\t%ebp, %ebp"
+           "\t\t## marker for objc_retainAutoreleaseReturnValue";
+  }
 };
 
 }

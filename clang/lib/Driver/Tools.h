@@ -10,8 +10,8 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLS_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLS_H
 
+#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/VersionTuple.h"
-#include "clang/Driver/DebugInfoKind.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"

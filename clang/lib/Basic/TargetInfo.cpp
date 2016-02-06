@@ -66,6 +66,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   UseSignedCharForObjCBool = true;
   UseBitFieldTypeAlignment = true;
   UseZeroLengthBitfieldAlignment = false;
+  UseExplicitBitFieldAlignment = true;
   ZeroLengthBitfieldBoundary = 0;
   HalfFormat = &llvm::APFloat::IEEEhalf;
   FloatFormat = &llvm::APFloat::IEEEsingle;

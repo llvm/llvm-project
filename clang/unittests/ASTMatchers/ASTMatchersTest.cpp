@@ -2827,6 +2827,52 @@ TEST(Matcher, HasNameSupportsOuterClasses) {
                  recordDecl(hasName("A+B::C"))));
 }
 
+TEST(Matcher, HasNameSupportsInlinedNamespaces) {
+  std::string code = "namespace a { inline namespace b { class C; } }";
+  EXPECT_TRUE(matches(code, recordDecl(hasName("a::b::C"))));
+  EXPECT_TRUE(matches(code, recordDecl(hasName("a::C"))));
+  EXPECT_TRUE(matches(code, recordDecl(hasName("::a::b::C"))));
+  EXPECT_TRUE(matches(code, recordDecl(hasName("::a::C"))));
+}
+
+TEST(Matcher, HasNameSupportsAnonymousNamespaces) {
+  std::string code = "namespace a { namespace { class C; } }";
+  EXPECT_TRUE(
+      matches(code, recordDecl(hasName("a::(anonymous namespace)::C"))));
+  EXPECT_TRUE(matches(code, recordDecl(hasName("a::C"))));
+  EXPECT_TRUE(
+      matches(code, recordDecl(hasName("::a::(anonymous namespace)::C"))));
+  EXPECT_TRUE(matches(code, recordDecl(hasName("::a::C"))));
+}
+
+TEST(Matcher, HasNameSupportsAnonymousOuterClasses) {
+  EXPECT_TRUE(matches("class A { class { class C; } x; };",
+                      recordDecl(hasName("A::(anonymous class)::C"))));
+  EXPECT_TRUE(matches("class A { class { class C; } x; };",
+                      recordDecl(hasName("::A::(anonymous class)::C"))));
+  EXPECT_FALSE(matches("class A { class { class C; } x; };",
+                       recordDecl(hasName("::A::C"))));
+  EXPECT_TRUE(matches("class A { struct { class C; } x; };",
+                      recordDecl(hasName("A::(anonymous struct)::C"))));
+  EXPECT_TRUE(matches("class A { struct { class C; } x; };",
+                      recordDecl(hasName("::A::(anonymous struct)::C"))));
+  EXPECT_FALSE(matches("class A { struct { class C; } x; };",
+                       recordDecl(hasName("::A::C"))));
+}
+
+TEST(Matcher, HasNameSupportsFunctionScope) {
+  std::string code =
+      "namespace a { void F(int a) { struct S { int m; }; int i; } }";
+  EXPECT_TRUE(matches(code, varDecl(hasName("i"))));
+  EXPECT_FALSE(matches(code, varDecl(hasName("F()::i"))));
+
+  EXPECT_TRUE(matches(code, fieldDecl(hasName("m"))));
+  EXPECT_TRUE(matches(code, fieldDecl(hasName("S::m"))));
+  EXPECT_TRUE(matches(code, fieldDecl(hasName("F(int)::S::m"))));
+  EXPECT_TRUE(matches(code, fieldDecl(hasName("a::F(int)::S::m"))));
+  EXPECT_TRUE(matches(code, fieldDecl(hasName("::a::F(int)::S::m"))));
+}
+
 TEST(Matcher, IsDefinition) {
   DeclarationMatcher DefinitionOfClassA =
       recordDecl(hasName("A"), isDefinition());

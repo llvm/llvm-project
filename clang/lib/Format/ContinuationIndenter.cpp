@@ -250,7 +250,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   // If the return type spans multiple lines, wrap before the function name.
   if ((Current.is(TT_FunctionDeclarationName) ||
        (Current.is(tok::kw_operator) && !Previous.is(tok::coloncolon))) &&
-      State.Stack.back().BreakBeforeParameter)
+      !Previous.is(tok::kw_template) && State.Stack.back().BreakBeforeParameter)
     return true;
 
   if (startsSegmentOfBuilderTypeCall(Current) &&

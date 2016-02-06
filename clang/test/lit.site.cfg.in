@@ -14,6 +14,7 @@ config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
+config.have_zlib = "@HAVE_LIBZ@"
 config.clang_arcmt = @ENABLE_CLANG_ARCMT@
 config.clang_staticanalyzer = @ENABLE_CLANG_STATIC_ANALYZER@
 config.clang_examples = @ENABLE_CLANG_EXAMPLES@

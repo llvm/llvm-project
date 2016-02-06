@@ -1,4 +1,4 @@
-//===--- DebugInfoKind.h - Debug Info Emission Types ------------*- C++ -*-===//
+//===--- DebugInfoOptions.h - Debug Info Emission Types ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_DRIVER_DEBUGINFOKIND_H
-#define LLVM_CLANG_DRIVER_DEBUGINFOKIND_H
+#ifndef LLVM_CLANG_BASIC_DEBUGINFOOPTIONS_H
+#define LLVM_CLANG_BASIC_DEBUGINFOOPTIONS_H
 
 namespace clang {
 namespace codegenoptions {
