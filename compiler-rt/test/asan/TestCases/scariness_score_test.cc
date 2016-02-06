@@ -29,6 +29,8 @@
 // RUN: not %run %t 24 2>&1 | FileCheck %s --check-prefix=CHECK24
 // RUN: not %run %t 25 2>&1 | FileCheck %s --check-prefix=CHECK25
 // RUN: not %run %t 26 2>&1 | FileCheck %s --check-prefix=CHECK26
+// Parts of the test are too platform-specific:
+// REQUIRES: x86_64-supported-target
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
