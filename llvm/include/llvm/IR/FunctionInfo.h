@@ -40,13 +40,14 @@ private:
   /// module path string table.
   StringRef ModulePath;
 
-  /// \brief Used to flag functions that have local linkage types and need to
+  /// \brief The linkage type of the associated function.
+  ///
+  /// One use is to flag functions that have local linkage types and need to
   /// have module identifier appended before placing into the combined
   /// index, to disambiguate from other functions with the same name.
-  ///
-  /// This is only used in the per-module function index, as it is consumed
-  /// while creating the combined index.
-  bool IsLocalFunction;
+  /// In the future this will be used to update and optimize linkage
+  /// types based on global summary-based analysis.
+  GlobalValue::LinkageTypes FunctionLinkage;
 
   // The rest of the information is used to help decide whether importing
   // is likely to be profitable.
@@ -69,12 +70,15 @@ public:
   /// Get the path to the module containing this function.
   StringRef modulePath() const { return ModulePath; }
 
-  /// Record whether this is a local function in the per-module index.
-  void setLocalFunction(bool IsLocal) { IsLocalFunction = IsLocal; }
+  /// Record linkage type.
+  void setFunctionLinkage(GlobalValue::LinkageTypes Linkage) {
+    FunctionLinkage = Linkage;
+  }
 
-  /// Check whether this was a local function, for use in creating
-  /// the combined index.
-  bool isLocalFunction() const { return IsLocalFunction; }
+  /// Return linkage type recorded for this function.
+  GlobalValue::LinkageTypes getFunctionLinkage() const {
+    return FunctionLinkage;
+  }
 
   /// Get the instruction count recorded for this function.
   unsigned instCount() const { return InstCount; }
