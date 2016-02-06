@@ -36,57 +36,44 @@
 namespace std {
 __DEVICE__ long long abs(long long n) { return ::llabs(n); }
 __DEVICE__ long abs(long n) { return ::labs(n); }
-__DEVICE__ int abs(int n) { return ::abs(n); }
+using ::abs;
 __DEVICE__ float abs(float x) { return ::fabsf(x); }
 __DEVICE__ double abs(double x) { return ::fabs(x); }
 __DEVICE__ float acos(float x) { return ::acosf(x); }
-__DEVICE__ double acos(double x) { return ::acos(x); }
-__DEVICE__ float acosh(float x) { return ::acoshf(x); }
-__DEVICE__ double acosh(double x) { return ::acosh(x); }
+using ::acos;
+using ::acosh;
 __DEVICE__ float asin(float x) { return ::asinf(x); }
-__DEVICE__ double asin(double x) { return ::asin(x); }
-__DEVICE__ float asinh(float x) { return ::asinhf(x); }
-__DEVICE__ double asinh(double x) { return ::asinh(x); }
+using ::asin;
+using ::asinh;
 __DEVICE__ float atan(float x) { return ::atanf(x); }
-__DEVICE__ double atan(double x) { return ::atan(x); }
+using ::atan;
 __DEVICE__ float atan2(float x, float y) { return ::atan2f(x, y); }
-__DEVICE__ double atan2(double x, double y) { return ::atan2(x, y); }
-__DEVICE__ float atanh(float x) { return ::atanhf(x); }
-__DEVICE__ double atanh(double x) { return ::atanh(x); }
-__DEVICE__ float cbrt(float x) { return ::cbrtf(x); }
-__DEVICE__ double cbrt(double x) { return ::cbrt(x); }
+using ::atan2;
+using ::atanh;
+using ::cbrt;
 __DEVICE__ float ceil(float x) { return ::ceilf(x); }
-__DEVICE__ double ceil(double x) { return ::ceil(x); }
-__DEVICE__ float copysign(float x, float y) { return ::copysignf(x, y); }
-__DEVICE__ double copysign(double x, double y) { return ::copysign(x, y); }
+using ::ceil;
+using ::copysign;
 __DEVICE__ float cos(float x) { return ::cosf(x); }
-__DEVICE__ double cos(double x) { return ::cos(x); }
+using ::cos;
 __DEVICE__ float cosh(float x) { return ::coshf(x); }
-__DEVICE__ double cosh(double x) { return ::cosh(x); }
-__DEVICE__ float erf(float x) { return ::erff(x); }
-__DEVICE__ double erf(double x) { return ::erf(x); }
-__DEVICE__ float erfc(float x) { return ::erfcf(x); }
-__DEVICE__ double erfc(double x) { return ::erfc(x); }
+using ::cosh;
+using ::erf;
+using ::erfc;
 __DEVICE__ float exp(float x) { return ::expf(x); }
-__DEVICE__ double exp(double x) { return ::exp(x); }
-__DEVICE__ float exp2(float x) { return ::exp2f(x); }
-__DEVICE__ double exp2(double x) { return ::exp2(x); }
-__DEVICE__ float expm1(float x) { return ::expm1f(x); }
-__DEVICE__ double expm1(double x) { return ::expm1(x); }
+using ::exp;
+using ::exp2;
+using ::expm1;
 __DEVICE__ float fabs(float x) { return ::fabsf(x); }
-__DEVICE__ double fabs(double x) { return ::fabs(x); }
-__DEVICE__ float fdim(float x, float y) { return ::fdimf(x, y); }
-__DEVICE__ double fdim(double x, double y) { return ::fdim(x, y); }
+using ::fabs;
+using ::fdim;
 __DEVICE__ float floor(float x) { return ::floorf(x); }
-__DEVICE__ double floor(double x) { return ::floor(x); }
-__DEVICE__ float fma(float x, float y, float z) { return ::fmaf(x, y, z); }
-__DEVICE__ double fma(double x, double y, double z) { return ::fma(x, y, z); }
-__DEVICE__ float fmax(float x, float y) { return ::fmaxf(x, y); }
-__DEVICE__ double fmax(double x, double y) { return ::fmax(x, y); }
-__DEVICE__ float fmin(float x, float y) { return ::fminf(x, y); }
-__DEVICE__ double fmin(double x, double y) { return ::fmin(x, y); }
+using ::floor;
+using ::fma;
+using ::fmax;
+using ::fmin;
 __DEVICE__ float fmod(float x, float y) { return ::fmodf(x, y); }
-__DEVICE__ double fmod(double x, double y) { return ::fmod(x, y); }
+using ::fmod;
 __DEVICE__ int fpclassify(float x) {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL,
                               FP_ZERO, x);
@@ -96,11 +83,9 @@ __DEVICE__ int fpclassify(double x) {
                               FP_ZERO, x);
 }
 __DEVICE__ float frexp(float arg, int *exp) { return ::frexpf(arg, exp); }
-__DEVICE__ double frexp(double arg, int *exp) { return ::frexp(arg, exp); }
-__DEVICE__ float hypot(float x, float y) { return ::hypotf(x, y); }
-__DEVICE__ double hypot(double x, double y) { return ::hypot(x, y); }
-__DEVICE__ int ilogb(float arg) { return ::ilogbf(arg); }
-__DEVICE__ int ilogb(double arg) { return ::ilogb(arg); }
+using ::frexp;
+using ::hypot;
+using ::ilogb;
 __DEVICE__ bool isfinite(float x) { return ::__finitef(x); }
 __DEVICE__ bool isfinite(double x) { return ::__finite(x); }
 __DEVICE__ bool isgreater(float x, float y) {
@@ -141,82 +126,57 @@ __DEVICE__ bool isunordered(float x, float y) {
 __DEVICE__ bool isunordered(double x, double y) {
   return __builtin_isunordered(x, y);
 }
-__DEVICE__ long labs(long n) { return ::labs(n); }
+using ::labs;
 __DEVICE__ float ldexp(float arg, int exp) { return ::ldexpf(arg, exp); }
-__DEVICE__ double ldexp(double arg, int exp) { return ::ldexp(arg, exp); }
-__DEVICE__ float lgamma(float x) { return ::lgammaf(x); }
-__DEVICE__ double lgamma(double x) { return ::lgamma(x); }
-__DEVICE__ long long llabs(long long n) { return ::llabs(n); }
-__DEVICE__ long long llrint(float x) { return ::llrintf(x); }
-__DEVICE__ long long llrint(double x) { return ::llrint(x); }
+using ::ldexp;
+using ::lgamma;
+using ::llabs;
+using ::llrint;
 __DEVICE__ float log(float x) { return ::logf(x); }
-__DEVICE__ double log(double x) { return ::log(x); }
+using ::log;
 __DEVICE__ float log10(float x) { return ::log10f(x); }
-__DEVICE__ double log10(double x) { return ::log10(x); }
-__DEVICE__ float log1p(float x) { return ::log1pf(x); }
-__DEVICE__ double log1p(double x) { return ::log1p(x); }
-__DEVICE__ float log2(float x) { return ::log2f(x); }
-__DEVICE__ double log2(double x) { return ::log2(x); }
-__DEVICE__ float logb(float x) { return ::logbf(x); }
-__DEVICE__ double logb(double x) { return ::logb(x); }
-__DEVICE__ long lrint(float x) { return ::lrintf(x); }
-__DEVICE__ long lrint(double x) { return ::lrint(x); }
-__DEVICE__ long lround(float x) { return ::lroundf(x); }
-__DEVICE__ long lround(double x) { return ::lround(x); }
+using ::log10;
+using ::log1p;
+using ::log2;
+using ::logb;
+using ::lrint;
+using ::lround;
 __DEVICE__ float modf(float x, float *iptr) { return ::modff(x, iptr); }
-__DEVICE__ double modf(double x, double *iptr) { return ::modf(x, iptr); }
-__DEVICE__ double nan(const char *x) { return ::nan(x); }
-__DEVICE__ float nanf(const char *x) { return ::nanf(x); }
-__DEVICE__ float nearbyint(float x) { return ::nearbyintf(x); }
-__DEVICE__ double nearbyint(double x) { return ::nearbyint(x); }
-__DEVICE__ float nextafter(float from, float to) {
-  return ::nextafterf(from, to);
-}
-__DEVICE__ double nextafter(double from, double to) {
-  return ::nextafter(from, to);
-}
+using ::modf;
+using ::nan;
+using ::nanf;
+using ::nearbyint;
+using ::nextafter;
 __DEVICE__ float nexttoward(float from, float to) {
   return __builtin_nexttowardf(from, to);
 }
 __DEVICE__ double nexttoward(double from, double to) {
   return __builtin_nexttoward(from, to);
 }
+using ::pow;
 __DEVICE__ float pow(float base, float exp) { return ::powf(base, exp); }
 __DEVICE__ float pow(float base, int iexp) { return ::powif(base, iexp); }
-__DEVICE__ double pow(double base, double exp) { return ::pow(base, exp); }
 __DEVICE__ double pow(double base, int iexp) { return ::powi(base, iexp); }
-__DEVICE__ float remainder(float x, float y) { return ::remainderf(x, y); }
-__DEVICE__ double remainder(double x, double y) { return ::remainder(x, y); }
-__DEVICE__ float remquo(float x, float y, int *quo) {
-  return ::remquof(x, y, quo);
-}
-__DEVICE__ double remquo(double x, double y, int *quo) {
-  return ::remquo(x, y, quo);
-}
-__DEVICE__ float rint(float x) { return ::rintf(x); }
-__DEVICE__ double rint(double x) { return ::rint(x); }
-__DEVICE__ float round(float x) { return ::roundf(x); }
-__DEVICE__ double round(double x) { return ::round(x); }
-__DEVICE__ float scalbln(float x, long exp) { return ::scalblnf(x, exp); }
-__DEVICE__ double scalbln(double x, long exp) { return ::scalbln(x, exp); }
-__DEVICE__ float scalbn(float x, int exp) { return ::scalbnf(x, exp); }
-__DEVICE__ double scalbn(double x, int exp) { return ::scalbn(x, exp); }
+using ::remainder;
+using ::remquo;
+using ::rint;
+using ::round;
+using ::scalbln;
+using ::scalbn;
 __DEVICE__ bool signbit(float x) { return ::__signbitf(x); }
 __DEVICE__ bool signbit(double x) { return ::__signbit(x); }
 __DEVICE__ float sin(float x) { return ::sinf(x); }
-__DEVICE__ double sin(double x) { return ::sin(x); }
+using ::sin;
 __DEVICE__ float sinh(float x) { return ::sinhf(x); }
-__DEVICE__ double sinh(double x) { return ::sinh(x); }
+using ::sinh;
 __DEVICE__ float sqrt(float x) { return ::sqrtf(x); }
-__DEVICE__ double sqrt(double x) { return ::sqrt(x); }
+using ::sqrt;
 __DEVICE__ float tan(float x) { return ::tanf(x); }
-__DEVICE__ double tan(double x) { return ::tan(x); }
+using ::tan;
 __DEVICE__ float tanh(float x) { return ::tanhf(x); }
-__DEVICE__ double tanh(double x) { return ::tanh(x); }
-__DEVICE__ float tgamma(float x) { return ::tgammaf(x); }
-__DEVICE__ double tgamma(double x) { return ::tgamma(x); }
-__DEVICE__ float trunc(float x) { return ::truncf(x); }
-__DEVICE__ double trunc(double x) { return ::trunc(x); }
+using ::tanh;
+using ::tgamma;
+using ::trunc;
 
 } // namespace std
 

@@ -14,9 +14,10 @@
 #ifndef LLVM_CLANG_FRONTEND_CODEGENOPTIONS_H
 #define LLVM_CLANG_FRONTEND_CODEGENOPTIONS_H
 
+#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Sanitizers.h"
-#include "clang/Driver/DebugInfoKind.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Target/TargetOptions.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -57,13 +58,6 @@ public:
     Legacy = 0,
     NonLegacy = 1,
     Mixed = 2
-  };
-
-  enum DebuggerKind {
-    DebuggerKindDefault,
-    DebuggerKindGDB,
-    DebuggerKindLLDB,
-    DebuggerKindSCE
   };
 
   enum TLSModel {

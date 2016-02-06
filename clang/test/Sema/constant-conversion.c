@@ -110,4 +110,6 @@ void test9() {
   char macro_char_hex = CHAR_MACRO_HEX;
 #define CHAR_MACRO_DEC 255
   char macro_char_dec = CHAR_MACRO_DEC;  // expected-warning {{implicit conversion from 'int' to 'char' changes value from 255 to -1}}
+
+  char array_init[] = { 255, 127, 128, 129, 0 };
 }

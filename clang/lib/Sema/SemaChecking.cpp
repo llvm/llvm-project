@@ -7400,6 +7400,32 @@ static void checkObjCDictionaryLiteral(
   }
 }
 
+// Helper function to filter out cases for constant width constant conversion.
+// Don't warn on char array initialization or for non-decimal values.
+static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
+                                          SourceLocation CC) {
+  // If initializing from a constant, and the constant starts with '0',
+  // then it is a binary, octal, or hexadecimal.  Allow these constants
+  // to fill all the bits, even if there is a sign change.
+  if (auto *IntLit = dyn_cast<IntegerLiteral>(E->IgnoreParenImpCasts())) {
+    const char FirstLiteralCharacter =
+        S.getSourceManager().getCharacterData(IntLit->getLocStart())[0];
+    if (FirstLiteralCharacter == '0')
+      return false;
+  }
+
+  // If the CC location points to a '{', and the type is char, then assume
+  // assume it is an array initialization.
+  if (CC.isValid() && T->isCharType()) {
+    const char FirstContextCharacter =
+        S.getSourceManager().getCharacterData(CC)[0];
+    if (FirstContextCharacter == '{')
+      return false;
+  }
+
+  return true;
+}
+
 void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
                              SourceLocation CC, bool *ICContext = nullptr) {
   if (E->isTypeDependent() || E->isValueDependent()) return;
@@ -7610,32 +7636,21 @@ void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     // cause a negative value to be stored.
 
     llvm::APSInt Value;
-    if (E->EvaluateAsInt(Value, S.Context, Expr::SE_AllowSideEffects)) {
-      if (!S.SourceMgr.isInSystemMacro(CC)) {
+    if (E->EvaluateAsInt(Value, S.Context, Expr::SE_AllowSideEffects) &&
+        !S.SourceMgr.isInSystemMacro(CC)) {
+      if (isSameWidthConstantConversion(S, E, T, CC)) {
+        std::string PrettySourceValue = Value.toString(10);
+        std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
 
-        IntegerLiteral *IntLit =
-            dyn_cast<IntegerLiteral>(E->IgnoreParenImpCasts());
-
-        // If initializing from a constant, and the constant starts with '0',
-        // then it is a binary, octal, or hexadecimal.  Allow these constants
-        // to fill all the bits, even if there is a sign change.
-        if (!IntLit ||
-            *(S.getSourceManager().getCharacterData(IntLit->getLocStart())) !=
-                '0') {
-
-          std::string PrettySourceValue = Value.toString(10);
-          std::string PrettyTargetValue =
-              PrettyPrintInRange(Value, TargetRange);
-
-          S.DiagRuntimeBehavior(
-              E->getExprLoc(), E,
-              S.PDiag(diag::warn_impcast_integer_precision_constant)
-                  << PrettySourceValue << PrettyTargetValue << E->getType() << T
-                  << E->getSourceRange() << clang::SourceRange(CC));
-          return;
-        }
+        S.DiagRuntimeBehavior(
+            E->getExprLoc(), E,
+            S.PDiag(diag::warn_impcast_integer_precision_constant)
+                << PrettySourceValue << PrettyTargetValue << E->getType() << T
+                << E->getSourceRange() << clang::SourceRange(CC));
+        return;
       }
     }
+
     // Fall through for non-constants to give a sign conversion warning.
   }
 

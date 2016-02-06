@@ -1600,7 +1600,8 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
         (AllowPadding &&
          (FieldOffset & (FieldAlign-1)) + FieldSize > TypeSize)) {
       FieldOffset = llvm::alignTo(FieldOffset, FieldAlign);
-    } else if (ExplicitFieldAlign) {
+    } else if (ExplicitFieldAlign &&
+               Context.getTargetInfo().useExplicitBitFieldAlignment()) {
       // TODO: figure it out what needs to be done on targets that don't honor
       // bit-field type alignment like ARM APCS ABI.
       FieldOffset = llvm::alignTo(FieldOffset, ExplicitFieldAlign);
@@ -1612,7 +1613,8 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
          (UnpackedFieldOffset & (UnpackedFieldAlign-1)) + FieldSize > TypeSize))
       UnpackedFieldOffset =
           llvm::alignTo(UnpackedFieldOffset, UnpackedFieldAlign);
-    else if (ExplicitFieldAlign)
+    else if (ExplicitFieldAlign &&
+             Context.getTargetInfo().useExplicitBitFieldAlignment())
       UnpackedFieldOffset =
           llvm::alignTo(UnpackedFieldOffset, ExplicitFieldAlign);
   }

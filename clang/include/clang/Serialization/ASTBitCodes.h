@@ -591,9 +591,12 @@ namespace clang {
       /// SM_SLOC_BUFFER_ENTRY record or a SM_SLOC_FILE_ENTRY with an
       /// overridden buffer.
       SM_SLOC_BUFFER_BLOB = 3,
+      /// \brief Describes a zlib-compressed blob that contains the data for
+      /// a buffer entry.
+      SM_SLOC_BUFFER_BLOB_COMPRESSED = 4,
       /// \brief Describes a source location entry (SLocEntry) for a
       /// macro expansion.
-      SM_SLOC_EXPANSION_ENTRY = 4
+      SM_SLOC_EXPANSION_ENTRY = 5
     };
 
     /// \brief Record types used within a preprocessor block.
