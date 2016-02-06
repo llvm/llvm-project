@@ -105,10 +105,8 @@ LTOModule::createFromFile(LLVMContext &Context, const char *path,
                           TargetOptions options) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(path);
-  if (std::error_code EC = BufferOrErr.getError()) {
-    Context.emitError(EC.message());
+  if (std::error_code EC = BufferOrErr.getError())
     return EC;
-  }
   std::unique_ptr<MemoryBuffer> Buffer = std::move(BufferOrErr.get());
   return makeLTOModule(Buffer->getMemBufferRef(), options, &Context);
 }
@@ -125,10 +123,8 @@ LTOModule::createFromOpenFileSlice(LLVMContext &Context, int fd,
                                    off_t offset, TargetOptions options) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getOpenFileSlice(fd, path, map_size, offset);
-  if (std::error_code EC = BufferOrErr.getError()) {
-    Context.emitError(EC.message());
+  if (std::error_code EC = BufferOrErr.getError())
     return EC;
-  }
   std::unique_ptr<MemoryBuffer> Buffer = std::move(BufferOrErr.get());
   return makeLTOModule(Buffer->getMemBufferRef(), options, &Context);
 }
@@ -162,10 +158,8 @@ parseBitcodeFileImpl(MemoryBufferRef Buffer, LLVMContext &Context,
   // Find the buffer.
   ErrorOr<MemoryBufferRef> MBOrErr =
       IRObjectFile::findBitcodeInMemBuffer(Buffer);
-  if (std::error_code EC = MBOrErr.getError()) {
-    Context.emitError(EC.message());
+  if (std::error_code EC = MBOrErr.getError())
     return EC;
-  }
 
   if (!ShouldBeLazy) {
     // Parse the full file.
