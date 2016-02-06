@@ -41,8 +41,8 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
                                         LLVMContext &Context) {
   SMDiagnostic Err;
   DEBUG(dbgs() << "Loading '" << FileName << "'\n");
-  // Metadata isn't loaded or linked until after all functions are
-  // imported, after which it will be materialized and linked.
+  // Metadata isn't loaded until functions are imported, to minimize
+  // the memory overhead.
   std::unique_ptr<Module> Result =
       getLazyIRFileModule(FileName, Err, Context,
                           /* ShouldLazyLoadMetadata = */ true);
@@ -295,9 +295,6 @@ bool FunctionImporter::importFunctions(Module &DestModule) {
                 ModuleToFunctionsToImportMap, Index, ModuleLoaderCache);
   assert(Worklist.empty() && "Worklist hasn't been flushed in GetImportList");
 
-  StringMap<std::unique_ptr<DenseMap<unsigned, MDNode *>>>
-      ModuleToTempMDValsMap;
-
   // Do the actual import of functions now, one Module at a time
   for (auto &FunctionsToImportPerModule : ModuleToFunctionsToImportMap) {
     // Get the module for the import
@@ -307,34 +304,17 @@ bool FunctionImporter::importFunctions(Module &DestModule) {
     assert(&DestModule.getContext() == &SrcModule->getContext() &&
            "Context mismatch");
 
-    // Save the mapping of value ids to temporary metadata created when
-    // importing this function. If we have already imported from this module,
-    // add new temporary metadata to the existing mapping.
-    auto &TempMDVals = ModuleToTempMDValsMap[SrcModule->getModuleIdentifier()];
-    if (!TempMDVals)
-      TempMDVals = llvm::make_unique<DenseMap<unsigned, MDNode *>>();
+    // If modules were created with lazy metadata loading, materialize it
+    // now, before linking it (otherwise this will be a noop).
+    SrcModule->materializeMetadata();
+    UpgradeDebugInfo(*SrcModule);
 
     // Link in the specified functions.
     if (TheLinker.linkInModule(std::move(SrcModule), Linker::Flags::None,
-                               &Index, &FunctionsToImport, TempMDVals.get()))
+                               &Index, &FunctionsToImport))
       report_fatal_error("Function Import: link error");
 
     ImportedCount += FunctionsToImport.size();
-  }
-
-  // Now link in metadata for all modules from which we imported functions.
-  for (StringMapEntry<std::unique_ptr<DenseMap<unsigned, MDNode *>>> &SME :
-       ModuleToTempMDValsMap) {
-    // Load the specified source module.
-    auto &SrcModule = ModuleLoaderCache(SME.getKey());
-    // The modules were created with lazy metadata loading. Materialize it
-    // now, before linking it.
-    SrcModule.materializeMetadata();
-    UpgradeDebugInfo(SrcModule);
-
-    // Link in all necessary metadata from this module.
-    if (TheLinker.linkInMetadata(SrcModule, SME.getValue().get()))
-      return false;
   }
 
   DEBUG(dbgs() << "Imported " << ImportedCount << " functions for Module "
