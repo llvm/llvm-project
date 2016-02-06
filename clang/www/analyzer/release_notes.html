@@ -14,6 +14,21 @@
 <div id="content">
 
 <h1>Release notes for <tt>checker-XXX</tt> builds</h1>
+<h4 id="checker_278">checker-278</h4>
+<p><b>built:</b> February 6, 2016</br>
+	<b>download:</b> <a href="downloads/checker-278.tar.bz2">checker-278.tar.bz2</a></p>
+	<p><b>highlights:</b></p>
+	<ul>
+    <li>Greatly improves analysis of C++ lambdas, including interprocedural analysis of lambda applications and reduced 'dead store'
+        false positives for variables captured by reference.</li>
+    <li>The analyzer now checks for misuse of 'vfork()'. This check is enabled by default.</li>
+    <li>The analyzer can now detect excessively-padded structs. This check can be enabled by passing the following
+        command to scan-build:<br />
+  &nbsp;&nbsp;<tt>-enable-checker optin.performance.Padding</tt> </li>
+    <li>The checks to detect misuse of <tt>_Nonnull</tt> are now enabled by default.</li>
+    <li>The checks to detect misuse of Objective-C generics are now enabled by default.</li>
+    <li>Many miscellaneous improvements.</li>
+	</ul>
 
 <h4 id="checker_277">checker-277</h4>
 <p><b>built:</b> October 28, 2015</br>
