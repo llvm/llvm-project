@@ -16,7 +16,9 @@
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -175,6 +177,21 @@ AddMacros(const DebugMacros *dm, CompileUnit *comp_unit, AddMacroState &state, S
     }
 }
 
+static void
+AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp, StreamString &stream)
+{
+    for (size_t i = 0; i < var_list_sp->GetSize(); i++)
+    {
+        lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
+
+        ConstString var_name = var_sp->GetName();
+        if (var_name == ConstString("this") || var_name == ConstString(".block_descriptor"))
+            continue;
+
+        stream.Printf("using $__lldb_local_vars::%s;\n", var_name.AsCString());
+    }
+}
+
 bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrapping_language, bool const_object, bool static_method, ExecutionContext &exe_ctx) const
 {
     const char *target_specific_defines = "typedef signed char BOOL;\n";
@@ -239,6 +256,7 @@ bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrappi
     }
 
     StreamString debug_macros_stream;
+    StreamString lldb_local_var_decls;
     if (StackFrame *frame = exe_ctx.GetFramePtr())
     {
         const SymbolContext &sc = frame->GetSymbolContext(
@@ -253,8 +271,15 @@ bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrappi
                 AddMacros(dm, sc.comp_unit, state, debug_macros_stream);
             }
         }
+
+        ConstString object_name;
+        if (Language::LanguageIsCPlusPlus(frame->GetLanguage()))
+        {
+            lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false);
+            AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
+        }
     }
-    
+
     if (m_wrap)
     {
         switch (wrapping_language) 
@@ -284,19 +309,23 @@ bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrappi
             wrap_stream.Printf("void                           \n"
                                "%s(void *$__lldb_arg)          \n"
                                "{                              \n"
+                               "    %s;                        \n"
                                "    %s;                        \n" 
                                "}                              \n",
                                m_name.c_str(),
+                               lldb_local_var_decls.GetData(),
                                m_body.c_str());
             break;
         case lldb::eLanguageTypeC_plus_plus:
             wrap_stream.Printf("void                                   \n"
                                "$__lldb_class::%s(void *$__lldb_arg) %s\n"
                                "{                                      \n"
+                               "    %s;                                \n"
                                "    %s;                                \n" 
                                "}                                      \n",
                                m_name.c_str(),
                                (const_object ? "const" : ""),
+                               lldb_local_var_decls.GetData(),
                                m_body.c_str());
             break;
         case lldb::eLanguageTypeObjC:
@@ -339,6 +368,6 @@ bool ExpressionSourceCode::GetText (std::string &text, lldb::LanguageType wrappi
     {
         text.append(m_body);
     }
-    
+
     return true;
 }

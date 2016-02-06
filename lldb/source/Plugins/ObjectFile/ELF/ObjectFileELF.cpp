@@ -1562,6 +1562,15 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         }
     }
 
+    if (arch_spec.GetMachine() == llvm::Triple::arm ||
+        arch_spec.GetMachine() == llvm::Triple::thumb)
+    {
+        if (header.e_flags & llvm::ELF::EF_ARM_SOFT_FLOAT)
+            arch_spec.SetFlags (ArchSpec::eARM_abi_soft_float);
+        else if (header.e_flags & llvm::ELF::EF_ARM_VFP_FLOAT)
+            arch_spec.SetFlags (ArchSpec::eARM_abi_hard_float);
+    }
+
     // If there are no section headers we are done.
     if (header.e_shnum == 0)
         return 0;

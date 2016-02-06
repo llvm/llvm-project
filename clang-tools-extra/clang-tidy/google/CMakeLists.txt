@@ -22,4 +22,5 @@ add_clang_library(clangTidyGoogleModule
   clangLex
   clangTidy
   clangTidyReadabilityModule
+  clangTidyUtils
   )

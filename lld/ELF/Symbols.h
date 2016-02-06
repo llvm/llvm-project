@@ -83,8 +83,6 @@ public:
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
-  bool isUsedInDynamicReloc() const { return IsUsedInDynamicReloc; }
-  void setUsedInDynamicReloc() { IsUsedInDynamicReloc = true; }
   bool isTls() const { return IsTls; }
   bool isFunc() const { return IsFunc; }
 
@@ -131,10 +129,9 @@ public:
 protected:
   SymbolBody(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
              bool IsTls, bool IsFunc)
-      : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility), IsTls(IsTls),
-        IsFunc(IsFunc), Name(Name) {
+      : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility),
+        MustBeInDynSym(false), IsTls(IsTls), IsFunc(IsFunc), Name(Name) {
     IsUsedInRegularObj = K != SharedKind && K != LazyKind;
-    IsUsedInDynamicReloc = 0;
   }
 
   const unsigned SymbolKind : 8;
@@ -147,9 +144,11 @@ protected:
   // it can be false.
   unsigned IsUsedInRegularObj : 1;
 
+public:
   // If true, the symbol is added to .dynsym symbol table.
-  unsigned IsUsedInDynamicReloc : 1;
+  unsigned MustBeInDynSym : 1;
 
+protected:
   unsigned IsTls : 1;
   unsigned IsFunc : 1;
   StringRef Name;

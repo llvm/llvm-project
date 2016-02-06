@@ -19,38 +19,50 @@ namespace misc {
 
 namespace {
 
-AST_MATCHER(NamedDecl, isHeaderFileExtension) {
-  SourceManager& SM = Finder->getASTContext().getSourceManager();
-  SourceLocation ExpansionLoc = SM.getExpansionLoc(Node.getLocStart());
-  StringRef Filename = SM.getFilename(ExpansionLoc);
-  return Filename.endswith(".h") || Filename.endswith(".hh") ||
-         Filename.endswith(".hpp") || Filename.endswith(".hxx") ||
-         llvm::sys::path::extension(Filename).empty();
+AST_MATCHER_P(NamedDecl, usesHeaderFileExtension,
+              utils::HeaderFileExtensionsSet, HeaderFileExtensions) {
+  return utils::isExpansionLocInHeaderFile(
+      Node.getLocStart(), Finder->getASTContext().getSourceManager(),
+      HeaderFileExtensions);
 }
 
 } // namespace
 
-DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(
-    StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        UseHeaderFileExtension(Options.get("UseHeaderFileExtension", true)) {}
+DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      UseHeaderFileExtension(Options.get("UseHeaderFileExtension", true)),
+      RawStringHeaderFileExtensions(
+          Options.getLocalOrGlobal("HeaderFileExtensions", ",h,hh,hpp,hxx")) {
+  if (!utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
+                                        HeaderFileExtensions,
+                                        ',')) {
+    // FIXME: Find a more suitable way to handle invalid configuration
+    // options.
+    llvm::errs() << "Invalid header file extension: "
+                 << RawStringHeaderFileExtensions << "\n";
+  }
+}
 
 void DefinitionsInHeadersCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "UseHeaderFileExtension", UseHeaderFileExtension);
+  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
 }
 
 void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
   if (UseHeaderFileExtension) {
     Finder->addMatcher(
         namedDecl(anyOf(functionDecl(isDefinition()), varDecl(isDefinition())),
-                  isHeaderFileExtension()).bind("name-decl"),
+                  usesHeaderFileExtension(HeaderFileExtensions))
+            .bind("name-decl"),
         this);
   } else {
     Finder->addMatcher(
         namedDecl(anyOf(functionDecl(isDefinition()), varDecl(isDefinition())),
-                  anyOf(isHeaderFileExtension(),
-                        unless(isExpansionInMainFile()))).bind("name-decl"),
+                  anyOf(usesHeaderFileExtension(HeaderFileExtensions),
+                        unless(isExpansionInMainFile())))
+            .bind("name-decl"),
         this);
   }
 }

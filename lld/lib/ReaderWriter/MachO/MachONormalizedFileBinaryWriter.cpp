@@ -430,9 +430,6 @@ uint32_t MachOFileLayout::loadCommandsSize(uint32_t &count) {
   count += _file.segments.size();
   // Add section record for each section.
   size += _file.sections.size() * sectionSize;
-  // Add one LC_SEGMENT for implicit  __LINKEDIT segment
-  size += segCommandSize;
-  ++count;
 
   // If creating a dylib, add LC_ID_DYLIB.
   if (_file.fileType == llvm::MachO::MH_DYLIB) {
@@ -595,8 +592,11 @@ void MachOFileLayout::buildFileOffsets() {
                   << ", fileOffset=" << fileOffset << "\n");
     }
 
-    _segInfo[&sg].fileSize = llvm::alignTo(segFileSize, _file.pageSize);
-    fileOffset = llvm::alignTo(fileOffset + segFileSize, _file.pageSize);
+    // round up all segments to page aligned, except __LINKEDIT
+    if (!sg.name.equals("__LINKEDIT")) {
+      _segInfo[&sg].fileSize = llvm::alignTo(segFileSize, _file.pageSize);
+      fileOffset = llvm::alignTo(fileOffset + segFileSize, _file.pageSize);
+    }
     _addressOfLinkEdit = sg.address + sg.size;
   }
   _startOfLinkEdit = fileOffset;
@@ -697,8 +697,30 @@ template <typename T>
 std::error_code MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
   uint32_t indirectSymRunningIndex = 0;
   for (const Segment &seg : _file.segments) {
-    // Write segment command with trailing sections.
+    // Link edit has no sections and a custom range of address, so handle it
+    // specially.
     SegExtraInfo &segInfo = _segInfo[&seg];
+    if (seg.name.equals("__LINKEDIT")) {
+      size_t linkeditSize = _endOfLinkEdit - _startOfLinkEdit;
+      typename T::command* cmd = reinterpret_cast<typename T::command*>(lc);
+      cmd->cmd = T::LC;
+      cmd->cmdsize = sizeof(typename T::command);
+      uint8_t *next = lc + cmd->cmdsize;
+      setString16("__LINKEDIT", cmd->segname);
+      cmd->vmaddr   = _addressOfLinkEdit;
+      cmd->vmsize   = llvm::alignTo(linkeditSize, _file.pageSize);
+      cmd->fileoff  = _startOfLinkEdit;
+      cmd->filesize = linkeditSize;
+      cmd->initprot = seg.access;
+      cmd->maxprot  = seg.access;
+      cmd->nsects   = 0;
+      cmd->flags    = 0;
+      if (_swap)
+        swapStruct(*cmd);
+      lc = next;
+      continue;
+    }
+    // Write segment command with trailing sections.
     typename T::command* cmd = reinterpret_cast<typename T::command*>(lc);
     cmd->cmd = T::LC;
     cmd->cmdsize = sizeof(typename T::command)
@@ -738,24 +760,6 @@ std::error_code MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
     }
     lc = reinterpret_cast<uint8_t*>(next);
   }
-  // Add implicit __LINKEDIT segment
-  size_t linkeditSize = _endOfLinkEdit - _startOfLinkEdit;
-  typename T::command* cmd = reinterpret_cast<typename T::command*>(lc);
-  cmd->cmd = T::LC;
-  cmd->cmdsize = sizeof(typename T::command);
-  uint8_t *next = lc + cmd->cmdsize;
-  setString16("__LINKEDIT", cmd->segname);
-  cmd->vmaddr   = _addressOfLinkEdit;
-  cmd->vmsize   = llvm::alignTo(linkeditSize, _file.pageSize);
-  cmd->fileoff  = _startOfLinkEdit;
-  cmd->filesize = linkeditSize;
-  cmd->maxprot  = VM_PROT_READ;
-  cmd->initprot = VM_PROT_READ;
-  cmd->nsects   = 0;
-  cmd->flags    = 0;
-  if (_swap)
-    swapStruct(*cmd);
-  lc = next;
   return std::error_code();
 }
 

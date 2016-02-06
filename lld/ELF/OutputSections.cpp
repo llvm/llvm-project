@@ -216,6 +216,14 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool IsRela)
 }
 
 template <class ELFT>
+void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
+  SymbolBody *Sym = Reloc.Sym;
+  if (!Reloc.UseSymVA && Sym)
+    Sym->MustBeInDynSym = true;
+  Relocs.push_back(Reloc);
+}
+
+template <class ELFT>
 static typename ELFFile<ELFT>::uintX_t
 getOffset(const DynamicReloc<ELFT> &Rel) {
   typedef typename ELFFile<ELFT>::uintX_t uintX_t;
@@ -263,8 +271,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT> unsigned RelocationSection<ELFT>::getRelocOffset() {
-  const unsigned EntrySize = IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-  return EntrySize * Relocs.size();
+  return this->Header.sh_entsize * Relocs.size();
 }
 
 template <class ELFT> void RelocationSection<ELFT>::finalize() {
@@ -957,6 +964,31 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
 }
 
 template <class ELFT>
+static typename ELFFile<ELFT>::uintX_t readEntryLength(ArrayRef<uint8_t> D) {
+  const endianness E = ELFT::TargetEndianness;
+  if (D.size() < 4)
+    fatal("CIE/FDE too small");
+
+  // First 4 bytes of CIE/FDE is the size of the record.
+  // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead.
+  uint64_t V = read32<E>(D.data());
+  if (V < UINT32_MAX) {
+    uint64_t Len = V + 4;
+    if (Len > D.size())
+      fatal("CIE/FIE ends past the end of the section");
+    return Len;
+  }
+
+  if (D.size() < 12)
+    fatal("CIE/FDE too small");
+  V = read64<E>(D.data() + 4);
+  uint64_t Len = V + 12;
+  if (Len < V || D.size() < Len)
+    fatal("CIE/FIE ends past the end of the section");
+  return Len;
+}
+
+template <class ELFT>
 template <bool IsRela>
 void EHOutputSection<ELFT>::addSectionAux(
     EHInputSection<ELFT> *S,
@@ -978,7 +1010,7 @@ void EHOutputSection<ELFT>::addSectionAux(
     unsigned Index = S->Offsets.size();
     S->Offsets.push_back(std::make_pair(Offset, -1));
 
-    uintX_t Length = readEntryLength(D);
+    uintX_t Length = readEntryLength<ELFT>(D);
     // If CIE/FDE data length is zero then Length is 4, this
     // shall be considered a terminator and processing shall end.
     if (Length == 4)
@@ -1029,32 +1061,6 @@ void EHOutputSection<ELFT>::addSectionAux(
     Offset = NextOffset;
     D = D.slice(Length);
   }
-}
-
-template <class ELFT>
-typename EHOutputSection<ELFT>::uintX_t
-EHOutputSection<ELFT>::readEntryLength(ArrayRef<uint8_t> D) {
-  const endianness E = ELFT::TargetEndianness;
-
-  if (D.size() < 4)
-    fatal("Truncated CIE/FDE length");
-  uint64_t Len = read32<E>(D.data());
-  if (Len < UINT32_MAX) {
-    if (Len > (UINT32_MAX - 4))
-      fatal("CIE/FIE size is too large");
-    if (Len + 4 > D.size())
-      fatal("CIE/FIE ends past the end of the section");
-    return Len + 4;
-  }
-
-  if (D.size() < 12)
-    fatal("Truncated CIE/FDE length");
-  Len = read64<E>(D.data() + 4);
-  if (Len > (UINT64_MAX - 12))
-    fatal("CIE/FIE size is too large");
-  if (Len + 12 > D.size())
-    fatal("CIE/FIE ends past the end of the section");
-  return Len + 12;
 }
 
 template <class ELFT>

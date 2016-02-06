@@ -414,6 +414,20 @@ GetReturnValuePassedInMemory(Thread &thread, RegisterContext* reg_ctx, size_t by
     return true;
 }
 
+bool
+ABISysV_arm::IsArmHardFloat (Thread &thread) const
+{
+    ProcessSP process_sp (thread.GetProcess());
+    if (process_sp)
+    {
+        const ArchSpec &arch (process_sp->GetTarget().GetArchitecture());
+
+        return (arch.GetFlags() & ArchSpec::eARM_abi_hard_float) != 0;
+    }
+
+    return false;
+}
+
 ValueObjectSP
 ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
                                        lldb_private::CompilerType &compiler_type) const
@@ -516,19 +530,42 @@ ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
                 case 64:
                 {
                     static_assert(sizeof(double) == sizeof(uint64_t), "");
-                    const RegisterInfo *r1_reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
-                    uint64_t raw_value;
-                    raw_value = reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
-                    raw_value |= ((uint64_t)(reg_ctx->ReadRegisterAsUnsigned(r1_reg_info, 0) & UINT32_MAX)) << 32;
-                    value.GetScalar() = *reinterpret_cast<double*>(&raw_value);
+
+                    if (IsArmHardFloat(thread))
+                    {
+                        RegisterValue reg_value;
+                        const RegisterInfo *d0_reg_info = reg_ctx->GetRegisterInfoByName("d0", 0);
+                        reg_ctx->ReadRegister(d0_reg_info, reg_value);
+                        value.GetScalar() = reg_value.GetAsDouble();
+                    }
+                    else
+                    {
+                        uint64_t raw_value;
+                        const RegisterInfo *r1_reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
+                        raw_value = reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
+                        raw_value |= ((uint64_t)(reg_ctx->ReadRegisterAsUnsigned(r1_reg_info, 0) & UINT32_MAX)) << 32;
+                        value.GetScalar() = *reinterpret_cast<double*>(&raw_value);
+                    }
                     break;
                 }
                 case 16: // Half precision returned after a conversion to single precision
                 case 32:
                 {
                     static_assert(sizeof(float) == sizeof(uint32_t), "");
-                    uint32_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
-                    value.GetScalar() = *reinterpret_cast<float*>(&raw_value);
+
+                    if (IsArmHardFloat(thread))
+                    {
+                        RegisterValue reg_value;
+                        const RegisterInfo *s0_reg_info = reg_ctx->GetRegisterInfoByName("s0", 0);
+                        reg_ctx->ReadRegister(s0_reg_info, reg_value);
+                        value.GetScalar() = reg_value.GetAsFloat();
+                    }
+                    else
+                    {
+                        uint32_t raw_value;
+                        raw_value = reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
+                        value.GetScalar() = *reinterpret_cast<float*>(&raw_value);
+                    }
                     break;
                 }
             }

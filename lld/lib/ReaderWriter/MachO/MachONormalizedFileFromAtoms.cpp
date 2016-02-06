@@ -487,6 +487,8 @@ void Util::organizeSections() {
     default:
       break;
   }
+  segmentForName("__LINKEDIT");
+
   // Group sections into segments.
   for (SectionInfo *si : _sectionInfos) {
     SegmentInfo *seg = segmentForName(si->segmentName);

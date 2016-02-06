@@ -128,7 +128,7 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
   // symbols in the DSO at runtime.
   if (isShared() != Other->isShared())
     if (isa<DefinedRegular<ELFT>>(isShared() ? Other : this))
-      IsUsedInDynamicReloc = Other->IsUsedInDynamicReloc = true;
+      MustBeInDynSym = Other->MustBeInDynSym = true;
 
   if (L != R)
     return -1;

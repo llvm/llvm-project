@@ -77,6 +77,8 @@ ASAN_FLAG(bool, print_stats, false,
           "Print various statistics after printing an error message or if "
           "atexit=1.")
 ASAN_FLAG(bool, print_legend, true, "Print the legend for the shadow bytes.")
+ASAN_FLAG(bool, print_scariness, false,
+          "Print the scariness score. Experimental.")
 ASAN_FLAG(bool, atexit, false,
           "If set, prints ASan exit stats even after program terminates "
           "successfully.")

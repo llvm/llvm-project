@@ -6,4 +6,4 @@
         .section .eh_frame
         .byte 0
 
-// CHECK: Truncated CIE/FDE length
+// CHECK: CIE/FDE too small
