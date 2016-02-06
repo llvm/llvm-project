@@ -18,6 +18,8 @@
 
 ; CHECK: distinct !DISubprogram(name: "func1"
 ; CHECK-NOT: distinct !DISubprogram(name: "func2"
+; CHECK: distinct !DISubprogram(name: "func3"
+; CHECK: distinct !DISubprogram(name: "func4"
 
 
 ; ModuleID = 'dbg.o'
@@ -55,7 +57,7 @@ attributes #1 = { nounwind readnone }
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
 !1 = !DIFile(filename: "dbg.c", directory: ".")
 !2 = !{}
-!3 = !{!4, !11}
+!3 = !{!4, !11, !27, !30}
 !4 = distinct !DISubprogram(name: "func1", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, variables: !8)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7}
@@ -72,9 +74,17 @@ attributes #1 = { nounwind readnone }
 !17 = !DIExpression()
 !18 = !DILocation(line: 1, column: 15, scope: !4)
 !19 = !DILocation(line: 2, column: 7, scope: !4)
-!20 = !DILocation(line: 3, column: 9, scope: !21)
-!21 = distinct !DILexicalBlock(scope: !4, file: !1, line: 3, column: 7)
+!20 = !DILocation(line: 3, column: 9, scope: !21, inlinedAt: !26)
+!21 = distinct !DILexicalBlock(scope: !27, file: !1, line: 3, column: 7)
 !22 = !DILocation(line: 3, column: 7, scope: !4)
 !23 = !DILocation(line: 5, column: 3, scope: !4)
 !24 = !DILocation(line: 8, column: 15, scope: !11)
 !25 = !DILocation(line: 9, column: 3, scope: !11)
+!26 = !DILocation(line: 9, column: 3, scope: !4)
+!27 = distinct !DISubprogram(name: "func3", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, variables: !28)
+!28 = !{!29}
+!29 = !DILocalVariable(name: "n", arg: 1, scope: !30, file: !1, line: 8, type: !7)
+!30 = distinct !DISubprogram(name: "func4", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, variables: !31)
+!31 = !{!32}
+!32 = !DILocalVariable(name: "n", arg: 1, scope: !30, file: !1, line: 8, type: !7)
+

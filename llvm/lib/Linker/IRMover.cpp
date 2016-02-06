@@ -501,6 +501,11 @@ class IRLinker {
   /// in an imported function.
   void findNeededSubprograms();
 
+  /// Recursive helper for findNeededSubprograms to locate any DISubprogram
+  /// reached from the given Node, marking any found as needed.
+  void findReachedSubprograms(const MDNode *Node,
+                              SmallPtrSet<const MDNode *, 16> &Visited);
+
   /// The value mapper leaves nulls in the list of subprograms for any
   /// in the UnneededSubprograms map. Strip those out after metadata linking.
   void stripNullSubprograms();
@@ -1194,6 +1199,21 @@ bool IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
   return false;
 }
 
+void IRLinker::findReachedSubprograms(
+    const MDNode *Node, SmallPtrSet<const MDNode *, 16> &Visited) {
+  if (!Visited.insert(Node).second)
+    return;
+  DISubprogram *SP = getDISubprogram(Node);
+  if (SP)
+    UnneededSubprograms.erase(SP);
+  for (auto &Op : Node->operands()) {
+    const MDNode *OpN = dyn_cast_or_null<MDNode>(Op.get());
+    if (!OpN)
+      continue;
+    findReachedSubprograms(OpN, Visited);
+  }
+}
+
 void IRLinker::findNeededSubprograms() {
   // Track unneeded nodes to make it simpler to handle the case
   // where we are checking if an already-mapped SP is needed.
@@ -1231,17 +1251,18 @@ void IRLinker::findNeededSubprograms() {
   if (!IsMetadataLinkingPostpass)
     return;
   // In the case of metadata linking as a postpass (e.g. for function
-  // importing), see which DISubprogram MD from the source has an associated
-  // temporary metadata node, which means the SP was needed by an imported
-  // function.
+  // importing), see which MD from the source has an associated
+  // temporary metadata node, which means that any DISubprogram
+  // reached from that MD was needed by an imported function.
+  SmallPtrSet<const MDNode *, 16> Visited;
   for (auto MDI : MetadataToIDs) {
     const MDNode *Node = dyn_cast<MDNode>(MDI.first);
     if (!Node)
       continue;
-    DISubprogram *SP = getDISubprogram(Node);
-    if (!SP || !ValIDToTempMDMap->count(MDI.second))
+    if (!ValIDToTempMDMap->count(MDI.second))
       continue;
-    UnneededSubprograms.erase(SP);
+    // Find any SP needed recursively from this needed Node.
+    findReachedSubprograms(Node, Visited);
   }
 }
 
