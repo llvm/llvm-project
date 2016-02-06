@@ -64,3 +64,33 @@ struct v {
 
 // MSVC: CXXConstructor=v{{.*}}[mangled=??0v@@QAE@H@Z] [mangled=??_Fv@@QAEXXZ]
 
+struct w {
+  virtual int m(int);
+};
+
+// ITANIUM: CXXMethod=m{{.*}} (virtual) [mangled=_ZN1w1mEi]
+
+// MACHO: CXXMethod=m{{.*}} (virtual) [mangled=__ZN1w1mEi]
+
+// MSVC: CXXMethod=m{{.*}} (virtual) [mangled=?m@w@@UAEHH@Z]
+
+struct x {
+  virtual int m(int);
+};
+
+// ITANIUM: CXXMethod=m{{.*}} (virtual) [mangled=_ZN1x1mEi]
+
+// MACHO: CXXMethod=m{{.*}} (virtual) [mangled=__ZN1x1mEi]
+
+// MSVC: CXXMethod=m{{.*}} (virtual) [mangled=?m@x@@UAEHH@Z]
+
+struct y : w, x {
+  virtual int m(int);
+};
+
+// ITANIUM: CXXMethod=m{{.*}} (virtual) {{.*}} [mangled=_ZN1y1mEi] [mangled=_ZThn4_N1y1mEi]
+
+// MACHO: CXXMethod=m{{.*}} (virtual) {{.*}} [mangled=__ZN1y1mEi] [mangled=__ZThn4_N1y1mEi]
+
+// MSVC: CXXMethod=m{{.*}} (virtual) {{.*}} [mangled=?m@y@@UAEHH@Z] [mangled=?m@y@@W3AEHH@Z]
+
