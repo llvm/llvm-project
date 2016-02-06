@@ -268,7 +268,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanShlibUndefined() {
     for (StringRef U : File->getUndefinedSymbols())
       if (SymbolBody *Sym = find(U))
         if (Sym->isDefined())
-          Sym->setUsedInDynamicReloc();
+          Sym->MustBeInDynSym = true;
 }
 
 template class elf2::SymbolTable<ELF32LE>;

@@ -176,6 +176,14 @@ Specifies install location of Hwloc. The configuration system will look for
 hwloc.h in ${LIBOMP_HWLOC_INSTALL_DIR}/include and the library in 
 ${LIBOMP_HWLOC_INSTALL_DIR}/lib.
 
+-DLIBOMP_LLVM_LIT_EXECUTABLE=/path/to/llvm-lit
+Default: search in PATH
+Specifiy full path to llvm-lit executable for running tests.
+
+-DOPENMP_LLVM_TOOLS_DIR=/path/to/built/llvm/tools
+Default: search for tools in path
+Additional path to search for LLVM tools needed by tests.
+
 ================================
 How to append flags to the build
 ================================

@@ -194,6 +194,7 @@ public:
                     if (!success)
                         error.SetErrorStringWithFormat("invalid integer value for option '%c'", short_option);
                 }
+                break;
                 case 'e':
                 {
                     bool success;

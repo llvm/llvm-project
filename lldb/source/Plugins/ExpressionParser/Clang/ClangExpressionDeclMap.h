@@ -707,6 +707,9 @@ private:
     AddThisType(NameSearchContext &context,
                 TypeFromUser &type,
                 unsigned int current_id);
+
+    ClangASTContext *
+    GetClangASTContext();
 };
     
 } // namespace lldb_private

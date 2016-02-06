@@ -255,7 +255,7 @@ class RelocationSection final : public OutputSectionBase<ELFT> {
 
 public:
   RelocationSection(StringRef Name, bool IsRela);
-  void addReloc(const DynamicReloc<ELFT> &Reloc) { Relocs.push_back(Reloc); }
+  void addReloc(const DynamicReloc<ELFT> &Reloc);
   unsigned getRelocOffset();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
@@ -337,7 +337,6 @@ public:
 
 private:
   uint8_t getFdeEncoding(ArrayRef<uint8_t> D);
-  uintX_t readEntryLength(ArrayRef<uint8_t> D);
 
   std::vector<EHInputSection<ELFT> *> Sections;
   std::vector<Cie<ELFT>> Cies;

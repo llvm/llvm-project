@@ -153,7 +153,9 @@ TypeSystem::DeclGetFunctionArgumentType (void *opaque_decl, size_t arg_idx)
 
 
 std::vector<CompilerDecl>
-TypeSystem::DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name)
+TypeSystem::DeclContextFindDeclByName (void *opaque_decl_ctx,
+                                       ConstString name,
+                                       bool ignore_imported_decls)
 {
     return std::vector<CompilerDecl>();
 }

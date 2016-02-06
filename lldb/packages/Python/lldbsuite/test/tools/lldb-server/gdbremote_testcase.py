@@ -26,7 +26,7 @@ import logging
 
 class GdbRemoteTestCaseBase(TestBase):
 
-    _TIMEOUT_SECONDS = 5
+    _TIMEOUT_SECONDS = 7
 
     _GDBREMOTE_KILL_PACKET = "$k#6b"
 
