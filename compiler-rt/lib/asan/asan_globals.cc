@@ -144,7 +144,16 @@ static void RegisterGlobal(const Global *g) {
     ReportGlobal(*g, "Added");
   CHECK(flags()->report_globals);
   CHECK(AddrIsInMem(g->beg));
-  CHECK(AddrIsAlignedByGranularity(g->beg));
+  if (!AddrIsAlignedByGranularity(g->beg)) {
+    Report("The following global variable is not properly aligned.\n");
+    Report("This may happen if another global with the same name\n");
+    Report("resides in another non-instrumented module.\n");
+    Report("Or the global comes from a C file built w/o -fno-common.\n");
+    Report("In either case this is likely an ODR violation bug,\n");
+    Report("but AddressSanitizer can not provide more details.\n");
+    ReportODRViolation(g, FindRegistrationSite(g), g, FindRegistrationSite(g));
+    CHECK(AddrIsAlignedByGranularity(g->beg));
+  }
   CHECK(AddrIsAlignedByGranularity(g->size_with_redzone));
   if (flags()->detect_odr_violation) {
     // Try detecting ODR (One Definition Rule) violation, i.e. the situation
