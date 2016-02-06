@@ -269,17 +269,20 @@ public:
 private:
   StringRef Data;
   uint64_t Address;
-  // A map from MD5 hash keys to function name strings.
-  std::vector<std::pair<uint64_t, std::string>> HashNameMap;
+  // Unique name strings.
+  StringSet<> NameTab;
+  // A map from MD5 keys to function name strings.
+  std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
   AddrHashMap AddrToMD5Map;
 
 public:
-  InstrProfSymtab() : Data(), Address(0), HashNameMap(), AddrToMD5Map() {}
+  InstrProfSymtab()
+      : Data(), Address(0), NameTab(), MD5NameMap(), AddrToMD5Map() {}
 
   /// Create InstrProfSymtab from an object file section which
-  /// contains function PGO names. When section may contain raw 
+  /// contains function PGO names. When section may contain raw
   /// string data or string data in compressed form. This method
   /// only initialize the symtab with reference to the data and
   /// the section base address. The decompression will be delayed
@@ -307,8 +310,10 @@ public:
   /// Update the symtab by adding \p FuncName to the table. This interface
   /// is used by the raw and text profile readers.
   void addFuncName(StringRef FuncName) {
-    HashNameMap.push_back(std::make_pair(
-        IndexedInstrProf::ComputeHash(FuncName), FuncName.str()));
+    auto Ins = NameTab.insert(FuncName);
+    if (Ins.second)
+      MD5NameMap.push_back(std::make_pair(
+          IndexedInstrProf::ComputeHash(FuncName), Ins.first->getKey()));
   }
   /// Map a function address to its name's MD5 hash. This interface
   /// is only used by the raw profiler reader.
@@ -346,15 +351,13 @@ std::error_code InstrProfSymtab::create(StringRef NameStrings) {
 template <typename NameIterRange>
 void InstrProfSymtab::create(const NameIterRange &IterRange) {
   for (auto Name : IterRange)
-    HashNameMap.push_back(
-        std::make_pair(IndexedInstrProf::ComputeHash(Name), Name.str()));
+    addFuncName(Name);
+
   finalizeSymtab();
 }
 
 void InstrProfSymtab::finalizeSymtab() {
-  std::sort(HashNameMap.begin(), HashNameMap.end(), less_first());
-  HashNameMap.erase(std::unique(HashNameMap.begin(), HashNameMap.end()),
-                    HashNameMap.end());
+  std::sort(MD5NameMap.begin(), MD5NameMap.end(), less_first());
   std::sort(AddrToMD5Map.begin(), AddrToMD5Map.end(), less_first());
   AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
                      AddrToMD5Map.end());
@@ -362,10 +365,10 @@ void InstrProfSymtab::finalizeSymtab() {
 
 StringRef InstrProfSymtab::getFuncName(uint64_t FuncMD5Hash) {
   auto Result =
-      std::lower_bound(HashNameMap.begin(), HashNameMap.end(), FuncMD5Hash,
+      std::lower_bound(MD5NameMap.begin(), MD5NameMap.end(), FuncMD5Hash,
                        [](const std::pair<uint64_t, std::string> &LHS,
                           uint64_t RHS) { return LHS.first < RHS; });
-  if (Result != HashNameMap.end())
+  if (Result != MD5NameMap.end())
     return Result->second;
   return StringRef();
 }

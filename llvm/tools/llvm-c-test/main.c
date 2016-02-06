@@ -60,33 +60,33 @@ int main(int argc, char **argv) {
   LLVMInitializeCore(pr);
 
   if (argc == 2 && !strcmp(argv[1], "--lazy-new-module-dump")) {
-    return module_dump(true, true);
+    return llvm_module_dump(true, true);
   } else if (argc == 2 && !strcmp(argv[1], "--new-module-dump")) {
-    return module_dump(false, true);
+    return llvm_module_dump(false, true);
   } else if (argc == 2 && !strcmp(argv[1], "--lazy-module-dump")) {
-    return module_dump(true, false);
+    return llvm_module_dump(true, false);
   } else if (argc == 2 && !strcmp(argv[1], "--module-dump")) {
-    return module_dump(false, false);
+    return llvm_module_dump(false, false);
   } else if (argc == 2 && !strcmp(argv[1], "--module-list-functions")) {
-    return module_list_functions();
+    return llvm_module_list_functions();
   } else if (argc == 2 && !strcmp(argv[1], "--module-list-globals")) {
-    return module_list_globals();
+    return llvm_module_list_globals();
   } else if (argc == 2 && !strcmp(argv[1], "--targets-list")) {
-    return targets_list();
+    return llvm_targets_list();
   } else if (argc == 2 && !strcmp(argv[1], "--object-list-sections")) {
-    return object_list_sections();
+    return llvm_object_list_sections();
   } else if (argc == 2 && !strcmp(argv[1], "--object-list-symbols")) {
-    return object_list_symbols();
+    return llvm_object_list_symbols();
   } else if (argc == 2 && !strcmp(argv[1], "--disassemble")) {
-    return disassemble();
+    return llvm_disassemble();
   } else if (argc == 2 && !strcmp(argv[1], "--calc")) {
-    return calc();
+    return llvm_calc();
   } else if (argc == 2 && !strcmp(argv[1], "--add-named-metadata-operand")) {
-    return add_named_metadata_operand();
+    return llvm_add_named_metadata_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--set-metadata")) {
-    return set_metadata();
+    return llvm_set_metadata();
   } else if (argc == 2 && !strcmp(argv[1], "--echo")) {
-    return echo();
+    return llvm_echo();
   } else {
     print_usage();
   }

@@ -139,9 +139,9 @@ static void handle_line(char **tokens, int ntokens) {
   LLVMDisposeModule(M);
 }
 
-int calc(void) {
+int llvm_calc(void) {
 
-  tokenize_stdin(handle_line);
+  llvm_tokenize_stdin(handle_line);
 
   return 0;
 }

@@ -214,20 +214,33 @@ namespace llvm {
   void reserveIndirectRegisters(BitVector &Reserved,
                                 const MachineFunction &MF) const;
 
-  unsigned calculateIndirectAddress(unsigned RegIndex,
-                                    unsigned Channel) const override;
+  /// Calculate the "Indirect Address" for the given \p RegIndex and
+  /// \p Channel
+  ///
+  /// We model indirect addressing using a virtual address space that can be
+  /// accesed with loads and stores.  The "Indirect Address" is the memory
+  /// address in this virtual address space that maps to the given \p RegIndex
+  /// and \p Channel.
+  unsigned calculateIndirectAddress(unsigned RegIndex, unsigned Channel) const;
+
 
   const TargetRegisterClass *getIndirectAddrRegClass() const override;
 
+  /// \brief Build instruction(s) for an indirect register write.
+  ///
+  /// \returns The instruction that performs the indirect register write
   MachineInstrBuilder buildIndirectWrite(MachineBasicBlock *MBB,
-                          MachineBasicBlock::iterator I,
-                          unsigned ValueReg, unsigned Address,
-                          unsigned OffsetReg) const override;
+                                         MachineBasicBlock::iterator I,
+                                         unsigned ValueReg, unsigned Address,
+                                         unsigned OffsetReg) const;
 
+  /// \brief Build instruction(s) for an indirect register read.
+  ///
+  /// \returns The instruction that performs the indirect register read
   MachineInstrBuilder buildIndirectRead(MachineBasicBlock *MBB,
                                         MachineBasicBlock::iterator I,
                                         unsigned ValueReg, unsigned Address,
-                                        unsigned OffsetReg) const override;
+                                        unsigned OffsetReg) const;
 
   unsigned getMaxAlusPerClause() const;
 

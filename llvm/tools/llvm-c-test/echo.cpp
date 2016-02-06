@@ -520,10 +520,10 @@ static void clone_functions(LLVMModuleRef Src, LLVMModuleRef Dst) {
   }
 }
 
-int echo(void) {
+int llvm_echo(void) {
   LLVMEnablePrettyStackTrace();
 
-  LLVMModuleRef Src = load_module(false, true);
+  LLVMModuleRef Src = llvm_load_module(false, true);
 
   LLVMContextRef Ctx = LLVMContextCreate();
   LLVMModuleRef Dst = LLVMModuleCreateWithNameInContext("<stdin>", Ctx);

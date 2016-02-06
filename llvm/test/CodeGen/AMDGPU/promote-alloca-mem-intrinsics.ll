@@ -11,7 +11,7 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i32, i1) #0
 declare i32 @llvm.objectsize.i32.p0i8(i8*, i1) #1
 
 ; CHECK-LABEL: @promote_with_memcpy(
-; CHECK: getelementptr inbounds [256 x [17 x i32]], [256 x [17 x i32]] addrspace(3)* @alloca, i32 0, i32 %{{[0-9]+}}
+; CHECK: getelementptr inbounds [256 x [17 x i32]], [256 x [17 x i32]] addrspace(3)* @promote_with_memcpy.alloca, i32 0, i32 %{{[0-9]+}}
 ; CHECK: call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %alloca.bc, i8 addrspace(1)* %in.bc, i32 68, i32 4, i1 false)
 ; CHECK: call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %out.bc, i8 addrspace(3)* %alloca.bc, i32 68, i32 4, i1 false)
 define void @promote_with_memcpy(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
@@ -25,7 +25,7 @@ define void @promote_with_memcpy(i32 addrspace(1)* %out, i32 addrspace(1)* %in) 
 }
 
 ; CHECK-LABEL: @promote_with_memmove(
-; CHECK: getelementptr inbounds [256 x [17 x i32]], [256 x [17 x i32]] addrspace(3)* @alloca.1, i32 0, i32 %{{[0-9]+}}
+; CHECK: getelementptr inbounds [256 x [17 x i32]], [256 x [17 x i32]] addrspace(3)* @promote_with_memmove.alloca, i32 0, i32 %{{[0-9]+}}
 ; CHECK: call void @llvm.memmove.p3i8.p1i8.i32(i8 addrspace(3)* %alloca.bc, i8 addrspace(1)* %in.bc, i32 68, i32 4, i1 false)
 ; CHECK: call void @llvm.memmove.p1i8.p3i8.i32(i8 addrspace(1)* %out.bc, i8 addrspace(3)* %alloca.bc, i32 68, i32 4, i1 false)
 define void @promote_with_memmove(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
@@ -39,7 +39,7 @@ define void @promote_with_memmove(i32 addrspace(1)* %out, i32 addrspace(1)* %in)
 }
 
 ; CHECK-LABEL: @promote_with_memset(
-; CHECK: getelementptr inbounds [256 x [17 x i32]], [256 x [17 x i32]] addrspace(3)* @alloca.2, i32 0, i32 %{{[0-9]+}}
+; CHECK: getelementptr inbounds [256 x [17 x i32]], [256 x [17 x i32]] addrspace(3)* @promote_with_memset.alloca, i32 0, i32 %{{[0-9]+}}
 ; CHECK: call void @llvm.memset.p3i8.i32(i8 addrspace(3)* %alloca.bc, i8 7, i32 68, i32 4, i1 false)
 define void @promote_with_memset(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %alloca = alloca [17 x i32], align 16
@@ -51,7 +51,7 @@ define void @promote_with_memset(i32 addrspace(1)* %out, i32 addrspace(1)* %in) 
 }
 
 ; CHECK-LABEL: @promote_with_objectsize(
-; CHECK: [[PTR:%[0-9]+]] = getelementptr inbounds [256 x [17 x i32]], [256 x [17 x i32]] addrspace(3)* @alloca.3, i32 0, i32 %{{[0-9]+}}
+; CHECK: [[PTR:%[0-9]+]] = getelementptr inbounds [256 x [17 x i32]], [256 x [17 x i32]] addrspace(3)* @promote_with_objectsize.alloca, i32 0, i32 %{{[0-9]+}}
 ; CHECK: call i32 @llvm.objectsize.i32.p3i8(i8 addrspace(3)* %alloca.bc, i1 false)
 define void @promote_with_objectsize(i32 addrspace(1)* %out) #0 {
   %alloca = alloca [17 x i32], align 16

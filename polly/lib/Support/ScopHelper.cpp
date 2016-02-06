@@ -442,3 +442,14 @@ bool polly::canSynthesize(const Value *V, const llvm::LoopInfo *LI,
 
   return false;
 }
+
+llvm::BasicBlock *polly::getUseBlock(llvm::Use &U) {
+  Instruction *UI = dyn_cast<Instruction>(U.getUser());
+  if (!UI)
+    return nullptr;
+
+  if (PHINode *PHI = dyn_cast<PHINode>(UI))
+    return PHI->getIncomingBlock(U);
+
+  return UI->getParent();
+}

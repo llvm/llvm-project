@@ -200,6 +200,10 @@ struct ClassInfo {
 
   /// For custom match classes: the diagnostic kind for when the predicate fails.
   std::string DiagnosticType;
+
+  /// Is this operand optional and not always required.
+  bool IsOptional;
+
 public:
   /// isRegisterClass() - Check if this is a register class.
   bool isRegisterClass() const {
@@ -1115,6 +1119,7 @@ ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token) {
     Entry->RenderMethod = "<invalid>";
     Entry->ParserMethod = "";
     Entry->DiagnosticType = "";
+    Entry->IsOptional = false;
   }
 
   return Entry;
@@ -1249,6 +1254,7 @@ buildRegisterClasses(SmallPtrSetImpl<Record*> &SingletonRegisters) {
     CI->Registers = RS;
     // FIXME: diagnostic type.
     CI->DiagnosticType = "";
+    CI->IsOptional = false;
     RegisterSetClasses.insert(std::make_pair(RS, CI));
     ++Index;
   }
@@ -1362,6 +1368,10 @@ void AsmMatcherInfo::buildOperandClasses() {
     Init *DiagnosticType = Rec->getValueInit("DiagnosticType");
     if (StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
       CI->DiagnosticType = SI->getValue();
+
+    Init *IsOptional = Rec->getValueInit("IsOptional");
+    if (BitInit *BI = dyn_cast<BitInit>(IsOptional))
+      CI->IsOptional = BI->getValue();
 
     ++Index;
   }
@@ -2102,6 +2112,7 @@ static void emitMatchClassEnumeration(CodeGenTarget &Target,
      << "/// instruction matching.\n";
   OS << "enum MatchClassKind {\n";
   OS << "  InvalidMatchClass = 0,\n";
+  OS << "  OptionalMatchClass = 1,\n";
   for (const auto &CI : Infos) {
     OS << "  " << CI.Name << ", // ";
     if (CI.Kind == ClassInfo::Token) {
@@ -2188,6 +2199,8 @@ static void emitIsSubclass(CodeGenTarget &Target,
   bool EmittedSwitch = false;
   for (const auto &A : Infos) {
     std::vector<StringRef> SuperClasses;
+    if (A.IsOptional)
+      SuperClasses.push_back("OptionalMatchClass");
     for (const auto &B : Infos) {
       if (&A != &B && A.isSubsetOf(B))
         SuperClasses.push_back(B.Name);
@@ -3100,7 +3113,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      auto Formal = static_cast<MatchClassKind>(it->Classes[i]);\n";
   OS << "      if (i" << (HasMnemonicFirst ? "+1" : "")
      << " >= Operands.size()) {\n";
-  OS << "        OperandsValid = (Formal == " <<"InvalidMatchClass);\n";
+  OS << "        OperandsValid = (Formal == " <<"InvalidMatchClass) || "
+                                 "isSubclass(Formal, OptionalMatchClass);\n";
   OS << "        if (!OperandsValid) ErrorInfo = i"
      << (HasMnemonicFirst ? "+1" : "") << ";\n";
   OS << "        break;\n";

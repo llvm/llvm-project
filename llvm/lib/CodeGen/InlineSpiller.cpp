@@ -981,18 +981,20 @@ void InlineSpiller::reMaterializeAll() {
   DEBUG(dbgs() << "Remat created " << DeadDefs.size() << " dead defs.\n");
   Edit->eliminateDeadDefs(DeadDefs, RegsToSpill);
 
-  // Get rid of deleted and empty intervals.
+  // LiveRangeEdit::eliminateDeadDef is used to remove dead define instructions
+  // after rematerialization.  To remove a VNI for a vreg from its LiveInterval,
+  // LiveIntervals::removeVRegDefAt is used. However, after non-PHI VNIs are all
+  // removed, PHI VNI are still left in the LiveInterval.
+  // So to get rid of unused reg, we need to check whether it has non-dbg
+  // reference instead of whether it has non-empty interval.
   unsigned ResultPos = 0;
   for (unsigned Reg : RegsToSpill) {
-    if (!LIS.hasInterval(Reg))
-      continue;
-
-    LiveInterval &LI = LIS.getInterval(Reg);
-    if (LI.empty()) {
+    if (MRI.reg_nodbg_empty(Reg)) {
       Edit->eraseVirtReg(Reg);
       continue;
     }
-
+    assert((LIS.hasInterval(Reg) && !LIS.getInterval(Reg).empty()) &&
+           "Reg with empty interval has reference");
     RegsToSpill[ResultPos++] = Reg;
   }
   RegsToSpill.erase(RegsToSpill.begin() + ResultPos, RegsToSpill.end());

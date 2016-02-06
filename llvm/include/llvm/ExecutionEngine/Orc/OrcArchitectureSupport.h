@@ -117,7 +117,7 @@ class OrcX86_64 {
 public:
   static const unsigned PointerSize = 8;
   static const unsigned TrampolineSize = 8;
-  static const unsigned ResolverCodeSize = 0x78;
+  static const unsigned ResolverCodeSize = 0x6C;
 
   typedef GenericIndirectStubsInfo<8> IndirectStubsInfo;
 

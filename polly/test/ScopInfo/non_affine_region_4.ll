@@ -16,14 +16,14 @@
 ;
 ; CHECK:       Arrays {
 ; CHECK-NEXT:      i32 MemRef_A[*]; // Element size 4
-; CHECK-NEXT:      i32 MemRef_x; [BasePtrOrigin: MemRef_A] // Element size 4
 ; CHECK-NEXT:      i32 MemRef_y__phi; // Element size 4
+; CHECK-NEXT:      i32 MemRef_x; [BasePtrOrigin: MemRef_A] // Element size 4
 ; CHECK-NEXT:  }
 ;
 ; CHECK:       Arrays (Bounds as pw_affs) {
 ; CHECK-NEXT:      i32 MemRef_A[*]; // Element size 4
-; CHECK-NEXT:      i32 MemRef_x; [BasePtrOrigin: MemRef_A] // Element size 4
 ; CHECK-NEXT:      i32 MemRef_y__phi; // Element size 4
+; CHECK-NEXT:      i32 MemRef_x; [BasePtrOrigin: MemRef_A] // Element size 4
 ; CHECK-NEXT:  }
 ;
 ; CHECK:       Statements {
@@ -35,18 +35,18 @@
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_x[] };
-; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_y__phi[] };
+; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:              { Stmt_bb2__TO__bb7[i0] -> MemRef_x[] };
 ; CHECK-NEXT:      Stmt_bb7
 ; CHECK-NEXT:          Domain :=
 ; CHECK-NEXT:              { Stmt_bb7[i0] : 0 <= i0 <= 1023 };
 ; CHECK-NEXT:          Schedule :=
 ; CHECK-NEXT:              { Stmt_bb7[i0] -> [i0, 1] };
 ; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:              { Stmt_bb7[i0] -> MemRef_x[] };
-; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:              { Stmt_bb7[i0] -> MemRef_y__phi[] };
+; CHECK-NEXT:          ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:              { Stmt_bb7[i0] -> MemRef_x[] };
 ; CHECK-NEXT:          MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:              { Stmt_bb7[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:  }

@@ -34,6 +34,7 @@ public:
     void *Mem = ::operator new(totalSizeToAlloc<short>(NumShorts));
     return new (Mem) Class1(ShortArray, NumShorts);
   }
+  using TrailingObjects::operator delete;
 
   short get(unsigned Num) const { return getTrailingObjects<short>()[Num]; }
 
@@ -78,6 +79,7 @@ public:
       *C->getTrailingObjects<double>() = D;
     return C;
   }
+  using TrailingObjects::operator delete;
 
   short getShort() const {
     if (!HasShort)

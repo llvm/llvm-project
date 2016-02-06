@@ -73,35 +73,11 @@ public:
 // Pure virtual funtions to be implemented by sub-classes.
 //===---------------------------------------------------------------------===//
 
-  /// \brief Calculate the "Indirect Address" for the given \p RegIndex and
-  ///        \p Channel
-  ///
-  /// We model indirect addressing using a virtual address space that can be
-  /// accesed with loads and stores.  The "Indirect Address" is the memory
-  /// address in this virtual address space that maps to the given \p RegIndex
-  /// and \p Channel.
-  virtual unsigned calculateIndirectAddress(unsigned RegIndex,
-                                            unsigned Channel) const = 0;
-
   /// \returns The register class to be used for loading and storing values
   /// from an "Indirect Address" .
-  virtual const TargetRegisterClass *getIndirectAddrRegClass() const = 0;
-
-  /// \brief Build instruction(s) for an indirect register write.
-  ///
-  /// \returns The instruction that performs the indirect register write
-  virtual MachineInstrBuilder buildIndirectWrite(MachineBasicBlock *MBB,
-                                    MachineBasicBlock::iterator I,
-                                    unsigned ValueReg, unsigned Address,
-                                    unsigned OffsetReg) const = 0;
-
-  /// \brief Build instruction(s) for an indirect register read.
-  ///
-  /// \returns The instruction that performs the indirect register read
-  virtual MachineInstrBuilder buildIndirectRead(MachineBasicBlock *MBB,
-                                    MachineBasicBlock::iterator I,
-                                    unsigned ValueReg, unsigned Address,
-                                    unsigned OffsetReg) const = 0;
+  virtual const TargetRegisterClass *getIndirectAddrRegClass() const {
+    llvm_unreachable("getIndirectAddrRegClass() not implemented");
+  }
 
   /// \brief Given a MIMG \p Opcode that writes all 4 channels, return the
   /// equivalent opcode that writes \p Channels Channels.

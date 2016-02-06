@@ -92,12 +92,12 @@
 ; CHECK-NEXT:             { Stmt_bb12[i0, i1, i2] -> [i0, 2, i1, 2, i2, 3] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             { Stmt_bb12[i0, i1, i2] -> MemRef_x_3__phi[] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             { Stmt_bb12[i0, i1, i2] -> MemRef_x_3[] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             { Stmt_bb12[i0, i1, i2] -> MemRef_a[i0, i1] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             { Stmt_bb12[i0, i1, i2] -> MemRef_a[i0, i1] };
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             { Stmt_bb12[i0, i1, i2] -> MemRef_x_3[] };
 ; CHECK-NEXT:     Stmt_bb16
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             { Stmt_bb16[i0, i1, i2] : 0 <= i0 <= 99 and 0 <= i1 <= 99 and 0 <= i2 <= 99 };

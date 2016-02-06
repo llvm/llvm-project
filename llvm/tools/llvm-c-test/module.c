@@ -25,7 +25,7 @@ static void diagnosticHandler(LLVMDiagnosticInfoRef DI, void *C) {
   exit(1);
 }
 
-LLVMModuleRef load_module(bool Lazy, bool New) {
+LLVMModuleRef llvm_load_module(bool Lazy, bool New) {
   LLVMMemoryBufferRef MB;
   LLVMModuleRef M;
   char *msg = NULL;
@@ -62,8 +62,8 @@ LLVMModuleRef load_module(bool Lazy, bool New) {
   return M;
 }
 
-int module_dump(bool Lazy, bool New) {
-  LLVMModuleRef M = load_module(Lazy, New);
+int llvm_module_dump(bool Lazy, bool New) {
+  LLVMModuleRef M = llvm_load_module(Lazy, New);
 
   char *irstr = LLVMPrintModuleToString(M);
   puts(irstr);
@@ -74,8 +74,8 @@ int module_dump(bool Lazy, bool New) {
   return 0;
 }
 
-int module_list_functions(void) {
-  LLVMModuleRef M = load_module(false, false);
+int llvm_module_list_functions(void) {
+  LLVMModuleRef M = llvm_load_module(false, false);
   LLVMValueRef f;
 
   f = LLVMGetFirstFunction(M);
@@ -115,8 +115,8 @@ int module_list_functions(void) {
   return 0;
 }
 
-int module_list_globals(void) {
-  LLVMModuleRef M = load_module(false, false);
+int llvm_module_list_globals(void) {
+  LLVMModuleRef M = llvm_load_module(false, false);
   LLVMValueRef g;
 
   g = LLVMGetFirstGlobal(M);

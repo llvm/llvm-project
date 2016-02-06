@@ -21,33 +21,33 @@ extern "C" {
 #endif
 
 // helpers.c
-void tokenize_stdin(void (*cb)(char **tokens, int ntokens));
+void llvm_tokenize_stdin(void (*cb)(char **tokens, int ntokens));
 
 // module.c
-LLVMModuleRef load_module(bool Lazy, bool New);
-int module_dump(bool Lazy, bool New);
-int module_list_functions(void);
-int module_list_globals(void);
+LLVMModuleRef llvm_load_module(bool Lazy, bool New);
+int llvm_module_dump(bool Lazy, bool New);
+int llvm_module_list_functions(void);
+int llvm_module_list_globals(void);
 
 // calc.c
-int calc(void);
+int llvm_calc(void);
 
 // disassemble.c
-int disassemble(void);
+int llvm_disassemble(void);
 
 // metadata.c
-int add_named_metadata_operand(void);
-int set_metadata(void);
+int llvm_add_named_metadata_operand(void);
+int llvm_set_metadata(void);
 
 // object.c
-int object_list_sections(void);
-int object_list_symbols(void);
+int llvm_object_list_sections(void);
+int llvm_object_list_symbols(void);
 
 // targets.c
-int targets_list(void);
+int llvm_targets_list(void);
 
 // echo.c
-int echo(void);
+int llvm_echo(void);
 
 #ifdef __cplusplus
 }

@@ -605,6 +605,15 @@ class AsmOperandClass {
   // match failure error message. By default, use a generic "invalid operand"
   // diagnostic. The target AsmParser maps these codes to text.
   string DiagnosticType = "";
+
+  /// Set to 1 if this operand is optional and not always required. Typically,
+  /// the AsmParser will emit an error when it finishes parsing an
+  /// instruction if it hasn't matched all the operands yet.  However, this
+  /// error will be suppressed if all of the remaining unmatched operands are
+  /// marked as IsOptional.
+  ///
+  /// Optional arguments must be at the end of the operand list.
+  bit IsOptional = 0;
 }
 
 def ImmAsmOperand : AsmOperandClass {

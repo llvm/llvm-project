@@ -2039,14 +2039,15 @@ class ScopInfo : public RegionPass {
   /// @brief Analyze and extract the cross-BB scalar dependences (or,
   ///        dataflow dependencies) of an instruction.
   ///
-  /// @param Inst               The instruction to be analyzed
-  /// @param R                  The SCoP region
-  /// @param NonAffineSubRegion The non affine sub-region @p Inst is in.
+  /// @param Inst    The instruction to be analyzed.
+  void buildScalarDependences(Instruction *Inst);
+
+  /// @brief Search for uses of the llvm::Value defined by @p Inst that are not
+  ///        within the SCoP. If there is such use, add a SCALAR WRITE such that
+  ///        it is available after the SCoP as escaping value.
   ///
-  /// @return     True if the Instruction is used in other BB and a scalar write
-  ///             Access is required.
-  bool buildScalarDependences(Instruction *Inst, Region *R,
-                              Region *NonAffineSubRegio);
+  /// @param Inst The instruction to be analyzed.
+  void buildEscapingDependences(Instruction *Inst);
 
   /// @brief Create MemoryAccesses for the given PHI node in the given region.
   ///
