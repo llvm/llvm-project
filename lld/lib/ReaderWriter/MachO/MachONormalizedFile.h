@@ -172,7 +172,8 @@ struct Segment {
   StringRef     name;
   Hex64         address;
   Hex64         size;
-  VMProtect     access;
+  VMProtect     init_access;
+  VMProtect     max_access;
 };
 
 /// Only used in normalized final linked images to specify on which dylibs

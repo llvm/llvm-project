@@ -874,6 +874,9 @@ CommandInterpreter::GetCommandSP (const char *cmd_cstr, bool include_aliases, bo
 bool
 CommandInterpreter::AddCommand (const char *name, const lldb::CommandObjectSP &cmd_sp, bool can_replace)
 {
+    if (cmd_sp.get())
+        assert((this == &cmd_sp->GetCommandInterpreter()) && "tried to add a CommandObject from a different interpreter");
+
     if (name && name[0])
     {
         std::string name_sstr(name);
@@ -893,9 +896,11 @@ CommandInterpreter::AddUserCommand (std::string name,
                                     const lldb::CommandObjectSP &cmd_sp,
                                     bool can_replace)
 {
+    if (cmd_sp.get())
+        assert((this == &cmd_sp->GetCommandInterpreter()) && "tried to add a CommandObject from a different interpreter");
+
     if (!name.empty())
     {
-        
         const char* name_cstr = name.c_str();
         
         // do not allow replacement of internal commands
@@ -1110,6 +1115,9 @@ CommandInterpreter::UserCommandExists (const char *cmd)
 void
 CommandInterpreter::AddAlias (const char *alias_name, CommandObjectSP& command_obj_sp)
 {
+    if (command_obj_sp.get())
+        assert((this == &command_obj_sp->GetCommandInterpreter()) && "tried to add a CommandObject from a different interpreter");
+
     command_obj_sp->SetIsAlias (true);
     m_alias_dict[alias_name] = command_obj_sp;
 }

@@ -504,10 +504,11 @@ struct ScalarTraits<VMProtect> {
 template <>
 struct MappingTraits<Segment> {
   static void mapping(IO &io, Segment& seg) {
-    io.mapRequired("name",      seg.name);
-    io.mapRequired("address",   seg.address);
-    io.mapRequired("size",      seg.size);
-    io.mapRequired("access",    seg.access);
+    io.mapRequired("name",            seg.name);
+    io.mapRequired("address",         seg.address);
+    io.mapRequired("size",            seg.size);
+    io.mapRequired("init-access",     seg.init_access);
+    io.mapRequired("max-access",      seg.max_access);
   }
 };
 

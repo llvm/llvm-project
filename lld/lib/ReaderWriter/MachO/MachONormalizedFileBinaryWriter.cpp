@@ -570,7 +570,7 @@ void MachOFileLayout::buildFileOffsets() {
                   llvm::dbgs() << "buildFileOffsets()\n");
   for (const Segment &sg : _file.segments) {
     _segInfo[&sg].fileOffset = fileOffset;
-    if ((_seg1addr == INT64_MAX) && sg.access)
+    if ((_seg1addr == INT64_MAX) && sg.init_access)
       _seg1addr = sg.address;
     DEBUG_WITH_TYPE("MachOFileLayout",
                   llvm::dbgs() << "  segment=" << sg.name
@@ -578,7 +578,7 @@ void MachOFileLayout::buildFileOffsets() {
 
     uint32_t segFileSize = 0;
     // A segment that is not zero-fill must use a least one page of disk space.
-    if (sg.access)
+    if (sg.init_access)
       segFileSize = _file.pageSize;
     for (const Section *s : _segInfo[&sg].sections) {
       uint32_t sectOffset = s->address - sg.address;
@@ -711,8 +711,8 @@ std::error_code MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
       cmd->vmsize   = llvm::alignTo(linkeditSize, _file.pageSize);
       cmd->fileoff  = _startOfLinkEdit;
       cmd->filesize = linkeditSize;
-      cmd->initprot = seg.access;
-      cmd->maxprot  = seg.access;
+      cmd->initprot = seg.init_access;
+      cmd->maxprot  = seg.max_access;
       cmd->nsects   = 0;
       cmd->flags    = 0;
       if (_swap)
@@ -731,8 +731,8 @@ std::error_code MachOFileLayout::writeSegmentLoadCommands(uint8_t *&lc) {
     cmd->vmsize   = seg.size;
     cmd->fileoff  = segInfo.fileOffset;
     cmd->filesize = segInfo.fileSize;
-    cmd->maxprot  = seg.access;
-    cmd->initprot = seg.access;
+    cmd->initprot = seg.init_access;
+    cmd->maxprot  = seg.max_access;
     cmd->nsects   = segInfo.sections.size();
     cmd->flags    = 0;
     if (_swap)

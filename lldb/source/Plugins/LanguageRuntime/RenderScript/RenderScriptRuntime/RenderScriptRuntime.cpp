@@ -4167,12 +4167,7 @@ RenderScriptRuntime::RenderScriptRuntime(Process *process)
 lldb::CommandObjectSP
 RenderScriptRuntime::GetCommandObject(lldb_private::CommandInterpreter &interpreter)
 {
-    static CommandObjectSP command_object;
-    if (!command_object)
-    {
-        command_object.reset(new CommandObjectRenderScriptRuntime(interpreter));
-    }
-    return command_object;
+    return CommandObjectSP(new CommandObjectRenderScriptRuntime(interpreter));
 }
 
 RenderScriptRuntime::~RenderScriptRuntime() = default;

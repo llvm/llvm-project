@@ -92,13 +92,15 @@ struct SegmentInfo {
   StringRef                  name;
   uint64_t                   address;
   uint64_t                   size;
-  uint32_t                   access;
+  uint32_t                   init_access;
+  uint32_t                   max_access;
   std::vector<SectionInfo*>  sections;
   uint32_t                   normalizedSegmentIndex;
 };
 
 SegmentInfo::SegmentInfo(StringRef n)
- : name(n), address(0), size(0), access(0), normalizedSegmentIndex(0) {
+ : name(n), address(0), size(0), init_access(0), max_access(0),
+   normalizedSegmentIndex(0) {
 }
 
 class Util {
@@ -432,12 +434,38 @@ SegmentInfo *Util::segmentForName(StringRef segName) {
       return si;
   }
   auto *info = new (_allocator) SegmentInfo(segName);
+
+  // Set the initial segment protection.
   if (segName.equals("__TEXT"))
-    info->access = VM_PROT_READ | VM_PROT_EXECUTE;
-  else if (segName.equals("__DATA"))
-    info->access = VM_PROT_READ | VM_PROT_WRITE;
+    info->init_access = VM_PROT_READ | VM_PROT_EXECUTE;
   else if (segName.equals("__PAGEZERO"))
-    info->access = 0;
+    info->init_access = 0;
+  else if (segName.equals("__LINKEDIT"))
+    info->init_access = VM_PROT_READ;
+  else {
+    // All others default to read-write
+    info->init_access = VM_PROT_READ | VM_PROT_WRITE;
+  }
+
+  // Set max segment protection
+  // Note, its overkill to use a switch statement here, but makes it so much
+  // easier to use switch coverage to catch new cases.
+  switch (_ctx.os()) {
+    case lld::MachOLinkingContext::OS::unknown:
+    case lld::MachOLinkingContext::OS::macOSX:
+    case lld::MachOLinkingContext::OS::iOS_simulator:
+      if (segName.equals("__PAGEZERO")) {
+        info->max_access = 0;
+        break;
+      }
+      // All others default to all
+      info->max_access = VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE;
+      break;
+    case lld::MachOLinkingContext::OS::iOS:
+      // iPhoneOS always uses same protection for max and initial
+      info->max_access = info->init_access;
+      break;
+  }
   _segmentInfos.push_back(info);
   return info;
 }
@@ -589,7 +617,8 @@ void Util::copySegmentInfo(NormalizedFile &file) {
     seg.name    = sgi->name;
     seg.address = sgi->address;
     seg.size    = sgi->size;
-    seg.access  = sgi->access;
+    seg.init_access  = sgi->init_access;
+    seg.max_access  = sgi->max_access;
     file.segments.push_back(seg);
   }
 }
