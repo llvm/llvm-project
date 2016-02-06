@@ -173,7 +173,7 @@ struct DefRangeFramePointerRelFullScopeSym {
 struct DefRangeRegisterRelSym {
   ulittle16_t BaseRegister;
   ulittle16_t Flags;
-  ulittle32_t BasePointerOffset;
+  little32_t BasePointerOffset;
   LocalVariableAddrRange Range;
   // LocalVariableAddrGap Gaps[];
 

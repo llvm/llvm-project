@@ -176,6 +176,7 @@ void initializeGlobalMergePass(PassRegistry&);
 void initializeLoopRerollPass(PassRegistry&);
 void initializeLoopUnrollPass(PassRegistry&);
 void initializeLoopUnswitchPass(PassRegistry&);
+void initializeLoopVersioningLICMPass(PassRegistry&);
 void initializeLoopIdiomRecognizePass(PassRegistry&);
 void initializeLowerAtomicPass(PassRegistry&);
 void initializeLowerBitSetsPass(PassRegistry&);

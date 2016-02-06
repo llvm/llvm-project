@@ -116,6 +116,10 @@ static cl::opt<std::string> RunPGOInstrUse(
     cl::desc("Enable use phase of PGO instrumentation and specify the path "
              "of profile data file"));
 
+static cl::opt<bool> UseLoopVersioningLICM(
+    "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
+    cl::desc("Enable the experimental Loop Versioning LICM pass"));
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -374,6 +378,16 @@ void PassManagerBuilder::populateModulePassManager(
   // pass manager that we are specifically trying to avoid. To prevent this
   // we must insert a no-op module pass to reset the pass manager.
   MPM.add(createBarrierNoopPass());
+
+  // Scheduling LoopVersioningLICM when inining is over, because after that
+  // we may see more accurate aliasing. Reason to run this late is that too
+  // early versioning may prevent further inlining due to increase of code
+  // size. By placing it just after inlining other optimizations which runs 
+  // later might get benefit of no-alias assumption in clone loop. 
+  if (UseLoopVersioningLICM) {
+    MPM.add(createLoopVersioningLICMPass());    // Do LoopVersioningLICM
+    MPM.add(createLICMPass());                  // Hoist loop invariants
+  }
 
   if (!DisableUnitAtATime)
     MPM.add(createReversePostOrderFunctionAttrsPass());

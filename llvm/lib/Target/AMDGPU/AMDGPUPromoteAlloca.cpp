@@ -500,10 +500,18 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
   DEBUG(dbgs() << "Promoting alloca to local memory\n");
   LocalMemAvailable -= AllocaSize;
 
+  Function *F = I.getParent()->getParent();
+
   Type *GVTy = ArrayType::get(I.getAllocatedType(), 256);
   GlobalVariable *GV = new GlobalVariable(
-      *Mod, GVTy, false, GlobalValue::ExternalLinkage, 0, I.getName(), 0,
-      GlobalVariable::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS);
+      *Mod, GVTy, false, GlobalValue::InternalLinkage,
+      UndefValue::get(GVTy),
+      Twine(F->getName()) + Twine('.') + I.getName(),
+      nullptr,
+      GlobalVariable::NotThreadLocal,
+      AMDGPUAS::LOCAL_ADDRESS);
+  GV->setUnnamedAddr(true);
+  GV->setAlignment(I.getAlignment());
 
   Value *TCntY, *TCntZ;
 

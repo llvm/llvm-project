@@ -125,7 +125,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
                                            int LookUpDepth) {
   // Can not look any further - give up now
   if (LookUpDepth <= 0)
-    return Optional<int>();
+    return None;
 
   // Spill location is known for gc relocates
   if (const auto *Relocate = dyn_cast<GCRelocateInst>(Val)) {
@@ -134,7 +134,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
 
     auto It = SpillMap.find(Relocate->getDerivedPtr());
     if (It == SpillMap.end())
-      return Optional<int>();
+      return None;
 
     return It->second;
   }
@@ -154,10 +154,10 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
       Optional<int> SpillSlot =
           findPreviousSpillSlot(IncomingValue, Builder, LookUpDepth - 1);
       if (!SpillSlot.hasValue())
-        return Optional<int>();
+        return None;
 
       if (MergedResult.hasValue() && *MergedResult != *SpillSlot)
-        return Optional<int>();
+        return None;
 
       MergedResult = SpillSlot;
     }
@@ -192,7 +192,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
   // which we visit values is unspecified.
 
   // Don't know any information about this instruction
-  return Optional<int>();
+  return None;
 }
 
 /// Try to find existing copies of the incoming values in stack slots used for

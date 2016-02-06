@@ -1580,6 +1580,8 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
       W.printBoolean("HasSpilledUDTMember",
                      DefRangeRegisterRel->hasSpilledUDTMember());
       W.printNumber("OffsetInParent", DefRangeRegisterRel->offsetInParent());
+      W.printNumber("BasePointerOffset",
+                    DefRangeRegisterRel->BasePointerOffset);
       printLocalVariableAddrRange(DefRangeRegisterRel->Range, Sec,
                                   SectionContents);
       printLocalVariableAddrGap(SymData);

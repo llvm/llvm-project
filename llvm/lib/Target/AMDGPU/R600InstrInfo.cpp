@@ -1047,6 +1047,12 @@ unsigned int R600InstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   return 2;
 }
 
+unsigned R600InstrInfo::calculateIndirectAddress(unsigned RegIndex,
+                                                   unsigned Channel) const {
+  assert(Channel == 0);
+  return RegIndex;
+}
+
 bool R600InstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
 
   switch(MI->getOpcode()) {
@@ -1133,13 +1139,6 @@ void  R600InstrInfo::reserveIndirectRegisters(BitVector &Reserved,
       Reserved.set(Reg);
     }
   }
-}
-
-unsigned R600InstrInfo::calculateIndirectAddress(unsigned RegIndex,
-                                                 unsigned Channel) const {
-  // XXX: Remove when we support a stack width > 2
-  assert(Channel == 0);
-  return RegIndex;
 }
 
 const TargetRegisterClass *R600InstrInfo::getIndirectAddrRegClass() const {

@@ -377,6 +377,14 @@ void computeLICMSafetyInfo(LICMSafetyInfo *, Loop *);
 
 /// \brief Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
+
+/// \brief Check string metadata into loop, if it exist return true,
+/// else return false.
+bool checkStringMetadataIntoLoop(Loop *TheLoop, StringRef Name);
+
+/// \brief Set input string into loop metadata by keeping other values intact.
+void addStringMetadataToLoop(Loop *TheLoop, const char *MDString, 
+                             unsigned V = 0);
 }
 
 #endif
