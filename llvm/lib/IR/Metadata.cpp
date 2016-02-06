@@ -188,8 +188,6 @@ void ReplaceableMetadataImpl::moveRef(void *Ref, void *New,
 }
 
 void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
-  assert(!(MD && isa<MDNode>(MD) && cast<MDNode>(MD)->isTemporary()) &&
-         "Expected non-temp node");
   assert(CanReplace &&
          "Attempted to replace Metadata marked for no replacement");
 
