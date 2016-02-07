@@ -50,8 +50,8 @@ public:
 /// frontend action.
 class FixItRecompile : public WrapperFrontendAction {
 public:
-  FixItRecompile(FrontendAction *WrappedAction)
-    : WrapperFrontendAction(WrappedAction) {}
+  FixItRecompile(std::unique_ptr<FrontendAction> WrappedAction)
+    : WrapperFrontendAction(std::move(WrappedAction)) {}
 
 protected:
   bool BeginInvocation(CompilerInstance &CI) override;
