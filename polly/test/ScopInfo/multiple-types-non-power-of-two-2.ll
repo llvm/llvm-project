@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -analyze \
+; RUN: -polly-allow-differing-element-types < %s | FileCheck %s
 ;
 ;  void multiple_types(i128 *A) {
 ;    for (long i = 0; i < 100; i++) {

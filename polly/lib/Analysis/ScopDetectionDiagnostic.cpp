@@ -270,6 +270,24 @@ bool ReportVariantBasePtr::classof(const RejectReason *RR) {
 }
 
 //===----------------------------------------------------------------------===//
+// ReportDifferentArrayElementSize
+
+std::string ReportDifferentArrayElementSize::getMessage() const {
+  return "Access to one array through data types of different size";
+}
+
+bool ReportDifferentArrayElementSize::classof(const RejectReason *RR) {
+  return RR->getKind() == rrkDifferentElementSize;
+}
+
+std::string ReportDifferentArrayElementSize::getEndUserMessage() const {
+  llvm::StringRef BaseName = BaseValue->getName();
+  std::string Name = (BaseName.size() > 0) ? BaseName : "UNKNOWN";
+  return "The array \"" + Name + "\" is accessed through elements that differ "
+                                 "in size";
+}
+
+//===----------------------------------------------------------------------===//
 // ReportNonAffineAccess.
 
 std::string ReportNonAffineAccess::getMessage() const {

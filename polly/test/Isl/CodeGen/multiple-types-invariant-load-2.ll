@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -S \
+; RUN: -polly-allow-differing-element-types < %s | FileCheck %s
 
 ; CHECK: polly
 

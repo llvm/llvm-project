@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-scops -pass-remarks-analysis="polly-scops" \
+; RUN: -polly-allow-differing-element-types \
 ; RUN:                -analyze < %s  2>&1 | FileCheck %s
 ;
 ;    void foo(long n, long m, char A[][m]) {

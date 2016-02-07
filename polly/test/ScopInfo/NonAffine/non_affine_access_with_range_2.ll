@@ -13,9 +13,9 @@
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> [i0, i1] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
-; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2046 };
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2048 };
 ; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: +] [Scalar: 0]
-; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2046 };
+; CHECK-NEXT:             { Stmt_bb7[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2048 };
 ; CHECK-NEXT: }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

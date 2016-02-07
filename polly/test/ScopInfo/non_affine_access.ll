@@ -30,4 +30,4 @@ for.end:                                          ; preds = %for.body
 }
 
 ; CHECK-NOT: Stmt_for_body
-; NONAFFINE: { Stmt_for_body[i0] -> MemRef_A[o0] : -1152921504606846976 <= o0 <= 1152921504606846973 };
+; NONAFFINE: { Stmt_for_body[i0] -> MemRef_A[o0] : -1152921504606846976 <= o0 <= 1152921504606846975 };
