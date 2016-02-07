@@ -850,11 +850,13 @@ using MemoryAccessList = std::forward_list<MemoryAccess *>;
 /// The first element is the SCEV for the pointer/location that identifies this
 /// equivalence class. The second is a list of memory accesses to that location
 /// that are now treated as invariant and hoisted during code generation. The
-/// last element is the execution context under which the invariant memory
+/// third element is the execution context under which the invariant memory
 /// location is accessed, hence the union of all domain contexts for the memory
-/// accesses in the list.
+/// accesses in the list. The last element describes the type of the invariant
+/// accesss in order to differentiate between different typed invariant loads of
+/// the same location.
 using InvariantEquivClassTy =
-    std::tuple<const SCEV *, MemoryAccessList, isl_set *>;
+    std::tuple<const SCEV *, MemoryAccessList, isl_set *, Type *>;
 
 /// @brief Type for invariant accesses equivalence classes.
 using InvariantEquivClassesTy = SmallVector<InvariantEquivClassTy, 8>;

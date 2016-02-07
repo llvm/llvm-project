@@ -1015,7 +1015,8 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   // Check for recurrsion which can be caused by additional constraints, e.g.,
   // non-finitie loop contraints. In such a case we have to bail out and insert
   // a "false" runtime check that will cause the original code to be executed.
-  if (!PreloadedPtrs.insert(std::get<0>(IAClass)).second)
+  auto PtrId = std::make_pair(std::get<0>(IAClass), std::get<3>(IAClass));
+  if (!PreloadedPtrs.insert(PtrId).second)
     return false;
 
   // If the base pointer of this class is dependent on another one we have to
@@ -1033,13 +1034,10 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   if (!PreloadVal)
     return false;
 
-  assert(PreloadVal->getType() == AccInst->getType());
   for (const MemoryAccess *MA : MAs) {
     Instruction *MAAccInst = MA->getAccessInstruction();
-    // TODO: The bitcast here is wrong. In case of floating and non-floating
-    //       point values we need to reload the value or convert it.
-    ValueMap[MAAccInst] =
-        Builder.CreateBitOrPointerCast(PreloadVal, MAAccInst->getType());
+    assert(PreloadVal->getType() == MAAccInst->getType());
+    ValueMap[MAAccInst] = PreloadVal;
   }
 
   if (SE.isSCEVable(AccInstTy)) {
@@ -1063,11 +1061,8 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
       // should only change the base pointer of the derived SAI if we actually
       // preloaded it.
       if (BasePtr == MA->getBaseAddr()) {
-        // TODO: The bitcast here is wrong. In case of floating and non-floating
-        //       point values we need to reload the value or convert it.
-        BasePtr =
-            Builder.CreateBitOrPointerCast(PreloadVal, BasePtr->getType());
-        DerivedSAI->setBasePtr(BasePtr);
+        assert(BasePtr->getType() == PreloadVal->getType());
+        DerivedSAI->setBasePtr(PreloadVal);
       }
 
       // For scalar derived SAIs we remap the alloca used for the derived value.

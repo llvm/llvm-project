@@ -16,6 +16,9 @@
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             { Stmt_do_body[i0] -> MemRef_U[0] };
 ; CHECK-NEXT:         Execution Context: {  :  }
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_do_body[i0] -> MemRef_U[0] };
+; CHECK-NEXT:         Execution Context: {  :  }
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Statements {
@@ -29,26 +32,26 @@
 ; CHECK-NEXT: }
 ;
 ; CODEGEN: entry:
-; CODEGEN:   %U.f.preload.s2a = alloca float
+; CODEGEN-DAG:   %U.f.preload.s2a = alloca float
+; CODEGEN-DAG:   %U.i.preload.s2a = alloca i32
 ; CODEGEN:   br label %polly.split_new_and_old
 ;
 ; CODEGEN: polly.preload.begin:
-; CODEGEN:   %U.load = load float, float* bitcast (i32* @U to float*)
-; CODEGEN:   %0 = bitcast float %U.load to i32
-; CODEGEN:   store float %U.load, float* %U.f.preload.s2a
+; CODEGEN-DAG:   %U.load[[f:[.0-9]*]] = load float, float* bitcast (i32* @U to float*)
+; CODEGEN-DAG:   store float %U.load[[f]], float* %U.f.preload.s2a
+; CODEGEN-DAG:   %U.load[[i:[.0-9]*]] = load i32, i32* @U
+; CODEGEN-DAG:   store i32 %U.load[[i]], i32* %U.i.preload.s2a
 ;
 ; CODEGEN:     polly.merge_new_and_old:
 ; CODEGEN-DAG:   %U.f.merge = phi float [ %U.f.final_reload, %polly.exiting ], [ %U.f, %do.cond ]
-; CODEGEN-DAG:   %U.i.merge = phi i32 [ %5, %polly.exiting ], [ %U.i, %do.cond ]
+; CODEGEN-DAG:   %U.i.merge = phi i32 [ %U.i.final_reload, %polly.exiting ], [ %U.i, %do.cond ]
 ;
 ; CODEGEN: polly.loop_exit:
 ; CODEGEN-DAG:   %U.f.final_reload = load float, float* %U.f.preload.s2a
-; CODEGEN-DAG:   %U.i.final_reload = load float, float* %U.f.preload.s2a
-; CODEGEN-DAG:   %5 = bitcast float %U.i.final_reload to i32
+; CODEGEN-DAG:   %U.i.final_reload = load i32, i32* %U.i.preload.s2a
 ;
 ; CODEGEN: polly.stmt.do.body:
-; CODEGEN:   %p_conv = fptosi float %U.load to i32
-; CODEGEN:   %p_add = add nsw i32 %0, %p_conv
+; CODEGEN:   %p_add = add nsw i32 %U.load[[i]], %p_conv
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

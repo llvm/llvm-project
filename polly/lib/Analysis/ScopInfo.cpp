@@ -1827,21 +1827,22 @@ void Scop::addUserContext() {
 }
 
 void Scop::buildInvariantEquivalenceClasses() {
-  DenseMap<const SCEV *, LoadInst *> EquivClasses;
+  DenseMap<std::pair<const SCEV *, Type *>, LoadInst *> EquivClasses;
 
   const InvariantLoadsSetTy &RIL = *SD.getRequiredInvariantLoads(&getRegion());
   for (LoadInst *LInst : RIL) {
     const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
 
-    LoadInst *&ClassRep = EquivClasses[PointerSCEV];
+    Type *Ty = LInst->getType();
+    LoadInst *&ClassRep = EquivClasses[std::make_pair(PointerSCEV, Ty)];
     if (ClassRep) {
       InvEquivClassVMap[LInst] = ClassRep;
       continue;
     }
 
     ClassRep = LInst;
-    InvariantEquivClasses.emplace_back(PointerSCEV, MemoryAccessList(),
-                                       nullptr);
+    InvariantEquivClasses.emplace_back(PointerSCEV, MemoryAccessList(), nullptr,
+                                       Ty);
   }
 }
 
@@ -2852,9 +2853,10 @@ const InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) const {
   if (Value *Rep = InvEquivClassVMap.lookup(LInst))
     LInst = cast<LoadInst>(Rep);
 
+  Type *Ty = LInst->getType();
   const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
   for (auto &IAClass : InvariantEquivClasses)
-    if (PointerSCEV == std::get<0>(IAClass))
+    if (PointerSCEV == std::get<0>(IAClass) && Ty == std::get<3>(IAClass))
       return &IAClass;
 
   return nullptr;
@@ -2897,11 +2899,12 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
     // MA and if found consolidate them. Otherwise create a new equivalence
     // class at the end of InvariantEquivClasses.
     LoadInst *LInst = cast<LoadInst>(MA->getAccessInstruction());
+    Type *Ty = LInst->getType();
     const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
 
     bool Consolidated = false;
     for (auto &IAClass : InvariantEquivClasses) {
-      if (PointerSCEV != std::get<0>(IAClass))
+      if (PointerSCEV != std::get<0>(IAClass) || Ty != std::get<3>(IAClass))
         continue;
 
       Consolidated = true;
@@ -2926,7 +2929,7 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
     // If we did not consolidate MA, thus did not find an equivalence class
     // for it, we create a new one.
     InvariantEquivClasses.emplace_back(PointerSCEV, MemoryAccessList{MA},
-                                       isl_set_copy(DomainCtx));
+                                       isl_set_copy(DomainCtx), Ty);
   }
 
   isl_set_free(DomainCtx);
@@ -2970,15 +2973,6 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
     return false;
 
   isl_map *AccessRelation = Access->getAccessRelation();
-
-  // Invariant load hoisting of memory accesses with non-canonical element
-  // types lacks support for equivalence classes that contain elements of
-  // different width/size. Hence, do not yet consider loads with non-canonical
-  // element size for load hoisting.
-  if (!isl_map_is_single_valued(AccessRelation)) {
-    isl_map_free(AccessRelation);
-    return false;
-  }
 
   // Skip accesses that have an empty access relation. These can be caused
   // by multiple offsets with a type cast in-between that cause the overall

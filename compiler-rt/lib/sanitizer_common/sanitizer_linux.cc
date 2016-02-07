@@ -1158,7 +1158,11 @@ void internal_join_thread(void *th) {}
 bool GetSigContextWriteFlag(void *context) {
 #if defined(__x86_64__) || defined(__i386__)
   ucontext_t *ucontext = (ucontext_t*)context;
+#if SANITIZER_FREEBSD
+  return ucontext->uc_mcontext.mc_err & 2;
+#else
   return ucontext->uc_mcontext.gregs[REG_ERR] & 2;
+#endif
 #else
   return false;  // FIXME: Implement.
 #endif
