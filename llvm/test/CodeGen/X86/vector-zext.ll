@@ -747,7 +747,7 @@ define <8 x i64> @load_zext_8i8_to_8i64(<8 x i8> *%ptr) {
 ;
 ; AVX512-LABEL: load_zext_8i8_to_8i64:
 ; AVX512:       # BB#0: # %entry
-; AVX512-NEXT:    vpmovzxbq (%rdi), %zmm0
+; AVX512-NEXT:    vpmovzxbq {{.*#+}} zmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero,mem[2],zero,zero,zero,zero,zero,zero,zero,mem[3],zero,zero,zero,zero,zero,zero,zero,mem[4],zero,zero,zero,zero,zero,zero,zero,mem[5],zero,zero,zero,zero,zero,zero,zero,mem[6],zero,zero,zero,zero,zero,zero,zero,mem[7],zero,zero,zero,zero,zero,zero,zero
 ; AVX512-NEXT:    retq
 entry:
  %X = load <8 x i8>, <8 x i8>* %ptr

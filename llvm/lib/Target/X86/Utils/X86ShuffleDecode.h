@@ -92,7 +92,7 @@ void decodeVSHUF64x2FamilyMask(MVT VT, unsigned Imm,
 void DecodeVPERMMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
 
 /// \brief Decode a zero extension instruction as a shuffle mask.
-void DecodeZeroExtendMask(MVT SrcVT, MVT DstVT,
+void DecodeZeroExtendMask(MVT SrcScalarVT, MVT DstVT,
                           SmallVectorImpl<int> &ShuffleMask);
 
 /// \brief Decode a move lower and zero upper instruction as a shuffle mask.

@@ -2969,6 +2969,15 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
 
   isl_map *AccessRelation = Access->getAccessRelation();
 
+  // Invariant load hoisting of memory accesses with non-canonical element
+  // types lacks support for equivalence classes that contain elements of
+  // different width/size. Hence, do not yet consider loads with non-canonical
+  // element size for load hoisting.
+  if (!isl_map_is_single_valued(AccessRelation)) {
+    isl_map_free(AccessRelation);
+    return false;
+  }
+
   // Skip accesses that have an empty access relation. These can be caused
   // by multiple offsets with a type cast in-between that cause the overall
   // byte offset to be not divisible by the new types sizes.

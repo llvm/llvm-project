@@ -605,3 +605,45 @@ define <16 x i8> @merge_16i8_i8_0123uu67uuuuuzzz(i8* %ptr) nounwind uwtable noin
   %resF = insertelement <16 x i8> %resE, i8     0, i32 15
   ret <16 x i8> %resF
 }
+
+define void @merge_4i32_i32_combine(<4 x i32>* %dst, i32* %src) {
+; SSE-LABEL: merge_4i32_i32_combine:
+; SSE:       # BB#0:
+; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movaps %xmm0, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: merge_4i32_i32_combine:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: merge_4i32_i32_combine:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: merge_4i32_i32_combine:
+; AVX512F:       # BB#0:
+; AVX512F-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512F-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX512F-NEXT:    retq
+;
+; X32-SSE-LABEL: merge_4i32_i32_combine:
+; X32-SSE:       # BB#0:
+; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-SSE-NEXT:    movaps %xmm0, (%eax)
+; X32-SSE-NEXT:    retl
+ %1 = getelementptr i32, i32* %src, i32 0
+ %2 = load i32, i32* %1
+ %3 = insertelement <4 x i32> undef, i32 %2, i32 0
+ %4 = shufflevector <4 x i32> %3, <4 x i32> undef, <4 x i32> zeroinitializer
+ %5 = lshr <4 x i32> %4, <i32 0, i32 undef, i32 undef, i32 undef>
+ %6 = and <4 x i32> %5, <i32 -1, i32 0, i32 0, i32 0>
+ store <4 x i32> %6, <4 x i32>* %dst
+ ret void
+}

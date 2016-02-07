@@ -1,5 +1,9 @@
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 
+; Invariant loads with non-canonical types are not yet fully supported.
+
+; XFAIL: *
+
 ; CHECK: %polly.access.cast.global.load = bitcast %struct.hoge* %global.load to i32*
 ; CHECK: %polly.access.global.load = getelementptr i32, i32* %polly.access.cast.global.load, i64 0
 ; CHECK: %polly.access.global.load.load = load i32, i32* %polly.access.global.load

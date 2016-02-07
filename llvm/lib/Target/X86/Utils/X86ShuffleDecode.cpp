@@ -339,15 +339,13 @@ void DecodeVPERMMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask) {
   }
 }
 
-void DecodeZeroExtendMask(MVT SrcVT, MVT DstVT, SmallVectorImpl<int> &Mask) {
+void DecodeZeroExtendMask(MVT SrcScalarVT, MVT DstVT, SmallVectorImpl<int> &Mask) {
   unsigned NumDstElts = DstVT.getVectorNumElements();
-  unsigned SrcScalarBits = SrcVT.getScalarSizeInBits();
+  unsigned SrcScalarBits = SrcScalarVT.getSizeInBits();
   unsigned DstScalarBits = DstVT.getScalarSizeInBits();
   unsigned Scale = DstScalarBits / SrcScalarBits;
   assert(SrcScalarBits < DstScalarBits &&
          "Expected zero extension mask to increase scalar size");
-  assert(SrcVT.getVectorNumElements() >= NumDstElts &&
-         "Too many zero extension lanes");
 
   for (unsigned i = 0; i != NumDstElts; i++) {
     Mask.push_back(i);

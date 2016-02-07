@@ -637,8 +637,7 @@ define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ; SKX-NEXT:    vpinsrq $1, %rdi, %xmm0, %xmm1
 ; SKX-NEXT:    vinserti64x2 $0, %xmm1, %zmm0, %zmm0
 ; SKX-NEXT:    vpbroadcastq %xmm0, %zmm0
-; SKX-NEXT:    vmovd %esi, %xmm1
-; SKX-NEXT:    vpbroadcastd %xmm1, %ymm1
+; SKX-NEXT:    vpbroadcastd %esi, %ymm1
 ; SKX-NEXT:    vpmovsxdq %ymm1, %zmm1
 ; SKX-NEXT:    vpsllq $2, %zmm1, %zmm1
 ; SKX-NEXT:    vpaddq %zmm1, %zmm0, %zmm0

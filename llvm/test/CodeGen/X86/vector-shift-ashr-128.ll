@@ -677,7 +677,7 @@ define <4 x i32> @splatvar_shift_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX512-LABEL: splatvar_shift_v4i32:
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmovss %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX512-NEXT:    vpsrad %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 ;

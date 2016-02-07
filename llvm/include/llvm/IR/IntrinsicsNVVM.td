@@ -729,16 +729,20 @@ def llvm_anyi64ptr_ty     : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
                                       [IntrReadWriteArgMem, NoCapture<0>]>;
 
 // Bar.Sync
+//
+// TODO: Remove NoDuplicate here after fixing up LLVM to handle convergent
+// properly.  See discussion in http://reviews.llvm.org/D16941 and
+// http://reviews.llvm.org/D12246.
   def int_cuda_syncthreads : GCCBuiltin<"__syncthreads">,
-      Intrinsic<[], [], [IntrNoDuplicate]>;
+      Intrinsic<[], [], [IntrNoDuplicate, IntrConvergent]>;
   def int_nvvm_barrier0 : GCCBuiltin<"__nvvm_bar0">,
-      Intrinsic<[], [], [IntrNoDuplicate]>;
+      Intrinsic<[], [], [IntrNoDuplicate, IntrConvergent]>;
   def int_nvvm_barrier0_popc : GCCBuiltin<"__nvvm_bar0_popc">,
-      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoDuplicate]>;
+      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoDuplicate, IntrConvergent]>;
   def int_nvvm_barrier0_and : GCCBuiltin<"__nvvm_bar0_and">,
-      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoDuplicate]>;
+      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoDuplicate, IntrConvergent]>;
   def int_nvvm_barrier0_or : GCCBuiltin<"__nvvm_bar0_or">,
-      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoDuplicate]>;
+      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoDuplicate, IntrConvergent]>;
 
   // Membar
   def int_nvvm_membar_cta : GCCBuiltin<"__nvvm_membar_cta">,

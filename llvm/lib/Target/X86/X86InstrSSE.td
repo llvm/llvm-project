@@ -8410,48 +8410,51 @@ let Predicates = [HasAVX2] in {
             (VBROADCASTSDYrr (v2f64 (EXTRACT_SUBREG (v4f64 VR256:$src),
                                                     sub_xmm)))>;
 
-  // Provide fallback in case the load node that is used in the patterns above
-  // is used by additional users, which prevents the pattern selection.
+// Provide fallback in case the load node that is used in the patterns above
+// is used by additional users, which prevents the pattern selection.
   let AddedComplexity = 20 in {
-    def : Pat<(v4f32 (X86VBroadcast FR32:$src)),
-              (VBROADCASTSSrr (COPY_TO_REGCLASS FR32:$src, VR128))>;
-    def : Pat<(v8f32 (X86VBroadcast FR32:$src)),
-              (VBROADCASTSSYrr (COPY_TO_REGCLASS FR32:$src, VR128))>;
-    def : Pat<(v4f64 (X86VBroadcast FR64:$src)),
-              (VBROADCASTSDYrr (COPY_TO_REGCLASS FR64:$src, VR128))>;
-
-    def : Pat<(v4i32 (X86VBroadcast GR32:$src)),
-              (VBROADCASTSSrr (COPY_TO_REGCLASS GR32:$src, VR128))>;
-    def : Pat<(v8i32 (X86VBroadcast GR32:$src)),
-              (VBROADCASTSSYrr (COPY_TO_REGCLASS GR32:$src, VR128))>;
-    def : Pat<(v4i64 (X86VBroadcast GR64:$src)),
-              (VBROADCASTSDYrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
-
-    def : Pat<(v16i8 (X86VBroadcast GR8:$src)),
-          (VPBROADCASTBrr (COPY_TO_REGCLASS
-                           (i32 (SUBREG_TO_REG (i32 0), GR8:$src, sub_8bit)),
-                           VR128))>;
-    def : Pat<(v32i8 (X86VBroadcast GR8:$src)),
-          (VPBROADCASTBYrr (COPY_TO_REGCLASS
-                            (i32 (SUBREG_TO_REG (i32 0), GR8:$src, sub_8bit)),
-                            VR128))>;
-
-    def : Pat<(v8i16 (X86VBroadcast GR16:$src)),
-          (VPBROADCASTWrr (COPY_TO_REGCLASS
-                           (i32 (SUBREG_TO_REG (i32 0), GR16:$src, sub_16bit)),
-                           VR128))>;
-    def : Pat<(v16i16 (X86VBroadcast GR16:$src)),
-          (VPBROADCASTWYrr (COPY_TO_REGCLASS
-                            (i32 (SUBREG_TO_REG (i32 0), GR16:$src, sub_16bit)),
-                            VR128))>;
-
-    // The patterns for VPBROADCASTD are not needed because they would match
-    // the exact same thing as VBROADCASTSS patterns.
-
-    def : Pat<(v2i64 (X86VBroadcast GR64:$src)),
-          (VPBROADCASTQrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
-    // The v4i64 pattern is not needed because VBROADCASTSDYrr already match.
+  def : Pat<(v4f32 (X86VBroadcast FR32:$src)),
+            (VBROADCASTSSrr (COPY_TO_REGCLASS FR32:$src, VR128))>;
+  def : Pat<(v8f32 (X86VBroadcast FR32:$src)),
+            (VBROADCASTSSYrr (COPY_TO_REGCLASS FR32:$src, VR128))>;
+  def : Pat<(v4f64 (X86VBroadcast FR64:$src)),
+            (VBROADCASTSDYrr (COPY_TO_REGCLASS FR64:$src, VR128))>;
   }
+}
+
+let Predicates = [HasAVX2, NoVLX_Or_NoBWI], AddedComplexity = 20 in {
+  def : Pat<(v16i8 (X86VBroadcast GR8:$src)),
+        (VPBROADCASTBrr (COPY_TO_REGCLASS
+                         (i32 (SUBREG_TO_REG (i32 0), GR8:$src, sub_8bit)),
+                         VR128))>;
+  def : Pat<(v32i8 (X86VBroadcast GR8:$src)),
+        (VPBROADCASTBYrr (COPY_TO_REGCLASS
+                          (i32 (SUBREG_TO_REG (i32 0), GR8:$src, sub_8bit)),
+                          VR128))>;
+
+  def : Pat<(v8i16 (X86VBroadcast GR16:$src)),
+        (VPBROADCASTWrr (COPY_TO_REGCLASS
+                         (i32 (SUBREG_TO_REG (i32 0), GR16:$src, sub_16bit)),
+                         VR128))>;
+  def : Pat<(v16i16 (X86VBroadcast GR16:$src)),
+        (VPBROADCASTWYrr (COPY_TO_REGCLASS
+                          (i32 (SUBREG_TO_REG (i32 0), GR16:$src, sub_16bit)),
+                          VR128))>;  
+}
+let Predicates = [HasAVX2, NoVLX], AddedComplexity = 20 in {
+  def : Pat<(v4i32 (X86VBroadcast GR32:$src)),
+            (VBROADCASTSSrr (COPY_TO_REGCLASS GR32:$src, VR128))>;
+  def : Pat<(v8i32 (X86VBroadcast GR32:$src)),
+            (VBROADCASTSSYrr (COPY_TO_REGCLASS GR32:$src, VR128))>;
+  def : Pat<(v4i64 (X86VBroadcast GR64:$src)),
+            (VBROADCASTSDYrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
+
+  // The patterns for VPBROADCASTD are not needed because they would match
+  // the exact same thing as VBROADCASTSS patterns.
+
+  def : Pat<(v2i64 (X86VBroadcast GR64:$src)),
+        (VPBROADCASTQrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
+  // The v4i64 pattern is not needed because VBROADCASTSDYrr already match.
 }
 
 // AVX1 broadcast patterns
@@ -8464,10 +8467,9 @@ def : Pat<(v4i32 (X86VBroadcast (loadi32 addr:$src))),
           (VBROADCASTSSrm addr:$src)>;
 }
 
-let Predicates = [HasAVX] in {
   // Provide fallback in case the load node that is used in the patterns above
   // is used by additional users, which prevents the pattern selection.
-  let AddedComplexity = 20 in {
+let Predicates = [HasAVX], AddedComplexity = 20 in {
   // 128bit broadcasts:
   def : Pat<(v4f32 (X86VBroadcast FR32:$src)),
             (VPSHUFDri (COPY_TO_REGCLASS FR32:$src, VR128), 0)>;
@@ -8480,6 +8482,11 @@ let Predicates = [HasAVX] in {
               (VPSHUFDri (COPY_TO_REGCLASS FR64:$src, VR128), 0x44), sub_xmm),
               (VPSHUFDri (COPY_TO_REGCLASS FR64:$src, VR128), 0x44), 1)>;
 
+  def : Pat<(v2f64 (X86VBroadcast f64:$src)),
+            (VMOVDDUPrr (COPY_TO_REGCLASS FR64:$src, VR128))>;  
+}
+
+let Predicates = [HasAVX, NoVLX], AddedComplexity = 20 in {
   def : Pat<(v4i32 (X86VBroadcast GR32:$src)),
             (VPSHUFDri (COPY_TO_REGCLASS GR32:$src, VR128), 0)>;
   def : Pat<(v8i32 (X86VBroadcast GR32:$src)),
@@ -8490,12 +8497,9 @@ let Predicates = [HasAVX] in {
             (VINSERTF128rr (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)),
               (VPSHUFDri (COPY_TO_REGCLASS GR64:$src, VR128), 0x44), sub_xmm),
               (VPSHUFDri (COPY_TO_REGCLASS GR64:$src, VR128), 0x44), 1)>;
-  }
-
-  def : Pat<(v2f64 (X86VBroadcast f64:$src)),
-            (VMOVDDUPrr (COPY_TO_REGCLASS FR64:$src, VR128))>;
+  
   def : Pat<(v2i64 (X86VBroadcast i64:$src)),
-            (VMOVDDUPrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
+              (VMOVDDUPrr (COPY_TO_REGCLASS GR64:$src, VR128))>;
 }
 
 //===----------------------------------------------------------------------===//

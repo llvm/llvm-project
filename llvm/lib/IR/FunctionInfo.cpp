@@ -50,7 +50,8 @@ void FunctionInfoIndex::mergeFrom(std::unique_ptr<FunctionInfoIndex> Other,
     Info->functionSummary()->setModulePath(ModPath);
 
     // If it is a local function, rename it.
-    if (Info->functionSummary()->isLocalFunction()) {
+    if (GlobalValue::isLocalLinkage(
+            Info->functionSummary()->getFunctionLinkage())) {
       // Any local functions are virtually renamed when being added to the
       // combined index map, to disambiguate from other functions with
       // the same name. The symbol table created for the combined index
