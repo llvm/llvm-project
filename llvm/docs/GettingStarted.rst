@@ -38,6 +38,9 @@ Here's the short story for getting up and running quickly with LLVM:
 #. Read the documentation.
 #. Read the documentation.
 #. Remember that you were warned twice about reading the documentation.
+
+   * In particular, the *relative paths specified are important*.
+
 #. Checkout LLVM:
 
    * ``cd where-you-want-llvm-to-live``
@@ -49,13 +52,13 @@ Here's the short story for getting up and running quickly with LLVM:
    * ``cd llvm/tools``
    * ``svn co http://llvm.org/svn/llvm-project/cfe/trunk clang``
 
-#. Checkout Compiler-RT (required to build the sanitizers):
+#. Checkout Compiler-RT (required to build the sanitizers) **[Optional]**:
 
    * ``cd where-you-want-llvm-to-live``
    * ``cd llvm/projects``
    * ``svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt``
 
-#. Checkout Libomp (required for OpenMP support):
+#. Checkout Libomp (required for OpenMP support) **[Optional]**:
 
    * ``cd where-you-want-llvm-to-live``
    * ``cd llvm/projects``
@@ -75,6 +78,10 @@ Here's the short story for getting up and running quickly with LLVM:
    * ``svn co http://llvm.org/svn/llvm-project/test-suite/trunk test-suite``
 
 #. Configure and build LLVM and Clang:
+
+   *Warning:* Make sure you've checked out *all of* the source code 
+   before trying to configure with cmake.  cmake does not pickup newly
+   added source directories in incremental builds. 
 
    The build uses `CMake <CMake.html>`_.
    Although the build is known to work with CMake >= 2.8.8, we recommend CMake
@@ -115,6 +122,9 @@ Here's the short story for getting up and running quickly with LLVM:
 
      * CMake will generate build targets for each tool and library, and most
        LLVM sub-projects generate their own ``check-<project>`` target.
+
+     * Running a serial build will be *slow*.  Make sure you run a 
+       parallel build; for ``make``, use ``make -j``.  
 
    * For more information see `CMake <CMake.html>`_
 

@@ -12,6 +12,10 @@ Introduction
 does not build the project, it generates the files needed by your build tool
 (GNU make, Visual Studio, etc.) for building LLVM.
 
+If **you are a new contributor**, please start with the :doc:`GettingStarted` 
+page.  This page is geared for existing contributors moving from the 
+legacy configure/make system.
+
 If you are really anxious about getting a functional LLVM build, go to the
 `Quick start`_ section. If you are a CMake novice, start with `Basic CMake usage`_
 and then go back to the `Quick start`_ section once you know what you are doing. The

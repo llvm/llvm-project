@@ -913,9 +913,10 @@ def : Pat<(int_x86_avx512_vbroadcast_sd_512 addr:$src),
 
 multiclass avx512_int_broadcast_reg<bits<8> opc, X86VectorVTInfo _,
                                     RegisterClass SrcRC> {
-  defm r : AVX512_maskable_in_asm<opc, MRMSrcReg, _, (outs _.RC:$dst),
-                           (ins SrcRC:$src),  "vpbroadcast"##_.Suffix,
-                           "$src", "$src", []>, T8PD, EVEX;
+  defm r : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
+                         (ins SrcRC:$src), 
+                         "vpbroadcast"##_.Suffix, "$src", "$src", 
+                         (_.VT (X86VBroadcast SrcRC:$src))>, T8PD, EVEX;
 }
 
 multiclass avx512_int_broadcast_reg_vl<bits<8> opc, AVX512VLVectorVTInfo _,
@@ -928,10 +929,18 @@ multiclass avx512_int_broadcast_reg_vl<bits<8> opc, AVX512VLVectorVTInfo _,
   }
 }
 
-defm VPBROADCASTBr : avx512_int_broadcast_reg_vl<0x7A, avx512vl_i8_info, GR32,
+let isCodeGenOnly = 1 in {
+defm VPBROADCASTBr : avx512_int_broadcast_reg_vl<0x7A, avx512vl_i8_info, GR8,
                                                  HasBWI>;
-defm VPBROADCASTWr : avx512_int_broadcast_reg_vl<0x7B, avx512vl_i16_info, GR32,
+defm VPBROADCASTWr : avx512_int_broadcast_reg_vl<0x7B, avx512vl_i16_info, GR16,
                                                  HasBWI>;
+}
+let isAsmParserOnly = 1 in {
+  defm VPBROADCASTBr_Alt : avx512_int_broadcast_reg_vl<0x7A, avx512vl_i8_info,
+                                                       GR32, HasBWI>;
+  defm VPBROADCASTWr_Alt : avx512_int_broadcast_reg_vl<0x7B, avx512vl_i16_info,
+                                                       GR32, HasBWI>;  
+}
 defm VPBROADCASTDr : avx512_int_broadcast_reg_vl<0x7C, avx512vl_i32_info, GR32,
                                                  HasAVX512>;
 defm VPBROADCASTQr : avx512_int_broadcast_reg_vl<0x7C, avx512vl_i64_info, GR64,
@@ -939,26 +948,8 @@ defm VPBROADCASTQr : avx512_int_broadcast_reg_vl<0x7C, avx512vl_i64_info, GR64,
 
 def : Pat <(v16i32 (X86vzext VK16WM:$mask)),
            (VPBROADCASTDrZrkz VK16WM:$mask, (i32 (MOV32ri 0x1)))>;
-
 def : Pat <(v8i64 (X86vzext VK8WM:$mask)),
            (VPBROADCASTQrZrkz VK8WM:$mask, (i64 (MOV64ri 0x1)))>;
-
-def : Pat<(v16i32 (X86VBroadcast (i32 GR32:$src))),
-        (VPBROADCASTDrZr GR32:$src)>;
-def : Pat<(v8i64 (X86VBroadcast (i64 GR64:$src))),
-        (VPBROADCASTQrZr GR64:$src)>;
-
-def : Pat<(v16i32 (int_x86_avx512_pbroadcastd_i32_512 (i32 GR32:$src))),
-        (VPBROADCASTDrZr GR32:$src)>;
-def : Pat<(v8i64 (int_x86_avx512_pbroadcastq_i64_512 (i64 GR64:$src))),
-        (VPBROADCASTQrZr GR64:$src)>;
-
-def : Pat<(v16i32 (int_x86_avx512_mask_pbroadcast_d_gpr_512 (i32 GR32:$src),
-                   (v16i32 immAllZerosV), (i16 GR16:$mask))),
-          (VPBROADCASTDrZrkz (COPY_TO_REGCLASS GR16:$mask, VK16WM), GR32:$src)>;
-def : Pat<(v8i64 (int_x86_avx512_mask_pbroadcast_q_gpr_512 (i64 GR64:$src),
-                   (bc_v8i64 (v16i32 immAllZerosV)), (i8 GR8:$mask))),
-          (VPBROADCASTQrZrkz (COPY_TO_REGCLASS GR8:$mask, VK8WM), GR64:$src)>;
 
 // Provide aliases for broadcast from the same register class that
 // automatically does the extract.

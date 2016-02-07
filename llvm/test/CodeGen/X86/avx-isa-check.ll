@@ -1,5 +1,6 @@
 ; check AVX2 instructions that are disabled in case avx512VL/avx512BW present
-   
+
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=corei7-avx                             -o /dev/null
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=core-avx2 -mattr=+avx2                 -o /dev/null
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=knl                                    -o /dev/null
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -show-mc-encoding -mcpu=knl  -mattr=+avx512vl                  -o /dev/null
@@ -574,6 +575,78 @@ entry:
   %B = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %C = zext <8 x i8> %B to <8 x i16>
   ret <8 x i16> %C
+}
+
+define   <32 x i8> @_broadcast32xi8(i8 %a) {
+  %b = insertelement <32 x i8> undef, i8 %a, i32 0
+  %c = shufflevector <32 x i8> %b, <32 x i8> undef, <32 x i32> zeroinitializer
+  ret <32 x i8> %c
+}
+
+define   <16 x i8> @_broadcast16xi8(i8 %a) {
+  %b = insertelement <16 x i8> undef, i8 %a, i32 0
+  %c = shufflevector <16 x i8> %b, <16 x i8> undef, <16 x i32> zeroinitializer
+  ret <16 x i8> %c
+}
+
+define   <16 x i16> @_broadcast16xi16(i16 %a) {
+  %b = insertelement <16 x i16> undef, i16 %a, i32 0
+  %c = shufflevector <16 x i16> %b, <16 x i16> undef, <16 x i32> zeroinitializer
+  ret <16 x i16> %c
+}
+
+define   <8 x i16> @_broadcast8xi16(i16 %a) {
+  %b = insertelement <8 x i16> undef, i16 %a, i32 0
+  %c = shufflevector <8 x i16> %b, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %c
+}
+
+define <8 x i32> @_broadcast8xi32(i32 %a) {
+  %b = insertelement <8 x i32> undef, i32 %a, i32 0
+  %c = shufflevector <8 x i32> %b, <8 x i32> undef, <8 x i32> zeroinitializer
+  ret <8 x i32> %c
+}
+
+define <4 x i32> @_broadcast4xi32(i32 %a) {
+  %b = insertelement <4 x i32> undef, i32 %a, i32 0
+  %c = shufflevector <4 x i32> %b, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %c
+}
+
+define <4 x i64> @_broadcast4xi64(i64 %a) {
+  %b = insertelement <4 x i64> undef, i64 %a, i64 0
+  %c = shufflevector <4 x i64> %b, <4 x i64> undef, <4 x i32> zeroinitializer
+  ret <4 x i64> %c
+}
+
+define <2 x i64> @_broadcast2xi64(i64 %a) {
+  %b = insertelement <2 x i64> undef, i64 %a, i64 0
+  %c = shufflevector <2 x i64> %b, <2 x i64> undef, <2 x i32> zeroinitializer
+  ret <2 x i64> %c
+}
+
+define   <8 x float> @_broadcast8xfloat(float %a) {
+  %b = insertelement <8 x float> undef, float %a, i32 0
+  %c = shufflevector <8 x float> %b, <8 x float> undef, <8 x i32> zeroinitializer
+  ret <8 x float> %c
+}
+
+define   <4 x float> @_broadcast4xfloat(float %a) {
+  %b = insertelement <4 x float> undef, float %a, i32 0
+  %c = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> zeroinitializer
+  ret <4 x float> %c
+}
+
+define   <4 x double> @_broadcast4xdouble(double %a) {
+  %b = insertelement <4 x double> undef, double %a, i32 0
+  %c = shufflevector <4 x double> %b, <4 x double> undef, <4 x i32> zeroinitializer
+  ret <4 x double> %c
+}
+
+define   <2 x double> @_broadcast2xdouble(double %a) {
+  %b = insertelement <2 x double> undef, double %a, i32 0
+  %c = shufflevector <2 x double> %b, <2 x double> undef, <2 x i32> zeroinitializer
+  ret <2 x double> %c
 }
 
 define <4 x float> @test_x86_fmsub_ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) {

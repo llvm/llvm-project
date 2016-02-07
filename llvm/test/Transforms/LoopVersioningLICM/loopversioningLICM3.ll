@@ -1,4 +1,5 @@
 ; RUN: opt < %s  -O1  -S -loop-versioning-licm -debug-only=loop-versioning-licm  2>&1 | FileCheck %s
+; REQUIRES: asserts
 ;
 ; Test to confirm loop is not a candidate for LoopVersioningLICM.
 ;

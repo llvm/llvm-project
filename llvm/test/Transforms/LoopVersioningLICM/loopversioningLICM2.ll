@@ -1,4 +1,5 @@
 ; RUN: opt < %s  -O1  -S -loop-versioning-licm -licm -debug-only=loop-versioning-licm -disable-loop-unrolling 2>&1 | FileCheck %s
+; REQUIRES: asserts
 ;
 ; Test to confirm loop is a good candidate for LoopVersioningLICM
 ; It also confirms invariant moved out of loop.

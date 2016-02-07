@@ -369,7 +369,7 @@ define <8 x i32> @splatvar_shift_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; AVX512-LABEL: splatvar_shift_v8i32:
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vmovss %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; AVX512-NEXT:    vpsrld %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %splat = shufflevector <8 x i32> %b, <8 x i32> undef, <8 x i32> zeroinitializer

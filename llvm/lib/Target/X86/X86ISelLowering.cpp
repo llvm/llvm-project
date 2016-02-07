@@ -5677,7 +5677,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     MVT VecSVT = VT.isFloatingPoint() ? MVT::f32 : MVT::i32;
     MVT VecVT = MVT::getVectorVT(VecSVT, VT.getSizeInBits() / 32);
     if (TLI.isTypeLegal(VecVT)) {
-      SDValue V = CreateLoad(VecSVT, LDBase);
+      SDValue V = LastLoadedElt != 0 ? CreateLoad(VecSVT, LDBase)
+                                     : DAG.getBitcast(VecSVT, EltBase);
       V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, V);
       V = DAG.getNode(X86ISD::VZEXT_MOVL, DL, VecVT, V);
       return DAG.getBitcast(VT, V);
@@ -10652,7 +10653,7 @@ static SDValue lowerVectorShuffleWithUndefHalf(SDLoc DL, MVT VT, SDValue V1,
                        DAG.getIntPtrConstant(HalfNumElts, DL));
   }
 
-  // If the shuffle only uses the lower halves of the input operands,
+  // If the shuffle only uses two of the four halves of the input operands,
   // then extract them and perform the 'half' shuffle at half width.
   // e.g. vector_shuffle <X, X, X, X, u, u, u, u> or <X, X, u, u>
   int HalfIdx1 = -1, HalfIdx2 = -1;

@@ -302,6 +302,35 @@ define <4 x float> @shuffle_v4f32_1133(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %shuffle
 }
 
+define <4 x float> @shuffle_v4f32_0145(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: shuffle_v4f32_0145:
+; SSE:       # BB#0:
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_v4f32_0145:
+; AVX:       # BB#0:
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    retq
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  ret <4 x float> %shuffle
+}
+
+define <4 x float> @shuffle_v4f32_6723(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: shuffle_v4f32_6723:
+; SSE:       # BB#0:
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_v4f32_6723:
+; AVX:       # BB#0:
+; AVX-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm1[1],xmm0[1]
+; AVX-NEXT:    retq
+  %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 6, i32 7, i32 2, i32 3>
+  ret <4 x float> %shuffle
+}
+
 define <4 x i32> @shuffle_v4i32_0124(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: shuffle_v4i32_0124:
 ; SSE2:       # BB#0:
