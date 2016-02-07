@@ -39,7 +39,7 @@
 @synthesize Z = _Z; // expected-warning{{The '_Z' instance variable in 'MyClass' was not retained by a synthesized property but was released in 'dealloc'}}
 @synthesize K = _K;
 @synthesize L = _L; // no-warning
-@synthesize N = _N; // expected-warning{{The '_N' instance variable in 'MyClass' was not retained by a synthesized property but was released in 'dealloc'}}
+@synthesize N = _N; // no-warning
 @synthesize M = _M;
 @synthesize V = _V;
 @synthesize W = _W; // expected-warning{{The '_W' instance variable in 'MyClass' was retained by a synthesized property but was not released in 'dealloc'}}

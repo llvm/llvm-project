@@ -8927,13 +8927,16 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-shared");
   }
 
-  if (Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
-      Arch == llvm::Triple::thumb || Arch == llvm::Triple::thumbeb ||
-      (!Args.hasArg(options::OPT_static) &&
-       !Args.hasArg(options::OPT_shared))) {
-    CmdArgs.push_back("-dynamic-linker");
-    CmdArgs.push_back(Args.MakeArgString(
-        D.DyldPrefix + getLinuxDynamicLinker(Args, ToolChain)));
+  if (!Args.hasArg(options::OPT_static)) {
+    if (Args.hasArg(options::OPT_rdynamic))
+      CmdArgs.push_back("-export-dynamic");
+
+    if (!Args.hasArg(options::OPT_shared)) {
+      const std::string Loader =
+          D.DyldPrefix + getLinuxDynamicLinker(Args, ToolChain);
+      CmdArgs.push_back("-dynamic-linker");
+      CmdArgs.push_back(Args.MakeArgString(Loader));
+    }
   }
 
   CmdArgs.push_back("-o");
