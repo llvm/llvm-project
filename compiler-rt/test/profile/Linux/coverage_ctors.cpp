@@ -15,10 +15,9 @@ struct Base {
 };
 
 struct Derived : public Base {
-  Derived(const Derived &) = default; // CHECK:  2| [[@LINE]]|  Derived
-  Derived() = default;                // CHECK:  1| [[@LINE]]|  Derived
+  Derived(const Derived &) = default; // CHECK:  2| [[@LINE]]|  Derived(const Derived &) = default;
+  Derived() = default;                // CHECK:  1| [[@LINE]]|  Derived() = default
   int I;
-  int J;
   int getI() { return I; }
 };
 
