@@ -28,11 +28,9 @@
 ; CODEGEN:   br label %polly.split_new_and_old
 ;
 ; CODEGEN: polly.preload.begin:
-; CODEGEN:   %U.load1 = load float, float* bitcast (i32* @U to float*)
-; TODO FIXME There should not be a bitcast but either a real conversion or
-;            another load as one type is FP the other is not.
-; CODEGEN:   %0 = bitcast float %U.load1 to i32
-; CODEGEN:   store float %U.load1, float* %U.f.preload.s2a
+; CODEGEN:   %U.load = load float, float* bitcast (i32* @U to float*)
+; CODEGEN:   %0 = bitcast float %U.load to i32
+; CODEGEN:   store float %U.load, float* %U.f.preload.s2a
 ;
 ; CODEGEN:     polly.merge_new_and_old:
 ; CODEGEN-NOT:   merge = phi
@@ -41,7 +39,7 @@
 ; CODEGEN-NOT:   final_reload
 ;
 ; CODEGEN: polly.stmt.for.body:
-; CODEGEN:   %p_conv = fptosi float %U.load1 to i32
+; CODEGEN:   %p_conv = fptosi float %U.load to i32
 ; CODEGEN:   %p_add = add nsw i32 %0, %p_conv
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

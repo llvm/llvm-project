@@ -42,6 +42,7 @@
 // Fix undefined behavior in how std::list stores it's linked nodes.
 #define _LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB
 #define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
+#define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
 #endif
 
 #define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y

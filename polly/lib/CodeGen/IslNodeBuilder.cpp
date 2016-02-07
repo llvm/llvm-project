@@ -900,32 +900,21 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
   PWAccRel = isl_pw_multi_aff_gist_params(PWAccRel, S.getContext());
   isl_ast_expr *Access =
       isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
-  Value *PreloadVal = ExprBuilder.create(Access);
-
-  if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
-    PreloadInst->setAlignment(dyn_cast<LoadInst>(AccInst)->getAlignment());
+  auto *Address = isl_ast_expr_address_of(Access);
+  auto *AddressValue = ExprBuilder.create(Address);
+  Value *PreloadVal;
 
   // Correct the type as the SAI might have a different type than the user
   // expects, especially if the base pointer is a struct.
   Type *Ty = AccInst->getType();
-  if (Ty == PreloadVal->getType())
-    return PreloadVal;
 
-  if (!Ty->isFloatingPointTy() && !PreloadVal->getType()->isFloatingPointTy())
-    return PreloadVal = Builder.CreateBitOrPointerCast(PreloadVal, Ty);
-
-  // We do not want to cast floating point to non-floating point types and vice
-  // versa, thus we simply create a new load with a casted pointer expression.
-  auto *LInst = dyn_cast<LoadInst>(PreloadVal);
-  assert(LInst && "Preloaded value was not a load instruction");
-  auto *Ptr = LInst->getPointerOperand();
-  Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(),
-                                  Ptr->getName() + ".cast");
-  PreloadVal = Builder.CreateLoad(Ptr, LInst->getName());
+  auto *Ptr = AddressValue;
+  auto Name = Ptr->getName();
+  Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(), Name + ".cast");
+  PreloadVal = Builder.CreateLoad(Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(dyn_cast<LoadInst>(AccInst)->getAlignment());
 
-  LInst->eraseFromParent();
   return PreloadVal;
 }
 

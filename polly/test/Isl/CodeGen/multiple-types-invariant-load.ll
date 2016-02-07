@@ -7,7 +7,7 @@
 ; CHECK: %polly.access.cast.global.load1 = bitcast %struct.hoge* %global.load to i32*
 ; CHECK: %polly.access.global.load2 = getelementptr i32, i32* %polly.access.cast.global.load1, i64 2
 ; CHECK: %polly.access.global.load2.cast = bitcast i32* %polly.access.global.load2 to double*
-; CHECK: %polly.access.global.load2.load3 = load double, double* %polly.access.global.load2.cast
+; CHECK: %polly.access.global.load2.load = load double, double* %polly.access.global.load2.cast
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

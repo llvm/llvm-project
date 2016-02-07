@@ -24,6 +24,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticCategories.h"
 #include "clang/Basic/DiagnosticIDs.h"
@@ -4368,6 +4369,38 @@ CXString clang_Cursor_getMangling(CXCursor C) {
   return cxstring::createDup(FinalBufOS.str());
 }
 
+static std::string getMangledName(std::unique_ptr<MangleContext> &M,
+                                  std::unique_ptr<llvm::DataLayout> &DL,
+                                  const NamedDecl *ND) {
+  std::string FrontendBuf;
+  llvm::raw_string_ostream FOS(FrontendBuf);
+
+  M->mangleName(ND, FOS);
+
+  std::string BackendBuf;
+  llvm::raw_string_ostream BOS(BackendBuf);
+
+  llvm::Mangler::getNameWithPrefix(BOS, llvm::Twine(FOS.str()), *DL);
+
+  return BOS.str();
+}
+
+static std::string getMangledThunk(std::unique_ptr<MangleContext> &M,
+                                   std::unique_ptr<llvm::DataLayout> &DL,
+                                   const CXXMethodDecl *MD, const ThunkInfo &T) {
+  std::string FrontendBuf;
+  llvm::raw_string_ostream FOS(FrontendBuf);
+
+  M->mangleThunk(MD, T, FOS);
+
+  std::string BackendBuf;
+  llvm::raw_string_ostream BOS(BackendBuf);
+
+  llvm::Mangler::getNameWithPrefix(BOS, llvm::Twine(FOS.str()), *DL);
+
+  return BOS.str();
+}
+
 CXStringSet *clang_Cursor_getCXXManglings(CXCursor C) {
   if (clang_isInvalid(C.kind) || !clang_isDeclaration(C.kind))
     return nullptr;
@@ -4411,6 +4444,12 @@ CXStringSet *clang_Cursor_getCXXManglings(CXCursor C) {
       if (DD->isVirtual())
         Manglings.emplace_back(getMangledStructor(M, DL, DD, Dtor_Deleting));
     }
+  } else if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(ND)) {
+    Manglings.emplace_back(getMangledName(M, DL, ND));
+    if (MD->isVirtual())
+      if (const auto *TIV = Ctx.getVTableContext()->getThunkInfo(MD))
+        for (const auto &T : *TIV)
+          Manglings.emplace_back(getMangledThunk(M, DL, MD, T));
   }
 
   return cxstring::createSet(Manglings);

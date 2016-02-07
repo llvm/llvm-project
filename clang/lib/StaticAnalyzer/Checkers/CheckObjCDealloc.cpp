@@ -216,6 +216,12 @@ static void checkObjCDealloc(const CheckerBase *Checker,
            << "' was retained by a synthesized property "
               "but was not released in 'dealloc'";
       } else {
+        // It is common for the ivars for read-only assign properties to
+        // always be stored retained, so don't warn for a release in
+        // dealloc for the ivar backing these properties.
+        if (PD->isReadOnly())
+          continue;
+
         name = LOpts.getGC() == LangOptions::NonGC
                ? "extra ivar release (use-after-release)"
                : "extra ivar release (Hybrid MM, non-GC)";
