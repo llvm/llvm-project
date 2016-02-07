@@ -10,9 +10,10 @@ struct Base {
 };
 
 struct Derived : public Base {
-  Derived(int K) : Base(K), I(K) {}
-  ~Derived() = default; // CHECK:  2| [[@LINE]]|  ~Derived() = default;
+  Derived(int K) : Base(K), I(K), J(K) {}
+  ~Derived() = default; // CHECK:  2| [[@LINE]]|  ~Derived
   int I;
+  int J;
   int getI() { return I; }
 };
 
