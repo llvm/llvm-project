@@ -25,6 +25,7 @@ class IncompleteModulesTestCase(TestBase):
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
     @skipUnlessDarwin
+    @expectedFailureDarwin("rdar://24543255")
     @unittest2.expectedFailure("rdar://20416388")
     @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion('12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
     def test_expr(self):

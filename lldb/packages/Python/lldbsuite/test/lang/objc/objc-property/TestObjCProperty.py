@@ -24,7 +24,6 @@ class ObjCPropertyTestCase(TestBase):
         self.source_name = 'main.m'
 
     @skipUnlessDarwin
-    @expectedFailureDarwin("rdar://24543255")
     @add_test_categories(['pyapi'])
     def test_objc_properties(self):
         """Test that expr uses the correct property getters and setters"""
