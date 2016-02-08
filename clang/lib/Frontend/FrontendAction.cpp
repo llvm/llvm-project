@@ -594,6 +594,7 @@ bool WrapperFrontendAction::hasCodeCompletionSupport() const {
   return WrappedAction->hasCodeCompletionSupport();
 }
 
-WrapperFrontendAction::WrapperFrontendAction(FrontendAction *WrappedAction)
-  : WrappedAction(WrappedAction) {}
+WrapperFrontendAction::WrapperFrontendAction(
+    std::unique_ptr<FrontendAction> WrappedAction)
+  : WrappedAction(std::move(WrappedAction)) {}
 

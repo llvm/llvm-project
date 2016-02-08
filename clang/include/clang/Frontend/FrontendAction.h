@@ -283,7 +283,7 @@ protected:
 public:
   /// Construct a WrapperFrontendAction from an existing action, taking
   /// ownership of it.
-  WrapperFrontendAction(FrontendAction *WrappedAction);
+  WrapperFrontendAction(std::unique_ptr<FrontendAction> WrappedAction);
 
   bool usesPreprocessorOnly() const override;
   TranslationUnitKind getTranslationUnitKind() override;

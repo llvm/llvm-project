@@ -179,10 +179,11 @@ protected:
 
 }
 
-ObjCMigrateAction::ObjCMigrateAction(FrontendAction *WrappedAction,
+ObjCMigrateAction::ObjCMigrateAction(
+                                  std::unique_ptr<FrontendAction> WrappedAction,
                                      StringRef migrateDir,
                                      unsigned migrateAction)
-  : WrapperFrontendAction(WrappedAction), MigrateDir(migrateDir),
+  : WrapperFrontendAction(std::move(WrappedAction)), MigrateDir(migrateDir),
     ObjCMigAction(migrateAction),
     CompInst(nullptr) {
   if (MigrateDir.empty())

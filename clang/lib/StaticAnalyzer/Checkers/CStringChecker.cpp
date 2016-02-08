@@ -118,6 +118,10 @@ public:
 
   void evalStrsep(CheckerContext &C, const CallExpr *CE) const;
 
+  void evalStdCopy(CheckerContext &C, const CallExpr *CE) const;
+  void evalStdCopyBackward(CheckerContext &C, const CallExpr *CE) const;
+  void evalStdCopyCommon(CheckerContext &C, const CallExpr *CE) const;
+
   // Utility methods
   std::pair<ProgramStateRef , ProgramStateRef >
   static assumeZero(CheckerContext &C,
@@ -1950,7 +1954,57 @@ void CStringChecker::evalStrsep(CheckerContext &C, const CallExpr *CE) const {
   C.addTransition(State);
 }
 
+// These should probably be moved into a C++ standard library checker.
+void CStringChecker::evalStdCopy(CheckerContext &C, const CallExpr *CE) const {
+  evalStdCopyCommon(C, CE);
+}
 
+void CStringChecker::evalStdCopyBackward(CheckerContext &C,
+                                         const CallExpr *CE) const {
+  evalStdCopyCommon(C, CE);
+}
+
+void CStringChecker::evalStdCopyCommon(CheckerContext &C,
+                                       const CallExpr *CE) const {
+  if (CE->getNumArgs() < 3)
+    return;
+
+  ProgramStateRef State = C.getState();
+
+  const LocationContext *LCtx = C.getLocationContext();
+
+  // template <class _InputIterator, class _OutputIterator>
+  // _OutputIterator
+  // copy(_InputIterator __first, _InputIterator __last,
+  //        _OutputIterator __result)
+
+  // Invalidate the destination buffer
+  const Expr *Dst = CE->getArg(2);
+  SVal DstVal = State->getSVal(Dst, LCtx);
+  State = InvalidateBuffer(C, State, Dst, DstVal, /*IsSource=*/false,
+                           /*Size=*/nullptr);
+
+  SValBuilder &SVB = C.getSValBuilder();
+
+  SVal ResultVal = SVB.conjureSymbolVal(nullptr, CE, LCtx, C.blockCount());
+  State = State->BindExpr(CE, LCtx, ResultVal);
+
+  C.addTransition(State);
+}
+
+static bool isCPPStdLibraryFunction(const FunctionDecl *FD, StringRef Name) {
+  IdentifierInfo *II = FD->getIdentifier();
+  if (!II)
+    return false;
+
+  if (!AnalysisDeclContext::isInStdNamespace(FD))
+    return false;
+
+  if (II->getName().equals(Name))
+    return true;
+
+  return false;
+}
 //===----------------------------------------------------------------------===//
 // The driver method, and other Checker callbacks.
 //===----------------------------------------------------------------------===//
@@ -1999,6 +2053,10 @@ bool CStringChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
     evalFunction =  &CStringChecker::evalBcopy;
   else if (C.isCLibraryFunction(FDecl, "bcmp"))
     evalFunction =  &CStringChecker::evalMemcmp;
+  else if (isCPPStdLibraryFunction(FDecl, "copy"))
+    evalFunction =  &CStringChecker::evalStdCopy;
+  else if (isCPPStdLibraryFunction(FDecl, "copy_backward"))
+    evalFunction =  &CStringChecker::evalStdCopyBackward;
 
   // If the callee isn't a string function, let another checker handle it.
   if (!evalFunction)

@@ -7807,7 +7807,9 @@ public:
   /// \brief Check if the specified variable is used in one of the private
   /// clauses (private, firstprivate, lastprivate, reduction etc.) in OpenMP
   /// constructs.
-  bool IsOpenMPCapturedDecl(ValueDecl *D);
+  VarDecl *IsOpenMPCapturedDecl(ValueDecl *D);
+  ExprResult getOpenMPCapturedExpr(VarDecl *Capture, ExprValueKind VK,
+                                   ExprObjectKind OK);
 
   /// \brief Check if the specified variable is used in 'private' clause.
   /// \param Level Relative level of nested OpenMP construct for that the check

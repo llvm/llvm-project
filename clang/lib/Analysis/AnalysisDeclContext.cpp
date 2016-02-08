@@ -317,6 +317,21 @@ AnalysisDeclContext::getBlockInvocationContext(const LocationContext *parent,
                                                                BD, ContextData);
 }
 
+bool AnalysisDeclContext::isInStdNamespace(const Decl *D) {
+  const DeclContext *DC = D->getDeclContext()->getEnclosingNamespaceContext();
+  const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC);
+  if (!ND)
+    return false;
+
+  while (const DeclContext *Parent = ND->getParent()) {
+    if (!isa<NamespaceDecl>(Parent))
+      break;
+    ND = cast<NamespaceDecl>(Parent);
+  }
+
+  return ND->isStdNamespace();
+}
+
 LocationContextManager & AnalysisDeclContext::getLocationContextManager() {
   assert(Manager &&
          "Cannot create LocationContexts without an AnalysisDeclContextManager!");

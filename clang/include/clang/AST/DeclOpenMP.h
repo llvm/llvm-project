@@ -87,6 +87,35 @@ public:
   static bool classofKind(Kind K) { return K == OMPThreadPrivate; }
 };
 
-}  // end namespace clang
+/// Pseudo declaration for capturing of non-static data members in non-static
+/// member functions.
+///
+/// Clang supports capturing of variables only, but OpenMP 4.5 allows to
+/// privatize non-static members of current class in non-static member
+/// functions. This pseudo-declaration allows properly handle this kind of
+/// capture by wrapping captured expression into a variable-like declaration.
+class OMPCapturedFieldDecl final : public VarDecl {
+  friend class ASTDeclReader;
+  void anchor() override;
+
+  OMPCapturedFieldDecl(ASTContext &C, DeclContext *DC, IdentifierInfo *Id,
+                       QualType Type)
+      : VarDecl(OMPCapturedField, C, DC, SourceLocation(), SourceLocation(), Id,
+                Type, nullptr, SC_None) {
+    setImplicit();
+  }
+
+public:
+  static OMPCapturedFieldDecl *Create(ASTContext &C, DeclContext *DC,
+                                      IdentifierInfo *Id, QualType T);
+
+  static OMPCapturedFieldDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OMPCapturedField; }
+};
+
+} // end namespace clang
 
 #endif

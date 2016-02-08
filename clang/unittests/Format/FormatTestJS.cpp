@@ -200,6 +200,11 @@ TEST_F(FormatTestJS, ContainerLiterals) {
                "  b: 2,\n"
                "  [c]: 3,\n"
                "};");
+
+  // Object literals can leave out labels.
+  verifyFormat("f({a}, () => {\n"
+               "  g();  //\n"
+               "});");
 }
 
 TEST_F(FormatTestJS, MethodsInObjectLiterals) {

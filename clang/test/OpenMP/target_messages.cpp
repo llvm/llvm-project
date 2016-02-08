@@ -1,9 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s
 // RUN: not %clang_cc1 -fopenmp -std=c++11 -omptargets=aaa-bbb-ccc-ddd -o - %s 2>&1 | FileCheck %s
 // CHECK: error: OpenMP target is invalid: 'aaa-bbb-ccc-ddd'
-// RUN: not %clang_cc1 -fopenmp -std=c++11 -triple nvptx64-nvidia-cuda -o - %s 2>&1 | FileCheck --check-prefix CHECK-UNSUPPORTED-HOST-TARGET %s
-// RUN: not %clang_cc1 -fopenmp -std=c++11 -triple nvptx-nvidia-cuda -o - %s 2>&1 | FileCheck --check-prefix CHECK-UNSUPPORTED-HOST-TARGET %s
-// CHECK-UNSUPPORTED-HOST-TARGET: error: The target '{{nvptx64-nvidia-cuda|nvptx-nvidia-cuda}}' is not a supported OpenMP host target.
 
 void foo() {
 }

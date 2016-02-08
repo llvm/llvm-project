@@ -4,6 +4,8 @@
 // RTTI-DAG: $"\01??_7S@@6B@" = comdat largest
 // RTTI-DAG: $"\01??_7V@@6B@" = comdat largest
 
+// RTTI-NOT: @"\01??_R4U@@6B@"
+
 struct S {
   virtual ~S();
 } s;

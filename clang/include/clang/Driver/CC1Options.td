@@ -151,6 +151,8 @@ def msave_temp_labels : Flag<["-"], "msave-temp-labels">,
            "on compiler-generated code.">;
 def mrelocation_model : Separate<["-"], "mrelocation-model">,
   HelpText<"The relocation model to use">;
+def fno_math_builtin : Flag<["-"], "fno-math-builtin">,
+  HelpText<"Disable implicit builtin knowledge of math functions">;
 }
 
 def disable_llvm_optzns : Flag<["-"], "disable-llvm-optzns">,

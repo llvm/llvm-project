@@ -2082,6 +2082,9 @@ def err_function_concept_bool_ret : Error<
   "declared return type of function concept must be 'bool'">;
 def err_variable_concept_bool_decl : Error<
   "declared type of variable concept must be 'bool'">;
+def err_concept_specified_specialization : Error<
+  "'concept' cannot be applied on an "
+  "%select{explicit instantiation|explicit specialization|partial specialization}0">;
 
 // C++11 char16_t/char32_t
 def warn_cxx98_compat_unicode_type : Warning<

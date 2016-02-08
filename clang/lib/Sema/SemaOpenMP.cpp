@@ -71,10 +71,11 @@ public:
     OpenMPDirectiveKind DKind;
     OpenMPClauseKind CKind;
     Expr *RefExpr;
+    DeclRefExpr *PrivateCopy;
     SourceLocation ImplicitDSALoc;
     DSAVarData()
         : DKind(OMPD_unknown), CKind(OMPC_unknown), RefExpr(nullptr),
-          ImplicitDSALoc() {}
+          PrivateCopy(nullptr), ImplicitDSALoc() {}
   };
 
 private:
@@ -83,11 +84,12 @@ private:
   struct DSAInfo {
     OpenMPClauseKind Attributes;
     Expr *RefExpr;
+    DeclRefExpr *PrivateCopy;
   };
-  typedef llvm::SmallDenseMap<ValueDecl *, DSAInfo, 64> DeclSAMapTy;
-  typedef llvm::SmallDenseMap<ValueDecl *, Expr *, 64> AlignedMapTy;
+  typedef llvm::DenseMap<ValueDecl *, DSAInfo> DeclSAMapTy;
+  typedef llvm::DenseMap<ValueDecl *, Expr *> AlignedMapTy;
   typedef llvm::DenseMap<ValueDecl *, unsigned> LoopControlVariablesMapTy;
-  typedef llvm::SmallDenseMap<ValueDecl *, MapInfo, 64> MappedDeclsTy;
+  typedef llvm::DenseMap<ValueDecl *, MapInfo> MappedDeclsTy;
   typedef llvm::StringMap<std::pair<OMPCriticalDirective *, llvm::APSInt>>
       CriticalsWithHintsTy;
 
@@ -195,7 +197,8 @@ public:
   ValueDecl *getParentLoopControlVariable(unsigned I);
 
   /// \brief Adds explicit data sharing attribute to the specified declaration.
-  void addDSA(ValueDecl *D, Expr *E, OpenMPClauseKind A);
+  void addDSA(ValueDecl *D, Expr *E, OpenMPClauseKind A,
+              DeclRefExpr *PrivateCopy = nullptr);
 
   /// \brief Returns data sharing attributes from top of the stack for the
   /// specified declaration.
@@ -434,6 +437,7 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(StackTy::reverse_iterator Iter,
   // attributes.
   if (Iter->SharingMap.count(D)) {
     DVar.RefExpr = Iter->SharingMap[D].RefExpr;
+    DVar.PrivateCopy = Iter->SharingMap[D].PrivateCopy;
     DVar.CKind = Iter->SharingMap[D].Attributes;
     DVar.ImplicitDSALoc = Iter->DefaultAttrLoc;
     return DVar;
@@ -547,15 +551,20 @@ ValueDecl *DSAStackTy::getParentLoopControlVariable(unsigned I) {
   return nullptr;
 }
 
-void DSAStackTy::addDSA(ValueDecl *D, Expr *E, OpenMPClauseKind A) {
+void DSAStackTy::addDSA(ValueDecl *D, Expr *E, OpenMPClauseKind A,
+                        DeclRefExpr *PrivateCopy) {
   D = getCanonicalDecl(D);
   if (A == OMPC_threadprivate) {
     Stack[0].SharingMap[D].Attributes = A;
     Stack[0].SharingMap[D].RefExpr = E;
+    Stack[0].SharingMap[D].PrivateCopy = nullptr;
   } else {
     assert(Stack.size() > 1 && "Data-sharing attributes stack is empty");
     Stack.back().SharingMap[D].Attributes = A;
     Stack.back().SharingMap[D].RefExpr = E;
+    Stack.back().SharingMap[D].PrivateCopy = PrivateCopy;
+    if (PrivateCopy)
+      addDSA(PrivateCopy->getDecl(), PrivateCopy, A);
   }
 }
 
@@ -682,6 +691,7 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D, bool FromParent) {
   auto I = std::prev(StartI);
   if (I->SharingMap.count(D)) {
     DVar.RefExpr = I->SharingMap[D].RefExpr;
+    DVar.PrivateCopy = I->SharingMap[D].PrivateCopy;
     DVar.CKind = I->SharingMap[D].Attributes;
     DVar.ImplicitDSALoc = I->DefaultAttrLoc;
   }
@@ -886,7 +896,7 @@ bool Sema::IsOpenMPCapturedByRef(ValueDecl *D,
   return IsByRef;
 }
 
-bool Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
+VarDecl *Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   D = getCanonicalDecl(D);
 
@@ -900,18 +910,16 @@ bool Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
   auto *VD = dyn_cast<VarDecl>(D);
   if (VD && !VD->hasLocalStorage()) {
     if (DSAStack->getCurrentDirective() == OMPD_target &&
-        !DSAStack->isClauseParsingMode()) {
-      return true;
-    }
+        !DSAStack->isClauseParsingMode())
+      return VD;
     if (DSAStack->getCurScope() &&
         DSAStack->hasDirective(
             [](OpenMPDirectiveKind K, const DeclarationNameInfo &DNI,
                SourceLocation Loc) -> bool {
               return isOpenMPTargetExecutionDirective(K);
             },
-            false)) {
-      return true;
-    }
+            false))
+      return VD;
   }
 
   if (DSAStack->getCurrentDirective() != OMPD_unknown &&
@@ -921,15 +929,16 @@ bool Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
         (VD && VD->hasLocalStorage() &&
          isParallelOrTaskRegion(DSAStack->getCurrentDirective())) ||
         (VD && DSAStack->isForceVarCapturing()))
-      return true;
+      return VD;
     auto DVarPrivate = DSAStack->getTopDSA(D, DSAStack->isClauseParsingMode());
     if (DVarPrivate.CKind != OMPC_unknown && isOpenMPPrivate(DVarPrivate.CKind))
-      return true;
+      return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
     DVarPrivate = DSAStack->hasDSA(D, isOpenMPPrivate, MatchesAlways(),
                                    DSAStack->isClauseParsingMode());
-    return DVarPrivate.CKind != OMPC_unknown;
+    if (DVarPrivate.CKind != OMPC_unknown)
+      return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
   }
-  return false;
+  return nullptr;
 }
 
 bool Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level) {
@@ -6958,6 +6967,50 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   return Res;
 }
 
+static DeclRefExpr *buildCapture(Sema &S, IdentifierInfo *Id,
+                                 Expr *CaptureExpr) {
+  ASTContext &C = S.getASTContext();
+  Expr *Init = CaptureExpr->IgnoreImpCasts();
+  QualType Ty = Init->getType();
+  if (CaptureExpr->getObjectKind() == OK_Ordinary) {
+    if (S.getLangOpts().CPlusPlus)
+      Ty = C.getLValueReferenceType(Ty);
+    else {
+      Ty = C.getPointerType(Ty);
+      ExprResult Res =
+          S.CreateBuiltinUnaryOp(CaptureExpr->getExprLoc(), UO_AddrOf, Init);
+      if (!Res.isUsable())
+        return nullptr;
+      Init = Res.get();
+    }
+  }
+  auto *CFD = OMPCapturedFieldDecl::Create(C, S.CurContext, Id, Ty);
+  S.CurContext->addHiddenDecl(CFD);
+  S.AddInitializerToDecl(CFD, Init, /*DirectInit=*/false,
+                         /*TypeMayContainAuto=*/true);
+  return buildDeclRefExpr(S, CFD, Ty.getNonReferenceType(), SourceLocation());
+}
+
+ExprResult Sema::getOpenMPCapturedExpr(VarDecl *Capture, ExprValueKind VK,
+                                       ExprObjectKind OK) {
+  SourceLocation Loc = Capture->getInit()->getExprLoc();
+  ExprResult Res = BuildDeclRefExpr(
+      Capture, Capture->getType().getNonReferenceType(), VK_LValue, Loc);
+  if (!Res.isUsable())
+    return ExprError();
+  if (OK == OK_Ordinary && !getLangOpts().CPlusPlus) {
+    Res = CreateBuiltinUnaryOp(Loc, UO_Deref, Res.get());
+    if (!Res.isUsable())
+      return ExprError();
+  }
+  if (VK != VK_LValue && Res.get()->isGLValue()) {
+    Res = DefaultLvalueConversion(Res.get());
+    if (!Res.isUsable())
+      return ExprError();
+  }
+  return Res;
+}
+
 OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
@@ -7050,8 +7103,11 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     auto VDPrivateRefExpr = buildDeclRefExpr(
         *this, VDPrivate, RefExpr->getType().getUnqualifiedType(), ELoc);
 
-    DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_private);
-    Vars.push_back(RefExpr->IgnoreParens());
+    DeclRefExpr *Ref = nullptr;
+    if (!VD)
+      Ref = buildCapture(*this, D->getIdentifier(), RefExpr);
+    DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_private, Ref);
+    Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
     PrivateCopies.push_back(VDPrivateRefExpr);
   }
 

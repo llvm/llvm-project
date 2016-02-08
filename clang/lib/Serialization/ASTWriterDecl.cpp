@@ -131,6 +131,7 @@ namespace clang {
     void VisitObjCPropertyDecl(ObjCPropertyDecl *D);
     void VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
+    void VisitOMPCapturedFieldDecl(OMPCapturedFieldDecl *D);
 
     /// Add an Objective-C type parameter list to the given record.
     void AddObjCTypeParamList(ObjCTypeParamList *typeParams) {
@@ -1626,6 +1627,11 @@ void ASTDeclWriter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
   for (auto *I : D->varlists())
     Writer.AddStmt(I);
   Code = serialization::DECL_OMP_THREADPRIVATE;
+}
+
+void ASTDeclWriter::VisitOMPCapturedFieldDecl(OMPCapturedFieldDecl *D) {
+  VisitVarDecl(D);
+  Code = serialization::DECL_OMP_CAPTUREDFIELD;
 }
 
 //===----------------------------------------------------------------------===//
