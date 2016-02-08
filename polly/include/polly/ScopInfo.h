@@ -850,11 +850,13 @@ using MemoryAccessList = std::forward_list<MemoryAccess *>;
 /// The first element is the SCEV for the pointer/location that identifies this
 /// equivalence class. The second is a list of memory accesses to that location
 /// that are now treated as invariant and hoisted during code generation. The
-/// last element is the execution context under which the invariant memory
+/// third element is the execution context under which the invariant memory
 /// location is accessed, hence the union of all domain contexts for the memory
-/// accesses in the list.
+/// accesses in the list. The last element describes the type of the invariant
+/// accesss in order to differentiate between different typed invariant loads of
+/// the same location.
 using InvariantEquivClassTy =
-    std::tuple<const SCEV *, MemoryAccessList, isl_set *>;
+    std::tuple<const SCEV *, MemoryAccessList, isl_set *, Type *>;
 
 /// @brief Type for invariant accesses equivalence classes.
 using InvariantEquivClassesTy = SmallVector<InvariantEquivClassTy, 8>;
@@ -2039,14 +2041,15 @@ class ScopInfo : public RegionPass {
   /// @brief Analyze and extract the cross-BB scalar dependences (or,
   ///        dataflow dependencies) of an instruction.
   ///
-  /// @param Inst               The instruction to be analyzed
-  /// @param R                  The SCoP region
-  /// @param NonAffineSubRegion The non affine sub-region @p Inst is in.
+  /// @param Inst    The instruction to be analyzed.
+  void buildScalarDependences(Instruction *Inst);
+
+  /// @brief Search for uses of the llvm::Value defined by @p Inst that are not
+  ///        within the SCoP. If there is such use, add a SCALAR WRITE such that
+  ///        it is available after the SCoP as escaping value.
   ///
-  /// @return     True if the Instruction is used in other BB and a scalar write
-  ///             Access is required.
-  bool buildScalarDependences(Instruction *Inst, Region *R,
-                              Region *NonAffineSubRegio);
+  /// @param Inst The instruction to be analyzed.
+  void buildEscapingDependences(Instruction *Inst);
 
   /// @brief Create MemoryAccesses for the given PHI node in the given region.
   ///

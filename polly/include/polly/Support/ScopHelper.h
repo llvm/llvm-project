@@ -321,5 +321,14 @@ bool isIgnoredIntrinsic(const llvm::Value *V);
 ///         otherwise return false.
 bool canSynthesize(const llvm::Value *V, const llvm::LoopInfo *LI,
                    llvm::ScalarEvolution *SE, const llvm::Region *R);
+
+/// @brief Return the block in which a value is used.
+///
+/// For normal instructions, this is the instruction's parent block. For PHI
+/// nodes, this is the incoming block of that use, because this is where the
+/// operand must be defined (i.e. its definition dominates this block).
+/// Non-instructions do not use operands at a specific point such that in this
+/// case this function returns nullptr.
+llvm::BasicBlock *getUseBlock(llvm::Use &U);
 }
 #endif

@@ -121,6 +121,11 @@ static cl::opt<bool>
                 cl::desc("Print information about the activities of Polly"),
                 cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<bool> AllowDifferentTypes(
+    "polly-allow-differing-element-types",
+    cl::desc("Allow different element types for array accesses"), cl::Hidden,
+    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 static cl::opt<bool>
     AllowNonAffine("polly-allow-nonaffine",
                    cl::desc("Allow non affine access functions in arrays"),
@@ -787,11 +792,16 @@ bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
   AccessFunction = SE->getMinusSCEV(AccessFunction, BasePointer);
 
   const SCEV *Size = SE->getElementSize(Inst);
-  if (Context.ElementSize[BasePointer])
+  if (Context.ElementSize[BasePointer]) {
+    if (!AllowDifferentTypes && Context.ElementSize[BasePointer] != Size)
+      return invalid<ReportDifferentArrayElementSize>(Context, /*Assert=*/true,
+                                                      Inst, BaseValue);
+
     Context.ElementSize[BasePointer] =
         SE->getSMinExpr(Size, Context.ElementSize[BasePointer]);
-  else
+  } else {
     Context.ElementSize[BasePointer] = Size;
+  }
 
   bool isVariantInNonAffineLoop = false;
   SetVector<const Loop *> Loops;

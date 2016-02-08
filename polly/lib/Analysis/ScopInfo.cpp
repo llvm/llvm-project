@@ -552,6 +552,7 @@ MemoryAccess::createBasicAccessMap(ScopStmt *Statement) {
 // constraints is the set of constraints that needs to be assumed to ensure such
 // statement instances are never executed.
 void MemoryAccess::assumeNoOutOfBound() {
+  auto *SAI = getScopArrayInfo();
   isl_space *Space = isl_space_range(getOriginalAccessRelationSpace());
   isl_set *Outside = isl_set_empty(isl_space_copy(Space));
   for (int i = 1, Size = isl_space_dim(Space, isl_dim_set); i < Size; ++i) {
@@ -563,7 +564,7 @@ void MemoryAccess::assumeNoOutOfBound() {
     isl_set *DimOutside;
 
     DimOutside = isl_pw_aff_lt_set(isl_pw_aff_copy(Var), Zero);
-    isl_pw_aff *SizeE = getScopArrayInfo()->getDimensionSizePw(i);
+    isl_pw_aff *SizeE = SAI->getDimensionSizePw(i);
     SizeE = isl_pw_aff_add_dims(SizeE, isl_dim_in,
                                 isl_space_dim(Space, isl_dim_set));
     SizeE = isl_pw_aff_set_tuple_id(SizeE, isl_dim_in,
@@ -611,11 +612,12 @@ void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
 
   bool isWrapping = Range.isSignWrappedSet();
   unsigned BW = Range.getBitWidth();
+  const auto One = APInt(BW, 1);
   const auto LB = isWrapping ? Range.getLower() : Range.getSignedMin();
-  const auto UB = isWrapping ? Range.getUpper() : Range.getSignedMax();
+  const auto UB = isWrapping ? (Range.getUpper() - One) : Range.getSignedMax();
 
   auto Min = LB.sdiv(APInt(BW, ElementSize));
-  auto Max = (UB - APInt(BW, 1)).sdiv(APInt(BW, ElementSize));
+  auto Max = UB.sdiv(APInt(BW, ElementSize)) + One;
 
   isl_set *AccessRange = isl_map_range(isl_map_copy(AccessRelation));
   AccessRange =
@@ -940,6 +942,7 @@ void ScopStmt::restrictDomain(__isl_take isl_set *NewDomain) {
 }
 
 void ScopStmt::buildAccessRelations() {
+  Scop &S = *getParent();
   for (MemoryAccess *Access : MemAccs) {
     Type *ElementType = Access->getAccessValue()->getType();
 
@@ -953,9 +956,8 @@ void ScopStmt::buildAccessRelations() {
     else
       Ty = ScopArrayInfo::MK_Array;
 
-    const ScopArrayInfo *SAI = getParent()->getOrCreateScopArrayInfo(
-        Access->getBaseAddr(), ElementType, Access->Sizes, Ty);
-
+    auto *SAI = S.getOrCreateScopArrayInfo(Access->getBaseAddr(), ElementType,
+                                           Access->Sizes, Ty);
     Access->buildAccessRelation(SAI);
   }
 }
@@ -1825,21 +1827,22 @@ void Scop::addUserContext() {
 }
 
 void Scop::buildInvariantEquivalenceClasses() {
-  DenseMap<const SCEV *, LoadInst *> EquivClasses;
+  DenseMap<std::pair<const SCEV *, Type *>, LoadInst *> EquivClasses;
 
   const InvariantLoadsSetTy &RIL = *SD.getRequiredInvariantLoads(&getRegion());
   for (LoadInst *LInst : RIL) {
     const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
 
-    LoadInst *&ClassRep = EquivClasses[PointerSCEV];
+    Type *Ty = LInst->getType();
+    LoadInst *&ClassRep = EquivClasses[std::make_pair(PointerSCEV, Ty)];
     if (ClassRep) {
       InvEquivClassVMap[LInst] = ClassRep;
       continue;
     }
 
     ClassRep = LInst;
-    InvariantEquivClasses.emplace_back(PointerSCEV, MemoryAccessList(),
-                                       nullptr);
+    InvariantEquivClasses.emplace_back(PointerSCEV, MemoryAccessList(), nullptr,
+                                       Ty);
   }
 }
 
@@ -2850,9 +2853,10 @@ const InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) const {
   if (Value *Rep = InvEquivClassVMap.lookup(LInst))
     LInst = cast<LoadInst>(Rep);
 
+  Type *Ty = LInst->getType();
   const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
   for (auto &IAClass : InvariantEquivClasses)
-    if (PointerSCEV == std::get<0>(IAClass))
+    if (PointerSCEV == std::get<0>(IAClass) && Ty == std::get<3>(IAClass))
       return &IAClass;
 
   return nullptr;
@@ -2895,11 +2899,12 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
     // MA and if found consolidate them. Otherwise create a new equivalence
     // class at the end of InvariantEquivClasses.
     LoadInst *LInst = cast<LoadInst>(MA->getAccessInstruction());
+    Type *Ty = LInst->getType();
     const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
 
     bool Consolidated = false;
     for (auto &IAClass : InvariantEquivClasses) {
-      if (PointerSCEV != std::get<0>(IAClass))
+      if (PointerSCEV != std::get<0>(IAClass) || Ty != std::get<3>(IAClass))
         continue;
 
       Consolidated = true;
@@ -2924,7 +2929,7 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
     // If we did not consolidate MA, thus did not find an equivalence class
     // for it, we create a new one.
     InvariantEquivClasses.emplace_back(PointerSCEV, MemoryAccessList{MA},
-                                       isl_set_copy(DomainCtx));
+                                       isl_set_copy(DomainCtx), Ty);
   }
 
   isl_set_free(DomainCtx);
@@ -3677,25 +3682,6 @@ void ScopInfo::buildPHIAccesses(PHINode *PHI, Region &R,
       continue;
 
     OnlyNonAffineSubRegionOperands = false;
-
-    if (!R.contains(OpBB))
-      continue;
-
-    Instruction *OpI = dyn_cast<Instruction>(Op);
-    if (OpI) {
-      BasicBlock *OpIBB = OpI->getParent();
-      // As we pretend there is a use (or more precise a write) of OpI in OpBB
-      // we have to insert a scalar dependence from the definition of OpI to
-      // OpBB if the definition is not in OpBB.
-      if (scop->getStmtForBasicBlock(OpIBB) !=
-          scop->getStmtForBasicBlock(OpBB)) {
-        ensureValueRead(OpI, OpBB);
-        ensureValueWrite(OpI);
-      }
-    } else if (ModelReadOnlyScalars && !isa<Constant>(Op)) {
-      ensureValueRead(Op, OpBB);
-    }
-
     ensurePHIWrite(PHI, OpBB, Op, IsExitBlock);
   }
 
@@ -3704,115 +3690,41 @@ void ScopInfo::buildPHIAccesses(PHINode *PHI, Region &R,
   }
 }
 
-bool ScopInfo::buildScalarDependences(Instruction *Inst, Region *R,
-                                      Region *NonAffineSubRegion) {
-  bool canSynthesizeInst = canSynthesize(Inst, LI, SE, R);
-  if (isIgnoredIntrinsic(Inst))
-    return false;
+void ScopInfo::buildScalarDependences(Instruction *Inst) {
+  assert(!isa<PHINode>(Inst));
 
-  bool AnyCrossStmtUse = false;
-  BasicBlock *ParentBB = Inst->getParent();
+  // Pull-in required operands.
+  for (Use &Op : Inst->operands())
+    ensureValueRead(Op.get(), Inst->getParent());
+}
 
-  for (User *U : Inst->users()) {
-    Instruction *UI = dyn_cast<Instruction>(U);
+void ScopInfo::buildEscapingDependences(Instruction *Inst) {
+  Region *R = &scop->getRegion();
 
-    // Ignore the strange user
-    if (UI == 0)
+  // Check for uses of this instruction outside the scop. Because we do not
+  // iterate over such instructions and therefore did not "ensure" the existence
+  // of a write, we must determine such use here.
+  for (Use &U : Inst->uses()) {
+    Instruction *UI = dyn_cast<Instruction>(U.getUser());
+    if (!UI)
       continue;
 
-    BasicBlock *UseParent = UI->getParent();
+    BasicBlock *UseParent = getUseBlock(U);
+    BasicBlock *UserParent = UI->getParent();
 
-    // Ignore basic block local uses. A value that is defined in a scop, but
-    // used in a PHI node in the same basic block does not count as basic block
-    // local, as for such cases a control flow edge is passed between definition
-    // and use.
-    if (UseParent == ParentBB && !isa<PHINode>(UI))
-      continue;
-
-    // Uses by PHI nodes in the entry node count as external uses in case the
-    // use is through an incoming block that is itself not contained in the
-    // region.
-    if (R->getEntry() == UseParent) {
-      if (auto *PHI = dyn_cast<PHINode>(UI)) {
-        bool ExternalUse = false;
-        for (unsigned i = 0; i < PHI->getNumIncomingValues(); i++) {
-          if (PHI->getIncomingValue(i) == Inst &&
-              !R->contains(PHI->getIncomingBlock(i))) {
-            ExternalUse = true;
-            break;
-          }
-        }
-
-        if (ExternalUse) {
-          AnyCrossStmtUse = true;
-          continue;
-        }
-      }
-    }
-
-    // Do not build scalar dependences inside a non-affine subregion.
-    if (NonAffineSubRegion && NonAffineSubRegion->contains(UseParent))
-      continue;
-
-    // Check for PHI nodes in the region exit and skip them, if they will be
-    // modeled as PHI nodes.
-    //
-    // PHI nodes in the region exit that have more than two incoming edges need
-    // to be modeled as PHI-Nodes to correctly model the fact that depending on
-    // the control flow a different value will be assigned to the PHI node. In
-    // case this is the case, there is no need to create an additional normal
-    // scalar dependence. Hence, bail out before we register an "out-of-region"
-    // use for this definition.
-    if (isa<PHINode>(UI) && UI->getParent() == R->getExit() &&
-        !R->getExitingBlock())
-      continue;
-
-    // Check whether or not the use is in the SCoP.
-    if (!R->contains(UseParent)) {
-      AnyCrossStmtUse = true;
-      continue;
-    }
-
-    // If the instruction can be synthesized and the user is in the region
-    // we do not need to add scalar dependences.
-    if (canSynthesizeInst)
-      continue;
-
-    // No need to translate these scalar dependences into polyhedral form,
-    // because synthesizable scalars can be generated by the code generator.
-    if (canSynthesize(UI, LI, SE, R))
-      continue;
-
-    // Skip PHI nodes in the region as they handle their operands on their own.
-    if (isa<PHINode>(UI))
-      continue;
-
-    // Now U is used in another statement.
-    AnyCrossStmtUse = true;
-
-    // Do not build a read access that is not in the current SCoP
-    // Use the def instruction as base address of the MemoryAccess, so that it
-    // will become the name of the scalar access in the polyhedral form.
-    ensureValueRead(Inst, UI->getParent());
-  }
-
-  if (ModelReadOnlyScalars && !isa<PHINode>(Inst)) {
-    for (Value *Op : Inst->operands()) {
-      if (canSynthesize(Op, LI, SE, R))
-        continue;
-
-      if (Instruction *OpInst = dyn_cast<Instruction>(Op))
-        if (R->contains(OpInst))
-          continue;
-
-      if (isa<Constant>(Op))
-        continue;
-
-      ensureValueRead(Op, Inst->getParent());
+    // An escaping value is either used by an instruction not within the scop,
+    // or (when the scop region's exit needs to be simplified) by a PHI in the
+    // scop's exit block. This is because region simplification before code
+    // generation inserts new basic blocks before the PHI such that its incoming
+    // blocks are not in the scop anymore.
+    if (!R->contains(UseParent) ||
+        (isa<PHINode>(UI) && UserParent == R->getExit() &&
+         R->getExitingBlock())) {
+      // At least one escaping use found.
+      ensureValueWrite(Inst);
+      break;
     }
   }
-
-  return AnyCrossStmtUse;
 }
 
 extern MapInsnToMemAcc InsnToMemAcc;
@@ -4018,10 +3930,8 @@ void ScopInfo::buildAccessFunctions(Region &R, BasicBlock &BB,
   // The set of loads that are required to be invariant.
   auto &ScopRIL = *SD->getRequiredInvariantLoads(&R);
 
-  for (BasicBlock::iterator I = BB.begin(), E = --BB.end(); I != E; ++I) {
-    Instruction *Inst = &*I;
-
-    PHINode *PHI = dyn_cast<PHINode>(Inst);
+  for (Instruction &Inst : BB) {
+    PHINode *PHI = dyn_cast<PHINode>(&Inst);
     if (PHI)
       buildPHIAccesses(PHI, R, NonAffineSubRegion, IsExitBlock);
 
@@ -4036,18 +3946,13 @@ void ScopInfo::buildAccessFunctions(Region &R, BasicBlock &BB,
     if (auto MemInst = MemAccInst::dyn_cast(Inst))
       buildMemoryAccess(MemInst, L, &R, BoxedLoops, ScopRIL);
 
-    if (isIgnoredIntrinsic(Inst))
+    if (isIgnoredIntrinsic(&Inst))
       continue;
 
-    // Do not build scalar dependences for required invariant loads as we will
-    // hoist them later on anyway or drop the SCoP if we cannot.
-    if (ScopRIL.count(dyn_cast<LoadInst>(Inst)))
-      continue;
-
-    if (buildScalarDependences(Inst, &R, NonAffineSubRegion)) {
-      if (!isa<StoreInst>(Inst))
-        ensureValueWrite(Inst);
-    }
+    if (!PHI)
+      buildScalarDependences(&Inst);
+    if (!IsExitBlock)
+      buildEscapingDependences(&Inst);
   }
 }
 
@@ -4127,16 +4032,43 @@ void ScopInfo::ensureValueWrite(Instruction *Value) {
 }
 void ScopInfo::ensureValueRead(Value *Value, BasicBlock *UserBB) {
 
+  // There cannot be an "access" for literal constants. BasicBlock references
+  // (jump destinations) also never change.
+  if ((isa<Constant>(Value) && !isa<GlobalVariable>(Value)) ||
+      isa<BasicBlock>(Value))
+    return;
+
   // If the instruction can be synthesized and the user is in the region we do
   // not need to add a value dependences.
   Region &ScopRegion = scop->getRegion();
   if (canSynthesize(Value, LI, SE, &ScopRegion))
     return;
 
+  // Do not build scalar dependences for required invariant loads as we will
+  // hoist them later on anyway or drop the SCoP if we cannot.
+  auto ScopRIL = SD->getRequiredInvariantLoads(&ScopRegion);
+  if (ScopRIL->count(dyn_cast<LoadInst>(Value)))
+    return;
+
+  // Determine the ScopStmt containing the value's definition and use. There is
+  // no defining ScopStmt if the value is a function argument, a global value,
+  // or defined outside the SCoP.
+  Instruction *ValueInst = dyn_cast<Instruction>(Value);
+  ScopStmt *ValueStmt =
+      ValueInst ? scop->getStmtForBasicBlock(ValueInst->getParent()) : nullptr;
+
   ScopStmt *UserStmt = scop->getStmtForBasicBlock(UserBB);
 
   // We do not model uses outside the scop.
   if (!UserStmt)
+    return;
+
+  // Add MemoryAccess for invariant values only if requested.
+  if (!ModelReadOnlyScalars && !ValueStmt)
+    return;
+
+  // Ignore use-def chains within the same ScopStmt.
+  if (ValueStmt == UserStmt)
     return;
 
   // Do not create another MemoryAccess for reloading the value if one already
@@ -4147,10 +4079,21 @@ void ScopInfo::ensureValueRead(Value *Value, BasicBlock *UserBB) {
   addMemoryAccess(UserBB, nullptr, MemoryAccess::READ, Value, 1, true, Value,
                   ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
                   ScopArrayInfo::MK_Value);
+  if (ValueInst)
+    ensureValueWrite(ValueInst);
 }
 void ScopInfo::ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
                               Value *IncomingValue, bool IsExitBlock) {
   ScopStmt *IncomingStmt = scop->getStmtForBasicBlock(IncomingBlock);
+  if (!IncomingStmt)
+    return;
+
+  // Take care for the incoming value being available in the incoming block.
+  // This must be done before the check for multiple PHI writes because multiple
+  // exiting edges from subregion each can be the effective written value of the
+  // subregion. As such, all of them must be made available in the subregion
+  // statement.
+  ensureValueRead(IncomingValue, IncomingBlock);
 
   // Do not add more than one MemoryAccess per PHINode and ScopStmt.
   if (MemoryAccess *Acc = IncomingStmt->lookupPHIWriteOf(PHI)) {

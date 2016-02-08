@@ -384,6 +384,7 @@ template <class _Key, class _Cp, class _Hash,
 class __unordered_map_hasher
     : private _Hash
 {
+  typedef typename __key_value_types<_Cp>::__map_value_type _PairT;
 public:
     _LIBCPP_INLINE_VISIBILITY
     __unordered_map_hasher()
@@ -414,6 +415,7 @@ class __unordered_map_hasher<_Key, _Cp, _Hash, false>
 {
     _Hash __hash_;
 
+    typedef typename __key_value_types<_Cp>::__map_value_type _PairT;
 public:
     _LIBCPP_INLINE_VISIBILITY
     __unordered_map_hasher()
@@ -455,6 +457,7 @@ template <class _Key, class _Cp, class _Pred,
 class __unordered_map_equal
     : private _Pred
 {
+   typedef typename __key_value_types<_Cp>::__map_value_type _PairT;
 public:
     _LIBCPP_INLINE_VISIBILITY
     __unordered_map_equal()
@@ -488,6 +491,7 @@ class __unordered_map_equal<_Key, _Cp, _Pred, false>
 {
     _Pred __pred_;
 
+    typedef typename __key_value_types<_Cp>::__map_value_type _PairT;
 public:
     _LIBCPP_INLINE_VISIBILITY
     __unordered_map_equal()
@@ -508,6 +512,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Key& __x, const _Cp& __y) const
         {return __pred_(__x, __y.__cc.first);}
+  _LIBCPP_INLINE_VISIBILITY
+    bool operator()(const _Key& __x, const _PairT& __y) const
+        {return __pred_(__x, __y.first);}
     void swap(__unordered_map_equal&__y)
         _NOEXCEPT_(__is_nothrow_swappable<_Pred>::value)
     {
@@ -531,12 +538,11 @@ class __hash_map_node_destructor
 {
     typedef _Alloc                              allocator_type;
     typedef allocator_traits<allocator_type>    __alloc_traits;
-    typedef typename __alloc_traits::value_type::value_type value_type;
+
 public:
-    typedef typename __alloc_traits::pointer    pointer;
+
+    typedef typename __alloc_traits::pointer       pointer;
 private:
-    typedef typename value_type::value_type::first_type     first_type;
-    typedef typename value_type::value_type::second_type    second_type;
 
     allocator_type& __na_;
 
@@ -656,15 +662,14 @@ class _LIBCPP_TYPE_VIS_ONLY __hash_map_iterator
 {
     _HashIterator __i_;
 
-    typedef const typename _HashIterator::value_type::value_type::first_type key_type;
-    typedef typename _HashIterator::value_type::value_type::second_type      mapped_type;
+    typedef  __hash_node_types_from_iterator<_HashIterator> _NodeTypes;
+
 public:
     typedef forward_iterator_tag                                 iterator_category;
-    typedef pair<key_type, mapped_type>                          value_type;
-    typedef typename _HashIterator::difference_type              difference_type;
+    typedef typename _NodeTypes::__map_value_type                value_type;
+    typedef typename _NodeTypes::difference_type                 difference_type;
     typedef value_type&                                          reference;
-    typedef typename __rebind_pointer<typename _HashIterator::pointer, value_type>::type
-        pointer;
+    typedef typename _NodeTypes::__map_value_type_pointer       pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __hash_map_iterator() _NOEXCEPT {}
@@ -706,15 +711,14 @@ class _LIBCPP_TYPE_VIS_ONLY __hash_map_const_iterator
 {
     _HashIterator __i_;
 
-    typedef const typename _HashIterator::value_type::value_type::first_type key_type;
-    typedef typename _HashIterator::value_type::value_type::second_type      mapped_type;
+    typedef  __hash_node_types_from_iterator<_HashIterator> _NodeTypes;
+
 public:
     typedef forward_iterator_tag                                 iterator_category;
-    typedef pair<key_type, mapped_type>                          value_type;
-    typedef typename _HashIterator::difference_type              difference_type;
+    typedef typename _NodeTypes::__map_value_type                value_type;
+    typedef typename _NodeTypes::difference_type                 difference_type;
     typedef const value_type&                                    reference;
-    typedef typename __rebind_pointer<typename _HashIterator::pointer, const value_type>::type
-        pointer;
+    typedef typename _NodeTypes::__const_map_value_type_pointer  pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __hash_map_const_iterator() _NOEXCEPT {}
@@ -796,8 +800,8 @@ private:
 public:
     typedef typename __alloc_traits::pointer         pointer;
     typedef typename __alloc_traits::const_pointer   const_pointer;
-    typedef typename __alloc_traits::size_type       size_type;
-    typedef typename __alloc_traits::difference_type difference_type;
+    typedef typename __table::size_type              size_type;
+    typedef typename __table::difference_type        difference_type;
 
     typedef __hash_map_iterator<typename __table::iterator>       iterator;
     typedef __hash_map_const_iterator<typename __table::const_iterator> const_iterator;
@@ -1641,11 +1645,14 @@ private:
     typedef __hash_map_node_destructor<__node_allocator>   _Dp;
     typedef unique_ptr<__node, _Dp>                         __node_holder;
     typedef allocator_traits<allocator_type>               __alloc_traits;
+    static_assert((is_same<typename __node_traits::size_type,
+                          typename __alloc_traits::size_type>::value),
+                 "Allocator uses different size_type for different types");
 public:
     typedef typename __alloc_traits::pointer         pointer;
     typedef typename __alloc_traits::const_pointer   const_pointer;
-    typedef typename __alloc_traits::size_type       size_type;
-    typedef typename __alloc_traits::difference_type difference_type;
+    typedef typename __table::size_type              size_type;
+    typedef typename __table::difference_type        difference_type;
 
     typedef __hash_map_iterator<typename __table::iterator>       iterator;
     typedef __hash_map_const_iterator<typename __table::const_iterator> const_iterator;

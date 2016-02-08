@@ -23,10 +23,10 @@
 ; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> [i0, 1] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> MemRef_tmp_0__phi[] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> MemRef_tmp_0[] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> MemRef_A[i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [N] -> { Stmt_bb4[i0] -> MemRef_tmp_0[] };
 ; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

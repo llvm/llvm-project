@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-dir=%S \
+; RUN: -polly-allow-differing-element-types \
 ; RUN:   -polly-codegen -S    < %s | FileCheck %s
 ;
 ;    // Check that accessing one array with different types works.

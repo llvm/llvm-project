@@ -397,8 +397,9 @@ void Writer<ELFT>::scanRelocs(
         // linking only.
         continue;
       if (Body == Config->MipsGpDisp || Body == Config->MipsLocalGp)
-        // MIPS _gp_disp designates offset between start of function and gp
-        // pointer into GOT therefore any relocations against it do not require
+        // MIPS _gp_disp designates offset between start of function and 'gp'
+        // pointer into GOT. __gnu_local_gp is equal to the current value of
+        // the 'gp'. Therefore any relocations against them do not require
         // dynamic relocation.
         continue;
     }
