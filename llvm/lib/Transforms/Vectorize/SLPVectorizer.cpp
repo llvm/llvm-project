@@ -1732,6 +1732,13 @@ int BoUpSLP::getSpillCost() {
       continue;
     }
 
+    // Update LiveValues.
+    LiveValues.erase(PrevInst);
+    for (auto &J : PrevInst->operands()) {
+      if (isa<Instruction>(&*J) && ScalarToTreeEntry.count(&*J))
+        LiveValues.insert(cast<Instruction>(&*J));
+    }
+
     DEBUG(
       dbgs() << "SLP: #LV: " << LiveValues.size();
       for (auto *X : LiveValues)
@@ -1739,13 +1746,6 @@ int BoUpSLP::getSpillCost() {
       dbgs() << ", Looking at ";
       Inst->dump();
       );
-
-    // Update LiveValues.
-    LiveValues.erase(PrevInst);
-    for (auto &J : PrevInst->operands()) {
-      if (isa<Instruction>(&*J) && ScalarToTreeEntry.count(&*J))
-        LiveValues.insert(cast<Instruction>(&*J));
-    }
 
     // Now find the sequence of instructions between PrevInst and Inst.
     BasicBlock::reverse_iterator InstIt(Inst->getIterator()),
