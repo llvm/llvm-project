@@ -16,6 +16,7 @@
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_report.h"
+#include "asan_scariness_score.h"
 #include "asan_stack.h"
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -747,6 +748,7 @@ void ReportStackOverflow(const SignalContext &sig) {
       (void *)sig.addr, (void *)sig.pc, (void *)sig.bp, (void *)sig.sp,
       GetCurrentTidOrInvalid());
   Printf("%s", d.EndWarning());
+  ScarinessScore::PrintSimple(15, "stack-overflow");
   GET_STACK_TRACE_SIGNAL(sig);
   stack.Print();
   ReportErrorSummary("stack-overflow", &stack);
@@ -762,14 +764,26 @@ void ReportDeadlySignal(const char *description, const SignalContext &sig) {
       description, (void *)sig.addr, (void *)sig.pc, (void *)sig.bp,
       (void *)sig.sp, GetCurrentTidOrInvalid());
   Printf("%s", d.EndWarning());
+  ScarinessScore SS;
   if (sig.pc < GetPageSizeCached())
     Report("Hint: pc points to the zero page.\n");
   if (sig.is_memory_access) {
     Report("The signal is caused by a %s memory access.\n",
            sig.is_write ? "WRITE" : "READ");
-    if (sig.addr < GetPageSizeCached())
+    if (sig.addr < GetPageSizeCached()) {
       Report("Hint: address points to the zero page.\n");
+      SS.Scare(10, "null-deref");
+    } else if (sig.addr == sig.pc) {
+      SS.Scare(60, "wild-jump");
+    } else if (sig.is_write) {
+      SS.Scare(30, "wild-addr-write");
+    } else {
+      SS.Scare(20, "wild-addr-read");
+    }
+  } else {
+    SS.Scare(10, "signal");
   }
+  SS.Print();
   GET_STACK_TRACE_SIGNAL(sig);
   stack.Print();
   MaybeDumpInstructionBytes(sig.pc);
@@ -789,6 +803,7 @@ void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
          ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
   Printf("%s", d.EndWarning());
   CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(42, "double-free");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
   DescribeHeapAddress(addr, 1);
@@ -811,6 +826,7 @@ void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
          "  size of the deallocated type: %zd bytes.\n",
          asan_mz_size(reinterpret_cast<void*>(addr)), delete_size);
   CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(10, "new-delete-type-mismatch");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
   DescribeHeapAddress(addr, 1);
@@ -830,6 +846,7 @@ void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
          curr_tid, ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
   Printf("%s", d.EndWarning());
   CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(10, "bad-free");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
   DescribeHeapAddress(addr, 1);
@@ -851,6 +868,7 @@ void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
         alloc_names[alloc_type], dealloc_names[dealloc_type], addr);
   Printf("%s", d.EndWarning());
   CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(10, "alloc-dealloc-mismatch");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
   DescribeHeapAddress(addr, 1);
@@ -899,6 +917,7 @@ void ReportStringFunctionMemoryRangesOverlap(const char *function,
              "memory ranges [%p,%p) and [%p, %p) overlap\n", \
              bug_type, offset1, offset1 + length1, offset2, offset2 + length2);
   Printf("%s", d.EndWarning());
+  ScarinessScore::PrintSimple(10, bug_type);
   stack->Print();
   DescribeAddress((uptr)offset1, length1, bug_type);
   DescribeAddress((uptr)offset2, length2, bug_type);
@@ -913,6 +932,7 @@ void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
   Printf("%s", d.Warning());
   Report("ERROR: AddressSanitizer: %s: (size=%zd)\n", bug_type, size);
   Printf("%s", d.EndWarning());
+  ScarinessScore::PrintSimple(10, bug_type);
   stack->Print();
   DescribeAddress(offset, size, bug_type);
   ReportErrorSummary(bug_type, stack);
@@ -1033,6 +1053,18 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal) {
   if (!fatal && SuppressErrorReport(pc)) return;
   ENABLE_FRAME_POINTER;
+  ScarinessScore SS;
+
+  if (access_size) {
+    if (access_size <= 9) {
+      char desr[] = "?-byte";
+      desr[0] = '0' + access_size;
+      SS.Scare(access_size + access_size / 2, desr);
+    } else if (access_size >= 10) {
+      SS.Scare(15, "multi-byte");
+    }
+    is_write ? SS.Scare(20, "write") : SS.Scare(1, "read");
+  }
 
   // Optimization experiments.
   // The experiments can be used to evaluate potential optimizations that remove
@@ -1054,50 +1086,72 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
     // If we are in the partial right redzone, look at the next shadow byte.
     if (*shadow_addr > 0 && *shadow_addr < 128)
       shadow_addr++;
+    bool far_from_bounds = false;
     shadow_val = *shadow_addr;
+    int bug_type_score = 0;
     switch (shadow_val) {
       case kAsanHeapLeftRedzoneMagic:
       case kAsanHeapRightRedzoneMagic:
       case kAsanArrayCookieMagic:
         bug_descr = "heap-buffer-overflow";
+        bug_type_score = 10;
+        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
         break;
       case kAsanHeapFreeMagic:
         bug_descr = "heap-use-after-free";
+        bug_type_score = 20;
         break;
       case kAsanStackLeftRedzoneMagic:
         bug_descr = "stack-buffer-underflow";
+        bug_type_score = 25;
+        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
         break;
       case kAsanInitializationOrderMagic:
         bug_descr = "initialization-order-fiasco";
+        bug_type_score = 1;
         break;
       case kAsanStackMidRedzoneMagic:
       case kAsanStackRightRedzoneMagic:
       case kAsanStackPartialRedzoneMagic:
         bug_descr = "stack-buffer-overflow";
+        bug_type_score = 25;
+        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
         break;
       case kAsanStackAfterReturnMagic:
         bug_descr = "stack-use-after-return";
+        bug_type_score = 30;
         break;
       case kAsanUserPoisonedMemoryMagic:
         bug_descr = "use-after-poison";
+        bug_type_score = 10;
         break;
       case kAsanContiguousContainerOOBMagic:
         bug_descr = "container-overflow";
+        bug_type_score = 10;
         break;
       case kAsanStackUseAfterScopeMagic:
         bug_descr = "stack-use-after-scope";
+        bug_type_score = 10;
         break;
       case kAsanGlobalRedzoneMagic:
         bug_descr = "global-buffer-overflow";
+        bug_type_score = 10;
+        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
         break;
       case kAsanIntraObjectRedzone:
         bug_descr = "intra-object-overflow";
+        bug_type_score = 10;
         break;
       case kAsanAllocaLeftMagic:
       case kAsanAllocaRightMagic:
         bug_descr = "dynamic-stack-buffer-overflow";
+        bug_type_score = 25;
+        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
         break;
     }
+    SS.Scare(bug_type_score, bug_descr);
+    if (far_from_bounds)
+      SS.Scare(10, "far-from-bounds");
   }
 
   ReportData report = { pc, sp, bp, addr, (bool)is_write, access_size,
@@ -1120,6 +1174,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
          ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)),
          d.EndAccess());
 
+  SS.Print();
   GET_STACK_TRACE_FATAL(pc, bp);
   stack.Print();
 
