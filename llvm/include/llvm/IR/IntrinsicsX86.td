@@ -1948,11 +1948,11 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           Intrinsic<[llvm_i16_ty], [llvm_v16f32_ty, llvm_i32_ty, llvm_i16_ty],
           [IntrNoMem]>;
   def int_x86_avx512_mask_fpclass_sd : 
-         GCCBuiltin<"__builtin_ia32_fpclasssd">,
+         GCCBuiltin<"__builtin_ia32_fpclasssd_mask">,
           Intrinsic<[llvm_i8_ty], [llvm_v2f64_ty, llvm_i32_ty, llvm_i8_ty],
           [IntrNoMem]>;
   def int_x86_avx512_mask_fpclass_ss : 
-         GCCBuiltin<"__builtin_ia32_fpclassss">,
+         GCCBuiltin<"__builtin_ia32_fpclassss_mask">,
           Intrinsic<[llvm_i8_ty], [llvm_v4f32_ty, llvm_i32_ty, llvm_i8_ty],
           [IntrNoMem]>;
 }
@@ -3491,22 +3491,22 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
    def int_x86_avx512_mask_prol_d_128 : GCCBuiltin<"__builtin_ia32_prold128_mask">,
               Intrinsic<[llvm_v4i32_ty] , [llvm_v4i32_ty,
-                         llvm_i8_ty, llvm_v4i32_ty, llvm_i8_ty], [IntrNoMem]>;
+                         llvm_i32_ty, llvm_v4i32_ty, llvm_i8_ty], [IntrNoMem]>;
   def int_x86_avx512_mask_prol_d_256 : GCCBuiltin<"__builtin_ia32_prold256_mask">,
               Intrinsic<[llvm_v8i32_ty] , [llvm_v8i32_ty,
-                         llvm_i8_ty, llvm_v8i32_ty, llvm_i8_ty], [IntrNoMem]>;
+                         llvm_i32_ty, llvm_v8i32_ty, llvm_i8_ty], [IntrNoMem]>;
   def int_x86_avx512_mask_prol_d_512 : GCCBuiltin<"__builtin_ia32_prold512_mask">,
               Intrinsic<[llvm_v16i32_ty] , [llvm_v16i32_ty,
-                         llvm_i8_ty, llvm_v16i32_ty, llvm_i16_ty], [IntrNoMem]>;
+                         llvm_i32_ty, llvm_v16i32_ty, llvm_i16_ty], [IntrNoMem]>;
   def int_x86_avx512_mask_prol_q_128 : GCCBuiltin<"__builtin_ia32_prolq128_mask">,
               Intrinsic<[llvm_v2i64_ty] , [llvm_v2i64_ty,
-                         llvm_i8_ty, llvm_v2i64_ty, llvm_i8_ty], [IntrNoMem]>;
+                         llvm_i32_ty, llvm_v2i64_ty, llvm_i8_ty], [IntrNoMem]>;
   def int_x86_avx512_mask_prol_q_256 : GCCBuiltin<"__builtin_ia32_prolq256_mask">,
               Intrinsic<[llvm_v4i64_ty] , [llvm_v4i64_ty,
-                         llvm_i8_ty, llvm_v4i64_ty, llvm_i8_ty], [IntrNoMem]>;
+                         llvm_i32_ty, llvm_v4i64_ty, llvm_i8_ty], [IntrNoMem]>;
   def int_x86_avx512_mask_prol_q_512 : GCCBuiltin<"__builtin_ia32_prolq512_mask">,
               Intrinsic<[llvm_v8i64_ty] , [llvm_v8i64_ty,
-                         llvm_i8_ty, llvm_v8i64_ty, llvm_i8_ty], [IntrNoMem]>;
+                         llvm_i32_ty, llvm_v8i64_ty, llvm_i8_ty], [IntrNoMem]>;
 
 
   def int_x86_avx512_mask_prolv_d_128 : GCCBuiltin<"__builtin_ia32_prolvd128_mask">,
@@ -5541,13 +5541,13 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           [IntrNoMem]>;
 
   def int_x86_avx512_mask_cvtsd2ss_round : 
-        GCCBuiltin<"__builtin_ia32_cvtsd2ss_round">,
+        GCCBuiltin<"__builtin_ia32_cvtsd2ss_round_mask">,
           Intrinsic<[llvm_v4f32_ty],
           [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrNoMem]>;
 
   def int_x86_avx512_mask_cvtss2sd_round : 
-        GCCBuiltin<"__builtin_ia32_cvtss2sd_round">,
+        GCCBuiltin<"__builtin_ia32_cvtss2sd_round_mask">,
           Intrinsic<[llvm_v2f64_ty],
           [ llvm_v4f32_ty, llvm_v4f32_ty, llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrNoMem]>;
@@ -6450,71 +6450,71 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           Intrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_v8f64_ty,
                      llvm_v8f64_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_add_ss_round : GCCBuiltin<"__builtin_ia32_addss_round">,
+  def int_x86_avx512_mask_add_ss_round : GCCBuiltin<"__builtin_ia32_addss_round_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
                      llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_div_ss_round : GCCBuiltin<"__builtin_ia32_divss_round">,
+  def int_x86_avx512_mask_div_ss_round : GCCBuiltin<"__builtin_ia32_divss_round_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
                      llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_mul_ss_round : GCCBuiltin<"__builtin_ia32_mulss_round">,
+  def int_x86_avx512_mask_mul_ss_round : GCCBuiltin<"__builtin_ia32_mulss_round_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
                      llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_sub_ss_round : GCCBuiltin<"__builtin_ia32_subss_round">,
+  def int_x86_avx512_mask_sub_ss_round : GCCBuiltin<"__builtin_ia32_subss_round_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
                      llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_max_ss_round : GCCBuiltin<"__builtin_ia32_maxss_round">,
+  def int_x86_avx512_mask_max_ss_round : GCCBuiltin<"__builtin_ia32_maxss_round_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
                      llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_min_ss_round : GCCBuiltin<"__builtin_ia32_minss_round">,
+  def int_x86_avx512_mask_min_ss_round : GCCBuiltin<"__builtin_ia32_minss_round_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
                      llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_add_sd_round : GCCBuiltin<"__builtin_ia32_addsd_round">,
+  def int_x86_avx512_mask_add_sd_round : GCCBuiltin<"__builtin_ia32_addsd_round_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                      llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_div_sd_round : GCCBuiltin<"__builtin_ia32_divsd_round">,
+  def int_x86_avx512_mask_div_sd_round : GCCBuiltin<"__builtin_ia32_divsd_round_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                      llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_mul_sd_round : GCCBuiltin<"__builtin_ia32_mulsd_round">,
+  def int_x86_avx512_mask_mul_sd_round : GCCBuiltin<"__builtin_ia32_mulsd_round_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                      llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_sub_sd_round : GCCBuiltin<"__builtin_ia32_subsd_round">,
+  def int_x86_avx512_mask_sub_sd_round : GCCBuiltin<"__builtin_ia32_subsd_round_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                      llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_max_sd_round : GCCBuiltin<"__builtin_ia32_maxsd_round">,
+  def int_x86_avx512_mask_max_sd_round : GCCBuiltin<"__builtin_ia32_maxsd_round_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                      llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_min_sd_round : GCCBuiltin<"__builtin_ia32_minsd_round">,
+  def int_x86_avx512_mask_min_sd_round : GCCBuiltin<"__builtin_ia32_minsd_round_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                      llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_rndscale_ss : GCCBuiltin<"__builtin_ia32_rndscaless_round">,
+  def int_x86_avx512_mask_rndscale_ss : GCCBuiltin<"__builtin_ia32_rndscaless_round_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
                                      llvm_i8_ty, llvm_i32_ty, llvm_i32_ty],
                                      [IntrNoMem]>;
-  def int_x86_avx512_mask_rndscale_sd : GCCBuiltin<"__builtin_ia32_rndscalesd_round">,
+  def int_x86_avx512_mask_rndscale_sd : GCCBuiltin<"__builtin_ia32_rndscalesd_round_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
                                       llvm_i8_ty, llvm_i32_ty, llvm_i32_ty],
                                      [IntrNoMem]>;
-  def int_x86_avx512_mask_range_ss : GCCBuiltin<"__builtin_ia32_rangess128_round">,
+  def int_x86_avx512_mask_range_ss : GCCBuiltin<"__builtin_ia32_rangess128_round_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
                                      llvm_i8_ty, llvm_i32_ty, llvm_i32_ty],
                                      [IntrNoMem]>;
-  def int_x86_avx512_mask_range_sd : GCCBuiltin<"__builtin_ia32_rangesd128_round">,
+  def int_x86_avx512_mask_range_sd : GCCBuiltin<"__builtin_ia32_rangesd128_round_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
                                       llvm_i8_ty, llvm_i32_ty, llvm_i32_ty],
                                      [IntrNoMem]>;
-  def int_x86_avx512_mask_reduce_ss : GCCBuiltin<"__builtin_ia32_reducess">,
+  def int_x86_avx512_mask_reduce_ss : GCCBuiltin<"__builtin_ia32_reducess_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
                                      llvm_i8_ty, llvm_i32_ty, llvm_i32_ty],
                                      [IntrNoMem]>;
-  def int_x86_avx512_mask_reduce_sd : GCCBuiltin<"__builtin_ia32_reducesd">,
+  def int_x86_avx512_mask_reduce_sd : GCCBuiltin<"__builtin_ia32_reducesd_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
                                       llvm_i8_ty, llvm_i32_ty, llvm_i32_ty],
                                      [IntrNoMem]>;
-  def int_x86_avx512_mask_scalef_sd : GCCBuiltin<"__builtin_ia32_scalefsd_round">,
+  def int_x86_avx512_mask_scalef_sd : GCCBuiltin<"__builtin_ia32_scalefsd_round_mask">,
           Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty, 
                                       llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_scalef_ss : GCCBuiltin<"__builtin_ia32_scalefss_round">,
+  def int_x86_avx512_mask_scalef_ss : GCCBuiltin<"__builtin_ia32_scalefss_round_mask">,
           Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, 
                                       llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
   def int_x86_avx512_mask_scalef_pd_128 : GCCBuiltin<"__builtin_ia32_scalefpd128_mask">,
@@ -6536,10 +6536,10 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_v16f32_ty, 
                     llvm_v16f32_ty, llvm_i16_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_sqrt_ss : GCCBuiltin<"__builtin_ia32_sqrtss_round">,
+  def int_x86_avx512_mask_sqrt_ss : GCCBuiltin<"__builtin_ia32_sqrtss_round_mask">,
         Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
                                     llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_sqrt_sd : GCCBuiltin<"__builtin_ia32_sqrtsd_round">,
+  def int_x86_avx512_mask_sqrt_sd : GCCBuiltin<"__builtin_ia32_sqrtsd_round_mask">,
         Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
                                     llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
@@ -6660,10 +6660,10 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
         Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_v16f32_ty,
                                      llvm_i16_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_mask_getexp_ss : GCCBuiltin<"__builtin_ia32_getexpss_mask">,
+  def int_x86_avx512_mask_getexp_ss : GCCBuiltin<"__builtin_ia32_getexpss128_round_mask">,
         Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
                                     llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_mask_getexp_sd : GCCBuiltin<"__builtin_ia32_getexpsd_mask">,
+  def int_x86_avx512_mask_getexp_sd : GCCBuiltin<"__builtin_ia32_getexpsd128_round_mask">,
         Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
                                     llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
@@ -6704,21 +6704,21 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
           [IntrNoMem]>;
 
   def int_x86_avx512_mask_getmant_ss :
-         GCCBuiltin<"__builtin_ia32_getmantss_round">,
+         GCCBuiltin<"__builtin_ia32_getmantss_round_mask">,
           Intrinsic<[llvm_v4f32_ty],
           [llvm_v4f32_ty, llvm_v4f32_ty, llvm_i32_ty, llvm_v4f32_ty,
            llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
   def int_x86_avx512_mask_getmant_sd :
-         GCCBuiltin<"__builtin_ia32_getmantsd_round">,
+         GCCBuiltin<"__builtin_ia32_getmantsd_round_mask">,
           Intrinsic<[llvm_v2f64_ty],
           [llvm_v2f64_ty, llvm_v2f64_ty, llvm_i32_ty, llvm_v2f64_ty,
            llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_rsqrt14_ss : GCCBuiltin<"__builtin_ia32_rsqrt14ss">,
+  def int_x86_avx512_rsqrt14_ss : GCCBuiltin<"__builtin_ia32_rsqrt14ss_mask">,
         Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
                                     llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_rsqrt14_sd : GCCBuiltin<"__builtin_ia32_rsqrt14sd">,
+  def int_x86_avx512_rsqrt14_sd : GCCBuiltin<"__builtin_ia32_rsqrt14sd_mask">,
         Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
                                     llvm_i8_ty], [IntrNoMem]>;
 
@@ -6740,10 +6740,10 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx512_rsqrt14_ps_512 : GCCBuiltin<"__builtin_ia32_rsqrt14ps512_mask">,
         Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_v16f32_ty,
                                      llvm_i16_ty], [IntrNoMem]>;
-  def int_x86_avx512_rcp14_ss : GCCBuiltin<"__builtin_ia32_rcp14ss">,
+  def int_x86_avx512_rcp14_ss : GCCBuiltin<"__builtin_ia32_rcp14ss_mask">,
         Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty,
                                     llvm_i8_ty], [IntrNoMem]>;
-  def int_x86_avx512_rcp14_sd : GCCBuiltin<"__builtin_ia32_rcp14sd">,
+  def int_x86_avx512_rcp14_sd : GCCBuiltin<"__builtin_ia32_rcp14sd_mask">,
         Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty, llvm_v2f64_ty,
                                     llvm_i8_ty], [IntrNoMem]>;
 
@@ -6779,11 +6779,11 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
             Intrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_v8f64_ty,
                                         llvm_i8_ty, llvm_i32_ty], [IntrNoMem]>;
 
-  def int_x86_avx512_rcp28_ss : GCCBuiltin<"__builtin_ia32_rcp28ss_round">,
+  def int_x86_avx512_rcp28_ss : GCCBuiltin<"__builtin_ia32_rcp28ss_round_mask">,
             Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
                                         llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty],
                       [IntrNoMem]>;
-  def int_x86_avx512_rcp28_sd : GCCBuiltin<"__builtin_ia32_rcp28sd_round">,
+  def int_x86_avx512_rcp28_sd : GCCBuiltin<"__builtin_ia32_rcp28sd_round_mask">,
             Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                                         llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty],
                       [IntrNoMem]>;
@@ -6795,11 +6795,11 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
             Intrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_v8f64_ty,
                                         llvm_i8_ty, llvm_i32_ty],
                       [IntrNoMem]>;
-  def int_x86_avx512_rsqrt28_ss : GCCBuiltin<"__builtin_ia32_rsqrt28ss_round">,
+  def int_x86_avx512_rsqrt28_ss : GCCBuiltin<"__builtin_ia32_rsqrt28ss_round_mask">,
             Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty,
                                         llvm_v4f32_ty, llvm_i8_ty, llvm_i32_ty],
                       [IntrNoMem]>;
-  def int_x86_avx512_rsqrt28_sd : GCCBuiltin<"__builtin_ia32_rsqrt28sd_round">,
+  def int_x86_avx512_rsqrt28_sd : GCCBuiltin<"__builtin_ia32_rsqrt28sd_round_mask">,
             Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty, llvm_v2f64_ty,
                                         llvm_v2f64_ty, llvm_i8_ty, llvm_i32_ty],
                       [IntrNoMem]>;

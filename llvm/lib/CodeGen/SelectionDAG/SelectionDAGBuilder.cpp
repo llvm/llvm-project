@@ -3854,7 +3854,8 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
     if (VectorType *PTy = dyn_cast<VectorType>(I.getType())) {
       EVT VT = TLI.getValueType(DAG.getDataLayout(), PTy);
       Result = DAG.getNode(ISD::BITCAST, getCurSDLoc(), VT, Result);
-    }
+    } else
+      Result = lowerRangeToAssertZExt(DAG, I, Result);
 
     setValue(&I, Result);
   }
@@ -5563,8 +5564,11 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
     .setTailCall(isTailCall);
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
-  if (Result.first.getNode())
-    setValue(CS.getInstruction(), Result.first);
+  if (Result.first.getNode()) {
+    const Instruction *Inst = CS.getInstruction();
+    Result.first = lowerRangeToAssertZExt(DAG, *Inst, Result.first);
+    setValue(Inst, Result.first);
+  }
 
   // The last element of CLI.InVals has the SDValue for swifterror return.
   // Here we copy it to a virtual register and update SwiftErrorMap for
@@ -6871,6 +6875,39 @@ void SelectionDAGBuilder::visitVACopy(const CallInst &I) {
                           getValue(I.getArgOperand(1)),
                           DAG.getSrcValue(I.getArgOperand(0)),
                           DAG.getSrcValue(I.getArgOperand(1))));
+}
+
+SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
+                                                    const Instruction &I,
+                                                    SDValue Op) {
+  const MDNode *Range = I.getMetadata(LLVMContext::MD_range);
+  if (!Range)
+    return Op;
+
+  Constant *Lo = cast<ConstantAsMetadata>(Range->getOperand(0))->getValue();
+  if (!Lo->isNullValue())
+    return Op;
+
+  Constant *Hi = cast<ConstantAsMetadata>(Range->getOperand(1))->getValue();
+  unsigned Bits = cast<ConstantInt>(Hi)->getValue().logBase2();
+
+  EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
+
+  SDLoc SL = getCurSDLoc();
+
+  SDValue ZExt = DAG.getNode(ISD::AssertZext, SL, Op.getValueType(),
+                             Op, DAG.getValueType(SmallVT));
+  unsigned NumVals = Op.getNode()->getNumValues();
+  if (NumVals == 1)
+    return ZExt;
+
+  SmallVector<SDValue, 4> Ops;
+
+  Ops.push_back(ZExt);
+  for (unsigned I = 1; I != NumVals; ++I)
+    Ops.push_back(Op.getValue(I));
+
+  return DAG.getMergeValues(Ops, SL);
 }
 
 /// \brief Lower an argument list according to the target calling convention.

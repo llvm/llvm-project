@@ -56,7 +56,6 @@ void LoopVersioning::versionLoop(
   BasicBlock *RuntimeCheckBB = VersionedLoop->getLoopPreheader();
   std::tie(FirstCheckInst, MemRuntimeCheck) =
       LAI.addRuntimeChecks(RuntimeCheckBB->getTerminator(), AliasChecks);
-  assert(MemRuntimeCheck && "called even though needsAnyChecking = false");
 
   const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
   SCEVExpander Exp(*SE, RuntimeCheckBB->getModule()->getDataLayout(),

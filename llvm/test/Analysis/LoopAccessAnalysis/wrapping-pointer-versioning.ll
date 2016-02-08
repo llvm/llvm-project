@@ -1,5 +1,5 @@
 ; RUN: opt -basicaa -loop-accesses -analyze < %s | FileCheck %s -check-prefix=LAA
-; RUN: opt -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S < %s | FileCheck %s -check-prefix=LV
+; RUN: opt -loop-versioning -S < %s | FileCheck %s -check-prefix=LV
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -32,12 +32,12 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ;    i64 {0,+,2}<%for.body>
 
 ; LV-LABEL: f1
-; LV-LABEL: vector.scevcheck
+; LV-LABEL: for.body.lver.check
 ; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
 ; LV: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
 ; LV: [[PredCheck1:%[^ ]*]] = icmp ne i128
 ; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
-; LV: br i1 [[FinalCheck]], label %scalar.ph, label %vector.ph
+; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f1(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
 entry:
@@ -101,12 +101,12 @@ for.end:                                          ; preds = %for.body
 ;     i64 {zext i32 (2 * (trunc i64 %N to i32)) to i64,+,-2}<%for.body>
 
 ; LV-LABEL: f2
-; LV-LABEL: vector.scevcheck
+; LV-LABEL: for.body.lver.check
 ; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
 ; LV: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
 ; LV: [[PredCheck1:%[^ ]*]] = icmp ne i128
 ; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
-; LV: br i1 [[FinalCheck]], label %scalar.ph, label %vector.ph
+; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f2(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
 entry:
@@ -155,12 +155,12 @@ for.end:                                          ; preds = %for.body
 ;     i64 {0,+,2}<%for.body>
 
 ; LV-LABEL: f3
-; LV-LABEL: vector.scevcheck
+; LV-LABEL: for.body.lver.check
 ; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
 ; LV: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
 ; LV: [[PredCheck1:%[^ ]*]] = icmp ne i128
 ; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
-; LV: br i1 [[FinalCheck]], label %scalar.ph, label %vector.ph
+; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f3(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
 entry:
@@ -205,12 +205,12 @@ for.end:                                          ; preds = %for.body
 ;     i64 {sext i32 (2 * (trunc i64 %N to i32)) to i64,+,-2}<%for.body>
 
 ; LV-LABEL: f4
-; LV-LABEL: vector.scevcheck
+; LV-LABEL: for.body.lver.check
 ; LV: [[PredCheck0:%[^ ]*]] = icmp ne i128
 ; LV: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
 ; LV: [[PredCheck1:%[^ ]*]] = icmp ne i128
 ; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
-; LV: br i1 [[FinalCheck]], label %scalar.ph, label %vector.ph
+; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f4(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
 entry:
@@ -258,7 +258,7 @@ for.end:                                          ; preds = %for.body
 ; LAA-NEXT: {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64)) + %a),+,-4}<%for.body> Added Flags: <nusw>
 
 ; LV-LABEL: f5
-; LV-LABEL: vector.scevcheck
+; LV-LABEL: for.body.lver.check
 define void @f5(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
 entry:

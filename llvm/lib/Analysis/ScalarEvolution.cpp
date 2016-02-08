@@ -9957,7 +9957,8 @@ const SCEV *PredicatedScalarEvolution::getAsAddRec(Value *V) {
 
 PredicatedScalarEvolution::
 PredicatedScalarEvolution(const PredicatedScalarEvolution &Init) :
-  RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L), Preds(Init.Preds) {
+  RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L), Preds(Init.Preds),
+  Generation(Init.Generation) {
   for (auto I = Init.FlagsMap.begin(), E = Init.FlagsMap.end(); I != E; ++I)
     FlagsMap.insert(*I);
 }
