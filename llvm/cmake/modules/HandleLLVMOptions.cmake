@@ -635,7 +635,7 @@ append_if(LLVM_BUILD_INSTRUMENTED "-fprofile-instr-generate"
   CMAKE_EXE_LINKER_FLAGS
   CMAKE_SHARED_LINKER_FLAGS)
 
-option(LLVM_ENABLE_LTO "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO" OFF)
+set(LLVM_ENABLE_LTO OFF CACHE STRING "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO")
 string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
   append("-flto=thin" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
