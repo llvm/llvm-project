@@ -756,6 +756,20 @@ void strcmp_unknown_arg (char *unknown) {
 	clang_analyzer_eval(strcmp(unknown, unknown) == 0); // expected-warning{{TRUE}}
 }
 
+union argument {
+   char *f;
+};
+
+void function_pointer_cast_helper(char **a) {
+  strcmp("Hi", *a); // PR24951 crash
+}
+
+void strcmp_union_function_pointer_cast(union argument a) {
+  void (*fPtr)(union argument *) = (void (*)(union argument *))function_pointer_cast_helper;
+
+  fPtr(&a);
+}
+
 //===----------------------------------------------------------------------===
 // strncmp()
 //===----------------------------------------------------------------------===
