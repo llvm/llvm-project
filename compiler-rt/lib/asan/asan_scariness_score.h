@@ -36,7 +36,9 @@
 namespace __asan {
 class ScarinessScore {
  public:
-  ScarinessScore() {}
+  ScarinessScore() {
+    descr[0] = 0;
+  }
   void Scare(int add_to_score, const char *reason) {
     if (descr[0])
       internal_strlcat(descr, "-", sizeof(descr));
@@ -57,7 +59,7 @@ class ScarinessScore {
 
  private:
   int score = 0;
-  char descr[1024] = {0};
+  char descr[1024];
 };
 
 }  // namespace __asan
