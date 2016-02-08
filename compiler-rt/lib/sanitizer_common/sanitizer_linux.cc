@@ -1168,7 +1168,6 @@ static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
   while (true) {
     _aarch64_ctx *ctx = (_aarch64_ctx *)aux;
     if (ctx->size == 0) break;
-    Printf("ctx magic %x\n", ctx->magic);
     if (ctx->magic == kEsrMagic) {
       *esr = ((__sanitizer_esr_context *)ctx)->esr;
       return true;
