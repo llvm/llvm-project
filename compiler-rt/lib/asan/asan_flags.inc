@@ -106,7 +106,7 @@ ASAN_FLAG(bool, alloc_dealloc_mismatch,
           "Report errors on malloc/delete, new/free, new/delete[], etc.")
 
 ASAN_FLAG(bool, new_delete_type_mismatch, true,
-          "Report errors on mismatch betwen size of new and delete.")
+          "Report errors on mismatch between size of new and delete.")
 ASAN_FLAG(
     bool, strict_init_order, false,
     "If true, assume that dynamic initializers can never access globals from "
