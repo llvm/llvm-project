@@ -99,15 +99,15 @@ int main() {
 #ifdef LAMBDA
   // LAMBDA: [[G:@.+]] = global i{{[0-9]+}} 1212,
   // LAMBDA-LABEL: @main
-  // LAMBDA: call
-  // LAMBDA: call{{.*}} void [[OUTER_LAMBDA:@.+]](
+  // LAMBDA: call{{.*}} void
+  // LAMBDA: call{{.*}} void [[OUTER_LAMBDA:@[^(]+]](
   [&]() {
   // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
   // LAMBDA-NOT: = getelementptr inbounds %{{.+}},
   // LAMBDA: call{{.*}} void {{.+}} @__kmpc_fork_call({{.+}}, i32 0, {{.+}}* [[OMP_REGION:@.+]] to {{.+}})
 #pragma omp parallel private(g, sivar)
   {
-    // LAMBDA: define {{.+}} @{{.+}}([[SS_TY]]* %
+    // LAMBDA: define {{.+}} @{{.+}}([[SS_TY]]*
     // LAMBDA: store i{{[0-9]+}} 0, i{{[0-9]+}}* %
     // LAMBDA: store i8
     // LAMBDA: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
@@ -207,7 +207,7 @@ int main() {
   }
   }();
   return 0;
-// BLOCKS: define {{.+}} @{{.+}}([[SS_TY]]* %
+// BLOCKS: define {{.+}} @{{.+}}([[SS_TY]]*
 // BLOCKS: store i{{[0-9]+}} 0, i{{[0-9]+}}* %
 // BLOCKS: store i8
 // BLOCKS: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
