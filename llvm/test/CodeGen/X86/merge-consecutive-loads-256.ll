@@ -275,7 +275,7 @@ define <8 x float> @merge_8f32_2f32_23z5(<2 x float>* %ptr) nounwind uwtable noi
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vmovupd 16(%rdi), %xmm0
 ; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vmovhpd 40(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -283,7 +283,7 @@ define <8 x float> @merge_8f32_2f32_23z5(<2 x float>* %ptr) nounwind uwtable noi
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vmovupd 16(%rdi), %xmm0
 ; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vmovhpd 40(%rdi), %xmm1, %xmm1
+; AVX2-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -291,7 +291,7 @@ define <8 x float> @merge_8f32_2f32_23z5(<2 x float>* %ptr) nounwind uwtable noi
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    vmovups 16(%rdi), %xmm0
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovhpd 40(%rdi), %xmm1, %xmm1
+; AVX512F-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;

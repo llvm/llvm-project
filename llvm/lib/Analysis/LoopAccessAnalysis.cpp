@@ -773,7 +773,7 @@ static bool isInBoundsGep(Value *Ptr) {
 /// \brief Return true if an AddRec pointer \p Ptr is unsigned non-wrapping,
 /// i.e. monotonically increasing/decreasing.
 static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
-                           ScalarEvolution *SE, const Loop *L) {
+                           PredicatedScalarEvolution &PSE, const Loop *L) {
   // FIXME: This should probably only return true for NUW.
   if (AR->getNoWrapFlags(SCEV::NoWrapMask))
     return true;
@@ -809,7 +809,7 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
         // Assume constant for other the operand so that the AddRec can be
         // easily found.
         isa<ConstantInt>(OBO->getOperand(1))) {
-      auto *OpScev = SE->getSCEV(OBO->getOperand(0));
+      auto *OpScev = PSE.getSCEV(OBO->getOperand(0));
 
       if (auto *OpAR = dyn_cast<SCEVAddRecExpr>(OpScev))
         return OpAR->getLoop() == L && OpAR->getNoWrapFlags(SCEV::FlagNSW);
@@ -820,31 +820,35 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
 
 /// \brief Check whether the access through \p Ptr has a constant stride.
 int llvm::isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr,
-                       const Loop *Lp, const ValueToValueMap &StridesMap) {
+                       const Loop *Lp, const ValueToValueMap &StridesMap,
+                       bool Assume) {
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
 
   // Make sure that the pointer does not point to aggregate types.
   auto *PtrTy = cast<PointerType>(Ty);
   if (PtrTy->getElementType()->isAggregateType()) {
-    DEBUG(dbgs() << "LAA: Bad stride - Not a pointer to a scalar type"
-          << *Ptr << "\n");
+    DEBUG(dbgs() << "LAA: Bad stride - Not a pointer to a scalar type" << *Ptr
+                 << "\n");
     return 0;
   }
 
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
 
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PtrScev);
+  if (Assume && !AR)
+    AR = dyn_cast<SCEVAddRecExpr>(PSE.getAsAddRec(Ptr));
+
   if (!AR) {
-    DEBUG(dbgs() << "LAA: Bad stride - Not an AddRecExpr pointer "
-          << *Ptr << " SCEV: " << *PtrScev << "\n");
+    DEBUG(dbgs() << "LAA: Bad stride - Not an AddRecExpr pointer " << *Ptr
+                 << " SCEV: " << *PtrScev << "\n");
     return 0;
   }
 
   // The accesss function must stride over the innermost loop.
   if (Lp != AR->getLoop()) {
     DEBUG(dbgs() << "LAA: Bad stride - Not striding over innermost loop " <<
-          *Ptr << " SCEV: " << *PtrScev << "\n");
+          *Ptr << " SCEV: " << *AR << "\n");
     return 0;
   }
 
@@ -856,12 +860,23 @@ int llvm::isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr,
   // to access the pointer value "0" which is undefined behavior in address
   // space 0, therefore we can also vectorize this case.
   bool IsInBoundsGEP = isInBoundsGep(Ptr);
-  bool IsNoWrapAddRec = isNoWrapAddRec(Ptr, AR, PSE.getSE(), Lp);
+  bool IsNoWrapAddRec =
+      PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW) ||
+      isNoWrapAddRec(Ptr, AR, PSE, Lp);
   bool IsInAddressSpaceZero = PtrTy->getAddressSpace() == 0;
   if (!IsNoWrapAddRec && !IsInBoundsGEP && !IsInAddressSpaceZero) {
-    DEBUG(dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
-                 << *Ptr << " SCEV: " << *PtrScev << "\n");
-    return 0;
+    if (Assume) {
+      PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
+      IsNoWrapAddRec = true;
+      DEBUG(dbgs() << "LAA: Pointer may wrap in the address space:\n"
+                   << "LAA:   Pointer: " << *Ptr << "\n"
+                   << "LAA:   SCEV: " << *AR << "\n"
+                   << "LAA:   Added an overflow assumption\n");
+    } else {
+      DEBUG(dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
+                   << *Ptr << " SCEV: " << *AR << "\n");
+      return 0;
+    }
   }
 
   // Check the step is constant.
@@ -871,7 +886,7 @@ int llvm::isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr,
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
   if (!C) {
     DEBUG(dbgs() << "LAA: Bad stride - Not a constant strided " << *Ptr <<
-          " SCEV: " << *PtrScev << "\n");
+          " SCEV: " << *AR << "\n");
     return 0;
   }
 
@@ -895,8 +910,18 @@ int llvm::isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr,
   // know we can't "wrap around the address space". In case of address space
   // zero we know that this won't happen without triggering undefined behavior.
   if (!IsNoWrapAddRec && (IsInBoundsGEP || IsInAddressSpaceZero) &&
-      Stride != 1 && Stride != -1)
-    return 0;
+      Stride != 1 && Stride != -1) {
+    if (Assume) {
+      // We can avoid this case by adding a run-time check.
+      DEBUG(dbgs() << "LAA: Non unit strided pointer which is not either "
+                   << "inbouds or in address space 0 may wrap:\n"
+                   << "LAA:   Pointer: " << *Ptr << "\n"
+                   << "LAA:   SCEV: " << *AR << "\n"
+                   << "LAA:   Added an overflow assumption\n");
+      PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
+    } else
+      return 0;
+  }
 
   return Stride;
 }
@@ -1123,8 +1148,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   const SCEV *AScev = replaceSymbolicStrideSCEV(PSE, Strides, APtr);
   const SCEV *BScev = replaceSymbolicStrideSCEV(PSE, Strides, BPtr);
 
-  int StrideAPtr = isStridedPtr(PSE, APtr, InnermostLoop, Strides);
-  int StrideBPtr = isStridedPtr(PSE, BPtr, InnermostLoop, Strides);
+  int StrideAPtr = isStridedPtr(PSE, APtr, InnermostLoop, Strides, true);
+  int StrideBPtr = isStridedPtr(PSE, BPtr, InnermostLoop, Strides, true);
 
   const SCEV *Src = AScev;
   const SCEV *Sink = BScev;
@@ -1824,7 +1849,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const TargetLibraryInfo *TLI, AliasAnalysis *AA,
                                DominatorTree *DT, LoopInfo *LI,
                                const ValueToValueMap &Strides)
-    : PSE(*SE), PtrRtChecking(SE), DepChecker(PSE, L), TheLoop(L), DL(DL),
+    : PSE(*SE, *L), PtrRtChecking(SE), DepChecker(PSE, L), TheLoop(L), DL(DL),
       TLI(TLI), AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
       MaxSafeDepDistBytes(-1U), CanVecMem(false),
       StoreToLoopInvariantAddress(false) {

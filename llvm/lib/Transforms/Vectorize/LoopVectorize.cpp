@@ -1751,7 +1751,7 @@ struct LoopVectorize : public FunctionPass {
       }
     }
 
-    PredicatedScalarEvolution PSE(*SE);
+    PredicatedScalarEvolution PSE(*SE, *L);
 
     // Check if it is legal to vectorize the loop.
     LoopVectorizationRequirements Requirements;

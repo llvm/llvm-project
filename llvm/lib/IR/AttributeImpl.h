@@ -171,8 +171,6 @@ class AttributeSetNode final
   void operator=(const AttributeSetNode &) = delete;
   AttributeSetNode(const AttributeSetNode &) = delete;
 public:
-  using TrailingObjects<AttributeSetNode, Attribute>::operator delete;
-
   static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
   bool hasAttribute(Attribute::AttrKind Kind) const {
@@ -267,8 +265,6 @@ public:
       }
     }
   }
-
-  using TrailingObjects<AttributeSetImpl, IndexAttrPair>::operator delete;
 
   /// \brief Get the context that created this AttributeSetImpl.
   LLVMContext &getContext() { return Context; }

@@ -47,7 +47,7 @@ entry:
 define <2 x double> @test_negative_zero_2(<2 x double> %A) {
 ; CHECK-LABEL: test_negative_zero_2:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movhpd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <2 x double> %A, i32 0

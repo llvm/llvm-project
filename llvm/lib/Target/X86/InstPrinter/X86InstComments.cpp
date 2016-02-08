@@ -257,6 +257,38 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DecodeMOVHLPSMask(2, ShuffleMask);
     break;
 
+  case X86::MOVHPDrm:
+  case X86::VMOVHPDrm:
+  case X86::VMOVHPDZ128rm:
+    Src1Name = getRegName(MI->getOperand(1).getReg());
+    DestName = getRegName(MI->getOperand(0).getReg());
+    DecodeInsertElementMask(MVT::v2f64, 1, 1, ShuffleMask);
+    break;
+
+  case X86::MOVHPSrm:
+  case X86::VMOVHPSrm:
+  case X86::VMOVHPSZ128rm:
+    Src1Name = getRegName(MI->getOperand(1).getReg());
+    DestName = getRegName(MI->getOperand(0).getReg());
+    DecodeInsertElementMask(MVT::v4f32, 2, 2, ShuffleMask);
+    break;
+
+  case X86::MOVLPDrm:
+  case X86::VMOVLPDrm:
+  case X86::VMOVLPDZ128rm:
+    Src1Name = getRegName(MI->getOperand(1).getReg());
+    DestName = getRegName(MI->getOperand(0).getReg());
+    DecodeInsertElementMask(MVT::v2f64, 0, 1, ShuffleMask);
+    break;
+
+  case X86::MOVLPSrm:
+  case X86::VMOVLPSrm:
+  case X86::VMOVLPSZ128rm:
+    Src1Name = getRegName(MI->getOperand(1).getReg());
+    DestName = getRegName(MI->getOperand(0).getReg());
+    DecodeInsertElementMask(MVT::v4f32, 0, 2, ShuffleMask);
+    break;
+
   CASE_MOVDUP(MOVSLDUP, r)
     Src1Name = getRegName(MI->getOperand(MI->getNumOperands() - 1).getReg());
     // FALL THROUGH.

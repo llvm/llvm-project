@@ -91,6 +91,10 @@ Here's the short story for getting up and running quickly with LLVM:
      using LLVM.  Another important option is ``LLVM_TARGETS_TO_BUILD``,
      which controls the LLVM target architectures that are included on the
      build.
+   * If CMake complains that it cannot find the compiler, make sure that
+     you have the Visual Studio C++ Tools installed, not just Visual Studio
+     itself (trying to create a C++ project in Visual Studio will generally
+     download the C++ tools if they haven't already been).
    * See the :doc:`LLVM CMake guide <CMake>` for detailed information about
      how to configure the LLVM build.
    * CMake generates project files for all build types. To select a specific

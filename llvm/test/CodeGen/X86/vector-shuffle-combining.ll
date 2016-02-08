@@ -1783,13 +1783,13 @@ define <8 x float> @combine_test22(<2 x float>* %a, <2 x float>* %b) {
 ; SSE-LABEL: combine_test22:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movhpd (%rsi), %xmm0
+; SSE-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_test22:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovhpd (%rsi), %xmm0, %xmm0
+; AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; AVX-NEXT:    retq
 ; Current AVX2 lowering of this is still awful, not adding a test case.
   %1 = load <2 x float>, <2 x float>* %a, align 8

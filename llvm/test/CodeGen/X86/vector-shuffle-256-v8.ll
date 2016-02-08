@@ -2192,7 +2192,7 @@ define <8x float> @concat_v2f32_1(<2 x float>* %tmp64, <2 x float>* %tmp65) {
 ; ALL-LABEL: concat_v2f32_1:
 ; ALL:       # BB#0: # %entry
 ; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vmovhpd (%rsi), %xmm0, %xmm0
+; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; ALL-NEXT:    retq
 entry:
   %tmp74 = load <2 x float>, <2 x float>* %tmp65, align 8
@@ -2207,7 +2207,7 @@ define <8x float> @concat_v2f32_2(<2 x float>* %tmp64, <2 x float>* %tmp65) {
 ; ALL-LABEL: concat_v2f32_2:
 ; ALL:       # BB#0: # %entry
 ; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vmovhpd (%rsi), %xmm0, %xmm0
+; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; ALL-NEXT:    retq
 entry:
   %tmp74 = load <2 x float>, <2 x float>* %tmp65, align 8
@@ -2220,7 +2220,7 @@ define <8x float> @concat_v2f32_3(<2 x float>* %tmp64, <2 x float>* %tmp65) {
 ; ALL-LABEL: concat_v2f32_3:
 ; ALL:       # BB#0: # %entry
 ; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vmovhpd (%rsi), %xmm0, %xmm0
+; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; ALL-NEXT:    retq
 entry:
   %tmp74 = load <2 x float>, <2 x float>* %tmp65, align 8

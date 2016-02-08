@@ -44,6 +44,17 @@ void DecodeINSERTPSMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask) {
   if (ZMask & 8) ShuffleMask[3] = SM_SentinelZero;
 }
 
+void DecodeInsertElementMask(MVT VT, unsigned Idx, unsigned Len,
+                             SmallVectorImpl<int> &ShuffleMask) {
+  unsigned NumElts = VT.getVectorNumElements();
+  assert((Idx + Len) <= NumElts && "Insertion out of range");
+
+  for (unsigned i = 0; i != NumElts; ++i)
+    ShuffleMask.push_back(i);
+  for (unsigned i = 0; i != Len; ++i)
+    ShuffleMask[Idx + i] = NumElts + i;
+}
+
 // <3,1> or <6,7,2,3>
 void DecodeMOVHLPSMask(unsigned NElts, SmallVectorImpl<int> &ShuffleMask) {
   for (unsigned i = NElts / 2; i != NElts; ++i)

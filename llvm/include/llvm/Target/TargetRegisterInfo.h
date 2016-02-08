@@ -457,7 +457,7 @@ public:
 
   /// Return a register mask that clobbers everything.
   virtual const uint32_t *getNoPreservedMask() const {
-    llvm_unreachable("target does not provide no presered mask");
+    llvm_unreachable("target does not provide no preserved mask");
   }
 
   /// Return all the call-preserved register masks defined for this target.

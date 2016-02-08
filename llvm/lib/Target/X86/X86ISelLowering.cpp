@@ -4821,6 +4821,84 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, unsigned Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, &MaskVec[0]);
 }
 
+static bool getTargetShuffleMaskIndices(SDValue MaskNode,
+                                        unsigned MaskEltSizeInBits,
+                                        SmallVectorImpl<uint64_t> &RawMask) {
+  while (MaskNode.getOpcode() == ISD::BITCAST)
+    MaskNode = MaskNode.getOperand(0);
+
+  MVT VT = MaskNode.getSimpleValueType();
+  assert(VT.isVector() && "Can't produce a non-vector with a build_vector!");
+
+  if (MaskNode.getOpcode() == X86ISD::VBROADCAST) {
+    if (VT.getScalarSizeInBits() != MaskEltSizeInBits)
+      return false;
+    if (auto *CN = dyn_cast<ConstantSDNode>(MaskNode.getOperand(0))) {
+      APInt MaskElement = CN->getAPIntValue();
+      for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
+        APInt RawElt = MaskElement.getLoBits(MaskEltSizeInBits);
+        RawMask.push_back(RawElt.getZExtValue());
+      }
+    }
+    return false;
+  }
+
+  if (MaskNode.getOpcode() != ISD::BUILD_VECTOR)
+    return false;
+
+  if ((VT.getScalarSizeInBits() % MaskEltSizeInBits) != 0)
+    return false;
+  unsigned ElementSplit = VT.getScalarSizeInBits() / MaskEltSizeInBits;
+
+  for (int i = 0, e = MaskNode.getNumOperands(); i < e; ++i) {
+    SDValue Op = MaskNode.getOperand(i);
+    if (Op->getOpcode() == ISD::UNDEF) {
+      RawMask.push_back((uint64_t)SM_SentinelUndef);
+      continue;
+    }
+
+    APInt MaskElement;
+    if (auto *CN = dyn_cast<ConstantSDNode>(Op.getNode()))
+      MaskElement = CN->getAPIntValue();
+    else if (auto *CFN = dyn_cast<ConstantFPSDNode>(Op.getNode()))
+      MaskElement = CFN->getValueAPF().bitcastToAPInt();
+    else
+      return false;
+
+    // We now have to decode the element which could be any integer size and
+    // extract each byte of it.
+    for (unsigned j = 0; j < ElementSplit; ++j) {
+      // Note that this is x86 and so always little endian: the low byte is
+      // the first byte of the mask.
+      APInt RawElt = MaskElement.getLoBits(MaskEltSizeInBits);
+      RawMask.push_back(RawElt.getZExtValue());
+      MaskElement = MaskElement.lshr(MaskEltSizeInBits);
+    }
+  }
+
+  return true;
+}
+
+static const Constant *getTargetShuffleMaskConstant(SDValue MaskNode) {
+  while (MaskNode.getOpcode() == ISD::BITCAST)
+    MaskNode = MaskNode.getOperand(0);
+
+  auto *MaskLoad = dyn_cast<LoadSDNode>(MaskNode);
+  if (!MaskLoad)
+    return nullptr;
+
+  SDValue Ptr = MaskLoad->getBasePtr();
+  if (Ptr->getOpcode() == X86ISD::Wrapper ||
+      Ptr->getOpcode() == X86ISD::WrapperRIP)
+    Ptr = Ptr->getOperand(0);
+
+  auto *MaskCP = dyn_cast<ConstantPoolSDNode>(Ptr);
+  if (!MaskCP || MaskCP->isMachineConstantPoolEntry())
+    return nullptr;
+
+  return dyn_cast<Constant>(MaskCP->getConstVal());
+}
+
 /// Calculates the shuffle mask corresponding to the target-specific opcode.
 /// Returns true if the Mask could be calculated. Sets IsUnary to true if only
 /// uses one source. Note that this will set IsUnary for shuffles which use a
@@ -4891,62 +4969,15 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
   case X86ISD::PSHUFB: {
     IsUnary = true;
     SDValue MaskNode = N->getOperand(1);
-    while (MaskNode->getOpcode() == ISD::BITCAST)
-      MaskNode = MaskNode->getOperand(0);
-
-    if (MaskNode->getOpcode() == ISD::BUILD_VECTOR) {
-      // If we have a build-vector, then things are easy.
-      MVT VT = MaskNode.getSimpleValueType();
-      assert(VT.isVector() &&
-             "Can't produce a non-vector with a build_vector!");
-      if (!VT.isInteger())
-        return false;
-
-      int NumBytesPerElement = VT.getVectorElementType().getSizeInBits() / 8;
-
-      SmallVector<uint64_t, 32> RawMask;
-      for (int i = 0, e = MaskNode->getNumOperands(); i < e; ++i) {
-        SDValue Op = MaskNode->getOperand(i);
-        if (Op->getOpcode() == ISD::UNDEF) {
-          RawMask.push_back((uint64_t)SM_SentinelUndef);
-          continue;
-        }
-        auto *CN = dyn_cast<ConstantSDNode>(Op.getNode());
-        if (!CN)
-          return false;
-        APInt MaskElement = CN->getAPIntValue();
-
-        // We now have to decode the element which could be any integer size and
-        // extract each byte of it.
-        for (int j = 0; j < NumBytesPerElement; ++j) {
-          // Note that this is x86 and so always little endian: the low byte is
-          // the first byte of the mask.
-          RawMask.push_back(MaskElement.getLoBits(8).getZExtValue());
-          MaskElement = MaskElement.lshr(8);
-        }
-      }
+    SmallVector<uint64_t, 32> RawMask;
+    if (getTargetShuffleMaskIndices(MaskNode, 8, RawMask)) {
       DecodePSHUFBMask(RawMask, Mask);
       break;
     }
-
-    auto *MaskLoad = dyn_cast<LoadSDNode>(MaskNode);
-    if (!MaskLoad)
-      return false;
-
-    SDValue Ptr = MaskLoad->getBasePtr();
-    if (Ptr->getOpcode() == X86ISD::Wrapper ||
-        Ptr->getOpcode() == X86ISD::WrapperRIP)
-      Ptr = Ptr->getOperand(0);
-
-    auto *MaskCP = dyn_cast<ConstantPoolSDNode>(Ptr);
-    if (!MaskCP || MaskCP->isMachineConstantPoolEntry())
-      return false;
-
-    if (auto *C = dyn_cast<Constant>(MaskCP->getConstVal())) {
+    if (auto *C = getTargetShuffleMaskConstant(MaskNode)) {
       DecodePSHUFBMask(C, Mask);
       break;
     }
-
     return false;
   }
   case X86ISD::VPERMI:
@@ -4983,57 +5014,13 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
   case X86ISD::VPERMV: {
     IsUnary = true;
     SDValue MaskNode = N->getOperand(0);
-    while (MaskNode->getOpcode() == ISD::BITCAST)
-      MaskNode = MaskNode->getOperand(0);
-
-    unsigned MaskLoBits = Log2_64(VT.getVectorNumElements());
     SmallVector<uint64_t, 32> RawMask;
-    if (MaskNode->getOpcode() == ISD::BUILD_VECTOR) {
-      // If we have a build-vector, then things are easy.
-      assert(MaskNode.getSimpleValueType().isInteger() &&
-             MaskNode.getSimpleValueType().getVectorNumElements() ==
-             VT.getVectorNumElements());
-
-      for (unsigned i = 0; i < MaskNode->getNumOperands(); ++i) {
-        SDValue Op = MaskNode->getOperand(i);
-        if (Op->getOpcode() == ISD::UNDEF)
-          RawMask.push_back((uint64_t)SM_SentinelUndef);
-        else if (isa<ConstantSDNode>(Op)) {
-          APInt MaskElement = cast<ConstantSDNode>(Op)->getAPIntValue();
-          RawMask.push_back(MaskElement.getLoBits(MaskLoBits).getZExtValue());
-        } else
-          return false;
-      }
+    unsigned MaskLoBits = Log2_64(VT.getVectorNumElements());
+    if (getTargetShuffleMaskIndices(MaskNode, MaskLoBits, RawMask)) {
       DecodeVPERMVMask(RawMask, Mask);
       break;
     }
-    if (MaskNode->getOpcode() == X86ISD::VBROADCAST) {
-      unsigned NumEltsInMask = MaskNode->getNumOperands();
-      MaskNode = MaskNode->getOperand(0);
-      if (auto *CN = dyn_cast<ConstantSDNode>(MaskNode)) {
-        APInt MaskEltValue = CN->getAPIntValue();
-        for (unsigned i = 0; i < NumEltsInMask; ++i)
-          RawMask.push_back(MaskEltValue.getLoBits(MaskLoBits).getZExtValue());
-        DecodeVPERMVMask(RawMask, Mask);
-        break;
-      }
-      // It may be a scalar load
-    }
-
-    auto *MaskLoad = dyn_cast<LoadSDNode>(MaskNode);
-    if (!MaskLoad)
-      return false;
-
-    SDValue Ptr = MaskLoad->getBasePtr();
-    if (Ptr->getOpcode() == X86ISD::Wrapper ||
-        Ptr->getOpcode() == X86ISD::WrapperRIP)
-      Ptr = Ptr->getOperand(0);
-
-    auto *MaskCP = dyn_cast<ConstantPoolSDNode>(Ptr);
-    if (!MaskCP || MaskCP->isMachineConstantPoolEntry())
-      return false;
-
-    if (auto *C = dyn_cast<Constant>(MaskCP->getConstVal())) {
+    if (auto *C = getTargetShuffleMaskConstant(MaskNode)) {
       DecodeVPERMVMask(C, VT, Mask);
       break;
     }
@@ -5042,48 +5029,14 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
   case X86ISD::VPERMV3: {
     IsUnary = false;
     SDValue MaskNode = N->getOperand(1);
-    while (MaskNode->getOpcode() == ISD::BITCAST)
-      MaskNode = MaskNode->getOperand(1);
 
-    if (MaskNode->getOpcode() == ISD::BUILD_VECTOR) {
-      // If we have a build-vector, then things are easy.
-      assert(MaskNode.getSimpleValueType().isInteger() &&
-             MaskNode.getSimpleValueType().getVectorNumElements() ==
-             VT.getVectorNumElements());
-
-      SmallVector<uint64_t, 32> RawMask;
-      unsigned MaskLoBits = Log2_64(VT.getVectorNumElements()*2);
-
-      for (unsigned i = 0; i < MaskNode->getNumOperands(); ++i) {
-        SDValue Op = MaskNode->getOperand(i);
-        if (Op->getOpcode() == ISD::UNDEF)
-          RawMask.push_back((uint64_t)SM_SentinelUndef);
-        else {
-          auto *CN = dyn_cast<ConstantSDNode>(Op.getNode());
-          if (!CN)
-            return false;
-          APInt MaskElement = CN->getAPIntValue();
-          RawMask.push_back(MaskElement.getLoBits(MaskLoBits).getZExtValue());
-        }
-      }
+    SmallVector<uint64_t, 32> RawMask;
+    unsigned MaskLoBits = Log2_64(VT.getVectorNumElements() * 2);
+    if (getTargetShuffleMaskIndices(MaskNode, MaskLoBits, RawMask)) {
       DecodeVPERMV3Mask(RawMask, Mask);
       break;
     }
-
-    auto *MaskLoad = dyn_cast<LoadSDNode>(MaskNode);
-    if (!MaskLoad)
-      return false;
-
-    SDValue Ptr = MaskLoad->getBasePtr();
-    if (Ptr->getOpcode() == X86ISD::Wrapper ||
-        Ptr->getOpcode() == X86ISD::WrapperRIP)
-      Ptr = Ptr->getOperand(0);
-
-    auto *MaskCP = dyn_cast<ConstantPoolSDNode>(Ptr);
-    if (!MaskCP || MaskCP->isMachineConstantPoolEntry())
-      return false;
-
-    if (auto *C = dyn_cast<Constant>(MaskCP->getConstVal())) {
+    if (auto *C = getTargetShuffleMaskConstant(MaskNode)) {
       DecodeVPERMV3Mask(C, VT, Mask);
       break;
     }
@@ -5141,7 +5094,9 @@ static bool setTargetShuffleZeroElements(SDValue N,
     if (M < 0)
       continue;
 
+    // Determine shuffle input and normalize the mask.
     SDValue V = M < Size ? V1 : V2;
+    M %= Size;
 
     // We are referencing an UNDEF input.
     if (V.isUndef()) {
@@ -5149,12 +5104,77 @@ static bool setTargetShuffleZeroElements(SDValue N,
       continue;
     }
 
-    // TODO - handle the Size != (int)V.getNumOperands() cases in future.
-    if (V.getOpcode() != ISD::BUILD_VECTOR || Size != (int)V.getNumOperands())
+    // Currently we can only search BUILD_VECTOR for UNDEF/ZERO elements.
+    if (V.getOpcode() != ISD::BUILD_VECTOR)
       continue;
-    if (!X86::isZeroNode(V.getOperand(M % Size)))
+
+    // If the BUILD_VECTOR has fewer elements then the (larger) source
+    // element must be UNDEF/ZERO.
+    // TODO: Is it worth testing the individual bits of a constant?
+    if ((Size % V.getNumOperands()) == 0) {
+      unsigned Scale = Size / V->getNumOperands();
+      SDValue Op = V.getOperand(M / Scale);
+      if (Op.isUndef())
+        Mask[i] = SM_SentinelUndef;
+      else if (X86::isZeroNode(Op))
+        Mask[i] = SM_SentinelZero;
       continue;
-    Mask[i] = SM_SentinelZero;
+    }
+
+    // If the BUILD_VECTOR has more elements then all the (smaller) source
+    // elements must be all UNDEF or all ZERO.
+    if ((V.getNumOperands() % Size) == 0) {
+      unsigned Scale = V->getNumOperands() / Size;
+      bool AllUndef = true;
+      bool AllZero = true;
+      for (unsigned j = 0; j != Scale; ++j) {
+        SDValue Op = V.getOperand((M * Scale) + j);
+        AllUndef &= Op.isUndef();
+        AllZero &= X86::isZeroNode(Op);
+      }
+      if (AllUndef)
+        Mask[i] = SM_SentinelUndef;
+      else if (AllZero)
+        Mask[i] = SM_SentinelZero;
+      continue;
+    }
+  }
+
+  return true;
+}
+
+/// Calls setTargetShuffleZeroElements to resolve a target shuffle mask's inputs
+/// and set the SM_SentinelUndef and SM_SentinelZero values. Then check the
+/// remaining input indices in case we now have a unary shuffle and adjust the
+/// Op0/Op1 inputs accordingly.
+/// Returns true if the target shuffle mask was decoded.
+static bool resolveTargetShuffleInputs(SDValue Op, bool &IsUnary, SDValue &Op0,
+                                       SDValue &Op1,
+                                       SmallVectorImpl<int> &Mask) {
+  if (!setTargetShuffleZeroElements(Op, Mask))
+    return false;
+
+  int NumElts = Mask.size();
+  bool Op0InUse = std::any_of(Mask.begin(), Mask.end(), [NumElts](int Idx) {
+    return 0 <= Idx && Idx < NumElts;
+  });
+  bool Op1InUse = std::any_of(Mask.begin(), Mask.end(),
+                              [NumElts](int Idx) { return NumElts <= Idx; });
+
+  Op0 = Op0InUse ? Op.getOperand(0) : SDValue();
+  Op1 = Op1InUse ? Op.getOperand(1) : SDValue();
+  IsUnary = !(Op0InUse && Op1InUse);
+
+  if (!IsUnary)
+    return true;
+
+  // We're only using Op1 - commute the mask and inputs.
+  if (!Op0InUse && Op1InUse) {
+    for (int &M : Mask)
+      if (NumElts <= M)
+        M -= NumElts;
+    Op0 = Op1;
+    Op1 = SDValue();
   }
 
   return true;
@@ -21195,6 +21215,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::VFPCLASS:           return "X86ISD::VFPCLASS";
   case X86ISD::VFPCLASSS:          return "X86ISD::VFPCLASSS";
   case X86ISD::MULTISHIFT:         return "X86ISD::MULTISHIFT";
+  case X86ISD::SCALAR_FP_TO_SINT_RND: return "X86ISD::SCALAR_FP_TO_SINT_RND";
+  case X86ISD::SCALAR_FP_TO_UINT_RND: return "X86ISD::SCALAR_FP_TO_UINT_RND";
   }
   return nullptr;
 }
@@ -23323,7 +23345,7 @@ static SDValue PerformShuffleCombine256(SDNode *N, SelectionDAG &DAG,
 /// \brief Combine an arbitrary chain of shuffles into a single instruction if
 /// possible.
 ///
-/// This is the leaf of the recursive combinine below. When we have found some
+/// This is the leaf of the recursive combine below. When we have found some
 /// chain of single-use x86 shuffle instructions and accumulated the combined
 /// shuffle mask represented by them, this will try to pattern match that mask
 /// into either a single instruction if there is a special purpose instruction
@@ -23484,13 +23506,19 @@ static bool combineX86ShuffleChain(SDValue Op, SDValue Root, ArrayRef<int> Mask,
     int NumBytes = VT.getSizeInBits() / 8;
     int Ratio = NumBytes / Mask.size();
     for (int i = 0; i < NumBytes; ++i) {
-      if (Mask[i / Ratio] == SM_SentinelUndef) {
+      int M = Mask[i / Ratio];
+      if (M == SM_SentinelUndef) {
         PSHUFBMask.push_back(DAG.getUNDEF(MVT::i8));
         continue;
       }
-      int M = Mask[i / Ratio] != SM_SentinelZero
-                  ? Ratio * Mask[i / Ratio] + i % Ratio
-                  : 255;
+      if (M == SM_SentinelZero) {
+        PSHUFBMask.push_back(DAG.getConstant(255, DL, MVT::i8));
+        continue;
+      }
+      M = Ratio * M + i % Ratio;
+      // Check that we are not crossing lanes.
+      if ((M / 16) != (i / 16))
+        return false;
       PSHUFBMask.push_back(DAG.getConstant(M, DL, MVT::i8));
     }
     MVT ByteVT = MVT::getVectorVT(MVT::i8, NumBytes);
@@ -23563,13 +23591,15 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
   assert(VT.getSizeInBits() == Root.getSimpleValueType().getSizeInBits() &&
          "Can only combine shuffles of the same vector register size.");
 
-  if (!isTargetShuffle(Op.getOpcode()))
-    return false;
-  SmallVector<int, 16> OpMask;
+  // Extract target shuffle mask and resolve sentinels and inputs.
   bool IsUnary;
-  bool HaveMask = getTargetShuffleMask(Op.getNode(), VT, true, OpMask, IsUnary);
-  // We only can combine unary shuffles which we can decode the mask for.
-  if (!HaveMask || !IsUnary)
+  SDValue Input0, Input1;
+  SmallVector<int, 16> OpMask;
+  if (!resolveTargetShuffleInputs(Op, IsUnary, Input0, Input1, OpMask))
+    return false;
+
+  // At the moment we can only combine target shuffle unary cases.
+  if (!IsUnary)
     return false;
 
   assert(VT.getVectorNumElements() == OpMask.size() &&
@@ -23615,31 +23645,24 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
                    RootMaskedIdx % OpRatio);
   }
 
-  // See if we can recurse into the operand to combine more things.
-  switch (Op.getOpcode()) {
-  case X86ISD::PSHUFB:
-    HasPSHUFB = true;
-  case X86ISD::PSHUFD:
-  case X86ISD::PSHUFHW:
-  case X86ISD::PSHUFLW:
-    if (Op.getOperand(0).hasOneUse() &&
-        combineX86ShufflesRecursively(Op.getOperand(0), Root, Mask, Depth + 1,
-                                      HasPSHUFB, DAG, DCI, Subtarget))
-      return true;
-    break;
-
-  case X86ISD::UNPCKL:
-  case X86ISD::UNPCKH:
-    assert(Op.getOperand(0) == Op.getOperand(1) &&
-           "We only combine unary shuffles!");
-    // We can't check for single use, we have to check that this shuffle is the
-    // only user.
-    if (Op->isOnlyUserOf(Op.getOperand(0).getNode()) &&
-        combineX86ShufflesRecursively(Op.getOperand(0), Root, Mask, Depth + 1,
-                                      HasPSHUFB, DAG, DCI, Subtarget))
-      return true;
-    break;
+  // Handle the all undef case early.
+  // TODO - should we handle zero/undef case as well? Widening the mask
+  // will lose information on undef elements possibly reducing future
+  // combine possibilities.
+  if (std::all_of(Mask.begin(), Mask.end(),
+                  [](int Idx) { return Idx == SM_SentinelUndef; })) {
+    DCI.CombineTo(Root.getNode(), DAG.getUNDEF(Root.getValueType()));
+    return true;
   }
+
+  HasPSHUFB |= (Op.getOpcode() == X86ISD::PSHUFB);
+
+  // See if we can recurse into Input0 (if it's a target shuffle).
+  if (Input0 && Op->isOnlyUserOf(Input0.getNode()) &&
+      combineX86ShufflesRecursively(Input0, Root, Mask, Depth + 1, HasPSHUFB,
+                                    DAG, DCI, Subtarget))
+    return true;
+
 
   // Minor canonicalization of the accumulated shuffle mask to make it easier
   // to match below. All this does is detect masks with sequential pairs of
