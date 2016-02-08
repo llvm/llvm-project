@@ -7676,6 +7676,15 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     Diag(D.getDeclSpec().getConstexprSpecLoc(),
          diag::err_explicit_instantiation_constexpr);
 
+  // C++ Concepts TS [dcl.spec.concept]p1: The concept specifier shall be
+  // applied only to the definition of a function template or variable template,
+  // declared in namespace scope.
+  if (D.getDeclSpec().isConceptSpecified()) {
+    Diag(D.getDeclSpec().getConceptSpecLoc(),
+         diag::err_concept_specified_specialization) << 0;
+    return true;
+  }
+
   // C++0x [temp.explicit]p2:
   //   There are two forms of explicit instantiation: an explicit instantiation
   //   definition and an explicit instantiation declaration. An explicit

@@ -1567,7 +1567,9 @@ void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
     if (VTable->hasInitializer())
       continue;
 
-    llvm::Constant *RTTI = getContext().getLangOpts().RTTIData
+    llvm::Constant *RTTI = getContext().getLangOpts().RTTIData &&
+                                   VTable->getDLLStorageClass() !=
+                                       llvm::GlobalValue::DLLImportStorageClass
                                ? getMSCompleteObjectLocator(RD, Info)
                                : nullptr;
 

@@ -367,6 +367,11 @@ SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
   if (lhs.isUnknown() || rhs.isUnknown())
     return UnknownVal();
 
+  if (lhs.getAs<nonloc::LazyCompoundVal>() ||
+      rhs.getAs<nonloc::LazyCompoundVal>()) {
+    return UnknownVal();
+  }
+
   if (Optional<Loc> LV = lhs.getAs<Loc>()) {
     if (Optional<Loc> RV = rhs.getAs<Loc>())
       return evalBinOpLL(state, op, *LV, *RV, type);

@@ -164,7 +164,7 @@ bool CodeGenModule::TryEmitDefinitionAsAlias(GlobalDecl AliasDecl,
     // members with attribute "AlwaysInline" and expect no reference to
     // be generated. It is desirable to reenable this optimisation after
     // corresponding LLVM changes.
-    Replacements[MangledName] = Aliasee;
+    addReplacement(MangledName, Aliasee);
     return false;
   }
 

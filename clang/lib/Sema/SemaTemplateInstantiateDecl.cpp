@@ -2483,6 +2483,11 @@ Decl *TemplateDeclInstantiator::VisitOMPThreadPrivateDecl(
   return TD;
 }
 
+Decl *TemplateDeclInstantiator::VisitOMPCapturedFieldDecl(
+    OMPCapturedFieldDecl * /*D*/) {
+  llvm_unreachable("Should not be met in templates");
+}
+
 Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D) {
   return VisitFunctionDecl(D, nullptr);
 }

@@ -863,7 +863,8 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     //       ParameterToInnerFunction));
     if (*I > prec::Unknown)
       NewParenState.LastSpace = std::max(NewParenState.LastSpace, State.Column);
-    if (*I != prec::Conditional && !Current.is(TT_UnaryOperator))
+    if (*I != prec::Conditional && !Current.is(TT_UnaryOperator) &&
+        Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign)
       NewParenState.StartOfFunctionCall = State.Column;
 
     // Always indent conditional expressions. Never indent expression where

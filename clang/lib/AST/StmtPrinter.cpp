@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -763,15 +764,16 @@ template<typename T>
 void OMPClausePrinter::VisitOMPClauseList(T *Node, char StartSym) {
   for (typename T::varlist_iterator I = Node->varlist_begin(),
                                     E = Node->varlist_end();
-         I != E; ++I) {
+       I != E; ++I) {
     assert(*I && "Expected non-null Stmt");
+    OS << (I == Node->varlist_begin() ? StartSym : ',');
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(*I)) {
-      OS << (I == Node->varlist_begin() ? StartSym : ',');
-      cast<NamedDecl>(DRE->getDecl())->printQualifiedName(OS);
-    } else {
-      OS << (I == Node->varlist_begin() ? StartSym : ',');
+      if (auto *CFD = dyn_cast<OMPCapturedFieldDecl>(DRE->getDecl()))
+        CFD->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy, 0);
+      else
+        DRE->getDecl()->printQualifiedName(OS);
+    } else
       (*I)->printPretty(OS, nullptr, Policy, 0);
-    }
   }
 }
 

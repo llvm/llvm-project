@@ -92,6 +92,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Label:        // __label__ x;
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPCapturedField:
   case Decl::Empty:
     // None of these decls require codegen support.
     return;

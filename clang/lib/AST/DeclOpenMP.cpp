@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief This file implements OMPThreadPrivateDecl class.
+/// \brief This file implements OMPThreadPrivateDecl, OMPCapturedFieldDecl
+/// classes.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -50,5 +51,23 @@ void OMPThreadPrivateDecl::setVars(ArrayRef<Expr *> VL) {
   assert(VL.size() == NumVars &&
          "Number of variables is not the same as the preallocated buffer");
   std::uninitialized_copy(VL.begin(), VL.end(), getTrailingObjects<Expr *>());
+}
+
+//===----------------------------------------------------------------------===//
+// OMPCapturedFieldDecl Implementation.
+//===----------------------------------------------------------------------===//
+
+void OMPCapturedFieldDecl::anchor() {}
+
+OMPCapturedFieldDecl *OMPCapturedFieldDecl::Create(ASTContext &C,
+                                                   DeclContext *DC,
+                                                   IdentifierInfo *Id,
+                                                   QualType T) {
+  return new (C, DC) OMPCapturedFieldDecl(C, DC, Id, T);
+}
+
+OMPCapturedFieldDecl *OMPCapturedFieldDecl::CreateDeserialized(ASTContext &C,
+                                                               unsigned ID) {
+  return new (C, ID) OMPCapturedFieldDecl(C, nullptr, nullptr, QualType());
 }
 

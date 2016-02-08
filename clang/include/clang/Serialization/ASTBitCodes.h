@@ -1163,6 +1163,8 @@ namespace clang {
       DECL_EMPTY,
       /// \brief An ObjCTypeParamDecl record.
       DECL_OBJC_TYPE_PARAM,
+      /// \brief An OMPCapturedFieldDecl record.
+      DECL_OMP_CAPTUREDFIELD,
     };
 
     /// \brief Record codes for each kind of statement or expression.

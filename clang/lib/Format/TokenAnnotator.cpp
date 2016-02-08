@@ -423,7 +423,7 @@ private:
   }
 
   void updateParameterCount(FormatToken *Left, FormatToken *Current) {
-    if (Current->is(tok::l_brace) && !Current->is(TT_DictLiteral))
+    if (Current->is(tok::l_brace) && Current->BlockKind == BK_Block)
       ++Left->BlockParameterCount;
     if (Current->is(tok::comma)) {
       ++Left->ParameterCount;

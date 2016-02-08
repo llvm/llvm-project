@@ -1447,7 +1447,6 @@ static Visibility parseVisibility(Arg *arg, ArgList &args,
 }
 
 static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
-                          const TargetOptions &TargetOpts,
                           DiagnosticsEngine &Diags) {
   // FIXME: Cleanup per-file based stuff.
   LangStandard::Kind LangStd = LangStandard::lang_unspecified;
@@ -1844,22 +1843,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.OpenMPIsDevice =
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_is_device);
 
-  // Provide diagnostic when a given target is not expected to be an OpenMP
-  // device or host.
-  if (Opts.OpenMP && !Opts.OpenMPIsDevice) {
-    llvm::Triple T(TargetOpts.Triple);
-    switch (T.getArch()) {
-    default:
-      break;
-    // Add unsupported host targets here:
-    case llvm::Triple::nvptx:
-    case llvm::Triple::nvptx64:
-      Diags.Report(clang::diag::err_drv_omp_host_target_not_supported)
-          << TargetOpts.Triple;
-      break;
-    }
-  }
-
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_omptargets_EQ)) {
 
@@ -2126,7 +2109,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                         Diags, Res.getLangOpts()->Sanitize);
   } else {
     // Other LangOpts are only initialzed when the input is not AST or LLVM IR.
-    ParseLangArgs(*Res.getLangOpts(), Args, DashX, Res.getTargetOpts(), Diags);
+    ParseLangArgs(*Res.getLangOpts(), Args, DashX, Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       Res.getLangOpts()->ObjCExceptions = 1;
 

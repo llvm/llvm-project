@@ -41,3 +41,20 @@ typedef concept int CI; // expected-error {{'concept' can only appear on the def
 void fpc(concept int i) {} // expected-error {{'concept' can only appear on the definition of a function template or variable template}}
 
 concept bool; // expected-error {{'concept' can only appear on the definition of a function template or variable template}}
+
+template <typename T> concept bool VCEI{ true };
+template concept bool VCEI<int>; // expected-error {{'concept' cannot be applied on an explicit instantiation}}
+extern template concept bool VCEI<int>; // expected-error {{'concept' cannot be applied on an explicit instantiation}}
+
+template <typename T> concept bool VCPS{ true };
+template <typename T> concept bool VCPS<T *>{ true }; // expected-error {{'concept' cannot be applied on an partial specialization}}
+
+template <typename T> concept bool VCES{ true };
+template <> concept bool VCES<int>{ true }; // expected-error {{'concept' cannot be applied on an explicit specialization}}
+
+template <typename T> concept bool FCEI() { return true; }
+template concept bool FCEI<int>(); // expected-error {{'concept' cannot be applied on an explicit instantiation}}
+extern template concept bool FCEI<int>(); // expected-error {{'concept' cannot be applied on an explicit instantiation}}
+
+template <typename T> concept bool FCES() { return true; }
+template <> concept bool FCES<bool>() { return true; } // expected-error {{'concept' cannot be applied on an explicit specialization}}

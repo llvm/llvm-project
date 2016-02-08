@@ -350,6 +350,7 @@ namespace clang {
     void VisitObjCPropertyDecl(ObjCPropertyDecl *D);
     void VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
+    void VisitOMPCapturedFieldDecl(OMPCapturedFieldDecl *D);
 
     /// We've merged the definition \p MergedDef into the existing definition
     /// \p Def. Ensure that \p Def is made visible whenever \p MergedDef is made
@@ -2360,6 +2361,10 @@ void ASTDeclReader::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
   D->setVars(Vars);
 }
 
+void ASTDeclReader::VisitOMPCapturedFieldDecl(OMPCapturedFieldDecl *D) {
+  VisitVarDecl(D);
+}
+
 //===----------------------------------------------------------------------===//
 // Attribute Reading
 //===----------------------------------------------------------------------===//
@@ -3322,6 +3327,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_OMP_THREADPRIVATE:
     D = OMPThreadPrivateDecl::CreateDeserialized(Context, ID, Record[Idx++]);
+    break;
+  case DECL_OMP_CAPTUREDFIELD:
+    D = OMPCapturedFieldDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_EMPTY:
     D = EmptyDecl::CreateDeserialized(Context, ID);
