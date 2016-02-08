@@ -13,4 +13,5 @@ add_llvm_unittest(AnalysisTests
   ScalarEvolutionTest.cpp
   MixedTBAATest.cpp
   ValueTrackingTest.cpp
+  UnrollAnalyzer.cpp
   )
