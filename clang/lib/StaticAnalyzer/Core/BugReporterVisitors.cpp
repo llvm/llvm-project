@@ -1540,20 +1540,6 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond,
   return event;
 }
 
-
-// FIXME: Copied from ExprEngineCallAndReturn.cpp.
-static bool isInStdNamespace(const Decl *D) {
-  const DeclContext *DC = D->getDeclContext()->getEnclosingNamespaceContext();
-  const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC);
-  if (!ND)
-    return false;
-
-  while (const NamespaceDecl *Parent = dyn_cast<NamespaceDecl>(ND->getParent()))
-    ND = Parent;
-
-  return ND->isStdNamespace();
-}
-
 std::unique_ptr<PathDiagnosticPiece>
 LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
                                                     const ExplodedNode *N,
@@ -1564,7 +1550,7 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
   AnalyzerOptions &Options = Eng.getAnalysisManager().options;
   const Decl *D = N->getLocationContext()->getDecl();
 
-  if (isInStdNamespace(D)) {
+  if (AnalysisDeclContext::isInStdNamespace(D)) {
     // Skip reports within the 'std' namespace. Although these can sometimes be
     // the user's fault, we currently don't report them very well, and
     // Note that this will not help for any other data structure libraries, like
