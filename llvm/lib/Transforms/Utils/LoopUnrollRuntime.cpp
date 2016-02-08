@@ -110,7 +110,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
     }
   }
 
-  // Create a branch around the orignal loop, which is taken if there are no
+  // Create a branch around the original loop, which is taken if there are no
   // iterations remaining to be executed after running the prologue.
   Instruction *InsertPt = PrologEnd->getTerminator();
   IRBuilder<> B(InsertPt);
@@ -281,7 +281,7 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
                                    bool AllowExpensiveTripCount, LoopInfo *LI,
                                    ScalarEvolution *SE, DominatorTree *DT,
                                    bool PreserveLCSSA) {
-  // for now, only unroll loops that contain a single exit
+  // For now, only unroll loops that contain a single exit.
   if (!L->getExitingBlock())
     return false;
 
@@ -290,13 +290,13 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   if (!L->isLoopSimplifyForm() || !L->getUniqueExitBlock())
     return false;
 
-  // Use Scalar Evolution to compute the trip count.  This allows more
-  // loops to be unrolled than relying on induction var simplification
+  // Use Scalar Evolution to compute the trip count. This allows more loops to
+  // be unrolled than relying on induction var simplification.
   if (!SE)
     return false;
 
-  // Only unroll loops with a computable trip count and the trip count needs
-  // to be an int value (allowing a pointer type is a TODO item)
+  // Only unroll loops with a computable trip count, and the trip count needs
+  // to be an int value (allowing a pointer type is a TODO item).
   const SCEV *BECountSC = SE->getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BECountSC) ||
       !BECountSC->getType()->isIntegerTy())
@@ -304,7 +304,7 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
 
   unsigned BEWidth = cast<IntegerType>(BECountSC->getType())->getBitWidth();
 
-  // Add 1 since the backedge count doesn't include the first loop iteration
+  // Add 1 since the backedge count doesn't include the first loop iteration.
   const SCEV *TripCountSC =
       SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
   if (isa<SCEVCouldNotCompute>(TripCountSC))
@@ -326,15 +326,15 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   if (Log2_32(Count) > BEWidth)
     return false;
 
-  // If this loop is nested, then the loop unroller changes the code in
-  // parent loop, so the Scalar Evolution pass needs to be run again
+  // If this loop is nested, then the loop unroller changes the code in the
+  // parent loop, so the Scalar Evolution pass needs to be run again.
   if (Loop *ParentLoop = L->getParentLoop())
     SE->forgetLoop(ParentLoop);
 
   BasicBlock *PH = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
-  // It helps to splits the original preheader twice, one for the end of the
-  // prolog code and one for a new loop preheader
+  // It helps to split the original preheader twice, one for the end of the
+  // prolog code and one for a new loop preheader.
   BasicBlock *PEnd = SplitEdge(PH, Header, DT, LI);
   BasicBlock *NewPH = SplitBlock(PEnd, PEnd->getTerminator(), DT, LI);
   BranchInst *PreHeaderBR = cast<BranchInst>(PH->getTerminator());
@@ -350,9 +350,9 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   Value *ModVal = B.CreateAnd(TripCount, Count - 1, "xtraiter");
 
   // If ModVal is zero, we know that either
-  //  1. there are no iteration to be run in the prologue loop
+  //  1. There are no iterations to be run in the prologue loop.
   // OR
-  //  2. the addition computing TripCount overflowed
+  //  2. The addition computing TripCount overflowed.
   //
   // If (2) is true, we know that TripCount really is (1 << BEWidth) and so the
   // number of iterations that remain to be run in the original loop is a
@@ -361,8 +361,8 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
 
   Value *BranchVal = B.CreateIsNotNull(ModVal, "lcmp.mod");
 
-  // Branch to either the extra iterations or the cloned/unrolled loop
-  // We will fix up the true branch label when adding loop body copies
+  // Branch to either the extra iterations or the cloned/unrolled loop.
+  // We will fix up the true branch label when adding loop body copies.
   B.CreateCondBr(BranchVal, PEnd, PEnd);
   assert(PreHeaderBR->isUnconditional() &&
          PreHeaderBR->getSuccessor(0) == PEnd &&
@@ -370,7 +370,7 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   PreHeaderBR->eraseFromParent();
   Function *F = Header->getParent();
   // Get an ordered list of blocks in the loop to help with the ordering of the
-  // cloned blocks in the prolog code
+  // cloned blocks in the prolog code.
   LoopBlocksDFS LoopBlocks(L);
   LoopBlocks.perform(LI);
 
@@ -390,7 +390,7 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   CloneLoopBlocks(L, ModVal, UnrollPrologue, PH, PEnd, NewBlocks, LoopBlocks,
                   VMap, LI);
 
-  // Insert the cloned blocks into function just before the original loop
+  // Insert the cloned blocks into the function just before the original loop.
   F->getBasicBlockList().splice(PEnd->getIterator(), F->getBasicBlockList(),
                                 NewBlocks[0]->getIterator(), F->end());
 
