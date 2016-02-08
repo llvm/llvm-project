@@ -424,12 +424,154 @@ declare i64 @llvm.x86.avx512.cvttss2usi64(<4 x float>, i32) nounwind readnone
 define i64 @test_x86_avx512_cvtsd2usi64(<2 x double> %a0) {
 ; CHECK-LABEL: test_x86_avx512_cvtsd2usi64:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcvtsd2usi %xmm0, %rax
+; CHECK-NEXT:    vcvtsd2usi %xmm0, %rcx
+; CHECK-NEXT:    vcvtsd2usi      {rz-sae}, %xmm0, %rax
+; CHECK-NEXT:    vcvtsd2usi      {rd-sae}, %xmm0, %rdx
+; CHECK-NEXT:    addq    %rcx, %rax
+; CHECK-NEXT:    addq    %rdx, %rax
 ; CHECK-NEXT:    retq
-  %res = call i64 @llvm.x86.avx512.cvtsd2usi64(<2 x double> %a0) ; <i64> [#uses=1]
-  ret i64 %res
+
+  %res = call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> %a0, i32 4)
+  %res1 = call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> %a0, i32 3)
+  %res2 = call i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double> %a0, i32 1)
+  %res3 = add i64 %res, %res1
+  %res4 = add i64 %res3, %res2
+  ret i64 %res4
 }
-declare i64 @llvm.x86.avx512.cvtsd2usi64(<2 x double>) nounwind readnone
+declare i64 @llvm.x86.avx512.vcvtsd2usi64(<2 x double>, i32) nounwind readnone
+
+define i64 @test_x86_avx512_cvtsd2si64(<2 x double> %a0) {
+; CHECK-LABEL: test_x86_avx512_cvtsd2si64:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtsd2si %xmm0, %rcx
+; CHECK-NEXT:    vcvtsd2si      {rz-sae}, %xmm0, %rax
+; CHECK-NEXT:    vcvtsd2si      {rd-sae}, %xmm0, %rdx
+; CHECK-NEXT:    addq    %rcx, %rax
+; CHECK-NEXT:    addq    %rdx, %rax
+; CHECK-NEXT:    retq
+
+  %res = call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> %a0, i32 4)
+  %res1 = call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> %a0, i32 3)
+  %res2 = call i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double> %a0, i32 1)
+  %res3 = add i64 %res, %res1
+  %res4 = add i64 %res3, %res2
+  ret i64 %res4
+}
+declare i64 @llvm.x86.avx512.vcvtsd2si64(<2 x double>, i32) nounwind readnone
+
+define i64 @test_x86_avx512_cvtss2usi64(<4 x float> %a0) {
+; CHECK-LABEL: test_x86_avx512_cvtss2usi64:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtss2usi %xmm0, %rcx
+; CHECK-NEXT:    vcvtss2usi      {rz-sae}, %xmm0, %rax
+; CHECK-NEXT:    vcvtss2usi      {rd-sae}, %xmm0, %rdx
+; CHECK-NEXT:    addq    %rcx, %rax
+; CHECK-NEXT:    addq    %rdx, %rax
+; CHECK-NEXT:    retq
+
+  %res = call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> %a0, i32 4)
+  %res1 = call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> %a0, i32 3)
+  %res2 = call i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float> %a0, i32 1)
+  %res3 = add i64 %res, %res1
+  %res4 = add i64 %res3, %res2
+  ret i64 %res4
+}
+declare i64 @llvm.x86.avx512.vcvtss2usi64(<4 x float>, i32) nounwind readnone
+
+define i64 @test_x86_avx512_cvtss2si64(<4 x float> %a0) {
+; CHECK-LABEL: test_x86_avx512_cvtss2si64:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtss2si %xmm0, %rcx
+; CHECK-NEXT:    vcvtss2si      {rz-sae}, %xmm0, %rax
+; CHECK-NEXT:    vcvtss2si      {rd-sae}, %xmm0, %rdx
+; CHECK-NEXT:    addq    %rcx, %rax
+; CHECK-NEXT:    addq    %rdx, %rax
+; CHECK-NEXT:    retq
+
+  %res = call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> %a0, i32 4)
+  %res1 = call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> %a0, i32 3)
+  %res2 = call i64 @llvm.x86.avx512.vcvtss2si64(<4 x float> %a0, i32 1)
+  %res3 = add i64 %res, %res1
+  %res4 = add i64 %res3, %res2
+  ret i64 %res4
+}
+declare i64 @llvm.x86.avx512.vcvtss2si64(<4 x float>, i32) nounwind readnone
+
+define i32 @test_x86_avx512_cvtsd2usi32(<2 x double> %a0) {
+; CHECK-LABEL: test_x86_avx512_cvtsd2usi32:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtsd2usi %xmm0, %ecx
+; CHECK-NEXT:    vcvtsd2usi      {rz-sae}, %xmm0, %eax
+; CHECK-NEXT:    vcvtsd2usi      {rd-sae}, %xmm0, %edx
+; CHECK-NEXT:    addl    %ecx, %eax
+; CHECK-NEXT:    addl    %edx, %eax
+; CHECK-NEXT:    retq
+
+  %res = call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> %a0, i32 4)
+  %res1 = call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> %a0, i32 3)
+  %res2 = call i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double> %a0, i32 1)
+  %res3 = add i32 %res, %res1
+  %res4 = add i32 %res3, %res2
+  ret i32 %res4
+}
+declare i32 @llvm.x86.avx512.vcvtsd2usi32(<2 x double>, i32) nounwind readnone
+
+define i32 @test_x86_avx512_cvtsd2si32(<2 x double> %a0) {
+; CHECK-LABEL: test_x86_avx512_cvtsd2si32:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtsd2si %xmm0, %ecx
+; CHECK-NEXT:    vcvtsd2si      {rz-sae}, %xmm0, %eax
+; CHECK-NEXT:    vcvtsd2si      {rd-sae}, %xmm0, %edx
+; CHECK-NEXT:    addl    %ecx, %eax
+; CHECK-NEXT:    addl    %edx, %eax
+; CHECK-NEXT:    retq
+
+  %res = call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> %a0, i32 4)
+  %res1 = call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> %a0, i32 3)
+  %res2 = call i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double> %a0, i32 1)
+  %res3 = add i32 %res, %res1
+  %res4 = add i32 %res3, %res2
+  ret i32 %res4
+}
+declare i32 @llvm.x86.avx512.vcvtsd2si32(<2 x double>, i32) nounwind readnone
+
+define i32 @test_x86_avx512_cvtss2usi32(<4 x float> %a0) {
+; CHECK-LABEL: test_x86_avx512_cvtss2usi32:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtss2usi %xmm0, %ecx
+; CHECK-NEXT:    vcvtss2usi      {rz-sae}, %xmm0, %eax
+; CHECK-NEXT:    vcvtss2usi      {rd-sae}, %xmm0, %edx
+; CHECK-NEXT:    addl    %ecx, %eax
+; CHECK-NEXT:    addl    %edx, %eax
+; CHECK-NEXT:    retq
+
+  %res = call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> %a0, i32 4)
+  %res1 = call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> %a0, i32 3)
+  %res2 = call i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float> %a0, i32 1)
+  %res3 = add i32 %res, %res1
+  %res4 = add i32 %res3, %res2
+  ret i32 %res4
+}
+declare i32 @llvm.x86.avx512.vcvtss2usi32(<4 x float>, i32) nounwind readnone
+
+define i32 @test_x86_avx512_cvtss2si32(<4 x float> %a0) {
+; CHECK-LABEL: test_x86_avx512_cvtss2si32:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtss2si %xmm0, %ecx
+; CHECK-NEXT:    vcvtss2si      {rz-sae}, %xmm0, %eax
+; CHECK-NEXT:    vcvtss2si      {rd-sae}, %xmm0, %edx
+; CHECK-NEXT:    addl    %ecx, %eax
+; CHECK-NEXT:    addl    %edx, %eax
+; CHECK-NEXT:    retq
+
+  %res = call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> %a0, i32 4)
+  %res1 = call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> %a0, i32 3)
+  %res2 = call i32 @llvm.x86.avx512.vcvtss2si32(<4 x float> %a0, i32 1)
+  %res3 = add i32 %res, %res1
+  %res4 = add i32 %res3, %res2
+  ret i32 %res4
+}
+declare i32 @llvm.x86.avx512.vcvtss2si32(<4 x float>, i32) nounwind readnone
 
 define <16 x float> @test_x86_vcvtph2ps_512(<16 x i16> %a0) {
 ; CHECK-LABEL: test_x86_vcvtph2ps_512:

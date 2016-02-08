@@ -62,11 +62,9 @@ define i32 @kernel11(double* %x, double* %y, i32 %n) nounwind uwtable ssp {
 }
 
 
-
-; We don't vectorize this function because A[i*7] is scalarized, and the
-; different scalars can in theory wrap around and overwrite other scalar
-; elements. At the moment we only allow read/write access to arrays
-; that are consecutive.
+; A[i*7] is scalarized, and the different scalars can in theory wrap
+; around and overwrite other scalar elements. However we can still
+; vectorize because we can version the loop to avoid this case.
 ; 
 ; void foo(int *a) {
 ;   for (int i=0; i<256; ++i) {
@@ -78,7 +76,7 @@ define i32 @kernel11(double* %x, double* %y, i32 %n) nounwind uwtable ssp {
 ; }
 
 ; CHECK-LABEL: @func2(
-; CHECK-NOT: <4 x i32>
+; CHECK: <4 x i32>
 ; CHECK: ret
 define i32 @func2(i32* nocapture %a) nounwind uwtable ssp {
   br label %1

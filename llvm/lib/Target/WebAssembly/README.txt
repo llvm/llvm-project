@@ -95,3 +95,8 @@ It could be done with a smaller encoding like this:
     copy_local  $3=, $pop6
 
 //===---------------------------------------------------------------------===//
+
+WebAssembly registers are implicitly initialized to zero. Explicit zeroing is
+therefore often redundant and could be optimized away.
+
+//===---------------------------------------------------------------------===//

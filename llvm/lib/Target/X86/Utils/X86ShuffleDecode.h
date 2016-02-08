@@ -29,6 +29,11 @@ enum { SM_SentinelUndef = -1, SM_SentinelZero = -2 };
 
 void DecodeINSERTPSMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask);
 
+// Insert the bottom Len elements from a second source into a vector starting at
+// element Idx.
+void DecodeInsertElementMask(MVT VT, unsigned Idx, unsigned Len,
+                             SmallVectorImpl<int> &ShuffleMask);
+
 // <3,1> or <6,7,2,3>
 void DecodeMOVHLPSMask(unsigned NElts, SmallVectorImpl<int> &ShuffleMask);
 

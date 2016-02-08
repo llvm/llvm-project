@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl -mattr=+ifma | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl -mattr=+avx512ifma | FileCheck %s
 
 declare <8 x i64> @llvm.x86.avx512.mask.vpmadd52h.uq.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
 

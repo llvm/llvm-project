@@ -58,7 +58,7 @@ public:
     Value = static_cast<uintptr_t>(I) << Shift;
   }
 
-  // Note that this imilict conversion additionally allows all of the basic
+  // Note that this implicit conversion additionally allows all of the basic
   // comparison operators to work transparently, etc.
   operator IntT() const { return static_cast<IntT>(Value >> Shift); }
 };

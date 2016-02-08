@@ -362,10 +362,12 @@ LLVM-specific variables
   Define the maximum number of concurrent link jobs.
 
 **LLVM_BUILD_DOCS**:BOOL
-  Enables all enabled documentation targets (i.e. Doxgyen and Sphinx targets) to
-  be built as part of the normal build. If the ``install`` target is run then
-  this also enables all built documentation targets to be installed. Defaults to
-  OFF.
+  Adds all *enabled* documentation targets (i.e. Doxgyen and Sphinx targets) as
+  dependencies of the default build targets.  This results in all of the (enabled)
+  documentation targets being as part of a normal build.  If the ``install`` 
+  target is run then this also enables all built documentation targets to be 
+  installed. Defaults to OFF.  To enable a particular documentation target, see 
+  see LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.  
 
 **LLVM_ENABLE_DOXYGEN**:BOOL
   Enables the generation of browsable HTML documentation using doxygen.
@@ -417,7 +419,7 @@ LLVM-specific variables
   Defaults to OFF.
 
 **LLVM_ENABLE_SPHINX**:BOOL
-  If enabled CMake will search for the ``sphinx-build`` executable and will make
+  If specified, CMake will search for the ``sphinx-build`` executable and will make
   the ``SPHINX_OUTPUT_HTML`` and ``SPHINX_OUTPUT_MAN`` CMake options available.
   Defaults to OFF.
 

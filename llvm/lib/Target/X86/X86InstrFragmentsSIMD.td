@@ -542,6 +542,12 @@ def X86cvttss2IntRnd      : SDNode<"X86ISD::FP_TO_SINT_RND",  SDTSFloatToIntRnd>
 def X86cvttss2UIntRnd     : SDNode<"X86ISD::FP_TO_UINT_RND",  SDTSFloatToIntRnd>;
 def X86cvttsd2IntRnd      : SDNode<"X86ISD::FP_TO_SINT_RND",  SDTSDoubleToIntRnd>;
 def X86cvttsd2UIntRnd     : SDNode<"X86ISD::FP_TO_UINT_RND",  SDTSDoubleToIntRnd>;
+
+def  X86cvtsd2si  : SDNode<"X86ISD::SCALAR_FP_TO_SINT_RND", SDTSDoubleToIntRnd>;
+def  X86cvtsd2usi : SDNode<"X86ISD::SCALAR_FP_TO_UINT_RND", SDTSDoubleToIntRnd>;
+def  X86cvtss2si  : SDNode<"X86ISD::SCALAR_FP_TO_SINT_RND", SDTSFloatToIntRnd>;
+def  X86cvtss2usi : SDNode<"X86ISD::SCALAR_FP_TO_UINT_RND", SDTSFloatToIntRnd>;
+
 // Vector with rounding mode
 
 // cvtt fp-to-int staff

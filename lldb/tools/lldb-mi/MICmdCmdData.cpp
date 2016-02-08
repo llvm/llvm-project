@@ -117,7 +117,8 @@ CMICmdCmdDataEvaluateExpression::Execute()
 
     lldb::SBFrame frame = thread.GetSelectedFrame();
     lldb::SBValue value = frame.EvaluateExpression(rExpression.c_str());
-    if (!value.IsValid() || value.GetError().Fail())
+    m_Error = value.GetError();
+    if (!value.IsValid() || m_Error.Fail())
         value = frame.FindVariable(rExpression.c_str());
     const CMICmnLLDBUtilSBValue utilValue(value, true);
     if (!utilValue.IsValid() || utilValue.IsValueUnknown())
@@ -177,8 +178,10 @@ CMICmdCmdDataEvaluateExpression::Acknowledge()
             m_miResultRecord = miRecordResult;
             return MIstatus::success;
         }
-
-        const CMICmnMIValueConst miValueConst("Could not evaluate expression");
+        CMIUtilString mi_error_msg = "Could not evaluate expression";
+        if (const char* err_msg = m_Error.GetCString())
+            mi_error_msg = err_msg;
+        const CMICmnMIValueConst miValueConst(mi_error_msg.Escape(true));
         const CMICmnMIValueResult miValueResult("msg", miValueConst);
         const CMICmnMIResultRecord miRecordResult(m_cmdData.strMiCmdToken, CMICmnMIResultRecord::eResultClass_Error, miValueResult);
         m_miResultRecord = miRecordResult;
