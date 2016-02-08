@@ -744,10 +744,10 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
 #endif
   uptr access_addr = exception_record->ExceptionInformation[1];
 
-  bool is_write = false;  // FIXME: compute this.
-  bool is_memory_access = false;  // FIXME: compute this.
+  bool write_flag = SignalContext::UNKNOWN;  // FIXME: compute this.
+  bool is_memory_access = false;             // FIXME: compute this.
   return SignalContext(context, access_addr, pc, sp, bp, is_memory_access,
-                       is_write);
+                       write_flag);
 }
 
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
