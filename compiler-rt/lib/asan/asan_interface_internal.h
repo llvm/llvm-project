@@ -54,6 +54,7 @@ extern "C" {
     uptr has_dynamic_init;   // Non-zero if the global has dynamic initializer.
     __asan_global_source_location *location;  // Source location of a global,
                                               // or NULL if it is unknown.
+    uptr odr_indicator;      // The address of the ODR indicator symbol.
   };
 
   // These two functions should be called by the instrumented code.

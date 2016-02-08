@@ -28,7 +28,8 @@ extern "C" {
   // v4=>v5: changed the semantics and format of __asan_stack_malloc_ and
   //         __asan_stack_free_ functions.
   // v5=>v6: changed the name of the version check symbol
-  #define __asan_version_mismatch_check __asan_version_mismatch_check_v6
+  // v6=>v7: added 'odr_indicator' to __asan_global.
+  #define __asan_version_mismatch_check __asan_version_mismatch_check_v7
 }
 
 #endif  // ASAN_INIT_VERSION_H

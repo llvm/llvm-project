@@ -12,13 +12,6 @@ if(POLICY CMP0022)
   cmake_policy(SET CMP0022 NEW) # Required when interacting with LLVM and Clang
 endif()
 
-project(libcxx CXX C)
-
-set(PACKAGE_NAME libcxx)
-set(PACKAGE_VERSION trunk-svn)
-set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
-
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
@@ -26,21 +19,31 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-# Require out of source build.
-include(MacroEnsureOutOfSourceBuild)
-MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
- "${PROJECT_NAME} requires an out of source build. Please create a separate
- build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
- )
-
 # Find the LLVM sources and simulate LLVM CMake options.
 include(HandleOutOfTreeLLVM)
+
+if (LIBCXX_BUILT_STANDALONE)
+  project(libcxx CXX C)
+
+  set(PACKAGE_NAME libcxx)
+  set(PACKAGE_VERSION trunk-svn)
+  set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
+  set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
+endif ()
+
 if (LIBCXX_BUILT_STANDALONE AND NOT LLVM_FOUND)
   message(WARNING "UNSUPPORTED LIBCXX CONFIGURATION DETECTED: "
                   "llvm-config not found and LLVM_PATH not defined.\n"
                   "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
                   "or -DLLVM_PATH=path/to/llvm-source-root.")
 endif()
+
+# Require out of source build.
+include(MacroEnsureOutOfSourceBuild)
+MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
+ "${PROJECT_NAME} requires an out of source build. Please create a separate
+ build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
+ )
 
 #===============================================================================
 # Setup CMake Options

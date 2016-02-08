@@ -135,6 +135,70 @@ bool GetInfoForAddressIfGlobal(uptr addr, AddressDescription *descr) {
   return false;
 }
 
+enum GlobalSymbolState {
+  UNREGISTERED = 0,
+  REGISTERED = 1
+};
+
+// Check ODR violation for given global G via special ODR indicator. We use
+// this method in case compiler instruments global variables through their
+// local aliases.
+static void CheckODRViolationViaIndicator(const Global *g) {
+  u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
+  if (*odr_indicator == UNREGISTERED) {
+    *odr_indicator = REGISTERED;
+    return;
+  }
+  // If *odr_indicator is DEFINED, some module have already registered
+  // externally visible symbol with the same name. This is an ODR violation.
+  for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
+    if (g->odr_indicator == l->g->odr_indicator &&
+        (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
+        !IsODRViolationSuppressed(g->name))
+      ReportODRViolation(g, FindRegistrationSite(g),
+                         l->g, FindRegistrationSite(l->g));
+  }
+}
+
+// Check ODR violation for given global G by checking if it's already poisoned.
+// We use this method in case compiler doesn't use private aliases for global
+// variables.
+static void CheckODRViolationViaPoisoning(const Global *g) {
+  if (__asan_region_is_poisoned(g->beg, g->size_with_redzone)) {
+    // This check may not be enough: if the first global is much larger
+    // the entire redzone of the second global may be within the first global.
+    for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
+      if (g->beg == l->g->beg &&
+          (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
+          !IsODRViolationSuppressed(g->name))
+        ReportODRViolation(g, FindRegistrationSite(g),
+                           l->g, FindRegistrationSite(l->g));
+    }
+  }
+}
+
+// Clang provides two different ways for global variables protection:
+// it can poison the global itself or it's private alias. In former
+// case we may poison same symbol multiple times, that can help us to
+// cheaply detect ODR violation: if we try to poison an already poisoned
+// global, we have ODR violation error.
+// In latter case, we poison each symbol exactly once, so we use special
+// indicator symbol to perform similar check.
+// In either case, compiler provides a special odr_indicator field to Global
+// structure, that can contain two kinds of values:
+//   1) Non-zero value. In this case, odr_indicator is an address of
+//      corresponding indicator variable for given global.
+//   2) Zero. This means that we don't use private aliases for global variables
+//      and can freely check ODR violation with the first method.
+//
+// This routine chooses between two different methods of ODR violation
+// detection.
+static inline bool UseODRIndicator(const Global *g) {
+  // Use ODR indicator method iff use_odr_indicator flag is set and
+  // indicator symbol address is not 0.
+  return flags()->use_odr_indicator && g->odr_indicator > 0;
+}
+
 // Register a global variable.
 // This function may be called more than once for every global
 // so we store the globals in a map.
@@ -158,17 +222,10 @@ static void RegisterGlobal(const Global *g) {
   if (flags()->detect_odr_violation) {
     // Try detecting ODR (One Definition Rule) violation, i.e. the situation
     // where two globals with the same name are defined in different modules.
-    if (__asan_region_is_poisoned(g->beg, g->size_with_redzone)) {
-      // This check may not be enough: if the first global is much larger
-      // the entire redzone of the second global may be within the first global.
-      for (ListOfGlobals *l = list_of_all_globals; l; l = l->next) {
-        if (g->beg == l->g->beg &&
-            (flags()->detect_odr_violation >= 2 || g->size != l->g->size) &&
-            !IsODRViolationSuppressed(g->name))
-          ReportODRViolation(g, FindRegistrationSite(g),
-                             l->g, FindRegistrationSite(l->g));
-      }
-    }
+    if (UseODRIndicator(g))
+      CheckODRViolationViaIndicator(g);
+    else
+      CheckODRViolationViaPoisoning(g);
   }
   if (CanPoisonMemory())
     PoisonRedZones(*g);
@@ -199,6 +256,12 @@ static void UnregisterGlobal(const Global *g) {
   // We unpoison the shadow memory for the global but we do not remove it from
   // the list because that would require O(n^2) time with the current list
   // implementation. It might not be worth doing anyway.
+
+  // Release ODR indicator.
+  if (UseODRIndicator(g)) {
+    u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
+    *odr_indicator = UNREGISTERED;
+  }
 }
 
 void StopInitOrderChecking() {
