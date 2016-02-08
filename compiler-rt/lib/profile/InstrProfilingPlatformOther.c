@@ -64,7 +64,8 @@ void __llvm_profile_register_names_function(void *NamesStart,
     return;
   }
   NamesFirst = (const char *)getMinAddr(NamesFirst, NamesStart);
-  NamesLast = (const char *)getMaxAddr(NamesLast, NamesStart + NamesSize);
+  NamesLast =
+      (const char *)getMaxAddr(NamesLast, (const char *)NamesStart + NamesSize);
 }
 
 COMPILER_RT_VISIBILITY
