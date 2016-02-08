@@ -135,3 +135,5 @@ ASAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
 ASAN_FLAG(bool, halt_on_error, true,
           "Crash the program after printing the first error report "
           "(WARNING: USE AT YOUR OWN RISK!)")
+ASAN_FLAG(bool, use_odr_indicator, false,
+          "Use special ODR indicator symbol for ODR violation detection")
