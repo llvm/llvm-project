@@ -4,6 +4,8 @@
 // false positive global-buffer-overflow due to sanitized library poisons
 // globals from non-sanitized one.
 //
+// XFAIL: mips
+//
 // RUN: %clangxx_asan -DBUILD_INSTRUMENTED_DSO=1 -fPIC -shared -mllvm -asan-use-private-alias %s -o %t-INSTRUMENTED-SO.so
 // RUN: %clangxx -DBUILD_UNINSTRUMENTED_DSO=1 -fPIC -shared %s -o %t-UNINSTRUMENTED-SO.so
 // RUN: %clangxx %s -c -mllvm -asan-use-private-alias -o %t.o
