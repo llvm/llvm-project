@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLD_READER_WRITER_MACHO_NORMALIZED_FILE_BINARY_UTILS_H
+#define LLD_READER_WRITER_MACHO_NORMALIZED_FILE_BINARY_UTILS_H
 
 #include "MachONormalizedFile.h"
 #include "lld/Core/Error.h"
@@ -18,9 +20,6 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MachO.h"
 #include <system_error>
-
-#ifndef LLD_READER_WRITER_MACHO_NORMALIZED_FILE_BINARY_UTILS_H
-#define LLD_READER_WRITER_MACHO_NORMALIZED_FILE_BINARY_UTILS_H
 
 namespace lld {
 namespace mach_o {

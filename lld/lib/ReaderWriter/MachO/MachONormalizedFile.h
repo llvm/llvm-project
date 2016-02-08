@@ -39,6 +39,9 @@
 ///                    +-------+
 ///
 
+#ifndef LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
+#define LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
+
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
@@ -49,9 +52,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
-
-#ifndef LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
-#define LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
 
 using llvm::BumpPtrAllocator;
 using llvm::yaml::Hex64;

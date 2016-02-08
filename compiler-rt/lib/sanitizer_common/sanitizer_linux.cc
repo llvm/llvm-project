@@ -1155,16 +1155,55 @@ void *internal_start_thread(void (*func)(void *), void *arg) { return 0; }
 void internal_join_thread(void *th) {}
 #endif
 
-bool GetSigContextWriteFlag(void *context) {
-#if defined(__x86_64__) || defined(__i386__)
-  ucontext_t *ucontext = (ucontext_t*)context;
-#if SANITIZER_FREEBSD
-  return ucontext->uc_mcontext.mc_err & 2;
-#else
-  return ucontext->uc_mcontext.gregs[REG_ERR] & 2;
+#if defined(__aarch64__)
+// Android headers in the older NDK releases miss this definition.
+struct __sanitizer_esr_context {
+  struct _aarch64_ctx head;
+  uint64_t esr;
+};
+
+static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
+  static const u32 kEsrMagic = 0x45535201;
+  u8 *aux = ucontext->uc_mcontext.__reserved;
+  while (true) {
+    _aarch64_ctx *ctx = (_aarch64_ctx *)aux;
+    if (ctx->size == 0) break;
+    Printf("ctx magic %x\n", ctx->magic);
+    if (ctx->magic == kEsrMagic) {
+      *esr = ((__sanitizer_esr_context *)ctx)->esr;
+      return true;
+    }
+    aux += ctx->size;
+  }
+  return false;
+}
 #endif
+
+SignalContext::WriteFlag SignalContext::GetWriteFlag(void *context) {
+  ucontext_t *ucontext = (ucontext_t *)context;
+#if defined(__x86_64__) || defined(__i386__)
+  static const uptr PF_WRITE = 1U << 1;
+#if SANITIZER_FREEBSD
+  uptr err = ucontext->uc_mcontext.mc_err;
 #else
-  return false;  // FIXME: Implement.
+  uptr err = ucontext->uc_mcontext.gregs[REG_ERR];
+#endif
+  return err & PF_WRITE ? WRITE : READ;
+#elif defined(__arm__)
+  static const uptr FSR_WRITE = 1U << 11;
+  uptr fsr = ucontext->uc_mcontext.error_code;
+  // FSR bits 5:0 describe the abort type, and are never 0 (or so it seems).
+  // Zero FSR indicates an older kernel that does not pass this information to
+  // the userspace.
+  if (fsr == 0) return UNKNOWN;
+  return fsr & FSR_WRITE ? WRITE : READ;
+#elif defined(__aarch64__)
+  static const u64 ESR_ELx_WNR = 1U << 6;
+  u64 esr;
+  if (!Aarch64GetESR(ucontext, &esr)) return UNKNOWN;
+  return esr & ESR_ELx_WNR ? WRITE : READ;
+#else
+  return UNKNOWN;  // FIXME: Implement.
 #endif
 }
 
