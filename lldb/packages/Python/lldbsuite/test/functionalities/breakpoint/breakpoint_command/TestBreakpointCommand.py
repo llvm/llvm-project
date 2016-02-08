@@ -22,7 +22,7 @@ class BreakpointCommandTestCase(TestBase):
         cls.RemoveTempFile("output.txt")
         cls.RemoveTempFile("output2.txt")
 
-    @expectedFailureWindows("llvm.org/pr24528")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()

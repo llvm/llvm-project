@@ -19,7 +19,7 @@ class ThreadStepOutTestCase(TestBase):
     @skipIfLinux                              # Test occasionally times out on the Linux build bot
     @expectedFailureLinux("llvm.org/pr23477") # Test occasionally times out on the Linux build bot
     @expectedFailureFreeBSD("llvm.org/pr18066") # inferior does not exit
-    @expectedFailureWindows # Test crashes
+    @expectedFailureAll(oslist=["windows"])
     def test_step_single_thread(self):
         """Test thread step out on one thread via command interpreter. """
         self.build(dictionary=self.getBuildFlags())
@@ -28,7 +28,7 @@ class ThreadStepOutTestCase(TestBase):
     @skipIfLinux                              # Test occasionally times out on the Linux build bot
     @expectedFailureLinux("llvm.org/pr23477") # Test occasionally times out on the Linux build bot
     @expectedFailureFreeBSD("llvm.org/pr19347") # 2nd thread stops at breakpoint
-    @expectedFailureWindows # Test crashes
+    @expectedFailureAll(oslist=["windows"])
     def test_step_all_threads(self):
         """Test thread step out on all threads via command interpreter. """
         self.build(dictionary=self.getBuildFlags())
@@ -37,7 +37,7 @@ class ThreadStepOutTestCase(TestBase):
     @skipIfLinux                              # Test occasionally times out on the Linux build bot
     @expectedFailureLinux("llvm.org/pr23477") # Test occasionally times out on the Linux build bot
     @expectedFailureFreeBSD("llvm.org/pr19347")
-    @expectedFailureWindows("llvm.org/pr24681")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24681")
     def test_python(self):
         """Test thread step out on one thread via Python API (dwarf)."""
         self.build(dictionary=self.getBuildFlags())

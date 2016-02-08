@@ -53,19 +53,19 @@ class ExprCharTestCase(TestBase):
         self.assertTrue(value.GetError().Success())
         self.assertEqual(value.GetValueAsSigned(0), 3)
 
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_default_char(self):
         self.do_test()
 
     @expectedFailureArch("arm", "llvm.org/pr23069")
     @expectedFailureArch("aarch64", "llvm.org/pr23069")
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_signed_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-fsigned-char'})
 
     @expectedFailurei386("llvm.org/pr23069")
     @expectedFailurex86_64("llvm.org/pr23069")
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     @expectedFailureAll(bugnumber="llvm.org/pr23069", triple = 'mips*')
     def test_unsigned_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-funsigned-char'})

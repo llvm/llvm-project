@@ -22,7 +22,7 @@ class ExprDoesntDeadlockTestCase(TestBase):
 
     @expectedFailureFreeBSD('llvm.org/pr17946')
     @expectedFlakeyLinux # failed 1/365 test runs, line 61, thread.IsValid()
-    @expectedFailureWindows # Windows doesn't have pthreads, need to port this test.
+    @expectedFailureAll(oslist=["windows"], bugnumber="Windows doesn't have pthreads, test needs to be ported")
     def test_with_run_command(self):
         """Test that expr will time out and allow other threads to run if it blocks."""
         self.build()

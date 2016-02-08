@@ -13,7 +13,7 @@ class RvalueReferencesTestCase(TestBase):
     
     #rdar://problem/11479676
     @expectedFailureIcc("ICC (13.1, 14-beta) do not emit DW_TAG_rvalue_reference_type.")
-    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_with_run_command(self):
         """Test that rvalues are supported in the C++ expression parser"""
         self.build()

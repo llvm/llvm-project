@@ -36,7 +36,7 @@ class DriverBatchModeTest (TestBase):
     @skipIfRemote # test not remote-ready llvm.org/pr24813
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     @expectedFlakeyLinux("llvm.org/pr25172")
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_batch_mode_run_crash (self):
         """Test that the lldb driver's batch mode works correctly."""
         self.build()
@@ -73,7 +73,7 @@ class DriverBatchModeTest (TestBase):
     @skipIfRemote # test not remote-ready llvm.org/pr24813
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     @expectedFlakeyLinux("llvm.org/pr25172")
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_batch_mode_run_exit (self):
         """Test that the lldb driver's batch mode works correctly."""
         self.build()
@@ -110,7 +110,7 @@ class DriverBatchModeTest (TestBase):
     @skipIfRemote # test not remote-ready llvm.org/pr24813
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     @expectedFlakeyLinux("llvm.org/pr25172")
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_batch_mode_attach_exit (self):
         """Test that the lldb driver's batch mode works correctly."""
         self.build()

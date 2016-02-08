@@ -20,7 +20,7 @@ class AttachResumeTestCase(TestBase):
 
     @skipIfRemote
     @expectedFailureFreeBSD('llvm.org/pr19310')
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_attach_continue_interrupt_detach(self):
         """Test attach/continue/interrupt/detach"""
         self.build()

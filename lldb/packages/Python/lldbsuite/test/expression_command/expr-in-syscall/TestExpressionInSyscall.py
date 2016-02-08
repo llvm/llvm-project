@@ -15,7 +15,7 @@ class ExprSyscallTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows("llvm.org/pr21765") # Also getpid() is not a function on Windows anyway
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
     def test_setpgid(self):
         self.build()
         self.expr_syscall()

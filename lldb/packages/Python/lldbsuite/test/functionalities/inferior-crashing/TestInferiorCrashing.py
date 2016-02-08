@@ -16,46 +16,46 @@ class CrashingInferiorTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureFreeBSD("llvm.org/pr23699 SIGSEGV is reported as exception, not signal")
-    @expectedFailureWindows("llvm.org/pr24778") # This actually works, but the test relies on the output format instead of the API
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     def test_inferior_crashing(self):
         """Test that lldb reliably catches the inferior crashing (command)."""
         self.build()
         self.inferior_crashing()
 
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     def test_inferior_crashing_register(self):
         """Test that lldb reliably reads registers from the inferior after crashing (command)."""
         self.build()
         self.inferior_crashing_registers()
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     def test_inferior_crashing_python(self):
         """Test that lldb reliably catches the inferior crashing (Python API)."""
         self.build()
         self.inferior_crashing_python()
 
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     def test_inferior_crashing_expr(self):
         """Test that the lldb expression interpreter can read from the inferior after crashing (command)."""
         self.build()
         self.inferior_crashing_expr()
 
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     def test_inferior_crashing_step(self):
         """Test that stepping after a crash behaves correctly."""
         self.build()
         self.inferior_crashing_step()
 
     @expectedFailureFreeBSD('llvm.org/pr24939')
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     @expectedFailureAndroid(archs=['aarch64'], api_levels=list(range(21 + 1))) # No eh_frame for sa_restorer
     def test_inferior_crashing_step_after_break(self):
         """Test that lldb functions correctly after stepping through a crash."""
         self.build()
         self.inferior_crashing_step_after_break()
 
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     @skipIfLinux # Inferior exits after stepping after a segfault. This is working as intended IMHO.
     def test_inferior_crashing_expr_step_and_expr(self):
         """Test that lldb expressions work before and after stepping after a crash."""

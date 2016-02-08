@@ -13,7 +13,7 @@ class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_gdb_exit(self):
         """Test that '-gdb-exit' terminates local debug session and exits."""
@@ -37,7 +37,7 @@ class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
         import pexpect
         self.expect(pexpect.EOF)
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_quit(self):
         """Test that 'quit' exits immediately."""
@@ -60,7 +60,7 @@ class MiExitTestCase(lldbmi_testcase.MiTestCaseBase):
         import pexpect
         self.expect(pexpect.EOF)
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_q(self):
         """Test that 'q' exits immediately."""

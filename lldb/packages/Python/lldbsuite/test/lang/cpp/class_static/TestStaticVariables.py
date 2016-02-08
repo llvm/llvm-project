@@ -22,7 +22,7 @@ class StaticVariableTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @expectedFailureWindows("llvm.org/pr24764")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test_with_run_command(self):
         """Test that file and class static variables display correctly."""
         self.build()

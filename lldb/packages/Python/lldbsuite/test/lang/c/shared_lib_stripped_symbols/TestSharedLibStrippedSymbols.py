@@ -14,7 +14,7 @@ class SharedLibStrippedTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows # Test crashes
+    @expectedFailureAll(oslist=["windows"])
     def test_expr(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""
         if "clang" in self.getCompiler() and "3.4" in self.getCompilerVersion():
@@ -27,7 +27,7 @@ class SharedLibStrippedTestCase(TestBase):
         self.expect("expression --show-types -- *my_foo_ptr", VARIABLES_DISPLAYED_CORRECTLY,
             substrs = ["(foo)", "(sub_foo)", "other_element = 3"])
 
-    @expectedFailureWindows # Test crashes
+    @expectedFailureAll(oslist=["windows"])
     @unittest2.expectedFailure("rdar://problem/10381325")
     def test_frame_variable(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""

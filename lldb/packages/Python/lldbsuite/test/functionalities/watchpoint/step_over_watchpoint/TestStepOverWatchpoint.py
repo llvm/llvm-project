@@ -19,7 +19,7 @@ class TestStepOverWatchpoint(TestBase):
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureLinux(bugnumber="llvm.org/pr26031", archs=['aarch64', 'arm'])
-    @expectedFailureWindows("llvm.org/pr24446")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test(self):
         """Test stepping over watchpoints."""
         self.build()

@@ -178,7 +178,7 @@ class EventAPITestCase(TestBase):
     @skipIfFreeBSD # llvm.org/pr21325
     @add_test_categories(['pyapi'])
     @expectedFailureLinux("llvm.org/pr23617")  # Flaky, fails ~1/10 cases
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_add_listener_to_broadcaster(self):
         """Exercise some SBBroadcaster APIs."""
         self.build()

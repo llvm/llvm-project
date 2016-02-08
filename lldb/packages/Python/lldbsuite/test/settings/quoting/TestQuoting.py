@@ -28,7 +28,7 @@ class SettingsCommandTestCase(TestBase):
     def test_no_quote(self):
         self.do_test_args("a b c", "a\0b\0c\0")
 
-    @expectedFailureWindows("http://llvm.org/pr24557")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24557")
     @no_debug_info_test
     def test_single_quote(self):
         self.do_test_args("'a b c'", "a b c\0")
@@ -37,17 +37,17 @@ class SettingsCommandTestCase(TestBase):
     def test_double_quote(self):
         self.do_test_args('"a b c"', "a b c\0")
 
-    @expectedFailureWindows("http://llvm.org/pr24557")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24557")
     @no_debug_info_test
     def test_single_quote_escape(self):
         self.do_test_args("'a b\\' c", "a b\\\0c\0")
 
-    @expectedFailureWindows("http://llvm.org/pr24557")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24557")
     @no_debug_info_test
     def test_double_quote_escape(self):
         self.do_test_args('"a b\\" c"', 'a b" c\0')
 
-    @expectedFailureWindows("http://llvm.org/pr24557")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24557")
     @no_debug_info_test
     def test_double_quote_escape2(self):
         self.do_test_args('"a b\\\\" c', 'a b\\\0c\0')
@@ -56,7 +56,7 @@ class SettingsCommandTestCase(TestBase):
     def test_single_in_double(self):
         self.do_test_args('"a\'b"', "a'b\0")
 
-    @expectedFailureWindows("http://llvm.org/pr24557")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24557")
     @no_debug_info_test
     def test_double_in_single(self):
         self.do_test_args("'a\"b'", 'a"b\0')
@@ -69,7 +69,7 @@ class SettingsCommandTestCase(TestBase):
     def test_bare_single(self):
         self.do_test_args("a\\'b", "a'b\0")
 
-    @expectedFailureWindows("http://llvm.org/pr24557")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24557")
     @no_debug_info_test
     def test_bare_double(self):
         self.do_test_args('a\\"b', 'a"b\0')

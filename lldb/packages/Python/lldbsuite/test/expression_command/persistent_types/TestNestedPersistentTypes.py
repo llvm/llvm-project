@@ -16,7 +16,7 @@ class NestedPersistentTypesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_persistent_types(self):
         """Test that nested persistent types work."""
         self.build()

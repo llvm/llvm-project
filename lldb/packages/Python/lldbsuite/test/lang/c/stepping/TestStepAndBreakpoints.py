@@ -23,10 +23,10 @@ class TestCStepping(TestBase):
         # Find the line numbers that we will step to in main:
         self.main_source = "main.c"
 
+    @add_test_categories(['pyapi'])
     @expectedFailureFreeBSD('llvm.org/pr17932')
     @expectedFailureLinux # llvm.org/pr14437
-    @expectedFailureWindows("llvm.org/pr24777")
-    @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24777")
     def test_and_python_api(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
         self.build()

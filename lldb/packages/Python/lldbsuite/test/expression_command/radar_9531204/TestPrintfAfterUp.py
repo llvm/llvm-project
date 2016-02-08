@@ -17,7 +17,7 @@ class Radar9531204TestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     # rdar://problem/9531204
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_expr_commands(self):
         """The evaluating printf(...) after break stop and then up a stack frame."""
         self.build()

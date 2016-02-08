@@ -7,7 +7,7 @@ class TestWithLimitDebugInfo(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(debug_info=not_in(["dwarf"]))
+    @skipIf(debug_info=no_match(["dwarf"]))
     def test_limit_debug_info(self):
         self.build()
 
