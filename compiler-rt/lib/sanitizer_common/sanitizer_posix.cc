@@ -323,13 +323,13 @@ bool GetCodeRangeForFile(const char *module, uptr *start, uptr *end) {
 }
 
 SignalContext SignalContext::Create(void *siginfo, void *context) {
-  auto si = (siginfo_t*)siginfo;
+  auto si = (siginfo_t *)siginfo;
   uptr addr = (uptr)si->si_addr;
   uptr pc, sp, bp;
   GetPcSpBp(context, &pc, &sp, &bp);
-  bool is_write = GetSigContextWriteFlag(context);
+  WriteFlag write_flag = GetWriteFlag(context);
   bool is_memory_access = si->si_signo == SIGSEGV;
-  return SignalContext(context, addr, pc, sp, bp, is_memory_access, is_write);
+  return SignalContext(context, addr, pc, sp, bp, is_memory_access, write_flag);
 }
 
 } // namespace __sanitizer

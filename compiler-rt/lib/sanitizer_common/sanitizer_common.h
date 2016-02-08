@@ -750,19 +750,26 @@ struct SignalContext {
   uptr sp;
   uptr bp;
   bool is_memory_access;
-  bool is_write;
+
+  enum WriteFlag { UNKNOWN, READ, WRITE } write_flag;
 
   SignalContext(void *context, uptr addr, uptr pc, uptr sp, uptr bp,
-                bool is_memory_access, bool is_write)
-      : context(context), addr(addr), pc(pc), sp(sp), bp(bp),
-      is_memory_access(is_memory_access), is_write(is_write) {}
+                bool is_memory_access, WriteFlag write_flag)
+      : context(context),
+        addr(addr),
+        pc(pc),
+        sp(sp),
+        bp(bp),
+        is_memory_access(is_memory_access),
+        write_flag(write_flag) {}
 
   // Creates signal context in a platform-specific manner.
   static SignalContext Create(void *siginfo, void *context);
+
+  // Returns true if the "context" indicates a memory write.
+  static WriteFlag GetWriteFlag(void *context);
 };
 
-// Returns true if the "context" indicates a memory write.
-bool GetSigContextWriteFlag(void *context);
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp);
 
 void DisableReexec();

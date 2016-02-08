@@ -491,8 +491,8 @@ void LogFullErrorReport(const char *buffer) {
   // The report is added to CrashLog as part of logging all of Printf output.
 }
 
-bool GetSigContextWriteFlag(void *context) {
-  return false;  // FIXME: implement this.
+SignalContext::WriteFlag SignalContext::GetWriteFlag(void *context) {
+  return UNKNOWN;  // FIXME: implement this.
 }
 
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {

@@ -755,7 +755,7 @@ void ReportStackOverflow(const SignalContext &sig) {
 }
 
 void ReportDeadlySignal(const char *description, const SignalContext &sig) {
-  ScopedInErrorReport in_report(/*report*/nullptr, /*fatal*/true);
+  ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
   Decorator d;
   Printf("%s", d.Warning());
   Report(
@@ -768,17 +768,22 @@ void ReportDeadlySignal(const char *description, const SignalContext &sig) {
   if (sig.pc < GetPageSizeCached())
     Report("Hint: pc points to the zero page.\n");
   if (sig.is_memory_access) {
-    Report("The signal is caused by a %s memory access.\n",
-           sig.is_write ? "WRITE" : "READ");
+    const char *access_type =
+        sig.write_flag == SignalContext::WRITE
+            ? "WRITE"
+            : (sig.write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
+    Report("The signal is caused by a %s memory access.\n", access_type);
     if (sig.addr < GetPageSizeCached()) {
       Report("Hint: address points to the zero page.\n");
       SS.Scare(10, "null-deref");
     } else if (sig.addr == sig.pc) {
       SS.Scare(60, "wild-jump");
-    } else if (sig.is_write) {
+    } else if (sig.write_flag == SignalContext::WRITE) {
       SS.Scare(30, "wild-addr-write");
-    } else {
+    } else if (sig.write_flag == SignalContext::READ) {
       SS.Scare(20, "wild-addr-read");
+    } else {
+      SS.Scare(25, "wild-addr");
     }
   } else {
     SS.Scare(10, "signal");
