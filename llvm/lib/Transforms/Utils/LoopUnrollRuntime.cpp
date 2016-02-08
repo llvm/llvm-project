@@ -394,13 +394,11 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   F->getBasicBlockList().splice(PEnd->getIterator(), F->getBasicBlockList(),
                                 NewBlocks[0]->getIterator(), F->end());
 
-  // Rewrite the cloned instruction operands to use the values
-  // created when the clone is created.
-  for (unsigned i = 0, e = NewBlocks.size(); i != e; ++i) {
-    for (BasicBlock::iterator I = NewBlocks[i]->begin(),
-                              E = NewBlocks[i]->end();
-         I != E; ++I) {
-      RemapInstruction(&*I, VMap,
+  // Rewrite the cloned instruction operands to use the values created when the
+  // clone is created.
+  for (BasicBlock *BB : NewBlocks) {
+    for (Instruction &I : *BB) {
+      RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingEntries);
     }
   }
