@@ -280,13 +280,12 @@ RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 
 template <class IntPtrT>
 void RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
+  Symtab.create(StringRef(NamesStart, NamesSize));
   for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
-    StringRef FunctionName(getName(I->NamePtr), swap(I->NameSize));
-    Symtab.addFuncName(FunctionName);
     const IntPtrT FPtr = swap(I->FunctionPointer);
     if (!FPtr)
       continue;
-    Symtab.mapAddress(FPtr, IndexedInstrProf::ComputeHash(FunctionName));
+    Symtab.mapAddress(FPtr, I->NameRef);
   }
   Symtab.finalizeSymtab();
 }
@@ -301,7 +300,7 @@ RawInstrProfReader<IntPtrT>::readHeader(const RawInstrProf::Header &Header) {
   NamesDelta = swap(Header.NamesDelta);
   auto DataSize = swap(Header.DataSize);
   auto CountersSize = swap(Header.CountersSize);
-  auto NamesSize = swap(Header.NamesSize);
+  NamesSize = swap(Header.NamesSize);
   auto ValueDataSize = swap(Header.ValueDataSize);
   ValueKindLast = swap(Header.ValueKindLast);
 
@@ -334,11 +333,7 @@ RawInstrProfReader<IntPtrT>::readHeader(const RawInstrProf::Header &Header) {
 
 template <class IntPtrT>
 std::error_code RawInstrProfReader<IntPtrT>::readName(InstrProfRecord &Record) {
-  Record.Name = StringRef(getName(Data->NamePtr), swap(Data->NameSize));
-  if (Record.Name.data() < NamesStart ||
-      Record.Name.data() + Record.Name.size() >
-          reinterpret_cast<const char *>(ValueDataStart))
-    return error(instrprof_error::malformed);
+  Record.Name = getName(Data->NameRef);
   return success();
 }
 
