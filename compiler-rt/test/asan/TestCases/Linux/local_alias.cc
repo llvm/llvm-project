@@ -4,6 +4,8 @@
 // false positive global-buffer-overflow due to sanitized library poisons
 // globals from non-sanitized one.
 //
+// FIXME: https://github.com/google/sanitizers/issues/316
+// XFAIL: android
 // XFAIL: mips
 //
 // RUN: %clangxx_asan -DBUILD_INSTRUMENTED_DSO=1 -fPIC -shared -mllvm -asan-use-private-alias %s -o %t-INSTRUMENTED-SO.so
