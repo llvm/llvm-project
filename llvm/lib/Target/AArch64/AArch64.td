@@ -90,6 +90,7 @@ def AArch64InstrInfo : InstrInfo;
 include "AArch64SchedA53.td"
 include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
+include "AArch64SchedM1.td"
 
 def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                    "Cortex-A35 ARM processors",
@@ -144,8 +145,7 @@ def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
 // FIXME: Cortex-A72 is currently modelled as an Cortex-A57.
 def : ProcessorModel<"cortex-a72", CortexA57Model, [ProcA57]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
-// FIXME: Exynos-M1 is currently modelled without a specific SchedModel.
-def : ProcessorModel<"exynos-m1", NoSchedModel, [ProcExynosM1]>;
+def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser
