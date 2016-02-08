@@ -3996,6 +3996,39 @@ static std::string getMangledStructor(std::unique_ptr<MangleContext> &M,
   return BOS.str();
 }
 
+static std::string getMangledName(std::unique_ptr<MangleContext> &M,
+                                  std::unique_ptr<llvm::DataLayout> &DL,
+                                  const NamedDecl *ND) {
+  std::string FrontendBuf;
+  llvm::raw_string_ostream FOS(FrontendBuf);
+
+  M->mangleName(ND, FOS);
+
+  std::string BackendBuf;
+  llvm::raw_string_ostream BOS(BackendBuf);
+
+  llvm::Mangler::getNameWithPrefix(BOS, llvm::Twine(FOS.str()), *DL);
+
+  return BOS.str();
+}
+
+static std::string getMangledThunk(std::unique_ptr<MangleContext> &M,
+                                   std::unique_ptr<llvm::DataLayout> &DL,
+                                   const CXXMethodDecl *MD,
+                                   const ThunkInfo &T) {
+  std::string FrontendBuf;
+  llvm::raw_string_ostream FOS(FrontendBuf);
+
+  M->mangleThunk(MD, T, FOS);
+
+  std::string BackendBuf;
+  llvm::raw_string_ostream BOS(BackendBuf);
+
+  llvm::Mangler::getNameWithPrefix(BOS, llvm::Twine(FOS.str()), *DL);
+
+  return BOS.str();
+}
+
 extern "C" {
 
 unsigned clang_visitChildren(CXCursor parent,
@@ -4367,38 +4400,6 @@ CXString clang_Cursor_getMangling(CXCursor C) {
                                    *DL);
 
   return cxstring::createDup(FinalBufOS.str());
-}
-
-static std::string getMangledName(std::unique_ptr<MangleContext> &M,
-                                  std::unique_ptr<llvm::DataLayout> &DL,
-                                  const NamedDecl *ND) {
-  std::string FrontendBuf;
-  llvm::raw_string_ostream FOS(FrontendBuf);
-
-  M->mangleName(ND, FOS);
-
-  std::string BackendBuf;
-  llvm::raw_string_ostream BOS(BackendBuf);
-
-  llvm::Mangler::getNameWithPrefix(BOS, llvm::Twine(FOS.str()), *DL);
-
-  return BOS.str();
-}
-
-static std::string getMangledThunk(std::unique_ptr<MangleContext> &M,
-                                   std::unique_ptr<llvm::DataLayout> &DL,
-                                   const CXXMethodDecl *MD, const ThunkInfo &T) {
-  std::string FrontendBuf;
-  llvm::raw_string_ostream FOS(FrontendBuf);
-
-  M->mangleThunk(MD, T, FOS);
-
-  std::string BackendBuf;
-  llvm::raw_string_ostream BOS(BackendBuf);
-
-  llvm::Mangler::getNameWithPrefix(BOS, llvm::Twine(FOS.str()), *DL);
-
-  return BOS.str();
 }
 
 CXStringSet *clang_Cursor_getCXXManglings(CXCursor C) {
