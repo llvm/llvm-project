@@ -2073,6 +2073,26 @@ TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
   EXPECT_TRUE(MD->getValue() == GV1.get());
 }
 
+TEST_F(ValueAsMetadataTest, TempTempReplacement) {
+  // Create a constant.
+  ConstantAsMetadata *CI = ConstantAsMetadata::get(
+      ConstantInt::get(getGlobalContext(), APInt(8, 0)));
+
+  Metadata *Ops1[] = {CI};
+  auto Temp1 = MDTuple::getTemporary(Context, None);
+  auto Temp2 = MDTuple::getTemporary(Context, Ops1);
+
+  Metadata *Ops2[] = {Temp1.get()};
+  auto *N = MDTuple::get(Context, Ops2);
+
+  // Test replacing a temporary node with another temporary node.
+  Temp1->replaceAllUsesWith(Temp2.get());
+  EXPECT_EQ(N->getOperand(0), Temp2.get());
+
+  // Clean up Temp2 for teardown.
+  Temp2->replaceAllUsesWith(nullptr);
+}
+
 TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
   // Create a constant.
   ConstantAsMetadata *CI = ConstantAsMetadata::get(
