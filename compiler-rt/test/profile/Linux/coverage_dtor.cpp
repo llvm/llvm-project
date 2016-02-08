@@ -3,23 +3,24 @@
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: llvm-cov show %t -instr-profile %t.profdata -filename-equivalence 2>&1 | FileCheck %s
 
+int g = 100;
 struct Base {
   int B;
   Base(int B_) : B(B_) {}
-  ~Base() {}
+  ~Base() { g -= B; }
 };
 
 struct Derived : public Base {
-  Derived(int K) : Base(K), I(K) {}
+  Derived(int K) : Base(K) {}
   ~Derived() = default; // CHECK:  2| [[@LINE]]|  ~Derived() = default;
-  int I;
-  int getI() { return I; }
 };
 
-int g;
 int main() {
-  Derived dd(10);
-  Derived dd2(120);
-  g = dd2.getI() + dd.getI();
+  {
+    Derived dd(10);
+    Derived dd2(90);
+  }
+  if (g != 0)
+    return 1;          // CHECK:  0| [[@LINE]]|    return 1;
   return 0;
 }

@@ -5,28 +5,28 @@
 
 struct Base {
   int B;
-  Base() : B(2) {}
-  Base(const struct Base &b2) {
-    if (b2.B == 0) {
-      B = b2.B + 1;
-    } else
-      B = b2.B;
+  Base() : B(0) {}
+  Base(const Base &b2) {
+    B = b2.B + 5;
+  }
+  Base(Base &&b2) {
+    B = b2.B + 10;
   }
 };
 
 struct Derived : public Base {
   Derived(const Derived &) = default; // CHECK:  2| [[@LINE]]|  Derived(const Derived &) = default;
+  Derived(Derived &&) = default;      // CHECK:  1| [[@LINE]]|  Derived(Derived &&) = default;
   Derived() = default;                // CHECK:  1| [[@LINE]]|  Derived() = default
-  int I;
-  int getI() { return I; }
 };
 
 Derived dd;
-int g;
 int main() {
   Derived dd2(dd);
-  Derived dd3(dd);
+  Derived dd3(dd2);
+  Derived dd4(static_cast<Derived &&>(dd3));
 
-  g = dd2.getI() + dd3.getI();
+  if (dd.B != 0 || dd2.B != 5 || dd3.B != 10 || dd4.B != 20)
+    return 1;                         // CHECK: 0| [[@LINE]]|     return 1;
   return 0;
 }
