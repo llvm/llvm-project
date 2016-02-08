@@ -2,11 +2,14 @@
 Clang-Tidy
 ==========
 
+.. contents::
+
+See also:
+
 .. toctree::
    :maxdepth: 1
 
-   checks/list
-
+   The list of clang-tidy checks <checks/list>
 
 :program:`clang-tidy` is a clang-based C++ linter tool. Its purpose is to
 provide an extensible framework for diagnosing and fixing typical programming
@@ -229,8 +232,8 @@ checks, but its power is in the ability to easily write custom checks.
 Checks are organized in modules, which can be linked into :program:`clang-tidy`
 with minimal or no code changes in clang-tidy.
 
-Checks can plug the analysis on the preprocessor level using `PPCallbacks`_ or
-on the AST level using `AST Matchers`_. When an error is found, checks can
+Checks can plug into the analysis on the preprocessor level using `PPCallbacks`_
+or on the AST level using `AST Matchers`_. When an error is found, checks can
 report them in a way similar to how Clang diagnostics work. A fix-it hint can be
 attached to a diagnostic message.
 
@@ -238,8 +241,20 @@ The interface provided by clang-tidy makes it easy to write useful and precise
 checks in just a few lines of code. If you have an idea for a good check, the
 rest of this document explains how to do this.
 
+There are a few tools particularly useful when developing clang-tidy checks:
+  * ``add_new_check.py`` is a script to automate the process of adding a new
+    check, it will create the check, update the CMake file and create a test;
+  * ``rename_check.py`` does what the script name suggest, renames an existsing
+    check;
+  * :program:`clang-query` is invaluable for interactive prototyping of AST
+    matchers and exploration of the Clang AST;
+  * `clang-check`_ with the ``-ast-dump`` (and optionally ``-ast-dump-filter``)
+    provides a convenient way to dump AST of a C++ program.
+
+
 .. _AST Matchers: http://clang.llvm.org/docs/LibASTMatchers.html
 .. _PPCallbacks: http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html
+.. _clang-check: http://clang.llvm.org/docs/ClangCheck.html
 
 
 Choosing the Right Place for your Check

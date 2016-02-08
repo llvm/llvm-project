@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace misc {
 
 /// \brief Checks the usage of patterns known to produce incorrect rounding.
 /// Programmers often use
@@ -31,8 +32,8 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
-
 
 #endif  // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_INCORRECTROUNDINGS_H_

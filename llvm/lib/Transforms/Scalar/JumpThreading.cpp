@@ -415,7 +415,7 @@ ComputeValueKnownInPredecessors(Value *V, BasicBlock *BB, PredValueInfo &Result,
     for (BasicBlock *Pred : predecessors(BB))
       Result.push_back(std::make_pair(KC, Pred));
 
-    return true;
+    return !Result.empty();
   }
 
   // If V is a non-instruction value, or an instruction in a different block,

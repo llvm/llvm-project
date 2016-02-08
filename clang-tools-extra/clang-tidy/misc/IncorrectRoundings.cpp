@@ -36,6 +36,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace misc {
 void IncorrectRoundings::registerMatchers(MatchFinder *MatchFinder) {
   // Match a floating literal with value 0.5.
   auto FloatHalf = floatLiteral(floatHalf());
@@ -70,5 +71,6 @@ void IncorrectRoundings::check(const MatchFinder::MatchResult &Result) {
        "consider using lround (#include <cmath>) instead");
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang

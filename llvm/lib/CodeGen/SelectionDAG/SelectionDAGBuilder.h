@@ -708,6 +708,11 @@ public:
   void LowerCallTo(ImmutableCallSite CS, SDValue Callee, bool IsTailCall,
                    const BasicBlock *EHPadBB = nullptr);
 
+  // Lower range metadata from 0 to N to assert zext to an integer of nearest
+  // floor power of two.
+  SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
+                                 SDValue Op);
+
   std::pair<SDValue, SDValue> lowerCallOperands(
           ImmutableCallSite CS,
           unsigned ArgIdx,

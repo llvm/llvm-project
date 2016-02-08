@@ -2,8 +2,10 @@ misc-incorrect-roundings
 ========================
 
 Checks the usage of patterns known to produce incorrect rounding.
-Programmers often use
-  (int)(double_expression + 0.5)
+Programmers often use::
+
+   (int)(double_expression + 0.5)
+
 to round the double expression to an integer. The problem with this:
 
 1. It is unnecessarily slow.

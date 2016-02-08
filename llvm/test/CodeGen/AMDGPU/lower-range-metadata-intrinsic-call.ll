@@ -1,0 +1,46 @@
+; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-unknown < %s | FileCheck %s
+
+; and can be eliminated
+; CHECK-LABEL: {{^}}test_workitem_id_x_known_max_range:
+; CHECK-NOT: v0
+; CHECK: {{flat|buffer}}_store_dword v0
+define void @test_workitem_id_x_known_max_range(i32 addrspace(1)* nocapture %out) #0 {
+entry:
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
+  %and = and i32 %id, 1023
+  store i32 %and, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: {{^}}test_workitem_id_x_known_trunc_1_bit_range:
+; CHECK: v_and_b32_e32 [[MASKED:v[0-9]+]], 0x1ff, v0
+; CHECK: {{flat|buffer}}_store_dword [[MASKED]]
+define void @test_workitem_id_x_known_trunc_1_bit_range(i32 addrspace(1)* nocapture %out) #0 {
+entry:
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
+  %and = and i32 %id, 511
+  store i32 %and, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; CHECK-LABEL: {{^}}test_workitem_id_x_known_max_range_m1:
+; CHECK-NOT: v0
+; CHECK: v_and_b32_e32 [[MASKED:v[0-9]+]], 0xff, v0
+; CHECK: {{flat|buffer}}_store_dword [[MASKED]]
+define void @test_workitem_id_x_known_max_range_m1(i32 addrspace(1)* nocapture %out) #0 {
+entry:
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !1
+  %and = and i32 %id, 255
+  store i32 %and, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+
+declare i32 @llvm.amdgcn.workitem.id.x() #1
+
+attributes #0 = { norecurse nounwind }
+attributes #1 = { nounwind readnone }
+
+!0 = !{i32 0, i32 1024}
+!1 = !{i32 0, i32 1023}

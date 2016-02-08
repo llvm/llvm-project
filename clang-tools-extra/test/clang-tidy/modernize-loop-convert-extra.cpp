@@ -251,8 +251,16 @@ void refs_and_vals() {
   // CHECK-FIXES-NEXT: const int& Idx = Other[0];
   // CHECK-FIXES-NEXT: unsigned Othersize = Other.size();
 
+  for (int i = 0; i <  Other.size(); ++i) {
+    Other.at(i);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for (int & i : Other)
+  // CHECK-FIXES: i;
+
   for (int I = 0, E = Dep.size(); I != E; ++I) {
     int Idx = Other.at(I);
+    Other.at(I, I);  // Should not trigger assert failure.
   }
 }
 
