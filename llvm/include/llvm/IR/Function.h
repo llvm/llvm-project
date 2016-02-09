@@ -639,6 +639,14 @@ public:
   /// to \a DISubprogram.
   DISubprogram *getSubprogram() const;
 
+  /// Return the modified name for a function suitable to be
+  /// used as the key for a global lookup (e.g. profile or ThinLTO).
+  /// The function's original name is \c FuncName and has linkage of type
+  /// \c Linkage. The function is defined in module \c FileName.
+  static std::string getGlobalIdentifier(StringRef FuncName,
+                                         GlobalValue::LinkageTypes Linkage,
+                                         StringRef FileName);
+
 private:
   void allocHungoffUselist();
   template<int Idx> void setHungoffOperand(Constant *C);

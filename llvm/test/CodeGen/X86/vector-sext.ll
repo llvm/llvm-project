@@ -169,9 +169,7 @@ define <8 x i32> @sext_16i8_to_8i32(<16 x i8> %A) nounwind uwtable readnone ssp 
 ;
 ; AVX2-LABEL: sext_16i8_to_8i32:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX2-NEXT:    vpslld $24, %ymm0, %ymm0
-; AVX2-NEXT:    vpsrad $24, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovsxbd %xmm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: sext_16i8_to_8i32:
@@ -283,10 +281,7 @@ define <4 x i64> @sext_16i8_to_4i64(<16 x i8> %A) nounwind uwtable readnone ssp 
 ;
 ; AVX2-LABEL: sext_16i8_to_4i64:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX2-NEXT:    vpslld $24, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrad $24, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
+; AVX2-NEXT:    vpmovsxbq %xmm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: sext_16i8_to_4i64:
@@ -477,10 +472,7 @@ define <4 x i64> @sext_8i16_to_4i64(<8 x i16> %A) nounwind uwtable readnone ssp 
 ;
 ; AVX2-LABEL: sext_8i16_to_4i64:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrad $16, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
+; AVX2-NEXT:    vpmovsxwq %xmm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: sext_8i16_to_4i64:

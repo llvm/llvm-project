@@ -907,8 +907,7 @@ Currently, only the following parameter attributes are defined:
 ``zeroext``
     This indicates to the code generator that the parameter or return
     value should be zero-extended to the extent required by the target's
-    ABI (which is usually 32-bits, but is 8-bits for a i1 on x86-64) by
-    the caller (for a parameter) or the callee (for a return value).
+    ABI by the caller (for a parameter) or the callee (for a return value).
 ``signext``
     This indicates to the code generator that the parameter or return
     value should be sign-extended to the extent required by the target's

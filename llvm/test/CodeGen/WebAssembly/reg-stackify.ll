@@ -66,7 +66,7 @@ define i32 @yes1(i32* %q) {
 ; CHECK-NEXT: i32.xor     $push7=, $pop5, $pop6{{$}}
 ; CHECK-NEXT: i32.const   $push10=, 1{{$}}
 ; CHECK-NEXT: i32.ne      $push8=, $pop7, $pop10{{$}}
-; CHECK-NEXT: br_if       $pop8, 0{{$}}
+; CHECK-NEXT: br_if       0, $pop8{{$}}
 ; CHECK-NEXT: i32.const   $push9=, 0{{$}}
 ; CHECK-NEXT: return      $pop9{{$}}
 ; CHECK-NEXT: .LBB4_2:
@@ -99,9 +99,9 @@ false:
 ; CHECK-NEXT: i32.load    $push0=, 0($2){{$}}
 ; CHECK-NEXT: tee_local   $push3=, $3=, $pop0{{$}}
 ; CHECK-NEXT: i32.ge_u    $push1=, $pop3, $1{{$}}
-; CHECK-NEXT: br_if       $pop1, 0{{$}}
+; CHECK-NEXT: br_if       0, $pop1{{$}}
 ; CHECK-NEXT: i32.lt_u    $push2=, $3, $0{{$}}
-; CHECK-NEXT: br_if       $pop2, 0{{$}}
+; CHECK-NEXT: br_if       0, $pop2{{$}}
 ; CHECK-NEXT: i32.store   $discard=, 0($2), $3{{$}}
 ; CHECK-NEXT: .LBB5_3:
 ; CHECK-NEXT: end_block{{$}}

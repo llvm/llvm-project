@@ -1096,8 +1096,8 @@ namespace llvm {
 
     bool mayBeEmittedAsTailCall(CallInst *CI) const override;
 
-    EVT getTypeForExtArgOrReturn(LLVMContext &Context, EVT VT,
-                                 ISD::NodeType ExtendKind) const override;
+    EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
+                            ISD::NodeType ExtendKind) const override;
 
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,

@@ -213,8 +213,11 @@ VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &li) {
   if (!Spillable)
     return;
 
-  // Mark li as unspillable if all live ranges are tiny.
-  if (li.isZeroLength(LIS.getSlotIndexes())) {
+  // Mark li as unspillable if all live ranges are tiny and the interval
+  // is not live at any reg mask.  If the interval is live at a reg mask
+  // spilling may be required.
+  if (li.isZeroLength(LIS.getSlotIndexes()) &&
+      !li.isLiveAtIndexes(LIS.getRegMaskSlots())) {
     li.markNotSpillable();
     return;
   }

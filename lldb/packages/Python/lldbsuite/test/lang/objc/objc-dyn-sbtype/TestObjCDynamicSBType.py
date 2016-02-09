@@ -26,7 +26,7 @@ class ObjCDynamicSBTypeTestCase(TestBase):
         self.main_source = "main.m"
         self.line = line_number(self.main_source, '// Set breakpoint here.')
 
-    @skipIfi386
+    @skipIf(archs="i[3-6]86")
     def test_dyn(self):
         """Test that we are able to properly report a usable dynamic type."""
         d = {'EXE': self.exe_name}

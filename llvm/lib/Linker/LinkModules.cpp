@@ -722,9 +722,21 @@ void ThinLTOGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
       GV.setVisibility(GlobalValue::HiddenVisibility);
     if (isModuleExporting())
       NewExportedValues.insert(&GV);
-    return;
+  } else
+    GV.setLinkage(getLinkage(&GV));
+
+  // Remove functions imported as available externally defs from comdats,
+  // as this is a declaration for the linker, and will be dropped eventually.
+  // It is illegal for comdats to contain declarations.
+  auto *GO = dyn_cast_or_null<GlobalObject>(&GV);
+  if (GO && GO->isDeclarationForLinker() && GO->hasComdat()) {
+    // The IRMover should not have placed any imported declarations in
+    // a comdat, so the only declaration that should be in a comdat
+    // at this point would be a definition imported as available_externally.
+    assert(GO->hasAvailableExternallyLinkage() &&
+           "Expected comdat on definition (possibly available external)");
+    GO->setComdat(nullptr);
   }
-  GV.setLinkage(getLinkage(&GV));
 }
 
 void ThinLTOGlobalProcessing::processGlobalsForThinLTO() {

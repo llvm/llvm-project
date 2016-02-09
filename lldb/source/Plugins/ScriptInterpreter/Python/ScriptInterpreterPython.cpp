@@ -1019,7 +1019,7 @@ ScriptInterpreterPython::Interrupt()
 
     if (IsExecutingPython())
     {
-        PyThreadState *state = PyThreadState_Get();
+        PyThreadState *state = PyThreadState_GET();
         if (!state)
             state = GetThreadState();
         if (state)

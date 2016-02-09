@@ -351,9 +351,10 @@ LLVM-specific variables
   are ``Address``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``, ``Thread``,
   and ``Address;Undefined``. Defaults to empty string.
 
-**LLVM_ENABLE_LTO**:BOOL
-  Add the ``-flto`` flag to the compile and link command lines,
-  enabling link-time optimization. Defaults to OFF.
+**LLVM_ENABLE_LTO**:STRING
+  Add ``-flto`` or ``-flto=`` flags to the compile and link command
+  lines, enabling link-time optimization. Possible values are ``Off``,
+  ``On``, ``Thin`` and ``Full``. Defaults to OFF.
 
 **LLVM_PARALLEL_COMPILE_JOBS**:STRING
   Define the maximum number of concurrent compilation jobs.

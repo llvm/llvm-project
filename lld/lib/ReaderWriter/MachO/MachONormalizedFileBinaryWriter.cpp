@@ -37,7 +37,6 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MachO.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -51,46 +50,6 @@ using namespace llvm::MachO;
 namespace lld {
 namespace mach_o {
 namespace normalized {
-
-class ByteBuffer {
-public:
-  ByteBuffer() : _ostream(_bytes) { }
-
-  void append_byte(uint8_t b) {
-    _ostream << b;
-  }
-  void append_uleb128(uint64_t value) {
-    llvm::encodeULEB128(value, _ostream);
-  }
-  void append_uleb128Fixed(uint64_t value, unsigned byteCount) {
-    unsigned min = llvm::getULEB128Size(value);
-    assert(min <= byteCount);
-    unsigned pad = byteCount - min;
-    llvm::encodeULEB128(value, _ostream, pad);
-  }
-  void append_sleb128(int64_t value) {
-    llvm::encodeSLEB128(value, _ostream);
-  }
-  void append_string(StringRef str) {
-    _ostream << str;
-    append_byte(0);
-  }
-  void align(unsigned alignment) {
-    while ( (_ostream.tell() % alignment) != 0 )
-      append_byte(0);
-  }
-  size_t size() {
-    return _ostream.tell();
-  }
-  const uint8_t *bytes() {
-    return reinterpret_cast<const uint8_t*>(_ostream.str().data());
-  }
-
-private:
-  SmallVector<char, 128>        _bytes;
-  // Stream ivar must be after SmallVector ivar to construct properly.
-  llvm::raw_svector_ostream     _ostream;
-};
 
 struct TrieNode; // Forward declaration.
 
@@ -188,6 +147,7 @@ private:
   void        writeBindingInfo();
   void        writeLazyBindingInfo();
   void        writeExportInfo();
+  void        writeFunctionStartsInfo();
   void        writeDataInCodeInfo();
   void        writeLinkEditContent();
   void        buildLinkEditInfo();
@@ -195,6 +155,7 @@ private:
   void        buildBindInfo();
   void        buildLazyBindInfo();
   void        buildExportTrie();
+  void        computeFunctionStartsSize();
   void        computeDataInCodeSize();
   void        computeSymbolTableSizes();
   void        buildSectionRelocations();
@@ -246,6 +207,7 @@ private:
   uint32_t              _countOfLoadCommands;
   uint32_t              _endOfLoadCommands;
   uint32_t              _startOfRelocations;
+  uint32_t              _startOfFunctionStarts;
   uint32_t              _startOfDataInCode;
   uint32_t              _startOfSymbols;
   uint32_t              _startOfIndirectSymbols;
@@ -256,6 +218,7 @@ private:
   uint32_t              _symbolTableUndefinesStartIndex;
   uint32_t              _symbolStringPoolSize;
   uint32_t              _symbolTableSize;
+  uint32_t              _functionStartsSize;
   uint32_t              _dataInCodeSize;
   uint32_t              _indirectSymbolTableCount;
   // Used in object file creation only
@@ -321,7 +284,11 @@ MachOFileLayout::MachOFileLayout(const NormalizedFile &file)
       _endOfLoadCommands += sizeof(version_min_command);
       _countOfLoadCommands++;
     }
-    if (!_file.dataInCode.empty()) {
+    if (!_file.functionStarts.empty()) {
+      _endOfLoadCommands += sizeof(linkedit_data_command);
+      _countOfLoadCommands++;
+    }
+    if (_file.generateDataInCodeLoadCommand) {
       _endOfLoadCommands += sizeof(linkedit_data_command);
       _countOfLoadCommands++;
     }
@@ -342,11 +309,13 @@ MachOFileLayout::MachOFileLayout(const NormalizedFile &file)
     _endOfSectionsContent = offset;
 
     computeSymbolTableSizes();
+    computeFunctionStartsSize();
     computeDataInCodeSize();
 
     // Align start of relocations.
     _startOfRelocations = pointerAlign(_endOfSectionsContent);
-    _startOfDataInCode = _startOfRelocations + relocCount * 8;
+    _startOfFunctionStarts = _startOfRelocations + relocCount * 8;
+    _startOfDataInCode = _startOfFunctionStarts + _functionStartsSize;
     _startOfSymbols = _startOfDataInCode + _dataInCodeSize;
     // Add Indirect symbol table.
     _startOfIndirectSymbols = _startOfSymbols + _symbolTableSize;
@@ -387,7 +356,8 @@ MachOFileLayout::MachOFileLayout(const NormalizedFile &file)
     _endOfLazyBindingInfo = _startOfLazyBindingInfo + _lazyBindingInfo.size();
     _startOfExportTrie = _endOfLazyBindingInfo;
     _endOfExportTrie = _startOfExportTrie + _exportTrie.size();
-    _startOfDataInCode = _endOfExportTrie;
+    _startOfFunctionStarts = _endOfExportTrie;
+    _startOfDataInCode = _startOfFunctionStarts + _functionStartsSize;
     _startOfSymbols = _startOfDataInCode + _dataInCodeSize;
     _startOfIndirectSymbols = _startOfSymbols + _symbolTableSize;
     _startOfSymbolStrings = _startOfIndirectSymbols
@@ -409,6 +379,7 @@ MachOFileLayout::MachOFileLayout(const NormalizedFile &file)
       << "  endOfLazyBindingInfo=" << _endOfLazyBindingInfo << "\n"
       << "  startOfExportTrie=" << _startOfExportTrie << "\n"
       << "  endOfExportTrie=" << _endOfExportTrie << "\n"
+      << "  startOfFunctionStarts=" << _startOfFunctionStarts << "\n"
       << "  startOfDataInCode=" << _startOfDataInCode << "\n"
       << "  startOfSymbols=" << _startOfSymbols << "\n"
       << "  startOfSymbolStrings=" << _startOfSymbolStrings << "\n"
@@ -486,8 +457,15 @@ uint32_t MachOFileLayout::loadCommandsSize(uint32_t &count) {
     ++count;
   }
 
-  // Add LC_DATA_IN_CODE if needed
-  if (!_file.dataInCode.empty()) {
+  // Add LC_FUNCTION_STARTS if needed
+  if (!_file.functionStarts.empty()) {
+    size += sizeof(linkedit_data_command);
+    ++count;
+  }
+
+  // Add LC_DATA_IN_CODE if requested.  Note, we do encode zero length entries.
+  // FIXME: Zero length entries is only to match ld64.  Should we change this?
+  if (_file.generateDataInCodeLoadCommand) {
     size += sizeof(linkedit_data_command);
     ++count;
   }
@@ -821,8 +799,20 @@ std::error_code MachOFileLayout::writeLoadCommands() {
     // LC_VERSION_MIN_WATCHOS, LC_VERSION_MIN_TVOS
     writeVersionMinLoadCommand(_file, _swap, lc);
 
-    // Add LC_DATA_IN_CODE if needed.
-    if (_dataInCodeSize != 0) {
+    // Add LC_FUNCTION_STARTS if needed.
+    if (_functionStartsSize != 0) {
+      linkedit_data_command* dl = reinterpret_cast<linkedit_data_command*>(lc);
+      dl->cmd      = LC_FUNCTION_STARTS;
+      dl->cmdsize  = sizeof(linkedit_data_command);
+      dl->dataoff  = _startOfFunctionStarts;
+      dl->datasize = _functionStartsSize;
+      if (_swap)
+        swapStruct(*dl);
+      lc += sizeof(linkedit_data_command);
+    }
+
+    // Add LC_DATA_IN_CODE if requested.
+    if (_file.generateDataInCodeLoadCommand) {
       linkedit_data_command* dl = reinterpret_cast<linkedit_data_command*>(lc);
       dl->cmd      = LC_DATA_IN_CODE;
       dl->cmdsize  = sizeof(linkedit_data_command);
@@ -992,8 +982,20 @@ std::error_code MachOFileLayout::writeLoadCommands() {
       lc += size;
     }
 
-    // Add LC_DATA_IN_CODE if needed.
-    if (_dataInCodeSize != 0) {
+    // Add LC_FUNCTION_STARTS if needed.
+    if (_functionStartsSize != 0) {
+      linkedit_data_command* dl = reinterpret_cast<linkedit_data_command*>(lc);
+      dl->cmd      = LC_FUNCTION_STARTS;
+      dl->cmdsize  = sizeof(linkedit_data_command);
+      dl->dataoff  = _startOfFunctionStarts;
+      dl->datasize = _functionStartsSize;
+      if (_swap)
+        swapStruct(*dl);
+      lc += sizeof(linkedit_data_command);
+    }
+
+    // Add LC_DATA_IN_CODE if requested.
+    if (_file.generateDataInCodeLoadCommand) {
       linkedit_data_command* dl = reinterpret_cast<linkedit_data_command*>(lc);
       dl->cmd      = LC_DATA_IN_CODE;
       dl->cmdsize  = sizeof(linkedit_data_command);
@@ -1061,6 +1063,11 @@ void MachOFileLayout::appendSymbols(const std::vector<Symbol> &symbols,
     strOffset += sym.name.size();
     _buffer[strOffset++] ='\0'; // Strings in table have nul terminator.
   }
+}
+
+void MachOFileLayout::writeFunctionStartsInfo() {
+  memcpy(&_buffer[_startOfFunctionStarts], _file.functionStarts.data(),
+         _functionStartsSize);
 }
 
 void MachOFileLayout::writeDataInCodeInfo() {
@@ -1138,6 +1145,7 @@ void MachOFileLayout::buildLinkEditInfo() {
   buildLazyBindInfo();
   buildExportTrie();
   computeSymbolTableSizes();
+  computeFunctionStartsSize();
   computeDataInCodeSize();
 }
 
@@ -1417,6 +1425,10 @@ void MachOFileLayout::computeSymbolTableSizes() {
   }
 }
 
+void MachOFileLayout::computeFunctionStartsSize() {
+  _functionStartsSize = _file.functionStarts.size();
+}
+
 void MachOFileLayout::computeDataInCodeSize() {
   _dataInCodeSize = _file.dataInCode.size() * sizeof(data_in_code_entry);
 }
@@ -1424,6 +1436,7 @@ void MachOFileLayout::computeDataInCodeSize() {
 void MachOFileLayout::writeLinkEditContent() {
   if (_file.fileType == llvm::MachO::MH_OBJECT) {
     writeRelocations();
+    writeFunctionStartsInfo();
     writeDataInCodeInfo();
     writeSymbolTable();
   } else {
@@ -1432,6 +1445,7 @@ void MachOFileLayout::writeLinkEditContent() {
     writeLazyBindingInfo();
     // TODO: add weak binding info
     writeExportInfo();
+    writeFunctionStartsInfo();
     writeDataInCodeInfo();
     writeSymbolTable();
   }

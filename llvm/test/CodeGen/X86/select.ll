@@ -66,10 +66,10 @@ entry:
 	%2 = load i8, i8* %1, align 1		; <i8> [#uses=1]
 	ret i8 %2
 ; CHECK-LABEL: test4:
-; CHECK: movsbl	({{.*}},4), %eax
+; CHECK: movb	({{.*}},4), %al
 
 ; ATOM-LABEL: test4:
-; ATOM: movsbl ({{.*}},4), %eax
+; ATOM: movb ({{.*}},4), %al
 }
 
 define void @test5(i1 %c, <2 x i16> %a, <2 x i16> %b, <2 x i16>* %p) nounwind {

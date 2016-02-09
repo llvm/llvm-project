@@ -39,6 +39,7 @@ add_llvm_library(LLVMAnalysis
   Lint.cpp
   Loads.cpp
   LoopAccessAnalysis.cpp
+  LoopUnrollAnalyzer.cpp
   LoopInfo.cpp
   LoopPass.cpp
   MemDepPrinter.cpp

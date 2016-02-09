@@ -243,13 +243,14 @@ FunctionModRefBehavior
 GlobalsAAResult::getModRefBehavior(ImmutableCallSite CS) {
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
 
-  if (const Function *F = CS.getCalledFunction())
-    if (FunctionInfo *FI = getFunctionInfo(F)) {
-      if (FI->getModRefInfo() == MRI_NoModRef)
-        Min = FMRB_DoesNotAccessMemory;
-      else if ((FI->getModRefInfo() & MRI_Mod) == 0)
-        Min = FMRB_OnlyReadsMemory;
-    }
+  if (!CS.hasOperandBundles())
+    if (const Function *F = CS.getCalledFunction())
+      if (FunctionInfo *FI = getFunctionInfo(F)) {
+        if (FI->getModRefInfo() == MRI_NoModRef)
+          Min = FMRB_DoesNotAccessMemory;
+        else if ((FI->getModRefInfo() & MRI_Mod) == 0)
+          Min = FMRB_OnlyReadsMemory;
+      }
 
   return FunctionModRefBehavior(AAResultBase::getModRefBehavior(CS) & Min);
 }

@@ -1007,3 +1007,27 @@ Optional<uint64_t> Function::getEntryCount() const {
       }
   return None;
 }
+
+std::string Function::getGlobalIdentifier(StringRef FuncName,
+                                          GlobalValue::LinkageTypes Linkage,
+                                          StringRef FileName) {
+
+  // Function names may be prefixed with a binary '1' to indicate
+  // that the backend should not modify the symbols due to any platform
+  // naming convention. Do not include that '1' in the PGO profile name.
+  if (FuncName[0] == '\1')
+    FuncName = FuncName.substr(1);
+
+  std::string NewFuncName = FuncName;
+  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
+    // For local symbols, prepend the main file name to distinguish them.
+    // Do not include the full path in the file name since there's no guarantee
+    // that it will stay the same, e.g., if the files are checked out from
+    // version control in different locations.
+    if (FileName.empty())
+      NewFuncName = NewFuncName.insert(0, "<unknown>:");
+    else
+      NewFuncName = NewFuncName.insert(0, FileName.str() + ":");
+  }
+  return NewFuncName;
+}

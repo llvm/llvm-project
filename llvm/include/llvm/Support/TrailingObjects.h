@@ -290,7 +290,7 @@ class TrailingObjects : private trailing_objects_internal::TrailingObjectsImpl<
   }
 
 public:
-  // make this (privately inherited) class public.
+  // Make this (privately inherited) member public.
   using ParentType::OverloadToken;
 
   /// Returns a pointer to the trailing object array of the given type

@@ -291,14 +291,6 @@ def not_remote_testsuite_ready(func):
         return "Not ready for remote testsuite" if lldb.remote_platform else None
     return skipTestIfFn(is_remote)(func)
 
-def _match_architectures(archs, actual_arch):
-    retype = type(re.compile('hello, world'))
-    list_passes = isinstance(archs, list) and actual_arch in archs
-    basestring_passes = isinstance(archs, six.string_types) and actual_arch == archs
-    regex_passes = isinstance(archs, retype) and re.match(archs, actual_arch)
-
-    return (list_passes or basestring_passes or regex_passes)
-
 def expectedFailureDwarf(bugnumber=None):
     return expectedFailureAll(bugnumber=bugnumber, debug_info="dwarf")
 
@@ -323,15 +315,6 @@ def expectedFailureGcc(bugnumber=None, compiler_version=None):
 
 def expectedFailureIcc(bugnumber=None):
     return expectedFailureCompiler('icc', None, bugnumber)
-
-def expectedFailureArch(arch, bugnumber=None):
-    return expectedFailureAll(archs=arch, bugnumber=bugnumber)
-
-def expectedFailurei386(bugnumber=None):
-    return expectedFailureArch('i386', bugnumber)
-
-def expectedFailurex86_64(bugnumber=None):
-    return expectedFailureArch('x86_64', bugnumber)
 
 def expectedFailureOS(oslist, bugnumber=None, compilers=None, debug_info=None, archs=None):
     return expectedFailureAll(oslist=oslist, bugnumber=bugnumber, compiler=compilers, archs=archs, debug_info=debug_info)
@@ -498,17 +481,9 @@ def skipIfLinux(func):
     """Decorate the item to skip tests that should be skipped on Linux."""
     return skipIfPlatform(["linux"])(func)
 
-def skipUnlessHostLinux(func):
-    """Decorate the item to skip tests that should be skipped on any non Linux host."""
-    return skipUnlessHostPlatform(["linux"])(func)
-
 def skipIfWindows(func):
     """Decorate the item to skip tests that should be skipped on Windows."""
     return skipIfPlatform(["windows"])(func)
-
-def skipIfHostWindows(func):
-    """Decorate the item to skip tests that should be skipped on Windows."""
-    return skipIfHostPlatform(["windows"])(func)
 
 def skipUnlessWindows(func):
     """Decorate the item to skip tests that should be skipped on any non-Windows platform."""
@@ -551,33 +526,6 @@ def skipIfHostIncompatibleWithRemote(func):
         return None
     return skipTestIfFn(is_host_incompatible_with_remote)(func)
 
-def skipIfHostPlatform(oslist):
-    """Decorate the item to skip tests if running on one of the listed host platforms."""
-    return skipIf(hostoslist=oslist)
-
-def skipUnlessHostPlatform(oslist):
-    """Decorate the item to skip tests unless running on one of the listed host platforms."""
-    return skipIf(hostoslist=no_match(oslist))
-
-def skipUnlessArch(archs):
-    """Decorate the item to skip tests unless running on one of the listed architectures."""
-    # This decorator cannot be ported to `skipIf` yet because it is uused with regular
-    # expressions, which the common matcher does not yet support.
-    def myImpl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-            raise Exception("@skipUnlessArch can only be used to decorate a test method")
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            self = args[0]
-            if not _match_architectures(archs, self.getArchitecture()):
-                self.skipTest("skipping for architecture %s" % (self.getArchitecture())) 
-            else:
-                func(*args, **kwargs)
-        return wrapper
-
-    return myImpl
-
 def skipIfPlatform(oslist):
     """Decorate the item to skip tests if running on one of the listed platforms."""
     # This decorator cannot be ported to `skipIf` yet because it is used on entire
@@ -612,10 +560,6 @@ def skipIfGcc(func):
 def skipIfIcc(func):
     """Decorate the item to skip tests that should be skipped if building with icc ."""
     return skipIf(compiler="icc")(func)
-
-def skipIfi386(func):
-    """Decorate the item to skip tests that should be skipped if building 32-bit."""
-    return skipIf(archs="i386")(func)
 
 def skipIfTargetAndroid(api_levels=None, archs=None):
     """Decorator to skip tests when the target is Android.

@@ -15,7 +15,7 @@ class ChangedInferiorTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfHostWindows
+    @skipIf(hostoslist=["windows"])
     def test_inferior_crashing(self):
         """Test lldb reloads the inferior after it was changed during the session."""
         self.build()

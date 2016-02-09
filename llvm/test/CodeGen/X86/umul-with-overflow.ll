@@ -9,7 +9,6 @@ define zeroext i1 @a(i32 %x)  nounwind {
 ; CHECK-LABEL: a:
 ; CHECK: mull
 ; CHECK: seto %al
-; CHECK: movzbl	%al, %eax
 ; CHECK: ret
 }
 

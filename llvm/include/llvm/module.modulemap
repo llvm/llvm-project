@@ -37,6 +37,9 @@ module LLVM_Backend {
   module Target {
     umbrella "Target"
     module * { export * }
+
+    // This is intended for (repeated) textual inclusion.
+    textual header "Target/TargetOpcodes.def"
   }
 
   // FIXME: Where should this go?

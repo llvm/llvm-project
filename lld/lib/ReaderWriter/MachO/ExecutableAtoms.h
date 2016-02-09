@@ -71,7 +71,6 @@ public:
     : SimpleFile("mach_header symbols", kindHeaderObject) {
     StringRef machHeaderSymbolName;
     DefinedAtom::Scope symbolScope = DefinedAtom::scopeLinkageUnit;
-    bool noDeadStrip = false;
     StringRef dsoHandleName;
     switch (context.outputMachOType()) {
     case llvm::MachO::MH_OBJECT:
@@ -80,7 +79,6 @@ public:
     case llvm::MachO::MH_EXECUTE:
       machHeaderSymbolName = "__mh_execute_header";
       symbolScope = DefinedAtom::scopeGlobal;
-      noDeadStrip = true;
       dsoHandleName = "___dso_handle";
       break;
     case llvm::MachO::MH_FVMLIB:
@@ -112,13 +110,15 @@ public:
     if (!machHeaderSymbolName.empty())
       _definedAtoms.push_back(new (allocator()) MachODefinedAtom(
           *this, machHeaderSymbolName, symbolScope,
-          DefinedAtom::typeMachHeader, DefinedAtom::mergeNo, false, noDeadStrip,
+          DefinedAtom::typeMachHeader, DefinedAtom::mergeNo, false,
+          true /* noDeadStrip */,
           ArrayRef<uint8_t>(), DefinedAtom::Alignment(4096)));
 
     if (!dsoHandleName.empty())
       _definedAtoms.push_back(new (allocator()) MachODefinedAtom(
           *this, dsoHandleName, DefinedAtom::scopeLinkageUnit,
-          DefinedAtom::typeDSOHandle, DefinedAtom::mergeNo, false, false,
+          DefinedAtom::typeDSOHandle, DefinedAtom::mergeNo, false,
+          true /* noDeadStrip */,
           ArrayRef<uint8_t>(), DefinedAtom::Alignment(1)));
   }
 

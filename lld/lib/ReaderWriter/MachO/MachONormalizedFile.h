@@ -247,6 +247,7 @@ struct NormalizedFile {
   PackedVersion               currentVersion = 0; // dylibs only
   bool                        hasUUID = false;
   bool                        hasMinVersionLoadCommand = false;
+  bool                        generateDataInCodeLoadCommand = false;
   std::vector<StringRef>      rpaths;
   Hex64                       entryAddress = 0;
   Hex64                       stackSize = 0;
@@ -263,6 +264,7 @@ struct NormalizedFile {
   std::vector<BindLocation>   weakBindingInfo;
   std::vector<BindLocation>   lazyBindingInfo;
   std::vector<Export>         exportInfo;
+  std::vector<uint8_t>        functionStarts;
   std::vector<DataInCode>     dataInCode;
 
   // TODO:

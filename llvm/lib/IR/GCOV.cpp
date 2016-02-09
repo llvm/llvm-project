@@ -248,9 +248,11 @@ bool GCOVFunction::readGCNO(GCOVBuffer &Buff, GCOV::GCOVVersion Version) {
 /// readGCDA - Read a function from the GCDA buffer. Return false if an error
 /// occurs.
 bool GCOVFunction::readGCDA(GCOVBuffer &Buff, GCOV::GCOVVersion Version) {
-  uint32_t Dummy;
-  if (!Buff.readInt(Dummy))
+  uint32_t HeaderLength;
+  if (!Buff.readInt(HeaderLength))
     return false; // Function header length
+
+  uint64_t EndPos = Buff.getCursor() + HeaderLength * sizeof(uint32_t);
 
   uint32_t GCDAIdent;
   if (!Buff.readInt(GCDAIdent))
@@ -281,13 +283,15 @@ bool GCOVFunction::readGCDA(GCOVBuffer &Buff, GCOV::GCOVVersion Version) {
     }
   }
 
-  StringRef GCDAName;
-  if (!Buff.readString(GCDAName))
-    return false;
-  if (Name != GCDAName) {
-    errs() << "Function names do not match: " << Name << " != " << GCDAName
-           << ".\n";
-    return false;
+  if (Buff.getCursor() < EndPos) {
+    StringRef GCDAName;
+    if (!Buff.readString(GCDAName))
+      return false;
+    if (Name != GCDAName) {
+      errs() << "Function names do not match: " << Name << " != " << GCDAName
+             << ".\n";
+      return false;
+    }
   }
 
   if (!Buff.readArcTag()) {

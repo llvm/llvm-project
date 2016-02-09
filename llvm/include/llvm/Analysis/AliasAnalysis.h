@@ -1057,7 +1057,15 @@ ImmutablePass *createExternalAAWrapperPass(
 /// A helper for the legacy pass manager to create a \c AAResults
 /// object populated to the best of our ability for a particular function when
 /// inside of a \c ModulePass or a \c CallGraphSCCPass.
+///
+/// If a \c ModulePass or a \c CallGraphSCCPass calls \p
+/// createLegacyPMAAResults, it also needs to call \p addUsedAAAnalyses in \p
+/// getAnalysisUsage.
 AAResults createLegacyPMAAResults(Pass &P, Function &F, BasicAAResult &BAR);
+
+/// A helper for the legacy pass manager to populate \p AU to add uses to make
+/// sure the analyses required by \p createLegacyPMAAResults are available.
+void addUsedAAAnalyses(AnalysisUsage &AU);
 
 } // End llvm namespace
 

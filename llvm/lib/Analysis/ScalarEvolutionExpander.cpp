@@ -1645,10 +1645,9 @@ Value *SCEVExpander::expand(const SCEV *S) {
   // Expand the expression into instructions.
   SetVector<Value *> *Set = SE.getSCEVValues(S);
   Value *V = nullptr;
-  // If the expansion is in LSRMode, and the SCEV contains any sub scAddRecExpr
-  // type SCEV, it will be expanded literally, to prevent LSR's transformed SCEV
-  // from being reverted.
-  if (!(LSRMode && SE.containsAddRecurrence(S))) {
+  // If the expansion is not in CanonicalMode, and the SCEV contains any
+  // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
+  if (CanonicalMode || !SE.containsAddRecurrence(S)) {
     // If S is scConstant, it may be worse to reuse an existing Value.
     if (S->getSCEVType() != scConstant && Set) {
       // Choose a Value from the set which dominates the insertPt.

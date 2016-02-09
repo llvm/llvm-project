@@ -125,6 +125,7 @@ public:
   void      addRebaseAndBindingInfo(const lld::File &, NormalizedFile &file);
   void      addExportInfo(const lld::File &, NormalizedFile &file);
   void      addSectionRelocs(const lld::File &, NormalizedFile &file);
+  void      addFunctionStarts(const lld::File &, NormalizedFile &file);
   void      buildDataInCodeArray(const lld::File &, NormalizedFile &file);
   void      addDependentDylibs(const lld::File &, NormalizedFile &file);
   void      copyEntryPointAddress(NormalizedFile &file);
@@ -301,6 +302,7 @@ SectionInfo *Util::getFinalSection(DefinedAtom::ContentType atomType) {
       continue;
     SectionAttr sectionAttrs = 0;
     switch (atomType) {
+    case DefinedAtom::typeMachHeader:
     case DefinedAtom::typeCode:
     case DefinedAtom::typeStub:
     case DefinedAtom::typeStubHelper:
@@ -1139,7 +1141,53 @@ void Util::addSectionRelocs(const lld::File &, NormalizedFile &file) {
   }
 }
 
+void Util::addFunctionStarts(const lld::File &, NormalizedFile &file) {
+  if (!_ctx.generateFunctionStartsLoadCommand())
+    return;
+  file.functionStarts.reserve(8192);
+  // Delta compress function starts, starting with the mach header symbol.
+  const uint64_t badAddress = ~0ULL;
+  uint64_t addr = badAddress;
+  for (SectionInfo *si : _sectionInfos) {
+    for (const AtomInfo &info : si->atomsAndOffsets) {
+      auto type = info.atom->contentType();
+      if (type == DefinedAtom::typeMachHeader) {
+        addr = _atomToAddress[info.atom];
+        continue;
+      }
+      if (type != DefinedAtom::typeCode)
+        continue;
+      assert(addr != badAddress && "Missing mach header symbol");
+      // Skip atoms which have 0 size.  This is so that LC_FUNCTION_STARTS
+      // can't spill in to the next section.
+      if (!info.atom->size())
+        continue;
+      uint64_t nextAddr = _atomToAddress[info.atom];
+      if (_archHandler.isThumbFunction(*info.atom))
+        nextAddr |= 1;
+      uint64_t delta = nextAddr - addr;
+      if (delta) {
+        ByteBuffer buffer;
+        buffer.append_uleb128(delta);
+        file.functionStarts.insert(file.functionStarts.end(), buffer.bytes(),
+                                   buffer.bytes() + buffer.size());
+      }
+      addr = nextAddr;
+    }
+  }
+
+  // Null terminate, and pad to pointer size for this arch.
+  file.functionStarts.push_back(0);
+
+  auto size = file.functionStarts.size();
+  for (unsigned i = size, e = llvm::alignTo(size, _ctx.is64Bit() ? 8 : 4);
+       i != e; ++i)
+    file.functionStarts.push_back(0);
+}
+
 void Util::buildDataInCodeArray(const lld::File &, NormalizedFile &file) {
+  if (!_ctx.generateDataInCodeLoadCommand())
+    return;
   for (SectionInfo *si : _sectionInfos) {
     for (const AtomInfo &info : si->atomsAndOffsets) {
       // Atoms that contain data-in-code have "transition" references
@@ -1331,6 +1379,8 @@ normalizedFromAtoms(const lld::File &atomFile,
     // source object files.
     normFile.hasMinVersionLoadCommand = true;
   }
+  normFile.generateDataInCodeLoadCommand =
+    context.generateDataInCodeLoadCommand();
   normFile.pageSize = context.pageSize();
   normFile.rpaths = context.rpaths();
   util.addDependentDylibs(atomFile, normFile);
@@ -1347,6 +1397,7 @@ normalizedFromAtoms(const lld::File &atomFile,
   util.addRebaseAndBindingInfo(atomFile, normFile);
   util.addExportInfo(atomFile, normFile);
   util.addSectionRelocs(atomFile, normFile);
+  util.addFunctionStarts(atomFile, normFile);
   util.buildDataInCodeArray(atomFile, normFile);
   util.copyEntryPointAddress(normFile);
 

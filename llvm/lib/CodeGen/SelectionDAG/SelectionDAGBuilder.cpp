@@ -1417,7 +1417,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
         EVT VT = ValueVTs[j];
 
         if (ExtendKind != ISD::ANY_EXTEND && VT.isInteger())
-          VT = TLI.getTypeForExtArgOrReturn(Context, VT, ExtendKind);
+          VT = TLI.getTypeForExtReturn(Context, VT, ExtendKind);
 
         unsigned NumParts = TLI.getNumRegisters(Context, VT);
         MVT PartVT = TLI.getRegisterType(Context, VT);

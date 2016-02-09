@@ -2078,12 +2078,9 @@ TEST_F(ValueAsMetadataTest, TempTempReplacement) {
   ConstantAsMetadata *CI = ConstantAsMetadata::get(
       ConstantInt::get(getGlobalContext(), APInt(8, 0)));
 
-  Metadata *Ops1[] = {CI};
   auto Temp1 = MDTuple::getTemporary(Context, None);
-  auto Temp2 = MDTuple::getTemporary(Context, Ops1);
-
-  Metadata *Ops2[] = {Temp1.get()};
-  auto *N = MDTuple::get(Context, Ops2);
+  auto Temp2 = MDTuple::getTemporary(Context, {CI});
+  auto *N = MDTuple::get(Context, {Temp1.get()});
 
   // Test replacing a temporary node with another temporary node.
   Temp1->replaceAllUsesWith(Temp2.get());
