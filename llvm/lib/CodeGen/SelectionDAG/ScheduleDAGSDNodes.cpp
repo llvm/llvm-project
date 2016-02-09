@@ -321,7 +321,7 @@ void ScheduleDAGSDNodes::BuildSchedUnits() {
 
   // Add all nodes in depth first order.
   SmallVector<SDNode*, 64> Worklist;
-  SmallPtrSet<SDNode*, 64> Visited;
+  SmallPtrSet<SDNode*, 32> Visited;
   Worklist.push_back(DAG->getRoot().getNode());
   Visited.insert(DAG->getRoot().getNode());
 

@@ -34,7 +34,7 @@ using namespace llvm;
 STATISTIC(NumRemoved, "Number of instructions removed");
 
 static bool aggressiveDCE(Function& F) {
-  SmallPtrSet<Instruction*, 128> Alive;
+  SmallPtrSet<Instruction*, 32> Alive;
   SmallVector<Instruction*, 128> Worklist;
 
   // Collect the set of "root" instructions that are known live.

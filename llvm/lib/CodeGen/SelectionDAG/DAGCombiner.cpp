@@ -112,7 +112,7 @@ namespace {
     ///
     /// This is used to allow us to reliably add any operands of a DAG node
     /// which have not yet been combined to the worklist.
-    SmallPtrSet<SDNode *, 64> CombinedNodes;
+    SmallPtrSet<SDNode *, 32> CombinedNodes;
 
     // AA - Used for DAG load/store alias analysis.
     AliasAnalysis &AA;

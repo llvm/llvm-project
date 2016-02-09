@@ -303,7 +303,7 @@ void SjLjEHPrepare::lowerAcrossUnwindEdges(Function &F,
       }
 
       // Find all of the blocks that this value is live in.
-      SmallPtrSet<BasicBlock *, 64> LiveBBs;
+      SmallPtrSet<BasicBlock *, 32> LiveBBs;
       LiveBBs.insert(Inst->getParent());
       while (!Users.empty()) {
         Instruction *U = Users.back();

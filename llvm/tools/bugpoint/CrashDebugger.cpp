@@ -459,7 +459,7 @@ bool ReduceCrashingInstructions::TestInsts(std::vector<const Instruction*>
   Module *M = CloneModule(BD.getProgram(), VMap).release();
 
   // Convert list to set for fast lookup...
-  SmallPtrSet<Instruction*, 64> Instructions;
+  SmallPtrSet<Instruction*, 32> Instructions;
   for (unsigned i = 0, e = Insts.size(); i != e; ++i) {
     assert(!isa<TerminatorInst>(Insts[i]));
     Instructions.insert(cast<Instruction>(VMap[Insts[i]]));
@@ -600,7 +600,7 @@ public:
 bool ReduceCrashingNamedMDOps::TestNamedMDOps(
     std::vector<const MDNode *> &NamedMDOps) {
   // Convert list to set for fast lookup...
-  SmallPtrSet<const MDNode *, 64> OldMDNodeOps;
+  SmallPtrSet<const MDNode *, 32> OldMDNodeOps;
   for (unsigned i = 0, e = NamedMDOps.size(); i != e; ++i) {
     OldMDNodeOps.insert(NamedMDOps[i]);
   }

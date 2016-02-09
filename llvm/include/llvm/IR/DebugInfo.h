@@ -136,7 +136,7 @@ private:
   SmallVector<DIGlobalVariable *, 8> GVs;
   SmallVector<DIType *, 8> TYs;
   SmallVector<DIScope *, 8> Scopes;
-  SmallPtrSet<const MDNode *, 64> NodesSeen;
+  SmallPtrSet<const MDNode *, 32> NodesSeen;
   DITypeIdentifierMap TypeIdentifierMap;
 
   /// \brief Specify if TypeIdentifierMap is initialized.
