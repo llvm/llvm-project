@@ -4333,6 +4333,13 @@ TEST(HasAncestor, NonParmDependentTemplateParmVarDeclRefExpr) {
                       declRefExpr(to(decl(hasAncestor(decl()))))));
 }
 
+TEST(HasAncestor, AddressOfExplicitSpecializationFunction) {
+  EXPECT_TRUE(matches("template <class T> void f();\n"
+                      "template <> void f<int>();\n"
+                      "void (*get_f())() { return f<int>; }\n",
+                      declRefExpr(to(decl(hasAncestor(decl()))))));
+}
+
 TEST(HasParent, MatchesAllParents) {
   EXPECT_TRUE(matches(
       "template <typename T> struct C { static void f() { 42; } };"

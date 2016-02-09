@@ -37,8 +37,6 @@ static bool isContainer(llvm::StringRef ClassName) {
 
 namespace clang {
 namespace {
-AST_MATCHER(QualType, isBoolType) { return Node->isBooleanType(); }
-
 AST_MATCHER(NamedDecl, stlContainer) {
   return isContainer(Node.getQualifiedNameAsString());
 }
@@ -67,11 +65,11 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
                               ignoringImpCasts(integerLiteral(equals(1)))))))
               .bind("SizeBinaryOp")),
       hasParent(implicitCastExpr(
-          hasImplicitDestinationType(isBoolType()),
+          hasImplicitDestinationType(booleanType()),
           anyOf(
               hasParent(unaryOperator(hasOperatorName("!")).bind("NegOnSize")),
               anything()))),
-      hasParent(explicitCastExpr(hasDestinationType(isBoolType()))));
+      hasParent(explicitCastExpr(hasDestinationType(booleanType()))));
 
   Finder->addMatcher(
       cxxMemberCallExpr(

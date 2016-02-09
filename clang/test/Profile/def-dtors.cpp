@@ -9,7 +9,7 @@ struct Base {
 };
 
 struct Derived : public Base {
-  Derived(int K) : Base(K), I(K), J(K) {}
+  Derived(int K) : Base(K) {}
   ~Derived() = default;
   // PGOGEN-LABEL: define {{.*}}@_ZN7DerivedD2Ev
   // PGOGEN: %pgocount = load {{.*}} @__profc__ZN7DerivedD2Ev
@@ -18,18 +18,13 @@ struct Derived : public Base {
 
   // Check that coverage mapping has 6 function records including
   // the default destructor in the derived class.
-  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }, [6 x
+  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }, [5 x
   // <{{.*}}>],
-
-  int I;
-  int J;
-  int getI() { return I; }
 };
 
-Derived dd(100);
-int g;
 int main() {
-  Derived dd2(dd.getI());
-  g = dd2.getI();
+  Derived dd2(10);
+  if (dd2.B != 10)
+    return 1;
   return 0;
 }

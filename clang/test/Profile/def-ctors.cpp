@@ -5,12 +5,7 @@
 struct Base {
   int B;
   Base() : B(2) {}
-  Base(const struct Base &b2) {
-    if (b2.B == 0) {
-      B = b2.B + 1;
-    } else
-      B = b2.B;
-  }
+  Base(const struct Base &b2) {}
 };
 
 struct Derived : public Base {
@@ -28,18 +23,14 @@ struct Derived : public Base {
   // Check that coverage mapping has 6 function records including
   // the defaulted Derived::Derived(const Derived), and Derived::Derived()
   // methds.
-  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }, [6 x
+  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }, [5 x
   // <{{.*}}>],
-  int I;
-  int J;
-  int getI() { return I; }
 };
 
 Derived dd;
 int g;
 int main() {
   Derived dd2(dd);
-
-  g = dd2.getI();
+  g = dd2.B;
   return 0;
 }

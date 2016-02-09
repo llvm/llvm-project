@@ -1179,8 +1179,10 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   }
 
   QualType ExprType = VD->getType().getNonReferenceType();
-  ExprResult DE = buildDeclRefExpr(*this, VD, ExprType, Id.getLoc());
-  return DE;
+  return DeclRefExpr::Create(Context, NestedNameSpecifierLoc(),
+                             SourceLocation(), VD,
+                             /*RefersToEnclosingVariableOrCapture=*/false,
+                             Id.getLoc(), ExprType, VK_LValue);
 }
 
 Sema::DeclGroupPtrTy
@@ -1229,6 +1231,10 @@ Sema::CheckOMPThreadPrivateDecl(SourceLocation Loc, ArrayRef<Expr *> VarList) {
     DeclRefExpr *DE = cast<DeclRefExpr>(RefExpr);
     VarDecl *VD = cast<VarDecl>(DE->getDecl());
     SourceLocation ILoc = DE->getExprLoc();
+
+    // Mark variable as used.
+    VD->setReferenced();
+    VD->markUsed(Context);
 
     QualType QType = VD->getType();
     if (QType->isDependentType() || QType->isInstantiationDependentType()) {
