@@ -66,7 +66,7 @@ private:
   const uint8_t *body(ArrayRef<uint8_t> Data);
 };
 
-/// Helper to compute and return a 64-bit MD5 Hash of a given string.
+/// Helper to compute and return lower 64 bits of the given string's MD5 hash.
 inline uint64_t MD5Hash(StringRef Str) {
   MD5 Hash;
   Hash.update(Str);
