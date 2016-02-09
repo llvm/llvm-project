@@ -592,8 +592,9 @@ bool IndexingContext::handleObjCMethod(const ObjCMethodDecl *D) {
 bool IndexingContext::handleSynthesizedObjCProperty(
                                                 const ObjCPropertyImplDecl *D) {
   ObjCPropertyDecl *PD = D->getPropertyDecl();
-  return handleReference(PD, D->getLocation(), getCursor(D), nullptr,
-                         D->getDeclContext());
+  auto *DC = D->getDeclContext();
+  return handleReference(PD, D->getLocation(), getCursor(D),
+                         dyn_cast<NamedDecl>(DC), DC);
 }
 
 bool IndexingContext::handleSynthesizedObjCMethod(const ObjCMethodDecl *D,
