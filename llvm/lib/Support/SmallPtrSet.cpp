@@ -296,8 +296,3 @@ void SmallPtrSetImplBase::swap(SmallPtrSetImplBase &RHS) {
                    RHS.SmallArray);
   std::swap(this->NumElements, RHS.NumElements);
 }
-
-SmallPtrSetImplBase::~SmallPtrSetImplBase() {
-  if (!isSmall())
-    free(CurArray);
-}

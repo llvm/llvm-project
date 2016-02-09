@@ -73,7 +73,10 @@ protected:
            "Initial size must be a power of two!");
     clear();
   }
-  ~SmallPtrSetImplBase();
+  ~SmallPtrSetImplBase() {
+    if (!isSmall())
+      free(CurArray);
+  }
 
 public:
   typedef unsigned size_type;
