@@ -31,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Endian.h"
 
 namespace llvm {
 
@@ -64,6 +65,18 @@ public:
 private:
   const uint8_t *body(ArrayRef<uint8_t> Data);
 };
+
+/// Helper to compute and return a 64-bit MD5 Hash of a given string.
+inline uint64_t MD5Hash(StringRef Str) {
+  MD5 Hash;
+  Hash.update(Str);
+  llvm::MD5::MD5Result Result;
+  Hash.final(Result);
+  // Return the least significant 8 bytes. Our MD5 implementation returns the
+  // result in little endian, so we may need to swap bytes.
+  using namespace llvm::support;
+  return endian::read<uint64_t, little, unaligned>(Result);
+}
 
 }
 
