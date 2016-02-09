@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <cstdlib>
 #include <iterator>
 #include <utility>
 
