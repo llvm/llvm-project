@@ -137,6 +137,16 @@ entry:
 ; CHECK: umsubl {{x[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, {{x[0-9]+}}
   %tmp1 = zext i32 %a to i64
   %tmp3 = mul i64 %tmp1, 12345678
-  %tmp4 = sub i64 %tmp3, %b
+  %tmp4 = sub i64 %b, %tmp3
+  ret i64 %tmp4
+}
+
+define i64 @t14(i32 %a, i64 %b) nounwind {
+entry:
+; CHECK-LABEL: t14:
+; CHECK: smsubl {{x[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, {{x[0-9]+}}
+  %tmp1 = sext i32 %a to i64
+  %tmp3 = mul i64 %tmp1, -12345678
+  %tmp4 = sub i64 %b, %tmp3
   ret i64 %tmp4
 }

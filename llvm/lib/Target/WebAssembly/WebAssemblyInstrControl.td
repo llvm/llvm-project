@@ -16,12 +16,12 @@ let Defs = [ARGUMENTS] in {
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in {
 // The condition operand is a boolean value which WebAssembly represents as i32.
-def BR_IF : I<(outs), (ins I32:$cond, bb_op:$dst),
+def BR_IF : I<(outs), (ins bb_op:$dst, I32:$cond),
               [(brcond I32:$cond, bb:$dst)],
-               "br_if   \t$cond, $dst">;
+               "br_if   \t$dst, $cond">;
 let isCodeGenOnly = 1 in
-def BR_UNLESS : I<(outs), (ins I32:$cond, bb_op:$dst), [],
-                   "br_unless\t$cond, $dst">;
+def BR_UNLESS : I<(outs), (ins bb_op:$dst, I32:$cond), [],
+                   "br_unless\t$dst, $cond">;
 let isBarrier = 1 in {
 def BR   : I<(outs), (ins bb_op:$dst),
              [(br bb:$dst)],
@@ -32,9 +32,9 @@ def BR   : I<(outs), (ins bb_op:$dst),
 } // Defs = [ARGUMENTS]
 
 def : Pat<(brcond (i32 (setne I32:$cond, 0)), bb:$dst),
-          (BR_IF I32:$cond, bb_op:$dst)>;
+          (BR_IF bb_op:$dst, I32:$cond)>;
 def : Pat<(brcond (i32 (seteq I32:$cond, 0)), bb:$dst),
-          (BR_UNLESS I32:$cond, bb_op:$dst)>;
+          (BR_UNLESS bb_op:$dst, I32:$cond)>;
 
 let Defs = [ARGUMENTS] in {
 

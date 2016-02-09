@@ -66,7 +66,7 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       if (MI->getOpcode() != WebAssembly::BR_UNLESS)
         continue;
 
-      unsigned Cond = MI->getOperand(0).getReg();
+      unsigned Cond = MI->getOperand(1).getReg();
       bool Inverted = false;
 
       // Attempt to invert the condition in place.
@@ -124,8 +124,8 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       // delete the br_unless.
       assert(Inverted);
       BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::BR_IF))
-          .addReg(Cond)
-          .addOperand(MI->getOperand(1));
+          .addOperand(MI->getOperand(0))
+          .addReg(Cond);
       MBB.erase(MI);
     }
   }

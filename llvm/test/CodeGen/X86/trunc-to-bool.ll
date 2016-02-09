@@ -8,7 +8,7 @@ define zeroext i1 @test1(i32 %X)  nounwind {
     ret i1 %Y
 }
 ; CHECK-LABEL: test1:
-; CHECK: andl $1, %eax
+; CHECK: andb $1, %al
 
 define i1 @test2(i32 %val, i32 %mask) nounwind {
 entry:

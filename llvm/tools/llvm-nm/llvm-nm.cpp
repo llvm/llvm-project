@@ -791,26 +791,20 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
 }
 
 static char getSymbolNMTypeChar(const GlobalValue &GV) {
-  if (GV.getValueType()->isFunctionTy())
-    return 't';
   // FIXME: should we print 'b'? At the IR level we cannot be sure if this
   // will be in bss or not, but we could approximate.
-  return 'd';
+  return GV.getValueType()->isFunctionTy() ? 't' : 'd';
 }
 
 static char getSymbolNMTypeChar(IRObjectFile &Obj, basic_symbol_iterator I) {
   const GlobalValue *GV = Obj.getSymbolGV(I->getRawDataRefImpl());
-  if (!GV)
-    return 't';
-  return getSymbolNMTypeChar(*GV);
+  return !GV ? 't' : getSymbolNMTypeChar(*GV);
 }
 
 static bool isObject(SymbolicFile &Obj, basic_symbol_iterator I) {
-  auto *ELF = dyn_cast<ELFObjectFileBase>(&Obj);
-  if (!ELF)
-    return false;
-
-  return elf_symbol_iterator(I)->getELFType() == ELF::STT_OBJECT;
+  return !dyn_cast<ELFObjectFileBase>(&Obj)
+             ? false
+             : elf_symbol_iterator(I)->getELFType() == ELF::STT_OBJECT;
 }
 
 static char getNMTypeChar(SymbolicFile &Obj, basic_symbol_iterator I) {

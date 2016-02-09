@@ -530,8 +530,6 @@ AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
     AAR.addAAResult(WrapperPass->getResult());
   if (auto *WrapperPass = P.getAnalysisIfAvailable<GlobalsAAWrapperPass>())
     AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<SCEVAAWrapperPass>())
-    AAR.addAAResult(WrapperPass->getResult());
   if (auto *WrapperPass = P.getAnalysisIfAvailable<CFLAAWrapperPass>())
     AAR.addAAResult(WrapperPass->getResult());
 
@@ -564,4 +562,15 @@ bool llvm::isIdentifiedObject(const Value *V) {
 
 bool llvm::isIdentifiedFunctionLocal(const Value *V) {
   return isa<AllocaInst>(V) || isNoAliasCall(V) || isNoAliasArgument(V);
+}
+
+void llvm::addUsedAAAnalyses(AnalysisUsage &AU) {
+  // This function needs to be in sync with llvm::createLegacyPMAAResults -- if
+  // more alias analyses are added to llvm::createLegacyPMAAResults, they need
+  // to be added here also.
+  AU.addUsedIfAvailable<ScopedNoAliasAAWrapperPass>();
+  AU.addUsedIfAvailable<TypeBasedAAWrapperPass>();
+  AU.addUsedIfAvailable<objcarc::ObjCARCAAWrapperPass>();
+  AU.addUsedIfAvailable<GlobalsAAWrapperPass>();
+  AU.addUsedIfAvailable<CFLAAWrapperPass>();
 }

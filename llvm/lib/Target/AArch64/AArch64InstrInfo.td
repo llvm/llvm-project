@@ -766,12 +766,12 @@ def : Pat<(i64 (add (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
           (SMADDLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
                      (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
 
-def : Pat<(i64 (sub (mul (sext GPR32:$Rn), (s64imm_32bit:$C)), GPR64:$Ra)),
+def : Pat<(i64 (sub GPR64:$Ra, (mul (sext GPR32:$Rn), (s64imm_32bit:$C)))),
           (SMSUBLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
-def : Pat<(i64 (sub (mul (zext GPR32:$Rn), (i64imm_32bit:$C)), GPR64:$Ra)),
+def : Pat<(i64 (sub GPR64:$Ra, (mul (zext GPR32:$Rn), (i64imm_32bit:$C)))),
           (UMSUBLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
-def : Pat<(i64 (sub (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
-                    GPR64:$Ra)),
+def : Pat<(i64 (sub GPR64:$Ra, (mul (sext_inreg GPR64:$Rn, i32),
+                                    (s64imm_32bit:$C)))),
           (SMSUBLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
                      (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
 } // AddedComplexity = 5

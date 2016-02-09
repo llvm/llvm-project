@@ -488,9 +488,11 @@ inline std::error_code make_error_code(coveragemap_error E) {
 // [ArrayEnd]
 // [Encoded Region Mapping Data]
 LLVM_PACKED_START
-template <class IntPtrT> struct CovMapFunctionRecord {
+template <class IntPtrT> struct CovMapFunctionRecordV1 {
+#define COVMAP_V1
 #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
+#undef COVMAP_V1
 
   // Return the structural hash associated with the function.
   template <support::endianness Endian> uint64_t getFuncHash() const {
@@ -516,6 +518,33 @@ template <class IntPtrT> struct CovMapFunctionRecord {
     return std::error_code();
   }
 };
+
+template <class IntPtrT> struct CovMapFunctionRecord {
+#define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
+
+  // Return the structural hash associated with the function.
+  template <support::endianness Endian> uint64_t getFuncHash() const {
+    return support::endian::byte_swap<uint64_t, Endian>(FuncHash);
+  }
+  // Return the coverage map data size for the funciton.
+  template <support::endianness Endian> uint32_t getDataSize() const {
+    return support::endian::byte_swap<uint32_t, Endian>(DataSize);
+  }
+  // Return function lookup key. The value is consider opaque.
+  template <support::endianness Endian> uint64_t getFuncNameRef() const {
+    return support::endian::byte_swap<uint64_t, Endian>(NameRef);
+  }
+  // Return the PGO name of the function */
+  template <support::endianness Endian>
+  std::error_code getFuncName(InstrProfSymtab &ProfileNames,
+                              StringRef &FuncName) const {
+    IntPtrT NameRef = getFuncNameRef<Endian>();
+    FuncName = ProfileNames.getFuncName(NameRef);
+    return std::error_code();
+  }
+};
+
 // Per module coverage mapping data header, i.e. CoverageMapFileHeader
 // documented above.
 struct CovMapHeader {
@@ -539,12 +568,21 @@ LLVM_PACKED_END
 
 enum CovMapVersion {
   Version1 = 0,
-  // The current version is Version1
+  // Function's name reference from CovMapFuncRecord is changed from raw
+  // name string pointer to MD5 to support name section compression. Name
+  // section is also compressed.
+  Version2 = 1,
+  // The current version is Version2
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
 
 template <int CovMapVersion, class IntPtrT> struct CovMapTraits {
   typedef CovMapFunctionRecord<IntPtrT> CovMapFuncRecordType;
+  typedef uint64_t NameRefType;
+};
+
+template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version1, IntPtrT> {
+  typedef CovMapFunctionRecordV1<IntPtrT> CovMapFuncRecordType;
   typedef IntPtrT NameRefType;
 };
 

@@ -68,6 +68,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
+      addUsedAAAnalyses(AU);
       CallGraphSCCPass::getAnalysisUsage(AU);
     }
 

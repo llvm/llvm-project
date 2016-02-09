@@ -64,17 +64,12 @@
 #else
 #define INSTR_PROF_DATA_DEFINED
 #endif
-
-INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
-                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
-                NamePtr->getType()->getPointerElementType()->getArrayNumElements()))
-INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
-                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
+INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
+                ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
+		IndexedInstrProf::ComputeHash(getPGOFuncNameVarInitializer(Inc->getName()))))
 INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), FuncHash, \
                 ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
                 Inc->getHash()->getZExtValue()))
-INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), NamePtr, \
-                ConstantExpr::getBitCast(NamePtr, llvm::Type::getInt8PtrTy(Ctx)))
 INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt64PtrTy(Ctx), CounterPtr, \
                 ConstantExpr::getBitCast(CounterPtr, \
                 llvm::Type::getInt64PtrTy(Ctx)))
@@ -82,6 +77,8 @@ INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), FunctionPointer, \
                 FunctionAddr)
 INSTR_PROF_DATA(IntPtrT, llvm::Type::getInt8PtrTy(Ctx), Values, \
                 ConstantPointerNull::get(Int8PtrTy))
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
+                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
 INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
                 ConstantArray::get(Int16ArrayTy, Int16ArrayVals))
 #undef INSTR_PROF_DATA
@@ -153,12 +150,18 @@ VALUE_PROF_KIND(IPVK_Last, IPVK_IndirectCallTarget)
 #else
 #define INSTR_PROF_DATA_DEFINED
 #endif
+#ifdef COVMAP_V1
 COVMAP_FUNC_RECORD(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), \
                    NamePtr, llvm::ConstantExpr::getBitCast(NamePtr, \
                    llvm::Type::getInt8PtrTy(Ctx)))
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
-                   llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx),\
+                   llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
                    NameValue.size()))
+#else
+COVMAP_FUNC_RECORD(const int64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
+                   llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
+	           llvm::IndexedInstrProf::ComputeHash(NameValue)))
+#endif
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), DataSize, \
                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx),\
                    CoverageMapping.size()))
@@ -691,10 +694,12 @@ serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
        (uint64_t)'p' << 40 | (uint64_t)'r' << 32 | (uint64_t)'o' << 24 |  \
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
-/* Raw profile format version. */
-#define INSTR_PROF_RAW_VERSION 2
+/* Raw profile format version (start from 1). */
+#define INSTR_PROF_RAW_VERSION 3
+/* Indexed profile format version (start from 1). */
 #define INSTR_PROF_INDEX_VERSION 4
-#define INSTR_PROF_COVMAP_VERSION 0
+/* Coverage mapping format vresion (start from 0). */
+#define INSTR_PROF_COVMAP_VERSION 1
 
 /* Profile version is always of type uint64_t. Reserve the upper 8 bits in the
  * version for other variants of profile. We set the lowest bit of the upper 8

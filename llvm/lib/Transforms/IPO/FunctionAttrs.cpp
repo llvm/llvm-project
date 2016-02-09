@@ -64,6 +64,7 @@ struct PostOrderFunctionAttrs : public CallGraphSCCPass {
     AU.setPreservesCFG();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    addUsedAAAnalyses(AU);
     CallGraphSCCPass::getAnalysisUsage(AU);
   }
 

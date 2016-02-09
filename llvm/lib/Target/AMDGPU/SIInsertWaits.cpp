@@ -88,6 +88,9 @@ private:
   /// \brief Whether the machine function returns void
   bool ReturnsVoid;
 
+  /// Whether the VCCZ bit is possibly corrupt
+  bool VCCZCorrupt;
+
   /// \brief Get increment/decrement amount for this instruction.
   Counters getHwCounts(MachineInstr &MI);
 
@@ -116,6 +119,10 @@ private:
   /// \brief Insert S_NOP between an instruction writing M0 and S_SENDMSG.
   void handleSendMsg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I);
 
+  /// Return true if there are LGKM instrucitons that haven't been waited on
+  /// yet.
+  bool hasOutstandingLGKM() const;
+
 public:
   static char ID;
 
@@ -123,7 +130,8 @@ public:
     MachineFunctionPass(ID),
     TII(nullptr),
     TRI(nullptr),
-    ExpInstrTypesSeen(0) { }
+    ExpInstrTypesSeen(0),
+    VCCZCorrupt(false) { }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -155,6 +163,13 @@ FunctionPass *llvm::createSIInsertWaitsPass() {
 const Counters SIInsertWaits::WaitCounts = { { 15, 7, 15 } };
 const Counters SIInsertWaits::ZeroCounts = { { 0, 0, 0 } };
 
+static bool readsVCCZ(unsigned Opcode) {
+  return Opcode == AMDGPU::S_CBRANCH_VCCNZ || Opcode == AMDGPU::S_CBRANCH_VCCNZ;
+}
+
+bool SIInsertWaits::hasOutstandingLGKM() const {
+  return WaitedOn.Named.LGKM != LastIssued.Named.LGKM;
+}
 
 Counters SIInsertWaits::getHwCounts(MachineInstr &MI) {
   uint64_t TSFlags = MI.getDesc().TSFlags;
@@ -475,6 +490,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   TRI =
       static_cast<const SIRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
 
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   MRI = &MF.getRegInfo();
 
   WaitedOn = ZeroCounts;
@@ -492,6 +508,44 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock &MBB = *BI;
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
          I != E; ++I) {
+
+      if (ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS) {
+        // There is a hardware bug on CI/SI where SMRD instruction may corrupt
+        // vccz bit, so when we detect that an instruction may read from a
+        // corrupt vccz bit, we need to:
+        // 1. Insert s_waitcnt lgkm(0) to wait for all outstanding SMRD operations to
+        //    complete.
+        // 2. Restore the correct value of vccz by writing the current value
+        //    of vcc back to vcc.
+
+        if (TII->isSMRD(I->getOpcode())) {
+          VCCZCorrupt = true;
+        } else if (!hasOutstandingLGKM() && I->modifiesRegister(AMDGPU::VCC, TRI)) {
+          // FIXME: We only care about SMRD instructions here, not LDS or GDS.
+          // Whenever we store a value in vcc, the correct value of vccz is
+          // restored.
+          VCCZCorrupt = false;
+        }
+
+        // Check if we need to apply the bug work-around
+        if (readsVCCZ(I->getOpcode()) && VCCZCorrupt) {
+          DEBUG(dbgs() << "Inserting vccz bug work-around before: " << *I << '\n');
+
+          // Wait on everything, not just LGKM.  vccz reads usually come from
+          // terminators, and we always wait on everything at the end of the
+          // block, so if we only wait on LGKM here, we might end up with
+          // another s_waitcnt inserted right after this if there are non-LGKM
+          // instructions still outstanding.
+          insertWait(MBB, I, LastIssued);
+
+          // Restore the vccz bit.  Any time a value is written to vcc, the vcc
+          // bit is updated, so we can restore the bit by reading the value of
+          // vcc and then writing it back to the register.
+          BuildMI(MBB, I, I->getDebugLoc(), TII->get(AMDGPU::S_MOV_B64),
+                  AMDGPU::VCC)
+                  .addReg(AMDGPU::VCC);
+        }
+      }
 
       // Wait for everything before a barrier.
       if (I->getOpcode() == AMDGPU::S_BARRIER)

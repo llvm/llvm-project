@@ -1085,9 +1085,7 @@ define <8 x float> @sitofp_8i8_to_8f32(<16 x i8> %a) {
 ;
 ; AVX2-LABEL: sitofp_8i8_to_8f32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX2-NEXT:    vpslld $24, %ymm0, %ymm0
-; AVX2-NEXT:    vpsrad $24, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovsxbd %xmm0, %ymm0
 ; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %shuf = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

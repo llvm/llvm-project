@@ -107,22 +107,22 @@ bool WebAssemblyInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
       if (HaveCond)
         return true;
       // If we're running after CFGStackify, we can't optimize further.
-      if (!MI.getOperand(1).isMBB())
+      if (!MI.getOperand(0).isMBB())
         return true;
       Cond.push_back(MachineOperand::CreateImm(true));
-      Cond.push_back(MI.getOperand(0));
-      TBB = MI.getOperand(1).getMBB();
+      Cond.push_back(MI.getOperand(1));
+      TBB = MI.getOperand(0).getMBB();
       HaveCond = true;
       break;
     case WebAssembly::BR_UNLESS:
       if (HaveCond)
         return true;
       // If we're running after CFGStackify, we can't optimize further.
-      if (!MI.getOperand(1).isMBB())
+      if (!MI.getOperand(0).isMBB())
         return true;
       Cond.push_back(MachineOperand::CreateImm(false));
-      Cond.push_back(MI.getOperand(0));
-      TBB = MI.getOperand(1).getMBB();
+      Cond.push_back(MI.getOperand(1));
+      TBB = MI.getOperand(0).getMBB();
       HaveCond = true;
       break;
     case WebAssembly::BR:
@@ -177,11 +177,11 @@ unsigned WebAssemblyInstrInfo::InsertBranch(MachineBasicBlock &MBB,
   assert(Cond.size() == 2 && "Expected a flag and a successor block");
 
   if (Cond[0].getImm()) {
-    BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addOperand(Cond[1]).addMBB(TBB);
+    BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addMBB(TBB).addOperand(Cond[1]);
   } else {
     BuildMI(&MBB, DL, get(WebAssembly::BR_UNLESS))
-        .addOperand(Cond[1])
-        .addMBB(TBB);
+        .addMBB(TBB)
+        .addOperand(Cond[1]);
   }
   if (!FBB)
     return 1;

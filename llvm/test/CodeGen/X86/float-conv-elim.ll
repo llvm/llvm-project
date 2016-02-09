@@ -21,7 +21,7 @@ define i32 @foo2(i8 %a) #0 {
 
 ; CHECK-LABEL: bar
 ; CHECK-NOT: cvt
-; CHECK: movl
+; CHECK: movb
 define zeroext i8 @bar(i8 zeroext %a) #0 {
   %conv = uitofp i8 %a to float
   %conv1 = fptoui float %conv to i8

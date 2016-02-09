@@ -656,12 +656,18 @@ append_if(LLVM_BUILD_INSTRUMENTED "-fprofile-instr-generate"
   CMAKE_EXE_LINKER_FLAGS
   CMAKE_SHARED_LINKER_FLAGS)
 
-option(LLVM_ENABLE_LTO "Enable link-time optimization" OFF)
-append_if(LLVM_ENABLE_LTO "-flto"
-  CMAKE_CXX_FLAGS
-  CMAKE_C_FLAGS
-  CMAKE_EXE_LINKER_FLAGS
-  CMAKE_SHARED_LINKER_FLAGS)
+set(LLVM_ENABLE_LTO OFF CACHE STRING "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO")
+string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
+if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
+  append("-flto=thin" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
+                      CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+elseif(uppercase_LLVM_ENABLE_LTO STREQUAL "FULL")
+  append("-flto=full" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
+                 CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+elseif(LLVM_ENABLE_LTO)
+  append("-flto" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
+                 CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+endif()
 
 # Plugin support
 # FIXME: Make this configurable.
