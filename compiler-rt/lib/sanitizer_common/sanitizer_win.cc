@@ -731,8 +731,8 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
 }
 
 SignalContext SignalContext::Create(void *siginfo, void *context) {
-  EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD*)siginfo;
-  CONTEXT *context_record = (CONTEXT*)context;
+  EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
+  CONTEXT *context_record = (CONTEXT *)context;
 
   uptr pc = (uptr)exception_record->ExceptionAddress;
 #ifdef _WIN64
@@ -744,8 +744,8 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
 #endif
   uptr access_addr = exception_record->ExceptionInformation[1];
 
-  bool write_flag = SignalContext::UNKNOWN;  // FIXME: compute this.
-  bool is_memory_access = false;             // FIXME: compute this.
+  WriteFlag write_flag = SignalContext::UNKNOWN;  // FIXME: compute this.
+  bool is_memory_access = false;                  // FIXME: compute this.
   return SignalContext(context, access_addr, pc, sp, bp, is_memory_access,
                        write_flag);
 }
