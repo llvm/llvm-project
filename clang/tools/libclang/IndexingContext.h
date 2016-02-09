@@ -468,7 +468,8 @@ private:
   bool handleDecl(const NamedDecl *D,
                   SourceLocation Loc, CXCursor Cursor,
                   DeclInfo &DInfo,
-                  const DeclContext *LexicalDC = nullptr);
+                  const DeclContext *LexicalDC = nullptr,
+                  const DeclContext *SemaDC = nullptr);
 
   bool handleObjCContainer(const ObjCContainerDecl *D,
                            SourceLocation Loc, CXCursor Cursor,
