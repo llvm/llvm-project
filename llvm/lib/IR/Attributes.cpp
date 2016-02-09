@@ -508,13 +508,6 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
   return PA;
 }
 
-bool AttributeSetNode::hasAttribute(Attribute::AttrKind Kind) const {
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (I->hasAttribute(Kind))
-      return true;
-  return false;
-}
-
 bool AttributeSetNode::hasAttribute(StringRef Kind) const {
   for (iterator I = begin(), E = end(); I != E; ++I)
     if (I->hasAttribute(Kind))
@@ -523,9 +516,11 @@ bool AttributeSetNode::hasAttribute(StringRef Kind) const {
 }
 
 Attribute AttributeSetNode::getAttribute(Attribute::AttrKind Kind) const {
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (I->hasAttribute(Kind))
-      return *I;
+  if (hasAttribute(Kind)) {
+    for (iterator I = begin(), E = end(); I != E; ++I)
+      if (I->hasAttribute(Kind))
+        return *I;
+  }
   return Attribute();
 }
 
