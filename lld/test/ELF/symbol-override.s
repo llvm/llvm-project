@@ -43,4 +43,4 @@ nop
 .text
 .globl _start
 _start:
-callq do
+callq do@plt

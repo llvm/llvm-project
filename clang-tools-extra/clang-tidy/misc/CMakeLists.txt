@@ -12,6 +12,7 @@ add_clang_library(clangTidyMiscModule
   MacroParenthesesCheck.cpp
   MacroRepeatedSideEffectsCheck.cpp
   MiscTidyModule.cpp
+  MisplacedWideningCastCheck.cpp
   MoveConstantArgumentCheck.cpp
   MoveConstructorInitCheck.cpp
   NewDeleteOverloadsCheck.cpp

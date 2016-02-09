@@ -130,7 +130,8 @@ protected:
   SymbolBody(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
              bool IsTls, bool IsFunc)
       : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility),
-        MustBeInDynSym(false), IsTls(IsTls), IsFunc(IsFunc), Name(Name) {
+        MustBeInDynSym(false), NeedsCopyOrPltAddr(false), IsTls(IsTls),
+        IsFunc(IsFunc), Name(Name) {
     IsUsedInRegularObj = K != SharedKind && K != LazyKind;
   }
 
@@ -148,9 +149,14 @@ public:
   // If true, the symbol is added to .dynsym symbol table.
   unsigned MustBeInDynSym : 1;
 
+  // True if the linker has to generate a copy relocation for this shared
+  // symbol or if the symbol should point to its plt entry.
+  unsigned NeedsCopyOrPltAddr : 1;
+
 protected:
   unsigned IsTls : 1;
   unsigned IsFunc : 1;
+
   StringRef Name;
   Symbol *Backref = nullptr;
 };
@@ -280,10 +286,10 @@ public:
 
   SharedFile<ELFT> *File;
 
-  // True if the linker has to generate a copy relocation for this shared
-  // symbol. OffsetInBss is significant only when NeedsCopy is true.
-  bool NeedsCopy = false;
+  // OffsetInBss is significant only when needsCopy() is true.
   uintX_t OffsetInBss = 0;
+
+  bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->IsFunc; }
 };
 
 // This class represents a symbol defined in an archive file. It is

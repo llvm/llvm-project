@@ -57,7 +57,7 @@ class ExprCharTestCase(TestBase):
     def test_default_char(self):
         self.do_test()
 
-    @expectedFailureAll(archs=["arm, aarch64"], bugnumber="llvm.org/pr23069")
+    @expectedFailureAll(archs=["arm", "aarch64"], bugnumber="llvm.org/pr23069")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_signed_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-fsigned-char'})

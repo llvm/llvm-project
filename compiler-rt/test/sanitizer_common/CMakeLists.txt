@@ -36,6 +36,7 @@ foreach(tool ${SUPPORTED_TOOLS})
       string(REPLACE ";" " " SANITIZER_COMMON_TEST_TARGET_CFLAGS "${SANITIZER_COMMON_TEST_TARGET_CFLAGS}")
     endif()
     set(CONFIG_NAME ${tool}-${arch}-${OS_NAME})
+    set(SANITIZER_COMMON_TEST_CONFIG_SUFFIX "-${arch}-${OS_NAME}")
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)

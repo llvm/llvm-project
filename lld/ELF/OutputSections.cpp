@@ -1328,7 +1328,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
       OutSec = Out<ELFT>::Bss;
       break;
     case SymbolBody::SharedKind: {
-      if (cast<SharedSymbol<ELFT>>(Body)->NeedsCopy)
+      if (cast<SharedSymbol<ELFT>>(Body)->needsCopy())
         OutSec = Out<ELFT>::Bss;
       break;
     }
