@@ -63,9 +63,10 @@ protected:
   unsigned NumTombstones;
 
   // Helpers to copy and move construct a SmallPtrSet.
-  SmallPtrSetImplBase(const void **SmallStorage, const SmallPtrSetImplBase &that);
+  SmallPtrSetImplBase(const void **SmallStorage,
+                      const SmallPtrSetImplBase &that);
   SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize,
-                  SmallPtrSetImplBase &&that);
+                      SmallPtrSetImplBase &&that);
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize) :
     SmallArray(SmallStorage), CurArray(SmallStorage), CurArraySize(SmallSize) {
     assert(SmallSize && (SmallSize & (SmallSize-1)) == 0 &&
@@ -172,7 +173,7 @@ protected:
 public:
   explicit SmallPtrSetIteratorImpl(const void *const *BP, const void*const *E)
     : Bucket(BP), End(E) {
-      AdvanceIfNotValid();
+    AdvanceIfNotValid();
   }
 
   bool operator==(const SmallPtrSetIteratorImpl &RHS) const {
