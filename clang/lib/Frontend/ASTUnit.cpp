@@ -1723,7 +1723,7 @@ ASTUnit *ASTUnit::create(CompilerInvocation *CI,
 ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
     CompilerInvocation *CI,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags, ASTFrontendAction *Action,
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FrontendAction *Action,
     ASTUnit *Unit, bool Persistent, StringRef ResourceFilesPath,
     bool OnlyLocalDecls, bool CaptureDiagnostics,
     unsigned PrecompilePreambleAfterNParses, bool CacheCodeCompletionResults,
@@ -1812,7 +1812,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   // Create the source manager.
   Clang->setSourceManager(&AST->getSourceManager());
 
-  ASTFrontendAction *Act = Action;
+  FrontendAction *Act = Action;
 
   std::unique_ptr<TopLevelDeclTrackerAction> TrackerAct;
   if (!Act) {
