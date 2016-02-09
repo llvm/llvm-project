@@ -748,7 +748,7 @@ void ReportStackOverflow(const SignalContext &sig) {
       (void *)sig.addr, (void *)sig.pc, (void *)sig.bp, (void *)sig.sp,
       GetCurrentTidOrInvalid());
   Printf("%s", d.EndWarning());
-  ScarinessScore::PrintSimple(15, "stack-overflow");
+  ScarinessScore::PrintSimple(10, "stack-overflow");
   GET_STACK_TRACE_SIGNAL(sig);
   stack.Print();
   ReportErrorSummary("stack-overflow", &stack);
@@ -851,7 +851,7 @@ void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
          curr_tid, ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
   Printf("%s", d.EndWarning());
   CHECK_GT(free_stack->size, 0);
-  ScarinessScore::PrintSimple(10, "bad-free");
+  ScarinessScore::PrintSimple(40, "bad-free");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
   DescribeHeapAddress(addr, 1);
@@ -1054,6 +1054,10 @@ static void PrintContainerOverflowHint() {
          "AddressSanitizerContainerOverflow.\n");
 }
 
+static bool AdjacentShadowValuesAreFullyPoisoned(u8 *s) {
+  return s[-1] > 127 && s[1] > 127;
+}
+
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal) {
   if (!fatal && SuppressErrorReport(pc)) return;
@@ -1100,7 +1104,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
       case kAsanArrayCookieMagic:
         bug_descr = "heap-buffer-overflow";
         bug_type_score = 10;
-        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
       case kAsanHeapFreeMagic:
         bug_descr = "heap-use-after-free";
@@ -1109,7 +1113,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
       case kAsanStackLeftRedzoneMagic:
         bug_descr = "stack-buffer-underflow";
         bug_type_score = 25;
-        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
       case kAsanInitializationOrderMagic:
         bug_descr = "initialization-order-fiasco";
@@ -1120,7 +1124,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
       case kAsanStackPartialRedzoneMagic:
         bug_descr = "stack-buffer-overflow";
         bug_type_score = 25;
-        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
       case kAsanStackAfterReturnMagic:
         bug_descr = "stack-use-after-return";
@@ -1128,7 +1132,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
         break;
       case kAsanUserPoisonedMemoryMagic:
         bug_descr = "use-after-poison";
-        bug_type_score = 10;
+        bug_type_score = 20;
         break;
       case kAsanContiguousContainerOOBMagic:
         bug_descr = "container-overflow";
@@ -1141,7 +1145,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
       case kAsanGlobalRedzoneMagic:
         bug_descr = "global-buffer-overflow";
         bug_type_score = 10;
-        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
       case kAsanIntraObjectRedzone:
         bug_descr = "intra-object-overflow";
@@ -1151,7 +1155,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
       case kAsanAllocaRightMagic:
         bug_descr = "dynamic-stack-buffer-overflow";
         bug_type_score = 25;
-        far_from_bounds = shadow_addr[-1] > 127 && shadow_addr[1] > 127;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
     }
     SS.Scare(bug_type_score, bug_descr);
