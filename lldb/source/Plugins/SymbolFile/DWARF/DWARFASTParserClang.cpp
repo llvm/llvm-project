@@ -1214,11 +1214,11 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                     // that may or may not include these member functions and this means one class won't match another
                     // class definition and it affects our ability to use a class in the clang expression parser. So
                     // for the greater good, we currently must not allow any template member functions in a class definition.
-//                    if (is_cxx_method && has_template_params)
-//                    {
-//                        ignore_containing_context = true;
-//                        is_cxx_method = false;
-//                    }
+                    if (is_cxx_method && has_template_params)
+                    {
+                        ignore_containing_context = true;
+                        is_cxx_method = false;
+                    }
 
                     // clang_type will get the function prototype clang type after this call
                     clang_type = m_ast.CreateFunctionType (return_clang_type,
