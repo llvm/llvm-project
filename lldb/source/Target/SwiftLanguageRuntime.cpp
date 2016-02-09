@@ -1746,6 +1746,8 @@ m_fields()
     if (!nom_type_desc_ptr || nom_type_desc_ptr == LLDB_INVALID_ADDRESS)
         return;
     
+    nom_type_desc_ptr = (int64_t)nom_type_desc_ptr + base_addr + runtime.GetProcess()->GetAddressByteSize();
+    
     NominalTypeDescriptorSP nominal_sp(runtime.GetNominalTypeDescriptorForLocation(nom_type_desc_ptr));
     if (!nominal_sp)
         return;
@@ -1797,6 +1799,8 @@ m_cases()
     lldb::addr_t nom_type_desc_ptr = ReadPointerAtOffset(1);
     if (!nom_type_desc_ptr || nom_type_desc_ptr == LLDB_INVALID_ADDRESS)
         return;
+    
+    nom_type_desc_ptr = (int64_t)nom_type_desc_ptr + base_addr + runtime.GetProcess()->GetAddressByteSize();
     
     NominalTypeDescriptorSP nominal_sp(runtime.GetNominalTypeDescriptorForLocation(nom_type_desc_ptr));
     if (!nominal_sp)
@@ -2078,6 +2082,7 @@ m_gpv_ap()
 {
     static ConstString g_superclass("superclass");
     static ConstString g_rodata("rodata");
+    static ConstString g_nominal_descriptor_ptr("nominal_descriptor_ptr");
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TYPES));
     if (log)
@@ -2137,13 +2142,13 @@ m_gpv_ap()
         return;
     }
     
-    m_class_flags = reader.GetField<uint32_t>(ConstString("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] class_flags"));
-    m_instance_addr_point = reader.GetField<uint32_t>(ConstString("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] instance_addr_point"));
-    m_instance_size = reader.GetField<uint32_t>(ConstString("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] instance_size"));
-    m_instance_align_mask = reader.GetField<uint16_t>(ConstString("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] instance_align_mask"));
-    m_class_obj_size = reader.GetField<uint32_t>(ConstString("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] class_object_size"));
+    m_class_flags = reader.GetField<uint32_t>(ConstString("class_flags"));
+    m_instance_addr_point = reader.GetField<uint32_t>(ConstString("instance_addr_point"));
+    m_instance_size = reader.GetField<uint32_t>(ConstString("instance_size"));
+    m_instance_align_mask = reader.GetField<uint16_t>(ConstString("instance_align_mask"));
+    m_class_obj_size = reader.GetField<uint32_t>(ConstString("class_object_size"));
 
-    lldb::addr_t nom_type_desc_ptr = reader.GetField<lldb::addr_t>(ConstString("nominal_descriptor_ptr"));
+    lldb::addr_t nom_type_desc_ptr = reader.GetField<lldb::addr_t>(g_nominal_descriptor_ptr);
 
     if (log)
     {
@@ -2152,10 +2157,13 @@ m_gpv_ap()
         log->Printf("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] m_instance_size = 0x%" PRIx32, m_instance_size);
         log->Printf("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] m_instance_align_mask = 0x%" PRIx16, m_instance_align_mask);
         log->Printf("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] m_class_obj_size = 0x%" PRIx32, m_class_obj_size);
+        log->Printf("[SwiftLanguageRuntime::ClassMetadata::ClassMetadata] nom_type_desc_ptr = 0x%" PRIx64, nom_type_desc_ptr);
     }
     
     if (!nom_type_desc_ptr || nom_type_desc_ptr == LLDB_INVALID_ADDRESS)
         return;
+    
+    nom_type_desc_ptr = (int64_t)nom_type_desc_ptr + base_addr + reader.GetOffsetOf(g_nominal_descriptor_ptr);
     
     NominalTypeDescriptorSP descriptor_sp(m_runtime.GetNominalTypeDescriptorForLocation(nom_type_desc_ptr));
     
