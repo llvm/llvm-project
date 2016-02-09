@@ -70,7 +70,7 @@ class TestClass {
 
 namespace ns {
   int m;
-#pragma omp threadprivate (m)
+#pragma omp threadprivate (m, m)
 }
 #pragma omp threadprivate (m) // expected-error {{use of undeclared identifier 'm'}}
 #pragma omp threadprivate (ns::m)

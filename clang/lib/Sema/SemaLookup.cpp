@@ -432,10 +432,6 @@ static bool isPreferredLookupResult(Sema &S, Sema::LookupNameKind Kind,
     if (Prev == EUnderlying)
       return true;
   return false;
-
-  // If the existing declaration is hidden, prefer the new one. Otherwise,
-  // keep what we've got.
-  return !S.isVisible(Existing);
 }
 
 /// Determine whether \p D can hide a tag declaration.

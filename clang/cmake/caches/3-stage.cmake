@@ -1,0 +1,34 @@
+set(CMAKE_BUILD_TYPE RELEASE CACHE STRING "")
+set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
+set(LLVM_BUILD_EXTERNAL_COMPILER_RT ON CACHE BOOL "")
+set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "")
+set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
+
+set(CLANG_BOOTSTRAP_PASSTHROUGH 
+  CLANG_ENABLE_BOOTSTRAP
+  LLVM_BUILD_EXTERNAL_COMPILER_RT
+  LLVM_TARGETS_TO_BUILD
+  CLANG_BOOTSTRAP_PASSTHROUGH
+  BOOTSTRAP_LLVM_ENABLE_LTO
+  CMAKE_BUILD_TYPE
+  CACHE STRING "")
+
+set(CLANG_BOOTSTRAP_TARGETS
+  clang
+  check-all
+  check-llvm
+  check-clang
+  test-suite
+  stage3
+  stage3-clang
+  stage3-check-all
+  stage3-check-llvm
+  stage3-check-clang
+  stage3-test-suite CACHE STRING "")
+
+set(BOOTSTRAP_CLANG_BOOTSTRAP_TARGETS
+  clang
+  check-all
+  check-llvm
+  check-clang
+  test-suite CACHE STRING "")
