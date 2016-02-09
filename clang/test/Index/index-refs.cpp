@@ -69,6 +69,8 @@ void foo5() {
   struct S2 s = { .y = 1, .x = 4};
 }
 
+int ginitlist[] = {EnumVal};
+
 // RUN: c-index-test -index-file %s | FileCheck %s
 // CHECK:      [indexDeclaration]: kind: namespace | name: NS
 // CHECK-NEXT: [indexDeclaration]: kind: variable | name: gx
@@ -119,3 +121,9 @@ void foo5() {
 
 // CHECK:      [indexEntityReference]: kind: field | name: y | {{.*}} | loc: 69:20
 // CHECK-NEXT: [indexEntityReference]: kind: field | name: x | {{.*}} | loc: 69:28
+// CHECK-NOT:  [indexEntityReference]: kind: field | name: y | {{.*}} | loc: 69:20
+// CHECK-NOT:  [indexEntityReference]: kind: field | name: x | {{.*}} | loc: 69:28
+
+// CHECK:      [indexDeclaration]: kind: variable | name: ginitlist |
+// CHECK:      [indexEntityReference]: kind: enumerator | name: EnumVal | {{.*}} | loc: 72:20
+// CHECK-NOT:  [indexEntityReference]: kind: enumerator | name: EnumVal | {{.*}} | loc: 72:20
