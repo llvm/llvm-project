@@ -327,9 +327,8 @@ public:
 
   /// \brief Handle the specified top-level declaration that occurred inside
   /// and ObjC container.
-  void HandleTopLevelDeclInObjCContainer(DeclGroupRef D) override {
-    // They will be handled after the interface is seen first.
-    IndexCtx.addTUDeclInObjCContainer(D);
+  void HandleTopLevelDeclInObjCContainer(DeclGroupRef DG) override {
+    IndexCtx.indexDeclGroupRef(DG);
   }
 
   /// \brief This is called by the AST reader when deserializing things.
