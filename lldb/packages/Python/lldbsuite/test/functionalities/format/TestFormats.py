@@ -16,7 +16,7 @@ class TestFormats(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureHostWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_formats(self):
         """Test format string functionality."""
         self.build()

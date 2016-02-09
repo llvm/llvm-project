@@ -16,7 +16,7 @@ class TypeCompletionTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureIcc # often fails with 'NameAndAddress should be valid'
+    @expectedFailureAll(compiler="icc", bugnumber="often fails with 'NameAndAddress should be valid.")
     # Fails with gcc 4.8.1 with llvm.org/pr15301 LLDB prints incorrect sizes of STL containers
     def test_with_run_command(self):
         """Check that types only get completed when necessary."""

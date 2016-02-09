@@ -16,7 +16,7 @@ class LibcxxMultiSetDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfGcc
+    @skipIf(compiler="gcc")
     @skipIfWindows # libc++ not ported to Windows yet
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""

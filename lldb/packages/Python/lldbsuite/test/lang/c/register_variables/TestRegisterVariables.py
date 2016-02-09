@@ -15,8 +15,8 @@ class RegisterVariableTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=['macosx'], compiler='clang', compiler_version=['<', '7.0.0'], debug_info="dsym")
-    @expectedFailureClang(None, ['<', '3.5'])
-    @expectedFailureGcc(None, ['is', '4.8.2'])
+    @expectedFailureAll(compiler="clang", compiler_version=['<', '3.5'])
+    @expectedFailureAll(compiler="gcc", compiler_version=['=', '4.8.2'])
     def test_and_run_command(self):
         """Test expressions on register values."""
         self.build()

@@ -62,7 +62,7 @@ def _match_decorator_property(expected, actual):
 
     if isinstance(expected, no_match):
         return not _match_decorator_property(expected.item, actual)
-    elif isinstance(expected, (str, re._pattern_type)):
+    elif isinstance(expected, (re._pattern_type,)+six.string_types):
         return re.search(expected, actual) is not None
     elif hasattr(expected, "__iter__"):
         return any([x is not None and _match_decorator_property(x, actual) for x in expected])
@@ -291,36 +291,8 @@ def not_remote_testsuite_ready(func):
         return "Not ready for remote testsuite" if lldb.remote_platform else None
     return skipTestIfFn(is_remote)(func)
 
-def expectedFailureDwarf(bugnumber=None):
-    return expectedFailureAll(bugnumber=bugnumber, debug_info="dwarf")
-
-def expectedFailureDwo(bugnumber=None):
-    return expectedFailureAll(bugnumber=bugnumber, debug_info="dwo")
-
-def expectedFailureDsym(bugnumber=None):
-    return expectedFailureAll(bugnumber=bugnumber, debug_info="dsym")
-
-def expectedFailureCompiler(compiler, compiler_version=None, bugnumber=None):
-    if compiler_version is None:
-        compiler_version=['=', None]
-    return expectedFailureAll(bugnumber=bugnumber, compiler=compiler, compiler_version=compiler_version)
-
-# to XFAIL a specific clang versions, try this
-# @expectedFailureClang('bugnumber', ['<=', '3.4'])
-def expectedFailureClang(bugnumber=None, compiler_version=None):
-    return expectedFailureCompiler('clang', compiler_version, bugnumber)
-
-def expectedFailureGcc(bugnumber=None, compiler_version=None):
-    return expectedFailureCompiler('gcc', compiler_version, bugnumber)
-
-def expectedFailureIcc(bugnumber=None):
-    return expectedFailureCompiler('icc', None, bugnumber)
-
 def expectedFailureOS(oslist, bugnumber=None, compilers=None, debug_info=None, archs=None):
     return expectedFailureAll(oslist=oslist, bugnumber=bugnumber, compiler=compilers, archs=archs, debug_info=debug_info)
-
-def expectedFailureHostOS(oslist, bugnumber=None, compilers=None):
-    return expectedFailureAll(hostoslist=oslist, bugnumber=bugnumber)
 
 def expectedFailureDarwin(bugnumber=None, compilers=None, debug_info=None):
     # For legacy reasons, we support both "darwin" and "macosx" as OS X triples.
@@ -334,9 +306,6 @@ def expectedFailureLinux(bugnumber=None, compilers=None, debug_info=None, archs=
 
 def expectedFailureNetBSD(bugnumber=None, compilers=None, debug_info=None):
     return expectedFailureOS(['netbsd'], bugnumber, compilers, debug_info=debug_info)
-
-def expectedFailureHostWindows(bugnumber=None, compilers=None):
-    return expectedFailureHostOS(['windows'], bugnumber, compilers)
 
 def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
     """ Mark a test as xfail for Android.
@@ -539,27 +508,6 @@ def skipUnlessPlatform(oslist):
     # classes, which `skipIf` explicitly forbids.
     return unittest2.skipUnless(lldbplatformutil.getPlatform() in oslist,
                                 "requires on of %s" % (", ".join(oslist)))
-
-
-def skipIfDebugInfo(bugnumber=None, debug_info=None):
-    return skipIf(bugnumber=bugnumber, debug_info=debug_info)
-
-def skipIfDWO(bugnumber=None):
-    return skipIfDebugInfo(bugnumber, ["dwo"])
-
-def skipIfDwarf(bugnumber=None):
-    return skipIfDebugInfo(bugnumber, ["dwarf"])
-
-def skipIfDsym(bugnumber=None):
-    return skipIfDebugInfo(bugnumber, ["dsym"])
-
-def skipIfGcc(func):
-    """Decorate the item to skip tests that should be skipped if building with gcc ."""
-    return skipIf(compiler="gcc")(func)
-
-def skipIfIcc(func):
-    """Decorate the item to skip tests that should be skipped if building with icc ."""
-    return skipIf(compiler="icc")(func)
 
 def skipIfTargetAndroid(api_levels=None, archs=None):
     """Decorator to skip tests when the target is Android.

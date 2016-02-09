@@ -1623,6 +1623,8 @@ SymbolFileDWARF::HasForwardDeclForClangType (const CompilerType &compiler_type)
 bool
 SymbolFileDWARF::CompleteType (CompilerType &compiler_type)
 {
+    lldb_private::Mutex::Locker locker(GetObjectFile()->GetModule()->GetMutex());
+
     TypeSystem *type_system = compiler_type.GetTypeSystem();
     if (type_system)
     {

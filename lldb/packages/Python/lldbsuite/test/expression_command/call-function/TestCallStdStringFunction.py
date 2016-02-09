@@ -22,7 +22,7 @@ class ExprCommandCallFunctionTestCase(TestBase):
         self.line = line_number('main.cpp',
                                 '// Please test these expressions while stopped at this line:')
 
-    @expectedFailureIcc # llvm.org/pr14437, fails with ICC 13.1
+    @expectedFailureAll(compiler="icc", bugnumber="llvm.org/pr14437, fails with ICC 13.1")
     @expectedFailureFreeBSD('llvm.org/pr17807') # Fails on FreeBSD buildbot
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_with(self):

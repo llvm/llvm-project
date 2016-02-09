@@ -283,8 +283,13 @@ const ArchHandler::StubInfo ArchHandler_arm64::_sStubInfo = {
   { Reference::KindArch::AArch64, lazyImmediateLocation, 8, 0 },
   { Reference::KindArch::AArch64, branch26, 4, 0 },
 
+  // Stub helper image cache content type
+  DefinedAtom::typeGOT,
+
   // Stub Helper-Common size and code
   24,
+  // Stub helper alignment
+  2,
   { 0x11, 0x00, 0x00, 0x90,   //  ADRP  X17, dyld_ImageLoaderCache@page
     0x31, 0x02, 0x00, 0x91,   //  ADD   X17, X17, dyld_ImageLoaderCache@pageoff
     0xF0, 0x47, 0xBF, 0xA9,   //  STP   X16/X17, [SP, #-16]!

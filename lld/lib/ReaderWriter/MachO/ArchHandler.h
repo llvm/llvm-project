@@ -255,7 +255,10 @@ public:
     ReferenceInfo   stubHelperReferenceToImm;
     ReferenceInfo   stubHelperReferenceToHelperCommon;
 
+    DefinedAtom::ContentType stubHelperImageCacheContentType;
+
     uint32_t        stubHelperCommonSize;
+    uint8_t         stubHelperCommonAlignment;
     uint8_t         stubHelperCommonBytes[36];
     ReferenceInfo   stubHelperCommonReferenceToCache;
     OptionalRefInfo optStubHelperCommonReferenceToCache;

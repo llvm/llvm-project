@@ -2,6 +2,8 @@
 
 // RUN: %clangxx_asan -O0 %s -o %t
 // RUN: export %env_asan_opts=detect_stack_use_after_return=1:handle_abort=1:print_scariness=1
+// Make sure the stack is limited (may not be the default under GNU make)
+// RUN: ulimit -s 4096
 // RUN: not %run %t  1 2>&1 | FileCheck %s --check-prefix=CHECK1
 // RUN: not %run %t  2 2>&1 | FileCheck %s --check-prefix=CHECK2
 // RUN: not %run %t  3 2>&1 | FileCheck %s --check-prefix=CHECK3
@@ -19,8 +21,7 @@
 // RUN: not %run %t 15 2>&1 | FileCheck %s --check-prefix=CHECK15
 // RUN: not %run %t 16 2>&1 | FileCheck %s --check-prefix=CHECK16
 // RUN: not %run %t 17 2>&1 | FileCheck %s --check-prefix=CHECK17
-// Stack overflow may not trigger under GNU make.
-// DISABLED: not %run %t 18 2>&1 | FileCheck %s --check-prefix=CHECK18
+// RUN: not %run %t 18 2>&1 | FileCheck %s --check-prefix=CHECK18
 // RUN: not %run %t 19 2>&1 | FileCheck %s --check-prefix=CHECK19
 // RUN: not %run %t 20 2>&1 | FileCheck %s --check-prefix=CHECK20
 // RUN: not %run %t 21 2>&1 | FileCheck %s --check-prefix=CHECK21
@@ -29,11 +30,15 @@
 // RUN: not %run %t 24 2>&1 | FileCheck %s --check-prefix=CHECK24
 // RUN: not %run %t 25 2>&1 | FileCheck %s --check-prefix=CHECK25
 // RUN: not %run %t 26 2>&1 | FileCheck %s --check-prefix=CHECK26
+// RUN: not %run %t 27 2>&1 | FileCheck %s --check-prefix=CHECK27
 // Parts of the test are too platform-specific:
 // REQUIRES: x86_64-supported-target
+// REQUIRES: shell
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <sanitizer/asan_interface.h>
 
 enum ReadOrWrite { Read = 0, Write = 1 };
 
@@ -114,6 +119,13 @@ void StackOverflow(int Idx) {
     StackOverflow(Idx - 1);
 }
 
+void UseAfterPoison() {
+  int buf[100];
+  __asan_poison_memory_region(buf, sizeof(buf));
+  static volatile int sink;
+  sink = buf[42];
+}
+
 int main(int argc, char **argv) {
   char arr[100];
   static volatile int zero = 0;
@@ -148,6 +160,7 @@ int main(int argc, char **argv) {
     case 24: delete (new int[10]); break;
     case 25: free((char*)malloc(100) + 10); break;
     case 26: memcpy(arr, arr+10, 20);  break;
+    case 27: UseAfterPoison(); break;
     // CHECK1: SCARINESS: 12 (1-byte-read-heap-buffer-overflow)
     // CHECK2: SCARINESS: 17 (4-byte-read-heap-buffer-overflow)
     // CHECK3: SCARINESS: 33 (2-byte-write-heap-buffer-overflow)
@@ -165,14 +178,15 @@ int main(int argc, char **argv) {
     // CHECK15: SCARINESS: 31 (1-byte-write-global-buffer-overflow)
     // CHECK16: SCARINESS: 36 (multi-byte-read-global-buffer-overflow-far-from-bounds)
     // CHECK17: SCARINESS: 42 (double-free)
-    // CHECK18: SCARINESS: 15 (stack-overflow)
+    // CHECK18: SCARINESS: 10 (stack-overflow)
     // CHECK19: SCARINESS: 10 (null-deref)
     // CHECK20: SCARINESS: 30 (wild-addr-write)
     // CHECK21: SCARINESS: 20 (wild-addr-read)
     // CHECK22: SCARINESS: 10 (signal)
     // CHECK23: SCARINESS: 60 (wild-jump)
     // CHECK24: SCARINESS: 10 (alloc-dealloc-mismatch)
-    // CHECK25: SCARINESS: 10 (bad-free)
+    // CHECK25: SCARINESS: 40 (bad-free)
     // CHECK26: SCARINESS: 10 (memcpy-param-overlap)
+    // CHECK27: SCARINESS: 27 (4-byte-read-use-after-poison)
   }
 }

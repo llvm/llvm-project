@@ -34,4 +34,6 @@
 
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, log2, float);
 
+#ifdef cl_khr_fp64
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, log2, double);
+#endif // cl_khr_fp64

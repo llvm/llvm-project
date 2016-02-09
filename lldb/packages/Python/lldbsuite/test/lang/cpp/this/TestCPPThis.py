@@ -11,8 +11,8 @@ class CPPThisTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     
     #rdar://problem/9962849
-    @expectedFailureGcc # llvm.org/pr15439 The 'this' pointer isn't available during expression evaluation when stopped in an inlined member function.
-    @expectedFailureIcc # ICC doesn't emit correct DWARF inline debug info for inlined member functions
+    @expectedFailureAll(compiler="gcc", bugnumber="llvm.org/pr15439 The 'this' pointer isn't available during expression evaluation when stopped in an inlined member function")
+    @expectedFailureAll(compiler="icc", bugnumber="ICC doesn't emit correct DWARF inline debug info for inlined member functions.")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     @expectedFlakeyClang(bugnumber='llvm.org/pr23012', compiler_version=['>=','3.6']) # failed with totclang - clang3.7
     def test_with_run_command(self):
