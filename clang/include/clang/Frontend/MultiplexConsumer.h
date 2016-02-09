@@ -53,6 +53,7 @@ public:
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   void PrintStats() override;
+  bool shouldSkipFunctionBody(Decl *D) override;
 
   // SemaConsumer
   void InitializeSema(Sema &S) override;
