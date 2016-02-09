@@ -38,6 +38,11 @@ class SmallSet {
   typedef typename SmallVector<T, N>::const_iterator VIterator;
   typedef typename SmallVector<T, N>::iterator mutable_iterator;
 
+  // In small mode SmallPtrSet uses linear search for the elements, so it is
+  // not a good idea to choose this value too high. You may consider using a
+  // DenseSet<> instead if you expect many elements in the set.
+  static_assert(N <= 32, "N should be small");
+
 public:
   typedef size_t size_type;
   SmallSet() {}

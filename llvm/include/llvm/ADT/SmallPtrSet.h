@@ -329,6 +329,11 @@ public:
 /// SmallPtrSetImplBase for details of the algorithm.
 template<class PtrType, unsigned SmallSize>
 class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
+  // In small mode SmallPtrSet uses linear search for the elements, so it is
+  // not a good idea to choose this value too high. You may consider using a
+  // DenseSet<> instead if you expect many elements in the set.
+  static_assert(SmallSize <= 32, "SmallSize should be small");
+
   typedef SmallPtrSetImpl<PtrType> BaseT;
 
   // Make sure that SmallSize is a power of two, round up if not.
