@@ -1009,6 +1009,10 @@ bool AttributeSet::hasAttributes(unsigned Index) const {
   return ASN && ASN->hasAttributes();
 }
 
+bool AttributeSet::hasFnAttribute(Attribute::AttrKind Kind) const {
+  return pImpl && pImpl->hasFnAttribute(Kind);
+}
+
 /// \brief Return true if the specified attribute is set for at least one
 /// parameter or for the return value.
 bool AttributeSet::hasAttrSomewhere(Attribute::AttrKind Attr) const {
@@ -1394,14 +1398,14 @@ AttrBuilder &AttrBuilder::addRawValue(uint64_t Val) {
       continue;
     if (uint64_t A = (Val & AttributeImpl::getAttrMask(I))) {
       Attrs[I] = true;
- 
+
       if (I == Attribute::Alignment)
         Alignment = 1ULL << ((A >> 16) - 1);
       else if (I == Attribute::StackAlignment)
         StackAlignment = 1ULL << ((A >> 26)-1);
     }
   }
- 
+
   return *this;
 }
 
