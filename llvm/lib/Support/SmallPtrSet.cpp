@@ -164,45 +164,17 @@ SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
     assert(CurArray && "Failed to allocate memory?");
   }
 
-  // Copy over the new array size
-  CurArraySize = that.CurArraySize;
-
-  // Copy over the contents from the other set
-  memcpy(CurArray, that.CurArray, sizeof(void*)*CurArraySize);
-
-  NumElements = that.NumElements;
-  NumTombstones = that.NumTombstones;
+  // Copy over the that array.
+  CopyHelper(that);
 }
 
 SmallPtrSetImplBase::SmallPtrSetImplBase(const void **SmallStorage,
                                          unsigned SmallSize,
                                          SmallPtrSetImplBase &&that) {
   SmallArray = SmallStorage;
-
-  // Copy over the basic members.
-  CurArraySize = that.CurArraySize;
-  NumElements = that.NumElements;
-  NumTombstones = that.NumTombstones;
-
-  // When small, just copy into our small buffer.
-  if (that.isSmall()) {
-    CurArray = SmallArray;
-    memcpy(CurArray, that.CurArray, sizeof(void *) * CurArraySize);
-  } else {
-    // Otherwise, we steal the large memory allocation and no copy is needed.
-    CurArray = that.CurArray;
-    that.CurArray = that.SmallArray;
-  }
-
-  // Make the "that" object small and empty.
-  that.CurArraySize = SmallSize;
-  assert(that.CurArray == that.SmallArray);
-  that.NumElements = 0;
-  that.NumTombstones = 0;
+  MoveHelper(SmallSize, std::move(that));
 }
 
-/// CopyFrom - implement operator= from a smallptrset that has the same pointer
-/// type, but may have a different small size.
 void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
   assert(&RHS != this && "Self-copy should be handled by the caller.");
 
@@ -229,6 +201,10 @@ void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
     assert(CurArray && "Failed to allocate memory?");
   }
 
+  CopyHelper(RHS);
+}
+
+void SmallPtrSetImplBase::CopyHelper(const SmallPtrSetImplBase &RHS) {
   // Copy over the new array size
   CurArraySize = RHS.CurArraySize;
 
@@ -241,10 +217,14 @@ void SmallPtrSetImplBase::CopyFrom(const SmallPtrSetImplBase &RHS) {
 
 void SmallPtrSetImplBase::MoveFrom(unsigned SmallSize,
                                    SmallPtrSetImplBase &&RHS) {
-  assert(&RHS != this && "Self-move should be handled by the caller.");
-
   if (!isSmall())
     free(CurArray);
+  MoveHelper(SmallSize, std::move(RHS));
+}
+
+void SmallPtrSetImplBase::MoveHelper(unsigned SmallSize,
+                                     SmallPtrSetImplBase &&RHS) {
+  assert(&RHS != this && "Self-move should be handled by the caller.");
 
   if (RHS.isSmall()) {
     // Copy a small RHS rather than moving.
