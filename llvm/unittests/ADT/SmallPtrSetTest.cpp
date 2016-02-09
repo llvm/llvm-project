@@ -167,13 +167,29 @@ TEST(SmallPtrSetTest, SwapTest) {
   a.insert(&buf[1]);
   b.insert(&buf[2]);
 
+  EXPECT_EQ(2U, a.size());
+  EXPECT_EQ(1U, b.size());
+  EXPECT_TRUE(a.count(&buf[0]));
+  EXPECT_TRUE(a.count(&buf[1]));
+  EXPECT_FALSE(a.count(&buf[2]));
+  EXPECT_FALSE(a.count(&buf[3]));
+  EXPECT_FALSE(b.count(&buf[0]));
+  EXPECT_FALSE(b.count(&buf[1]));
+  EXPECT_TRUE(b.count(&buf[2]));
+  EXPECT_FALSE(b.count(&buf[3]));
+
   std::swap(a, b);
 
   EXPECT_EQ(1U, a.size());
   EXPECT_EQ(2U, b.size());
+  EXPECT_FALSE(a.count(&buf[0]));
+  EXPECT_FALSE(a.count(&buf[1]));
   EXPECT_TRUE(a.count(&buf[2]));
+  EXPECT_FALSE(a.count(&buf[3]));
   EXPECT_TRUE(b.count(&buf[0]));
   EXPECT_TRUE(b.count(&buf[1]));
+  EXPECT_FALSE(b.count(&buf[2]));
+  EXPECT_FALSE(b.count(&buf[3]));
 
   b.insert(&buf[3]);
   std::swap(a, b);
@@ -182,16 +198,24 @@ TEST(SmallPtrSetTest, SwapTest) {
   EXPECT_EQ(1U, b.size());
   EXPECT_TRUE(a.count(&buf[0]));
   EXPECT_TRUE(a.count(&buf[1]));
+  EXPECT_FALSE(a.count(&buf[2]));
   EXPECT_TRUE(a.count(&buf[3]));
+  EXPECT_FALSE(b.count(&buf[0]));
+  EXPECT_FALSE(b.count(&buf[1]));
   EXPECT_TRUE(b.count(&buf[2]));
+  EXPECT_FALSE(b.count(&buf[3]));
 
   std::swap(a, b);
 
   EXPECT_EQ(1U, a.size());
   EXPECT_EQ(3U, b.size());
+  EXPECT_FALSE(a.count(&buf[0]));
+  EXPECT_FALSE(a.count(&buf[1]));
   EXPECT_TRUE(a.count(&buf[2]));
+  EXPECT_FALSE(a.count(&buf[3]));
   EXPECT_TRUE(b.count(&buf[0]));
   EXPECT_TRUE(b.count(&buf[1]));
+  EXPECT_FALSE(b.count(&buf[2]));
   EXPECT_TRUE(b.count(&buf[3]));
 
   a.insert(&buf[4]);
