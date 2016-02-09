@@ -1202,6 +1202,7 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag(void *context) {
   if (!Aarch64GetESR(ucontext, &esr)) return UNKNOWN;
   return esr & ESR_ELx_WNR ? WRITE : READ;
 #else
+  (void)ucontext;
   return UNKNOWN;  // FIXME: Implement.
 #endif
 }
