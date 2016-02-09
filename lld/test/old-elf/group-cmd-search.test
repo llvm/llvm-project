@@ -1,5 +1,5 @@
 /*
-  XFAIL: win32
+  REQUIRES: shell
 
   This test does not pass on Windows because a path starting with
   "/" is not considered as an absolute path. (It needs a drive

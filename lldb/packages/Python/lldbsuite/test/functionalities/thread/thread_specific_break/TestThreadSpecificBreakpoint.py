@@ -18,7 +18,7 @@ class ThreadSpecificBreakTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows # Thread specific breakpoints cause the inferior to crash
+    @expectedFailureAll(oslist=["windows"])
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""
         self.build()

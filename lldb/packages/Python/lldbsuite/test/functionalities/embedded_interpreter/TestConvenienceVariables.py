@@ -22,7 +22,7 @@ class ConvenienceVariablesCase(TestBase):
 
     @skipIfFreeBSD # llvm.org/pr17228
     @skipIfRemote
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_with_run_commands(self):
         """Test convenience variables lldb.debugger, lldb.target, lldb.process, lldb.thread, and lldb.frame."""
         self.build()

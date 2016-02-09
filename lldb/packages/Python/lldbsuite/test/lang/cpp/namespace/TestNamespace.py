@@ -39,7 +39,7 @@ class NamespaceTestCase(TestBase):
                        'stop reason = breakpoint'])
 
     # rdar://problem/8668674
-    @expectedFailureWindows("llvm.org/pr24764")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test_with_run_command(self):
         """Test that anonymous and named namespace variables display correctly."""
         self.build()

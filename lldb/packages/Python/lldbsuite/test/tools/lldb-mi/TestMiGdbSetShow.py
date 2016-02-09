@@ -16,7 +16,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_gdb_set_target_async_default(self):
         """Test that 'lldb-mi --interpreter' switches to async mode by default."""
@@ -35,7 +35,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-gdb-show target-async")
         self.expect("\^done,value=\"on\"")
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     @expectedFlakeyLinux("llvm.org/pr26028") # Fails in ~1% of cases
     def test_lldbmi_gdb_set_target_async_on(self):
@@ -64,7 +64,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\*running")
         self.expect("@\"argc=1")
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     @expectedFailureLinux # Failing in ~11/600 dosep runs (build 3120-3122)
     def test_lldbmi_gdb_set_target_async_off(self):
@@ -89,7 +89,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         if it < len(unexpected):
             self.fail("unexpected found: %s" % unexpected[it])
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_gdb_show_target_async(self):
         """Test that 'lldb-mi --interpreter' in async mode by default."""
@@ -100,7 +100,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-gdb-show target-async")
         self.expect("\^done,value=\"on\"")
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_gdb_show_language(self):
         """Test that 'lldb-mi --interpreter' can get current language."""
@@ -122,7 +122,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-gdb-show language")
         self.expect("\^done,value=\"c\+\+\"")
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @unittest2.expectedFailure("-gdb-set ignores unknown properties")
     def test_lldbmi_gdb_set_unknown(self):
         """Test that 'lldb-mi --interpreter' fails when setting an unknown property."""
@@ -133,7 +133,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         self.runCmd("-gdb-set unknown some_value")
         self.expect("\^error")
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @unittest2.expectedFailure("-gdb-show ignores unknown properties")
     def test_lldbmi_gdb_show_unknown(self):
         """Test that 'lldb-mi --interpreter' fails when showing an unknown property."""
@@ -145,7 +145,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^error")
 
 
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     @skipIfLinux # llvm.org/pr22841: lldb-mi tests fail on all Linux buildbots
     def test_lldbmi_gdb_set_ouptut_radix(self):

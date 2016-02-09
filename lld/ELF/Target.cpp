@@ -196,6 +196,7 @@ public:
   MipsTargetInfo();
   unsigned getDynRel(unsigned Type) const override;
   void writeGotHeader(uint8_t *Buf) const override;
+  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool needsGot(uint32_t Type, const SymbolBody &S) const override;
   bool needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
@@ -1386,6 +1387,7 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 }
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
+  CopyRel = R_MIPS_COPY;
   PageSize = 65536;
   GotHeaderEntriesNum = 2;
   RelativeRel = R_MIPS_REL32;
@@ -1423,6 +1425,17 @@ void MipsTargetInfo<ELFT>::writeGotHeader(uint8_t *Buf) const {
   // if we had to do this.
   auto *P = reinterpret_cast<Elf_Off *>(Buf);
   P[1] = uintX_t(1) << (ELFT::Is64Bits ? 63 : 31);
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::needsCopyRel(uint32_t Type,
+                                        const SymbolBody &S) const {
+  if (Config->Shared)
+    return false;
+  if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
+    if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S))
+      return SS->Sym.getType() == STT_OBJECT;
+  return false;
 }
 
 template <class ELFT>

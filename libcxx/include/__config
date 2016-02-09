@@ -42,7 +42,6 @@
 // Fix undefined behavior in how std::list stores it's linked nodes.
 #define _LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB
 #define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
-#define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
 #endif
 
 #define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y
@@ -437,7 +436,7 @@ namespace std {
 
 // Allow for build-time disabling of unsigned integer sanitization
 #if !defined(_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK) && __has_attribute(no_sanitize)
-#define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute((no_sanitize("unsigned-integer-overflow")))
+#define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif 
 
 #elif defined(__GNUC__)

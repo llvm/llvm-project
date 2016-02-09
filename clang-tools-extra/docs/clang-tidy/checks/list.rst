@@ -49,6 +49,7 @@ Clang-Tidy Checks
    misc-bool-pointer-implicit-conversion
    misc-definitions-in-headers
    misc-inaccurate-erase
+   misc-incorrect-roundings
    misc-inefficient-algorithm
    misc-macro-parentheses
    misc-macro-repeated-side-effects

@@ -20,7 +20,7 @@ class TestCPPExceptionBreakpoint (TestBase):
     my_var = 10
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24538") # clang-cl does not support throw or catch
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24538")
     def test_cpp_exception_breakpoint(self):
         """Test setting and hitting the C++ exception breakpoint."""
         self.build()

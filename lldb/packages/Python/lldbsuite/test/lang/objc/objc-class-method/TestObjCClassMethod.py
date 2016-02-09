@@ -22,7 +22,7 @@ class TestObjCClassMethod(TestBase):
         self.break_line = line_number(self.main_source, '// Set breakpoint here.')
 
     @skipUnlessDarwin
-    @expectedFailurei386
+    @expectedFailureAll(archs=["i[3-6]86"])
     @add_test_categories(['pyapi'])
     #rdar://problem/9745789 "expression" can't call functions in class methods
     def test_with_python_api(self):

@@ -38,7 +38,7 @@ class FunctionTypesTestCase(TestBase):
             substrs = ['a.out`string_not_empty',
                        'stop reason = breakpoint'])
     
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_pointers(self):
         """Test that a function pointer to 'printf' works and can be called."""
         self.build()

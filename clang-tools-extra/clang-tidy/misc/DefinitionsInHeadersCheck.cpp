@@ -51,6 +51,8 @@ void DefinitionsInHeadersCheck::storeOptions(
 }
 
 void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus)
+    return;
   if (UseHeaderFileExtension) {
     Finder->addMatcher(
         namedDecl(anyOf(functionDecl(isDefinition()), varDecl(isDefinition())),
@@ -78,6 +80,8 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
   // satisfy the following requirements.
   const auto *ND = Result.Nodes.getNodeAs<NamedDecl>("name-decl");
   assert(ND);
+  if (ND->isInvalidDecl())
+    return;
 
   // Internal linkage variable definitions are ignored for now:
   //   const int a = 1;

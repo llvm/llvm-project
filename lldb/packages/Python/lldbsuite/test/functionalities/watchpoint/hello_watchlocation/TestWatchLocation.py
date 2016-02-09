@@ -31,7 +31,7 @@ class HelloWatchLocationTestCase(TestBase):
         self.d = {'CXX_SOURCES': self.source, 'EXE': self.exe_name}
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureWindows("llvm.org/pr24446") # WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     @expectedFailureAll(archs=['mips', 'mipsel', 'mips64', 'mips64el']) # Most of the MIPS boards provide only one H/W watchpoints, and S/W watchpoints are not supported yet
     @skipIfDarwin
     def test_hello_watchlocation(self):

@@ -16,12 +16,10 @@ class TestMultipleSimultaneousDebuggers(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfi386
     @skipIfNoSBHeaders
-    @expectedFailureFreeBSD("llvm.org/pr20282")
-    @expectedFailureLinux("llvm.org/pr20282")
-    @expectedFailureWindows # Test crashes
     @expectedFlakeyDarwin()
+    @expectedFailureAll(archs="i[3-6]86", bugnumber="multi-process-driver.cpp creates an x64 target")
+    @expectedFailureAll(oslist=["windows", "linux", "freebsd"], bugnumber="llvm.org/pr20282")
     def test_multiple_debuggers(self):
         env = {self.dylibPath : self.getLLDBLibraryEnvVal()}
 

@@ -18,7 +18,7 @@ class LaunchWithShellExpandTestCase(TestBase):
 
     @expectedFailureFreeBSD("llvm.org/pr22627 process launch w/ shell expansion not working")
     @expectedFailureLinux("llvm.org/pr22627 process launch w/ shell expansion not working")
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test(self):
         self.build()
         exe = os.path.join (os.getcwd(), "a.out")

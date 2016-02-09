@@ -10,7 +10,7 @@ class CStringsTestCase(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_with_run_command(self):
         """Tests that C strings work as expected in expressions"""
         self.build()

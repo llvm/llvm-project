@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLD_READER_WRITER_MACHO_ARCH_HANDLER_H
+#define LLD_READER_WRITER_MACHO_ARCH_HANDLER_H
+
 #include "Atoms.h"
 #include "File.h"
 #include "MachONormalizedFile.h"
@@ -15,9 +18,6 @@
 #include "lld/Core/Simple.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
 #include "llvm/ADT/Triple.h"
-
-#ifndef LLD_READER_WRITER_MACHO_ARCH_HANDLER_H
-#define LLD_READER_WRITER_MACHO_ARCH_HANDLER_H
 
 namespace lld {
 namespace mach_o {

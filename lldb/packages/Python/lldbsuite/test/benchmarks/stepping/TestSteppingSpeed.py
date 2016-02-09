@@ -26,7 +26,7 @@ class SteppingSpeedBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_run_lldb_steppings(self):
         """Test lldb steppings on a large executable."""
         print()

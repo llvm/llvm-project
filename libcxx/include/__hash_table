@@ -17,7 +17,6 @@
 #include <iterator>
 #include <algorithm>
 #include <cmath>
-#include <utility>
 
 #include <__undef_min_max>
 #include <__undef___deallocate>
@@ -50,10 +49,10 @@ struct __hash_node
                  typename __rebind_pointer<_VoidPtr, __hash_node<_Tp, _VoidPtr> >::type
              >
 {
-    typedef _Tp __node_value_type;
+    typedef _Tp value_type;
 
     size_t     __hash_;
-    __node_value_type __value_;
+    value_type __value_;
 };
 
 inline _LIBCPP_INLINE_VISIBILITY
@@ -78,126 +77,23 @@ __next_hash_pow2(size_t __n)
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc> class __hash_table;
-
-template <class _NodePtr>      class _LIBCPP_TYPE_VIS_ONLY __hash_iterator;
 template <class _ConstNodePtr> class _LIBCPP_TYPE_VIS_ONLY __hash_const_iterator;
-template <class _NodePtr>      class _LIBCPP_TYPE_VIS_ONLY __hash_local_iterator;
-template <class _ConstNodePtr> class _LIBCPP_TYPE_VIS_ONLY __hash_const_local_iterator;
 template <class _HashIterator> class _LIBCPP_TYPE_VIS_ONLY __hash_map_iterator;
 template <class _HashIterator> class _LIBCPP_TYPE_VIS_ONLY __hash_map_const_iterator;
-
-#if __cplusplus >= 201103L
-template <class _Key, class _Tp>
-union __hash_value_type;
-#else
-template <class _Key, class _Tp>
-struct __hash_value_type;
-#endif
-
-template <class _Tp>
-struct __key_value_types {
-  static_assert(!is_reference<_Tp>::value && !is_const<_Tp>::value, "");
-  typedef _Tp key_type;
-  typedef _Tp __node_value_type;
-  typedef _Tp __container_value_type;
-  static const bool __is_map = false;
-};
-
-template <class _Key, class _Tp>
-struct __key_value_types<__hash_value_type<_Key, _Tp> > {
-  typedef _Key                                         key_type;
-  typedef _Tp                                          mapped_type;
-  typedef __hash_value_type<_Key, _Tp>                 __node_value_type;
-  typedef pair<const _Key, _Tp>                        __container_value_type;
-  typedef __container_value_type                       __map_value_type;
-  static const bool __is_map = true;
-};
-
-template <class _Tp, class _AllocPtr, class _KVTypes = __key_value_types<_Tp>,
-          bool = _KVTypes::__is_map>
-struct __map_pointer_types {};
-
-template <class _Tp, class _AllocPtr, class _KVTypes>
-struct __map_pointer_types<_Tp, _AllocPtr, _KVTypes, true> {
-  typedef typename _KVTypes::__map_value_type   _Mv;
-  typedef typename __rebind_pointer<_AllocPtr, _Mv>::type
-                                                       __map_value_type_pointer;
-  typedef typename __rebind_pointer<_AllocPtr, const _Mv>::type
-                                                 __const_map_value_type_pointer;
-};
-
-template <class _NodePtr, class _NodeT = typename pointer_traits<_NodePtr>::element_type>
-struct __hash_node_types;
-
-template <class _NodePtr, class _Tp, class _VoidPtr>
-struct __hash_node_types<_NodePtr, __hash_node<_Tp, _VoidPtr> >
-    : public __key_value_types<_Tp>, __map_pointer_types<_Tp, _VoidPtr>
-
-{
-  typedef __key_value_types<_Tp>           __base;
-
-public:
-  typedef ptrdiff_t difference_type;
-  typedef size_t size_type;
-
-  typedef typename __rebind_pointer<_NodePtr, void>::type       __void_pointer;
-
-  typedef typename pointer_traits<_NodePtr>::element_type       __node_type;
-  typedef _NodePtr                                              __node_pointer;
-
-  typedef __hash_node_base<__node_pointer>                      __node_base_type;
-  typedef typename __rebind_pointer<_NodePtr, __node_base_type>::type
-                                                             __node_base_pointer;
-
-  typedef _Tp                                                 __node_value_type;
-  typedef typename __rebind_pointer<_VoidPtr, __node_value_type>::type
-                                                      __node_value_type_pointer;
-  typedef typename __rebind_pointer<_VoidPtr, const __node_value_type>::type
-                                                __const_node_value_type_pointer;
-private:
-    static_assert(!is_const<__node_type>::value,
-                "_NodePtr should never be a pointer to const");
-    static_assert((is_same<typename pointer_traits<_VoidPtr>::element_type, void>::value),
-                  "_VoidPtr does not point to unqualified void type");
-    static_assert((is_same<typename __rebind_pointer<_VoidPtr, __node_type>::type,
-                          _NodePtr>::value), "_VoidPtr does not rebind to _NodePtr.");
-};
-
-
-
-template <class _HashIterator>
-struct __hash_node_types_from_iterator;
-template <class _NodePtr>
-struct __hash_node_types_from_iterator<__hash_iterator<_NodePtr> > : __hash_node_types<_NodePtr> {};
-template <class _NodePtr>
-struct __hash_node_types_from_iterator<__hash_const_iterator<_NodePtr> > : __hash_node_types<_NodePtr> {};
-template <class _NodePtr>
-struct __hash_node_types_from_iterator<__hash_local_iterator<_NodePtr> > : __hash_node_types<_NodePtr> {};
-template <class _NodePtr>
-struct __hash_node_types_from_iterator<__hash_const_local_iterator<_NodePtr> > : __hash_node_types<_NodePtr> {};
-
-
-template <class _NodeValueTp, class _VoidPtr>
-struct __make_hash_node_types {
-  typedef __hash_node<_NodeValueTp, _VoidPtr> _NodeTp;
-  typedef typename __rebind_pointer<_VoidPtr, _NodeTp>::type _NodePtr;
-  typedef __hash_node_types<_NodePtr> type;
-};
 
 template <class _NodePtr>
 class _LIBCPP_TYPE_VIS_ONLY __hash_iterator
 {
-    typedef __hash_node_types<_NodePtr> _NodeTypes;
-    typedef _NodePtr                    __node_pointer;
+    typedef _NodePtr __node_pointer;
 
     __node_pointer            __node_;
 
 public:
-    typedef forward_iterator_tag                           iterator_category;
-    typedef typename _NodeTypes::__node_value_type         value_type;
-    typedef typename _NodeTypes::difference_type           difference_type;
-    typedef value_type&                                    reference;
-    typedef typename _NodeTypes::__node_value_type_pointer pointer;
+    typedef forward_iterator_tag                         iterator_category;
+    typedef typename pointer_traits<__node_pointer>::element_type::value_type value_type;
+    typedef typename pointer_traits<__node_pointer>::difference_type difference_type;
+    typedef value_type&                                  reference;
+    typedef typename __rebind_pointer<__node_pointer, value_type>::type pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_iterator() _NOEXCEPT
 #if _LIBCPP_STD_VER > 11
@@ -306,22 +202,25 @@ private:
     template <class, class, class, class, class> friend class _LIBCPP_TYPE_VIS_ONLY unordered_multimap;
 };
 
-template <class _NodePtr>
+template <class _ConstNodePtr>
 class _LIBCPP_TYPE_VIS_ONLY __hash_const_iterator
 {
-    static_assert(!is_const<typename pointer_traits<_NodePtr>::element_type>::value, "");
-    typedef __hash_node_types<_NodePtr> _NodeTypes;
-    typedef _NodePtr __node_pointer;
-    typedef __hash_iterator<_NodePtr> __non_const_iterator;
-    __node_pointer __node_;
+    typedef _ConstNodePtr __node_pointer;
+
+    __node_pointer         __node_;
+
+    typedef typename remove_const<
+        typename pointer_traits<__node_pointer>::element_type
+                                 >::type __node;
 
 public:
-    typedef forward_iterator_tag                                 iterator_category;
-    typedef typename _NodeTypes::__node_value_type               value_type;
-    typedef typename _NodeTypes::difference_type                 difference_type;
-    typedef const value_type&                                    reference;
-    typedef typename _NodeTypes::__const_node_value_type_pointer pointer;
-
+    typedef forward_iterator_tag                       iterator_category;
+    typedef typename __node::value_type                value_type;
+    typedef typename pointer_traits<__node_pointer>::difference_type difference_type;
+    typedef const value_type&                          reference;
+    typedef typename __rebind_pointer<__node_pointer, const value_type>::type pointer;
+    typedef typename __rebind_pointer<__node_pointer, __node>::type __non_const_node_pointer;
+    typedef __hash_iterator<__non_const_node_pointer> __non_const_iterator;
 
     _LIBCPP_INLINE_VISIBILITY __hash_const_iterator() _NOEXCEPT
 #if _LIBCPP_STD_VER > 11
@@ -437,22 +336,24 @@ private:
     template <class, class, class, class, class> friend class _LIBCPP_TYPE_VIS_ONLY unordered_multimap;
 };
 
+template <class _ConstNodePtr> class _LIBCPP_TYPE_VIS_ONLY __hash_const_local_iterator;
+
 template <class _NodePtr>
 class _LIBCPP_TYPE_VIS_ONLY __hash_local_iterator
 {
-    typedef __hash_node_types<_NodePtr> _NodeTypes;
-    typedef _NodePtr                    __node_pointer;
+    typedef _NodePtr __node_pointer;
 
     __node_pointer         __node_;
     size_t                 __bucket_;
     size_t                 __bucket_count_;
 
+    typedef pointer_traits<__node_pointer>          __pointer_traits;
 public:
     typedef forward_iterator_tag                                iterator_category;
-    typedef typename _NodeTypes::__node_value_type              value_type;
-    typedef typename _NodeTypes::difference_type                difference_type;
+    typedef typename __pointer_traits::element_type::value_type value_type;
+    typedef typename __pointer_traits::difference_type          difference_type;
     typedef value_type&                                         reference;
-    typedef typename _NodeTypes::__node_value_type_pointer      pointer;
+    typedef typename __rebind_pointer<__node_pointer, value_type>::type pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_local_iterator() _NOEXCEPT
     {
@@ -575,8 +476,7 @@ private:
 template <class _ConstNodePtr>
 class _LIBCPP_TYPE_VIS_ONLY __hash_const_local_iterator
 {
-    typedef __hash_node_types<_ConstNodePtr> _NodeTypes;
-    typedef _ConstNodePtr                    __node_pointer;
+    typedef _ConstNodePtr __node_pointer;
 
     __node_pointer         __node_;
     size_t                 __bucket_;
@@ -591,11 +491,14 @@ class _LIBCPP_TYPE_VIS_ONLY __hash_const_local_iterator
     typedef __hash_local_iterator<__non_const_node_pointer>
                                                     __non_const_iterator;
 public:
-    typedef forward_iterator_tag                                 iterator_category;
-    typedef typename _NodeTypes::__node_value_type               value_type;
-    typedef typename _NodeTypes::difference_type                 difference_type;
-    typedef const value_type&                                    reference;
-    typedef typename _NodeTypes::__const_node_value_type_pointer pointer;
+    typedef forward_iterator_tag                       iterator_category;
+    typedef typename remove_const<
+                        typename __pointer_traits::element_type::value_type
+                     >::type                           value_type;
+    typedef typename __pointer_traits::difference_type difference_type;
+    typedef const value_type&                          reference;
+    typedef typename __rebind_pointer<__node_pointer, const value_type>::type
+        pointer;
 
 
     _LIBCPP_INLINE_VISIBILITY __hash_const_local_iterator() _NOEXCEPT
@@ -783,7 +686,7 @@ class __hash_node_destructor
 {
     typedef _Alloc                                          allocator_type;
     typedef allocator_traits<allocator_type>                __alloc_traits;
-
+    typedef typename __alloc_traits::value_type::value_type value_type;
 public:
     typedef typename __alloc_traits::pointer                pointer;
 private:
@@ -825,42 +728,23 @@ public:
 
 private:
     typedef allocator_traits<allocator_type> __alloc_traits;
-    typedef typename
-      __make_hash_node_types<value_type, typename __alloc_traits::void_pointer>::type
-                                                                     _NodeTypes;
 public:
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
     typedef typename __alloc_traits::pointer         pointer;
     typedef typename __alloc_traits::const_pointer   const_pointer;
-#ifndef _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
     typedef typename __alloc_traits::size_type       size_type;
-#else
-    typedef typename _NodeTypes::size_type           size_type;
-#endif
-    typedef typename _NodeTypes::difference_type     difference_type;
+    typedef typename __alloc_traits::difference_type difference_type;
 public:
     // Create __node
-
-    typedef typename _NodeTypes::__node_type __node;
+    typedef __hash_node<value_type, typename __alloc_traits::void_pointer> __node;
     typedef typename __rebind_alloc_helper<__alloc_traits, __node>::type __node_allocator;
     typedef allocator_traits<__node_allocator>       __node_traits;
-    typedef typename _NodeTypes::__node_pointer      __node_pointer;
-    typedef typename _NodeTypes::__node_pointer      __node_const_pointer;
-    typedef typename _NodeTypes::__node_base_type    __first_node;
-    typedef typename _NodeTypes::__node_base_pointer __node_base_pointer;
-
-private:
-    // check for sane allocator pointer rebinding semantics. Rebinding the
-    // allocator for a new pointer type should be exactly the same as rebinding
-    // the pointer using 'pointer_traits'.
-    static_assert((is_same<__node_pointer, typename __node_traits::pointer>::value),
-                  "Allocator does not rebind pointers in a sane manner.");
-    typedef typename __rebind_alloc_helper<__node_traits, __first_node>::type
-        __node_base_allocator;
-    typedef allocator_traits<__node_base_allocator> __node_base_traits;
-    static_assert((is_same<__node_base_pointer, typename __node_base_traits::pointer>::value),
-                 "Allocator does not rebind pointers in a sane manner.");
+    typedef typename __node_traits::pointer          __node_pointer;
+    typedef typename __node_traits::pointer          __node_const_pointer;
+    typedef __hash_node_base<__node_pointer>         __first_node;
+    typedef typename __rebind_pointer<__node_pointer, __first_node>::type
+        __node_base_pointer;
 
 private:
 
@@ -871,10 +755,10 @@ private:
     typedef typename __bucket_list_deleter::pointer __node_pointer_pointer;
 
     // --- Member data begin ---
-    __bucket_list                                         __bucket_list_;
-    __compressed_pair<__first_node, __node_allocator>     __p1_;
-    __compressed_pair<size_type, hasher>                  __p2_;
-    __compressed_pair<float, key_equal>                   __p3_;
+    __bucket_list                                     __bucket_list_;
+    __compressed_pair<__first_node, __node_allocator> __p1_;
+    __compressed_pair<size_type, hasher>              __p2_;
+    __compressed_pair<float, key_equal>               __p3_;
     // --- Member data end ---
 
     _LIBCPP_INLINE_VISIBILITY

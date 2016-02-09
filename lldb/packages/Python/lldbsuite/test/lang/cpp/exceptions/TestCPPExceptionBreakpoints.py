@@ -22,7 +22,7 @@ class CPPBreakpointTestCase(TestBase):
         self.source = 'exceptions.cpp'
         self.catch_line = line_number(self.source, '// This is the line you should stop at for catch')
 
-    @expectedFailureWindows("llvm.org/pr24538") # clang-cl does not support throw or catch
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24538, clang-cl does not support throw or catch")
     def test(self):
         """Test lldb exception breakpoint command for CPP."""
         self.build()

@@ -14,7 +14,7 @@ class DebugBreakTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(archs=not_in(["i386", "i686"]))
+    @skipIf(archs=no_match(["i386", "i686"]))
     @no_debug_info_test
     def test_asm_int_3(self):
         """Test that intrinsics like `__debugbreak();` and `asm {"int3"}` are treated like breakpoints."""

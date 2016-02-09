@@ -19,7 +19,7 @@ class FrameAPITestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_get_arg_vals_for_call_stack(self):
         """Exercise SBFrame.GetVariables() API to get argument vals."""
         self.build()

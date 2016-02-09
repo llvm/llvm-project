@@ -19,7 +19,7 @@ class CreateDuringStepTestCase(TestBase):
     @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
     @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
     @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureWindows("llvm.org/pr24668") # Breakpoints not resolved correctly
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test_step_inst(self):
         """Test thread creation during step-inst handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -28,7 +28,7 @@ class CreateDuringStepTestCase(TestBase):
     @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
     @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
     @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureWindows("llvm.org/pr24668") # Breakpoints not resolved correctly
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test_step_over(self):
         """Test thread creation during step-over handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -37,7 +37,7 @@ class CreateDuringStepTestCase(TestBase):
     @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
     @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
     @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureWindows("llvm.org/pr24668") # Breakpoints not resolved correctly
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test_step_in(self):
         """Test thread creation during step-in handling."""
         self.build(dictionary=self.getBuildFlags())

@@ -16,6 +16,7 @@
 #include "BoolPointerImplicitConversionCheck.h"
 #include "DefinitionsInHeadersCheck.h"
 #include "InaccurateEraseCheck.h"
+#include "IncorrectRoundings.h"
 #include "InefficientAlgorithmCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
@@ -54,6 +55,8 @@ public:
         "misc-definitions-in-headers");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "misc-inaccurate-erase");
+    CheckFactories.registerCheck<IncorrectRoundings>(
+        "misc-incorrect-roundings");
     CheckFactories.registerCheck<InefficientAlgorithmCheck>(
         "misc-inefficient-algorithm");
     CheckFactories.registerCheck<MacroParenthesesCheck>(

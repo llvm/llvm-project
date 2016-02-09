@@ -28,21 +28,21 @@ class CompDirSymLinkTestCase(TestBase):
         self.line = line_number(_SRC_FILE, '// Set break point at this line.')
         self.src_path = os.path.join(os.getcwd(), _SRC_FILE)
 
-    @skipIfHostWindows
+    @skipIf(hostoslist=["windows"])
     def test_symlink_paths_set(self):
         pwd_symlink = self.create_src_symlink()
         self.doBuild(pwd_symlink)
         self.runCmd("settings set %s %s" % (_COMP_DIR_SYM_LINK_PROP, pwd_symlink))
         lldbutil.run_break_set_by_file_and_line(self, self.src_path, self.line)
 
-    @skipUnlessHostLinux
+    @skipIf(hostoslist=no_match(["linux"]))
     def test_symlink_paths_set_procselfcwd(self):
         pwd_symlink = '/proc/self/cwd'
         self.doBuild(pwd_symlink)
         self.runCmd("settings set %s %s" % (_COMP_DIR_SYM_LINK_PROP, pwd_symlink))
         lldbutil.run_break_set_by_file_and_line(self, self.src_path, self.line)
 
-    @skipIfHostWindows
+    @skipIf(hostoslist=["windows"])
     def test_symlink_paths_unset(self):
         pwd_symlink = self.create_src_symlink()
         self.doBuild(pwd_symlink)

@@ -1,5 +1,5 @@
-# RUN: lld -flavor darwin -arch x86_64  %s -bundle -o %t %p/Inputs/libSystem.yaml
-# RUN: llvm-nm -m -n %t | FileCheck %s
+# RUN: lld -flavor darwin -arch x86_64  %s -bundle -o %t %p/Inputs/libSystem.yaml && llvm-nm -m -n %t | FileCheck %s
+# RUN: lld -flavor darwin -arch x86_64  %s -bundle -dead_strip -o %t %p/Inputs/libSystem.yaml && llvm-nm -m -n %t | FileCheck %s
 #
 # Test that __mh_bundle_header symbol is available for bundles
 #
@@ -39,6 +39,7 @@ global-symbols:
     type:            N_SECT
     scope:           [ N_EXT ]
     sect:            1
+    desc:            [ N_NO_DEAD_STRIP ]
     value:           0x0000000000000000
 undefined-symbols:
   - name:            __mh_bundle_header
@@ -49,5 +50,5 @@ undefined-symbols:
 
 ...
 
-# CHECK_NOT:	__mh_bundle_header
+# CHECK: __mh_bundle_header
 # CHECK:      _foo

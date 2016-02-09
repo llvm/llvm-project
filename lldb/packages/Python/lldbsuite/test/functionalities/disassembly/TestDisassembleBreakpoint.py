@@ -16,7 +16,7 @@ class DisassemblyTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows # Function name prints fully demangled instead of name-only
+    @expectedFailureAll(oslist=["windows"], bugnumber="function names print fully demangled instead of name-only")
     def test(self):
         self.build()
         exe = os.path.join (os.getcwd(), "a.out")

@@ -1187,7 +1187,8 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   size_t PhdrSize = sizeof(Elf_Phdr) * Phdrs.size();
 
   // The first phdr entry is PT_PHDR which describes the program header itself.
-  setPhdr(&Phdrs[0], PT_PHDR, PF_R, FileOff, VA, PhdrSize, /*Align=*/8);
+  setPhdr(&Phdrs[0], PT_PHDR, PF_R, FileOff, VA, PhdrSize,
+          /*Align=*/sizeof(uintX_t));
   FileOff += PhdrSize;
   VA += PhdrSize;
 

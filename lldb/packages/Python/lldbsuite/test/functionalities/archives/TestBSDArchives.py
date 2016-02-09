@@ -20,7 +20,7 @@ class BSDArchivesTestCase(TestBase):
         # Find the line number in a(int) to break at.
         self.line = line_number('a.c', '// Set file and line breakpoint inside a().')
 
-    @expectedFailureWindows("llvm.org/pr24527") # Makefile.rules doesn't know how to build static libs on Windows.
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows")
     def test(self):
         """Break inside a() and b() defined within libfoo.a."""
         self.build()

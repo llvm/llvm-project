@@ -24,7 +24,7 @@ class ExprCommandCallFunctionTestCase(TestBase):
 
     @expectedFailureIcc # llvm.org/pr14437, fails with ICC 13.1
     @expectedFailureFreeBSD('llvm.org/pr17807') # Fails on FreeBSD buildbot
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_with(self):
         """Test calling std::String member function."""
         self.build()

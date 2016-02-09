@@ -23,7 +23,7 @@ class ExpressionEvaluationCase(BenchBase):
         self.count = 25
 
     @benchmarks_test
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_expr_cmd(self):
         """Test lldb's expression commands and collect statistics."""
         self.build()

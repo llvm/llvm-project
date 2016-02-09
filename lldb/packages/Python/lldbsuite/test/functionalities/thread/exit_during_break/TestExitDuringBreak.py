@@ -25,7 +25,7 @@ class ExitDuringBreakpointTestCase(TestBase):
     @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
     @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
     @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureWindows("llvm.org/pr24668") # Breakpoints not resolved correctly
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test(self):
         """Test thread exit during breakpoint handling."""
         self.build(dictionary=self.getBuildFlags())

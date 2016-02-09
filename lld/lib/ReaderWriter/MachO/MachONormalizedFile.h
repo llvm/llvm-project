@@ -39,6 +39,9 @@
 ///                    +-------+
 ///
 
+#ifndef LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
+#define LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
+
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
@@ -49,9 +52,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
-
-#ifndef LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
-#define LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
 
 using llvm::BumpPtrAllocator;
 using llvm::yaml::Hex64;
@@ -247,6 +247,7 @@ struct NormalizedFile {
   PackedVersion               currentVersion = 0; // dylibs only
   bool                        hasUUID = false;
   bool                        hasMinVersionLoadCommand = false;
+  bool                        generateDataInCodeLoadCommand = false;
   std::vector<StringRef>      rpaths;
   Hex64                       entryAddress = 0;
   Hex64                       stackSize = 0;
@@ -263,6 +264,7 @@ struct NormalizedFile {
   std::vector<BindLocation>   weakBindingInfo;
   std::vector<BindLocation>   lazyBindingInfo;
   std::vector<Export>         exportInfo;
+  std::vector<uint8_t>        functionStarts;
   std::vector<DataInCode>     dataInCode;
 
   // TODO:

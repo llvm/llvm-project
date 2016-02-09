@@ -42,7 +42,7 @@ class TargetAPITestCase(TestBase):
         self.find_global_variables('b.out')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_find_functions(self):
         """Exercise SBTarget.FindFunctions() API."""
         d = {'EXE': 'b.out'}
