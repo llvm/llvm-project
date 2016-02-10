@@ -1608,6 +1608,7 @@ void CodeGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &Args) 
 
   LexicalScope Scope(*this, RootCS->getSourceRange());
 
+  incrementProfileCounter(RootCS);
   AssignmentMemcpyizer AM(*this, AssignOp, Args);
   for (auto *I : RootCS->body())
     AM.emitAssignment(I);

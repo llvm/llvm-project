@@ -50,17 +50,6 @@ public:
     return true;
   }
 
-  bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
-    for (DesignatedInitExpr::reverse_designators_iterator
-           D = E->designators_rbegin(), DEnd = E->designators_rend();
-           D != DEnd; ++D) {
-      if (D->isFieldDesignator())
-        IndexCtx.handleReference(D->getField(), D->getFieldLoc(),
-                                 Parent, ParentDC, E);
-    }
-    return true;
-  }
-
   bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
     IndexCtx.handleReference(E->getDecl(), E->getLocation(),
                              Parent, ParentDC, E);
@@ -159,6 +148,64 @@ public:
                                ParentDC);
 
     // FIXME: Lambda init-captures.
+    return true;
+  }
+
+  // RecursiveASTVisitor visits both syntactic and semantic forms, duplicating
+  // the things that we visit. Make sure to only visit the semantic form.
+  // Also visit things that are in the syntactic form but not the semantic one,
+  // for example the indices in DesignatedInitExprs.
+  bool TraverseInitListExpr(InitListExpr *S) {
+
+    class SyntacticFormIndexer :
+              public RecursiveASTVisitor<SyntacticFormIndexer> {
+      IndexingContext &IndexCtx;
+      const NamedDecl *Parent;
+      const DeclContext *ParentDC;
+
+    public:
+      SyntacticFormIndexer(IndexingContext &indexCtx,
+                            const NamedDecl *Parent, const DeclContext *DC)
+        : IndexCtx(indexCtx), Parent(Parent), ParentDC(DC) { }
+
+      bool shouldWalkTypesOfTypeLocs() const { return false; }
+
+      bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
+        for (DesignatedInitExpr::reverse_designators_iterator
+               D = E->designators_rbegin(), DEnd = E->designators_rend();
+               D != DEnd; ++D) {
+          if (D->isFieldDesignator())
+            IndexCtx.handleReference(D->getField(), D->getFieldLoc(),
+                                     Parent, ParentDC, E);
+        }
+        return true;
+      }
+    };
+
+    auto visitForm = [&](InitListExpr *Form) {
+      for (Stmt *SubStmt : Form->children()) {
+        if (!TraverseStmt(SubStmt))
+          return false;
+      }
+      return true;
+    };
+
+    InitListExpr *SemaForm = S->isSemanticForm() ? S : S->getSemanticForm();
+    InitListExpr *SyntaxForm = S->isSemanticForm() ? S->getSyntacticForm() : S;
+
+    if (SemaForm) {
+      // Visit things present in syntactic form but not the semantic form.
+      if (SyntaxForm) {
+        SyntacticFormIndexer(IndexCtx, Parent, ParentDC).TraverseStmt(SyntaxForm);
+      }
+      return visitForm(SemaForm);
+    }
+
+    // No semantic, try the syntactic.
+    if (SyntaxForm) {
+      return visitForm(SyntaxForm);
+    }
+
     return true;
   }
 

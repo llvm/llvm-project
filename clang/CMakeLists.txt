@@ -735,6 +735,10 @@ if (CLANG_ENABLE_BOOTSTRAP)
       list(APPEND PASSTHROUGH_VARIABLES
         -D${varName}=${value})
     endif()
+    if(${variableName} AND variableName MATCHES "LLVM_EXTERNAL_.*_SOURCE_DIR")
+      list(APPEND PASSTHROUGH_VARIABLES
+        -D${variableName}=${${variableName}})
+    endif()
   endforeach()
 
   # Populate the passthrough variables

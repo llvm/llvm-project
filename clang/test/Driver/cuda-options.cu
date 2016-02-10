@@ -105,7 +105,7 @@
 
 // Match no device-side compilation.
 // NODEVICE-NOT: "-cc1" "-triple" "nvptx64-nvidia-cuda"
-// NODEVICE-SAME-NOT: "-fcuda-is-device"
+// NODEVICE-NOT: "-fcuda-is-device"
 
 // INCLUDES-DEVICE:fatbinary
 // INCLUDES-DEVICE-DAG: "--create" "[[FATBINARY:[^"]*]]"
@@ -115,13 +115,13 @@
 // Match host-side preprocessor job with -save-temps.
 // HOST-SAVE: "-cc1" "-triple" "x86_64--linux-gnu"
 // HOST-SAVE-SAME: "-aux-triple" "nvptx64-nvidia-cuda"
-// HOST-SAVE-SAME-NOT: "-fcuda-is-device"
+// HOST-SAVE-NOT: "-fcuda-is-device"
 // HOST-SAVE-SAME: "-x" "cuda"
 
 // Match host-side compilation.
 // HOST: "-cc1" "-triple" "x86_64--linux-gnu"
 // HOST-SAME: "-aux-triple" "nvptx64-nvidia-cuda"
-// HOST-SAME-NOT: "-fcuda-is-device"
+// HOST-NOT: "-fcuda-is-device"
 // HOST-SAME: "-o" "[[HOSTOUTPUT:[^"]*]]"
 // HOST-NOSAVE-SAME: "-x" "cuda"
 // HOST-SAVE-SAME: "-x" "cuda-cpp-output"
@@ -135,7 +135,7 @@
 
 // Match no host compilation.
 // NOHOST-NOT: "-cc1" "-triple"
-// NOHOST-SAME-NOT: "-x" "cuda"
+// NOHOST-NOT: "-x" "cuda"
 
 // Match linker.
 // LINK: "{{.*}}{{ld|link}}{{(.exe)?}}"

@@ -573,19 +573,19 @@ struct UnknownPragmaHandler : public PragmaHandler {
                     Token &PragmaTok) override {
     // Figure out what line we went to and insert the appropriate number of
     // newline characters.
-    if (ShouldExpandTokens) {
-      // The first token does not have expanded macros. Expand them, if
-      // required.
-      Token Toks[] = {PragmaTok};
-      PP.EnterTokenStream(Toks, llvm::array_lengthof(Toks),
-                          /*DisableMacroExpansion=*/false,
-                          /*OwnsTokens=*/false);
-      PP.Lex(PragmaTok);
-    }
     Callbacks->startNewLineIfNeeded();
     Callbacks->MoveToLine(PragmaTok.getLocation());
     Callbacks->OS.write(Prefix, strlen(Prefix));
 
+    if (ShouldExpandTokens) {
+      // The first token does not have expanded macros. Expand them, if
+      // required.
+      auto Toks = llvm::make_unique<Token[]>(1);
+      Toks[0] = PragmaTok;
+      PP.EnterTokenStream(std::move(Toks), /*NumToks=*/1,
+                          /*DisableMacroExpansion=*/false);
+      PP.Lex(PragmaTok);
+    }
     Token PrevToken;
     Token PrevPrevToken;
     PrevToken.startToken();

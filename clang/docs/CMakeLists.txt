@@ -95,6 +95,8 @@ if (LLVM_ENABLE_SPHINX)
     include(AddSphinxTarget)
     if (${SPHINX_OUTPUT_HTML})
       add_sphinx_target(html clang)
+      configure_file(LibASTMatchersReference.html
+        "${CMAKE_CURRENT_BINARY_DIR}/html/LibASTMatchersReference.html" COPYONLY)
     endif()
     if (${SPHINX_OUTPUT_MAN})
       add_sphinx_target(man clang)

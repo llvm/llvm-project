@@ -189,9 +189,16 @@ bool clang::ExecuteCompilerInvocation(CompilerInstance *Clang) {
          e = Clang->getFrontendOpts().Plugins.size(); i != e; ++i) {
     const std::string &Path = Clang->getFrontendOpts().Plugins[i];
     std::string Error;
-    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(Path.c_str(), &Error))
+    llvm::sys::DynamicLibrary DL(
+        llvm::sys::DynamicLibrary::getPermanentLibrary(Path.c_str(), &Error));
+    if (DL.isValid()) {
+      // On Windows, we need to import the plugin front-end action
+      // dynamically.
+      LLVM_IMPORT_REGISTRY(FrontendPluginRegistry, DL);
+    } else {
       Clang->getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
         << Path << Error;
+    }
   }
 
   // Honor -mllvm.

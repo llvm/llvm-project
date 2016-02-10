@@ -67,8 +67,7 @@ patches are needed to make <a href="libstdc++4.4-clang0x.patch">libstdc++-4.4</a
 work with Clang in C++11 mode. Patches are also needed to make
 <a href="libstdc++4.6-clang11.patch">libstdc++-4.6</a>
 and <a href="libstdc++4.7-clang11.patch">libstdc++-4.7</a> work with Clang
-releases prior to version 3.2 in C++11 mode. <tt>thread_local</tt> support
-currently requires the C++ runtime library from g++-4.8 or later.</p>
+releases prior to version 3.2 in C++11 mode.
 
 <table width="689" border="1" cellspacing="0">
  <tr>
@@ -373,7 +372,7 @@ currently requires the C++ runtime library from g++-4.8 or later.</p>
     <tr>
       <td>Thread-local storage</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2659.htm">N2659</a></td>
-      <td class="full" align="center">Clang 3.3</td>
+      <td class="full" align="center">Clang 3.3 <a href="#n2659">(5)</a></td>
     </tr>
     <tr>
       <td>Dynamic initialization and destruction with concurrency</td>
@@ -402,7 +401,7 @@ currently requires the C++ runtime library from g++-4.8 or later.</p>
     <tr>
       <td>Extended integral types</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1988.pdf">N1988</a></td>
-      <td class="na" align="center">N/A <a href="#n1988">(5)</a></td>
+      <td class="na" align="center">N/A <a href="#n1988">(6)</a></td>
     </tr>
 </table>
 
@@ -415,7 +414,11 @@ such as Clang that does not provide garbage collection.</span><br>
 strong compare-exchanges.</span><br>
 <span id="n2664">(4): <code>memory_order_consume</code> is lowered to
 <code>memory_order_acquire</code>.</span><br>
-<span id="n1988">(5): No compiler changes are required for an implementation
+<span id="n2659">(5): <code>thread_local</code> support
+requires a C++ runtime library providing <code>__cxa_thread_atexit</code>, such
+as <a href="http://libcxxabi.llvm.org">libc++abi</a> 3.6 or later,
+or libsupc++ 4.8 or later.</span><br>
+<span id="n1988">(6): No compiler changes are required for an implementation
 such as Clang that does not provide any extended integer types.
 <code>__int128</code> is not treated as an extended integer type,
 because changing <code>intmax_t</code> would be an ABI-incompatible
@@ -501,12 +504,12 @@ Clang version in which each feature became available.</p>
     <tr>
       <td>C++ Sized Deallocation</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3778.html">N3778</a></td>
-      <td class="full" align="center">Clang 3.4 <a href="#n3778">(6)</a></td>
+      <td class="full" align="center">Clang 3.4 <a href="#n3778">(7)</a></td>
     </tr>
 </table>
 
 <p>
-<span id="n3778">(6): In Clang 3.7 and later, sized deallocation is only enabled
+<span id="n3778">(7): In Clang 3.7 and later, sized deallocation is only enabled
 if the user passes the <code>-fsized-deallocation</code> flag. The user must
 supply definitions of the sized deallocation functions, either by providing them
 explicitly or by using a C++ standard library that does. <code>libstdc++</code>
@@ -517,9 +520,9 @@ version 3.7.
 
 <h2 id="cxx17">C++1z implementation status</h2>
 
-<p>Clang has <b>highly experimental</b> support for some proposed features of
-the C++ standard following C++14,
-provisionally named C++1z.  The following table describes which C++1z features
+<p>Clang has <b>experimental</b> support for some proposed features of
+the C++ standard following C++14, provisionally named C++1z.
+The following table describes which C++1z features
 have been implemented in Clang and in which Clang version they became
 available.</p>
 
@@ -564,7 +567,7 @@ as the draft C++1z standard evolves.</p>
     <tr>
       <td>New <tt>auto</tt> rules for direct-list-initialization
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3922.html">N3922</a></td>
-      <td class="svn" align="center">Clang 3.8 <a href="#n3922">(7)</a></td>
+      <td class="svn" align="center">Clang 3.8 <a href="#n3922">(8)</a></td>
     </tr>
     <!-- Urbana papers -->
     <tr>
@@ -613,10 +616,15 @@ as the draft C++1z standard evolves.</p>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0061.html">P0061R1</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
+    <tr>
+      <td>New specification for inheriting constructors (<a href="cxx_dr_status.html#1941">DR1941</a> et al)</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0136r1.html">P0136R1</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
 </table>
 
 <p>
-<span id="n3922">(7): This is a backwards-incompatible change that is applied to
+<span id="n3922">(8): This is a backwards-incompatible change that is applied to
 all language versions that allow type deduction from <tt>auto</tt>
 (per the request of the C++ committee).
 In Clang 3.7, a warning is emitted for all cases that would change meaning.

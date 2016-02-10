@@ -1567,14 +1567,14 @@ void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
     if (VTable->hasInitializer())
       continue;
 
-    llvm::Constant *RTTI = getContext().getLangOpts().RTTIData &&
-                                   VTable->getDLLStorageClass() !=
-                                       llvm::GlobalValue::DLLImportStorageClass
-                               ? getMSCompleteObjectLocator(RD, Info)
-                               : nullptr;
-
     const VTableLayout &VTLayout =
       VFTContext.getVFTableLayout(RD, Info->FullOffsetInMDC);
+
+    llvm::Constant *RTTI = nullptr;
+    if (any_of(VTLayout.vtable_components(),
+               [](const VTableComponent &VTC) { return VTC.isRTTIKind(); }))
+      RTTI = getMSCompleteObjectLocator(RD, Info);
+
     llvm::Constant *Init = CGVT.CreateVTableInitializer(
         RD, VTLayout.vtable_component_begin(),
         VTLayout.getNumVTableComponents(), VTLayout.vtable_thunk_begin(),
