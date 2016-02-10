@@ -186,23 +186,8 @@ TEST(AddressSanitizer, StrNCpyOOBTest) {
 typedef char*(*PointerToStrChr1)(const char*, int);
 typedef char*(*PointerToStrChr2)(char*, int);
 
-UNUSED static void RunStrChrTest(PointerToStrChr1 StrChr) {
-  size_t size = Ident(100);
-  char *str = MallocAndMemsetString(size);
-  str[10] = 'q';
-  str[11] = '\0';
-  EXPECT_EQ(str, StrChr(str, 'z'));
-  EXPECT_EQ(str + 10, StrChr(str, 'q'));
-  EXPECT_EQ(NULL, StrChr(str, 'a'));
-  // StrChr argument points to not allocated memory.
-  EXPECT_DEATH(Ident(StrChr(str - 1, 'z')), LeftOOBReadMessage(1));
-  EXPECT_DEATH(Ident(StrChr(str + size, 'z')), RightOOBReadMessage(0));
-  // Overwrite the terminator and hit not allocated memory.
-  str[11] = 'z';
-  EXPECT_DEATH(Ident(StrChr(str, 'a')), RightOOBReadMessage(0));
-  free(str);
-}
-UNUSED static void RunStrChrTest(PointerToStrChr2 StrChr) {
+template<typename StrChrFn>
+static void RunStrChrTestImpl(StrChrFn *StrChr) {
   size_t size = Ident(100);
   char *str = MallocAndMemsetString(size);
   str[10] = 'q';
@@ -219,11 +204,19 @@ UNUSED static void RunStrChrTest(PointerToStrChr2 StrChr) {
   free(str);
 }
 
+// Prefer to use the standard signature if both are available.
+UNUSED static void RunStrChrTest(PointerToStrChr1 StrChr, ...) {
+  RunStrChrTestImpl(StrChr);
+}
+UNUSED static void RunStrChrTest(PointerToStrChr2 StrChr, int) {
+  RunStrChrTestImpl(StrChr);
+}
+
 TEST(AddressSanitizer, StrChrAndIndexOOBTest) {
-  RunStrChrTest(&strchr);
+  RunStrChrTest(&strchr, 0);
 // No index() on Windows and on Android L.
 #if !defined(_WIN32) && !defined(__ANDROID__)
-  RunStrChrTest(&index);
+  RunStrChrTest(&index, 0);
 #endif
 }
 
