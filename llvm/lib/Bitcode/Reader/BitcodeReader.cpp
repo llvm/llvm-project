@@ -1799,7 +1799,7 @@ std::error_code BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
     switch (Stream.readRecord(Entry.ID, Record)) {
     default:  // Default behavior: unknown type.
       break;
-    case bitc::VST_CODE_ENTRY: {  // VST_ENTRY: [valueid, namechar x N]
+    case bitc::VST_CODE_ENTRY: {  // VST_CODE_ENTRY: [valueid, namechar x N]
       ErrorOr<Value *> ValOrErr = recordValue(Record, 1, TT);
       if (std::error_code EC = ValOrErr.getError())
         return EC;
@@ -1807,7 +1807,7 @@ std::error_code BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
       break;
     }
     case bitc::VST_CODE_FNENTRY: {
-      // VST_FNENTRY: [valueid, offset, namechar x N]
+      // VST_CODE_FNENTRY: [valueid, offset, namechar x N]
       ErrorOr<Value *> ValOrErr = recordValue(Record, 2, TT);
       if (std::error_code EC = ValOrErr.getError())
         return EC;
@@ -5477,7 +5477,7 @@ std::error_code FunctionIndexBitcodeReader::parseValueSymbolTable() {
     default: // Default behavior: ignore (e.g. VST_CODE_BBENTRY records).
       break;
     case bitc::VST_CODE_FNENTRY: {
-      // VST_FNENTRY: [valueid, offset, namechar x N]
+      // VST_CODE_FNENTRY: [valueid, offset, namechar x N]
       if (convertToString(Record, 2, ValueName))
         return error("Invalid record");
       unsigned ValueID = Record[0];
@@ -5496,7 +5496,7 @@ std::error_code FunctionIndexBitcodeReader::parseValueSymbolTable() {
       break;
     }
     case bitc::VST_CODE_COMBINED_FNENTRY: {
-      // VST_FNENTRY: [offset, namechar x N]
+      // VST_CODE_FNENTRY: [offset, namechar x N]
       if (convertToString(Record, 1, ValueName))
         return error("Invalid record");
       uint64_t FuncSummaryOffset = Record[0];
