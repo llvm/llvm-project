@@ -4,6 +4,11 @@
 
 // RUN: %clangxx_msan -std=c++11 -fsanitize-memory-track-origins=2 -g -O3 %s -o %t
 // RUN: MSAN_OPTIONS=store_context_size=1000,origin_history_size=0,origin_history_per_stack_limit=0 %run %t |& FileCheck %s
+//
+// Big-endian mips64 currently hangs on this test. Mark it unsupported to allow
+// llvm-lit to finish. This also marks mips unsupported in most cases but msan
+// is already unsupported for 32-bit mips.
+// UNSUPPORTED: mips64-supported-target
 
 // Fun fact: if test output is redirected to a file (as opposed to
 // being piped directly to FileCheck), we may lose some "done"s due to
