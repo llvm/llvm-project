@@ -735,10 +735,10 @@ ClangASTImporter::Minion::ExecuteDeportWorkQueues ()
             tag_decl->setHasExternalLexicalStorage(false);
             tag_decl->setHasExternalVisibleStorage(false);
         }
-        else if (ObjCInterfaceDecl *interface_decl = dyn_cast<ObjCInterfaceDecl>(decl))
+        else if (ObjCContainerDecl *container_decl = dyn_cast<ObjCContainerDecl>(decl))
         {
-            interface_decl->setHasExternalLexicalStorage(false);
-            interface_decl->setHasExternalVisibleStorage(false);
+            container_decl->setHasExternalLexicalStorage(false);
+            container_decl->setHasExternalVisibleStorage(false);
         }
         
         to_context_md->m_origins.erase(decl);
@@ -949,20 +949,32 @@ ClangASTImporter::Minion::Imported (clang::Decl *from, clang::Decl *to)
         to_namespace_decl->setHasExternalVisibleStorage();
     }
 
-    if (isa<ObjCInterfaceDecl>(from))
+    if (isa<ObjCContainerDecl>(from))
     {
-        ObjCInterfaceDecl *to_interface_decl = dyn_cast<ObjCInterfaceDecl>(to);
+        ObjCContainerDecl *to_container_decl = dyn_cast<ObjCContainerDecl>(to);
 
-        to_interface_decl->setHasExternalLexicalStorage();
-        to_interface_decl->setHasExternalVisibleStorage();
+        to_container_decl->setHasExternalLexicalStorage();
+        to_container_decl->setHasExternalVisibleStorage();
 
         /*to_interface_decl->setExternallyCompleted();*/
 
         if (log)
-            log->Printf("    [ClangASTImporter] To is an ObjCInterfaceDecl - attributes %s%s%s",
-                        (to_interface_decl->hasExternalLexicalStorage() ? " Lexical" : ""),
-                        (to_interface_decl->hasExternalVisibleStorage() ? " Visible" : ""),
-                        (to_interface_decl->hasDefinition() ? " HasDefinition" : ""));
+        {
+            if (ObjCInterfaceDecl *to_interface_decl = llvm::dyn_cast<ObjCInterfaceDecl>(to_container_decl))
+            {
+                log->Printf("    [ClangASTImporter] To is an ObjCInterfaceDecl - attributes %s%s%s",
+                            (to_interface_decl->hasExternalLexicalStorage() ? " Lexical" : ""),
+                            (to_interface_decl->hasExternalVisibleStorage() ? " Visible" : ""),
+                            (to_interface_decl->hasDefinition() ? " HasDefinition" : ""));
+            }
+            else
+            {
+                log->Printf("    [ClangASTImporter] To is an %sDecl - attributes %s%s",
+                            ((Decl*)to_container_decl)->getDeclKindName(),
+                            (to_container_decl->hasExternalLexicalStorage() ? " Lexical" : ""),
+                            (to_container_decl->hasExternalVisibleStorage() ? " Visible" : ""));
+            }
+        }
     }
 
     return clang::ASTImporter::Imported(from, to);
