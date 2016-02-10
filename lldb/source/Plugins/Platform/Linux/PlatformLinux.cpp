@@ -560,10 +560,8 @@ PlatformLinux::GetSoftwareBreakpointTrapOpcode (Target &target,
         break;
     case llvm::Triple::arm:
         {
-            // The ARM reference recommends the use of 0xe7fddefe and 0xdefe
-            // but the linux kernel does otherwise.
-            static const uint8_t g_arm_breakpoint_opcode[] = { 0xf0, 0x01, 0xf0, 0xe7 };
-            static const uint8_t g_thumb_breakpoint_opcode[] = { 0x01, 0xde };
+            static const uint8_t g_arm_breakpoint_opcode[] = { 0x70, 0xbe, 0x20, 0xe1 };
+            static const uint8_t g_thumb_breakpoint_opcode[] = { 0x70, 0xbe };
 
             lldb::BreakpointLocationSP bp_loc_sp (bp_site->GetOwnerAtIndex (0));
             AddressClass addr_class = eAddressClassUnknown;

@@ -292,8 +292,6 @@ class IndexingContext {
   typedef std::pair<const FileEntry *, const Decl *> RefFileOccurrence;
   llvm::DenseSet<RefFileOccurrence> RefFileOccurrences;
 
-  std::deque<DeclGroupRef> TUDeclsInObjCContainer;
-  
   llvm::BumpPtrAllocator StrScratch;
   unsigned StrAdapterCount;
   friend class ScratchAlloc;
@@ -446,12 +444,7 @@ public:
   bool isNotFromSourceFile(SourceLocation Loc) const;
 
   void indexTopLevelDecl(const Decl *D);
-  void indexTUDeclsInObjCContainer();
   void indexDeclGroupRef(DeclGroupRef DG);
-
-  void addTUDeclInObjCContainer(DeclGroupRef DG) {
-    TUDeclsInObjCContainer.push_back(DG);
-  }
 
   void translateLoc(SourceLocation Loc, CXIdxClientFile *indexFile, CXFile *file,
                     unsigned *line, unsigned *column, unsigned *offset);
@@ -468,7 +461,8 @@ private:
   bool handleDecl(const NamedDecl *D,
                   SourceLocation Loc, CXCursor Cursor,
                   DeclInfo &DInfo,
-                  const DeclContext *LexicalDC = nullptr);
+                  const DeclContext *LexicalDC = nullptr,
+                  const DeclContext *SemaDC = nullptr);
 
   bool handleObjCContainer(const ObjCContainerDecl *D,
                            SourceLocation Loc, CXCursor Cursor,

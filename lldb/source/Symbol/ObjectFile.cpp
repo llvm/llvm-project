@@ -241,8 +241,7 @@ ObjectFile::ObjectFile (const lldb::ModuleSP &module_sp,
                         lldb::offset_t file_offset,
                         lldb::offset_t length,
                         const lldb::DataBufferSP& data_sp,
-                        lldb::offset_t data_offset
-) :
+                        lldb::offset_t data_offset) :
     ModuleChild (module_sp),
     m_file (),  // This file could be different from the original module's file
     m_type (eTypeInvalid),
@@ -254,7 +253,8 @@ ObjectFile::ObjectFile (const lldb::ModuleSP &module_sp,
     m_process_wp(),
     m_memory_addr (LLDB_INVALID_ADDRESS),
     m_sections_ap(),
-    m_symtab_ap ()
+    m_symtab_ap (),
+    m_synthetic_symbol_idx (0)
 {
     if (file_spec_ptr)
         m_file = *file_spec_ptr;
@@ -286,7 +286,8 @@ ObjectFile::ObjectFile (const lldb::ModuleSP &module_sp,
     m_process_wp (process_sp),
     m_memory_addr (header_addr),
     m_sections_ap(),
-    m_symtab_ap ()
+    m_symtab_ap (),
+    m_synthetic_symbol_idx (0)
 {
     if (header_data_sp)
         m_data.SetData (header_data_sp, 0, header_data_sp->GetByteSize());
@@ -653,3 +654,13 @@ ObjectFile::GetSymbolTypeFromName (llvm::StringRef name,
     }
     return symbol_type_hint;
 }
+
+ConstString
+ObjectFile::GetNextSyntheticSymbolName()
+{
+    StreamString ss;
+    ConstString file_name = GetModule()->GetFileSpec().GetFilename();
+    ss.Printf("___lldb_unnamed_symbol%u$$%s", ++m_synthetic_symbol_idx, file_name.GetCString());
+    return ConstString(ss.GetData());
+}
+

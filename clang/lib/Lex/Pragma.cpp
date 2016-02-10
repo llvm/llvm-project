@@ -938,13 +938,13 @@ struct PragmaDebugHandler : public PragmaHandler {
     }
 
     SourceLocation NameLoc = Tok.getLocation();
-    Token *Toks = PP.getPreprocessorAllocator().Allocate<Token>(1);
-    Toks->startToken();
-    Toks->setKind(tok::annot_pragma_captured);
-    Toks->setLocation(NameLoc);
+    MutableArrayRef<Token> Toks(
+        PP.getPreprocessorAllocator().Allocate<Token>(1), 1);
+    Toks[0].startToken();
+    Toks[0].setKind(tok::annot_pragma_captured);
+    Toks[0].setLocation(NameLoc);
 
-    PP.EnterTokenStream(Toks, 1, /*DisableMacroExpansion=*/true,
-                        /*OwnsTokens=*/false);
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
   }
 
 // Disable MSVC warning about runtime stack overflow.

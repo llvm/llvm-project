@@ -744,46 +744,25 @@ private:
   MemoizationMap ResultCache;
 };
 
-static CXXRecordDecl *getAsCXXRecordDecl(const Type *TypeNode) {
-  // Type::getAs<...>() drills through typedefs.
-  if (TypeNode->getAs<DependentNameType>() != nullptr ||
-      TypeNode->getAs<DependentTemplateSpecializationType>() != nullptr ||
-      TypeNode->getAs<TemplateTypeParmType>() != nullptr)
-    // Dependent names and template TypeNode parameters will be matched when
-    // the template is instantiated.
-    return nullptr;
-  TemplateSpecializationType const *TemplateType =
-      TypeNode->getAs<TemplateSpecializationType>();
-  if (!TemplateType) {
-    return TypeNode->getAsCXXRecordDecl();
-  }
-  if (TemplateType->getTemplateName().isDependent())
-    // Dependent template specializations will be matched when the
-    // template is instantiated.
-    return nullptr;
+static CXXRecordDecl *
+getAsCXXRecordDeclOrPrimaryTemplate(const Type *TypeNode) {
+  if (auto *RD = TypeNode->getAsCXXRecordDecl())
+    return RD;
 
-  // For template specialization types which are specializing a template
-  // declaration which is an explicit or partial specialization of another
-  // template declaration, getAsCXXRecordDecl() returns the corresponding
-  // ClassTemplateSpecializationDecl.
-  //
-  // For template specialization types which are specializing a template
-  // declaration which is neither an explicit nor partial specialization of
-  // another template declaration, getAsCXXRecordDecl() returns NULL and
-  // we get the CXXRecordDecl of the templated declaration.
-  CXXRecordDecl *SpecializationDecl = TemplateType->getAsCXXRecordDecl();
-  if (SpecializationDecl) {
-    return SpecializationDecl;
-  }
-  NamedDecl *Templated =
-      TemplateType->getTemplateName().getAsTemplateDecl()->getTemplatedDecl();
-  if (CXXRecordDecl *TemplatedRecord = dyn_cast<CXXRecordDecl>(Templated)) {
-    return TemplatedRecord;
-  }
-  // Now it can still be that we have an alias template.
-  TypeAliasDecl *AliasDecl = dyn_cast<TypeAliasDecl>(Templated);
-  assert(AliasDecl);
-  return getAsCXXRecordDecl(AliasDecl->getUnderlyingType().getTypePtr());
+  // Find the innermost TemplateSpecializationType that isn't an alias template.
+  auto *TemplateType = TypeNode->getAs<TemplateSpecializationType>();
+  while (TemplateType && TemplateType->isTypeAlias())
+    TemplateType =
+        TemplateType->getAliasedType()->getAs<TemplateSpecializationType>();
+
+  // If this is the name of a (dependent) template specialization, use the
+  // definition of the template, even though it might be specialized later.
+  if (TemplateType)
+    if (auto *ClassTemplate = dyn_cast_or_null<ClassTemplateDecl>(
+          TemplateType->getTemplateName().getAsTemplateDecl()))
+      return ClassTemplate->getTemplatedDecl();
+
+  return nullptr;
 }
 
 // Returns true if the given class is directly or indirectly derived
@@ -800,7 +779,10 @@ bool MatchASTVisitor::classIsDerivedFrom(const CXXRecordDecl *Declaration,
     if (typeHasMatchingAlias(TypeNode, Base, Builder))
       return true;
 
-    CXXRecordDecl *ClassDecl = getAsCXXRecordDecl(TypeNode);
+    // FIXME: Going to the primary template here isn't really correct, but
+    // unfortunately we accept a Decl matcher for the base class not a Type
+    // matcher, so it's the best thing we can do with our current interface.
+    CXXRecordDecl *ClassDecl = getAsCXXRecordDeclOrPrimaryTemplate(TypeNode);
     if (!ClassDecl)
       continue;
     if (ClassDecl == Declaration) {

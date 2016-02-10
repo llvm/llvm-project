@@ -200,7 +200,7 @@ public:
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
   bool needsPlt(uint32_t Type, SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA, uint64_t ZA = 0,
+                   uint64_t S, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
   bool isHintRel(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
@@ -1385,9 +1385,9 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 }
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
-  CopyRel = R_MIPS_COPY;
-  PageSize = 65536;
   GotHeaderEntriesNum = 2;
+  PageSize = 65536;
+  CopyRel = R_MIPS_COPY;
   RelativeRel = R_MIPS_REL32;
 }
 
@@ -1450,29 +1450,29 @@ static uint16_t mipsHigh(uint64_t V) { return (V + 0x8000) >> 16; }
 
 template <endianness E, uint8_t BSIZE, uint8_t SHIFT>
 static void applyMipsPcReloc(uint8_t *Loc, uint32_t Type, uint64_t P,
-                             uint64_t SA) {
+                             uint64_t S) {
   uint32_t Mask = 0xffffffff >> (32 - BSIZE);
   uint32_t Instr = read32<E>(Loc);
   int64_t A = SignExtend64<BSIZE + SHIFT>((Instr & Mask) << SHIFT);
   if (SHIFT > 0)
-    checkAlignment<(1 << SHIFT)>(SA + A, Type);
-  int64_t V = SA + A - P;
+    checkAlignment<(1 << SHIFT)>(S + A, Type);
+  int64_t V = S + A - P;
   checkInt<BSIZE + SHIFT>(V, Type);
   write32<E>(Loc, (Instr & ~Mask) | ((V >> SHIFT) & Mask));
 }
 
 template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
-                                       uint32_t Type, uint64_t P, uint64_t SA,
+                                       uint32_t Type, uint64_t P, uint64_t S,
                                        uint64_t ZA, uint8_t *PairedLoc) const {
   const endianness E = ELFT::TargetEndianness;
   switch (Type) {
   case R_MIPS_32:
-    add32<E>(Loc, SA);
+    add32<E>(Loc, S);
     break;
   case R_MIPS_CALL16:
   case R_MIPS_GOT16: {
-    int64_t V = SA - getMipsGpAddr<ELFT>();
+    int64_t V = S - getMipsGpAddr<ELFT>();
     if (Type == R_MIPS_GOT16)
       checkInt<16>(V, Type);
     write32<E>(Loc, (read32<E>(Loc) & 0xffff0000) | (V & 0xffff));
@@ -1480,23 +1480,23 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   }
   case R_MIPS_GPREL16: {
     uint32_t Instr = read32<E>(Loc);
-    int64_t V = SA + SignExtend64<16>(Instr & 0xffff) - getMipsGpAddr<ELFT>();
+    int64_t V = S + SignExtend64<16>(Instr & 0xffff) - getMipsGpAddr<ELFT>();
     checkInt<16>(V, Type);
     write32<E>(Loc, (Instr & 0xffff0000) | (V & 0xffff));
     break;
   }
   case R_MIPS_GPREL32:
-    write32<E>(Loc, SA + int32_t(read32<E>(Loc)) - getMipsGpAddr<ELFT>());
+    write32<E>(Loc, S + int32_t(read32<E>(Loc)) - getMipsGpAddr<ELFT>());
     break;
   case R_MIPS_HI16: {
     uint32_t Instr = read32<E>(Loc);
     if (PairedLoc) {
       uint64_t AHL = ((Instr & 0xffff) << 16) +
                      SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA + AHL));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S + AHL));
     } else {
       warning("Can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16");
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S));
     }
     break;
   }
@@ -1506,40 +1506,40 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   case R_MIPS_LO16: {
     uint32_t Instr = read32<E>(Loc);
     int64_t AHL = SignExtend64<16>(Instr & 0xffff);
-    write32<E>(Loc, (Instr & 0xffff0000) | ((SA + AHL) & 0xffff));
+    write32<E>(Loc, (Instr & 0xffff0000) | ((S + AHL) & 0xffff));
     break;
   }
   case R_MIPS_PC16:
-    applyMipsPcReloc<E, 16, 2>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 16, 2>(Loc, Type, P, S);
     break;
   case R_MIPS_PC19_S2:
-    applyMipsPcReloc<E, 19, 2>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 19, 2>(Loc, Type, P, S);
     break;
   case R_MIPS_PC21_S2:
-    applyMipsPcReloc<E, 21, 2>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 21, 2>(Loc, Type, P, S);
     break;
   case R_MIPS_PC26_S2:
-    applyMipsPcReloc<E, 26, 2>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 26, 2>(Loc, Type, P, S);
     break;
   case R_MIPS_PC32:
-    applyMipsPcReloc<E, 32, 0>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 32, 0>(Loc, Type, P, S);
     break;
   case R_MIPS_PCHI16: {
     uint32_t Instr = read32<E>(Loc);
     if (PairedLoc) {
       uint64_t AHL = ((Instr & 0xffff) << 16) +
                      SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA + AHL - P));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S + AHL - P));
     } else {
       warning("Can't find matching R_MIPS_PCLO16 relocation for R_MIPS_PCHI16");
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA - P));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S - P));
     }
     break;
   }
   case R_MIPS_PCLO16: {
     uint32_t Instr = read32<E>(Loc);
     int64_t AHL = SignExtend64<16>(Instr & 0xffff);
-    write32<E>(Loc, (Instr & 0xffff0000) | ((SA + AHL - P) & 0xffff));
+    write32<E>(Loc, (Instr & 0xffff0000) | ((S + AHL - P) & 0xffff));
     break;
   }
   default:

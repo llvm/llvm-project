@@ -755,13 +755,12 @@ MacroArgs *Preprocessor::ReadFunctionLikeMacroArgs(Token &MacroName,
           // Do not lose the EOF/EOD.  Return it to the client.
           MacroName = Tok;
           return nullptr;
-        } else {
-          // Do not lose the EOF/EOD.
-          Token *Toks = new Token[1];
-          Toks[0] = Tok;
-          EnterTokenStream(Toks, 1, true, true);
-          break;
         }
+        // Do not lose the EOF/EOD.
+        auto Toks = llvm::make_unique<Token[]>(1);
+        Toks[0] = Tok;
+        EnterTokenStream(std::move(Toks), 1, true);
+        break;
       } else if (Tok.is(tok::r_paren)) {
         // If we found the ) token, the macro arg list is done.
         if (NumParens-- == 0) {
