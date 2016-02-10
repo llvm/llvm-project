@@ -1825,7 +1825,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // facts about the relocate value, while being careful to
     // preserve relocation semantics.
     Value *DerivedPtr = cast<GCRelocateInst>(II)->getDerivedPtr();
-    auto *GCRelocateType = cast<PointerType>(II->getType());
 
     // Remove the relocation if unused, note that this check is required
     // to prevent the cases below from looping forever.
@@ -1836,36 +1835,34 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // TODO: provide a hook for this in GCStrategy.  This is clearly legal for
     // most practical collectors, but there was discussion in the review thread
     // about whether it was legal for all possible collectors.
-    if (isa<UndefValue>(DerivedPtr)) {
-      // gc_relocate is uncasted. Use undef of gc_relocate's type to replace it.
-      return replaceInstUsesWith(*II, UndefValue::get(GCRelocateType));
-    }
+    if (isa<UndefValue>(DerivedPtr))
+      // Use undef of gc_relocate's type to replace it.
+      return replaceInstUsesWith(*II, UndefValue::get(II->getType()));
 
-    // The relocation of null will be null for most any collector.
-    // TODO: provide a hook for this in GCStrategy.  There might be some weird
-    // collector this property does not hold for.
-    if (isa<ConstantPointerNull>(DerivedPtr)) {
-      // gc_relocate is uncasted. Use null-pointer of gc_relocate's type to
-      // replace it.
-      return replaceInstUsesWith(*II, ConstantPointerNull::get(GCRelocateType));
-    }
-
-    // isKnownNonNull -> nonnull attribute
-    if (isKnownNonNullAt(DerivedPtr, II, DT, TLI))
-      II->addAttribute(AttributeSet::ReturnIndex, Attribute::NonNull);
-
-    // isDereferenceablePointer -> deref attribute
-    if (isDereferenceablePointer(DerivedPtr, DL)) {
-      if (Argument *A = dyn_cast<Argument>(DerivedPtr)) {
-        uint64_t Bytes = A->getDereferenceableBytes();
-        II->addDereferenceableAttr(AttributeSet::ReturnIndex, Bytes);
-      }
+    if (auto *PT = dyn_cast<PointerType>(II->getType())) {
+      // The relocation of null will be null for most any collector.
+      // TODO: provide a hook for this in GCStrategy.  There might be some
+      // weird collector this property does not hold for.
+      if (isa<ConstantPointerNull>(DerivedPtr))
+        // Use null-pointer of gc_relocate's type to replace it.
+        return replaceInstUsesWith(*II, ConstantPointerNull::get(PT));
+      
+      // isKnownNonNull -> nonnull attribute
+      if (isKnownNonNullAt(DerivedPtr, II, DT, TLI))
+        II->addAttribute(AttributeSet::ReturnIndex, Attribute::NonNull);
+      
+      // isDereferenceablePointer -> deref attribute
+      if (isDereferenceablePointer(DerivedPtr, DL))
+        if (Argument *A = dyn_cast<Argument>(DerivedPtr))
+          II->addDereferenceableAttr(AttributeSet::ReturnIndex,
+                                     A->getDereferenceableBytes());
     }
 
     // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
     // Canonicalize on the type from the uses to the defs
 
     // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
+    break;
   }
   }
 

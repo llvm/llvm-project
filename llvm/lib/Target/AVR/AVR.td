@@ -514,9 +514,9 @@ include "AVRRegisterInfo.td"
 // Instruction Descriptions
 //===---------------------------------------------------------------------===//
 
-//include "AVRInstrInfo.td"
+include "AVRInstrInfo.td"
 
-//def AVRInstrInfo : InstrInfo;
+def AVRInstrInfo : InstrInfo;
 
 //===---------------------------------------------------------------------===//
 // Calling Conventions
@@ -554,7 +554,7 @@ include "AVRCallingConv.td"
 //===---------------------------------------------------------------------===//
 
 def AVR : Target {
-//   let InstructionSet         = AVRInstrInfo;
+   let InstructionSet         = AVRInstrInfo;
 //   let AssemblyWriters        = [AVRAsmWriter];
 //
 //   let AssemblyParsers        = [AVRAsmParser];

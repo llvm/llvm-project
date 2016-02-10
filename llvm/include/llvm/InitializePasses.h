@@ -316,6 +316,7 @@ void initializeFuncletLayoutPass(PassRegistry &);
 void initializeLoopLoadEliminationPass(PassRegistry&);
 void initializeFunctionImportPassPass(PassRegistry &);
 void initializeLoopVersioningPassPass(PassRegistry &);
+void initializeWholeProgramDevirtPass(PassRegistry &);
 }
 
 #endif

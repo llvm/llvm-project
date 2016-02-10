@@ -1,0 +1,7 @@
+RUN: llvm-size -m %p/Inputs/darwin-m.o | FileCheck --check-prefix="DARWIN" %s
+
+DARWIN: Segment : 8
+DARWIN-NEXT:	Section (__TEXT, __text): 4
+DARWIN-NEXT:	Section (__DATA, __data): 4
+DARWIN-NEXT:	total 8
+DARWIN-NEXT: total 8

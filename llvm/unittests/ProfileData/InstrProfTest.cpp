@@ -746,6 +746,12 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
   R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar3"));
   ASSERT_EQ(StringRef("bar3"), R);
 
+  // negative tests
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("bar4"));
+  ASSERT_EQ(StringRef(), R);
+  R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("foo4"));
+  ASSERT_EQ(StringRef(), R);
+
   // Now incrementally update the symtab
   Symtab.addFuncName("blah_1");
   Symtab.addFuncName("blah_2");

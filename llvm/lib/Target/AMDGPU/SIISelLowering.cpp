@@ -1703,8 +1703,7 @@ SDValue SITargetLowering::LowerFastFDIV(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
-  SDValue FastLowered = LowerFastFDIV(Op, DAG);
-  if (FastLowered.getNode())
+  if (SDValue FastLowered = LowerFastFDIV(Op, DAG))
     return FastLowered;
 
   // This uses v_rcp_f32 which does not handle denormals. Let this hit a
@@ -1835,8 +1834,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
   }
 
-  SDValue Ret = AMDGPUTargetLowering::LowerSTORE(Op, DAG);
-  if (Ret.getNode())
+  if (SDValue Ret = AMDGPUTargetLowering::LowerSTORE(Op, DAG))
     return Ret;
 
   if (VT.isVector() && VT.getVectorNumElements() >= 8)

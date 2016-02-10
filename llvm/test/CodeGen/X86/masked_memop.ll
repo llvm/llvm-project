@@ -1080,9 +1080,124 @@ define void @one_mask_bit_set5(<8 x double>* %addr, <8 x double> %val) {
   ret void
 }
 
+;  When only one element of the mask is set, reduce to a scalar load.
+
+define <4 x i32> @load_one_mask_bit_set1(<4 x i32>* %addr, <4 x i32> %val) {
+; AVX-LABEL: load_one_mask_bit_set1:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vpinsrd $0, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: load_one_mask_bit_set1:
+; AVX512:       ## BB#0:
+; AVX512-NEXT:    vpinsrd $0, (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %res = call <4 x i32> @llvm.masked.load.v4i32(<4 x i32>* %addr, i32 4, <4 x i1><i1 true, i1 false, i1 false, i1 false>, <4 x i32> %val)
+  ret <4 x i32> %res
+}
+
+; Choose a different element to show that the correct address offset is produced.
+
+define <4 x float> @load_one_mask_bit_set2(<4 x float>* %addr, <4 x float> %val) {
+; AVX-LABEL: load_one_mask_bit_set2:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vinsertps $32, 8(%rdi), %xmm0, %xmm0 ## xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: load_one_mask_bit_set2:
+; AVX512:       ## BB#0:
+; AVX512-NEXT:    vinsertps $32, 8(%rdi), %xmm0, %xmm0 ## xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX512-NEXT:    retq
+  %res = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>, <4 x float> %val)
+  ret <4 x float> %res
+}
+
+; Choose a different scalar type and a high element of a 256-bit vector because AVX doesn't support those evenly.
+
+define <4 x i64> @load_one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
+; AVX1-LABEL: load_one_mask_bit_set3:
+; AVX1:       ## BB#0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpinsrq $0, 16(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load_one_mask_bit_set3:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpinsrq $0, 16(%rdi), %xmm1, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: load_one_mask_bit_set3:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512F-NEXT:    vpinsrq $0, 16(%rdi), %xmm1, %xmm1
+; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: load_one_mask_bit_set3:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; SKX-NEXT:    vpinsrq $0, 16(%rdi), %xmm1, %xmm1
+; SKX-NEXT:    vinserti32x4 $1, %xmm1, %ymm0, %ymm0
+; SKX-NEXT:    retq
+  %res = call <4 x i64> @llvm.masked.load.v4i64(<4 x i64>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>, <4 x i64> %val)
+  ret <4 x i64> %res
+}
+
+; Choose a different scalar type and a high element of a 256-bit vector because AVX doesn't support those evenly.
+
+define <4 x double> @load_one_mask_bit_set4(<4 x double>* %addr, <4 x double> %val) {
+; AVX-LABEL: load_one_mask_bit_set4:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vmovhpd 24(%rdi), %xmm1, %xmm1  ## xmm1 = xmm1[0],mem[0]
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX512F-LABEL: load_one_mask_bit_set4:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX512F-NEXT:    vmovhpd 24(%rdi), %xmm1, %xmm1  ## xmm1 = xmm1[0],mem[0]
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: load_one_mask_bit_set4:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; SKX-NEXT:    vmovhpd 24(%rdi), %xmm1, %xmm1  ## xmm1 = xmm1[0],mem[0]
+; SKX-NEXT:    vinsertf32x4 $1, %xmm1, %ymm0, %ymm0
+; SKX-NEXT:    retq
+  %res = call <4 x double> @llvm.masked.load.v4f64(<4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>, <4 x double> %val)
+  ret <4 x double> %res
+}
+
+; Try a 512-bit vector to make sure AVX doesn't die and AVX512 works as expected.
+
+define <8 x double> @load_one_mask_bit_set5(<8 x double>* %addr, <8 x double> %val) {
+; AVX-LABEL: load_one_mask_bit_set5:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: load_one_mask_bit_set5:
+; AVX512:       ## BB#0:
+; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
+; AVX512-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; AVX512-NEXT:    vinsertf32x4 $3, %xmm1, %zmm0, %zmm0
+; AVX512-NEXT:    retq
+  %res = call <8 x double> @llvm.masked.load.v8f64(<8 x double>* %addr, i32 4, <8 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x double> %val)
+  ret <8 x double> %res
+}
+
 declare <16 x i32> @llvm.masked.load.v16i32(<16 x i32>*, i32, <16 x i1>, <16 x i32>)
 declare <4 x i32> @llvm.masked.load.v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
 declare <2 x i32> @llvm.masked.load.v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
+declare <4 x i64> @llvm.masked.load.v4i64(<4 x i64>*, i32, <4 x i1>, <4 x i64>)
 declare void @llvm.masked.store.v16i32(<16 x i32>, <16 x i32>*, i32, <16 x i1>)
 declare void @llvm.masked.store.v8i32(<8 x i32>, <8 x i32>*, i32, <8 x i1>)
 declare void @llvm.masked.store.v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)

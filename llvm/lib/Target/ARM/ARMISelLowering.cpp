@@ -3964,8 +3964,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   if (getTargetMachine().Options.UnsafeFPMath &&
       (CC == ISD::SETEQ || CC == ISD::SETOEQ ||
        CC == ISD::SETNE || CC == ISD::SETUNE)) {
-    SDValue Result = OptimizeVFPBrcond(Op, DAG);
-    if (Result.getNode())
+    if (SDValue Result = OptimizeVFPBrcond(Op, DAG))
       return Result;
   }
 
@@ -6231,11 +6230,9 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) {
   if ((VT == MVT::v8i16 || VT == MVT::v16i8) && isReverseMask(ShuffleMask, VT))
     return LowerReverse_VECTOR_SHUFFLEv16i8_v8i16(Op, DAG);
 
-  if (VT == MVT::v8i8) {
-    SDValue NewOp = LowerVECTOR_SHUFFLEv8i8(Op, ShuffleMask, DAG);
-    if (NewOp.getNode())
+  if (VT == MVT::v8i8)
+    if (SDValue NewOp = LowerVECTOR_SHUFFLEv8i8(Op, ShuffleMask, DAG))
       return NewOp;
-  }
 
   return SDValue();
 }
@@ -8498,16 +8495,12 @@ SDValue combineSelectAndUseCommutative(SDNode *N, bool AllOnes,
                                        TargetLowering::DAGCombinerInfo &DCI) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  if (N0.getNode()->hasOneUse()) {
-    SDValue Result = combineSelectAndUse(N, N0, N1, DCI, AllOnes);
-    if (Result.getNode())
+  if (N0.getNode()->hasOneUse())
+    if (SDValue Result = combineSelectAndUse(N, N0, N1, DCI, AllOnes))
       return Result;
-  }
-  if (N1.getNode()->hasOneUse()) {
-    SDValue Result = combineSelectAndUse(N, N1, N0, DCI, AllOnes);
-    if (Result.getNode())
+  if (N1.getNode()->hasOneUse())
+    if (SDValue Result = combineSelectAndUse(N, N1, N0, DCI, AllOnes))
       return Result;
-  }
   return SDValue();
 }
 
@@ -8766,15 +8759,13 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
                                           const ARMSubtarget *Subtarget){
 
   // Attempt to create vpaddl for this add.
-  SDValue Result = AddCombineToVPADDL(N, N0, N1, DCI, Subtarget);
-  if (Result.getNode())
+  if (SDValue Result = AddCombineToVPADDL(N, N0, N1, DCI, Subtarget))
     return Result;
 
   // fold (add (select cc, 0, c), x) -> (select cc, x, (add, x, c))
-  if (N0.getNode()->hasOneUse()) {
-    SDValue Result = combineSelectAndUse(N, N0, N1, DCI);
-    if (Result.getNode()) return Result;
-  }
+  if (N0.getNode()->hasOneUse())
+    if (SDValue Result = combineSelectAndUse(N, N0, N1, DCI))
+      return Result;
   return SDValue();
 }
 
@@ -8787,8 +8778,7 @@ static SDValue PerformADDCombine(SDNode *N,
   SDValue N1 = N->getOperand(1);
 
   // First try with the default operand order.
-  SDValue Result = PerformADDCombineWithOperands(N, N0, N1, DCI, Subtarget);
-  if (Result.getNode())
+  if (SDValue Result = PerformADDCombineWithOperands(N, N0, N1, DCI, Subtarget))
     return Result;
 
   // If that didn't work, try again with the operands commuted.
@@ -8803,10 +8793,9 @@ static SDValue PerformSUBCombine(SDNode *N,
   SDValue N1 = N->getOperand(1);
 
   // fold (sub x, (select cc, 0, c)) -> (select cc, x, (sub, x, c))
-  if (N1.getNode()->hasOneUse()) {
-    SDValue Result = combineSelectAndUse(N, N1, N0, DCI);
-    if (Result.getNode()) return Result;
-  }
+  if (N1.getNode()->hasOneUse())
+    if (SDValue Result = combineSelectAndUse(N, N1, N0, DCI))
+      return Result;
 
   return SDValue();
 }
@@ -8976,8 +8965,7 @@ static SDValue PerformANDCombine(SDNode *N,
 
   if (!Subtarget->isThumb1Only()) {
     // fold (and (select cc, -1, c), x) -> (select cc, x, (and, x, c))
-    SDValue Result = combineSelectAndUseCommutative(N, true, DCI);
-    if (Result.getNode())
+    if (SDValue Result = combineSelectAndUseCommutative(N, true, DCI))
       return Result;
   }
 
@@ -9019,8 +9007,7 @@ static SDValue PerformORCombine(SDNode *N,
 
   if (!Subtarget->isThumb1Only()) {
     // fold (or (select cc, 0, c), x) -> (select cc, x, (or, x, c))
-    SDValue Result = combineSelectAndUseCommutative(N, false, DCI);
-    if (Result.getNode())
+    if (SDValue Result = combineSelectAndUseCommutative(N, false, DCI))
       return Result;
   }
 
@@ -9193,8 +9180,7 @@ static SDValue PerformXORCombine(SDNode *N,
 
   if (!Subtarget->isThumb1Only()) {
     // fold (xor (select cc, 0, c), x) -> (select cc, x, (xor, x, c))
-    SDValue Result = combineSelectAndUseCommutative(N, false, DCI);
-    if (Result.getNode())
+    if (SDValue Result = combineSelectAndUseCommutative(N, false, DCI))
       return Result;
   }
 
@@ -9420,11 +9406,9 @@ static SDValue PerformBUILD_VECTORCombine(SDNode *N,
   // into a pair of GPRs, which is fine when the value is used as a scalar,
   // but if the i64 value is converted to a vector, we need to undo the VMOVRRD.
   SelectionDAG &DAG = DCI.DAG;
-  if (N->getNumOperands() == 2) {
-    SDValue RV = PerformVMOVDRRCombine(N, DAG);
-    if (RV.getNode())
+  if (N->getNumOperands() == 2)
+    if (SDValue RV = PerformVMOVDRRCombine(N, DAG))
       return RV;
-  }
 
   // Load i64 elements as f64 values so that type legalization does not split
   // them up into i32 values.

@@ -11,7 +11,11 @@ add_llvm_tool(llvm-config
 # Compute the substitution values for various items.
 get_property(LLVM_SYSTEM_LIBS_LIST TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS)
 foreach(l ${LLVM_SYSTEM_LIBS_LIST})
-  set(SYSTEM_LIBS ${SYSTEM_LIBS} "-l${l}")
+  if(MSVC)
+    set(SYSTEM_LIBS ${SYSTEM_LIBS} "${l}.lib")
+  else()
+    set(SYSTEM_LIBS ${SYSTEM_LIBS} "-l${l}")
+  endif()
 endforeach()
 string(REPLACE ";" " " SYSTEM_LIBS "${SYSTEM_LIBS}")
 

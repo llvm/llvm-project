@@ -4018,6 +4018,7 @@ const MCExpr *MipsAsmParser::evaluateRelocExpr(const MCExpr *Expr,
       Val = MCE->getValue() & 0xffff;
       break;
     case MCSymbolRefExpr::VK_Mips_ABS_HI:
+    case MCSymbolRefExpr::VK_Mips_GOT:
       // Get the 2nd 16-bits. Also add 1 if bit 15 is 1, to compensate for low
       // 16 bits being negative.
       Val = ((MCE->getValue() + 0x8000) >> 16) & 0xffff;

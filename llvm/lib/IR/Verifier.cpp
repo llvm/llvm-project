@@ -4075,6 +4075,44 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            "eh.exceptionpointer argument must be a catchpad", CS);
     break;
   }
+  case Intrinsic::masked_load: {
+    Assert(CS.getType()->isVectorTy(), "masked_load: must return a vector", CS);
+    
+    Value *Ptr = CS.getArgOperand(0);
+    //Value *Alignment = CS.getArgOperand(1);
+    Value *Mask = CS.getArgOperand(2);
+    Value *PassThru = CS.getArgOperand(3);
+    Assert(Mask->getType()->isVectorTy(),
+           "masked_load: mask must be vector", CS);
+
+    // DataTy is the overloaded type
+    Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
+    Assert(DataTy == CS.getType(), 
+           "masked_load: return must match pointer type", CS);
+    Assert(PassThru->getType() == DataTy,
+           "masked_load: pass through and data type must match", CS);
+    Assert(Mask->getType()->getVectorNumElements() ==
+           DataTy->getVectorNumElements(), 
+           "masked_load: vector mask must be same length as data", CS);
+    break;
+  }
+  case Intrinsic::masked_store: {
+    Value *Val = CS.getArgOperand(0);
+    Value *Ptr = CS.getArgOperand(1);
+    //Value *Alignment = CS.getArgOperand(2);
+    Value *Mask = CS.getArgOperand(3);
+    Assert(Mask->getType()->isVectorTy(),
+           "masked_store: mask must be vector", CS);
+
+    // DataTy is the overloaded type
+    Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
+    Assert(DataTy == Val->getType(), 
+           "masked_store: storee must match pointer type", CS);
+    Assert(Mask->getType()->getVectorNumElements() ==
+           DataTy->getVectorNumElements(), 
+           "masked_store: vector mask must be same length as data", CS);
+    break;
+  }
   };
 }
 

@@ -339,6 +339,9 @@ public:
   void setConvergent() {
     addFnAttr(Attribute::Convergent);
   }
+  void setNotConvergent() {
+    removeFnAttr(Attribute::Convergent);
+  }
 
   /// Determine if the function is known not to recurse, directly or
   /// indirectly.

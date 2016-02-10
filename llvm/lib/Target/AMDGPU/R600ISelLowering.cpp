@@ -1271,10 +1271,8 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDValue Value = Op.getOperand(1);
   SDValue Ptr = Op.getOperand(2);
 
-  SDValue Result = AMDGPUTargetLowering::LowerSTORE(Op, DAG);
-  if (Result.getNode()) {
+  if (SDValue Result = AMDGPUTargetLowering::LowerSTORE(Op, DAG))
     return Result;
-  }
 
   if (StoreNode->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS) {
     if (StoreNode->isTruncatingStore()) {
@@ -1328,16 +1326,13 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
   EVT ValueVT = Value.getValueType();
 
-  if (StoreNode->getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS) {
+  if (StoreNode->getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
     return SDValue();
-  }
 
-  SDValue Ret = AMDGPUTargetLowering::LowerSTORE(Op, DAG);
-  if (Ret.getNode()) {
+  if (SDValue Ret = AMDGPUTargetLowering::LowerSTORE(Op, DAG))
     return Ret;
-  }
-  // Lowering for indirect addressing
 
+  // Lowering for indirect addressing
   const MachineFunction &MF = DAG.getMachineFunction();
   const AMDGPUFrameLowering *TFL =
       static_cast<const AMDGPUFrameLowering *>(Subtarget->getFrameLowering());
@@ -1906,8 +1901,7 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
 
   case ISD::SELECT_CC: {
     // Try common optimizations
-    SDValue Ret = AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
-    if (Ret.getNode())
+    if (SDValue Ret = AMDGPUTargetLowering::PerformDAGCombine(N, DCI))
       return Ret;
 
     // fold selectcc (selectcc x, y, a, b, cc), b, a, b, seteq ->

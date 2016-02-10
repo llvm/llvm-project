@@ -1029,10 +1029,8 @@ SDValue SelectionDAGBuilder::getValue(const Value *V) {
 
   // If there's a virtual register allocated and initialized for this
   // value, use it.
-  SDValue copyFromReg = getCopyFromRegs(V, V->getType());
-  if (copyFromReg.getNode()) {
+  if (SDValue copyFromReg = getCopyFromRegs(V, V->getType()))
     return copyFromReg;
-  }
 
   // Otherwise create a new SDValue and remember it.
   SDValue Val = getValueImpl(V);
@@ -7512,8 +7510,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 void TargetLowering::LowerOperationWrapper(SDNode *N,
                                            SmallVectorImpl<SDValue> &Results,
                                            SelectionDAG &DAG) const {
-  SDValue Res = LowerOperation(SDValue(N, 0), DAG);
-  if (Res.getNode())
+  if (SDValue Res = LowerOperation(SDValue(N, 0), DAG))
     Results.push_back(Res);
 }
 

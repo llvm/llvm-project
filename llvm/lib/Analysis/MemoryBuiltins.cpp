@@ -144,7 +144,7 @@ static const AllocFnsTy *getAllocationData(const Value *V, AllocType AllocTy,
 
 static bool hasNoAliasAttr(const Value *V, bool LookThroughBitCast) {
   ImmutableCallSite CS(LookThroughBitCast ? V->stripPointerCasts() : V);
-  return CS && CS.hasFnAttr(Attribute::NoAlias);
+  return CS && CS.paramHasAttr(AttributeSet::ReturnIndex, Attribute::NoAlias);
 }
 
 
