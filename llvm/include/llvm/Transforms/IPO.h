@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace llvm {
 
@@ -126,7 +127,11 @@ Pass *createPruneEHPass();
 ///
 /// Note that commandline options that are used with the above function are not
 /// used now!
+ModulePass *createInternalizePass(StringSet<> ExportList);
+
+/// Same as above, but with an exportList created for an array.
 ModulePass *createInternalizePass(ArrayRef<const char *> ExportList);
+
 /// createInternalizePass - Same as above, but with an empty exportList.
 ModulePass *createInternalizePass();
 
