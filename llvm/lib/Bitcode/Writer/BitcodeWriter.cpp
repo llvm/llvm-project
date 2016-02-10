@@ -622,6 +622,24 @@ static uint64_t WriteValueSymbolTableForwardDecl(const ValueSymbolTable &VST,
   return Stream.GetCurrentBitNo() - 32;
 }
 
+enum StringEncoding { SE_Char6, SE_Fixed7, SE_Fixed8 };
+
+/// Determine the encoding to use for the given string name and length.
+static StringEncoding getStringEncoding(const char *Str, unsigned StrLen) {
+  bool isChar6 = true;
+  for (const char *C = Str, *E = C + StrLen; C != E; ++C) {
+    if (isChar6)
+      isChar6 = BitCodeAbbrevOp::isChar6(*C);
+    if ((unsigned char)*C & 128)
+      // don't bother scanning the rest.
+      return SE_Fixed8;
+  }
+  if (isChar6)
+    return SE_Char6;
+  else
+    return SE_Fixed7;
+}
+
 /// Emit top-level description of module, including target triple, inline asm,
 /// descriptors for global variables, and function prototype info.
 /// Returns the bit offset to backpatch with the location of the real VST.
@@ -795,13 +813,40 @@ static uint64_t WriteModuleInfo(const Module *M, const ValueEnumerator &VE,
   // function importing where we lazy load the metadata as a postpass,
   // we want to avoid parsing the module-level metadata before parsing
   // the imported functions.
-  BitCodeAbbrev *Abbv = new BitCodeAbbrev();
-  Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_METADATA_VALUES));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
-  unsigned MDValsAbbrev = Stream.EmitAbbrev(Abbv);
-  Vals.push_back(VE.numMDs());
-  Stream.EmitRecord(bitc::MODULE_CODE_METADATA_VALUES, Vals, MDValsAbbrev);
-  Vals.clear();
+  {
+    BitCodeAbbrev *Abbv = new BitCodeAbbrev();
+    Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_METADATA_VALUES));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    unsigned MDValsAbbrev = Stream.EmitAbbrev(Abbv);
+    Vals.push_back(VE.numMDs());
+    Stream.EmitRecord(bitc::MODULE_CODE_METADATA_VALUES, Vals, MDValsAbbrev);
+    Vals.clear();
+  }
+
+  // Emit the module's source file name.
+  {
+    StringEncoding Bits =
+        getStringEncoding(M->getName().data(), M->getName().size());
+    BitCodeAbbrevOp AbbrevOpToUse = BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8);
+    if (Bits == SE_Char6)
+      AbbrevOpToUse = BitCodeAbbrevOp(BitCodeAbbrevOp::Char6);
+    else if (Bits == SE_Fixed7)
+      AbbrevOpToUse = BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 7);
+
+    // MODULE_CODE_SOURCE_FILENAME: [namechar x N]
+    BitCodeAbbrev *Abbv = new BitCodeAbbrev();
+    Abbv->Add(BitCodeAbbrevOp(bitc::MODULE_CODE_SOURCE_FILENAME));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+    Abbv->Add(AbbrevOpToUse);
+    unsigned FilenameAbbrev = Stream.EmitAbbrev(Abbv);
+
+    for (const auto P : M->getSourceFileName())
+      Vals.push_back((unsigned char)P);
+
+    // Emit the finished record.
+    Stream.EmitRecord(bitc::MODULE_CODE_SOURCE_FILENAME, Vals, FilenameAbbrev);
+    Vals.clear();
+  }
 
   uint64_t VSTOffsetPlaceholder =
       WriteValueSymbolTableForwardDecl(M->getValueSymbolTable(), Stream);
@@ -2198,24 +2243,6 @@ static void WriteInstruction(const Instruction &I, unsigned InstID,
   Vals.clear();
 }
 
-enum StringEncoding { SE_Char6, SE_Fixed7, SE_Fixed8 };
-
-/// Determine the encoding to use for the given string name and length.
-static StringEncoding getStringEncoding(const char *Str, unsigned StrLen) {
-  bool isChar6 = true;
-  for (const char *C = Str, *E = C + StrLen; C != E; ++C) {
-    if (isChar6)
-      isChar6 = BitCodeAbbrevOp::isChar6(*C);
-    if ((unsigned char)*C & 128)
-      // don't bother scanning the rest.
-      return SE_Fixed8;
-  }
-  if (isChar6)
-    return SE_Char6;
-  else
-    return SE_Fixed7;
-}
-
 /// Emit names for globals/functions etc. The VSTOffsetPlaceholder,
 /// BitcodeStartBit and FunctionIndex are only passed for the module-level
 /// VST, where we are including a function bitcode index and need to
@@ -2355,51 +2382,24 @@ static void WriteCombinedValueSymbolTable(const FunctionInfoIndex &Index,
                                           BitstreamWriter &Stream) {
   Stream.EnterSubblock(bitc::VALUE_SYMTAB_BLOCK_ID, 4);
 
-  // 8-bit fixed-width VST_CODE_COMBINED_FNENTRY function strings.
   BitCodeAbbrev *Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::VST_CODE_COMBINED_FNENTRY));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // funcoffset
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8));
-  unsigned FnEntry8BitAbbrev = Stream.EmitAbbrev(Abbv);
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // funcsumoffset
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // funcguid
+  unsigned FnEntryAbbrev = Stream.EmitAbbrev(Abbv);
 
-  // 7-bit fixed width VST_CODE_COMBINED_FNENTRY function strings.
-  Abbv = new BitCodeAbbrev();
-  Abbv->Add(BitCodeAbbrevOp(bitc::VST_CODE_COMBINED_FNENTRY));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // funcoffset
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 7));
-  unsigned FnEntry7BitAbbrev = Stream.EmitAbbrev(Abbv);
-
-  // 6-bit char6 VST_CODE_COMBINED_FNENTRY function strings.
-  Abbv = new BitCodeAbbrev();
-  Abbv->Add(BitCodeAbbrevOp(bitc::VST_CODE_COMBINED_FNENTRY));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // funcoffset
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Char6));
-  unsigned FnEntry6BitAbbrev = Stream.EmitAbbrev(Abbv);
-
-  // FIXME: We know if the type names can use 7-bit ascii.
-  SmallVector<unsigned, 64> NameVals;
+  SmallVector<uint64_t, 64> NameVals;
 
   for (const auto &FII : Index) {
-    for (const auto &FI : FII.getValue()) {
+    for (const auto &FI : FII.second) {
       NameVals.push_back(FI->bitcodeIndex());
 
-      StringRef FuncName = FII.first();
+      uint64_t FuncGUID = FII.first;
 
-      // Figure out the encoding to use for the name.
-      StringEncoding Bits = getStringEncoding(FuncName.data(), FuncName.size());
+      // VST_CODE_COMBINED_FNENTRY: [funcsumoffset, funcguid]
+      unsigned AbbrevToUse = FnEntryAbbrev;
 
-      // VST_CODE_COMBINED_FNENTRY: [funcsumoffset, namechar x N]
-      unsigned AbbrevToUse = FnEntry8BitAbbrev;
-      if (Bits == SE_Char6)
-        AbbrevToUse = FnEntry6BitAbbrev;
-      else if (Bits == SE_Fixed7)
-        AbbrevToUse = FnEntry7BitAbbrev;
-
-      for (const auto P : FuncName)
-        NameVals.push_back((unsigned char)P);
+      NameVals.push_back(FuncGUID);
 
       // Emit the finished record.
       Stream.EmitRecord(bitc::VST_CODE_COMBINED_FNENTRY, NameVals, AbbrevToUse);
@@ -2858,7 +2858,7 @@ static void WriteCombinedFunctionSummary(const FunctionInfoIndex &I,
 
   SmallVector<unsigned, 64> NameVals;
   for (const auto &FII : I) {
-    for (auto &FI : FII.getValue()) {
+    for (auto &FI : FII.second) {
       FunctionSummary *FS = FI->functionSummary();
       assert(FS);
 

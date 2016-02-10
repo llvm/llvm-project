@@ -126,7 +126,11 @@ static void findExternalCalls(const Module &DestModule, Function &F,
         if (CalledFunction->hasInternalLinkage()) {
           ImportedName = Renamed;
         }
-        auto It = CalledFunctions.insert(ImportedName);
+        // Compute the global identifier used in the function index.
+        auto CalledFunctionGlobalID = Function::getGlobalIdentifier(
+            CalledFunction->getName(), CalledFunction->getLinkage(),
+            CalledFunction->getParent()->getSourceFileName());
+        auto It = CalledFunctions.insert(CalledFunctionGlobalID);
         if (!It.second) {
           // This is a call to a function we already considered, skip.
           continue;
@@ -213,14 +217,12 @@ static void GetImportList(Module &DestModule,
     GlobalValue *SGV = SrcModule.getNamedValue(CalledFunctionName);
 
     if (!SGV) {
-      // The destination module is referencing function using their renamed name
-      // when importing a function that was originally local in the source
-      // module. The source module we have might not have been renamed so we try
-      // to remove the suffix added during the renaming to recover the original
+      // The function is referenced by a global identifier, which has the
+      // source file name prepended for functions that were originally local
+      // in the source module. Strip any prepended name to recover the original
       // name in the source module.
-      std::pair<StringRef, StringRef> Split =
-          CalledFunctionName.split(".llvm.");
-      SGV = SrcModule.getNamedValue(Split.first);
+      std::pair<StringRef, StringRef> Split = CalledFunctionName.split(":");
+      SGV = SrcModule.getNamedValue(Split.second);
       assert(SGV && "Can't find function to import in source module");
     }
     if (!SGV) {
