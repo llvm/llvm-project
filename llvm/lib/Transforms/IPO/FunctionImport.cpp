@@ -221,7 +221,7 @@ static void GetImportList(Module &DestModule,
       // source file name prepended for functions that were originally local
       // in the source module. Strip any prepended name to recover the original
       // name in the source module.
-      std::pair<StringRef, StringRef> Split = CalledFunctionName.split(":");
+      std::pair<StringRef, StringRef> Split = CalledFunctionName.rsplit(':');
       SGV = SrcModule.getNamedValue(Split.second);
       assert(SGV && "Can't find function to import in source module");
     }
