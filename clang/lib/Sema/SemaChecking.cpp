@@ -7852,12 +7852,20 @@ void Sema::CheckBoolLikeConversion(Expr *E, SourceLocation CC) {
 /// Diagnose when expression is an integer constant expression and its evaluation
 /// results in integer overflow
 void Sema::CheckForIntOverflow (Expr *E) {
-  if (isa<BinaryOperator>(E->IgnoreParenCasts()))
-    E->IgnoreParenCasts()->EvaluateForOverflow(Context);
-  else if (auto InitList = dyn_cast<InitListExpr>(E))
-    for (Expr *E : InitList->inits())
-      if (isa<BinaryOperator>(E->IgnoreParenCasts()))
-        E->IgnoreParenCasts()->EvaluateForOverflow(Context);
+  // Use a work list to deal with nested struct initializers.
+  SmallVector<Expr *, 2> Exprs(1, E);
+
+  do {
+    Expr *E = Exprs.pop_back_val();
+
+    if (isa<BinaryOperator>(E->IgnoreParenCasts())) {
+      E->IgnoreParenCasts()->EvaluateForOverflow(Context);
+      continue;
+    }
+
+    if (auto InitList = dyn_cast<InitListExpr>(E))
+      Exprs.append(InitList->inits().begin(), InitList->inits().end());
+  } while (!Exprs.empty());
 }
 
 namespace {
