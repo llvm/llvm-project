@@ -68,11 +68,11 @@ private:
 //
 class NonLazyPointerAtom : public SimpleDefinedAtom {
 public:
-  NonLazyPointerAtom(const File &file, bool is64)
-    : SimpleDefinedAtom(file), _is64(is64) { }
+  NonLazyPointerAtom(const File &file, bool is64, ContentType contentType)
+    : SimpleDefinedAtom(file), _is64(is64), _contentType(contentType) { }
 
   ContentType contentType() const override {
-    return DefinedAtom::typeGOT;
+    return _contentType;
   }
 
   Alignment alignment() const override {
@@ -95,6 +95,7 @@ public:
 
 private:
   const bool _is64;
+  const ContentType _contentType;
 };
 
 //
@@ -175,7 +176,7 @@ public:
   }
 
   Alignment alignment() const override {
-    return 1 << _stubInfo.codeAlignment;
+    return 1 << _stubInfo.stubHelperCommonAlignment;
   }
 
   uint64_t size() const override {
@@ -239,9 +240,11 @@ public:
     SimpleDefinedAtom *helperCommonAtom =
         new (_file.allocator()) StubHelperCommonAtom(_file, _stubInfo);
     SimpleDefinedAtom *helperCacheNLPAtom =
-        new (_file.allocator()) NonLazyPointerAtom(_file, _ctx.is64Bit());
+        new (_file.allocator()) NonLazyPointerAtom(_file, _ctx.is64Bit(),
+                                    _stubInfo.stubHelperImageCacheContentType);
     SimpleDefinedAtom *helperBinderNLPAtom =
-        new (_file.allocator()) NonLazyPointerAtom(_file, _ctx.is64Bit());
+        new (_file.allocator()) NonLazyPointerAtom(_file, _ctx.is64Bit(),
+                                    _stubInfo.stubHelperImageCacheContentType);
     addReference(helperCommonAtom, _stubInfo.stubHelperCommonReferenceToCache,
                  helperCacheNLPAtom);
     addOptReference(

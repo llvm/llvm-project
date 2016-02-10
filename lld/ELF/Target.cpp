@@ -90,8 +90,8 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool needsDynRelative(unsigned Type) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  bool needsGot(uint32_t Type, SymbolBody &S) const override;
+  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
@@ -121,8 +121,8 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  bool needsGot(uint32_t Type, SymbolBody &S) const override;
+  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
@@ -157,8 +157,8 @@ public:
   PPC64TargetInfo();
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  bool needsGot(uint32_t Type, SymbolBody &S) const override;
+  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
@@ -176,8 +176,8 @@ public:
   unsigned getTlsGotRel(unsigned Type = -1) const override;
   bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  bool needsGot(uint32_t Type, SymbolBody &S) const override;
+  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
@@ -197,10 +197,10 @@ public:
   unsigned getDynRel(unsigned Type) const override;
   void writeGotHeader(uint8_t *Buf) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
-  bool needsGot(uint32_t Type, const SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, const SymbolBody &S) const override;
+  bool needsGot(uint32_t Type, SymbolBody &S) const override;
+  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
-                   uint64_t SA, uint64_t ZA = 0,
+                   uint64_t S, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
   bool isHintRel(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
@@ -263,13 +263,9 @@ bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
 bool TargetInfo::isRelRelative(uint32_t Type) const { return true; }
 bool TargetInfo::isSizeRel(uint32_t Type) const { return false; }
 
-bool TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
-  return false;
-}
+bool TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const { return false; }
 
-bool TargetInfo::needsPlt(uint32_t Type, const SymbolBody &S) const {
-  return false;
-}
+bool TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const { return false; }
 
 unsigned TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                               uint64_t P, uint64_t SA,
@@ -376,7 +372,7 @@ bool X86TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   return false;
 }
 
-bool X86TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
+bool X86TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   if (S.isTls() && Type == R_386_TLS_GD)
     return Target->canRelaxTls(Type, &S) && canBePreempted(&S, true);
   if (Type == R_386_TLS_GOTIE || Type == R_386_TLS_IE)
@@ -384,7 +380,7 @@ bool X86TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
   return Type == R_386_GOT32 || needsPlt(Type, S);
 }
 
-bool X86TargetInfo::needsPlt(uint32_t Type, const SymbolBody &S) const {
+bool X86TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const {
   return isGnuIFunc<ELF32LE>(S) ||
          (Type == R_386_PLT32 && canBePreempted(&S, true)) ||
          (Type == R_386_PC32 && S.isShared());
@@ -646,7 +642,7 @@ bool X86_64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   return false;
 }
 
-bool X86_64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
+bool X86_64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   if (Type == R_X86_64_TLSGD)
     return Target->canRelaxTls(Type, &S) && canBePreempted(&S, true);
   if (Type == R_X86_64_GOTTPOFF)
@@ -658,7 +654,7 @@ bool X86_64TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
   return Type == R_X86_64_GOTTPOFF || Type == R_X86_64_TLSGD;
 }
 
-bool X86_64TargetInfo::needsPlt(uint32_t Type, const SymbolBody &S) const {
+bool X86_64TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const {
   if (needsCopyRel(Type, S))
     return false;
   if (isGnuIFunc<ELF64LE>(S))
@@ -684,17 +680,19 @@ bool X86_64TargetInfo::needsPlt(uint32_t Type, const SymbolBody &S) const {
     // For the static linking part, we just return true and everything else
     // will use the the PLT entry as the address.
     //
-    // The remaining (unimplemented) problem is making sure pointer equality
-    // still works. We need the help of the dynamic linker for that. We
-    // let it know that we have a direct reference to a so symbol by creating
-    // an undefined symbol with a non zero st_value. Seeing that, the
-    // dynamic linker resolves the symbol to the value of the symbol we created.
-    // This is true even for got entries, so pointer equality is maintained.
-    // To avoid an infinite loop, the only entry that points to the
-    // real function is a dedicated got entry used by the plt. That is
-    // identified by special relocation types (R_X86_64_JUMP_SLOT,
+    // The remaining problem is making sure pointer equality still works. We
+    // need the help of the dynamic linker for that. We let it know that we have
+    // a direct reference to a so symbol by creating an undefined symbol with a
+    // non zero st_value. Seeing that, the dynamic linker resolves the symbol to
+    // the value of the symbol we created. This is true even for got entries, so
+    // pointer equality is maintained. To avoid an infinite loop, the only entry
+    // that points to the real function is a dedicated got entry used by the
+    // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
     // R_386_JMP_SLOT, etc).
-    return S.isShared();
+    if (!S.isShared())
+      return false;
+    S.NeedsCopyOrPltAddr = true;
+    return true;
   case R_X86_64_PLT32:
     return canBePreempted(&S, true);
   }
@@ -989,7 +987,7 @@ void PPC64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32be(Buf + 28, 0x4e800420);                   // bctr
 }
 
-bool PPC64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
+bool PPC64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   if (needsPlt(Type, S))
     return true;
 
@@ -1005,7 +1003,7 @@ bool PPC64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
   }
 }
 
-bool PPC64TargetInfo::needsPlt(uint32_t Type, const SymbolBody &S) const {
+bool PPC64TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const {
   // These are function calls that need to be redirected through a PLT stub.
   return Type == R_PPC64_REL24 && canBePreempted(&S, false);
 }
@@ -1240,7 +1238,7 @@ bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   }
 }
 
-bool AArch64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
+bool AArch64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   switch (Type) {
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
@@ -1252,7 +1250,7 @@ bool AArch64TargetInfo::needsGot(uint32_t Type, const SymbolBody &S) const {
   }
 }
 
-bool AArch64TargetInfo::needsPlt(uint32_t Type, const SymbolBody &S) const {
+bool AArch64TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const {
   if (isGnuIFunc<ELF64LE>(S))
     return true;
   switch (Type) {
@@ -1387,9 +1385,9 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 }
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
-  CopyRel = R_MIPS_COPY;
-  PageSize = 65536;
   GotHeaderEntriesNum = 2;
+  PageSize = 65536;
+  CopyRel = R_MIPS_COPY;
   RelativeRel = R_MIPS_REL32;
 }
 
@@ -1439,12 +1437,12 @@ bool MipsTargetInfo<ELFT>::needsCopyRel(uint32_t Type,
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, const SymbolBody &S) const {
+bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, SymbolBody &S) const {
   return Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16;
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsPlt(uint32_t Type, const SymbolBody &S) const {
+bool MipsTargetInfo<ELFT>::needsPlt(uint32_t Type, SymbolBody &S) const {
   return false;
 }
 
@@ -1452,29 +1450,29 @@ static uint16_t mipsHigh(uint64_t V) { return (V + 0x8000) >> 16; }
 
 template <endianness E, uint8_t BSIZE, uint8_t SHIFT>
 static void applyMipsPcReloc(uint8_t *Loc, uint32_t Type, uint64_t P,
-                             uint64_t SA) {
+                             uint64_t S) {
   uint32_t Mask = 0xffffffff >> (32 - BSIZE);
   uint32_t Instr = read32<E>(Loc);
   int64_t A = SignExtend64<BSIZE + SHIFT>((Instr & Mask) << SHIFT);
   if (SHIFT > 0)
-    checkAlignment<(1 << SHIFT)>(SA + A, Type);
-  int64_t V = SA + A - P;
+    checkAlignment<(1 << SHIFT)>(S + A, Type);
+  int64_t V = S + A - P;
   checkInt<BSIZE + SHIFT>(V, Type);
   write32<E>(Loc, (Instr & ~Mask) | ((V >> SHIFT) & Mask));
 }
 
 template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
-                                       uint32_t Type, uint64_t P, uint64_t SA,
+                                       uint32_t Type, uint64_t P, uint64_t S,
                                        uint64_t ZA, uint8_t *PairedLoc) const {
   const endianness E = ELFT::TargetEndianness;
   switch (Type) {
   case R_MIPS_32:
-    add32<E>(Loc, SA);
+    add32<E>(Loc, S);
     break;
   case R_MIPS_CALL16:
   case R_MIPS_GOT16: {
-    int64_t V = SA - getMipsGpAddr<ELFT>();
+    int64_t V = S - getMipsGpAddr<ELFT>();
     if (Type == R_MIPS_GOT16)
       checkInt<16>(V, Type);
     write32<E>(Loc, (read32<E>(Loc) & 0xffff0000) | (V & 0xffff));
@@ -1482,23 +1480,23 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   }
   case R_MIPS_GPREL16: {
     uint32_t Instr = read32<E>(Loc);
-    int64_t V = SA + SignExtend64<16>(Instr & 0xffff) - getMipsGpAddr<ELFT>();
+    int64_t V = S + SignExtend64<16>(Instr & 0xffff) - getMipsGpAddr<ELFT>();
     checkInt<16>(V, Type);
     write32<E>(Loc, (Instr & 0xffff0000) | (V & 0xffff));
     break;
   }
   case R_MIPS_GPREL32:
-    write32<E>(Loc, SA + int32_t(read32<E>(Loc)) - getMipsGpAddr<ELFT>());
+    write32<E>(Loc, S + int32_t(read32<E>(Loc)) - getMipsGpAddr<ELFT>());
     break;
   case R_MIPS_HI16: {
     uint32_t Instr = read32<E>(Loc);
     if (PairedLoc) {
       uint64_t AHL = ((Instr & 0xffff) << 16) +
                      SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA + AHL));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S + AHL));
     } else {
       warning("Can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16");
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S));
     }
     break;
   }
@@ -1508,40 +1506,40 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   case R_MIPS_LO16: {
     uint32_t Instr = read32<E>(Loc);
     int64_t AHL = SignExtend64<16>(Instr & 0xffff);
-    write32<E>(Loc, (Instr & 0xffff0000) | ((SA + AHL) & 0xffff));
+    write32<E>(Loc, (Instr & 0xffff0000) | ((S + AHL) & 0xffff));
     break;
   }
   case R_MIPS_PC16:
-    applyMipsPcReloc<E, 16, 2>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 16, 2>(Loc, Type, P, S);
     break;
   case R_MIPS_PC19_S2:
-    applyMipsPcReloc<E, 19, 2>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 19, 2>(Loc, Type, P, S);
     break;
   case R_MIPS_PC21_S2:
-    applyMipsPcReloc<E, 21, 2>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 21, 2>(Loc, Type, P, S);
     break;
   case R_MIPS_PC26_S2:
-    applyMipsPcReloc<E, 26, 2>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 26, 2>(Loc, Type, P, S);
     break;
   case R_MIPS_PC32:
-    applyMipsPcReloc<E, 32, 0>(Loc, Type, P, SA);
+    applyMipsPcReloc<E, 32, 0>(Loc, Type, P, S);
     break;
   case R_MIPS_PCHI16: {
     uint32_t Instr = read32<E>(Loc);
     if (PairedLoc) {
       uint64_t AHL = ((Instr & 0xffff) << 16) +
                      SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA + AHL - P));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S + AHL - P));
     } else {
       warning("Can't find matching R_MIPS_PCLO16 relocation for R_MIPS_PCHI16");
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(SA - P));
+      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S - P));
     }
     break;
   }
   case R_MIPS_PCLO16: {
     uint32_t Instr = read32<E>(Loc);
     int64_t AHL = SignExtend64<16>(Instr & 0xffff);
-    write32<E>(Loc, (Instr & 0xffff0000) | ((SA + AHL - P) & 0xffff));
+    write32<E>(Loc, (Instr & 0xffff0000) | ((S + AHL - P) & 0xffff));
     break;
   }
   default:

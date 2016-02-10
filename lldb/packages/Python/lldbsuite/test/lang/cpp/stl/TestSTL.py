@@ -68,7 +68,7 @@ class STLTestCase(TestBase):
         self.expect('expr associative_array["hello"]',
             substrs = [' = 2'])
 
-    @expectedFailureIcc # icc 13.1 and 14-beta do not emit DW_TAG_template_type_parameter
+    @expectedFailureAll(compiler="icc", bugnumber="ICC (13.1, 14-beta) do not emit DW_TAG_template_type_parameter.")
     @add_test_categories(['pyapi'])
     def test_SBType_template_aspects(self):
         """Test APIs for getting template arguments from an SBType."""

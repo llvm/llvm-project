@@ -134,3 +134,12 @@ class ValueAPITestCase(TestBase):
         val_a = target.EvaluateExpression('a')
         self.assertTrue(val_s.GetChildMemberWithName('a').AddressOf(), VALID_VARIABLE)
         self.assertTrue(val_a.Cast(val_i.GetType()).AddressOf(), VALID_VARIABLE)
+
+        self.assertTrue(int(lldb.value(frame0.FindVariable('uinthex'))) == 3768803088, 'uinthex == 3768803088')
+        self.assertTrue(int(lldb.value(frame0.FindVariable('sinthex'))) == -526164208, 'sinthex == -526164208')
+
+        self.assertTrue(frame0.FindVariable('uinthex').GetValueAsUnsigned() == 3768803088, 'unsigned uinthex == 3768803088')
+        self.assertTrue(frame0.FindVariable('sinthex').GetValueAsUnsigned() == 3768803088, 'unsigned sinthex == 3768803088')
+
+        self.assertTrue(frame0.FindVariable('uinthex').GetValueAsSigned() == -526164208, 'signed uinthex == -526164208')
+        self.assertTrue(frame0.FindVariable('sinthex').GetValueAsSigned() == -526164208, 'signed sinthex == -526164208')

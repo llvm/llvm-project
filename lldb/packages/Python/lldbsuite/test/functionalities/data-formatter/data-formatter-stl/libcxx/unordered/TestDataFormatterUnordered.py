@@ -17,7 +17,7 @@ class LibcxxUnorderedDataFormatterTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows # libc++ not ported to Windows yet
-    @skipIfGcc
+    @skipIf(compiler="gcc")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

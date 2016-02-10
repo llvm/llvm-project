@@ -17,7 +17,7 @@ class InitializerListTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows # libc++ not ported to Windows yet
-    @skipIfGcc
+    @skipIf(compiler="gcc")
     @expectedFailureLinux # fails on clang 3.5 and tot
     def test(self):
         """Test that that file and class static variables display correctly."""

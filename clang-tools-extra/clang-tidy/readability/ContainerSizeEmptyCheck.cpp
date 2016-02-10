@@ -14,23 +14,23 @@
 
 using namespace clang::ast_matchers;
 
-static bool isContainer(llvm::StringRef ClassName) {
-  static const char *const ContainerNames[] = {"std::array",
-                                               "std::deque",
-                                               "std::forward_list",
-                                               "std::list",
-                                               "std::map",
-                                               "std::multimap",
-                                               "std::multiset",
-                                               "std::priority_queue",
-                                               "std::queue",
-                                               "std::set",
-                                               "std::stack",
-                                               "std::unordered_map",
-                                               "std::unordered_multimap",
-                                               "std::unordered_multiset",
-                                               "std::unordered_set",
-                                               "std::vector"};
+static bool isContainerName(llvm::StringRef ClassName) {
+  static const char *const ContainerNames[] = {"array",
+                                               "deque",
+                                               "forward_list",
+                                               "list",
+                                               "map",
+                                               "multimap",
+                                               "multiset",
+                                               "priority_queue",
+                                               "queue",
+                                               "set",
+                                               "stack",
+                                               "unordered_map",
+                                               "unordered_multimap",
+                                               "unordered_multiset",
+                                               "unordered_set",
+                                               "vector"};
   return std::binary_search(std::begin(ContainerNames),
                             std::end(ContainerNames), ClassName);
 }
@@ -38,7 +38,10 @@ static bool isContainer(llvm::StringRef ClassName) {
 namespace clang {
 namespace {
 AST_MATCHER(NamedDecl, stlContainer) {
-  return isContainer(Node.getQualifiedNameAsString());
+  if (!isContainerName(Node.getName()))
+    return false;
+
+  return StringRef(Node.getQualifiedNameAsString()).startswith("std::");
 }
 } // namespace
 

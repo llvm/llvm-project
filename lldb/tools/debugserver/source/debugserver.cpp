@@ -885,6 +885,10 @@ static struct option g_long_options[] =
 int
 main (int argc, char *argv[])
 {
+    // If debugserver is launched with DYLD_INSERT_LIBRARIES, unset it so we
+    // don't spawn child processes with this enabled.
+    unsetenv("DYLD_INSERT_LIBRARIES");
+
     const char *argv_sub_zero = argv[0]; // save a copy of argv[0] for error reporting post-launch
 
 #if defined (__APPLE__)
@@ -1076,7 +1080,7 @@ main (int argc, char *argv[])
 
             case 'K':
                 g_detach_on_error = false;
-
+                break;
             case 'W':
                 if (optarg && optarg[0])
                     working_dir.assign(optarg);

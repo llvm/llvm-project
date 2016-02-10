@@ -386,7 +386,7 @@ public:
                 {
                     m_step_count = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0);
                     if (m_step_count == UINT32_MAX)
-                       error.SetErrorStringWithFormat ("invalid ignore count '%s'", option_arg);
+                       error.SetErrorStringWithFormat ("invalid step count '%s'", option_arg);
                     break;
                 }
                 break;
@@ -403,6 +403,16 @@ public:
                 }
                 break;
             
+            case 'e':
+                {
+                    uint32_t tmp_end_line = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0);
+                    if (tmp_end_line == UINT32_MAX)
+                       error.SetErrorStringWithFormat ("invalid end line number '%s'", option_arg);
+                    else
+                        m_end_line = tmp_end_line;
+                    break;
+                }
+                break;
             case 'r':
                 {
                     m_avoid_regexp.clear();
@@ -441,6 +451,7 @@ public:
             m_step_in_target.clear();
             m_class_name.clear();
             m_step_count = 1;
+            m_end_line = LLDB_INVALID_LINE_NUMBER;
         }
 
         const OptionDefinition*
@@ -461,6 +472,7 @@ public:
         std::string m_step_in_target;
         std::string m_class_name;
         uint32_t m_step_count;
+        uint32_t m_end_line;
     };
 
     CommandObjectThreadStepWithTypeAndScope (CommandInterpreter &interpreter,
@@ -559,6 +571,14 @@ protected:
             }
         }
 
+        if (m_options.m_end_line != LLDB_INVALID_LINE_NUMBER
+            && m_step_type != eStepTypeInto)
+        {
+            result.AppendErrorWithFormat("end line option is only valid for step into");
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+        }
+        
         const bool abort_other_plans = false;
         const lldb::RunMode stop_other_threads = m_options.m_run_mode;
         
@@ -586,8 +606,70 @@ protected:
 
             if (frame->HasDebugInformation ())
             {
+                AddressRange range = frame->GetSymbolContext(eSymbolContextEverything).line_entry.range;
+                if (m_options.m_end_line != LLDB_INVALID_LINE_NUMBER)
+                {
+                    SymbolContext sc = frame->GetSymbolContext(eSymbolContextEverything);
+                    if (sc.line_entry.line > m_options.m_end_line)
+                    {
+                        result.AppendErrorWithFormat("end line option %d must be after the current line: %d",
+                                                     m_options.m_end_line,
+                                                     sc.line_entry.line);
+                        result.SetStatus(eReturnStatusFailed);
+                        return false;
+                    }
+
+                    CompileUnit *cu = sc.comp_unit;
+                    uint32_t line_index = 0;
+                    bool found = false;
+                    while (1)
+                    {
+                        LineEntry this_line;
+                        line_index = cu->FindLineEntry(line_index, sc.line_entry.line, nullptr, false, &this_line);
+                        if (line_index == UINT32_MAX)
+                            break;
+                        if (LineEntry::Compare(this_line, sc.line_entry) == 0)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                    LineEntry end_entry;
+                    if (!found)
+                    {
+                        // Can't find the index of the SymbolContext's line entry in the SymbolContext's CompUnit.
+                        result.AppendErrorWithFormat("Can't find the current line entry in the CompUnit - can't process "
+                                                     "the end-line option");
+                        result.SetStatus(eReturnStatusFailed);
+                        return false;
+                    }
+                    
+                    line_index = cu->FindLineEntry(line_index, m_options.m_end_line, nullptr, false, &end_entry);
+                    if (line_index == UINT32_MAX)
+                    {
+                        result.AppendErrorWithFormat("could not find a line table entry corresponding "
+                                                     "to end line number %d",
+                                                     m_options.m_end_line);
+                        result.SetStatus(eReturnStatusFailed);
+                        return false;
+                    }
+                    
+                    Block *func_block = sc.GetFunctionBlock();
+                    if (func_block && func_block->GetRangeIndexContainingAddress(end_entry.range.GetBaseAddress()) == UINT32_MAX)
+                    {
+                        result.AppendErrorWithFormat("end line number %d is not contained within the current function.",
+                                                     m_options.m_end_line);
+                        result.SetStatus(eReturnStatusFailed);
+                        return false;
+                    }
+                    
+                    lldb::addr_t range_size = end_entry.range.GetBaseAddress().GetFileAddress()
+                                              - range.GetBaseAddress().GetFileAddress();
+                    range.SetByteSize(range_size);
+                }
+                
                 new_plan_sp = thread->QueueThreadPlanForStepInRange (abort_other_plans,
-                                                                frame->GetSymbolContext(eSymbolContextEverything).line_entry,
+                                                                range,
                                                                 frame->GetSymbolContext(eSymbolContextEverything),
                                                                 m_options.m_step_in_target.c_str(),
                                                                 stop_other_threads,
@@ -737,6 +819,7 @@ CommandObjectThreadStepWithTypeAndScope::CommandOptions::g_option_table[] =
 { LLDB_OPT_SET_1, false, "step-in-avoids-no-debug",   'a', OptionParser::eRequiredArgument, NULL, NULL,               0, eArgTypeBoolean,     "A boolean value that sets whether stepping into functions will step over functions with no debug information."},
 { LLDB_OPT_SET_1, false, "step-out-avoids-no-debug",  'A', OptionParser::eRequiredArgument, NULL, NULL,               0, eArgTypeBoolean,     "A boolean value, if true stepping out of functions will continue to step out till it hits a function with debug information."},
 { LLDB_OPT_SET_1, false, "count",                     'c', OptionParser::eRequiredArgument, NULL, NULL,               1, eArgTypeCount,     "How many times to perform the stepping operation - currently only supported for step-inst and next-inst."},
+{ LLDB_OPT_SET_1, false, "end-linenumber",            'e', OptionParser::eRequiredArgument, NULL, NULL,               1, eArgTypeLineNum,     "The line at which to stop stepping - defaults to the next line and only supported for step-in and step-over."},
 { LLDB_OPT_SET_1, false, "run-mode",                  'm', OptionParser::eRequiredArgument, NULL, g_tri_running_mode, 0, eArgTypeRunMode, "Determine how to run other threads while stepping the current thread."},
 { LLDB_OPT_SET_1, false, "step-over-regexp",          'r', OptionParser::eRequiredArgument, NULL, NULL,               0, eArgTypeRegularExpression,   "A regular expression that defines function names to not to stop at when stepping in."},
 { LLDB_OPT_SET_1, false, "step-in-target",            't', OptionParser::eRequiredArgument, NULL, NULL,               0, eArgTypeFunctionName,   "The name of the directly called function step in should stop at when stepping into."},

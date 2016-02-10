@@ -78,30 +78,13 @@ using ::strcmp;
 using ::strncmp;
 using ::strcoll;
 using ::strxfrm;
-
 using ::memchr;
-
 using ::strchr;
-
 using ::strcspn;
-
 using ::strpbrk;
-
 using ::strrchr;
-
 using ::strspn;
-
 using ::strstr;
-
-// MSVCRT, GNU libc and its derivates already have the correct prototype in <string.h> #ifdef __cplusplus
-#if !defined(__GLIBC__) && !defined(_LIBCPP_MSVCRT) && !defined(__sun__) && !defined(_STRING_H_CPLUSPLUS_98_CONFORMANCE_)
-inline _LIBCPP_INLINE_VISIBILITY       char* strchr(      char* __s, int __c) {return ::strchr(__s, __c);}
-inline _LIBCPP_INLINE_VISIBILITY       char* strpbrk(      char* __s1, const char* __s2) {return ::strpbrk(__s1, __s2);}
-inline _LIBCPP_INLINE_VISIBILITY       char* strrchr(      char* __s, int __c) {return ::strrchr(__s, __c);}
-inline _LIBCPP_INLINE_VISIBILITY       void* memchr(      void* __s, int __c, size_t __n) {return ::memchr(__s, __c, __n);}
-inline _LIBCPP_INLINE_VISIBILITY       char* strstr(      char* __s1, const char* __s2) {return ::strstr(__s1, __s2);}
-#endif
-
 #ifndef _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
 using ::strtok;
 #endif

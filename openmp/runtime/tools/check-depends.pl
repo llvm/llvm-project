@@ -185,6 +185,8 @@ sub get_deps_otool($) {
         or parse_error( $tool, @bulk, $i );
     ++ $i;
     if ( $name =~ m{\.dylib\z} ) {
+        # Added "@rpath/" enables dynamic load of the library designated at link time.
+        $name = '@rpath/' . $name;
         # In case of dynamic library otool print the library itself as a dependent library.
         ( $i < @bulk and $bulk[ $i ] =~ m{^\s+\Q$name\E\s+\(compatibility version.*\)$} )
             or parse_error( $tool, @bulk, $i );

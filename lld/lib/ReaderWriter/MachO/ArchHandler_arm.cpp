@@ -260,8 +260,13 @@ const ArchHandler::StubInfo ArchHandler_arm::_sStubInfoArmPIC = {
   { Reference::KindArch::ARM, lazyImmediateLocation, 8, 0 },
   { Reference::KindArch::ARM, arm_b24, 4, 0 },
 
+  // Stub helper image cache content type
+  DefinedAtom::typeGOT,
+
   // Stub Helper-Common size and code
   36,
+  // Stub helper alignment
+  2,
 	{ // push lazy-info-offset
     0x04, 0xC0, 0x2D, 0xE5,       // str ip, [sp, #-4]!
 		// push address of dyld_mageLoaderCache

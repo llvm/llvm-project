@@ -22,7 +22,7 @@ class LibcxxIteratorDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @skipIfGcc
+    @skipIf(compiler="gcc")
     @skipIfWindows # libc++ not ported to Windows yet
     def test_with_run_command(self):
         """Test that libc++ iterators format properly."""

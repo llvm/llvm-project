@@ -28,7 +28,7 @@ class StopHookMechanismTestCase(TestBase):
 
     @skipIfFreeBSD # llvm.org/pr15037
     @expectedFlakeyLinux('llvm.org/pr15037') # stop-hooks sometimes fail to fire on Linux
-    @expectedFailureHostWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test(self):
         """Test the stop-hook mechanism."""
         self.build()

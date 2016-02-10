@@ -56,9 +56,12 @@ typename ELFFile<ELFT>::uintX_t SymbolBody::getVA() const {
     return Out<ELFT>::Bss->getVA() + cast<DefinedCommon>(this)->OffsetInBss;
   case SharedKind: {
     auto *SS = cast<SharedSymbol<ELFT>>(this);
-    if (SS->NeedsCopy)
+    if (!SS->NeedsCopyOrPltAddr)
+      return 0;
+    if (SS->IsFunc)
+      return getPltVA<ELFT>();
+    else
       return Out<ELFT>::Bss->getVA() + SS->OffsetInBss;
-    return 0;
   }
   case UndefinedElfKind:
   case UndefinedKind:

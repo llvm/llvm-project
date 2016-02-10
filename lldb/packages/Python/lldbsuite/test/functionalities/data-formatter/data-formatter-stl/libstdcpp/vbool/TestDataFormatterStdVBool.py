@@ -23,7 +23,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
     @expectedFailureFreeBSD("llvm.org/pr20548") # fails to build on lab.llvm.org buildbot
-    @expectedFailureIcc # llvm.org/pr15301: lldb does not print the correct sizes of STL containers when building with ICC
+    @expectedFailureAll(compiler="icc", bugnumber="llvm.org/pr15301 LLDB prints incorrect sizes of STL containers")
     @skipIfWindows # libstdcpp not ported to Windows.
     @skipIfDarwin
     def test_with_run_command(self):

@@ -283,6 +283,8 @@ const MachOFinalSectionFromAtomType sectsToAtomType[] = {
                                                           typeTerminatorPtr),
   ENTRY("__DATA", "__got",            S_NON_LAZY_SYMBOL_POINTERS,
                                                           typeGOT),
+  ENTRY("__DATA", "__nl_symbol_ptr",  S_NON_LAZY_SYMBOL_POINTERS,
+                                                          typeNonLazyPointer),
   ENTRY("__DATA", "__thread_vars",    S_THREAD_LOCAL_VARIABLES,
                                                           typeThunkTLV),
   ENTRY("__DATA", "__thread_data",    S_THREAD_LOCAL_REGULAR,

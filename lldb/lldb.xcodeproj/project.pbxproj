@@ -7280,7 +7280,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
-					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -7366,7 +7365,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
-					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -7492,7 +7490,6 @@
 				LLDB_GTESTS_CFLAGS = "-I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
-					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -7529,7 +7526,6 @@
 				LLDB_GTESTS_CFLAGS = "-I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
-					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -7566,7 +7562,6 @@
 				LLDB_GTESTS_CFLAGS = "-I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
-					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -7603,7 +7598,6 @@
 				LLDB_GTESTS_CFLAGS = "-I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
-					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -8076,7 +8070,6 @@
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				MACOSX_DEPLOYMENT_TARGET = "";
 				OTHER_CFLAGS = (
-					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -8475,12 +8468,10 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
@@ -8548,12 +8539,10 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
@@ -8621,12 +8610,10 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
@@ -8793,7 +8780,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
-					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -9035,12 +9021,10 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
@@ -9126,12 +9110,10 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
@@ -9194,12 +9176,10 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
@@ -9259,12 +9239,10 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
@@ -9326,12 +9304,10 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
-					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";

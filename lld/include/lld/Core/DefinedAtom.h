@@ -129,6 +129,7 @@ public:
     typeObjC1Class,         // ObjC1 class [Darwin]
     typeLazyPointer,        // pointer through which a stub jumps
     typeLazyDylibPointer,   // pointer through which a stub jumps [Darwin]
+    typeNonLazyPointer,     // pointer to external symbol
     typeCFString,           // NS/CFString object [Darwin]
     typeGOT,                // pointer to external symbol
     typeInitializerPtr,     // pointer to initializer function

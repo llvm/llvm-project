@@ -22,7 +22,7 @@ class LibcxxVBoolDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @skipIfGcc
+    @skipIf(compiler="gcc")
     @skipIfWindows # libc++ not ported to Windows.
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""

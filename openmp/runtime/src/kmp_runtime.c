@@ -2093,7 +2093,8 @@ __kmp_fork_call(
         KA_TRACE( 20, ( "__kmp_fork_call: Master T#%d pushing task_team %p / team %p, new task_team %p / team %p\n",
                       __kmp_gtid_from_thread( master_th ), master_th->th.th_task_team,
                       parent_team, team->t.t_task_team[master_th->th.th_task_state], team ) );
-        if (level) {
+
+        if ( level || master_th->th.th_task_team ) {
             // Take a memo of master's task_state
             KMP_DEBUG_ASSERT(master_th->th.th_task_state_memo_stack);
             if (master_th->th.th_task_state_top >= master_th->th.th_task_state_stack_sz) { // increase size

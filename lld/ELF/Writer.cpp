@@ -302,10 +302,10 @@ void Writer<ELFT>::scanRelocs(
     // If a symbol in a DSO is referenced directly instead of through GOT,
     // we need to create a copy relocation for the symbol.
     if (auto *B = dyn_cast_or_null<SharedSymbol<ELFT>>(Body)) {
-      if (B->NeedsCopy)
+      if (B->needsCopy())
         continue;
       if (Target->needsCopyRel(Type, *B)) {
-        B->NeedsCopy = true;
+        B->NeedsCopyOrPltAddr = true;
         Out<ELFT>::RelaDyn->addReloc(
             {Target->CopyRel, DynamicReloc<ELFT>::Off_Bss, B});
         continue;
@@ -968,7 +968,7 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
     if (auto *C = dyn_cast<DefinedCommon>(Body))
       CommonSymbols.push_back(C);
     if (auto *SC = dyn_cast<SharedSymbol<ELFT>>(Body))
-      if (SC->NeedsCopy)
+      if (SC->needsCopy())
         CopyRelSymbols.push_back(SC);
 
     if (!includeInSymtab<ELFT>(*Body))

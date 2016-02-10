@@ -7,8 +7,7 @@ class TestCppIncompleteTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureFreeBSD("llvm.org/pr25626 test executable not built correctly on FreeBSD")
-    @skipIfGcc
+    @skipIf(compiler="gcc")
     def test_limit_debug_info(self):
         self.build()
         frame = self.get_test_frame('limit')
@@ -21,7 +20,7 @@ class TestCppIncompleteTypes(TestBase):
         self.assertTrue(value_a.IsValid(), "'expr a' results in a valid SBValue object")
         self.assertTrue(value_a.GetError().Success(), "'expr a' is successful")
 
-    @skipIfGcc
+    @skipIf(compiler="gcc")
     @skipIfWindows # Clang on Windows asserts in external record layout in this case.
     def test_partial_limit_debug_info(self):
         self.build()

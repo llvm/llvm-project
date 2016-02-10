@@ -112,6 +112,14 @@ set(LIBOMP_OSX_ARCHITECTURES "${CMAKE_OSX_ARCHITECTURES}" CACHE STRING
   "For Mac builds, semicolon separated list of architectures to build for universal fat binary.")
 set(CMAKE_OSX_ARCHITECTURES ${LIBOMP_OSX_ARCHITECTURES})
 
+# Should @rpath be used for dynamic libraries on Mac?
+# The if(NOT DEFINED) is there to guard a cached value of the variable if one
+# exists so there is no interference with what the user wants.  Also, no cache entry
+# is created so there are no inadvertant effects on other parts of LLVM.
+if(NOT DEFINED CMAKE_MACOSX_RPATH)
+  set(CMAKE_MACOSX_RPATH TRUE)
+endif()
+
 # User specified flags.  These are appended to the configured flags.
 set(LIBOMP_CFLAGS "" CACHE STRING
   "Appended user specified C compiler flags.")
