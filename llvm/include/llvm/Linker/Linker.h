@@ -67,10 +67,6 @@ public:
                       DenseMap<unsigned, MDNode *> *ValIDToTempMDMap);
 };
 
-/// Perform in-place global value handling on the given Module for
-/// exported local functions renamed and promoted for ThinLTO.
-bool renameModuleForThinLTO(Module &M, const FunctionInfoIndex *Index);
-
 } // End llvm namespace
 
 #endif
