@@ -1871,6 +1871,10 @@ LLVMBasicBlockRef LLVMValueAsBasicBlock(LLVMValueRef Val) {
   return wrap(unwrap<BasicBlock>(Val));
 }
 
+const char *LLVMGetBasicBlockName(LLVMBasicBlockRef BB) {
+  return unwrap(BB)->getName().data();
+}
+
 LLVMValueRef LLVMGetBasicBlockParent(LLVMBasicBlockRef BB) {
   return wrap(unwrap(BB)->getParent());
 }
@@ -2037,22 +2041,17 @@ LLVMValueRef LLVMInstructionClone(LLVMValueRef Inst) {
 
 /*--.. Call and invoke instructions ........................................--*/
 
+unsigned LLVMGetNumArgOperands(LLVMValueRef Instr) {
+  return CallSite(unwrap<Instruction>(Instr)).getNumArgOperands();
+}
+
 unsigned LLVMGetInstructionCallConv(LLVMValueRef Instr) {
-  Value *V = unwrap(Instr);
-  if (CallInst *CI = dyn_cast<CallInst>(V))
-    return CI->getCallingConv();
-  if (InvokeInst *II = dyn_cast<InvokeInst>(V))
-    return II->getCallingConv();
-  llvm_unreachable("LLVMGetInstructionCallConv applies only to call and invoke!");
+  return CallSite(unwrap<Instruction>(Instr)).getCallingConv();
 }
 
 void LLVMSetInstructionCallConv(LLVMValueRef Instr, unsigned CC) {
-  Value *V = unwrap(Instr);
-  if (CallInst *CI = dyn_cast<CallInst>(V))
-    return CI->setCallingConv(static_cast<CallingConv::ID>(CC));
-  else if (InvokeInst *II = dyn_cast<InvokeInst>(V))
-    return II->setCallingConv(static_cast<CallingConv::ID>(CC));
-  llvm_unreachable("LLVMSetInstructionCallConv applies only to call and invoke!");
+  return CallSite(unwrap<Instruction>(Instr))
+    .setCallingConv(static_cast<CallingConv::ID>(CC));
 }
 
 void LLVMAddInstrAttribute(LLVMValueRef Instr, unsigned index,
@@ -2084,6 +2083,10 @@ void LLVMSetInstrParamAlignment(LLVMValueRef Instr, unsigned index,
                        .addAttributes(Call->getContext(), index,
                                       AttributeSet::get(Call->getContext(),
                                                         index, B)));
+}
+
+LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr) {
+  return wrap(CallSite(unwrap<Instruction>(Instr)).getCalledValue());
 }
 
 /*--.. Operations on call instructions (only) ..............................--*/
@@ -2130,6 +2133,12 @@ LLVMBasicBlockRef LLVMGetSwitchDefaultDest(LLVMValueRef Switch) {
   return wrap(unwrap<SwitchInst>(Switch)->getDefaultDest());
 }
 
+/*--.. Operations on alloca instructions (only) ............................--*/
+
+LLVMTypeRef LLVMGetAllocatedType(LLVMValueRef Alloca) {
+  return wrap(unwrap<AllocaInst>(Alloca)->getAllocatedType());
+}
+
 /*--.. Operations on phi nodes .............................................--*/
 
 void LLVMAddIncoming(LLVMValueRef PhiNode, LLVMValueRef *IncomingValues,
@@ -2149,6 +2158,28 @@ LLVMValueRef LLVMGetIncomingValue(LLVMValueRef PhiNode, unsigned Index) {
 
 LLVMBasicBlockRef LLVMGetIncomingBlock(LLVMValueRef PhiNode, unsigned Index) {
   return wrap(unwrap<PHINode>(PhiNode)->getIncomingBlock(Index));
+}
+
+/*--.. Operations on extractvalue and insertvalue nodes ....................--*/
+
+unsigned LLVMGetNumIndices(LLVMValueRef Inst) {
+  auto *I = unwrap(Inst);
+  if (auto *EV = dyn_cast<ExtractValueInst>(I))
+    return EV->getNumIndices();
+  if (auto *IV = dyn_cast<InsertValueInst>(I))
+    return IV->getNumIndices();
+  llvm_unreachable(
+    "LLVMGetNumIndices applies only to extractvalue and insertvalue!");
+}
+
+const unsigned *LLVMGetIndices(LLVMValueRef Inst) {
+  auto *I = unwrap(Inst);
+  if (auto *EV = dyn_cast<ExtractValueInst>(I))
+    return EV->getIndices().data();
+  if (auto *IV = dyn_cast<InsertValueInst>(I))
+    return IV->getIndices().data();
+  llvm_unreachable(
+    "LLVMGetIndices applies only to extractvalue and insertvalue!");
 }
 
 

@@ -684,8 +684,7 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::STORE: {
-    SDValue Lowered = LowerSTORE(SDValue(N, 0), DAG);
-    if (Lowered.getNode())
+    if (SDValue Lowered = LowerSTORE(SDValue(N, 0), DAG))
       Results.push_back(Lowered);
     return;
   }
@@ -1386,10 +1385,8 @@ SDValue AMDGPUTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue AMDGPUTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  SDValue Result = AMDGPUTargetLowering::MergeVectorStore(Op, DAG);
-  if (Result.getNode()) {
+  if (SDValue Result = AMDGPUTargetLowering::MergeVectorStore(Op, DAG))
     return Result;
-  }
 
   StoreSDNode *Store = cast<StoreSDNode>(Op);
   SDValue Chain = Store->getChain();

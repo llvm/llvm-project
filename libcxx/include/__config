@@ -237,6 +237,12 @@
 #  endif
 #endif
 
+#ifndef _LIBCPP_PREFERRED_OVERLOAD
+#  if __has_attribute(__enable_if__)
+#    define _LIBCPP_PREFERRED_OVERLOAD __attribute__ ((__enable_if__(true, "")))
+#  endif
+#endif
+
 #ifndef _LIBCPP_TYPE_VIS_ONLY
 # define _LIBCPP_TYPE_VIS_ONLY _LIBCPP_TYPE_VIS
 #endif

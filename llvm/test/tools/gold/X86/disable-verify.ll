@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; -disable-verify should disable output verification from the optimization
 ; pipeline.
-; CHECK: Pass Arguments: {{.*}} -verify -forceattrs
+; CHECK: Pass Arguments: {{.*}} -verify -
 ; CHECK-NOT: -verify
 
 ; VERIFY: Pass Arguments: {{.*}} -verify {{.*}} -verify

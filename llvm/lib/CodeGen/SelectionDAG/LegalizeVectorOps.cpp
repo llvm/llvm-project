@@ -358,8 +358,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case TargetLowering::Legal:
     break;
   case TargetLowering::Custom: {
-    SDValue Tmp1 = TLI.LowerOperation(Op, DAG);
-    if (Tmp1.getNode()) {
+    if (SDValue Tmp1 = TLI.LowerOperation(Op, DAG)) {
       Result = Tmp1;
       break;
     }

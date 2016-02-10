@@ -5679,8 +5679,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(Opc, dl, V1.getValueType(), V1, V1);
   }
 
-  SDValue Concat = tryFormConcatFromShuffle(Op, DAG);
-  if (Concat.getNode())
+  if (SDValue Concat = tryFormConcatFromShuffle(Op, DAG))
     return Concat;
 
   bool DstIsLeft;
@@ -5952,8 +5951,7 @@ SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
                                              SelectionDAG &DAG) const {
   // Attempt to form a vector S[LR]I from (or (and X, C1), (lsl Y, C2))
   if (EnableAArch64SlrGeneration) {
-    SDValue Res = tryLowerToSLI(Op.getNode(), DAG);
-    if (Res.getNode())
+    if (SDValue Res = tryLowerToSLI(Op.getNode(), DAG))
       return Res;
   }
 
@@ -7908,12 +7906,10 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
-  SDValue Res = tryCombineToEXTR(N, DCI);
-  if (Res.getNode())
+  if (SDValue Res = tryCombineToEXTR(N, DCI))
     return Res;
 
-  Res = tryCombineToBSL(N, DCI);
-  if (Res.getNode())
+  if (SDValue Res = tryCombineToBSL(N, DCI))
     return Res;
 
   return SDValue();
@@ -8873,8 +8869,7 @@ static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
                                    const AArch64Subtarget *Subtarget) {
-  SDValue Split = split16BStores(N, DCI, DAG, Subtarget);
-  if (Split.getNode())
+  if (SDValue Split = split16BStores(N, DCI, DAG, Subtarget))
     return Split;
 
   if (Subtarget->supportsAddressTopByteIgnored() &&
@@ -9540,8 +9535,7 @@ SDValue performCONDCombine(SDNode *N,
 static SDValue performBRCONDCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
-  SDValue NV = performCONDCombine(N, DCI, DAG, 2, 3);
-  if (NV.getNode())
+  if (SDValue NV = performCONDCombine(N, DCI, DAG, 2, 3))
     N = NV.getNode();
   SDValue Chain = N->getOperand(0);
   SDValue Dest = N->getOperand(1);

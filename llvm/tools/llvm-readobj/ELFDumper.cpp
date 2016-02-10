@@ -497,10 +497,10 @@ getSectionNameIndex(const ELFO &Obj, const typename ELFO::Elf_Sym *Symbol,
 }
 
 template <class ELFO>
-static const typename ELFO::Elf_Shdr *findSectionByAddress(const ELFO *Obj,
-                                                           uint64_t Addr) {
+static const typename ELFO::Elf_Shdr *
+findNotEmptySectionByAddress(const ELFO *Obj, uint64_t Addr) {
   for (const auto &Shdr : Obj->sections())
-    if (Shdr.sh_addr == Addr)
+    if (Shdr.sh_addr == Addr && Shdr.sh_size > 0)
       return &Shdr;
   return nullptr;
 }
@@ -1865,23 +1865,6 @@ template <class ELFT> void MipsGOTParser<ELFT>::parseGOT() {
     return;
   }
 
-  const Elf_Shdr *GOTShdr = findSectionByAddress(Obj, *DtPltGot);
-  if (!GOTShdr) {
-    W.startLine() << "There is no .got section in the file.\n";
-    return;
-  }
-
-  ErrorOr<ArrayRef<uint8_t>> GOT = Obj->getSectionContents(GOTShdr);
-  if (!GOT) {
-    W.startLine() << "The .got section is empty.\n";
-    return;
-  }
-
-  if (*DtLocalGotNum > getGOTTotal(*GOT)) {
-    W.startLine() << "MIPS_LOCAL_GOTNO exceeds a number of GOT entries.\n";
-    return;
-  }
-
   const Elf_Shdr *DynSymSec = Dumper->getDotDynSymSec();
   ErrorOr<StringRef> StrTable = Obj->getStringTableForSymtab(*DynSymSec);
   error(StrTable.getError());
@@ -1889,17 +1872,25 @@ template <class ELFT> void MipsGOTParser<ELFT>::parseGOT() {
   const Elf_Sym *DynSymEnd = Obj->symbol_end(DynSymSec);
   std::size_t DynSymTotal = std::size_t(std::distance(DynSymBegin, DynSymEnd));
 
-  if (*DtGotSym > DynSymTotal) {
-    W.startLine() << "MIPS_GOTSYM exceeds a number of dynamic symbols.\n";
-    return;
-  }
+  if (*DtGotSym > DynSymTotal)
+    report_fatal_error("MIPS_GOTSYM exceeds a number of dynamic symbols");
 
   std::size_t GlobalGotNum = DynSymTotal - *DtGotSym;
 
-  if (*DtLocalGotNum + GlobalGotNum > getGOTTotal(*GOT)) {
-    W.startLine() << "Number of global GOT entries exceeds the size of GOT.\n";
+  if (*DtLocalGotNum + GlobalGotNum == 0) {
+    W.startLine() << "GOT is empty.\n";
     return;
   }
+
+  const Elf_Shdr *GOTShdr = findNotEmptySectionByAddress(Obj, *DtPltGot);
+  if (!GOTShdr)
+    report_fatal_error("There is no not empty GOT section at 0x" +
+                       Twine::utohexstr(*DtPltGot));
+
+  ErrorOr<ArrayRef<uint8_t>> GOT = Obj->getSectionContents(GOTShdr);
+
+  if (*DtLocalGotNum + GlobalGotNum > getGOTTotal(*GOT))
+    report_fatal_error("Number of GOT entries exceeds the size of GOT section");
 
   const GOTEntry *GotBegin = makeGOTIter(*GOT, 0);
   const GOTEntry *GotLocalEnd = makeGOTIter(*GOT, *DtLocalGotNum);
@@ -1957,22 +1948,16 @@ template <class ELFT> void MipsGOTParser<ELFT>::parsePLT() {
     return;
   }
 
-  const Elf_Shdr *PLTShdr = findSectionByAddress(Obj, *DtMipsPltGot);
-  if (!PLTShdr) {
-    W.startLine() << "There is no .got.plt section in the file.\n";
-    return;
-  }
+  const Elf_Shdr *PLTShdr = findNotEmptySectionByAddress(Obj, *DtMipsPltGot);
+  if (!PLTShdr)
+    report_fatal_error("There is no not empty PLTGOT section at 0x " +
+                       Twine::utohexstr(*DtMipsPltGot));
   ErrorOr<ArrayRef<uint8_t>> PLT = Obj->getSectionContents(PLTShdr);
-  if (!PLT) {
-    W.startLine() << "The .got.plt section is empty.\n";
-    return;
-  }
 
-  const Elf_Shdr *PLTRelShdr = findSectionByAddress(Obj, *DtJmpRel);
-  if (!PLTShdr) {
-    W.startLine() << "There is no .rel.plt section in the file.\n";
-    return;
-  }
+  const Elf_Shdr *PLTRelShdr = findNotEmptySectionByAddress(Obj, *DtJmpRel);
+  if (!PLTRelShdr)
+    report_fatal_error("There is no not empty RELPLT section at 0x" +
+                       Twine::utohexstr(*DtJmpRel));
   ErrorOr<const Elf_Shdr *> SymTableOrErr =
       Obj->getSection(PLTRelShdr->sh_link);
   error(SymTableOrErr.getError());

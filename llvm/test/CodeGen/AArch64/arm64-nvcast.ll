@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: _test:
 ; CHECK:  fmov.2d v0, #2.00000000
-; CHECK:  str  q0, [sp]
+; CHECK:  str  q0, [sp, #-16]!
 ; CHECK:  mov  x8, sp
 ; CHECK:  ldr s0, [x8, w1, sxtw #2]
 ; CHECK:  str  s0, [x0]
@@ -16,7 +16,7 @@ entry:
 
 ; CHECK-LABEL: _test2
 ; CHECK: movi.16b  v0, #0x3f
-; CHECK: str  q0, [sp]
+; CHECK: str  q0, [sp, #-16]!
 ; CHECK: mov  x8, sp
 ; CHECK: ldr s0, [x8, w1, sxtw #2]
 ; CHECK: str  s0, [x0]

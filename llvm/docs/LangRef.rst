@@ -1249,10 +1249,17 @@ example:
     function call are also considered to be cold; and, thus, given low
     weight.
 ``convergent``
-    This attribute indicates that the callee is dependent on a convergent
-    thread execution pattern under certain parallel execution models.
-    Transformations that are execution model agnostic may not make the execution
-    of a convergent operation control dependent on any additional values.
+    In some parallel execution models, there exist operations that cannot be
+    made control-dependent on any additional values.  We call such operations
+    ``convergent``, and mark them with this function attribute.
+
+    For example, the intrinsic ``llvm.cuda.syncthreads`` is ``convergent``, so
+    calls to this intrinsic cannot be made control-dependent on additional
+    values.  Other functions may also be marked as convergent; this prevents
+    the same optimization on those functions.
+
+    The optimizer may remove the ``convergent`` attribute when it can prove
+    that the function does not execute any convergent operations.
 ``inaccessiblememonly``
     This attribute indicates that the function may only access memory that
     is not accessible by the module being compiled. This is a weaker form

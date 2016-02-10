@@ -3944,9 +3944,8 @@ static SDValue PerformADDCombine(SDNode *N,
   SDValue N1 = N->getOperand(1);
 
   // First try with the default operand order.
-  SDValue Result = PerformADDCombineWithOperands(N, N0, N1, DCI, Subtarget,
-                                                 OptLevel);
-  if (Result.getNode())
+  if (SDValue Result =
+          PerformADDCombineWithOperands(N, N0, N1, DCI, Subtarget, OptLevel))
     return Result;
 
   // If that didn't work, try again with the operands commuted.
@@ -4234,8 +4233,7 @@ static SDValue PerformMULCombine(SDNode *N,
                                  CodeGenOpt::Level OptLevel) {
   if (OptLevel > 0) {
     // Try mul.wide combining at OptLevel > 0
-    SDValue Ret = TryMULWIDECombine(N, DCI);
-    if (Ret.getNode())
+    if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;
   }
 
@@ -4248,8 +4246,7 @@ static SDValue PerformSHLCombine(SDNode *N,
                                  CodeGenOpt::Level OptLevel) {
   if (OptLevel > 0) {
     // Try mul.wide combining at OptLevel > 0
-    SDValue Ret = TryMULWIDECombine(N, DCI);
-    if (Ret.getNode())
+    if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;
   }
 

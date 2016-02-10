@@ -157,30 +157,11 @@ using ::wcscmp;
 using ::wcscoll;
 using ::wcsncmp;
 using ::wcsxfrm;
-
-#ifdef _LIBCPP_WCHAR_H_HAS_CONST_OVERLOADS
 using ::wcschr;
 using ::wcspbrk;
 using ::wcsrchr;
 using ::wcsstr;
 using ::wmemchr;
-#else
-inline _LIBCPP_INLINE_VISIBILITY const wchar_t* wcschr(const wchar_t* __s, wchar_t __c) {return ::wcschr(__s, __c);}
-inline _LIBCPP_INLINE_VISIBILITY       wchar_t* wcschr(      wchar_t* __s, wchar_t __c) {return ::wcschr(__s, __c);}
-
-inline _LIBCPP_INLINE_VISIBILITY const wchar_t* wcspbrk(const wchar_t* __s1, const wchar_t* __s2) {return ::wcspbrk(__s1, __s2);}
-inline _LIBCPP_INLINE_VISIBILITY       wchar_t* wcspbrk(      wchar_t* __s1, const wchar_t* __s2) {return ::wcspbrk(__s1, __s2);}
-
-inline _LIBCPP_INLINE_VISIBILITY const wchar_t* wcsrchr(const wchar_t* __s, wchar_t __c) {return ::wcsrchr(__s, __c);}
-inline _LIBCPP_INLINE_VISIBILITY       wchar_t* wcsrchr(      wchar_t* __s, wchar_t __c) {return ::wcsrchr(__s, __c);}
-
-inline _LIBCPP_INLINE_VISIBILITY const wchar_t* wcsstr(const wchar_t* __s1, const wchar_t* __s2) {return ::wcsstr(__s1, __s2);}
-inline _LIBCPP_INLINE_VISIBILITY       wchar_t* wcsstr(      wchar_t* __s1, const wchar_t* __s2) {return ::wcsstr(__s1, __s2);}
-
-inline _LIBCPP_INLINE_VISIBILITY const wchar_t* wmemchr(const wchar_t* __s, wchar_t __c, size_t __n) {return ::wmemchr(__s, __c, __n);}
-inline _LIBCPP_INLINE_VISIBILITY       wchar_t* wmemchr(      wchar_t* __s, wchar_t __c, size_t __n) {return ::wmemchr(__s, __c, __n);}
-#endif
-
 using ::wcscspn;
 using ::wcslen;
 using ::wcsspn;

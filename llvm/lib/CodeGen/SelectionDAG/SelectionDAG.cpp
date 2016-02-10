@@ -4152,13 +4152,10 @@ static SDValue getMemsetStringVal(EVT VT, SDLoc dl, SelectionDAG &DAG,
   return SDValue(nullptr, 0);
 }
 
-/// getMemBasePlusOffset - Returns base and offset node for the
-///
-static SDValue getMemBasePlusOffset(SDValue Base, unsigned Offset, SDLoc dl,
-                                      SelectionDAG &DAG) {
+SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, unsigned Offset,
+                                           SDLoc DL) {
   EVT VT = Base.getValueType();
-  return DAG.getNode(ISD::ADD, dl,
-                     VT, Base, DAG.getConstant(Offset, dl, VT));
+  return getNode(ISD::ADD, DL, VT, Base, getConstant(Offset, DL, VT));
 }
 
 /// isMemSrcFromString - Returns true if memcpy source is a string constant.
@@ -4380,7 +4377,7 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, SDLoc dl,
       Value = getMemsetStringVal(VT, dl, DAG, TLI, Str.substr(SrcOff));
       if (Value.getNode())
         Store = DAG.getStore(Chain, dl, Value,
-                             getMemBasePlusOffset(Dst, DstOff, dl, DAG),
+                             DAG.getMemBasePlusOffset(Dst, DstOff, dl),
                              DstPtrInfo.getWithOffset(DstOff), isVol,
                              false, Align);
     }
@@ -4394,11 +4391,11 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, SDLoc dl,
       EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
       assert(NVT.bitsGE(VT));
       Value = DAG.getExtLoad(ISD::EXTLOAD, dl, NVT, Chain,
-                             getMemBasePlusOffset(Src, SrcOff, dl, DAG),
+                             DAG.getMemBasePlusOffset(Src, SrcOff, dl),
                              SrcPtrInfo.getWithOffset(SrcOff), VT, isVol, false,
                              false, MinAlign(SrcAlign, SrcOff));
       Store = DAG.getTruncStore(Chain, dl, Value,
-                                getMemBasePlusOffset(Dst, DstOff, dl, DAG),
+                                DAG.getMemBasePlusOffset(Dst, DstOff, dl),
                                 DstPtrInfo.getWithOffset(DstOff), VT, isVol,
                                 false, Align);
     }
@@ -4465,7 +4462,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, SDLoc dl,
     SDValue Value;
 
     Value = DAG.getLoad(VT, dl, Chain,
-                        getMemBasePlusOffset(Src, SrcOff, dl, DAG),
+                        DAG.getMemBasePlusOffset(Src, SrcOff, dl),
                         SrcPtrInfo.getWithOffset(SrcOff), isVol,
                         false, false, SrcAlign);
     LoadValues.push_back(Value);
@@ -4480,7 +4477,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, SDLoc dl,
     SDValue Store;
 
     Store = DAG.getStore(Chain, dl, LoadValues[i],
-                         getMemBasePlusOffset(Dst, DstOff, dl, DAG),
+                         DAG.getMemBasePlusOffset(Dst, DstOff, dl),
                          DstPtrInfo.getWithOffset(DstOff), isVol, false, Align);
     OutChains.push_back(Store);
     DstOff += VTSize;
@@ -4578,7 +4575,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, SDLoc dl,
     }
     assert(Value.getValueType() == VT && "Value with wrong type.");
     SDValue Store = DAG.getStore(Chain, dl, Value,
-                                 getMemBasePlusOffset(Dst, DstOff, dl, DAG),
+                                 DAG.getMemBasePlusOffset(Dst, DstOff, dl),
                                  DstPtrInfo.getWithOffset(DstOff),
                                  isVol, false, Align);
     OutChains.push_back(Store);

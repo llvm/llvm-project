@@ -145,6 +145,42 @@ public:
                                                 void *InitialPtrVal);
 };
 
+/// @brief I386 support.
+///
+/// I386 supports lazy JITing.
+class OrcI386 {
+public:
+  static const unsigned PointerSize = 4;
+  static const unsigned TrampolineSize = 8;
+  static const unsigned ResolverCodeSize = 0x66;
+
+  typedef GenericIndirectStubsInfo<8> IndirectStubsInfo;
+
+  typedef TargetAddress (*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
+
+  /// @brief Write the resolver code into the given memory. The user is be
+  ///        responsible for allocating the memory and setting permissions.
+  static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,
+                                void *CallbackMgr);
+
+  /// @brief Write the requsted number of trampolines into the given memory,
+  ///        which must be big enough to hold 1 pointer, plus NumTrampolines
+  ///        trampolines.
+  static void writeTrampolines(uint8_t *TrampolineMem, void *ResolverAddr,
+                               unsigned NumTrampolines);
+
+  /// @brief Emit at least MinStubs worth of indirect call stubs, rounded out to
+  ///        the nearest page size.
+  ///
+  ///   E.g. Asking for 4 stubs on i386, where stubs are 8-bytes, with 4k
+  /// pages will return a block of 512 stubs (4096 / 8 = 512). Asking for 513
+  /// will return a block of 1024 (2-pages worth).
+  static std::error_code emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
+                                                unsigned MinStubs,
+                                                void *InitialPtrVal);
+};
+
+
 } // End namespace orc.
 } // End namespace llvm.
 

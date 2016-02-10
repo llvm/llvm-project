@@ -14,9 +14,10 @@
 #ifndef LLVM_SUPPORT_REGISTRY_H
 #define LLVM_SUPPORT_REGISTRY_H
 
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include <memory>
 
 namespace llvm {
@@ -59,19 +60,22 @@ namespace llvm {
     ///
     class node {
       friend class iterator;
+      friend Registry<T>;
 
       node *Next;
       const entry& Val;
 
     public:
-      node(const entry& V) : Next(nullptr), Val(V) {
-        if (Tail)
-          Tail->Next = this;
-        else
-          Head = this;
-        Tail = this;
-      }
+      node(const entry &V) : Next(nullptr), Val(V) {}
     };
+
+    static void add_node(node *N) {
+      if (Tail)
+        Tail->Next = N;
+      else
+        Head = N;
+      Tail = N;
+    }
 
     /// Iterators for registry entries.
     ///
@@ -112,8 +116,41 @@ namespace llvm {
 
     public:
       Add(const char *Name, const char *Desc)
-        : Entry(Name, Desc, CtorFn), Node(Entry) {}
+          : Entry(Name, Desc, CtorFn), Node(Entry) {
+        add_node(&Node);
+      }
     };
+
+    /// A dynamic import facility.  This is used on Windows to
+    /// import the entries added in the plugin.
+    static void import(sys::DynamicLibrary &DL, const char *RegistryName) {
+      typedef void *(*GetRegistry)();
+      std::string Name("LLVMGetRegistry_");
+      Name.append(RegistryName);
+      GetRegistry Getter =
+          reinterpret_cast<GetRegistry>(DL.getAddressOfSymbol(Name.c_str()));
+      if (Getter) {
+        // Call the getter function in order to get the full copy of the
+        // registry defined in the plugin DLL, and copy them over to the
+        // current Registry.
+        typedef std::pair<const node *, const node *> Info;
+        Info *I = static_cast<Info *>(Getter());
+        iterator begin(I->first);
+        iterator end(I->second);
+        for (++end; begin != end; ++begin) {
+          // This Node object needs to remain alive for the
+          // duration of the program.
+          add_node(new node(*begin));
+        }
+      }
+    }
+
+    /// Retrieve the data to be passed across DLL boundaries when
+    /// importing registries from another DLL on Windows.
+    static void *exportRegistry() {
+      static std::pair<const node *, const node *> Info(Head, Tail);
+      return &Info;
+    }
   };
 
   
@@ -125,5 +162,19 @@ namespace llvm {
   template <typename T>
   typename Registry<T>::node *Registry<T>::Tail;
 } // end namespace llvm
+
+#ifdef LLVM_ON_WIN32
+#define LLVM_EXPORT_REGISTRY(REGISTRY_CLASS)                                   \
+  extern "C" {                                                                 \
+  __declspec(dllexport) void *__cdecl LLVMGetRegistry_##REGISTRY_CLASS() {     \
+    return REGISTRY_CLASS::exportRegistry();                                   \
+  }                                                                            \
+  }
+#define LLVM_IMPORT_REGISTRY(REGISTRY_CLASS, DL)                               \
+  REGISTRY_CLASS::import(DL, #REGISTRY_CLASS)
+#else
+#define LLVM_EXPORT_REGISTRY(REGISTRY_CLASS)
+#define LLVM_IMPORT_REGISTRY(REGISTRY_CLASS, DL)
+#endif
 
 #endif // LLVM_SUPPORT_REGISTRY_H

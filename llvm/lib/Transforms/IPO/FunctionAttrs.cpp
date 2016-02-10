@@ -120,8 +120,12 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, AAResults &AAR,
     // Detect these now, skipping to the next instruction if one is found.
     CallSite CS(cast<Value>(I));
     if (CS) {
-      // Ignore calls to functions in the same SCC.
-      if (CS.getCalledFunction() && SCCNodes.count(CS.getCalledFunction()))
+      // Ignore calls to functions in the same SCC, as long as the call sites
+      // don't have operand bundles.  Calls with operand bundles are allowed to
+      // have memory effects not described by the memory effects of the call
+      // target.
+      if (!CS.hasOperandBundles() && CS.getCalledFunction() &&
+          SCCNodes.count(CS.getCalledFunction()))
         continue;
       FunctionModRefBehavior MRB = AAR.getModRefBehavior(CS);
 
@@ -931,6 +935,68 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes,
   return MadeChange;
 }
 
+/// Removes convergent attributes where we can prove that none of the SCC's
+/// callees are themselves convergent.  Returns true if successful at removing
+/// the attribute.
+static bool removeConvergentAttrs(const CallGraphSCC &SCC,
+                                  const SCCNodeSet &SCCNodes) {
+  // Determines whether a function can be made non-convergent, ignoring all
+  // other functions in SCC.  (A function can *actually* be made non-convergent
+  // only if all functions in its SCC can be made convergent.)
+  auto CanRemoveConvergent = [&] (CallGraphNode *CGN) {
+    Function *F = CGN->getFunction();
+    if (!F) return false;
+
+    if (!F->isConvergent()) return true;
+
+    // Can't remove convergent from declarations.
+    if (F->isDeclaration()) return false;
+
+    // Don't remove convergent from optnone functions.
+    if (F->hasFnAttribute(Attribute::OptimizeNone))
+      return false;
+
+    // Can't remove convergent if any of F's callees -- ignoring functions in the
+    // SCC itself -- are convergent.
+    if (llvm::any_of(*CGN, [&](const CallGraphNode::CallRecord &CR) {
+          Function *F = CR.second->getFunction();
+          return SCCNodes.count(F) == 0 && (!F || F->isConvergent());
+        }))
+      return false;
+
+    // CGN doesn't contain calls to intrinsics, so iterate over all of F's
+    // callsites, looking for any calls to convergent intrinsics.  If we find one,
+    // F must remain marked as convergent.
+    auto IsConvergentIntrinsicCall = [](Instruction &I) {
+      CallSite CS(cast<Value>(&I));
+      if (!CS)
+        return false;
+      Function *Callee = CS.getCalledFunction();
+      return Callee && Callee->isIntrinsic() && Callee->isConvergent();
+    };
+    return !llvm::any_of(*F, [=](BasicBlock &BB) {
+      return llvm::any_of(BB, IsConvergentIntrinsicCall);
+    });
+  };
+
+  // We can remove the convergent attr from functions in the SCC if they all can
+  // be made non-convergent (because they call only non-convergent functions,
+  // other than each other).
+  if (!llvm::all_of(SCC, CanRemoveConvergent)) return false;
+
+  // If we got here, all of the SCC's callees are non-convergent, and none of
+  // the optnone functions in the SCC are marked as convergent.  Therefore all
+  // of the SCC's functions can be marked as non-convergent.
+  for (CallGraphNode *CGN : SCC)
+    if (Function *F = CGN->getFunction()) {
+      if (F->isConvergent())
+        DEBUG(dbgs() << "Removing convergent attr from " << F->getName()
+                     << "\n");
+      F->setNotConvergent();
+    }
+  return true;
+}
+
 static bool setDoesNotRecurse(Function &F) {
   if (F.doesNotRecurse())
     return false;
@@ -1007,6 +1073,7 @@ bool PostOrderFunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
   if (!ExternalNode) {
     Changed |= addNoAliasAttrs(SCCNodes);
     Changed |= addNonNullAttrs(SCCNodes, *TLI);
+    Changed |= removeConvergentAttrs(SCC, SCCNodes);
   }
 
   Changed |= addNoRecurseAttrs(SCC);

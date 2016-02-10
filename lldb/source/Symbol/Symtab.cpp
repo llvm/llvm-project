@@ -56,7 +56,7 @@ Symtab::Resize(size_t count)
     // Clients should grab the mutex from this symbol table and lock it manually
     // when calling this function to avoid performance issues.
     m_symbols.resize (count);
-    return &m_symbols[0];
+    return m_symbols.empty() ? nullptr : &m_symbols[0];
 }
 
 uint32_t

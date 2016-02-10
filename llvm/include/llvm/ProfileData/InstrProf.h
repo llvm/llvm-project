@@ -379,7 +379,7 @@ StringRef InstrProfSymtab::getFuncName(uint64_t FuncMD5Hash) {
       std::lower_bound(MD5NameMap.begin(), MD5NameMap.end(), FuncMD5Hash,
                        [](const std::pair<uint64_t, std::string> &LHS,
                           uint64_t RHS) { return LHS.first < RHS; });
-  if (Result != MD5NameMap.end())
+  if (Result != MD5NameMap.end() && Result->first == FuncMD5Hash)
     return Result->second;
   return StringRef();
 }

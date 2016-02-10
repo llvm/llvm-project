@@ -2883,26 +2883,20 @@ SDValue MipsSETargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   // MipsISD::VSHF.
   if (isVECTOR_SHUFFLE_SPLATI(Op, ResTy, Indices, DAG))
     return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, DAG);
-  SDValue Result = lowerVECTOR_SHUFFLE_ILVEV(Op, ResTy, Indices, DAG);
-  if (Result.getNode())
+  SDValue Result;
+  if ((Result = lowerVECTOR_SHUFFLE_ILVEV(Op, ResTy, Indices, DAG)))
     return Result;
-  Result = lowerVECTOR_SHUFFLE_ILVOD(Op, ResTy, Indices, DAG);
-  if (Result.getNode())
+  if ((Result = lowerVECTOR_SHUFFLE_ILVOD(Op, ResTy, Indices, DAG)))
     return Result;
-  Result = lowerVECTOR_SHUFFLE_ILVL(Op, ResTy, Indices, DAG);
-  if (Result.getNode())
+  if ((Result = lowerVECTOR_SHUFFLE_ILVL(Op, ResTy, Indices, DAG)))
     return Result;
-  Result = lowerVECTOR_SHUFFLE_ILVR(Op, ResTy, Indices, DAG);
-  if (Result.getNode())
+  if ((Result = lowerVECTOR_SHUFFLE_ILVR(Op, ResTy, Indices, DAG)))
     return Result;
-  Result = lowerVECTOR_SHUFFLE_PCKEV(Op, ResTy, Indices, DAG);
-  if (Result.getNode())
+  if ((Result = lowerVECTOR_SHUFFLE_PCKEV(Op, ResTy, Indices, DAG)))
     return Result;
-  Result = lowerVECTOR_SHUFFLE_PCKOD(Op, ResTy, Indices, DAG);
-  if (Result.getNode())
+  if ((Result = lowerVECTOR_SHUFFLE_PCKOD(Op, ResTy, Indices, DAG)))
     return Result;
-  Result = lowerVECTOR_SHUFFLE_SHF(Op, ResTy, Indices, DAG);
-  if (Result.getNode())
+  if ((Result = lowerVECTOR_SHUFFLE_SHF(Op, ResTy, Indices, DAG)))
     return Result;
   return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, DAG);
 }

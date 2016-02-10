@@ -74,7 +74,7 @@ class TestStepOverWatchpoint(TestBase):
 
         # Most of the MIPS boards provide only one H/W watchpoints, and S/W watchpoints are not supported yet
         arch = self.getArchitecture()
-        if arch in ['mips', 'mipsel', 'mips64', 'mips64el']:
+        if re.match("^mips",arch):
             self.runCmd("watchpoint delete 1")
 
         # resolve_location=True, read=False, write=True

@@ -226,6 +226,10 @@ ModulePass *createLowerBitSetsPass();
 /// \brief This pass export CFI checks for use by external modules.
 ModulePass *createCrossDSOCFIPass();
 
+/// \brief This pass implements whole-program devirtualization using bitset
+/// metadata.
+ModulePass *createWholeProgramDevirtPass();
+
 //===----------------------------------------------------------------------===//
 // SampleProfilePass - Loads sample profile data from disk and generates
 // IR metadata to reflect the profile.

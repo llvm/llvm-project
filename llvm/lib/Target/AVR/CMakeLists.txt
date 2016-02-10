@@ -1,6 +1,7 @@
 set(LLVM_TARGET_DEFINITIONS AVR.td)
 
 tablegen(LLVM AVRGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM AVRGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM AVRGenCallingConv.inc -gen-callingconv)
 add_public_tablegen_target(AVRCommonTableGen)
 

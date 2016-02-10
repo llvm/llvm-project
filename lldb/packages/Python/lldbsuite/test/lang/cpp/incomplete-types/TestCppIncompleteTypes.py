@@ -7,7 +7,6 @@ class TestCppIncompleteTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureFreeBSD("llvm.org/pr25626 test executable not built correctly on FreeBSD")
     @skipIf(compiler="gcc")
     def test_limit_debug_info(self):
         self.build()

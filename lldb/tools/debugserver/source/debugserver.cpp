@@ -1080,7 +1080,7 @@ main (int argc, char *argv[])
 
             case 'K':
                 g_detach_on_error = false;
-
+                break;
             case 'W':
                 if (optarg && optarg[0])
                     working_dir.assign(optarg);

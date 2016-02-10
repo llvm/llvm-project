@@ -50,3 +50,21 @@ gc:
 no_gc:
     unreachable
 }
+
+
+; Make sure we don't crash when processing vectors
+define <2 x i8 addrspace(1)*> @vector(<2 x i8 addrspace(1)*> %obj) gc "statepoint-example" {
+entry:
+; CHECK-LABEL: @vector
+; CHECK: gc.statepoint
+; CHECK: gc.relocate
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0, <2 x i8 addrspace(1)*> %obj)
+  %obj.relocated = call coldcc <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token %safepoint_token, i32 7, i32 7) ; (%obj, %obj)
+  ret <2 x i8 addrspace(1)*> %obj.relocated
+}
+
+declare void @do_safepoint()
+
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token, i32, i32)
