@@ -16,27 +16,27 @@ class CreateDuringStepTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
-    @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr18190 thread states not properly maintained")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test_step_inst(self):
         """Test thread creation during step-inst handling."""
         self.build(dictionary=self.getBuildFlags())
         self.create_during_step_base("thread step-inst -m all-threads", 'stop reason = instruction step')
 
-    @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
-    @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr18190 thread states not properly maintained")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test_step_over(self):
         """Test thread creation during step-over handling."""
         self.build(dictionary=self.getBuildFlags())
         self.create_during_step_base("thread step-over -m all-threads", 'stop reason = step over')
 
-    @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
-    @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr18190 thread states not properly maintained")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test_step_in(self):
         """Test thread creation during step-in handling."""

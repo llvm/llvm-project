@@ -17,17 +17,17 @@ class ThreadStateTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureDarwin("rdar://15367566")
-    @expectedFailureFreeBSD('llvm.org/pr15824')
-    @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr18190 thread states not properly maintained")
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_breakpoint_test()
 
     @skipIfDarwin # 'llvm.org/pr23669', cause Python crash randomly
-    @expectedFailureDarwin('llvm.org/pr23669')
-    @expectedFailureFreeBSD('llvm.org/pr15824')
+    @expectedFailureAll(oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr23669")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr15824")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
     def test_state_after_continue(self):
         """Test thread state after continue."""

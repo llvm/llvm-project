@@ -414,6 +414,7 @@ bool MachOLinkingContext::minOS(StringRef mac, StringRef iOS) const {
     // This matches the ld64 behaviour
     return false;
   }
+  llvm_unreachable("invalid OS enum");
 }
 
 bool MachOLinkingContext::addEntryPointLoadCommand() const {

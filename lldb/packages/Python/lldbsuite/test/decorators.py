@@ -301,12 +301,6 @@ def expectedFailureDarwin(bugnumber=None, compilers=None, debug_info=None):
 def expectedFailureFreeBSD(bugnumber=None, compilers=None, debug_info=None):
     return expectedFailureOS(['freebsd'], bugnumber, compilers, debug_info=debug_info)
 
-def expectedFailureLinux(bugnumber=None, compilers=None, debug_info=None, archs=None):
-    return expectedFailureOS(['linux'], bugnumber, compilers, debug_info=debug_info, archs=archs)
-
-def expectedFailureNetBSD(bugnumber=None, compilers=None, debug_info=None):
-    return expectedFailureOS(['netbsd'], bugnumber, compilers, debug_info=debug_info)
-
 def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
     """ Mark a test as xfail for Android.
 
@@ -396,18 +390,6 @@ def skipIfRemote(func):
     def is_remote():
         return "skip on remote platform" if lldb.remote_platform else None
     return skipTestIfFn(is_remote)(func)
-
-def skipUnlessListedRemote(remote_list=None):
-    def is_remote_unlisted(self):
-        if remote_list and lldb.remote_platform:
-            triple = self.dbg.GetSelectedPlatform().GetTriple()
-            for r in remote_list:
-                if r in triple:
-                    return None
-            return "skipping because remote is not listed"
-        else:
-            return None
-    return skipTestIfFn(is_remote_unlisted)
 
 def skipIfRemoteDueToDeadlock(func):
     """Decorate the item to skip tests if testing remotely due to the test deadlocking."""

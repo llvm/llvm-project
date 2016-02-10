@@ -94,7 +94,7 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @llgs_test
     @expectedFailureAndroid(bugnumber="llvm.org/pr24739", archs=["arm", "aarch64"])
-    @expectedFailureLinux(bugnumber="llvm.org/pr24739", archs=["arm", "aarch64"])
+    @expectedFailureAll(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr24739")
     def test_single_step_only_steps_one_instruction_with_Hc_vCont_s_llgs(self):
         self.init_llgs_test()
         self.build()
@@ -110,7 +110,7 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @llgs_test
     @expectedFailureAndroid(bugnumber="llvm.org/pr24739", archs=["arm", "aarch64"])
-    @expectedFailureLinux(bugnumber="llvm.org/pr24739", archs=["arm", "aarch64"])
+    @expectedFailureAll(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr24739")
     def test_single_step_only_steps_one_instruction_with_vCont_s_thread_llgs(self):
         self.init_llgs_test()
         self.build()

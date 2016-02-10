@@ -116,7 +116,7 @@ class ProcessLaunchTestCase(TestBase):
     # rdar://problem/9056462
     # The process launch flag '-w' for setting the current working directory not working?
     @not_remote_testsuite_ready
-    @expectedFailureLinux("llvm.org/pr20265")
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr20265")
     def test_set_working_dir (self):
         """Test that '-w dir' sets the working dir when running the inferior."""
         d = {'CXX_SOURCES' : 'print_cwd.cpp'}

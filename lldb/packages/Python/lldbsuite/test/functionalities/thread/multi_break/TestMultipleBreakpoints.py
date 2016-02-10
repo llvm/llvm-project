@@ -22,9 +22,9 @@ class MultipleBreakpointTestCase(TestBase):
         # Find the line number for our breakpoint.
         self.breakpoint = line_number('main.cpp', '// Set breakpoint here')
 
-    @expectedFailureDarwin("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureFreeBSD("llvm.org/pr18190") # thread states not properly maintained
-    @expectedFailureLinux("llvm.org/pr15824") # thread states not properly maintained
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr18190 thread states not properly maintained")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test(self):
         """Test simultaneous breakpoints in multiple threads."""

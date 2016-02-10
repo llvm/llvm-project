@@ -66,7 +66,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureLinux # Failing in ~11/600 dosep runs (build 3120-3122)
+    @expectedFailureAll(oslist=["linux"], bugnumber="Failing in ~11/600 dosep runs (build 3120-3122)")
     def test_lldbmi_gdb_set_target_async_off(self):
         """Test that 'lldb-mi --interpreter' can execute commands in sync mode."""
 
