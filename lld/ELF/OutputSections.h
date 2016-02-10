@@ -342,7 +342,7 @@ private:
   std::vector<Cie<ELFT>> Cies;
 
   // Maps CIE content + personality to a index in Cies.
-  llvm::DenseMap<std::pair<StringRef, StringRef>, unsigned> CieMap;
+  llvm::DenseMap<std::pair<StringRef, SymbolBody *>, unsigned> CieMap;
 };
 
 template <class ELFT>

@@ -2332,11 +2332,11 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
                 mangled.SetDemangledName( ConstString((demangled_name + suffix).str()) );
         }
 
-        // In ELF all symbol should have a valid size but it is not true for some function symbols
-        // coming from hand written assembly. As none of the function symbol should have 0 size we
-        // try to calculate the size for these symbols in the symtab with saying that their original
+        // In ELF all symbol should have a valid size but it is not true for some code symbols
+        // coming from hand written assembly. As none of the code symbol should have 0 size we try
+        // to calculate the size for these symbols in the symtab with saying that their original
         // size is not valid.
-        bool symbol_size_valid = symbol.st_size != 0 || symbol.getType() != STT_FUNC;
+        bool symbol_size_valid = symbol.st_size != 0 || symbol_type != eSymbolTypeCode;
 
         Symbol dc_symbol(
             i + start_id,       // ID is the original symbol table index.
@@ -2863,14 +2863,6 @@ ObjectFileELF::GetSymtab()
             }
         }
 
-        DWARFCallFrameInfo* eh_frame = GetUnwindTable().GetEHFrameInfo();
-        if (eh_frame)
-        {
-            if (m_symtab_ap == nullptr)
-                m_symtab_ap.reset(new Symtab(this));
-            ParseUnwindSymbols (m_symtab_ap.get(), eh_frame);
-        }
-
         // If we still don't have any symtab then create an empty instance to avoid do the section
         // lookup next time.
         if (m_symtab_ap == nullptr)
@@ -2900,64 +2892,57 @@ ObjectFileELF::GetSymtab()
     return m_symtab_ap.get();
 }
 
-void
-ObjectFileELF::ParseUnwindSymbols(Symtab *symbol_table, DWARFCallFrameInfo* eh_frame)
+Symbol *
+ObjectFileELF::ResolveSymbolForAddress(const Address& so_addr, bool verify_unique)
 {
-    SectionList* section_list = GetSectionList();
+    if (!m_symtab_ap.get())
+        return nullptr; // GetSymtab() should be called first.
+
+    const SectionList *section_list = GetSectionList();
     if (!section_list)
-        return;
+        return nullptr;
 
-    // First we save the new symbols into a separate list and add them to the symbol table after
-    // we colleced all symbols we want to add. This is neccessary because adding a new symbol
-    // invalidates the internal index of the symtab what causing the next lookup to be slow because
-    // it have to recalculate the index first.
-    std::vector<Symbol> new_symbols;
+    if (DWARFCallFrameInfo *eh_frame = GetUnwindTable().GetEHFrameInfo())
+    {
+        AddressRange range;
+        if (eh_frame->GetAddressRange (so_addr, range))
+        {
+            const addr_t file_addr = range.GetBaseAddress().GetFileAddress();
+            Symbol * symbol = verify_unique ? m_symtab_ap->FindSymbolContainingFileAddress(file_addr) : nullptr;
+            if (symbol)
+                return symbol;
 
-    eh_frame->ForEachFDEEntries(
-        [this, symbol_table, section_list, &new_symbols](lldb::addr_t file_addr,
-                                                         uint32_t size,
-                                                         dw_offset_t) {
-        Symbol* symbol = symbol_table->FindSymbolAtFileAddress(file_addr);
-        if (symbol)
-        {
-            if (!symbol->GetByteSizeIsValid())
+            // Note that a (stripped) symbol won't be found by GetSymtab()...
+            lldb::SectionSP eh_sym_section_sp = section_list->FindSectionContainingFileAddress(file_addr);
+            if (eh_sym_section_sp.get())
             {
-                symbol->SetByteSize(size);
-                symbol->SetSizeIsSynthesized(true);
-            }
-        }
-        else
-        {
-            SectionSP section_sp = section_list->FindSectionContainingFileAddress(file_addr);
-            if (section_sp)
-            {
-                addr_t offset = file_addr - section_sp->GetFileAddress();
-                const char* symbol_name = GetNextSyntheticSymbolName().GetCString();
-                uint64_t symbol_id = symbol_table->GetNumSymbols();
+                addr_t section_base = eh_sym_section_sp->GetFileAddress();
+                addr_t offset = file_addr - section_base;
+                uint64_t symbol_id = m_symtab_ap->GetNumSymbols();
+
                 Symbol eh_symbol(
-                        symbol_id,       // Symbol table index.
-                        symbol_name,     // Symbol name.
-                        false,           // Is the symbol name mangled?
-                        eSymbolTypeCode, // Type of this symbol.
-                        true,            // Is this globally visible?
-                        false,           // Is this symbol debug info?
-                        false,           // Is this symbol a trampoline?
-                        true,            // Is this symbol artificial?
-                        section_sp,      // Section in which this symbol is defined or null.
-                        offset,          // Offset in section or symbol value.
-                        0,               // Size:          Don't specify the size as an FDE can
-                        false,           // Size is valid: cover multiple symbols.
-                        false,           // Contains linker annotations?
-                        0);              // Symbol flags.
-                new_symbols.push_back(eh_symbol);
+                        symbol_id,            // Symbol table index.
+                        "???",                // Symbol name.
+                        false,                // Is the symbol name mangled?
+                        eSymbolTypeCode,      // Type of this symbol.
+                        true,                 // Is this globally visible?
+                        false,                // Is this symbol debug info?
+                        false,                // Is this symbol a trampoline?
+                        true,                 // Is this symbol artificial?
+                        eh_sym_section_sp,    // Section in which this symbol is defined or null.
+                        offset,               // Offset in section or symbol value.
+                        range.GetByteSize(),  // Size in bytes of this symbol.
+                        true,                 // Size is valid.
+                        false,                // Contains linker annotations?
+                        0);                   // Symbol flags.
+                if (symbol_id == m_symtab_ap->AddSymbol(eh_symbol))
+                    return m_symtab_ap->SymbolAtIndex(symbol_id);
             }
         }
-        return true;
-    });
-
-    for (const Symbol& s : new_symbols)
-        symbol_table->AddSymbol(s);
+    }
+    return nullptr;
 }
+
 
 bool
 ObjectFileELF::IsStripped ()
