@@ -20,6 +20,7 @@
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -127,12 +128,14 @@ ItaniumABILanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
                         uint32_t num_matches = 0;
                         // First look in the module that the vtable symbol came from
                         // and look for a single exact match.
+                        llvm::DenseSet<SymbolFile *> searched_symbol_files;
                         if (sc.module_sp)
                         {
                             num_matches = sc.module_sp->FindTypes (sc,
                                                                    ConstString(class_name),
                                                                    exact_match,
                                                                    1,
+                                                                   searched_symbol_files,
                                                                    class_types);
                         }
                         
@@ -145,6 +148,7 @@ ItaniumABILanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
                                                                          ConstString(class_name),
                                                                          exact_match,
                                                                          UINT32_MAX,
+                                                                         searched_symbol_files,
                                                                          class_types);
                         }
                         

@@ -40,6 +40,7 @@
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/GoASTContext.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -229,7 +230,8 @@ LookupType(TargetSP target, ConstString name)
         return CompilerType();
     SymbolContext sc;
     TypeList type_list;
-    uint32_t num_matches = target->GetImages().FindTypes(sc, name, false, 2, type_list);
+    llvm::DenseSet<SymbolFile *> searched_symbol_files;
+    uint32_t num_matches = target->GetImages().FindTypes(sc, name, false, 2, searched_symbol_files, type_list);
     if (num_matches > 0)
     {
         return type_list.GetTypeAtIndex(0)->GetFullCompilerType();

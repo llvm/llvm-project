@@ -3162,9 +3162,20 @@ SymbolFileDWARF::FindTypes (const SymbolContext& sc,
                             const ConstString &name, 
                             const CompilerDeclContext *parent_decl_ctx, 
                             bool append, 
-                            uint32_t max_matches, 
+                            uint32_t max_matches,
+                            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
                             TypeMap& types)
 {
+    // If we aren't appending the results to this list, then clear the list
+    if (!append)
+        types.Clear();
+
+    // Make sure we haven't already searched this SymbolFile before...
+    if (searched_symbol_files.count(this))
+        return 0;
+    else
+        searched_symbol_files.insert(this);
+
     DWARFDebugInfo* info = DebugInfo();
     if (info == NULL)
         return 0;
@@ -3186,10 +3197,6 @@ SymbolFileDWARF::FindTypes (const SymbolContext& sc,
                                                       name.GetCString(), append,
                                                       max_matches);
     }
-
-    // If we aren't appending the results to this list, then clear the list
-    if (!append)
-        types.Clear();
 
     if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
         return 0;
@@ -3288,6 +3295,7 @@ SymbolFileDWARF::FindTypes (const SymbolContext& sc,
                                                                                  parent_decl_ctx,
                                                                                  append,
                                                                                  max_matches,
+                                                                                 searched_symbol_files,
                                                                                  types);
                     if (num_external_matches)
                         return num_external_matches;

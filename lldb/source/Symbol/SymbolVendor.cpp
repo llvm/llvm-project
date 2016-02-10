@@ -359,14 +359,14 @@ SymbolVendor::FindFunctions(const RegularExpression& regex, bool include_inlines
 
 
 size_t
-SymbolVendor::FindTypes (const SymbolContext& sc, const ConstString &name, const CompilerDeclContext *parent_decl_ctx, bool append, size_t max_matches, TypeMap& types)
+SymbolVendor::FindTypes (const SymbolContext& sc, const ConstString &name, const CompilerDeclContext *parent_decl_ctx, bool append, size_t max_matches, llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files, TypeMap& types)
 {
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
         lldb_private::Mutex::Locker locker(module_sp->GetMutex());
         if (m_sym_file_ap.get())
-            return m_sym_file_ap->FindTypes(sc, name, parent_decl_ctx, append, max_matches, types);
+            return m_sym_file_ap->FindTypes(sc, name, parent_decl_ctx, append, max_matches, searched_symbol_files, types);
     }
     if (!append)
         types.Clear();

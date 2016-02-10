@@ -23,6 +23,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
 
 using namespace lldb;
@@ -733,7 +734,7 @@ ModuleList::FindModule (const UUID &uuid) const
 
 
 size_t
-ModuleList::FindTypes (const SymbolContext& sc, const ConstString &name, bool name_is_fully_qualified, size_t max_matches, TypeList& types) const
+ModuleList::FindTypes (const SymbolContext& sc, const ConstString &name, bool name_is_fully_qualified, size_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeList& types) const
 {
     Mutex::Locker locker(m_modules_mutex);
 
@@ -747,7 +748,7 @@ ModuleList::FindTypes (const SymbolContext& sc, const ConstString &name, bool na
         {
             if (sc.module_sp.get() == (*pos).get())
             {
-                total_matches += (*pos)->FindTypes (sc, name, name_is_fully_qualified, max_matches, types);
+                total_matches += (*pos)->FindTypes (sc, name, name_is_fully_qualified, max_matches, searched_symbol_files, types);
 
                 if (total_matches >= max_matches)
                     break;
@@ -764,7 +765,7 @@ ModuleList::FindTypes (const SymbolContext& sc, const ConstString &name, bool na
             // context "sc". If "sc" contains a empty module shared pointer, then
             // the comparison will always be true (valid_module_ptr != NULL).
             if (sc.module_sp.get() != (*pos).get())
-                total_matches += (*pos)->FindTypes (world_sc, name, name_is_fully_qualified, max_matches, types);
+                total_matches += (*pos)->FindTypes (world_sc, name, name_is_fully_qualified, max_matches, searched_symbol_files, types);
             
             if (total_matches >= max_matches)
                 break;
