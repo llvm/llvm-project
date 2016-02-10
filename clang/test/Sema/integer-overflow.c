@@ -153,3 +153,23 @@ struct s {
   .y = 5,
   .x = 4 * 1024 * 1024 * 1024  // expected-warning {{overflow in expression; result is 0 with type 'int'}}
 };
+
+struct s2 {
+  unsigned a0;
+
+  struct s3 {
+    unsigned a2;
+
+    struct s4 {
+      unsigned a4;
+    } a3;
+  } a1;
+} s2 = {
+  .a0 = 4 * 1024 * 1024 * 1024, // expected-warning {{overflow in expression; result is 0 with type 'int'}}
+  {
+    .a2 = 4 * 1024 * 1024 * 1024, // expected-warning {{overflow in expression; result is 0 with type 'int'}}
+    {
+      .a4 = 4 * 1024 * 1024 * 1024 // expected-warning {{overflow in expression; result is 0 with type 'int'}}
+    }
+  }
+};
