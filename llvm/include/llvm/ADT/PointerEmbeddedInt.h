@@ -56,6 +56,7 @@ public:
   PointerEmbeddedInt &operator=(IntT I) {
     assert((I & Mask) == 0 && "Integer has bits outside those preserved!");
     Value = static_cast<uintptr_t>(I) << Shift;
+    return *this;
   }
 
   // Note that this imilict conversion additionally allows all of the basic
