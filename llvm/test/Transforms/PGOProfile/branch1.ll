@@ -1,9 +1,14 @@
-; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
+; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-COMDAT
+; RUN: opt < %s -mtriple=x86_64-apple-darwin -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-DARWIN-LINKONCE
 ; RUN: llvm-profdata merge %S/Inputs/branch1.proftext -o %t.profdata
 ; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
+; GEN-DARWIN-LINKONCE: target triple = "x86_64-apple-darwin"
 
+; GEN-COMDAT: $__llvm_profile_raw_version = comdat any
+; GEN-COMDAT: @__llvm_profile_raw_version = constant i64 72057594037927939, comdat
+; GEN-LINKONCE: @__llvm_profile_raw_version = linkonce constant i64 72057594037927939
 ; GEN: @__profn_test_br_1 = private constant [9 x i8] c"test_br_1"
 
 define i32 @test_br_1(i32 %i) {
