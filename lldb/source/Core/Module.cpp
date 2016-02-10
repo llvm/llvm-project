@@ -933,6 +933,7 @@ Module::FindTypes_Impl (const SymbolContext& sc,
                         const CompilerDeclContext *parent_decl_ctx,
                         bool append,
                         size_t max_matches,
+                        llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
                         TypeMap& types)
 {
     Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
@@ -940,7 +941,7 @@ Module::FindTypes_Impl (const SymbolContext& sc,
     {
         SymbolVendor *symbols = GetSymbolVendor ();
         if (symbols)
-            return symbols->FindTypes(sc, name, parent_decl_ctx, append, max_matches, types);
+            return symbols->FindTypes(sc, name, parent_decl_ctx, append, max_matches, searched_symbol_files, types);
     }
     return 0;
 }
@@ -954,7 +955,8 @@ Module::FindTypesInNamespace (const SymbolContext& sc,
 {
     const bool append = true;
     TypeMap types_map;
-    size_t num_types = FindTypes_Impl(sc, type_name, parent_decl_ctx, append, max_matches, types_map);
+    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
+    size_t num_types = FindTypes_Impl(sc, type_name, parent_decl_ctx, append, max_matches, searched_symbol_files, types_map);
     if (num_types > 0)
         sc.SortTypeList(types_map, type_list);
     return num_types;
@@ -966,7 +968,8 @@ Module::FindFirstType (const SymbolContext& sc,
                        bool exact_match)
 {
     TypeList type_list;
-    const size_t num_matches = FindTypes (sc, name, exact_match, 1, type_list);
+    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
+    const size_t num_matches = FindTypes (sc, name, exact_match, 1, searched_symbol_files, type_list);
     if (num_matches)
         return type_list.GetTypeAtIndex(0);
     return TypeSP();
@@ -978,6 +981,7 @@ Module::FindTypes (const SymbolContext& sc,
                    const ConstString &name,
                    bool exact_match,
                    size_t max_matches,
+                   llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
                    TypeList& types)
 {
     size_t num_matches = 0;
@@ -1000,7 +1004,7 @@ Module::FindTypes (const SymbolContext& sc,
             exact_match = true;
         }
         ConstString type_basename_const_str (type_basename.c_str());
-        if (FindTypes_Impl(sc, type_basename_const_str, NULL, append, max_matches, typesmap))
+        if (FindTypes_Impl(sc, type_basename_const_str, NULL, append, max_matches, searched_symbol_files, typesmap))
         {
             typesmap.RemoveMismatchedTypes (type_scope, type_basename, type_class, exact_match);
             num_matches = typesmap.GetSize();
@@ -1013,13 +1017,13 @@ Module::FindTypes (const SymbolContext& sc,
         {
             // The "type_name_cstr" will have been modified if we have a valid type class
             // prefix (like "struct", "class", "union", "typedef" etc).
-            FindTypes_Impl(sc, ConstString(type_name_cstr), NULL, append, max_matches, typesmap);
+            FindTypes_Impl(sc, ConstString(type_name_cstr), NULL, append, max_matches, searched_symbol_files, typesmap);
             typesmap.RemoveMismatchedTypes (type_class);
             num_matches = typesmap.GetSize();
         }
         else
         {
-            num_matches = FindTypes_Impl(sc, name, NULL, append, max_matches, typesmap);
+            num_matches = FindTypes_Impl(sc, name, NULL, append, max_matches, searched_symbol_files, typesmap);
         }
     }
     if (num_matches > 0)

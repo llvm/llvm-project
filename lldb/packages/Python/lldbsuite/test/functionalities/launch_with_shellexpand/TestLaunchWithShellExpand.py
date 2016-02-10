@@ -16,9 +16,7 @@ class LaunchWithShellExpandTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureFreeBSD("llvm.org/pr22627 process launch w/ shell expansion not working")
-    @expectedFailureLinux("llvm.org/pr22627 process launch w/ shell expansion not working")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows", "linux", "freebsd"], bugnumber="llvm.org/pr24778 llvm.org/pr22627")
     def test(self):
         self.build()
         exe = os.path.join (os.getcwd(), "a.out")

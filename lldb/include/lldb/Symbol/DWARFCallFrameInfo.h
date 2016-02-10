@@ -73,9 +73,6 @@ public:
     void
     GetFunctionAddressAndSizeVector (FunctionAddressAndSizeVector &function_info);
 
-    void
-    ForEachFDEEntries(const std::function<bool(lldb::addr_t, uint32_t, dw_offset_t)>& callback);
-
 private:
     enum
     {

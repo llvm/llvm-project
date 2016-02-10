@@ -42,6 +42,7 @@
 // Fix undefined behavior in how std::list stores it's linked nodes.
 #define _LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB
 #define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
+#define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
 #endif
 
 #define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y
@@ -178,6 +179,12 @@
 #  error unable to determine endian
 # endif
 #endif  // !defined(_LIBCPP_LITTLE_ENDIAN) || !defined(_LIBCPP_BIG_ENDIAN)
+
+#if __has_attribute(__no_sanitize__)
+#define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
+#else
+#define _LIBCPP_NO_CFI
+#endif
 
 #ifdef _WIN32
 
@@ -719,9 +726,11 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_LOCALE__L_EXTENSIONS 1
 #endif
 
-#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(_NEWLIB_VERSION) && \
-    !defined(__CloudABI__)
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+// Most unix variants have catopen.  These are the specific ones that don't.
+#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(_NEWLIB_VERSION)
 #define _LIBCPP_HAS_CATOPEN 1
+#endif
 #endif
 
 #ifdef __FreeBSD__

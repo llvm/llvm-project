@@ -17,7 +17,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureLinux # llvm.org/pr25000: lldb-mi does not receive broadcasted notification from Core/Process about process stopped
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr25000: lldb-mi does not receive broadcasted notification from Core/Process about process stopped")
     def test_lldbmi_exec_run(self):
         """Test that 'lldb-mi --interpreter' can stop at entry."""
 

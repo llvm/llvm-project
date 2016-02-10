@@ -26,7 +26,7 @@ class EventAPITestCase(TestBase):
         self.line = line_number('main.c', '// Find the line number of function "c" here.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureLinux("llvm.org/pr23730") # Flaky, fails ~1/10 cases
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr23730 Flaky, fails ~1/10 cases")
     def test_listen_for_and_print_event(self):
         """Exercise SBEvent API."""
         self.build()
@@ -177,7 +177,7 @@ class EventAPITestCase(TestBase):
 
     @skipIfFreeBSD # llvm.org/pr21325
     @add_test_categories(['pyapi'])
-    @expectedFailureLinux("llvm.org/pr23617")  # Flaky, fails ~1/10 cases
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr23617 Flaky, fails ~1/10 cases")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_add_listener_to_broadcaster(self):
         """Exercise some SBBroadcaster APIs."""

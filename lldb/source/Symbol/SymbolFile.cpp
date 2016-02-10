@@ -141,7 +141,7 @@ SymbolFile::GetMangledNamesForFunction(const std::string &scope_qualified_name, 
 }
 
 uint32_t
-SymbolFile::FindTypes (const SymbolContext& sc, const ConstString &name, const CompilerDeclContext *parent_decl_ctx, bool append, uint32_t max_matches, TypeMap& types)
+SymbolFile::FindTypes (const SymbolContext& sc, const ConstString &name, const CompilerDeclContext *parent_decl_ctx, bool append, uint32_t max_matches, llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files, TypeMap& types)
 {
     if (!append)
         types.Clear();

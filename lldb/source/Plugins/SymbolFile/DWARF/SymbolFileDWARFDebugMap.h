@@ -82,7 +82,7 @@ public:
     uint32_t        FindGlobalVariables (const lldb_private::RegularExpression& regex, bool append, uint32_t max_matches, lldb_private::VariableList& variables) override;
     uint32_t        FindFunctions (const lldb_private::ConstString &name, const lldb_private::CompilerDeclContext *parent_decl_ctx, uint32_t name_type_mask, bool include_inlines, bool append, lldb_private::SymbolContextList& sc_list) override;
     uint32_t        FindFunctions (const lldb_private::RegularExpression& regex, bool include_inlines, bool append, lldb_private::SymbolContextList& sc_list) override;
-    uint32_t        FindTypes (const lldb_private::SymbolContext& sc, const lldb_private::ConstString &name, const lldb_private::CompilerDeclContext *parent_decl_ctx, bool append, uint32_t max_matches, lldb_private::TypeMap& types) override;
+    uint32_t        FindTypes (const lldb_private::SymbolContext& sc, const lldb_private::ConstString &name, const lldb_private::CompilerDeclContext *parent_decl_ctx, bool append, uint32_t max_matches, llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files, lldb_private::TypeMap& types) override;
     lldb_private::CompilerDeclContext
                     FindNamespace (const lldb_private::SymbolContext& sc,
                                    const lldb_private::ConstString &name,

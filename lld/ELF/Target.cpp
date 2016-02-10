@@ -195,6 +195,10 @@ template <class ELFT> class MipsTargetInfo final : public TargetInfo {
 public:
   MipsTargetInfo();
   unsigned getDynRel(unsigned Type) const override;
+  void writeGotPlt(uint8_t *Buf, uint64_t Plt) const override;
+  void writePltZero(uint8_t *Buf) const override;
+  void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
+                int32_t Index, unsigned RelOff) const override;
   void writeGotHeader(uint8_t *Buf) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
@@ -867,6 +871,7 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write32le(Loc, SA);
     break;
   case R_X86_64_64:
+  case R_X86_64_DTPOFF64:
     write64le(Loc, SA);
     break;
   case R_X86_64_DTPOFF32:
@@ -1386,8 +1391,13 @@ void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   GotHeaderEntriesNum = 2;
+  GotPltHeaderEntriesNum = 2;
   PageSize = 65536;
+  PltEntrySize = 16;
+  PltZeroSize = 32;
+  UseLazyBinding = true;
   CopyRel = R_MIPS_COPY;
+  PltRel = R_MIPS_JUMP_SLOT;
   RelativeRel = R_MIPS_REL32;
 }
 
@@ -1426,24 +1436,8 @@ void MipsTargetInfo<ELFT>::writeGotHeader(uint8_t *Buf) const {
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsCopyRel(uint32_t Type,
-                                        const SymbolBody &S) const {
-  if (Config->Shared)
-    return false;
-  if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
-    if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S))
-      return SS->Sym.getType() == STT_OBJECT;
-  return false;
-}
-
-template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, SymbolBody &S) const {
-  return Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16;
-}
-
-template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsPlt(uint32_t Type, SymbolBody &S) const {
-  return false;
+void MipsTargetInfo<ELFT>::writeGotPlt(uint8_t *Buf, uint64_t Plt) const {
+  write32<ELFT::TargetEndianness>(Buf, Out<ELFT>::Plt->getVA());
 }
 
 static uint16_t mipsHigh(uint64_t V) { return (V + 0x8000) >> 16; }
@@ -1461,6 +1455,71 @@ static void applyMipsPcReloc(uint8_t *Loc, uint32_t Type, uint64_t P,
   write32<E>(Loc, (Instr & ~Mask) | ((V >> SHIFT) & Mask));
 }
 
+template <endianness E>
+static void applyMipsHi16Reloc(uint8_t *Loc, uint64_t S, int64_t A) {
+  uint32_t Instr = read32<E>(Loc);
+  write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S + A));
+}
+
+template <class ELFT>
+void MipsTargetInfo<ELFT>::writePltZero(uint8_t *Buf) const {
+  const endianness E = ELFT::TargetEndianness;
+  write32<E>(Buf, 0x3c1c0000);      // lui   $28, %hi(&GOTPLT[0])
+  write32<E>(Buf + 4, 0x8f990000);  // lw    $25, %lo(&GOTPLT[0])($28)
+  write32<E>(Buf + 8, 0x279c0000);  // addiu $28, $28, %lo(&GOTPLT[0])
+  write32<E>(Buf + 12, 0x031cc023); // subu  $24, $24, $28
+  write32<E>(Buf + 16, 0x03e07825); // move  $15, $31
+  write32<E>(Buf + 20, 0x0018c082); // srl   $24, $24, 2
+  write32<E>(Buf + 24, 0x0320f809); // jalr  $25
+  write32<E>(Buf + 28, 0x2718fffe); // subu  $24, $24, 2
+  uint64_t Got = Out<ELFT>::GotPlt->getVA();
+  uint64_t Plt = Out<ELFT>::Plt->getVA();
+  applyMipsHi16Reloc<E>(Buf, Got, 0);
+  relocateOne(Buf + 4, Buf + 8, R_MIPS_LO16, Plt + 4, Got);
+  relocateOne(Buf + 8, Buf + 12, R_MIPS_LO16, Plt + 8, Got);
+}
+
+template <class ELFT>
+void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
+                                    uint64_t PltEntryAddr, int32_t Index,
+                                    unsigned RelOff) const {
+  const endianness E = ELFT::TargetEndianness;
+  write32<E>(Buf, 0x3c0f0000);      // lui   $15, %hi(.got.plt entry)
+  write32<E>(Buf + 4, 0x8df90000);  // l[wd] $25, %lo(.got.plt entry)($15)
+  write32<E>(Buf + 8, 0x03200008);  // jr    $25
+  write32<E>(Buf + 12, 0x25f80000); // addiu $24, $15, %lo(.got.plt entry)
+  applyMipsHi16Reloc<E>(Buf, GotEntryAddr, 0);
+  relocateOne(Buf + 4, Buf + 8, R_MIPS_LO16, PltEntryAddr + 4, GotEntryAddr);
+  relocateOne(Buf + 12, Buf + 16, R_MIPS_LO16, PltEntryAddr + 8, GotEntryAddr);
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::needsCopyRel(uint32_t Type,
+                                        const SymbolBody &S) const {
+  if (Config->Shared)
+    return false;
+  if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
+    if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S))
+      return SS->Sym.getType() == STT_OBJECT;
+  return false;
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, SymbolBody &S) const {
+  return needsPlt(Type, S) || Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16;
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::needsPlt(uint32_t Type, SymbolBody &S) const {
+  if (needsCopyRel(Type, S))
+    return false;
+  if (Type == R_MIPS_26 && canBePreempted(&S, false))
+    return true;
+  if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
+    return S.isShared();
+  return false;
+}
+
 template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
                                        uint32_t Type, uint64_t P, uint64_t S,
@@ -1470,6 +1529,15 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   case R_MIPS_32:
     add32<E>(Loc, S);
     break;
+  case R_MIPS_26: {
+    uint32_t Instr = read32<E>(Loc);
+    // FIXME (simon): If the relocation target symbol is not a PLT entry
+    // we should use another expression for calculation:
+    // ((A << 2) | (P & 0xf0000000)) >> 2
+    S += SignExtend64<28>((Instr & 0x3ffffff) << 2);
+    write32<E>(Loc, (Instr & ~0x3ffffff) | (S >> 2));
+    break;
+  }
   case R_MIPS_CALL16:
   case R_MIPS_GOT16: {
     int64_t V = S - getMipsGpAddr<ELFT>();
@@ -1493,10 +1561,10 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     if (PairedLoc) {
       uint64_t AHL = ((Instr & 0xffff) << 16) +
                      SignExtend64<16>(read32<E>(PairedLoc) & 0xffff);
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S + AHL));
+      applyMipsHi16Reloc<E>(Loc, S, AHL);
     } else {
       warning("Can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16");
-      write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(S));
+      applyMipsHi16Reloc<E>(Loc, S, 0);
     }
     break;
   }

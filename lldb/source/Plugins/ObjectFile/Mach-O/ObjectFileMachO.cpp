@@ -4517,6 +4517,7 @@ ObjectFileMachO::ParseSymtab ()
 
         if (function_starts_count > 0)
         {
+            char synthetic_function_symbol[PATH_MAX];
             uint32_t num_synthetic_function_symbols = 0;
             for (i=0; i<function_starts_count; ++i)
             {
@@ -4531,6 +4532,7 @@ ObjectFileMachO::ParseSymtab ()
                     num_syms = sym_idx + num_synthetic_function_symbols;
                     sym = symtab->Resize (num_syms);
                 }
+                uint32_t synthetic_function_symbol_idx = 0;
                 for (i=0; i<function_starts_count; ++i)
                 {
                     const FunctionStarts::Entry *func_start_entry = function_starts.GetEntryAtIndex (i);
@@ -4565,8 +4567,13 @@ ObjectFileMachO::ParseSymtab ()
                                 {
                                     symbol_byte_size = section_end_file_addr - symbol_file_addr;
                                 }
+                                snprintf (synthetic_function_symbol,
+                                          sizeof(synthetic_function_symbol),
+                                          "___lldb_unnamed_function%u$$%s",
+                                          ++synthetic_function_symbol_idx,
+                                          module_sp->GetFileSpec().GetFilename().GetCString());
                                 sym[sym_idx].SetID (synthetic_sym_id++);
-                                sym[sym_idx].GetMangled().SetDemangledName(GetNextSyntheticSymbolName());
+                                sym[sym_idx].GetMangled().SetDemangledName(ConstString(synthetic_function_symbol));
                                 sym[sym_idx].SetType (eSymbolTypeCode);
                                 sym[sym_idx].SetIsSynthetic (true);
                                 sym[sym_idx].GetAddressRef() = symbol_addr;

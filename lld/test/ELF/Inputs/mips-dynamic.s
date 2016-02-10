@@ -4,9 +4,14 @@
 _foo:
   nop
 
-  .globl foo
-  .type foo, @function
-foo:
+  .globl foo0
+  .type foo0, @function
+foo0:
+  nop
+
+  .globl foo1
+  .type foo1, @function
+foo1:
   nop
 
   .data

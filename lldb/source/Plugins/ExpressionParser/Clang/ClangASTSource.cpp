@@ -20,6 +20,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
@@ -299,7 +300,8 @@ ClangASTSource::CompleteType (TagDecl *tag_decl)
             const ModuleList &module_list = m_target->GetImages();
 
             bool exact_match = false;
-            module_list.FindTypes (null_sc, name, exact_match, UINT32_MAX, types);
+            llvm::DenseSet<SymbolFile *> searched_symbol_files;
+            module_list.FindTypes (null_sc, name, exact_match, UINT32_MAX, searched_symbol_files, types);
 
             for (uint32_t ti = 0, te = types.GetSize();
                  ti != te && !found;
@@ -743,11 +745,11 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context,
         TypeList types;
         SymbolContext null_sc;
         const bool exact_match = false;
-
+        llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
         if (module_sp && namespace_decl)
             module_sp->FindTypesInNamespace(null_sc, name, &namespace_decl, 1, types);
         else
-            m_target->GetImages().FindTypes(null_sc, name, exact_match, 1, types);
+            m_target->GetImages().FindTypes(null_sc, name, exact_match, 1, searched_symbol_files, types);
 
         bool found_a_type = false;
         

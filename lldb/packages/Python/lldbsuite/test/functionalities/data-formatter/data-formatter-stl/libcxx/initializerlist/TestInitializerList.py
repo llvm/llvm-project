@@ -18,7 +18,7 @@ class InitializerListTestCase(TestBase):
 
     @skipIfWindows # libc++ not ported to Windows yet
     @skipIf(compiler="gcc")
-    @expectedFailureLinux # fails on clang 3.5 and tot
+    @expectedFailureAll(oslist=["linux"], bugnumber="fails on clang 3.5 and tot")
     def test(self):
         """Test that that file and class static variables display correctly."""
         self.build()

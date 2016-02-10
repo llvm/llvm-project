@@ -1027,14 +1027,13 @@ void EHOutputSection<ELFT>::addSectionAux(
       if (Config->EhFrameHdr)
         C.FdeEncoding = getFdeEncoding(D);
 
-      StringRef Personality;
+      SymbolBody *Personality = nullptr;
       if (HasReloc) {
         uint32_t SymIndex = RelI->getSymbol(Config->Mips64EL);
-        SymbolBody &Body = *S->getFile()->getSymbolBody(SymIndex)->repl();
-        Personality = Body.getName();
+        Personality = S->getFile()->getSymbolBody(SymIndex)->repl();
       }
 
-      std::pair<StringRef, StringRef> CieInfo(Entry, Personality);
+      std::pair<StringRef, SymbolBody *> CieInfo(Entry, Personality);
       auto P = CieMap.insert(std::make_pair(CieInfo, Cies.size()));
       if (P.second) {
         Cies.push_back(C);

@@ -17,6 +17,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
 
@@ -129,6 +130,7 @@ public:
                const CompilerDeclContext *parent_decl_ctx, 
                bool append, 
                size_t max_matches,
+               llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
                TypeMap& types);
 
     virtual size_t

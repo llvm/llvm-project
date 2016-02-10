@@ -17,7 +17,7 @@ class MiSymbolTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureLinux # new failure after r256863
+    @expectedFailureAll(oslist=["linux"], bugnumber="new failure after r256863")
     def test_lldbmi_symbol_list_lines_file(self):
         """Test that 'lldb-mi --interpreter' works for -symbol-list-lines when file exists."""
 

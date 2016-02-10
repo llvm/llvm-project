@@ -17,8 +17,8 @@ class ThreadStepOutTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfLinux                              # Test occasionally times out on the Linux build bot
-    @expectedFailureLinux("llvm.org/pr23477") # Test occasionally times out on the Linux build bot
-    @expectedFailureFreeBSD("llvm.org/pr18066") # inferior does not exit
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr23477 Test occasionally times out on the Linux build bot")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr18066 inferior does not exit")
     @expectedFailureAll(oslist=["windows"])
     def test_step_single_thread(self):
         """Test thread step out on one thread via command interpreter. """
@@ -26,8 +26,8 @@ class ThreadStepOutTestCase(TestBase):
         self.step_out_test(self.step_out_single_thread_with_cmd)
 
     @skipIfLinux                              # Test occasionally times out on the Linux build bot
-    @expectedFailureLinux("llvm.org/pr23477") # Test occasionally times out on the Linux build bot
-    @expectedFailureFreeBSD("llvm.org/pr19347") # 2nd thread stops at breakpoint
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr23477 Test occasionally times out on the Linux build bot")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr19347 2nd thread stops at breakpoint")
     @expectedFailureAll(oslist=["windows"])
     def test_step_all_threads(self):
         """Test thread step out on all threads via command interpreter. """
@@ -35,8 +35,8 @@ class ThreadStepOutTestCase(TestBase):
         self.step_out_test(self.step_out_all_threads_with_cmd)
 
     @skipIfLinux                              # Test occasionally times out on the Linux build bot
-    @expectedFailureLinux("llvm.org/pr23477") # Test occasionally times out on the Linux build bot
-    @expectedFailureFreeBSD("llvm.org/pr19347")
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr23477 Test occasionally times out on the Linux build bot")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr19347 2nd thread stops at breakpoint")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24681")
     def test_python(self):
         """Test thread step out on one thread via Python API (dwarf)."""

@@ -20,6 +20,7 @@
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Symbol/GoASTContext.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -117,10 +118,12 @@ LookupRuntimeType(ValueObjectSP type, ExecutionContext* exe_ctx, bool* is_direct
     
     SymbolContext sc;
     TypeList type_list;
+    llvm::DenseSet<SymbolFile *> searched_symbol_files;
     uint32_t num_matches = target->GetImages().FindTypes (sc,
                                                           const_typename,
                                                           false,
                                                           2,
+                                                          searched_symbol_files,
                                                           type_list);
     if (num_matches > 0) {
         return type_list.GetTypeAtIndex(0)->GetFullCompilerType();

@@ -150,6 +150,9 @@ public:
     lldb_private::Symtab *
     GetSymtab() override;
 
+    lldb_private::Symbol *
+    ResolveSymbolForAddress(const lldb_private::Address& so_addr, bool verify_unique) override;
+
     bool
     IsStripped () override;
 
@@ -345,10 +348,6 @@ private:
                            lldb::user_id_t start_id,
                            const ELFSectionHeaderInfo *rela_hdr,
                            lldb::user_id_t section_id);
-
-    void
-    ParseUnwindSymbols(lldb_private::Symtab *symbol_table,
-                       lldb_private::DWARFCallFrameInfo* eh_frame);
 
     /// Relocates debug sections
     unsigned

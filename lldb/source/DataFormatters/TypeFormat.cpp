@@ -23,6 +23,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/Target.h"
 
@@ -199,7 +200,8 @@ TypeFormatImpl_EnumType::FormatObject (ValueObject *valobj,
         const ModuleList& images(target_sp->GetImages());
         SymbolContext sc;
         TypeList types;
-        images.FindTypes(sc, m_enum_type, false, UINT32_MAX, types);
+        llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
+        images.FindTypes(sc, m_enum_type, false, UINT32_MAX, searched_symbol_files, types);
         if (types.GetSize() == 0)
             return false;
         for (lldb::TypeSP type_sp : types.Types())

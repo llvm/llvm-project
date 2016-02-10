@@ -35,6 +35,7 @@
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/TypeList.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
@@ -514,6 +515,7 @@ protected:
                 }
             }
                     
+            llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
             ConstString lookup_type_name(type_str.c_str());
             StackFrame *frame = m_exe_ctx.GetFramePtr();
             if (frame)
@@ -524,7 +526,8 @@ protected:
                     sc.module_sp->FindTypes (sc,
                                              lookup_type_name,
                                              exact_match,
-                                             1, 
+                                             1,
+                                             searched_symbol_files,
                                              type_list);
                 }
             }
@@ -533,7 +536,8 @@ protected:
                 target->GetImages().FindTypes (sc, 
                                                lookup_type_name, 
                                                exact_match, 
-                                               1, 
+                                               1,
+                                               searched_symbol_files,
                                                type_list);
             }
 
