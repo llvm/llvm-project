@@ -79,6 +79,21 @@ Non-comprehensive list of changes in this release
 
 * Support for dematerializing has been dropped.
 
+* ``ilist_iterator<T>`` no longer has implicit conversions to and from ``T*``,
+  since ``ilist_iterator<T>`` may be pointing at the sentinel (which is usually
+  not of type ``T`` at all).  To convert from an iterator ``I`` to a pointer,
+  use ``&*I``; to convert from a pointer ``P`` to an iterator, use
+  ``P->getIterator()``.  Alternatively, explicit conversions via
+  ``static_cast<T>(U)`` are still available.
+
+* ``ilist_node<T>::getNextNode()`` and ``ilist_node<T>::getPrevNode()`` now
+  fail at compile time when the node cannot access its parent list.
+  Previously, when the sentinel was was an ``ilist_half_node<T>``, this API
+  could return the sentinal instead of ``nullptr``.  Frustrated callers should
+  be updated to use ``iplist<T>::getNextNode(T*)`` instead.  Alternatively, if
+  the node ``N`` is guaranteed not to be the last in the list, it is safe to
+  call ``&*++N->getIterator()`` directly.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet
