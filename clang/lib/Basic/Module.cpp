@@ -497,6 +497,7 @@ void Module::dump() const {
 
 void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
                                   VisibleCallback Vis, ConflictCallback Cb) {
+  assert(Loc.isValid() && "setVisible expects a valid import location");
   if (isVisible(M))
     return;
 
