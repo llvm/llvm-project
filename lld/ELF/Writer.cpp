@@ -725,20 +725,10 @@ StringRef Writer<ELFT>::getOutputSectionName(StringRef S) const {
   if (It != std::end(InputToOutputSection))
     return It->second;
 
-  if (S.startswith(".text."))
-    return ".text";
-  if (S.startswith(".rodata."))
-    return ".rodata";
-  if (S.startswith(".data.rel.ro"))
-    return ".data.rel.ro";
-  if (S.startswith(".data."))
-    return ".data";
-  if (S.startswith(".bss."))
-    return ".bss";
-  if (S.startswith(".init_array."))
-    return ".init_array";
-  if (S.startswith(".fini_array."))
-    return ".fini_array";
+  for (StringRef V : {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
+                      ".init_array.", ".fini_array.", ".ctors.", ".dtors."})
+    if (S.startswith(V))
+      return V.drop_back();
   return S;
 }
 
@@ -976,6 +966,8 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   // Sort section contents for __attribute__((init_priority(N)).
   sortByPriority(Out<ELFT>::Dynamic->InitArraySec);
   sortByPriority(Out<ELFT>::Dynamic->FiniArraySec);
+  sortByPriority(Factory.lookup(".ctors", SHT_PROGBITS, SHF_WRITE | SHF_ALLOC));
+  sortByPriority(Factory.lookup(".dtors", SHT_PROGBITS, SHF_WRITE | SHF_ALLOC));
 
   // The linker needs to define SECNAME_start, SECNAME_end and SECNAME_stop
   // symbols for sections, so that the runtime can get the start and end
