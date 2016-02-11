@@ -12,7 +12,6 @@
 
 #include "../ClangTidy.h"
 #include <map>
-#include <string>
 
 namespace clang {
 namespace tidy {
@@ -46,12 +45,12 @@ private:
   bool isOverriddenByDerivedClass(const CXXMethodDecl *BaseMD,
                                   const CXXRecordDecl *DerivedRD);
 
-  /// key: the unique ID of a method;
-  /// value: whether the method is possible to be overridden.
+  /// Key: the unique ID of a method.
+  /// Value: whether the method is possible to be overridden.
   std::map<const CXXMethodDecl *, bool> PossibleMap;
 
-  /// key: <unique ID of base method, name of derived class>
-  /// value: whether the base method is overridden by some method in the derived
+  /// Key: <unique ID of base method, name of derived class>
+  /// Value: whether the base method is overridden by some method in the derived
   /// class.
   std::map<std::pair<const CXXMethodDecl *, const CXXRecordDecl *>, bool>
       OverriddenMap;

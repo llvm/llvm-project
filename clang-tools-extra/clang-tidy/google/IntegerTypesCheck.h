@@ -12,7 +12,12 @@
 
 #include "../ClangTidy.h"
 
+#include <memory>
+
 namespace clang {
+
+class IdentifierTable;
+
 namespace tidy {
 namespace google {
 namespace runtime {
@@ -32,6 +37,8 @@ private:
   const std::string UnsignedTypePrefix;
   const std::string SignedTypePrefix;
   const std::string TypeSuffix;
+
+  std::unique_ptr<IdentifierTable> IdentTable;
 };
 
 } // namespace runtime

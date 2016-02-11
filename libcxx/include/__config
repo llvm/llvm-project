@@ -475,8 +475,6 @@ namespace std {
 #define _LIBCPP_NO_EXCEPTIONS
 #endif
 
-#define _LIBCPP_HAS_NO_TEMPLATE_ALIASES
-
 // constexpr was added to GCC in 4.6.
 #if _GNUC_VER < 406
 #define _LIBCPP_HAS_NO_CONSTEXPR
@@ -508,6 +506,7 @@ namespace std {
 #define _LIBCPP_HAS_NO_VARIADICS
 #define _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #define _LIBCPP_HAS_NO_STRONG_ENUMS
+#define _LIBCPP_HAS_NO_TEMPLATE_ALIASES
 #define _LIBCPP_HAS_NO_NOEXCEPT
 
 #else  // __GXX_EXPERIMENTAL_CXX0X__
@@ -531,6 +530,7 @@ namespace std {
 #if _GNUC_VER < 406
 #define _LIBCPP_HAS_NO_NOEXCEPT
 #define _LIBCPP_HAS_NO_NULLPTR
+#define _LIBCPP_HAS_NO_TEMPLATE_ALIASES
 #endif
 
 #if _GNUC_VER < 407
@@ -849,7 +849,15 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 
 #ifndef _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
-#endif 
+#endif
+
+#if __cplusplus < 201103L
+#define _LIBCPP_CXX03_LANG
+#else
+#if defined(_LIBCPP_HAS_NO_VARIADIC_TEMPLATES) || defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
+#error Libc++ requires a feature complete C++11 compiler in C++11 or greater.
+#endif
+#endif
 
 #endif // __cplusplus
 

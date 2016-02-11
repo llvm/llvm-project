@@ -249,11 +249,19 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
         if (EditDistance > 0 && EditDistance <= EditDistanceThreshold) {
           if (checkOverrideWithoutName(Context, BaseMD, DerivedMD)) {
             // A "virtual near miss" is found.
-            diag(DerivedMD->getLocStart(),
-                 "method '%0' has a similar name and the same signature as "
-                 "virtual method '%1'; did you mean to override it?")
+            auto Range = CharSourceRange::getTokenRange(
+                SourceRange(DerivedMD->getLocation()));
+
+            bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
+                            !DerivedMD->isTemplateInstantiation();
+            auto Diag =
+                diag(DerivedMD->getLocStart(),
+                     "method '%0' has a similar name and the same signature as "
+                     "virtual method '%1'; did you mean to override it?")
                 << DerivedMD->getQualifiedNameAsString()
                 << BaseMD->getQualifiedNameAsString();
+            if (ApplyFix)
+              Diag << FixItHint::CreateReplacement(Range, BaseMD->getName());
           }
         }
       }

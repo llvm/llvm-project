@@ -403,7 +403,7 @@ void Writer<ELFT>::scanRelocs(
       if (CBP || Dynrel) {
         uint32_t DynType;
         if (CBP)
-          DynType = Body->isTls() ? Target->getTlsGotRel() : Target->GotRel;
+          DynType = Body->isTls() ? Target->TlsGotRel : Target->GotRel;
         else
           DynType = Target->RelativeRel;
         Out<ELFT>::RelaDyn->addReloc(

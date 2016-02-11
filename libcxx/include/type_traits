@@ -1091,6 +1091,12 @@ struct __uncvref  {
     typedef typename remove_cv<typename remove_reference<_Tp>::type>::type type;
 };
 
+// __is_same_uncvref
+
+template <class _Tp, class _Up>
+struct __is_same_uncvref : is_same<typename __uncvref<_Tp>::type,
+                                   typename __uncvref<_Up>::type> {};
+
 struct __any
 {
     __any(...);
