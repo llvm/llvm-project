@@ -393,11 +393,6 @@ struct CopyInsertable {
     }
   }
 
-  CopyInsertable() : data(0), copied_once(false), constructed_under_allocator(true)
-  {
-    assert(getConstructController()->isInAllocatorConstruct());
-  }
-
   CopyInsertable(CopyInsertable const& other) : data(other.data),
                                                 copied_once(true),
                                                 constructed_under_allocator(true) {
