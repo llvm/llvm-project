@@ -12,6 +12,7 @@ add_llvm_library(LLVMTransformUtils
   CtorUtils.cpp
   DemoteRegToStack.cpp
   FlattenCFG.cpp
+  FunctionImportUtils.cpp
   GlobalStatus.cpp
   InlineFunction.cpp
   InstructionNamer.cpp
