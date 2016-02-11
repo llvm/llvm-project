@@ -123,7 +123,7 @@ class VOP2Common <dag outs, dag ins, string asm, list<dag> pattern> :
   let Size = 4;
 }
 
-class VOP3Common <dag outs, dag ins, string asm, list<dag> pattern> :
+class VOP3Common <dag outs, dag ins, string asm, list<dag> pattern, bit HasMods = 0, bit VOP3Only = 0> :
     VOPAnyCommon <outs, ins, asm, pattern> {
 
   // Using complex patterns gives VOP3 patterns a very high complexity rating,
@@ -135,7 +135,10 @@ class VOP3Common <dag outs, dag ins, string asm, list<dag> pattern> :
   let VOP3 = 1;
   let VALU = 1;
 
-  let AsmMatchConverter = "cvtVOP3";
+  let AsmMatchConverter =
+    !if(!eq(VOP3Only,1),
+        "cvtVOP3_only",
+        !if(!eq(HasMods,1), "cvtVOP3_2_mod", "cvtVOP3_2_nomod"));
   let isCodeGenOnly = 0;
 
   int Size = 8;

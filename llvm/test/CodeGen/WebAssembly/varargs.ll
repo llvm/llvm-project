@@ -8,13 +8,17 @@ target triple = "wasm32-unknown-unknown"
 ; Test va_start.
 
 ; TODO: Test va_start.
-
-;define void @start(i8** %ap, ...) {
-;entry:
-;  %0 = bitcast i8** %ap to i8*
-;  call void @llvm.va_start(i8* %0)
-;  ret void
-;}
+; CHECK-LABEL: start:
+; CHECK-NEXT: .param i32, i32
+; CHECK-NOT: __stack_pointer
+define void @start(i8** %ap, ...) {
+entry:
+  %0 = bitcast i8** %ap to i8*
+; Store the second argument (the hidden vararg buffer pointer) into ap
+; CHECK: i32.store $discard=, 0($0), $1
+  call void @llvm.va_start(i8* %0)
+  ret void
+}
 
 ; Test va_end.
 
@@ -105,7 +109,8 @@ entry:
 declare void @callee(...)
 
 ; CHECK-LABEL: caller_none:
-; CHECK-NEXT: call callee@FUNCTION{{$}}
+; CHECK-NEXT: i32.const $push0=, 0
+; CHECK-NEXT: call callee@FUNCTION, $pop0
 ; CHECK-NEXT: return{{$}}
 define void @caller_none() {
   call void (...) @callee()
@@ -124,6 +129,23 @@ define void @caller_some() {
   call void (...) @callee(i32 0, double 2.0)
   ret void
 }
+
+; Test a va_start call in a non-entry block
+; CHECK-LABEL: startbb:
+; CHECK: .param i32, i32, i32
+define void @startbb(i1 %cond, i8** %ap, ...) {
+entry:
+  br i1 %cond, label %bb0, label %bb1
+bb0:
+  ret void
+bb1:
+  %0 = bitcast i8** %ap to i8*
+; Store the second argument (the hidden vararg buffer pointer) into ap
+; CHECK: i32.store $discard=, 0($1), $2
+  call void @llvm.va_start(i8* %0)
+  ret void
+}
+
 
 declare void @llvm.va_start(i8*)
 declare void @llvm.va_end(i8*)

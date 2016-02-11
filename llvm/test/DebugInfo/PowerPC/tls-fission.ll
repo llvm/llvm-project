@@ -15,7 +15,7 @@
 ; check that the expected TLS address description is the first thing in the debug_addr section
 ; CHECK: debug_addr
 ; CHECK-NEXT: .Laddr_sec:
-; CHECK-NEXT: .quad tls@dtprel+32768
+; CHECK-NEXT: .quad tls@DTPREL+32768
 
 @tls = thread_local global i32 0, align 4
 

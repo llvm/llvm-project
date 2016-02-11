@@ -53,7 +53,7 @@ class ConstantInt : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   // allocate space for exactly zero operands
@@ -239,7 +239,7 @@ class ConstantFP : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   ConstantFP(Type *Ty, const APFloat& V);
@@ -310,7 +310,7 @@ class ConstantAggregateZero : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   explicit ConstantAggregateZero(Type *ty)
@@ -357,7 +357,7 @@ class ConstantArray : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   ConstantArray(ArrayType *T, ArrayRef<Constant *> Val);
@@ -400,7 +400,7 @@ class ConstantStruct : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   ConstantStruct(StructType *T, ArrayRef<Constant *> Val);
@@ -459,7 +459,7 @@ class ConstantVector : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   ConstantVector(VectorType *T, ArrayRef<Constant *> Val);
@@ -509,7 +509,7 @@ class ConstantPointerNull : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   explicit ConstantPointerNull(PointerType *T)
@@ -562,7 +562,7 @@ class ConstantDataSequential : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   explicit ConstantDataSequential(Type *ty, ValueTy VT, const char *Data)
@@ -786,7 +786,7 @@ class ConstantTokenNone : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   explicit ConstantTokenNone(LLVMContext &Context)
@@ -813,7 +813,7 @@ class BlockAddress : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
   /// Return a BlockAddress for the specified function and basic block.
@@ -860,7 +860,7 @@ class ConstantExpr : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   ConstantExpr(Type *ty, unsigned Opcode, Use *Ops, unsigned NumOps)
@@ -1229,7 +1229,7 @@ class UndefValue : public Constant {
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   explicit UndefValue(Type *T) : Constant(T, UndefValueVal, nullptr, 0) {}

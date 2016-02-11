@@ -519,7 +519,7 @@ template <class IntPtrT> struct CovMapFunctionRecordV1 {
   }
 };
 
-template <class IntPtrT> struct CovMapFunctionRecord {
+struct CovMapFunctionRecord {
 #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Init) Type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
 
@@ -539,7 +539,7 @@ template <class IntPtrT> struct CovMapFunctionRecord {
   template <support::endianness Endian>
   std::error_code getFuncName(InstrProfSymtab &ProfileNames,
                               StringRef &FuncName) const {
-    IntPtrT NameRef = getFuncNameRef<Endian>();
+    uint64_t NameRef = getFuncNameRef<Endian>();
     FuncName = ProfileNames.getFuncName(NameRef);
     return std::error_code();
   }
@@ -577,7 +577,7 @@ enum CovMapVersion {
 };
 
 template <int CovMapVersion, class IntPtrT> struct CovMapTraits {
-  typedef CovMapFunctionRecord<IntPtrT> CovMapFuncRecordType;
+  typedef CovMapFunctionRecord CovMapFuncRecordType;
   typedef uint64_t NameRefType;
 };
 

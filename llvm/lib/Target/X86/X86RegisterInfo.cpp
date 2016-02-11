@@ -52,7 +52,7 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
                          X86_MC::getDwarfRegFlavour(TT, false),
                          X86_MC::getDwarfRegFlavour(TT, true),
                          (TT.isArch64Bit() ? X86::RIP : X86::EIP)) {
-  X86_MC::InitLLVM2SEHRegisterMapping(this);
+  X86_MC::initLLVMToSEHAndCVRegMapping(this);
 
   // Cache some information.
   Is64Bit = TT.isArch64Bit();

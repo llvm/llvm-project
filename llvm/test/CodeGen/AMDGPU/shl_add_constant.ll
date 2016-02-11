@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; Test with inline immediate
 
@@ -10,7 +10,7 @@ declare i32 @llvm.r600.read.tidig.x() #1
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @shl_2_add_9_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-  %tid.x = tail call i32 @llvm.r600.read.tidig.x() #1
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %ptr = getelementptr i32, i32 addrspace(1)* %in, i32 %tid.x
   %val = load i32, i32 addrspace(1)* %ptr, align 4
   %add = add i32 %val, 9
@@ -26,7 +26,7 @@ define void @shl_2_add_9_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
 ; SI-DAG: buffer_store_dword [[SHLREG]]
 ; SI: s_endpgm
 define void @shl_2_add_9_i32_2_add_uses(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %in) #0 {
-  %tid.x = tail call i32 @llvm.r600.read.tidig.x() #1
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %ptr = getelementptr i32, i32 addrspace(1)* %in, i32 %tid.x
   %val = load i32, i32 addrspace(1)* %ptr, align 4
   %add = add i32 %val, 9
@@ -44,7 +44,7 @@ define void @shl_2_add_9_i32_2_add_uses(i32 addrspace(1)* %out0, i32 addrspace(1
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @shl_2_add_999_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-  %tid.x = tail call i32 @llvm.r600.read.tidig.x() #1
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %ptr = getelementptr i32, i32 addrspace(1)* %in, i32 %tid.x
   %val = load i32, i32 addrspace(1)* %ptr, align 4
   %shl = add i32 %val, 999

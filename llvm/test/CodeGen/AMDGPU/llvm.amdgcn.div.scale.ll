@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1) nounwind readnone
 declare { double, i1 } @llvm.amdgcn.div.scale.f64(double, double, i1) nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
@@ -12,7 +12,7 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_1(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -32,7 +32,7 @@ define void @test_div_scale_f32_1(float addrspace(1)* %out, float addrspace(1)* 
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_2(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -52,7 +52,7 @@ define void @test_div_scale_f32_2(float addrspace(1)* %out, float addrspace(1)* 
 ; SI: buffer_store_dwordx2 [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f64_1(double addrspace(1)* %out, double addrspace(1)* %aptr, double addrspace(1)* %in) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
 
@@ -72,7 +72,7 @@ define void @test_div_scale_f64_1(double addrspace(1)* %out, double addrspace(1)
 ; SI: buffer_store_dwordx2 [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f64_2(double addrspace(1)* %out, double addrspace(1)* %aptr, double addrspace(1)* %in) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
 
@@ -92,7 +92,7 @@ define void @test_div_scale_f64_2(double addrspace(1)* %out, double addrspace(1)
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_scalar_num_1(float addrspace(1)* %out, float addrspace(1)* %in, float %a) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr float, float addrspace(1)* %in, i32 %tid
 
   %b = load float, float addrspace(1)* %gep, align 4
@@ -110,7 +110,7 @@ define void @test_div_scale_f32_scalar_num_1(float addrspace(1)* %out, float add
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_scalar_num_2(float addrspace(1)* %out, float addrspace(1)* %in, float %a) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr float, float addrspace(1)* %in, i32 %tid
 
   %b = load float, float addrspace(1)* %gep, align 4
@@ -128,7 +128,7 @@ define void @test_div_scale_f32_scalar_num_2(float addrspace(1)* %out, float add
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_scalar_den_1(float addrspace(1)* %out, float addrspace(1)* %in, float %b) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr float, float addrspace(1)* %in, i32 %tid
 
   %a = load float, float addrspace(1)* %gep, align 4
@@ -146,7 +146,7 @@ define void @test_div_scale_f32_scalar_den_1(float addrspace(1)* %out, float add
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_scalar_den_2(float addrspace(1)* %out, float addrspace(1)* %in, float %b) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr float, float addrspace(1)* %in, i32 %tid
 
   %a = load float, float addrspace(1)* %gep, align 4
@@ -164,7 +164,7 @@ define void @test_div_scale_f32_scalar_den_2(float addrspace(1)* %out, float add
 ; SI: buffer_store_dwordx2 [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f64_scalar_num_1(double addrspace(1)* %out, double addrspace(1)* %in, double %a) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
 
   %b = load double, double addrspace(1)* %gep, align 8
@@ -182,7 +182,7 @@ define void @test_div_scale_f64_scalar_num_1(double addrspace(1)* %out, double a
 ; SI: buffer_store_dwordx2 [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f64_scalar_num_2(double addrspace(1)* %out, double addrspace(1)* %in, double %a) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
 
   %b = load double, double addrspace(1)* %gep, align 8
@@ -200,7 +200,7 @@ define void @test_div_scale_f64_scalar_num_2(double addrspace(1)* %out, double a
 ; SI: buffer_store_dwordx2 [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f64_scalar_den_1(double addrspace(1)* %out, double addrspace(1)* %in, double %b) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
 
   %a = load double, double addrspace(1)* %gep, align 8
@@ -218,7 +218,7 @@ define void @test_div_scale_f64_scalar_den_1(double addrspace(1)* %out, double a
 ; SI: buffer_store_dwordx2 [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f64_scalar_den_2(double addrspace(1)* %out, double addrspace(1)* %in, double %b) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
 
   %a = load double, double addrspace(1)* %gep, align 8
@@ -293,7 +293,7 @@ define void @test_div_scale_f64_all_scalar_2(double addrspace(1)* %out, double %
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_inline_imm_num(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %a = load float, float addrspace(1)* %gep.0, align 4
 
@@ -309,7 +309,7 @@ define void @test_div_scale_f32_inline_imm_num(float addrspace(1)* %out, float a
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_inline_imm_den(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %a = load float, float addrspace(1)* %gep.0, align 4
 
@@ -326,7 +326,7 @@ define void @test_div_scale_f32_inline_imm_den(float addrspace(1)* %out, float a
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_fabs_num(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
@@ -348,7 +348,7 @@ define void @test_div_scale_f32_fabs_num(float addrspace(1)* %out, float addrspa
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define void @test_div_scale_f32_fabs_den(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 

@@ -49,7 +49,7 @@
 //    +--------------------+               +----------------------+
 //              |                                      |
 //    +--------------------+               +----------------------+
-//    |Orig Loop|Exit Block|               |Cloned Loop Exit Block|
+//    |Orig Loop Exit Block|               |Cloned Loop Exit Block|
 //    +--------------------+               +-----------+----------+
 //              |                                      |
 //              +----------+--------------+-----------+
@@ -92,21 +92,22 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 #define DEBUG_TYPE "loop-versioning-licm"
-#define LOOP_VERSIONING_LICM_METADATA "llvm.loop.licm_versioning.disable"
+static constexpr char LICMVersioningMetaData[] =
+    "llvm.loop.licm_versioning.disable";
 
 using namespace llvm;
 
 /// Threshold minimum allowed percentage for possible
 /// invariant instructions in a loop.
 static cl::opt<float>
-    LVInvarThreshold("-licm-versioning-invariant-threshold",
+    LVInvarThreshold("licm-versioning-invariant-threshold",
                      cl::desc("LoopVersioningLICM's minimum allowed percentage"
                               "of possible invariant instructions per loop"),
                      cl::init(25), cl::Hidden);
 
 /// Threshold for maximum allowed loop nest/depth
 static cl::opt<unsigned> LVLoopDepthThreshold(
-    "-licm-versioning-max-depth-threshold",
+    "licm-versioning-max-depth-threshold",
     cl::desc(
         "LoopVersioningLICM's threshold for maximum allowed loop nest/depth"),
     cl::init(2), cl::Hidden);
@@ -372,7 +373,7 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
 bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
   assert(I != nullptr && "Null instruction found!");
   // Check function call safety
-  if (dyn_cast<CallInst>(I) && !AA->doesNotAccessMemory(CallSite(I))) {
+  if (isa<CallInst>(I) && !AA->doesNotAccessMemory(CallSite(I))) {
     DEBUG(dbgs() << "    Unsafe call site found.\n");
     return false;
   }
@@ -427,7 +428,7 @@ bool LoopVersioningLICM::legalLoopInstructions() {
   // instruction safety.
   for (auto *Block : CurLoop->getBlocks())
     for (auto &Inst : *Block) {
-      // If instruction in unsafe just return false.
+      // If instruction is unsafe just return false.
       if (!instructionSafeForVersioning(&Inst))
         return false;
     }
@@ -469,11 +470,11 @@ bool LoopVersioningLICM::legalLoopInstructions() {
 }
 
 /// \brief It checks loop is already visited or not.
-/// check loop meta data, If loop revisited return true
+/// check loop meta data, if loop revisited return true
 /// else false.
 bool LoopVersioningLICM::isLoopAlreadyVisited() {
   // Check LoopVersioningLICM metadata into loop
-  if (checkStringMetadataIntoLoop(CurLoop, LOOP_VERSIONING_LICM_METADATA)) {
+  if (checkStringMetadataIntoLoop(CurLoop, LICMVersioningMetaData)) {
     return true;
   }
   return false;
@@ -585,11 +586,9 @@ bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
     LoopVersioning LVer(*LAI, CurLoop, LI, DT, SE, true);
     LVer.versionLoop();
     // Set Loop Versioning metaData for original loop.
-    addStringMetadataToLoop(LVer.getNonVersionedLoop(),
-                            LOOP_VERSIONING_LICM_METADATA);
+    addStringMetadataToLoop(LVer.getNonVersionedLoop(), LICMVersioningMetaData);
     // Set Loop Versioning metaData for version loop.
-    addStringMetadataToLoop(LVer.getVersionedLoop(),
-                            LOOP_VERSIONING_LICM_METADATA);
+    addStringMetadataToLoop(LVer.getVersionedLoop(), LICMVersioningMetaData);
     // Set "llvm.mem.parallel_loop_access" metaData to versioned loop.
     addStringMetadataToLoop(LVer.getVersionedLoop(),
                             "llvm.mem.parallel_loop_access");

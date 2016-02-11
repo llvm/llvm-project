@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 declare float @llvm.fmuladd.f32(float, float, float)
 declare double @llvm.fmuladd.f64(double, double, double)
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
 
 ; CHECK-LABEL: {{^}}fmuladd_f32:
@@ -37,7 +37,7 @@ define void @fmuladd_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
 ; CHECK: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
 ; CHECK: buffer_store_dword [[R2]]
 define void @fmuladd_2.0_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -56,7 +56,7 @@ define void @fmuladd_2.0_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %
 ; CHECK: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
 ; CHECK: buffer_store_dword [[R2]]
 define void @fmuladd_a_2.0_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -77,7 +77,7 @@ define void @fmuladd_a_2.0_b_f32(float addrspace(1)* %out, float addrspace(1)* %
 define void @fadd_a_a_b_f32(float addrspace(1)* %out,
                             float addrspace(1)* %in1,
                             float addrspace(1)* %in2) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -99,7 +99,7 @@ define void @fadd_a_a_b_f32(float addrspace(1)* %out,
 define void @fadd_b_a_a_f32(float addrspace(1)* %out,
                             float addrspace(1)* %in1,
                             float addrspace(1)* %in2) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -119,7 +119,7 @@ define void @fadd_b_a_a_f32(float addrspace(1)* %out,
 ; CHECK: v_mac_f32_e32 [[R2]], -2.0, [[R1]]
 ; CHECK: buffer_store_dword [[R2]]
 define void @fmuladd_neg_2.0_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -139,7 +139,7 @@ define void @fmuladd_neg_2.0_a_b_f32(float addrspace(1)* %out, float addrspace(1
 ; CHECK: v_mac_f32_e32 [[R2]], 2.0, [[R1]]
 ; CHECK: buffer_store_dword [[R2]]
 define void @fmuladd_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -161,7 +161,7 @@ define void @fmuladd_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspa
 ; CHECK: v_mac_f32_e32 [[R2]], -2.0, [[R1]]
 ; CHECK: buffer_store_dword [[R2]]
 define void @fmuladd_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -183,7 +183,7 @@ define void @fmuladd_2.0_neg_a_b_f32(float addrspace(1)* %out, float addrspace(1
 ; CHECK: v_mad_f32 [[RESULT:v[0-9]+]], 2.0, [[R1]], -[[R2]]
 ; CHECK: buffer_store_dword [[RESULT]]
 define void @fmuladd_2.0_a_neg_b_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid

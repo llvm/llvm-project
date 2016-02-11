@@ -416,7 +416,7 @@ TEST(SupportDeathTest, TempDirectoryOnWindows) {
   SmallString<270> Expected{"C:\\Temp\\AB\\123456789"};
   while (Expected.size() < 260)
     Expected.append("\\DirNameWith19Charss");
-  ASSERT_EQ(260, Expected.size());
+  ASSERT_EQ(260U, Expected.size());
   EXPECT_TEMP_DIR(_putenv_s("TMP", Expected.c_str()), Expected.c_str());
 }
 #endif

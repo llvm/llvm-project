@@ -328,6 +328,7 @@ if( MSVC )
         # C4592 is disabled because of false positives in Visual Studio 2015
         # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
     -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
+    -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
 
 	# Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
 	# support the 'aligned' attribute in the way that clang sources requires (for
@@ -336,7 +337,7 @@ if( MSVC )
 	# When we switch to requiring a version of MSVC that supports the 'alignas'
 	# specifier (MSVC 2015?) this warning can be re-enabled.
     -wd4324 # Suppress 'structure was padded due to __declspec(align())'
-	    
+
     # Promoted warnings.
     -w14062 # Promote 'enumerator in switch of enum is not handled' to level 1 warning.
 

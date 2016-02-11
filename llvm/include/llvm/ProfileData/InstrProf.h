@@ -214,9 +214,11 @@ struct InstrProfRecord;
 
 /// Get the value profile data for value site \p SiteIdx from \p InstrProfR
 /// and annotate the instruction \p Inst with the value profile meta data.
+/// Annotate up to \p MaxMDCount (default 3) number of records per value site.
 void annotateValueSite(Module &M, Instruction &Inst,
                        const InstrProfRecord &InstrProfR,
-                       InstrProfValueKind ValueKind, uint32_t SiteIndx);
+                       InstrProfValueKind ValueKind, uint32_t SiteIndx,
+                       uint32_t MaxMDCount = 3);
 /// Extract the value profile data from \p Inst which is annotated with
 /// value profile meta data. Return false if there is no value data annotated,
 /// otherwise  return true.

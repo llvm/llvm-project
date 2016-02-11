@@ -66,12 +66,52 @@ unsigned X86_MC::getDwarfRegFlavour(const Triple &TT, bool isEH) {
   return DWARFFlavour::X86_32_Generic;
 }
 
-void X86_MC::InitLLVM2SEHRegisterMapping(MCRegisterInfo *MRI) {
+void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
   // FIXME: TableGen these.
-  for (unsigned Reg = X86::NoRegister+1; Reg < X86::NUM_TARGET_REGS; ++Reg) {
+  for (unsigned Reg = X86::NoRegister + 1; Reg < X86::NUM_TARGET_REGS; ++Reg) {
     unsigned SEH = MRI->getEncodingValue(Reg);
     MRI->mapLLVMRegToSEHReg(Reg, SEH);
   }
+
+  // These CodeView registers are numbered sequentially starting at value 1.
+  unsigned LowCVRegs[] = {
+      X86::AL,  X86::CL,  X86::DL,  X86::BL,  X86::AH,  X86::CH,
+      X86::DH,  X86::BH,  X86::AX,  X86::CX,  X86::DX,  X86::BX,
+      X86::SP,  X86::BP,  X86::SI,  X86::DI,  X86::EAX, X86::ECX,
+      X86::EDX, X86::EBX, X86::ESP, X86::EBP, X86::ESI, X86::EDI,
+  };
+  unsigned CVLowRegStart = 1;
+  for (unsigned I = 0; I < array_lengthof(LowCVRegs); ++I)
+    MRI->mapLLVMRegToCVReg(LowCVRegs[I], I + CVLowRegStart);
+
+  // The low 8 XMM registers start at 154 and are numbered sequentially.
+  unsigned CVXMM0Start = 154;
+  for (unsigned I = 0; I < 8; ++I)
+    MRI->mapLLVMRegToCVReg(X86::XMM0 + I, CVXMM0Start + I);
+
+  // The high 8 XMM registers start at 252 and are numbered sequentially.
+  unsigned CVXMM8Start = 252;
+  for (unsigned I = 0; I < 8; ++I)
+    MRI->mapLLVMRegToCVReg(X86::XMM8 + I, CVXMM8Start + I);
+
+  // FIXME: XMM16 and above from AVX512 not yet documented.
+
+  // AMD64 registers start at 324 and count up.
+  unsigned CVX64RegStart = 324;
+  unsigned CVX64Regs[] = {
+      X86::SIL,   X86::DIL,   X86::BPL,   X86::SPL,   X86::RAX,   X86::RBX,
+      X86::RCX,   X86::RDX,   X86::RSI,   X86::RDI,   X86::RBP,   X86::RSP,
+      X86::R8,    X86::R9,    X86::R10,   X86::R11,   X86::R12,   X86::R13,
+      X86::R14,   X86::R15,   X86::R8B,   X86::R9B,   X86::R10B,  X86::R11B,
+      X86::R12B,  X86::R13B,  X86::R14B,  X86::R15B,  X86::R8W,   X86::R9W,
+      X86::R10W,  X86::R11W,  X86::R12W,  X86::R13W,  X86::R14W,  X86::R15W,
+      X86::R8D,   X86::R9D,   X86::R10D,  X86::R11D,  X86::R12D,  X86::R13D,
+      X86::R14D,  X86::R15D,  X86::YMM0,  X86::YMM1,  X86::YMM2,  X86::YMM3,
+      X86::YMM4,  X86::YMM5,  X86::YMM6,  X86::YMM7,  X86::YMM8,  X86::YMM9,
+      X86::YMM10, X86::YMM11, X86::YMM12, X86::YMM13, X86::YMM14, X86::YMM15,
+  };
+  for (unsigned I = 0; I < array_lengthof(CVX64Regs); ++I)
+    MRI->mapLLVMRegToCVReg(CVX64Regs[I], CVX64RegStart + I);
 }
 
 MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
@@ -105,7 +145,7 @@ static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
   InitX86MCRegisterInfo(X, RA, X86_MC::getDwarfRegFlavour(TT, false),
                         X86_MC::getDwarfRegFlavour(TT, true), RA);
-  X86_MC::InitLLVM2SEHRegisterMapping(X);
+  X86_MC::initLLVMToSEHAndCVRegMapping(X);
   return X;
 }
 

@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFDEBUG_H
 
-#include "AsmPrinterHandler.h"
 #include "DbgValueHistoryCalculator.h"
+#include "DebugHandlerBase.h"
 #include "DebugLocStream.h"
 #include "DwarfAccelTable.h"
 #include "DwarfFile.h"
@@ -188,13 +188,7 @@ struct SymbolCU {
 };
 
 /// Collects and handles dwarf debug information.
-class DwarfDebug : public AsmPrinterHandler {
-  /// Target of Dwarf emission.
-  AsmPrinter *Asm;
-
-  /// Collected machine module information.
-  MachineModuleInfo *MMI;
-
+class DwarfDebug : public DebugHandlerBase {
   /// All DIEValues are allocated through this allocator.
   BumpPtrAllocator DIEValueAllocator;
 
@@ -213,8 +207,6 @@ class DwarfDebug : public AsmPrinterHandler {
   /// Size of each symbol emitted (for those symbols that have a specific size).
   DenseMap<const MCSymbol *, uint64_t> SymSize;
 
-  LexicalScopes LScopes;
-
   /// Collection of abstract variables.
   DenseMap<const MDNode *, std::unique_ptr<DbgVariable>> AbstractVariables;
   SmallVector<std::unique_ptr<DbgVariable>, 64> ConcreteVariables;
@@ -227,31 +219,8 @@ class DwarfDebug : public AsmPrinterHandler {
   /// create DIEs.
   SmallPtrSet<const MDNode *, 16> ProcessedSPNodes;
 
-  /// Maps instruction with label emitted before instruction.
-  DenseMap<const MachineInstr *, MCSymbol *> LabelsBeforeInsn;
-
-  /// Maps instruction with label emitted after instruction.
-  DenseMap<const MachineInstr *, MCSymbol *> LabelsAfterInsn;
-
-  /// History of DBG_VALUE and clobber instructions for each user
-  /// variable.  Variables are listed in order of appearance.
-  DbgValueHistoryMap DbgValues;
-
-  /// Previous instruction's location information. This is used to
-  /// determine label location to indicate scope boundries in dwarf
-  /// debug info.
-  DebugLoc PrevInstLoc;
-  MCSymbol *PrevLabel;
-
-  /// This location indicates end of function prologue and beginning of
-  /// function body.
-  DebugLoc PrologEndLoc;
-
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn;
-
-  /// If nonnull, stores the current machine instruction we're processing.
-  const MachineInstr *CurMI;
 
   /// If nonnull, stores the CU in which the previous subprogram was contained.
   const DwarfCompileUnit *PrevCU;
@@ -458,10 +427,6 @@ class DwarfDebug : public AsmPrinterHandler {
   void recordSourceLine(unsigned Line, unsigned Col, const MDNode *Scope,
                         unsigned Flags);
 
-  /// Indentify instructions that are marking the beginning of or
-  /// ending of a scope.
-  void identifyScopeMarkers();
-
   /// Populate LexicalScope entries with variables' info.
   void collectVariableInfo(DwarfCompileUnit &TheCU, const DISubprogram *SP,
                            DenseSet<InlinedVariable> &ProcessedVars);
@@ -474,16 +439,6 @@ class DwarfDebug : public AsmPrinterHandler {
   /// Collect variable information from the side table maintained
   /// by MMI.
   void collectVariableInfoFromMMITable(DenseSet<InlinedVariable> &P);
-
-  /// Ensure that a label will be emitted before MI.
-  void requestLabelBeforeInsn(const MachineInstr *MI) {
-    LabelsBeforeInsn.insert(std::make_pair(MI, nullptr));
-  }
-
-  /// Ensure that a label will be emitted after MI.
-  void requestLabelAfterInsn(const MachineInstr *MI) {
-    LabelsAfterInsn.insert(std::make_pair(MI, nullptr));
-  }
 
 public:
   //===--------------------------------------------------------------------===//
@@ -508,9 +463,6 @@ public:
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
-
-  /// Process end of an instruction.
-  void endInstruction() override;
 
   /// Perform an MD5 checksum of \p Identifier and return the lower 64 bits.
   static uint64_t makeTypeSignature(StringRef Identifier);
@@ -605,12 +557,6 @@ public:
   /// A helper function to check whether the DIE for a given Scope is
   /// going to be null.
   bool isLexicalScopeDIENull(LexicalScope *Scope);
-
-  /// Return Label preceding the instruction.
-  MCSymbol *getLabelBeforeInsn(const MachineInstr *MI);
-
-  /// Return Label immediately following the instruction.
-  MCSymbol *getLabelAfterInsn(const MachineInstr *MI);
 
   // FIXME: Sink these functions down into DwarfFile/Dwarf*Unit.
 

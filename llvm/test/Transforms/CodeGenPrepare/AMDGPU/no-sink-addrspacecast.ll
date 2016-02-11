@@ -8,7 +8,7 @@
 define void @test_sink_ptrtoint_asc(float addrspace(1)* nocapture %arg, float addrspace(1)* nocapture readonly %arg1, float addrspace(3)* %arg2) #0 {
 bb:
   %tmp = getelementptr inbounds float, float addrspace(3)* %arg2, i32 16
-  %tmp2 = tail call i32 @llvm.r600.read.tidig.x() #1
+  %tmp2 = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %tmp3 = sext i32 %tmp2 to i64
   %tmp4 = getelementptr inbounds float, float addrspace(1)* %arg1, i64 %tmp3
   %tmp5 = load float, float addrspace(1)* %tmp4, align 4
@@ -43,7 +43,7 @@ bb15:                                             ; preds = %bb14, %bb8
 }
 
 declare float @llvm.fma.f32(float, float, float) #1
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

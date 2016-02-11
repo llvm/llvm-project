@@ -19,7 +19,7 @@ class Intrinsic<string name, list<LLVMType> param_types = []> {
   string TargetPrefix = "";
   list<LLVMType> RetTypes = [];
   list<LLVMType> ParamTypes = param_types;
-  list<IntrinsicProperty> Properties = [];
+  list<IntrinsicProperty> IntrProperties = [];
 }
 
 // isVoid needs to match the definition in ValueTypes.td

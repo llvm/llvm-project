@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; XUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
 
 ; GCN-LABEL: {{^}}madmk_f32:
@@ -9,7 +9,7 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_madmk_f32_e32 {{v[0-9]+}}, [[VA]], [[VB]], 0x41200000
 define void @madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -32,7 +32,7 @@ define void @madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noa
 ; GCN-DAG: v_mac_f32_e32 [[VC]], [[VK]], [[VA]]
 ; GCN: s_endpgm
 define void @madmk_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
   %in.gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %in.gep.1 = getelementptr float, float addrspace(1)* %in.gep.0, i32 1
@@ -61,7 +61,7 @@ define void @madmk_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mac_f32_e32 [[VB]], 4.0, [[VA]]
 define void @madmk_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -80,7 +80,7 @@ define void @madmk_inline_imm_f32(float addrspace(1)* noalias %out, float addrsp
 ; GCN: v_mac_f32_e32
 ; GCN: s_endpgm
 define void @s_s_madmk_f32(float addrspace(1)* noalias %out, float %a, float %b) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
 
   %mul = fmul float %a, 10.0
@@ -94,7 +94,7 @@ define void @s_s_madmk_f32(float addrspace(1)* noalias %out, float %a, float %b)
 ; GCN: v_mad_f32
 ; GCN: s_endpgm
 define void @v_s_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in, float %b) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.0, align 4
@@ -110,7 +110,7 @@ define void @v_s_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)*
 ; GCN: v_mac_f32_e32
 ; GCN: s_endpgm
 define void @scalar_vector_madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in, float %a) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %b = load float, float addrspace(1)* %gep.0, align 4
@@ -126,7 +126,7 @@ define void @scalar_vector_madmk_f32(float addrspace(1)* noalias %out, float add
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mad_f32 {{v[0-9]+}}, |{{v[0-9]+}}|, {{v[0-9]+}}, {{[sv][0-9]+}}
 define void @no_madmk_src0_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -147,7 +147,7 @@ define void @no_madmk_src0_modifier_f32(float addrspace(1)* noalias %out, float 
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mad_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, |{{[sv][0-9]+}}|
 define void @no_madmk_src2_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -168,7 +168,7 @@ define void @no_madmk_src2_modifier_f32(float addrspace(1)* noalias %out, float 
 ; GCN: v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
 ; GCN: v_mad_f32 {{v[0-9]+}}, [[VK]], [[A]], 2.0
 define void @madmk_add_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
 

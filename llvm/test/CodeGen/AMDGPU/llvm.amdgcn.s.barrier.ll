@@ -6,7 +6,7 @@
 ; GCN: s_barrier
 define void @test_barrier(i32 addrspace(1)* %out) #0 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x()
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %tmp
   store i32 %tmp, i32 addrspace(1)* %tmp1
   call void @llvm.amdgcn.s.barrier()
@@ -20,7 +20,7 @@ entry:
 }
 
 declare void @llvm.amdgcn.s.barrier() #1
-declare i32 @llvm.r600.read.tidig.x() #2
+declare i32 @llvm.amdgcn.workitem.id.x() #2
 declare i32 @llvm.r600.read.local.size.x() #2
 
 attributes #0 = { nounwind }

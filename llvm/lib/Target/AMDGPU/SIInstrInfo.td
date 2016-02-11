@@ -477,6 +477,7 @@ def OModMatchClass : AsmOperandClass {
   let PredicateMethod = "isImm";
   let ParserMethod = "parseVOP3OptionalOps";
   let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
 }
 
 def ClampMatchClass : AsmOperandClass {
@@ -484,6 +485,7 @@ def ClampMatchClass : AsmOperandClass {
   let PredicateMethod = "isImm";
   let ParserMethod = "parseVOP3OptionalOps";
   let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
 }
 
 class SMRDOffsetBaseMatchClass <string predicate> : AsmOperandClass {
@@ -1072,8 +1074,10 @@ class getVOP3SrcForVT<ValueType VT> {
 // Returns 1 if the source arguments have modifiers, 0 if they do not.
 // XXX - do f16 instructions?
 class hasModifiers<ValueType SrcVT> {
-  bit ret = !if(!eq(SrcVT.Value, f32.Value), 1,
-            !if(!eq(SrcVT.Value, f64.Value), 1, 0));
+  bit ret =
+    !if(!eq(SrcVT.Value, f32.Value), 1,
+    !if(!eq(SrcVT.Value, f64.Value), 1,
+    0));
 }
 
 // Returns the input arguments for VOP[12C] instructions for the given SrcVT.
@@ -1471,8 +1475,9 @@ class VOP3DisableModFields <bit HasSrc0Mods,
   bits<1> clamp = !if(HasOutputMods, ?, 0);
 }
 
-class VOP3_Pseudo <dag outs, dag ins, list<dag> pattern, string opName> :
-  VOP3Common <outs, ins, "", pattern>,
+class VOP3_Pseudo <dag outs, dag ins, list<dag> pattern, string opName,
+                   bit HasMods = 0, bit VOP3Only = 0> :
+  VOP3Common <outs, ins, "", pattern, HasMods, VOP3Only>,
   VOP <opName>,
   SIMCInstr<opName#"_e64", SISubtarget.NONE>,
   MnemonicAlias<opName#"_e64", opName> {
@@ -1483,44 +1488,48 @@ class VOP3_Pseudo <dag outs, dag ins, list<dag> pattern, string opName> :
   field bit src0;
 }
 
-class VOP3_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName> :
-  VOP3Common <outs, ins, asm, []>,
+class VOP3_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
+                    bit HasMods = 0, bit VOP3Only = 0> :
+  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
   VOP3e <op>,
   SIMCInstr<opName#"_e64", SISubtarget.SI> {
   let AssemblerPredicates = [isSICI];
 }
 
-class VOP3_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName> :
-  VOP3Common <outs, ins, asm, []>,
+class VOP3_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
+                    bit HasMods = 0, bit VOP3Only = 0> :
+  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
   VOP3e_vi <op>,
   SIMCInstr <opName#"_e64", SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
 }
 
-class VOP3b_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName> :
-  VOP3Common <outs, ins, asm, []>,
+class VOP3b_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
+                     bit HasMods = 0, bit VOP3Only = 0> :
+  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
   VOP3be <op>,
   SIMCInstr<opName#"_e64", SISubtarget.SI> {
   let AssemblerPredicates = [isSICI];
 }
 
-class VOP3b_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName> :
-  VOP3Common <outs, ins, asm, []>,
+class VOP3b_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
+                     bit HasMods = 0, bit VOP3Only = 0> :
+  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
   VOP3be_vi <op>,
   SIMCInstr <opName#"_e64", SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
 }
 
 multiclass VOP3_m <vop op, dag outs, dag ins, string asm, list<dag> pattern,
-                   string opName, int NumSrcArgs, bit HasMods = 1> {
+                   string opName, int NumSrcArgs, bit HasMods = 1, bit VOP3Only = 0> {
 
   def "" : VOP3_Pseudo <outs, ins, pattern, opName>;
 
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName>,
+  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods, VOP3Only>,
             VOP3DisableFields<!if(!eq(NumSrcArgs, 1), 0, 1),
                               !if(!eq(NumSrcArgs, 2), 0, 1),
                               HasMods>;
-  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName>,
+  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName, HasMods, VOP3Only>,
             VOP3DisableFields<!if(!eq(NumSrcArgs, 1), 0, 1),
                               !if(!eq(NumSrcArgs, 2), 0, 1),
                               HasMods>;
@@ -1529,21 +1538,21 @@ multiclass VOP3_m <vop op, dag outs, dag ins, string asm, list<dag> pattern,
 multiclass VOP3_1_m <vop op, dag outs, dag ins, string asm,
                      list<dag> pattern, string opName, bit HasMods = 1> {
 
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName>;
+  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>;
 
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName>,
+  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<0, 0, HasMods>;
 
-  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName>,
+  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<0, 0, HasMods>;
 }
 
 multiclass VOP3SI_1_m <vop op, dag outs, dag ins, string asm,
                      list<dag> pattern, string opName, bit HasMods = 1> {
 
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName>;
+  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>;
 
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName>,
+  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<0, 0, HasMods>;
   // No VI instruction. This class is for SI only.
 }
@@ -1552,13 +1561,13 @@ multiclass VOP3_2_m <vop op, dag outs, dag ins, string asm,
                      list<dag> pattern, string opName, string revOp,
                      bit HasMods = 1> {
 
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName>,
+  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>,
            VOP2_REV<revOp#"_e64", !eq(revOp, opName)>;
 
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName>,
+  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<1, 0, HasMods>;
 
-  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName>,
+  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<1, 0, HasMods>;
 }
 
@@ -1566,10 +1575,10 @@ multiclass VOP3SI_2_m <vop op, dag outs, dag ins, string asm,
                      list<dag> pattern, string opName, string revOp,
                      bit HasMods = 1> {
 
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName>,
+  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>,
            VOP2_REV<revOp#"_e64", !eq(revOp, opName)>;
 
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName>,
+  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<1, 0, HasMods>;
 
   // No VI instruction. This class is for SI only.
@@ -1594,19 +1603,19 @@ multiclass VOP3_C_m <vop op, dag outs, dag ins, string asm,
                      bit HasMods, bit defExec,
                      string revOp, list<SchedReadWrite> sched> {
 
-  def "" : VOP3_Pseudo <outs, ins, pattern, opName>,
+  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods>,
            VOP2_REV<revOp#"_e64", !eq(revOp, opName)> {
     let Defs = !if(defExec, [EXEC], []);
     let SchedRW = sched;
   }
 
-  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName>,
+  def _si : VOP3_Real_si <op.SI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<1, 0, HasMods> {
     let Defs = !if(defExec, [EXEC], []);
     let SchedRW = sched;
   }
 
-  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName>,
+  def _vi : VOP3_Real_vi <op.VI3, outs, ins, asm, opName, HasMods>,
             VOP3DisableFields<1, 0, HasMods> {
     let Defs = !if(defExec, [EXEC], []);
     let SchedRW = sched;
@@ -1900,8 +1909,9 @@ multiclass VOPCX_I64 <vopc op, string opName, string revOp = opName> :
   VOPCX <op, opName, VOPC_I1_I64_I64, COND_NULL, [Write64Bit], revOp>;
 
 multiclass VOP3_Helper <vop3 op, string opName, dag outs, dag ins, string asm,
-                        list<dag> pat, int NumSrcArgs, bit HasMods> : VOP3_m <
-    op, outs, ins, opName#" "#asm, pat, opName, NumSrcArgs, HasMods
+                        list<dag> pat, int NumSrcArgs, bit HasMods,
+                        bit VOP3Only = 0> : VOP3_m <
+    op, outs, ins, opName#" "#asm, pat, opName, NumSrcArgs, HasMods, VOP3Only
 >;
 
 multiclass VOPC_CLASS_F32 <vopc op, string opName> :
@@ -1917,7 +1927,8 @@ multiclass VOPCX_CLASS_F64 <vopc op, string opName> :
   VOPCClassInst <op, opName, VOPC_I1_F64_I32, 1, [WriteDoubleAdd]>;
 
 multiclass VOP3Inst <vop3 op, string opName, VOPProfile P,
-                     SDPatternOperator node = null_frag> : VOP3_Helper <
+                     SDPatternOperator node = null_frag, bit VOP3Only = 0> :
+  VOP3_Helper <
   op, opName, (outs P.DstRC.RegClass:$dst), P.Ins64, P.Asm64,
   !if(!eq(P.NumSrcArgs, 3),
     !if(P.HasModifiers,
@@ -1941,7 +1952,7 @@ multiclass VOP3Inst <vop3 op, string opName, VOPProfile P,
             (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
                                        i1:$clamp, i32:$omod))))],
         [(set P.DstVT:$dst, (node P.Src0VT:$src0))]))),
-  P.NumSrcArgs, P.HasModifiers
+  P.NumSrcArgs, P.HasModifiers, VOP3Only
 >;
 
 // Special case for v_div_fmas_{f32|f64}, since it seems to be the

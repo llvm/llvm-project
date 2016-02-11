@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-FASTFMAF -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-SLOWFMAF -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare double @llvm.fabs.f64(double) #0
 declare double @llvm.fma.f64(double, double, double) #0
 declare float @llvm.fma.f32(float, float, float) #0
@@ -14,7 +14,7 @@ declare float @llvm.fma.f32(float, float, float) #0
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define void @combine_to_fma_f64_0(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -42,7 +42,7 @@ define void @combine_to_fma_f64_0(double addrspace(1)* noalias %out, double addr
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
 define void @combine_to_fma_f64_0_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -71,7 +71,7 @@ define void @combine_to_fma_f64_0_2use(double addrspace(1)* noalias %out, double
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define void @combine_to_fma_f64_1(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -95,7 +95,7 @@ define void @combine_to_fma_f64_1(double addrspace(1)* noalias %out, double addr
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], -[[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -123,7 +123,7 @@ define void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
 define void @combine_to_fma_fsub_f64_0_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -152,7 +152,7 @@ define void @combine_to_fma_fsub_f64_0_2use(double addrspace(1)* noalias %out, d
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -180,7 +180,7 @@ define void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
 define void @combine_to_fma_fsub_1_f64_2use(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -209,7 +209,7 @@ define void @combine_to_fma_fsub_1_f64_2use(double addrspace(1)* noalias %out, d
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -238,7 +238,7 @@ define void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalias %out, double
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
 define void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -272,7 +272,7 @@ define void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(1)* noalias %o
 ; SI-DAG: buffer_store_dwordx2 [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI: s_endpgm
 define void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -307,7 +307,7 @@ define void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(1)* noalias %o
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[X]], [[Y]], [[FMA0]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define void @aggressive_combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2
@@ -342,7 +342,7 @@ define void @aggressive_combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[Y]], [[Z]], [[FMA0]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define void @aggressive_combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.0 = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr double, double addrspace(1)* %gep.0, i32 1
   %gep.2 = getelementptr double, double addrspace(1)* %gep.0, i32 2

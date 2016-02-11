@@ -565,7 +565,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   }
 
   // Parse the intrinsic properties.
-  ListInit *PropList = R->getValueAsListInit("Properties");
+  ListInit *PropList = R->getValueAsListInit("IntrProperties");
   for (unsigned i = 0, e = PropList->size(); i != e; ++i) {
     Record *Property = PropList->getElementAsRecord(i);
     assert(Property->isSubClassOf("IntrinsicProperty") &&

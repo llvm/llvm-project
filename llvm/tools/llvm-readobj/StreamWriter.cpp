@@ -8,23 +8,22 @@ using namespace llvm::support;
 namespace llvm {
 
 raw_ostream &operator<<(raw_ostream &OS, const HexNumber& Value) {
-  uint64_t N = Value.Value;
-  // Zero is a special case.
-  if (N == 0)
-    return OS << "0x0";
+  OS << "0x" << to_hexString(Value.Value);
+  return OS;
+}
 
-  char NumberBuffer[20];
-  char *EndPtr = NumberBuffer + sizeof(NumberBuffer);
-  char *CurPtr = EndPtr;
+const std::string to_hexString(uint64_t Value, bool UpperCase) {
+  std::string number;
+  llvm::raw_string_ostream stream(number);
+  stream << format_hex_no_prefix(Value, 1, UpperCase);
+  return stream.str();
+}
 
-  while (N) {
-    uintptr_t X = N % 16;
-    *--CurPtr = (X < 10 ? '0' + X : 'A' + X - 10);
-    N /= 16;
-  }
-
-  OS << "0x";
-  return OS.write(CurPtr, EndPtr - CurPtr);
+const std::string to_string(uint64_t Value) {
+  std::string number;
+  llvm::raw_string_ostream stream(number);
+  stream << format_decimal(Value, 1);
+  return stream.str();
 }
 
 void StreamWriter::printBinaryImpl(StringRef Label, StringRef Str,

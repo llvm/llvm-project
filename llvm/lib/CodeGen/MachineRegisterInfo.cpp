@@ -103,6 +103,31 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass){
   return Reg;
 }
 
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+unsigned
+MachineRegisterInfo::getSize(unsigned VReg) const {
+  DenseMap<unsigned, unsigned>::const_iterator SizeIt =
+    VRegToSize.find(VReg);
+  return SizeIt != VRegToSize.end()? SizeIt->second: 0;
+}
+
+unsigned
+MachineRegisterInfo::createGenericVirtualRegister(unsigned Size) {
+  assert(Size && "Cannot create empty virtual register");
+
+  // New virtual register number.
+  unsigned Reg = TargetRegisterInfo::index2VirtReg(getNumVirtRegs());
+  VRegInfo.grow(Reg);
+  // FIXME: Should we use a dummy register class?
+  VRegInfo[Reg].first = nullptr;
+  VRegToSize[Reg] = Size;
+  RegAllocHints.grow(Reg);
+  if (TheDelegate)
+    TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  return Reg;
+}
+#endif // LLVM_BUILD_GLOBAL_ISEL
+
 /// clearVirtRegs - Remove all virtual registers (after physreg assignment).
 void MachineRegisterInfo::clearVirtRegs() {
 #ifndef NDEBUG

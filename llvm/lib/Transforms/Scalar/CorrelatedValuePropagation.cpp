@@ -312,8 +312,11 @@ bool CorrelatedValuePropagation::processCallSite(CallSite CS) {
 
   for (Value *V : CS.args()) {
     PointerType *Type = dyn_cast<PointerType>(V->getType());
-
+    // Try to mark pointer typed parameters as non-null.  We skip the
+    // relatively expensive analysis for constants which are obviously either
+    // null or non-null to start with.
     if (Type && !CS.paramHasAttr(ArgNo + 1, Attribute::NonNull) &&
+        !isa<Constant>(V) && 
         LVI->getPredicateAt(ICmpInst::ICMP_EQ, V,
                             ConstantPointerNull::get(Type),
                             CS.getInstruction()) == LazyValueInfo::False)

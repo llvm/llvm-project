@@ -40,7 +40,7 @@ endif:
 
 define void @sgpr_if_else_valu_br(i32 addrspace(1)* %out, float %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 entry:
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid_f = uitofp i32 %tid to float
   %tmp1 = fcmp ueq float %tid_f, 0.0
   br i1 %tmp1, label %if, label %else
@@ -77,7 +77,7 @@ endif:
 ; SI: buffer_store_dword [[RESULT]]
 define void @sgpr_if_else_valu_cmp_phi_br(i32 addrspace(1)* %out, i32 addrspace(1)* %a, i32 addrspace(1)* %b) {
 entry:
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp1 = icmp eq i32 %tid, 0
   br i1 %tmp1, label %if, label %else
 
@@ -100,6 +100,6 @@ endif:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { readnone }

@@ -1155,9 +1155,10 @@ LVILatticeVal LazyValueInfoCache::getValueInBlock(Value *V, BasicBlock *BB,
         << BB->getName() << "'\n");
 
   assert(BlockValueStack.empty() && BlockValueSet.empty());
-  pushBlockValue(std::make_pair(BB, V));
-
-  solve();
+  if (!hasBlockValue(V, BB)) {
+    pushBlockValue(std::make_pair(BB, V)); 
+    solve();
+  }
   LVILatticeVal Result = getBlockValue(V, BB);
   intersectAssumeBlockValueConstantRange(V, Result, CxtI);
 
@@ -1168,6 +1169,9 @@ LVILatticeVal LazyValueInfoCache::getValueInBlock(Value *V, BasicBlock *BB,
 LVILatticeVal LazyValueInfoCache::getValueAt(Value *V, Instruction *CxtI) {
   DEBUG(dbgs() << "LVI Getting value " << *V << " at '"
         << CxtI->getName() << "'\n");
+
+  if (auto *C = dyn_cast<Constant>(V))
+    return LVILatticeVal::get(C);
 
   LVILatticeVal Result = LVILatticeVal::getOverdefined();
   if (auto *I = dyn_cast<Instruction>(V))

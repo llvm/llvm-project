@@ -1,11 +1,11 @@
-; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}v_test_imax_sge_i32:
 ; SI: v_max_i32_e32
 define void @v_test_imax_sge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i32, i32 addrspace(1)* %bptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
@@ -23,7 +23,7 @@ define void @v_test_imax_sge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr
 ; SI: v_max_i32_e32
 ; SI: v_max_i32_e32
 define void @v_test_imax_sge_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %aptr, <4 x i32> addrspace(1)* %bptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %bptr, i32 %tid
   %outgep = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %out, i32 %tid
@@ -58,7 +58,7 @@ define void @s_test_imax_sge_imm_i32(i32 addrspace(1)* %out, i32 %a) nounwind {
 ; SI: buffer_load_sbyte
 ; SI: v_max_i32_e32
 define void @v_test_imax_sge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i8, i8 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i8, i8 addrspace(1)* %bptr, i32 %tid
   %outgep = getelementptr i8, i8 addrspace(1)* %out, i32 %tid
@@ -91,7 +91,7 @@ define void @s_test_imax_sgt_imm_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %
 ; FUNC-LABEL: @v_test_imax_sgt_i32
 ; SI: v_max_i32_e32
 define void @v_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i32, i32 addrspace(1)* %bptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
@@ -115,7 +115,7 @@ define void @s_test_imax_sgt_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 ; FUNC-LABEL: @v_test_umax_uge_i32
 ; SI: v_max_u32_e32
 define void @v_test_umax_uge_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i32, i32 addrspace(1)* %bptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
@@ -154,7 +154,7 @@ define void @s_test_umax_uge_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a, <
 ; SI: buffer_load_ubyte
 ; SI: v_max_u32_e32
 define void @v_test_umax_uge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i8 addrspace(1)* %bptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i8, i8 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i8, i8 addrspace(1)* %bptr, i32 %tid
   %outgep = getelementptr i8, i8 addrspace(1)* %out, i32 %tid
@@ -169,7 +169,7 @@ define void @v_test_umax_uge_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %aptr, i
 ; FUNC-LABEL: @v_test_umax_ugt_i32
 ; SI: v_max_u32_e32
 define void @v_test_umax_ugt_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
   %gep1 = getelementptr i32, i32 addrspace(1)* %bptr, i32 %tid
   %outgep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid

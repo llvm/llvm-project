@@ -147,12 +147,8 @@ public:
 
   static char DecodeChar6(unsigned V) {
     assert((V & ~63) == 0 && "Not a Char6 encoded character!");
-    if (V < 26)       return V+'a';
-    if (V < 26+26)    return V-26+'A';
-    if (V < 26+26+10) return V-26-26+'0';
-    if (V == 62)      return '.';
-    if (V == 63)      return '_';
-    llvm_unreachable("Not a value Char6 character!");
+    return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._"
+        [V];
   }
 
 };

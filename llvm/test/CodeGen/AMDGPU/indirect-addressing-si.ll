@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 
 ; Tests for indirect addressing on SI, which is implemented using dynamic
 ; indexing of vectors.
@@ -87,7 +87,7 @@ entry:
 ; CHECK: s_cbranch_execnz
 define void @extract_neg_offset_vgpr(i32 addrspace(1)* %out) {
 entry:
-  %id = call i32 @llvm.r600.read.tidig.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
   %index = add i32 %id, -512
   %value = extractelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 %index
   store i32 %value, i32 addrspace(1)* %out
@@ -152,7 +152,7 @@ entry:
 ; CHECK: s_cbranch_execnz
 define void @insert_neg_offset_vgpr(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out) {
 entry:
-  %id = call i32 @llvm.r600.read.tidig.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
   %index = add i32 %id, -512
   %value = insertelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 5, i32 %index
   store <4 x i32> %value, <4 x i32> addrspace(1)* %out
@@ -167,12 +167,13 @@ entry:
 ; CHECK: s_cbranch_execnz
 define void @insert_neg_inline_offset_vgpr(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out) {
 entry:
-  %id = call i32 @llvm.r600.read.tidig.x() #1
+  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
   %index = add i32 %id, -16
   %value = insertelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 5, i32 %index
   store <4 x i32> %value, <4 x i32> addrspace(1)* %out
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
+
 attributes #1 = { nounwind readnone }

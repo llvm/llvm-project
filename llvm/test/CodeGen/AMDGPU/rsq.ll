@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=SI -mattr=-fp32-denormals -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=SI-UNSAFE -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=SI -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mattr=-fp32-denormals -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=SI-UNSAFE -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE -check-prefix=SI %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.sqrt.f32(float) nounwind readnone
 declare double @llvm.sqrt.f64(double) nounwind readnone
 
@@ -56,7 +56,7 @@ define void @rsq_f32_sgpr(float addrspace(1)* noalias %out, float %val) nounwind
 
 ; SI: s_endpgm
 define void @rsqrt_fmul(float addrspace(1)* %out, float addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1

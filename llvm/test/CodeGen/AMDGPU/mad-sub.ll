@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare float @llvm.fabs.f32(float) #0
 
 ; FUNC-LABEL: {{^}}mad_sub_f32:
@@ -10,7 +10,7 @@ declare float @llvm.fabs.f32(float) #0
 ; SI: v_mad_f32 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -[[REGC]]
 ; SI: buffer_store_dword [[RESULT]]
 define void @mad_sub_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -34,7 +34,7 @@ define void @mad_sub_f32(float addrspace(1)* noalias nocapture %out, float addrs
 ; SI: v_mad_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], [[REGC]]
 ; SI: buffer_store_dword [[RESULT]]
 define void @mad_sub_inv_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -55,7 +55,7 @@ define void @mad_sub_inv_f32(float addrspace(1)* noalias nocapture %out, float a
 ; SI: v_mul_f64
 ; SI: v_add_f64
 define void @mad_sub_f64(double addrspace(1)* noalias nocapture %out, double addrspace(1)* noalias nocapture readonly %ptr) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr double, double addrspace(1)* %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -79,7 +79,7 @@ define void @mad_sub_f64(double addrspace(1)* noalias nocapture %out, double add
 ; SI: v_mad_f32 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -|[[REGC]]|
 ; SI: buffer_store_dword [[RESULT]]
 define void @mad_sub_fabs_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -104,7 +104,7 @@ define void @mad_sub_fabs_f32(float addrspace(1)* noalias nocapture %out, float 
 ; SI: v_mad_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
 ; SI: buffer_store_dword [[RESULT]]
 define void @mad_sub_fabs_inv_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -125,7 +125,7 @@ define void @mad_sub_fabs_inv_f32(float addrspace(1)* noalias nocapture %out, fl
 ; FUNC-LABEL: {{^}}neg_neg_mad_f32:
 ; SI: v_mac_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define void @neg_neg_mad_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -151,7 +151,7 @@ define void @neg_neg_mad_f32(float addrspace(1)* noalias nocapture %out, float a
 ; SI: v_mad_f32 [[RESULT:v[0-9]+]], [[REGA]], |[[REGB]]|, -[[REGC]]
 ; SI: buffer_store_dword [[RESULT]]
 define void @mad_fabs_sub_f32(float addrspace(1)* noalias nocapture %out, float addrspace(1)* noalias nocapture readonly %ptr) #1 {
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid.ext = sext i32 %tid to i64
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 %tid.ext
   %add1 = add i64 %tid.ext, 1
@@ -175,7 +175,7 @@ define void @mad_fabs_sub_f32(float addrspace(1)* noalias nocapture %out, float 
 ; SI: v_mac_f32_e32 [[R2]], -2.0, [[R1]]
 ; SI: buffer_store_dword [[R2]]
 define void @fsub_c_fadd_a_a(float addrspace(1)* %out, float addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid
@@ -196,7 +196,7 @@ define void @fsub_c_fadd_a_a(float addrspace(1)* %out, float addrspace(1)* %in) 
 ; SI: v_mad_f32 [[RESULT:v[0-9]+]], 2.0, [[R1]], -[[R2]]
 ; SI: buffer_store_dword [[RESULT]]
 define void @fsub_fadd_a_a_c(float addrspace(1)* %out, float addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
   %gep.out = getelementptr float, float addrspace(1)* %out, i32 %tid

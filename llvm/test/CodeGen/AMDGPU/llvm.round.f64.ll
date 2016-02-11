@@ -27,7 +27,7 @@ define void @round_f64(double addrspace(1)* %out, double %x) #0 {
 ; SI: buffer_store_dwordx2
 ; SI: s_endpgm
 define void @v_round_f64(double addrspace(1)* %out, double addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
   %x = load double, double addrspace(1)* %gep
@@ -60,7 +60,7 @@ define void @round_v8f64(<8 x double> addrspace(1)* %out, <8 x double> %in) #0 {
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 declare double @llvm.round.f64(double) #1
 declare <2 x double> @llvm.round.v2f64(<2 x double>) #1

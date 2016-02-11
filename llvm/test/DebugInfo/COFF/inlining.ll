@@ -55,7 +55,7 @@
 ; ASM: [[inline_end]]:
 
 ; ASM: .long   241                     # Symbol subsection for baz
-; ASM: .long   Ltmp3-Ltmp2
+; ASM: .long   {{.*}} # Subsection size
 ; ASM: .short 4429
 ; ASM: .long
 ; ASM: .long

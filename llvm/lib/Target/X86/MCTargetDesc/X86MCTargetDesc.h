@@ -56,7 +56,7 @@ std::string ParseX86Triple(const Triple &TT);
 
 unsigned getDwarfRegFlavour(const Triple &TT, bool isEH);
 
-void InitLLVM2SEHRegisterMapping(MCRegisterInfo *MRI);
+void initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI);
 
 /// Create a X86 MCSubtargetInfo instance. This is exposed so Asm parser, etc.
 /// do not need to go through TargetRegistry.

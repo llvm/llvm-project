@@ -128,6 +128,10 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       exitWithErrorCode(ec, Input.Filename);
 
     auto Reader = std::move(ReaderOrErr.get());
+    bool IsIRProfile = Reader->isIRLevelProfile();
+    if (Writer.setIsIRLevelProfile(IsIRProfile))
+      exitWithError("Merge IR generated profile with Clang generated profile.");
+
     for (auto &I : *Reader) {
       if (std::error_code EC = Writer.addRecord(std::move(I), Input.Weight)) {
         // Only show hint the first time an error occurs.
@@ -269,6 +273,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
     exitWithErrorCode(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
+  bool IsIRInstr = Reader->isIRLevelProfile();
   size_t ShownFunctions = 0;
   for (const auto &Func : *Reader) {
     bool Show =
@@ -295,8 +300,9 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
 
       OS << "  " << Func.Name << ":\n"
          << "    Hash: " << format("0x%016" PRIx64, Func.Hash) << "\n"
-         << "    Counters: " << Func.Counts.size() << "\n"
-         << "    Function count: " << Func.Counts[0] << "\n";
+         << "    Counters: " << Func.Counts.size() << "\n";
+      if (!IsIRInstr)
+        OS << "    Function count: " << Func.Counts[0] << "\n";
 
       if (ShowIndirectCallTargets)
         OS << "    Indirect Call Site Count: "
@@ -304,8 +310,9 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
 
       if (ShowCounts) {
         OS << "    Block counts: [";
-        for (size_t I = 1, E = Func.Counts.size(); I < E; ++I) {
-          OS << (I == 1 ? "" : ", ") << Func.Counts[I];
+        size_t Start = (IsIRInstr ? 0 : 1);
+        for (size_t I = Start, E = Func.Counts.size(); I < E; ++I) {
+          OS << (I == Start ? "" : ", ") << Func.Counts[I];
         }
         OS << "]\n";
       }

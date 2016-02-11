@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -146,8 +147,12 @@ public:
 /// COMDAT functions of the same name.
 typedef std::vector<std::unique_ptr<FunctionInfo>> FunctionInfoList;
 
-/// Map from function name to corresponding function info structures.
-typedef StringMap<FunctionInfoList> FunctionInfoMapTy;
+/// Map from function GUID to corresponding function info structures.
+/// Use a std::map rather than a DenseMap since it will likely incur
+/// less overhead, as the value type is not very small and the size
+/// of the map is unknown, resulting in inefficiencies due to repeated
+/// insertions and resizing.
+typedef std::map<uint64_t, FunctionInfoList> FunctionInfoMapTy;
 
 /// Type used for iterating through the function info map.
 typedef FunctionInfoMapTy::const_iterator const_funcinfo_iterator;
@@ -184,17 +189,21 @@ public:
 
   /// Get the list of function info objects for a given function.
   const FunctionInfoList &getFunctionInfoList(StringRef FuncName) {
-    return FunctionMap[FuncName];
+    return FunctionMap[Function::getGUID(FuncName)];
   }
 
   /// Get the list of function info objects for a given function.
   const const_funcinfo_iterator findFunctionInfoList(StringRef FuncName) const {
-    return FunctionMap.find(FuncName);
+    return FunctionMap.find(Function::getGUID(FuncName));
   }
 
   /// Add a function info for a function of the given name.
   void addFunctionInfo(StringRef FuncName, std::unique_ptr<FunctionInfo> Info) {
-    FunctionMap[FuncName].push_back(std::move(Info));
+    FunctionMap[Function::getGUID(FuncName)].push_back(std::move(Info));
+  }
+
+  void addFunctionInfo(uint64_t FuncGUID, std::unique_ptr<FunctionInfo> Info) {
+    FunctionMap[FuncGUID].push_back(std::move(Info));
   }
 
   /// Iterator to allow writer to walk through table during emission.

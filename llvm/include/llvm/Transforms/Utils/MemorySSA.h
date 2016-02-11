@@ -522,15 +522,19 @@ public:
   /// whether MemoryAccess \p A dominates MemoryAccess \p B.
   bool locallyDominates(const MemoryAccess *A, const MemoryAccess *B) const;
 
+  /// \brief Verify that MemorySSA is self consistent (IE definitions dominate
+  /// all uses, uses appear in the right places).  This is used by unit tests.
+  void verifyMemorySSA() const;
+
 protected:
   // Used by Memory SSA annotater, dumpers, and wrapper pass
   friend class MemorySSAAnnotatedWriter;
   friend class MemorySSAPrinterPass;
-  void verifyDefUses(Function &F);
-  void verifyDomination(Function &F);
+  void verifyDefUses(Function &F) const;
+  void verifyDomination(Function &F) const;
 
 private:
-  void verifyUseInDefs(MemoryAccess *, MemoryAccess *);
+  void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
   using AccessMap =
       DenseMap<const BasicBlock *, std::unique_ptr<AccessListType>>;
 
@@ -551,7 +555,7 @@ private:
   Function &F;
 
   // Memory SSA mappings
-  DenseMap<const Value *, MemoryAccess *> InstructionToMemoryAccess;
+  DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
   AccessMap PerBlockAccesses;
   std::unique_ptr<MemoryAccess> LiveOnEntryDef;
 

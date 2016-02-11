@@ -138,6 +138,15 @@ cl::opt<bool> ArchiveMap("print-armap", cl::desc("Print the archive map"));
 cl::alias ArchiveMaps("M", cl::desc("Alias for --print-armap"),
                       cl::aliasopt(ArchiveMap), cl::Grouping);
 
+enum Radix { d, o, x };
+cl::opt<Radix>
+    AddressRadix("radix", cl::desc("Radix (o/d/x) for printing symbol Values"),
+                 cl::values(clEnumVal(d, "decimal"), clEnumVal(o, "octal"),
+                            clEnumVal(x, "hexadecimal"), clEnumValEnd),
+                 cl::init(x));
+cl::alias RadixAlias("t", cl::desc("Alias for --radix"),
+                     cl::aliasopt(AddressRadix));
+
 cl::opt<bool> JustSymbolName("just-symbol-name",
                              cl::desc("Print just the symbol's name"));
 cl::alias JustSymbolNames("j", cl::desc("Alias for --just-symbol-name"),
@@ -572,11 +581,29 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
   if (isSymbolList64Bit(Obj)) {
     printBlanks = "                ";
     printDashes = "----------------";
-    printFormat = "%016" PRIx64;
+    switch (AddressRadix) {
+    case Radix::o:
+      printFormat = "%016" PRIo64;
+      break;
+    case Radix::x:
+      printFormat = "%016" PRIx64;
+      break;
+    default:
+      printFormat = "%016" PRId64;
+    }
   } else {
     printBlanks = "        ";
     printDashes = "--------";
-    printFormat = "%08" PRIx64;
+    switch (AddressRadix) {
+    case Radix::o:
+      printFormat = "%08" PRIo64;
+      break;
+    case Radix::x:
+      printFormat = "%08" PRIx64;
+      break;
+    default:
+      printFormat = "%08" PRId64;
+    }
   }
 
   for (SymbolListT::iterator I = SymbolList.begin(), E = SymbolList.end();
@@ -747,18 +774,10 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
   return '?';
 }
 
-static uint8_t getNType(MachOObjectFile &Obj, DataRefImpl Symb) {
-  if (Obj.is64Bit()) {
-    MachO::nlist_64 STE = Obj.getSymbol64TableEntry(Symb);
-    return STE.n_type;
-  }
-  MachO::nlist STE = Obj.getSymbolTableEntry(Symb);
-  return STE.n_type;
-}
-
 static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
   DataRefImpl Symb = I->getRawDataRefImpl();
-  uint8_t NType = getNType(Obj, Symb);
+  uint8_t NType = Obj.is64Bit() ? Obj.getSymbol64TableEntry(Symb).n_type
+                                : Obj.getSymbolTableEntry(Symb).n_type;
 
   if (NType & MachO::N_STAB)
     return '-';
@@ -850,9 +869,8 @@ static char getNMTypeChar(SymbolicFile &Obj, basic_symbol_iterator I) {
 // file or zero it is not present.
 static unsigned getNsectForSegSect(MachOObjectFile *Obj) {
   unsigned Nsect = 1;
-  for (section_iterator I = Obj->section_begin(), E = Obj->section_end();
-       I != E; ++I) {
-    DataRefImpl Ref = I->getRawDataRefImpl();
+  for (auto &S : Obj->sections()) {
+    DataRefImpl Ref = S.getRawDataRefImpl();
     StringRef SectionName;
     Obj->getSectionName(Ref, SectionName);
     StringRef SegmentName = Obj->getSectionFinalSegmentName(Ref);
@@ -872,14 +890,10 @@ static unsigned getNsectInMachO(MachOObjectFile &Obj, BasicSymbolRef Sym) {
   DataRefImpl Symb = Sym.getRawDataRefImpl();
   if (Obj.is64Bit()) {
     MachO::nlist_64 STE = Obj.getSymbol64TableEntry(Symb);
-    if ((STE.n_type & MachO::N_TYPE) == MachO::N_SECT)
-      return STE.n_sect;
-    return 0;
+    return (STE.n_type & MachO::N_TYPE) == MachO::N_SECT ? STE.n_sect : 0;
   }
   MachO::nlist STE = Obj.getSymbolTableEntry(Symb);
-  if ((STE.n_type & MachO::N_TYPE) == MachO::N_SECT)
-    return STE.n_sect;
-  return 0;
+  return (STE.n_type & MachO::N_TYPE) == MachO::N_SECT ? STE.n_sect : 0;
 }
 
 static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
@@ -943,7 +957,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     std::error_code EC = Sym.printName(OS);
     if (EC && MachO)
       OS << "bad string index";
-    else 
+    else
       error(EC);
     OS << '\0';
     S.Sym = Sym;
@@ -1286,5 +1300,5 @@ int main(int argc, char **argv) {
   if (HadError)
     return 1;
 
-  return 0;
+  return EXIT_SUCCESS;
 }

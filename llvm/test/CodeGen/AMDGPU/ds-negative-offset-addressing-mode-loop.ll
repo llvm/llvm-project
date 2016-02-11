@@ -1,9 +1,9 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefix=SI --check-prefix=CHECK %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefix=SI --check-prefix=CHECK %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs -mattr=+load-store-opt,+unsafe-ds-offset-folding < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -mattr=+load-store-opt,+unsafe-ds-offset-folding < %s | FileCheck -check-prefix=CI --check-prefix=CHECK %s
 
-declare i32 @llvm.r600.read.tidig.x() #0
-declare void @llvm.AMDGPU.barrier.local() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare void @llvm.amdgcn.s.barrier() #1
 
 ; Function Attrs: nounwind
 ; CHECK-LABEL: {{^}}signed_ds_offset_addressing_loop:
@@ -25,7 +25,7 @@ declare void @llvm.AMDGPU.barrier.local() #1
 ; CHECK: s_endpgm
 define void @signed_ds_offset_addressing_loop(float addrspace(1)* noalias nocapture %out, float addrspace(3)* noalias nocapture readonly %lptr, i32 %n) #2 {
 entry:
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #0
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %mul = shl nsw i32 %x.i, 1
   br label %for.body
 
@@ -33,7 +33,7 @@ for.body:                                         ; preds = %for.body, %entry
   %sum.03 = phi float [ 0.000000e+00, %entry ], [ %add13, %for.body ]
   %offset.02 = phi i32 [ %mul, %entry ], [ %add14, %for.body ]
   %k.01 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  tail call void @llvm.AMDGPU.barrier.local() #1
+  tail call void @llvm.amdgcn.s.barrier() #1
   %arrayidx = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %offset.02
   %tmp = load float, float addrspace(3)* %arrayidx, align 4
   %add1 = add nsw i32 %offset.02, 1

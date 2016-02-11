@@ -499,8 +499,7 @@ static void emitEnums(raw_ostream &OS, RecordKeeper &Records) {
 
   // Iterate over all InstrMapping records and create a map between column
   // fields and their possible values across all records.
-  for (unsigned i = 0, e = InstrMapVec.size(); i < e; i++) {
-    Record *CurMap = InstrMapVec[i];
+  for (Record *CurMap : InstrMapVec) {
     ListInit *ColFields;
     ColFields = CurMap->getValueAsListInit("ColFields");
     ListInit *List = CurMap->getValueAsListInit("ValueCols");
@@ -524,10 +523,8 @@ static void emitEnums(raw_ostream &OS, RecordKeeper &Records) {
     }
   }
 
-  for (std::map<std::string, std::vector<Init*> >::iterator
-       II = ColFieldValueMap.begin(), IE = ColFieldValueMap.end();
-       II != IE; II++) {
-    std::vector<Init*> FieldValues = (*II).second;
+  for (auto &Entry : ColFieldValueMap) {
+    std::vector<Init*> FieldValues = Entry.second;
 
     // Delete duplicate entries from ColFieldValueMap
     for (unsigned i = 0; i < FieldValues.size() - 1; i++) {
@@ -540,9 +537,9 @@ static void emitEnums(raw_ostream &OS, RecordKeeper &Records) {
     }
 
     // Emit enumerated values for the column fields.
-    OS << "enum " << (*II).first << " {\n";
+    OS << "enum " << Entry.first << " {\n";
     for (unsigned i = 0, endFV = FieldValues.size(); i < endFV; i++) {
-      OS << "\t" << (*II).first << "_" << FieldValues[i]->getAsUnquotedString();
+      OS << "\t" << Entry.first << "_" << FieldValues[i]->getAsUnquotedString();
       if (i != endFV - 1)
         OS << ",\n";
       else
@@ -577,8 +574,8 @@ void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
   // Iterate over all instruction mapping records and construct relationship
   // maps based on the information specified there.
   //
-  for (unsigned i = 0, e = InstrMapVec.size(); i < e; i++) {
-    MapTableEmitter IMap(Target, Records, InstrMapVec[i]);
+  for (Record *CurMap : InstrMapVec) {
+    MapTableEmitter IMap(Target, Records, CurMap);
 
     // Build RowInstrMap to group instructions based on their values for
     // RowFields. In the process, also collect key instructions into
