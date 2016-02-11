@@ -189,4 +189,64 @@ typedef struct objc_selector *SEL;
 #endif
 }
 @end
+
+@interface ClassWithControlFlowInRelease : NSObject {
+  BOOL _ivar1;
+}
+@property (retain) NSObject *ivar2;
+@end
+
+@implementation ClassWithControlFlowInRelease
+- (void)dealloc; {
+  if (_ivar1) {
+    // We really should warn because there is a path through -dealloc on which
+    // _ivar2 is not released.
+#if NON_ARC
+    [_ivar2 release]; // no-warning
+#endif
+  }
+
+#if NON_ARC
+  [super dealloc];
+#endif
+}
+
+@end
+
+//===------------------------------------------------------------------------===
+// Don't warn when the property is nil'd out in -dealloc
+
+@interface ClassWithNildOutProperty : NSObject
+@property (retain) NSObject *ivar;  // no-warning
+@end
+
+@implementation ClassWithNildOutProperty
+- (void)dealloc; {
+  self.ivar = nil;
+
+#if NON_ARC
+  [super dealloc];
+#endif
+}
+
+@end
+
+//===------------------------------------------------------------------------===
+// Don't warn when the property is nil'd out with a setter in -dealloc
+
+@interface ClassWithNildOutPropertyViaSetter : NSObject
+@property (retain) NSObject *ivar;  // no-warning
+@end
+
+@implementation ClassWithNildOutPropertyViaSetter
+- (void)dealloc; {
+  [self setIvar:nil];
+
+#if NON_ARC
+  [super dealloc];
+#endif
+}
+
+@end
+
 // CHECK: 4 warnings generated.
