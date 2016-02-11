@@ -136,3 +136,18 @@ define %B @structB(%B* %b.ptr) {
   %1 = load %B, %B* %b.ptr, align 8
   ret %B %1
 }
+
+%struct.S = type <{ i8, %struct.T }>
+%struct.T = type { i32, i32 }
+
+; Make sure that we do not increase alignment of packed struct element
+define i32 @packed_alignment(%struct.S* dereferenceable(9) %s) {
+; CHECK-LABEL: packed_alignment
+; CHECK-NEXT: %tv.elt1 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 1, i32 1
+; CHECK-NEXT: %tv.unpack2 = load i32, i32* %tv.elt1, align 1
+; CHECK-NEXT: ret i32 %tv.unpack2
+  %t = getelementptr inbounds %struct.S, %struct.S* %s, i32 0, i32 1
+  %tv = load %struct.T, %struct.T* %t, align 1
+  %v = extractvalue %struct.T %tv, 1
+  ret i32 %v
+}
