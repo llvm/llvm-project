@@ -552,9 +552,6 @@ public:
   typedef typename ConstantInfo<ConstantClass>::TypeClass TypeClass;
   typedef std::pair<TypeClass *, ValType> LookupKey;
 
-  /// Key and hash together, so that we compute the hash only once and reuse it.
-  typedef std::pair<unsigned, LookupKey> LookupKeyHashed;
-
 private:
   struct MapInfo {
     typedef DenseMapInfo<ConstantClass *> ConstantClassInfo;
@@ -574,18 +571,12 @@ private:
     static unsigned getHashValue(const LookupKey &Val) {
       return hash_combine(Val.first, Val.second.getHash());
     }
-    static unsigned getHashValue(const LookupKeyHashed &Val) {
-      return Val.first;
-    }
     static bool isEqual(const LookupKey &LHS, const ConstantClass *RHS) {
       if (RHS == getEmptyKey() || RHS == getTombstoneKey())
         return false;
       if (LHS.first != RHS->getType())
         return false;
       return LHS.second == RHS;
-    }
-    static bool isEqual(const LookupKeyHashed &LHS, const ConstantClass *RHS) {
-      return isEqual(LHS.second, RHS);
     }
   };
 
@@ -604,12 +595,13 @@ public:
       // Asserts that use_empty().
       delete I.first;
   }
+
 private:
-  ConstantClass *create(TypeClass *Ty, ValType V, LookupKeyHashed &HashKey) {
+  ConstantClass *create(TypeClass *Ty, ValType V) {
     ConstantClass *Result = V.create(Ty);
 
     assert(Result->getType() == Ty && "Type specified is not correct!");
-    Map.insert_as(std::make_pair(Result, '\0'), HashKey);
+    insert(Result);
 
     return Result;
   }
@@ -617,21 +609,26 @@ private:
 public:
   /// Return the specified constant from the map, creating it if necessary.
   ConstantClass *getOrCreate(TypeClass *Ty, ValType V) {
-    LookupKey Key(Ty, V);
-    /// Hash once, and reuse it for the lookup and the insertion if needed.
-    LookupKeyHashed Lookup(MapInfo::getHashValue(Key), Key);
-
+    LookupKey Lookup(Ty, V);
     ConstantClass *Result = nullptr;
 
-    auto I = Map.find_as(Lookup);
+    auto I = find(Lookup);
     if (I == Map.end())
-      Result = create(Ty, V, Lookup);
+      Result = create(Ty, V);
     else
       Result = I->first;
     assert(Result && "Unexpected nullptr");
 
     return Result;
   }
+
+  /// Find the constant by lookup key.
+  typename MapTy::iterator find(LookupKey Lookup) {
+    return Map.find_as(Lookup);
+  }
+
+  /// Insert the constant into its proper slot.
+  void insert(ConstantClass *CP) { Map[CP] = '\0'; }
 
   /// Remove this constant from the map
   void remove(ConstantClass *CP) {
@@ -645,11 +642,8 @@ public:
                                         ConstantClass *CP, Value *From,
                                         Constant *To, unsigned NumUpdated = 0,
                                         unsigned OperandNo = ~0u) {
-    LookupKey Key(CP->getType(), ValType(Operands, CP));
-    /// Hash once, and reuse it for the lookup and the insertion if needed.
-    LookupKeyHashed Lookup(MapInfo::getHashValue(Key), Key);
-
-    auto I = Map.find_as(Lookup);
+    LookupKey Lookup(CP->getType(), ValType(Operands, CP));
+    auto I = find(Lookup);
     if (I != Map.end())
       return I->first;
 
@@ -665,7 +659,7 @@ public:
         if (CP->getOperand(I) == From)
           CP->setOperand(I, To);
     }
-    Map.insert_as(std::make_pair(CP, '\0'), Lookup);
+    insert(CP);
     return nullptr;
   }
 
