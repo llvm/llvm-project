@@ -500,8 +500,8 @@ static void WriteTypeTable(const ValueEnumerator &VE, BitstreamWriter &Stream) {
   Stream.ExitBlock();
 }
 
-static unsigned getEncodedLinkage(const GlobalValue &GV) {
-  switch (GV.getLinkage()) {
+static unsigned getEncodedLinkage(const GlobalValue::LinkageTypes Linkage) {
+  switch (Linkage) {
   case GlobalValue::ExternalLinkage:
     return 0;
   case GlobalValue::WeakAnyLinkage:
@@ -526,6 +526,10 @@ static unsigned getEncodedLinkage(const GlobalValue &GV) {
     return 12;
   }
   llvm_unreachable("Invalid linkage");
+}
+
+static unsigned getEncodedLinkage(const GlobalValue &GV) {
+  return getEncodedLinkage(GV.getLinkage());
 }
 
 static unsigned getEncodedVisibility(const GlobalValue &GV) {
@@ -2452,7 +2456,7 @@ static void SaveFunctionInfo(
   std::unique_ptr<FunctionSummary> FuncSummary;
   if (EmitFunctionSummary) {
     FuncSummary = llvm::make_unique<FunctionSummary>(NumInsts);
-    FuncSummary->setLocalFunction(F.hasLocalLinkage());
+    FuncSummary->setFunctionLinkage(F.getLinkage());
   }
   FunctionIndex[&F] =
       llvm::make_unique<FunctionInfo>(BitcodeIndex, std::move(FuncSummary));
@@ -2779,7 +2783,7 @@ static void WritePerModuleFunctionSummaryRecord(
     unsigned FSAbbrev, BitstreamWriter &Stream) {
   assert(FS);
   NameVals.push_back(ValueID);
-  NameVals.push_back(FS->isLocalFunction());
+  NameVals.push_back(getEncodedLinkage(FS->getFunctionLinkage()));
   NameVals.push_back(FS->instCount());
 
   // Emit the finished record.
@@ -2798,7 +2802,7 @@ static void WritePerModuleFunctionSummary(
   BitCodeAbbrev *Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_CODE_PERMODULE_ENTRY));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // valueid
-  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // islocal
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   unsigned FSAbbrev = Stream.EmitAbbrev(Abbv);
 
@@ -2848,6 +2852,7 @@ static void WriteCombinedFunctionSummary(const FunctionInfoIndex &I,
   BitCodeAbbrev *Abbv = new BitCodeAbbrev();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_CODE_COMBINED_ENTRY));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // modid
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // linkage
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // instcount
   unsigned FSAbbrev = Stream.EmitAbbrev(Abbv);
 
@@ -2858,6 +2863,7 @@ static void WriteCombinedFunctionSummary(const FunctionInfoIndex &I,
       assert(FS);
 
       NameVals.push_back(I.getModuleId(FS->modulePath()));
+      NameVals.push_back(getEncodedLinkage(FS->getFunctionLinkage()));
       NameVals.push_back(FS->instCount());
 
       // Record the starting offset of this summary entry for use

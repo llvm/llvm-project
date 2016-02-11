@@ -184,8 +184,8 @@ enum { BITCODE_CURRENT_EPOCH = 0 };
   // The function summary section uses different codes in the per-module
   // and combined index cases.
   enum FunctionSummarySymtabCodes {
-    FS_CODE_PERMODULE_ENTRY = 1,  // FS_ENTRY: [valueid, islocal, instcount]
-    FS_CODE_COMBINED_ENTRY  = 2,  // FS_ENTRY: [modid, instcount]
+    FS_CODE_PERMODULE_ENTRY = 1,  // FS_ENTRY: [valueid, linkage, instcount]
+    FS_CODE_COMBINED_ENTRY  = 2,  // FS_ENTRY: [modid, linkage, instcount]
   };
 
   enum MetadataCodes {

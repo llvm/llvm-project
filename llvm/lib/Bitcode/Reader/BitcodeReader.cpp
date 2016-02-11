@@ -5620,14 +5620,14 @@ std::error_code FunctionIndexBitcodeReader::parseEntireSummary() {
     switch (Stream.readRecord(Entry.ID, Record)) {
     default: // Default behavior: ignore.
       break;
-    // FS_PERMODULE_ENTRY: [valueid, islocal, instcount]
+    // FS_PERMODULE_ENTRY: [valueid, linkage, instcount]
     case bitc::FS_CODE_PERMODULE_ENTRY: {
       unsigned ValueID = Record[0];
-      bool IsLocal = Record[1];
+      uint64_t RawLinkage = Record[1];
       unsigned InstCount = Record[2];
       std::unique_ptr<FunctionSummary> FS =
           llvm::make_unique<FunctionSummary>(InstCount);
-      FS->setLocalFunction(IsLocal);
+      FS->setFunctionLinkage(getDecodedLinkage(RawLinkage));
       // The module path string ref set in the summary must be owned by the
       // index's module string table. Since we don't have a module path
       // string table section in the per-module index, we create a single
@@ -5637,12 +5637,14 @@ std::error_code FunctionIndexBitcodeReader::parseEntireSummary() {
           TheIndex->addModulePath(Buffer->getBufferIdentifier(), 0));
       SummaryMap[ValueID] = std::move(FS);
     }
-    // FS_COMBINED_ENTRY: [modid, instcount]
+    // FS_COMBINED_ENTRY: [modid, linkage, instcount]
     case bitc::FS_CODE_COMBINED_ENTRY: {
       uint64_t ModuleId = Record[0];
-      unsigned InstCount = Record[1];
+      uint64_t RawLinkage = Record[1];
+      unsigned InstCount = Record[2];
       std::unique_ptr<FunctionSummary> FS =
           llvm::make_unique<FunctionSummary>(InstCount);
+      FS->setFunctionLinkage(getDecodedLinkage(RawLinkage));
       FS->setModulePath(ModuleIdMap[ModuleId]);
       SummaryMap[CurRecordBit] = std::move(FS);
     }
