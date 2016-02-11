@@ -11,8 +11,18 @@ if os.environ.get('ANDROID_RUN_VERBOSE') == '1':
 def adb(args):
     if verbose:
         print args
-    devnull = open(os.devnull, 'w')
-    return subprocess.call([ADB] + args, stdout=devnull, stderr=subprocess.STDOUT)
+    tmpname = tempfile.mktemp()
+    out = open(tmpname, 'w')
+    ret = subprocess.call([ADB] + args, stdout=out, stderr=subprocess.STDOUT)
+    if ret != 0:
+        print "adb command failed", args
+        print tmpname
+        out.close()
+        out = open(tmpname, 'r')
+        print out.read()
+    out.close()
+    os.unlink(tmpname)
+    return ret
 
 def pull_from_device(path):
     tmp = tempfile.mktemp()
