@@ -37,6 +37,13 @@ static cl::opt<unsigned> ImportInstrLimit(
     "import-instr-limit", cl::init(100), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only import functions with less than N instructions"));
 
+static cl::opt<float>
+    ImportInstrFactor("import-instr-evolution-factor", cl::init(0.7),
+                      cl::Hidden, cl::value_desc("x"),
+                      cl::desc("As we import functions, multiply the "
+                               "`import-instr-limit` threshold by this factor "
+                               "before processing newly imported functions"));
+
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
                                         LLVMContext &Context) {
@@ -56,6 +63,14 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
 }
 
 namespace {
+
+/// Track functions already seen using a map that record the current
+/// Threshold and the importing decision. Since the traversal of the call graph
+/// is DFS, we can revisit a function a second time with a higher threshold. In
+/// this case and if the function was not imported the first time, it is added
+/// back to the worklist with the new threshold
+using VisitedFunctionTrackerTy = StringMap<std::pair<unsigned, bool>>;
+
 /// Helper to load on demand a Module from file and cache it for subsequent
 /// queries. It can be used with the FunctionImporter.
 class ModuleLazyLoaderCache {
@@ -93,12 +108,12 @@ Module &ModuleLazyLoaderCache::operator()(StringRef Identifier) {
 } // anonymous namespace
 
 /// Walk through the instructions in \p F looking for external
-/// calls not already in the \p CalledFunctions set. If any are
+/// calls not already in the \p VisitedFunctions map. If any are
 /// found they are added to the \p Worklist for importing.
-static void findExternalCalls(const Module &DestModule, Function &F,
-                              const FunctionInfoIndex &Index,
-                              StringSet<> &CalledFunctions,
-                              SmallVector<StringRef, 64> &Worklist) {
+static void findExternalCalls(
+    const Module &DestModule, Function &F, const FunctionInfoIndex &Index,
+    VisitedFunctionTrackerTy &VisitedFunctions, unsigned Threshold,
+    SmallVectorImpl<std::pair<StringRef, unsigned>> &Worklist) {
   // We need to suffix internal function calls imported from other modules,
   // prepare the suffix ahead of time.
   std::string Suffix;
@@ -130,10 +145,18 @@ static void findExternalCalls(const Module &DestModule, Function &F,
         auto CalledFunctionGlobalID = Function::getGlobalIdentifier(
             CalledFunction->getName(), CalledFunction->getLinkage(),
             CalledFunction->getParent()->getSourceFileName());
-        auto It = CalledFunctions.insert(CalledFunctionGlobalID);
+
+        auto CalledFunctionInfo = std::make_pair(Threshold, false);
+        auto It = VisitedFunctions.insert(
+            std::make_pair(CalledFunctionGlobalID, CalledFunctionInfo));
         if (!It.second) {
-          // This is a call to a function we already considered, skip.
-          continue;
+          // This is a call to a function we already considered, if the function
+          // has been imported the first time, or if the current threshold is
+          // not higher, skip it.
+          auto &FunctionInfo = It.first->second;
+          if (FunctionInfo.second || FunctionInfo.first >= Threshold)
+            continue;
+          It.first->second = CalledFunctionInfo;
         }
         // Ignore functions already present in the destination module
         auto *SrcGV = DestModule.getNamedValue(ImportedName);
@@ -148,7 +171,7 @@ static void findExternalCalls(const Module &DestModule, Function &F,
           }
         }
 
-        Worklist.push_back(It.first->getKey());
+        Worklist.push_back(std::make_pair(It.first->getKey(), Threshold));
         DEBUG(dbgs() << DestModule.getModuleIdentifier()
                      << ": Adding callee for : " << ImportedName << " : "
                      << F.getName() << "\n");
@@ -165,17 +188,21 @@ static void findExternalCalls(const Module &DestModule, Function &F,
 //
 // \p ModuleToFunctionsToImportMap is filled with the set of Function to import
 // per Module.
-static void GetImportList(Module &DestModule,
-                          SmallVector<StringRef, 64> &Worklist,
-                          StringSet<> &CalledFunctions,
-                          std::map<StringRef, DenseSet<const GlobalValue *>>
-                              &ModuleToFunctionsToImportMap,
-                          const FunctionInfoIndex &Index,
-                          ModuleLazyLoaderCache &ModuleLoaderCache) {
+static void
+GetImportList(Module &DestModule,
+              SmallVectorImpl<std::pair<StringRef, unsigned>> &Worklist,
+              VisitedFunctionTrackerTy &VisitedFunctions,
+              std::map<StringRef, DenseSet<const GlobalValue *>> &
+                  ModuleToFunctionsToImportMap,
+              const FunctionInfoIndex &Index,
+              ModuleLazyLoaderCache &ModuleLoaderCache) {
   while (!Worklist.empty()) {
-    auto CalledFunctionName = Worklist.pop_back_val();
+    StringRef CalledFunctionName;
+    unsigned Threshold;
+    std::tie(CalledFunctionName, Threshold) = Worklist.pop_back_val();
     DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": Process import for "
-                 << CalledFunctionName << "\n");
+                 << CalledFunctionName << " with Threshold " << Threshold
+                 << "\n");
 
     // Try to get a summary for this function call.
     auto InfoList = Index.findFunctionInfoList(CalledFunctionName);
@@ -199,12 +226,16 @@ static void GetImportList(Module &DestModule,
       llvm_unreachable("Missing summary");
     }
 
-    if (Summary->instCount() > ImportInstrLimit) {
+    if (Summary->instCount() > Threshold) {
       DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": Skip import of "
                    << CalledFunctionName << " with " << Summary->instCount()
-                   << " instructions (limit " << ImportInstrLimit << ")\n");
+                   << " instructions (limit " << Threshold << ")\n");
       continue;
     }
+
+    // Mark the function as imported in the VisitedFunctions tracker
+    assert(VisitedFunctions.count(CalledFunctionName));
+    VisitedFunctions[CalledFunctionName].second = true;
 
     // Get the module path from the summary.
     auto ModuleIdentifier = Summary->modulePath();
@@ -256,8 +287,11 @@ static void GetImportList(Module &DestModule,
     Entry.insert(F);
 
     // Process the newly imported functions and add callees to the worklist.
+    // Adjust the threshold
+    Threshold = Threshold * ImportInstrFactor;
     F->materialize();
-    findExternalCalls(DestModule, *F, Index, CalledFunctions, Worklist);
+    findExternalCalls(DestModule, *F, Index, VisitedFunctions, Threshold,
+                      Worklist);
   }
 }
 
@@ -271,13 +305,15 @@ bool FunctionImporter::importFunctions(Module &DestModule) {
                << DestModule.getModuleIdentifier() << "\n");
   unsigned ImportedCount = 0;
 
-  /// First step is collecting the called external functions.
-  StringSet<> CalledFunctions;
-  SmallVector<StringRef, 64> Worklist;
+  // First step is collecting the called external functions.
+  // We keep the function name as well as the import threshold for its callees.
+  VisitedFunctionTrackerTy VisitedFunctions;
+  SmallVector<std::pair<StringRef, unsigned>, 64> Worklist;
   for (auto &F : DestModule) {
     if (F.isDeclaration() || F.hasFnAttribute(Attribute::OptimizeNone))
       continue;
-    findExternalCalls(DestModule, F, Index, CalledFunctions, Worklist);
+    findExternalCalls(DestModule, F, Index, VisitedFunctions, ImportInstrLimit,
+                      Worklist);
   }
   if (Worklist.empty())
     return false;
@@ -294,7 +330,7 @@ bool FunctionImporter::importFunctions(Module &DestModule) {
   // Analyze the summaries and get the list of functions to import by
   // populating ModuleToFunctionsToImportMap
   ModuleLazyLoaderCache ModuleLoaderCache(ModuleLoader);
-  GetImportList(DestModule, Worklist, CalledFunctions,
+  GetImportList(DestModule, Worklist, VisitedFunctions,
                 ModuleToFunctionsToImportMap, Index, ModuleLoaderCache);
   assert(Worklist.empty() && "Worklist hasn't been flushed in GetImportList");
 
