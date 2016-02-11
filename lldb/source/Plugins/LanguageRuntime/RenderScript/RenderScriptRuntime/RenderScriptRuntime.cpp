@@ -392,7 +392,7 @@ GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
             const RegisterInfo *rArg = ctx.reg_ctx->GetRegisterInfoAtIndex(i + c_reg_offset);
             RegisterValue rVal;
             if (ctx.reg_ctx->ReadRegister(rArg, rVal))
-                arg.value = rVal.GetAsUInt32(0, &success);
+                arg.value = rVal.GetAsUInt64(0, &success);
         }
         // arguments passed on the stack
         else
