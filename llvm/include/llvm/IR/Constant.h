@@ -131,7 +131,7 @@ public:
   /// use Value::replaceAllUsesWith, which automatically dispatches to this
   /// method as needed.
   ///
-  void handleOperandChange(Value *, Value *, Use *);
+  void handleOperandChange(Value *, Value *);
 
   static Constant *getNullValue(Type* Ty);
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}fold_sgpr:
 ; CHECK: v_add_i32_e32 v{{[0-9]+}}, vcc, s
@@ -8,7 +8,7 @@ entry:
   br i1 %tmp0, label %if, label %endif
 
 if:
-  %id = call i32 @llvm.r600.read.tidig.x()
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
   %offset = add i32 %fold, %id
   %tmp1 = getelementptr i32, i32 addrspace(1)* %out, i32 %offset
   store i32 0, i32 addrspace(1)* %tmp1
@@ -27,7 +27,7 @@ entry:
   br i1 %tmp0, label %if, label %endif
 
 if:
-  %id = call i32 @llvm.r600.read.tidig.x()
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
   %val = or i32 %id, %fold
   store i32 %val, i32 addrspace(1)* %out
   br label %endif
@@ -63,7 +63,7 @@ entry:
 
 define void @vector_inline(<4 x i32> addrspace(1)* %out) {
 entry:
-  %tmp0 = call i32 @llvm.r600.read.tidig.x()
+  %tmp0 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp0, 1
   %tmp2 = add i32 %tmp0, 2
   %tmp3 = add i32 %tmp0, 3
@@ -82,7 +82,7 @@ entry:
 
 define void @imm_one_use(i32 addrspace(1)* %out) {
 entry:
-  %tmp0 = call i32 @llvm.r600.read.tidig.x()
+  %tmp0 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = xor i32 %tmp0, 100
   store i32 %tmp1, i32 addrspace(1)* %out
   ret void
@@ -96,7 +96,7 @@ entry:
 
 define void @vector_imm(<4 x i32> addrspace(1)* %out) {
 entry:
-  %tmp0 = call i32 @llvm.r600.read.tidig.x()
+  %tmp0 = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp0, 1
   %tmp2 = add i32 %tmp0, 2
   %tmp3 = add i32 %tmp0, 3
@@ -109,5 +109,6 @@ entry:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #0
-attributes #0 = { readnone }
+declare i32 @llvm.amdgcn.workitem.id.x() #0
+
+attributes #0 = { nounwind readnone }

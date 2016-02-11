@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; SI-LABEL: {{^}}v_cnd_nan_nosgpr:
 ; SI: v_cndmask_b32_e64 v{{[0-9]}}, v{{[0-9]}}, -1, s{{\[[0-9]+:[0-9]+\]}}
@@ -9,7 +9,7 @@ declare i32 @llvm.r600.read.tidig.x() #1
 ; All nan values are converted to 0xffffffff
 ; SI: s_endpgm
 define void @v_cnd_nan_nosgpr(float addrspace(1)* %out, i32 %c, float addrspace(1)* %fptr) #0 {
-  %idx = call i32 @llvm.r600.read.tidig.x() #1
+  %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
   %f.gep = getelementptr float, float addrspace(1)* %fptr, i32 %idx
   %f = load float, float addrspace(1)* %fptr
   %setcc = icmp ne i32 %c, 0

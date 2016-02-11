@@ -215,7 +215,6 @@ public:
     VK_PPC_TOC_HI,         // symbol@toc@h
     VK_PPC_TOC_HA,         // symbol@toc@ha
     VK_PPC_DTPMOD,         // symbol@dtpmod
-    VK_PPC_TPREL,          // symbol@tprel
     VK_PPC_TPREL_LO,       // symbol@tprel@l
     VK_PPC_TPREL_HI,       // symbol@tprel@h
     VK_PPC_TPREL_HA,       // symbol@tprel@ha
@@ -223,7 +222,6 @@ public:
     VK_PPC_TPREL_HIGHERA,  // symbol@tprel@highera
     VK_PPC_TPREL_HIGHEST,  // symbol@tprel@highest
     VK_PPC_TPREL_HIGHESTA, // symbol@tprel@highesta
-    VK_PPC_DTPREL,         // symbol@dtprel
     VK_PPC_DTPREL_LO,      // symbol@dtprel@l
     VK_PPC_DTPREL_HI,      // symbol@dtprel@h
     VK_PPC_DTPREL_HA,      // symbol@dtprel@ha

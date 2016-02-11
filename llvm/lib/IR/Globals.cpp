@@ -43,7 +43,7 @@ void GlobalValue::destroyConstantImpl() {
   llvm_unreachable("You can't GV->destroyConstantImpl()!");
 }
 
-Value *GlobalValue::handleOperandChangeImpl(Value *From, Value *To, Use *U) {
+Value *GlobalValue::handleOperandChangeImpl(Value *From, Value *To) {
   llvm_unreachable("Unsupported class for handleOperandChange()!");
 }
 

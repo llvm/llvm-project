@@ -18,7 +18,7 @@ main_body:
   %tmp11 = call <4 x float> @llvm.SI.vs.load.input(<16 x i8> %tmp10, i32 0, i32 %arg6)
   %tmp12 = extractelement <4 x float> %tmp11, i32 0
   %tmp13 = extractelement <4 x float> %tmp11, i32 1
-  call void @llvm.AMDGPU.barrier.global() #1
+  call void @llvm.amdgcn.s.barrier() #1
   %tmp14 = extractelement <4 x float> %tmp11, i32 2
 ;  %tmp15 = extractelement <4 x float> %tmp11, i32 3
   %tmp15 = load float, float addrspace(2)* %constptr, align 4 ; Force waiting for expcnt and lgkmcnt
@@ -71,7 +71,7 @@ main_body:
 
 
 ; Function Attrs: convergent nounwind
-declare void @llvm.AMDGPU.barrier.global() #1
+declare void @llvm.amdgcn.s.barrier() #1
 
 ; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.SI.vs.load.input(<16 x i8>, i32, i32) #2

@@ -207,7 +207,7 @@ class Neon_Tbl6Arg_Intrinsic
 
 // Arithmetic ops
 
-let Properties = [IntrNoMem, Commutative] in {
+let IntrProperties = [IntrNoMem, Commutative] in {
 
   // Vector Add.
   def int_arm_neon_vhadds : Neon_2Arg_Intrinsic;

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs -enable-misched -asm-verbose < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -enable-misched -asm-verbose < %s | FileCheck -check-prefix=SI %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; SI-LABEL: @test_if
 ; Make sure the i1 values created by the cfg structurizer pass are
@@ -54,7 +54,7 @@ end:
 ; SI: s_or_b64 exec, exec, [[BR_SREG]]
 ; SI: s_endpgm
 define void @simple_test_v_if(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %is.0 = icmp ne i32 %tid, 0
   br i1 %is.0, label %store, label %exit
 
@@ -86,7 +86,7 @@ exit:
 
 define void @simple_test_v_loop(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
 entry:
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %is.0 = icmp ne i32 %tid, 0
   %limit = add i32 %tid, 64
   br i1 %is.0, label %loop, label %exit
@@ -152,7 +152,7 @@ exit:
 
 define void @multi_vcond_loop(i32 addrspace(1)* noalias nocapture %arg, i32 addrspace(1)* noalias nocapture readonly %arg1, i32 addrspace(1)* noalias nocapture readonly %arg2, i32 addrspace(1)* noalias nocapture readonly %arg3) #1 {
 bb:
-  %tmp = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp4 = sext i32 %tmp to i64
   %tmp5 = getelementptr inbounds i32, i32 addrspace(1)* %arg3, i64 %tmp4
   %tmp6 = load i32, i32 addrspace(1)* %tmp5, align 4

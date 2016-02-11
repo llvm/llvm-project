@@ -26748,6 +26748,31 @@ static int getOneTrueElt(SDValue V) {
   return TrueIndex;
 }
 
+/// Given a masked memory load/store operation, return true if it has one mask
+/// bit set. If it has one mask bit set, then also return the memory address of
+/// the scalar element to load/store, the vector index to insert/extract that
+/// scalar element, and the alignment for the scalar memory access.
+static bool getParamsForOneTrueMaskedElt(MaskedLoadStoreSDNode *MaskedOp,
+                                         SelectionDAG &DAG, SDValue &Addr,
+                                         SDValue &Index, unsigned &Alignment) {
+  int TrueMaskElt = getOneTrueElt(MaskedOp->getMask());
+  if (TrueMaskElt < 0)
+    return false;
+
+  // Get the address of the one scalar element that is specified by the mask
+  // using the appropriate offset from the base pointer.
+  EVT EltVT = MaskedOp->getMemoryVT().getVectorElementType();
+  Addr = MaskedOp->getBasePtr();
+  if (TrueMaskElt != 0) {
+    unsigned Offset = TrueMaskElt * EltVT.getStoreSize();
+    Addr = DAG.getMemBasePlusOffset(Addr, Offset, SDLoc(MaskedOp));
+  }
+
+  Index = DAG.getIntPtrConstant(TrueMaskElt, SDLoc(MaskedOp));
+  Alignment = MinAlign(MaskedOp->getAlignment(), EltVT.getStoreSize());
+  return true;
+}
+
 /// If exactly one element of the mask is set for a non-extending masked load,
 /// it is a scalar load and vector insert.
 /// Note: It is expected that the degenerate cases of an all-zeros or all-ones
@@ -26755,36 +26780,27 @@ static int getOneTrueElt(SDValue V) {
 static SDValue
 reduceMaskedLoadToScalarLoad(MaskedLoadSDNode *ML, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI) {
-  // FIXME: Refactor shared/similar logic with reduceMaskedStoreToScalarStore().
-
   // TODO: This is not x86-specific, so it could be lifted to DAGCombiner.
   // However, some target hooks may need to be added to know when the transform
   // is profitable. Endianness would also have to be considered.
 
-  int TrueMaskElt = getOneTrueElt(ML->getMask());
-  if (TrueMaskElt < 0)
+  SDValue Addr, VecIndex;
+  unsigned Alignment;
+  if (!getParamsForOneTrueMaskedElt(ML, DAG, Addr, VecIndex, Alignment))
     return SDValue();
-
-  SDLoc DL(ML);
-  EVT VT = ML->getValueType(0);
-  EVT EltVT = VT.getVectorElementType();
 
   // Load the one scalar element that is specified by the mask using the
   // appropriate offset from the base pointer.
-  SDValue Addr = ML->getBasePtr();
-  if (TrueMaskElt != 0) {
-    unsigned Offset = TrueMaskElt * EltVT.getStoreSize();
-    Addr = DAG.getMemBasePlusOffset(Addr, Offset, DL);
-  }
-  unsigned Alignment = MinAlign(ML->getAlignment(), EltVT.getStoreSize());
+  SDLoc DL(ML);
+  EVT VT = ML->getValueType(0);
+  EVT EltVT = VT.getVectorElementType();
   SDValue Load = DAG.getLoad(EltVT, DL, ML->getChain(), Addr,
                              ML->getPointerInfo(), ML->isVolatile(),
                              ML->isNonTemporal(), ML->isInvariant(), Alignment);
 
   // Insert the loaded element into the appropriate place in the vector.
-  SDValue InsertIndex = DAG.getIntPtrConstant(TrueMaskElt, DL);
   SDValue Insert = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, ML->getSrc0(),
-                               Load, InsertIndex);
+                               Load, VecIndex);
   return DCI.CombineTo(ML, Insert, Load.getValue(1), true);
 }
 
@@ -26881,26 +26897,19 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
   // However, some target hooks may need to be added to know when the transform
   // is profitable. Endianness would also have to be considered.
 
-  int TrueMaskElt = getOneTrueElt(MS->getMask());
-  if (TrueMaskElt < 0)
+  SDValue Addr, VecIndex;
+  unsigned Alignment;
+  if (!getParamsForOneTrueMaskedElt(MS, DAG, Addr, VecIndex, Alignment))
     return SDValue();
 
+  // Extract the one scalar element that is actually being stored.
   SDLoc DL(MS);
   EVT VT = MS->getValue().getValueType();
   EVT EltVT = VT.getVectorElementType();
-
-  // Extract the one scalar element that is actually being stored.
-  SDValue ExtractIndex = DAG.getIntPtrConstant(TrueMaskElt, DL);
   SDValue Extract = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT,
-                                MS->getValue(), ExtractIndex);
+                                MS->getValue(), VecIndex);
 
   // Store that element at the appropriate offset from the base pointer.
-  SDValue Addr = MS->getBasePtr();
-  if (TrueMaskElt != 0) {
-    unsigned Offset = TrueMaskElt * EltVT.getStoreSize();
-    Addr = DAG.getMemBasePlusOffset(Addr, Offset, DL);
-  }
-  unsigned Alignment = MinAlign(MS->getAlignment(), EltVT.getStoreSize());
   return DAG.getStore(MS->getChain(), DL, Extract, Addr, MS->getPointerInfo(),
                       MS->isVolatile(), MS->isNonTemporal(), Alignment);
 }

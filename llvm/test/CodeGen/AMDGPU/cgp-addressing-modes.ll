@@ -5,8 +5,6 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-declare i32 @llvm.r600.read.tidig.x() #0
-
 ; OPT-LABEL: @test_sink_global_small_offset_i32(
 ; OPT-CI-NOT: getelementptr i32, i32 addrspace(1)* %in
 ; OPT-VI: getelementptr i32, i32 addrspace(1)* %in

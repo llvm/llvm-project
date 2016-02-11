@@ -23,7 +23,7 @@ void FunctionInfoIndex::mergeFrom(std::unique_ptr<FunctionInfoIndex> Other,
 
   StringRef ModPath;
   for (auto &OtherFuncInfoLists : *Other) {
-    std::string FuncName = OtherFuncInfoLists.getKey();
+    uint64_t FuncGUID = OtherFuncInfoLists.first;
     FunctionInfoList &List = OtherFuncInfoLists.second;
 
     // Assert that the func info list only has one entry, since we shouldn't
@@ -49,20 +49,9 @@ void FunctionInfoIndex::mergeFrom(std::unique_ptr<FunctionInfoIndex> Other,
     // string reference owned by the combined index.
     Info->functionSummary()->setModulePath(ModPath);
 
-    // If it is a local function, rename it.
-    if (GlobalValue::isLocalLinkage(
-            Info->functionSummary()->getFunctionLinkage())) {
-      // Any local functions are virtually renamed when being added to the
-      // combined index map, to disambiguate from other functions with
-      // the same name. The symbol table created for the combined index
-      // file should contain the renamed symbols.
-      FuncName =
-          FunctionInfoIndex::getGlobalNameForLocal(FuncName, NextModuleId);
-    }
-
     // Add new function info to existing list. There may be duplicates when
     // combining FunctionMap entries, due to COMDAT functions. Any local
-    // functions were virtually renamed above.
-    addFunctionInfo(FuncName, std::move(Info));
+    // functions were given unique global IDs.
+    addFunctionInfo(FuncGUID, std::move(Info));
   }
 }

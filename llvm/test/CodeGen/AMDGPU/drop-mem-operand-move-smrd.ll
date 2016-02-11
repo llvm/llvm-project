@@ -12,7 +12,7 @@
 ; GCN: s_endpgm
 define void @reschedule_global_load_lds_store(i32 addrspace(1)* noalias %gptr0, i32 addrspace(1)* noalias %gptr1, i32 addrspace(3)* noalias %lptr, i32 %c) #0 {
 entry:
-  %tid = tail call i32 @llvm.r600.read.tidig.x() #1
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx = shl i32 %tid, 2
   %gep0 = getelementptr i32, i32 addrspace(1)* %gptr0, i32 %idx
   %gep1 = getelementptr i32, i32 addrspace(1)* %gptr1, i32 %idx
@@ -42,10 +42,7 @@ exit:                                             ; preds = %for.body, %entry
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.x() #1
-
-; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

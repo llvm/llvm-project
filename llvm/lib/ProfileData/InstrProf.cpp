@@ -591,7 +591,8 @@ void ValueProfData::swapBytesFromHost(support::endianness Endianness) {
 
 void annotateValueSite(Module &M, Instruction &Inst,
                        const InstrProfRecord &InstrProfR,
-                       InstrProfValueKind ValueKind, uint32_t SiteIdx) {
+                       InstrProfValueKind ValueKind, uint32_t SiteIdx,
+                       uint32_t MaxMDCount) {
   uint32_t NV = InstrProfR.getNumValueDataForSite(ValueKind, SiteIdx);
 
   uint64_t Sum = 0;
@@ -611,7 +612,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
       MDHelper.createConstant(ConstantInt::get(Type::getInt64Ty(Ctx), Sum)));
 
   // Value Profile Data
-  uint32_t MDCount = 3;
+  uint32_t MDCount = MaxMDCount;
   for (uint32_t I = 0; I < NV; ++I) {
     Vals.push_back(MDHelper.createConstant(
         ConstantInt::get(Type::getInt64Ty(Ctx), VD[I].Value)));

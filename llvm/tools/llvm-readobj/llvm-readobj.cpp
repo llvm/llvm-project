@@ -233,6 +233,11 @@ namespace opts {
   cl::alias SectionGroupsShort("g", cl::desc("Alias for -elf-sections-groups"),
                                cl::aliasopt(SectionGroups));
 
+  cl::opt<OutpytStyleTy>
+      Output("elf-output-style", cl::desc("Specify ELF dump style"),
+             cl::values(clEnumVal(LLVM, "LLVM default style"),
+                        clEnumVal(GNU, "GNU readelf style"), clEnumValEnd),
+             cl::init(LLVM));
 } // namespace opts
 
 namespace llvm {
@@ -305,14 +310,15 @@ static void dumpObject(const ObjectFile *Obj) {
   if (std::error_code EC = createDumper(Obj, Writer, Dumper))
     reportError(Obj->getFileName(), EC);
 
-  outs() << '\n';
-  outs() << "File: " << Obj->getFileName() << "\n";
-  outs() << "Format: " << Obj->getFileFormatName() << "\n";
-  outs() << "Arch: "
-         << Triple::getArchTypeName((llvm::Triple::ArchType)Obj->getArch())
-         << "\n";
-  outs() << "AddressSize: " << (8*Obj->getBytesInAddress()) << "bit\n";
-  Dumper->printLoadName();
+  if (opts::Output == opts::LLVM) {
+    outs() << '\n';
+    outs() << "File: " << Obj->getFileName() << "\n";
+    outs() << "Format: " << Obj->getFileFormatName() << "\n";
+    outs() << "Arch: " << Triple::getArchTypeName(
+                              (llvm::Triple::ArchType)Obj->getArch()) << "\n";
+    outs() << "AddressSize: " << (8 * Obj->getBytesInAddress()) << "bit\n";
+    Dumper->printLoadName();
+  }
 
   if (opts::FileHeaders)
     Dumper->printFileHeaders();

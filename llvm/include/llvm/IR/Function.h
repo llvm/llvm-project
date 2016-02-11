@@ -27,6 +27,7 @@
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MD5.h"
 
 namespace llvm {
 
@@ -649,6 +650,12 @@ public:
   static std::string getGlobalIdentifier(StringRef FuncName,
                                          GlobalValue::LinkageTypes Linkage,
                                          StringRef FileName);
+
+  /// Return a 64-bit global unique ID constructed from global function name
+  /// (i.e. returned by getGlobalIdentifier).
+  static uint64_t getGUID(StringRef GlobalFuncName) {
+    return MD5Hash(GlobalFuncName);
+  }
 
 private:
   void allocHungoffUselist();

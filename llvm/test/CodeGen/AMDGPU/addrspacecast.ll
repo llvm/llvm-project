@@ -47,19 +47,19 @@ end:
 ; CHECK: flat_load_dword
 define void @store_flat_scratch(i32 addrspace(1)* noalias %out, i32) #0 {
   %alloca = alloca i32, i32 9, align 4
-  %x = call i32 @llvm.r600.read.tidig.x() #3
+  %x = call i32 @llvm.amdgcn.workitem.id.x() #3
   %pptr = getelementptr i32, i32* %alloca, i32 %x
   %fptr = addrspacecast i32* %pptr to i32 addrspace(4)*
   store i32 %x, i32 addrspace(4)* %fptr
   ; Dummy call
-  call void @llvm.AMDGPU.barrier.local() #1
+  call void @llvm.amdgcn.s.barrier() #1
   %reload = load i32, i32 addrspace(4)* %fptr, align 4
   store i32 %reload, i32 addrspace(1)* %out, align 4
   ret void
 }
 
-declare void @llvm.AMDGPU.barrier.local() #1
-declare i32 @llvm.r600.read.tidig.x() #3
+declare void @llvm.amdgcn.s.barrier() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #3
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind convergent }

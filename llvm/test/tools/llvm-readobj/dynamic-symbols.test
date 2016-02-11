@@ -1,0 +1,223 @@
+RUN: llvm-readobj -dyn-symbols -dynamic-table -dyn-relocations \
+RUN:   %S/Inputs/dynamic-table-exe-no-shdrs.x86 | FileCheck %s
+RUN: llvm-readobj -dyn-symbols -dynamic-table -relocations \
+RUN:   %S/Inputs/dynamic-table-exe-no-phdrs.x86 | FileCheck %s
+
+CHECK:      File:
+CHECK-NEXT: Format: ELF32-i386
+CHECK-NEXT: Arch: i386
+CHECK-NEXT: AddressSize: 32bit
+CHECK-NEXT: LoadName:
+CHECK:        0x85F R_386_RELATIVE - 0x0
+CHECK-NEXT:   0x874 R_386_RELATIVE - 0x0
+CHECK-NEXT:   0x19FC R_386_RELATIVE - 0x0
+CHECK-NEXT:   0x1A00 R_386_RELATIVE - 0x0
+CHECK-NEXT:   0x1B2C R_386_RELATIVE - 0x0
+CHECK-NEXT:   0x1B60 R_386_RELATIVE - 0x0
+CHECK-NEXT:   0x0 R_386_NONE - 0x0
+CHECK-NEXT:   0x864 R_386_PC32 puts 0x0
+CHECK-NEXT:   0x880 R_386_PC32 _ZNSt14basic_ifstreamIcSt11char_traitsIcEEC1EPKcSt13_Ios_Openmode 0x0
+CHECK-NEXT:   0x88C R_386_PC32 _ZNSt14basic_ifstreamIcSt11char_traitsIcEED1Ev 0x0
+CHECK-NEXT:   0x89B R_386_PC32 _Unwind_Resume 0x0
+CHECK-NEXT:   0x9BB R_386_32 __gxx_personality_v0 0x0
+CHECK-NEXT:   0x1B18 R_386_GLOB_DAT __gmon_start__ 0x0
+CHECK-NEXT:   0x1B1C R_386_GLOB_DAT _Jv_RegisterClasses 0x0
+CHECK-NEXT:   0x1B20 R_386_GLOB_DAT _ITM_deregisterTMCloneTable 0x0
+CHECK-NEXT:   0x1B24 R_386_GLOB_DAT _ITM_registerTMCloneTable 0x0
+CHECK-NEXT:   0x1B28 R_386_GLOB_DAT __cxa_finalize 0x0
+CHECK:        0x1B3C R_386_JUMP_SLOT __gmon_start__ 0x0
+CHECK-NEXT:   0x1B40 R_386_JUMP_SLOT __libc_start_main 0x0
+CHECK-NEXT:   0x1B44 R_386_JUMP_SLOT _ZNSt14basic_ifstreamIcSt11char_traitsIcEED1Ev 0x0
+CHECK-NEXT:   0x1B48 R_386_JUMP_SLOT _ZNSt14basic_ifstreamIcSt11char_traitsIcEEC1EPKcSt13_Ios_Openmode 0x0
+CHECK-NEXT:   0x1B4C R_386_JUMP_SLOT puts 0x0
+CHECK-NEXT:   0x1B50 R_386_JUMP_SLOT __gxx_personality_v0 0x0
+CHECK-NEXT:   0x1B54 R_386_JUMP_SLOT _Unwind_Resume 0x0
+CHECK-NEXT:   0x1B58 R_386_JUMP_SLOT __cxa_finalize 0x0
+CHECK:        DynamicSymbols [
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: @
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Local
+CHECK-NEXT:     Type: None
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: __gmon_start__@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Weak
+CHECK-NEXT:     Type: None
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: _Jv_RegisterClasses@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Weak
+CHECK-NEXT:     Type: None
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: __libc_start_main@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: Function
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: _ITM_deregisterTMCloneTable@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Weak
+CHECK-NEXT:     Type: None
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: _ITM_registerTMCloneTable@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Weak
+CHECK-NEXT:     Type: None
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: _ZNSt14basic_ifstreamIcSt11char_traitsIcEED1Ev@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: Function
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: _ZNSt14basic_ifstreamIcSt11char_traitsIcEEC1EPKcSt13_Ios_Openmode@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: Function
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: puts@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: Function
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: __gxx_personality_v0@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: Function
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: _Unwind_Resume@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: Function
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: __cxa_finalize@
+CHECK-NEXT:     Value: 0x0
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Weak
+CHECK-NEXT:     Type: Function
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Undefined
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: _end@
+CHECK-NEXT:     Value: 0x1B68
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: None
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Absolute
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: _edata@
+CHECK-NEXT:     Value: 0x1B64
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: None
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Absolute
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: _IO_stdin_used@
+CHECK-NEXT:     Value: 0x93C
+CHECK-NEXT:     Size: 4
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: Object
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section:
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: __bss_start@
+CHECK-NEXT:     Value: 0x1B64
+CHECK-NEXT:     Size: 0
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: None
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section: Absolute
+CHECK-NEXT:   }
+CHECK-NEXT:   Symbol {
+CHECK-NEXT:     Name: main@
+CHECK-NEXT:     Value: 0x850
+CHECK-NEXT:     Size: 81
+CHECK-NEXT:     Binding: Global
+CHECK-NEXT:     Type: Function
+CHECK-NEXT:     Other: 0
+CHECK-NEXT:     Section:
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: DynamicSection [
+CHECK-NEXT:   Tag        Type                 Name/Value
+CHECK-NEXT:   0x00000001 NEEDED               SharedLibrary (libstdc++.so.6)
+CHECK-NEXT:   0x00000001 NEEDED               SharedLibrary (libgcc_s.so.1)
+CHECK-NEXT:   0x00000001 NEEDED               SharedLibrary (libc.so.6)
+CHECK-NEXT:   0x0000000C INIT                 0x62C
+CHECK-NEXT:   0x0000000D FINI                 0x920
+CHECK-NEXT:   0x00000019 INIT_ARRAY           0x19FC
+CHECK-NEXT:   0x0000001B INIT_ARRAYSZ         4
+CHECK-NEXT:   0x0000001A FINI_ARRAY           0x1A00
+CHECK-NEXT:   0x0000001C FINI_ARRAYSZ         4
+CHECK-NEXT:   0x00000004 HASH                 0x18C
+CHECK-NEXT:   0x6FFFFEF5 GNU_HASH             0x1E4
+CHECK-NEXT:   0x00000005 STRTAB               0x328
+CHECK-NEXT:   0x00000006 SYMTAB               0x218
+CHECK-NEXT:   0x0000000A STRSZ                408
+CHECK-NEXT:   0x0000000B SYMENT               16
+CHECK-NEXT:   0x00000015 DEBUG                0x0
+CHECK-NEXT:   0x00000003 PLTGOT               0x1B30
+CHECK-NEXT:   0x00000002 PLTRELSZ             64
+CHECK-NEXT:   0x00000014 PLTREL               REL
+CHECK-NEXT:   0x00000017 JMPREL               0x5EC
+CHECK-NEXT:   0x00000011 REL                  0x564
+CHECK-NEXT:   0x00000012 RELSZ                136
+CHECK-NEXT:   0x00000013 RELENT               8
+CHECK-NEXT:   0x00000016 TEXTREL              0x0
+CHECK-NEXT:   0x0000001E FLAGS                TEXTREL
+CHECK-NEXT:   0x6FFFFFFE VERNEED              0x4E4
+CHECK-NEXT:   0x6FFFFFFF VERNEEDNUM           3
+CHECK-NEXT:   0x6FFFFFF0 VERSYM               0x4C0
+CHECK-NEXT:   0x6FFFFFFA RELCOUNT             6
+CHECK-NEXT:   0x00000000 NULL                 0x0
+CHECK-NEXT: ]

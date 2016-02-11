@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 declare double @fabs(double) readnone
 declare double @llvm.fabs.f64(double) readnone
@@ -11,7 +11,7 @@ declare <4 x double> @llvm.fabs.v4f64(<4 x double>) readnone
 ; SI: v_and_b32
 ; SI: s_endpgm
 define void @v_fabs_f64(double addrspace(1)* %out, double addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %tidext = sext i32 %tid to i64
   %gep = getelementptr double, double addrspace(1)* %in, i64 %tidext
   %val = load double, double addrspace(1)* %gep, align 8

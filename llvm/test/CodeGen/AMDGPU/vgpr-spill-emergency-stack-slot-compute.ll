@@ -11,10 +11,6 @@
 
 ; FIXME: The same register is initialized to 0 for every spill.
 
-declare i32 @llvm.r600.read.tgid.x() #1
-declare i32 @llvm.r600.read.tgid.y() #1
-declare i32 @llvm.r600.read.tgid.z() #1
-
 ; GCN-LABEL: {{^}}spill_vgpr_compute:
 
 ; GCN: s_mov_b32 s16, s3

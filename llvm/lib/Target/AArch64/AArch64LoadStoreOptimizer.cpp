@@ -1131,8 +1131,28 @@ bool AArch64LoadStoreOpt::findMatchingStore(
   return false;
 }
 
-/// findMatchingInsn - Scan the instructions looking for a load/store that can
-/// be combined with the current instruction into a load/store pair.
+// Returns true if these two opcodes can be merged or paired.  Otherwise,
+// returns false.
+static bool canMergeOpc(unsigned OpcA, unsigned OpcB, LdStPairFlags &Flags) {
+  // Opcodes match: nothing more to check.
+  if (OpcA == OpcB)
+    return true;
+
+  // Try to match a sign-extended load/store with a zero-extended load/store.
+  bool IsValidLdStrOpc, PairIsValidLdStrOpc;
+  unsigned NonSExtOpc = getMatchingNonSExtOpcode(OpcA, &IsValidLdStrOpc);
+  assert(IsValidLdStrOpc &&
+         "Given Opc should be a Load or Store with an immediate");
+  // OpcA will be the first instruction in the pair.
+  if (NonSExtOpc == getMatchingNonSExtOpcode(OpcB, &PairIsValidLdStrOpc)) {
+    Flags.setSExtIdx(NonSExtOpc == (unsigned)OpcA ? 1 : 0);
+    return true;
+  }
+  return false;
+}
+
+/// Scan the instructions looking for a load/store that can be combined with the
+/// current instruction into a wider equivalent or a load/store pair.
 MachineBasicBlock::iterator
 AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
                                       LdStPairFlags &Flags, unsigned Limit) {
@@ -1147,15 +1167,8 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   unsigned Reg = getLdStRegOp(FirstMI).getReg();
   unsigned BaseReg = getLdStBaseOp(FirstMI).getReg();
   int Offset = getLdStOffsetOp(FirstMI).getImm();
-  bool IsNarrowStore = isNarrowStore(Opc);
-
-  // Early exit if the offset is not possible to match. (6 bits of positive
-  // range, plus allow an extra one in case we find a later insn that matches
-  // with Offset-1)
   int OffsetStride = IsUnscaled ? getMemScale(FirstMI) : 1;
-  if (!(isNarrowLoad(Opc) || IsNarrowStore) &&
-      !inBoundsForPair(IsUnscaled, Offset, OffsetStride))
-    return E;
+  bool IsNarrowStore = isNarrowStore(Opc);
 
   // Track which registers have been modified and used between the first insn
   // (inclusive) and the second insn.
@@ -1175,19 +1188,9 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
     // Now that we know this is a real instruction, count it.
     ++Count;
 
-    bool CanMergeOpc = Opc == MI->getOpcode();
     Flags.setSExtIdx(-1);
-    if (!CanMergeOpc) {
-      bool IsValidLdStrOpc;
-      unsigned NonSExtOpc = getMatchingNonSExtOpcode(Opc, &IsValidLdStrOpc);
-      assert(IsValidLdStrOpc &&
-             "Given Opc should be a Load or Store with an immediate");
-      // Opc will be the first instruction in the pair.
-      Flags.setSExtIdx(NonSExtOpc == (unsigned)Opc ? 1 : 0);
-      CanMergeOpc = NonSExtOpc == getMatchingNonSExtOpcode(MI->getOpcode());
-    }
-
-    if (CanMergeOpc && getLdStOffsetOp(MI).isImm()) {
+    if (canMergeOpc(Opc, MI->getOpcode(), Flags) &&
+        getLdStOffsetOp(MI).isImm()) {
       assert(MI->mayLoadOrStore() && "Expected memory operation.");
       // If we've found another instruction with the same opcode, check to see
       // if the base and offset are compatible with our starting instruction.
@@ -1606,6 +1609,15 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   MachineBasicBlock::iterator E = MI->getParent()->end();
 
   if (!isCandidateToMergeOrPair(MI))
+    return false;
+
+  // Early exit if the offset is not possible to match. (6 bits of positive
+  // range, plus allow an extra one in case we find a later insn that matches
+  // with Offset-1)
+  bool IsUnscaled = isUnscaledLdSt(MI);
+  int Offset = getLdStOffsetOp(MI).getImm();
+  int OffsetStride = IsUnscaled ? getMemScale(MI) : 1;
+  if (!inBoundsForPair(IsUnscaled, Offset, OffsetStride))
     return false;
 
   // Look ahead up to LdStLimit instructions for a pairable instruction.

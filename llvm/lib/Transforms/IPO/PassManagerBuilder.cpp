@@ -379,7 +379,7 @@ void PassManagerBuilder::populateModulePassManager(
   // we must insert a no-op module pass to reset the pass manager.
   MPM.add(createBarrierNoopPass());
 
-  // Scheduling LoopVersioningLICM when inining is over, because after that
+  // Scheduling LoopVersioningLICM when inlining is over, because after that
   // we may see more accurate aliasing. Reason to run this late is that too
   // early versioning may prevent further inlining due to increase of code
   // size. By placing it just after inlining other optimizations which runs 

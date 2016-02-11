@@ -33,6 +33,12 @@ namespace llvm {
       assert(!Key.empty());
       return base::insert(std::make_pair(Key, '\0'));
     }
+
+    template <typename InputIt>
+    void insert(const InputIt &Begin, const InputIt &End) {
+      for (auto It = Begin; It != End; ++It)
+        base::insert(std::make_pair(*It, '\0'));
+    }
   };
 }
 

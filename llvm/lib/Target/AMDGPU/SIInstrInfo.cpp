@@ -1788,7 +1788,7 @@ bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
 bool SIInstrInfo::isOperandLegal(const MachineInstr *MI, unsigned OpIdx,
                                  const MachineOperand *MO) const {
   const MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
-  const MCInstrDesc &InstDesc = get(MI->getOpcode());
+  const MCInstrDesc &InstDesc = MI->getDesc();
   const MCOperandInfo &OpInfo = InstDesc.OpInfo[OpIdx];
   const TargetRegisterClass *DefinedRC =
       OpInfo.RegClass != -1 ? RI.getRegClass(OpInfo.RegClass) : nullptr;
@@ -1797,13 +1797,17 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr *MI, unsigned OpIdx,
 
   if (isVALU(*MI) &&
       usesConstantBus(MRI, *MO, DefinedRC->getSize())) {
-    unsigned SGPRUsed =
-        MO->isReg() ? MO->getReg() : (unsigned)AMDGPU::NoRegister;
+
+    RegSubRegPair SGPRUsed;
+    if (MO->isReg())
+      SGPRUsed = RegSubRegPair(MO->getReg(), MO->getSubReg());
+
     for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
       if (i == OpIdx)
         continue;
       const MachineOperand &Op = MI->getOperand(i);
-      if (Op.isReg() && Op.getReg() != SGPRUsed &&
+      if (Op.isReg() &&
+          (Op.getReg() != SGPRUsed.Reg || Op.getSubReg() != SGPRUsed.SubReg) &&
           usesConstantBus(MRI, Op, getOpSize(*MI, i))) {
         return false;
       }

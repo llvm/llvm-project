@@ -7,11 +7,11 @@
 ; can do to avoid this.
 
 declare void @llvm.write_register.i32(metadata, i32) #0
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 
 define void @write_vgpr_into_sgpr() {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   call void @llvm.write_register.i32(metadata !0, i32 %tid)
   ret void
 }

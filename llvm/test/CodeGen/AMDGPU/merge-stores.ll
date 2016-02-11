@@ -376,7 +376,7 @@ define void @merge_global_store_4_adjacent_loads_inverse_i32(i32 addrspace(1)* %
   %w = load i32, i32 addrspace(1)* %in.gep.3
 
   ; Make sure the barrier doesn't stop this
-  tail call void @llvm.AMDGPU.barrier.local() #1
+  tail call void @llvm.amdgcn.s.barrier() #1
 
   store i32 %w, i32 addrspace(1)* %out.gep.3
   store i32 %z, i32 addrspace(1)* %out.gep.2
@@ -413,7 +413,7 @@ define void @merge_global_store_4_adjacent_loads_shuffle_i32(i32 addrspace(1)* %
   %w = load i32, i32 addrspace(1)* %in.gep.3
 
   ; Make sure the barrier doesn't stop this
-  tail call void @llvm.AMDGPU.barrier.local() #1
+  tail call void @llvm.amdgcn.s.barrier() #1
 
   store i32 %w, i32 addrspace(1)* %out
   store i32 %z, i32 addrspace(1)* %out.gep.1
@@ -705,7 +705,7 @@ define void @copy_v3f64_align4(<3 x double> addrspace(1)* noalias %out, <3 x dou
   ret void
 }
 
-declare void @llvm.AMDGPU.barrier.local() #1
+declare void @llvm.amdgcn.s.barrier() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }

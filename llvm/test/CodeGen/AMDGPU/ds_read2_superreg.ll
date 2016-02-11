@@ -13,7 +13,7 @@
 ; CI: buffer_store_dwordx2 [[RESULT]]
 ; CI: s_endpgm
 define void @simple_read2_v2f32_superreg_align4(<2 x float> addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds  [512 x <2 x float>], [512 x <2 x float>] addrspace(3)* @lds.v2, i32 0, i32 %x.i
   %val0 = load <2 x float>, <2 x float> addrspace(3)* %arrayidx0, align 4
   %out.gep = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %out, i32 %x.i
@@ -27,7 +27,7 @@ define void @simple_read2_v2f32_superreg_align4(<2 x float> addrspace(1)* %out) 
 ; CI: buffer_store_dwordx2 [[RESULT]]
 ; CI: s_endpgm
 define void @simple_read2_v2f32_superreg(<2 x float> addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <2 x float>], [512 x <2 x float>] addrspace(3)* @lds.v2, i32 0, i32 %x.i
   %val0 = load <2 x float>, <2 x float> addrspace(3)* %arrayidx0
   %out.gep = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %out, i32 %x.i
@@ -44,7 +44,7 @@ define void @simple_read2_v2f32_superreg(<2 x float> addrspace(1)* %out) #0 {
 ; CI: buffer_store_dword v[[ADD2]]
 ; CI: s_endpgm
 define void @simple_read2_v4f32_superreg_align4(float addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <4 x float>], [512 x <4 x float>] addrspace(3)* @lds.v4, i32 0, i32 %x.i
   %val0 = load <4 x float>, <4 x float> addrspace(3)* %arrayidx0, align 4
   %elt0 = extractelement <4 x float> %val0, i32 0
@@ -69,7 +69,7 @@ define void @simple_read2_v4f32_superreg_align4(float addrspace(1)* %out) #0 {
 ; CI: buffer_store_dword v[[ADD1]]
 ; CI: s_endpgm
 define void @simple_read2_v3f32_superreg_align4(float addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <3 x float>], [512 x <3 x float>] addrspace(3)* @lds.v3, i32 0, i32 %x.i
   %val0 = load <3 x float>, <3 x float> addrspace(3)* %arrayidx0, align 4
   %elt0 = extractelement <3 x float> %val0, i32 0
@@ -95,7 +95,7 @@ define void @simple_read2_v3f32_superreg_align4(float addrspace(1)* %out) #0 {
 ; CI: buffer_store_dwordx4
 ; CI: s_endpgm
 define void @simple_read2_v4f32_superreg_align8(<4 x float> addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <4 x float>], [512 x <4 x float>] addrspace(3)* @lds.v4, i32 0, i32 %x.i
   %val0 = load <4 x float>, <4 x float> addrspace(3)* %arrayidx0, align 8
   %out.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %out, i32 %x.i
@@ -110,7 +110,7 @@ define void @simple_read2_v4f32_superreg_align8(<4 x float> addrspace(1)* %out) 
 ; CI: buffer_store_dwordx4
 ; CI: s_endpgm
 define void @simple_read2_v4f32_superreg(<4 x float> addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <4 x float>], [512 x <4 x float>] addrspace(3)* @lds.v4, i32 0, i32 %x.i
   %val0 = load <4 x float>, <4 x float> addrspace(3)* %arrayidx0
   %out.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %out, i32 %x.i
@@ -130,7 +130,7 @@ define void @simple_read2_v4f32_superreg(<4 x float> addrspace(1)* %out) #0 {
 ; CI: buffer_store_dwordx4
 ; CI: s_endpgm
 define void @simple_read2_v8f32_superreg(<8 x float> addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <8 x float>], [512 x <8 x float>] addrspace(3)* @lds.v8, i32 0, i32 %x.i
   %val0 = load <8 x float>, <8 x float> addrspace(3)* %arrayidx0
   %out.gep = getelementptr inbounds <8 x float>, <8 x float> addrspace(1)* %out, i32 %x.i
@@ -158,7 +158,7 @@ define void @simple_read2_v8f32_superreg(<8 x float> addrspace(1)* %out) #0 {
 ; CI: buffer_store_dwordx4
 ; CI: s_endpgm
 define void @simple_read2_v16f32_superreg(<16 x float> addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x <16 x float>], [512 x <16 x float>] addrspace(3)* @lds.v16, i32 0, i32 %x.i
   %val0 = load <16 x float>, <16 x float> addrspace(3)* %arrayidx0
   %out.gep = getelementptr inbounds <16 x float>, <16 x float> addrspace(1)* %out, i32 %x.i
@@ -173,7 +173,7 @@ define void @simple_read2_v16f32_superreg(<16 x float> addrspace(1)* %out) #0 {
 ; CI: buffer_store_dwordx2 v{{\[}}[[REG_ELT0]]:[[REG_ELT1]]{{\]}}
 ; CI: s_endpgm
 define void @simple_read2_v2f32_superreg_scalar_loads_align4(<2 x float> addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   %arrayidx1 = getelementptr inbounds float, float addrspace(3)* %arrayidx0, i32 1
 
@@ -196,7 +196,7 @@ define void @simple_read2_v2f32_superreg_scalar_loads_align4(<2 x float> addrspa
 ; CI: buffer_store_dwordx4 v{{\[}}[[REG_ELT0]]:[[REG_ELT3]]{{\]}}
 ; CI: s_endpgm
 define void @simple_read2_v4f32_superreg_scalar_loads_align4(<4 x float> addrspace(1)* %out) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
   %arrayidx1 = getelementptr inbounds float, float addrspace(3)* %arrayidx0, i32 1
   %arrayidx2 = getelementptr inbounds float, float addrspace(3)* %arrayidx0, i32 2
@@ -218,19 +218,10 @@ define void @simple_read2_v4f32_superreg_scalar_loads_align4(<4 x float> addrspa
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.y() #1
-
-; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.x() #1
-
-; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.y() #1
-
-; Function Attrs: convergent nounwind
-declare void @llvm.AMDGPU.barrier.local() #2
+declare i32 @llvm.amdgcn.workitem.id.y() #1
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

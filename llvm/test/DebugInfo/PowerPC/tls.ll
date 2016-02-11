@@ -8,7 +8,7 @@
 ; DW_OP_const8u
 ; CHECK: .byte  14
 ; The debug relocation of the address of the tls variable
-; CHECK: .quad  tls@dtprel+32768
+; CHECK: .quad  tls@DTPREL+32768
 ; DW_OP_GNU_push_tls_address
 ; CHECK: .byte  224
 

@@ -17,6 +17,10 @@
 
 #include "llvm/Config/llvm-config.h"
 
+#if defined(_MSC_VER)
+#include <sal.h>
+#endif
+
 #ifndef __has_feature
 # define __has_feature(x) 0
 #endif
@@ -92,7 +96,7 @@
 #define LLVM_LVALUE_FUNCTION
 #endif
 
-#if __has_feature(cxx_constexpr) || defined(__GXX_EXPERIMENTAL_CXX0X__)
+#if __has_feature(cxx_constexpr) || defined(__GXX_EXPERIMENTAL_CXX0X__) || LLVM_MSC_PREREQ(1900)
 # define LLVM_CONSTEXPR constexpr
 #else
 # define LLVM_CONSTEXPR
@@ -124,6 +128,8 @@
 
 #if __has_attribute(warn_unused_result) || LLVM_GNUC_PREREQ(3, 4, 0)
 #define LLVM_ATTRIBUTE_UNUSED_RESULT __attribute__((__warn_unused_result__))
+#elif defined(_MSC_VER)
+#define LLVM_ATTRIBUTE_UNUSED_RESULT _Check_return_
 #else
 #define LLVM_ATTRIBUTE_UNUSED_RESULT
 #endif
@@ -206,6 +212,8 @@
 
 #if __has_attribute(returns_nonnull) || LLVM_GNUC_PREREQ(4, 9, 0)
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL __attribute__((returns_nonnull))
+#elif defined(_MSC_VER)
+#define LLVM_ATTRIBUTE_RETURNS_NONNULL _Ret_notnull_
 #else
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL
 #endif

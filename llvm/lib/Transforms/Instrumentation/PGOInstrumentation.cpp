@@ -25,9 +25,12 @@
 //
 // This file contains two passes:
 // (1) Pass PGOInstrumentationGen which instruments the IR to generate edge
-// count profile, and
+// count profile, and generates the instrumentation for indirect call
+// profiling.
 // (2) Pass PGOInstrumentationUse which reads the edge count profile and
-// annotates the branch weights.
+// annotates the branch weights. It also reads the indirect call value
+// profiling records and annotate the indirect call instructions.
+//
 // To get the precise counter information, These two passes need to invoke at
 // the same compilation point (so they see the same IR). For pass
 // PGOInstrumentationGen, the real work is done in instrumentOneFunc(). For
@@ -49,6 +52,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
@@ -83,7 +87,7 @@ STATISTIC(NumOfPGOSplit, "Number of critical edge splits.");
 STATISTIC(NumOfPGOFunc, "Number of functions having valid profile counts.");
 STATISTIC(NumOfPGOMismatch, "Number of functions having mismatch profile.");
 STATISTIC(NumOfPGOMissing, "Number of functions without profile.");
-STATISTIC(NumOfPGOICall, "Number of indirect call value instrumentation.");
+STATISTIC(NumOfPGOICall, "Number of indirect call value instrumentations.");
 
 // Command line option to specify the file to read profile from. This is
 // mainly used for testing.
@@ -94,7 +98,7 @@ static cl::opt<std::string>
                                 "mainly for test purpose."));
 
 // Command line options to disable value profiling. The default is false:
-// i.e. vaule profiling is enabled by default. This is for debug purpose.
+// i.e. value profiling is enabled by default. This is for debug purpose.
 static cl::opt<bool>
 DisableValueProfiling("disable-vp", cl::init(false),
                                     cl::Hidden,
@@ -462,6 +466,9 @@ private:
   // compilation.
   uint64_t ProgramMaxCount;
 
+  // ProfileRecord for this function.
+  InstrProfRecord ProfileRecord;
+
   // Find the Instrumented BB and set the value.
   void setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
 
@@ -501,6 +508,9 @@ public:
 
   // Set the branch weights based on the count values.
   void setBranchWeights();
+
+  // Annotate the indirect call sites.
+  void annotateIndirectCallSites();
 };
 
 // Visit all the edges and assign the count value for the instrumented
@@ -573,7 +583,8 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader) {
         DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
     return false;
   }
-  std::vector<uint64_t> &CountFromProfile = Result.get().Counts;
+  ProfileRecord = std::move(Result.get());
+  std::vector<uint64_t> &CountFromProfile = ProfileRecord.Counts;
 
   NumOfPGOFunc++;
   DEBUG(dbgs() << CountFromProfile.size() << " counts\n");
@@ -711,9 +722,58 @@ void PGOUseFunc::setBranchWeights() {
           dbgs() << "\n";);
   }
 }
+
+// Traverse all the indirect callsites and annotate the instructions.
+void PGOUseFunc::annotateIndirectCallSites() {
+  if (DisableValueProfiling)
+    return;
+
+  unsigned IndirectCallSiteIndex = 0;
+  PGOIndirectCallSiteVisitor ICV;
+  ICV.visit(F);
+  unsigned NumValueSites=
+      ProfileRecord.getNumValueSites(IPVK_IndirectCallTarget);
+  if (NumValueSites != ICV.IndirectCallInsts.size()) {
+    std::string Msg =
+        std::string("Inconsistent number of indirect call sites: ") +
+            F.getName().str();
+    auto &Ctx = M->getContext();
+    Ctx.diagnose(
+        DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
+    return;
+  }
+
+  for (auto &I : ICV.IndirectCallInsts) {
+    DEBUG(dbgs() << "Read one indirect call instrumentation: Index="
+                 << IndirectCallSiteIndex << " out of "
+                 << NumValueSites<< "\n");
+    annotateValueSite(*M, *I, ProfileRecord, IPVK_IndirectCallTarget,
+                      IndirectCallSiteIndex);
+    IndirectCallSiteIndex++;
+  }
+}
 } // end anonymous namespace
 
+// Create a COMDAT variable IR_LEVEL_PROF_VARNAME to make the runtime
+// aware this is an ir_level profile so it can set the version flag.
+static void createIRLevelProfileFlagVariable(Module &M) {
+  Type *IntTy64 = Type::getInt64Ty(M.getContext());
+  uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
+  auto IRLevelVersionVariable =
+      new GlobalVariable(M, IntTy64, true, GlobalVariable::ExternalLinkage,
+                         Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)),
+                         INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR));
+  IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
+  Triple TT(M.getTargetTriple());
+  if (TT.isOSBinFormatMachO())
+    IRLevelVersionVariable->setLinkage(GlobalValue::LinkOnceODRLinkage);
+  else
+    IRLevelVersionVariable->setComdat(
+        M.getOrInsertComdat(StringRef(INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR))));
+}
+
 bool PGOInstrumentationGen::runOnModule(Module &M) {
+  createIRLevelProfileFlagVariable(M);
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
@@ -731,6 +791,7 @@ static void setPGOCountOnFunc(PGOUseFunc &Func,
   if (Func.readCounters(PGOReader)) {
     Func.populateCounters();
     Func.setBranchWeights();
+    Func.annotateIndirectCallSites();
   }
 }
 
@@ -751,6 +812,13 @@ bool PGOInstrumentationUse::runOnModule(Module &M) {
                                           "Cannot get PGOReader"));
     return false;
   }
+  // TODO: might need to change the warning once the clang option is finalized.
+  if (!PGOReader->isIRLevelProfile()) {
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        ProfileFileName.data(), "Not an IR level instrumentation profile"));
+    return false;
+  }
+
 
   for (auto &F : M) {
     if (F.isDeclaration())

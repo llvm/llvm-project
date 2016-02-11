@@ -1599,39 +1599,58 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   LoadSDNode *Load = cast<LoadSDNode>(Op);
+  ISD::LoadExtType ExtType = Load->getExtensionType();
+  EVT MemVT = Load->getMemoryVT();
 
-  if (Op.getValueType().isVector()) {
-    assert(Op.getValueType().getVectorElementType() == MVT::i32 &&
-           "Custom lowering for non-i32 vectors hasn't been implemented.");
-    unsigned NumElements = Op.getValueType().getVectorNumElements();
-    assert(NumElements != 2 && "v2 loads are supported for all address spaces.");
+  if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
+    assert(MemVT == MVT::i1 && "Only i1 non-extloads expected");
+    // FIXME: Copied from PPC
+    // First, load into 32 bits, then truncate to 1 bit.
 
-    switch (Load->getAddressSpace()) {
-      default: break;
-      case AMDGPUAS::CONSTANT_ADDRESS:
-      if (isMemOpUniform(Load))
-        break;
-        // Non-uniform loads will be selected to MUBUF instructions, so they
-        // have the same legalization requires ments as global and private
-        // loads.
-        //
-        // Fall-through
-      case AMDGPUAS::GLOBAL_ADDRESS:
-      case AMDGPUAS::PRIVATE_ADDRESS:
-        if (NumElements >= 8)
-          return SplitVectorLoad(Op, DAG);
+    SDValue Chain = Load->getChain();
+    SDValue BasePtr = Load->getBasePtr();
+    MachineMemOperand *MMO = Load->getMemOperand();
 
-        // v4 loads are supported for private and global memory.
-        if (NumElements <= 4)
-          break;
-        // fall-through
-      case AMDGPUAS::LOCAL_ADDRESS:
-        // If properly aligned, if we split we might be able to use ds_read_b64.
-        return SplitVectorLoad(Op, DAG);
-    }
+    SDValue NewLD = DAG.getExtLoad(ISD::EXTLOAD, DL, MVT::i32, Chain,
+                                   BasePtr, MVT::i8, MMO);
+
+    SDValue Ops[] = {
+      DAG.getNode(ISD::TRUNCATE, DL, MemVT, NewLD),
+      NewLD.getValue(1)
+    };
+
+    return DAG.getMergeValues(Ops, DL);
   }
 
-  return AMDGPUTargetLowering::LowerLOAD(Op, DAG);
+  if (!MemVT.isVector())
+    return SDValue();
+
+  assert(Op.getValueType().getVectorElementType() == MVT::i32 &&
+         "Custom lowering for non-i32 vectors hasn't been implemented.");
+  unsigned NumElements = MemVT.getVectorNumElements();
+  assert(NumElements != 2 && "v2 loads are supported for all address spaces.");
+
+  switch (Load->getAddressSpace()) {
+  case AMDGPUAS::CONSTANT_ADDRESS:
+    if (isMemOpUniform(Load))
+      return SDValue();
+    // Non-uniform loads will be selected to MUBUF instructions, so they
+    // have the same legalization requires ments as global and private
+    // loads.
+    //
+    // Fall-through
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::PRIVATE_ADDRESS:
+    if (NumElements >= 8)
+      return SplitVectorLoad(Op, DAG);
+    // v4 loads are supported for private and global memory.
+    return SDValue();
+  case AMDGPUAS::LOCAL_ADDRESS:
+    // If properly aligned, if we split we might be able to use ds_read_b64.
+    return SplitVectorLoad(Op, DAG);
+  default:
+    return SDValue();
+  }
 }
 
 SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
@@ -1827,23 +1846,27 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   StoreSDNode *Store = cast<StoreSDNode>(Op);
   EVT VT = Store->getMemoryVT();
 
-  // These stores are legal.
-  if (Store->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
-    if (VT.isVector() && VT.getVectorNumElements() > 4)
-      return ScalarizeVectorStore(Op, DAG);
-    return SDValue();
+  if (VT == MVT::i1) {
+    return DAG.getTruncStore(Store->getChain(), DL,
+       DAG.getSExtOrTrunc(Store->getValue(), DL, MVT::i32),
+       Store->getBasePtr(), MVT::i1, Store->getMemOperand());
   }
 
-  if (SDValue Ret = AMDGPUTargetLowering::LowerSTORE(Op, DAG))
-    return Ret;
+  assert(Store->getValue().getValueType().getScalarType() == MVT::i32);
 
-  if (VT.isVector() && VT.getVectorNumElements() >= 8)
-      return SplitVectorStore(Op, DAG);
+  unsigned NElts = VT.getVectorNumElements();
+  unsigned AS = Store->getAddressSpace();
+  if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+    // If properly aligned, if we split we might be able to use ds_write_b64.
+    return SplitVectorStore(Op, DAG);
+  }
 
-  if (VT == MVT::i1)
-    return DAG.getTruncStore(Store->getChain(), DL,
-                        DAG.getSExtOrTrunc(Store->getValue(), DL, MVT::i32),
-                        Store->getBasePtr(), MVT::i1, Store->getMemOperand());
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS && NElts > 4)
+    return ScalarizeVectorStore(Op, DAG);
+
+  // These stores are legal. private, global and flat.
+  if (NElts >= 8)
+    return SplitVectorStore(Op, DAG);
 
   return SDValue();
 }

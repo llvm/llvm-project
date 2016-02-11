@@ -229,8 +229,9 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {
 TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   InstrProfRecord Record("caller", 0x1234, {1, 2});
   Record.reserveSites(IPVK_IndirectCallTarget, 1);
-  InstrProfValueData VD0[] = {{1000, 1}, {2000, 2}, {3000, 3}};
-  Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 3, nullptr);
+  InstrProfValueData VD0[] = {{1000, 1}, {2000, 2}, {3000, 3}, {5000, 5},
+                              {4000, 4}, {6000, 6}};
+  Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 6, nullptr);
   Writer.addRecord(std::move(Record));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -261,23 +262,43 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
                                       ValueData, N, T);
   ASSERT_TRUE(Res);
   ASSERT_EQ(3U, N);
-  ASSERT_EQ(6U, T);
+  ASSERT_EQ(21U, T);
   // The result should be sorted already:
-  ASSERT_EQ(3000U, ValueData[0].Value);
-  ASSERT_EQ(3U, ValueData[0].Count);
-  ASSERT_EQ(2000U, ValueData[1].Value);
-  ASSERT_EQ(2U, ValueData[1].Count);
-  ASSERT_EQ(1000U, ValueData[2].Value);
-  ASSERT_EQ(1U, ValueData[2].Count);
+  ASSERT_EQ(6000U, ValueData[0].Value);
+  ASSERT_EQ(6U, ValueData[0].Count);
+  ASSERT_EQ(5000U, ValueData[1].Value);
+  ASSERT_EQ(5U, ValueData[1].Count);
+  ASSERT_EQ(4000U, ValueData[2].Value);
+  ASSERT_EQ(4U, ValueData[2].Count);
   Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 1, ValueData,
                                  N, T);
   ASSERT_TRUE(Res);
   ASSERT_EQ(1U, N);
-  ASSERT_EQ(6U, T);
+  ASSERT_EQ(21U, T);
 
   Res = getValueProfDataFromInst(*Inst2, IPVK_IndirectCallTarget, 5, ValueData,
                                  N, T);
   ASSERT_FALSE(Res);
+
+  // Remove the MD_prof metadata 
+  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  // Annotate 5 records this time.
+  annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
+  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
+                                      ValueData, N, T);
+  ASSERT_TRUE(Res);
+  ASSERT_EQ(5U, N);
+  ASSERT_EQ(21U, T);
+  ASSERT_EQ(6000U, ValueData[0].Value);
+  ASSERT_EQ(6U, ValueData[0].Count);
+  ASSERT_EQ(5000U, ValueData[1].Value);
+  ASSERT_EQ(5U, ValueData[1].Count);
+  ASSERT_EQ(4000U, ValueData[2].Value);
+  ASSERT_EQ(4U, ValueData[2].Count);
+  ASSERT_EQ(3000U, ValueData[3].Value);
+  ASSERT_EQ(3U, ValueData[3].Count);
+  ASSERT_EQ(2000U, ValueData[4].Value);
+  ASSERT_EQ(2U, ValueData[4].Count);
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_with_weight) {

@@ -35,9 +35,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-optimize-LEAs"
 
-static cl::opt<bool> EnableX86LEAOpt("enable-x86-lea-opt", cl::Hidden,
-                                     cl::desc("X86: Enable LEA optimizations."),
-                                     cl::init(false));
+static cl::opt<bool>
+    DisableX86LEAOpt("disable-x86-lea-opt", cl::Hidden,
+                     cl::desc("X86: Disable LEA optimizations."),
+                     cl::init(false));
 
 STATISTIC(NumSubstLEAs, "Number of LEA instruction substitutions");
 STATISTIC(NumRedundantLEAs, "Number of redundant LEA instructions removed");
@@ -568,7 +569,7 @@ bool OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   // Perform this optimization only if we care about code size.
-  if (!EnableX86LEAOpt || !MF.getFunction()->optForSize())
+  if (DisableX86LEAOpt || !MF.getFunction()->optForSize())
     return false;
 
   MRI = &MF.getRegInfo();

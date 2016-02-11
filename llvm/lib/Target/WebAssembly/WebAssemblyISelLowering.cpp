@@ -279,6 +279,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
   MachineFunction &MF = DAG.getMachineFunction();
+  auto Layout = MF.getDataLayout();
 
   CallingConv::ID CallConv = CLI.CallConv;
   if (!CallingConvSupported(CallConv))
@@ -321,7 +322,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                       /*isSS=*/false);
       SDValue SizeNode =
           DAG.getConstant(Out.Flags.getByValSize(), DL, MVT::i32);
-      SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+      SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
       Chain = DAG.getMemcpy(
           Chain, DL, FINode, OutVal, SizeNode, Out.Flags.getByValAlign(),
           /*isVolatile*/ false, /*AlwaysInline=*/true,
@@ -332,24 +333,23 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   bool IsVarArg = CLI.IsVarArg;
   unsigned NumFixedArgs = CLI.NumFixedArgs;
-  auto PtrVT = getPointerTy(MF.getDataLayout());
+
+  auto PtrVT = getPointerTy(Layout);
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
   if (IsVarArg) {
-    // Outgoing non-fixed arguments are placed at the top of the stack. First
-    // compute their offsets and the total amount of argument stack space
-    // needed.
+    // Outgoing non-fixed arguments are placed in a buffer. First
+    // compute their offsets and the total amount of buffer space needed.
     for (SDValue Arg :
          make_range(OutVals.begin() + NumFixedArgs, OutVals.end())) {
       EVT VT = Arg.getValueType();
       assert(VT != MVT::iPTR && "Legalized args should be concrete");
       Type *Ty = VT.getTypeForEVT(*DAG.getContext());
-      unsigned Offset =
-          CCInfo.AllocateStack(MF.getDataLayout().getTypeAllocSize(Ty),
-                               MF.getDataLayout().getABITypeAlignment(Ty));
+      unsigned Offset = CCInfo.AllocateStack(Layout.getTypeAllocSize(Ty),
+                                             Layout.getABITypeAlignment(Ty));
       CCInfo.addLoc(CCValAssign::getMem(ArgLocs.size(), VT.getSimpleVT(),
                                         Offset, VT.getSimpleVT(),
                                         CCValAssign::Full));
@@ -358,17 +358,13 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned NumBytes = CCInfo.getAlignedCallFrameSize();
 
-  SDValue NB;
-  if (NumBytes) {
-    NB = DAG.getConstant(NumBytes, DL, PtrVT, true);
-    Chain = DAG.getCALLSEQ_START(Chain, NB, DL);
-  }
-
-  if (IsVarArg) {
+  SDValue FINode;
+  if (IsVarArg && NumBytes) {
     // For non-fixed arguments, next emit stores to store the argument values
-    // to the stack at the offsets computed above.
-    SDValue SP = DAG.getCopyFromReg(
-        Chain, DL, getStackPointerRegisterToSaveRestore(), PtrVT);
+    // to the stack buffer at the offsets computed above.
+    int FI = MF.getFrameInfo()->CreateStackObject(NumBytes,
+                                                  Layout.getStackAlignment(),
+                                                  /*isSS=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;
     for (SDValue Arg :
@@ -376,14 +372,17 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       assert(ArgLocs[ValNo].getValNo() == ValNo &&
              "ArgLocs should remain in order and only hold varargs args");
       unsigned Offset = ArgLocs[ValNo++].getLocMemOffset();
-      SDValue Add = DAG.getNode(ISD::ADD, DL, PtrVT, SP,
+      FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
+      SDValue Add = DAG.getNode(ISD::ADD, DL, PtrVT, FINode,
                                 DAG.getConstant(Offset, DL, PtrVT));
-      Chains.push_back(DAG.getStore(Chain, DL, Arg, Add,
-                                    MachinePointerInfo::getStack(MF, Offset),
-                                    false, false, 0));
+      Chains.push_back(DAG.getStore(
+          Chain, DL, Arg, Add,
+          MachinePointerInfo::getFixedStack(MF, FI, Offset), false, false, 0));
     }
     if (!Chains.empty())
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
+  } else if (IsVarArg) {
+    FINode = DAG.getIntPtrConstant(0, DL);
   }
 
   // Compute the operands for the CALLn node.
@@ -395,8 +394,10 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // isn't reliable.
   Ops.append(OutVals.begin(),
              IsVarArg ? OutVals.begin() + NumFixedArgs : OutVals.end());
+  // Add a pointer to the vararg buffer.
+  if (IsVarArg) Ops.push_back(FINode);
 
-  SmallVector<EVT, 8> Tys;
+  SmallVector<EVT, 8> InTys;
   for (const auto &In : Ins) {
     assert(!In.Flags.isByVal() && "byval is not valid for return values");
     assert(!In.Flags.isNest() && "nest is not valid for return values");
@@ -409,23 +410,18 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
            "WebAssembly hasn't implemented cons regs last return values");
     // Ignore In.getOrigAlign() because all our arguments are passed in
     // registers.
-    Tys.push_back(In.VT);
+    InTys.push_back(In.VT);
   }
-  Tys.push_back(MVT::Other);
-  SDVTList TyList = DAG.getVTList(Tys);
+  InTys.push_back(MVT::Other);
+  SDVTList InTyList = DAG.getVTList(InTys);
   SDValue Res =
       DAG.getNode(Ins.empty() ? WebAssemblyISD::CALL0 : WebAssemblyISD::CALL1,
-                  DL, TyList, Ops);
+                  DL, InTyList, Ops);
   if (Ins.empty()) {
     Chain = Res;
   } else {
     InVals.push_back(Res);
     Chain = Res.getValue(1);
-  }
-
-  if (NumBytes) {
-    SDValue Unused = DAG.getTargetConstant(0, DL, PtrVT);
-    Chain = DAG.getCALLSEQ_END(Chain, NB, Unused, SDValue(), DL);
   }
 
   return Chain;
@@ -469,10 +465,11 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
 }
 
 SDValue WebAssemblyTargetLowering::LowerFormalArguments(
-    SDValue Chain, CallingConv::ID CallConv, bool /*IsVarArg*/,
+    SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc DL, SelectionDAG &DAG,
     SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
+  auto *MFI = MF.getInfo<WebAssemblyFunctionInfo>();
 
   if (!CallingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
@@ -499,11 +496,22 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
             : DAG.getUNDEF(In.VT));
 
     // Record the number and types of arguments.
-    MF.getInfo<WebAssemblyFunctionInfo>()->addParam(In.VT);
+    MFI->addParam(In.VT);
   }
 
-  // Incoming varargs arguments are on the stack and will be accessed through
-  // va_arg, so we don't need to do anything for them here.
+  // Varargs are copied into a buffer allocated by the caller, and a pointer to
+  // the buffer is passed as an argument.
+  if (IsVarArg) {
+    MVT PtrVT = getPointerTy(MF.getDataLayout());
+    unsigned VarargVreg =
+        MF.getRegInfo().createVirtualRegister(getRegClassFor(PtrVT));
+    MFI->setVarargBufferVreg(VarargVreg);
+    Chain = DAG.getCopyToReg(
+        Chain, DL, VarargVreg,
+        DAG.getNode(WebAssemblyISD::ARGUMENT, DL, PtrVT,
+                    DAG.getTargetConstant(Ins.size(), DL, MVT::i32)));
+    MFI->addParam(PtrVT);
+  }
 
   return Chain;
 }
@@ -613,15 +621,12 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
   SDLoc DL(Op);
   EVT PtrVT = getPointerTy(DAG.getMachineFunction().getDataLayout());
 
-  // The incoming non-fixed arguments are placed on the top of the stack, with
-  // natural alignment, at the point of the call, so the base pointer is just
-  // the current frame pointer.
-  DAG.getMachineFunction().getFrameInfo()->setFrameAddressIsTaken(true);
-  unsigned FP =
-      Subtarget->getRegisterInfo()->getFrameRegister(DAG.getMachineFunction());
-  SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), DL, FP, PtrVT);
+  auto *MFI = DAG.getMachineFunction().getInfo<WebAssemblyFunctionInfo>();
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
-  return DAG.getStore(Op.getOperand(0), DL, FrameAddr, Op.getOperand(1),
+
+  SDValue ArgN = DAG.getCopyFromReg(DAG.getEntryNode(), DL,
+                                    MFI->getVarargBufferVreg(), PtrVT);
+  return DAG.getStore(Op.getOperand(0), DL, ArgN, Op.getOperand(1),
                       MachinePointerInfo(SV), false, false, 0);
 }
 

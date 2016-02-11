@@ -64,6 +64,7 @@ public:
   /// Iterator over profile data.
   InstrProfIterator begin() { return InstrProfIterator(this); }
   InstrProfIterator end() { return InstrProfIterator(); }
+  virtual bool isIRLevelProfile() const = 0;
 
   /// Return the PGO symtab. There are three different readers:
   /// Raw, Text, and Indexed profile readers. The first two types
@@ -118,6 +119,7 @@ private:
   std::unique_ptr<MemoryBuffer> DataBuffer;
   /// Iterator over the profile data.
   line_iterator Line;
+  bool IsIRLevelProfile;
 
   TextInstrProfReader(const TextInstrProfReader &) = delete;
   TextInstrProfReader &operator=(const TextInstrProfReader &) = delete;
@@ -125,10 +127,13 @@ private:
 
 public:
   TextInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer_)
-      : DataBuffer(std::move(DataBuffer_)), Line(*DataBuffer, true, '#') {}
+      : DataBuffer(std::move(DataBuffer_)), Line(*DataBuffer, true, '#'),
+        IsIRLevelProfile(false) {}
 
   /// Return true if the given buffer is in text instrprof format.
   static bool hasFormat(const MemoryBuffer &Buffer);
+
+  bool isIRLevelProfile() const override { return IsIRLevelProfile; }
 
   /// Read the header.
   std::error_code readHeader() override;
@@ -154,6 +159,10 @@ private:
   /// The profile data file contents.
   std::unique_ptr<MemoryBuffer> DataBuffer;
   bool ShouldSwapBytes;
+  // The value of the version field of the raw profile data header. The lower 56
+  // bits specifies the format version and the most significant 8 bits specify
+  // the variant types of the profile.
+  uint64_t Version;
   uint64_t CountersDelta;
   uint64_t NamesDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
@@ -177,6 +186,9 @@ public:
   static bool hasFormat(const MemoryBuffer &DataBuffer);
   std::error_code readHeader() override;
   std::error_code readNextRecord(InstrProfRecord &Record) override;
+  bool isIRLevelProfile() const override {
+    return (Version & VARIANT_MASK_IR_PROF) != 0;
+  }
 
   InstrProfSymtab &getSymtab() override {
     assert(Symtab.get());
@@ -292,6 +304,7 @@ struct InstrProfReaderIndexBase {
   virtual void setValueProfDataEndianness(support::endianness Endianness) = 0;
   virtual ~InstrProfReaderIndexBase() {}
   virtual uint64_t getVersion() const = 0;
+  virtual bool isIRLevelProfile() const = 0;
   virtual void populateSymtab(InstrProfSymtab &) = 0;
 };
 
@@ -323,7 +336,10 @@ public:
     HashTable->getInfoObj().setValueProfDataEndianness(Endianness);
   }
   ~InstrProfReaderIndex() override {}
-  uint64_t getVersion() const override { return FormatVersion; }
+  uint64_t getVersion() const override { return GET_VERSION(FormatVersion); }
+  bool isIRLevelProfile() const override {
+    return (FormatVersion & VARIANT_MASK_IR_PROF) != 0;
+  }
   void populateSymtab(InstrProfSymtab &Symtab) override {
     Symtab.create(HashTable->keys());
   }
@@ -348,7 +364,9 @@ private:
                                    const unsigned char *Cur);
 
 public:
+  /// Return the profile version.
   uint64_t getVersion() const { return Index->getVersion(); }
+  bool isIRLevelProfile() const override { return Index->isIRLevelProfile(); }
   IndexedInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer)
       : DataBuffer(std::move(DataBuffer)), Index(nullptr) {}
 

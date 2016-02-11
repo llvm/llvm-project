@@ -1,10 +1,10 @@
 ; RUN: opt -mtriple=amdgcn-unknown-amdhsa -mcpu=hawaii -loop-unroll -S < %s | FileCheck %s
 
 ; CHECK-LABEL: @test_unroll_convergent_barrier(
-; CHECK: call void @llvm.AMDGPU.barrier.global()
-; CHECK: call void @llvm.AMDGPU.barrier.global()
-; CHECK: call void @llvm.AMDGPU.barrier.global()
-; CHECK: call void @llvm.AMDGPU.barrier.global()
+; CHECK: call void @llvm.amdgcn.s.barrier()
+; CHECK: call void @llvm.amdgcn.s.barrier()
+; CHECK: call void @llvm.amdgcn.s.barrier()
+; CHECK: call void @llvm.amdgcn.s.barrier()
 ; CHECK-NOT: br
 define void @test_unroll_convergent_barrier(i32 addrspace(1)* noalias nocapture %out, i32 addrspace(1)* noalias nocapture %in) #0 {
 entry:
@@ -16,7 +16,7 @@ for.body:                                         ; preds = %for.body, %entry
   %arrayidx.in = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 %indvars.iv
   %arrayidx.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %indvars.iv
   %load = load i32, i32 addrspace(1)* %arrayidx.in
-  call void @llvm.AMDGPU.barrier.global() #1
+  call void @llvm.amdgcn.s.barrier() #1
   %add = add i32 %load, %sum.02
   store i32 %add, i32 addrspace(1)* %arrayidx.out
   %indvars.iv.next = add i32 %indvars.iv, 1
@@ -27,7 +27,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-declare void @llvm.AMDGPU.barrier.global() #1
+declare void @llvm.amdgcn.s.barrier() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind convergent }

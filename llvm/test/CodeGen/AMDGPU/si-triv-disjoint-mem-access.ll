@@ -2,7 +2,7 @@
 
 declare void @llvm.SI.tbuffer.store.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
 declare void @llvm.SI.tbuffer.store.v4i32(<16 x i8>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
-declare void @llvm.AMDGPU.barrier.local() #2
+declare void @llvm.amdgcn.s.barrier() #2
 
 
 @stored_lds_ptr = addrspace(3) global i32 addrspace(3)* undef, align 4
@@ -61,7 +61,7 @@ define void @no_reorder_barrier_local_load_global_store_local_load(i32 addrspace
 
   %tmp1 = load i32, i32 addrspace(3)* %ptr1, align 4
   store i32 99, i32 addrspace(1)* %gptr, align 4
-  call void @llvm.AMDGPU.barrier.local() #2
+  call void @llvm.amdgcn.s.barrier() #2
   %tmp2 = load i32, i32 addrspace(3)* %ptr2, align 4
 
   %add = add nsw i32 %tmp1, %tmp2

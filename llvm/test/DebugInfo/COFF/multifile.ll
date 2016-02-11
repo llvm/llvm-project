@@ -28,7 +28,7 @@
 ; X86:      calll   _g
 ; X86:      .cv_loc 0 1 8 0 # one.c:8:0
 ; X86:      ret
-; X86-NEXT: [[END_OF_F:.*]]:
+; X86:      [[END_OF_F:.?Lfunc_end.*]]:
 ;
 ; X86-LABEL: .section        .debug$S,"dr"
 ; X86-NEXT: .long   4
@@ -134,7 +134,7 @@
 ; X64:      .cv_loc 0 2 8 0 # one.c:8:0
 ; X64:      addq    $40, %rsp
 ; X64-NEXT: ret
-; X64-NEXT: [[END_OF_F:.*]]:
+; X64:      [[END_OF_F:.?Lfunc_end.*]]:
 ;
 ; X64-LABEL: .section        .debug$S,"dr"
 ; X64-NEXT: .long   4

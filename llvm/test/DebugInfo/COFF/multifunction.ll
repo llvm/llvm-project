@@ -29,7 +29,7 @@
 ; X86:      calll   _z
 ; X86:      .cv_loc 0 1 5 43 # source.c:5:43
 ; X86:      ret
-; X86-NEXT: [[END_OF_X:.*]]:
+; X86:      [[END_OF_X:.?Lfunc_end.*]]:
 ;
 ; X86-LABEL: _y:
 ; X86:      # BB
@@ -37,7 +37,7 @@
 ; X86:      calll   _z
 ; X86:      .cv_loc 1 1 9 53 # source.c:9:53
 ; X86:      ret
-; X86-NEXT: [[END_OF_Y:.*]]:
+; X86:      [[END_OF_Y:.?Lfunc_end.*]]:
 ;
 ; X86-LABEL: _f:
 ; X86:      # BB
@@ -49,7 +49,7 @@
 ; X86:      calll   _z
 ; X86:      .cv_loc 2 1 15 73 # source.c:15:73
 ; X86:      ret
-; X86-NEXT: [[END_OF_F:.*]]:
+; X86:      [[END_OF_F:.?Lfunc_end.*]]:
 ;
 ; X86-LABEL: .section        .debug$S,"dr"
 ; X86-NEXT: .long   4
@@ -281,7 +281,7 @@
 ; X64:      .cv_loc 0 1 5 43 # source.c:5:43
 ; X64:      addq    $40, %rsp
 ; X64-NEXT: ret
-; X64-NEXT: [[END_OF_X:.*]]:
+; X64:      [[END_OF_X:.?Lfunc_end.*]]:
 ;
 ; X64-LABEL: y:
 ; X64-NEXT: .L{{.*}}:
@@ -293,7 +293,7 @@
 ; X64:      .cv_loc 1 1 9 53 # source.c:9:53
 ; X64:      addq    $40, %rsp
 ; X64-NEXT: ret
-; X64-NEXT: [[END_OF_Y:.*]]:
+; X64:      [[END_OF_Y:.?Lfunc_end.*]]:
 ;
 ; X64-LABEL: f:
 ; X64-NEXT: .L{{.*}}:
@@ -309,7 +309,7 @@
 ; X64:      .cv_loc 2 1 15 73 # source.c:15:73
 ; X64:      addq    $40, %rsp
 ; X64-NEXT: ret
-; X64-NEXT: [[END_OF_F:.*]]:
+; X64:      [[END_OF_F:.?Lfunc_end.*]]:
 ;
 ; X64-LABEL: .section        .debug$S,"dr"
 ; X64-NEXT: .long   4

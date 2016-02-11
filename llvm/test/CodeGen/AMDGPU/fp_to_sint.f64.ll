@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
-declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: @fp_to_sint_f64_i32
 ; SI: v_cvt_i32_f64_e32
@@ -47,7 +47,7 @@ define void @fp_to_sint_v4f64_v4i32(<4 x i32> addrspace(1)* %out, <4 x double> %
 ; CI-DAG: v_cvt_i32_f64_e32 v[[HI:[0-9]+]], [[FLOOR]]
 ; CI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @fp_to_sint_i64_f64(i64 addrspace(1)* %out, double addrspace(1)* %in) {
-  %tid = call i32 @llvm.r600.read.tidig.x() nounwind readnone
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid
   %val = load double, double addrspace(1)* %gep, align 8
   %cast = fptosi double %val to i64

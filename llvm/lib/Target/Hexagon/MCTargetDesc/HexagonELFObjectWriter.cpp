@@ -50,7 +50,7 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
     break;
   case FK_Data_4:
     switch(Variant) {
-    case MCSymbolRefExpr::VariantKind::VK_PPC_DTPREL:
+    case MCSymbolRefExpr::VariantKind::VK_DTPREL:
       return ELF::R_HEX_DTPREL_32;
     case MCSymbolRefExpr::VariantKind::VK_GOT:
       return ELF::R_HEX_GOT_32;
@@ -66,7 +66,7 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_HEX_LD_GOT_32;
     case MCSymbolRefExpr::VariantKind::VK_Hexagon_PCREL:
       return ELF::R_HEX_32_PCREL;
-    case MCSymbolRefExpr::VariantKind::VK_PPC_TPREL:
+    case MCSymbolRefExpr::VariantKind::VK_TPREL:
       return ELF::R_HEX_TPREL_32;
     case MCSymbolRefExpr::VariantKind::VK_None:
       return IsPCRel ? ELF::R_HEX_32_PCREL : ELF::R_HEX_32;
@@ -77,7 +77,7 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_HEX_32_PCREL;
   case FK_Data_2:
     switch(Variant) {
-    case MCSymbolRefExpr::VariantKind::VK_PPC_DTPREL:
+    case MCSymbolRefExpr::VariantKind::VK_DTPREL:
       return ELF::R_HEX_DTPREL_16;
     case MCSymbolRefExpr::VariantKind::VK_GOT:
       return ELF::R_HEX_GOT_16;
@@ -87,7 +87,7 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_HEX_IE_GOT_16;
     case MCSymbolRefExpr::VariantKind::VK_Hexagon_LD_GOT:
       return ELF::R_HEX_LD_GOT_16;
-    case MCSymbolRefExpr::VariantKind::VK_PPC_TPREL:
+    case MCSymbolRefExpr::VariantKind::VK_TPREL:
       return ELF::R_HEX_TPREL_16;
     case MCSymbolRefExpr::VariantKind::VK_None:
       return ELF::R_HEX_16;

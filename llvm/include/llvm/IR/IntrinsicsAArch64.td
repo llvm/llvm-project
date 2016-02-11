@@ -159,7 +159,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
 // Arithmetic ops
 
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
   // Vector Add Across Lanes
   def int_aarch64_neon_saddv : AdvSIMD_1VectorArg_Int_Across_Intrinsic;
   def int_aarch64_neon_uaddv : AdvSIMD_1VectorArg_Int_Across_Intrinsic;
@@ -212,7 +212,7 @@ let Properties = [IntrNoMem] in {
 
   // Vector Extending Multiply
   def int_aarch64_neon_fmulx : AdvSIMD_2FloatArg_Intrinsic {
-    let Properties = [IntrNoMem, Commutative];
+    let IntrProperties = [IntrNoMem, Commutative];
   }
 
   // Vector Saturating Doubling Long Multiply

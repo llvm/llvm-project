@@ -1,7 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=SI %s
 
-
-declare i32 @llvm.r600.read.tidig.x() #1
 
 ; FIXME: This currently doesn't do a great job of clustering the
 ; loads, which end up with extra moves between them. Right now, it

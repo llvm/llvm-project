@@ -93,7 +93,7 @@ private:
 
   friend class Constant;
   void destroyConstantImpl();
-  Value *handleOperandChangeImpl(Value *From, Value *To, Use *U);
+  Value *handleOperandChangeImpl(Value *From, Value *To);
 
 protected:
   /// \brief The intrinsic ID for this subclass (which must be a Function).

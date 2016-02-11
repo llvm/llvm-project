@@ -1,8 +1,9 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI -mattr=-promote-alloca < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI -mattr=+promote-alloca < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=-promote-alloca < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+promote-alloca < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
 
-declare i32 @llvm.SI.tid() nounwind readnone
-declare void @llvm.AMDGPU.barrier.local() nounwind convergent
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
+declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
+declare void @llvm.amdgcn.s.barrier() #2
 
 ; The required pointer calculations for the alloca'd actually requires
 ; an add and won't be folded into the addressing, which fails with a
@@ -24,9 +25,10 @@ declare void @llvm.AMDGPU.barrier.local() nounwind convergent
 
 ; SI-PROMOTE: v_add_i32_e32 [[PTRREG:v[0-9]+]], vcc, 16
 ; SI-PROMOTE: ds_write_b32 [[PTRREG]]
-define void @test_private_array_ptr_calc(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %inA, i32 addrspace(1)* noalias %inB) {
+define void @test_private_array_ptr_calc(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %inA, i32 addrspace(1)* noalias %inB) #0 {
   %alloca = alloca [4 x i32], i32 4, align 16
-  %tid = call i32 @llvm.SI.tid() readnone
+  %mbcnt.lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0);
+  %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo)
   %a_ptr = getelementptr inbounds i32, i32 addrspace(1)* %inA, i32 %tid
   %b_ptr = getelementptr inbounds i32, i32 addrspace(1)* %inB, i32 %tid
   %a = load i32, i32 addrspace(1)* %a_ptr
@@ -35,10 +37,13 @@ define void @test_private_array_ptr_calc(i32 addrspace(1)* noalias %out, i32 add
   %alloca_ptr = getelementptr inbounds [4 x i32], [4 x i32]* %alloca, i32 1, i32 %b
   store i32 %result, i32* %alloca_ptr, align 4
   ; Dummy call
-  call void @llvm.AMDGPU.barrier.local() nounwind convergent
+  call void @llvm.amdgcn.s.barrier()
   %reload = load i32, i32* %alloca_ptr, align 4
   %out_ptr = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 %tid
   store i32 %reload, i32 addrspace(1)* %out_ptr, align 4
   ret void
 }
 
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind convergent }

@@ -234,6 +234,7 @@ void SIRegisterInfo::buildScratchLoadStore(MachineBasicBlock::iterator MI,
   bool IsLoad = TII->get(LoadStoreOp).mayLoad();
 
   bool RanOutOfSGPRs = false;
+  bool Scavenged = false;
   unsigned SOffset = ScratchOffset;
 
   unsigned NumSubRegs = getNumSubRegsForSpillOp(MI->getOpcode());
@@ -244,6 +245,8 @@ void SIRegisterInfo::buildScratchLoadStore(MachineBasicBlock::iterator MI,
     if (SOffset == AMDGPU::NoRegister) {
       RanOutOfSGPRs = true;
       SOffset = AMDGPU::SGPR0;
+    } else {
+      Scavenged = true;
     }
     BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_U32), SOffset)
             .addReg(ScratchOffset)
@@ -259,10 +262,14 @@ void SIRegisterInfo::buildScratchLoadStore(MachineBasicBlock::iterator MI,
         getPhysRegSubReg(Value, &AMDGPU::VGPR_32RegClass, i) :
         Value;
 
+    unsigned SOffsetRegState = 0;
+    if (i + 1 == e && Scavenged)
+      SOffsetRegState |= RegState::Kill;
+
     BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
       .addReg(SubReg, getDefRegState(IsLoad))
       .addReg(ScratchRsrcReg)
-      .addReg(SOffset)
+      .addReg(SOffset, SOffsetRegState)
       .addImm(Offset)
       .addImm(0) // glc
       .addImm(0) // slc

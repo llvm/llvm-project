@@ -26,7 +26,17 @@ namespace llvm {
 template<typename T>
 struct EnumEntry {
   StringRef Name;
+  // While Name suffices in most of the cases, in certain cases
+  // GNU style and LLVM style of ELFDumper do not
+  // display same string for same enum. The AltName if initialized appropriately
+  // will hold the string that GNU style emits.
+  // Example:
+  // "EM_X86_64" string on LLVM style for Elf_Ehdr->e_machine corresponds to
+  // "Advanced Micro Devices X86-64" on GNU style
+  StringRef AltName;
   T Value;
+  EnumEntry(StringRef N, StringRef A, T V) : Name(N), AltName(A), Value(V) {}
+  EnumEntry(StringRef N, T V) : Name(N), AltName(N), Value(V) {}
 };
 
 struct HexNumber {
@@ -49,6 +59,8 @@ struct HexNumber {
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const HexNumber& Value);
+const std::string to_hexString(uint64_t Value, bool UpperCase = true);
+const std::string to_string(uint64_t Value);
 
 class StreamWriter {
 public:

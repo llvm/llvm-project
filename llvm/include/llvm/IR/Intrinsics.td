@@ -240,7 +240,7 @@ class Intrinsic<list<LLVMType> ret_types,
   string TargetPrefix = "";   // Set to a prefix for target-specific intrinsics.
   list<LLVMType> RetTypes = ret_types;
   list<LLVMType> ParamTypes = param_types;
-  list<IntrinsicProperty> Properties = properties;
+  list<IntrinsicProperty> IntrProperties = properties;
 
   bit isTarget = 0;
 }
@@ -359,7 +359,7 @@ def int_memset  : Intrinsic<[],
                              llvm_i32_ty, llvm_i1_ty],
                             [IntrReadWriteArgMem, NoCapture<0>]>;
 
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
   def int_fma  : Intrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>,
                             LLVMMatchType<0>]>;
@@ -382,8 +382,6 @@ let Properties = [IntrNoMem] in {
   def int_exp  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_exp2 : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_fabs : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_minnum : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_maxnum : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_copysign : Intrinsic<[llvm_anyfloat_ty],
                                [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_floor : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
@@ -395,6 +393,13 @@ let Properties = [IntrNoMem] in {
   def int_canonicalize : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;
 }
+
+def int_minnum : Intrinsic<[llvm_anyfloat_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, Commutative]
+>;
+def int_maxnum : Intrinsic<[llvm_anyfloat_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, Commutative]
+>;
 
 // NOTE: these are internal interfaces.
 def int_setjmp     : Intrinsic<[llvm_i32_ty],  [llvm_ptr_ty]>;
@@ -416,7 +421,7 @@ def int_expect : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
 //
 
 // None of these intrinsics accesses memory at all.
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
   def int_bswap: Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
   def int_ctpop: Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
   def int_ctlz : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, llvm_i1_ty]>;
@@ -430,7 +435,7 @@ let Properties = [IntrNoMem] in {
 // None of these intrinsics accesses memory at all...but that doesn't mean the
 // optimizers can change them aggressively.  Special handling needed in a few
 // places.
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
   def int_dbg_declare      : Intrinsic<[],
                                        [llvm_metadata_ty,
                                        llvm_metadata_ty,
@@ -467,7 +472,7 @@ def int_eh_unwind_init: Intrinsic<[]>,
 
 def int_eh_dwarf_cfa  : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty]>;
 
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
   def int_eh_sjlj_lsda             : Intrinsic<[llvm_ptr_ty]>;
   def int_eh_sjlj_callsite         : Intrinsic<[], [llvm_i32_ty]>;
 }
@@ -592,7 +597,7 @@ def int_debugtrap : Intrinsic<[]>,
 def int_donothing : Intrinsic<[], [], [IntrNoMem]>;
 
 // Intrisics to support half precision floating point format
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
 def int_convert_to_fp16   : Intrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
 def int_convert_from_fp16 : Intrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
 }

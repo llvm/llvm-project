@@ -84,3 +84,10 @@ int MCRegisterInfo::getSEHRegNum(unsigned RegNum) const {
   if (I == L2SEHRegs.end()) return (int)RegNum;
   return I->second;
 }
+
+int MCRegisterInfo::getCodeViewRegNum(unsigned RegNum) const {
+  const DenseMap<unsigned, int>::const_iterator I = L2CVRegs.find(RegNum);
+  if (I == L2CVRegs.end())
+    report_fatal_error("target does not implement codeview register mapping");
+  return I->second;
+}

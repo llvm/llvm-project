@@ -20,10 +20,26 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetFrameLowering.h"
 
+using namespace llvm;
 using namespace llvm::codeview;
 
-namespace llvm {
+CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
+    : DebugHandlerBase(AP), OS(*Asm->OutStreamer), CurFn(nullptr) {
+  // If module doesn't have named metadata anchors or COFF debug section
+  // is not available, skip any debug info related stuff.
+  if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
+      !AP->getObjFileLowering().getCOFFDebugSymbolsSection()) {
+    Asm = nullptr;
+    return;
+  }
+
+  // Tell MMI that we have debug info.
+  MMI->setDebugInfoAvailability(true);
+}
 
 StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
   std::string &Filepath = FileToFilepathMap[File];
@@ -92,13 +108,13 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
 CodeViewDebug::InlineSite &CodeViewDebug::getInlineSite(const DILocation *Loc) {
   const DILocation *InlinedAt = Loc->getInlinedAt();
   auto Insertion = CurFn->InlineSites.insert({InlinedAt, InlineSite()});
+  InlineSite *Site = &Insertion.first->second;
   if (Insertion.second) {
-    InlineSite &Site = Insertion.first->second;
-    Site.SiteFuncId = NextFuncId++;
-    Site.Inlinee = Loc->getScope()->getSubprogram();
+    Site->SiteFuncId = NextFuncId++;
+    Site->Inlinee = Loc->getScope()->getSubprogram();
     InlinedSubprograms.insert(Loc->getScope()->getSubprogram());
   }
-  return Insertion.first->second;
+  return *Site;
 }
 
 void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
@@ -135,6 +151,7 @@ void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
     // If this location was actually inlined from somewhere else, give it the ID
     // of the inline call site.
     FuncId = getInlineSite(DL.get()).SiteFuncId;
+    CurFn->ChildSites.push_back(Loc);
     // Ensure we have links in the tree of inline call sites.
     const DILocation *ChildLoc = nullptr;
     while (Loc->getInlinedAt()) {
@@ -153,22 +170,6 @@ void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
   OS.EmitCVLocDirective(FuncId, FileId, DL.getLine(), DL.getCol(),
                         /*PrologueEnd=*/false,
                         /*IsStmt=*/false, DL->getFilename());
-}
-
-CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
-    : Asm(AP), OS(*Asm->OutStreamer), CurFn(nullptr) {
-  MachineModuleInfo *MMI = AP->MMI;
-
-  // If module doesn't have named metadata anchors or COFF debug section
-  // is not available, skip any debug info related stuff.
-  if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
-      !AP->getObjFileLowering().getCOFFDebugSymbolsSection()) {
-    Asm = nullptr;
-    return;
-  }
-
-  // Tell MMI that we have debug info.
-  MMI->setDebugInfoAvailability(true);
 }
 
 void CodeViewDebug::endModule() {
@@ -215,7 +216,7 @@ void CodeViewDebug::emitTypeInformation() {
   OS.EmitIntValue(COFF::DEBUG_SECTION_MAGIC, 4);
 
   NamedMDNode *CU_Nodes =
-      Asm->MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+      MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
   if (!CU_Nodes)
     return;
 
@@ -277,8 +278,8 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
   if (InlinedSubprograms.empty())
     return;
 
-  MCSymbol *InlineBegin = Asm->MMI->getContext().createTempSymbol(),
-           *InlineEnd = Asm->MMI->getContext().createTempSymbol();
+  MCSymbol *InlineBegin = MMI->getContext().createTempSymbol(),
+           *InlineEnd = MMI->getContext().createTempSymbol();
 
   OS.AddComment("Inlinee lines subsection");
   OS.EmitIntValue(unsigned(ModuleSubstreamKind::InlineeLines), 4);
@@ -317,7 +318,6 @@ void CodeViewDebug::collectInlineSiteChildren(
     const InlineSite &Site) {
   for (const DILocation *ChildSiteLoc : Site.ChildSites) {
     auto I = FI.InlineSites.find(ChildSiteLoc);
-    assert(I != FI.InlineSites.end());
     const InlineSite &ChildSite = I->second;
     Children.push_back(ChildSite.SiteFuncId);
     collectInlineSiteChildren(Children, FI, ChildSite);
@@ -327,8 +327,8 @@ void CodeViewDebug::collectInlineSiteChildren(
 void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
                                         const DILocation *InlinedAt,
                                         const InlineSite &Site) {
-  MCSymbol *InlineBegin = Asm->MMI->getContext().createTempSymbol(),
-           *InlineEnd = Asm->MMI->getContext().createTempSymbol();
+  MCSymbol *InlineBegin = MMI->getContext().createTempSymbol(),
+           *InlineEnd = MMI->getContext().createTempSymbol();
 
   assert(SubprogramToFuncId.count(Site.Inlinee));
   TypeIndex InlineeIdx = SubprogramToFuncId[Site.Inlinee];
@@ -357,6 +357,9 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
 
   OS.EmitLabel(InlineEnd);
 
+  for (const LocalVariable &Var : Site.InlinedLocals)
+    emitLocalVariable(Var);
+
   // Recurse on child inlined call sites before closing the scope.
   for (const DILocation *ChildSite : Site.ChildSites) {
     auto I = FI.InlineSites.find(ChildSite);
@@ -370,6 +373,13 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   OS.EmitIntValue(2, 2);                                  // RecordLength
   OS.AddComment("Record kind: S_INLINESITE_END");
   OS.EmitIntValue(SymbolRecordKind::S_INLINESITE_END, 2); // RecordKind
+}
+
+static void emitNullTerminatedString(MCStreamer &OS, StringRef S) {
+  SmallString<32> NullTerminatedString(S);
+  if (NullTerminatedString.empty() || NullTerminatedString.back() != '\0')
+    NullTerminatedString.push_back('\0');
+  OS.EmitBytes(NullTerminatedString);
 }
 
 void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
@@ -388,16 +398,16 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     FuncName = GlobalValue::getRealLinkageName(GV->getName());
 
   // Emit a symbol subsection, required by VS2012+ to find function boundaries.
-  MCSymbol *SymbolsBegin = Asm->MMI->getContext().createTempSymbol(),
-           *SymbolsEnd = Asm->MMI->getContext().createTempSymbol();
+  MCSymbol *SymbolsBegin = MMI->getContext().createTempSymbol(),
+           *SymbolsEnd = MMI->getContext().createTempSymbol();
   OS.AddComment("Symbol subsection for " + Twine(FuncName));
   OS.EmitIntValue(unsigned(ModuleSubstreamKind::Symbols), 4);
   OS.AddComment("Subsection size");
   OS.emitAbsoluteSymbolDiff(SymbolsEnd, SymbolsBegin, 4);
   OS.EmitLabel(SymbolsBegin);
   {
-    MCSymbol *ProcRecordBegin = Asm->MMI->getContext().createTempSymbol(),
-             *ProcRecordEnd = Asm->MMI->getContext().createTempSymbol();
+    MCSymbol *ProcRecordBegin = MMI->getContext().createTempSymbol(),
+             *ProcRecordEnd = MMI->getContext().createTempSymbol();
     OS.AddComment("Record length");
     OS.emitAbsoluteSymbolDiff(ProcRecordEnd, ProcRecordBegin, 2);
     OS.EmitLabel(ProcRecordBegin);
@@ -430,21 +440,20 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.EmitIntValue(0, 1);
     // Emit the function display name as a null-terminated string.
     OS.AddComment("Function name");
-    {
-      SmallString<32> NullTerminatedString(FuncName);
-      if (NullTerminatedString.empty() || NullTerminatedString.back() != '\0')
-        NullTerminatedString.push_back('\0');
-      OS.EmitBytes(NullTerminatedString);
-    }
+    emitNullTerminatedString(OS, FuncName);
     OS.EmitLabel(ProcRecordEnd);
+
+    for (const LocalVariable &Var : FI.Locals)
+      emitLocalVariable(Var);
 
     // Emit inlined call site information. Only emit functions inlined directly
     // into the parent function. We'll emit the other sites recursively as part
     // of their parent inline site.
-    for (auto &KV : FI.InlineSites) {
-      const DILocation *InlinedAt = KV.first;
-      if (!InlinedAt->getInlinedAt())
-        emitInlinedCallSite(FI, InlinedAt, KV.second);
+    for (const DILocation *InlinedAt : FI.ChildSites) {
+      auto I = FI.InlineSites.find(InlinedAt);
+      assert(I != FI.InlineSites.end() &&
+             "child site not in function inline site map");
+      emitInlinedCallSite(FI, InlinedAt, I->second);
     }
 
     // We're done with this function.
@@ -461,11 +470,55 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   OS.EmitCVLinetableDirective(FI.FuncId, Fn, FI.End);
 }
 
+void CodeViewDebug::collectVariableInfoFromMMITable() {
+  for (const auto &VI : MMI->getVariableDbgInfo()) {
+    if (!VI.Var)
+      continue;
+    assert(VI.Var->isValidLocationForIntrinsic(VI.Loc) &&
+           "Expected inlined-at fields to agree");
+
+    LexicalScope *Scope = LScopes.findLexicalScope(VI.Loc);
+
+    // If variable scope is not found then skip this variable.
+    if (!Scope)
+      continue;
+
+    LocalVariable Var;
+    Var.DIVar = VI.Var;
+
+    // Get the frame register used and the offset.
+    unsigned FrameReg = 0;
+    const TargetSubtargetInfo &TSI = Asm->MF->getSubtarget();
+    const TargetFrameLowering *TFI = TSI.getFrameLowering();
+    const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
+    Var.RegisterOffset = TFI->getFrameIndexReference(*Asm->MF, VI.Slot, FrameReg);
+    Var.CVRegister = TRI->getCodeViewRegNum(FrameReg);
+
+    // Calculate the label ranges.
+    for (const InsnRange &Range : Scope->getRanges()) {
+      const MCSymbol *Begin = getLabelBeforeInsn(Range.first);
+      const MCSymbol *End = getLabelAfterInsn(Range.second);
+      Var.Ranges.push_back({Begin, End});
+    }
+
+    if (VI.Loc->getInlinedAt()) {
+      // This variable was inlined. Associate it with the InlineSite.
+      InlineSite &Site = getInlineSite(VI.Loc);
+      Site.InlinedLocals.emplace_back(std::move(Var));
+    } else {
+      // This variable goes in the main ProcSym.
+      CurFn->Locals.emplace_back(std::move(Var));
+    }
+  }
+}
+
 void CodeViewDebug::beginFunction(const MachineFunction *MF) {
   assert(!CurFn && "Can't process two functions at once!");
 
-  if (!Asm || !Asm->MMI->hasDebugInfo())
+  if (!Asm || !MMI->hasDebugInfo())
     return;
+
+  DebugHandlerBase::beginFunction(MF);
 
   const Function *GV = MF->getFunction();
   assert(FnDebugInfo.count(GV) == false);
@@ -473,28 +526,24 @@ void CodeViewDebug::beginFunction(const MachineFunction *MF) {
   CurFn->FuncId = NextFuncId++;
   CurFn->Begin = Asm->getFunctionBegin();
 
-  // Find the end of the function prolog.
+  // Find the end of the function prolog.  First known non-DBG_VALUE and
+  // non-frame setup location marks the beginning of the function body.
   // FIXME: is there a simpler a way to do this? Can we just search
   // for the first instruction of the function, not the last of the prolog?
   DebugLoc PrologEndLoc;
   bool EmptyPrologue = true;
   for (const auto &MBB : *MF) {
-    if (PrologEndLoc)
-      break;
     for (const auto &MI : MBB) {
-      if (MI.isDebugValue())
-        continue;
-
-      // First known non-DBG_VALUE and non-frame setup location marks
-      // the beginning of the function body.
-      // FIXME: do we need the first subcondition?
-      if (!MI.getFlag(MachineInstr::FrameSetup) && MI.getDebugLoc()) {
+      if (!MI.isDebugValue() && !MI.getFlag(MachineInstr::FrameSetup) &&
+          MI.getDebugLoc()) {
         PrologEndLoc = MI.getDebugLoc();
         break;
+      } else if (!MI.isDebugValue()) {
+        EmptyPrologue = false;
       }
-      EmptyPrologue = false;
     }
   }
+
   // Record beginning of function if we have a non-empty prologue.
   if (PrologEndLoc && !EmptyPrologue) {
     DebugLoc FnStartDL = PrologEndLoc.getFnDebugLoc();
@@ -502,7 +551,50 @@ void CodeViewDebug::beginFunction(const MachineFunction *MF) {
   }
 }
 
+void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
+  // LocalSym record, see SymbolRecord.h for more info.
+  MCSymbol *LocalBegin = MMI->getContext().createTempSymbol(),
+           *LocalEnd = MMI->getContext().createTempSymbol();
+  OS.AddComment("Record length");
+  OS.emitAbsoluteSymbolDiff(LocalEnd, LocalBegin, 2);
+  OS.EmitLabel(LocalBegin);
+
+  OS.AddComment("Record kind: S_LOCAL");
+  OS.EmitIntValue(unsigned(SymbolRecordKind::S_LOCAL), 2);
+
+  uint16_t Flags = 0;
+  if (Var.DIVar->isParameter())
+    Flags |= LocalSym::IsParameter;
+
+  OS.AddComment("TypeIndex");
+  OS.EmitIntValue(TypeIndex::Int32().getIndex(), 4);
+  OS.AddComment("Flags");
+  OS.EmitIntValue(Flags, 2);
+  emitNullTerminatedString(OS, Var.DIVar->getName());
+  OS.EmitLabel(LocalEnd);
+
+  // DefRangeRegisterRelSym record, see SymbolRecord.h for more info.  Omit the
+  // LocalVariableAddrRange field from the record. The directive will emit that.
+  DefRangeRegisterRelSym Sym{};
+  ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER_REL);
+  Sym.BaseRegister = Var.CVRegister;
+  Sym.Flags = 0; // Unclear what matters here.
+  Sym.BasePointerOffset = Var.RegisterOffset;
+  SmallString<sizeof(Sym) + sizeof(SymKind) - sizeof(LocalVariableAddrRange)>
+      BytePrefix;
+  BytePrefix += StringRef(reinterpret_cast<const char *>(&SymKind),
+                          sizeof(SymKind));
+  BytePrefix += StringRef(reinterpret_cast<const char *>(&Sym),
+                          sizeof(Sym) - sizeof(LocalVariableAddrRange));
+
+  OS.EmitCVDefRangeDirective(Var.Ranges, BytePrefix);
+}
+
 void CodeViewDebug::endFunction(const MachineFunction *MF) {
+  collectVariableInfoFromMMITable();
+
+  DebugHandlerBase::endFunction(MF);
+
   if (!Asm || !CurFn)  // We haven't created any debug info for this function.
     return;
 
@@ -513,13 +605,18 @@ void CodeViewDebug::endFunction(const MachineFunction *MF) {
   // Don't emit anything if we don't have any line tables.
   if (!CurFn->HaveLineInfo) {
     FnDebugInfo.erase(GV);
-  } else {
-    CurFn->End = Asm->getFunctionEnd();
+    CurFn = nullptr;
+    return;
   }
+
+  CurFn->End = Asm->getFunctionEnd();
+
   CurFn = nullptr;
 }
 
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
+  DebugHandlerBase::beginInstruction(MI);
+
   // Ignore DBG_VALUE locations and function prologue.
   if (!Asm || MI->isDebugValue() || MI->getFlag(MachineInstr::FrameSetup))
     return;
@@ -527,5 +624,4 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   if (DL == PrevInstLoc || !DL)
     return;
   maybeRecordLocation(DL, Asm->MF);
-}
 }

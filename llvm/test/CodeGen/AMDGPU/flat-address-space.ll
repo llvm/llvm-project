@@ -127,9 +127,6 @@ define void @zextload_flat_i16(i32 addrspace(1)* noalias %out, i16 addrspace(1)*
   ret void
 }
 
-declare void @llvm.AMDGPU.barrier.local() #1
-declare i32 @llvm.r600.read.tidig.x() #3
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind convergent }
 attributes #3 = { nounwind readnone }

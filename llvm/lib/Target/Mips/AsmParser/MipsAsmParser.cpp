@@ -23,10 +23,12 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -266,6 +268,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool parseDirectiveSet();
   bool parseDirectiveOption();
   bool parseInsnDirective();
+  bool parseSSectionDirective(StringRef Section, unsigned Type);
 
   bool parseSetAtDirective();
   bool parseSetNoAtDirective();
@@ -5734,6 +5737,24 @@ bool MipsAsmParser::parseInsnDirective() {
   return false;
 }
 
+/// parseSSectionDirective
+///  ::= .sbss
+///  ::= .sdata
+bool MipsAsmParser::parseSSectionDirective(StringRef Section, unsigned Type) {
+  // If this is not the end of the statement, report an error.
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    reportParseError("unexpected token, expected end of statement");
+    return false;
+  }
+
+  MCSection *ELFSection = getContext().getELFSection(
+      Section, Type, ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_MIPS_GPREL);
+  getParser().getStreamer().SwitchSection(ELFSection);
+
+  getParser().Lex(); // Eat EndOfStatement token.
+  return false;
+}
+
 /// parseDirectiveModule
 ///  ::= .module oddspreg
 ///  ::= .module nooddspreg
@@ -6223,6 +6244,11 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".insn")
     return parseInsnDirective();
+
+  if (IDVal == ".sbss")
+    return parseSSectionDirective(IDVal, ELF::SHT_NOBITS);
+  if (IDVal == ".sdata")
+    return parseSSectionDirective(IDVal, ELF::SHT_PROGBITS);
 
   return true;
 }

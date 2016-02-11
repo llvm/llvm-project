@@ -1,0 +1,43 @@
+:ir
+bar
+# Func Hash:
+12884901887
+# Num Counters:
+1
+# Counter Values:
+140
+# Num Value Kinds:
+1
+# ValueKind = IPVK_IndirectCallTarget:
+0
+# NumValueSites:
+1
+3
+func2:80
+func1:40
+func3:20
+
+func1
+# Func Hash:
+12884901887
+# Num Counters:
+1
+# Counter Values:
+40
+
+func2
+# Func Hash:
+12884901887
+# Num Counters:
+1
+# Counter Values:
+80
+
+func3
+# Func Hash:
+12884901887
+# Num Counters:
+1
+# Counter Values:
+20
+

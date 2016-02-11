@@ -105,6 +105,11 @@ private:
   /// started.
   BitVector ReservedRegs;
 
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+  /// Map generic virtual registers to their actual size.
+  DenseMap<unsigned, unsigned> VRegToSize;
+#endif
+
   /// Keep track of the physical registers that are live in to the function.
   /// Live in values are typically arguments in registers.  LiveIn values are
   /// allowed to have virtual registers associated with them, stored in the
@@ -586,6 +591,16 @@ public:
   /// function with the specified register class.
   ///
   unsigned createVirtualRegister(const TargetRegisterClass *RegClass);
+
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+  /// Get the size of \p VReg or 0 if VReg is not a generic
+  /// (target independent) virtual register.
+  unsigned getSize(unsigned VReg) const;
+
+  /// Create and return a new generic virtual register with a size of \p Size.
+  /// \pre Size > 0.
+  unsigned createGenericVirtualRegister(unsigned Size);
+#endif
 
   /// getNumVirtRegs - Return the number of virtual registers created.
   ///

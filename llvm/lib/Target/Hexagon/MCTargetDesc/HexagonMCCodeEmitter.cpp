@@ -279,9 +279,9 @@ Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
       return Hexagon::fixup_Hexagon_GOTREL_32_6_X;
     case MCSymbolRefExpr::VK_GOT:
       return Hexagon::fixup_Hexagon_GOT_32_6_X;
-    case MCSymbolRefExpr::VK_PPC_TPREL:
+    case MCSymbolRefExpr::VK_TPREL:
       return Hexagon::fixup_Hexagon_TPREL_32_6_X;
-    case MCSymbolRefExpr::VK_PPC_DTPREL:
+    case MCSymbolRefExpr::VK_DTPREL:
       return Hexagon::fixup_Hexagon_DTPREL_32_6_X;
     case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
       return Hexagon::fixup_Hexagon_GD_GOT_32_6_X;
@@ -319,9 +319,9 @@ Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
       return Hexagon::fixup_Hexagon_IE_HI16;
     case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
       return Hexagon::fixup_Hexagon_IE_GOT_HI16;
-    case MCSymbolRefExpr::VK_PPC_TPREL:
+    case MCSymbolRefExpr::VK_TPREL:
       return Hexagon::fixup_Hexagon_TPREL_HI16;
-    case MCSymbolRefExpr::VK_PPC_DTPREL:
+    case MCSymbolRefExpr::VK_DTPREL:
       return Hexagon::fixup_Hexagon_DTPREL_HI16;
     case MCSymbolRefExpr::VK_None:
       return Hexagon::fixup_Hexagon_HI16;
@@ -344,9 +344,9 @@ Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
       return Hexagon::fixup_Hexagon_IE_LO16;
     case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
       return Hexagon::fixup_Hexagon_IE_GOT_LO16;
-    case MCSymbolRefExpr::VK_PPC_TPREL:
+    case MCSymbolRefExpr::VK_TPREL:
       return Hexagon::fixup_Hexagon_TPREL_LO16;
-    case MCSymbolRefExpr::VK_PPC_DTPREL:
+    case MCSymbolRefExpr::VK_DTPREL:
       return Hexagon::fixup_Hexagon_DTPREL_LO16;
     case MCSymbolRefExpr::VK_None:
       return Hexagon::fixup_Hexagon_LO16;
@@ -452,7 +452,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
     raise_relocation_error(bits, kind);
   case 32:
     switch (kind) {
-    case MCSymbolRefExpr::VK_PPC_DTPREL:
+    case MCSymbolRefExpr::VK_DTPREL:
       FixupKind = *Extended ? Hexagon::fixup_Hexagon_DTPREL_32_6_X
                             : Hexagon::fixup_Hexagon_DTPREL_32;
       break;
@@ -487,7 +487,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
       FixupKind =
           *Extended ? Hexagon::fixup_Hexagon_32_6_X : Hexagon::fixup_Hexagon_32;
       break;
-    case MCSymbolRefExpr::VK_PPC_TPREL:
+    case MCSymbolRefExpr::VK_TPREL:
       FixupKind = *Extended ? Hexagon::fixup_Hexagon_TPREL_32_6_X
                             : Hexagon::fixup_Hexagon_TPREL_32;
       break;
@@ -519,7 +519,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   case 16:
     if (*Extended) {
       switch (kind) {
-      case MCSymbolRefExpr::VK_PPC_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         FixupKind = Hexagon::fixup_Hexagon_DTPREL_16_X;
         break;
       case MCSymbolRefExpr::VK_GOT:
@@ -543,7 +543,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
       case MCSymbolRefExpr::VK_None:
         FixupKind = Hexagon::fixup_Hexagon_16_X;
         break;
-      case MCSymbolRefExpr::VK_PPC_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         FixupKind = Hexagon::fixup_Hexagon_TPREL_16_X;
         break;
       default:
@@ -551,7 +551,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
       }
     } else
       switch (kind) {
-      case MCSymbolRefExpr::VK_PPC_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         FixupKind = Hexagon::fixup_Hexagon_DTPREL_16;
         break;
       case MCSymbolRefExpr::VK_GOTREL:
@@ -578,7 +578,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
       case MCSymbolRefExpr::VK_Hexagon_LO16:
         FixupKind = Hexagon::fixup_Hexagon_LO16;
         break;
-      case MCSymbolRefExpr::VK_PPC_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         FixupKind = Hexagon::fixup_Hexagon_TPREL_16;
         break;
       default:
@@ -630,7 +630,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   case 11:
     if (*Extended)
       switch (kind) {
-      case MCSymbolRefExpr::VK_PPC_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         FixupKind = Hexagon::fixup_Hexagon_DTPREL_11_X;
         break;
       case MCSymbolRefExpr::VK_GOT:
@@ -651,7 +651,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
       case MCSymbolRefExpr::VK_None:
         FixupKind = Hexagon::fixup_Hexagon_11_X;
         break;
-      case MCSymbolRefExpr::VK_PPC_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         FixupKind = Hexagon::fixup_Hexagon_TPREL_11_X;
         break;
       default:
@@ -659,7 +659,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
       }
     else {
       switch (kind) {
-      case MCSymbolRefExpr::VK_PPC_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         FixupKind = Hexagon::fixup_Hexagon_TPREL_11_X;
         break;
       default:
@@ -713,7 +713,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   case 6:
     if (*Extended) {
       switch (kind) {
-      case MCSymbolRefExpr::VK_PPC_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         FixupKind = Hexagon::fixup_Hexagon_DTPREL_16_X;
         break;
       // This is part of an extender, GOT_11 is a
@@ -727,7 +727,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
       case MCSymbolRefExpr::VK_Hexagon_PCREL:
         FixupKind = Hexagon::fixup_Hexagon_6_PCREL_X;
         break;
-      case MCSymbolRefExpr::VK_PPC_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         FixupKind = Hexagon::fixup_Hexagon_TPREL_16_X;
         break;
       case MCSymbolRefExpr::VK_None:

@@ -42,7 +42,12 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   // One entry for each possible target reg. we expect it to be small.
   std::vector<unsigned> PhysRegs;
 
-public:
+  // A virtual register holding the pointer to the vararg buffer for vararg
+  // functions. It is created and set in TLI::LowerFormalArguments and read by
+  // TLI::LowerVASTART
+  unsigned VarargVreg = -1U;
+
+ public:
   explicit WebAssemblyFunctionInfo(MachineFunction &MF) : MF(MF) {
     PhysRegs.resize(WebAssembly::NUM_TARGET_REGS, -1U);
   }
@@ -50,6 +55,12 @@ public:
 
   void addParam(MVT VT) { Params.push_back(VT); }
   const std::vector<MVT> &getParams() const { return Params; }
+
+  unsigned getVarargBufferVreg() const {
+    assert(VarargVreg != -1U && "Vararg vreg hasn't been set");
+    return VarargVreg;
+  }
+  void setVarargBufferVreg(unsigned Reg) { VarargVreg = Reg; }
 
   static const unsigned UnusedReg = -1u;
 

@@ -2,7 +2,7 @@
 
 declare i1 @llvm.amdgcn.class.f32(float, i32) #1
 declare i1 @llvm.amdgcn.class.f64(double, i32) #1
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @llvm.fabs.f32(float) #1
 declare double @llvm.fabs.f64(double) #1
 
@@ -133,7 +133,7 @@ define void @test_class_9bit_mask_f32(i32 addrspace(1)* %out, float %a) #0 {
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @v_test_class_full_mask_f32(i32 addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
@@ -151,7 +151,7 @@ define void @v_test_class_full_mask_f32(i32 addrspace(1)* %out, float addrspace(
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_inline_imm_constant_dynamic_mask_f32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %b = load i32, i32 addrspace(1)* %gep.in
@@ -171,7 +171,7 @@ define void @test_class_inline_imm_constant_dynamic_mask_f32(i32 addrspace(1)* %
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @test_class_lit_constant_dynamic_mask_f32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %b = load i32, i32 addrspace(1)* %gep.in
@@ -291,7 +291,7 @@ define void @test_class_full_mask_f64(i32 addrspace(1)* %out, double %a) #0 {
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define void @v_test_class_full_mask_f64(i32 addrspace(1)* %out, double addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr double, double addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load double, double addrspace(1)* %in
@@ -307,7 +307,7 @@ define void @v_test_class_full_mask_f64(i32 addrspace(1)* %out, double addrspace
 ; SI: v_cmp_class_f64_e32 vcc,
 ; SI: s_endpgm
 define void @test_class_inline_imm_constant_dynamic_mask_f64(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %b = load i32, i32 addrspace(1)* %gep.in
@@ -322,7 +322,7 @@ define void @test_class_inline_imm_constant_dynamic_mask_f64(i32 addrspace(1)* %
 ; SI: v_cmp_class_f64_e32 vcc, s{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
 ; SI: s_endpgm
 define void @test_class_lit_constant_dynamic_mask_f64(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %b = load i32, i32 addrspace(1)* %gep.in
@@ -339,7 +339,7 @@ define void @test_class_lit_constant_dynamic_mask_f64(i32 addrspace(1)* %out, i3
 ; SI-NOT: v_cmp_class
 ; SI: s_endpgm
 define void @test_fold_or_class_f32_0(i32 addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
@@ -359,7 +359,7 @@ define void @test_fold_or_class_f32_0(i32 addrspace(1)* %out, float addrspace(1)
 ; SI-NOT: v_cmp_class
 ; SI: s_endpgm
 define void @test_fold_or3_class_f32_0(i32 addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
@@ -382,7 +382,7 @@ define void @test_fold_or3_class_f32_0(i32 addrspace(1)* %out, float addrspace(1
 ; SI-NOT: v_cmp_class
 ; SI: s_endpgm
 define void @test_fold_or_all_tests_class_f32_0(i32 addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
@@ -417,7 +417,7 @@ define void @test_fold_or_all_tests_class_f32_0(i32 addrspace(1)* %out, float ad
 ; SI-NOT: v_cmp_class
 ; SI: s_endpgm
 define void @test_fold_or_class_f32_1(i32 addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
@@ -437,7 +437,7 @@ define void @test_fold_or_class_f32_1(i32 addrspace(1)* %out, float addrspace(1)
 ; SI-NOT: v_cmp_class
 ; SI: s_endpgm
 define void @test_fold_or_class_f32_2(i32 addrspace(1)* %out, float addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in
@@ -457,7 +457,7 @@ define void @test_fold_or_class_f32_2(i32 addrspace(1)* %out, float addrspace(1)
 ; SI: s_or_b64
 ; SI: s_endpgm
 define void @test_no_fold_or_class_f32_0(i32 addrspace(1)* %out, float addrspace(1)* %in, float %b) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %gep.in = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.out = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep.in

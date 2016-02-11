@@ -5,6 +5,7 @@ add_llvm_library(LLVMAsmPrinter
   AsmPrinterDwarf.cpp
   AsmPrinterInlineAsm.cpp
   DbgValueHistoryCalculator.cpp
+  DebugHandlerBase.cpp
   DebugLocStream.cpp
   DIE.cpp
   DIEHash.cpp

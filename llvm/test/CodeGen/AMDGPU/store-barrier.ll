@@ -12,7 +12,7 @@
 ; CHECK: s_barrier
 ; CHECK: s_endpgm
 ; Function Attrs: nounwind
-define void @test(<2 x i8> addrspace(3)* nocapture %arg, <2 x i8> addrspace(1)* nocapture readonly %arg1, i32 addrspace(1)* nocapture readonly %arg2, <2 x i8> addrspace(1)* nocapture %arg3, i32 %arg4, i64 %tmp9) {
+define void @test(<2 x i8> addrspace(3)* nocapture %arg, <2 x i8> addrspace(1)* nocapture readonly %arg1, i32 addrspace(1)* nocapture readonly %arg2, <2 x i8> addrspace(1)* nocapture %arg3, i32 %arg4, i64 %tmp9) #0 {
 bb:
   %tmp10 = getelementptr inbounds i32, i32 addrspace(1)* %arg2, i64 %tmp9
   %tmp13 = load i32, i32 addrspace(1)* %tmp10, align 2
@@ -21,7 +21,7 @@ bb:
   %tmp16 = add i32 %tmp13, 1
   %tmp17 = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(3)* %arg, i32 %tmp16
   store <2 x i8> %tmp15, <2 x i8> addrspace(3)* %tmp17, align 2
-  tail call void @llvm.AMDGPU.barrier.local() #2
+  tail call void @llvm.amdgcn.s.barrier()
   %tmp25 = load i32, i32 addrspace(1)* %tmp10, align 4
   %tmp26 = sext i32 %tmp25 to i64
   %tmp27 = sext i32 %arg4 to i64
@@ -37,6 +37,7 @@ bb:
 }
 
 ; Function Attrs: convergent nounwind
-declare void @llvm.AMDGPU.barrier.local() #2
+declare void @llvm.amdgcn.s.barrier() #1
 
-attributes #2 = { convergent nounwind }
+attributes #0 = { nounwind }
+attributes #1 = { convergent nounwind }

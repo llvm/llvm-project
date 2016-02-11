@@ -1727,23 +1727,23 @@ let SchedRW = [WriteDoubleAdd] in {
 let isCommutable = 1 in {
 
 defm V_ADD_F64 : VOP3Inst <vop3<0x164, 0x280>, "v_add_f64",
-  VOP_F64_F64_F64, fadd
+  VOP_F64_F64_F64, fadd, 1
 >;
 defm V_MUL_F64 : VOP3Inst <vop3<0x165, 0x281>, "v_mul_f64",
-  VOP_F64_F64_F64, fmul
+  VOP_F64_F64_F64, fmul, 1
 >;
 
 defm V_MIN_F64 : VOP3Inst <vop3<0x166, 0x282>, "v_min_f64",
-  VOP_F64_F64_F64, fminnum
+  VOP_F64_F64_F64, fminnum, 1
 >;
 defm V_MAX_F64 : VOP3Inst <vop3<0x167, 0x283>, "v_max_f64",
-  VOP_F64_F64_F64, fmaxnum
+  VOP_F64_F64_F64, fmaxnum, 1
 >;
 
 } // End isCommutable = 1
 
 defm V_LDEXP_F64 : VOP3Inst <vop3<0x168, 0x284>, "v_ldexp_f64",
-  VOP_F64_F64_I32, AMDGPUldexp
+  VOP_F64_F64_I32, AMDGPUldexp, 1
 >;
 
 } // End let SchedRW = [WriteDoubleAdd]
