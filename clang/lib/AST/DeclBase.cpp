@@ -659,7 +659,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ObjCCategoryImpl:
     case Import:
     case OMPThreadPrivate:
-    case OMPCapturedField:
+    case OMPCapturedExpr:
     case Empty:
       // Never looked up by name.
       return 0;

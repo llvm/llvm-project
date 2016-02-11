@@ -61,7 +61,6 @@ PathDiagnosticCallPiece::~PathDiagnosticCallPiece() {}
 PathDiagnosticControlFlowPiece::~PathDiagnosticControlFlowPiece() {}
 PathDiagnosticMacroPiece::~PathDiagnosticMacroPiece() {}
 
-
 void PathPieces::flattenTo(PathPieces &Primary, PathPieces &Current,
                            bool ShouldFlattenMacros) const {
   for (PathPieces::const_iterator I = begin(), E = end(); I != E; ++I) {
@@ -101,7 +100,6 @@ void PathPieces::flattenTo(PathPieces &Primary, PathPieces &Current,
     }
   }
 }
-
 
 PathDiagnostic::~PathDiagnostic() {}
 
@@ -278,6 +276,7 @@ void PathDiagnosticConsumer::HandlePathDiagnostic(
 }
 
 static Optional<bool> comparePath(const PathPieces &X, const PathPieces &Y);
+
 static Optional<bool>
 compareControlFlow(const PathDiagnosticControlFlowPiece &X,
                    const PathDiagnosticControlFlowPiece &Y) {
@@ -505,7 +504,6 @@ static SourceLocation getValidSourceLocation(const Stmt* S,
   // S might be a temporary statement that does not have a location in the
   // source code, so find an enclosing statement and use its location.
   if (!L.isValid()) {
-
     AnalysisDeclContext *ADC;
     if (LAC.is<const LocationContext*>())
       ADC = LAC.get<const LocationContext*>()->getAnalysisDeclContext();
@@ -578,21 +576,19 @@ getLocationForCaller(const StackFrameContext *SFC,
   llvm_unreachable("Unknown CFGElement kind");
 }
 
-
 PathDiagnosticLocation
-  PathDiagnosticLocation::createBegin(const Decl *D,
-                                      const SourceManager &SM) {
+PathDiagnosticLocation::createBegin(const Decl *D,
+                                    const SourceManager &SM) {
   return PathDiagnosticLocation(D->getLocStart(), SM, SingleLocK);
 }
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::createBegin(const Stmt *S,
-                                      const SourceManager &SM,
-                                      LocationOrAnalysisDeclContext LAC) {
+PathDiagnosticLocation::createBegin(const Stmt *S,
+                                    const SourceManager &SM,
+                                    LocationOrAnalysisDeclContext LAC) {
   return PathDiagnosticLocation(getValidSourceLocation(S, LAC),
                                 SM, SingleLocK);
 }
-
 
 PathDiagnosticLocation
 PathDiagnosticLocation::createEnd(const Stmt *S,
@@ -605,13 +601,13 @@ PathDiagnosticLocation::createEnd(const Stmt *S,
 }
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::createOperatorLoc(const BinaryOperator *BO,
-                                            const SourceManager &SM) {
+PathDiagnosticLocation::createOperatorLoc(const BinaryOperator *BO,
+                                          const SourceManager &SM) {
   return PathDiagnosticLocation(BO->getOperatorLoc(), SM, SingleLocK);
 }
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::createConditionalColonLoc(
+PathDiagnosticLocation::createConditionalColonLoc(
                                             const ConditionalOperator *CO,
                                             const SourceManager &SM) {
   return PathDiagnosticLocation(CO->getColonLoc(), SM, SingleLocK);
@@ -619,28 +615,28 @@ PathDiagnosticLocation
 
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::createMemberLoc(const MemberExpr *ME,
-                                          const SourceManager &SM) {
+PathDiagnosticLocation::createMemberLoc(const MemberExpr *ME,
+                                        const SourceManager &SM) {
   return PathDiagnosticLocation(ME->getMemberLoc(), SM, SingleLocK);
 }
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::createBeginBrace(const CompoundStmt *CS,
-                                           const SourceManager &SM) {
+PathDiagnosticLocation::createBeginBrace(const CompoundStmt *CS,
+                                         const SourceManager &SM) {
   SourceLocation L = CS->getLBracLoc();
   return PathDiagnosticLocation(L, SM, SingleLocK);
 }
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::createEndBrace(const CompoundStmt *CS,
-                                         const SourceManager &SM) {
+PathDiagnosticLocation::createEndBrace(const CompoundStmt *CS,
+                                       const SourceManager &SM) {
   SourceLocation L = CS->getRBracLoc();
   return PathDiagnosticLocation(L, SM, SingleLocK);
 }
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::createDeclBegin(const LocationContext *LC,
-                                          const SourceManager &SM) {
+PathDiagnosticLocation::createDeclBegin(const LocationContext *LC,
+                                        const SourceManager &SM) {
   // FIXME: Should handle CXXTryStmt if analyser starts supporting C++.
   if (const CompoundStmt *CS =
         dyn_cast_or_null<CompoundStmt>(LC->getDecl()->getBody()))
@@ -653,16 +649,15 @@ PathDiagnosticLocation
 }
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::createDeclEnd(const LocationContext *LC,
-                                        const SourceManager &SM) {
+PathDiagnosticLocation::createDeclEnd(const LocationContext *LC,
+                                      const SourceManager &SM) {
   SourceLocation L = LC->getDecl()->getBodyRBrace();
   return PathDiagnosticLocation(L, SM, SingleLocK);
 }
 
 PathDiagnosticLocation
-  PathDiagnosticLocation::create(const ProgramPoint& P,
-                                 const SourceManager &SMng) {
-
+PathDiagnosticLocation::create(const ProgramPoint& P,
+                               const SourceManager &SMng) {
   const Stmt* S = nullptr;
   if (Optional<BlockEdge> BE = P.getAs<BlockEdge>()) {
     const CFGBlock *BSrc = BE->getSrc();
@@ -1062,7 +1057,6 @@ void PathDiagnosticLocation::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddInteger(Range.getBegin().getRawEncoding());
   ID.AddInteger(Range.getEnd().getRawEncoding());
   ID.AddInteger(Loc.getRawEncoding());
-  return;
 }
 
 void PathDiagnosticPiece::Profile(llvm::FoldingSetNodeID &ID) const {

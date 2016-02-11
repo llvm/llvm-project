@@ -92,7 +92,7 @@ namespace {
     void VisitUsingDecl(UsingDecl *D);
     void VisitUsingShadowDecl(UsingShadowDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
-    void VisitOMPCapturedFieldDecl(OMPCapturedFieldDecl *D);
+    void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
     void PrintTemplateParameters(const TemplateParameterList *Params,
                                  const TemplateArgumentList *Args = nullptr);
@@ -1367,7 +1367,7 @@ void DeclPrinter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
   }
 }
 
-void DeclPrinter::VisitOMPCapturedFieldDecl(OMPCapturedFieldDecl *D) {
+void DeclPrinter::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
   D->getInit()->printPretty(Out, nullptr, Policy, Indentation);
 }
 

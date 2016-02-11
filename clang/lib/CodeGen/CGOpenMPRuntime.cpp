@@ -100,6 +100,7 @@ public:
         ThreadIDVar(ThreadIDVar) {
     assert(ThreadIDVar != nullptr && "No ThreadID in OpenMP region.");
   }
+
   /// \brief Get a variable or parameter for storing global thread id
   /// inside OpenMP construct.
   const VarDecl *getThreadIDVariable() const override { return ThreadIDVar; }
@@ -130,6 +131,7 @@ public:
         ThreadIDVar(ThreadIDVar) {
     assert(ThreadIDVar != nullptr && "No ThreadID in OpenMP region.");
   }
+
   /// \brief Get a variable or parameter for storing global thread id
   /// inside OpenMP construct.
   const VarDecl *getThreadIDVariable() const override { return ThreadIDVar; }
@@ -162,12 +164,14 @@ public:
       : CGOpenMPRegionInfo(InlinedRegion, CodeGen, Kind, HasCancel),
         OldCSI(OldCSI),
         OuterRegionInfo(dyn_cast_or_null<CGOpenMPRegionInfo>(OldCSI)) {}
+
   // \brief Retrieve the value of the context parameter.
   llvm::Value *getContextValue() const override {
     if (OuterRegionInfo)
       return OuterRegionInfo->getContextValue();
     llvm_unreachable("No context value for inlined OpenMP region");
   }
+
   void setContextValue(llvm::Value *V) override {
     if (OuterRegionInfo) {
       OuterRegionInfo->setContextValue(V);
@@ -175,6 +179,7 @@ public:
     }
     llvm_unreachable("No context value for inlined OpenMP region");
   }
+
   /// \brief Lookup the captured field decl for a variable.
   const FieldDecl *lookup(const VarDecl *VD) const override {
     if (OuterRegionInfo)
@@ -183,11 +188,13 @@ public:
     // captured variables, we can use the original one.
     return nullptr;
   }
+
   FieldDecl *getThisFieldDecl() const override {
     if (OuterRegionInfo)
       return OuterRegionInfo->getThisFieldDecl();
     return nullptr;
   }
+
   /// \brief Get a variable or parameter for storing global thread id
   /// inside OpenMP construct.
   const VarDecl *getThreadIDVariable() const override {
@@ -261,6 +268,7 @@ public:
     CGF.CapturedStmtInfo = new CGOpenMPInlinedRegionInfo(
         CGF.CapturedStmtInfo, CodeGen, Kind, HasCancel);
   }
+
   ~InlinedOpenMPRegionRAII() {
     // Restore original CapturedStmtInfo only if we're done with code emission.
     auto *OldCSI =
@@ -1379,6 +1387,7 @@ public:
     assert(CleanupArgs.size() == N);
     std::copy(CleanupArgs.begin(), CleanupArgs.end(), std::begin(Args));
   }
+
   void Emit(CodeGenFunction &CGF, Flags /*flags*/) override {
     if (!CGF.HaveInsertPoint())
       return;
@@ -2209,7 +2218,6 @@ void CGOpenMPRuntime::createOffloadEntry(llvm::Constant *Addr, StringRef Name,
   // We can't have any padding between symbols, so we need to have 1-byte
   // alignment.
   Entry->setAlignment(1);
-  return;
 }
 
 void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
@@ -3591,7 +3599,7 @@ enum RTCancelKind {
   CancelSections = 3,
   CancelTaskgroup = 4
 };
-}
+} // anonymous namespace
 
 static RTCancelKind getCancellationKind(OpenMPDirectiveKind CancelRegion) {
   RTCancelKind CancelKind = CancelNoreq;
@@ -3711,14 +3719,12 @@ static void getTargetEntryUniqueInfo(ASTContext &C, SourceLocation Loc,
   FileID = ID.getFile();
   LineNum = PLoc.getLine();
   ColumnNum = PLoc.getColumn();
-  return;
 }
 
 void CGOpenMPRuntime::emitTargetOutlinedFunction(
     const OMPExecutableDirective &D, StringRef ParentName,
     llvm::Function *&OutlinedFn, llvm::Constant *&OutlinedFnID,
     bool IsOffloadEntry) {
-
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
   const CapturedStmt &CS = *cast<CapturedStmt>(D.getAssociatedStmt());
@@ -3787,7 +3793,6 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
   // Register the information for the entry associated with this target region.
   OffloadEntriesInfoManager.registerTargetRegionEntryInfo(
       DeviceID, FileID, ParentName, Line, Column, OutlinedFn, OutlinedFnID);
-  return;
 }
 
 void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
@@ -3975,7 +3980,6 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
       MapTypesArray = MapTypesArrayGbl;
 
       for (unsigned i = 0; i < PointerNumVal; ++i) {
-
         llvm::Value *BPVal = BasePointers[i];
         if (BPVal->getType()->isPointerTy())
           BPVal = CGF.Builder.CreateBitCast(BPVal, CGM.VoidPtrTy);
@@ -4103,7 +4107,6 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
   CGF.EmitBranch(OffloadContBlock);
 
   CGF.EmitBlock(OffloadContBlock, /*IsFinished=*/true);
-  return;
 }
 
 void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
@@ -4156,8 +4159,6 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   // Keep looking for target regions recursively.
   for (auto *II : S->children())
     scanForTargetRegionsFunctions(II, ParentName);
-
-  return;
 }
 
 bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {

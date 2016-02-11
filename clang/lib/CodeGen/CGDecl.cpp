@@ -29,9 +29,9 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
+
 using namespace clang;
 using namespace CodeGen;
-
 
 void CodeGenFunction::EmitDecl(const Decl &D) {
   switch (D.getKind()) {
@@ -92,7 +92,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Label:        // __label__ x;
   case Decl::Import:
   case Decl::OMPThreadPrivate:
-  case Decl::OMPCapturedField:
+  case Decl::OMPCapturedExpr:
   case Decl::Empty:
     // None of these decls require codegen support.
     return;
@@ -527,7 +527,7 @@ namespace {
       CGF.EmitLifetimeEnd(Size, Addr);
     }
   };
-}
+} // end anonymous namespace
 
 /// EmitAutoVarWithLifetime - Does the setup required for an automatic
 /// variable with lifetime.
@@ -645,7 +645,6 @@ static bool tryEmitARCCopyWeakInit(CodeGenFunction &CGF,
     }
 
     init = castExpr->getSubExpr();
-    continue;
   }
   return false;
 }
@@ -876,7 +875,6 @@ static void emitStoresForInitAfterMemset(llvm::Constant *Init, llvm::Value *Loc,
           isVolatile, Builder);
   }
 }
-
 
 /// shouldUseMemSetPlusStoresToInitialize - Decide whether we should use memset
 /// plus some stores to initialize a local variable instead of using a memcpy
@@ -1163,6 +1161,7 @@ bool CodeGenFunction::isTrivialInitializer(const Expr *Init) {
 
   return false;
 }
+
 void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   assert(emission.Variable && "emission was not valid!");
 
@@ -1662,7 +1661,7 @@ namespace {
                               ElementType, ElementAlign, Destroyer);
     }
   };
-}
+} // end anonymous namespace
 
 /// pushIrregularPartialArrayCleanup - Push an EH cleanup to destroy
 /// already-constructed elements of the given array.  The cleanup
@@ -1731,7 +1730,7 @@ namespace {
       CGF.EmitARCRelease(Param, Precise);
     }
   };
-}
+} // end anonymous namespace
 
 /// Emit an alloca (or GlobalValue depending on target)
 /// for the specified parameter and set up LocalDeclMap.

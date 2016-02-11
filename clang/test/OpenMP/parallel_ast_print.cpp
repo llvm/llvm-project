@@ -26,9 +26,15 @@ public:
 #pragma omp parallel private(a) private(this->a) private(T::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
+#pragma omp parallel firstprivate(a) firstprivate(this->a) firstprivate(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
   }
   S7 &operator=(S7 &s) {
 #pragma omp parallel private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+#pragma omp parallel firstprivate(a) firstprivate(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
@@ -36,8 +42,11 @@ public:
 };
 
 // CHECK: #pragma omp parallel private(this->a) private(this->a) private(this->S1::a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a) firstprivate(this->S1::a)
 // CHECK: #pragma omp parallel private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a) firstprivate(T::a)
 // CHECK: #pragma omp parallel private(this->a) private(this->a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a)
 
 class S8 : public S7<S1> {
   S8() {}
@@ -47,9 +56,15 @@ public:
 #pragma omp parallel private(a) private(this->a) private(S7<S1>::a) 
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
+#pragma omp parallel firstprivate(a) firstprivate(this->a) firstprivate(S7<S1>::a) 
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
   }
   S8 &operator=(S8 &s) {
 #pragma omp parallel private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+#pragma omp parallel firstprivate(a) firstprivate(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
@@ -57,7 +72,9 @@ public:
 };
 
 // CHECK: #pragma omp parallel private(this->a) private(this->a) private(this->S7<S1>::a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a) firstprivate(this->S7<S1>::a)
 // CHECK: #pragma omp parallel private(this->a) private(this->a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a)
 
 template <class T>
 struct S {

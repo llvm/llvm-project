@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief This file implements OMPThreadPrivateDecl, OMPCapturedFieldDecl
+/// \brief This file implements OMPThreadPrivateDecl, OMPCapturedExprDecl
 /// classes.
 ///
 //===----------------------------------------------------------------------===//
@@ -54,20 +54,19 @@ void OMPThreadPrivateDecl::setVars(ArrayRef<Expr *> VL) {
 }
 
 //===----------------------------------------------------------------------===//
-// OMPCapturedFieldDecl Implementation.
+// OMPCapturedExprDecl Implementation.
 //===----------------------------------------------------------------------===//
 
-void OMPCapturedFieldDecl::anchor() {}
+void OMPCapturedExprDecl::anchor() {}
 
-OMPCapturedFieldDecl *OMPCapturedFieldDecl::Create(ASTContext &C,
-                                                   DeclContext *DC,
-                                                   IdentifierInfo *Id,
-                                                   QualType T) {
-  return new (C, DC) OMPCapturedFieldDecl(C, DC, Id, T);
+OMPCapturedExprDecl *OMPCapturedExprDecl::Create(ASTContext &C, DeclContext *DC,
+                                                 IdentifierInfo *Id,
+                                                 QualType T) {
+  return new (C, DC) OMPCapturedExprDecl(C, DC, Id, T);
 }
 
-OMPCapturedFieldDecl *OMPCapturedFieldDecl::CreateDeserialized(ASTContext &C,
-                                                               unsigned ID) {
-  return new (C, ID) OMPCapturedFieldDecl(C, nullptr, nullptr, QualType());
+OMPCapturedExprDecl *OMPCapturedExprDecl::CreateDeserialized(ASTContext &C,
+                                                             unsigned ID) {
+  return new (C, ID) OMPCapturedExprDecl(C, nullptr, nullptr, QualType());
 }
 

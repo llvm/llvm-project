@@ -83,6 +83,13 @@ CodeGenFunction::EmitCUDADevicePrintfCallExpr(const CallExpr *E,
                E->arguments(), E->getDirectCallee(),
                /* ParamsToSkip = */ 0);
 
+  // We don't know how to emit non-scalar varargs.
+  if (std::any_of(Args.begin() + 1, Args.end(),
+                  [](const CallArg &A) { return !A.RV.isScalar(); })) {
+    CGM.ErrorUnsupported(E, "non-scalar arg to printf");
+    return RValue::get(llvm::ConstantInt::get(IntTy, 0));
+  }
+
   // Construct and fill the args buffer that we'll pass to vprintf.
   llvm::Value *BufferPtr;
   if (Args.size() <= 1) {

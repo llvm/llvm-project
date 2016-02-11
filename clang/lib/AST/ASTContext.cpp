@@ -1904,8 +1904,8 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   if (T->isMemberPointerType())
     return getPreferredTypeAlign(getPointerDiffType().getTypePtr());
 
-  if (Target->getTriple().getArch() == llvm::Triple::xcore)
-    return ABIAlign;  // Never overalign on XCore.
+  if (!Target->allowsLargerPreferedTypeAlignment())
+    return ABIAlign;
 
   // Double and long long should be naturally aligned if possible.
   if (const ComplexType *CT = T->getAs<ComplexType>())

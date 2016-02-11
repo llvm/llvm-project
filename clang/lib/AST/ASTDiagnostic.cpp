@@ -10,6 +10,7 @@
 // This file implements a diagnostic formatting hook for AST elements.
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -443,7 +444,6 @@ void clang::FormatASTNodeDiagnosticArgument(
       NeedQuotes = false;
       break;
     }
-
   }
 
   if (NeedQuotes) {
@@ -1628,7 +1628,6 @@ class TemplateDiff {
       Unbold();
       OS << "]";
     }
-    return;
   }
 
   /// PrintExpr - Prints out the expr template arguments, highlighting argument
@@ -1840,7 +1839,6 @@ class TemplateDiff {
       Unbold();
       OS << ']';
     }
-
   }
 
   /// PrintValueDeclAndInteger - Uses the print functions for ValueDecl and
@@ -2022,7 +2020,7 @@ public:
     return true;
   }
 }; // end class TemplateDiff
-}  // end namespace
+}  // end anonymous namespace
 
 /// FormatTemplateTypeDiff - A helper static function to start the template
 /// diff and return the properly formatted string.  Returns true if the diff

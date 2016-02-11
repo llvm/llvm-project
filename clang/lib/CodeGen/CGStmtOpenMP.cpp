@@ -1535,16 +1535,10 @@ emitScheduleClause(CodeGenFunction &CGF, const OMPLoopDirective &S,
     M2 = C->getSecondScheduleModifier();
     if (const auto *Ch = C->getChunkSize()) {
       if (auto *ImpRef = cast_or_null<DeclRefExpr>(C->getHelperChunkSize())) {
-        if (OuterRegion) {
-          const VarDecl *ImpVar = cast<VarDecl>(ImpRef->getDecl());
-          CGF.EmitVarDecl(*ImpVar);
-          CGF.EmitStoreThroughLValue(
-              CGF.EmitAnyExpr(Ch),
-              CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(ImpVar),
-                                 ImpVar->getType()));
-        } else {
+        if (OuterRegion)
+          CGF.EmitVarDecl(*cast<VarDecl>(ImpRef->getDecl()));
+        else
           Ch = ImpRef;
-        }
       }
       if (!C->getHelperChunkSize() || !OuterRegion) {
         Chunk = CGF.EmitScalarExpr(Ch);

@@ -309,7 +309,7 @@ StringRef CodeCompletionTUInfo::getParentName(const DeclContext *DC) {
         if (!Interface) {
           // Assign an empty StringRef but with non-null data to distinguish
           // between empty because we didn't process the DeclContext yet.
-          CachedParentName = StringRef((const char *)~0U, 0);
+          CachedParentName = StringRef((const char *)(uintptr_t)~0U, 0);
           return StringRef();
         }
         

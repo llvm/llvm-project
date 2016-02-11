@@ -940,6 +940,9 @@ public:
     return false;
   }
 
+  /// \brief Whether target allows to overalign ABI-specified prefered alignment
+  virtual bool allowsLargerPreferedTypeAlignment() const { return true; }
+
 protected:
   virtual uint64_t getPointerWidthV(unsigned AddrSpace) const {
     return PointerWidth;
