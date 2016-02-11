@@ -49,6 +49,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
@@ -1893,11 +1894,12 @@ SBTarget::FindTypes (const char* typename_cstr)
         bool exact_match = false;
         SymbolContext sc;
         TypeList type_list;
-        
+        llvm::DenseSet<SymbolFile *> searched_symbol_files;
         uint32_t num_matches = images.FindTypes (sc,
                                                  const_typename,
                                                  exact_match,
                                                  UINT32_MAX,
+                                                 searched_symbol_files,
                                                  type_list);
         
         if (num_matches > 0)

@@ -750,6 +750,45 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   this->Header.sh_size = Off;
 }
 
+// If an input string is in the form of "foo.N" where N is a number,
+// return N. Otherwise, returns 65536, which is one greater than the
+// lowest priority.
+static int getPriority(StringRef S) {
+  size_t Pos = S.rfind('.');
+  if (Pos == StringRef::npos)
+    return 65536;
+  int V;
+  if (S.substr(Pos + 1).getAsInteger(10, V))
+    return 65536;
+  return V;
+}
+
+// Sorts input sections by section name suffixes, so that .foo.N comes
+// before .foo.M if N < M. Used to sort .{init,fini}_array.N sections.
+// For more detail, read the section of the GCC's manual about init_priority.
+template <class ELFT> void OutputSection<ELFT>::sortByPriority() {
+  // Sort sections by priority.
+  typedef std::pair<int, InputSection<ELFT> *> Pair;
+  auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
+
+  std::vector<Pair> V;
+  for (InputSection<ELFT> *S : Sections)
+    V.push_back({getPriority(S->getSectionName()), S});
+  std::stable_sort(V.begin(), V.end(), Comp);
+  Sections.clear();
+  for (Pair &P : V)
+    Sections.push_back(P.second);
+
+  // Reassign section addresses.
+  uintX_t Off = 0;
+  for (InputSection<ELFT> *S : Sections) {
+    Off = alignTo(Off, S->getAlign());
+    S->OutSecOff = Off;
+    Off += S->getSize();
+  }
+  this->Header.sh_size = Off;
+}
+
 // Returns a VA which a relocatin RI refers to. Used only for local symbols.
 // For non-local symbols, use SymbolBody::getVA instead.
 template <class ELFT, bool IsRela>

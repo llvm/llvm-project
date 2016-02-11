@@ -13,6 +13,7 @@
 #include "SymbolTable.h"
 #include "Target.h"
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -41,6 +42,19 @@ public:
   void run();
 
 private:
+  // This describes a program header entry.
+  // Each contains type, access flags and range of output sections that will be
+  // placed in it.
+  struct Phdr {
+    Phdr(unsigned Type, unsigned Flags) {
+      H.p_type = Type;
+      H.p_flags = Flags;
+    }
+    Elf_Phdr H = {};
+    OutputSectionBase<ELFT> *First = nullptr;
+    OutputSectionBase<ELFT> *Last = nullptr;
+  };
+
   void copyLocalSymbols();
   void addReservedSymbols();
   bool createSections();
@@ -52,7 +66,7 @@ private:
 
   void scanRelocs(InputSection<ELFT> &C);
   void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
-  void updateRelro(Elf_Phdr *Cur, Elf_Phdr *GnuRelroPhdr, uintX_t VA);
+  void createPhdrs();
   void assignAddresses();
   void buildSectionMap();
   void fixAbsoluteSymbols();
@@ -67,7 +81,6 @@ private:
   bool isOutputDynamic() const {
     return !Symtab.getSharedFiles().empty() || Config->Shared;
   }
-  int getPhdrsNum() const;
 
   OutputSection<ELFT> *getBss();
   void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
@@ -78,18 +91,22 @@ private:
   BumpPtrAllocator Alloc;
   std::vector<OutputSectionBase<ELFT> *> OutputSections;
   std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> OwningSections;
-  unsigned getNumSections() const { return OutputSections.size() + 1; }
+
+  // We create a section for the ELF header and one for the program headers.
+  const unsigned NumDummySections = 2;
+  ArrayRef<OutputSectionBase<ELFT> *> getSections() const {
+    return makeArrayRef(OutputSections).slice(NumDummySections);
+  }
+  unsigned getNumSections() const {
+    return OutputSections.size() + 1 - NumDummySections;
+  }
 
   void addRelIpltSymbols();
   void addStartEndSymbols();
   void addStartStopSymbols(OutputSectionBase<ELFT> *Sec);
-  void setPhdr(Elf_Phdr *PH, uint32_t Type, uint32_t Flags, uintX_t FileOff,
-               uintX_t VA, uintX_t Size, uintX_t Align);
-  void copyPhdr(Elf_Phdr *PH, OutputSectionBase<ELFT> *From);
 
-  bool HasRelro = false;
   SymbolTable<ELFT> &Symtab;
-  std::vector<Elf_Phdr> Phdrs;
+  std::vector<Phdr> Phdrs;
 
   uintX_t FileSize;
   uintX_t SectionHeaderOff;
@@ -105,6 +122,8 @@ private:
 template <class ELFT> static bool shouldUseRela() { return ELFT::Is64Bits; }
 
 template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
+  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+
   // Create singleton output sections.
   bool IsRela = shouldUseRela<ELFT>();
   DynamicSection<ELFT> Dynamic(*Symtab);
@@ -116,6 +135,10 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   StringTableSection<ELFT> DynStrTab(".dynstr", true);
   StringTableSection<ELFT> ShStrTab(".shstrtab", false);
   SymbolTableSection<ELFT> DynSymTab(*Symtab, DynStrTab);
+
+  OutputSectionBase<ELFT> ElfHeader("", 0, SHF_ALLOC);
+  OutputSectionBase<ELFT> ProgramHeaders("", 0, SHF_ALLOC);
+  ProgramHeaders.updateAlign(sizeof(uintX_t));
 
   // Instantiate optional output sections if they are needed.
   std::unique_ptr<GnuHashTableSection<ELFT>> GnuHashTab;
@@ -159,6 +182,8 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   Out<ELFT>::Opd = nullptr;
   Out<ELFT>::OpdBuf = nullptr;
   Out<ELFT>::TlsPhdr = nullptr;
+  Out<ELFT>::ElfHeader = &ElfHeader;
+  Out<ELFT>::ProgramHeaders = &ProgramHeaders;
 
   Writer<ELFT>(*Symtab).run();
 }
@@ -171,6 +196,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   addReservedSymbols();
   if (!createSections())
     return;
+  createPhdrs();
   assignAddresses();
   fixAbsoluteSymbols();
   if (!openFile())
@@ -547,6 +573,8 @@ static int getPPC64SectionRank(StringRef SectionName) {
 }
 
 template <class ELFT> static bool isRelroSection(OutputSectionBase<ELFT> *Sec) {
+  if (!Config->ZRelro)
+    return false;
   typename OutputSectionBase<ELFT>::uintX_t Flags = Sec->getFlags();
   if (!(Flags & SHF_ALLOC) || !(Flags & SHF_WRITE))
     return false;
@@ -707,6 +735,10 @@ StringRef Writer<ELFT>::getOutputSectionName(StringRef S) const {
     return ".data";
   if (S.startswith(".bss."))
     return ".bss";
+  if (S.startswith(".init_array."))
+    return ".init_array";
+  if (S.startswith(".fini_array."))
+    return ".fini_array";
   return S;
 }
 
@@ -887,8 +919,18 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
       Symtab.addAbsolute("end", ElfSym<ELFT>::End);
 }
 
+// Sort input sections by section name suffixes for
+// __attribute__((init_priority(N))).
+template <class ELFT> static void sortByPriority(OutputSectionBase<ELFT> *S) {
+  if (S)
+    reinterpret_cast<OutputSection<ELFT> *>(S)->sortByPriority();
+}
+
 // Create output section objects and add them to OutputSections.
 template <class ELFT> bool Writer<ELFT>::createSections() {
+  OutputSections.push_back(Out<ELFT>::ElfHeader);
+  OutputSections.push_back(Out<ELFT>::ProgramHeaders);
+
   // Add .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
   if (needsInterpSection())
@@ -930,6 +972,10 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
       Factory.lookup(".init_array", SHT_INIT_ARRAY, SHF_WRITE | SHF_ALLOC);
   Out<ELFT>::Dynamic->FiniArraySec =
       Factory.lookup(".fini_array", SHT_FINI_ARRAY, SHF_WRITE | SHF_ALLOC);
+
+  // Sort section contents for __attribute__((init_priority(N)).
+  sortByPriority(Out<ELFT>::Dynamic->InitArraySec);
+  sortByPriority(Out<ELFT>::Dynamic->FiniArraySec);
 
   // The linker needs to define SECNAME_start, SECNAME_end and SECNAME_stop
   // symbols for sections, so that the runtime can get the start and end
@@ -994,12 +1040,10 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   std::stable_sort(OutputSections.begin(), OutputSections.end(),
                    compareSections<ELFT>);
 
-  for (unsigned I = 0, N = OutputSections.size(); I < N; ++I) {
-    OutputSections[I]->SectionIndex = I + 1;
-    HasRelro |= (Config->ZRelro && isRelroSection(OutputSections[I]));
-  }
+  for (unsigned I = NumDummySections, N = OutputSections.size(); I < N; ++I)
+    OutputSections[I]->SectionIndex = I + 1 - NumDummySections;
 
-  for (OutputSectionBase<ELFT> *Sec : OutputSections)
+  for (OutputSectionBase<ELFT> *Sec : getSections())
     Sec->setSHName(Out<ELFT>::ShStrTab->addString(Sec->getName()));
 
   // Finalizers fix each section's size.
@@ -1140,8 +1184,16 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
       Symtab.addSynthetic(Stop, *Sec, Sec->getSize());
 }
 
-template <class ELFT> static bool needsPhdr(OutputSectionBase<ELFT> *Sec) {
-  return Sec->getFlags() & SHF_ALLOC;
+template <class ELFT> static bool needsPtLoad(OutputSectionBase<ELFT> *Sec) {
+  if (!(Sec->getFlags() & SHF_ALLOC))
+    return false;
+
+  // Don't allocate VA space for TLS NOBITS sections. The PT_TLS PHDR is
+  // responsible for allocating space for them, not the PT_LOAD that
+  // contains the TLS initialization image.
+  if (Sec->getFlags() & SHF_TLS && Sec->getType() == SHT_NOBITS)
+    return false;
+  return true;
 }
 
 static uint32_t toPhdrFlags(uint64_t Flags) {
@@ -1165,141 +1217,142 @@ static uint32_t getAmdgpuPhdr(OutputSectionBase<ELFT> *Sec) {
   return PT_LOAD;
 }
 
-template <class ELFT>
-void Writer<ELFT>::updateRelro(Elf_Phdr *Cur, Elf_Phdr *GnuRelroPhdr,
-                               uintX_t VA) {
-  if (!GnuRelroPhdr->p_type)
-    setPhdr(GnuRelroPhdr, PT_GNU_RELRO, PF_R, Cur->p_offset, Cur->p_vaddr,
-            VA - Cur->p_vaddr, 1 /*p_align*/);
-  GnuRelroPhdr->p_filesz = VA - Cur->p_vaddr;
-  GnuRelroPhdr->p_memsz = VA - Cur->p_vaddr;
-}
+// Decide which program headers to create and which sections to include in each
+// one.
+template <class ELFT> void Writer<ELFT>::createPhdrs() {
+  auto AddHdr = [this](unsigned Type, unsigned Flags) {
+    return &*Phdrs.emplace(Phdrs.end(), Type, Flags);
+  };
 
-// Visits all sections to create PHDRs and to assign incremental,
-// non-overlapping addresses to output sections.
-template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uintX_t VA = Target->getVAStart() + sizeof(Elf_Ehdr);
-  uintX_t FileOff = sizeof(Elf_Ehdr);
-
-  // Calculate and reserve the space for the program header first so that
-  // the first section can start right after the program header.
-  Phdrs.resize(getPhdrsNum());
-  size_t PhdrSize = sizeof(Elf_Phdr) * Phdrs.size();
+  auto AddSec = [](Phdr &Hdr, OutputSectionBase<ELFT> *Sec) {
+    Hdr.Last = Sec;
+    if (!Hdr.First)
+      Hdr.First = Sec;
+    Hdr.H.p_align = std::max<uintX_t>(Hdr.H.p_align, Sec->getAlign());
+  };
 
   // The first phdr entry is PT_PHDR which describes the program header itself.
-  setPhdr(&Phdrs[0], PT_PHDR, PF_R, FileOff, VA, PhdrSize,
-          /*Align=*/sizeof(uintX_t));
-  FileOff += PhdrSize;
-  VA += PhdrSize;
+  Phdr &Hdr = *AddHdr(PT_PHDR, PF_R);
+  AddSec(Hdr, Out<ELFT>::ProgramHeaders);
 
   // PT_INTERP must be the second entry if exists.
-  int PhdrIdx = 0;
-  Elf_Phdr *Interp = nullptr;
-  if (needsInterpSection())
-    Interp = &Phdrs[++PhdrIdx];
+  if (needsInterpSection()) {
+    Phdr &Hdr = *AddHdr(PT_INTERP, toPhdrFlags(Out<ELFT>::Interp->getFlags()));
+    AddSec(Hdr, Out<ELFT>::Interp);
+  }
 
   // Add the first PT_LOAD segment for regular output sections.
-  setPhdr(&Phdrs[++PhdrIdx], PT_LOAD, PF_R, 0, Target->getVAStart(), FileOff,
-          Target->PageSize);
+  uintX_t Flags = PF_R;
+  Phdr *Load = AddHdr(PT_LOAD, Flags);
+  AddSec(*Load, Out<ELFT>::ElfHeader);
 
-  Elf_Phdr GnuRelroPhdr = {};
-  Elf_Phdr TlsPhdr{};
-  bool RelroAligned = false;
-  uintX_t ThreadBssOffset = 0;
-  // Create phdrs as we assign VAs and file offsets to all output sections.
+  Phdr TlsHdr(PT_TLS, PF_R);
+  Phdr RelRo(PT_GNU_RELRO, PF_R);
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    Elf_Phdr *PH = &Phdrs[PhdrIdx];
-    if (needsPhdr<ELFT>(Sec)) {
-      uintX_t Flags = toPhdrFlags(Sec->getFlags());
-      bool InRelRo = Config->ZRelro && (Flags & PF_W) && isRelroSection(Sec);
-      bool FirstNonRelRo = GnuRelroPhdr.p_type && !InRelRo && !RelroAligned;
-      if (FirstNonRelRo || PH->p_flags != Flags) {
-        VA = alignTo(VA, Target->PageSize);
-        FileOff = alignTo(FileOff, Target->PageSize);
-        if (FirstNonRelRo)
-          RelroAligned = true;
-      }
+    if (!(Sec->getFlags() & SHF_ALLOC))
+      break;
 
-      if (PH->p_flags != Flags) {
-        // Flags changed. Create a new PT_LOAD.
-        PH = &Phdrs[++PhdrIdx];
-        uint32_t PTType = (Config->EMachine != EM_AMDGPU) ? (uint32_t)PT_LOAD
-                                                          : getAmdgpuPhdr(Sec);
-        setPhdr(PH, PTType, Flags, FileOff, VA, 0, Target->PageSize);
-      }
+    // If we meet TLS section then we create TLS header
+    // and put all TLS sections inside for futher use when
+    // assign addresses.
+    if (Sec->getFlags() & SHF_TLS)
+      AddSec(TlsHdr, Sec);
 
-      if (Sec->getFlags() & SHF_TLS) {
-        if (!TlsPhdr.p_vaddr)
-          setPhdr(&TlsPhdr, PT_TLS, PF_R, FileOff, VA, 0, Sec->getAlign());
-        if (Sec->getType() != SHT_NOBITS)
-          VA = alignTo(VA, Sec->getAlign());
-        uintX_t TVA = alignTo(VA + ThreadBssOffset, Sec->getAlign());
-        Sec->setVA(TVA);
-        TlsPhdr.p_memsz += Sec->getSize();
-        if (Sec->getType() == SHT_NOBITS) {
-          ThreadBssOffset = TVA - VA + Sec->getSize();
-        } else {
-          TlsPhdr.p_filesz += Sec->getSize();
-          VA += Sec->getSize();
-        }
-        TlsPhdr.p_align = std::max<uintX_t>(TlsPhdr.p_align, Sec->getAlign());
-      } else {
-        VA = alignTo(VA, Sec->getAlign());
-        Sec->setVA(VA);
-        VA += Sec->getSize();
-      }
-      if (InRelRo)
-        updateRelro(PH, &GnuRelroPhdr, VA);
+    if (!needsPtLoad<ELFT>(Sec))
+      continue;
+
+    // If flags changed then we want new load segment.
+    uintX_t NewFlags = toPhdrFlags(Sec->getFlags());
+    if (Flags != NewFlags) {
+      uint32_t LoadType = (Config->EMachine == EM_AMDGPU) ? getAmdgpuPhdr(Sec)
+                                                          : (uint32_t)PT_LOAD;
+      Load = AddHdr(LoadType, NewFlags);
+      Flags = NewFlags;
     }
 
-    FileOff = alignTo(FileOff, Sec->getAlign());
-    Sec->setFileOffset(FileOff);
-    if (Sec->getType() != SHT_NOBITS)
-      FileOff += Sec->getSize();
-    if (needsPhdr<ELFT>(Sec)) {
-      PH->p_filesz = FileOff - PH->p_offset;
-      PH->p_memsz = VA - PH->p_vaddr;
-    }
+    AddSec(*Load, Sec);
+
+    if (isRelroSection(Sec))
+      AddSec(RelRo, Sec);
   }
 
-  if (TlsPhdr.p_vaddr) {
-    // The TLS pointer goes after PT_TLS. At least glibc will align it,
-    // so round up the size to make sure the offsets are correct.
-    TlsPhdr.p_memsz = alignTo(TlsPhdr.p_memsz, TlsPhdr.p_align);
-    Phdrs[++PhdrIdx] = TlsPhdr;
-    Out<ELFT>::TlsPhdr = &Phdrs[PhdrIdx];
-  }
+  // Add the TLS segment unless it's empty.
+  if (TlsHdr.First)
+    Phdrs.push_back(std::move(TlsHdr));
 
   // Add an entry for .dynamic.
   if (isOutputDynamic()) {
-    Elf_Phdr *PH = &Phdrs[++PhdrIdx];
-    PH->p_type = PT_DYNAMIC;
-    copyPhdr(PH, Out<ELFT>::Dynamic);
+    Phdr &H = *AddHdr(PT_DYNAMIC, toPhdrFlags(Out<ELFT>::Dynamic->getFlags()));
+    AddSec(H, Out<ELFT>::Dynamic);
   }
 
-  if (HasRelro) {
-    Elf_Phdr *PH = &Phdrs[++PhdrIdx];
-    *PH = GnuRelroPhdr;
-  }
+  // PT_GNU_RELRO includes all sections that should be marked as
+  // read-only by dynamic linker after proccessing relocations.
+  if (RelRo.First)
+    Phdrs.push_back(std::move(RelRo));
 
+  // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
   if (Out<ELFT>::EhFrameHdr->Live) {
-    Elf_Phdr *PH = &Phdrs[++PhdrIdx];
-    PH->p_type = PT_GNU_EH_FRAME;
-    copyPhdr(PH, Out<ELFT>::EhFrameHdr);
+    Phdr &Hdr = *AddHdr(PT_GNU_EH_FRAME,
+                        toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags()));
+    AddSec(Hdr, Out<ELFT>::EhFrameHdr);
   }
 
   // PT_GNU_STACK is a special section to tell the loader to make the
   // pages for the stack non-executable.
-  if (!Config->ZExecStack) {
-    Elf_Phdr *PH = &Phdrs[++PhdrIdx];
-    PH->p_type = PT_GNU_STACK;
-    PH->p_flags = PF_R | PF_W;
+  if (!Config->ZExecStack)
+    AddHdr(PT_GNU_STACK, PF_R | PF_W);
+}
+
+// Visits all headers in PhdrTable and assigns the adresses to
+// the output sections. Also creates common and special headers.
+template <class ELFT> void Writer<ELFT>::assignAddresses() {
+  Out<ELFT>::ElfHeader->setSize(sizeof(Elf_Ehdr));
+  size_t PhdrSize = sizeof(Elf_Phdr) * Phdrs.size();
+  Out<ELFT>::ProgramHeaders->setSize(PhdrSize);
+
+  // The first section of each PT_LOAD and the first section after PT_GNU_RELRO
+  // have to be page aligned so that the dynamic linker can set the permissions.
+  SmallPtrSet<OutputSectionBase<ELFT> *, 4> PageAlign;
+  for (const Phdr &P : Phdrs) {
+    if (P.H.p_type == PT_GNU_RELRO) {
+      // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
+      // have to align it to a page.
+      auto I = std::find(OutputSections.begin(), OutputSections.end(), P.Last);
+      ++I;
+      if (I != OutputSections.end() && needsPtLoad(*I))
+        PageAlign.insert(*I);
+    }
+
+    if (P.H.p_type == PT_LOAD)
+      PageAlign.insert(P.First);
   }
 
-  // Fix up PT_INTERP as we now know the address of .interp section.
-  if (Interp) {
-    Interp->p_type = PT_INTERP;
-    copyPhdr(Interp, Out<ELFT>::Interp);
+  uintX_t ThreadBssOffset = 0;
+  uintX_t VA = Target->getVAStart();
+  uintX_t FileOff = 0;
+
+  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
+    uintX_t Align = Sec->getAlign();
+    if (PageAlign.count(Sec))
+      Align = std::max<uintX_t>(Align, Target->PageSize);
+
+    FileOff = alignTo(FileOff, Align);
+    Sec->setFileOffset(FileOff);
+    if (Sec->getType() != SHT_NOBITS)
+      FileOff += Sec->getSize();
+
+    // We only assign VAs to allocated sections.
+    if (needsPtLoad<ELFT>(Sec)) {
+      VA = alignTo(VA, Align);
+      Sec->setVA(VA);
+      VA += Sec->getSize();
+    } else if (Sec->getFlags() & SHF_TLS && Sec->getType() == SHT_NOBITS) {
+      uintX_t TVA = VA + ThreadBssOffset;
+      TVA = alignTo(TVA, Align);
+      Sec->setVA(TVA);
+      ThreadBssOffset = TVA - VA + Sec->getSize();
+    }
   }
 
   // Add space for section headers.
@@ -1309,37 +1362,31 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
   // Update "_end" and "end" symbols so that they
   // point to the end of the data segment.
   ElfSym<ELFT>::End.st_value = VA;
-}
 
-// Returns the number of PHDR entries.
-template <class ELFT> int Writer<ELFT>::getPhdrsNum() const {
-  bool Tls = false;
-  int I = 2; // 2 for PT_PHDR and first PT_LOAD
-  if (needsInterpSection())
-    ++I;
-  if (isOutputDynamic())
-    ++I;
-  if (!Config->ZExecStack)
-    ++I;
-  uintX_t Last = PF_R;
-  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    if (!needsPhdr<ELFT>(Sec))
-      continue;
-    if (Sec->getFlags() & SHF_TLS)
-      Tls = true;
-    uintX_t Flags = toPhdrFlags(Sec->getFlags());
-    if (Last != Flags) {
-      Last = Flags;
-      ++I;
+  for (Phdr &PHdr : Phdrs) {
+    Elf_Phdr &H = PHdr.H;
+    if (PHdr.First) {
+      OutputSectionBase<ELFT> *Last = PHdr.Last;
+      H.p_filesz = Last->getFileOff() - PHdr.First->getFileOff();
+      if (Last->getType() != SHT_NOBITS)
+        H.p_filesz += Last->getSize();
+      H.p_memsz = Last->getVA() + Last->getSize() - PHdr.First->getVA();
+      H.p_offset = PHdr.First->getFileOff();
+      H.p_vaddr = PHdr.First->getVA();
+    }
+    if (PHdr.H.p_type == PT_LOAD)
+      H.p_align = Target->PageSize;
+    else if (PHdr.H.p_type == PT_GNU_RELRO)
+      H.p_align = 1;
+    H.p_paddr = H.p_vaddr;
+
+    // The TLS pointer goes after PT_TLS. At least glibc will align it,
+    // so round up the size to make sure the offsets are correct.
+    if (PHdr.H.p_type == PT_TLS) {
+      Out<ELFT>::TlsPhdr = &H;
+      H.p_memsz = alignTo(H.p_memsz, H.p_align);
     }
   }
-  if (Tls)
-    ++I;
-  if (HasRelro)
-    ++I;
-  if (Out<ELFT>::EhFrameHdr->Live)
-    ++I;
-  return I;
 }
 
 static uint32_t getELFFlags() {
@@ -1412,11 +1459,13 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_shstrndx = Out<ELFT>::ShStrTab->SectionIndex;
 
   // Write the program header table.
-  memcpy(Buf + EHdr->e_phoff, &Phdrs[0], Phdrs.size() * sizeof(Phdrs[0]));
+  auto *HBuf = reinterpret_cast<Elf_Phdr *>(Buf + EHdr->e_phoff);
+  for (Phdr &P : Phdrs)
+    *HBuf++ = P.H;
 
   // Write the section header table. Note that the first table entry is null.
   auto SHdrs = reinterpret_cast<Elf_Shdr *>(Buf + EHdr->e_shoff);
-  for (OutputSectionBase<ELFT> *Sec : OutputSections)
+  for (OutputSectionBase<ELFT> *Sec : getSections())
     Sec->writeHeaderTo(++SHdrs);
 }
 
@@ -1444,31 +1493,6 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
     if (Sec != Out<ELFT>::Opd)
       Sec->writeTo(Buf + Sec->getFileOff());
-}
-
-template <class ELFT>
-void Writer<ELFT>::setPhdr(Elf_Phdr *PH, uint32_t Type, uint32_t Flags,
-                           uintX_t FileOff, uintX_t VA, uintX_t Size,
-                           uintX_t Align) {
-  PH->p_type = Type;
-  PH->p_flags = Flags;
-  PH->p_offset = FileOff;
-  PH->p_vaddr = VA;
-  PH->p_paddr = VA;
-  PH->p_filesz = Size;
-  PH->p_memsz = Size;
-  PH->p_align = Align;
-}
-
-template <class ELFT>
-void Writer<ELFT>::copyPhdr(Elf_Phdr *PH, OutputSectionBase<ELFT> *From) {
-  PH->p_flags = toPhdrFlags(From->getFlags());
-  PH->p_offset = From->getFileOff();
-  PH->p_vaddr = From->getVA();
-  PH->p_paddr = From->getVA();
-  PH->p_filesz = From->getSize();
-  PH->p_memsz = From->getSize();
-  PH->p_align = From->getAlign();
 }
 
 template <class ELFT> void Writer<ELFT>::buildSectionMap() {

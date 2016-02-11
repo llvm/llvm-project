@@ -17,6 +17,8 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Type.h"
 
+#include "llvm/ADT/DenseSet.h"
+
 namespace lldb_private {
 
 class SymbolFile :
@@ -141,7 +143,7 @@ public:
     virtual uint32_t        FindGlobalVariables (const RegularExpression& regex, bool append, uint32_t max_matches, VariableList& variables);
     virtual uint32_t        FindFunctions (const ConstString &name, const CompilerDeclContext *parent_decl_ctx, uint32_t name_type_mask, bool include_inlines, bool append, SymbolContextList& sc_list);
     virtual uint32_t        FindFunctions (const RegularExpression& regex, bool include_inlines, bool append, SymbolContextList& sc_list);
-    virtual uint32_t        FindTypes (const SymbolContext& sc, const ConstString &name, const CompilerDeclContext *parent_decl_ctx, bool append, uint32_t max_matches, TypeMap& types);
+    virtual uint32_t        FindTypes (const SymbolContext& sc, const ConstString &name, const CompilerDeclContext *parent_decl_ctx, bool append, uint32_t max_matches, llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files, TypeMap& types);
     virtual size_t          FindTypes (const std::vector<CompilerContext> &context, bool append, TypeMap& types);
 
     virtual void            GetMangledNamesForFunction(const std::string &scope_qualified_name, std::vector<ConstString> &mangled_names);

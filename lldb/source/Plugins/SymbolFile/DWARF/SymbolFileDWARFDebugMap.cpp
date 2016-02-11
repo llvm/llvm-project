@@ -1276,7 +1276,8 @@ SymbolFileDWARFDebugMap::FindTypes
     const ConstString &name,
     const CompilerDeclContext *parent_decl_ctx,
     bool append,
-    uint32_t max_matches, 
+    uint32_t max_matches,
+    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap& types
 )
 {
@@ -1290,12 +1291,12 @@ SymbolFileDWARFDebugMap::FindTypes
     {
         oso_dwarf = GetSymbolFile (sc);
         if (oso_dwarf)
-            return oso_dwarf->FindTypes (sc, name, parent_decl_ctx, append, max_matches, types);
+            return oso_dwarf->FindTypes (sc, name, parent_decl_ctx, append, max_matches, searched_symbol_files, types);
     }
     else
     {
         ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-            oso_dwarf->FindTypes (sc, name, parent_decl_ctx, append, max_matches, types);
+            oso_dwarf->FindTypes (sc, name, parent_decl_ctx, append, max_matches, searched_symbol_files, types);
             return false;
         });
     }

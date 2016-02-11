@@ -21,6 +21,7 @@
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -555,10 +556,12 @@ SBModule::FindTypes (const char *type)
         TypeList type_list;
         const bool exact_match = false;
         ConstString name(type);
+        llvm::DenseSet<SymbolFile *> searched_symbol_files;
         const uint32_t num_matches = module_sp->FindTypes (sc,
                                                            name,
                                                            exact_match,
                                                            UINT32_MAX,
+                                                           searched_symbol_files,
                                                            type_list);
         
         if (num_matches > 0)

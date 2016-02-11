@@ -1564,6 +1564,10 @@ class _LIBCPP_TYPE_VIS_ONLY function<_Rp(_ArgTypes...)>
     typename aligned_storage<3*sizeof(void*)>::type __buf_;
     __base* __f_;
 
+    _LIBCPP_NO_CFI static __base *__as_base(void *p) {
+      return reinterpret_cast<__base*>(p);
+    }
+
     template <class _Fp, bool = !is_same<_Fp, function>::value &&
                                 __invokable<_Fp&, _ArgTypes...>::value>
         struct __callable;
@@ -1660,9 +1664,9 @@ function<_Rp(_ArgTypes...)>::function(const function& __f)
 {
     if (__f.__f_ == 0)
         __f_ = 0;
-    else if (__f.__f_ == (const __base*)&__f.__buf_)
+    else if ((void *)__f.__f_ == &__f.__buf_)
     {
-        __f_ = (__base*)&__buf_;
+        __f_ = __as_base(&__buf_);
         __f.__f_->__clone(__f_);
     }
     else
@@ -1676,9 +1680,9 @@ function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
 {
     if (__f.__f_ == 0)
         __f_ = 0;
-    else if (__f.__f_ == (const __base*)&__f.__buf_)
+    else if ((void *)__f.__f_ == &__f.__buf_)
     {
-        __f_ = (__base*)&__buf_;
+        __f_ = __as_base(&__buf_);
         __f.__f_->__clone(__f_);
     }
     else
@@ -1690,9 +1694,9 @@ function<_Rp(_ArgTypes...)>::function(function&& __f) _NOEXCEPT
 {
     if (__f.__f_ == 0)
         __f_ = 0;
-    else if (__f.__f_ == (__base*)&__f.__buf_)
+    else if ((void *)__f.__f_ == &__f.__buf_)
     {
-        __f_ = (__base*)&__buf_;
+        __f_ = __as_base(&__buf_);
         __f.__f_->__clone(__f_);
     }
     else
@@ -1709,9 +1713,9 @@ function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
 {
     if (__f.__f_ == 0)
         __f_ = 0;
-    else if (__f.__f_ == (__base*)&__f.__buf_)
+    else if ((void *)__f.__f_ == &__f.__buf_)
     {
-        __f_ = (__base*)&__buf_;
+        __f_ = __as_base(&__buf_);
         __f.__f_->__clone(__f_);
     }
     else
@@ -1736,8 +1740,7 @@ function<_Rp(_ArgTypes...)>::function(_Fp __f,
         typedef __function::__func<_Fp, allocator<_Fp>, _Rp(_ArgTypes...)> _FF;
         if (sizeof(_FF) <= sizeof(__buf_) && is_nothrow_copy_constructible<_Fp>::value)
         {
-            __f_ = (__base*)&__buf_;
-            ::new (__f_) _FF(_VSTD::move(__f));
+            __f_ = ::new((void*)&__buf_) _FF(_VSTD::move(__f));
         }
         else
         {
@@ -1766,8 +1769,7 @@ function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc& __a0, _Fp _
         if (sizeof(_FF) <= sizeof(__buf_) && 
             is_nothrow_copy_constructible<_Fp>::value && is_nothrow_copy_constructible<_Ap>::value)
         {
-            __f_ = (__base*)&__buf_;
-            ::new (__f_) _FF(_VSTD::move(__f), _Alloc(__a));
+            __f_ = ::new((void*)&__buf_) _FF(_VSTD::move(__f), _Alloc(__a));
         }
         else
         {
@@ -1791,16 +1793,16 @@ template<class _Rp, class ..._ArgTypes>
 function<_Rp(_ArgTypes...)>&
 function<_Rp(_ArgTypes...)>::operator=(function&& __f) _NOEXCEPT
 {
-    if (__f_ == (__base*)&__buf_)
+    if ((void *)__f_ == &__buf_)
         __f_->destroy();
     else if (__f_)
         __f_->destroy_deallocate();
     __f_ = 0;
     if (__f.__f_ == 0)
         __f_ = 0;
-    else if (__f.__f_ == (__base*)&__f.__buf_)
+    else if ((void *)__f.__f_ == &__f.__buf_)
     {
-        __f_ = (__base*)&__buf_;
+        __f_ = __as_base(&__buf_);
         __f.__f_->__clone(__f_);
     }
     else
@@ -1815,7 +1817,7 @@ template<class _Rp, class ..._ArgTypes>
 function<_Rp(_ArgTypes...)>&
 function<_Rp(_ArgTypes...)>::operator=(nullptr_t) _NOEXCEPT
 {
-    if (__f_ == (__base*)&__buf_)
+    if ((void *)__f_ == &__buf_)
         __f_->destroy();
     else if (__f_)
         __f_->destroy_deallocate();
@@ -1840,7 +1842,7 @@ function<_Rp(_ArgTypes...)>::operator=(_Fp&& __f)
 template<class _Rp, class ..._ArgTypes>
 function<_Rp(_ArgTypes...)>::~function()
 {
-    if (__f_ == (__base*)&__buf_)
+    if ((void *)__f_ == &__buf_)
         __f_->destroy();
     else if (__f_)
         __f_->destroy_deallocate();
@@ -1850,34 +1852,34 @@ template<class _Rp, class ..._ArgTypes>
 void
 function<_Rp(_ArgTypes...)>::swap(function& __f) _NOEXCEPT
 {
-    if (__f_ == (__base*)&__buf_ && __f.__f_ == (__base*)&__f.__buf_)
+    if ((void *)__f_ == &__buf_ && (void *)__f.__f_ == &__f.__buf_)
     {
         typename aligned_storage<sizeof(__buf_)>::type __tempbuf;
-        __base* __t = (__base*)&__tempbuf;
+        __base* __t = __as_base(&__tempbuf);
         __f_->__clone(__t);
         __f_->destroy();
         __f_ = 0;
-        __f.__f_->__clone((__base*)&__buf_);
+        __f.__f_->__clone(__as_base(&__buf_));
         __f.__f_->destroy();
         __f.__f_ = 0;
-        __f_ = (__base*)&__buf_;
-        __t->__clone((__base*)&__f.__buf_);
+        __f_ = __as_base(&__buf_);
+        __t->__clone(__as_base(&__f.__buf_));
         __t->destroy();
-        __f.__f_ = (__base*)&__f.__buf_;
+        __f.__f_ = __as_base(&__f.__buf_);
     }
-    else if (__f_ == (__base*)&__buf_)
+    else if ((void *)__f_ == &__buf_)
     {
-        __f_->__clone((__base*)&__f.__buf_);
+        __f_->__clone(__as_base(&__f.__buf_));
         __f_->destroy();
         __f_ = __f.__f_;
-        __f.__f_ = (__base*)&__f.__buf_;
+        __f.__f_ = __as_base(&__f.__buf_);
     }
-    else if (__f.__f_ == (__base*)&__f.__buf_)
+    else if ((void *)__f.__f_ == &__f.__buf_)
     {
-        __f.__f_->__clone((__base*)&__buf_);
+        __f.__f_->__clone(__as_base(&__buf_));
         __f.__f_->destroy();
         __f.__f_ = __f_;
-        __f_ = (__base*)&__buf_;
+        __f_ = __as_base(&__buf_);
     }
     else
         _VSTD::swap(__f_, __f.__f_);

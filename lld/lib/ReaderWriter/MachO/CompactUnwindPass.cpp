@@ -59,7 +59,7 @@ struct CompactUnwindEntry {
 };
 
 struct UnwindInfoPage {
-  std::vector<CompactUnwindEntry> entries;
+  ArrayRef<CompactUnwindEntry> entries;
 };
 }
 
@@ -179,7 +179,7 @@ public:
     }
 
     // Finally, write out the final sentinel index
-    CompactUnwindEntry &finalEntry = pages[pages.size() - 1].entries.back();
+    auto &finalEntry = pages[pages.size() - 1].entries.back();
     addImageReference(_topLevelIndexOffset +
                           3 * pages.size() * sizeof(uint32_t),
                       finalEntry.rangeStart, finalEntry.rangeLength);
@@ -323,26 +323,23 @@ private:
     // boundaries. That might be worth doing, or perhaps we could perform some
     // minor balancing for expected number of lookups.
     std::vector<UnwindInfoPage> pages;
-    unsigned pageStart = 0;
+    auto remainingInfos = llvm::makeArrayRef(unwindInfos);
     do {
       pages.push_back(UnwindInfoPage());
 
       // FIXME: we only create regular pages at the moment. These can hold up to
       // 1021 entries according to the documentation.
-      unsigned entriesInPage =
-          std::min(1021U, (unsigned)unwindInfos.size() - pageStart);
+      unsigned entriesInPage = std::min(1021U, (unsigned)remainingInfos.size());
 
-      std::copy(unwindInfos.begin() + pageStart,
-                unwindInfos.begin() + pageStart + entriesInPage,
-                std::back_inserter(pages.back().entries));
-      pageStart += entriesInPage;
+      pages.back().entries = remainingInfos.slice(0, entriesInPage);
+      remainingInfos = remainingInfos.slice(entriesInPage);
 
       DEBUG(llvm::dbgs()
             << "    Page from " << pages.back().entries[0].rangeStart->name()
             << " to " << pages.back().entries.back().rangeStart->name() << " + "
             << llvm::format("0x%x", pages.back().entries.back().rangeLength)
             << " has " << entriesInPage << " entries\n");
-    } while (pageStart < unwindInfos.size());
+    } while (!remainingInfos.empty());
 
     auto *unwind = new (_file.allocator())
         UnwindInfoAtom(_archHandler, _file, _isBig, personalities,
