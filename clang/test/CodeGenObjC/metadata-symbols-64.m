@@ -11,7 +11,7 @@
 // CHECK: @"\01l_OBJC_$_CLASS_METHODS_A" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_PROTOCOL_INSTANCE_METHODS_P" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_$_PROTOCOL_CLASS_METHODS_P" = private global {{.*}} section "__DATA, __objc_const", align 8
-// CHECK: @"\01l_OBJC_PROTOCOL_$_P" = weak hidden global {{.*}} section "__DATA,__datacoal_nt,coalesced", align 8
+// CHECK: @"\01l_OBJC_PROTOCOL_$_P" = weak hidden global {{.*}}, align 8
 // CHECK: @"\01l_OBJC_LABEL_PROTOCOL_$_P" = weak hidden global {{.*}} section "__DATA, __objc_protolist, coalesced, no_dead_strip", align 8
 // CHECK: @"\01l_OBJC_CLASS_PROTOCOLS_$_A" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_METACLASS_RO_$_A" = private global {{.*}} section "__DATA, __objc_const", align 8
