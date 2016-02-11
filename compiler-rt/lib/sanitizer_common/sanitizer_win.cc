@@ -744,8 +744,17 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
 #endif
   uptr access_addr = exception_record->ExceptionInformation[1];
 
-  WriteFlag write_flag = SignalContext::UNKNOWN;  // FIXME: compute this.
-  bool is_memory_access = false;                  // FIXME: compute this.
+  // The contents of this array are documented at
+  // https://msdn.microsoft.com/en-us/library/windows/desktop/aa363082(v=vs.85).aspx
+  // The first element indicates read as 0, write as 1, or execute as 8.  The
+  // second element is the faulting address.
+  WriteFlag write_flag = SignalContext::UNKNOWN;
+  switch (exception_record->ExceptionInformation[0]) {
+  case 0: write_flag = SignalContext::READ; break;
+  case 1: write_flag = SignalContext::WRITE; break;
+  case 8: write_flag = SignalContext::UNKNOWN; break;
+  }
+  bool is_memory_access = write_flag != SignalContext::UNKNOWN;
   return SignalContext(context, access_addr, pc, sp, bp, is_memory_access,
                        write_flag);
 }
