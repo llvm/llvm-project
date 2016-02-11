@@ -5374,6 +5374,7 @@ namespace {
   struct FunctionTypeUnwrapper {
     enum WrapKind {
       Desugar,
+      Attributed,
       Parens,
       Pointer,
       BlockPointer,
@@ -5406,6 +5407,9 @@ namespace {
         } else if (isa<ReferenceType>(Ty)) {
           T = cast<ReferenceType>(Ty)->getPointeeType();
           Stack.push_back(Reference);
+        } else if (isa<AttributedType>(Ty)) {
+          T = cast<AttributedType>(Ty)->getEquivalentType();
+          Stack.push_back(Attributed);
         } else {
           const Type *DTy = Ty->getUnqualifiedDesugaredType();
           if (Ty == DTy) {
@@ -5453,6 +5457,9 @@ namespace {
         // This is the point at which we potentially lose source
         // information.
         return wrap(C, Old->getUnqualifiedDesugaredType(), I);
+
+      case Attributed:
+        return wrap(C, cast<AttributedType>(Old)->getEquivalentType(), I);
 
       case Parens: {
         QualType New = wrap(C, cast<ParenType>(Old)->getInnerType(), I);

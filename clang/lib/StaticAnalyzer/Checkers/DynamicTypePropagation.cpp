@@ -1,4 +1,4 @@
-//== DynamicTypePropagation.cpp -------------------------------- -*- C++ -*--=//
+//===- DynamicTypePropagation.cpp ------------------------------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -97,6 +97,7 @@ class DynamicTypePropagation:
                          const ObjCObjectPointerType *To, ExplodedNode *N,
                          SymbolRef Sym, CheckerContext &C,
                          const Stmt *ReportedNode = nullptr) const;
+
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
@@ -109,7 +110,7 @@ public:
   /// This value is set to true, when the Generics checker is turned on.
   DefaultBool CheckGenerics;
 };
-}
+} // end anonymous namespace
 
 void DynamicTypePropagation::checkDeadSymbols(SymbolReaper &SR,
                                               CheckerContext &C) const {
@@ -151,7 +152,6 @@ static void recordFixedType(const MemRegion *Region, const CXXMethodDecl *MD,
   ProgramStateRef State = C.getState();
   State = setDynamicTypeInfo(State, Region, Ty, /*CanBeSubclass=*/false);
   C.addTransition(State);
-  return;
 }
 
 void DynamicTypePropagation::checkPreCall(const CallEvent &Call,
@@ -772,7 +772,6 @@ void DynamicTypePropagation::checkPostObjCMessage(const ObjCMethodCall &M,
   // class. This method is provided by the runtime and available on all classes.
   if (MessageExpr->getReceiverKind() == ObjCMessageExpr::Class &&
       Sel.getAsString() == "class") {
-
     QualType ReceiverType = MessageExpr->getClassReceiver();
     const auto *ReceiverClassType = ReceiverType->getAs<ObjCObjectType>();
     QualType ReceiverClassPointerType =

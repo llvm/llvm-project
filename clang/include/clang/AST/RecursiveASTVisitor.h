@@ -1434,7 +1434,7 @@ DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   }
 })
 
-DEF_TRAVERSE_DECL(OMPCapturedFieldDecl, { TRY_TO(TraverseVarHelper(D)); })
+DEF_TRAVERSE_DECL(OMPCapturedExprDecl, { TRY_TO(TraverseVarHelper(D)); })
 
 // A helper method for TemplateDecl's children.
 template <typename Derived>

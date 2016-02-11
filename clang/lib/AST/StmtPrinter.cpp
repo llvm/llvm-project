@@ -768,8 +768,8 @@ void OMPClausePrinter::VisitOMPClauseList(T *Node, char StartSym) {
     assert(*I && "Expected non-null Stmt");
     OS << (I == Node->varlist_begin() ? StartSym : ',');
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(*I)) {
-      if (auto *CFD = dyn_cast<OMPCapturedFieldDecl>(DRE->getDecl()))
-        CFD->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy, 0);
+      if (auto *CED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl()))
+        CED->getInit()->printPretty(OS, nullptr, Policy, 0);
       else
         DRE->getDecl()->printQualifiedName(OS);
     } else

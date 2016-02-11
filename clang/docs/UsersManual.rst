@@ -1694,10 +1694,6 @@ GCC extensions not implemented yet
 clang tries to be compatible with gcc as much as possible, but some gcc
 extensions are not implemented yet:
 
--  clang does not support #pragma weak (`bug
-   3679 <http://llvm.org/bugs/show_bug.cgi?id=3679>`_). Due to the uses
-   described in the bug, this is likely to be implemented at some point,
-   at least partially.
 -  clang does not support decimal floating point types (``_Decimal32`` and
    friends) or fixed-point types (``_Fract`` and friends); nobody has
    expressed interest in these features yet, so it's hard to say when
@@ -1715,12 +1711,6 @@ extensions are not implemented yet:
      ...
      local_function(1);
 
--  clang does not support global register variables; this is unlikely to
-   be implemented soon because it requires additional LLVM backend
-   support.
--  clang does not support static initialization of flexible array
-   members. This appears to be a rarely used extension, but could be
-   implemented pending user demand.
 -  clang does not support
    ``__builtin_va_arg_pack``/``__builtin_va_arg_pack_len``. This is
    used rarely, but in some potentially interesting places, like the

@@ -61,6 +61,7 @@ Clang-Tidy Checks
    misc-sizeof-container
    misc-static-assert
    misc-string-integer-assignment
+   misc-suspicious-semicolon
    misc-swapped-arguments
    misc-throw-by-value-catch-by-reference
    misc-undelegated-constructor

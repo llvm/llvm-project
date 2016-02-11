@@ -243,6 +243,7 @@ static NestedNameSpecifier *getFullyQualifiedNestedNameSpecifier(
       return Scope;
     }
   }
+  llvm_unreachable("bad NNS kind");
 }
 
 /// \brief Create a nested name specifier for the declaring context of

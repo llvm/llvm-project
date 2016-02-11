@@ -3911,6 +3911,8 @@ public:
   MCUX86_32TargetInfo(const llvm::Triple &Triple) : X86_32TargetInfo(Triple) {
     LongDoubleWidth = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    DataLayoutString =
+        "e-m:e-p:32:32-i64:32-f64:32-f128:32-n8:16:32-a:0:32-S32";
     UserLabelPrefix = "";
     WIntType = UnsignedInt;
   }
@@ -3925,6 +3927,10 @@ public:
     X86_32TargetInfo::getTargetDefines(Opts, Builder);
     Builder.defineMacro("__iamcu");
     Builder.defineMacro("__iamcu__");
+  }
+
+  bool allowsLargerPreferedTypeAlignment() const override {
+    return false;
   }
 };
 
@@ -7490,6 +7496,9 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     // R0=ExceptionPointerRegister R1=ExceptionSelectorRegister
     return (RegNo < 2)? RegNo : -1;
+  }
+  bool allowsLargerPreferedTypeAlignment() const override {
+    return false;
   }
 };
 

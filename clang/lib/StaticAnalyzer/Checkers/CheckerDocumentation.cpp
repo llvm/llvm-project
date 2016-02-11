@@ -1,4 +1,4 @@
-//= CheckerDocumentation.cpp - Documentation checker ---------------*- C++ -*-//
+//===- CheckerDocumentation.cpp - Documentation checker ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -57,7 +57,6 @@ class CheckerDocumentation : public Checker< check::PreStmt<ReturnStmt>,
                                        check::Event<ImplicitNullDerefEvent>,
                                        check::ASTDecl<FunctionDecl> > {
 public:
-
   /// \brief Pre-visit the Statement.
   ///
   /// The method will be called before the analyzer core processes the
@@ -147,7 +146,6 @@ public:
   /// check::Bind
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &) const {}
 
-
   /// \brief Called whenever a symbol becomes dead.
   ///
   /// This callback should be used by the checkers to aggressively clean
@@ -189,7 +187,6 @@ public:
   void checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
                                  AnalysisManager &Mgr,
                                  BugReporter &BR) const {}
-
 
   /// \brief Evaluates function call.
   ///
@@ -310,12 +307,10 @@ public:
   void checkASTDecl(const FunctionDecl *D,
                     AnalysisManager &Mgr,
                     BugReporter &BR) const {}
-
 };
 
 void CheckerDocumentation::checkPostStmt(const DeclStmt *DS,
                                          CheckerContext &C) const {
-  return;
 }
 
 } // end namespace ento

@@ -56,5 +56,5 @@ void e() {
 
 // CHECK-LABEL: define void @_Z1ev(
 // CHECK: call void @_ZN1AC1Ev(%struct.A* nonnull @_ZZ1evE1a)
-// CHECK: call {{.*}}@llvm.invariant.start(i64 4, i8* nonnull bitcast ({{.*}} @_ZZ1evE1a to i8*))
+// CHECK: call {{.*}}@llvm.invariant.start(i64 4, i8* {{.*}}bitcast ({{.*}} @_ZZ1evE1a to i8*))
 // CHECK-NOT: llvm.invariant.end

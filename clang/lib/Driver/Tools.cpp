@@ -5917,11 +5917,8 @@ void Clang::AddClangCLArgs(const ArgList &Args, ArgStringList &CmdArgs,
 
   // Emit CodeView if -Z7 is present.
   *EmitCodeView = Args.hasArg(options::OPT__SLASH_Z7);
-  bool EmitDwarf = Args.hasArg(options::OPT_gdwarf);
-  // If we are emitting CV but not DWARF, don't build information that LLVM
-  // can't yet process.
-  if (*EmitCodeView && !EmitDwarf)
-    *DebugInfoKind = codegenoptions::DebugLineTablesOnly;
+  if (*EmitCodeView)
+    *DebugInfoKind = codegenoptions::LimitedDebugInfo;
   if (*EmitCodeView)
     CmdArgs.push_back("-gcodeview");
 

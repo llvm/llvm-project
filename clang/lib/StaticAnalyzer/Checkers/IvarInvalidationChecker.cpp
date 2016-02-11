@@ -1,4 +1,4 @@
-//=- IvarInvalidationChecker.cpp - -*- C++ -------------------------------*-==//
+//===- IvarInvalidationChecker.cpp ------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -43,7 +43,6 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-
 struct ChecksFilter {
   /// Check for missing invalidation method declarations.
   DefaultBool check_MissingInvalidationMethod;
@@ -55,7 +54,6 @@ struct ChecksFilter {
 };
 
 class IvarInvalidationCheckerImpl {
-
   typedef llvm::SmallSetVector<const ObjCMethodDecl*, 2> MethodSet;
   typedef llvm::DenseMap<const ObjCMethodDecl*,
                          const ObjCIvarDecl*> MethToIvarMapTy;
@@ -63,7 +61,6 @@ class IvarInvalidationCheckerImpl {
                          const ObjCIvarDecl*> PropToIvarMapTy;
   typedef llvm::DenseMap<const ObjCIvarDecl*,
                          const ObjCPropertyDecl*> IvarToPropMapTy;
-
 
   struct InvalidationInfo {
     /// Has the ivar been invalidated?
@@ -167,7 +164,7 @@ class IvarInvalidationCheckerImpl {
     void VisitObjCMessageExpr(const ObjCMessageExpr *ME);
 
     void VisitChildren(const Stmt *S) {
-      for (const Stmt *Child : S->children()) {
+      for (const auto *Child : S->children()) {
         if (Child)
           this->Visit(Child);
         if (CalledAnotherInvalidationMethod)
@@ -208,6 +205,7 @@ class IvarInvalidationCheckerImpl {
                                   const IvarToPropMapTy &IvarToPopertyMap,
                                   const ObjCInterfaceDecl *InterfaceD,
                                   bool MissingDeclaration) const;
+
   void reportIvarNeedsInvalidation(const ObjCIvarDecl *IvarD,
                                    const IvarToPropMapTy &IvarToPopertyMap,
                                    const ObjCMethodDecl *MethodD) const;
@@ -276,8 +274,6 @@ void IvarInvalidationCheckerImpl::containsInvalidationMethod(
     }
     return;
   }
-
-  return;
 }
 
 bool IvarInvalidationCheckerImpl::trackIvar(const ObjCIvarDecl *Iv,
@@ -724,11 +720,10 @@ void IvarInvalidationCheckerImpl::MethodCrawler::VisitObjCMessageExpr(
 
   VisitStmt(ME);
 }
-}
+} // end anonymous namespace
 
 // Register the checkers.
 namespace {
-
 class IvarInvalidationChecker :
   public Checker<check::ASTDecl<ObjCImplementationDecl> > {
 public:
@@ -740,7 +735,7 @@ public:
     Walker.visit(D);
   }
 };
-}
+} // end anonymous namespace
 
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
@@ -752,4 +747,3 @@ public:
 
 REGISTER_CHECKER(InstanceVariableInvalidation)
 REGISTER_CHECKER(MissingInvalidationMethod)
-

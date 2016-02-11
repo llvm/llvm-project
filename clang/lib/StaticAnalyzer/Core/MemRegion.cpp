@@ -35,7 +35,6 @@ template<typename RegionTy> struct MemRegionManagerTrait;
 
 template <typename RegionTy, typename A1>
 RegionTy* MemRegionManager::getRegion(const A1 a1) {
-
   const typename MemRegionManagerTrait<RegionTy>::SuperRegionTy *superRegion =
   MemRegionManagerTrait<RegionTy>::getSuperRegion(*this, a1);
 
@@ -74,7 +73,6 @@ RegionTy* MemRegionManager::getSubRegion(const A1 a1,
 
 template <typename RegionTy, typename A1, typename A2>
 RegionTy* MemRegionManager::getRegion(const A1 a1, const A2 a2) {
-
   const typename MemRegionManagerTrait<RegionTy>::SuperRegionTy *superRegion =
   MemRegionManagerTrait<RegionTy>::getSuperRegion(*this, a1, a2);
 
@@ -96,7 +94,6 @@ RegionTy* MemRegionManager::getRegion(const A1 a1, const A2 a2) {
 template <typename RegionTy, typename A1, typename A2>
 RegionTy* MemRegionManager::getSubRegion(const A1 a1, const A2 a2,
                                          const MemRegion *superRegion) {
-
   llvm::FoldingSetNodeID ID;
   RegionTy::ProfileRegion(ID, a1, a2, superRegion);
   void *InsertPos;
@@ -115,7 +112,6 @@ RegionTy* MemRegionManager::getSubRegion(const A1 a1, const A2 a2,
 template <typename RegionTy, typename A1, typename A2, typename A3>
 RegionTy* MemRegionManager::getSubRegion(const A1 a1, const A2 a2, const A3 a3,
                                          const MemRegion *superRegion) {
-
   llvm::FoldingSetNodeID ID;
   RegionTy::ProfileRegion(ID, a1, a2, a3, superRegion);
   void *InsertPos;
@@ -582,12 +578,10 @@ void MemRegion::printPretty(raw_ostream &os) const {
   os << "'";
   printPrettyAsExpr(os);
   os << "'";
-  return;
 }
 
 void MemRegion::printPrettyAsExpr(raw_ostream &os) const {
   llvm_unreachable("This region cannot be printed pretty.");
-  return;
 }
 
 bool VarRegion::canPrintPrettyAsExpr() const {
@@ -628,7 +622,6 @@ void FieldRegion::printPretty(raw_ostream &os) const {
   } else {
     os << "field " << "\'" << getDecl()->getName() << "'";
   }
-  return;
 }
 
 bool CXXBaseObjectRegion::canPrintPrettyAsExpr() const {
@@ -892,7 +885,6 @@ MemRegionManager::getCXXStaticTempObjectRegion(const Expr *Ex) {
 const CompoundLiteralRegion*
 MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
                                            const LocationContext *LC) {
-
   const MemRegion *sReg = nullptr;
 
   if (CL->isFileScope())
@@ -910,7 +902,6 @@ const ElementRegion*
 MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
                                    const MemRegion* superRegion,
                                    ASTContext &Ctx){
-
   QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
 
   llvm::FoldingSetNodeID ID;
