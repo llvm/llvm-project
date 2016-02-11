@@ -457,6 +457,9 @@ class FunctionIndexBitcodeReader {
   /// summary records.
   DenseMap<uint64_t, StringRef> ModuleIdMap;
 
+  /// Original source file name recorded in a bitcode record.
+  std::string SourceFileName;
+
 public:
   std::error_code error(BitcodeError E, const Twine &Message);
   std::error_code error(BitcodeError E);
@@ -3723,6 +3726,13 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       assert(MetadataList.size() == 0);
       MetadataList.resize(NumModuleMDs);
       break;
+    /// MODULE_CODE_SOURCE_FILENAME: [namechar x N]
+    case bitc::MODULE_CODE_SOURCE_FILENAME:
+      SmallString<128> ValueName;
+      if (convertToString(Record, 0, ValueName))
+        return error("Invalid record");
+      TheModule->setSourceFileName(ValueName);
+      break;
     }
     Record.clear();
   }
@@ -5482,24 +5492,30 @@ std::error_code FunctionIndexBitcodeReader::parseValueSymbolTable() {
         return error("Invalid record");
       unsigned ValueID = Record[0];
       uint64_t FuncOffset = Record[1];
-      std::unique_ptr<FunctionInfo> FuncInfo =
-          llvm::make_unique<FunctionInfo>(FuncOffset);
-      if (foundFuncSummary() && !IsLazy) {
+      assert(!IsLazy && "Lazy summary read only supported for combined index");
+      // Gracefully handle bitcode without a function summary section,
+      // which will simply not populate the index.
+      if (foundFuncSummary()) {
         DenseMap<uint64_t, std::unique_ptr<FunctionSummary>>::iterator SMI =
             SummaryMap.find(ValueID);
         assert(SMI != SummaryMap.end() && "Summary info not found");
+        std::unique_ptr<FunctionInfo> FuncInfo =
+            llvm::make_unique<FunctionInfo>(FuncOffset);
         FuncInfo->setFunctionSummary(std::move(SMI->second));
+        assert(!SourceFileName.empty());
+        std::string FunctionGlobalId = Function::getGlobalIdentifier(
+            ValueName, FuncInfo->functionSummary()->getFunctionLinkage(),
+            SourceFileName);
+        TheIndex->addFunctionInfo(FunctionGlobalId, std::move(FuncInfo));
       }
-      TheIndex->addFunctionInfo(ValueName, std::move(FuncInfo));
 
       ValueName.clear();
       break;
     }
     case bitc::VST_CODE_COMBINED_FNENTRY: {
-      // VST_CODE_FNENTRY: [offset, namechar x N]
-      if (convertToString(Record, 1, ValueName))
-        return error("Invalid record");
+      // VST_CODE_COMBINED_FNENTRY: [offset, funcguid]
       uint64_t FuncSummaryOffset = Record[0];
+      uint64_t FuncGUID = Record[1];
       std::unique_ptr<FunctionInfo> FuncInfo =
           llvm::make_unique<FunctionInfo>(FuncSummaryOffset);
       if (foundFuncSummary() && !IsLazy) {
@@ -5508,7 +5524,7 @@ std::error_code FunctionIndexBitcodeReader::parseValueSymbolTable() {
         assert(SMI != SummaryMap.end() && "Summary info not found");
         FuncInfo->setFunctionSummary(std::move(SMI->second));
       }
-      TheIndex->addFunctionInfo(ValueName, std::move(FuncInfo));
+      TheIndex->addFunctionInfo(FuncGUID, std::move(FuncInfo));
 
       ValueName.clear();
       break;
@@ -5526,6 +5542,8 @@ std::error_code FunctionIndexBitcodeReader::parseValueSymbolTable() {
 std::error_code FunctionIndexBitcodeReader::parseModule() {
   if (Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
     return error("Invalid record");
+
+  SmallVector<uint64_t, 64> Record;
 
   // Read the function index for this module.
   while (1) {
@@ -5579,7 +5597,24 @@ std::error_code FunctionIndexBitcodeReader::parseModule() {
       continue;
 
     case BitstreamEntry::Record:
-      Stream.skipRecord(Entry.ID);
+      // Once we find the single record of interest, skip the rest.
+      if (!SourceFileName.empty())
+        Stream.skipRecord(Entry.ID);
+      else {
+        Record.clear();
+        auto BitCode = Stream.readRecord(Entry.ID, Record);
+        switch (BitCode) {
+        default:
+          break; // Default behavior, ignore unknown content.
+        /// MODULE_CODE_SOURCE_FILENAME: [namechar x N]
+        case bitc::MODULE_CODE_SOURCE_FILENAME:
+          SmallString<128> ValueName;
+          if (convertToString(Record, 0, ValueName))
+            return error("Invalid record");
+          SourceFileName = ValueName.c_str();
+          break;
+        }
+      }
       continue;
     }
   }
