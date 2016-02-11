@@ -962,6 +962,18 @@ TEST(TripleTest, getARMCPUForArch) {
     EXPECT_EQ("swift", Triple.getARMCPUForArch());
   }
   {
+    llvm::Triple Triple("armv7k-apple-ios9");
+    EXPECT_EQ("cortex-a7", Triple.getARMCPUForArch());
+  }
+  {
+    llvm::Triple Triple("armv7k-apple-watchos3");
+    EXPECT_EQ("cortex-a7", Triple.getARMCPUForArch());
+  }
+  {
+    llvm::Triple Triple("armv7k-apple-tvos9");
+    EXPECT_EQ("cortex-a7", Triple.getARMCPUForArch());
+  }
+  {
     llvm::Triple Triple("armv7em-apple-ios7");
     EXPECT_EQ("cortex-m4", Triple.getARMCPUForArch());
   }

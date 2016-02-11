@@ -1402,6 +1402,7 @@ StringRef Triple::getARMCPUForArch(StringRef MArch) const {
   case llvm::Triple::MacOSX:
   case llvm::Triple::IOS:
   case llvm::Triple::WatchOS:
+  case llvm::Triple::TvOS:
     if (MArch == "v7k")
       return "cortex-a7";
     break;
