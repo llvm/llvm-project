@@ -23,7 +23,6 @@ class SwiftNSErrorTest(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
-    @expectedFailureDarwin("rdar://24539482")
     @swiftTest
     def test_swift_nserror(self):
         """Tests that Swift displays NSError correctly"""
