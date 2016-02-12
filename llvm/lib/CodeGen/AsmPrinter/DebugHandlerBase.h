@@ -26,7 +26,7 @@ class MachineModuleInfo;
 
 /// Base class for debug information backends. Common functionality related to
 /// tracking which variables and scopes are alive at a given PC live here.
-class LLVM_LIBRARY_VISIBILITY DebugHandlerBase : public AsmPrinterHandler {
+class DebugHandlerBase : public AsmPrinterHandler {
 protected:
   DebugHandlerBase(AsmPrinter *A);
 

@@ -798,6 +798,7 @@ void NVPTXAsmPrinter::recordAndEmitFilenames(Module &M) {
     if (filenameMap.find(Filename) != filenameMap.end())
       continue;
     filenameMap[Filename] = i;
+    OutStreamer->EmitDwarfFileDirective(i, "", Filename);
     ++i;
   }
 }

@@ -206,24 +206,20 @@ struct FunCloner {
     }
 
     // Function argument should always be in the map already.
-    if (LLVMIsAArgument(Src)) {
-      auto i = VMap.find(Src);
-      if (i != VMap.end())
-        return i->second;
-    }
+    auto i = VMap.find(Src);
+    if (i != VMap.end())
+      return i->second;
 
-    if (LLVMIsAInstruction(Src)) {
-      auto Ctx = LLVMGetModuleContext(M);
-      auto Builder = LLVMCreateBuilderInContext(Ctx);
-      auto BB = DeclareBB(LLVMGetInstructionParent(Src));
-      LLVMPositionBuilderAtEnd(Builder, BB);
-      auto Dst = CloneInstruction(Src, Builder);
-      LLVMDisposeBuilder(Builder);
-      return Dst;
-    }
+    if (!LLVMIsAInstruction(Src))
+      report_fatal_error("Expected an instruction");
 
-    fprintf(stderr, "Could not determine the type of %s\n", Name);
-    exit(-1);
+    auto Ctx = LLVMGetModuleContext(M);
+    auto Builder = LLVMCreateBuilderInContext(Ctx);
+    auto BB = DeclareBB(LLVMGetInstructionParent(Src));
+    LLVMPositionBuilderAtEnd(Builder, BB);
+    auto Dst = CloneInstruction(Src, Builder);
+    LLVMDisposeBuilder(Builder);
+    return Dst;
   }
 
   LLVMValueRef CloneInstruction(LLVMValueRef Src, LLVMBuilderRef Builder) {
@@ -234,8 +230,15 @@ struct FunCloner {
     // Check if this is something we already computed.
     {
       auto i = VMap.find(Src);
-      if (i != VMap.end())
-        return i->second;
+      if (i != VMap.end()) {
+        // If we have a hit, it means we already generated the instruction
+        // as a dependancy to somethign else. We need to make sure
+        // it is ordered properly.
+        auto I = i->second;
+        LLVMInstructionRemoveFromParent(I);
+        LLVMInsertIntoBuilderWithName(Builder, I, Name);
+        return I;
+      }
     }
 
     // We tried everything, it must be an instruction
@@ -364,6 +367,22 @@ struct FunCloner {
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildICmp(Builder, Pred, LHS, RHS, Name);
         break;
+      }
+      case LLVMPHI: {
+        // We need to agressively set things here because of loops.
+        VMap[Src] = Dst = LLVMBuildPhi(Builder, CloneType(Src), Name);
+
+        SmallVector<LLVMValueRef, 8> Values;
+        SmallVector<LLVMBasicBlockRef, 8> Blocks;
+
+        unsigned IncomingCount = LLVMCountIncoming(Src);
+        for (unsigned i = 0; i < IncomingCount; ++i) {
+          Blocks.push_back(DeclareBB(LLVMGetIncomingBlock(Src, i)));
+          Values.push_back(CloneValue(LLVMGetIncomingValue(Src, i)));
+        }
+
+        LLVMAddIncoming(Dst, Values.data(), Blocks.data(), IncomingCount);
+        return Dst;
       }
       case LLVMCall: {
         SmallVector<LLVMValueRef, 8> Args;

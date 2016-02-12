@@ -235,9 +235,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Holders for the various debug information flags that we might need to
   /// have exposed. See accessor functions below for description.
 
-  /// Map from MDNodes for user-defined types to the type units that
-  /// describe them.
-  DenseMap<const MDNode *, const DwarfTypeUnit *> DwarfTypeUnits;
+  /// Map from MDNodes for user-defined types to their type signatures. Also
+  /// used to keep track of which types we have emitted type units for.
+  DenseMap<const MDNode *, uint64_t> TypeSignatures;
 
   SmallVector<
       std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
@@ -295,7 +295,7 @@ class DwarfDebug : public DebugHandlerBase {
 
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
 
-  const SmallVectorImpl<std::unique_ptr<DwarfUnit>> &getUnits() {
+  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return InfoHolder.getUnits();
   }
 
@@ -391,7 +391,7 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// Initialize common features of skeleton units.
   void initSkeletonUnit(const DwarfUnit &U, DIE &Die,
-                        std::unique_ptr<DwarfUnit> NewU);
+                        std::unique_ptr<DwarfCompileUnit> NewU);
 
   /// Construct the split debug info compile unit for the debug info
   /// section.

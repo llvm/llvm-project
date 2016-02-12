@@ -25,6 +25,13 @@ enum {
 #include "llvm/Target/TargetOpcodes.def"
 };
 } // end namespace TargetOpcode
+
+/// Check whether the given Opcode is a generic opcode that is not supposed
+/// to appear after ISel.
+static inline bool isPreISelGenericOpcode(unsigned Opcode) {
+  return Opcode >= TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START &&
+         Opcode <= TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
+}
 } // end namespace llvm
 
 #endif

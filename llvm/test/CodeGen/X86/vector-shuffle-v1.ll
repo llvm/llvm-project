@@ -308,9 +308,9 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; AVX512F-LABEL: shuf8i1__9_6_1_10_3_7_7_1:
 ; AVX512F:       # BB#0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    movb $51, %al
-; AVX512F-NEXT:    kmovw %eax, %k2
 ; AVX512F-NEXT:    movq {{.*}}(%rip), %rax
+; AVX512F-NEXT:    movb $51, %cl
+; AVX512F-NEXT:    kmovw %ecx, %k2
 ; AVX512F-NEXT:    vpbroadcastq %rax, %zmm0 {%k2} {z}
 ; AVX512F-NEXT:    vpbroadcastq %rax, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [9,6,1,0,3,7,7,1]

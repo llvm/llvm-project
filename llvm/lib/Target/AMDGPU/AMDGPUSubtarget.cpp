@@ -58,6 +58,11 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
     FP32Denormals = false;
     FP64Denormals = false;
   }
+
+  // Set defaults if needed.
+  if (MaxPrivateElementSize == 0)
+    MaxPrivateElementSize = 16;
+
   return *this;
 }
 
@@ -74,7 +79,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
       EnableUnsafeDSOffsetFolding(false),
       EnableXNACK(false),
       WavefrontSize(0), CFALUBug(false),
-      LocalMemorySize(0),
+      LocalMemorySize(0), MaxPrivateElementSize(0),
       EnableVGPRSpilling(false), SGPRInitBug(false), IsGCN(false),
       GCN1Encoding(false), GCN3Encoding(false), CIInsts(false), LDSBankCount(0),
       IsaVersion(ISAVersion0_0_0), EnableHugeScratchBuffer(false),

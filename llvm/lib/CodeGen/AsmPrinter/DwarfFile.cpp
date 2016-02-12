@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfFile.h"
+#include "DwarfCompileUnit.h"
 #include "DwarfDebug.h"
 #include "DwarfUnit.h"
 #include "llvm/ADT/STLExtras.h"
@@ -50,22 +51,25 @@ DIEAbbrev &DwarfFile::assignAbbrevNumber(DIE &Die) {
   return *New;
 }
 
-void DwarfFile::addUnit(std::unique_ptr<DwarfUnit> U) {
+void DwarfFile::addUnit(std::unique_ptr<DwarfCompileUnit> U) {
   CUs.push_back(std::move(U));
 }
 
 // Emit the various dwarf units to the unit section USection with
 // the abbreviations going into ASection.
 void DwarfFile::emitUnits(bool UseOffsets) {
-  for (const auto &TheU : CUs) {
-    DIE &Die = TheU->getUnitDie();
-    MCSection *USection = TheU->getSection();
-    Asm->OutStreamer->SwitchSection(USection);
+  for (const auto &TheU : CUs)
+    emitUnit(TheU.get(), UseOffsets);
+}
 
-    TheU->emitHeader(UseOffsets);
+void DwarfFile::emitUnit(DwarfUnit *TheU, bool UseOffsets) {
+  DIE &Die = TheU->getUnitDie();
+  MCSection *USection = TheU->getSection();
+  Asm->OutStreamer->SwitchSection(USection);
 
-    Asm->emitDwarfDIE(Die);
-  }
+  TheU->emitHeader(UseOffsets);
+
+  Asm->emitDwarfDIE(Die);
 }
 
 // Compute the size and offset for each DIE.
@@ -77,17 +81,20 @@ void DwarfFile::computeSizeAndOffsets() {
   // DIE within each compile unit. All offsets are CU relative.
   for (const auto &TheU : CUs) {
     TheU->setDebugInfoOffset(SecOffset);
-
-    // CU-relative offset is reset to 0 here.
-    unsigned Offset = sizeof(int32_t) +      // Length of Unit Info
-                      TheU->getHeaderSize(); // Unit-specific headers
-
-    // EndOffset here is CU-relative, after laying out
-    // all of the CU DIE.
-    unsigned EndOffset = computeSizeAndOffset(TheU->getUnitDie(), Offset);
-    SecOffset += EndOffset;
+    SecOffset += computeSizeAndOffsetsForUnit(TheU.get());
   }
 }
+
+unsigned DwarfFile::computeSizeAndOffsetsForUnit(DwarfUnit *TheU) {
+  // CU-relative offset is reset to 0 here.
+  unsigned Offset = sizeof(int32_t) +      // Length of Unit Info
+                    TheU->getHeaderSize(); // Unit-specific headers
+
+  // The return value here is CU-relative, after laying out
+  // all of the CU DIE.
+  return computeSizeAndOffset(TheU->getUnitDie(), Offset);
+}
+
 // Compute the size and offset of a DIE. The offset is relative to start of the
 // CU. It returns the offset after laying out the DIE.
 unsigned DwarfFile::computeSizeAndOffset(DIE &Die, unsigned Offset) {

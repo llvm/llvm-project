@@ -2069,7 +2069,6 @@ static bool isOperator(AsmToken::TokenKind kind) {
   case AsmToken::AmpAmp:
   case AsmToken::Exclaim:
   case AsmToken::ExclaimEqual:
-  case AsmToken::Percent:
   case AsmToken::Less:
   case AsmToken::LessEqual:
   case AsmToken::LessLess:
@@ -2108,37 +2107,44 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
   }
 
   unsigned ParenLevel = 0;
-  unsigned AddTokens = 0;
 
   // Darwin doesn't use spaces to delmit arguments.
   AsmLexerSkipSpaceRAII ScopedSkipSpace(Lexer, IsDarwin);
 
+  bool SpaceEaten;
+
   for (;;) {
+    SpaceEaten = false;
     if (Lexer.is(AsmToken::Eof) || Lexer.is(AsmToken::Equal))
       return TokError("unexpected token in macro instantiation");
 
-    if (ParenLevel == 0 && Lexer.is(AsmToken::Comma))
-      break;
+    if (ParenLevel == 0) {
 
-    if (Lexer.is(AsmToken::Space)) {
-      Lex(); // Eat spaces
+      if (Lexer.is(AsmToken::Comma))
+        break;
+
+      if (Lexer.is(AsmToken::Space)) {
+        SpaceEaten = true;
+        Lex(); // Eat spaces
+      }
 
       // Spaces can delimit parameters, but could also be part an expression.
       // If the token after a space is an operator, add the token and the next
       // one into this argument
       if (!IsDarwin) {
         if (isOperator(Lexer.getKind())) {
-          // Check to see whether the token is used as an operator,
-          // or part of an identifier
-          const char *NextChar = getTok().getEndLoc().getPointer();
-          if (*NextChar == ' ')
-            AddTokens = 2;
-        }
+          MA.push_back(getTok());
+          Lex();
 
-        if (!AddTokens && ParenLevel == 0) {
-          break;
+          // Whitespace after an operator can be ignored.
+          if (Lexer.is(AsmToken::Space))
+            Lex();
+
+          continue;
         }
       }
+      if (SpaceEaten)
+        break;
     }
 
     // handleMacroEntry relies on not advancing the lexer here
@@ -2154,8 +2160,6 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
 
     // Append the token to the current argument list.
     MA.push_back(getTok());
-    if (AddTokens)
-      AddTokens--;
     Lex();
   }
 

@@ -1,5 +1,9 @@
 ; RUN: llc -march=amdgcn -mcpu=verde < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck %s
+; RUN: llc -regalloc=basic -march=amdgcn -mcpu=tonga < %s | FileCheck %s
+;
+; There is something about Tonga that causes this test to spend a lot of time
+; in the default register allocator.
+
 
 ; When the offset of VGPR spills into scratch space gets too large, an additional SGPR
 ; is used to calculate the scratch load/store address. Make sure that this
@@ -7,10 +11,10 @@
 
 ; Just test that it compiles successfully.
 ; CHECK-LABEL: test
-define void @test(<1280 x i32> addrspace(1)* %out, <1280 x i32> addrspace(1)* %in,
-                  <96 x i32> addrspace(1)* %sdata_out, <96 x i32> %sdata_in) {
+define void @test(<1280 x i32> addrspace(1)* %out, <1280 x i32> addrspace(1)* %in) {
 entry:
-  %tid = call i32 @llvm.SI.tid() nounwind readnone
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %tid = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
 
   %aptr = getelementptr <1280 x i32>, <1280 x i32> addrspace(1)* %in, i32 %tid
   %a = load <1280 x i32>, <1280 x i32> addrspace(1)* %aptr
@@ -24,10 +28,13 @@ entry:
   call void asm sideeffect "", "~{VGPR164},~{VGPR168},~{VGPR172},~{VGPR176},~{VGPR180},~{VGPR184},~{VGPR188},~{VGPR192}" ()
   call void asm sideeffect "", "~{VGPR196},~{VGPR200},~{VGPR204},~{VGPR208},~{VGPR212},~{VGPR216},~{VGPR220},~{VGPR224}" ()
 
-  %outptr = getelementptr <1280 x i32>, <1280 x i32> addrspace(1)* %in, i32 %tid
+  %outptr = getelementptr <1280 x i32>, <1280 x i32> addrspace(1)* %out, i32 %tid
   store <1280 x i32> %a, <1280 x i32> addrspace(1)* %outptr
 
   ret void
 }
 
-declare i32 @llvm.SI.tid() nounwind readnone
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
+declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
+
+attributes #1 = { nounwind readnone }

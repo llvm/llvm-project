@@ -92,7 +92,7 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 #define DEBUG_TYPE "loop-versioning-licm"
-static constexpr char LICMVersioningMetaData[] =
+static const char* LICMVersioningMetaData =
     "llvm.loop.licm_versioning.disable";
 
 using namespace llvm;

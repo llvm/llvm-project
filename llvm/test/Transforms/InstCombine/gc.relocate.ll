@@ -9,17 +9,6 @@ declare zeroext i1 @return_i1()
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
 
-define i32 addrspace(1)* @deref(i32 addrspace(1)* dereferenceable(8) %dparam) gc "statepoint-example" {
-; Checks that a dereferenceabler pointer
-; CHECK-LABEL: @deref
-; CHECK: call dereferenceable(8)
-entry:
-    %load = load i32, i32 addrspace(1)* %dparam
-    %tok = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0, i32 addrspace(1)* %dparam)
-    %relocate = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok,  i32 7, i32 7)
-    ret i32 addrspace(1)* %relocate
-}
-
 define i32 @explicit_nonnull(i32 addrspace(1)* nonnull %dparam) gc "statepoint-example" {
 ; Checks that a nonnull pointer
 ; CHECK-LABEL: @explicit_nonnull

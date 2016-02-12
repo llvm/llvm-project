@@ -62,6 +62,12 @@ static cl::opt<bool> AllowEmptyInput(
     cl::desc("Allow the input file to be empty. This is useful when making\n"
              "checks that some error message does not occur, for example."));
 
+static cl::opt<bool> MatchFullLines(
+    "match-full-lines", cl::init(false),
+    cl::desc("Require all positive matches to cover an entire input line.\n"
+             "Allows leading and trailing whitespace if --strict-whitespace\n"
+             "is not also passed."));
+
 typedef cl::list<std::string>::const_iterator prefix_iterator;
 
 //===----------------------------------------------------------------------===//
@@ -174,6 +180,8 @@ bool Pattern::ParsePattern(StringRef PatternStr,
                            StringRef Prefix,
                            SourceMgr &SM,
                            unsigned LineNumber) {
+  bool MatchFullLinesHere = MatchFullLines && CheckTy != Check::CheckNot;
+
   this->LineNumber = LineNumber;
   PatternLoc = SMLoc::getFromPointer(PatternStr.data());
 
@@ -191,11 +199,17 @@ bool Pattern::ParsePattern(StringRef PatternStr,
   }
 
   // Check to see if this is a fixed string, or if it has regex pieces.
-  if (PatternStr.size() < 2 ||
-      (PatternStr.find("{{") == StringRef::npos &&
-       PatternStr.find("[[") == StringRef::npos)) {
+  if (!MatchFullLinesHere &&
+      (PatternStr.size() < 2 || (PatternStr.find("{{") == StringRef::npos &&
+                                 PatternStr.find("[[") == StringRef::npos))) {
     FixedStr = PatternStr;
     return false;
+  }
+
+  if (MatchFullLinesHere) {
+    RegExStr += '^';
+    if (!NoCanonicalizeWhiteSpace)
+      RegExStr += " *";
   }
 
   // Paren value #0 is for the fully matched string.  Any new parenthesized
@@ -327,6 +341,12 @@ bool Pattern::ParsePattern(StringRef PatternStr,
     FixedMatchEnd = std::min(FixedMatchEnd, PatternStr.find("[["));
     RegExStr += Regex::escape(PatternStr.substr(0, FixedMatchEnd));
     PatternStr = PatternStr.substr(FixedMatchEnd);
+  }
+
+  if (MatchFullLinesHere) {
+    if (!NoCanonicalizeWhiteSpace)
+      RegExStr += " *";
+    RegExStr += '$';
   }
 
   return false;
@@ -598,19 +618,15 @@ struct CheckString {
 
   /// CheckTy - Specify what kind of check this is. e.g. CHECK-NEXT: directive,
   /// as opposed to a CHECK: directive.
-  Check::CheckType CheckTy;
+  //  Check::CheckType CheckTy;
 
   /// DagNotStrings - These are all of the strings that are disallowed from
   /// occurring between this match string and the previous one (or start of
   /// file).
   std::vector<Pattern> DagNotStrings;
 
-
-  CheckString(const Pattern &P,
-              StringRef S,
-              SMLoc L,
-              Check::CheckType Ty)
-    : Pat(P), Prefix(S), Loc(L), CheckTy(Ty) {}
+  CheckString(const Pattern &P, StringRef S, SMLoc L)
+      : Pat(P), Prefix(S), Loc(L) {}
 
   /// Check - Match check string and its "not strings" and/or "dag strings".
   size_t Check(const SourceMgr &SM, StringRef Buffer, bool IsLabelScanMode,
@@ -942,7 +958,7 @@ static bool ReadCheckFile(SourceMgr &SM,
     }
 
     // Okay, add the string we captured to the output vector and move on.
-    CheckStrings.emplace_back(P, UsedPrefix, PatternLoc, CheckTy);
+    CheckStrings.emplace_back(P, UsedPrefix, PatternLoc);
     std::swap(DagNotMatches, CheckStrings.back().DagNotStrings);
     DagNotMatches = ImplicitNegativeChecks;
   }
@@ -951,8 +967,7 @@ static bool ReadCheckFile(SourceMgr &SM,
   // prefix as a filler for the error message.
   if (!DagNotMatches.empty()) {
     CheckStrings.emplace_back(Pattern(Check::CheckEOF), *CheckPrefixes.begin(),
-                              SMLoc::getFromPointer(Buffer.data()),
-                              Check::CheckEOF);
+                              SMLoc::getFromPointer(Buffer.data()));
     std::swap(DagNotMatches, CheckStrings.back().DagNotStrings);
   }
 
@@ -965,7 +980,7 @@ static bool ReadCheckFile(SourceMgr &SM,
       errs() << "\'" << *I << ":'";
       ++I;
     }
-    for (; I != E; ++I) 
+    for (; I != E; ++I)
       errs() << ", \'" << *I << ":'";
 
     errs() << '\n';
@@ -1073,7 +1088,7 @@ size_t CheckString::Check(const SourceMgr &SM, StringRef Buffer,
 }
 
 bool CheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
-  if (CheckTy != Check::CheckNext)
+  if (Pat.getCheckTy() != Check::CheckNext)
     return false;
 
   // Count the number of newlines between the previous match and this one.
@@ -1112,7 +1127,7 @@ bool CheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
 }
 
 bool CheckString::CheckSame(const SourceMgr &SM, StringRef Buffer) const {
-  if (CheckTy != Check::CheckSame)
+  if (Pat.getCheckTy() != Check::CheckSame)
     return false;
 
   // Count the number of newlines between the previous match and this one.
@@ -1326,7 +1341,7 @@ int main(int argc, char **argv) {
       CheckRegion = Buffer;
     } else {
       const CheckString &CheckLabelStr = CheckStrings[j];
-      if (CheckLabelStr.CheckTy != Check::CheckLabel) {
+      if (CheckLabelStr.Pat.getCheckTy() != Check::CheckLabel) {
         ++j;
         continue;
       }

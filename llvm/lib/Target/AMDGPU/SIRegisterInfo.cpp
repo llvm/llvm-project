@@ -479,6 +479,24 @@ const TargetRegisterClass *SIRegisterInfo::getEquivalentVGPRClass(
   }
 }
 
+const TargetRegisterClass *SIRegisterInfo::getEquivalentSGPRClass(
+                                         const TargetRegisterClass *VRC) const {
+  switch (VRC->getSize()) {
+  case 4:
+    return &AMDGPU::SGPR_32RegClass;
+  case 8:
+    return &AMDGPU::SReg_64RegClass;
+  case 16:
+    return &AMDGPU::SReg_128RegClass;
+  case 32:
+    return &AMDGPU::SReg_256RegClass;
+  case 64:
+    return &AMDGPU::SReg_512RegClass;
+  default:
+    llvm_unreachable("Invalid register class size");
+  }
+}
+
 const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
                          const TargetRegisterClass *RC, unsigned SubIdx) const {
   if (SubIdx == AMDGPU::NoSubRegister)
@@ -631,6 +649,11 @@ unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
   case SIRegisterInfo::KERNARG_SEGMENT_PTR:
     assert(MFI->hasKernargSegmentPtr());
     return MFI->KernargSegmentPtrUserSGPR;
+  case SIRegisterInfo::DISPATCH_ID:
+    llvm_unreachable("unimplemented");
+  case SIRegisterInfo::FLAT_SCRATCH_INIT:
+    assert(MFI->hasFlatScratchInit());
+    return MFI->FlatScratchInitUserSGPR;
   case SIRegisterInfo::DISPATCH_PTR:
     assert(MFI->hasDispatchPtr());
     return MFI->DispatchPtrUserSGPR;

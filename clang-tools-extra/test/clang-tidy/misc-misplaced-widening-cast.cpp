@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-misplaced-widening-cast %t -- -- -target x86_64-unknown-unknown
+// RUN: %check_clang_tidy %s misc-misplaced-widening-cast %t
 
 void assign(int a, int b) {
   long l;

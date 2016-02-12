@@ -2334,6 +2334,16 @@ LLVMValueRef LLVMGetPreviousInstruction(LLVMValueRef Inst);
  * Remove and delete an instruction.
  *
  * The instruction specified is removed from its containing building
+ * block but is kept alive.
+ *
+ * @see llvm::Instruction::removeFromParent()
+ */
+void LLVMInstructionRemoveFromParent(LLVMValueRef Inst);
+
+/**
+ * Remove and delete an instruction.
+ *
+ * The instruction specified is removed from its containing building
  * block and then deleted.
  *
  * @see llvm::Instruction::eraseFromParent()

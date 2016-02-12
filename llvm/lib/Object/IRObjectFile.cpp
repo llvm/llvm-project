@@ -305,8 +305,8 @@ llvm::object::IRObjectFile::create(MemoryBufferRef Object,
   if (!BCOrErr)
     return BCOrErr.getError();
 
-  std::unique_ptr<MemoryBuffer> Buff(
-      MemoryBuffer::getMemBuffer(BCOrErr.get(), false));
+  std::unique_ptr<MemoryBuffer> Buff =
+      MemoryBuffer::getMemBuffer(BCOrErr.get(), false);
 
   ErrorOr<std::unique_ptr<Module>> MOrErr =
       getLazyBitcodeModule(std::move(Buff), Context,

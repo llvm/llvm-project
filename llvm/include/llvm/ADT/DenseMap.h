@@ -195,26 +195,6 @@ public:
                           true);
   }
 
-  /// Alternate version of insert() which allows a different, and possibly
-  /// less expensive, key type.
-  /// The DenseMapInfo is responsible for supplying methods
-  /// getHashValue(LookupKeyT) and isEqual(LookupKeyT, KeyT) for each key
-  /// type used.
-  template <typename LookupKeyT>
-  std::pair<iterator, bool> insert_as(std::pair<KeyT, ValueT> &&KV,
-                                      const LookupKeyT &Val) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Val, TheBucket))
-      return std::make_pair(iterator(TheBucket, getBucketsEnd(), *this, true),
-                            false); // Already in map.
-
-    // Otherwise, insert the new element.
-    TheBucket = InsertIntoBucket(std::move(KV.first), std::move(KV.second), Val,
-                                 TheBucket);
-    return std::make_pair(iterator(TheBucket, getBucketsEnd(), *this, true),
-                          true);
-  }
-
   /// insert - Range insertion of pairs.
   template<typename InputIt>
   void insert(InputIt I, InputIt E) {
@@ -419,7 +399,7 @@ private:
 
   BucketT *InsertIntoBucket(const KeyT &Key, const ValueT &Value,
                             BucketT *TheBucket) {
-    TheBucket = InsertIntoBucketImpl(Key, Key, TheBucket);
+    TheBucket = InsertIntoBucketImpl(Key, TheBucket);
 
     TheBucket->getFirst() = Key;
     ::new (&TheBucket->getSecond()) ValueT(Value);
@@ -428,7 +408,7 @@ private:
 
   BucketT *InsertIntoBucket(const KeyT &Key, ValueT &&Value,
                             BucketT *TheBucket) {
-    TheBucket = InsertIntoBucketImpl(Key, Key, TheBucket);
+    TheBucket = InsertIntoBucketImpl(Key, TheBucket);
 
     TheBucket->getFirst() = Key;
     ::new (&TheBucket->getSecond()) ValueT(std::move(Value));
@@ -436,26 +416,14 @@ private:
   }
 
   BucketT *InsertIntoBucket(KeyT &&Key, ValueT &&Value, BucketT *TheBucket) {
-    TheBucket = InsertIntoBucketImpl(Key, Key, TheBucket);
+    TheBucket = InsertIntoBucketImpl(Key, TheBucket);
 
     TheBucket->getFirst() = std::move(Key);
     ::new (&TheBucket->getSecond()) ValueT(std::move(Value));
     return TheBucket;
   }
 
-  template <typename LookupKeyT>
-  BucketT *InsertIntoBucket(KeyT &&Key, ValueT &&Value, LookupKeyT &Lookup,
-                            BucketT *TheBucket) {
-    TheBucket = InsertIntoBucketImpl(Key, Lookup, TheBucket);
-
-    TheBucket->getFirst() = std::move(Key);
-    ::new (&TheBucket->getSecond()) ValueT(std::move(Value));
-    return TheBucket;
-  }
-
-  template <typename LookupKeyT>
-  BucketT *InsertIntoBucketImpl(const KeyT &Key, const LookupKeyT &Lookup,
-                                BucketT *TheBucket) {
+  BucketT *InsertIntoBucketImpl(const KeyT &Key, BucketT *TheBucket) {
     incrementEpoch();
 
     // If the load of the hash table is more than 3/4, or if fewer than 1/8 of
@@ -471,12 +439,12 @@ private:
     unsigned NumBuckets = getNumBuckets();
     if (LLVM_UNLIKELY(NewNumEntries * 4 >= NumBuckets * 3)) {
       this->grow(NumBuckets * 2);
-      LookupBucketFor(Lookup, TheBucket);
+      LookupBucketFor(Key, TheBucket);
       NumBuckets = getNumBuckets();
     } else if (LLVM_UNLIKELY(NumBuckets-(NewNumEntries+getNumTombstones()) <=
                              NumBuckets/8)) {
       this->grow(NumBuckets);
-      LookupBucketFor(Lookup, TheBucket);
+      LookupBucketFor(Key, TheBucket);
     }
     assert(TheBucket);
 

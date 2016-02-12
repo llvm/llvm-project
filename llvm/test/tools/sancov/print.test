@@ -1,5 +1,5 @@
 REQUIRES: x86_64-linux
-RUN: sancov -obj %p/Inputs/test-linux_x86_64 -print %p/Inputs/test-linux_x86_64.sancov | FileCheck %s
+RUN: sancov -print %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
 
 CHECK: 0x4dbe2b
 CHECK: 0x4dbf72

@@ -653,7 +653,12 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &tid,
                            DebugLoc dl, bool NoImp)
     : MCID(&tid), Parent(nullptr), Operands(nullptr), NumOperands(0), Flags(0),
       AsmPrinterFlags(0), NumMemRefs(0), MemRefs(nullptr),
-      debugLoc(std::move(dl)) {
+      debugLoc(std::move(dl))
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+      ,
+      Ty(nullptr)
+#endif
+{
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   // Reserve space for the expected number of operands.
@@ -670,10 +675,14 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &tid,
 /// MachineInstr ctor - Copies MachineInstr arg exactly
 ///
 MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
-  : MCID(&MI.getDesc()), Parent(nullptr), Operands(nullptr), NumOperands(0),
-    Flags(0), AsmPrinterFlags(0),
-    NumMemRefs(MI.NumMemRefs), MemRefs(MI.MemRefs),
-    debugLoc(MI.getDebugLoc()) {
+    : MCID(&MI.getDesc()), Parent(nullptr), Operands(nullptr), NumOperands(0),
+      Flags(0), AsmPrinterFlags(0), NumMemRefs(MI.NumMemRefs),
+      MemRefs(MI.MemRefs), debugLoc(MI.getDebugLoc())
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+      ,
+      Ty(nullptr)
+#endif
+{
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   CapOperands = OperandCapacity::get(MI.getNumOperands());
@@ -1676,6 +1685,12 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << TII->getName(getOpcode());
   else
     OS << "UNKNOWN";
+
+
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+  if (Ty)
+    OS << ' ' << *Ty << ' ';
+#endif
 
   if (SkipOpers)
     return;

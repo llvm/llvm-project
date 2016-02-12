@@ -1628,9 +1628,10 @@ void DwarfDebug::emitDebugARanges() {
   }
 
   // Sort the CU list (again, to ensure consistent output order).
-  std::sort(CUs.begin(), CUs.end(), [](const DwarfUnit *A, const DwarfUnit *B) {
-    return A->getUniqueID() < B->getUniqueID();
-  });
+  std::sort(CUs.begin(), CUs.end(),
+            [](const DwarfCompileUnit *A, const DwarfCompileUnit *B) {
+              return A->getUniqueID() < B->getUniqueID();
+            });
 
   // Emit an arange table for each CU we used.
   for (DwarfCompileUnit *CU : CUs) {
@@ -1793,7 +1794,7 @@ void DwarfDebug::emitDebugMacinfo() {
 // DWARF5 Experimental Separate Dwarf emitters.
 
 void DwarfDebug::initSkeletonUnit(const DwarfUnit &U, DIE &Die,
-                                  std::unique_ptr<DwarfUnit> NewU) {
+                                  std::unique_ptr<DwarfCompileUnit> NewU) {
   NewU->addString(Die, dwarf::DW_AT_GNU_dwo_name,
                   U.getCUNode()->getSplitDebugFilename());
 
@@ -1882,21 +1883,19 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
     return;
 
-  const DwarfTypeUnit *&TU = DwarfTypeUnits[CTy];
-  if (TU) {
-    CU.addDIETypeSignature(RefDie, *TU);
+  auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
+  if (!Ins.second) {
+    CU.addDIETypeSignature(RefDie, Ins.first->second);
     return;
   }
 
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
 
-  auto OwnedUnit = make_unique<DwarfTypeUnit>(
-      InfoHolder.getUnits().size() + TypeUnitsUnderConstruction.size(), CU, Asm,
-      this, &InfoHolder, getDwoLineTable(CU));
+  auto OwnedUnit = make_unique<DwarfTypeUnit>(CU, Asm, this, &InfoHolder,
+                                              getDwoLineTable(CU));
   DwarfTypeUnit &NewTU = *OwnedUnit;
   DIE &UnitDie = NewTU.getUnitDie();
-  TU = &NewTU;
   TypeUnitsUnderConstruction.push_back(
       std::make_pair(std::move(OwnedUnit), CTy));
 
@@ -1905,6 +1904,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 
   uint64_t Signature = makeTypeSignature(Identifier);
   NewTU.setTypeSignature(Signature);
+  Ins.first->second = Signature;
 
   if (useSplitDwarf())
     NewTU.initSection(Asm->getObjFileLowering().getDwarfTypesDWOSection());
@@ -1928,7 +1928,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       // This is pessimistic as some of these types might not be dependent on
       // the type that used an address.
       for (const auto &TU : TypeUnitsToAdd)
-        DwarfTypeUnits.erase(TU.second);
+        TypeSignatures.erase(TU.second);
 
       // Construct this type in the CU directly.
       // This is inefficient because all the dependent types will be rebuilt
@@ -1940,10 +1940,12 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 
     // If the type wasn't dependent on fission addresses, finish adding the type
     // and all its dependent types.
-    for (auto &TU : TypeUnitsToAdd)
-      InfoHolder.addUnit(std::move(TU.first));
+    for (auto &TU : TypeUnitsToAdd) {
+      InfoHolder.computeSizeAndOffsetsForUnit(TU.first.get());
+      InfoHolder.emitUnit(TU.first.get(), useSplitDwarf());
+    }
   }
-  CU.addDIETypeSignature(RefDie, NewTU);
+  CU.addDIETypeSignature(RefDie, Signature);
 }
 
 // Accelerator table mutators - add each name along with its companion

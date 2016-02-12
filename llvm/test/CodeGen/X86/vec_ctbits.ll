@@ -121,22 +121,22 @@ define <2 x i32> @prompop(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: prompop:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    psrlq $1, %xmm1
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
 ; CHECK-NEXT:    psubq %xmm1, %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [3689348814741910323,3689348814741910323]
-; CHECK-NEXT:    movdqa %xmm0, %xmm2
-; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    movdqa %xmm0, %xmm3
+; CHECK-NEXT:    pand %xmm1, %xmm3
 ; CHECK-NEXT:    psrlq $2, %xmm0
 ; CHECK-NEXT:    pand %xmm1, %xmm0
-; CHECK-NEXT:    paddq %xmm2, %xmm0
+; CHECK-NEXT:    paddq %xmm3, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    psrlq $4, %xmm1
 ; CHECK-NEXT:    paddq %xmm0, %xmm1
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    pxor %xmm0, %xmm0
-; CHECK-NEXT:    psadbw %xmm0, %xmm1
+; CHECK-NEXT:    psadbw %xmm2, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)

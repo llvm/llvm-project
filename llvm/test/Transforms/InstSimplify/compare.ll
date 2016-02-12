@@ -333,6 +333,21 @@ define i1 @or(i32 %x) {
 ; CHECK: ret i1 false
 }
 
+; Do not simplify if we cannot guarantee that the ConstantExpr is a non-zero
+; constant.
+@GV = common global i32* null
+define i1 @or_constexp(i32 %x) {
+; CHECK-LABEL: @or_constexp(
+entry:
+  %0 = and i32 ptrtoint (i32** @GV to i32), 32
+  %o = or i32 %x, %0
+  %c = icmp eq i32 %o, 0
+  ret i1 %c
+; CHECK: or
+; CHECK-NEXT: icmp eq
+; CHECK-NOT: ret i1 false
+}
+
 define i1 @shl1(i32 %x) {
 ; CHECK-LABEL: @shl1(
   %s = shl i32 1, %x

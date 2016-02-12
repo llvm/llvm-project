@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; XUN: llc -march=amdgcn -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA %s
-; XUN: llc -march=amdgcn -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
+; RUN: llc -march=amdgcn -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
 
 ; This ends up using all 256 registers and requires register
 ; scavenging which will fail to find an unsued register.
@@ -13,12 +13,18 @@
 
 ; GCN-LABEL: {{^}}spill_vgpr_compute:
 
-; GCN: s_mov_b32 s16, s3
-; GCN: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; GCN-NEXT: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GCN-NEXT: s_mov_b32 s14, -1
-; SI-NEXT: s_mov_b32 s15, 0x80f000
-; VI-NEXT: s_mov_b32 s15, 0x800000
+; HSA: enable_sgpr_private_segment_buffer = 1
+; HSA: enable_sgpr_flat_scratch_init = 0
+; HSA: workitem_private_segment_byte_size = 1024
+
+; GCN-NOT: flat_scr
+
+; GCNMESA: s_mov_b32 s16, s3
+; GCNMESA: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
+; GCNMESA-NEXT: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GCNMESA-NEXT: s_mov_b32 s14, -1
+; SIMESA-NEXT: s_mov_b32 s15, 0x98f000
+; VIMESA-NEXT: s_mov_b32 s15, 0x980000
 
 
 ; GCN: buffer_store_dword {{v[0-9]+}}, s[12:15], s16 offset:{{[0-9]+}} ; 4-byte Folded Spill

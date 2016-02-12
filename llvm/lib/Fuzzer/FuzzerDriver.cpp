@@ -335,10 +335,13 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   }
 
   if (AllInputsAreFiles()) {
-    Printf("%s: Running %zd inputs.\n", ProgName->c_str(), Inputs->size());
+    int Runs = std::max(1, Flags.runs);
+    Printf("%s: Running %zd inputs %d time(s) each.\n", ProgName->c_str(),
+           Inputs->size(), Runs);
     for (auto &Path : *Inputs) {
       auto StartTime = system_clock::now();
-      RunOneTest(&F, Path.c_str());
+      while (Runs-- > 0)
+        RunOneTest(&F, Path.c_str());
       auto StopTime = system_clock::now();
       auto MS = duration_cast<milliseconds>(StopTime - StartTime).count();
       Printf("%s: %zd ms\n", Path.c_str(), (long)MS);

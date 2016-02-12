@@ -54,6 +54,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     NumSystemSGPRs(0),
     HasSpilledSGPRs(false),
     HasSpilledVGPRs(false),
+    HasNonSpillStackObjects(false),
+    HasFlatInstructions(false),
     PrivateSegmentBuffer(false),
     DispatchPtr(false),
     QueuePtr(false),
@@ -93,6 +95,11 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   if (F->hasFnAttribute("amdgpu-work-item-id-z"))
     WorkItemIDZ = true;
 
+  // X, XY, and XYZ are the only supported combinations, so make sure Y is
+  // enabled if Z is.
+  if (WorkItemIDZ)
+    WorkItemIDY = true;
+
   bool MaySpill = ST.isVGPRSpillingEnabled(this);
   bool HasStackObjects = FrameInfo->hasStackObjects();
 
@@ -107,10 +114,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
       DispatchPtr = true;
   }
 
-  // X, XY, and XYZ are the only supported combinations, so make sure Y is
-  // enabled if Z is.
-  if (WorkItemIDZ)
-    WorkItemIDY = true;
+  // We don't need to worry about accessing spills with flat instructions.
+  // TODO: On VI where we must use flat for global, we should be able to omit
+  // this if it is never used for generic access.
+  if (HasStackObjects && ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS &&
+      ST.isAmdHsaOS())
+    FlatScratchInit = true;
 }
 
 unsigned SIMachineFunctionInfo::addPrivateSegmentBuffer(
@@ -140,6 +149,13 @@ unsigned SIMachineFunctionInfo::addKernargSegmentPtr(const SIRegisterInfo &TRI) 
     getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_64RegClass);
   NumUserSGPRs += 2;
   return KernargSegmentPtrUserSGPR;
+}
+
+unsigned SIMachineFunctionInfo::addFlatScratchInit(const SIRegisterInfo &TRI) {
+  FlatScratchInitUserSGPR = TRI.getMatchingSuperReg(
+    getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_64RegClass);
+  NumUserSGPRs += 2;
+  return FlatScratchInitUserSGPR;
 }
 
 SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg(

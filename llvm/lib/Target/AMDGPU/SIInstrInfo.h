@@ -396,6 +396,13 @@ public:
   /// \brief Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr *MI) const;
 
+  /// Copy a value from a VGPR (\p SrcReg) to SGPR.  This function can only
+  /// be used when it is know that the value in SrcReg is same across all
+  /// threads in the wave.
+  /// \returns The SGPR register that \p SrcReg was copied to.
+  unsigned readlaneVGPRToSGPR(unsigned SrcReg, MachineInstr *UseMI,
+                          MachineRegisterInfo &MRI) const;
+
   /// \brief Legalize all operands in this instruction.  This function may
   /// create new instruction and insert them before \p MI.
   void legalizeOperands(MachineInstr *MI) const;
@@ -482,7 +489,7 @@ namespace AMDGPU {
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_TID_ENABLE = 1LL << 55;
-
+  const uint64_t RSRC_ELEMENT_SIZE_SHIFT = 51;
 } // End namespace AMDGPU
 
 namespace SI {

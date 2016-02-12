@@ -1907,7 +1907,7 @@ void COFFDumper::printLocalVariableAddrRange(
   DictScope S(W, "LocalVariableAddrRange");
   printRelocatedField("OffsetStart", Sec, SectionContents, &Range.OffsetStart);
   W.printHex("ISectStart", Range.ISectStart);
-  W.printNumber("Range", Range.Range);
+  W.printHex("Range", Range.Range);
 }
 
 void COFFDumper::printLocalVariableAddrGap(StringRef &SymData) {
@@ -1915,8 +1915,8 @@ void COFFDumper::printLocalVariableAddrGap(StringRef &SymData) {
     const LocalVariableAddrGap *Gap;
     error(consumeObject(SymData, Gap));
     ListScope S(W, "LocalVariableAddrGap");
-    W.printNumber("GapStartOffset", Gap->GapStartOffset);
-    W.printNumber("Range", Gap->Range);
+    W.printHex("GapStartOffset", Gap->GapStartOffset);
+    W.printHex("Range", Gap->Range);
   }
 }
 

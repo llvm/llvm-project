@@ -1850,12 +1850,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       // isKnownNonNull -> nonnull attribute
       if (isKnownNonNullAt(DerivedPtr, II, DT, TLI))
         II->addAttribute(AttributeSet::ReturnIndex, Attribute::NonNull);
-      
-      // isDereferenceablePointer -> deref attribute
-      if (isDereferenceablePointer(DerivedPtr, DL))
-        if (Argument *A = dyn_cast<Argument>(DerivedPtr))
-          II->addDereferenceableAttr(AttributeSet::ReturnIndex,
-                                     A->getDereferenceableBytes());
     }
 
     // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))

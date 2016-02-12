@@ -1855,7 +1855,7 @@ AMDGPUAsmParser::parseVOP3OptionalOps(OperandVector &Operands) {
 void AMDGPUAsmParser::cvtId(MCInst &Inst, const OperandVector &Operands) {
   unsigned I = 1;
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
-  if (Desc.getNumDefs() > 0) {
+  for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
   for (unsigned E = Operands.size(); I != E; ++I)
@@ -1885,7 +1885,7 @@ void AMDGPUAsmParser::cvtVOP3_only(MCInst &Inst, const OperandVector &Operands) 
 void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands) {
   unsigned I = 1;
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
-  if (Desc.getNumDefs() > 0) {
+  for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 

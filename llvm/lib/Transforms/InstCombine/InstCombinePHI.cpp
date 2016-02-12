@@ -15,8 +15,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
@@ -641,6 +644,16 @@ static bool PHIsEqualValue(PHINode *PN, Value *NonPhiInVal,
   return true;
 }
 
+/// Return an existing non-zero constant if this phi node has one, otherwise
+/// return constant 1.
+static ConstantInt *GetAnyNonZeroConstInt(PHINode &PN) {
+  assert(isa<IntegerType>(PN.getType()) && "Expect only intger type phi");
+  for (Value *V : PN.operands())
+    if (auto *ConstVA = dyn_cast<ConstantInt>(V))
+      if (!ConstVA->isZeroValue())
+        return ConstVA;
+  return ConstantInt::get(cast<IntegerType>(PN.getType()), 1);
+}
 
 namespace {
 struct PHIUsageRecord {
@@ -918,6 +931,29 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
         (isa<BinaryOperator>(PHIUser) || isa<GetElementPtrInst>(PHIUser)) &&
         PHIUser->user_back() == &PN) {
       return replaceInstUsesWith(PN, UndefValue::get(PN.getType()));
+    }
+    // When a PHI is used only to be compared with zero, it is safe to replace
+    // an incoming value proved as known nonzero with any non-zero constant.
+    // For example, in the code below, the incoming value %v can be replaced
+    // with any non-zero constant based on the fact that the PHI is only used to
+    // be compared with zero and %v is a known non-zero value:
+    // %v = select %cond, 1, 2
+    // %p = phi [%v, BB] ...
+    //      icmp eq, %p, 0
+    auto *CmpInst = dyn_cast<ICmpInst>(PHIUser);
+    // FIXME: To be simple, handle only integer type for now.
+    if (CmpInst && isa<IntegerType>(PN.getType()) && CmpInst->isEquality() &&
+        match(CmpInst->getOperand(1), m_Zero())) {
+      ConstantInt *NonZeroConst = nullptr;
+      for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
+        Instruction *CtxI = PN.getIncomingBlock(i)->getTerminator();
+        Value *VA = PN.getIncomingValue(i);
+        if (isKnownNonZero(VA, DL, 0, AC, CtxI, DT)) {
+          if (!NonZeroConst)
+            NonZeroConst = GetAnyNonZeroConstInt(PN);
+          PN.setIncomingValue(i, NonZeroConst);
+        }
+      }
     }
   }
 

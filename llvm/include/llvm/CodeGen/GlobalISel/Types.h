@@ -21,14 +21,13 @@
 
 namespace llvm {
 
-/// Map a value to virtual registers.
-/// We must support several virtual registers for a value.
-/// Indeed each virtual register is mapped to one EVT, but a value
-/// may span over several EVT when it is a type representing a structure.
-/// In that case the value will be break into EVTs.
+/// Map a value to a virtual register.
+/// For now, we chose to map aggregate types to on single virtual
+/// register. This might be revisited if it turns out to be inefficient.
+/// PR26161 tracks that.
 /// Note: We need to expose this type to the target hooks for thing like
 /// ABI lowering that would be used during IRTranslation.
-typedef DenseMap<const Value *, SmallVector<unsigned, 1>> ValueToVRegs;
+typedef DenseMap<const Value *, unsigned> ValueToVReg;
 
 } // End namespace llvm.
 #endif

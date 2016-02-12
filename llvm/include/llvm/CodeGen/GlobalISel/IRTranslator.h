@@ -20,16 +20,21 @@
 #define LLVM_CODEGEN_GLOBALISEL_IRTRANSLATOR_H
 
 #include "Types.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/IR/Constants.h"
 
 namespace llvm {
 // Forward declarations.
+class BasicBlock;
 class Constant;
 class Instruction;
+class MachineBasicBlock;
+class MachineFunction;
 class MachineInstr;
-class MachineIRBuilder;
+class MachineRegisterInfo;
+class TargetLowering;
 
 // Technically the pass should run on an hypothetical MachineModule,
 // since it should translate Global into some sort of MachineGlobal.
@@ -44,15 +49,11 @@ public:
   static char ID;
 
 private:
-  // Interface used to lower the everything related to calls.
-  //  TargetLowering *CallLowering;
-  // Mapping of the values of the current LLVM IR function
-  // to the related virtual registers.
-  // We need several virtual registers for the lowering of things
-  // like structures. Right now, this is just a list of virtual
-  // registers, but we would need to encapsulate that in a higher
-  // level class.
-  ValueToVRegs ValToVRegs;
+  /// Interface used to lower the everything related to calls.
+  const TargetLowering *TLI;
+  /// Mapping of the values of the current LLVM IR function
+  /// to the related virtual registers.
+  ValueToVReg ValToVReg;
   // Constants are special because when we encounter one,
   // we do not know at first where to insert the definition since
   // this depends on all its uses.
@@ -62,6 +63,8 @@ private:
   // Note: Constants that end up as immediate in the related instructions,
   // do not appear in that map.
   SmallSetVector<const Constant *, 8> Constants;
+
+  DenseMap<const BasicBlock *, MachineBasicBlock *> BBToMBB;
 
   /* A bunch of methods targeting ADD, SUB, etc. */
   // Return true if the translation was successful, false
@@ -86,11 +89,16 @@ private:
   // 3. Create the generic instruction.
   bool translateADD(const Instruction &Inst);
 
+  bool translateReturn(const Instruction &Inst);
+
   // Builder for machine instruction a la IRBuilder.
   // I.e., compared to regular MIBuilder, this one also inserts the instruction
   // in the current block, it can creates block, etc., basically a kind of
   // IRBuilder, but for Machine IR.
-  MachineIRBuilder *MIRBuilder;
+  MachineIRBuilder MIRBuilder;
+
+  /// MachineRegisterInfo used to create virtual registers.
+  MachineRegisterInfo *MRI;
 
   // Return true if the translation from LLVM IR to Machine IR
   // suceeded.
@@ -102,6 +110,12 @@ private:
   // of each constant depending on how fancy we want to be.
   // * Clear the different maps.
   void finalize();
+
+  /// Get the sequence of VRegs for that \p Val.
+  unsigned getOrCreateVReg(const Value *Val);
+
+  MachineBasicBlock &getOrCreateBB(const BasicBlock *BB);
+
 public:
   // Ctor, nothing fancy.
   IRTranslator();

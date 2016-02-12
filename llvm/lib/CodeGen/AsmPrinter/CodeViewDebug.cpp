@@ -117,6 +117,13 @@ CodeViewDebug::InlineSite &CodeViewDebug::getInlineSite(const DILocation *Loc) {
   return *Site;
 }
 
+static void addLocIfNotPresent(SmallVectorImpl<const DILocation *> &Locs,
+                               const DILocation *Loc) {
+  auto B = Locs.begin(), E = Locs.end();
+  if (std::find(B, E, Loc) == E)
+    Locs.push_back(Loc);
+}
+
 void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
                                         const MachineFunction *MF) {
   // Skip this instruction if it has the same location as the previous one.
@@ -147,24 +154,24 @@ void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
   CurFn->LastLoc = DL;
 
   unsigned FuncId = CurFn->FuncId;
-  if (const DILocation *Loc = DL->getInlinedAt()) {
+  if (DL->getInlinedAt()) {
+    const DILocation *Loc = DL.get();
+
     // If this location was actually inlined from somewhere else, give it the ID
     // of the inline call site.
-    FuncId = getInlineSite(DL.get()).SiteFuncId;
-    CurFn->ChildSites.push_back(Loc);
+    FuncId = getInlineSite(Loc).SiteFuncId;
+
     // Ensure we have links in the tree of inline call sites.
-    const DILocation *ChildLoc = nullptr;
-    while (Loc->getInlinedAt()) {
+    const DILocation *SiteLoc;
+    bool FirstLoc = true;
+    while ((SiteLoc = Loc->getInlinedAt())) {
       InlineSite &Site = getInlineSite(Loc);
-      if (ChildLoc) {
-        // Record the child inline site if not already present.
-        auto B = Site.ChildSites.begin(), E = Site.ChildSites.end();
-        if (std::find(B, E, Loc) != E)
-          break;
-        Site.ChildSites.push_back(Loc);
-      }
-      ChildLoc = Loc;
+      if (!FirstLoc)
+        addLocIfNotPresent(Site.ChildSites, Loc);
+      FirstLoc = false;
+      Loc = SiteLoc;
     }
+    addLocIfNotPresent(CurFn->ChildSites, Loc);
   }
 
   OS.EmitCVLocDirective(FuncId, FileId, DL.getLine(), DL.getCol(),

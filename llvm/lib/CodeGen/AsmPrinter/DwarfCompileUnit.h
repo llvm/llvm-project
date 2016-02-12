@@ -29,6 +29,12 @@ class MCSymbol;
 class LexicalScope;
 
 class DwarfCompileUnit : public DwarfUnit {
+  /// A numeric ID unique among all CUs in the module
+  unsigned UniqueID;
+
+  /// Offset of the UnitDie from beginning of debug info section.
+  unsigned DebugInfoOffset = 0;
+
   /// The attribute index of DW_AT_stmt_list in the compile unit DIE, avoiding
   /// the need to search for it in applyStmtList.
   DIE::value_iterator StmtListValue;
@@ -76,6 +82,10 @@ class DwarfCompileUnit : public DwarfUnit {
 public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU);
+
+  unsigned getUniqueID() const { return UniqueID; }
+  unsigned getDebugInfoOffset() const { return DebugInfoOffset; }
+  void setDebugInfoOffset(unsigned DbgInfoOff) { DebugInfoOffset = DbgInfoOff; }
 
   DwarfCompileUnit *getSkeleton() const {
     return Skeleton;
