@@ -438,7 +438,7 @@ void SubRegion::anchor() { }
 // Region pretty-printing.
 //===----------------------------------------------------------------------===//
 
-void MemRegion::dump() const {
+LLVM_DUMP_METHOD void MemRegion::dump() const {
   dumpToStream(llvm::errs());
 }
 
@@ -525,7 +525,7 @@ void VarRegion::dumpToStream(raw_ostream &os) const {
   os << *cast<VarDecl>(D);
 }
 
-void RegionRawOffset::dump() const {
+LLVM_DUMP_METHOD void RegionRawOffset::dump() const {
   dumpToStream(llvm::errs());
 }
 

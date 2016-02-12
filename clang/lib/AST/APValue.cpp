@@ -255,7 +255,7 @@ void APValue::swap(APValue &RHS) {
   memcpy(RHS.Data.buffer, TmpData, DataSize);
 }
 
-void APValue::dump() const {
+LLVM_DUMP_METHOD void APValue::dump() const {
   dump(llvm::errs());
   llvm::errs() << '\n';
 }
