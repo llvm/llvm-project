@@ -28,6 +28,7 @@
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Host/Mutex.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolContext.h"
 
 namespace llvm {
     
@@ -71,6 +72,7 @@ public:
                      std::unique_ptr<llvm::Module> &module_ap,
                      ConstString &name,
                      const lldb::TargetSP &target_sp,
+                     const SymbolContext &sym_ctx,
                      std::vector<std::string> &cpu_features);
     
     //------------------------------------------------------------------
@@ -131,7 +133,16 @@ public:
     
     lldb::ModuleSP
     GetJITModule ();
+        
+    static lldb::addr_t
+    FindSymbol(const ConstString &name,
+               const SymbolContext &sc);
     
+    lldb::addr_t
+    FindSymbol(const ConstString &name)
+    {
+        return FindSymbol(name, m_sym_ctx);
+    }
 private:
     //------------------------------------------------------------------
     /// Look up the object in m_address_map that contains a given address,
@@ -275,9 +286,6 @@ private:
         void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
         }
         
-        //------------------------------------------------------------------
-        /// Passthrough interface stub
-        //------------------------------------------------------------------
         uint64_t getSymbolAddress(const std::string &Name) override;
 
         void *getPointerToNamedFunction(const std::string &Name,
@@ -387,6 +395,7 @@ private:
     std::vector<std::string>                m_cpu_features;
     llvm::SmallVector<JittedFunction, 1>    m_jitted_functions;     ///< A vector of all functions that have been JITted into machine code
     const ConstString                       m_name;
+    SymbolContext                           m_sym_ctx;              ///< Used for symbol lookups
     std::vector<ConstString>                m_failed_lookups;
     
     std::atomic<bool>                       m_did_jit;

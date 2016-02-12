@@ -20,7 +20,23 @@ namespace lld {
 namespace elf2 {
 
 class ScriptParser;
+template <class ELFT> class InputSectionBase;
 
+// This class represents each rule in SECTIONS command.
+class SectionRule {
+public:
+  SectionRule(StringRef D, StringRef S) : Dest(D), SectionPattern(S) {}
+
+  // Returns true if S should be in Dest section.
+  template <class ELFT> bool match(InputSectionBase<ELFT> *S);
+
+  StringRef Dest;
+
+private:
+  StringRef SectionPattern;
+};
+
+// This is a runner of the linker script.
 class LinkerScript {
   friend class ScriptParser;
 
@@ -29,18 +45,16 @@ public:
   // this object and Config.
   void read(MemoryBufferRef MB);
 
-  StringRef getOutputSection(StringRef InputSection);
-  bool isDiscarded(StringRef InputSection);
+  template <class ELFT> StringRef getOutputSection(InputSectionBase<ELFT> *S);
+  template <class ELFT> bool isDiscarded(InputSectionBase<ELFT> *S);
   int compareSections(StringRef A, StringRef B);
-  void finalize();
 
 private:
-  // Map for SECTIONS command. The key is output section name
-  // and a value is a list of input section names.
-  llvm::MapVector<StringRef, std::vector<StringRef>> Sections;
+  // SECTIONS commands.
+  std::vector<SectionRule> Sections;
 
-  // Inverse map of Sections.
-  llvm::DenseMap<StringRef, StringRef> RevSections;
+  // Output sections are sorted by this order.
+  std::vector<StringRef> SectionOrder;
 
   llvm::BumpPtrAllocator Alloc;
 };

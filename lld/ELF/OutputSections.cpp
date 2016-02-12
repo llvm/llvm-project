@@ -1483,6 +1483,8 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     case SymbolBody::UndefinedKind:
     case SymbolBody::LazyKind:
       break;
+    case SymbolBody::DefinedBitcodeKind:
+      llvm_unreachable("Should have been replaced");
     }
 
     ESym->st_name = P.second;

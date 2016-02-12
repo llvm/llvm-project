@@ -65,6 +65,7 @@ public:
     SharedKind,
     DefinedElfLast = SharedKind,
     DefinedCommonKind,
+    DefinedBitcodeKind,
     DefinedSyntheticKind,
     DefinedLast = DefinedSyntheticKind,
     UndefinedElfKind,
@@ -185,6 +186,12 @@ public:
   static bool classof(const SymbolBody *S) {
     return S->kind() <= DefinedElfLast;
   }
+};
+
+class DefinedBitcode : public Defined {
+public:
+  DefinedBitcode(StringRef Name);
+  static bool classof(const SymbolBody *S);
 };
 
 class DefinedCommon : public Defined {

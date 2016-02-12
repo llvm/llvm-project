@@ -74,7 +74,7 @@ private:
   void writeHeader();
   void writeSections();
   bool isDiscarded(InputSectionBase<ELFT> *IS) const;
-  StringRef getOutputSectionName(StringRef S) const;
+  StringRef getOutputSectionName(InputSectionBase<ELFT> *S) const;
   bool needsInterpSection() const {
     return !Symtab.getSharedFiles().empty() && !Config->DynamicLinker.empty();
   }
@@ -726,16 +726,17 @@ void Writer<ELFT>::addCopyRelSymbols(std::vector<SharedSymbol<ELFT> *> &Syms) {
 }
 
 template <class ELFT>
-StringRef Writer<ELFT>::getOutputSectionName(StringRef S) const {
-  StringRef Out = Script->getOutputSection(S);
-  if (!Out.empty())
-    return Out;
+StringRef Writer<ELFT>::getOutputSectionName(InputSectionBase<ELFT> *S) const {
+  StringRef Dest = Script->getOutputSection<ELFT>(S);
+  if (!Dest.empty())
+    return Dest;
 
+  StringRef Name = S->getSectionName();
   for (StringRef V : {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
                       ".init_array.", ".fini_array.", ".ctors.", ".dtors."})
-    if (S.startswith(V))
+    if (Name.startswith(V))
       return V.drop_back();
-  return S;
+  return Name;
 }
 
 template <class ELFT>
@@ -750,7 +751,7 @@ void reportDiscarded(InputSectionBase<ELFT> *IS,
 template <class ELFT>
 bool Writer<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) const {
   return !S || !S->isLive() || S == &InputSection<ELFT>::Discarded ||
-         Script->isDiscarded(S->getSectionName());
+         Script->isDiscarded(S);
 }
 
 // The beginning and the ending of .rel[a].plt section are marked
@@ -934,8 +935,7 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
       }
       OutputSectionBase<ELFT> *Sec;
       bool IsNew;
-      std::tie(Sec, IsNew) =
-          Factory.create(C, getOutputSectionName(C->getSectionName()));
+      std::tie(Sec, IsNew) = Factory.create(C, getOutputSectionName(C));
       if (IsNew) {
         OwningSections.emplace_back(Sec);
         OutputSections.push_back(Sec);

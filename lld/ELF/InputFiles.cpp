@@ -12,6 +12,9 @@
 #include "InputSection.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::ELF;
@@ -83,23 +86,24 @@ ELFFileBase<ELFT>::getNonLocalSymbols() {
 }
 
 template <class ELFT>
-ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M)
+elf2::ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M)
     : ELFFileBase<ELFT>(Base::ObjectKind, M) {}
 
 template <class ELFT>
-typename ObjectFile<ELFT>::Elf_Sym_Range ObjectFile<ELFT>::getLocalSymbols() {
+typename elf2::ObjectFile<ELFT>::Elf_Sym_Range
+elf2::ObjectFile<ELFT>::getLocalSymbols() {
   return this->getSymbolsHelper(true);
 }
 
-template <class ELFT> uint32_t ObjectFile<ELFT>::getMipsGp0() const {
+template <class ELFT> uint32_t elf2::ObjectFile<ELFT>::getMipsGp0() const {
   if (MipsReginfo)
     return MipsReginfo->Reginfo->ri_gp_value;
   return 0;
 }
 
 template <class ELFT>
-const typename ObjectFile<ELFT>::Elf_Sym *
-ObjectFile<ELFT>::getLocalSymbol(uintX_t SymIndex) {
+const typename elf2::ObjectFile<ELFT>::Elf_Sym *
+elf2::ObjectFile<ELFT>::getLocalSymbol(uintX_t SymIndex) {
   uint32_t FirstNonLocal = this->Symtab->sh_info;
   if (SymIndex >= FirstNonLocal)
     return nullptr;
@@ -108,7 +112,7 @@ ObjectFile<ELFT>::getLocalSymbol(uintX_t SymIndex) {
 }
 
 template <class ELFT>
-void ObjectFile<ELFT>::parse(DenseSet<StringRef> &ComdatGroups) {
+void elf2::ObjectFile<ELFT>::parse(DenseSet<StringRef> &ComdatGroups) {
   // Read section and symbol tables.
   initializeSections(ComdatGroups);
   initializeSymbols();
@@ -118,7 +122,7 @@ void ObjectFile<ELFT>::parse(DenseSet<StringRef> &ComdatGroups) {
 // They are identified and deduplicated by group name. This function
 // returns a group name.
 template <class ELFT>
-StringRef ObjectFile<ELFT>::getShtGroupSignature(const Elf_Shdr &Sec) {
+StringRef elf2::ObjectFile<ELFT>::getShtGroupSignature(const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->ELFObj;
   uint32_t SymtabdSectionIndex = Sec.sh_link;
   ErrorOr<const Elf_Shdr *> SecOrErr = Obj.getSection(SymtabdSectionIndex);
@@ -134,8 +138,8 @@ StringRef ObjectFile<ELFT>::getShtGroupSignature(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT>
-ArrayRef<typename ObjectFile<ELFT>::uint32_X>
-ObjectFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
+ArrayRef<typename elf2::ObjectFile<ELFT>::uint32_X>
+elf2::ObjectFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->ELFObj;
   ErrorOr<ArrayRef<uint32_X>> EntriesOrErr =
       Obj.template getSectionContentsAsArray<uint32_X>(&Sec);
@@ -174,7 +178,8 @@ static bool shouldMerge(const typename ELFFile<ELFT>::Elf_Shdr &Sec) {
 }
 
 template <class ELFT>
-void ObjectFile<ELFT>::initializeSections(DenseSet<StringRef> &ComdatGroups) {
+void elf2::ObjectFile<ELFT>::initializeSections(
+    DenseSet<StringRef> &ComdatGroups) {
   uint64_t Size = this->ELFObj.getNumSections();
   Sections.resize(Size);
   unsigned I = -1;
@@ -238,8 +243,9 @@ void ObjectFile<ELFT>::initializeSections(DenseSet<StringRef> &ComdatGroups) {
   }
 }
 
-template <class ELFT> InputSectionBase<ELFT> *
-ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
+template <class ELFT>
+InputSectionBase<ELFT> *
+elf2::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   ErrorOr<StringRef> NameOrErr = this->ELFObj.getSectionName(&Sec);
   fatal(NameOrErr);
   StringRef Name = *NameOrErr;
@@ -265,7 +271,7 @@ ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   return new (Alloc) InputSection<ELFT>(this, &Sec);
 }
 
-template <class ELFT> void ObjectFile<ELFT>::initializeSymbols() {
+template <class ELFT> void elf2::ObjectFile<ELFT>::initializeSymbols() {
   this->initStringTable();
   Elf_Sym_Range Syms = this->getNonLocalSymbols();
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
@@ -276,7 +282,7 @@ template <class ELFT> void ObjectFile<ELFT>::initializeSymbols() {
 
 template <class ELFT>
 InputSectionBase<ELFT> *
-ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
+elf2::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   uint32_t Index = this->getSectionIndex(Sym);
   if (Index == 0)
     return nullptr;
@@ -286,7 +292,7 @@ ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 }
 
 template <class ELFT>
-SymbolBody *ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
+SymbolBody *elf2::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   ErrorOr<StringRef> NameOrErr = Sym->getName(this->StringTable);
   fatal(NameOrErr);
   StringRef Name = *NameOrErr;
@@ -420,6 +426,28 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
       Undefs.push_back(Name);
     else
       SymbolBodies.emplace_back(this, Name, Sym);
+  }
+}
+
+BitcodeFile::BitcodeFile(MemoryBufferRef M) : InputFile(BitcodeKind, M) {}
+
+bool BitcodeFile::classof(const InputFile *F) {
+  return F->kind() == BitcodeKind;
+}
+
+void BitcodeFile::parse() {
+  LLVMContext Context;
+  ErrorOr<std::unique_ptr<IRObjectFile>> ObjOrErr =
+      IRObjectFile::create(MB, Context);
+  fatal(ObjOrErr);
+  IRObjectFile &Obj = **ObjOrErr;
+  for (const BasicSymbolRef &Sym : Obj.symbols()) {
+    SmallString<64> Name;
+    raw_svector_ostream OS(Name);
+    Sym.printName(OS);
+    StringRef NameRef = Saver.save(StringRef(Name));
+    SymbolBody *Body = new (Alloc) DefinedBitcode(NameRef);
+    SymbolBodies.push_back(Body);
   }
 }
 
