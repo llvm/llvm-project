@@ -2140,6 +2140,9 @@ struct kmp_taskdata {                                 /* aligned during dynamic 
 #if OMPT_SUPPORT
     ompt_task_info_t        ompt_task_info;
 #endif
+#if OMP_41_ENABLED
+    kmp_task_team_t *       td_task_team;
+#endif
 #if KMP_HAVE_QUAD
     _Quad                   td_dummy;             // Align structure 16-byte size since allocated just before kmp_task_t
 #else

@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Writer.h"
@@ -34,8 +35,10 @@ bool elf2::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   ErrorOS = &Error;
   Configuration C;
   LinkerDriver D;
+  LinkerScript LS;
   Config = &C;
   Driver = &D;
+  Script = &LS;
   Driver->main(Args.slice(1));
   return !HasError;
 }
@@ -95,7 +98,7 @@ void LinkerDriver::addFile(StringRef Path) {
 
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::unknown:
-    readLinkerScript(&Alloc, MBRef);
+    Script->read(MBRef);
     return;
   case file_magic::archive:
     if (WholeArchive) {
@@ -291,7 +294,9 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   SymbolTable<ELFT> Symtab;
-  Target.reset(createTarget());
+  std::unique_ptr<TargetInfo> TI(createTarget());
+  Target = TI.get();
+  Script->finalize();
 
   if (!Config->Shared) {
     // Add entry symbol.

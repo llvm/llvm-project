@@ -763,10 +763,25 @@ static int getPriority(StringRef S) {
   return V;
 }
 
+// This function is called after we sort input sections
+// to update their offsets.
+template <class ELFT> void OutputSection<ELFT>::reassignOffsets() {
+  uintX_t Off = 0;
+  for (InputSection<ELFT> *S : Sections) {
+    Off = alignTo(Off, S->getAlign());
+    S->OutSecOff = Off;
+    Off += S->getSize();
+  }
+  this->Header.sh_size = Off;
+}
+
 // Sorts input sections by section name suffixes, so that .foo.N comes
 // before .foo.M if N < M. Used to sort .{init,fini}_array.N sections.
+// We want to keep the original order if the priorities are the same
+// because the compiler keeps the original initialization order in a
+// translation unit and we need to respect that.
 // For more detail, read the section of the GCC's manual about init_priority.
-template <class ELFT> void OutputSection<ELFT>::sortByPriority() {
+template <class ELFT> void OutputSection<ELFT>::sortInitFini() {
   // Sort sections by priority.
   typedef std::pair<int, InputSection<ELFT> *> Pair;
   auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
@@ -778,15 +793,68 @@ template <class ELFT> void OutputSection<ELFT>::sortByPriority() {
   Sections.clear();
   for (Pair &P : V)
     Sections.push_back(P.second);
+  reassignOffsets();
+}
 
-  // Reassign section addresses.
-  uintX_t Off = 0;
-  for (InputSection<ELFT> *S : Sections) {
-    Off = alignTo(Off, S->getAlign());
-    S->OutSecOff = Off;
-    Off += S->getSize();
-  }
-  this->Header.sh_size = Off;
+// Returns true if S matches /Filename.?\.o$/.
+static bool isCrtBeginEnd(StringRef S, StringRef Filename) {
+  if (!S.endswith(".o"))
+    return false;
+  S = S.drop_back(2);
+  if (S.endswith(Filename))
+    return true;
+  return !S.empty() && S.drop_back().endswith(Filename);
+}
+
+static bool isCrtbegin(StringRef S) { return isCrtBeginEnd(S, "crtbegin"); }
+static bool isCrtend(StringRef S) { return isCrtBeginEnd(S, "crtend"); }
+
+// .ctors and .dtors are sorted by this priority from highest to lowest.
+//
+//  1. The section was contained in crtbegin (crtbegin contains
+//     some sentinel value in its .ctors and .dtors so that the runtime
+//     can find the beginning of the sections.)
+//
+//  2. The section has an optional priority value in the form of ".ctors.N"
+//     or ".dtors.N" where N is a number. Unlike .{init,fini}_array,
+//     they are compared as string rather than number.
+//
+//  3. The section is just ".ctors" or ".dtors".
+//
+//  4. The section was contained in crtend, which contains an end marker.
+//
+// In an ideal world, we don't need this function because .init_array and
+// .ctors are duplicate features (and .init_array is newer.) However, there
+// are too many real-world use cases of .ctors, so we had no choice to
+// support that with this rather ad-hoc semantics.
+template <class ELFT>
+static bool compCtors(const InputSection<ELFT> *A,
+                      const InputSection<ELFT> *B) {
+  bool BeginA = isCrtbegin(A->getFile()->getName());
+  bool BeginB = isCrtbegin(B->getFile()->getName());
+  if (BeginA != BeginB)
+    return BeginA;
+  bool EndA = isCrtend(A->getFile()->getName());
+  bool EndB = isCrtend(B->getFile()->getName());
+  if (EndA != EndB)
+    return EndB;
+  StringRef X = A->getSectionName();
+  StringRef Y = B->getSectionName();
+  assert(X.startswith(".ctors") || X.startswith(".dtors"));
+  assert(Y.startswith(".ctors") || Y.startswith(".dtors"));
+  X = X.substr(6);
+  Y = Y.substr(6);
+  if (X.empty() || Y.empty())
+    return X.empty();
+  return X < Y;
+}
+
+// Sorts input sections by the special rules for .ctors and .dtors.
+// Unfortunately, the rules are different from the one for .{init,fini}_array.
+// Read the comment above.
+template <class ELFT> void OutputSection<ELFT>::sortCtorsDtors() {
+  std::stable_sort(Sections.begin(), Sections.end(), compCtors<ELFT>);
+  reassignOffsets();
 }
 
 // Returns a VA which a relocatin RI refers to. Used only for local symbols.

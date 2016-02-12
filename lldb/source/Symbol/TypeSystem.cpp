@@ -176,8 +176,26 @@ TypeSystemMap::~TypeSystemMap()
 void
 TypeSystemMap::Clear ()
 {
-    Mutex::Locker locker (m_mutex);
-    m_map.clear();
+    collection map;
+    {
+        Mutex::Locker locker (m_mutex);
+        map = m_map;
+    }
+    std::set<TypeSystem *> visited;
+    for (auto pair : map)
+    {
+        TypeSystem *type_system = pair.second.get();
+        if (type_system && !visited.count(type_system))
+        {
+            visited.insert(type_system);
+            type_system->Finalize();
+        }
+    }
+    map.clear();
+    {
+        Mutex::Locker locker (m_mutex);
+        m_map.clear();
+    }
 }
 
 

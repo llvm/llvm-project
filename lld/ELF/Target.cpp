@@ -33,7 +33,7 @@ using namespace llvm::ELF;
 namespace lld {
 namespace elf2 {
 
-std::unique_ptr<TargetInfo> Target;
+TargetInfo *Target;
 
 template <endianness E> static void add32(void *P, int32_t V) {
   write32<E>(P, read32<E>(P) + V);

@@ -369,6 +369,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__hash_table>
 #include <functional>
 #include <stdexcept>
+#include <tuple>
 
 #include <__debug>
 
@@ -1128,7 +1129,7 @@ public:
         {return __table_.__equal_range_unique(__k);}
 
     mapped_type& operator[](const key_type& __k);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     mapped_type& operator[](key_type&& __k);
 #endif
 
@@ -1184,10 +1185,10 @@ public:
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
 
 private:
-#ifndef _LIBCPP_CXX03_LANG
-    __node_holder __construct_node_with_key(key_type&& __k);
-#endif  // _LIBCPP_CXX03_LANG
+
+#ifdef _LIBCPP_CXX03_LANG
     __node_holder __construct_node_with_key(const key_type& __k);
+#endif
 };
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -1394,23 +1395,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(
 
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
-unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node_with_key(key_type&& __k)
-{
-    __node_allocator& __na = __table_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.first), _VSTD::move(__k));
-    __h.get_deleter().__first_constructed = true;
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.second));
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-#endif
-
+#ifdef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node_with_key(const key_type& __k)
@@ -1423,6 +1408,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node_with_key(const 
     __h.get_deleter().__second_constructed = true;
     return _LIBCPP_EXPLICIT_MOVE(__h);  // explicitly moved for C++03
 }
+#endif
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
@@ -1435,6 +1421,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
         __table_.__insert_unique(*__first);
 }
 
+#ifdef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k)
@@ -1447,23 +1434,27 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k)
     __h.release();
     return __r.first->second;
 }
+#else
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+_Tp&
+unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k)
+{
+    return __table_.__emplace_unique_key_args(__k,
+        std::piecewise_construct, std::forward_as_tuple(__k),
+                                  std::forward_as_tuple()).first->__cc.second;
+}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](key_type&& __k)
 {
-    iterator __i = find(__k);
-    if (__i != end())
-        return __i->second;
-    __node_holder __h = __construct_node_with_key(_VSTD::move(__k));
-    pair<iterator, bool> __r = __table_.__node_insert_unique(__h.get());
-    __h.release();
-    return __r.first->second;
+    return __table_.__emplace_unique_key_args(__k,
+        std::piecewise_construct, std::forward_as_tuple(std::move(__k)),
+                                  std::forward_as_tuple()).first->__cc.second;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_MODE
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp&

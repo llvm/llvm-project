@@ -9,6 +9,7 @@
 
 #include "Writer.h"
 #include "Config.h"
+#include "LinkerScript.h"
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -68,7 +69,6 @@ private:
   void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
   void createPhdrs();
   void assignAddresses();
-  void buildSectionMap();
   void fixAbsoluteSymbols();
   bool openFile();
   void writeHeader();
@@ -110,8 +110,6 @@ private:
 
   uintX_t FileSize;
   uintX_t SectionHeaderOff;
-
-  llvm::StringMap<llvm::StringRef> InputToOutputSection;
 
   // Flag to force GOT to be in output if we have relocations
   // that relies on its address.
@@ -190,7 +188,6 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
-  buildSectionMap();
   if (!Config->DiscardAll)
     copyLocalSymbols();
   addReservedSymbols();
@@ -595,9 +592,13 @@ template <class ELFT> static bool isRelroSection(OutputSectionBase<ELFT> *Sec) {
 
 // Output section ordering is determined by this function.
 template <class ELFT>
-static bool compareOutputSections(OutputSectionBase<ELFT> *A,
-                                  OutputSectionBase<ELFT> *B) {
+static bool compareSections(OutputSectionBase<ELFT> *A,
+                            OutputSectionBase<ELFT> *B) {
   typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+
+  int Comp = Script->compareSections(A->getName(), B->getName());
+  if (Comp != 0)
+    return Comp < 0;
 
   uintX_t AFlags = A->getFlags();
   uintX_t BFlags = B->getFlags();
@@ -721,9 +722,9 @@ void Writer<ELFT>::addCopyRelSymbols(std::vector<SharedSymbol<ELFT> *> &Syms) {
 
 template <class ELFT>
 StringRef Writer<ELFT>::getOutputSectionName(StringRef S) const {
-  auto It = InputToOutputSection.find(S);
-  if (It != std::end(InputToOutputSection))
-    return It->second;
+  StringRef Out = Script->getOutputSection(S);
+  if (!Out.empty())
+    return Out;
 
   for (StringRef V : {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
                       ".init_array.", ".fini_array.", ".ctors.", ".dtors."})
@@ -742,24 +743,9 @@ void reportDiscarded(InputSectionBase<ELFT> *IS,
 }
 
 template <class ELFT>
-bool Writer<ELFT>::isDiscarded(InputSectionBase<ELFT> *IS) const {
-  if (!IS || !IS->isLive() || IS == &InputSection<ELFT>::Discarded)
-    return true;
-  return InputToOutputSection.lookup(IS->getSectionName()) == "/DISCARD/";
-}
-
-template <class ELFT>
-static bool compareSections(OutputSectionBase<ELFT> *A,
-                            OutputSectionBase<ELFT> *B) {
-  auto ItA = Config->OutputSections.find(A->getName());
-  auto ItEnd = std::end(Config->OutputSections);
-  if (ItA == ItEnd)
-    return compareOutputSections(A, B);
-  auto ItB = Config->OutputSections.find(B->getName());
-  if (ItB == ItEnd)
-    return compareOutputSections(A, B);
-
-  return std::distance(ItA, ItB) > 0;
+bool Writer<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) const {
+  return !S || !S->isLive() || S == &InputSection<ELFT>::Discarded ||
+         Script->isDiscarded(S->getSectionName());
 }
 
 // The beginning and the ending of .rel[a].plt section are marked
@@ -911,9 +897,15 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
 
 // Sort input sections by section name suffixes for
 // __attribute__((init_priority(N))).
-template <class ELFT> static void sortByPriority(OutputSectionBase<ELFT> *S) {
+template <class ELFT> static void sortInitFini(OutputSectionBase<ELFT> *S) {
   if (S)
-    reinterpret_cast<OutputSection<ELFT> *>(S)->sortByPriority();
+    reinterpret_cast<OutputSection<ELFT> *>(S)->sortInitFini();
+}
+
+// Sort input sections by the special rule for .ctors and .dtors.
+template <class ELFT> static void sortCtorsDtors(OutputSectionBase<ELFT> *S) {
+  if (S)
+    reinterpret_cast<OutputSection<ELFT> *>(S)->sortCtorsDtors();
 }
 
 // Create output section objects and add them to OutputSections.
@@ -964,10 +956,10 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
       Factory.lookup(".fini_array", SHT_FINI_ARRAY, SHF_WRITE | SHF_ALLOC);
 
   // Sort section contents for __attribute__((init_priority(N)).
-  sortByPriority(Out<ELFT>::Dynamic->InitArraySec);
-  sortByPriority(Out<ELFT>::Dynamic->FiniArraySec);
-  sortByPriority(Factory.lookup(".ctors", SHT_PROGBITS, SHF_WRITE | SHF_ALLOC));
-  sortByPriority(Factory.lookup(".dtors", SHT_PROGBITS, SHF_WRITE | SHF_ALLOC));
+  sortInitFini(Out<ELFT>::Dynamic->InitArraySec);
+  sortInitFini(Out<ELFT>::Dynamic->FiniArraySec);
+  sortCtorsDtors(Factory.lookup(".ctors", SHT_PROGBITS, SHF_WRITE | SHF_ALLOC));
+  sortCtorsDtors(Factory.lookup(".dtors", SHT_PROGBITS, SHF_WRITE | SHF_ALLOC));
 
   // The linker needs to define SECNAME_start, SECNAME_end and SECNAME_stop
   // symbols for sections, so that the runtime can get the start and end
@@ -1485,13 +1477,6 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
     if (Sec != Out<ELFT>::Opd)
       Sec->writeTo(Buf + Sec->getFileOff());
-}
-
-template <class ELFT> void Writer<ELFT>::buildSectionMap() {
-  for (const std::pair<StringRef, std::vector<StringRef>> &OutSec :
-       Config->OutputSections)
-    for (StringRef Name : OutSec.second)
-      InputToOutputSection[Name] = OutSec.first;
 }
 
 template void elf2::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);
