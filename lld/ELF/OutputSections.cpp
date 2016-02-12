@@ -844,8 +844,8 @@ static bool compCtors(const InputSection<ELFT> *A,
   assert(Y.startswith(".ctors") || Y.startswith(".dtors"));
   X = X.substr(6);
   Y = Y.substr(6);
-  if (X.empty() || Y.empty())
-    return X.empty();
+  if (X.empty() && Y.empty())
+    return false;
   return X < Y;
 }
 

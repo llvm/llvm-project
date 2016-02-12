@@ -39,7 +39,9 @@
 #  undef FLT_MANT_DIG
 #  undef DBL_MANT_DIG
 #  undef LDBL_MANT_DIG
-#  undef DECIMAL_DIG
+#  if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__)
+#    undef DECIMAL_DIG
+#  endif
 #  undef FLT_DIG
 #  undef DBL_DIG
 #  undef LDBL_DIG
@@ -68,6 +70,9 @@
 #    undef FLT_TRUE_MIN
 #    undef DBL_TRUE_MIN
 #    undef LDBL_TRUE_MIN
+#    undef FLT_DECIMAL_DIG
+#    undef DBL_DECIMAL_DIG
+#    undef LDBL_DECIMAL_DIG
 #  endif
 #endif
 
@@ -81,7 +86,9 @@
 #define DBL_MANT_DIG __DBL_MANT_DIG__
 #define LDBL_MANT_DIG __LDBL_MANT_DIG__
 
-#define DECIMAL_DIG __DECIMAL_DIG__
+#if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__)
+#  define DECIMAL_DIG __DECIMAL_DIG__
+#endif
 
 #define FLT_DIG __FLT_DIG__
 #define DBL_DIG __DBL_DIG__
@@ -119,6 +126,9 @@
 #  define FLT_TRUE_MIN __FLT_DENORM_MIN__
 #  define DBL_TRUE_MIN __DBL_DENORM_MIN__
 #  define LDBL_TRUE_MIN __LDBL_DENORM_MIN__
+#  define FLT_DECIMAL_DIG __FLT_DECIMAL_DIG__
+#  define DBL_DECIMAL_DIG __DBL_DECIMAL_DIG__
+#  define LDBL_DECIMAL_DIG __LDBL_DECIMAL_DIG__
 #endif
 
 #endif /* __FLOAT_H */

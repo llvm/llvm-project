@@ -2416,7 +2416,7 @@ private:
   MethodVFTableLocationsTy MethodVFTableLocations;
 
   /// \brief Does this class have an RTTI component?
-  bool HasRTTIComponent;
+  bool HasRTTIComponent = false;
 
   /// MethodInfo - Contains information about a method in a vtable.
   /// (Used for computing 'this' pointer adjustment thunks.
@@ -2546,11 +2546,13 @@ public:
         WhichVFPtr(*Which),
         Overriders(MostDerivedClass, CharUnits(), MostDerivedClass) {
     // Only include the RTTI component if we know that we will provide a
-    // definition of the vftable.
-    HasRTTIComponent = Context.getLangOpts().RTTIData &&
-                       !MostDerivedClass->hasAttr<DLLImportAttr>() &&
-                       MostDerivedClass->getTemplateSpecializationKind() !=
-                           TSK_ExplicitInstantiationDeclaration;
+    // definition of the vftable.  We always provide the definition of
+    // dllimported classes.
+    if (Context.getLangOpts().RTTIData)
+      if (MostDerivedClass->hasAttr<DLLImportAttr>() ||
+          MostDerivedClass->getTemplateSpecializationKind() !=
+              TSK_ExplicitInstantiationDeclaration)
+        HasRTTIComponent = true;
 
     LayoutVFTable();
 

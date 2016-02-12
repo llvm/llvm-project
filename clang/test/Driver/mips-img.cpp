@@ -3,7 +3,7 @@
 // = Big-endian, mips32r6
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-img-linux-gnu -mips32r6 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_img_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-32R6 %s
 // CHECK-BE-32R6: "-internal-isystem"
 // CHECK-BE-32R6: "[[TC:[^"]+/lib/gcc/mips-img-linux-gnu/4.9.0]]/../../../../mips-img-linux-gnu/include/c++/4.9.0"
@@ -30,7 +30,7 @@
 // = Little-endian, mips32r6
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-img-linux-gnu -mips32r6 -EL \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_img_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LE-32R6 %s
 // CHECK-LE-32R6: "-internal-isystem"
 // CHECK-LE-32R6: "[[TC:[^"]+/lib/gcc/mips-img-linux-gnu/4.9.0]]/../../../../mips-img-linux-gnu/include/c++/4.9.0"
@@ -57,7 +57,7 @@
 // = Big-endian, mips64r6, N32
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -mabi=n32 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_img_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-64R6-N32 %s
 // CHECK-BE-64R6-N32: "-internal-isystem"
 // CHECK-BE-64R6-N32: "[[TC:[^"]+/lib/gcc/mips-img-linux-gnu/4.9.0]]/../../../../mips-img-linux-gnu/include/c++/4.9.0"
@@ -84,7 +84,7 @@
 // = Little-endian, mips64r6, N32
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -EL -mabi=n32 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_img_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LE-64R6-N32 %s
 // CHECK-LE-64R6-N32: "-internal-isystem"
 // CHECK-LE-64R6-N32: "[[TC:[^"]+/lib/gcc/mips-img-linux-gnu/4.9.0]]/../../../../mips-img-linux-gnu/include/c++/4.9.0"
@@ -111,7 +111,7 @@
 // = Big-endian, mips64r6, N64
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -mabi=64 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_img_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-64R6-N64 %s
 // CHECK-BE-64R6-N64: "-internal-isystem"
 // CHECK-BE-64R6-N64: "[[TC:[^"]+/lib/gcc/mips-img-linux-gnu/4.9.0]]/../../../../mips-img-linux-gnu/include/c++/4.9.0"
@@ -138,7 +138,7 @@
 // = Little-endian, mips64r6, N64
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -EL -mabi=64 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_img_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LE-64R6-N64 %s
 // CHECK-LE-64R6-N64: "-internal-isystem"
 // CHECK-LE-64R6-N64: "[[TC:[^"]+/lib/gcc/mips-img-linux-gnu/4.9.0]]/../../../../mips-img-linux-gnu/include/c++/4.9.0"

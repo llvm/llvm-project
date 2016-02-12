@@ -838,6 +838,11 @@ CodeGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
 bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
   assert(RD->isDynamicClass() && "Non-dynamic classes have no VTable.");
 
+  // We always synthesize vtables on the import side regardless of whether or
+  // not it is an explicit instantiation declaration.
+  if (CGM.getTarget().getCXXABI().isMicrosoft() && RD->hasAttr<DLLImportAttr>())
+    return false;
+
   // If we have an explicit instantiation declaration (and not a
   // definition), the vtable is defined elsewhere.
   TemplateSpecializationKind TSK = RD->getTemplateSpecializationKind();

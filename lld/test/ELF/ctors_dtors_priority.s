@@ -36,6 +36,6 @@ _start:
   .byte 0x15
 
 // CHECK:      Contents of section .ctors:
-// CHECK-NEXT: a1b10104 050302c1
+// CHECK-NEXT: a1010405 b10302c1
 // CHECK:      Contents of section .dtors:
-// CHECK-NEXT: a2b21114 151312c2
+// CHECK-NEXT: a2111415 b21312c2

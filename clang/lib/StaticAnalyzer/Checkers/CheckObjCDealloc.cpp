@@ -28,6 +28,16 @@
 using namespace clang;
 using namespace ento;
 
+// FIXME: This was taken from IvarInvalidationChecker.cpp
+static const Expr *peel(const Expr *E) {
+  E = E->IgnoreParenCasts();
+  if (const PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(E))
+    E = POE->getSyntacticForm()->IgnoreParenCasts();
+  if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(E))
+    E = OVE->getSourceExpr()->IgnoreParenCasts();
+  return E;
+}
+
 static bool scan_ivar_release(Stmt *S, const ObjCIvarDecl *ID,
                               const ObjCPropertyDecl *PD,
                               Selector Release,
@@ -38,30 +48,29 @@ static bool scan_ivar_release(Stmt *S, const ObjCIvarDecl *ID,
   if (ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S))
     if (ME->getSelector() == Release)
       if (ME->getInstanceReceiver())
-        if (Expr *Receiver = ME->getInstanceReceiver()->IgnoreParenCasts())
-          if (ObjCIvarRefExpr *E = dyn_cast<ObjCIvarRefExpr>(Receiver))
+        if (const Expr *Receiver = peel(ME->getInstanceReceiver()))
+          if (auto *E = dyn_cast<ObjCIvarRefExpr>(Receiver))
             if (E->getDecl() == ID)
               return true;
 
   // [self setMyIvar:nil];
   if (ObjCMessageExpr *ME = dyn_cast<ObjCMessageExpr>(S))
     if (ME->getInstanceReceiver())
-      if (Expr *Receiver = ME->getInstanceReceiver()->IgnoreParenCasts())
-        if (DeclRefExpr *E = dyn_cast<DeclRefExpr>(Receiver))
+      if (const Expr *Receiver = peel(ME->getInstanceReceiver()))
+        if (auto *E = dyn_cast<DeclRefExpr>(Receiver))
           if (E->getDecl()->getIdentifier() == SelfII)
             if (ME->getMethodDecl() == PD->getSetterMethodDecl() &&
                 ME->getNumArgs() == 1 &&
-                ME->getArg(0)->isNullPointerConstant(Ctx,
+                peel(ME->getArg(0))->isNullPointerConstant(Ctx,
                                               Expr::NPC_ValueDependentIsNull))
               return true;
 
   // self.myIvar = nil;
   if (BinaryOperator* BO = dyn_cast<BinaryOperator>(S))
     if (BO->isAssignmentOp())
-      if (ObjCPropertyRefExpr *PRE =
-           dyn_cast<ObjCPropertyRefExpr>(BO->getLHS()->IgnoreParenCasts()))
+      if (auto *PRE = dyn_cast<ObjCPropertyRefExpr>(peel(BO->getLHS())))
         if (PRE->isExplicitProperty() && PRE->getExplicitProperty() == PD)
-            if (BO->getRHS()->isNullPointerConstant(Ctx,
+            if (peel(BO->getRHS())->isNullPointerConstant(Ctx,
                                             Expr::NPC_ValueDependentIsNull)) {
               // This is only a 'release' if the property kind is not
               // 'assign'.

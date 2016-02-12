@@ -9,6 +9,7 @@
 
 #include "Tools.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -533,18 +534,34 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
   return GetDefaultRuntimeLibType();
 }
 
+static bool ParseCXXStdlibType(const StringRef& Name,
+                               ToolChain::CXXStdlibType& Type) {
+  if (Name == "libc++")
+    Type = ToolChain::CST_Libcxx;
+  else if (Name == "libstdc++")
+    Type = ToolChain::CST_Libstdcxx;
+  else
+    return false;
+
+  return true;
+}
+
 ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
-  if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
-    StringRef Value = A->getValue();
-    if (Value == "libc++")
-      return ToolChain::CST_Libcxx;
-    if (Value == "libstdc++")
-      return ToolChain::CST_Libstdcxx;
-    getDriver().Diag(diag::err_drv_invalid_stdlib_name)
-      << A->getAsString(Args);
+  ToolChain::CXXStdlibType Type;
+  bool HasValidType = false;
+
+  const Arg *A = Args.getLastArg(options::OPT_stdlib_EQ);
+  if (A) {
+    HasValidType = ParseCXXStdlibType(A->getValue(), Type);
+    if (!HasValidType)
+      getDriver().Diag(diag::err_drv_invalid_stdlib_name)
+        << A->getAsString(Args);
   }
 
-  return ToolChain::CST_Libstdcxx;
+  if (!HasValidType && !ParseCXXStdlibType(CLANG_DEFAULT_CXX_STDLIB, Type))
+    Type = GetDefaultCXXStdlibType();
+
+  return Type;
 }
 
 /// \brief Utility function to add a system include directory to CC1 arguments.

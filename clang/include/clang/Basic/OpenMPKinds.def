@@ -379,6 +379,7 @@ OPENMP_TARGET_CLAUSE(private)
 OPENMP_TARGET_CLAUSE(nowait)
 OPENMP_TARGET_CLAUSE(depend)
 OPENMP_TARGET_CLAUSE(defaultmap)
+OPENMP_TARGET_CLAUSE(firstprivate)
 
 // Clauses allowed for OpenMP directive 'target data'.
 // TODO More clauses for 'target data' directive.

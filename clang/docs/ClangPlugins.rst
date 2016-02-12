@@ -37,14 +37,11 @@ Registering a plugin
 ====================
 
 A plugin is loaded from a dynamic library at runtime by the compiler. To
-register a plugin in a library, use ``FrontendPluginRegistry::Add<>``.
-On Windows, you also need to export your plugin registry using
-``LLVM_EXPORT_REGISTRY``.  Here is an example:
+register a plugin in a library, use ``FrontendPluginRegistry::Add<>``:
 
 .. code-block:: c++
 
   static FrontendPluginRegistry::Add<MyPlugin> X("my-plugin-name", "my plugin description");
-  LLVM_EXPORT_REGISTRY(FrontendPluginRegistry)
 
 Putting it all together
 =======================
