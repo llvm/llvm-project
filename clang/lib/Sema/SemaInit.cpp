@@ -26,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
+
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -204,6 +205,8 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
 // Semantic checking for initializer lists.
 //===----------------------------------------------------------------------===//
 
+namespace {
+
 /// @brief Semantic checking for initializer lists.
 ///
 /// The InitListChecker class contains a set of routines that each
@@ -231,7 +234,6 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
 /// point. CheckDesignatedInitializer() recursively steps into the
 /// designated subobject and manages backing out the recursion to
 /// initialize the subobjects after the one designated.
-namespace {
 class InitListChecker {
   Sema &SemaRef;
   bool hadError;
@@ -360,6 +362,7 @@ public:
   // semantic analysis and code generation.
   InitListExpr *getFullyStructuredList() const { return FullyStructuredList; }
 };
+
 } // end anonymous namespace
 
 ExprResult InitListChecker::PerformEmptyInit(Sema &SemaRef,
@@ -419,8 +422,6 @@ ExprResult InitListChecker::PerformEmptyInit(Sema &SemaRef,
     if (CtorDecl->getMinRequiredArguments() == 0 &&
         CtorDecl->isExplicit() && R->getDeclName() &&
         SemaRef.SourceMgr.isInSystemHeader(CtorDecl->getLocation())) {
-
-
       bool IsInStd = false;
       for (NamespaceDecl *ND = dyn_cast<NamespaceDecl>(R->getDeclContext());
            ND && !IsInStd; ND = dyn_cast<NamespaceDecl>(ND->getParent())) {
@@ -707,7 +708,6 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
   }
 }
 
-
 InitListChecker::InitListChecker(Sema &S, const InitializedEntity &Entity,
                                  InitListExpr *IL, QualType &T,
                                  bool VerifyOnly)
@@ -887,7 +887,6 @@ static void warnBracedScalarInit(Sema &S, const InitializedEntity &Entity,
       << FixItHint::CreateRemoval(Braces.getEnd());
   }
 }
-
 
 /// Check whether the initializer \p IList (that was written with explicit
 /// braces) can be used to initialize an object of type \p T.
@@ -1219,7 +1218,6 @@ void InitListChecker::CheckComplexType(const InitializedEntity &Entity,
                         StructuredList, StructuredIndex);
   }
 }
-
 
 void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
                                       InitListExpr *IList, QualType DeclType,
@@ -1919,7 +1917,7 @@ class FieldInitializerValidatorCCC : public CorrectionCandidateCallback {
   RecordDecl *Record;
 };
 
-}
+} // end anonymous namespace
 
 /// @brief Check the well-formedness of a C99 designated initializer.
 ///
@@ -4068,7 +4066,6 @@ convertQualifiersAndValueKindIfNecessary(Sema &S,
   return Initializer->getValueKind();
 }
 
-
 /// \brief Reference initialization without resolving overloaded functions.
 static void TryReferenceInitializationCore(Sema &S,
                                            const InitializedEntity &Entity,
@@ -4303,7 +4300,6 @@ static void TryReferenceInitializationCore(Sema &S,
   }
 
   Sequence.AddReferenceBindingStep(cv1T1, /*bindingTemporary=*/true);
-  return;
 }
 
 /// \brief Attempt character array initialization from a string literal

@@ -8722,14 +8722,44 @@ OverloadingResult
 OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
                                          iterator &Best,
                                          bool UserDefinedConversion) {
+  llvm::SmallVector<OverloadCandidate *, 16> Candidates;
+  std::transform(begin(), end(), std::back_inserter(Candidates),
+                 [](OverloadCandidate &Cand) { return &Cand; });
+
+  // [CUDA] HD->H or HD->D calls are technically not allowed by CUDA
+  // but accepted by both clang and NVCC. However during a particular
+  // compilation mode only one call variant is viable. We need to
+  // exclude non-viable overload candidates from consideration based
+  // only on their host/device attributes. Specifically, if one
+  // candidate call is WrongSide and the other is SameSide, we ignore
+  // the WrongSide candidate.
+  if (S.getLangOpts().CUDA && S.getLangOpts().CUDATargetOverloads) {
+    const FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext);
+    bool ContainsSameSideCandidate =
+        llvm::any_of(Candidates, [&](OverloadCandidate *Cand) {
+          return Cand->Function &&
+                 S.IdentifyCUDAPreference(Caller, Cand->Function) ==
+                     Sema::CFP_SameSide;
+        });
+    if (ContainsSameSideCandidate) {
+      auto IsWrongSideCandidate = [&](OverloadCandidate *Cand) {
+        return Cand->Function &&
+               S.IdentifyCUDAPreference(Caller, Cand->Function) ==
+                   Sema::CFP_WrongSide;
+      };
+      Candidates.erase(std::remove_if(Candidates.begin(), Candidates.end(),
+                                      IsWrongSideCandidate),
+                       Candidates.end());
+    }
+  }
+
   // Find the best viable function.
   Best = end();
-  for (iterator Cand = begin(); Cand != end(); ++Cand) {
+  for (auto *Cand : Candidates)
     if (Cand->Viable)
       if (Best == end() || isBetterOverloadCandidate(S, *Cand, *Best, Loc,
                                                      UserDefinedConversion))
         Best = Cand;
-  }
 
   // If we didn't find any viable functions, abort.
   if (Best == end())
@@ -8739,7 +8769,7 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
 
   // Make sure that this function is better than every other viable
   // function. If not, we have an ambiguity.
-  for (iterator Cand = begin(); Cand != end(); ++Cand) {
+  for (auto *Cand : Candidates) {
     if (Cand->Viable &&
         Cand != Best &&
         !isBetterOverloadCandidate(S, *Best, *Cand, Loc,

@@ -32,6 +32,7 @@
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/MathExtras.h"
+
 using namespace clang;
 using namespace sema;
 
@@ -41,7 +42,7 @@ namespace AttributeLangSupport {
     Cpp,
     ObjC
   };
-}
+} // end namespace AttributeLangSupport
 
 //===----------------------------------------------------------------------===//
 //  Helper functions
@@ -53,6 +54,7 @@ namespace AttributeLangSupport {
 static bool isFunctionOrMethod(const Decl *D) {
   return (D->getFunctionType() != nullptr) || isa<ObjCMethodDecl>(D);
 }
+
 /// \brief Return true if the given decl has function type (function or
 /// function-typed variable) or an Objective-C method or a block.
 static bool isFunctionOrMethodOrBlock(const Decl *D) {
@@ -888,7 +890,6 @@ static void handleConsumableAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                             Attr.getAttributeSpellingListIndex()));
 }
 
-
 static bool checkForConsumableClass(Sema &S, const CXXMethodDecl *MD,
                                         const AttributeList &Attr) {
   ASTContext &CurrContext = S.getASTContext();
@@ -905,7 +906,6 @@ static bool checkForConsumableClass(Sema &S, const CXXMethodDecl *MD,
   
   return true;
 }
-
 
 static void handleCallableWhenAttr(Sema &S, Decl *D,
                                    const AttributeList &Attr) {
@@ -945,7 +945,6 @@ static void handleCallableWhenAttr(Sema &S, Decl *D,
                States.size(), Attr.getAttributeSpellingListIndex()));
 }
 
-
 static void handleParamTypestateAttr(Sema &S, Decl *D,
                                     const AttributeList &Attr) {
   ParamTypestateAttr::ConsumedState ParamState;
@@ -982,7 +981,6 @@ static void handleParamTypestateAttr(Sema &S, Decl *D,
              ParamTypestateAttr(Attr.getRange(), S.Context, ParamState,
                                 Attr.getAttributeSpellingListIndex()));
 }
-
 
 static void handleReturnTypestateAttr(Sema &S, Decl *D,
                                       const AttributeList &Attr) {
@@ -1031,7 +1029,6 @@ static void handleReturnTypestateAttr(Sema &S, Decl *D,
              ReturnTypestateAttr(Attr.getRange(), S.Context, ReturnState,
                                  Attr.getAttributeSpellingListIndex()));
 }
-
 
 static void handleSetTypestateAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   if (!checkForConsumableClass(S, cast<CXXMethodDecl>(D), Attr))
@@ -2643,7 +2640,6 @@ static void handleTargetAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   D->addAttr(NewAttr);
 }
 
-
 static void handleCleanupAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   VarDecl *VD = cast<VarDecl>(D);
   if (!VD->hasLocalStorage()) {
@@ -3101,7 +3097,6 @@ void Sema::AddAlignValueAttr(SourceRange AttrRange, Decl *D, Expr *E,
 
   // Save dependent expressions in the AST to be instantiated.
   D->addAttr(::new (Context) AlignValueAttr(TmpAttr));
-  return;
 }
 
 static void handleAlignedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
@@ -3923,7 +3918,6 @@ bool Sema::CheckRegparmAttr(const AttributeList &Attr, unsigned &numParams) {
 static bool checkLaunchBoundsArgument(Sema &S, Expr *E,
                                       const CUDALaunchBoundsAttr &Attr,
                                       const unsigned Idx) {
-
   if (S.DiagnoseUnexpandedParameterPack(E))
     return false;
 
@@ -4066,6 +4060,7 @@ static bool isValidSubjectOfNSAttribute(Sema &S, QualType type) {
          type->isObjCObjectPointerType() || 
          S.Context.isObjCNSObjectType(type);
 }
+
 static bool isValidSubjectOfCFAttribute(Sema &S, QualType type) {
   return type->isDependentType() || 
          type->isPointerType() || 
@@ -4102,7 +4097,6 @@ static void handleNSConsumedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
 
 static void handleNSReturnsRetainedAttr(Sema &S, Decl *D,
                                         const AttributeList &Attr) {
-
   QualType returnType;
 
   if (ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D))
@@ -5555,57 +5549,45 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_VecReturn:
     handleVecReturnAttr(S, D, Attr);
     break;
-
   case AttributeList::AT_ObjCOwnership:
     handleObjCOwnershipAttr(S, D, Attr);
     break;
   case AttributeList::AT_ObjCPreciseLifetime:
     handleObjCPreciseLifetimeAttr(S, D, Attr);
     break;
-
   case AttributeList::AT_ObjCReturnsInnerPointer:
     handleObjCReturnsInnerPointerAttr(S, D, Attr);
     break;
-
   case AttributeList::AT_ObjCRequiresSuper:
     handleObjCRequiresSuperAttr(S, D, Attr);
     break;
-
   case AttributeList::AT_ObjCBridge:
     handleObjCBridgeAttr(S, scope, D, Attr);
     break;
-
   case AttributeList::AT_ObjCBridgeMutable:
     handleObjCBridgeMutableAttr(S, scope, D, Attr);
     break;
-
   case AttributeList::AT_ObjCBridgeRelated:
     handleObjCBridgeRelatedAttr(S, scope, D, Attr);
     break;
-
   case AttributeList::AT_ObjCDesignatedInitializer:
     handleObjCDesignatedInitializer(S, D, Attr);
     break;
-
   case AttributeList::AT_ObjCRuntimeName:
     handleObjCRuntimeName(S, D, Attr);
     break;
-
   case AttributeList::AT_ObjCBoxable:
     handleObjCBoxable(S, D, Attr);
     break;
-
   case AttributeList::AT_NSErrorDomain:
     handleNSErrorDomain(S, D, Attr);
     break;
-          
   case AttributeList::AT_CFAuditedTransfer:
     handleCFAuditedTransferAttr(S, D, Attr);
     break;
   case AttributeList::AT_CFUnknownTransfer:
     handleCFUnknownTransferAttr(S, D, Attr);
     break;
-
   case AttributeList::AT_CFConsumed:
   case AttributeList::AT_NSConsumed:
     handleNSConsumedAttr(S, D, Attr);
@@ -5613,7 +5595,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_NSConsumesSelf:
     handleSimpleAttribute<NSConsumesSelfAttr>(S, D, Attr);
     break;
-
   case AttributeList::AT_NSReturnsAutoreleased:
   case AttributeList::AT_NSReturnsNotRetained:
   case AttributeList::AT_CFReturnsNotRetained:
@@ -5630,11 +5611,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_VecTypeHint:
     handleVecTypeHint(S, D, Attr);
     break;
-
   case AttributeList::AT_InitPriority:
     handleInitPriorityAttr(S, D, Attr);
     break;
-
   case AttributeList::AT_Packed:
     handlePackedAttr(S, D, Attr);
     break;
@@ -6182,7 +6161,6 @@ static void handleDelayedForbiddenType(Sema &S, DelayedDiagnostic &diag,
   diag.Triggered = true;
 }
 
-
 static bool isDeclDeprecated(Decl *D) {
   do {
     if (D->isDeprecated())
@@ -6288,7 +6266,6 @@ static void DoEmitAvailabilityWarning(Sema &S, Sema::AvailabilityDiagnostic K,
         }
       }
     }
-
     break;
 
   case Sema::AD_Partial:

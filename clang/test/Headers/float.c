@@ -24,17 +24,17 @@
 
 #ifndef FLT_MANT_DIG
     #error "Mandatory macro FLT_MANT_DIG is missing."
-#elif   FLT_MANT_DIG < 1
+#elif   FLT_MANT_DIG < 2
     #error "Mandatory macro FLT_MANT_DIG is invalid."
 #endif
 #ifndef DBL_MANT_DIG
     #error "Mandatory macro DBL_MANT_DIG is missing."
-#elif   DBL_MANT_DIG < 1
+#elif   DBL_MANT_DIG < 2
     #error "Mandatory macro DBL_MANT_DIG is invalid."
 #endif
 #ifndef LDBL_MANT_DIG
     #error "Mandatory macro LDBL_MANT_DIG is missing."
-#elif   LDBL_MANT_DIG < 1
+#elif   LDBL_MANT_DIG < 2
     #error "Mandatory macro LDBL_MANT_DIG is invalid."
 #endif
 #if ((FLT_MANT_DIG > DBL_MANT_DIG) || (DBL_MANT_DIG > LDBL_MANT_DIG))
@@ -108,18 +108,18 @@
 
 
 #ifndef FLT_MIN_EXP
-    #error "Mandatory macro _MIN_EXP is missing."
-#elif   FLT_MIN_EXP > -2
-    #error "Mandatory macro _MIN_EXP is invalid."
+    #error "Mandatory macro FLT_MIN_EXP is missing."
+#elif   FLT_MIN_EXP > -1
+    #error "Mandatory macro FLT_MIN_EXP is invalid."
 #endif
 #ifndef DBL_MIN_EXP
     #error "Mandatory macro DBL_MIN_EXP is missing."
-#elif   DBL_MIN_EXP > -2
+#elif   DBL_MIN_EXP > -1
     #error "Mandatory macro DBL_MIN_EXP is invalid."
 #endif
 #ifndef LDBL_MIN_EXP
     #error "Mandatory macro LDBL_MIN_EXP is missing."
-#elif   LDBL_MIN_EXP > -2
+#elif   LDBL_MIN_EXP > -1
     #error "Mandatory macro LDBL_MIN_EXP is invalid."
 #endif
 
@@ -143,17 +143,17 @@
 
 #ifndef FLT_MAX_EXP
     #error "Mandatory macro FLT_MAX_EXP is missing."
-#elif   FLT_MAX_EXP < 2
+#elif   FLT_MAX_EXP < 1
     #error "Mandatory macro FLT_MAX_EXP is invalid."
 #endif
 #ifndef DBL_MAX_EXP
     #error "Mandatory macro DBL_MAX_EXP is missing."
-#elif   DBL_MAX_EXP < 2
+#elif   DBL_MAX_EXP < 1
     #error "Mandatory macro DBL_MAX_EXP is invalid."
 #endif
 #ifndef LDBL_MAX_EXP
     #error "Mandatory macro LDBL_MAX_EXP is missing."
-#elif   LDBL_MAX_EXP < 2
+#elif   LDBL_MAX_EXP < 1
     #error "Mandatory macro LDBL_MAX_EXP is invalid."
 #endif
 #if ((FLT_MAX_EXP > DBL_MAX_EXP) || (DBL_MAX_EXP > LDBL_MAX_EXP))

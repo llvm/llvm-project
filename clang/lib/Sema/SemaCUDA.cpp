@@ -68,26 +68,26 @@ Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D) {
 // Ph - preference in host mode
 // Pd - preference in device mode
 // H  - handled in (x)
-// Preferences: b-best, f-fallback, l-last resort, n-never.
+// Preferences: N:native, HD:host-device, SS:same side, WS:wrong side, --:never.
 //
-// | F  | T  | Ph | Pd |  H  |
-// |----+----+----+----+-----+
-// | d  | d  | b  | b  | (b) |
-// | d  | g  | n  | n  | (a) |
-// | d  | h  | l  | l  | (e) |
-// | d  | hd | f  | f  | (c) |
-// | g  | d  | b  | b  | (b) |
-// | g  | g  | n  | n  | (a) |
-// | g  | h  | l  | l  | (e) |
-// | g  | hd | f  | f  | (c) |
-// | h  | d  | l  | l  | (e) |
-// | h  | g  | b  | b  | (b) |
-// | h  | h  | b  | b  | (b) |
-// | h  | hd | f  | f  | (c) |
-// | hd | d  | l  | f  | (d) |
-// | hd | g  | f  | n  |(d/a)|
-// | hd | h  | f  | l  | (d) |
-// | hd | hd | b  | b  | (b) |
+// | F  | T  | Ph  | Pd  |  H  |
+// |----+----+-----+-----+-----+
+// | d  | d  | N   | N   | (c) |
+// | d  | g  | --  | --  | (a) |
+// | d  | h  | --  | --  | (e) |
+// | d  | hd | HD  | HD  | (b) |
+// | g  | d  | N   | N   | (c) |
+// | g  | g  | --  | --  | (a) |
+// | g  | h  | --  | --  | (e) |
+// | g  | hd | HD  | HD  | (b) |
+// | h  | d  | --  | --  | (e) |
+// | h  | g  | N   | N   | (c) |
+// | h  | h  | N   | N   | (c) |
+// | h  | hd | HD  | HD  | (b) |
+// | hd | d  | WS  | SS  | (d) |
+// | hd | g  | SS  | --  |(d/a)|
+// | hd | h  | SS  | WS  | (d) |
+// | hd | hd | HD  | HD  | (b) |
 
 Sema::CUDAFunctionPreference
 Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
@@ -112,39 +112,38 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
        (CallerTarget == CFT_HostDevice && getLangOpts().CUDAIsDevice)))
     return CFP_Never;
 
-  // (b) Best case scenarios
+  // (b) Calling HostDevice is OK for everyone.
+  if (CalleeTarget == CFT_HostDevice)
+    return CFP_HostDevice;
+
+  // (c) Best case scenarios
   if (CalleeTarget == CallerTarget ||
       (CallerTarget == CFT_Host && CalleeTarget == CFT_Global) ||
       (CallerTarget == CFT_Global && CalleeTarget == CFT_Device))
-    return CFP_Best;
-
-  // (c) Calling HostDevice is OK as a fallback that works for everyone.
-  if (CalleeTarget == CFT_HostDevice)
-    return CFP_Fallback;
-
-  // Figure out what should be returned 'last resort' cases. Normally
-  // those would not be allowed, but we'll consider them if
-  // CUDADisableTargetCallChecks is true.
-  CUDAFunctionPreference QuestionableResult =
-      getLangOpts().CUDADisableTargetCallChecks ? CFP_LastResort : CFP_Never;
+    return CFP_Native;
 
   // (d) HostDevice behavior depends on compilation mode.
   if (CallerTarget == CFT_HostDevice) {
-    // Calling a function that matches compilation mode is OK.
-    // Calling a function from the other side is frowned upon.
-    if (getLangOpts().CUDAIsDevice)
-      return CalleeTarget == CFT_Device ? CFP_Fallback : QuestionableResult;
-    else
-      return (CalleeTarget == CFT_Host || CalleeTarget == CFT_Global)
-                 ? CFP_Fallback
-                 : QuestionableResult;
+    // It's OK to call a compilation-mode matching function from an HD one.
+    if ((getLangOpts().CUDAIsDevice && CalleeTarget == CFT_Device) ||
+        (!getLangOpts().CUDAIsDevice &&
+         (CalleeTarget == CFT_Host || CalleeTarget == CFT_Global)))
+      return CFP_SameSide;
+
+    // We'll allow calls to non-mode-matching functions if target call
+    // checks are disabled. This is needed to avoid complaining about
+    // HD->H calls when we compile for device side and vice versa.
+    if (getLangOpts().CUDADisableTargetCallChecks)
+      return CFP_WrongSide;
+
+    return CFP_Never;
   }
 
   // (e) Calling across device/host boundary is not something you should do.
   if ((CallerTarget == CFT_Host && CalleeTarget == CFT_Device) ||
       (CallerTarget == CFT_Device && CalleeTarget == CFT_Host) ||
       (CallerTarget == CFT_Global && CalleeTarget == CFT_Host))
-    return QuestionableResult;
+    return CFP_Never;
 
   llvm_unreachable("All cases should've been handled by now.");
 }

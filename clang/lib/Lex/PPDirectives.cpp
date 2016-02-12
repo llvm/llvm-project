@@ -27,6 +27,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SaveAndRestore.h"
+
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -272,8 +273,6 @@ void Preprocessor::CheckEndOfDirective(const char *DirType, bool EnableMacros) {
   }
 }
 
-
-
 /// SkipExcludedConditionalBlock - We just read a \#if or related directive and
 /// decided that the subsequent tokens are in the \#if'd out portion of the
 /// file.  Lex the rest of the file, until we see an \#endif.  If
@@ -497,7 +496,6 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation IfTokenLoc,
 }
 
 void Preprocessor::PTHSkipExcludedConditionalBlock() {
-
   while (1) {
     assert(CurPTHLexer);
     assert(CurPTHLexer->LexingRawMode == false);
@@ -571,7 +569,6 @@ void Preprocessor::PTHSkipExcludedConditionalBlock() {
     }
 
     // Otherwise, skip this block and go to the next one.
-    continue;
   }
 }
 
@@ -728,7 +725,6 @@ const FileEntry *Preprocessor::LookupFile(
   return nullptr;
 }
 
-
 //===----------------------------------------------------------------------===//
 // Preprocessor Directive Handling.
 //===----------------------------------------------------------------------===//
@@ -740,9 +736,11 @@ public:
     if (pp->MacroExpansionInDirectivesOverride)
       pp->DisableMacroExpansion = false;
   }
+
   ~ResetMacroExpansionHelper() {
     PP->DisableMacroExpansion = save;
   }
+
 private:
   Preprocessor *PP;
   bool save;
@@ -1210,7 +1208,6 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
   }
 }
 
-
 /// HandleUserDiagnosticDirective - Handle a #warning or #error directive.
 ///
 void Preprocessor::HandleUserDiagnosticDirective(Token &Tok,
@@ -1506,7 +1503,6 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
                                           const DirectoryLookup *LookupFrom,
                                           const FileEntry *LookupFromFile,
                                           bool isImport) {
-
   Token FilenameTok;
   CurPPLexer->LexIncludeFilename(FilenameTok);
 
@@ -2151,7 +2147,6 @@ void Preprocessor::HandleDefineDirective(Token &DefineTok,
       // Get the next token of the macro.
       LexUnexpandedToken(Tok);
     }
-
   } else {
     // Otherwise, read the body of a function-like macro.  While we are at it,
     // check C99 6.10.3.2p1: ensure that # operators are followed by macro
@@ -2180,7 +2175,6 @@ void Preprocessor::HandleDefineDirective(Token &DefineTok,
       }
 
       if (Tok.is(tok::hashhash)) {
-        
         // If we see token pasting, check if it looks like the gcc comma
         // pasting extension.  We'll use this information to suppress
         // diagnostics later on.
@@ -2368,7 +2362,6 @@ void Preprocessor::HandleUndefDirective(Token &UndefTok) {
   appendMacroDirective(MacroNameTok.getIdentifierInfo(),
                        AllocateUndefMacroDirective(MacroNameTok.getLocation()));
 }
-
 
 //===----------------------------------------------------------------------===//
 // Preprocessor Conditional Directive Handling.

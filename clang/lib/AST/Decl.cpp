@@ -2732,6 +2732,12 @@ unsigned FunctionDecl::getBuiltinID() const {
   if (getStorageClass() == SC_Static)
     return 0;
 
+  // OpenCL v1.2 s6.9.f - The library functions defined in
+  // the C99 standard headers are not available.
+  if (Context.getLangOpts().OpenCL &&
+      Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
+    return 0;
+
   return BuiltinID;
 }
 

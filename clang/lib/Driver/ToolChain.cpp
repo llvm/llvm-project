@@ -516,7 +516,6 @@ void ToolChain::addProfileRTLibs(const llvm::opt::ArgList &Args,
   if (!needsProfileRT(Args)) return;
 
   CmdArgs.push_back(getCompilerRTArgString(Args, "profile"));
-  return;
 }
 
 ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
