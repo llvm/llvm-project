@@ -26,7 +26,7 @@ public:
   bool isTlsGlobalDynamicRel(unsigned Type) const;
   virtual unsigned getDynRel(unsigned Type) const { return Type; }
   virtual bool isTlsDynRel(unsigned Type, const SymbolBody &S) const;
-  virtual unsigned getTlsGotRel(unsigned Type = -1) const { return TlsGotRel; }
+  virtual unsigned getTlsGotRel(unsigned Type) const { return TlsGotRel; }
   virtual void writeGotHeader(uint8_t *Buf) const {}
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
   virtual void writeGotPlt(uint8_t *Buf, uint64_t Plt) const {};
@@ -100,7 +100,7 @@ typename llvm::object::ELFFile<ELFT>::uintX_t getMipsGpAddr();
 
 template <class ELFT> bool isGnuIFunc(const SymbolBody &S);
 
-extern std::unique_ptr<TargetInfo> Target;
+extern TargetInfo *Target;
 TargetInfo *createTarget();
 }
 }

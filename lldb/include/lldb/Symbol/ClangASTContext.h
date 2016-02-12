@@ -61,6 +61,9 @@ public:
 
     ~ClangASTContext() override;
 
+    void
+    Finalize() override;
+
     //------------------------------------------------------------------
     // PluginInterface functions
     //------------------------------------------------------------------
@@ -127,7 +130,7 @@ public:
 
     void
     Clear();
-
+    
     const char *
     GetTargetTriple ();
 

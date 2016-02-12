@@ -886,8 +886,10 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                             // When the definition needs to be defined.
                             assert(!dwarf->GetForwardDeclClangTypeToDie().count(ClangASTContext::RemoveFastQualifiers(clang_type).GetOpaqueQualType()) &&
                                    "Type already in the forward declaration map!");
-                            assert(((SymbolFileDWARF*)m_ast.GetSymbolFile())->UserIDMatches(die.GetDIERef().GetUID()) &&
-                                   "Adding incorrect type to forward declaration map");
+                            // Can't assume m_ast.GetSymbolFile() is actually a SymbolFileDWARF, it can be a
+                            // SymbolFileDWARFDebugMap for Apple binaries.
+                            //assert(((SymbolFileDWARF*)m_ast.GetSymbolFile())->UserIDMatches(die.GetDIERef().GetUID()) &&
+                            //       "Adding incorrect type to forward declaration map");
                             dwarf->GetForwardDeclDieToClangType()[die.GetDIE()] = clang_type.GetOpaqueQualType();
                             dwarf->GetForwardDeclClangTypeToDie()[ClangASTContext::RemoveFastQualifiers(clang_type).GetOpaqueQualType()] = die.GetDIERef();
                             m_ast.SetHasExternalStorage (clang_type.GetOpaqueQualType(), true);

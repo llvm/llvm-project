@@ -369,6 +369,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__hash_table>
 #include <functional>
 #include <stdexcept>
+#include <tuple>
 
 #include <__debug>
 
@@ -583,8 +584,7 @@ public:
     }
 };
 
-#if __cplusplus >= 201103L
-
+#ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp>
 union __hash_value_type
 {
@@ -596,19 +596,6 @@ union __hash_value_type
     value_type __cc;
     __nc_value_type __nc;
 
-    template <class ..._Args>
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_value_type(_Args&& ...__args)
-        : __cc(std::forward<_Args>(__args)...) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_value_type(const __hash_value_type& __v)
-        : __cc(__v.__cc) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_value_type(__hash_value_type&& __v)
-        : __nc(_VSTD::move(__v.__nc)) {}
-
     _LIBCPP_INLINE_VISIBILITY
     __hash_value_type& operator=(const __hash_value_type& __v)
         {__nc = __v.__cc; return *this;}
@@ -617,8 +604,23 @@ union __hash_value_type
     __hash_value_type& operator=(__hash_value_type&& __v)
         {__nc = _VSTD::move(__v.__nc); return *this;}
 
+    template <class _ValueTp,
+              class = typename enable_if<
+                    __is_same_uncvref<_ValueTp, value_type>::value
+                 >::type
+             >
     _LIBCPP_INLINE_VISIBILITY
-    ~__hash_value_type() {__cc.~value_type();}
+    __hash_value_type& operator=(_ValueTp&& __v) {
+        __nc = _VSTD::forward<_ValueTp>(__v); return *this;
+    }
+
+private:
+    __hash_value_type(const __hash_value_type& __v) = delete;
+    __hash_value_type(__hash_value_type&& __v) = delete;
+    template <class ..._Args>
+    explicit __hash_value_type(_Args&& ...__args) = delete;
+
+    ~__hash_value_type() = delete;
 };
 
 #else
@@ -632,18 +634,8 @@ struct __hash_value_type
 
     value_type __cc;
 
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_value_type() {}
-
-    template <class _A0>
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_value_type(const _A0& __a0)
-        : __cc(__a0) {}
-
-    template <class _A0, class _A1>
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_value_type(const _A0& __a0, const _A1& __a1)
-        : __cc(__a0, __a1) {}
+private:
+   ~__hash_value_type();
 };
 
 #endif
@@ -780,6 +772,7 @@ private:
 
     __table __table_;
 
+    typedef typename __table::_NodeTypes                   _NodeTypes;
     typedef typename __table::__node_pointer               __node_pointer;
     typedef typename __table::__node_const_pointer         __node_const_pointer;
     typedef typename __table::__node_traits                __node_traits;
@@ -788,6 +781,9 @@ private:
     typedef __hash_map_node_destructor<__node_allocator>   _Dp;
     typedef unique_ptr<__node, _Dp>                         __node_holder;
     typedef allocator_traits<allocator_type>               __alloc_traits;
+
+    static_assert((is_same<typename __table::__container_value_type, value_type>::value), "");
+    static_assert((is_same<typename __table::__node_value_type, __value_type>::value), "");
 public:
     typedef typename __alloc_traits::pointer         pointer;
     typedef typename __alloc_traits::const_pointer   const_pointer;
@@ -913,28 +909,26 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const_iterator cend()   const _NOEXCEPT {return __table_.end();}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
+    template <class... _Args>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool> emplace(_Args&&... __args) {
+        return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...);
+    }
 
     template <class... _Args>
-        pair<iterator, bool> emplace(_Args&&... __args);
-
-    template <class... _Args>
-        _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY
+    iterator emplace_hint(const_iterator __p, _Args&&... __args) {
 #if _LIBCPP_DEBUG_LEVEL >= 2
-        iterator emplace_hint(const_iterator __p, _Args&&... __args)
-        {
-            _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
-                "unordered_map::emplace_hint(const_iterator, args...) called with an iterator not"
-                " referring to this unordered_map");
-            return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...).first;
-        }
-#else
-        iterator emplace_hint(const_iterator, _Args&&... __args)
-            {return emplace(_VSTD::forward<_Args>(__args)...).first;}
+        _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+            "unordered_map::emplace_hint(const_iterator, args...) called with an iterator not"
+            " referring to this unordered_map");
 #endif
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+        return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...).first;
+    }
+
+#endif // _LIBCPP_CXX03_LANG
+
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> insert(const value_type& __x)
         {return __table_.__insert_unique(__x);}
@@ -1135,7 +1129,7 @@ public:
         {return __table_.__equal_range_unique(__k);}
 
     mapped_type& operator[](const key_type& __k);
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#ifndef _LIBCPP_CXX03_LANG
     mapped_type& operator[](key_type&& __k);
 #endif
 
@@ -1191,18 +1185,10 @@ public:
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
 
 private:
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    __node_holder __construct_node();
-    template <class _A0>
-        __node_holder
-         __construct_node(_A0&& __a0);
-    __node_holder __construct_node_with_key(key_type&& __k);
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-    template <class _A0, class _A1, class ..._Args>
-        __node_holder __construct_node(_A0&& __a0, _A1&& __a1, _Args&& ...__args);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
+#ifdef _LIBCPP_CXX03_LANG
     __node_holder __construct_node_with_key(const key_type& __k);
+#endif
 };
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -1328,10 +1314,10 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     if (__a != __u.get_allocator())
     {
         iterator __i = __u.begin();
-        while (__u.size() != 0)
-            __table_.__insert_unique(
-                _VSTD::move(__u.__table_.remove((__i++).__i_)->__value_)
-                                    );
+        while (__u.size() != 0) {
+            __table_.__emplace_unique(_VSTD::move(
+                __u.__table_.remove((__i++).__i_)->__value_.__nc));
+        }
     }
 #if _LIBCPP_DEBUG_LEVEL >= 2
     else
@@ -1409,81 +1395,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(
 
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
-unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node()
-{
-    __node_allocator& __na = __table_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_));
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-template <class _A0>
-typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
-unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node(_A0&& __a0)
-{
-    __node_allocator& __na = __table_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_),
-                             _VSTD::forward<_A0>(__a0));
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
-unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node_with_key(key_type&& __k)
-{
-    __node_allocator& __na = __table_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.first), _VSTD::move(__k));
-    __h.get_deleter().__first_constructed = true;
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.second));
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-template <class _A0, class _A1, class ..._Args>
-typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
-unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node(_A0&& __a0,
-                                                                 _A1&& __a1,
-                                                                 _Args&&... __args)
-{
-    __node_allocator& __na = __table_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_),
-                             _VSTD::forward<_A0>(__a0), _VSTD::forward<_A1>(__a1),
-                             _VSTD::forward<_Args>(__args)...);
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-template <class... _Args>
-pair<typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::iterator, bool>
-unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::emplace(_Args&&... __args)
-{
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
-    pair<iterator, bool> __r = __table_.__node_insert_unique(__h.get());
-    if (__r.second)
-        __h.release();
-    return __r;
-}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
+#ifdef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node_with_key(const key_type& __k)
@@ -1496,6 +1408,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node_with_key(const 
     __h.get_deleter().__second_constructed = true;
     return _LIBCPP_EXPLICIT_MOVE(__h);  // explicitly moved for C++03
 }
+#endif
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
@@ -1508,6 +1421,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterator __first,
         __table_.__insert_unique(*__first);
 }
 
+#ifdef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k)
@@ -1520,23 +1434,27 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k)
     __h.release();
     return __r.first->second;
 }
+#else
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+_Tp&
+unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k)
+{
+    return __table_.__emplace_unique_key_args(__k,
+        std::piecewise_construct, std::forward_as_tuple(__k),
+                                  std::forward_as_tuple()).first->__cc.second;
+}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](key_type&& __k)
 {
-    iterator __i = find(__k);
-    if (__i != end())
-        return __i->second;
-    __node_holder __h = __construct_node_with_key(_VSTD::move(__k));
-    pair<iterator, bool> __r = __table_.__node_insert_unique(__h.get());
-    __h.release();
-    return __r.first->second;
+    return __table_.__emplace_unique_key_args(__k,
+        std::piecewise_construct, std::forward_as_tuple(std::move(__k)),
+                                  std::forward_as_tuple()).first->__cc.second;
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#endif  // !_LIBCPP_CXX03_MODE
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp&
@@ -1630,6 +1548,7 @@ private:
 
     __table __table_;
 
+    typedef typename __table::_NodeTypes                   _NodeTypes;
     typedef typename __table::__node_traits                __node_traits;
     typedef typename __table::__node_allocator             __node_allocator;
     typedef typename __table::__node                       __node;
@@ -1765,16 +1684,18 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const_iterator cend()   const _NOEXCEPT {return __table_.end();}
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#ifndef _LIBCPP_HAS_NO_VARIADICS
+#ifndef _LIBCPP_CXX03_LANG
+    template <class... _Args>
+    iterator emplace(_Args&&... __args) {
+        return __table_.__emplace_multi(_VSTD::forward<_Args>(__args)...);
+    }
 
     template <class... _Args>
-        iterator emplace(_Args&&... __args);
+    iterator emplace_hint(const_iterator __p, _Args&&... __args) {
+        return __table_.__emplace_hint_multi(__p.__i_, _VSTD::forward<_Args>(__args)...);
+    }
+#endif  // _LIBCPP_CXX03_LANG
 
-    template <class... _Args>
-        iterator emplace_hint(const_iterator __p, _Args&&... __args);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const value_type& __x) {return __table_.__insert_multi(__x);}
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -1888,17 +1809,7 @@ public:
 
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
 
-private:
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    __node_holder __construct_node();
-    template <class _A0>
-        __node_holder
-         __construct_node(_A0&& __a0);
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-    template <class _A0, class _A1, class ..._Args>
-        __node_holder __construct_node(_A0&& __a0, _A1&& __a1, _Args&& ...__args);
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+
 };
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -2027,7 +1938,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         while (__u.size() != 0)
         {
             __table_.__insert_multi(
-                _VSTD::move(__u.__table_.remove((__i++).__i_)->__value_)
+                      _VSTD::move(__u.__table_.remove((__i++).__i_)->__value_.__nc)
                                    );
         }
     }
@@ -2107,77 +2018,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(
 
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-typename unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
-unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node()
-{
-    __node_allocator& __na = __table_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_));
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-template <class _A0>
-typename unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
-unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node(_A0&& __a0)
-{
-    __node_allocator& __na = __table_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_),
-                             _VSTD::forward<_A0>(__a0));
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-template <class _A0, class _A1, class ..._Args>
-typename unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
-unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node(
-        _A0&& __a0, _A1&& __a1, _Args&&... __args)
-{
-    __node_allocator& __na = __table_.__node_alloc();
-    __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_),
-                             _VSTD::forward<_A0>(__a0), _VSTD::forward<_A1>(__a1),
-                             _VSTD::forward<_Args>(__args)...);
-    __h.get_deleter().__first_constructed = true;
-    __h.get_deleter().__second_constructed = true;
-    return __h;
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-template <class... _Args>
-typename unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::iterator
-unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::emplace(_Args&&... __args)
-{
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
-    iterator __r = __table_.__node_insert_multi(__h.get());
-    __h.release();
-    return __r;
-}
-
-template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-template <class... _Args>
-typename unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::iterator
-unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::emplace_hint(
-        const_iterator __p, _Args&&... __args)
-{
-    __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
-    iterator __r = __table_.__node_insert_multi(__p.__i_, __h.get());
-    __h.release();
-    return __r;
-}
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>

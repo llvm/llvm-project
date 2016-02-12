@@ -1,5 +1,6 @@
 include(CheckLibraryExists)
 include(CheckCXXCompilerFlag)
+include(CheckLibcxxAtomic)
 
 # Check compiler flags
 

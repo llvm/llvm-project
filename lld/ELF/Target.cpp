@@ -33,7 +33,7 @@ using namespace llvm::ELF;
 namespace lld {
 namespace elf2 {
 
-std::unique_ptr<TargetInfo> Target;
+TargetInfo *Target;
 
 template <endianness E> static void add32(void *P, int32_t V) {
   write32<E>(P, read32<E>(P) + V);
@@ -114,6 +114,7 @@ private:
 class X86_64TargetInfo final : public TargetInfo {
 public:
   X86_64TargetInfo();
+  unsigned getTlsGotRel(unsigned Type) const override;
   bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   void writeGotPlt(uint8_t *Buf, uint64_t Plt) const override;
@@ -173,7 +174,7 @@ public:
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  unsigned getTlsGotRel(unsigned Type = -1) const override;
+  unsigned getTlsGotRel(unsigned Type) const override;
   bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
@@ -654,6 +655,13 @@ bool X86_64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   return Type == R_X86_64_GOTPCREL || needsPlt(Type, S);
 }
 
+unsigned X86_64TargetInfo::getTlsGotRel(unsigned Type) const {
+  // No other types of TLS relocations requiring GOT should
+  // reach here.
+  assert(Type == R_X86_64_GOTTPOFF);
+  return R_X86_64_PC32;
+}
+
 bool X86_64TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
   return Type == R_X86_64_GOTTPOFF || Type == R_X86_64_TLSGD;
 }
@@ -789,7 +797,7 @@ void X86_64TargetInfo::relocateTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd,
       0x48, 0x03, 0x05, 0x00, 0x00, 0x00, 0x00              // addq x@tpoff,%rax
   };
   memcpy(Loc - 4, Inst, sizeof(Inst));
-  relocateOne(Loc + 8, BufEnd, R_X86_64_TPOFF64, P + 12, SA);
+  relocateOne(Loc + 8, BufEnd, R_X86_64_PC32, P + 12, SA);
 }
 
 // In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
@@ -896,9 +904,6 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write32le(Loc, Val);
     break;
   }
-  case R_X86_64_TPOFF64:
-    write32le(Loc, SA - P);
-    break;
   default:
     fatal("unrecognized reloc " + Twine(Type));
   }
@@ -1209,10 +1214,9 @@ void AArch64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 unsigned AArch64TargetInfo::getTlsGotRel(unsigned Type) const {
-  if (Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
-      Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC)
+  assert(Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
+    Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC);
     return Type;
-  return TlsGotRel;
 }
 
 bool AArch64TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {

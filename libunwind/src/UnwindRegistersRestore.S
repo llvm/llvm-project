@@ -282,8 +282,8 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind15Registers_arm646jumptoEv)
   ldp    x22,x23, [x0, #0x0B0]
   ldp    x24,x25, [x0, #0x0C0]
   ldp    x26,x27, [x0, #0x0D0]
-  ldp    x28,fp,  [x0, #0x0E0]
-  ldr    lr,      [x0, #0x100]  // restore pc into lr
+  ldp    x28,x29, [x0, #0x0E0]
+  ldr    x30,     [x0, #0x100]  // restore pc into lr
   ldr    x1,      [x0, #0x0F8]
   mov    sp,x1                  // restore sp
 
@@ -306,7 +306,7 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind15Registers_arm646jumptoEv)
   ldr    d31,     [x0, #0x208]
 
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
-  ret    lr                     // jump to pc
+  ret    x30                    // jump to pc
 
 #elif defined(__arm__) && !defined(__APPLE__)
 

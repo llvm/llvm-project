@@ -48,7 +48,6 @@ struct Configuration {
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   std::string RPath;
-  llvm::MapVector<llvm::StringRef, std::vector<llvm::StringRef>> OutputSections;
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;
   bool AllowMultipleDefinition;

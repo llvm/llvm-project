@@ -112,6 +112,360 @@ protected:
     type_t data;
 };
 
+// ArgItem is used by the GetArgs() function when reading function arguments from the target.
+struct ArgItem
+{
+    enum
+    {
+        ePointer,
+        eInt32,
+        eInt64,
+        eLong,
+        eBool
+    } type;
+
+    uint64_t value;
+
+    explicit operator uint64_t() const { return value; }
+};
+
+// Context structure to be passed into GetArgsXXX(), argument reading functions below.
+struct GetArgsCtx
+{
+    RegisterContext *reg_ctx;
+    Process *process;
+};
+
+bool
+GetArgsX86(const GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
+{
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    // get the current stack pointer
+    uint64_t sp = ctx.reg_ctx->GetSP();
+
+    for (size_t i = 0; i < num_args; ++i)
+    {
+        ArgItem &arg = arg_list[i];
+        // advance up the stack by one argument
+        sp += sizeof(uint32_t);
+        // get the argument type size
+        size_t arg_size = sizeof(uint32_t);
+        // read the argument from memory
+        arg.value = 0;
+        Error error;
+        size_t read = ctx.process->ReadMemory(sp, &arg.value, sizeof(uint32_t), error);
+        if (read != arg_size || !error.Success())
+        {
+            if (log)
+                log->Printf("%s - error reading argument: %" PRIu64 " '%s'", __FUNCTION__, uint64_t(i),
+                            error.AsCString());
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
+GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
+{
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    // number of arguments passed in registers
+    static const uint32_t c_args_in_reg = 6;
+    // register passing order
+    static const std::array<const char *, c_args_in_reg> c_reg_names = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+    // argument type to size mapping
+    static const std::array<size_t, 5> arg_size = {
+        8, // ePointer,
+        4, // eInt32,
+        8, // eInt64,
+        8, // eLong,
+        4, // eBool,
+    };
+
+    // get the current stack pointer
+    uint64_t sp = ctx.reg_ctx->GetSP();
+    // step over the return address
+    sp += sizeof(uint64_t);
+
+    // check the stack alignment was correct (16 byte aligned)
+    if ((sp & 0xf) != 0x0)
+    {
+        if (log)
+            log->Printf("%s - stack misaligned", __FUNCTION__);
+        return false;
+    }
+
+    // find the start of arguments on the stack
+    uint64_t sp_offset = 0;
+    for (uint32_t i = c_args_in_reg; i < num_args; ++i)
+    {
+        sp_offset += arg_size[arg_list[i].type];
+    }
+    // round up to multiple of 16
+    sp_offset = (sp_offset + 0xf) & 0xf;
+    sp += sp_offset;
+
+    for (size_t i = 0; i < num_args; ++i)
+    {
+        bool success = false;
+        ArgItem &arg = arg_list[i];
+        // arguments passed in registers
+        if (i < c_args_in_reg)
+        {
+            const RegisterInfo *rArg = ctx.reg_ctx->GetRegisterInfoByName(c_reg_names[i]);
+            RegisterValue rVal;
+            if (ctx.reg_ctx->ReadRegister(rArg, rVal))
+                arg.value = rVal.GetAsUInt64(0, &success);
+        }
+        // arguments passed on the stack
+        else
+        {
+            // get the argument type size
+            const size_t size = arg_size[arg_list[i].type];
+            // read the argument from memory
+            arg.value = 0;
+            // note: due to little endian layout reading 4 or 8 bytes will give the correct value.
+            Error error;
+            size_t read = ctx.process->ReadMemory(sp, &arg.value, size, error);
+            success = (error.Success() && read==size);
+            // advance past this argument
+            sp -= size;
+        }
+        // fail if we couldn't read this argument
+        if (!success)
+        {
+            if (log)
+                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
+GetArgsArm(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
+{
+    // number of arguments passed in registers
+    static const uint32_t c_args_in_reg = 4;
+
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    // get the current stack pointer
+    uint64_t sp = ctx.reg_ctx->GetSP();
+
+    for (size_t i = 0; i < num_args; ++i)
+    {
+        bool success = false;
+        ArgItem &arg = arg_list[i];
+        // arguments passed in registers
+        if (i < c_args_in_reg)
+        {
+            const RegisterInfo *rArg = ctx.reg_ctx->GetRegisterInfoAtIndex(i);
+            RegisterValue rVal;
+            if (ctx.reg_ctx->ReadRegister(rArg, rVal))
+                arg.value = rVal.GetAsUInt32(0, &success);
+        }
+        // arguments passed on the stack
+        else
+        {
+            // get the argument type size
+            const size_t arg_size = sizeof(uint32_t);
+            // clear all 64bits
+            arg.value = 0;
+            // read this argument from memory
+            Error error;
+            size_t bytes_read = ctx.process->ReadMemory(sp, &arg.value, arg_size, error);
+            success = (error.Success() && bytes_read == arg_size);
+            // advance the stack pointer
+            sp += sizeof(uint32_t);
+        }
+        // fail if we couldn't read this argument
+        if (!success)
+        {
+            if (log)
+                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
+GetArgsAarch64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
+{
+    // number of arguments passed in registers
+    static const uint32_t c_args_in_reg = 8;
+
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    for (size_t i = 0; i < num_args; ++i)
+    {
+        bool success = false;
+        ArgItem &arg = arg_list[i];
+        // arguments passed in registers
+        if (i < c_args_in_reg)
+        {
+            const RegisterInfo *rArg = ctx.reg_ctx->GetRegisterInfoAtIndex(i);
+            RegisterValue rVal;
+            if (ctx.reg_ctx->ReadRegister(rArg, rVal))
+                arg.value = rVal.GetAsUInt64(0, &success);
+        }
+        // arguments passed on the stack
+        else
+        {
+            if (log)
+                log->Printf("%s - reading arguments spilled to stack not implemented", __FUNCTION__);
+        }
+        // fail if we couldn't read this argument
+        if (!success)
+        {
+            if (log)
+                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__,
+                            uint64_t(i));
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
+GetArgsMipsel(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
+{
+    // number of arguments passed in registers
+    static const uint32_t c_args_in_reg = 4;
+    // register file offset to first argument
+    static const uint32_t c_reg_offset = 4;
+
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    for (size_t i = 0; i < num_args; ++i)
+    {
+        bool success = false;
+        ArgItem &arg = arg_list[i];
+        // arguments passed in registers
+        if (i < c_args_in_reg)
+        {
+            const RegisterInfo *rArg = ctx.reg_ctx->GetRegisterInfoAtIndex(i + c_reg_offset);
+            RegisterValue rVal;
+            if (ctx.reg_ctx->ReadRegister(rArg, rVal))
+                arg.value = rVal.GetAsUInt64(0, &success);
+        }
+        // arguments passed on the stack
+        else
+        {
+            if (log)
+                log->Printf("%s - reading arguments spilled to stack not implemented.", __FUNCTION__);
+        }
+        // fail if we couldn't read this argument
+        if (!success)
+        {
+            if (log)
+                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
+GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
+{
+    // number of arguments passed in registers
+    static const uint32_t c_args_in_reg = 8;
+    // register file offset to first argument
+    static const uint32_t c_reg_offset = 4;
+
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    // get the current stack pointer
+    uint64_t sp = ctx.reg_ctx->GetSP();
+
+    for (size_t i = 0; i < num_args; ++i)
+    {
+        bool success = false;
+        ArgItem &arg = arg_list[i];
+        // arguments passed in registers
+        if (i < c_args_in_reg)
+        {
+            const RegisterInfo *rArg = ctx.reg_ctx->GetRegisterInfoAtIndex(i + c_reg_offset);
+            RegisterValue rVal;
+            if (ctx.reg_ctx->ReadRegister(rArg, rVal))
+                arg.value = rVal.GetAsUInt64(0, &success);
+        }
+        // arguments passed on the stack
+        else
+        {
+            // get the argument type size
+            const size_t arg_size = sizeof(uint64_t);
+            // clear all 64bits
+            arg.value = 0;
+            // read this argument from memory
+            Error error;
+            size_t bytes_read = ctx.process->ReadMemory(sp, &arg.value, arg_size, error);
+            success = (error.Success() && bytes_read == arg_size);
+            // advance the stack pointer
+            sp += arg_size;
+        }
+        // fail if we couldn't read this argument
+        if (!success)
+        {
+            if (log)
+                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+            return false;
+        }
+    }
+    return true;
+}
+
+bool
+GetArgs(ExecutionContext &context, ArgItem *arg_list, size_t num_args)
+{
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    // verify that we have a target
+    if (!context.GetTargetPtr())
+    {
+        if (log)
+            log->Printf("%s - invalid target", __FUNCTION__);
+        return false;
+    }
+
+    GetArgsCtx ctx = {context.GetRegisterContext(), context.GetProcessPtr()};
+    assert(ctx.reg_ctx && ctx.process);
+
+    // dispatch based on architecture
+    switch (context.GetTargetPtr()->GetArchitecture().GetMachine())
+    {
+        case llvm::Triple::ArchType::x86:
+            return GetArgsX86(ctx, arg_list, num_args);
+
+        case llvm::Triple::ArchType::x86_64:
+            return GetArgsX86_64(ctx, arg_list, num_args);
+
+        case llvm::Triple::ArchType::arm:
+            return GetArgsArm(ctx, arg_list, num_args);
+
+        case llvm::Triple::ArchType::aarch64:
+            return GetArgsAarch64(ctx, arg_list, num_args);
+
+        case llvm::Triple::ArchType::mipsel:
+            return GetArgsMipsel(ctx, arg_list, num_args);
+
+        case llvm::Triple::ArchType::mips64el:
+            return GetArgsMips64el(ctx, arg_list, num_args);
+
+        default:
+            // unsupported architecture
+            if (log)
+            {
+                log->Printf("%s - architecture not supported: '%s'", __FUNCTION__,
+                            context.GetTargetRef().GetArchitecture().GetArchitectureName());
+            }
+            return false;
+    }
+}
 } // anonymous namespace
 
 // The ScriptDetails class collects data associated with a single script instance.
@@ -647,281 +1001,38 @@ RenderScriptRuntime::HookCallback(RuntimeHook *hook_info, ExecutionContext &cont
     }
 }
 
-bool
-RenderScriptRuntime::GetArgSimple(ExecutionContext &context, uint32_t arg, uint64_t *data)
-{
-    // Get a positional integer argument.
-    // Given an ExecutionContext, ``context`` which should be a RenderScript
-    // frame, get the value of the positional argument ``arg`` and save its value
-    // to the address pointed to by ``data``.
-    // returns true on success, false otherwise.
-    // If unsuccessful, the value pointed to by ``data`` is undefined. Otherwise,
-    // ``data`` will be set to the value of the the given ``arg``.
-    // NOTE: only natural width integer arguments for the machine are supported.
-    // Behaviour with non primitive arguments is undefined.
-
-    if (!data)
-        return false;
-
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
-    Error error;
-    RegisterContext *reg_ctx = context.GetRegisterContext();
-    Process *process = context.GetProcessPtr();
-    bool success = false; // return value
-
-    if (!context.GetTargetPtr())
-    {
-        if (log)
-            log->Printf("%s - invalid target", __FUNCTION__);
-
-        return false;
-    }
-
-    switch (context.GetTargetPtr()->GetArchitecture().GetMachine())
-    {
-        case llvm::Triple::ArchType::x86:
-        {
-            uint64_t sp = reg_ctx->GetSP();
-            uint32_t offset = (1 + arg) * sizeof(uint32_t);
-            uint32_t result = 0;
-            process->ReadMemory(sp + offset, &result, sizeof(uint32_t), error);
-            if (error.Fail())
-            {
-                if (log)
-                    log->Printf("%s - error reading X86 stack: '%s'.", __FUNCTION__, error.AsCString());
-            }
-            else
-            {
-                *data = result;
-                success = true;
-            }
-            break;
-        }
-        case llvm::Triple::ArchType::x86_64:
-        {
-            // amd64 has 6 integer registers, and 8 XMM registers for parameter passing.
-            // Surplus args are spilled onto the stack.
-            // rdi, rsi, rdx, rcx, r8, r9, (zmm0 - 7 for vectors)
-            // ref: AMD64 ABI Draft 0.99.6 – October 7, 2013 – 10:35; Figure 3.4. Retrieved from
-            // http://www.x86-64.org/documentation/abi.pdf
-            if (arg > 5)
-            {
-                if (log)
-                    log->Warning("%s - X86_64 - reading arguments passed on stack not supported yet.",
-                                 __FUNCTION__);
-                break;
-            }
-            const char *regnames[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
-            assert((sizeof(regnames) / sizeof(const char *)) > arg);
-            const RegisterInfo *rArg = reg_ctx->GetRegisterInfoByName(regnames[arg]);
-            RegisterValue rVal;
-            success = reg_ctx->ReadRegister(rArg, rVal);
-            if (success)
-            {
-                *data = rVal.GetAsUInt64(0u, &success);
-            }
-            else
-            {
-                if (log)
-                    log->Printf("%s - error reading x86_64 register: %" PRId32 ".", __FUNCTION__, arg);
-            }
-            break;
-        }
-        case llvm::Triple::ArchType::arm:
-        {
-            // arm 32 bit
-            // first 4 arguments are passed via registers
-            if (arg < 4)
-            {
-                const RegisterInfo *rArg = reg_ctx->GetRegisterInfoAtIndex(arg);
-                RegisterValue rVal;
-                success = reg_ctx->ReadRegister(rArg, rVal);
-                if (success)
-                {
-                    (*data) = rVal.GetAsUInt32(0u, &success);
-                }
-                else
-                {
-                    if (log)
-                        log->Printf("%s - error reading ARM register: %" PRId32 ".", __FUNCTION__, arg);
-                }
-            }
-            else
-            {
-                uint64_t sp = reg_ctx->GetSP();
-                uint32_t offset = (arg - 4) * sizeof(uint32_t);
-                uint32_t value = 0;
-                size_t bytes_read = process->ReadMemory(sp + offset, &value, sizeof(value), error);
-                if (error.Fail() || bytes_read != sizeof(value))
-                {
-                    if (log)
-                        log->Printf("%s - error reading ARM stack: %s.", __FUNCTION__, error.AsCString());
-                }
-                else
-                {
-                    *data = value;
-                    success = true;
-                }
-            }
-            break;
-        }
-        case llvm::Triple::ArchType::aarch64:
-        {
-            // arm 64 bit
-            // first 8 arguments are in the registers
-            if (arg < 8)
-            {
-                const RegisterInfo *rArg = reg_ctx->GetRegisterInfoAtIndex(arg);
-                RegisterValue rVal;
-                success = reg_ctx->ReadRegister(rArg, rVal);
-                if (success)
-                {
-                    *data = rVal.GetAsUInt64(0u, &success);
-                }
-                else
-                {
-                    if (log)
-                        log->Printf("%s - AARCH64 - error while reading the argument #%" PRId32 ".",
-                                    __FUNCTION__, arg);
-                }
-            }
-            else
-            {
-                // @TODO: need to find the argument in the stack
-                if (log)
-                    log->Printf("%s - AARCH64 - reading arguments passed on stack not supported yet.",
-                                __FUNCTION__);
-            }
-            break;
-        }
-        case llvm::Triple::ArchType::mipsel:
-        {
-            // read from the registers
-            // first 4 arguments are passed in registers
-            if (arg < 4)
-            {
-                const RegisterInfo *rArg = reg_ctx->GetRegisterInfoAtIndex(arg + 4);
-                RegisterValue rVal;
-                success = reg_ctx->ReadRegister(rArg, rVal);
-                if (success)
-                {
-                    *data = rVal.GetAsUInt64(0u, &success);
-                }
-                else
-                {
-                    if (log)
-                        log->Printf("%s - Mips - error while reading the argument #%" PRId32 "",
-                                    __FUNCTION__, arg);
-                }
-            }
-            // arguments > 4 are read from the stack
-            else
-            {
-                uint64_t sp = reg_ctx->GetSP();
-                uint32_t offset = arg * sizeof(uint32_t);
-                uint32_t value = 0;
-                size_t bytes_read = process->ReadMemory(sp + offset, &value, sizeof(value), error);
-                if (error.Fail() || bytes_read != sizeof(value))
-                {
-                    if (log)
-                        log->Printf("%s - error reading Mips stack: %s.",
-                                    __FUNCTION__, error.AsCString());
-                }
-                else
-                {
-                    *data = value;
-                    success = true;
-                }
-            }
-            break;
-        }
-        case llvm::Triple::ArchType::mips64el:
-        {
-            // read from the registers
-            if (arg < 8)
-            {
-                const RegisterInfo *rArg = reg_ctx->GetRegisterInfoAtIndex(arg + 4);
-                RegisterValue rVal;
-                success = reg_ctx->ReadRegister(rArg, rVal);
-                if (success)
-                {
-                    (*data) = rVal.GetAsUInt64(0u, &success);
-                }
-                else
-                {
-                    if (log)
-                        log->Printf("%s - Mips64 - error reading the argument #%" PRId32 "",
-                                    __FUNCTION__, arg);
-                }
-            }
-            // arguments > 8 are read from the stack
-            else
-            {
-                uint64_t sp = reg_ctx->GetSP();
-                uint32_t offset = (arg - 8) * sizeof(uint64_t);
-                uint64_t value = 0;
-                size_t bytes_read = process->ReadMemory(sp + offset, &value, sizeof(value), error);
-                if (error.Fail() || bytes_read != sizeof(value))
-                {
-                    if (log)
-                        log->Printf("%s - Mips64 - error reading Mips64 stack: %s.",
-                                    __FUNCTION__, error.AsCString());
-                }
-                else
-                {
-                    *data = value;
-                    success = true;
-                }
-            }
-            break;
-        }
-        default:
-        {
-            // invalid architecture
-            if (log)
-                log->Printf("%s - architecture not supported.", __FUNCTION__);
-        }
-    }
-
-    if (!success)
-    {
-        if (log)
-            log->Printf("%s - failed to get argument at index %" PRIu32 ".", __FUNCTION__, arg);
-    }
-    return success;
-}
-
 void
 RenderScriptRuntime::CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info,
                                                      ExecutionContext& context)
 {
     Log* log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
-    struct args_t
+    enum
     {
-        uint64_t context;   // const Context       *rsc
-        uint64_t script;    // Script              *s
-        uint64_t slot;      // uint32_t             slot
-        uint64_t aIns;      // const Allocation   **aIns
-        uint64_t inLen;     // size_t               inLen
-        uint64_t aOut;      // Allocation          *aout
-        uint64_t usr;       // const void          *usr
-        uint64_t usrLen;    // size_t               usrLen
-        uint64_t sc;        // const RsScriptCall  *sc
-    }
-    args;
+        eRsContext = 0,
+        eRsScript,
+        eRsSlot,
+        eRsAIns,
+        eRsInLen,
+        eRsAOut,
+        eRsUsr,
+        eRsUsrLen,
+        eRsSc,
+    };
 
-    bool success =
-        GetArgSimple(context, 0, &args.context) &&
-        GetArgSimple(context, 1, &args.script) &&
-        GetArgSimple(context, 2, &args.slot) &&
-        GetArgSimple(context, 3, &args.aIns) &&
-        GetArgSimple(context, 4, &args.inLen) &&
-        GetArgSimple(context, 5, &args.aOut) &&
-        GetArgSimple(context, 6, &args.usr) &&
-        GetArgSimple(context, 7, &args.usrLen) &&
-        GetArgSimple(context, 8, &args.sc);
+    std::array<ArgItem, 9> args = {
+        ArgItem{ArgItem::ePointer, 0}, // const Context       *rsc
+        ArgItem{ArgItem::ePointer, 0}, // Script              *s
+        ArgItem{ArgItem::eInt32, 0},   // uint32_t             slot
+        ArgItem{ArgItem::ePointer, 0}, // const Allocation   **aIns
+        ArgItem{ArgItem::eInt32, 0},   // size_t               inLen
+        ArgItem{ArgItem::ePointer, 0}, // Allocation          *aout
+        ArgItem{ArgItem::ePointer, 0}, // const void          *usr
+        ArgItem{ArgItem::eInt32, 0},   // size_t               usrLen
+        ArgItem{ArgItem::ePointer, 0}, // const RsScriptCall  *sc
+    };
 
+    bool success = GetArgs(context, &args[0], args.size());
     if (!success)
     {
         if (log)
@@ -934,10 +1045,10 @@ RenderScriptRuntime::CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info,
     std::vector<uint64_t> allocs;
 
     // traverse allocation list
-    for (uint64_t i = 0; i < args.inLen; ++i)
+    for (uint64_t i = 0; i < uint64_t(args[eRsInLen]); ++i)
     {
         // calculate offest to allocation pointer
-        const lldb::addr_t addr = args.aIns + i * target_ptr_size;
+        const addr_t addr = addr_t(args[eRsAIns]) + i * target_ptr_size;
 
         // Note: due to little endian layout, reading 32bits or 64bits into res64 will
         //       give the correct results.
@@ -947,7 +1058,7 @@ RenderScriptRuntime::CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info,
         if (read != target_ptr_size || !error.Success())
         {
             if (log)
-                log->Printf("%s - Error while reading allocation list argument %" PRId64, __FUNCTION__, i);
+                log->Printf("%s - Error while reading allocation list argument %" PRIu64, __FUNCTION__, i);
         }
         else
         {
@@ -956,9 +1067,9 @@ RenderScriptRuntime::CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info,
     }
 
     // if there is an output allocation track it
-    if (args.aOut)
+    if (uint64_t aOut = uint64_t(args[eRsAOut]))
     {
-        allocs.push_back(args.aOut);
+        allocs.push_back(aOut);
     }
 
     // for all allocations we have found
@@ -981,22 +1092,22 @@ RenderScriptRuntime::CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info,
             // save the context
             if (log)
             {
-                if (alloc->context.isValid() && *alloc->context.get() != args.context)
+                if (alloc->context.isValid() && *alloc->context.get() != addr_t(args[eRsContext]))
                     log->Printf("%s - Allocation used by multiple contexts", __FUNCTION__);
             }
-            alloc->context = args.context;
+            alloc->context = addr_t(args[eRsContext]);
         }
     }
 
     // make sure we track this script object
-    if (lldb_private::RenderScriptRuntime::ScriptDetails * script = LookUpScript(args.script, true))
+    if (lldb_private::RenderScriptRuntime::ScriptDetails *script = LookUpScript(addr_t(args[eRsScript]), true))
     {
         if (log)
         {
-            if (script->context.isValid() && *script->context.get() != args.context)
+            if (script->context.isValid() && *script->context.get() != addr_t(args[eRsContext]))
                 log->Printf("%s - Script used by multiple contexts", __FUNCTION__);
         }
-        script->context = args.context;
+        script->context = addr_t(args[eRsContext]);
     }
 }
 
@@ -1005,20 +1116,24 @@ RenderScriptRuntime::CaptureSetGlobalVar(RuntimeHook *hook_info, ExecutionContex
 {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
-    // Context, Script, int, data, length
+    enum
+    {
+        eRsContext,
+        eRsScript,
+        eRsId,
+        eRsData,
+        eRsLength,
+    };
 
-    uint64_t rs_context_u64 = 0U;
-    uint64_t rs_script_u64 = 0U;
-    uint64_t rs_id_u64 = 0U;
-    uint64_t rs_data_u64 = 0U;
-    uint64_t rs_length_u64 = 0U;
+    std::array<ArgItem, 5> args = {
+        ArgItem{ArgItem::ePointer, 0}, // eRsContext
+        ArgItem{ArgItem::ePointer, 0}, // eRsScript
+        ArgItem{ArgItem::eInt32, 0},   // eRsId
+        ArgItem{ArgItem::ePointer, 0}, // eRsData
+        ArgItem{ArgItem::eInt32, 0},   // eRsLength
+    };
 
-    bool success = GetArgSimple(context, 0, &rs_context_u64) &&
-                   GetArgSimple(context, 1, &rs_script_u64) &&
-                   GetArgSimple(context, 2, &rs_id_u64) &&
-                   GetArgSimple(context, 3, &rs_data_u64) &&
-                   GetArgSimple(context, 4, &rs_length_u64);
-
+    bool success = GetArgs(context, &args[0], args.size());
     if (!success)
     {
         if (log)
@@ -1028,18 +1143,19 @@ RenderScriptRuntime::CaptureSetGlobalVar(RuntimeHook *hook_info, ExecutionContex
 
     if (log)
     {
-        log->Printf("%s - 0x%" PRIx64 ",0x%" PRIx64 " slot %" PRIu64 " = 0x%" PRIx64 ":%" PRIu64 "bytes.",
-                    __FUNCTION__, rs_context_u64, rs_script_u64, rs_id_u64, rs_data_u64, rs_length_u64);
+        log->Printf("%s - 0x%" PRIx64 ",0x%" PRIx64 " slot %" PRIu64 " = 0x%" PRIx64 ":%" PRIu64 "bytes.", __FUNCTION__,
+                    uint64_t(args[eRsContext]), uint64_t(args[eRsScript]), uint64_t(args[eRsId]),
+                    uint64_t(args[eRsData]), uint64_t(args[eRsLength]));
 
-        addr_t script_addr = (addr_t)rs_script_u64;
+        addr_t script_addr = addr_t(args[eRsScript]);
         if (m_scriptMappings.find(script_addr) != m_scriptMappings.end())
         {
             auto rsm = m_scriptMappings[script_addr];
-            if (rs_id_u64 < rsm->m_globals.size())
+            if (uint64_t(args[eRsId]) < rsm->m_globals.size())
             {
-                auto rsg = rsm->m_globals[rs_id_u64];
-                log->Printf("%s - setting of '%s' within '%s' inferred.", __FUNCTION__,
-                            rsg.m_name.AsCString(), rsm->m_module->GetFileSpec().GetFilename().AsCString());
+                auto rsg = rsm->m_globals[uint64_t(args[eRsId])];
+                log->Printf("%s - Setting of '%s' within '%s' inferred", __FUNCTION__, rsg.m_name.AsCString(),
+                            rsm->m_module->GetFileSpec().GetFilename().AsCString());
             }
         }
     }
@@ -1050,15 +1166,20 @@ RenderScriptRuntime::CaptureAllocationInit(RuntimeHook *hook_info, ExecutionCont
 {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
-    // Context, Alloc, bool
+    enum
+    {
+        eRsContext,
+        eRsAlloc,
+        eRsForceZero
+    };
 
-    uint64_t rs_context_u64 = 0U;
-    uint64_t rs_alloc_u64 = 0U;
-    uint64_t rs_forceZero_u64 = 0U;
+    std::array<ArgItem, 3> args = {
+        ArgItem{ArgItem::ePointer, 0}, // eRsContext
+        ArgItem{ArgItem::ePointer, 0}, // eRsAlloc
+        ArgItem{ArgItem::eBool, 0},    // eRsForceZero
+    };
 
-    bool success = GetArgSimple(context, 0, &rs_context_u64) &&
-                   GetArgSimple(context, 1, &rs_alloc_u64) &&
-                   GetArgSimple(context, 2, &rs_forceZero_u64);
+    bool success = GetArgs(context, &args[0], args.size());
     if (!success) // error case
     {
         if (log)
@@ -1067,12 +1188,12 @@ RenderScriptRuntime::CaptureAllocationInit(RuntimeHook *hook_info, ExecutionCont
     }
 
     if (log)
-        log->Printf("%s - 0x%" PRIx64 ",0x%" PRIx64 ",0x%" PRIx64 " .", __FUNCTION__,
-                    rs_context_u64, rs_alloc_u64, rs_forceZero_u64);
+        log->Printf("%s - 0x%" PRIx64 ",0x%" PRIx64 ",0x%" PRIx64 " .", __FUNCTION__, uint64_t(args[eRsContext]),
+                    uint64_t(args[eRsAlloc]), uint64_t(args[eRsForceZero]));
 
-    AllocationDetails *alloc = LookUpAllocation(rs_alloc_u64, true);
+    AllocationDetails *alloc = LookUpAllocation(uint64_t(args[eRsAlloc]), true);
     if (alloc)
-        alloc->context = rs_context_u64;
+        alloc->context = uint64_t(args[eRsContext]);
 }
 
 void
@@ -1080,12 +1201,18 @@ RenderScriptRuntime::CaptureAllocationDestroy(RuntimeHook *hook_info, ExecutionC
 {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
-    // Context, Alloc
-    uint64_t rs_context_u64 = 0U;
-    uint64_t rs_alloc_u64 = 0U;
+    enum
+    {
+        eRsContext,
+        eRsAlloc,
+    };
 
-    bool success = GetArgSimple(context, 0, &rs_context_u64) &&
-                   GetArgSimple(context, 1, &rs_alloc_u64);
+    std::array<ArgItem, 2> args = {
+        ArgItem{ArgItem::ePointer, 0}, // eRsContext
+        ArgItem{ArgItem::ePointer, 0}, // eRsAlloc
+    };
+
+    bool success = GetArgs(context, &args[0], args.size());
     if (!success)
     {
         if (log)
@@ -1094,12 +1221,13 @@ RenderScriptRuntime::CaptureAllocationDestroy(RuntimeHook *hook_info, ExecutionC
     }
 
     if (log)
-        log->Printf("%s - 0x%" PRIx64 ", 0x%" PRIx64 ".", __FUNCTION__, rs_context_u64, rs_alloc_u64);
+        log->Printf("%s - 0x%" PRIx64 ", 0x%" PRIx64 ".", __FUNCTION__, uint64_t(args[eRsContext]),
+                    uint64_t(args[eRsAlloc]));
 
     for (auto iter = m_allocations.begin(); iter != m_allocations.end(); ++iter)
     {
         auto &allocation_ap = *iter; // get the unique pointer
-        if (allocation_ap->address.isValid() && *allocation_ap->address.get() == rs_alloc_u64)
+        if (allocation_ap->address.isValid() && *allocation_ap->address.get() == addr_t(args[eRsAlloc]))
         {
             m_allocations.erase(iter);
             if (log)
@@ -1117,24 +1245,20 @@ RenderScriptRuntime::CaptureScriptInit(RuntimeHook *hook_info, ExecutionContext 
 {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
 
-    // Context, Script, resname Str, cachedir Str
     Error error;
     Process *process = context.GetProcessPtr();
 
-    uint64_t rs_context_u64 = 0U;
-    uint64_t rs_script_u64 = 0U;
-    uint64_t rs_resnameptr_u64 = 0U;
-    uint64_t rs_cachedirptr_u64 = 0U;
+    enum
+    {
+        eRsContext,
+        eRsScript,
+        eRsResNamePtr,
+        eRsCachedDirPtr
+    };
 
-    std::string resname;
-    std::string cachedir;
-
-    // read the function parameters
-    bool success = GetArgSimple(context, 0, &rs_context_u64) &&
-                   GetArgSimple(context, 1, &rs_script_u64) &&
-                   GetArgSimple(context, 2, &rs_resnameptr_u64) &&
-                   GetArgSimple(context, 3, &rs_cachedirptr_u64);
-
+    std::array<ArgItem, 4> args = {ArgItem{ArgItem::ePointer, 0}, ArgItem{ArgItem::ePointer, 0},
+                                   ArgItem{ArgItem::ePointer, 0}, ArgItem{ArgItem::ePointer, 0}};
+    bool success = GetArgs(context, &args[0], args.size());
     if (!success)
     {
         if (log)
@@ -1142,14 +1266,16 @@ RenderScriptRuntime::CaptureScriptInit(RuntimeHook *hook_info, ExecutionContext 
         return;
     }
 
-    process->ReadCStringFromMemory((lldb::addr_t)rs_resnameptr_u64, resname, error);
+    std::string resname;
+    process->ReadCStringFromMemory(addr_t(args[eRsResNamePtr]), resname, error);
     if (error.Fail())
     {
         if (log)
             log->Printf("%s - error reading resname: %s.", __FUNCTION__, error.AsCString());
     }
 
-    process->ReadCStringFromMemory((lldb::addr_t)rs_cachedirptr_u64, cachedir, error);
+    std::string cachedir;
+    process->ReadCStringFromMemory(addr_t(args[eRsCachedDirPtr]), cachedir, error);
     if (error.Fail())
     {
         if (log)
@@ -1157,27 +1283,27 @@ RenderScriptRuntime::CaptureScriptInit(RuntimeHook *hook_info, ExecutionContext 
     }
 
     if (log)
-        log->Printf("%s - 0x%" PRIx64 ",0x%" PRIx64 " => '%s' at '%s' .", __FUNCTION__,
-                    rs_context_u64, rs_script_u64, resname.c_str(), cachedir.c_str());
+        log->Printf("%s - 0x%" PRIx64 ",0x%" PRIx64 " => '%s' at '%s' .", __FUNCTION__, uint64_t(args[eRsContext]),
+                    uint64_t(args[eRsScript]), resname.c_str(), cachedir.c_str());
 
     if (resname.size() > 0)
     {
         StreamString strm;
         strm.Printf("librs.%s.so", resname.c_str());
 
-        ScriptDetails *script = LookUpScript(rs_script_u64, true);
+        ScriptDetails *script = LookUpScript(addr_t(args[eRsScript]), true);
         if (script)
         {
             script->type = ScriptDetails::eScriptC;
             script->cacheDir = cachedir;
             script->resName = resname;
             script->scriptDyLib = strm.GetData();
-            script->context = addr_t(rs_context_u64);
+            script->context = addr_t(args[eRsContext]);
         }
 
         if (log)
-            log->Printf("%s - '%s' tagged with context 0x%" PRIx64 " and script 0x%" PRIx64 ".",
-                        __FUNCTION__, strm.GetData(), rs_context_u64, rs_script_u64);
+            log->Printf("%s - '%s' tagged with context 0x%" PRIx64 " and script 0x%" PRIx64 ".", __FUNCTION__,
+                        strm.GetData(), uint64_t(args[eRsContext]), uint64_t(args[eRsScript]));
     }
     else if (log)
     {

@@ -94,7 +94,7 @@ public:
   }
 
   virtual void finalize() {}
-  virtual void writeTo(uint8_t *Buf) = 0;
+  virtual void writeTo(uint8_t *Buf) {}
   virtual ~OutputSectionBase() = default;
 
 protected:
@@ -279,9 +279,12 @@ public:
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
   OutputSection(StringRef Name, uint32_t sh_type, uintX_t sh_flags);
   void addSection(InputSectionBase<ELFT> *C) override;
+  void sortInitFini();
+  void sortCtorsDtors();
   void writeTo(uint8_t *Buf) override;
 
 private:
+  void reassignOffsets();
   std::vector<InputSection<ELFT> *> Sections;
 };
 
@@ -540,6 +543,8 @@ template <class ELFT> struct Out {
   static SymbolTableSection<ELFT> *DynSymTab;
   static SymbolTableSection<ELFT> *SymTab;
   static Elf_Phdr *TlsPhdr;
+  static OutputSectionBase<ELFT> *ElfHeader;
+  static OutputSectionBase<ELFT> *ProgramHeaders;
 };
 
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
@@ -562,6 +567,8 @@ template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
 template <class ELFT> typename Out<ELFT>::Elf_Phdr *Out<ELFT>::TlsPhdr;
+template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ElfHeader;
+template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
 
 } // namespace elf2
 } // namespace lld

@@ -69,10 +69,6 @@ class DataFormatterOneIsSingularTestCase(TestBase):
                     substrs = ['@"1 value"'])
         self.expect('frame variable mutable_bag_ref', matching=False,
                     substrs = ['1 values'])
-        self.expect('frame variable nscounted_set',
-                    substrs = ['1 element'])
-        self.expect('frame variable nscounted_set', matching=False,
-                    substrs = ['1 elements'])
         self.expect('frame variable imset',
                     substrs = ['1 index'])
         self.expect('frame variable imset', matching=False,
@@ -81,10 +77,6 @@ class DataFormatterOneIsSingularTestCase(TestBase):
                     substrs = ['@"1 item"'])
         self.expect('frame variable binheap_ref', matching=False,
                     substrs = ['1 items'])
-        self.expect('frame variable nsset',
-                    substrs = ['1 element'])
-        self.expect('frame variable nsset', matching=False,
-                    substrs = ['1 elements'])
         self.expect('frame variable immutableData',
                     substrs = ['1 byte'])
         self.expect('frame variable immutableData', matching=False,

@@ -23,7 +23,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
 
     @skipIfRemote # test not remote-ready llvm.org/pr24813
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
-    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr26139")
+    @expectedFailureAll(oslist=["freebsd","linux"], bugnumber="llvm.org/pr26139")
     def test_command_script_immediate_output (self):
         """Test that LLDB correctly allows scripted commands to set an immediate output file."""
         self.launch(timeout=5)

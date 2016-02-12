@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LinkerScript.h"
 #include "Config.h"
 #include "Driver.h"
 #include "SymbolTable.h"
@@ -25,10 +26,36 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::elf2;
 
-namespace {
-class LinkerScript {
+LinkerScript *elf2::Script;
+
+void LinkerScript::finalize() {
+  for (const std::pair<StringRef, std::vector<StringRef>> &P : Sections)
+    for (StringRef S : P.second)
+      RevSections[S] = P.first;
+}
+
+StringRef LinkerScript::getOutputSection(StringRef S) {
+  return RevSections.lookup(S);
+}
+
+bool LinkerScript::isDiscarded(StringRef S) {
+  return RevSections.lookup(S) == "/DISCARD/";
+}
+
+int LinkerScript::compareSections(StringRef A, StringRef B) {
+  auto I = Sections.find(A);
+  auto E = Sections.end();
+  if (I == E)
+    return 0;
+  auto J = Sections.find(B);
+  if (J == E)
+    return 0;
+  return I < J ? -1 : 1;
+}
+
+class elf2::ScriptParser {
 public:
-  LinkerScript(BumpPtrAllocator *A, StringRef S, bool B)
+  ScriptParser(BumpPtrAllocator *A, StringRef S, bool B)
       : Saver(*A), Tokens(tokenize(S)), IsUnderSysroot(B) {}
   void run();
 
@@ -62,9 +89,8 @@ private:
   size_t Pos = 0;
   bool IsUnderSysroot;
 };
-}
 
-void LinkerScript::run() {
+void ScriptParser::run() {
   while (!atEOF()) {
     StringRef Tok = next();
     if (Tok == ";")
@@ -95,7 +121,7 @@ void LinkerScript::run() {
 }
 
 // We don't want to record cascading errors. Keep only the first one.
-void LinkerScript::setError(const Twine &Msg) {
+void ScriptParser::setError(const Twine &Msg) {
   if (Error)
     return;
   error(Msg);
@@ -103,7 +129,7 @@ void LinkerScript::setError(const Twine &Msg) {
 }
 
 // Split S into linker script tokens.
-std::vector<StringRef> LinkerScript::tokenize(StringRef S) {
+std::vector<StringRef> ScriptParser::tokenize(StringRef S) {
   std::vector<StringRef> Ret;
   for (;;) {
     S = skipSpace(S);
@@ -136,7 +162,7 @@ std::vector<StringRef> LinkerScript::tokenize(StringRef S) {
 }
 
 // Skip leading whitespace characters or /**/-style comments.
-StringRef LinkerScript::skipSpace(StringRef S) {
+StringRef ScriptParser::skipSpace(StringRef S) {
   for (;;) {
     if (S.startswith("/*")) {
       size_t E = S.find("*/", 2);
@@ -155,9 +181,9 @@ StringRef LinkerScript::skipSpace(StringRef S) {
 }
 
 // An errneous token is handled as if it were the last token before EOF.
-bool LinkerScript::atEOF() { return Error || Tokens.size() == Pos; }
+bool ScriptParser::atEOF() { return Error || Tokens.size() == Pos; }
 
-StringRef LinkerScript::next() {
+StringRef ScriptParser::next() {
   if (Error)
     return "";
   if (atEOF()) {
@@ -167,7 +193,7 @@ StringRef LinkerScript::next() {
   return Tokens[Pos++];
 }
 
-bool LinkerScript::skip(StringRef Tok) {
+bool ScriptParser::skip(StringRef Tok) {
   if (Error)
     return false;
   if (atEOF()) {
@@ -180,7 +206,7 @@ bool LinkerScript::skip(StringRef Tok) {
   return true;
 }
 
-void LinkerScript::expect(StringRef Expect) {
+void ScriptParser::expect(StringRef Expect) {
   if (Error)
     return;
   StringRef Tok = next();
@@ -188,7 +214,7 @@ void LinkerScript::expect(StringRef Expect) {
     setError(Expect + " expected, but got " + Tok);
 }
 
-void LinkerScript::addFile(StringRef S) {
+void ScriptParser::addFile(StringRef S) {
   if (IsUnderSysroot && S.startswith("/")) {
     SmallString<128> Path;
     (Config->Sysroot + S).toStringRef(Path);
@@ -218,7 +244,7 @@ void LinkerScript::addFile(StringRef S) {
   }
 }
 
-void LinkerScript::readAsNeeded() {
+void ScriptParser::readAsNeeded() {
   expect("(");
   bool Orig = Config->AsNeeded;
   Config->AsNeeded = true;
@@ -231,7 +257,7 @@ void LinkerScript::readAsNeeded() {
   Config->AsNeeded = Orig;
 }
 
-void LinkerScript::readEntry() {
+void ScriptParser::readEntry() {
   // -e <symbol> takes predecence over ENTRY(<symbol>).
   expect("(");
   StringRef Tok = next();
@@ -240,7 +266,7 @@ void LinkerScript::readEntry() {
   expect(")");
 }
 
-void LinkerScript::readExtern() {
+void ScriptParser::readExtern() {
   expect("(");
   while (!Error) {
     StringRef Tok = next();
@@ -250,7 +276,7 @@ void LinkerScript::readExtern() {
   }
 }
 
-void LinkerScript::readGroup() {
+void ScriptParser::readGroup() {
   expect("(");
   while (!Error) {
     StringRef Tok = next();
@@ -264,7 +290,7 @@ void LinkerScript::readGroup() {
   }
 }
 
-void LinkerScript::readInclude() {
+void ScriptParser::readInclude() {
   StringRef Tok = next();
   auto MBOrErr = MemoryBuffer::getFile(Tok);
   if (!MBOrErr) {
@@ -277,7 +303,7 @@ void LinkerScript::readInclude() {
   Tokens.insert(Tokens.begin() + Pos, V.begin(), V.end());
 }
 
-void LinkerScript::readOutput() {
+void ScriptParser::readOutput() {
   // -o <file> takes predecence over OUTPUT(<file>).
   expect("(");
   StringRef Tok = next();
@@ -286,14 +312,14 @@ void LinkerScript::readOutput() {
   expect(")");
 }
 
-void LinkerScript::readOutputArch() {
+void ScriptParser::readOutputArch() {
   // Error checking only for now.
   expect("(");
   next();
   expect(")");
 }
 
-void LinkerScript::readOutputFormat() {
+void ScriptParser::readOutputFormat() {
   // Error checking only for now.
   expect("(");
   next();
@@ -310,29 +336,27 @@ void LinkerScript::readOutputFormat() {
   expect(")");
 }
 
-void LinkerScript::readSearchDir() {
+void ScriptParser::readSearchDir() {
   expect("(");
   Config->SearchPaths.push_back(next());
   expect(")");
 }
 
-void LinkerScript::readSections() {
+void ScriptParser::readSections() {
   expect("{");
   while (!Error && !skip("}"))
     readOutputSectionDescription();
 }
 
-void LinkerScript::readOutputSectionDescription() {
-  StringRef Name = next();
-  std::vector<StringRef> &InputSections = Config->OutputSections[Name];
-
+void ScriptParser::readOutputSectionDescription() {
+  std::vector<StringRef> &V = Script->Sections[next()];
   expect(":");
   expect("{");
   while (!Error && !skip("}")) {
     next(); // Skip input file name.
     expect("(");
     while (!Error && !skip(")"))
-      InputSections.push_back(next());
+      V.push_back(next());
   }
 }
 
@@ -346,7 +370,7 @@ static bool isUnderSysroot(StringRef Path) {
 }
 
 // Entry point. The other functions or classes are private to this file.
-void elf2::readLinkerScript(BumpPtrAllocator *A, MemoryBufferRef MB) {
+void LinkerScript::read(MemoryBufferRef MB) {
   StringRef Path = MB.getBufferIdentifier();
-  LinkerScript(A, MB.getBuffer(), isUnderSysroot(Path)).run();
+  ScriptParser(&Alloc, MB.getBuffer(), isUnderSysroot(Path)).run();
 }

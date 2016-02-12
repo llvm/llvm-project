@@ -131,48 +131,42 @@ RegisterContextWindows_x86::ReadRegister(const RegisterInfo *reg_info, RegisterV
     switch (reg)
     {
         case lldb_eax_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EAX", m_context.Eax);
-            reg_value.SetUInt32(m_context.Eax);
-            break;
+            return ReadRegisterHelper(CONTEXT_INTEGER, "EAX", m_context.Eax, reg_value);
         case lldb_ebx_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EBX", m_context.Ebx);
-            reg_value.SetUInt32(m_context.Ebx);
-            break;
+            return ReadRegisterHelper(CONTEXT_INTEGER, "EBX", m_context.Ebx, reg_value);
         case lldb_ecx_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from ECX", m_context.Ecx);
-            reg_value.SetUInt32(m_context.Ecx);
-            break;
+            return ReadRegisterHelper(CONTEXT_INTEGER, "ECX", m_context.Ecx, reg_value);
         case lldb_edx_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EDX", m_context.Edx);
-            reg_value.SetUInt32(m_context.Edx);
-            break;
+            return ReadRegisterHelper(CONTEXT_INTEGER, "EDX", m_context.Edx, reg_value);
         case lldb_edi_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EDI", m_context.Edi);
-            reg_value.SetUInt32(m_context.Edi);
-            break;
+            return ReadRegisterHelper(CONTEXT_INTEGER, "EDI", m_context.Edi, reg_value);
         case lldb_esi_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from ESI", m_context.Esi);
-            reg_value.SetUInt32(m_context.Esi);
-            break;
+            return ReadRegisterHelper(CONTEXT_INTEGER, "ESI", m_context.Esi, reg_value);
         case lldb_ebp_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EBP", m_context.Ebp);
-            reg_value.SetUInt32(m_context.Ebp);
-            break;
+            return ReadRegisterHelper(CONTEXT_CONTROL, "EBP", m_context.Ebp, reg_value);
         case lldb_esp_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from ESP", m_context.Esp);
-            reg_value.SetUInt32(m_context.Esp);
-            break;
+            return ReadRegisterHelper(CONTEXT_CONTROL, "ESP", m_context.Esp, reg_value);
         case lldb_eip_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EIP", m_context.Eip);
-            reg_value.SetUInt32(m_context.Eip);
-            break;
+            return ReadRegisterHelper(CONTEXT_CONTROL, "EIP", m_context.Eip, reg_value);
         case lldb_eflags_i386:
-            WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from EFLAGS", m_context.EFlags);
-            reg_value.SetUInt32(m_context.EFlags);
-            break;
+            return ReadRegisterHelper(CONTEXT_CONTROL, "EFLAGS", m_context.EFlags, reg_value);
         default:
             WINWARN_IFALL(WINDOWS_LOG_REGISTERS, "Requested unknown register %u", reg);
             break;
     }
+    return false;
+}
+
+bool
+RegisterContextWindows_x86::ReadRegisterHelper(DWORD flags_required, const char *reg_name, DWORD value,
+                                               RegisterValue &reg_value) const
+{
+    if ((m_context.ContextFlags & flags_required) != flags_required)
+    {
+        WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Thread context doesn't have %s", reg_name);
+        return false;
+    }
+    WINLOG_IFALL(WINDOWS_LOG_REGISTERS, "Read value 0x%x from %s", value, reg_name);
+    reg_value.SetUInt32(value);
     return true;
 }

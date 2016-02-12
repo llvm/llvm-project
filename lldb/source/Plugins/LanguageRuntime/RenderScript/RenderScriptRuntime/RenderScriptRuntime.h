@@ -337,9 +337,6 @@ private:
     void
     HookCallback(RuntimeHook *hook_info, ExecutionContext &context);
 
-    bool
-    GetArgSimple(ExecutionContext &context, uint32_t arg, uint64_t *data);
-
     void
     CaptureScriptInit(RuntimeHook *hook_info, ExecutionContext &context);
 

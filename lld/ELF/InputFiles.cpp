@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
-#include "InputSection.h"
 #include "Error.h"
+#include "InputSection.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
 

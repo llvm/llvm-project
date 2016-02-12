@@ -214,17 +214,12 @@ class ObjCDataFormatterTestCase(TestBase):
                     '(NSNumber *) num_at4 = ',' (double)-12.5'])
 
     def nscontainers_data_formatter_commands(self):
-        self.expect('frame variable newArray newDictionary newMutableDictionary cfdict_ref mutable_dict_ref cfarray_ref mutable_array_ref',
+        self.expect('frame variable newArray newDictionary newMutableDictionary cfarray_ref mutable_array_ref',
                     substrs = ['(NSArray *) newArray = ','@"50 elements"',
                     '(NSDictionary *) newDictionary = ',' 12 key/value pairs',
                     '(NSDictionary *) newMutableDictionary = ',' 21 key/value pairs',
-                    '(CFDictionaryRef) cfdict_ref = ','3 key/value pairs',
-                    '(CFMutableDictionaryRef) mutable_dict_ref = ','12 key/value pairs',
                     '(CFArrayRef) cfarray_ref = ','@"3 elements"',
                     '(CFMutableArrayRef) mutable_array_ref = ','@"11 elements"'])
-
-        self.expect('frame variable nscounted_set',
-                    substrs = ['(NSCountedSet *) nscounted_set = ','5 elements'])
 
         self.expect('frame variable iset1 iset2 imset',
                     substrs = ['4 indexes','512 indexes','10 indexes'])
