@@ -20,5 +20,5 @@ int main(int argc, char **argv) {
 
 // CHECK-main: PID: [[PID:[0-9]+]]
 // CHECK-main: [[PID]].sancov: 2 PCs written
-// CHECK-main: html report generated to ./coverage_html_report.cc.tmp.[[PID]].html
+// CHECK-main: coverage report generated to ./coverage_html_report.cc.tmp.[[PID]].html
 // CHECK-ls: coverage_html_report.cc.tmp.{{[0-9]+}}.html
