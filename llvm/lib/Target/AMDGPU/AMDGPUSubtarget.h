@@ -81,6 +81,7 @@ private:
   unsigned WavefrontSize;
   bool CFALUBug;
   int LocalMemorySize;
+  unsigned MaxPrivateElementSize;
   bool EnableVGPRSpilling;
   bool SGPRInitBug;
   bool IsGCN;
@@ -251,6 +252,10 @@ public:
 
   int getLocalMemorySize() const {
     return LocalMemorySize;
+  }
+
+  unsigned getMaxPrivateElementSize() const {
+    return MaxPrivateElementSize;
   }
 
   bool hasSGPRInitBug() const {

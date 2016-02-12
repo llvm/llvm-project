@@ -784,3 +784,98 @@ if.end:                                           ; preds = %if.else, %if.then
 
 declare void @dummy()
 
+; CHECK-LABEL: @phi_knownnonzero_eq
+; CHECK-LABEL: if.then:
+; CHECK-NOT: select
+; CHECK-LABEL: if.end:
+; CHECK: phi i32 [ 1, %if.then ]
+define i1 @phi_knownnonzero_eq(i32 %n, i32 %s, i32* nocapture readonly %P) {
+entry:
+  %tobool = icmp slt  i32 %n, %s
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %0 = load i32, i32* %P
+  %cmp = icmp eq i32 %n, %0
+  %1 = select i1 %cmp, i32 1, i32 2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  %a.0 = phi i32 [ %1,  %if.then ], [ %n, %entry ]
+  %cmp1 = icmp eq i32 %a.0, 0
+  ret i1  %cmp1
+}
+
+; CHECK-LABEL: @phi_knownnonzero_ne
+; CHECK-LABEL: if.then:
+; CHECK-NOT: select
+; CHECK-LABEL: if.end:
+; CHECK: phi i32 [ 1, %if.then ]
+define i1 @phi_knownnonzero_ne(i32 %n, i32 %s, i32* nocapture readonly %P) {
+entry:
+  %tobool = icmp slt  i32 %n, %s
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %0 = load i32, i32* %P
+  %cmp = icmp eq i32 %n, %0
+  %1 = select i1 %cmp, i32 1, i32 2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  %a.0 = phi i32 [ %1,  %if.then ], [ %n, %entry ]
+  %cmp1 = icmp ne i32 %a.0, 0
+  ret i1  %cmp1
+}
+
+; CHECK-LABEL: @phi_knownnonzero_eq_2
+; CHECK-LABEL: if.then:
+; CHECK-NOT: select
+; CHECK-LABEL: if.end:
+; CHECK: phi i32 [ 2, %if.else ]
+define i1 @phi_knownnonzero_eq_2(i32 %n, i32 %s, i32* nocapture readonly %P) {
+entry:
+  %tobool = icmp slt  i32 %n, %s
+  br i1 %tobool, label %if.then, label %if.end
+
+if.then:
+  %tobool2 = icmp slt  i32 %n, %s
+  br i1 %tobool2, label %if.else, label %if.end
+
+if.else:                                          ; preds = %entry
+  %0 = load i32, i32* %P
+  %cmp = icmp eq i32 %n, %0
+  %1 = select i1 %cmp, i32 1, i32 2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  %a.0 = phi i32 [ %1,  %if.else], [ %n, %entry ], [2, %if.then]
+  %cmp1 = icmp eq i32 %a.0, 0
+  ret i1  %cmp1
+}
+
+; CHECK-LABEL: @phi_knownnonzero_ne_2
+; CHECK-LABEL: if.then:
+; CHECK-NOT: select
+; CHECK-LABEL: if.end:
+; CHECK: phi i32 [ 2, %if.else ]
+define i1 @phi_knownnonzero_ne_2(i32 %n, i32 %s, i32* nocapture readonly %P) {
+entry:
+  %tobool = icmp slt  i32 %n, %s
+  br i1 %tobool, label %if.then, label %if.end
+
+if.then:
+  %tobool2 = icmp slt  i32 %n, %s
+  br i1 %tobool2, label %if.else, label %if.end
+
+if.else:                                          ; preds = %entry
+  %0 = load i32, i32* %P
+  %cmp = icmp eq i32 %n, %0
+  %1 = select i1 %cmp, i32 1, i32 2
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  %a.0 = phi i32 [ %1,  %if.else], [ %n, %entry ], [2, %if.then]
+  %cmp1 = icmp ne i32 %a.0, 0
+  ret i1  %cmp1
+}

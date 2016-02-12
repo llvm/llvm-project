@@ -4484,48 +4484,29 @@ static SDValue getConstVector(ArrayRef<int> Values, MVT VT,
 /// Returns a vector of specified type with all zero elements.
 static SDValue getZeroVector(MVT VT, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG, SDLoc dl) {
-  assert(VT.isVector() && "Expected a vector type");
+  assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector() ||
+          VT.getVectorElementType() == MVT::i1) &&
+         "Unexpected vector type");
 
-  // Always build SSE zero vectors as <4 x i32> bitcasted
-  // to their dest type. This ensures they get CSE'd.
+  // Try to build SSE/AVX zero vectors as <N x i32> bitcasted to their dest
+  // type. This ensures they get CSE'd. But if the integer type is not
+  // available, use a floating-point +0.0 instead.
   SDValue Vec;
-  if (VT.is128BitVector()) {  // SSE
-    if (Subtarget.hasSSE2()) {  // SSE2
-      SDValue Cst = DAG.getConstant(0, dl, MVT::i32);
-      Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v4i32, Cst, Cst, Cst, Cst);
-    } else { // SSE1
-      SDValue Cst = DAG.getConstantFP(+0.0, dl, MVT::f32);
-      Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v4f32, Cst, Cst, Cst, Cst);
-    }
-  } else if (VT.is256BitVector()) { // AVX
-    if (Subtarget.hasInt256()) { // AVX2
-      SDValue Cst = DAG.getConstant(0, dl, MVT::i32);
-      SDValue Ops[] = { Cst, Cst, Cst, Cst, Cst, Cst, Cst, Cst };
-      Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v8i32, Ops);
-    } else {
-      // 256-bit logic and arithmetic instructions in AVX are all
-      // floating-point, no support for integer ops. Emit fp zeroed vectors.
-      SDValue Cst = DAG.getConstantFP(+0.0, dl, MVT::f32);
-      SDValue Ops[] = { Cst, Cst, Cst, Cst, Cst, Cst, Cst, Cst };
-      Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v8f32, Ops);
-    }
-  } else if (VT.is512BitVector()) { // AVX-512
-      SDValue Cst = DAG.getConstant(0, dl, MVT::i32);
-      SDValue Ops[] = { Cst, Cst, Cst, Cst, Cst, Cst, Cst, Cst,
-                        Cst, Cst, Cst, Cst, Cst, Cst, Cst, Cst };
-      Vec = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v16i32, Ops);
+  if (!Subtarget.hasSSE2() && VT.is128BitVector()) {
+    Vec = DAG.getConstantFP(+0.0, dl, MVT::v4f32);
+  } else if (!Subtarget.hasInt256() && VT.is256BitVector()) {
+    Vec = DAG.getConstantFP(+0.0, dl, MVT::v8f32);
   } else if (VT.getVectorElementType() == MVT::i1) {
-
-    assert((Subtarget.hasBWI() || VT.getVectorNumElements() <= 16)
-            && "Unexpected vector type");
-    assert((Subtarget.hasVLX() || VT.getVectorNumElements() >= 8)
-            && "Unexpected vector type");
-    SDValue Cst = DAG.getConstant(0, dl, MVT::i1);
-    SmallVector<SDValue, 64> Ops(VT.getVectorNumElements(), Cst);
-    return DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);
-  } else
-    llvm_unreachable("Unexpected vector type");
-
+    // AVX512 can use "vpxord" for 512-bit zeros.
+    assert((Subtarget.hasBWI() || VT.getVectorNumElements() <= 16) &&
+           "Unexpected vector type");
+    assert((Subtarget.hasVLX() || VT.getVectorNumElements() >= 8) &&
+           "Unexpected vector type");
+    Vec = DAG.getConstant(0, dl, VT);
+  } else {
+    unsigned Num32BitElts = VT.getSizeInBits() / 32;
+    Vec = DAG.getConstant(0, dl, MVT::getVectorVT(MVT::i32, Num32BitElts));
+  }
   return DAG.getBitcast(VT, Vec);
 }
 

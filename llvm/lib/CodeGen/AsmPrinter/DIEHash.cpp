@@ -353,7 +353,6 @@ void DIEHash::hashAttribute(DIEValue Value, dwarf::Tag Tag) {
   case DIEValue::isExpr:
   case DIEValue::isLabel:
   case DIEValue::isDelta:
-  case DIEValue::isTypeSignature:
     llvm_unreachable("Add support for additional value types.");
   }
 }

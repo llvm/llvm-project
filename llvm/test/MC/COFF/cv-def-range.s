@@ -81,7 +81,7 @@ Ltmp3:
 # CHECK:      LocalVariableAddrRange {
 # CHECK:        OffsetStart: .text+0x9
 # CHECK:        ISectStart: 0x0
-# CHECK:        Range: 15
+# CHECK:        Range: 0xF
 # CHECK:      }
 # CHECK:    }
 # CHECK:    BlockRelocations [

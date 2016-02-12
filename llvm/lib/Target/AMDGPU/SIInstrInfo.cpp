@@ -1949,6 +1949,32 @@ void SIInstrInfo::legalizeOperandsVOP3(
   }
 }
 
+unsigned SIInstrInfo::readlaneVGPRToSGPR(unsigned SrcReg, MachineInstr *UseMI,
+                                 MachineRegisterInfo &MRI) const {
+  const TargetRegisterClass *VRC = MRI.getRegClass(SrcReg);
+  const TargetRegisterClass *SRC = RI.getEquivalentSGPRClass(VRC);
+  unsigned DstReg = MRI.createVirtualRegister(SRC);
+  unsigned SubRegs = VRC->getSize() / 4;
+
+  SmallVector<unsigned, 8> SRegs;
+  for (unsigned i = 0; i < SubRegs; ++i) {
+    unsigned SGPR = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+    BuildMI(*UseMI->getParent(), UseMI, UseMI->getDebugLoc(),
+            get(AMDGPU::V_READFIRSTLANE_B32), SGPR)
+            .addReg(SrcReg, 0, RI.getSubRegFromChannel(i));
+    SRegs.push_back(SGPR);
+  }
+
+  MachineInstrBuilder MIB = BuildMI(*UseMI->getParent(), UseMI,
+                                    UseMI->getDebugLoc(),
+                                    get(AMDGPU::REG_SEQUENCE), DstReg);
+  for (unsigned i = 0; i < SubRegs; ++i) {
+    MIB.addReg(SRegs[i]);
+    MIB.addImm(RI.getSubRegFromChannel(i));
+  }
+  return DstReg;
+}
+
 void SIInstrInfo::legalizeOperands(MachineInstr *MI) const {
   MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
 
@@ -2058,6 +2084,22 @@ void SIInstrInfo::legalizeOperands(MachineInstr *MI) const {
       BuildMI(MBB, MI, MI->getDebugLoc(), get(AMDGPU::COPY), NewSrc0)
               .addReg(Src0);
       MI->getOperand(1).setReg(NewSrc0);
+    }
+    return;
+  }
+
+  // Legalize MIMG
+  if (isMIMG(*MI)) {
+    MachineOperand *SRsrc = getNamedOperand(*MI, AMDGPU::OpName::srsrc);
+    if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg()))) {
+      unsigned SGPR = readlaneVGPRToSGPR(SRsrc->getReg(), MI, MRI);
+      SRsrc->setReg(SGPR);
+    }
+
+    MachineOperand *SSamp = getNamedOperand(*MI, AMDGPU::OpName::ssamp);
+    if (SSamp && !RI.isSGPRClass(MRI.getRegClass(SSamp->getReg()))) {
+      unsigned SGPR = readlaneVGPRToSGPR(SSamp->getReg(), MI, MRI);
+      SSamp->setReg(SGPR);
     }
     return;
   }
@@ -2411,6 +2453,7 @@ void SIInstrInfo::moveSMRDToVALU(MachineInstr *MI,
     }
     case 32: {
       MachineInstr *Lo, *Hi;
+      addUsersToMoveToVALUWorklist(MI->getOperand(0).getReg(), MRI, Worklist);
       splitSMRD(MI, &AMDGPU::SReg_128RegClass, AMDGPU::S_LOAD_DWORDX4_IMM,
                 AMDGPU::S_LOAD_DWORDX4_SGPR, Lo, Hi);
       MI->eraseFromParent();
@@ -2421,6 +2464,7 @@ void SIInstrInfo::moveSMRDToVALU(MachineInstr *MI,
 
     case 64: {
       MachineInstr *Lo, *Hi;
+      addUsersToMoveToVALUWorklist(MI->getOperand(0).getReg(), MRI, Worklist);
       splitSMRD(MI, &AMDGPU::SReg_256RegClass, AMDGPU::S_LOAD_DWORDX8_IMM,
                 AMDGPU::S_LOAD_DWORDX8_SGPR, Lo, Hi);
       MI->eraseFromParent();
@@ -3014,6 +3058,10 @@ uint64_t SIInstrInfo::getScratchRsrcWords23() const {
   uint64_t Rsrc23 = getDefaultRsrcDataFormat() |
                     AMDGPU::RSRC_TID_ENABLE |
                     0xffffffff; // Size;
+
+  uint64_t EltSizeValue = Log2_32(ST.getMaxPrivateElementSize()) - 1;
+
+  Rsrc23 |= (EltSizeValue << AMDGPU::RSRC_ELEMENT_SIZE_SHIFT);
 
   // If TID_ENABLE is set, DATA_FORMAT specifies stride bits [14:17].
   // Clear them unless we want a huge stride.

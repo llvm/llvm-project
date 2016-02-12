@@ -1061,7 +1061,9 @@ SDValue AMDGPUTargetLowering::ScalarizeVectorLoad(const SDValue Op,
   SmallVector<SDValue, 8> Chains;
 
   SDLoc SL(Op);
+  unsigned BaseAlign = Load->getAlignment();
   unsigned MemEltSize = MemEltVT.getStoreSize();
+
   MachinePointerInfo SrcValue(Load->getMemOperand()->getValue());
 
   for (unsigned i = 0; i < NumElts; ++i) {
@@ -1073,7 +1075,7 @@ SDValue AMDGPUTargetLowering::ScalarizeVectorLoad(const SDValue Op,
                        Load->getChain(), Ptr,
                        SrcValue.getWithOffset(i * MemEltSize),
                        MemEltVT, Load->isVolatile(), Load->isNonTemporal(),
-                       Load->isInvariant(), Load->getAlignment());
+                       Load->isInvariant(), MinAlign(BaseAlign, i * MemEltSize));
     Loads.push_back(NewLoad.getValue(0));
     Chains.push_back(NewLoad.getValue(1));
   }
@@ -1212,6 +1214,7 @@ SDValue AMDGPUTargetLowering::ScalarizeVectorStore(SDValue Op,
 
   SmallVector<SDValue, 8> Chains;
 
+  unsigned BaseAlign = Store->getAlignment();
   unsigned EltSize = MemEltVT.getStoreSize();
   MachinePointerInfo SrcValue(Store->getMemOperand()->getValue());
 
@@ -1226,7 +1229,7 @@ SDValue AMDGPUTargetLowering::ScalarizeVectorStore(SDValue Op,
       DAG.getTruncStore(Store->getChain(), SL, Val, Ptr,
                         SrcValue.getWithOffset(i * EltSize),
                         MemEltVT, Store->isNonTemporal(), Store->isVolatile(),
-                        Store->getAlignment());
+                        MinAlign(BaseAlign, i * EltSize));
     Chains.push_back(NewStore);
   }
 

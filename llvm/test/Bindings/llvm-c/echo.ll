@@ -90,3 +90,19 @@ next8:
 next9:
   ret i32 0
 }
+
+define i32 @loop(i32 %i) {
+  br label %cond
+cond:
+  %c = phi i32 [ %i, %0 ], [ %j, %do ]
+  %p = phi i32 [ %r, %do ], [ 789, %0 ]
+  %1 = icmp eq i32 %c, 0
+  br i1 %1, label %do, label %done
+do:
+  %2 = sub i32 %p, 23
+  %j = sub i32 %i, 1
+  %r = mul i32 %2, 3
+  br label %cond
+done:
+  ret i32 %p
+}

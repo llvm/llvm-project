@@ -479,20 +479,6 @@ void DIEEntry::print(raw_ostream &O) const {
 }
 
 //===----------------------------------------------------------------------===//
-// DIETypeSignature Implementation
-//===----------------------------------------------------------------------===//
-void DIETypeSignature::EmitValue(const AsmPrinter *Asm,
-                                 dwarf::Form Form) const {
-  assert(Form == dwarf::DW_FORM_ref_sig8);
-  Asm->OutStreamer->EmitIntValue(Unit->getTypeSignature(), 8);
-}
-
-LLVM_DUMP_METHOD
-void DIETypeSignature::print(raw_ostream &O) const {
-  O << format("Type Unit: 0x%lx", Unit->getTypeSignature());
-}
-
-//===----------------------------------------------------------------------===//
 // DIELoc Implementation
 //===----------------------------------------------------------------------===//
 

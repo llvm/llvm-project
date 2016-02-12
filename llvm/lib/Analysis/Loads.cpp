@@ -56,6 +56,8 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 
 /// \brief Check if executing a load of this pointer value cannot trap.
 ///
+/// If DT is specified this method performs context-sensitive analysis.
+///
 /// If it is not obviously safe to load from the specified pointer, we do
 /// a quick local scan of the basic block containing \c ScanFrom, to determine
 /// if the address is already accessed.
@@ -63,7 +65,9 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 /// This uses the pointee type to determine how many bytes need to be safe to
 /// load from the pointer.
 bool llvm::isSafeToLoadUnconditionally(Value *V, unsigned Align,
-                                       Instruction *ScanFrom) {
+                                       Instruction *ScanFrom,
+                                       const DominatorTree *DT,
+                                       const TargetLibraryInfo *TLI) {
   const DataLayout &DL = ScanFrom->getModule()->getDataLayout();
 
   // Zero alignment means that the load has the ABI alignment for the target
@@ -71,7 +75,9 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, unsigned Align,
     Align = DL.getABITypeAlignment(V->getType()->getPointerElementType());
   assert(isPowerOf2_32(Align));
 
-  if (isDereferenceableAndAlignedPointer(V, Align, DL))
+  // If DT is not specified we can't make context-sensitive query
+  const Instruction* CtxI = DT ? ScanFrom : nullptr;
+  if (isDereferenceableAndAlignedPointer(V, Align, DL, CtxI, DT, TLI))
     return true;
 
   int64_t ByteOffset = 0;

@@ -540,8 +540,10 @@ bool MemorySanitizer::doInitialization(Module &M) {
       createSanitizerCtorAndInitFunctions(M, kMsanModuleCtorName, kMsanInitName,
                                           /*InitArgTypes=*/{},
                                           /*InitArgs=*/{});
+  Comdat *MsanCtorComdat = M.getOrInsertComdat(kMsanModuleCtorName);
+  MsanCtorFunction->setComdat(MsanCtorComdat);
 
-  appendToGlobalCtors(M, MsanCtorFunction, 0);
+  appendToGlobalCtors(M, MsanCtorFunction, 0, MsanCtorFunction);
 
   if (TrackOrigins)
     new GlobalVariable(M, IRB.getInt32Ty(), true, GlobalValue::WeakODRLinkage,

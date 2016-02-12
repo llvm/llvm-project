@@ -61,14 +61,14 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "si-lower-control-flow"
+
 namespace {
 
-class SILowerControlFlowPass : public MachineFunctionPass {
-
+class SILowerControlFlow : public MachineFunctionPass {
 private:
   static const unsigned SkipThreshold = 12;
 
-  static char ID;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
@@ -94,13 +94,15 @@ private:
   void IndirectDst(MachineInstr &MI);
 
 public:
-  SILowerControlFlowPass(TargetMachine &tm) :
+  static char ID;
+
+  SILowerControlFlow() :
     MachineFunctionPass(ID), TRI(nullptr), TII(nullptr) { }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "SI Lower control flow instructions";
+    return "SI Lower control flow pseudo instructions";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -111,14 +113,20 @@ public:
 
 } // End anonymous namespace
 
-char SILowerControlFlowPass::ID = 0;
+char SILowerControlFlow::ID = 0;
 
-FunctionPass *llvm::createSILowerControlFlowPass(TargetMachine &tm) {
-  return new SILowerControlFlowPass(tm);
+INITIALIZE_PASS(SILowerControlFlow, DEBUG_TYPE,
+                "SI lower control flow", false, false)
+
+char &llvm::SILowerControlFlowPassID = SILowerControlFlow::ID;
+
+
+FunctionPass *llvm::createSILowerControlFlowPass() {
+  return new SILowerControlFlow();
 }
 
-bool SILowerControlFlowPass::shouldSkip(MachineBasicBlock *From,
-                                        MachineBasicBlock *To) {
+bool SILowerControlFlow::shouldSkip(MachineBasicBlock *From,
+                                    MachineBasicBlock *To) {
 
   unsigned NumInstr = 0;
 
@@ -137,7 +145,7 @@ bool SILowerControlFlowPass::shouldSkip(MachineBasicBlock *From,
   return false;
 }
 
-void SILowerControlFlowPass::Skip(MachineInstr &From, MachineOperand &To) {
+void SILowerControlFlow::Skip(MachineInstr &From, MachineOperand &To) {
 
   if (!shouldSkip(*From.getParent()->succ_begin(), To.getMBB()))
     return;
@@ -147,7 +155,7 @@ void SILowerControlFlowPass::Skip(MachineInstr &From, MachineOperand &To) {
     .addOperand(To);
 }
 
-void SILowerControlFlowPass::SkipIfDead(MachineInstr &MI) {
+void SILowerControlFlow::SkipIfDead(MachineInstr &MI) {
 
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
@@ -180,7 +188,7 @@ void SILowerControlFlowPass::SkipIfDead(MachineInstr &MI) {
   BuildMI(MBB, Insert, DL, TII->get(AMDGPU::S_ENDPGM));
 }
 
-void SILowerControlFlowPass::If(MachineInstr &MI) {
+void SILowerControlFlow::If(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
   unsigned Reg = MI.getOperand(0).getReg();
@@ -198,7 +206,7 @@ void SILowerControlFlowPass::If(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlowPass::Else(MachineInstr &MI) {
+void SILowerControlFlow::Else(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
   unsigned Dst = MI.getOperand(0).getReg();
@@ -217,13 +225,13 @@ void SILowerControlFlowPass::Else(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlowPass::Break(MachineInstr &MI) {
+void SILowerControlFlow::Break(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
 
   unsigned Dst = MI.getOperand(0).getReg();
   unsigned Src = MI.getOperand(1).getReg();
- 
+
   BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
           .addReg(AMDGPU::EXEC)
           .addReg(Src);
@@ -231,14 +239,14 @@ void SILowerControlFlowPass::Break(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlowPass::IfBreak(MachineInstr &MI) {
+void SILowerControlFlow::IfBreak(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
 
   unsigned Dst = MI.getOperand(0).getReg();
   unsigned Vcc = MI.getOperand(1).getReg();
   unsigned Src = MI.getOperand(2).getReg();
- 
+
   BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
           .addReg(Vcc)
           .addReg(Src);
@@ -246,14 +254,14 @@ void SILowerControlFlowPass::IfBreak(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlowPass::ElseBreak(MachineInstr &MI) {
+void SILowerControlFlow::ElseBreak(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
 
   unsigned Dst = MI.getOperand(0).getReg();
   unsigned Saved = MI.getOperand(1).getReg();
   unsigned Src = MI.getOperand(2).getReg();
- 
+
   BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
           .addReg(Saved)
           .addReg(Src);
@@ -261,7 +269,7 @@ void SILowerControlFlowPass::ElseBreak(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlowPass::Loop(MachineInstr &MI) {
+void SILowerControlFlow::Loop(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
   unsigned Src = MI.getOperand(0).getReg();
@@ -276,7 +284,7 @@ void SILowerControlFlowPass::Loop(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlowPass::EndCf(MachineInstr &MI) {
+void SILowerControlFlow::EndCf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
   unsigned Reg = MI.getOperand(0).getReg();
@@ -289,14 +297,14 @@ void SILowerControlFlowPass::EndCf(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlowPass::Branch(MachineInstr &MI) {
+void SILowerControlFlow::Branch(MachineInstr &MI) {
   if (MI.getOperand(0).getMBB() == MI.getParent()->getNextNode())
     MI.eraseFromParent();
 
   // If these aren't equal, this is probably an infinite loop.
 }
 
-void SILowerControlFlowPass::Kill(MachineInstr &MI) {
+void SILowerControlFlow::Kill(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
   const MachineOperand &Op = MI.getOperand(0);
@@ -325,7 +333,7 @@ void SILowerControlFlowPass::Kill(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlowPass::LoadM0(MachineInstr &MI, MachineInstr *MovRel, int Offset) {
+void SILowerControlFlow::LoadM0(MachineInstr &MI, MachineInstr *MovRel, int Offset) {
 
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
@@ -403,9 +411,9 @@ void SILowerControlFlowPass::LoadM0(MachineInstr &MI, MachineInstr *MovRel, int 
 //                         indirect Index. e.g. v0 = v[VecReg + Offset]
 //                         As an output, this is a constant value that needs
 //                         to be added to the value stored in M0.
-void SILowerControlFlowPass::computeIndirectRegAndOffset(unsigned VecReg,
-                                                         unsigned &Reg,
-                                                         int &Offset) {
+void SILowerControlFlow::computeIndirectRegAndOffset(unsigned VecReg,
+                                                     unsigned &Reg,
+                                                     int &Offset) {
   unsigned SubReg = TRI->getSubReg(VecReg, AMDGPU::sub0);
   if (!SubReg)
     SubReg = VecReg;
@@ -423,7 +431,7 @@ void SILowerControlFlowPass::computeIndirectRegAndOffset(unsigned VecReg,
   Reg = RC->getRegister(RegIdx);
 }
 
-void SILowerControlFlowPass::IndirectSrc(MachineInstr &MI) {
+void SILowerControlFlow::IndirectSrc(MachineInstr &MI) {
 
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
@@ -443,7 +451,7 @@ void SILowerControlFlowPass::IndirectSrc(MachineInstr &MI) {
   LoadM0(MI, MovRel, Off);
 }
 
-void SILowerControlFlowPass::IndirectDst(MachineInstr &MI) {
+void SILowerControlFlow::IndirectDst(MachineInstr &MI) {
 
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
@@ -455,7 +463,7 @@ void SILowerControlFlowPass::IndirectDst(MachineInstr &MI) {
 
   computeIndirectRegAndOffset(Dst, Reg, Off);
 
-  MachineInstr *MovRel = 
+  MachineInstr *MovRel =
     BuildMI(*MBB.getParent(), DL, TII->get(AMDGPU::V_MOVRELD_B32_e32))
             .addReg(Reg, RegState::Define)
             .addReg(Val)
@@ -464,7 +472,7 @@ void SILowerControlFlowPass::IndirectDst(MachineInstr &MI) {
   LoadM0(MI, MovRel, Off);
 }
 
-bool SILowerControlFlowPass::runOnMachineFunction(MachineFunction &MF) {
+bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI =
       static_cast<const SIRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
@@ -564,43 +572,11 @@ bool SILowerControlFlowPass::runOnMachineFunction(MachineFunction &MF) {
             AMDGPU::EXEC).addReg(AMDGPU::EXEC);
   }
 
-  // FIXME: This seems inappropriate to do here.
   if (NeedFlat && MFI->IsKernel) {
-    // Insert the prologue initializing the SGPRs pointing to the scratch space
-    // for flat accesses.
-    const MachineFrameInfo *FrameInfo = MF.getFrameInfo();
-
     // TODO: What to use with function calls?
-
-    // FIXME: This is reporting stack size that is used in a scratch buffer
-    // rather than registers as well.
-    uint64_t StackSizeBytes = FrameInfo->getStackSize();
-
-    int IndirectBegin
-      = static_cast<const AMDGPUInstrInfo*>(TII)->getIndirectIndexBegin(MF);
-    // Convert register index to 256-byte unit.
-    uint64_t StackOffset = IndirectBegin < 0 ? 0 : (4 * IndirectBegin / 256);
-
-    assert((StackSizeBytes < 0xffff) && StackOffset < 0xffff &&
-           "Stack limits should be smaller than 16-bits");
-
-    // Initialize the flat scratch register pair.
-    // TODO: Can we use one s_mov_b64 here?
-
-    // Offset is in units of 256-bytes.
-    MachineBasicBlock &MBB = MF.front();
-    DebugLoc NoDL;
-    MachineBasicBlock::iterator Start = MBB.getFirstNonPHI();
-    const MCInstrDesc &SMovK = TII->get(AMDGPU::S_MOVK_I32);
-
-    assert(isInt<16>(StackOffset) && isInt<16>(StackSizeBytes));
-
-    BuildMI(MBB, Start, NoDL, SMovK, AMDGPU::FLAT_SCR_LO)
-      .addImm(StackOffset);
-
-    // Documentation says size is "per-thread scratch size in bytes"
-    BuildMI(MBB, Start, NoDL, SMovK, AMDGPU::FLAT_SCR_HI)
-      .addImm(StackSizeBytes);
+    // We will need to Initialize the flat scratch register pair.
+    if (NeedFlat)
+      MFI->setHasFlatInstructions(true);
   }
 
   return true;

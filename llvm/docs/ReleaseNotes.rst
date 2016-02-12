@@ -37,7 +37,8 @@ Non-comprehensive list of changes in this release
 
 * .. note about C API functions LLVMLinkModules, LLVMParseBitcode,
    LLVMParseBitcodeInContext, LLVMGetBitcodeModuleInContext and
-   LLVMGetBitcodeModule having been removed.
+   LLVMGetBitcodeModule having been removed. LLVMGetTargetMachineData has been
+   removed (use LLVMGetDataLayout instead).
 
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of

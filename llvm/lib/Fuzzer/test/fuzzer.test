@@ -53,10 +53,16 @@ RUN: echo aaa > %tmp/SINGLE_INPUTS/aaa
 RUN: echo bbb > %tmp/SINGLE_INPUTS/bbb
 RUN: LLVMFuzzer-SimpleTest %tmp/SINGLE_INPUTS/aaa %tmp/SINGLE_INPUTS/bbb 2>&1 | FileCheck %s --check-prefix=SINGLE_INPUTS
 RUN: rm -rf  %tmp/SINGLE_INPUTS
-SINGLE_INPUTS: LLVMFuzzer-SimpleTest: Running 2 inputs.
+SINGLE_INPUTS: LLVMFuzzer-SimpleTest: Running 2 inputs 1 time(s) each.
 SINGLE_INPUTS: aaa:
 SINGLE_INPUTS: bbb:
 
 RUN: not LLVMFuzzer-LeakTest -runs=10 2>&1 | FileCheck %s --check-prefix=LEAK
 LEAK: ERROR: LeakSanitizer: detected memory leaks
 LEAK-NOT: DEATH:
+
+RUN: echo abcd > %t/NthRunCrashTest.in
+RUN: LLVMFuzzer-NthRunCrashTest %t/NthRunCrashTest.in
+RUN: LLVMFuzzer-NthRunCrashTest %t/NthRunCrashTest.in -runs=10
+RUN: not LLVMFuzzer-NthRunCrashTest %t/NthRunCrashTest.in -runs=10000 2>&1 | FileCheck %s
+RUN: rm %t/NthRunCrashTest.in

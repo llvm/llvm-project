@@ -21,19 +21,8 @@ using namespace llvm;
 
 static bool hasOnlySGPRSpills(const SIMachineFunctionInfo *FuncInfo,
                               const MachineFrameInfo *FrameInfo) {
-  if (!FuncInfo->hasSpilledSGPRs())
-    return false;
-
-  if (FuncInfo->hasSpilledVGPRs())
-    return false;
-
-  for (int I = FrameInfo->getObjectIndexBegin(),
-         E = FrameInfo->getObjectIndexEnd(); I != E; ++I) {
-    if (!FrameInfo->isSpillSlotObjectIndex(I))
-      return false;
-  }
-
-  return true;
+  return FuncInfo->hasSpilledSGPRs() &&
+    (!FuncInfo->hasSpilledVGPRs() && !FuncInfo->hasNonSpillStackObjects());
 }
 
 static ArrayRef<MCPhysReg> getAllSGPR128() {
@@ -67,6 +56,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineBasicBlock::iterator I = MBB.begin();
 
   // We need to insert initialization of the scratch resource descriptor.
   unsigned ScratchRsrcReg = MFI->getScratchRSrcReg();
@@ -84,6 +75,44 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
   }
 
+  if (MFI->hasFlatScratchInit()) {
+    // We don't need this if we only have spills since there is no user facing
+    // scratch.
+
+    // TODO: If we know we don't have flat instructions earlier, we can omit
+    // this from the input registers.
+    //
+    // TODO: We only need to know if we access scratch space through a flat
+    // pointer. Because we only detect if flat instructions are used at all,
+    // this will be used more often than necessary on VI.
+
+    DebugLoc DL;
+
+    unsigned FlatScratchInitReg
+      = TRI->getPreloadedValue(MF, SIRegisterInfo::FLAT_SCRATCH_INIT);
+
+    MRI.addLiveIn(FlatScratchInitReg);
+    MBB.addLiveIn(FlatScratchInitReg);
+
+    // Copy the size in bytes.
+    unsigned FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::FLAT_SCR_LO)
+      .addReg(FlatScrInitHi, RegState::Kill);
+
+    unsigned FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
+
+    // Add wave offset in bytes to private base offset.
+    // See comment in AMDKernelCodeT.h for enable_sgpr_flat_scratch_init.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), FlatScrInitLo)
+      .addReg(FlatScrInitLo)
+      .addReg(ScratchWaveOffsetReg);
+
+    // Convert offset to 256-byte units.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_LSHR_B32), AMDGPU::FLAT_SCR_HI)
+      .addReg(FlatScrInitLo, RegState::Kill)
+      .addImm(8);
+  }
+
   // If we reserved the original input registers, we don't need to copy to the
   // reserved registers.
   if (ScratchRsrcReg == PreloadedPrivateBufferReg) {
@@ -96,7 +125,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   // We added live-ins during argument lowering, but since they were not used
   // they were deleted. We're adding the uses now, so add them back.
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
   MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
 
@@ -160,7 +188,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   assert(!TRI->isSubRegister(ScratchRsrcReg, ScratchWaveOffsetReg));
 
   const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
-  MachineBasicBlock::iterator I = MBB.begin();
   DebugLoc DL;
 
   if (PreloadedScratchWaveOffsetReg != ScratchWaveOffsetReg) {

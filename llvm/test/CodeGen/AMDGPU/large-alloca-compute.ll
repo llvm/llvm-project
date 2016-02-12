@@ -10,14 +10,14 @@
 ; GCN: s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GCN: s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; GCN: s_mov_b32 s10, -1
-; CI: s_mov_b32 s11, 0x80f000
-; VI: s_mov_b32 s11, 0x800000
+; CI: s_mov_b32 s11, 0x98f000
+; VI: s_mov_b32 s11, 0x980000
 
 
 ; GCNHSA: .amd_kernel_code_t
 
 ; GCNHSA: compute_pgm_rsrc2_scratch_en = 1
-; GCNHSA: compute_pgm_rsrc2_user_sgpr = 6
+; GCNHSA: compute_pgm_rsrc2_user_sgpr = 8
 ; GCNHSA: compute_pgm_rsrc2_tgid_x_en = 1
 ; GCNHSA: compute_pgm_rsrc2_tgid_y_en = 0
 ; GCNHSA: compute_pgm_rsrc2_tgid_z_en = 0
@@ -29,7 +29,7 @@
 ; GCNHSA: enable_sgpr_queue_ptr = 0
 ; GCNHSA: enable_sgpr_kernarg_segment_ptr = 1
 ; GCNHSA: enable_sgpr_dispatch_id = 0
-; GCNHSA: enable_sgpr_flat_scratch_init = 0
+; GCNHSA: enable_sgpr_flat_scratch_init = 1
 ; GCNHSA: enable_sgpr_private_segment_size = 0
 ; GCNHSA: enable_sgpr_grid_workgroup_count_x = 0
 ; GCNHSA: enable_sgpr_grid_workgroup_count_y = 0
@@ -39,8 +39,8 @@
 ; GCNHSA: .end_amd_kernel_code_t
 
 
-; GCNHSA: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s7 offen
-; GCNHSA: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s7 offen
+; GCNHSA: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s9 offen
+; GCNHSA: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[0:3], s9 offen
 
 ; Scratch size = alloca size + emergency stack slot
 ; ALL: ; ScratchSize: 32772

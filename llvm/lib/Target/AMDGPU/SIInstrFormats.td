@@ -690,5 +690,6 @@ class MIMG <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
   let MIMG = 1;
   let Uses = [EXEC];
 
+  let UseNamedOperandTable = 1;
   let hasSideEffects = 0; // XXX ????
 }

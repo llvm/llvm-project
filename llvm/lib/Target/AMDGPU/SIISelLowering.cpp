@@ -695,6 +695,12 @@ SDValue SITargetLowering::LowerFormalArguments(
     CCInfo.AllocateReg(InputPtrReg);
   }
 
+  if (Info->hasFlatScratchInit()) {
+    unsigned FlatScratchInitReg = Info->addFlatScratchInit(*TRI);
+    MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SReg_64RegClass);
+    CCInfo.AllocateReg(FlatScratchInitReg);
+  }
+
   AnalyzeFormalArguments(CCInfo, Splits);
 
   SmallVector<SDValue, 16> Chains;
@@ -822,8 +828,11 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   // Now that we've figured out where the scratch register inputs are, see if
   // should reserve the arguments and use them directly.
-
   bool HasStackObjects = MF.getFrameInfo()->hasStackObjects();
+  // Record that we know we have non-spill stack objects so we don't need to
+  // check all stack objects later.
+  if (HasStackObjects)
+    Info->setHasNonSpillStackObjects(true);
 
   if (ST.isAmdHsaOS()) {
     // TODO: Assume we will spill without optimizations.

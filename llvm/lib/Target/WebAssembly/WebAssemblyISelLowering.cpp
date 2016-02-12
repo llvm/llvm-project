@@ -149,8 +149,7 @@ bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
 MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
                                                       EVT VT) const {
   unsigned BitWidth = NextPowerOf2(VT.getSizeInBits() - 1);
-  if (BitWidth > 1 && BitWidth < 8)
-    BitWidth = 8;
+  if (BitWidth > 1 && BitWidth < 8) BitWidth = 8;
 
   if (BitWidth > 64) {
     BitWidth = 64;
@@ -164,13 +163,13 @@ MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
   return Result;
 }
 
-const char *
-WebAssemblyTargetLowering::getTargetNodeName(unsigned Opcode) const {
+const char *WebAssemblyTargetLowering::getTargetNodeName(
+    unsigned Opcode) const {
   switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
-  case WebAssemblyISD::FIRST_NUMBER:
-    break;
-#define HANDLE_NODETYPE(NODE)                                                  \
-  case WebAssemblyISD::NODE:                                                   \
+    case WebAssemblyISD::FIRST_NUMBER:
+      break;
+#define HANDLE_NODETYPE(NODE) \
+  case WebAssemblyISD::NODE:  \
     return "WebAssemblyISD::" #NODE;
 #include "WebAssemblyISD.def"
 #undef HANDLE_NODETYPE
@@ -185,17 +184,17 @@ WebAssemblyTargetLowering::getRegForInlineAsmConstraint(
   // WebAssembly register class.
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
-    case 'r':
-      assert(VT != MVT::iPTR && "Pointer MVT not expected here");
-      if (VT.isInteger() && !VT.isVector()) {
-        if (VT.getSizeInBits() <= 32)
-          return std::make_pair(0U, &WebAssembly::I32RegClass);
-        if (VT.getSizeInBits() <= 64)
-          return std::make_pair(0U, &WebAssembly::I64RegClass);
-      }
-      break;
-    default:
-      break;
+      case 'r':
+        assert(VT != MVT::iPTR && "Pointer MVT not expected here");
+        if (VT.isInteger() && !VT.isVector()) {
+          if (VT.getSizeInBits() <= 32)
+            return std::make_pair(0U, &WebAssembly::I32RegClass);
+          if (VT.getSizeInBits() <= 64)
+            return std::make_pair(0U, &WebAssembly::I64RegClass);
+        }
+        break;
+      default:
+        break;
     }
   }
 
@@ -219,28 +218,24 @@ bool WebAssemblyTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   // WebAssembly offsets are added as unsigned without wrapping. The
   // isLegalAddressingMode gives us no way to determine if wrapping could be
   // happening, so we approximate this by accepting only non-negative offsets.
-  if (AM.BaseOffs < 0)
-    return false;
+  if (AM.BaseOffs < 0) return false;
 
   // WebAssembly has no scale register operands.
-  if (AM.Scale != 0)
-    return false;
+  if (AM.Scale != 0) return false;
 
   // Everything else is legal.
   return true;
 }
 
 bool WebAssemblyTargetLowering::allowsMisalignedMemoryAccesses(
-    EVT /*VT*/, unsigned /*AddrSpace*/, unsigned /*Align*/,
-    bool *Fast) const {
+    EVT /*VT*/, unsigned /*AddrSpace*/, unsigned /*Align*/, bool *Fast) const {
   // WebAssembly supports unaligned accesses, though it should be declared
   // with the p2align attribute on loads and stores which do so, and there
   // may be a performance impact. We tell LLVM they're "fast" because
   // for the kinds of things that LLVM uses this for (merging adjacent stores
   // of constants, etc.), WebAssembly implementations will either want the
   // unaligned access or they'll split anyway.
-  if (Fast)
-    *Fast = true;
+  if (Fast) *Fast = true;
   return true;
 }
 
@@ -271,9 +266,8 @@ static bool CallingConvSupported(CallingConv::ID CallConv) {
          CallConv == CallingConv::CXX_FAST_TLS;
 }
 
-SDValue
-WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
-                                     SmallVectorImpl<SDValue> &InVals) const {
+SDValue WebAssemblyTargetLowering::LowerCall(
+    CallLoweringInfo &CLI, SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc DL = CLI.DL;
   SDValue Chain = CLI.Chain;
@@ -523,21 +517,21 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
 SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
                                                   SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
-  default:
-    llvm_unreachable("unimplemented operation lowering");
-    return SDValue();
-  case ISD::FrameIndex:
-    return LowerFrameIndex(Op, DAG);
-  case ISD::GlobalAddress:
-    return LowerGlobalAddress(Op, DAG);
-  case ISD::ExternalSymbol:
-    return LowerExternalSymbol(Op, DAG);
-  case ISD::JumpTable:
-    return LowerJumpTable(Op, DAG);
-  case ISD::BR_JT:
-    return LowerBR_JT(Op, DAG);
-  case ISD::VASTART:
-    return LowerVASTART(Op, DAG);
+    default:
+      llvm_unreachable("unimplemented operation lowering");
+      return SDValue();
+    case ISD::FrameIndex:
+      return LowerFrameIndex(Op, DAG);
+    case ISD::GlobalAddress:
+      return LowerGlobalAddress(Op, DAG);
+    case ISD::ExternalSymbol:
+      return LowerExternalSymbol(Op, DAG);
+    case ISD::JumpTable:
+      return LowerJumpTable(Op, DAG);
+    case ISD::BR_JT:
+      return LowerBR_JT(Op, DAG);
+    case ISD::VASTART:
+      return LowerVASTART(Op, DAG);
   }
 }
 
@@ -561,9 +555,8 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
       DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT, GA->getOffset()));
 }
 
-SDValue
-WebAssemblyTargetLowering::LowerExternalSymbol(SDValue Op,
-                                               SelectionDAG &DAG) const {
+SDValue WebAssemblyTargetLowering::LowerExternalSymbol(
+    SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   const auto *ES = cast<ExternalSymbolSDNode>(Op);
   EVT VT = Op.getValueType();
@@ -610,8 +603,7 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
   Ops.push_back(DAG.getBasicBlock(MBBs[0]));
 
   // Add an operand for each case.
-  for (auto MBB : MBBs)
-    Ops.push_back(DAG.getBasicBlock(MBB));
+  for (auto MBB : MBBs) Ops.push_back(DAG.getBasicBlock(MBB));
 
   return DAG.getNode(WebAssemblyISD::TABLESWITCH, DL, MVT::Other, Ops);
 }

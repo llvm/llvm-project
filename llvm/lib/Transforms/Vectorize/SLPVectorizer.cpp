@@ -1779,7 +1779,6 @@ int BoUpSLP::getSpillCost() {
     PrevInst = Inst;
   }
 
-  DEBUG(dbgs() << "SLP: SpillCost=" << Cost << "\n");
   return Cost;
 }
 
@@ -1833,10 +1832,13 @@ int BoUpSLP::getTreeCost() {
         TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, EU.Lane);
   }
 
-  Cost += getSpillCost();
+  int SpillCost = getSpillCost();
+  Cost += SpillCost + ExtractCost;
 
-  DEBUG(dbgs() << "SLP: Total Cost " << Cost + ExtractCost<< ".\n");
-  return  Cost + ExtractCost;
+  DEBUG(dbgs() << "SLP: Spill Cost = " << SpillCost << ".\n"
+               << "SLP: Extract Cost = " << ExtractCost << ".\n"
+               << "SLP: Total Cost = " << Cost << ".\n");
+  return Cost;
 }
 
 int BoUpSLP::getGatherCost(Type *Ty) {

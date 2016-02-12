@@ -21,16 +21,16 @@
 namespace llvm {
 
 class WebAssemblyFrameLowering final : public TargetFrameLowering {
-public:
+ public:
   WebAssemblyFrameLowering()
       : TargetFrameLowering(StackGrowsDown, /*StackAlignment=*/16,
                             /*LocalAreaOffset=*/0,
                             /*TransientStackAlignment=*/16,
                             /*StackRealignable=*/true) {}
 
-  void
-  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator I) const override;
+  void eliminateCallFramePseudoInstr(
+      MachineFunction &MF, MachineBasicBlock &MBB,
+      MachineBasicBlock::iterator I) const override;
 
   /// These methods insert prolog and epilog code into the function.
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
@@ -40,6 +40,6 @@ public:
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 };
 
-} // end namespace llvm
+}  // end namespace llvm
 
 #endif

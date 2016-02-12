@@ -2005,6 +2005,10 @@ LLVMValueRef LLVMGetPreviousInstruction(LLVMValueRef Inst) {
   return wrap(&*--I);
 }
 
+void LLVMInstructionRemoveFromParent(LLVMValueRef Inst) {
+  unwrap<Instruction>(Inst)->removeFromParent();
+}
+
 void LLVMInstructionEraseFromParent(LLVMValueRef Inst) {
   unwrap<Instruction>(Inst)->eraseFromParent();
 }

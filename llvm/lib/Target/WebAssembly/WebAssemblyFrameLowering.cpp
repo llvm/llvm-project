@@ -99,9 +99,9 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   // Load the SP value.
   BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::LOAD_I32),
           StackSize ? SPReg : (unsigned)WebAssembly::SP32)
-      .addImm(0)     // offset
-      .addReg(SPReg) // addr
-      .addImm(2)     // p2align
+      .addImm(0)      // offset
+      .addReg(SPReg)  // addr
+      .addImm(2)      // p2align
       .addMemOperand(LoadMMO);
 
   unsigned OffsetReg = 0;
@@ -110,8 +110,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
     OffsetReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), OffsetReg)
         .addImm(StackSize);
-    BuildMI(MBB, InsertPt, DL,
-            TII->get(WebAssembly::SUB_I32),
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::SUB_I32),
             WebAssembly::SP32)
         .addReg(SPReg)
         .addReg(OffsetReg);
@@ -126,17 +125,18 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   }
   if (StackSize) {
     assert(OffsetReg);
-  // The SP32 register now has the new stacktop. Also write it back to memory.
-  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), OffsetReg)
-      .addExternalSymbol(SPSymbol);
-  auto *MMO = new MachineMemOperand(MachinePointerInfo(),
-                                    MachineMemOperand::MOStore, 4, 4);
-  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::STORE_I32), WebAssembly::SP32)
-      .addImm(0)
-      .addReg(OffsetReg)
-      .addImm(2) // p2align
-      .addReg(WebAssembly::SP32)
-      .addMemOperand(MMO);
+    // The SP32 register now has the new stacktop. Also write it back to memory.
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), OffsetReg)
+        .addExternalSymbol(SPSymbol);
+    auto *MMO = new MachineMemOperand(MachinePointerInfo(),
+                                      MachineMemOperand::MOStore, 4, 4);
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::STORE_I32),
+            WebAssembly::SP32)
+        .addImm(0)
+        .addReg(OffsetReg)
+        .addImm(2)  // p2align
+        .addReg(WebAssembly::SP32)
+        .addMemOperand(MMO);
   }
 }
 
@@ -160,7 +160,8 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
   if (StackSize) {
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), OffsetReg)
         .addImm(StackSize);
-    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::ADD_I32), WebAssembly::SP32)
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::ADD_I32),
+            WebAssembly::SP32)
         .addReg(hasFP(MF) ? WebAssembly::FP32 : WebAssembly::SP32)
         .addReg(OffsetReg);
   }
@@ -171,10 +172,11 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
       .addExternalSymbol(SPSymbol);
   auto *MMO = new MachineMemOperand(MachinePointerInfo(),
                                     MachineMemOperand::MOStore, 4, 4);
-  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::STORE_I32), WebAssembly::SP32)
+  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::STORE_I32),
+          WebAssembly::SP32)
       .addImm(0)
       .addReg(OffsetReg)
-      .addImm(2) // p2align
+      .addImm(2)  // p2align
       .addReg((!StackSize && hasFP(MF)) ? WebAssembly::FP32 : WebAssembly::SP32)
       .addMemOperand(MMO);
 }

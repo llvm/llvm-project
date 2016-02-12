@@ -167,3 +167,52 @@ exit:
 ; CHECK: ret i1 true
   ret i1 true
 }
+
+;; Using the condition to clamp the result
+;; 
+
+define i1 @test5(i32* %p, i1 %unknown) {
+; CHECK-LABEL: @test5
+  %pval = load i32, i32* %p
+  %cmp1 = icmp slt i32 %pval, 255
+  br i1 %cmp1, label %next, label %exit
+
+next:
+  %cond = icmp sgt i32 %pval, 0
+  %min = select i1 %cond, i32 %pval, i32 5
+  ;; TODO: This pointless branch shouldn't be neccessary
+  br label %next2
+next2:
+; CHECK-LABEL: next2:
+; CHECK: ret i1 false
+  %res = icmp eq i32 %min, -1
+  ret i1 %res
+
+exit:
+; CHECK-LABEL: exit:
+; CHECK: ret i1 true
+  ret i1 true
+}
+
+define i1 @test6(i32* %p, i1 %unknown) {
+; CHECK-LABEL: @test6
+  %pval = load i32, i32* %p
+  %cmp1 = icmp ult i32 %pval, 255
+  br i1 %cmp1, label %next, label %exit
+
+next:
+  %cond = icmp ne i32 %pval, 254
+  %sel = select i1 %cond, i32 %pval, i32 1
+  ;; TODO: This pointless branch shouldn't be neccessary
+  br label %next2
+next2:
+; CHECK-LABEL: next2:
+; CHECK: ret i1 true
+  %res = icmp slt i32 %sel, 254
+  ret i1 %res
+
+exit:
+; CHECK-LABEL: exit:
+; CHECK: ret i1 true
+  ret i1 true
+}

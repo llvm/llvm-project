@@ -32,15 +32,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-// Friend to the TargetMachine, access legacy API that are made private in C++
-struct C_API_PRIVATE_ACCESS {
-  static const DataLayout &getDataLayout(const TargetMachine &T) {
-    return T.getDataLayout();
-  }
-};
-}
-
 static TargetMachine *unwrap(LLVMTargetMachineRef P) {
   return reinterpret_cast<TargetMachine *>(P);
 }
@@ -173,11 +164,6 @@ char* LLVMGetTargetMachineCPU(LLVMTargetMachineRef T) {
 char* LLVMGetTargetMachineFeatureString(LLVMTargetMachineRef T) {
   std::string StringRep = unwrap(T)->getTargetFeatureString();
   return strdup(StringRep.c_str());
-}
-
-/** Deprecated: use LLVMGetDataLayout(LLVMModuleRef M) instead. */
-LLVMTargetDataRef LLVMGetTargetMachineData(LLVMTargetMachineRef T) {
-  return wrap(&C_API_PRIVATE_ACCESS::getDataLayout(*unwrap(T)));
 }
 
 void LLVMSetTargetMachineAsmVerbosity(LLVMTargetMachineRef T,

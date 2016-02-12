@@ -14,6 +14,9 @@
 #include "AArch64TargetMachine.h"
 #include "AArch64TargetObjectFile.h"
 #include "AArch64TargetTransformInfo.h"
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+#  include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#endif
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/IR/Function.h"
@@ -194,6 +197,9 @@ public:
   void addIRPasses()  override;
   bool addPreISel() override;
   bool addInstSelector() override;
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+  bool addIRTranslator() override;
+#endif
   bool addILPOpts() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
@@ -277,6 +283,13 @@ bool AArch64PassConfig::addInstSelector() {
 
   return false;
 }
+
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+bool AArch64PassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+#endif
 
 bool AArch64PassConfig::addILPOpts() {
   if (EnableCondOpt)

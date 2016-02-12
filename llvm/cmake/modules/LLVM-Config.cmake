@@ -40,10 +40,19 @@ macro(llvm_config executable)
     # done in case libLLVM does not contain all of the components
     # the target requires.
     #
-    # TODO strip LLVM_DYLIB_COMPONENTS out of link_components.
+    # Strip LLVM_DYLIB_COMPONENTS out of link_components.
     # To do this, we need special handling for "all", since that
     # may imply linking to libraries that are not included in
     # libLLVM.
+
+    if (DEFINED link_components AND DEFINED LLVM_DYLIB_COMPONENTS)
+      if("${LLVM_DYLIB_COMPONENTS}" STREQUAL "all")
+        set(link_components "")
+      else()
+        list(REMOVE_ITEM link_components ${LLVM_DYLIB_COMPONENTS})
+      endif()
+    endif()
+
     target_link_libraries(${executable} LLVM)
   endif()
 

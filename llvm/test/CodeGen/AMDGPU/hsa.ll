@@ -28,7 +28,7 @@
 
 ; ELF: Symbol {
 ; ELF: Name: simple
-; ELF: Size: 296
+; ELF: Size: 288
 ; ELF: Type: AMDGPU_HSA_KERNEL (0xA)
 ; ELF: }
 

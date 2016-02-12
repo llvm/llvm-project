@@ -1167,9 +1167,8 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, SDLoc DL, EVT VT,
     for (unsigned i = 0; i < VT.getVectorNumElements(); ++i)
       Ops.insert(Ops.end(), EltParts.begin(), EltParts.end());
 
-    SDValue Result = getNode(ISD::BITCAST, SDLoc(), VT,
-                             getNode(ISD::BUILD_VECTOR, SDLoc(), ViaVecVT,
-                                     Ops));
+    SDValue Result = getNode(ISD::BITCAST, DL, VT,
+                             getNode(ISD::BUILD_VECTOR, DL, ViaVecVT, Ops));
     return Result;
   }
 
@@ -1197,7 +1196,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, SDLoc DL, EVT VT,
   if (VT.isVector()) {
     SmallVector<SDValue, 8> Ops;
     Ops.assign(VT.getVectorNumElements(), Result);
-    Result = getNode(ISD::BUILD_VECTOR, SDLoc(), VT, Ops);
+    Result = getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
   }
   return Result;
 }
@@ -1241,7 +1240,7 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP& V, SDLoc DL, EVT VT,
   if (VT.isVector()) {
     SmallVector<SDValue, 8> Ops;
     Ops.assign(VT.getVectorNumElements(), Result);
-    Result = getNode(ISD::BUILD_VECTOR, SDLoc(), VT, Ops);
+    Result = getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
   }
   return Result;
 }

@@ -122,7 +122,7 @@
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0x8
 ; OBJ:        ISectStart: 0x0
-; OBJ:        Range: 79
+; OBJ:        Range: 0x4F
 ; OBJ:      }
 ; OBJ:    }
 ; OBJ:    Local {
@@ -139,7 +139,7 @@
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0xC
 ; OBJ:        ISectStart: 0x0
-; OBJ:        Range: 33
+; OBJ:        Range: 0x21
 ; OBJ:      }
 ; OBJ:    }
 ; OBJ:    Local {
@@ -156,7 +156,7 @@
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0x2D
 ; OBJ:        ISectStart: 0x0
-; OBJ:        Range: 36
+; OBJ:        Range: 0x24
 ; OBJ:      }
 ; OBJ:    }
 ; OBJ:    InlineSite {
@@ -184,7 +184,7 @@
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0x14
 ; OBJ:        ISectStart: 0x0
-; OBJ:        Range: 25
+; OBJ:        Range: 0x19
 ; OBJ:      }
 ; OBJ:    }
 ; OBJ:    InlineSiteEnd {
@@ -214,7 +214,7 @@
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0x35
 ; OBJ:        ISectStart: 0x0
-; OBJ:        Range: 23
+; OBJ:        Range: 0x17
 ; OBJ:      }
 ; OBJ:    }
 ; OBJ:    InlineSiteEnd {

@@ -495,12 +495,17 @@ static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
   }
 
   // Fold away bit casts of the loaded value by loading the desired type.
+  // We can do this for BitCastInsts as well as casts from and to pointer types,
+  // as long as those are noops (i.e., the source or dest type have the same
+  // bitwidth as the target's pointers).
   if (LI.hasOneUse())
-    if (auto *BC = dyn_cast<BitCastInst>(LI.user_back())) {
-      LoadInst *NewLoad = combineLoadToNewType(IC, LI, BC->getDestTy());
-      BC->replaceAllUsesWith(NewLoad);
-      IC.eraseInstFromFunction(*BC);
-      return &LI;
+    if (auto* CI = dyn_cast<CastInst>(LI.user_back())) {
+      if (CI->isNoopCast(DL)) {
+        LoadInst *NewLoad = combineLoadToNewType(IC, LI, CI->getDestTy());
+        CI->replaceAllUsesWith(NewLoad);
+        IC.eraseInstFromFunction(*CI);
+        return &LI;
+      }
     }
 
   // FIXME: We should also canonicalize loads of vectors when their elements are
@@ -552,7 +557,8 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
         ConstantInt::get(IdxType, i),
       };
       auto *Ptr = IC.Builder->CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices), EltName);
-      auto *L = IC.Builder->CreateLoad(ST->getTypeAtIndex(i), Ptr, LoadName);
+      auto *L = IC.Builder->CreateAlignedLoad(Ptr, LI.getAlignment(),
+                                              LoadName);
       V = IC.Builder->CreateInsertValue(V, L, i);
     }
 
