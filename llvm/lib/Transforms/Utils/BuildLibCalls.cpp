@@ -214,7 +214,8 @@ Value *llvm::EmitMemCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
 }
 
 /// Append a suffix to the function name according to the type of 'Op'.
-static void AppendTypeSuffix(Value *Op, StringRef &Name, SmallString<20> &NameBuffer) {
+static void AppendTypeSuffix(Value *Op, StringRef &Name,
+                             SmallString<20> &NameBuffer) {
   if (!Op->getType()->isDoubleTy()) {
       NameBuffer += Name;
 
@@ -250,8 +251,8 @@ Value *llvm::EmitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
   AppendTypeSuffix(Op1, Name, NameBuffer);   
 
   Module *M = B.GetInsertBlock()->getParent()->getParent();
-  Value *Callee = M->getOrInsertFunction(Name, Op1->getType(),
-                                         Op1->getType(), Op2->getType(), nullptr);
+  Value *Callee = M->getOrInsertFunction(Name, Op1->getType(), Op1->getType(),
+                                         Op2->getType(), nullptr);
   CallInst *CI = B.CreateCall(Callee, {Op1, Op2}, Name);
   CI->setAttributes(Attrs);
   if (const Function *F = dyn_cast<Function>(Callee->stripPointerCasts()))
