@@ -43,4 +43,50 @@ TEST(PointerEmbeddedIntTest, Basic) {
   EXPECT_FALSE(42 >= J);
 }
 
+TEST(PointerEmbeddedIntTest, intptr_t) {
+  {
+    PointerEmbeddedInt<intptr_t, CHAR_BIT> I = 42, J = -42;
+    EXPECT_EQ(42, I);
+    EXPECT_EQ(-42, J);
+  }
+
+  {
+    PointerEmbeddedInt<uintptr_t, CHAR_BIT> I = 42, J = 255;
+    EXPECT_EQ(42U, I);
+    EXPECT_EQ(255U, J);
+  }
+
+  {
+    PointerEmbeddedInt<intptr_t, std::numeric_limits<intptr_t>::digits>
+        I = std::numeric_limits<intptr_t>::max() >> 1,
+        J = std::numeric_limits<intptr_t>::min() >> 1;
+    EXPECT_EQ(std::numeric_limits<intptr_t>::max() >> 1, I);
+    EXPECT_EQ(std::numeric_limits<intptr_t>::min() >> 1, J);
+  }
+
+  {
+    PointerEmbeddedInt<uintptr_t, std::numeric_limits<uintptr_t>::digits - 1>
+        I = std::numeric_limits<uintptr_t>::max() >> 1,
+        J = std::numeric_limits<uintptr_t>::min() >> 1;
+    EXPECT_EQ(std::numeric_limits<uintptr_t>::max() >> 1, I);
+    EXPECT_EQ(std::numeric_limits<uintptr_t>::min() >> 1, J);
+  }
+}
+
+TEST(PointerEmbeddedIntTest, PointerLikeTypeTraits) {
+  {
+    PointerEmbeddedInt<int, CHAR_BIT> I = 42;
+    using Traits = PointerLikeTypeTraits<decltype(I)>;
+    EXPECT_EQ(42, Traits::getFromVoidPointer(Traits::getAsVoidPointer(I)));
+  }
+
+  {
+    PointerEmbeddedInt<uintptr_t, std::numeric_limits<uintptr_t>::digits - 1>
+        I = std::numeric_limits<uintptr_t>::max() >> 1;
+    using Traits = PointerLikeTypeTraits<decltype(I)>;
+    EXPECT_EQ(std::numeric_limits<uintptr_t>::max() >> 1,
+              Traits::getFromVoidPointer(Traits::getAsVoidPointer(I)));
+  }
+}
+
 } // end anonymous namespace

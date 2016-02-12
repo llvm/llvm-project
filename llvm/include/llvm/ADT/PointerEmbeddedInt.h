@@ -11,6 +11,7 @@
 #define LLVM_ADT_POINTEREMBEDDEDINT_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <climits>
 
@@ -30,6 +31,8 @@ template <typename IntT, int Bits = sizeof(IntT) * CHAR_BIT>
 class PointerEmbeddedInt {
   uintptr_t Value;
 
+  // Note: This '<' is correct; using '<=' would result in some shifts
+  // overflowing their storage types.
   static_assert(Bits < sizeof(uintptr_t) * CHAR_BIT,
                 "Cannot embed more bits than we have in a pointer!");
 
@@ -42,26 +45,36 @@ class PointerEmbeddedInt {
     Mask = static_cast<uintptr_t>(-1) << Bits
   };
 
+  enum RawValue_t {
+    RawValue
+  };
+
   friend class PointerLikeTypeTraits<PointerEmbeddedInt>;
 
-  explicit PointerEmbeddedInt(uintptr_t Value) : Value(Value) {}
+  explicit PointerEmbeddedInt(uintptr_t Value, RawValue_t) : Value(Value) {}
 
 public:
   PointerEmbeddedInt() : Value(0) {}
 
-  PointerEmbeddedInt(IntT I) : Value(static_cast<uintptr_t>(I) << Shift) {
-    assert((I & Mask) == 0 && "Integer has bits outside those preserved!");
+  PointerEmbeddedInt(IntT I) {
+    *this = I;
   }
 
   PointerEmbeddedInt &operator=(IntT I) {
-    assert((I & Mask) == 0 && "Integer has bits outside those preserved!");
+    assert((std::is_signed<IntT>::value ? llvm::isInt<Bits>(I)
+                                        : llvm::isUInt<Bits>(I)) && 
+           "Integer has bits outside those preserved!");
     Value = static_cast<uintptr_t>(I) << Shift;
     return *this;
   }
 
   // Note that this imilict conversion additionally allows all of the basic
   // comparison operators to work transparently, etc.
-  operator IntT() const { return static_cast<IntT>(Value >> Shift); }
+  operator IntT() const {
+    if (std::is_signed<IntT>::value)
+      return static_cast<IntT>(static_cast<intptr_t>(Value) >> Shift);
+    return static_cast<IntT>(Value >> Shift);
+  }
 };
 
 // Provide pointer like traits to support use with pointer unions and sum
@@ -75,10 +88,10 @@ public:
     return reinterpret_cast<void *>(P.Value);
   }
   static inline T getFromVoidPointer(void *P) {
-    return T(reinterpret_cast<uintptr_t>(P));
+    return T(reinterpret_cast<uintptr_t>(P), T::RawValue);
   }
   static inline T getFromVoidPointer(const void *P) {
-    return T(reinterpret_cast<uintptr_t>(P));
+    return T(reinterpret_cast<uintptr_t>(P), T::RawValue);
   }
 
   enum { NumLowBitsAvailable = T::Shift };
