@@ -69,6 +69,11 @@ Non-comprehensive list of changes in this release
 
 * Support for dematerializing has been dropped.
 
+* RegisterScheduler::setDefault was removed. Targets that used to call into the
+  command line parser to set the DAGScheduler, and that don't have enough
+  control with setSchedulingPreference, should look into overriding the
+  SubTargetHook "getDAGScheduler()".
+
 * ``ilist_iterator<T>`` no longer has implicit conversions to and from ``T*``,
   since ``ilist_iterator<T>`` may be pointing at the sentinel (which is usually
   not of type ``T`` at all).  To convert from an iterator ``I`` to a pointer,
@@ -157,7 +162,7 @@ fixes:
   the Integrated Assembler.
 * Added support for atomic load and atomic store.
 * Corrected debug info when dynamically re-aligning the stack.
- 
+
 Integrated Assembler
 ^^^^^^^^^^^^^^^^^^^^
 We have made a large number of improvements to the integrated assembler for
