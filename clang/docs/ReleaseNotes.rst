@@ -82,7 +82,40 @@ Clang's support for building native Windows programs ...
 C Language Changes in Clang
 ---------------------------
 
+Better support for ``__builtin_object_size``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clang 3.8 has expanded support for the ``__builtin_object_size`` intrinsic.
+Specifically, ``__builtin_object_size`` will now fail less often when you're
+trying to get the size of a subobject. Additionally, the ``pass_object_size``
+attribute was added, which allows ``__builtin_object_size`` to successfully
+report the size of function parameters, without requiring that the function be
+inlined.
+
+
+``overloadable`` attribute relaxations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Previously, functions marked ``overloadable`` in C would strictly use C++'s
+type conversion rules, so the following code would not compile:
+
+.. code-block:: c
+
+  void foo(char *bar, char *baz) __attribute__((overloadable));
+  void foo(char *bar) __attribute__((overloadable));
+
+  void callFoo() {
+    int a;
+    foo(&a);
+  }
+
+Now, Clang is able to selectively use C's type conversion rules during overload
+resolution in C, which allows the above example to compile (albeit potentially
+with a warning about an implicit conversion from ``int*`` to ``char*``).
+
+
 ...
+
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
