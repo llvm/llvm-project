@@ -131,8 +131,10 @@ During this release the ARM target has:
 * Expanded LLDB support, including watchpoints, unwind tables
 * Extended the Load/Store optimiser and cleaned up some of the bad decisions
   made earlier.
-* Gained some code size improvements, though there's still a long road ahead,
-  especially for older cores.
+* Simplified code generation for global variable addresses in ELF, resulting in
+  a significant (4% in Chromium) reduction in code size.
+* Gained some additional code size improvements, though there's still a long road
+  ahead, especially for older cores.
 * Added some EABI floating point comparison functions to Compiler-RT
 * Added support for Windows+GNU triple, +features in -mcpu/-march options.
 
