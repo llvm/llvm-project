@@ -156,7 +156,7 @@ using ::nanf;
 using ::nearbyint;
 using ::nextafter;
 __DEVICE__ float nexttoward(float __from, float __to) {
-  return __builtin_nexttowardf(from, to);
+  return __builtin_nexttowardf(__from, __to);
 }
 __DEVICE__ double nexttoward(double __from, double __to) {
   return __builtin_nexttoward(__from, __to);

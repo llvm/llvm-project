@@ -2005,3 +2005,13 @@ namespace PR24597 {
   constexpr int a = *f().p;
   constexpr int b = *g().p;
 }
+
+namespace IncompleteClass {
+  struct XX {
+    static constexpr int f(XX*) { return 1; } // expected-note {{here}}
+    friend constexpr int g(XX*) { return 2; } // expected-note {{here}}
+
+    static constexpr int i = f(static_cast<XX*>(nullptr)); // expected-error {{constexpr variable 'i' must be initialized by a constant expression}}  expected-note {{undefined function 'f' cannot be used in a constant expression}}
+    static constexpr int j = g(static_cast<XX*>(nullptr)); // expected-error {{constexpr variable 'j' must be initialized by a constant expression}}  expected-note {{undefined function 'g' cannot be used in a constant expression}}
+  };
+}

@@ -336,7 +336,6 @@ static bool LocPropertyAttribute( ASTContext &Context, const char *attrName,
     }
   } while (Tok.isNot(tok::r_paren));
   return false;
-  
 }
 
 /// Check for a mismatch in the atomicity of the given properties.
@@ -805,7 +804,6 @@ static void setImpliedPropertyAttributeForReadOnlyProperty(
     property->setPropertyAttributes(ObjCPropertyDecl::OBJC_PR_strong);
   else if (ivarLifetime == Qualifiers::OCL_Weak)
     property->setPropertyAttributes(ObjCPropertyDecl::OBJC_PR_weak);
-  return;
 }
 
 /// DiagnosePropertyMismatchDeclInProtocols - diagnose properties declared
@@ -1536,7 +1534,6 @@ static void CollectImmediateProperties(ObjCContainerDecl *CDecl,
                                        ObjCContainerDecl::PropertyMap &PropMap,
                                        ObjCContainerDecl::PropertyMap &SuperPropMap,
                                        bool IncludeProtocols = true) {
-
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(CDecl)) {
     for (auto *Prop : IDecl->properties())
       PropMap[std::make_pair(Prop->getIdentifier(), Prop->isClassProperty())] =
@@ -1655,7 +1652,6 @@ static bool SuperClassImplementsProperty(ObjCInterfaceDecl *IDecl,
 /// in class's \@implementation.
 void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl* IMPDecl,
                                        ObjCInterfaceDecl *IDecl) {
-  
   ObjCInterfaceDecl::PropertyMap PropMap;
   ObjCInterfaceDecl::PropertyDeclOrder PropertyOrder;
   IDecl->collectPropertiesToImplement(PropMap, PropertyOrder);
@@ -2499,5 +2495,4 @@ void Sema::CheckObjCPropertyAttributes(Decl *PDecl,
   if ((Attributes & ObjCDeclSpec::DQ_PR_readonly) &&
       (Attributes & ObjCDeclSpec::DQ_PR_setter))
     Diag(Loc, diag::warn_objc_readonly_property_has_setter);
-      
 }

@@ -7,7 +7,8 @@
 // RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-HOST %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device \
 // RUN:     -fcuda-target-overloads -emit-llvm -o - %s \
-// RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-DEVICE %s
+// RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-DEVICE \
+// RUN:       -check-prefix=CHECK-DEVICE-STRICT %s
 
 // Check target overloads handling with disabled call target checks.
 // RUN: %clang_cc1 -DNOCHECKS -triple x86_64-unknown-linux-gnu -emit-llvm \
@@ -77,12 +78,112 @@ extern "C" __host__ int ch(void) {return 13;}
 extern "C" __host__ __device__ int chd(void) {return 14;}
 // CHECK-BOTH:     ret i32 14
 
+// HD functions are sometimes allowed to call H or D functions -- this
+// is an artifact of the source-to-source splitting performed by nvcc
+// that we need to mimic. During device mode compilation in nvcc, host
+// functions aren't present at all, so don't participate in
+// overloading. But in clang, H and D functions are present in both
+// compilation modes. Clang normally uses the target attribute as a
+// tiebreaker between overloads with otherwise identical priority, but
+// in order to match nvcc's behavior, we sometimes need to wholly
+// discard overloads that would not be present during compilation
+// under nvcc.
+
+template <typename T> T template_vs_function(T arg) { return 15; }
+__device__ float template_vs_function(float arg) { return 16; }
+
+// Here we expect to call the templated function during host
+// compilation, even if -fcuda-disable-target-call-checks is passed,
+// and even though C++ overload rules prefer the non-templated
+// function.
+// CHECK-BOTH-LABEL: define void @_Z5hd_tfv()
+__host__ __device__ void hd_tf(void) {
+  template_vs_function(1.0f);
+  // CHECK-HOST: call float @_Z20template_vs_functionIfET_S0_(float
+  // CHECK-DEVICE: call float @_Z20template_vs_functionf(float
+  template_vs_function(2.0);
+  // CHECK-HOST: call double @_Z20template_vs_functionIdET_S0_(double
+  // CHECK-DEVICE: call float @_Z20template_vs_functionf(float
+}
+
+// Calls from __host__ and __device__ functions should always call the
+// overloaded function that matches their mode.
+// CHECK-HOST-LABEL: define void @_Z4h_tfv()
+__host__ void h_tf() {
+  template_vs_function(1.0f);
+  // CHECK-HOST: call float @_Z20template_vs_functionIfET_S0_(float
+  template_vs_function(2.0);
+  // CHECK-HOST: call double @_Z20template_vs_functionIdET_S0_(double
+}
+
+// CHECK-DEVICE-LABEL: define void @_Z4d_tfv()
+__device__ void d_tf() {
+  template_vs_function(1.0f);
+  // CHECK-DEVICE: call float @_Z20template_vs_functionf(float
+  template_vs_function(2.0);
+  // CHECK-DEVICE: call float @_Z20template_vs_functionf(float
+}
+
+// In case we have a mix of HD and H-only or D-only candidates in the
+// overload set, normal C++ overload resolution rules apply first.
+template <typename T> T template_vs_hd_function(T arg) { return 15; }
+__host__ __device__ float template_vs_hd_function(float arg) { return 16; }
+
+// CHECK-BOTH-LABEL: define void @_Z7hd_thdfv()
+__host__ __device__ void hd_thdf() {
+  template_vs_hd_function(1.0f);
+  // CHECK-HOST: call float @_Z23template_vs_hd_functionf(float
+  // CHECK-DEVICE: call float @_Z23template_vs_hd_functionf(float
+  template_vs_hd_function(1);
+  // CHECK-HOST: call i32 @_Z23template_vs_hd_functionIiET_S0_(i32
+  // CHECK-DEVICE-STRICT: call float @_Z23template_vs_hd_functionf(float
+  // CHECK-DEVICE-NC: call i32 @_Z23template_vs_hd_functionIiET_S0_(i32
+}
+
+// CHECK-HOST-LABEL: define void @_Z6h_thdfv()
+__host__ void h_thdf() {
+  template_vs_hd_function(1.0f);
+  // CHECK-HOST: call float @_Z23template_vs_hd_functionf(float
+  template_vs_hd_function(1);
+  // CHECK-HOST: call i32 @_Z23template_vs_hd_functionIiET_S0_(i32
+}
+
+// CHECK-DEVICE-LABEL: define void @_Z6d_thdfv()
+__device__ void d_thdf() {
+  template_vs_hd_function(1.0f);
+  // CHECK-DEVICE: call float @_Z23template_vs_hd_functionf(float
+  template_vs_hd_function(1);
+  // Host-only function template is not callable with strict call checks,
+  // so for device side HD function will be the only choice.
+  // CHECK-DEVICE: call float @_Z23template_vs_hd_functionf(float
+}
+
+// Check that overloads still work the same way on both host and
+// device side when the overload set contains only functions from one
+// side of compilation.
+__device__ float device_only_function(int arg) { return 17; }
+__device__ float device_only_function(float arg) { return 18; }
+
+__host__ float host_only_function(int arg) { return 19; }
+__host__ float host_only_function(float arg) { return 20; }
+
+// CHECK-BOTH-LABEL: define void @_Z6hd_dofv()
+__host__ __device__ void hd_dof() {
+#ifdef NOCHECKS
+  device_only_function(1.0f);
+  // CHECK-BOTH-NC: call float @_Z20device_only_functionf(float
+  device_only_function(1);
+  // CHECK-BOTH-NC: call float @_Z20device_only_functioni(i32
+  host_only_function(1.0f);
+  // CHECK-BOTH-NC: call float @_Z18host_only_functionf(float
+  host_only_function(1);
+  // CHECK-BOTH-NC: call float @_Z18host_only_functioni(i32
+#endif
+}
+
+
 // CHECK-HOST-LABEL: define void @_Z5hostfv()
 __host__ void hostf(void) {
-#if defined (NOCHECKS)
-  fp_t dp = d;   // CHECK-HOST-NC: store {{.*}} @_Z1dv, {{.*}} %dp,
-  fp_t cdp = cd; // CHECK-HOST-NC: store {{.*}} @cd, {{.*}} %cdp,
-#endif
   fp_t hp = h; // CHECK-HOST: store {{.*}} @_Z1hv, {{.*}} %hp,
   fp_t chp = ch; // CHECK-HOST: store {{.*}} @ch, {{.*}} %chp,
   fp_t dhp = dh; // CHECK-HOST: store {{.*}} @_Z2dhv, {{.*}} %dhp,
@@ -91,10 +192,6 @@ __host__ void hostf(void) {
   fp_t chdp = chd; // CHECK-HOST: store {{.*}} @chd, {{.*}} %chdp,
   gp_t gp = g; // CHECK-HOST: store {{.*}} @_Z1gv, {{.*}} %gp,
 
-#if defined (NOCHECKS)
-  d();     // CHECK-HOST-NC: call i32 @_Z1dv()
-  cd();    // CHECK-HOST-NC: call i32 @cd()
-#endif
   h();     // CHECK-HOST: call i32 @_Z1hv()
   ch();    // CHECK-HOST: call i32 @ch()
   dh();    // CHECK-HOST: call i32 @_Z2dhv()
@@ -106,10 +203,6 @@ __host__ void hostf(void) {
 __device__ void devicef(void) {
   fp_t dp = d;   // CHECK-DEVICE: store {{.*}} @_Z1dv, {{.*}} %dp,
   fp_t cdp = cd; // CHECK-DEVICE: store {{.*}} @cd, {{.*}} %cdp,
-#if defined (NOCHECKS)
-  fp_t hp = h; // CHECK-DEVICE-NC: store {{.*}} @_Z1hv, {{.*}} %hp,
-  fp_t chp = ch; // CHECK-DEVICE-NC: store {{.*}} @ch, {{.*}} %chp,
-#endif
   fp_t dhp = dh; // CHECK-DEVICE: store {{.*}} @_Z2dhv, {{.*}} %dhp,
   fp_t cdhp = cdh; // CHECK-DEVICE: store {{.*}} @cdh, {{.*}} %cdhp,
   fp_t hdp = hd; // CHECK-DEVICE: store {{.*}} @_Z2hdv, {{.*}} %hdp,
@@ -117,10 +210,6 @@ __device__ void devicef(void) {
 
   d();     // CHECK-DEVICE: call i32 @_Z1dv()
   cd();    // CHECK-DEVICE: call i32 @cd()
-#if defined (NOCHECKS)
-  h();     // CHECK-DEVICE-NC: call i32 @_Z1hv()
-  ch();    // CHECK-DEVICE-NC: call i32 @ch()
-#endif
   dh();    // CHECK-DEVICE: call i32 @_Z2dhv()
   cdh();   // CHECK-DEVICE: call i32 @cdh()
 }

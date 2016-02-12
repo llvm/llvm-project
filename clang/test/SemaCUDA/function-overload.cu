@@ -70,13 +70,11 @@ extern "C" __host__ int ch(void) {return 11;}
 
 __host__ void hostf(void) {
   fp_t dp = d;
-  fp_t cdp = cd;
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{reference to __device__ function 'd' in __host__ function}}
+  // expected-error@-1 {{reference to __device__ function 'd' in __host__ function}}
   // expected-note@65 {{'d' declared here}}
-  // expected-error@-4 {{reference to __device__ function 'cd' in __host__ function}}
+  fp_t cdp = cd;
+  // expected-error@-1 {{reference to __device__ function 'cd' in __host__ function}}
   // expected-note@68 {{'cd' declared here}}
-#endif
   fp_t hp = h;
   fp_t chp = ch;
   fp_t dhp = dh;
@@ -84,13 +82,11 @@ __host__ void hostf(void) {
   gp_t gp = g;
 
   d();
-  cd();
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{no matching function for call to 'd'}}
+  // expected-error@-1 {{no matching function for call to 'd'}}
   // expected-note@65 {{candidate function not viable: call to __device__ function from __host__ function}}
-  // expected-error@-4 {{no matching function for call to 'cd'}}
+  cd();
+  // expected-error@-1 {{no matching function for call to 'cd'}}
   // expected-note@68 {{candidate function not viable: call to __device__ function from __host__ function}}
-#endif
   h();
   ch();
   dh();
@@ -104,13 +100,11 @@ __device__ void devicef(void) {
   fp_t dp = d;
   fp_t cdp = cd;
   fp_t hp = h;
-  fp_t chp = ch;
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{reference to __host__ function 'h' in __device__ function}}
+  // expected-error@-1 {{reference to __host__ function 'h' in __device__ function}}
   // expected-note@66 {{'h' declared here}}
-  // expected-error@-4 {{reference to __host__ function 'ch' in __device__ function}}
+  fp_t chp = ch;
+  // expected-error@-1 {{reference to __host__ function 'ch' in __device__ function}}
   // expected-note@69 {{'ch' declared here}}
-#endif
   fp_t dhp = dh;
   fp_t cdhp = cdh;
   gp_t gp = g; // expected-error {{reference to __global__ function 'g' in __device__ function}}
@@ -118,14 +112,10 @@ __device__ void devicef(void) {
 
   d();
   cd();
-  h();
-  ch();
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{no matching function for call to 'h'}}
+  h(); // expected-error {{no matching function for call to 'h'}}
   // expected-note@66 {{candidate function not viable: call to __host__ function from __device__ function}}
-  // expected-error@-4 {{no matching function for call to 'ch'}}
+  ch(); // expected-error {{no matching function for call to 'ch'}}
   // expected-note@69 {{candidate function not viable: call to __host__ function from __device__ function}}
-#endif
   dh();
   cdh();
   g(); // expected-error {{no matching function for call to 'g'}}
@@ -138,28 +128,25 @@ __global__ void globalf(void) {
   fp_t dp = d;
   fp_t cdp = cd;
   fp_t hp = h;
-  fp_t chp = ch;
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{reference to __host__ function 'h' in __global__ function}}
+  // expected-error@-1 {{reference to __host__ function 'h' in __global__ function}}
   // expected-note@66 {{'h' declared here}}
-  // expected-error@-4 {{reference to __host__ function 'ch' in __global__ function}}
+  fp_t chp = ch;
+  // expected-error@-1 {{reference to __host__ function 'ch' in __global__ function}}
   // expected-note@69 {{'ch' declared here}}
-#endif
   fp_t dhp = dh;
   fp_t cdhp = cdh;
-  gp_t gp = g; // expected-error {{reference to __global__ function 'g' in __global__ function}}
-               // expected-note@67 {{'g' declared here}}
+  gp_t gp = g;
+  // expected-error@-1 {{reference to __global__ function 'g' in __global__ function}}
+  // expected-note@67 {{'g' declared here}}
 
   d();
   cd();
   h();
-  ch();
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{no matching function for call to 'h'}}
+  // expected-error@-1 {{no matching function for call to 'h'}}
   // expected-note@66 {{candidate function not viable: call to __host__ function from __global__ function}}
-  // expected-error@-4 {{no matching function for call to 'ch'}}
+  ch();
+  // expected-error@-1 {{no matching function for call to 'ch'}}
   // expected-note@69 {{candidate function not viable: call to __host__ function from __global__ function}}
-#endif
   dh();
   cdh();
   g(); // expected-error {{no matching function for call to 'g'}}

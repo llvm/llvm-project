@@ -8812,12 +8812,18 @@ public:
 
   CUDAFunctionTarget IdentifyCUDATarget(const FunctionDecl *D);
 
+  // CUDA function call preference. Must be ordered numerically from
+  // worst to best.
   enum CUDAFunctionPreference {
     CFP_Never,      // Invalid caller/callee combination.
-    CFP_LastResort, // Lowest priority. Only in effect if
+    CFP_WrongSide,  // Calls from host-device to host or device
+                    // function that do not match current compilation
+                    // mode. Only in effect if
                     // LangOpts.CUDADisableTargetCallChecks is true.
-    CFP_Fallback,   // Low priority caller/callee combination
-    CFP_Best,       // Preferred caller/callee combination
+    CFP_HostDevice, // Any calls to host/device functions.
+    CFP_SameSide,   // Calls from host-device to host or device
+                    // function matching current compilation mode.
+    CFP_Native,     // host-to-host or device-to-device calls.
   };
 
   /// Identifies relative preference of a given Caller/Callee

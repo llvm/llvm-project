@@ -595,17 +595,23 @@ if( CLANG_INCLUDE_DOCS )
   add_subdirectory(docs)
 endif()
 
-if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/clang.order")
-  file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/clang.order")
-endif()
-
-if(CLANG_ORDER_FILE STREQUAL "${CMAKE_CURRENT_BINARY_DIR}/clang.order")
+# this line is needed as a cleanup to ensure that any CMakeCaches with the old
+# default value get updated to the new default.
+if(CLANG_ORDER_FILE STREQUAL "")
   unset(CLANG_ORDER_FILE CACHE)
-  unset(CLANG_ORDER_FILE)
 endif()
 
-set(CLANG_ORDER_FILE "" CACHE FILEPATH
+set(CLANG_ORDER_FILE ${CMAKE_CURRENT_BINARY_DIR}/clang.order CACHE FILEPATH
   "Order file to use when compiling clang in order to improve startup time.")
+
+if(CLANG_ORDER_FILE AND NOT EXISTS ${CLANG_ORDER_FILE})
+  string(FIND "${CLANG_ORDER_FILE}" "${CMAKE_CURRENT_BINARY_DIR}" PATH_START)
+  if(PATH_START EQUAL 0)
+    file(WRITE ${CLANG_ORDER_FILE} "\n")
+  else()
+    message(FATAL_ERROR "Specified order file '${CLANG_ORDER_FILE}' does not exist.")
+  endif()
+endif()
 
 if (CLANG_BUILT_STANDALONE OR CMAKE_VERSION VERSION_EQUAL 3 OR
     CMAKE_VERSION VERSION_GREATER 3)
@@ -677,11 +683,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
 
   # If on Darwin we need to make bootstrap depend on LTO and pass
   # DARWIN_LTO_LIBRARY so that -flto will work using the just-built compiler
-  if(APPLE)
+  if(BOOTSTRAP_LLVM_ENABLE_LTO OR LLVM_ENABLE_LTO)
     set(LTO_DEP LTO llvm-ar llvm-ranlib)
-    set(LTO_LIBRARY -DDARWIN_LTO_LIBRARY=${LLVM_SHLIB_OUTPUT_INTDIR}/libLTO.dylib)
     set(LTO_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
     set(LTO_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib)
+    if(APPLE)
+      set(LTO_LIBRARY -DDARWIN_LTO_LIBRARY=${LLVM_SHLIB_OUTPUT_INTDIR}/libLTO.dylib)
+    elseif(NOT WIN32)
+      list(APPEND LTO_DEP LLVMgold)
+    endif()
   endif()
 
   add_custom_target(${NEXT_CLANG_STAGE}-clear

@@ -3736,7 +3736,8 @@ static bool CheckTrivialDefaultConstructor(EvalInfo &Info, SourceLocation Loc,
 /// expression.
 static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
                                    const FunctionDecl *Declaration,
-                                   const FunctionDecl *Definition) {
+                                   const FunctionDecl *Definition,
+                                   const Stmt *Body) {
   // Potential constant expressions can contain calls to declared, but not yet
   // defined, constexpr functions.
   if (Info.checkingPotentialConstantExpression() && !Definition &&
@@ -3749,7 +3750,8 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
     return false;
 
   // Can we evaluate this function call?
-  if (Definition && Definition->isConstexpr() && !Definition->isInvalidDecl())
+  if (Definition && Definition->isConstexpr() &&
+      !Definition->isInvalidDecl() && Body)
     return true;
 
   if (Info.getLangOpts().CPlusPlus11) {
@@ -4275,7 +4277,7 @@ public:
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
 
-    if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition) ||
+    if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body) ||
         !HandleFunctionCall(E->getExprLoc(), Definition, This, Args, Body, Info,
                             Result, ResultSlot))
       return false;
@@ -5483,9 +5485,9 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   }
 
   const FunctionDecl *Definition = nullptr;
-  FD->getBody(Definition);
+  auto Body = FD->getBody(Definition);
 
-  if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition))
+  if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body))
     return false;
 
   // Avoid materializing a temporary for an elidable copy/move constructor.
@@ -5971,9 +5973,9 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
   }
 
   const FunctionDecl *Definition = nullptr;
-  FD->getBody(Definition);
+  auto Body = FD->getBody(Definition);
 
-  if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition))
+  if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body))
     return false;
 
   if (ZeroInit && !HadZeroInit) {
