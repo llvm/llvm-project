@@ -1358,6 +1358,7 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
             my_task_id = taskdata->ompt_task_info.task_id;
             my_parallel_id = team->t.ompt_team_info.parallel_id;
             
+            taskdata->ompt_task_info.frame.reenter_runtime_frame = __builtin_frame_address(0);
             if (ompt_callbacks.ompt_callback(ompt_event_taskwait_begin)) {
                 ompt_callbacks.ompt_callback(ompt_event_taskwait_begin)(
                                 my_parallel_id, my_task_id);
@@ -1400,10 +1401,12 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
         taskdata->td_taskwait_thread = - taskdata->td_taskwait_thread;
 
 #if OMPT_SUPPORT && OMPT_TRACE
-        if (ompt_enabled &&
-            ompt_callbacks.ompt_callback(ompt_event_taskwait_end)) {
-            ompt_callbacks.ompt_callback(ompt_event_taskwait_end)(
+        if (ompt_enabled) {
+            if (ompt_callbacks.ompt_callback(ompt_event_taskwait_end)) {
+                ompt_callbacks.ompt_callback(ompt_event_taskwait_end)(
                                 my_parallel_id, my_task_id);
+            }
+            taskdata->ompt_task_info.frame.reenter_runtime_frame = 0;
         }
 #endif
     }

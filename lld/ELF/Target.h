@@ -22,8 +22,8 @@ class SymbolBody;
 class TargetInfo {
 public:
   uint64_t getVAStart() const;
-  bool isTlsLocalDynamicRel(unsigned Type) const;
-  bool isTlsGlobalDynamicRel(unsigned Type) const;
+  virtual bool isTlsLocalDynamicRel(unsigned Type) const;
+  virtual bool isTlsGlobalDynamicRel(unsigned Type) const;
   virtual unsigned getDynRel(unsigned Type) const { return Type; }
   virtual bool isTlsDynRel(unsigned Type, const SymbolBody &S) const;
   virtual unsigned getTlsGotRel(unsigned Type) const { return TlsGotRel; }
@@ -82,8 +82,6 @@ public:
   unsigned RelativeRel;
   unsigned IRelativeRel;
   unsigned TlsGotRel = 0;
-  unsigned TlsLocalDynamicRel = 0;
-  unsigned TlsGlobalDynamicRel = 0;
   unsigned TlsModuleIndexRel;
   unsigned TlsOffsetRel;
   unsigned PltEntrySize = 8;

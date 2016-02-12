@@ -41,7 +41,7 @@ if(COMPILER_RT_INCLUDE_TESTS AND COMPILER_RT_HAS_LIBCXX_SOURCES)
 endif()
 
 add_lit_testsuite(check-msan "Running the MemorySanitizer tests"
-  ${MSAN_TESTSUITES}
+  ${MSAN_TESTSUITES} ${CMAKE_CURRENT_BINARY_DIR}/Unit
   DEPENDS ${MSAN_TEST_DEPS}
   )
 set_target_properties(check-msan PROPERTIES FOLDER "MSan tests")
