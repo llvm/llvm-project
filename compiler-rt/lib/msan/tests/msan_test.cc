@@ -2389,13 +2389,19 @@ TEST(MemorySanitizer, Invoke) {
 
 TEST(MemorySanitizer, ptrtoint) {
   // Test that shadow is propagated through pointer-to-integer conversion.
-  void* p = (void*)0xABCD;
-  __msan_poison(((char*)&p) + 1, sizeof(p));
-  EXPECT_NOT_POISONED((((uintptr_t)p) & 0xFF) == 0);
+  unsigned char c = 0;
+  __msan_poison(&c, 1);
+  uintptr_t u = (uintptr_t)c << 8;
+  EXPECT_NOT_POISONED(u & 0xFF00FF);
+  EXPECT_POISONED(u & 0xFF00);
 
-  void* q = (void*)0xABCD;
-  __msan_poison(&q, sizeof(q) - 1);
-  EXPECT_POISONED((((uintptr_t)q) & 0xFF) == 0);
+  break_optimization(&u);
+  void* p = (void*)u;
+
+  break_optimization(&p);
+  EXPECT_POISONED(p);
+  EXPECT_NOT_POISONED(((uintptr_t)p) & 0xFF00FF);
+  EXPECT_POISONED(((uintptr_t)p) & 0xFF00);
 }
 
 static void vaargsfn2(int guard, ...) {
