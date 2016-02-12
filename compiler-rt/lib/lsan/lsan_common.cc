@@ -446,6 +446,9 @@ static bool CheckForLeaks() {
 
   if (!param.success) {
     Report("LeakSanitizer has encountered a fatal error.\n");
+    Report(
+        "HINT: For debugging, try setting environment variable "
+        "LSAN_OPTIONS=verbosity=1:log_threads=1\n");
     Die();
   }
   param.leak_report.ApplySuppressions();

@@ -1941,7 +1941,7 @@ Target::CalculateTarget ()
 ProcessSP
 Target::CalculateProcess ()
 {
-    return ProcessSP();
+    return m_process_sp;
 }
 
 ThreadSP

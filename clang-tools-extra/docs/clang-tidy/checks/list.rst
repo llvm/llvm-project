@@ -80,6 +80,7 @@ Clang-Tidy Checks
    modernize-use-default
    modernize-use-nullptr
    modernize-use-override
+   performance-faster-string-find
    performance-for-range-copy
    performance-implicit-cast-in-loop
    readability-braces-around-statements
