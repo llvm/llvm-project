@@ -155,10 +155,11 @@ static void PrintDarwinSectionSizes(MachOObjectFile *MachO) {
         outs() << "\ttotal " << format(fmt.str().c_str(), sec_total) << "\n";
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
       MachO::segment_command Seg = MachO->getSegmentLoadCommand(Load);
+      uint64_t Seg_vmsize = Seg.vmsize;
       outs() << "Segment " << Seg.segname << ": "
-             << format(fmt.str().c_str(), Seg.vmsize);
+             << format(fmt.str().c_str(), Seg_vmsize);
       if (DarwinLongFormat)
-        outs() << " (vmaddr 0x" << format("%" PRIx64, Seg.vmaddr) << " fileoff "
+        outs() << " (vmaddr 0x" << format("%" PRIx32, Seg.vmaddr) << " fileoff "
                << Seg.fileoff << ")";
       outs() << "\n";
       total += Seg.vmsize;
@@ -170,9 +171,10 @@ static void PrintDarwinSectionSizes(MachOObjectFile *MachO) {
                  << format("%.16s", &Sec.sectname) << "): ";
         else
           outs() << "\tSection " << format("%.16s", &Sec.sectname) << ": ";
-        outs() << format(fmt.str().c_str(), Sec.size);
+        uint64_t Sec_size = Sec.size;
+        outs() << format(fmt.str().c_str(), Sec_size);
         if (DarwinLongFormat)
-          outs() << " (addr 0x" << format("%" PRIx64, Sec.addr) << " offset "
+          outs() << " (addr 0x" << format("%" PRIx32, Sec.addr) << " offset "
                  << Sec.offset << ")";
         outs() << "\n";
         sec_total += Sec.size;
