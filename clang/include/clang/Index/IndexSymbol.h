@@ -11,6 +11,7 @@
 #define LLVM_CLANG_INDEX_INDEXSYMBOL_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/Support/DataTypes.h"
 
 namespace clang {
   class Decl;
