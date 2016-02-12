@@ -137,11 +137,20 @@ bool InstrProfiling::runOnModule(Module &M) {
   // We did not know how many value sites there would be inside
   // the instrumented function. This is counting the number of instrumented
   // target value sites to enter it as field in the profile data variable.
-  for (Function &F : M)
+  for (Function &F : M) {
+    InstrProfIncrementInst *FirstProfIncInst = nullptr;
     for (BasicBlock &BB : F)
-      for (auto I = BB.begin(), E = BB.end(); I != E;)
-        if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I++))
+      for (auto I = BB.begin(), E = BB.end(); I != E; I++)
+        if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I))
           computeNumValueSiteCounts(Ind);
+        else if (FirstProfIncInst == nullptr)
+          FirstProfIncInst = dyn_cast<InstrProfIncrementInst>(I);
+
+    // Value profiling intrinsic lowering requires per-function profile data
+    // variable to be created first.
+    if (FirstProfIncInst != nullptr)
+      static_cast<void>(getOrCreateRegionCounters(FirstProfIncInst));
+  }
 
   for (Function &F : M)
     for (BasicBlock &BB : F)
