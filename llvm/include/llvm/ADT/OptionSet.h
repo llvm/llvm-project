@@ -116,6 +116,8 @@ public:
   }
 
 private:
+#ifndef _MSC_VER
+  // This is crashing MSVC.
   template <typename T>
   static auto _checkResultTypeOperatorOr(T t) -> decltype(t | t) { return T(); }
 
@@ -124,6 +126,7 @@ private:
   static_assert(!std::is_same<decltype(_checkResultTypeOperatorOr(Flags())),
                               Flags>::value,
                 "operator| should produce an OptionSet");
+#endif
 };
 
 }
