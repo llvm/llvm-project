@@ -39,7 +39,8 @@ protected:
     CortexA53,
     CortexA57,
     Cyclone,
-    ExynosM1
+    ExynosM1,
+    Kryo
   };
 
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
@@ -151,6 +152,7 @@ public:
   bool isCortexA57() const { return CPUString == "cortex-a57"; }
   bool isCortexA53() const { return CPUString == "cortex-a53"; }
   bool isExynosM1() const { return CPUString == "exynos-m1"; }
+  bool isKryo() const { return CPUString == "kryo"; }
 
   bool useAA() const override { return isCortexA53(); }
 

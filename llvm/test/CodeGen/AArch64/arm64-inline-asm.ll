@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -no-integrated-as -disable-post-ra | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios -aarch64-neon-syntax=apple -no-integrated-as -disable-post-ra | FileCheck %s
 
 ; rdar://9167275
 

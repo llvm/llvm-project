@@ -93,7 +93,7 @@ public:
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool needsDynRelative(unsigned Type) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
+  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
@@ -127,7 +127,7 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
+  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
@@ -163,7 +163,7 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
+  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
@@ -183,7 +183,7 @@ public:
   bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
+  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t SA, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
@@ -219,7 +219,7 @@ public:
   void writeGotHeader(uint8_t *Buf) const override;
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
-  bool needsPlt(uint32_t Type, SymbolBody &S) const override;
+  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
                    uint64_t S, uint64_t ZA = 0,
                    uint8_t *PairedLoc = nullptr) const override;
@@ -278,7 +278,10 @@ bool TargetInfo::isSizeRel(uint32_t Type) const { return false; }
 
 bool TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const { return false; }
 
-bool TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const { return false; }
+TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
+                                         const SymbolBody &S) const {
+  return Plt_No;
+}
 
 bool TargetInfo::isTlsLocalDynamicRel(unsigned Type) const {
   return false;
@@ -407,10 +410,13 @@ bool X86TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   return Type == R_386_GOT32 || needsPlt(Type, S);
 }
 
-bool X86TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const {
-  return isGnuIFunc<ELF32LE>(S) ||
-         (Type == R_386_PLT32 && canBePreempted(&S, true)) ||
-         (Type == R_386_PC32 && S.isShared());
+TargetInfo::PltNeed X86TargetInfo::needsPlt(uint32_t Type,
+                                            const SymbolBody &S) const {
+  if (isGnuIFunc<ELF32LE>(S) ||
+      (Type == R_386_PLT32 && canBePreempted(&S, true)) ||
+      (Type == R_386_PC32 && S.isShared()))
+    return Plt_Explicit;
+  return Plt_No;
 }
 
 bool X86TargetInfo::isGotRelative(uint32_t Type) const {
@@ -694,15 +700,16 @@ bool X86_64TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
   return Type == R_X86_64_GOTTPOFF || Type == R_X86_64_TLSGD;
 }
 
-bool X86_64TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const {
+TargetInfo::PltNeed X86_64TargetInfo::needsPlt(uint32_t Type,
+                                               const SymbolBody &S) const {
   if (needsCopyRel(Type, S))
-    return false;
+    return Plt_No;
   if (isGnuIFunc<ELF64LE>(S))
-    return true;
+    return Plt_Explicit;
 
   switch (Type) {
   default:
-    return false;
+    return Plt_No;
   case R_X86_64_32:
   case R_X86_64_64:
   case R_X86_64_PC32:
@@ -730,11 +737,12 @@ bool X86_64TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const {
     // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
     // R_386_JMP_SLOT, etc).
     if (!S.isShared())
-      return false;
-    S.NeedsCopyOrPltAddr = true;
-    return true;
+      return Plt_No;
+    return Plt_Implicit;
   case R_X86_64_PLT32:
-    return canBePreempted(&S, true);
+    if (canBePreempted(&S, true))
+      return Plt_Explicit;
+    return Plt_No;
   }
 }
 
@@ -1041,9 +1049,12 @@ bool PPC64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   }
 }
 
-bool PPC64TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const {
+TargetInfo::PltNeed PPC64TargetInfo::needsPlt(uint32_t Type,
+                                              const SymbolBody &S) const {
   // These are function calls that need to be redirected through a PLT stub.
-  return Type == R_PPC64_REL24 && canBePreempted(&S, false);
+  if (Type == R_PPC64_REL24 && canBePreempted(&S, false))
+    return Plt_Explicit;
+  return Plt_No;
 }
 
 bool PPC64TargetInfo::isRelRelative(uint32_t Type) const {
@@ -1300,17 +1311,20 @@ bool AArch64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   }
 }
 
-bool AArch64TargetInfo::needsPlt(uint32_t Type, SymbolBody &S) const {
+TargetInfo::PltNeed AArch64TargetInfo::needsPlt(uint32_t Type,
+                                                const SymbolBody &S) const {
   if (isGnuIFunc<ELF64LE>(S))
-    return true;
+    return Plt_Explicit;
   switch (Type) {
   default:
-    return false;
+    return Plt_No;
   case R_AARCH64_CALL26:
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
-    return canBePreempted(&S, true);
+    if (canBePreempted(&S, true))
+      return Plt_Explicit;
+    return Plt_No;
   }
 }
 
@@ -1678,14 +1692,16 @@ bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, SymbolBody &S) const {
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsPlt(uint32_t Type, SymbolBody &S) const {
+TargetInfo::PltNeed MipsTargetInfo<ELFT>::needsPlt(uint32_t Type,
+                                                   const SymbolBody &S) const {
   if (needsCopyRel(Type, S))
-    return false;
+    return Plt_No;
   if (Type == R_MIPS_26 && canBePreempted(&S, false))
-    return true;
+    return Plt_Explicit;
   if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
-    return S.isShared();
-  return false;
+    if (S.isShared())
+      return Plt_Explicit;
+  return Plt_No;
 }
 
 template <class ELFT>

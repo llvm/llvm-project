@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -disable-post-ra < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=arm64-apple-ios -disable-post-ra < %s | FileCheck %s --check-prefix=CHECK-MACHO
 
 ; This test aims to check basic correctness of frame layout &
 ; frame access code. There are 8 functions in this test file,
@@ -97,7 +98,7 @@ entry:
 ; CHECK-LABEL: novla_nodynamicrealign_call
 ; CHECK: .cfi_startproc
 ;   Check that used callee-saved registers are saved
-; CHECK: stp	x20, x19, [sp, #-32]!
+; CHECK: str	x19, [sp, #-32]!
 ;   Check that the frame pointer is created:
 ; CHECK: stp	x29, x30, [sp, #16]
 ; CHECK: add	x29, sp, #16
@@ -105,8 +106,7 @@ entry:
 ; CHECK: .cfi_def_cfa w29, 16
 ; CHECK: .cfi_offset w30, -8
 ; CHECK: .cfi_offset w29, -16
-; CHECK: .cfi_offset w19, -24
-; CHECK: .cfi_offset w20, -32
+; CHECK: .cfi_offset w19, -32
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #40]
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #24]
@@ -114,9 +114,33 @@ entry:
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [sp, #12]
 ;   Check epilogue:
 ; CHECK: ldp	x29, x30, [sp, #16]
-; CHECK: ldp	x20, x19, [sp], #32
+; CHECK: ldr	x19, [sp], #32
 ; CHECK: ret
 ; CHECK: .cfi_endproc
+
+; CHECK-MACHO-LABEL: _novla_nodynamicrealign_call:
+; CHECK-MACHO: .cfi_startproc
+;   Check that used callee-saved registers are saved
+; CHECK-MACHO: stp	x20, x19, [sp, #-32]!
+;   Check that the frame pointer is created:
+; CHECK-MACHO: stp	x29, x30, [sp, #16]
+; CHECK-MACHO: add	x29, sp, #16
+;   Check correctness of cfi pseudo-instructions
+; CHECK-MACHO: .cfi_def_cfa w29, 16
+; CHECK-MACHO: .cfi_offset w30, -8
+; CHECK-MACHO: .cfi_offset w29, -16
+; CHECK-MACHO: .cfi_offset w19, -24
+; CHECK-MACHO: .cfi_offset w20, -32
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
+; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
+;   Check correct access to local variable on the stack, through stack pointer
+; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [sp, #12]
+;   Check epilogue:
+; CHECK-MACHO: ldp	x29, x30, [sp, #16]
+; CHECK-MACHO: ldp	x20, x19, [sp], #32
+; CHECK-MACHO: ret
+; CHECK-MACHO: .cfi_endproc
 
 
 declare i32 @g() #0
@@ -159,7 +183,7 @@ entry:
 ; CHECK-LABEL: novla_dynamicrealign_call
 ; CHECK: .cfi_startproc
 ;   Check that used callee-saved registers are saved
-; CHECK: stp	x20, x19, [sp, #-32]!
+; CHECK: str	x19, [sp, #-32]!
 ;   Check that the frame pointer is created:
 ; CHECK: stp	x29, x30, [sp, #16]
 ; CHECK: add	x29, sp, #16
@@ -170,8 +194,7 @@ entry:
 ; CHECK: .cfi_def_cfa w29, 16
 ; CHECK: .cfi_offset w30, -8
 ; CHECK: .cfi_offset w29, -16
-; CHECK: .cfi_offset w19, -24
-; CHECK: .cfi_offset w20, -32
+; CHECK: .cfi_offset w19, -32
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #40]
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #24]
@@ -181,9 +204,38 @@ entry:
 ;     Check that stack pointer get restored from frame pointer.
 ; CHECK: sub	sp, x29, #16            // =16
 ; CHECK: ldp	x29, x30, [sp, #16]
-; CHECK: ldp	x20, x19, [sp], #32
+; CHECK: ldr	x19, [sp], #32
 ; CHECK: ret
 ; CHECK: .cfi_endproc
+
+; CHECK-MACHO-LABEL: _novla_dynamicrealign_call:
+; CHECK-MACHO: .cfi_startproc
+;   Check that used callee-saved registers are saved
+; CHECK-MACHO: stp	x20, x19, [sp, #-32]!
+;   Check that the frame pointer is created:
+; CHECK-MACHO: stp	x29, x30, [sp, #16]
+; CHECK-MACHO: add	x29, sp, #16
+;   Check the dynamic realignment of the stack pointer to a 128-byte boundary
+; CHECK-MACHO: sub	x9, sp, #96
+; CHECK-MACHO: and	sp, x9, #0xffffffffffffff80
+;   Check correctness of cfi pseudo-instructions
+; CHECK-MACHO: .cfi_def_cfa w29, 16
+; CHECK-MACHO: .cfi_offset w30, -8
+; CHECK-MACHO: .cfi_offset w29, -16
+; CHECK-MACHO: .cfi_offset w19, -24
+; CHECK-MACHO: .cfi_offset w20, -32
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
+; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
+;   Check correct access to local variable on the stack, through re-aligned stack pointer
+; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [sp]
+;   Check epilogue:
+;     Check that stack pointer get restored from frame pointer.
+; CHECK-MACHO: sub	sp, x29, #16
+; CHECK-MACHO: ldp	x29, x30, [sp, #16]
+; CHECK-MACHO: ldp	x20, x19, [sp], #32
+; CHECK-MACHO: ret
+; CHECK-MACHO: .cfi_endproc
 
 
 ; Function Attrs: nounwind
@@ -336,7 +388,7 @@ entry:
 ; CHECK-LABEL: vla_dynamicrealign_call
 ; CHECK: .cfi_startproc
 ;   Check that used callee-saved registers are saved
-; CHECK: stp	x22, x21, [sp, #-48]!
+; CHECK: str	x21, [sp, #-48]!
 ; CHECK: stp	x20, x19, [sp, #16]
 ;   Check that the frame pointer is created:
 ; CHECK: stp	x29, x30, [sp, #32]
@@ -354,8 +406,7 @@ entry:
 ; CHECK: .cfi_offset w29, -16
 ; CHECK: .cfi_offset w19, -24
 ; CHECK: .cfi_offset w20, -32
-; CHECK: .cfi_offset w21, -40
-; CHECK: .cfi_offset w22, -48
+; CHECK: .cfi_offset w21, -48
 ;   Check correct access to arguments passed on the stack, through frame pointer
 ; CHECK: ldr	w[[IARG:[0-9]+]], [x29, #24]
 ; CHECK: ldr	d[[DARG:[0-9]+]], [x29, #40]
@@ -376,9 +427,56 @@ entry:
 ; CHECK: sub	sp, x29, #32
 ; CHECK: ldp	x29, x30, [sp, #32]
 ; CHECK: ldp	x20, x19, [sp, #16]
-; CHECK: ldp	x22, x21, [sp], #48
+; CHECK: ldr	x21, [sp], #48
 ; CHECK: ret
 ; CHECK: .cfi_endproc
+
+; CHECK-MACHO-LABEL: _vla_dynamicrealign_call:
+; CHECK-MACHO: .cfi_startproc
+;   Check that used callee-saved registers are saved
+; CHECK-MACHO: stp	x22, x21, [sp, #-48]!
+; CHECK-MACHO: stp	x20, x19, [sp, #16]
+;   Check that the frame pointer is created:
+; CHECK-MACHO: stp	x29, x30, [sp, #32]
+; CHECK-MACHO: add	x29, sp, #32
+;   Check that the stack pointer gets re-aligned to 128
+;   bytes & the base pointer (x19) gets initialized to
+;   this 128-byte aligned area for local variables &
+;   spill slots
+; CHECK-MACHO: sub	x9, sp, #80
+; CHECK-MACHO: and	sp, x9, #0xffffffffffffff80
+; CHECK-MACHO: mov    x19, sp
+;   Check correctness of cfi pseudo-instructions
+; CHECK-MACHO: .cfi_def_cfa w29, 16
+; CHECK-MACHO: .cfi_offset w30, -8
+; CHECK-MACHO: .cfi_offset w29, -16
+; CHECK-MACHO: .cfi_offset w19, -24
+; CHECK-MACHO: .cfi_offset w20, -32
+; CHECK-MACHO: .cfi_offset w21, -40
+; CHECK-MACHO: .cfi_offset w22, -48
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
+; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+;   and set-up of base pointer (x19).
+; CHECK-MACHO: mov	w9, w0
+; CHECK-MACHO: mov	 x10, sp
+; CHECK-MACHO: lsl	x9, x9, #2
+; CHECK-MACHO: add	x9, x9, #15
+; CHECK-MACHO: and	x9, x9, #0x7fffffff0
+; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK-MACHO: mov	 sp, x[[VLASPTMP]]
+;   Check correct access to local variable, through base pointer
+; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [x19]
+; CHECK-MACHO: ldr	 w[[VLA:[0-9]+]], [x[[VLASPTMP]]]
+;   Check epilogue:
+;     Check that stack pointer get restored from frame pointer.
+; CHECK-MACHO: sub	sp, x29, #32
+; CHECK-MACHO: ldp	x29, x30, [sp, #32]
+; CHECK-MACHO: ldp	x20, x19, [sp, #16]
+; CHECK-MACHO: ldp	x22, x21, [sp], #48
+; CHECK-MACHO: ret
+; CHECK-MACHO: .cfi_endproc
 
 
 ; Function Attrs: nounwind
@@ -398,7 +496,7 @@ entry:
 
 ; CHECK-LABEL: vla_dynamicrealign_nocall
 ;   Check that used callee-saved registers are saved
-; CHECK: stp	x20, x19, [sp, #-32]!
+; CHECK: str	x19, [sp, #-32]!
 ;   Check that the frame pointer is created:
 ; CHECK: stp	x29, x30, [sp, #16]
 ; CHECK: add	x29, sp, #16
@@ -428,8 +526,43 @@ entry:
 ;     Check that stack pointer get restored from frame pointer.
 ; CHECK: sub	sp, x29, #16
 ; CHECK: ldp	x29, x30, [sp, #16]
-; CHECK: ldp	x20, x19, [sp], #32
+; CHECK: ldr	x19, [sp], #32
 ; CHECK: ret
+
+; CHECK-MACHO-LABEL: _vla_dynamicrealign_nocall:
+;   Check that used callee-saved registers are saved
+; CHECK-MACHO: stp	x20, x19, [sp, #-32]!
+;   Check that the frame pointer is created:
+; CHECK-MACHO: stp	x29, x30, [sp, #16]
+; CHECK-MACHO: add	x29, sp, #16
+;   Check that the stack pointer gets re-aligned to 128
+;   bytes & the base pointer (x19) gets initialized to
+;   this 128-byte aligned area for local variables &
+;   spill slots
+; CHECK-MACHO: sub	x9, sp, #96
+; CHECK-MACHO: and	sp, x9, #0xffffffffffffff80
+; CHECK-MACHO: mov    x19, sp
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
+; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+;   and set-up of base pointer (x19).
+; CHECK-MACHO: mov	w9, w0
+; CHECK-MACHO: mov	 x10, sp
+; CHECK-MACHO: lsl	x9, x9, #2
+; CHECK-MACHO: add	x9, x9, #15
+; CHECK-MACHO: and	x9, x9, #0x7fffffff0
+; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK-MACHO: mov	 sp, x[[VLASPTMP]]
+;   Check correct access to local variable, through base pointer
+; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [x19]
+; CHECK-MACHO: ldr	 w[[VLA:[0-9]+]], [x[[VLASPTMP]]]
+;   Check epilogue:
+;     Check that stack pointer get restored from frame pointer.
+; CHECK-MACHO: sub	sp, x29, #16
+; CHECK-MACHO: ldp	x29, x30, [sp, #16]
+; CHECK-MACHO: ldp	x20, x19, [sp], #32
+; CHECK-MACHO: ret
 
 
 ; Function Attrs: nounwind
@@ -449,7 +582,7 @@ entry:
 
 ; CHECK-LABEL: vla_dynamicrealign_nocall_large_align
 ;   Check that used callee-saved registers are saved
-; CHECK: stp	x20, x19, [sp, #-32]!
+; CHECK: stp	x28, x19, [sp, #-32]!
 ;   Check that the frame pointer is created:
 ; CHECK: stp	x29, x30, [sp, #16]
 ; CHECK: add	x29, sp, #16
@@ -479,8 +612,43 @@ entry:
 ;     Check that stack pointer get restored from frame pointer.
 ; CHECK: sub	sp, x29, #16
 ; CHECK: ldp	x29, x30, [sp, #16]
-; CHECK: ldp	x20, x19, [sp], #32
+; CHECK: ldp	x28, x19, [sp], #32
 ; CHECK: ret
+
+; CHECK-MACHO-LABEL: _vla_dynamicrealign_nocall_large_align:
+;   Check that used callee-saved registers are saved
+; CHECK-MACHO: stp	x20, x19, [sp, #-32]!
+;   Check that the frame pointer is created:
+; CHECK-MACHO: stp	x29, x30, [sp, #16]
+; CHECK-MACHO: add	x29, sp, #16
+;   Check that the stack pointer gets re-aligned to 128
+;   bytes & the base pointer (x19) gets initialized to
+;   this 128-byte aligned area for local variables &
+;   spill slots
+; CHECK-MACHO: sub	x9, sp, #7, lsl #12
+; CHECK-MACHO: and	sp, x9, #0xffffffffffff8000
+; CHECK-MACHO: mov    x19, sp
+;   Check correct access to arguments passed on the stack, through frame pointer
+; CHECK-MACHO: ldr	w[[IARG:[0-9]+]], [x29, #20]
+; CHECK-MACHO: ldr	d[[DARG:[0-9]+]], [x29, #32]
+;   Check correct reservation of 16-byte aligned VLA (size in w0) on stack
+;   and set-up of base pointer (x19).
+; CHECK-MACHO: mov	w9, w0
+; CHECK-MACHO: mov	 x10, sp
+; CHECK-MACHO: lsl	x9, x9, #2
+; CHECK-MACHO: add	x9, x9, #15
+; CHECK-MACHO: and	x9, x9, #0x7fffffff0
+; CHECK-MACHO: sub	 x[[VLASPTMP:[0-9]+]], x10, x9
+; CHECK-MACHO: mov	 sp, x[[VLASPTMP]]
+;   Check correct access to local variable, through base pointer
+; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [x19]
+; CHECK-MACHO: ldr	 w[[VLA:[0-9]+]], [x[[VLASPTMP]]]
+;   Check epilogue:
+;     Check that stack pointer get restored from frame pointer.
+; CHECK-MACHO: sub	sp, x29, #16
+; CHECK-MACHO: ldp	x29, x30, [sp, #16]
+; CHECK-MACHO: ldp	x20, x19, [sp], #32
+; CHECK-MACHO: ret
 
 
 define void @realign_conditional(i1 %b) {

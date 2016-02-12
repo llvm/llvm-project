@@ -17,7 +17,7 @@
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"
 
-define zeroext i8 @foo1(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
+define signext i8 @foo1(i16 zeroext %filtMemLen, i16* %filtMemLR, i16 signext %filtMemIndex) nounwind {
 entry:
   %inputLR = alloca i8, align 1
   %conv = zext i16 %filtMemLen to i32
@@ -26,9 +26,9 @@ entry:
   %arrayidx = getelementptr inbounds i16, i16* %filtMemLR, i32 %idxprom
   %0 = bitcast i16* %arrayidx to i8*
   %or = or i32 %shr1, 33554432
-; CHECK: memb(r{{[0-9]*.}}++{{.}}#-1:circ(m{{[0-1]}}))
+; CHECK: = memb(r{{[0-9]*.}}++{{.}}#-1:circ(m{{[0-1]}}))
   %1 = call i8* @llvm.hexagon.circ.ldb(i8* %0, i8* %inputLR, i32 %or, i32 -1)
-  %2 = load i8, i8* %1, align 1, !tbaa !0
+  %2 = load i8, i8* %inputLR, align 1, !tbaa !0
   ret i8 %2
 }
 
@@ -45,9 +45,9 @@ entry:
   %1 = bitcast i64* %inputLR to i8*
   %shl = shl nuw nsw i32 %shr1, 3
   %or = or i32 %shl, 83886080
-; CHECK: memd(r{{[0-9]*.}}++{{.}}#-8:circ(m{{[0-1]}}))
+; CHECK: = memd(r{{[0-9]*.}}++{{.}}#-8:circ(m{{[0-1]}}))
   %2 = call i8* @llvm.hexagon.circ.ldd(i8* %0, i8* %1, i32 %or, i32 -8)
-  %3 = bitcast i8* %2 to i64*
+  %3 = bitcast i8* %1 to i64*
   %4 = load i64, i64* %3, align 8, !tbaa !0
   ret i64 %4
 }
@@ -64,9 +64,9 @@ entry:
   %0 = bitcast i16* %arrayidx to i8*
   %1 = bitcast i16* %inputLR to i8*
   %or = or i32 %shr1, 50331648
-; CHECK: memh(r{{[0-9]*.}}++{{.}}#-2:circ(m{{[0-1]}}))
+; CHECK: = memh(r{{[0-9]*.}}++{{.}}#-2:circ(m{{[0-1]}}))
   %2 = call i8* @llvm.hexagon.circ.ldh(i8* %0, i8* %1, i32 %or, i32 -2)
-  %3 = bitcast i8* %2 to i16*
+  %3 = bitcast i8* %1 to i16*
   %4 = load i16, i16* %3, align 2, !tbaa !2
   ret i16 %4
 }
@@ -82,9 +82,9 @@ entry:
   %arrayidx = getelementptr inbounds i16, i16* %filtMemLR, i32 %idxprom
   %0 = bitcast i16* %arrayidx to i8*
   %or = or i32 %shr1, 33554432
-; CHECK: memub(r{{[0-9]*.}}++{{.}}#-1:circ(m{{[0-1]}}))
+; CHECK: = memub(r{{[0-9]*.}}++{{.}}#-1:circ(m{{[0-1]}}))
   %1 = call i8* @llvm.hexagon.circ.ldub(i8* %0, i8* %inputLR, i32 %or, i32 -1)
-  %2 = load i8, i8* %1, align 1, !tbaa !0
+  %2 = load i8, i8* %inputLR, align 1, !tbaa !0
   ret i8 %2
 }
 
@@ -100,9 +100,9 @@ entry:
   %0 = bitcast i16* %arrayidx to i8*
   %1 = bitcast i16* %inputLR to i8*
   %or = or i32 %shr1, 50331648
-; CHECK: memuh(r{{[0-9]*.}}++{{.}}#-2:circ(m{{[0-1]}}))
+; CHECK: = memuh(r{{[0-9]*.}}++{{.}}#-2:circ(m{{[0-1]}}))
   %2 = call i8* @llvm.hexagon.circ.lduh(i8* %0, i8* %1, i32 %or, i32 -2)
-  %3 = bitcast i8* %2 to i16*
+  %3 = bitcast i8* %1 to i16*
   %4 = load i16, i16* %3, align 2, !tbaa !2
   ret i16 %4
 }
@@ -120,9 +120,9 @@ entry:
   %1 = bitcast i32* %inputLR to i8*
   %shl = shl nuw nsw i32 %shr1, 2
   %or = or i32 %shl, 67108864
-; CHECK: memw(r{{[0-9]*.}}++{{.}}#-4:circ(m{{[0-1]}}))
+; CHECK: = memw(r{{[0-9]*.}}++{{.}}#-4:circ(m{{[0-1]}}))
   %2 = call i8* @llvm.hexagon.circ.ldw(i8* %0, i8* %1, i32 %or, i32 -4)
-  %3 = bitcast i8* %2 to i32*
+  %3 = bitcast i8* %1 to i32*
   %4 = load i32, i32* %3, align 4, !tbaa !3
   ret i32 %4
 }

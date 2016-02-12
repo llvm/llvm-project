@@ -637,7 +637,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   // Prefer likely predicted branches to selects on out-of-order cores.
-  if (Subtarget->isCortexA57())
+  if (Subtarget->isCortexA57() || Subtarget->isKryo())
     PredictableSelectIsExpensive = true;
 }
 

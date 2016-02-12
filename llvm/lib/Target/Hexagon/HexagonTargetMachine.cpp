@@ -101,7 +101,6 @@ namespace llvm {
   FunctionPass *createHexagonCopyToCombine();
   FunctionPass *createHexagonEarlyIfConversion();
   FunctionPass *createHexagonExpandCondsets();
-  FunctionPass *createHexagonExpandPredSpillCode();
   FunctionPass *createHexagonFixupHwLoops();
   FunctionPass *createHexagonGenExtract();
   FunctionPass *createHexagonGenInsert();
@@ -121,19 +120,19 @@ namespace llvm {
   FunctionPass *createHexagonStoreWidening();
 } // end namespace llvm;
 
-/// HexagonTargetMachine ctor - Create an ILP32 architecture model.
-///
 
-/// Hexagon_TODO: Do I need an aggregate alignment?
-///
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
                                            Reloc::Model RM, CodeModel::Model CM,
                                            CodeGenOpt::Level OL)
-    : LLVMTargetMachine(T, "e-m:e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-"
-                        "i1:8:8-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a:0-"
-                        "n16:32", TT, CPU, FS, Options, RM, CM, OL),
+    // Specify the vector alignment explicitly. For v512x1, the calculated
+    // alignment would be 512*alignment(i1), which is 512 bytes, instead of
+    // the required minimum of 64 bytes.
+    : LLVMTargetMachine(T, "e-m:e-p:32:32:32-a:0-n16:32-"
+         "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
+         "v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048",
+         TT, CPU, FS, Options, RM, CM, OL),
       TLOF(make_unique<HexagonTargetObjectFile>()) {
   initAsmInfo();
 }
@@ -287,9 +286,6 @@ void HexagonPassConfig::addPreEmitPass() {
 
   if (!NoOpt)
     addPass(createHexagonNewValueJump(), false);
-
-  // Expand Spill code for predicate registers.
-  addPass(createHexagonExpandPredSpillCode(), false);
 
   // Create Packets.
   if (!NoOpt) {
