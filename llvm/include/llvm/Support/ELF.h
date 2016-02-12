@@ -1202,6 +1202,7 @@ enum {
   DT_MIPS_RWPLT             = 0x70000034, // Points to the base
                                           // of a writable PLT.
   DT_MIPS_RLD_MAP_REL       = 0x70000035, // Relative offset of run time loader
+                                          // map, used for debugging.
 
   // Sun machine-independent extensions.
   DT_AUXILIARY              = 0x7FFFFFFD, // Shared object to load before self
