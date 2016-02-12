@@ -197,6 +197,12 @@ Changes to the X86 Target
 * Tail call support for ``thiscall``, ``stdcall`, ``vectorcall``, and
   ``fastcall`` functions.
 
+Changes to the AVR Target
+-------------------------
+
+Slightly less than half of the AVR backend has been merged in at this point. It is still
+missing a number large parts which cause it to be unusable, but is well on the
+road to being completely merged and workable.
 
 Changes to the OCaml bindings
 -----------------------------
