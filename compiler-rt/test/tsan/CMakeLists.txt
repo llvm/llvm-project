@@ -50,6 +50,6 @@ if(COMPILER_RT_INCLUDE_TESTS)
 endif()
 
 add_lit_testsuite(check-tsan "Running ThreadSanitizer tests"
-  ${TSAN_TESTSUITES}
+  ${TSAN_TESTSUITES} ${CMAKE_CURRENT_BINARY_DIR}/Unit
   DEPENDS ${TSAN_TEST_DEPS})
 set_target_properties(check-tsan PROPERTIES FOLDER "TSan tests")
