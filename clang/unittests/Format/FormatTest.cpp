@@ -4434,6 +4434,11 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
       "    aaaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa));",
       Style);
 
+  verifyFormat("bbbbbbbbbbbb(aaaaaaaaaaaaaaaaaaaaaaaa, //\n"
+               "    ccccccc(aaaaaaaaaaaaaaaaa,         //\n"
+               "        b));",
+               Style);
+
   Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
   Style.BinPackArguments = false;
   Style.BinPackParameters = false;
