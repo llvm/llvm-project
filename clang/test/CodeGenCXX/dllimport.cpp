@@ -614,7 +614,7 @@ USEMEMFUNC(V, foo)
 struct __declspec(dllimport) W { virtual void foo() {} };
 USECLASS(W)
 // vftable:
-// MO1-DAG: @"\01??_7W@@6B@" = available_externally dllimport unnamed_addr constant [1 x i8*] [i8* bitcast (void (%struct.W*)* @"\01?foo@W@@UAEXXZ" to i8*)]
+// MO1-DAG: @"\01??_SW@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (void (%struct.W*)* @"\01?foo@W@@UAEXXZ" to i8*)]
 // GO1-DAG: @_ZTV1W = available_externally dllimport unnamed_addr constant [3 x i8*] [i8* null, i8* null, i8* bitcast (void (%struct.W*)* @_ZN1W3fooEv to i8*)]
 
 struct __declspec(dllimport) KeyFuncClass {

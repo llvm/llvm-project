@@ -32,4 +32,4 @@ void CallFoo(A *a, int (A::*fp)() const) {
 //
 // CHECK: [[NUM]] = !{[[TYPE:!.*]], [[TYPE]], i64 0}
 // CHECK: [[TYPE]] = !{!"vtable pointer", !{{.*}}
-// NOTBAA-NOT: = !{!"Simple C/C++ TBAA"}
+// NOTBAA-NOT: = !{!"Simple C++ TBAA"}

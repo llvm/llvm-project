@@ -528,6 +528,7 @@ struct AdditionalKeywords {
     kw_final = &IdentTable.get("final");
     kw_override = &IdentTable.get("override");
     kw_in = &IdentTable.get("in");
+    kw_of = &IdentTable.get("of");
     kw_CF_ENUM = &IdentTable.get("CF_ENUM");
     kw_CF_OPTIONS = &IdentTable.get("CF_OPTIONS");
     kw_NS_ENUM = &IdentTable.get("NS_ENUM");
@@ -571,6 +572,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_final;
   IdentifierInfo *kw_override;
   IdentifierInfo *kw_in;
+  IdentifierInfo *kw_of;
   IdentifierInfo *kw_CF_ENUM;
   IdentifierInfo *kw_CF_OPTIONS;
   IdentifierInfo *kw_NS_ENUM;

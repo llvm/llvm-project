@@ -43,9 +43,9 @@
 ///    A 16-bit half-precision float value.
 /// \returns The converted 32-bit float value.
 static __inline float __DEFAULT_FN_ATTRS
-_cvtsh_ss(unsigned short a)
+_cvtsh_ss(unsigned short __a)
 {
-  __v8hi v = {(short)a, 0, 0, 0, 0, 0, 0, 0};
+  __v8hi v = {(short)__a, 0, 0, 0, 0, 0, 0, 0};
   __v4sf r = __builtin_ia32_vcvtph2ps(v);
   return r[0];
 }
@@ -114,9 +114,9 @@ _cvtsh_ss(unsigned short a)
 ///    64 bits are used in the conversion.
 /// \returns A 128-bit vector of [4 x float] containing converted float values.
 static __inline __m128 __DEFAULT_FN_ATTRS
-_mm_cvtph_ps(__m128i a)
+_mm_cvtph_ps(__m128i __a)
 {
-  return (__m128)__builtin_ia32_vcvtph2ps((__v8hi)a);
+  return (__m128)__builtin_ia32_vcvtph2ps((__v8hi)__a);
 }
 
 #undef __DEFAULT_FN_ATTRS

@@ -880,10 +880,6 @@ static void getARMTargetFeatures(const ToolChain &TC,
       Features.push_back("-crc");
   }
 
-  if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v8_1a) {
-    Features.insert(Features.begin(), "+v8.1a");
-  }
-
   // Look for the last occurrence of -mlong-calls or -mno-long-calls. If
   // neither options are specified, see if we are compiling for kernel/kext and
   // decide whether to pass "+long-calls" based on the OS and its version.
@@ -2129,7 +2125,8 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
   if (CPU == "cyclone" || CPU == "cortex-a53" || CPU == "cortex-a57" ||
-      CPU == "cortex-a72" || CPU == "cortex-a35" || CPU == "exynos-m1") {
+      CPU == "cortex-a72" || CPU == "cortex-a35" || CPU == "exynos-m1" ||
+      CPU == "kryo") {
     Features.push_back("+neon");
     Features.push_back("+crc");
     Features.push_back("+crypto");
@@ -8400,7 +8397,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   unsigned Major, Minor, Micro;
   getToolChain().getTriple().getOSVersion(Major, Minor, Micro);
   bool useLibgcc = true;
-  if (Major >= 7 || (Major == 6 && Minor == 99 && Micro >= 49) || Major == 0) {
+  if (Major >= 7 || Major == 0) {
     switch (getToolChain().getArch()) {
     case llvm::Triple::aarch64:
     case llvm::Triple::arm:
@@ -8410,6 +8407,8 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     case llvm::Triple::ppc:
     case llvm::Triple::ppc64:
     case llvm::Triple::ppc64le:
+    case llvm::Triple::sparc:
+    case llvm::Triple::sparcv9:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       useLibgcc = false;

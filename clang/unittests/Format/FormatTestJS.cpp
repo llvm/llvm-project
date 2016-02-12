@@ -595,6 +595,8 @@ TEST_F(FormatTestJS, ReturnStatements) {
 TEST_F(FormatTestJS, ForLoops) {
   verifyFormat("for (var i in [2, 3]) {\n"
                "}");
+  verifyFormat("for (var i of [2, 3]) {\n"
+               "}");
 }
 
 TEST_F(FormatTestJS, AutomaticSemicolonInsertion) {
@@ -758,6 +760,7 @@ TEST_F(FormatTestJS, TypeAnnotations) {
   verifyFormat("function x(): {x: string} {\n  return {x: 'x'};\n}");
   verifyFormat("function x(y: string): string {\n  return 'x';\n}");
   verifyFormat("for (var y: string in x) {\n  x();\n}");
+  verifyFormat("for (var y: string of x) {\n  x();\n}");
   verifyFormat("function x(y: {a?: number;} = {}): number {\n"
                "  return 12;\n"
                "}");

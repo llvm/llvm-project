@@ -4,8 +4,6 @@
 // RTTI-DAG: $"\01??_7S@@6B@" = comdat largest
 // RTTI-DAG: $"\01??_7V@@6B@" = comdat largest
 
-// RTTI-NOT: @"\01??_R4U@@6B@"
-
 struct S {
   virtual ~S();
 } s;
@@ -19,9 +17,10 @@ struct __declspec(dllimport) U {
   virtual ~U();
 } u;
 
-// RTTI-DAG: @"\01??_7U@@6B@" = available_externally dllimport unnamed_addr constant [1 x i8*] [i8* bitcast ({{.*}} @"\01??_GU@@UAEPAXI@Z" to i8*)]
+// RTTI-DAG: [[VTABLE_U:@.*]] = private unnamed_addr constant [2 x i8*] [i8* bitcast ({{.*}} @"\01??_R4U@@6B@" to i8*), i8* bitcast ({{.*}} @"\01??_GU@@UAEPAXI@Z" to i8*)]
+// RTTI-DAG: @"\01??_SU@@6B@" = unnamed_addr alias i8*, getelementptr inbounds ([2 x i8*], [2 x i8*]* [[VTABLE_U]], i32 0, i32 1)
 
-// NO-RTTI-DAG: @"\01??_7U@@6B@" = available_externally dllimport unnamed_addr constant [1 x i8*] [i8* bitcast ({{.*}} @"\01??_GU@@UAEPAXI@Z" to i8*)]
+// NO-RTTI-DAG: @"\01??_SU@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast ({{.*}} @"\01??_GU@@UAEPAXI@Z" to i8*)]
 
 struct __declspec(dllexport) V {
   virtual ~V();

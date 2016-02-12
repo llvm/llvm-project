@@ -6,3 +6,17 @@ module ModuleNeedsVFS {
 framework module * { }
 
 module ModuleUndef { header "module-undef.h" }
+
+module PreambleWithImplicitImport {
+  module A {
+    header "preamble-with-implicit-import-A.h"
+  }
+  module B {
+    header "preamble-with-implicit-import-B.h"
+    export *
+  }
+  module C {
+    header "preamble-with-implicit-import-C.h"
+    export *
+  }
+}

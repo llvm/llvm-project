@@ -2,7 +2,7 @@
 // toolchain.
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm-linux-androideabi \
+// RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck  %s
@@ -17,7 +17,7 @@
 // CHECK: "-L{{.*}}/sysroot/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target aarch64-linux-android \
+// RUN:     -target aarch64-linux-android -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64 %s
@@ -32,7 +32,7 @@
 // CHECK-AARCH64: "-L{{.*}}/sysroot/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target arm64-linux-android \
+// RUN:     -target arm64-linux-android -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM64 %s
@@ -48,7 +48,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target mipsel-linux-android \
-// RUN:     -mips32 \
+// RUN:     -mips32 -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS %s
@@ -64,7 +64,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target mipsel-linux-android \
-// RUN:     -march=mips32 -mips32r2 \
+// RUN:     -march=mips32 -mips32r2 -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSR2 %s
@@ -80,7 +80,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target mipsel-linux-android \
-// RUN:     -mips32 -march=mips32r2 \
+// RUN:     -mips32 -march=mips32r2 -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSR2-A %s
@@ -96,7 +96,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target mipsel-linux-android \
-// RUN:     -mips32r6 \
+// RUN:     -mips32r6 -stdlib=libstdc++ \
 // RUN:     -B%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSR6 %s

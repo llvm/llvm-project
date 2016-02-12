@@ -76,7 +76,7 @@
 // CHECK-ASAN-FREEBSD-LDL-NOT: "-ldl"
 
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target i386-unknown-linux -fsanitize=address \
+// RUN:     -target i386-unknown-linux -stdlib=libstdc++ -fsanitize=address \
 // RUN:     -resource-dir=%S/Inputs/empty_resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-CXX %s
@@ -93,8 +93,8 @@
 // CHECK-ASAN-LINUX-CXX: "-ldl"
 
 // RUN: %clang -no-canonical-prefixes %s -### -o /dev/null -fsanitize=address \
-// RUN:     -target i386-unknown-linux --sysroot=%S/Inputs/basic_linux_tree \
-// RUN:     -lstdc++ -static 2>&1 \
+// RUN:     -target i386-unknown-linux -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree -lstdc++ -static 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-CXX-STATIC %s
 //
 // CHECK-ASAN-LINUX-CXX-STATIC: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
@@ -152,7 +152,8 @@
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lpthread"
 
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target x86_64-unknown-linux -lstdc++ -fsanitize=thread \
+// RUN:     -target x86_64-unknown-linux -stdlib=libstdc++ -lstdc++ \
+// RUN:     -fsanitize=thread \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-TSAN-LINUX-CXX %s
@@ -170,7 +171,8 @@
 // CHECK-TSAN-LINUX-CXX: "-ldl"
 
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -target x86_64-unknown-linux -lstdc++ -fsanitize=memory \
+// RUN:     -target x86_64-unknown-linux -stdlib=libstdc++ -lstdc++ \
+// RUN:     -fsanitize=memory \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-MSAN-LINUX-CXX %s
@@ -209,7 +211,7 @@
 // CHECK-UBSAN-LINUX-LINK-CXX-NOT: "-lstdc++"
 
 // RUN: %clangxx -fsanitize=undefined %s -### -o %t.o 2>&1 \
-// RUN:     -target i386-unknown-linux \
+// RUN:     -target i386-unknown-linux -stdlib=libstdc++ \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-LINUX-CXX %s
@@ -234,7 +236,7 @@
 // CHECK-ASAN-UBSAN-LINUX: "-lpthread"
 
 // RUN: %clangxx -fsanitize=address,undefined %s -### -o %t.o 2>&1 \
-// RUN:     -target i386-unknown-linux \
+// RUN:     -target i386-unknown-linux -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-UBSAN-LINUX-CXX %s
 // CHECK-ASAN-UBSAN-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
@@ -327,7 +329,7 @@
 
 // RUN: %clangxx -fsanitize=address %s -### -o %t.o 2>&1 \
 // RUN:     -mmacosx-version-min=10.6 \
-// RUN:     -target x86_64-apple-darwin13.4.0 \
+// RUN:     -target x86_64-apple-darwin13.4.0 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-DARWIN106-CXX %s
 // CHECK-ASAN-DARWIN106-CXX: "{{.*}}ld{{(.exe)?}}"

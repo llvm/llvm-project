@@ -1711,6 +1711,9 @@ extensions are not implemented yet:
      ...
      local_function(1);
 
+-  clang does not support static initialization of flexible array
+   members. This appears to be a rarely used extension, but could be
+   implemented pending user demand.
 -  clang does not support
    ``__builtin_va_arg_pack``/``__builtin_va_arg_pack_len``. This is
    used rarely, but in some potentially interesting places, like the
@@ -2032,6 +2035,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
     CL.EXE COMPATIBILITY OPTIONS:
       /?                     Display available options
       /arch:<value>          Set architecture for code generation
+      /Brepro-               Emit an object file which cannot be reproduced over time
+      /Brepro                Emit an object file which can be reproduced over time
       /C                     Don't discard comments when preprocessing
       /c                     Compile only
       /D <macro[=value]>     Define macro
@@ -2075,8 +2080,6 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Oi                    Enable use of builtin functions
       /Os                    Optimize for size
       /Ot                    Optimize for speed
-      /Oy-                   Disable frame pointer omission
-      /Oy                    Enable frame pointer omission
       /O<value>              Optimization level
       /o <file or directory> Set output file or directory (ends in / or \)
       /P                     Preprocess to file
@@ -2101,7 +2104,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /W2                    Enable -Wall
       /W3                    Enable -Wall
       /W4                    Enable -Wall and -Wextra
-      /Wall                  Enable -Wall
+      /Wall                  Enable -Wall and -Wextra
       /WX-                   Do not treat warnings as errors
       /WX                    Treat warnings as errors
       /w                     Disable all warnings
@@ -2129,8 +2132,10 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fms-compatibility-version=<value>
                               Dot-separated value representing the Microsoft compiler version
                               number to report in _MSC_VER (0 = don't define it (default))
-      -fmsc-version=<value>   Microsoft compiler version number to report in _MSC_VER (0 = don't
-                              define it (default))
+      -fms-compatibility      Enable full Microsoft Visual C++ compatibility
+      -fms-extensions         Accept some non-standard constructs supported by the Microsoft compiler
+      -fmsc-version=<value>   Microsoft compiler version number to report in _MSC_VER
+                              (0 = don't define it (default))
       -fno-sanitize-coverage=<value>
                               Disable specified features of coverage instrumentation for Sanitizers
       -fno-sanitize-recover=<value>

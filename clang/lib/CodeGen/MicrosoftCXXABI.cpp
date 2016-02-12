@@ -1673,7 +1673,16 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   SmallString<256> VFTableName;
   mangleVFTableName(getMangleContext(), RD, VFPtr, VFTableName);
 
-  llvm::GlobalValue::LinkageTypes VFTableLinkage = CGM.getVTableLinkage(RD);
+  // Classes marked __declspec(dllimport) need vftables generated on the
+  // import-side in order to support features like constexpr.  No other
+  // translation unit relies on the emission of the local vftable, translation
+  // units are expected to generate them as needed.
+  //
+  // Because of this unique behavior, we maintain this logic here instead of
+  // getVTableLinkage.
+  llvm::GlobalValue::LinkageTypes VFTableLinkage =
+      RD->hasAttr<DLLImportAttr>() ? llvm::GlobalValue::LinkOnceODRLinkage
+                                   : CGM.getVTableLinkage(RD);
   bool VFTableComesFromAnotherTU =
       llvm::GlobalValue::isAvailableExternallyLinkage(VFTableLinkage) ||
       llvm::GlobalValue::isExternalLinkage(VFTableLinkage);
@@ -1746,9 +1755,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   if (C)
     VTable->setComdat(C);
 
-  if (RD->hasAttr<DLLImportAttr>())
-    VFTable->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
-  else if (RD->hasAttr<DLLExportAttr>())
+  if (RD->hasAttr<DLLExportAttr>())
     VFTable->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
 
   VFTablesMap[ID] = VFTable;

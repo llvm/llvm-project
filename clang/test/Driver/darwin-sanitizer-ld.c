@@ -1,7 +1,7 @@
 // Test sanitizer link flags on Darwin.
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
-// RUN:   -fsanitize=address %s -o %t.o 2>&1 \
+// RUN:   -stdlib=libstdc++ -fsanitize=address %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN %s
 
 // CHECK-ASAN: "{{.*}}ld{{(.exe)?}}"
@@ -21,7 +21,7 @@
 // CHECK-DYN-ASAN: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
-// RUN:   -fsanitize=undefined %s -o %t.o 2>&1 \
+// RUN:   -stdlib=libstdc++ -fsanitize=undefined %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN %s
 
 // CHECK-UBSAN: "{{.*}}ld{{(.exe)?}}"

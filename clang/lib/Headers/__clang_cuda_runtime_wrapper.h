@@ -44,9 +44,9 @@
 
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
-#include <stdlib.h>
 #include <cmath>
 #include <cstdlib>
+#include <stdlib.h>
 
 // Preserve common macros that will be changed below by us or by CUDA
 // headers.
@@ -86,9 +86,9 @@
 #define __CUDABE__
 // Disables definitions of device-side runtime support stubs in
 // cuda_device_runtime_api.h
+#include "driver_types.h"
 #include "host_config.h"
 #include "host_defines.h"
-#include "driver_types.h"
 
 #undef __CUDABE__
 #define __CUDACC__
@@ -99,11 +99,11 @@
 
 // CUDA headers use __nvvm_memcpy and __nvvm_memset which Clang does
 // not have at the moment. Emulate them with a builtin memcpy/memset.
-#define __nvvm_memcpy(s,d,n,a) __builtin_memcpy(s,d,n)
-#define __nvvm_memset(d,c,n,a) __builtin_memset(d,c,n)
+#define __nvvm_memcpy(s, d, n, a) __builtin_memcpy(s, d, n)
+#define __nvvm_memset(d, c, n, a) __builtin_memset(d, c, n)
 
-#include "crt/host_runtime.h"
 #include "crt/device_runtime.h"
+#include "crt/host_runtime.h"
 // device_runtime.h defines __cxa_* macros that will conflict with
 // cxxabi.h.
 // FIXME: redefine these as __device__ functions.
@@ -151,21 +151,21 @@
 // Alas, additional overloads for these functions are hard to get to.
 // Considering that we only need these overloads for a few functions,
 // we can provide them here.
-static inline float rsqrt(float a) { return rsqrtf(a); }
-static inline float rcbrt(float a) { return rcbrtf(a); }
-static inline float sinpi(float a) { return sinpif(a); }
-static inline float cospi(float a) { return cospif(a); }
-static inline void sincospi(float a, float *b, float *c) {
-  return sincospif(a, b, c);
+static inline float rsqrt(float __a) { return rsqrtf(__a); }
+static inline float rcbrt(float __a) { return rcbrtf(__a); }
+static inline float sinpi(float __a) { return sinpif(__a); }
+static inline float cospi(float __a) { return cospif(__a); }
+static inline void sincospi(float __a, float *__b, float *__c) {
+  return sincospif(__a, __b, __c);
 }
-static inline float erfcinv(float a) { return erfcinvf(a); }
-static inline float normcdfinv(float a) { return normcdfinvf(a); }
-static inline float normcdf(float a) { return normcdff(a); }
-static inline float erfcx(float a) { return erfcxf(a); }
+static inline float erfcinv(float __a) { return erfcinvf(__a); }
+static inline float normcdfinv(float __a) { return normcdfinvf(__a); }
+static inline float normcdf(float __a) { return normcdff(__a); }
+static inline float erfcx(float __a) { return erfcxf(__a); }
 
 // For some reason single-argument variant is not always declared by
 // CUDA headers. Alas, device_functions.hpp included below needs it.
-static inline __device__ void __brkpt(int c) { __brkpt(); }
+static inline __device__ void __brkpt(int __c) { __brkpt(); }
 
 // Now include *.hpp with definitions of various GPU functions.  Alas,
 // a lot of thins get declared/defined with __host__ attribute which
@@ -177,11 +177,11 @@ static inline __device__ void __brkpt(int c) { __brkpt(); }
 #undef __CUDABE__
 #define __CUDACC__
 #undef __DEVICE_FUNCTIONS_HPP__
-#include "device_functions.hpp"
 #include "device_atomic_functions.hpp"
+#include "device_functions.hpp"
 #include "sm_20_atomic_functions.hpp"
-#include "sm_32_atomic_functions.hpp"
 #include "sm_20_intrinsics.hpp"
+#include "sm_32_atomic_functions.hpp"
 // sm_30_intrinsics.h has declarations that use default argument, so
 // we have to include it and it will in turn include .hpp
 #include "sm_30_intrinsics.h"
@@ -217,19 +217,19 @@ extern "C" {
 // We need these declarations and wrappers for device-side
 // malloc/free/printf calls to work without relying on
 // -fcuda-disable-target-call-checks option.
-__device__ int vprintf(const char*, const char*);
+__device__ int vprintf(const char *, const char *);
 __device__ void free(void *) __attribute((nothrow));
 __device__ void *malloc(size_t) __attribute((nothrow)) __attribute__((malloc));
-__device__ void __assertfail(const char *message, const char *file,
-                             unsigned line, const char *function,
-                             size_t charSize) __attribute__((noreturn));
+__device__ void __assertfail(const char *__message, const char *__file,
+                             unsigned __line, const char *__function,
+                             size_t __charSize) __attribute__((noreturn));
 
 // In order for standard assert() macro on linux to work we need to
 // provide device-side __assert_fail()
-__device__ static inline void __assert_fail(const char *message,
-                                            const char *file, unsigned line,
-                                            const char *function) {
-  __assertfail(message, file, line, function, sizeof(char));
+__device__ static inline void __assert_fail(const char *__message,
+                                            const char *__file, unsigned __line,
+                                            const char *__function) {
+  __assertfail(__message, __file, __line, __function, sizeof(char));
 }
 
 // Clang will convert printf into vprintf, but we still need

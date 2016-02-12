@@ -4473,6 +4473,8 @@ class ARMTargetInfo : public TargetInfo {
       return "8A";
     case llvm::ARM::AK_ARMV8_1A:
       return "8_1A";
+    case llvm::ARM::AK_ARMV8_2A:
+      return "8_2A";
     }
   }
 
@@ -5357,6 +5359,7 @@ public:
                         .Cases("cortex-a53", "cortex-a57", "cortex-a72",
                                "cortex-a35", "exynos-m1", true)
                         .Case("cyclone", true)
+                        .Case("kryo", true)
                         .Default(false);
     return CPUKnown;
   }

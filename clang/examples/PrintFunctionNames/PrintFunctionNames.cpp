@@ -121,4 +121,3 @@ protected:
 
 static FrontendPluginRegistry::Add<PrintFunctionNamesAction>
 X("print-fns", "print function names");
-LLVM_EXPORT_REGISTRY(FrontendPluginRegistry)

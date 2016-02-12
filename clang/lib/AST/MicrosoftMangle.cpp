@@ -2599,7 +2599,10 @@ void MicrosoftMangleContextImpl::mangleCXXVFTable(
   // NOTE: <cvr-qualifiers> here is always 'B' (const). <storage-class>
   // is always '6' for vftables.
   MicrosoftCXXNameMangler Mangler(*this, Out);
-  Mangler.getStream() << "\01??_7";
+  if (Derived->hasAttr<DLLImportAttr>())
+    Mangler.getStream() << "\01??_S";
+  else
+    Mangler.getStream() << "\01??_7";
   Mangler.mangleName(Derived);
   Mangler.getStream() << "6B"; // '6' for vftable, 'B' for const.
   for (const CXXRecordDecl *RD : BasePath)
