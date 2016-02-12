@@ -149,7 +149,9 @@ These are major API changes that have happened since the 3.7 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
--  ...
+* With this release, the autoconf build system is deprecated. It will be removed
+  in the 3.9 release. Please migrate to using CMake. For more information see:
+  `Building LLVM with CMake <http://llvm.org/docs/CMake.html>`_
 
 AST Matchers
 ------------
