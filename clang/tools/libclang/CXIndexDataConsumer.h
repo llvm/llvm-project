@@ -1,4 +1,4 @@
-//===- IndexingContext.h - Higher level API functions -----------*- C++ -*-===//
+//===- CXIndexDataConsumer.h - Index data consumer for libclang--*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_LIBCLANG_INDEXINGCONTEXT_H
-#define LLVM_CLANG_TOOLS_LIBCLANG_INDEXINGCONTEXT_H
+#ifndef LLVM_CLANG_TOOLS_LIBCLANG_CXINDEXDATACONSUMER_H
+#define LLVM_CLANG_TOOLS_LIBCLANG_CXINDEXDATACONSUMER_H
 
 #include "CXCursor.h"
 #include "Index_Internal.h"
+#include "clang/Index/IndexDataConsumer.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclObjC.h"
 #include "llvm/ADT/DenseSet.h"
@@ -27,14 +28,14 @@ namespace clang {
   class ClassTemplateSpecializationDecl;
 
 namespace cxindex {
-  class IndexingContext;
+  class CXIndexDataConsumer;
   class AttrListInfo;
 
 class ScratchAlloc {
-  IndexingContext &IdxCtx;
+  CXIndexDataConsumer &IdxCtx;
 
 public:
-  explicit ScratchAlloc(IndexingContext &indexCtx);
+  explicit ScratchAlloc(CXIndexDataConsumer &indexCtx);
   ScratchAlloc(const ScratchAlloc &SA);
 
   ~ScratchAlloc();
@@ -48,7 +49,7 @@ public:
 
 struct EntityInfo : public CXIdxEntityInfo {
   const NamedDecl *Dcl;
-  IndexingContext *IndexCtx;
+  CXIndexDataConsumer *IndexCtx;
   IntrusiveRefCntPtr<AttrListInfo> AttrList;
 
   EntityInfo() {
@@ -60,7 +61,7 @@ struct EntityInfo : public CXIdxEntityInfo {
 
 struct ContainerInfo : public CXIdxContainerInfo {
   const DeclContext *DC;
-  IndexingContext *IndexCtx;
+  CXIndexDataConsumer *IndexCtx;
 };
   
 struct DeclInfo : public CXIdxDeclInfo {
@@ -248,10 +249,10 @@ class AttrListInfo {
   AttrListInfo(const AttrListInfo &) = delete;
   void operator=(const AttrListInfo &) = delete;
 public:
-  AttrListInfo(const Decl *D, IndexingContext &IdxCtx);
+  AttrListInfo(const Decl *D, CXIndexDataConsumer &IdxCtx);
 
   static IntrusiveRefCntPtr<AttrListInfo> create(const Decl *D,
-                                                 IndexingContext &IdxCtx);
+                                                 CXIndexDataConsumer &IdxCtx);
 
   const CXIdxAttrInfo *const *getAttrs() const {
     if (CXAttrs.empty())
@@ -273,7 +274,7 @@ public:
   }
 };
 
-class IndexingContext {
+class CXIndexDataConsumer : public index::IndexDataConsumer {
   ASTContext *Ctx;
   CXClientData ClientData;
   IndexerCallbacks &CB;
@@ -308,7 +309,7 @@ class IndexingContext {
     }
 
     ObjCProtocolListInfo(const ObjCProtocolList &ProtList,
-                         IndexingContext &IdxCtx,
+                         CXIndexDataConsumer &IdxCtx,
                          ScratchAlloc &SA);
   };
 
@@ -323,7 +324,7 @@ class IndexingContext {
     unsigned getNumBases() const { return (unsigned)CXBases.size(); }
 
     CXXBasesListInfo(const CXXRecordDecl *D,
-                     IndexingContext &IdxCtx, ScratchAlloc &SA);
+                     CXIndexDataConsumer &IdxCtx, ScratchAlloc &SA);
 
   private:
     SourceLocation getBaseLoc(const CXXBaseSpecifier &Base) const;
@@ -332,13 +333,14 @@ class IndexingContext {
   friend class AttrListInfo;
 
 public:
-  IndexingContext(CXClientData clientData, IndexerCallbacks &indexCallbacks,
+  CXIndexDataConsumer(CXClientData clientData, IndexerCallbacks &indexCallbacks,
                   unsigned indexOptions, CXTranslationUnit cxTU)
     : Ctx(nullptr), ClientData(clientData), CB(indexCallbacks),
       IndexOptions(indexOptions), CXTU(cxTU),
       StrScratch(), StrAdapterCount(0) { }
 
   ASTContext &getASTContext() const { return *Ctx; }
+  CXTranslationUnit getCXTU() const { return CXTU; }
 
   void setASTContext(ASTContext &ctx);
   void setPreprocessor(Preprocessor &PP);
@@ -390,6 +392,8 @@ public:
   
   void indexBody(const Stmt *S, const NamedDecl *Parent,
                  const DeclContext *DC = nullptr);
+
+  void indexDiagnostics();
 
   void handleDiagnosticSet(CXDiagnosticSet CXDiagSet);
 
@@ -458,6 +462,17 @@ public:
   static bool isTemplateImplicitInstantiation(const Decl *D);
 
 private:
+  bool handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
+                           ArrayRef<index::SymbolRelation> Relations,
+                           FileID FID, unsigned Offset,
+                           ASTNodeInfo ASTNode) override;
+
+  bool handleModuleOccurence(const ImportDecl *ImportD,
+                             index::SymbolRoleSet Roles,
+                             FileID FID, unsigned Offset) override;
+
+  void finish() override;
+
   bool handleDecl(const NamedDecl *D,
                   SourceLocation Loc, CXCursor Cursor,
                   DeclInfo &DInfo,
@@ -495,7 +510,7 @@ private:
   static bool shouldIgnoreIfImplicit(const Decl *D);
 };
 
-inline ScratchAlloc::ScratchAlloc(IndexingContext &idxCtx) : IdxCtx(idxCtx) {
+inline ScratchAlloc::ScratchAlloc(CXIndexDataConsumer &idxCtx) : IdxCtx(idxCtx) {
   ++IdxCtx.StrAdapterCount;
 }
 inline ScratchAlloc::ScratchAlloc(const ScratchAlloc &SA) : IdxCtx(SA.IdxCtx) {
