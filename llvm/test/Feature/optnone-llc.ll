@@ -44,6 +44,7 @@ attributes #0 = { optnone noinline }
 ; LLC-Ox-DAG: Skipping pass 'Machine code sinking'
 ; LLC-Ox-DAG: Skipping pass 'Machine Common Subexpression Elimination'
 ; LLC-Ox-DAG: Skipping pass 'Machine Copy Propagation Pass'
+; LLC-Ox-DAG: Skipping pass 'Machine Instruction Scheduler'
 ; LLC-Ox-DAG: Skipping pass 'Machine Loop Invariant Code Motion'
 ; LLC-Ox-DAG: Skipping pass 'Merge disjoint stack slots'
 ; LLC-Ox-DAG: Skipping pass 'Optimize machine instruction PHIs'
