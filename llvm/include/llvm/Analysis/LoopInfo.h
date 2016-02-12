@@ -353,7 +353,7 @@ raw_ostream& operator<<(raw_ostream &OS, const LoopBase<BlockT, LoopT> &Loop) {
 extern template class LoopBase<BasicBlock, Loop>;
 
 
-/// Represents a single loop in the control flow graph.  Not that not all SCCs
+/// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are neccessarily loops.
 class Loop : public LoopBase<BasicBlock, Loop> {
 public:
