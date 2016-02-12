@@ -74,7 +74,7 @@ namespace {
       }
 
       std::string getDescription() const {
-        return (Twine(IsArg ? "Argument #" : "Return value #") + utostr(Idx) +
+        return (Twine(IsArg ? "Argument #" : "Return value #") + Twine(Idx) +
                 " of function " + F->getName()).str();
       }
     };
