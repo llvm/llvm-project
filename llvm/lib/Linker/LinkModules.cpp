@@ -557,11 +557,6 @@ bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags,
   return ModLinker.run();
 }
 
-bool Linker::linkInModuleForCAPI(Module &Src) {
-  ModuleLinker ModLinker(Mover, Src, 0, nullptr, nullptr);
-  return ModLinker.run();
-}
-
 bool Linker::linkInMetadata(Module &Src,
                             DenseMap<unsigned, MDNode *> *ValIDToTempMDMap) {
   SetVector<GlobalValue *> ValuesToLink;
@@ -591,35 +586,6 @@ bool Linker::linkModules(Module &Dest, std::unique_ptr<Module> Src,
 //===----------------------------------------------------------------------===//
 // C API.
 //===----------------------------------------------------------------------===//
-
-static void diagnosticHandler(const DiagnosticInfo &DI, void *C) {
-  auto *Message = reinterpret_cast<std::string *>(C);
-  raw_string_ostream Stream(*Message);
-  DiagnosticPrinterRawOStream DP(Stream);
-  DI.print(DP);
-}
-
-LLVMBool LLVMLinkModules(LLVMModuleRef Dest, LLVMModuleRef Src,
-                         LLVMLinkerMode Unused, char **OutMessages) {
-  Module *D = unwrap(Dest);
-  LLVMContext &Ctx = D->getContext();
-
-  LLVMContext::DiagnosticHandlerTy OldDiagnosticHandler =
-      Ctx.getDiagnosticHandler();
-  void *OldDiagnosticContext = Ctx.getDiagnosticContext();
-  std::string Message;
-  Ctx.setDiagnosticHandler(diagnosticHandler, &Message, true);
-
-  Linker L(*D);
-  Module *M = unwrap(Src);
-  LLVMBool Result = L.linkInModuleForCAPI(*M);
-
-  Ctx.setDiagnosticHandler(OldDiagnosticHandler, OldDiagnosticContext, true);
-
-  if (OutMessages && Result)
-    *OutMessages = strdup(Message.c_str());
-  return Result;
-}
 
 LLVMBool LLVMLinkModules2(LLVMModuleRef Dest, LLVMModuleRef Src) {
   Module *D = unwrap(Dest);

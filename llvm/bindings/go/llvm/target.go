@@ -267,11 +267,6 @@ func (tm TargetMachine) Triple() string {
 	return C.GoString(cstr)
 }
 
-// TargetData returns the TargetData for the machine.
-func (tm TargetMachine) TargetData() TargetData {
-	return TargetData{C.LLVMGetTargetMachineData(tm.C)}
-}
-
 func (tm TargetMachine) EmitToMemoryBuffer(m Module, ft CodeGenFileType) (MemoryBuffer, error) {
 	var errstr *C.char
 	var mb MemoryBuffer

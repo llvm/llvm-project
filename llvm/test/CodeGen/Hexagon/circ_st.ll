@@ -12,7 +12,6 @@
 ;   memh(r1++#-2:circ(m0)) = r3.h
 ;   memw(r1++#-4:circ(m0)) = r0
 
-; ModuleID = 'circ_st.i'
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon"
 
@@ -26,8 +25,7 @@ entry:
   %or = or i32 %shr2, 33554432
 ; CHECK: memb(r{{[0-9]*}}{{.}}++{{.}}#-1:circ(m{{[0-1]}}))
   %1 = tail call i8* @llvm.hexagon.circ.stb(i8* %0, i32 0, i32 %or, i32 -1)
-  %2 = load i8, i8* %1, align 1, !tbaa !0
-  ret i8 %2
+  ret i8 0
 }
 
 declare i8* @llvm.hexagon.circ.stb(i8*, i32, i32, i32) nounwind
@@ -43,9 +41,7 @@ entry:
   %or = or i32 %shl, 83886080
 ; CHECK: memd(r{{[0-9]*}}{{.}}++{{.}}#-8:circ(m{{[0-1]}}))
   %1 = tail call i8* @llvm.hexagon.circ.std(i8* %0, i64 undef, i32 %or, i32 -8)
-  %2 = bitcast i8* %1 to i64*
-  %3 = load i64, i64* %2, align 8, !tbaa !0
-  ret i64 %3
+  ret i64 0
 }
 
 declare i8* @llvm.hexagon.circ.std(i8*, i64, i32, i32) nounwind
@@ -60,9 +56,7 @@ entry:
   %or = or i32 %shr2, 50331648
 ; CHECK: memh(r{{[0-9]*}}{{.}}++{{.}}#-2:circ(m{{[0-1]}}))
   %1 = tail call i8* @llvm.hexagon.circ.sth(i8* %0, i32 0, i32 %or, i32 -2)
-  %2 = bitcast i8* %1 to i16*
-  %3 = load i16, i16* %2, align 2, !tbaa !2
-  ret i16 %3
+  ret i16 0
 }
 
 declare i8* @llvm.hexagon.circ.sth(i8*, i32, i32, i32) nounwind
@@ -77,9 +71,7 @@ entry:
   %or = or i32 %shr2, 50331648
 ; CHECK: memh(r{{[0-9]*}}{{.}}++{{.}}#-2:circ(m{{[0-1]}})){{ *}}={{ *}}r{{[0-9]*}}.h
   %1 = tail call i8* @llvm.hexagon.circ.sthhi(i8* %0, i32 0, i32 %or, i32 -2)
-  %2 = bitcast i8* %1 to i16*
-  %3 = load i16, i16* %2, align 2, !tbaa !2
-  ret i16 %3
+  ret i16 0
 }
 
 declare i8* @llvm.hexagon.circ.sthhi(i8*, i32, i32, i32) nounwind
@@ -95,9 +87,7 @@ entry:
   %or = or i32 %shl, 67108864
 ; CHECK: memw(r{{[0-9]*}}{{.}}++{{.}}#-4:circ(m{{[0-1]}}))
   %1 = tail call i8* @llvm.hexagon.circ.stw(i8* %0, i32 undef, i32 %or, i32 -4)
-  %2 = bitcast i8* %1 to i32*
-  %3 = load i32, i32* %2, align 4, !tbaa !3
-  ret i32 %3
+  ret i32 0
 }
 
 declare i8* @llvm.hexagon.circ.stw(i8*, i32, i32, i32) nounwind

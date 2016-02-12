@@ -543,7 +543,8 @@ static bool canBeExpandedToORR(const MachineInstr *MI, unsigned BitSize) {
 // FIXME: this implementation should be micro-architecture dependent, so a
 // micro-architecture target hook should be introduced here in future.
 bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr *MI) const {
-  if (!Subtarget.isCortexA57() && !Subtarget.isCortexA53())
+  if (!Subtarget.isCortexA57() && !Subtarget.isCortexA53() &&
+      !Subtarget.isKryo())
     return MI->isAsCheapAsAMove();
 
   switch (MI->getOpcode()) {

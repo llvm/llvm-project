@@ -2161,28 +2161,6 @@ let accessSize = WordAccess, hasNewValue = 0 in {
 let accessSize = DoubleWordAccess, hasNewValue = 0 in
 def L2_loadrd_pci : T_load_pci <"memd", DoubleRegs, s4_3Imm, 0b1110>;
 
-//===----------------------------------------------------------------------===//
-// Circular loads - Pseudo
-//
-// Please note that the input operand order in the pseudo instructions
-// doesn't match with the real instructions. Pseudo instructions operand
-// order should mimics the ordering in the intrinsics. Also, 'src2' doesn't
-// appear in the AsmString because it's same as 'dst'.
-//===----------------------------------------------------------------------===//
-let isCodeGenOnly = 1,  mayLoad = 1, hasSideEffects = 0, isPseudo = 1 in
-class T_load_pci_pseudo <string opc, RegisterClass RC>
-  : LDInstPI<(outs IntRegs:$_dst_, RC:$dst),
-             (ins IntRegs:$src1, IntRegs:$src2, IntRegs:$src3, s4Imm:$src4),
-  ".error \"$dst = "#opc#"($src1++#$src4:circ($src3))\"",
-  [], "$src1 = $_dst_">;
-
-def L2_loadrb_pci_pseudo  : T_load_pci_pseudo <"memb",  IntRegs>;
-def L2_loadrub_pci_pseudo : T_load_pci_pseudo <"memub", IntRegs>;
-def L2_loadrh_pci_pseudo  : T_load_pci_pseudo <"memh",  IntRegs>;
-def L2_loadruh_pci_pseudo : T_load_pci_pseudo <"memuh", IntRegs>;
-def L2_loadri_pci_pseudo  : T_load_pci_pseudo <"memw",  IntRegs>;
-def L2_loadrd_pci_pseudo  : T_load_pci_pseudo <"memd",  DoubleRegs>;
-
 
 // TODO: memb_fifo and memh_fifo must take destination register as input.
 // One-off circ loads - not enough in common to break into a class.
@@ -2282,26 +2260,6 @@ def L2_loadrd_pbr : T_load_pbr <"memd", DoubleRegs, DoubleWordAccess, 0b1110>;
 def L2_loadalignb_pbr :T_load_pbr <"memb_fifo", DoubleRegs, ByteAccess, 0b0100>;
 def L2_loadalignh_pbr :T_load_pbr <"memh_fifo", DoubleRegs,
                                    HalfWordAccess, 0b0010>;
-
-//===----------------------------------------------------------------------===//
-// Bit-reversed loads - Pseudo
-//
-// Please note that 'src2' doesn't appear in the AsmString because
-// it's same as 'dst'.
-//===----------------------------------------------------------------------===//
-let isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0, isPseudo = 1 in
-class T_load_pbr_pseudo <string opc, RegisterClass RC>
-  : LDInstPI<(outs IntRegs:$_dst_, RC:$dst),
-             (ins IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
-  ".error \"$dst = "#opc#"($src1++$src3:brev)\"",
-  [], "$src1 = $_dst_">;
-
-def L2_loadrb_pbr_pseudo  : T_load_pbr_pseudo <"memb",  IntRegs>;
-def L2_loadrub_pbr_pseudo : T_load_pbr_pseudo <"memub", IntRegs>;
-def L2_loadrh_pbr_pseudo  : T_load_pbr_pseudo <"memh",  IntRegs>;
-def L2_loadruh_pbr_pseudo : T_load_pbr_pseudo <"memuh", IntRegs>;
-def L2_loadri_pbr_pseudo  : T_load_pbr_pseudo <"memw",  IntRegs>;
-def L2_loadrd_pbr_pseudo  : T_load_pbr_pseudo <"memd",  DoubleRegs>;
 
 //===----------------------------------------------------------------------===//
 // LD -
@@ -3757,26 +3715,6 @@ def S2_storerhnew_pci : T_storenew_pci <"memh", s4_1Imm, 0b01, HalfWordAccess>;
 def S2_storerinew_pci : T_storenew_pci <"memw", s4_2Imm, 0b10, WordAccess>;
 
 //===----------------------------------------------------------------------===//
-// Circular stores - Pseudo
-//
-// Please note that the input operand order in the pseudo instructions
-// doesn't match with the real instructions. Pseudo instructions operand
-// order should mimics the ordering in the intrinsics.
-//===----------------------------------------------------------------------===//
-let isCodeGenOnly = 1, mayStore = 1, hasSideEffects = 0, isPseudo = 1 in
-class T_store_pci_pseudo <string opc, RegisterClass RC>
-  : STInstPI<(outs IntRegs:$_dst_),
-             (ins IntRegs:$src1, RC:$src2, IntRegs:$src3, s4Imm:$src4),
-  ".error \""#opc#"($src1++#$src4:circ($src3)) = $src2\"",
-  [], "$_dst_ = $src1">;
-
-def S2_storerb_pci_pseudo : T_store_pci_pseudo <"memb", IntRegs>;
-def S2_storerh_pci_pseudo : T_store_pci_pseudo <"memh", IntRegs>;
-def S2_storerf_pci_pseudo : T_store_pci_pseudo <"memh", IntRegs>;
-def S2_storeri_pci_pseudo : T_store_pci_pseudo <"memw", IntRegs>;
-def S2_storerd_pci_pseudo : T_store_pci_pseudo <"memd", DoubleRegs>;
-
-//===----------------------------------------------------------------------===//
 // Circular stores with auto-increment register
 //===----------------------------------------------------------------------===//
 let Uses = [CS] in
@@ -3920,26 +3858,6 @@ def S2_storerhnew_pbr : T_storenew_pbr<"memh", HalfWordAccess, 0b01>;
 
 let BaseOpcode = "S2_storeri_pbr" in
 def S2_storerinew_pbr : T_storenew_pbr<"memw", WordAccess, 0b10>;
-
-//===----------------------------------------------------------------------===//
-// Bit-reversed stores - Pseudo
-//
-// Please note that the input operand order in the pseudo instructions
-// doesn't match with the real instructions. Pseudo instructions operand
-// order should mimics the ordering in the intrinsics.
-//===----------------------------------------------------------------------===//
-let isCodeGenOnly = 1,  mayStore = 1, hasSideEffects = 0, isPseudo = 1 in
-class T_store_pbr_pseudo <string opc, RegisterClass RC>
-  : STInstPI<(outs IntRegs:$_dst_),
-             (ins IntRegs:$src1, RC:$src2, IntRegs:$src3),
-  ".error \""#opc#"($src1++$src3:brev) = $src2\"",
-  [], "$_dst_ = $src1">;
-
-def S2_storerb_pbr_pseudo : T_store_pbr_pseudo <"memb", IntRegs>;
-def S2_storerh_pbr_pseudo : T_store_pbr_pseudo <"memh", IntRegs>;
-def S2_storeri_pbr_pseudo : T_store_pbr_pseudo <"memw", IntRegs>;
-def S2_storerf_pbr_pseudo : T_store_pbr_pseudo <"memh", IntRegs>;
-def S2_storerd_pbr_pseudo : T_store_pbr_pseudo <"memd", DoubleRegs>;
 
 //===----------------------------------------------------------------------===//
 // ST -

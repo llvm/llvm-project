@@ -1816,8 +1816,8 @@ static bool isVOP3(OperandVector &Operands) {
 
   if (Operands.size() > 3) {
     AMDGPUOperand &Src1Op = ((AMDGPUOperand&)*Operands[3]);
-    if (Src1Op.getReg() && (Src1Op.isRegClass(AMDGPU::SReg_32RegClassID) ||
-                            Src1Op.isRegClass(AMDGPU::SReg_64RegClassID)))
+    if (Src1Op.isReg() && (Src1Op.isRegClass(AMDGPU::SReg_32RegClassID) ||
+                           Src1Op.isRegClass(AMDGPU::SReg_64RegClassID)))
       return true;
   }
   return false;

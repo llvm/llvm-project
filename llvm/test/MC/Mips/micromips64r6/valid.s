@@ -150,5 +150,9 @@ a:
         di                       # CHECK: di                      # encoding: [0x00,0x00,0x47,0x7c]
         di $0                    # CHECK: di                      # encoding: [0x00,0x00,0x47,0x7c]
         di $15                   # CHECK: di $15                  # encoding: [0x00,0x0f,0x47,0x7c]
+        ceil.l.s $f1, $f3        # CHECK: ceil.l.s $f1, $f3       # encoding: [0x54,0x23,0x13,0x3b]
+        ceil.l.d $f1, $f3        # CHECK: ceil.l.d $f1, $f3       # encoding: [0x54,0x23,0x53,0x3b]
+        floor.l.s $f1, $f3       # CHECK: floor.l.s $f1, $f3      # encoding: [0x54,0x23,0x03,0x3b]
+        floor.l.d $f1, $f3       # CHECK: floor.l.d $f1, $f3      # encoding: [0x54,0x23,0x43,0x3b]
 
 1:

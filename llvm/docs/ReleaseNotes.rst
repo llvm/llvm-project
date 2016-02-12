@@ -35,10 +35,12 @@ Non-comprehensive list of changes in this release
 =================================================
 * .. note about autoconf build having been removed.
 
-* .. note about C API functions LLVMLinkModules, LLVMParseBitcode,
+* .. note about C API functions LLVMParseBitcode,
    LLVMParseBitcodeInContext, LLVMGetBitcodeModuleInContext and
    LLVMGetBitcodeModule having been removed. LLVMGetTargetMachineData has been
    removed (use LLVMGetDataLayout instead).
+
+* The C API function LLVMLinkModules has been removed.
 
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
