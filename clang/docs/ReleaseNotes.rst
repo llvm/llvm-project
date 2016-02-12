@@ -204,7 +204,26 @@ libclang
 Static Analyzer
 ---------------
 
-...
+The scan-build and scan-view tools will now be installed with clang. Use these
+tools to run the static analyzer on projects and view the produced results.
+
+Static analysis of C++ lambdas has been greatly improved, including
+interprocedural analysis of lambda applications.
+
+Several new checks were added:
+
+- The analyzer now checks for misuse of ``vfork()``.
+- The analyzer can now detect excessively-padded structs. This check can be
+  enabled by passing the following command to scan-build:
+  ``-enable-checker optin.performance.Padding``.
+- The checks to detect misuse of ``_Nonnull`` type qualifiers as well as checks
+  to detect misuse of Objective-C generics were added.
+- The analyzer now has opt in checks to detect localization errors in Coca
+  applications. The checks warn about uses of non-localized ``NSStrings``
+  passed to UI methods expecting localized strings and on ``NSLocalizedString``
+  macros that are missing the comment argument. These can be enabled by passing
+  the following command to scan-build:
+  ``-enable-checker optin.osx.cocoa.localizability``.
 
 Core Analysis Improvements
 ==========================
