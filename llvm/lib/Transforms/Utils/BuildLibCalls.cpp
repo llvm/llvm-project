@@ -35,7 +35,7 @@ Value *llvm::emitStrLen(Value *Ptr, IRBuilder<> &B, const DataLayout &DL,
   if (!TLI->has(LibFunc::strlen))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS[2];
   AS[0] = AttributeSet::get(M->getContext(), 1, Attribute::NoCapture);
   Attribute::AttrKind AVs[2] = { Attribute::ReadOnly, Attribute::NoUnwind };
@@ -57,7 +57,7 @@ Value *llvm::emitStrChr(Value *Ptr, char C, IRBuilder<> &B,
   if (!TLI->has(LibFunc::strchr))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   Attribute::AttrKind AVs[2] = { Attribute::ReadOnly, Attribute::NoUnwind };
   AttributeSet AS =
     AttributeSet::get(M->getContext(), AttributeSet::FunctionIndex, AVs);
@@ -80,7 +80,7 @@ Value *llvm::emitStrNCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
   if (!TLI->has(LibFunc::strncmp))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS[3];
   AS[0] = AttributeSet::get(M->getContext(), 1, Attribute::NoCapture);
   AS[1] = AttributeSet::get(M->getContext(), 2, Attribute::NoCapture);
@@ -105,7 +105,7 @@ Value *llvm::emitStrCpy(Value *Dst, Value *Src, IRBuilder<> &B,
   if (!TLI->has(LibFunc::strcpy))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS[2];
   AS[0] = AttributeSet::get(M->getContext(), 2, Attribute::NoCapture);
   AS[1] = AttributeSet::get(M->getContext(), AttributeSet::FunctionIndex,
@@ -126,7 +126,7 @@ Value *llvm::emitStrNCpy(Value *Dst, Value *Src, Value *Len, IRBuilder<> &B,
   if (!TLI->has(LibFunc::strncpy))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS[2];
   AS[0] = AttributeSet::get(M->getContext(), 2, Attribute::NoCapture);
   AS[1] = AttributeSet::get(M->getContext(), AttributeSet::FunctionIndex,
@@ -150,7 +150,7 @@ Value *llvm::emitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
   if (!TLI->has(LibFunc::memcpy_chk))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS;
   AS = AttributeSet::get(M->getContext(), AttributeSet::FunctionIndex,
                          Attribute::NoUnwind);
@@ -172,7 +172,7 @@ Value *llvm::emitMemChr(Value *Ptr, Value *Val, Value *Len, IRBuilder<> &B,
   if (!TLI->has(LibFunc::memchr))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS;
   Attribute::AttrKind AVs[2] = { Attribute::ReadOnly, Attribute::NoUnwind };
   AS = AttributeSet::get(M->getContext(), AttributeSet::FunctionIndex, AVs);
@@ -193,7 +193,7 @@ Value *llvm::emitMemCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
   if (!TLI->has(LibFunc::memcmp))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS[3];
   AS[0] = AttributeSet::get(M->getContext(), 1, Attribute::NoCapture);
   AS[1] = AttributeSet::get(M->getContext(), 2, Attribute::NoCapture);
@@ -234,7 +234,7 @@ Value *llvm::emitUnaryFloatFnCall(Value *Op, StringRef Name, IRBuilder<> &B,
   SmallString<20> NameBuffer;
   appendTypeSuffix(Op, Name, NameBuffer);
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   Value *Callee = M->getOrInsertFunction(Name, Op->getType(),
                                          Op->getType(), nullptr);
   CallInst *CI = B.CreateCall(Callee, Op, Name);
@@ -250,7 +250,7 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
   SmallString<20> NameBuffer;
   appendTypeSuffix(Op1, Name, NameBuffer);
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   Value *Callee = M->getOrInsertFunction(Name, Op1->getType(), Op1->getType(),
                                          Op2->getType(), nullptr);
   CallInst *CI = B.CreateCall(Callee, {Op1, Op2}, Name);
@@ -266,7 +266,7 @@ Value *llvm::emitPutChar(Value *Char, IRBuilder<> &B,
   if (!TLI->has(LibFunc::putchar))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   Value *PutChar = M->getOrInsertFunction("putchar", B.getInt32Ty(),
                                           B.getInt32Ty(), nullptr);
   CallInst *CI = B.CreateCall(PutChar,
@@ -286,7 +286,7 @@ Value *llvm::emitPutS(Value *Str, IRBuilder<> &B,
   if (!TLI->has(LibFunc::puts))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS[2];
   AS[0] = AttributeSet::get(M->getContext(), 1, Attribute::NoCapture);
   AS[1] = AttributeSet::get(M->getContext(), AttributeSet::FunctionIndex,
@@ -308,7 +308,7 @@ Value *llvm::emitFPutC(Value *Char, Value *File, IRBuilder<> &B,
   if (!TLI->has(LibFunc::fputc))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS[2];
   AS[0] = AttributeSet::get(M->getContext(), 2, Attribute::NoCapture);
   AS[1] = AttributeSet::get(M->getContext(), AttributeSet::FunctionIndex,
@@ -339,7 +339,7 @@ Value *llvm::emitFPutS(Value *Str, Value *File, IRBuilder<> &B,
   if (!TLI->has(LibFunc::fputs))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS[3];
   AS[0] = AttributeSet::get(M->getContext(), 1, Attribute::NoCapture);
   AS[1] = AttributeSet::get(M->getContext(), 2, Attribute::NoCapture);
@@ -369,7 +369,7 @@ Value *llvm::emitFWrite(Value *Ptr, Value *Size, Value *File, IRBuilder<> &B,
   if (!TLI->has(LibFunc::fwrite))
     return nullptr;
 
-  Module *M = B.GetInsertBlock()->getParent()->getParent();
+  Module *M = B.GetInsertBlock()->getModule();
   AttributeSet AS[3];
   AS[0] = AttributeSet::get(M->getContext(), 1, Attribute::NoCapture);
   AS[1] = AttributeSet::get(M->getContext(), 4, Attribute::NoCapture);
