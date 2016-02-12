@@ -25,14 +25,11 @@
 
 using namespace llvm;
 
-/// CastToCStr - Return V if it is an i8*, otherwise cast it to i8*.
 Value *llvm::CastToCStr(Value *V, IRBuilder<> &B) {
   unsigned AS = V->getType()->getPointerAddressSpace();
   return B.CreateBitCast(V, B.getInt8PtrTy(AS), "cstr");
 }
 
-/// EmitStrLen - Emit a call to the strlen function to the builder, for the
-/// specified pointer.  This always returns an integer value of size intptr_t.
 Value *llvm::EmitStrLen(Value *Ptr, IRBuilder<> &B, const DataLayout &DL,
                         const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::strlen))
@@ -55,9 +52,6 @@ Value *llvm::EmitStrLen(Value *Ptr, IRBuilder<> &B, const DataLayout &DL,
   return CI;
 }
 
-/// EmitStrChr - Emit a call to the strchr function to the builder, for the
-/// specified pointer and character.  Ptr is required to be some pointer type,
-/// and the return value has 'i8*' type.
 Value *llvm::EmitStrChr(Value *Ptr, char C, IRBuilder<> &B,
                         const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::strchr))
@@ -81,7 +75,6 @@ Value *llvm::EmitStrChr(Value *Ptr, char C, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitStrNCmp - Emit a call to the strncmp function to the builder.
 Value *llvm::EmitStrNCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
                          const DataLayout &DL, const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::strncmp))
@@ -107,8 +100,6 @@ Value *llvm::EmitStrNCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitStrCpy - Emit a call to the strcpy function to the builder, for the
-/// specified pointer arguments.
 Value *llvm::EmitStrCpy(Value *Dst, Value *Src, IRBuilder<> &B,
                         const TargetLibraryInfo *TLI, StringRef Name) {
   if (!TLI->has(LibFunc::strcpy))
@@ -130,8 +121,6 @@ Value *llvm::EmitStrCpy(Value *Dst, Value *Src, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitStrNCpy - Emit a call to the strncpy function to the builder, for the
-/// specified pointer arguments.
 Value *llvm::EmitStrNCpy(Value *Dst, Value *Src, Value *Len, IRBuilder<> &B,
                          const TargetLibraryInfo *TLI, StringRef Name) {
   if (!TLI->has(LibFunc::strncpy))
@@ -155,9 +144,6 @@ Value *llvm::EmitStrNCpy(Value *Dst, Value *Src, Value *Len, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitMemCpyChk - Emit a call to the __memcpy_chk function to the builder.
-/// This expects that the Len and ObjSize have type 'intptr_t' and Dst/Src
-/// are pointers.
 Value *llvm::EmitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
                            IRBuilder<> &B, const DataLayout &DL,
                            const TargetLibraryInfo *TLI) {
@@ -181,8 +167,6 @@ Value *llvm::EmitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
   return CI;
 }
 
-/// EmitMemChr - Emit a call to the memchr function.  This assumes that Ptr is
-/// a pointer, Val is an i32 value, and Len is an 'intptr_t' value.
 Value *llvm::EmitMemChr(Value *Ptr, Value *Val, Value *Len, IRBuilder<> &B,
                         const DataLayout &DL, const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::memchr))
@@ -204,7 +188,6 @@ Value *llvm::EmitMemChr(Value *Ptr, Value *Val, Value *Len, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitMemCmp - Emit a call to the memcmp function.
 Value *llvm::EmitMemCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
                         const DataLayout &DL, const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::memcmp))
@@ -245,10 +228,6 @@ static void AppendTypeSuffix(Value *Op, StringRef &Name, SmallString<20> &NameBu
   return;
 }
 
-/// EmitUnaryFloatFnCall - Emit a call to the unary function named 'Name' (e.g.
-/// 'floor').  This function is known to take a single of type matching 'Op' and
-/// returns one value with the same type.  If 'Op' is a long double, 'l' is
-/// added as the suffix of name, if 'Op' is a float, we add a 'f' suffix.
 Value *llvm::EmitUnaryFloatFnCall(Value *Op, StringRef Name, IRBuilder<> &B,
                                   const AttributeSet &Attrs) {
   SmallString<20> NameBuffer;
@@ -265,11 +244,6 @@ Value *llvm::EmitUnaryFloatFnCall(Value *Op, StringRef Name, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitBinaryFloatFnCall - Emit a call to the binary function named 'Name'
-/// (e.g. 'fmin').  This function is known to take type matching 'Op1' and 'Op2'
-/// and return one value with the same type.  If 'Op1/Op2' are long double, 'l'
-/// is added as the suffix of name, if 'Op1/Op2' is a float, we add a 'f'
-/// suffix.
 Value *llvm::EmitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
                                   IRBuilder<> &B, const AttributeSet &Attrs) {
   SmallString<20> NameBuffer;
@@ -286,8 +260,6 @@ Value *llvm::EmitBinaryFloatFnCall(Value *Op1, Value *Op2, StringRef Name,
   return CI;
 }
 
-/// EmitPutChar - Emit a call to the putchar function.  This assumes that Char
-/// is an integer.
 Value *llvm::EmitPutChar(Value *Char, IRBuilder<> &B,
                          const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::putchar))
@@ -308,8 +280,6 @@ Value *llvm::EmitPutChar(Value *Char, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitPutS - Emit a call to the puts function.  This assumes that Str is
-/// some pointer.
 Value *llvm::EmitPutS(Value *Str, IRBuilder<> &B,
                       const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::puts))
@@ -332,8 +302,6 @@ Value *llvm::EmitPutS(Value *Str, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitFPutC - Emit a call to the fputc function.  This assumes that Char is
-/// an integer and File is a pointer to FILE.
 Value *llvm::EmitFPutC(Value *Char, Value *File, IRBuilder<> &B,
                        const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::fputc))
@@ -365,8 +333,6 @@ Value *llvm::EmitFPutC(Value *Char, Value *File, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitFPutS - Emit a call to the puts function.  Str is required to be a
-/// pointer and File is a pointer to FILE.
 Value *llvm::EmitFPutS(Value *Str, Value *File, IRBuilder<> &B,
                        const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::fputs))
@@ -397,8 +363,6 @@ Value *llvm::EmitFPutS(Value *Str, Value *File, IRBuilder<> &B,
   return CI;
 }
 
-/// EmitFWrite - Emit a call to the fwrite function.  This assumes that Ptr is
-/// a pointer, Size is an 'intptr_t', and File is a pointer to FILE.
 Value *llvm::EmitFWrite(Value *Ptr, Value *Size, Value *File, IRBuilder<> &B,
                         const DataLayout &DL, const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc::fwrite))
