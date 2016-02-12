@@ -11,17 +11,14 @@ set(SOURCES
   CIndexer.cpp
   CXComment.cpp
   CXCursor.cpp
+  CXIndexDataConsumer.cpp
   CXCompilationDatabase.cpp
   CXLoadedDiagnostic.cpp
   CXSourceLocation.cpp
   CXStoredDiagnostic.cpp
   CXString.cpp
   CXType.cpp
-  IndexBody.cpp
-  IndexDecl.cpp
-  IndexTypeSourceInfo.cpp
   Indexing.cpp
-  IndexingContext.cpp
 
   ADDITIONAL_HEADERS
   CIndexDiagnostic.h
