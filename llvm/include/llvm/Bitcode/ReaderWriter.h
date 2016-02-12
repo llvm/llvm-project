@@ -30,6 +30,14 @@ namespace llvm {
   class ModulePass;
   class raw_ostream;
 
+  /// Offsets of the 32-bit fields of bitcode wrapper header.
+  static const unsigned BWH_MagicField = 0*4;
+  static const unsigned BWH_VersionField = 1*4;
+  static const unsigned BWH_OffsetField = 2*4;
+  static const unsigned BWH_SizeField = 3*4;
+  static const unsigned BWH_CPUTypeField = 4*4;
+  static const unsigned BWH_HeaderSize = 5*4;
+
   /// Read the header of the specified bitcode buffer and prepare for lazy
   /// deserialization of function bodies. If ShouldLazyLoadMetadata is true,
   /// lazily load metadata as well. If successful, this moves Buffer. On
@@ -163,17 +171,12 @@ namespace llvm {
   inline bool SkipBitcodeWrapperHeader(const unsigned char *&BufPtr,
                                        const unsigned char *&BufEnd,
                                        bool VerifyBufferSize) {
-    enum {
-      KnownHeaderSize = 4*4,  // Size of header we read.
-      OffsetField = 2*4,      // Offset in bytes to Offset field.
-      SizeField = 3*4         // Offset in bytes to Size field.
-    };
+    // Must contain the offset and size field!
+    if (BufEnd - BufPtr < BWH_SizeField + 4)
+      return true;
 
-    // Must contain the header!
-    if (BufEnd-BufPtr < KnownHeaderSize) return true;
-
-    unsigned Offset = support::endian::read32le(&BufPtr[OffsetField]);
-    unsigned Size = support::endian::read32le(&BufPtr[SizeField]);
+    unsigned Offset = support::endian::read32le(&BufPtr[BWH_OffsetField]);
+    unsigned Size = support::endian::read32le(&BufPtr[BWH_SizeField]);
 
     // Verify that Offset+Size fits in the file.
     if (VerifyBufferSize && Offset+Size > unsigned(BufEnd-BufPtr))
