@@ -108,17 +108,6 @@ Non-comprehensive list of changes in this release
 
    Makes programs 10x faster by doing Special New Thing.
 
-Changes to the X86 and X86-64 Targets
--------------------------------------
-
-* Smaller code for materializing 32-bit 1 and -1 constants at ``-Os``.
-
-* More efficient code for wide integer compares. (E.g. 64-bit compares
-  on 32-bit targets.)
-
-* Tail call support for ``thiscall``, ``stdcall`, ``vectorcall``, and
-  ``fastcall`` functions.
-
 
 Changes to the ARM Backend
 --------------------------
@@ -199,6 +188,14 @@ Changes to the X86 Target
  During this release ...
 
 * TLS is enabled for Cygwin as emutls.
+
+* Smaller code for materializing 32-bit 1 and -1 constants at ``-Os``.
+
+* More efficient code for wide integer compares. (E.g. 64-bit compares
+  on 32-bit targets.)
+
+* Tail call support for ``thiscall``, ``stdcall`, ``vectorcall``, and
+  ``fastcall`` functions.
 
 
 Changes to the OCaml bindings
