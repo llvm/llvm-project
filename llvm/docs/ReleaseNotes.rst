@@ -109,10 +109,32 @@ Non-comprehensive list of changes in this release
    Makes programs 10x faster by doing Special New Thing.
 
 
-Changes to the ARM Backend
---------------------------
+Changes to the ARM Backends
+---------------------------
 
- During this release ...
+During this release the AArch64 target has:
+
+* Added support for more sanitizers (MSAN, TSAN) and made them compatible with
+  all VMA kernel configurations (kurrently tested on 39 and 42 bits).
+* Gained initial LLD support in the new ELF back-end
+* Extended the Load/Store optimiser and cleaned up some of the bad decisions
+  made earlier.
+* Expanded LLDB support, including watchpoints, native building, Renderscript,
+  LLDB-server, debugging 32-bit applications.
+* Added support for the ``Exynos M1`` chip.
+
+During this release the ARM target has:
+
+* Gained massive performance improvements on embedded benchmarks due to finally
+  running the stride vectorizer in full form, incrementing the performance gains
+  that we already had in the previous releases with limited stride vectorization.
+* Expanded LLDB support, including watchpoints, unwind tables
+* Extended the Load/Store optimiser and cleaned up some of the bad decisions
+  made earlier.
+* Gained some code size improvements, though there's still a long road ahead,
+  especially for older cores.
+* Added some EABI floating point comparison functions to Compiler-RT
+* Added support for Windows+GNU triple, +features in -mcpu/-march options.
 
 
 Changes to the MIPS Target
