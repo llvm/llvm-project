@@ -353,22 +353,7 @@ ClangASTContext::ClangASTContext (clang::ASTContext* ast_ctx) :
 //----------------------------------------------------------------------
 ClangASTContext::~ClangASTContext()
 {
-    if (m_ast_ap.get())
-    {
-        GetASTMap().Erase(m_ast_ap.get());
-        if (!m_ast_owned)
-            m_ast_ap.release();
-    }
-
-    m_builtins_ap.reset();
-    m_selector_table_ap.reset();
-    m_identifier_table_ap.reset();
-    m_target_info_ap.reset();
-    m_target_options_rp.reset();
-    m_diagnostics_engine_ap.reset();
-    m_source_manager_ap.reset();
-    m_language_options_ap.reset();
-    m_ast_ap.reset();
+    Finalize();
 }
 
 ConstString
@@ -493,6 +478,27 @@ ClangASTContext::Terminate()
     PluginManager::UnregisterPlugin (CreateInstance);
 }
 
+void
+ClangASTContext::Finalize()
+{
+    if (m_ast_ap.get())
+    {
+        GetASTMap().Erase(m_ast_ap.get());
+        if (!m_ast_owned)
+            m_ast_ap.release();
+    }
+
+    m_builtins_ap.reset();
+    m_selector_table_ap.reset();
+    m_identifier_table_ap.reset();
+    m_target_info_ap.reset();
+    m_target_options_rp.reset();
+    m_diagnostics_engine_ap.reset();
+    m_source_manager_ap.reset();
+    m_language_options_ap.reset();
+    m_ast_ap.reset();
+    m_scratch_ast_source_ap.reset();
+}
 
 void
 ClangASTContext::Clear()
