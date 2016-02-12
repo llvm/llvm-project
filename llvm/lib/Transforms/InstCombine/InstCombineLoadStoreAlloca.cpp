@@ -557,7 +557,8 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
         ConstantInt::get(IdxType, i),
       };
       auto *Ptr = IC.Builder->CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices), EltName);
-      auto *L = IC.Builder->CreateLoad(ST->getTypeAtIndex(i), Ptr, LoadName);
+      auto *L = IC.Builder->CreateAlignedLoad(Ptr, LI.getAlignment(),
+                                              LoadName);
       V = IC.Builder->CreateInsertValue(V, L, i);
     }
 
