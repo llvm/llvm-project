@@ -141,7 +141,7 @@ raw_ostream &raw_ostream::operator<<(unsigned long long N) {
     return this->operator<<(static_cast<unsigned long>(N));
 
   char NumberBuffer[20];
-  char *EndPtr = NumberBuffer+sizeof(NumberBuffer);
+  char *EndPtr = std::end(NumberBuffer);
   char *CurPtr = EndPtr;
 
   while (N) {
@@ -167,7 +167,7 @@ raw_ostream &raw_ostream::write_hex(unsigned long long N) {
     return *this << '0';
 
   char NumberBuffer[20];
-  char *EndPtr = NumberBuffer+sizeof(NumberBuffer);
+  char *EndPtr = std::end(NumberBuffer);
   char *CurPtr = EndPtr;
 
   while (N) {
