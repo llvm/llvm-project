@@ -596,7 +596,7 @@ set(CLANG_ORDER_FILE ${CMAKE_CURRENT_BINARY_DIR}/clang.order CACHE FILEPATH
   "Order file to use when compiling clang in order to improve startup time.")
 
 if(CLANG_ORDER_FILE AND NOT EXISTS ${CLANG_ORDER_FILE})
-  string(FIND CLANG_ORDER_FILE "${CMAKE_CURRENT_BINARY_DIR}" PATH_START)
+  string(FIND "${CLANG_ORDER_FILE}" "${CMAKE_CURRENT_BINARY_DIR}" PATH_START)
   if(PATH_START EQUAL 0)
     file(WRITE ${CLANG_ORDER_FILE} "\n")
   else()
