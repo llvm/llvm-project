@@ -5248,13 +5248,12 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock) {
   // lead to the loop header.
   bool MustExecuteLoopHeader = true;
   BasicBlock *Exit = nullptr;
-  for (succ_iterator SI = succ_begin(ExitingBlock), SE = succ_end(ExitingBlock);
-       SI != SE; ++SI)
-    if (!L->contains(*SI)) {
+  for (auto *SBB : successors(ExitingBlock))
+    if (!L->contains(SBB)) {
       if (Exit) // Multiple exit successors.
         return getCouldNotCompute();
-      Exit = *SI;
-    } else if (*SI != L->getHeader()) {
+      Exit = SBB;
+    } else if (SBB != L->getHeader()) {
       MustExecuteLoopHeader = false;
     }
 
