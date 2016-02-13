@@ -29,11 +29,15 @@ public:
   
   bool shouldWalkTypesOfTypeLocs() const { return false; }
 
-  bool TraverseStmt(Stmt *S) {
+  bool dataTraverseStmtPre(Stmt *S) {
     StmtStack.push_back(S);
-    bool ret = base::TraverseStmt(S);
+    return true;
+  }
+
+  bool dataTraverseStmtPost(Stmt *S) {
+    assert(StmtStack.back() == S);
     StmtStack.pop_back();
-    return ret;
+    return true;
   }
 
   bool TraverseTypeLoc(TypeLoc TL) {
