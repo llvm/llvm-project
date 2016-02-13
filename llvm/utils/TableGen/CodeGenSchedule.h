@@ -300,6 +300,7 @@ public:
   typedef std::vector<CodeGenProcModel>::const_iterator ProcIter;
   ProcIter procModelBegin() const { return ProcModels.begin(); }
   ProcIter procModelEnd() const { return ProcModels.end(); }
+  ArrayRef<CodeGenProcModel> procModels() const { return ProcModels; }
 
   // Return true if any processors have itineraries.
   bool hasItineraries() const;
@@ -353,6 +354,7 @@ public:
   typedef std::vector<CodeGenSchedClass>::const_iterator SchedClassIter;
   SchedClassIter schedClassBegin() const { return SchedClasses.begin(); }
   SchedClassIter schedClassEnd() const { return SchedClasses.end(); }
+  ArrayRef<CodeGenSchedClass> schedClasses() const { return SchedClasses; }
 
   unsigned numInstrSchedClasses() const { return NumInstrSchedClasses; }
 

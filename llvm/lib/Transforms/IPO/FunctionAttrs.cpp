@@ -991,31 +991,32 @@ static bool setDoesNotRecurse(Function &F) {
   return true;
 }
 
-static bool addNoRecurseAttrs(const CallGraphSCC &SCC) {
+static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
   // Try and identify functions that do not recurse.
 
   // If the SCC contains multiple nodes we know for sure there is recursion.
-  if (!SCC.isSingular())
+  if (SCCNodes.size() != 1)
     return false;
 
-  const CallGraphNode *CGN = *SCC.begin();
-  Function *F = CGN->getFunction();
+  Function *F = *SCCNodes.begin();
   if (!F || F->isDeclaration() || F->doesNotRecurse())
     return false;
 
   // If all of the calls in F are identifiable and are to norecurse functions, F
   // is norecurse. This check also detects self-recursion as F is not currently
   // marked norecurse, so any called from F to F will not be marked norecurse.
-  if (std::all_of(CGN->begin(), CGN->end(),
-                  [](const CallGraphNode::CallRecord &CR) {
-                    Function *F = CR.second->getFunction();
-                    return F && F->doesNotRecurse();
-                  }))
-    // Function calls a potentially recursive function.
-    return setDoesNotRecurse(*F);
+  for (Instruction &I : instructions(*F))
+    if (auto CS = CallSite(&I)) {
+      Function *Callee = CS.getCalledFunction();
+      if (!Callee || Callee == F || !Callee->doesNotRecurse())
+        // Function calls a potentially recursive function.
+        return false;
+    }
 
-  // Nothing else we can deduce usefully during the postorder traversal.
-  return false;
+  // Every call was to a non-recursive function other than this function, and
+  // we have no indirect recursion as the SCC size is one. This function cannot
+  // recurse.
+  return setDoesNotRecurse(*F);
 }
 
 bool PostOrderFunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
@@ -1060,9 +1061,9 @@ bool PostOrderFunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
     Changed |= addNoAliasAttrs(SCCNodes);
     Changed |= addNonNullAttrs(SCCNodes, *TLI);
     Changed |= removeConvergentAttrs(SCCNodes);
+    Changed |= addNoRecurseAttrs(SCCNodes);
   }
 
-  Changed |= addNoRecurseAttrs(SCC);
   return Changed;
 }
 

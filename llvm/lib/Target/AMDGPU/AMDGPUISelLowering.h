@@ -269,7 +269,7 @@ enum NodeType : unsigned {
   RCP,
   RSQ,
   RSQ_LEGACY,
-  RSQ_CLAMPED,
+  RSQ_CLAMP,
   LDEXP,
   FP_CLASS,
   DOT4,

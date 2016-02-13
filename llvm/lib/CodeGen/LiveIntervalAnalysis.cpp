@@ -9,8 +9,7 @@
 //
 // This file implements the LiveInterval analysis pass which is used
 // by the Linear Scan Register allocator. This pass linearizes the
-// basic blocks of the function in DFS order and uses the
-// LiveVariables pass to conservatively compute live intervals for
+// basic blocks of the function in DFS order and computes live intervals for
 // each virtual and physical register.
 //
 //===----------------------------------------------------------------------===//
@@ -48,7 +47,6 @@ char &llvm::LiveIntervalsID = LiveIntervals::ID;
 INITIALIZE_PASS_BEGIN(LiveIntervals, "liveintervals",
                 "Live Interval Analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
 INITIALIZE_PASS_END(LiveIntervals, "liveintervals",
@@ -77,10 +75,6 @@ void LiveIntervals::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
-  // LiveVariables isn't really required by this analysis, it is only required
-  // here to make sure it is live during TwoAddressInstructionPass and
-  // PHIElimination. This is temporary.
-  AU.addRequired<LiveVariables>();
   AU.addPreserved<LiveVariables>();
   AU.addPreservedID(MachineLoopInfoID);
   AU.addRequiredTransitiveID(MachineDominatorsID);

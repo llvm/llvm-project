@@ -92,6 +92,18 @@ def int_amdgcn_trig_preop : Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_i32_ty], [IntrNoMem]
 >;
 
+def int_amdgcn_sin : Intrinsic<
+  [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
+>;
+
+def int_amdgcn_cos : Intrinsic<
+  [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
+>;
+
+def int_amdgcn_log_clamp : Intrinsic<
+  [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
+>;
+
 def int_amdgcn_rcp : Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
 >;
@@ -100,7 +112,7 @@ def int_amdgcn_rsq :  Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
 >;
 
-def int_amdgcn_rsq_clamped :  Intrinsic<
+def int_amdgcn_rsq_clamp : Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 
 def int_amdgcn_ldexp : Intrinsic<
@@ -139,32 +151,12 @@ def int_amdgcn_buffer_wbinvl1_sc :
   GCCBuiltin<"__builtin_amdgcn_buffer_wbinvl1_sc">,
   Intrinsic<[], [], []>;
 
-// On CI+
-def int_amdgcn_buffer_wbinvl1_vol :
-  GCCBuiltin<"__builtin_amdgcn_buffer_wbinvl1_vol">,
-  Intrinsic<[], [], []>;
-
 def int_amdgcn_buffer_wbinvl1 :
   GCCBuiltin<"__builtin_amdgcn_buffer_wbinvl1">,
   Intrinsic<[], [], []>;
 
 def int_amdgcn_s_dcache_inv :
   GCCBuiltin<"__builtin_amdgcn_s_dcache_inv">,
-  Intrinsic<[], [], []>;
-
-// CI+
-def int_amdgcn_s_dcache_inv_vol :
-  GCCBuiltin<"__builtin_amdgcn_s_dcache_inv_vol">,
-  Intrinsic<[], [], []>;
-
-// VI
-def int_amdgcn_s_dcache_wb :
-  GCCBuiltin<"__builtin_amdgcn_s_dcache_wb">,
-  Intrinsic<[], [], []>;
-
-// VI
-def int_amdgcn_s_dcache_wb_vol :
-  GCCBuiltin<"__builtin_amdgcn_s_dcache_wb_vol">,
   Intrinsic<[], [], []>;
 
 def int_amdgcn_dispatch_ptr :
@@ -194,4 +186,35 @@ def int_amdgcn_mbcnt_lo :
 def int_amdgcn_mbcnt_hi :
   GCCBuiltin<"__builtin_amdgcn_mbcnt_hi">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
+//===----------------------------------------------------------------------===//
+// CI+ Intrinsics
+//===----------------------------------------------------------------------===//
+
+def int_amdgcn_s_dcache_inv_vol :
+  GCCBuiltin<"__builtin_amdgcn_s_dcache_inv_vol">,
+  Intrinsic<[], [], []>;
+
+def int_amdgcn_buffer_wbinvl1_vol :
+  GCCBuiltin<"__builtin_amdgcn_buffer_wbinvl1_vol">,
+  Intrinsic<[], [], []>;
+
+//===----------------------------------------------------------------------===//
+// VI Intrinsics
+//===----------------------------------------------------------------------===//
+
+// llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <bound_ctrl> <bank_mask> <row_mask>
+def int_amdgcn_mov_dpp :
+  Intrinsic<[llvm_anyint_ty],
+            [LLVMMatchType<0>, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty,
+             llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
+
+def int_amdgcn_s_dcache_wb :
+  GCCBuiltin<"__builtin_amdgcn_s_dcache_wb">,
+  Intrinsic<[], [], []>;
+
+def int_amdgcn_s_dcache_wb_vol :
+  GCCBuiltin<"__builtin_amdgcn_s_dcache_wb_vol">,
+  Intrinsic<[], [], []>;
+
 }

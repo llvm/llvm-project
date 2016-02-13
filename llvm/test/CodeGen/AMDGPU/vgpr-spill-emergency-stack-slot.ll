@@ -18,7 +18,8 @@
 ; VI-NEXT: s_mov_b32 s15, 0x980000
 
 ; s12 is offset user SGPR
-; GCN: buffer_store_dword {{v[0-9]+}}, s[12:15], s11 offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GCN: buffer_store_dword {{v[0-9]+}}, s[12:15], s11 offset:{{[0-9]+}} ; 16-byte Folded Spill
+; GCN: buffer_load_dword v{{[0-9]+}}, s[12:15], s11 offset:{{[0-9]+}} ; 16-byte Folded Reload
 
 ; GCN: NumVgprs: 256
 ; GCN: ScratchSize: 1024

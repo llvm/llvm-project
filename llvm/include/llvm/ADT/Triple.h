@@ -131,7 +131,9 @@ public:
     NVIDIA,
     CSR,
     Myriad,
-    LastVendorType = Myriad
+    AMD,
+    Mesa,
+    LastVendorType = Mesa
   };
   enum OSType {
     UnknownOS,
@@ -163,7 +165,8 @@ public:
     ELFIAMCU,
     TvOS,       // Apple tvOS
     WatchOS,    // Apple watchOS
-    LastOSType = WatchOS
+    Mesa3D,
+    LastOSType = Mesa3D
   };
   enum EnvironmentType {
     UnknownEnvironment,

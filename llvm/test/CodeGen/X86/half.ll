@@ -2,6 +2,8 @@
 ; RUN:   | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-LIBCALL
 ; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=+f16c -asm-verbose=false \
 ; RUN:    | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-F16C
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr +sse2 -asm-verbose=false \
+; RUN:    | FileCheck %s -check-prefix=CHECK-I686
 
 define void @test_load_store(half* %in, half* %out) {
 ; CHECK-LABEL: test_load_store:
@@ -258,6 +260,19 @@ define void @test_trunc64_vec4(<4 x double> %a, <4 x half>* %p) {
   %v = fptrunc <4 x double> %a to <4 x half>
   store <4 x half> %v, <4 x half>* %p
   ret void
+}
+
+declare float @test_floatret();
+
+; On i686, if SSE2 is available, the return value from test_floatret is loaded
+; to f80 and then rounded to f32.  The DAG combiner should not combine this
+; fp_round and the subsequent fptrunc from float to half.
+define half @test_f80trunc_nodagcombine() #0 {
+; CHECK-LABEL: test_f80trunc_nodagcombine:
+; CHECK-I686-NOT: calll __truncxfhf2
+  %1 = call float @test_floatret()
+  %2 = fptrunc float %1 to half
+  ret half %2
 }
 
 attributes #0 = { nounwind }

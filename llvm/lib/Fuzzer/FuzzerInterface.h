@@ -16,11 +16,24 @@
 #ifndef LLVM_FUZZER_INTERFACE_H
 #define LLVM_FUZZER_INTERFACE_H
 
-#include <limits>
 #include <cstddef>
 #include <cstdint>
-#include <vector>
-#include <string>
+
+// Plain C interface. Should be sufficient for most uses.
+extern "C" {
+// The target function, mandatory.
+// Must return 0.
+int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size);
+// The initialization function, optional.
+int LLVMFuzzerInitialize(int *argc, char ***argv);
+// Custom mutator, optional.
+// Mutates raw data in [Data, Data+Size] inplace.
+// Returns the new size, which is not greater than MaxSize.
+// Given the same Seed produces the same mutation.
+size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size, size_t MaxSize,
+                               unsigned int Seed);
+
+}  // extern "C"
 
 namespace fuzzer {
 
@@ -48,6 +61,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv) {
 }
 
 // Implement your own main() or use the one from FuzzerMain.cpp.
+// *NOT* recommended for most cases.
 int main(int argc, char **argv) {
   InitializeMeIfNeeded();
   return fuzzer::FuzzerDriver(argc, argv, LLVMFuzzerTestOneInput);
@@ -56,99 +70,10 @@ int main(int argc, char **argv) {
 */
 int FuzzerDriver(int argc, char **argv, UserCallback Callback);
 
-class FuzzerRandomBase {
- public:
-  FuzzerRandomBase(){}
-  virtual ~FuzzerRandomBase(){};
-  virtual void ResetSeed(unsigned int seed) = 0;
-  // Return a random number.
-  virtual size_t Rand() = 0;
-  // Return a random number in range [0,n).
-  size_t operator()(size_t n) { return n ? Rand() % n : 0; }
-  bool RandBool() { return Rand() % 2; }
-};
-
-// Using libc's stand/rand.
-class FuzzerRandomLibc : public FuzzerRandomBase {
- public:
-  FuzzerRandomLibc(unsigned int seed) { ResetSeed(seed); }
-  void ResetSeed(unsigned int seed) override;
-  ~FuzzerRandomLibc() override {};
-  size_t Rand() override;
-};
-
-// Using std::mt19937
-class FuzzerRandom_mt19937 : public FuzzerRandomBase {
- public:
-  FuzzerRandom_mt19937(unsigned int seed) { ResetSeed(seed); }
-  void ResetSeed(unsigned int seed) override;
-  ~FuzzerRandom_mt19937() override;
-  size_t Rand() override;
- private:
-  struct Impl;
-  Impl *R = nullptr;
-};
-
-// For backward compatibility only, deprecated.
-size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize,
-              FuzzerRandomBase &Rand);
-
-class MutationDispatcher;
-
-/** An abstract class that allows to use user-supplied mutators with libFuzzer.
-
-Usage:
-
-#\code
-#include "FuzzerInterface.h"
-class MyFuzzer : public fuzzer::UserSuppliedFuzzer {
- public:
-  MyFuzzer(fuzzer::FuzzerRandomBase *Rand);
-  // Must define the target function.
-  int TargetFunction(...) { ...; return 0; }
-  // Optionally define the mutator.
-  size_t Mutate(...) { ... }
-  // Optionally define the CrossOver method.
-  size_t CrossOver(...) { ... }
-};
-
-int main(int argc, char **argv) {
-  MyFuzzer F;
-  fuzzer::FuzzerDriver(argc, argv, F);
-}
-#\endcode
-*/
-class UserSuppliedFuzzer {
- public:
-  UserSuppliedFuzzer(FuzzerRandomBase *Rand);
-  /// Executes the target function on 'Size' bytes of 'Data'.
-  virtual int TargetFunction(const uint8_t *Data, size_t Size) = 0;
-  /// Mutates 'Size' bytes of data in 'Data' inplace into up to 'MaxSize' bytes,
-  /// returns the new size of the data, which should be positive.
-  virtual size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize);
-  /// Crosses 'Data1' and 'Data2', writes up to 'MaxOutSize' bytes into Out,
-  /// returns the number of bytes written, which should be positive.
-  virtual size_t CrossOver(const uint8_t *Data1, size_t Size1,
-                           const uint8_t *Data2, size_t Size2,
-                           uint8_t *Out, size_t MaxOutSize);
-  virtual ~UserSuppliedFuzzer();
-
-  FuzzerRandomBase &GetRand() { return *Rand; }
-
-  MutationDispatcher &GetMD() { return *MD; }
-
- private:
-  bool OwnRand = false;
-  FuzzerRandomBase *Rand;
-  MutationDispatcher *MD;
-};
-
-/// Runs the fuzzing with the UserSuppliedFuzzer.
-int FuzzerDriver(int argc, char **argv, UserSuppliedFuzzer &USF);
-
-/// More C++-ish interface.
-int FuzzerDriver(const std::vector<std::string> &Args, UserSuppliedFuzzer &USF);
-int FuzzerDriver(const std::vector<std::string> &Args, UserCallback Callback);
+// Mutates raw data in [Data, Data+Size] inplace.
+// Returns the new size, which is not greater than MaxSize.
+// Can be used inside the user-supplied LLVMFuzzerTestOneInput.
+size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize);
 
 }  // namespace fuzzer
 

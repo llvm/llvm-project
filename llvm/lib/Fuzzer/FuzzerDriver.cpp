@@ -241,25 +241,8 @@ static bool AllInputsAreFiles() {
   return true;
 }
 
-int FuzzerDriver(int argc, char **argv, UserCallback Callback) {
-  FuzzerRandom_mt19937 Rand(0);
-  SimpleUserSuppliedFuzzer SUSF(&Rand, Callback);
-  return FuzzerDriver(argc, argv, SUSF);
-}
-
-int FuzzerDriver(int argc, char **argv, UserSuppliedFuzzer &USF) {
-  std::vector<std::string> Args(argv, argv + argc);
-  return FuzzerDriver(Args, USF);
-}
-
-int FuzzerDriver(const std::vector<std::string> &Args, UserCallback Callback) {
-  FuzzerRandom_mt19937 Rand(0);
-  SimpleUserSuppliedFuzzer SUSF(&Rand, Callback);
-  return FuzzerDriver(Args, SUSF);
-}
-
-int FuzzerDriver(const std::vector<std::string> &Args,
-                 UserSuppliedFuzzer &USF) {
+static int FuzzerDriver(const std::vector<std::string> &Args,
+                        UserCallback Callback) {
   using namespace fuzzer;
   assert(!Args.empty());
   ProgName = new std::string(Args[0]);
@@ -319,11 +302,21 @@ int FuzzerDriver(const std::vector<std::string> &Args,
   Options.SaveArtifacts = !Flags.test_single_input;
   Options.PrintNewCovPcs = Flags.print_new_cov_pcs;
 
-  Fuzzer F(USF, Options);
+  unsigned Seed = Flags.seed;
+  // Initialize Seed.
+  if (Seed == 0)
+    Seed = (std::chrono::system_clock::now().time_since_epoch().count() << 10) +
+           getpid();
+  if (Flags.verbosity)
+    Printf("Seed: %u\n", Seed);
+
+  Random Rand(Seed);
+  MutationDispatcher MD(Rand);
+  Fuzzer F(Callback, MD, Options);
 
   for (auto &U: Dictionary)
     if (U.size() <= Word::GetMaxSize())
-      USF.GetMD().AddWordToManualDictionary(Word(U.data(), U.size()));
+      MD.AddWordToManualDictionary(Word(U.data(), U.size()));
 
   // Timer
   if (Flags.timeout > 0)
@@ -359,14 +352,6 @@ int FuzzerDriver(const std::vector<std::string> &Args,
     exit(0);
   }
 
-  unsigned Seed = Flags.seed;
-  // Initialize Seed.
-  if (Seed == 0)
-    Seed = (std::chrono::system_clock::now().time_since_epoch().count() << 10) +
-           getpid();
-  if (Flags.verbosity)
-    Printf("Seed: %u\n", Seed);
-  USF.GetRand().ResetSeed(Seed);
 
   F.RereadOutputCorpus();
   for (auto &inp : *Inputs)
@@ -386,6 +371,11 @@ int FuzzerDriver(const std::vector<std::string> &Args,
            F.secondsSinceProcessStartUp());
 
   exit(0);  // Don't let F destroy itself.
+}
+
+int FuzzerDriver(int argc, char **argv, UserCallback Callback) {
+  std::vector<std::string> Args(argv, argv + argc);
+  return FuzzerDriver(Args, Callback);
 }
 
 }  // namespace fuzzer

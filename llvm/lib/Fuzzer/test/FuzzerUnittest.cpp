@@ -11,7 +11,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 }
 
 TEST(Fuzzer, CrossOver) {
-  FuzzerRandomLibc Rand(0);
+  Random Rand(0);
   MutationDispatcher MD(Rand);
   Unit A({0, 1, 2}), B({5, 6, 7});
   Unit C;
@@ -87,7 +87,7 @@ void TestEraseByte(Mutator M, int NumIter) {
   uint8_t REM5[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x66, 0x77};
   uint8_t REM6[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x77};
   uint8_t REM7[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
-  FuzzerRandomLibc Rand(0);
+  Random Rand(0);
   MutationDispatcher MD(Rand);
   int FoundMask = 0;
   for (int i = 0; i < NumIter; i++) {
@@ -113,7 +113,7 @@ TEST(FuzzerMutate, EraseByte2) {
 }
 
 void TestInsertByte(Mutator M, int NumIter) {
-  FuzzerRandomLibc Rand(0);
+  Random Rand(0);
   MutationDispatcher MD(Rand);
   int FoundMask = 0;
   uint8_t INS0[8] = {0xF1, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
@@ -147,7 +147,7 @@ TEST(FuzzerMutate, InsertByte2) {
 }
 
 void TestChangeByte(Mutator M, int NumIter) {
-  FuzzerRandomLibc Rand(0);
+  Random Rand(0);
   MutationDispatcher MD(Rand);
   int FoundMask = 0;
   uint8_t CH0[8] = {0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
@@ -181,7 +181,7 @@ TEST(FuzzerMutate, ChangeByte2) {
 }
 
 void TestChangeBit(Mutator M, int NumIter) {
-  FuzzerRandomLibc Rand(0);
+  Random Rand(0);
   MutationDispatcher MD(Rand);
   int FoundMask = 0;
   uint8_t CH0[8] = {0x01, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
@@ -215,7 +215,7 @@ TEST(FuzzerMutate, ChangeBit2) {
 }
 
 void TestShuffleBytes(Mutator M, int NumIter) {
-  FuzzerRandomLibc Rand(0);
+  Random Rand(0);
   MutationDispatcher MD(Rand);
   int FoundMask = 0;
   uint8_t CH0[7] = {0x00, 0x22, 0x11, 0x33, 0x44, 0x55, 0x66};
@@ -236,14 +236,14 @@ void TestShuffleBytes(Mutator M, int NumIter) {
 }
 
 TEST(FuzzerMutate, ShuffleBytes1) {
-  TestShuffleBytes(&MutationDispatcher::Mutate_ShuffleBytes, 1 << 15);
+  TestShuffleBytes(&MutationDispatcher::Mutate_ShuffleBytes, 1 << 16);
 }
 TEST(FuzzerMutate, ShuffleBytes2) {
   TestShuffleBytes(&MutationDispatcher::Mutate, 1 << 19);
 }
 
 void TestAddWordFromDictionary(Mutator M, int NumIter) {
-  FuzzerRandomLibc Rand(0);
+  Random Rand(0);
   MutationDispatcher MD(Rand);
   uint8_t Word1[4] = {0xAA, 0xBB, 0xCC, 0xDD};
   uint8_t Word2[3] = {0xFF, 0xEE, 0xEF};
@@ -283,7 +283,7 @@ TEST(FuzzerMutate, AddWordFromDictionary2) {
 }
 
 void TestAddWordFromDictionaryWithHint(Mutator M, int NumIter) {
-  FuzzerRandomLibc Rand(0);
+  Random Rand(0);
   MutationDispatcher MD(Rand);
   uint8_t W[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xFF, 0xEE, 0xEF};
   size_t PosHint = 7777;
@@ -310,7 +310,7 @@ TEST(FuzzerMutate, AddWordFromDictionaryWithHint2) {
 }
 
 void TestChangeASCIIInteger(Mutator M, int NumIter) {
-  FuzzerRandomLibc Rand(0);
+  Random Rand(0);
   MutationDispatcher MD(Rand);
 
   uint8_t CH0[8] = {'1', '2', '3', '4', '5', '6', '7', '7'};
@@ -402,10 +402,10 @@ TEST(FuzzerUtil, Base64) {
 }
 
 TEST(Corpus, Distribution) {
-  FuzzerRandomLibc Rand(0);
-  SimpleUserSuppliedFuzzer USF(&Rand, LLVMFuzzerTestOneInput);
+  Random Rand(0);
+  MutationDispatcher MD(Rand);
   Fuzzer::FuzzingOptions Options;
-  Fuzzer Fuzz(USF, Options);
+  Fuzzer Fuzz(LLVMFuzzerTestOneInput, MD, Options);
   size_t N = 10;
   size_t TriesPerUnit = 1<<20;
   for (size_t i = 0; i < N; i++) {
