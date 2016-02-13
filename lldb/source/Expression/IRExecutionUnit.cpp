@@ -325,6 +325,8 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
                                                                mAttrs);
 
     m_execution_engine_ap.reset(builder.create(target_machine));
+    
+    m_strip_underscore = (m_execution_engine_ap->getDataLayout().getGlobalPrefix() == '_');
 
     if (!m_execution_engine_ap.get())
     {
@@ -644,64 +646,6 @@ IRExecutionUnit::MemoryManager::allocateDataSection(uintptr_t Size,
     return return_value;
 }
 
-static void
-FindCodeSymbolInContext(const ConstString &name,
-                        const SymbolContext &sym_ctx,
-                        uint32_t name_type_mask,
-                        SymbolContextList &sc_list)
-{
-    sc_list.Clear();
-    SymbolContextList temp_sc_list;
-    if (sym_ctx.module_sp)
-        sym_ctx.module_sp->FindFunctions(name,
-                                         NULL,
-                                         name_type_mask,
-                                         true,  // include_symbols
-                                         false, // include_inlines
-                                         true,  // append
-                                         temp_sc_list);
-    if (temp_sc_list.GetSize() == 0)
-    {
-        if (sym_ctx.target_sp)
-            sym_ctx.target_sp->GetImages().FindFunctions(name,
-                                                         name_type_mask,
-                                                         true,  // include_symbols
-                                                         false, // include_inlines
-                                                         true,  // append
-                                                         temp_sc_list);
-    }
-
-    SymbolContextList internal_symbol_sc_list;
-    unsigned temp_sc_list_size = temp_sc_list.GetSize();
-    for (unsigned i = 0; i < temp_sc_list_size; i++)
-    {
-        SymbolContext sc;
-        temp_sc_list.GetContextAtIndex(i, sc);
-        if (sc.function)
-        {
-            sc_list.Append(sc);
-        }
-        else if (sc.symbol)
-        {
-            if (sc.symbol->IsExternal())
-            {
-                sc_list.Append(sc);
-            }
-            else
-            {
-                internal_symbol_sc_list.Append(sc);
-            }
-        }
-    }
-
-    // If we had internal symbols and we didn't find any external symbols or
-    // functions in debug info, then fallback to the internal symbols
-    if (sc_list.GetSize() == 0 && internal_symbol_sc_list.GetSize())
-    {
-        sc_list = internal_symbol_sc_list;
-    }
-}
-
 static ConstString
 FindBestAlternateMangledName(const ConstString &demangled,
                              const lldb::LanguageType &lang_type,
@@ -756,7 +700,7 @@ FindBestAlternateMangledName(const ConstString &demangled,
         return ConstString();
 }
 
-struct SearchSpec
+struct IRExecutionUnit::SearchSpec
 {
     ConstString name;
     uint32_t    mask;
@@ -768,16 +712,16 @@ struct SearchSpec
     }
 };
 
-static void
-CollectCandidateCNames(std::vector<SearchSpec> &C_specs, const ConstString &name)
+void
+IRExecutionUnit::CollectCandidateCNames(std::vector<IRExecutionUnit::SearchSpec> &C_specs, const ConstString &name)
 {
+    if (m_strip_underscore && name.AsCString()[0] == '_')
+        C_specs.insert(C_specs.begin(), ConstString(&name.AsCString()[1]));
     C_specs.push_back(SearchSpec(name));
-    if (name.AsCString()[0] == '_')
-        C_specs.push_back(ConstString(&name.AsCString()[1]));
 }
 
-static void
-CollectCandidateCPlusPlusNames(std::vector<SearchSpec> &CPP_specs, const std::vector<SearchSpec> &C_specs, const SymbolContext &sc)
+void
+IRExecutionUnit::CollectCandidateCPlusPlusNames(std::vector<IRExecutionUnit::SearchSpec> &CPP_specs, const std::vector<SearchSpec> &C_specs, const SymbolContext &sc)
 {
     for (const SearchSpec &C_spec : C_specs)
     {
@@ -822,8 +766,8 @@ CollectCandidateCPlusPlusNames(std::vector<SearchSpec> &CPP_specs, const std::ve
     }
 }
 
-static lldb::addr_t
-FindInSymbols(const std::vector<SearchSpec> &specs, const lldb_private::SymbolContext &sc)
+lldb::addr_t
+IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &specs, const lldb_private::SymbolContext &sc)
 {
     for (const SearchSpec &spec : specs)
     {
@@ -902,8 +846,8 @@ FindInSymbols(const std::vector<SearchSpec> &specs, const lldb_private::SymbolCo
     return LLDB_INVALID_ADDRESS;
 }
 
-static lldb::addr_t
-FindInRuntimes(const std::vector<SearchSpec> &specs, const lldb_private::SymbolContext &sc)
+lldb::addr_t
+IRExecutionUnit::FindInRuntimes(const std::vector<SearchSpec> &specs, const lldb_private::SymbolContext &sc)
 {
     lldb::TargetSP target_sp = sc.target_sp;
     
@@ -936,21 +880,21 @@ FindInRuntimes(const std::vector<SearchSpec> &specs, const lldb_private::SymbolC
 }
 
 lldb::addr_t
-IRExecutionUnit::FindSymbol(const lldb_private::ConstString &name, const lldb_private::SymbolContext &sc)
+IRExecutionUnit::FindSymbol(const lldb_private::ConstString &name)
 {
     std::vector<SearchSpec> candidate_C_names;
     std::vector<SearchSpec> candidate_CPlusPlus_names;
     
     CollectCandidateCNames(candidate_C_names, name);
 
-    lldb::addr_t ret = FindInSymbols(candidate_C_names, sc);
+    lldb::addr_t ret = FindInSymbols(candidate_C_names, m_sym_ctx);
     if (ret == LLDB_INVALID_ADDRESS)
-        ret = FindInRuntimes(candidate_C_names, sc);
+        ret = FindInRuntimes(candidate_C_names, m_sym_ctx);
     
     if (ret == LLDB_INVALID_ADDRESS)
     {
-        CollectCandidateCPlusPlusNames(candidate_CPlusPlus_names, candidate_C_names, sc);
-        ret = FindInSymbols(candidate_CPlusPlus_names, sc);
+        CollectCandidateCPlusPlusNames(candidate_CPlusPlus_names, candidate_C_names, m_sym_ctx);
+        ret = FindInSymbols(candidate_CPlusPlus_names, m_sym_ctx);
     }
     
     return ret;

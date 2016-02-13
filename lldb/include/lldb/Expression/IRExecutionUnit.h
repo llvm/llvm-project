@@ -134,15 +134,9 @@ public:
     lldb::ModuleSP
     GetJITModule ();
         
-    static lldb::addr_t
-    FindSymbol(const ConstString &name,
-               const SymbolContext &sc);
-    
     lldb::addr_t
-    FindSymbol(const ConstString &name)
-    {
-        return FindSymbol(name, m_sym_ctx);
-    }
+    FindSymbol(const ConstString &name);
+
 private:
     //------------------------------------------------------------------
     /// Look up the object in m_address_map that contains a given address,
@@ -212,6 +206,25 @@ private:
     DisassembleFunction (Stream &stream,
                          lldb::ProcessSP &process_sp);
 
+    struct SearchSpec;
+    
+    void
+    CollectCandidateCNames(std::vector<SearchSpec> &C_specs,
+                           const ConstString &name);
+    
+    void
+    CollectCandidateCPlusPlusNames(std::vector<SearchSpec> &CPP_specs,
+                                   const std::vector<SearchSpec> &C_specs,
+                                   const SymbolContext &sc);
+    
+    lldb::addr_t
+    FindInSymbols(const std::vector<SearchSpec> &specs,
+                  const lldb_private::SymbolContext &sc);
+    
+    lldb::addr_t
+    FindInRuntimes(const std::vector<SearchSpec> &specs,
+                   const lldb_private::SymbolContext &sc);
+    
     void
     ReportSymbolLookupError(const ConstString &name);
 
@@ -402,6 +415,8 @@ private:
 
     lldb::addr_t                            m_function_load_addr;
     lldb::addr_t                            m_function_end_load_addr;
+    
+    bool                                    m_strip_underscore;     ///< True for platforms where global symbols have a _ prefix
 };
 
 } // namespace lldb_private

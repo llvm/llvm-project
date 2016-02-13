@@ -43,13 +43,6 @@ using namespace llvm;
 
 static char ID;
 
-IRForTarget::StaticDataAllocator::StaticDataAllocator(lldb_private::IRExecutionUnit &execution_unit) :
-    m_execution_unit(execution_unit),
-    m_stream_string(lldb_private::Stream::eBinary, execution_unit.GetAddressByteSize(), execution_unit.GetByteOrder()),
-    m_allocation(LLDB_INVALID_ADDRESS)
-{
-}
-
 IRForTarget::FunctionValueCache::FunctionValueCache(Maker const &maker) :
     m_maker(maker),
     m_values()
@@ -72,28 +65,6 @@ IRForTarget::FunctionValueCache::GetValue(llvm::Function *function)
     return m_values[function];
 }
 
-lldb::addr_t
-IRForTarget::StaticDataAllocator::Allocate()
-{
-    lldb_private::Error err;
-
-    if (m_allocation != LLDB_INVALID_ADDRESS)
-    {
-        m_execution_unit.FreeNow(m_allocation);
-        m_allocation = LLDB_INVALID_ADDRESS;
-    }
-
-    m_allocation = m_execution_unit.WriteNow((const uint8_t*)m_stream_string.GetData(), m_stream_string.GetSize(), err);
-
-    return m_allocation;
-}
-
-lldb::TargetSP
-IRForTarget::StaticDataAllocator::GetTarget()
-{
-    return m_execution_unit.GetTarget();
-}
-
 static llvm::Value *
 FindEntryInstruction (llvm::Function *function)
 {
@@ -113,7 +84,6 @@ IRForTarget::IRForTarget (lldb_private::ClangExpressionDeclMap *decl_map,
     m_func_name(func_name),
     m_module(NULL),
     m_decl_map(decl_map),
-    m_data_allocator(execution_unit),
     m_CFStringCreateWithBytes(NULL),
     m_sel_registerName(NULL),
     m_intptr_ty(NULL),
@@ -121,6 +91,7 @@ IRForTarget::IRForTarget (lldb_private::ClangExpressionDeclMap *decl_map,
     m_result_store(NULL),
     m_result_is_pointer(false),
     m_reloc_placeholder(NULL),
+    m_execution_unit(execution_unit),
     m_entry_instruction_finder (FindEntryInstruction)
 {
 }
@@ -167,208 +138,6 @@ IRForTarget::FixFunctionLinkage(llvm::Function &llvm_function)
 
     return true;
 }
-
-IRForTarget::LookupResult
-IRForTarget::GetFunctionAddress (llvm::Function *fun,
-                                 uint64_t &fun_addr,
-                                 lldb_private::ConstString &name,
-                                 Constant **&value_ptr)
-{
-    lldb_private::Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-
-    fun_addr = LLDB_INVALID_ADDRESS;
-    name.Clear();
-    value_ptr = NULL;
-
-    if (fun->isIntrinsic())
-    {
-        Intrinsic::ID intrinsic_id = (Intrinsic::ID)fun->getIntrinsicID();
-
-        switch (intrinsic_id)
-        {
-        default:
-            if (log)
-                log->Printf("Unresolved intrinsic \"%s\"", Intrinsic::getName(intrinsic_id).c_str());
-
-            if (m_error_stream)
-                m_error_stream->Printf("Internal error [IRForTarget]: Call to unhandled compiler intrinsic '%s'\n", Intrinsic::getName(intrinsic_id).c_str());
-
-            return LookupResult::Fail;
-        case Intrinsic::memcpy:
-            {
-                static lldb_private::ConstString g_memcpy_str ("memcpy");
-                name = g_memcpy_str;
-            }
-            break;
-        case Intrinsic::memset:
-            {
-                static lldb_private::ConstString g_memset_str ("memset");
-                name = g_memset_str;
-            }
-            break;
-        case Intrinsic::dbg_declare:
-        case Intrinsic::dbg_value:
-            return LookupResult::Ignore;
-        }
-
-        if (log && name)
-            log->Printf("Resolved intrinsic name \"%s\"", name.GetCString());
-    }
-    else
-    {
-        name.SetCStringWithLength (fun->getName().data(), fun->getName().size());
-    }
-
-    // Find the address of the function.
-
-    clang::NamedDecl *fun_decl = DeclForGlobal (fun);
-
-    if (fun_decl)
-    {
-        if (!m_decl_map->GetFunctionInfo (fun_decl, fun_addr))
-        {
-            std::vector<lldb_private::ConstString> alternates;
-            bool found_it = m_decl_map->GetFunctionAddress (name, fun_addr);
-
-            if (!found_it)
-            {
-                lldb_private::Mangled mangled_name(name);
-                if (m_error_stream)
-                {
-                    if (mangled_name.GetMangledName())
-                        m_error_stream->Printf("error: call to a function '%s' ('%s') that is not present in the target\n",
-                                               mangled_name.GetName(lldb::eLanguageTypeObjC_plus_plus).GetCString(),
-                                               mangled_name.GetMangledName().GetCString());
-                    else
-                        m_error_stream->Printf("error: call to a function '%s' that is not present in the target\n",
-                                               mangled_name.GetName(lldb::eLanguageTypeObjC_plus_plus).GetCString());
-                }
-                return LookupResult::Fail;
-            }
-        }
-    }
-    else
-    {
-        if (!m_decl_map->GetFunctionAddress (name, fun_addr))
-        {
-            if (log)
-                log->Printf ("Metadataless function \"%s\" had no address", name.GetCString());
-
-            if (m_error_stream)
-                m_error_stream->Printf("Error [IRForTarget]: Call to a symbol-only function '%s' that is not present in the target\n", name.GetCString());
-
-            return LookupResult::Fail;
-        }
-    }
-
-    if (log)
-        log->Printf("Found \"%s\" at 0x%" PRIx64, name.GetCString(), fun_addr);
-
-    return LookupResult::Success;
-}
-
-llvm::Constant *
-IRForTarget::BuildFunctionPointer (llvm::Type *type,
-                                   uint64_t ptr)
-{
-    PointerType *fun_ptr_ty = PointerType::getUnqual(type);
-    Constant *fun_addr_int = ConstantInt::get(m_intptr_ty, ptr, false);
-    return ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty);
-}
-
-void
-IRForTarget::RegisterFunctionMetadata(LLVMContext &context,
-                                      llvm::Value *function_ptr,
-                                      const char *name)
-{
-    for (llvm::User *user : function_ptr->users())
-    {
-        if (Instruction *user_inst = dyn_cast<Instruction>(user))
-        {
-            MDString* md_name = MDString::get(context, StringRef(name));
-
-            MDNode *metadata = MDNode::get(context, md_name);
-
-            user_inst->setMetadata("lldb.call.realName", metadata);
-        }
-        else
-        {
-            RegisterFunctionMetadata (context, user, name);
-        }
-    }
-}
-
-bool
-IRForTarget::ResolveFunctionPointers(llvm::Module &llvm_module)
-{
-    lldb_private::Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-
-    for (llvm::Module::iterator fi = llvm_module.begin();
-         fi != llvm_module.end();
-         ++fi)
-    {
-        Function *fun = &*fi;
-
-        bool is_decl = fun->isDeclaration();
-
-        if (log)
-            log->Printf("Examining %s function %s", (is_decl ? "declaration" : "non-declaration"), fun->getName().str().c_str());
-
-        if (!is_decl)
-            continue;
-
-        if (fun->use_empty())
-            continue; // ignore
-
-        uint64_t addr = LLDB_INVALID_ADDRESS;
-        lldb_private::ConstString name;
-        Constant **value_ptr = NULL;
-
-        LookupResult result = GetFunctionAddress(fun,
-                                                 addr,
-                                                 name,
-                                                 value_ptr);
-
-        switch (result)
-        {
-        case LookupResult::Fail:
-            return false; // GetFunctionAddress reports its own errors
-
-        case LookupResult::Ignore:
-            break; // Nothing to do
-
-        case LookupResult::Success:
-            {
-                Constant *value = BuildFunctionPointer(fun->getFunctionType(), addr);
-
-                RegisterFunctionMetadata (llvm_module.getContext(), fun, name.AsCString());
-
-                if (value_ptr)
-                    *value_ptr = value;
-
-                // If we are replacing a function with the nobuiltin attribute, it may
-                // be called with the builtin attribute on call sites. Remove any such
-                // attributes since it's illegal to have a builtin call to something
-                // other than a nobuiltin function.
-                if (fun->hasFnAttribute(llvm::Attribute::NoBuiltin)) {
-                    llvm::Attribute builtin = llvm::Attribute::get(fun->getContext(), llvm::Attribute::Builtin);
-
-                    for (auto u : fun->users()) {
-                        if (auto call = dyn_cast<CallInst>(u)) {
-                            call->removeAttribute(AttributeSet::FunctionIndex, builtin);
-                        }
-                    }
-                }
-
-                fun->replaceAllUsesWith(value);
-            }
-            break;
-        }
-    }
-
-    return true;
-}
-
 
 clang::NamedDecl *
 IRForTarget::DeclForGlobal (const GlobalValue *global_val, Module *module)
@@ -572,7 +341,7 @@ IRForTarget::CreateResultVariable (llvm::Function &llvm_function)
     }
 
 
-    lldb::TargetSP target_sp (m_data_allocator.GetTarget());
+    lldb::TargetSP target_sp (m_execution_unit.GetTarget());
     lldb_private::ExecutionContext exe_ctx (target_sp, true);
     if (m_result_type.GetBitSize(exe_ctx.GetBestExecutionContextScope()) == 0)
     {
@@ -704,7 +473,8 @@ IRForTarget::RewriteObjCConstString (llvm::GlobalVariable *ns_str,
 
         static lldb_private::ConstString g_CFStringCreateWithBytes_str ("CFStringCreateWithBytes");
 
-        if (!m_decl_map->GetFunctionAddress (g_CFStringCreateWithBytes_str, CFStringCreateWithBytes_addr))
+        CFStringCreateWithBytes_addr = m_execution_unit.FindSymbol (g_CFStringCreateWithBytes_str);
+        if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS)
         {
             if (log)
                 log->PutCString("Couldn't find CFStringCreateWithBytes in the target");
@@ -1093,7 +863,8 @@ IRForTarget::RewriteObjCSelector (Instruction* selector_load)
         lldb::addr_t sel_registerName_addr;
 
         static lldb_private::ConstString g_sel_registerName_str ("sel_registerName");
-        if (!m_decl_map->GetFunctionAddress (g_sel_registerName_str, sel_registerName_addr))
+        sel_registerName_addr = m_execution_unit.FindSymbol (g_sel_registerName_str);
+        if (sel_registerName_addr == LLDB_INVALID_ADDRESS)
             return false;
 
         if (log)
@@ -1388,48 +1159,6 @@ IRForTarget::MaterializeInitializer (uint8_t *data, Constant *initializer)
     return false;
 }
 
-bool
-IRForTarget::MaterializeInternalVariable (GlobalVariable *global_variable)
-{
-    if (GlobalVariable::isExternalLinkage(global_variable->getLinkage()))
-        return false;
-
-    if (global_variable == m_reloc_placeholder)
-        return true;
-
-    uint64_t offset = m_data_allocator.GetStream().GetSize();
-
-    llvm::Type *variable_type = global_variable->getType();
-
-    Constant *initializer = global_variable->getInitializer();
-
-    llvm::Type *initializer_type = initializer->getType();
-
-    size_t size = m_target_data->getTypeAllocSize(initializer_type);
-    size_t align = m_target_data->getPrefTypeAlignment(initializer_type);
-
-    const size_t mask = (align - 1);
-    uint64_t aligned_offset = (offset + mask) & ~mask;
-    m_data_allocator.GetStream().PutNHex8(aligned_offset - offset, 0);
-    offset = aligned_offset;
-
-    lldb_private::DataBufferHeap data(size, '\0');
-
-    if (initializer)
-        if (!MaterializeInitializer(data.GetBytes(), initializer))
-            return false;
-
-    m_data_allocator.GetStream().Write(data.GetBytes(), data.GetByteSize());
-
-    Constant *new_pointer = BuildRelocation(variable_type, offset);
-
-    global_variable->replaceAllUsesWith(new_pointer);
-
-    global_variable->eraseFromParent();
-
-    return true;
-}
-
 // This function does not report errors; its callers are responsible.
 bool
 IRForTarget::MaybeHandleVariable (Value *llvm_value_ptr)
@@ -1455,7 +1184,7 @@ IRForTarget::MaybeHandleVariable (Value *llvm_value_ptr)
     else if (GlobalVariable *global_variable = dyn_cast<GlobalVariable>(llvm_value_ptr))
     {
         if (!GlobalValue::isExternalLinkage(global_variable->getLinkage()))
-            return MaterializeInternalVariable(global_variable);
+            return true;
 
         clang::NamedDecl *named_decl = DeclForGlobal(global_variable);
 
@@ -1524,10 +1253,8 @@ IRForTarget::MaybeHandleVariable (Value *llvm_value_ptr)
         {
             if (!global_variable->hasExternalLinkage())
                 return true;
-            else if (HandleSymbol (global_variable))
-                return true;
             else
-                return false;
+                return true;
         }
     }
     else if (dyn_cast<llvm::Function>(llvm_value_ptr))
@@ -1777,231 +1504,6 @@ IRForTarget::ResolveExternals (Function &llvm_function)
 
                 return false;
             }
-        }
-    }
-
-    return true;
-}
-
-bool
-IRForTarget::ReplaceStrings ()
-{
-    lldb_private::Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-
-    typedef std::map <GlobalVariable *, size_t> OffsetsTy;
-
-    OffsetsTy offsets;
-
-    for (GlobalVariable &gv : m_module->globals())
-    {
-        if (!gv.hasInitializer())
-            continue;
-
-        Constant *gc = gv.getInitializer();
-
-        std::string str;
-
-        if (gc->isNullValue())
-        {
-            Type *gc_type = gc->getType();
-
-            ArrayType *gc_array_type = dyn_cast<ArrayType>(gc_type);
-
-            if (!gc_array_type)
-                continue;
-
-            Type *gc_element_type = gc_array_type->getElementType();
-
-            IntegerType *gc_integer_type = dyn_cast<IntegerType>(gc_element_type);
-
-            if (gc_integer_type->getBitWidth() != 8)
-                continue;
-
-            str = "";
-        }
-        else
-        {
-            ConstantDataArray *gc_array = dyn_cast<ConstantDataArray>(gc);
-
-            if (!gc_array)
-                continue;
-
-            if (!gc_array->isCString())
-                continue;
-
-            if (log)
-                log->Printf("Found a GlobalVariable with string initializer %s", PrintValue(gc).c_str());
-
-            str = gc_array->getAsString();
-        }
-
-        offsets[&gv] = m_data_allocator.GetStream().GetSize();
-
-        m_data_allocator.GetStream().Write(str.c_str(), str.length() + 1);
-    }
-
-    Type *char_ptr_ty = Type::getInt8PtrTy(m_module->getContext());
-
-    for (OffsetsTy::iterator oi = offsets.begin(), oe = offsets.end();
-         oi != oe;
-         ++oi)
-    {
-        GlobalVariable *gv = oi->first;
-        size_t offset = oi->second;
-
-        Constant *new_initializer = BuildRelocation(char_ptr_ty, offset);
-
-        if (log)
-            log->Printf("Replacing GV %s with %s", PrintValue(gv).c_str(), PrintValue(new_initializer).c_str());
-
-        for (llvm::User *u : gv->users())
-        {
-            if (log)
-                log->Printf("Found use %s", PrintValue(u).c_str());
-
-            ConstantExpr *const_expr = dyn_cast<ConstantExpr>(u);
-            StoreInst *store_inst = dyn_cast<StoreInst>(u);
-
-            if (const_expr)
-            {
-                if (const_expr->getOpcode() != Instruction::GetElementPtr)
-                {
-                    if (log)
-                        log->Printf("Use (%s) of string variable is not a GetElementPtr constant", PrintValue(const_expr).c_str());
-
-                    return false;
-                }
-
-                Constant *bit_cast = ConstantExpr::getBitCast(new_initializer, const_expr->getOperand(0)->getType());
-                Constant *new_gep = const_expr->getWithOperandReplaced(0, bit_cast);
-
-                const_expr->replaceAllUsesWith(new_gep);
-            }
-            else if (store_inst)
-            {
-                Constant *bit_cast = ConstantExpr::getBitCast(new_initializer, store_inst->getValueOperand()->getType());
-
-                store_inst->setOperand(0, bit_cast);
-            }
-            else
-            {
-                if (log)
-                    log->Printf("Use (%s) of string variable is neither a constant nor a store", PrintValue(const_expr).c_str());
-
-                return false;
-            }
-        }
-
-        gv->eraseFromParent();
-    }
-
-    return true;
-}
-
-bool
-IRForTarget::ReplaceStaticLiterals (llvm::BasicBlock &basic_block)
-{
-    lldb_private::Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-
-    typedef SmallVector <Value*, 2> ConstantList;
-    typedef SmallVector <llvm::Instruction*, 2> UserList;
-    typedef ConstantList::iterator ConstantIterator;
-    typedef UserList::iterator UserIterator;
-
-    ConstantList static_constants;
-    UserList static_users;
-
-    for (BasicBlock::iterator ii = basic_block.begin(), ie = basic_block.end();
-         ii != ie;
-         ++ii)
-    {
-        llvm::Instruction &inst = *ii;
-
-        for (Value *operand_val : inst.operand_values())
-        {
-            ConstantFP *operand_constant_fp = dyn_cast<ConstantFP>(operand_val);
-
-            if (operand_constant_fp/* && operand_constant_fp->getType()->isX86_FP80Ty()*/)
-            {
-                static_constants.push_back(operand_val);
-                static_users.push_back(&*ii);
-            }
-        }
-    }
-
-    ConstantIterator constant_iter;
-    UserIterator user_iter;
-
-    for (constant_iter = static_constants.begin(), user_iter = static_users.begin();
-         constant_iter != static_constants.end();
-         ++constant_iter, ++user_iter)
-    {
-        Value *operand_val = *constant_iter;
-        llvm::Instruction *inst = *user_iter;
-
-        ConstantFP *operand_constant_fp = dyn_cast<ConstantFP>(operand_val);
-
-        if (operand_constant_fp)
-        {
-            Type *operand_type = operand_constant_fp->getType();
-
-            APFloat operand_apfloat = operand_constant_fp->getValueAPF();
-            APInt operand_apint = operand_apfloat.bitcastToAPInt();
-
-            const uint8_t* operand_raw_data = (const uint8_t*)operand_apint.getRawData();
-            size_t operand_data_size = operand_apint.getBitWidth() / 8;
-
-            if (log)
-            {
-                std::string s;
-                raw_string_ostream ss(s);
-                for (size_t index = 0;
-                     index < operand_data_size;
-                     ++index)
-                {
-                    ss << (uint32_t)operand_raw_data[index];
-                    ss << " ";
-                }
-                ss.flush();
-
-                log->Printf("Found ConstantFP with size %" PRIu64 " and raw data %s", (uint64_t)operand_data_size, s.c_str());
-            }
-
-            lldb_private::DataBufferHeap data(operand_data_size, 0);
-
-            if (lldb_private::endian::InlHostByteOrder() != m_data_allocator.GetStream().GetByteOrder())
-            {
-                uint8_t *data_bytes = data.GetBytes();
-
-                for (size_t index = 0;
-                     index < operand_data_size;
-                     ++index)
-                {
-                    data_bytes[index] = operand_raw_data[operand_data_size - (1 + index)];
-                }
-            }
-            else
-            {
-                memcpy(data.GetBytes(), operand_raw_data, operand_data_size);
-            }
-
-            uint64_t offset = m_data_allocator.GetStream().GetSize();
-
-            size_t align = m_target_data->getPrefTypeAlignment(operand_type);
-
-            const size_t mask = (align - 1);
-            uint64_t aligned_offset = (offset + mask) & ~mask;
-            m_data_allocator.GetStream().PutNHex8(aligned_offset - offset, 0);
-
-            m_data_allocator.GetStream().Write(data.GetBytes(), operand_data_size);
-
-            llvm::Type *fp_ptr_ty = operand_constant_fp->getType()->getPointerTo();
-
-            Constant *new_pointer = BuildRelocation(fp_ptr_ty, aligned_offset);
-
-            llvm::LoadInst *fp_load = new llvm::LoadInst(new_pointer, "fp_load", inst);
-
-            operand_constant_fp->replaceAllUsesWith(fp_load);
         }
     }
 
@@ -2437,79 +1939,6 @@ IRForTarget::BuildRelocation(llvm::Type *type, uint64_t offset)
 }
 
 bool
-IRForTarget::CompleteDataAllocation ()
-{
-    lldb_private::Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-
-    if (!m_data_allocator.GetStream().GetSize())
-        return true;
-
-    lldb::addr_t allocation = m_data_allocator.Allocate();
-
-    if (log)
-    {
-        if (allocation)
-            log->Printf("Allocated static data at 0x%llx", (unsigned long long)allocation);
-        else
-            log->Printf("Failed to allocate static data");
-    }
-
-    if (!allocation || allocation == LLDB_INVALID_ADDRESS)
-        return false;
-
-    Constant *relocated_addr = ConstantInt::get(m_intptr_ty, (uint64_t)allocation);
-    Constant *relocated_bitcast = ConstantExpr::getIntToPtr(relocated_addr, llvm::Type::getInt8PtrTy(m_module->getContext()));
-
-    m_reloc_placeholder->replaceAllUsesWith(relocated_bitcast);
-
-    m_reloc_placeholder->eraseFromParent();
-
-    return true;
-}
-
-bool
-IRForTarget::StripAllGVs (Module &llvm_module)
-{
-    lldb_private::Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-    std::vector<GlobalVariable *> global_vars;
-    std::set<GlobalVariable *>erased_vars;
-
-    bool erased = true;
-
-    while (erased)
-    {
-        erased = false;
-
-        for (GlobalVariable &global_var : llvm_module.globals())
-        {
-            global_var.removeDeadConstantUsers();
-
-            if (global_var.use_empty())
-            {
-                if (log)
-                    log->Printf("Did remove %s",
-                                PrintValue(&global_var).c_str());
-                global_var.eraseFromParent();
-                erased = true;
-                break;
-            }
-        }
-    }
-
-    for (GlobalVariable &global_var : llvm_module.globals())
-    {
-        GlobalValue::user_iterator ui = global_var.user_begin();
-
-        if (log)
-            log->Printf("Couldn't remove %s because of %s",
-                        PrintValue(&global_var).c_str(),
-                        PrintValue(*ui).c_str());
-    }
-
-    return true;
-}
-
-bool
 IRForTarget::runOnModule (Module &llvm_module)
 {
     lldb_private::Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
@@ -2650,20 +2079,6 @@ IRForTarget::runOnModule (Module &llvm_module)
         return false;
     }
 
-    ///////////////////////////////
-    // Resolve function pointers
-    //
-
-    if (!ResolveFunctionPointers(llvm_module))
-    {
-        if (log)
-            log->Printf("ResolveFunctionPointers() failed");
-
-        // ResolveFunctionPointers() reports its own errors, so we don't do so here
-
-        return false;
-    }
-
     for (Module::iterator fi = m_module->begin(), fe = m_module->end();
          fi != fe;
          ++fi)
@@ -2705,14 +2120,6 @@ IRForTarget::runOnModule (Module &llvm_module)
 
                 return false;
             }
-
-            if (!ReplaceStaticLiterals(*bbi))
-            {
-                if (log)
-                    log->Printf("ReplaceStaticLiterals() failed");
-
-                return false;
-            }
         }
     }
 
@@ -2738,28 +2145,6 @@ IRForTarget::runOnModule (Module &llvm_module)
         // ReplaceVariables() reports its own errors, so we don't do so here
 
         return false;
-    }
-
-    if (!ReplaceStrings())
-    {
-        if (log)
-            log->Printf("ReplaceStrings() failed");
-
-        return false;
-    }
-
-    if (!CompleteDataAllocation())
-    {
-        if (log)
-            log->Printf("CompleteDataAllocation() failed");
-
-        return false;
-    }
-
-    if (!StripAllGVs(llvm_module))
-    {
-        if (log)
-            log->Printf("StripAllGVs() failed");
     }
 
     if (log && log->GetVerbose())
