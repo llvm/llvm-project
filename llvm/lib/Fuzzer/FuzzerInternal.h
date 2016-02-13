@@ -12,6 +12,7 @@
 #ifndef LLVM_FUZZER_INTERNAL_H
 #define LLVM_FUZZER_INTERNAL_H
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <climits>
@@ -98,6 +99,17 @@ bool IsASCII(const Unit &U);
 int NumberOfCpuCores();
 int GetPid();
 
+class Random {
+ public:
+  Random(unsigned int seed) : R(seed) {}
+  size_t Rand() { return R(); }
+  size_t RandBool() { return Rand() % 2; }
+  size_t operator()(size_t n) { return n ? Rand() % n : 0; }
+  std::mt19937 &Get_mt19937() { return R; }
+ private:
+  std::mt19937 R;
+};
+
 // Dictionary.
 
 // Parses one dictionary entry.
@@ -108,10 +120,62 @@ bool ParseOneDictionaryEntry(const std::string &Str, Unit *U);
 // were parsed succesfully.
 bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units);
 
+class DictionaryEntry {
+ public:
+  DictionaryEntry() {}
+  DictionaryEntry(Word W) : W(W) {}
+  DictionaryEntry(Word W, size_t PositionHint) : W(W), PositionHint(PositionHint) {}
+  const Word &GetW() const { return W; }
+
+  bool HasPositionHint() const { return PositionHint != std::numeric_limits<size_t>::max(); }
+  size_t GetPositionHint() const {
+    assert(HasPositionHint());
+    return PositionHint;
+  }
+  void IncUseCount() { UseCount++; }
+  void IncSuccessCount() { SuccessCount++; }
+  size_t GetUseCount() const { return UseCount; }
+  size_t GetSuccessCount() const {return SuccessCount; }
+
+private:
+  Word W;
+  size_t PositionHint = std::numeric_limits<size_t>::max();
+  size_t UseCount = 0;
+  size_t SuccessCount = 0;
+};
+
+class Dictionary {
+ public:
+  static const size_t kMaxDictSize = 1 << 14;
+
+  bool ContainsWord(const Word &W) const {
+    return std::any_of(begin(), end(), [&](const DictionaryEntry &DE) {
+      return DE.GetW() == W;
+    });
+  }
+  const DictionaryEntry *begin() const { return &DE[0]; }
+  const DictionaryEntry *end() const { return begin() + Size; }
+  DictionaryEntry & operator[] (size_t Idx) {
+    assert(Idx < Size);
+    return DE[Idx];
+  }
+  void push_back(DictionaryEntry DE) {
+    if (Size < kMaxDictSize)
+      this->DE[Size++] = DE;
+  }
+  void clear() { Size = 0; }
+  bool empty() const { return Size == 0; }
+  size_t size() const { return Size; }
+
+private:
+  DictionaryEntry DE[kMaxDictSize];
+  size_t Size = 0;
+};
+
 class MutationDispatcher {
 public:
-  MutationDispatcher(FuzzerRandomBase &Rand);
-  ~MutationDispatcher();
+  MutationDispatcher(Random &Rand) : Rand(Rand) {}
+  ~MutationDispatcher() {}
   /// Indicate that we are about to start a new sequence of mutations.
   void StartMutationSequence();
   /// Print the current sequence of mutations.
@@ -161,12 +225,34 @@ public:
   void ClearAutoDictionary();
   void PrintRecommendedDictionary();
 
-  void SetCorpus(const std::vector<Unit> *Corpus);
+  void SetCorpus(const std::vector<Unit> *Corpus) { this->Corpus = Corpus; }
+
+  Random &GetRand() { return Rand; }
 
 private:
-  FuzzerRandomBase &Rand;
-  struct Impl;
-  Impl *MDImpl;
+
+  struct Mutator {
+    size_t (MutationDispatcher::*Fn)(uint8_t *Data, size_t Size, size_t Max);
+    const char *Name;
+  };
+
+  size_t AddWordFromDictionary(Dictionary &D, uint8_t *Data, size_t Size,
+                               size_t MaxSize);
+
+  Random &Rand;
+  // Dictionary provided by the user via -dict=DICT_FILE.
+  Dictionary ManualDictionary;
+  // Temporary dictionary modified by the fuzzer itself,
+  // recreated periodically.
+  Dictionary TempAutoDictionary;
+  // Persistent dictionary modified by the fuzzer, consists of
+  // entries that led to successfull discoveries in the past mutations.
+  Dictionary PersistentAutoDictionary;
+  std::vector<Mutator> CurrentMutatorSequence;
+  std::vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
+  const std::vector<Unit> *Corpus = nullptr;
+
+  static Mutator Mutators[];
 };
 
 class Fuzzer {
@@ -202,7 +288,7 @@ public:
     bool OutputCSV = false;
     bool PrintNewCovPcs = false;
   };
-  Fuzzer(UserSuppliedFuzzer &USF, FuzzingOptions Options);
+  Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options);
   void AddToCorpus(const Unit &U) {
     Corpus.push_back(U);
     UpdateCorpusDistribution();
@@ -236,6 +322,7 @@ public:
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const std::vector<std::string> &Corpora);
+  MutationDispatcher &GetMD() { return MD; }
 
 private:
   void AlarmCallback();
@@ -289,14 +376,9 @@ private:
     return Res;
   }
 
-  // TODO(krasin): remove GetRand from UserSuppliedFuzzer,
-  // and fully rely on the generator and the seed.
-  // The user supplied fuzzer will have a way to access the
-  // generator for its own purposes (like seeding the custom
-  // PRNG).
-  std::mt19937 Generator;
   std::piecewise_constant_distribution<double> CorpusDistribution;
-  UserSuppliedFuzzer &USF;
+  UserCallback CB;
+  MutationDispatcher &MD;
   FuzzingOptions Options;
   system_clock::time_point ProcessStartTime = system_clock::now();
   system_clock::time_point LastExternalSync = system_clock::now();
@@ -306,19 +388,6 @@ private:
   size_t LastRecordedBlockCoverage = 0;
   size_t LastRecordedCallerCalleeCoverage = 0;
   size_t LastCoveragePcBufferLen = 0;
-};
-
-class SimpleUserSuppliedFuzzer : public UserSuppliedFuzzer {
-public:
-  SimpleUserSuppliedFuzzer(FuzzerRandomBase *Rand, UserCallback Callback)
-      : UserSuppliedFuzzer(Rand), Callback(Callback) {}
-
-  virtual int TargetFunction(const uint8_t *Data, size_t Size) override {
-    return Callback(Data, Size);
-  }
-
-private:
-  UserCallback Callback = nullptr;
 };
 
 }; // namespace fuzzer

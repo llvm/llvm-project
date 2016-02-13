@@ -174,9 +174,9 @@ static bool RecordingMemcmp = false;
 
 class TraceState {
  public:
-   TraceState(UserSuppliedFuzzer &USF, const Fuzzer::FuzzingOptions &Options,
+   TraceState(MutationDispatcher &MD, const Fuzzer::FuzzingOptions &Options,
               uint8_t **CurrentUnitData, size_t *CurrentUnitSize)
-       : USF(USF), Options(Options), CurrentUnitData(CurrentUnitData),
+       : MD(MD), Options(Options), CurrentUnitData(CurrentUnitData),
          CurrentUnitSize(CurrentUnitSize) {
      // Current trace collection is not thread-friendly and it probably
      // does not have to be such, but at least we should not crash in presence
@@ -210,7 +210,7 @@ class TraceState {
     RecordingTraces = Options.UseTraces;
     RecordingMemcmp = Options.UseMemcmp;
     NumMutations = 0;
-    USF.GetMD().ClearAutoDictionary();
+    MD.ClearAutoDictionary();
   }
 
   void StopTraceRecording() {
@@ -237,7 +237,7 @@ class TraceState {
           }
         }
       }
-      USF.GetMD().AddWordToAutoDictionary(M.W, M.Pos);
+      MD.AddWordToAutoDictionary(M.W, M.Pos);
     }
   }
 
@@ -271,7 +271,7 @@ class TraceState {
     size_t Diff = NumMutations - FirstN;
     size_t DiffLog = sizeof(long) * 8 - __builtin_clzl((long)Diff);
     assert(DiffLog > 0 && DiffLog < 64);
-    bool WantThisOne = USF.GetRand()(1 << DiffLog) == 0;  // 1 out of DiffLog.
+    bool WantThisOne = MD.GetRand()(1 << DiffLog) == 0;  // 1 out of DiffLog.
     return WantThisOne;
   }
 
@@ -279,7 +279,7 @@ class TraceState {
   size_t NumMutations;
   TraceBasedMutation Mutations[kMaxMutations];
   LabelRange LabelRanges[1 << (sizeof(dfsan_label) * 8)];
-  UserSuppliedFuzzer &USF;
+  MutationDispatcher &MD;
   const Fuzzer::FuzzingOptions &Options;
   uint8_t **CurrentUnitData;
   size_t *CurrentUnitSize;
@@ -486,7 +486,7 @@ void Fuzzer::AssignTaintLabels(uint8_t *Data, size_t Size) {
 
 void Fuzzer::InitializeTraceState() {
   if (!Options.UseTraces && !Options.UseMemcmp) return;
-  TS = new TraceState(USF, Options, &CurrentUnitData, &CurrentUnitSize);
+  TS = new TraceState(MD, Options, &CurrentUnitData, &CurrentUnitSize);
   if (ReallyHaveDFSan()) {
     for (size_t i = 0; i < static_cast<size_t>(Options.MaxLen); i++) {
       dfsan_label L = dfsan_create_label("input", (void *)(i + 1));

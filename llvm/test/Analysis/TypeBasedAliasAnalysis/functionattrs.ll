@@ -43,13 +43,13 @@ define void @test1_no(i32* %p) nounwind {
 ; This is unusual, since the function is memcpy, but as above, this
 ; isn't necessarily invalid.
 
-; CHECK: define void @test2_yes(i8* nocapture %p, i8* nocapture %q, i64 %n) #0 {
+; CHECK: define void @test2_yes(i8* nocapture %p, i8* nocapture %q, i64 %n) #4 {
 define void @test2_yes(i8* %p, i8* %q, i64 %n) nounwind {
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %p, i8* %q, i64 %n, i32 1, i1 false), !tbaa !1
   ret void
 }
 
-; CHECK: define void @test2_no(i8* nocapture %p, i8* nocapture readonly %q, i64 %n) #1 {
+; CHECK: define void @test2_no(i8* nocapture %p, i8* nocapture readonly %q, i64 %n) #3 {
 define void @test2_no(i8* %p, i8* %q, i64 %n) nounwind {
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %p, i8* %q, i64 %n, i32 1, i1 false), !tbaa !2
   ret void
@@ -76,7 +76,8 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i32, i1) nounwind
 ; CHECK: attributes #1 = { norecurse nounwind }
 ; CHECK: attributes #2 = { nounwind readonly }
 ; CHECK: attributes #3 = { nounwind }
-; CHECK: attributes #4 = { argmemonly nounwind }
+; CHECK: attributes #4 = { nounwind readnone }
+; CHECK: attributes #5 = { argmemonly nounwind }
 
 ; Root note.
 !0 = !{ }

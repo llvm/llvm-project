@@ -16,6 +16,7 @@ set(Tests
   BufferOverflowOnInput
   CallerCalleeTest
   CounterTest
+  CustomMutatorTest
   FourIndependentBranchesTest
   FullCoverageSetTest
   InitializeTest
@@ -36,7 +37,6 @@ set(Tests
   )
 
 set(CustomMainTests
-  UserSuppliedFuzzerTest
   )
 
 set(UninstrumentedTests

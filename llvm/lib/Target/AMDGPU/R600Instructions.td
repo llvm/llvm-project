@@ -1101,7 +1101,7 @@ class RECIP_UINT_Common <bits<11> inst> : R600_1OP_Helper <
 
 // Clamped to maximum.
 class RECIPSQRT_CLAMPED_Common <bits<11> inst> : R600_1OP_Helper <
-  inst, "RECIPSQRT_CLAMPED", AMDGPUrsq_clamped
+  inst, "RECIPSQRT_CLAMPED", AMDGPUrsq_clamp
 > {
   let Itinerary = TransALU;
 }

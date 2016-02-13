@@ -109,4 +109,15 @@ def : Pat <
   (S_BUFFER_LOAD_DWORD_IMM $sbase, (as_i32imm $offset))
 >;
 
+//===----------------------------------------------------------------------===//
+// DPP Paterns
+//===----------------------------------------------------------------------===//
+
+def : Pat <
+  (int_amdgcn_mov_dpp i32:$src, imm:$dpp_ctrl, imm:$bound_ctrl,
+                      imm:$bank_mask, imm:$row_mask),
+  (V_MOV_B32_dpp $src, (as_i32imm $dpp_ctrl), (as_i1imm $bound_ctrl),
+                       (as_i32imm $bank_mask), (as_i32imm $row_mask))
+>;
+
 } // End Predicates = [isVI]

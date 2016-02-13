@@ -15,22 +15,20 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUIntrinsicInfo.h"
 #include "AMDGPUISelLowering.h" // For AMDGPUISD
-#include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
-#include "R600InstrInfo.h"
-#include "SIDefines.h"
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Function.h"
 
 using namespace llvm;
+
+namespace llvm {
+class R600InstrInfo;
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction Selector Implementation
@@ -651,11 +649,6 @@ bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
 const char *AMDGPUDAGToDAGISel::getPassName() const {
   return "AMDGPU DAG->DAG Pattern Instruction Selection";
 }
-
-#ifdef DEBUGTMP
-#undef INT64_C
-#endif
-#undef DEBUGTMP
 
 //===----------------------------------------------------------------------===//
 // Complex Patterns

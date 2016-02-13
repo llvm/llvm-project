@@ -439,10 +439,8 @@ static void printFileSectionSizes(StringRef file) {
 
   // Attempt to open the binary.
   ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(file);
-  if (std::error_code EC = BinaryOrErr.getError()) {
-    errs() << ToolName << ": " << file << ": " << EC.message() << ".\n";
+  if (error(BinaryOrErr.getError()))
     return;
-  }
   Binary &Bin = *BinaryOrErr.get().getBinary();
 
   if (Archive *a = dyn_cast<Archive>(&Bin)) {
@@ -450,17 +448,11 @@ static void printFileSectionSizes(StringRef file) {
     for (object::Archive::child_iterator i = a->child_begin(),
                                          e = a->child_end();
          i != e; ++i) {
-      if (i->getError()) {
-        errs() << ToolName << ": " << file << ": " << i->getError().message()
-               << ".\n";
+      if (error(i->getError()))
         exit(1);
-      }
-      auto &c = i->get();
-      ErrorOr<std::unique_ptr<Binary>> ChildOrErr = c.getAsBinary();
-      if (std::error_code EC = ChildOrErr.getError()) {
-        errs() << ToolName << ": " << file << ": " << EC.message() << ".\n";
+      ErrorOr<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
+      if (error(ChildOrErr.getError()))
         continue;
-      }
       if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
         MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
         if (!checkMachOAndArchFlags(o, file))
@@ -518,18 +510,11 @@ static void printFileSectionSizes(StringRef file) {
               for (object::Archive::child_iterator i = UA->child_begin(),
                                                    e = UA->child_end();
                    i != e; ++i) {
-                if (std::error_code EC = i->getError()) {
-                  errs() << ToolName << ": " << file << ": " << EC.message()
-                         << ".\n";
+                if (error(i->getError()))
                   exit(1);
-                }
-                auto &c = i->get();
-                ErrorOr<std::unique_ptr<Binary>> ChildOrErr = c.getAsBinary();
-                if (std::error_code EC = ChildOrErr.getError()) {
-                  errs() << ToolName << ": " << file << ": " << EC.message()
-                         << ".\n";
+                ErrorOr<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
+                if (error(ChildOrErr.getError()))
                   continue;
-                }
                 if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
                   MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
                   if (OutputFormat == sysv)
@@ -601,18 +586,11 @@ static void printFileSectionSizes(StringRef file) {
             for (object::Archive::child_iterator i = UA->child_begin(),
                                                  e = UA->child_end();
                  i != e; ++i) {
-              if (std::error_code EC = i->getError()) {
-                errs() << ToolName << ": " << file << ": " << EC.message()
-                       << ".\n";
+              if (error(i->getError()))
                 exit(1);
-              }
-              auto &c = i->get();
-              ErrorOr<std::unique_ptr<Binary>> ChildOrErr = c.getAsBinary();
-              if (std::error_code EC = ChildOrErr.getError()) {
-                errs() << ToolName << ": " << file << ": " << EC.message()
-                       << ".\n";
+              ErrorOr<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
+              if (error(ChildOrErr.getError()))
                 continue;
-              }
               if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
                 MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
                 if (OutputFormat == sysv)
@@ -671,16 +649,11 @@ static void printFileSectionSizes(StringRef file) {
         for (object::Archive::child_iterator i = UA->child_begin(),
                                              e = UA->child_end();
              i != e; ++i) {
-          if (std::error_code EC = i->getError()) {
-            errs() << ToolName << ": " << file << ": " << EC.message() << ".\n";
+          if (error(i->getError()))
             exit(1);
-          }
-          auto &c = i->get();
-          ErrorOr<std::unique_ptr<Binary>> ChildOrErr = c.getAsBinary();
-          if (std::error_code EC = ChildOrErr.getError()) {
-            errs() << ToolName << ": " << file << ": " << EC.message() << ".\n";
+          ErrorOr<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
+          if (error(ChildOrErr.getError()))
             continue;
-          }
           if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
             MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
             if (OutputFormat == sysv)
