@@ -423,6 +423,7 @@ protected:
   void SetupModule() { OldM = new Module("", C); }
 
   void CreateOldModule() {
+    DIBuilder DBuilder(*OldM);
     IRBuilder<> IBuilder(C);
 
     auto *FuncType = FunctionType::get(Type::getVoidTy(C), false);
@@ -431,9 +432,25 @@ protected:
     auto *F =
         Function::Create(FuncType, GlobalValue::PrivateLinkage, "f", OldM);
     F->setPersonalityFn(PersFn);
+
+    // Create debug info
+    auto *File = DBuilder.createFile("filename.c", "/file/dir/");
+    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray(None);
+    DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
+    auto *CU =
+        DBuilder.createCompileUnit(dwarf::DW_LANG_C99, "filename.c",
+                                   "/file/dir", "CloneModule", false, "", 0);
+    // Function DI
+    auto *Subprogram = DBuilder.createFunction(CU, "f", "f", File, 4, DFuncType,
+                                               true, true, 3, 0, false);
+    F->setSubprogram(Subprogram);
+
     auto *Entry = BasicBlock::Create(C, "", F);
     IBuilder.SetInsertPoint(Entry);
     IBuilder.CreateRetVoid();
+
+    // Finalize the debug info
+    DBuilder.finalize();
   }
 
   void CreateNewModule() { NewM = llvm::CloneModule(OldM).release(); }
@@ -447,4 +464,12 @@ TEST_F(CloneModule, Verify) {
   EXPECT_FALSE(verifyModule(*NewM));
 }
 
+TEST_F(CloneModule, Subprogram) {
+  Function *NewF = NewM->getFunction("f");
+  DISubprogram *SP = NewF->getSubprogram();
+  EXPECT_TRUE(SP != nullptr);
+  EXPECT_EQ(SP->getName(), "f");
+  EXPECT_EQ(SP->getFile()->getFilename(), "filename.c");
+  EXPECT_EQ(SP->getLine(), (unsigned)4);
+}
 }
