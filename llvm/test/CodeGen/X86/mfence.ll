@@ -1,8 +1,11 @@
-; RUN: llc < %s -march=x86 -mattr=+sse2 | not grep sfence
-; RUN: llc < %s -march=x86 -mattr=+sse2 | not grep lfence
-; RUN: llc < %s -march=x86 -mattr=+sse2 | grep mfence
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=+sse2 | FileCheck %s
 
 define void @test() {
+; CHECK-LABEL: test:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    mfence
+; CHECK-NEXT:    retl
   fence seq_cst
   ret void
 }
+

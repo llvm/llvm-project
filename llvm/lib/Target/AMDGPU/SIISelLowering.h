@@ -60,6 +60,8 @@ class SITargetLowering : public AMDGPUTargetLowering {
 
   bool isLegalFlatAddressingMode(const AddrMode &AM) const;
   bool isLegalMUBUFAddressingMode(const AddrMode &AM) const;
+
+  bool isCFIntrinsic(const SDNode *Intr) const;
 public:
   SITargetLowering(TargetMachine &tm, const AMDGPUSubtarget &STI);
 

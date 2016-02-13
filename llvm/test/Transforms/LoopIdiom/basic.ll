@@ -531,3 +531,36 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK: call void @llvm.memcpy
 ; CHECK: ret
 }
+
+; Two dimensional nested loop with negative stride should be promoted to one big memset.
+define void @test19(i8* nocapture %X) {
+entry:
+  br label %for.cond1.preheader
+
+for.cond1.preheader:                              ; preds = %entry, %for.inc4
+  %i.06 = phi i32 [ 99, %entry ], [ %dec5, %for.inc4 ]
+  %mul = mul nsw i32 %i.06, 100
+  br label %for.body3
+
+for.body3:                                        ; preds = %for.cond1.preheader, %for.body3
+  %j.05 = phi i32 [ 99, %for.cond1.preheader ], [ %dec, %for.body3 ]
+  %add = add nsw i32 %j.05, %mul
+  %idxprom = sext i32 %add to i64
+  %arrayidx = getelementptr inbounds i8, i8* %X, i64 %idxprom
+  store i8 0, i8* %arrayidx, align 1
+  %dec = add nsw i32 %j.05, -1
+  %cmp2 = icmp sgt i32 %j.05, 0
+  br i1 %cmp2, label %for.body3, label %for.inc4
+
+for.inc4:                                         ; preds = %for.body3
+  %dec5 = add nsw i32 %i.06, -1
+  %cmp = icmp sgt i32 %i.06, 0
+  br i1 %cmp, label %for.cond1.preheader, label %for.end6
+
+for.end6:                                         ; preds = %for.inc4
+  ret void
+; CHECK-LABEL: @test19(
+; CHECK: entry:
+; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %X, i8 0, i64 10000, i32 1, i1 false)
+; CHECK: ret void
+}

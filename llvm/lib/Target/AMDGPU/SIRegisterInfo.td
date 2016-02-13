@@ -81,6 +81,11 @@ foreach Index = 0-255 in {
 //  Groupings using register classes and tuples
 //===----------------------------------------------------------------------===//
 
+def SCC_CLASS : RegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
+  let CopyCost = -1;
+  let isAllocatable = 0;
+}
+
 // TODO: Do we need to set DwarfRegAlias on register tuples?
 
 // SGPR 32-bit registers

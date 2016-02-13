@@ -299,6 +299,26 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(3U, ValueData[3].Count);
   ASSERT_EQ(2000U, ValueData[4].Value);
   ASSERT_EQ(2U, ValueData[4].Count);
+
+  // Remove the MD_prof metadata 
+  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  // Annotate with 4 records.
+  InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4}, {4000, 3},
+                              {5000, 2}, {6000, 1}};
+  annotateValueSite(*M, *Inst, &VD0Sorted[2], 4, 10, IPVK_IndirectCallTarget, 5);
+  Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
+                                      ValueData, N, T);
+  ASSERT_TRUE(Res);
+  ASSERT_EQ(4U, N);
+  ASSERT_EQ(10U, T);
+  ASSERT_EQ(3000U, ValueData[0].Value);
+  ASSERT_EQ(4U, ValueData[0].Count);
+  ASSERT_EQ(4000U, ValueData[1].Value);
+  ASSERT_EQ(3U, ValueData[1].Count);
+  ASSERT_EQ(5000U, ValueData[2].Value);
+  ASSERT_EQ(2U, ValueData[2].Count);
+  ASSERT_EQ(6000U, ValueData[3].Value);
+  ASSERT_EQ(1U, ValueData[3].Count);
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_with_weight) {

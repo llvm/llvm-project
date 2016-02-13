@@ -191,10 +191,98 @@ static uint64_t blockToOffset(uint64_t BlockNumber, uint64_t BlockSize) {
   return BlockNumber * BlockSize;
 }
 
+struct PDBStructureContext {
+  const PDB::SuperBlock *SB;
+  MemoryBufferRef M;
+  std::vector<uint32_t> StreamSizes;
+  DenseMap<uint32_t, std::vector<uint32_t>> StreamMap;
+
+  SmallVector<char, 512> Scratch;
+
+  // getObject tries to stitch together non-contiguous blocks into a contiguous
+  // value.  The storage for the value comes from the memory mapped file if the
+  // memory would be contiguous.  Otherwise, it uses 'Scratch' to buffer the
+  // data.
+  template <typename T>
+  void getObject(const T *&Obj, uint32_t StreamIdx, uint32_t &Offset) {
+    // Make sure the stream index is valid.
+    auto StreamBlockI = StreamMap.find(StreamIdx);
+    if (StreamBlockI == StreamMap.end())
+      reportError(M.getBufferIdentifier(),
+                  std::make_error_code(std::errc::bad_address));
+
+    auto &StreamBlocks = StreamBlockI->second;
+    uint32_t BlockNum = Offset / SB->BlockSize;
+    uint32_t OffsetInBlock = Offset % SB->BlockSize;
+
+    // Make sure we aren't trying to read beyond the end of the stream.
+    if (Offset + sizeof(T) > StreamSizes[StreamIdx])
+      reportError(M.getBufferIdentifier(),
+                  std::make_error_code(std::errc::bad_address));
+
+    // Modify the passed in offset to point to the data after the object.
+    Offset += sizeof(T);
+
+    // Handle the contiguous case: the offset + size stays within a block.
+    if (OffsetInBlock + sizeof(T) <= SB->BlockSize) {
+      uint32_t StreamBlockAddr = StreamBlocks[BlockNum];
+      uint64_t StreamBlockOffset =
+          blockToOffset(StreamBlockAddr, SB->BlockSize) + OffsetInBlock;
+      // Return a pointer to the memory buffer.
+      Obj = reinterpret_cast<const T *>(M.getBufferStart() + StreamBlockOffset);
+      return;
+    }
+
+    // The non-contiguous case: we will stitch together non-contiguous chunks
+    // into the scratch buffer.
+    Scratch.clear();
+
+    uint32_t BytesLeft = sizeof(T);
+    while (BytesLeft > 0) {
+      uint32_t StreamBlockAddr = StreamBlocks[BlockNum];
+      uint64_t StreamBlockOffset =
+          blockToOffset(StreamBlockAddr, SB->BlockSize) + OffsetInBlock;
+
+      const char *ChunkStart =
+          M.getBufferStart() + StreamBlockOffset;
+      uint32_t BytesInChunk =
+          std::min(BytesLeft, SB->BlockSize - OffsetInBlock);
+      Scratch.append(ChunkStart, ChunkStart + BytesInChunk);
+
+      BytesLeft -= BytesInChunk;
+      ++BlockNum;
+      OffsetInBlock = 0;
+    }
+
+    // Return a pointer to the scratch buffer.
+    Obj = reinterpret_cast<const T *>(Scratch.data());
+  }
+
+  template <typename T>
+  T getInt(uint32_t StreamIdx, uint32_t &Offset) {
+    const support::detail::packed_endian_specific_integral<
+        T, support::little, support::unaligned> *P;
+    getObject(P, StreamIdx, Offset);
+    return *P;
+  }
+
+  template <typename T>
+  T getObject(uint32_t StreamIdx, uint32_t &Offset) {
+    const T *P;
+    getObject(P, StreamIdx, Offset);
+    return *P;
+  }
+};
+
 static void dumpStructure(MemoryBufferRef M) {
   const PDB::SuperBlock *SB;
-  if (auto EC = getObject(SB, M, M.getBufferStart()))
-    reportError(M.getBufferIdentifier(), EC);
+
+  auto Error = [&](std::error_code EC) {
+    if (EC)
+      reportError(M.getBufferIdentifier(), EC);
+  };
+
+  Error(getObject(SB, M, M.getBufferStart()));
 
   if (opts::DumpHeaders) {
     outs() << "BlockSize: " << SB->BlockSize << '\n';
@@ -207,13 +295,11 @@ static void dumpStructure(MemoryBufferRef M) {
 
   // We don't support blocksizes which aren't a multiple of four bytes.
   if (SB->BlockSize % sizeof(support::ulittle32_t) != 0)
-    reportError(M.getBufferIdentifier(),
-                std::make_error_code(std::errc::illegal_byte_sequence));
+    Error(std::make_error_code(std::errc::not_supported));
 
   // We don't support directories whose sizes aren't a multiple of four bytes.
   if (SB->NumDirectoryBytes % sizeof(support::ulittle32_t) != 0)
-    reportError(M.getBufferIdentifier(),
-                std::make_error_code(std::errc::illegal_byte_sequence));
+    Error(std::make_error_code(std::errc::not_supported));
 
   // The number of blocks which comprise the directory is a simple function of
   // the number of bytes it contains.
@@ -227,9 +313,7 @@ static void dumpStructure(MemoryBufferRef M) {
   // It is unclear what would happen if the number of blocks couldn't fit on a
   // single block.
   if (NumDirectoryBlocks > SB->BlockSize / sizeof(support::ulittle32_t))
-    reportError(M.getBufferIdentifier(),
-                std::make_error_code(std::errc::illegal_byte_sequence));
-
+    Error(std::make_error_code(std::errc::illegal_byte_sequence));
 
   uint64_t BlockMapOffset = (uint64_t)SB->BlockMapAddr * SB->BlockSize;
   if (opts::DumpHeaders)
@@ -242,8 +326,7 @@ static void dumpStructure(MemoryBufferRef M) {
       makeArrayRef(reinterpret_cast<const support::ulittle32_t *>(
                        M.getBufferStart() + BlockMapOffset),
                    NumDirectoryBlocks);
-  if (auto EC = checkOffset(M, DirectoryBlocks))
-    reportError(M.getBufferIdentifier(), EC);
+  Error(checkOffset(M, DirectoryBlocks));
 
   if (opts::DumpHeaders) {
     outs() << "DirectoryBlocks: [";
@@ -257,10 +340,11 @@ static void dumpStructure(MemoryBufferRef M) {
 
   bool SeenNumStreams = false;
   uint32_t NumStreams = 0;
-  std::vector<uint32_t> StreamSizes;
-  DenseMap<uint32_t, std::vector<uint32_t>> StreamMap;
   uint32_t StreamIdx = 0;
   uint64_t DirectoryBytesRead = 0;
+  PDBStructureContext Ctx;
+  Ctx.SB = SB;
+  Ctx.M = M;
   // The structure of the directory is as follows:
   //    struct PDBDirectory {
   //      uint32_t NumStreams;
@@ -276,8 +360,7 @@ static void dumpStructure(MemoryBufferRef M) {
         makeArrayRef(reinterpret_cast<const support::ulittle32_t *>(
                          M.getBufferStart() + DirectoryBlockOffset),
                      SB->BlockSize / sizeof(support::ulittle32_t));
-    if (auto EC = checkOffset(M, DirectoryBlock))
-      reportError(M.getBufferIdentifier(), EC);
+    Error(checkOffset(M, DirectoryBlock));
 
     // We read data out of the directory four bytes at a time.  Depending on
     // where we are in the directory, the contents may be: the number of streams
@@ -296,13 +379,13 @@ static void dumpStructure(MemoryBufferRef M) {
         continue;
       }
       // This data must be a stream size if we have not seen them all yet.
-      if (StreamSizes.size() < NumStreams) {
+      if (Ctx.StreamSizes.size() < NumStreams) {
         // It seems like some streams have their set to -1 when their contents
         // are not present.  Treat them like empty streams for now.
         if (Data == UINT32_MAX)
-          StreamSizes.push_back(0);
+          Ctx.StreamSizes.push_back(0);
         else
-          StreamSizes.push_back(Data);
+          Ctx.StreamSizes.push_back(Data);
         continue;
       }
 
@@ -312,8 +395,8 @@ static void dumpStructure(MemoryBufferRef M) {
       // Figure out which stream this block number belongs to.
       while (StreamIdx < NumStreams) {
         uint64_t NumExpectedStreamBlocks =
-            bytesToBlocks(StreamSizes[StreamIdx], SB->BlockSize);
-        StreamBlocks = &StreamMap[StreamIdx];
+            bytesToBlocks(Ctx.StreamSizes[StreamIdx], SB->BlockSize);
+        StreamBlocks = &Ctx.StreamMap[StreamIdx];
         if (NumExpectedStreamBlocks > StreamBlocks->size())
           break;
         ++StreamIdx;
@@ -321,8 +404,7 @@ static void dumpStructure(MemoryBufferRef M) {
       // It seems this block doesn't belong to any stream?  The stream is either
       // corrupt or something more mysterious is going on.
       if (StreamIdx == NumStreams)
-        reportError(M.getBufferIdentifier(),
-                    std::make_error_code(std::errc::illegal_byte_sequence));
+        Error(std::make_error_code(std::errc::illegal_byte_sequence));
 
       StreamBlocks->push_back(Data);
     }
@@ -335,13 +417,13 @@ static void dumpStructure(MemoryBufferRef M) {
     outs() << "NumStreams: " << NumStreams << '\n';
   if (opts::DumpStreamSizes)
     for (uint32_t StreamIdx = 0; StreamIdx < NumStreams; ++StreamIdx)
-      outs() << "StreamSizes[" << StreamIdx << "]: " << StreamSizes[StreamIdx]
-             << '\n';
+      outs() << "StreamSizes[" << StreamIdx
+             << "]: " << Ctx.StreamSizes[StreamIdx] << '\n';
 
   if (opts::DumpStreamBlocks) {
     for (uint32_t StreamIdx = 0; StreamIdx < NumStreams; ++StreamIdx) {
       outs() << "StreamBlocks[" << StreamIdx << "]: [";
-      std::vector<uint32_t> &StreamBlocks = StreamMap[StreamIdx];
+      std::vector<uint32_t> &StreamBlocks = Ctx.StreamMap[StreamIdx];
       for (uint32_t &StreamBlock : StreamBlocks) {
         if (&StreamBlock != &StreamBlocks.front())
           outs() << ", ";
@@ -356,8 +438,8 @@ static void dumpStructure(MemoryBufferRef M) {
   if (!DumpStreamStr.getAsInteger(/*Radix=*/0U, DumpStreamNum) &&
       DumpStreamNum < NumStreams) {
     uint32_t StreamBytesRead = 0;
-    uint32_t StreamSize = StreamSizes[DumpStreamNum];
-    std::vector<uint32_t> &StreamBlocks = StreamMap[DumpStreamNum];
+    uint32_t StreamSize = Ctx.StreamSizes[DumpStreamNum];
+    std::vector<uint32_t> &StreamBlocks = Ctx.StreamMap[DumpStreamNum];
     for (uint32_t &StreamBlockAddr : StreamBlocks) {
       uint64_t StreamBlockOffset = blockToOffset(StreamBlockAddr, SB->BlockSize);
       uint32_t BytesLeftToReadInStream = StreamSize - StreamBytesRead;
@@ -368,12 +450,154 @@ static void dumpStructure(MemoryBufferRef M) {
           BytesLeftToReadInStream, static_cast<uint32_t>(SB->BlockSize));
       auto StreamBlockData =
           StringRef(M.getBufferStart() + StreamBlockOffset, BytesToReadInBlock);
-      if (auto EC = checkOffset(M, StreamBlockData))
-        reportError(M.getBufferIdentifier(), EC);
+      Error(checkOffset(M, StreamBlockData));
 
       outs() << StreamBlockData;
       StreamBytesRead += StreamBlockData.size();
     }
+  }
+
+  uint32_t Offset = 0;
+
+  // Stream 1 starts with the following header:
+  //   uint32_t Version;
+  //   uint32_t Signature;
+  //   uint32_t Age;
+  //   GUID Guid;
+  auto Version = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+  outs() << "Version: " << Version << '\n';
+
+  // PDB's with versions before PDBImpvVC70 might not have the Guid field, we
+  // don't support them.
+  if (Version < 20000404)
+    Error(std::make_error_code(std::errc::not_supported));
+
+  // This appears to be the time the PDB was last opened by an MSVC tool?
+  // It is definitely a timestamp of some sort.
+  auto Signature = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+  outs() << "Signature: ";
+  outs().write_hex(Signature) << '\n';
+
+  // This appears to be a number which is used to determine that the PDB is kept
+  // in sync with the EXE.
+  auto Age = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+  outs() << "Age: " << Age << '\n';
+
+  // I'm not sure what the purpose of the GUID is.
+  using GuidTy = char[16];
+  const GuidTy *Guid;
+  Ctx.getObject(Guid, /*PDBStream=*/1, Offset);
+  outs() << "Guid: ";
+  for (char C : *Guid)
+    outs().write_hex(C & 0xff) << ' ';
+  outs() << '\n';
+
+  // This is some sort of weird string-set/hash table encoded in the stream.
+  // It starts with the number of bytes in the table.
+  auto NumberOfBytes = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+  outs() << "NumberOfBytes: " << NumberOfBytes << '\n';
+
+  // Following that field is the starting offset of strings in the name table.
+  uint32_t StringsOffset = Offset;
+  Offset += NumberOfBytes;
+
+  // This appears to be equivalent to the total number of strings *actually*
+  // in the name table.
+  auto HashSize = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+  outs() << "HashSize: " << HashSize << '\n';
+
+  // This appears to be an upper bound on the number of strings in the name
+  // table.
+  auto MaxNumberOfStrings = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+  outs() << "MaxNumberOfStrings: " << MaxNumberOfStrings << '\n';
+
+  // This appears to be a hash table which uses bitfields to determine whether
+  // or not a bucket is 'present'.
+  auto NumPresentWords = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+  outs() << "NumPresentWords: " << NumPresentWords << '\n';
+
+  // Store all the 'present' bits in a vector for later processing.
+  SmallVector<uint32_t, 1> PresentWords;
+  for (uint32_t I = 0; I != NumPresentWords; ++I) {
+    auto Word = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+    PresentWords.push_back(Word);
+    outs() << "Word: " << Word << '\n';
+  }
+
+  // This appears to be a hash table which uses bitfields to determine whether
+  // or not a bucket is 'deleted'.
+  auto NumDeletedWords = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+  outs() << "NumDeletedWords: " << NumDeletedWords << '\n';
+
+  // Store all the 'deleted' bits in a vector for later processing.
+  SmallVector<uint32_t, 1> DeletedWords;
+  for (uint32_t I = 0; I != NumDeletedWords; ++I) {
+    auto Word = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+    DeletedWords.push_back(Word);
+    outs() << "Word: " << Word << '\n';
+  }
+
+  BitVector Present(MaxNumberOfStrings, false);
+  if (!PresentWords.empty())
+    Present.setBitsInMask(PresentWords.data(), PresentWords.size());
+  BitVector Deleted(MaxNumberOfStrings, false);
+  if (!DeletedWords.empty())
+    Deleted.setBitsInMask(DeletedWords.data(), DeletedWords.size());
+
+  StringMap<uint32_t> NamedStreams;
+  for (uint32_t I = 0; I < MaxNumberOfStrings; ++I) {
+    if (!Present.test(I))
+      continue;
+
+    // For all present entries, dump out their mapping.
+
+    // This appears to be an offset relative to the start of the strings.
+    // It tells us where the null-terminated string begins.
+    auto NameOffset = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+    outs() << "NameOffset: " << NameOffset << '\n';
+
+    // This appears to be a stream number into the stream directory.
+    auto NameIndex = Ctx.getInt<uint32_t>(/*PDBStream=*/1, Offset);
+    outs() << "NameIndex: " << NameIndex << '\n';
+
+    // Compute the offset of the start of the string relative to the stream.
+    uint32_t StringOffset = StringsOffset + NameOffset;
+
+    // Pump out our c-string from the stream.
+    SmallString<8> Str;
+    char C;
+    do {
+      C = Ctx.getObject<char>(/*PDBStream=*/1, StringOffset);
+      if (C != '\0')
+        Str += C;
+    } while (C != '\0');
+    outs() << "String: " << Str << "\n\n";
+
+    // Add this to a string-map from name to stream number.
+    NamedStreams.insert({Str, NameIndex});
+  }
+
+  // Let's try to dump out the named stream "/names".
+  auto NameI = NamedStreams.find("/names");
+  if (NameI != NamedStreams.end()) {
+    uint32_t NameStream = NameI->second;
+    outs() << "NameStream: " << NameStream << '\n';
+
+    uint32_t NameStreamOffset = 0;
+
+    // The name stream appears to start with a signature and version.
+    auto NameStreamSignature =
+        Ctx.getInt<uint32_t>(/*PDBStream=*/NameStream, NameStreamOffset);
+    outs() << "NameStreamSignature: ";
+    outs().write_hex(NameStreamSignature) << '\n';
+
+    auto NameStreamVersion =
+        Ctx.getInt<uint32_t>(/*PDBStream=*/NameStream, NameStreamOffset);
+    outs() << "NameStreamVersion: " << NameStreamVersion << '\n';
+
+    // We only support this particular version of the name stream.
+    if (NameStreamSignature != 0xeffeeffe || NameStreamVersion != 1)
+      Error(std::make_error_code(std::errc::not_supported));
   }
 }
 

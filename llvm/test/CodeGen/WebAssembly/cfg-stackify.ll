@@ -1228,3 +1228,65 @@ bb48:
 bb50:
   ret void
 }
+
+; Test that a block boundary which ends one block, begins another block, and
+; also begins a loop, has the markers placed in the correct order.
+
+; CHECK-LABEL: test15:
+; CHECK:        block
+; CHECK-NEXT:   i32.const   $push{{.*}}=, 1{{$}}
+; CHECK-NEXT:   br_if       0, $pop{{.*}}{{$}}
+; CHECK-NEXT: .LBB24_1:
+; CHECK-NEXT:   block
+; CHECK-NEXT:   loop
+; OPT-LABEL: test15:
+; OPT:        block
+; OPT-NEXT:   i32.const   $push
+; OPT-NEXT:   i32.const   $push
+; OPT-NEXT:   i32.eq      $push{{.*}}=, $pop{{.*}}, $pop{{.*}}{{$}}
+; OPT-NEXT:   br_if       0, $pop{{.*}}{{$}}
+; OPT-NEXT:   call        test15_callee1@FUNCTION{{$}}
+; OPT-NEXT:   return{{$}}
+; OPT-NEXT: .LBB24_2:
+; OPT-NEXT:   end_block
+; OPT-NEXT:   block
+; OPT-NEXT:   loop
+%0 = type { i8, i32 }
+declare void @test15_callee0()
+declare void @test15_callee1()
+define void @test15() {
+bb:
+  %tmp1 = icmp eq i8 1, 0
+  br i1 %tmp1, label %bb2, label %bb14
+
+bb2:
+  %tmp3 = phi %0** [ %tmp6, %bb5 ], [ null, %bb ]
+  %tmp4 = icmp eq i32 0, 11
+  br i1 %tmp4, label %bb5, label %bb8
+
+bb5:
+  %tmp = bitcast i8* null to %0**
+  %tmp6 = getelementptr %0*, %0** %tmp3, i32 1
+  %tmp7 = icmp eq %0** %tmp6, null
+  br i1 %tmp7, label %bb10, label %bb2
+
+bb8:
+  %tmp9 = icmp eq %0** null, undef
+  br label %bb10
+
+bb10:
+  %tmp11 = phi %0** [ null, %bb8 ], [ %tmp, %bb5 ]
+  %tmp12 = icmp eq %0** null, %tmp11
+  br i1 %tmp12, label %bb15, label %bb13
+
+bb13:
+  call void @test15_callee0()
+  ret void
+
+bb14:
+  call void @test15_callee1()
+  ret void
+
+bb15:
+  ret void
+}

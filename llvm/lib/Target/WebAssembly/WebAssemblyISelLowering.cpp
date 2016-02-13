@@ -61,6 +61,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::GlobalAddress, MVTPtr, Custom);
   setOperationAction(ISD::ExternalSymbol, MVTPtr, Custom);
   setOperationAction(ISD::JumpTable, MVTPtr, Custom);
+  setOperationAction(ISD::BlockAddress, MVTPtr, Custom);
+  setOperationAction(ISD::BRIND, MVT::Other, Custom);
 
   // Take the default expansion for va_arg, va_copy, and va_end. There is no
   // default action for va_start, so we do that custom.
@@ -308,9 +310,8 @@ SDValue WebAssemblyTargetLowering::LowerCall(
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs arguments");
     if (Out.Flags.isInConsecutiveRegsLast())
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs last arguments");
-    if (Out.Flags.isByVal()) {
+    if (Out.Flags.isByVal() && Out.Flags.getByValSize() != 0) {
       auto *MFI = MF.getFrameInfo();
-      assert(Out.Flags.getByValSize() && "Zero-size byval?");
       int FI = MFI->CreateStackObject(Out.Flags.getByValSize(),
                                       Out.Flags.getByValAlign(),
                                       /*isSS=*/false);
@@ -516,6 +517,7 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
 
 SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
                                                   SelectionDAG &DAG) const {
+  SDLoc DL(Op);
   switch (Op.getOpcode()) {
     default:
       llvm_unreachable("unimplemented operation lowering");
@@ -532,6 +534,16 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
       return LowerBR_JT(Op, DAG);
     case ISD::VASTART:
       return LowerVASTART(Op, DAG);
+    case ISD::BlockAddress:
+    case ISD::BRIND:
+      fail(DL, DAG, "WebAssembly hasn't implemented computed gotos");
+      return SDValue();
+    case ISD::RETURNADDR: // Probably nothing meaningful can be returned here.
+      fail(DL, DAG, "WebAssembly hasn't implemented __builtin_return_address");
+      return SDValue();
+    case ISD::FRAMEADDR: // TODO: Make this return the userspace frame address
+      fail(DL, DAG, "WebAssembly hasn't implemented __builtin_frame_address");
+      return SDValue();
   }
 }
 

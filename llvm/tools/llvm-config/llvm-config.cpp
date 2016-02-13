@@ -83,6 +83,14 @@ static void VisitComponent(const std::string &Name,
                            const std::string &DirSep) {
   // Lookup the component.
   AvailableComponent *AC = ComponentMap.lookup(Name);
+  if (!AC) {
+    errs() << "Can't find component: '" << Name << "' in the map. Available components are: ";
+    for (const auto &Component : ComponentMap) {
+      errs() << "'" << Component.first() << "' ";
+    }
+    errs() << "\n";
+    report_fatal_error("abort");
+  }
   assert(AC && "Invalid component name!");
 
   // Add to the visited table.

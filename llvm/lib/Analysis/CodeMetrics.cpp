@@ -152,9 +152,12 @@ void CodeMetrics::analyzeBasicBlock(const BasicBlock *BB,
     if (II->getType()->isTokenTy() && II->isUsedOutsideOfBlock(BB))
       notDuplicatable = true;
 
-    if (const CallInst *CI = dyn_cast<CallInst>(II))
+    if (const CallInst *CI = dyn_cast<CallInst>(II)) {
       if (CI->cannotDuplicate())
         notDuplicatable = true;
+      if (CI->isConvergent())
+        convergent = true;
+    }
 
     if (const InvokeInst *InvI = dyn_cast<InvokeInst>(II))
       if (InvI->cannotDuplicate())

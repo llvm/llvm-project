@@ -172,7 +172,8 @@ bb24:                                             ; preds = %bb157, %bb
   %tmp152 = phi float [ 0.000000e+00, %bb ], [ %tmp417, %bb157 ]
   %tmp153 = phi float [ 0.000000e+00, %bb ], [ %tmp418, %bb157 ]
   %tmp154 = bitcast float %tmp107 to i32
-  %tmp155 = icmp sgt i32 %tmp154, 125
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #1
+  %tmp155 = icmp sgt i32 %tmp154, %tid
   br i1 %tmp155, label %bb156, label %bb157
 
 bb156:                                            ; preds = %bb24
@@ -486,6 +487,8 @@ declare float @llvm.SI.load.const(<16 x i8>, i32) #1
 declare <4 x float> @llvm.SI.vs.load.input(<16 x i8>, i32, i32) #1
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
+
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 
 attributes #0 = { "ShaderType"="1" "enable-no-nans-fp-math"="true" }
 attributes #1 = { nounwind readnone }

@@ -10,8 +10,8 @@
 
 #define DEBUG_TYPE "hexagon-pei"
 
+#include "HexagonBlockRanges.h"
 #include "HexagonFrameLowering.h"
-#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonRegisterInfo.h"
@@ -19,12 +19,10 @@
 #include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SCCIterator.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -127,7 +125,6 @@ using namespace llvm;
 static cl::opt<bool> DisableDeallocRet("disable-hexagon-dealloc-ret",
     cl::Hidden, cl::desc("Disable Dealloc Return for Hexagon target"));
 
-
 static cl::opt<int> NumberScavengerSlots("number-scavenger-slots",
     cl::Hidden, cl::desc("Set the number of scavenger slots"), cl::init(2),
     cl::ZeroOrMore);
@@ -150,6 +147,9 @@ static cl::opt<unsigned> ShrinkLimit("shrink-frame-limit", cl::init(UINT_MAX),
 
 static cl::opt<bool> UseAllocframe("use-allocframe", cl::init(true),
     cl::Hidden, cl::desc("Use allocframe more conservatively"));
+
+static cl::opt<bool> OptimizeSpillSlots("hexagon-opt-spill", cl::Hidden,
+    cl::init(true), cl::desc("Optimize spill slots"));
 
 
 namespace llvm {
@@ -397,7 +397,6 @@ void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
   auto &HST = static_cast<const HexagonSubtarget&>(MF.getSubtarget());
   auto &HRI = *HST.getRegisterInfo();
 
-  assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineFrameInfo *MFI = MF.getFrameInfo();
   const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
 
@@ -831,7 +830,6 @@ int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   auto &MFI = *MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
-  // Large parts of this code are shared with HRI::eliminateFrameIndex.
   int Offset = MFI.getObjectOffset(FI);
   bool HasAlloca = MFI.hasVarSizedObjects();
   bool HasExtraAlign = HRI.needsStackRealignment(MF);
@@ -1052,13 +1050,13 @@ static bool needToReserveScavengingSpillSlots(MachineFunction &MF,
   // Check for an unused caller-saved register.
   for ( ; *CallerSavedRegs; ++CallerSavedRegs) {
     MCPhysReg FreeReg = *CallerSavedRegs;
-    if (!MRI.reg_nodbg_empty(FreeReg))
+    if (MRI.isPhysRegUsed(FreeReg))
       continue;
 
     // Check aliased register usage.
     bool IsCurrentRegUsed = false;
     for (MCRegAliasIterator AI(FreeReg, &HRI, false); AI.isValid(); ++AI)
-      if (!MRI.reg_nodbg_empty(*AI)) {
+      if (MRI.isPhysRegUsed(*AI)) {
         IsCurrentRegUsed = true;
         break;
       }
@@ -1070,99 +1068,6 @@ static bool needToReserveScavengingSpillSlots(MachineFunction &MF,
   }
   // All caller-saved registers are used.
   return true;
-}
-
-
-/// Find a GPR register that's available in the range from It to any use of
-/// the 'spill' in FI.
-static bool findAvailableReg(int FI, MachineBasicBlock::iterator It,
-                             MachineBasicBlock::iterator End,
-                             unsigned *AvailReg,
-                             unsigned *NumUses,
-                             const TargetRegisterInfo *TRI,
-                             RegScavenger *Scavenger) {
-  assert(Scavenger->getCurrentPosition() == It &&
-         "Unexpected scavenger position!");
-
-  BitVector Avail(Scavenger->getRegsAvailable(&Hexagon::IntRegsRegClass));
-  if (Avail.none())
-    return false;
-
-  BitVector AvailByLastLoad(Avail.size());
-
-  while (++It != End) {
-    MachineInstr *MI = It;
-    if (MI->isDebugValue())
-      continue;
-
-    // Remove all registers modified by this inst from Avail
-    int Reg = Avail.find_first();
-    while (Reg != -1) {
-      if (MI->modifiesRegister(Reg, TRI))
-        Avail[Reg] = false;
-      else
-        assert(!MI->readsRegister(Reg, TRI) && "Inst reads undefined register");
-
-      Reg = Avail.find_next(Reg);
-    }
-
-    int Opc = MI->getOpcode();
-    // Stop if we find a store that overwrites the current spill in FI
-    if ((Opc == Hexagon::STriw_pred || Opc == Hexagon::STriw_mod) &&
-        MI->getOperand(0).getIndex() == FI)
-      break;
-
-    if ((Opc == Hexagon::LDriw_pred || Opc == Hexagon::LDriw_mod) &&
-        MI->getOperand(1).getIndex() == FI && !MI->getOperand(0).isDead()) {
-      AvailByLastLoad = Avail;
-      ++(*NumUses);
-    }
-
-    // Give up early if there are no registers available
-    if (AvailByLastLoad.none() && Avail.none())
-      break;
-  }
-
-  if (AvailByLastLoad.none())
-    return false;
-
-  *AvailReg = (unsigned) AvailByLastLoad.find_first();
-  return true;
-}
-
-
-
-void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                                BitVector &SavedRegs,
-                                                RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-
-  auto &HST = static_cast<const HexagonSubtarget&>(MF.getSubtarget());
-  auto &HRI = *HST.getRegisterInfo();
-
-  bool HasEHReturn = MF.getInfo<HexagonMachineFunctionInfo>()->hasEHReturn();
-
-  // If we have a function containing __builtin_eh_return we want to spill and
-  // restore all callee saved registers. Pretend that they are used.
-  if (HasEHReturn) {
-    for (const MCPhysReg *CSRegs = HRI.getCalleeSavedRegs(&MF); *CSRegs;
-         ++CSRegs)
-      SavedRegs.set(*CSRegs);
-  }
-
-  const TargetRegisterClass &RC = Hexagon::IntRegsRegClass;
-
-  // Replace predicate register pseudo spill code.
-  bool HasReplacedPseudoInst = replacePseudoRegTransferCode(MF);
-
-  // We need to reserve a a spill slot if scavenging could potentially require
-  // spilling a scavenged register.
-  if (HasReplacedPseudoInst && needToReserveScavengingSpillSlots(MF, HRI)) {
-    MachineFrameInfo *MFI = MF.getFrameInfo();
-    for (int i = 0; i < NumberScavengerSlots; i++)
-      RS->addScavengingFrameIndex(
-        MFI->CreateSpillStackObject(RC.getSize(), RC.getAlignment()));
-  }
 }
 
 
@@ -1314,229 +1219,804 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
 }
 
 
-/// Expands pseudo instructions that copy/spill/restore registers that cannot
-/// have these operations done directly. For spills/restores, it will attempt
-/// to spill into a general-purpose register, instead of spilling to memory.
-bool HexagonFrameLowering::replacePseudoRegTransferCode(MachineFunction &MF)
-      const {
-  auto &HST = static_cast<const HexagonSubtarget&>(MF.getSubtarget());
+bool HexagonFrameLowering::expandCopy(MachineBasicBlock &B,
+      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
+      const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
+  MachineInstr *MI = &*It;
+  DebugLoc DL = MI->getDebugLoc();
+  unsigned DstR = MI->getOperand(0).getReg();
+  unsigned SrcR = MI->getOperand(1).getReg();
+  if (!Hexagon::ModRegsRegClass.contains(DstR) ||
+      !Hexagon::ModRegsRegClass.contains(SrcR))
+    return false;
+
+  unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), TmpR)
+    .addOperand(MI->getOperand(1));
+  BuildMI(B, It, DL, HII.get(TargetOpcode::COPY), DstR)
+    .addReg(TmpR, RegState::Kill);
+
+  NewRegs.push_back(TmpR);
+  B.erase(It);
+  return true;
+}
+
+bool HexagonFrameLowering::expandStoreInt(MachineBasicBlock &B,
+      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
+      const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
+  MachineInstr *MI = &*It;
+  DebugLoc DL = MI->getDebugLoc();
+  unsigned Opc = MI->getOpcode();
+  unsigned SrcR = MI->getOperand(2).getReg();
+  bool IsKill = MI->getOperand(2).isKill();
+
+  assert(MI->getOperand(0).isFI() && "Expect a frame index");
+  int FI = MI->getOperand(0).getIndex();
+
+  // TmpR = C2_tfrpr SrcR   if SrcR is a predicate register
+  // TmpR = A2_tfrcrr SrcR  if SrcR is a modifier register
+  unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  unsigned TfrOpc = (Opc == Hexagon::STriw_pred) ? Hexagon::C2_tfrpr
+                                                 : Hexagon::A2_tfrcrr;
+  BuildMI(B, It, DL, HII.get(TfrOpc), TmpR)
+    .addReg(SrcR, getKillRegState(IsKill));
+
+  // S2_storeri_io FI, 0, TmpR
+  BuildMI(B, It, DL, HII.get(Hexagon::S2_storeri_io))
+    .addFrameIndex(FI)
+    .addImm(0)
+    .addReg(TmpR, RegState::Kill)
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+  NewRegs.push_back(TmpR);
+  B.erase(It);
+  return true;
+}
+
+bool HexagonFrameLowering::expandLoadInt(MachineBasicBlock &B,
+      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
+      const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
+  MachineInstr *MI = &*It;
+  DebugLoc DL = MI->getDebugLoc();
+  unsigned Opc = MI->getOpcode();
+  unsigned DstR = MI->getOperand(0).getReg();
+
+  assert(MI->getOperand(1).isFI() && "Expect a frame index");
+  int FI = MI->getOperand(1).getIndex();
+
+  // TmpR = L2_loadri_io FI, 0
+  unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  BuildMI(B, It, DL, HII.get(Hexagon::L2_loadri_io), TmpR)
+    .addFrameIndex(FI)
+    .addImm(0)
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+  // DstR = C2_tfrrp TmpR   if DstR is a predicate register
+  // DstR = A2_tfrrcr TmpR  if DstR is a modifier register
+  unsigned TfrOpc = (Opc == Hexagon::LDriw_pred) ? Hexagon::C2_tfrrp
+                                                 : Hexagon::A2_tfrrcr;
+  BuildMI(B, It, DL, HII.get(TfrOpc), DstR)
+    .addReg(TmpR, RegState::Kill);
+
+  NewRegs.push_back(TmpR);
+  B.erase(It);
+  return true;
+}
+
+
+bool HexagonFrameLowering::expandStoreVecPred(MachineBasicBlock &B,
+      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
+      const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
+  auto &HST = B.getParent()->getSubtarget<HexagonSubtarget>();
+  MachineInstr *MI = &*It;
+  DebugLoc DL = MI->getDebugLoc();
+  unsigned SrcR = MI->getOperand(2).getReg();
+  bool IsKill = MI->getOperand(2).isKill();
+
+  assert(MI->getOperand(0).isFI() && "Expect a frame index");
+  int FI = MI->getOperand(0).getIndex();
+
+  bool Is128B = HST.useHVXDblOps();
+  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
+                     : &Hexagon::VectorRegs128BRegClass;
+
+  // Insert transfer to general vector register.
+  //   TmpR0 = A2_tfrsi 0x01010101
+  //   TmpR1 = V6_vandqrt Qx, TmpR0
+  //   store FI, 0, TmpR1
+  unsigned TmpR0 = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  unsigned TmpR1 = MRI.createVirtualRegister(RC);
+
+  BuildMI(B, It, DL, HII.get(Hexagon::A2_tfrsi), TmpR0)
+    .addImm(0x01010101);
+
+  unsigned VandOpc = !Is128B ? Hexagon::V6_vandqrt : Hexagon::V6_vandqrt_128B;
+  BuildMI(B, It, DL, HII.get(VandOpc), TmpR1)
+    .addReg(SrcR, getKillRegState(IsKill))
+    .addReg(TmpR0, RegState::Kill);
+
+  auto *HRI = B.getParent()->getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  HII.storeRegToStackSlot(B, It, TmpR1, true, FI, RC, HRI);
+  expandStoreVec(B, std::prev(It), MRI, HII, NewRegs);
+
+  NewRegs.push_back(TmpR0);
+  NewRegs.push_back(TmpR1);
+  B.erase(It);
+  return true;
+}
+
+bool HexagonFrameLowering::expandLoadVecPred(MachineBasicBlock &B,
+      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
+      const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
+  auto &HST = B.getParent()->getSubtarget<HexagonSubtarget>();
+  MachineInstr *MI = &*It;
+  DebugLoc DL = MI->getDebugLoc();
+  unsigned DstR = MI->getOperand(0).getReg();
+
+  assert(MI->getOperand(1).isFI() && "Expect a frame index");
+  int FI = MI->getOperand(1).getIndex();
+
+  bool Is128B = HST.useHVXDblOps();
+  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
+                     : &Hexagon::VectorRegs128BRegClass;
+
+  // TmpR0 = A2_tfrsi 0x01010101
+  // TmpR1 = load FI, 0
+  // DstR = V6_vandvrt TmpR1, TmpR0
+  unsigned TmpR0 = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+  unsigned TmpR1 = MRI.createVirtualRegister(RC);
+
+  BuildMI(B, It, DL, HII.get(Hexagon::A2_tfrsi), TmpR0)
+    .addImm(0x01010101);
+  auto *HRI = B.getParent()->getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  HII.loadRegFromStackSlot(B, It, TmpR1, FI, RC, HRI);
+  expandLoadVec(B, std::prev(It), MRI, HII, NewRegs);
+
+  unsigned VandOpc = !Is128B ? Hexagon::V6_vandvrt : Hexagon::V6_vandvrt_128B;
+  BuildMI(B, It, DL, HII.get(VandOpc), DstR)
+    .addReg(TmpR1, RegState::Kill)
+    .addReg(TmpR0, RegState::Kill);
+
+  NewRegs.push_back(TmpR0);
+  NewRegs.push_back(TmpR1);
+  B.erase(It);
+  return true;
+}
+
+bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
+      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
+      const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
+  MachineFunction &MF = *B.getParent();
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &MFI = *MF.getFrameInfo();
+  auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  MachineInstr *MI = &*It;
+  DebugLoc DL = MI->getDebugLoc();
+
+  unsigned SrcR = MI->getOperand(2).getReg();
+  unsigned SrcLo = HRI.getSubReg(SrcR, Hexagon::subreg_loreg);
+  unsigned SrcHi = HRI.getSubReg(SrcR, Hexagon::subreg_hireg);
+  bool IsKill = MI->getOperand(2).isKill();
+
+  assert(MI->getOperand(0).isFI() && "Expect a frame index");
+  int FI = MI->getOperand(0).getIndex();
+
+  bool Is128B = HST.useHVXDblOps();
+  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
+                     : &Hexagon::VectorRegs128BRegClass;
+  unsigned Size = RC->getSize();
+  unsigned NeedAlign = RC->getAlignment();
+  unsigned HasAlign = MFI.getObjectAlignment(FI);
+  unsigned StoreOpc;
+
+  // Store low part.
+  if (NeedAlign <= HasAlign)
+    StoreOpc = !Is128B ? Hexagon::V6_vS32b_ai  : Hexagon::V6_vS32b_ai_128B;
+  else
+    StoreOpc = !Is128B ? Hexagon::V6_vS32Ub_ai : Hexagon::V6_vS32Ub_ai_128B;
+
+  BuildMI(B, It, DL, HII.get(StoreOpc))
+    .addFrameIndex(FI)
+    .addImm(0)
+    .addReg(SrcLo, getKillRegState(IsKill))
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+  // Load high part.
+  if (NeedAlign <= MinAlign(HasAlign, Size))
+    StoreOpc = !Is128B ? Hexagon::V6_vS32b_ai  : Hexagon::V6_vS32b_ai_128B;
+  else
+    StoreOpc = !Is128B ? Hexagon::V6_vS32Ub_ai : Hexagon::V6_vS32Ub_ai_128B;
+
+  BuildMI(B, It, DL, HII.get(StoreOpc))
+    .addFrameIndex(FI)
+    .addImm(Size)
+    .addReg(SrcHi, getKillRegState(IsKill))
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+  B.erase(It);
+  return true;
+}
+
+bool HexagonFrameLowering::expandLoadVec2(MachineBasicBlock &B,
+      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
+      const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
+  MachineFunction &MF = *B.getParent();
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &MFI = *MF.getFrameInfo();
+  auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  MachineInstr *MI = &*It;
+  DebugLoc DL = MI->getDebugLoc();
+
+  unsigned DstR = MI->getOperand(0).getReg();
+  unsigned DstHi = HRI.getSubReg(DstR, Hexagon::subreg_hireg);
+  unsigned DstLo = HRI.getSubReg(DstR, Hexagon::subreg_loreg);
+
+  assert(MI->getOperand(1).isFI() && "Expect a frame index");
+  int FI = MI->getOperand(1).getIndex();
+
+  bool Is128B = HST.useHVXDblOps();
+  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
+                     : &Hexagon::VectorRegs128BRegClass;
+  unsigned Size = RC->getSize();
+  unsigned NeedAlign = RC->getAlignment();
+  unsigned HasAlign = MFI.getObjectAlignment(FI);
+  unsigned LoadOpc;
+
+  // Load low part.
+  if (NeedAlign <= HasAlign)
+    LoadOpc = !Is128B ? Hexagon::V6_vL32b_ai  : Hexagon::V6_vL32b_ai_128B;
+  else
+    LoadOpc = !Is128B ? Hexagon::V6_vL32Ub_ai : Hexagon::V6_vL32Ub_ai_128B;
+
+  BuildMI(B, It, DL, HII.get(LoadOpc), DstLo)
+    .addFrameIndex(FI)
+    .addImm(0)
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+  // Load high part.
+  if (NeedAlign <= MinAlign(HasAlign, Size))
+    LoadOpc = !Is128B ? Hexagon::V6_vL32b_ai  : Hexagon::V6_vL32b_ai_128B;
+  else
+    LoadOpc = !Is128B ? Hexagon::V6_vL32Ub_ai : Hexagon::V6_vL32Ub_ai_128B;
+
+  BuildMI(B, It, DL, HII.get(LoadOpc), DstHi)
+    .addFrameIndex(FI)
+    .addImm(Size)
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+  B.erase(It);
+  return true;
+}
+
+bool HexagonFrameLowering::expandStoreVec(MachineBasicBlock &B,
+      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
+      const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
+  MachineFunction &MF = *B.getParent();
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &MFI = *MF.getFrameInfo();
+  MachineInstr *MI = &*It;
+  DebugLoc DL = MI->getDebugLoc();
+
+  unsigned SrcR = MI->getOperand(2).getReg();
+  bool IsKill = MI->getOperand(2).isKill();
+
+  assert(MI->getOperand(0).isFI() && "Expect a frame index");
+  int FI = MI->getOperand(0).getIndex();
+
+  bool Is128B = HST.useHVXDblOps();
+  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
+                     : &Hexagon::VectorRegs128BRegClass;
+
+  unsigned NeedAlign = RC->getAlignment();
+  unsigned HasAlign = MFI.getObjectAlignment(FI);
+  unsigned StoreOpc;
+
+  if (NeedAlign <= HasAlign)
+    StoreOpc = !Is128B ? Hexagon::V6_vS32b_ai : Hexagon::V6_vS32b_ai_128B;
+  else
+    StoreOpc = !Is128B ? Hexagon::V6_vS32Ub_ai : Hexagon::V6_vS32Ub_ai_128B;
+
+  BuildMI(B, It, DL, HII.get(StoreOpc))
+    .addFrameIndex(FI)
+    .addImm(0)
+    .addReg(SrcR, getKillRegState(IsKill))
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+  B.erase(It);
+  return true;
+}
+
+bool HexagonFrameLowering::expandLoadVec(MachineBasicBlock &B,
+      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
+      const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
+  MachineFunction &MF = *B.getParent();
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &MFI = *MF.getFrameInfo();
+  MachineInstr *MI = &*It;
+  DebugLoc DL = MI->getDebugLoc();
+
+  unsigned DstR = MI->getOperand(0).getReg();
+
+  assert(MI->getOperand(1).isFI() && "Expect a frame index");
+  int FI = MI->getOperand(1).getIndex();
+
+  bool Is128B = HST.useHVXDblOps();
+  auto *RC = !Is128B ? &Hexagon::VectorRegsRegClass
+                     : &Hexagon::VectorRegs128BRegClass;
+
+  unsigned NeedAlign = RC->getAlignment();
+  unsigned HasAlign = MFI.getObjectAlignment(FI);
+  unsigned LoadOpc;
+
+  if (NeedAlign <= HasAlign)
+    LoadOpc = !Is128B ? Hexagon::V6_vL32b_ai : Hexagon::V6_vL32b_ai_128B;
+  else
+    LoadOpc = !Is128B ? Hexagon::V6_vL32Ub_ai : Hexagon::V6_vL32Ub_ai_128B;
+
+  BuildMI(B, It, DL, HII.get(LoadOpc), DstR)
+    .addFrameIndex(FI)
+    .addImm(0)
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+  B.erase(It);
+  return true;
+}
+
+
+bool HexagonFrameLowering::expandSpillMacros(MachineFunction &MF,
+      SmallVectorImpl<unsigned> &NewRegs) const {
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HII = *HST.getInstrInfo();
-  auto &HRI = *HST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  bool HasReplacedPseudoInst = false;
+  bool Changed = false;
 
-  // We use the register scavenger purely for tracking of available registers
-  // here, but do the 'scavenging' on our own.
-  RegScavenger Scavenger;
+  for (auto &B : MF) {
+    // Traverse the basic block.
+    MachineBasicBlock::iterator NextI;
+    for (auto I = B.begin(), E = B.end(); I != E; I = NextI) {
+      MachineInstr *MI = &*I;
+      NextI = std::next(I);
+      unsigned Opc = MI->getOpcode();
 
-  // Map from PredReg spill FIs to GPRs and remaining number of uses
-  DenseMap<int,std::pair<unsigned, unsigned>> FItoRegUses;
-
-  // PredReg FIs that cannot be 'spilled' into GPRs because they are live
-  // across BB boundaries.
-  SmallSet<int, 8> AlwaysSpill;
-
-  // Pred Reg FIs that have been spilled in a block due to shortage of GPRs
-  SmallSet<int, 8> LocallySpilled;
-
-  // Do an SCC traversal of the MachineFunction. This is to make sure we detect
-  // cases where a PredReg *must* be spilled to memory because it is live across
-  // BasicBlock boundaries: we see the reload before the spill and can mark the
-  // PredReg's FI in AlwaysSpill.
-  for (auto It = scc_begin(&MF); !It.isAtEnd(); ++It) {
-    const std::vector<MachineBasicBlock *> &Scc = *It;
-    for (MachineBasicBlock *MBB : Scc) {
-      if (MBB->empty())
-        continue;
-
-      Scavenger.enterBasicBlock(MBB);
-      Scavenger.forward();
-
-      LocallySpilled.clear();
-
-      // Traverse the basic block.
-      MachineBasicBlock::iterator NextII;
-      for (auto MII = MBB->begin(); MII != MBB->end(); MII = NextII) {
-        MachineInstr *MI = MII;
-        NextII = std::next(MII);
-
-        assert(Scavenger.getCurrentPosition() == MII &&
-            "Unexpected scavenger position");
-
-        unsigned Opc = MI->getOpcode();
-        DebugLoc DL = MI->getDebugLoc();
-
-        if (Opc == TargetOpcode::COPY) {
-          unsigned DestReg = MI->getOperand(0).getReg();
-          unsigned SrcReg = MI->getOperand(1).getReg();
-          MachineInstr *EraseMI = nullptr;
-          if (Hexagon::ModRegsRegClass.contains(DestReg) &&
-              Hexagon::ModRegsRegClass.contains(SrcReg)) {
-            unsigned T = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-            BuildMI(*MBB, MII, DL, HII.get(TargetOpcode::COPY), T)
-              .addOperand(MI->getOperand(1));
-            BuildMI(*MBB, MII, DL, HII.get(TargetOpcode::COPY), DestReg)
-              .addReg(T, RegState::Kill);
-            EraseMI = &*MII;
-            HasReplacedPseudoInst = true;
-          }
-          if (NextII != MBB->end())
-            Scavenger.forward(); // Move to next instruction
-          if (EraseMI)
-            MBB->erase(EraseMI);
-        } else if (Opc == Hexagon::STriw_pred || Opc == Hexagon::STriw_mod) {
-          // STriw_pred FI, 0, SrcReg
-          unsigned SrcReg = MI->getOperand(2).getReg();
-          bool IsOrigSrcRegKilled = MI->getOperand(2).isKill();
-
-          assert(MI->getOperand(0).isFI() && "Expect a frame index");
-          assert((Hexagon::PredRegsRegClass.contains(SrcReg) ||
-                  Hexagon::ModRegsRegClass.contains(SrcReg)) &&
-              "Not a predicate or modifier register");
-          int FI = MI->getOperand(0).getIndex();
-
-          assert(!FItoRegUses.count(FI) &&
-              "Still expecting a load of this spilled predicate register!");
-
-          // Check whether we have an available GPR here and all the way to the
-          // reload(s) of this spill
-          unsigned AvailReg, NumUses = 0;
-          if (!AlwaysSpill.count(FI) && findAvailableReg(FI, MII, MBB->end(),
-                &AvailReg, &NumUses, &HRI, &Scavenger)) {
-            // Found a register we can move this into instead of spilling
-            if (Opc == Hexagon::STriw_pred)
-              BuildMI(*MBB, MII, MI->getDebugLoc(), HII.get(Hexagon::C2_tfrpr),
-                  AvailReg).addReg(SrcReg, getKillRegState(IsOrigSrcRegKilled));
-            else
-              BuildMI(*MBB, MII, MI->getDebugLoc(), HII.get(Hexagon::A2_tfrcrr),
-                  AvailReg).addReg(SrcReg, getKillRegState(IsOrigSrcRegKilled));
-
-            // Mark the register as used in the function (important for callee
-            // saved registers).
-            BitVector UsedPhysRegsMask = MRI.getUsedPhysRegsMask();
-            UsedPhysRegsMask.set(AvailReg);
-            MRI.setUsedPhysRegMask(UsedPhysRegsMask);
-
-            Scavenger.setRegUsed(AvailReg);
-            if (NextII != MBB->end())
-              Scavenger.forward();
-
-            FItoRegUses[FI] = std::make_pair(AvailReg, NumUses);
-            LocallySpilled.erase(FI);
-
-            MBB->erase(MII);
-          } else {
-            // No register available. Insert actual spill.
-            //   VirtReg = C2_tfrpr SrcPredReg
-            unsigned VirtReg =
-              MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-            if (Opc == Hexagon::STriw_pred)
-              BuildMI(*MBB, MII, MI->getDebugLoc(), HII.get(Hexagon::C2_tfrpr),
-                  VirtReg).addReg(SrcReg, getKillRegState(IsOrigSrcRegKilled));
-            else
-              BuildMI(*MBB, MII, MI->getDebugLoc(), HII.get(Hexagon::A2_tfrcrr),
-                  VirtReg).addReg(SrcReg, getKillRegState(IsOrigSrcRegKilled));
-
-            // Change instruction to S2_storeri_io.
-            //   S2_storeri_io FI, 0, VirtReg
-            MI->setDesc(HII.get(Hexagon::S2_storeri_io));
-            MI->getOperand(2).setReg(VirtReg);
-            MI->getOperand(2).setIsKill();
-
-            HasReplacedPseudoInst = true;
-
-            if (NextII != MBB->end())
-              Scavenger.forward();
-
-            if (!AlwaysSpill.count(FI))
-              LocallySpilled.insert(FI);
-          }
-        } else if (Opc == Hexagon::LDriw_pred || Opc == Hexagon::LDriw_mod) {
-          // DstReg = LDriw_pred FI, 0
-          unsigned DestReg = MI->getOperand(0).getReg();
-          assert(MI->getOperand(1).isFI() && "Expect a frame index");
-          assert((Hexagon::PredRegsRegClass.contains(DestReg) ||
-                  Hexagon::ModRegsRegClass.contains(DestReg)) &&
-              "Not a predicate or modifier register");
-
-          int FI = MI->getOperand(1).getIndex();
-
-          MachineOperand &M0 = MI->getOperand(0);
-          if (M0.isDead()) {
-            if (NextII != MBB->end())
-              Scavenger.forward();
-            MBB->erase(MII);
-            continue;
-          }
-
-          if (FItoRegUses.count(FI)) {
-            // Reload from GPR
-            std::pair<unsigned,unsigned> &SpillInfo = FItoRegUses[FI];
-
-            --SpillInfo.second;
-            bool IsKill = SpillInfo.second == 0;
-            if (Opc == Hexagon::LDriw_pred)
-              BuildMI(*MBB, std::next(MII), MI->getDebugLoc(),
-                  HII.get(Hexagon::C2_tfrrp), DestReg).addReg(SpillInfo.first,
-                  getKillRegState(IsKill));
-            else
-              BuildMI(*MBB, std::next(MII), MI->getDebugLoc(),
-                  HII.get(Hexagon::A2_tfrrcr), DestReg).addReg(SpillInfo.first,
-                  getKillRegState(IsKill));
-
-            if (IsKill)
-              FItoRegUses.erase(FI);
-
-            Scavenger.forward(); // Process the newly inserted instruction
-            if (NextII != MBB->end())
-              Scavenger.forward(); // Move to next instruction
-
-            MBB->erase(MII);
-          } else {
-            // Reload from memory
-
-            // If this wasn't spilled previously in this block, the PredReg in
-            // this FI is live across blocks. Make sure it never ends up in a
-            // register.
-            if (!LocallySpilled.count(FI))
-              AlwaysSpill.insert(FI);
-
-            unsigned VirtReg =
-              MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-
-            // Change instruction to L2_loadri_io.
-            //   VirtReg = L2_loadri_io FI, 0
-            MI->setDesc(HII.get(Hexagon::L2_loadri_io));
-            MI->getOperand(0).setReg(VirtReg);
-
-            // Insert transfer to general purpose register.
-            //   DestReg = C2_tfrrp VirtReg
-            if (Opc == Hexagon::LDriw_pred)
-              BuildMI(*MBB, std::next(MII), MI->getDebugLoc(),
-                HII.get(Hexagon::C2_tfrrp), DestReg).addReg(VirtReg,
-                getKillRegState(true));
-            else
-              BuildMI(*MBB, std::next(MII), MI->getDebugLoc(),
-                HII.get(Hexagon::A2_tfrrcr), DestReg).addReg(VirtReg,
-                getKillRegState(true));
-
-            Scavenger.forward(); // Process newly inserted instruction
-            if (NextII != MBB->end())
-              Scavenger.forward(); // Move to next instruction
-
-            HasReplacedPseudoInst = true;
-          }
-        } else if (NextII != MBB->end())
-          Scavenger.forward();
+      switch (Opc) {
+        case TargetOpcode::COPY:
+          Changed = expandCopy(B, I, MRI, HII, NewRegs);
+          break;
+        case Hexagon::STriw_pred:
+        case Hexagon::STriw_mod:
+          Changed = expandStoreInt(B, I, MRI, HII, NewRegs);
+          break;
+        case Hexagon::LDriw_pred:
+        case Hexagon::LDriw_mod:
+          Changed = expandLoadInt(B, I, MRI, HII, NewRegs);
+          break;
+        case Hexagon::STriq_pred_V6:
+        case Hexagon::STriq_pred_V6_128B:
+          Changed = expandStoreVecPred(B, I, MRI, HII, NewRegs);
+          break;
+        case Hexagon::LDriq_pred_V6:
+        case Hexagon::LDriq_pred_V6_128B:
+          Changed = expandLoadVecPred(B, I, MRI, HII, NewRegs);
+          break;
+        case Hexagon::LDrivv_pseudo_V6:
+        case Hexagon::LDrivv_pseudo_V6_128B:
+          Changed = expandLoadVec2(B, I, MRI, HII, NewRegs);
+          break;
+        case Hexagon::STrivv_pseudo_V6:
+        case Hexagon::STrivv_pseudo_V6_128B:
+          Changed = expandStoreVec2(B, I, MRI, HII, NewRegs);
+          break;
+        case Hexagon::STriv_pseudo_V6:
+        case Hexagon::STriv_pseudo_V6_128B:
+          Changed = expandStoreVec(B, I, MRI, HII, NewRegs);
+          break;
+        case Hexagon::LDriv_pseudo_V6:
+        case Hexagon::LDriv_pseudo_V6_128B:
+          Changed = expandLoadVec(B, I, MRI, HII, NewRegs);
+          break;
       }
-
-      assert(FItoRegUses.empty() && "PredRegs in GPRs outlast this block!");
     }
   }
 
-  return HasReplacedPseudoInst;
+  return Changed;
 }
 
+
+void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
+                                                BitVector &SavedRegs,
+                                                RegScavenger *RS) const {
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &HRI = *HST.getRegisterInfo();
+
+  SavedRegs.resize(HRI.getNumRegs());
+
+  // If we have a function containing __builtin_eh_return we want to spill and
+  // restore all callee saved registers. Pretend that they are used.
+  if (MF.getInfo<HexagonMachineFunctionInfo>()->hasEHReturn())
+    for (const MCPhysReg *R = HRI.getCalleeSavedRegs(&MF); *R; ++R)
+      SavedRegs.set(*R);
+
+  // Replace predicate register pseudo spill code.
+  SmallVector<unsigned,8> NewRegs;
+  expandSpillMacros(MF, NewRegs);
+  if (OptimizeSpillSlots)
+    optimizeSpillSlots(MF, NewRegs);
+
+  // We need to reserve a a spill slot if scavenging could potentially require
+  // spilling a scavenged register.
+  if (!NewRegs.empty() && needToReserveScavengingSpillSlots(MF, HRI)) {
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+    SetVector<const TargetRegisterClass*> SpillRCs;
+    for (unsigned VR : NewRegs)
+      SpillRCs.insert(MRI.getRegClass(VR));
+
+    MachineFrameInfo &MFI = *MF.getFrameInfo();
+    const TargetRegisterClass &IntRC = Hexagon::IntRegsRegClass;
+    if (SpillRCs.count(&IntRC)) {
+      for (int i = 0; i < NumberScavengerSlots; i++) {
+        int NewFI = MFI.CreateSpillStackObject(IntRC.getSize(),
+                                               IntRC.getAlignment());
+        RS->addScavengingFrameIndex(NewFI);
+      }
+    }
+    for (auto *RC : SpillRCs) {
+      if (RC == &IntRC)
+        continue;
+      int NewFI = MFI.CreateSpillStackObject(RC->getSize(), RC->getAlignment());
+      RS->addScavengingFrameIndex(NewFI);
+    }
+  }
+
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+}
+
+
+unsigned HexagonFrameLowering::findPhysReg(MachineFunction &MF,
+      HexagonBlockRanges::IndexRange &FIR,
+      HexagonBlockRanges::InstrIndexMap &IndexMap,
+      HexagonBlockRanges::RegToRangeMap &DeadMap,
+      const TargetRegisterClass *RC) const {
+  auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  auto &MRI = MF.getRegInfo();
+
+  auto isDead = [&FIR,&DeadMap] (unsigned Reg) -> bool {
+    auto F = DeadMap.find({Reg,0});
+    if (F == DeadMap.end())
+      return false;
+    for (auto &DR : F->second)
+      if (DR.contains(FIR))
+        return true;
+    return false;
+  };
+
+  for (unsigned Reg : RC->getRawAllocationOrder(MF)) {
+    bool Dead = true;
+    for (auto R : HexagonBlockRanges::expandToSubRegs({Reg,0}, MRI, HRI)) {
+      if (isDead(R.Reg))
+        continue;
+      Dead = false;
+      break;
+    }
+    if (Dead)
+      return Reg;
+  }
+  return 0;
+}
+
+void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
+      SmallVectorImpl<unsigned> &VRegs) const {
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &HII = *HST.getInstrInfo();
+  auto &HRI = *HST.getRegisterInfo();
+  auto &MRI = MF.getRegInfo();
+  HexagonBlockRanges HBR(MF);
+
+  typedef std::map<MachineBasicBlock*,HexagonBlockRanges::InstrIndexMap>
+      BlockIndexMap;
+  typedef std::map<MachineBasicBlock*,HexagonBlockRanges::RangeList>
+      BlockRangeMap;
+  typedef HexagonBlockRanges::IndexType IndexType;
+
+  struct SlotInfo {
+    BlockRangeMap Map;
+    unsigned Size = 0;
+    const TargetRegisterClass *RC = nullptr;
+  };
+
+  BlockIndexMap BlockIndexes;
+  SmallSet<int,4> BadFIs;
+  std::map<int,SlotInfo> FIRangeMap;
+
+  auto getRegClass = [&MRI,&HRI] (HexagonBlockRanges::RegisterRef R)
+        -> const TargetRegisterClass* {
+    if (TargetRegisterInfo::isPhysicalRegister(R.Reg))
+      assert(R.Sub == 0);
+    if (TargetRegisterInfo::isVirtualRegister(R.Reg)) {
+      auto *RCR = MRI.getRegClass(R.Reg);
+      if (R.Sub == 0)
+        return RCR;
+      unsigned PR = *RCR->begin();
+      R.Reg = HRI.getSubReg(PR, R.Sub);
+    }
+    return HRI.getMinimalPhysRegClass(R.Reg);
+  };
+  // Accumulate register classes: get a common class for a pre-existing
+  // class HaveRC and a new class NewRC. Return nullptr if a common class
+  // cannot be found, otherwise return the resulting class. If HaveRC is
+  // nullptr, assume that it is still unset.
+  auto getCommonRC = [&HRI] (const TargetRegisterClass *HaveRC,
+                             const TargetRegisterClass *NewRC)
+        -> const TargetRegisterClass* {
+    if (HaveRC == nullptr || HaveRC == NewRC)
+      return NewRC;
+    // Different classes, both non-null. Pick the more general one.
+    if (HaveRC->hasSubClassEq(NewRC))
+      return HaveRC;
+    if (NewRC->hasSubClassEq(HaveRC))
+      return NewRC;
+    return nullptr;
+  };
+
+  // Scan all blocks in the function. Check all occurrences of frame indexes,
+  // and collect relevant information.
+  for (auto &B : MF) {
+    std::map<int,IndexType> LastStore, LastLoad;
+    auto P = BlockIndexes.emplace(&B, HexagonBlockRanges::InstrIndexMap(B));
+    auto &IndexMap = P.first->second;
+    DEBUG(dbgs() << "Index map for BB#" << B.getNumber() << "\n"
+                 << IndexMap << '\n');
+
+    for (auto &In : B) {
+      int LFI, SFI;
+      bool Load = HII.isLoadFromStackSlot(&In, LFI) && !HII.isPredicated(&In);
+      bool Store = HII.isStoreToStackSlot(&In, SFI) && !HII.isPredicated(&In);
+      if (Load && Store) {
+        // If it's both a load and a store, then we won't handle it.
+        BadFIs.insert(LFI);
+        BadFIs.insert(SFI);
+        continue;
+      }
+      // Check for register classes of the register used as the source for
+      // the store, and the register used as the destination for the load.
+      // Also, only accept base+imm_offset addressing modes. Other addressing
+      // modes can have side-effects (post-increments, etc.). For stack
+      // slots they are very unlikely, so there is not much loss due to
+      // this restriction.
+      if (Load || Store) {
+        int TFI = Load ? LFI : SFI;
+        unsigned AM = HII.getAddrMode(&In);
+        SlotInfo &SI = FIRangeMap[TFI];
+        bool Bad = (AM != HexagonII::BaseImmOffset);
+        if (!Bad) {
+          // If the addressing mode is ok, check the register class.
+          const TargetRegisterClass *RC = nullptr;
+          if (Load) {
+            MachineOperand &DataOp = In.getOperand(0);
+            RC = getRegClass({DataOp.getReg(), DataOp.getSubReg()});
+          } else {
+            MachineOperand &DataOp = In.getOperand(2);
+            RC = getRegClass({DataOp.getReg(), DataOp.getSubReg()});
+          }
+          RC = getCommonRC(SI.RC, RC);
+          if (RC == nullptr)
+            Bad = true;
+          else
+            SI.RC = RC;
+        }
+        if (!Bad) {
+          // Check sizes.
+          unsigned S = (1U << (HII.getMemAccessSize(&In) - 1));
+          if (SI.Size != 0 && SI.Size != S)
+            Bad = true;
+          else
+            SI.Size = S;
+        }
+        if (Bad)
+          BadFIs.insert(TFI);
+      }
+
+      // Locate uses of frame indices.
+      for (unsigned i = 0, n = In.getNumOperands(); i < n; ++i) {
+        const MachineOperand &Op = In.getOperand(i);
+        if (!Op.isFI())
+          continue;
+        int FI = Op.getIndex();
+        // Make sure that the following operand is an immediate and that
+        // it is 0. This is the offset in the stack object.
+        if (i+1 >= n || !In.getOperand(i+1).isImm() ||
+            In.getOperand(i+1).getImm() != 0)
+          BadFIs.insert(FI);
+        if (BadFIs.count(FI))
+          continue;
+
+        IndexType Index = IndexMap.getIndex(&In);
+        if (Load) {
+          if (LastStore[FI] == IndexType::None)
+            LastStore[FI] = IndexType::Entry;
+          LastLoad[FI] = Index;
+        } else if (Store) {
+          HexagonBlockRanges::RangeList &RL = FIRangeMap[FI].Map[&B];
+          if (LastStore[FI] != IndexType::None)
+            RL.add(LastStore[FI], LastLoad[FI], false, false);
+          else if (LastLoad[FI] != IndexType::None)
+            RL.add(IndexType::Entry, LastLoad[FI], false, false);
+          LastLoad[FI] = IndexType::None;
+          LastStore[FI] = Index;
+        } else {
+          BadFIs.insert(FI);
+        }
+      }
+    }
+
+    for (auto &I : LastLoad) {
+      IndexType LL = I.second;
+      if (LL == IndexType::None)
+        continue;
+      auto &RL = FIRangeMap[I.first].Map[&B];
+      IndexType &LS = LastStore[I.first];
+      if (LS != IndexType::None)
+        RL.add(LS, LL, false, false);
+      else
+        RL.add(IndexType::Entry, LL, false, false);
+      LS = IndexType::None;
+    }
+    for (auto &I : LastStore) {
+      IndexType LS = I.second;
+      if (LS == IndexType::None)
+        continue;
+      auto &RL = FIRangeMap[I.first].Map[&B];
+      RL.add(LS, IndexType::None, false, false);
+    }
+  }
+
+  DEBUG({
+    for (auto &P : FIRangeMap) {
+      dbgs() << "fi#" << P.first;
+      if (BadFIs.count(P.first))
+        dbgs() << " (bad)";
+      dbgs() << "  RC: ";
+      if (P.second.RC != nullptr)
+        dbgs() << HRI.getRegClassName(P.second.RC) << '\n';
+      else
+        dbgs() << "<null>\n";
+      for (auto &R : P.second.Map)
+        dbgs() << "  BB#" << R.first->getNumber() << " { " << R.second << "}\n";
+    }
+  });
+
+  // When a slot is loaded from in a block without being stored to in the
+  // same block, it is live-on-entry to this block. To avoid CFG analysis,
+  // consider this slot to be live-on-exit from all blocks.
+  SmallSet<int,4> LoxFIs;
+
+  std::map<MachineBasicBlock*,std::vector<int>> BlockFIMap;
+
+  for (auto &P : FIRangeMap) {
+    // P = pair(FI, map: BB->RangeList)
+    if (BadFIs.count(P.first))
+      continue;
+    for (auto &B : MF) {
+      auto F = P.second.Map.find(&B);
+      // F = pair(BB, RangeList)
+      if (F == P.second.Map.end() || F->second.empty())
+        continue;
+      HexagonBlockRanges::IndexRange &IR = F->second.front();
+      if (IR.start() == IndexType::Entry)
+        LoxFIs.insert(P.first);
+      BlockFIMap[&B].push_back(P.first);
+    }
+  }
+
+  DEBUG({
+    dbgs() << "Block-to-FI map (* -- live-on-exit):\n";
+    for (auto &P : BlockFIMap) {
+      auto &FIs = P.second;
+      if (FIs.empty())
+        continue;
+      dbgs() << "  BB#" << P.first->getNumber() << ": {";
+      for (auto I : FIs) {
+        dbgs() << " fi#" << I;
+        if (LoxFIs.count(I))
+          dbgs() << '*';
+      }
+      dbgs() << " }\n";
+    }
+  });
+
+  // eliminate loads, when all loads eliminated, eliminate all stores.
+  for (auto &B : MF) {
+    auto F = BlockIndexes.find(&B);
+    assert(F != BlockIndexes.end());
+    HexagonBlockRanges::InstrIndexMap &IM = F->second;
+    HexagonBlockRanges::RegToRangeMap LM = HBR.computeLiveMap(IM);
+    HexagonBlockRanges::RegToRangeMap DM = HBR.computeDeadMap(IM, LM);
+    DEBUG(dbgs() << "BB#" << B.getNumber() << " dead map\n"
+                 << HexagonBlockRanges::PrintRangeMap(DM, HRI));
+
+    for (auto FI : BlockFIMap[&B]) {
+      if (BadFIs.count(FI))
+        continue;
+      DEBUG(dbgs() << "Working on fi#" << FI << '\n');
+      HexagonBlockRanges::RangeList &RL = FIRangeMap[FI].Map[&B];
+      for (auto &Range : RL) {
+        DEBUG(dbgs() << "--Examining range:" << RL << '\n');
+        if (!IndexType::isInstr(Range.start()) ||
+            !IndexType::isInstr(Range.end()))
+          continue;
+        MachineInstr *SI = IM.getInstr(Range.start());
+        MachineInstr *EI = IM.getInstr(Range.end());
+        assert(SI->mayStore() && "Unexpected start instruction");
+        assert(EI->mayLoad() && "Unexpected end instruction");
+        MachineOperand &SrcOp = SI->getOperand(2);
+
+        HexagonBlockRanges::RegisterRef SrcRR = { SrcOp.getReg(),
+                                                  SrcOp.getSubReg() };
+        auto *RC = getRegClass({SrcOp.getReg(), SrcOp.getSubReg()});
+        // The this-> is needed to unconfuse MSVC.
+        unsigned FoundR = this->findPhysReg(MF, Range, IM, DM, RC);
+        DEBUG(dbgs() << "Replacement reg:" << PrintReg(FoundR, &HRI) << '\n');
+        if (FoundR == 0)
+          continue;
+
+        // Generate the copy-in: "FoundR = COPY SrcR" at the store location.
+        MachineBasicBlock::iterator StartIt = SI, NextIt;
+        MachineInstr *CopyIn = nullptr;
+        if (SrcRR.Reg != FoundR || SrcRR.Sub != 0) {
+          DebugLoc DL = SI->getDebugLoc();
+          CopyIn = BuildMI(B, StartIt, DL, HII.get(TargetOpcode::COPY), FoundR)
+                      .addOperand(SrcOp);
+        }
+
+        ++StartIt;
+        // Check if this is a last store and the FI is live-on-exit.
+        if (LoxFIs.count(FI) && (&Range == &RL.back())) {
+          // Update store's source register.
+          if (unsigned SR = SrcOp.getSubReg())
+            SrcOp.setReg(HRI.getSubReg(FoundR, SR));
+          else
+            SrcOp.setReg(FoundR);
+          SrcOp.setSubReg(0);
+          // We are keeping this register live.
+          SrcOp.setIsKill(false);
+        } else {
+          B.erase(SI);
+          IM.replaceInstr(SI, CopyIn);
+        }
+
+        auto EndIt = std::next(MachineBasicBlock::iterator(EI));
+        for (auto It = StartIt; It != EndIt; It = NextIt) {
+          MachineInstr *MI = &*It;
+          NextIt = std::next(It);
+          int TFI;
+          if (!HII.isLoadFromStackSlot(MI, TFI) || TFI != FI)
+            continue;
+          unsigned DstR = MI->getOperand(0).getReg();
+          assert(MI->getOperand(0).getSubReg() == 0);
+          MachineInstr *CopyOut = nullptr;
+          if (DstR != FoundR) {
+            DebugLoc DL = MI->getDebugLoc();
+            unsigned MemSize = (1U << (HII.getMemAccessSize(MI) - 1));
+            assert(HII.getAddrMode(MI) == HexagonII::BaseImmOffset);
+            unsigned CopyOpc = TargetOpcode::COPY;
+            if (HII.isSignExtendingLoad(MI))
+              CopyOpc = (MemSize == 1) ? Hexagon::A2_sxtb : Hexagon::A2_sxth;
+            else if (HII.isZeroExtendingLoad(MI))
+              CopyOpc = (MemSize == 1) ? Hexagon::A2_zxtb : Hexagon::A2_zxth;
+            CopyOut = BuildMI(B, It, DL, HII.get(CopyOpc), DstR)
+                        .addReg(FoundR, getKillRegState(MI == EI));
+          }
+          IM.replaceInstr(MI, CopyOut);
+          B.erase(It);
+        }
+
+        // Update the dead map.
+        HexagonBlockRanges::RegisterRef FoundRR = { FoundR, 0 };
+        for (auto RR : HexagonBlockRanges::expandToSubRegs(FoundRR, MRI, HRI))
+          DM[RR].subtract(Range);
+      } // for Range in range list
+    }
+  }
+}
 
 
 void HexagonFrameLowering::expandAlloca(MachineInstr *AI,

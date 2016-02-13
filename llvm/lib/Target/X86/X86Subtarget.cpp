@@ -285,6 +285,7 @@ void X86Subtarget::initializeEnvironment() {
   HasSSEUnalignedMem = false;
   HasCmpxchg16b = false;
   UseLeaForSP = false;
+  HasFastPartialYMMWrite = false;
   HasSlowDivide32 = false;
   HasSlowDivide64 = false;
   PadShortFunctions = false;

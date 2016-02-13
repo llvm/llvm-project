@@ -16,7 +16,7 @@
 ;===------------------------------------------------------------------------===;
 
 [component_0]
-type = OptionalLibrary
+type = Library
 name = GlobalISel
 parent = CodeGen
 required_libraries = Analysis CodeGen Core MC Support Target TransformUtils

@@ -189,6 +189,10 @@ protected:
   /// the stack pointer. This is an optimization for Intel Atom processors.
   bool UseLeaForSP;
 
+  /// True if there is no performance penalty to writing only the lower parts
+  /// of a YMM register without clearing the upper part.
+  bool HasFastPartialYMMWrite;
+
   /// True if 8-bit divisions are significantly faster than
   /// 32-bit divisions and should be used when possible.
   bool HasSlowDivide32;
@@ -421,6 +425,7 @@ public:
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
   bool hasCmpxchg16b() const { return HasCmpxchg16b; }
   bool useLeaForSP() const { return UseLeaForSP; }
+  bool hasFastPartialYMMWrite() const { return HasFastPartialYMMWrite; }
   bool hasSlowDivide32() const { return HasSlowDivide32; }
   bool hasSlowDivide64() const { return HasSlowDivide64; }
   bool padShortFunctions() const { return PadShortFunctions; }

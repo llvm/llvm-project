@@ -219,6 +219,13 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        const InstrProfRecord &InstrProfR,
                        InstrProfValueKind ValueKind, uint32_t SiteIndx,
                        uint32_t MaxMDCount = 3);
+/// Same as the above interface but using the ValueData array directly, as
+/// well as \p Sum.
+void annotateValueSite(Module &M, Instruction &Inst,
+                       const InstrProfValueData VD[], uint32_t NV,
+                       uint64_t Sum, InstrProfValueKind ValueKind,
+                       uint32_t MaxMDCount);
+
 /// Extract the value profile data from \p Inst which is annotated with
 /// value profile meta data. Return false if there is no value data annotated,
 /// otherwise  return true.

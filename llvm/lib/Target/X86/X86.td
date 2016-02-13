@@ -239,6 +239,11 @@ def FeatureSlowIncDec : SubtargetFeature<"slow-incdec", "SlowIncDec", "true",
 def FeatureSoftFloat
     : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
                        "Use software floating point features.">;
+// On at least some AMD processors, there is no performance hazard to writing
+// only the lower parts of a YMM register without clearing the upper part.
+def FeatureFastPartialYMMWrite
+    : SubtargetFeature<"fast-partial-ymm-write", "HasFastPartialYMMWrite",
+                       "true", "Partial writes to YMM registers are fast">;
 
 //===----------------------------------------------------------------------===//
 // X86 processors supported.
@@ -596,7 +601,8 @@ def : ProcessorModel<"btver2", BtVer2Model, [
   FeatureXSAVE,
   FeatureXSAVEOPT,
   FeatureSlowSHLD,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF,
+  FeatureFastPartialYMMWrite
 ]>;
 
 // Bulldozer

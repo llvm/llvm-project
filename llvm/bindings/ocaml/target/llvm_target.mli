@@ -204,9 +204,6 @@ module TargetMachine : sig
       [llvm::TargetMachine::getFeatureString]. *)
   val features : t -> string
 
-  (** Returns the data layout of this target machine. *)
-  val data_layout : t -> DataLayout.t
-
   (** Adds the target-specific analysis passes to the pass manager.
       See [llvm::TargetMachine::addAnalysisPasses]. *)
   val add_analysis_passes : [< Llvm.PassManager.any ] Llvm.PassManager.t -> t -> unit

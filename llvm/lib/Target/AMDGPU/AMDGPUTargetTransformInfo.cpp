@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/CostTable.h"
 #include "llvm/Target/TargetLowering.h"

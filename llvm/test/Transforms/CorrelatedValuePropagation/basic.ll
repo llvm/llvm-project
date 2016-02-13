@@ -199,3 +199,58 @@ out:
 next:
   ret void
 }
+
+; Can we use nsw in LVI to prove lack of overflow?
+define i1 @add_nsw(i32 %s) {
+; CHECK-LABEL: @add_nsw(
+entry:
+  %cmp = icmp sgt i32 %s, 0
+  br i1 %cmp, label %positive, label %out
+
+positive:
+  %add = add nsw i32 %s, 1
+  %res = icmp sgt i32 %add, 0
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 true
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @add_nsw2(i32 %s) {
+; CHECK-LABEL: @add_nsw2(
+entry:
+  %cmp = icmp sge i32 %s, 0
+  br i1 %cmp, label %positive, label %out
+
+positive:
+  %add = add nsw i32 %s, 1
+  %res = icmp ne i32 %add, 0
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 true
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @add_nuw(i32 %s) {
+; CHECK-LABEL: @add_nuw(
+entry:
+  %cmp = icmp ult i32 %s, 400
+  br i1 %cmp, label %positive, label %out
+
+positive:
+  %add = add nsw i32 %s, 1
+  %res = icmp ne i32 %add, -100
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 true
+  ret i1 %res
+out:
+  ret i1 false
+}

@@ -108,9 +108,20 @@ FunctionPass *llvm::createSIFixSGPRLiveRangesPass() {
   return new SIFixSGPRLiveRanges();
 }
 
+static bool hasOnlyScalarBr(const MachineBasicBlock *MBB,
+                            const SIInstrInfo *TII) {
+  for (MachineBasicBlock::const_iterator I = MBB->getFirstTerminator(),
+                                         E = MBB->end(); I != E; ++I) {
+    if (!TII->isSOPP(*I))
+      return false;
+  }
+  return true;
+}
+
 bool SIFixSGPRLiveRanges::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const SIInstrInfo *TII =
+      static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
   const SIRegisterInfo *TRI = static_cast<const SIRegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
   bool MadeChange = false;
@@ -147,7 +158,7 @@ bool SIFixSGPRLiveRanges::runOnMachineFunction(MachineFunction &MF) {
       }
     }
 
-    if (MBB->succ_size() < 2)
+    if (MBB->succ_size() < 2 || hasOnlyScalarBr(MBB, TII))
       continue;
 
     // We have structured control flow, so the number of successors should be

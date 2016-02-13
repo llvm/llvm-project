@@ -240,10 +240,7 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
 
 bool
 AMDGPUPassConfig::addPreISel() {
-  const AMDGPUSubtarget &ST = *getAMDGPUTargetMachine().getSubtargetImpl();
   addPass(createFlattenCFGPass());
-  if (ST.IsIRStructurizerEnabled())
-    addPass(createStructurizeCFGPass());
   return false;
 }
 
@@ -263,6 +260,9 @@ bool AMDGPUPassConfig::addGCPasses() {
 
 bool R600PassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
+  const AMDGPUSubtarget &ST = *getAMDGPUTargetMachine().getSubtargetImpl();
+  if (ST.IsIRStructurizerEnabled())
+    addPass(createStructurizeCFGPass());
   addPass(createR600TextureIntrinsicsReplacer());
   return false;
 }
@@ -301,11 +301,11 @@ bool GCNPassConfig::addPreISel() {
   // FIXME: We need to run a pass to propagate the attributes when calls are
   // supported.
   addPass(&AMDGPUAnnotateKernelFeaturesID);
-
+  addPass(createStructurizeCFGPass(true)); // true -> SkipUniformRegions
   addPass(createSinkingPass());
   addPass(createSITypeRewriter());
-  addPass(createSIAnnotateControlFlowPass());
   addPass(createAMDGPUAnnotateUniformValues());
+  addPass(createSIAnnotateControlFlowPass());
 
   return false;
 }

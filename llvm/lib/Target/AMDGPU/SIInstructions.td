@@ -336,18 +336,18 @@ defm S_ABSDIFF_I32 : SOP2_32 <sop2<0x2c, 0x2a>, "s_absdiff_i32", []>;
 // SOPC Instructions
 //===----------------------------------------------------------------------===//
 
-def S_CMP_EQ_I32 : SOPC_32 <0x00000000, "s_cmp_eq_i32">;
-def S_CMP_LG_I32 : SOPC_32 <0x00000001, "s_cmp_lg_i32">;
-def S_CMP_GT_I32 : SOPC_32 <0x00000002, "s_cmp_gt_i32">;
-def S_CMP_GE_I32 : SOPC_32 <0x00000003, "s_cmp_ge_i32">;
-def S_CMP_LT_I32 : SOPC_32 <0x00000004, "s_cmp_lt_i32">;
-def S_CMP_LE_I32 : SOPC_32 <0x00000005, "s_cmp_le_i32">;
-def S_CMP_EQ_U32 : SOPC_32 <0x00000006, "s_cmp_eq_u32">;
-def S_CMP_LG_U32 : SOPC_32 <0x00000007, "s_cmp_lg_u32">;
-def S_CMP_GT_U32 : SOPC_32 <0x00000008, "s_cmp_gt_u32">;
-def S_CMP_GE_U32 : SOPC_32 <0x00000009, "s_cmp_ge_u32">;
-def S_CMP_LT_U32 : SOPC_32 <0x0000000a, "s_cmp_lt_u32">;
-def S_CMP_LE_U32 : SOPC_32 <0x0000000b, "s_cmp_le_u32">;
+def S_CMP_EQ_I32 : SOPC_32 <0x00000000, "s_cmp_eq_i32", COND_EQ>;
+def S_CMP_LG_I32 : SOPC_32 <0x00000001, "s_cmp_lg_i32", COND_NE>;
+def S_CMP_GT_I32 : SOPC_32 <0x00000002, "s_cmp_gt_i32", COND_SGT>;
+def S_CMP_GE_I32 : SOPC_32 <0x00000003, "s_cmp_ge_i32", COND_SGE>;
+def S_CMP_LT_I32 : SOPC_32 <0x00000004, "s_cmp_lt_i32", COND_SLT>;
+def S_CMP_LE_I32 : SOPC_32 <0x00000005, "s_cmp_le_i32", COND_SLE>;
+def S_CMP_EQ_U32 : SOPC_32 <0x00000006, "s_cmp_eq_u32", COND_EQ>;
+def S_CMP_LG_U32 : SOPC_32 <0x00000007, "s_cmp_lg_u32", COND_NE >;
+def S_CMP_GT_U32 : SOPC_32 <0x00000008, "s_cmp_gt_u32", COND_UGT>;
+def S_CMP_GE_U32 : SOPC_32 <0x00000009, "s_cmp_ge_u32", COND_UGE>;
+def S_CMP_LT_U32 : SOPC_32 <0x0000000a, "s_cmp_lt_u32", COND_ULT>;
+def S_CMP_LE_U32 : SOPC_32 <0x0000000b, "s_cmp_le_u32", COND_ULE>;
 ////def S_BITCMP0_B32 : SOPC_BITCMP0 <0x0000000c, "s_bitcmp0_b32", []>;
 ////def S_BITCMP1_B32 : SOPC_BITCMP1 <0x0000000d, "s_bitcmp1_b32", []>;
 ////def S_BITCMP0_B64 : SOPC_BITCMP0 <0x0000000e, "s_bitcmp0_b64", []>;
@@ -449,7 +449,8 @@ def S_CBRANCH_SCC0 : SOPP <
 >;
 def S_CBRANCH_SCC1 : SOPP <
   0x00000005, (ins sopp_brtarget:$simm16),
-  "s_cbranch_scc1 $simm16"
+  "s_cbranch_scc1 $simm16",
+  [(si_uniform_br_scc SCC, bb:$simm16)]
 >;
 } // End Uses = [SCC]
 
@@ -2130,7 +2131,7 @@ def : Pat <
 def : Pat <
   (i64 (ctpop i64:$src)),
     (i64 (REG_SEQUENCE SReg_64,
-     (S_BCNT1_I32_B64 $src), sub0,
+     (i32 (COPY_TO_REGCLASS (S_BCNT1_I32_B64 $src), SReg_32)), sub0,
      (S_MOV_B32 0), sub1))
 >;
 
@@ -3030,10 +3031,12 @@ def : ZExt_i64_i32_Pat<anyext>;
 def : ZExt_i64_i1_Pat<zext>;
 def : ZExt_i64_i1_Pat<anyext>;
 
+// FIXME: We need to use COPY_TO_REGCLASS to work-around the fact that
+// REG_SEQUENCE patterns don't support instructions with multiple outputs.
 def : Pat <
   (i64 (sext i32:$src)),
     (REG_SEQUENCE SReg_64, $src, sub0,
-    (S_ASHR_I32 $src, 31), sub1)
+    (i32 (COPY_TO_REGCLASS (S_ASHR_I32 $src, 31), SGPR_32)), sub1)
 >;
 
 def : Pat <

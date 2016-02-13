@@ -1437,6 +1437,16 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr *MI,
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
   int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
 
+  // Make sure we don't have SCC live-ins to basic blocks.  moveToVALU assumes
+  // all SCC users are in the same blocks as their defs.
+  const MachineBasicBlock *MBB = MI->getParent();
+  if (MI == &MBB->front()) {
+    if (MBB->isLiveIn(AMDGPU::SCC)) {
+      ErrInfo = "scc register cannot be live across blocks.";
+      return false;
+    }
+  }
+
   // Make sure the number of operands is correct.
   const MCInstrDesc &Desc = get(Opcode);
   if (!Desc.isVariadic() &&
@@ -1605,6 +1615,12 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) {
   case AMDGPU::S_CMP_GE_I32: return AMDGPU::V_CMP_GE_I32_e32;
   case AMDGPU::S_CMP_LT_I32: return AMDGPU::V_CMP_LT_I32_e32;
   case AMDGPU::S_CMP_LE_I32: return AMDGPU::V_CMP_LE_I32_e32;
+  case AMDGPU::S_CMP_EQ_U32: return AMDGPU::V_CMP_EQ_U32_e32;
+  case AMDGPU::S_CMP_LG_U32: return AMDGPU::V_CMP_NE_U32_e32;
+  case AMDGPU::S_CMP_GT_U32: return AMDGPU::V_CMP_GT_U32_e32;
+  case AMDGPU::S_CMP_GE_U32: return AMDGPU::V_CMP_GE_U32_e32;
+  case AMDGPU::S_CMP_LT_U32: return AMDGPU::V_CMP_LT_U32_e32;
+  case AMDGPU::S_CMP_LE_U32: return AMDGPU::V_CMP_LE_U32_e32;
   case AMDGPU::S_LOAD_DWORD_IMM:
   case AMDGPU::S_LOAD_DWORD_SGPR:
   case AMDGPU::S_LOAD_DWORD_IMM_ci:
@@ -1621,6 +1637,8 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) {
   case AMDGPU::S_FF1_I32_B32: return AMDGPU::V_FFBL_B32_e32;
   case AMDGPU::S_FLBIT_I32_B32: return AMDGPU::V_FFBH_U32_e32;
   case AMDGPU::S_FLBIT_I32: return AMDGPU::V_FFBH_I32_e64;
+  case AMDGPU::S_CBRANCH_SCC0: return AMDGPU::S_CBRANCH_VCCZ;
+  case AMDGPU::S_CBRANCH_SCC1: return AMDGPU::S_CBRANCH_VCCNZ;
   }
 }
 
@@ -1979,7 +1997,7 @@ void SIInstrInfo::legalizeOperands(MachineInstr *MI) const {
   MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
 
   // Legalize VOP2
-  if (isVOP2(*MI)) {
+  if (isVOP2(*MI) || isVOPC(*MI)) {
     legalizeOperandsVOP2(MRI, MI);
     return;
   }
@@ -2568,6 +2586,14 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
       Inst->eraseFromParent();
       continue;
 
+    case AMDGPU::S_CBRANCH_SCC0:
+    case AMDGPU::S_CBRANCH_SCC1:
+      // Clear unused bits of vcc
+      BuildMI(*MBB, Inst, Inst->getDebugLoc(), get(AMDGPU::S_AND_B64), AMDGPU::VCC)
+              .addReg(AMDGPU::EXEC)
+              .addReg(AMDGPU::VCC);
+      break;
+
     case AMDGPU::S_BFE_U64:
     case AMDGPU::S_BFM_B64:
       llvm_unreachable("Moving this op to VALU not implemented");
@@ -2589,8 +2615,10 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
     // both.
     for (unsigned i = Inst->getNumOperands() - 1; i > 0; --i) {
       MachineOperand &Op = Inst->getOperand(i);
-      if (Op.isReg() && Op.getReg() == AMDGPU::SCC)
+      if (Op.isReg() && Op.getReg() == AMDGPU::SCC) {
         Inst->RemoveOperand(i);
+        addSCCDefUsersToVALUWorklist(Inst, Worklist);
+      }
     }
 
     if (Opcode == AMDGPU::S_SEXT_I32_I8 || Opcode == AMDGPU::S_SEXT_I32_I16) {
@@ -2623,19 +2651,24 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
       Inst->addOperand(MachineOperand::CreateImm(BitWidth));
     }
 
-    // Update the destination register class.
-    const TargetRegisterClass *NewDstRC = getDestEquivalentVGPRClass(*Inst);
-    if (!NewDstRC)
-      continue;
+    bool HasDst = Inst->getOperand(0).isReg() && Inst->getOperand(0).isDef();
+    unsigned NewDstReg = AMDGPU::NoRegister;
+    if (HasDst) {
+      // Update the destination register class.
+      const TargetRegisterClass *NewDstRC = getDestEquivalentVGPRClass(*Inst);
+      if (!NewDstRC)
+        continue;
 
-    unsigned DstReg = Inst->getOperand(0).getReg();
-    unsigned NewDstReg = MRI.createVirtualRegister(NewDstRC);
-    MRI.replaceRegWith(DstReg, NewDstReg);
+      unsigned DstReg = Inst->getOperand(0).getReg();
+      NewDstReg = MRI.createVirtualRegister(NewDstRC);
+      MRI.replaceRegWith(DstReg, NewDstReg);
+    }
 
     // Legalize the operands
     legalizeOperands(Inst);
 
-    addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
+    if (HasDst)
+     addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
   }
 }
 
@@ -2907,6 +2940,22 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
     if (!canReadVGPR(UseMI, I.getOperandNo())) {
       Worklist.push_back(&UseMI);
     }
+  }
+}
+
+void SIInstrInfo::addSCCDefUsersToVALUWorklist(MachineInstr *SCCDefInst,
+                              SmallVectorImpl<MachineInstr *> &Worklist) const {
+  // This assumes that all the users of SCC are in the same block
+  // as the SCC def.
+  for (MachineBasicBlock::iterator I = SCCDefInst,
+       E = SCCDefInst->getParent()->end(); I != E; ++I) {
+
+    // Exit if we find another SCC def.
+    if (I->findRegisterDefOperandIdx(AMDGPU::SCC) != -1)
+      return;
+
+    if (I->findRegisterUseOperandIdx(AMDGPU::SCC) != -1)
+      Worklist.push_back(I);
   }
 }
 

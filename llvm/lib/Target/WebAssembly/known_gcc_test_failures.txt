@@ -24,21 +24,9 @@ pr53645-2.c
 pr53645.c
 pr59643.c
 
-
-
-# WebAssemblyCFGStackify.cpp:438: void PlaceMarkers(llvm::MachineFunction&, const llvm::MachineLoopInfo&, const llvm::WebAssemblyInstrInfo&, llvm::MachineDominatorTree&): Assertion `ScopeTops[Stack.back()->getNumber()] == &MBB && "Block should be balanced"' failed.
+# WebAssemblyCFGStackify.cpp:458: void PlaceMarkers(llvm::MachineFunction &, const llvm::MachineLoopInfo &, const llvm::WebAssemblyInstrInfo &, llvm::MachineDominatorTree &, llvm::WebAssemblyFunctionInfo &): Assertion `Stack.back() == &MBB && "Loop top should be balanced"' failed.
 20090113-2.c
 20090113-3.c
-ashldi-1.c
-ashrdi-1.c
-builtin-bitops-1.c
-loop-11.c
-lshrdi-1.c
-mode-dependent-address.c
-va-arg-10.c
-
-
-# WebAssemblyCFGStackify.cpp:458: void PlaceMarkers(llvm::MachineFunction &, const llvm::MachineLoopInfo &, const llvm::WebAssemblyInstrInfo &, llvm::MachineDominatorTree &, llvm::WebAssemblyFunctionInfo &): Assertion `Stack.back() == &MBB && "Loop top should be balanced"' failed.
 930628-1.c
 
 
@@ -66,22 +54,22 @@ pr38151.c
 pr28982b.c
 
 
-# Cannot select brind.
+# Computed gotos are not supported (Cannot select BlockAddress/BRIND)
 20040302-1.c
 20071210-1.c
 920501-4.c
 920501-5.c
-
-# Cannot select BlockAddress.
 comp-goto-1.c
 980526-1.c
 990208-1.c
 
-# unimplemented operation lowering.
+# WebAssembly hasn't implemented (will never?) __builtin_return_address
 20010122-1.c
 20030323-1.c
 20030811-1.c
 pr17377.c
+
+# WebAssembly hasn't implemented __builtin_frame_address
 frame-address.c
 
 # Error: invalid output constraint '=t' in asm.

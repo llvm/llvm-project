@@ -961,6 +961,27 @@ bool LazyValueInfoCache::solveBlockValueConstantRange(LVILatticeVal &BBLV,
   if (isa<BinaryOperator>(BBI)) {
     if (ConstantInt *RHS = dyn_cast<ConstantInt>(BBI->getOperand(1))) {
       RHSRange = ConstantRange(RHS->getValue());
+
+      // Try to use information about wrap flags to refine the range LHS can
+      // legally have.  This is a slightly weird way to implement forward
+      // propagation over overflowing instructions, but it seems to be the only
+      // clean one we have.  NOTE: Because we may have speculated the
+      // instruction, we can't constrain other uses of LHS even if they would
+      // seem to be equivelent control dependent with this op.
+      if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BBI)) {
+        unsigned WrapKind = 0;
+        if (OBO->hasNoSignedWrap())
+          WrapKind |= OverflowingBinaryOperator::NoSignedWrap;
+        if (OBO->hasNoUnsignedWrap())
+          WrapKind |= OverflowingBinaryOperator::NoUnsignedWrap;
+
+        if (WrapKind) {
+          auto OpCode = static_cast<Instruction::BinaryOps>(BBI->getOpcode());
+          auto NoWrapCR =
+            ConstantRange::makeNoWrapRegion(OpCode, RHS->getValue(), WrapKind);
+          LHSRange = LHSRange.intersectWith(NoWrapCR);
+        }
+      }
     } else {
       BBLV.markOverdefined();
       return true;
