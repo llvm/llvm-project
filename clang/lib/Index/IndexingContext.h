@@ -62,18 +62,18 @@ public:
   static bool isTemplateImplicitInstantiation(const Decl *D);
 
   bool handleDecl(const Decl *D, SymbolRoleSet Roles = SymbolRoleSet(),
-                  ArrayRef<SymbolRelation> Relations = {});
+                  ArrayRef<SymbolRelation> Relations = None);
 
   bool handleDecl(const Decl *D, SourceLocation Loc,
                   SymbolRoleSet Roles = SymbolRoleSet(),
-                  ArrayRef<SymbolRelation> Relations = {},
+                  ArrayRef<SymbolRelation> Relations = None,
                   const DeclContext *DC = nullptr);
 
   bool handleReference(const NamedDecl *D, SourceLocation Loc,
                        const NamedDecl *Parent,
                        const DeclContext *DC,
                        SymbolRoleSet Roles,
-                       ArrayRef<SymbolRelation> Relations = {},
+                       ArrayRef<SymbolRelation> Relations = None,
                        const Expr *RefE = nullptr,
                        const Decl *RefD = nullptr);
 
