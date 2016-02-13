@@ -1251,7 +1251,7 @@ Process::HandleProcessStateChangedEvent (const EventSP &event_sp,
                         else if (other_thread)
                         {
                             thread_list.SetSelectedThreadByID (other_thread->GetID());
-                            curr_thread = plan_thread;
+                            curr_thread = other_thread;
                         }
                         else
                         {
