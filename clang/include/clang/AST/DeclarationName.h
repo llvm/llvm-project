@@ -30,6 +30,7 @@ namespace clang {
   class IdentifierInfo;
   class MultiKeywordSelector;
   enum OverloadedOperatorKind : int;
+  struct PrintingPolicy;
   class QualType;
   class Type;
   class TypeSourceInfo;
@@ -302,7 +303,9 @@ public:
   }
 
   static int compare(DeclarationName LHS, DeclarationName RHS);
-  
+
+  void print(raw_ostream &OS, const PrintingPolicy &Policy);
+
   void dump() const;
 };
 
