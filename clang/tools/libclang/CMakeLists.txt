@@ -30,7 +30,6 @@ set(SOURCES
   CXTranslationUnit.h
   CXType.h
   Index_Internal.h
-  IndexingContext.h
   ../../include/clang-c/Index.h
   )
 
