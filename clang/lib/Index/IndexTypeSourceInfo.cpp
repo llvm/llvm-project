@@ -1,4 +1,4 @@
-//===- CIndexHigh.cpp - Higher level API functions ------------------------===//
+//===- IndexTypeSourceInfo.cpp - Indexing types ---------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,7 +11,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 
 using namespace clang;
-using namespace cxindex;
+using namespace index;
 
 namespace {
 
@@ -19,18 +19,56 @@ class TypeIndexer : public RecursiveASTVisitor<TypeIndexer> {
   IndexingContext &IndexCtx;
   const NamedDecl *Parent;
   const DeclContext *ParentDC;
+  bool IsBase;
+  SmallVector<SymbolRelation, 3> Relations;
+
+  typedef RecursiveASTVisitor<TypeIndexer> base;
 
 public:
   TypeIndexer(IndexingContext &indexCtx, const NamedDecl *parent,
-              const DeclContext *DC)
-    : IndexCtx(indexCtx), Parent(parent), ParentDC(DC) { }
+              const DeclContext *DC, bool isBase)
+    : IndexCtx(indexCtx), Parent(parent), ParentDC(DC), IsBase(isBase) {
+    if (IsBase) {
+      assert(Parent);
+      Relations.emplace_back((unsigned)SymbolRole::RelationBaseOf, Parent);
+    }
+  }
   
   bool shouldWalkTypesOfTypeLocs() const { return false; }
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-    IndexCtx.handleReference(TL.getTypedefNameDecl(), TL.getNameLoc(),
-                             Parent, ParentDC);
+    return IndexCtx.handleReference(TL.getTypedefNameDecl(), TL.getNameLoc(),
+                                    Parent, ParentDC, SymbolRoleSet(),
+                                    Relations);
+  }
+
+#define TRY_TO(CALL_EXPR)                                                      \
+  do {                                                                         \
+    if (!CALL_EXPR)                                                            \
+      return false;                                                            \
+  } while (0)
+
+  bool traverseParamVarHelper(ParmVarDecl *D) {
+    TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
+    if (D->getTypeSourceInfo())
+      TRY_TO(TraverseTypeLoc(D->getTypeSourceInfo()->getTypeLoc()));
     return true;
+  }
+
+  bool TraverseParmVarDecl(ParmVarDecl *D) {
+    // Avoid visiting default arguments from the definition that were already
+    // visited in the declaration.
+    // FIXME: A free function definition can have default arguments.
+    // Avoiding double visitaiton of default arguments should be handled by the
+    // visitor probably with a bit in the AST to indicate if the attached
+    // default argument was 'inherited' or written in source.
+    if (auto FD = dyn_cast<FunctionDecl>(D->getDeclContext())) {
+      if (FD->isThisDeclarationADefinition()) {
+        return traverseParamVarHelper(D);
+      }
+    }
+
+    return base::TraverseParmVarDecl(D);
   }
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
@@ -48,24 +86,20 @@ public:
       return true;
     }
 
-    if (D->getLocation() == TL.getNameLoc())
-      IndexCtx.handleTagDecl(D);
-    else
-      IndexCtx.handleReference(D, TL.getNameLoc(),
-                               Parent, ParentDC);
-    return true;
+    return IndexCtx.handleReference(D, TL.getNameLoc(),
+                                    Parent, ParentDC, SymbolRoleSet(),
+                                    Relations);
   }
 
   bool VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
-    IndexCtx.handleReference(TL.getIFaceDecl(), TL.getNameLoc(),
-                             Parent, ParentDC);
-    return true;
+    return IndexCtx.handleReference(TL.getIFaceDecl(), TL.getNameLoc(),
+                                    Parent, ParentDC, SymbolRoleSet());
   }
 
   bool VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
     for (unsigned i = 0, e = TL.getNumProtocols(); i != e; ++i) {
       IndexCtx.handleReference(TL.getProtocol(i), TL.getProtocolLoc(i),
-                               Parent, ParentDC);
+                               Parent, ParentDC, SymbolRoleSet());
     }
     return true;
   }
@@ -75,11 +109,11 @@ public:
       if (IndexCtx.shouldIndexImplicitTemplateInsts()) {
         if (CXXRecordDecl *RD = T->getAsCXXRecordDecl())
           IndexCtx.handleReference(RD, TL.getTemplateNameLoc(),
-                                   Parent, ParentDC);
+                                   Parent, ParentDC, SymbolRoleSet(), Relations);
       } else {
         if (const TemplateDecl *D = T->getTemplateName().getAsTemplateDecl())
           IndexCtx.handleReference(D, TL.getTemplateNameLoc(),
-                                   Parent, ParentDC);
+                                   Parent, ParentDC, SymbolRoleSet(), Relations);
       }
     }
     return true;
@@ -95,22 +129,24 @@ public:
 
 void IndexingContext::indexTypeSourceInfo(TypeSourceInfo *TInfo,
                                           const NamedDecl *Parent,
-                                          const DeclContext *DC) {
+                                          const DeclContext *DC,
+                                          bool isBase) {
   if (!TInfo || TInfo->getTypeLoc().isNull())
     return;
   
-  indexTypeLoc(TInfo->getTypeLoc(), Parent, DC);
+  indexTypeLoc(TInfo->getTypeLoc(), Parent, DC, isBase);
 }
 
 void IndexingContext::indexTypeLoc(TypeLoc TL,
                                    const NamedDecl *Parent,
-                                   const DeclContext *DC) {
+                                   const DeclContext *DC,
+                                   bool isBase) {
   if (TL.isNull())
     return;
 
   if (!DC)
     DC = Parent->getLexicalDeclContext();
-  TypeIndexer(*this, Parent, DC).TraverseTypeLoc(TL);
+  TypeIndexer(*this, Parent, DC, isBase).TraverseTypeLoc(TL);
 }
 
 void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
@@ -134,11 +170,11 @@ void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
 
   case NestedNameSpecifier::Namespace:
     handleReference(NNS.getNestedNameSpecifier()->getAsNamespace(),
-                    Loc, Parent, DC);
+                    Loc, Parent, DC, SymbolRoleSet());
     break;
   case NestedNameSpecifier::NamespaceAlias:
     handleReference(NNS.getNestedNameSpecifier()->getAsNamespaceAlias(),
-                    Loc, Parent, DC);
+                    Loc, Parent, DC, SymbolRoleSet());
     break;
 
   case NestedNameSpecifier::TypeSpec:
@@ -149,8 +185,18 @@ void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
 }
 
 void IndexingContext::indexTagDecl(const TagDecl *D) {
-  if (handleTagDecl(D)) {
-    if (D->isThisDeclarationADefinition())
+  if (!shouldIndexFunctionLocalSymbols() && isFunctionLocalDecl(D))
+    return;
+
+  if (handleDecl(D)) {
+    if (D->isThisDeclarationADefinition()) {
+      indexNestedNameSpecifierLoc(D->getQualifierLoc(), D);
+      if (auto CXXRD = dyn_cast<CXXRecordDecl>(D)) {
+        for (const auto &I : CXXRD->bases()) {
+          indexTypeSourceInfo(I.getTypeSourceInfo(), CXXRD, CXXRD, /*isBase=*/true);
+        }
+      }
       indexDeclContext(D);
+    }
   }
 }

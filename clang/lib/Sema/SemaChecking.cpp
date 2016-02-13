@@ -7265,14 +7265,21 @@ void DiagnoseNullConversion(Sema &S, Expr *E, QualType T, SourceLocation CC) {
 
   SourceLocation Loc = E->getSourceRange().getBegin();
 
+  // Venture through the macro stacks to get to the source of macro arguments.
+  // The new location is a better location than the complete location that was
+  // passed in.
+  while (S.SourceMgr.isMacroArgExpansion(Loc))
+    Loc = S.SourceMgr.getImmediateMacroCallerLoc(Loc);
+
+  while (S.SourceMgr.isMacroArgExpansion(CC))
+    CC = S.SourceMgr.getImmediateMacroCallerLoc(CC);
+
   // __null is usually wrapped in a macro.  Go up a macro if that is the case.
-  if (NullKind == Expr::NPCK_GNUNull) {
-    if (Loc.isMacroID()) {
-      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
-          Loc, S.SourceMgr, S.getLangOpts());
-      if (MacroName == "NULL")
-        Loc = S.SourceMgr.getImmediateExpansionRange(Loc).first;
-    }
+  if (NullKind == Expr::NPCK_GNUNull && Loc.isMacroID()) {
+    StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
+        Loc, S.SourceMgr, S.getLangOpts());
+    if (MacroName == "NULL")
+      Loc = S.SourceMgr.getImmediateExpansionRange(Loc).first;
   }
 
   // Only warn if the null and context location are in the same macro expansion.

@@ -8672,7 +8672,7 @@ public:
                                         Expr *CastExpr,
                                         SourceLocation RParenLoc);
 
-  enum ARCConversionResult { ACR_okay, ACR_unbridged };
+  enum ARCConversionResult { ACR_okay, ACR_unbridged, ACR_error };
 
   /// \brief Checks for invalid conversions and casts between
   /// retainable pointers and other pointer kinds.

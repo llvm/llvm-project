@@ -26,74 +26,80 @@ using namespace clang;
 // OpenMP declarative directives.
 //===----------------------------------------------------------------------===//
 
+namespace {
+enum OpenMPDirectiveKindEx {
+  OMPD_cancellation = OMPD_unknown + 1,
+  OMPD_data,
+  OMPD_enter,
+  OMPD_exit,
+  OMPD_point,
+  OMPD_target_enter,
+  OMPD_target_exit
+};
+} // namespace
+
+// Map token string to extended OMP token kind that are
+// OpenMPDirectiveKind + OpenMPDirectiveKindEx.
+static unsigned getOpenMPDirectiveKindEx(StringRef S) {
+  auto DKind = getOpenMPDirectiveKind(S);
+  if (DKind != OMPD_unknown)
+    return DKind;
+
+  return llvm::StringSwitch<unsigned>(S)
+      .Case("cancellation", OMPD_cancellation)
+      .Case("data", OMPD_data)
+      .Case("enter", OMPD_enter)
+      .Case("exit", OMPD_exit)
+      .Case("point", OMPD_point)
+      .Default(OMPD_unknown);
+}
+
 static OpenMPDirectiveKind ParseOpenMPDirectiveKind(Parser &P) {
   // Array of foldings: F[i][0] F[i][1] ===> F[i][2].
   // E.g.: OMPD_for OMPD_simd ===> OMPD_for_simd
   // TODO: add other combined directives in topological order.
-  const OpenMPDirectiveKind F[][3] = {
-      {OMPD_unknown /*cancellation*/, OMPD_unknown /*point*/,
-       OMPD_cancellation_point},
-      {OMPD_target, OMPD_unknown /*data*/, OMPD_target_data},
-      {OMPD_target, OMPD_unknown /*enter/exit*/,
-       OMPD_unknown /*target enter/exit*/},
-      {OMPD_unknown /*target enter*/, OMPD_unknown /*data*/,
-       OMPD_target_enter_data},
-      {OMPD_unknown /*target exit*/, OMPD_unknown /*data*/,
-       OMPD_target_exit_data},
-      {OMPD_for, OMPD_simd, OMPD_for_simd},
-      {OMPD_parallel, OMPD_for, OMPD_parallel_for},
-      {OMPD_parallel_for, OMPD_simd, OMPD_parallel_for_simd},
-      {OMPD_parallel, OMPD_sections, OMPD_parallel_sections},
-      {OMPD_taskloop, OMPD_simd, OMPD_taskloop_simd},
-      {OMPD_target, OMPD_parallel, OMPD_target_parallel},
-      {OMPD_target_parallel, OMPD_for, OMPD_target_parallel_for}};
+  static const unsigned F[][3] = {
+    { OMPD_cancellation, OMPD_point, OMPD_cancellation_point },
+    { OMPD_target, OMPD_data, OMPD_target_data },
+    { OMPD_target, OMPD_enter, OMPD_target_enter },
+    { OMPD_target, OMPD_exit, OMPD_target_exit },
+    { OMPD_target_enter, OMPD_data, OMPD_target_enter_data },
+    { OMPD_target_exit, OMPD_data, OMPD_target_exit_data },
+    { OMPD_for, OMPD_simd, OMPD_for_simd },
+    { OMPD_parallel, OMPD_for, OMPD_parallel_for },
+    { OMPD_parallel_for, OMPD_simd, OMPD_parallel_for_simd },
+    { OMPD_parallel, OMPD_sections, OMPD_parallel_sections },
+    { OMPD_taskloop, OMPD_simd, OMPD_taskloop_simd },
+    { OMPD_target, OMPD_parallel, OMPD_target_parallel },
+    { OMPD_target_parallel, OMPD_for, OMPD_target_parallel_for }
+  };
   auto Tok = P.getCurToken();
-  auto DKind =
+  unsigned DKind =
       Tok.isAnnotation()
-          ? OMPD_unknown
-          : getOpenMPDirectiveKind(P.getPreprocessor().getSpelling(Tok));
+          ? static_cast<unsigned>(OMPD_unknown)
+          : getOpenMPDirectiveKindEx(P.getPreprocessor().getSpelling(Tok));
+  if (DKind == OMPD_unknown)
+    return OMPD_unknown;
 
-  bool TokenMatched = false;
   for (unsigned i = 0; i < llvm::array_lengthof(F); ++i) {
-    if (!Tok.isAnnotation() && DKind == OMPD_unknown) {
-      TokenMatched =
-          ((i == 0) &&
-           !P.getPreprocessor().getSpelling(Tok).compare("cancellation")) ||
-          ((i == 3) &&
-           !P.getPreprocessor().getSpelling(Tok).compare("enter")) ||
-          ((i == 4) && !P.getPreprocessor().getSpelling(Tok).compare("exit"));
-    } else {
-      TokenMatched = DKind == F[i][0] && DKind != OMPD_unknown;
-    }
+    if (DKind != F[i][0])
+      continue;
 
-    if (TokenMatched) {
-      Tok = P.getPreprocessor().LookAhead(0);
-      auto TokenIsAnnotation = Tok.isAnnotation();
-      auto SDKind =
-          TokenIsAnnotation
-              ? OMPD_unknown
-              : getOpenMPDirectiveKind(P.getPreprocessor().getSpelling(Tok));
+    Tok = P.getPreprocessor().LookAhead(0);
+    unsigned SDKind =
+        Tok.isAnnotation()
+            ? static_cast<unsigned>(OMPD_unknown)
+            : getOpenMPDirectiveKindEx(P.getPreprocessor().getSpelling(Tok));
+    if (SDKind == OMPD_unknown)
+      continue;
 
-      if (!TokenIsAnnotation && SDKind == OMPD_unknown) {
-        TokenMatched =
-            ((i == 0) &&
-             !P.getPreprocessor().getSpelling(Tok).compare("point")) ||
-            ((i == 1 || i == 3 || i == 4) &&
-             !P.getPreprocessor().getSpelling(Tok).compare("data")) ||
-            ((i == 2) &&
-             (!P.getPreprocessor().getSpelling(Tok).compare("enter") ||
-              !P.getPreprocessor().getSpelling(Tok).compare("exit")));
-      } else {
-        TokenMatched = SDKind == F[i][1] && SDKind != OMPD_unknown;
-      }
-
-      if (TokenMatched) {
-        P.ConsumeToken();
-        DKind = F[i][2];
-      }
+    if (SDKind == F[i][1]) {
+      P.ConsumeToken();
+      DKind = F[i][2];
     }
   }
-  return DKind;
+  return DKind <= OMPD_unknown ? static_cast<OpenMPDirectiveKind>(DKind)
+                               : OMPD_unknown;
 }
 
 /// \brief Parsing of declarative OpenMP directives.

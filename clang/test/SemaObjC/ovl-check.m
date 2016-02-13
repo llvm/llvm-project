@@ -4,20 +4,24 @@
 // in overload resolution in ObjC.
 
 struct Type1 { int a; };
+typedef const __attribute__((objc_bridge(id))) void * CFTypeRef;
 @interface Iface1 @end
 
 @interface NeverCalled
 - (void) test:(struct Type1 *)arg;
+- (void) test2:(CFTypeRef)arg;
 @end
 
 @interface TakesIface1
 - (void) test:(Iface1 *)arg;
+- (void) test2:(Iface1 *)arg;
 @end
 
 // PR26085, rdar://problem/24111333
 void testTakesIface1(id x, Iface1 *arg) {
   // This should resolve silently to `TakesIface1`.
   [x test:arg];
+  [x test2:arg];
 }
 
 @class NSString;
@@ -36,15 +40,14 @@ void testTakesNSString(id x) {
   [x testStr:"someStringLiteral"];
 }
 
-typedef const void *CFTypeRef;
 id CreateSomething();
-
-@interface NeverCalledv3
-- (void) testCFTypeRef:(struct Type1 *)arg;
-@end
 
 @interface TakesCFTypeRef
 - (void) testCFTypeRef:(CFTypeRef)arg;
+@end
+
+@interface NeverCalledv3
+- (void) testCFTypeRef:(struct Type1 *)arg;
 @end
 
 // Not called out explicitly by PR26085, but related.
