@@ -80,7 +80,8 @@ main_body:
 LOOP:                                             ; preds = %ENDIF2795, %main_body
   %temp894.0 = phi float [ 0.000000e+00, %main_body ], [ %temp894.1, %ENDIF2795 ]
   %temp18.0 = phi float [ undef, %main_body ], [ %temp18.1, %ENDIF2795 ]
-  %67 = icmp sgt i32 undef, 4
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #2
+  %67 = icmp sgt i32 %tid, 4
   br i1 %67, label %ENDLOOP, label %ENDIF
 
 ENDLOOP:                                          ; preds = %ELSE2566, %LOOP
@@ -228,13 +229,19 @@ ENDIF:                                            ; preds = %LOOP
   %199 = fcmp olt float undef, %.temp292.9
   %200 = and i1 %198, %199
   %temp292.11 = select i1 %200, float undef, float %.temp292.9
-  br i1 undef, label %IF2565, label %ELSE2566
+  %tid0 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #2
+  %cmp0 = icmp eq i32 %tid0, 0
+  br i1 %cmp0, label %IF2565, label %ELSE2566
 
 IF2565:                                           ; preds = %ENDIF
-  br i1 false, label %ENDIF2582, label %ELSE2584
+  %tid1 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #2
+  %cmp1 = icmp eq i32 %tid1, 0
+  br i1 %cmp1, label %ENDIF2582, label %ELSE2584
 
 ELSE2566:                                         ; preds = %ENDIF
-  %201 = fcmp oeq float %temp292.11, 1.000000e+04
+  %tid2 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #2
+  %tidf = bitcast i32 %tid2 to float
+  %201 = fcmp oeq float %temp292.11, %tidf
   br i1 %201, label %ENDLOOP, label %ELSE2593
 
 ENDIF2564:                                        ; preds = %ENDIF2594, %ENDIF2588
@@ -248,7 +255,9 @@ ENDIF2564:                                        ; preds = %ENDIF2594, %ENDIF25
   %207 = fcmp ogt float undef, 0.000000e+00
   %208 = fcmp olt float undef, 1.000000e+00
   %209 = and i1 %207, %208
-  %210 = fcmp olt float undef, %206
+  %tid3 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #2
+  %tidf3 = bitcast i32 %tid3 to float
+  %210 = fcmp olt float %tidf3, %206
   %211 = and i1 %209, %210
   br i1 %211, label %ENDIF2795, label %ELSE2797
 
@@ -260,7 +269,9 @@ ENDIF2582:                                        ; preds = %ELSE2584, %IF2565
   %213 = fadd float 0.000000e+00, %212
   %floor = call float @llvm.floor.f32(float %213)
   %214 = fsub float %213, %floor
-  br i1 undef, label %IF2589, label %ELSE2590
+  %tid4 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #2
+  %cmp4 = icmp eq i32 %tid4, 0
+  br i1 %cmp4, label %IF2589, label %ELSE2590
 
 IF2589:                                           ; preds = %ENDIF2582
   br label %ENDIF2588
@@ -478,6 +489,8 @@ ELSE2824:                                         ; preds = %ELSE2821
   %.2849 = select i1 undef, float 0.000000e+00, float 1.000000e+00
   br label %ENDIF2795
 }
+
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #2
 
 ; Function Attrs: nounwind readnone
 declare float @llvm.SI.load.const(<16 x i8>, i32) #2

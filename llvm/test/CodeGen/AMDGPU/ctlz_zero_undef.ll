@@ -123,7 +123,7 @@ define void @s_ctlz_zero_undef_i64_trunc(i32 addrspace(1)* noalias %out, i64 %va
 ; SI-DAG: v_ffbh_u32_e32 [[FFBH_HI:v[0-9]+]], v[[HI]]
 ; SI-DAG: v_cndmask_b32_e64 v[[CTLZ:[0-9]+]], [[FFBH_HI]], [[FFBH_LO]]
 ; SI-DAG: v_mov_b32_e32 v[[CTLZ_HI:[0-9]+]], 0{{$}}
-; SI: {{buffer|flat}}_store_dwordx2 v{{\[}}[[CTLZ]]:[[CTLZ_HI]]{{\]}}
+; SI: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CTLZ]]:[[CTLZ_HI]]{{\]}}
 define void @v_ctlz_zero_undef_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid

@@ -7,9 +7,10 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; moved using VALU instructions
 ; SI-NOT: s_mov_b64 s[{{[0-9]:[0-9]}}], -1
 ; SI: v_mov_b32_e32 v{{[0-9]}}, -1
-define void @test_if(i32 %a, i32 %b, i32 addrspace(1)* %src, i32 addrspace(1)* %dst) #1 {
+define void @test_if(i32 %b, i32 addrspace(1)* %src, i32 addrspace(1)* %dst) #1 {
 entry:
-  switch i32 %a, label %default [
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+  switch i32 %tid, label %default [
     i32 0, label %case0
     i32 1, label %case1
   ]
@@ -25,7 +26,7 @@ case1:
   br label %end
 
 default:
-  %cmp8 = icmp eq i32 %a, 2
+  %cmp8 = icmp eq i32 %tid, 2
   %arrayidx10 = getelementptr i32, i32 addrspace(1)* %dst, i32 %b
   br i1 %cmp8, label %if, label %else
 
@@ -80,9 +81,11 @@ exit:
 ; SI: buffer_load_dword
 ; SI-DAG: buffer_store_dword
 ; SI-DAG: v_cmp_eq_i32_e32 vcc,
-; SI: s_or_b64 [[OR_SREG:s\[[0-9]+:[0-9]+\]]]
-; SI: s_andn2_b64 exec, exec, [[OR_SREG]]
-; SI: s_cbranch_execnz BB2_3
+; SI-DAG: s_and_b64 vcc, exec, vcc
+; SI: s_cbranch_vccnz BB2_2
+; SI: s_branch BB2_3
+; SI: BB2_2:
+; SI: s_endpgm
 
 define void @simple_test_v_loop(i32 addrspace(1)* %dst, i32 addrspace(1)* %src) #1 {
 entry:

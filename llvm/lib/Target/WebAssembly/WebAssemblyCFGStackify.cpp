@@ -334,8 +334,10 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
   MachineLoop *HeaderLoop = MLI.getLoopFor(Header);
   if (HeaderLoop && MBB.getNumber() > LoopBottom(HeaderLoop)->getNumber()) {
     // Header is the header of a loop that does not lexically contain MBB, so
-    // the BLOCK needs to be above the LOOP.
+    // the BLOCK needs to be above the LOOP, after any END constructs.
     InsertPos = Header->begin();
+    while (InsertPos->getOpcode() != WebAssembly::LOOP)
+      ++InsertPos;
   } else {
     // Otherwise, insert the BLOCK as late in Header as we can, but before the
     // beginning of the local expression tree and any nested BLOCKs.

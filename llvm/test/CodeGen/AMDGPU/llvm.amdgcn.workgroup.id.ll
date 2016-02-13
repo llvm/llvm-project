@@ -25,7 +25,7 @@ declare i32 @llvm.amdgcn.workgroup.id.z() #0
 ; HSA: v_mov_b32_e32 [[VCOPY:v[0-9]+]], s6{{$}}
 
 ; ALL-NOT: [[VCOPY]]
-; ALL: {{buffer|flat}}_store_dword [[VCOPY]]
+; ALL: {{buffer|flat}}_store_dword {{.*}}[[VCOPY]]
 
 ; HSA: COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; ALL-NOHSA: COMPUTE_PGM_RSRC2:USER_SGPR: 2
@@ -53,7 +53,7 @@ define void @test_workgroup_id_x(i32 addrspace(1)* %out) #1 {
 ; HSA: v_mov_b32_e32 [[VCOPY:v[0-9]+]], s7{{$}}
 
 ; ALL-NOT: [[VCOPY]]
-; ALL: {{buffer|flat}}_store_dword [[VCOPY]]
+; ALL: {{buffer|flat}}_store_dword {{.*}}[[VCOPY]]
 
 ; HSA: COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; ALL-NOHSA: COMPUTE_PGM_RSRC2:USER_SGPR: 2
@@ -89,7 +89,7 @@ define void @test_workgroup_id_y(i32 addrspace(1)* %out) #1 {
 ; HSA: v_mov_b32_e32 [[VCOPY:v[0-9]+]], s7{{$}}
 
 ; ALL-NOT: [[VCOPY]]
-; ALL: {{buffer|flat}}_store_dword [[VCOPY]]
+; ALL: {{buffer|flat}}_store_dword {{.*}}[[VCOPY]]
 
 ; HSA: COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; ALL-NOHSA: COMPUTE_PGM_RSRC2:USER_SGPR: 2

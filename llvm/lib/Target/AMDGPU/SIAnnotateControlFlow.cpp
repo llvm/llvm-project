@@ -14,6 +14,7 @@
 
 #include "AMDGPU.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
@@ -43,6 +44,7 @@ static const char *const LoopIntrinsic = "llvm.amdgcn.loop";
 static const char *const EndCfIntrinsic = "llvm.amdgcn.end.cf";
 
 class SIAnnotateControlFlow : public FunctionPass {
+  DivergenceAnalysis *DA;
 
   Type *Boolean;
   Type *Void;
@@ -105,6 +107,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<DivergenceAnalysis>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
@@ -115,6 +118,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(SIAnnotateControlFlow, DEBUG_TYPE,
                       "Annotate SI Control Flow", false, false)
+INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
 INITIALIZE_PASS_END(SIAnnotateControlFlow, DEBUG_TYPE,
                     "Annotate SI Control Flow", false, false)
 
@@ -200,6 +204,9 @@ void SIAnnotateControlFlow::eraseIfUnused(PHINode *Phi) {
 
 /// \brief Open a new "If" block
 void SIAnnotateControlFlow::openIf(BranchInst *Term) {
+  if (DA->isUniform(Term->getCondition())) {
+    return;
+  }
   Value *Ret = CallInst::Create(If, Term->getCondition(), "", Term);
   Term->setCondition(ExtractValueInst::Create(Ret, 0, "", Term));
   push(Term->getSuccessor(1), ExtractValueInst::Create(Ret, 1, "", Term));
@@ -207,6 +214,9 @@ void SIAnnotateControlFlow::openIf(BranchInst *Term) {
 
 /// \brief Close the last "If" block and open a new "Else" block
 void SIAnnotateControlFlow::insertElse(BranchInst *Term) {
+  if (DA->isUniform(Term->getCondition())) {
+    return;
+  }
   Value *Ret = CallInst::Create(Else, popSaved(), "", Term);
   Term->setCondition(ExtractValueInst::Create(Ret, 0, "", Term));
   push(Term->getSuccessor(1), ExtractValueInst::Create(Ret, 1, "", Term));
@@ -290,6 +300,10 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
 
 /// \brief Handle a back edge (loop)
 void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
+  if (DA->isUniform(Term->getCondition())) {
+    return;
+  }
+
   BasicBlock *BB = Term->getParent();
   llvm::Loop *L = LI->getLoopFor(BB);
   BasicBlock *Target = Term->getSuccessor(1);
@@ -311,6 +325,9 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
 void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
   llvm::Loop *L = LI->getLoopFor(BB);
 
+  if (Stack.back().first != BB)
+    return;
+
   if (L && L->getHeader() == BB) {
     // We can't insert an EndCF call into a loop header, because it will
     // get executed on every iteration of the loop, when it should be
@@ -326,14 +343,18 @@ void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
     BB = llvm::SplitBlockPredecessors(BB, Preds, "endcf.split", DT, LI, false);
   }
 
-  CallInst::Create(EndCf, popSaved(), "", &*BB->getFirstInsertionPt());
+  Value *Exec = popSaved();
+  if (!isa<UndefValue>(Exec))
+    CallInst::Create(EndCf, Exec, "", &*BB->getFirstInsertionPt());
 }
 
 /// \brief Annotate the control flow with intrinsics so the backend can
 /// recognize if/then/else and loops.
 bool SIAnnotateControlFlow::runOnFunction(Function &F) {
+
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  DA = &getAnalysis<DivergenceAnalysis>();
 
   for (df_iterator<BasicBlock *> I = df_begin(&F.getEntryBlock()),
        E = df_end(&F.getEntryBlock()); I != E; ++I) {
@@ -343,12 +364,14 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
     if (!Term || Term->isUnconditional()) {
       if (isTopOfStack(*I))
         closeControlFlow(*I);
+
       continue;
     }
 
     if (I.nodeVisited(Term->getSuccessor(1))) {
       if (isTopOfStack(*I))
         closeControlFlow(*I);
+
       handleLoop(Term);
       continue;
     }

@@ -2212,27 +2212,30 @@ Instruction *InstCombiner::visitICmpInstWithInstAndIntCst(ICmpInst &ICI,
         }
         break;
       case Instruction::Xor:
-        // For the xor case, we can xor two constants together, eliminating
-        // the explicit xor.
-        if (Constant *BOC = dyn_cast<Constant>(BO->getOperand(1))) {
-          return new ICmpInst(ICI.getPredicate(), BO->getOperand(0),
-                              ConstantExpr::getXor(RHS, BOC));
-        } else if (RHSV == 0) {
-          // Replace ((xor A, B) != 0) with (A != B)
-          return new ICmpInst(ICI.getPredicate(), BO->getOperand(0),
-                              BO->getOperand(1));
+        if (BO->hasOneUse()) {
+          if (Constant *BOC = dyn_cast<Constant>(BO->getOperand(1))) {
+            // For the xor case, we can xor two constants together, eliminating
+            // the explicit xor.
+            return new ICmpInst(ICI.getPredicate(), BO->getOperand(0),
+                ConstantExpr::getXor(RHS, BOC));
+          } else if (RHSV == 0) {
+            // Replace ((xor A, B) != 0) with (A != B)
+            return new ICmpInst(ICI.getPredicate(), BO->getOperand(0),
+                BO->getOperand(1));
+          }
         }
         break;
       case Instruction::Sub:
-        // Replace ((sub A, B) != C) with (B != A-C) if A & C are constants.
-        if (ConstantInt *BOp0C = dyn_cast<ConstantInt>(BO->getOperand(0))) {
-          if (BO->hasOneUse())
+        if (BO->hasOneUse()) {
+          if (ConstantInt *BOp0C = dyn_cast<ConstantInt>(BO->getOperand(0))) {
+            // Replace ((sub A, B) != C) with (B != A-C) if A & C are constants.
             return new ICmpInst(ICI.getPredicate(), BO->getOperand(1),
-                                ConstantExpr::getSub(BOp0C, RHS));
-        } else if (RHSV == 0) {
-          // Replace ((sub A, B) != 0) with (A != B)
-          return new ICmpInst(ICI.getPredicate(), BO->getOperand(0),
-                              BO->getOperand(1));
+                ConstantExpr::getSub(BOp0C, RHS));
+          } else if (RHSV == 0) {
+            // Replace ((sub A, B) != 0) with (A != B)
+            return new ICmpInst(ICI.getPredicate(), BO->getOperand(0),
+                BO->getOperand(1));
+          }
         }
         break;
       case Instruction::Or:

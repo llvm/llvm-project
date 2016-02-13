@@ -193,7 +193,9 @@ bb1:                                              ; preds = %bb2
 
 bb2:                                              ; preds = %bb6, %bb
   %tmp = phi float [ undef, %bb ], [ %tmp8, %bb6 ]
-  %tmp3 = fsub float undef, %tmp
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #1
+  %f_tid = bitcast i32 %tid to float
+  %tmp3 = fsub float %f_tid, %tmp
   %tmp5 = fcmp oeq float %tmp3, 1.000000e+04
   br i1 %tmp5, label %bb1, label %bb6
 
@@ -203,3 +205,7 @@ bb6:                                              ; preds = %bb2
   %tmp8 = fadd float %tmp7, undef
   br label %bb2
 }
+
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
+
+attributes #1 = { nounwind readnone }

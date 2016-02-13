@@ -379,7 +379,7 @@ define void @v3i8_eq(<3 x i8> addrspace(1)* %out, <3 x i8> addrspace(1)* %ptra, 
 ; Make sure we don't try to emit i1 setcc ops
 ; FUNC-LABEL: setcc-i1
 ; SI: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, 1
-; SI: v_cmp_eq_i32_e64 s[0:1], 0, [[AND]]
+; SI: s_cmp_eq_i32 [[AND]], 0
 define void @setcc-i1(i32 %in) {
   %and = and i32 %in, 1
   %cmp = icmp eq i32 %and, 0

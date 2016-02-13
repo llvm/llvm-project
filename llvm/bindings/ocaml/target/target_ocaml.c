@@ -302,25 +302,6 @@ CAMLprim value llvm_targetmachine_features(value Machine) {
                                 TargetMachine_val(Machine)));
 }
 
-/* TargetMachine.t -> DataLayout.t */
-CAMLprim value llvm_targetmachine_data_layout(value Machine) {
-  CAMLparam1(Machine);
-  CAMLlocal1(DataLayout);
-  char *TargetDataCStr;
-
-  /* LLVMGetTargetMachineData returns a pointer owned by the TargetMachine,
-     so it is impossible to wrap it with llvm_alloc_target_data, which assumes
-     that OCaml owns the pointer. */
-  LLVMTargetDataRef OrigDataLayout;
-  OrigDataLayout = LLVMGetTargetMachineData(TargetMachine_val(Machine));
-
-  TargetDataCStr = LLVMCopyStringRepOfTargetData(OrigDataLayout);
-  DataLayout = llvm_alloc_data_layout(LLVMCreateTargetData(TargetDataCStr));
-  LLVMDisposeMessage(TargetDataCStr);
-
-  CAMLreturn(DataLayout);
-}
-
 /* bool -> TargetMachine.t -> unit */
 CAMLprim value llvm_targetmachine_set_verbose_asm(value Verb, value Machine) {
   LLVMSetTargetMachineAsmVerbosity(TargetMachine_val(Machine), Bool_val(Verb));

@@ -261,7 +261,13 @@ def VolatileV3 {
                          R28, R31,
                          P0, P1, P2, P3,
                          M0, M1,
-                         LC0, LC1, SA0, SA1, USR, USR_OVF];
+                         LC0, LC1, SA0, SA1, USR, USR_OVF, CS0, CS1,
+                         V0, V1, V2, V3, V4, V5, V6, V7, V8, V9, V10, V11,
+                         V12, V13, V14, V15, V16, V17, V18, V19, V20, V21,
+                         V22, V23, V24, V25, V26, V27, V28, V29, V30, V31,
+                         W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11,
+                         W12, W13, W14, W15,
+                         Q0, Q1, Q2, Q3];
 }
 
 def PositiveHalfWord : PatLeaf<(i32 IntRegs:$a),

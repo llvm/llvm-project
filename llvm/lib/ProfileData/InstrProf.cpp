@@ -599,6 +599,13 @@ void annotateValueSite(Module &M, Instruction &Inst,
   std::unique_ptr<InstrProfValueData[]> VD =
       InstrProfR.getValueForSite(ValueKind, SiteIdx, &Sum);
 
+  annotateValueSite(M, Inst, VD.get(), NV, Sum, ValueKind, MaxMDCount);
+}
+
+void annotateValueSite(Module &M, Instruction &Inst,
+                       const InstrProfValueData VD[], uint32_t NV,
+                       uint64_t Sum, InstrProfValueKind ValueKind,
+                       uint32_t MaxMDCount) {
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDHelper(Ctx);
   SmallVector<Metadata *, 3> Vals;

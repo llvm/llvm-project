@@ -165,6 +165,11 @@ static bool rotateLoop(Loop *L, unsigned MaxHeaderSize, LoopInfo *LI,
             << " instructions: "; L->dump());
       return false;
     }
+    if (Metrics.convergent) {
+      DEBUG(dbgs() << "LoopRotation: NOT rotating - contains convergent "
+                      "instructions: "; L->dump());
+      return false;
+    }
     if (Metrics.NumInsts > MaxHeaderSize)
       return false;
   }

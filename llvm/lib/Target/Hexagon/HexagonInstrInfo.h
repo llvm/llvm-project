@@ -309,6 +309,7 @@ public:
   bool isPredicateLate(unsigned Opcode) const;
   bool isPredictedTaken(unsigned Opcode) const;
   bool isSaveCalleeSavedRegsCall(const MachineInstr *MI) const;
+  bool isSignExtendingLoad(const MachineInstr *MI) const;
   bool isSolo(const MachineInstr* MI) const;
   bool isSpillPredRegOp(const MachineInstr *MI) const;
   bool isTC1(const MachineInstr *MI) const;
@@ -322,6 +323,7 @@ public:
   bool isVecALU(const MachineInstr *MI) const;
   bool isVecUsableNextPacket(const MachineInstr *ProdMI,
                              const MachineInstr *ConsMI) const;
+  bool isZeroExtendingLoad(const MachineInstr *MI) const;
 
 
   bool canExecuteInBundle(const MachineInstr *First,

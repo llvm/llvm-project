@@ -297,7 +297,7 @@ def : FlatLoadPat <FLAT_LOAD_DWORDX4, flat_load, v4i32>;
 
 class FlatStorePat <FLAT inst, SDPatternOperator node, ValueType vt> : Pat <
   (node vt:$data, i64:$addr),
-  (inst $data, $addr, 0, 0, 0)
+  (inst $addr, $data, 0, 0, 0)
 >;
 
 def : FlatStorePat <FLAT_STORE_BYTE, flat_truncstorei8, i32>;

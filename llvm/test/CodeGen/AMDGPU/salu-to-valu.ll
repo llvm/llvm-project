@@ -56,7 +56,7 @@ done:                                             ; preds = %loop
 ; FIXME: We should be using flat load for HSA.
 ; GCN: buffer_load_dword [[OUT:v[0-9]+]]
 ; GCN-NOHSA: buffer_store_dword [[OUT]]
-; GCN-HSA: flat_store_dword [[OUT]]
+; GCN-HSA: flat_store_dword {{.*}}, [[OUT]]
 define void @smrd_valu(i32 addrspace(2)* addrspace(1)* %in, i32 %a, i32 %b, i32 addrspace(1)* %out) #1 {
 entry:
   %tmp = icmp ne i32 %a, 0
@@ -104,7 +104,7 @@ entry:
 ; GCN-NOHSA: v_add_i32_e32
 ; GCN-NOHSA: buffer_store_dword
 ; GCN-HSA: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
-; GCN-HSA: flat_store_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
+; GCN-HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}
 define void @smrd_valu_ci_offset(i32 addrspace(1)* %out, i32 addrspace(2)* %in, i32 %c) #1 {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -248,7 +248,7 @@ entry:
 ; GCN-HSA: flat_load_dword [[MOVED:v[0-9]+]], v[{{[0-9+:[0-9]+}}]
 ; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, s{{[0-9]+}}, [[MOVED]]
 ; GCN-NOHSA: buffer_store_dword [[ADD]]
-; GCN-HSA: flat_store_dword [[ADD]]
+; GCN-HSA: flat_store_dword {{.*}}, [[ADD]]
 define void @smrd_valu2_salu_user(i32 addrspace(1)* %out, [8 x i32] addrspace(2)* %in, i32 %a) #1 {
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -428,6 +428,34 @@ entry:
   %add14 = add i32 %add13, %elt15
 
   store i32 %add14, i32 addrspace(1)* %out
+  ret void
+}
+
+; Make sure we legalize vopc operands after moving an sopc to the value.
+
+; {{^}}sopc_vopc_legalize_bug:
+; GCN: s_load_dword [[SGPR:s[0-9]+]]
+; GCN: v_cmp_le_u32_e32 vcc, [[SGPR]], v{{[0-9]+}}
+; GCN: s_and_b64 vcc, exec, vcc
+; GCN: s_cbranch_vccnz [[EXIT:[A-Z0-9_]+]]
+; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
+; GCN-NOHSA: buffer_store_dword [[ONE]]
+; GCN-HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[ONE]]
+; GCN; {{^}}[[EXIT]]:
+; GCN: s_endpgm
+define void @sopc_vopc_legalize_bug(i32 %cond, i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+bb3:                                              ; preds = %bb2
+  %tmp0 = bitcast i32 %cond to float
+  %tmp1 = fadd float %tmp0, 2.500000e-01
+  %tmp2 = bitcast float %tmp1 to i32
+  %tmp3 = icmp ult i32 %tmp2, %cond
+  br i1 %tmp3, label %bb6, label %bb7
+
+bb6:
+  store i32 1, i32 addrspace(1)* %out
+  br label %bb7
+
+bb7:                                              ; preds = %bb3
   ret void
 }
 

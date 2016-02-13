@@ -130,6 +130,10 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
 
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
+  setOperationAction(ISD::BR_CC, MVT::i32, Expand);
+  setOperationAction(ISD::BR_CC, MVT::i64, Expand);
+  setOperationAction(ISD::BR_CC, MVT::f32, Expand);
+  setOperationAction(ISD::BR_CC, MVT::f64, Expand);
 
   for (MVT VT : MVT::integer_valuetypes()) {
     if (VT == MVT::i64)
@@ -1192,6 +1196,23 @@ SDValue SITargetLowering::LowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
                     DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), 31)));
 }
 
+bool SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
+  if (!Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN)
+    return false;
+
+  switch (cast<ConstantSDNode>(Intr->getOperand(1))->getZExtValue()) {
+  default: return false;
+  case AMDGPUIntrinsic::amdgcn_if:
+  case AMDGPUIntrinsic::amdgcn_else:
+  case AMDGPUIntrinsic::amdgcn_break:
+  case AMDGPUIntrinsic::amdgcn_if_break:
+  case AMDGPUIntrinsic::amdgcn_else_break:
+  case AMDGPUIntrinsic::amdgcn_loop:
+  case AMDGPUIntrinsic::amdgcn_end_cf:
+    return true;
+  }
+}
+
 /// This transforms the control flow intrinsics to get the branch destination as
 /// last parameter, also switches branch target with BR if the need arise
 SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
@@ -1202,13 +1223,11 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
   SDNode *Intr = BRCOND.getOperand(1).getNode();
   SDValue Target = BRCOND.getOperand(2);
   SDNode *BR = nullptr;
+  SDNode *SetCC = nullptr;
 
   if (Intr->getOpcode() == ISD::SETCC) {
     // As long as we negate the condition everything is fine
-    SDNode *SetCC = Intr;
-    assert(SetCC->getConstantOperandVal(1) == 1);
-    assert(cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get() ==
-           ISD::SETNE);
+    SetCC = Intr;
     Intr = SetCC->getOperand(0).getNode();
 
   } else {
@@ -1217,7 +1236,16 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
     Target = BR->getOperand(1);
   }
 
-  assert(Intr->getOpcode() == ISD::INTRINSIC_W_CHAIN);
+  if (Intr->getOpcode() != ISD::INTRINSIC_W_CHAIN) {
+    // This is a uniform branch so we don't need to legalize.
+    return BRCOND;
+  }
+
+  assert(!SetCC ||
+        (SetCC->getConstantOperandVal(1) == 1 &&
+         isCFIntrinsic(Intr) &&
+         cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get() ==
+                                                             ISD::SETNE));
 
   // Build the result and
   ArrayRef<EVT> Res(Intr->value_begin() + 1, Intr->value_end());

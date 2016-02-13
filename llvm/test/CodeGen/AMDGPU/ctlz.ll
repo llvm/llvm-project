@@ -120,7 +120,7 @@ define void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %
 ; SI-DAG: v_mov_b32_e32 [[VFFBH_HI:v[0-9]+]], [[FFBH_HI]]
 ; SI-DAG: v_cndmask_b32_e32 v[[CTLZ:[0-9]+]], [[VFFBH_HI]], [[VFFBH_LO]]
 ; SI-DAG: v_mov_b32_e32 v[[CTLZ_HI:[0-9]+]], 0{{$}}
-; SI: {{buffer|flat}}_store_dwordx2 v{{\[}}[[CTLZ]]:[[CTLZ_HI]]{{\]}}
+; SI: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CTLZ]]:[[CTLZ_HI]]{{\]}}
 define void @s_ctlz_i64(i64 addrspace(1)* noalias %out, i64 %val) nounwind {
   %ctlz = call i64 @llvm.ctlz.i64(i64 %val, i1 false)
   store i64 %ctlz, i64 addrspace(1)* %out
@@ -146,7 +146,7 @@ define void @s_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 %val) nounwind
 ; SI-DAG: v_cmp_eq_i32_e32 vcc, 0, [[OR]]
 ; SI-DAG: v_cndmask_b32_e64 v[[CLTZ_LO:[0-9]+]], v[[CTLZ:[0-9]+]], 64, vcc
 ; SI-DAG: v_mov_b32_e32 v[[CTLZ_HI:[0-9]+]], 0{{$}}
-; SI: {{buffer|flat}}_store_dwordx2 v{{\[}}[[CLTZ_LO]]:[[CTLZ_HI]]{{\]}}
+; SI: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CLTZ_LO]]:[[CTLZ_HI]]{{\]}}
 define void @v_ctlz_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid

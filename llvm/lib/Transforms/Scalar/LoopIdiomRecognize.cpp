@@ -262,9 +262,9 @@ static unsigned getStoreSizeInBytes(StoreInst *SI, const DataLayout *DL) {
   return (unsigned)SizeInBits >> 3;
 }
 
-static unsigned getStoreStride(const SCEVAddRecExpr *StoreEv) {
+static APInt getStoreStride(const SCEVAddRecExpr *StoreEv) {
   const SCEVConstant *ConstStride = cast<SCEVConstant>(StoreEv->getOperand(1));
-  return ConstStride->getAPInt().getZExtValue();
+  return ConstStride->getAPInt();
 }
 
 /// getMemSetPatternValue - If a strided store of the specified value is safe to
@@ -365,7 +365,7 @@ bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
   if (HasMemcpy) {
     // Check to see if the stride matches the size of the store.  If so, then we
     // know that every byte is touched in the loop.
-    unsigned Stride = getStoreStride(StoreEv);
+    APInt Stride = getStoreStride(StoreEv);
     unsigned StoreSize = getStoreSizeInBytes(SI, DL);
     if (StoreSize != Stride && StoreSize != -Stride)
       return false;
@@ -493,11 +493,11 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     Value *FirstStorePtr = SL[i]->getPointerOperand();
     const SCEVAddRecExpr *FirstStoreEv =
         cast<SCEVAddRecExpr>(SE->getSCEV(FirstStorePtr));
-    unsigned FirstStride = getStoreStride(FirstStoreEv);
+    APInt FirstStride = getStoreStride(FirstStoreEv);
     unsigned FirstStoreSize = getStoreSizeInBytes(SL[i], DL);
 
     // See if we can optimize just this store in isolation.
-    if (FirstStride == FirstStoreSize || FirstStride == -FirstStoreSize) {
+    if (FirstStride == FirstStoreSize || -FirstStride == FirstStoreSize) {
       Heads.insert(SL[i]);
       continue;
     }
@@ -529,7 +529,7 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
       Value *SecondStorePtr = SL[k]->getPointerOperand();
       const SCEVAddRecExpr *SecondStoreEv =
           cast<SCEVAddRecExpr>(SE->getSCEV(SecondStorePtr));
-      unsigned SecondStride = getStoreStride(SecondStoreEv);
+      APInt SecondStride = getStoreStride(SecondStoreEv);
 
       if (FirstStride != SecondStride)
         continue;
@@ -595,7 +595,7 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     Value *StoredVal = HeadStore->getValueOperand();
     Value *StorePtr = HeadStore->getPointerOperand();
     const SCEVAddRecExpr *StoreEv = cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
-    unsigned Stride = getStoreStride(StoreEv);
+    APInt Stride = getStoreStride(StoreEv);
 
     // Check to see if the stride matches the size of the stores.  If so, then
     // we know that every byte is touched in the loop.
@@ -642,11 +642,12 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
 
   // Check to see if the stride matches the size of the memset.  If so, then we
   // know that every byte is touched in the loop.
-  const SCEVConstant *Stride = dyn_cast<SCEVConstant>(Ev->getOperand(1));
+  const SCEVConstant *ConstStride = dyn_cast<SCEVConstant>(Ev->getOperand(1));
+  if (!ConstStride)
+    return false;
 
-  // TODO: Could also handle negative stride here someday, that will require the
-  // validity check in mayLoopAccessLocation to be updated though.
-  if (!Stride || MSI->getLength() != Stride->getValue())
+  APInt Stride = ConstStride->getAPInt();
+  if (SizeInBytes != Stride && SizeInBytes != -Stride)
     return false;
 
   // Verify that the memset value is loop invariant.  If not, we can't promote
@@ -657,9 +658,10 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
 
   SmallPtrSet<Instruction *, 1> MSIs;
   MSIs.insert(MSI);
+  bool NegStride = SizeInBytes == -Stride;
   return processLoopStridedStore(Pointer, (unsigned)SizeInBytes,
                                  MSI->getAlignment(), SplatValue, MSI, MSIs, Ev,
-                                 BECount, /*NegStride=*/false);
+                                 BECount, NegStride);
 }
 
 /// mayLoopAccessLocation - Return true if the specified loop might access the
@@ -817,7 +819,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 
   Value *StorePtr = SI->getPointerOperand();
   const SCEVAddRecExpr *StoreEv = cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
-  unsigned Stride = getStoreStride(StoreEv);
+  APInt Stride = getStoreStride(StoreEv);
   unsigned StoreSize = getStoreSizeInBytes(SI, DL);
   bool NegStride = StoreSize == -Stride;
 

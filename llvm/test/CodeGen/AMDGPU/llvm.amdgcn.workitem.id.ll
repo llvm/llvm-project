@@ -15,7 +15,7 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 ; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 0
 
 ; ALL-NOT: v0
-; ALL: {{buffer|flat}}_store_dword v0
+; ALL: {{buffer|flat}}_store_dword {{.*}}v0
 define void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   store i32 %id, i32 addrspace(1)* %out
@@ -30,7 +30,7 @@ define void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
 ; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 1
 
 ; ALL-NOT: v1
-; ALL: {{buffer|flat}}_store_dword v1
+; ALL: {{buffer|flat}}_store_dword {{.*}}v1
 define void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.y()
   store i32 %id, i32 addrspace(1)* %out
@@ -45,7 +45,7 @@ define void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
 ; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 2
 
 ; ALL-NOT: v2
-; ALL: {{buffer|flat}}_store_dword v2
+; ALL: {{buffer|flat}}_store_dword {{.*}}v2
 define void @test_workitem_id_z(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.z()
   store i32 %id, i32 addrspace(1)* %out

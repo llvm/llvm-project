@@ -35,13 +35,40 @@ class LexicalScope;
 class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   MCStreamer &OS;
 
+  /// Represents the most general definition range.
+  struct LocalVarDefRange {
+    /// Indicates that variable data is stored in memory relative to the
+    /// specified register.
+    int InMemory : 1;
+
+    /// Offset of variable data in memory.
+    int DataOffset : 31;
+
+    /// Offset of the data into the user level struct. If zero, no splitting
+    /// occurred.
+    uint16_t StructOffset;
+
+    /// Register containing the data or the register base of the memory
+    /// location containing the data.
+    uint16_t CVRegister;
+
+    /// Compares all location fields. This includes all fields except the label
+    /// ranges.
+    bool isDifferentLocation(LocalVarDefRange &O) {
+      return InMemory != O.InMemory || DataOffset != O.DataOffset ||
+             StructOffset != O.StructOffset || CVRegister != O.CVRegister;
+    }
+
+    SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 1> Ranges;
+  };
+
+  static LocalVarDefRange createDefRangeMem(uint16_t CVRegister, int Offset);
+  static LocalVarDefRange createDefRangeReg(uint16_t CVRegister);
+
   /// Similar to DbgVariable in DwarfDebug, but not dwarf-specific.
   struct LocalVariable {
     const DILocalVariable *DIVar = nullptr;
-    SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 1> Ranges;
-    unsigned CVRegister = 0;
-    int RegisterOffset = 0;
-    // FIXME: Add support for DIExpressions.
+    SmallVector<LocalVarDefRange, 1> DefRanges;
   };
 
   struct InlineSite {
@@ -74,7 +101,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   unsigned NextFuncId = 0;
 
-  InlineSite &getInlineSite(const DILocation *Loc);
+  InlineSite &getInlineSite(const DILocation *InlinedAt,
+                            const DISubprogram *Inlinee);
 
   static void collectInlineSiteChildren(SmallVectorImpl<unsigned> &Children,
                                         const FunctionInfo &FI,
@@ -123,7 +151,15 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   void emitInlinedCallSite(const FunctionInfo &FI, const DILocation *InlinedAt,
                            const InlineSite &Site);
 
-  void collectVariableInfoFromMMITable();
+  typedef DbgValueHistoryMap::InlinedVariable InlinedVariable;
+
+  void collectVariableInfo(const DISubprogram *SP);
+
+  void collectVariableInfoFromMMITable(DenseSet<InlinedVariable> &Processed);
+
+  /// Records information about a local variable in the appropriate scope. In
+  /// particular, locals from inlined code live inside the inlining site.
+  void recordLocalVariable(LocalVariable &&Var, const DILocation *Loc);
 
   void emitLocalVariable(const LocalVariable &Var);
 

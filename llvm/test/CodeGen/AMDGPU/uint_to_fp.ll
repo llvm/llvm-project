@@ -103,7 +103,7 @@ define void @s_uint_to_fp_i1_to_f32_load(float addrspace(1)* %out, i1 %in) #0 {
 ; SI: v_and_b32_e32 {{v[0-9]+}}, 1, {{v[0-9]+}}
 ; SI: v_cmp_eq_i32
 ; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0
-; SI: {{buffer|flat}}_store_dword [[RESULT]],
+; SI: {{buffer|flat}}_store_dword {{.*}}[[RESULT]]
 ; SI: s_endpgm
 define void @v_uint_to_fp_i1_f32_load(float addrspace(1)* %out, i1 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()

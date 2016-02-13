@@ -216,11 +216,9 @@ public:
     return true;
   }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
   /// This method should install an IR translator pass, which converts from
   /// LLVM code to machine instructions with possibly generic opcodes.
   virtual bool addIRTranslator() { return true; }
-#endif
 
   /// Add the complete, standard set of LLVM CodeGen passes.
   /// Fully developed targets will not generally override this.

@@ -22,7 +22,7 @@ define void @s_uint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 %in) #0 {
 ; GCN-DAG: v_cmp_lt_u64
 
 ; GCN: v_add_i32_e32 [[VR:v[0-9]+]]
-; GCN: {{buffer|flat}}_store_dword [[VR]]
+; GCN: {{buffer|flat}}_store_dword {{.*}}[[VR]]
 define void @v_uint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
