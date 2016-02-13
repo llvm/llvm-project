@@ -1026,7 +1026,7 @@ public:
 
     diag::Flavor Flavor = WarningName[1] == 'W' ? diag::Flavor::WarningOrError
                                                 : diag::Flavor::Remark;
-    StringRef Group = WarningName.substr(2);
+    StringRef Group = StringRef(WarningName).substr(2);
     bool unknownDiag = false;
     if (Group == "everything") {
       // Special handling for pragma clang diagnostic ... "-Weverything".

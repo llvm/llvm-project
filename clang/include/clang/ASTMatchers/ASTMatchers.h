@@ -1844,8 +1844,9 @@ inline internal::Matcher<Stmt> sizeOfExpr(
 /// \code
 ///   namespace a { namespace b { class X; } }
 /// \endcode
-inline internal::Matcher<NamedDecl> hasName(const std::string &Name) {
-  return internal::Matcher<NamedDecl>(new internal::HasNameMatcher(Name));
+inline internal::Matcher<NamedDecl> hasName(std::string Name) {
+  return internal::Matcher<NamedDecl>(
+      new internal::HasNameMatcher(std::move(Name)));
 }
 
 /// \brief Matches NamedDecl nodes whose fully qualified names contain

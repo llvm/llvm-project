@@ -241,7 +241,7 @@ public:
       : Out(out), PP(pp), idcount(0), CurStrOffset(0) {}
 
   PTHMap &getPM() { return PM; }
-  void GeneratePTH(const std::string &MainFile);
+  void GeneratePTH(StringRef MainFile);
 };
 } // end anonymous namespace
 
@@ -479,7 +479,7 @@ static void pwrite32le(raw_pwrite_stream &OS, uint32_t Val, uint64_t &Off) {
   Off += 4;
 }
 
-void PTHWriter::GeneratePTH(const std::string &MainFile) {
+void PTHWriter::GeneratePTH(StringRef MainFile) {
   // Generate the prologue.
   Out << "cfe-pth" << '\0';
   Emit32(PTHManager::Version);

@@ -412,13 +412,13 @@ void HTMLDiagnostics::HandlePiece(Rewriter& R, FileID BugFileID,
   // Output a maximum size.
   if (!isa<PathDiagnosticMacroPiece>(P)) {
     // Get the string and determining its maximum substring.
-    const std::string& Msg = P.getString();
+    const auto &Msg = P.getString();
     unsigned max_token = 0;
     unsigned cnt = 0;
     unsigned len = Msg.size();
 
-    for (std::string::const_iterator I=Msg.begin(), E=Msg.end(); I!=E; ++I)
-      switch (*I) {
+    for (char C : Msg)
+      switch (C) {
       default:
         ++cnt;
         continue;

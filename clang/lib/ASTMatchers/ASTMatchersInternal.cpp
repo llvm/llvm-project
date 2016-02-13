@@ -293,8 +293,9 @@ bool AnyOfVariadicOperator(const ast_type_traits::DynTypedNode &DynNode,
   return false;
 }
 
-HasNameMatcher::HasNameMatcher(StringRef NameRef)
-    : UseUnqualifiedMatch(NameRef.find("::") == NameRef.npos), Name(NameRef) {
+HasNameMatcher::HasNameMatcher(std::string NameRef)
+    : UseUnqualifiedMatch(NameRef.find("::") == NameRef.npos),
+      Name(std::move(NameRef)) {
   assert(!Name.empty());
 }
 

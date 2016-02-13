@@ -130,7 +130,7 @@ static void ApplyOneQAOverride(raw_ostream &OS,
       }
     }
   } else if (Edit[0] == 'x' || Edit[0] == 'X') {
-    std::string Option = Edit.substr(1, std::string::npos);
+    auto Option = Edit.substr(1);
     for (unsigned i = 1; i < Args.size();) {
       if (Option == Args[i]) {
         OS << "### Deleting argument " << Args[i] << '\n';
