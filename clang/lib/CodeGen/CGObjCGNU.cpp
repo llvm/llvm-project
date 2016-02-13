@@ -591,8 +591,7 @@ public:
     return NULLPtr;
   }
 
-  llvm::Constant *GetClassGlobal(const std::string &Name,
-                                 bool ForDefinition,
+  llvm::Constant *GetClassGlobal(StringRef Name, bool ForDefinition,
                                  bool Weak) override {
     return nullptr;
   }

@@ -640,7 +640,7 @@ private:
 /// See \c hasName() in ASTMatchers.h for details.
 class HasNameMatcher : public SingleNodeMatcherInterface<NamedDecl> {
  public:
-  explicit HasNameMatcher(StringRef Name);
+  explicit HasNameMatcher(std::string Name);
 
   bool matchesNode(const NamedDecl &Node) const override;
 
