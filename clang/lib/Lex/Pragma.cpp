@@ -1024,10 +1024,19 @@ public:
       return;
     }
 
-    if (PP.getDiagnostics().setSeverityForGroup(
-            WarningName[1] == 'W' ? diag::Flavor::WarningOrError
-                                  : diag::Flavor::Remark,
-            WarningName.substr(2), SV, DiagLoc))
+    diag::Flavor Flavor = WarningName[1] == 'W' ? diag::Flavor::WarningOrError
+                                                : diag::Flavor::Remark;
+    StringRef Group = WarningName.substr(2);
+    bool unknownDiag = false;
+    if (Group == "everything") {
+      // Special handling for pragma clang diagnostic ... "-Weverything".
+      // There is no formal group named "everything", so there has to be a
+      // special case for it.
+      PP.getDiagnostics().setSeverityForAll(Flavor, SV, DiagLoc);
+    } else
+      unknownDiag = PP.getDiagnostics().setSeverityForGroup(Flavor, Group, SV,
+                                                            DiagLoc);
+    if (unknownDiag)
       PP.Diag(StringLoc, diag::warn_pragma_diagnostic_unknown_warning)
         << WarningName;
     else if (Callbacks)

@@ -1,7 +1,6 @@
 declare i32 @__clc_clk_local_mem_fence() #1
 declare i32 @__clc_clk_global_mem_fence() #1
-declare void @llvm.AMDGPU.barrier.local() #0
-declare void @llvm.AMDGPU.barrier.global() #0
+declare void @llvm.amdgcn.s.barrier() #0
 
 define void @barrier(i32 %flags) #2 {
 barrier_local_test:
@@ -11,7 +10,7 @@ barrier_local_test:
   br i1 %1, label %barrier_local, label %barrier_global_test
 
 barrier_local:
-  call void @llvm.AMDGPU.barrier.local()
+  call void @llvm.amdgcn.s.barrier()
   br label %barrier_global_test
 
 barrier_global_test:
@@ -21,7 +20,7 @@ barrier_global_test:
   br i1 %3, label %barrier_global, label %done
 
 barrier_global:
-  call void @llvm.AMDGPU.barrier.global()
+  call void @llvm.amdgcn.s.barrier()
   br label %done
 
 done:

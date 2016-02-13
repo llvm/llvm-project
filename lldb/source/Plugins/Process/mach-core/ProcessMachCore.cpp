@@ -343,21 +343,27 @@ ProcessMachCore::DoLoadCore ()
         // search heuristics might identify the correct one.
         // Most of the time, I expect the address from SearchForDarwinKernel() will be the
         // same as the address we found via exhaustive search.
-        // 
-        // NB SearchForDarwinKernel will end up calling back into this this class in the GetImageInfoAddress
-        // method which will give it the m_mach_kernel_addr address it already has.  Save that aside
-        // and set m_mach_kernel_addr to an invalid address temporarily so DynamicLoaderDarwinKernel does
-        // a real search for the kernel using its own heuristics.
 
         if (GetTarget().GetArchitecture().IsValid() == false && m_core_module_sp.get())
         {
             GetTarget().SetArchitecture (m_core_module_sp->GetArchitecture());
         }
 
+        // SearchForDarwinKernel will end up calling back into this this class in the GetImageInfoAddress
+        // method which will give it the m_mach_kernel_addr/m_dyld_addr it already has.  Save that aside
+        // and set m_mach_kernel_addr/m_dyld_addr to an invalid address temporarily so 
+        // DynamicLoaderDarwinKernel does a real search for the kernel using its own heuristics.
+
         addr_t saved_mach_kernel_addr = m_mach_kernel_addr;
+        addr_t saved_user_dyld_addr = m_dyld_addr;
         m_mach_kernel_addr = LLDB_INVALID_ADDRESS;
+        m_dyld_addr = LLDB_INVALID_ADDRESS;
+
         addr_t better_kernel_address = DynamicLoaderDarwinKernel::SearchForDarwinKernel (this);
+
         m_mach_kernel_addr = saved_mach_kernel_addr;
+        m_dyld_addr = saved_user_dyld_addr;
+
         if (better_kernel_address != LLDB_INVALID_ADDRESS)
         {
             if (log)
