@@ -214,40 +214,6 @@ private:
                         llvm::Constant **&value_ptr);
     
     //------------------------------------------------------------------
-    /// Build a function pointer given a type and a raw pointer.
-    ///
-    /// @param[in] type
-    ///     The type of the function pointer to be built.
-    ///
-    /// @param[in] ptr
-    ///     The value of the pointer.
-    ///
-    /// @return
-    ///     The pointer.
-    //------------------------------------------------------------------ 
-    llvm::Constant *
-    BuildFunctionPointer (llvm::Type *type,
-                          uint64_t ptr);
-    
-    void
-    RegisterFunctionMetadata (llvm::LLVMContext &context,
-                              llvm::Value *function_ptr,
-                              const char *name);
-    
-    //------------------------------------------------------------------
-    /// The top-level pass implementation
-    ///
-    /// @param[in] llvm_function
-    ///     The function currently being processed.
-    ///
-    /// @return
-    ///     True if the function has side effects (or if this cannot
-    ///     be determined); false otherwise.
-    //------------------------------------------------------------------
-    bool 
-    ResolveFunctionPointers (llvm::Module &llvm_module);
-    
-    //------------------------------------------------------------------
     /// A function-level pass to take the generated global value
     /// $__lldb_expr_result and make it into a persistent variable.
     /// Also see ASTResultSynthesizer.
@@ -565,38 +531,6 @@ private:
     RemoveGuards (llvm::BasicBlock &basic_block);
     
     //------------------------------------------------------------------
-    /// A module-level pass to allocate all string literals in a separate
-    /// allocation and redirect references to them.
-    //------------------------------------------------------------------
-    
-    //------------------------------------------------------------------
-    /// The top-level pass implementation
-    ///
-    /// @return
-    ///     True on success; false otherwise
-    //------------------------------------------------------------------
-    bool 
-    ReplaceStrings ();
-    
-    //------------------------------------------------------------------
-    /// A basic block-level pass to find all literals that will be 
-    /// allocated as statics by the JIT (in contrast to the Strings, 
-    /// which already are statics) and synthesize loads for them.
-    //------------------------------------------------------------------
-    
-    //------------------------------------------------------------------
-    /// The top-level pass implementation
-    ///
-    /// @param[in] basic_block
-    ///     The basic block currently being processed.
-    ///
-    /// @return
-    ///     True on success; false otherwise
-    //------------------------------------------------------------------
-    bool 
-    ReplaceStaticLiterals (llvm::BasicBlock &basic_block);
-    
-    //------------------------------------------------------------------
     /// A function-level pass to make all external variable references
     /// point at the correct offsets from the void* passed into the
     /// function.  ClangExpressionDeclMap::DoStructLayout() must be called
@@ -615,39 +549,6 @@ private:
     bool 
     ReplaceVariables (llvm::Function &llvm_function);
     
-    //------------------------------------------------------------------
-    /// A module-level pass to remove all global variables from the
-    /// module since it no longer should export or import any symbols.
-    //------------------------------------------------------------------
-    
-    //------------------------------------------------------------------
-    /// The top-level pass implementation
-    ///
-    /// @param[in] llvm_module
-    ///     The module currently being processed.
-    ///
-    /// @return
-    ///     True on success; false otherwise
-    //------------------------------------------------------------------
-    bool
-    StripAllGVs (llvm::Module &llvm_module);
-    
-    class StaticDataAllocator {
-    public:
-        StaticDataAllocator(lldb_private::IRExecutionUnit &execution_unit);
-        lldb_private::StreamString &GetStream()
-        {
-            return m_stream_string;
-        }
-        lldb::addr_t Allocate();
-
-        lldb::TargetSP
-        GetTarget();
-    private:
-        lldb_private::IRExecutionUnit  &m_execution_unit;
-        lldb_private::StreamString      m_stream_string;
-        lldb::addr_t                    m_allocation;
-    };
     
     /// Flags
     bool                                    m_resolve_vars;             ///< True if external variable references and persistent variable references should be resolved
@@ -657,11 +558,11 @@ private:
     llvm::Module                           *m_module;                   ///< The module being processed, or NULL if that has not been determined yet.
     std::unique_ptr<llvm::DataLayout>       m_target_data;              ///< The target data for the module being processed, or NULL if there is no module.
     lldb_private::ClangExpressionDeclMap   *m_decl_map;                 ///< The DeclMap containing the Decls 
-    StaticDataAllocator                     m_data_allocator;           ///< The allocator to use for constant strings
     llvm::Constant                         *m_CFStringCreateWithBytes;  ///< The address of the function CFStringCreateWithBytes, cast to the appropriate function pointer type
     llvm::Constant                         *m_sel_registerName;         ///< The address of the function sel_registerName, cast to the appropriate function pointer type
     llvm::IntegerType                      *m_intptr_ty;                ///< The type of an integer large enough to hold a pointer.
     lldb_private::Stream                   *m_error_stream;             ///< If non-NULL, the stream on which errors should be printed
+    lldb_private::IRExecutionUnit          &m_execution_unit;           ///< The execution unit containing the IR being created.
     
     llvm::StoreInst                        *m_result_store;             ///< If non-NULL, the store instruction that writes to the result variable.  If m_has_side_effects is true, this is NULL.
     bool                                    m_result_is_pointer;        ///< True if the function's result in the AST is a pointer (see comments in ASTResultSynthesizer::SynthesizeBodyResult)

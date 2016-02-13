@@ -69,6 +69,8 @@ typename ELFFile<ELFT>::uintX_t SymbolBody::getVA() const {
   case LazyKind:
     assert(isUsedInRegularObj() && "Lazy symbol reached writer");
     return 0;
+  case DefinedBitcodeKind:
+    llvm_unreachable("Should have been replaced");
   }
   llvm_unreachable("Invalid symbol kind");
 }
@@ -158,6 +160,13 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
 Defined::Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
                  bool IsTls, bool IsFunction)
     : SymbolBody(K, Name, IsWeak, Visibility, IsTls, IsFunction) {}
+
+DefinedBitcode::DefinedBitcode(StringRef Name)
+    : Defined(DefinedBitcodeKind, Name, false, STV_DEFAULT, false, false) {}
+
+bool DefinedBitcode::classof(const SymbolBody *S) {
+  return S->kind() == DefinedBitcodeKind;
+}
 
 Undefined::Undefined(SymbolBody::Kind K, StringRef N, bool IsWeak,
                      uint8_t Visibility, bool IsTls)

@@ -27,7 +27,7 @@ from lldbsuite.test import lldbutil
 #  [5] = e\0\0\0
 #}
 
-class Rdar12991846TestCase(TestBase):
+class UnicodeLiteralsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 

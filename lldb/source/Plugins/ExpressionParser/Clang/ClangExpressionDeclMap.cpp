@@ -515,248 +515,6 @@ ClangExpressionDeclMap::GetFunctionInfo
     return true;
 }
 
-static void
-FindCodeSymbolInContext
-(
-    const ConstString &name,
-    SymbolContext &sym_ctx,
-    uint32_t name_type_mask,
-    SymbolContextList &sc_list
-)
-{
-    sc_list.Clear();
-    SymbolContextList temp_sc_list;
-    if (sym_ctx.module_sp)
-        sym_ctx.module_sp->FindFunctions(name,
-                                         NULL,
-                                         name_type_mask,
-                                         true,  // include_symbols
-                                         false, // include_inlines
-                                         true,  // append
-                                         temp_sc_list);
-    if (temp_sc_list.GetSize() == 0)
-    {
-        if (sym_ctx.target_sp)
-            sym_ctx.target_sp->GetImages().FindFunctions(name,
-                                                         name_type_mask,
-                                                         true,  // include_symbols
-                                                         false, // include_inlines
-                                                         true,  // append
-                                                         temp_sc_list);
-    }
-
-    SymbolContextList internal_symbol_sc_list;
-    unsigned temp_sc_list_size = temp_sc_list.GetSize();
-    for (unsigned i = 0; i < temp_sc_list_size; i++)
-    {
-        SymbolContext sc;
-        temp_sc_list.GetContextAtIndex(i, sc);
-        if (sc.function)
-        {
-            sc_list.Append(sc);
-        }
-        else if (sc.symbol)
-        {
-            if (sc.symbol->IsExternal())
-            {
-                sc_list.Append(sc);
-            }
-            else
-            {
-                internal_symbol_sc_list.Append(sc);
-            }
-        }
-    }
-
-    // If we had internal symbols and we didn't find any external symbols or
-    // functions in debug info, then fallback to the internal symbols
-    if (sc_list.GetSize() == 0 && internal_symbol_sc_list.GetSize())
-    {
-        sc_list = internal_symbol_sc_list;
-    }
-}
-
-ConstString
-FindBestAlternateMangledName
-(
-    const ConstString &demangled,
-    const LanguageType &lang_type,
-    SymbolContext &sym_ctx
-)
-{
-    CPlusPlusLanguage::MethodName cpp_name(demangled);
-    std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
-
-    if (!scope_qualified_name.size())
-        return ConstString();
-
-    if (!sym_ctx.module_sp)
-        return ConstString();
-
-    SymbolVendor *sym_vendor = sym_ctx.module_sp->GetSymbolVendor();
-    if (!sym_vendor)
-        return ConstString();
-
-    lldb_private::SymbolFile *sym_file = sym_vendor->GetSymbolFile();
-    if (!sym_file)
-        return ConstString();
-
-    std::vector<ConstString> alternates;
-    sym_file->GetMangledNamesForFunction(scope_qualified_name, alternates);
-
-    std::vector<ConstString> param_and_qual_matches;
-    std::vector<ConstString> param_matches;
-    for (size_t i = 0; i < alternates.size(); i++)
-    {
-        ConstString alternate_mangled_name = alternates[i];
-        Mangled mangled(alternate_mangled_name, true);
-        ConstString demangled = mangled.GetDemangledName(lang_type);
-
-        CPlusPlusLanguage::MethodName alternate_cpp_name(demangled);
-        if (!cpp_name.IsValid())
-            continue;
-
-        if (alternate_cpp_name.GetArguments() == cpp_name.GetArguments())
-        {
-            if (alternate_cpp_name.GetQualifiers() == cpp_name.GetQualifiers())
-                param_and_qual_matches.push_back(alternate_mangled_name);
-            else
-                param_matches.push_back(alternate_mangled_name);
-        }
-    }
-
-    if (param_and_qual_matches.size())
-        return param_and_qual_matches[0]; // It is assumed that there will be only one!
-    else if (param_matches.size())
-        return param_matches[0]; // Return one of them as a best match
-    else
-        return ConstString();
-}
-
-bool
-ClangExpressionDeclMap::GetFunctionAddress
-(
-    const ConstString &name,
-    uint64_t &func_addr
-)
-{
-    assert (m_parser_vars.get());
-
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-    ExecutionContext &exe_ctx = m_parser_vars->m_exe_ctx;
-    Target *target = exe_ctx.GetTargetPtr();
-    // Back out in all cases where we're not fully initialized
-    if (target == NULL)
-        return false;
-    if (!m_parser_vars->m_sym_ctx.target_sp)
-        return false;
-
-    SymbolContextList sc_list;
-
-    FindCodeSymbolInContext(name, m_parser_vars->m_sym_ctx, eFunctionNameTypeAuto, sc_list);
-
-    uint32_t sc_list_size = sc_list.GetSize();
-
-    if (sc_list_size == 0)
-    {
-        SymbolContext &sc = m_parser_vars->m_sym_ctx;
-        if (sc.comp_unit)
-        {
-            LanguageType lang_type = sc.comp_unit->GetLanguage();
-            if (Language::LanguageIsCPlusPlus(lang_type) &&
-                CPlusPlusLanguage::IsCPPMangledName(name.AsCString()))
-            {
-                Mangled mangled(name, true);
-                ConstString demangled = mangled.GetDemangledName(lang_type);
-
-                if (demangled)
-                {
-                    ConstString best_alternate_mangled_name = FindBestAlternateMangledName(demangled, lang_type, sc);
-                    if (best_alternate_mangled_name)
-                    {
-                        FindCodeSymbolInContext(
-                            best_alternate_mangled_name, m_parser_vars->m_sym_ctx, eFunctionNameTypeAuto, sc_list);
-                        sc_list_size = sc_list.GetSize();
-                    }
-
-                    if (sc_list_size == 0)
-                    {
-                        FindCodeSymbolInContext(
-                            demangled, m_parser_vars->m_sym_ctx, eFunctionNameTypeFull, sc_list);
-                        sc_list_size = sc_list.GetSize();
-                    }
-                }
-            }
-        }
-    }
-
-    if (sc_list_size == 0)
-    {
-        // We occasionally get debug information in which a const function is reported
-        // as non-const, so the mangled name is wrong.  This is a hack to compensate.
-
-        if (!strncmp(name.GetCString(), "_ZN", 3) &&
-            strncmp(name.GetCString(), "_ZNK", 4))
-        {
-            std::string fixed_scratch("_ZNK");
-            fixed_scratch.append(name.GetCString() + 3);
-            ConstString fixed_name(fixed_scratch.c_str());
-
-            if (log)
-                log->Printf("Failed to find symbols given non-const name %s; trying %s", name.GetCString(), fixed_name.GetCString());
-
-            FindCodeSymbolInContext(
-                fixed_name, m_parser_vars->m_sym_ctx, eFunctionNameTypeAuto, sc_list);
-            sc_list_size = sc_list.GetSize();
-        }
-    }
-
-    lldb::addr_t intern_callable_load_addr = LLDB_INVALID_ADDRESS;
-
-    for (uint32_t i=0; i<sc_list_size; ++i)
-    {
-        SymbolContext sym_ctx;
-        sc_list.GetContextAtIndex(i, sym_ctx);
-
-
-        lldb::addr_t callable_load_addr = LLDB_INVALID_ADDRESS;
-
-        if (sym_ctx.function)
-        {
-            const Address func_so_addr = sym_ctx.function->GetAddressRange().GetBaseAddress();
-            if (func_so_addr.IsValid())
-            {
-                callable_load_addr = func_so_addr.GetCallableLoadAddress(target, false);
-            }
-        }
-        else if (sym_ctx.symbol)
-        {
-            if (sym_ctx.symbol->IsExternal())
-                callable_load_addr = sym_ctx.symbol->ResolveCallableAddress(*target);
-            else
-            {
-                if (intern_callable_load_addr == LLDB_INVALID_ADDRESS)
-                    intern_callable_load_addr = sym_ctx.symbol->ResolveCallableAddress(*target);
-            }
-        }
-
-        if (callable_load_addr != LLDB_INVALID_ADDRESS)
-        {
-            func_addr = callable_load_addr;
-            return true;
-        }
-    }
-
-    // See if we found an internal symbol
-    if (intern_callable_load_addr != LLDB_INVALID_ADDRESS)
-    {
-        func_addr = intern_callable_load_addr;
-        return true;
-    }
-
-    return false;
-}
-
 addr_t
 ClangExpressionDeclMap::GetSymbolAddress (Target &target,
                                           Process *process,
@@ -2268,6 +2026,54 @@ ClangExpressionDeclMap::AddOneFunction (NameSearchContext &context,
     if (function)
     {
         Type *function_type = function->GetType();
+        
+        const lldb::LanguageType comp_unit_language = function->GetCompileUnit()->GetLanguage();
+        const bool extern_c = Language::LanguageIsC(comp_unit_language) ||
+                              (Language::LanguageIsObjC(comp_unit_language) &&
+                               !Language::LanguageIsCPlusPlus(comp_unit_language));
+        
+        if (!extern_c)
+        {
+            TypeSystem *type_system = function->GetDeclContext().GetTypeSystem();
+            if (ClangASTContext *src_ast = llvm::dyn_cast<ClangASTContext>(type_system))
+            {
+                clang::DeclContext *src_decl_context = (clang::DeclContext*)function->GetDeclContext().GetOpaqueDeclContext();
+                clang::FunctionDecl *src_function_decl = llvm::dyn_cast_or_null<clang::FunctionDecl>(src_decl_context);
+                
+                if (src_function_decl)
+                {
+                    if (clang::FunctionDecl *copied_function_decl = llvm::dyn_cast_or_null<clang::FunctionDecl>(m_ast_importer_sp->CopyDecl(m_ast_context, src_ast->getASTContext(), src_function_decl)))
+                    {
+                        if (log)
+                        {
+                            ASTDumper ast_dumper((clang::Decl*)copied_function_decl);
+                            
+                            StreamString ss;
+                            
+                            function->DumpSymbolContext(&ss);
+                            
+                            log->Printf("  CEDM::FEVD[%u] Imported decl for function %s (description %s), returned %s",
+                                        current_id,
+                                        copied_function_decl->getName().str().c_str(),
+                                        ss.GetData(),
+                                        ast_dumper.GetCString());
+                            
+                        }
+                        
+                        context.AddNamedDecl(copied_function_decl);
+                        return;
+                    }
+                    else
+                    {
+                        if (log)
+                        {
+                            log->Printf ("  Failed to import the function decl for '%s'",
+                                         src_function_decl->getName().str().c_str());
+                        }
+                    }
+                }
+            }
+        }
 
         if (!function_type)
         {
@@ -2290,7 +2096,7 @@ ClangExpressionDeclMap::AddOneFunction (NameSearchContext &context,
         CompilerType copied_function_type = GuardedCopyType(function_clang_type);
         if (copied_function_type)
         {
-            function_decl = context.AddFunDecl(copied_function_type);
+            function_decl = context.AddFunDecl(copied_function_type, extern_c);
 
             if (!function_decl)
             {

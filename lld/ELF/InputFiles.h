@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/StringSaver.h"
 
 namespace lld {
 namespace elf2 {
@@ -33,10 +34,11 @@ class SymbolBody;
 // The root class of input files.
 class InputFile {
 public:
-  enum Kind { ObjectKind, SharedKind, ArchiveKind };
+  enum Kind { ObjectKind, SharedKind, ArchiveKind, BitcodeKind };
   Kind kind() const { return FileKind; }
 
   StringRef getName() const { return MB.getBufferIdentifier(); }
+  MemoryBufferRef MB;
 
   // Filename of .a which contained this file. If this file was
   // not in an archive file, it is the empty string. We use this
@@ -45,7 +47,6 @@ public:
 
 protected:
   InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
-  MemoryBufferRef MB;
 
 private:
   const Kind FileKind;
@@ -176,6 +177,19 @@ private:
   std::unique_ptr<Archive> File;
   std::vector<Lazy> LazySymbols;
   llvm::DenseSet<uint64_t> Seen;
+};
+
+class BitcodeFile : public InputFile {
+public:
+  explicit BitcodeFile(MemoryBufferRef M);
+  static bool classof(const InputFile *F);
+  void parse();
+
+  std::vector<SymbolBody *> SymbolBodies;
+
+private:
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver{Alloc};
 };
 
 // .so file.

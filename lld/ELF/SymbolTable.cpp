@@ -18,7 +18,12 @@
 #include "Config.h"
 #include "Error.h"
 #include "Symbols.h"
+#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Linker/Linker.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -74,12 +79,85 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
     return;
   }
 
+  // LLVM bitcode file.
+  if (auto *F = dyn_cast<BitcodeFile>(FileP)) {
+    BitcodeFiles.emplace_back(cast<BitcodeFile>(File.release()));
+    F->parse();
+    for (SymbolBody *B : F->SymbolBodies)
+      resolve(B);
+    return;
+  }
+
   // .o file
   auto *F = cast<ObjectFile<ELFT>>(FileP);
   ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(File.release()));
   F->parse(ComdatGroups);
   for (SymbolBody *B : F->getSymbols())
     resolve(B);
+}
+
+// Codegen the module M and returns the resulting InputFile.
+template <class ELFT>
+std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
+  StringRef TripleStr = M.getTargetTriple();
+  Triple TheTriple(TripleStr);
+
+  // FIXME: Should we have a default triple? The gold plugin uses
+  // sys::getDefaultTargetTriple(), but that is probably wrong given that this
+  // might be a cross linker.
+
+  std::string ErrMsg;
+  const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
+  if (!TheTarget)
+    fatal("Target not found: " + ErrMsg);
+
+  TargetOptions Options;
+  std::unique_ptr<TargetMachine> TM(
+      TheTarget->createTargetMachine(TripleStr, "", "", Options));
+
+  raw_svector_ostream OS(OwningLTOData);
+  legacy::PassManager CodeGenPasses;
+  if (TM->addPassesToEmitFile(CodeGenPasses, OS,
+                              TargetMachine::CGFT_ObjectFile))
+    fatal("Failed to setup codegen");
+  CodeGenPasses.run(M);
+  LtoBuffer = MemoryBuffer::getMemBuffer(OwningLTOData, "", false);
+  return createObjectFile(*LtoBuffer);
+}
+
+// Merge all the bitcode files we have seen, codegen the result and return
+// the resulting ObjectFile.
+template <class ELFT>
+ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
+  LLVMContext Context;
+  Module Combined("ld-temp.o", Context);
+  Linker L(Combined);
+  for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles) {
+    std::unique_ptr<MemoryBuffer> Buffer =
+        MemoryBuffer::getMemBuffer(F->MB, false);
+    ErrorOr<std::unique_ptr<Module>> MOrErr =
+        getLazyBitcodeModule(std::move(Buffer), Context,
+                             /*ShouldLazyLoadMetadata*/ true);
+    fatal(MOrErr);
+    std::unique_ptr<Module> &M = *MOrErr;
+    L.linkInModule(std::move(M));
+  }
+  std::unique_ptr<InputFile> F = codegen(Combined);
+  ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(F.release()));
+  return &*ObjectFiles.back();
+}
+
+template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
+  if (BitcodeFiles.empty())
+    return;
+  ObjectFile<ELFT> *Obj = createCombinedLtoObject();
+  // FIXME: We probably have to ignore comdats here.
+  Obj->parse(ComdatGroups);
+  for (SymbolBody *Body : Obj->getSymbols()) {
+    Symbol *Sym = insert(Body);
+    assert(isa<DefinedBitcode>(Sym->Body));
+    Sym->Body = Body;
+  }
 }
 
 // Add an undefined symbol.

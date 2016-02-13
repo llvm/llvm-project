@@ -612,11 +612,23 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
         if (log)
             log->Printf("Found function %s for %s", function_name.AsCString(), m_expr.FunctionName());
     }
+    
+    SymbolContext sc;
+    
+    if (lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP())
+    {
+        sc = frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
+    }
+    else if (lldb::TargetSP target_sp = exe_ctx.GetTargetSP())
+    {
+        sc.target_sp = target_sp;
+    }
 
     execution_unit_sp.reset(new IRExecutionUnit (m_llvm_context, // handed off here
                                                  llvm_module_ap, // handed off here
                                                  function_name,
                                                  exe_ctx.GetTargetSP(),
+                                                 sc,
                                                  m_compiler->getTargetOpts().Features));
 
     ClangExpressionHelper *type_system_helper = dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());

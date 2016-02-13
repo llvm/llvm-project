@@ -9926,6 +9926,15 @@ ClangASTContext::CountDeclLevels (clang::DeclContext *frame_decl_ctx,
             {
                 if (searched.find(it->second) != searched.end())
                     continue;
+                
+                // Currently DWARF has one shared translation unit for all Decls at top level, so this
+                // would erroneously find using statements anywhere.  So don't look at the top-level
+                // translation unit.
+                // TODO fix this and add a testcase that depends on it.
+                
+                if (llvm::isa<clang::TranslationUnitDecl>(it->second))
+                    continue;
+                
                 searched.insert(it->second);
                 symbol_file->ParseDeclsForContext(CompilerDeclContext(this, it->second));
 

@@ -440,6 +440,10 @@ def builder_module():
         return __import__("builder_freebsd")
     if sys.platform.startswith("netbsd"):
         return __import__("builder_netbsd")
+    if sys.platform.startswith("linux"):
+        # sys.platform with Python-3.x returns 'linux', but with
+        # Python-2.x it returns 'linux2'.
+        return __import__("builder_linux")
     return __import__("builder_" + sys.platform)
 
 

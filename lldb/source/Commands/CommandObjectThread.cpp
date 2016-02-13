@@ -606,75 +606,30 @@ protected:
 
             if (frame->HasDebugInformation ())
             {
-                AddressRange range = frame->GetSymbolContext(eSymbolContextEverything).line_entry.range;
+                AddressRange range;
+                SymbolContext sc = frame->GetSymbolContext(eSymbolContextEverything);
                 if (m_options.m_end_line != LLDB_INVALID_LINE_NUMBER)
                 {
-                    SymbolContext sc = frame->GetSymbolContext(eSymbolContextEverything);
-                    if (sc.line_entry.line > m_options.m_end_line)
+                    Error error;
+                    if (!sc.GetAddressRangeFromHereToEndLine(m_options.m_end_line, range, error))
                     {
-                        result.AppendErrorWithFormat("end line option %d must be after the current line: %d",
-                                                     m_options.m_end_line,
-                                                     sc.line_entry.line);
+                        result.AppendErrorWithFormat("invalid end-line option: %s.", error.AsCString());
                         result.SetStatus(eReturnStatusFailed);
                         return false;
                     }
-
-                    CompileUnit *cu = sc.comp_unit;
-                    uint32_t line_index = 0;
-                    bool found = false;
-                    while (1)
-                    {
-                        LineEntry this_line;
-                        line_index = cu->FindLineEntry(line_index, sc.line_entry.line, nullptr, false, &this_line);
-                        if (line_index == UINT32_MAX)
-                            break;
-                        if (LineEntry::Compare(this_line, sc.line_entry) == 0)
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                    LineEntry end_entry;
-                    if (!found)
-                    {
-                        // Can't find the index of the SymbolContext's line entry in the SymbolContext's CompUnit.
-                        result.AppendErrorWithFormat("Can't find the current line entry in the CompUnit - can't process "
-                                                     "the end-line option");
-                        result.SetStatus(eReturnStatusFailed);
-                        return false;
-                    }
-                    
-                    line_index = cu->FindLineEntry(line_index, m_options.m_end_line, nullptr, false, &end_entry);
-                    if (line_index == UINT32_MAX)
-                    {
-                        result.AppendErrorWithFormat("could not find a line table entry corresponding "
-                                                     "to end line number %d",
-                                                     m_options.m_end_line);
-                        result.SetStatus(eReturnStatusFailed);
-                        return false;
-                    }
-                    
-                    Block *func_block = sc.GetFunctionBlock();
-                    if (func_block && func_block->GetRangeIndexContainingAddress(end_entry.range.GetBaseAddress()) == UINT32_MAX)
-                    {
-                        result.AppendErrorWithFormat("end line number %d is not contained within the current function.",
-                                                     m_options.m_end_line);
-                        result.SetStatus(eReturnStatusFailed);
-                        return false;
-                    }
-                    
-                    lldb::addr_t range_size = end_entry.range.GetBaseAddress().GetFileAddress()
-                                              - range.GetBaseAddress().GetFileAddress();
-                    range.SetByteSize(range_size);
+                }
+                else
+                {
+                    range = sc.line_entry.range;
                 }
                 
                 new_plan_sp = thread->QueueThreadPlanForStepInRange (abort_other_plans,
-                                                                range,
-                                                                frame->GetSymbolContext(eSymbolContextEverything),
-                                                                m_options.m_step_in_target.c_str(),
-                                                                stop_other_threads,
-                                                                m_options.m_step_in_avoid_no_debug,
-                                                                m_options.m_step_out_avoid_no_debug);
+                                                                     range,
+                                                                     frame->GetSymbolContext(eSymbolContextEverything),
+                                                                     m_options.m_step_in_target.c_str(),
+                                                                     stop_other_threads,
+                                                                     m_options.m_step_in_avoid_no_debug,
+                                                                     m_options.m_step_out_avoid_no_debug);
                 
                 if (new_plan_sp && !m_options.m_avoid_regexp.empty())
                 {

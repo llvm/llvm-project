@@ -17,6 +17,7 @@
 #include "Writer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 
@@ -111,6 +112,9 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   case file_magic::elf_shared_object:
     Files.push_back(createSharedFile(MBRef));
+    return;
+  case sys::fs::file_magic::bitcode:
+    Files.push_back(make_unique<BitcodeFile>(MBRef));
     return;
   default:
     Files.push_back(createObjectFile(MBRef));
@@ -293,10 +297,14 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
 }
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
+  // For LTO
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+
   SymbolTable<ELFT> Symtab;
   std::unique_ptr<TargetInfo> TI(createTarget());
   Target = TI.get();
-  Script->finalize();
 
   if (!Config->Shared) {
     // Add entry symbol.
@@ -352,6 +360,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   for (StringRef S : Config->Undefined)
     Symtab.addUndefinedOpt(S);
+
+  Symtab.addCombinedLtoObject();
 
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
