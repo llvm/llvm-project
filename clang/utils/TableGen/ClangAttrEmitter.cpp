@@ -81,7 +81,7 @@ static std::string ReadPCHRecord(StringRef type) {
     .Case("TypeSourceInfo *", "GetTypeSourceInfo(F, Record, Idx)")
     .Case("Expr *", "ReadExpr(F)")
     .Case("IdentifierInfo *", "GetIdentifierInfo(F, Record, Idx)")
-    .Case("std::string", "ReadString(Record, Idx)")
+    .Case("StringRef", "ReadString(Record, Idx)")
     .Default("Record[Idx++]");
 }
 
@@ -95,7 +95,7 @@ static std::string WritePCHRecord(StringRef type, StringRef name) {
     .Case("Expr *", "AddStmt(" + std::string(name) + ");\n")
     .Case("IdentifierInfo *", 
           "AddIdentifierRef(" + std::string(name) + ", Record);\n")
-    .Case("std::string", "AddString(" + std::string(name) + ", Record);\n")
+    .Case("StringRef", "AddString(" + std::string(name) + ", Record);\n")
     .Default("Record.push_back(" + std::string(name) + ");\n");
 }
 
@@ -528,7 +528,9 @@ namespace {
         : Argument(Arg, Attr), Type(T), ArgName(getLowerName().str() + "_"),
           ArgSizeName(ArgName + "Size"), RangeName(getLowerName()) {}
 
-    std::string getType() const { return Type; }
+    const std::string &getType() const { return Type; }
+    const std::string &getArgName() const { return ArgName; }
+    const std::string &getArgSizeName() const { return ArgSizeName; }
     bool isVariadic() const override { return true; }
 
     void writeAccessors(raw_ostream &OS) const override {
@@ -993,8 +995,19 @@ namespace {
   class VariadicStringArgument : public VariadicArgument {
   public:
     VariadicStringArgument(const Record &Arg, StringRef Attr)
-      : VariadicArgument(Arg, Attr, "std::string")
+      : VariadicArgument(Arg, Attr, "StringRef")
     {}
+    void writeCtorBody(raw_ostream &OS) const override {
+      OS << "    for (size_t I = 0, E = " << getArgSizeName() << "; I != E;\n"
+            "         ++I) {\n"
+            "      StringRef Ref = " << getUpperName() << "[I];\n"
+            "      if (!Ref.empty()) {\n"
+            "        char *Mem = new (Ctx, 1) char[Ref.size()];\n"
+            "        std::memcpy(Mem, Ref.data(), Ref.size());\n"
+            "        " << getArgName() << "[I] = StringRef(Mem, Ref.size());\n"
+            "      }\n"
+            "    }";
+    }
     void writeValueImpl(raw_ostream &OS) const override {
       OS << "    OS << \"\\\"\" << Val << \"\\\"\";\n";
     }

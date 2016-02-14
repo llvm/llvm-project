@@ -633,7 +633,8 @@ struct RecordExpansion : TypeExpansion {
 
   RecordExpansion(SmallVector<const CXXBaseSpecifier *, 1> &&Bases,
                   SmallVector<const FieldDecl *, 1> &&Fields)
-      : TypeExpansion(TEK_Record), Bases(Bases), Fields(Fields) {}
+      : TypeExpansion(TEK_Record), Bases(std::move(Bases)),
+        Fields(std::move(Fields)) {}
   static bool classof(const TypeExpansion *TE) {
     return TE->Kind == TEK_Record;
   }
