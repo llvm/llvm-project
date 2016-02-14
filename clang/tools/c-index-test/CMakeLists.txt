@@ -1,5 +1,10 @@
+set(LLVM_LINK_COMPONENTS
+  support
+)
+
 add_clang_executable(c-index-test
   c-index-test.c
+  core_main.cpp
   )
 
 if(NOT MSVC)
@@ -12,10 +17,12 @@ endif()
 if (LLVM_BUILD_STATIC)
   target_link_libraries(c-index-test
     libclang_static
+    clangIndex
   )
 else()
   target_link_libraries(c-index-test
     libclang
+    clangIndex
   )
 endif()
 

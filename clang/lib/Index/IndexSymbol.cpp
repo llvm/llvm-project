@@ -185,3 +185,102 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   return Info;
 }
+
+void index::applyForEachSymbolRole(SymbolRoleSet Roles,
+                                   llvm::function_ref<void(SymbolRole)> Fn) {
+#define APPLY_FOR_ROLE(Role) \
+  if (Roles & (unsigned)SymbolRole::Role) \
+    Fn(SymbolRole::Role)
+
+  APPLY_FOR_ROLE(Declaration);
+  APPLY_FOR_ROLE(Definition);
+  APPLY_FOR_ROLE(Reference);
+  APPLY_FOR_ROLE(Read);
+  APPLY_FOR_ROLE(Write);
+  APPLY_FOR_ROLE(Call);
+  APPLY_FOR_ROLE(Dynamic);
+  APPLY_FOR_ROLE(AddressOf);
+  APPLY_FOR_ROLE(Implicit);
+  APPLY_FOR_ROLE(RelationChildOf);
+  APPLY_FOR_ROLE(RelationBaseOf);
+  APPLY_FOR_ROLE(RelationOverrideOf);
+  APPLY_FOR_ROLE(RelationReceivedBy);
+
+#undef APPLY_FOR_ROLE
+}
+
+void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
+  bool VisitedOnce = false;
+  applyForEachSymbolRole(Roles, [&](SymbolRole Role) {
+    if (VisitedOnce)
+      OS << '/';
+    else
+      VisitedOnce = true;
+    switch (Role) {
+    case SymbolRole::Declaration: OS << "Decl"; break;
+    case SymbolRole::Definition: OS << "Def"; break;
+    case SymbolRole::Reference: OS << "Ref"; break;
+    case SymbolRole::Read: OS << "Read"; break;
+    case SymbolRole::Write: OS << "Writ"; break;
+    case SymbolRole::Call: OS << "Call"; break;
+    case SymbolRole::Dynamic: OS << "Dyn"; break;
+    case SymbolRole::AddressOf: OS << "Addr"; break;
+    case SymbolRole::Implicit: OS << "Impl"; break;
+    case SymbolRole::RelationChildOf: OS << "RelChild"; break;
+    case SymbolRole::RelationBaseOf: OS << "RelBase"; break;
+    case SymbolRole::RelationOverrideOf: OS << "RelOver"; break;
+    case SymbolRole::RelationReceivedBy: OS << "RelRec"; break;
+    }
+  });
+}
+
+StringRef index::getSymbolKindString(SymbolKind K) {
+  switch (K) {
+  case SymbolKind::Unknown: return "<unknown>";
+  case SymbolKind::Module: return "module";
+  case SymbolKind::Macro: return "macro";
+  case SymbolKind::Enum: return "enum";
+  case SymbolKind::Struct: return "struct";
+  case SymbolKind::Union: return "union";
+  case SymbolKind::Typedef: return "typedef";
+  case SymbolKind::Function: return "function";
+  case SymbolKind::Variable: return "variable";
+  case SymbolKind::Field: return "field";
+  case SymbolKind::EnumConstant: return "enumerator";
+  case SymbolKind::ObjCClass: return "objc-class";
+  case SymbolKind::ObjCProtocol: return "objc-protocol";
+  case SymbolKind::ObjCCategory: return "objc-category";
+  case SymbolKind::ObjCInstanceMethod: return "objc-instance-method";
+  case SymbolKind::ObjCClassMethod: return "objc-class-method";
+  case SymbolKind::ObjCProperty: return "objc-property";
+  case SymbolKind::ObjCIvar: return "objc-ivar";
+  case SymbolKind::CXXClass: return "c++-class";
+  case SymbolKind::CXXNamespace: return "namespace";
+  case SymbolKind::CXXNamespaceAlias: return "namespace-alias";
+  case SymbolKind::CXXStaticVariable: return "c++-static-var";
+  case SymbolKind::CXXStaticMethod: return "c++-static-method";
+  case SymbolKind::CXXInstanceMethod: return "c++-instance-method";
+  case SymbolKind::CXXConstructor: return "constructor";
+  case SymbolKind::CXXDestructor: return "destructor";
+  case SymbolKind::CXXConversionFunction: return "coversion-func";
+  case SymbolKind::CXXTypeAlias: return "type-alias";
+  case SymbolKind::CXXInterface: return "c++-__interface";
+  }
+}
+
+StringRef index::getTemplateKindStr(SymbolCXXTemplateKind TK) {
+  switch (TK) {
+  case SymbolCXXTemplateKind::NonTemplate: return "NT";
+  case SymbolCXXTemplateKind::Template : return "T";
+  case SymbolCXXTemplateKind::TemplatePartialSpecialization : return "TPS";
+  case SymbolCXXTemplateKind::TemplateSpecialization: return "TS";
+  }
+}
+
+StringRef index::getSymbolLanguageString(SymbolLanguage K) {
+  switch (K) {
+  case SymbolLanguage::C: return "C";
+  case SymbolLanguage::ObjC: return "ObjC";
+  case SymbolLanguage::CXX: return "C++";
+  }
+}
