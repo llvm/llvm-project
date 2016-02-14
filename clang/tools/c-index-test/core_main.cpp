@@ -172,7 +172,7 @@ int indextest_core_main(int argc, const char **argv) {
   PrettyStackTraceProgram X(argc, argv);
 
   std::vector<const char *> CompArgs;
-  const char *const *DoubleDash = std::find(argv, argv + argc, StringRef("--"));
+  const char **DoubleDash = std::find(argv, argv + argc, StringRef("--"));
   if (DoubleDash != argv + argc) {
     CompArgs = std::vector<const char *>(DoubleDash + 1, argv + argc);
     argc = DoubleDash - argv;
