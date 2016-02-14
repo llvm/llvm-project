@@ -13,6 +13,7 @@
 #include "clang/Index/IndexSymbol.h"
 
 namespace clang {
+  class ASTContext;
   class DeclContext;
   class Expr;
   class FileID;
@@ -32,6 +33,8 @@ public:
   };
 
   virtual ~IndexDataConsumer() {}
+
+  virtual void initialize(ASTContext &Ctx) {}
 
   /// \returns true to continue indexing, or false to abort.
   virtual bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
