@@ -1763,7 +1763,10 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
   // and collect relevant information.
   for (auto &B : MF) {
     std::map<int,IndexType> LastStore, LastLoad;
-    auto P = BlockIndexes.emplace(&B, HexagonBlockRanges::InstrIndexMap(B));
+    // Emplace appears not to be supported in gcc 4.7.2-4.
+    //auto P = BlockIndexes.emplace(&B, HexagonBlockRanges::InstrIndexMap(B));
+    auto TmpP = std::make_pair(&B, HexagonBlockRanges::InstrIndexMap(B));
+    auto P = BlockIndexes.insert(TmpP);
     auto &IndexMap = P.first->second;
     DEBUG(dbgs() << "Index map for BB#" << B.getNumber() << "\n"
                  << IndexMap << '\n');

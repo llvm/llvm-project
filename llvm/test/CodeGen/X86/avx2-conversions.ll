@@ -4,8 +4,8 @@
 define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ; CHECK-LABEL: trunc4:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; CHECK-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %B = trunc <4 x i64> %A to <4 x i32>

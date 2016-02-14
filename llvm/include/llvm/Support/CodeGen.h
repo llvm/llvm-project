@@ -15,9 +15,6 @@
 #ifndef LLVM_SUPPORT_CODEGEN_H
 #define LLVM_SUPPORT_CODEGEN_H
 
-#include "llvm-c/TargetMachine.h"
-#include "llvm/Support/ErrorHandling.h"
-
 namespace llvm {
 
   // Relocation model types.
@@ -27,6 +24,7 @@ namespace llvm {
 
   // Code model types.
   namespace CodeModel {
+    // Sync changes with CodeGenCWrappers.h.
     enum Model { Default, JITDefault, Small, Kernel, Medium, Large };
   }
 
@@ -54,42 +52,6 @@ namespace llvm {
     };
   }
 
-  // Create wrappers for C Binding types (see CBindingWrapping.h).
-  inline CodeModel::Model unwrap(LLVMCodeModel Model) {
-    switch (Model) {
-      case LLVMCodeModelDefault:
-        return CodeModel::Default;
-      case LLVMCodeModelJITDefault:
-        return CodeModel::JITDefault;
-      case LLVMCodeModelSmall:
-        return CodeModel::Small;
-      case LLVMCodeModelKernel:
-        return CodeModel::Kernel;
-      case LLVMCodeModelMedium:
-        return CodeModel::Medium;
-      case LLVMCodeModelLarge:
-        return CodeModel::Large;
-    }
-    return CodeModel::Default;
-  }
-
-  inline LLVMCodeModel wrap(CodeModel::Model Model) {
-    switch (Model) {
-      case CodeModel::Default:
-        return LLVMCodeModelDefault;
-      case CodeModel::JITDefault:
-        return LLVMCodeModelJITDefault;
-      case CodeModel::Small:
-        return LLVMCodeModelSmall;
-      case CodeModel::Kernel:
-        return LLVMCodeModelKernel;
-      case CodeModel::Medium:
-        return LLVMCodeModelMedium;
-      case CodeModel::Large:
-        return LLVMCodeModelLarge;
-    }
-    llvm_unreachable("Bad CodeModel!");
-  }
 }  // end llvm namespace
 
 #endif

@@ -669,7 +669,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
   case Instruction::UIToFP:
   case Instruction::SIToFP:
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-      APInt api = CI->getValue();
+      const APInt &api = CI->getValue();
       APFloat apf(DestTy->getFltSemantics(),
                   APInt::getNullValue(DestTy->getPrimitiveSizeInBits()));
       if (APFloat::opOverflow &
@@ -1168,8 +1168,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
     }
   } else if (ConstantFP *CFP1 = dyn_cast<ConstantFP>(C1)) {
     if (ConstantFP *CFP2 = dyn_cast<ConstantFP>(C2)) {
-      APFloat C1V = CFP1->getValueAPF();
-      APFloat C2V = CFP2->getValueAPF();
+      const APFloat &C1V = CFP1->getValueAPF();
+      const APFloat &C2V = CFP2->getValueAPF();
       APFloat C3V = C1V;  // copy for modification
       switch (Opcode) {
       default:                   
@@ -1729,8 +1729,8 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
   }
 
   if (isa<ConstantInt>(C1) && isa<ConstantInt>(C2)) {
-    APInt V1 = cast<ConstantInt>(C1)->getValue();
-    APInt V2 = cast<ConstantInt>(C2)->getValue();
+    const APInt &V1 = cast<ConstantInt>(C1)->getValue();
+    const APInt &V2 = cast<ConstantInt>(C2)->getValue();
     switch (pred) {
     default: llvm_unreachable("Invalid ICmp Predicate");
     case ICmpInst::ICMP_EQ:  return ConstantInt::get(ResultTy, V1 == V2);
@@ -1745,8 +1745,8 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
     case ICmpInst::ICMP_UGE: return ConstantInt::get(ResultTy, V1.uge(V2));
     }
   } else if (isa<ConstantFP>(C1) && isa<ConstantFP>(C2)) {
-    APFloat C1V = cast<ConstantFP>(C1)->getValueAPF();
-    APFloat C2V = cast<ConstantFP>(C2)->getValueAPF();
+    const APFloat &C1V = cast<ConstantFP>(C1)->getValueAPF();
+    const APFloat &C2V = cast<ConstantFP>(C2)->getValueAPF();
     APFloat::cmpResult R = C1V.compare(C2V);
     switch (pred) {
     default: llvm_unreachable("Invalid FCmp Predicate");

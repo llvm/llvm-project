@@ -229,7 +229,7 @@ int RunOneTest(Fuzzer *F, const char *InputFilePath) {
   Unit U = FileToVector(InputFilePath);
   Unit PreciseSizedU(U);
   assert(PreciseSizedU.size() == PreciseSizedU.capacity());
-  F->ExecuteCallback(PreciseSizedU);
+  F->ExecuteCallback(PreciseSizedU.data(), PreciseSizedU.size());
   return 0;
 }
 

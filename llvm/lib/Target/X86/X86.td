@@ -388,10 +388,19 @@ class WestmereProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
 ]>;
 def : WestmereProc<"westmere">;
 
+class ProcessorFeatures<list<SubtargetFeature> Inherited,
+                        list<SubtargetFeature> NewFeatures> {
+  list<SubtargetFeature> Value = !listconcat(Inherited, NewFeatures);
+}
+
+class ProcModel<string Name, SchedMachineModel Model,
+                list<SubtargetFeature> ProcFeatures,
+                list<SubtargetFeature> OtherFeatures> :
+  ProcessorModel<Name, Model, !listconcat(ProcFeatures, OtherFeatures)>;
+
 // SSE is not listed here since llvm treats AVX as a reimplementation of SSE,
 // rather than a superset.
-def ProcIntelSNB : SubtargetFeature<"snb", "X86ProcFamily", "IntelSNB",
-                                    " Intel SandyBridge Processor", [
+def SNBFeatures : ProcessorFeatures<[], [
   FeatureMMX,
   FeatureAVX,
   FeatureFXSR,
@@ -404,33 +413,29 @@ def ProcIntelSNB : SubtargetFeature<"snb", "X86ProcFamily", "IntelSNB",
   FeatureLAHFSAHF
 ]>;
 
-class SandyBridgeProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
-  ProcIntelSNB,
+class SandyBridgeProc<string Name> : ProcModel<Name, SandyBridgeModel,
+                                               SNBFeatures.Value, [
   FeatureSlowBTMem,
   FeatureSlowUAMem32
 ]>;
 def : SandyBridgeProc<"sandybridge">;
 def : SandyBridgeProc<"corei7-avx">; // Legacy alias.
 
-def ProcIntelIVB : SubtargetFeature<"ivb", "X86ProcFamily", "IntelIVB",
-                                    " Intel IvyBridge Processor", [
-  ProcIntelSNB,
+def IVBFeatures : ProcessorFeatures<SNBFeatures.Value, [
   FeatureRDRAND,
   FeatureF16C,
   FeatureFSGSBase
 ]>;
 
-class IvyBridgeProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
-  ProcIntelIVB,
+class IvyBridgeProc<string Name> : ProcModel<Name, SandyBridgeModel,
+                                             IVBFeatures.Value, [
   FeatureSlowBTMem,
   FeatureSlowUAMem32
 ]>;
 def : IvyBridgeProc<"ivybridge">;
 def : IvyBridgeProc<"core-avx-i">; // Legacy alias.
 
-def ProcIntelHSW : SubtargetFeature<"hsw", "X86ProcFamily", "IntelHSW",
-                                    " Intel Haswell Processor", [
-  ProcIntelIVB,
+def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
   FeatureAVX2,
   FeatureBMI,
   FeatureBMI2,
@@ -444,25 +449,21 @@ def ProcIntelHSW : SubtargetFeature<"hsw", "X86ProcFamily", "IntelHSW",
   FeatureSlowIncDec
 ]>;
 
-class HaswellProc<string Name> : ProcessorModel<Name, HaswellModel,
-                                 [ProcIntelHSW]>;
+class HaswellProc<string Name> : ProcModel<Name, HaswellModel,
+                                           HSWFeatures.Value, []>;
 def : HaswellProc<"haswell">;
 def : HaswellProc<"core-avx2">; // Legacy alias.
 
-def ProcIntelBDW : SubtargetFeature<"bdw", "X86ProcFamily", "IntelBDW",
-                                    " Intel Broadwell Processor", [
-  ProcIntelHSW,
+def BDWFeatures : ProcessorFeatures<HSWFeatures.Value, [
   FeatureADX,
   FeatureRDSEED,
   FeatureSMAP
 ]>;
-class BroadwellProc<string Name> : ProcessorModel<Name, HaswellModel,
-                                   [ProcIntelBDW]>;
+class BroadwellProc<string Name> : ProcModel<Name, HaswellModel,
+                                             BDWFeatures.Value, []>;
 def : BroadwellProc<"broadwell">;
 
-def ProcIntelSKL : SubtargetFeature<"skl", "X86ProcFamily", "IntelSKL",
-                                    " Intel Skylake Client Processor", [
-  ProcIntelBDW,
+def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
   FeatureMPX,
   FeatureXSAVEC,
   FeatureXSAVES,
@@ -471,13 +472,13 @@ def ProcIntelSKL : SubtargetFeature<"skl", "X86ProcFamily", "IntelSKL",
 ]>;
 
 // FIXME: define SKL model
-class SkylakeClientProc<string Name> : ProcessorModel<Name, HaswellModel,
-                                       [ProcIntelSKL]>;
+class SkylakeClientProc<string Name> : ProcModel<Name, HaswellModel,
+                                                 SKLFeatures.Value, []>;
 def : SkylakeClientProc<"skl">;
 
 // FIXME: define KNL model
-class KnightsLandingProc<string Name> : ProcessorModel<Name, HaswellModel,[
-  ProcIntelIVB,
+class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
+                                                  IVBFeatures.Value, [
   FeatureAVX512,
   FeatureERI,
   FeatureCDI,
@@ -493,9 +494,7 @@ class KnightsLandingProc<string Name> : ProcessorModel<Name, HaswellModel,[
 ]>;
 def : KnightsLandingProc<"knl">;
 
-def ProcIntelSKX : SubtargetFeature<"skx", "X86ProcFamily", "IntelSKX",
-                                    " Intel Skylake Server Processor", [
-  ProcIntelSKL,
+def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
   FeatureAVX512,
   FeatureCDI,
   FeatureDQI,
@@ -507,21 +506,19 @@ def ProcIntelSKX : SubtargetFeature<"skx", "X86ProcFamily", "IntelSKX",
 ]>;
 
 // FIXME: define SKX model
-class SkylakeServerProc<string Name> : ProcessorModel<Name, HaswellModel,
-                                       [ ProcIntelSKX]>;
+class SkylakeServerProc<string Name> : ProcModel<Name, HaswellModel,
+                                                 SKXFeatures.Value, []>;
 def : SkylakeServerProc<"skylake">;
 def : SkylakeServerProc<"skx">; // Legacy alias.
 
-def ProcIntelCNL : SubtargetFeature<"cnl", "X86ProcFamily", "IntelCNL",
-                                    " Intel Cannonlake Processor", [
-  ProcIntelSKX,
+def CNLFeatures : ProcessorFeatures<SKXFeatures.Value, [
   FeatureVBMI,
   FeatureIFMA,
   FeatureSHA
 ]>;
 
-class CannonlakeProc<string Name> : ProcessorModel<Name, HaswellModel,
-                                    [ ProcIntelCNL ]>;
+class CannonlakeProc<string Name> : ProcModel<Name, HaswellModel,
+                                              CNLFeatures.Value, []>;
 def : CannonlakeProc<"cannonlake">;
 def : CannonlakeProc<"cnl">;
 

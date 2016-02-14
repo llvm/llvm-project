@@ -93,7 +93,7 @@ void ComputeSHA1(const uint8_t *Data, size_t Len, uint8_t *Out);
 
 // Changes U to contain only ASCII (isprint+isspace) characters.
 // Returns true iff U has been changed.
-bool ToASCII(Unit &U);
+bool ToASCII(uint8_t *Data, size_t Size);
 bool IsASCII(const Unit &U);
 
 int NumberOfCpuCores();
@@ -251,6 +251,7 @@ private:
   std::vector<Mutator> CurrentMutatorSequence;
   std::vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
   const std::vector<Unit> *Corpus = nullptr;
+  std::vector<uint8_t> MutateInPlaceHere;
 
   static Mutator Mutators[];
 };
@@ -318,7 +319,7 @@ public:
 
   static void StaticAlarmCallback();
 
-  void ExecuteCallback(const Unit &U);
+  void ExecuteCallback(const uint8_t *Data, size_t Size);
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const std::vector<std::string> &Corpora);
@@ -328,8 +329,9 @@ private:
   void AlarmCallback();
   void MutateAndTestOne();
   void ReportNewCoverage(const Unit &U);
-  bool RunOne(const Unit &U);
-  void RunOneAndUpdateCorpus(Unit &U);
+  bool RunOne(const uint8_t *Data, size_t Size);
+  bool RunOne(const Unit &U) { return RunOne(U.data(), U.size()); }
+  void RunOneAndUpdateCorpus(uint8_t *Data, size_t Size);
   void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n");
@@ -375,6 +377,8 @@ private:
       Res += __builtin_popcount(x);
     return Res;
   }
+
+  std::vector<uint8_t> MutateInPlaceHere;
 
   std::piecewise_constant_distribution<double> CorpusDistribution;
   UserCallback CB;

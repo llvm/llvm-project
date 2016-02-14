@@ -55,8 +55,7 @@ protected:
   };
 
   enum X86ProcFamilyEnum {
-    Others, IntelAtom, IntelSLM, IntelSNB, IntelIVB, IntelHSW, IntelBDW,
-    IntelKNL, IntelSKL, IntelSKX, IntelCNL
+    Others, IntelAtom, IntelSLM
   };
 
   /// X86 processor family: Intel Atom, and others
@@ -445,6 +444,11 @@ public:
   bool isAtom() const { return X86ProcFamily == IntelAtom; }
   bool isSLM() const { return X86ProcFamily == IntelSLM; }
   bool useSoftFloat() const { return UseSoftFloat; }
+
+  /// Use mfence if we have SSE2 or we're on x86-64 (even if we asked for
+  /// no-sse2). There isn't any reason to disable it if the target processor
+  /// supports it.
+  bool hasMFence() const { return hasSSE2() || is64Bit(); }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 

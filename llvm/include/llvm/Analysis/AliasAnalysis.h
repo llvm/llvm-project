@@ -983,6 +983,12 @@ class AAManager {
 public:
   typedef AAResults Result;
 
+  /// \brief Opaque, unique identifier for this analysis pass.
+  static void *ID() { return (void *)&PassID; }
+
+  /// \brief Provide access to a name for this pass.
+  static StringRef name() { return "AAManager"; }
+
   // This type hase value semantics. We have to spell these out because MSVC
   // won't synthesize them.
   AAManager() {}
@@ -1004,14 +1010,16 @@ public:
     FunctionResultGetters.push_back(&getFunctionAAResultImpl<AnalysisT>);
   }
 
-  Result run(Function &F, AnalysisManager<Function> &AM) {
+  Result run(Function &F, AnalysisManager<Function> *AM) {
     Result R;
     for (auto &Getter : FunctionResultGetters)
-      (*Getter)(F, AM, R);
+      (*Getter)(F, *AM, R);
     return R;
   }
 
 private:
+  static char PassID;
+
   SmallVector<void (*)(Function &F, AnalysisManager<Function> &AM,
                        AAResults &AAResults),
               4> FunctionResultGetters;

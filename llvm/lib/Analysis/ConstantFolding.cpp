@@ -1678,7 +1678,7 @@ static Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID,
         }
         if (IntrinsicID == Intrinsic::copysign) {
           APFloat V1 = Op1->getValueAPF();
-          APFloat V2 = Op2->getValueAPF();
+          const APFloat &V2 = Op2->getValueAPF();
           V1.copySign(V2);
           return ConstantFP::get(Ty->getContext(), V1);
         }
