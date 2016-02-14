@@ -123,9 +123,8 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
                                      /*WrappedAction=*/nullptr);
 
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
-  ASTUnit *Unit =
-   ASTUnit::LoadFromCompilerInvocationAction(CInvok.get(), PCHContainerOps,
-                                             Diags, IndexAction.get());
+  std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCompilerInvocationAction(
+      CInvok.get(), PCHContainerOps, Diags, IndexAction.get()));
 
   if (!Unit)
     return true;
