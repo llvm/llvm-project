@@ -564,8 +564,9 @@ static CXErrorCode clang_indexSourceFile_Impl(
   auto InterAction = llvm::make_unique<IndexingFrontendAction>(DataConsumer,
                          SkipBodies ? IdxSession->SkipBodyData.get() : nullptr);
   std::unique_ptr<FrontendAction> IndexAction;
-  IndexAction = createIndexingAction(std::move(InterAction), DataConsumer,
-                                getIndexingOptionsFromCXOptions(index_options));
+  IndexAction = createIndexingAction(DataConsumer,
+                                getIndexingOptionsFromCXOptions(index_options),
+                                     std::move(InterAction));
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<FrontendAction>

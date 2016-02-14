@@ -32,10 +32,11 @@ struct IndexingOptions {
   bool IndexFunctionLocals = false;
 };
 
+/// \param WrappedAction another frontend action to wrap over or null.
 std::unique_ptr<FrontendAction>
-createIndexingAction(std::unique_ptr<FrontendAction> WrappedAction,
-                     std::shared_ptr<IndexDataConsumer> DataConsumer,
-                     IndexingOptions Opts);
+createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
+                     IndexingOptions Opts,
+                     std::unique_ptr<FrontendAction> WrappedAction = nullptr);
 
 void indexASTUnit(ASTUnit &Unit,
                   std::shared_ptr<IndexDataConsumer> DataConsumer,
