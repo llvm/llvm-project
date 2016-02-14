@@ -3,14 +3,15 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangIndex
+  CodegenNameGenerator.cpp
   CommentToXML.cpp
-  USRGeneration.cpp
   IndexBody.cpp
   IndexDecl.cpp
   IndexingAction.cpp
   IndexingContext.cpp
   IndexSymbol.cpp
   IndexTypeSourceInfo.cpp
+  USRGeneration.cpp
 
   ADDITIONAL_HEADERS
   IndexingContext.h
