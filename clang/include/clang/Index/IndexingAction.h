@@ -36,7 +36,7 @@ struct IndexingOptions {
 std::unique_ptr<FrontendAction>
 createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
                      IndexingOptions Opts,
-                     std::unique_ptr<FrontendAction> WrappedAction = nullptr);
+                     std::unique_ptr<FrontendAction> WrappedAction);
 
 void indexASTUnit(ASTUnit &Unit,
                   std::shared_ptr<IndexDataConsumer> DataConsumer,

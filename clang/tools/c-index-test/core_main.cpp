@@ -119,7 +119,8 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
   auto DataConsumer = std::make_shared<PrintIndexDataConsumer>(outs());
   IndexingOptions IndexOpts;
   std::unique_ptr<FrontendAction> IndexAction;
-  IndexAction = createIndexingAction(DataConsumer, IndexOpts);
+  IndexAction = createIndexingAction(DataConsumer, IndexOpts,
+                                     /*WrappedAction=*/nullptr);
 
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   ASTUnit *Unit =
