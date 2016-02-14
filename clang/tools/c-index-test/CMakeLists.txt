@@ -22,6 +22,9 @@ if (LLVM_BUILD_STATIC)
 else()
   target_link_libraries(c-index-test
     libclang
+    clangAST
+    clangBasic
+    clangFrontend
     clangIndex
   )
 endif()
