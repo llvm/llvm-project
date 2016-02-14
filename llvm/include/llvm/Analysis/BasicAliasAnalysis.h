@@ -185,10 +185,10 @@ public:
   /// \brief Opaque, unique identifier for this analysis pass.
   static void *ID() { return (void *)&PassID; }
 
-  BasicAAResult run(Function &F, AnalysisManager<Function> *AM);
-
   /// \brief Provide access to a name for this pass for debugging purposes.
-  static StringRef name() { return "BasicAliasAnalysis"; }
+  static StringRef name() { return "BasicAA"; }
+
+  BasicAAResult run(Function &F, AnalysisManager<Function> *AM);
 
 private:
   static char PassID;

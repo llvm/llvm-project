@@ -176,7 +176,8 @@ size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
   size_t Idx = Rand(Corpus->size());
   const Unit &Other = (*Corpus)[Idx];
   if (Other.empty()) return 0;
-  Unit U(MaxSize);
+  MutateInPlaceHere.resize(MaxSize);
+  auto &U = MutateInPlaceHere;
   size_t NewSize =
       CrossOver(Data, Size, Other.data(), Other.size(), U.data(), U.size());
   assert(NewSize > 0 && "CrossOver returned empty unit");

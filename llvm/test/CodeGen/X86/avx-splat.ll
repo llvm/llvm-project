@@ -124,9 +124,8 @@ entry:
 define <8 x float> @funcH(<8 x float> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcH:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,1,1,1,5,5,5,5]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; CHECK-NEXT:    retq
 entry:
   %shuffle = shufflevector <8 x float> %a, <8 x float> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>

@@ -298,6 +298,22 @@
 ; CHECK-DT: Running analysis: DominatorTreeAnalysis
 ; CHECK-DT: Finished pass manager
 
+; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN:     -passes='require<aa>' \
+; RUN:     | FileCheck %s --check-prefix=CHECK-AA
+; CHECK-AA: Starting pass manager
+; CHECK-AA: Running pass: RequireAnalysisPass
+; CHECK-AA: Running analysis: AAManager
+; CHECK-AA: Finished pass manager
+
+; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN:     -passes='require<basic-aa>' \
+; RUN:     | FileCheck %s --check-prefix=CHECK-BASIC-AA
+; CHECK-BASIC-AA: Starting pass manager
+; CHECK-BASIC-AA: Running pass: RequireAnalysisPass
+; CHECK-BASIC-AA: Running analysis: BasicAA
+; CHECK-BASIC-AA: Finished pass manager
+
 define void @foo() {
   ret void
 }

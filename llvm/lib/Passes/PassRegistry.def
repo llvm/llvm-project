@@ -53,7 +53,9 @@ CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 #ifndef FUNCTION_ANALYSIS
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)
 #endif
+FUNCTION_ANALYSIS("aa", AAManager())
 FUNCTION_ANALYSIS("assumptions", AssumptionAnalysis())
+FUNCTION_ANALYSIS("basic-aa", BasicAA())
 FUNCTION_ANALYSIS("domtree", DominatorTreeAnalysis())
 FUNCTION_ANALYSIS("loops", LoopAnalysis())
 FUNCTION_ANALYSIS("no-op-function", NoOpFunctionAnalysis())

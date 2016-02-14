@@ -563,13 +563,16 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
     if (RegRefs.count(Reg) > 0) {
       DEBUG(dbgs() << "\t\t" << TRI->getName(Reg) << ":");
 
-      BitVector BV = GetRenameRegisters(Reg);
-      RenameRegisterMap.insert(std::pair<unsigned, BitVector>(Reg, BV));
+      BitVector &BV = RenameRegisterMap[Reg];
+      assert(BV.empty());
+      BV = GetRenameRegisters(Reg);
 
-      DEBUG(dbgs() << " ::");
-      DEBUG(for (int r = BV.find_first(); r != -1; r = BV.find_next(r))
-              dbgs() << " " << TRI->getName(r));
-      DEBUG(dbgs() << "\n");
+      DEBUG({
+        dbgs() << " ::";
+        for (int r = BV.find_first(); r != -1; r = BV.find_next(r))
+          dbgs() << " " << TRI->getName(r);
+        dbgs() << "\n";
+      });
     }
   }
 
@@ -650,8 +653,7 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
       DEBUG(dbgs() << " " << TRI->getName(NewReg));
 
       // Check if Reg can be renamed to NewReg.
-      BitVector BV = RenameRegisterMap[Reg];
-      if (!BV.test(NewReg)) {
+      if (!RenameRegisterMap[Reg].test(NewReg)) {
         DEBUG(dbgs() << "(no rename)");
         goto next_super_reg;
       }

@@ -64,7 +64,7 @@ class SubtargetEmitter {
   CodeGenSchedModels &SchedModels;
   std::string Target;
 
-  void Enumeration(raw_ostream &OS, const char *ClassName);
+  void Enumeration(raw_ostream &OS);
   unsigned FeatureKeyValues(raw_ostream &OS);
   unsigned CPUKeyValues(raw_ostream &OS);
   void FormItineraryStageString(const std::string &Names,
@@ -112,10 +112,10 @@ public:
 //
 // Enumeration - Emit the specified class as an enumeration.
 //
-void SubtargetEmitter::Enumeration(raw_ostream &OS,
-                                   const char *ClassName) {
+void SubtargetEmitter::Enumeration(raw_ostream &OS) {
   // Get all records of class and sort
-  std::vector<Record*> DefList = Records.getAllDerivedDefinitions(ClassName);
+  std::vector<Record*> DefList =
+    Records.getAllDerivedDefinitions("SubtargetFeature");
   std::sort(DefList.begin(), DefList.end(), LessRecord());
 
   unsigned N = DefList.size();
@@ -126,7 +126,7 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS,
 
   OS << "namespace " << Target << " {\n";
 
-  // Open enumeration. Use a 64-bit underlying type.
+  // Open enumeration.
   OS << "enum {\n";
 
   // For each record
@@ -1379,7 +1379,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "#undef GET_SUBTARGETINFO_ENUM\n";
 
   OS << "namespace llvm {\n";
-  Enumeration(OS, "SubtargetFeature");
+  Enumeration(OS);
   OS << "} // end llvm namespace\n";
   OS << "#endif // GET_SUBTARGETINFO_ENUM\n\n";
 

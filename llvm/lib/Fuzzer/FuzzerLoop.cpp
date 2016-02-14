@@ -208,7 +208,7 @@ void Fuzzer::ShuffleAndMinimize() {
       size_t Last = std::min(First + Options.MaxLen, C.size());
       U.insert(U.begin(), C.begin() + First, C.begin() + Last);
       if (Options.OnlyASCII)
-        ToASCII(U);
+        ToASCII(U.data(), U.size());
       if (RunOne(U)) {
         NewCorpus.push_back(U);
         if (Options.Verbosity >= 2)
@@ -223,12 +223,12 @@ void Fuzzer::ShuffleAndMinimize() {
   PrintStats("INITED");
 }
 
-bool Fuzzer::RunOne(const Unit &U) {
+bool Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
   UnitStartTime = system_clock::now();
   TotalNumberOfRuns++;
 
   PrepareCoverageBeforeRun();
-  ExecuteCallback(U);
+  ExecuteCallback(Data, Size);
   bool Res = CheckCoverageAfterRun();
 
   auto UnitStopTime = system_clock::now();
@@ -241,29 +241,29 @@ bool Fuzzer::RunOne(const Unit &U) {
       TimeOfUnit >= Options.ReportSlowUnits) {
     TimeOfLongestUnitInSeconds = TimeOfUnit;
     Printf("Slowest unit: %zd s:\n", TimeOfLongestUnitInSeconds);
-    WriteUnitToFileWithPrefix(U, "slow-unit-");
+    WriteUnitToFileWithPrefix({Data, Data + Size}, "slow-unit-");
   }
   return Res;
 }
 
-void Fuzzer::RunOneAndUpdateCorpus(Unit &U) {
+void Fuzzer::RunOneAndUpdateCorpus(uint8_t *Data, size_t Size) {
   if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)
     return;
   if (Options.OnlyASCII)
-    ToASCII(U);
-  if (RunOne(U))
-    ReportNewCoverage(U);
+    ToASCII(Data, Size);
+  if (RunOne(Data, Size))
+    ReportNewCoverage({Data, Data + Size});
 }
 
-void Fuzzer::ExecuteCallback(const Unit &U) {
+void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   // We copy the contents of Unit into a separate heap buffer
   // so that we reliably find buffer overflows in it.
-  std::unique_ptr<uint8_t[]> Data(new uint8_t[U.size()]);
-  memcpy(Data.get(), U.data(), U.size());
-  AssignTaintLabels(Data.get(), U.size());
-  CurrentUnitData = Data.get();
-  CurrentUnitSize = U.size();
-  int Res = CB(Data.get(), U.size());
+  std::unique_ptr<uint8_t[]> DataCopy(new uint8_t[Size]);
+  memcpy(DataCopy.get(), Data, Size);
+  AssignTaintLabels(DataCopy.get(), Size);
+  CurrentUnitData = DataCopy.get();
+  CurrentUnitSize = Size;
+  int Res = CB(DataCopy.get(), Size);
   (void)Res;
   assert(Res == 0);
   CurrentUnitData = nullptr;
@@ -411,24 +411,25 @@ void Fuzzer::Merge(const std::vector<std::string> &Corpora) {
 void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
-  auto U = ChooseUnitToMutate();
+  auto &U = ChooseUnitToMutate();
+  MutateInPlaceHere.resize(Options.MaxLen);
+  memcpy(MutateInPlaceHere.data(), U.data(), U.size());
+  size_t Size = U.size();
 
   for (int i = 0; i < Options.MutateDepth; i++) {
-    size_t Size = U.size();
-    U.resize(Options.MaxLen);
     size_t NewSize = 0;
     if (LLVMFuzzerCustomMutator)
-      NewSize = LLVMFuzzerCustomMutator(U.data(), Size, U.size(),
-                                        MD.GetRand().Rand());
+      NewSize = LLVMFuzzerCustomMutator(MutateInPlaceHere.data(), Size,
+                                        Options.MaxLen, MD.GetRand().Rand());
     else
-      NewSize = MD.Mutate(U.data(), Size, U.size());
+      NewSize = MD.Mutate(MutateInPlaceHere.data(), Size, Options.MaxLen);
     assert(NewSize > 0 && "Mutator returned empty unit");
     assert(NewSize <= (size_t)Options.MaxLen &&
            "Mutator return overisized unit");
-    U.resize(NewSize);
+    Size = NewSize;
     if (i == 0)
       StartTraceRecording();
-    RunOneAndUpdateCorpus(U);
+    RunOneAndUpdateCorpus(MutateInPlaceHere.data(), Size);
     StopTraceRecording();
   }
 }

@@ -10755,6 +10755,136 @@ static bool isShuffleMaskInputInPlace(int Input, ArrayRef<int> Mask) {
   return true;
 }
 
+/// Handle case where shuffle sources are coming from the same 128-bit lane and
+/// every lane can be represented as the same repeating mask - allowing us to
+/// shuffle the sources with the repeating shuffle and then permute the result
+/// to the destination lanes.
+static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
+    SDLoc DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
+    const X86Subtarget &Subtarget, SelectionDAG &DAG) {
+  int NumElts = VT.getVectorNumElements();
+  int NumLanes = VT.getSizeInBits() / 128;
+  int NumLaneElts = NumElts / NumLanes;
+
+  // On AVX2 we may be able to just shuffle the lowest elements and then
+  // broadcast the result.
+  if (Subtarget.hasAVX2()) {
+    for (unsigned BroadcastSize : {16, 32, 64}) {
+      if (BroadcastSize <= VT.getScalarSizeInBits())
+        continue;
+      int NumBroadcastElts = BroadcastSize / VT.getScalarSizeInBits();
+
+      // Attempt to match a repeating pattern every NumBroadcastElts,
+      // accounting for UNDEFs but only references the lowest 128-bit
+      // lane of the inputs.
+      auto FindRepeatingBroadcastMask = [&](SmallVectorImpl<int> &RepeatMask) {
+        for (int i = 0; i != NumElts; i += NumBroadcastElts)
+          for (int j = 0; j != NumBroadcastElts; ++j) {
+            int M = Mask[i + j];
+            if (M < 0)
+              continue;
+            int &R = RepeatMask[j];
+            if (0 != ((M % NumElts) / NumLaneElts))
+              return false;
+            else if (0 <= R && R != M)
+              return false;
+            else
+              R = M;
+          }
+        return true;
+      };
+
+      SmallVector<int, 8> RepeatMask((unsigned)NumElts, -1);
+      if (!FindRepeatingBroadcastMask(RepeatMask))
+        continue;
+
+      // Shuffle the (lowest) repeated elements in place for broadcast.
+      SDValue RepeatShuf = DAG.getVectorShuffle(VT, DL, V1, V2, RepeatMask);
+
+      // Shuffle the actual broadcast.
+      SmallVector<int, 8> BroadcastMask((unsigned)NumElts, -1);
+      for (int i = 0; i != NumElts; i += NumBroadcastElts)
+        for (int j = 0; j != NumBroadcastElts; ++j)
+          BroadcastMask[i + j] = j;
+      return DAG.getVectorShuffle(VT, DL, RepeatShuf, DAG.getUNDEF(VT),
+                                  BroadcastMask);
+    }
+  }
+
+  // Bail if we already have a repeated lane shuffle mask.
+  SmallVector<int, 8> RepeatedShuffleMask((unsigned)NumLaneElts, -1);
+  if (is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedShuffleMask))
+    return SDValue();
+
+  // On AVX2 targets we can permute 256-bit vectors as 64-bit sub-lanes
+  // (with PERMQ/PERMPD), otherwise we can only permute whole 128-bit lanes.
+  int SubLaneScale = Subtarget.hasAVX2() && VT.is256BitVector() ? 2 : 1;
+  int NumSubLanes = NumLanes * SubLaneScale;
+  int NumSubLaneElts = NumLaneElts / SubLaneScale;
+
+  // Check that all the sources are coming from the same lane and see if we
+  // can form a repeating shuffle mask (local to each lane). At the same time,
+  // determine the source sub-lane for each destination sub-lane.
+  int TopSrcSubLane = -1;
+  SmallVector<int, 8> RepeatedLaneMask((unsigned)NumLaneElts, -1);
+  SmallVector<int, 8> Dst2SrcSubLanes((unsigned)NumSubLanes, -1);
+  for (int i = 0; i != NumElts; ++i) {
+    int M = Mask[i];
+    if (M < 0)
+      continue;
+    assert(0 <= M && M < 2 * NumElts);
+
+    // Check that the local mask index is the same for every lane. We always do
+    // this with 128-bit lanes to match in is128BitLaneRepeatedShuffleMask.
+    int LocalM = M < NumElts ? (M % NumLaneElts) : (M % NumLaneElts) + NumElts;
+    int &RepeatM = RepeatedLaneMask[i % NumLaneElts];
+    if (0 <= RepeatM && RepeatM != LocalM)
+      return SDValue();
+    RepeatM = LocalM;
+
+    // Check that the whole of each destination sub-lane comes from the same
+    // sub-lane, we need to calculate the source based off where the repeated
+    // lane mask will have left it.
+    int SrcLane = (M % NumElts) / NumLaneElts;
+    int SrcSubLane = (SrcLane * SubLaneScale) +
+                     ((i % NumLaneElts) / NumSubLaneElts);
+    int &Dst2SrcSubLane = Dst2SrcSubLanes[i / NumSubLaneElts];
+    if (0 <= Dst2SrcSubLane && SrcSubLane != Dst2SrcSubLane)
+      return SDValue();
+    Dst2SrcSubLane = SrcSubLane;
+
+    // Track the top most source sub-lane - by setting the remaining to UNDEF
+    // we can greatly simplify shuffle matching.
+    TopSrcSubLane = std::max(TopSrcSubLane, SrcSubLane);
+  }
+  assert(0 <= TopSrcSubLane && TopSrcSubLane < NumSubLanes &&
+         "Unexpected source lane");
+
+  // Create a repeating shuffle mask for the entire vector.
+  SmallVector<int, 8> RepeatedMask((unsigned)NumElts, -1);
+  for (int i = 0, e = ((TopSrcSubLane + 1) * NumSubLaneElts); i != e; ++i) {
+    int M = RepeatedLaneMask[i % NumLaneElts];
+    if (M < 0)
+      continue;
+    int Lane = i / NumLaneElts;
+    RepeatedMask[i] = M + (Lane * NumLaneElts);
+  }
+  SDValue RepeatedShuffle = DAG.getVectorShuffle(VT, DL, V1, V2, RepeatedMask);
+
+  // Shuffle each source sub-lane to its destination.
+  SmallVector<int, 8> SubLaneMask((unsigned)NumElts, -1);
+  for (int i = 0; i != NumElts; i += NumSubLaneElts) {
+    int SrcSubLane = Dst2SrcSubLanes[i / NumSubLaneElts];
+    if (SrcSubLane < 0)
+      continue;
+    for (int j = 0; j != NumSubLaneElts; ++j)
+      SubLaneMask[i + j] = j + (SrcSubLane * NumSubLaneElts);
+  }
+
+  return DAG.getVectorShuffle(VT, DL, RepeatedShuffle, DAG.getUNDEF(VT),
+                              SubLaneMask);
+}
+
 static SDValue lowerVectorShuffleWithSHUFPD(SDLoc DL, MVT VT,
                                             ArrayRef<int> Mask, SDValue V1,
                                             SDValue V2, SelectionDAG &DAG) {
@@ -10829,6 +10959,12 @@ static SDValue lowerV4F64VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
       return DAG.getNode(X86ISD::VPERMI, DL, MVT::v4f64, V1,
                          getV4X86ShuffleImm8ForMask(Mask, DL, DAG));
 
+    // Try to create an in-lane repeating shuffle mask and then shuffle the
+    // the results into the target lanes.
+    if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
+            DL, MVT::v4f64, V1, V2, Mask, Subtarget, DAG))
+    return V;
+
     // Otherwise, fall back.
     return lowerVectorShuffleAsLanePermuteAndBlend(DL, MVT::v4f64, V1, V2, Mask,
                                                    DAG);
@@ -10847,6 +10983,12 @@ static SDValue lowerV4F64VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
   if (SDValue Op =
       lowerVectorShuffleWithSHUFPD(DL, MVT::v4f64, Mask, V1, V2, DAG))
     return Op;
+
+  // Try to create an in-lane repeating shuffle mask and then shuffle the
+  // the results into the target lanes.
+  if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
+          DL, MVT::v4f64, V1, V2, Mask, Subtarget, DAG))
+  return V;
 
   // Try to simplify this by merging 128-bit lanes to enable a lane-based
   // shuffle. However, if we have AVX2 and either inputs are already in place,
@@ -11001,6 +11143,12 @@ static SDValue lowerV8F32VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
     return lowerVectorShuffleWithSHUFPS(DL, MVT::v8f32, RepeatedMask, V1, V2, DAG);
   }
 
+  // Try to create an in-lane repeating shuffle mask and then shuffle the
+  // the results into the target lanes.
+  if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
+          DL, MVT::v8f32, V1, V2, Mask, Subtarget, DAG))
+    return V;
+
   // If we have a single input shuffle with different shuffle patterns in the
   // two 128-bit lanes use the variable mask to VPERMILPS.
   if (isSingleInputShuffleMask(Mask)) {
@@ -11096,6 +11244,12 @@ static SDValue lowerV8I32VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
           DL, MVT::v8i32, V1, V2, Mask, Subtarget, DAG))
     return Rotate;
 
+  // Try to create an in-lane repeating shuffle mask and then shuffle the
+  // the results into the target lanes.
+  if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
+          DL, MVT::v8i32, V1, V2, Mask, Subtarget, DAG))
+    return V;
+
   // If the shuffle patterns aren't repeated but it is a single input, directly
   // generate a cross-lane VPERMD instruction.
   if (isSingleInputShuffleMask(Mask)) {
@@ -11164,6 +11318,12 @@ static SDValue lowerV16I16VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
   if (SDValue Rotate = lowerVectorShuffleAsByteRotate(
           DL, MVT::v16i16, V1, V2, Mask, Subtarget, DAG))
     return Rotate;
+
+  // Try to create an in-lane repeating shuffle mask and then shuffle the
+  // the results into the target lanes.
+  if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
+          DL, MVT::v16i16, V1, V2, Mask, Subtarget, DAG))
+    return V;
 
   if (isSingleInputShuffleMask(Mask)) {
     // There are no generalized cross-lane shuffle operations available on i16
@@ -11255,6 +11415,12 @@ static SDValue lowerV32I8VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
   if (SDValue Rotate = lowerVectorShuffleAsByteRotate(
           DL, MVT::v32i8, V1, V2, Mask, Subtarget, DAG))
     return Rotate;
+
+  // Try to create an in-lane repeating shuffle mask and then shuffle the
+  // the results into the target lanes.
+  if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
+          DL, MVT::v32i8, V1, V2, Mask, Subtarget, DAG))
+    return V;
 
   if (isSingleInputShuffleMask(Mask)) {
     // There are no generalized cross-lane shuffle operations available on i8
@@ -19717,13 +19883,6 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   }
 }
 
-static bool hasMFENCE(const X86Subtarget &Subtarget) {
-  // Use mfence if we have SSE2 or we're on x86-64 (even if we asked for
-  // no-sse2). There isn't any reason to disable it if the target processor
-  // supports it.
-  return Subtarget.hasSSE2() || Subtarget.is64Bit();
-}
-
 LoadInst *
 X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
@@ -19763,7 +19922,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
     // the IR level, so we must wrap it in an intrinsic.
     return nullptr;
 
-  if (!hasMFENCE(Subtarget))
+  if (!Subtarget.hasMFence())
     // FIXME: it might make sense to use a locked operation here but on a
     // different cache-line to prevent cache-line bouncing. In practice it
     // is probably a small win, and x86 processors without mfence are rare
@@ -19794,7 +19953,7 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, const X86Subtarget &Subtarget,
   // The only fence that needs an instruction is a sequentially-consistent
   // cross-thread fence.
   if (FenceOrdering == SequentiallyConsistent && FenceScope == CrossThread) {
-    if (hasMFENCE(Subtarget))
+    if (Subtarget.hasMFence())
       return DAG.getNode(X86ISD::MFENCE, dl, MVT::Other, Op.getOperand(0));
 
     SDValue Chain = Op.getOperand(0);

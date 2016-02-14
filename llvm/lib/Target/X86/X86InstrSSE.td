@@ -3762,6 +3762,8 @@ def PAUSE : I<0x90, RawFrm, (outs), (ins),
 
 let SchedRW = [WriteFence] in {
 // Load, store, and memory fence
+// TODO: As with mfence, we may want to ease the availablity of sfence/lfence
+// to include any 64-bit target.
 def SFENCE : I<0xAE, MRM_F8, (outs), (ins),
                "sfence", [(int_x86_sse_sfence)], IIC_SSE_SFENCE>,
                PS, Requires<[HasSSE1]>;
@@ -3770,7 +3772,7 @@ def LFENCE : I<0xAE, MRM_E8, (outs), (ins),
                TB, Requires<[HasSSE2]>;
 def MFENCE : I<0xAE, MRM_F0, (outs), (ins),
                "mfence", [(int_x86_sse2_mfence)], IIC_SSE_MFENCE>,
-               TB, Requires<[HasSSE2]>;
+               TB, Requires<[HasMFence]>;
 } // SchedRW
 
 def : Pat<(X86SFence), (SFENCE)>;

@@ -139,8 +139,7 @@ protected:
   void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
   bool computeBlockWeights(Function &F);
   void findEquivalenceClasses(Function &F);
-  void findEquivalencesFor(BasicBlock *BB1,
-                           SmallVector<BasicBlock *, 8> Descendants,
+  void findEquivalencesFor(BasicBlock *BB1, ArrayRef<BasicBlock *> Descendants,
                            DominatorTreeBase<BasicBlock> *DomTree);
   void propagateWeights(Function &F);
   uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges, Edge *UnknownEdge);
@@ -731,7 +730,7 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
 ///                 with blocks from \p BB1's dominator tree, then
 ///                 this is the post-dominator tree, and vice versa.
 void SampleProfileLoader::findEquivalencesFor(
-    BasicBlock *BB1, SmallVector<BasicBlock *, 8> Descendants,
+    BasicBlock *BB1, ArrayRef<BasicBlock *> Descendants,
     DominatorTreeBase<BasicBlock> *DomTree) {
   const BasicBlock *EC = EquivalenceClass[BB1];
   uint64_t Weight = BlockWeights[EC];
