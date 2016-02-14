@@ -1,4 +1,4 @@
-// RUN: c-index-test core -print-source-symbols -- %s | FileCheck %s
+// RUN: c-index-test core -print-source-symbols -- %s -target x86_64-apple-macosx10.7 | FileCheck %s
 
 @interface Base
 // CHECK: [[@LINE-1]]:12 | objc-class/ObjC | Base | c:objc(cs)Base | _OBJC_CLASS_$_Base | Decl | rel: 0
