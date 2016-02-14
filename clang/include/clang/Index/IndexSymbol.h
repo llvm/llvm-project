@@ -11,6 +11,7 @@
 #define LLVM_CLANG_INDEX_INDEXSYMBOL_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace clang {
@@ -106,6 +107,13 @@ struct SymbolInfo {
 };
 
 SymbolInfo getSymbolInfo(const Decl *D);
+
+void applyForEachSymbolRole(SymbolRoleSet Roles,
+                            llvm::function_ref<void(SymbolRole)> Fn);
+void printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS);
+StringRef getSymbolKindString(SymbolKind K);
+StringRef getTemplateKindStr(SymbolCXXTemplateKind TK);
+StringRef getSymbolLanguageString(SymbolLanguage K);
 
 } // namespace index
 } // namespace clang
