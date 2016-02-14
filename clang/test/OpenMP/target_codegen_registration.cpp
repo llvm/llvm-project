@@ -99,7 +99,7 @@
 // CHECK-NTARGET-NOT: private constant i8 0
 // CHECK-NTARGET-NOT: private unnamed_addr constant [1 x i
 
-// CHECK-DAG: [[NAMEPTR1:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME1:\.omp_offloading\.[0-9a-f]+\.[0-9a-f]+\._Z.+\.l[0-9]+\.c[0-9]+]]\00"
+// CHECK-DAG: [[NAMEPTR1:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME1:__omp_offloading_[0-9a-f]+_[0-9a-f]+__Z.+_l[0-9]+]]\00"
 // CHECK-DAG: [[ENTRY1:@.+]] = constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR1]], i32 0, i32 0), i[[SZ]] 0 }, section ".omp_offloading.entries", align 1
 // CHECK-DAG: [[NAMEPTR2:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME2:.+]]\00"
 // CHECK-DAG: [[ENTRY2:@.+]] = constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR2]], i32 0, i32 0), i[[SZ]] 0 }, section ".omp_offloading.entries", align 1
@@ -124,7 +124,7 @@
 // CHECK-DAG: [[NAMEPTR12:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME12:.+]]\00"
 // CHECK-DAG: [[ENTRY12:@.+]] = constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR12]], i32 0, i32 0), i[[SZ]] 0 }, section ".omp_offloading.entries", align 1
 
-// TCHECK-DAG: [[NAMEPTR1:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME1:\.omp_offloading\.[0-9a-f]+\.[0-9a-f]+\._Z.+\.l[0-9]+\.c[0-9]+]]\00"
+// TCHECK-DAG: [[NAMEPTR1:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME1:__omp_offloading_[0-9a-f]+_[0-9a-f]+__Z.+_l[0-9]+]]\00"
 // TCHECK-DAG: [[ENTRY1:@.+]] = constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR1]], i32 0, i32 0), i[[SZ]] 0 }, section ".omp_offloading.entries", align 1
 // TCHECK-DAG: [[NAMEPTR2:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME2:.+]]\00"
 // TCHECK-DAG: [[ENTRY2:@.+]] = constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR2]], i32 0, i32 0), i[[SZ]] 0 }, section ".omp_offloading.entries", align 1
@@ -407,31 +407,31 @@ int bar(int a){
 
 // Check metadata is properly generated:
 // CHECK:     !omp_offload.info = !{!{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID:-?[0-9]+]], i32 [[FILEID:-?[0-9]+]], !"_ZN2SB3fooEv", i32 193, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SDD1Ev", i32 243, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SEC1Ev", i32 259, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SED1Ev", i32 265, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EE3fooEv", i32 276, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EEC1Ev", i32 282, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_Z3bari", i32 402, i32 11, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EED1Ev", i32 288, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EEC1Ev", i32 282, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EED1Ev", i32 288, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EE3fooEv", i32 276, i32 13, i32 {{[0-9]+}}}
-// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SCC1Ev", i32 218, i32 13, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID:-?[0-9]+]], i32 [[FILEID:-?[0-9]+]], !"_ZN2SB3fooEv", i32 193, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SDD1Ev", i32 243, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SEC1Ev", i32 259, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SED1Ev", i32 265, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EE3fooEv", i32 276, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EEC1Ev", i32 282, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_Z3bari", i32 402, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EED1Ev", i32 288, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EEC1Ev", i32 282, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EED1Ev", i32 288, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EE3fooEv", i32 276, i32 {{[0-9]+}}}
+// CHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SCC1Ev", i32 218, i32 {{[0-9]+}}}
 
 // TCHECK:     !omp_offload.info = !{!{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID:-?[0-9]+]], i32 [[FILEID:-?[0-9]+]], !"_ZN2SB3fooEv", i32 193, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SDD1Ev", i32 243, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SEC1Ev", i32 259, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SED1Ev", i32 265, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EE3fooEv", i32 276, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EEC1Ev", i32 282, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_Z3bari", i32 402, i32 11, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EED1Ev", i32 288, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EEC1Ev", i32 282, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EED1Ev", i32 288, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EE3fooEv", i32 276, i32 13, i32 {{[0-9]+}}}
-// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SCC1Ev", i32 218, i32 13, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID:-?[0-9]+]], i32 [[FILEID:-?[0-9]+]], !"_ZN2SB3fooEv", i32 193, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SDD1Ev", i32 243, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SEC1Ev", i32 259, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SED1Ev", i32 265, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EE3fooEv", i32 276, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EEC1Ev", i32 282, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_Z3bari", i32 402, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EED1Ev", i32 288, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EEC1Ev", i32 282, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi1000EED1Ev", i32 288, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2STILi100EE3fooEv", i32 276, i32 {{[0-9]+}}}
+// TCHECK-DAG: = !{i32 0, i32 [[DEVID]], i32 [[FILEID]], !"_ZN2SCC1Ev", i32 218, i32 {{[0-9]+}}}
 
 #endif
