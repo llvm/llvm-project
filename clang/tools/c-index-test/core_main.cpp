@@ -14,6 +14,7 @@
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Index/CodegenNameGenerator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,9 +61,14 @@ namespace {
 
 class PrintIndexDataConsumer : public IndexDataConsumer {
   raw_ostream &OS;
+  std::unique_ptr<CodegenNameGenerator> CGNameGen;
 
 public:
   PrintIndexDataConsumer(raw_ostream &OS) : OS(OS) {
+  }
+
+  void initialize(ASTContext &Ctx) override {
+    CGNameGen.reset(new CodegenNameGenerator(Ctx));
   }
 
   bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
@@ -80,6 +86,10 @@ public:
     OS << " | ";
 
     printSymbolNameAndUSR(D, Ctx, OS);
+    OS << " | ";
+
+    if (CGNameGen->writeName(D, OS))
+      OS << "<no-cgname>";
     OS << " | ";
 
     printSymbolRoles(Roles, OS);
