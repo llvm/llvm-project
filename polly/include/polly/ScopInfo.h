@@ -881,7 +881,9 @@ public:
   ScopStmt(Scop &parent, Region &R);
 
   /// Initialize members after all MemoryAccesses have been added.
-  void init();
+  ///
+  /// @param SD The ScopDetection analysis for the current function.
+  void init(ScopDetection &SD);
 
 private:
   /// Polyhedral description
@@ -1007,10 +1009,10 @@ private:
   /// result scanning for GEP[s] is imprecise. Even though this is not a
   /// correctness problem, this imprecision may result in missed optimizations
   /// or non-optimal run-time checks.
-  void deriveAssumptionsFromGEP(GetElementPtrInst *Inst);
+  void deriveAssumptionsFromGEP(GetElementPtrInst *Inst, ScopDetection &SD);
 
   /// @brief Scan @p Block and derive assumptions about parameter values.
-  void deriveAssumptions(BasicBlock *Block);
+  void deriveAssumptions(BasicBlock *Block, ScopDetection &SD);
 
 public:
   ~ScopStmt();
@@ -1231,18 +1233,15 @@ private:
   Scop(const Scop &) = delete;
   const Scop &operator=(const Scop &) = delete;
 
-  LoopInfo &LI;
-  DominatorTree &DT;
   ScalarEvolution *SE;
-
-  /// @brief The scop detection analysis.
-  ScopDetection &SD;
 
   /// The underlying Region.
   Region &R;
 
-  // Access function of bbs.
-  AccFuncMapType &AccFuncMap;
+  // Access function of statements (currently BasicBlocks) .
+  //
+  // This owns all the MemoryAccess objects of the Scop created in this pass.
+  AccFuncMapType AccFuncMap;
 
   /// Flag to indicate that the scheduler actually optimized the SCoP.
   bool IsOptimized;
@@ -1372,36 +1371,59 @@ private:
   InvariantEquivClassesTy InvariantEquivClasses;
 
   /// @brief Scop constructor; invoked from ScopInfo::buildScop.
-  Scop(Region &R, AccFuncMapType &AccFuncMap, ScopDetection &SD,
-       ScalarEvolution &SE, DominatorTree &DT, LoopInfo &LI, isl_ctx *ctx,
-       unsigned MaxLoopDepth);
+  Scop(Region &R, ScalarEvolution &SE, isl_ctx *ctx, unsigned MaxLoopDepth);
+
+  /// @brief Get or create the access function set in a BasicBlock
+  AccFuncSetType &getOrCreateAccessFunctions(const BasicBlock *BB) {
+    return AccFuncMap[BB];
+  }
+  //@}
 
   /// @brief Initialize this ScopInfo .
-  void init(AliasAnalysis &AA, AssumptionCache &AC);
+  void init(AliasAnalysis &AA, AssumptionCache &AC, ScopDetection &SD,
+            DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Add loop carried constraints to the header block of the loop @p L.
   ///
   /// @param L  The loop to process.
-  void addLoopBoundsToHeaderDomain(Loop *L);
+  /// @param LI The LoopInfo for the current function.
+  void addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI);
 
   /// @brief Compute the branching constraints for each basic block in @p R.
   ///
   /// @param R  The region we currently build branching conditions for.
-  void buildDomainsWithBranchConstraints(Region *R);
+  /// @param SD The ScopDetection analysis for the current function.
+  /// @param DT The DominatorTree for the current function.
+  /// @param LI The LoopInfo for the current function.
+  void buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
+                                         DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Propagate the domain constraints through the region @p R.
   ///
   /// @param R  The region we currently build branching conditions for.
-  void propagateDomainConstraints(Region *R);
+  /// @param SD The ScopDetection analysis for the current function.
+  /// @param DT The DominatorTree for the current function.
+  /// @param LI The LoopInfo for the current function.
+  void propagateDomainConstraints(Region *R, ScopDetection &SD,
+                                  DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Remove domains of error blocks/regions (and blocks dominated by
   ///        them).
-  void removeErrorBlockDomains();
+  ///
+  /// @param SD The ScopDetection analysis for the current function.
+  /// @param DT The DominatorTree for the current function.
+  /// @param LI The LoopInfo for the current function.
+  void removeErrorBlockDomains(ScopDetection &SD, DominatorTree &DT,
+                               LoopInfo &LI);
 
   /// @brief Compute the domain for each basic block in @p R.
   ///
   /// @param R  The region we currently traverse.
-  void buildDomains(Region *R);
+  /// @param SD The ScopDetection analysis for the current function.
+  /// @param DT The DominatorTree for the current function.
+  /// @param LI The LoopInfo for the current function.
+  void buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
+                    LoopInfo &LI);
 
   /// @brief Check if a region part should be represented in the SCoP or not.
   ///
@@ -1409,9 +1431,11 @@ private:
   /// via error blocks we do not model it in the polyhedral representation.
   ///
   /// @param RN The region part to check.
+  /// @param DT The DominatorTree for the current function.
+  /// @param LI The LoopInfo for the current function.
   ///
   /// @return True if the part should be ignored, otherwise false.
-  bool isIgnored(RegionNode *RN);
+  bool isIgnored(RegionNode *RN, DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Add parameter constraints to @p C that imply a non-empty domain.
   __isl_give isl_set *addNonEmptyDomainConstraints(__isl_take isl_set *C) const;
@@ -1422,7 +1446,7 @@ private:
   ///   - removal of no-op statements
   /// @param RemoveIgnoredStmts If true, also removed ignored statments.
   /// @see isIgnored()
-  void simplifySCoP(bool RemoveIgnoredStmts);
+  void simplifySCoP(bool RemoveIgnoredStmts, DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Create equivalence classes for required invariant accesses.
   ///
@@ -1436,7 +1460,9 @@ private:
   /// consequence Scop::getIdForParam() will only return an id for the
   /// representing element of each equivalence class, thus for each required
   /// invariant location.
-  void buildInvariantEquivalenceClasses();
+  ///
+  /// @param SD The ScopDetection analysis for the current function.
+  void buildInvariantEquivalenceClasses(ScopDetection &SD);
 
   /// @brief Check if a memory access can be hoisted.
   ///
@@ -1461,7 +1487,8 @@ private:
   ///   for (int j = 1; j < Bound[1]; j++)
   ///     ...
   ///
-  void verifyInvariantLoads();
+  /// @param SD The ScopDetection analysis for the current function.
+  void verifyInvariantLoads(ScopDetection &SD);
 
   /// @brief Hoist invariant memory loads and check for required ones.
   ///
@@ -1480,7 +1507,9 @@ private:
   ///
   /// Common inv. loads: V, A[0][0], LB[0], LB[1]
   /// Required inv. loads: LB[0], LB[1], (V, if it may alias with A or LB)
-  void hoistInvariantLoads();
+  ///
+  /// @param SD The ScopDetection analysis for the current function.
+  void hoistInvariantLoads(ScopDetection &SD);
 
   /// @brief Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
   void addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs);
@@ -1492,7 +1521,7 @@ private:
   void buildBoundaryContext();
 
   /// @brief Add user provided parameter constraints to context (source code).
-  void addUserAssumptions(AssumptionCache &AC);
+  void addUserAssumptions(AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Add user provided parameter constraints to context (command line).
   void addUserContext();
@@ -1535,7 +1564,10 @@ private:
   void updateAccessDimensionality();
 
   /// @brief Construct the schedule of this SCoP.
-  void buildSchedule();
+  ///
+  /// @param SD The ScopDetection analysis for the current function.
+  /// @param LI The LoopInfo for the current function.
+  void buildSchedule(ScopDetection &SD, LoopInfo &LI);
 
   /// @brief A loop stack element to keep track of per-loop information during
   ///        schedule construction.
@@ -1574,7 +1606,10 @@ private:
   /// @param R              The region which to process.
   /// @param LoopStack      A stack of loops that are currently under
   ///                       construction.
-  void buildSchedule(Region *R, LoopStackTy &LoopStack);
+  /// @param SD The ScopDetection analysis for the current function.
+  /// @param LI The LoopInfo for the current function.
+  void buildSchedule(Region *R, LoopStackTy &LoopStack, ScopDetection &SD,
+                     LoopInfo &LI);
 
   /// @brief Build Schedule for the region node @p RN and add the derived
   ///        information to @p LoopStack.
@@ -1589,7 +1624,10 @@ private:
   /// @param RN             The RegionNode region traversed.
   /// @param LoopStack      A stack of loops that are currently under
   ///                       construction.
-  void buildSchedule(RegionNode *RN, LoopStackTy &LoopStack);
+  /// @param SD The ScopDetection analysis for the current function.
+  /// @param LI The LoopInfo for the current function.
+  void buildSchedule(RegionNode *RN, LoopStackTy &LoopStack, ScopDetection &SD,
+                     LoopInfo &LI);
 
   /// @brief Collect all memory access relations of a given type.
   ///
@@ -1627,7 +1665,6 @@ public:
   //@}
 
   ScalarEvolution *getSE() const;
-  ScopDetection &getSD() const { return SD; }
 
   /// @brief Get the count of parameters used in this Scop.
   ///
@@ -1971,14 +2008,8 @@ class ScopInfo : public RegionPass {
   /// @brief The ScalarEvolution to help building Scop.
   ScalarEvolution *SE;
 
-  // Access function of statements (currently BasicBlocks) .
-  //
-  // This owns all the MemoryAccess objects of the Scop created in this pass. It
-  // must live until #scop is deleted.
-  AccFuncMapType AccFuncMap;
-
   // The Scop
-  Scop *scop;
+  std::unique_ptr<Scop> scop;
   isl_ctx *ctx;
 
   // Clear the context.
@@ -2183,8 +2214,8 @@ public:
   /// @return If the current region is a valid for a static control part,
   ///         return the Polly IR representing this static control part,
   ///         return null otherwise.
-  Scop *getScop() { return scop; }
-  const Scop *getScop() const { return scop; }
+  Scop *getScop() { return scop.get(); }
+  const Scop *getScop() const { return scop.get(); }
 
   /// @name RegionPass interface
   //@{
