@@ -156,10 +156,7 @@ static void printSymbolInfo(SymbolInfo SymInfo, raw_ostream &OS) {
 
 static void printSymbolNameAndUSR(const Decl *D, ASTContext &Ctx,
                                   raw_ostream &OS) {
-  if (auto *ND = dyn_cast<NamedDecl>(D)) {
-    PrintingPolicy PrintPolicy(Ctx.getLangOpts());
-    ND->getDeclName().print(OS, PrintPolicy);
-  } else {
+  if (printSymbolName(D, Ctx.getLangOpts(), OS)) {
     OS << "<no-name>";
   }
   OS << " | ";
