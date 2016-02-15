@@ -195,12 +195,6 @@ TypeSystemMap::TypeSystemMap() :
 }
 
 
-TypeSystemMap::TypeSystemMap(const TypeSystemMap &rhs) :
-    m_mutex (),
-    m_map(rhs.m_map)
-{
-}
-
 TypeSystemMap::~TypeSystemMap()
 {
 }
