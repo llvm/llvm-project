@@ -11,6 +11,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/PrettyPrinter.h"
 
 using namespace clang;
 using namespace clang::index;
@@ -234,6 +235,24 @@ void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
   });
 }
 
+bool index::printSymbolName(const Decl *D, const LangOptions &LO,
+                            raw_ostream &OS) {
+  if (auto *ND = dyn_cast<NamedDecl>(D)) {
+    PrintingPolicy Policy(LO);
+    // Forward references can have different template argument names. Suppress
+    // the template argument names in constructors to make their name more
+    // stable.
+    Policy.SuppressTemplateArgsInCXXConstructors = true;
+    DeclarationName DeclName = ND->getDeclName();
+    if (DeclName.isEmpty())
+      return true;
+    DeclName.print(OS, Policy);
+    return false;
+  } else {
+    return true;
+  }
+}
+
 StringRef index::getSymbolKindString(SymbolKind K) {
   switch (K) {
   case SymbolKind::Unknown: return "<unknown>";
@@ -266,6 +285,7 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::CXXTypeAlias: return "type-alias";
   case SymbolKind::CXXInterface: return "c++-__interface";
   }
+  llvm_unreachable("invalid symbol kind");
 }
 
 StringRef index::getTemplateKindStr(SymbolCXXTemplateKind TK) {
@@ -275,6 +295,7 @@ StringRef index::getTemplateKindStr(SymbolCXXTemplateKind TK) {
   case SymbolCXXTemplateKind::TemplatePartialSpecialization : return "TPS";
   case SymbolCXXTemplateKind::TemplateSpecialization: return "TS";
   }
+  llvm_unreachable("invalid template kind");
 }
 
 StringRef index::getSymbolLanguageString(SymbolLanguage K) {
@@ -283,4 +304,5 @@ StringRef index::getSymbolLanguageString(SymbolLanguage K) {
   case SymbolLanguage::ObjC: return "ObjC";
   case SymbolLanguage::CXX: return "C++";
   }
+  llvm_unreachable("invalid symbol language kind");
 }

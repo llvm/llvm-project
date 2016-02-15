@@ -666,7 +666,7 @@ Adding additional style options
 ===============================
 
 Each additional style option adds costs to the clang-format project. Some of
-these costs affect the clang-format developement itself, as we need to make
+these costs affect the clang-format development itself, as we need to make
 sure that any given combination of options work and that new features don't
 break any of the existing options in any way. There are also costs for end users
 as options become less discoverable and people have to think about and make a

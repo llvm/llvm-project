@@ -1479,6 +1479,14 @@ TEST(IsInteger, ReportsNoFalsePositives) {
                           to(varDecl(hasType(isInteger()))))))));
 }
 
+TEST(IsAnyPointer, MatchesPointers) {
+  EXPECT_TRUE(matches("int* i = nullptr;", varDecl(hasType(isAnyPointer()))));
+}
+
+TEST(IsAnyPointer, ReportsNoFalsePositives) {
+  EXPECT_TRUE(notMatches("int i = 0;", varDecl(hasType(isAnyPointer()))));
+}
+
 TEST(IsAnyCharacter, MatchesCharacters) {
   EXPECT_TRUE(matches("char i = 0;", varDecl(hasType(isAnyCharacter()))));
 }

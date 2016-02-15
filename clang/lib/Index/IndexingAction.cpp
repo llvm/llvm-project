@@ -50,6 +50,7 @@ public:
 protected:
   void Initialize(ASTContext &Context) override {
     IndexCtx.setASTContext(Context);
+    IndexCtx.getDataConsumer().initialize(Context);
   }
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
@@ -170,5 +171,6 @@ void index::indexASTUnit(ASTUnit &Unit,
                          IndexingOptions Opts) {
   IndexingContext IndexCtx(Opts, *DataConsumer);
   IndexCtx.setASTContext(Unit.getASTContext());
+  DataConsumer->initialize(Unit.getASTContext());
   indexTranslationUnit(Unit, IndexCtx);
 }

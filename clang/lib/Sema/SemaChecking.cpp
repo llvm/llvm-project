@@ -5818,10 +5818,12 @@ void Sema::CheckStrncatArguments(const CallExpr *CE,
 
 //===--- CHECK: Return Address of Stack Variable --------------------------===//
 
-static Expr *EvalVal(Expr *E, SmallVectorImpl<DeclRefExpr *> &refVars,
-                     Decl *ParentDecl);
-static Expr *EvalAddr(Expr* E, SmallVectorImpl<DeclRefExpr *> &refVars,
-                      Decl *ParentDecl);
+static const Expr *EvalVal(const Expr *E,
+                           SmallVectorImpl<const DeclRefExpr *> &refVars,
+                           const Decl *ParentDecl);
+static const Expr *EvalAddr(const Expr *E,
+                            SmallVectorImpl<const DeclRefExpr *> &refVars,
+                            const Decl *ParentDecl);
 
 /// CheckReturnStackAddr - Check if a return statement returns the address
 ///   of a stack variable.
@@ -5829,8 +5831,8 @@ static void
 CheckReturnStackAddr(Sema &S, Expr *RetValExp, QualType lhsType,
                      SourceLocation ReturnLoc) {
 
-  Expr *stackE = nullptr;
-  SmallVector<DeclRefExpr *, 8> refVars;
+  const Expr *stackE = nullptr;
+  SmallVector<const DeclRefExpr *, 8> refVars;
 
   // Perform checking for returned stack addresses, local blocks,
   // label addresses or references to temporaries.
@@ -5858,7 +5860,8 @@ CheckReturnStackAddr(Sema &S, Expr *RetValExp, QualType lhsType,
     diagRange = refVars[0]->getSourceRange();
   }
 
-  if (DeclRefExpr *DR = dyn_cast<DeclRefExpr>(stackE)) { //address of local var.
+  if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(stackE)) {
+    // address of local var
     S.Diag(diagLoc, diag::warn_ret_stack_addr_ref) << lhsType->isReferenceType()
      << DR->getDecl()->getDeclName() << diagRange;
   } else if (isa<BlockExpr>(stackE)) { // local block.
@@ -5873,12 +5876,12 @@ CheckReturnStackAddr(Sema &S, Expr *RetValExp, QualType lhsType,
   // Display the "trail" of reference variables that we followed until we
   // found the problematic expression using notes.
   for (unsigned i = 0, e = refVars.size(); i != e; ++i) {
-    VarDecl *VD = cast<VarDecl>(refVars[i]->getDecl());
+    const VarDecl *VD = cast<VarDecl>(refVars[i]->getDecl());
     // If this var binds to another reference var, show the range of the next
     // var, otherwise the var binds to the problematic expression, in which case
     // show the range of the expression.
-    SourceRange range = (i < e-1) ? refVars[i+1]->getSourceRange()
-                                  : stackE->getSourceRange();
+    SourceRange range = (i < e - 1) ? refVars[i + 1]->getSourceRange()
+                                    : stackE->getSourceRange();
     S.Diag(VD->getLocation(), diag::note_ref_var_local_bind)
         << VD->getDeclName() << range;
   }
@@ -5910,8 +5913,9 @@ CheckReturnStackAddr(Sema &S, Expr *RetValExp, QualType lhsType,
 ///   * arbitrary interplay between "&" and "*" operators
 ///   * pointer arithmetic from an address of a stack variable
 ///   * taking the address of an array element where the array is on the stack
-static Expr *EvalAddr(Expr *E, SmallVectorImpl<DeclRefExpr *> &refVars,
-                      Decl *ParentDecl) {
+static const Expr *EvalAddr(const Expr *E,
+                            SmallVectorImpl<const DeclRefExpr *> &refVars,
+                            const Decl *ParentDecl) {
   if (E->isTypeDependent())
     return nullptr;
 
@@ -5928,13 +5932,13 @@ static Expr *EvalAddr(Expr *E, SmallVectorImpl<DeclRefExpr *> &refVars,
   // EvalAddr and EvalVal appropriately.
   switch (E->getStmtClass()) {
   case Stmt::DeclRefExprClass: {
-    DeclRefExpr *DR = cast<DeclRefExpr>(E);
+    const DeclRefExpr *DR = cast<DeclRefExpr>(E);
 
     // If we leave the immediate function, the lifetime isn't about to end.
     if (DR->refersToEnclosingVariableOrCapture())
       return nullptr;
 
-    if (VarDecl *V = dyn_cast<VarDecl>(DR->getDecl()))
+    if (const VarDecl *V = dyn_cast<VarDecl>(DR->getDecl()))
       // If this is a reference variable, follow through to the expression that
       // it points to.
       if (V->hasLocalStorage() &&
@@ -5950,44 +5954,44 @@ static Expr *EvalAddr(Expr *E, SmallVectorImpl<DeclRefExpr *> &refVars,
   case Stmt::UnaryOperatorClass: {
     // The only unary operator that make sense to handle here
     // is AddrOf.  All others don't make sense as pointers.
-    UnaryOperator *U = cast<UnaryOperator>(E);
+    const UnaryOperator *U = cast<UnaryOperator>(E);
 
     if (U->getOpcode() == UO_AddrOf)
       return EvalVal(U->getSubExpr(), refVars, ParentDecl);
-    else
-      return nullptr;
+    return nullptr;
   }
 
   case Stmt::BinaryOperatorClass: {
     // Handle pointer arithmetic.  All other binary operators are not valid
     // in this context.
-    BinaryOperator *B = cast<BinaryOperator>(E);
+    const BinaryOperator *B = cast<BinaryOperator>(E);
     BinaryOperatorKind op = B->getOpcode();
 
     if (op != BO_Add && op != BO_Sub)
       return nullptr;
 
-    Expr *Base = B->getLHS();
+    const Expr *Base = B->getLHS();
 
     // Determine which argument is the real pointer base.  It could be
     // the RHS argument instead of the LHS.
-    if (!Base->getType()->isPointerType()) Base = B->getRHS();
+    if (!Base->getType()->isPointerType())
+      Base = B->getRHS();
 
-    assert (Base->getType()->isPointerType());
+    assert(Base->getType()->isPointerType());
     return EvalAddr(Base, refVars, ParentDecl);
   }
 
   // For conditional operators we need to see if either the LHS or RHS are
   // valid DeclRefExpr*s.  If one of them is valid, we return it.
   case Stmt::ConditionalOperatorClass: {
-    ConditionalOperator *C = cast<ConditionalOperator>(E);
+    const ConditionalOperator *C = cast<ConditionalOperator>(E);
 
     // Handle the GNU extension for missing LHS.
     // FIXME: That isn't a ConditionalOperator, so doesn't get here.
-    if (Expr *LHSExpr = C->getLHS()) {
+    if (const Expr *LHSExpr = C->getLHS()) {
       // In C++, we can have a throw-expression, which has 'void' type.
       if (!LHSExpr->getType()->isVoidType())
-        if (Expr *LHS = EvalAddr(LHSExpr, refVars, ParentDecl))
+        if (const Expr *LHS = EvalAddr(LHSExpr, refVars, ParentDecl))
           return LHS;
     }
 
@@ -6020,7 +6024,7 @@ static Expr *EvalAddr(Expr *E, SmallVectorImpl<DeclRefExpr *> &refVars,
   case Stmt::CXXDynamicCastExprClass:
   case Stmt::CXXConstCastExprClass:
   case Stmt::CXXReinterpretCastExprClass: {
-    Expr* SubExpr = cast<CastExpr>(E)->getSubExpr();
+    const Expr* SubExpr = cast<CastExpr>(E)->getSubExpr();
     switch (cast<CastExpr>(E)->getCastKind()) {
     case CK_LValueToRValue:
     case CK_NoOp:
@@ -6050,13 +6054,12 @@ static Expr *EvalAddr(Expr *E, SmallVectorImpl<DeclRefExpr *> &refVars,
   }
 
   case Stmt::MaterializeTemporaryExprClass:
-    if (Expr *Result = EvalAddr(
-                         cast<MaterializeTemporaryExpr>(E)->GetTemporaryExpr(),
-                                refVars, ParentDecl))
+    if (const Expr *Result =
+            EvalAddr(cast<MaterializeTemporaryExpr>(E)->GetTemporaryExpr(),
+                     refVars, ParentDecl))
       return Result;
-      
     return E;
-      
+
   // Everything else: we simply don't reason about them.
   default:
     return nullptr;
@@ -6065,141 +6068,147 @@ static Expr *EvalAddr(Expr *E, SmallVectorImpl<DeclRefExpr *> &refVars,
 
 ///  EvalVal - This function is complements EvalAddr in the mutual recursion.
 ///   See the comments for EvalAddr for more details.
-static Expr *EvalVal(Expr *E, SmallVectorImpl<DeclRefExpr *> &refVars,
-                     Decl *ParentDecl) {
-do {
-  // We should only be called for evaluating non-pointer expressions, or
-  // expressions with a pointer type that are not used as references but instead
-  // are l-values (e.g., DeclRefExpr with a pointer type).
+static const Expr *EvalVal(const Expr *E,
+                           SmallVectorImpl<const DeclRefExpr *> &refVars,
+                           const Decl *ParentDecl) {
+  do {
+    // We should only be called for evaluating non-pointer expressions, or
+    // expressions with a pointer type that are not used as references but
+    // instead
+    // are l-values (e.g., DeclRefExpr with a pointer type).
 
-  // Our "symbolic interpreter" is just a dispatch off the currently
-  // viewed AST node.  We then recursively traverse the AST by calling
-  // EvalAddr and EvalVal appropriately.
+    // Our "symbolic interpreter" is just a dispatch off the currently
+    // viewed AST node.  We then recursively traverse the AST by calling
+    // EvalAddr and EvalVal appropriately.
 
-  E = E->IgnoreParens();
-  switch (E->getStmtClass()) {
-  case Stmt::ImplicitCastExprClass: {
-    ImplicitCastExpr *IE = cast<ImplicitCastExpr>(E);
-    if (IE->getValueKind() == VK_LValue) {
-      E = IE->getSubExpr();
-      continue;
-    }
-    return nullptr;
-  }
-
-  case Stmt::ExprWithCleanupsClass:
-    return EvalVal(cast<ExprWithCleanups>(E)->getSubExpr(), refVars,ParentDecl);
-
-  case Stmt::DeclRefExprClass: {
-    // When we hit a DeclRefExpr we are looking at code that refers to a
-    // variable's name. If it's not a reference variable we check if it has
-    // local storage within the function, and if so, return the expression.
-    DeclRefExpr *DR = cast<DeclRefExpr>(E);
-
-    // If we leave the immediate function, the lifetime isn't about to end.
-    if (DR->refersToEnclosingVariableOrCapture())
+    E = E->IgnoreParens();
+    switch (E->getStmtClass()) {
+    case Stmt::ImplicitCastExprClass: {
+      const ImplicitCastExpr *IE = cast<ImplicitCastExpr>(E);
+      if (IE->getValueKind() == VK_LValue) {
+        E = IE->getSubExpr();
+        continue;
+      }
       return nullptr;
+    }
 
-    if (VarDecl *V = dyn_cast<VarDecl>(DR->getDecl())) {
-      // Check if it refers to itself, e.g. "int& i = i;".
-      if (V == ParentDecl)
-        return DR;
+    case Stmt::ExprWithCleanupsClass:
+      return EvalVal(cast<ExprWithCleanups>(E)->getSubExpr(), refVars,
+                     ParentDecl);
 
-      if (V->hasLocalStorage()) {
-        if (!V->getType()->isReferenceType())
+    case Stmt::DeclRefExprClass: {
+      // When we hit a DeclRefExpr we are looking at code that refers to a
+      // variable's name. If it's not a reference variable we check if it has
+      // local storage within the function, and if so, return the expression.
+      const DeclRefExpr *DR = cast<DeclRefExpr>(E);
+
+      // If we leave the immediate function, the lifetime isn't about to end.
+      if (DR->refersToEnclosingVariableOrCapture())
+        return nullptr;
+
+      if (const VarDecl *V = dyn_cast<VarDecl>(DR->getDecl())) {
+        // Check if it refers to itself, e.g. "int& i = i;".
+        if (V == ParentDecl)
           return DR;
 
-        // Reference variable, follow through to the expression that
-        // it points to.
-        if (V->hasInit()) {
-          // Add the reference variable to the "trail".
-          refVars.push_back(DR);
-          return EvalVal(V->getInit(), refVars, V);
+        if (V->hasLocalStorage()) {
+          if (!V->getType()->isReferenceType())
+            return DR;
+
+          // Reference variable, follow through to the expression that
+          // it points to.
+          if (V->hasInit()) {
+            // Add the reference variable to the "trail".
+            refVars.push_back(DR);
+            return EvalVal(V->getInit(), refVars, V);
+          }
         }
       }
+
+      return nullptr;
     }
 
-    return nullptr;
-  }
+    case Stmt::UnaryOperatorClass: {
+      // The only unary operator that make sense to handle here
+      // is Deref.  All others don't resolve to a "name."  This includes
+      // handling all sorts of rvalues passed to a unary operator.
+      const UnaryOperator *U = cast<UnaryOperator>(E);
 
-  case Stmt::UnaryOperatorClass: {
-    // The only unary operator that make sense to handle here
-    // is Deref.  All others don't resolve to a "name."  This includes
-    // handling all sorts of rvalues passed to a unary operator.
-    UnaryOperator *U = cast<UnaryOperator>(E);
+      if (U->getOpcode() == UO_Deref)
+        return EvalAddr(U->getSubExpr(), refVars, ParentDecl);
 
-    if (U->getOpcode() == UO_Deref)
-      return EvalAddr(U->getSubExpr(), refVars, ParentDecl);
+      return nullptr;
+    }
 
-    return nullptr;
-  }
+    case Stmt::ArraySubscriptExprClass: {
+      // Array subscripts are potential references to data on the stack.  We
+      // retrieve the DeclRefExpr* for the array variable if it indeed
+      // has local storage.
+      const auto *ASE = cast<ArraySubscriptExpr>(E);
+      if (ASE->isTypeDependent())
+        return nullptr;
+      return EvalAddr(ASE->getBase(), refVars, ParentDecl);
+    }
 
-  case Stmt::ArraySubscriptExprClass: {
-    // Array subscripts are potential references to data on the stack.  We
-    // retrieve the DeclRefExpr* for the array variable if it indeed
-    // has local storage.
-    return EvalAddr(cast<ArraySubscriptExpr>(E)->getBase(), refVars,ParentDecl);
-  }
+    case Stmt::OMPArraySectionExprClass: {
+      return EvalAddr(cast<OMPArraySectionExpr>(E)->getBase(), refVars,
+                      ParentDecl);
+    }
 
-  case Stmt::OMPArraySectionExprClass: {
-    return EvalAddr(cast<OMPArraySectionExpr>(E)->getBase(), refVars,
-                    ParentDecl);
-  }
+    case Stmt::ConditionalOperatorClass: {
+      // For conditional operators we need to see if either the LHS or RHS are
+      // non-NULL Expr's.  If one is non-NULL, we return it.
+      const ConditionalOperator *C = cast<ConditionalOperator>(E);
 
-  case Stmt::ConditionalOperatorClass: {
-    // For conditional operators we need to see if either the LHS or RHS are
-    // non-NULL Expr's.  If one is non-NULL, we return it.
-    ConditionalOperator *C = cast<ConditionalOperator>(E);
+      // Handle the GNU extension for missing LHS.
+      if (const Expr *LHSExpr = C->getLHS()) {
+        // In C++, we can have a throw-expression, which has 'void' type.
+        if (!LHSExpr->getType()->isVoidType())
+          if (const Expr *LHS = EvalVal(LHSExpr, refVars, ParentDecl))
+            return LHS;
+      }
 
-    // Handle the GNU extension for missing LHS.
-    if (Expr *LHSExpr = C->getLHS()) {
       // In C++, we can have a throw-expression, which has 'void' type.
-      if (!LHSExpr->getType()->isVoidType())
-        if (Expr *LHS = EvalVal(LHSExpr, refVars, ParentDecl))
-          return LHS;
+      if (C->getRHS()->getType()->isVoidType())
+        return nullptr;
+
+      return EvalVal(C->getRHS(), refVars, ParentDecl);
     }
 
-    // In C++, we can have a throw-expression, which has 'void' type.
-    if (C->getRHS()->getType()->isVoidType())
-      return nullptr;
+    // Accesses to members are potential references to data on the stack.
+    case Stmt::MemberExprClass: {
+      const MemberExpr *M = cast<MemberExpr>(E);
 
-    return EvalVal(C->getRHS(), refVars, ParentDecl);
-  }
+      // Check for indirect access.  We only want direct field accesses.
+      if (M->isArrow())
+        return nullptr;
 
-  // Accesses to members are potential references to data on the stack.
-  case Stmt::MemberExprClass: {
-    MemberExpr *M = cast<MemberExpr>(E);
+      // Check whether the member type is itself a reference, in which case
+      // we're not going to refer to the member, but to what the member refers
+      // to.
+      if (M->getMemberDecl()->getType()->isReferenceType())
+        return nullptr;
 
-    // Check for indirect access.  We only want direct field accesses.
-    if (M->isArrow())
-      return nullptr;
+      return EvalVal(M->getBase(), refVars, ParentDecl);
+    }
 
-    // Check whether the member type is itself a reference, in which case
-    // we're not going to refer to the member, but to what the member refers to.
-    if (M->getMemberDecl()->getType()->isReferenceType())
-      return nullptr;
-
-    return EvalVal(M->getBase(), refVars, ParentDecl);
-  }
-
-  case Stmt::MaterializeTemporaryExprClass:
-    if (Expr *Result = EvalVal(
-                          cast<MaterializeTemporaryExpr>(E)->GetTemporaryExpr(),
-                               refVars, ParentDecl))
-      return Result;
-      
-    return E;
-
-  default:
-    // Check that we don't return or take the address of a reference to a
-    // temporary. This is only useful in C++.
-    if (!E->isTypeDependent() && E->isRValue())
+    case Stmt::MaterializeTemporaryExprClass:
+      if (const Expr *Result =
+              EvalVal(cast<MaterializeTemporaryExpr>(E)->GetTemporaryExpr(),
+                      refVars, ParentDecl))
+        return Result;
       return E;
 
-    // Everything else: we simply don't reason about them.
-    return nullptr;
-  }
-} while (true);
+    default:
+      // Check that we don't return or take the address of a reference to a
+      // temporary. This is only useful in C++.
+      if (!E->isTypeDependent() && E->isRValue())
+        return E;
+
+      // Everything else: we simply don't reason about them.
+      return nullptr;
+    }
+  } while (true);
 }
 
 void

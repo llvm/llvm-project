@@ -14,6 +14,7 @@
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Index/CodegenNameGenerator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,9 +61,14 @@ namespace {
 
 class PrintIndexDataConsumer : public IndexDataConsumer {
   raw_ostream &OS;
+  std::unique_ptr<CodegenNameGenerator> CGNameGen;
 
 public:
   PrintIndexDataConsumer(raw_ostream &OS) : OS(OS) {
+  }
+
+  void initialize(ASTContext &Ctx) override {
+    CGNameGen.reset(new CodegenNameGenerator(Ctx));
   }
 
   bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
@@ -80,6 +86,10 @@ public:
     OS << " | ";
 
     printSymbolNameAndUSR(D, Ctx, OS);
+    OS << " | ";
+
+    if (CGNameGen->writeName(D, OS))
+      OS << "<no-cgname>";
     OS << " | ";
 
     printSymbolRoles(Roles, OS);
@@ -123,9 +133,8 @@ static bool printSourceSymbols(ArrayRef<const char *> Args) {
                                      /*WrappedAction=*/nullptr);
 
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
-  ASTUnit *Unit =
-   ASTUnit::LoadFromCompilerInvocationAction(CInvok.get(), PCHContainerOps,
-                                             Diags, IndexAction.get());
+  std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCompilerInvocationAction(
+      CInvok.get(), PCHContainerOps, Diags, IndexAction.get()));
 
   if (!Unit)
     return true;
@@ -147,10 +156,7 @@ static void printSymbolInfo(SymbolInfo SymInfo, raw_ostream &OS) {
 
 static void printSymbolNameAndUSR(const Decl *D, ASTContext &Ctx,
                                   raw_ostream &OS) {
-  if (auto *ND = dyn_cast<NamedDecl>(D)) {
-    PrintingPolicy PrintPolicy(Ctx.getLangOpts());
-    ND->getDeclName().print(OS, PrintPolicy);
-  } else {
+  if (printSymbolName(D, Ctx.getLangOpts(), OS)) {
     OS << "<no-name>";
   }
   OS << " | ";
