@@ -1044,7 +1044,7 @@ void CoverageMappingModuleGen::emit() {
     // to pass the list of names referenced to codegen.
     new llvm::GlobalVariable(CGM.getModule(), NamesArrTy, true,
                              llvm::GlobalValue::InternalLinkage, NamesArrVal,
-                             llvm::getCoverageNamesVarName());
+                             llvm::getCoverageUnusedNamesVarName());
   }
 }
 
