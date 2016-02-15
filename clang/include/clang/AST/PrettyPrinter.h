@@ -40,6 +40,7 @@ struct PrintingPolicy {
       SuppressUnwrittenScope(false), SuppressInitializers(false),
       ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
       SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
+      SuppressTemplateArgsInCXXConstructors(false),
       Bool(LO.Bool), TerseOutput(false), PolishForDeclaration(false),
       Half(LO.Half), MSWChar(LO.MicrosoftExt && !LO.WChar),
       IncludeNewlines(true), MSVCFormatting(false) { }
@@ -136,7 +137,11 @@ struct PrintingPolicy {
   /// \brief When true, suppress printing of lifetime qualifier in
   /// ARC.
   unsigned SuppressLifetimeQualifiers : 1;
-  
+
+  /// When true, suppresses printing template arguments in names of C++
+  /// constructors.
+  unsigned SuppressTemplateArgsInCXXConstructors : 1;
+
   /// \brief Whether we can use 'bool' rather than '_Bool', even if the language
   /// doesn't actually have 'bool' (because, e.g., it is defined as a macro).
   unsigned Bool : 1;

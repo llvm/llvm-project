@@ -203,7 +203,12 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
     VisitTemplateParameterList(FunTmpl->getTemplateParameters());
   } else
     Out << "@F@";
-  D->printName(Out);
+
+  PrintingPolicy Policy(Context->getLangOpts());
+  // Forward references can have different template argument names. Suppress the
+  // template argument names in constructors to make their USR more stable.
+  Policy.SuppressTemplateArgsInCXXConstructors = true;
+  D->getDeclName().print(Out, Policy);
 
   ASTContext &Ctx = *Context;
   if (!Ctx.getLangOpts().CPlusPlus || D->isExternC())
