@@ -16,6 +16,7 @@
 
 namespace clang {
   class Decl;
+  class LangOptions;
 
 namespace index {
 
@@ -111,6 +112,10 @@ SymbolInfo getSymbolInfo(const Decl *D);
 void applyForEachSymbolRole(SymbolRoleSet Roles,
                             llvm::function_ref<void(SymbolRole)> Fn);
 void printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS);
+
+/// \returns true if no name was printed, false otherwise.
+bool printSymbolName(const Decl *D, const LangOptions &LO, raw_ostream &OS);
+
 StringRef getSymbolKindString(SymbolKind K);
 StringRef getTemplateKindStr(SymbolCXXTemplateKind TK);
 StringRef getSymbolLanguageString(SymbolLanguage K);
