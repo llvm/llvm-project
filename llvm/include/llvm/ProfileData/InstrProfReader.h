@@ -160,6 +160,7 @@ private:
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
   const uint64_t *CountersStart;
   const char *NamesStart;
+  uint64_t NamesSize;
   const uint8_t *ValueDataStart;
   const char *ProfileEnd;
   uint32_t ValueKindLast;
@@ -216,9 +217,8 @@ private:
     ptrdiff_t Offset = (swap(CounterPtr) - CountersDelta) / sizeof(uint64_t);
     return CountersStart + Offset;
   }
-  const char *getName(IntPtrT NamePtr) const {
-    ptrdiff_t Offset = (swap(NamePtr) - NamesDelta) / sizeof(char);
-    return NamesStart + Offset;
+  StringRef getName(uint64_t NameRef) const {
+    return Symtab->getFuncName(swap(NameRef));
   }
 };
 
