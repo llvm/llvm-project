@@ -183,7 +183,7 @@ int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
       std::string(CompressedNameStrings.data(), CompressedNameStrings.size()));
 }
 
-StringRef getPGOFuncNameInitializer(GlobalVariable *NameVar) {
+StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar) {
   auto *Arr = cast<ConstantDataArray>(NameVar->getInitializer());
   StringRef NameStr =
       Arr->isCString() ? Arr->getAsCString() : Arr->getAsString();
@@ -201,7 +201,7 @@ int collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
                               std::string &Result, bool doCompression) {
   std::vector<std::string> NameStrs;
   for (auto *NameVar : NameVars) {
-    NameStrs.push_back(getPGOFuncNameInitializer(NameVar));
+    NameStrs.push_back(getPGOFuncNameVarInitializer(NameVar));
   }
   return collectPGOFuncNameStrings(
       NameStrs, zlib::isAvailable() && doCompression, Result);
