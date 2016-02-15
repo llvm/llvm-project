@@ -554,6 +554,41 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
   return Magic == IndexedInstrProf::Magic;
 }
 
+const unsigned char *
+IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
+                                    const unsigned char *Cur) {
+  using namespace support;
+  if (Version >= IndexedInstrProf::Version4) {
+    const IndexedInstrProf::Summary *SummaryInLE =
+        reinterpret_cast<const IndexedInstrProf::Summary *>(Cur);
+    uint64_t NFields =
+        endian::byte_swap<uint64_t, little>(SummaryInLE->NumSummaryFields);
+    uint64_t NEntries =
+        endian::byte_swap<uint64_t, little>(SummaryInLE->NumCutoffEntries);
+    uint32_t SummarySize =
+        IndexedInstrProf::Summary::getSize(NFields, NEntries);
+    std::unique_ptr<IndexedInstrProf::Summary> SummaryData =
+        IndexedInstrProf::allocSummary(SummarySize);
+
+    const uint64_t *Src = reinterpret_cast<const uint64_t *>(SummaryInLE);
+    uint64_t *Dst = reinterpret_cast<uint64_t *>(SummaryData.get());
+    for (unsigned I = 0; I < SummarySize / sizeof(uint64_t); I++)
+      Dst[I] = endian::byte_swap<uint64_t, little>(Src[I]);
+
+    // initialize ProfileSummary using the SummaryData from disk.
+    this->Summary = llvm::make_unique<ProfileSummary>(*(SummaryData.get()));
+    return Cur + SummarySize;
+  } else {
+    // For older version of profile data, we need to compute on the fly:
+    using namespace IndexedInstrProf;
+    std::vector<uint32_t> Cutoffs(&SummaryCutoffs[0],
+                                  &SummaryCutoffs[NumSummaryCutoffs]);
+    this->Summary = llvm::make_unique<ProfileSummary>(Cutoffs);
+    this->Summary->computeDetailedSummary();
+    return Cur;
+  }
+}
+
 std::error_code IndexedInstrProfReader::readHeader() {
   const unsigned char *Start =
       (const unsigned char *)DataBuffer->getBufferStart();
@@ -576,9 +611,7 @@ std::error_code IndexedInstrProfReader::readHeader() {
   if (FormatVersion > IndexedInstrProf::ProfVersion::CurrentVersion)
     return error(instrprof_error::unsupported_version);
 
-  // Read the maximal function count.
-  MaxFunctionCount =
-      endian::byte_swap<uint64_t, little>(Header->MaxFunctionCount);
+  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur);
 
   // Read the hash type and start offset.
   IndexedInstrProf::HashT HashType = static_cast<IndexedInstrProf::HashT>(

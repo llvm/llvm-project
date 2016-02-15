@@ -34,7 +34,6 @@ public:
 private:
   bool Sparse;
   StringMap<ProfilingData> FunctionData;
-  uint64_t MaxFunctionCount;
   // Use raw pointer here for the incomplete type object.
   InstrProfRecordWriterTrait *InfoObj;
 
