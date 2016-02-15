@@ -651,9 +651,13 @@ protected:
         RemoveTypeSystemsForLanguage (lldb::LanguageType language);
 
     protected:
+        void
+        AddToMap (lldb::LanguageType language, lldb::TypeSystemSP const &type_system_sp);
+
         typedef std::map<lldb::LanguageType, lldb::TypeSystemSP> collection;
         mutable Mutex m_mutex; ///< A mutex to keep this object happy in multi-threaded environments.
         collection m_map;
+        bool m_clear_in_progress;
     };
 
 } // namespace lldb_private
