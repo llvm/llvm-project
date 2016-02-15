@@ -262,7 +262,7 @@ As a practical consideration, many garbage-collected systems allow code that is
 collector-aware ("managed code") to call code that is not collector-aware
 ("unmanaged code"). It is common that such calls must also be safepoints, since
 it is desirable to allow the collector to run during the execution of
-unmanaged code. Futhermore, it is common that coordinating the transition from
+unmanaged code. Furthermore, it is common that coordinating the transition from
 managed to unmanaged code requires extra code generation at the call site to
 inform the collector of the transition. In order to support these needs, a
 statepoint may be marked as a GC transition, and data that is necessary to

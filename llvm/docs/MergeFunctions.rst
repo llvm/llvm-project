@@ -697,7 +697,7 @@ Below is detailed body description.
 If “F” may be overridden
 ------------------------
 As follows from ``mayBeOverridden`` comments: “whether the definition of this
-global may be replaced by something non-equivalent at link time”. If so, thats
+global may be replaced by something non-equivalent at link time”. If so, that's
 ok: we can use alias to *F* instead of *G* or change call instructions itself.
 
 HasGlobalAliases, removeUsers

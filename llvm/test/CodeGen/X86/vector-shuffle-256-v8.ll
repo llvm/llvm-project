@@ -784,10 +784,10 @@ define <8 x float> @shuffle_v8f32_ba987654(<8 x float> %a, <8 x float> %b) {
 define <8 x float> @shuffle_v8f32_ba983210(<8 x float> %a, <8 x float> %b) {
 ; ALL-LABEL: shuffle_v8f32_ba983210:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3]
+; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; ALL-NEXT:    retq
-  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4>
+  %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 11, i32 10, i32 9, i32 8, i32 3, i32 2, i32 1, i32 0>
   ret <8 x float> %shuffle
 }
 

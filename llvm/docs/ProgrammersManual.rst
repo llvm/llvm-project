@@ -420,7 +420,7 @@ system in place to ensure that names do not conflict. If two different modules
 use the same string, they will all be turned on when the name is specified.
 This allows, for example, all debug information for instruction scheduling to be
 enabled with ``-debug-only=InstrSched``, even if the source lives in multiple
-files. The name must not include a comma (,) as that is used to seperate the
+files. The name must not include a comma (,) as that is used to separate the
 arguments of the ``-debug-only`` option.
 
 For performance reasons, -debug-only is not available in optimized build
@@ -1135,7 +1135,7 @@ llvm/ADT/StringSet.h
 ``StringSet`` is a thin wrapper around :ref:`StringMap\<char\> <dss_stringmap>`,
 and it allows efficient storage and retrieval of unique strings.
 
-Functionally analogous to ``SmallSet<StringRef>``, ``StringSet`` also suports
+Functionally analogous to ``SmallSet<StringRef>``, ``StringSet`` also supports
 iteration. (The iterator dereferences to a ``StringMapEntry<char>``, so you
 need to call ``i->getKey()`` to access the item of the StringSet.)  On the
 other hand, ``StringSet`` doesn't support range-insertion and
