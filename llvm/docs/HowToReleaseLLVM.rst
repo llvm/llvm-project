@@ -332,7 +332,7 @@ Below are the rules regarding patching the release branch:
 #. During the remaining rounds of testing, only patches that fix critical
    regressions may be applied.
 
-#. For dot releases all patches must mantain both API and ABI compatibility with
+#. For dot releases all patches must maintain both API and ABI compatibility with
    the previous major release.  Only bugfixes will be accepted.
 
 Merging Patches

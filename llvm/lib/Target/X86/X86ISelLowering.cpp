@@ -12123,10 +12123,15 @@ X86TargetLowering::ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG) const
   }
 
   unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
-  const TargetRegisterClass* rc = getRegClassFor(VecVT);
-  if (!Subtarget.hasDQI() && (VecVT.getVectorNumElements() <= 8))
-    rc = getRegClassFor(MVT::v16i1);
-  unsigned MaxSift = rc->getSize()*8 - 1;
+  if (!Subtarget.hasDQI() && (VecVT.getVectorNumElements() <= 8)) {
+    // Use kshiftlw/rw instruction.
+    VecVT = MVT::v16i1;
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VecVT,
+                      DAG.getUNDEF(VecVT),
+                      Vec,
+                      DAG.getIntPtrConstant(0, dl));
+  }
+  unsigned MaxSift = VecVT.getVectorNumElements() - 1;
   Vec = DAG.getNode(X86ISD::VSHLI, dl, VecVT, Vec,
                     DAG.getConstant(MaxSift - IdxVal, dl, MVT::i8));
   Vec = DAG.getNode(X86ISD::VSRLI, dl, VecVT, Vec,
