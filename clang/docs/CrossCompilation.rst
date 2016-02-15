@@ -32,7 +32,7 @@ when compiling your code.
 
 On the other hand, Clang/LLVM is natively a cross-compiler, meaning that
 one set of programs can compile to all targets by setting the ``-target``
-option. That makes it a lot easier for programers wishing to compile to
+option. That makes it a lot easier for programmers wishing to compile to
 different platforms and architectures, and for compiler developers that
 only have to maintain one build system, and for OS distributions, that
 need only one set of main packages.

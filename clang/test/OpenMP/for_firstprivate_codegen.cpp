@@ -95,7 +95,7 @@ int main() {
     // LAMBDA: [[SIVAR2_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR_REF]]
     // LAMBDA: store i{{[0-9]+}} [[SIVAR2_VAL]], i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]]
 
-    // LAMBDA: call void @__kmpc_barrier(
+    // LAMBDA-NOT: call void @__kmpc_barrier(
     g = 1;
     g1 = 1;
     sivar = 2;
@@ -158,7 +158,7 @@ int main() {
     // BLOCKS: [[SIVAR2_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIVAR_REF_ADDRR]]
     // BLOCKS: store i{{[0-9]+}} {{.+}}, i{{[0-9]+}}* [[SIVAR2_PRIVATE_ADDR]]
 
-    // BLOCKS: call void @__kmpc_barrier(
+    // BLOCKS-NOT: call void @__kmpc_barrier(
     g = 1;
     g1 =1;
     sivar = 2;
@@ -246,7 +246,7 @@ int main() {
 // CHECK: store i{{[0-9]+}} [[SIVAR_VAL]], i{{[0-9]+}}* [[SIVAR_PRIV]]
 
 // Synchronization for initialization.
-// CHECK: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
+// CHECK-NOT: call void @__kmpc_barrier(
 
 // CHECK: call void @__kmpc_for_static_init_4(
 // CHECK: call void @__kmpc_for_static_fini(
@@ -310,10 +310,8 @@ int main() {
 // CHECK: call {{.*}} [[S_INT_TY_COPY_CONSTR]]([[S_INT_TY]]* [[VAR_PRIV]], [[S_INT_TY]]* {{.*}} [[VAR_REF]], [[ST_TY]]* [[ST_TY_TEMP]])
 // CHECK: call {{.*}} [[ST_TY_DESTR]]([[ST_TY]]* [[ST_TY_TEMP]])
 
-// Synchronization for initialization.
-// CHECK: [[GTID_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[GTID_ADDR_ADDR]]
-// CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]
-// CHECK: call void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i{{[0-9]+}} [[GTID]])
+// No synchronization for initialization.
+// CHECK-NOT: call void @__kmpc_barrier(
 
 // CHECK: call void @__kmpc_for_static_init_4(
 // CHECK: call void @__kmpc_for_static_fini(

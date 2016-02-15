@@ -3673,6 +3673,19 @@ AST_MATCHER(QualType, isAnyCharacter) {
     return Node->isAnyCharacterType();
 }
 
+//// \brief Matches QualType nodes that are of any pointer type.
+///
+/// Given
+/// \code
+///   int *i = nullptr;
+///   int j;
+/// \endcode
+/// varDecl(hasType(isAnyPointer()))
+///   matches "int *i", but not "int j".
+AST_MATCHER(QualType, isAnyPointer) {
+  return Node->isAnyPointerType();
+}
+
 /// \brief Matches QualType nodes that are const-qualified, i.e., that
 /// include "top-level" const.
 ///

@@ -1263,6 +1263,7 @@ static CXIdxEntityKind getEntityKindFromSymbolKind(SymbolKind K) {
   case SymbolKind::CXXTypeAlias: return CXIdxEntity_CXXTypeAlias;
   case SymbolKind::CXXInterface: return CXIdxEntity_CXXInterface;
   }
+  llvm_unreachable("invalid symbol kind");
 }
 
 static CXIdxEntityCXXTemplateKind
@@ -1275,6 +1276,7 @@ getEntityKindFromSymbolCXXTemplateKind(SymbolCXXTemplateKind K) {
   case SymbolCXXTemplateKind::TemplateSpecialization:
     return CXIdxEntity_TemplateSpecialization;
   }
+  llvm_unreachable("invalid template kind");
 }
 
 static CXIdxEntityLanguage getEntityLangFromSymbolLang(SymbolLanguage L) {
@@ -1283,4 +1285,5 @@ static CXIdxEntityLanguage getEntityLangFromSymbolLang(SymbolLanguage L) {
   case SymbolLanguage::ObjC: return CXIdxEntityLang_ObjC;
   case SymbolLanguage::CXX: return CXIdxEntityLang_CXX;
   }
+  llvm_unreachable("invalid symbol language");
 }

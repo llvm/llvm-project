@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -139,6 +139,12 @@ static void printCXXConstructorDestructorName(QualType ClassType,
   if (const RecordType *ClassRec = ClassType->getAs<RecordType>()) {
     OS << *ClassRec->getDecl();
     return;
+  }
+  if (Policy.SuppressTemplateArgsInCXXConstructors) {
+    if (auto *InjTy = ClassType->getAs<InjectedClassNameType>()) {
+      OS << *InjTy->getDecl();
+      return;
+    }
   }
   if (!Policy.LangOpts.CPlusPlus) {
     // Passed policy is the default one from operator <<, use a C++ policy.

@@ -110,8 +110,8 @@ Sancov matches these files using module names and binaries file names.
 
     Action (required)
       -print                    - Print coverage addresses
-      -covered-functions        - Print all covered funcions.
-      -not-covered-functions    - Print all not covered funcions.
+      -covered-functions        - Print all covered functions.
+      -not-covered-functions    - Print all not covered functions.
       -html-report              - Print HTML coverage report.
 
     Options

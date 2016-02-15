@@ -135,6 +135,7 @@ bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {
     case TSK_ExplicitInstantiationDefinition:
       return true;
   }
+  llvm_unreachable("invalid TemplateSpecializationKind");
 }
 
 bool IndexingContext::shouldIgnoreIfImplicit(const Decl *D) {
