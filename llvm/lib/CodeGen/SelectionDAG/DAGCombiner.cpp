@@ -9040,6 +9040,17 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
   if (N0.getOpcode() == ISD::FP_ROUND) {
     const bool NIsTrunc = N->getConstantOperandVal(1) == 1;
     const bool N0IsTrunc = N0.getNode()->getConstantOperandVal(1) == 1;
+
+    // Skip this folding if it results in an fp_round from f80 to f16.
+    //
+    // f80 to f16 always generates an expensive (and as yet, unimplemented)
+    // libcall to __truncxfhf2 instead of selecting native f16 conversion
+    // instructions from f32 or f64.  Moreover, the first (value-preserving)
+    // fp_round from f80 to either f32 or f64 may become a NOP in platforms like
+    // x86.
+    if (N0.getOperand(0).getValueType() == MVT::f80 && VT == MVT::f16)
+      return SDValue();
+
     // If the first fp_round isn't a value preserving truncation, it might
     // introduce a tie in the second fp_round, that wouldn't occur in the
     // single-step fp_round we want to fold to.
