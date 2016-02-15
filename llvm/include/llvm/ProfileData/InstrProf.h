@@ -91,10 +91,12 @@ inline StringRef getCoverageMappingVarName() {
 }
 
 /// Return the name of the internal variable recording the array
-/// of PGO name vars referenced by the coverage mapping, The owning
+/// of PGO name vars referenced by the coverage mapping. The owning
 /// functions of those names are not emitted by FE (e.g, unused inline
 /// functions.)
-inline StringRef getCoverageNamesVarName() { return "__llvm_coverage_names"; }
+inline StringRef getCoverageUnusedNamesVarName() {
+  return "__llvm_coverage_names";
+}
 
 /// Return the name of function that registers all the per-function control
 /// data at program startup time by calling __llvm_register_function. This

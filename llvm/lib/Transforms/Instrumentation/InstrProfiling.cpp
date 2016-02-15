@@ -166,7 +166,7 @@ bool InstrProfiling::runOnModule(Module &M) {
       }
 
   if (GlobalVariable *CoverageNamesVar =
-          M.getNamedGlobal(getCoverageNamesVarName())) {
+          M.getNamedGlobal(getCoverageUnusedNamesVarName())) {
     lowerCoverageData(CoverageNamesVar);
     MadeChange = true;
   }
