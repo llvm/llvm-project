@@ -164,6 +164,10 @@ public:
     /// @brief Loads that need to be invariant during execution.
     InvariantLoadsSetTy RequiredILS;
 
+    /// @brief Map to memory access description for the corresponding LLVM
+    ///        instructions.
+    MapInsnToMemAcc InsnToMemAcc;
+
     /// @brief Initialize a DetectionContext from scratch.
     DetectionContext(Region &R, AliasAnalysis &AA, bool Verify)
         : CurRegion(R), AST(AA), Verifying(Verify), Log(&R), hasLoads(false),
@@ -500,6 +504,10 @@ public:
 
   /// @brief Return the set of loops in non-affine subregions for @p R.
   const BoxedLoopsSetTy *getBoxedLoops(const Region *R) const;
+
+  /// @brief Get the instruction to memory access mapping of the current
+  ///        function for @p R.
+  const MapInsnToMemAcc *getInsnToMemAccMap(const Region *R) const;
 
   /// @brief Return the set of required invariant loads for @p R.
   const InvariantLoadsSetTy *getRequiredInvariantLoads(const Region *R) const;

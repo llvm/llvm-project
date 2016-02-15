@@ -88,10 +88,10 @@ IRForTarget::IRForTarget (lldb_private::ClangExpressionDeclMap *decl_map,
     m_sel_registerName(NULL),
     m_intptr_ty(NULL),
     m_error_stream(error_stream),
+    m_execution_unit(execution_unit),
     m_result_store(NULL),
     m_result_is_pointer(false),
     m_reloc_placeholder(NULL),
-    m_execution_unit(execution_unit),
     m_entry_instruction_finder (FindEntryInstruction)
 {
 }
