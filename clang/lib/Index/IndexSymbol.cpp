@@ -289,6 +289,7 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::Destructor: return "destructor";
   case SymbolKind::ConversionFunction: return "coversion-func";
   }
+  llvm_unreachable("invalid symbol kind");
 }
 
 StringRef index::getTemplateKindStr(SymbolCXXTemplateKind TK) {
@@ -298,6 +299,7 @@ StringRef index::getTemplateKindStr(SymbolCXXTemplateKind TK) {
   case SymbolCXXTemplateKind::TemplatePartialSpecialization : return "TPS";
   case SymbolCXXTemplateKind::TemplateSpecialization: return "TS";
   }
+  llvm_unreachable("invalid template kind");
 }
 
 StringRef index::getSymbolLanguageString(SymbolLanguage K) {
@@ -306,4 +308,5 @@ StringRef index::getSymbolLanguageString(SymbolLanguage K) {
   case SymbolLanguage::ObjC: return "ObjC";
   case SymbolLanguage::CXX: return "C++";
   }
+  llvm_unreachable("invalid symbol language kind");
 }
