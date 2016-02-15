@@ -20,14 +20,14 @@
 ; INNERMOST-NEXT: Invariant Accesses: {
 ; INNERMOST-NEXT: }
 ; INNERMOST-NEXT: Context:
-; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 0 <= p_0 <= 2147483647 and 0 <= p_1 <= 4096 and 0 <= p_2 <= 4096 }
+; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  : 0 <= p_0 <= 2147483647 and 0 <= p_1 <= 1024 and 0 <= p_2 <= 1024 }
 ; INNERMOST-NEXT: Assumed Context:
 ; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  :  }
 ; INNERMOST-NEXT: Boundary Context:
 ; INNERMOST-NEXT: [p_0, p_1, p_2] -> {  :  }
 ; INNERMOST-NEXT: p0: {0,+,{0,+,1}<nuw><nsw><%bb11>}<nuw><nsw><%bb13>
-; INNERMOST-NEXT: p1: {0,+,4}<nuw><nsw><%bb11>
-; INNERMOST-NEXT: p2: {0,+,4}<nuw><nsw><%bb13>
+; INNERMOST-NEXT: p1: {0,+,1}<nuw><nsw><%bb11>
+; INNERMOST-NEXT: p2: {0,+,1}<nuw><nsw><%bb13>
 ; INNERMOST-NEXT: Arrays {
 ; INNERMOST-NEXT:     i32 MemRef_A[*]; // Element size 4
 ; INNERMOST-NEXT:     i64 MemRef_indvars_iv_next6; // Element size 8
@@ -47,9 +47,9 @@
 ; INNERMOST-NEXT:         Schedule :=
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> [0, i0] };
 ; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_1 };
+; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[p_1] };
 ; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[o0] : 4o0 = p_2 };
+; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[p_2] };
 ; INNERMOST-NEXT:         ReadAccess :=    [Reduction Type: +] [Scalar: 0]
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[i0] };
 ; INNERMOST-NEXT:         MustWriteAccess :=    [Reduction Type: +] [Scalar: 0]

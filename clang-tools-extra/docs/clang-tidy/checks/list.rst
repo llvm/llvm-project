@@ -19,6 +19,7 @@ Clang-Tidy Checks
    cppcoreguidelines-pro-bounds-pointer-arithmetic
    cppcoreguidelines-pro-type-const-cast
    cppcoreguidelines-pro-type-cstyle-cast
+   cppcoreguidelines-pro-type-member-init
    cppcoreguidelines-pro-type-reinterpret-cast
    cppcoreguidelines-pro-type-static-cast-downcast
    cppcoreguidelines-pro-type-union-access

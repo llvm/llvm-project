@@ -501,8 +501,6 @@ bool ScopDetection::isInvariant(const Value &Val, const Region &Reg) const {
   return true;
 }
 
-MapInsnToMemAcc InsnToMemAcc;
-
 /// @brief Remove smax of smax(0, size) expressions from a SCEV expression and
 /// register the '...' components.
 ///
@@ -732,7 +730,8 @@ bool ScopDetection::computeAccessFunctions(
   }
 
   if (!BasePtrHasNonAffine)
-    InsnToMemAcc.insert(TempMemoryAccesses.begin(), TempMemoryAccesses.end());
+    Context.InsnToMemAcc.insert(TempMemoryAccesses.begin(),
+                                TempMemoryAccesses.end());
 
   return true;
 }
@@ -1400,6 +1399,13 @@ ScopDetection::getBoxedLoops(const Region *R) const {
   return &DC->BoxedLoopsSet;
 }
 
+const MapInsnToMemAcc *
+ScopDetection::getInsnToMemAccMap(const Region *R) const {
+  const DetectionContext *DC = getDetectionContext(R);
+  assert(DC && "ScopR is no valid region!");
+  return &DC->InsnToMemAcc;
+}
+
 const InvariantLoadsSetTy *
 ScopDetection::getRequiredInvariantLoads(const Region *R) const {
   const DetectionContext *DC = getDetectionContext(R);
@@ -1442,7 +1448,6 @@ void ScopDetection::print(raw_ostream &OS, const Module *) const {
 void ScopDetection::releaseMemory() {
   RejectLogs.clear();
   ValidRegions.clear();
-  InsnToMemAcc.clear();
   DetectionContextMap.clear();
 
   // Do not clear the invalid function set.

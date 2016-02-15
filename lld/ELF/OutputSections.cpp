@@ -1027,10 +1027,10 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
   if (Version != 1 && Version != 3)
     fatal("FDE version 1 or 3 expected, but got " + Twine((unsigned)Version));
 
-  auto AugEnd = std::find(D.begin() + 1, D.end(), '\0');
+  const unsigned char *AugEnd = std::find(D.begin() + 1, D.end(), '\0');
   if (AugEnd == D.end())
     fatal("corrupted CIE");
-  StringRef Aug((char *)D.begin(), AugEnd - D.begin());
+  StringRef Aug(reinterpret_cast<const char *>(D.begin()), AugEnd - D.begin());
   D = D.slice(Aug.size() + 1);
 
   // Code alignment factor should always be 1 for .eh_frame.

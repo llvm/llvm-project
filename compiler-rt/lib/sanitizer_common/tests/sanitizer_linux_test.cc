@@ -271,7 +271,7 @@ TEST(SanitizerCommon, StartSubprocessTest) {
 #else
   const char *shell = "/bin/sh";
 #endif
-  const char *argv[] = {shell, "-c", "echo -n 'hello'"};
+  const char *argv[] = {shell, "-c", "echo -n 'hello'", (char *)NULL};
   int pid = StartSubprocess(shell, argv,
                             /* stdin */ kInvalidFd, /* stdout */ pipe_fds[1]);
   ASSERT_GT(pid, 0);

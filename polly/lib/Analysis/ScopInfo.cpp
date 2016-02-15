@@ -182,7 +182,7 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
       getIslCompatibleName("MemRef_", BasePtr, Kind == MK_PHI ? "__phi" : "");
   Id = isl_id_alloc(Ctx, BasePtrName.c_str(), this);
 
-  updateSizes(Sizes, ElementType);
+  updateSizes(Sizes);
   BasePtrOriginSAI = identifyBasePtrOriginSAI(S, BasePtr);
   if (BasePtrOriginSAI)
     const_cast<ScopArrayInfo *>(BasePtrOriginSAI)->addDerivedSAI(this);
@@ -195,21 +195,25 @@ __isl_give isl_space *ScopArrayInfo::getSpace() const {
   return Space;
 }
 
-bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
-                                Type *NewElementType) {
+void ScopArrayInfo::updateElementType(Type *NewElementType) {
+  if (NewElementType == ElementType)
+    return;
+
   auto OldElementSize = DL.getTypeAllocSizeInBits(ElementType);
   auto NewElementSize = DL.getTypeAllocSizeInBits(NewElementType);
 
-  if (NewElementSize != OldElementSize) {
-    if (NewElementSize % OldElementSize == 0 &&
-        NewElementSize < OldElementSize) {
-      ElementType = NewElementType;
-    } else {
-      auto GCD = GreatestCommonDivisor64(NewElementSize, OldElementSize);
-      ElementType = IntegerType::get(ElementType->getContext(), GCD);
-    }
-  }
+  if (NewElementSize == OldElementSize)
+    return;
 
+  if (NewElementSize % OldElementSize == 0 && NewElementSize < OldElementSize) {
+    ElementType = NewElementType;
+  } else {
+    auto GCD = GreatestCommonDivisor64(NewElementSize, OldElementSize);
+    ElementType = IntegerType::get(ElementType->getContext(), GCD);
+  }
+}
+
+bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes) {
   int SharedDims = std::min(NewSizes.size(), DimensionSizes.size());
   int ExtraDimsNew = NewSizes.size() - SharedDims;
   int ExtraDimsOld = DimensionSizes.size() - SharedDims;
@@ -2993,6 +2997,12 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
     return false;
   }
 
+  // See comment above the definition of SAI.
+  if (SAI->getDerivedSAIs().size()) {
+    isl_map_free(AccessRelation);
+    return true;
+  }
+
   AccessRelation = isl_map_intersect_domain(AccessRelation, Stmt.getDomain());
   isl_set *AccessRange = isl_map_range(AccessRelation);
 
@@ -3055,9 +3065,10 @@ Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
     SAI.reset(new ScopArrayInfo(BasePtr, ElementType, getIslCtx(), Sizes, Kind,
                                 DL, this));
   } else {
+    SAI->updateElementType(ElementType);
     // In case of mismatching array sizes, we bail out by setting the run-time
     // context to false.
-    if (!SAI->updateSizes(Sizes, ElementType))
+    if (!SAI->updateSizes(Sizes))
       invalidate(DELINEARIZATION, DebugLoc());
   }
   return SAI.get();
@@ -3734,8 +3745,6 @@ void ScopInfo::buildEscapingDependences(Instruction *Inst) {
   }
 }
 
-extern MapInsnToMemAcc InsnToMemAcc;
-
 bool ScopInfo::buildAccessMultiDimFixed(
     MemAccInst Inst, Loop *L, Region *R,
     const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
@@ -3795,7 +3804,7 @@ bool ScopInfo::buildAccessMultiDimFixed(
 bool ScopInfo::buildAccessMultiDimParam(
     MemAccInst Inst, Loop *L, Region *R,
     const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
-    const InvariantLoadsSetTy &ScopRIL) {
+    const InvariantLoadsSetTy &ScopRIL, const MapInsnToMemAcc &InsnToMemAcc) {
   Value *Address = Inst.getPointerOperand();
   Value *Val = Inst.getValueOperand();
   Type *SizeType = Val->getType();
@@ -3881,30 +3890,31 @@ void ScopInfo::buildAccessSingleDim(
 void ScopInfo::buildMemoryAccess(
     MemAccInst Inst, Loop *L, Region *R,
     const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
-    const InvariantLoadsSetTy &ScopRIL) {
+    const InvariantLoadsSetTy &ScopRIL, const MapInsnToMemAcc &InsnToMemAcc) {
 
   if (buildAccessMultiDimFixed(Inst, L, R, BoxedLoops, ScopRIL))
     return;
 
-  if (buildAccessMultiDimParam(Inst, L, R, BoxedLoops, ScopRIL))
+  if (buildAccessMultiDimParam(Inst, L, R, BoxedLoops, ScopRIL, InsnToMemAcc))
     return;
 
   buildAccessSingleDim(Inst, L, R, BoxedLoops, ScopRIL);
 }
 
-void ScopInfo::buildAccessFunctions(Region &R, Region &SR) {
+void ScopInfo::buildAccessFunctions(Region &R, Region &SR,
+                                    const MapInsnToMemAcc &InsnToMemAcc) {
 
   if (SD->isNonAffineSubRegion(&SR, &R)) {
     for (BasicBlock *BB : SR.blocks())
-      buildAccessFunctions(R, *BB, &SR);
+      buildAccessFunctions(R, *BB, InsnToMemAcc, &SR);
     return;
   }
 
   for (auto I = SR.element_begin(), E = SR.element_end(); I != E; ++I)
     if (I->isSubRegion())
-      buildAccessFunctions(R, *I->getNodeAs<Region>());
+      buildAccessFunctions(R, *I->getNodeAs<Region>(), InsnToMemAcc);
     else
-      buildAccessFunctions(R, *I->getNodeAs<BasicBlock>());
+      buildAccessFunctions(R, *I->getNodeAs<BasicBlock>(), InsnToMemAcc);
 }
 
 void ScopInfo::buildStmts(Region &R, Region &SR) {
@@ -3922,6 +3932,7 @@ void ScopInfo::buildStmts(Region &R, Region &SR) {
 }
 
 void ScopInfo::buildAccessFunctions(Region &R, BasicBlock &BB,
+                                    const MapInsnToMemAcc &InsnToMemAcc,
                                     Region *NonAffineSubRegion,
                                     bool IsExitBlock) {
   // We do not build access functions for error blocks, as they may contain
@@ -3951,7 +3962,7 @@ void ScopInfo::buildAccessFunctions(Region &R, BasicBlock &BB,
     //       there might be other invariant accesses that will be hoisted and
     //       that would allow to make a non-affine access affine.
     if (auto MemInst = MemAccInst::dyn_cast(Inst))
-      buildMemoryAccess(MemInst, L, &R, BoxedLoops, ScopRIL);
+      buildMemoryAccess(MemInst, L, &R, BoxedLoops, ScopRIL, InsnToMemAcc);
 
     if (isIgnoredIntrinsic(&Inst))
       continue;
@@ -4129,7 +4140,7 @@ void ScopInfo::buildScop(Region &R, AssumptionCache &AC) {
   scop.reset(new Scop(R, *SE, ctx, MaxLoopDepth));
 
   buildStmts(R, R);
-  buildAccessFunctions(R, R);
+  buildAccessFunctions(R, R, *SD->getInsnToMemAccMap(&R));
 
   // In case the region does not have an exiting block we will later (during
   // code generation) split the exit block. This will move potential PHI nodes
@@ -4139,7 +4150,8 @@ void ScopInfo::buildScop(Region &R, AssumptionCache &AC) {
   // accesses. Note that we do not model anything in the exit block if we have
   // an exiting block in the region, as there will not be any splitting later.
   if (!R.getExitingBlock())
-    buildAccessFunctions(R, *R.getExit(), nullptr, /* IsExitBlock */ true);
+    buildAccessFunctions(R, *R.getExit(), *SD->getInsnToMemAccMap(&R), nullptr,
+                         /* IsExitBlock */ true);
 
   scop->init(*AA, AC, *SD, *DT, *LI);
 }

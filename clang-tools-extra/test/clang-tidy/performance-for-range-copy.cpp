@@ -127,6 +127,7 @@ bool operator!=(const Mutable& M1, const Mutable& M2) {
 }
 
 void use(const Mutable &M);
+void use(int I);
 void useTwice(const Mutable &M1, const Mutable &M2);
 void useByValue(Mutable M);
 void useByConstValue(const Mutable M);
@@ -167,6 +168,30 @@ void negativeNonConstOperatorIsInvoked() {
 void negativeNonConstNonMemberOperatorInvoked() {
   for (auto NonConstOperatorInvokee : View<Iterator<Mutable>>()) {
     NonConstOperatorInvokee << true;
+  }
+}
+
+void negativeConstCheapToCopy() {
+  for (const int I : View<Iterator<int>>()) {
+  }
+}
+
+void negativeConstCheapToCopyTypedef() {
+  typedef const int ConstInt;
+  for (ConstInt C  : View<Iterator<ConstInt>>()) {
+  }
+}
+
+void negativeCheapToCopy() {
+  for (int I : View<Iterator<int>>()) {
+    use(I);
+  }
+}
+
+void negativeCheapToCopyTypedef() {
+  typedef int Int;
+  for (Int I : View<Iterator<Int>>()) {
+    use(I);
   }
 }
 
