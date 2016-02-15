@@ -632,4 +632,19 @@ ProfileSummary::ProfileSummary(const IndexedInstrProf::Summary &S)
   }
 }
 
+ProfileSummary::ProfileSummary(const IndexedInstrProf::Summary &S)
+    : TotalCount(S.get(IndexedInstrProf::Summary::TotalBlockCount)),
+      MaxBlockCount(S.get(IndexedInstrProf::Summary::MaxBlockCount)),
+      MaxInternalBlockCount(
+          S.get(IndexedInstrProf::Summary::MaxInternalBlockCount)),
+      MaxFunctionCount(S.get(IndexedInstrProf::Summary::MaxFunctionCount)),
+      NumBlocks(S.get(IndexedInstrProf::Summary::TotalNumBlocks)),
+      NumFunctions(S.get(IndexedInstrProf::Summary::TotalNumFunctions)) {
+  for (unsigned I = 0; I < S.NumCutoffEntries; I++) {
+    const IndexedInstrProf::Summary::Entry &Ent = S.getEntry(I);
+    DetailedSummary.emplace_back((uint32_t)Ent.Cutoff, Ent.MinBlockCount,
+                                 Ent.NumBlocks);
+  }
+}
+
 } // end namespace llvm
