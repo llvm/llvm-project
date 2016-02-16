@@ -227,7 +227,7 @@ Changes to the X86 Target
 * More efficient code for wide integer compares. (E.g. 64-bit compares
   on 32-bit targets.)
 
-* Tail call support for ``thiscall``, ``stdcall`, ``vectorcall``, and
+* Tail call support for ``thiscall``, ``stdcall``, ``vectorcall``, and
   ``fastcall`` functions.
 
 Changes to the Hexagon Target
