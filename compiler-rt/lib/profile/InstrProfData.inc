@@ -700,7 +700,7 @@ serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
 #define INSTR_PROF_INDEX_VERSION 3
 #define INSTR_PROF_COVMAP_VERSION 0
 
-/* Profile version is always of type uint_64_t. Reserve the upper 8 bits in the
+/* Profile version is always of type uint64_t. Reserve the upper 8 bits in the
  * version for other variants of profile. We set the lowest bit of the upper 8
  * bits (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentaiton
  * generated profile, and 0 if this is a Clang FE generated profile.
