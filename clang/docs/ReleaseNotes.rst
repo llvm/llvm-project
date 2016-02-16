@@ -179,6 +179,16 @@ Several additional features/bugfixes have been added to the previous standards:
 
 - Improved diagnostics for function pointers.
 
+CUDA Support in Clang
+---------------------
+Clang has experimental support for end-to-end CUDA compilation now:
+
+- The driver now detects CUDA installation, creates host and device compilation
+  pipelines, links device-side code with appropriate CUDA bitcode and produces
+  single object file with host and GPU code.
+
+- Implemented target attribute-based function overloading which allows clang to
+  compile CUDA sources without splitting them into separate host/device TUs.
 
 Internal API Changes
 --------------------
