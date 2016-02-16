@@ -211,79 +211,8 @@ void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
   if (!PGOInstrUse.empty())
     MPM.add(createPGOInstrumentationUsePass(PGOInstrUse));
 }
-
-void PassManagerBuilder::populateModulePassManager(
+void PassManagerBuilder::addFunctionSimplificationPasses(
     legacy::PassManagerBase &MPM) {
-  // Allow forcing function attributes as a debugging and tuning aid.
-  MPM.add(createForceFunctionAttrsLegacyPass());
-
-  // If all optimizations are disabled, just run the always-inline pass and,
-  // if enabled, the function merging pass.
-  if (OptLevel == 0) {
-    addPGOInstrPasses(MPM);
-    if (Inliner) {
-      MPM.add(Inliner);
-      Inliner = nullptr;
-    }
-
-    // FIXME: The BarrierNoopPass is a HACK! The inliner pass above implicitly
-    // creates a CGSCC pass manager, but we don't want to add extensions into
-    // that pass manager. To prevent this we insert a no-op module pass to reset
-    // the pass manager to get the same behavior as EP_OptimizerLast in non-O0
-    // builds. The function merging pass is 
-    if (MergeFunctions)
-      MPM.add(createMergeFunctionsPass());
-    else if (!GlobalExtensions->empty() || !Extensions.empty())
-      MPM.add(createBarrierNoopPass());
-
-    addExtensionsToPM(EP_EnabledOnOptLevel0, MPM);
-    return;
-  }
-
-  // Add LibraryInfo if we have some.
-  if (LibraryInfo)
-    MPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
-
-  addInitialAliasAnalysisPasses(MPM);
-
-  if (!DisableUnitAtATime) {
-    // Infer attributes about declarations if possible.
-    MPM.add(createInferFunctionAttrsLegacyPass());
-
-    addExtensionsToPM(EP_ModuleOptimizerEarly, MPM);
-
-    MPM.add(createIPSCCPPass());              // IP SCCP
-    MPM.add(createGlobalOptimizerPass());     // Optimize out global vars
-    // Promote any localized global vars
-    MPM.add(createPromoteMemoryToRegisterPass());
-
-    MPM.add(createDeadArgEliminationPass());  // Dead argument elimination
-
-    MPM.add(createInstructionCombiningPass());// Clean up after IPCP & DAE
-    addExtensionsToPM(EP_Peephole, MPM);
-    MPM.add(createCFGSimplificationPass());   // Clean up after IPCP & DAE
-  }
-
-  addPGOInstrPasses(MPM);
-
-  if (EnableNonLTOGlobalsModRef)
-    // We add a module alias analysis pass here. In part due to bugs in the
-    // analysis infrastructure this "works" in that the analysis stays alive
-    // for the entire SCC pass run below.
-    MPM.add(createGlobalsAAWrapperPass());
-
-  // Start of CallGraph SCC passes.
-  if (!DisableUnitAtATime)
-    MPM.add(createPruneEHPass());             // Remove dead EH info
-  if (Inliner) {
-    MPM.add(Inliner);
-    Inliner = nullptr;
-  }
-  if (!DisableUnitAtATime)
-    MPM.add(createPostOrderFunctionAttrsPass());
-  if (OptLevel > 2)
-    MPM.add(createArgumentPromotionPass());   // Scalarize uninlined fn args
-
   // Start of function pass.
   // Break up aggregate allocas, using SSAUpdater.
   if (UseNewSROA)
@@ -369,6 +298,81 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createCFGSimplificationPass()); // Merge & remove BBs
   MPM.add(createInstructionCombiningPass());  // Clean up after everything.
   addExtensionsToPM(EP_Peephole, MPM);
+}
+
+void PassManagerBuilder::populateModulePassManager(
+    legacy::PassManagerBase &MPM) {
+  // Allow forcing function attributes as a debugging and tuning aid.
+  MPM.add(createForceFunctionAttrsLegacyPass());
+
+  // If all optimizations are disabled, just run the always-inline pass and,
+  // if enabled, the function merging pass.
+  if (OptLevel == 0) {
+    addPGOInstrPasses(MPM);
+    if (Inliner) {
+      MPM.add(Inliner);
+      Inliner = nullptr;
+    }
+
+    // FIXME: The BarrierNoopPass is a HACK! The inliner pass above implicitly
+    // creates a CGSCC pass manager, but we don't want to add extensions into
+    // that pass manager. To prevent this we insert a no-op module pass to reset
+    // the pass manager to get the same behavior as EP_OptimizerLast in non-O0
+    // builds. The function merging pass is
+    if (MergeFunctions)
+      MPM.add(createMergeFunctionsPass());
+    else if (!GlobalExtensions->empty() || !Extensions.empty())
+      MPM.add(createBarrierNoopPass());
+
+    addExtensionsToPM(EP_EnabledOnOptLevel0, MPM);
+    return;
+  }
+
+  // Add LibraryInfo if we have some.
+  if (LibraryInfo)
+    MPM.add(new TargetLibraryInfoWrapperPass(*LibraryInfo));
+
+  addInitialAliasAnalysisPasses(MPM);
+
+  if (!DisableUnitAtATime) {
+    // Infer attributes about declarations if possible.
+    MPM.add(createInferFunctionAttrsLegacyPass());
+
+    addExtensionsToPM(EP_ModuleOptimizerEarly, MPM);
+
+    MPM.add(createIPSCCPPass());          // IP SCCP
+    MPM.add(createGlobalOptimizerPass()); // Optimize out global vars
+    // Promote any localized global vars.
+    MPM.add(createPromoteMemoryToRegisterPass());
+
+    MPM.add(createDeadArgEliminationPass()); // Dead argument elimination
+
+    MPM.add(createInstructionCombiningPass()); // Clean up after IPCP & DAE
+    addExtensionsToPM(EP_Peephole, MPM);
+    MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
+  }
+
+  addPGOInstrPasses(MPM);
+
+  if (EnableNonLTOGlobalsModRef)
+    // We add a module alias analysis pass here. In part due to bugs in the
+    // analysis infrastructure this "works" in that the analysis stays alive
+    // for the entire SCC pass run below.
+    MPM.add(createGlobalsAAWrapperPass());
+
+  // Start of CallGraph SCC passes.
+  if (!DisableUnitAtATime)
+    MPM.add(createPruneEHPass()); // Remove dead EH info
+  if (Inliner) {
+    MPM.add(Inliner);
+    Inliner = nullptr;
+  }
+  if (!DisableUnitAtATime)
+    MPM.add(createPostOrderFunctionAttrsPass());
+  if (OptLevel > 2)
+    MPM.add(createArgumentPromotionPass()); // Scalarize uninlined fn args
+
+  addFunctionSimplificationPasses(MPM);
 
   // FIXME: This is a HACK! The inliner pass above implicitly creates a CGSCC
   // pass manager that we are specifically trying to avoid. To prevent this
