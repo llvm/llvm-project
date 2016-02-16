@@ -89,6 +89,11 @@ Non-comprehensive list of changes in this release
   the node ``N`` is guaranteed not to be the last in the list, it is safe to
   call ``&*++N->getIterator()`` directly.
 
+* The `Kaleidoscope tutorials <tutorial/index.html>`_ have been updated to use
+  the ORC JIT APIs.
+
+* ORC now has a basic set of C bindings.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet
