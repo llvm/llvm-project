@@ -140,7 +140,41 @@ Objective-C Language Changes in Clang
 OpenCL C Language Changes in Clang
 ----------------------------------
 
-...
+Several OpenCL 2.0 features have been added, including:
+
+- Command-line option ``-std=CL2.0``.
+
+- Generic address space (``__generic``) along with new conversion rules
+  between different address spaces and default address space deduction.
+
+- Support for program scope variables with ``__global`` address space.
+
+- Pipe specifier was added (although no pipe functions are supported yet).
+
+- Atomic types: ``atomic_int``, ``atomic_uint``, ``atomic_long``,
+  ``atomic_ulong``, ``atomic_float``, ``atomic_double``, ``atomic_flag``,
+  ``atomic_intptr_t``, ``atomic_uintptr_t``, ``atomic_size_t``,
+  ``atomic_ptrdiff_t`` and their usage with C11 style builtin functions.
+
+- Image types: ``image2d_depth_t``, ``image2d_array_depth_t``,
+  ``image2d_msaa_t``, ``image2d_array_msaa_t``, ``image2d_msaa_depth_t``,
+  ``image2d_array_msaa_depth_t``.
+
+- Other types (for pipes and device side enqueue): ``clk_event_t``,
+  ``queue_t``, ``ndrange_t``, ``reserve_id_t``.
+
+Several additional features/bugfixes have been added to the previous standards:
+
+- A set of floating point arithmetic relaxation flags: ``-cl-no-signed-zeros``,
+  ``-cl-unsafe-math-optimizations``, ``-cl-finite-math-only``,
+  ``-cl-fast-relaxed-math``.
+
+- Added ``^^`` to the list of reserved operations.
+
+- Improved vector support and diagnostics.
+
+- Improved diagnostics for function pointers.
+
 
 Internal API Changes
 --------------------
