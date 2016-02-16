@@ -52,14 +52,14 @@ ErrorOr<uint32_t> ArchiveMemberHeader::getSize() const {
 
 sys::fs::perms ArchiveMemberHeader::getAccessMode() const {
   unsigned Ret;
-  if (StringRef(AccessMode, sizeof(AccessMode)).rtrim(" ").getAsInteger(8, Ret))
+  if (StringRef(AccessMode, sizeof(AccessMode)).rtrim(' ').getAsInteger(8, Ret))
     llvm_unreachable("Access mode is not an octal number.");
   return static_cast<sys::fs::perms>(Ret);
 }
 
 sys::TimeValue ArchiveMemberHeader::getLastModified() const {
   unsigned Seconds;
-  if (StringRef(LastModified, sizeof(LastModified)).rtrim(" ")
+  if (StringRef(LastModified, sizeof(LastModified)).rtrim(' ')
           .getAsInteger(10, Seconds))
     llvm_unreachable("Last modified time not a decimal number.");
 
@@ -70,14 +70,14 @@ sys::TimeValue ArchiveMemberHeader::getLastModified() const {
 
 unsigned ArchiveMemberHeader::getUID() const {
   unsigned Ret;
-  if (StringRef(UID, sizeof(UID)).rtrim(" ").getAsInteger(10, Ret))
+  if (StringRef(UID, sizeof(UID)).rtrim(' ').getAsInteger(10, Ret))
     llvm_unreachable("UID time not a decimal number.");
   return Ret;
 }
 
 unsigned ArchiveMemberHeader::getGID() const {
   unsigned Ret;
-  if (StringRef(GID, sizeof(GID)).rtrim(" ").getAsInteger(10, Ret))
+  if (StringRef(GID, sizeof(GID)).rtrim(' ').getAsInteger(10, Ret))
     llvm_unreachable("GID time not a decimal number.");
   return Ret;
 }
@@ -108,7 +108,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start,
   StringRef Name = getRawName();
   if (Name.startswith("#1/")) {
     uint64_t NameSize;
-    if (Name.substr(3).rtrim(" ").getAsInteger(10, NameSize))
+    if (Name.substr(3).rtrim(' ').getAsInteger(10, NameSize))
       llvm_unreachable("Long name length is not an integer");
     StartOfFile += NameSize;
   }
@@ -197,7 +197,7 @@ ErrorOr<StringRef> Archive::Child::getName() const {
     // It's a long name.
     // Get the offset.
     std::size_t offset;
-    if (name.substr(1).rtrim(" ").getAsInteger(10, offset))
+    if (name.substr(1).rtrim(' ').getAsInteger(10, offset))
       llvm_unreachable("Long name offset is not an integer");
 
     // Verify it.
@@ -213,10 +213,9 @@ ErrorOr<StringRef> Archive::Child::getName() const {
     return StringRef(addr);
   } else if (name.startswith("#1/")) {
     uint64_t name_size;
-    if (name.substr(3).rtrim(" ").getAsInteger(10, name_size))
+    if (name.substr(3).rtrim(' ').getAsInteger(10, name_size))
       llvm_unreachable("Long name length is not an ingeter");
-    return Data.substr(sizeof(ArchiveMemberHeader), name_size)
-        .rtrim(StringRef("\0", 1));
+    return Data.substr(sizeof(ArchiveMemberHeader), name_size).rtrim('\0');
   }
   // It's a simple name.
   if (name[name.size() - 1] == '/')
