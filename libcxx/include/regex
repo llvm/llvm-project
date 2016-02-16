@@ -4265,6 +4265,9 @@ basic_regex<_CharT, _Traits>::__parse_atom_escape(_ForwardIterator __first,
     if (__first != __last && *__first == '\\')
     {
         _ForwardIterator __t1 = _VSTD::next(__first);
+        if (__t1 == __last)
+            __throw_regex_error<regex_constants::error_escape>();
+
         _ForwardIterator __t2 = __parse_decimal_escape(__t1, __last);
         if (__t2 != __t1)
             __first = __t2;
