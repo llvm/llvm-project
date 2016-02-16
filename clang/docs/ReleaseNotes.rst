@@ -39,11 +39,15 @@ Major New Features
 - Feature1...
 
 Improvements to Clang's diagnostics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------------
 
 Clang's diagnostics are constantly being improved to catch more issues,
 explain them more clearly, and provide more accurate source information
 about them. The improvements since the 3.7 release include:
+
+- ``-Wmicrosoft`` has been split into many targeted flags, so that projects can
+  choose to enable only a subset of these warnings. ``-Wno-microsoft`` still
+  disables all these warnings, and ``-Wmicrosoft`` still enables them all.
 
 -  ...
 
