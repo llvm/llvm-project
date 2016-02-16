@@ -4418,7 +4418,7 @@ GDBRemoteCommunicationClient::ReadExtFeature (const lldb_private::ConstString ob
             // last chunk
         case ( 'l' ):
             active = false;
-            // fall through intentional
+            LLVM_FALLTHROUGH;
 
             // more chunks
         case ( 'm' ) :

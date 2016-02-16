@@ -1060,7 +1060,7 @@ DerivedArgList *Darwin::TranslateArgs(const DerivedArgList &Args,
   }
 
   if (!Args.getLastArg(options::OPT_stdlib_EQ) &&
-      GetDefaultCXXStdlibType() == ToolChain::CST_Libcxx)
+      GetCXXStdlibType(Args) == ToolChain::CST_Libcxx)
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_stdlib_EQ),
                       "libc++");
 

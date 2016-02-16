@@ -2969,12 +2969,18 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
   // no base pointer origin we check that the base pointer is defined
   // outside the region.
   const ScopArrayInfo *SAI = Access->getScopArrayInfo();
-  while (auto *BasePtrOriginSAI = SAI->getBasePtrOriginSAI())
-    SAI = BasePtrOriginSAI;
-
-  if (auto *BasePtrInst = dyn_cast<Instruction>(SAI->getBasePtr()))
-    if (R.contains(BasePtrInst))
+  auto *BasePtrInst = dyn_cast<Instruction>(SAI->getBasePtr());
+  if (SAI->getBasePtrOriginSAI()) {
+    assert(BasePtrInst && R.contains(BasePtrInst));
+    if (!isa<LoadInst>(BasePtrInst))
       return false;
+    auto *BasePtrStmt = getStmtForBasicBlock(BasePtrInst->getParent());
+    assert(BasePtrStmt);
+    auto *BasePtrMA = BasePtrStmt->getArrayAccessOrNULLFor(BasePtrInst);
+    if (BasePtrMA && !isHoistableAccess(BasePtrMA, Writes))
+      return false;
+  } else if (BasePtrInst && R.contains(BasePtrInst))
+    return false;
 
   // Skip accesses in non-affine subregions as they might not be executed
   // under the same condition as the entry of the non-affine subregion.
@@ -2995,12 +3001,6 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
                             Stmt.getNumIterators())) {
     isl_map_free(AccessRelation);
     return false;
-  }
-
-  // See comment above the definition of SAI.
-  if (SAI->getDerivedSAIs().size()) {
-    isl_map_free(AccessRelation);
-    return true;
   }
 
   AccessRelation = isl_map_intersect_domain(AccessRelation, Stmt.getDomain());

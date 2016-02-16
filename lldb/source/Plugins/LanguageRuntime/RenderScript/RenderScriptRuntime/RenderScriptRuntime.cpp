@@ -174,15 +174,15 @@ GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
     // number of arguments passed in registers
     static const uint32_t c_args_in_reg = 6;
     // register passing order
-    static const std::array<const char *, c_args_in_reg> c_reg_names = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+    static const std::array<const char *, c_args_in_reg> c_reg_names{{"rdi", "rsi", "rdx", "rcx", "r8", "r9"}};
     // argument type to size mapping
-    static const std::array<size_t, 5> arg_size = {
+    static const std::array<size_t, 5> arg_size{{
         8, // ePointer,
         4, // eInt32,
         8, // eInt64,
         8, // eLong,
         4, // eBool,
-    };
+    }};
 
     // get the current stack pointer
     uint64_t sp = ctx.reg_ctx->GetSP();
@@ -1020,7 +1020,7 @@ RenderScriptRuntime::CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info,
         eRsSc,
     };
 
-    std::array<ArgItem, 9> args = {
+    std::array<ArgItem, 9> args{{
         ArgItem{ArgItem::ePointer, 0}, // const Context       *rsc
         ArgItem{ArgItem::ePointer, 0}, // Script              *s
         ArgItem{ArgItem::eInt32, 0},   // uint32_t             slot
@@ -1030,7 +1030,7 @@ RenderScriptRuntime::CaptureScriptInvokeForEachMulti(RuntimeHook* hook_info,
         ArgItem{ArgItem::ePointer, 0}, // const void          *usr
         ArgItem{ArgItem::eInt32, 0},   // size_t               usrLen
         ArgItem{ArgItem::ePointer, 0}, // const RsScriptCall  *sc
-    };
+    }};
 
     bool success = GetArgs(context, &args[0], args.size());
     if (!success)
@@ -1125,13 +1125,13 @@ RenderScriptRuntime::CaptureSetGlobalVar(RuntimeHook *hook_info, ExecutionContex
         eRsLength,
     };
 
-    std::array<ArgItem, 5> args = {
+    std::array<ArgItem, 5> args{{
         ArgItem{ArgItem::ePointer, 0}, // eRsContext
         ArgItem{ArgItem::ePointer, 0}, // eRsScript
         ArgItem{ArgItem::eInt32, 0},   // eRsId
         ArgItem{ArgItem::ePointer, 0}, // eRsData
         ArgItem{ArgItem::eInt32, 0},   // eRsLength
-    };
+    }};
 
     bool success = GetArgs(context, &args[0], args.size());
     if (!success)
@@ -1173,11 +1173,11 @@ RenderScriptRuntime::CaptureAllocationInit(RuntimeHook *hook_info, ExecutionCont
         eRsForceZero
     };
 
-    std::array<ArgItem, 3> args = {
+    std::array<ArgItem, 3> args{{
         ArgItem{ArgItem::ePointer, 0}, // eRsContext
         ArgItem{ArgItem::ePointer, 0}, // eRsAlloc
         ArgItem{ArgItem::eBool, 0},    // eRsForceZero
-    };
+    }};
 
     bool success = GetArgs(context, &args[0], args.size());
     if (!success) // error case
@@ -1207,10 +1207,10 @@ RenderScriptRuntime::CaptureAllocationDestroy(RuntimeHook *hook_info, ExecutionC
         eRsAlloc,
     };
 
-    std::array<ArgItem, 2> args = {
+    std::array<ArgItem, 2> args{{
         ArgItem{ArgItem::ePointer, 0}, // eRsContext
         ArgItem{ArgItem::ePointer, 0}, // eRsAlloc
-    };
+    }};
 
     bool success = GetArgs(context, &args[0], args.size());
     if (!success)
@@ -1256,8 +1256,8 @@ RenderScriptRuntime::CaptureScriptInit(RuntimeHook *hook_info, ExecutionContext 
         eRsCachedDirPtr
     };
 
-    std::array<ArgItem, 4> args = {ArgItem{ArgItem::ePointer, 0}, ArgItem{ArgItem::ePointer, 0},
-                                   ArgItem{ArgItem::ePointer, 0}, ArgItem{ArgItem::ePointer, 0}};
+    std::array<ArgItem, 4> args{{ArgItem{ArgItem::ePointer, 0}, ArgItem{ArgItem::ePointer, 0},
+                                 ArgItem{ArgItem::ePointer, 0}, ArgItem{ArgItem::ePointer, 0}}};
     bool success = GetArgs(context, &args[0], args.size());
     if (!success)
     {

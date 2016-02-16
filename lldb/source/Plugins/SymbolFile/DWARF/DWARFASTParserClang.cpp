@@ -345,6 +345,7 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                                 break;
                             }
                             // Fall through to base type below in case we can handle the type there...
+                            LLVM_FALLTHROUGH;
 
                         case DW_TAG_base_type:
                             resolve_state = Type::eResolveStateFull;

@@ -1000,7 +1000,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
     return;
 
   StringRef Comment =
-      StringRef(Result.getLiteralData(), Result.getLength()).trim("\"");
+      StringRef(Result.getLiteralData(), Result.getLength()).trim('"');
 
   if ((Comment.trim().size() == 0 && Comment.size() > 0) || // Is Whitespace
       Comment.empty()) {

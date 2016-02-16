@@ -3884,7 +3884,7 @@ Process::ShouldBroadcastEvent (Event *event_ptr)
             m_stdio_communication.StopReadThread();
             m_stdin_forward = false;
 
-            // fall-through
+            LLVM_FALLTHROUGH;
         case eStateConnected:
         case eStateAttaching:
         case eStateLaunching:
