@@ -94,6 +94,10 @@ Non-comprehensive list of changes in this release
 
 * ORC now has a basic set of C bindings.
 
+* Optional support for linking clang and the LLVM tools with a single libLLVM
+  shared library. To enable this, pass ``-DLLVM_LINK_LLVM_DYLIB=ON`` to CMake.
+  See `Building LLVM with CMake`_ for more details.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet
