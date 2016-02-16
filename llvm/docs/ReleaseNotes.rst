@@ -230,6 +230,13 @@ Changes to the X86 Target
 * Tail call support for ``thiscall``, ``stdcall`, ``vectorcall``, and
   ``fastcall`` functions.
 
+Changes to the Hexagon Target
+-----------------------------
+
+In addition to general code size and performance improvements, Hexagon target
+now has basic support for Hexagon V60 architecture and Hexagon Vector
+Extensions (HVX).
+
 Changes to the AVR Target
 -------------------------
 
