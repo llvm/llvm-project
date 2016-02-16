@@ -59,8 +59,11 @@ protected:
   /// CurArraySize - The allocated size of CurArray, always a power of two.
   unsigned CurArraySize;
 
-  // If small, this is # elts allocated consecutively
-  unsigned NumElements;
+  /// Number of elements in CurArray that contain a value or are a tombstone.
+  /// If small, all these elements are at the beginning of CurArray and the rest
+  /// is uninitialized.
+  unsigned NumNonEmpty;
+  /// Number of tombstones in CurArray.
   unsigned NumTombstones;
 
   // Helpers to copy and move construct a SmallPtrSet.
@@ -68,11 +71,11 @@ protected:
                       const SmallPtrSetImplBase &that);
   SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize,
                       SmallPtrSetImplBase &&that);
-  explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize) :
-    SmallArray(SmallStorage), CurArray(SmallStorage), CurArraySize(SmallSize) {
+  explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
+      : SmallArray(SmallStorage), CurArray(SmallStorage),
+        CurArraySize(SmallSize), NumNonEmpty(0), NumTombstones(0) {
     assert(SmallSize && (SmallSize & (SmallSize-1)) == 0 &&
            "Initial size must be a power of two!");
-    clear();
   }
   ~SmallPtrSetImplBase() {
     if (!isSmall())
@@ -82,17 +85,19 @@ protected:
 public:
   typedef unsigned size_type;
   bool LLVM_ATTRIBUTE_UNUSED_RESULT empty() const { return size() == 0; }
-  size_type size() const { return NumElements; }
+  size_type size() const { return NumNonEmpty - NumTombstones; }
 
   void clear() {
     // If the capacity of the array is huge, and the # elements used is small,
     // shrink the array.
-    if (!isSmall() && NumElements*4 < CurArraySize && CurArraySize > 32)
-      return shrink_and_clear();
+    if (!isSmall()) {
+      if (size() * 4 < CurArraySize && CurArraySize > 32)
+        return shrink_and_clear();
+      // Fill the array with empty markers.
+      memset(CurArray, -1, CurArraySize * sizeof(void *));
+    }
 
-    // Fill the array with empty markers.
-    memset(CurArray, -1, CurArraySize*sizeof(void*));
-    NumElements = 0;
+    NumNonEmpty = 0;
     NumTombstones = 0;
   }
 
@@ -104,21 +109,37 @@ protected:
     return reinterpret_cast<void*>(-1);
   }
 
+  const void **EndPointer() const {
+    return isSmall() ? CurArray + NumNonEmpty : CurArray + CurArraySize;
+  }
+
   /// insert_imp - This returns true if the pointer was new to the set, false if
   /// it was already in the set.  This is hidden from the client so that the
   /// derived class can check that the right type of pointer is passed in.
   std::pair<const void *const *, bool> insert_imp(const void *Ptr) {
     if (isSmall()) {
       // Check to see if it is already in the set.
-      for (const void **APtr = SmallArray, **E = SmallArray+NumElements;
-           APtr != E; ++APtr)
-        if (*APtr == Ptr)
+      const void **LastTombstone = nullptr;
+      for (const void **APtr = SmallArray, **E = SmallArray + NumNonEmpty;
+           APtr != E; ++APtr) {
+        const void *Value = *APtr;
+        if (Value == Ptr)
           return std::make_pair(APtr, false);
+        if (Value == getTombstoneMarker())
+          LastTombstone = APtr;
+      }
+
+      // Did we find any tombstone marker?
+      if (LastTombstone != nullptr) {
+        *LastTombstone = Ptr;
+        --NumTombstones;
+        return std::make_pair(LastTombstone, true);
+      }
 
       // Nope, there isn't.  If we stay small, just 'pushback' now.
-      if (NumElements < CurArraySize) {
-        SmallArray[NumElements++] = Ptr;
-        return std::make_pair(SmallArray + (NumElements - 1), true);
+      if (NumNonEmpty < CurArraySize) {
+        SmallArray[NumNonEmpty++] = Ptr;
+        return std::make_pair(SmallArray + (NumNonEmpty - 1), true);
       }
       // Otherwise, hit the big set case, which will call grow.
     }
@@ -135,7 +156,7 @@ protected:
     if (isSmall()) {
       // Linear search for the item.
       for (const void *const *APtr = SmallArray,
-                      *const *E = SmallArray+NumElements; APtr != E; ++APtr)
+                      *const *E = SmallArray + NumNonEmpty; APtr != E; ++APtr)
         if (*APtr == Ptr)
           return true;
       return false;
@@ -295,7 +316,7 @@ public:
   /// the element equal to Ptr.
   std::pair<iterator, bool> insert(PtrType Ptr) {
     auto p = insert_imp(PtrTraits::getAsVoidPointer(Ptr));
-    return std::make_pair(iterator(p.first, CurArray + CurArraySize), p.second);
+    return std::make_pair(iterator(p.first, EndPointer()), p.second);
   }
 
   /// erase - If the set contains the specified pointer, remove it and return
@@ -316,10 +337,11 @@ public:
   }
 
   inline iterator begin() const {
-    return iterator(CurArray, CurArray+CurArraySize);
+    return iterator(CurArray, EndPointer());
   }
   inline iterator end() const {
-    return iterator(CurArray+CurArraySize, CurArray+CurArraySize);
+    const void *const *End = EndPointer();
+    return iterator(End, End);
   }
 };
 

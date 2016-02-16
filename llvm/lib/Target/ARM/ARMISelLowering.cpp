@@ -6581,8 +6581,7 @@ LowerSDIV_v4i8(SDValue X, SDValue Y, SDLoc dl, SelectionDAG &DAG) {
   // float4 result = as_float4(as_int4(xf*recip) + 0xb000);
   X = DAG.getNode(ISD::FMUL, dl, MVT::v4f32, X, Y);
   X = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, X);
-  Y = DAG.getConstant(0xb000, dl, MVT::i32);
-  Y = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v4i32, Y, Y, Y, Y);
+  Y = DAG.getConstant(0xb000, dl, MVT::v4i32);
   X = DAG.getNode(ISD::ADD, dl, MVT::v4i32, X, Y);
   X = DAG.getNode(ISD::BITCAST, dl, MVT::v4f32, X);
   // Convert back to short.
@@ -6620,8 +6619,7 @@ LowerSDIV_v4i16(SDValue N0, SDValue N1, SDLoc dl, SelectionDAG &DAG) {
   // float4 result = as_float4(as_int4(xf*recip) + 0x89);
   N0 = DAG.getNode(ISD::FMUL, dl, MVT::v4f32, N0, N2);
   N0 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, N0);
-  N1 = DAG.getConstant(0x89, dl, MVT::i32);
-  N1 = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v4i32, N1, N1, N1, N1);
+  N1 = DAG.getConstant(0x89, dl, MVT::v4i32);
   N0 = DAG.getNode(ISD::ADD, dl, MVT::v4i32, N0, N1);
   N0 = DAG.getNode(ISD::BITCAST, dl, MVT::v4f32, N0);
   // Convert back to integer and return.
@@ -6732,8 +6730,7 @@ static SDValue LowerUDIV(SDValue Op, SelectionDAG &DAG) {
   // float4 result = as_float4(as_int4(xf*recip) + 2);
   N0 = DAG.getNode(ISD::FMUL, dl, MVT::v4f32, N0, N2);
   N0 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, N0);
-  N1 = DAG.getConstant(2, dl, MVT::i32);
-  N1 = DAG.getNode(ISD::BUILD_VECTOR, dl, MVT::v4i32, N1, N1, N1, N1);
+  N1 = DAG.getConstant(2, dl, MVT::v4i32);
   N0 = DAG.getNode(ISD::ADD, dl, MVT::v4i32, N0, N1);
   N0 = DAG.getNode(ISD::BITCAST, dl, MVT::v4f32, N0);
   // Convert back to integer and return.

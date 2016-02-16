@@ -139,6 +139,13 @@ public:
   /// Returns true if the target will correctly handle shrink wrapping.
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
+  /// Order the symbols in the local stack.
+  /// We want to place the local stack objects in some sort of sensible order.
+  /// The heuristic we use is to try and pack them according to static number
+  /// of uses and size in order to minimize code size.
+  void orderFrameObjects(const MachineFunction &MF,
+                         SmallVectorImpl<int> &ObjectsToAllocate) const override;
+
   /// convertArgMovsToPushes - This method tries to convert a call sequence
   /// that uses sub and mov instructions to put the argument onto the stack
   /// into a series of pushes.

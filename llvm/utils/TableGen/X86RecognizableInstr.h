@@ -87,8 +87,6 @@ private:
 
   /// The instruction name as listed in the tables
   std::string Name;
-  /// The AT&T AsmString for the instruction
-  std::string AsmString;
 
   /// Indicates whether the instruction should be emitted into the decode
   /// tables; regardless, it will be emitted into the instruction info table
@@ -179,7 +177,7 @@ private:
   void handleOperand(bool optional,
                      unsigned &operandIndex,
                      unsigned &physicalOperandIndex,
-                     unsigned &numPhysicalOperands,
+                     unsigned numPhysicalOperands,
                      const unsigned *operandMapping,
                      OperandEncoding (*encodingFromString)
                        (const std::string&,

@@ -171,6 +171,10 @@ void LLVMSetTargetMachineAsmVerbosity(LLVMTargetMachineRef T,
   unwrap(T)->Options.MCOptions.AsmVerbose = VerboseAsm;
 }
 
+LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T) {
+  return wrap(new DataLayout(unwrap(T)->createDataLayout()));
+}
+
 static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
                                       raw_pwrite_stream &OS,
                                       LLVMCodeGenFileType codegen,

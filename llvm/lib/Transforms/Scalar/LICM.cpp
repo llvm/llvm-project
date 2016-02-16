@@ -164,6 +164,11 @@ namespace {
 
     /// Simple Analysis hook. Delete loop L from alias set map.
     void deleteAnalysisLoop(Loop *L) override;
+
+    /// Returns an owning pointer to an alias set which incorporates aliasing
+    /// info from all subloops of L, but does not include instructions in L
+    /// itself.
+    AliasSetTracker *collectAliasInfoFromSubLoops(Loop *L);
   };
 }
 
@@ -202,20 +207,7 @@ bool LICM::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   assert(L->isLCSSAForm(*DT) && "Loop is not in LCSSA form.");
 
-  CurAST = new AliasSetTracker(*AA);
-  // Collect Alias info from subloops.
-  for (Loop *InnerL : L->getSubLoops()) {
-    AliasSetTracker *InnerAST = LoopToAliasSetMap[InnerL];
-    assert(InnerAST && "Where is my AST?");
-
-    // What if InnerLoop was modified by other passes ?
-    CurAST->add(*InnerAST);
-
-    // Once we've incorporated the inner loop's AST into ours, we don't need the
-    // subloop's anymore.
-    delete InnerAST;
-    LoopToAliasSetMap.erase(InnerL);
-  }
+  CurAST = collectAliasInfoFromSubLoops(L);
 
   CurLoop = L;
 
@@ -1063,6 +1055,32 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
     PreheaderLoad->eraseFromParent();
 
   return Changed;
+}
+
+/// Returns an owning pointer to an alias set which incorporates aliasing info
+/// from all subloops of L, but does not include instructions in L itself.
+///
+AliasSetTracker *LICM::collectAliasInfoFromSubLoops(Loop *L) {
+  AliasSetTracker *CurAST = nullptr;
+  for (Loop *InnerL : L->getSubLoops()) {
+    AliasSetTracker *InnerAST = LoopToAliasSetMap[InnerL];
+    assert(InnerAST && "Where is my AST?");
+
+    if (CurAST != nullptr) {
+      // What if InnerLoop was modified by other passes ?
+      CurAST->add(*InnerAST);
+
+      // Once we've incorporated the inner loop's AST into ours, we don't need
+      // the subloop's anymore.
+      delete InnerAST;
+    } else {
+      CurAST = InnerAST;
+    }
+    LoopToAliasSetMap.erase(InnerL);
+  }
+  if (CurAST == nullptr)
+    CurAST = new AliasSetTracker(*AA);
+  return CurAST;
 }
 
 /// Simple analysis hook. Clone alias set info.

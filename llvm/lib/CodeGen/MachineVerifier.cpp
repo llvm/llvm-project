@@ -58,7 +58,7 @@ namespace {
       Banner(b)
       {}
 
-    bool runOnMachineFunction(MachineFunction &MF);
+    unsigned verify(MachineFunction &MF);
 
     Pass *const PASS;
     const char *Banner;
@@ -268,7 +268,9 @@ namespace {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
-      MF.verify(this, Banner.c_str());
+      unsigned FoundErrors = MachineVerifier(this, Banner.c_str()).verify(MF);
+      if (FoundErrors)
+        report_fatal_error("Found "+Twine(FoundErrors)+" machine code errors.");
       return false;
     }
   };
@@ -283,9 +285,13 @@ FunctionPass *llvm::createMachineVerifierPass(const std::string &Banner) {
   return new MachineVerifierPass(Banner);
 }
 
-void MachineFunction::verify(Pass *p, const char *Banner) const {
-  MachineVerifier(p, Banner)
-    .runOnMachineFunction(const_cast<MachineFunction&>(*this));
+bool MachineFunction::verify(Pass *p, const char *Banner, bool AbortOnErrors)
+    const {
+  MachineFunction &MF = const_cast<MachineFunction&>(*this);
+  unsigned FoundErrors = MachineVerifier(p, Banner).verify(MF);
+  if (AbortOnErrors && FoundErrors)
+    report_fatal_error("Found "+Twine(FoundErrors)+" machine code errors.");
+  return FoundErrors == 0;
 }
 
 void MachineVerifier::verifySlotIndexes() const {
@@ -301,7 +307,7 @@ void MachineVerifier::verifySlotIndexes() const {
   }
 }
 
-bool MachineVerifier::runOnMachineFunction(MachineFunction &MF) {
+unsigned MachineVerifier::verify(MachineFunction &MF) {
   foundErrors = 0;
 
   this->MF = &MF;
@@ -386,9 +392,6 @@ bool MachineVerifier::runOnMachineFunction(MachineFunction &MF) {
   }
   visitMachineFunctionAfter();
 
-  if (foundErrors)
-    report_fatal_error("Found "+Twine(foundErrors)+" machine code errors.");
-
   // Clean up.
   regsLive.clear();
   regsDefined.clear();
@@ -398,7 +401,7 @@ bool MachineVerifier::runOnMachineFunction(MachineFunction &MF) {
   regsLiveInButUnused.clear();
   MBBInfoMap.clear();
 
-  return false;                 // no changes
+  return foundErrors;
 }
 
 void MachineVerifier::report(const char *msg, const MachineFunction *MF) {

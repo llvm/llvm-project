@@ -3779,14 +3779,14 @@ class LoadGP_pats <PatFrag ldOp, InstHexagon MI, ValueType VT = i32>
          (VT (MI tglobaladdr:$global))>;
 
 let AddedComplexity = 100 in {
-  def: LoadGP_pats <extloadi8, L2_loadrbgp>;
-  def: LoadGP_pats <sextloadi8, L2_loadrbgp>;
-  def: LoadGP_pats <zextloadi8, L2_loadrubgp>;
-  def: LoadGP_pats <extloadi16, L2_loadrhgp>;
+  def: LoadGP_pats <extloadi8,   L2_loadrubgp>;
+  def: LoadGP_pats <sextloadi8,  L2_loadrbgp>;
+  def: LoadGP_pats <zextloadi8,  L2_loadrubgp>;
+  def: LoadGP_pats <extloadi16,  L2_loadruhgp>;
   def: LoadGP_pats <sextloadi16, L2_loadrhgp>;
   def: LoadGP_pats <zextloadi16, L2_loadruhgp>;
-  def: LoadGP_pats <load, L2_loadrigp>;
-  def: LoadGP_pats <load, L2_loadrdgp, i64>;
+  def: LoadGP_pats <load,        L2_loadrigp>;
+  def: LoadGP_pats <load,        L2_loadrdgp, i64>;
 }
 
 // When the Interprocedural Global Variable optimizer realizes that a certain

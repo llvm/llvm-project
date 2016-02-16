@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64SUBTARGET_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64SUBTARGET_H
 
+#include "AArch64CallLowering.h"
 #include "AArch64FrameLowering.h"
 #include "AArch64ISelLowering.h"
 #include "AArch64InstrInfo.h"
@@ -81,6 +82,7 @@ protected:
   AArch64InstrInfo InstrInfo;
   AArch64SelectionDAGInfo TSInfo;
   AArch64TargetLowering TLInfo;
+  mutable std::unique_ptr<AArch64CallLowering> CallLoweringInfo;
 private:
   /// initializeSubtargetDependencies - Initializes using CPUString and the
   /// passed in feature string so that we can use initializer lists for
@@ -107,6 +109,7 @@ public:
   const AArch64RegisterInfo *getRegisterInfo() const override {
     return &getInstrInfo()->getRegisterInfo();
   }
+  const CallLowering *getCallLowering() const override;
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override {

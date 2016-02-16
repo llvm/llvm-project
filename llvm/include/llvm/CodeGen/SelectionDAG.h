@@ -427,6 +427,13 @@ public:
   //===--------------------------------------------------------------------===//
   // Node creation methods.
   //
+
+  /// \brief Create a ConstantSDNode wrapping a constant value.
+  /// If VT is a vector type, the constant is splatted into a BUILD_VECTOR.
+  ///
+  /// If only legal types can be produced, this does the necessary
+  /// transformations (e.g., if the vector element type is illegal).
+  /// @{
   SDValue getConstant(uint64_t Val, SDLoc DL, EVT VT, bool isTarget = false,
                       bool isOpaque = false);
   SDValue getConstant(const APInt &Val, SDLoc DL, EVT VT, bool isTarget = false,
@@ -446,8 +453,16 @@ public:
                             bool isOpaque = false) {
     return getConstant(Val, DL, VT, true, isOpaque);
   }
-  // The forms below that take a double should only be used for simple
-  // constants that can be exactly represented in VT.  No checks are made.
+  /// @}
+
+  /// \brief Create a ConstantFPSDNode wrapping a constant value.
+  /// If VT is a vector type, the constant is splatted into a BUILD_VECTOR.
+  ///
+  /// If only legal types can be produced, this does the necessary
+  /// transformations (e.g., if the vector element type is illegal).
+  /// The forms that take a double should only be used for simple constants
+  /// that can be exactly represented in VT.  No checks are made.
+  /// @{
   SDValue getConstantFP(double Val, SDLoc DL, EVT VT, bool isTarget = false);
   SDValue getConstantFP(const APFloat& Val, SDLoc DL, EVT VT,
                         bool isTarget = false);
@@ -462,6 +477,8 @@ public:
   SDValue getTargetConstantFP(const ConstantFP &Val, SDLoc DL, EVT VT) {
     return getConstantFP(Val, DL, VT, true);
   }
+  /// @}
+
   SDValue getGlobalAddress(const GlobalValue *GV, SDLoc DL, EVT VT,
                            int64_t offset = 0, bool isTargetGA = false,
                            unsigned char TargetFlags = 0);

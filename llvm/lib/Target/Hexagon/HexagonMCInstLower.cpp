@@ -66,7 +66,7 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
     ME = MCBinaryExpr::createAdd(ME, MCConstantExpr::create(MO.getOffset(), MC),
                                  MC);
 
-  return MCOperand::createExpr(ME);
+  return MCOperand::createExpr(HexagonMCExpr::create(ME, MC));
 }
 
 // Create an MCInst from a MachineInstr
@@ -106,18 +106,18 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
       // FP immediates are used only when setting GPRs, so they may be dealt
       // with like regular immediates from this point on.
       MCO = MCOperand::createExpr(
-        MCConstantExpr::create(*Val.bitcastToAPInt().getRawData(),
-                               AP.OutContext));
+        HexagonMCExpr::create(MCConstantExpr::create(*Val.bitcastToAPInt().getRawData(),
+                              AP.OutContext), AP.OutContext));
       break;
     }
     case MachineOperand::MO_Immediate:
       MCO = MCOperand::createExpr(
-        MCConstantExpr::create(MO.getImm(), AP.OutContext));
+        HexagonMCExpr::create(MCConstantExpr::create(MO.getImm(), AP.OutContext), AP.OutContext));
       break;
     case MachineOperand::MO_MachineBasicBlock:
       MCO = MCOperand::createExpr
-              (MCSymbolRefExpr::create(MO.getMBB()->getSymbol(),
-               AP.OutContext));
+              (HexagonMCExpr::create(MCSymbolRefExpr::create(MO.getMBB()->getSymbol(),
+               AP.OutContext), AP.OutContext));
       break;
     case MachineOperand::MO_GlobalAddress:
       MCO = GetSymbolRef(MO, AP.getSymbol(MO.getGlobal()), AP);

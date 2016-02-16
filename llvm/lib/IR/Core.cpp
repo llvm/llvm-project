@@ -160,12 +160,16 @@ void LLVMDisposeModule(LLVMModuleRef M) {
 }
 
 /*--.. Data layout .........................................................--*/
-const char * LLVMGetDataLayout(LLVMModuleRef M) {
+const char *LLVMGetDataLayoutStr(LLVMModuleRef M) {
   return unwrap(M)->getDataLayoutStr().c_str();
 }
 
-void LLVMSetDataLayout(LLVMModuleRef M, const char *Triple) {
-  unwrap(M)->setDataLayout(Triple);
+const char *LLVMGetDataLayout(LLVMModuleRef M) {
+  return LLVMGetDataLayoutStr(M);
+}
+
+void LLVMSetDataLayout(LLVMModuleRef M, const char *DataLayoutStr) {
+  unwrap(M)->setDataLayout(DataLayoutStr);
 }
 
 /*--.. Target triple .......................................................--*/

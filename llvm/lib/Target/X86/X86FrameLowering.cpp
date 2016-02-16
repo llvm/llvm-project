@@ -2670,6 +2670,148 @@ MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
   return MBBI;
 }
 
+namespace {
+// Struct used by orderFrameObjects to help sort the stack objects.
+struct X86FrameSortingObject {
+  bool IsValid = false;         // true if we care about this Object.
+  unsigned ObjectIndex = 0;     // Index of Object into MFI list.
+  unsigned ObjectSize = 0;      // Size of Object in bytes.
+  unsigned ObjectAlignment = 1; // Alignment of Object in bytes.
+  unsigned ObjectNumUses = 0;   // Object static number of uses.
+};
+
+// The comparison function we use for std::sort to order our local
+// stack symbols. The current algorithm is to use an estimated
+// "density". This takes into consideration the size and number of
+// uses each object has in order to roughly minimize code size.
+// So, for example, an object of size 16B that is referenced 5 times
+// will get higher priority than 4 4B objects referenced 1 time each.
+// It's not perfect and we may be able to squeeze a few more bytes out of
+// it (for example : 0(esp) requires fewer bytes, symbols allocated at the
+// fringe end can have special consideration, given their size is less
+// important, etc.), but the algorithmic complexity grows too much to be
+// worth the extra gains we get. This gets us pretty close.
+// The final order leaves us with objects with highest priority going
+// at the end of our list.
+struct X86FrameSortingComparator {
+  inline bool operator()(const X86FrameSortingObject &A,
+                         const X86FrameSortingObject &B) {
+    uint64_t DensityAScaled, DensityBScaled;
+
+    // For consistency in our comparison, all invalid objects are placed
+    // at the end. This also allows us to stop walking when we hit the
+    // first invalid item after it's all sorted.
+    if (!A.IsValid)
+      return false;
+    if (!B.IsValid)
+      return true;
+
+    // The density is calculated by doing :
+    //     (double)DensityA = A.ObjectNumUses / A.ObjectSize
+    //     (double)DensityB = B.ObjectNumUses / B.ObjectSize
+    // Since this approach may cause inconsistencies in
+    // the floating point <, >, == comparisons, depending on the floating
+    // point model with which the compiler was built, we're going
+    // to scale both sides by multiplying with
+    // A.ObjectSize * B.ObjectSize. This ends up factoring away
+    // the division and, with it, the need for any floating point
+    // arithmetic.
+    DensityAScaled = static_cast<uint64_t>(A.ObjectNumUses) *
+      static_cast<uint64_t>(B.ObjectSize);
+    DensityBScaled = static_cast<uint64_t>(B.ObjectNumUses) *
+      static_cast<uint64_t>(A.ObjectSize);
+
+    // If the two densities are equal, prioritize highest alignment
+    // objects. This allows for similar alignment objects
+    // to be packed together (given the same density).
+    // There's room for improvement here, also, since we can pack
+    // similar alignment (different density) objects next to each
+    // other to save padding. This will also require further
+    // complexity/iterations, and the overall gain isn't worth it,
+    // in general. Something to keep in mind, though.
+    if (DensityAScaled == DensityBScaled)
+      return A.ObjectAlignment < B.ObjectAlignment;
+    
+    return DensityAScaled < DensityBScaled;
+  }
+};
+} // namespace
+
+// Order the symbols in the local stack.
+// We want to place the local stack objects in some sort of sensible order.
+// The heuristic we use is to try and pack them according to static number
+// of uses and size of object in order to minimize code size.
+void X86FrameLowering::orderFrameObjects(
+    const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
+  const MachineFrameInfo *MFI = MF.getFrameInfo();
+
+  // Don't waste time if there's nothing to do.
+  if (ObjectsToAllocate.empty())
+    return;
+
+  // Create an array of all MFI objects. We won't need all of these
+  // objects, but we're going to create a full array of them to make
+  // it easier to index into when we're counting "uses" down below.
+  // We want to be able to easily/cheaply access an object by simply
+  // indexing into it, instead of having to search for it every time.
+  std::vector<X86FrameSortingObject> SortingObjects(MFI->getObjectIndexEnd());
+
+  // Walk the objects we care about and mark them as such in our working
+  // struct.
+  for (auto &Obj : ObjectsToAllocate) {
+    SortingObjects[Obj].IsValid = true;
+    SortingObjects[Obj].ObjectIndex = Obj;
+    SortingObjects[Obj].ObjectAlignment = MFI->getObjectAlignment(Obj);
+    // Set the size.
+    int ObjectSize = MFI->getObjectSize(Obj);
+    if (ObjectSize == 0)
+      // Variable size. Just use 4.
+      SortingObjects[Obj].ObjectSize = 4;
+    else      
+      SortingObjects[Obj].ObjectSize = ObjectSize;
+  }
+
+  // Count the number of uses for each object.
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      for (const MachineOperand &MO : MI.operands()) {
+        // Check to see if it's a local stack symbol.
+        if (!MO.isFI())
+          continue;
+        int Index = MO.getIndex();
+        // Check to see if it falls within our range, and is tagged
+        // to require ordering.
+        if (Index >= 0 && Index < MFI->getObjectIndexEnd() &&
+            SortingObjects[Index].IsValid)
+          SortingObjects[Index].ObjectNumUses++;
+      }
+    }
+  }
+
+  // Sort the objects using X86FrameSortingAlgorithm (see its comment for
+  // info).
+  std::stable_sort(SortingObjects.begin(), SortingObjects.end(),
+                   X86FrameSortingComparator());
+
+  // Now modify the original list to represent the final order that
+  // we want. The order will depend on whether we're going to access them
+  // from the stack pointer or the frame pointer. For SP, the list should
+  // end up with the END containing objects that we want with smaller offsets.
+  // For FP, it should be flipped.
+  int i = 0;
+  for (auto &Obj : SortingObjects) {
+    // All invalid items are sorted at the end, so it's safe to stop.
+    if (!Obj.IsValid)
+      break;
+    ObjectsToAllocate[i++] = Obj.ObjectIndex;
+  }
+
+  // Flip it if we're accessing off of the FP.
+  if (!TRI->needsStackRealignment(MF) && hasFP(MF))
+    std::reverse(ObjectsToAllocate.begin(), ObjectsToAllocate.end());
+}
+
+
 unsigned X86FrameLowering::getWinEHParentFrameOffset(const MachineFunction &MF) const {
   // RDX, the parent frame pointer, is homed into 16(%rsp) in the prologue.
   unsigned Offset = 16;

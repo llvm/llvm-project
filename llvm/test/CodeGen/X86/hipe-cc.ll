@@ -1,4 +1,4 @@
-; RUN: llc < %s -tailcallopt -code-model=medium -stack-alignment=4 -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
+; RUN: llc < %s -stack-symbol-ordering=0 -tailcallopt -code-model=medium -stack-alignment=4 -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
 
 ; Check the HiPE calling convention works (x86-32)
 

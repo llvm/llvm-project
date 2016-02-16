@@ -311,9 +311,12 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
     return false;
 
   BasicBlock *Header = L->getHeader();
+  BasicBlock *PH = L->getLoopPreheader();
+  BranchInst *PreHeaderBR = cast<BranchInst>(PH->getTerminator());
   const DataLayout &DL = Header->getModule()->getDataLayout();
   SCEVExpander Expander(*SE, DL, "loop-unroll");
-  if (!AllowExpensiveTripCount && Expander.isHighCostExpansion(TripCountSC, L))
+  if (!AllowExpensiveTripCount &&
+      Expander.isHighCostExpansion(TripCountSC, L, PreHeaderBR))
     return false;
 
   // We only handle cases when the unroll factor is a power of 2.
@@ -331,13 +334,12 @@ bool llvm::UnrollRuntimeLoopProlog(Loop *L, unsigned Count,
   if (Loop *ParentLoop = L->getParentLoop())
     SE->forgetLoop(ParentLoop);
 
-  BasicBlock *PH = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
   // It helps to split the original preheader twice, one for the end of the
   // prolog code and one for a new loop preheader.
   BasicBlock *PEnd = SplitEdge(PH, Header, DT, LI);
   BasicBlock *NewPH = SplitBlock(PEnd, PEnd->getTerminator(), DT, LI);
-  BranchInst *PreHeaderBR = cast<BranchInst>(PH->getTerminator());
+  PreHeaderBR = cast<BranchInst>(PH->getTerminator());
 
   // Compute the number of extra iterations required, which is:
   //  extra iterations = run-time trip count % (loop unroll factor + 1)

@@ -1598,6 +1598,34 @@ Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty) {
   return V;
 }
 
+Value *SCEVExpander::FindValueInExprValueMap(const SCEV *S,
+                                             const Instruction *InsertPt) {
+  SetVector<Value *> *Set = SE.getSCEVValues(S);
+  // If the expansion is not in CanonicalMode, and the SCEV contains any
+  // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
+  if (CanonicalMode || !SE.containsAddRecurrence(S)) {
+    // If S is scConstant, it may be worse to reuse an existing Value.
+    if (S->getSCEVType() != scConstant && Set) {
+      // Choose a Value from the set which dominates the insertPt.
+      // insertPt should be inside the Value's parent loop so as not to break
+      // the LCSSA form.
+      for (auto const &Ent : *Set) {
+        Instruction *EntInst = nullptr;
+        if (Ent && isa<Instruction>(Ent) &&
+            (EntInst = cast<Instruction>(Ent)) &&
+            S->getType() == Ent->getType() &&
+            EntInst->getFunction() == InsertPt->getFunction() &&
+            SE.DT.dominates(EntInst, InsertPt) &&
+            (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
+             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt))) {
+          return Ent;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 // The expansion of SCEV will either reuse a previous Value in ExprValueMap,
 // or expand the SCEV literally. Specifically, if the expansion is in LSRMode,
 // and the SCEV contains any sub scAddRecExpr type SCEV, it will be expanded
@@ -1643,31 +1671,8 @@ Value *SCEVExpander::expand(const SCEV *S) {
   Builder.SetInsertPoint(InsertPt);
 
   // Expand the expression into instructions.
-  SetVector<Value *> *Set = SE.getSCEVValues(S);
-  Value *V = nullptr;
-  // If the expansion is not in CanonicalMode, and the SCEV contains any
-  // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
-  if (CanonicalMode || !SE.containsAddRecurrence(S)) {
-    // If S is scConstant, it may be worse to reuse an existing Value.
-    if (S->getSCEVType() != scConstant && Set) {
-      // Choose a Value from the set which dominates the insertPt.
-      // insertPt should be inside the Value's parent loop so as not to break
-      // the LCSSA form.
-      for (auto const &Ent : *Set) {
-        Instruction *EntInst = nullptr;
-        if (Ent && isa<Instruction>(Ent) &&
-            (EntInst = cast<Instruction>(Ent)) &&
-            S->getType() == Ent->getType() &&
-            EntInst->getFunction() == InsertPt->getFunction() &&
-            SE.DT.dominates(EntInst, InsertPt) &&
-            (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
-             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt))) {
-          V = Ent;
-          break;
-        }
-      }
-    }
-  }
+  Value *V = FindValueInExprValueMap(S, InsertPt);
+
   if (!V)
     V = visit(S);
 
@@ -1876,6 +1881,11 @@ Value *SCEVExpander::findExistingExpansion(const SCEV *S,
     if (SE.getSCEV(RHS) == S && SE.DT.dominates(RHS, At))
       return RHS;
   }
+
+  // Use expand's logic which is used for reusing a previous Value in
+  // ExprValueMap.
+  if (Value *Val = FindValueInExprValueMap(S, At))
+    return Val;
 
   // There is potential to make this significantly smarter, but this simple
   // heuristic already gets some interesting cases.

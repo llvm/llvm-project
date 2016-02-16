@@ -121,13 +121,6 @@ func NewTargetData(rep string) (td TargetData) {
 	return
 }
 
-// Adds target data information to a pass manager. This does not take ownership
-// of the target data.
-// See the method llvm::PassManagerBase::add.
-func (pm PassManager) Add(td TargetData) {
-	C.LLVMAddTargetData(td.C, pm.C)
-}
-
 // Converts target data to a target layout string. The string must be disposed
 // with LLVMDisposeMessage.
 // See the constructor llvm::TargetData::TargetData.

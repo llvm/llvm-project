@@ -549,34 +549,6 @@ static inline bool isGlobalMemoryObject(AliasAnalysis *AA, MachineInstr *MI) {
          (MI->hasOrderedMemoryRef() && !MI->isInvariantLoad(AA));
 }
 
-// This MI might have either incomplete info, or known to be unsafe
-// to deal with (i.e. volatile object).
-static inline bool isUnsafeMemoryObject(MachineInstr *MI,
-                                        const MachineFrameInfo *MFI,
-                                        const DataLayout &DL) {
-  if (!MI || MI->memoperands_empty())
-    return true;
-  // We purposefully do no check for hasOneMemOperand() here
-  // in hope to trigger an assert downstream in order to
-  // finish implementation.
-  if ((*MI->memoperands_begin())->isVolatile() ||
-       MI->hasUnmodeledSideEffects())
-    return true;
-
-  if ((*MI->memoperands_begin())->getPseudoValue()) {
-    // Similarly to getUnderlyingObjectForInstr:
-    // For now, ignore PseudoSourceValues which may alias LLVM IR values
-    // because the code that uses this function has no way to cope with
-    // such aliases.
-    return true;
-  }
-
-  if ((*MI->memoperands_begin())->getValue() == nullptr)
-    return true;
-
-  return false;
-}
-
 /// This returns true if the two MIs need a chain edge between them.
 /// This is called on normal stores and loads.
 static bool MIsNeedChainEdge(AliasAnalysis *AA, const MachineFrameInfo *MFI,
@@ -592,15 +564,12 @@ static bool MIsNeedChainEdge(AliasAnalysis *AA, const MachineFrameInfo *MFI,
   if (TII->areMemAccessesTriviallyDisjoint(MIa, MIb, AA))
     return false;
 
-  // FIXME: Need to handle multiple memory operands to support all targets.
-  if (!MIa->hasOneMemOperand() || !MIb->hasOneMemOperand())
-    return true;
-
-  if (isUnsafeMemoryObject(MIa, MFI, DL) || isUnsafeMemoryObject(MIb, MFI, DL))
-    return true;
-
   // To this point analysis is generic. From here on we do need AA.
   if (!AA)
+    return true;
+
+  // FIXME: Need to handle multiple memory operands to support all targets.
+  if (!MIa->hasOneMemOperand() || !MIb->hasOneMemOperand())
     return true;
 
   MachineMemOperand *MMOa = *MIa->memoperands_begin();
@@ -1042,7 +1011,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
     // Find the underlying objects for MI. The Objs vector is either
     // empty, or filled with the Values of memory locations which this
     // SU depends on. An empty vector means the memory location is
-    // unknown, and may alias anything except NonAlias nodes.
+    // unknown, and may alias anything.
     UnderlyingObjectsVector Objs;
     getUnderlyingObjectsForInstr(MI, MFI, Objs, MF.getDataLayout());
 

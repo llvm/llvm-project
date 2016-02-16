@@ -225,7 +225,6 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
   CD8_Scale        = byteFromRec(Rec, "CD8_Scale");
 
   Name      = Rec->getName();
-  AsmString = Rec->getValueAsString("AsmString");
 
   Operands = &insn.Operands.OperandList;
 
@@ -477,7 +476,7 @@ void RecognizableInstr::adjustOperandEncoding(OperandEncoding &encoding) {
 
 void RecognizableInstr::handleOperand(bool optional, unsigned &operandIndex,
                                       unsigned &physicalOperandIndex,
-                                      unsigned &numPhysicalOperands,
+                                      unsigned numPhysicalOperands,
                                       const unsigned *operandMapping,
                                       OperandEncoding (*encodingFromString)
                                         (const std::string&,
@@ -800,8 +799,8 @@ void RecognizableInstr::emitInstructionSpecifier() {
   case X86Local::MRM_F1: case X86Local::MRM_F2: case X86Local::MRM_F3:
   case X86Local::MRM_F4: case X86Local::MRM_F5: case X86Local::MRM_F6:
   case X86Local::MRM_F7: case X86Local::MRM_F9: case X86Local::MRM_FA:
-  case X86Local::MRM_FB:  case X86Local::MRM_FC: case X86Local::MRM_FD:
-  case X86Local::MRM_FE:  case X86Local::MRM_FF:
+  case X86Local::MRM_FB: case X86Local::MRM_FC: case X86Local::MRM_FD:
+  case X86Local::MRM_FE: case X86Local::MRM_FF:
     // Ignored.
     break;
   }
