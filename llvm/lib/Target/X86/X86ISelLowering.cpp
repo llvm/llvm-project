@@ -26119,7 +26119,7 @@ static SDValue PerformAndCombine(SDNode *N, SelectionDAG &DAG,
 // As a special case, try to fold:
 //   (or (and (m, (sub 0, x)), (pandn m, x)))
 // into:
-//   (psign m, x)
+//   (sub (xor X, M), M)
 static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
                                             const X86Subtarget &Subtarget) {
   assert(N->getOpcode() == ISD::OR);
@@ -26128,9 +26128,9 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
-  if (!((VT == MVT::v2i64 && Subtarget.hasSSSE3()) ||
-        (VT == MVT::v4i64 && Subtarget.hasInt256())))
+  if (!((VT == MVT::v2i64) || (VT == MVT::v4i64 && Subtarget.hasInt256())))
     return SDValue();
+  assert(Subtarget.hasSSE2() && "Unexpected i64 vector without SSE2!");
 
   // Canonicalize pandn to RHS
   if (N0.getOpcode() == X86ISD::ANDNP)
@@ -26179,16 +26179,29 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
 
   SDLoc DL(N);
 
-  // Now we know we at least have a plendvb with the mask val.  See if
-  // we can form a psignb/w/d.
-  // psign = x.type == y.type == mask.type && y = sub(0, x);
+  // Try to match:
+  //   (or (and (M, (sub 0, X)), (pandn M, X)))
+  // which is a special case of vselect:
+  //   (vselect M, (sub 0, X), X)
+  // Per:
+  // http://graphics.stanford.edu/~seander/bithacks.html#ConditionalNegate
+  // We know that, if fNegate is 0 or 1:
+  //   (fNegate ? -v : v) == ((v ^ -fNegate) + fNegate)
+  //
+  // Here, we have a mask, M (all 1s or 0), and, similarly, we know that:
+  //   ((M & 1) ? -X : X) == ((X ^ -(M & 1)) + (M & 1))
+  //   ( M      ? -X : X) == ((X ^   M     ) + (M & 1))
+  // This lets us transform our vselect to:
+  //   (add (xor X, M), (and M, 1))
+  // And further to:
+  //   (sub (xor X, M), M)
   if (Y.getOpcode() == ISD::SUB && Y.getOperand(1) == X &&
       ISD::isBuildVectorAllZeros(Y.getOperand(0).getNode()) &&
       X.getValueType() == MaskVT && Y.getValueType() == MaskVT) {
-    assert((EltBits == 8 || EltBits == 16 || EltBits == 32) &&
-           "Unsupported VT for PSIGN");
-    Mask = DAG.getNode(X86ISD::PSIGN, DL, MaskVT, X, Mask.getOperand(0));
-    return DAG.getBitcast(VT, Mask);
+    assert(EltBits == 8 || EltBits == 16 || EltBits == 32);
+    return DAG.getBitcast(
+        VT, DAG.getNode(ISD::SUB, DL, MaskVT,
+                        DAG.getNode(ISD::XOR, DL, MaskVT, X, Mask), Mask));
   }
 
   // PBLENDVB is only available on SSE 4.1.
