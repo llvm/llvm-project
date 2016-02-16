@@ -7289,6 +7289,7 @@
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
+					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
@@ -7374,6 +7375,7 @@
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
+					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
@@ -8079,6 +8081,7 @@
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
+					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
@@ -8789,6 +8792,7 @@
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
+					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",

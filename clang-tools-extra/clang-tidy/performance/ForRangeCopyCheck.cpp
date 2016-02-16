@@ -135,7 +135,9 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
   } else if (!LoopVar.getType().isConstQualified()) {
     return false;
   }
-  if (!type_traits::isExpensiveToCopy(LoopVar.getType(), Context))
+  llvm::Optional<bool> Expensive =
+      type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
+  if (!Expensive || !*Expensive)
     return false;
   auto Diagnostic =
       diag(LoopVar.getLocation(),
@@ -150,8 +152,9 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
 bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
     const VarDecl &LoopVar, const CXXForRangeStmt &ForRange,
     ASTContext &Context) {
-  if (LoopVar.getType().isConstQualified() ||
-      !type_traits::isExpensiveToCopy(LoopVar.getType(), Context)) {
+  llvm::Optional<bool> Expensive =
+      type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
+  if (LoopVar.getType().isConstQualified() || !Expensive || !*Expensive) {
     return false;
   }
   // Collect all DeclRefExprs to the loop variable and all CallExprs and

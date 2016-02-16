@@ -7,6 +7,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
   ProBoundsPointerArithmeticCheck.cpp
   ProTypeConstCastCheck.cpp
   ProTypeCstyleCastCheck.cpp
+  ProTypeMemberInitCheck.cpp
   ProTypeReinterpretCastCheck.cpp
   ProTypeStaticCastDowncastCheck.cpp
   ProTypeUnionAccessCheck.cpp

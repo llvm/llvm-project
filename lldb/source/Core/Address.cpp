@@ -448,7 +448,7 @@ Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, Dum
             else
                 s->Printf("%s[","<Unknown>");
         }
-        // Fall through
+        LLVM_FALLTHROUGH;
     case DumpStyleFileAddress:
         {
             addr_t file_addr = GetFileAddress();

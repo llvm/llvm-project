@@ -37,7 +37,7 @@ The resulting expression ``e`` is modified as follows:
      opposite condition.
   4. Implicit conversions of pointers, including pointers to members, to
      ``bool`` are replaced with explicit comparisons to ``nullptr`` in C++11
-      or ``NULL`` in C++98/03.
+     or ``NULL`` in C++98/03.
   5. Implicit casts to ``bool`` are replaced with explicit casts to ``bool``.
   6. Object expressions with ``explicit operator bool`` conversion operators
      are replaced with explicit casts to ``bool``.

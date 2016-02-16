@@ -4728,7 +4728,7 @@ ClangASTContext::GetBitSize (lldb::opaque_compiler_type_t type, ExecutionContext
                     }
                 }
             }
-                // fallthrough
+                LLVM_FALLTHROUGH;
             default:
                 const uint32_t bit_size = getASTContext()->getTypeSize (qual_type);
                 if (bit_size == 0)
@@ -9299,6 +9299,7 @@ ClangASTContext::DumpTypeValue (lldb::opaque_compiler_type_t type, Stream *s,
                     return true;
                 }
                 // format was not enum, just fall through and dump the value as requested....
+                LLVM_FALLTHROUGH;
                 
             default:
                 // We are down to a scalar type that we just need to display.

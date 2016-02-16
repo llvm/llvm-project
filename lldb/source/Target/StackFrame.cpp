@@ -756,7 +756,7 @@ StackFrame::GetValueForVariableExpressionPath (const char *var_expr_cstr,
                             }
                         }
                         var_path.erase (0, 1); // Remove the '-'
-                        // Fall through
+                        LLVM_FALLTHROUGH;
                     case '.':
                         {
                             const bool expr_is_ptr = var_path[0] == '>';
@@ -1554,12 +1554,12 @@ StackFrame::GetStatus (Stream& strm,
             case Debugger::eStopDisassemblyTypeNoDebugInfo:
                 if (have_debuginfo)
                     break;
-                // Fall through to next case
+                LLVM_FALLTHROUGH;
 
             case Debugger::eStopDisassemblyTypeNoSource:
                 if (have_source)
                     break;
-                // Fall through to next case
+                LLVM_FALLTHROUGH;
 
             case Debugger::eStopDisassemblyTypeAlways:
                 if (target)

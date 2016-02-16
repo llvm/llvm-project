@@ -295,7 +295,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     case lldb::eLanguageTypeC_plus_plus_14:
         m_compiler->getLangOpts().CPlusPlus11 = true;
         m_compiler->getHeaderSearchOpts().UseLibcxx = true;
-        // fall thru ...
+        LLVM_FALLTHROUGH;
     case lldb::eLanguageTypeC_plus_plus_03:
         m_compiler->getLangOpts().CPlusPlus = true;
         // FIXME: the following language option is a temporary workaround,
