@@ -1911,7 +1911,7 @@ StringRef ScalarNode::getValue(SmallVectorImpl<char> &Storage) const {
     return UnquotedValue;
   }
   // Plain or block.
-  return Value.rtrim(" ");
+  return Value.rtrim(' ');
 }
 
 StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue

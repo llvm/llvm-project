@@ -42,7 +42,7 @@ struct ArchiveMemberHeader {
   sys::fs::perms getAccessMode() const;
   sys::TimeValue getLastModified() const;
   llvm::StringRef getRawLastModified() const {
-    return StringRef(LastModified, sizeof(LastModified)).rtrim(" ");
+    return StringRef(LastModified, sizeof(LastModified)).rtrim(' ');
   }
   unsigned getUID() const;
   unsigned getGID() const;
