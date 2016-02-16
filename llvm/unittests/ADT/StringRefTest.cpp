@@ -301,7 +301,7 @@ TEST(StringRefTest, Trim) {
   EXPECT_EQ(StringRef(""), StringRef(" ").trim());
   EXPECT_EQ(StringRef("\0", 1), StringRef(" \0 ", 3).trim());
   EXPECT_EQ(StringRef("\0\0", 2), StringRef("\0\0", 2).trim());
-  EXPECT_EQ(StringRef("x"), StringRef("\0\0x\0\0", 5).trim(StringRef("\0", 1)));
+  EXPECT_EQ(StringRef("x"), StringRef("\0\0x\0\0", 5).trim('\0'));
 }
 
 TEST(StringRefTest, StartsWith) {
