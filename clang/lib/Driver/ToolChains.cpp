@@ -3108,6 +3108,22 @@ void FreeBSD::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
+void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
+                                  ArgStringList &CmdArgs) const {
+  CXXStdlibType Type = GetCXXStdlibType(Args);
+  bool Profiling = Args.hasArg(options::OPT_pg);
+
+  switch (Type) {
+  case ToolChain::CST_Libcxx:
+    CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
+    break;
+
+  case ToolChain::CST_Libstdcxx:
+    CmdArgs.push_back(Profiling ? "-lstdc++_p" : "-lstdc++");
+    break;
+  }
+}
+
 Tool *FreeBSD::buildAssembler() const {
   return new tools::freebsd::Assembler(*this);
 }
