@@ -220,7 +220,7 @@ Several new checks were added:
   ``-enable-checker optin.performance.Padding``.
 - The checks to detect misuse of ``_Nonnull`` type qualifiers as well as checks
   to detect misuse of Objective-C generics were added.
-- The analyzer now has opt in checks to detect localization errors in Coca
+- The analyzer now has opt in checks to detect localization errors in Cocoa
   applications. The checks warn about uses of non-localized ``NSStrings``
   passed to UI methods expecting localized strings and on ``NSLocalizedString``
   macros that are missing the comment argument. These can be enabled by passing
