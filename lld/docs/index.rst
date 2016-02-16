@@ -75,6 +75,7 @@ Contents
 
    design
    getting_started
+   ReleaseNotes
    development
    windows_support
    open_projects

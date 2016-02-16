@@ -124,7 +124,7 @@ static cl::opt<bool>
 static cl::opt<bool> AllowDifferentTypes(
     "polly-allow-differing-element-types",
     cl::desc("Allow different element types for array accesses"), cl::Hidden,
-    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::init(true), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<bool>
     AllowNonAffine("polly-allow-nonaffine",
