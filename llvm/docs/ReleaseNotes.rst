@@ -115,7 +115,7 @@ Changes to the ARM Backends
 During this release the AArch64 target has:
 
 * Added support for more sanitizers (MSAN, TSAN) and made them compatible with
-  all VMA kernel configurations (kurrently tested on 39 and 42 bits).
+  all VMA kernel configurations (currently tested on 39 and 42 bits).
 * Gained initial LLD support in the new ELF back-end
 * Extended the Load/Store optimiser and cleaned up some of the bad decisions
   made earlier.
