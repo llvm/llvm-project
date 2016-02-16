@@ -10,6 +10,7 @@
 #include "InstrProfiling.h"
 
 #if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__)
+
 #include <stdlib.h>
 
 static const __llvm_profile_data *DataFirst = NULL;
@@ -18,6 +19,14 @@ static const char *NamesFirst = NULL;
 static const char *NamesLast = NULL;
 static uint64_t *CountersFirst = NULL;
 static uint64_t *CountersLast = NULL;
+
+static const void *getMinAddr(const void *A1, const void *A2) {
+  return A1 < A2 ? A1 : A2;
+}
+
+static const void *getMaxAddr(const void *A1, const void *A2) {
+  return A1 > A2 ? A1 : A2;
+}
 
 /*!
  * \brief Register an instrumented function.
@@ -33,24 +42,29 @@ void __llvm_profile_register_function(void *Data_) {
   if (!DataFirst) {
     DataFirst = Data;
     DataLast = Data + 1;
-    NamesFirst = Data->NamePtr;
-    NamesLast = (const char *)Data->NamePtr + Data->NameSize;
     CountersFirst = Data->CounterPtr;
     CountersLast = (uint64_t *)Data->CounterPtr + Data->NumCounters;
     return;
   }
 
-#define UPDATE_FIRST(First, New) First = New < First ? New : First
-  UPDATE_FIRST(DataFirst, Data);
-  UPDATE_FIRST(NamesFirst, (const char *)Data->NamePtr);
-  UPDATE_FIRST(CountersFirst, (uint64_t *)Data->CounterPtr);
-#undef UPDATE_FIRST
+  DataFirst = (const __llvm_profile_data *)getMinAddr(DataFirst, Data);
+  CountersFirst = (uint64_t *)getMinAddr(CountersFirst, Data->CounterPtr);
 
-#define UPDATE_LAST(Last, New) Last = New > Last ? New : Last
-  UPDATE_LAST(DataLast, Data + 1);
-  UPDATE_LAST(NamesLast, (const char *)Data->NamePtr + Data->NameSize);
-  UPDATE_LAST(CountersLast, (uint64_t *)Data->CounterPtr + Data->NumCounters);
-#undef UPDATE_LAST
+  DataLast = (const __llvm_profile_data *)getMaxAddr(DataLast, Data + 1);
+  CountersLast = (uint64_t *)getMaxAddr(
+      CountersLast, (uint64_t *)Data->CounterPtr + Data->NumCounters);
+}
+
+COMPILER_RT_VISIBILITY
+void __llvm_profile_register_names_function(void *NamesStart,
+                                            uint64_t NamesSize) {
+  if (!NamesFirst) {
+    NamesFirst = (const char *)NamesStart;
+    NamesLast = (const char *)NamesStart + NamesSize;
+    return;
+  }
+  NamesFirst = (const char *)getMinAddr(NamesFirst, NamesStart);
+  NamesLast = (const char *)getMaxAddr(NamesLast, NamesStart + NamesSize);
 }
 
 COMPILER_RT_VISIBILITY
