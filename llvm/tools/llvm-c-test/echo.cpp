@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c-test.h"
+#include "llvm-c/Target.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -220,14 +221,12 @@ LLVMValueRef clone_constant(LLVMValueRef Cst, LLVMModuleRef M) {
     const char *Name = LLVMGetValueName(Cst);
 
     // Try function
-    LLVMValueRef Dst = LLVMGetNamedFunction(M, Name);
-    if (Dst != nullptr)
-      return Dst;
+    if (LLVMIsAFunction(Cst))
+      return LLVMGetNamedFunction(M, Name);
 
     // Try global variable
-    Dst = LLVMGetNamedGlobal(M, Name);
-    if (Dst != nullptr)
-      return Dst;
+    if (LLVMIsAGlobalVariable(Cst))
+      return LLVMGetNamedGlobal(M, Name);
 
     fprintf(stderr, "Could not find @%s\n", Name);
     exit(-1);
@@ -242,8 +241,12 @@ LLVMValueRef clone_constant(LLVMValueRef Cst, LLVMModuleRef M) {
   if (LLVMIsUndef(Cst))
     return LLVMGetUndef(TypeCloner(M).Clone(Cst));
 
-  // This kind of constant is not supported.
-  report_fatal_error("Unsupported contant type");
+  // This kind of constant is not supported
+  if (!LLVMIsAConstantExpr(Cst))
+    report_fatal_error("Expected a constant expression");
+
+  // At this point, it must be a constant expression
+  report_fatal_error("ConstantExpression are not supported");
 }
 
 struct FunCloner {
@@ -584,26 +587,57 @@ struct FunCloner {
   }
 };
 
-static LLVMValueRef clone_function(LLVMValueRef Src, LLVMModuleRef M) {
+static void clone_function(LLVMValueRef Src, LLVMModuleRef M) {
+  const char *Name = LLVMGetValueName(Src);
+  LLVMValueRef Fun = LLVMGetNamedFunction(M, Name);
+  if (!Fun)
+    report_fatal_error("Function must have been declared already");
+
+  FunCloner FC(Src, Fun);
+  FC.CloneBBs(Src);
+}
+
+static void declare_function(LLVMValueRef Src, LLVMModuleRef M) {
   const char *Name = LLVMGetValueName(Src);
   LLVMValueRef Fun = LLVMGetNamedFunction(M, Name);
   if (Fun != nullptr)
-    return Fun;
+    report_fatal_error("Function already cloned");
 
   LLVMTypeRef FunTy = LLVMGetElementType(TypeCloner(M).Clone(Src));
-  Fun = LLVMAddFunction(M, Name, FunTy);
-  FunCloner FC(Src, Fun);
-  FC.CloneBBs(Src);
-
-  return Fun;
+  LLVMAddFunction(M, Name, FunTy);
 }
 
 static void clone_functions(LLVMModuleRef Src, LLVMModuleRef Dst) {
   LLVMValueRef Begin = LLVMGetFirstFunction(Src);
   LLVMValueRef End = LLVMGetLastFunction(Src);
+  if (!Begin) {
+    if (End != nullptr)
+      report_fatal_error("Range has an end but no start");
+    return;
+  }
 
+  // First pass, we declare all function
   LLVMValueRef Cur = Begin;
   LLVMValueRef Next = nullptr;
+  while (true) {
+    declare_function(Cur, Dst);
+    Next = LLVMGetNextFunction(Cur);
+    if (Next == nullptr) {
+      if (Cur != End)
+        report_fatal_error("Last function does not match End");
+      break;
+    }
+
+    LLVMValueRef Prev = LLVMGetPreviousFunction(Next);
+    if (Prev != Cur)
+      report_fatal_error("Next.Previous function is not Current");
+
+    Cur = Next;
+  }
+
+  // Second pass, we define them
+  Cur = Begin;
+  Next = nullptr;
   while (true) {
     clone_function(Cur, Dst);
     Next = LLVMGetNextFunction(Cur);
@@ -628,6 +662,11 @@ int llvm_echo(void) {
 
   LLVMContextRef Ctx = LLVMContextCreate();
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext("<stdin>", Ctx);
+
+  LLVMSetTarget(M, LLVMGetTarget(Src));
+  LLVMSetModuleDataLayout(M, LLVMGetModuleDataLayout(Src));
+  if (strcmp(LLVMGetDataLayoutStr(M), LLVMGetDataLayoutStr(Src)))
+    report_fatal_error("Inconsistent DataLayout string representation");
 
   clone_functions(Src, M);
   char *Str = LLVMPrintModuleToString(M);

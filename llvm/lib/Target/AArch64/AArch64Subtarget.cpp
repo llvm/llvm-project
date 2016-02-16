@@ -57,7 +57,14 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
       StrictAlign(false), ReserveX18(TT.isOSDarwin()), IsLittle(LittleEndian),
       CPUString(CPU), TargetTriple(TT), FrameLowering(),
       InstrInfo(initializeSubtargetDependencies(FS)), TSInfo(),
-      TLInfo(TM, *this) {}
+      TLInfo(TM, *this), CallLoweringInfo(nullptr) {}
+
+const CallLowering *
+AArch64Subtarget::getCallLowering() const {
+  if (!CallLoweringInfo)
+    CallLoweringInfo.reset(new AArch64CallLowering(TLInfo));
+  return CallLoweringInfo.get();
+}
 
 /// ClassifyGlobalReference - Find the target operand flags that describe
 /// how a global value should be referenced for the current subtarget.

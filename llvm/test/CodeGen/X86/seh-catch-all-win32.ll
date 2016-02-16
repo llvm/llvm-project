@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s
+; RUN: llc -stack-symbol-ordering=0 -mtriple=i686-windows-msvc < %s | FileCheck %s
 
 ; 32-bit catch-all has to use a filter function because that's how it saves the
 ; exception code.

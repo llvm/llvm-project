@@ -6216,6 +6216,11 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
     return false;
   }
 
+  if (IDVal == ".hword") {
+    parseDataDirective(2, DirectiveID.getLoc());
+    return false;
+  }
+
   if (IDVal == ".option")
     return parseDirectiveOption();
 

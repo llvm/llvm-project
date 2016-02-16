@@ -6430,10 +6430,8 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
 
       // zext(setcc) -> (and (vsetcc), (1, 1, ...) for vectors.
       // Only do this before legalize for now.
-      EVT EltVT = VT.getVectorElementType();
       SDLoc DL(N);
-      SmallVector<SDValue,8> OneOps(VT.getVectorNumElements(),
-                                    DAG.getConstant(1, DL, EltVT));
+      SDValue VecOnes = DAG.getConstant(1, DL, VT);
       if (VT.getSizeInBits() == N0VT.getSizeInBits())
         // We know that the # elements of the results is the same as the
         // # elements of the compare (and the # elements of the compare result
@@ -6444,8 +6442,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
                            DAG.getSetCC(DL, VT, N0.getOperand(0),
                                          N0.getOperand(1),
                                  cast<CondCodeSDNode>(N0.getOperand(2))->get()),
-                           DAG.getNode(ISD::BUILD_VECTOR, DL, VT,
-                                       OneOps));
+                           VecOnes);
 
       // If the desired elements are smaller or larger than the source
       // elements we can use a matching integer vector type and then
@@ -6462,7 +6459,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
                       cast<CondCodeSDNode>(N0.getOperand(2))->get());
       return DAG.getNode(ISD::AND, DL, VT,
                          DAG.getSExtOrTrunc(VsetCC, DL, VT),
-                         DAG.getNode(ISD::BUILD_VECTOR, DL, VT, OneOps));
+                         VecOnes);
     }
 
     // zext(setcc x,y,cc) -> select_cc x, y, 1, 0, cc

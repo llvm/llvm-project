@@ -99,7 +99,8 @@ void HexagonMCInstrInfo::clampExtended(MCInstrInfo const &MCII,
   int64_t Value;
   if (exOp.getExpr()->evaluateAsAbsolute(Value)) {
     unsigned Shift = HexagonMCInstrInfo::getExtentAlignment(MCII, MCI);
-    exOp.setExpr(MCConstantExpr::create((Value & 0x3f) << Shift, Context));
+    exOp.setExpr(HexagonMCExpr::create(
+        MCConstantExpr::create((Value & 0x3f) << Shift, Context), Context));
   }
 }
 
@@ -188,6 +189,12 @@ unsigned short HexagonMCInstrInfo::getCExtOpNum(MCInstrInfo const &MCII,
 MCInstrDesc const &HexagonMCInstrInfo::getDesc(MCInstrInfo const &MCII,
                                                MCInst const &MCI) {
   return (MCII.get(MCI.getOpcode()));
+}
+
+MCExpr const &HexagonMCInstrInfo::getExpr(MCExpr const &Expr) {
+  HexagonMCExpr const &HExpr = *llvm::cast<HexagonMCExpr>(&Expr);
+  assert(HExpr.getExpr());
+  return *HExpr.getExpr();
 }
 
 unsigned short HexagonMCInstrInfo::getExtendableOp(MCInstrInfo const &MCII,
@@ -573,6 +580,25 @@ int64_t HexagonMCInstrInfo::minConstant(MCInst const &MCI, size_t Index) {
   if (!MCO.getExpr()->evaluateAsAbsolute(Value))
     return Sentinal;
   return Value;
+}
+ 
+void HexagonMCInstrInfo::setMustExtend(MCExpr &Expr, bool Val) {
+  HexagonMCExpr &HExpr = *llvm::cast<HexagonMCExpr>(&Expr);
+  HExpr.setMustExtend(Val);
+}
+
+bool HexagonMCInstrInfo::mustExtend(MCExpr const &Expr) {
+  HexagonMCExpr const &HExpr = *llvm::cast<HexagonMCExpr>(&Expr);
+  return HExpr.mustExtend();
+}
+void HexagonMCInstrInfo::setMustNotExtend(MCExpr const &Expr, bool Val) {
+  HexagonMCExpr &HExpr =
+      const_cast<HexagonMCExpr &>(*llvm::cast<HexagonMCExpr>(&Expr));
+  HExpr.setMustNotExtend(Val);
+}
+bool HexagonMCInstrInfo::mustNotExtend(MCExpr const &Expr) {
+  HexagonMCExpr const &HExpr = *llvm::cast<HexagonMCExpr>(&Expr);
+  return HExpr.mustNotExtend();
 }
 
 void HexagonMCInstrInfo::padEndloop(MCContext &Context, MCInst &MCB) {

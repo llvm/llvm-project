@@ -108,6 +108,8 @@ unsigned getDuplexCandidateGroup(MCInst const &MI);
 SmallVector<DuplexCandidate, 8> getDuplexPossibilties(MCInstrInfo const &MCII,
                                                       MCInst const &MCB);
 
+MCExpr const &getExpr(MCExpr const &Expr);
+
 // Return the index of the extendable operand
 unsigned short getExtendableOp(MCInstrInfo const &MCII, MCInst const &MCI);
 
@@ -261,6 +263,8 @@ bool isSoloAX(MCInstrInfo const &MCII, MCInst const &MCI);
 /// Return whether the insn can be packaged only with an A-type insn in slot #1.
 bool isSoloAin1(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isVector(MCInstrInfo const &MCII, MCInst const &MCI);
+bool mustExtend(MCExpr const &Expr);
+bool mustNotExtend(MCExpr const &Expr);
 
 // Pad the bundle with nops to satisfy endloop requirements
 void padEndloop(MCContext &Context, MCInst &MCI);
@@ -274,6 +278,8 @@ void replaceDuplex(MCContext &Context, MCInst &MCB, DuplexCandidate Candidate);
 void setInnerLoop(MCInst &MCI);
 void setMemReorderDisabled(MCInst &MCI);
 void setMemStoreReorderEnabled(MCInst &MCI);
+void setMustExtend(MCExpr &Expr, bool Val = true);
+void setMustNotExtend(MCExpr const &Expr, bool Val = true);
 
 // Marks a bundle as endloop1
 void setOuterLoop(MCInst &MCI);

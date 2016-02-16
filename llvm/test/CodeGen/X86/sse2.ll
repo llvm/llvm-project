@@ -8,7 +8,7 @@ define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movapd (%ecx), %xmm0
-; CHECK-NEXT:    movlpd {{[0-9]+}}(%esp), %xmm0
+; CHECK-NEXT:    movlpd {{.*#+}} xmm0 = mem[0],xmm0[1]
 ; CHECK-NEXT:    movapd %xmm0, (%eax)
 ; CHECK-NEXT:    retl
 	%tmp3 = load <2 x double>, <2 x double>* %A, align 16
@@ -24,7 +24,7 @@ define void @test2(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movapd (%ecx), %xmm0
-; CHECK-NEXT:    movhpd {{[0-9]+}}(%esp), %xmm0
+; CHECK-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; CHECK-NEXT:    movapd %xmm0, (%eax)
 ; CHECK-NEXT:    retl
 	%tmp3 = load <2 x double>, <2 x double>* %A, align 16

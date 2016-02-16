@@ -115,6 +115,9 @@ char *LLVMGetTargetMachineCPU(LLVMTargetMachineRef T);
   LLVMDisposeMessage. */
 char *LLVMGetTargetMachineFeatureString(LLVMTargetMachineRef T);
 
+/** Create a DataLayout based on the targetMachine. */
+LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T);
+
 /** Set the target machine's ASM verbosity. */
 void LLVMSetTargetMachineAsmVerbosity(LLVMTargetMachineRef T,
                                       LLVMBool VerboseAsm);

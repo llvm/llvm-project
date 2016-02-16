@@ -412,6 +412,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   case ELF::R_MICROMIPS_LO16:
     return true;
 
+  case ELF::R_MIPS_16:
   case ELF::R_MIPS_32:
     if (cast<MCSymbolELF>(Sym).getOther() & ELF::STO_MIPS_MICROMIPS)
       return true;

@@ -243,7 +243,7 @@ public:
   bool CheckImmRange(int immBits, int zeroBits, bool isSigned,
                      bool isRelocatable, bool Extendable) const {
     if (Kind == Immediate) {
-      const MCExpr *myMCExpr = getImm();
+      const MCExpr *myMCExpr = &HexagonMCInstrInfo::getExpr(*getImm());
       if (Imm.MustExtend && !Extendable)
         return false;
       int64_t Res;
@@ -553,13 +553,15 @@ public:
 
   void adds4_6ImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE =
+        dyn_cast<MCConstantExpr>(&HexagonMCInstrInfo::getExpr(*getImm()));
     Inst.addOperand(MCOperand::createImm(CE->getValue() * 64));
   }
 
   void adds3_6ImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    const MCConstantExpr *CE =
+        dyn_cast<MCConstantExpr>(&HexagonMCInstrInfo::getExpr(*getImm()));
     Inst.addOperand(MCOperand::createImm(CE->getValue() * 64));
   }
 
@@ -765,8 +767,8 @@ void HexagonAsmParser::canonicalizeImmediates(MCInst &MCI) {
         if (WarnSignedMismatch)
           Warning (MCI.getLoc(), "Signed/Unsigned mismatch");
       }
-      NewInst.addOperand(MCOperand::createExpr(
-          MCConstantExpr::create(Value, getContext())));
+      NewInst.addOperand(MCOperand::createExpr(HexagonMCExpr::create(
+          MCConstantExpr::create(Value, getContext()), getContext())));
     }
     else
       NewInst.addOperand(I);
@@ -916,7 +918,8 @@ bool HexagonAsmParser::ParseDirectiveSubsection(SMLoc L) {
   // end of the section.  Only legacy hexagon-gcc created assembly code
   // used negative subsections.
   if ((Res < 0) && (Res > -8193))
-    Subsection = MCConstantExpr::create(8192 + Res, this->getContext());
+    Subsection = HexagonMCExpr::create(
+        MCConstantExpr::create(8192 + Res, getContext()), getContext());
 
   getStreamer().SubSection(Subsection);
   return false;
@@ -1333,11 +1336,12 @@ bool HexagonAsmParser::parseExpressionOrOperand(OperandVector &Operands) {
   if (implicitExpressionLocation(Operands)) {
     MCAsmParser &Parser = getParser();
     SMLoc Loc = Parser.getLexer().getLoc();
-    std::unique_ptr<HexagonOperand> Expr =
-        HexagonOperand::CreateImm(nullptr, Loc, Loc);
-    MCExpr const *& Val = Expr->Imm.Val;
-    Operands.push_back(std::move(Expr));
-    return parseExpression(Val);
+    MCExpr const *Expr = nullptr;
+    bool Error = parseExpression(Expr);
+    Expr = HexagonMCExpr::create(Expr, getContext());
+    if (!Error)
+      Operands.push_back(HexagonOperand::CreateImm(Expr, Loc, Loc));
+    return Error;
   }
   return parseOperand(Operands);
 }
@@ -1389,8 +1393,7 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
     case AsmToken::Hash: {
       bool MustNotExtend = false;
       bool ImplicitExpression = implicitExpressionLocation(Operands);
-      std::unique_ptr<HexagonOperand> Expr = HexagonOperand::CreateImm(
-          nullptr, Lexer.getLoc(), Lexer.getLoc());
+      SMLoc ExprLoc = Lexer.getLoc();
       if (!ImplicitExpression)
         Operands.push_back(
           HexagonOperand::CreateToken(Token.getString(), Token.getLoc()));
@@ -1422,23 +1425,27 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
           }
         }
       }
-      if (parseExpression(Expr->Imm.Val))
+      MCExpr const *Expr = nullptr;
+      if (parseExpression(Expr))
         return true;
       int64_t Value;
       MCContext &Context = Parser.getContext();
-      assert(Expr->Imm.Val != nullptr);
-      if (Expr->Imm.Val->evaluateAsAbsolute(Value)) {
+      assert(Expr != nullptr);
+      if (Expr->evaluateAsAbsolute(Value)) {
         if (HiOnly)
-          Expr->Imm.Val = MCBinaryExpr::createLShr(
-              Expr->Imm.Val, MCConstantExpr::create(16, Context), Context);
+          Expr = MCBinaryExpr::createLShr(
+              Expr,  MCConstantExpr::create(16, Context), Context);
         if (HiOnly || LoOnly)
-          Expr->Imm.Val = MCBinaryExpr::createAnd(
-              Expr->Imm.Val, MCConstantExpr::create(0xffff, Context), Context);
+          Expr = MCBinaryExpr::createAnd(Expr,
+              MCConstantExpr::create(0xffff, Context),
+                                    Context);
       }
-      if (MustNotExtend)
-        Expr->Imm.Val = HexagonNoExtendOperand::Create(Expr->Imm.Val, Context);
-      Expr->Imm.MustExtend = MustExtend;
-      Operands.push_back(std::move(Expr));
+      Expr = HexagonMCExpr::create(Expr, Context);
+      HexagonMCInstrInfo::setMustNotExtend(*Expr, MustNotExtend);
+      std::unique_ptr<HexagonOperand> Operand =
+          HexagonOperand::CreateImm(Expr, ExprLoc, ExprLoc);
+      Operand->Imm.MustExtend = MustExtend;
+      Operands.push_back(std::move(Operand));
       continue;
     }
     default:
@@ -1555,8 +1562,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
   case Hexagon::C2_cmpgei: {
     MCOperand &MO = Inst.getOperand(2);
-    MO.setExpr(MCBinaryExpr::createSub(
-        MO.getExpr(), MCConstantExpr::create(1, Context), Context));
+    MO.setExpr(HexagonMCExpr::create(MCBinaryExpr::createSub(
+        MO.getExpr(), MCConstantExpr::create(1, Context), Context), Context));
     Inst.setOpcode(Hexagon::C2_cmpgti);
     break;
   }
@@ -1577,8 +1584,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       TmpInst.addOperand(Rt);
       Inst = TmpInst;
     } else {
-      MO.setExpr(MCBinaryExpr::createSub(
-          MO.getExpr(), MCConstantExpr::create(1, Context), Context));
+      MO.setExpr(HexagonMCExpr::create(MCBinaryExpr::createSub(
+          MO.getExpr(), MCConstantExpr::create(1, Context), Context), Context));
       Inst.setOpcode(Hexagon::C2_cmpgtui);
     }
     break;
@@ -1773,7 +1780,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &MO = Inst.getOperand(1);
     int64_t Value;
     int sVal = (MO.getExpr()->evaluateAsAbsolute(Value) && Value < 0) ? -1 : 0;
-    MCOperand imm(MCOperand::createExpr(MCConstantExpr::create(sVal, Context)));
+    MCOperand imm(MCOperand::createExpr(
+        HexagonMCExpr::create(MCConstantExpr::create(sVal, Context), Context)));
     Inst = makeCombineInst(Hexagon::A2_combineii, Rdd, imm, MO);
     break;
   }
@@ -1788,14 +1796,15 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       signed int s8 = (u64 >> 32) & 0xFFFFFFFF;
       if (s8 < -128 || s8 > 127)
         OutOfRange(IDLoc, s8, -128);
-      MCOperand imm(MCOperand::createExpr(
-          MCConstantExpr::create(s8, Context))); // upper 32
-      MCOperand imm2(MCOperand::createExpr(
-          MCConstantExpr::create(u64 & 0xFFFFFFFF, Context))); // lower 32
+      MCOperand imm(MCOperand::createExpr(HexagonMCExpr::create(
+          MCConstantExpr::create(s8, Context), Context))); // upper 32
+      MCOperand imm2(MCOperand::createExpr(HexagonMCExpr::create(
+          MCConstantExpr::create(u64 & 0xFFFFFFFF, Context),
+          Context))); // lower 32
       Inst = makeCombineInst(Hexagon::A4_combineii, Rdd, imm, imm2);
     } else {
-      MCOperand imm(MCOperand::createExpr(
-          MCConstantExpr::create(0, Context))); // upper 32
+      MCOperand imm(MCOperand::createExpr(HexagonMCExpr::create(
+          MCConstantExpr::create(0, Context), Context))); // upper 32
       Inst = makeCombineInst(Hexagon::A4_combineii, Rdd, imm, MO);
     }
     break;
@@ -1843,8 +1852,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Rs = Inst.getOperand(2);
     MCOperand &Imm4 = Inst.getOperand(3);
     MCOperand &Imm6 = Inst.getOperand(4);
-    Imm6.setExpr(MCBinaryExpr::createSub(
-        Imm6.getExpr(), MCConstantExpr::create(1, Context), Context));
+    Imm6.setExpr(HexagonMCExpr::create(MCBinaryExpr::createSub(
+        Imm6.getExpr(), MCConstantExpr::create(1, Context), Context), Context));
     TmpInst.setOpcode(Hexagon::S2_tableidxh);
     TmpInst.addOperand(Rx);
     TmpInst.addOperand(_dst_);
@@ -1862,8 +1871,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Rs = Inst.getOperand(2);
     MCOperand &Imm4 = Inst.getOperand(3);
     MCOperand &Imm6 = Inst.getOperand(4);
-    Imm6.setExpr(MCBinaryExpr::createSub(
-        Imm6.getExpr(), MCConstantExpr::create(2, Context), Context));
+    Imm6.setExpr(HexagonMCExpr::create(MCBinaryExpr::createSub(
+        Imm6.getExpr(), MCConstantExpr::create(2, Context), Context), Context));
     TmpInst.setOpcode(Hexagon::S2_tableidxw);
     TmpInst.addOperand(Rx);
     TmpInst.addOperand(_dst_);
@@ -1881,8 +1890,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Rs = Inst.getOperand(2);
     MCOperand &Imm4 = Inst.getOperand(3);
     MCOperand &Imm6 = Inst.getOperand(4);
-    Imm6.setExpr(MCBinaryExpr::createSub(
-        Imm6.getExpr(), MCConstantExpr::create(3, Context), Context));
+    Imm6.setExpr(HexagonMCExpr::create(MCBinaryExpr::createSub(
+        Imm6.getExpr(), MCConstantExpr::create(3, Context), Context), Context));
     TmpInst.setOpcode(Hexagon::S2_tableidxd);
     TmpInst.addOperand(Rx);
     TmpInst.addOperand(_dst_);
@@ -1908,7 +1917,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     (void)Absolute;
     if (!MustExtend) {
       if (Value < 0 && Value > -256) {
-        Imm.setExpr(MCConstantExpr::create(Value * -1, Context));
+        Imm.setExpr(HexagonMCExpr::create(
+            MCConstantExpr::create(Value * -1, Context), Context));
         TmpInst.setOpcode(Hexagon::M2_mpysin);
       } else if (Value < 256 && Value >= 0)
         TmpInst.setOpcode(Hexagon::M2_mpysip);
@@ -1941,8 +1951,10 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       TmpInst.addOperand(Rd);
       TmpInst.addOperand(Rs);
     } else {
-      Imm.setExpr(MCBinaryExpr::createSub(
-          Imm.getExpr(), MCConstantExpr::create(1, Context), Context));
+      Imm.setExpr(HexagonMCExpr::create(
+          MCBinaryExpr::createSub(Imm.getExpr(),
+                                  MCConstantExpr::create(1, Context), Context),
+          Context));
       TmpInst.setOpcode(Hexagon::S2_asr_i_r_rnd);
       MCOperand &Rd = Inst.getOperand(0);
       MCOperand &Rs = Inst.getOperand(1);
@@ -1977,8 +1989,10 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       TmpInst.addOperand(MCOperand::createReg(MatchRegisterName(Reg2)));
       Inst = TmpInst;
     } else {
-      Imm.setExpr(MCBinaryExpr::createSub(
-          Imm.getExpr(), MCConstantExpr::create(1, Context), Context));
+      Imm.setExpr(HexagonMCExpr::create(
+          MCBinaryExpr::createSub(Imm.getExpr(),
+                                  MCConstantExpr::create(1, Context), Context),
+          Context));
       Inst.setOpcode(Hexagon::S2_asr_i_p_rnd);
     }
     break;
@@ -2097,8 +2111,10 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     if (Value == 0)
       Inst.setOpcode(Hexagon::S2_vsathub);
     else {
-      Imm.setExpr(MCBinaryExpr::createSub(
-          Imm.getExpr(), MCConstantExpr::create(1, Context), Context));
+      Imm.setExpr(HexagonMCExpr::create(
+          MCBinaryExpr::createSub(Imm.getExpr(),
+                                  MCConstantExpr::create(1, Context), Context),
+          Context));
       Inst.setOpcode(Hexagon::S5_asrhub_rnd_sat);
     }
     break;
@@ -2127,8 +2143,10 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       TmpInst.addOperand(MCOperand::createReg(MatchRegisterName(Reg2)));
       Inst = TmpInst;
     } else {
-      Imm.setExpr(MCBinaryExpr::createSub(
-          Imm.getExpr(), MCConstantExpr::create(1, Context), Context));
+      Imm.setExpr(HexagonMCExpr::create(
+          MCBinaryExpr::createSub(Imm.getExpr(),
+                                  MCConstantExpr::create(1, Context), Context),
+          Context));
       Inst.setOpcode(Hexagon::S5_vasrhrnd);
     }
     break;
@@ -2140,8 +2158,8 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Rs = Inst.getOperand(1);
     TmpInst.setOpcode(Hexagon::A2_subri);
     TmpInst.addOperand(Rd);
-    TmpInst.addOperand(
-        MCOperand::createExpr(MCConstantExpr::create(-1, Context)));
+    TmpInst.addOperand(MCOperand::createExpr(
+        HexagonMCExpr::create(MCConstantExpr::create(-1, Context), Context)));
     TmpInst.addOperand(Rs);
     Inst = TmpInst;
     break;

@@ -418,9 +418,8 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
                                               const MCSubtargetInfo &STI) const
 
 {
-  auto Wrapper = dyn_cast<HexagonNoExtendOperand>(ME);
-  if (Wrapper != nullptr)
-    ME = Wrapper->getExpr();
+  if (isa<HexagonMCExpr>(ME))
+    ME = &HexagonMCInstrInfo::getExpr(*ME);
   int64_t Value;
   if (ME->evaluateAsAbsolute(Value))
     return Value;

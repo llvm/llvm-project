@@ -97,6 +97,7 @@ namespace llvm {
           UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackAlignmentOverride(0),
+          StackSymbolOrdering(true),
           EnableFastISel(false), PositionIndependentExecutable(false),
           UseInitArray(false), DisableIntegratedAS(false),
           CompressDebugSections(false), FunctionSections(false),
@@ -168,6 +169,12 @@ namespace llvm {
 
     /// StackAlignmentOverride - Override default stack alignment for target.
     unsigned StackAlignmentOverride;
+
+    /// StackSymbolOrdering - When true, this will allow CodeGen to order
+    /// the local stack symbols (for code size, code locality, or any other
+    /// heuristics). When false, the local symbols are left in whatever order
+    /// they were generated. Default is true.
+    unsigned StackSymbolOrdering : 1;
 
     /// EnableFastISel - This flag enables fast-path instruction selection
     /// which trades away generated code quality in favor of reducing

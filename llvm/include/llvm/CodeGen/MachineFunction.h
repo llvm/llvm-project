@@ -332,9 +332,11 @@ public:
   ///
   void dump() const;
 
-  /// verify - Run the current MachineFunction through the machine code
-  /// verifier, useful for debugger use.
-  void verify(Pass *p = nullptr, const char *Banner = nullptr) const;
+  /// Run the current MachineFunction through the machine code verifier, useful
+  /// for debugger use.
+  /// \returns true if no problems were found.
+  bool verify(Pass *p = nullptr, const char *Banner = nullptr,
+              bool AbortOnError = true) const;
 
   // Provide accessors for the MachineBasicBlock list...
   typedef BasicBlockListType::iterator iterator;

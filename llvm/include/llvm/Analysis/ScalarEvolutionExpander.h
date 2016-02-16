@@ -263,6 +263,9 @@ namespace llvm {
                           const SCEV *const *op_end,
                           PointerType *PTy, Type *Ty, Value *V);
 
+    /// \brief Find a previous Value in ExprValueMap for expand.
+    Value *FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);
+
     Value *expand(const SCEV *S);
 
     /// \brief Insert code to directly compute the specified SCEV expression

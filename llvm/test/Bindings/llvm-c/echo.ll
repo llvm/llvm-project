@@ -2,6 +2,9 @@
 ; RUN: llvm-as < %s | llvm-c-test --echo > %t.echo
 ; RUN: diff -w %t.orig %t.echo
 
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-apple-macosx10.11.0"
+
 %S = type { i64, %S* }
 
 define { i64, %S* } @unpackrepack(%S %s) {

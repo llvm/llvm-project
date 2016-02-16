@@ -28,13 +28,13 @@
 namespace llvm {
 // Forward declarations.
 class BasicBlock;
+class CallLowering;
 class Constant;
 class Instruction;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
-class TargetLowering;
 
 // Technically the pass should run on an hypothetical MachineModule,
 // since it should translate Global into some sort of MachineGlobal.
@@ -50,7 +50,7 @@ public:
 
 private:
   /// Interface used to lower the everything related to calls.
-  const TargetLowering *TLI;
+  const CallLowering *CLI;
   /// Mapping of the values of the current LLVM IR function
   /// to the related virtual registers.
   ValueToVReg ValToVReg;
@@ -119,6 +119,10 @@ private:
 public:
   // Ctor, nothing fancy.
   IRTranslator();
+
+  const char *getPassName() const override {
+    return "IRTranslator";
+  }
 
   // Algo:
   //   CallLowering = MF.subtarget.getCallLowering()

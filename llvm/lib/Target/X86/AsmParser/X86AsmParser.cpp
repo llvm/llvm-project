@@ -1052,9 +1052,9 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
                                            OperandVector &FinalOperands) {
 
   if (OrigOperands.size() > 1) {
-    // Check if sizes match, OrigOpernads also contains the instruction name
+    // Check if sizes match, OrigOperands also contains the instruction name
     assert(OrigOperands.size() == FinalOperands.size() + 1 &&
-           "Opernand size mismatch");
+           "Operand size mismatch");
 
     SmallVector<std::pair<SMLoc, std::string>, 2> Warnings;
     // Verify types match
@@ -1092,7 +1092,7 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
         else if (X86MCRegisterClasses[X86::GR16RegClassID].contains(OrigReg))
           RegClassID = X86::GR16RegClassID;
         else
-          // Unexpexted register class type
+          // Unexpected register class type
           // Return false and let a normal complaint about bogus operands happen
           return false;
 
@@ -1115,9 +1115,8 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
 
     // Produce warnings only if all the operands passed the adjustment - prevent
     // legal cases like "movsd (%rax), %xmm0" mistakenly produce warnings
-    for (auto WarningMsg = Warnings.begin(); WarningMsg < Warnings.end();
-         ++WarningMsg) {
-      Warning((*WarningMsg).first, (*WarningMsg).second);
+    for (auto &WarningMsg : Warnings) {
+      Warning(WarningMsg.first, WarningMsg.second);
     }
 
     // Remove old operands

@@ -183,14 +183,23 @@ static inline LLVMBool LLVMInitializeNativeDisassembler(void) {
 
 /*===-- Target Data -------------------------------------------------------===*/
 
+/**
+ * Obtain the data layout for a module.
+ *
+ * @see Module::getDataLayout()
+ */
+LLVMTargetDataRef LLVMGetModuleDataLayout(LLVMModuleRef M);
+
+/**
+ * Set the data layout for a module.
+ *
+ * @see Module::setDataLayout()
+ */
+void LLVMSetModuleDataLayout(LLVMModuleRef M, LLVMTargetDataRef DL);
+
 /** Creates target data from a target layout string.
     See the constructor llvm::DataLayout::DataLayout. */
 LLVMTargetDataRef LLVMCreateTargetData(const char *StringRep);
-
-/** Adds target data information to a pass manager. This does not take ownership
-    of the target data.
-    See the method llvm::PassManagerBase::add. */
-void LLVMAddTargetData(LLVMTargetDataRef TD, LLVMPassManagerRef PM);
 
 /** Adds target library information to a pass manager. This does not take
     ownership of the target library info.

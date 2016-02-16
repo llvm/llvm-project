@@ -456,15 +456,6 @@ private:
                       const SmallVectorImpl<SDValue> &OutVals, SDLoc DL,
                       SelectionDAG &DAG) const override;
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-  bool LowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
-                   unsigned VReg) const override;
-  bool
-  LowerFormalArguments(MachineIRBuilder &MIRBuilder,
-                       const Function::ArgumentListType &Args,
-                       const SmallVectorImpl<unsigned> &VRegs) const override;
-#endif
-
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDarwinGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;

@@ -75,8 +75,8 @@ private:
 static void PrintDefList(const std::vector<Record*> &Uses,
                          unsigned Num, raw_ostream &OS) {
   OS << "static const MCPhysReg ImplicitList" << Num << "[] = { ";
-  for (unsigned i = 0, e = Uses.size(); i != e; ++i)
-    OS << getQualifiedName(Uses[i]) << ", ";
+  for (Record *U : Uses)
+    OS << getQualifiedName(U) << ", ";
   OS << "0 };\n";
 }
 
