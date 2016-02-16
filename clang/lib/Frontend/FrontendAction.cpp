@@ -566,7 +566,10 @@ bool WrapperFrontendAction::BeginSourceFileAction(CompilerInstance &CI,
                                                   StringRef Filename) {
   WrappedAction->setCurrentInput(getCurrentInput());
   WrappedAction->setCompilerInstance(&CI);
-  return WrappedAction->BeginSourceFileAction(CI, Filename);
+  auto Ret = WrappedAction->BeginSourceFileAction(CI, Filename);
+  // BeginSourceFileAction may change CurrentInput, e.g. during module builds.
+  setCurrentInput(WrappedAction->getCurrentInput());
+  return Ret;
 }
 void WrapperFrontendAction::ExecuteAction() {
   WrappedAction->ExecuteAction();
