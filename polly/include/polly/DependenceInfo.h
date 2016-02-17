@@ -137,14 +137,14 @@ struct Dependences {
   /// is able to call or modify a dependences struct.
   friend class DependenceInfo;
 
-private:
-  /// @brief Create an empty dependences struct.
-  Dependences()
-      : RAW(nullptr), WAR(nullptr), WAW(nullptr), RED(nullptr),
-        TC_RED(nullptr) {}
-
   /// @brief Destructor that will free internal objects.
   ~Dependences() { releaseMemory(); }
+
+private:
+  /// @brief Create an empty dependences struct.
+  explicit Dependences(const std::shared_ptr<isl_ctx> &IslCtx)
+      : RAW(nullptr), WAR(nullptr), WAW(nullptr), RED(nullptr), TC_RED(nullptr),
+        IslCtx(IslCtx) {}
 
   /// @brief Calculate and add at the privatization dependences.
   void addPrivatizationDependences();
@@ -173,6 +173,9 @@ private:
 
   /// @brief Mapping from memory accesses to their reduction dependences.
   ReductionDependencesMapTy ReductionDependences;
+
+  /// Isl context from the SCoP.
+  std::shared_ptr<isl_ctx> IslCtx;
 };
 
 class DependenceInfo : public ScopPass {
@@ -183,7 +186,7 @@ public:
   DependenceInfo() : ScopPass(ID) {}
 
   /// @brief Return the dependence information for the current SCoP.
-  const Dependences &getDependences() { return D; }
+  const Dependences &getDependences() { return *D; }
 
   /// @brief Recompute dependences from schedule and memory accesses.
   void recomputeDependences();
@@ -192,10 +195,10 @@ public:
   bool runOnScop(Scop &S) override;
 
   /// @brief Print the dependences for the given SCoP to @p OS.
-  void printScop(raw_ostream &OS, Scop &) const override { D.print(OS); }
+  void printScop(raw_ostream &OS, Scop &) const override { D->print(OS); }
 
   /// @brief Release the internal memory.
-  void releaseMemory() override { D.releaseMemory(); }
+  void releaseMemory() override { D.reset(); }
 
   /// @brief Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -204,7 +207,7 @@ private:
   Scop *S;
 
   /// @brief Dependences struct for the current SCoP.
-  Dependences D;
+  std::auto_ptr<Dependences> D;
 };
 
 } // End polly namespace.

@@ -25,7 +25,9 @@ internal::Matcher<Expr> callToGet(internal::Matcher<Decl> OnClass) {
                                pointsTo(decl(OnClass).bind("ptr_to_ptr"))))))
                     .bind("smart_pointer")),
              unless(callee(memberExpr(hasObjectExpression(cxxThisExpr())))),
-             callee(cxxMethodDecl(hasName("get"))))
+             callee(cxxMethodDecl(
+                 hasName("get"),
+                 returns(qualType(pointsTo(type().bind("getType")))))))
       .bind("redundant_get");
 }
 
@@ -35,10 +37,8 @@ void registerMatchersForGetArrowStart(MatchFinder *Finder,
       recordDecl().bind("duck_typing"),
       has(cxxMethodDecl(hasName("operator->"),
                         returns(qualType(pointsTo(type().bind("op->Type")))))),
-      has(cxxMethodDecl(hasName("operator*"),
-                        returns(qualType(references(type().bind("op*Type")))))),
-      has(cxxMethodDecl(hasName("get"),
-                        returns(qualType(pointsTo(type().bind("getType")))))));
+      has(cxxMethodDecl(hasName("operator*"), returns(qualType(references(
+                                                  type().bind("op*Type")))))));
 
   // Catch 'ptr.get()->Foo()'
   Finder->addMatcher(memberExpr(expr().bind("memberExpr"), isArrow(),

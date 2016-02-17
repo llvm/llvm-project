@@ -106,9 +106,9 @@
 # RAW: Disassembly of section .text:
 # RAW: main:
 # RAW-NEXT:   {{[0x0-9a-f]+}}:  5c fc 18 80   lw      $2, -32744($gp)
-# RAW-NEXT:   {{[0x0-9a-f]+}}:  42 30 40 10   addiu   $2, $2, 4160
+# RAW-NEXT:   {{[0x0-9a-f]+}}:  42 30 00 20   addiu   $2, $2, 8192
 # RAW-NEXT:   {{[0x0-9a-f]+}}:  5c fc 1c 80   lw      $2, -32740($gp)
-# RAW-NEXT:   {{[0x0-9a-f]+}}:  42 30 60 20   addiu   $2, $2, 8288
+# RAW-NEXT:   {{[0x0-9a-f]+}}:  42 30 20 30   addiu   $2, $2, 12320
 # RAW-NEXT:   {{[0x0-9a-f]+}}:  5c fc 20 80   lw      $2, -32736($gp)
 # RAW-NEXT:   {{[0x0-9a-f]+}}:  5c fc 24 80   lw      $2, -32732($gp)
 # RAW-NEXT:   {{[0x0-9a-f]+}}:  5c fc 28 80   lw      $2, -32728($gp)

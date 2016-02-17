@@ -1788,7 +1788,8 @@ void Scop::addUserContext() {
   if (UserContextStr.empty())
     return;
 
-  isl_set *UserContext = isl_set_read_from_str(IslCtx, UserContextStr.c_str());
+  isl_set *UserContext =
+      isl_set_read_from_str(getIslCtx(), UserContextStr.c_str());
   isl_space *Space = getParamSpace();
   if (isl_space_dim(Space, isl_dim_param) !=
       isl_set_dim(UserContext, isl_dim_param)) {
@@ -1852,7 +1853,7 @@ void Scop::buildInvariantEquivalenceClasses(ScopDetection &SD) {
 }
 
 void Scop::buildContext() {
-  isl_space *Space = isl_space_params_alloc(IslCtx, 0);
+  isl_space *Space = isl_space_params_alloc(getIslCtx(), 0);
   Context = isl_set_universe(isl_space_copy(Space));
   AssumedContext = isl_set_universe(Space);
 }
@@ -1869,7 +1870,7 @@ void Scop::addParameterBounds() {
 
 void Scop::realignParams() {
   // Add all parameters into a common model.
-  isl_space *Space = isl_space_params_alloc(IslCtx, ParameterIds.size());
+  isl_space *Space = isl_space_params_alloc(getIslCtx(), ParameterIds.size());
 
   for (const auto &ParamID : ParameterIds) {
     const SCEV *Parameter = ParamID.first;
@@ -2735,13 +2736,13 @@ static unsigned getMaxLoopDepthInRegion(const Region &R, LoopInfo &LI,
   return MaxLD - MinLD + 1;
 }
 
-Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, isl_ctx *Context,
-           unsigned MaxLoopDepth)
+Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, unsigned MaxLoopDepth)
     : SE(&ScalarEvolution), R(R), IsOptimized(false),
       HasSingleExitEdge(R.getExitingBlock()), HasErrorBlock(false),
-      MaxLoopDepth(MaxLoopDepth), IslCtx(Context), Context(nullptr),
-      Affinator(this), AssumedContext(nullptr), BoundaryContext(nullptr),
-      Schedule(nullptr) {
+      MaxLoopDepth(MaxLoopDepth), IslCtx(isl_ctx_alloc(), isl_ctx_free),
+      Context(nullptr), Affinator(this), AssumedContext(nullptr),
+      BoundaryContext(nullptr), Schedule(nullptr) {
+  isl_options_set_on_error(getIslCtx(), ISL_ON_ERROR_ABORT);
   buildContext();
 }
 
@@ -2802,6 +2803,12 @@ Scop::~Scop() {
 
   for (const auto &IAClass : InvariantEquivClasses)
     isl_set_free(std::get<2>(IAClass));
+
+  // Explicitly release all Scop objects and the underlying isl objects before
+  // we relase the isl context.
+  Stmts.clear();
+  ScopArrayInfoMap.clear();
+  AccFuncMap.clear();
 }
 
 void Scop::updateAccessDimensionality() {
@@ -3311,7 +3318,7 @@ void Scop::print(raw_ostream &OS) const {
 
 void Scop::dump() const { print(dbgs()); }
 
-isl_ctx *Scop::getIslCtx() const { return IslCtx; }
+isl_ctx *Scop::getIslCtx() const { return IslCtx.get(); }
 
 __isl_give isl_pw_aff *Scop::getPwAff(const SCEV *E, BasicBlock *BB) {
   return Affinator.getPwAff(E, BB);
@@ -4137,7 +4144,7 @@ void ScopInfo::addPHIReadAccess(PHINode *PHI) {
 
 void ScopInfo::buildScop(Region &R, AssumptionCache &AC) {
   unsigned MaxLoopDepth = getMaxLoopDepthInRegion(R, *LI, *SD);
-  scop.reset(new Scop(R, *SE, ctx, MaxLoopDepth));
+  scop.reset(new Scop(R, *SE, MaxLoopDepth));
 
   buildStmts(R, R);
   buildAccessFunctions(R, R, *SD->getInsnToMemAccMap(&R));
@@ -4168,15 +4175,9 @@ void ScopInfo::print(raw_ostream &OS, const Module *) const {
 void ScopInfo::clear() { scop.reset(); }
 
 //===----------------------------------------------------------------------===//
-ScopInfo::ScopInfo() : RegionPass(ID) {
-  ctx = isl_ctx_alloc();
-  isl_options_set_on_error(ctx, ISL_ON_ERROR_ABORT);
-}
+ScopInfo::ScopInfo() : RegionPass(ID) {}
 
-ScopInfo::~ScopInfo() {
-  clear();
-  isl_ctx_free(ctx);
-}
+ScopInfo::~ScopInfo() { clear(); }
 
 void ScopInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();

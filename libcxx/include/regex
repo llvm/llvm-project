@@ -976,7 +976,12 @@ public:
     typedef locale                  locale_type;
     typedef ctype_base::mask        char_class_type;
 
+#if defined(__mips__) && defined(__GLIBC__)
+    static const char_class_type __regex_word = static_cast<char_class_type>(_ISbit(15));
+#else
     static const char_class_type __regex_word = 0x80;
+#endif
+
 private:
     locale __loc_;
     const ctype<char_type>* __ct_;

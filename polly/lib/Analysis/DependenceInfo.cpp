@@ -283,10 +283,10 @@ void Dependences::calculateDependences(Scop &S) {
   Write = isl_union_map_coalesce(Write);
   MayWrite = isl_union_map_coalesce(MayWrite);
 
-  long MaxOpsOld = isl_ctx_get_max_operations(S.getIslCtx());
+  long MaxOpsOld = isl_ctx_get_max_operations(IslCtx.get());
   if (OptComputeOut)
-    isl_ctx_set_max_operations(S.getIslCtx(), OptComputeOut);
-  isl_options_set_on_error(S.getIslCtx(), ISL_ON_ERROR_CONTINUE);
+    isl_ctx_set_max_operations(IslCtx.get(), OptComputeOut);
+  isl_options_set_on_error(IslCtx.get(), ISL_ON_ERROR_CONTINUE);
 
   DEBUG(dbgs() << "Read: " << Read << "\n";
         dbgs() << "Write: " << Write << "\n";
@@ -362,16 +362,16 @@ void Dependences::calculateDependences(Scop &S) {
   WAW = isl_union_map_coalesce(WAW);
   WAR = isl_union_map_coalesce(WAR);
 
-  if (isl_ctx_last_error(S.getIslCtx()) == isl_error_quota) {
+  if (isl_ctx_last_error(IslCtx.get()) == isl_error_quota) {
     isl_union_map_free(RAW);
     isl_union_map_free(WAW);
     isl_union_map_free(WAR);
     RAW = WAW = WAR = nullptr;
-    isl_ctx_reset_error(S.getIslCtx());
+    isl_ctx_reset_error(IslCtx.get());
   }
-  isl_options_set_on_error(S.getIslCtx(), ISL_ON_ERROR_ABORT);
-  isl_ctx_reset_operations(S.getIslCtx());
-  isl_ctx_set_max_operations(S.getIslCtx(), MaxOpsOld);
+  isl_options_set_on_error(IslCtx.get(), ISL_ON_ERROR_ABORT);
+  isl_ctx_reset_operations(IslCtx.get());
+  isl_ctx_set_max_operations(IslCtx.get(), MaxOpsOld);
 
   isl_union_map *STMT_RAW, *STMT_WAW, *STMT_WAR;
   STMT_RAW = isl_union_map_intersect_domain(
@@ -689,8 +689,8 @@ void Dependences::setReductionDependences(MemoryAccess *MA, isl_map *D) {
 }
 
 void DependenceInfo::recomputeDependences() {
-  releaseMemory();
-  D.calculateDependences(*S);
+  D.reset(new Dependences(S->getSharedIslCtx()));
+  D->calculateDependences(*S);
 }
 
 bool DependenceInfo::runOnScop(Scop &ScopVar) {
