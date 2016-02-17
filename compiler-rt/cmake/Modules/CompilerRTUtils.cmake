@@ -67,3 +67,57 @@ macro(list_intersect output input1 input2)
     endif()
   endforeach()
 endmacro()
+
+# Takes ${ARGN} and puts only supported architectures in @out_var list.
+function(filter_available_targets out_var)
+  set(archs ${${out_var}})
+  foreach(arch ${ARGN})
+    list(FIND COMPILER_RT_SUPPORTED_ARCH ${arch} ARCH_INDEX)
+    if(NOT (ARCH_INDEX EQUAL -1) AND CAN_TARGET_${arch})
+      list(APPEND archs ${arch})
+    endif()
+  endforeach()
+  set(${out_var} ${archs} PARENT_SCOPE)
+endfunction()
+
+function(check_compile_definition def argstring out_var)
+  if("${def}" STREQUAL "")
+    set(${out_var} TRUE PARENT_SCOPE)
+    return()
+  endif()
+  cmake_push_check_state()
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${argstring}")
+  check_symbol_exists(${def} "" ${out_var})
+  cmake_pop_check_state()
+endfunction()
+
+# test_target_arch(<arch> <def> <target flags...>)
+# Checks if architecture is supported: runs host compiler with provided
+# flags to verify that:
+#   1) <def> is defined (if non-empty)
+#   2) simple file can be successfully built.
+# If successful, saves target flags for this architecture.
+macro(test_target_arch arch def)
+  set(TARGET_${arch}_CFLAGS ${ARGN})
+  set(argstring "")
+  foreach(arg ${ARGN})
+    set(argstring "${argstring} ${arg}")
+  endforeach()
+  check_compile_definition("${def}" "${argstring}" HAS_${arch}_DEF)
+  if(NOT HAS_${arch}_DEF)
+    set(CAN_TARGET_${arch} FALSE)
+  else()
+    set(argstring "${CMAKE_EXE_LINKER_FLAGS} ${argstring}")
+    try_compile(CAN_TARGET_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_SOURCE}
+                COMPILE_DEFINITIONS "${TARGET_${arch}_CFLAGS}"
+                OUTPUT_VARIABLE TARGET_${arch}_OUTPUT
+                CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS:STRING=${argstring}")
+  endif()
+  if(${CAN_TARGET_${arch}})
+    list(APPEND COMPILER_RT_SUPPORTED_ARCH ${arch})
+  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "${arch}" AND
+         COMPILER_RT_HAS_EXPLICIT_DEFAULT_TARGET_TRIPLE)
+    # Bail out if we cannot target the architecture we plan to test.
+    message(FATAL_ERROR "Cannot compile for ${arch}:\n${TARGET_${arch}_OUTPUT}")
+  endif()
+endmacro()
