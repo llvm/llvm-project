@@ -34,6 +34,7 @@
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Vectorize.h"
+#include "llvm/Transforms/Instrumentation.h"
 
 using namespace llvm;
 
@@ -105,6 +106,16 @@ static cl::opt<bool> EnableLoopLoadElim(
     "enable-loop-load-elim", cl::init(false), cl::Hidden,
     cl::desc("Enable the new, experimental LoopLoadElimination Pass"));
 
+static cl::opt<std::string> RunPGOInstrGen(
+    "profile-generate", cl::init(""), cl::Hidden,
+    cl::desc("Enable generation phase of PGO instrumentation and specify the "
+             "path of profile data file"));
+
+static cl::opt<std::string> RunPGOInstrUse(
+    "profile-use", cl::init(""), cl::Hidden, cl::value_desc("filename"),
+    cl::desc("Enable use phase of PGO instrumentation and specify the path "
+             "of profile data file"));
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -123,6 +134,8 @@ PassManagerBuilder::PassManagerBuilder() {
     VerifyOutput = false;
     MergeFunctions = false;
     PrepareForLTO = false;
+    PGOInstrGen = RunPGOInstrGen;
+    PGOInstrUse = RunPGOInstrUse;
 }
 
 PassManagerBuilder::~PassManagerBuilder() {
@@ -186,6 +199,19 @@ void PassManagerBuilder::populateFunctionPassManager(
   FPM.add(createLowerExpectIntrinsicPass());
 }
 
+// Do PGO instrumentation generation or use pass as the option specified.
+void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
+  if (!PGOInstrGen.empty()) {
+    MPM.add(createPGOInstrumentationGenPass());
+    // Add the profile lowering pass.
+    InstrProfOptions Options;
+    Options.InstrProfileOutput = PGOInstrGen;
+    MPM.add(createInstrProfilingPass(Options));
+  }
+  if (!PGOInstrUse.empty())
+    MPM.add(createPGOInstrumentationUsePass(PGOInstrUse));
+}
+
 void PassManagerBuilder::populateModulePassManager(
     legacy::PassManagerBase &MPM) {
   // Allow forcing function attributes as a debugging and tuning aid.
@@ -194,6 +220,7 @@ void PassManagerBuilder::populateModulePassManager(
   // If all optimizations are disabled, just run the always-inline pass and,
   // if enabled, the function merging pass.
   if (OptLevel == 0) {
+    addPGOInstrPasses(MPM);
     if (Inliner) {
       MPM.add(Inliner);
       Inliner = nullptr;
@@ -236,6 +263,8 @@ void PassManagerBuilder::populateModulePassManager(
     addExtensionsToPM(EP_Peephole, MPM);
     MPM.add(createCFGSimplificationPass());   // Clean up after IPCP & DAE
   }
+
+  addPGOInstrPasses(MPM);
 
   if (EnableNonLTOGlobalsModRef)
     // We add a module alias analysis pass here. In part due to bugs in the
