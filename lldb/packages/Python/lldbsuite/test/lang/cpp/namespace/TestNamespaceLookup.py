@@ -7,8 +7,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class NamespaceLookupTestCase(TestBase):
 
@@ -33,8 +34,7 @@ class NamespaceLookupTestCase(TestBase):
             substrs = ['stopped',
                        'stop reason = breakpoint'])
 
-    @expectedFailureFreeBSD("llvm.org/pr25819")
-    @expectedFailureLinux("llvm.org/pr25819")
+    @expectedFailureAll(oslist=["windows", "linux", "freebsd"], bugnumber="llvm.org/pr25819")
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -144,7 +144,7 @@ class NamespaceLookupTestCase(TestBase):
         # finds the global ::func().
         self.expect("expr -- func()", startstr = "(int) $0 = 2")
 
-    @expectedFailureLinux("llvm.org/pr25819")
+    @expectedFailureAll(oslist=["windows", "linux"], bugnumber="llvm.org/pr25819")
     def test_scope_lookup_before_using_with_run_command(self):
         """Test scope lookup before using in lldb."""
         self.build()
@@ -158,9 +158,8 @@ class NamespaceLookupTestCase(TestBase):
         self.expect("expr -- func()", startstr = "(int) $0 = 1")
 
     # NOTE: this test may fail on older systems that don't emit import
-    # emtries in DWARF - may need to add checks for compiler versions here.
-    @expectedFailureFreeBSD("llvm.org/pr25819")
-    @expectedFailureLinux("llvm.org/pr25819")
+    # entries in DWARF - may need to add checks for compiler versions here.
+    @expectedFailureAll(oslist=["windows", "linux", "freebsd"], bugnumber="llvm.org/pr25819")
     def test_scope_after_using_directive_lookup_with_run_command(self):
         """Test scope lookup after using directive in lldb."""
         self.build()
@@ -203,8 +202,7 @@ class NamespaceLookupTestCase(TestBase):
         # the same type.
         self.expect("expr -- func()", startstr = "error")
 
-    @expectedFailureFreeBSD("llvm.org/pr25819")
-    @expectedFailureLinux("llvm.org/pr25819")
+    @expectedFailureAll(oslist=["windows", "linux", "freebsd"], bugnumber="llvm.org/pr25819")
     def test_scope_lookup_shadowed_by_using_with_run_command(self):
         """Test scope lookup shadowed by using in lldb."""
         self.build()

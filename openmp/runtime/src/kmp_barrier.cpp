@@ -1457,8 +1457,6 @@ __kmp_join_barrier(int gtid)
        the kmp_task_team_t structs.  */
     if (KMP_MASTER_TID(tid)) {
         if (__kmp_tasking_mode != tskm_immediate_exec) {
-            // Master shouldn't call decrease_load().         // TODO: enable master threads.
-            // Master should have th_may_decrease_load == 0.  // TODO: enable master threads.
             __kmp_task_team_wait(this_thr, team
                                  USE_ITT_BUILD_ARG(itt_sync_obj) );
         }

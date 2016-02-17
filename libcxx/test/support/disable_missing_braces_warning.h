@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 #ifndef SUPPORT_DISABLE_MISSING_BRACES_WARNING_H
 #define SUPPORT_DISABLE_MISSING_BRACES_WARNING_H
 

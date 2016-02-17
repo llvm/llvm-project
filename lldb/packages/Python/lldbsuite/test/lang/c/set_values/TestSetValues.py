@@ -6,8 +6,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class SetValuesTestCase(TestBase):
 
@@ -23,7 +24,7 @@ class SetValuesTestCase(TestBase):
         self.line4 = line_number('main.c', '// Set break point #4.')
         self.line5 = line_number('main.c', '// Set break point #5.')
 
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test(self):
         """Test settings and readings of program variables."""
         self.build()

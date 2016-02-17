@@ -9,6 +9,7 @@
 
 #include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
+#include "lldb/lldb-private.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -22,9 +23,10 @@ static void
 display_usage (const char *progname)
 {
     fprintf(stderr, "Usage:\n"
+            "  %s v[ersion]\n"
             "  %s g[dbserver] [options]\n"
             "  %s p[latform] [options]\n"
-            "Invoke subcommand for additional help\n", progname, progname);
+            "Invoke subcommand for additional help\n", progname, progname, progname);
     exit(0);
 }
 
@@ -57,20 +59,24 @@ main (int argc, char *argv[])
         display_usage(progname);
         exit(option_error);
     }
-    else if (argv[1][0] == 'g')
+
+    switch (argv[1][0])
     {
-        initialize();
-        main_gdbserver(argc, argv);
-        terminate();
-    }
-    else if (argv[1][0] == 'p')
-    {
-        initialize();
-        main_platform(argc, argv);
-        terminate();
-    }
-    else {
-        display_usage(progname);
-        exit(option_error);
+        case 'g':
+            initialize();
+            main_gdbserver(argc, argv);
+            terminate();
+            break;
+        case 'p':
+            initialize();
+            main_platform(argc, argv);
+            terminate();
+            break;
+        case 'v':
+            fprintf(stderr, "%s\n", lldb_private::GetVersion());
+            break;
+        default:
+            display_usage(progname);
+            exit(option_error);
     }
 }

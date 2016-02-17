@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <map>
 #include <memory>
 
 // Other libraries and framework includes
@@ -192,7 +193,11 @@ public:
     ConnectToWaitingProcesses(lldb_private::Debugger& debugger, lldb_private::Error& error) override;
 
 protected:
-    std::unique_ptr<lldb_private::OptionGroupOptions> m_options;
+    std::unique_ptr<lldb_private::OptionGroupPlatformRSync> m_option_group_platform_rsync;
+    std::unique_ptr<lldb_private::OptionGroupPlatformSSH> m_option_group_platform_ssh;
+    std::unique_ptr<lldb_private::OptionGroupPlatformCaching> m_option_group_platform_caching;
+    
+    std::map<lldb_private::CommandInterpreter*,std::unique_ptr<lldb_private::OptionGroupOptions>> m_options;
     lldb::PlatformSP m_remote_platform_sp; // Allow multiple ways to connect to a remote POSIX-compliant OS
 
     lldb_private::Error

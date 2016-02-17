@@ -83,6 +83,17 @@ undefined-symbols:
 # CHECK-HELPERS: 	68 10 00 00 00            pushq	$16
 # CHECK-HELPERS: 	68 20 00 00 00            pushq	$32
 
+# Make sure the stub helper is correctly aligned
+# CHECK-DYLIBS:   sectname __stub_helper
+# CHECK-DYLIBS-NEXT:    segname __TEXT
+# CHECK-DYLIBS-NEXT:       addr
+# CHECK-DYLIBS-NEXT:       size
+# CHECK-DYLIBS-NEXT:     offset
+# CHECK-DYLIBS-NEXT:      align 2^2 (4)
+
+# Make sure the __nl_symbol_ptr section is used instea of __got as this is x86_64
+# CHECK-DYLIBS:   sectname __nl_symbol_ptr
+# CHECK-DYLIBS-NEXT:    segname __DATA
 
 # CHECK-DYLIBS:           cmd LC_LOAD_DYLIB
 # CHECK-DYLIBS:          name /usr/lib/libbar.dylib (offset 24)

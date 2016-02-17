@@ -11,11 +11,13 @@
 #include "Config.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Writer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 
@@ -29,12 +31,17 @@ using namespace lld::elf2;
 Configuration *elf2::Config;
 LinkerDriver *elf2::Driver;
 
-void elf2::link(ArrayRef<const char *> Args) {
+bool elf2::link(ArrayRef<const char *> Args, raw_ostream &Error) {
+  HasError = false;
+  ErrorOS = &Error;
   Configuration C;
   LinkerDriver D;
+  LinkerScript LS;
   Config = &C;
   Driver = &D;
+  Script = &LS;
   Driver->main(Args.slice(1));
+  return !HasError;
 }
 
 static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
@@ -54,21 +61,23 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
     return {ELF64LEKind, EM_AARCH64};
   if (S == "i386pe" || S == "i386pep" || S == "thumb2pe")
     error("Windows targets are not supported on the ELF frontend: " + S);
-  error("Unknown emulation: " + S);
+  else
+    error("Unknown emulation: " + S);
+  return {ELFNoneKind, 0};
 }
 
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
 static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
   ErrorOr<std::unique_ptr<Archive>> FileOrErr = Archive::create(MB);
-  error(FileOrErr, "Failed to parse archive");
+  fatal(FileOrErr, "Failed to parse archive");
   std::unique_ptr<Archive> File = std::move(*FileOrErr);
 
   std::vector<MemoryBufferRef> V;
   for (const ErrorOr<Archive::Child> &C : File->children()) {
-    error(C, "Could not get the child of the archive " + File->getFileName());
+    fatal(C, "Could not get the child of the archive " + File->getFileName());
     ErrorOr<MemoryBufferRef> MbOrErr = C->getMemoryBufferRef();
-    error(MbOrErr, "Could not get the buffer for a child of the archive " +
+    fatal(MbOrErr, "Could not get the buffer for a child of the archive " +
                        File->getFileName());
     V.push_back(*MbOrErr);
   }
@@ -82,19 +91,21 @@ void LinkerDriver::addFile(StringRef Path) {
   if (Config->Verbose)
     llvm::outs() << Path << "\n";
   auto MBOrErr = MemoryBuffer::getFile(Path);
-  error(MBOrErr, "cannot open " + Path);
+  if (error(MBOrErr, "cannot open " + Path))
+    return;
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   OwningMBs.push_back(std::move(MB)); // take MB ownership
 
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::unknown:
-    readLinkerScript(&Alloc, MBRef);
+    Script->read(MBRef);
     return;
   case file_magic::archive:
     if (WholeArchive) {
+      StringRef S = MBRef.getBufferIdentifier();
       for (MemoryBufferRef MB : getArchiveMembers(MBRef))
-        Files.push_back(createObjectFile(MB));
+        Files.push_back(createObjectFile(MB, S));
       return;
     }
     Files.push_back(make_unique<ArchiveFile>(MBRef));
@@ -102,9 +113,21 @@ void LinkerDriver::addFile(StringRef Path) {
   case file_magic::elf_shared_object:
     Files.push_back(createSharedFile(MBRef));
     return;
+  case sys::fs::file_magic::bitcode:
+    Files.push_back(make_unique<BitcodeFile>(MBRef));
+    return;
   default:
     Files.push_back(createObjectFile(MBRef));
   }
+}
+
+// Add a given library by searching it from input search paths.
+void LinkerDriver::addLibrary(StringRef Name) {
+  std::string Path = searchLibrary(Name);
+  if (Path.empty())
+    error("Unable to find library -l" + Name);
+  else
+    addFile(Path);
 }
 
 // Some command line options or some combinations of them are not allowed.
@@ -146,6 +169,8 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   readConfigs(Args);
   createFiles(Args);
   checkOptions(Args);
+  if (HasError)
+    return;
 
   switch (Config->EKind) {
   case ELF32LEKind:
@@ -185,6 +210,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
+  Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
   Config->Demangle = !Args.hasArg(OPT_no_demangle);
   Config->DiscardAll = Args.hasArg(OPT_discard_all);
   Config->DiscardLocals = Args.hasArg(OPT_discard_locals);
@@ -239,7 +265,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
   for (auto *Arg : Args) {
     switch (Arg->getOption().getID()) {
     case OPT_l:
-      addFile(searchLibrary(Arg->getValue()));
+      addLibrary(Arg->getValue());
       break;
     case OPT_INPUT:
     case OPT_script:
@@ -266,13 +292,19 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     }
   }
 
-  if (Files.empty())
+  if (Files.empty() && !HasError)
     error("no input files.");
 }
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
+  // For LTO
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+
   SymbolTable<ELFT> Symtab;
-  Target.reset(createTarget());
+  std::unique_ptr<TargetInfo> TI(createTarget());
+  Target = TI.get();
 
   if (!Config->Shared) {
     // Add entry symbol.
@@ -306,9 +338,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   if (Config->EMachine == EM_MIPS) {
     // On MIPS O32 ABI, _gp_disp is a magic symbol designates offset between
-    // start of function and gp pointer into GOT. Use 'strong' variant of
-    // the addIgnored to prevent '_gp_disp' substitution.
+    // start of function and 'gp' pointer into GOT.
     Config->MipsGpDisp = Symtab.addIgnored("_gp_disp");
+    // The __gnu_local_gp is a magic symbol equal to the current value of 'gp'
+    // pointer. This symbol is used in the code generated by .cpload pseudo-op
+    // in case of using -mno-shared option.
+    // https://sourceware.org/ml/binutils/2004-12/msg00094.html
+    Config->MipsLocalGp = Symtab.addIgnored("__gnu_local_gp");
 
     // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
     // so that it points to an absolute address which is relative to GOT.
@@ -319,9 +355,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   for (std::unique_ptr<InputFile> &F : Files)
     Symtab.addFile(std::move(F));
+  if (HasError)
+    return; // There were duplicate symbols or incompatible files
 
   for (StringRef S : Config->Undefined)
     Symtab.addUndefinedOpt(S);
+
+  Symtab.addCombinedLtoObject();
 
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());

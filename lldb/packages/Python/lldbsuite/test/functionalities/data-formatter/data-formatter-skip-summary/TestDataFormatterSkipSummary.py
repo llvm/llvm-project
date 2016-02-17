@@ -8,15 +8,16 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class SkipSummaryDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureFreeBSD("llvm.org/pr20548") # fails to build on lab.llvm.org buildbot
-    @expectedFailureWindows("llvm.org/pr24462") # Data formatters have problems on Windows
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24462, Data formatters have problems on Windows")
     def test_with_run_command(self):
         """Test data formatter commands."""
         self.build()

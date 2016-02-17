@@ -98,7 +98,6 @@ class CXXSystemIncludeInserterCheck : public IncludeInserterCheckBase {
 public:
   CXXSystemIncludeInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
-  virtual ~CXXSystemIncludeInserterCheck() {}
 
   std::vector<StringRef> HeadersToInclude() const override { return {"set"}; }
   bool IsAngledInclude() const override { return true; }
@@ -522,7 +521,7 @@ void foo() {
                                    "insert_includes_test_header.cc"));
 }
 
-} // namespace
+} // anonymous namespace
 } // namespace tidy
 } // namespace clang
 

@@ -46,42 +46,30 @@ namespace tidy {
 namespace modernize {
 
 void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(functionDecl(isExpansionInMainFile(), parameterCountIs(0),
-                                  unless(isImplicit()), unless(isExternC()))
+  Finder->addMatcher(functionDecl(parameterCountIs(0), unless(isImplicit()),
+                                  unless(isExternC()))
                          .bind(FunctionId),
                      this);
-  Finder->addMatcher(typedefDecl(isExpansionInMainFile()).bind(TypedefId),
-                     this);
+  Finder->addMatcher(typedefDecl().bind(TypedefId), this);
   auto ParenFunctionType = parenType(innerType(functionType()));
   auto PointerToFunctionType = pointee(ParenFunctionType);
   auto FunctionOrMemberPointer =
       anyOf(hasType(pointerType(PointerToFunctionType)),
             hasType(memberPointerType(PointerToFunctionType)));
-  Finder->addMatcher(
-      fieldDecl(isExpansionInMainFile(), FunctionOrMemberPointer).bind(FieldId),
-      this);
-  Finder->addMatcher(
-      varDecl(isExpansionInMainFile(), FunctionOrMemberPointer).bind(VarId),
-      this);
+  Finder->addMatcher(fieldDecl(FunctionOrMemberPointer).bind(FieldId), this);
+  Finder->addMatcher(varDecl(FunctionOrMemberPointer).bind(VarId), this);
   auto CastDestinationIsFunction =
       hasDestinationType(pointsTo(ParenFunctionType));
   Finder->addMatcher(
-      cStyleCastExpr(isExpansionInMainFile(), CastDestinationIsFunction)
-          .bind(CStyleCastId),
+      cStyleCastExpr(CastDestinationIsFunction).bind(CStyleCastId), this);
+  Finder->addMatcher(
+      cxxStaticCastExpr(CastDestinationIsFunction).bind(NamedCastId), this);
+  Finder->addMatcher(
+      cxxReinterpretCastExpr(CastDestinationIsFunction).bind(NamedCastId),
       this);
   Finder->addMatcher(
-      cxxStaticCastExpr(isExpansionInMainFile(), CastDestinationIsFunction)
-          .bind(NamedCastId),
-      this);
-  Finder->addMatcher(
-      cxxReinterpretCastExpr(isExpansionInMainFile(), CastDestinationIsFunction)
-          .bind(NamedCastId),
-      this);
-  Finder->addMatcher(
-      cxxConstCastExpr(isExpansionInMainFile(), CastDestinationIsFunction)
-          .bind(NamedCastId),
-      this);
-  Finder->addMatcher(lambdaExpr(isExpansionInMainFile()).bind(LambdaId), this);
+      cxxConstCastExpr(CastDestinationIsFunction).bind(NamedCastId), this);
+  Finder->addMatcher(lambdaExpr().bind(LambdaId), this);
 }
 
 void RedundantVoidArgCheck::check(const MatchFinder::MatchResult &Result) {

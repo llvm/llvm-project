@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class BreakpointCommandTestCase(TestBase):
 
@@ -21,7 +22,7 @@ class BreakpointCommandTestCase(TestBase):
         cls.RemoveTempFile("output.txt")
         cls.RemoveTempFile("output2.txt")
 
-    @expectedFailureWindows("llvm.org/pr24528")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()

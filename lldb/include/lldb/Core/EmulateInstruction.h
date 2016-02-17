@@ -384,6 +384,11 @@ public:
                                              const RegisterInfo *reg_info,
                                              const RegisterValue &reg_value);
 
+    // Type to represent the condition of an instruction. The UINT32 value is reserved for the
+    // unconditional case and all other value can be used in an architecture dependent way.
+    typedef uint32_t InstructionCondition;
+    static const InstructionCondition UnconditionalCondition = UINT32_MAX;
+
     EmulateInstruction (const ArchSpec &arch);
 
     ~EmulateInstruction() override = default;
@@ -403,8 +408,8 @@ public:
     virtual bool
     EvaluateInstruction (uint32_t evaluate_options) = 0;
 
-    virtual bool
-    IsInstructionConditional() { return false; }
+    virtual InstructionCondition
+    GetInstructionCondition() { return UnconditionalCondition; }
 
     virtual bool
     TestEmulation (Stream *out_stream, ArchSpec &arch, OptionValueDictionary *test_data) = 0;

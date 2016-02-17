@@ -14,19 +14,21 @@
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace lld {
 namespace elf2 {
 
 extern class LinkerDriver *Driver;
 
-// Entry point of the ELF linker.
-void link(ArrayRef<const char *> Args);
+// Entry point of the ELF linker. Returns true on success.
+bool link(ArrayRef<const char *> Args, llvm::raw_ostream &Error = llvm::errs());
 
 class LinkerDriver {
 public:
   void main(ArrayRef<const char *> Args);
   void addFile(StringRef Path);
+  void addLibrary(StringRef Name);
 
 private:
   void readConfigs(llvm::opt::InputArgList &Args);
@@ -50,9 +52,6 @@ enum {
 #include "Options.inc"
 #undef OPTION
 };
-
-// Parses a linker script. Calling this function updates the Symtab and Config.
-void readLinkerScript(llvm::BumpPtrAllocator *A, MemoryBufferRef MB);
 
 std::string findFromSearchPaths(StringRef Path);
 std::string searchLibrary(StringRef Path);

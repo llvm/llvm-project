@@ -690,7 +690,7 @@ bool if_implicit_bool_expr(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return static_cast<bool>(i & 1);{{$}}
+// CHECK-FIXES: {{^}}  return (i & 1) != 0;{{$}}
 
 bool negated_if_implicit_bool_expr(int i) {
   if (i - 1) {
@@ -700,7 +700,7 @@ bool negated_if_implicit_bool_expr(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return !static_cast<bool>(i - 1);{{$}}
+// CHECK-FIXES: {{^}}  return (i - 1) == 0;{{$}}
 
 bool implicit_int(int i) {
   if (i) {
@@ -710,7 +710,7 @@ bool implicit_int(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return static_cast<bool>(i);{{$}}
+// CHECK-FIXES: {{^}}  return i != 0;{{$}}
 
 bool explicit_bool(bool b) {
   if (b) {
@@ -757,7 +757,7 @@ bool bitwise_complement_conversion(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return static_cast<bool>(~i);{{$}}
+// CHECK-FIXES: {{^}}  return ~i != 0;{{$}}
 
 bool logical_or(bool a, bool b) {
   if (a || b) {
@@ -830,7 +830,7 @@ void ternary_integer_condition(int i) {
   bool b = i ? true : false;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: {{.*}} in ternary expression result
-// CHECK-FIXES: bool b = static_cast<bool>(i);{{$}}
+// CHECK-FIXES: bool b = i != 0;{{$}}
 
 bool non_null_pointer_condition(int *p1) {
   if (p1) {
@@ -895,3 +895,38 @@ bool preprocessor_in_the_middle(bool b) {
 // CHECK-MESSAGES: :[[@LINE-6]]:12: warning: {{.*}} in conditional return
 // CHECK-FIXES: {{^}}  if (b) {
 // CHECK-FIXES: {{^}}#define SOMETHING_WICKED false
+
+bool integer_not_zero(int i) {
+  if (i) {
+    return false;
+  } else {
+    return true;
+  }
+}
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-FIXES: {{^}}  return i == 0;{{$}}
+
+class A {
+public:
+    int m;
+};
+
+bool member_pointer_nullptr(int A::*p) {
+  if (p) {
+    return true;
+  } else {
+    return false;
+  }
+}
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-FIXES: return p != nullptr;{{$}}
+
+bool integer_member_implicit_cast(A *p) {
+  if (p->m) {
+    return true;
+  } else {
+    return false;
+  }
+}
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-FIXES: return p->m != 0;{{$}}

@@ -19,6 +19,7 @@
 namespace llvm {
 class Region;
 class SCEV;
+class SCEVConstant;
 class ScalarEvolution;
 class Value;
 class Loop;
@@ -67,7 +68,7 @@ getParamsInAffineExpr(const llvm::Region *R, const llvm::SCEV *Expression,
 /// @param SE The ScalarEvolution analysis to create new SCEVs.
 ///
 /// @returns The constant factor in @p M and the rest of @p M.
-std::pair<const llvm::SCEV *, const llvm::SCEV *>
+std::pair<const llvm::SCEVConstant *, const llvm::SCEV *>
 extractConstantFactor(const llvm::SCEV *M, llvm::ScalarEvolution &SE);
 }
 

@@ -299,6 +299,7 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
 
   // Figure out output kind ( -dylib, -r, -bundle, -preload, or -static )
   llvm::MachO::HeaderFileType fileType = llvm::MachO::MH_EXECUTE;
+  bool isStaticExecutable = false;
   if (llvm::opt::Arg *kind = parsedArgs.getLastArg(
           OPT_dylib, OPT_relocatable, OPT_bundle, OPT_static, OPT_preload)) {
     switch (kind->getOption().getID()) {
@@ -313,6 +314,7 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
       break;
     case OPT_static:
       fileType = llvm::MachO::MH_EXECUTE;
+      isStaticExecutable = true;
       break;
     case OPT_preload:
       fileType = llvm::MachO::MH_PRELOAD;
@@ -350,7 +352,7 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
   }
 
   // Handle -macosx_version_min or -ios_version_min
-  MachOLinkingContext::OS os = MachOLinkingContext::OS::macOSX;
+  MachOLinkingContext::OS os = MachOLinkingContext::OS::unknown;
   uint32_t minOSVersion = 0;
   if (llvm::opt::Arg *minOS =
           parsedArgs.getLastArg(OPT_macosx_version_min, OPT_ios_version_min,
@@ -385,9 +387,16 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
     // No min-os version on command line, check environment variables
   }
 
+  // Handle export_dynamic
+  // FIXME: Should we warn when this applies to something other than a static
+  // executable or dylib?  Those are the only cases where this has an effect.
+  // Note, this has to come before ctx.configure() so that we get the correct
+  // value for _globalsAreDeadStripRoots.
+  bool exportDynamicSymbols = parsedArgs.hasArg(OPT_export_dynamic);
+
   // Now that there's enough information parsed in, let the linking context
   // set up default values.
-  ctx.configure(fileType, arch, os, minOSVersion);
+  ctx.configure(fileType, arch, os, minOSVersion, exportDynamicSymbols);
 
   // Handle -e xxx
   if (llvm::opt::Arg *entry = parsedArgs.getLastArg(OPT_entry))
@@ -735,6 +744,182 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
     }
   }
 
+  // Handle -version_load_command or -no_version_load_command
+  {
+    bool flagOn = false;
+    bool flagOff = false;
+    if (auto *arg = parsedArgs.getLastArg(OPT_version_load_command,
+                                          OPT_no_version_load_command)) {
+      flagOn = arg->getOption().getID() == OPT_version_load_command;
+      flagOff = arg->getOption().getID() == OPT_no_version_load_command;
+    }
+
+    // default to adding version load command for dynamic code,
+    // static code must opt-in
+    switch (ctx.outputMachOType()) {
+      case llvm::MachO::MH_OBJECT:
+        ctx.setGenerateVersionLoadCommand(false);
+        break;
+      case llvm::MachO::MH_EXECUTE:
+        // dynamic executables default to generating a version load command,
+        // while static exectuables only generate it if required.
+        if (isStaticExecutable) {
+          if (flagOn)
+            ctx.setGenerateVersionLoadCommand(true);
+        } else {
+          if (!flagOff)
+            ctx.setGenerateVersionLoadCommand(true);
+        }
+        break;
+      case llvm::MachO::MH_PRELOAD:
+      case llvm::MachO::MH_KEXT_BUNDLE:
+        if (flagOn)
+          ctx.setGenerateVersionLoadCommand(true);
+        break;
+      case llvm::MachO::MH_DYLINKER:
+      case llvm::MachO::MH_DYLIB:
+      case llvm::MachO::MH_BUNDLE:
+        if (!flagOff)
+          ctx.setGenerateVersionLoadCommand(true);
+        break;
+      case llvm::MachO::MH_FVMLIB:
+      case llvm::MachO::MH_DYLDLINK:
+      case llvm::MachO::MH_DYLIB_STUB:
+      case llvm::MachO::MH_DSYM:
+        // We don't generate load commands for these file types, even if
+        // forced on.
+        break;
+    }
+  }
+
+  // Handle -function_starts or -no_function_starts
+  {
+    bool flagOn = false;
+    bool flagOff = false;
+    if (auto *arg = parsedArgs.getLastArg(OPT_function_starts,
+                                          OPT_no_function_starts)) {
+      flagOn = arg->getOption().getID() == OPT_function_starts;
+      flagOff = arg->getOption().getID() == OPT_no_function_starts;
+    }
+
+    // default to adding functions start for dynamic code, static code must
+    // opt-in
+    switch (ctx.outputMachOType()) {
+      case llvm::MachO::MH_OBJECT:
+        ctx.setGenerateFunctionStartsLoadCommand(false);
+        break;
+      case llvm::MachO::MH_EXECUTE:
+        // dynamic executables default to generating a version load command,
+        // while static exectuables only generate it if required.
+        if (isStaticExecutable) {
+          if (flagOn)
+            ctx.setGenerateFunctionStartsLoadCommand(true);
+        } else {
+          if (!flagOff)
+            ctx.setGenerateFunctionStartsLoadCommand(true);
+        }
+        break;
+      case llvm::MachO::MH_PRELOAD:
+      case llvm::MachO::MH_KEXT_BUNDLE:
+        if (flagOn)
+          ctx.setGenerateFunctionStartsLoadCommand(true);
+        break;
+      case llvm::MachO::MH_DYLINKER:
+      case llvm::MachO::MH_DYLIB:
+      case llvm::MachO::MH_BUNDLE:
+        if (!flagOff)
+          ctx.setGenerateFunctionStartsLoadCommand(true);
+        break;
+      case llvm::MachO::MH_FVMLIB:
+      case llvm::MachO::MH_DYLDLINK:
+      case llvm::MachO::MH_DYLIB_STUB:
+      case llvm::MachO::MH_DSYM:
+        // We don't generate load commands for these file types, even if
+        // forced on.
+        break;
+    }
+  }
+
+  // Handle -data_in_code_info or -no_data_in_code_info
+  {
+    bool flagOn = false;
+    bool flagOff = false;
+    if (auto *arg = parsedArgs.getLastArg(OPT_data_in_code_info,
+                                          OPT_no_data_in_code_info)) {
+      flagOn = arg->getOption().getID() == OPT_data_in_code_info;
+      flagOff = arg->getOption().getID() == OPT_no_data_in_code_info;
+    }
+
+    // default to adding data in code for dynamic code, static code must
+    // opt-in
+    switch (ctx.outputMachOType()) {
+      case llvm::MachO::MH_OBJECT:
+        if (!flagOff)
+          ctx.setGenerateDataInCodeLoadCommand(true);
+        break;
+      case llvm::MachO::MH_EXECUTE:
+        // dynamic executables default to generating a version load command,
+        // while static exectuables only generate it if required.
+        if (isStaticExecutable) {
+          if (flagOn)
+            ctx.setGenerateDataInCodeLoadCommand(true);
+        } else {
+          if (!flagOff)
+            ctx.setGenerateDataInCodeLoadCommand(true);
+        }
+        break;
+      case llvm::MachO::MH_PRELOAD:
+      case llvm::MachO::MH_KEXT_BUNDLE:
+        if (flagOn)
+          ctx.setGenerateDataInCodeLoadCommand(true);
+        break;
+      case llvm::MachO::MH_DYLINKER:
+      case llvm::MachO::MH_DYLIB:
+      case llvm::MachO::MH_BUNDLE:
+        if (!flagOff)
+          ctx.setGenerateDataInCodeLoadCommand(true);
+        break;
+      case llvm::MachO::MH_FVMLIB:
+      case llvm::MachO::MH_DYLDLINK:
+      case llvm::MachO::MH_DYLIB_STUB:
+      case llvm::MachO::MH_DSYM:
+        // We don't generate load commands for these file types, even if
+        // forced on.
+        break;
+    }
+  }
+
+  // Handle sdk_version
+  if (llvm::opt::Arg *arg = parsedArgs.getLastArg(OPT_sdk_version)) {
+    uint32_t sdkVersion = 0;
+    if (MachOLinkingContext::parsePackedVersion(arg->getValue(),
+                                                sdkVersion)) {
+      diagnostics << "error: malformed sdkVersion value\n";
+      return false;
+    }
+    ctx.setSdkVersion(sdkVersion);
+  } else if (ctx.generateVersionLoadCommand()) {
+    // If we don't have an sdk version, but were going to emit a load command
+    // with min_version, then we need to give an warning as we have no sdk
+    // version to put in that command.
+    // FIXME: We need to decide whether to make this an error.
+    diagnostics << "warning: -sdk_version is required when emitting "
+                   "min version load command.  "
+                   "Setting sdk version to match provided min version\n";
+    ctx.setSdkVersion(ctx.osMinVersion());
+  }
+
+  // Handle source_version
+  if (llvm::opt::Arg *arg = parsedArgs.getLastArg(OPT_source_version)) {
+    uint64_t version = 0;
+    if (MachOLinkingContext::parsePackedVersion(arg->getValue(),
+                                                version)) {
+      diagnostics << "error: malformed source_version value\n";
+      return false;
+    }
+    ctx.setSourceVersion(version);
+  }
+
   // Handle stack_size
   if (llvm::opt::Arg *stackSize = parsedArgs.getLastArg(OPT_stack_size)) {
     uint64_t stackSizeVal;
@@ -809,6 +994,10 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
 
     ctx.setUndefinedMode(UndefMode);
   }
+
+  // Handle -no_objc_category_merging.
+  if (parsedArgs.getLastArg(OPT_no_objc_category_merging))
+    ctx.setMergeObjCCategories(false);
 
   // Handle -rpath <path>
   if (parsedArgs.hasArg(OPT_rpath)) {

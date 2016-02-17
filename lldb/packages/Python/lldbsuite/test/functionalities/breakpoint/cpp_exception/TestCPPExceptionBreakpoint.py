@@ -8,10 +8,11 @@ from __future__ import print_function
 
 import os
 import re
-import lldb
-import lldbsuite.test.lldbutil as lldbutil
 import sys
+import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class TestCPPExceptionBreakpoint (TestBase):
 
@@ -19,7 +20,7 @@ class TestCPPExceptionBreakpoint (TestBase):
     my_var = 10
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24538") # clang-cl does not support throw or catch
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24538")
     def test_cpp_exception_breakpoint(self):
         """Test setting and hitting the C++ exception breakpoint."""
         self.build()

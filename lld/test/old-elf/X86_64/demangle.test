@@ -1,8 +1,8 @@
-# XFAIL: win32
-#
 # Check that the linker is able to demangle strings properly.
 # Once there is a way to add undefined symbols using yaml2obj, the test will be
 # changed.
+#
+# REQUIRES: demangler
 
 RUN: lld -flavor old-gnu -target x86_64 %p/Inputs/undefcpp.o --noinhibit-exec 2>&1 | FileCheck -check-prefix=DEMANGLE %s
 RUN: lld -flavor old-gnu -target x86_64 %p/Inputs/undefcpp.o --noinhibit-exec --no-demangle 2>&1 | FileCheck -check-prefix=NODEMANGLE %s

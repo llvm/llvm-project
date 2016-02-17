@@ -334,7 +334,7 @@ bool ModularizeUtilities::collectModuleMapHeaders(clang::ModuleMap *ModMap) {
 // Collect referenced headers from one module.
 // Collects the headers referenced in the given module into
 // HeaderFileNames.
-bool ModularizeUtilities::collectModuleHeaders(const Module &Mod) {
+bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
 
   // Ignore explicit modules because they often have dependencies
   // we can't know.
@@ -345,7 +345,7 @@ bool ModularizeUtilities::collectModuleHeaders(const Module &Mod) {
   DependentsVector UmbrellaDependents;
 
   // Recursively do submodules.
-  for (Module::submodule_const_iterator MI = Mod.submodule_begin(),
+  for (clang::Module::submodule_const_iterator MI = Mod.submodule_begin(),
       MIEnd = Mod.submodule_end();
       MI != MIEnd; ++MI)
     collectModuleHeaders(**MI);

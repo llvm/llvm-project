@@ -16,6 +16,7 @@
 #include "ProBoundsPointerArithmeticCheck.h"
 #include "ProTypeConstCastCheck.h"
 #include "ProTypeCstyleCastCheck.h"
+#include "ProTypeMemberInitCheck.h"
 #include "ProTypeReinterpretCastCheck.h"
 #include "ProTypeStaticCastDowncastCheck.h"
 #include "ProTypeUnionAccessCheck.h"
@@ -39,6 +40,8 @@ public:
         "cppcoreguidelines-pro-type-const-cast");
     CheckFactories.registerCheck<ProTypeCstyleCastCheck>(
         "cppcoreguidelines-pro-type-cstyle-cast");
+    CheckFactories.registerCheck<ProTypeMemberInitCheck>(
+        "cppcoreguidelines-pro-type-member-init");
     CheckFactories.registerCheck<ProTypeReinterpretCastCheck>(
         "cppcoreguidelines-pro-type-reinterpret-cast");
     CheckFactories.registerCheck<ProTypeStaticCastDowncastCheck>(

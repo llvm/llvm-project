@@ -13,6 +13,7 @@ import os
 import lldb
 from .lldbtest import *
 from . import lldbutil
+from .decorators import *
 
 def source_type(filename):
     _, extension = os.path.splitext(filename)

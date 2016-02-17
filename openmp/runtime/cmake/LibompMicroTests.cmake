@@ -150,8 +150,8 @@ add_custom_target(libomp-test-execstack DEPENDS test-execstack/.success)
 add_custom_command(
   OUTPUT  test-execstack/.success
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-execstack
-  COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/check-execstack.pl --os=${LIBOMP_PERL_SCRIPT_OS}
-    --arch=${LIBOMP_ARCH} ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
+  COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/check-execstack.pl
+    --arch=${LIBOMP_PERL_SCRIPT_ARCH} ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
   COMMAND ${CMAKE_COMMAND} -E touch test-execstack/.success
   DEPENDS omp
 )
@@ -162,7 +162,7 @@ add_custom_command(
   OUTPUT  test-instr/.success
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-instr
   COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/check-instruction-set.pl --os=${LIBOMP_PERL_SCRIPT_OS}
-    --arch=${LIBOMP_ARCH} --show --mic-arch=${LIBOMP_MIC_ARCH} ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
+    --arch=${LIBOMP_PERL_SCRIPT_ARCH} --show --mic-arch=${LIBOMP_MIC_ARCH} ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
   COMMAND ${CMAKE_COMMAND} -E touch test-instr/.success
   DEPENDS omp ${LIBOMP_TOOLS_DIR}/check-instruction-set.pl
 )
@@ -219,7 +219,7 @@ add_custom_command(
   OUTPUT  test-deps/.success
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-deps
   COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/check-depends.pl --os=${LIBOMP_PERL_SCRIPT_OS}
-    --arch=${LIBOMP_ARCH} --expected="${libomp_expected_library_deps}" ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
+    --arch=${LIBOMP_PERL_SCRIPT_ARCH} --expected="${libomp_expected_library_deps}" ${LIBOMP_OUTPUT_DIRECTORY}/${LIBOMP_LIB_FILE}
   COMMAND ${CMAKE_COMMAND} -E touch test-deps/.success
   DEPENDS omp ${LIBOMP_TOOLS_DIR}/check-depends.pl
 )

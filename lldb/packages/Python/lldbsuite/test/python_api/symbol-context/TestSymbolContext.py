@@ -6,11 +6,14 @@ from __future__ import print_function
 
 
 
-import os, time
+import os
 import re
+import time
+
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class SymbolContextAPITestCase(TestBase):
 
@@ -23,7 +26,7 @@ class SymbolContextAPITestCase(TestBase):
         self.line = line_number('main.c', '// Find the line number of function "c" here.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test(self):
         """Exercise SBSymbolContext API extensively."""
         self.build()

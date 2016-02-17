@@ -15,23 +15,43 @@
 namespace lld {
 namespace elf2 {
 
+bool HasError;
+llvm::raw_ostream *ErrorOS;
+
 void warning(const Twine &Msg) { llvm::errs() << Msg << "\n"; }
 
 void error(const Twine &Msg) {
+  *ErrorOS << Msg << "\n";
+  HasError = true;
+}
+
+bool error(std::error_code EC, const Twine &Prefix) {
+  if (!EC)
+    return false;
+  error(Prefix + ": " + EC.message());
+  return true;
+}
+
+bool error(std::error_code EC) {
+  if (!EC)
+    return false;
+  error(EC.message());
+  return true;
+}
+
+void fatal(const Twine &Msg) {
   llvm::errs() << Msg << "\n";
   exit(1);
 }
 
-void error(std::error_code EC, const Twine &Prefix) {
-  if (!EC)
-    return;
-  error(Prefix + ": " + EC.message());
+void fatal(std::error_code EC, const Twine &Prefix) {
+  if (EC)
+    fatal(Prefix + ": " + EC.message());
 }
 
-void error(std::error_code EC) {
-  if (!EC)
-    return;
-  error(EC.message());
+void fatal(std::error_code EC) {
+  if (EC)
+    fatal(EC.message());
 }
 
 } // namespace elf2

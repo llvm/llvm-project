@@ -8,9 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Symbols.h"
-#include "InputSection.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "InputSection.h"
+#include "OutputSections.h"
+#include "Target.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/config.h"
@@ -25,6 +27,79 @@ using namespace llvm::ELF;
 
 using namespace lld;
 using namespace lld::elf2;
+
+template <class ELFT>
+typename ELFFile<ELFT>::uintX_t SymbolBody::getVA() const {
+  switch (kind()) {
+  case DefinedSyntheticKind: {
+    auto *D = cast<DefinedSynthetic<ELFT>>(this);
+    return D->Section.getVA() + D->Value;
+  }
+  case DefinedRegularKind: {
+    auto *D = cast<DefinedRegular<ELFT>>(this);
+    InputSectionBase<ELFT> *SC = D->Section;
+
+    // This is an absolute symbol.
+    if (!SC)
+      return D->Sym.st_value;
+
+    // Symbol offsets for AMDGPU need to be the offset in bytes of the symbol
+    // from the beginning of the section.
+    if (Config->EMachine == EM_AMDGPU)
+      return SC->getOffset(D->Sym);
+    if (D->Sym.getType() == STT_TLS)
+      return SC->OutSec->getVA() + SC->getOffset(D->Sym) -
+             Out<ELFT>::TlsPhdr->p_vaddr;
+    return SC->OutSec->getVA() + SC->getOffset(D->Sym);
+  }
+  case DefinedCommonKind:
+    return Out<ELFT>::Bss->getVA() + cast<DefinedCommon>(this)->OffsetInBss;
+  case SharedKind: {
+    auto *SS = cast<SharedSymbol<ELFT>>(this);
+    if (!SS->NeedsCopyOrPltAddr)
+      return 0;
+    if (SS->IsFunc)
+      return getPltVA<ELFT>();
+    else
+      return Out<ELFT>::Bss->getVA() + SS->OffsetInBss;
+  }
+  case UndefinedElfKind:
+  case UndefinedKind:
+    return 0;
+  case LazyKind:
+    assert(isUsedInRegularObj() && "Lazy symbol reached writer");
+    return 0;
+  case DefinedBitcodeKind:
+    llvm_unreachable("Should have been replaced");
+  }
+  llvm_unreachable("Invalid symbol kind");
+}
+
+template <class ELFT>
+typename ELFFile<ELFT>::uintX_t SymbolBody::getGotVA() const {
+  return Out<ELFT>::Got->getVA() +
+         (Out<ELFT>::Got->getMipsLocalEntriesNum() + GotIndex) *
+             sizeof(typename ELFFile<ELFT>::uintX_t);
+}
+
+template <class ELFT>
+typename ELFFile<ELFT>::uintX_t SymbolBody::getGotPltVA() const {
+  return Out<ELFT>::GotPlt->getVA() +
+         GotPltIndex * sizeof(typename ELFFile<ELFT>::uintX_t);
+}
+
+template <class ELFT>
+typename ELFFile<ELFT>::uintX_t SymbolBody::getPltVA() const {
+  return Out<ELFT>::Plt->getVA() + Target->PltZeroSize +
+         PltIndex * Target->PltEntrySize;
+}
+
+template <class ELFT>
+typename ELFFile<ELFT>::uintX_t SymbolBody::getSize() const {
+  if (auto *B = dyn_cast<DefinedElf<ELFT>>(this))
+    return B->Sym.st_size;
+  return 0;
+}
 
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   if (VA == STV_DEFAULT)
@@ -53,6 +128,13 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
   if (IsUsedInRegularObj || Other->IsUsedInRegularObj)
     IsUsedInRegularObj = Other->IsUsedInRegularObj = true;
 
+  // We want to export all symbols that exist both in the executable
+  // and in DSOs, so that the symbols in the executable can interrupt
+  // symbols in the DSO at runtime.
+  if (isShared() != Other->isShared())
+    if (isa<DefinedRegular<ELFT>>(isShared() ? Other : this))
+      MustBeInDynSym = Other->MustBeInDynSym = true;
+
   if (L != R)
     return -1;
   if (!std::get<0>(L) || !std::get<1>(L) || !std::get<2>(L))
@@ -76,12 +158,20 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
 }
 
 Defined::Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
-                 bool IsTls)
-    : SymbolBody(K, Name, IsWeak, Visibility, IsTls) {}
+                 bool IsTls, bool IsFunction)
+    : SymbolBody(K, Name, IsWeak, Visibility, IsTls, IsFunction) {}
+
+DefinedBitcode::DefinedBitcode(StringRef Name)
+    : Defined(DefinedBitcodeKind, Name, false, STV_DEFAULT, false, false) {}
+
+bool DefinedBitcode::classof(const SymbolBody *S) {
+  return S->kind() == DefinedBitcodeKind;
+}
 
 Undefined::Undefined(SymbolBody::Kind K, StringRef N, bool IsWeak,
                      uint8_t Visibility, bool IsTls)
-    : SymbolBody(K, N, IsWeak, Visibility, IsTls), CanKeepUndefined(false) {}
+    : SymbolBody(K, N, IsWeak, Visibility, IsTls, /*IsFunction*/ false),
+      CanKeepUndefined(false) {}
 
 Undefined::Undefined(StringRef N, bool IsWeak, uint8_t Visibility,
                      bool CanKeepUndefined)
@@ -100,12 +190,14 @@ UndefinedElf<ELFT>::UndefinedElf(StringRef N, const Elf_Sym &Sym)
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
                                          OutputSectionBase<ELFT> &Section)
-    : Defined(SymbolBody::DefinedSyntheticKind, N, false, STV_DEFAULT, false),
+    : Defined(SymbolBody::DefinedSyntheticKind, N, false, STV_DEFAULT,
+              /*IsTls*/ false, /*IsFunction*/ false),
       Value(Value), Section(Section) {}
 
 DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
                              bool IsWeak, uint8_t Visibility)
-    : Defined(SymbolBody::DefinedCommonKind, N, IsWeak, Visibility, false) {
+    : Defined(SymbolBody::DefinedCommonKind, N, IsWeak, Visibility,
+              /*IsTls*/ false, /*IsFunction*/ false) {
   MaxAlignment = Alignment;
   this->Size = Size;
 }
@@ -117,13 +209,13 @@ std::unique_ptr<InputFile> Lazy::getMember() {
   // read from the library.
   if (MBRef.getBuffer().empty())
     return std::unique_ptr<InputFile>(nullptr);
-  return createObjectFile(MBRef);
+  return createObjectFile(MBRef, File->getName());
 }
 
 template <class ELFT> static void doInitSymbols() {
   ElfSym<ELFT>::End.setBinding(STB_GLOBAL);
-  ElfSym<ELFT>::IgnoredWeak.setBinding(STB_WEAK);
-  ElfSym<ELFT>::IgnoredWeak.setVisibility(STV_HIDDEN);
+  ElfSym<ELFT>::Ignored.setBinding(STB_WEAK);
+  ElfSym<ELFT>::Ignored.setVisibility(STV_HIDDEN);
 }
 
 void elf2::initSymbols() {
@@ -158,6 +250,31 @@ std::string elf2::demangle(StringRef Name) {
   return S;
 #endif
 }
+
+template uint32_t SymbolBody::template getVA<ELF32LE>() const;
+template uint32_t SymbolBody::template getVA<ELF32BE>() const;
+template uint64_t SymbolBody::template getVA<ELF64LE>() const;
+template uint64_t SymbolBody::template getVA<ELF64BE>() const;
+
+template uint32_t SymbolBody::template getGotVA<ELF32LE>() const;
+template uint32_t SymbolBody::template getGotVA<ELF32BE>() const;
+template uint64_t SymbolBody::template getGotVA<ELF64LE>() const;
+template uint64_t SymbolBody::template getGotVA<ELF64BE>() const;
+
+template uint32_t SymbolBody::template getGotPltVA<ELF32LE>() const;
+template uint32_t SymbolBody::template getGotPltVA<ELF32BE>() const;
+template uint64_t SymbolBody::template getGotPltVA<ELF64LE>() const;
+template uint64_t SymbolBody::template getGotPltVA<ELF64BE>() const;
+
+template uint32_t SymbolBody::template getPltVA<ELF32LE>() const;
+template uint32_t SymbolBody::template getPltVA<ELF32BE>() const;
+template uint64_t SymbolBody::template getPltVA<ELF64LE>() const;
+template uint64_t SymbolBody::template getPltVA<ELF64BE>() const;
+
+template uint32_t SymbolBody::template getSize<ELF32LE>() const;
+template uint32_t SymbolBody::template getSize<ELF32BE>() const;
+template uint64_t SymbolBody::template getSize<ELF64LE>() const;
+template uint64_t SymbolBody::template getSize<ELF64BE>() const;
 
 template int SymbolBody::compare<ELF32LE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF32BE>(SymbolBody *Other);

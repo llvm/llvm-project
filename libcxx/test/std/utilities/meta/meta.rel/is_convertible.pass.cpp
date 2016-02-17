@@ -52,6 +52,11 @@ class NonCopyable {
   NonCopyable(NonCopyable&);
 };
 
+template <typename T>
+class CannotInstantiate {
+  enum { X = T::ThisExpressionWillBlowUp };
+};
+
 int main()
 {
     // void
@@ -206,4 +211,7 @@ int main()
     test_is_not_convertible<NonCopyable&, NonCopyable>();
 #endif
 
+    // Ensure that CannotInstantiate is not instantiated by is_convertible when it is not needed.
+    // For example CannotInstantiate is instatiated as a part of ADL lookup for arguments of type CannotInstantiate*.
+    static_assert((std::is_convertible<CannotInstantiate<int>*, CannotInstantiate<int>*>::value), "");
 }

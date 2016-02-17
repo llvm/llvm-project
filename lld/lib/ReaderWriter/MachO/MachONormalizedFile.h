@@ -39,6 +39,9 @@
 ///                    +-------+
 ///
 
+#ifndef LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
+#define LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
+
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
@@ -49,9 +52,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
-
-#ifndef LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
-#define LLD_READER_WRITER_MACHO_NORMALIZE_FILE_H
 
 using llvm::BumpPtrAllocator;
 using llvm::yaml::Hex64;
@@ -172,7 +172,8 @@ struct Segment {
   StringRef     name;
   Hex64         address;
   Hex64         size;
-  VMProtect     access;
+  VMProtect     init_access;
+  VMProtect     max_access;
 };
 
 /// Only used in normalized final linked images to specify on which dylibs
@@ -245,6 +246,8 @@ struct NormalizedFile {
   PackedVersion               compatVersion = 0;  // dylibs only
   PackedVersion               currentVersion = 0; // dylibs only
   bool                        hasUUID = false;
+  bool                        hasMinVersionLoadCommand = false;
+  bool                        generateDataInCodeLoadCommand = false;
   std::vector<StringRef>      rpaths;
   Hex64                       entryAddress = 0;
   Hex64                       stackSize = 0;
@@ -252,6 +255,7 @@ struct NormalizedFile {
   Hex64                       sourceVersion = 0;
   PackedVersion               minOSverson = 0;
   PackedVersion               sdkVersion = 0;
+  LoadCommandType             minOSVersionKind = (LoadCommandType)0;
 
   // Maps to load commands with LINKEDIT content (final linked images only).
   Hex32                       pageSize = 0;
@@ -260,6 +264,7 @@ struct NormalizedFile {
   std::vector<BindLocation>   weakBindingInfo;
   std::vector<BindLocation>   lazyBindingInfo;
   std::vector<Export>         exportInfo;
+  std::vector<uint8_t>        functionStarts;
   std::vector<DataInCode>     dataInCode;
 
   // TODO:

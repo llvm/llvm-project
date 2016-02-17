@@ -9,8 +9,9 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class ReturnValueTestCase(TestBase):
 
@@ -19,7 +20,7 @@ class ReturnValueTestCase(TestBase):
     @expectedFailureAll(oslist=["macosx","freebsd"], archs=["i386"])
     @expectedFailureAll(oslist=["linux"], compiler="clang", compiler_version=["<=", "3.6"], archs=["i386"])
     @expectedFailureAll(bugnumber="llvm.org/pr25785", hostoslist=["windows"], compiler="gcc", archs=["i386"], triple='.*-android')
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @add_test_categories(['pyapi'])
     def test_with_python(self):
         """Test getting return values from stepping out."""

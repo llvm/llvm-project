@@ -55,8 +55,8 @@ return:
 ; CHECK-NEXT:             [N] -> { Stmt_S2[i0] : 0 <= i0 < N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_S2[i0] -> [i0, 1] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [N] -> { Stmt_S2[i0] -> MemRef_val[] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [N] -> { Stmt_S2[i0] -> MemRef_a[i0] };
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:             [N] -> { Stmt_S2[i0] -> MemRef_val[] };
 ; CHECK-NEXT: }

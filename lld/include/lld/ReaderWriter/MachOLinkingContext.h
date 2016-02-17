@@ -71,10 +71,21 @@ public:
     dynamicLookup
   };
 
+  enum ObjCConstraint {
+    objc_unknown = 0,
+    objc_supports_gc = 2,
+    objc_gc_only = 4,
+    // Image optimized by dyld = 8
+    // GC compaction = 16
+    objc_retainReleaseForSimulator = 32,
+    objc_retainRelease
+  };
+
   /// Initializes the context to sane default values given the specified output
   /// file type, arch, os, and minimum os version.  This should be called before
   /// other setXXX() methods.
-  void configure(HeaderFileType type, Arch arch, OS os, uint32_t minOSVersion);
+  void configure(HeaderFileType type, Arch arch, OS os, uint32_t minOSVersion,
+                 bool exportDynamicSymbols);
 
   void addPasses(PassManager &pm) override;
   bool validateImpl(raw_ostream &diagnostics) override;
@@ -118,6 +129,8 @@ public:
   void setKeepPrivateExterns(bool v) { _keepPrivateExterns = v; }
   bool demangleSymbols() const { return _demangle; }
   void setDemangleSymbols(bool d) { _demangle = d; }
+  bool mergeObjCCategories() const { return _mergeObjCCategories; }
+  void setMergeObjCCategories(bool v) { _mergeObjCCategories = v; }
   /// Create file at specified path which will contain a binary encoding
   /// of all input and output file paths.
   std::error_code createDependencyFile(StringRef path);
@@ -136,12 +149,44 @@ public:
   const StringRefVector &sysLibRoots() const { return _syslibRoots; }
   bool PIE() const { return _pie; }
   void setPIE(bool pie) { _pie = pie; }
+  bool generateVersionLoadCommand() const {
+    return _generateVersionLoadCommand;
+  }
+  void setGenerateVersionLoadCommand(bool v) {
+    _generateVersionLoadCommand = v;
+  }
+
+  bool generateFunctionStartsLoadCommand() const {
+    return _generateFunctionStartsLoadCommand;
+  }
+  void setGenerateFunctionStartsLoadCommand(bool v) {
+    _generateFunctionStartsLoadCommand = v;
+  }
+
+  bool generateDataInCodeLoadCommand() const {
+    return _generateDataInCodeLoadCommand;
+  }
+  void setGenerateDataInCodeLoadCommand(bool v) {
+    _generateDataInCodeLoadCommand = v;
+  }
 
   uint64_t stackSize() const { return _stackSize; }
   void setStackSize(uint64_t stackSize) { _stackSize = stackSize; }
 
   uint64_t baseAddress() const { return _baseAddress; }
   void setBaseAddress(uint64_t baseAddress) { _baseAddress = baseAddress; }
+
+  ObjCConstraint objcConstraint() const { return _objcConstraint; }
+
+  uint32_t osMinVersion() const { return _osMinVersion; }
+
+  uint32_t sdkVersion() const { return _sdkVersion; }
+  void setSdkVersion(uint64_t v) { _sdkVersion = v; }
+
+  uint64_t sourceVersion() const { return _sourceVersion; }
+  void setSourceVersion(uint64_t v) { _sourceVersion = v; }
+
+  uint32_t swiftVersion() const { return _swiftVersion; }
 
   /// \brief Checks whether a given path on the filesystem exists.
   ///
@@ -297,6 +342,9 @@ public:
   /// Pass to add shims switching between thumb and arm mode.
   bool needsShimPass() const;
 
+  /// Pass to add objc image info and optimized objc data.
+  bool needsObjCPass() const;
+
   /// Magic symbol name stubs will need to help lazy bind.
   StringRef binderSymbolName() const;
 
@@ -339,6 +387,10 @@ public:
   /// Construct 32-bit value from string "X.Y.Z" where
   /// bits are xxxx.yy.zz.  Largest number is 65535.255.255
   static bool parsePackedVersion(StringRef str, uint32_t &result);
+
+  /// Construct 64-bit value from string "A.B.C.D.E" where
+  /// bits are aaaa.bb.cc.dd.ee.  Largest number is 16777215.1023.1023.1023.1023
+  static bool parsePackedVersion(StringRef str, uint64_t &result);
 
   void finalizeInputFiles() override;
 
@@ -392,12 +444,15 @@ private:
   Arch _arch;
   OS _os;
   uint32_t _osMinVersion;
+  uint32_t _sdkVersion = 0;
+  uint64_t _sourceVersion = 0;
   uint64_t _pageZeroSize;
   uint64_t _pageSize;
   uint64_t _baseAddress;
   uint64_t _stackSize;
   uint32_t _compatibilityVersion;
   uint32_t _currentVersion;
+  ObjCConstraint _objcConstraint;
   uint32_t _swiftVersion;
   StringRef _installName;
   StringRefVector _rpaths;
@@ -408,6 +463,10 @@ private:
   bool _testingFileUsage;
   bool _keepPrivateExterns;
   bool _demangle;
+  bool _mergeObjCCategories = true;
+  bool _generateVersionLoadCommand = false;
+  bool _generateFunctionStartsLoadCommand = false;
+  bool _generateDataInCodeLoadCommand = false;
   StringRef _bundleLoader;
   mutable std::unique_ptr<mach_o::ArchHandler> _archHandler;
   mutable std::unique_ptr<Writer> _writer;

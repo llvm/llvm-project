@@ -33,6 +33,28 @@ def iphoneos_version_min : Separate<["-"], "iphoneos_version_min">,
 def ios_simulator_version_min : Separate<["-"], "ios_simulator_version_min">,
      MetaVarName<"<version>">,
      HelpText<"Minimum iOS simulator version">, Group<grp_opts>;
+def sdk_version : Separate<["-"], "sdk_version">,
+     MetaVarName<"<version>">,
+     HelpText<"SDK version">, Group<grp_opts>;
+def source_version : Separate<["-"], "source_version">,
+     MetaVarName<"<version>">,
+     HelpText<"Source version">, Group<grp_opts>;
+def version_load_command : Flag<["-"], "version_load_command">,
+     HelpText<"Force generation of a version load command">, Group<grp_opts>;
+def no_version_load_command : Flag<["-"], "no_version_load_command">,
+     HelpText<"Disable generation of a version load command">, Group<grp_opts>;
+def function_starts : Flag<["-"], "function_starts">,
+     HelpText<"Force generation of a function starts load command">,
+     Group<grp_opts>;
+def no_function_starts : Flag<["-"], "no_function_starts">,
+     HelpText<"Disable generation of a function starts load command">,
+     Group<grp_opts>;
+def data_in_code_info : Flag<["-"], "data_in_code_info">,
+     HelpText<"Force generation of a data in code load command">,
+     Group<grp_opts>;
+def no_data_in_code_info : Flag<["-"], "no_data_in_code_info">,
+     HelpText<"Disable generation of a data in code load command">,
+     Group<grp_opts>;
 def mllvm : Separate<["-"], "mllvm">,
      MetaVarName<"<option>">,
      HelpText<"Options to pass to LLVM during LTO">, Group<grp_opts>;
@@ -68,6 +90,10 @@ def undefined : Separate<["-"], "undefined">,
                 MetaVarName<"<undefined>">,
                 HelpText<"Determines how undefined symbols are handled.">,
                 Group<grp_opts>;
+def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
+     HelpText<"Disables the optimisation which merges Objective-C categories "
+              "on a class in to the class itself.">,
+     Group<grp_opts>;
 
 // main executable options
 def grp_main : OptionGroup<"opts">, HelpText<"MAIN EXECUTABLE OPTIONS">;
@@ -83,6 +109,9 @@ def no_pie : Flag<["-"], "no_pie">,
 def stack_size : Separate<["-"], "stack_size">,
      HelpText<"Specifies the maximum stack size for the main thread in a program. "
               "Must be a page-size multiple. (default=8Mb)">,
+     Group<grp_main>;
+def export_dynamic : Flag<["-"], "export_dynamic">,
+     HelpText<"Preserves all global symbols in main executables during LTO">,
      Group<grp_main>;
 
 // dylib executable options

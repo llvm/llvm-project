@@ -158,6 +158,10 @@ __isl_give isl_pw_aff *SCEVAffinator::visit(const SCEV *Expr) {
   if (PWA)
     return isl_pw_aff_copy(PWA);
 
+  auto ConstantAndLeftOverPair = extractConstantFactor(Expr, *S->getSE());
+  auto *Factor = ConstantAndLeftOverPair.first;
+  Expr = ConstantAndLeftOverPair.second;
+
   // In case the scev is a valid parameter, we do not further analyze this
   // expression, but create a new parameter in the isl_pw_aff. This allows us
   // to treat subexpressions that we cannot translate into an piecewise affine
@@ -171,18 +175,17 @@ __isl_give isl_pw_aff *SCEVAffinator::visit(const SCEV *Expr) {
     Affine = isl_aff_add_coefficient_si(Affine, isl_dim_param, 0, 1);
 
     PWA = isl_pw_aff_alloc(Domain, Affine);
-    CachedExpressions[Key] = PWA;
-    return isl_pw_aff_copy(PWA);
+  } else {
+    PWA = SCEVVisitor<SCEVAffinator, isl_pw_aff *>::visit(Expr);
   }
 
-  PWA = SCEVVisitor<SCEVAffinator, isl_pw_aff *>::visit(Expr);
+  PWA = isl_pw_aff_mul(visitConstant(Factor), PWA);
 
   // For compile time reasons we need to simplify the PWA before we cache and
   // return it.
   PWA = isl_pw_aff_coalesce(PWA);
-
-  CachedExpressions[Key] = PWA;
-  return isl_pw_aff_copy(PWA);
+  CachedExpressions[Key] = isl_pw_aff_copy(PWA);
+  return PWA;
 }
 
 __isl_give isl_pw_aff *SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
@@ -235,15 +238,7 @@ __isl_give isl_pw_aff *SCEVAffinator::visitAddExpr(const SCEVAddExpr *Expr) {
 }
 
 __isl_give isl_pw_aff *SCEVAffinator::visitMulExpr(const SCEVMulExpr *Expr) {
-  // Divide Expr into a constant part and the rest. Then visit both and multiply
-  // the result to obtain the representation for Expr. While the second part of
-  // ConstantAndLeftOverPair might still be a SCEVMulExpr we will not get to
-  // this point again. The reason is that if it is a multiplication it consists
-  // only of parameters and we will stop in the visit(const SCEV *) function and
-  // return the isl_pw_aff for that parameter.
-  auto ConstantAndLeftOverPair = extractConstantFactor(Expr, *S->getSE());
-  return isl_pw_aff_mul(visit(ConstantAndLeftOverPair.first),
-                        visit(ConstantAndLeftOverPair.second));
+  llvm_unreachable("SCEVMulExpr should not be reached");
 }
 
 __isl_give isl_pw_aff *SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {

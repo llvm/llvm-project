@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: locale.en_US.UTF-8
+
 // <locale>
 
 // template <> class codecvt_byname<wchar_t, char, mbstate_t>

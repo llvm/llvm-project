@@ -1024,11 +1024,13 @@ class value(object):
         return complex (int(self))
         
     def __int__(self):
+        is_num,is_sign = is_numeric_type(self.sbvalue.GetType().GetCanonicalType().GetBasicType())
+        if is_num and not is_sign: return self.sbvalue.GetValueAsUnsigned()
         return self.sbvalue.GetValueAsSigned()
-        
+
     def __long__(self):
-        return self.sbvalue.GetValueAsSigned()
-        
+        return self.__int__()
+
     def __float__(self):
         return float (self.sbvalue.GetValueAsSigned())
         
@@ -1083,5 +1085,48 @@ class SBSyntheticValueProvider(object):
     def has_children(self):
         return False
 
+
+%}
+
+%pythoncode %{
+
+# given an lldb.SBBasicType it returns a tuple
+# (is_numeric, is_signed)
+# the value of is_signed is undefined if is_numeric == false
+def is_numeric_type(basic_type):
+    if basic_type == eBasicTypeInvalid: return (False,False)
+    if basic_type == eBasicTypeVoid: return (False,False)
+    if basic_type == eBasicTypeChar: return (True,False)
+    if basic_type == eBasicTypeSignedChar: return (True,True)
+    if basic_type == eBasicTypeUnsignedChar: return (True,False)
+    if basic_type == eBasicTypeWChar: return (True,False)
+    if basic_type == eBasicTypeSignedWChar: return (True,True)
+    if basic_type == eBasicTypeUnsignedWChar: return (True,False)
+    if basic_type == eBasicTypeChar16: return (True,False)
+    if basic_type == eBasicTypeChar32: return (True,False)
+    if basic_type == eBasicTypeShort: return (True,True)
+    if basic_type == eBasicTypeUnsignedShort: return (True,False)
+    if basic_type == eBasicTypeInt: return (True,True)
+    if basic_type == eBasicTypeUnsignedInt: return (True,False)
+    if basic_type == eBasicTypeLong: return (True,True)
+    if basic_type == eBasicTypeUnsignedLong: return (True,False)
+    if basic_type == eBasicTypeLongLong: return (True,True)
+    if basic_type == eBasicTypeUnsignedLongLong: return (True,False)
+    if basic_type == eBasicTypeInt128: return (True,True)
+    if basic_type == eBasicTypeUnsignedInt128: return (True,False)
+    if basic_type == eBasicTypeBool: return (False,False)
+    if basic_type == eBasicTypeHalf: return (True,True)
+    if basic_type == eBasicTypeFloat: return (True,True)
+    if basic_type == eBasicTypeDouble: return (True,True)
+    if basic_type == eBasicTypeLongDouble: return (True,True)
+    if basic_type == eBasicTypeFloatComplex: return (True,True)
+    if basic_type == eBasicTypeDoubleComplex: return (True,True)
+    if basic_type == eBasicTypeLongDoubleComplex: return (True,True)
+    if basic_type == eBasicTypeObjCID: return (False,False)
+    if basic_type == eBasicTypeObjCClass: return (False,False)
+    if basic_type == eBasicTypeObjCSel: return (False,False)
+    if basic_type == eBasicTypeNullPtr: return (False,False)
+    #if basic_type == eBasicTypeOther:
+    return (False,False)
 
 %}

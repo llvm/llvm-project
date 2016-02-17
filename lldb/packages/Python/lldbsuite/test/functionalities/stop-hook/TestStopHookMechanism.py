@@ -8,8 +8,10 @@ from __future__ import print_function
 
 import os
 import lldb
-from lldbsuite.test import configuration
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import configuration
+from lldbsuite.test import lldbutil
 
 class StopHookMechanismTestCase(TestBase):
 
@@ -26,7 +28,7 @@ class StopHookMechanismTestCase(TestBase):
 
     @skipIfFreeBSD # llvm.org/pr15037
     @expectedFlakeyLinux('llvm.org/pr15037') # stop-hooks sometimes fail to fire on Linux
-    @expectedFailureHostWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test(self):
         """Test the stop-hook mechanism."""
         self.build()

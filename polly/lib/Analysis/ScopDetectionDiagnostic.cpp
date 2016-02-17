@@ -144,6 +144,23 @@ bool ReportInvalidTerminator::classof(const RejectReason *RR) {
 }
 
 //===----------------------------------------------------------------------===//
+// ReportIrreducibleRegion.
+
+std::string ReportIrreducibleRegion::getMessage() const {
+  return "Irreducible region encountered: " + R->getNameStr();
+}
+
+const DebugLoc &ReportIrreducibleRegion::getDebugLoc() const { return DbgLoc; }
+
+std::string ReportIrreducibleRegion::getEndUserMessage() const {
+  return "Irreducible region encountered in control flow.";
+}
+
+bool ReportIrreducibleRegion::classof(const RejectReason *RR) {
+  return RR->getKind() == rrkIrreducibleRegion;
+}
+
+//===----------------------------------------------------------------------===//
 // ReportAffFunc.
 
 ReportAffFunc::ReportAffFunc(const RejectReasonKind K, const Instruction *Inst)

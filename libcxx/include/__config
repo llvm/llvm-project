@@ -41,6 +41,8 @@
 #define _LIBCPP_ABI_INCOMPLETE_TYPES_IN_DEQUE
 // Fix undefined behavior in how std::list stores it's linked nodes.
 #define _LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB
+#define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
+#define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
 #endif
 
 #define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y
@@ -178,6 +180,12 @@
 # endif
 #endif  // !defined(_LIBCPP_LITTLE_ENDIAN) || !defined(_LIBCPP_BIG_ENDIAN)
 
+#if __has_attribute(__no_sanitize__)
+#define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
+#else
+#define _LIBCPP_NO_CFI
+#endif
+
 #ifdef _WIN32
 
 // only really useful for a DLL
@@ -233,6 +241,12 @@
 #    define _LIBCPP_TYPE_VIS __attribute__ ((__type_visibility__("default")))
 #  else
 #    define _LIBCPP_TYPE_VIS __attribute__ ((__visibility__("default")))
+#  endif
+#endif
+
+#ifndef _LIBCPP_PREFERRED_OVERLOAD
+#  if __has_attribute(__enable_if__)
+#    define _LIBCPP_PREFERRED_OVERLOAD __attribute__ ((__enable_if__(true, "")))
 #  endif
 #endif
 
@@ -435,7 +449,7 @@ namespace std {
 
 // Allow for build-time disabling of unsigned integer sanitization
 #if !defined(_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK) && __has_attribute(no_sanitize)
-#define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute((no_sanitize("unsigned-integer-overflow")))
+#define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif 
 
 #elif defined(__GNUC__)
@@ -460,8 +474,6 @@ namespace std {
 #if !__EXCEPTIONS
 #define _LIBCPP_NO_EXCEPTIONS
 #endif
-
-#define _LIBCPP_HAS_NO_TEMPLATE_ALIASES
 
 // constexpr was added to GCC in 4.6.
 #if _GNUC_VER < 406
@@ -494,6 +506,7 @@ namespace std {
 #define _LIBCPP_HAS_NO_VARIADICS
 #define _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #define _LIBCPP_HAS_NO_STRONG_ENUMS
+#define _LIBCPP_HAS_NO_TEMPLATE_ALIASES
 #define _LIBCPP_HAS_NO_NOEXCEPT
 
 #else  // __GXX_EXPERIMENTAL_CXX0X__
@@ -517,6 +530,7 @@ namespace std {
 #if _GNUC_VER < 406
 #define _LIBCPP_HAS_NO_NOEXCEPT
 #define _LIBCPP_HAS_NO_NULLPTR
+#define _LIBCPP_HAS_NO_TEMPLATE_ALIASES
 #endif
 
 #if _GNUC_VER < 407
@@ -712,9 +726,11 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_LOCALE__L_EXTENSIONS 1
 #endif
 
-#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(_NEWLIB_VERSION) && \
-    !defined(__CloudABI__)
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+// Most unix variants have catopen.  These are the specific ones that don't.
+#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(_NEWLIB_VERSION)
 #define _LIBCPP_HAS_CATOPEN 1
+#endif
 #endif
 
 #ifdef __FreeBSD__
@@ -833,7 +849,15 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 
 #ifndef _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
-#endif 
+#endif
+
+#if __cplusplus < 201103L
+#define _LIBCPP_CXX03_LANG
+#else
+#if defined(_LIBCPP_HAS_NO_VARIADIC_TEMPLATES) || defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
+#error Libc++ requires a feature complete C++11 compiler in C++11 or greater.
+#endif
+#endif
 
 #endif // __cplusplus
 

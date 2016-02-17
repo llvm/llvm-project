@@ -76,6 +76,35 @@ bool MachOLinkingContext::parsePackedVersion(StringRef str, uint32_t &result) {
   return false;
 }
 
+bool MachOLinkingContext::parsePackedVersion(StringRef str, uint64_t &result) {
+  result = 0;
+
+  if (str.empty())
+    return false;
+
+  SmallVector<StringRef, 5> parts;
+  llvm::SplitString(str, parts, ".");
+
+  unsigned long long num;
+  if (llvm::getAsUnsignedInteger(parts[0], 10, num))
+    return true;
+  if (num > 0xFFFFFF)
+    return true;
+  result = num << 40;
+
+  unsigned Shift = 30;
+  for (StringRef str : llvm::makeArrayRef(parts).slice(1)) {
+    if (llvm::getAsUnsignedInteger(str, 10, num))
+      return true;
+    if (num > 0x3FF)
+      return true;
+    result |= (num << Shift);
+    Shift -= 10;
+  }
+
+  return false;
+}
+
 MachOLinkingContext::ArchInfo MachOLinkingContext::_s_archInfos[] = {
   { "x86_64", arch_x86_64, true,  CPU_TYPE_X86_64,  CPU_SUBTYPE_X86_64_ALL },
   { "i386",   arch_x86,    true,  CPU_TYPE_I386,    CPU_SUBTYPE_X86_ALL },
@@ -145,40 +174,45 @@ MachOLinkingContext::MachOLinkingContext()
       _doNothing(false), _pie(false), _arch(arch_unknown), _os(OS::macOSX),
       _osMinVersion(0), _pageZeroSize(0), _pageSize(4096), _baseAddress(0),
       _stackSize(0), _compatibilityVersion(0), _currentVersion(0),
-      _swiftVersion(0),
-      _flatNamespace(false), _undefinedMode(UndefinedMode::error),
-      _deadStrippableDylib(false), _printAtoms(false), _testingFileUsage(false),
-      _keepPrivateExterns(false), _demangle(false), _archHandler(nullptr),
-      _exportMode(ExportMode::globals),
+      _objcConstraint(objc_unknown), _swiftVersion(0), _flatNamespace(false),
+      _undefinedMode(UndefinedMode::error), _deadStrippableDylib(false),
+      _printAtoms(false), _testingFileUsage(false), _keepPrivateExterns(false),
+      _demangle(false), _archHandler(nullptr), _exportMode(ExportMode::globals),
       _debugInfoMode(DebugInfoMode::addDebugMap), _orderFileEntries(0),
       _flatNamespaceFile(nullptr) {}
 
 MachOLinkingContext::~MachOLinkingContext() {}
 
 void MachOLinkingContext::configure(HeaderFileType type, Arch arch, OS os,
-                                    uint32_t minOSVersion) {
+                                    uint32_t minOSVersion,
+                                    bool exportDynamicSymbols) {
   _outputMachOType = type;
   _arch = arch;
   _os = os;
   _osMinVersion = minOSVersion;
 
   // If min OS not specified on command line, use reasonable defaults.
-  if (minOSVersion == 0) {
-    switch (_arch) {
-    case arch_x86_64:
-    case arch_x86:
-      parsePackedVersion("10.8", _osMinVersion);
-      _os = MachOLinkingContext::OS::macOSX;
-      break;
-    case arch_armv6:
-    case arch_armv7:
-    case arch_armv7s:
-    case arch_arm64:
-      parsePackedVersion("7.0", _osMinVersion);
-      _os = MachOLinkingContext::OS::iOS;
-      break;
-    default:
-      break;
+  // Note that we only do sensible defaults when emitting something other than
+  // object and preload.
+  if (_outputMachOType != llvm::MachO::MH_OBJECT &&
+      _outputMachOType != llvm::MachO::MH_PRELOAD) {
+    if (minOSVersion == 0) {
+      switch (_arch) {
+      case arch_x86_64:
+      case arch_x86:
+        parsePackedVersion("10.8", _osMinVersion);
+        _os = MachOLinkingContext::OS::macOSX;
+        break;
+      case arch_armv6:
+      case arch_armv7:
+      case arch_armv7s:
+      case arch_arm64:
+        parsePackedVersion("7.0", _osMinVersion);
+        _os = MachOLinkingContext::OS::iOS;
+        break;
+      default:
+        break;
+      }
     }
   }
 
@@ -219,9 +253,10 @@ void MachOLinkingContext::configure(HeaderFileType type, Arch arch, OS os,
        case OS::unknown:
        break;
     }
+    setGlobalsAreDeadStripRoots(exportDynamicSymbols);
     break;
   case llvm::MachO::MH_DYLIB:
-    setGlobalsAreDeadStripRoots(true);
+    setGlobalsAreDeadStripRoots(exportDynamicSymbols);
     break;
   case llvm::MachO::MH_BUNDLE:
     break;
@@ -327,6 +362,11 @@ bool MachOLinkingContext::needsCompactUnwindPass() const {
   }
 }
 
+bool MachOLinkingContext::needsObjCPass() const {
+  // ObjC pass is only needed if any of the inputs were ObjC.
+  return _objcConstraint != objc_unknown;
+}
+
 bool MachOLinkingContext::needsShimPass() const {
   // Shim pass only used in final executables.
   if (_outputMachOType == MH_OBJECT)
@@ -370,9 +410,11 @@ bool MachOLinkingContext::minOS(StringRef mac, StringRef iOS) const {
       return false;
     return _osMinVersion >= parsedVersion;
   case OS::unknown:
-    break;
+    // If we don't know the target, then assume that we don't meet the min OS.
+    // This matches the ld64 behaviour
+    return false;
   }
-  llvm_unreachable("target not configured for iOS or MacOSX");
+  llvm_unreachable("invalid OS enum");
 }
 
 bool MachOLinkingContext::addEntryPointLoadCommand() const {
@@ -591,6 +633,10 @@ bool MachOLinkingContext::validateImpl(raw_ostream &diagnostics) {
 }
 
 void MachOLinkingContext::addPasses(PassManager &pm) {
+  // objc pass should be before layout pass.  Otherwise test cases may contain
+  // no atoms which confuses the layout pass.
+  if (needsObjCPass())
+    mach_o::addObjCPass(pm, *this);
   mach_o::addLayoutPass(pm, *this);
   if (needsStubsPass())
     mach_o::addStubsPass(pm, *this);
@@ -1017,6 +1063,41 @@ std::error_code MachOLinkingContext::handleLoadedFile(File &file) {
               Twine(" cannot be linked due to incompatible operating systems"));
   }
 
+  // Check that if the objc info exists, that it is compatible with the target
+  // OS.
+  switch (machoFile->objcConstraint()) {
+    case objc_unknown:
+      // The file is not compiled with objc, so skip the checks.
+      break;
+    case objc_gc_only:
+    case objc_supports_gc:
+      llvm_unreachable("GC support should already have thrown an error");
+    case objc_retainReleaseForSimulator:
+      // The file is built with simulator objc, so make sure that the context
+      // is also building with simulator support.
+      if (_os != OS::iOS_simulator)
+        return make_dynamic_error_code(file.path() +
+          Twine(" cannot be linked.  It contains ObjC built for the simulator"
+                " while we are linking a non-simulator target"));
+      assert((_objcConstraint == objc_unknown ||
+              _objcConstraint == objc_retainReleaseForSimulator) &&
+             "Must be linking with retain/release for the simulator");
+      _objcConstraint = objc_retainReleaseForSimulator;
+      break;
+    case objc_retainRelease:
+      // The file is built without simulator objc, so make sure that the
+      // context is also building without simulator support.
+      if (_os == OS::iOS_simulator)
+        return make_dynamic_error_code(file.path() +
+          Twine(" cannot be linked.  It contains ObjC built for a non-simulator"
+                " target while we are linking a simulator target"));
+      assert((_objcConstraint == objc_unknown ||
+              _objcConstraint == objc_retainRelease) &&
+             "Must be linking with retain/release for a non-simulator target");
+      _objcConstraint = objc_retainRelease;
+      break;
+  }
+
   // Check that the swift version of the context matches that of the file.
   // Also set the swift version of the context if it didn't have one.
   if (!_swiftVersion) {
@@ -1026,6 +1107,7 @@ std::error_code MachOLinkingContext::handleLoadedFile(File &file) {
     // Swift versions are different.
     return make_dynamic_error_code("different swift versions");
   }
+
   return std::error_code();
 }
 

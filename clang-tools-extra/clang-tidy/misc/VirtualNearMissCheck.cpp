@@ -19,6 +19,12 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+
+AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
+  return Node.isOverloadedOperator();
+}
+
 /// Finds out if the given method overrides some method.
 static bool isOverrideMethod(const CXXMethodDecl *MD) {
   return MD->size_overridden_methods() > 0 || MD->hasAttr<OverrideAttr>();
@@ -32,10 +38,14 @@ static bool isOverrideMethod(const CXXMethodDecl *MD) {
 static bool checkOverridingFunctionReturnType(const ASTContext *Context,
                                               const CXXMethodDecl *BaseMD,
                                               const CXXMethodDecl *DerivedMD) {
-  QualType BaseReturnTy =
-      BaseMD->getType()->getAs<FunctionType>()->getReturnType();
-  QualType DerivedReturnTy =
-      DerivedMD->getType()->getAs<FunctionType>()->getReturnType();
+  QualType BaseReturnTy = BaseMD->getType()
+                              ->getAs<FunctionType>()
+                              ->getReturnType()
+                              .getCanonicalType();
+  QualType DerivedReturnTy = DerivedMD->getType()
+                                 ->getAs<FunctionType>()
+                                 ->getReturnType()
+                                 .getCanonicalType();
 
   if (DerivedReturnTy->isDependentType() || BaseReturnTy->isDependentType())
     return false;
@@ -45,32 +55,24 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
     return true;
 
   /// Check if the return types are covariant.
+
+  // Both types must be pointers or references to classes.
+  if (!(BaseReturnTy->isPointerType() && DerivedReturnTy->isPointerType()) &&
+      !(BaseReturnTy->isReferenceType() && DerivedReturnTy->isReferenceType()))
+    return false;
+
   /// BTy is the class type in return type of BaseMD. For example,
   ///    B* Base::md()
   /// While BRD is the declaration of B.
-  QualType BTy, DTy;
-  const CXXRecordDecl *BRD, *DRD;
+  QualType DTy = DerivedReturnTy->getPointeeType().getCanonicalType();
+  QualType BTy = BaseReturnTy->getPointeeType().getCanonicalType();
 
-  // Both types must be pointers or references to classes.
-  if (const auto *DerivedPT = DerivedReturnTy->getAs<PointerType>()) {
-    if (const auto *BasePT = BaseReturnTy->getAs<PointerType>()) {
-      DTy = DerivedPT->getPointeeType();
-      BTy = BasePT->getPointeeType();
-    }
-  } else if (const auto *DerivedRT = DerivedReturnTy->getAs<ReferenceType>()) {
-    if (const auto *BaseRT = BaseReturnTy->getAs<ReferenceType>()) {
-      DTy = DerivedRT->getPointeeType();
-      BTy = BaseRT->getPointeeType();
-    }
-  }
-
-  // The return types aren't either both pointers or references to a class type.
-  if (DTy.isNull())
+  const CXXRecordDecl *DRD = DTy->getAsCXXRecordDecl();
+  const CXXRecordDecl *BRD = BTy->getAsCXXRecordDecl();
+  if (DRD == nullptr || BRD == nullptr)
     return false;
 
-  DRD = DTy->getAsCXXRecordDecl();
-  BRD = BTy->getAsCXXRecordDecl();
-  if (DRD == nullptr || BRD == nullptr)
+  if (!DRD->hasDefinition() || !BRD->hasDefinition())
     return false;
 
   if (DRD == BRD)
@@ -92,7 +94,8 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
     // Check accessibility.
     // FIXME: We currently only support checking if B is accessible base class
     // of D, or D is the same class which DerivedMD is in.
-    bool IsItself = DRD == DerivedMD->getParent();
+    bool IsItself =
+        DRD->getCanonicalDecl() == DerivedMD->getParent()->getCanonicalDecl();
     bool HasPublicAccess = false;
     for (const auto &Path : Paths) {
       if (Path.Access == AS_public)
@@ -116,6 +119,13 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
   return true;
 }
 
+/// \returns decayed type for arrays and functions.
+static QualType getDecayedType(QualType Type) {
+  if (const auto *Decayed = Type->getAs<DecayedType>())
+    return Decayed->getDecayedType();
+  return Type;
+}
+
 /// \returns true if the param types are the same.
 static bool checkParamTypes(const CXXMethodDecl *BaseMD,
                             const CXXMethodDecl *DerivedMD) {
@@ -125,8 +135,9 @@ static bool checkParamTypes(const CXXMethodDecl *BaseMD,
     return false;
 
   for (unsigned I = 0; I < NumParamA; I++) {
-    if (BaseMD->getParamDecl(I)->getType() !=
-        DerivedMD->getParamDecl(I)->getType())
+    if (getDecayedType(BaseMD->getParamDecl(I)->getType().getCanonicalType()) !=
+        getDecayedType(
+            DerivedMD->getParamDecl(I)->getType().getCanonicalType()))
       return false;
   }
   return true;
@@ -137,13 +148,7 @@ static bool checkParamTypes(const CXXMethodDecl *BaseMD,
 static bool checkOverrideWithoutName(const ASTContext *Context,
                                      const CXXMethodDecl *BaseMD,
                                      const CXXMethodDecl *DerivedMD) {
-  if (BaseMD->getTypeQualifiers() != DerivedMD->getTypeQualifiers())
-    return false;
-
   if (BaseMD->isStatic() != DerivedMD->isStatic())
-    return false;
-
-  if (BaseMD->getAccess() != DerivedMD->getAccess())
     return false;
 
   if (BaseMD->getType() == DerivedMD->getType())
@@ -162,40 +167,34 @@ static bool checkOverrideWithoutName(const ASTContext *Context,
 /// DerivedMD is in.
 static bool checkOverrideByDerivedMethod(const CXXMethodDecl *BaseMD,
                                          const CXXMethodDecl *DerivedMD) {
-  if (BaseMD->getNameAsString() != DerivedMD->getNameAsString())
-    return false;
+  for (CXXMethodDecl::method_iterator I = DerivedMD->begin_overridden_methods(),
+                                      E = DerivedMD->end_overridden_methods();
+       I != E; ++I) {
+    const CXXMethodDecl *OverriddenMD = *I;
+    if (BaseMD->getCanonicalDecl() == OverriddenMD->getCanonicalDecl())
+      return true;
+  }
 
-  if (!checkParamTypes(BaseMD, DerivedMD))
-    return false;
-
-  return true;
-}
-
-/// Generate unique ID for given MethodDecl.
-///
-/// The Id is used as key for 'PossibleMap'.
-/// Typical Id: "Base::func void (void)"
-static std::string generateMethodId(const CXXMethodDecl *MD) {
-  return MD->getQualifiedNameAsString() + " " + MD->getType().getAsString();
+  return false;
 }
 
 bool VirtualNearMissCheck::isPossibleToBeOverridden(
     const CXXMethodDecl *BaseMD) {
-  std::string Id = generateMethodId(BaseMD);
-  auto Iter = PossibleMap.find(Id);
+  auto Iter = PossibleMap.find(BaseMD);
   if (Iter != PossibleMap.end())
     return Iter->second;
 
   bool IsPossible = !BaseMD->isImplicit() && !isa<CXXConstructorDecl>(BaseMD) &&
-                    BaseMD->isVirtual();
-  PossibleMap[Id] = IsPossible;
+                    !isa<CXXDestructorDecl>(BaseMD) && BaseMD->isVirtual() &&
+                    !BaseMD->isOverloadedOperator() &&
+                    !isa<CXXConversionDecl>(BaseMD);
+  PossibleMap[BaseMD] = IsPossible;
   return IsPossible;
 }
 
 bool VirtualNearMissCheck::isOverriddenByDerivedClass(
     const CXXMethodDecl *BaseMD, const CXXRecordDecl *DerivedRD) {
-  auto Key = std::make_pair(generateMethodId(BaseMD),
-                            DerivedRD->getQualifiedNameAsString());
+  auto Key = std::make_pair(BaseMD, DerivedRD);
   auto Iter = OverriddenMap.find(Key);
   if (Iter != OverriddenMap.end())
     return Iter->second;
@@ -218,22 +217,23 @@ void VirtualNearMissCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  Finder->addMatcher(cxxMethodDecl(unless(anyOf(isOverride(), isImplicit(),
-                                                cxxConstructorDecl())))
-                         .bind("method"),
-                     this);
+  Finder->addMatcher(
+      cxxMethodDecl(
+          unless(anyOf(isOverride(), isImplicit(), cxxConstructorDecl(),
+                       cxxDestructorDecl(), cxxConversionDecl(), isStatic(),
+                       isOverloadedOperator())))
+          .bind("method"),
+      this);
 }
 
 void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DerivedMD = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
-  assert(DerivedMD != nullptr);
-
-  if (DerivedMD->isStatic())
-    return;
+  assert(DerivedMD);
 
   const ASTContext *Context = Result.Context;
 
-  const auto *DerivedRD = DerivedMD->getParent();
+  const auto *DerivedRD = DerivedMD->getParent()->getDefinition();
+  assert(DerivedRD);
 
   for (const auto &BaseSpec : DerivedRD->bases()) {
     if (const auto *BaseRD = BaseSpec.getType()->getAsCXXRecordDecl()) {
@@ -249,11 +249,19 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
         if (EditDistance > 0 && EditDistance <= EditDistanceThreshold) {
           if (checkOverrideWithoutName(Context, BaseMD, DerivedMD)) {
             // A "virtual near miss" is found.
-            diag(DerivedMD->getLocStart(),
-                 "method '%0' has a similar name and the same signature as "
-                 "virtual method '%1'; did you mean to override it?")
+            auto Range = CharSourceRange::getTokenRange(
+                SourceRange(DerivedMD->getLocation()));
+
+            bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
+                            !DerivedMD->isTemplateInstantiation();
+            auto Diag =
+                diag(DerivedMD->getLocStart(),
+                     "method '%0' has a similar name and the same signature as "
+                     "virtual method '%1'; did you mean to override it?")
                 << DerivedMD->getQualifiedNameAsString()
                 << BaseMD->getQualifiedNameAsString();
+            if (ApplyFix)
+              Diag << FixItHint::CreateReplacement(Range, BaseMD->getName());
           }
         }
       }

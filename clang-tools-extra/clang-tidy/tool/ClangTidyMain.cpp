@@ -27,132 +27,154 @@ using namespace llvm;
 static cl::OptionCategory ClangTidyCategory("clang-tidy options");
 
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
-static cl::extrahelp ClangTidyHelp(
-    "Configuration files:\n"
-    "  clang-tidy attempts to read configuration for each source file from a\n"
-    "  .clang-tidy file located in the closest parent directory of the source\n"
-    "  file. If any configuration options have a corresponding command-line\n"
-    "  option, command-line option takes precedence. The effective\n"
-    "  configuration can be inspected using -dump-config:\n"
-    "\n"
-    "    $ clang-tidy -dump-config - --\n"
-    "    ---\n"
-    "    Checks:          '-*,some-check'\n"
-    "    HeaderFilterRegex: ''\n"
-    "    AnalyzeTemporaryDtors: false\n"
-    "    User:            user\n"
-    "    CheckOptions:    \n"
-    "      - key:             some-check.SomeOption\n"
-    "        value:           'some value'\n"
-    "    ...\n"
-    "\n\n");
+static cl::extrahelp ClangTidyHelp(R"(
+Configuration files:
+  clang-tidy attempts to read configuration for each source file from a
+  .clang-tidy file located in the closest parent directory of the source
+  file. If any configuration options have a corresponding command-line
+  option, command-line option takes precedence. The effective
+  configuration can be inspected using -dump-config:
+
+    $ clang-tidy -dump-config - --
+    ---
+    Checks:          '-*,some-check'
+    WarningsAsErrors: ''
+    HeaderFilterRegex: ''
+    AnalyzeTemporaryDtors: false
+    User:            user
+    CheckOptions:
+      - key:             some-check.SomeOption
+        value:           'some value'
+    ...
+
+)");
 
 const char DefaultChecks[] =  // Enable these checks:
     "clang-diagnostic-*,"     //   * compiler diagnostics
     "clang-analyzer-*,"       //   * Static Analyzer checks
     "-clang-analyzer-alpha*"; //   * but not alpha checks: many false positives
 
-static cl::opt<std::string>
-Checks("checks", cl::desc("Comma-separated list of globs with optional '-'\n"
-                          "prefix. Globs are processed in order of appearance\n"
-                          "in the list. Globs without '-' prefix add checks\n"
-                          "with matching names to the set, globs with the '-'\n"
-                          "prefix remove checks with matching names from the\n"
-                          "set of enabled checks.\n"
-                          "This option's value is appended to the value read\n"
-                          "from a .clang-tidy file, if any."),
-       cl::init(""), cl::cat(ClangTidyCategory));
+static cl::opt<std::string> Checks("checks", cl::desc(R"(
+Comma-separated list of globs with optional '-'
+prefix. Globs are processed in order of
+appearance in the list. Globs without '-'
+prefix add checks with matching names to the
+set, globs with the '-' prefix remove checks
+with matching names from the set of enabled
+checks.  This option's value is appended to the
+value of the 'Checks' option in .clang-tidy
+file, if any.
+)"),
+                                   cl::init(""), cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string>
-    WarningsAsErrors("warnings-as-errors",
-                     cl::desc("Upgrades warnings to errors. "
-                              "Same format as '-checks'."),
-                     cl::init(""), cl::cat(ClangTidyCategory));
+static cl::opt<std::string> WarningsAsErrors("warnings-as-errors", cl::desc(R"(
+Upgrades warnings to errors. Same format as
+'-checks'.
+This option's value is appended to the value of
+the 'WarningsAsErrors' option in .clang-tidy
+file, if any.
+)"),
+                                             cl::init(""),
+                                             cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string>
-    HeaderFilter("header-filter",
-                 cl::desc("Regular expression matching the names of the\n"
-                          "headers to output diagnostics from. Diagnostics\n"
-                          "from the main file of each translation unit are\n"
-                          "always displayed.\n"
-                          "Can be used together with -line-filter.\n"
-                          "This option overrides the value read from a\n"
-                          ".clang-tidy file."),
-                 cl::init(""), cl::cat(ClangTidyCategory));
+static cl::opt<std::string> HeaderFilter("header-filter", cl::desc(R"(
+Regular expression matching the names of the
+headers to output diagnostics from. Diagnostics
+from the main file of each translation unit are
+always displayed.
+Can be used together with -line-filter.
+This option overrides the 'HeaderFilter' option
+in .clang-tidy file, if any.
+)"),
+                                         cl::init(""),
+                                         cl::cat(ClangTidyCategory));
 
 static cl::opt<bool>
     SystemHeaders("system-headers",
                   cl::desc("Display the errors from system headers."),
                   cl::init(false), cl::cat(ClangTidyCategory));
 static cl::opt<std::string>
-LineFilter("line-filter",
-           cl::desc("List of files with line ranges to filter the\n"
-                    "warnings. Can be used together with\n"
-                    "-header-filter. The format of the list is a JSON\n"
-                    "array of objects:\n"
-                    "  [\n"
-                    "    {\"name\":\"file1.cpp\",\"lines\":[[1,3],[5,7]]},\n"
-                    "    {\"name\":\"file2.h\"}\n"
-                    "  ]"),
-           cl::init(""), cl::cat(ClangTidyCategory));
+    LineFilter("line-filter",
+               cl::desc(R"(
+List of files with line ranges to filter the
+warnings. Can be used together with
+-header-filter. The format of the list is a
+JSON array of objects:
+  [
+    {"name":"file1.cpp","lines":[[1,3],[5,7]]},
+    {"name":"file2.h"}
+  ]
+)"),
+               cl::init(""), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool>
-    Fix("fix", cl::desc("Apply suggested fixes. Without -fix-errors\n"
-                        "clang-tidy will bail out if any compilation\n"
-                        "errors were found."),
-        cl::init(false), cl::cat(ClangTidyCategory));
+static cl::opt<bool> Fix("fix", cl::desc(R"(
+Apply suggested fixes. Without -fix-errors
+clang-tidy will bail out if any compilation
+errors were found.
+)"),
+                         cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool>
-    FixErrors("fix-errors",
-              cl::desc("Apply suggested fixes even if compilation errors\n"
-                       "were found. If compiler errors have attached\n"
-                       "fix-its, clang-tidy will apply them as well."),
-              cl::init(false), cl::cat(ClangTidyCategory));
+static cl::opt<bool> FixErrors("fix-errors", cl::desc(R"(
+Apply suggested fixes even if compilation
+errors were found. If compiler errors have
+attached fix-its, clang-tidy will apply them as
+well.
+)"),
+                               cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool>
-ListChecks("list-checks",
-           cl::desc("List all enabled checks and exit. Use with\n"
-                    "-checks=* to list all available checks."),
-           cl::init(false), cl::cat(ClangTidyCategory));
+static cl::opt<bool> ListChecks("list-checks", cl::desc(R"(
+List all enabled checks and exit. Use with
+-checks=* to list all available checks.
+)"),
+                                cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> Config(
-    "config",
-    cl::desc("Specifies a configuration in YAML/JSON format:\n"
-             "  -config=\"{Checks: '*', CheckOptions: [{key: x, value: y}]}\"\n"
-             "When the value is empty, clang-tidy will attempt to find\n"
-             "a file named .clang-tidy for each source file in its parent\n"
-             "directories."),
-    cl::init(""), cl::cat(ClangTidyCategory));
+static cl::opt<std::string> Config("config", cl::desc(R"(
+Specifies a configuration in YAML/JSON format:
+  -config="{Checks: '*',
+            CheckOptions: [{key: x,
+                            value: y}]}"
+When the value is empty, clang-tidy will
+attempt to find a file named .clang-tidy for
+each source file in its parent directories.
+)"),
+                                   cl::init(""), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> DumpConfig(
-    "dump-config",
-    cl::desc("Dumps configuration in the YAML format to stdout. This option\n"
-             "can be used along with a file name (and '--' if the file is\n"
-             "outside of a project with configured compilation database). The\n"
-             "configuration used for this file will be printed.\n"
-             "Use along with -checks=* to include configuration of all\n"
-             "checks.\n"),
-    cl::init(false), cl::cat(ClangTidyCategory));
+static cl::opt<bool> DumpConfig("dump-config", cl::desc(R"(
+Dumps configuration in the YAML format to
+stdout. This option can be used along with a
+file name (and '--' if the file is outside of a
+project with configured compilation database).
+The configuration used for this file will be
+printed.
+Use along with -checks=* to include
+configuration of all checks.
+)"),
+                                cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> EnableCheckProfile(
-    "enable-check-profile",
-    cl::desc("Enable per-check timing profiles, and print a report to stderr."),
-    cl::init(false), cl::cat(ClangTidyCategory));
+static cl::opt<bool> EnableCheckProfile("enable-check-profile", cl::desc(R"(
+Enable per-check timing profiles, and print a
+report to stderr.
+)"),
+                                        cl::init(false),
+                                        cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> AnalyzeTemporaryDtors(
-    "analyze-temporary-dtors",
-    cl::desc("Enable temporary destructor-aware analysis in\n"
-             "clang-analyzer- checks.\n"
-             "This option overrides the value read from a\n"
-             ".clang-tidy file."),
-    cl::init(false), cl::cat(ClangTidyCategory));
+static cl::opt<bool> AnalyzeTemporaryDtors("analyze-temporary-dtors",
+                                           cl::desc(R"(
+Enable temporary destructor-aware analysis in
+clang-analyzer- checks.
+This option overrides the value read from a
+.clang-tidy file.
+)"),
+                                           cl::init(false),
+                                           cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> ExportFixes(
-    "export-fixes",
-    cl::desc("YAML file to store suggested fixes in. The\n"
-             "stored fixes can be applied to the input source\n"
-             "code with clang-apply-replacements."),
-    cl::value_desc("filename"), cl::cat(ClangTidyCategory));
+static cl::opt<std::string> ExportFixes("export-fixes", cl::desc(R"(
+YAML file to store suggested fixes in. The
+stored fixes can be applied to the input sorce
+code with clang-apply-replacements.
+)"),
+                                        cl::value_desc("filename"),
+                                        cl::cat(ClangTidyCategory));
 
 namespace clang {
 namespace tidy {
@@ -180,7 +202,8 @@ static void printStats(const ClangTidyStats &Stats) {
     llvm::errs() << ").\n";
     if (Stats.ErrorsIgnoredNonUserCode)
       llvm::errs() << "Use -header-filter=.* to display errors from all "
-                      "non-system headers.\n";
+                      "non-system headers. Use -system-headers to display "
+                      "errors from system headers as well.\n";
   }
 }
 

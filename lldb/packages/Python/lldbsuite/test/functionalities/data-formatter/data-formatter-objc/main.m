@@ -417,41 +417,6 @@ int main (int argc, const char * argv[])
 
 	    CFStringRef cfstring_ref = CFSTR("HELLO WORLD");
 
-
-	    CFSetRef set_ref = CFSetCreate(NULL, data_set, 3, NULL);
-
-	    CFMutableSetRef mutable_set_ref = CFSetCreateMutable(NULL, 5, NULL);
-
-	    CFSetAddValue(mutable_set_ref, str1);
-	    CFSetAddValue(mutable_set_ref, str2);
-	    CFSetAddValue(mutable_set_ref, str3);
-	    CFSetAddValue(mutable_set_ref, str4);
-	    CFSetAddValue(mutable_set_ref, str5);
-	    CFSetAddValue(mutable_set_ref, str6);
-	    CFSetAddValue(mutable_set_ref, str7);
-	    CFSetAddValue(mutable_set_ref, str8);
-	    CFSetAddValue(mutable_set_ref, str9);
-	    CFSetAddValue(mutable_set_ref, str10);
-	    CFSetAddValue(mutable_set_ref, str11);
-	    CFSetAddValue(mutable_set_ref, str12);
-
-
-	    CFDictionaryRef cfdict_ref = CFDictionaryCreate(NULL, data_set, data_set, 3, NULL, NULL);
-	    CFMutableDictionaryRef mutable_dict_ref = CFDictionaryCreateMutable(NULL, 16, NULL, NULL);
-
-	    CFDictionarySetValue(mutable_dict_ref, str1, str1);
-	    CFDictionarySetValue(mutable_dict_ref, str2, str2);
-	    CFDictionarySetValue(mutable_dict_ref, str3, str3);
-	    CFDictionarySetValue(mutable_dict_ref, str4, str1);
-	    CFDictionarySetValue(mutable_dict_ref, str5, str2);
-	    CFDictionarySetValue(mutable_dict_ref, str6, str3);
-	    CFDictionarySetValue(mutable_dict_ref, str7, str1);
-	    CFDictionarySetValue(mutable_dict_ref, str8, str2);
-	    CFDictionarySetValue(mutable_dict_ref, str9, str3);
-	    CFDictionarySetValue(mutable_dict_ref, str10, str1);
-	    CFDictionarySetValue(mutable_dict_ref, str11, str2);
-	    CFDictionarySetValue(mutable_dict_ref, str12, str3);
-
 	    CFArrayRef cfarray_ref = CFArrayCreate(NULL, data_set, 3, NULL);
 	    CFMutableArrayRef mutable_array_ref = CFArrayCreateMutable(NULL, 16, NULL);
 
@@ -558,16 +523,6 @@ int main (int argc, const char * argv[])
 		CFAbsoluteTime date3_abs = CFDateGetAbsoluteTime(date3);
 		CFAbsoluteTime date4_abs = CFDateGetAbsoluteTime(date4);
 
-	    NSCountedSet *nscounted_set = [[NSCountedSet alloc] initWithCapacity:5];
-
-	    [nscounted_set addObject:str0];
-	    [nscounted_set addObject:str1];
-	    [nscounted_set addObject:str0];
-	    [nscounted_set addObject:str0];
-	    [nscounted_set addObject:@"foo1"];
-	    [nscounted_set addObject:@"foo2"];
-	    [nscounted_set addObject:@"foo3"];
-	
 	    NSIndexSet *iset1 = [[NSIndexSet alloc] initWithIndexesInRange:NSMakeRange(1, 4)];
 	    NSIndexSet *iset2 = [[NSIndexSet alloc] initWithIndexesInRange:NSMakeRange(1, 512)];
 

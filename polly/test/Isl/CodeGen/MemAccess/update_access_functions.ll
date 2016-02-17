@@ -8,8 +8,8 @@
 
 ; CHECK: polly.stmt.loop3:
 ; CHECK-NEXT:   %val.s2a.reload = load double, double* %val.s2a
-; CHECK-NEXT:   %polly.access.A20 = getelementptr double, double* %A, i64 42
-; CHECK-NEXT:   store double %val.s2a.reload, double* %polly.access.A20
+; CHECK-NEXT:   %scevgep[[R21:[0-9]*]] = getelementptr double, double* %scevgep{{[0-9]*}}, i64 %polly.indvar16
+; CHECK-NEXT:   store double %val.s2a.reload, double* %scevgep[[R21]]
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

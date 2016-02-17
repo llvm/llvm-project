@@ -12,7 +12,6 @@
 
 #include "lld/Core/LLVM.h"
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELF.h"
 
@@ -36,10 +35,6 @@ template <class ELFT> class OutputSection;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class DefinedRegular;
 
-// Flag to force GOT to be in output if we have relocations
-// that relies on its address.
-extern bool HasGotOffRel;
-
 template <class ELFT>
 static inline typename llvm::object::ELFFile<ELFT>::uintX_t
 getAddend(const typename llvm::object::ELFFile<ELFT>::Elf_Rel &Rel) {
@@ -52,9 +47,6 @@ getAddend(const typename llvm::object::ELFFile<ELFT>::Elf_Rela &Rel) {
   return Rel.r_addend;
 }
 
-template <class ELFT>
-typename llvm::object::ELFFile<ELFT>::uintX_t getSymVA(const SymbolBody &S);
-
 template <class ELFT, bool IsRela>
 typename llvm::object::ELFFile<ELFT>::uintX_t
 getLocalRelTarget(const ObjectFile<ELFT> &File,
@@ -62,11 +54,6 @@ getLocalRelTarget(const ObjectFile<ELFT> &File,
                   typename llvm::object::ELFFile<ELFT>::uintX_t Addend);
 
 bool canBePreempted(const SymbolBody *Body, bool NeedsGot);
-
-template <class ELFT>
-bool shouldKeepInSymtab(
-    const ObjectFile<ELFT> &File, StringRef Name,
-    const typename llvm::object::ELFFile<ELFT>::Elf_Sym &Sym);
 
 // This represents a section in an output file.
 // Different sub classes represent different types of sections. Some contain
@@ -82,6 +69,7 @@ public:
   void setVA(uintX_t VA) { Header.sh_addr = VA; }
   uintX_t getVA() const { return Header.sh_addr; }
   void setFileOffset(uintX_t Off) { Header.sh_offset = Off; }
+  void setSHName(unsigned Val) { Header.sh_name = Val; }
   void writeHeaderTo(Elf_Shdr *SHdr);
   StringRef getName() { return Name; }
 
@@ -106,7 +94,7 @@ public:
   }
 
   virtual void finalize() {}
-  virtual void writeTo(uint8_t *Buf) = 0;
+  virtual void writeTo(uint8_t *Buf) {}
   virtual ~OutputSectionBase() = default;
 
 protected:
@@ -123,10 +111,12 @@ public:
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody *Sym);
+  void addMipsLocalEntry();
   bool addDynTlsEntry(SymbolBody *Sym);
-  bool addCurrentModuleTlsIndex();
-  bool empty() const { return Entries.empty(); }
-  uintX_t getEntryAddr(const SymbolBody &B) const;
+  bool addTlsIndex();
+  bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }
+  uintX_t getMipsLocalFullAddr(const SymbolBody &B);
+  uintX_t getMipsLocalPageAddr(uintX_t Addr);
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getNumEntries() const { return Entries.size(); }
 
@@ -140,11 +130,15 @@ public:
   // the number of reserved entries. This method is MIPS-specific.
   unsigned getMipsLocalEntriesNum() const;
 
-  uint32_t getLocalTlsIndexVA() { return Base::getVA() + LocalTlsIndexOff; }
+  uintX_t getTlsIndexVA() { return Base::getVA() + TlsIndexOff; }
 
 private:
   std::vector<const SymbolBody *> Entries;
-  uint32_t LocalTlsIndexOff = -1;
+  uint32_t TlsIndexOff = -1;
+  uint32_t MipsLocalEntries = 0;
+  llvm::DenseMap<uintX_t, size_t> MipsLocalGotPos;
+
+  uintX_t getMipsLocalEntryAddr(uintX_t EntryValue);
 };
 
 template <class ELFT>
@@ -157,7 +151,6 @@ public:
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody *Sym);
   bool empty() const;
-  uintX_t getEntryAddr(const SymbolBody &B) const;
 
 private:
   std::vector<const SymbolBody *> Entries;
@@ -173,16 +166,52 @@ public:
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody *Sym);
   bool empty() const { return Entries.empty(); }
-  uintX_t getEntryAddr(const SymbolBody &B) const;
 
 private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
 };
 
 template <class ELFT> struct DynamicReloc {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  InputSectionBase<ELFT> *C;
-  const Elf_Rel *RI;
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  uint32_t Type;
+
+  // Where the relocation is.
+  enum OffsetKind {
+    Off_Got,       // The got entry of Sym.
+    Off_GotPlt,    // The got.plt entry of Sym.
+    Off_Bss,       // The bss entry of Sym (copy reloc).
+    Off_Sec,       // The final position of the given input section and offset.
+    Off_LTlsIndex, // The local tls index.
+    Off_GTlsIndex, // The global tls index of Sym.
+    Off_GTlsOffset // The global tls offset of Sym.
+  } OKind;
+
+  SymbolBody *Sym = nullptr;
+  InputSectionBase<ELFT> *OffsetSec = nullptr;
+  uintX_t OffsetInSec = 0;
+  bool UseSymVA = false;
+  InputSectionBase<ELFT> *TargetSec = nullptr;
+  uintX_t OffsetInTargetSec = 0;
+  uintX_t Addend = 0;
+
+  DynamicReloc(uint32_t Type, OffsetKind OKind, SymbolBody *Sym)
+      : Type(Type), OKind(OKind), Sym(Sym) {}
+
+  DynamicReloc(uint32_t Type, OffsetKind OKind, bool UseSymVA, SymbolBody *Sym)
+      : Type(Type), OKind(OKind), Sym(Sym), UseSymVA(UseSymVA) {}
+
+  DynamicReloc(uint32_t Type, InputSectionBase<ELFT> *OffsetSec,
+               uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
+               uintX_t Addend)
+      : Type(Type), OKind(Off_Sec), Sym(Sym), OffsetSec(OffsetSec),
+        OffsetInSec(OffsetInSec), UseSymVA(UseSymVA), Addend(Addend) {}
+
+  DynamicReloc(uint32_t Type, InputSectionBase<ELFT> *OffsetSec,
+               uintX_t OffsetInSec, InputSectionBase<ELFT> *TargetSec,
+               uintX_t OffsetInTargetSec, uintX_t Addend)
+      : Type(Type), OKind(Off_Sec), OffsetSec(OffsetSec),
+        OffsetInSec(OffsetInSec), TargetSec(TargetSec),
+        OffsetInTargetSec(OffsetInTargetSec), Addend(Addend) {}
 };
 
 template <class ELFT>
@@ -197,12 +226,16 @@ public:
 
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
-  void addLocalSymbol(StringRef Name);
   void addSymbol(SymbolBody *Body);
   StringTableSection<ELFT> &getStrTabSec() const { return StrTabSec; }
-  unsigned getNumSymbols() const { return NumVisible + 1; }
+  unsigned getNumSymbols() const { return NumLocals + Symbols.size() + 1; }
 
-  ArrayRef<SymbolBody *> getSymbols() const { return Symbols; }
+  ArrayRef<std::pair<SymbolBody *, unsigned>> getSymbols() const {
+    return Symbols;
+  }
+
+  unsigned NumLocals = 0;
+  StringTableSection<ELFT> &StrTabSec;
 
 private:
   void writeLocalSymbols(uint8_t *&Buf);
@@ -211,10 +244,7 @@ private:
   static uint8_t getSymbolBinding(SymbolBody *Body);
 
   SymbolTable<ELFT> &Table;
-  StringTableSection<ELFT> &StrTabSec;
-  std::vector<SymbolBody *> Symbols;
-  unsigned NumVisible = 0;
-  unsigned NumLocals = 0;
+  std::vector<std::pair<SymbolBody *, unsigned>> Symbols;
 };
 
 template <class ELFT>
@@ -225,7 +255,7 @@ class RelocationSection final : public OutputSectionBase<ELFT> {
 
 public:
   RelocationSection(StringRef Name, bool IsRela);
-  void addReloc(const DynamicReloc<ELFT> &Reloc) { Relocs.push_back(Reloc); }
+  void addReloc(const DynamicReloc<ELFT> &Reloc);
   unsigned getRelocOffset();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
@@ -235,9 +265,6 @@ public:
   bool Static = false;
 
 private:
-  bool applyTlsDynamicReloc(SymbolBody *Body, uint32_t Type, Elf_Rel *P,
-                            Elf_Rel *N);
-
   std::vector<DynamicReloc<ELFT>> Relocs;
   const bool IsRela;
 };
@@ -252,9 +279,12 @@ public:
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
   OutputSection(StringRef Name, uint32_t sh_type, uintX_t sh_flags);
   void addSection(InputSectionBase<ELFT> *C) override;
+  void sortInitFini();
+  void sortCtorsDtors();
   void writeTo(uint8_t *Buf) override;
 
 private:
+  void reassignOffsets();
   std::vector<InputSection<ELFT> *> Sections;
 };
 
@@ -310,13 +340,12 @@ public:
 
 private:
   uint8_t getFdeEncoding(ArrayRef<uint8_t> D);
-  uintX_t readEntryLength(ArrayRef<uint8_t> D);
 
   std::vector<EHInputSection<ELFT> *> Sections;
   std::vector<Cie<ELFT>> Cies;
 
   // Maps CIE content + personality to a index in Cies.
-  llvm::DenseMap<std::pair<StringRef, StringRef>, unsigned> CieMap;
+  llvm::DenseMap<std::pair<StringRef, SymbolBody *>, unsigned> CieMap;
 };
 
 template <class ELFT>
@@ -331,18 +360,17 @@ class StringTableSection final : public OutputSectionBase<ELFT> {
 public:
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
   StringTableSection(StringRef Name, bool Dynamic);
-  void reserve(StringRef S);
-  size_t addString(StringRef S);
+  unsigned addString(StringRef S, bool HashIt = true);
   void writeTo(uint8_t *Buf) override;
-  size_t getSize() const { return Used + Reserved; }
+  unsigned getSize() const { return Size; }
   void finalize() override { this->Header.sh_size = getSize(); }
   bool isDynamic() const { return Dynamic; }
 
 private:
   const bool Dynamic;
+  llvm::DenseMap<StringRef, unsigned> StringMap;
   std::vector<StringRef> Strings;
-  size_t Used = 1; // ELF string tables start with a NUL byte, so 1.
-  size_t Reserved = 0;
+  unsigned Size = 1; // ELF string tables start with a NUL byte, so 1.
 };
 
 template <class ELFT>
@@ -370,7 +398,7 @@ public:
 
   // Adds symbols to the hash table.
   // Sorts the input to satisfy GNU hash section requirements.
-  void addSymbols(std::vector<SymbolBody *> &Symbols);
+  void addSymbols(std::vector<std::pair<SymbolBody *, unsigned>> &Symbols);
 
 private:
   static unsigned calcNBuckets(unsigned NumHashed);
@@ -382,6 +410,7 @@ private:
 
   struct HashedSymbolData {
     SymbolBody *Body;
+    unsigned STName;
     uint32_t Hash;
   };
 
@@ -400,6 +429,31 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+
+  // The .dynamic section contains information for the dynamic linker.
+  // The section consists of fixed size entries, which consist of
+  // type and value fields. Value are one of plain integers, symbol
+  // addresses, or section addresses. This struct represents the entry.
+  struct Entry {
+    int32_t Tag;
+    union {
+      OutputSectionBase<ELFT> *OutSec;
+      uint64_t Val;
+      const SymbolBody *Sym;
+    };
+    enum KindT { SecAddr, SymAddr, PlainInt } Kind;
+    Entry(int32_t Tag, OutputSectionBase<ELFT> *OutSec)
+        : Tag(Tag), OutSec(OutSec), Kind(SecAddr) {}
+    Entry(int32_t Tag, uint64_t Val) : Tag(Tag), Val(Val), Kind(PlainInt) {}
+    Entry(int32_t Tag, const SymbolBody *Sym)
+        : Tag(Tag), Sym(Sym), Kind(SymAddr) {}
+  };
+
+  // finalize() fills this vector with the section contents. finalize()
+  // cannot directly create final section contents because when the
+  // function is called, symbol or section addresses are not fixed yet.
+  std::vector<Entry> Entries;
 
 public:
   DynamicSection(SymbolTable<ELFT> &SymTab);
@@ -412,10 +466,6 @@ public:
 
 private:
   SymbolTable<ELFT> &SymTab;
-  const SymbolBody *InitSym = nullptr;
-  const SymbolBody *FiniSym = nullptr;
-  uint32_t DtFlags = 0;
-  uint32_t DtFlags1 = 0;
 };
 
 template <class ELFT>
@@ -493,6 +543,8 @@ template <class ELFT> struct Out {
   static SymbolTableSection<ELFT> *DynSymTab;
   static SymbolTableSection<ELFT> *SymTab;
   static Elf_Phdr *TlsPhdr;
+  static OutputSectionBase<ELFT> *ElfHeader;
+  static OutputSectionBase<ELFT> *ProgramHeaders;
 };
 
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
@@ -515,6 +567,8 @@ template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
 template <class ELFT> typename Out<ELFT>::Elf_Phdr *Out<ELFT>::TlsPhdr;
+template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ElfHeader;
+template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
 
 } // namespace elf2
 } // namespace lld

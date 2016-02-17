@@ -88,6 +88,8 @@ const MachORelocatableSectionToAtomType sectsToAtomType[] = {
   ENTRY("__DATA", "__thread_data", S_THREAD_LOCAL_REGULAR, typeTLVInitialData),
   ENTRY("__DATA", "__thread_bss",     S_THREAD_LOCAL_ZEROFILL,
                                                         typeTLVInitialZeroFill),
+  ENTRY("__DATA", "__objc_imageinfo", S_REGULAR,          typeObjCImageInfo),
+  ENTRY("__DATA", "__objc_catlist",   S_REGULAR,          typeObjC2CategoryList),
   ENTRY("",       "",                 S_INTERPOSING,      typeInterposingTuples),
   ENTRY("__LD",   "__compact_unwind", S_REGULAR,
                                                          typeCompactUnwindInfo),
@@ -179,6 +181,8 @@ void sectionParseInfo(DefinedAtom::ContentType atomType,
     ENTRY(typeCompactUnwindInfo, 4, scopeTranslationUnit, mergeNo,
                                                             atomizeCU),
     ENTRY(typeGOT,               4, scopeLinkageUnit,     mergeByContent,
+                                                            atomizePointerSize),
+    ENTRY(typeObjC2CategoryList, 4, scopeTranslationUnit, mergeByContent,
                                                             atomizePointerSize),
     ENTRY(typeUnknown,           1, scopeGlobal,          mergeNo,
                                                             atomizeAtSymbols)
@@ -360,9 +364,9 @@ std::error_code processSymboledSection(DefinedAtom::ContentType atomType,
     file.eachAtomInSection(section,
                            [&](MachODefinedAtom *atom, uint64_t offset)->void {
       if (prevAtom)
-        prevAtom->addReference(0, Reference::kindLayoutAfter, atom, 0,
+        prevAtom->addReference(Reference::KindNamespace::all,
                                Reference::KindArch::all,
-                               Reference::KindNamespace::all);
+                               Reference::kindLayoutAfter, 0, atom, 0);
       prevAtom = atom;
     });
   }
@@ -659,8 +663,9 @@ std::error_code convertRelocs(const Section &section,
       }
     }
     // Instantiate an lld::Reference object and add to its atom.
-    inAtom->addReference(offsetInAtom, kind, target, addend,
-                         handler.kindArch());
+    inAtom->addReference(Reference::KindNamespace::mach_o,
+                         handler.kindArch(),
+                         kind, offsetInAtom, target, addend);
   }
 
   return std::error_code();
@@ -773,8 +778,8 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
   Reference::Addend addend;
   const MachODefinedAtom *cie =
     findAtomCoveringAddress(normalizedFile, file, cieAddress, &addend);
-  atom->addReference(cieFieldInFDE, handler.unwindRefToCIEKind(), cie,
-                     addend, handler.kindArch());
+  atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
+                     handler.unwindRefToCIEKind(), cieFieldInFDE, cie, addend);
 
   assert(cie && cie->contentType() == DefinedAtom::typeCFI && !addend &&
          "FDE's CIE field does not point at the start of a CIE.");
@@ -794,8 +799,9 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
 
   const Atom *func =
     findAtomCoveringAddress(normalizedFile, file, rangeStart, &addend);
-  atom->addReference(rangeFieldInFDE, handler.unwindRefToFunctionKind(),
-                     func, addend, handler.kindArch());
+  atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
+                     handler.unwindRefToFunctionKind(), rangeFieldInFDE, func,
+                     addend);
 
   // Handle the augmentation data if there is any.
   if (cieInfo._augmentationDataPresent) {
@@ -820,9 +826,9 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
         lsdaFromFDE;
       const Atom *lsda =
         findAtomCoveringAddress(normalizedFile, file, lsdaStart, &addend);
-      atom->addReference(augmentationDataFieldInFDE,
+      atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
                          handler.unwindRefToFunctionKind(),
-                         lsda, addend, handler.kindArch());
+                         augmentationDataFieldInFDE, lsda, addend);
     }
   }
 
@@ -867,58 +873,42 @@ std::error_code addEHFrameReferences(const NormalizedFile &normalizedFile,
   return ehFrameErr;
 }
 
-std::error_code parseObjCImageInfo(const NormalizedFile &normalizedFile,
+std::error_code parseObjCImageInfo(const Section &sect,
+                                   const NormalizedFile &normalizedFile,
                                    MachOFile &file) {
-
-  const Section *imageInfoSection = nullptr;
-  for (auto &section : normalizedFile.sections) {
-    if (section.segmentName == "__OBJC" &&
-        section.sectionName == "__image_info") {
-      imageInfoSection = &section;
-      break;
-    }
-    if (section.segmentName == "__DATA" &&
-        section.sectionName == "__objc_imageinfo") {
-      imageInfoSection = &section;
-      break;
-    }
-  }
-
-  // No image info section so nothing to do.
-  if (!imageInfoSection)
-    return std::error_code();
 
   //	struct objc_image_info  {
   //		uint32_t	version;	// initially 0
   //		uint32_t	flags;
   //	};
-  enum {
-    OBJC_IMAGE_SUPPORTS_GC=2,
-    OBJC_IMAGE_GC_ONLY=4,
-    OBJC_IMAGE_IS_SIMULATED=32,
-  };
 
-  ArrayRef<uint8_t> content = imageInfoSection->content;
+  ArrayRef<uint8_t> content = sect.content;
   if (content.size() != 8)
-    return make_dynamic_error_code(imageInfoSection->segmentName + "/" +
-                                   imageInfoSection->sectionName +
+    return make_dynamic_error_code(sect.segmentName + "/" +
+                                   sect.sectionName +
                                    " in file " + file.path() +
                                    " should be 8 bytes in size");
 
   const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
   uint32_t version = read32(content.data(), isBig);
   if (version)
-    return make_dynamic_error_code(imageInfoSection->segmentName + "/" +
-                                   imageInfoSection->sectionName +
+    return make_dynamic_error_code(sect.segmentName + "/" +
+                                   sect.sectionName +
                                    " in file " + file.path() +
                                    " should have version=0");
 
   uint32_t flags = read32(content.data() + 4, isBig);
-  if (flags & (OBJC_IMAGE_SUPPORTS_GC|OBJC_IMAGE_GC_ONLY))
-    return make_dynamic_error_code(imageInfoSection->segmentName + "/" +
-                                   imageInfoSection->sectionName +
+  if (flags & (MachOLinkingContext::objc_supports_gc |
+               MachOLinkingContext::objc_gc_only))
+    return make_dynamic_error_code(sect.segmentName + "/" +
+                                   sect.sectionName +
                                    " in file " + file.path() +
                                    " uses GC.  This is not supported");
+
+  if (flags & MachOLinkingContext::objc_retainReleaseForSimulator)
+    file.setObjcConstraint(MachOLinkingContext::objc_retainReleaseForSimulator);
+  else
+    file.setObjcConstraint(MachOLinkingContext::objc_retainRelease);
 
   file.setSwiftVersion((flags >> 8) & 0xFF);
 
@@ -950,6 +940,11 @@ dylibToAtoms(const NormalizedFile &normalizedFile, StringRef path,
 
 namespace normalized {
 
+static bool isObjCImageInfo(const Section &sect) {
+  return (sect.segmentName == "__OBJC" && sect.sectionName == "__image_info") ||
+    (sect.segmentName == "__DATA" && sect.sectionName == "__objc_imageinfo");
+}
+
 std::error_code
 normalizedObjectToAtoms(MachOFile *file,
                         const NormalizedFile &normalizedFile,
@@ -963,6 +958,18 @@ normalizedObjectToAtoms(MachOFile *file,
     DEBUG(llvm::dbgs() << "Creating atoms: "; sect.dump());
     if (isDebugInfoSection(sect))
       continue;
+
+
+    // If the file contains an objc_image_info struct, then we should parse the
+    // ObjC flags and Swift version.
+    if (isObjCImageInfo(sect)) {
+      if (std::error_code ec = parseObjCImageInfo(sect, normalizedFile, *file))
+        return ec;
+      // We then skip adding atoms for this section as we use the ObjCPass to
+      // re-emit this data after it has been aggregated for all files.
+      continue;
+    }
+
     bool customSectionName;
     DefinedAtom::ContentType atomType = atomTypeFromSection(sect,
                                                             customSectionName);
@@ -1006,11 +1013,6 @@ normalizedObjectToAtoms(MachOFile *file,
   if (std::error_code ec = addEHFrameReferences(normalizedFile, *file, *handler))
     return ec;
 
-  // If the file contains an objc_image_info struct, then we should parse the
-  // ObjC flags and Swift version.
-  if (std::error_code ec = parseObjCImageInfo(normalizedFile, *file))
-    return ec;
-
   // Process mach-o data-in-code regions array. That information is encoded in
   // atoms as References at each transition point.
   unsigned nextIndex = 0;
@@ -1034,9 +1036,9 @@ normalizedObjectToAtoms(MachOFile *file,
                                      + ") crosses atom boundary."));
     }
     // Add reference that marks start of data-in-code.
-    atom->addReference(offsetInAtom,
-                       handler->dataInCodeTransitionStart(*atom), atom,
-                       entry.kind, handler->kindArch());
+    atom->addReference(Reference::KindNamespace::mach_o, handler->kindArch(),
+                       handler->dataInCodeTransitionStart(*atom),
+                       offsetInAtom, atom, entry.kind);
 
     // Peek at next entry, if it starts where this one ends, skip ending ref.
     if (nextIndex < normalizedFile.dataInCode.size()) {
@@ -1050,15 +1052,17 @@ normalizedObjectToAtoms(MachOFile *file,
       continue;
 
     // Add reference that marks end of data-in-code.
-    atom->addReference(offsetInAtom+entry.length,
-                       handler->dataInCodeTransitionEnd(*atom), atom, 0,
-                       handler->kindArch());
+    atom->addReference(Reference::KindNamespace::mach_o, handler->kindArch(),
+                       handler->dataInCodeTransitionEnd(*atom),
+                       offsetInAtom+entry.length, atom, 0);
   }
 
   // Cache some attributes on the file for use later.
   file->setFlags(normalizedFile.flags);
   file->setArch(normalizedFile.arch);
   file->setOS(normalizedFile.os);
+  file->setMinVersion(normalizedFile.minOSverson);
+  file->setMinVersionLoadCommandKind(normalizedFile.minOSVersionKind);
 
   // Sort references in each atom to their canonical order.
   for (const DefinedAtom* defAtom : file->defined()) {

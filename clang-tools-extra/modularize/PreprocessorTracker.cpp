@@ -1276,7 +1276,7 @@ private:
   std::vector<HeaderHandle> HeaderStack;
   std::vector<HeaderInclusionPath> InclusionPaths;
   InclusionPathHandle CurrentInclusionPathHandle;
-  llvm::SmallSet<HeaderHandle, 128> HeadersInThisCompile;
+  llvm::SmallSet<HeaderHandle, 32> HeadersInThisCompile;
   std::vector<PPItemKey> IncludeDirectives;
   MacroExpansionMap MacroExpansions;
   ConditionalExpansionMap ConditionalExpansions;

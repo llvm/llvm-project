@@ -9,8 +9,9 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class PluginCommandTestCase(TestBase):
 
@@ -18,7 +19,7 @@ class PluginCommandTestCase(TestBase):
 
     @skipIfNoSBHeaders
     @skipIfHostIncompatibleWithRemote # Requires a compatible arch and platform to link against the host's built lldb lib.
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @no_debug_info_test
     def test_load_plugin(self):
         """Test that plugins that load commands work correctly."""

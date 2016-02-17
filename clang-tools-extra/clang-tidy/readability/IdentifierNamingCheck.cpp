@@ -504,7 +504,7 @@ static StyleKind findStyleKind(
 static void addUsage(IdentifierNamingCheck::NamingCheckFailureMap &Failures,
                      const NamedDecl *Decl, SourceRange Range,
                      const SourceManager *SM) {
-  // Do nothin if the provided range is invalid
+  // Do nothing if the provided range is invalid.
   if (Range.getBegin().isInvalid() || Range.getEnd().isInvalid())
     return;
 

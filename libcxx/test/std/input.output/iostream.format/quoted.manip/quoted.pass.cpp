@@ -16,79 +16,95 @@
 #include <string>
 #include <cassert>
 
-#if _LIBCPP_STD_VER > 11
+#include "test_macros.h"
 
-bool is_skipws ( const std::istream *is ) {
-    return ( is->flags() & std::ios_base::skipws ) != 0;
+#if TEST_STD_VER > 11
+
+template <class CharT, class Traits>
+bool is_skipws ( const std::basic_istream<CharT, Traits>& is ) {
+    return ( is.flags() & std::ios_base::skipws ) != 0;
     }
 
-
-bool is_skipws ( const std::wistream *is ) {
-    return ( is->flags() & std::ios_base::skipws ) != 0;
-    }
-
-void both_ways ( const char *p ) {
-    std::string str(p);
+template <class CharT, class Traits = std::char_traits<CharT>>
+void both_ways ( const CharT *p ) {
+    std::basic_string<CharT, Traits> str(p);
     auto q = std::quoted(str);
 
-    std::stringstream ss;
-    bool skippingws = is_skipws ( &ss );
+    std::basic_stringstream<CharT, Traits> ss;
+    bool skippingws = is_skipws ( ss );
     ss << q;
     ss >> q;
     }
 
-void round_trip ( const char *p ) {
-    std::stringstream ss;
-    bool skippingws = is_skipws ( &ss );
+template <class CharT, class Traits = std::char_traits<CharT>>
+void round_trip ( const CharT *p ) {
+    std::basic_stringstream<CharT, Traits> ss;
+    bool skippingws = is_skipws ( ss );
+
     ss << std::quoted(p);
-    std::string s;
+    std::basic_string<CharT, Traits> s;
     ss >> std::quoted(s);
     assert ( s == p );
-    assert ( skippingws == is_skipws ( &ss ));
+    assert ( skippingws == is_skipws ( ss ));
     }
 
-void round_trip_ws ( const char *p ) {
-    std::stringstream ss;
+
+template <class CharT, class Traits = std::char_traits<CharT>>
+void round_trip_ws ( const CharT *p ) {
+    std::basic_stringstream<CharT, Traits> ss;
     std::noskipws ( ss );
-    bool skippingws = is_skipws ( &ss );
+    bool skippingws = is_skipws ( ss );
+
     ss << std::quoted(p);
-    std::string s;
+    std::basic_string<CharT, Traits> s;
     ss >> std::quoted(s);
     assert ( s == p );
-    assert ( skippingws == is_skipws ( &ss ));
+    assert ( skippingws == is_skipws ( ss ));
     }
 
-void round_trip_d ( const char *p, char delim ) {
-    std::stringstream ss;
-    ss << std::quoted(p, delim);
-    std::string s;
-    ss >> std::quoted(s, delim);
+template <class CharT, class Traits = std::char_traits<CharT>>
+void round_trip_d ( const CharT *p, char delim ) {
+    std::basic_stringstream<CharT, Traits> ss;
+    CharT d{delim};
+
+    ss << std::quoted(p, d);
+    std::basic_string<CharT, Traits> s;
+    ss >> std::quoted(s, d);
     assert ( s == p );
     }
 
-void round_trip_e ( const char *p, char escape ) {
-    std::stringstream ss;
-    ss << std::quoted(p, '"', escape );
-    std::string s;
-    ss >> std::quoted(s, '"', escape );
+template <class CharT, class Traits = std::char_traits<CharT>>
+void round_trip_e ( const CharT *p, char escape ) {
+    std::basic_stringstream<CharT, Traits> ss;
+    CharT e{escape};
+
+    ss << std::quoted(p, CharT('"'), e );
+    std::basic_string<CharT, Traits> s;
+    ss >> std::quoted(s, CharT('"'), e );
     assert ( s == p );
     }
 
 
-
-std::string quote ( const char *p, char delim='"', char escape='\\' ) {
-    std::stringstream ss;
-    ss << std::quoted(p, delim, escape);
-    std::string s;
+template <class CharT, class Traits = std::char_traits<CharT>>
+std::basic_string<CharT, Traits> quote ( const CharT *p, char delim='"', char escape='\\' ) {
+    std::basic_stringstream<CharT, Traits> ss;
+    CharT d{delim};
+    CharT e{escape};
+    ss << std::quoted(p, d, e);
+    std::basic_string<CharT, Traits> s;
     ss >> s;    // no quote
     return s;
 }
 
-std::string unquote ( const char *p, char delim='"', char escape='\\' ) {
-    std::stringstream ss;
+template <class CharT, class Traits = std::char_traits<CharT>>
+std::basic_string<CharT, Traits> unquote ( const CharT *p, char delim='"', char escape='\\' ) {
+    std::basic_stringstream<CharT, Traits> ss;
     ss << p;
-    std::string s;
-    ss >> std::quoted(s, delim, escape);
+
+    CharT d{delim};
+    CharT e{escape};
+    std::basic_string<CharT, Traits> s;
+    ss >> std::quoted(s, d, e);
     return s;
 }
 
@@ -106,61 +122,6 @@ void test_padding () {
     }
 }
 
-
-void round_trip ( const wchar_t *p ) {
-    std::wstringstream ss;
-    bool skippingws = is_skipws ( &ss );
-    ss << std::quoted(p);
-    std::wstring s;
-    ss >> std::quoted(s);
-    assert ( s == p );
-    assert ( skippingws == is_skipws ( &ss ));
-    }
-    
-
-void round_trip_ws ( const wchar_t *p ) {
-    std::wstringstream ss;
-    std::noskipws ( ss );
-    bool skippingws = is_skipws ( &ss );
-    ss << std::quoted(p);
-    std::wstring s;
-    ss >> std::quoted(s);
-    assert ( s == p );
-    assert ( skippingws == is_skipws ( &ss ));
-    }
-
-void round_trip_d ( const wchar_t *p, wchar_t delim ) {
-    std::wstringstream ss;
-    ss << std::quoted(p, delim);
-    std::wstring s;
-    ss >> std::quoted(s, delim);
-    assert ( s == p );
-    }
-
-void round_trip_e ( const wchar_t *p, wchar_t escape ) {
-    std::wstringstream ss;
-    ss << std::quoted(p, wchar_t('"'), escape );
-    std::wstring s;
-    ss >> std::quoted(s, wchar_t('"'), escape );
-    assert ( s == p );
-    }
-
-
-std::wstring quote ( const wchar_t *p, wchar_t delim='"', wchar_t escape='\\' ) {
-    std::wstringstream ss;
-    ss << std::quoted(p, delim, escape);
-    std::wstring s;
-    ss >> s;    // no quote
-    return s;
-}
-
-std::wstring unquote ( const wchar_t *p, wchar_t delim='"', wchar_t escape='\\' ) {
-    std::wstringstream ss;
-    ss << p;
-    std::wstring s;
-    ss >> std::quoted(s, delim, escape);
-    return s;
-}
 
 int main()
 {

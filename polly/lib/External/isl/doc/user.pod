@@ -8911,6 +8911,10 @@ L</"Schedule Trees">.
 	isl_stat isl_options_set_schedule_serialize_sccs(
 		isl_ctx *ctx, int val);
 	int isl_options_get_schedule_serialize_sccs(isl_ctx *ctx);
+	isl_stat isl_options_set_schedule_whole_component(
+		isl_ctx *ctx, int val);
+	int isl_options_get_schedule_whole_component(
+		isl_ctx *ctx);
 	isl_stat isl_options_set_schedule_maximize_band_depth(
 		isl_ctx *ctx, int val);
 	int isl_options_get_schedule_maximize_band_depth(
@@ -8960,16 +8964,35 @@ appear in the same band node if these statements belong
 to the same strongly connected component at the point where
 the band node is constructed.
 
+=item * schedule_whole_component
+
+If this option is set, then entire (weakly) connected
+components in the dependence graph are scheduled together
+as a whole.
+Otherwise, each strongly connected component within
+such a weakly connected component is first scheduled separately
+and then combined with other strongly connected components.
+This option has no effect if C<schedule_serialize_sccs> is set.
+
 =item * schedule_maximize_band_depth
 
-If this option is set, we do not split bands at the point
-where we detect splitting is necessary. Instead, we
-backtrack and split bands as early as possible. This
-reduces the number of splits and maximizes the width of
-the bands. Wider bands give more possibilities for tiling.
-Note that if the C<schedule_serialize_sccs> options is set,
-then bands will be split as early as possible, even if there is no need.
-The C<schedule_maximize_band_depth> option therefore has no effect in this case.
+If this option is set, then the scheduler tries to maximize
+the width of the bands.  Wider bands give more possibilities for tiling.
+In particular, if the C<schedule_whole_component> option is set,
+then bands are split if this might result in wider bands.
+Otherwise, the effect of this option is to only allow
+strongly connected components to be combined if this does
+not reduce the width of the bands.
+Note that if the C<schedule_serialize_sccs> options is set, then
+the C<schedule_maximize_band_depth> option therefore has no effect.
+
+=item * schedule_maximize_coincidence
+
+This option is only effective if the C<schedule_whole_component>
+option is turned off.
+If the C<schedule_maximize_coincidence> option is set, then (clusters of)
+strongly connected components are only combined with each other
+if this does not reduce the number of coincident band members.
 
 =item * schedule_outer_coincidence
 

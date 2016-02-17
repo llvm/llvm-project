@@ -857,6 +857,73 @@ SymbolContext::GetFunctionStartLineEntry () const
     return LineEntry();
 }
 
+bool
+SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line, AddressRange &range, Error &error)
+{
+    if (!line_entry.IsValid())
+    {
+        error.SetErrorString("Symbol context has no line table.");
+        return false;
+    }
+    
+    range = line_entry.range;
+    if (line_entry.line > end_line)
+    {
+        error.SetErrorStringWithFormat("end line option %d must be after the current line: %d",
+                                     end_line,
+                                     line_entry.line);
+        return false;
+    }
+
+    uint32_t line_index = 0;
+    bool found = false;
+    while (1)
+    {
+        LineEntry this_line;
+        line_index = comp_unit->FindLineEntry(line_index, line_entry.line, nullptr, false, &this_line);
+        if (line_index == UINT32_MAX)
+            break;
+        if (LineEntry::Compare(this_line, line_entry) == 0)
+        {
+            found = true;
+            break;
+        }
+    }
+    
+    LineEntry end_entry;
+    if (!found)
+    {
+        // Can't find the index of the SymbolContext's line entry in the SymbolContext's CompUnit.
+        error.SetErrorString("Can't find the current line entry in the CompUnit - can't process "
+                                     "the end-line option");
+        return false;
+    }
+    
+    line_index = comp_unit->FindLineEntry(line_index, end_line, nullptr, false, &end_entry);
+    if (line_index == UINT32_MAX)
+    {
+        error.SetErrorStringWithFormat("could not find a line table entry corresponding "
+                                       "to end line number %d",
+                                       end_line);
+        return false;
+    }
+    
+    Block *func_block = GetFunctionBlock();
+    if (func_block && func_block->GetRangeIndexContainingAddress(end_entry.range.GetBaseAddress()) == UINT32_MAX)
+    {
+        error.SetErrorStringWithFormat("end line number %d is not contained within the current function.",
+                                     end_line);
+        return false;
+    }
+    
+    lldb::addr_t range_size = end_entry.range.GetBaseAddress().GetFileAddress()
+                              - range.GetBaseAddress().GetFileAddress();
+    range.SetByteSize(range_size);
+    return true;
+}
+
+
+
 //----------------------------------------------------------------------
 //
 //  SymbolContextSpecifier

@@ -168,7 +168,7 @@ struct float_data<long double>
 #if defined(__mips__) && defined(__mips_n64) || defined(__aarch64__) || \
     defined(__wasm__)
     static const size_t mangled_size = 32;
-#elif defined(__arm__) || defined(__mips__)
+#elif defined(__arm__) || defined(__mips__) || defined(__hexagon__)
     static const size_t mangled_size = 16;
 #else
     static const size_t mangled_size = 20;  // May need to be adjusted to 16 or 24 on other platforms

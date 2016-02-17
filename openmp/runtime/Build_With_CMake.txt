@@ -143,6 +143,11 @@ symbols are supported (Linux, some BSD* variants).  It is off
 by default for Windows and Mac, but on for other Unix based operating
 systems.
 
+-DLIBOMP_ENABLE_SHARED=on|off
+Shared library instead of static library? (Note: static libraries are not
+supported on Windows). If LIBOMP_ENABLE_SHARED is off, then static OpenMP
+libraries will be built instead of dynamic ones.
+
 -DLIBOMP_OMPT_SUPPORT=off|on
 Should OMPT support be included in the build? (Not supported on Windows)
 If LIBOMP_OMPT_SUPPORT is off, then both ompt_blame and ompt_trace are ignored.
@@ -170,6 +175,14 @@ This option is only used if LIBOMP_USE_HWLOC is on.
 Specifies install location of Hwloc. The configuration system will look for
 hwloc.h in ${LIBOMP_HWLOC_INSTALL_DIR}/include and the library in 
 ${LIBOMP_HWLOC_INSTALL_DIR}/lib.
+
+-DLIBOMP_LLVM_LIT_EXECUTABLE=/path/to/llvm-lit
+Default: search in PATH
+Specifiy full path to llvm-lit executable for running tests.
+
+-DOPENMP_LLVM_TOOLS_DIR=/path/to/built/llvm/tools
+Default: search for tools in path
+Additional path to search for LLVM tools needed by tests.
 
 ================================
 How to append flags to the build

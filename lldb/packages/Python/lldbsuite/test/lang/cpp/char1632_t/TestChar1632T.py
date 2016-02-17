@@ -9,8 +9,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class Char1632TestCase(TestBase):
 
@@ -24,8 +25,7 @@ class Char1632TestCase(TestBase):
         self.lines = [ line_number(self.source, '// breakpoint1'), 
                        line_number(self.source, '// breakpoint2') ]
 
-    @expectedFailureIcc # ICC (13.1) does not emit the DW_TAG_base_type for char16_t and char32_t.
-    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(compiler="icc", bugnumber="ICC (13.1) does not emit the DW_TAG_base_type for char16_t and char32_t.")
     def test(self):
         """Test that the C++11 support for char16_t and char32_t works correctly."""
         self.build()

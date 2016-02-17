@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLD_READER_WRITER_MACHO_ARCH_HANDLER_H
+#define LLD_READER_WRITER_MACHO_ARCH_HANDLER_H
+
 #include "Atoms.h"
 #include "File.h"
 #include "MachONormalizedFile.h"
@@ -15,9 +18,6 @@
 #include "lld/Core/Simple.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
 #include "llvm/ADT/Triple.h"
-
-#ifndef LLD_READER_WRITER_MACHO_ARCH_HANDLER_H
-#define LLD_READER_WRITER_MACHO_ARCH_HANDLER_H
 
 namespace lld {
 namespace mach_o {
@@ -91,6 +91,10 @@ public:
   /// represent the offset of the function's FDE entry from the start of
   /// __eh_frame.
   virtual Reference::KindValue unwindRefToEhFrameKind() = 0;
+
+  /// Returns a pointer sized reference kind.  On 64-bit targets this will
+  /// likely be something like pointer64, and pointer32 on 32-bit targets.
+  virtual Reference::KindValue pointerKind() = 0;
 
   virtual const Atom *fdeTargetFunction(const DefinedAtom *fde);
 
@@ -251,7 +255,10 @@ public:
     ReferenceInfo   stubHelperReferenceToImm;
     ReferenceInfo   stubHelperReferenceToHelperCommon;
 
+    DefinedAtom::ContentType stubHelperImageCacheContentType;
+
     uint32_t        stubHelperCommonSize;
+    uint8_t         stubHelperCommonAlignment;
     uint8_t         stubHelperCommonBytes[36];
     ReferenceInfo   stubHelperCommonReferenceToCache;
     OptionalRefInfo optStubHelperCommonReferenceToCache;

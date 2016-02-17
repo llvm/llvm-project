@@ -10,15 +10,16 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class FrameAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_get_arg_vals_for_call_stack(self):
         """Exercise SBFrame.GetVariables() API to get argument vals."""
         self.build()
@@ -49,7 +50,8 @@ class FrameAPITestCase(TestBase):
         from six import StringIO as SixStringIO
         session = SixStringIO()
         while process.GetState() == lldb.eStateStopped:
-            thread = process.GetThreadAtIndex(0)
+            thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+            self.assertIsNotNone(thread)
             # Inspect at most 3 frames.
             numFrames = min(3, thread.GetNumFrames())
             for i in range(numFrames):
@@ -134,7 +136,8 @@ class FrameAPITestCase(TestBase):
         self.assertTrue(process.GetState() == lldb.eStateStopped,
                         PROCESS_STOPPED)
 
-        thread = process.GetThreadAtIndex(0)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
         frame = thread.GetFrameAtIndex(0)
         if self.TraceOn():
             print("frame:", frame)
@@ -173,8 +176,8 @@ class FrameAPITestCase(TestBase):
         self.assertTrue(process.GetState() == lldb.eStateStopped,
                         PROCESS_STOPPED)
 
-        thread = process.GetThreadAtIndex(0)
-        self.assertTrue(thread)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         frameEntered = thread.GetFrameAtIndex(0)
         if self.TraceOn():

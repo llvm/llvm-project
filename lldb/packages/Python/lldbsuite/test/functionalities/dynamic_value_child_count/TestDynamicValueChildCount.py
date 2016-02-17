@@ -9,8 +9,9 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class DynamicValueChildCountTestCase(TestBase):
 
@@ -31,11 +32,8 @@ class DynamicValueChildCountTestCase(TestBase):
         self.main_sixth_call_line = line_number('pass-to-base.cpp',
                                                        '// Break here and check b has 0 children again')
 
-    @expectedFailureLinux("llvm.org/pr23039")
-    @expectedFailureFreeBSD("llvm.org/pr19311") # continue at a breakpoint does not work
-    @expectedFailureWindows("llvm.org/pr24663")
-    @expectedFailurei386("to be figured out")
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_get_dynamic_vals(self):
         """Test fetching C++ dynamic values from pointers & references."""
         """Get argument vals for the call stack when stopped on a breakpoint."""

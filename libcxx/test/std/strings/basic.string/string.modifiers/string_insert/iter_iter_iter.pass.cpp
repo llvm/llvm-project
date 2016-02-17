@@ -33,6 +33,7 @@ test(S s, typename S::difference_type pos, It first, It last, S expected)
     assert(s == expected);
 }
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
 template <class S, class It>
 void
 test_exceptions(S s, typename S::difference_type pos, It first, It last)
@@ -47,6 +48,7 @@ test_exceptions(S s, typename S::difference_type pos, It first, It last)
     assert(s.__invariants());
     assert(s == aCopy);
 }
+#endif
 
 int main()
 {
@@ -142,6 +144,7 @@ int main()
          S("12345678901234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"));
     }
 #endif
+#ifndef TEST_HAS_NO_EXCEPTIONS
 	{ // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
@@ -155,6 +158,7 @@ int main()
     test_exceptions(S(), 0, TIter(s, s+10, 5, TIter::TADereference), TIter());
     test_exceptions(S(), 0, TIter(s, s+10, 6, TIter::TAComparison), TIter());
 	}
+#endif
 #if _LIBCPP_DEBUG >= 1
     {
         std::string v;

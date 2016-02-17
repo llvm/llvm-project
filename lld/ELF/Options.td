@@ -3,6 +3,9 @@ include "llvm/Option/OptParser.td"
 def Bsymbolic: Flag<["-"], "Bsymbolic">,
   HelpText<"Bind defined symbols locally">;
 
+def Bsymbolic_functions: Flag<["-"], "Bsymbolic-functions">,
+  HelpText<"Bind defined function symbols locally">;
+
 def Bdynamic: Flag<["-"], "Bdynamic">,
   HelpText<"Link against shared libraries">;
 

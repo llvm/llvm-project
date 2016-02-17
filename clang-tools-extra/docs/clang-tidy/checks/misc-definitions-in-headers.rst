@@ -1,9 +1,11 @@
 misc-definitions-in-headers
 ===========================
 
-Finds non-extern non-inline function and variable definitions in header files, which can lead to potential ODR violations.
+Finds non-extern non-inline function and variable definitions in header files,
+which can lead to potential ODR violations.
 
 .. code:: c++
+
    // Foo.h
    int a = 1; // Warning.
    extern int d; // OK: extern variable.

@@ -58,6 +58,7 @@
 #include <clc/math/fmin.h>
 #include <clc/math/fmod.h>
 #include <clc/math/fract.h>
+#include <clc/math/frexp.h>
 #include <clc/math/half_rsqrt.h>
 #include <clc/math/half_sqrt.h>
 #include <clc/math/hypot.h>
@@ -67,6 +68,7 @@
 #include <clc/math/log1p.h>
 #include <clc/math/log2.h>
 #include <clc/math/mad.h>
+#include <clc/math/modf.h>
 #include <clc/math/nextafter.h>
 #include <clc/math/pow.h>
 #include <clc/math/pown.h>

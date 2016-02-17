@@ -41,6 +41,9 @@ using namespace lldb_private;
 //------------------------------------------------------------------
 PlatformPOSIX::PlatformPOSIX (bool is_host) :
 Platform(is_host),  // This is the local host platform
+m_option_group_platform_rsync(new OptionGroupPlatformRSync()),
+m_option_group_platform_ssh(new OptionGroupPlatformSSH()),
+m_option_group_platform_caching(new OptionGroupPlatformCaching()),
 m_remote_platform_sp ()
 {
 }
@@ -69,14 +72,17 @@ PlatformPOSIX::GetModuleSpec (const FileSpec& module_file_spec,
 lldb_private::OptionGroupOptions*
 PlatformPOSIX::GetConnectionOptions (lldb_private::CommandInterpreter& interpreter)
 {
-    if (m_options.get() == NULL)
+    auto iter = m_options.find(&interpreter), end = m_options.end();
+    if (iter == end)
     {
-        m_options.reset(new OptionGroupOptions(interpreter));
-        m_options->Append(new OptionGroupPlatformRSync());
-        m_options->Append(new OptionGroupPlatformSSH());
-        m_options->Append(new OptionGroupPlatformCaching());
+        std::unique_ptr<lldb_private::OptionGroupOptions> options(new OptionGroupOptions(interpreter));
+        options->Append(m_option_group_platform_rsync.get());
+        options->Append(m_option_group_platform_ssh.get());
+        options->Append(m_option_group_platform_caching.get());
+        m_options[&interpreter] = std::move(options);
     }
-    return m_options.get();
+    
+    return m_options.at(&interpreter).get();
 }
 
 bool
@@ -675,29 +681,21 @@ PlatformPOSIX::ConnectRemote (Args& args)
 
     if (error.Success() && m_remote_platform_sp)
     {
-        if (m_options.get())
+        if (m_option_group_platform_rsync.get() && m_option_group_platform_ssh.get() && m_option_group_platform_caching.get())
         {
-            OptionGroupOptions* options = m_options.get();
-            const OptionGroupPlatformRSync *m_rsync_options =
-                static_cast<const OptionGroupPlatformRSync *>(options->GetGroupWithOption('r'));
-            const OptionGroupPlatformSSH *m_ssh_options =
-                static_cast<const OptionGroupPlatformSSH *>(options->GetGroupWithOption('s'));
-            const OptionGroupPlatformCaching *m_cache_options =
-                static_cast<const OptionGroupPlatformCaching *>(options->GetGroupWithOption('c'));
-
-            if (m_rsync_options->m_rsync)
+            if (m_option_group_platform_rsync->m_rsync)
             {
                 SetSupportsRSync(true);
-                SetRSyncOpts(m_rsync_options->m_rsync_opts.c_str());
-                SetRSyncPrefix(m_rsync_options->m_rsync_prefix.c_str());
-                SetIgnoresRemoteHostname(m_rsync_options->m_ignores_remote_hostname);
+                SetRSyncOpts(m_option_group_platform_rsync->m_rsync_opts.c_str());
+                SetRSyncPrefix(m_option_group_platform_rsync->m_rsync_prefix.c_str());
+                SetIgnoresRemoteHostname(m_option_group_platform_rsync->m_ignores_remote_hostname);
             }
-            if (m_ssh_options->m_ssh)
+            if (m_option_group_platform_ssh->m_ssh)
             {
                 SetSupportsSSH(true);
-                SetSSHOpts(m_ssh_options->m_ssh_opts.c_str());
+                SetSSHOpts(m_option_group_platform_ssh->m_ssh_opts.c_str());
             }
-            SetLocalCacheDirectory(m_cache_options->m_cache_dir.c_str());
+            SetLocalCacheDirectory(m_option_group_platform_caching->m_cache_dir.c_str());
         }
     }
 

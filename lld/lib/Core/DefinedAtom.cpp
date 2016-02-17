@@ -43,6 +43,8 @@ DefinedAtom::ContentPermissions DefinedAtom::permissions(ContentType type) {
   case typeProcessedUnwindInfo:
   case typeRONote:
   case typeNoAlloc:
+  case typeObjCImageInfo:
+  case typeObjCMethodList:
     return permR__;
 
   case typeData:
@@ -52,6 +54,7 @@ DefinedAtom::ContentPermissions DefinedAtom::permissions(ContentType type) {
   case typeObjC1Class:
   case typeLazyPointer:
   case typeLazyDylibPointer:
+  case typeNonLazyPointer:
   case typeThunkTLV:
   case typeRWNote:
     return permRW_;
@@ -77,6 +80,7 @@ DefinedAtom::ContentPermissions DefinedAtom::permissions(ContentType type) {
   case typeUnknown:
   case typeTempLTO:
   case typeSectCreate:
+  case typeDSOHandle:
     return permUnknown;
   }
   llvm_unreachable("unknown content type");

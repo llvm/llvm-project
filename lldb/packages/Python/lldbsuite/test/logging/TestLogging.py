@@ -8,7 +8,9 @@ from __future__ import print_function
 
 import os, time, string
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class LogTestCase(TestBase):
 
@@ -61,7 +63,7 @@ class LogTestCase(TestBase):
         f.close ()
         os.remove (log_file)
 
-        self.assertTrue(log_lines > 0, "Something was written to the log file.")
+        self.assertGreater(len(log_lines), 0, "Something was written to the log file.")
 
     # Check that lldb truncates its log files
     @no_debug_info_test
@@ -83,7 +85,7 @@ class LogTestCase(TestBase):
             contents = f.read ()
 
         # check that it got removed
-        self.assertTrue(string.find(contents, "bacon") == -1)
+        self.assertEquals(contents.find("bacon"), -1)
 
     # Check that lldb can append to a log file
     @no_debug_info_test
@@ -104,4 +106,4 @@ class LogTestCase(TestBase):
             contents = f.read ()
 
         # check that it is still there
-        self.assertTrue(string.find(contents, "bacon") == 0)
+        self.assertEquals(contents.find("bacon"), 0)

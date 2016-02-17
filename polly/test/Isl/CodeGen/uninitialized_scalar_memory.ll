@@ -5,7 +5,6 @@
 ;
 ; CHECK:      polly.start:
 ; CHECK-NEXT:   store float %ebig.0, float* %ebig.0.s2a
-; CHECK-NEXT:   store i32 %iebig.0, i32* %iebig.0.s2a
 ; CHECK-NEXT:   br label %polly.stmt.if.end.entry
 ;
 ;    int g(void);

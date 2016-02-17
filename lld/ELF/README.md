@@ -19,3 +19,16 @@ Achieving good performance is one of our goals. It's too early to reach a
 conclusion, but we are optimistic about that as it currently seems to be faster
 than GNU gold. It will be interesting to compare when we are close to feature
 parity.
+
+Library Use
+-----------
+
+You can embed LLD to your program by linking against it and calling the linker's
+entry point function lld::elf2::link.
+
+The current policy is that it is your reponsibility to give trustworthy object
+files. The function is guaranteed to return as long as you do not pass corrupted
+or malicious object files. A corrupted file could cause a fatal error or SEGV.
+That being said, you don't need to worry too much about it if you create object
+files in a usual way and give them to the linker (it is naturally expected to
+work, or otherwise it's a linker's bug.)

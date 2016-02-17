@@ -309,7 +309,7 @@ class __hash_map_node_destructor
 {
     typedef _Alloc                              allocator_type;
     typedef allocator_traits<allocator_type>    __alloc_traits;
-    typedef typename __alloc_traits::value_type::value_type value_type;
+    typedef typename __alloc_traits::value_type::__node_value_type value_type;
 public:
     typedef typename __alloc_traits::pointer    pointer;
 private:
