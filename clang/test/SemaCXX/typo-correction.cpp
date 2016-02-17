@@ -663,3 +663,5 @@ class Bar : public A::B::Foofoo {};
 
 using C::D::Foofoo;  // expected-error {{no member named 'Foofoo' in namespace 'PR24781_using_crash::C::D'; did you mean 'A::B::Foofoo'?}}
 }
+
+int d = ? L : d; // expected-error {{expected expression}} expected-error {{undeclared identifier}}

@@ -124,6 +124,8 @@ def warn_float_underflow : Warning<
   InGroup<LiteralRange>;
 def warn_double_const_requires_fp64 : Warning<
   "double precision constant requires cl_khr_fp64, casting to single precision">;
+def err_half_const_requires_fp16 : Error<
+  "half precision constant requires cl_khr_fp16">;
 
 // C99 variable-length arrays
 def ext_vla : Extension<"variable length arrays are a C99 feature">,

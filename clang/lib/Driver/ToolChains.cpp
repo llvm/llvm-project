@@ -3000,6 +3000,12 @@ Tool *CloudABI::buildLinker() const {
   return new tools::cloudabi::Linker(*this);
 }
 
+SanitizerMask CloudABI::getSupportedSanitizers() const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  Res |= SanitizerKind::SafeStack;
+  return Res;
+}
+
 /// OpenBSD - OpenBSD tool chain which can call as(1) and ld(1) directly.
 
 OpenBSD::OpenBSD(const Driver &D, const llvm::Triple &Triple,

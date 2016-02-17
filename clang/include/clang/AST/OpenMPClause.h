@@ -1253,6 +1253,7 @@ public:
 ///
 class OMPFirstprivateClause final
     : public OMPVarListClause<OMPFirstprivateClause>,
+      public OMPClauseWithPreInit,
       private llvm::TrailingObjects<OMPFirstprivateClause, Expr *> {
   friend TrailingObjects;
   friend OMPVarListClause;
@@ -1268,7 +1269,8 @@ class OMPFirstprivateClause final
   OMPFirstprivateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
                         SourceLocation EndLoc, unsigned N)
       : OMPVarListClause<OMPFirstprivateClause>(OMPC_firstprivate, StartLoc,
-                                                LParenLoc, EndLoc, N) {}
+                                                LParenLoc, EndLoc, N),
+        OMPClauseWithPreInit(this) {}
 
   /// \brief Build an empty clause.
   ///
@@ -1277,7 +1279,8 @@ class OMPFirstprivateClause final
   explicit OMPFirstprivateClause(unsigned N)
       : OMPVarListClause<OMPFirstprivateClause>(
             OMPC_firstprivate, SourceLocation(), SourceLocation(),
-            SourceLocation(), N) {}
+            SourceLocation(), N),
+        OMPClauseWithPreInit(this) {}
   /// \brief Sets the list of references to private copies with initializers for
   /// new private variables.
   /// \param VL List of references.
@@ -1318,11 +1321,13 @@ public:
   /// \param InitVL List of references to auto generated variables used for
   /// initialization of a single array element. Used if firstprivate variable is
   /// of array type.
+  /// \param PreInit Statement that must be executed before entering the OpenMP
+  /// region with this clause.
   ///
   static OMPFirstprivateClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
-         ArrayRef<Expr *> InitVL);
+         ArrayRef<Expr *> InitVL, Stmt *PreInit);
   /// \brief Creates an empty clause with the place for \a N variables.
   ///
   /// \param C AST context.

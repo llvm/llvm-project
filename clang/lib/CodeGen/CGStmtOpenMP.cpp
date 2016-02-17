@@ -1925,16 +1925,14 @@ void CodeGenFunction::EmitOMPSingleDirective(const OMPSingleDirective &S) {
     AssignmentOps.append(C->assignment_ops().begin(),
                          C->assignment_ops().end());
   }
-  bool HasFirstprivates;
   {
     OMPLexicalScope Scope(*this, S);
     // Emit code for 'single' region along with 'copyprivate' clauses
-    auto &&CodeGen = [&S, &HasFirstprivates](CodeGenFunction &CGF) {
+    auto &&CodeGen = [&S](CodeGenFunction &CGF) {
       CodeGenFunction::OMPPrivateScope SingleScope(CGF);
-      HasFirstprivates = CGF.EmitOMPFirstprivateClause(S, SingleScope);
+      (void)CGF.EmitOMPFirstprivateClause(S, SingleScope);
       CGF.EmitOMPPrivateClause(S, SingleScope);
       (void)SingleScope.Privatize();
-
       CGF.EmitStmt(
           cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
     };
@@ -1944,8 +1942,7 @@ void CodeGenFunction::EmitOMPSingleDirective(const OMPSingleDirective &S) {
   }
   // Emit an implicit barrier at the end (to avoid data race on firstprivate
   // init or if no 'nowait' clause was specified and no 'copyprivate' clause).
-  if ((!S.getSingleClause<OMPNowaitClause>() || HasFirstprivates) &&
-      CopyprivateVars.empty()) {
+  if (!S.getSingleClause<OMPNowaitClause>() && CopyprivateVars.empty()) {
     CGM.getOpenMPRuntime().emitBarrierCall(
         *this, S.getLocStart(),
         S.getSingleClause<OMPNowaitClause>() ? OMPD_unknown : OMPD_single);
@@ -2000,9 +1997,7 @@ void CodeGenFunction::EmitOMPParallelSectionsDirective(
   // Emit directive as a combined directive that consists of two implicit
   // directives: 'parallel' with 'sections' directive.
   OMPLexicalScope Scope(*this, S);
-  auto &&CodeGen = [&S](CodeGenFunction &CGF) {
-    CGF.EmitSections(S);
-  };
+  auto &&CodeGen = [&S](CodeGenFunction &CGF) { CGF.EmitSections(S); };
   emitCommonOMPParallelDirective(*this, S, OMPD_sections, CodeGen);
 }
 

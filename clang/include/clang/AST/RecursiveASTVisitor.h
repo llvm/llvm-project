@@ -492,6 +492,8 @@ private:
 #include "clang/Basic/OpenMPKinds.def"
   /// \brief Process clauses with list of variables.
   template <typename T> bool VisitOMPClauseList(T *Node);
+  /// Process clauses with pre-initis.
+  bool VisitOMPClauseWithPreInit(OMPClauseWithPreInit *Node);
 
   bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue);
 };
@@ -2498,6 +2500,13 @@ bool RecursiveASTVisitor<Derived>::TraverseOMPClause(OMPClause *C) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPClauseWithPreInit(
+    OMPClauseWithPreInit *Node) {
+  TRY_TO(TraverseStmt(Node->getPreInitStmt()));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPIfClause(OMPIfClause *C) {
   TRY_TO(TraverseStmt(C->getCondition()));
   return true;
@@ -2548,8 +2557,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPProcBindClause(OMPProcBindClause *) {
 template <typename Derived>
 bool
 RecursiveASTVisitor<Derived>::VisitOMPScheduleClause(OMPScheduleClause *C) {
+  TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getChunkSize()));
-  TRY_TO(TraverseStmt(C->getPreInitStmt()));
   return true;
 }
 
@@ -2637,6 +2646,7 @@ template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPFirstprivateClause(
     OMPFirstprivateClause *C) {
   TRY_TO(VisitOMPClauseList(C));
+  TRY_TO(VisitOMPClauseWithPreInit(C));
   for (auto *E : C->private_copies()) {
     TRY_TO(TraverseStmt(E));
   }
@@ -2818,8 +2828,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPHintClause(OMPHintClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPDistScheduleClause(
     OMPDistScheduleClause *C) {
+  TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getChunkSize()));
-  TRY_TO(TraverseStmt(C->getPreInitStmt()));
   return true;
 }
 

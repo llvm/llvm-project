@@ -7247,6 +7247,7 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
   SmallVector<Expr *, 8> Vars;
   SmallVector<Expr *, 8> PrivateCopies;
   SmallVector<Expr *, 8> Inits;
+  SmallVector<Decl *, 4> ExprCaptures;
   bool IsImplicitClause =
       StartLoc.isInvalid() && LParenLoc.isInvalid() && EndLoc.isInvalid();
   auto ImplicitClauseLoc = DSAStack->getConstructLoc();
@@ -7479,8 +7480,10 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
         *this, VDPrivate, RefExpr->getType().getUnqualifiedType(),
         RefExpr->getExprLoc());
     DeclRefExpr *Ref = nullptr;
-    if (!VD)
+    if (!VD) {
       Ref = buildCapture(*this, D->getIdentifier(), RefExpr);
+      ExprCaptures.push_back(Ref->getDecl());
+    }
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_firstprivate, Ref);
     Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
     PrivateCopies.push_back(VDPrivateRefExpr);
@@ -7489,9 +7492,16 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
 
   if (Vars.empty())
     return nullptr;
+  Stmt *PreInit = nullptr;
+  if (!ExprCaptures.empty()) {
+    PreInit = new (Context)
+        DeclStmt(DeclGroupRef::Create(Context, ExprCaptures.begin(),
+                                      ExprCaptures.size()),
+                 SourceLocation(), SourceLocation());
+  }
 
   return OMPFirstprivateClause::Create(Context, StartLoc, LParenLoc, EndLoc,
-                                       Vars, PrivateCopies, Inits);
+                                       Vars, PrivateCopies, Inits, PreInit);
 }
 
 OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,

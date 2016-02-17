@@ -449,9 +449,11 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
         LHS = Actions.ActOnConditionalOp(OpToken.getLocation(), ColonLoc,
                                          LHS.get(), TernaryMiddle.get(),
                                          RHS.get());
-    } else
-      // Ensure potential typos in the RHS aren't left undiagnosed.
+    } else {
+      // Ensure potential typos aren't left undiagnosed.
+      Actions.CorrectDelayedTyposInExpr(TernaryMiddle);
       Actions.CorrectDelayedTyposInExpr(RHS);
+    }
   }
 }
 

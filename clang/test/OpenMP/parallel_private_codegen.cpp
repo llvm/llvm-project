@@ -287,7 +287,7 @@ int main() {
 // CHECK: call void [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
 // CHECK: ret
 //
-// CHECK: define {{.+}} @{{.+}}([[SS_TY]]* %
+// CHECK: define {{.+}} @{{.+}}([[SS_TY]]*
 // CHECK: store i{{[0-9]+}} 0, i{{[0-9]+}}* %
 // CHECK: store i8
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
