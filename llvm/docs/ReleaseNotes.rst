@@ -101,6 +101,11 @@ Non-comprehensive list of changes in this release
 * The optimization to move the prologue and epilogue of functions in colder
   code path (shrink-wrapping) is now enabled by default.
 
+* A new target-independent gcc-compatible emulated Thread Local Storage mode
+  is added.  When ``-femultated-tls`` flag is used, all accesses to TLS
+  variables are converted to calls to ``__emutls_get_address`` in the runtime
+  library.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet
