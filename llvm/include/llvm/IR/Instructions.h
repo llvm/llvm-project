@@ -2512,6 +2512,14 @@ public:
     return block_begin() + getNumOperands();
   }
 
+  iterator_range<block_iterator> blocks() {
+    return make_range(block_begin(), block_end());
+  }
+
+  iterator_range<const_block_iterator> blocks() const {
+    return make_range(block_begin(), block_end());
+  }
+
   op_range incoming_values() { return operands(); }
 
   const_op_range incoming_values() const { return operands(); }
