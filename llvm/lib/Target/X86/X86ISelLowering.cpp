@@ -26112,6 +26112,98 @@ static SDValue PerformAndCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Try to fold:
+//   (or (and (m, y), (pandn m, x)))
+// into:
+//   (vselect m, x, y)
+// As a special case, try to fold:
+//   (or (and (m, (sub 0, x)), (pandn m, x)))
+// into:
+//   (psign m, x)
+static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
+                                            const X86Subtarget &Subtarget) {
+  assert(N->getOpcode() == ISD::OR);
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  if (!((VT == MVT::v2i64 && Subtarget.hasSSSE3()) ||
+        (VT == MVT::v4i64 && Subtarget.hasInt256())))
+    return SDValue();
+
+  // Canonicalize pandn to RHS
+  if (N0.getOpcode() == X86ISD::ANDNP)
+    std::swap(N0, N1);
+
+  if (N0.getOpcode() != ISD::AND || N1.getOpcode() != X86ISD::ANDNP)
+    return SDValue();
+
+  SDValue Mask = N1.getOperand(0);
+  SDValue X = N1.getOperand(1);
+  SDValue Y;
+  if (N0.getOperand(0) == Mask)
+    Y = N0.getOperand(1);
+  if (N0.getOperand(1) == Mask)
+    Y = N0.getOperand(0);
+
+  // Check to see if the mask appeared in both the AND and ANDNP.
+  if (!Y.getNode())
+    return SDValue();
+
+  // Validate that X, Y, and Mask are bitcasts, and see through them.
+  if (Mask.getOpcode() == ISD::BITCAST)
+    Mask = Mask.getOperand(0);
+  if (X.getOpcode() == ISD::BITCAST)
+    X = X.getOperand(0);
+  if (Y.getOpcode() == ISD::BITCAST)
+    Y = Y.getOperand(0);
+
+  EVT MaskVT = Mask.getValueType();
+
+  // Validate that the Mask operand is a vector sra node.
+  // FIXME: what to do for bytes, since there is a psignb/pblendvb, but
+  // there is no psrai.b
+  unsigned EltBits = MaskVT.getVectorElementType().getSizeInBits();
+  unsigned SraAmt = ~0;
+  if (Mask.getOpcode() == ISD::SRA) {
+    if (auto *AmtBV = dyn_cast<BuildVectorSDNode>(Mask.getOperand(1)))
+      if (auto *AmtConst = AmtBV->getConstantSplatNode())
+        SraAmt = AmtConst->getZExtValue();
+  } else if (Mask.getOpcode() == X86ISD::VSRAI) {
+    SDValue SraC = Mask.getOperand(1);
+    SraAmt = cast<ConstantSDNode>(SraC)->getZExtValue();
+  }
+  if ((SraAmt + 1) != EltBits)
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // Now we know we at least have a plendvb with the mask val.  See if
+  // we can form a psignb/w/d.
+  // psign = x.type == y.type == mask.type && y = sub(0, x);
+  if (Y.getOpcode() == ISD::SUB && Y.getOperand(1) == X &&
+      ISD::isBuildVectorAllZeros(Y.getOperand(0).getNode()) &&
+      X.getValueType() == MaskVT && Y.getValueType() == MaskVT) {
+    assert((EltBits == 8 || EltBits == 16 || EltBits == 32) &&
+           "Unsupported VT for PSIGN");
+    Mask = DAG.getNode(X86ISD::PSIGN, DL, MaskVT, X, Mask.getOperand(0));
+    return DAG.getBitcast(VT, Mask);
+  }
+
+  // PBLENDVB is only available on SSE 4.1.
+  if (!Subtarget.hasSSE41())
+    return SDValue();
+
+  MVT BlendVT = (VT == MVT::v4i64) ? MVT::v32i8 : MVT::v16i8;
+
+  X = DAG.getBitcast(BlendVT, X);
+  Y = DAG.getBitcast(BlendVT, Y);
+  Mask = DAG.getBitcast(BlendVT, Mask);
+  Mask = DAG.getNode(ISD::VSELECT, DL, BlendVT, Mask, Y, X);
+  return DAG.getBitcast(VT, Mask);
+}
+
 static SDValue PerformOrCombine(SDNode *N, SelectionDAG &DAG,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const X86Subtarget *Subtarget) {
@@ -26124,86 +26216,12 @@ static SDValue PerformOrCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, Subtarget))
     return FPLogic;
 
+  if (SDValue R = combineLogicBlendIntoPBLENDV(N, DAG, *Subtarget))
+    return R;
+
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
-
-  // look for psign/blend
-  if (VT == MVT::v2i64 || VT == MVT::v4i64) {
-    if (!Subtarget->hasSSSE3() ||
-        (VT == MVT::v4i64 && !Subtarget->hasInt256()))
-      return SDValue();
-
-    // Canonicalize pandn to RHS
-    if (N0.getOpcode() == X86ISD::ANDNP)
-      std::swap(N0, N1);
-    // or (and (m, y), (pandn m, x))
-    if (N0.getOpcode() == ISD::AND && N1.getOpcode() == X86ISD::ANDNP) {
-      SDValue Mask = N1.getOperand(0);
-      SDValue X    = N1.getOperand(1);
-      SDValue Y;
-      if (N0.getOperand(0) == Mask)
-        Y = N0.getOperand(1);
-      if (N0.getOperand(1) == Mask)
-        Y = N0.getOperand(0);
-
-      // Check to see if the mask appeared in both the AND and ANDNP and
-      if (!Y.getNode())
-        return SDValue();
-
-      // Validate that X, Y, and Mask are BIT_CONVERTS, and see through them.
-      // Look through mask bitcast.
-      if (Mask.getOpcode() == ISD::BITCAST)
-        Mask = Mask.getOperand(0);
-      if (X.getOpcode() == ISD::BITCAST)
-        X = X.getOperand(0);
-      if (Y.getOpcode() == ISD::BITCAST)
-        Y = Y.getOperand(0);
-
-      EVT MaskVT = Mask.getValueType();
-
-      // Validate that the Mask operand is a vector sra node.
-      // FIXME: what to do for bytes, since there is a psignb/pblendvb, but
-      // there is no psrai.b
-      unsigned EltBits = MaskVT.getVectorElementType().getSizeInBits();
-      unsigned SraAmt = ~0;
-      if (Mask.getOpcode() == ISD::SRA) {
-        if (auto *AmtBV = dyn_cast<BuildVectorSDNode>(Mask.getOperand(1)))
-          if (auto *AmtConst = AmtBV->getConstantSplatNode())
-            SraAmt = AmtConst->getZExtValue();
-      } else if (Mask.getOpcode() == X86ISD::VSRAI) {
-        SDValue SraC = Mask.getOperand(1);
-        SraAmt  = cast<ConstantSDNode>(SraC)->getZExtValue();
-      }
-      if ((SraAmt + 1) != EltBits)
-        return SDValue();
-
-      SDLoc DL(N);
-
-      // Now we know we at least have a plendvb with the mask val.  See if
-      // we can form a psignb/w/d.
-      // psign = x.type == y.type == mask.type && y = sub(0, x);
-      if (Y.getOpcode() == ISD::SUB && Y.getOperand(1) == X &&
-          ISD::isBuildVectorAllZeros(Y.getOperand(0).getNode()) &&
-          X.getValueType() == MaskVT && Y.getValueType() == MaskVT) {
-        assert((EltBits == 8 || EltBits == 16 || EltBits == 32) &&
-               "Unsupported VT for PSIGN");
-        Mask = DAG.getNode(X86ISD::PSIGN, DL, MaskVT, X, Mask.getOperand(0));
-        return DAG.getBitcast(VT, Mask);
-      }
-      // PBLENDVB only available on SSE 4.1
-      if (!Subtarget->hasSSE41())
-        return SDValue();
-
-      MVT BlendVT = (VT == MVT::v4i64) ? MVT::v32i8 : MVT::v16i8;
-
-      X = DAG.getBitcast(BlendVT, X);
-      Y = DAG.getBitcast(BlendVT, Y);
-      Mask = DAG.getBitcast(BlendVT, Mask);
-      Mask = DAG.getNode(ISD::VSELECT, DL, BlendVT, Mask, Y, X);
-      return DAG.getBitcast(VT, Mask);
-    }
-  }
 
   if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
     return SDValue();
