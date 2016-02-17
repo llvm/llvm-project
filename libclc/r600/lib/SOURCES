@@ -1,1 +1,3 @@
 synchronization/barrier_impl.ll
+workitem/get_group_id.ll
+workitem/get_local_id.ll

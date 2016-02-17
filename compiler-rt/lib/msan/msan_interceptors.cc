@@ -874,17 +874,42 @@ INTERCEPTOR(int, getrlimit, int resource, void *rlim) {
 
 #if !SANITIZER_FREEBSD
 INTERCEPTOR(int, getrlimit64, int resource, void *rlim) {
-  if (msan_init_is_running)
-    return REAL(getrlimit64)(resource, rlim);
+  if (msan_init_is_running) return REAL(getrlimit64)(resource, rlim);
   ENSURE_MSAN_INITED();
   int res = REAL(getrlimit64)(resource, rlim);
-  if (!res)
-    __msan_unpoison(rlim, __sanitizer::struct_rlimit64_sz);
+  if (!res) __msan_unpoison(rlim, __sanitizer::struct_rlimit64_sz);
   return res;
 }
+
+INTERCEPTOR(int, prlimit, int pid, int resource, void *new_rlimit,
+            void *old_rlimit) {
+  if (msan_init_is_running)
+    return REAL(prlimit)(pid, resource, new_rlimit, old_rlimit);
+  ENSURE_MSAN_INITED();
+  CHECK_UNPOISONED(new_rlimit, __sanitizer::struct_rlimit_sz);
+  int res = REAL(prlimit)(pid, resource, new_rlimit, old_rlimit);
+  if (!res) __msan_unpoison(old_rlimit, __sanitizer::struct_rlimit_sz);
+  return res;
+}
+
+INTERCEPTOR(int, prlimit64, int pid, int resource, void *new_rlimit,
+            void *old_rlimit) {
+  if (msan_init_is_running)
+    return REAL(prlimit64)(pid, resource, new_rlimit, old_rlimit);
+  ENSURE_MSAN_INITED();
+  CHECK_UNPOISONED(new_rlimit, __sanitizer::struct_rlimit64_sz);
+  int res = REAL(prlimit64)(pid, resource, new_rlimit, old_rlimit);
+  if (!res) __msan_unpoison(old_rlimit, __sanitizer::struct_rlimit64_sz);
+  return res;
+}
+
 #define MSAN_MAYBE_INTERCEPT_GETRLIMIT64 INTERCEPT_FUNCTION(getrlimit64)
+#define MSAN_MAYBE_INTERCEPT_PRLIMIT INTERCEPT_FUNCTION(prlimit)
+#define MSAN_MAYBE_INTERCEPT_PRLIMIT64 INTERCEPT_FUNCTION(prlimit64)
 #else
 #define MSAN_MAYBE_INTERCEPT_GETRLIMIT64
+#define MSAN_MAYBE_INTERCEPT_PRLIMIT
+#define MSAN_MAYBE_INTERCEPT_PRLIMIT64
 #endif
 
 #if SANITIZER_FREEBSD
@@ -1616,6 +1641,8 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_FGETS_UNLOCKED;
   INTERCEPT_FUNCTION(getrlimit);
   MSAN_MAYBE_INTERCEPT_GETRLIMIT64;
+  MSAN_MAYBE_INTERCEPT_PRLIMIT;
+  MSAN_MAYBE_INTERCEPT_PRLIMIT64;
   MSAN_INTERCEPT_UNAME;
   INTERCEPT_FUNCTION(gethostname);
   MSAN_MAYBE_INTERCEPT_EPOLL_WAIT;

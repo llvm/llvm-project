@@ -702,12 +702,15 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
                                   __isl_keep isl_ast_node *Node) {
   isl_id_to_ast_expr *NewAccesses =
       isl_id_to_ast_expr_alloc(Stmt->getParent()->getIslCtx(), 0);
+
+  auto *Build = IslAstInfo::getBuild(Node);
+  assert(Build && "Could not obtain isl_ast_build from user node");
+  Stmt->setAstBuild(Build);
+
   for (auto *MA : *Stmt) {
     if (!MA->hasNewAccessRelation())
       continue;
 
-    auto Build = IslAstInfo::getBuild(Node);
-    assert(Build && "Could not obtain isl_ast_build from user node");
     auto Schedule = isl_ast_build_get_schedule(Build);
     auto PWAccRel = MA->applyScheduleToAccessRelation(Schedule);
 

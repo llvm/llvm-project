@@ -557,7 +557,9 @@ bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
     if (ExprType.isNull())
       ExprType = Obj->getType();
 
-    assert(ExprType->isPointerType() && "Operator-> returned non-pointer type");
+    if (!ExprType->isPointerType())
+      return false;
+
     // FIXME: This works around not having the location of the arrow operator.
     // Consider adding OperatorLoc to MemberExpr?
     SourceLocation ArrowLoc = Lexer::getLocForEndOfToken(

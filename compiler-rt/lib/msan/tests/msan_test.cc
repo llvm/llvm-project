@@ -2811,6 +2811,13 @@ TEST(MemorySanitizer, getrlimit) {
   ASSERT_EQ(result, 0);
   EXPECT_NOT_POISONED(limit.rlim_cur);
   EXPECT_NOT_POISONED(limit.rlim_max);
+
+  struct rlimit limit2;
+  __msan_poison(&limit2, sizeof(limit2));
+  int result2 = prlimit(getpid(), RLIMIT_DATA, &limit, &limit2);
+  ASSERT_EQ(result2, 0);
+  EXPECT_NOT_POISONED(limit2.rlim_cur);
+  EXPECT_NOT_POISONED(limit2.rlim_max);
 }
 
 TEST(MemorySanitizer, getrusage) {

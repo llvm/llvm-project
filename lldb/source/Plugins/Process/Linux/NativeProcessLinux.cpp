@@ -1294,10 +1294,8 @@ NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info, NativeThreadLinux &thr
             break;
         }
 
-        if (m_arch.GetMachine() == llvm::Triple::arm)
-            MonitorBreakpoint(thread); // Arm linux reports trace for breakpoint hits
-        else
-            MonitorTrace(thread); // Report the trace
+        // Otherwise, report step over
+        MonitorTrace(thread);
         break;
     }
 
@@ -2291,11 +2289,13 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode (size_t trap_opcode_size_hin
     // FIXME put this behind a breakpoint protocol class that can be set per
     // architecture.  Need MIPS support here.
     static const uint8_t g_aarch64_opcode[] = { 0x00, 0x00, 0x20, 0xd4 };
-    static const uint8_t g_arm_breakpoint_opcode[] = { 0x70, 0xbe, 0x20, 0xe1 };
+    // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the
+    // linux kernel does otherwise.
+    static const uint8_t g_arm_breakpoint_opcode[] = { 0xf0, 0x01, 0xf0, 0xe7 };
     static const uint8_t g_i386_opcode [] = { 0xCC };
     static const uint8_t g_mips64_opcode[] = { 0x00, 0x00, 0x00, 0x0d };
     static const uint8_t g_mips64el_opcode[] = { 0x0d, 0x00, 0x00, 0x00 };
-    static const uint8_t g_thumb_breakpoint_opcode[] = { 0x70, 0xbe };
+    static const uint8_t g_thumb_breakpoint_opcode[] = { 0x01, 0xde };
 
     switch (m_arch.GetMachine ())
     {

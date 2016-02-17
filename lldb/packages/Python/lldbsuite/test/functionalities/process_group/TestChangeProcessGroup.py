@@ -45,7 +45,7 @@ class ChangeProcessGroupTestCase(TestBase):
                 print(msg)
             if i < max_attempts:
                 # Exponential backoff!
-                time.sleep(pow(2, i) * 0.25)
+                time.sleep(pow(2, i) * 0.30)
         else:
             self.fail("Child PID file %s not found even after %d attempts." % (pid_file_path, max_attempts))
 

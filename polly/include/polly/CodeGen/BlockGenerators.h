@@ -473,11 +473,8 @@ protected:
   void copyInstScalar(ScopStmt &Stmt, Instruction *Inst, ValueMapT &BBMap,
                       LoopToScevMapT &LTS);
 
-  /// @brief Get the innermost loop that surrounds an instruction.
-  ///
-  /// @param Inst The instruction for which we get the loop.
-  /// @return The innermost loop that surrounds the instruction.
-  Loop *getLoopForInst(const Instruction *Inst);
+  /// @brief Get the innermost loop that surrounds the statement @p Stmt.
+  Loop *getLoopForStmt(const ScopStmt &Stmt) const;
 
   /// @brief Generate the operand address
   /// @param NewAccesses A map from memory access ids to new ast expressions,

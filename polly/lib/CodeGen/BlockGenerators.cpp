@@ -149,7 +149,7 @@ void BlockGenerator::copyInstScalar(ScopStmt &Stmt, Instruction *Inst,
   // Replace old operands with the new ones.
   for (Value *OldOperand : Inst->operands()) {
     Value *NewOperand =
-        getNewValue(Stmt, OldOperand, BBMap, LTS, getLoopForInst(Inst));
+        getNewValue(Stmt, OldOperand, BBMap, LTS, getLoopForStmt(Stmt));
 
     if (!NewOperand) {
       assert(!isa<StoreInst>(NewInst) &&
@@ -194,11 +194,13 @@ BlockGenerator::generateLocationAccessed(ScopStmt &Stmt, MemAccInst Inst,
   }
 
   return getNewValue(Stmt, Inst.getPointerOperand(), BBMap, LTS,
-                     getLoopForInst(Inst));
+                     getLoopForStmt(Stmt));
 }
 
-Loop *BlockGenerator::getLoopForInst(const llvm::Instruction *Inst) {
-  return LI.getLoopFor(Inst->getParent());
+Loop *BlockGenerator::getLoopForStmt(const ScopStmt &Stmt) const {
+  auto *StmtBB =
+      Stmt.isBlockStmt() ? Stmt.getBasicBlock() : Stmt.getRegion()->getEntry();
+  return LI.getLoopFor(StmtBB);
 }
 
 Value *BlockGenerator::generateScalarLoad(ScopStmt &Stmt, LoadInst *Load,
@@ -225,7 +227,7 @@ void BlockGenerator::generateScalarStore(ScopStmt &Stmt, StoreInst *Store,
   Value *NewPointer =
       generateLocationAccessed(Stmt, Store, BBMap, LTS, NewAccesses);
   Value *ValueOperand = getNewValue(Stmt, Store->getValueOperand(), BBMap, LTS,
-                                    getLoopForInst(Store));
+                                    getLoopForStmt(Stmt));
 
   if (DebugPrinting)
     RuntimeDebugBuilder::createCPUPrinter(Builder, "Store to  ", NewPointer,
@@ -235,7 +237,7 @@ void BlockGenerator::generateScalarStore(ScopStmt &Stmt, StoreInst *Store,
 }
 
 bool BlockGenerator::canSyntheziseInStmt(ScopStmt &Stmt, Instruction *Inst) {
-  Loop *L = getLoopForInst(Inst);
+  Loop *L = getLoopForStmt(Stmt);
   return (Stmt.isBlockStmt() || !Stmt.getRegion()->contains(L)) &&
          canSynthesize(Inst, &LI, &SE, &Stmt.getParent()->getRegion());
 }
@@ -770,7 +772,7 @@ void VectorBlockGenerator::copyUnaryInst(ScopStmt &Stmt, UnaryInstruction *Inst,
                                          VectorValueMapT &ScalarMaps) {
   int VectorWidth = getVectorWidth();
   Value *NewOperand = getVectorValue(Stmt, Inst->getOperand(0), VectorMap,
-                                     ScalarMaps, getLoopForInst(Inst));
+                                     ScalarMaps, getLoopForStmt(Stmt));
 
   assert(isa<CastInst>(Inst) && "Can not generate vector code for instruction");
 
@@ -782,7 +784,7 @@ void VectorBlockGenerator::copyUnaryInst(ScopStmt &Stmt, UnaryInstruction *Inst,
 void VectorBlockGenerator::copyBinaryInst(ScopStmt &Stmt, BinaryOperator *Inst,
                                           ValueMapT &VectorMap,
                                           VectorValueMapT &ScalarMaps) {
-  Loop *L = getLoopForInst(Inst);
+  Loop *L = getLoopForStmt(Stmt);
   Value *OpZero = Inst->getOperand(0);
   Value *OpOne = Inst->getOperand(1);
 
@@ -802,7 +804,7 @@ void VectorBlockGenerator::copyStore(
 
   auto *Pointer = Store->getPointerOperand();
   Value *Vector = getVectorValue(Stmt, Store->getValueOperand(), VectorMap,
-                                 ScalarMaps, getLoopForInst(Store));
+                                 ScalarMaps, getLoopForStmt(Stmt));
 
   // Make sure we have scalar values available to access the pointer to
   // the data location.
@@ -1294,7 +1296,7 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, const PHINode *PHI,
     BasicBlock *OldBlock = Builder.GetInsertBlock();
     auto OldIP = Builder.GetInsertPoint();
     Builder.SetInsertPoint(BBCopy->getTerminator());
-    OpCopy = getNewValue(Stmt, Op, BBCopyMap, LTS, getLoopForInst(PHI));
+    OpCopy = getNewValue(Stmt, Op, BBCopyMap, LTS, getLoopForStmt(Stmt));
     Builder.SetInsertPoint(OldBlock, OldIP);
   } else {
 

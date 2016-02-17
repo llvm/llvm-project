@@ -1,7 +1,12 @@
-// RUN: %check_clang_tidy %s readability-braces-around-statements %t
+// RUN: clang-tidy -checks='-*,readability-braces-around-statements' %s --
+
+// Note: this test expects no assert failure happened in clang-tidy.
 
 int test_failure() {
   if (std::rand()) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: error: use of undeclared identifier 'std'
   }
+}
+
+void test_failure2() {
+  for (a b c;;
 }
