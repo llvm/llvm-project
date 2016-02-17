@@ -81,23 +81,6 @@ define void @byval_arg_double(%AlignedStruct* %ptr) {
  ret void
 }
 
-; CHECK-LABEL: byval_arg_big
-define void @byval_arg_big(%BigArray* %ptr) {
- ; CHECK: .param i32
- ; Subtract 48 from SP (SP is 16-byte aligned)
- ; CHECK: i32.const [[L2:.+]]=, 48
- ; CHECK-NEXT: i32.sub [[SP:.+]]=, {{.+}}, [[L2]]
- ; Copy the AlignedStruct argument to the stack (SP+12, original SP-36)
- ; CHECK: i64.load $push[[L4:.+]]=, 0($0):p2align=0
- ; CHECK: i64.store {{.*}}=, 12([[SP]]):p2align=2, $pop[[L4]]
- ; Pass a pointer to the stack slot to the function
- ; CHECK-NEXT: i32.const [[L5:.+]]=, 12
- ; CHECK-NEXT: i32.add [[ARG:.+]]=, [[SP]], [[L5]]
- ; CHECK-NEXT: call ext_byval_func_bigarray@FUNCTION, [[ARG]]
- call void @ext_byval_func_bigarray(%BigArray* byval %ptr)
- ret void
-}
-
 ; CHECK-LABEL: byval_param
 define void @byval_param(%SmallStruct* byval align 32 %ptr) {
  ; CHECK: .param i32
@@ -121,4 +104,18 @@ define void @byval_empty_callee(%EmptyStruct* byval %ptr) {
  ; CHECK: call ext_func_empty@FUNCTION, $0
  call void @ext_func_empty(%EmptyStruct* %ptr)
  ret void
+}
+
+; Call memcpy for "big" byvals.
+; TODO: When the prolog/epilog sequences are optimized, refine these checks to
+; be more specific.
+
+; CHECK-LABEL: big_byval:
+; CHECK:      i32.call       ${{[^,]+}}=, memcpy@FUNCTION,
+; CHECK-NEXT: call           big_byval_callee@FUNCTION,
+%big = type [131072 x i8]
+declare void @big_byval_callee(%big* byval align 1)
+define void @big_byval(%big* byval align 1 %x) {
+  call void @big_byval_callee(%big* byval align 1 %x)
+  ret void
 }

@@ -20,21 +20,25 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
 using namespace llvm;
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-#  define EMIT_IMPLEMENTATION 1
-#else
-#  define EMIT_IMPLEMENTATION 0
-#endif
 
 AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {
 }
 
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+bool AArch64CallLowering::LowerReturn(MachineIRBuilder &MIRBuilder,
+                                      const Value *Val, unsigned VReg) const {
+  return false;
+}
+
+bool AArch64CallLowering::LowerFormalArguments(
+    MachineIRBuilder &MIRBuilder, const Function::ArgumentListType &Args,
+    const SmallVectorImpl<unsigned> &VRegs) const {
+  return false;
+}
+#else
 bool AArch64CallLowering::LowerReturn(MachineIRBuilder &MIRBuilder,
                                         const Value *Val, unsigned VReg) const {
-  if (!EMIT_IMPLEMENTATION)
-    return false;
-  
   MachineInstr *Return = MIRBuilder.buildInstr(AArch64::RET_ReallyLR);
   assert(Return && "Unable to build a return instruction?!");
 
@@ -60,9 +64,6 @@ bool AArch64CallLowering::LowerReturn(MachineIRBuilder &MIRBuilder,
 bool AArch64CallLowering::LowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function::ArgumentListType &Args,
     const SmallVectorImpl<unsigned> &VRegs) const {
-  if (!EMIT_IMPLEMENTATION)
-    return false;
-
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = *MF.getFunction();
 
@@ -109,3 +110,4 @@ bool AArch64CallLowering::LowerFormalArguments(
   }
   return true;
 }
+#endif

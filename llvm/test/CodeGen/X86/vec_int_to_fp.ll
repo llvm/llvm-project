@@ -1754,11 +1754,9 @@ define <8 x float> @uitofp_8i8_to_8f32(<16 x i8> %a) {
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
-; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

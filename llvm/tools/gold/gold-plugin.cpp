@@ -906,7 +906,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
     else if (M->getTargetTriple().empty())
       M->setTargetTriple(DefaultTriple);
 
-    if (L.move(*M, Keep, [](GlobalValue &, IRMover::ValueAdder) {}))
+    if (L.move(std::move(M), Keep, [](GlobalValue &, IRMover::ValueAdder) {}))
       message(LDPL_FATAL, "Failed to link module");
   }
 

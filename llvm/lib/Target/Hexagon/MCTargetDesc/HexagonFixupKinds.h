@@ -110,6 +110,7 @@ enum Fixups {
   fixup_Hexagon_TPREL_32_6_X,
   fixup_Hexagon_TPREL_16_X,
   fixup_Hexagon_TPREL_11_X,
+  fixup_Hexagon_23_REG,
 
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind

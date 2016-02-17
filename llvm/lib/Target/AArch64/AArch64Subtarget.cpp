@@ -59,8 +59,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
       InstrInfo(initializeSubtargetDependencies(FS)), TSInfo(),
       TLInfo(TM, *this), CallLoweringInfo(nullptr) {}
 
-const CallLowering *
-AArch64Subtarget::getCallLowering() const {
+const CallLowering *AArch64Subtarget::getCallLowering() const {
   if (!CallLoweringInfo)
     CallLoweringInfo.reset(new AArch64CallLowering(TLInfo));
   return CallLoweringInfo.get();

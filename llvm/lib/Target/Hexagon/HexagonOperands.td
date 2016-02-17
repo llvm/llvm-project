@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 def s32ImmOperand : AsmOperandClass { let Name = "s32Imm"; }
+def s23_2ImmOperand : AsmOperandClass { let Name = "s23_2Imm"; }
 def s8ImmOperand : AsmOperandClass { let Name = "s8Imm"; }
 def s8Imm64Operand : AsmOperandClass { let Name = "s8Imm64"; }
 def s6ImmOperand : AsmOperandClass { let Name = "s6Imm"; }
@@ -48,6 +49,7 @@ let OperandType = "OPERAND_IMMEDIATE",
     DecoderMethod = "unsignedImmDecoder" in {
   def s32Imm : Operand<i32> { let ParserMatchClass = s32ImmOperand;
                               let DecoderMethod = "s32ImmDecoder"; }
+  def s23_2Imm : Operand<i32> { let ParserMatchClass = s23_2ImmOperand; }
   def s8Imm : Operand<i32> { let ParserMatchClass = s8ImmOperand;
                              let DecoderMethod = "s8ImmDecoder"; }
   def s8Imm64 : Operand<i64>  { let ParserMatchClass = s8Imm64Operand;

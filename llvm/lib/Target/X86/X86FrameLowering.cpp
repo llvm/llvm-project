@@ -192,10 +192,9 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
   return 0;
 }
 
-static bool isEAXLiveIn(MachineFunction &MF) {
-  for (MachineRegisterInfo::livein_iterator II = MF.getRegInfo().livein_begin(),
-       EE = MF.getRegInfo().livein_end(); II != EE; ++II) {
-    unsigned Reg = II->first;
+static bool isEAXLiveIn(MachineBasicBlock &MBB) {
+  for (MachineBasicBlock::RegisterMaskPair RegMask : MBB.liveins()) {
+    unsigned Reg = RegMask.PhysReg;
 
     if (Reg == X86::RAX || Reg == X86::EAX || Reg == X86::AX ||
         Reg == X86::AH || Reg == X86::AL)
@@ -261,7 +260,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
       // load the offset into a register and do one sub/add
       unsigned Reg = 0;
 
-      if (isSub && !isEAXLiveIn(*MBB.getParent()))
+      if (isSub && !isEAXLiveIn(MBB))
         Reg = (unsigned)(Is64Bit ? X86::RAX : X86::EAX);
       else
         Reg = findDeadCallerSavedReg(MBB, MBBI, TRI, Is64Bit);
@@ -1138,8 +1137,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   if (IsWin64Prologue && !IsFunclet && TRI->needsStackRealignment(MF))
     AlignedNumBytes = alignTo(AlignedNumBytes, MaxAlign);
   if (AlignedNumBytes >= StackProbeSize && UseStackProbe) {
-    // Check whether EAX is livein for this function.
-    bool isEAXAlive = isEAXLiveIn(MF);
+    // Check whether EAX is livein for this block.
+    bool isEAXAlive = isEAXLiveIn(MBB);
 
     if (isEAXAlive) {
       // Sanity check that EAX is not livein for this function.

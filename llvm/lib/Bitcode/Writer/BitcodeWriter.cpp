@@ -825,8 +825,8 @@ static uint64_t WriteModuleInfo(const Module *M, const ValueEnumerator &VE,
 
   // Emit the module's source file name.
   {
-    StringEncoding Bits =
-        getStringEncoding(M->getName().data(), M->getName().size());
+    StringEncoding Bits = getStringEncoding(M->getSourceFileName().data(),
+                                            M->getSourceFileName().size());
     BitCodeAbbrevOp AbbrevOpToUse = BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8);
     if (Bits == SE_Char6)
       AbbrevOpToUse = BitCodeAbbrevOp(BitCodeAbbrevOp::Char6);

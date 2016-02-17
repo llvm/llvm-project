@@ -61,6 +61,11 @@ EnableDeadRegisterElimination("aarch64-dead-def-elimination", cl::Hidden,
                               cl::init(true));
 
 static cl::opt<bool>
+EnableRedundantCopyElimination("aarch64-redundant-copy-elim",
+              cl::desc("Enable the redundant copy elimination pass"),
+              cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
 EnableLoadStoreOpt("aarch64-load-store-opt", cl::desc("Enable the load/store pair"
                    " optimization pass"), cl::init(true), cl::Hidden);
 
@@ -316,6 +321,10 @@ void AArch64PassConfig::addPreRegAlloc() {
 }
 
 void AArch64PassConfig::addPostRegAlloc() {
+  // Remove redundant copy instructions.
+  if (TM->getOptLevel() != CodeGenOpt::None && EnableRedundantCopyElimination)
+    addPass(createAArch64RedundantCopyEliminationPass());
+
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOpt::None && EnableDeadRegisterElimination)
     addPass(createAArch64DeadRegisterDefinitions());

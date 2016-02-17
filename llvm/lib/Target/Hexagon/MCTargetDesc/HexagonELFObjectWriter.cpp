@@ -282,6 +282,8 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_HEX_TPREL_16_X;
   case fixup_Hexagon_TPREL_11_X:
     return ELF::R_HEX_TPREL_11_X;
+  case fixup_Hexagon_23_REG:
+    return ELF::R_HEX_23_REG;
   }
 }
 

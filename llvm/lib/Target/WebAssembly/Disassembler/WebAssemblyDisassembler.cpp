@@ -110,7 +110,8 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
       MI.addOperand(MCOperand::createReg(Reg));
       break;
     }
-    case WebAssembly::OPERAND_FPIMM: {
+    case WebAssembly::OPERAND_FP32IMM:
+    case WebAssembly::OPERAND_FP64IMM: {
       // TODO: MC converts all floating point immediate operands to double.
       // This is fine for numeric values, but may cause NaNs to change bits.
       if (Pos + sizeof(uint64_t) > Bytes.size())

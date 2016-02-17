@@ -274,12 +274,14 @@ bool prefersSlot3(MCInstrInfo const &MCII, MCInst const &MCI);
 // Replace the instructions inside MCB, represented by Candidate
 void replaceDuplex(MCContext &Context, MCInst &MCB, DuplexCandidate Candidate);
 
+bool s23_2_reloc(MCExpr const &Expr);
 // Marks a bundle as endloop0
 void setInnerLoop(MCInst &MCI);
 void setMemReorderDisabled(MCInst &MCI);
 void setMemStoreReorderEnabled(MCInst &MCI);
 void setMustExtend(MCExpr &Expr, bool Val = true);
 void setMustNotExtend(MCExpr const &Expr, bool Val = true);
+void setS23_2_reloc(MCExpr const &Expr, bool Val = true);
 
 // Marks a bundle as endloop1
 void setOuterLoop(MCInst &MCI);

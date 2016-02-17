@@ -434,6 +434,11 @@ bool OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
 
     MemOpNo += X86II::getOperandBias(Desc);
 
+    // Address displacement must be an immediate or a global.
+    MachineOperand &Disp = MI.getOperand(MemOpNo + X86::AddrDisp);
+    if (!Disp.isImm() && !Disp.isGlobal())
+      continue;
+
     // Get the best LEA instruction to replace address calculation.
     MachineInstr *DefMI;
     int64_t AddrDispShift;

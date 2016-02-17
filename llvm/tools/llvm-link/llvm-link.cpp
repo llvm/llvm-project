@@ -236,7 +236,7 @@ static bool importFunctions(const char *argv0, LLVMContext &Context,
     }
 
     // Link in all necessary metadata from this module.
-    if (L.linkInMetadata(*M, SME.getValue().get()))
+    if (L.linkInMetadata(std::move(M), SME.getValue().get()))
       return false;
   }
   return true;

@@ -1503,7 +1503,7 @@ defm V_AND_B32 : VOP2Inst <vop2<0x1b, 0x13>, "v_and_b32", VOP_I32_I32_I32>;
 defm V_OR_B32 : VOP2Inst <vop2<0x1c, 0x14>, "v_or_b32", VOP_I32_I32_I32>;
 defm V_XOR_B32 : VOP2Inst <vop2<0x1d, 0x15>, "v_xor_b32", VOP_I32_I32_I32>;
 
-let Constraints = "$dst = $src2", DisableEncoding="$src2",
+let Constraints = "$vdst = $src2", DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1 in {
 defm V_MAC_F32 : VOP2Inst <vop2<0x1f, 0x16>, "v_mac_f32", VOP_MAC>;
 }
@@ -1850,14 +1850,14 @@ defm V_ASHRREV_I64 : VOP3Inst <vop3<0, 0x291>, "v_ashrrev_i64",
 let isCodeGenOnly = 1, isPseudo = 1 in {
 
 // For use in patterns
-def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$dst),
+def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
   (ins VSrc_64:$src0, VSrc_64:$src1, SSrc_64:$src2), "", []
 >;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
 // 64-bit vector move instruction.  This is mainly used by the SIFoldOperands
 // pass to enable folding of inline immediates.
-def V_MOV_B64_PSEUDO : InstSI <(outs VReg_64:$dst), (ins VSrc_64:$src0), "", []>;
+def V_MOV_B64_PSEUDO : InstSI <(outs VReg_64:$vdst), (ins VSrc_64:$src0), "", []>;
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let hasSideEffects = 1, SALU = 1 in {

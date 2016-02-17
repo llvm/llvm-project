@@ -78,11 +78,13 @@ class WebAssemblyTargetLowering final : public TargetLowering {
   // Custom lowering hooks.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue LowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerCopyToReg(SDValue Op, SelectionDAG &DAG) const;
 };
 
 namespace WebAssembly {

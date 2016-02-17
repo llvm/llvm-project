@@ -44,11 +44,11 @@ using namespace llvm;
 /// register.
 bool WebAssemblyFrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo *MFI = MF.getFrameInfo();
-  assert(!MFI->isFrameAddressTaken());
   const auto *RegInfo =
       MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
-  return MFI->hasVarSizedObjects() || MFI->hasStackMap() ||
-         MFI->hasPatchPoint() || RegInfo->needsStackRealignment(MF);
+  return MFI->isFrameAddressTaken() || MFI->hasVarSizedObjects() ||
+         MFI->hasStackMap() || MFI->hasPatchPoint() ||
+         RegInfo->needsStackRealignment(MF);
 }
 
 /// Under normal circumstances, when a frame pointer is not required, we reserve

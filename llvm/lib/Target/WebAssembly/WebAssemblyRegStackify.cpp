@@ -129,6 +129,7 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
       return false;
   }
 
+  SawStore = Def->isCall() || Def->mayStore();
   // Check for memory dependencies and side effects.
   for (--I; I != D; --I)
     SawSideEffects |= !I->isSafeToMove(&AA, SawStore);
@@ -237,13 +238,13 @@ RematerializeCheapDef(unsigned Reg, MachineOperand &Op, MachineInstr *Def,
 ///
 /// to this:
 ///
-///    Reg = INST ...        // Def (to become the new Insert)
-///    TeeReg, NewReg = TEE_LOCAL_... Reg
+///    DefReg = INST ...     // Def (to become the new Insert)
+///    TeeReg, NewReg = TEE_LOCAL_... DefReg
 ///    INST ..., TeeReg, ... // Insert
 ///    INST ..., NewReg, ...
 ///    INST ..., NewReg, ...
 ///
-/// with Reg and TeeReg stackified. This eliminates a get_local from the
+/// with DefReg and TeeReg stackified. This eliminates a get_local from the
 /// resulting code.
 static MachineInstr *MoveAndTeeForMultiUse(
     unsigned Reg, MachineOperand &Op, MachineInstr *Def, MachineBasicBlock &MBB,
@@ -254,18 +255,20 @@ static MachineInstr *MoveAndTeeForMultiUse(
   const auto *RegClass = MRI.getRegClass(Reg);
   unsigned NewReg = MRI.createVirtualRegister(RegClass);
   unsigned TeeReg = MRI.createVirtualRegister(RegClass);
+  unsigned DefReg = MRI.createVirtualRegister(RegClass);
   MRI.replaceRegWith(Reg, NewReg);
   MachineInstr *Tee = BuildMI(MBB, Insert, Insert->getDebugLoc(),
                               TII->get(GetTeeLocalOpcode(RegClass)), TeeReg)
                           .addReg(NewReg, RegState::Define)
-                          .addReg(Reg);
+                          .addReg(DefReg);
   Op.setReg(TeeReg);
-  Def->getOperand(0).setReg(Reg);
+  Def->getOperand(0).setReg(DefReg);
   LIS.InsertMachineInstrInMaps(Tee);
-  LIS.shrinkToUses(&LIS.getInterval(Reg));
+  LIS.removeInterval(Reg);
   LIS.createAndComputeVirtRegInterval(NewReg);
   LIS.createAndComputeVirtRegInterval(TeeReg);
-  MFI.stackifyVReg(Reg);
+  LIS.createAndComputeVirtRegInterval(DefReg);
+  MFI.stackifyVReg(DefReg);
   MFI.stackifyVReg(TeeReg);
   ImposeStackOrdering(Def);
   ImposeStackOrdering(Tee);

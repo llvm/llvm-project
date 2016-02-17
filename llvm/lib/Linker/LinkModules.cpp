@@ -27,7 +27,7 @@ namespace {
 /// entrypoint for this file.
 class ModuleLinker {
   IRMover &Mover;
-  Module &SrcM;
+  std::unique_ptr<Module> SrcM;
 
   SetVector<GlobalValue *> ValuesToLink;
   StringSet<> Internalize;
@@ -71,7 +71,7 @@ class ModuleLinker {
 
   /// Should we have mover and linker error diag info?
   bool emitError(const Twine &Message) {
-    SrcM.getContext().diagnose(LinkDiagnosticInfo(DS_Error, Message));
+    SrcM->getContext().diagnose(LinkDiagnosticInfo(DS_Error, Message));
     return true;
   }
 
@@ -123,11 +123,11 @@ class ModuleLinker {
   bool doImportAsDefinition(const GlobalValue *SGV);
 
 public:
-  ModuleLinker(IRMover &Mover, Module &SrcM, unsigned Flags,
+  ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags,
                const FunctionInfoIndex *Index = nullptr,
                DenseSet<const GlobalValue *> *FunctionsToImport = nullptr,
                DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr)
-      : Mover(Mover), SrcM(SrcM), Flags(Flags), ImportIndex(Index),
+      : Mover(Mover), SrcM(std::move(SrcM)), Flags(Flags), ImportIndex(Index),
         FunctionsToImport(FunctionsToImport),
         ValIDToTempMDMap(ValIDToTempMDMap) {
     assert((ImportIndex || !FunctionsToImport) &&
@@ -137,7 +137,7 @@ public:
     // backend compilation, and we need to see if it has functions that
     // may be exported to another backend compilation.
     if (ImportIndex && !FunctionsToImport)
-      HasExportedFunctions = ImportIndex->hasExportedFunctions(SrcM);
+      HasExportedFunctions = ImportIndex->hasExportedFunctions(*this->SrcM);
   }
 
   bool run();
@@ -221,11 +221,11 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
     const GlobalVariable *DstGV;
     const GlobalVariable *SrcGV;
     if (getComdatLeader(DstM, ComdatName, DstGV) ||
-        getComdatLeader(SrcM, ComdatName, SrcGV))
+        getComdatLeader(*SrcM, ComdatName, SrcGV))
       return true;
 
     const DataLayout &DstDL = DstM.getDataLayout();
-    const DataLayout &SrcDL = SrcM.getDataLayout();
+    const DataLayout &SrcDL = SrcM->getDataLayout();
     uint64_t DstSize = DstDL.getTypeAllocSize(DstGV->getValueType());
     uint64_t SrcSize = SrcDL.getTypeAllocSize(SrcGV->getValueType());
     if (Result == Comdat::SelectionKind::ExactMatch) {
@@ -471,7 +471,7 @@ void ModuleLinker::addLazyFor(GlobalValue &GV, IRMover::ValueAdder Add) {
 }
 
 bool ModuleLinker::run() {
-  for (const auto &SMEC : SrcM.getComdatSymbolTable()) {
+  for (const auto &SMEC : SrcM->getComdatSymbolTable()) {
     const Comdat &C = SMEC.getValue();
     if (ComdatsChosen.count(&C))
       continue;
@@ -482,34 +482,34 @@ bool ModuleLinker::run() {
     ComdatsChosen[&C] = std::make_pair(SK, LinkFromSrc);
   }
 
-  for (GlobalVariable &GV : SrcM.globals())
+  for (GlobalVariable &GV : SrcM->globals())
     if (const Comdat *SC = GV.getComdat())
       ComdatMembers[SC].push_back(&GV);
 
-  for (Function &SF : SrcM)
+  for (Function &SF : *SrcM)
     if (const Comdat *SC = SF.getComdat())
       ComdatMembers[SC].push_back(&SF);
 
-  for (GlobalAlias &GA : SrcM.aliases())
+  for (GlobalAlias &GA : SrcM->aliases())
     if (const Comdat *SC = GA.getComdat())
       ComdatMembers[SC].push_back(&GA);
 
   // Insert all of the globals in src into the DstM module... without linking
   // initializers (which could refer to functions not yet mapped over).
-  for (GlobalVariable &GV : SrcM.globals())
+  for (GlobalVariable &GV : SrcM->globals())
     if (linkIfNeeded(GV))
       return true;
 
-  for (Function &SF : SrcM)
+  for (Function &SF : *SrcM)
     if (linkIfNeeded(SF))
       return true;
 
-  for (GlobalAlias &GA : SrcM.aliases())
+  for (GlobalAlias &GA : SrcM->aliases())
     if (linkIfNeeded(GA))
       return true;
 
   if (ImportIndex) {
-    FunctionImportGlobalProcessing ThinLTOProcessing(SrcM, ImportIndex,
+    FunctionImportGlobalProcessing ThinLTOProcessing(*SrcM, ImportIndex,
                                                      FunctionsToImport);
     if (ThinLTOProcessing.run())
       return true;
@@ -531,7 +531,7 @@ bool ModuleLinker::run() {
       Internalize.insert(GV->getName());
   }
 
-  if (Mover.move(SrcM, ValuesToLink.getArrayRef(),
+  if (Mover.move(std::move(SrcM), ValuesToLink.getArrayRef(),
                  [this](GlobalValue &GV, IRMover::ValueAdder Add) {
                    addLazyFor(GV, Add);
                  },
@@ -552,16 +552,16 @@ bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags,
                           const FunctionInfoIndex *Index,
                           DenseSet<const GlobalValue *> *FunctionsToImport,
                           DenseMap<unsigned, MDNode *> *ValIDToTempMDMap) {
-  ModuleLinker ModLinker(Mover, *Src, Flags, Index, FunctionsToImport,
+  ModuleLinker ModLinker(Mover, std::move(Src), Flags, Index, FunctionsToImport,
                          ValIDToTempMDMap);
   return ModLinker.run();
 }
 
-bool Linker::linkInMetadata(Module &Src,
+bool Linker::linkInMetadata(std::unique_ptr<Module> Src,
                             DenseMap<unsigned, MDNode *> *ValIDToTempMDMap) {
   SetVector<GlobalValue *> ValuesToLink;
   if (Mover.move(
-          Src, ValuesToLink.getArrayRef(),
+          std::move(Src), ValuesToLink.getArrayRef(),
           [this](GlobalValue &GV, IRMover::ValueAdder Add) { assert(false); },
           ValIDToTempMDMap, true))
     return true;

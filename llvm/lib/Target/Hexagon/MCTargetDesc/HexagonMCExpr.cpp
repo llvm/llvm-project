@@ -52,12 +52,17 @@ void HexagonMCExpr::setMustNotExtend(bool Val) {
 }
 bool HexagonMCExpr::mustNotExtend() const { return MustNotExtend; }
 
+bool HexagonMCExpr::s23_2_reloc() const { return S23_2_reloc; }
+void HexagonMCExpr::setS23_2_reloc(bool Val) {
+  S23_2_reloc = Val;
+}
+
 bool HexagonMCExpr::classof(MCExpr const *E) {
   return E->getKind() == MCExpr::Target;
 }
 
 HexagonMCExpr::HexagonMCExpr(MCExpr const *Expr)
-    : Expr(Expr), MustNotExtend(false), MustExtend(false) {}
+    : Expr(Expr), MustNotExtend(false), MustExtend(false), S23_2_reloc(false) {}
 
 void HexagonMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Expr->print(OS, MAI);

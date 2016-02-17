@@ -550,6 +550,13 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
       }
     } else
       switch (kind) {
+      case MCSymbolRefExpr::VK_None: {
+        if (HexagonMCInstrInfo::s23_2_reloc(*MO.getExpr()))
+          FixupKind = Hexagon::fixup_Hexagon_23_REG;
+        else
+          raise_relocation_error(bits, kind);
+        break;
+      }
       case MCSymbolRefExpr::VK_DTPREL:
         FixupKind = Hexagon::fixup_Hexagon_DTPREL_16;
         break;

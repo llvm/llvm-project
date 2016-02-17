@@ -83,6 +83,7 @@ protected:
   AArch64SelectionDAGInfo TSInfo;
   AArch64TargetLowering TLInfo;
   mutable std::unique_ptr<AArch64CallLowering> CallLoweringInfo;
+
 private:
   /// initializeSubtargetDependencies - Initializes using CPUString and the
   /// passed in feature string so that we can use initializer lists for

@@ -191,9 +191,6 @@ namespace llvm {
       /// Bitwise Logical AND NOT of Packed FP values.
       ANDNP,
 
-      /// Copy integer sign.
-      PSIGN,
-
       /// Blend where the selector is an immediate.
       BLENDI,
 

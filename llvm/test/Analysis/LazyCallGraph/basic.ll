@@ -125,52 +125,219 @@ define void @test2() {
   ret void
 }
 
+@test3_ptr = external global void ()*
+
+define void @test3_aa1() {
+; CHECK-LABEL: Edges in function: test3_aa1
+; CHECK-NEXT: call -> test3_aa2
+; CHECK-NEXT: ref -> test3_ab1
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_aa2()
+  store void ()* @test3_ab1, void ()** @test3_ptr
+  ret void
+}
+
+define void @test3_aa2() {
+; CHECK-LABEL: Edges in function: test3_aa2
+; CHECK-NEXT: call -> test3_aa1
+; CHECK-NEXT: call -> test3_ab2
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_aa1()
+  call void @test3_ab2()
+  ret void
+}
+
+define void @test3_ab1() {
+; CHECK-LABEL: Edges in function: test3_ab1
+; CHECK-NEXT: call -> test3_ab2
+; CHECK-NEXT: call -> test3_ac1
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_ab2()
+  call void @test3_ac1()
+  ret void
+}
+
+define void @test3_ab2() {
+; CHECK-LABEL: Edges in function: test3_ab2
+; CHECK-NEXT: call -> test3_ab1
+; CHECK-NEXT: call -> test3_ba1
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_ab1()
+  call void @test3_ba1()
+  ret void
+}
+
+define void @test3_ac1() {
+; CHECK-LABEL: Edges in function: test3_ac1
+; CHECK-NEXT: call -> test3_ac2
+; CHECK-NEXT: ref -> test3_aa2
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_ac2()
+  store void ()* @test3_aa2, void ()** @test3_ptr
+  ret void
+}
+
+define void @test3_ac2() {
+; CHECK-LABEL: Edges in function: test3_ac2
+; CHECK-NEXT: call -> test3_ac1
+; CHECK-NEXT: ref -> test3_ba1
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_ac1()
+  store void ()* @test3_ba1, void ()** @test3_ptr
+  ret void
+}
+
+define void @test3_ba1() {
+; CHECK-LABEL: Edges in function: test3_ba1
+; CHECK-NEXT: call -> test3_bb1
+; CHECK-NEXT: ref -> test3_ca1
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_bb1()
+  store void ()* @test3_ca1, void ()** @test3_ptr
+  ret void
+}
+
+define void @test3_bb1() {
+; CHECK-LABEL: Edges in function: test3_bb1
+; CHECK-NEXT: call -> test3_ca2
+; CHECK-NEXT: ref -> test3_ba1
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_ca2()
+  store void ()* @test3_ba1, void ()** @test3_ptr
+  ret void
+}
+
+define void @test3_ca1() {
+; CHECK-LABEL: Edges in function: test3_ca1
+; CHECK-NEXT: call -> test3_ca2
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_ca2()
+  ret void
+}
+
+define void @test3_ca2() {
+; CHECK-LABEL: Edges in function: test3_ca2
+; CHECK-NEXT: call -> test3_ca3
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_ca3()
+  ret void
+}
+
+define void @test3_ca3() {
+; CHECK-LABEL: Edges in function: test3_ca3
+; CHECK-NEXT: call -> test3_ca1
+; CHECK-NOT: ->
+
+entry:
+  call void @test3_ca1()
+  ret void
+}
+
 ; Verify the SCCs formed.
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f7
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 3 functions:
+; CHECK-NEXT:      test3_ca3
+; CHECK-NEXT:      test3_ca1
+; CHECK-NEXT:      test3_ca2
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f6
+; CHECK-LABEL: RefSCC with 2 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      test3_bb1
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      test3_ba1
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f5
+; CHECK-LABEL: RefSCC with 3 call SCCs:
+; CHECK-NEXT:    SCC with 2 functions:
+; CHECK-NEXT:      test3_ac2
+; CHECK-NEXT:      test3_ac1
+; CHECK-NEXT:    SCC with 2 functions:
+; CHECK-NEXT:      test3_ab2
+; CHECK-NEXT:      test3_ab1
+; CHECK-NEXT:    SCC with 2 functions:
+; CHECK-NEXT:      test3_aa2
+; CHECK-NEXT:      test3_aa1
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f4
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f7
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f3
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f6
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f2
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f5
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f1
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f4
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    test2
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f3
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f10
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f2
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f12
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f1
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f11
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      test2
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f9
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f10
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f8
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f12
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    test1
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f11
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    f
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f9
 ;
-; CHECK-LABEL: SCC with 1 functions:
-; CHECK-NEXT:    test0
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f8
+;
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      test1
+;
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      f
+;
+; CHECK-LABEL: RefSCC with 1 call SCCs:
+; CHECK-NEXT:    SCC with 1 functions:
+; CHECK-NEXT:      test0

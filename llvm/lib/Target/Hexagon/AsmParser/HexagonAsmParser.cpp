@@ -278,6 +278,7 @@ public:
 
   bool isf32Ext() const { return false; }
   bool iss32Imm() const { return CheckImmRange(32, 0, true, true, false); }
+  bool iss23_2Imm() const { return CheckImmRange(23, 2, true, true, false); }
   bool iss8Imm() const { return CheckImmRange(8, 0, true, false, false); }
   bool iss8Imm64() const { return CheckImmRange(8, 0, true, true, false); }
   bool iss7Imm() const { return CheckImmRange(7, 0, true, false, false); }
@@ -382,6 +383,9 @@ public:
   }
 
   void adds32ImmOperands(MCInst &Inst, unsigned N) const {
+    addSignedImmOperands(Inst, N);
+  }
+  void adds23_2ImmOperands(MCInst &Inst, unsigned N) const {
     addSignedImmOperands(Inst, N);
   }
   void adds8ImmOperands(MCInst &Inst, unsigned N) const {
@@ -1543,6 +1547,18 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   default:
     break;
 
+  case Hexagon::A2_iconst: {
+    Inst.setOpcode(Hexagon::A2_addi);
+    MCOperand Reg = Inst.getOperand(0);
+    MCOperand S16 = Inst.getOperand(1);
+    HexagonMCInstrInfo::setMustNotExtend(*S16.getExpr());
+    HexagonMCInstrInfo::setS23_2_reloc(*S16.getExpr());
+    Inst.clear();
+    Inst.addOperand(Reg);
+    Inst.addOperand(MCOperand::createReg(Hexagon::R0));
+    Inst.addOperand(S16);
+    break;
+  }
   case Hexagon::M4_mpyrr_addr:
   case Hexagon::S4_addi_asl_ri:
   case Hexagon::S4_addi_lsr_ri:
