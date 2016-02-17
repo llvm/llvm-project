@@ -231,11 +231,15 @@ void PruneEH::DeleteBasicBlock(BasicBlock *BB) {
   CallGraphNode *CGN = CG[BB->getParent()];
   for (BasicBlock::iterator I = BB->end(), E = BB->begin(); I != E; ) {
     --I;
-    if (CallInst *CI = dyn_cast<CallInst>(I)) {
-      if (!isa<IntrinsicInst>(I))
-        CGN->removeCallEdgeFor(CI);
-    } else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
-      CGN->removeCallEdgeFor(II);
+
+    if (auto CS = CallSite (&*I)) {
+      const Function *Callee = CS.getCalledFunction();
+      if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
+        CGN->removeCallEdgeFor(CS);
+      else if (!Callee->isIntrinsic())
+        CGN->removeCallEdgeFor(CS);
+    }
+
     if (!I->use_empty())
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
   }
