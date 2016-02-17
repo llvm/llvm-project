@@ -133,6 +133,8 @@ public:
   bool VerifyOutput;
   bool MergeFunctions;
   bool PrepareForLTO;
+  bool PrepareForThinLTO;
+  bool PerformThinLTO;
 
   /// Profile data file name that the instrumentation will be written to.
   std::string PGOInstrGen;
@@ -170,6 +172,7 @@ public:
   /// populateModulePassManager - This sets up the primary pass manager.
   void populateModulePassManager(legacy::PassManagerBase &MPM);
   void populateLTOPassManager(legacy::PassManagerBase &PM);
+  void populateThinLTOPassManager(legacy::PassManagerBase &PM);
 };
 
 /// Registers a function for adding a standard set of passes.  This should be
