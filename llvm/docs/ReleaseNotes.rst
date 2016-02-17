@@ -106,6 +106,13 @@ Non-comprehensive list of changes in this release
   variables are converted to calls to ``__emutls_get_address`` in the runtime
   library.
 
+* MSVC compatible exception handling has been completely overhauled. New
+  instructions have been introduced to facilitate this:
+  `New exception handling instructions <ExceptionHandling.html#new-exception-handling-instructions>`_. 
+  While we have done our best to test this feature thoroughly, it would
+  not be completely surprising if there were a few lingering issues that
+  early adopters might bump into.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet
