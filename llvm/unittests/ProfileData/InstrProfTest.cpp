@@ -154,7 +154,7 @@ TEST_F(InstrProfTest, get_profile_summary) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  ProfileSummary &PS = Reader->getSummary();
+  InstrProfSummary &PS = Reader->getSummary();
   ASSERT_EQ(2305843009213693952U, PS.getMaxFunctionCount());
   ASSERT_EQ(2305843009213693952U, PS.getMaxBlockCount());
   ASSERT_EQ(10U, PS.getNumBlocks());
@@ -171,10 +171,10 @@ TEST_F(InstrProfTest, get_profile_summary) {
   auto NinetyFivePerc = std::find_if(Details.begin(), Details.end(), Predicate);
   Cutoff = 990000;
   auto NinetyNinePerc = std::find_if(Details.begin(), Details.end(), Predicate);
-  ASSERT_EQ(576460752303423488U, EightyPerc->MinBlockCount);
-  ASSERT_EQ(288230376151711744U, NinetyPerc->MinBlockCount);
-  ASSERT_EQ(288230376151711744U, NinetyFivePerc->MinBlockCount);
-  ASSERT_EQ(72057594037927936U, NinetyNinePerc->MinBlockCount);
+  ASSERT_EQ(576460752303423488U, EightyPerc->MinCount);
+  ASSERT_EQ(288230376151711744U, NinetyPerc->MinCount);
+  ASSERT_EQ(288230376151711744U, NinetyFivePerc->MinCount);
+  ASSERT_EQ(72057594037927936U, NinetyNinePerc->MinCount);
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {

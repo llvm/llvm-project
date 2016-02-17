@@ -757,8 +757,8 @@ struct Summary {
   void setEntry(uint32_t I, const ProfileSummaryEntry &E) {
     Entry &ER = getCutoffEntryBase()[I];
     ER.Cutoff = E.Cutoff;
-    ER.MinBlockCount = E.MinBlockCount;
-    ER.NumBlocks = E.NumBlocks;
+    ER.MinBlockCount = E.MinCount;
+    ER.NumBlocks = E.NumCounts;
   }
 
   Summary(uint32_t Size) { memset(this, 0, Size); }

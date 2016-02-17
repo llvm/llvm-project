@@ -1197,7 +1197,7 @@ public:
     assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
   }
 
-  /// Erase an operand  from an instruction, leaving it with one
+  /// Erase an operand from an instruction, leaving it with one
   /// fewer operand than it started with.
   void RemoveOperand(unsigned i);
 

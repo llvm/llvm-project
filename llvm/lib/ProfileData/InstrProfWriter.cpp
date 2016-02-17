@@ -84,7 +84,7 @@ public:
   typedef uint64_t offset_type;
 
   support::endianness ValueProfDataEndianness;
-  ProfileSummary *TheProfileSummary;
+  InstrProfSummary *TheProfileSummary;
 
   InstrProfRecordWriterTrait() : ValueProfDataEndianness(support::little) {}
   static hash_value_type ComputeHash(key_type_ref K) {
@@ -197,7 +197,7 @@ bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {
 }
 
 static void setSummary(IndexedInstrProf::Summary *TheSummary,
-                       ProfileSummary &PS) {
+                       InstrProfSummary &PS) {
   using namespace IndexedInstrProf;
   std::vector<ProfileSummaryEntry> &Res = PS.getDetailedSummary();
   TheSummary->NumSummaryFields = Summary::NumKinds;
@@ -219,7 +219,7 @@ void InstrProfWriter::writeImpl(ProfOStream &OS) {
   using namespace IndexedInstrProf;
   std::vector<uint32_t> Cutoffs(&SummaryCutoffs[0],
                                 &SummaryCutoffs[NumSummaryCutoffs]);
-  ProfileSummary PS(Cutoffs);
+  InstrProfSummary PS(Cutoffs);
   InfoObj->TheProfileSummary = &PS;
 
   // Populate the hash table generator.

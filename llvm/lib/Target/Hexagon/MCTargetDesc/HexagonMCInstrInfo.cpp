@@ -586,21 +586,21 @@ int64_t HexagonMCInstrInfo::minConstant(MCInst const &MCI, size_t Index) {
 }
  
 void HexagonMCInstrInfo::setMustExtend(MCExpr &Expr, bool Val) {
-  HexagonMCExpr &HExpr = *llvm::cast<HexagonMCExpr>(&Expr);
+  HexagonMCExpr &HExpr = cast<HexagonMCExpr>(Expr);
   HExpr.setMustExtend(Val);
 }
 
 bool HexagonMCInstrInfo::mustExtend(MCExpr const &Expr) {
-  HexagonMCExpr const &HExpr = *llvm::cast<HexagonMCExpr>(&Expr);
+  HexagonMCExpr const &HExpr = cast<HexagonMCExpr>(Expr);
   return HExpr.mustExtend();
 }
 void HexagonMCInstrInfo::setMustNotExtend(MCExpr const &Expr, bool Val) {
   HexagonMCExpr &HExpr =
-      const_cast<HexagonMCExpr &>(*llvm::cast<HexagonMCExpr>(&Expr));
+      const_cast<HexagonMCExpr &>(cast<HexagonMCExpr>(Expr));
   HExpr.setMustNotExtend(Val);
 }
 bool HexagonMCInstrInfo::mustNotExtend(MCExpr const &Expr) {
-  HexagonMCExpr const &HExpr = *llvm::cast<HexagonMCExpr>(&Expr);
+  HexagonMCExpr const &HExpr = cast<HexagonMCExpr>(Expr);
   return HExpr.mustNotExtend();
 }
 

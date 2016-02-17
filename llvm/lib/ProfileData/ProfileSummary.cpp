@@ -16,17 +16,14 @@
 
 using namespace llvm;
 
-void ProfileSummary::addRecord(const InstrProfRecord &R) {
-  NumFunctions++;
-  if (R.Counts[0] > MaxFunctionCount)
-    MaxFunctionCount = R.Counts[0];
-
-  for (size_t I = 0, E = R.Counts.size(); I < E; ++I)
-    addCount(R.Counts[I], (I == 0));
+void InstrProfSummary::addRecord(const InstrProfRecord &R) {
+  addEntryCount(R.Counts[0]);
+  for (size_t I = 1, E = R.Counts.size(); I < E; ++I)
+    addInternalCount(R.Counts[I]);
 }
 
 // The argument to this method is a vector of cutoff percentages and the return
-// value is a vector of (Cutoff, MinBlockCount, NumBlocks) triplets.
+// value is a vector of (Cutoff, MinCount, NumCounts) triplets.
 void ProfileSummary::computeDetailedSummary() {
   if (DetailedSummaryCutoffs.empty())
     return;
@@ -34,7 +31,7 @@ void ProfileSummary::computeDetailedSummary() {
   auto End = CountFrequencies.end();
   std::sort(DetailedSummaryCutoffs.begin(), DetailedSummaryCutoffs.end());
 
-  uint32_t BlocksSeen = 0;
+  uint32_t CountsSeen = 0;
   uint64_t CurrSum = 0, Count = 0;
 
   for (uint32_t Cutoff : DetailedSummaryCutoffs) {
@@ -50,26 +47,40 @@ void ProfileSummary::computeDetailedSummary() {
       Count = Iter->first;
       uint32_t Freq = Iter->second;
       CurrSum += (Count * Freq);
-      BlocksSeen += Freq;
+      CountsSeen += Freq;
       Iter++;
     }
     assert(CurrSum >= DesiredCount);
-    ProfileSummaryEntry PSE = {Cutoff, Count, BlocksSeen};
+    ProfileSummaryEntry PSE = {Cutoff, Count, CountsSeen};
     DetailedSummary.push_back(PSE);
   }
 }
 
-ProfileSummary::ProfileSummary(const IndexedInstrProf::Summary &S)
-    : TotalCount(S.get(IndexedInstrProf::Summary::TotalBlockCount)),
-      MaxBlockCount(S.get(IndexedInstrProf::Summary::MaxBlockCount)),
-      MaxInternalBlockCount(
-          S.get(IndexedInstrProf::Summary::MaxInternalBlockCount)),
+InstrProfSummary::InstrProfSummary(const IndexedInstrProf::Summary &S)
+    : ProfileSummary(), MaxInternalBlockCount(S.get(
+                            IndexedInstrProf::Summary::MaxInternalBlockCount)),
       MaxFunctionCount(S.get(IndexedInstrProf::Summary::MaxFunctionCount)),
-      NumBlocks(S.get(IndexedInstrProf::Summary::TotalNumBlocks)),
       NumFunctions(S.get(IndexedInstrProf::Summary::TotalNumFunctions)) {
+
+  TotalCount = S.get(IndexedInstrProf::Summary::TotalBlockCount);
+  MaxCount = S.get(IndexedInstrProf::Summary::MaxBlockCount);
+  NumCounts = S.get(IndexedInstrProf::Summary::TotalNumBlocks);
+
   for (unsigned I = 0; I < S.NumCutoffEntries; I++) {
     const IndexedInstrProf::Summary::Entry &Ent = S.getEntry(I);
     DetailedSummary.emplace_back((uint32_t)Ent.Cutoff, Ent.MinBlockCount,
                                  Ent.NumBlocks);
   }
+}
+void InstrProfSummary::addEntryCount(uint64_t Count) {
+  addCount(Count);
+  NumFunctions++;
+  if (Count > MaxFunctionCount)
+    MaxFunctionCount = Count;
+}
+
+void InstrProfSummary::addInternalCount(uint64_t Count) {
+  addCount(Count);
+  if (Count > MaxInternalBlockCount)
+    MaxInternalBlockCount = Count;
 }

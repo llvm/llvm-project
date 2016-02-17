@@ -47,8 +47,6 @@ std::string _object_error_category::message(int EV) const {
     return "Invalid section index";
   case object_error::bitcode_section_not_found:
     return "Bitcode section not found in object file";
-  case object_error::elf_invalid_dynamic_table_size:
-    return "Invalid dynamic table size";
   case object_error::macho_small_load_command:
     return "Mach-O load command with size < 8 bytes";
   case object_error::macho_load_segment_too_many_sections:

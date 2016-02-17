@@ -268,7 +268,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
   if (ShowDetailedSummary && DetailedSummaryCutoffs.empty()) {
     Cutoffs = {800000, 900000, 950000, 990000, 999000, 999900, 999990};
   }
-  ProfileSummary PS(Cutoffs);
+  InstrProfSummary PS(Cutoffs);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, Filename);
 
@@ -352,7 +352,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
     OS << "Total number of blocks: " << PS.getNumBlocks() << "\n";
     OS << "Total count: " << PS.getTotalCount() << "\n";
     for (auto Entry : PS.getDetailedSummary()) {
-      OS << Entry.NumBlocks << " blocks with count >= " << Entry.MinBlockCount
+      OS << Entry.NumCounts << " blocks with count >= " << Entry.MinCount
          << " account for "
          << format("%0.6g", (float)Entry.Cutoff / ProfileSummary::Scale * 100)
          << " percentage of the total counts.\n";
