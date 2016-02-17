@@ -27,4 +27,30 @@ cleanupret:
 
 ; CHECK: cleanupret from %[[cp]] unwind to caller
 
+define void @test2() personality i32 (...)* @__CxxFrameHandler3 {
+  invoke void @neverthrows()
+          to label %try.cont unwind label %catchswitch
+
+try.cont:
+  ret void
+
+catchswitch:
+  %cs = catchswitch within none [label %catchpad] unwind to caller
+
+catchpad:
+  %cp = catchpad within %cs []
+  unreachable
+
+ret:
+  ret void
+}
+
+; CHECK-LABEL: define void @test2(
+; CHECK: call void @neverthrows()
+
+; CHECK: %[[cs:.*]] = catchswitch within none [label
+
+; CHECK: catchpad within %[[cs]] []
+; CHECK-NEXT: unreachable
+
 declare i32 @__CxxFrameHandler3(...)
