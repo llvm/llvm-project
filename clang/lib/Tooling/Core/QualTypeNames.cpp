@@ -329,7 +329,8 @@ NestedNameSpecifier *createNestedNameSpecifier(
 NestedNameSpecifier *createNestedNameSpecifier(
     const ASTContext &Ctx, const TypeDecl *TD, bool FullyQualify) {
   return NestedNameSpecifier::Create(Ctx, createOuterNNS(Ctx, TD, FullyQualify),
-                                     true /*Template*/, TD->getTypeForDecl());
+                                     false /*No TemplateKeyword*/,
+                                     TD->getTypeForDecl());
 }
 
 /// \brief Return the fully qualified type, including fully-qualified

@@ -7,6 +7,7 @@
 // CHECK-DAG: @__profn_bar = {{.*}} [3 x i8] c"bar"
 // CHECK-DAG: @__profn_baz = {{.*}} [3 x i8] c"baz"
 // CHECK-DAG: @__profn_unused_names.c_qux = {{.*}} [18 x i8] c"unused_names.c:qux"
+// CHECK-DAG: @__llvm_prf_nm = private constant {{.*}}, section "{{.*}}__llvm_prf_names"
 
 // SYSHEADER-NOT: @__profn_foo =
 

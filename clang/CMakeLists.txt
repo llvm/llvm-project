@@ -595,23 +595,17 @@ if( CLANG_INCLUDE_DOCS )
   add_subdirectory(docs)
 endif()
 
-# this line is needed as a cleanup to ensure that any CMakeCaches with the old
-# default value get updated to the new default.
-if(CLANG_ORDER_FILE STREQUAL "")
+if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/clang.order")
+  file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/clang.order")
+endif()
+
+if(CLANG_ORDER_FILE STREQUAL "${CMAKE_CURRENT_BINARY_DIR}/clang.order")
   unset(CLANG_ORDER_FILE CACHE)
+  unset(CLANG_ORDER_FILE)
 endif()
 
-set(CLANG_ORDER_FILE ${CMAKE_CURRENT_BINARY_DIR}/clang.order CACHE FILEPATH
+set(CLANG_ORDER_FILE "" CACHE FILEPATH
   "Order file to use when compiling clang in order to improve startup time.")
-
-if(CLANG_ORDER_FILE AND NOT EXISTS ${CLANG_ORDER_FILE})
-  string(FIND "${CLANG_ORDER_FILE}" "${CMAKE_CURRENT_BINARY_DIR}" PATH_START)
-  if(PATH_START EQUAL 0)
-    file(WRITE ${CLANG_ORDER_FILE} "\n")
-  else()
-    message(FATAL_ERROR "Specified order file '${CLANG_ORDER_FILE}' does not exist.")
-  endif()
-endif()
 
 if (CLANG_BUILT_STANDALONE OR CMAKE_VERSION VERSION_EQUAL 3 OR
     CMAKE_VERSION VERSION_GREATER 3)

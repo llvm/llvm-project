@@ -2392,7 +2392,7 @@ private:
                            Address UB, Address ST, Address IL,
                            llvm::Value *Chunk);
   /// \brief Emit code for sections directive.
-  OpenMPDirectiveKind EmitSections(const OMPExecutableDirective &S);
+  void EmitSections(const OMPExecutableDirective &S);
 
 public:
 

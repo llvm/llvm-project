@@ -24,9 +24,8 @@ struct A {
   B b;
 };
 
-int main() {
-  A a1, a2;
+A a1, a2;
+void foo() {
   a1 = a2;
   a2 = static_cast<A &&>(a1);
-  return 0;
 }

@@ -12,6 +12,6 @@ float operator ""E(const char *); // expected-error {{invalid suffix on literal}
 float operator " " B(const char *); // expected-error {{must be '""'}} expected-warning {{reserved}}
 string operator "" 5X(const char *, std::size_t); // expected-error {{expected identifier}}
 double operator "" _miles(double); // expected-error {{parameter}}
-template<char...> int operator "" j(const char*); // expected-error {{parameter}}
+template<char...> int operator "" j(const char*); // expected-error {{template}}
 
 float operator ""_E(const char *);

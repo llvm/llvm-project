@@ -119,6 +119,18 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: foo();
+  char buf[9] = "01234567";
+  char *p, *q;
+#pragma omp parallel
+#pragma omp for
+  for (p = buf; p < &buf[8]; p++)
+    for (q = &buf[0]; q <= buf + 7; q++)
+      foo();
+  // CHECK: #pragma omp parallel
+  // CHECK-NEXT: #pragma omp for
+  // CHECK-NEXT: for (p = buf; p < &buf[8]; p++)
+  // CHECK-NEXT: for (q = &buf[0]; q <= buf + 7; q++)
+  // CHECK-NEXT: foo();
   return (tmain<int, 5>(argc) + tmain<char, 1>(argv[0][0]));
 }
 

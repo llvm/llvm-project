@@ -324,6 +324,7 @@ void EmitAssemblyHelper::CreatePasses(FunctionInfoIndex *FunctionIndex) {
   PMBuilder.DisableUnitAtATime = !CodeGenOpts.UnitAtATime;
   PMBuilder.DisableUnrollLoops = !CodeGenOpts.UnrollLoops;
   PMBuilder.MergeFunctions = CodeGenOpts.MergeFunctions;
+  PMBuilder.PrepareForThinLTO = CodeGenOpts.EmitFunctionSummary;
   PMBuilder.PrepareForLTO = CodeGenOpts.PrepareForLTO;
   PMBuilder.RerollLoops = CodeGenOpts.RerollLoops;
 
@@ -333,7 +334,7 @@ void EmitAssemblyHelper::CreatePasses(FunctionInfoIndex *FunctionIndex) {
   // pipeline and pass down the in-memory function index.
   if (FunctionIndex) {
     PMBuilder.FunctionIndex = FunctionIndex;
-    PMBuilder.populateLTOPassManager(*MPM);
+    PMBuilder.populateThinLTOPassManager(*MPM);
     return;
   }
 
