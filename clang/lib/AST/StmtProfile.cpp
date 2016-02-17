@@ -360,6 +360,7 @@ void OMPClauseProfiler::VisitOMPPrivateClause(const OMPPrivateClause *C) {
 void
 OMPClauseProfiler::VisitOMPFirstprivateClause(const OMPFirstprivateClause *C) {
   VisitOMPClauseList(C);
+  VistOMPClauseWithPreInit(C);
   for (auto *E : C->private_copies()) {
     Profiler->VisitStmt(E);
   }

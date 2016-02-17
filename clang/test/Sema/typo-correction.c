@@ -55,3 +55,5 @@ void fn2() {
   f(THIS_IS_AN_ERROR, // expected-error {{use of undeclared identifier 'THIS_IS_AN_ERROR'}}
     afunction(afunction_));  // expected-error {{use of undeclared identifier 'afunction_'; did you mean 'afunction'?}}
 }
+
+int d = X ? d : L; // expected-error 2 {{use of undeclared identifier}}

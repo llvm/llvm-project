@@ -1748,8 +1748,7 @@ public:
   OMPClauseReader(ASTStmtReader *R, ASTContext &C,
                   const ASTReader::RecordData &Record, unsigned &Idx)
     : Reader(R), Context(C), Record(Record), Idx(Idx) { }
-#define OPENMP_CLAUSE(Name, Class)    \
-  void Visit##Class(Class *C);
+#define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *C);
 #include "clang/Basic/OpenMPKinds.def"
   OMPClause *readClause();
   void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
@@ -2002,6 +2001,7 @@ void OMPClauseReader::VisitOMPPrivateClause(OMPPrivateClause *C) {
 }
 
 void OMPClauseReader::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;

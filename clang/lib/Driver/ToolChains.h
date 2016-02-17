@@ -617,6 +617,8 @@ public:
 
   bool isPIEDefault() const override { return false; }
 
+  SanitizerMask getSupportedSanitizers() const override;
+
 protected:
   Tool *buildLinker() const override;
 };

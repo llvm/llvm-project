@@ -40,6 +40,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPScheduleClause *>(C);
   case OMPC_dist_schedule:
     return static_cast<const OMPDistScheduleClause *>(C);
+  case OMPC_firstprivate:
+    return static_cast<const OMPFirstprivateClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_if:
@@ -49,7 +51,6 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_simdlen:
   case OMPC_collapse:
   case OMPC_private:
-  case OMPC_firstprivate:
   case OMPC_lastprivate:
   case OMPC_shared:
   case OMPC_reduction:
@@ -129,13 +130,14 @@ OMPFirstprivateClause *
 OMPFirstprivateClause::Create(const ASTContext &C, SourceLocation StartLoc,
                               SourceLocation LParenLoc, SourceLocation EndLoc,
                               ArrayRef<Expr *> VL, ArrayRef<Expr *> PrivateVL,
-                              ArrayRef<Expr *> InitVL) {
+                              ArrayRef<Expr *> InitVL, Stmt *PreInit) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(3 * VL.size()));
   OMPFirstprivateClause *Clause =
       new (Mem) OMPFirstprivateClause(StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
   Clause->setPrivateCopies(PrivateVL);
   Clause->setInits(InitVL);
+  Clause->setPreInitStmt(PreInit);
   return Clause;
 }
 

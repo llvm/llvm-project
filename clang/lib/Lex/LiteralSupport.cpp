@@ -522,6 +522,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   isLong = false;
   isUnsigned = false;
   isLongLong = false;
+  isHalf = false;
   isFloat = false;
   isImaginary = false;
   MicrosoftInteger = 0;
@@ -555,10 +556,18 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   // we break out of the loop.
   for (; s != ThisTokEnd; ++s) {
     switch (*s) {
+    case 'h':      // FP Suffix for "half".
+    case 'H':
+      // OpenCL Extension v1.2 s9.5 - h or H suffix for half type.
+      if (!PP.getLangOpts().Half) break;
+      if (!isFPConstant) break;  // Error for integer constant.
+      if (isHalf || isFloat || isLong) break; // HH, FH, LH invalid.
+      isHalf = true;
+      continue;  // Success.
     case 'f':      // FP Suffix for "float"
     case 'F':
       if (!isFPConstant) break;  // Error for integer constant.
-      if (isFloat || isLong) break; // FF, LF invalid.
+      if (isHalf || isFloat || isLong) break; // HF, FF, LF invalid.
       isFloat = true;
       continue;  // Success.
     case 'u':
@@ -570,7 +579,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     case 'l':
     case 'L':
       if (isLong || isLongLong) break;  // Cannot be repeated.
-      if (isFloat) break;               // LF invalid.
+      if (isHalf || isFloat) break;     // LH, LF invalid.
 
       // Check for long long.  The L's need to be adjacent and the same case.
       if (s[1] == s[0]) {
@@ -647,6 +656,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       isUnsigned = false;
       isLongLong = false;
       isFloat = false;
+      isHalf = false;
       isImaginary = false;
       MicrosoftInteger = 0;
 

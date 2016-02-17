@@ -2141,6 +2141,13 @@ void OMPClauseEnqueue::VisitOMPPrivateClause(const OMPPrivateClause *C) {
 void OMPClauseEnqueue::VisitOMPFirstprivateClause(
                                         const OMPFirstprivateClause *C) {
   VisitOMPClauseList(C);
+  VisitOMPClauseWithPreInit(C);
+  for (const auto *E : C->private_copies()) {
+    Visitor->AddStmt(E);
+  }
+  for (const auto *E : C->inits()) {
+    Visitor->AddStmt(E);
+  }
 }
 void OMPClauseEnqueue::VisitOMPLastprivateClause(
                                         const OMPLastprivateClause *C) {

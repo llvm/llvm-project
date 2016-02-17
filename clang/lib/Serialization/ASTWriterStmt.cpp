@@ -1867,6 +1867,7 @@ void OMPClauseWriter::VisitOMPPrivateClause(OMPPrivateClause *C) {
 
 void OMPClauseWriter::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
   Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPreInit(C);
   Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
   for (auto *VE : C->varlists()) {
     Writer->Writer.AddStmt(VE);
