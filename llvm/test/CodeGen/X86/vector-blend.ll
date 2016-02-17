@@ -907,27 +907,29 @@ define <4 x i32> @blend_neg_logic_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; SSE2-LABEL: blend_neg_logic_v4i32:
 ; SSE2:       # BB#0: # %entry
 ; SSE2-NEXT:    psrad $31, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    psubd %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    psubd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: blend_neg_logic_v4i32:
 ; SSSE3:       # BB#0: # %entry
-; SSSE3-NEXT:    psignd %xmm1, %xmm0
+; SSSE3-NEXT:    psrad $31, %xmm1
+; SSSE3-NEXT:    pxor %xmm1, %xmm0
+; SSSE3-NEXT:    psubd %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: blend_neg_logic_v4i32:
 ; SSE41:       # BB#0: # %entry
-; SSE41-NEXT:    psignd %xmm1, %xmm0
+; SSE41-NEXT:    psrad $31, %xmm1
+; SSE41-NEXT:    pxor %xmm1, %xmm0
+; SSE41-NEXT:    psubd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: blend_neg_logic_v4i32:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpsignd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %b.lobit = ashr <4 x i32> %b, <i32 31, i32 31, i32 31, i32 31>
@@ -942,32 +944,32 @@ entry:
 define <8 x i32> @blend_neg_logic_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; SSE2-LABEL: blend_neg_logic_v8i32:
 ; SSE2:       # BB#0: # %entry
-; SSE2-NEXT:    psrad $31, %xmm2
 ; SSE2-NEXT:    psrad $31, %xmm3
-; SSE2-NEXT:    pxor %xmm4, %xmm4
-; SSE2-NEXT:    pxor %xmm5, %xmm5
-; SSE2-NEXT:    psubd %xmm0, %xmm5
-; SSE2-NEXT:    psubd %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm3, %xmm4
-; SSE2-NEXT:    pandn %xmm1, %xmm3
-; SSE2-NEXT:    pand %xmm2, %xmm5
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm5
-; SSE2-NEXT:    por %xmm3, %xmm4
-; SSE2-NEXT:    movdqa %xmm5, %xmm0
-; SSE2-NEXT:    movdqa %xmm4, %xmm1
+; SSE2-NEXT:    psrad $31, %xmm2
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    psubd %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm3, %xmm1
+; SSE2-NEXT:    psubd %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: blend_neg_logic_v8i32:
 ; SSSE3:       # BB#0: # %entry
-; SSSE3-NEXT:    psignd %xmm2, %xmm0
-; SSSE3-NEXT:    psignd %xmm3, %xmm1
+; SSSE3-NEXT:    psrad $31, %xmm3
+; SSSE3-NEXT:    psrad $31, %xmm2
+; SSSE3-NEXT:    pxor %xmm2, %xmm0
+; SSSE3-NEXT:    psubd %xmm2, %xmm0
+; SSSE3-NEXT:    pxor %xmm3, %xmm1
+; SSSE3-NEXT:    psubd %xmm3, %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: blend_neg_logic_v8i32:
 ; SSE41:       # BB#0: # %entry
-; SSE41-NEXT:    psignd %xmm2, %xmm0
-; SSE41-NEXT:    psignd %xmm3, %xmm1
+; SSE41-NEXT:    psrad $31, %xmm3
+; SSE41-NEXT:    psrad $31, %xmm2
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    psubd %xmm2, %xmm0
+; SSE41-NEXT:    pxor %xmm3, %xmm1
+; SSE41-NEXT:    psubd %xmm3, %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: blend_neg_logic_v8i32:
@@ -988,7 +990,9 @@ define <8 x i32> @blend_neg_logic_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ;
 ; AVX2-LABEL: blend_neg_logic_v8i32:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    vpsignd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrad $31, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 entry:
   %b.lobit = ashr <8 x i32> %b, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
