@@ -228,9 +228,16 @@ void PruneEH::DeleteBasicBlock(BasicBlock *BB) {
   assert(pred_empty(BB) && "BB is not dead!");
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
+  Instruction *TokenInst = nullptr;
+
   CallGraphNode *CGN = CG[BB->getParent()];
   for (BasicBlock::iterator I = BB->end(), E = BB->begin(); I != E; ) {
     --I;
+
+    if (I->getType()->isTokenTy()) {
+      TokenInst = &*I;
+      break;
+    }
 
     if (auto CS = CallSite (&*I)) {
       const Function *Callee = CS.getCalledFunction();
@@ -244,11 +251,15 @@ void PruneEH::DeleteBasicBlock(BasicBlock *BB) {
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
   }
 
-  // Get the list of successors of this block.
-  std::vector<BasicBlock*> Succs(succ_begin(BB), succ_end(BB));
+  if (TokenInst) {
+    changeToUnreachable(TokenInst->getNextNode(), /*UseLLVMTrap=*/false);
+  } else {
+    // Get the list of successors of this block.
+    std::vector<BasicBlock *> Succs(succ_begin(BB), succ_end(BB));
 
-  for (unsigned i = 0, e = Succs.size(); i != e; ++i)
-    Succs[i]->removePredecessor(BB);
+    for (unsigned i = 0, e = Succs.size(); i != e; ++i)
+      Succs[i]->removePredecessor(BB);
 
-  BB->eraseFromParent();
+    BB->eraseFromParent();
+  }
 }
