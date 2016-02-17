@@ -10,13 +10,14 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK:   br i1 %p_tmp8, label %polly.stmt.bb9, label %polly.stmt.bb10
 
 ; CHECK: polly.stmt.bb9:                                   ; preds = %polly.stmt.bb3
-; CHECK:   store double 1.000000e+00, double* %tmp12.phiops
 ; CHECK:   br label %polly.stmt.bb11.exit
 
 ; CHECK: polly.stmt.bb10:                                  ; preds = %polly.stmt.bb3
-; CHECK:   store double 2.000000e+00, double* %tmp12.phiops
 ; CHECK:   br label %polly.stmt.bb11.exit
 
+; CHECK: polly.stmt.bb11.exit:                             ; preds = %polly.stmt.bb10, %polly.stmt.bb9
+; CHECK:   %polly.tmp12 = phi double [ 1.000000e+00, %polly.stmt.bb9 ], [ 2.000000e+00, %polly.stmt.bb10 ]
+; CHECK:   store double %polly.tmp12, double* %tmp12.phiops
 
 define void @hoge(i32 %arg, [1024 x double]* %arg1) {
 bb:

@@ -12,10 +12,12 @@
 // class function<R(ArgTypes...)>
 
 // template<class F, class A> void assign(F&&, const A&);
+//     This call was removed post-C++14
 
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_allocator.h"
 
 class A
@@ -49,6 +51,7 @@ int A::count = 0;
 
 int main()
 {
+#if TEST_STD_VER <= 14
     {
     std::function<int(int)> f;
     f.assign(A(), test_allocator<A>());
@@ -57,4 +60,5 @@ int main()
     assert(f.target<int(*)(int)>() == 0);
     }
     assert(A::count == 0);
+#endif
 }

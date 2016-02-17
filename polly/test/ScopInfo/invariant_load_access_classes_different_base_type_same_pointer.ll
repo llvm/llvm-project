@@ -11,6 +11,9 @@
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_U[0] };
 ; CHECK-NEXT:         Execution Context: {  :  }
+; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             { Stmt_for_body[i0] -> MemRef_U[0] };
+; CHECK-NEXT:         Execution Context: {  :  }
 ; CHECK-NEXT: }
 ;
 ; CHECK:      Statements {
@@ -24,15 +27,15 @@
 ; CHECK-NEXT: }
 ;
 ; CODEGEN: entry:
-; CODEGEN:   %U.f.preload.s2a = alloca float
+; CODEGEN-DAG:   %U.f.preload.s2a = alloca float
+; CODEGEN-DAG:   %U.i.preload.s2a = alloca i32
 ; CODEGEN:   br label %polly.split_new_and_old
 ;
 ; CODEGEN: polly.preload.begin:
-; CODEGEN:   %U.load1 = load float, float* bitcast (i32* @U to float*)
-; TODO FIXME There should not be a bitcast but either a real conversion or
-;            another load as one type is FP the other is not.
-; CODEGEN:   %0 = bitcast float %U.load1 to i32
-; CODEGEN:   store float %U.load1, float* %U.f.preload.s2a
+; CODEGEN-DAG:   %U.load[[f:[.0-9]*]] = load float, float* bitcast (i32* @U to float*)
+; CODEGEN-DAG:   store float %U.load[[f]], float* %U.f.preload.s2a
+; CODEGEN-DAG:   %U.load[[i:[.0-9]*]] = load i32, i32* @U
+; CODEGEN-DAG:   store i32 %U.load[[i]], i32* %U.i.preload.s2a
 ;
 ; CODEGEN:     polly.merge_new_and_old:
 ; CODEGEN-NOT:   merge = phi
@@ -41,8 +44,7 @@
 ; CODEGEN-NOT:   final_reload
 ;
 ; CODEGEN: polly.stmt.for.body:
-; CODEGEN:   %p_conv = fptosi float %U.load1 to i32
-; CODEGEN:   %p_add = add nsw i32 %0, %p_conv
+; CODEGEN:   %p_add = add nsw i32 %U.load[[i]], %p_conv
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

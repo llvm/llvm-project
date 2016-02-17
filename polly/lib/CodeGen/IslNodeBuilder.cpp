@@ -839,7 +839,8 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           // the parent of Inst and lastly if the parent of Inst has an empty
           // domain. In the first and last case the instruction is dead but if
           // there is a statement or the domain is not empty Inst is not dead.
-          auto *Address = getPointerOperand(*Inst);
+          auto MemInst = MemAccInst::dyn_cast(Inst);
+          auto Address = MemInst ? MemInst.getPointerOperand() : nullptr;
           if (Address &&
               SE.getUnknown(UndefValue::get(Address->getType())) ==
                   SE.getPointerBase(SE.getSCEV(Address))) {
@@ -899,39 +900,28 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
   PWAccRel = isl_pw_multi_aff_gist_params(PWAccRel, S.getContext());
   isl_ast_expr *Access =
       isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
-  Value *PreloadVal = ExprBuilder.create(Access);
-
-  if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
-    PreloadInst->setAlignment(dyn_cast<LoadInst>(AccInst)->getAlignment());
+  auto *Address = isl_ast_expr_address_of(Access);
+  auto *AddressValue = ExprBuilder.create(Address);
+  Value *PreloadVal;
 
   // Correct the type as the SAI might have a different type than the user
   // expects, especially if the base pointer is a struct.
   Type *Ty = AccInst->getType();
-  if (Ty == PreloadVal->getType())
-    return PreloadVal;
 
-  if (!Ty->isFloatingPointTy() && !PreloadVal->getType()->isFloatingPointTy())
-    return PreloadVal = Builder.CreateBitOrPointerCast(PreloadVal, Ty);
-
-  // We do not want to cast floating point to non-floating point types and vice
-  // versa, thus we simply create a new load with a casted pointer expression.
-  auto *LInst = dyn_cast<LoadInst>(PreloadVal);
-  assert(LInst && "Preloaded value was not a load instruction");
-  auto *Ptr = LInst->getPointerOperand();
-  Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(),
-                                  Ptr->getName() + ".cast");
-  PreloadVal = Builder.CreateLoad(Ptr, LInst->getName());
+  auto *Ptr = AddressValue;
+  auto Name = Ptr->getName();
+  Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(), Name + ".cast");
+  PreloadVal = Builder.CreateLoad(Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(dyn_cast<LoadInst>(AccInst)->getAlignment());
 
-  LInst->eraseFromParent();
   return PreloadVal;
 }
 
 Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
                                             isl_set *Domain) {
 
-  isl_set *AccessRange = isl_map_range(MA.getAccessRelation());
+  isl_set *AccessRange = isl_map_range(MA.getAddressFunction());
   if (!materializeParameters(AccessRange, false)) {
     isl_set_free(AccessRange);
     isl_set_free(Domain);
@@ -1025,12 +1015,13 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   // Check for recurrsion which can be caused by additional constraints, e.g.,
   // non-finitie loop contraints. In such a case we have to bail out and insert
   // a "false" runtime check that will cause the original code to be executed.
-  if (!PreloadedPtrs.insert(std::get<0>(IAClass)).second)
+  auto PtrId = std::make_pair(std::get<0>(IAClass), std::get<3>(IAClass));
+  if (!PreloadedPtrs.insert(PtrId).second)
     return false;
 
   // If the base pointer of this class is dependent on another one we have to
   // make sure it was preloaded already.
-  auto *SAI = S.getScopArrayInfo(MA->getBaseAddr(), ScopArrayInfo::MK_Array);
+  auto *SAI = MA->getScopArrayInfo();
   if (const auto *BaseIAClass = S.lookupInvariantEquivClass(SAI->getBasePtr()))
     if (!preloadInvariantEquivClass(*BaseIAClass))
       return false;
@@ -1043,13 +1034,10 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   if (!PreloadVal)
     return false;
 
-  assert(PreloadVal->getType() == AccInst->getType());
   for (const MemoryAccess *MA : MAs) {
     Instruction *MAAccInst = MA->getAccessInstruction();
-    // TODO: The bitcast here is wrong. In case of floating and non-floating
-    //       point values we need to reload the value or convert it.
-    ValueMap[MAAccInst] =
-        Builder.CreateBitOrPointerCast(PreloadVal, MAAccInst->getType());
+    assert(PreloadVal->getType() == MAAccInst->getType());
+    ValueMap[MAAccInst] = PreloadVal;
   }
 
   if (SE.isSCEVable(AccInstTy)) {
@@ -1073,11 +1061,8 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
       // should only change the base pointer of the derived SAI if we actually
       // preloaded it.
       if (BasePtr == MA->getBaseAddr()) {
-        // TODO: The bitcast here is wrong. In case of floating and non-floating
-        //       point values we need to reload the value or convert it.
-        BasePtr =
-            Builder.CreateBitOrPointerCast(PreloadVal, BasePtr->getType());
-        DerivedSAI->setBasePtr(BasePtr);
+        assert(BasePtr->getType() == PreloadVal->getType());
+        DerivedSAI->setBasePtr(PreloadVal);
       }
 
       // For scalar derived SAIs we remap the alloca used for the derived value.

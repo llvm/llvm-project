@@ -86,6 +86,7 @@ math/fmax.cl
 math/fmin.cl
 math/fmod.cl
 math/fract.cl
+math/frexp.cl
 math/half_rsqrt.cl
 math/half_sqrt.cl
 math/hypot.cl
@@ -96,6 +97,7 @@ math/log10.cl
 math/log1p.cl
 math/log2.cl
 math/mad.cl
+math/modf.cl
 math/native_log.cl
 math/native_log2.cl
 math/tables.cl

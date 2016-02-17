@@ -229,6 +229,17 @@ public:
     void
     StepInto (const char *target_name, lldb::RunMode stop_other_threads = lldb::eOnlyDuringStepping);
 
+    %feature("autodoc", "
+    Step  the current thread from the current source line to the line given by end_line, stopping if
+    the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
+    in any of the places we would normally stop.
+    ") StepInto;
+    void
+    StepInto (const char *target_name,
+              uint32_t end_line,
+              SBError &error,
+              lldb::RunMode stop_other_threads = lldb::eOnlyDuringStepping);
+
     void
     StepOut ();
 

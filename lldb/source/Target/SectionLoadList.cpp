@@ -172,10 +172,16 @@ SectionLoadList::SetSectionUnloaded (const lldb::SectionSP &section_sp)
 
         if (log)
         {
-            const FileSpec &module_file_spec (section_sp->GetModule()->GetFileSpec());
+            ModuleSP module_sp = section_sp->GetModule();
+            std::string module_name("<Unknown>");
+            if (module_sp)
+            {
+                const FileSpec &module_file_spec (section_sp->GetModule()->GetFileSpec());
+                module_name = module_file_spec.GetPath();
+            }
             log->Printf ("SectionLoadList::%s (section = %p (%s.%s))",
                          __FUNCTION__, static_cast<void*>(section_sp.get()),
-                         module_file_spec.GetPath().c_str(),
+                         module_name.c_str(),
                          section_sp->GetName().AsCString());
         }
 
@@ -203,10 +209,16 @@ SectionLoadList::SetSectionUnloaded (const lldb::SectionSP &section_sp, addr_t l
 
     if (log)
     {
-        const FileSpec &module_file_spec (section_sp->GetModule()->GetFileSpec());
+        ModuleSP module_sp = section_sp->GetModule();
+        std::string module_name("<Unknown>");
+        if (module_sp)
+        {
+            const FileSpec &module_file_spec (section_sp->GetModule()->GetFileSpec());
+            module_name = module_file_spec.GetPath();
+        }
         log->Printf ("SectionLoadList::%s (section = %p (%s.%s), load_addr = 0x%16.16" PRIx64 ")",
                      __FUNCTION__, static_cast<void*>(section_sp.get()),
-                     module_file_spec.GetPath().c_str(),
+                     module_name.c_str(),
                      section_sp->GetName().AsCString(), load_addr);
     }
     bool erased = false;

@@ -34,10 +34,13 @@ if(${LIBOMP_STANDALONE_BUILD})
     "OpenMP compiler flag to use for testing OpenMP library")
   set(LIBOMP_LLVM_LIT_EXECUTABLE "" CACHE STRING
     "Path to llvm-lit")
-  find_program(LIT_EXECUTABLE NAMES llvm-lit ${LIBOMP_LLVM_LIT_EXECUTABLE})
+  find_program(LIT_EXECUTABLE
+    NAMES llvm-lit
+    HINTS ${LIBOMP_LLVM_LIT_EXECUTABLE}
+    PATHS ${OPENMP_LLVM_TOOLS_DIR})
   if(NOT LIT_EXECUTABLE)
     libomp_say("Cannot find llvm-lit.")
-    libomp_say("Please put llvm-lit in your PATH or set LIBOMP_LLVM_LIT_EXECUTABLE to its full path")
+    libomp_say("Please put llvm-lit in your PATH, set LIBOMP_LLVM_LIT_EXECUTABLE to its full path or point OPENMP_LLVM_TOOLS_DIR to its directory")
     libomp_warning_say("The check-libomp target will not be available!")
     return()
   endif()

@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: locale.en_US.UTF-8
+
 // <regex>
 
 // template <class charT> struct regex_traits;

@@ -25,7 +25,6 @@
 ; CHECK-NEXT:     i32 MemRef_j_0__phi; // Element size 4
 ; CHECK-NEXT:     i32 MemRef_j_0; // Element size 4
 ; CHECK-NEXT:     i32 MemRef_A[*]; // Element size 4
-; CHECK-NEXT:     i32 MemRef_smax; // Element size 4
 ; CHECK-NEXT:     i32 MemRef_j_2__phi; // Element size 4
 ; CHECK-NEXT:     i32 MemRef_j_2; // Element size 4
 ; CHECK-NEXT: }
@@ -33,7 +32,6 @@
 ; CHECK-NEXT:     i32 MemRef_j_0__phi; // Element size 4
 ; CHECK-NEXT:     i32 MemRef_j_0; // Element size 4
 ; CHECK-NEXT:     i32 MemRef_A[*]; // Element size 4
-; CHECK-NEXT:     i32 MemRef_smax; // Element size 4
 ; CHECK-NEXT:     i32 MemRef_j_2__phi; // Element size 4
 ; CHECK-NEXT:     i32 MemRef_j_2; // Element size 4
 ; CHECK-NEXT: }
@@ -60,14 +58,10 @@
 ; CHECK-NEXT:             [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_A[i0] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_smax[] };
-; CHECK-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
+; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_j_2__phi[] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_j_0[] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [N] -> { Stmt_bb4__TO__bb18[i0] -> MemRef_j_2__phi[] };
 ; CHECK-NEXT:     Stmt_bb18
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             [N] -> { Stmt_bb18[i0] : 0 <= i0 < N };
@@ -78,7 +72,7 @@
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [N] -> { Stmt_bb18[i0] -> MemRef_j_2__phi[] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [N] -> { Stmt_bb18[i0] -> MemRef_A[o0] : -2147483648 <= o0 <= 2147483645 };
+; CHECK-NEXT:             [N] -> { Stmt_bb18[i0] -> MemRef_A[o0] : -2147483648 <= o0 <= 2147483647 };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [N] -> { Stmt_bb18[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_bb23

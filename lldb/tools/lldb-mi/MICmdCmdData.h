@@ -32,6 +32,7 @@
 
 // Third party headers:
 #include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBError.h"
 
 // In-house headers:
 #include "MICmdBase.h"
@@ -71,6 +72,7 @@ class CMICmdCmdDataEvaluateExpression : public CMICmdBase
   private:
     bool m_bExpressionValid;     // True = yes is valid, false = not valid
     bool m_bEvaluatedExpression; // True = yes is expression evaluated, false = failed
+    lldb::SBError m_Error;       // Error object, which is examined when m_bEvaluatedExpression is false 
     CMIUtilString m_strValue;
     CMICmnMIValueTuple m_miValueTuple;
     bool m_bFoundInvalidChar; // True = yes found unexpected character in the expression, false = all ok

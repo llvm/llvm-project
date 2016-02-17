@@ -21,6 +21,7 @@
 #include "IntegerTypesCheck.h"
 #include "MemsetZeroLengthCheck.h"
 #include "OverloadedUnaryAndCheck.h"
+#include "NonConstReferences.h"
 #include "StringReferenceMemberCheck.h"
 #include "TodoCommentCheck.h"
 #include "UnnamedNamespaceInHeaderCheck.h"
@@ -47,6 +48,8 @@ public:
         "google-runtime-int");
     CheckFactories.registerCheck<runtime::OverloadedUnaryAndCheck>(
         "google-runtime-operator");
+    CheckFactories.registerCheck<runtime::NonConstReferences>(
+        "google-runtime-references");
     CheckFactories.registerCheck<runtime::StringReferenceMemberCheck>(
         "google-runtime-member-string-references");
     CheckFactories.registerCheck<runtime::MemsetZeroLengthCheck>(

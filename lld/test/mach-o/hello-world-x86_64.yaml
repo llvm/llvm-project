@@ -116,4 +116,5 @@ undefined-symbols:
 # CHECK:	(undefined) external ___stdoutp (from libSystem)
 # CHECK:	(undefined) external _fprintf (from libSystem)
 # CHECK:	(undefined) external dyld_stub_binder (from libSystem)
+# CHECK:	{{[0-9a-f]+}} (__TEXT,__text) [referenced dynamically] external __mh_execute_header
 # CHECK:	{{[0-9a-f]+}} (__TEXT,__text) external _main

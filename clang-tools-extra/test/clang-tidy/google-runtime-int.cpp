@@ -65,3 +65,10 @@ struct some_value {};
 constexpr some_value operator"" _some_literal(unsigned long long int i);
 // CHECK-MESSAGES: [[@LINE-1]]:47: warning: consider replacing 'unsigned long long'
 
+struct A { A& operator=(const A&); };
+class B { A a[0]; };
+
+void fff() {
+  B a, b;
+  a = b;
+}

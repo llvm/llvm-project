@@ -6,8 +6,11 @@ from __future__ import print_function
 
 import os, sys
 import lldb
-from lldbsuite.test import configuration
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import configuration
+from lldbsuite.test import lldbutil
 
 class ExpressionEvaluationCase(BenchBase):
 
@@ -20,7 +23,7 @@ class ExpressionEvaluationCase(BenchBase):
         self.count = 25
 
     @benchmarks_test
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_expr_cmd(self):
         """Test lldb's expression commands and collect statistics."""
         self.build()

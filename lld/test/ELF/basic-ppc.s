@@ -215,7 +215,7 @@
 // CHECK-NEXT:     Flags [ (0x4)
 // CHECK-NEXT:       PF_R (0x4)
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Alignment: 8
+// CHECK-NEXT:     Alignment: 4
 // CHECK-NEXT:   }
 // CHECK-NEXT:   ProgramHeader {
 // CHECK-NEXT:     Type: PT_LOAD (0x1)

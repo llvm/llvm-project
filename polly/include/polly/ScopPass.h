@@ -22,8 +22,6 @@
 
 using namespace llvm;
 
-struct isl_ctx;
-
 namespace polly {
 class Scop;
 

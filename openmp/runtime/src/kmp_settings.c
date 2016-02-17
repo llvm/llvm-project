@@ -3854,7 +3854,6 @@ __kmp_stg_print_gtid_mode( kmp_str_buf_t * buffer, char const * name, void * dat
     }
 } // __kmp_stg_print_gtid_mode
 
-
 // -------------------------------------------------------------------------------------------------
 // KMP_NUM_LOCKS_IN_BLOCK
 // -------------------------------------------------------------------------------------------------
@@ -5252,7 +5251,7 @@ __kmp_env_initialize( char const * string ) {
                     else if ( ( __kmp_affinity_gran != affinity_gran_group )
                       && ( __kmp_affinity_gran != affinity_gran_fine )
                       && ( __kmp_affinity_gran != affinity_gran_thread ) ) {
-                        char *str = NULL;
+                        const char *str = NULL;
                         switch ( __kmp_affinity_gran ) {
                             case affinity_gran_core: str = "core"; break;
                             case affinity_gran_package: str = "package"; break;
@@ -5268,7 +5267,7 @@ __kmp_env_initialize( char const * string ) {
                         __kmp_affinity_gran = affinity_gran_core;
                     }
                     else if ( __kmp_affinity_gran == affinity_gran_group ) {
-                        char *str = NULL;
+                        const char *str = NULL;
                         switch ( __kmp_affinity_type ) {
                             case affinity_physical: str = "physical"; break;
                             case affinity_logical: str = "logical"; break;

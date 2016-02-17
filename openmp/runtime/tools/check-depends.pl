@@ -18,9 +18,10 @@ use FindBin;
 use lib "$FindBin::Bin/lib";
 
 use tools;
-use Platform ":vars";
 
 our $VERSION = "0.005";
+my $target_os;
+my $target_arch;
 
 # --------------------------------------------------------------------------------------------------
 # Ouput parse error.
@@ -184,6 +185,8 @@ sub get_deps_otool($) {
         or parse_error( $tool, @bulk, $i );
     ++ $i;
     if ( $name =~ m{\.dylib\z} ) {
+        # Added "@rpath/" enables dynamic load of the library designated at link time.
+        $name = '@rpath/' . $name;
         # In case of dynamic library otool print the library itself as a dependent library.
         ( $i < @bulk and $bulk[ $i ] =~ m{^\s+\Q$name\E\s+\(compatibility version.*\)$} )
             or parse_error( $tool, @bulk, $i );
@@ -331,7 +334,8 @@ my $expected;
 my $bare;
 Getopt::Long::Configure( "permute" );
 get_options(
-    Platform::target_options(),
+    "os=s"       => \$target_os,
+    "arch=s"     => \$target_arch,
     "bare"       => \$bare,
     "expected=s" => \$expected,
 );

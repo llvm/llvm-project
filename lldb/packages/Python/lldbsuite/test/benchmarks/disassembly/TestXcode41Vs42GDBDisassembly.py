@@ -6,8 +6,11 @@ from __future__ import print_function
 
 import os, sys
 import lldb
-from lldbsuite.test import configuration
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import configuration
+from lldbsuite.test import lldbutil
 
 class XCode41Vs42GDBDisassembly(BenchBase):
 
@@ -25,7 +28,7 @@ class XCode41Vs42GDBDisassembly(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_run_41_then_42(self):
         """Test disassembly on a large function with 4.1 vs. 4.2's gdb."""
         print()
@@ -39,7 +42,7 @@ class XCode41Vs42GDBDisassembly(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_run_42_then_41(self):
         """Test disassembly on a large function with 4.1 vs. 4.2's gdb."""
         print()

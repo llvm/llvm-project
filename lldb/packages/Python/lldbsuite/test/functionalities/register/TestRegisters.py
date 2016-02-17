@@ -9,8 +9,9 @@ from __future__ import print_function
 import os, sys, time
 import re
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class RegisterCommandsTestCase(TestBase):
 
@@ -25,7 +26,7 @@ class RegisterCommandsTestCase(TestBase):
         TestBase.tearDown(self)
 
     @skipIfiOSSimulator
-    @skipUnlessArch(['amd64', 'arm', 'i386', 'x86_64'])
+    @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
         self.build()
@@ -48,7 +49,7 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIfTargetAndroid(archs=["i386"]) # Writing of mxcsr register fails, presumably due to a kernel/hardware problem
-    @skipUnlessArch(['amd64', 'arm', 'i386', 'x86_64'])
+    @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
         self.build()
@@ -57,14 +58,14 @@ class RegisterCommandsTestCase(TestBase):
     @skipIfiOSSimulator
     @expectedFailureAndroid(archs=["i386"]) # "register read fstat" always return 0xffff
     @skipIfFreeBSD    #llvm.org/pr25057
-    @skipUnlessArch(['amd64', 'i386', 'x86_64'])
+    @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""
         self.build()
         self.fp_special_purpose_register_read()
 
     @skipIfiOSSimulator
-    @skipUnlessArch(['amd64', 'arm', 'i386', 'x86_64'])
+    @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
     def test_register_expressions(self):
         """Test expression evaluation with commands related to registers."""
         self.build()
@@ -85,21 +86,21 @@ class RegisterCommandsTestCase(TestBase):
             self.expect("expr -- ($rax & 0xffffffff) == $eax", substrs = ['true'])
 
     @skipIfiOSSimulator
-    @skipUnlessArch(['amd64', 'x86_64'])
+    @skipIf(archs=no_match(['amd64', 'x86_64']))
     def test_convenience_registers(self):
         """Test convenience registers."""
         self.build()
         self.convenience_registers()
 
     @skipIfiOSSimulator
-    @skipUnlessArch(['amd64', 'x86_64'])
+    @skipIf(archs=no_match(['amd64', 'x86_64']))
     def test_convenience_registers_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()
         self.convenience_registers_with_process_attach(test_16bit_regs=False)
 
     @skipIfiOSSimulator
-    @skipUnlessArch(['amd64', 'x86_64'])
+    @skipIf(archs=no_match(['amd64', 'x86_64']))
     def test_convenience_registers_16bit_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()

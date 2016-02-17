@@ -51,7 +51,8 @@ class StdCXXDisassembleTestCase(TestBase):
 
         # Disassemble the functions on the call stack.
         self.runCmd("thread backtrace")
-        thread = process.GetThreadAtIndex(0)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
         depth = thread.GetNumFrames()
         for i in range(depth - 1):
             frame = thread.GetFrameAtIndex(i)

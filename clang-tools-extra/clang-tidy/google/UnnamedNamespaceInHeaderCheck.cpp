@@ -19,6 +19,24 @@ namespace tidy {
 namespace google {
 namespace build {
 
+UnnamedNamespaceInHeaderCheck::UnnamedNamespaceInHeaderCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      RawStringHeaderFileExtensions(
+          Options.getLocalOrGlobal("HeaderFileExtensions", "h,hh,hpp,hxx")) {
+  if (!utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
+                                        HeaderFileExtensions,
+                                        ',')) {
+    llvm::errs() << "Invalid header file extension: "
+                 << RawStringHeaderFileExtensions << "\n";
+  }
+}
+
+void UnnamedNamespaceInHeaderCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "HeaderFileExtensions", RawStringHeaderFileExtensions);
+}
+
 void UnnamedNamespaceInHeaderCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
@@ -30,17 +48,13 @@ void UnnamedNamespaceInHeaderCheck::registerMatchers(
 
 void
 UnnamedNamespaceInHeaderCheck::check(const MatchFinder::MatchResult &Result) {
-  SourceManager *SM = Result.SourceManager;
   const auto *N = Result.Nodes.getNodeAs<NamespaceDecl>("anonymousNamespace");
   SourceLocation Loc = N->getLocStart();
   if (!Loc.isValid())
     return;
 
-  // Look if we're inside a header, check for common suffixes only.
-  // TODO: Allow configuring the set of file extensions.
-  StringRef FileName = SM->getPresumedLoc(Loc).getFilename();
-  if (FileName.endswith(".h") || FileName.endswith(".hh") ||
-      FileName.endswith(".hpp") || FileName.endswith(".hxx"))
+  if (utils::isPresumedLocInHeaderFile(Loc, *Result.SourceManager,
+                                       HeaderFileExtensions))
     diag(Loc, "do not use unnamed namespaces in header files");
 }
 

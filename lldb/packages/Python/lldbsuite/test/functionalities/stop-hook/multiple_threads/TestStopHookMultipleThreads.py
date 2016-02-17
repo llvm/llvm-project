@@ -8,8 +8,10 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test import configuration
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import configuration
+from lldbsuite.test import lldbutil
 
 class StopHookForMultipleThreadsTestCase(TestBase):
 
@@ -29,7 +31,7 @@ class StopHookForMultipleThreadsTestCase(TestBase):
 
     @expectedFlakeyFreeBSD("llvm.org/pr15037")
     @expectedFlakeyLinux("llvm.org/pr15037") # stop hooks sometimes fail to fire on Linux
-    @expectedFailureHostWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_stop_hook_multiple_threads(self):
         """Test that lldb stop-hook works for multiple threads."""
         self.build(dictionary=self.d)

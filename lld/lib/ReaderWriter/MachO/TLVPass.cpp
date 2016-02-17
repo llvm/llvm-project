@@ -65,7 +65,9 @@ class TLVPass : public Pass {
 public:
   TLVPass(const MachOLinkingContext &context)
       : _ctx(context), _archHandler(_ctx.archHandler()),
-        _file("<mach-o TLV Pass>") {}
+        _file("<mach-o TLV Pass>") {
+    _file.setOrdinal(_ctx.getNextOrdinalAndIncrement());
+  }
 
 private:
   std::error_code perform(SimpleFile &mergedFile) override {

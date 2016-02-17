@@ -71,35 +71,10 @@ IRMemoryMap::FindSpace (size_t size, bool zero_memory)
 
     for (int iterations = 0; iterations < 16; ++iterations)
     {
-        lldb::addr_t candidate = LLDB_INVALID_ADDRESS;
-
-        switch (target_sp->GetArchitecture().GetAddressByteSize())
-        {
-        case 4:
-            {
-                uint32_t random_data = rand();
-                candidate = random_data;
-                candidate &= ~0xfffull;
-                break;
-            }
-        case 8:
-            {
-                uint32_t random_low = rand();
-                uint32_t random_high = rand();
-                candidate = random_high;
-                candidate <<= 32ull;
-                candidate |= random_low;
-                candidate &= ~0xfffull;
-                break;
-            }
-        }
-
-        if (IntersectsAllocation(candidate, size))
-            continue;
-
-        ret = candidate;
-
-        return ret;
+        auto back = m_allocations.rbegin();
+        lldb::addr_t addr = back->first;
+        size_t alloc_size = back->second.m_size;
+        ret = llvm::alignTo(addr+alloc_size, 4096);
     }
 
     return ret;

@@ -391,8 +391,8 @@ static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
     // This check is needed because getMethodDecl can return nullptr if the
     // callee is a member function pointer.
     const auto *MDecl = MemCall->getMethodDecl();
-    if (MDecl && !isa<CXXConversionDecl>(MDecl) && MDecl->getName() == "at") {
-      assert(MemCall->getNumArgs() == 1);
+    if (MDecl && !isa<CXXConversionDecl>(MDecl) && MDecl->getName() == "at" &&
+        MemCall->getNumArgs() == 1) {
       return isIndexInSubscriptExpr(MemCall->getArg(0), IndexVar);
     }
     return false;

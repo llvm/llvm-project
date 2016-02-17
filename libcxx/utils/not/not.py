@@ -1,3 +1,12 @@
+#===----------------------------------------------------------------------===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is dual licensed under the MIT and the University of Illinois Open
+# Source Licenses. See LICENSE.TXT for details.
+#
+#===----------------------------------------------------------------------===##
+
 """not.py is a utility for inverting the return code of commands.
 It acts similar to llvm/utils/not.
 ex: python /path/to/not.py ' echo hello

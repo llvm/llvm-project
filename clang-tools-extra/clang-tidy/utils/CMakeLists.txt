@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyUtils
   HeaderGuard.cpp
+  HeaderFileExtensionsUtils.cpp
   IncludeInserter.cpp
   IncludeSorter.cpp
   LexerUtils.cpp

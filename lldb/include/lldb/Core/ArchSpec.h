@@ -72,6 +72,13 @@ public:
         eMIPSABI_mask       = 0x000ff000
     };
 
+    // ARM specific e_flags
+    enum ARMeflags
+    {
+        eARM_abi_soft_float = 0x00000200,
+        eARM_abi_hard_float = 0x00000400
+    };
+
     enum Core
     {
         eCore_arm_generic,

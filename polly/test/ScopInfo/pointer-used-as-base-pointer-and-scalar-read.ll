@@ -6,16 +6,12 @@
 
 ; CHECK:      Arrays {
 ; CHECK-NEXT:     float MemRef_A[*]; // Element size 4
-; CHECK-NEXT:     float* MemRef_A; // Element size 8
 ; CHECK-NEXT:     float* MemRef_x__phi; // Element size 8
-; CHECK-NEXT:     float* MemRef_B; // Element size 8
 ; CHECK-NEXT:     float* MemRef_C[*]; // Element size 8
 ; CHECK-NEXT: }
 ; CHECK:      Arrays (Bounds as pw_affs) {
 ; CHECK-NEXT:     float MemRef_A[*]; // Element size 4
-; CHECK-NEXT:     float* MemRef_A; // Element size 8
 ; CHECK-NEXT:     float* MemRef_x__phi; // Element size 8
-; CHECK-NEXT:     float* MemRef_B; // Element size 8
 ; CHECK-NEXT:     float* MemRef_C[*]; // Element size 8
 ; CHECK-NEXT: }
 ; CHECK:      Alias Groups (0):
@@ -28,8 +24,6 @@
 ; CHECK-NEXT:             [p] -> { Stmt_then[i0] -> [i0, 1] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [p] -> { Stmt_then[i0] -> MemRef_A[0] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [p] -> { Stmt_then[i0] -> MemRef_A[] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [p] -> { Stmt_then[i0] -> MemRef_x__phi[] };
 ; CHECK-NEXT:     Stmt_else
@@ -39,8 +33,6 @@
 ; CHECK-NEXT:             [p] -> { Stmt_else[i0] -> [i0, 0] : p >= 33 or p <= 31 };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [p] -> { Stmt_else[i0] -> MemRef_A[0] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [p] -> { Stmt_else[i0] -> MemRef_B[] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:             [p] -> { Stmt_else[i0] -> MemRef_x__phi[] };
 ; CHECK-NEXT:     Stmt_bb8

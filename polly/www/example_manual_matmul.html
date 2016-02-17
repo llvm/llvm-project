@@ -42,9 +42,7 @@ a single file with llvm-link.
 
 Polly is not built into opt or bugpoint, but it is a shared library that needs
 to be loaded into these tools explicitally. The Polly library is called
-LVMPolly.so. For a cmake build it is available in the build/lib/ directory,
-autoconf creates the same file in
-build/tools/polly/{Release+Asserts|Asserts|Debug}/lib. For convenience we create
+LVMPolly.so. It is available in the build/lib/ directory. For convenience we create
 an alias that automatically loads Polly if 'opt' is called.
 <pre class="code">
 export PATH_TO_POLLY_LIB="~/polly/build/lib/"

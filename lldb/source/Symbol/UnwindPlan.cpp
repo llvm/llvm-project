@@ -338,7 +338,7 @@ UnwindPlan::AppendRow (const UnwindPlan::RowSP &row_sp)
 }
 
 void
-UnwindPlan::InsertRow (const UnwindPlan::RowSP &row_sp)
+UnwindPlan::InsertRow (const UnwindPlan::RowSP &row_sp, bool replace_existing)
 {
     collection::iterator it = m_row_list.begin();
     while (it != m_row_list.end()) {
@@ -349,6 +349,8 @@ UnwindPlan::InsertRow (const UnwindPlan::RowSP &row_sp)
     }
     if (it == m_row_list.end() || (*it)->GetOffset() != row_sp->GetOffset())
         m_row_list.insert(it, row_sp);
+    else if (replace_existing)
+        *it = row_sp;
 }
 
 UnwindPlan::RowSP

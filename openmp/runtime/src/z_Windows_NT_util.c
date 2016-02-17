@@ -19,11 +19,6 @@
 #include "kmp_io.h"
 #include "kmp_wait_release.h"
 
-
-
-/* ----------------------------------------------------------------------------------- */
-/* ----------------------------------------------------------------------------------- */
-
 /* This code is related to NtQuerySystemInformation() function. This function
    is used in the Load balance algorithm for OMP_DYNAMIC=true to find the
    number of running threads in the system. */
@@ -228,7 +223,6 @@ __kmp_win32_cond_wait( kmp_win32_cond_t *cv, kmp_win32_mutex_t *mx, kmp_info_t *
     __kmp_win32_mutex_unlock( &cv->waiters_count_lock_ );
     __kmp_win32_mutex_unlock( mx );
 
-
     for (;;) {
         int wait_done;
 
@@ -394,7 +388,6 @@ static inline void __kmp_suspend_template( int th_gtid, C *flag )
                 }
                 deactivated = TRUE;
 
-
                 __kmp_win32_cond_wait( &th->th.th_suspend_cv, &th->th.th_suspend_mx, 0, 0 );
             }
             else {
@@ -419,7 +412,6 @@ static inline void __kmp_suspend_template( int th_gtid, C *flag )
             }
         }
     }
-
 
     __kmp_win32_mutex_unlock( &th->th.th_suspend_mx );
 
@@ -480,7 +472,6 @@ static inline void __kmp_resume_template( int target_gtid, C *flag )
 
     KF_TRACE( 5, ( "__kmp_resume_template: T#%d about to wakeup T#%d, reset sleep bit for flag's loc(%p)\n",
                    gtid, target_gtid, flag->get() ) );
-
 
     __kmp_win32_cond_signal(  &th->th.th_suspend_cv );
     __kmp_win32_mutex_unlock( &th->th.th_suspend_mx );
@@ -1141,7 +1132,6 @@ __kmp_elapsed_tick( double *t )
 void
 __kmp_read_system_time( double *delta )
 {
-
     if (delta != NULL) {
         BOOL status;
         LARGE_INTEGER now;
@@ -1210,7 +1200,6 @@ __kmp_launch_worker( void *arg )
     KMP_MB();
     return exit_val;
 }
-
 
 /* The monitor thread controls all of the threads in the complex */
 
@@ -1384,11 +1373,9 @@ __kmp_create_worker( int gtid, kmp_info_t *th, size_t stack_size )
                         (LPTHREAD_START_ROUTINE) & __kmp_launch_worker,
                         (LPVOID) th, &idThread ) );
 
-            {
-                handle = CreateThread( NULL, (SIZE_T) stack_size,
-                                       (LPTHREAD_START_ROUTINE) __kmp_launch_worker,
-                                       (LPVOID) th, STACK_SIZE_PARAM_IS_A_RESERVATION, &idThread );
-            }
+        handle = CreateThread( NULL, (SIZE_T) stack_size,
+                               (LPTHREAD_START_ROUTINE) __kmp_launch_worker,
+                               (LPVOID) th, STACK_SIZE_PARAM_IS_A_RESERVATION, &idThread );
 
         KA_TRACE( 10, ( "__kmp_create_worker: (after) stack_size = %"
                         KMP_SIZE_T_SPEC
@@ -1398,19 +1385,13 @@ __kmp_create_worker( int gtid, kmp_info_t *th, size_t stack_size )
                         (LPTHREAD_START_ROUTINE) & __kmp_launch_worker,
                         (LPVOID) th, idThread, handle ) );
 
-            {
-                if ( handle == 0 ) {
-                    DWORD error = GetLastError();
-                    __kmp_msg(
-                              kmp_ms_fatal,
-                              KMP_MSG( CantCreateThread ),
-                              KMP_ERR( error ),
-                              __kmp_msg_null
-                              );
-                } else {
-                    th->th.th_info.ds.ds_thread = handle;
-                }
-            }
+        if ( handle == 0 ) {
+            DWORD error = GetLastError();
+            __kmp_msg(kmp_ms_fatal, KMP_MSG( CantCreateThread ), KMP_ERR( error ), __kmp_msg_null);
+        } else {
+            th->th.th_info.ds.ds_thread = handle;
+        }
+
         KMP_MB();       /* Flush all pending memory write invalidates.  */
     }
 

@@ -3578,6 +3578,7 @@ __kmp_cleanup_indirect_user_locks()
             __kmp_free(ll->lock);
             ll->lock = NULL;
         }
+        __kmp_indirect_lock_pool[k] = NULL;
     }
     // Clean up the remaining undestroyed locks.
     for (i = 0; i < __kmp_i_lock_table.next; i++) {

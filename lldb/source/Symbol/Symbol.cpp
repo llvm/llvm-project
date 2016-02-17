@@ -739,3 +739,10 @@ Symbol::GetDisassembly (const ExecutionContext &exe_ctx,
     }
     return false;
 }
+
+bool
+Symbol::ContainsFileAddress (lldb::addr_t file_addr) const
+{
+    return m_addr_range.ContainsFileAddress(file_addr);
+}
+

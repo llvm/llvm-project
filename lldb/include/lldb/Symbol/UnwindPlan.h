@@ -539,7 +539,7 @@ public:
     AppendRow (const RowSP& row_sp);
 
     void
-    InsertRow (const RowSP& row_sp);
+    InsertRow (const RowSP& row_sp, bool replace_existing = false);
 
     // Returns a pointer to the best row for the given offset into the function's instructions.
     // If offset is -1 it indicates that the function start is unknown - the final row in the UnwindPlan is returned.

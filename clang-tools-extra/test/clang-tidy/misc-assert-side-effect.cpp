@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-assert-side-effect %t -- -config="{CheckOptions: [{key: misc-assert-side-effect.CheckFunctionCalls, value: 1}, {key: misc-assert-side-effect.AssertMacros, value: 'assert,assert2,my_assert,convoluted_assert'}]}" -- -fexceptions
+// RUN: %check_clang_tidy %s misc-assert-side-effect %t -- -config="{CheckOptions: [{key: misc-assert-side-effect.CheckFunctionCalls, value: 1}, {key: misc-assert-side-effect.AssertMacros, value: 'assert,assert2,my_assert,convoluted_assert,msvc_assert'}]}" -- -fexceptions
 
 //===--- assert definition block ------------------------------------------===//
 int abort() { return 0; }
@@ -34,6 +34,12 @@ void print(...);
 #define wrap1(x) real_assert(x)
 #define wrap2(x) wrap1(x)
 #define convoluted_assert(x) wrap2(x)
+
+#define msvc_assert(expression) (void)(                                        \
+            (!!(expression)) ||                                                \
+            (abort(), 0)                                                       \
+        )
+
 
 //===----------------------------------------------------------------------===//
 
@@ -100,6 +106,9 @@ int main() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found assert() with side effect
 
   assert2(1 == 2 - 1);
+
+  msvc_assert(mc2 = mc);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: found msvc_assert() with side effect
 
   return 0;
 }

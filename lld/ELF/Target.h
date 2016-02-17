@@ -21,46 +21,29 @@ class SymbolBody;
 
 class TargetInfo {
 public:
-  unsigned getPageSize() const { return PageSize; }
   uint64_t getVAStart() const;
-  unsigned getCopyReloc() const { return CopyReloc; }
-  unsigned getGotReloc() const { return GotReloc; }
-  unsigned getPltReloc() const { return PltReloc; }
-  unsigned getRelativeReloc() const { return RelativeReloc; }
-  unsigned getIRelativeReloc() const { return IRelativeReloc; }
-  bool isTlsLocalDynamicReloc(unsigned Type) const {
-    return Type == TlsLocalDynamicReloc;
-  }
-  bool isTlsGlobalDynamicReloc(unsigned Type) const {
-    return Type == TlsGlobalDynamicReloc;
-  }
-  unsigned getTlsModuleIndexReloc() const { return TlsModuleIndexReloc; }
-  unsigned getTlsOffsetReloc() const { return TlsOffsetReloc; }
-  unsigned getPltZeroEntrySize() const { return PltZeroEntrySize; }
-  unsigned getPltEntrySize() const { return PltEntrySize; }
-  bool supportsLazyRelocations() const { return LazyRelocations; }
-  unsigned getGotHeaderEntriesNum() const { return GotHeaderEntriesNum; }
-  unsigned getGotPltHeaderEntriesNum() const { return GotPltHeaderEntriesNum; }
-  virtual unsigned getDynReloc(unsigned Type) const { return Type; }
-  virtual bool isTlsDynReloc(unsigned Type, const SymbolBody &S) const {
-    return false;
-  }
-  virtual unsigned getTlsGotReloc(unsigned Type = -1) const {
-    return TlsGotReloc;
-  }
-  virtual void writeGotHeaderEntries(uint8_t *Buf) const;
-  virtual void writeGotPltHeaderEntries(uint8_t *Buf) const;
-  virtual void writeGotPltEntry(uint8_t *Buf, uint64_t Plt) const = 0;
-  virtual void writePltZeroEntry(uint8_t *Buf, uint64_t GotEntryAddr,
-                                 uint64_t PltEntryAddr) const = 0;
-  virtual void writePltEntry(uint8_t *Buf, uint64_t GotAddr,
-                             uint64_t GotEntryAddr, uint64_t PltEntryAddr,
-                             int32_t Index, unsigned RelOff) const = 0;
+  virtual bool isTlsLocalDynamicRel(unsigned Type) const;
+  virtual bool isTlsGlobalDynamicRel(unsigned Type) const;
+  virtual unsigned getDynRel(unsigned Type) const { return Type; }
+  virtual bool isTlsDynRel(unsigned Type, const SymbolBody &S) const;
+  virtual unsigned getTlsGotRel(unsigned Type) const { return TlsGotRel; }
+  virtual void writeGotHeader(uint8_t *Buf) const {}
+  virtual void writeGotPltHeader(uint8_t *Buf) const {}
+  virtual void writeGotPlt(uint8_t *Buf, uint64_t Plt) const {};
+
+  // If lazy binding is supported, the first entry of the PLT has code
+  // to call the dynamic linker to resolve PLT entries the first time
+  // they are called. This function writes that code.
+  virtual void writePltZero(uint8_t *Buf) const {}
+
+  virtual void writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
+                        uint64_t PltEntryAddr, int32_t Index,
+                        unsigned RelOff) const {}
 
   // Returns true if a relocation is just a hint for linker to make for example
   // some code optimization. Such relocations should not be handled as a regular
   // ones and lead to dynamic relocation creation etc.
-  virtual bool isHintReloc(uint32_t Type) const;
+  virtual bool isHintRel(uint32_t Type) const;
 
   // Returns true if a relocation is relative to the place being relocated,
   // such as relocations used for PC-relative instructions. Such relocations
@@ -69,22 +52,22 @@ public:
   // dynamic linker if isRelRelative returns true.
   virtual bool isRelRelative(uint32_t Type) const;
 
-  virtual bool isSizeReloc(uint32_t Type) const;
-  virtual bool relocNeedsDynRelative(unsigned Type) const { return false; }
-  virtual bool relocNeedsGot(uint32_t Type, const SymbolBody &S) const = 0;
-  virtual bool relocNeedsPlt(uint32_t Type, const SymbolBody &S) const = 0;
+  virtual bool isSizeRel(uint32_t Type) const;
+  virtual bool needsDynRelative(unsigned Type) const { return false; }
+  virtual bool needsGot(uint32_t Type, SymbolBody &S) const;
+
+  enum PltNeed { Plt_No, Plt_Explicit, Plt_Implicit };
+  virtual PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const;
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                            uint64_t P, uint64_t SA, uint64_t ZA = 0,
                            uint8_t *PairedLoc = nullptr) const = 0;
   virtual bool isGotRelative(uint32_t Type) const;
-  virtual bool isTlsOptimized(unsigned Type, const SymbolBody *S) const;
+  virtual bool canRelaxTls(unsigned Type, const SymbolBody *S) const;
   virtual bool needsCopyRel(uint32_t Type, const SymbolBody &S) const;
-  virtual unsigned relocateTlsOptimize(uint8_t *Loc, uint8_t *BufEnd,
-                                       uint32_t Type, uint64_t P, uint64_t SA,
-                                       const SymbolBody &S) const;
+  virtual unsigned relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                            uint64_t P, uint64_t SA, const SymbolBody *S) const;
   virtual ~TargetInfo();
 
-protected:
   unsigned PageSize = 4096;
 
   // On freebsd x86_64 the first page cannot be mmaped.
@@ -95,22 +78,19 @@ protected:
   // 0x200000, but it looks like every OS uses 4k pages for executables.
   uint64_t VAStart = 0x10000;
 
-  unsigned CopyReloc;
-  unsigned PCRelReloc;
-  unsigned GotReloc;
-  unsigned PltReloc;
-  unsigned RelativeReloc;
-  unsigned IRelativeReloc;
-  unsigned TlsGotReloc = 0;
-  unsigned TlsLocalDynamicReloc = 0;
-  unsigned TlsGlobalDynamicReloc = 0;
-  unsigned TlsModuleIndexReloc;
-  unsigned TlsOffsetReloc;
+  unsigned CopyRel;
+  unsigned GotRel;
+  unsigned PltRel;
+  unsigned RelativeRel;
+  unsigned IRelativeRel;
+  unsigned TlsGotRel = 0;
+  unsigned TlsModuleIndexRel;
+  unsigned TlsOffsetRel;
   unsigned PltEntrySize = 8;
-  unsigned PltZeroEntrySize = 0;
+  unsigned PltZeroSize = 0;
   unsigned GotHeaderEntriesNum = 0;
   unsigned GotPltHeaderEntriesNum = 3;
-  bool LazyRelocations = false;
+  bool UseLazyBinding = false;
 };
 
 uint64_t getPPC64TocBase();
@@ -120,7 +100,7 @@ typename llvm::object::ELFFile<ELFT>::uintX_t getMipsGpAddr();
 
 template <class ELFT> bool isGnuIFunc(const SymbolBody &S);
 
-extern std::unique_ptr<TargetInfo> Target;
+extern TargetInfo *Target;
 TargetInfo *createTarget();
 }
 }

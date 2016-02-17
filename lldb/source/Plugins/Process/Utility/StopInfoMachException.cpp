@@ -507,6 +507,8 @@ StopInfoMachException::CreateStopReasonWithMachException
                         // report the breakpoint regardless of the thread.
                         if (bp_site_sp->ValidForThisThread (&thread) || thread.GetProcess()->GetOperatingSystem () != NULL)
                             return StopInfo::CreateStopReasonWithBreakpointSiteID (thread, bp_site_sp->GetID());
+                        else if (is_trace_if_actual_breakpoint_missing)
+                            return StopInfo::CreateStopReasonToTrace (thread);
                         else
                             return StopInfoSP();
                     }

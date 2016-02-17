@@ -33,4 +33,4 @@ add_lit_testsuite(check-lldb-unit "Running lldb unit test suite"
   DEPENDS ${LLDB_TEST_DEPS}
   )
 
-set_target_properties(check-lldb-unit PROPERTIES FOLDER "lldb tests")
+set_target_properties(check-lldb-unit PROPERTIES FOLDER "LLDB tests")

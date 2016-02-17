@@ -18,7 +18,12 @@
 #include "Config.h"
 #include "Error.h"
 #include "Symbols.h"
+#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Linker/Linker.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -30,25 +35,26 @@ using namespace lld::elf2;
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
-template <class ELFT>
-static void checkCompatibility(InputFile *FileP) {
+template <class ELFT> static bool isCompatible(InputFile *FileP) {
   auto *F = dyn_cast<ELFFileBase<ELFT>>(FileP);
   if (!F)
-    return;
+    return true;
   if (F->getELFKind() == Config->EKind && F->getEMachine() == Config->EMachine)
-    return;
+    return true;
   StringRef A = F->getName();
   StringRef B = Config->Emulation;
   if (B.empty())
     B = Config->FirstElf->getName();
   error(A + " is incompatible with " + B);
+  return false;
 }
 
 // Add symbols in File to the symbol table.
 template <class ELFT>
 void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   InputFile *FileP = File.get();
-  checkCompatibility<ELFT>(FileP);
+  if (!isCompatible<ELFT>(FileP))
+    return;
 
   // .a file
   if (auto *F = dyn_cast<ArchiveFile>(FileP)) {
@@ -73,12 +79,85 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
     return;
   }
 
+  // LLVM bitcode file.
+  if (auto *F = dyn_cast<BitcodeFile>(FileP)) {
+    BitcodeFiles.emplace_back(cast<BitcodeFile>(File.release()));
+    F->parse();
+    for (SymbolBody *B : F->SymbolBodies)
+      resolve(B);
+    return;
+  }
+
   // .o file
   auto *F = cast<ObjectFile<ELFT>>(FileP);
   ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(File.release()));
   F->parse(ComdatGroups);
   for (SymbolBody *B : F->getSymbols())
     resolve(B);
+}
+
+// Codegen the module M and returns the resulting InputFile.
+template <class ELFT>
+std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
+  StringRef TripleStr = M.getTargetTriple();
+  Triple TheTriple(TripleStr);
+
+  // FIXME: Should we have a default triple? The gold plugin uses
+  // sys::getDefaultTargetTriple(), but that is probably wrong given that this
+  // might be a cross linker.
+
+  std::string ErrMsg;
+  const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
+  if (!TheTarget)
+    fatal("Target not found: " + ErrMsg);
+
+  TargetOptions Options;
+  std::unique_ptr<TargetMachine> TM(
+      TheTarget->createTargetMachine(TripleStr, "", "", Options));
+
+  raw_svector_ostream OS(OwningLTOData);
+  legacy::PassManager CodeGenPasses;
+  if (TM->addPassesToEmitFile(CodeGenPasses, OS,
+                              TargetMachine::CGFT_ObjectFile))
+    fatal("Failed to setup codegen");
+  CodeGenPasses.run(M);
+  LtoBuffer = MemoryBuffer::getMemBuffer(OwningLTOData, "", false);
+  return createObjectFile(*LtoBuffer);
+}
+
+// Merge all the bitcode files we have seen, codegen the result and return
+// the resulting ObjectFile.
+template <class ELFT>
+ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
+  LLVMContext Context;
+  Module Combined("ld-temp.o", Context);
+  Linker L(Combined);
+  for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles) {
+    std::unique_ptr<MemoryBuffer> Buffer =
+        MemoryBuffer::getMemBuffer(F->MB, false);
+    ErrorOr<std::unique_ptr<Module>> MOrErr =
+        getLazyBitcodeModule(std::move(Buffer), Context,
+                             /*ShouldLazyLoadMetadata*/ true);
+    fatal(MOrErr);
+    std::unique_ptr<Module> &M = *MOrErr;
+    L.linkInModule(std::move(M));
+  }
+  std::unique_ptr<InputFile> F = codegen(Combined);
+  ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(F.release()));
+  return &*ObjectFiles.back();
+}
+
+template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
+  if (BitcodeFiles.empty())
+    return;
+  ObjectFile<ELFT> *Obj = createCombinedLtoObject();
+  // FIXME: We probably have to ignore comdats here.
+  Obj->parse(ComdatGroups);
+  for (SymbolBody *Body : Obj->getSymbols()) {
+    Symbol *Sym = insert(Body);
+    assert(isa<DefinedBitcode>(Sym->Body));
+    Sym->Body = Body;
+  }
 }
 
 // Add an undefined symbol.
@@ -120,7 +199,7 @@ SymbolBody *SymbolTable<ELFT>::addSynthetic(StringRef Name,
 // file's symbol table. Such symbols are useful for some linker-defined symbols.
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addIgnored(StringRef Name) {
-  return addAbsolute(Name, ElfSym<ELFT>::IgnoredWeak);
+  return addAbsolute(Name, ElfSym<ELFT>::Ignored);
 }
 
 // Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
@@ -148,17 +227,23 @@ ELFFileBase<ELFT> *SymbolTable<ELFT>::findFile(SymbolBody *B) {
   return nullptr;
 }
 
+// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
+template <class ELFT> static std::string getFilename(ELFFileBase<ELFT> *F) {
+  if (!F)
+    return "(internal)";
+  if (!F->ArchiveName.empty())
+    return (F->ArchiveName + "(" + F->getName() + ")").str();
+  return F->getName();
+}
+
 // Construct a string in the form of "Sym in File1 and File2".
 // Used to construct an error message.
 template <class ELFT>
 std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Old, SymbolBody *New) {
-  ELFFileBase<ELFT> *OldFile = findFile(Old);
-  ELFFileBase<ELFT> *NewFile = findFile(New);
-
+  ELFFileBase<ELFT> *F1 = findFile(Old);
+  ELFFileBase<ELFT> *F2 = findFile(New);
   StringRef Sym = Old->getName();
-  StringRef F1 = OldFile ? OldFile->getName() : "(internal)";
-  StringRef F2 = NewFile ? NewFile->getName() : "(internal)";
-  return (demangle(Sym) + " in " + F1 + " and " + F2).str();
+  return demangle(Sym) + " in " + getFilename(F1) + " and " + getFilename(F2);
 }
 
 // This function resolves conflicts if there's an existing symbol with
@@ -181,17 +266,20 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     return;
   }
 
-  if (New->isTls() != Existing->isTls())
+  if (New->isTls() != Existing->isTls()) {
     error("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
+    return;
+  }
 
   // compare() returns -1, 0, or 1 if the lhs symbol is less preferable,
   // equivalent (conflicting), or more preferable, respectively.
   int Comp = Existing->compare<ELFT>(New);
   if (Comp == 0) {
     std::string S = "duplicate symbol: " + conflictMsg(Existing, New);
-    if (!Config->AllowMultipleDefinition)
+    if (Config->AllowMultipleDefinition)
+      warning(S);
+    else
       error(S);
-    warning(S);
     return;
   }
   if (Comp < 0)
@@ -258,7 +346,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanShlibUndefined() {
     for (StringRef U : File->getUndefinedSymbols())
       if (SymbolBody *Sym = find(U))
         if (Sym->isDefined())
-          Sym->setUsedInDynamicReloc();
+          Sym->MustBeInDynSym = true;
 }
 
 template class elf2::SymbolTable<ELF32LE>;

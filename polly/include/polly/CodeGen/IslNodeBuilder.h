@@ -209,7 +209,9 @@ protected:
   virtual void createFor(__isl_take isl_ast_node *For);
 
   /// @brief Set to remember materialized invariant loads.
-  SmallPtrSet<const SCEV *, 16> PreloadedPtrs;
+  ///
+  /// An invariant load is identified by its pointer (the SCEV) and its type.
+  SmallSet<std::pair<const SCEV *, Type *>, 16> PreloadedPtrs;
 
   /// @brief Preload the memory access at @p AccessRange with @p Build.
   ///

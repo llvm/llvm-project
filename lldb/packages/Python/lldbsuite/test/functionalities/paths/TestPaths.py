@@ -8,8 +8,9 @@ from __future__ import print_function
 import lldb
 import os
 import time
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class TestPaths(TestBase):
 

@@ -6,18 +6,21 @@ from __future__ import print_function
 
 
 
-import os
-import lldb
-from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
 import binascii
+import os
+
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbplatformutil
 
 
 class MemoryReadTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessPlatform(getDarwinOSTriples()+["linux"])
+    @skipUnlessPlatform(lldbplatformutil.getDarwinOSTriples()+["linux"])
     def test_memory_read(self):
         self.build()
         exe = os.path.join (os.getcwd(), "a.out")
@@ -34,7 +37,8 @@ class MemoryReadTestCase(TestBase):
             error = lldb.SBError()
             memory = process.ReadMemory(pc, size, error)
             self.assertTrue(error.Success())
-            self.match("process plugin packet send x%x,%x" % (pc, size), ["response:", memory])
+            # Results in trying to write non-printable characters to the session log.
+            # self.match("process plugin packet send x%x,%x" % (pc, size), ["response:", memory])
             self.match("process plugin packet send m%x,%x" % (pc, size), ["response:", binascii.hexlify(memory)])
 
         process.Continue()

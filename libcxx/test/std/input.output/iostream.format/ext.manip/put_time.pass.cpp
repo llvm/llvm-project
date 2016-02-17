@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: locale.en_US.UTF-8
+
 // <iomanip>
 
 // template <class charT> T10 put_time(const struct tm* tmb, const charT* fmt);

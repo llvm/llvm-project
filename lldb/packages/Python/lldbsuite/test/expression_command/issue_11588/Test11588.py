@@ -10,14 +10,15 @@ from __future__ import print_function
 
 import os, time
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class Issue11581TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_11581_commands(self):
         # This is the function to remove the custom commands in order to have a
         # clean slate for the next test case.

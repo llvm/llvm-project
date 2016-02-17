@@ -1,8 +1,3 @@
-# XFAIL: win32
-# This test fails on Windows because the linker would use '\' instead
-# of '/' as a path separator when concatenating path components.
-# So the output from the linker would be different.
-
 # Test -dependency_info option
 #
 # RUN: lld -flavor darwin -arch x86_64 -test_file_usage  \
@@ -14,11 +9,11 @@
 # RUN:        -F/Custom/Frameworks \
 # RUN:        -framework Bar \
 # RUN:        -framework Foo
-# RUN: python %p/Inputs/DependencyDump.py %t.info | FileCheck %s
+# RUN: %python %p/Inputs/DependencyDump.py %t.info | FileCheck %s
 
 
 # CHECK: linker-vers: lld
-# CHECK: input-file:  /Custom/Frameworks/Bar.framework/Bar
-# CHECK: not-found:   /Custom/Frameworks/Foo.framework/Foo
-# CHECK: input-file:  /System/Library/Frameworks/Foo.framework/Foo
+# CHECK: input-file:  /Custom/Frameworks{{[/\\]}}Bar.framework{{[/\\]}}Bar
+# CHECK: not-found:   /Custom/Frameworks{{[/\\]}}Foo.framework{{[/\\]}}Foo
+# CHECK: input-file:  /System/Library/Frameworks{{[/\\]}}Foo.framework{{[/\\]}}Foo
 # CHECK: output-file: a.out

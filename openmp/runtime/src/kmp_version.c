@@ -203,9 +203,6 @@ __kmp_print_version_2( void ) {
         return;
     }; // if
     __kmp_version_2_printed = TRUE;
-
-    #ifndef KMP_STUB
-    #endif // KMP_STUB
 } // __kmp_print_version_2
 
 // end of file //

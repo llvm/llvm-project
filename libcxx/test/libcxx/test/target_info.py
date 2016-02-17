@@ -1,3 +1,12 @@
+#===----------------------------------------------------------------------===//
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is dual licensed under the MIT and the University of Illinois Open
+# Source Licenses. See LICENSE.TXT for details.
+#
+#===----------------------------------------------------------------------===//
+
 import importlib
 import lit.util  # pylint: disable=import-error,no-name-in-module
 import locale
@@ -163,6 +172,9 @@ class LinuxLocalTI(DefaultTargetInfo):
             flags += ['-lunwind', '-ldl']
         else:
             flags += ['-lgcc_s', '-lgcc']
+        use_libatomic = self.full_config.get_lit_bool('use_libatomic', False)
+        if use_libatomic:
+            flags += ['-latomic']
         san = self.full_config.get_lit_conf('use_sanitizer', '').strip()
         if san:
             # The libraries and their order are taken from the

@@ -133,121 +133,37 @@ protected:
     Emulate_LDST_Reg (llvm::MCInst& insn);
 
     bool
-    Emulate_BEQ (llvm::MCInst& insn);
+    Emulate_BXX_3ops (llvm::MCInst& insn);
 
     bool
-    Emulate_BNE (llvm::MCInst& insn);
+    Emulate_BXX_3ops_C (llvm::MCInst& insn);
 
     bool
-    Emulate_BEQL (llvm::MCInst& insn);
+    Emulate_BXX_2ops (llvm::MCInst& insn);
 
     bool
-    Emulate_BNEL (llvm::MCInst& insn);
+    Emulate_BXX_2ops_C (llvm::MCInst& insn);
 
     bool
-    Emulate_BGEZALL (llvm::MCInst& insn);
+    Emulate_Bcond_Link_C (llvm::MCInst& insn);
+
+    bool
+    Emulate_Bcond_Link (llvm::MCInst& insn);
+
+    bool
+    Emulate_FP_branch (llvm::MCInst& insn);
+
+    bool
+    Emulate_3D_branch (llvm::MCInst& insn);
 
     bool
     Emulate_BAL (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGEZAL (llvm::MCInst& insn);
 
     bool
     Emulate_BALC (llvm::MCInst& insn);
 
     bool
     Emulate_BC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGEZ (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLEZALC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGEZALC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLTZALC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGTZALC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BEQZALC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BNEZALC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BEQC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BNEC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLTC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGEC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLTUC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGEUC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLTZC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLEZC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGEZC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGTZC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BEQZC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BNEZC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGEZL (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGTZ (llvm::MCInst& insn);
-
-    bool
-    Emulate_BGTZL (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLEZ (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLEZL (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLTZ (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLTZAL (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLTZALL (llvm::MCInst& insn);
-
-    bool
-    Emulate_BLTZL (llvm::MCInst& insn);
-
-    bool
-    Emulate_BOVC (llvm::MCInst& insn);
-
-    bool
-    Emulate_BNVC (llvm::MCInst& insn);
 
     bool
     Emulate_J (llvm::MCInst& insn);
@@ -268,34 +184,10 @@ protected:
     Emulate_JR (llvm::MCInst& insn);
 
     bool
-    Emulate_BC1F (llvm::MCInst& insn);
-
-    bool
-    Emulate_BC1T (llvm::MCInst& insn);
-
-    bool
-    Emulate_BC1FL (llvm::MCInst& insn);
-
-    bool
-    Emulate_BC1TL (llvm::MCInst& insn);
-
-    bool
     Emulate_BC1EQZ (llvm::MCInst& insn);
 
     bool
     Emulate_BC1NEZ (llvm::MCInst& insn);
-
-    bool
-    Emulate_BC1ANY2F  (llvm::MCInst& insn);
-
-    bool
-    Emulate_BC1ANY2T  (llvm::MCInst& insn);
-
-    bool
-    Emulate_BC1ANY4F  (llvm::MCInst& insn);
-
-    bool
-    Emulate_BC1ANY4T  (llvm::MCInst& insn);
 
     bool
     Emulate_BNZB  (llvm::MCInst& insn);

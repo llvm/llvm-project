@@ -12,12 +12,13 @@
 // remove_pointer
 
 #include <type_traits>
+#include "test_macros.h"
 
 template <class T, class U>
 void test_remove_pointer()
 {
     static_assert((std::is_same<typename std::remove_pointer<T>::type, U>::value), "");
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     static_assert((std::is_same<std::remove_pointer_t<T>,     U>::value), "");
 #endif
 }

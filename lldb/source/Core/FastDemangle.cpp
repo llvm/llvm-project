@@ -11,6 +11,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "lldb/lldb-private.h"
+
 //#define DEBUG_FAILURES 1
 //#define DEBUG_SUBSTITUTIONS 1
 //#define DEBUG_TEMPLATE_ARGS 1
@@ -1627,7 +1629,7 @@ private:
                     return Parse('E');
                 }
                 --m_read_ptr;
-                // fallthrough
+                LLVM_FALLTHROUGH;
             case 'w':
             case 'c':
             case 'a':
@@ -1827,7 +1829,7 @@ private:
                 if (*m_read_ptr++ == 'r')
                     return ParseUnresolvedName();
                 --m_read_ptr;
-                // fallthrough
+                LLVM_FALLTHROUGH;
             default:
                 return ParseExpressionPrimary();
         }
@@ -2099,7 +2101,7 @@ private:
             }
             case 'L':
                 ++m_read_ptr;
-                // fallthrough
+                LLVM_FALLTHROUGH;
             default:
             {
                 if (!ParseUnscopedName(name_state))
@@ -2293,7 +2295,7 @@ private:
                         m_read_ptr += strlen(m_read_ptr);
                         break;
                     }
-                    // fallthrough
+                    LLVM_FALLTHROUGH;
                 default:
                     if (first_param)
                         first_param = false;

@@ -4138,7 +4138,7 @@ ObjectFileMachO::ParseSymtab ()
                     case N_ECOML:
                         // end common (local name): 0,,n_sect,0,address
                         symbol_section = section_info.GetSection (nlist.n_sect, nlist.n_value);
-                        // Fall through
+                        LLVM_FALLTHROUGH;
 
                     case N_ECOMM:
                         // end common: name,,n_sect,0,0
@@ -4199,7 +4199,8 @@ ObjectFileMachO::ParseSymtab ()
                             ConstString undefined_name(symbol_name + ((symbol_name[0] == '_') ? 1 : 0));
                             undefined_name_to_desc[undefined_name] = nlist.n_desc;
                         }
-                        // Fall through
+                        LLVM_FALLTHROUGH;
+
                     case N_PBUD:
                         type = eSymbolTypeUndefined;
                         break;

@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import os
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class ExprCommands2TestCase(TestBase):
 
@@ -22,7 +23,7 @@ class ExprCommands2TestCase(TestBase):
         self.line = line_number('main.cpp',
                                 '// Please test many expressions while stopped at this line:')
 
-    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_more_expr_commands(self):
         """Test some more expression commands."""
         self.build()

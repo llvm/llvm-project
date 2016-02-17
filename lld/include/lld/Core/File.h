@@ -50,6 +50,7 @@ public:
     kindMachObject,           ///< a MachO object file (.o)
     kindELFObject,            ///< a ELF object file (.o)
     kindCEntryObject,         ///< a file for CEntries
+    kindHeaderObject,         ///< a file for file headers
     kindEntryObject,          ///< a file for the entry
     kindUndefinedSymsObject,  ///< a file for undefined symbols
     kindAliasSymsObject,      ///< a file for alias symbols

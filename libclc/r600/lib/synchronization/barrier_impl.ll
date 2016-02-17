@@ -1,9 +1,9 @@
-declare i32 @__clc_clk_local_mem_fence() nounwind alwaysinline
-declare i32 @__clc_clk_global_mem_fence() nounwind alwaysinline
-declare void @llvm.AMDGPU.barrier.local() nounwind noduplicate
-declare void @llvm.AMDGPU.barrier.global() nounwind noduplicate
+declare i32 @__clc_clk_local_mem_fence() #1
+declare i32 @__clc_clk_global_mem_fence() #1
+declare void @llvm.AMDGPU.barrier.local() #0
+declare void @llvm.AMDGPU.barrier.global() #0
 
-define void @barrier(i32 %flags) nounwind noduplicate alwaysinline {
+define void @barrier(i32 %flags) #2 {
 barrier_local_test:
   %CLK_LOCAL_MEM_FENCE = call i32 @__clc_clk_local_mem_fence()
   %0 = and i32 %flags, %CLK_LOCAL_MEM_FENCE
@@ -11,7 +11,7 @@ barrier_local_test:
   br i1 %1, label %barrier_local, label %barrier_global_test
 
 barrier_local:
-  call void @llvm.AMDGPU.barrier.local() noduplicate
+  call void @llvm.AMDGPU.barrier.local()
   br label %barrier_global_test
 
 barrier_global_test:
@@ -21,9 +21,13 @@ barrier_global_test:
   br i1 %3, label %barrier_global, label %done
 
 barrier_global:
-  call void @llvm.AMDGPU.barrier.global() noduplicate
+  call void @llvm.AMDGPU.barrier.global()
   br label %done
 
 done:
   ret void
 }
+
+attributes #0 = { nounwind convergent }
+attributes #1 = { nounwind alwaysinline }
+attributes #2 = { nounwind convergent alwaysinline }

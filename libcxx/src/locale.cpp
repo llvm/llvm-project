@@ -123,11 +123,6 @@ const locale::category locale::time;
 const locale::category locale::messages;
 const locale::category locale::all;
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpadded"
-#endif
-
 class _LIBCPP_HIDDEN locale::__imp
     : public facet
 {
@@ -162,10 +157,6 @@ private:
     template <class F> void install(F* f) {install(f, f->id.__get());}
     template <class F> void install_from(const __imp& other);
 };
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 locale::__imp::__imp(size_t refs)
     : facet(refs),

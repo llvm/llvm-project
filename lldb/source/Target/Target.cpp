@@ -1962,7 +1962,7 @@ Target::CalculateTarget ()
 ProcessSP
 Target::CalculateProcess ()
 {
-    return ProcessSP();
+    return m_process_sp;
 }
 
 ThreadSP
@@ -2488,18 +2488,18 @@ Target::GetBreakableLoadAddress (lldb::addr_t addr)
             SymbolContext sc;
             uint32_t resolve_scope = eSymbolContextFunction | eSymbolContextSymbol;
             temp_addr_module_sp->ResolveSymbolContextForAddress(resolved_addr, resolve_scope, sc);
+            Address sym_addr;
             if (sc.function)
-            {
-                function_start = sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(this);
-                if (function_start == LLDB_INVALID_ADDRESS)
-                    function_start = sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
-            }
+                sym_addr = sc.function->GetAddressRange().GetBaseAddress();
             else if (sc.symbol)
-            {
-                Address sym_addr = sc.symbol->GetAddress();
+                sym_addr = sc.symbol->GetAddress();
+
+            function_start = sym_addr.GetLoadAddress(this);
+            if (function_start == LLDB_INVALID_ADDRESS)
                 function_start = sym_addr.GetFileAddress();
-            }
-            current_offset = addr - function_start;
+
+            if (function_start)
+                current_offset = addr - function_start;
         }
 
         // If breakpoint address is start of function then we dont have to do anything.
@@ -3491,6 +3491,7 @@ g_properties[] =
     { "swift-module-search-paths"          , OptionValue::eTypeFileSpecList, false, 0                       , nullptr, nullptr, "List of directories to be searched when locating modules for Swift." },
     { "auto-import-clang-modules"          , OptionValue::eTypeBoolean   , false, true                      , nullptr, nullptr, "Automatically load Clang modules referred to by the program." },
     { "use-all-compiler-flags"             , OptionValue::eTypeBoolean   , false, false                     , nullptr, nullptr, "Try to use compiler flags for all modules when setting up the Swift expression parser, not just the main executable." },
+    { "auto-import-clang-modules"          , OptionValue::eTypeBoolean   , false, true                      , nullptr, nullptr, "Automatically load Clang modules referred to by the program." },
     { "max-children-count"                 , OptionValue::eTypeSInt64    , false, 256                       , nullptr, nullptr, "Maximum number of children to expand in any level of depth." },
     { "max-string-summary-length"          , OptionValue::eTypeSInt64    , false, 1024                      , nullptr, nullptr, "Maximum number of characters to show when using %s in summary strings." },
     { "max-memory-read-size"               , OptionValue::eTypeSInt64    , false, 1024                      , nullptr, nullptr, "Maximum number of bytes that 'memory read' will fetch before --force must be specified." },
@@ -4309,6 +4310,12 @@ Target::TargetEventData::GetFlavorString ()
 void
 Target::TargetEventData::Dump (Stream *s) const
 {
+    for (size_t i = 0; i < m_module_list.GetSize(); ++i)
+    {
+        if (i != 0)
+             *s << ", ";
+        m_module_list.GetModuleAtIndex(i)->GetDescription(s, lldb::eDescriptionLevelBrief);
+    }
 }
 
 const Target::TargetEventData *

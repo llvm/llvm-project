@@ -23,8 +23,11 @@
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/OptionValue.h"
 
+#include "llvm/ADT/ArrayRef.h"
+
 namespace lldb_private {
 
+class PythonBytes;
 class PythonString;
 class PythonList;
 class PythonDictionary;
@@ -71,6 +74,8 @@ enum class PyObjectType
     Dictionary,
     List,
     String,
+    Bytes,
+    ByteArray,
     Module,
     Callable,
     Tuple,
@@ -254,6 +259,72 @@ public:
 
 protected:
     PyObject* m_py_obj;
+};
+
+class PythonBytes : public PythonObject
+{
+public:
+    PythonBytes();
+    explicit PythonBytes(llvm::ArrayRef<uint8_t> bytes);
+    PythonBytes(const uint8_t *bytes, size_t length);
+    PythonBytes(PyRefType type, PyObject *o);
+    PythonBytes(const PythonBytes &object);
+
+    ~PythonBytes() override;
+
+    static bool
+    Check(PyObject *py_obj);
+
+    // Bring in the no-argument base class version
+    using PythonObject::Reset;
+
+    void
+    Reset(PyRefType type, PyObject *py_obj) override;
+
+    llvm::ArrayRef<uint8_t>
+    GetBytes() const;
+
+    size_t
+    GetSize() const;
+
+    void
+    SetBytes(llvm::ArrayRef<uint8_t> stringbytes);
+
+    StructuredData::StringSP
+    CreateStructuredString() const;
+};
+
+class PythonByteArray : public PythonObject
+{
+public:
+    PythonByteArray();
+    explicit PythonByteArray(llvm::ArrayRef<uint8_t> bytes);
+    PythonByteArray(const uint8_t *bytes, size_t length);
+    PythonByteArray(PyRefType type, PyObject *o);
+    PythonByteArray(const PythonBytes &object);
+
+    ~PythonByteArray() override;
+
+    static bool
+    Check(PyObject *py_obj);
+
+    // Bring in the no-argument base class version
+    using PythonObject::Reset;
+
+    void
+    Reset(PyRefType type, PyObject *py_obj) override;
+
+    llvm::ArrayRef<uint8_t>
+    GetBytes() const;
+
+    size_t
+    GetSize() const;
+
+    void
+    SetBytes(llvm::ArrayRef<uint8_t> stringbytes);
+
+    StructuredData::StringSP
+    CreateStructuredString() const;
 };
 
 class PythonString : public PythonObject

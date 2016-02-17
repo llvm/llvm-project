@@ -29,8 +29,10 @@
 namespace lld {
 // Nothing in this namespace is part of the exported interface.
 namespace detail {
+
 using std::begin;
 using std::end;
+
 /// Used as the result type of undefined functions.
 struct undefined {};
 
@@ -197,7 +199,7 @@ public:
         !std::is_pointer<Iterator>::value &&
         detail::is_range<R>::value &&
         std::is_convertible<typename detail::begin_result<R>::type,
-                            Iterator>::value>::type* = 0)
+                            Iterator>::value>::type* = nullptr)
       : begin_(detail::adl_begin(r)), end_(detail::adl_end(r)) {}
 
   /// This constructor creates a \c range<T*> from any range with
@@ -229,7 +231,7 @@ public:
         && detail::conversion_preserves_array_indexing<
              decltype(&*detail::adl_begin(r)), Iterator>::value
 #endif
-      >::type* = 0)
+      >::type* = nullptr)
       : begin_((detail::adl_begin(r) == detail::adl_end(r) &&
                 !std::is_pointer<decltype(detail::adl_begin(r))>::value)
                // For non-pointers, &*begin(r) is only defined behavior
@@ -714,7 +716,7 @@ LLVM_CONSTEXPR range<Iterator> make_range(Iterator begin, Iterator end) {
 /// \c begin(r) and \c end(r) return the same type.
 template <typename Range> LLVM_CONSTEXPR auto make_range(
     Range &&r,
-    typename std::enable_if<detail::is_range<Range>::value>::type* = 0)
+    typename std::enable_if<detail::is_range<Range>::value>::type* = nullptr)
     -> range<decltype(detail::adl_begin(r))> {
   return range<decltype(detail::adl_begin(r))>(r);
 }
@@ -728,11 +730,11 @@ template <typename Range> LLVM_CONSTEXPR auto make_ptr_range(
     Range &&r,
     typename std::enable_if<
       detail::is_contiguous_range<Range>::value &&
-      std::is_pointer<decltype(&*detail::adl_begin(r))>::value>::type* = 0)
-      -> range<decltype(&*detail::adl_begin(r))> {
+      std::is_pointer<decltype(&*detail::adl_begin(r))>::value>::type* =
+      nullptr) -> range<decltype(&*detail::adl_begin(r))> {
   return range<decltype(&*detail::adl_begin(r))>(r);
 }
 /// @}
 } // end namespace lld
 
-#endif
+#endif // LLD_CORE_RANGE_H

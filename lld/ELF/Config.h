@@ -37,6 +37,7 @@ enum ELFKind {
 struct Configuration {
   SymbolBody *EntrySym = nullptr;
   SymbolBody *MipsGpDisp = nullptr;
+  SymbolBody *MipsLocalGp = nullptr;
   InputFile *FirstElf = nullptr;
   llvm::StringRef DynamicLinker;
   llvm::StringRef Entry;
@@ -47,12 +48,12 @@ struct Configuration {
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   std::string RPath;
-  llvm::MapVector<llvm::StringRef, std::vector<llvm::StringRef>> OutputSections;
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;
   bool AllowMultipleDefinition;
   bool AsNeeded = false;
   bool Bsymbolic;
+  bool BsymbolicFunctions;
   bool Demangle = true;
   bool DiscardAll;
   bool DiscardLocals;

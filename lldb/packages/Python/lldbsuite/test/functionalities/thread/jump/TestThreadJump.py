@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class ThreadJumpTestCase(TestBase):
 
@@ -33,9 +34,7 @@ class ThreadJumpTestCase(TestBase):
 
         # The stop reason of the thread should be breakpoint 1.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT + " 1",
-            substrs = ['stopped',
-                       '* thread #1',
-                       'stop reason = breakpoint 1'])
+                    substrs=['stopped', 'main.cpp:{}'.format(self.mark3), 'stop reason = breakpoint 1'])
 
         self.do_min_test(self.mark3, self.mark1, "i", "4"); # Try the int path, force it to return 'a'
         self.do_min_test(self.mark3, self.mark2, "i", "5"); # Try the int path, force it to return 'b'

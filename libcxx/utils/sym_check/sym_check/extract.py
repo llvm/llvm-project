@@ -1,4 +1,12 @@
 # -*- Python -*- vim: set syntax=python tabstop=4 expandtab cc=80:
+#===----------------------------------------------------------------------===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is dual licensed under the MIT and the University of Illinois Open
+# Source Licenses. See LICENSE.TXT for details.
+#
+#===----------------------------------------------------------------------===##
 """
 extract - A set of function that extract symbol lists from shared libraries.
 """

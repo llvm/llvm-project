@@ -19,6 +19,7 @@ Clang-Tidy Checks
    cppcoreguidelines-pro-bounds-pointer-arithmetic
    cppcoreguidelines-pro-type-const-cast
    cppcoreguidelines-pro-type-cstyle-cast
+   cppcoreguidelines-pro-type-member-init
    cppcoreguidelines-pro-type-reinterpret-cast
    cppcoreguidelines-pro-type-static-cast-downcast
    cppcoreguidelines-pro-type-union-access
@@ -38,6 +39,7 @@ Clang-Tidy Checks
    google-runtime-member-string-references
    google-runtime-memset
    google-runtime-operator
+   google-runtime-references
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
@@ -48,9 +50,11 @@ Clang-Tidy Checks
    misc-bool-pointer-implicit-conversion
    misc-definitions-in-headers
    misc-inaccurate-erase
+   misc-incorrect-roundings
    misc-inefficient-algorithm
    misc-macro-parentheses
    misc-macro-repeated-side-effects
+   misc-misplaced-widening-cast
    misc-move-constructor-init
    misc-new-delete-overloads
    misc-noexcept-move-constructor
@@ -58,6 +62,7 @@ Clang-Tidy Checks
    misc-sizeof-container
    misc-static-assert
    misc-string-integer-assignment
+   misc-suspicious-semicolon
    misc-swapped-arguments
    misc-throw-by-value-catch-by-reference
    misc-undelegated-constructor
@@ -76,6 +81,9 @@ Clang-Tidy Checks
    modernize-use-default
    modernize-use-nullptr
    modernize-use-override
+   performance-faster-string-find
+   performance-for-range-copy
+   performance-implicit-cast-in-loop
    readability-braces-around-statements
    readability-container-size-empty
    readability-else-after-return
@@ -84,6 +92,7 @@ Clang-Tidy Checks
    readability-implicit-bool-cast
    readability-inconsistent-declaration-parameter-name
    readability-named-parameter
+   readability-redundant-control-flow
    readability-redundant-smartptr-get
    readability-redundant-string-cstr
    readability-simplify-boolean-expr

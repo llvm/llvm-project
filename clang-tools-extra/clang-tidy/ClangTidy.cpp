@@ -344,8 +344,20 @@ OptionsView::OptionsView(StringRef CheckName,
                          const ClangTidyOptions::OptionMap &CheckOptions)
     : NamePrefix(CheckName.str() + "."), CheckOptions(CheckOptions) {}
 
-std::string OptionsView::get(StringRef LocalName, std::string Default) const {
+std::string OptionsView::get(StringRef LocalName, StringRef Default) const {
   const auto &Iter = CheckOptions.find(NamePrefix + LocalName.str());
+  if (Iter != CheckOptions.end())
+    return Iter->second;
+  return Default;
+}
+
+std::string OptionsView::getLocalOrGlobal(StringRef LocalName,
+                                          StringRef Default) const {
+  auto Iter = CheckOptions.find(NamePrefix + LocalName.str());
+  if (Iter != CheckOptions.end())
+    return Iter->second;
+  // Fallback to global setting, if present.
+  Iter = CheckOptions.find(LocalName.str());
   if (Iter != CheckOptions.end())
     return Iter->second;
   return Default;

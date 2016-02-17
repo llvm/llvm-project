@@ -12,14 +12,34 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Lexer.h"
 
 namespace clang {
+
+using namespace ast_matchers;
+
+static Token getTokenAtLoc(SourceLocation Loc,
+                           const MatchFinder::MatchResult &MatchResult,
+                           IdentifierTable &IdentTable) {
+  Token Tok;
+  if (Lexer::getRawToken(Loc, Tok, *MatchResult.SourceManager,
+                         MatchResult.Context->getLangOpts(), false))
+    return Tok;
+
+  if (Tok.is(tok::raw_identifier)) {
+    IdentifierInfo &Info = IdentTable.get(Tok.getRawIdentifier());
+    Tok.setIdentifierInfo(&Info);
+    Tok.setKind(Info.getTokenID());
+  }
+  return Tok;
+}
+
 namespace tidy {
 namespace google {
 namespace runtime {
 
-using namespace ast_matchers;
 
 IntegerTypesCheck::IntegerTypesCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -35,8 +55,10 @@ void IntegerTypesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
   // Find all TypeLocs. The relevant Style Guide rule only applies to C++.
-  if (getLangOpts().CPlusPlus)
-    Finder->addMatcher(typeLoc(loc(isInteger())).bind("tl"), this);
+  if (!getLangOpts().CPlusPlus)
+    return;
+  Finder->addMatcher(typeLoc(loc(isInteger())).bind("tl"), this);
+  IdentTable = llvm::make_unique<IdentifierTable>(getLangOpts());
 }
 
 void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
@@ -52,6 +74,15 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto BuiltinLoc = TL.getAs<BuiltinTypeLoc>();
   if (!BuiltinLoc)
+    return;
+
+  Token Tok = getTokenAtLoc(Loc, Result, *IdentTable);
+  // Ensure the location actually points to one of the builting integral type
+  // names we're interested in. Otherwise, we might be getting this match from
+  // implicit code (e.g. an implicit assignment operator of a class containing
+  // an array of non-POD types).
+  if (!Tok.isOneOf(tok::kw_short, tok::kw_long, tok::kw_unsigned,
+                   tok::kw_signed))
     return;
 
   bool IsSigned;

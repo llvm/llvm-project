@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 @skipUnlessDarwin
 @skipIfDarwin # <rdar://problem/23298079> Modify TestRdar12408181.py to self.skipTest() if WindowServer isn't available

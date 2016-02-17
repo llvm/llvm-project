@@ -75,7 +75,6 @@ opt::InputArgList elf2::parseArgs(llvm::BumpPtrAllocator *A,
     warning("warning: unknown argument: " + Arg->getSpelling());
   if (Unknowns.begin() != Unknowns.end())
     error("unknown argument(s) found");
-
   return Args;
 }
 
@@ -104,7 +103,7 @@ std::string elf2::searchLibrary(StringRef Path) {
     if (!S.empty())
       return S;
   }
-  error("Unable to find library -l" + Path);
+  return "";
 }
 
 // Makes a path by concatenating Dir and File.

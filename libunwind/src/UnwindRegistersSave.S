@@ -263,11 +263,11 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   stp    x22,x23, [x0, #0x0B0]
   stp    x24,x25, [x0, #0x0C0]
   stp    x26,x27, [x0, #0x0D0]
-  stp    x28,fp,  [x0, #0x0E0]
-  str    lr,      [x0, #0x0F0]
+  stp    x28,x29, [x0, #0x0E0]
+  str    x30,     [x0, #0x0F0]
   mov    x1,sp
   str    x1,      [x0, #0x0F8]
-  str    lr,      [x0, #0x100]    // store return address as pc
+  str    x30,     [x0, #0x100]    // store return address as pc
   // skip cpsr
   stp    d0, d1,  [x0, #0x110]
   stp    d2, d3,  [x0, #0x120]

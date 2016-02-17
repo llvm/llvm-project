@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class IterateFrameAndDisassembleTestCase(TestBase):
 
@@ -46,7 +47,8 @@ class IterateFrameAndDisassembleTestCase(TestBase):
         # disassemble it.
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
-        thread = process.GetThreadAtIndex(0)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
         depth = thread.GetNumFrames()
         for i in range(depth - 1):
             frame = thread.GetFrameAtIndex(i)

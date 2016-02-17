@@ -268,7 +268,7 @@ Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
         {
             bool ok = false;
             port = StringConvert::ToUInt32 (port_str.c_str(), UINT32_MAX, 10, &ok);
-            if (ok && port < UINT16_MAX)
+            if (ok && port <= UINT16_MAX)
             {
                 if (error_ptr)
                     error_ptr->Clear();

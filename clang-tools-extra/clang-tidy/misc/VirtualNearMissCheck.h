@@ -12,7 +12,6 @@
 
 #include "../ClangTidy.h"
 #include <map>
-#include <string>
 
 namespace clang {
 namespace tidy {
@@ -34,7 +33,7 @@ public:
 
 private:
   /// Check if the given method is possible to be overridden by some other
-  /// method.
+  /// method. Operators and destructors are excluded.
   ///
   /// Results are memoized in PossibleMap.
   bool isPossibleToBeOverridden(const CXXMethodDecl *BaseMD);
@@ -46,14 +45,15 @@ private:
   bool isOverriddenByDerivedClass(const CXXMethodDecl *BaseMD,
                                   const CXXRecordDecl *DerivedRD);
 
-  /// key: the unique ID of a method;
-  /// value: whether the method is possible to be overridden.
-  std::map<std::string, bool> PossibleMap;
+  /// Key: the unique ID of a method.
+  /// Value: whether the method is possible to be overridden.
+  std::map<const CXXMethodDecl *, bool> PossibleMap;
 
-  /// key: <unique ID of base method, name of derived class>
-  /// value: whether the base method is overridden by some method in the derived
+  /// Key: <unique ID of base method, name of derived class>
+  /// Value: whether the base method is overridden by some method in the derived
   /// class.
-  std::map<std::pair<std::string, std::string>, bool> OverriddenMap;
+  std::map<std::pair<const CXXMethodDecl *, const CXXRecordDecl *>, bool>
+      OverriddenMap;
 
   const unsigned EditDistanceThreshold = 1;
 };

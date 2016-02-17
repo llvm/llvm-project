@@ -1,9 +1,11 @@
 ; RUN: opt %loadPolly -polly-codegen -S -polly-delinearize < %s | FileCheck %s
 
+; CHECK: entry:
+; CHECK-NEXT: %0 = zext i32 %n to i64
+
 ; CHECK: polly.split_new_and_old:
-; CHECK-NEXT: %1 = zext i32 %n to i64
-; CHECK-NEXT: %2 = icmp sge i64 %1, 1
-; CHECK-NEXT: br i1 %2, label %polly.start, label %for.body4
+; CHECK-NEXT: %1 = icmp sge i64 %0, 1
+; CHECK-NEXT: br i1 %1, label %polly.start, label %for.body4
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
