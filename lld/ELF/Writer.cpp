@@ -780,11 +780,14 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
   if (!B.isUsedInRegularObj())
     return false;
 
-  // Don't include synthetic symbols like __init_array_start in every output.
-  if (auto *U = dyn_cast<DefinedRegular<ELFT>>(&B))
-    if (&U->Sym == &ElfSym<ELFT>::Ignored)
+  if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
+    // Don't include synthetic symbols like __init_array_start in every output.
+    if (&D->Sym == &ElfSym<ELFT>::Ignored)
       return false;
-
+    // Exclude symbols pointing to garbage-collected sections.
+    if (D->Section && !D->Section->isLive())
+      return false;
+  }
   return true;
 }
 

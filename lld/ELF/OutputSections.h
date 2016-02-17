@@ -212,6 +212,8 @@ template <class ELFT> struct DynamicReloc {
       : Type(Type), OKind(Off_Sec), OffsetSec(OffsetSec),
         OffsetInSec(OffsetInSec), TargetSec(TargetSec),
         OffsetInTargetSec(OffsetInTargetSec), Addend(Addend) {}
+
+  uintX_t getOffset() const;
 };
 
 template <class ELFT>
@@ -230,7 +232,7 @@ public:
   StringTableSection<ELFT> &getStrTabSec() const { return StrTabSec; }
   unsigned getNumSymbols() const { return NumLocals + Symbols.size() + 1; }
 
-  ArrayRef<std::pair<SymbolBody *, unsigned>> getSymbols() const {
+  ArrayRef<std::pair<SymbolBody *, size_t>> getSymbols() const {
     return Symbols;
   }
 
@@ -241,10 +243,13 @@ private:
   void writeLocalSymbols(uint8_t *&Buf);
   void writeGlobalSymbols(uint8_t *Buf);
 
+  const OutputSectionBase<ELFT> *getOutputSection(SymbolBody *Sym);
   static uint8_t getSymbolBinding(SymbolBody *Body);
 
   SymbolTable<ELFT> &Table;
-  std::vector<std::pair<SymbolBody *, unsigned>> Symbols;
+
+  // A vector of symbols and their string table offsets.
+  std::vector<std::pair<SymbolBody *, size_t>> Symbols;
 };
 
 template <class ELFT>
@@ -398,7 +403,7 @@ public:
 
   // Adds symbols to the hash table.
   // Sorts the input to satisfy GNU hash section requirements.
-  void addSymbols(std::vector<std::pair<SymbolBody *, unsigned>> &Symbols);
+  void addSymbols(std::vector<std::pair<SymbolBody *, size_t>> &Symbols);
 
 private:
   static unsigned calcNBuckets(unsigned NumHashed);
@@ -408,13 +413,13 @@ private:
   void writeBloomFilter(uint8_t *&Buf);
   void writeHashTable(uint8_t *Buf);
 
-  struct HashedSymbolData {
+  struct SymbolData {
     SymbolBody *Body;
-    unsigned STName;
+    size_t STName;
     uint32_t Hash;
   };
 
-  std::vector<HashedSymbolData> HashedSymbols;
+  std::vector<SymbolData> Symbols;
 
   unsigned MaskWords;
   unsigned NBuckets;
