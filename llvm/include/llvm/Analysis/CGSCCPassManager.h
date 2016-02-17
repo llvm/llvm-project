@@ -11,7 +11,7 @@
 /// This header provides classes for managing passes over SCCs of the call
 /// graph. These passes form an important component of LLVM's interprocedural
 /// optimizations. Because they operate on the SCCs of the call graph, and they
-/// wtraverse the graph in post order, they can effectively do pair-wise
+/// traverse the graph in post order, they can effectively do pair-wise
 /// interprocedural optimizations for all call edges in the program. At each
 /// call site edge, the callee has already been optimized as much as is
 /// possible. This in turn allows very accurate analysis of it for IPO.

@@ -1826,6 +1826,7 @@ class StoreRetvalV4Inst<NVPTXRegClass regclass, string opstr> :
                 "\t[func_retval0+$a], {{$val, $val2, $val3, $val4}};"),
                 []>;
 
+let isCall = 1 in {
 def PrintCallRetInst1 : NVPTXInst<(outs), (ins),
 "call (retval0), ",
                                 [(PrintCall (i32 1))]>;
@@ -1883,6 +1884,7 @@ def PrintCallUniRetInst8 : NVPTXInst<(outs), (ins),
 
 def PrintCallUniNoRetInst : NVPTXInst<(outs), (ins), "call.uni ",
                                 [(PrintCallUni (i32 0))]>;
+} // call instructions
 
 def LoadParamMemI64    : LoadParamMemInst<Int64Regs, ".b64">;
 def LoadParamMemI32    : LoadParamMemInst<Int32Regs, ".b32">;

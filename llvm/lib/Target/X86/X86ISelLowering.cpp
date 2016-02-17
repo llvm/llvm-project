@@ -20551,7 +20551,7 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
   NewScatter = DAG.getMaskedScatter(VTs, N->getMemoryVT(), dl, Ops,
                                     N->getMemOperand());
   DAG.ReplaceAllUsesWith(Op, SDValue(NewScatter.getNode(), 1));
-  return SDValue(NewScatter.getNode(), 0);
+  return SDValue(NewScatter.getNode(), 1);
 }
 
 static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,

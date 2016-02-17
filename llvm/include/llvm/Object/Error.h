@@ -30,7 +30,6 @@ enum class object_error {
   string_table_non_null_end,
   invalid_section_index,
   bitcode_section_not_found,
-  elf_invalid_dynamic_table_size,
   macho_small_load_command,
   macho_load_segment_too_many_sections,
   macho_load_segment_too_small,

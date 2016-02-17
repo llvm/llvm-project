@@ -12,6 +12,7 @@
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorOr.h"
 #include <string>
 
 namespace llvm {
@@ -22,6 +23,11 @@ namespace llvm {
   // Various helper functions.
   LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg);
   void error(std::error_code ec);
+  template <class T> T unwrapOrError(ErrorOr<T> EO) {
+    if (EO)
+      return *EO;
+    reportError(EO.getError().message());
+  }
   bool relocAddressLess(object::RelocationRef A,
                         object::RelocationRef B);
 } // namespace llvm

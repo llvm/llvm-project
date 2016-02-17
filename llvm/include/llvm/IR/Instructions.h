@@ -1757,6 +1757,10 @@ public:
   void setConvergent() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
   }
+  void setNotConvergent() {
+    removeAttribute(AttributeSet::FunctionIndex,
+                    Attribute::get(getContext(), Attribute::Convergent));
+  }
 
   /// \brief Determine if the call returns a structure through first
   /// pointer argument.
@@ -3674,6 +3678,16 @@ public:
   bool cannotDuplicate() const {return hasFnAttr(Attribute::NoDuplicate); }
   void setCannotDuplicate() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::NoDuplicate);
+  }
+
+  /// \brief Determine if the invoke is convergent
+  bool isConvergent() const { return hasFnAttr(Attribute::Convergent); }
+  void setConvergent() {
+    addAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
+  }
+  void setNotConvergent() {
+    removeAttribute(AttributeSet::FunctionIndex,
+                    Attribute::get(getContext(), Attribute::Convergent));
   }
 
   /// \brief Determine if the call returns a structure through first

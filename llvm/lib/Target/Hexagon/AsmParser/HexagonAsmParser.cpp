@@ -1606,31 +1606,6 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     }
     break;
   }
-  case Hexagon::J2_loop1r:
-  case Hexagon::J2_loop1i:
-  case Hexagon::J2_loop0r:
-  case Hexagon::J2_loop0i: {
-    MCOperand &MO = Inst.getOperand(0);
-    // Loop has different opcodes for extended vs not extended, but we should
-    //   not use the other opcode as it is a legacy artifact of TD files.
-    int64_t Value;
-    if (MO.getExpr()->evaluateAsAbsolute(Value)) {
-      // if the operand can fit within a 7:2 field
-      if (Value < (1 << 8) && Value >= -(1 << 8)) {
-        SMLoc myLoc = Operands[2]->getStartLoc();
-        // # is left in startLoc in the case of ##
-        // If '##' found then force extension.
-        if (*myLoc.getPointer() == '#') {
-          MustExtend = true;
-          break;
-        }
-      } else {
-        // If immediate and out of 7:2 range.
-        MustExtend = true;
-      }
-    }
-    break;
-  }
 
   // Translate a "$Rdd = $Rss" to "$Rdd = combine($Rs, $Rt)"
   case Hexagon::A2_tfrp: {

@@ -410,6 +410,17 @@ public:
     CALLSITE_DELEGATE_SETTER(setDoesNotThrow());
   }
 
+  /// @brief Determine if the call is convergent.
+  bool isConvergent() const {
+    CALLSITE_DELEGATE_GETTER(isConvergent());
+  }
+  void setConvergent() {
+    CALLSITE_DELEGATE_SETTER(setConvergent());
+  }
+  void setNotConvergent() {
+    CALLSITE_DELEGATE_SETTER(setNotConvergent());
+  }
+
   unsigned getNumOperandBundles() const {
     CALLSITE_DELEGATE_GETTER(getNumOperandBundles());
   }

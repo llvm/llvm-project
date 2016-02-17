@@ -1251,15 +1251,24 @@ example:
 ``convergent``
     In some parallel execution models, there exist operations that cannot be
     made control-dependent on any additional values.  We call such operations
-    ``convergent``, and mark them with this function attribute.
+    ``convergent``, and mark them with this attribute.
 
+    The ``convergent`` attribute may appear on functions or call/invoke
+    instructions.  When it appears on a function, it indicates that calls to
+    this function should not be made control-dependent on additional values.
     For example, the intrinsic ``llvm.cuda.syncthreads`` is ``convergent``, so
     calls to this intrinsic cannot be made control-dependent on additional
-    values.  Other functions may also be marked as convergent; this prevents
-    the same optimization on those functions.
+    values.
 
-    The optimizer may remove the ``convergent`` attribute when it can prove
-    that the function does not execute any convergent operations.
+    When it appears on a call/invoke, the ``convergent`` attribute indicates
+    that we should treat the call as though we're calling a convergent
+    function.  This is particularly useful on indirect calls; without this we
+    may treat such calls as though the target is non-convergent.
+
+    The optimizer may remove the ``convergent`` attribute on functions when it
+    can prove that the function does not execute any convergent operations.
+    Similarly, the optimizer may remove ``convergent`` on calls/invokes when it
+    can prove that the call/invoke cannot call a convergent function.
 ``inaccessiblememonly``
     This attribute indicates that the function may only access memory that
     is not accessible by the module being compiled. This is a weaker form

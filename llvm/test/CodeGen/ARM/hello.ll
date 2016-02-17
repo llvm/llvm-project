@@ -16,9 +16,11 @@ define i32 @main() {
 
 declare i32 @puts(i8*)
 
+; CHECK-LABEL: main
 ; CHECK: mov
 ; CHECK-NOT: mov
 
+; CHECK-FP-ELIM-LABEL: main
 ; CHECK-FP-ELIM: mov
 ; CHECK-FP-ELIM: mov
 ; CHECK-FP-ELIM-NOT: mov

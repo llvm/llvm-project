@@ -62,6 +62,8 @@ public:
     return reinterpret_cast<const uint8_t *>(Buf.data());
   }
 
+  size_t getBufSize() const { return Buf.size(); }
+
 private:
 
   StringRef Buf;
@@ -102,18 +104,6 @@ public:
     return Header->e_machine == ELF::EM_MIPS &&
       Header->getFileClass() == ELF::ELFCLASS64 &&
       Header->getDataEncoding() == ELF::ELFDATA2LSB;
-  }
-
-  ErrorOr<const Elf_Dyn *> dynamic_table_begin(const Elf_Phdr *Phdr) const;
-  ErrorOr<const Elf_Dyn *> dynamic_table_end(const Elf_Phdr *Phdr) const;
-  ErrorOr<Elf_Dyn_Range> dynamic_table(const Elf_Phdr *Phdr) const {
-    ErrorOr<const Elf_Dyn *> Begin = dynamic_table_begin(Phdr);
-    if (std::error_code EC = Begin.getError())
-      return EC;
-    ErrorOr<const Elf_Dyn *> End = dynamic_table_end(Phdr);
-    if (std::error_code EC = End.getError())
-      return EC;
-    return make_range(*Begin, *End);
   }
 
   const Elf_Shdr *section_begin() const;
@@ -200,6 +190,9 @@ public:
   uint32_t getExtendedSymbolTableIndex(const Elf_Sym *Sym,
                                        const Elf_Shdr *SymTab,
                                        ArrayRef<Elf_Word> ShndxTable) const;
+  uint32_t getExtendedSymbolTableIndex(const Elf_Sym *Sym,
+                                       const Elf_Sym *FirstSym,
+                                       ArrayRef<Elf_Word> ShndxTable) const;
   const Elf_Ehdr *getHeader() const { return Header; }
   ErrorOr<const Elf_Shdr *> getSection(const Elf_Sym *Sym,
                                        const Elf_Shdr *SymTab,
@@ -225,8 +218,15 @@ template <class ELFT>
 uint32_t ELFFile<ELFT>::getExtendedSymbolTableIndex(
     const Elf_Sym *Sym, const Elf_Shdr *SymTab,
     ArrayRef<Elf_Word> ShndxTable) const {
+  return getExtendedSymbolTableIndex(Sym, symbol_begin(SymTab), ShndxTable);
+}
+
+template <class ELFT>
+uint32_t ELFFile<ELFT>::getExtendedSymbolTableIndex(
+    const Elf_Sym *Sym, const Elf_Sym *FirstSym,
+    ArrayRef<Elf_Word> ShndxTable) const {
   assert(Sym->st_shndx == ELF::SHN_XINDEX);
-  unsigned Index = Sym - symbol_begin(SymTab);
+  unsigned Index = Sym - FirstSym;
 
   // The size of the table was checked in getSHNDXTable.
   return ShndxTable[Index];
@@ -401,34 +401,6 @@ const typename ELFFile<ELFT>::Elf_Shdr *ELFFile<ELFT>::section_begin() const {
 template <class ELFT>
 const typename ELFFile<ELFT>::Elf_Shdr *ELFFile<ELFT>::section_end() const {
   return section_begin() + getNumSections();
-}
-
-template <class ELFT>
-ErrorOr<const typename ELFFile<ELFT>::Elf_Dyn *>
-ELFFile<ELFT>::dynamic_table_begin(const Elf_Phdr *Phdr) const {
-  if (!Phdr)
-    return nullptr;
-  assert(Phdr->p_type == ELF::PT_DYNAMIC && "Got the wrong program header");
-  uintX_t Offset = Phdr->p_offset;
-  if (Offset > Buf.size())
-    return object_error::parse_failed;
-  return reinterpret_cast<const Elf_Dyn *>(base() + Offset);
-}
-
-template <class ELFT>
-ErrorOr<const typename ELFFile<ELFT>::Elf_Dyn *>
-ELFFile<ELFT>::dynamic_table_end(const Elf_Phdr *Phdr) const {
-  if (!Phdr)
-    return nullptr;
-  assert(Phdr->p_type == ELF::PT_DYNAMIC && "Got the wrong program header");
-  uintX_t Size = Phdr->p_filesz;
-  if (Size % sizeof(Elf_Dyn))
-    return object_error::elf_invalid_dynamic_table_size;
-  // FIKME: Check for overflow?
-  uintX_t End = Phdr->p_offset + Size;
-  if (End > Buf.size())
-    return object_error::parse_failed;
-  return reinterpret_cast<const Elf_Dyn *>(base() + End);
 }
 
 template <class ELFT>
