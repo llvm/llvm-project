@@ -29,6 +29,65 @@ OMPClause::child_range OMPClause::children() {
   llvm_unreachable("unknown OMPClause");
 }
 
+OMPClauseWithPreInit *OMPClauseWithPreInit::get(OMPClause *C) {
+  auto *Res = OMPClauseWithPreInit::get(const_cast<const OMPClause *>(C));
+  return Res ? const_cast<OMPClauseWithPreInit *>(Res) : nullptr;
+}
+
+const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
+  switch (C->getClauseKind()) {
+  case OMPC_schedule:
+    return static_cast<const OMPScheduleClause *>(C);
+  case OMPC_dist_schedule:
+    return static_cast<const OMPDistScheduleClause *>(C);
+  case OMPC_default:
+  case OMPC_proc_bind:
+  case OMPC_if:
+  case OMPC_final:
+  case OMPC_num_threads:
+  case OMPC_safelen:
+  case OMPC_simdlen:
+  case OMPC_collapse:
+  case OMPC_private:
+  case OMPC_firstprivate:
+  case OMPC_lastprivate:
+  case OMPC_shared:
+  case OMPC_reduction:
+  case OMPC_linear:
+  case OMPC_aligned:
+  case OMPC_copyin:
+  case OMPC_copyprivate:
+  case OMPC_ordered:
+  case OMPC_nowait:
+  case OMPC_untied:
+  case OMPC_mergeable:
+  case OMPC_threadprivate:
+  case OMPC_flush:
+  case OMPC_read:
+  case OMPC_write:
+  case OMPC_update:
+  case OMPC_capture:
+  case OMPC_seq_cst:
+  case OMPC_depend:
+  case OMPC_device:
+  case OMPC_threads:
+  case OMPC_simd:
+  case OMPC_map:
+  case OMPC_num_teams:
+  case OMPC_thread_limit:
+  case OMPC_priority:
+  case OMPC_grainsize:
+  case OMPC_nogroup:
+  case OMPC_num_tasks:
+  case OMPC_hint:
+  case OMPC_defaultmap:
+  case OMPC_unknown:
+    break;
+  }
+
+  return nullptr;
+}
+
 void OMPPrivateClause::setPrivateCopies(ArrayRef<Expr *> VL) {
   assert(VL.size() == varlist_size() &&
          "Number of private copies is not the same as the preallocated buffer");

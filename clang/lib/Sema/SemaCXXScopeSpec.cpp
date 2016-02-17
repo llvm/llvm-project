@@ -606,6 +606,10 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S,
         diagnoseTypo(Corrected, PDiag(diag::err_undeclared_var_use_suggest)
                                   << Name);
 
+      if (Corrected.getCorrectionSpecifier())
+        SS.MakeTrivial(Context, Corrected.getCorrectionSpecifier(),
+                       SourceRange(Found.getNameLoc()));
+
       if (NamedDecl *ND = Corrected.getFoundDecl())
         Found.addDecl(ND);
       Found.setLookupName(Corrected.getCorrection());

@@ -6911,9 +6911,16 @@ def err_literal_operator_id_outside_namespace : Error<
   "non-namespace scope '%0' cannot have a literal operator member">;
 def err_literal_operator_default_argument : Error<
   "literal operator cannot have a default argument">;
-// FIXME: This diagnostic sucks
-def err_literal_operator_params : Error<
-  "parameter declaration for literal operator %0 is not valid">;
+def err_literal_operator_bad_param_count : Error<
+  "non-template literal operator must have one or two parameters">;
+def err_literal_operator_invalid_param : Error<
+  "parameter of literal operator must have type 'unsigned long long', 'long double', 'char', 'wchar_t', 'char16_t', 'char32_t', or 'const char *'">;
+def err_literal_operator_param : Error<
+  "invalid literal operator parameter type %0, did you mean %1?">;
+def err_literal_operator_template_with_params : Error<
+  "literal operator template cannot have any parameters">;
+def err_literal_operator_template : Error<
+  "template parameter list for literal operator must be either 'char...' or 'typename T, T...'">;
 def err_literal_operator_extern_c : Error<
   "literal operator must have C++ linkage">;
 def ext_string_literal_operator_template : ExtWarn<

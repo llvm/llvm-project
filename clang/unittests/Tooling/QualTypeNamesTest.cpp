@@ -85,7 +85,8 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
   // Namespace alias
   Visitor.ExpectedQualTypeNames["CheckL"] = "A::B::C::MyInt";
   Visitor.ExpectedQualTypeNames["non_dependent_type_var"] =
-      "template Foo<X>::non_dependent_type";
+      "Foo<X>::non_dependent_type";
+  Visitor.ExpectedQualTypeNames["AnEnumVar"] = "EnumScopeClass::AnEnum";
   Visitor.runOver(
       "int CheckInt;\n"
       "namespace A {\n"
@@ -143,6 +144,11 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "  var.dependent_type_var = 0;\n"
       "var.non_dependent_type_var = 0;\n"
       "}\n"
+      "class EnumScopeClass {\n"
+      "public:\n"
+      "  enum AnEnum { ZERO, ONE };\n"
+      "};\n"
+      "EnumScopeClass::AnEnum AnEnumVar;\n"
 );
 
   TypeNameVisitor Complex;

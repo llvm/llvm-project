@@ -5348,5 +5348,15 @@ TEST(ObjCMessageExprMatcher, SimpleExprs) {
                       )));
 }
 
+TEST(NullPointerConstants, Basic) {
+  EXPECT_TRUE(matches("#define NULL ((void *)0)\n"
+                      "void *v1 = NULL;", expr(nullPointerConstant())));
+  EXPECT_TRUE(matches("void *v2 = nullptr;", expr(nullPointerConstant())));
+  EXPECT_TRUE(matches("void *v3 = __null;", expr(nullPointerConstant())));
+  EXPECT_TRUE(matches("char *cp = (char *)0;", expr(nullPointerConstant())));
+  EXPECT_TRUE(matches("int *ip = 0;", expr(nullPointerConstant())));
+  EXPECT_TRUE(notMatches("int i = 0;", expr(nullPointerConstant())));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang

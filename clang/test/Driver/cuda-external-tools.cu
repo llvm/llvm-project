@@ -18,6 +18,10 @@
 // RUN: %clang -### -target x86_64-linux-gnu -Ofast -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix ARCH64 -check-prefix SM20 -check-prefix OPT3 %s
 
+// With debugging enabled, ptxas should be run with with no ptxas optimizations.
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-noopt-device-debug -O2 -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix ARCH64 -check-prefix SM20 -check-prefix DBG %s
+
 // Regular compile without -O.  This should result in us passing -O0 to ptxas.
 // RUN: %clang -### -target x86_64-linux-gnu -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix ARCH64 -check-prefix SM20 -check-prefix OPT0 %s
@@ -59,9 +63,14 @@
 // ARCH64: "-m64"
 // ARCH32: "-m32"
 // OPT0: "-O0"
+// OPT0-NOT: "-g"
 // OPT1: "-O1"
+// OPT1-NOT: "-g"
 // OPT2: "-O2"
+// OPT2-NOT: "-g"
 // OPT3: "-O3"
+// OPT3-NOT: "-g"
+// DBG: "-g" "--dont-merge-basicblocks" "--return-at-end"
 // SM20: "--gpu-name" "sm_20"
 // SM35: "--gpu-name" "sm_35"
 // SM20: "--output-file" "[[CUBINFILE:[^"]*]]"

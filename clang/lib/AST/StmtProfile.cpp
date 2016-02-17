@@ -268,7 +268,14 @@ public:
 #define OPENMP_CLAUSE(Name, Class)                                             \
   void Visit##Class(const Class *C);
 #include "clang/Basic/OpenMPKinds.def"
+  void VistOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
 };
+
+void OMPClauseProfiler::VistOMPClauseWithPreInit(
+    const OMPClauseWithPreInit *C) {
+  if (auto *S = C->getPreInitStmt())
+    Profiler->VisitStmt(S);
+}
 
 void OMPClauseProfiler::VisitOMPIfClause(const OMPIfClause *C) {
   if (C->getCondition())
@@ -305,12 +312,9 @@ void OMPClauseProfiler::VisitOMPDefaultClause(const OMPDefaultClause *C) { }
 void OMPClauseProfiler::VisitOMPProcBindClause(const OMPProcBindClause *C) { }
 
 void OMPClauseProfiler::VisitOMPScheduleClause(const OMPScheduleClause *C) {
-  if (C->getChunkSize()) {
-    Profiler->VisitStmt(C->getChunkSize());
-    if (C->getHelperChunkSize()) {
-      Profiler->VisitStmt(C->getChunkSize());
-    }
-  }
+  VistOMPClauseWithPreInit(C);
+  if (auto *S = C->getChunkSize())
+    Profiler->VisitStmt(S);
 }
 
 void OMPClauseProfiler::VisitOMPOrderedClause(const OMPOrderedClause *C) {
@@ -633,12 +637,9 @@ void StmtProfiler::VisitOMPDistributeDirective(
 
 void OMPClauseProfiler::VisitOMPDistScheduleClause(
     const OMPDistScheduleClause *C) {
-  if (C->getChunkSize()) {
-    Profiler->VisitStmt(C->getChunkSize());
-    if (C->getHelperChunkSize()) {
-      Profiler->VisitStmt(C->getChunkSize());
-    }
-  }
+  VistOMPClauseWithPreInit(C);
+  if (auto *S = C->getChunkSize())
+    Profiler->VisitStmt(S);
 }
 
 void OMPClauseProfiler::VisitOMPDefaultmapClause(const OMPDefaultmapClause *) {}

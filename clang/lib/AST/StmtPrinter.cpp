@@ -664,9 +664,16 @@ void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {
     OS << ": ";
   }
   OS << getOpenMPSimpleClauseTypeName(OMPC_schedule, Node->getScheduleKind());
-  if (Node->getChunkSize()) {
+  if (auto *E = Node->getChunkSize()) {
     OS << ", ";
-    Node->getChunkSize()->printPretty(OS, nullptr, Policy);
+    if (Node->getPreInitStmt()) {
+      cast<OMPCapturedExprDecl>(
+          cast<DeclRefExpr>(E->IgnoreImpCasts())->getDecl())
+          ->getInit()
+          ->IgnoreImpCasts()
+          ->printPretty(OS, nullptr, Policy);
+    } else
+      E->printPretty(OS, nullptr, Policy);
   }
   OS << ")";
 }
@@ -769,7 +776,7 @@ void OMPClausePrinter::VisitOMPClauseList(T *Node, char StartSym) {
     OS << (I == Node->varlist_begin() ? StartSym : ',');
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(*I)) {
       if (auto *CED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl()))
-        CED->getInit()->printPretty(OS, nullptr, Policy, 0);
+        CED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy, 0);
       else
         DRE->getDecl()->printQualifiedName(OS);
     } else
@@ -915,9 +922,16 @@ void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
 void OMPClausePrinter::VisitOMPDistScheduleClause(OMPDistScheduleClause *Node) {
   OS << "dist_schedule(" << getOpenMPSimpleClauseTypeName(
                            OMPC_dist_schedule, Node->getDistScheduleKind());
-  if (Node->getChunkSize()) {
+  if (auto *E = Node->getChunkSize()) {
     OS << ", ";
-    Node->getChunkSize()->printPretty(OS, nullptr, Policy);
+    if (Node->getPreInitStmt()) {
+      cast<OMPCapturedExprDecl>(
+          cast<DeclRefExpr>(E->IgnoreImpCasts())->getDecl())
+          ->getInit()
+          ->IgnoreImpCasts()
+          ->printPretty(OS, nullptr, Policy);
+    } else
+      E->printPretty(OS, nullptr, Policy);
   }
   OS << ")";
 }
