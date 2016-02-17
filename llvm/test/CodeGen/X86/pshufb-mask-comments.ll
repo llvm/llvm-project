@@ -36,18 +36,18 @@ define <16 x i8> @test3(<16 x i8> %V) {
 
 ; Test that we won't crash when the constant was reused for another instruction.
 
-define <16 x i8> @test4(<2 x i64>* %V) {
+define <16 x i8> @test4(<16 x i8> %V, <2 x i64>* %P) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [1084818905618843912,506097522914230528]
-; CHECK-NEXT:    movdqa %xmm0, (%rdi)
-; CHECK-NEXT:    pshufb %xmm0, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [1084818905618843912,506097522914230528]
+; CHECK-NEXT:    movdqa %xmm1, (%rdi)
+; CHECK-NEXT:    pshufb %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %1 = insertelement <2 x i64> undef, i64 1084818905618843912, i32 0
   %2 = insertelement <2 x i64>    %1, i64  506097522914230528, i32 1
-  store <2 x i64> %2, <2 x i64>* %V, align 16
+  store <2 x i64> %2, <2 x i64>* %P, align 16
   %3 = bitcast <2 x i64> %2 to <16 x i8>
-  %4 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> undef, <16 x i8> %3)
+  %4 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %V, <16 x i8> %3)
   ret <16 x i8> %4
 }
 
