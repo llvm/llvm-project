@@ -29,6 +29,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -186,32 +187,8 @@ bool PruneEH::SimplifyFunction(Function *F) {
   for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB) {
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator()))
       if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(F)) {
-        SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
-        SmallVector<OperandBundleDef, 1> OpBundles;
-        II->getOperandBundlesAsDefs(OpBundles);
-
-        // Insert a call instruction before the invoke.
-        CallInst *Call = CallInst::Create(II->getCalledValue(), Args, OpBundles,
-                                          "", II);
-        Call->takeName(II);
-        Call->setCallingConv(II->getCallingConv());
-        Call->setAttributes(II->getAttributes());
-        Call->setDebugLoc(II->getDebugLoc());
-
-        // Anything that used the value produced by the invoke instruction
-        // now uses the value produced by the call instruction.  Note that we
-        // do this even for void functions and calls with no uses so that the
-        // callgraph edge is updated.
-        II->replaceAllUsesWith(Call);
         BasicBlock *UnwindBlock = II->getUnwindDest();
-        UnwindBlock->removePredecessor(II->getParent());
-
-        // Insert a branch to the normal destination right before the
-        // invoke.
-        BranchInst::Create(II->getNormalDest(), II);
-
-        // Finally, delete the invoke instruction!
-        BB->getInstList().pop_back();
+        removeUnwindEdge(&*BB);
 
         // If the unwind block is now dead, nuke it.
         if (pred_empty(UnwindBlock))
