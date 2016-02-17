@@ -418,6 +418,12 @@ defm addi : Addri_base<"add", add>, ImmRegRel, PredNewRel;
 def: Pat<(i32 (add I32:$Rs, s32ImmPred:$s16)),
          (i32 (A2_addi I32:$Rs, imm:$s16))>;
 
+let hasNewValue = 1, hasSideEffects = 0, isPseudo = 1 in
+def A2_iconst
+  : ALU32_ri <(outs IntRegs:$Rd),
+              (ins s23_2Imm:$s23_2),
+  "$Rd = iconst(#$s23_2)"> {}
+
 //===----------------------------------------------------------------------===//
 // Template class used for the following ALU32 instructions.
 // Rd=and(Rs,#s10)

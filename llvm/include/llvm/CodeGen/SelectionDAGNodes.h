@@ -328,6 +328,7 @@ private:
   bool NoInfs : 1;
   bool NoSignedZeros : 1;
   bool AllowReciprocal : 1;
+  bool VectorReduction : 1;
 
 public:
   /// Default constructor turns off all optimization flags.
@@ -340,6 +341,7 @@ public:
     NoInfs = false;
     NoSignedZeros = false;
     AllowReciprocal = false;
+    VectorReduction = false;
   }
 
   // These are mutators for each flag.
@@ -351,6 +353,7 @@ public:
   void setNoInfs(bool b) { NoInfs = b; }
   void setNoSignedZeros(bool b) { NoSignedZeros = b; }
   void setAllowReciprocal(bool b) { AllowReciprocal = b; }
+  void setVectorReduction(bool b) { VectorReduction = b; }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
@@ -361,6 +364,7 @@ public:
   bool hasNoInfs() const { return NoInfs; }
   bool hasNoSignedZeros() const { return NoSignedZeros; }
   bool hasAllowReciprocal() const { return AllowReciprocal; }
+  bool hasVectorReduction() const { return VectorReduction; }
 
   /// Return a raw encoding of the flags.
   /// This function should only be used to add data to the NodeID value.

@@ -110,14 +110,22 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
 }
 
 static std::string toString(const APFloat &FP) {
+  // Print NaNs with custom payloads specially.
+  if (FP.isNaN() &&
+      !FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics())) &&
+      !FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics(), /*Negative=*/true))) {
+    APInt AI = FP.bitcastToAPInt();
+    return
+        std::string(AI.isNegative() ? "-" : "") + "nan:0x" +
+        utohexstr(AI.getZExtValue() &
+                  (AI.getBitWidth() == 32 ? INT64_C(0x007fffff) :
+                                            INT64_C(0x000fffffffffffff)),
+                  /*LowerCase=*/true);
+  }
+
+  // Use C99's hexadecimal floating-point representation.
   static const size_t BufBytes = 128;
   char buf[BufBytes];
-  if (FP.isNaN())
-    assert((FP.bitwiseIsEqual(APFloat::getQNaN(FP.getSemantics())) ||
-            FP.bitwiseIsEqual(
-                APFloat::getQNaN(FP.getSemantics(), /*Negative=*/true))) &&
-           "convertToHexString handles neither SNaN nor NaN payloads");
-  // Use C99's hexadecimal floating-point representation.
   auto Written = FP.convertToHexString(
       buf, /*hexDigits=*/0, /*upperCase=*/false, APFloat::rmNearestTiesToEven);
   (void)Written;
@@ -157,10 +165,20 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     // control flow stack, and it may be nice to pretty-print.
     O << Op.getImm();
   } else if (Op.isFPImm()) {
-    assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||
-            MII.get(MI->getOpcode()).TSFlags == 0) &&
+    const MCInstrDesc &Desc = MII.get(MI->getOpcode());
+    assert(OpNo < Desc.getNumOperands() &&
+           "Unexpected floating-point immediate as a non-fixed operand");
+    assert(Desc.TSFlags == 0 &&
            "WebAssembly variable_ops floating point ops don't use TSFlags");
-    O << toString(APFloat(Op.getFPImm()));
+    const MCOperandInfo &Info = Desc.OpInfo[OpNo];
+    if (Info.OperandType == WebAssembly::OPERAND_FP32IMM) {
+      // TODO: MC converts all floating point immediate operands to double.
+      // This is fine for numeric values, but may cause NaNs to change bits.
+      O << toString(APFloat(float(Op.getFPImm())));
+    } else {
+      assert(Info.OperandType == WebAssembly::OPERAND_FP64IMM);
+      O << toString(APFloat(Op.getFPImm()));
+    }
   } else {
     assert((OpNo < MII.get(MI->getOpcode()).getNumOperands() ||
             (MII.get(MI->getOpcode()).TSFlags &

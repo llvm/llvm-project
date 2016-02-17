@@ -495,7 +495,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 CodeViewDebug::LocalVarDefRange
 CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset) {
   LocalVarDefRange DR;
-  DR.InMemory = 1;
+  DR.InMemory = -1;
   DR.DataOffset = Offset;
   assert(DR.DataOffset == Offset && "truncation");
   DR.StructOffset = 0;
@@ -592,6 +592,15 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
 
       // Bail if there is a complex DWARF expression for now.
       if (DIExpr && DIExpr->getNumElements() > 0)
+        continue;
+
+      // Bail if operand 0 is not a valid register. This means the variable is a
+      // simple constant, or is described by a complex expression.
+      // FIXME: Find a way to represent constant variables, since they are
+      // relatively common.
+      unsigned Reg =
+          DVInst->getOperand(0).isReg() ? DVInst->getOperand(0).getReg() : 0;
+      if (Reg == 0)
         continue;
 
       // Handle the two cases we can handle: indirect in memory and in register.

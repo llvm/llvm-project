@@ -1244,7 +1244,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
     }
   }
 
-  const MachineOperand *Dst = getNamedOperand(*MI, AMDGPU::OpName::dst);
+  const MachineOperand *Dst = getNamedOperand(*MI, AMDGPU::OpName::vdst);
   const MachineOperand *Src0 = getNamedOperand(*MI, AMDGPU::OpName::src0);
   const MachineOperand *Src1 = getNamedOperand(*MI, AMDGPU::OpName::src1);
   const MachineOperand *Src2 = getNamedOperand(*MI, AMDGPU::OpName::src2);

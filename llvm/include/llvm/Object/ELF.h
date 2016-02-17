@@ -62,8 +62,6 @@ public:
     return reinterpret_cast<const uint8_t *>(Buf.data());
   }
 
-  size_t getBufSize() const { return Buf.size(); }
-
 private:
 
   StringRef Buf;
@@ -202,9 +200,6 @@ public:
   uint32_t getExtendedSymbolTableIndex(const Elf_Sym *Sym,
                                        const Elf_Shdr *SymTab,
                                        ArrayRef<Elf_Word> ShndxTable) const;
-  uint32_t getExtendedSymbolTableIndex(const Elf_Sym *Sym,
-                                       const Elf_Sym *FirstSym,
-                                       ArrayRef<Elf_Word> ShndxTable) const;
   const Elf_Ehdr *getHeader() const { return Header; }
   ErrorOr<const Elf_Shdr *> getSection(const Elf_Sym *Sym,
                                        const Elf_Shdr *SymTab,
@@ -230,15 +225,8 @@ template <class ELFT>
 uint32_t ELFFile<ELFT>::getExtendedSymbolTableIndex(
     const Elf_Sym *Sym, const Elf_Shdr *SymTab,
     ArrayRef<Elf_Word> ShndxTable) const {
-  return getExtendedSymbolTableIndex(Sym, symbol_begin(SymTab), ShndxTable);
-}
-
-template <class ELFT>
-uint32_t ELFFile<ELFT>::getExtendedSymbolTableIndex(
-    const Elf_Sym *Sym, const Elf_Sym *FirstSym,
-    ArrayRef<Elf_Word> ShndxTable) const {
   assert(Sym->st_shndx == ELF::SHN_XINDEX);
-  unsigned Index = Sym - FirstSym;
+  unsigned Index = Sym - symbol_begin(SymTab);
 
   // The size of the table was checked in getSHNDXTable.
   return ShndxTable[Index];
@@ -250,8 +238,7 @@ ELFFile<ELFT>::getSection(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
                           ArrayRef<Elf_Word> ShndxTable) const {
   uint32_t Index = Sym->st_shndx;
   if (Index == ELF::SHN_XINDEX)
-    return getSection(
-        getExtendedSymbolTableIndex(Sym, symbol_begin(SymTab), ShndxTable));
+    return getSection(getExtendedSymbolTableIndex(Sym, SymTab, ShndxTable));
 
   if (Index == ELF::SHN_UNDEF || Index >= ELF::SHN_LORESERVE)
     return nullptr;

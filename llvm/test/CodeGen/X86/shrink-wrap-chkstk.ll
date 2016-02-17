@@ -1,6 +1,8 @@
 ; RUN: llc < %s -enable-shrink-wrap=true | FileCheck %s
 
 ; chkstk cannot come before the usual prologue, since it adjusts ESP.
+; If chkstk is used in the prologue, we also have to be careful about preserving
+; EAX if it is used.
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
@@ -35,3 +37,36 @@ bb2:
 ; CHECK: retl
 
 declare void @inalloca_params(<{ %struct.S }>* inalloca)
+
+declare i32 @doSomething(i32, i32*)
+
+; In this test case, we force usage of EAX before the prologue, and have to
+; compensate before calling __chkstk. It would also be valid for us to avoid
+; shrink wrapping in this case.
+
+define x86_fastcallcc i32 @use_eax_before_prologue(i32 inreg %a, i32 inreg %b) {
+  %tmp = alloca i32, i32 1024, align 4
+  %tmp2 = icmp slt i32 %a, %b
+  br i1 %tmp2, label %true, label %false
+
+true:
+  store i32 %a, i32* %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  br label %false
+
+false:
+  %tmp.0 = phi i32 [ %tmp4, %true ], [ %a, %0 ]
+  ret i32 %tmp.0
+}
+
+; CHECK-LABEL: @use_eax_before_prologue@8: # @use_eax_before_prologue
+; CHECK: movl %ecx, %eax
+; CHECK: cmpl %edx, %eax
+; CHECK: jge LBB1_2
+; CHECK: pushl %eax
+; CHECK: movl $4100, %eax
+; CHECK: calll __chkstk
+; CHECK: movl 4100(%esp), %eax
+; CHECK: calll _doSomething
+; CHECK: LBB1_2:
+; CHECK: retl

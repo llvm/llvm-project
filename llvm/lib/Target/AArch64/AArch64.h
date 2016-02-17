@@ -27,6 +27,7 @@ class FunctionPass;
 class MachineFunctionPass;
 
 FunctionPass *createAArch64DeadRegisterDefinitions();
+FunctionPass *createAArch64RedundantCopyEliminationPass();
 FunctionPass *createAArch64ConditionalCompares();
 FunctionPass *createAArch64AdvSIMDScalar();
 FunctionPass *createAArch64BranchRelaxation();

@@ -226,23 +226,24 @@ public:
     LazyCallGraph &CG = AM->getResult<LazyCallGraphAnalysis>(M);
 
     PreservedAnalyses PA = PreservedAnalyses::all();
-    for (LazyCallGraph::SCC &C : CG.postorder_sccs()) {
-      PreservedAnalyses PassPA = Pass.run(C, &CGAM);
+    for (LazyCallGraph::RefSCC &OuterC : CG.postorder_ref_sccs())
+      for (LazyCallGraph::SCC &C : OuterC) {
+        PreservedAnalyses PassPA = Pass.run(C, &CGAM);
 
-      // We know that the CGSCC pass couldn't have invalidated any other
-      // SCC's analyses (that's the contract of a CGSCC pass), so
-      // directly handle the CGSCC analysis manager's invalidation here. We
-      // also update the preserved set of analyses to reflect that invalidated
-      // analyses are now safe to preserve.
-      // FIXME: This isn't quite correct. We need to handle the case where the
-      // pass updated the CG, particularly some child of the current SCC, and
-      // invalidate its analyses.
-      PassPA = CGAM.invalidate(C, std::move(PassPA));
+        // We know that the CGSCC pass couldn't have invalidated any other
+        // SCC's analyses (that's the contract of a CGSCC pass), so
+        // directly handle the CGSCC analysis manager's invalidation here. We
+        // also update the preserved set of analyses to reflect that invalidated
+        // analyses are now safe to preserve.
+        // FIXME: This isn't quite correct. We need to handle the case where the
+        // pass updated the CG, particularly some child of the current SCC, and
+        // invalidate its analyses.
+        PassPA = CGAM.invalidate(C, std::move(PassPA));
 
-      // Then intersect the preserved set so that invalidation of module
-      // analyses will eventually occur when the module pass completes.
-      PA.intersect(std::move(PassPA));
-    }
+        // Then intersect the preserved set so that invalidation of module
+        // analyses will eventually occur when the module pass completes.
+        PA.intersect(std::move(PassPA));
+      }
 
     // By definition we preserve the proxy. This precludes *any* invalidation
     // of CGSCC analyses by the proxy, but that's OK because we've taken
@@ -446,8 +447,8 @@ public:
       FAM = &AM->getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
 
     PreservedAnalyses PA = PreservedAnalyses::all();
-    for (LazyCallGraph::Node *N : C) {
-      PreservedAnalyses PassPA = Pass.run(N->getFunction(), FAM);
+    for (LazyCallGraph::Node &N : C) {
+      PreservedAnalyses PassPA = Pass.run(N.getFunction(), FAM);
 
       // We know that the function pass couldn't have invalidated any other
       // function's analyses (that's the contract of a function pass), so
@@ -455,7 +456,7 @@ public:
       // Also, update the preserved analyses to reflect that once invalidated
       // these can again be preserved.
       if (FAM)
-        PassPA = FAM->invalidate(N->getFunction(), std::move(PassPA));
+        PassPA = FAM->invalidate(N.getFunction(), std::move(PassPA));
 
       // Then intersect the preserved set so that invalidation of module
       // analyses will eventually occur when the module pass completes.

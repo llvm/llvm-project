@@ -1,35 +1,5 @@
 # Tests which are known to fail from the GCC torture test suite.
 
-# InstrEmitter.cpp:302: unsigned int llvm::InstrEmitter::getVR(llvm::SDValue, DenseMap<llvm::SDValue, unsigned int> &): Assertion `I != VRBaseMap.end() && "Node emitted out of order - late"' failed.
-20000801-2.c
-20000815-1.c
-20011126-2.c
-20030916-1.c
-20050826-2.c
-20090113-1.c
-920501-6.c
-930518-1.c
-980707-1.c
-990127-1.c
-loop-15.c
-loop-ivopts-2.c
-pr20466-1.c
-pr28778.c
-pr33870-1.c
-pr33870.c
-pr38051.c
-pr39100.c
-pr49390.c
-pr53645-2.c
-pr53645.c
-pr59643.c
-
-# WebAssemblyCFGStackify.cpp:458: void PlaceMarkers(llvm::MachineFunction &, const llvm::MachineLoopInfo &, const llvm::WebAssemblyInstrInfo &, llvm::MachineDominatorTree &, llvm::WebAssemblyFunctionInfo &): Assertion `Stack.back() == &MBB && "Loop top should be balanced"' failed.
-20090113-2.c
-20090113-3.c
-930628-1.c
-
-
 # Unknown type!
 # UNREACHABLE executed at /s/llvm-upstream/llvm/lib/IR/ValueTypes.cpp:280!
 # This is what happens when there is a struct operand to va_arg
@@ -50,9 +20,12 @@ va-arg-22.c
 920908-1.c
 pr38151.c
 
-# include/llvm/CodeGen/SelectionDAGNodes.h:800: llvm::SDNode::SDNode(unsigned int, unsigned int, llvm::DebugLoc, llvm::SDVTList, ArrayRef<llvm::SDValue>): Assertion `NumOperands == Ops.size() && "NumOperands wasn't wide enough for its operands!"' failed.
-pr28982b.c
+# SelectionDAGNodes.h:943: llvm::SDValue::SDValue(llvm::SDNode *, unsigned int): Assertion `(!Node || ResNo < Node->getNumValues()) && "Invalid result number for the given node!"' failed.
+pr53645.c
+pr53645-2.c
 
+# multiple-entry loops are not supported yet.
+pr38051.c
 
 # Computed gotos are not supported (Cannot select BlockAddress/BRIND)
 20040302-1.c
@@ -68,9 +41,6 @@ comp-goto-1.c
 20030323-1.c
 20030811-1.c
 pr17377.c
-
-# WebAssembly hasn't implemented __builtin_frame_address
-frame-address.c
 
 # Error: invalid output constraint '=t' in asm.
 980709-1.c

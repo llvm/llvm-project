@@ -264,6 +264,19 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
   switch (Inst.getOpcode()) {
   default: return;
 
+  case Hexagon::A2_iconst: {
+    Inst.setOpcode(Hexagon::A2_addi);
+    MCOperand Reg = Inst.getOperand(0);
+    MCOperand S16 = Inst.getOperand(1);
+    HexagonMCInstrInfo::setMustNotExtend(*S16.getExpr());
+    HexagonMCInstrInfo::setS23_2_reloc(*S16.getExpr());
+    Inst.clear();
+    Inst.addOperand(Reg);
+    Inst.addOperand(MCOperand::createReg(Hexagon::R0));
+    Inst.addOperand(S16);
+    break;
+  }
+
   // "$dst = CONST64(#$src1)",
   case Hexagon::CONST64_Float_Real:
   case Hexagon::CONST64_Int_Real:

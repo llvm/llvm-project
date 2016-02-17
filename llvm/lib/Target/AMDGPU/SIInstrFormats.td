@@ -362,8 +362,7 @@ class VOP2_MADKe <bits<6> op> : Enc64 {
   let Inst{63-32} = src2;
 }
 
-class VOP3e <bits<9> op> : Enc64 {
-  bits<8> vdst;
+class VOP3a <bits<9> op> : Enc64 {
   bits<2> src0_modifiers;
   bits<9> src0;
   bits<2> src1_modifiers;
@@ -373,7 +372,6 @@ class VOP3e <bits<9> op> : Enc64 {
   bits<1> clamp;
   bits<2> omod;
 
-  let Inst{7-0} = vdst;
   let Inst{8} = src0_modifiers{1};
   let Inst{9} = src1_modifiers{1};
   let Inst{10} = src2_modifiers{1};
@@ -387,6 +385,20 @@ class VOP3e <bits<9> op> : Enc64 {
   let Inst{61} = src0_modifiers{0};
   let Inst{62} = src1_modifiers{0};
   let Inst{63} = src2_modifiers{0};
+}
+
+class VOP3e <bits<9> op> : VOP3a <op> {
+  bits<8> vdst;
+
+  let Inst{7-0} = vdst;
+}
+
+// Encoding used for VOPC instructions encoded as VOP3
+// Differs from VOP3e by destination name (sdst) as VOPC doesn't have vector dst
+class VOP3ce <bits<9> op> : VOP3a <op> {
+  bits<8> sdst;
+
+  let Inst{7-0} = sdst;
 }
 
 class VOP3be <bits<9> op> : Enc64 {

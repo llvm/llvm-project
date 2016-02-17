@@ -58,9 +58,9 @@ public:
   IRMover(Module &M);
 
   typedef std::function<void(GlobalValue &)> ValueAdder;
-  /// Move in the provide values. The source is destroyed.
+  /// Move in the provide values.
   /// Returns true on error.
-  bool move(Module &Src, ArrayRef<GlobalValue *> ValuesToLink,
+  bool move(std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
             std::function<void(GlobalValue &GV, ValueAdder Add)> AddLazyFor,
             DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr,
             bool IsMetadataLinkingPostpass = false);

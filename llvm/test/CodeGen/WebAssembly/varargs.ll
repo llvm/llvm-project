@@ -53,13 +53,13 @@ entry:
 ; CHECK-NEXT: .param     i32{{$}}
 ; CHECK-NEXT: .result    i32{{$}}
 ; CHECK-NEXT: .local     i32{{$}}
-; CHECK-NEXT: i32.load   $push0=, 0($0){{$}}
-; CHECK-NEXT: tee_local  $push4=, $1=, $pop0{{$}}
-; CHECK-NEXT: i32.const  $push1=, 4{{$}}
-; CHECK-NEXT: i32.add    $push2=, $pop4, $pop1{{$}}
-; CHECK-NEXT: i32.store  $discard=, 0($0), $pop2{{$}}
-; CHECK-NEXT: i32.load   $push3=, 0($1){{$}}
-; CHECK-NEXT: return     $pop3{{$}}
+; CHECK-NEXT: i32.load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: tee_local  $push[[NUM1:[0-9]+]]=, $1=, $pop[[NUM0]]{{$}}
+; CHECK-NEXT: i32.const  $push[[NUM2:[0-9]+]]=, 4{{$}}
+; CHECK-NEXT: i32.add    $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
+; CHECK-NEXT: i32.store  $discard=, 0($0), $pop[[NUM3]]{{$}}
+; CHECK-NEXT: i32.load   $push[[NUM4:[0-9]+]]=, 0($1){{$}}
+; CHECK-NEXT: return     $pop[[NUM4]]{{$}}
 define i8 @arg_i8(i8** %ap) {
 entry:
   %t = va_arg i8** %ap, i8
@@ -72,17 +72,17 @@ entry:
 ; CHECK-NEXT: .param     i32{{$}}
 ; CHECK-NEXT: .result    i32{{$}}
 ; CHECK-NEXT: .local     i32{{$}}
-; CHECK-NEXT: i32.load   $push0=, 0($0){{$}}
-; CHECK-NEXT: i32.const  $push1=, 3{{$}}
-; CHECK-NEXT: i32.add    $push2=, $pop0, $pop1{{$}}
-; CHECK-NEXT: i32.const  $push3=, -4{{$}}
-; CHECK-NEXT: i32.and    $push4=, $pop2, $pop3{{$}}
-; CHECK-NEXT: tee_local  $push8=, $1=, $pop4{{$}}
-; CHECK-NEXT: i32.const  $push5=, 4{{$}}
-; CHECK-NEXT: i32.add    $push6=, $pop8, $pop5{{$}}
-; CHECK-NEXT: i32.store  $discard=, 0($0), $pop6{{$}}
-; CHECK-NEXT: i32.load   $push7=, 0($1){{$}}
-; CHECK-NEXT: return     $pop7{{$}}
+; CHECK-NEXT: i32.load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: i32.const  $push[[NUM1:[0-9]+]]=, 3{{$}}
+; CHECK-NEXT: i32.add    $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
+; CHECK-NEXT: i32.const  $push[[NUM3:[0-9]+]]=, -4{{$}}
+; CHECK-NEXT: i32.and    $push[[NUM4:[0-9]+]]=, $pop[[NUM2]], $pop[[NUM3]]{{$}}
+; CHECK-NEXT: tee_local  $push[[NUM5:[0-9]+]]=, $1=, $pop[[NUM4]]{{$}}
+; CHECK-NEXT: i32.const  $push[[NUM6:[0-9]+]]=, 4{{$}}
+; CHECK-NEXT: i32.add    $push[[NUM7:[0-9]+]]=, $pop[[NUM5]], $pop[[NUM6]]{{$}}
+; CHECK-NEXT: i32.store  $discard=, 0($0), $pop[[NUM7]]{{$}}
+; CHECK-NEXT: i32.load   $push[[NUM8:[0-9]+]]=, 0($1){{$}}
+; CHECK-NEXT: return     $pop[[NUM8]]{{$}}
 define i32 @arg_i32(i8** %ap) {
 entry:
   %t = va_arg i8** %ap, i32

@@ -374,7 +374,7 @@ public:
 /// from SrcM to DstM.
 class IRLinker {
   Module &DstM;
-  Module &SrcM;
+  std::unique_ptr<Module> SrcM;
 
   std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor;
 
@@ -433,13 +433,13 @@ class IRLinker {
 
   /// Helper method for setting a message and returning an error code.
   bool emitError(const Twine &Message) {
-    SrcM.getContext().diagnose(LinkDiagnosticInfo(DS_Error, Message));
+    SrcM->getContext().diagnose(LinkDiagnosticInfo(DS_Error, Message));
     HasError = true;
     return true;
   }
 
   void emitWarning(const Twine &Message) {
-    SrcM.getContext().diagnose(LinkDiagnosticInfo(DS_Warning, Message));
+    SrcM->getContext().diagnose(LinkDiagnosticInfo(DS_Warning, Message));
   }
 
   /// Check whether we should be linking metadata from the source module.
@@ -512,12 +512,12 @@ class IRLinker {
   void stripNullSubprograms(DICompileUnit *CU);
 
 public:
-  IRLinker(Module &DstM, IRMover::IdentifiedStructTypeSet &Set, Module &SrcM,
-           ArrayRef<GlobalValue *> ValuesToLink,
+  IRLinker(Module &DstM, IRMover::IdentifiedStructTypeSet &Set,
+           std::unique_ptr<Module> SrcM, ArrayRef<GlobalValue *> ValuesToLink,
            std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor,
            DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr,
            bool IsMetadataLinkingPostpass = false)
-      : DstM(DstM), SrcM(SrcM), AddLazyFor(AddLazyFor), TypeMap(Set),
+      : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(AddLazyFor), TypeMap(Set),
         GValMaterializer(this), LValMaterializer(this),
         IsMetadataLinkingPostpass(IsMetadataLinkingPostpass),
         ValIDToTempMDMap(ValIDToTempMDMap) {
@@ -796,7 +796,7 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
 /// types 'Foo' but one got renamed when the module was loaded into the same
 /// LLVMContext.
 void IRLinker::computeTypeMapping() {
-  for (GlobalValue &SGV : SrcM.globals()) {
+  for (GlobalValue &SGV : SrcM->globals()) {
     GlobalValue *DGV = getLinkedToGlobal(&SGV);
     if (!DGV)
       continue;
@@ -812,11 +812,11 @@ void IRLinker::computeTypeMapping() {
     TypeMap.addTypeMapping(DAT->getElementType(), SAT->getElementType());
   }
 
-  for (GlobalValue &SGV : SrcM)
+  for (GlobalValue &SGV : *SrcM)
     if (GlobalValue *DGV = getLinkedToGlobal(&SGV))
       TypeMap.addTypeMapping(DGV->getType(), SGV.getType());
 
-  for (GlobalValue &SGV : SrcM.aliases())
+  for (GlobalValue &SGV : SrcM->aliases())
     if (GlobalValue *DGV = getLinkedToGlobal(&SGV))
       TypeMap.addTypeMapping(DGV->getType(), SGV.getType());
 
@@ -824,7 +824,7 @@ void IRLinker::computeTypeMapping() {
   // At this point, the destination module may have a type "%foo = { i32 }" for
   // example.  When the source module got loaded into the same LLVMContext, if
   // it had the same type, it would have been renamed to "%foo.42 = { i32 }".
-  std::vector<StructType *> Types = SrcM.getIdentifiedStructTypes();
+  std::vector<StructType *> Types = SrcM->getIdentifiedStructTypes();
   for (StructType *ST : Types) {
     if (!ST->hasName())
       continue;
@@ -1126,8 +1126,8 @@ bool IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
     // a function and before remapping metadata on instructions below
     // in RemapInstruction, as the saved mapping is used to handle
     // the temporary metadata hanging off instructions.
-    SrcM.getMaterializer()->saveMetadataList(MetadataToIDs,
-                                             /* OnlyTempMD = */ true);
+    SrcM->getMaterializer()->saveMetadataList(MetadataToIDs,
+                                              /* OnlyTempMD = */ true);
 
   // Link in the prefix data.
   if (Src.hasPrefixData())
@@ -1218,7 +1218,7 @@ void IRLinker::findReachedSubprograms(
 void IRLinker::findNeededSubprograms() {
   // Track unneeded nodes to make it simpler to handle the case
   // where we are checking if an already-mapped SP is needed.
-  NamedMDNode *CompileUnits = SrcM.getNamedMetadata("llvm.dbg.cu");
+  NamedMDNode *CompileUnits = SrcM->getNamedMetadata("llvm.dbg.cu");
   if (!CompileUnits)
     return;
   for (unsigned I = 0, E = CompileUnits->getNumOperands(); I != E; ++I) {
@@ -1290,8 +1290,8 @@ void IRLinker::stripNullSubprograms(DICompileUnit *CU) {
 /// Insert all of the named MDNodes in Src into the Dest module.
 void IRLinker::linkNamedMDNodes() {
   findNeededSubprograms();
-  const NamedMDNode *SrcModFlags = SrcM.getModuleFlagsMetadata();
-  for (const NamedMDNode &NMD : SrcM.named_metadata()) {
+  const NamedMDNode *SrcModFlags = SrcM->getModuleFlagsMetadata();
+  for (const NamedMDNode &NMD : SrcM->named_metadata()) {
     // Don't link module flags here. Do them separately.
     if (&NMD == SrcModFlags)
       continue;
@@ -1314,7 +1314,7 @@ void IRLinker::linkNamedMDNodes() {
 /// Merge the linker flags in Src into the Dest module.
 bool IRLinker::linkModuleFlagsMetadata() {
   // If the source module has no module flags, we are done.
-  const NamedMDNode *SrcModFlags = SrcM.getModuleFlagsMetadata();
+  const NamedMDNode *SrcModFlags = SrcM->getModuleFlagsMetadata();
   if (!SrcModFlags)
     return false;
 
@@ -1495,37 +1495,38 @@ bool IRLinker::run() {
   // Inherit the target data from the source module if the destination module
   // doesn't have one already.
   if (DstM.getDataLayout().isDefault())
-    DstM.setDataLayout(SrcM.getDataLayout());
+    DstM.setDataLayout(SrcM->getDataLayout());
 
-  if (SrcM.getDataLayout() != DstM.getDataLayout()) {
+  if (SrcM->getDataLayout() != DstM.getDataLayout()) {
     emitWarning("Linking two modules of different data layouts: '" +
-                SrcM.getModuleIdentifier() + "' is '" +
-                SrcM.getDataLayoutStr() + "' whereas '" +
+                SrcM->getModuleIdentifier() + "' is '" +
+                SrcM->getDataLayoutStr() + "' whereas '" +
                 DstM.getModuleIdentifier() + "' is '" +
                 DstM.getDataLayoutStr() + "'\n");
   }
 
   // Copy the target triple from the source to dest if the dest's is empty.
-  if (DstM.getTargetTriple().empty() && !SrcM.getTargetTriple().empty())
-    DstM.setTargetTriple(SrcM.getTargetTriple());
+  if (DstM.getTargetTriple().empty() && !SrcM->getTargetTriple().empty())
+    DstM.setTargetTriple(SrcM->getTargetTriple());
 
-  Triple SrcTriple(SrcM.getTargetTriple()), DstTriple(DstM.getTargetTriple());
+  Triple SrcTriple(SrcM->getTargetTriple()), DstTriple(DstM.getTargetTriple());
 
-  if (!SrcM.getTargetTriple().empty() && !triplesMatch(SrcTriple, DstTriple))
+  if (!SrcM->getTargetTriple().empty() && !triplesMatch(SrcTriple, DstTriple))
     emitWarning("Linking two modules of different target triples: " +
-                SrcM.getModuleIdentifier() + "' is '" + SrcM.getTargetTriple() +
-                "' whereas '" + DstM.getModuleIdentifier() + "' is '" +
-                DstM.getTargetTriple() + "'\n");
+                SrcM->getModuleIdentifier() + "' is '" +
+                SrcM->getTargetTriple() + "' whereas '" +
+                DstM.getModuleIdentifier() + "' is '" + DstM.getTargetTriple() +
+                "'\n");
 
   DstM.setTargetTriple(mergeTriples(SrcTriple, DstTriple));
 
   // Append the module inline asm string.
-  if (!SrcM.getModuleInlineAsm().empty()) {
+  if (!SrcM->getModuleInlineAsm().empty()) {
     if (DstM.getModuleInlineAsm().empty())
-      DstM.setModuleInlineAsm(SrcM.getModuleInlineAsm());
+      DstM.setModuleInlineAsm(SrcM->getModuleInlineAsm());
     else
       DstM.setModuleInlineAsm(DstM.getModuleInlineAsm() + "\n" +
-                              SrcM.getModuleInlineAsm());
+                              SrcM->getModuleInlineAsm());
   }
 
   // Loop over all of the linked values to compute type mappings.
@@ -1560,10 +1561,10 @@ bool IRLinker::run() {
     // we don't actually link anything from source.
     if (IsMetadataLinkingPostpass) {
       // Ensure metadata materialized
-      if (SrcM.getMaterializer()->materializeMetadata())
+      if (SrcM->getMaterializer()->materializeMetadata())
         return true;
-      SrcM.getMaterializer()->saveMetadataList(MetadataToIDs,
-                                               /* OnlyTempMD = */ false);
+      SrcM->getMaterializer()->saveMetadataList(MetadataToIDs,
+                                                /* OnlyTempMD = */ false);
     }
 
     linkNamedMDNodes();
@@ -1694,12 +1695,13 @@ IRMover::IRMover(Module &M) : Composite(M) {
 }
 
 bool IRMover::move(
-    Module &Src, ArrayRef<GlobalValue *> ValuesToLink,
+    std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
     std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor,
     DenseMap<unsigned, MDNode *> *ValIDToTempMDMap,
     bool IsMetadataLinkingPostpass) {
-  IRLinker TheIRLinker(Composite, IdentifiedStructTypes, Src, ValuesToLink,
-                       AddLazyFor, ValIDToTempMDMap, IsMetadataLinkingPostpass);
+  IRLinker TheIRLinker(Composite, IdentifiedStructTypes, std::move(Src),
+                       ValuesToLink, AddLazyFor, ValIDToTempMDMap,
+                       IsMetadataLinkingPostpass);
   bool RetCode = TheIRLinker.run();
   Composite.dropTriviallyDeadConstantArrays();
   return RetCode;

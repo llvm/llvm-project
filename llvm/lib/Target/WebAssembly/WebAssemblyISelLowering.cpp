@@ -114,6 +114,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVTPtr, Expand);
 
   setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
+  setOperationAction(ISD::CopyToReg, MVT::Other, Custom);
 
   // Expand these forms; we pattern-match the forms that we can handle in isel.
   for (auto T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64})
@@ -320,7 +321,7 @@ SDValue WebAssemblyTargetLowering::LowerCall(
       SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
       Chain = DAG.getMemcpy(
           Chain, DL, FINode, OutVal, SizeNode, Out.Flags.getByValAlign(),
-          /*isVolatile*/ false, /*AlwaysInline=*/true,
+          /*isVolatile*/ false, /*AlwaysInline=*/false,
           /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
       OutVal = FINode;
     }
@@ -541,16 +542,55 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     case ISD::RETURNADDR: // Probably nothing meaningful can be returned here.
       fail(DL, DAG, "WebAssembly hasn't implemented __builtin_return_address");
       return SDValue();
-    case ISD::FRAMEADDR: // TODO: Make this return the userspace frame address
-      fail(DL, DAG, "WebAssembly hasn't implemented __builtin_frame_address");
-      return SDValue();
+    case ISD::FRAMEADDR:
+      return LowerFRAMEADDR(Op, DAG);
+    case ISD::CopyToReg:
+      return LowerCopyToReg(Op, DAG);
   }
+}
+
+SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDValue Src = Op.getOperand(2);
+  if (isa<FrameIndexSDNode>(Src.getNode())) {
+    // CopyToReg nodes don't support FrameIndex operands. Other targets select
+    // the FI to some LEA-like instruction, but since we don't have that, we
+    // need to insert some kind of instruction that can take an FI operand and
+    // produces a value usable by CopyToReg (i.e. in a vreg). So insert a dummy
+    // copy_local between Op and its FI operand.
+    SDLoc DL(Op);
+    EVT VT = Src.getValueType();
+    SDValue Copy(
+        DAG.getMachineNode(VT == MVT::i32 ? WebAssembly::COPY_LOCAL_I32
+                                          : WebAssembly::COPY_LOCAL_I64,
+                           DL, VT, Src),
+        0);
+    return DAG.getCopyToReg(Op.getOperand(0), DL,
+                            cast<RegisterSDNode>(Op.getOperand(1))->getReg(),
+                            Copy);
+  }
+  return SDValue();
 }
 
 SDValue WebAssemblyTargetLowering::LowerFrameIndex(SDValue Op,
                                                    SelectionDAG &DAG) const {
   int FI = cast<FrameIndexSDNode>(Op)->getIndex();
   return DAG.getTargetFrameIndex(FI, Op.getValueType());
+}
+
+SDValue WebAssemblyTargetLowering::LowerFRAMEADDR(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  // Non-zero depths are not supported by WebAssembly currently. Use the
+  // legalizer's default expansion, which is to return 0 (what this function is
+  // documented to do).
+  if (Op.getConstantOperandVal(0) > 0)
+    return SDValue();
+
+  DAG.getMachineFunction().getFrameInfo()->setFrameAddressIsTaken(true);
+  EVT VT = Op.getValueType();
+  unsigned FP =
+      Subtarget->getRegisterInfo()->getFrameRegister(DAG.getMachineFunction());
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), FP, VT);
 }
 
 SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
