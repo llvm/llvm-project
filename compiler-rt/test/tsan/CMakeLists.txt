@@ -47,6 +47,7 @@ if(COMPILER_RT_INCLUDE_TESTS)
     ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg)
   list(APPEND TSAN_TEST_DEPS TsanUnitTests)
+  list(APPEND TSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
 endif()
 
 add_lit_testsuite(check-tsan "Running ThreadSanitizer tests"
