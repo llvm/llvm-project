@@ -157,6 +157,17 @@ private:
                                                        + NumArgs)[index];
   }
 
+  /// The location of the 'nopartial' keyword in an availability attribute.
+  SourceLocation *getNopartialSlot() {
+    return reinterpret_cast<SourceLocation*>(
+               &getAvailabilitySlot(ObsoletedSlot) + 1);
+  }
+
+  SourceLocation const *getNopartialSlot() const {
+    return reinterpret_cast<SourceLocation const*>(
+               &getAvailabilitySlot(ObsoletedSlot) + 1);
+  }
+
 public:
   struct TypeTagForDatatypeData {
     ParsedType *MatchingCType;
@@ -233,7 +244,7 @@ private:
                 const AvailabilityChange &obsoleted,
                 SourceLocation unavailable, 
                 const Expr *messageExpr,
-                Syntax syntaxUsed)
+                Syntax syntaxUsed, SourceLocation nopartial)
     : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
       ScopeLoc(scopeLoc), EllipsisLoc(), NumArgs(1), SyntaxUsed(syntaxUsed),
       Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
@@ -245,6 +256,7 @@ private:
     new (&getAvailabilitySlot(IntroducedSlot)) AvailabilityChange(introduced);
     new (&getAvailabilitySlot(DeprecatedSlot)) AvailabilityChange(deprecated);
     new (&getAvailabilitySlot(ObsoletedSlot)) AvailabilityChange(obsoleted);
+    memcpy(getNopartialSlot(), &nopartial, sizeof(SourceLocation));
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
 
@@ -412,6 +424,11 @@ public:
     return getAvailabilitySlot(ObsoletedSlot);
   }
 
+  SourceLocation getNopartialLoc() const {
+    assert(getKind() == AT_Availability && "Not an availability attribute");
+    return *getNopartialSlot();
+  }
+
   SourceLocation getUnavailableLoc() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
     return UnavailableLoc;
@@ -488,7 +505,7 @@ public:
     AvailabilityAllocSize =
       sizeof(AttributeList)
       + ((3 * sizeof(AvailabilityChange) + sizeof(void*) +
-         sizeof(ArgsUnion) - 1)
+         sizeof(ArgsUnion) + sizeof(SourceLocation) - 1)
          / sizeof(void*) * sizeof(void*)),
     TypeTagForDatatypeAllocSize =
       sizeof(AttributeList)
@@ -606,13 +623,14 @@ public:
                         const AvailabilityChange &obsoleted,
                         SourceLocation unavailable,
                         const Expr *MessageExpr,
-                        AttributeList::Syntax syntax) {
+                        AttributeList::Syntax syntax,
+                        SourceLocation nopartial) {
     void *memory = allocate(AttributeFactory::AvailabilityAllocSize);
     return add(new (memory) AttributeList(attrName, attrRange,
                                           scopeName, scopeLoc,
                                           Param, introduced, deprecated,
                                           obsoleted, unavailable, MessageExpr,
-                                          syntax));
+                                          syntax, nopartial));
   }
 
   AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
@@ -741,10 +759,12 @@ public:
                         const AvailabilityChange &obsoleted,
                         SourceLocation unavailable,
                         const Expr *MessageExpr,
-                        AttributeList::Syntax syntax) {
+                        AttributeList::Syntax syntax,
+                        SourceLocation nopartial) {
     AttributeList *attr =
       pool.create(attrName, attrRange, scopeName, scopeLoc, Param, introduced,
-                  deprecated, obsoleted, unavailable, MessageExpr, syntax);
+                  deprecated, obsoleted, unavailable, MessageExpr, syntax,
+                  nopartial);
     add(attr);
     return attr;
   }

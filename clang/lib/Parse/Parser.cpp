@@ -491,6 +491,7 @@ void Parser::Initialize() {
   Ident_deprecated = nullptr;
   Ident_obsoleted = nullptr;
   Ident_unavailable = nullptr;
+  Ident_nopartial = nullptr;
 
   Ident__except = nullptr;
 
