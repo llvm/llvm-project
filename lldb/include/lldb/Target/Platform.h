@@ -1325,10 +1325,10 @@ class ModuleCache;
     class OptionGroupPlatformRSync : public lldb_private::OptionGroup
     {
     public:
-        OptionGroupPlatformRSync ();
-        
-        ~OptionGroupPlatformRSync() override;
-        
+        OptionGroupPlatformRSync() = default;
+
+        ~OptionGroupPlatformRSync() override = default;
+
         lldb_private::Error
         SetOptionValue(CommandInterpreter &interpreter,
 		       uint32_t option_idx,
@@ -1353,6 +1353,7 @@ class ModuleCache;
         std::string m_rsync_opts;
         std::string m_rsync_prefix;
         bool m_ignores_remote_hostname;
+
     private:
         DISALLOW_COPY_AND_ASSIGN(OptionGroupPlatformRSync);
     };
@@ -1360,10 +1361,10 @@ class ModuleCache;
     class OptionGroupPlatformSSH : public lldb_private::OptionGroup
     {
     public:
-        OptionGroupPlatformSSH ();
-        
-        ~OptionGroupPlatformSSH() override;
-        
+        OptionGroupPlatformSSH() = default;
+
+        ~OptionGroupPlatformSSH() override = default;
+
         lldb_private::Error
         SetOptionValue(CommandInterpreter &interpreter,
 		       uint32_t option_idx,
@@ -1394,10 +1395,10 @@ class ModuleCache;
     class OptionGroupPlatformCaching : public lldb_private::OptionGroup
     {
     public:
-        OptionGroupPlatformCaching ();
-        
-        ~OptionGroupPlatformCaching() override;
-        
+        OptionGroupPlatformCaching() = default;
+
+        ~OptionGroupPlatformCaching() override = default;
+
         lldb_private::Error
         SetOptionValue(CommandInterpreter &interpreter,
 		       uint32_t option_idx,

@@ -222,6 +222,11 @@ uptr ThreadDescriptorSize() {
     char *end;
     int minor = internal_simple_strtoll(buf + 8, &end, 10);
     if (end != buf + 8 && (*end == '\0' || *end == '.')) {
+      int patch = 0;
+      if (*end == '.')
+        // strtoll will return 0 if no valid conversion could be performed
+        patch = internal_simple_strtoll(end + 1, nullptr, 10);
+
       /* sizeof(struct pthread) values from various glibc versions.  */
       if (SANITIZER_X32)
         val = 1728;  // Assume only one particular version for x32.
@@ -235,9 +240,9 @@ uptr ThreadDescriptorSize() {
         val = FIRST_32_SECOND_64(1136, 1712);
       else if (minor == 10)
         val = FIRST_32_SECOND_64(1168, 1776);
-      else if (minor <= 12)
+      else if (minor == 11 || (minor == 12 && patch == 1))
         val = FIRST_32_SECOND_64(1168, 2288);
-      else if (minor == 13)
+      else if (minor <= 13)
         val = FIRST_32_SECOND_64(1168, 2304);
       else
         val = FIRST_32_SECOND_64(1216, 2304);
