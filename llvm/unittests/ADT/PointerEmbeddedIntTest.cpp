@@ -44,49 +44,37 @@ TEST(PointerEmbeddedIntTest, Basic) {
 }
 
 TEST(PointerEmbeddedIntTest, intptr_t) {
-  {
-    PointerEmbeddedInt<intptr_t, CHAR_BIT> I = 42, J = -42;
-    EXPECT_EQ(42, I);
-    EXPECT_EQ(-42, J);
-  }
+  PointerEmbeddedInt<intptr_t, CHAR_BIT> IPos = 42, INeg = -42;
+  EXPECT_EQ(42, IPos);
+  EXPECT_EQ(-42, INeg);
 
-  {
-    PointerEmbeddedInt<uintptr_t, CHAR_BIT> I = 42, J = 255;
-    EXPECT_EQ(42U, I);
-    EXPECT_EQ(255U, J);
-  }
+  PointerEmbeddedInt<uintptr_t, CHAR_BIT> U = 42, USaturated = 255;
+  EXPECT_EQ(42U, U);
+  EXPECT_EQ(255U, USaturated);
 
-  {
-    PointerEmbeddedInt<intptr_t, std::numeric_limits<intptr_t>::digits>
-        I = std::numeric_limits<intptr_t>::max() >> 1,
-        J = std::numeric_limits<intptr_t>::min() >> 1;
-    EXPECT_EQ(std::numeric_limits<intptr_t>::max() >> 1, I);
-    EXPECT_EQ(std::numeric_limits<intptr_t>::min() >> 1, J);
-  }
+  PointerEmbeddedInt<intptr_t, std::numeric_limits<intptr_t>::digits>
+      IMax = std::numeric_limits<intptr_t>::max() >> 1,
+      IMin = std::numeric_limits<intptr_t>::min() >> 1;
+  EXPECT_EQ(std::numeric_limits<intptr_t>::max() >> 1, IMax);
+  EXPECT_EQ(std::numeric_limits<intptr_t>::min() >> 1, IMin);
 
-  {
-    PointerEmbeddedInt<uintptr_t, std::numeric_limits<uintptr_t>::digits - 1>
-        I = std::numeric_limits<uintptr_t>::max() >> 1,
-        J = std::numeric_limits<uintptr_t>::min() >> 1;
-    EXPECT_EQ(std::numeric_limits<uintptr_t>::max() >> 1, I);
-    EXPECT_EQ(std::numeric_limits<uintptr_t>::min() >> 1, J);
-  }
+  PointerEmbeddedInt<uintptr_t, std::numeric_limits<uintptr_t>::digits - 1>
+      UMax = std::numeric_limits<uintptr_t>::max() >> 1,
+      UMin = std::numeric_limits<uintptr_t>::min() >> 1;
+  EXPECT_EQ(std::numeric_limits<uintptr_t>::max() >> 1, UMax);
+  EXPECT_EQ(std::numeric_limits<uintptr_t>::min() >> 1, UMin);
 }
 
 TEST(PointerEmbeddedIntTest, PointerLikeTypeTraits) {
-  {
-    PointerEmbeddedInt<int, CHAR_BIT> I = 42;
-    using Traits = PointerLikeTypeTraits<decltype(I)>;
-    EXPECT_EQ(42, Traits::getFromVoidPointer(Traits::getAsVoidPointer(I)));
-  }
+  PointerEmbeddedInt<int, CHAR_BIT> I = 42;
+  using ITraits = PointerLikeTypeTraits<decltype(I)>;
+  EXPECT_EQ(42, ITraits::getFromVoidPointer(ITraits::getAsVoidPointer(I)));
 
-  {
-    PointerEmbeddedInt<uintptr_t, std::numeric_limits<uintptr_t>::digits - 1>
-        I = std::numeric_limits<uintptr_t>::max() >> 1;
-    using Traits = PointerLikeTypeTraits<decltype(I)>;
-    EXPECT_EQ(std::numeric_limits<uintptr_t>::max() >> 1,
-              Traits::getFromVoidPointer(Traits::getAsVoidPointer(I)));
-  }
+  PointerEmbeddedInt<uintptr_t, std::numeric_limits<uintptr_t>::digits - 1>
+      Max = std::numeric_limits<uintptr_t>::max() >> 1;
+  using MaxTraits = PointerLikeTypeTraits<decltype(Max)>;
+  EXPECT_EQ(std::numeric_limits<uintptr_t>::max() >> 1,
+            MaxTraits::getFromVoidPointer(MaxTraits::getAsVoidPointer(Max)));
 }
 
 } // end anonymous namespace

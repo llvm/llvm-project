@@ -1063,8 +1063,8 @@ defm IMAGE_LOAD_MIP : MIMG_NoSampler <0x00000001, "image_load_mip">;
 //def IMAGE_LOAD_PCK_SGN : MIMG_NoPattern_ <"image_load_pck_sgn", 0x00000003>;
 //def IMAGE_LOAD_MIP_PCK : MIMG_NoPattern_ <"image_load_mip_pck", 0x00000004>;
 //def IMAGE_LOAD_MIP_PCK_SGN : MIMG_NoPattern_ <"image_load_mip_pck_sgn", 0x00000005>;
-//def IMAGE_STORE : MIMG_NoPattern_ <"image_store", 0x00000008>;
-//def IMAGE_STORE_MIP : MIMG_NoPattern_ <"image_store_mip", 0x00000009>;
+defm IMAGE_STORE : MIMG_Store <0x00000008, "image_store">;
+defm IMAGE_STORE_MIP : MIMG_Store <0x00000009, "image_store_mip">;
 //def IMAGE_STORE_PCK : MIMG_NoPattern_ <"image_store_pck", 0x0000000a>;
 //def IMAGE_STORE_MIP_PCK : MIMG_NoPattern_ <"image_store_mip_pck", 0x0000000b>;
 defm IMAGE_GET_RESINFO : MIMG_NoSampler <0x0000000e, "image_get_resinfo">;
@@ -2230,8 +2230,8 @@ multiclass SampleRawPatterns<SDPatternOperator name, string opcode> {
 
 // Image only
 class ImagePattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
-  (name vt:$addr, v8i32:$rsrc, i32:$dmask, i32:$unorm,
-        i32:$r128, i32:$da, i32:$glc, i32:$slc, i32:$tfe, i32:$lwe),
+  (name vt:$addr, v8i32:$rsrc, imm:$dmask, imm:$unorm,
+        imm:$r128, imm:$da, imm:$glc, imm:$slc, imm:$tfe, imm:$lwe),
   (opcode (as_i32imm $dmask), (as_i1imm $unorm), (as_i1imm $glc), (as_i1imm $da),
           (as_i1imm $r128), (as_i1imm $tfe), (as_i1imm $lwe), (as_i1imm $slc),
           $addr, $rsrc)
@@ -2241,6 +2241,32 @@ multiclass ImagePatterns<SDPatternOperator name, string opcode> {
   def : ImagePattern<name, !cast<MIMG>(opcode # _V4_V1), i32>;
   def : ImagePattern<name, !cast<MIMG>(opcode # _V4_V2), v2i32>;
   def : ImagePattern<name, !cast<MIMG>(opcode # _V4_V4), v4i32>;
+}
+
+class ImageLoadPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
+  (name vt:$addr, v8i32:$rsrc, imm:$dmask, imm:$r128, imm:$da, imm:$glc,
+        imm:$slc),
+  (opcode (as_i32imm $dmask), 1, (as_i1imm $glc), (as_i1imm $da),
+          (as_i1imm $r128), 0, 0, (as_i1imm $slc), $addr, $rsrc)
+>;
+
+multiclass ImageLoadPatterns<SDPatternOperator name, string opcode> {
+  def : ImageLoadPattern<name, !cast<MIMG>(opcode # _V4_V1), i32>;
+  def : ImageLoadPattern<name, !cast<MIMG>(opcode # _V4_V2), v2i32>;
+  def : ImageLoadPattern<name, !cast<MIMG>(opcode # _V4_V4), v4i32>;
+}
+
+class ImageStorePattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
+  (name v4f32:$data, vt:$addr, v8i32:$rsrc, i32:$dmask, imm:$r128, imm:$da,
+        imm:$glc, imm:$slc),
+  (opcode $data, (as_i32imm $dmask), 1, (as_i1imm $glc), (as_i1imm $da),
+          (as_i1imm $r128), 0, 0, (as_i1imm $slc), $addr, $rsrc)
+>;
+
+multiclass ImageStorePatterns<SDPatternOperator name, string opcode> {
+  def : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V1), i32>;
+  def : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V2), v2i32>;
+  def : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V4), v4i32>;
 }
 
 // Basic sample
@@ -2339,6 +2365,10 @@ def : SampleRawPattern<int_SI_getlod, IMAGE_GET_LOD_V4_V4, v4i32>;
 def : ImagePattern<int_SI_getresinfo, IMAGE_GET_RESINFO_V4_V1, i32>;
 defm : ImagePatterns<int_SI_image_load, "IMAGE_LOAD">;
 defm : ImagePatterns<int_SI_image_load_mip, "IMAGE_LOAD_MIP">;
+defm : ImageLoadPatterns<int_amdgcn_image_load, "IMAGE_LOAD">;
+defm : ImageLoadPatterns<int_amdgcn_image_load_mip, "IMAGE_LOAD_MIP">;
+defm : ImageStorePatterns<int_amdgcn_image_store, "IMAGE_STORE">;
+defm : ImageStorePatterns<int_amdgcn_image_store_mip, "IMAGE_STORE_MIP">;
 
 /* SIsample for simple 1D texture lookup */
 def : Pat <
@@ -2419,27 +2449,6 @@ defm : SamplePatterns<IMAGE_SAMPLE_V4_V16, IMAGE_SAMPLE_C_V4_V16,
                       IMAGE_SAMPLE_B_V4_V16, IMAGE_SAMPLE_C_B_V4_V16,
                       IMAGE_SAMPLE_D_V4_V16, IMAGE_SAMPLE_C_D_V4_V16,
                       v16i32>;
-
-/* int_SI_imageload for texture fetches consuming varying address parameters */
-class ImageLoadPattern<Intrinsic name, MIMG opcode, ValueType addr_type> : Pat <
-    (name addr_type:$addr, v8i32:$rsrc, imm),
-    (opcode 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc)
->;
-
-class ImageLoadArrayPattern<Intrinsic name, MIMG opcode, ValueType addr_type> : Pat <
-    (name addr_type:$addr, v8i32:$rsrc, TEX_ARRAY),
-    (opcode 0xf, 0, 0, 1, 0, 0, 0, 0, $addr, $rsrc)
->;
-
-class ImageLoadMSAAPattern<Intrinsic name, MIMG opcode, ValueType addr_type> : Pat <
-    (name addr_type:$addr, v8i32:$rsrc, TEX_MSAA),
-    (opcode 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc)
->;
-
-class ImageLoadArrayMSAAPattern<Intrinsic name, MIMG opcode, ValueType addr_type> : Pat <
-    (name addr_type:$addr, v8i32:$rsrc, TEX_ARRAY_MSAA),
-    (opcode 0xf, 0, 0, 1, 0, 0, 0, 0, $addr, $rsrc)
->;
 
 /********** ============================================ **********/
 /********** Extraction, Insertion, Building and Casting  **********/

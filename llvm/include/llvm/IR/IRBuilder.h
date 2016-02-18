@@ -1547,16 +1547,7 @@ public:
   }
 
   CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args = None,
-                       ArrayRef<OperandBundleDef> OpBundles = None,
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(Callee, Args, OpBundles);
-    if (isa<FPMathOperator>(CI))
-      CI = cast<CallInst>(AddFPMathAttributes(CI, FPMathTag, FMF));
-    return Insert(CI, Name);
-  }
-
-  CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args,
-                       const Twine &Name, MDNode *FPMathTag = nullptr) {
     PointerType *PTy = cast<PointerType>(Callee->getType());
     FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
     return CreateCall(FTy, Callee, Args, Name, FPMathTag);
@@ -1566,6 +1557,15 @@ public:
                        ArrayRef<Value *> Args, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
     CallInst *CI = CallInst::Create(FTy, Callee, Args, DefaultOperandBundles);
+    if (isa<FPMathOperator>(CI))
+      CI = cast<CallInst>(AddFPMathAttributes(CI, FPMathTag, FMF));
+    return Insert(CI, Name);
+  }
+
+  CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> OpBundles,
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+    CallInst *CI = CallInst::Create(Callee, Args, OpBundles);
     if (isa<FPMathOperator>(CI))
       CI = cast<CallInst>(AddFPMathAttributes(CI, FPMathTag, FMF));
     return Insert(CI, Name);

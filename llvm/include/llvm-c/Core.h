@@ -1806,6 +1806,13 @@ LLVMValueRef LLVMAddAlias(LLVMModuleRef M, LLVMTypeRef Ty, LLVMValueRef Aliasee,
 void LLVMDeleteFunction(LLVMValueRef Fn);
 
 /**
+ * Check whether the given function has a personality function.
+ *
+ * @see llvm::Function::hasPersonalityFn()
+ */
+LLVMBool LLVMHasPersonalityFn(LLVMValueRef Fn);
+
+/**
  * Obtain the personality function attached to the function.
  *
  * @see llvm::Function::getPersonalityFn()
@@ -2471,6 +2478,42 @@ LLVMBool LLVMIsTailCall(LLVMValueRef CallInst);
 void LLVMSetTailCall(LLVMValueRef CallInst, LLVMBool IsTailCall);
 
 /**
+ * Return the normal destination basic block.
+ *
+ * This only works on llvm::InvokeInst instructions.
+ *
+ * @see llvm::InvokeInst::getNormalDest()
+ */
+LLVMBasicBlockRef LLVMGetNormalDest(LLVMValueRef InvokeInst);
+
+/**
+ * Return the unwind destination basic block.
+ *
+ * This only works on llvm::InvokeInst instructions.
+ *
+ * @see llvm::InvokeInst::getUnwindDest()
+ */
+LLVMBasicBlockRef LLVMGetUnwindDest(LLVMValueRef InvokeInst);
+
+/**
+ * Set the normal destination basic block.
+ *
+ * This only works on llvm::InvokeInst instructions.
+ *
+ * @see llvm::InvokeInst::setNormalDest()
+ */
+void LLVMSetNormalDest(LLVMValueRef InvokeInst, LLVMBasicBlockRef B);
+
+/**
+ * Set the unwind destination basic block.
+ *
+ * This only works on llvm::InvokeInst instructions.
+ *
+ * @see llvm::InvokeInst::setUnwindDest()
+ */
+void LLVMSetUnwindDest(LLVMValueRef InvokeInst, LLVMBasicBlockRef B);
+
+/**
  * @}
  */
 
@@ -2708,8 +2751,17 @@ void LLVMAddCase(LLVMValueRef Switch, LLVMValueRef OnVal,
 /* Add a destination to the indirectbr instruction */
 void LLVMAddDestination(LLVMValueRef IndirectBr, LLVMBasicBlockRef Dest);
 
+/* Get the number of clauses on the landingpad instruction */
+unsigned LLVMGetNumClauses(LLVMValueRef LandingPad);
+
+/* Get the value of the clause at idnex Idx on the landingpad instruction */
+LLVMValueRef LLVMGetClause(LLVMValueRef LandingPad, unsigned Idx);
+
 /* Add a catch or filter clause to the landingpad instruction */
 void LLVMAddClause(LLVMValueRef LandingPad, LLVMValueRef ClauseVal);
+
+/* Get the 'cleanup' flag in the landingpad instruction */
+LLVMBool LLVMIsCleanup(LLVMValueRef LandingPad);
 
 /* Set the 'cleanup' flag in the landingpad instruction */
 void LLVMSetCleanup(LLVMValueRef LandingPad, LLVMBool Val);

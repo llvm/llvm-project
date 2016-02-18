@@ -30,7 +30,8 @@ public:
   virtual uint32_t getUniqueId() const = 0;
   virtual std::string getChecksum() const = 0;
   virtual PDB_Checksum getChecksumType() const = 0;
-  virtual std::unique_ptr<IPDBEnumSymbols> getCompilands() const = 0;
+  virtual std::unique_ptr<IPDBEnumChildren<PDBSymbolCompiland>>
+  getCompilands() const = 0;
 };
 }
 

@@ -45,13 +45,11 @@ class PointerEmbeddedInt {
     Mask = static_cast<uintptr_t>(-1) << Bits
   };
 
-  enum RawValue_t {
-    RawValue
-  };
+  static constexpr const struct RawValueTag {} RawValue = RawValueTag();
 
   friend class PointerLikeTypeTraits<PointerEmbeddedInt>;
 
-  explicit PointerEmbeddedInt(uintptr_t Value, RawValue_t) : Value(Value) {}
+  explicit PointerEmbeddedInt(uintptr_t Value, RawValueTag) : Value(Value) {}
 
 public:
   PointerEmbeddedInt() : Value(0) {}
@@ -62,7 +60,11 @@ public:
 
   PointerEmbeddedInt &operator=(IntT I) {
     assert((std::is_signed<IntT>::value ? llvm::isInt<Bits>(I)
+<<<<<<< HEAD
                                         : llvm::isUInt<Bits>(I)) && 
+=======
+                                        : llvm::isUInt<Bits>(I)) &&
+>>>>>>> upstream/master
            "Integer has bits outside those preserved!");
     Value = static_cast<uintptr_t>(I) << Shift;
     return *this;

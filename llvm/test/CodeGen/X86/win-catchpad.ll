@@ -255,8 +255,8 @@ try.cont:
 ; X86: pushl %ebp
 ; X86: subl $8, %esp
 ; X86: addl $12, %ebp
-; X86: LBB1_[[loopbb:[0-9]+]]: # %loop
 ; X86: movl    $1, -16(%ebp)
+; X86: LBB1_[[loopbb:[0-9]+]]: # %loop
 ; X86: calll   _getbool
 ; X86: testb   $1, %al
 ; X86: jne LBB1_[[loopbb]]

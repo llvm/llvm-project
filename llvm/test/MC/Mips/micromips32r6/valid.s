@@ -250,3 +250,5 @@
   class.s $f2, $f3         # CHECK: class.s $f2, $f3       # encoding: [0x54,0x62,0x00,0x60]
   class.d $f2, $f4         # CHECK: class.d $f2, $f4       # encoding: [0x54,0x82,0x02,0x60]
   deret                    # CHECK: deret                  # encoding: [0x00,0x00,0xe3,0x7c]
+  tlbinv                   # CHECK: tlbinv                 # encoding: [0x00,0x00,0x43,0x7c]
+  tlbinvf                  # CHECK: tlbinvf                # encoding: [0x00,0x00,0x53,0x7c]

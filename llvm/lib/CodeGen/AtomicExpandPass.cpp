@@ -99,9 +99,9 @@ bool AtomicExpand::runOnFunction(Function &F) {
     assert((LI || SI || RMWI || CASI || isa<FenceInst>(I)) &&
            "Unknown atomic instruction");
 
-    auto FenceOrdering = Monotonic;
-    bool IsStore, IsLoad;
     if (TLI->getInsertFencesForAtomic()) {
+      auto FenceOrdering = Monotonic;
+      bool IsStore, IsLoad;
       if (LI && isAtLeastAcquire(LI->getOrdering())) {
         FenceOrdering = LI->getOrdering();
         LI->setOrdering(Monotonic);

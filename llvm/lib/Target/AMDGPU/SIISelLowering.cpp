@@ -2766,12 +2766,13 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
                                           SelectionDAG &DAG) const {
   const SIInstrInfo *TII =
       static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
+  unsigned Opcode = Node->getMachineOpcode();
 
-  if (TII->isMIMG(Node->getMachineOpcode()))
+  if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore())
     adjustWritemask(Node, DAG);
 
-  if (Node->getMachineOpcode() == AMDGPU::INSERT_SUBREG ||
-      Node->getMachineOpcode() == AMDGPU::REG_SEQUENCE) {
+  if (Opcode == AMDGPU::INSERT_SUBREG ||
+      Opcode == AMDGPU::REG_SEQUENCE) {
     legalizeTargetIndependentNode(Node, DAG);
     return Node;
   }

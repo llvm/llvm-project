@@ -62,8 +62,7 @@ HexagonRegisterInfo::getCallerSavedRegs(const MachineFunction *MF) const {
     Hexagon::R15, 0
   };
 
-  auto &HST = static_cast<const HexagonSubtarget&>(MF->getSubtarget());
-  switch (HST.getHexagonArchVersion()) {
+  switch (MF->getSubtarget<HexagonSubtarget>().getHexagonArchVersion()) {
   case HexagonSubtarget::V4:
   case HexagonSubtarget::V5:
   case HexagonSubtarget::V55:
@@ -83,16 +82,29 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     Hexagon::R24,   Hexagon::R25,   Hexagon::R26,   Hexagon::R27, 0
   };
 
+  // Functions that contain a call to __builtin_eh_return also save the first 4
+  // parameter registers.
+  static const MCPhysReg CalleeSavedRegsV3EHReturn[] = {
+    Hexagon::R0,    Hexagon::R1,    Hexagon::R2,    Hexagon::R3,
+    Hexagon::R16,   Hexagon::R17,   Hexagon::R18,   Hexagon::R19,
+    Hexagon::R20,   Hexagon::R21,   Hexagon::R22,   Hexagon::R23,
+    Hexagon::R24,   Hexagon::R25,   Hexagon::R26,   Hexagon::R27, 0
+  };
+
+  bool HasEHReturn = MF->getInfo<HexagonMachineFunctionInfo>()->hasEHReturn();
+
   switch (MF->getSubtarget<HexagonSubtarget>().getHexagonArchVersion()) {
   case HexagonSubtarget::V4:
   case HexagonSubtarget::V5:
   case HexagonSubtarget::V55:
   case HexagonSubtarget::V60:
-    return CalleeSavedRegsV3;
+    return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
   }
+
   llvm_unreachable("Callee saved registers requested for unknown architecture "
                    "version");
 }
+
 
 BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   const {
@@ -109,6 +121,7 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::LC1);
   Reserved.set(Hexagon::SA0);
   Reserved.set(Hexagon::SA1);
+  Reserved.set(Hexagon::UGP);
   Reserved.set(Hexagon::GP);
   Reserved.set(Hexagon::CS0);
   Reserved.set(Hexagon::CS1);

@@ -128,6 +128,7 @@ bool isPositiveHalfWord(SDNode *N);
     SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
@@ -135,6 +136,16 @@ bool isPositiveHalfWord(SDNode *N);
         SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const override;
     SDValue LowerGLOBALADDRESS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
+        SelectionDAG &DAG) const;
+    SDValue LowerToTLSInitialExecModel(GlobalAddressSDNode *GA,
+        SelectionDAG &DAG) const;
+    SDValue LowerToTLSLocalExecModel(GlobalAddressSDNode *GA,
+        SelectionDAG &DAG) const;
+    SDValue GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
+        GlobalAddressSDNode *GA, SDValue *InFlag, EVT PtrVT,
+        unsigned ReturnReg, unsigned char OperandFlags) const;
     SDValue LowerGLOBAL_OFFSET_TABLE(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
@@ -207,6 +218,7 @@ bool isPositiveHalfWord(SDNode *N);
 
     // Intrinsics
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
     /// isLegalAddressingMode - Return true if the addressing mode represented
     /// by AM is legal for this target, for a load/store of the specified type.
     /// The type may be VoidTy, in which case only return true if the addressing

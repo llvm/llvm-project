@@ -13,6 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -50,39 +51,6 @@ STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 namespace {
 typedef SmallSetVector<Function *, 8> SCCNodeSet;
 }
-
-namespace {
-struct PostOrderFunctionAttrs : public CallGraphSCCPass {
-  static char ID; // Pass identification, replacement for typeid
-  PostOrderFunctionAttrs() : CallGraphSCCPass(ID) {
-    initializePostOrderFunctionAttrsPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnSCC(CallGraphSCC &SCC) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    addUsedAAAnalyses(AU);
-    CallGraphSCCPass::getAnalysisUsage(AU);
-  }
-
-private:
-  TargetLibraryInfo *TLI;
-};
-}
-
-char PostOrderFunctionAttrs::ID = 0;
-INITIALIZE_PASS_BEGIN(PostOrderFunctionAttrs, "functionattrs",
-                      "Deduce function attributes", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(PostOrderFunctionAttrs, "functionattrs",
-                    "Deduce function attributes", false, false)
-
-Pass *llvm::createPostOrderFunctionAttrsPass() { return new PostOrderFunctionAttrs(); }
 
 namespace {
 /// The three kinds of memory access relevant to 'readonly' and
@@ -1019,7 +987,102 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
   return setDoesNotRecurse(*F);
 }
 
-bool PostOrderFunctionAttrs::runOnSCC(CallGraphSCC &SCC) {
+PreservedAnalyses
+PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C, CGSCCAnalysisManager *AM) {
+  Module &M = *C.begin()->getFunction().getParent();
+  const ModuleAnalysisManager &MAM =
+      AM->getResult<ModuleAnalysisManagerCGSCCProxy>(C).getManager();
+  FunctionAnalysisManager &FAM =
+      AM->getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
+
+  // FIXME: Need some way to make it more reasonable to assume that this is
+  // always cached.
+  TargetLibraryInfo &TLI = *MAM.getCachedResult<TargetLibraryAnalysis>(M);
+
+  // We pass a lambda into functions to wire them up to the analysis manager
+  // for getting function analyses.
+  auto AARGetter = [&](Function &F) -> AAResults & {
+    return FAM.getResult<AAManager>(F);
+  };
+
+  // Fill SCCNodes with the elements of the SCC. Also track whether there are
+  // any external or opt-none nodes that will prevent us from optimizing any
+  // part of the SCC.
+  SCCNodeSet SCCNodes;
+  bool HasUnknownCall = false;
+  for (LazyCallGraph::Node &N : C) {
+    Function &F = N.getFunction();
+    if (F.hasFnAttribute(Attribute::OptimizeNone)) {
+      // Treat any function we're trying not to optimize as if it were an
+      // indirect call and omit it from the node set used below.
+      HasUnknownCall = true;
+      continue;
+    }
+    // Track whether any functions in this SCC have an unknown call edge.
+    // Note: if this is ever a performance hit, we can common it with
+    // subsequent routines which also do scans over the instructions of the
+    // function.
+    if (!HasUnknownCall)
+      for (Instruction &I : instructions(F))
+        if (auto CS = CallSite(&I))
+          if (!CS.getCalledFunction()) {
+            HasUnknownCall = true;
+            break;
+          }
+
+    SCCNodes.insert(&F);
+  }
+
+  bool Changed = false;
+  Changed |= addReadAttrs(SCCNodes, AARGetter);
+  Changed |= addArgumentAttrs(SCCNodes);
+
+  // If we have no external nodes participating in the SCC, we can deduce some
+  // more precise attributes as well.
+  if (!HasUnknownCall) {
+    Changed |= addNoAliasAttrs(SCCNodes);
+    Changed |= addNonNullAttrs(SCCNodes, TLI);
+    Changed |= removeConvergentAttrs(SCCNodes);
+    Changed |= addNoRecurseAttrs(SCCNodes);
+  }
+
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
+
+namespace {
+struct PostOrderFunctionAttrsLegacyPass : public CallGraphSCCPass {
+  static char ID; // Pass identification, replacement for typeid
+  PostOrderFunctionAttrsLegacyPass() : CallGraphSCCPass(ID) {
+    initializePostOrderFunctionAttrsLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnSCC(CallGraphSCC &SCC) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    addUsedAAAnalyses(AU);
+    CallGraphSCCPass::getAnalysisUsage(AU);
+  }
+
+private:
+  TargetLibraryInfo *TLI;
+};
+}
+
+char PostOrderFunctionAttrsLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(PostOrderFunctionAttrsLegacyPass, "functionattrs",
+                      "Deduce function attributes", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(PostOrderFunctionAttrsLegacyPass, "functionattrs",
+                    "Deduce function attributes", false, false)
+
+Pass *llvm::createPostOrderFunctionAttrsLegacyPass() { return new PostOrderFunctionAttrsLegacyPass(); }
+
+bool PostOrderFunctionAttrsLegacyPass::runOnSCC(CallGraphSCC &SCC) {
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   bool Changed = false;
 

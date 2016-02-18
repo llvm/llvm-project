@@ -93,7 +93,7 @@ void LTOCodeGenerator::initializeLTOPasses() {
   initializeSROALegacyPassPass(R);
   initializeSROA_DTPass(R);
   initializeSROA_SSAUpPass(R);
-  initializePostOrderFunctionAttrsPass(R);
+  initializePostOrderFunctionAttrsLegacyPassPass(R);
   initializeReversePostOrderFunctionAttrsPass(R);
   initializeGlobalsAAWrapperPassPass(R);
   initializeLICMPass(R);

@@ -155,9 +155,6 @@ getELFKindForNamedSection(StringRef Name, SectionKind K) {
 
 static unsigned getELFSectionType(StringRef Name, SectionKind K) {
 
-  if (Name == getInstrProfCoverageSectionName(false))
-    return ELF::SHT_NOTE;
-
   if (Name == ".init_array")
     return ELF::SHT_INIT_ARRAY;
 

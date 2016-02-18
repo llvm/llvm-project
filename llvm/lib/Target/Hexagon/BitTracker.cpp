@@ -84,87 +84,89 @@ namespace {
   }
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const BT::BitValue &BV) {
-  switch (BV.Type) {
-    case BT::BitValue::Top:
-      OS << 'T';
-      break;
-    case BT::BitValue::Zero:
-      OS << '0';
-      break;
-    case BT::BitValue::One:
-      OS << '1';
-      break;
-    case BT::BitValue::Ref:
-      OS << printv(BV.RefI.Reg) << '[' << BV.RefI.Pos << ']';
-      break;
+namespace llvm {
+  raw_ostream &operator<<(raw_ostream &OS, const BT::BitValue &BV) {
+    switch (BV.Type) {
+      case BT::BitValue::Top:
+        OS << 'T';
+        break;
+      case BT::BitValue::Zero:
+        OS << '0';
+        break;
+      case BT::BitValue::One:
+        OS << '1';
+        break;
+      case BT::BitValue::Ref:
+        OS << printv(BV.RefI.Reg) << '[' << BV.RefI.Pos << ']';
+        break;
+    }
+    return OS;
   }
-  return OS;
-}
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const BT::RegisterCell &RC) {
-  unsigned n = RC.Bits.size();
-  OS << "{ w:" << n;
-  // Instead of printing each bit value individually, try to group them
-  // into logical segments, such as sequences of 0 or 1 bits or references
-  // to consecutive bits (e.g. "bits 3-5 are same as bits 7-9 of reg xyz").
-  // "Start" will be the index of the beginning of the most recent segment.
-  unsigned Start = 0;
-  bool SeqRef = false;    // A sequence of refs to consecutive bits.
-  bool ConstRef = false;  // A sequence of refs to the same bit.
+  raw_ostream &operator<<(raw_ostream &OS, const BT::RegisterCell &RC) {
+    unsigned n = RC.Bits.size();
+    OS << "{ w:" << n;
+    // Instead of printing each bit value individually, try to group them
+    // into logical segments, such as sequences of 0 or 1 bits or references
+    // to consecutive bits (e.g. "bits 3-5 are same as bits 7-9 of reg xyz").
+    // "Start" will be the index of the beginning of the most recent segment.
+    unsigned Start = 0;
+    bool SeqRef = false;    // A sequence of refs to consecutive bits.
+    bool ConstRef = false;  // A sequence of refs to the same bit.
 
-  for (unsigned i = 1, n = RC.Bits.size(); i < n; ++i) {
-    const BT::BitValue &V = RC[i];
-    const BT::BitValue &SV = RC[Start];
-    bool IsRef = (V.Type == BT::BitValue::Ref);
-    // If the current value is the same as Start, skip to the next one.
-    if (!IsRef && V == SV)
-      continue;
-    if (IsRef && SV.Type == BT::BitValue::Ref && V.RefI.Reg == SV.RefI.Reg) {
-      if (Start+1 == i) {
-        SeqRef = (V.RefI.Pos == SV.RefI.Pos+1);
-        ConstRef = (V.RefI.Pos == SV.RefI.Pos);
+    for (unsigned i = 1, n = RC.Bits.size(); i < n; ++i) {
+      const BT::BitValue &V = RC[i];
+      const BT::BitValue &SV = RC[Start];
+      bool IsRef = (V.Type == BT::BitValue::Ref);
+      // If the current value is the same as Start, skip to the next one.
+      if (!IsRef && V == SV)
+        continue;
+      if (IsRef && SV.Type == BT::BitValue::Ref && V.RefI.Reg == SV.RefI.Reg) {
+        if (Start+1 == i) {
+          SeqRef = (V.RefI.Pos == SV.RefI.Pos+1);
+          ConstRef = (V.RefI.Pos == SV.RefI.Pos);
+        }
+        if (SeqRef && V.RefI.Pos == SV.RefI.Pos+(i-Start))
+          continue;
+        if (ConstRef && V.RefI.Pos == SV.RefI.Pos)
+          continue;
       }
-      if (SeqRef && V.RefI.Pos == SV.RefI.Pos+(i-Start))
-        continue;
-      if (ConstRef && V.RefI.Pos == SV.RefI.Pos)
-        continue;
+
+      // The current value is different. Print the previous one and reset
+      // the Start.
+      OS << " [" << Start;
+      unsigned Count = i - Start;
+      if (Count == 1) {
+        OS << "]:" << SV;
+      } else {
+        OS << '-' << i-1 << "]:";
+        if (SV.Type == BT::BitValue::Ref && SeqRef)
+          OS << printv(SV.RefI.Reg) << '[' << SV.RefI.Pos << '-'
+             << SV.RefI.Pos+(Count-1) << ']';
+        else
+          OS << SV;
+      }
+      Start = i;
+      SeqRef = ConstRef = false;
     }
 
-    // The current value is different. Print the previous one and reset
-    // the Start.
     OS << " [" << Start;
-    unsigned Count = i - Start;
-    if (Count == 1) {
-      OS << "]:" << SV;
+    unsigned Count = n - Start;
+    if (n-Start == 1) {
+      OS << "]:" << RC[Start];
     } else {
-      OS << '-' << i-1 << "]:";
+      OS << '-' << n-1 << "]:";
+      const BT::BitValue &SV = RC[Start];
       if (SV.Type == BT::BitValue::Ref && SeqRef)
         OS << printv(SV.RefI.Reg) << '[' << SV.RefI.Pos << '-'
            << SV.RefI.Pos+(Count-1) << ']';
       else
         OS << SV;
     }
-    Start = i;
-    SeqRef = ConstRef = false;
-  }
+    OS << " }";
 
-  OS << " [" << Start;
-  unsigned Count = n - Start;
-  if (n-Start == 1) {
-    OS << "]:" << RC[Start];
-  } else {
-    OS << '-' << n-1 << "]:";
-    const BT::BitValue &SV = RC[Start];
-    if (SV.Type == BT::BitValue::Ref && SeqRef)
-      OS << printv(SV.RefI.Reg) << '[' << SV.RefI.Pos << '-'
-         << SV.RefI.Pos+(Count-1) << ']';
-    else
-      OS << SV;
+    return OS;
   }
-  OS << " }";
-
-  return OS;
 }
 
 BitTracker::BitTracker(const MachineEvaluator &E, MachineFunction &F)
