@@ -2196,7 +2196,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.mergeAvailabilityAttr(D, AA->getRange(), AA->getPlatform(),
                                       AA->getIntroduced(), AA->getDeprecated(),
                                       AA->getObsoleted(), AA->getUnavailable(),
-                                      AA->getMessage(), AMK,
+                                      AA->getMessage(), AA->getNopartial(), AMK,
                                       AttrSpellingListIndex);
   else if (const auto *VA = dyn_cast<VisibilityAttr>(Attr))
     NewAttr = S.mergeVisibilityAttr(D, VA->getRange(), VA->getVisibility(),
@@ -14836,6 +14836,9 @@ void Sema::ActOnModuleEnd(SourceLocation DirectiveLoc, Module *Mod) {
     VisibleModules = std::move(VisibleModulesStack.back());
     VisibleModulesStack.pop_back();
     VisibleModules.setVisible(Mod, DirectiveLoc);
+    // Leaving a module hides namespace names, so our visible namespace cache
+    // is now out of date.
+    VisibleNamespaceCache.clear();
   }
 }
 

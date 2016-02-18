@@ -291,6 +291,18 @@ With ``-fsanitize-coverage=trace-bb`` the compiler will insert
 ``__sanitizer_cov_trace_basic_block(s32 *id)`` before every function, basic block, or edge
 (depending on the value of ``-fsanitize-coverage=[func,bb,edge]``).
 
+Tracing PCs
+===========
+*Experimental* feature similar to tracing basic blocks, but with a different API.
+With ``-fsanitize-coverage=trace-pc`` the compiler will insert
+``__sanitizer_cov_trace_pc()`` on every edge.
+With an additional ``...=trace-pc,indirect-calls`` flag
+``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
+These callbacks are not implemented in the Sanitizer run-time and should be defined
+by the user. So, these flags do not require the other sanitizer to be used.
+This mechanism is used for fuzzing the Linux kernel (https://github.com/google/syzkaller)
+and can be used with `AFL <http://lcamtuf.coredump.cx/afl>`_.
+
 Tracing data flow
 =================
 

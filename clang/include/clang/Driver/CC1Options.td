@@ -270,6 +270,9 @@ def fsanitize_coverage_trace_cmp
 def fsanitize_coverage_8bit_counters
     : Flag<["-"], "fsanitize-coverage-8bit-counters">,
       HelpText<"Enable frequency counters in sanitizer coverage">;
+def fsanitize_coverage_trace_pc
+    : Flag<["-"], "fsanitize-coverage-trace-pc">,
+      HelpText<"Enable PC tracing in sanitizer coverage">;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
     HelpText<"Enable PGO instrumentation. The accepted values is clang or "
              "none">;

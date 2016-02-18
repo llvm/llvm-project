@@ -1705,3 +1705,26 @@ __m256i test_mm256_maskz_unpacklo_epi16(__mmask16 __U, __m256i __A, __m256i __B)
   return _mm256_maskz_unpacklo_epi16(__U, __A, __B); 
 }
 
+__m128i test_mm_mask_cvtepi8_epi16(__m128i __W, __mmask32 __U, __m128i __A) {
+  // CHECK-LABEL: @test_mm_mask_cvtepi8_epi16
+  // CHECK: @llvm.x86.avx512.mask.pmovsxb.w.128
+  return _mm_mask_cvtepi8_epi16(__W, __U, __A); 
+}
+
+__m128i test_mm_maskz_cvtepi8_epi16(__mmask8 __U, __m128i __A) {
+  // CHECK-LABEL: @test_mm_maskz_cvtepi8_epi16
+  // CHECK: @llvm.x86.avx512.mask.pmovsxb.w.128
+  return _mm_maskz_cvtepi8_epi16(__U, __A); 
+}
+
+__m256i test_mm256_mask_cvtepi8_epi16(__m256i __W, __mmask32 __U, __m128i __A) {
+  // CHECK-LABEL: @test_mm256_mask_cvtepi8_epi16
+  // CHECK: @llvm.x86.avx512.mask.pmovsxb.w.256
+  return _mm256_mask_cvtepi8_epi16(__W, __U, __A); 
+}
+
+__m256i test_mm256_maskz_cvtepi8_epi16(__mmask16 __U, __m128i __A) {
+  // CHECK-LABEL: @test_mm256_maskz_cvtepi8_epi16
+  // CHECK: @llvm.x86.avx512.mask.pmovsxb.w.256
+  return _mm256_maskz_cvtepi8_epi16(__U, __A); 
+}
