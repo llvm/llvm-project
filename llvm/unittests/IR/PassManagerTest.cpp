@@ -232,13 +232,13 @@ TEST_F(PassManagerTest, BasicPreservedAnalyses) {
 TEST_F(PassManagerTest, Basic) {
   FunctionAnalysisManager FAM;
   int FunctionAnalysisRuns = 0;
-  FAM.registerPass(TestFunctionAnalysis(FunctionAnalysisRuns));
+  FAM.registerPass([&] { return TestFunctionAnalysis(FunctionAnalysisRuns); });
 
   ModuleAnalysisManager MAM;
   int ModuleAnalysisRuns = 0;
-  MAM.registerPass(TestModuleAnalysis(ModuleAnalysisRuns));
-  MAM.registerPass(FunctionAnalysisManagerModuleProxy(FAM));
-  FAM.registerPass(ModuleAnalysisManagerFunctionProxy(MAM));
+  MAM.registerPass([&] { return TestModuleAnalysis(ModuleAnalysisRuns); });
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
 
   ModulePassManager MPM;
 

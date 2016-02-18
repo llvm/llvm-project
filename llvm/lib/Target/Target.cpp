@@ -54,6 +54,10 @@ LLVMTargetDataRef LLVMCreateTargetData(const char *StringRep) {
   return wrap(new DataLayout(StringRep));
 }
 
+void LLVMDisposeTargetData(LLVMTargetDataRef TD) {
+  delete unwrap(TD);
+}
+
 void LLVMAddTargetLibraryInfo(LLVMTargetLibraryInfoRef TLI,
                               LLVMPassManagerRef PM) {
   unwrap(PM)->add(new TargetLibraryInfoWrapperPass(*unwrap(TLI)));
@@ -131,8 +135,4 @@ unsigned long long LLVMOffsetOfElement(LLVMTargetDataRef TD, LLVMTypeRef StructT
                                        unsigned Element) {
   StructType *STy = unwrap<StructType>(StructTy);
   return unwrap(TD)->getStructLayout(STy)->getElementOffset(Element);
-}
-
-void LLVMDisposeTargetData(LLVMTargetDataRef TD) {
-  delete unwrap(TD);
 }

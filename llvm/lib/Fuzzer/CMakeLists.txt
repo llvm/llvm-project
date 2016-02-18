@@ -1,6 +1,6 @@
 set(LIBFUZZER_FLAGS_BASE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Disable the coverage and sanitizer instrumentation for the fuzzer itself.
-set(CMAKE_CXX_FLAGS_RELEASE "${LIBFUZZER_FLAGS_BASE} -O2 -fno-sanitize=all")
+set(CMAKE_CXX_FLAGS_RELEASE "${LIBFUZZER_FLAGS_BASE} -O2 -fno-sanitize=all -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters ")
 if( LLVM_USE_SANITIZE_COVERAGE )
   add_library(LLVMFuzzerNoMainObjects OBJECT
     FuzzerCrossOver.cpp

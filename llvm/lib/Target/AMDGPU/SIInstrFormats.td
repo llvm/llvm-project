@@ -75,6 +75,12 @@ class InstSI <dag outs, dag ins, string asm, list<dag> pattern> :
   let TSFlags{22} = VOPAsmPrefer32Bit;
 
   let SchedRW = [Write32Bit];
+
+  field bits<1> DisableSIDecoder = 0;
+  field bits<1> DisableVIDecoder = 0;
+  field bits<1> DisableDecoder = 0;
+
+  let isAsmParserOnly = !if(!eq(DisableDecoder{0}, {0}), 0, 1);
 }
 
 class Enc32 {

@@ -504,9 +504,20 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
         addVariableAddress(DV, *VariableDie, Location);
       } else if (RegOp.getReg())
         addVariableAddress(DV, *VariableDie, MachineLocation(RegOp.getReg()));
-    } else if (DVInsn->getOperand(0).isImm())
-      addConstantValue(*VariableDie, DVInsn->getOperand(0), DV.getType());
-    else if (DVInsn->getOperand(0).isFPImm())
+    } else if (DVInsn->getOperand(0).isImm()) {
+      // This variable is described by a single constant.
+      // Check whether it has a DIExpression.
+      auto *Expr = DV.getSingleExpression();
+      if (Expr && Expr->getNumElements()) {
+        DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+        DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+        // If there is an expression, emit raw unsigned bytes.
+        DwarfExpr.AddUnsignedConstant(DVInsn->getOperand(0).getImm());
+        DwarfExpr.AddExpression(Expr->expr_op_begin(), Expr->expr_op_end());
+        addBlock(*VariableDie, dwarf::DW_AT_location, Loc);
+      } else
+        addConstantValue(*VariableDie, DVInsn->getOperand(0), DV.getType());
+    } else if (DVInsn->getOperand(0).isFPImm())
       addConstantFPValue(*VariableDie, DVInsn->getOperand(0));
     else if (DVInsn->getOperand(0).isCImm())
       addConstantValue(*VariableDie, DVInsn->getOperand(0).getCImm(),
@@ -771,8 +782,7 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
                                          const MachineLocation &Location) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-  assert(DV.getExpression().size() == 1);
-  const DIExpression *Expr = DV.getExpression().back();
+  const DIExpression *Expr = DV.getSingleExpression();
   bool ValidReg;
   if (Location.getOffset()) {
     ValidReg = DwarfExpr.AddMachineRegIndirect(Location.getReg(),

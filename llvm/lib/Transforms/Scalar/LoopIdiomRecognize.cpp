@@ -314,6 +314,10 @@ bool LoopIdiomRecognize::isLegalStore(StoreInst *SI, bool &ForMemset,
   if (!SI->isSimple())
     return false;
 
+  // Avoid merging nontemporal stores.
+  if (SI->getMetadata(LLVMContext::MD_nontemporal))
+    return false;
+
   Value *StoredVal = SI->getValueOperand();
   Value *StorePtr = SI->getPointerOperand();
 

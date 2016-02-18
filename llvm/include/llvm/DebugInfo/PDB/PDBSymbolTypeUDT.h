@@ -40,7 +40,6 @@ public:
   FORWARD_SYMBOL_METHOD(hasOverloadedOperator)
   FORWARD_SYMBOL_METHOD(isPacked)
   FORWARD_SYMBOL_METHOD(isScoped)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getUdtKind)
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_METHOD(getVirtualTableShapeId)

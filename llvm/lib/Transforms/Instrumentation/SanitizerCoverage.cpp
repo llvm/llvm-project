@@ -57,8 +57,10 @@ static const char *const kSanCovModuleInitName = "__sanitizer_cov_module_init";
 static const char *const kSanCovName = "__sanitizer_cov";
 static const char *const kSanCovWithCheckName = "__sanitizer_cov_with_check";
 static const char *const kSanCovIndirCallName = "__sanitizer_cov_indir_call16";
+static const char *const kSanCovTracePCIndir = "__sanitizer_cov_trace_pc_indir";
 static const char *const kSanCovTraceEnter = "__sanitizer_cov_trace_func_enter";
 static const char *const kSanCovTraceBB = "__sanitizer_cov_trace_basic_block";
+static const char *const kSanCovTracePC = "__sanitizer_cov_trace_pc";
 static const char *const kSanCovTraceCmp = "__sanitizer_cov_trace_cmp";
 static const char *const kSanCovTraceSwitch = "__sanitizer_cov_trace_switch";
 static const char *const kSanCovModuleCtorName = "sancov.module_ctor";
@@ -81,6 +83,10 @@ static cl::opt<bool>
                           cl::desc("Experimental basic-block tracing: insert "
                                    "callbacks at every basic block"),
                           cl::Hidden, cl::init(false));
+
+static cl::opt<bool> ClExperimentalTracePC("sanitizer-coverage-trace-pc",
+                                           cl::desc("Experimental pc tracing"),
+                                           cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClExperimentalCMPTracing("sanitizer-coverage-experimental-trace-compares",
@@ -131,6 +137,7 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.TraceBB |= ClExperimentalTracing;
   Options.TraceCmp |= ClExperimentalCMPTracing;
   Options.Use8bitCounters |= ClUse8bitCounters;
+  Options.TracePC |= ClExperimentalTracePC;
   return Options;
 }
 
@@ -162,8 +169,8 @@ class SanitizerCoverageModule : public ModulePass {
   }
   Function *SanCovFunction;
   Function *SanCovWithCheckFunction;
-  Function *SanCovIndirCallFunction;
-  Function *SanCovTraceEnter, *SanCovTraceBB;
+  Function *SanCovIndirCallFunction, *SanCovTracePCIndir;
+  Function *SanCovTraceEnter, *SanCovTraceBB, *SanCovTracePC;
   Function *SanCovTraceCmpFunction;
   Function *SanCovTraceSwitchFunction;
   InlineAsm *EmptyAsm;
@@ -198,6 +205,9 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
       M.getOrInsertFunction(kSanCovName, VoidTy, Int32PtrTy, nullptr));
   SanCovWithCheckFunction = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction(kSanCovWithCheckName, VoidTy, Int32PtrTy, nullptr));
+  SanCovTracePCIndir =
+      checkSanitizerInterfaceFunction(M.getOrInsertFunction(
+          kSanCovTracePCIndir, VoidTy, IntptrTy, nullptr));
   SanCovIndirCallFunction =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
           kSanCovIndirCallName, VoidTy, IntptrTy, IntptrTy, nullptr));
@@ -213,6 +223,8 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
                             StringRef(""), StringRef(""),
                             /*hasSideEffects=*/true);
 
+  SanCovTracePC = checkSanitizerInterfaceFunction(
+      M.getOrInsertFunction(kSanCovTracePC, VoidTy, nullptr));
   SanCovTraceEnter = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction(kSanCovTraceEnter, VoidTy, Int32PtrTy, nullptr));
   SanCovTraceBB = checkSanitizerInterfaceFunction(
@@ -364,9 +376,13 @@ void SanitizerCoverageModule::InjectCoverageForIndirectCalls(
         *F.getParent(), Ty, false, GlobalValue::PrivateLinkage,
         Constant::getNullValue(Ty), "__sancov_gen_callee_cache");
     CalleeCache->setAlignment(kCacheAlignment);
-    IRB.CreateCall(SanCovIndirCallFunction,
-                   {IRB.CreatePointerCast(Callee, IntptrTy),
-                    IRB.CreatePointerCast(CalleeCache, IntptrTy)});
+    if (Options.TracePC)
+      IRB.CreateCall(SanCovTracePCIndir,
+                     IRB.CreatePointerCast(Callee, IntptrTy));
+    else
+      IRB.CreateCall(SanCovIndirCallFunction,
+                     {IRB.CreatePointerCast(Callee, IntptrTy),
+                       IRB.CreatePointerCast(CalleeCache, IntptrTy)});
   }
 }
 
@@ -464,7 +480,9 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
       ConstantInt::get(IntptrTy, (1 + NumberOfInstrumentedBlocks()) * 4));
   Type *Int32PtrTy = PointerType::getUnqual(IRB.getInt32Ty());
   GuardP = IRB.CreateIntToPtr(GuardP, Int32PtrTy);
-  if (Options.TraceBB) {
+  if (Options.TracePC) {
+    IRB.CreateCall(SanCovTracePC);
+  } else if (Options.TraceBB) {
     IRB.CreateCall(IsEntryBB ? SanCovTraceEnter : SanCovTraceBB, GuardP);
   } else if (UseCalls) {
     IRB.CreateCall(SanCovWithCheckFunction, GuardP);

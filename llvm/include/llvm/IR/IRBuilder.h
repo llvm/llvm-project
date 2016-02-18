@@ -436,6 +436,14 @@ public:
   CallInst *CreateMaskedStore(Value *Val, Value *Ptr, unsigned Align,
                               Value *Mask);
 
+  /// \brief Create a call to Masked Gather intrinsic
+  CallInst *CreateMaskedGather(Value *Ptrs, unsigned Align, Value *Mask = 0,
+                               Value *PassThru = 0, const Twine& Name = "");
+
+  /// \brief Create a call to Masked Scatter intrinsic
+  CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, unsigned Align,
+                                Value *Mask = 0);
+
   /// \brief Create an assume intrinsic call that allows the optimizer to
   /// assume that the provided condition will be true.
   CallInst *CreateAssumption(Value *Cond);

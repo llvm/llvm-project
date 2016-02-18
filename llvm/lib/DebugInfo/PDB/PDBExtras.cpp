@@ -284,37 +284,40 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const PDB_UniqueId &Id) {
 raw_ostream &llvm::operator<<(raw_ostream &OS, const Variant &Value) {
   switch (Value.Type) {
     case PDB_VariantType::Bool:
-      OS << (Value.Bool ? "true" : "false");
+      OS << (Value.Value.Bool ? "true" : "false");
       break;
     case PDB_VariantType::Double:
-      OS << Value.Double;
+      OS << Value.Value.Double;
       break;
     case PDB_VariantType::Int16:
-      OS << Value.Int16;
+      OS << Value.Value.Int16;
       break;
     case PDB_VariantType::Int32:
-      OS << Value.Int32;
+      OS << Value.Value.Int32;
       break;
     case PDB_VariantType::Int64:
-      OS << Value.Int64;
+      OS << Value.Value.Int64;
       break;
     case PDB_VariantType::Int8:
-      OS << static_cast<int>(Value.Int8);
+      OS << static_cast<int>(Value.Value.Int8);
       break;
     case PDB_VariantType::Single:
-      OS << Value.Single;
+      OS << Value.Value.Single;
       break;
     case PDB_VariantType::UInt16:
-      OS << Value.Double;
+      OS << Value.Value.Double;
       break;
     case PDB_VariantType::UInt32:
-      OS << Value.UInt32;
+      OS << Value.Value.UInt32;
       break;
     case PDB_VariantType::UInt64:
-      OS << Value.UInt64;
+      OS << Value.Value.UInt64;
       break;
     case PDB_VariantType::UInt8:
-      OS << static_cast<unsigned>(Value.UInt8);
+      OS << static_cast<unsigned>(Value.Value.UInt8);
+      break;
+    case PDB_VariantType::String:
+      OS << Value.Value.String;
       break;
     default:
       OS << Value.Type;

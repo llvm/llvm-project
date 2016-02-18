@@ -86,9 +86,13 @@ void WriteToFile(const Unit &U, const std::string &Path) {
 void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V,
                             long *Epoch) {
   long E = Epoch ? *Epoch : 0;
-  for (auto &X : ListFilesInDir(Path, Epoch)) {
+  auto Files = ListFilesInDir(Path, Epoch);
+  for (size_t i = 0; i < Files.size(); i++) {
+    auto &X = Files[i];
     auto FilePath = DirPlusFile(Path, X);
     if (Epoch && GetEpoch(FilePath) < E) continue;
+    if ((i % 1000) == 0 && i)
+      Printf("Loaded %zd/%zd files from %s\n", i, Files.size(), Path);
     V->push_back(FileToVector(FilePath));
   }
 }

@@ -2147,6 +2147,16 @@ LLVMTypeRef LLVMGetAllocatedType(LLVMValueRef Alloca) {
   return wrap(unwrap<AllocaInst>(Alloca)->getAllocatedType());
 }
 
+/*--.. Operations on gep instructions (only) ...............................--*/
+
+LLVMBool LLVMIsInBounds(LLVMValueRef GEP) {
+  return unwrap<GetElementPtrInst>(GEP)->isInBounds();
+}
+
+void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool b) {
+  return unwrap<GetElementPtrInst>(GEP)->setIsInBounds(b);
+}
+
 /*--.. Operations on phi nodes .............................................--*/
 
 void LLVMAddIncoming(LLVMValueRef PhiNode, LLVMValueRef *IncomingValues,
@@ -2172,6 +2182,8 @@ LLVMBasicBlockRef LLVMGetIncomingBlock(LLVMValueRef PhiNode, unsigned Index) {
 
 unsigned LLVMGetNumIndices(LLVMValueRef Inst) {
   auto *I = unwrap(Inst);
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    return GEP->getNumIndices();
   if (auto *EV = dyn_cast<ExtractValueInst>(I))
     return EV->getNumIndices();
   if (auto *IV = dyn_cast<InsertValueInst>(I))

@@ -10,6 +10,7 @@ tablegen(LLVM AMDGPUGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM AMDGPUGenDFAPacketizer.inc -gen-dfa-packetizer)
 tablegen(LLVM AMDGPUGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM AMDGPUGenAsmMatcher.inc -gen-asm-matcher)
+tablegen(LLVM AMDGPUGenDisassemblerTables.inc -gen-disassembler)
 add_public_tablegen_target(AMDGPUCommonTableGen)
 
 add_llvm_target(AMDGPUCodeGen
@@ -65,6 +66,7 @@ add_llvm_target(AMDGPUCodeGen
 
 add_subdirectory(AsmParser)
 add_subdirectory(InstPrinter)
+add_subdirectory(Disassembler)
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(Utils)

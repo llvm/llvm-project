@@ -101,6 +101,8 @@ void Fuzzer::StaticAlarmCallback() {
 
 void Fuzzer::AlarmCallback() {
   assert(Options.UnitTimeoutSec > 0);
+  if (!CurrentUnitSize)
+    return; // We have not started running units yet.
   size_t Seconds =
       duration_cast<seconds>(system_clock::now() - UnitStartTime).count();
   if (Seconds == 0)

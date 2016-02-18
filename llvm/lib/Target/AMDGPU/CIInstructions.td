@@ -100,9 +100,11 @@ defm S_DCACHE_INV_VOL : SMRD_Inval <smrd<0x1d, 0x22>,
 // MUBUF Instructions
 //===----------------------------------------------------------------------===//
 
+let DisableSIDecoder = 1 in {
 defm BUFFER_WBINVL1_VOL : MUBUF_Invalidate <mubuf<0x70, 0x3f>,
   "buffer_wbinvl1_vol", int_amdgcn_buffer_wbinvl1_vol
 >;
+}
 
 //===----------------------------------------------------------------------===//
 // Flat Instructions
@@ -233,7 +235,7 @@ defm FLAT_ATOMIC_DEC_X2 : FLAT_ATOMIC <
 
 // CI Only flat instructions
 
-let SubtargetPredicate = isCI, VIAssemblerPredicate = DisableInst in {
+let SubtargetPredicate = isCI, VIAssemblerPredicate = DisableInst, DisableVIDecoder = 1 in {
 
 defm FLAT_ATOMIC_FCMPSWAP : FLAT_ATOMIC <
   flat<0x3e>, "flat_atomic_fcmpswap", VGPR_32, VReg_64
@@ -254,7 +256,7 @@ defm FLAT_ATOMIC_FMAX_X2 : FLAT_ATOMIC <
   flat<0x60>, "flat_atomic_fmax_x2", VReg_64
 >;
 
-} // End SubtargetPredicate = isCI, VIAssemblerPredicate = DisableInst
+} // End SubtargetPredicate = isCI, VIAssemblerPredicate = DisableInst, DisableVIDecoder = 1
 
 let Predicates = [isCI] in {
 

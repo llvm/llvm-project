@@ -120,7 +120,7 @@ ModulePass *createDataFlowSanitizerPass(
 struct SanitizerCoverageOptions {
   SanitizerCoverageOptions()
       : CoverageType(SCK_None), IndirectCalls(false), TraceBB(false),
-        TraceCmp(false), Use8bitCounters(false) {}
+        TraceCmp(false), Use8bitCounters(false), TracePC(false) {}
 
   enum Type {
     SCK_None = 0,
@@ -132,6 +132,7 @@ struct SanitizerCoverageOptions {
   bool TraceBB;
   bool TraceCmp;
   bool Use8bitCounters;
+  bool TracePC;
 };
 
 // Insert SanitizerCoverage instrumentation.

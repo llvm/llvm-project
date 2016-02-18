@@ -64,7 +64,6 @@ public:
   FORWARD_SYMBOL_METHOD(hasOptimizedCodeDebugInfo)
   FORWARD_SYMBOL_METHOD(isPureVirtual)
   FORWARD_SYMBOL_METHOD(getRelativeVirtualAddress)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getToken)
   FORWARD_SYMBOL_METHOD(getTypeId)
   FORWARD_SYMBOL_METHOD(isUnalignedType)

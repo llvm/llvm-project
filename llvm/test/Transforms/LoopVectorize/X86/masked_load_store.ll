@@ -278,7 +278,8 @@ for.end:                                          ; preds = %for.cond
 ;AVX: ret void
 
 ;AVX512-LABEL: @foo4
-;AVX512-NOT: llvm.masked
+;AVX512-NOT: llvm.masked.load
+;AVX512: llvm.masked.gather
 ;AVX512: ret void
 
 ; Function Attrs: nounwind uwtable

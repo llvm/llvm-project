@@ -57,6 +57,7 @@ public:
   void defaultDump(raw_ostream &OS, int Indent) const;
 
   PDB_SymType getSymTag() const;
+  uint32_t getSymIndexId() const;
 
   template <typename T> std::unique_ptr<T> findOneChild() const {
     auto Enumerator(findAllChildren<T>());

@@ -31,7 +31,6 @@ public:
   FORWARD_SYMBOL_METHOD(getLibraryName)
   FORWARD_SYMBOL_METHOD(getName)
   FORWARD_SYMBOL_METHOD(getSourceFileName)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
 };
 }
 

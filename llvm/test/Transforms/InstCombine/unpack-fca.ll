@@ -151,3 +151,30 @@ define i32 @packed_alignment(%struct.S* dereferenceable(9) %s) {
   %v = extractvalue %struct.T %tv, 1
   ret i32 %v
 }
+
+%struct.U = type {i8, i8, i8, i8, i8, i8, i8, i8, i64}
+
+define void @check_alignment(%struct.U* %u, %struct.U* %v) {
+; CHECK-LABEL: check_alignment
+; CHECK: load i8, i8* {{.*}}, align 8
+; CHECK: load i8, i8* {{.*}}, align 1
+; CHECK: load i8, i8* {{.*}}, align 2
+; CHECK: load i8, i8* {{.*}}, align 1
+; CHECK: load i8, i8* {{.*}}, align 4
+; CHECK: load i8, i8* {{.*}}, align 1
+; CHECK: load i8, i8* {{.*}}, align 2
+; CHECK: load i8, i8* {{.*}}, align 1
+; CHECK: load i64, i64* {{.*}}, align 8
+; CHECK: store i8 {{.*}}, i8* {{.*}}, align 8
+; CHECK: store i8 {{.*}}, i8* {{.*}}, align 1
+; CHECK: store i8 {{.*}}, i8* {{.*}}, align 2
+; CHECK: store i8 {{.*}}, i8* {{.*}}, align 1
+; CHECK: store i8 {{.*}}, i8* {{.*}}, align 4
+; CHECK: store i8 {{.*}}, i8* {{.*}}, align 1
+; CHECK: store i8 {{.*}}, i8* {{.*}}, align 2
+; CHECK: store i8 {{.*}}, i8* {{.*}}, align 1
+; CHECK: store i64 {{.*}}, i64* {{.*}}, align 8
+  %1 = load %struct.U, %struct.U* %u
+  store %struct.U %1, %struct.U* %v
+  ret void
+}

@@ -201,6 +201,10 @@ void LLVMSetModuleDataLayout(LLVMModuleRef M, LLVMTargetDataRef DL);
     See the constructor llvm::DataLayout::DataLayout. */
 LLVMTargetDataRef LLVMCreateTargetData(const char *StringRep);
 
+/** Deallocates a TargetData.
+    See the destructor llvm::DataLayout::~DataLayout. */
+void LLVMDisposeTargetData(LLVMTargetDataRef TD);
+
 /** Adds target library information to a pass manager. This does not take
     ownership of the target library info.
     See the method llvm::PassManagerBase::add. */
@@ -283,10 +287,6 @@ unsigned LLVMElementAtOffset(LLVMTargetDataRef TD, LLVMTypeRef StructTy,
     See the method llvm::StructLayout::getElementContainingOffset. */
 unsigned long long LLVMOffsetOfElement(LLVMTargetDataRef TD,
                                        LLVMTypeRef StructTy, unsigned Element);
-
-/** Deallocates a TargetData.
-    See the destructor llvm::DataLayout::~DataLayout. */
-void LLVMDisposeTargetData(LLVMTargetDataRef TD);
 
 /**
  * @}

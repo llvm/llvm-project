@@ -1034,7 +1034,7 @@ defm BUFFER_ATOMIC_XOR : MUBUF_Atomic <
 //def BUFFER_ATOMIC_FMIN_X2 : MUBUF_X2 <mubuf<0x5f>, "buffer_atomic_fmin_x2", []>; // isn't on VI
 //def BUFFER_ATOMIC_FMAX_X2 : MUBUF_X2 <mubuf<0x60>, "buffer_atomic_fmax_x2", []>; // isn't on VI
 
-let SubtargetPredicate = isSI in {
+let SubtargetPredicate = isSI, DisableVIDecoder = 1 in {
 defm BUFFER_WBINVL1_SC : MUBUF_Invalidate <mubuf<0x70>, "buffer_wbinvl1_sc", int_amdgcn_buffer_wbinvl1_sc>; // isn't on CI & VI
 }
 
@@ -1396,11 +1396,11 @@ defm V_INTERP_P1_F32 : V_INTERP_P1_F32_m;
 
 } // End OtherPredicates = [has32BankLDS]
 
-let OtherPredicates = [has16BankLDS], Constraints = "@earlyclobber $dst" in {
+let OtherPredicates = [has16BankLDS], Constraints = "@earlyclobber $dst", isAsmParserOnly=1 in {
 
 defm V_INTERP_P1_F32_16bank : V_INTERP_P1_F32_m;
 
-} // End OtherPredicates = [has32BankLDS], Constraints = "@earlyclobber $dst"
+} // End OtherPredicates = [has32BankLDS], Constraints = "@earlyclobber $dst", isAsmParserOnly=1
 
 let DisableEncoding = "$src0", Constraints = "$src0 = $dst" in {
 
@@ -1759,9 +1759,12 @@ defm V_MUL_HI_U32 : VOP3Inst <vop3<0x16a, 0x286>, "v_mul_hi_u32",
   VOP_I32_I32_I32, mulhu
 >;
 
+let DisableVIDecoder=1 in { // removed from VI as identical to V_MUL_LO_U32
 defm V_MUL_LO_I32 : VOP3Inst <vop3<0x16b, 0x285>, "v_mul_lo_i32",
   VOP_I32_I32_I32
 >;
+}
+
 defm V_MUL_HI_I32 : VOP3Inst <vop3<0x16c, 0x287>, "v_mul_hi_i32",
   VOP_I32_I32_I32, mulhs
 >;
@@ -1830,7 +1833,7 @@ defm V_MULLIT_F32 : VOP3Inst <vop3<0x150>, "v_mullit_f32",
 
 } // End SubtargetPredicate = isSICI
 
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = isVI, DisableSIDecoder = 1 in {
 
 defm V_LSHLREV_B64 : VOP3Inst <vop3<0, 0x28f>, "v_lshlrev_b64",
   VOP_I64_I32_I64

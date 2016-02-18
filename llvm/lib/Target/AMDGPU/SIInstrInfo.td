@@ -704,9 +704,15 @@ multiclass EXP_m {
     def "" : EXPCommon, SIMCInstr <"exp", SISubtarget.NONE> ;
   }
 
-  def _si : EXPCommon, SIMCInstr <"exp", SISubtarget.SI>, EXPe;
+  def _si : EXPCommon, SIMCInstr <"exp", SISubtarget.SI>, EXPe {
+    let DecoderNamespace="SICI";
+    let DisableDecoder = DisableSIDecoder;
+  }
 
-  def _vi : EXPCommon, SIMCInstr <"exp", SISubtarget.VI>, EXPe_vi;
+  def _vi : EXPCommon, SIMCInstr <"exp", SISubtarget.VI>, EXPe_vi {
+    let DecoderNamespace="VI";
+    let DisableDecoder = DisableVIDecoder;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -726,6 +732,8 @@ class SOP1_Real_si <sop1 op, string opName, dag outs, dag ins, string asm> :
   SIMCInstr<opName, SISubtarget.SI> {
   let isCodeGenOnly = 0;
   let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class SOP1_Real_vi <sop1 op, string opName, dag outs, dag ins, string asm> :
@@ -734,6 +742,8 @@ class SOP1_Real_vi <sop1 op, string opName, dag outs, dag ins, string asm> :
   SIMCInstr<opName, SISubtarget.VI> {
   let isCodeGenOnly = 0;
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 multiclass SOP1_m <sop1 op, string opName, dag outs, dag ins, string asm,
@@ -812,6 +822,8 @@ class SOP2_Real_si<sop2 op, string opName, dag outs, dag ins, string asm> :
   SOP2e<op.SI>,
   SIMCInstr<opName, SISubtarget.SI> {
   let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class SOP2_Real_vi<sop2 op, string opName, dag outs, dag ins, string asm> :
@@ -819,6 +831,8 @@ class SOP2_Real_vi<sop2 op, string opName, dag outs, dag ins, string asm> :
   SOP2e<op.VI>,
   SIMCInstr<opName, SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 multiclass SOP2_m <sop2 op, string opName, dag outs, dag ins, string asm,
@@ -873,6 +887,8 @@ class SOPK_Real_si <sopk op, string opName, dag outs, dag ins, string asm> :
   SOPKe <op.SI>,
   SIMCInstr<opName, SISubtarget.SI> {
   let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
   let isCodeGenOnly = 0;
 }
 
@@ -881,6 +897,8 @@ class SOPK_Real_vi <sopk op, string opName, dag outs, dag ins, string asm> :
   SOPKe <op.VI>,
   SIMCInstr<opName, SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
   let isCodeGenOnly = 0;
 }
 
@@ -937,6 +955,8 @@ multiclass SOPK_IMM32 <sopk op, string opName, dag outs, dag ins,
             SOPK64e <op.SI>,
             SIMCInstr<opName, SISubtarget.SI> {
               let AssemblerPredicates = [isSICI];
+              let DecoderNamespace = "SICI";
+              let DisableDecoder = DisableSIDecoder;
               let isCodeGenOnly = 0;
             }
 
@@ -944,6 +964,8 @@ multiclass SOPK_IMM32 <sopk op, string opName, dag outs, dag ins,
             SOPK64e <op.VI>,
             SIMCInstr<opName, SISubtarget.VI> {
               let AssemblerPredicates = [isVI];
+              let DecoderNamespace = "VI";
+              let DisableDecoder = DisableVIDecoder;
               let isCodeGenOnly = 0;
             }
 }
@@ -964,6 +986,8 @@ class SMRD_Real_si <bits<5> op, string opName, bit imm, dag outs, dag ins,
   SMRDe <op, imm>,
   SIMCInstr<opName, SISubtarget.SI> {
   let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class SMRD_Real_vi <bits<8> op, string opName, bit imm, dag outs, dag ins,
@@ -972,6 +996,8 @@ class SMRD_Real_vi <bits<8> op, string opName, bit imm, dag outs, dag ins,
   SMEMe_vi <op, imm>,
   SIMCInstr<opName, SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 multiclass SMRD_m <smrd op, string opName, bit imm, dag outs, dag ins,
@@ -1027,6 +1053,7 @@ multiclass SMRD_Helper <smrd op, string opName, RegisterClass baseClass,
     (outs dstClass:$dst), (ins baseClass:$sbase, smrd_literal_offset:$offset),
     opName#" $dst, $sbase, $offset", []>, SMRD_IMMe_ci <op.SI> {
     let AssemblerPredicates = [isCIOnly];
+    let DecoderNamespace = "CI";
   }
 
   defm _SGPR : SMRD_m <
@@ -1123,6 +1150,10 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
                 bit HasModifiers> {
 
   dag ret =
+    !if (!eq(NumSrcArgs, 0),
+      // VOP1 without input operands (V_NOP, V_CLREXCP)
+      (ins),
+      /* else */
     !if (!eq(NumSrcArgs, 1),
       !if (!eq(HasModifiers, 1),
         // VOP1 with modifiers
@@ -1152,7 +1183,7 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
       /* else */,
         // VOP3 without modifiers
         (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2)
-      /* endif */ )));
+      /* endif */ ))));
 }
 
 class getInsDPP <RegisterClass Src0RC, RegisterClass Src1RC, int NumSrcArgs,
@@ -1465,12 +1496,16 @@ class VOP1_Real_si <string opName, vop1 op, dag outs, dag ins, string asm> :
   VOP1<op.SI, outs, ins, asm, []>,
   SIMCInstr <opName#"_e32", SISubtarget.SI> {
   let AssemblerPredicate = SIAssemblerPredicate;
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class VOP1_Real_vi <string opName, vop1 op, dag outs, dag ins, string asm> :
   VOP1<op.VI, outs, ins, asm, []>,
   SIMCInstr <opName#"_e32", SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 multiclass VOP1_m <vop1 op, string opName, VOPProfile p, list<dag> pattern,
@@ -1512,12 +1547,16 @@ class VOP2_Real_si <string opName, vop2 op, dag outs, dag ins, string asm> :
   VOP2 <op.SI, outs, ins, opName#asm, []>,
   SIMCInstr <opName#"_e32", SISubtarget.SI> {
   let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class VOP2_Real_vi <string opName, vop2 op, dag outs, dag ins, string asm> :
   VOP2 <op.VI, outs, ins, opName#asm, []>,
   SIMCInstr <opName#"_e32", SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 multiclass VOP2SI_m <vop2 op, string opName, VOPProfile p, list<dag> pattern,
@@ -1582,6 +1621,8 @@ class VOP3_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
   VOP3e <op>,
   SIMCInstr<opName#"_e64", SISubtarget.SI> {
   let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class VOP3_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
@@ -1590,6 +1631,8 @@ class VOP3_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
   VOP3e_vi <op>,
   SIMCInstr <opName#"_e64", SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 class VOP3_C_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
@@ -1598,6 +1641,8 @@ class VOP3_C_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
   VOP3ce <op>,
   SIMCInstr<opName#"_e64", SISubtarget.SI> {
   let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class VOP3_C_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
@@ -1606,6 +1651,8 @@ class VOP3_C_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
   VOP3ce_vi <op>,
   SIMCInstr <opName#"_e64", SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 class VOP3b_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
@@ -1614,6 +1661,8 @@ class VOP3b_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
   VOP3be <op>,
   SIMCInstr<opName#"_e64", SISubtarget.SI> {
   let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class VOP3b_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
@@ -1622,6 +1671,8 @@ class VOP3b_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
   VOP3be_vi <op>,
   SIMCInstr <opName#"_e64", SISubtarget.VI> {
   let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 multiclass VOP3_m <vop op, dag outs, dag ins, string asm, list<dag> pattern,
@@ -1737,6 +1788,8 @@ multiclass VOP2SI_3VI_m <vop3 op, string opName, dag outs, dag ins,
   def _si : VOP2 <op.SI3{5-0}, outs, ins, asm, []>,
             SIMCInstr <opName, SISubtarget.SI> {
             let AssemblerPredicates = [isSICI];
+            let DecoderNamespace = "SICI";
+            let DisableDecoder = DisableSIDecoder;
   }
 
   def _vi : VOP3Common <outs, ins, asm, []>,
@@ -1744,6 +1797,8 @@ multiclass VOP2SI_3VI_m <vop3 op, string opName, dag outs, dag ins,
             VOP3DisableFields <1, 0, 0>,
             SIMCInstr <opName, SISubtarget.VI> {
             let AssemblerPredicates = [isVI];
+            let DecoderNamespace = "VI";
+            let DisableDecoder = DisableVIDecoder;
   }
 }
 
@@ -1879,6 +1934,8 @@ let isCodeGenOnly = 0 in {
             SIMCInstr <opName#"_e32", SISubtarget.SI>,
             VOP2_MADKe <op.SI> {
             let AssemblerPredicates = [isSICI];
+            let DecoderNamespace = "SICI";
+            let DisableDecoder = DisableSIDecoder;
             }
 
   def _vi : VOP2Common <VOP_MADK.Outs, VOP_MADK.Ins,
@@ -1886,6 +1943,8 @@ let isCodeGenOnly = 0 in {
             SIMCInstr <opName#"_e32", SISubtarget.VI>,
             VOP2_MADKe <op.VI> {
             let AssemblerPredicates = [isVI];
+            let DecoderNamespace = "VI";
+            let DisableDecoder = DisableVIDecoder;
             }
 } // End isCodeGenOnly = 0
 }
@@ -1915,6 +1974,8 @@ multiclass VOPC_m <vopc op, dag ins, string op_asm, list<dag> pattern,
       let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
       let hasSideEffects = DefExec;
       let SchedRW = sched;
+      let DecoderNamespace = "SICI";
+      let DisableDecoder = DisableSIDecoder;
     }
 
   } // End AssemblerPredicates = [isSICI]
@@ -1925,6 +1986,8 @@ multiclass VOPC_m <vopc op, dag ins, string op_asm, list<dag> pattern,
       let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
       let hasSideEffects = DefExec;
       let SchedRW = sched;
+      let DecoderNamespace = "VI";
+      let DisableDecoder = DisableVIDecoder;
     }
 
   } // End AssemblerPredicates = [isVI]
@@ -2115,13 +2178,19 @@ class VINTRP_Real_si <bits <2> op, string opName, dag outs, dag ins,
                       string asm> :
   VINTRPCommon <outs, ins, asm, []>,
   VINTRPe <op>,
-  SIMCInstr<opName, SISubtarget.SI>;
+  SIMCInstr<opName, SISubtarget.SI> {
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
+}
 
 class VINTRP_Real_vi <bits <2> op, string opName, dag outs, dag ins,
                       string asm> :
   VINTRPCommon <outs, ins, asm, []>,
   VINTRPe_vi <op>,
-  SIMCInstr<opName, SISubtarget.VI>;
+  SIMCInstr<opName, SISubtarget.VI> {
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
+}
 
 multiclass VINTRP_m <bits <2> op, dag outs, dag ins, string asm,
                      list<dag> pattern = []> {
@@ -2148,12 +2217,17 @@ class DS_Real_si <bits<8> op, string opName, dag outs, dag ins, string asm> :
   DSe <op>,
   SIMCInstr <opName, SISubtarget.SI> {
   let isCodeGenOnly = 0;
+  let DecoderNamespace="SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class DS_Real_vi <bits<8> op, string opName, dag outs, dag ins, string asm> :
   DS <outs, ins, asm, []>,
   DSe_vi <op>,
-  SIMCInstr <opName, SISubtarget.VI>;
+  SIMCInstr <opName, SISubtarget.VI> {
+  let DecoderNamespace="VI";
+  let DisableDecoder = DisableVIDecoder;
+}
 
 class DS_Off16_Real_si <bits<8> op, string opName, dag outs, dag ins, string asm> :
   DS_Real_si <op,opName, outs, ins, asm> {
@@ -2354,12 +2428,18 @@ class MTBUF_Real_si <bits<3> op, string opName, dag outs, dag ins,
                     string asm> :
   MTBUF <outs, ins, asm, []>,
   MTBUFe <op>,
-  SIMCInstr<opName, SISubtarget.SI>;
+  SIMCInstr<opName, SISubtarget.SI> {
+  let DecoderNamespace="SICI";
+  let DisableDecoder = DisableSIDecoder;
+}
 
 class MTBUF_Real_vi <bits<4> op, string opName, dag outs, dag ins, string asm> :
   MTBUF <outs, ins, asm, []>,
   MTBUFe_vi <op>,
-  SIMCInstr <opName, SISubtarget.VI>;
+  SIMCInstr <opName, SISubtarget.VI> {
+  let DecoderNamespace="VI";
+  let DisableDecoder = DisableVIDecoder;
+}
 
 multiclass MTBUF_m <bits<3> op, string opName, dag outs, dag ins, string asm,
                     list<dag> pattern> {
@@ -2450,6 +2530,8 @@ class MUBUF_Real_si <mubuf op, string opName, dag outs, dag ins,
   MUBUFe <op.SI>,
   SIMCInstr<opName, SISubtarget.SI> {
   let lds = 0;
+  let DecoderNamespace="SICI";
+  let DisableDecoder = DisableSIDecoder;
 }
 
 class MUBUF_Real_vi <mubuf op, string opName, dag outs, dag ins,
@@ -2458,6 +2540,8 @@ class MUBUF_Real_vi <mubuf op, string opName, dag outs, dag ins,
   MUBUFe_vi <op.VI>,
   SIMCInstr<opName, SISubtarget.VI> {
   let lds = 0;
+  let DecoderNamespace="VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 multiclass MUBUF_m <mubuf op, string opName, dag outs, dag ins, string asm,
@@ -2721,12 +2805,15 @@ class FLAT_Real_ci <bits<7> op, string opName, dag outs, dag ins, string asm> :
     FLAT <op, outs, ins, asm, []>,
     SIMCInstr<opName, SISubtarget.SI> {
   let AssemblerPredicate = isCIOnly;
+  let DecoderNamespace="CI";
 }
 
 class FLAT_Real_vi <bits<7> op, string opName, dag outs, dag ins, string asm> :
     FLAT <op, outs, ins, asm, []>,
     SIMCInstr<opName, SISubtarget.VI> {
   let AssemblerPredicate = VIAssemblerPredicate;
+  let DecoderNamespace="VI";
+  let DisableDecoder = DisableVIDecoder;
 }
 
 multiclass FLAT_AtomicRet_m <flat op, dag outs, dag ins, string asm,
@@ -2807,9 +2894,19 @@ class MIMG_Mask <string op, int channels> {
   int Channels = channels;
 }
 
+class MIMG_Helper <bits<7> op, dag outs, dag ins, string asm,
+                   string dns=""> : MIMG<op, outs, ins, asm,[]> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasPostISelHook = 1;
+  let DecoderNamespace = dns;
+  let isAsmParserOnly = !if(!eq(dns,""), 1, 0);
+}
+
 class MIMG_NoSampler_Helper <bits<7> op, string asm,
                              RegisterClass dst_rc,
-                             RegisterClass src_rc> : MIMG <
+                             RegisterClass src_rc,
+                             string dns=""> : MIMG_Helper <
   op,
   (outs dst_rc:$vdata),
   (ins i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
@@ -2817,17 +2914,15 @@ class MIMG_NoSampler_Helper <bits<7> op, string asm,
        SReg_256:$srsrc),
   asm#" $vdata, $dmask, $unorm, $glc, $da, $r128,"
      #" $tfe, $lwe, $slc, $vaddr, $srsrc",
-  []> {
+  dns> {
   let ssamp = 0;
-  let mayLoad = 1;
-  let mayStore = 0;
-  let hasPostISelHook = 1;
 }
 
 multiclass MIMG_NoSampler_Src_Helper <bits<7> op, string asm,
                                       RegisterClass dst_rc,
                                       int channels> {
-  def _V1 : MIMG_NoSampler_Helper <op, asm, dst_rc, VGPR_32>,
+  def _V1 : MIMG_NoSampler_Helper <op, asm, dst_rc, VGPR_32,
+                                   !if(!eq(channels, 1), "AMDGPU", "")>,
             MIMG_Mask<asm#"_V1", channels>;
   def _V2 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_64>,
             MIMG_Mask<asm#"_V2", channels>;
@@ -2844,7 +2939,9 @@ multiclass MIMG_NoSampler <bits<7> op, string asm> {
 
 class MIMG_Sampler_Helper <bits<7> op, string asm,
                            RegisterClass dst_rc,
-                           RegisterClass src_rc, int wqm> : MIMG <
+                           RegisterClass src_rc,
+                           int wqm,
+                           string dns=""> : MIMG_Helper <
   op,
   (outs dst_rc:$vdata),
   (ins i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
@@ -2852,17 +2949,15 @@ class MIMG_Sampler_Helper <bits<7> op, string asm,
        SReg_256:$srsrc, SReg_128:$ssamp),
   asm#" $vdata, $dmask, $unorm, $glc, $da, $r128,"
      #" $tfe, $lwe, $slc, $vaddr, $srsrc, $ssamp",
-  []> {
-  let mayLoad = 1;
-  let mayStore = 0;
-  let hasPostISelHook = 1;
+  dns> {
   let WQM = wqm;
 }
 
 multiclass MIMG_Sampler_Src_Helper <bits<7> op, string asm,
                                     RegisterClass dst_rc,
                                     int channels, int wqm> {
-  def _V1 : MIMG_Sampler_Helper <op, asm, dst_rc, VGPR_32, wqm>,
+  def _V1 : MIMG_Sampler_Helper <op, asm, dst_rc, VGPR_32, wqm,
+                                 !if(!eq(channels, 1), "AMDGPU", "")>,
             MIMG_Mask<asm#"_V1", channels>;
   def _V2 : MIMG_Sampler_Helper <op, asm, dst_rc, VReg_64, wqm>,
             MIMG_Mask<asm#"_V2", channels>;
@@ -2874,19 +2969,14 @@ multiclass MIMG_Sampler_Src_Helper <bits<7> op, string asm,
             MIMG_Mask<asm#"_V16", channels>;
 }
 
-multiclass MIMG_Sampler <bits<7> op, string asm> {
-  defm _V1 : MIMG_Sampler_Src_Helper<op, asm, VGPR_32, 1, 0>;
-  defm _V2 : MIMG_Sampler_Src_Helper<op, asm, VReg_64, 2, 0>;
-  defm _V3 : MIMG_Sampler_Src_Helper<op, asm, VReg_96, 3, 0>;
-  defm _V4 : MIMG_Sampler_Src_Helper<op, asm, VReg_128, 4, 0>;
+multiclass MIMG_Sampler <bits<7> op, string asm, int wqm=0> {
+  defm _V1 : MIMG_Sampler_Src_Helper<op, asm, VGPR_32, 1, wqm>;
+  defm _V2 : MIMG_Sampler_Src_Helper<op, asm, VReg_64, 2, wqm>;
+  defm _V3 : MIMG_Sampler_Src_Helper<op, asm, VReg_96, 3, wqm>;
+  defm _V4 : MIMG_Sampler_Src_Helper<op, asm, VReg_128, 4, wqm>;
 }
 
-multiclass MIMG_Sampler_WQM <bits<7> op, string asm> {
-  defm _V1 : MIMG_Sampler_Src_Helper<op, asm, VGPR_32, 1, 1>;
-  defm _V2 : MIMG_Sampler_Src_Helper<op, asm, VReg_64, 2, 1>;
-  defm _V3 : MIMG_Sampler_Src_Helper<op, asm, VReg_96, 3, 1>;
-  defm _V4 : MIMG_Sampler_Src_Helper<op, asm, VReg_128, 4, 1>;
-}
+multiclass MIMG_Sampler_WQM <bits<7> op, string asm> : MIMG_Sampler<op, asm, 1>;
 
 class MIMG_Gather_Helper <bits<7> op, string asm,
                           RegisterClass dst_rc,
@@ -2912,6 +3002,8 @@ class MIMG_Gather_Helper <bits<7> op, string asm,
   let MIMG = 0;
   let hasPostISelHook = 0;
   let WQM = wqm;
+
+  let isAsmParserOnly = 1; // TBD: fix it later
 }
 
 multiclass MIMG_Gather_Src_Helper <bits<7> op, string asm,
@@ -2929,19 +3021,14 @@ multiclass MIMG_Gather_Src_Helper <bits<7> op, string asm,
             MIMG_Mask<asm#"_V16", channels>;
 }
 
-multiclass MIMG_Gather <bits<7> op, string asm> {
-  defm _V1 : MIMG_Gather_Src_Helper<op, asm, VGPR_32, 1, 0>;
-  defm _V2 : MIMG_Gather_Src_Helper<op, asm, VReg_64, 2, 0>;
-  defm _V3 : MIMG_Gather_Src_Helper<op, asm, VReg_96, 3, 0>;
-  defm _V4 : MIMG_Gather_Src_Helper<op, asm, VReg_128, 4, 0>;
+multiclass MIMG_Gather <bits<7> op, string asm, int wqm=0> {
+  defm _V1 : MIMG_Gather_Src_Helper<op, asm, VGPR_32, 1, wqm>;
+  defm _V2 : MIMG_Gather_Src_Helper<op, asm, VReg_64, 2, wqm>;
+  defm _V3 : MIMG_Gather_Src_Helper<op, asm, VReg_96, 3, wqm>;
+  defm _V4 : MIMG_Gather_Src_Helper<op, asm, VReg_128, 4, wqm>;
 }
 
-multiclass MIMG_Gather_WQM <bits<7> op, string asm> {
-  defm _V1 : MIMG_Gather_Src_Helper<op, asm, VGPR_32, 1, 1>;
-  defm _V2 : MIMG_Gather_Src_Helper<op, asm, VReg_64, 2, 1>;
-  defm _V3 : MIMG_Gather_Src_Helper<op, asm, VReg_96, 3, 1>;
-  defm _V4 : MIMG_Gather_Src_Helper<op, asm, VReg_128, 4, 1>;
-}
+multiclass MIMG_Gather_WQM <bits<7> op, string asm> : MIMG_Gather<op, asm, 1>;
 
 //===----------------------------------------------------------------------===//
 // Vector instruction mappings
