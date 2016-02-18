@@ -492,6 +492,9 @@ if (defined $ENV{'CCC_ANALYZER_LOG'}) { $Verbose = 2; }
 # Get the HTML output directory.
 my $HtmlDir = $ENV{'CCC_ANALYZER_HTML'};
 
+# Get force-analyze-debug-code option.
+my $ForceAnalyzeDebugCode = $ENV{'CCC_ANALYZER_FORCE_ANALYZE_DEBUG_CODE'};
+
 my %DisabledArchs = ('ppc' => 1, 'ppc64' => 1);
 my %ArchsSeen;
 my $HadArch = 0;
@@ -680,6 +683,11 @@ foreach (my $i = 0; $i < scalar(@ARGV); ++$i) {
     push @Files, $Arg;
     next;
   }
+}
+
+# Forcedly enable debugging if requested by user.
+if ($ForceAnalyzeDebugCode) {
+  push @CompileOpts, '-UNDEBUG';
 }
 
 # If we are on OSX and have an installation where the
