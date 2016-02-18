@@ -431,6 +431,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
       }
     }
 
+    ExprResult OrigLHS = LHS;
     if (!LHS.isInvalid()) {
       // Combine the LHS and RHS into the LHS (e.g. build AST).
       if (TernaryMiddle.isInvalid()) {
@@ -445,12 +446,15 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
 
         LHS = Actions.ActOnBinOp(getCurScope(), OpToken.getLocation(),
                                  OpToken.getKind(), LHS.get(), RHS.get());
-      } else
+      } else {
         LHS = Actions.ActOnConditionalOp(OpToken.getLocation(), ColonLoc,
                                          LHS.get(), TernaryMiddle.get(),
                                          RHS.get());
-    } else {
-      // Ensure potential typos aren't left undiagnosed.
+      }
+    }
+    // Ensure potential typos aren't left undiagnosed.
+    if (LHS.isInvalid()) {
+      Actions.CorrectDelayedTyposInExpr(OrigLHS);
       Actions.CorrectDelayedTyposInExpr(TernaryMiddle);
       Actions.CorrectDelayedTyposInExpr(RHS);
     }

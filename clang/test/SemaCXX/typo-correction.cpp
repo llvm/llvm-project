@@ -665,3 +665,8 @@ using C::D::Foofoo;  // expected-error {{no member named 'Foofoo' in namespace '
 }
 
 int d = ? L : d; // expected-error {{expected expression}} expected-error {{undeclared identifier}}
+
+struct B0 {
+  int : 0 |         // expected-error {{invalid operands to binary expression}}
+      (struct B0)e; // expected-error {{use of undeclared identifier}}
+};

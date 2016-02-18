@@ -2110,6 +2110,7 @@ public:
                                           VersionTuple Obsoleted,
                                           bool IsUnavailable,
                                           StringRef Message,
+                                          bool IsNopartial,
                                           AvailabilityMergeKind AMK,
                                           unsigned AttrSpellingListIndex);
   TypeVisibilityAttr *mergeTypeVisibilityAttr(Decl *D, SourceRange Range,
@@ -3547,7 +3548,8 @@ public:
 
   void redelayDiagnostics(sema::DelayedDiagnosticPool &pool);
 
-  enum AvailabilityDiagnostic { AD_Deprecation, AD_Unavailable, AD_Partial };
+  enum AvailabilityDiagnostic { AD_Deprecation, AD_Unavailable, AD_Partial,
+                                AD_NotYetIntroduced };
 
   void EmitAvailabilityWarning(AvailabilityDiagnostic AD,
                                NamedDecl *D, StringRef Message,
@@ -6628,6 +6630,10 @@ public:
   /// name lookup. A module and its imports become visible when instanting a
   /// template defined within it.
   llvm::DenseSet<Module*> &getLookupModules();
+
+  /// \brief Map from the most recent declaration of a namespace to the most
+  /// recent visible declaration of that namespace.
+  llvm::DenseMap<NamedDecl*, NamedDecl*> VisibleNamespaceCache;
 
   /// \brief Whether we are in a SFINAE context that is not associated with
   /// template instantiation.
