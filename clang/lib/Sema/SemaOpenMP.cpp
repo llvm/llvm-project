@@ -3205,7 +3205,7 @@ public:
         NewVD->setInitStyle(VD->getInitStyle());
         NewVD->setExceptionVariable(VD->isExceptionVariable());
         NewVD->setNRVOVariable(VD->isNRVOVariable());
-        NewVD->setCXXForRangeDecl(VD->isInExternCXXContext());
+        NewVD->setCXXForRangeDecl(VD->isCXXForRangeDecl());
         NewVD->setConstexpr(VD->isConstexpr());
         NewVD->setInitCapture(VD->isInitCapture());
         NewVD->setPreviousDeclInSameBlockScope(
@@ -3250,14 +3250,20 @@ OpenMPIterationSpaceChecker::BuildNumIterations(Scope *S,
     Expr *Lower = Transform.TransformExpr(LBExpr).get();
     if (!Upper || !Lower)
       return nullptr;
-    Upper = SemaRef.PerformImplicitConversion(Upper, UBExpr->getType(),
-                                                    Sema::AA_Converting,
-                                                    /*AllowExplicit=*/true)
-                      .get();
-    Lower = SemaRef.PerformImplicitConversion(Lower, LBExpr->getType(),
-                                              Sema::AA_Converting,
-                                              /*AllowExplicit=*/true)
-                .get();
+    if (!SemaRef.Context.hasSameType(Upper->getType(), UBExpr->getType())) {
+      Upper = SemaRef
+                  .PerformImplicitConversion(Upper, UBExpr->getType(),
+                                             Sema::AA_Converting,
+                                             /*AllowExplicit=*/true)
+                  .get();
+    }
+    if (!SemaRef.Context.hasSameType(Lower->getType(), LBExpr->getType())) {
+      Lower = SemaRef
+                  .PerformImplicitConversion(Lower, LBExpr->getType(),
+                                             Sema::AA_Converting,
+                                             /*AllowExplicit=*/true)
+                  .get();
+    }
     if (!Upper || !Lower)
       return nullptr;
 
@@ -3284,14 +3290,18 @@ OpenMPIterationSpaceChecker::BuildNumIterations(Scope *S,
     return nullptr;
 
   // Upper - Lower [- 1] + Step
-  auto NewStep = Transform.TransformExpr(Step->IgnoreImplicit());
+  auto *StepNoImp = Step->IgnoreImplicit();
+  auto NewStep = Transform.TransformExpr(StepNoImp);
   if (NewStep.isInvalid())
     return nullptr;
-  NewStep = SemaRef.PerformImplicitConversion(
-      NewStep.get(), Step->IgnoreImplicit()->getType(), Sema::AA_Converting,
-      /*AllowExplicit=*/true);
-  if (NewStep.isInvalid())
-    return nullptr;
+  if (!SemaRef.Context.hasSameType(NewStep.get()->getType(),
+                                   StepNoImp->getType())) {
+    NewStep = SemaRef.PerformImplicitConversion(
+        NewStep.get(), StepNoImp->getType(), Sema::AA_Converting,
+        /*AllowExplicit=*/true);
+    if (NewStep.isInvalid())
+      return nullptr;
+  }
   Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Add, Diff.get(), NewStep.get());
   if (!Diff.isUsable())
     return nullptr;
@@ -3302,14 +3312,17 @@ OpenMPIterationSpaceChecker::BuildNumIterations(Scope *S,
     return nullptr;
 
   // (Upper - Lower [- 1] + Step) / Step
-  NewStep = Transform.TransformExpr(Step->IgnoreImplicit());
+  NewStep = Transform.TransformExpr(StepNoImp);
   if (NewStep.isInvalid())
     return nullptr;
-  NewStep = SemaRef.PerformImplicitConversion(
-      NewStep.get(), Step->IgnoreImplicit()->getType(), Sema::AA_Converting,
-      /*AllowExplicit=*/true);
-  if (NewStep.isInvalid())
-    return nullptr;
+  if (!SemaRef.Context.hasSameType(NewStep.get()->getType(),
+                                   StepNoImp->getType())) {
+    NewStep = SemaRef.PerformImplicitConversion(
+        NewStep.get(), StepNoImp->getType(), Sema::AA_Converting,
+        /*AllowExplicit=*/true);
+    if (NewStep.isInvalid())
+      return nullptr;
+  }
   Diff = SemaRef.BuildBinOp(S, DefaultLoc, BO_Div, Diff.get(), NewStep.get());
   if (!Diff.isUsable())
     return nullptr;
@@ -3325,10 +3338,12 @@ OpenMPIterationSpaceChecker::BuildNumIterations(Scope *S,
     bool IsSigned = UseVarType ? VarType->hasSignedIntegerRepresentation()
                                : Type->hasSignedIntegerRepresentation();
     Type = C.getIntTypeForBitwidth(NewSize, IsSigned);
-    Diff = SemaRef.PerformImplicitConversion(
-        Diff.get(), Type, Sema::AA_Converting, /*AllowExplicit=*/true);
-    if (!Diff.isUsable())
-      return nullptr;
+    if (!SemaRef.Context.hasSameType(Diff.get()->getType(), Type)) {
+      Diff = SemaRef.PerformImplicitConversion(
+          Diff.get(), Type, Sema::AA_Converting, /*AllowExplicit=*/true);
+      if (!Diff.isUsable())
+        return nullptr;
+    }
   }
   if (LimitedType) {
     unsigned NewSize = (C.getTypeSize(Type) > 32) ? 64 : 32;
@@ -3341,10 +3356,12 @@ OpenMPIterationSpaceChecker::BuildNumIterations(Scope *S,
       QualType NewType = C.getIntTypeForBitwidth(
           NewSize, Type->hasSignedIntegerRepresentation() ||
                        C.getTypeSize(Type) < NewSize);
-      Diff = SemaRef.PerformImplicitConversion(Diff.get(), NewType,
-                                               Sema::AA_Converting, true);
-      if (!Diff.isUsable())
-        return nullptr;
+      if (!SemaRef.Context.hasSameType(Diff.get()->getType(), NewType)) {
+        Diff = SemaRef.PerformImplicitConversion(Diff.get(), NewType,
+                                                 Sema::AA_Converting, true);
+        if (!Diff.isUsable())
+          return nullptr;
+      }
     }
   }
 
@@ -3361,12 +3378,16 @@ Expr *OpenMPIterationSpaceChecker::BuildPreCond(Scope *S, Expr *Cond) const {
   auto NewUB = Transform.TransformExpr(UB);
   if (NewLB.isInvalid() || NewUB.isInvalid())
     return Cond;
-  NewLB = SemaRef.PerformImplicitConversion(NewLB.get(), LB->getType(),
-                                            Sema::AA_Converting,
-                                            /*AllowExplicit=*/true);
-  NewUB = SemaRef.PerformImplicitConversion(NewUB.get(), UB->getType(),
-                                            Sema::AA_Converting,
-                                            /*AllowExplicit=*/true);
+  if (!SemaRef.Context.hasSameType(NewLB.get()->getType(), LB->getType())) {
+    NewLB = SemaRef.PerformImplicitConversion(NewLB.get(), LB->getType(),
+                                              Sema::AA_Converting,
+                                              /*AllowExplicit=*/true);
+  }
+  if (!SemaRef.Context.hasSameType(NewUB.get()->getType(), UB->getType())) {
+    NewUB = SemaRef.PerformImplicitConversion(NewUB.get(), UB->getType(),
+                                              Sema::AA_Converting,
+                                              /*AllowExplicit=*/true);
+  }
   if (NewLB.isInvalid() || NewUB.isInvalid())
     return Cond;
   auto CondExpr = SemaRef.BuildBinOp(
@@ -3374,9 +3395,11 @@ Expr *OpenMPIterationSpaceChecker::BuildPreCond(Scope *S, Expr *Cond) const {
                                   : (TestIsStrictOp ? BO_GT : BO_GE),
       NewLB.get(), NewUB.get());
   if (CondExpr.isUsable()) {
-    CondExpr = SemaRef.PerformImplicitConversion(
-        CondExpr.get(), SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
-        /*AllowExplicit=*/true);
+    if (!SemaRef.Context.hasSameType(CondExpr.get()->getType(),
+                                     SemaRef.Context.BoolTy))
+      CondExpr = SemaRef.PerformImplicitConversion(
+          CondExpr.get(), SemaRef.Context.BoolTy, /*Action=*/Sema::AA_Casting,
+          /*AllowExplicit=*/true);
   }
   SemaRef.getDiagnostics().setSuppressAllDiagnostics(Suppress);
   // Otherwise use original loop conditon and evaluate it in runtime.
@@ -3603,20 +3626,26 @@ static ExprResult BuildCounterInit(Sema &SemaRef, Scope *S, SourceLocation Loc,
                                    ExprResult VarRef, ExprResult Start) {
   TransformToNewDefs Transform(SemaRef);
   // Build 'VarRef = Start.
-  auto NewStart = Transform.TransformExpr(Start.get()->IgnoreImplicit());
+  auto *StartNoImp = Start.get()->IgnoreImplicit();
+  auto NewStart = Transform.TransformExpr(StartNoImp);
   if (NewStart.isInvalid())
     return ExprError();
-  NewStart = SemaRef.PerformImplicitConversion(
-      NewStart.get(), Start.get()->IgnoreImplicit()->getType(),
-      Sema::AA_Converting,
-      /*AllowExplicit=*/true);
-  if (NewStart.isInvalid())
-    return ExprError();
-  NewStart = SemaRef.PerformImplicitConversion(
-      NewStart.get(), VarRef.get()->getType(), Sema::AA_Converting,
-      /*AllowExplicit=*/true);
-  if (!NewStart.isUsable())
-    return ExprError();
+  if (!SemaRef.Context.hasSameType(NewStart.get()->getType(),
+                                   StartNoImp->getType())) {
+    NewStart = SemaRef.PerformImplicitConversion(
+        NewStart.get(), StartNoImp->getType(), Sema::AA_Converting,
+        /*AllowExplicit=*/true);
+    if (NewStart.isInvalid())
+      return ExprError();
+  }
+  if (!SemaRef.Context.hasSameType(NewStart.get()->getType(),
+                                   VarRef.get()->getType())) {
+    NewStart = SemaRef.PerformImplicitConversion(
+        NewStart.get(), VarRef.get()->getType(), Sema::AA_Converting,
+        /*AllowExplicit=*/true);
+    if (!NewStart.isUsable())
+      return ExprError();
+  }
 
   auto Init =
       SemaRef.BuildBinOp(S, Loc, BO_Assign, VarRef.get(), NewStart.get());
@@ -3634,31 +3663,37 @@ static ExprResult BuildCounterUpdate(Sema &SemaRef, Scope *S,
       !Step.isUsable())
     return ExprError();
 
+  auto *StepNoImp = Step.get()->IgnoreImplicit();
   TransformToNewDefs Transform(SemaRef);
-  auto NewStep = Transform.TransformExpr(Step.get()->IgnoreImplicit());
+  auto NewStep = Transform.TransformExpr(StepNoImp);
   if (NewStep.isInvalid())
     return ExprError();
-  NewStep = SemaRef.PerformImplicitConversion(
-      NewStep.get(), Step.get()->IgnoreImplicit()->getType(),
-      Sema::AA_Converting,
-      /*AllowExplicit=*/true);
-  if (NewStep.isInvalid())
-    return ExprError();
+  if (!SemaRef.Context.hasSameType(NewStep.get()->getType(),
+                                   StepNoImp->getType())) {
+    NewStep = SemaRef.PerformImplicitConversion(
+        NewStep.get(), StepNoImp->getType(), Sema::AA_Converting,
+        /*AllowExplicit=*/true);
+    if (NewStep.isInvalid())
+      return ExprError();
+  }
   ExprResult Update =
       SemaRef.BuildBinOp(S, Loc, BO_Mul, Iter.get(), NewStep.get());
   if (!Update.isUsable())
     return ExprError();
 
   // Build 'VarRef = Start + Iter * Step'.
-  auto NewStart = Transform.TransformExpr(Start.get()->IgnoreImplicit());
+  auto *StartNoImp = Start.get()->IgnoreImplicit();
+  auto NewStart = Transform.TransformExpr(StartNoImp);
   if (NewStart.isInvalid())
     return ExprError();
-  NewStart = SemaRef.PerformImplicitConversion(
-      NewStart.get(), Start.get()->IgnoreImplicit()->getType(),
-      Sema::AA_Converting,
-      /*AllowExplicit=*/true);
-  if (NewStart.isInvalid())
-    return ExprError();
+  if (!SemaRef.Context.hasSameType(NewStart.get()->getType(),
+                                   StartNoImp->getType())) {
+    NewStart = SemaRef.PerformImplicitConversion(
+        NewStart.get(), StartNoImp->getType(), Sema::AA_Converting,
+        /*AllowExplicit=*/true);
+    if (NewStart.isInvalid())
+      return ExprError();
+  }
   Update = SemaRef.BuildBinOp(S, Loc, (Subtract ? BO_Sub : BO_Add),
                               NewStart.get(), Update.get());
   if (!Update.isUsable())
