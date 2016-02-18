@@ -585,71 +585,48 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
     EmitBlock(ThenBB);
   }
   llvm::DenseMap<const Decl *, const Expr *> LoopCountersAndUpdates;
-  const Expr *LastIterVal = nullptr;
-  const Expr *IVExpr = nullptr;
-  const Expr *IncExpr = nullptr;
   if (auto *LoopDirective = dyn_cast<OMPLoopDirective>(&D)) {
-    if (isOpenMPWorksharingDirective(D.getDirectiveKind())) {
-      LastIterVal = cast<VarDecl>(cast<DeclRefExpr>(
-                                      LoopDirective->getUpperBoundVariable())
-                                      ->getDecl())
-                        ->getAnyInitializer();
-      IVExpr = LoopDirective->getIterationVariable();
-      IncExpr = LoopDirective->getInc();
-      auto IUpdate = LoopDirective->updates().begin();
-      for (auto *E : LoopDirective->counters()) {
-        auto *D = cast<DeclRefExpr>(E)->getDecl()->getCanonicalDecl();
-        LoopCountersAndUpdates[D] = *IUpdate;
-        ++IUpdate;
-      }
+    auto IC = LoopDirective->counters().begin();
+    for (auto F : LoopDirective->finals()) {
+      auto *D = cast<DeclRefExpr>(*IC)->getDecl()->getCanonicalDecl();
+      LoopCountersAndUpdates[D] = F;
+      ++IC;
     }
   }
-  {
-    llvm::DenseSet<const VarDecl *> AlreadyEmittedVars;
-    bool FirstLCV = true;
-    for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
-      auto IRef = C->varlist_begin();
-      auto ISrcRef = C->source_exprs().begin();
-      auto IDestRef = C->destination_exprs().begin();
-      for (auto *AssignOp : C->assignment_ops()) {
-        auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
-        QualType Type = PrivateVD->getType();
-        auto *CanonicalVD = PrivateVD->getCanonicalDecl();
-        if (AlreadyEmittedVars.insert(CanonicalVD).second) {
-          // If lastprivate variable is a loop control variable for loop-based
-          // directive, update its value before copyin back to original
-          // variable.
-          if (auto *UpExpr = LoopCountersAndUpdates.lookup(CanonicalVD)) {
-            if (FirstLCV && LastIterVal) {
-              EmitAnyExprToMem(LastIterVal, EmitLValue(IVExpr).getAddress(),
-                               IVExpr->getType().getQualifiers(),
-                               /*IsInitializer=*/false);
-              EmitIgnoredExpr(IncExpr);
-              FirstLCV = false;
-            }
-            EmitIgnoredExpr(UpExpr);
-          }
-          auto *SrcVD = cast<VarDecl>(cast<DeclRefExpr>(*ISrcRef)->getDecl());
-          auto *DestVD = cast<VarDecl>(cast<DeclRefExpr>(*IDestRef)->getDecl());
-          // Get the address of the original variable.
-          Address OriginalAddr = GetAddrOfLocalVar(DestVD);
-          // Get the address of the private variable.
-          Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
-          if (auto RefTy = PrivateVD->getType()->getAs<ReferenceType>())
-            PrivateAddr =
+  llvm::DenseSet<const VarDecl *> AlreadyEmittedVars;
+  for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
+    auto IRef = C->varlist_begin();
+    auto ISrcRef = C->source_exprs().begin();
+    auto IDestRef = C->destination_exprs().begin();
+    for (auto *AssignOp : C->assignment_ops()) {
+      auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
+      QualType Type = PrivateVD->getType();
+      auto *CanonicalVD = PrivateVD->getCanonicalDecl();
+      if (AlreadyEmittedVars.insert(CanonicalVD).second) {
+        // If lastprivate variable is a loop control variable for loop-based
+        // directive, update its value before copyin back to original
+        // variable.
+        if (auto *UpExpr = LoopCountersAndUpdates.lookup(CanonicalVD))
+          EmitIgnoredExpr(UpExpr);
+        auto *SrcVD = cast<VarDecl>(cast<DeclRefExpr>(*ISrcRef)->getDecl());
+        auto *DestVD = cast<VarDecl>(cast<DeclRefExpr>(*IDestRef)->getDecl());
+        // Get the address of the original variable.
+        Address OriginalAddr = GetAddrOfLocalVar(DestVD);
+        // Get the address of the private variable.
+        Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
+        if (auto RefTy = PrivateVD->getType()->getAs<ReferenceType>())
+          PrivateAddr =
               Address(Builder.CreateLoad(PrivateAddr),
                       getNaturalTypeAlignment(RefTy->getPointeeType()));
-          EmitOMPCopy(Type, OriginalAddr, PrivateAddr, DestVD, SrcVD, AssignOp);
-        }
-        ++IRef;
-        ++ISrcRef;
-        ++IDestRef;
+        EmitOMPCopy(Type, OriginalAddr, PrivateAddr, DestVD, SrcVD, AssignOp);
       }
+      ++IRef;
+      ++ISrcRef;
+      ++IDestRef;
     }
   }
-  if (IsLastIterCond) {
+  if (IsLastIterCond)
     EmitBlock(DoneBB, /*IsFinished=*/true);
-  }
 }
 
 void CodeGenFunction::EmitOMPReductionClauseInit(
@@ -919,10 +896,6 @@ void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,
   // The end (updates/cleanups).
   EmitBlock(Continue.getBlock());
   BreakContinueStack.pop_back();
-    // TODO: Update lastprivates if the SeparateIter flag is true.
-    // This will be implemented in a follow-up OMPLastprivateClause patch, but
-    // result should be still correct without it, as we do not make these
-    // variables private yet.
 }
 
 void CodeGenFunction::EmitOMPInnerLoop(
