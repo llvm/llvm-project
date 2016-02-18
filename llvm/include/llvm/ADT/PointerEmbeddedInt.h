@@ -60,11 +60,7 @@ public:
 
   PointerEmbeddedInt &operator=(IntT I) {
     assert((std::is_signed<IntT>::value ? llvm::isInt<Bits>(I)
-<<<<<<< HEAD
-                                        : llvm::isUInt<Bits>(I)) && 
-=======
                                         : llvm::isUInt<Bits>(I)) &&
->>>>>>> upstream/master
            "Integer has bits outside those preserved!");
     Value = static_cast<uintptr_t>(I) << Shift;
     return *this;
