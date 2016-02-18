@@ -10,6 +10,7 @@ import os, time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 
 class AsanTestCase(TestBase):
@@ -20,7 +21,7 @@ class AsanTestCase(TestBase):
     @skipIfFreeBSD # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessCompilerRt
-    @expectedFailureDarwin
+    @expectedFailureAll(oslist=lldbplatform.darwin_all)
     def test (self):
         self.build ()
         self.asan_tests ()

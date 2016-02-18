@@ -1090,9 +1090,9 @@ extern void __kmp_x86_cpuid( int mode, int mode2, struct kmp_cpuid *p );
 # if KMP_ARCH_X86
   extern void __kmp_x86_pause( void );
 # elif KMP_MIC
-  static void __kmp_x86_pause( void ) { _mm_delay_32( 100 ); };
+  static void __kmp_x86_pause( void ) { _mm_delay_32( 100 ); }
 # else
-  static void __kmp_x86_pause( void ) { _mm_pause(); };
+  static void __kmp_x86_pause( void ) { _mm_pause(); }
 # endif
 # define KMP_CPU_PAUSE() __kmp_x86_pause()
 #elif KMP_ARCH_PPC64
