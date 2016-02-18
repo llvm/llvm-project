@@ -18,7 +18,7 @@ class UniversalTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
-        self.line = line_number('main.c', '// Set break point at this line.')
+        self.line = line_number('main.c',  '// Set break point at this line.')
 
     @add_test_categories(['pyapi'])
     @skipUnlessDarwin
@@ -107,3 +107,51 @@ class UniversalTestCase(TestBase):
             substrs = ['Name: eax'])
 
         self.runCmd("continue")
+
+        
+    @skipUnlessDarwin
+    @unittest2.skipUnless(hasattr(os, "uname") and os.uname()[4] in ['i386', 'x86_64'],
+            "requires i386 or x86_64")
+    def test_process_attach_with_wrong_arch(self):
+        """Test that when we attach to a binary from the wrong fork of a universal binary, we fix up the ABI correctly."""
+        # Now keep the architecture at 32 bit, but switch the binary we launch to
+        # 64 bit, and make sure on attach we switch to the correct architecture.
+
+        # Invoke the default build rule.
+        self.build()
+
+        # Note that "testit" is a universal binary.
+        exe = os.path.join(os.getcwd(), "testit")
+
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTargetWithFileAndTargetTriple(exe, "i386-apple-macosx")
+        self.assertTrue(target, VALID_TARGET)
+        pointer_size = target.GetAddressByteSize()
+        self.assertTrue(pointer_size == 4, "Initially we were 32 bit.")
+
+        bkpt = target.BreakpointCreateBySourceRegex("sleep", lldb.SBFileSpec("main.c"))
+        self.assertTrue (bkpt.IsValid(), "Valid breakpoint")
+        self.assertTrue(bkpt.GetNumLocations() >= 1, "Our main breakpoint has locations.")
+
+        popen = self.spawnSubprocess(exe, ["keep_waiting"])
+        self.addTearDownHook(self.cleanupSubprocesses)
+
+        error = lldb.SBError()
+        empty_listener = lldb.SBListener()
+        process = target.AttachToProcessWithID(empty_listener, popen.pid, error)
+        self.assertTrue(error.Success(), "Attached to process.")
+
+        pointer_size = target.GetAddressByteSize()
+        self.assertTrue(pointer_size == 8, "We switched to 64 bit.")
+
+        # It may seem odd that I am checking the number of frames, but the bug that
+        # motivated this test was that we eventually fixed the architecture, but we
+        # left the ABI set to the original value.  In that case, if you asked the
+        # process for its architecture, it would look right, but since the ABI was
+        # wrong, backtracing failed.
+
+        threads = lldbutil.continue_to_breakpoint(process, bkpt)
+        self.assertTrue(len(threads) == 1)
+        thread = threads[0]
+        self.assertTrue(thread.GetNumFrames() > 1, "We were able to backtrace.")
