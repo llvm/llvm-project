@@ -35,13 +35,15 @@ namespace __sanitizer {
 
 // --------------------- sanitizer_common.h
 uptr GetPageSize() {
-  // FIXME: there is an API for getting the system page size (GetSystemInfo or
-  // GetNativeSystemInfo), but if we use it here we get test failures elsewhere.
-  return 1U << 14;
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  return si.dwPageSize;
 }
 
 uptr GetMmapGranularity() {
-  return 1U << 16;  // FIXME: is this configurable?
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  return si.dwAllocationGranularity;
 }
 
 uptr GetMaxVirtualAddress() {
