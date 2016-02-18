@@ -313,6 +313,8 @@ int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   }
 
   // All other insert/extracts cost this much.
+  if (ST->isKryo())
+    return 2;
   return 3;
 }
 

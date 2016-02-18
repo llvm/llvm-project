@@ -143,6 +143,35 @@ def int_amdgcn_cubetc : GCCBuiltin<"__builtin_amdgcn_cubetc">,
     [llvm_float_ty, llvm_float_ty, llvm_float_ty], [IntrNoMem]
 >;
 
+class AMDGPUImageLoad : Intrinsic <
+  [llvm_v4f32_ty],    // vdata(VGPR)
+  [llvm_anyint_ty,    // vaddr(VGPR)
+   llvm_v8i32_ty,     // rsrc(SGPR)
+   llvm_i32_ty,       // dmask(imm)
+   llvm_i1_ty,        // r128(imm)
+   llvm_i1_ty,        // da(imm)
+   llvm_i1_ty,        // glc(imm)
+   llvm_i1_ty],       // slc(imm)
+  [IntrReadMem]>;
+
+def int_amdgcn_image_load : AMDGPUImageLoad;
+def int_amdgcn_image_load_mip : AMDGPUImageLoad;
+
+class AMDGPUImageStore : Intrinsic <
+  [],
+  [llvm_v4f32_ty,     // vdata(VGPR)
+   llvm_anyint_ty,    // vaddr(VGPR)
+   llvm_v8i32_ty,     // rsrc(SGPR)
+   llvm_i32_ty,       // dmask(imm)
+   llvm_i1_ty,        // r128(imm)
+   llvm_i1_ty,        // da(imm)
+   llvm_i1_ty,        // glc(imm)
+   llvm_i1_ty],       // slc(imm)
+  []>;
+
+def int_amdgcn_image_store : AMDGPUImageStore;
+def int_amdgcn_image_store_mip : AMDGPUImageStore;
+
 def int_amdgcn_read_workdim : AMDGPUReadPreloadRegisterIntrinsic <
   "__builtin_amdgcn_read_workdim">;
 

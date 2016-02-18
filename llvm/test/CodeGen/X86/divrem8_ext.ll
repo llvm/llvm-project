@@ -6,9 +6,9 @@ target triple = "x86_64-apple-macosx10.10.0"
 define zeroext i8 @test_udivrem_zext_ah(i8 %x, i8 %y) {
 ; CHECK-LABEL: test_udivrem_zext_ah
 ; CHECK:   divb
-; CHECK:   movzbl %ah, %e[[REG_REM:[a-z]]]x
+; CHECK:   movzbl %ah, [[REG_REM:%[a-z0-9]+]]
 ; CHECK:   movb   %al, ([[REG_ZPTR:%[a-z0-9]+]])
-; CHECK:   movb   %[[REG_REM]]l, %al
+; CHECK:   movl   [[REG_REM]], %eax
 ; CHECK:   ret
   %div = udiv i8 %x, %y
   store i8 %div, i8* @z
@@ -51,9 +51,9 @@ define signext i8 @test_sdivrem_sext_ah(i8 %x, i8 %y) {
 ; CHECK-LABEL: test_sdivrem_sext_ah
 ; CHECK:   cbtw
 ; CHECK:   idivb
-; CHECK:   movsbl %ah, %e[[REG_REM:[a-z]]]x
+; CHECK:   movsbl %ah, [[REG_REM:%[a-z0-9]+]]
 ; CHECK:   movb   %al, ([[REG_ZPTR]])
-; CHECK:   movb   %[[REG_REM]]l, %al
+; CHECK:   movl   [[REG_REM]], %eax
 ; CHECK:   ret
   %div = sdiv i8 %x, %y
   store i8 %div, i8* @z

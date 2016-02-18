@@ -193,3 +193,14 @@ define void @test6_2(i8* %x6_2, i8* %y6_2, i8* %z6_2) {
   ret void
 }
 
+; CHECK: define void @test_cmpxchg(i32* nocapture %p)
+define void @test_cmpxchg(i32* %p) {
+  cmpxchg i32* %p, i32 0, i32 1 acquire monotonic
+  ret void
+}
+
+; CHECK: define void @test_atomicrmw(i32* nocapture %p)
+define void @test_atomicrmw(i32* %p) {
+  atomicrmw add i32* %p, i32 1 seq_cst
+  ret void
+}

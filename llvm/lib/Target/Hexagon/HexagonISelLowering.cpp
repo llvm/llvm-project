@@ -990,6 +990,34 @@ HexagonTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   return Op;
 }
 
+// Need to transform ISD::PREFETCH into something that doesn't inherit
+// all of the properties of ISD::PREFETCH, specifically SDNPMayLoad and
+// SDNPMayStore.
+SDValue HexagonTargetLowering::LowerPREFETCH(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue Addr = Op.getOperand(1);
+  // Lower it to DCFETCH($reg, #0).  A "pat" will try to merge the offset in,
+  // if the "reg" is fed by an "add".
+  SDLoc DL(Op);
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+  return DAG.getNode(HexagonISD::DCFETCH, DL, MVT::Other, Chain, Addr, Zero);
+}
+
+SDValue HexagonTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
+      SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  // Lower the hexagon_prefetch builtin to DCFETCH, as above.
+  if (IntNo == Intrinsic::hexagon_prefetch) {
+    SDValue Addr = Op.getOperand(2);
+    SDLoc DL(Op);
+    SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+    return DAG.getNode(HexagonISD::DCFETCH, DL, MVT::Other, Chain, Addr, Zero);
+  }
+  return SDValue();
+}
+
 SDValue
 HexagonTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -1490,7 +1518,7 @@ HexagonTargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
 
   Reloc::Model RM = HTM.getRelocationModel();
   if (RM == Reloc::Static) {
-    SDValue A =  DAG.getTargetBlockAddress(BA, PtrVT);
+    SDValue A = DAG.getTargetBlockAddress(BA, PtrVT);
     return DAG.getNode(HexagonISD::CONST32_GP, dl, PtrVT, A);
   }
 
@@ -1505,6 +1533,158 @@ HexagonTargetLowering::LowerGLOBAL_OFFSET_TABLE(SDValue Op, SelectionDAG &DAG)
   SDValue GOTSym = DAG.getTargetExternalSymbol(HEXAGON_GOT_SYM_NAME, PtrVT,
                                                HexagonII::MO_PCREL);
   return DAG.getNode(HexagonISD::AT_PCREL, SDLoc(Op), PtrVT, GOTSym);
+}
+
+SDValue
+HexagonTargetLowering::GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
+      GlobalAddressSDNode *GA, SDValue *InFlag, EVT PtrVT, unsigned ReturnReg,
+      unsigned char OperandFlags) const {
+  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  SDLoc dl(GA);
+  SDValue TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl,
+                                           GA->getValueType(0),
+                                           GA->getOffset(),
+                                           OperandFlags);
+  // Create Operands for the call.The Operands should have the following:
+  // 1. Chain SDValue
+  // 2. Callee which in this case is the Global address value.
+  // 3. Registers live into the call.In this case its R0, as we
+  //    have just one argument to be passed.
+  // 4. InFlag if there is any.
+  // Note: The order is important.
+
+  if (InFlag) {
+    SDValue Ops[] = { Chain, TGA,
+                      DAG.getRegister(Hexagon::R0, PtrVT), *InFlag };
+    Chain = DAG.getNode(HexagonISD::CALLv3, dl, NodeTys, Ops);
+  } else {
+    SDValue Ops[]  = { Chain, TGA, DAG.getRegister(Hexagon::R0, PtrVT)};
+    Chain = DAG.getNode(HexagonISD::CALLv3, dl, NodeTys, Ops);
+  }
+
+  // Inform MFI that function has calls.
+  MFI->setAdjustsStack(true);
+
+  SDValue Flag = Chain.getValue(1);
+  return DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Flag);
+}
+
+//
+// Lower using the intial executable model for TLS addresses
+//
+SDValue
+HexagonTargetLowering::LowerToTLSInitialExecModel(GlobalAddressSDNode *GA,
+      SelectionDAG &DAG) const {
+  SDLoc dl(GA);
+  int64_t Offset = GA->getOffset();
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // Get the thread pointer.
+  SDValue TP = DAG.getCopyFromReg(DAG.getEntryNode(), dl, Hexagon::UGP, PtrVT);
+
+  Reloc::Model RM = HTM.getRelocationModel();
+  unsigned char TF = (RM == Reloc::PIC_) ? HexagonII::MO_IEGOT
+                                         : HexagonII::MO_IE;
+
+  // First generate the TLS symbol address
+  SDValue TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl, PtrVT,
+                                           Offset, TF);
+
+  SDValue Sym = DAG.getNode(HexagonISD::CONST32, dl, PtrVT, TGA);
+
+  if (RM == Reloc::PIC_) {
+    // Generate the GOT pointer in case of position independent code
+    SDValue GOT = LowerGLOBAL_OFFSET_TABLE(Sym, DAG);
+
+    // Add the TLS Symbol address to GOT pointer.This gives
+    // GOT relative relocation for the symbol.
+    Sym = DAG.getNode(ISD::ADD, dl, PtrVT, GOT, Sym);
+  }
+
+  // Load the offset value for TLS symbol.This offset is relative to
+  // thread pointer.
+  SDValue LoadOffset = DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Sym,
+                                   MachinePointerInfo(),
+                                   false, false, false, 0);
+
+  // Address of the thread local variable is the add of thread
+  // pointer and the offset of the variable.
+  return DAG.getNode(ISD::ADD, dl, PtrVT, TP, LoadOffset);
+}
+
+//
+// Lower using the local executable model for TLS addresses
+//
+SDValue
+HexagonTargetLowering::LowerToTLSLocalExecModel(GlobalAddressSDNode *GA,
+      SelectionDAG &DAG) const {
+  SDLoc dl(GA);
+  int64_t Offset = GA->getOffset();
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // Get the thread pointer.
+  SDValue TP = DAG.getCopyFromReg(DAG.getEntryNode(), dl, Hexagon::UGP, PtrVT);
+  // Generate the TLS symbol address
+  SDValue TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl, PtrVT, Offset,
+                                           HexagonII::MO_TPREL);
+  SDValue Sym = DAG.getNode(HexagonISD::CONST32, dl, PtrVT, TGA);
+
+  // Address of the thread local variable is the add of thread
+  // pointer and the offset of the variable.
+  return DAG.getNode(ISD::ADD, dl, PtrVT, TP, Sym);
+}
+
+//
+// Lower using the general dynamic model for TLS addresses
+//
+SDValue
+HexagonTargetLowering::LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
+      SelectionDAG &DAG) const {
+  SDLoc dl(GA);
+  int64_t Offset = GA->getOffset();
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // First generate the TLS symbol address
+  SDValue TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl, PtrVT, Offset,
+                                           HexagonII::MO_GDGOT);
+
+  // Then, generate the GOT pointer
+  SDValue GOT = LowerGLOBAL_OFFSET_TABLE(TGA, DAG);
+
+  // Add the TLS symbol and the GOT pointer
+  SDValue Sym = DAG.getNode(HexagonISD::CONST32, dl, PtrVT, TGA);
+  SDValue Chain = DAG.getNode(ISD::ADD, dl, PtrVT, GOT, Sym);
+
+  // Copy over the argument to R0
+  SDValue InFlag;
+  Chain = DAG.getCopyToReg(DAG.getEntryNode(), dl, Hexagon::R0, Chain, InFlag);
+  InFlag = Chain.getValue(1);
+
+  return GetDynamicTLSAddr(DAG, Chain, GA, &InFlag, PtrVT,
+                           Hexagon::R0, HexagonII::MO_GDPLT);
+}
+
+//
+// Lower TLS addresses.
+//
+// For now for dynamic models, we only support the general dynamic model.
+//
+SDValue
+HexagonTargetLowering::LowerGlobalTLSAddress(SDValue Op,
+      SelectionDAG &DAG) const {
+  GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+
+  switch (HTM.getTLSModel(GA->getGlobal())) {
+    case TLSModel::GeneralDynamic:
+    case TLSModel::LocalDynamic:
+      return LowerToTLSGeneralDynamicModel(GA, DAG);
+    case TLSModel::InitialExec:
+      return LowerToTLSInitialExecModel(GA, DAG);
+    case TLSModel::LocalExec:
+      return LowerToTLSLocalExecModel(GA, DAG);
+  }
+  llvm_unreachable("Bogus TLS model");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1606,8 +1786,11 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BUILD_PAIR, MVT::i64, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
   setOperationAction(ISD::INLINEASM, MVT::Other, Custom);
+  setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::EH_RETURN, MVT::Other, Custom);
   setOperationAction(ISD::GLOBAL_OFFSET_TABLE, MVT::i32, Custom);
+  setOperationAction(ISD::GlobalTLSAddress, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
   // Custom legalize GlobalAddress nodes into CONST32.
@@ -2596,6 +2779,7 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
       // Frame & Return address. Currently unimplemented.
     case ISD::RETURNADDR:           return LowerRETURNADDR(Op, DAG);
     case ISD::FRAMEADDR:            return LowerFRAMEADDR(Op, DAG);
+    case ISD::GlobalTLSAddress:     return LowerGlobalTLSAddress(Op, DAG);
     case ISD::ATOMIC_FENCE:         return LowerATOMIC_FENCE(Op, DAG);
     case ISD::GlobalAddress:        return LowerGLOBALADDRESS(Op, DAG);
     case ISD::BlockAddress:         return LowerBlockAddress(Op, DAG);
@@ -2608,7 +2792,9 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::VSELECT:              return LowerVSELECT(Op, DAG);
     case ISD::CTPOP:                return LowerCTPOP(Op, DAG);
     case ISD::INTRINSIC_WO_CHAIN:   return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+    case ISD::INTRINSIC_VOID:       return LowerINTRINSIC_VOID(Op, DAG);
     case ISD::INLINEASM:            return LowerINLINEASM(Op, DAG);
+    case ISD::PREFETCH:             return LowerPREFETCH(Op, DAG);
   }
 }
 

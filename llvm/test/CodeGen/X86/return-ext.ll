@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck -check-prefix=DARWIN %s
 
 
 @x = common global i32 0, align 4
@@ -29,6 +30,13 @@ entry:
 ; CHECK:			 cmp
 ; CHECK-NEXT:  sete
 ; CHECK-NEXT:  ret
+
+; Except on Darwin, for legacy reasons.
+; DARWIN-LABEL: unsigned_i8:
+; DARWIN:			  cmp
+; DARWIN-NEXT:  sete
+; DARWIN-NEXT:  movzbl
+; DARWIN-NEXT:  ret
 }
 
 define signext i8 @signed_i8() {
@@ -43,6 +51,13 @@ entry:
 ; CHECK:			 cmp
 ; CHECK-NEXT:  sete
 ; CHECK-NEXT:  ret
+
+; Except on Darwin, for legacy reasons.
+; DARWIN-LABEL: signed_i8:
+; DARWIN:			  cmp
+; DARWIN-NEXT:  sete
+; DARWIN-NEXT:  movzbl
+; DARWIN-NEXT:  ret
 }
 
 @a = common global i16 0
@@ -59,6 +74,13 @@ entry:
 ; CHECK:			 movw
 ; CHECK-NEXT:  addw
 ; CHECK-NEXT:  ret
+
+; Except on Darwin, for legay reasons.
+; DARWIN-LABEL: unsigned_i16:
+; DARWIN:	    	movw
+; DARWIN-NEXT:  addw
+; DARWIN-NEXT:  movzwl
+; DARWIN-NEXT:  ret
 }
 
 

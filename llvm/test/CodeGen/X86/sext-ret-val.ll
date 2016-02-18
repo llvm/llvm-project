@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
 ; rdar://6699246
 
 define signext i8 @t1(i8* %A) nounwind readnone ssp {

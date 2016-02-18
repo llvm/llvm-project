@@ -3996,6 +3996,10 @@ def Y2_dcfetchbo : LD0Inst<(outs), (ins IntRegs:$Rs, u11_3Imm:$u11_3),
   let Inst{10-0} = u11_3{13-3};
 }
 
+
+def: Pat<(HexagonDCFETCH (i32 (add IntRegs:$Rs, u11_3ImmPred:$u11_3)), (i32 0)),
+         (Y2_dcfetchbo IntRegs:$Rs, u11_3ImmPred:$u11_3)>;
+
 //===----------------------------------------------------------------------===//
 // Compound instructions
 //===----------------------------------------------------------------------===//

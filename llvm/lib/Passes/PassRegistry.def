@@ -47,6 +47,7 @@ CGSCC_ANALYSIS("no-op-cgscc", NoOpCGSCCAnalysis())
 #define CGSCC_PASS(NAME, CREATE_PASS)
 #endif
 CGSCC_PASS("invalidate<all>", InvalidateAllAnalysesPass())
+CGSCC_PASS("function-attrs", PostOrderFunctionAttrsPass())
 CGSCC_PASS("no-op-cgscc", NoOpCGSCCPass())
 #undef CGSCC_PASS
 

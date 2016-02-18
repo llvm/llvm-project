@@ -271,6 +271,17 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker) {
           return;
       // Storing to the pointee does not cause the pointer to be captured.
       break;
+    case Instruction::AtomicRMW:
+    case Instruction::AtomicCmpXchg:
+      // atomicrmw and cmpxchg conceptually include both a load and store from
+      // the same location.  As with a store, the location being accessed is
+      // not captured, but the value being stored is.  (For cmpxchg, we
+      // probably don't need to capture the original comparison value, but for
+      // the moment, let's be conservative.)
+      if (V != I->getOperand(0))
+        if (Tracker->captured(U))
+          return;
+      break;
     case Instruction::BitCast:
     case Instruction::GetElementPtr:
     case Instruction::PHI:

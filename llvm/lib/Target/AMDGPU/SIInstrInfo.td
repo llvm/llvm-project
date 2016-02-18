@@ -2905,12 +2905,12 @@ class MIMG_Helper <bits<7> op, dag outs, dag ins, string asm,
 
 class MIMG_NoSampler_Helper <bits<7> op, string asm,
                              RegisterClass dst_rc,
-                             RegisterClass src_rc,
+                             RegisterClass addr_rc,
                              string dns=""> : MIMG_Helper <
   op,
   (outs dst_rc:$vdata),
   (ins i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
-       i1imm:$tfe, i1imm:$lwe, i1imm:$slc, src_rc:$vaddr,
+       i1imm:$tfe, i1imm:$lwe, i1imm:$slc, addr_rc:$vaddr,
        SReg_256:$srsrc),
   asm#" $vdata, $dmask, $unorm, $glc, $da, $r128,"
      #" $tfe, $lwe, $slc, $vaddr, $srsrc",
@@ -2935,6 +2935,41 @@ multiclass MIMG_NoSampler <bits<7> op, string asm> {
   defm _V2 : MIMG_NoSampler_Src_Helper <op, asm, VReg_64, 2>;
   defm _V3 : MIMG_NoSampler_Src_Helper <op, asm, VReg_96, 3>;
   defm _V4 : MIMG_NoSampler_Src_Helper <op, asm, VReg_128, 4>;
+}
+
+class MIMG_Store_Helper <bits<7> op, string asm,
+                         RegisterClass data_rc,
+                         RegisterClass addr_rc> : MIMG_Helper <
+  op,
+  (outs),
+  (ins data_rc:$vdata, i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
+       i1imm:$tfe, i1imm:$lwe, i1imm:$slc, addr_rc:$vaddr,
+       SReg_256:$srsrc),
+  asm#" $vdata, $dmask, $unorm, $glc, $da, $r128,"
+     #" $tfe, $lwe, $slc, $vaddr, $srsrc"> {
+  let ssamp = 0;
+  let mayLoad = 1; // TableGen requires this for matching with the intrinsics
+  let mayStore = 1;
+  let hasSideEffects = 1;
+  let hasPostISelHook = 0;
+}
+
+multiclass MIMG_Store_Addr_Helper <bits<7> op, string asm,
+                                  RegisterClass data_rc,
+                                  int channels> {
+  def _V1 : MIMG_Store_Helper <op, asm, data_rc, VGPR_32>,
+            MIMG_Mask<asm#"_V1", channels>;
+  def _V2 : MIMG_Store_Helper <op, asm, data_rc, VReg_64>,
+            MIMG_Mask<asm#"_V2", channels>;
+  def _V4 : MIMG_Store_Helper <op, asm, data_rc, VReg_128>,
+            MIMG_Mask<asm#"_V4", channels>;
+}
+
+multiclass MIMG_Store <bits<7> op, string asm> {
+  defm _V1 : MIMG_Store_Addr_Helper <op, asm, VGPR_32, 1>;
+  defm _V2 : MIMG_Store_Addr_Helper <op, asm, VReg_64, 2>;
+  defm _V3 : MIMG_Store_Addr_Helper <op, asm, VReg_96, 3>;
+  defm _V4 : MIMG_Store_Addr_Helper <op, asm, VReg_128, 4>;
 }
 
 class MIMG_Sampler_Helper <bits<7> op, string asm,

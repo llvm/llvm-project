@@ -388,8 +388,19 @@ struct FunCloner {
       }
       case LLVMSwitch:
       case LLVMIndirectBr:
-      case LLVMInvoke:
         break;
+      case LLVMInvoke: {
+        SmallVector<LLVMValueRef, 8> Args;
+        int ArgCount = LLVMGetNumArgOperands(Src);
+        for (int i = 0; i < ArgCount; i++)
+          Args.push_back(CloneValue(LLVMGetOperand(Src, i)));
+        LLVMValueRef Fn = CloneValue(LLVMGetCalledValue(Src));
+        LLVMBasicBlockRef Then = DeclareBB(LLVMGetNormalDest(Src));
+        LLVMBasicBlockRef Unwind = DeclareBB(LLVMGetUnwindDest(Src));
+        Dst = LLVMBuildInvoke(Builder, Fn, Args.data(), ArgCount,
+                              Then, Unwind, Name);
+        break;
+      }
       case LLVMUnreachable:
         Dst = LLVMBuildUnreachable(Builder);
         break;
@@ -536,6 +547,20 @@ struct FunCloner {
           Args.push_back(CloneValue(LLVMGetOperand(Src, i)));
         LLVMValueRef Fn = CloneValue(LLVMGetCalledValue(Src));
         Dst = LLVMBuildCall(Builder, Fn, Args.data(), ArgCount, Name);
+        LLVMSetTailCall(Dst, LLVMIsTailCall(Src));
+        break;
+      }
+      case LLVMResume: {
+        Dst = LLVMBuildResume(Builder, CloneValue(LLVMGetOperand(Src, 0)));
+        break;
+      }
+      case LLVMLandingPad: {
+        // The landing pad API is a bit screwed up for historical reasons.
+        Dst = LLVMBuildLandingPad(Builder, CloneType(Src), nullptr, 0, Name);
+        unsigned NumClauses = LLVMGetNumClauses(Src);
+        for (unsigned i = 0; i < NumClauses; ++i)
+          LLVMAddClause(Dst, CloneValue(LLVMGetClause(Src, i)));
+        LLVMSetCleanup(Dst, LLVMIsCleanup(Src));
         break;
       }
       case LLVMExtractValue: {
@@ -788,6 +813,15 @@ FunClone:
     LLVMValueRef Fun = LLVMGetNamedFunction(M, Name);
     if (!Fun)
       report_fatal_error("Function must have been declared already");
+
+    if (LLVMHasPersonalityFn(Cur)) {
+      const char *FName = LLVMGetValueName(LLVMGetPersonalityFn(Cur));
+      LLVMValueRef P = LLVMGetNamedFunction(M, FName);
+      if (!P)
+        report_fatal_error("Could not find personality function");
+      LLVMSetPersonalityFn(Fun, P);
+    }
+
     FunCloner FC(Cur, Fun);
     FC.CloneBBs(Cur);
 

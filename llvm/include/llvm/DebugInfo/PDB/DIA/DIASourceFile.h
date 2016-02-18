@@ -25,7 +25,10 @@ public:
   uint32_t getUniqueId() const override;
   std::string getChecksum() const override;
   PDB_Checksum getChecksumType() const override;
-  std::unique_ptr<IPDBEnumSymbols> getCompilands() const override;
+  std::unique_ptr<IPDBEnumChildren<PDBSymbolCompiland>>
+  getCompilands() const override;
+
+  CComPtr<IDiaSourceFile> getDiaFile() const { return SourceFile; }
 
 private:
   const DIASession &Session;

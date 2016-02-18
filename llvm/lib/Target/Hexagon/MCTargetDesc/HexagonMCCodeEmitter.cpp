@@ -357,8 +357,8 @@ Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
   // The only relocs left should be GP relative:
   default:
     if (MCID.mayStore() || MCID.mayLoad()) {
-      for (const MCPhysReg *ImpUses = MCID.getImplicitUses();
-           *ImpUses && *ImpUses; ++ImpUses) {
+      for (const MCPhysReg *ImpUses = MCID.getImplicitUses(); *ImpUses;
+           ++ImpUses) {
         if (*ImpUses != Hexagon::GP)
           continue;
         switch (HexagonMCInstrInfo::getAccessSize(MCII, MI)) {

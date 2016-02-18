@@ -1,4 +1,5 @@
-; RUN: opt -S -slp-vectorizer -dce -instcombine < %s | FileCheck %s
+; RUN: opt -S -slp-vectorizer -dce -instcombine < %s | FileCheck %s --check-prefix=PROFITABLE
+; RUN: opt -S -slp-vectorizer -slp-threshold=-12 -dce -instcombine < %s | FileCheck %s --check-prefix=UNPROFITABLE
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -18,13 +19,13 @@ target triple = "aarch64--linux-gnu"
 ;   return sum;
 ; }
 
-; CHECK-LABEL: @gather_reduce_8x16_i32
+; PROFITABLE-LABEL: @gather_reduce_8x16_i32
 ;
-; CHECK: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
-; CHECK: zext <8 x i16> [[L]] to <8 x i32>
-; CHECK: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
-; CHECK: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
-; CHECK: sext i32 [[X]] to i64
+; PROFITABLE: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
+; PROFITABLE: zext <8 x i16> [[L]] to <8 x i32>
+; PROFITABLE: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
+; PROFITABLE: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
+; PROFITABLE: sext i32 [[X]] to i64
 ;
 define i32 @gather_reduce_8x16_i32(i16* nocapture readonly %a, i16* nocapture readonly %b, i16* nocapture readonly %g, i32 %n) {
 entry:
@@ -137,14 +138,18 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-; CHECK-LABEL: @gather_reduce_8x16_i64
+; UNPROFITABLE-LABEL: @gather_reduce_8x16_i64
 ;
-; CHECK-NOT: load <8 x i16>
+; UNPROFITABLE: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
+; UNPROFITABLE: zext <8 x i16> [[L]] to <8 x i32>
+; UNPROFITABLE: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
+; UNPROFITABLE: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
+; UNPROFITABLE: sext i32 [[X]] to i64
 ;
-; FIXME: We are currently unable to vectorize the case with i64 subtraction
-;        because the zero extensions are too expensive. The solution here is to
-;        convert the i64 subtractions to i32 subtractions during vectorization.
-;        This would then match the case above.
+; TODO: Although we can now vectorize this case while converting the i64
+;       subtractions to i32, the cost model currently finds vectorization to be
+;       unprofitable. The cost model is penalizing the sign and zero
+;       extensions in the vectorized version, but they are actually free.
 ;
 define i32 @gather_reduce_8x16_i64(i16* nocapture readonly %a, i16* nocapture readonly %b, i16* nocapture readonly %g, i32 %n) {
 entry:

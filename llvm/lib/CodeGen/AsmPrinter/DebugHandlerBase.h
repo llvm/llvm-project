@@ -18,6 +18,7 @@
 #include "AsmPrinterHandler.h"
 #include "DbgValueHistoryCalculator.h"
 #include "llvm/CodeGen/LexicalScopes.h"
+#include "llvm/CodeGen/MachineInstr.h"
 
 namespace llvm {
 

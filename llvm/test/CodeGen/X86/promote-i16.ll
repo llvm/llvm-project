@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
 
 define signext i16 @foo(i16 signext %x) nounwind {
 entry:
