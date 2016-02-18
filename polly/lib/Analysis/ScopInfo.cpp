@@ -294,12 +294,16 @@ const ScopArrayInfo *ScopArrayInfo::getFromId(isl_id *Id) {
 }
 
 void MemoryAccess::updateDimensionality() {
-  auto ArraySpace = getScopArrayInfo()->getSpace();
+  auto *SAI = getScopArrayInfo();
+  auto ArraySpace = SAI->getSpace();
   auto AccessSpace = isl_space_range(isl_map_get_space(AccessRelation));
+  auto *Ctx = isl_space_get_ctx(AccessSpace);
 
   auto DimsArray = isl_space_dim(ArraySpace, isl_dim_set);
   auto DimsAccess = isl_space_dim(AccessSpace, isl_dim_set);
   auto DimsMissing = DimsArray - DimsAccess;
+
+  unsigned ArrayElemSize = SAI->getElemSizeInBytes();
 
   auto Map = isl_map_from_domain_and_range(
       isl_set_universe(AccessSpace),
@@ -313,12 +317,29 @@ void MemoryAccess::updateDimensionality() {
 
   AccessRelation = isl_map_apply_range(AccessRelation, Map);
 
+  // For the non delinearized arrays, divide the access function of the last
+  // subscript by the size of the elements in the array.
+  //
+  // A stride one array access in C expressed as A[i] is expressed in
+  // LLVM-IR as something like A[i * elementsize]. This hides the fact that
+  // two subsequent values of 'i' index two values that are stored next to
+  // each other in memory. By this division we make this characteristic
+  // obvious again. If the base pointer was accessed with offsets not divisible
+  // by the accesses element size, we will have choosen a smaller ArrayElemSize
+  // that divides the offsets of all accesses to this base pointer.
+  if (DimsAccess == 1) {
+    isl_val *V = isl_val_int_from_si(Ctx, ArrayElemSize);
+    AccessRelation = isl_map_floordiv_val(AccessRelation, V);
+  }
+
+  if (!isAffine())
+    computeBoundsOnAccessRelation(ArrayElemSize);
+
   // Introduce multi-element accesses in case the type loaded by this memory
   // access is larger than the canonical element type of the array.
   //
   // An access ((float *)A)[i] to an array char *A is modeled as
   // {[i] -> A[o] : 4 i <= o <= 4 i + 3
-  unsigned ArrayElemSize = getScopArrayInfo()->getElemSizeInBytes();
   if (ElemBytes > ArrayElemSize) {
     assert(ElemBytes % ArrayElemSize == 0 &&
            "Loaded element size should be multiple of canonical element size");
@@ -328,24 +349,20 @@ void MemoryAccess::updateDimensionality() {
     for (unsigned i = 0; i < DimsArray - 1; i++)
       Map = isl_map_equate(Map, isl_dim_in, i, isl_dim_out, i);
 
-    isl_ctx *Ctx;
     isl_constraint *C;
     isl_local_space *LS;
 
     LS = isl_local_space_from_space(isl_map_get_space(Map));
-    Ctx = isl_map_get_ctx(Map);
     int Num = ElemBytes / getScopArrayInfo()->getElemSizeInBytes();
 
     C = isl_constraint_alloc_inequality(isl_local_space_copy(LS));
     C = isl_constraint_set_constant_val(C, isl_val_int_from_si(Ctx, Num - 1));
-    C = isl_constraint_set_coefficient_si(C, isl_dim_in,
-                                          DimsArray - 1 - DimsMissing, Num);
+    C = isl_constraint_set_coefficient_si(C, isl_dim_in, DimsArray - 1, 1);
     C = isl_constraint_set_coefficient_si(C, isl_dim_out, DimsArray - 1, -1);
     Map = isl_map_add_constraint(Map, C);
 
     C = isl_constraint_alloc_inequality(LS);
-    C = isl_constraint_set_coefficient_si(C, isl_dim_in,
-                                          DimsArray - 1 - DimsMissing, -Num);
+    C = isl_constraint_set_coefficient_si(C, isl_dim_in, DimsArray - 1, -1);
     C = isl_constraint_set_coefficient_si(C, isl_dim_out, DimsArray - 1, 1);
     C = isl_constraint_set_constant_val(C, isl_val_int_from_si(Ctx, 0));
     Map = isl_map_add_constraint(Map, C);
@@ -681,6 +698,8 @@ __isl_give isl_map *MemoryAccess::foldAccess(__isl_take isl_map *AccessRelation,
 
 /// @brief Check if @p Expr is divisible by @p Size.
 static bool isDivisible(const SCEV *Expr, unsigned Size, ScalarEvolution &SE) {
+  if (Size == 1)
+    return true;
 
   // Only one factor needs to be divisible.
   if (auto *MulExpr = dyn_cast<SCEVMulExpr>(Expr)) {
@@ -719,37 +738,15 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
     AccessRelation = isl_map_from_basic_map(createBasicAccessMap(Statement));
     AccessRelation =
         isl_map_set_tuple_id(AccessRelation, isl_dim_out, BaseAddrId);
-
-    computeBoundsOnAccessRelation(getElemSizeInBytes());
     return;
   }
 
-  Scop &S = *getStatement()->getParent();
   isl_space *Space = isl_space_alloc(Ctx, 0, Statement->getNumIterators(), 0);
   AccessRelation = isl_map_universe(Space);
 
   for (int i = 0, Size = Subscripts.size(); i < Size; ++i) {
     isl_pw_aff *Affine = Statement->getPwAff(Subscripts[i]);
-
-    if (Size == 1) {
-      // For the non delinearized arrays, divide the access function of the last
-      // subscript by the size of the elements in the array.
-      //
-      // A stride one array access in C expressed as A[i] is expressed in
-      // LLVM-IR as something like A[i * elementsize]. This hides the fact that
-      // two subsequent values of 'i' index two values that are stored next to
-      // each other in memory. By this division we make this characteristic
-      // obvious again. However, if the index is not divisible by the element
-      // size we will bail out.
-      isl_val *v = isl_val_int_from_si(Ctx, getElemSizeInBytes());
-      Affine = isl_pw_aff_scale_down_val(Affine, v);
-
-      if (!isDivisible(Subscripts[0], getElemSizeInBytes(), *S.getSE()))
-        S.invalidate(ALIGNMENT, AccessInstruction->getDebugLoc());
-    }
-
     isl_map *SubscriptMap = isl_map_from_pw_aff(Affine);
-
     AccessRelation = isl_map_flat_range_product(AccessRelation, SubscriptMap);
   }
 
@@ -2812,6 +2809,24 @@ Scop::~Scop() {
 }
 
 void Scop::updateAccessDimensionality() {
+  // Check all array accesses for each base pointer and find a (virtual) element
+  // size for the base pointer that divides all access functions.
+  for (auto &Stmt : *this)
+    for (auto *Access : Stmt) {
+      if (!Access->isArrayKind())
+        continue;
+      auto &SAI = ScopArrayInfoMap[std::make_pair(Access->getBaseAddr(),
+                                                  ScopArrayInfo::MK_Array)];
+      if (SAI->getNumberOfDimensions() != 1)
+        continue;
+      unsigned DivisibleSize = SAI->getElemSizeInBytes();
+      auto *Subscript = Access->getSubscript(0);
+      while (!isDivisible(Subscript, DivisibleSize, *SE))
+        DivisibleSize /= 2;
+      auto *Ty = IntegerType::get(SE->getContext(), DivisibleSize * 8);
+      SAI->updateElementType(Ty);
+    }
+
   for (auto &Stmt : *this)
     for (auto &Access : Stmt)
       Access->updateDimensionality();
@@ -3146,8 +3161,6 @@ static std::string toString(AssumptionKind Kind) {
     return "Inbounds";
   case WRAPPING:
     return "No-overflows";
-  case ALIGNMENT:
-    return "Alignment";
   case ERRORBLOCK:
     return "No-error";
   case INFINITELOOP:

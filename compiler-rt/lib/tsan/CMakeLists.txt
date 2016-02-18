@@ -192,7 +192,11 @@ endif()
 add_dependencies(compiler-rt tsan)
 
 # Make sure that non-platform-specific files don't include any system headers.
-if(COMPILER_RT_HAS_SYSROOT_FLAG)
+# FreeBSD does not install a number of Clang-provided headers for the compiler
+# in the base system due to incompatibilities between FreeBSD's and Clang's
+# versions. As a workaround do not use --sysroot=. on FreeBSD until this is
+# addressed.                                                        
+if(COMPILER_RT_HAS_SYSROOT_FLAG AND NOT CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   file(GLOB _tsan_generic_sources rtl/tsan*)
   file(GLOB _tsan_platform_sources rtl/tsan*posix* rtl/tsan*mac*
                                    rtl/tsan*linux*)

@@ -179,6 +179,12 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
 
+    ArchSpec target_arch;
+    if (target_sp)
+        target_arch = target_sp->GetArchitecture();
+
+    const auto target_machine = target_arch.GetMachine();
+
     // If the expression is being evaluated in the context of an existing
     // stack frame, we introspect to see if the language runtime is available.
     auto frame = exe_scope->CalculateStackFrame();
@@ -197,9 +203,9 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
 
     // 2. Configure the compiler with a set of default options that are appropriate
     // for most situations.
-    if (target_sp && target_sp->GetArchitecture().IsValid())
+    if (target_sp && target_arch.IsValid())
     {
-        std::string triple = target_sp->GetArchitecture().GetTriple().str();
+        std::string triple = target_arch.GetTriple().str();
         m_compiler->getTargetOpts().Triple = triple;
         if (log)
             log->Printf("Using %s as the target triple", m_compiler->getTargetOpts().Triple.c_str());
@@ -224,12 +230,16 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
         m_compiler->getTargetOpts().ABI = "apcs-gnu";
     }
     // Supported subsets of x86
-    if (target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86 ||
-        target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
+    if (target_machine == llvm::Triple::x86 ||
+        target_machine == llvm::Triple::x86_64)
     {
         m_compiler->getTargetOpts().Features.push_back("+sse");
         m_compiler->getTargetOpts().Features.push_back("+sse2");
     }
+
+    // Set the target CPU to generate code for.
+    // This will be empty for any CPU that doesn't really need to make a special CPU string.
+    m_compiler->getTargetOpts().CPU = target_arch.GetClangTargetCPU();
 
     // 3. Now allow the runtime to provide custom configuration options for the target.
     // In this case, a specialized language runtime is available and we can query it for extra options.

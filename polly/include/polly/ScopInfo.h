@@ -74,7 +74,6 @@ enum AssumptionKind {
   ALIASING,
   INBOUNDS,
   WRAPPING,
-  ALIGNMENT,
   ERRORBLOCK,
   INFINITELOOP,
   INVARIANTLOAD,
@@ -708,7 +707,7 @@ public:
   /// As 2) is by construction "newer" than 1) we return the new access
   /// relation if present.
   ///
-  isl_map *getAccessRelation() const {
+  __isl_give isl_map *getAccessRelation() const {
     return hasNewAccessRelation() ? getNewAccessRelation()
                                   : getOriginalAccessRelation();
   }
@@ -760,6 +759,9 @@ public:
 
   /// @brief Return the access instruction of this memory access.
   Instruction *getAccessInstruction() const { return AccessInstruction; }
+
+  /// @brief Return the access function subscript in the dimension @p Dim.
+  const SCEV *getSubscript(unsigned Dim) const { return Subscripts[Dim]; }
 
   /// Get the stride of this memory access in the specified Schedule. Schedule
   /// is a map from the statement to a schedule where the innermost dimension is

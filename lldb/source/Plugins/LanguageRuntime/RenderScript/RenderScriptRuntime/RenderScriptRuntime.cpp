@@ -2644,84 +2644,98 @@ RenderScriptRuntime::Update()
 
 // The maximum line length of an .rs.info packet
 #define MAXLINE 500
+#define STRINGIFY(x) #x
+#define MAXLINESTR_(x) "%" STRINGIFY(x) "s"
+#define MAXLINESTR MAXLINESTR_(MAXLINE)
 
 // The .rs.info symbol in renderscript modules contains a string which needs to be parsed.
 // The string is basic and is parsed on a line by line basis.
 bool
 RSModuleDescriptor::ParseRSInfo()
 {
+    assert(m_module);
     const Symbol *info_sym = m_module->FindFirstSymbolWithNameAndType(ConstString(".rs.info"), eSymbolTypeData);
-    if (info_sym)
+    if (!info_sym)
+        return false;
+
+    const addr_t addr = info_sym->GetAddressRef().GetFileAddress();
+    if (addr == LLDB_INVALID_ADDRESS)
+        return false;
+
+    const addr_t size = info_sym->GetByteSize();
+    const FileSpec fs = m_module->GetFileSpec();
+
+    const DataBufferSP buffer = fs.ReadFileContents(addr, size);
+    if (!buffer)
+        return false;
+
+    // split rs.info. contents into lines
+    std::vector<std::string> info_lines;
     {
-        const addr_t addr = info_sym->GetAddressRef().GetFileAddress();
-        const addr_t size = info_sym->GetByteSize();
-        const FileSpec fs = m_module->GetFileSpec();
-
-        DataBufferSP buffer = fs.ReadFileContents(addr, size);
-
-        if (!buffer)
-            return false;
-
-        std::string info((const char *)buffer->GetBytes());
-
-        std::vector<std::string> info_lines;
-        size_t lpos = info.find('\n');
-        while (lpos != std::string::npos)
+        const std::string info((const char *)buffer->GetBytes());
+        for (size_t tail = 0; tail < info.size();)
         {
-            info_lines.push_back(info.substr(0, lpos));
-            info = info.substr(lpos + 1);
-            lpos = info.find('\n');
+            // find next new line or end of string
+            size_t head = info.find('\n', tail);
+            head = (head == std::string::npos) ? info.size() : head;
+            std::string line = info.substr(tail, head - tail);
+            // add to line list
+            info_lines.push_back(line);
+            tail = head + 1;
         }
-        size_t offset = 0;
-        while (offset < info_lines.size())
-        {
-            std::string line = info_lines[offset];
-            // Parse directives
-            uint32_t numDefns = 0;
-            if (sscanf(line.c_str(), "exportVarCount: %" PRIu32 "", &numDefns) == 1)
-            {
-                while (numDefns--)
-                    m_globals.push_back(RSGlobalDescriptor(this, info_lines[++offset].c_str()));
-            }
-            else if (sscanf(line.c_str(), "exportFuncCount: %" PRIu32 "", &numDefns) == 1)
-            {
-            }
-            else if (sscanf(line.c_str(), "exportForEachCount: %" PRIu32 "", &numDefns) == 1)
-            {
-                char name[MAXLINE];
-                while (numDefns--)
-                {
-                    uint32_t slot = 0;
-                    name[0] = '\0';
-                    if (sscanf(info_lines[++offset].c_str(), "%" PRIu32 " - %s", &slot, &name[0]) == 2)
-                    {
-                        m_kernels.push_back(RSKernelDescriptor(this, name, slot));
-                    }
-                }
-            }
-            else if (sscanf(line.c_str(), "pragmaCount: %" PRIu32 "", &numDefns) == 1)
-            {
-                char name[MAXLINE];
-                char value[MAXLINE];
-                while (numDefns--)
-                {
-                    name[0] = '\0';
-                    value[0] = '\0';
-                    if (sscanf(info_lines[++offset].c_str(), "%s - %s", &name[0], &value[0]) != 0 && (name[0] != '\0'))
-                    {
-                        m_pragmas[std::string(name)] = value;
-                    }
-                }
-            }
-            else if (sscanf(line.c_str(), "objectSlotCount: %" PRIu32 "", &numDefns) == 1)
-            {
-            }
-
-            offset++;
-        }
-        return m_kernels.size() > 0;
     }
-    return false;
+
+    std::array<char, MAXLINE> name = {'\0'};
+    std::array<char, MAXLINE> value = {'\0'};
+
+    // parse all text lines of .rs.info
+    for (auto line = info_lines.begin(); line != info_lines.end(); ++line)
+    {
+        uint32_t numDefns = 0;
+        if (sscanf(line->c_str(), "exportVarCount: %" PRIu32 "", &numDefns) == 1)
+        {
+            while (numDefns--)
+                m_globals.push_back(RSGlobalDescriptor(this, (++line)->c_str()));
+        }
+        else if (sscanf(line->c_str(), "exportForEachCount: %" PRIu32 "", &numDefns) == 1)
+        {
+            while (numDefns--)
+            {
+                uint32_t slot = 0;
+                name[0] = '\0';
+                static const char *fmt_s = "%" PRIu32 " - " MAXLINESTR;
+                if (sscanf((++line)->c_str(), fmt_s, &slot, name.data()) == 2)
+                {
+                    if (name[0] != '\0')
+                        m_kernels.push_back(RSKernelDescriptor(this, name.data(), slot));
+                }
+            }
+        }
+        else if (sscanf(line->c_str(), "pragmaCount: %" PRIu32 "", &numDefns) == 1)
+        {
+            while (numDefns--)
+            {
+                name[0] = value[0] = '\0';
+                static const char *fmt_s = MAXLINESTR " - " MAXLINESTR;
+                if (sscanf((++line)->c_str(), fmt_s, name.data(), value.data()) != 0)
+                {
+                    if (name[0] != '\0')
+                        m_pragmas[std::string(name.data())] = value.data();
+                }
+            }
+        }
+        else
+        {
+            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
+            if (log)
+            {
+                log->Printf("%s - skipping .rs.info field '%s'", __FUNCTION__, line->c_str());
+            }
+        }
+    }
+
+    // 'root' kernel should always be present
+    return m_kernels.size() > 0;
 }
 
 void

@@ -894,35 +894,6 @@ typedef struct
     addr_t match_offset;
 } SymbolSearchInfo;
 
-static int
-SymbolWithClosestFileAddress (SymbolSearchInfo *info, const uint32_t *index_ptr)
-{
-    const Symbol *symbol = info->symtab->SymbolAtIndex (index_ptr[0]);
-    if (symbol == nullptr)
-        return -1;
-
-    const addr_t info_file_addr = info->file_addr;
-    if (symbol->ValueIsAddress())
-    {
-        const addr_t curr_file_addr = symbol->GetAddressRef().GetFileAddress();
-        if (info_file_addr < curr_file_addr)
-            return -1;
-
-        // Since we are finding the closest symbol that is greater than or equal
-        // to 'info->file_addr' we set the symbol here. This will get set
-        // multiple times, but after the search is done it will contain the best
-        // symbol match
-        info->match_symbol = const_cast<Symbol *>(symbol);
-        info->match_index_ptr = index_ptr;
-        info->match_offset = info_file_addr - curr_file_addr;
-
-        if (info_file_addr > curr_file_addr)
-            return +1;
-        return 0;
-    }
-    return -1;
-}
-
 void
 Symtab::InitAddressIndexes()
 {
@@ -944,43 +915,26 @@ Symtab::InitAddressIndexes()
                 m_file_addr_to_index.Append(entry);
             }
         }
+
         const size_t num_entries = m_file_addr_to_index.GetSize();
         if (num_entries > 0)
         {
             m_file_addr_to_index.Sort();
-            m_file_addr_to_index.CalculateSizesOfZeroByteSizeRanges();
-        
-            // Now our last symbols might not have had sizes because there
+
+            // Now our last address range might not have had sizes because there
             // was no subsequent symbol to calculate the size from. If this is
             // the case, then calculate the size by capping it at the end of the
             // section in which the symbol resides
-            for (int i = num_entries - 1; i >= 0; --i)
+            lldb::addr_t total_size = 0;
+            const FileRangeToIndexMap::Entry* entry = m_file_addr_to_index.Back();
+            if (entry->GetByteSize() == 0)
             {
-                const FileRangeToIndexMap::Entry &entry = m_file_addr_to_index.GetEntryRef(i);
-                // As we iterate backwards, as soon as we find a symbol with a valid
-                // byte size, we are done
-                if (entry.GetByteSize() > 0)
-                    break;
-
-                // Cap the size to the end of the section in which the symbol resides
-                SectionSP section_sp (m_objfile->GetSectionList()->FindSectionContainingFileAddress (entry.GetRangeBase()));
-                if (section_sp)
-                {
-                    const lldb::addr_t end_section_file_addr = section_sp->GetFileAddress() + section_sp->GetByteSize();
-                    const lldb::addr_t symbol_file_addr = entry.GetRangeBase();
-                    if (end_section_file_addr > symbol_file_addr)
-                    {
-                        Symbol &symbol = m_symbols[entry.data];
-                        if (!symbol.GetByteSizeIsValid())
-                        {
-                            symbol.SetByteSize(end_section_file_addr - symbol_file_addr);
-                            symbol.SetSizeIsSynthesized(true);
-                        }
-                    }
-                }
+                const Address& address = m_symbols[entry->data].GetAddressRef();
+                if (SectionSP section_sp = address.GetSection())
+                    total_size = entry->base + section_sp->GetByteSize() - address.GetOffset();
             }
-            // Sort again in case the range size changes the ordering
-            m_file_addr_to_index.Sort();
+
+            m_file_addr_to_index.CalculateSizesOfZeroByteSizeRanges(total_size);
         }
     }
 }
@@ -1020,37 +974,18 @@ Symtab::CalculateSymbolSizes ()
 }
 
 Symbol *
-Symtab::FindSymbolContainingFileAddress (addr_t file_addr, const uint32_t* indexes, uint32_t num_indexes)
+Symtab::FindSymbolAtFileAddress (addr_t file_addr)
 {
     Mutex::Locker locker (m_mutex);
+    if (!m_file_addr_to_index_computed)
+        InitAddressIndexes();
 
-    
-    SymbolSearchInfo info = { this, file_addr, nullptr, nullptr, 0 };
-
-    ::bsearch (&info, 
-               indexes, 
-               num_indexes, 
-               sizeof(uint32_t), 
-               (ComparisonFunction)SymbolWithClosestFileAddress);
-
-    if (info.match_symbol)
+    const FileRangeToIndexMap::Entry *entry = m_file_addr_to_index.FindEntryStartsAt(file_addr);
+    if (entry)
     {
-        if (info.match_offset == 0)
-        {
-            // We found an exact match!
-            return info.match_symbol;
-        }
-
-        if (!info.match_symbol->GetByteSizeIsValid())
-        {
-            // The matched symbol dosn't have a valid byte size so lets just go with that match...
-            return info.match_symbol;
-        }
-
-        // We were able to figure out a symbol size so lets make sure our 
-        // offset puts "file_addr" in the symbol's address range.
-        if (info.match_offset < info.match_symbol->GetByteSize())
-            return info.match_symbol;
+        Symbol* symbol = SymbolAtIndex(entry->data);
+        if (symbol->GetFileAddress() == file_addr)
+            return symbol;
     }
     return nullptr;
 }
@@ -1088,8 +1023,12 @@ Symtab::ForEachSymbolContainingFileAddress(addr_t file_addr, std::function<bool(
 
     for (size_t i = 0; i < addr_match_count; ++i)
     {
-        if (!callback(SymbolAtIndex(all_addr_indexes[i])))
-        break;
+        Symbol* symbol = SymbolAtIndex(all_addr_indexes[i]);
+        if (symbol->ContainsFileAddress(file_addr))
+        {
+            if (!callback(symbol))
+                break;
+        }
     }
 }
 

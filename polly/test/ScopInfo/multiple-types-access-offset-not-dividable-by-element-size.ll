@@ -12,12 +12,35 @@
 ;      }
 ;    }
 ;
-;   Polly currently does not allow such cases (even without multiple accesses of
-;   different type being involved).
-;   TODO: Add support for such kind of accesses
-;
-;
-; CHECK: Alignment assumption: {  : 1 = 0 }
+; CHECK:    Arrays {
+; CHECK:        i8 MemRef_Short[*]; // Element size 1
+; CHECK:        i8 MemRef_Float[*]; // Element size 1
+; CHECK:        i8 MemRef_Double[*]; // Element size 1
+; CHECK:    }
+; CHECK:    Arrays (Bounds as pw_affs) {
+; CHECK:        i8 MemRef_Short[*]; // Element size 1
+; CHECK:        i8 MemRef_Float[*]; // Element size 1
+; CHECK:        i8 MemRef_Double[*]; // Element size 1
+; CHECK:    }
+; CHECK:    Statements {
+; CHECK:      Stmt_bb2
+; CHECK:            Domain :=
+; CHECK:                { Stmt_bb2[i0] : 0 <= i0 <= 99 };
+; CHECK:            Schedule :=
+; CHECK:                { Stmt_bb2[i0] -> [i0] };
+; CHECK:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                { Stmt_bb2[i0] -> MemRef_Short[o0] : i0 <= o0 <= 1 + i0 };
+; CHECK:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                { Stmt_bb2[i0] -> MemRef_Short[i0] };
+; CHECK:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                { Stmt_bb2[i0] -> MemRef_Float[o0] : i0 <= o0 <= 3 + i0 };
+; CHECK:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                { Stmt_bb2[i0] -> MemRef_Float[i0] };
+; CHECK:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                { Stmt_bb2[i0] -> MemRef_Double[o0] : i0 <= o0 <= 7 + i0 };
+; CHECK:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                { Stmt_bb2[i0] -> MemRef_Double[i0] };
+; CHECK:    }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

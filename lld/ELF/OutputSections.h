@@ -65,7 +65,7 @@ public:
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
 
-  OutputSectionBase(StringRef Name, uint32_t sh_type, uintX_t sh_flags);
+  OutputSectionBase(StringRef Name, uint32_t Type, uintX_t Flags);
   void setVA(uintX_t VA) { Header.sh_addr = VA; }
   uintX_t getVA() const { return Header.sh_addr; }
   void setFileOffset(uintX_t Off) { Header.sh_offset = Off; }
@@ -282,7 +282,7 @@ public:
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
-  OutputSection(StringRef Name, uint32_t sh_type, uintX_t sh_flags);
+  OutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
   void addSection(InputSectionBase<ELFT> *C) override;
   void sortInitFini();
   void sortCtorsDtors();
@@ -300,7 +300,7 @@ class MergeOutputSection final : public OutputSectionBase<ELFT> {
   bool shouldTailMerge() const;
 
 public:
-  MergeOutputSection(StringRef Name, uint32_t sh_type, uintX_t sh_flags);
+  MergeOutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
   void addSection(InputSectionBase<ELFT> *S) override;
   void writeTo(uint8_t *Buf) override;
   unsigned getOffset(StringRef Val);
@@ -332,7 +332,7 @@ public:
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
-  EHOutputSection(StringRef Name, uint32_t sh_type, uintX_t sh_flags);
+  EHOutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
   void writeTo(uint8_t *Buf) override;
 
   template <bool IsRela>

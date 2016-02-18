@@ -29,6 +29,7 @@ struct isl_pw_multi_aff;
 struct isl_aff;
 struct isl_pw_aff;
 struct isl_val;
+struct isl_space;
 
 namespace llvm {
 class Value;
@@ -50,6 +51,7 @@ std::string stringFromIslObj(__isl_keep isl_multi_aff *maff);
 std::string stringFromIslObj(__isl_keep isl_pw_multi_aff *pma);
 std::string stringFromIslObj(__isl_keep isl_aff *aff);
 std::string stringFromIslObj(__isl_keep isl_pw_aff *pwaff);
+std::string stringFromIslObj(__isl_keep isl_space *space);
 //@}
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
@@ -79,6 +81,24 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_pw_multi_aff *PMA) {
   OS << polly::stringFromIslObj(PMA);
+  return OS;
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     __isl_keep isl_multi_aff *MA) {
+  OS << polly::stringFromIslObj(MA);
+  return OS;
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     __isl_keep isl_schedule *Schedule) {
+  OS << polly::stringFromIslObj(Schedule);
+  return OS;
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     __isl_keep isl_space *Space) {
+  OS << polly::stringFromIslObj(Space);
   return OS;
 }
 

@@ -315,7 +315,7 @@ static uint32_t hashSysv(StringRef Name) {
 template <class ELFT> void HashTableSection<ELFT>::finalize() {
   this->Header.sh_link = Out<ELFT>::DynSymTab->SectionIndex;
 
-  unsigned NumEntries = 2;                 // nbucket and nchain.
+  unsigned NumEntries = 2;                             // nbucket and nchain.
   NumEntries += Out<ELFT>::DynSymTab->getNumSymbols(); // The chain entries.
 
   // Create as many buckets as there are symbols.
