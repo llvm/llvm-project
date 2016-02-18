@@ -92,7 +92,7 @@ static const char *conv(ReportType typ) {
     return kSuppressionNone;
   else if (typ == ReportTypeDeadlock)
     return kSuppressionDeadlock;
-  Printf("ThreadSanitizer: unknown report type %d\n", typ),
+  Printf("ThreadSanitizer: unknown report type %d\n", typ);
   Die();
 }
 
