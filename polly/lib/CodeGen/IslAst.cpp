@@ -89,6 +89,7 @@ private:
   Scop *S;
   isl_ast_node *Root;
   isl_ast_expr *RunCondition;
+  std::shared_ptr<isl_ctx> Ctx;
 
   IslAst(Scop *Scop);
   void init(const Dependences &D);
@@ -377,7 +378,9 @@ static bool benefitsFromPolly(Scop *Scop, bool PerformParallelTest) {
   return true;
 }
 
-IslAst::IslAst(Scop *Scop) : S(Scop), Root(nullptr), RunCondition(nullptr) {}
+IslAst::IslAst(Scop *Scop)
+    : S(Scop), Root(nullptr), RunCondition(nullptr),
+      Ctx(Scop->getSharedIslCtx()) {}
 
 void IslAst::init(const Dependences &D) {
   bool PerformParallelTest = PollyParallel || DetectParallel ||

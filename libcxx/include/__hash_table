@@ -380,10 +380,12 @@ class _LIBCPP_TYPE_VIS_ONLY __hash_const_iterator
     static_assert(!is_const<typename pointer_traits<_NodePtr>::element_type>::value, "");
     typedef __hash_node_types<_NodePtr> _NodeTypes;
     typedef _NodePtr __node_pointer;
-    typedef __hash_iterator<_NodePtr> __non_const_iterator;
+
     __node_pointer __node_;
 
 public:
+    typedef __hash_iterator<_NodePtr> __non_const_iterator;
+
     typedef forward_iterator_tag                                 iterator_category;
     typedef typename _NodeTypes::__node_value_type               value_type;
     typedef typename _NodeTypes::difference_type                 difference_type;
@@ -655,10 +657,10 @@ class _LIBCPP_TYPE_VIS_ONLY __hash_const_local_iterator
     typedef typename remove_const<__node>::type     __non_const_node;
     typedef typename __rebind_pointer<__node_pointer, __non_const_node>::type
         __non_const_node_pointer;
-
+public:
     typedef __hash_local_iterator<__non_const_node_pointer>
                                                     __non_const_iterator;
-public:
+
     typedef forward_iterator_tag                                 iterator_category;
     typedef typename _NodeTypes::__node_value_type               value_type;
     typedef typename _NodeTypes::difference_type                 difference_type;

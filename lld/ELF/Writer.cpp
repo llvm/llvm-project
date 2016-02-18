@@ -339,7 +339,7 @@ void Writer<ELFT>::scanRelocs(
     // to the symbol go through the PLT. This is true even for a local
     // symbol, although local symbols normally do not require PLT entries.
     if (Body && isGnuIFunc<ELFT>(*Body)) {
-      if (Body->isInGot())
+      if (Body->isInPlt())
         continue;
       Out<ELFT>::Plt->addEntry(Body);
       bool CBP = canBePreempted(Body, /*NeedsGot=*/true);
@@ -733,7 +733,8 @@ StringRef Writer<ELFT>::getOutputSectionName(InputSectionBase<ELFT> *S) const {
 
   StringRef Name = S->getSectionName();
   for (StringRef V : {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
-                      ".init_array.", ".fini_array.", ".ctors.", ".dtors."})
+                      ".init_array.", ".fini_array.", ".ctors.", ".dtors.",
+                      ".tbss.", ".gcc_except_table.", ".tdata."})
     if (Name.startswith(V))
       return V.drop_back();
   return Name;
@@ -779,11 +780,14 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
   if (!B.isUsedInRegularObj())
     return false;
 
-  // Don't include synthetic symbols like __init_array_start in every output.
-  if (auto *U = dyn_cast<DefinedRegular<ELFT>>(&B))
-    if (&U->Sym == &ElfSym<ELFT>::Ignored)
+  if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
+    // Don't include synthetic symbols like __init_array_start in every output.
+    if (&D->Sym == &ElfSym<ELFT>::Ignored)
       return false;
-
+    // Exclude symbols pointing to garbage-collected sections.
+    if (D->Section && !D->Section->isLive())
+      return false;
+  }
   return true;
 }
 

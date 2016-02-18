@@ -607,6 +607,8 @@ protected:
         GetTypeSystemForLanguage (lldb::LanguageType language, Target *target, bool can_create);
 
     protected:
+        // This function does not take the map mutex, and should only be called from
+        // functions that do take the mutex.
         void
         AddToMap (lldb::LanguageType language, lldb::TypeSystemSP const &type_system_sp);
 

@@ -7,17 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/Platform.h"
-
 // C Includes
-
 // C++ Includes
 #include <algorithm>
 #include <fstream>
 #include <vector>
 
 // Other libraries and framework includes
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+
 // Project includes
+#include "lldb/Target/Platform.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Debugger.h"
@@ -39,11 +40,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Utils.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
-
 #include "Utility/ModuleCache.h"
-
 
 // Define these constants from POSIX mman.h rather than include the file
 // so that they will be correct even when compiled on Linux.
@@ -230,7 +227,7 @@ Platform::LocateExecutableScriptingResources (Target *target, Module &module, St
 //PlatformSP
 //Platform::FindPlugin (Process *process, const ConstString &plugin_name)
 //{
-//    PlatformCreateInstance create_callback = NULL;
+//    PlatformCreateInstance create_callback = nullptr;
 //    if (plugin_name)
 //    {
 //        create_callback  = PluginManager::GetPlatformCreateCallbackForPluginName (plugin_name);
@@ -248,7 +245,7 @@ Platform::LocateExecutableScriptingResources (Target *target, Module &module, St
 //    }
 //    else
 //    {
-//        for (uint32_t idx = 0; (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx)) != NULL; ++idx)
+//        for (uint32_t idx = 0; (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx)) != nullptr; ++idx)
 //        {
 //            PlatformSP platform_sp(create_callback(process, nullptr));
 //            if (platform_sp)
@@ -324,7 +321,7 @@ Platform::Find (const ConstString &name)
 PlatformSP
 Platform::Create (const ConstString &name, Error &error)
 {
-    PlatformCreateInstance create_callback = NULL;
+    PlatformCreateInstance create_callback = nullptr;
     lldb::PlatformSP platform_sp;
     if (name)
     {
@@ -334,7 +331,7 @@ Platform::Create (const ConstString &name, Error &error)
 
         create_callback = PluginManager::GetPlatformCreateCallbackForPluginName (name);
         if (create_callback)
-            platform_sp = create_callback(true, NULL);
+            platform_sp = create_callback(true, nullptr);
         else
             error.SetErrorStringWithFormat ("unable to find a plug-in for the platform named \"%s\"", name.GetCString());
     }
@@ -349,7 +346,6 @@ Platform::Create (const ConstString &name, Error &error)
 
     return platform_sp;
 }
-
 
 PlatformSP
 Platform::Create (const ArchSpec &arch, ArchSpec *platform_arch_ptr, Error &error)
@@ -521,10 +517,9 @@ Platform::GetStatus (Stream &strm)
 
     std::string specific_info(GetPlatformSpecificConnectionInformation());
     
-    if (specific_info.empty() == false)
+    if (!specific_info.empty())
         strm.Printf("Platform-specific connection: %s\n", specific_info.c_str());
 }
-
 
 bool
 Platform::GetOSVersion (uint32_t &major, 
@@ -631,7 +626,6 @@ Platform::AddClangModuleCompilationOptions (Target *target, std::vector<std::str
                    default_compilation_options.end());
 }
 
-
 FileSpec
 Platform::GetWorkingDirectory ()
 {
@@ -651,14 +645,12 @@ Platform::GetWorkingDirectory ()
     }
 }
 
-
 struct RecurseCopyBaton
 {
     const FileSpec& dst;
     Platform *platform_ptr;
     Error error;
 };
-
 
 static FileSpec::EnumerateDirectoryResult
 RecurseCopy_Callback (void *baton,
@@ -728,6 +720,7 @@ RecurseCopy_Callback (void *baton,
                 return FileSpec::eEnumerateDirectoryResultNext;
             }
             break;
+
         case FileSpec::eFileTypeRegular:
             {
                 // copy the file and keep going
@@ -964,7 +957,7 @@ Platform::GetHostname ()
         return "127.0.0.1";
 
     if (m_name.empty())        
-        return NULL;
+        return nullptr;
     return m_name.c_str();
 }
 
@@ -999,7 +992,7 @@ Platform::GetUserName (uint32_t uid)
             return SetCachedUserName (uid, name.c_str(), name.size());
     }
 #endif
-    return NULL;
+    return nullptr;
 }
 
 const char *
@@ -1016,7 +1009,7 @@ Platform::GetGroupName (uint32_t gid)
             return SetCachedGroupName (gid, name.c_str(), name.size());
     }
 #endif
-    return NULL;
+    return nullptr;
 }
 
 bool
@@ -1052,7 +1045,6 @@ Platform::SetOSVersion (uint32_t major,
     return false;
 }
 
-
 Error
 Platform::ResolveExecutable (const ModuleSpec &module_spec,
                              lldb::ModuleSP &exe_module_sp,
@@ -1063,11 +1055,11 @@ Platform::ResolveExecutable (const ModuleSpec &module_spec,
     {
         if (module_spec.GetArchitecture().IsValid())
         {
-            error = ModuleList::GetSharedModule (module_spec, 
-                                                 exe_module_sp, 
-                                                 module_search_paths_ptr,
-                                                 NULL, 
-                                                 NULL);
+            error = ModuleList::GetSharedModule(module_spec, 
+                                                exe_module_sp, 
+                                                module_search_paths_ptr,
+                                                nullptr, 
+                                                nullptr);
         }
         else
         {
@@ -1077,11 +1069,11 @@ Platform::ResolveExecutable (const ModuleSpec &module_spec,
             ModuleSpec arch_module_spec(module_spec);
             for (uint32_t idx = 0; GetSupportedArchitectureAtIndex (idx, arch_module_spec.GetArchitecture()); ++idx)
             {
-                error = ModuleList::GetSharedModule (arch_module_spec,
-                                                     exe_module_sp, 
-                                                     module_search_paths_ptr,
-                                                     NULL, 
-                                                     NULL);
+                error = ModuleList::GetSharedModule(arch_module_spec,
+                                                    exe_module_sp, 
+                                                    module_search_paths_ptr,
+                                                    nullptr, 
+                                                    nullptr);
                 // Did we find an executable using one of the 
                 if (error.Success() && exe_module_sp)
                     break;
@@ -1107,10 +1099,7 @@ Platform::ResolveSymbolFile (Target &target,
     else
         error.SetErrorString("unable to resolve symbol file");
     return error;
-    
-}
-
-
+}   
 
 bool
 Platform::ResolveRemotePath (const FileSpec &platform_path,
@@ -1119,7 +1108,6 @@ Platform::ResolveRemotePath (const FileSpec &platform_path,
     resolved_platform_path = platform_path;
     return resolved_platform_path.ResolvePath();
 }
-
 
 const ArchSpec &
 Platform::GetSystemArchitecture()
@@ -1166,7 +1154,6 @@ Platform::GetSystemArchitecture()
     return m_system_arch;
 }
 
-
 Error
 Platform::ConnectRemote (Args& args)
 {
@@ -1210,7 +1197,6 @@ Platform::FindProcesses (const ProcessInstanceInfoMatch &match_info,
         match_count = Host::FindProcesses (match_info, process_infos);
     return match_count;    
 }
-
 
 Error
 Platform::LaunchProcess (ProcessLaunchInfo &launch_info)
@@ -1309,7 +1295,7 @@ Platform::KillProcess (const lldb::pid_t pid)
 lldb::ProcessSP
 Platform::DebugProcess (ProcessLaunchInfo &launch_info, 
                         Debugger &debugger,
-                        Target *target,       // Can be NULL, if NULL create a new target, else use existing one
+                        Target *target,       // Can be nullptr, if nullptr create a new target, else use existing one
                         Error &error)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
@@ -1376,7 +1362,6 @@ Platform::DebugProcess (ProcessLaunchInfo &launch_info,
     return process_sp;
 }
 
-
 lldb::PlatformSP
 Platform::GetPlatformForArchitecture (const ArchSpec &arch, ArchSpec *platform_arch_ptr)
 {
@@ -1386,7 +1371,6 @@ Platform::GetPlatformForArchitecture (const ArchSpec &arch, ArchSpec *platform_a
         platform_sp = Platform::Create (arch, platform_arch_ptr, error);
     return platform_sp;
 }
-
 
 //------------------------------------------------------------------
 /// Lets a platform answer if it is compatible with a given
@@ -1539,11 +1523,11 @@ Platform::ConvertMmapFlagsToPlatform(const ArchSpec &arch, unsigned flags)
 }
 
 lldb_private::Error
-Platform::RunShellCommand(const char *command,           // Shouldn't be NULL
+Platform::RunShellCommand(const char *command,           // Shouldn't be nullptr
                           const FileSpec &working_dir,   // Pass empty FileSpec to use the current working directory
-                          int *status_ptr,               // Pass NULL if you don't want the process exit status
-                          int *signo_ptr,                // Pass NULL if you don't want the signal that caused the process to exit
-                          std::string *command_output,   // Pass NULL if you don't want the command output
+                          int *status_ptr,               // Pass nullptr if you don't want the process exit status
+                          int *signo_ptr,                // Pass nullptr if you don't want the signal that caused the process to exit
+                          std::string *command_output,   // Pass nullptr if you don't want the command output
                           uint32_t timeout_sec)          // Timeout in seconds to wait for shell program to finish
 {
     if (IsHost())
@@ -1551,7 +1535,6 @@ Platform::RunShellCommand(const char *command,           // Shouldn't be NULL
     else
         return Error("unimplemented");
 }
-
 
 bool
 Platform::CalculateMD5 (const FileSpec& file_spec,
@@ -1579,32 +1562,24 @@ Platform::GetLocalCacheDirectory ()
 static OptionDefinition
 g_rsync_option_table[] =
 {
-    {   LLDB_OPT_SET_ALL, false, "rsync"                  , 'r', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone         , "Enable rsync." },
-    {   LLDB_OPT_SET_ALL, false, "rsync-opts"             , 'R', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeCommandName  , "Platform-specific options required for rsync to work." },
-    {   LLDB_OPT_SET_ALL, false, "rsync-prefix"           , 'P', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeCommandName  , "Platform-specific rsync prefix put before the remote path." },
-    {   LLDB_OPT_SET_ALL, false, "ignore-remote-hostname" , 'i', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone         , "Do not automatically fill in the remote hostname when composing the rsync command." },
+    {   LLDB_OPT_SET_ALL, false, "rsync"                  , 'r', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone         , "Enable rsync." },
+    {   LLDB_OPT_SET_ALL, false, "rsync-opts"             , 'R', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCommandName  , "Platform-specific options required for rsync to work." },
+    {   LLDB_OPT_SET_ALL, false, "rsync-prefix"           , 'P', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCommandName  , "Platform-specific rsync prefix put before the remote path." },
+    {   LLDB_OPT_SET_ALL, false, "ignore-remote-hostname" , 'i', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone         , "Do not automatically fill in the remote hostname when composing the rsync command." },
 };
 
 static OptionDefinition
 g_ssh_option_table[] =
 {
-    {   LLDB_OPT_SET_ALL, false, "ssh"                    , 's', OptionParser::eNoArgument,       NULL, NULL, 0, eArgTypeNone         , "Enable SSH." },
-    {   LLDB_OPT_SET_ALL, false, "ssh-opts"               , 'S', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeCommandName  , "Platform-specific options required for SSH to work." },
+    {   LLDB_OPT_SET_ALL, false, "ssh"                    , 's', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone         , "Enable SSH." },
+    {   LLDB_OPT_SET_ALL, false, "ssh-opts"               , 'S', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCommandName  , "Platform-specific options required for SSH to work." },
 };
 
 static OptionDefinition
 g_caching_option_table[] =
 {
-    {   LLDB_OPT_SET_ALL, false, "local-cache-dir"        , 'c', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypePath         , "Path in which to store local copies of files." },
+    {   LLDB_OPT_SET_ALL, false, "local-cache-dir"        , 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePath         , "Path in which to store local copies of files." },
 };
-
-OptionGroupPlatformRSync::OptionGroupPlatformRSync ()
-{
-}
-
-OptionGroupPlatformRSync::~OptionGroupPlatformRSync ()
-{
-}
 
 const lldb_private::OptionDefinition*
 OptionGroupPlatformRSync::GetDefinitions ()
@@ -1666,14 +1641,6 @@ Platform::SetThreadCreationBreakpoint (lldb_private::Target &target)
     return lldb::BreakpointSP();
 }
 
-OptionGroupPlatformSSH::OptionGroupPlatformSSH ()
-{
-}
-
-OptionGroupPlatformSSH::~OptionGroupPlatformSSH ()
-{
-}
-
 const lldb_private::OptionDefinition*
 OptionGroupPlatformSSH::GetDefinitions ()
 {
@@ -1716,14 +1683,6 @@ uint32_t
 OptionGroupPlatformSSH::GetNumDefinitions ()
 {
     return llvm::array_lengthof(g_ssh_option_table);
-}
-
-OptionGroupPlatformCaching::OptionGroupPlatformCaching ()
-{
-}
-
-OptionGroupPlatformCaching::~OptionGroupPlatformCaching ()
-{
 }
 
 const lldb_private::OptionDefinition*

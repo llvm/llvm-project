@@ -1273,7 +1273,13 @@ private:
   ParamIdType ParameterIds;
 
   /// Isl context.
-  isl_ctx *IslCtx;
+  ///
+  /// We need a shared_ptr with reference counter to delete the context when all
+  /// isl objects are deleted. We will distribute the shared_ptr to all objects
+  /// that use the context to create isl objects, and increase the reference
+  /// counter. By doing this, we guarantee that the context is deleted when we
+  /// delete the last object that creates isl objects with the context.
+  std::shared_ptr<isl_ctx> IslCtx;
 
   /// @brief A map from basic blocks to SCoP statements.
   DenseMap<BasicBlock *, ScopStmt *> StmtMap;
@@ -1376,7 +1382,7 @@ private:
   InvariantEquivClassesTy InvariantEquivClasses;
 
   /// @brief Scop constructor; invoked from ScopInfo::buildScop.
-  Scop(Region &R, ScalarEvolution &SE, isl_ctx *ctx, unsigned MaxLoopDepth);
+  Scop(Region &R, ScalarEvolution &SE, unsigned MaxLoopDepth);
 
   /// @brief Get or create the access function set in a BasicBlock
   AccFuncSetType &getOrCreateAccessFunctions(const BasicBlock *BB) {
@@ -1916,6 +1922,9 @@ public:
   /// @return The isl context of this static control part.
   isl_ctx *getIslCtx() const;
 
+  /// @brief Directly return the shared_ptr of the context.
+  const std::shared_ptr<isl_ctx> &getSharedIslCtx() const { return IslCtx; }
+
   /// @brief Compute the isl representation for the SCEV @p
   ///
   /// @param BB An (optional) basic block in which the isl_pw_aff is computed.
@@ -2015,7 +2024,6 @@ class ScopInfo : public RegionPass {
 
   // The Scop
   std::unique_ptr<Scop> scop;
-  isl_ctx *ctx;
 
   // Clear the context.
   void clear();

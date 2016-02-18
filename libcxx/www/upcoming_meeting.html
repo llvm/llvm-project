@@ -78,9 +78,9 @@
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2572">2572</a></td><td>The remarks for <tt>shared_ptr::operator*</tt> should apply to <i>cv</i>-qualified <tt>void</tt> as well</td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2574">2574</a></td><td>[fund.ts.v2] <tt>std::experimental::function::operator=(F&amp;&amp;)</tt> should be constrained</td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2575">2575</a></td><td>[fund.ts.v2] <tt>experimental::function::assign</tt> should be removed</td><td>Jacksonville</td><td></td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2576">2576</a></td><td><tt>istream_iterator</tt> and <tt>ostream_iterator</tt> should use <tt>std::addressof</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2576">2576</a></td><td><tt>istream_iterator</tt> and <tt>ostream_iterator</tt> should use <tt>std::addressof</tt></td><td>Jacksonville</td><td>Patch done; needs tests</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2577">2577</a></td><td><tt>{shared,unique}_lock</tt> should use <tt>std::addressof</tt></td><td>Jacksonville</td><td></td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2579">2579</a></td><td>Inconsistency wrt Allocators in <tt>basic_string</tt> assignment vs. <tt>basic_string::assign</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2579">2579</a></td><td>Inconsistency wrt Allocators in <tt>basic_string</tt> assignment vs. <tt>basic_string::assign</tt></td><td>Jacksonville</td><td><i>Patch Ready</i></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2581">2581</a></td><td>Specialization of <tt>&lt;type_traits&gt;</tt> variable templates should be prohibited</td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2582">2582</a></td><td>&sect;[res.on.functions]/2's prohibition against incomplete types shouldn't apply to type traits</td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2583">2583</a></td><td>There is no way to supply an allocator for <tt>basic_string(str, pos)</tt></td><td>Jacksonville</td><td></td></tr>
@@ -112,9 +112,9 @@
 <li>2572 - </li>
 <li>2574 - </li>
 <li>2575 - I don't think we ever implemented this; so 'removing' it is trivial</li>
-<li>2576 - This one is simple</li>
+<li>2576 - This one is simple, but testing it will be hard. I tried making a sublass of istringstream, but it got sliced.</li>
 <li>2577 - This one is simple</li>
-<li>2579 - This one is simple</li>
+<li>2579 - Done.</li>
 <li>2581 - </li>
 <li>2582 - </li>
 <li>2583 - This looks easy.</li>

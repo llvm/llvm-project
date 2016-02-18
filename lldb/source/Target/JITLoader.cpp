@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Target/JITLoader.h"
 #include "lldb/Target/JITLoaderList.h"
@@ -19,8 +23,8 @@ using namespace lldb_private;
 void
 JITLoader::LoadPlugins (Process *process, JITLoaderList &list)
 {
-    JITLoaderCreateInstance create_callback = NULL;
-    for (uint32_t idx = 0; (create_callback = PluginManager::GetJITLoaderCreateCallbackAtIndex(idx)) != NULL; ++idx)
+    JITLoaderCreateInstance create_callback = nullptr;
+    for (uint32_t idx = 0; (create_callback = PluginManager::GetJITLoaderCreateCallbackAtIndex(idx)) != nullptr; ++idx)
     {
         JITLoaderSP instance_sp(create_callback(process, false));
         if (instance_sp)
@@ -33,6 +37,4 @@ JITLoader::JITLoader(Process *process) :
 {
 }
 
-JITLoader::~JITLoader()
-{
-}
+JITLoader::~JITLoader() = default;

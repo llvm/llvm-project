@@ -21,11 +21,17 @@ _start:
 .section .data.rel.ro.a,"aw",%progbits
 .section .data.rel.ro.local,"aw",%progbits
 .section .data.rel.ro.local.a,"aw",%progbits
+.section .tbss.foo,"aGwT",@nobits,foo,comdat
+.section .gcc_except_table.foo,"aG",@progbits,foo,comdat
+.section .tdata.foo,"aGwT",@progbits,foo,comdat
 
 // CHECK-NOT: Name: .rodata.a
 // CHECK:     Name: .rodata
+// CHECK:     Name: .gcc_except_table ({{.*}})
 // CHECK-NOT: Name: .text.a
 // CHECK:     Name: .text
+// CHECK:     Name: .tdata ({{.*}})
+// CHECK:     Name: .tbss ({{.*}})
 // CHECK-NOT: Name: .data.rel.ro.a
 // CHECK-NOT: Name: .data.rel.ro.local.a
 // CHECK:     Name: .data.rel.ro

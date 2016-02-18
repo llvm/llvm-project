@@ -225,25 +225,21 @@ void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
 }
 
 template <class ELFT>
-static typename ELFFile<ELFT>::uintX_t
-getOffset(const DynamicReloc<ELFT> &Rel) {
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
-  SymbolBody *Sym = Rel.Sym;
-  switch (Rel.OKind) {
-  case DynamicReloc<ELFT>::Off_GTlsIndex:
+typename ELFFile<ELFT>::uintX_t DynamicReloc<ELFT>::getOffset() const {
+  switch (OKind) {
+  case Off_GTlsIndex:
     return Out<ELFT>::Got->getGlobalDynAddr(*Sym);
-  case DynamicReloc<ELFT>::Off_GTlsOffset:
+  case Off_GTlsOffset:
     return Out<ELFT>::Got->getGlobalDynAddr(*Sym) + sizeof(uintX_t);
-  case DynamicReloc<ELFT>::Off_LTlsIndex:
+  case Off_LTlsIndex:
     return Out<ELFT>::Got->getTlsIndexVA();
-  case DynamicReloc<ELFT>::Off_Sec:
-    return Rel.OffsetSec->getOffset(Rel.OffsetInSec) +
-           Rel.OffsetSec->OutSec->getVA();
-  case DynamicReloc<ELFT>::Off_Bss:
+  case Off_Sec:
+    return OffsetSec->getOffset(OffsetInSec) + OffsetSec->OutSec->getVA();
+  case Off_Bss:
     return cast<SharedSymbol<ELFT>>(Sym)->OffsetInBss + Out<ELFT>::Bss->getVA();
-  case DynamicReloc<ELFT>::Off_Got:
+  case Off_Got:
     return Sym->getGotVA<ELFT>();
-  case DynamicReloc<ELFT>::Off_GotPlt:
+  case Off_GotPlt:
     return Sym->getGotPltVA<ELFT>();
   }
   llvm_unreachable("Invalid offset kind");
@@ -265,7 +261,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
       reinterpret_cast<Elf_Rela *>(P)->r_addend = Rel.Addend + VA;
     }
 
-    P->r_offset = getOffset(Rel);
+    P->r_offset = Rel.getOffset();
     uint32_t SymIdx = (!Rel.UseSymVA && Sym) ? Sym->DynsymIndex : 0;
     P->setSymbolAndType(SymIdx, Rel.Type, Config->Mips64EL);
   }
@@ -398,7 +394,7 @@ unsigned GnuHashTableSection<ELFT>::calcMaskWords(unsigned NumHashed) {
 }
 
 template <class ELFT> void GnuHashTableSection<ELFT>::finalize() {
-  unsigned NumHashed = HashedSymbols.size();
+  unsigned NumHashed = Symbols.size();
   NBuckets = calcNBuckets(NumHashed);
   MaskWords = calcMaskWords(NumHashed);
   // Second hash shift estimation: just predefined values.
@@ -413,7 +409,7 @@ template <class ELFT> void GnuHashTableSection<ELFT>::finalize() {
 
 template <class ELFT> void GnuHashTableSection<ELFT>::writeTo(uint8_t *Buf) {
   writeHeader(Buf);
-  if (HashedSymbols.empty())
+  if (Symbols.empty())
     return;
   writeBloomFilter(Buf);
   writeHashTable(Buf);
@@ -423,7 +419,7 @@ template <class ELFT>
 void GnuHashTableSection<ELFT>::writeHeader(uint8_t *&Buf) {
   auto *P = reinterpret_cast<Elf_Word *>(Buf);
   *P++ = NBuckets;
-  *P++ = Out<ELFT>::DynSymTab->getNumSymbols() - HashedSymbols.size();
+  *P++ = Out<ELFT>::DynSymTab->getNumSymbols() - Symbols.size();
   *P++ = MaskWords;
   *P++ = Shift2;
   Buf = reinterpret_cast<uint8_t *>(P);
@@ -434,10 +430,10 @@ void GnuHashTableSection<ELFT>::writeBloomFilter(uint8_t *&Buf) {
   unsigned C = sizeof(Elf_Off) * 8;
 
   auto *Masks = reinterpret_cast<Elf_Off *>(Buf);
-  for (const HashedSymbolData &Item : HashedSymbols) {
-    size_t Pos = (Item.Hash / C) & (MaskWords - 1);
-    uintX_t V = (uintX_t(1) << (Item.Hash % C)) |
-                (uintX_t(1) << ((Item.Hash >> Shift2) % C));
+  for (const SymbolData &Sym : Symbols) {
+    size_t Pos = (Sym.Hash / C) & (MaskWords - 1);
+    uintX_t V = (uintX_t(1) << (Sym.Hash % C)) |
+                (uintX_t(1) << ((Sym.Hash >> Shift2) % C));
     Masks[Pos] |= V;
   }
   Buf += sizeof(Elf_Off) * MaskWords;
@@ -450,16 +446,16 @@ void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
 
   int PrevBucket = -1;
   int I = 0;
-  for (const HashedSymbolData &Item : HashedSymbols) {
-    int Bucket = Item.Hash % NBuckets;
+  for (const SymbolData &Sym : Symbols) {
+    int Bucket = Sym.Hash % NBuckets;
     assert(PrevBucket <= Bucket);
     if (Bucket != PrevBucket) {
-      Buckets[Bucket] = Item.Body->DynsymIndex;
+      Buckets[Bucket] = Sym.Body->DynsymIndex;
       PrevBucket = Bucket;
       if (I > 0)
         Values[I - 1] |= 1;
     }
-    Values[I] = Item.Hash & ~1;
+    Values[I] = Sym.Hash & ~1;
     ++I;
   }
   if (I > 0)
@@ -471,32 +467,33 @@ static bool includeInGnuHashTable(SymbolBody *B) {
   return !B->isUndefined();
 }
 
+// Add symbols to this symbol hash table. Note that this function
+// destructively sort a given vector -- which is needed because
+// GNU-style hash table places some sorting requirements.
 template <class ELFT>
 void GnuHashTableSection<ELFT>::addSymbols(
-    std::vector<std::pair<SymbolBody *, unsigned>> &Symbols) {
-  std::vector<std::pair<SymbolBody *, unsigned>> NotHashed;
-  NotHashed.reserve(Symbols.size());
-  HashedSymbols.reserve(Symbols.size());
-  for (const std::pair<SymbolBody *, unsigned> &P : Symbols) {
-    SymbolBody *B = P.first;
-    if (includeInGnuHashTable(B))
-      HashedSymbols.push_back(
-          HashedSymbolData{B, P.second, hashGnu(B->getName())});
-    else
-      NotHashed.push_back(P);
-  }
-  if (HashedSymbols.empty())
+    std::vector<std::pair<SymbolBody *, size_t>> &V) {
+  auto Mid = std::stable_partition(V.begin(), V.end(),
+                                   [](std::pair<SymbolBody *, size_t> &P) {
+                                     return !includeInGnuHashTable(P.first);
+                                   });
+  if (Mid == V.end())
     return;
+  for (auto I = Mid, E = V.end(); I != E; ++I) {
+    SymbolBody *B = I->first;
+    size_t StrOff = I->second;
+    Symbols.push_back({B, StrOff, hashGnu(B->getName())});
+  }
 
-  unsigned NBuckets = calcNBuckets(HashedSymbols.size());
-  std::stable_sort(HashedSymbols.begin(), HashedSymbols.end(),
-                   [&](const HashedSymbolData &L, const HashedSymbolData &R) {
+  unsigned NBuckets = calcNBuckets(Symbols.size());
+  std::stable_sort(Symbols.begin(), Symbols.end(),
+                   [&](const SymbolData &L, const SymbolData &R) {
                      return L.Hash % NBuckets < R.Hash % NBuckets;
                    });
 
-  Symbols = std::move(NotHashed);
-  for (const HashedSymbolData &Item : HashedSymbols)
-    Symbols.push_back(std::make_pair(Item.Body, Item.STName));
+  V.erase(Mid, V.end());
+  for (const SymbolData &Sym : Symbols)
+    V.push_back({Sym.Body, Sym.STName});
 }
 
 template <class ELFT>
@@ -1386,14 +1383,13 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   else if (Config->EMachine == EM_MIPS)
     std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
   size_t I = 0;
-  for (const std::pair<SymbolBody *, unsigned> &P : Symbols)
+  for (const std::pair<SymbolBody *, size_t> &P : Symbols)
     P.first->DynsymIndex = ++I;
 }
 
 template <class ELFT>
-void SymbolTableSection<ELFT>::addSymbol(SymbolBody *Body) {
-  Symbols.push_back(
-      std::make_pair(Body, StrTabSec.addString(Body->getName(), false)));
+void SymbolTableSection<ELFT>::addSymbol(SymbolBody *B) {
+  Symbols.push_back({B, StrTabSec.addString(B->getName(), false)});
 }
 
 template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -1412,7 +1408,7 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   // Iterate over all input object files to copy their local symbols
   // to the output symbol table pointed by Buf.
   for (const std::unique_ptr<ObjectFile<ELFT>> &File : Table.getObjectFiles()) {
-    for (const std::pair<const Elf_Sym *, unsigned> &P : File->KeptLocalSyms) {
+    for (const std::pair<const Elf_Sym *, size_t> &P : File->KeptLocalSyms) {
       const Elf_Sym *Sym = P.first;
 
       auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
@@ -1454,40 +1450,9 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
   // Write the internal symbol table contents to the output symbol table
   // pointed by Buf.
   auto *ESym = reinterpret_cast<Elf_Sym *>(Buf);
-  for (const std::pair<SymbolBody *, unsigned> &P : Symbols) {
+  for (const std::pair<SymbolBody *, size_t> &P : Symbols) {
     SymbolBody *Body = P.first;
-    const OutputSectionBase<ELFT> *OutSec = nullptr;
-
-    switch (Body->kind()) {
-    case SymbolBody::DefinedSyntheticKind:
-      OutSec = &cast<DefinedSynthetic<ELFT>>(Body)->Section;
-      break;
-    case SymbolBody::DefinedRegularKind: {
-      auto *Sym = cast<DefinedRegular<ELFT>>(Body->repl());
-      if (InputSectionBase<ELFT> *Sec = Sym->Section) {
-        if (!Sec->isLive())
-          continue;
-        OutSec = Sec->OutSec;
-      }
-      break;
-    }
-    case SymbolBody::DefinedCommonKind:
-      OutSec = Out<ELFT>::Bss;
-      break;
-    case SymbolBody::SharedKind: {
-      if (cast<SharedSymbol<ELFT>>(Body)->needsCopy())
-        OutSec = Out<ELFT>::Bss;
-      break;
-    }
-    case SymbolBody::UndefinedElfKind:
-    case SymbolBody::UndefinedKind:
-    case SymbolBody::LazyKind:
-      break;
-    case SymbolBody::DefinedBitcodeKind:
-      llvm_unreachable("Should have been replaced");
-    }
-
-    ESym->st_name = P.second;
+    size_t StrOff = P.second;
 
     unsigned char Type = STT_NOTYPE;
     uintX_t Size = 0;
@@ -1501,16 +1466,44 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
 
     ESym->setBindingAndType(getSymbolBinding(Body), Type);
     ESym->st_size = Size;
+    ESym->st_name = StrOff;
     ESym->setVisibility(Body->getVisibility());
     ESym->st_value = Body->getVA<ELFT>();
 
-    if (OutSec)
+    if (const OutputSectionBase<ELFT> *OutSec = getOutputSection(Body))
       ESym->st_shndx = OutSec->SectionIndex;
     else if (isa<DefinedRegular<ELFT>>(Body))
       ESym->st_shndx = SHN_ABS;
-
     ++ESym;
   }
+}
+
+template <class ELFT>
+const OutputSectionBase<ELFT> *
+SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
+  switch (Sym->kind()) {
+  case SymbolBody::DefinedSyntheticKind:
+    return &cast<DefinedSynthetic<ELFT>>(Sym)->Section;
+  case SymbolBody::DefinedRegularKind: {
+    auto *D = cast<DefinedRegular<ELFT>>(Sym->repl());
+    if (D->Section)
+      return D->Section->OutSec;
+    break;
+  }
+  case SymbolBody::DefinedCommonKind:
+    return Out<ELFT>::Bss;
+  case SymbolBody::SharedKind:
+    if (cast<SharedSymbol<ELFT>>(Sym)->needsCopy())
+      return Out<ELFT>::Bss;
+    break;
+  case SymbolBody::UndefinedElfKind:
+  case SymbolBody::UndefinedKind:
+  case SymbolBody::LazyKind:
+    break;
+  case SymbolBody::DefinedBitcodeKind:
+    llvm_unreachable("Should have been replaced");
+  }
+  return nullptr;
 }
 
 template <class ELFT>

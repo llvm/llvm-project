@@ -7,8 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Target/ExecutionContext.h"
-
 #include "lldb/Core/State.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/StackFrame.h"
@@ -241,9 +244,7 @@ ExecutionContext::Clear()
     m_frame_sp.reset();
 }
 
-ExecutionContext::~ExecutionContext()
-{
-}
+ExecutionContext::~ExecutionContext() = default;
 
 uint32_t
 ExecutionContext::GetAddressByteSize() const
@@ -272,7 +273,7 @@ ExecutionContext::GetRegisterContext () const
         return m_frame_sp->GetRegisterContext().get();
     else if (m_thread_sp)
         return m_thread_sp->GetRegisterContext().get();
-    return NULL;
+    return nullptr;
 }
 
 Target *
@@ -282,7 +283,7 @@ ExecutionContext::GetTargetPtr () const
         return m_target_sp.get();
     if (m_process_sp)
         return &m_process_sp->GetTarget();
-    return NULL;
+    return nullptr;
 }
 
 Process *
@@ -292,7 +293,7 @@ ExecutionContext::GetProcessPtr () const
         return m_process_sp.get();
     if (m_target_sp)
         return m_target_sp->GetProcessSP().get();
-    return NULL;
+    return nullptr;
 }
 
 ExecutionContextScope *
@@ -311,7 +312,7 @@ Target &
 ExecutionContext::GetTargetRef () const
 {
 #if defined (LLDB_CONFIGURATION_DEBUG) || defined (LLDB_CONFIGURATION_RELEASE)
-    assert (m_target_sp.get());
+    assert (m_target_sp);
 #endif
     return *m_target_sp;
 }
@@ -320,7 +321,7 @@ Process &
 ExecutionContext::GetProcessRef () const
 {
 #if defined (LLDB_CONFIGURATION_DEBUG) || defined (LLDB_CONFIGURATION_RELEASE)
-    assert (m_process_sp.get());
+    assert (m_process_sp);
 #endif
     return *m_process_sp;
 }
@@ -329,7 +330,7 @@ Thread &
 ExecutionContext::GetThreadRef () const
 {
 #if defined (LLDB_CONFIGURATION_DEBUG) || defined (LLDB_CONFIGURATION_RELEASE)
-    assert (m_thread_sp.get());
+    assert (m_thread_sp);
 #endif
     return *m_thread_sp;
 }
@@ -338,7 +339,7 @@ StackFrame &
 ExecutionContext::GetFrameRef () const
 {
 #if defined (LLDB_CONFIGURATION_DEBUG) || defined (LLDB_CONFIGURATION_RELEASE)
-    assert (m_frame_sp.get());
+    assert (m_frame_sp);
 #endif
     return *m_frame_sp;
 }
@@ -572,7 +573,6 @@ ExecutionContextRef::ExecutionContextRef (const ExecutionContext &exe_ctx) :
     *this = exe_ctx;
 }
 
-
 ExecutionContextRef::ExecutionContextRef (Target *target, bool adopt_selected) :
     m_target_wp(),
     m_process_wp(),
@@ -582,9 +582,6 @@ ExecutionContextRef::ExecutionContextRef (Target *target, bool adopt_selected) :
 {
     SetTargetPtr (target, adopt_selected);
 }
-
-
-
 
 ExecutionContextRef::ExecutionContextRef (const ExecutionContextRef &rhs) :
     m_target_wp (rhs.m_target_wp),
@@ -637,9 +634,7 @@ ExecutionContextRef::Clear()
     ClearFrame();
 }
 
-ExecutionContextRef::~ExecutionContextRef()
-{
-}
+ExecutionContextRef::~ExecutionContextRef() = default;
 
 void
 ExecutionContextRef::SetTargetSP (const lldb::TargetSP &target_sp)
@@ -694,7 +689,6 @@ ExecutionContextRef::SetFrameSP (const lldb::StackFrameSP &frame_sp)
         m_process_wp.reset();
         m_target_wp.reset();
     }
-
 }
 
 void
@@ -820,7 +814,7 @@ ExecutionContextRef::GetThreadSP () const
         }
     }
     
-    // Check that we aren't about to return an invalid thread sp.  We might return a NULL thread_sp,
+    // Check that we aren't about to return an invalid thread sp.  We might return a nullptr thread_sp,
     // but don't return an invalid one.
     
     if (thread_sp && !thread_sp->IsValid())
@@ -846,5 +840,3 @@ ExecutionContextRef::Lock (bool thread_and_frame_only_if_stopped) const
 {
     return ExecutionContext(this, thread_and_frame_only_if_stopped);
 }
-
-
