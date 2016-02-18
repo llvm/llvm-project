@@ -100,6 +100,12 @@ Changes to the OCaml bindings
 
  During this release ...
 
+Support for attribute 'notail' has been added
+---------------------------------------------
+
+This marker prevents optimization passes from adding 'tail' or
+'musttail' markers to a call. It is used to prevent tail call
+optimization from being performed on the call.
 
 External Open Source Projects Using LLVM 3.9
 ============================================

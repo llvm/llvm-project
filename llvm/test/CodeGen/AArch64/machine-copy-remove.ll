@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mcpu=cortex-a57 -verify-machineinstrs < %s | FileCheck %s
 
-; CHECK-LABEL: f_XX
+; CHECK-LABEL: f_XX:
 ; CHECK: cbz x[[REG:[0-9]+]], [[BB:.LBB.*]]
 ; CHECK: [[BB]]:
 ; CHECK-NOT: mov x[[REG]], xzr
@@ -18,7 +18,7 @@ if.end:                                           ; preds = %entry, %if.then
   ret i64 %a.0
 }
 
-; CHECK-LABEL: f_WW
+; CHECK-LABEL: f_WW:
 ; CHECK: cbz w[[REG:[0-9]+]], [[BB:.LBB.*]]
 ; CHECK: [[BB]]:
 ; CHECK-NOT: mov w[[REG]], wzr
@@ -36,7 +36,7 @@ if.end:                                           ; preds = %entry, %if.then
   ret i32 %a.0
 }
 
-; CHECK-LABEL: f_XW
+; CHECK-LABEL: f_XW:
 ; CHECK: cbz x[[REG:[0-9]+]], [[BB:.LBB.*]]
 ; CHECK: [[BB]]:
 ; CHECK-NOT: mov w[[REG]], wzr
@@ -54,7 +54,7 @@ if.end:                                           ; preds = %entry, %if.then
   ret i32 %a.0
 }
 
-; CHECK-LABEL: f_WX
+; CHECK-LABEL: f_WX:
 ; CHECK: cbz w[[REG:[0-9]+]], [[BB:.LBB.*]]
 ; CHECK: [[BB]]:
 ; CHECK: mov x[[REG]], xzr
@@ -72,4 +72,23 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry, %if.then
   %a.0 = phi i64 [ %0, %if.then ], [ 0, %entry ]
   ret i64 %a.0
+}
+
+; CHECK-LABEL: test_superreg:
+; CHECK:     cbz x[[REG:[0-9]+]], [[BB:.LBB.*]]
+; CHECK: [[BB]]:
+; CHECK:     str x[[REG]], [x1]
+; CHECK-NOT: mov w[[REG]], wzr
+; Because we returned w0 but x0 was marked live-in to the block, we didn't
+; remove the <kill> on the str leading to a verification failure.
+define i32 @test_superreg(i64 %in, i64* %dest) {
+  %tst = icmp eq i64 %in, 0
+  br i1 %tst, label %true, label %false
+
+false:
+  ret i32 42
+
+true:
+  store volatile i64 %in, i64* %dest
+  ret i32 0
 }

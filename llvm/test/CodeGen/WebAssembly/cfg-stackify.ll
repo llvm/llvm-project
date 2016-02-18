@@ -459,9 +459,7 @@ exit:
 ; OPT-LABEL: test3:
 ; OPT: block
 ; OPT: br_if
-; OPT-NEXT: return
-; OPT-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
-; OPT-NEXT: end_block
+; OPT: .LBB{{[0-9]+}}_{{[0-9]+}}:
 ; OPT-NEXT: loop
 ; OPT-NEXT: block
 ; OPT-NEXT: block
@@ -513,44 +511,35 @@ if.end:
 ; CHECK:      block{{$}}
 ; CHECK-NEXT: block{{$}}
 ; CHECK:      br_if       0, $pop{{[0-9]+}}{{$}}
-; CHECK-NEXT: block{{$}}
-; CHECK:      br_if       0, $pop{{[0-9]+}}{{$}}
-; CHECK:      br_if       2, $pop{{[0-9]+}}{{$}}
+; CHECK:      br_if       1, $pop{{[0-9]+}}{{$}}
+; CHECK:      br          1{{$}}
 ; CHECK-NEXT: .LBB13_3:
 ; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: return{{$}}
-; CHECK-NEXT: .LBB13_4:
-; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: block{{$}}
-; CHECK:      br_if       0, $pop{{[0-9]+}}{{$}}
-; CHECK:      br_if       1, $pop{{[0-9]+}}{{$}}
-; CHECK-NEXT: return{{$}}
-; CHECK-NEXT: .LBB13_7:
+; CHECK:      br_if 0, $pop{{[0-9]+}}{{$}}
+; CHECK:      br_if 1, $pop{{[0-9]+}}{{$}}
+; CHECK-NEXT: .LBB13_5:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
-; CHECK-NEXT: .LBB13_8:
+; CHECK-NEXT: .LBB13_6:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
 ; OPT-LABEL: test4:
 ; OPT-NEXT: .param       i32{{$}}
 ; OPT:      block{{$}}
 ; OPT-NEXT: block{{$}}
-; OPT-NEXT: block{{$}}
 ; OPT:      br_if       0, $pop{{[0-9]+}}{{$}}
-; OPT-NEXT: block{{$}}
-; OPT:      br_if       0, $pop{{[0-9]+}}{{$}}
-; OPT:      br_if       2, $pop{{[0-9]+}}{{$}}
+; OPT:      br_if       1, $pop{{[0-9]+}}{{$}}
+; OPT:      br          1{{$}}
 ; OPT-NEXT: .LBB13_3:
 ; OPT-NEXT: end_block{{$}}
-; OPT-NEXT: return{{$}}
-; OPT-NEXT: .LBB13_4:
-; OPT:      br_if       1, $pop{{[0-9]+}}{{$}}
+; OPT-NEXT: block{{$}}
 ; OPT:      br_if       0, $pop{{[0-9]+}}{{$}}
-; OPT-NEXT: return{{$}}
-; OPT-NEXT: .LBB13_7:
+; OPT:      br_if       1, $pop{{[0-9]+}}{{$}}
+; OPT-NEXT: .LBB13_5:
 ; OPT-NEXT: end_block{{$}}
 ; OPT-NEXT: return{{$}}
-; OPT-NEXT: .LBB13_8:
+; OPT-NEXT: .LBB13_6:
 ; OPT-NEXT: end_block{{$}}
 ; OPT-NEXT: return{{$}}
 define void @test4(i32 %t) {
@@ -826,13 +815,13 @@ bb3:
 ; CHECK-NOT:   block
 ; CHECK:       br_if     0, {{[^,]+}}{{$}}
 ; CHECK-NOT:   block
-; CHECK:       br_if     1, {{[^,]+}}{{$}}
-; CHECK-NEXT:  br        3{{$}}
+; CHECK:       br_if     3, {{[^,]+}}{{$}}
+; CHECK-NEXT:  br        1{{$}}
 ; CHECK-NEXT:  .LBB18_4:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NOT:   block
-; CHECK:       br_if     0, {{[^,]+}}{{$}}
-; CHECK-NEXT:  br        2{{$}}
+; CHECK:       br_if     2, {{[^,]+}}{{$}}
+; CHECK-NEXT:  br        0{{$}}
 ; CHECK-NEXT:  .LBB18_5:
 ; CHECK-NOT:   block
 ; CHECK:       return{{$}}
@@ -1267,34 +1256,36 @@ bb50:
 ; CHECK:        block
 ; CHECK-NEXT:   block
 ; CHECK:        br_if       0, $pop{{.*}}{{$}}
-; CHECK-NEXT: .LBB24_1:
+; CHECK:        .LBB24_2:
 ; CHECK-NEXT:   block{{$}}
 ; CHECK-NEXT:   loop{{$}}
 ; CHECK:        br_if       1, $pop{{.*}}{{$}}
-; CHECK:        br_if       2, $pop{{.*}}{{$}}
-; CHECK-NEXT:   br          0{{$}}
-; CHECK-NEXT:   .LBB24_3:
+; CHECK:        br_if       0, ${{.*}}{{$}}
+; CHECK-NEXT:   br          2{{$}}
+; CHECK-NEXT:   .LBB24_4:
 ; CHECK-NEXT:   end_loop{{$}}
-; CHECK:        .LBB24_4:
+; CHECK:        .LBB24_5:
 ; CHECK-NEXT:   end_block{{$}}
 ; CHECK:        br_if       1, $pop{{.*}}{{$}}
 ; CHECK:        return{{$}}
-; CHECK:        .LBB24_6:
-; CHECK-NEXT:   end_block{{$}}
-; CHECK:        return{{$}}
 ; CHECK:        .LBB24_7:
+; CHECK-NEXT:   end_block{{$}}
+; CHECK:        .LBB24_8:
 ; CHECK-NEXT:   end_block{{$}}
 ; CHECK-NEXT:   return{{$}}
 ; OPT-LABEL: test15:
+; OPT:        block
 ; OPT:        block
 ; OPT-NEXT:   i32.const   $push
 ; OPT-NEXT:   i32.const   $push
 ; OPT-NEXT:   i32.eq      $push{{.*}}=, $pop{{.*}}, $pop{{.*}}{{$}}
 ; OPT-NEXT:   br_if       0, $pop{{.*}}{{$}}
 ; OPT-NEXT:   call        test15_callee1@FUNCTION{{$}}
-; OPT-NEXT:   return{{$}}
+; OPT-NEXT:   br          1{{$}}
 ; OPT-NEXT: .LBB24_2:
 ; OPT-NEXT:   end_block
+; OPT-NEXT:   i32.const
+; OPT-NEXT: .LBB24_3:
 ; OPT-NEXT:   block
 ; OPT-NEXT:   loop
 %0 = type { i8, i32 }

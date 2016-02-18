@@ -11,6 +11,8 @@
 
 let SIAssemblerPredicate = DisableInst, SubtargetPredicate = isVI in {
 
+let DisableSIDecoder = 1 in {
+
 //===----------------------------------------------------------------------===//
 // VOP1 Instructions
 //===----------------------------------------------------------------------===//
@@ -72,6 +74,8 @@ defm V_MIN_U16 : VOP2Inst <vop2<0,0x31>, "v_min_u16", VOP_I16_I16_I16>;
 defm V_MIN_I16 : VOP2Inst <vop2<0,0x32>, "v_min_i16", VOP_I16_I16_I16>;
 } // End isCommutable = 1
 defm V_LDEXP_F16 : VOP2Inst <vop2<0,0x33>, "v_ldexp_f16", VOP_F16_F16_I16>;
+
+} // let DisableSIDecoder = 1
 
 // Aliases to simplify matching of floating-point instructions that
 // are VOP2 on SI and VOP3 on VI.

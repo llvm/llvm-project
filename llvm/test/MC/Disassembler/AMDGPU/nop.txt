@@ -1,0 +1,4 @@
+# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck %s
+
+# CHECK: v_nop              ; encoding: [0x00,0x00,0x00,0x7e]
+0x00 0x00 0x00 0x7e

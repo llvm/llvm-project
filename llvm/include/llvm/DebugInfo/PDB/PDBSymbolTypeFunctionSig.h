@@ -38,7 +38,6 @@ public:
   FORWARD_SYMBOL_METHOD(getCount)
   FORWARD_SYMBOL_METHOD(getLexicalParentId)
   // FORWARD_SYMBOL_METHOD(getObjectPointerType)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getThisAdjust)
   FORWARD_SYMBOL_METHOD(getTypeId)
   FORWARD_SYMBOL_METHOD(isUnalignedType)

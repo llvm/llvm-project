@@ -22,8 +22,10 @@ PDBSymbolCompilandEnv::PDBSymbolCompilandEnv(
     : PDBSymbol(PDBSession, std::move(Symbol)) {}
 
 std::string PDBSymbolCompilandEnv::getValue() const {
-  // call RawSymbol->getValue() and convert the result to an std::string.
-  return std::string();
+    llvm::Variant Value = RawSymbol->getValue();
+    if (Value.Type != PDB_VariantType::String)
+        return std::string();
+    return std::string(Value.Value.String);
 }
 
 void PDBSymbolCompilandEnv::dump(PDBSymDumper &Dumper) const {

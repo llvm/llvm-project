@@ -63,6 +63,20 @@ char AArch64RedundantCopyElimination::ID = 0;
 INITIALIZE_PASS(AArch64RedundantCopyElimination, "aarch64-copyelim",
                 "AArch64 redundant copy elimination pass", false, false)
 
+static bool guaranteesZeroRegInBlock(MachineInstr *MI, MachineBasicBlock *MBB) {
+  unsigned Opc = MI->getOpcode();
+  // Check if the current basic block is the target block to which the
+  // CBZ/CBNZ instruction jumps when its Wt/Xt is zero.
+  if ((Opc == AArch64::CBZW || Opc == AArch64::CBZX) &&
+      MBB == MI->getOperand(1).getMBB())
+    return true;
+  else if ((Opc == AArch64::CBNZW || Opc == AArch64::CBNZX) &&
+           MBB != MI->getOperand(1).getMBB())
+    return true;
+
+  return false;
+}
+
 bool AArch64RedundantCopyElimination::optimizeCopy(MachineBasicBlock *MBB) {
   // Check if the current basic block has a single predecessor.
   if (MBB->pred_size() != 1)
@@ -73,18 +87,16 @@ bool AArch64RedundantCopyElimination::optimizeCopy(MachineBasicBlock *MBB) {
   if (CompBr == PredMBB->end() || PredMBB->succ_size() != 2)
     return false;
 
-  unsigned LastOpc = CompBr->getOpcode();
-  // Check if the current basic block is the target block to which the cbz/cbnz
-  // instruction jumps when its Wt/Xt is zero.
-  if (LastOpc == AArch64::CBZW || LastOpc == AArch64::CBZX) {
-    if (MBB != CompBr->getOperand(1).getMBB())
-      return false;
-  } else if (LastOpc == AArch64::CBNZW || LastOpc == AArch64::CBNZX) {
-    if (MBB == CompBr->getOperand(1).getMBB())
-      return false;
-  } else {
+  ++CompBr;
+  do {
+    --CompBr;
+    if (guaranteesZeroRegInBlock(CompBr, MBB))
+      break;
+  } while (CompBr != PredMBB->begin() && CompBr->isTerminator());
+
+  // We've not found a CBZ/CBNZ, time to bail out.
+  if (!guaranteesZeroRegInBlock(CompBr, MBB))
     return false;
-  }
 
   unsigned TargetReg = CompBr->getOperand(0).getReg();
   if (!TargetReg)
@@ -98,6 +110,8 @@ bool AArch64RedundantCopyElimination::optimizeCopy(MachineBasicBlock *MBB) {
     TargetRegs.insert(*AI);
 
   bool Changed = false;
+  MachineBasicBlock::iterator LastChange = MBB->begin();
+  unsigned SmallestDef = TargetReg;
   // Remove redundant Copy instructions unless TargetReg is modified.
   for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;) {
     MachineInstr *MI = &*I;
@@ -111,48 +125,40 @@ bool AArch64RedundantCopyElimination::optimizeCopy(MachineBasicBlock *MBB) {
       if ((SrcReg == AArch64::XZR || SrcReg == AArch64::WZR) &&
           !MRI->isReserved(DefReg) &&
           (TargetReg == DefReg || TRI->isSuperRegister(DefReg, TargetReg))) {
-
-        CompBr->clearRegisterKills(DefReg, TRI);
-        if (MBB->isLiveIn(DefReg))
-          // Clear any kills of TargetReg between CompBr and MI.
-          for (MachineInstr &MMI :
-               make_range(MBB->begin()->getIterator(), MI->getIterator()))
-            MMI.clearRegisterKills(DefReg, TRI);
-        else
-          MBB->addLiveIn(DefReg);
-
         DEBUG(dbgs() << "Remove redundant Copy : ");
         DEBUG((MI)->print(dbgs()));
 
         MI->eraseFromParent();
         Changed = true;
+        LastChange = I;
         NumCopiesRemoved++;
+        SmallestDef =
+            TRI->isSubRegister(SmallestDef, DefReg) ? DefReg : SmallestDef;
         continue;
       }
     }
 
-    for (const MachineOperand &MO : MI->operands()) {
-      // FIXME: It is possible to use the register mask to check if all
-      // registers in TargetRegs are not clobbered. For now, we treat it like
-      // a basic block boundary.
-      if (MO.isRegMask())
-        return Changed;
-      if (!MO.isReg())
-        continue;
-      unsigned Reg = MO.getReg();
-
-      if (!Reg)
-        continue;
-
-      assert(TargetRegisterInfo::isPhysicalRegister(Reg) &&
-             "Expect physical register");
-
-      // Stop if the TargetReg is modified.
-      if (MO.isDef() && TargetRegs.count(Reg))
-        return Changed;
-    }
+    if (MI->modifiesRegister(TargetReg, TRI))
+      break;
   }
-  return Changed;
+
+  if (!Changed)
+    return false;
+
+  // Otherwise, we have to fixup the use-def chain, starting with the
+  // CBZ/CBNZ. Conservatively mark as much as we can live.
+  CompBr->clearRegisterKills(SmallestDef, TRI);
+
+  if (std::none_of(TargetRegs.begin(), TargetRegs.end(),
+                   [&](unsigned Reg) { return MBB->isLiveIn(Reg); }))
+    MBB->addLiveIn(TargetReg);
+
+  // Clear any kills of TargetReg between CompBr and the last removed COPY.
+  for (MachineInstr &MMI :
+       make_range(MBB->begin()->getIterator(), LastChange->getIterator()))
+    MMI.clearRegisterKills(SmallestDef, TRI);
+
+  return true;
 }
 
 bool AArch64RedundantCopyElimination::runOnMachineFunction(

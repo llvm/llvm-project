@@ -111,6 +111,10 @@ public:
   const DILocalVariable *getVariable() const { return Var; }
   const DILocation *getInlinedAt() const { return IA; }
   ArrayRef<const DIExpression *> getExpression() const { return Expr; }
+  const DIExpression *getSingleExpression() const {
+    assert(MInsn && Expr.size() <= 1);
+    return Expr.size() ? Expr[0] : nullptr;
+  }
   void setDIE(DIE &D) { TheDIE = &D; }
   DIE *getDIE() const { return TheDIE; }
   void setDebugLocListIndex(unsigned O) { DebugLocListIndex = O; }

@@ -28,7 +28,6 @@ public:
 
   FORWARD_SYMBOL_METHOD(getLexicalParentId)
   FORWARD_SYMBOL_METHOD(getName)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
 };
 
 } // namespace llvm

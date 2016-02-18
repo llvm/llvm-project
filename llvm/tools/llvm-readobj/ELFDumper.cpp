@@ -1016,10 +1016,9 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, StreamWriter &Writer)
         reportError("Multilpe SHT_DYNSYM");
       DynSymRegion = createDRIFrom(&Sec);
       break;
-    case ELF::SHT_SYMTAB_SHNDX: {
+    case ELF::SHT_SYMTAB_SHNDX:
       ShndxTable = unwrapOrError(Obj->getSHNDXTable(Sec));
       break;
-    }
     case ELF::SHT_GNU_versym:
       if (dot_gnu_version_sec != nullptr)
         reportError("Multiple SHT_GNU_versym");

@@ -36,7 +36,6 @@ public:
   FORWARD_SYMBOL_METHOD(isManagedCode)
   FORWARD_SYMBOL_METHOD(isMSILCode)
   FORWARD_SYMBOL_METHOD(getName)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getRelativeVirtualAddress)
   FORWARD_SYMBOL_METHOD(getVirtualAddress)
   FORWARD_SYMBOL_METHOD(getUndecoratedName)

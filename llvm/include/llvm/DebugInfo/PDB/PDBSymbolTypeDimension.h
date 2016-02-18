@@ -28,7 +28,6 @@ public:
 
   FORWARD_SYMBOL_METHOD(getLowerBoundId)
   FORWARD_SYMBOL_METHOD(getUpperBoundId)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
 };
 
 } // namespace llvm
