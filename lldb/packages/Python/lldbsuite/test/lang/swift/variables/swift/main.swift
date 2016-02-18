@@ -35,6 +35,13 @@ func main() -> Int {
     var hello = "hello"
     var world = "world"
     var hello_world = hello + " " + world
+
+    var uint8_max = UInt8.max
+    var uint16_max = UInt16.max
+    var uint32_max = UInt32.max
+    var uint64_max = UInt64.max
+    var uint_max = UInt.max
+
     print("stop here") // Set breakpoint here
     return 0
 }
