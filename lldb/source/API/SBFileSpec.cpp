@@ -211,3 +211,9 @@ SBFileSpec::GetDescription (SBStream &description) const
         strm.PutCString (path);    
     return true;
 }
+
+void
+SBFileSpec::AppendPathComponent (const char *fn)
+{
+    m_opaque_ap->AppendPathComponent (fn);
+}
