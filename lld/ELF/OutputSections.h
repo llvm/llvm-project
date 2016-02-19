@@ -300,14 +300,15 @@ class MergeOutputSection final : public OutputSectionBase<ELFT> {
   bool shouldTailMerge() const;
 
 public:
-  MergeOutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
+  MergeOutputSection(StringRef Name, uint32_t Type, uintX_t Flags,
+                     uintX_t Alignment);
   void addSection(InputSectionBase<ELFT> *S) override;
   void writeTo(uint8_t *Buf) override;
   unsigned getOffset(StringRef Val);
   void finalize() override;
 
 private:
-  llvm::StringTableBuilder Builder{llvm::StringTableBuilder::RAW};
+  llvm::StringTableBuilder Builder;
 };
 
 // FDE or CIE

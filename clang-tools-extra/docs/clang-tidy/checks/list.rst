@@ -13,6 +13,7 @@ Clang-Tidy Checks
    cert-err60-cpp
    cert-err61-cpp (redirects to misc-throw-by-value-catch-by-reference) <cert-err61-cpp>
    cert-fio38-c (redirects to misc-non-copyable-objects) <cert-fio38-c>
+   cert-flp30-c
    cert-oop11-cpp (redirects to misc-move-constructor-init) <cert-oop11-cpp>
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
    cppcoreguidelines-pro-bounds-constant-array-index

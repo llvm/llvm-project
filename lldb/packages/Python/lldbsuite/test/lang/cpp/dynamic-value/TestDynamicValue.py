@@ -30,7 +30,6 @@ class DynamicValueTestCase(TestBase):
                                                        '// Break here and get real address of reallyA.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureFreeBSD # FIXME: This needs to be root-caused.
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_get_dynamic_vals(self):
         """Test fetching C++ dynamic values from pointers & references."""

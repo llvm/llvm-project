@@ -24,6 +24,6 @@ int main(int argc, char **argv) {
     return 1;
 // CHECK-NOT: Thread T1 created
   QueueUserWorkItem(&work_item, nullptr, 0);
-  if (WAIT_OBJECT_0 != WaitForSingleObject(done, INFINITE))
+  if (WAIT_OBJECT_0 != WaitForSingleObject(done, 10 * 1000))
     return 2;
 }

@@ -87,21 +87,6 @@ using namespace lldb_private;
 // Utility Methods for Clang
 //===----------------------------------------------------------------------===//
 
-std::string GetBuiltinIncludePath(const char *Argv0) {
-    SmallString<128> P(llvm::sys::fs::getMainExecutable(
-        Argv0, (void *)(intptr_t) GetBuiltinIncludePath));
-
-    if (!P.empty()) {
-        llvm::sys::path::remove_filename(P); // Remove /clang from foo/bin/clang
-        llvm::sys::path::remove_filename(P); // Remove /bin   from foo/bin
-
-        // Get foo/lib/clang/<version>/include
-        llvm::sys::path::append(P, "lib", "clang", CLANG_VERSION_STRING,
-                                "include");
-    }
-
-    return P.str();
-}
 
 class ClangExpressionParser::LLDBPreprocessorCallbacks : public PPCallbacks
 {
