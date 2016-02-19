@@ -99,6 +99,16 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   if (Info.Unavailable && !D->hasAttr<UnavailableAttr>()) {
     D->addAttr(UnavailableAttr::CreateImplicit(S.Context, Info.UnavailableMsg));
   }
+
+  if (Info.UnavailableInSwift) {
+    D->addAttr(AvailabilityAttr::CreateImplicit(S.Context, 
+                                                &S.Context.Idents.get("swift"),
+                                                VersionTuple(),
+                                                VersionTuple(),
+                                                VersionTuple(),
+                                                /*Unavailable=*/true,
+                                                Info.UnavailableMsg));
+  }
 }
 
 /// Process API notes for a variable or property.
