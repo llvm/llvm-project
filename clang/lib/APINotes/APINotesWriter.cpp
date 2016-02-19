@@ -272,7 +272,7 @@ namespace {
   static void emitCommonEntityInfo(raw_ostream &out,
                                    const CommonEntityInfo &info) {
     endian::Writer<little> writer(out);
-    writer.write<uint8_t>(info.Unavailable);
+    writer.write<uint8_t>(info.Unavailable << 1 | info.UnavailableInSwift);
     writer.write<uint16_t>(info.UnavailableMsg.size());
     out.write(info.UnavailableMsg.c_str(), info.UnavailableMsg.size());
   }
