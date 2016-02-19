@@ -30,7 +30,9 @@ using namespace llvm;
 namespace {
   /// Read serialized CommonEntityInfo.
   void readCommonEntityInfo(const uint8_t *&data, CommonEntityInfo &info) {
-    info.Unavailable = *data++;
+    uint8_t unavailableBits = *data++;
+    info.Unavailable = (unavailableBits >> 1) & 0x01;
+    info.UnavailableInSwift = unavailableBits & 0x01;
 
     unsigned msgLength = endian::readNext<uint16_t, little, unaligned>(data);
     info.UnavailableMsg
