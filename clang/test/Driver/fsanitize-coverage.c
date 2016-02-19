@@ -22,7 +22,7 @@
 // CHECK-SANITIZE-COVERAGE-FUNC_INDIR: fsanitize-coverage-indirect-calls
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=3 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-3
-// CHECK-SANITIZE-COVERAGE-3: warning: argument '-fsanitize-coverage=3' is deprecated, use '-fsanitize-coverage=[func,bb,edge]' instead
+// CHECK-SANITIZE-COVERAGE-3: warning: argument '-fsanitize-coverage=3' is deprecated, use '-fsanitize-coverage=edge' instead
 //
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-5
 // CHECK-SANITIZE-COVERAGE-5: error: unsupported argument '5' to option 'fsanitize-coverage='

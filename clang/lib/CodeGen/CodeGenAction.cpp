@@ -53,7 +53,6 @@ namespace clang {
 
     std::unique_ptr<CodeGenerator> Gen;
 
-    std::unique_ptr<llvm::Module> TheModule;
     SmallVector<std::pair<unsigned, std::unique_ptr<llvm::Module>>, 4>
         LinkModules;
 
@@ -81,7 +80,10 @@ namespace clang {
         this->LinkModules.push_back(
             std::make_pair(I.first, std::unique_ptr<llvm::Module>(I.second)));
     }
-    std::unique_ptr<llvm::Module> takeModule() { return std::move(TheModule); }
+    llvm::Module *getModule() const { return Gen->GetModule(); }
+    std::unique_ptr<llvm::Module> takeModule() {
+      return std::unique_ptr<llvm::Module>(Gen->ReleaseModule());
+    }
     void releaseLinkModules() {
       for (auto &I : LinkModules)
         I.second.release();
@@ -100,8 +102,6 @@ namespace clang {
         LLVMIRGeneration.startTimer();
 
       Gen->Initialize(Ctx);
-
-      TheModule.reset(Gen->GetModule());
 
       if (llvm::TimePassesIsEnabled)
         LLVMIRGeneration.stopTimer();
@@ -149,25 +149,12 @@ namespace clang {
       }
 
       // Silently ignore if we weren't initialized for some reason.
-      if (!TheModule)
+      if (!getModule())
         return;
-
-      // Make sure IR generation is happy with the module. This is released by
-      // the module provider.
-      llvm::Module *M = Gen->ReleaseModule();
-      if (!M) {
-        // The module has been released by IR gen on failures, do not double
-        // free.
-        TheModule.release();
-        return;
-      }
-
-      assert(TheModule.get() == M &&
-             "Unexpected module change during IR generation");
 
       // Install an inline asm handler so that diagnostics get printed through
       // our diagnostics hooks.
-      LLVMContext &Ctx = TheModule->getContext();
+      LLVMContext &Ctx = getModule()->getContext();
       LLVMContext::InlineAsmDiagHandlerTy OldHandler =
         Ctx.getInlineAsmDiagnosticHandler();
       void *OldContext = Ctx.getInlineAsmDiagnosticContext();
@@ -182,13 +169,13 @@ namespace clang {
       for (auto &I : LinkModules) {
         unsigned LinkFlags = I.first;
         CurLinkModule = I.second.get();
-        if (Linker::linkModules(*M, std::move(I.second), LinkFlags))
+        if (Linker::linkModules(*getModule(), std::move(I.second), LinkFlags))
           return;
       }
 
       EmitBackendOutput(Diags, CodeGenOpts, TargetOpts, LangOpts,
                         C.getTargetInfo().getDataLayoutString(),
-                        TheModule.get(), Action, AsmOutStream);
+                        getModule(), Action, AsmOutStream);
 
       Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
 

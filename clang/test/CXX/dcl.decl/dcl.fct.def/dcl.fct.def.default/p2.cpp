@@ -116,6 +116,7 @@ static_assert(!noexcept(e5 = e5), "");
 namespace PR13492 {
   struct B {
     B() = default;
+    int field;
   };
 
   void f() {

@@ -2760,7 +2760,8 @@ void CGOpenMPRuntime::emitTaskCall(
         PrivateHelpersTy(
             VD, cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl()),
             cast<VarDecl>(cast<DeclRefExpr>(*IElemInitRef)->getDecl()))));
-    ++I, ++IElemInitRef;
+    ++I;
+    ++IElemInitRef;
   }
   llvm::array_pod_sort(Privates.begin(), Privates.end(),
                        array_pod_sort_comparator);
@@ -3259,7 +3260,9 @@ static llvm::Value *emitReductionFunction(CodeGenModule &CGM,
     } else
       // Emit reduction for array subscript or single variable.
       CGF.EmitIgnoredExpr(E);
-    ++IPriv, ++ILHS, ++IRHS;
+    ++IPriv;
+    ++ILHS;
+    ++IRHS;
   }
   Scope.ForceCleanup();
   CGF.FinishFunction();
@@ -3326,7 +3329,9 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
                 const Expr *) { CGF.EmitIgnoredExpr(E); });
       } else
         CGF.EmitIgnoredExpr(E);
-      ++IPriv, ++ILHS, ++IRHS;
+      ++IPriv;
+      ++ILHS;
+      ++IRHS;
     }
     return;
   }
@@ -3444,7 +3449,9 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
       } else
         // Emit reduction for array subscript or single variable.
         CGF.EmitIgnoredExpr(E);
-      ++IPriv, ++ILHS, ++IRHS;
+      ++IPriv;
+      ++ILHS;
+      ++IRHS;
     }
   }
 
@@ -3553,7 +3560,9 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
           } else
             CritRedGen(CGF, nullptr, nullptr, nullptr);
         }
-      ++ILHS, ++IRHS, ++IPriv;
+      ++ILHS;
+      ++IRHS;
+      ++IPriv;
     }
   }
 

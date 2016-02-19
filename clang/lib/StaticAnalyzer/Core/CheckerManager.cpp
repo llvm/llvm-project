@@ -377,6 +377,40 @@ void CheckerManager::runCheckersForEndAnalysis(ExplodedGraph &G,
     EndAnalysisCheckers[i](G, BR, Eng);
 }
 
+namespace {
+struct CheckBeginFunctionContext {
+  typedef std::vector<CheckerManager::CheckBeginFunctionFunc> CheckersTy;
+  const CheckersTy &Checkers;
+  ExprEngine &Eng;
+  const ProgramPoint &PP;
+
+  CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
+  CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
+
+  CheckBeginFunctionContext(const CheckersTy &Checkers, ExprEngine &Eng,
+                            const ProgramPoint &PP)
+      : Checkers(Checkers), Eng(Eng), PP(PP) {}
+
+  void runChecker(CheckerManager::CheckBeginFunctionFunc checkFn,
+                  NodeBuilder &Bldr, ExplodedNode *Pred) {
+    const ProgramPoint &L = PP.withTag(checkFn.Checker);
+    CheckerContext C(Bldr, Eng, Pred, L);
+
+    checkFn(C);
+  }
+};
+}
+
+void CheckerManager::runCheckersForBeginFunction(ExplodedNodeSet &Dst,
+                                                 const BlockEdge &L,
+                                                 ExplodedNode *Pred,
+                                                 ExprEngine &Eng) {
+  ExplodedNodeSet Src;
+  Src.insert(Pred);
+  CheckBeginFunctionContext C(BeginFunctionCheckers, Eng, L);
+  expandGraphWithCheckers(C, Dst, Src);
+}
+
 /// \brief Run checkers for end of path.
 // Note, We do not chain the checker output (like in expandGraphWithCheckers)
 // for this callback since end of path nodes are expected to be final.
@@ -669,6 +703,10 @@ void CheckerManager::_registerForBind(CheckBindFunc checkfn) {
 
 void CheckerManager::_registerForEndAnalysis(CheckEndAnalysisFunc checkfn) {
   EndAnalysisCheckers.push_back(checkfn);
+}
+
+void CheckerManager::_registerForBeginFunction(CheckBeginFunctionFunc checkfn) {
+  BeginFunctionCheckers.push_back(checkfn);
 }
 
 void CheckerManager::_registerForEndFunction(CheckEndFunctionFunc checkfn) {

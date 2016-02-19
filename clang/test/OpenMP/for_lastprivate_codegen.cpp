@@ -396,20 +396,9 @@ int main() {
 // CHECK: br i1 [[IS_LAST_ITER:%.+]], label %[[LAST_THEN:.+]], label %[[LAST_DONE:.+]]
 // CHECK: [[LAST_THEN]]
 
-// Calculate last iter count
-// CHECK: store i32 1, i32* [[OMP_IV]]
-// CHECK: [[IV1_1:%.+]] = load i32, i32* [[OMP_IV]]
-// CHECK-NEXT: [[CALC_I_2:%.+]] = add nsw i32 [[IV1_1]], 1
-// CHECK-NEXT: store i32 [[CALC_I_2]], i32* [[OMP_IV]]
-// Actual copying.
-
-// original cnt=private_cnt;
 // Calculate private cnt value.
-// CHECK: [[IV1_1:%.+]] = load i32, i32* [[OMP_IV]]
-// CHECK: [[MUL:%.+]] = mul nsw i32 [[IV1_1]], 1
-// CHECK: [[ADD:%.+]] = add nsw i32 0, [[MUL]]
-// CHECK: [[CONV:%.+]] = trunc i32 [[ADD]] to i8
-// CHECK: store i8 [[CONV]], i8* [[CNT_PRIV]]
+// CHECK: store i8 2, i8* [[CNT_PRIV]]
+// original cnt=private_cnt;
 // CHECK: [[CNT_VAL:%.+]] = load i8, i8* [[CNT_PRIV]],
 // CHECK: store i8 [[CNT_VAL]], i8* [[CNT]],
 

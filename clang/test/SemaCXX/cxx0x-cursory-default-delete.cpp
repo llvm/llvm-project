@@ -11,6 +11,7 @@ struct non_const_copy {
   non_const_copy& operator = (non_const_copy&) &;
   non_const_copy& operator = (non_const_copy&) &&;
   non_const_copy() = default; // expected-note {{not viable}}
+  int uninit_field;
 };
 non_const_copy::non_const_copy(non_const_copy&) = default; // expected-note {{not viable}}
 non_const_copy& non_const_copy::operator = (non_const_copy&) & = default; // expected-note {{not viable}}
@@ -29,6 +30,65 @@ void fn1 () {
   non_const_copy ncc3 = cncc; // expected-error {{no matching}}
   ncc = cncc; // expected-error {{no viable overloaded}}
 };
+
+struct no_fields { };
+struct all_init {
+  int a = 0;
+  int b = 0;
+};
+struct some_init {
+  int a = 0;
+  int b;
+  int c = 0;
+};
+struct some_init_mutable {
+  int a = 0;
+  mutable int b;
+  int c = 0;
+};
+struct some_init_def {
+  some_init_def() = default;
+  int a = 0;
+  int b;
+  int c = 0;
+};
+struct some_init_ctor {
+  some_init_ctor();
+  int a = 0;
+  int b;
+  int c = 0;
+};
+struct sub_some_init : public some_init_def { };
+struct sub_some_init_ctor : public some_init_def {
+  sub_some_init_ctor();
+};
+struct sub_some_init_ctor2 : public some_init_ctor {
+};
+struct some_init_container {
+  some_init_def sid;
+};
+struct some_init_container_ctor {
+  some_init_container_ctor();
+  some_init_def sid;
+};
+struct no_fields_container {
+  no_fields nf;
+};
+
+void constobjs() {
+  const no_fields nf; // ok
+  const all_init ai; // ok
+  const some_init si; // expected-error {{default initialization of an object of const type 'const some_init' without a user-provided default constructor}}
+  const some_init_mutable sim; // ok
+  const some_init_def sid; // expected-error {{default initialization of an object of const type 'const some_init_def' without a user-provided default constructor}}
+  const some_init_ctor sic; // ok
+  const sub_some_init ssi; // expected-error {{default initialization of an object of const type 'const sub_some_init' without a user-provided default constructor}}
+  const sub_some_init_ctor ssic; // ok
+  const sub_some_init_ctor2 ssic2; // ok
+  const some_init_container sicon; // expected-error {{default initialization of an object of const type 'const some_init_container' without a user-provided default constructor}}
+  const some_init_container_ctor siconc; // ok
+  const no_fields_container nfc; // ok
+}
 
 struct non_const_derived : non_const_copy {
   non_const_derived(const non_const_derived&) = default; // expected-error {{requires it to be non-const}}

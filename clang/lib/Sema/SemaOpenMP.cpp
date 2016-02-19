@@ -8458,7 +8458,8 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
       Updates.push_back(Update.get());
       Finals.push_back(Final.get());
     }
-    ++CurInit, ++CurPrivate;
+    ++CurInit;
+    ++CurPrivate;
   }
   Clause.setUpdates(Updates);
   Clause.setFinals(Finals);

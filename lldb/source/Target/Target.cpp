@@ -3363,6 +3363,15 @@ g_load_script_from_sym_file_values[] =
 };
 
 static OptionEnumValueElement
+g_load_current_working_dir_lldbinit_values[] =
+{
+    { eLoadCWDlldbinitTrue,    "true",    "Load .lldbinit files from current directory"},
+    { eLoadCWDlldbinitFalse,   "false",   "Do not load .lldbinit files from current directory"},
+    { eLoadCWDlldbinitWarn,    "warn",    "Warn about loading .lldbinit files from current directory"},
+    { 0, nullptr, nullptr }
+};
+
+static OptionEnumValueElement
 g_memory_module_load_level_values[] =
 {
     { eMemoryModuleLoadLevelMinimal,  "minimal" , "Load minimal information when loading modules from memory. Currently this setting loads sections only."},
@@ -3418,6 +3427,7 @@ g_properties[] =
     { "hex-immediate-style"                , OptionValue::eTypeEnum   ,    false, Disassembler::eHexStyleC,   nullptr, g_hex_immediate_style_values, "Which style to use for printing hexadecimal disassembly values." },
     { "use-fast-stepping"                  , OptionValue::eTypeBoolean   , false, true,                       nullptr, nullptr, "Use a fast stepping algorithm based on running from branch to branch rather than instruction single-stepping." },
     { "load-script-from-symbol-file"       , OptionValue::eTypeEnum   ,    false, eLoadScriptFromSymFileWarn, nullptr, g_load_script_from_sym_file_values, "Allow LLDB to load scripting resources embedded in symbol files when available." },
+    { "load-cwd-lldbinit"                  , OptionValue::eTypeEnum   ,    false, eLoadCWDlldbinitWarn,       nullptr, g_load_current_working_dir_lldbinit_values, "Allow LLDB to .lldbinit files from the current directory automatically." },
     { "memory-module-load-level"           , OptionValue::eTypeEnum   ,    false, eMemoryModuleLoadLevelComplete, nullptr, g_memory_module_load_level_values,
         "Loading modules from memory can be slow as reading the symbol tables and other data can take a long time depending on your connection to the debug target. "
         "This setting helps users control how much information gets loaded when loading modules from memory."
@@ -3465,6 +3475,7 @@ enum
     ePropertyHexImmediateStyle,
     ePropertyUseFastStepping,
     ePropertyLoadScriptFromSymbolFile,
+    ePropertyLoadCWDlldbinitFile,
     ePropertyMemoryModuleLoadLevel,
     ePropertyDisplayExpressionsInCrashlogs,
     ePropertyTrapHandlerNames,
@@ -3943,6 +3954,13 @@ TargetProperties::GetLoadScriptFromSymbolFile () const
 {
     const uint32_t idx = ePropertyLoadScriptFromSymbolFile;
     return (LoadScriptFromSymFile)m_collection_sp->GetPropertyAtIndexAsEnumeration(nullptr, idx, g_properties[idx].default_uint_value);
+}
+
+LoadCWDlldbinitFile
+TargetProperties::GetLoadCWDlldbinitFile () const
+{
+    const uint32_t idx = ePropertyLoadCWDlldbinitFile;
+    return (LoadCWDlldbinitFile) m_collection_sp->GetPropertyAtIndexAsEnumeration(nullptr, idx, g_properties[idx].default_uint_value);
 }
 
 Disassembler::HexImmediateStyle

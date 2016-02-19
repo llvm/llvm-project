@@ -3818,6 +3818,10 @@ void Sema::CodeCompleteTypeQualifiers(DeclSpec &DS) {
                             Results.data(), Results.size());
 }
 
+void Sema::CodeCompleteBracketDeclarator(Scope *S) {
+  CodeCompleteExpression(S, QualType(getASTContext().getSizeType()));
+}
+
 void Sema::CodeCompleteCase(Scope *S) {
   if (getCurFunction()->SwitchStack.empty() || !CodeCompleter)
     return;

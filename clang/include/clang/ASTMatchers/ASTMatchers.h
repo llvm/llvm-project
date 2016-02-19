@@ -3961,6 +3961,19 @@ AST_TYPE_MATCHER(ArrayType, arrayType);
 ///   matches "_Complex float f"
 AST_TYPE_MATCHER(ComplexType, complexType);
 
+/// \brief Matches any real floating-point type (float, double, long double).
+///
+/// Given
+/// \code
+///   int i;
+///   float f;
+/// \endcode
+/// realFloatingPointType()
+///   matches "float f" but not "int i"
+AST_MATCHER(Type, realFloatingPointType) {
+  return Node.isRealFloatingType();
+}
+
 /// \brief Matches arrays and C99 complex types that have a specific element
 /// type.
 ///
