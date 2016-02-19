@@ -226,6 +226,9 @@ Assertions are picked up by the static analyzer to prune infeasible paths, which
 in some cases can greatly reduce the number of false positives (bogus error
 reports) emitted by the tool.</p>
 
+<p>Another option is to use <tt>--force-analyze-debug-code</tt> flag of
+<b>scan-build</b> tool which would enable assertions automatically.</p>
+
 <h3 id="recommend_verbose">Use verbose output when debugging scan-build</h3>
 
 <p><tt>scan-build</tt> takes a <b>-v</b> option to emit verbose output about
