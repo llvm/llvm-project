@@ -1,4 +1,4 @@
-//===-------- PPCLoopDataPrefetch.cpp - Loop Data Prefetching Pass --------===//
+//===-------- LoopDataPrefetch.cpp - Loop Data Prefetching Pass -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "loop-data-prefetch"
-#include "PPC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
@@ -97,7 +96,7 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_END(LoopDataPrefetch, "loop-data-prefetch",
                     "Loop Data Prefetch", false, false)
 
-FunctionPass *llvm::createPPCLoopDataPrefetchPass() { return new LoopDataPrefetch(); }
+FunctionPass *llvm::createLoopDataPrefetchPass() { return new LoopDataPrefetch(); }
 
 bool LoopDataPrefetch::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
