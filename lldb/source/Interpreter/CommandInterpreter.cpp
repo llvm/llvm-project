@@ -2317,12 +2317,44 @@ CommandInterpreter::SourceInitFile (bool in_cwd, CommandReturnObject &result)
     FileSpec init_file;
     if (in_cwd)
     {
-        // In the current working directory we don't load any program specific
-        // .lldbinit files, we only look for a "./.lldbinit" file.
-        if (m_skip_lldbinit_files)
-            return;
+        ExecutionContext exe_ctx(GetExecutionContext());
+        Target *target = exe_ctx.GetTargetPtr();
+        if (target)
+        {
+            // In the current working directory we don't load any program specific
+            // .lldbinit files, we only look for a ".lldbinit" file.
+            if (m_skip_lldbinit_files)
+                return;
 
-        init_file.SetFile ("./.lldbinit", true);
+            LoadCWDlldbinitFile should_load = target->TargetProperties::GetLoadCWDlldbinitFile ();
+            if (should_load == eLoadCWDlldbinitWarn)
+            {
+                FileSpec dot_lldb (".lldbinit", true);
+                llvm::SmallString<64> home_dir_path;
+                llvm::sys::path::home_directory (home_dir_path);
+                FileSpec homedir_dot_lldb (home_dir_path.c_str(), false);
+                homedir_dot_lldb.AppendPathComponent (".lldbinit");
+                homedir_dot_lldb.ResolvePath ();
+                if (dot_lldb.Exists ()
+                    && dot_lldb.GetDirectory() != homedir_dot_lldb.GetDirectory())
+                {
+                    result.AppendErrorWithFormat (
+                            "There is a .lldbinit file in the current directory which is not being read.\n"
+                            "To silence this warning without sourcing in the local .lldbinit,\n"
+                            "add the following to the lldbinit file in your home directory:\n"
+                            "    settings set target.load-cwd-lldbinit false\n"
+                            "To allow lldb to source .lldbinit files in the current working directory,\n"
+                            "set the value of this variable to true.  Only do so if you understand and\n"
+                            "accept the security risk.");
+                    result.SetStatus (eReturnStatusFailed);
+                    return;
+                }
+            }
+            else if (should_load == eLoadCWDlldbinitTrue)
+            {
+                init_file.SetFile ("./.lldbinit", true);
+            }
+        }
     }
     else
     {

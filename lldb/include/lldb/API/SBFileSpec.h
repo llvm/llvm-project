@@ -60,6 +60,9 @@ public:
     bool
     GetDescription (lldb::SBStream &description) const;
 
+    void
+    AppendPathComponent (const char *file_or_directory);
+
 private:
     friend class SBAttachInfo;
     friend class SBBlock;

@@ -63,6 +63,13 @@ typedef enum LoadScriptFromSymFile
     eLoadScriptFromSymFileWarn
 } LoadScriptFromSymFile;
 
+typedef enum LoadCWDlldbinitFile
+{
+    eLoadCWDlldbinitTrue,
+    eLoadCWDlldbinitFalse,
+    eLoadCWDlldbinitWarn
+} LoadCWDlldbinitFile;
+
 //----------------------------------------------------------------------
 // TargetProperties
 //----------------------------------------------------------------------
@@ -216,6 +223,9 @@ public:
 
     LoadScriptFromSymFile
     GetLoadScriptFromSymbolFile() const;
+
+    LoadCWDlldbinitFile
+    GetLoadCWDlldbinitFile () const;
 
     Disassembler::HexImmediateStyle
     GetHexImmediateStyle() const;
