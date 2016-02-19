@@ -192,6 +192,12 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
     }
   }
 
+  if (Info.getFactoryAsInitKind()
+        == api_notes::FactoryAsInitKind::AsClassMethod &&
+      !D->getAttr<SwiftNameAttr>()) {
+    D->addAttr(SwiftSuppressFactoryAsInitAttr::CreateImplicit(S.Context));
+  }
+
   // Handle common function information.
   ProcessAPINotes(S, FunctionOrMethod(D),
                   static_cast<const api_notes::FunctionInfo &>(Info));
