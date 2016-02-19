@@ -164,8 +164,16 @@ public:
   /// check::DeadSymbols
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const {}
 
+
+  /// \brief Called when the analyzer core starts analyzing a function,
+  /// regardless of whether it is analyzed at the top level or is inlined.
+  ///
+  /// check::BeginFunction
+  void checkBeginFunction(CheckerContext &Ctx) const {}
+
   /// \brief Called when the analyzer core reaches the end of a
-  /// function being analyzed.
+  /// function being analyzed regardless of whether it is analyzed at the top
+  /// level or is inlined.
   ///
   /// check::EndFunction
   void checkEndFunction(CheckerContext &Ctx) const {}

@@ -238,6 +238,20 @@ public:
   }
 };
 
+class BeginFunction {
+  template <typename CHECKER>
+  static void _checkBeginFunction(void *checker, CheckerContext &C) {
+    ((const CHECKER *)checker)->checkBeginFunction(C);
+  }
+
+public:
+  template <typename CHECKER>
+  static void _register(CHECKER *checker, CheckerManager &mgr) {
+    mgr._registerForBeginFunction(CheckerManager::CheckBeginFunctionFunc(
+        checker, _checkBeginFunction<CHECKER>));
+  }
+};
+
 class EndFunction {
   template <typename CHECKER>
   static void _checkEndFunction(void *checker,

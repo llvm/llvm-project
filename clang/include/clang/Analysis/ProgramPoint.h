@@ -595,6 +595,13 @@ public:
     return static_cast<const StackFrameContext *>(getData2());
   }
 
+  /// Returns the entry block in the CFG for the entered function.
+  const CFGBlock *getEntry() const {
+    const StackFrameContext *CalleeCtx = getCalleeContext();
+    const CFG *CalleeCFG = CalleeCtx->getCFG();
+    return &(CalleeCFG->getEntry());
+  }
+
 private:
   friend class ProgramPoint;
   CallEnter() {}
