@@ -92,13 +92,11 @@ public:
   /// If none is specified, abort (GCC-compatible behaviour).
   std::string OverflowHandler;
 
-  /// \brief The name of the current module.
+  /// \brief The name of the current module, of which the main source file
+  /// is a part. If CompilingModule is set, we are compiling the interface
+  /// of this module, otherwise we are compiling an implementation file of
+  /// it.
   std::string CurrentModule;
-
-  /// \brief The name of the module that the translation unit is an
-  /// implementation of. Prevents semantic imports, but does not otherwise
-  /// treat this as the CurrentModule.
-  std::string ImplementationOfModule;
 
   /// \brief The names of any features to enable in module 'requires' decls
   /// in addition to the hard-coded list in Module.cpp and the target features.
