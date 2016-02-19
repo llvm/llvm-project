@@ -3565,11 +3565,12 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                                            MVT::i1, MachineNode->getOperand(0),
                                            MachineNode->getOperand(1).
                                              getOperand(0));
-        else if (AllUsersSelectZero(MachineNode))
+        else if (AllUsersSelectZero(MachineNode)) {
           ResNode = CurDAG->getMachineNode(PPC::CRNAND, SDLoc(MachineNode),
                                            MVT::i1, MachineNode->getOperand(0),
-                                           MachineNode->getOperand(1)),
+                                           MachineNode->getOperand(1));
           SelectSwap = true;
+        }
         break;
       case PPC::CRNAND:
         if (MachineNode->getOperand(0) == MachineNode->getOperand(1))
@@ -3603,11 +3604,12 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                                            MVT::i1, MachineNode->getOperand(1).
                                                       getOperand(0),
                                            MachineNode->getOperand(0));
-        else if (AllUsersSelectZero(MachineNode))
+        else if (AllUsersSelectZero(MachineNode)) {
           ResNode = CurDAG->getMachineNode(PPC::CRAND, SDLoc(MachineNode),
                                            MVT::i1, MachineNode->getOperand(0),
-                                           MachineNode->getOperand(1)),
+                                           MachineNode->getOperand(1));
           SelectSwap = true;
+        }
         break;
       case PPC::CROR:
         if (MachineNode->getOperand(0) == MachineNode->getOperand(1))
@@ -3635,11 +3637,12 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                                            MVT::i1, MachineNode->getOperand(0),
                                            MachineNode->getOperand(1).
                                              getOperand(0));
-        else if (AllUsersSelectZero(MachineNode))
+        else if (AllUsersSelectZero(MachineNode)) {
           ResNode = CurDAG->getMachineNode(PPC::CRNOR, SDLoc(MachineNode),
                                            MVT::i1, MachineNode->getOperand(0),
-                                           MachineNode->getOperand(1)),
+                                           MachineNode->getOperand(1));
           SelectSwap = true;
+        }
         break;
       case PPC::CRXOR:
         if (MachineNode->getOperand(0) == MachineNode->getOperand(1))
@@ -3674,11 +3677,12 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                                            MVT::i1, MachineNode->getOperand(0),
                                            MachineNode->getOperand(1).
                                              getOperand(0));
-        else if (AllUsersSelectZero(MachineNode))
+        else if (AllUsersSelectZero(MachineNode)) {
           ResNode = CurDAG->getMachineNode(PPC::CREQV, SDLoc(MachineNode),
                                            MVT::i1, MachineNode->getOperand(0),
-                                           MachineNode->getOperand(1)),
+                                           MachineNode->getOperand(1));
           SelectSwap = true;
+        }
         break;
       case PPC::CRNOR:
         if (Op1Set || Op2Set)
@@ -3707,11 +3711,12 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                                            MVT::i1, MachineNode->getOperand(1).
                                                       getOperand(0),
                                            MachineNode->getOperand(0));
-        else if (AllUsersSelectZero(MachineNode))
+        else if (AllUsersSelectZero(MachineNode)) {
           ResNode = CurDAG->getMachineNode(PPC::CROR, SDLoc(MachineNode),
                                            MVT::i1, MachineNode->getOperand(0),
-                                           MachineNode->getOperand(1)),
+                                           MachineNode->getOperand(1));
           SelectSwap = true;
+        }
         break;
       case PPC::CREQV:
         if (MachineNode->getOperand(0) == MachineNode->getOperand(1))
@@ -3746,11 +3751,12 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                                            MVT::i1, MachineNode->getOperand(0),
                                            MachineNode->getOperand(1).
                                              getOperand(0));
-        else if (AllUsersSelectZero(MachineNode))
+        else if (AllUsersSelectZero(MachineNode)) {
           ResNode = CurDAG->getMachineNode(PPC::CRXOR, SDLoc(MachineNode),
                                            MVT::i1, MachineNode->getOperand(0),
-                                           MachineNode->getOperand(1)),
+                                           MachineNode->getOperand(1));
           SelectSwap = true;
+        }
         break;
       case PPC::CRANDC:
         if (MachineNode->getOperand(0) == MachineNode->getOperand(1))
@@ -3781,11 +3787,12 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                                            MVT::i1, MachineNode->getOperand(0),
                                            MachineNode->getOperand(1).
                                              getOperand(0));
-        else if (AllUsersSelectZero(MachineNode))
+        else if (AllUsersSelectZero(MachineNode)) {
           ResNode = CurDAG->getMachineNode(PPC::CRORC, SDLoc(MachineNode),
                                            MVT::i1, MachineNode->getOperand(1),
-                                           MachineNode->getOperand(0)),
+                                           MachineNode->getOperand(0));
           SelectSwap = true;
+        }
         break;
       case PPC::CRORC:
         if (MachineNode->getOperand(0) == MachineNode->getOperand(1))
@@ -3816,11 +3823,12 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                                            MVT::i1, MachineNode->getOperand(0),
                                            MachineNode->getOperand(1).
                                              getOperand(0));
-        else if (AllUsersSelectZero(MachineNode))
+        else if (AllUsersSelectZero(MachineNode)) {
           ResNode = CurDAG->getMachineNode(PPC::CRANDC, SDLoc(MachineNode),
                                            MVT::i1, MachineNode->getOperand(1),
-                                           MachineNode->getOperand(0)),
+                                           MachineNode->getOperand(0));
           SelectSwap = true;
+        }
         break;
       case PPC::SELECT_I4:
       case PPC::SELECT_I8:

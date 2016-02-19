@@ -1542,7 +1542,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
 
       // Remove the operand so that later passes don't see it.
       MI->RemoveOperand(i);
-      --i, --e;
+      --i;
+      --e;
     }
 
     // We may have been carrying spurious live-ins, so make sure only the returned

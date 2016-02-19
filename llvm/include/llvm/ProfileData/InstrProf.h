@@ -681,14 +681,6 @@ struct Header {
   uint64_t HashOffset;
 };
 
-static const uint32_t SummaryCutoffs[] = {
-    10000,  /*  1% */
-    100000, /* 10% */
-    200000, 300000, 400000, 500000, 600000, 500000, 600000, 700000,
-    800000, 900000, 950000, 990000, 999000, 999900, 999990, 999999};
-static const uint32_t NumSummaryCutoffs =
-    sizeof(SummaryCutoffs) / sizeof(*SummaryCutoffs);
-
 // Profile summary data recorded in the profile data file in indexed
 // format. It is introduced in version 4. The summary data follows
 // right after the profile file header.

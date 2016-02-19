@@ -11,15 +11,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/ProfileData/SampleProf.h"
 
 using namespace llvm;
+
+// A set of cutoff values. Each value, when divided by ProfileSummary::Scale
+// (which is 1000000) is a desired percentile of total counts.
+const std::vector<uint32_t> ProfileSummary::DefaultCutoffs(
+    {10000,  /*  1% */
+     100000, /* 10% */
+     200000, 300000, 400000, 500000, 600000, 500000, 600000, 700000, 800000,
+     900000, 950000, 990000, 999000, 999900, 999990, 999999});
 
 void InstrProfSummary::addRecord(const InstrProfRecord &R) {
   addEntryCount(R.Counts[0]);
   for (size_t I = 1, E = R.Counts.size(); I < E; ++I)
     addInternalCount(R.Counts[I]);
+}
+
+// To compute the detailed summary, we consider each line containing samples as
+// equivalent to a block with a count in the instrumented profile.
+void SampleProfileSummary::addRecord(const sampleprof::FunctionSamples &FS) {
+  NumFunctions++;
+  if (FS.getHeadSamples() > MaxHeadSamples)
+    MaxHeadSamples = FS.getHeadSamples();
+  for (const auto &I : FS.getBodySamples())
+    addCount(I.second.getSamples());
 }
 
 // The argument to this method is a vector of cutoff percentages and the return

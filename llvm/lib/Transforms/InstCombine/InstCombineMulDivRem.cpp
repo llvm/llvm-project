@@ -374,10 +374,13 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     APInt Negative2(I.getType()->getPrimitiveSizeInBits(), (uint64_t)-2, true);
 
     Value *BoolCast = nullptr, *OtherOp = nullptr;
-    if (MaskedValueIsZero(Op0, Negative2, 0, &I))
-      BoolCast = Op0, OtherOp = Op1;
-    else if (MaskedValueIsZero(Op1, Negative2, 0, &I))
-      BoolCast = Op1, OtherOp = Op0;
+    if (MaskedValueIsZero(Op0, Negative2, 0, &I)) {
+      BoolCast = Op0;
+      OtherOp = Op1;
+    } else if (MaskedValueIsZero(Op1, Negative2, 0, &I)) {
+      BoolCast = Op1;
+      OtherOp = Op0;
+    }
 
     if (BoolCast) {
       Value *V = Builder->CreateSub(Constant::getNullValue(I.getType()),

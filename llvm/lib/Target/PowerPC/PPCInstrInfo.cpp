@@ -883,8 +883,8 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (PPC::CRBITRCRegClass.contains(SrcReg) &&
       PPC::GPRCRegClass.contains(DestReg)) {
     unsigned CRReg = getCRFromCRBit(SrcReg);
-    BuildMI(MBB, I, DL, get(PPC::MFOCRF), DestReg)
-       .addReg(CRReg), getKillRegState(KillSrc);
+    BuildMI(MBB, I, DL, get(PPC::MFOCRF), DestReg).addReg(CRReg);
+    getKillRegState(KillSrc);
     // Rotate the CR bit in the CR fields to be the least significant bit and
     // then mask with 0x1 (MB = ME = 31).
     BuildMI(MBB, I, DL, get(PPC::RLWINM), DestReg)
@@ -895,13 +895,13 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   } else if (PPC::CRRCRegClass.contains(SrcReg) &&
       PPC::G8RCRegClass.contains(DestReg)) {
-    BuildMI(MBB, I, DL, get(PPC::MFOCRF8), DestReg)
-       .addReg(SrcReg), getKillRegState(KillSrc);
+    BuildMI(MBB, I, DL, get(PPC::MFOCRF8), DestReg).addReg(SrcReg);
+    getKillRegState(KillSrc);
     return;
   } else if (PPC::CRRCRegClass.contains(SrcReg) &&
       PPC::GPRCRegClass.contains(DestReg)) {
-    BuildMI(MBB, I, DL, get(PPC::MFOCRF), DestReg)
-       .addReg(SrcReg), getKillRegState(KillSrc);
+    BuildMI(MBB, I, DL, get(PPC::MFOCRF), DestReg).addReg(SrcReg);
+    getKillRegState(KillSrc);
     return;
    }
 

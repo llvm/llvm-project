@@ -1880,39 +1880,45 @@ void AArch64InstrInfo::storeRegToStackSlot(
     else if (AArch64::DDRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register store without NEON");
-      Opc = AArch64::ST1Twov1d, Offset = false;
+      Opc = AArch64::ST1Twov1d;
+      Offset = false;
     }
     break;
   case 24:
     if (AArch64::DDDRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register store without NEON");
-      Opc = AArch64::ST1Threev1d, Offset = false;
+      Opc = AArch64::ST1Threev1d;
+      Offset = false;
     }
     break;
   case 32:
     if (AArch64::DDDDRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register store without NEON");
-      Opc = AArch64::ST1Fourv1d, Offset = false;
+      Opc = AArch64::ST1Fourv1d;
+      Offset = false;
     } else if (AArch64::QQRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register store without NEON");
-      Opc = AArch64::ST1Twov2d, Offset = false;
+      Opc = AArch64::ST1Twov2d;
+      Offset = false;
     }
     break;
   case 48:
     if (AArch64::QQQRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register store without NEON");
-      Opc = AArch64::ST1Threev2d, Offset = false;
+      Opc = AArch64::ST1Threev2d;
+      Offset = false;
     }
     break;
   case 64:
     if (AArch64::QQQQRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register store without NEON");
-      Opc = AArch64::ST1Fourv2d, Offset = false;
+      Opc = AArch64::ST1Fourv2d;
+      Offset = false;
     }
     break;
   }
@@ -1978,39 +1984,45 @@ void AArch64InstrInfo::loadRegFromStackSlot(
     else if (AArch64::DDRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register load without NEON");
-      Opc = AArch64::LD1Twov1d, Offset = false;
+      Opc = AArch64::LD1Twov1d;
+      Offset = false;
     }
     break;
   case 24:
     if (AArch64::DDDRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register load without NEON");
-      Opc = AArch64::LD1Threev1d, Offset = false;
+      Opc = AArch64::LD1Threev1d;
+      Offset = false;
     }
     break;
   case 32:
     if (AArch64::DDDDRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register load without NEON");
-      Opc = AArch64::LD1Fourv1d, Offset = false;
+      Opc = AArch64::LD1Fourv1d;
+      Offset = false;
     } else if (AArch64::QQRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register load without NEON");
-      Opc = AArch64::LD1Twov2d, Offset = false;
+      Opc = AArch64::LD1Twov2d;
+      Offset = false;
     }
     break;
   case 48:
     if (AArch64::QQQRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register load without NEON");
-      Opc = AArch64::LD1Threev2d, Offset = false;
+      Opc = AArch64::LD1Threev2d;
+      Offset = false;
     }
     break;
   case 64:
     if (AArch64::QQQQRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasNEON() &&
              "Unexpected register load without NEON");
-      Opc = AArch64::LD1Fourv2d, Offset = false;
+      Opc = AArch64::LD1Fourv2d;
+      Offset = false;
     }
     break;
   }

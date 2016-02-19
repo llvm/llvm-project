@@ -192,11 +192,15 @@ VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &li) {
     // FIXME: we probably shouldn't use floats at all.
     volatile float hweight = Hint[hint] += weight;
     if (TargetRegisterInfo::isPhysicalRegister(hint)) {
-      if (hweight > bestPhys && mri.isAllocatable(hint))
-        bestPhys = hweight, hintPhys = hint;
+      if (hweight > bestPhys && mri.isAllocatable(hint)) {
+        bestPhys = hweight;
+        hintPhys = hint;
+      }
     } else {
-      if (hweight > bestVirt)
-        bestVirt = hweight, hintVirt = hint;
+      if (hweight > bestVirt) {
+        bestVirt = hweight;
+        hintVirt = hint;
+      }
     }
   }
 

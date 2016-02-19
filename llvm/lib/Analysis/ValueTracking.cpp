@@ -1024,7 +1024,8 @@ static void computeKnownBitsFromShiftOperator(Operator *I,
 
   // It would be more-clearly correct to use the two temporaries for this
   // calculation. Reusing the APInts here to prevent unnecessary allocations.
-  KnownZero.clearAllBits(), KnownOne.clearAllBits();
+  KnownZero.clearAllBits();
+  KnownOne.clearAllBits();
 
   // If we know the shifter operand is nonzero, we can sometimes infer more
   // known bits. However this is expensive to compute, so be lazy about it and
@@ -1069,8 +1070,10 @@ static void computeKnownBitsFromShiftOperator(Operator *I,
   // return anything we'd like, but we need to make sure the sets of known bits
   // stay disjoint (it should be better for some other code to actually
   // propagate the undef than to pick a value here using known bits).
-  if ((KnownZero & KnownOne) != 0)
-    KnownZero.clearAllBits(), KnownOne.clearAllBits();
+  if ((KnownZero & KnownOne) != 0) {
+    KnownZero.clearAllBits();
+    KnownOne.clearAllBits();
+  }
 }
 
 static void computeKnownBitsFromOperator(Operator *I, APInt &KnownZero,

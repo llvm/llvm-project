@@ -25,7 +25,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
@@ -93,7 +95,10 @@ static cl::opt<bool> ClUseDefaultBlacklist(
     "use_default_blacklist", cl::init(true), cl::Hidden,
     cl::desc("Controls if default blacklist should be used."));
 
-static const char *const DefaultBlacklist = "fun:__sanitizer_*";
+static const char *const DefaultBlacklistStr = 
+      "fun:__sanitizer_.*\n"
+      "src:/usr/include/.*\n"
+      "src:.*/libc\\+\\+/.*\n";
 
 // --------- FORMAT SPECIFICATION ---------
 
@@ -106,7 +111,7 @@ static const uint32_t BinCoverageMagic = 0xC0BFFFFF;
 static const uint32_t Bitness32 = 0xFFFFFF32;
 static const uint32_t Bitness64 = 0xFFFFFF64;
 
-// ---------
+// --------- ERROR HANDLING ---------
 
 static void Fail(const llvm::Twine &E) {
   errs() << "Error: " << E << "\n";
@@ -138,6 +143,23 @@ static void FailIfEmpty(const std::unique_ptr<T> &Ptr,
   Fail(Message);
 }
 
+// ---------
+
+// Produces std::map<K, std::vector<E>> grouping input
+// elements by FuncTy result.
+template <class RangeTy, class FuncTy>
+static inline auto group_by(const RangeTy &R, FuncTy F)
+    -> std::map<typename std::decay<decltype(F(*R.begin()))>::type,
+                std::vector<typename std::decay<decltype(*R.begin())>::type>> {
+  std::map<typename std::decay<decltype(F(*R.begin()))>::type,
+           std::vector<typename std::decay<decltype(*R.begin())>::type>>
+      Result;
+  for (const auto &E : R) {
+    Result[F(E)].push_back(E);
+  }
+  return Result;
+}
+
 template <typename T>
 static void readInts(const char *Start, const char *End,
                      std::set<uint64_t> *Ints) {
@@ -155,8 +177,18 @@ struct FileLoc {
   uint32_t Line;
 };
 
-struct FunctionLoc {
-  bool operator<(const FunctionLoc &RHS) const {
+struct FileFn {
+  bool operator<(const FileFn &RHS) const {
+    return std::tie(FileName, FunctionName) <
+           std::tie(RHS.FileName, RHS.FunctionName);
+  }
+
+  std::string FileName;
+  std::string FunctionName;
+};
+
+struct FnLoc {
+  bool operator<(const FnLoc &RHS) const {
     return std::tie(Loc, FunctionName) < std::tie(RHS.Loc, RHS.FunctionName);
   }
 
@@ -181,51 +213,86 @@ static std::unique_ptr<symbolize::LLVMSymbolizer> createSymbolizer() {
       new symbolize::LLVMSymbolizer(SymbolizerOptions));
 }
 
-// Compute [FileLoc -> FunctionName] map for given addresses.
-static std::map<FileLoc, std::string>
-computeFunctionsMap(std::string ObjectFile, const std::set<uint64_t> &Addrs) {
-  std::map<FileLoc, std::string> Fns;
+// A DILineInfo with address.
+struct AddrInfo : public DILineInfo {
+  uint64_t Addr;
 
-  auto Symbolizer(createSymbolizer());
-
-  // Fill in Fns map.
-  for (auto Addr : Addrs) {
-    auto InliningInfo = Symbolizer->symbolizeInlinedCode(ObjectFile, Addr);
-    FailIfError(InliningInfo);
-    for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
-      auto FrameInfo = InliningInfo->getFrame(I);
-      SmallString<256> FileName(FrameInfo.FileName);
-      sys::path::remove_dots(FileName, /* remove_dot_dot */ true);
-      FileLoc Loc = {FileName.str(), FrameInfo.Line};
-      Fns[Loc] = FrameInfo.FunctionName;
-    }
+  AddrInfo(const DILineInfo &DI, uint64_t Addr) : DILineInfo(DI), Addr(Addr) {
+    FileName = normalizeFilename(FileName);
   }
 
-  return Fns;
-}
+private:
+  static std::string normalizeFilename(std::string FileName) {
+    SmallString<256> S(FileName);
+    sys::path::remove_dots(S, /* remove_dot_dot */ true);
+    return S.str().str();
+  }
+};
 
-// Compute functions for given addresses. It keeps only the first
-// occurence of a function within a file.
-std::set<FunctionLoc> computeFunctionLocs(std::string ObjectFile,
-                                          const std::set<uint64_t> &Addrs) {
-  std::map<FileLoc, std::string> Fns = computeFunctionsMap(ObjectFile, Addrs);
+class Blacklists {
+public:
+  Blacklists()
+      : DefaultBlacklist(createDefaultBlacklist()),
+        UserBlacklist(createUserBlacklist()) {}
 
-  std::set<FunctionLoc> Result;
-  std::string LastFileName;
-  std::set<std::string> ProcessedFunctions;
+  bool isBlacklisted(const DILineInfo &DI) {
+    if (DefaultBlacklist && DefaultBlacklist->inSection("fun", DI.FunctionName))
+      return true;
+    if (DefaultBlacklist && DefaultBlacklist->inSection("src", DI.FileName))
+      return true;
+    if (UserBlacklist && UserBlacklist->inSection("fun", DI.FunctionName))
+      return true;
+    if (UserBlacklist && UserBlacklist->inSection("src", DI.FileName))
+      return true;
+    return false;
+  }
 
-  for (const auto &P : Fns) {
-    std::string FileName = P.first.FileName;
-    std::string FunctionName = P.second;
+private:
+  static std::unique_ptr<SpecialCaseList> createDefaultBlacklist() {
+    if (!ClUseDefaultBlacklist)
+      return std::unique_ptr<SpecialCaseList>();
+    std::unique_ptr<MemoryBuffer> MB =
+        MemoryBuffer::getMemBuffer(DefaultBlacklistStr);
+    std::string Error;
+    auto Blacklist = SpecialCaseList::create(MB.get(), Error);
+    FailIfNotEmpty(Error);
+    return Blacklist;
+  }
 
-    if (LastFileName != FileName)
-      ProcessedFunctions.clear();
-    LastFileName = FileName;
+  static std::unique_ptr<SpecialCaseList> createUserBlacklist() {
+    if (ClBlacklist.empty())
+      return std::unique_ptr<SpecialCaseList>();
 
-    if (!ProcessedFunctions.insert(FunctionName).second)
+    return SpecialCaseList::createOrDie({{ClBlacklist}});
+  }
+  std::unique_ptr<SpecialCaseList> DefaultBlacklist;
+  std::unique_ptr<SpecialCaseList> UserBlacklist;
+};
+
+// Collect all debug info for given addresses.
+static std::vector<AddrInfo> getAddrInfo(std::string ObjectFile,
+                                         const std::set<uint64_t> &Addrs,
+                                         bool InlinedCode) {
+  std::vector<AddrInfo> Result;
+  auto Symbolizer(createSymbolizer());
+  Blacklists B;
+
+  for (auto Addr : Addrs) {
+    auto LineInfo = Symbolizer->symbolizeCode(ObjectFile, Addr);
+    FailIfError(LineInfo);
+    if (B.isBlacklisted(*LineInfo))
       continue;
-
-    Result.insert(FunctionLoc{P.first, P.second});
+    Result.push_back(AddrInfo(*LineInfo, Addr));
+    if (InlinedCode) {
+      auto InliningInfo = Symbolizer->symbolizeInlinedCode(ObjectFile, Addr);
+      FailIfError(InliningInfo);
+      for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
+        auto FrameInfo = InliningInfo->getFrame(I);
+        if (B.isBlacklisted(FrameInfo))
+          continue;
+        Result.push_back(AddrInfo(FrameInfo, Addr));
+      }
+    }
   }
 
   return Result;
@@ -247,12 +314,10 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
 
     if (Name == "__sanitizer_cov" || Name == "__sanitizer_cov_with_check" ||
         Name == "__sanitizer_cov_trace_func_enter") {
-      Result.insert(AddressOrErr.get());
+      if (!(Symbol.getFlags() & object::BasicSymbolRef::SF_Undefined))
+        Result.insert(AddressOrErr.get());
     }
   }
-
-  if (Result.empty())
-    Fail("__sanitizer_cov* functions not found");
 
   return Result;
 }
@@ -296,6 +361,8 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
   FailIfEmpty(MIA, "no instruction analysis info for target " + TripleName);
 
   auto SanCovAddrs = findSanitizerCovFunctions(O);
+  if (SanCovAddrs.empty())
+    Fail("__sanitizer_cov* functions not found");
 
   for (const auto Section : O.sections()) {
     if (Section.isVirtual() || !Section.isText()) // llvm-objdump does the same.
@@ -304,9 +371,6 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
     uint64_t SectSize = Section.getSize();
     if (!SectSize)
       continue;
-
-    StringRef SectionName;
-    FailIfError(Section.getName(SectionName));
 
     StringRef BytesStr;
     FailIfError(Section.getContents(BytesStr));
@@ -322,31 +386,56 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
           Size = 1;
         continue;
       }
+      uint64_t Addr = Index + SectionAddr;
+      // Sanitizer coverage uses the address of the next instruction - 1.
+      uint64_t CovPoint = Addr + Size - 1;
       uint64_t Target;
       if (MIA->isCall(Inst) &&
-          MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target)) {
-        if (SanCovAddrs.find(Target) != SanCovAddrs.end()) {
-          // Sanitizer coverage uses the address of the next instruction - 1.
-          Addrs->insert(Index + SectionAddr + Size - 1);
-        }
-      }
+          MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target) &&
+          SanCovAddrs.find(Target) != SanCovAddrs.end())
+        Addrs->insert(CovPoint);
     }
   }
 }
 
-static void getArchiveCoveragePoints(const object::Archive &A,
-                                     std::set<uint64_t> *Addrs) {
+static void
+visitObjectFiles(const object::Archive &A,
+                 std::function<void(const object::ObjectFile &)> Fn) {
   for (auto &ErrorOrChild : A.children()) {
     FailIfError(ErrorOrChild);
     const object::Archive::Child &C = *ErrorOrChild;
     ErrorOr<std::unique_ptr<object::Binary>> ChildOrErr = C.getAsBinary();
     FailIfError(ChildOrErr);
-    if (object::ObjectFile *O =
-            dyn_cast<object::ObjectFile>(&*ChildOrErr.get()))
-      getObjectCoveragePoints(*O, Addrs);
+    if (auto *O = dyn_cast<object::ObjectFile>(&*ChildOrErr.get()))
+      Fn(*O);
     else
       FailIfError(object::object_error::invalid_file_type);
   }
+}
+
+static void
+visitObjectFiles(std::string FileName,
+                 std::function<void(const object::ObjectFile &)> Fn) {
+  ErrorOr<object::OwningBinary<object::Binary>> BinaryOrErr =
+      object::createBinary(FileName);
+  FailIfError(BinaryOrErr);
+
+  object::Binary &Binary = *BinaryOrErr.get().getBinary();
+  if (object::Archive *A = dyn_cast<object::Archive>(&Binary))
+    visitObjectFiles(*A, Fn);
+  else if (object::ObjectFile *O = dyn_cast<object::ObjectFile>(&Binary))
+    Fn(*O);
+  else
+    FailIfError(object::object_error::invalid_file_type);
+}
+
+std::set<uint64_t> findSanitizerCovFunctions(std::string FileName) {
+  std::set<uint64_t> Result;
+  visitObjectFiles(FileName, [&](const object::ObjectFile &O) {
+    auto Addrs = findSanitizerCovFunctions(O);
+    Result.insert(Addrs.begin(), Addrs.end());
+  });
+  return Result;
 }
 
 // Locate addresses of all coverage points in a file. Coverage point
@@ -354,60 +443,10 @@ static void getArchiveCoveragePoints(const object::Archive &A,
 // call - 1'.
 std::set<uint64_t> getCoveragePoints(std::string FileName) {
   std::set<uint64_t> Result;
-
-  ErrorOr<object::OwningBinary<object::Binary>> BinaryOrErr =
-      object::createBinary(FileName);
-  FailIfError(BinaryOrErr);
-
-  object::Binary &Binary = *BinaryOrErr.get().getBinary();
-  if (object::Archive *A = dyn_cast<object::Archive>(&Binary))
-    getArchiveCoveragePoints(*A, &Result);
-  else if (object::ObjectFile *O = dyn_cast<object::ObjectFile>(&Binary))
-    getObjectCoveragePoints(*O, &Result);
-  else
-    FailIfError(object::object_error::invalid_file_type);
-
+  visitObjectFiles(FileName, [&](const object::ObjectFile &O) {
+    getObjectCoveragePoints(O, &Result);
+  });
   return Result;
-}
-
-static std::unique_ptr<SpecialCaseList> createDefaultBlacklist() {
-  if (!ClUseDefaultBlacklist) 
-    return std::unique_ptr<SpecialCaseList>();
-  std::unique_ptr<MemoryBuffer> MB =
-      MemoryBuffer::getMemBuffer(DefaultBlacklist);
-  std::string Error;
-  auto Blacklist = SpecialCaseList::create(MB.get(), Error);
-  FailIfNotEmpty(Error);
-  return Blacklist;
-}
-
-static std::unique_ptr<SpecialCaseList> createUserBlacklist() {
-  if (ClBlacklist.empty())
-    return std::unique_ptr<SpecialCaseList>();
-
-  return SpecialCaseList::createOrDie({{ClBlacklist}});
-}
-
-static void printFunctionLocs(const std::set<FunctionLoc> &FnLocs,
-                              raw_ostream &OS) {
-  std::unique_ptr<SpecialCaseList> DefaultBlacklist = createDefaultBlacklist();
-  std::unique_ptr<SpecialCaseList> UserBlacklist = createUserBlacklist();
-
-  for (const FunctionLoc &FnLoc : FnLocs) {
-    if (DefaultBlacklist &&
-        DefaultBlacklist->inSection("fun", FnLoc.FunctionName))
-      continue;
-    if (DefaultBlacklist &&
-        DefaultBlacklist->inSection("src", FnLoc.Loc.FileName))
-      continue;
-    if (UserBlacklist && UserBlacklist->inSection("fun", FnLoc.FunctionName))
-      continue;
-    if (UserBlacklist && UserBlacklist->inSection("src", FnLoc.Loc.FileName))
-      continue;
-
-    OS << stripPathPrefix(FnLoc.Loc.FileName) << ":" << FnLoc.Loc.Line << " "
-       << FnLoc.FunctionName << "\n";
-  }
 }
 
 static std::string escapeHtml(const std::string &S) {
@@ -436,28 +475,6 @@ static std::string escapeHtml(const std::string &S) {
     }
   }
   return Result;
-}
-
-// Computes a map file_name->{line_number}
-static std::map<std::string, std::set<int>>
-getFileLines(std::string ObjectFile, const std::set<uint64_t> &Addrs) {
-  std::map<std::string, std::set<int>> FileLines;
-
-  auto Symbolizer(createSymbolizer());
-
-  // Fill in FileLines map.
-  for (auto Addr : Addrs) {
-    auto InliningInfo = Symbolizer->symbolizeInlinedCode(ObjectFile, Addr);
-    FailIfError(InliningInfo);
-    for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
-      auto FrameInfo = InliningInfo->getFrame(I);
-      SmallString<256> FileName(FrameInfo.FileName);
-      sys::path::remove_dots(FileName, /* remove_dot_dot */ true);
-      FileLines[FileName.str()].insert(FrameInfo.Line);
-    }
-  }
-
-  return FileLines;
 }
 
 static ErrorOr<bool> isCoverageFile(std::string FileName) {
@@ -547,83 +564,193 @@ class CoverageData {
     }
   }
 
-  void printReport(std::string ObjectFile, raw_ostream &OS) {
-    // file_name -> set of covered lines;
-    std::map<std::string, std::set<int>> CoveredFileLines =
-        getFileLines(ObjectFile, *Addrs);
-    std::map<std::string, std::set<int>> CoveragePoints =
-        getFileLines(ObjectFile, getCoveragePoints(ObjectFile));
-
-    // TOC
-    OS << "<ul>\n";
-    for (auto It : CoveredFileLines) {
-      auto FileName = It.first;
-      OS << "<li><a href=\"#" << escapeHtml(FileName) << "\">"
-         << stripPathPrefix(FileName) << "</a></li>\n";
-    }
-    OS << "</ul>\n";
-
-    // Source
-    for (auto It : CoveredFileLines) {
-      auto FileName = It.first;
-      auto Lines = It.second;
-      auto CovLines = CoveragePoints[FileName];
-
-      OS << "<a name=\"" << escapeHtml(FileName) << "\"></a>\n";
-      OS << "<h2>" << stripPathPrefix(FileName) << "</h2>\n";
-      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-          MemoryBuffer::getFile(FileName);
-      if (!BufOrErr) {
-        OS << "Error reading file: " << FileName << " : "
-           << BufOrErr.getError().message() << "("
-           << BufOrErr.getError().value() << ")\n";
-        continue;
-      }
-
-      OS << "<pre>\n";
-      for (line_iterator I = line_iterator(*BufOrErr.get(), false);
-           !I.is_at_eof(); ++I) {
-        OS << "<span ";
-        if (Lines.find(I.line_number()) != Lines.end())
-          OS << "class=covered";
-        else if (CovLines.find(I.line_number()) != CovLines.end())
-          OS << "class=notcovered";
-        OS << ">";
-        OS << escapeHtml(*I) << "</span>\n";
-      }
-      OS << "</pre>\n";
-    }
-  }
-
-  // Print list of covered functions.
-  // Line format: <file_name>:<line> <function_name>
-  void printCoveredFunctions(std::string ObjectFile, raw_ostream &OS) {
-    printFunctionLocs(computeFunctionLocs(ObjectFile, *Addrs), OS);
-  }
-
-  // Print list of not covered functions.
-  // Line format: <file_name>:<line> <function_name>
-  void printNotCoveredFunctions(std::string ObjectFile, raw_ostream &OS) {
-    std::set<FunctionLoc> AllFns =
-        computeFunctionLocs(ObjectFile, getCoveragePoints(ObjectFile));
-    std::set<FunctionLoc> CoveredFns = computeFunctionLocs(ObjectFile, *Addrs);
-
-    std::set<FunctionLoc> NotCoveredFns;
-    std::set_difference(AllFns.begin(), AllFns.end(), CoveredFns.begin(),
-                        CoveredFns.end(),
-                        std::inserter(NotCoveredFns, NotCoveredFns.end()));
-    printFunctionLocs(NotCoveredFns, OS);
-  }
-
-private:
+protected:
   explicit CoverageData(std::unique_ptr<std::set<uint64_t>> Addrs)
       : Addrs(std::move(Addrs)) {}
+
+  friend class CoverageDataWithObjectFile;
 
   std::unique_ptr<std::set<uint64_t>> Addrs;
 };
 
+// Coverage data translated into source code line-level information.
+// Fetches debug info in constructor and calculates various information per
+// request.
+class SourceCoverageData {
+public:
+  enum LineStatus {
+    // coverage information for the line is not available.
+    // default value in maps.
+    UNKNOWN = 0,
+    // the line is fully covered.
+    COVERED = 1,
+    // the line is fully uncovered.
+    NOT_COVERED = 2,
+    // some points in the line a covered, some are not.
+    MIXED = 3
+  };
+
+  SourceCoverageData(std::string ObjectFile, const std::set<uint64_t> &Addrs) {
+    std::set<uint64_t> AllCovPoints = getCoveragePoints(ObjectFile);
+
+    if (!std::includes(AllCovPoints.begin(), AllCovPoints.end(), Addrs.begin(),
+                       Addrs.end())) {
+      Fail("Coverage points in binary and .sancov file do not match.");
+    }
+
+    AllAddrInfo = getAddrInfo(ObjectFile, AllCovPoints, true);
+    CovAddrInfo = getAddrInfo(ObjectFile, Addrs, true);
+  }
+
+  // Compute number of functions hit/total in a file.
+  // file_name -> <fn_coverage, all_fn_coverage>
+  std::map<std::string, std::pair<size_t, size_t>> computeFileFnCoverage() {
+    std::map<std::string, std::pair<size_t, size_t>> FileCoverage;
+    auto AllCovPointsByFile =
+        group_by(AllAddrInfo, [](const AddrInfo &AI) { return AI.FileName; });
+    auto CovPointByFile =
+        group_by(CovAddrInfo, [](const AddrInfo &AI) { return AI.FileName; });
+
+    for (auto P : AllCovPointsByFile) {
+      const std::string &FileName = P.first;
+      const auto &AllCovInfo = P.second;
+
+      auto AllFns = group_by(
+          AllCovInfo, [](const AddrInfo &AI) { return AI.FunctionName; });
+      size_t AllCoverage = AllFns.size();
+      size_t Coverage = 0;
+
+      auto It = CovPointByFile.find(FileName);
+      if (It != CovPointByFile.end()) {
+        const auto &CovInfo = It->second;
+        auto Fns = group_by(CovInfo,
+                            [](const AddrInfo &AI) { return AI.FunctionName; });
+        Coverage = Fns.size();
+      }
+      FileCoverage[FileName] = std::make_pair(Coverage, AllCoverage);
+    }
+    return FileCoverage;
+  }
+
+  // line_number -> line_status.
+  typedef std::map<int, LineStatus> LineStatusMap;
+  // file_name -> LineStatusMap
+  typedef std::map<std::string, LineStatusMap> FileLineStatusMap;
+
+  // fills in the {file_name -> {line_no -> status}} map.
+  FileLineStatusMap computeLineStatusMap() {
+    FileLineStatusMap StatusMap;
+
+    auto AllLocs = group_by(AllAddrInfo, [](const AddrInfo &AI) {
+      return FileLoc{AI.FileName, AI.Line};
+    });
+    auto CovLocs = group_by(CovAddrInfo, [](const AddrInfo &AI) {
+      return FileLoc{AI.FileName, AI.Line};
+    });
+
+    for (const auto &P : AllLocs) {
+      const FileLoc &Loc = P.first;
+      auto I = CovLocs.find(Loc);
+
+      if (I == CovLocs.end()) {
+        StatusMap[Loc.FileName][Loc.Line] = NOT_COVERED;
+      } else {
+        StatusMap[Loc.FileName][Loc.Line] =
+            (I->second.size() == P.second.size()) ? COVERED : MIXED;
+      }
+    }
+    return StatusMap;
+  }
+
+  std::set<FileFn> computeCoveredFunctions() const {
+    std::set<FileFn> Fns;
+    auto CovFns = group_by(CovAddrInfo, [](const AddrInfo &AI) {
+      return FileFn{AI.FileName, AI.FunctionName};
+    });
+
+    for (const auto &P : CovFns) {
+      Fns.insert(P.first);
+    }
+    return Fns;
+  }
+
+  std::set<FileFn> computeNotCoveredFunctions() const {
+    std::set<FileFn> Fns;
+
+    auto AllFns = group_by(AllAddrInfo, [](const AddrInfo &AI) {
+      return FileFn{AI.FileName, AI.FunctionName};
+    });
+    auto CovFns = group_by(CovAddrInfo, [](const AddrInfo &AI) {
+      return FileFn{AI.FileName, AI.FunctionName};
+    });
+
+    for (const auto &P : AllFns) {
+      if (CovFns.find(P.first) == CovFns.end()) {
+        Fns.insert(P.first);
+      }
+    }
+    return Fns;
+  }
+
+  typedef std::map<FileLoc, std::set<std::string>> FunctionLocs;
+  // finds first line number in a file for each function.
+  FunctionLocs resolveFunctions(const std::set<FileFn> &Fns) const {
+    std::vector<AddrInfo> FnAddrs;
+    for (const auto &AI : AllAddrInfo) {
+      if (Fns.find(FileFn{AI.FileName, AI.FunctionName}) != Fns.end())
+        FnAddrs.push_back(AI);
+    }
+
+    auto GroupedAddrs = group_by(FnAddrs, [](const AddrInfo &AI) {
+      return FnLoc{FileLoc{AI.FileName, AI.Line}, AI.FunctionName};
+    });
+
+    FunctionLocs Result;
+    std::string LastFileName;
+    std::set<std::string> ProcessedFunctions;
+
+    for (const auto &P : GroupedAddrs) {
+      const FnLoc &Loc = P.first;
+      std::string FileName = Loc.Loc.FileName;
+      std::string FunctionName = Loc.FunctionName;
+
+      if (LastFileName != FileName)
+        ProcessedFunctions.clear();
+      LastFileName = FileName;
+
+      if (!ProcessedFunctions.insert(FunctionName).second)
+        continue;
+
+      Result[FileLoc{FileName, Loc.Loc.Line}].insert(FunctionName);
+    }
+    return Result;
+  }
+
+  std::set<std::string> files() const {
+    std::set<std::string> Files;
+    for (const auto &AI : AllAddrInfo) {
+      Files.insert(AI.FileName);
+    }
+    return Files;
+  }
+
+private:
+  std::vector<AddrInfo> AllAddrInfo;
+  std::vector<AddrInfo> CovAddrInfo;
+};
+
+static void printFunctionLocs(const SourceCoverageData::FunctionLocs &FnLocs,
+                              raw_ostream &OS) {
+  for (const auto &Fns : FnLocs) {
+    for (const auto &Fn : Fns.second) {
+      OS << stripPathPrefix(Fns.first.FileName) << ":" << Fns.first.Line << " "
+         << Fn << "\n";
+    }
+  }
+}
+
 // Holder for coverage data + filename of corresponding object file.
-class CoverageDataWithObjectFile {
+class CoverageDataWithObjectFile : public CoverageData {
 public:
   static ErrorOr<std::unique_ptr<CoverageDataWithObjectFile>>
   readAndMerge(std::string ObjectFile,
@@ -638,25 +765,145 @@ public:
 
   std::string object_file() const { return ObjectFile; }
 
+  // Print list of covered functions.
+  // Line format: <file_name>:<line> <function_name>
   void printCoveredFunctions(raw_ostream &OS) const {
-    Coverage->printCoveredFunctions(ObjectFile, OS);
+    SourceCoverageData SCovData(ObjectFile, *Addrs);
+    auto CoveredFns = SCovData.computeCoveredFunctions();
+    printFunctionLocs(SCovData.resolveFunctions(CoveredFns), OS);
   }
 
+  // Print list of not covered functions.
+  // Line format: <file_name>:<line> <function_name>
   void printNotCoveredFunctions(raw_ostream &OS) const {
-    Coverage->printNotCoveredFunctions(ObjectFile, OS);
+    SourceCoverageData SCovData(ObjectFile, *Addrs);
+    auto NotCoveredFns = SCovData.computeNotCoveredFunctions();
+    printFunctionLocs(SCovData.resolveFunctions(NotCoveredFns), OS);
   }
 
   void printReport(raw_ostream &OS) const {
-    Coverage->printReport(ObjectFile, OS);
+    SourceCoverageData SCovData(ObjectFile, *Addrs);
+    auto LineStatusMap = SCovData.computeLineStatusMap();
+
+    // file_name -> [file_fn].
+    auto NotCoveredFns = SCovData.computeNotCoveredFunctions();
+    auto NotCoveredFnMap = group_by(
+        NotCoveredFns, [](const FileFn &FileFn) { return FileFn.FileName; });
+    // file_loc -> set[function_name]
+    auto NotCoveredFnByLoc = SCovData.resolveFunctions(NotCoveredFns);
+    auto FileFnCoverage = SCovData.computeFileFnCoverage();
+
+    // TOC
+
+    // Covered Files.
+    OS << "<details open><summary>Covered Files</summary>\n";
+    OS << "<table>\n";
+    OS << "<tr><th>File</th><th>Hit Fns %</th>";
+    OS << "<th>Hit (Total) Fns</th></tr>\n";
+    for (auto FileName : SCovData.files()) {
+      std::pair<size_t, size_t> FC = FileFnCoverage[FileName];
+      if (FC.first == 0)
+        continue;
+      size_t CovPct = FC.second == 0 ? 100 : 100 * FC.first / FC.second;
+
+      OS << "<tr><td><a href=\"#" << escapeHtml(FileName) << "\">"
+         << stripPathPrefix(FileName) << "</a></td>"
+         << "<td>" << CovPct << "%</td>"
+         << "<td>" << FC.first << " (" << FC.second << ")"
+         << "</tr>\n";
+    }
+    OS << "</table>\n";
+    OS << "</details>\n";
+
+    // Not covered files.
+    OS << "<details><summary>Not Covered Files</summary>\n";
+    OS << "<table>\n";
+    for (auto FileName : SCovData.files()) {
+      std::pair<size_t, size_t> FC = FileFnCoverage[FileName];
+      if (FC.first == 0)
+        OS << "<tr><td>" << stripPathPrefix(FileName) << "</td>\n";
+    }
+    OS << "</table>\n";
+    OS << "</details>\n";
+
+    // Source
+    for (auto FileName : SCovData.files()) {
+      std::pair<size_t, size_t> FC = FileFnCoverage[FileName];
+      if (FC.first == 0)
+        continue;
+      OS << "<a name=\"" << escapeHtml(FileName) << "\"></a>\n";
+      OS << "<h2>" << stripPathPrefix(FileName) << "</h2>\n";
+
+      auto NotCoveredFns = NotCoveredFnMap.find(FileName);
+      if (NotCoveredFns != NotCoveredFnMap.end()) {
+        OS << "<details open><summary>Not Covered Functions</summary>";
+        OS << "<table>\n";
+        for (auto FileFn : NotCoveredFns->second) {
+          OS << "<tr><td>";
+          OS << "<a href=\"#"
+             << escapeHtml(FileName + ":: " + FileFn.FunctionName) << "\">";
+          OS << escapeHtml(FileFn.FunctionName) << "</a>";
+          OS << "</td></tr>\n";
+        }
+        OS << "</table></details>\n";
+      }
+
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+          MemoryBuffer::getFile(FileName);
+      if (!BufOrErr) {
+        OS << "Error reading file: " << FileName << " : "
+           << BufOrErr.getError().message() << "("
+           << BufOrErr.getError().value() << ")\n";
+        continue;
+      }
+
+      OS << "<pre>\n";
+      const auto &LineStatuses = LineStatusMap[FileName];
+      for (line_iterator I = line_iterator(*BufOrErr.get(), false);
+           !I.is_at_eof(); ++I) {
+        uint32_t Line = I.line_number();
+        { // generate anchors (if any);
+          FileLoc Loc = FileLoc{FileName, Line};
+          auto It = NotCoveredFnByLoc.find(Loc);
+          if (It != NotCoveredFnByLoc.end()) {
+            for (std::string Fn : It->second) {
+              OS << "<a name=\"" << escapeHtml(FileName + ":: " + Fn)
+                 << "\"></a>";
+            };
+          }
+        }
+
+        OS << "<span ";
+        auto LIT = LineStatuses.find(I.line_number());
+        auto Status = (LIT != LineStatuses.end()) ? LIT->second
+                                                  : SourceCoverageData::UNKNOWN;
+        switch (Status) {
+        case SourceCoverageData::UNKNOWN:
+          OS << "class=unknown";
+          break;
+        case SourceCoverageData::COVERED:
+          OS << "class=covered";
+          break;
+        case SourceCoverageData::NOT_COVERED:
+          OS << "class=notcovered";
+          break;
+        case SourceCoverageData::MIXED:
+          OS << "class=mixed";
+          break;
+        }
+        OS << ">";
+        OS << escapeHtml(*I) << "</span>\n";
+      }
+      OS << "</pre>\n";
+    }
   }
 
 private:
   CoverageDataWithObjectFile(std::string ObjectFile,
                              std::unique_ptr<CoverageData> Coverage)
-      : ObjectFile(std::move(ObjectFile)), Coverage(std::move(Coverage)) {}
-
+      : CoverageData(std::move(Coverage->Addrs)),
+        ObjectFile(std::move(ObjectFile)) {}
   const std::string ObjectFile;
-  const std::unique_ptr<CoverageData> Coverage;
 };
 
 // Multiple coverage files data organized by object file.
@@ -687,13 +934,11 @@ public:
       }
     }
 
-    // Object file => list of corresponding coverage files.
-    std::map<std::string, std::vector<std::string>> CoverageByObjFile;
     Regex SancovRegex("(.*)\\.[0-9]+\\.sancov");
     SmallVector<StringRef, 2> Components;
 
-    // Group coverage files by object file.
-    for (const auto &FileName : CovFiles) {
+    // Object file => list of corresponding coverage file names.
+    auto CoverageByObjFile = group_by(CovFiles, [&](std::string FileName) {
       auto ShortFileName = llvm::sys::path::filename(FileName);
       auto Ok = SancovRegex.match(ShortFileName, &Components);
       if (!Ok) {
@@ -706,13 +951,24 @@ public:
       if (Iter == ObjFiles.end()) {
         Fail("Object file for coverage not found: " + FileName);
       }
-      auto ObjectFile = Iter->second;
-      CoverageByObjFile[ObjectFile].push_back(FileName);
-    }
+      return Iter->second;
+    });
 
     // Read coverage.
     std::vector<std::unique_ptr<CoverageDataWithObjectFile>> MergedCoverage;
     for (const auto &Pair : CoverageByObjFile) {
+      if (findSanitizerCovFunctions(Pair.first).empty()) {
+        for (auto FileName : Pair.second) {
+          CovFiles.erase(FileName);
+        }
+
+        errs()
+            << "Ignoring " << Pair.first
+            << " and its coverage because  __sanitizer_cov* functions were not "
+               "found.\n";
+        continue;
+      }
+
       auto DataOrError =
           CoverageDataWithObjectFile::readAndMerge(Pair.first, Pair.second);
       FailIfError(DataOrError);
@@ -745,6 +1001,8 @@ public:
     OS << "<style>\n";
     OS << ".covered { background: #7F7; }\n";
     OS << ".notcovered { background: #F77; }\n";
+    OS << "summary { font-weight: bold; }\n";
+    OS << "details > summary + * { margin-left: 1em; }\n";
     OS << "</style>\n";
     OS << "<title>" << Title << "</title>\n";
     OS << "</head>\n";
@@ -752,14 +1010,6 @@ public:
 
     // Title
     OS << "<h1>" << Title << "</h1>\n";
-    OS << "<p>Coverage files: ";
-    for (auto InputFile : CoverageFiles) {
-      llvm::sys::fs::file_status Status;
-      llvm::sys::fs::status(InputFile, Status);
-      OS << stripPathPrefix(InputFile) << " ("
-         << Status.getLastModificationTime().str() << ") ";
-    }
-    OS << "</p>\n";
 
     // Modules TOC.
     if (Coverage.size() > 1) {
@@ -779,6 +1029,17 @@ public:
          << "\"></a>\n";
       CovData->printReport(OS);
     }
+
+    // About
+    OS << "<details><summary>About</summary>\n";
+    OS << "Coverage files:<ul>";
+    for (auto InputFile : CoverageFiles) {
+      llvm::sys::fs::file_status Status;
+      llvm::sys::fs::status(InputFile, Status);
+      OS << "<li>" << stripPathPrefix(InputFile) << " ("
+         << Status.getLastModificationTime().str() << ")</li>\n";
+    }
+    OS << "</ul></details>\n";
 
     OS << "</body>\n";
     OS << "</html>\n";

@@ -217,9 +217,7 @@ void InstrProfWriter::writeImpl(ProfOStream &OS) {
   OnDiskChainedHashTableGenerator<InstrProfRecordWriterTrait> Generator;
 
   using namespace IndexedInstrProf;
-  std::vector<uint32_t> Cutoffs(&SummaryCutoffs[0],
-                                &SummaryCutoffs[NumSummaryCutoffs]);
-  InstrProfSummary PS(Cutoffs);
+  InstrProfSummary PS(ProfileSummary::DefaultCutoffs);
   InfoObj->TheProfileSummary = &PS;
 
   // Populate the hash table generator.
@@ -249,7 +247,7 @@ void InstrProfWriter::writeImpl(ProfOStream &OS) {
   OS.write(0);
 
   // Reserve space to write profile summary data.
-  uint32_t NumEntries = Cutoffs.size();
+  uint32_t NumEntries = ProfileSummary::DefaultCutoffs.size();
   uint32_t SummarySize = Summary::getSize(Summary::NumKinds, NumEntries);
   // Remember the summary offset.
   uint64_t SummaryOffset = OS.tell();

@@ -1846,9 +1846,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   MaxStoresPerMemmoveOptSize = 4;
   setPrefLoopAlignment(4); // 2^4 bytes.
 
-  // A predictable cmov does not hurt on an in-order CPU.
-  // FIXME: Use a CPU attribute to trigger this, not a CPU model.
-  PredictableSelectIsExpensive = !Subtarget.isAtom();
+  // An out-of-order CPU can speculatively execute past a predictable branch,
+  // but a conditional move could be stalled by an expensive earlier operation. 
+  PredictableSelectIsExpensive = Subtarget.getSchedModel().isOutOfOrder();
   EnableExtLdPromotion = true;
   setPrefFunctionAlignment(4); // 2^4 bytes.
 

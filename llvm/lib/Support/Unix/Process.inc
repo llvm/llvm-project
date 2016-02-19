@@ -456,7 +456,7 @@ unsigned llvm::sys::Process::GetRandomNumber() {
 #if defined(HAVE_DECL_ARC4RANDOM) && HAVE_DECL_ARC4RANDOM
   return arc4random();
 #else
-  static int x = (::srand(GetRandomNumberSeed()), 0);
+  static int x = (static_cast<void>(::srand(GetRandomNumberSeed())), 0);
   (void)x;
   return ::rand();
 #endif

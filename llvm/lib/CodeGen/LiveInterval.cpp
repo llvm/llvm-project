@@ -309,10 +309,12 @@ LiveRange::iterator LiveRange::find(SlotIndex Pos) {
   size_t Len = size();
   do {
     size_t Mid = Len >> 1;
-    if (Pos < I[Mid].end)
+    if (Pos < I[Mid].end) {
       Len = Mid;
-    else
-      I += Mid + 1, Len -= Mid + 1;
+    } else {
+      I += Mid + 1;
+      Len -= Mid + 1;
+    }
   } while (Len);
   return I;
 }

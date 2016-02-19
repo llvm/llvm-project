@@ -1,4 +1,4 @@
-# RUN: llc -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
+# RUN: llc -start-after branch-folder -stop-after branch-folder -o /dev/null %s 2>&1 2>&1 | FileCheck %s
 # This test ensures that the MIR parser preserves unnamed LLVM IR block
 # references.
 

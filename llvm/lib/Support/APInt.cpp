@@ -2698,8 +2698,10 @@ APInt::tcDivide(integerPart *lhs, const integerPart *rhs,
         break;
       shiftCount--;
       tcShiftRight(srhs, parts, 1);
-      if ((mask >>= 1) == 0)
-        mask = (integerPart) 1 << (integerPartWidth - 1), n--;
+      if ((mask >>= 1) == 0) {
+        mask = (integerPart) 1 << (integerPartWidth - 1);
+        n--;
+      }
   }
 
   return false;

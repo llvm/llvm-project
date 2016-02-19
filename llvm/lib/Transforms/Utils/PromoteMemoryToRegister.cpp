@@ -802,7 +802,8 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
         // actually live-in here.
         LiveInBlockWorklist[i] = LiveInBlockWorklist.back();
         LiveInBlockWorklist.pop_back();
-        --i, --e;
+        --i;
+        --e;
         break;
       }
 

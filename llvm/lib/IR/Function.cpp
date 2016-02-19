@@ -892,11 +892,17 @@ bool Function::hasAddressTaken(const User* *PutOffender) const {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
       continue;
-    if (!isa<CallInst>(FU) && !isa<InvokeInst>(FU))
-      return PutOffender ? (*PutOffender = FU, true) : true;
+    if (!isa<CallInst>(FU) && !isa<InvokeInst>(FU)) {
+      if (PutOffender)
+        *PutOffender = FU;
+      return true;
+    }
     ImmutableCallSite CS(cast<Instruction>(FU));
-    if (!CS.isCallee(&U))
-      return PutOffender ? (*PutOffender = FU, true) : true;
+    if (!CS.isCallee(&U)) {
+      if (PutOffender)
+        *PutOffender = FU;
+      return true;
+    }
   }
   return false;
 }

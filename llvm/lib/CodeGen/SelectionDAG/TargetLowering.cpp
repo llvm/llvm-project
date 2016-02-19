@@ -2270,8 +2270,10 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         C = dyn_cast<ConstantSDNode>(Op.getOperand(0));
         GA = dyn_cast<GlobalAddressSDNode>(Op.getOperand(1));
       }
-      if (!C || !GA)
-        C = nullptr, GA = nullptr;
+      if (!C || !GA) {
+        C = nullptr;
+        GA = nullptr;
+      }
     }
 
     // If we find a valid operand, map to the TargetXXX version so that the

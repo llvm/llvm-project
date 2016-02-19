@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after prologepilog -stop-after prologepilog -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -start-after prologepilog -stop-after prologepilog -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that the MIR parser parses callee saved information in the
 # stack objects correctly.
 

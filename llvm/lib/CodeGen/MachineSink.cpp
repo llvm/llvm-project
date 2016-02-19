@@ -344,8 +344,10 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (SinkInstruction(MI, SawStore, AllSuccessors))
-      ++NumSunk, MadeChange = true;
+    if (SinkInstruction(MI, SawStore, AllSuccessors)) {
+      ++NumSunk;
+      MadeChange = true;
+    }
 
     // If we just processed the first instruction in the block, we're done.
   } while (!ProcessedBegin);

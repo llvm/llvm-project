@@ -74,7 +74,7 @@ static inline uint64_t SPMagic() {
          uint64_t('2') << (64 - 56) | uint64_t(0xff);
 }
 
-static inline uint64_t SPVersion() { return 102; }
+static inline uint64_t SPVersion() { return 103; }
 
 /// Represents the relative location of an instruction.
 ///

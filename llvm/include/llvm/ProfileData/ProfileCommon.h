@@ -24,6 +24,9 @@ namespace llvm {
 namespace IndexedInstrProf {
 struct Summary;
 }
+namespace sampleprof {
+class FunctionSamples;
+}
 struct InstrProfRecord;
 // The profile summary is one or more (Cutoff, MinCount, NumCounts) triplets.
 // The semantics of counts depend on the type of profile. For instrumentation
@@ -55,12 +58,18 @@ protected:
       : DetailedSummaryCutoffs(Cutoffs), TotalCount(0), MaxCount(0),
         NumCounts(0) {}
   ProfileSummary() : TotalCount(0), MaxCount(0), NumCounts(0) {}
+  ProfileSummary(std::vector<ProfileSummaryEntry> DetailedSummary,
+                 uint64_t TotalCount, uint64_t MaxCount, uint32_t NumCounts)
+      : DetailedSummary(DetailedSummary), TotalCount(TotalCount),
+        MaxCount(MaxCount), NumCounts(NumCounts) {}
   inline void addCount(uint64_t Count);
 
 public:
   static const int Scale = 1000000;
   inline std::vector<ProfileSummaryEntry> &getDetailedSummary();
   void computeDetailedSummary();
+  /// \brief A vector of useful cutoff values for detailed summary.
+  static const std::vector<uint32_t> DefaultCutoffs;
 };
 
 class InstrProfSummary : public ProfileSummary {
@@ -81,6 +90,28 @@ public:
   uint64_t getMaxFunctionCount() { return MaxFunctionCount; }
   uint64_t getMaxBlockCount() { return MaxCount; }
   uint64_t getMaxInternalBlockCount() { return MaxInternalBlockCount; }
+};
+
+class SampleProfileSummary : public ProfileSummary {
+  uint64_t MaxHeadSamples;
+  uint32_t NumFunctions;
+
+public:
+  uint32_t getNumLinesWithSamples() { return NumCounts; }
+  uint64_t getTotalSamples() { return TotalCount; }
+  uint32_t getNumFunctions() { return NumFunctions; }
+  uint64_t getMaxHeadSamples() { return MaxHeadSamples; }
+  uint64_t getMaxSamplesPerLine() { return MaxCount; }
+  void addRecord(const sampleprof::FunctionSamples &FS);
+  SampleProfileSummary(std::vector<uint32_t> Cutoffs)
+      : ProfileSummary(Cutoffs), MaxHeadSamples(0), NumFunctions(0) {}
+  SampleProfileSummary(uint64_t TotalSamples, uint64_t MaxSamplesPerLine,
+                       uint64_t MaxHeadSamples, int32_t NumLinesWithSamples,
+                       uint32_t NumFunctions,
+                       std::vector<ProfileSummaryEntry> DetailedSummary)
+      : ProfileSummary(DetailedSummary, TotalSamples, MaxSamplesPerLine,
+                       NumLinesWithSamples),
+        MaxHeadSamples(MaxHeadSamples), NumFunctions(NumFunctions) {}
 };
 
 // This is called when a count is seen in the profile.

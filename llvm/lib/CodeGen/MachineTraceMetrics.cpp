@@ -328,8 +328,10 @@ MinInstrCountEnsemble::pickTracePred(const MachineBasicBlock *MBB) {
       continue;
     // Pick the predecessor that would give this block the smallest InstrDepth.
     unsigned Depth = PredTBI->InstrDepth + CurCount;
-    if (!Best || Depth < BestDepth)
-      Best = Pred, BestDepth = Depth;
+    if (!Best || Depth < BestDepth) {
+      Best = Pred;
+      BestDepth = Depth;
+    }
   }
   return Best;
 }
@@ -356,8 +358,10 @@ MinInstrCountEnsemble::pickTraceSucc(const MachineBasicBlock *MBB) {
       continue;
     // Pick the successor that would give this block the smallest InstrHeight.
     unsigned Height = SuccTBI->InstrHeight;
-    if (!Best || Height < BestHeight)
-      Best = Succ, BestHeight = Height;
+    if (!Best || Height < BestHeight) {
+      Best = Succ;
+      BestHeight = Height;
+    }
   }
   return Best;
 }

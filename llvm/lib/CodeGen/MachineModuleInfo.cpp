@@ -396,7 +396,8 @@ void MachineModuleInfo::TidyLandingPads(DenseMap<MCSymbol*, uintptr_t> *LPMap) {
 
       LandingPad.BeginLabels.erase(LandingPad.BeginLabels.begin() + j);
       LandingPad.EndLabels.erase(LandingPad.EndLabels.begin() + j);
-      --j, --e;
+      --j;
+      --e;
     }
 
     // Remove landing pads with no try-ranges.
