@@ -91,6 +91,9 @@ private:
   void HandleBlockEdge(const BlockEdge &E, ExplodedNode *Pred);
   void HandleBlockEntrance(const BlockEntrance &E, ExplodedNode *Pred);
   void HandleBlockExit(const CFGBlock *B, ExplodedNode *Pred);
+
+  void HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred);
+
   void HandlePostStmt(const CFGBlock *B, unsigned StmtIdx, ExplodedNode *Pred);
 
   void HandleBranch(const Stmt *Cond, const Stmt *Term, const CFGBlock *B,
