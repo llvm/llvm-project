@@ -3175,7 +3175,7 @@ void Sema::addMethodToGlobalList(ObjCMethodList *List,
   ObjCMethodList *Previous = List;
   for (; List; Previous = List, List = List->getNext()) {
     // If we are building a module, keep all of the methods.
-    if (getLangOpts().Modules && !getLangOpts().CurrentModule.empty())
+    if (getLangOpts().CompilingModule)
       continue;
 
     if (!MatchTwoMethodDeclarations(Method, List->getMethod())) {

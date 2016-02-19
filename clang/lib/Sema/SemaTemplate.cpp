@@ -555,7 +555,6 @@ Decl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
                                ParsedType DefaultArg) {
   assert(S->isTemplateParamScope() &&
          "Template type parameter not in template parameter scope!");
-  bool Invalid = false;
 
   SourceLocation Loc = ParamNameLoc;
   if (!ParamName)
@@ -567,8 +566,6 @@ Decl *Sema::ActOnTypeParameter(Scope *S, bool Typename,
                                    KeyLoc, Loc, Depth, Position, ParamName,
                                    Typename, IsParameterPack);
   Param->setAccess(AS_public);
-  if (Invalid)
-    Param->setInvalidDecl();
 
   if (ParamName) {
     maybeDiagnoseTemplateParameterShadow(*this, S, ParamNameLoc, ParamName);

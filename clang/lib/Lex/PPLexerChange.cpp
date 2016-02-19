@@ -681,21 +681,36 @@ void Preprocessor::LeaveSubmodule() {
   Module *LeavingMod = Info.M;
   SourceLocation ImportLoc = Info.ImportLoc;
 
+  if ((!getLangOpts().CompilingModule ||
+       LeavingMod->getTopLevelModuleName() != getLangOpts().CurrentModule) &&
+      !getLangOpts().ModulesLocalVisibility) {
+    // Fast path: if we're leaving a modular header that we included textually,
+    // and we're not building the interface for that module, and we're not
+    // providing submodule visibility semantics regardless, then we don't need
+    // to create ModuleMacros. (We'd never use them.)
+    BuildingSubmoduleStack.pop_back();
+    makeModuleVisible(LeavingMod, ImportLoc);
+    return;
+  }
+
   // Create ModuleMacros for any macros defined in this submodule.
   for (auto &Macro : CurSubmoduleState->Macros) {
     auto *II = const_cast<IdentifierInfo*>(Macro.first);
 
     // Find the starting point for the MacroDirective chain in this submodule.
     MacroDirective *OldMD = nullptr;
-    if (getLangOpts().ModulesLocalVisibility) {
+    auto *OldState = Info.OuterSubmoduleState;
+    if (getLangOpts().ModulesLocalVisibility)
+      OldState = &NullSubmoduleState;
+    if (OldState && OldState != CurSubmoduleState) {
       // FIXME: It'd be better to start at the state from when we most recently
       // entered this submodule, but it doesn't really matter.
-      auto &PredefMacros = NullSubmoduleState.Macros;
-      auto PredefMacroIt = PredefMacros.find(Macro.first);
-      if (PredefMacroIt == PredefMacros.end())
+      auto &OldMacros = OldState->Macros;
+      auto OldMacroIt = OldMacros.find(Macro.first);
+      if (OldMacroIt == OldMacros.end())
         OldMD = nullptr;
       else
-        OldMD = PredefMacroIt->second.getLatest();
+        OldMD = OldMacroIt->second.getLatest();
     }
 
     // This module may have exported a new macro. If so, create a ModuleMacro

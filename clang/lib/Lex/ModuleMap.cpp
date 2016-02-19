@@ -89,7 +89,7 @@ ModuleMap::ModuleMap(SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                      HeaderSearch &HeaderInfo)
     : SourceMgr(SourceMgr), Diags(Diags), LangOpts(LangOpts), Target(Target),
       HeaderInfo(HeaderInfo), BuiltinIncludeDir(nullptr),
-      CompilingModule(nullptr), SourceModule(nullptr), NumCreatedModules(0) {
+      SourceModule(nullptr), NumCreatedModules(0) {
   MMapLangOpts.LineComment = true;
 }
 
@@ -343,8 +343,8 @@ ModuleMap::KnownHeader ModuleMap::findModuleForHeader(const FileEntry *File) {
     ModuleMap::KnownHeader Result;
     // Iterate over all modules that 'File' is part of to find the best fit.
     for (KnownHeader &H : Known->second) {
-      // Prefer a header from the current module over all others.
-      if (H.getModule()->getTopLevelModule() == CompilingModule)
+      // Prefer a header from the source module over all others.
+      if (H.getModule()->getTopLevelModule() == SourceModule)
         return MakeResult(H);
       if (!Result || isBetterKnownHeader(H, Result))
         Result = H;
@@ -556,17 +556,11 @@ ModuleMap::findOrCreateModule(StringRef Name, Module *Parent, bool IsFramework,
   // Create a new module with this name.
   Module *Result = new Module(Name, SourceLocation(), Parent,
                               IsFramework, IsExplicit, NumCreatedModules++);
-  if (LangOpts.CurrentModule == Name) {
-    SourceModule = Result;
-    SourceModuleName = Name;
-  }
   if (!Parent) {
+    if (LangOpts.CurrentModule == Name)
+      SourceModule = Result;
     Modules[Name] = Result;
     ModuleScopeIDs[Result] = CurrentModuleScopeID;
-    if (!LangOpts.CurrentModule.empty() && !CompilingModule &&
-        Name == LangOpts.CurrentModule) {
-      CompilingModule = Result;
-    }
   }
   return std::make_pair(Result, true);
 }
@@ -710,9 +704,10 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
     ModuleScopeIDs[Result] = CurrentModuleScopeID;
   InferredModuleAllowedBy[Result] = ModuleMapFile;
   Result->IsInferred = true;
-  if (LangOpts.CurrentModule == ModuleName) {
-    SourceModule = Result;
-    SourceModuleName = ModuleName;
+  if (!Parent) {
+    if (LangOpts.CurrentModule == ModuleName)
+      SourceModule = Result;
+    Modules[ModuleName] = Result;
   }
 
   Result->IsSystem |= Attrs.IsSystem;
@@ -720,9 +715,6 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
   Result->ConfigMacrosExhaustive |= Attrs.IsExhaustive;
   Result->Directory = FrameworkDir;
 
-  if (!Parent)
-    Modules[ModuleName] = Result;
-  
   // umbrella header "umbrella-header-name"
   //
   // The "Headers/" component of the name is implied because this is
@@ -829,7 +821,8 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
   HeaderList.push_back(KH);
   Mod->Headers[headerRoleToKind(Role)].push_back(std::move(Header));
 
-  bool isCompilingModuleHeader = Mod->getTopLevelModule() == CompilingModule;
+  bool isCompilingModuleHeader =
+      LangOpts.CompilingModule && Mod->getTopLevelModule() == SourceModule;
   if (!Imported || isCompilingModuleHeader) {
     // When we import HeaderFileInfo, the external source is expected to
     // set the isModuleHeader flag itself.

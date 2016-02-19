@@ -270,6 +270,8 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
 
 bool GenerateModuleAction::BeginSourceFileAction(CompilerInstance &CI, 
                                                  StringRef Filename) {
+  CI.getLangOpts().CompilingModule = true;
+
   // Find the module map file.
   const FileEntry *ModuleMap =
       CI.getFileManager().getFile(Filename, /*openFile*/true);
