@@ -145,3 +145,77 @@ void LoopVersioning::addPHINodes(
     PN->addIncoming(NonVersionedLoopInst, NonVersionedLoop->getExitingBlock());
   }
 }
+
+namespace {
+/// \brief Also expose this is a pass.  Currently this is only used for
+/// unit-testing.  It adds all memchecks necessary to remove all may-aliasing
+/// array accesses from the loop.
+class LoopVersioningPass : public FunctionPass {
+public:
+  LoopVersioningPass() : FunctionPass(ID) {
+    initializeLoopVersioningPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override {
+    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto *LAA = &getAnalysis<LoopAccessAnalysis>();
+    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+
+    // Build up a worklist of inner-loops to version. This is necessary as the
+    // act of versioning a loop creates new loops and can invalidate iterators
+    // across the loops.
+    SmallVector<Loop *, 8> Worklist;
+
+    for (Loop *TopLevelLoop : *LI)
+      for (Loop *L : depth_first(TopLevelLoop))
+        // We only handle inner-most loops.
+        if (L->empty())
+          Worklist.push_back(L);
+
+    // Now walk the identified inner loops.
+    bool Changed = false;
+    for (Loop *L : Worklist) {
+      const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
+      if (LAI.getNumRuntimePointerChecks() ||
+          !LAI.PSE.getUnionPredicate().isAlwaysTrue()) {
+        LoopVersioning LVer(LAI, L, LI, DT, SE);
+        LVer.versionLoop();
+        Changed = true;
+      }
+    }
+
+    return Changed;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<LoopAccessAnalysis>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<ScalarEvolutionWrapperPass>();
+  }
+
+  static char ID;
+};
+}
+
+#define LVER_OPTION "loop-versioning"
+#define DEBUG_TYPE LVER_OPTION
+
+char LoopVersioningPass::ID;
+static const char LVer_name[] = "Loop Versioning";
+
+INITIALIZE_PASS_BEGIN(LoopVersioningPass, LVER_OPTION, LVer_name, false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopAccessAnalysis)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_END(LoopVersioningPass, LVER_OPTION, LVer_name, false, false)
+
+namespace llvm {
+FunctionPass *createLoopVersioningPass() {
+  return new LoopVersioningPass();
+}
+}
