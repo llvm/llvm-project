@@ -44,7 +44,7 @@
 
  Availability: OSX        # Optional: Specifies which platform the API is
                           # available on. [OSX / iOS / none/
-                          #                available]
+                          #                available / nonswift]
 
  AvailabilityMsg: ""  # Optional: Custom availability message to display to
                           # the user, when API is not available.
@@ -143,6 +143,7 @@ namespace {
     OSX,
     IOS,
     None,
+    NonSwift,
   };
 
   enum class MethodKind {
@@ -264,6 +265,7 @@ namespace llvm {
         io.enumCase(value, "OSX",       APIAvailability::OSX);
         io.enumCase(value, "iOS",       APIAvailability::IOS);
         io.enumCase(value, "none",      APIAvailability::None);
+        io.enumCase(value, "nonswift",  APIAvailability::NonSwift);
         io.enumCase(value, "available", APIAvailability::Available);
       }
     };
@@ -410,9 +412,10 @@ static bool compile(const Module &module,
     bool convertAvailability(const AvailabilityItem &in,
                              CommonEntityInfo &outInfo,
                              llvm::StringRef apiName) {
-      // Populate the 'Unavailable' information.
+      // Populate the unavailability information.
       outInfo.Unavailable = (in.Mode == APIAvailability::None);
-      if (outInfo.Unavailable) {
+      outInfo.UnavailableInSwift = (in.Mode == APIAvailability::NonSwift);
+      if (outInfo.Unavailable || outInfo.UnavailableInSwift) {
         outInfo.UnavailableMsg = in.Msg;
       } else {
         if (!in.Msg.empty()) {
@@ -714,6 +717,11 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
                             const CommonEntityInfo &info) {
       if (info.Unavailable) {
         availability.Mode = APIAvailability::None;
+        availability.Msg = copyString(info.UnavailableMsg);
+      }
+
+      if (info.UnavailableInSwift) {
+        availability.Mode = APIAvailability::NonSwift;
         availability.Msg = copyString(info.UnavailableMsg);
       }
     }
