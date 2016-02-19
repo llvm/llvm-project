@@ -26,11 +26,12 @@ private:
   DenseMap<StringRef, size_t> StringIndexMap;
   size_t Size = 0;
   Kind K;
+  unsigned Alignment;
 
   void finalizeStringTable(bool Optimize);
 
 public:
-  StringTableBuilder(Kind K);
+  StringTableBuilder(Kind K, unsigned Alignment = 1);
 
   /// \brief Add a string to the builder. Returns the position of S in the
   /// table. The position will be changed if finalize is used.

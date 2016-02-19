@@ -525,6 +525,14 @@ interface.  Implementing a loop pass is usually straightforward.
 these methods should return ``true`` if they modified the program, or ``false``
 if they didn't.
 
+A ``LoopPass`` subclass which is intended to run as part of the main loop pass
+pipeline needs to preserve all of the same *function* analyses that the other
+loop passes in its pipeline require. To make that easier,
+a ``getLoopAnalysisUsage`` function is provided by ``LoopUtils.h``. It can be
+called within the subclass's ``getAnalysisUsage`` override to get consistent
+and correct behavior. Analogously, ``INITIALIZE_PASS_DEPENDENCY(LoopPass)``
+will initialize this set of function analyses.
+
 The ``doInitialization(Loop *, LPPassManager &)`` method
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

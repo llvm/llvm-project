@@ -67,6 +67,9 @@ def CC_SystemZ : CallingConv<[
 
   // Force long double values to the stack and pass i64 pointers to them.
   CCIfType<[f128], CCPassIndirect<i64>>,
+  // Same for i128 values.  These are already split into two i64 here,
+  // so we have to use a custom handler.
+  CCIfType<[i64], CCCustom<"CC_SystemZ_I128Indirect">>,
 
   // The first 5 integer arguments are passed in R2-R6.  Note that R6
   // is call-saved.

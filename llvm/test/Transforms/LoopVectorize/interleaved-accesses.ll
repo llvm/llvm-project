@@ -292,10 +292,8 @@ for.body:                                         ; preds = %for.body, %entry
 ; }
 
 ; CHECK-LABEL: @even_load(
-; CHECK: %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
-; CHECK: %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NOT: shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK: shl nsw <4 x i32> %strided.vec, <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NOT: %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
+; CHECK-NOT: %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 
 define void @even_load(i32* noalias nocapture readonly %A, i32* noalias nocapture %B) {
 entry:

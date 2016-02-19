@@ -813,9 +813,6 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDLoc DL,
 
   if (VA.isExtInLoc())
     Value = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Value);
-  else if (VA.getLocInfo() == CCValAssign::Indirect)
-    Value = DAG.getLoad(VA.getValVT(), DL, Chain, Value,
-                        MachinePointerInfo(), false, false, false, 0);
   else if (VA.getLocInfo() == CCValAssign::BCvt) {
     // If this is a short vector argument loaded from the stack,
     // extend from i64 to full vector size and then bitcast.
@@ -868,6 +865,7 @@ LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
       MF.getInfo<SystemZMachineFunctionInfo>();
   auto *TFL =
       static_cast<const SystemZFrameLowering *>(Subtarget.getFrameLowering());
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   // Detect unsupported vector argument types.
   if (Subtarget.hasVector())
@@ -930,7 +928,6 @@ LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
       // Create the SelectionDAG nodes corresponding to a load
       // from this parameter.  Unpromoted ints and floats are
       // passed as right-justified 8-byte values.
-      EVT PtrVT = getPointerTy(DAG.getDataLayout());
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
       if (VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::f32)
         FIN = DAG.getNode(ISD::ADD, DL, PtrVT, FIN,
@@ -942,7 +939,26 @@ LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
 
     // Convert the value of the argument register into the value that's
     // being passed.
-    InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
+    if (VA.getLocInfo() == CCValAssign::Indirect) {
+      InVals.push_back(DAG.getLoad(VA.getValVT(), DL, Chain,
+                                   ArgValue, MachinePointerInfo(),
+                                   false, false, false, 0));
+      // If the original argument was split (e.g. i128), we need
+      // to load all parts of it here (using the same address).
+      unsigned ArgIndex = Ins[I].OrigArgIndex;
+      assert (Ins[I].PartOffset == 0);
+      while (I + 1 != E && Ins[I + 1].OrigArgIndex == ArgIndex) {
+        CCValAssign &PartVA = ArgLocs[I + 1];
+        unsigned PartOffset = Ins[I + 1].PartOffset;
+        SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, ArgValue,
+                                      DAG.getIntPtrConstant(PartOffset, DL));
+        InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain,
+                                     Address, MachinePointerInfo(),
+                                     false, false, false, 0));
+        ++I;
+      }
+    } else
+      InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
   }
 
   if (IsVarArg) {
@@ -1054,11 +1070,25 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
       // Store the argument in a stack slot and pass its address.
-      SDValue SpillSlot = DAG.CreateStackTemporary(VA.getValVT());
+      SDValue SpillSlot = DAG.CreateStackTemporary(Outs[I].ArgVT);
       int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
       MemOpChains.push_back(DAG.getStore(
           Chain, DL, ArgValue, SpillSlot,
           MachinePointerInfo::getFixedStack(MF, FI), false, false, 0));
+      // If the original argument was split (e.g. i128), we need
+      // to store all parts of it here (and pass just one address).
+      unsigned ArgIndex = Outs[I].OrigArgIndex;
+      assert (Outs[I].PartOffset == 0);
+      while (I + 1 != E && Outs[I + 1].OrigArgIndex == ArgIndex) {
+        SDValue PartValue = OutVals[I + 1];
+        unsigned PartOffset = Outs[I + 1].PartOffset;
+        SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, SpillSlot,
+                                      DAG.getIntPtrConstant(PartOffset, DL));
+        MemOpChains.push_back(DAG.getStore(
+            Chain, DL, PartValue, Address,
+            MachinePointerInfo::getFixedStack(MF, FI), false, false, 0));
+        ++I;
+      }
       ArgValue = SpillSlot;
     } else
       ArgValue = convertValVTToLocVT(DAG, DL, VA, ArgValue);
@@ -1179,6 +1209,12 @@ CanLowerReturn(CallingConv::ID CallConv,
   // Detect unsupported vector return types.
   if (Subtarget.hasVector())
     VerifyVectorTypes(Outs);
+
+  // Special case that we cannot easily detect in RetCC_SystemZ since
+  // i128 is not a legal type.
+  for (auto &Out : Outs)
+    if (Out.ArgVT == MVT::i128)
+      return false;
 
   SmallVector<CCValAssign, 16> RetLocs;
   CCState RetCCInfo(CallConv, isVarArg, MF, RetLocs, Context);

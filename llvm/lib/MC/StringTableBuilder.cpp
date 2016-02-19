@@ -16,7 +16,8 @@
 
 using namespace llvm;
 
-StringTableBuilder::StringTableBuilder(Kind K) : K(K) {
+StringTableBuilder::StringTableBuilder(Kind K, unsigned Alignment)
+    : K(K), Alignment(Alignment) {
   // Account for leading bytes in table so that offsets returned from add are
   // correct.
   switch (K) {
@@ -125,15 +126,21 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
       assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
 
     if (Optimize && Previous.endswith(S)) {
-      P->second = StringTable.size() - S.size() - (K != RAW);
-      continue;
+      size_t Pos = StringTable.size() - S.size() - (K != RAW);
+      if (!(Pos & (Alignment - 1))) {
+        P->second = Pos;
+        continue;
+      }
     }
 
-    if (Optimize)
-      P->second = StringTable.size();
-    else
+    if (Optimize) {
+      size_t Start = alignTo(StringTable.size(), Alignment);
+      P->second = Start;
+      StringTable.append(Start - StringTable.size(), '\0');
+    } else {
       assert(P->second == StringTable.size() &&
              "different strtab offset after finalization");
+    }
 
     StringTable += S;
     if (K != RAW)
@@ -176,8 +183,9 @@ size_t StringTableBuilder::getOffset(StringRef S) const {
 
 size_t StringTableBuilder::add(StringRef S) {
   assert(!isFinalized());
-  auto P = StringIndexMap.insert(std::make_pair(S, Size));
+  size_t Start = alignTo(Size, Alignment);
+  auto P = StringIndexMap.insert(std::make_pair(S, Start));
   if (P.second)
-    Size += S.size() + (K != RAW);
+    Size = Start + S.size() + (K != RAW);
   return P.first->second;
 }

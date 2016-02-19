@@ -250,6 +250,63 @@ void AArch64FrameLowering::emitCalleeSavedFrameMoves(
   }
 }
 
+// Find a scratch register that we can use at the start of the prologue to
+// re-align the stack pointer.  We avoid using callee-save registers since they
+// may appear to be free when this is called from canUseAsPrologue (during
+// shrink wrapping), but then no longer be free when this is called from
+// emitPrologue.
+//
+// FIXME: This is a bit conservative, since in the above case we could use one
+// of the callee-save registers as a scratch temp to re-align the stack pointer,
+// but we would then have to make sure that we were in fact saving at least one
+// callee-save register in the prologue, which is additional complexity that
+// doesn't seem worth the benefit.
+static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
+  MachineFunction *MF = MBB->getParent();
+
+  // If MBB is an entry block, use X9 as the scratch register
+  if (&MF->front() == MBB)
+    return AArch64::X9;
+
+  RegScavenger RS;
+  RS.enterBasicBlock(MBB);
+
+  // Prefer X9 since it was historically used for the prologue scratch reg.
+  if (!RS.isRegUsed(AArch64::X9))
+    return AArch64::X9;
+
+  // Find a free non callee-save reg.
+  const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(MF);
+  BitVector CalleeSaveRegs(RegInfo->getNumRegs());
+  for (unsigned i = 0; CSRegs[i]; ++i)
+    CalleeSaveRegs.set(CSRegs[i]);
+
+  BitVector Available = RS.getRegsAvailable(&AArch64::GPR64RegClass);
+  for (int AvailReg = Available.find_first(); AvailReg != -1;
+       AvailReg = Available.find_next(AvailReg))
+    if (!CalleeSaveRegs.test(AvailReg))
+      return AvailReg;
+
+  return AArch64::NoRegister;
+}
+
+bool AArch64FrameLowering::canUseAsPrologue(
+    const MachineBasicBlock &MBB) const {
+  const MachineFunction *MF = MBB.getParent();
+  MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
+  const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+
+  // Don't need a scratch register if we're not going to re-align the stack.
+  if (!RegInfo->needsStackRealignment(*MF))
+    return true;
+  // Otherwise, we can use any block as long as it has a scratch register
+  // available.
+  return findScratchNonCalleeSaveRegister(TmpMBB) != AArch64::NoRegister;
+}
+
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -331,8 +388,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const bool NeedsRealignment = RegInfo->needsStackRealignment(MF);
   unsigned scratchSPReg = AArch64::SP;
   if (NumBytes && NeedsRealignment) {
-    // Use the first callee-saved register as a scratch register.
-    scratchSPReg = AArch64::X9;
+    scratchSPReg = findScratchNonCalleeSaveRegister(&MBB);
+    assert(scratchSPReg != AArch64::NoRegister);
   }
 
   // If we're a leaf function, try using the red zone.
@@ -932,19 +989,14 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (RegInfo->hasBasePointer(MF))
     BasePointerReg = RegInfo->getBaseRegister();
 
-  unsigned StackAlignReg = AArch64::NoRegister;
-  if (RegInfo->needsStackRealignment(MF) && !RegInfo->hasBasePointer(MF))
-    StackAlignReg = AArch64::X9;
-
   bool ExtraCSSpill = false;
   const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
   // Figure out which callee-saved registers to save/restore.
   for (unsigned i = 0; CSRegs[i]; ++i) {
     const unsigned Reg = CSRegs[i];
 
-    // Add the stack re-align scratch register and base pointer register to
-    // SavedRegs set only if they are callee-save.
-    if (Reg == BasePointerReg || Reg == StackAlignReg)
+    // Add the base pointer register to SavedRegs if it is callee-save.
+    if (Reg == BasePointerReg)
       SavedRegs.set(Reg);
 
     bool RegUsed = SavedRegs.test(Reg);

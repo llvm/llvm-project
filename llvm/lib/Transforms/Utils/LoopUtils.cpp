@@ -520,6 +520,43 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   return false;
 }
 
+bool RecurrenceDescriptor::isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+                                                  DominatorTree *DT) {
+
+  // Ensure the phi node is in the loop header and has two incoming values.
+  if (Phi->getParent() != TheLoop->getHeader() ||
+      Phi->getNumIncomingValues() != 2)
+    return false;
+
+  // Ensure the loop has a preheader and a single latch block. The loop
+  // vectorizer will need the latch to set up the next iteration of the loop.
+  auto *Preheader = TheLoop->getLoopPreheader();
+  auto *Latch = TheLoop->getLoopLatch();
+  if (!Preheader || !Latch)
+    return false;
+
+  // Ensure the phi node's incoming blocks are the loop preheader and latch.
+  if (Phi->getBasicBlockIndex(Preheader) < 0 ||
+      Phi->getBasicBlockIndex(Latch) < 0)
+    return false;
+
+  // Get the previous value. The previous value comes from the latch edge while
+  // the initial value comes form the preheader edge.
+  auto *Previous = dyn_cast<Instruction>(Phi->getIncomingValueForBlock(Latch));
+  if (!Previous)
+    return false;
+
+  // Ensure every user of the phi node is dominated by the previous value. The
+  // dominance requirement ensures the loop vectorizer will not need to
+  // vectorize the initial value prior to the first iteration of the loop.
+  for (User *U : Phi->users())
+    if (auto *I = dyn_cast<Instruction>(U))
+      if (!DT->dominates(Previous, I))
+        return false;
+
+  return true;
+}
+
 /// This function returns the identity element (or neutral element) for
 /// the operation K.
 Constant *RecurrenceDescriptor::getRecurrenceIdentity(RecurrenceKind K,
