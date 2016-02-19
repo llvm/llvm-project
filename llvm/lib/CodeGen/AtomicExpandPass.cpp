@@ -60,6 +60,7 @@ namespace {
     bool expandAtomicOpToLLSC(
         Instruction *I, Value *Addr, AtomicOrdering MemOpOrder,
         std::function<Value *(IRBuilder<> &, Value *)> PerformOp);
+    AtomicCmpXchgInst *convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI);
     bool expandAtomicCmpXchg(AtomicCmpXchgInst *CI);
     bool isIdempotentRMW(AtomicRMWInst *AI);
     bool simplifyIdempotentRMW(AtomicRMWInst *AI);
@@ -168,8 +169,22 @@ bool AtomicExpand::runOnFunction(Function &F) {
       } else {
         MadeChange |= tryExpandAtomicRMW(RMWI);
       }
-    } else if (CASI && TLI->shouldExpandAtomicCmpXchgInIR(CASI)) {
-      MadeChange |= expandAtomicCmpXchg(CASI);
+    } else if (CASI) {
+      // TODO: when we're ready to make the change at the IR level, we can
+      // extend convertCmpXchgToInteger for floating point too.
+      assert(!CASI->getCompareOperand()->getType()->isFloatingPointTy() &&
+             "unimplemented - floating point not legal at IR level");
+      if (CASI->getCompareOperand()->getType()->isPointerTy() ) {
+        // TODO: add a TLI hook to control this so that each target can
+        // convert to lowering the original type one at a time.
+        CASI = convertCmpXchgToIntegerType(CASI);
+        assert(CASI->getCompareOperand()->getType()->isIntegerTy() &&
+               "invariant broken");
+        MadeChange = true;
+      }
+      
+      if (TLI->shouldExpandAtomicCmpXchgInIR(CASI))
+        MadeChange |= expandAtomicCmpXchg(CASI);
     }
   }
   return MadeChange;
@@ -206,7 +221,7 @@ IntegerType *AtomicExpand::getCorrespondingIntegerType(Type *T,
 }
 
 /// Convert an atomic load of a non-integral type to an integer load of the
-/// equivelent bitwidth.  See the function comment on
+/// equivalent bitwidth.  See the function comment on
 /// convertAtomicStoreToIntegerType for background.  
 LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
   auto *M = LI->getModule();
@@ -283,7 +298,7 @@ bool AtomicExpand::expandAtomicLoadToCmpXchg(LoadInst *LI) {
 }
 
 /// Convert an atomic store of a non-integral type to an integer store of the
-/// equivelent bitwidth.  We used to not support floating point or vector
+/// equivalent bitwidth.  We used to not support floating point or vector
 /// atomics in the IR at all.  The backends learned to deal with the bitcast
 /// idiom because that was the only way of expressing the notion of a atomic
 /// float or vector store.  The long term plan is to teach each backend to
@@ -447,6 +462,50 @@ bool AtomicExpand::expandAtomicOpToLLSC(
 
   return true;
 }
+
+/// Convert an atomic cmpxchg of a non-integral type to an integer cmpxchg of
+/// the equivalent bitwidth.  We used to not support pointer cmpxchg in the
+/// IR.  As a migration step, we convert back to what use to be the standard
+/// way to represent a pointer cmpxchg so that we can update backends one by
+/// one. 
+AtomicCmpXchgInst *AtomicExpand::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
+  auto *M = CI->getModule();
+  Type *NewTy = getCorrespondingIntegerType(CI->getCompareOperand()->getType(),
+                                            M->getDataLayout());
+
+  IRBuilder<> Builder(CI);
+  
+  Value *Addr = CI->getPointerOperand();
+  Type *PT = PointerType::get(NewTy,
+                              Addr->getType()->getPointerAddressSpace());
+  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
+
+  Value *NewCmp = Builder.CreatePtrToInt(CI->getCompareOperand(), NewTy);
+  Value *NewNewVal = Builder.CreatePtrToInt(CI->getNewValOperand(), NewTy);
+  
+  
+  auto *NewCI = Builder.CreateAtomicCmpXchg(NewAddr, NewCmp, NewNewVal,
+                                            CI->getSuccessOrdering(),
+                                            CI->getFailureOrdering(),
+                                            CI->getSynchScope());
+  NewCI->setVolatile(CI->isVolatile());
+  NewCI->setWeak(CI->isWeak());
+  DEBUG(dbgs() << "Replaced " << *CI << " with " << *NewCI << "\n");
+
+  Value *OldVal = Builder.CreateExtractValue(NewCI, 0);
+  Value *Succ = Builder.CreateExtractValue(NewCI, 1);
+
+  OldVal = Builder.CreateIntToPtr(OldVal, CI->getCompareOperand()->getType());
+
+  Value *Res = UndefValue::get(CI->getType());
+  Res = Builder.CreateInsertValue(Res, OldVal, 0);
+  Res = Builder.CreateInsertValue(Res, Succ, 1);
+
+  CI->replaceAllUsesWith(Res);
+  CI->eraseFromParent();
+  return NewCI;
+}
+
 
 bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   AtomicOrdering SuccessOrder = CI->getSuccessOrdering();
