@@ -712,7 +712,8 @@ void PrintPreprocessedAction::ExecuteAction() {
       } else if (*cur == 0x0A)  // LF
         break;
 
-      ++cur, ++next;
+      ++cur;
+      ++next;
     }
   }
 

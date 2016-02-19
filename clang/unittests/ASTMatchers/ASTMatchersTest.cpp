@@ -4415,6 +4415,15 @@ TEST(TypeMatching, MatchesVoid) {
                       cxxMethodDecl(returns(voidType()))));
 }
 
+TEST(TypeMatching, MatchesRealFloats) {
+  EXPECT_TRUE(matches("struct S { float func(); };",
+                      cxxMethodDecl(returns(realFloatingPointType()))));
+  EXPECT_TRUE(notMatches("struct S { int func(); };",
+                         cxxMethodDecl(returns(realFloatingPointType()))));
+  EXPECT_TRUE(matches("struct S { long double func(); };",
+                      cxxMethodDecl(returns(realFloatingPointType()))));
+}
+
 TEST(TypeMatching, MatchesArrayTypes) {
   EXPECT_TRUE(matches("int a[] = {2,3};", arrayType()));
   EXPECT_TRUE(matches("int a[42];", arrayType()));

@@ -545,8 +545,10 @@ void PrintPPOutputPPCallbacks::HandleNewlinesInToken(const char *TokStr,
     // If we have \n\r or \r\n, skip both and count as one line.
     if (Len != 1 &&
         (TokStr[1] == '\n' || TokStr[1] == '\r') &&
-        TokStr[0] != TokStr[1])
-      ++TokStr, --Len;
+        TokStr[0] != TokStr[1]) {
+      ++TokStr;
+      --Len;
+    }
   }
 
   if (NumNewlines == 0) return;

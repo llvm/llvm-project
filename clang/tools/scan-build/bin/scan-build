@@ -69,7 +69,8 @@ my %Options = (
   MaxLoop => 0,
   PluginsToLoad => [],
   AnalyzerDiscoveryMethod => undef,
-  OverrideCompiler => 0      # The flag corresponding to the --override-compiler command line option.
+  OverrideCompiler => 0,      # The flag corresponding to the --override-compiler command line option.
+  ForceAnalyzeDebugCode => 0
 );
 lock_keys(%Options);
 
@@ -951,7 +952,8 @@ sub SetEnv {
                    'CCC_CC',
                    'CCC_CXX',
                    'CCC_REPORT_FAILURES',
-                   'CLANG_ANALYZER_TARGET') {
+                   'CLANG_ANALYZER_TARGET',
+                   'CCC_ANALYZER_FORCE_ANALYZE_DEBUG_CODE') {
     my $x = $EnvVars->{$var};
     if (defined $x) { $ENV{$var} = $x }
   }
@@ -1117,6 +1119,11 @@ OPTIONS:
 
    Also analyze functions in #included files.  By default, such functions
    are skipped unless they are called by functions within the main source file.
+
+ --force-analyze-debug-code
+
+   Tells analyzer to enable assertions in code even if they were disabled
+   during compilation to enable more precise results.
 
  -o <output location>
 
@@ -1681,6 +1688,12 @@ sub ProcessArgs {
       next;
     }
 
+    if ($arg eq "--force-analyze-debug-code") {
+      shift @$Args;
+      $Options{ForceAnalyzeDebugCode} = 1;
+      next;
+    }
+
     DieDiag("unrecognized option '$arg'\n") if ($arg =~ /^-/);
 
     $NumArgs--;
@@ -1796,7 +1809,8 @@ my %EnvVars = (
   'CCC_ANALYZER_CONSTRAINTS_MODEL' => $Options{ConstraintsModel},
   'CCC_ANALYZER_INTERNAL_STATS' => $Options{InternalStats},
   'CCC_ANALYZER_OUTPUT_FORMAT' => $Options{OutputFormat},
-  'CLANG_ANALYZER_TARGET' => $Options{AnalyzerTarget}
+  'CLANG_ANALYZER_TARGET' => $Options{AnalyzerTarget},
+  'CCC_ANALYZER_FORCE_ANALYZE_DEBUG_CODE' => $Options{ForceAnalyzeDebugCode}
 );
 
 # Run the build.

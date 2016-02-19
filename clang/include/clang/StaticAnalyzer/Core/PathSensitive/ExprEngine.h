@@ -253,8 +253,14 @@ public:
   ///  nodes by processing the 'effects' of a switch statement.
   void processSwitch(SwitchNodeBuilder& builder) override;
 
-  /// Called by CoreEngine.  Used to generate end-of-path
-  /// nodes when the control reaches the end of a function.
+  /// Called by CoreEngine.  Used to notify checkers that processing a
+  /// function has begun. Called for both inlined and and top-level functions.
+  void processBeginOfFunction(NodeBuilderContext &BC,
+                              ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                              const BlockEdge &L) override;
+
+  /// Called by CoreEngine.  Used to notify checkers that processing a
+  /// function has ended. Called for both inlined and and top-level functions.
   void processEndOfFunction(NodeBuilderContext& BC,
                             ExplodedNode *Pred) override;
 
@@ -264,7 +270,8 @@ public:
                                  ExplodedNodeSet &Dst);
 
   /// Generate the entry node of the callee.
-  void processCallEnter(CallEnter CE, ExplodedNode *Pred) override;
+  void processCallEnter(NodeBuilderContext& BC, CallEnter CE,
+                        ExplodedNode *Pred) override;
 
   /// Generate the sequence of nodes that simulate the call exit and the post
   /// visit for CallExpr.

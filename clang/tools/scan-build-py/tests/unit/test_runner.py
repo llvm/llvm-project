@@ -211,3 +211,14 @@ class RequireDecoratorTest(unittest.TestCase):
 
     def test_method_exception_not_caught(self):
         self.assertRaises(Exception, method_exception_from_inside, dict())
+
+class ForceAnalyzeDebugTest(unittest.TestCase):
+
+    def test_force_analyze_debug_code(self):
+        for a, b in [
+                ([], ['-UNDEBUG']),
+                (['-O2'], ['-O2', '-UNDEBUG']),
+                (['-Dkey=val'], ['-Dkey=val', '-UNDEBUG']),
+                (['-D', 'NDEBUG'], ['-D', 'NDEBUG', '-UNDEBUG']) ]:
+            sut.force_analyze_debug_code(a)
+            self.assertEqual(a, b)

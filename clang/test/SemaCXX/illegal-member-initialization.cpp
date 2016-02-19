@@ -7,6 +7,7 @@ struct A {
 };
 
 struct B {
+  int field;
 };
 
 struct X {

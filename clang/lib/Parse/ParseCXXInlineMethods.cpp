@@ -53,7 +53,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
     }
   }
 
-  HandleMemberFunctionDeclDelays(D, FnD);
+  if (FnD)
+    HandleMemberFunctionDeclDelays(D, FnD);
 
   D.complete(FnD);
 

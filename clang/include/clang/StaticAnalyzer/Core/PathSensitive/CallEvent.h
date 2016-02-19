@@ -957,6 +957,11 @@ public:
     llvm_unreachable("Unknown message kind");
   }
 
+  // Returns the property accessed by this method, either explicitly via
+  // property syntax or implicitly via a getter or setter method. Returns
+  // nullptr if the call is not a prooperty access.
+  const ObjCPropertyDecl *getAccessedProperty() const;
+
   RuntimeDefinition getRuntimeDefinition() const override;
 
   bool argumentsMayEscape() const override;

@@ -5547,6 +5547,7 @@ void ASTWriter::AddCXXDefinitionData(const CXXRecordDecl *D, RecordDataImpl &Rec
   Record.push_back(Data.HasOnlyCMembers);
   Record.push_back(Data.HasInClassInitializer);
   Record.push_back(Data.HasUninitializedReferenceMember);
+  Record.push_back(Data.HasUninitializedFields);
   Record.push_back(Data.NeedOverloadResolutionForMoveConstructor);
   Record.push_back(Data.NeedOverloadResolutionForMoveAssignment);
   Record.push_back(Data.NeedOverloadResolutionForDestructor);

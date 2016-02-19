@@ -719,7 +719,9 @@ SourceLocation Lexer::AdvanceToTokenCharacter(SourceLocation TokStart,
   while (Lexer::isObviouslySimpleCharacter(*TokPtr)) {
     if (CharNo == 0)
       return TokStart.getLocWithOffset(PhysOffset);
-    ++TokPtr, --CharNo, ++PhysOffset;
+    ++TokPtr;
+    --CharNo;
+    ++PhysOffset;
   }
   
   // If we have a character that may be a trigraph or escaped newline, use a

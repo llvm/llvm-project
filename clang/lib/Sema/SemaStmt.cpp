@@ -488,6 +488,20 @@ StmtResult Sema::ActOnAttributedStmt(SourceLocation AttrLoc,
   return LS;
 }
 
+namespace {
+class CommaVisitor : public EvaluatedExprVisitor<CommaVisitor> {
+  typedef EvaluatedExprVisitor<CommaVisitor> Inherited;
+  Sema &SemaRef;
+public:
+  CommaVisitor(Sema &SemaRef) : Inherited(SemaRef.Context), SemaRef(SemaRef) {}
+  void VisitBinaryOperator(BinaryOperator *E) {
+    if (E->getOpcode() == BO_Comma)
+      SemaRef.DiagnoseCommaOperator(E->getLHS(), E->getExprLoc());
+    EvaluatedExprVisitor<CommaVisitor>::VisitBinaryOperator(E);
+  }
+};
+}
+
 StmtResult
 Sema::ActOnIfStmt(SourceLocation IfLoc, FullExprArg CondVal, Decl *CondVar,
                   Stmt *thenStmt, SourceLocation ElseLoc,
@@ -502,6 +516,11 @@ Sema::ActOnIfStmt(SourceLocation IfLoc, FullExprArg CondVal, Decl *CondVar,
   }
   Expr *ConditionExpr = CondResult.getAs<Expr>();
   if (ConditionExpr) {
+
+    if (!Diags.isIgnored(diag::warn_comma_operator,
+                         ConditionExpr->getExprLoc()))
+      CommaVisitor(*this).Visit(ConditionExpr);
+
     DiagnoseUnusedExprResult(thenStmt);
 
     if (!elseStmt) {
@@ -980,7 +999,8 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
             << SourceRange(CR->getLHS()->getLocStart(),
                            Hi->getLocEnd());
           CaseRanges.erase(CaseRanges.begin()+i);
-          --i, --e;
+          --i;
+          --e;
           continue;
         }
 
@@ -1238,6 +1258,10 @@ Sema::ActOnWhileStmt(SourceLocation WhileLoc, FullExprArg Cond,
   if (!ConditionExpr)
     return StmtError();
   CheckBreakContinueBinding(ConditionExpr);
+
+  if (ConditionExpr &&
+      !Diags.isIgnored(diag::warn_comma_operator, ConditionExpr->getExprLoc()))
+    CommaVisitor(*this).Visit(ConditionExpr);
 
   DiagnoseUnusedExprResult(Body);
 
@@ -1640,6 +1664,11 @@ Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
     if (SecondResult.isInvalid())
       return StmtError();
   }
+
+  if (SecondResult.get() &&
+      !Diags.isIgnored(diag::warn_comma_operator,
+                       SecondResult.get()->getExprLoc()))
+    CommaVisitor(*this).Visit(SecondResult.get());
 
   Expr *Third  = third.release().getAs<Expr>();
 
