@@ -4855,8 +4855,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-assume-sane-operator-new");
 
   if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes,
-                   false)) {
-    CmdArgs.push_back("-fapinotes");
+                   false) ||
+      Args.hasArg(options::OPT_iapinotes_modules)) {
+    if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false))
+      CmdArgs.push_back("-fapinotes");
 
     SmallString<128> APINotesCachePath;
     if (Arg *A = Args.getLastArg(options::OPT_fapinotes_cache_path)) {
