@@ -3500,7 +3500,6 @@ g_properties[] =
     { "swift-module-search-paths"          , OptionValue::eTypeFileSpecList, false, 0                       , nullptr, nullptr, "List of directories to be searched when locating modules for Swift." },
     { "auto-import-clang-modules"          , OptionValue::eTypeBoolean   , false, true                      , nullptr, nullptr, "Automatically load Clang modules referred to by the program." },
     { "use-all-compiler-flags"             , OptionValue::eTypeBoolean   , false, false                     , nullptr, nullptr, "Try to use compiler flags for all modules when setting up the Swift expression parser, not just the main executable." },
-    { "auto-import-clang-modules"          , OptionValue::eTypeBoolean   , false, true                      , nullptr, nullptr, "Automatically load Clang modules referred to by the program." },
     { "max-children-count"                 , OptionValue::eTypeSInt64    , false, 256                       , nullptr, nullptr, "Maximum number of children to expand in any level of depth." },
     { "max-string-summary-length"          , OptionValue::eTypeSInt64    , false, 1024                      , nullptr, nullptr, "Maximum number of characters to show when using %s in summary strings." },
     { "max-memory-read-size"               , OptionValue::eTypeSInt64    , false, 1024                      , nullptr, nullptr, "Maximum number of bytes that 'memory read' will fetch before --force must be specified." },
