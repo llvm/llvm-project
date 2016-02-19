@@ -39,7 +39,7 @@ class ThreadAPITestCase(TestBase):
         self.run_to_address(self.exe_name)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureFreeBSD # llvm.org/pr20476
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr20476')
     @expectedFailureAll(oslist=["windows"])
     def test_step_out_of_malloc_into_function_b(self):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""

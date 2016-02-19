@@ -15,7 +15,7 @@ class CrashingInferiorTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureFreeBSD("llvm.org/pr23699 SIGSEGV is reported as exception, not signal")
+    @expectedFailureAll(oslist=['freebsd'], bugnumber="llvm.org/pr23699 SIGSEGV is reported as exception, not signal")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     def test_inferior_crashing(self):
         """Test that lldb reliably catches the inferior crashing (command)."""
@@ -47,7 +47,7 @@ class CrashingInferiorTestCase(TestBase):
         self.build()
         self.inferior_crashing_step()
 
-    @expectedFailureFreeBSD('llvm.org/pr24939')
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr24939')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778, This actually works, but the test relies on the output format instead of the API")
     @expectedFailureAndroid(archs=['aarch64'], api_levels=list(range(21 + 1))) # No eh_frame for sa_restorer
     def test_inferior_crashing_step_after_break(self):

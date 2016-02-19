@@ -31,19 +31,6 @@ using namespace lldb_private;
 
 namespace
 {
-    void
-    CleanupProcessSpecificLLDBTempDir()
-    {
-        // Get the process specific LLDB temporary directory and delete it.
-        FileSpec tmpdir_file_spec;
-        if (!HostInfo::GetLLDBPath(ePathTypeLLDBTempSystemDir, tmpdir_file_spec))
-            return;
-
-        // Remove the LLDB temporary directory if we have one. Set "recurse" to
-        // true to all files that were created for the LLDB process can be cleaned up.
-        FileSystem::DeleteDirectory(tmpdir_file_spec, true);
-    }
-
     //----------------------------------------------------------------------
     // The HostInfoBaseFields is a work around for windows not supporting
     // static variables correctly in a thread safe way. Really each of the
@@ -54,6 +41,16 @@ namespace
 
     struct HostInfoBaseFields
     {
+        ~HostInfoBaseFields()
+        {
+            if (m_lldb_process_tmp_dir.Exists())
+            {
+                // Remove the LLDB temporary directory if we have one. Set "recurse" to
+                // true to all files that were created for the LLDB process can be cleaned up.
+                FileSystem::DeleteDirectory(m_lldb_process_tmp_dir, true);
+            }
+        }
+
         uint32_t m_number_cpus;
         std::string m_vendor_string;
         std::string m_os_string;
@@ -80,6 +77,13 @@ void
 HostInfoBase::Initialize()
 {
     g_fields = new HostInfoBaseFields();
+}
+
+void
+HostInfoBase::Terminate()
+{
+    delete g_fields;
+    g_fields = nullptr;
 }
 
 uint32_t
@@ -335,9 +339,6 @@ HostInfoBase::ComputeProcessTempFileDirectory(FileSpec &file_spec)
     if (!FileSystem::MakeDirectory(temp_file_spec, eFilePermissionsDirectoryDefault).Success())
         return false;
 
-    // Make an atexit handler to clean up the process specify LLDB temp dir
-    // and all of its contents.
-    ::atexit(CleanupProcessSpecificLLDBTempDir);
     file_spec.GetDirectory().SetCString(temp_file_spec.GetCString());
     return true;
 }

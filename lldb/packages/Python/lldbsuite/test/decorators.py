@@ -300,9 +300,6 @@ def expectedFailureDarwin(bugnumber=None, compilers=None, debug_info=None):
     # For legacy reasons, we support both "darwin" and "macosx" as OS X triples.
     return expectedFailureOS(lldbplatform.darwin_all, bugnumber, compilers, debug_info=debug_info)
 
-def expectedFailureFreeBSD(bugnumber=None, compilers=None, debug_info=None):
-    return expectedFailureOS(lldbplatform.freebsd, bugnumber, compilers, debug_info=debug_info)
-
 def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
     """ Mark a test as xfail for Android.
 

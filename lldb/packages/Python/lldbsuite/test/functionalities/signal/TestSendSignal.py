@@ -21,7 +21,7 @@ class SendSignalTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.c', 'Put breakpoint here')
 
-    @expectedFailureFreeBSD("llvm.org/pr23318: does not report running state")
+    @expectedFailureAll(oslist=['freebsd'], bugnumber="llvm.org/pr23318: does not report running state")
     @skipIfWindows # Windows does not support signals
     def test_with_run_command(self):
         """Test that lldb command 'process signal SIGUSR1' sends a signal to the inferior process."""
