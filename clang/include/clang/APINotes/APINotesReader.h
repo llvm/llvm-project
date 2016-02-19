@@ -38,7 +38,7 @@ public:
   /// contains the contents of a binary API notes file.
   ///
   /// \returns the new API notes reader, or null if an error occurred.
-  static std::unique_ptr<APINotesReader> 
+  static std::unique_ptr<APINotesReader>
   get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer);
 
   ~APINotesReader();
