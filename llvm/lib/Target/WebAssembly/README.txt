@@ -100,3 +100,9 @@ WebAssembly registers are implicitly initialized to zero. Explicit zeroing is
 therefore often redundant and could be optimized away.
 
 //===---------------------------------------------------------------------===//
+
+Small indices may use smaller encodings than large indices.
+WebAssemblyRegRenumbering should sort registers according to their usage
+frequency to maximize the usage of smaller encodings.
+
+//===---------------------------------------------------------------------===//

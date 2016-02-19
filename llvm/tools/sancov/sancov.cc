@@ -795,15 +795,20 @@ public:
 
     // TOC
 
+    size_t NotCoveredFilesCount = 0;
+    std::set<std::string> Files = SCovData.files();
+
     // Covered Files.
-    OS << "<details open><summary>Covered Files</summary>\n";
+    OS << "<details open><summary>Touched Files</summary>\n";
     OS << "<table>\n";
     OS << "<tr><th>File</th><th>Hit Fns %</th>";
     OS << "<th>Hit (Total) Fns</th></tr>\n";
-    for (auto FileName : SCovData.files()) {
+    for (auto FileName : Files) {
       std::pair<size_t, size_t> FC = FileFnCoverage[FileName];
-      if (FC.first == 0)
+      if (FC.first == 0) {
+        NotCoveredFilesCount++;
         continue;
+      }
       size_t CovPct = FC.second == 0 ? 100 : 100 * FC.first / FC.second;
 
       OS << "<tr><td><a href=\"#" << escapeHtml(FileName) << "\">"
@@ -816,18 +821,22 @@ public:
     OS << "</details>\n";
 
     // Not covered files.
-    OS << "<details><summary>Not Covered Files</summary>\n";
-    OS << "<table>\n";
-    for (auto FileName : SCovData.files()) {
-      std::pair<size_t, size_t> FC = FileFnCoverage[FileName];
-      if (FC.first == 0)
-        OS << "<tr><td>" << stripPathPrefix(FileName) << "</td>\n";
+    if (NotCoveredFilesCount) {
+      OS << "<details><summary>Not Touched Files</summary>\n";
+      OS << "<table>\n";
+      for (auto FileName : Files) {
+        std::pair<size_t, size_t> FC = FileFnCoverage[FileName];
+        if (FC.first == 0)
+          OS << "<tr><td>" << stripPathPrefix(FileName) << "</td>\n";
+      }
+      OS << "</table>\n";
+      OS << "</details>\n";
+    } else {
+      OS << "<p>Congratulations! All source files are touched.</p>\n";
     }
-    OS << "</table>\n";
-    OS << "</details>\n";
 
     // Source
-    for (auto FileName : SCovData.files()) {
+    for (auto FileName : Files) {
       std::pair<size_t, size_t> FC = FileFnCoverage[FileName];
       if (FC.first == 0)
         continue;
@@ -841,7 +850,7 @@ public:
         for (auto FileFn : NotCoveredFns->second) {
           OS << "<tr><td>";
           OS << "<a href=\"#"
-             << escapeHtml(FileName + ":: " + FileFn.FunctionName) << "\">";
+             << escapeHtml(FileName + "::" + FileFn.FunctionName) << "\">";
           OS << escapeHtml(FileFn.FunctionName) << "</a>";
           OS << "</td></tr>\n";
         }
@@ -867,7 +876,7 @@ public:
           auto It = NotCoveredFnByLoc.find(Loc);
           if (It != NotCoveredFnByLoc.end()) {
             for (std::string Fn : It->second) {
-              OS << "<a name=\"" << escapeHtml(FileName + ":: " + Fn)
+              OS << "<a name=\"" << escapeHtml(FileName + "::" + Fn)
                  << "\"></a>";
             };
           }
@@ -992,7 +1001,7 @@ public:
   }
 
   void printReport(raw_ostream &OS) const {
-    std::string Title = stripPathPrefix(MainObjFile) + " Coverage Report";
+    auto Title = llvm::sys::path::filename(MainObjFile) + " Coverage Report";
 
     OS << "<html>\n";
     OS << "<head>\n";
@@ -1001,6 +1010,7 @@ public:
     OS << "<style>\n";
     OS << ".covered { background: #7F7; }\n";
     OS << ".notcovered { background: #F77; }\n";
+    OS << ".mixed { background: #FF7; }\n";
     OS << "summary { font-weight: bold; }\n";
     OS << "details > summary + * { margin-left: 1em; }\n";
     OS << "</style>\n";

@@ -175,6 +175,13 @@ public:
   static bool isReductionPHI(PHINode *Phi, Loop *TheLoop,
                              RecurrenceDescriptor &RedDes);
 
+  /// Returns true if Phi is a first-order recurrence. A first-order recurrence
+  /// is a non-reduction recurrence relation in which the value of the
+  /// recurrence in the current loop iteration equals a value defined in the
+  /// previous iteration.
+  static bool isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+                                     DominatorTree *DT);
+
   RecurrenceKind getRecurrenceKind() { return Kind; }
 
   MinMaxRecurrenceKind getMinMaxRecurrenceKind() { return MinMaxKind; }
