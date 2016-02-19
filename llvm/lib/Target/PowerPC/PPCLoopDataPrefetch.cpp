@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "ppc-loop-data-prefetch"
+#define DEBUG_TYPE "loop-data-prefetch"
 #include "PPC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -41,7 +41,7 @@ using namespace llvm;
 // By default, we limit this to creating 16 PHIs (which is a little over half
 // of the allocatable register set).
 static cl::opt<bool>
-PrefetchWrites("ppc-loop-prefetch-writes", cl::Hidden, cl::init(false),
+PrefetchWrites("loop-prefetch-writes", cl::Hidden, cl::init(false),
                cl::desc("Prefetch write addresses"));
 
 // This seems like a reasonable default for the BG/Q (this pass is enabled, by
@@ -51,16 +51,16 @@ PrefDist("ppc-loop-prefetch-distance", cl::Hidden, cl::init(300),
          cl::desc("The loop prefetch distance"));
 
 namespace llvm {
-  void initializePPCLoopDataPrefetchPass(PassRegistry&);
+  void initializeLoopDataPrefetchPass(PassRegistry&);
 }
 
 namespace {
 
-  class PPCLoopDataPrefetch : public FunctionPass {
+  class LoopDataPrefetch : public FunctionPass {
   public:
     static char ID; // Pass ID, replacement for typeid
-    PPCLoopDataPrefetch() : FunctionPass(ID) {
-      initializePPCLoopDataPrefetchPass(*PassRegistry::getPassRegistry());
+    LoopDataPrefetch() : FunctionPass(ID) {
+      initializeLoopDataPrefetchPass(*PassRegistry::getPassRegistry());
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -87,19 +87,19 @@ namespace {
   };
 }
 
-char PPCLoopDataPrefetch::ID = 0;
-INITIALIZE_PASS_BEGIN(PPCLoopDataPrefetch, "ppc-loop-data-prefetch",
-                      "PPC Loop Data Prefetch", false, false)
+char LoopDataPrefetch::ID = 0;
+INITIALIZE_PASS_BEGIN(LoopDataPrefetch, "loop-data-prefetch",
+                      "Loop Data Prefetch", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_END(PPCLoopDataPrefetch, "ppc-loop-data-prefetch",
-                    "PPC Loop Data Prefetch", false, false)
+INITIALIZE_PASS_END(LoopDataPrefetch, "loop-data-prefetch",
+                    "Loop Data Prefetch", false, false)
 
-FunctionPass *llvm::createPPCLoopDataPrefetchPass() { return new PPCLoopDataPrefetch(); }
+FunctionPass *llvm::createPPCLoopDataPrefetchPass() { return new LoopDataPrefetch(); }
 
-bool PPCLoopDataPrefetch::runOnFunction(Function &F) {
+bool LoopDataPrefetch::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   DL = &F.getParent()->getDataLayout();
@@ -117,7 +117,7 @@ bool PPCLoopDataPrefetch::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-bool PPCLoopDataPrefetch::runOnLoop(Loop *L) {
+bool LoopDataPrefetch::runOnLoop(Loop *L) {
   bool MadeChange = false;
 
   // Only prefetch in the inner-most loop
