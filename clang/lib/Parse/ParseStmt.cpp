@@ -107,6 +107,8 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
 
   ParsedAttributesWithRange Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs, nullptr, /*MightBeObjCMessageSend*/ true);
+  if (!MaybeParseOpenCLUnrollHintAttribute(Attrs))
+    return StmtError();
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
       Stmts, Allowed, TrailingElseLoc, Attrs);
@@ -2207,4 +2209,20 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
       Stmts.push_back(R.get());
   }
   Braces.consumeClose();
+}
+
+bool Parser::ParseOpenCLUnrollHintAttribute(ParsedAttributes &Attrs) {
+  MaybeParseGNUAttributes(Attrs);
+
+  if (Attrs.empty())
+    return true;
+
+  if (Attrs.getList()->getKind() != AttributeList::AT_OpenCLUnrollHint)
+    return true;
+
+  if (!(Tok.is(tok::kw_for) || Tok.is(tok::kw_while) || Tok.is(tok::kw_do))) {
+    Diag(Tok, diag::err_opencl_unroll_hint_on_non_loop);
+    return false;
+  }
+  return true;
 }

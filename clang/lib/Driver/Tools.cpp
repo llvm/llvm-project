@@ -4938,7 +4938,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fmodule-name specifies the module that is currently being built (or
   // used for header checking by -fmodule-maps).
-  Args.AddLastArg(CmdArgs, options::OPT_fmodule_name);
+  Args.AddLastArg(CmdArgs, options::OPT_fmodule_name_EQ);
 
   // -fmodule-map-file can be used to specify files containing module
   // definitions.

@@ -573,23 +573,23 @@ void Preprocessor::PTHSkipExcludedConditionalBlock() {
 }
 
 Module *Preprocessor::getModuleForLocation(SourceLocation Loc) {
-  ModuleMap &ModMap = HeaderInfo.getModuleMap();
-  if (SourceMgr.isInMainFile(Loc)) {
-    if (Module *CurMod = getCurrentModule())
-      return CurMod;                               // Compiling a module.
-    return HeaderInfo.getModuleMap().SourceModule; // Compiling a source.
+  if (!SourceMgr.isInMainFile(Loc)) {
+    // Try to determine the module of the include directive.
+    // FIXME: Look into directly passing the FileEntry from LookupFile instead.
+    FileID IDOfIncl = SourceMgr.getFileID(SourceMgr.getExpansionLoc(Loc));
+    if (const FileEntry *EntryOfIncl = SourceMgr.getFileEntryForID(IDOfIncl)) {
+      // The include comes from an included file.
+      return HeaderInfo.getModuleMap()
+          .findModuleForHeader(EntryOfIncl)
+          .getModule();
+    }
   }
-  // Try to determine the module of the include directive.
-  // FIXME: Look into directly passing the FileEntry from LookupFile instead.
-  FileID IDOfIncl = SourceMgr.getFileID(SourceMgr.getExpansionLoc(Loc));
-  if (const FileEntry *EntryOfIncl = SourceMgr.getFileEntryForID(IDOfIncl)) {
-    // The include comes from a file.
-    return ModMap.findModuleForHeader(EntryOfIncl).getModule();
-  } else {
-    // The include does not come from a file,
-    // so it is probably a module compilation.
-    return getCurrentModule();
-  }
+
+  // This is either in the main file or not in a file at all. It belongs
+  // to the current module, if there is one.
+  return getLangOpts().CurrentModule.empty()
+             ? nullptr
+             : HeaderInfo.lookupModule(getLangOpts().CurrentModule);
 }
 
 Module *Preprocessor::getModuleContainingLocation(SourceLocation Loc) {
@@ -1668,10 +1668,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   // are processing this module textually (because we're building the module).
   if (File && SuggestedModule && getLangOpts().Modules &&
       SuggestedModule.getModule()->getTopLevelModuleName() !=
-          getLangOpts().CurrentModule &&
-      SuggestedModule.getModule()->getTopLevelModuleName() !=
-          getLangOpts().ImplementationOfModule) {
-
+          getLangOpts().CurrentModule) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     if (!SuggestedModule.getModule()->isAvailable()) {

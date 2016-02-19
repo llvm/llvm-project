@@ -1558,10 +1558,13 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
 
   // But, if there's a #pragma pack in play, that takes precedent over
   // even the 'aligned' attribute, for non-zero-width bitfields.
+  unsigned MaxFieldAlignmentInBits = Context.toBits(MaxFieldAlignment);
   if (!MaxFieldAlignment.isZero() && FieldSize) {
-    unsigned MaxFieldAlignmentInBits = Context.toBits(MaxFieldAlignment);
-    FieldAlign = std::min(FieldAlign, MaxFieldAlignmentInBits);
     UnpackedFieldAlign = std::min(UnpackedFieldAlign, MaxFieldAlignmentInBits);
+    if (FieldPacked)
+      FieldAlign = UnpackedFieldAlign;
+    else
+      FieldAlign = std::min(FieldAlign, MaxFieldAlignmentInBits);
   }
 
   // But, ms_struct just ignores all of that in unions, even explicit
@@ -1601,6 +1604,8 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
          (FieldOffset & (FieldAlign-1)) + FieldSize > TypeSize)) {
       FieldOffset = llvm::alignTo(FieldOffset, FieldAlign);
     } else if (ExplicitFieldAlign &&
+               (MaxFieldAlignmentInBits == 0 ||
+                ExplicitFieldAlign <= MaxFieldAlignmentInBits) &&
                Context.getTargetInfo().useExplicitBitFieldAlignment()) {
       // TODO: figure it out what needs to be done on targets that don't honor
       // bit-field type alignment like ARM APCS ABI.
@@ -1614,6 +1619,8 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
       UnpackedFieldOffset =
           llvm::alignTo(UnpackedFieldOffset, UnpackedFieldAlign);
     else if (ExplicitFieldAlign &&
+             (MaxFieldAlignmentInBits == 0 ||
+              ExplicitFieldAlign <= MaxFieldAlignmentInBits) &&
              Context.getTargetInfo().useExplicitBitFieldAlignment())
       UnpackedFieldOffset =
           llvm::alignTo(UnpackedFieldOffset, ExplicitFieldAlign);

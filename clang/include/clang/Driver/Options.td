@@ -794,9 +794,10 @@ def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group
   Flags<[DriverOption, CC1Option]>,
   HelpText<"Implicitly search the file system for module map files.">;
 def fmodule_maps : Flag <["-"], "fmodule-maps">, Alias<fimplicit_module_maps>;
-def fmodule_name : JoinedOrSeparate<["-"], "fmodule-name=">, Group<f_Group>,
+def fmodule_name_EQ : Joined<["-"], "fmodule-name=">, Group<f_Group>,
   Flags<[DriverOption,CC1Option]>, MetaVarName<"<name>">,
   HelpText<"Specify the name of the module to build">;
+def fmodule_name : Separate<["-"], "fmodule-name">, Alias<fmodule_name_EQ>;
 def fmodule_map_file : Joined<["-"], "fmodule-map-file=">,
   Group<f_Group>, Flags<[DriverOption,CC1Option]>, MetaVarName<"<file>">,
   HelpText<"Load this module map file">;

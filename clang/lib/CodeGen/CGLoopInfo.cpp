@@ -115,20 +115,41 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
   // Identify loop hint attributes from Attrs.
   for (const auto *Attr : Attrs) {
     const LoopHintAttr *LH = dyn_cast<LoopHintAttr>(Attr);
+    const OpenCLUnrollHintAttr *OpenCLHint =
+        dyn_cast<OpenCLUnrollHintAttr>(Attr);
 
     // Skip non loop hint attributes
-    if (!LH)
+    if (!LH && !OpenCLHint) {
       continue;
-
-    auto *ValueExpr = LH->getValue();
-    unsigned ValueInt = 1;
-    if (ValueExpr) {
-      llvm::APSInt ValueAPS = ValueExpr->EvaluateKnownConstInt(Ctx);
-      ValueInt = ValueAPS.getSExtValue();
     }
 
-    LoopHintAttr::OptionType Option = LH->getOption();
-    LoopHintAttr::LoopHintState State = LH->getState();
+    LoopHintAttr::OptionType Option = LoopHintAttr::Unroll;
+    LoopHintAttr::LoopHintState State = LoopHintAttr::Disable;
+    unsigned ValueInt = 1;
+    // Translate opencl_unroll_hint attribute argument to
+    // equivalent LoopHintAttr enums.
+    // OpenCL v2.0 s6.11.5:  
+    // 0 - full unroll (no argument).
+    // 1 - disable unroll.
+    // other positive integer n - unroll by n.
+    if (OpenCLHint) {
+      ValueInt = OpenCLHint->getUnrollHint();
+      if (ValueInt == 0) {
+        State = LoopHintAttr::Full;
+      } else if (ValueInt != 1) {
+        Option = LoopHintAttr::UnrollCount;
+        State = LoopHintAttr::Numeric;
+      }
+    } else if (LH) {
+      auto *ValueExpr = LH->getValue();
+      if (ValueExpr) {
+        llvm::APSInt ValueAPS = ValueExpr->EvaluateKnownConstInt(Ctx);
+        ValueInt = ValueAPS.getSExtValue();
+      }
+
+      Option = LH->getOption();
+      State = LH->getState();
+    }
     switch (State) {
     case LoopHintAttr::Disable:
       switch (Option) {

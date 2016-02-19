@@ -670,7 +670,7 @@ void Parser::ParseBorlandTypeAttributes(ParsedAttributes &attrs) {
   }
 }
 
-void Parser::ParseOpenCLAttributes(ParsedAttributes &attrs) {
+void Parser::ParseOpenCLKernelAttributes(ParsedAttributes &attrs) {
   // Treat these like attributes
   while (Tok.is(tok::kw___kernel)) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
@@ -3098,7 +3098,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     // OpenCL single token adornments.
     case tok::kw___kernel:
-      ParseOpenCLAttributes(DS.getAttributes());
+      ParseOpenCLKernelAttributes(DS.getAttributes());
       continue;
 
     // Nullability type specifiers.

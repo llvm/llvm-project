@@ -203,6 +203,52 @@ CheckForIncompatibleAttributes(Sema &S,
   }
 }
 
+static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const AttributeList &A,
+                                    SourceRange Range) {
+  // OpenCL v2.0 s6.11.5 - opencl_unroll_hint can have 0 arguments (compiler
+  // determines unrolling factor) or 1 argument (the unroll factor provided
+  // by the user).
+
+  if (S.getLangOpts().OpenCLVersion < 200) {
+    S.Diag(A.getLoc(), diag::err_attribute_requires_opencl_version)
+        << A.getName() << "2.0";
+    return nullptr;
+  }
+
+  unsigned NumArgs = A.getNumArgs();
+
+  if (NumArgs > 1) {
+    S.Diag(A.getLoc(), diag::err_attribute_too_many_arguments) << A.getName()
+                                                               << 1;
+    return nullptr;
+  }
+
+  unsigned UnrollFactor = 0;
+
+  if (NumArgs == 1) {
+    Expr *E = A.getArgAsExpr(0);
+    llvm::APSInt ArgVal(32);
+
+    if (!E->isIntegerConstantExpr(ArgVal, S.Context)) {
+      S.Diag(A.getLoc(), diag::err_attribute_argument_type)
+          << A.getName() << AANT_ArgumentIntegerConstant << E->getSourceRange();
+      return nullptr;
+    }
+
+    int Val = ArgVal.getSExtValue();
+
+    if (Val <= 0) {
+      S.Diag(A.getRange().getBegin(),
+             diag::err_attribute_requires_positive_integer)
+          << A.getName();
+      return nullptr;
+    }
+    UnrollFactor = Val;
+  }
+
+  return OpenCLUnrollHintAttr::CreateImplicit(S.Context, UnrollFactor);
+}
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const AttributeList &A,
                                   SourceRange Range) {
   switch (A.getKind()) {
@@ -215,6 +261,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const AttributeList &A,
     return handleFallThroughAttr(S, St, A, Range);
   case AttributeList::AT_LoopHint:
     return handleLoopHintAttr(S, St, A, Range);
+  case AttributeList::AT_OpenCLUnrollHint:
+    return handleOpenCLUnrollHint(S, St, A, Range);
   default:
     // if we're here, then we parsed a known attribute, but didn't recognize
     // it as a statement attribute => it is declaration attribute

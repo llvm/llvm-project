@@ -127,6 +127,7 @@ BENIGN_LANGOPT(EmitAllDecls      , 1, 0, "support for emitting all declarations"
 LANGOPT(MathErrno         , 1, 1, "errno support for math functions")
 BENIGN_LANGOPT(HeinousExtensions , 1, 0, "Extensions that we really don't like and may be ripped out at any time")
 LANGOPT(Modules           , 1, 0, "modules extension to C")
+BENIGN_LANGOPT(CompilingModule, 1, 0, "compiling a module interface")
 COMPATIBLE_LANGOPT(ModulesDeclUse    , 1, 0, "require declaration of module uses")
 LANGOPT(ModulesSearchAll  , 1, 1, "search even non-imported modules to find unresolved references")
 COMPATIBLE_LANGOPT(ModulesStrictDeclUse, 1, 0, "require declaration of module uses and all headers to be in modules")

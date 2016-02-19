@@ -660,6 +660,12 @@ def OpenCLKernel : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def OpenCLUnrollHint : InheritableAttr {
+  let Spellings = [GNU<"opencl_unroll_hint">];
+  let Args = [UnsignedArgument<"UnrollHint">];
+  let Documentation = [OpenCLUnrollHintDocs];
+}
+
 // This attribute is both a type attribute, and a declaration attribute (for
 // parameter variables).
 def OpenCLImageAccess : Attr {
