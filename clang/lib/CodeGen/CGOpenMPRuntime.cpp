@@ -278,6 +278,215 @@ public:
   }
 };
 
+/// \brief Values for bit flags used in the ident_t to describe the fields.
+/// All enumeric elements are named and described in accordance with the code
+/// from http://llvm.org/svn/llvm-project/openmp/trunk/runtime/src/kmp.h
+enum OpenMPLocationFlags {
+  /// \brief Use trampoline for internal microtask.
+  OMP_IDENT_IMD = 0x01,
+  /// \brief Use c-style ident structure.
+  OMP_IDENT_KMPC = 0x02,
+  /// \brief Atomic reduction option for kmpc_reduce.
+  OMP_ATOMIC_REDUCE = 0x10,
+  /// \brief Explicit 'barrier' directive.
+  OMP_IDENT_BARRIER_EXPL = 0x20,
+  /// \brief Implicit barrier in code.
+  OMP_IDENT_BARRIER_IMPL = 0x40,
+  /// \brief Implicit barrier in 'for' directive.
+  OMP_IDENT_BARRIER_IMPL_FOR = 0x40,
+  /// \brief Implicit barrier in 'sections' directive.
+  OMP_IDENT_BARRIER_IMPL_SECTIONS = 0xC0,
+  /// \brief Implicit barrier in 'single' directive.
+  OMP_IDENT_BARRIER_IMPL_SINGLE = 0x140
+};
+
+/// \brief Describes ident structure that describes a source location.
+/// All descriptions are taken from
+/// http://llvm.org/svn/llvm-project/openmp/trunk/runtime/src/kmp.h
+/// Original structure:
+/// typedef struct ident {
+///    kmp_int32 reserved_1;   /**<  might be used in Fortran;
+///                                  see above  */
+///    kmp_int32 flags;        /**<  also f.flags; KMP_IDENT_xxx flags;
+///                                  KMP_IDENT_KMPC identifies this union
+///                                  member  */
+///    kmp_int32 reserved_2;   /**<  not really used in Fortran any more;
+///                                  see above */
+///#if USE_ITT_BUILD
+///                            /*  but currently used for storing
+///                                region-specific ITT */
+///                            /*  contextual information. */
+///#endif /* USE_ITT_BUILD */
+///    kmp_int32 reserved_3;   /**< source[4] in Fortran, do not use for
+///                                 C++  */
+///    char const *psource;    /**< String describing the source location.
+///                            The string is composed of semi-colon separated
+//                             fields which describe the source file,
+///                            the function and a pair of line numbers that
+///                            delimit the construct.
+///                             */
+/// } ident_t;
+enum IdentFieldIndex {
+  /// \brief might be used in Fortran
+  IdentField_Reserved_1,
+  /// \brief OMP_IDENT_xxx flags; OMP_IDENT_KMPC identifies this union member.
+  IdentField_Flags,
+  /// \brief Not really used in Fortran any more
+  IdentField_Reserved_2,
+  /// \brief Source[4] in Fortran, do not use for C++
+  IdentField_Reserved_3,
+  /// \brief String describing the source location. The string is composed of
+  /// semi-colon separated fields which describe the source file, the function
+  /// and a pair of line numbers that delimit the construct.
+  IdentField_PSource
+};
+
+/// \brief Schedule types for 'omp for' loops (these enumerators are taken from
+/// the enum sched_type in kmp.h).
+enum OpenMPSchedType {
+  /// \brief Lower bound for default (unordered) versions.
+  OMP_sch_lower = 32,
+  OMP_sch_static_chunked = 33,
+  OMP_sch_static = 34,
+  OMP_sch_dynamic_chunked = 35,
+  OMP_sch_guided_chunked = 36,
+  OMP_sch_runtime = 37,
+  OMP_sch_auto = 38,
+  /// \brief Lower bound for 'ordered' versions.
+  OMP_ord_lower = 64,
+  OMP_ord_static_chunked = 65,
+  OMP_ord_static = 66,
+  OMP_ord_dynamic_chunked = 67,
+  OMP_ord_guided_chunked = 68,
+  OMP_ord_runtime = 69,
+  OMP_ord_auto = 70,
+  OMP_sch_default = OMP_sch_static,
+};
+
+enum OpenMPRTLFunction {
+  /// \brief Call to void __kmpc_fork_call(ident_t *loc, kmp_int32 argc,
+  /// kmpc_micro microtask, ...);
+  OMPRTL__kmpc_fork_call,
+  /// \brief Call to void *__kmpc_threadprivate_cached(ident_t *loc,
+  /// kmp_int32 global_tid, void *data, size_t size, void ***cache);
+  OMPRTL__kmpc_threadprivate_cached,
+  /// \brief Call to void __kmpc_threadprivate_register( ident_t *,
+  /// void *data, kmpc_ctor ctor, kmpc_cctor cctor, kmpc_dtor dtor);
+  OMPRTL__kmpc_threadprivate_register,
+  // Call to __kmpc_int32 kmpc_global_thread_num(ident_t *loc);
+  OMPRTL__kmpc_global_thread_num,
+  // Call to void __kmpc_critical(ident_t *loc, kmp_int32 global_tid,
+  // kmp_critical_name *crit);
+  OMPRTL__kmpc_critical,
+  // Call to void __kmpc_critical_with_hint(ident_t *loc, kmp_int32
+  // global_tid, kmp_critical_name *crit, uintptr_t hint);
+  OMPRTL__kmpc_critical_with_hint,
+  // Call to void __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid,
+  // kmp_critical_name *crit);
+  OMPRTL__kmpc_end_critical,
+  // Call to kmp_int32 __kmpc_cancel_barrier(ident_t *loc, kmp_int32
+  // global_tid);
+  OMPRTL__kmpc_cancel_barrier,
+  // Call to void __kmpc_barrier(ident_t *loc, kmp_int32 global_tid);
+  OMPRTL__kmpc_barrier,
+  // Call to void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid);
+  OMPRTL__kmpc_for_static_fini,
+  // Call to void __kmpc_serialized_parallel(ident_t *loc, kmp_int32
+  // global_tid);
+  OMPRTL__kmpc_serialized_parallel,
+  // Call to void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32
+  // global_tid);
+  OMPRTL__kmpc_end_serialized_parallel,
+  // Call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32 global_tid,
+  // kmp_int32 num_threads);
+  OMPRTL__kmpc_push_num_threads,
+  // Call to void __kmpc_flush(ident_t *loc);
+  OMPRTL__kmpc_flush,
+  // Call to kmp_int32 __kmpc_master(ident_t *, kmp_int32 global_tid);
+  OMPRTL__kmpc_master,
+  // Call to void __kmpc_end_master(ident_t *, kmp_int32 global_tid);
+  OMPRTL__kmpc_end_master,
+  // Call to kmp_int32 __kmpc_omp_taskyield(ident_t *, kmp_int32 global_tid,
+  // int end_part);
+  OMPRTL__kmpc_omp_taskyield,
+  // Call to kmp_int32 __kmpc_single(ident_t *, kmp_int32 global_tid);
+  OMPRTL__kmpc_single,
+  // Call to void __kmpc_end_single(ident_t *, kmp_int32 global_tid);
+  OMPRTL__kmpc_end_single,
+  // Call to kmp_task_t * __kmpc_omp_task_alloc(ident_t *, kmp_int32 gtid,
+  // kmp_int32 flags, size_t sizeof_kmp_task_t, size_t sizeof_shareds,
+  // kmp_routine_entry_t *task_entry);
+  OMPRTL__kmpc_omp_task_alloc,
+  // Call to kmp_int32 __kmpc_omp_task(ident_t *, kmp_int32 gtid, kmp_task_t *
+  // new_task);
+  OMPRTL__kmpc_omp_task,
+  // Call to void __kmpc_copyprivate(ident_t *loc, kmp_int32 global_tid,
+  // size_t cpy_size, void *cpy_data, void(*cpy_func)(void *, void *),
+  // kmp_int32 didit);
+  OMPRTL__kmpc_copyprivate,
+  // Call to kmp_int32 __kmpc_reduce(ident_t *loc, kmp_int32 global_tid,
+  // kmp_int32 num_vars, size_t reduce_size, void *reduce_data, void
+  // (*reduce_func)(void *lhs_data, void *rhs_data), kmp_critical_name *lck);
+  OMPRTL__kmpc_reduce,
+  // Call to kmp_int32 __kmpc_reduce_nowait(ident_t *loc, kmp_int32
+  // global_tid, kmp_int32 num_vars, size_t reduce_size, void *reduce_data,
+  // void (*reduce_func)(void *lhs_data, void *rhs_data), kmp_critical_name
+  // *lck);
+  OMPRTL__kmpc_reduce_nowait,
+  // Call to void __kmpc_end_reduce(ident_t *loc, kmp_int32 global_tid,
+  // kmp_critical_name *lck);
+  OMPRTL__kmpc_end_reduce,
+  // Call to void __kmpc_end_reduce_nowait(ident_t *loc, kmp_int32 global_tid,
+  // kmp_critical_name *lck);
+  OMPRTL__kmpc_end_reduce_nowait,
+  // Call to void __kmpc_omp_task_begin_if0(ident_t *, kmp_int32 gtid,
+  // kmp_task_t * new_task);
+  OMPRTL__kmpc_omp_task_begin_if0,
+  // Call to void __kmpc_omp_task_complete_if0(ident_t *, kmp_int32 gtid,
+  // kmp_task_t * new_task);
+  OMPRTL__kmpc_omp_task_complete_if0,
+  // Call to void __kmpc_ordered(ident_t *loc, kmp_int32 global_tid);
+  OMPRTL__kmpc_ordered,
+  // Call to void __kmpc_end_ordered(ident_t *loc, kmp_int32 global_tid);
+  OMPRTL__kmpc_end_ordered,
+  // Call to kmp_int32 __kmpc_omp_taskwait(ident_t *loc, kmp_int32
+  // global_tid);
+  OMPRTL__kmpc_omp_taskwait,
+  // Call to void __kmpc_taskgroup(ident_t *loc, kmp_int32 global_tid);
+  OMPRTL__kmpc_taskgroup,
+  // Call to void __kmpc_end_taskgroup(ident_t *loc, kmp_int32 global_tid);
+  OMPRTL__kmpc_end_taskgroup,
+  // Call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32 global_tid,
+  // int proc_bind);
+  OMPRTL__kmpc_push_proc_bind,
+  // Call to kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32
+  // gtid, kmp_task_t * new_task, kmp_int32 ndeps, kmp_depend_info_t
+  // *dep_list, kmp_int32 ndeps_noalias, kmp_depend_info_t *noalias_dep_list);
+  OMPRTL__kmpc_omp_task_with_deps,
+  // Call to void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32
+  // gtid, kmp_int32 ndeps, kmp_depend_info_t *dep_list, kmp_int32
+  // ndeps_noalias, kmp_depend_info_t *noalias_dep_list);
+  OMPRTL__kmpc_omp_wait_deps,
+  // Call to kmp_int32 __kmpc_cancellationpoint(ident_t *loc, kmp_int32
+  // global_tid, kmp_int32 cncl_kind);
+  OMPRTL__kmpc_cancellationpoint,
+  // Call to kmp_int32 __kmpc_cancel(ident_t *loc, kmp_int32 global_tid,
+  // kmp_int32 cncl_kind);
+  OMPRTL__kmpc_cancel,
+
+  //
+  // Offloading related calls
+  //
+  // Call to int32_t __tgt_target(int32_t device_id, void *host_ptr, int32_t
+  // arg_num, void** args_base, void **args, size_t *arg_sizes, int32_t
+  // *arg_types);
+  OMPRTL__tgt_target,
+  // Call to void __tgt_register_lib(__tgt_bin_desc *desc);
+  OMPRTL__tgt_register_lib,
+  // Call to void __tgt_unregister_lib(__tgt_bin_desc *desc);
+  OMPRTL__tgt_unregister_lib,
+};
+
 } // anonymous namespace
 
 LValue CGOpenMPRegionInfo::getThreadIDVariableLValue(CodeGenFunction &CGF) {
@@ -337,12 +546,12 @@ static CharUnits getIdentSize(CodeGenModule &CGM) {
   assert((4 * CGM.getPointerSize()).isMultipleOf(CGM.getPointerAlign()));
   return CharUnits::fromQuantity(16) + CGM.getPointerSize();
 }
-static CharUnits getOffsetOfIdentField(CGOpenMPRuntime::IdentFieldIndex Field) {
+static CharUnits getOffsetOfIdentField(IdentFieldIndex Field) {
   // All the fields except the last are i32, so this works beautifully.
   return unsigned(Field) * CharUnits::fromQuantity(4);
 }
 static Address createIdentFieldGEP(CodeGenFunction &CGF, Address Addr,
-                                   CGOpenMPRuntime::IdentFieldIndex Field,
+                                   IdentFieldIndex Field,
                                    const llvm::Twine &Name = "") {
   auto Offset = getOffsetOfIdentField(Field);
   return CGF.Builder.CreateStructGEP(Addr, Field, Offset, Name);
@@ -382,7 +591,7 @@ llvm::Value *CGOpenMPRuntime::emitTaskOutlinedFunction(
   return CGF.GenerateCapturedStmtFunction(*CS);
 }
 
-Address CGOpenMPRuntime::getOrCreateDefaultLocation(OpenMPLocationFlags Flags) {
+Address CGOpenMPRuntime::getOrCreateDefaultLocation(unsigned Flags) {
   CharUnits Align = getIdentAlign(CGM);
   llvm::Value *Entry = OpenMPDefaultLocMap.lookup(Flags);
   if (!Entry) {
@@ -415,7 +624,8 @@ Address CGOpenMPRuntime::getOrCreateDefaultLocation(OpenMPLocationFlags Flags) {
 
 llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
                                                  SourceLocation Loc,
-                                                 OpenMPLocationFlags Flags) {
+                                                 unsigned Flags) {
+  Flags |= OMP_IDENT_KMPC;
   // If no debug info is generated - return global default location.
   if (CGM.getCodeGenOpts().getDebugInfo() == codegenoptions::NoDebugInfo ||
       Loc.isInvalid())
@@ -528,9 +738,9 @@ llvm::Type *CGOpenMPRuntime::getKmpc_MicroPointerTy() {
 }
 
 llvm::Constant *
-CGOpenMPRuntime::createRuntimeFunction(OpenMPRTLFunction Function) {
+CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
   llvm::Constant *RTLFn = nullptr;
-  switch (Function) {
+  switch (static_cast<OpenMPRTLFunction>(Function)) {
   case OMPRTL__kmpc_fork_call: {
     // Build void __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro
     // microtask, ...);
@@ -964,6 +1174,7 @@ CGOpenMPRuntime::createRuntimeFunction(OpenMPRTLFunction Function) {
     break;
   }
   }
+  assert(RTLFn && "Unable to find OpenMP runtime function");
   return RTLFn;
 }
 
@@ -1681,21 +1892,17 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
     return;
   // Build call __kmpc_cancel_barrier(loc, thread_id);
   // Build call __kmpc_barrier(loc, thread_id);
-  OpenMPLocationFlags Flags = OMP_IDENT_KMPC;
-  if (Kind == OMPD_for) {
-    Flags =
-        static_cast<OpenMPLocationFlags>(Flags | OMP_IDENT_BARRIER_IMPL_FOR);
-  } else if (Kind == OMPD_sections) {
-    Flags = static_cast<OpenMPLocationFlags>(Flags |
-                                             OMP_IDENT_BARRIER_IMPL_SECTIONS);
-  } else if (Kind == OMPD_single) {
-    Flags =
-        static_cast<OpenMPLocationFlags>(Flags | OMP_IDENT_BARRIER_IMPL_SINGLE);
-  } else if (Kind == OMPD_barrier) {
-    Flags = static_cast<OpenMPLocationFlags>(Flags | OMP_IDENT_BARRIER_EXPL);
-  } else {
-    Flags = static_cast<OpenMPLocationFlags>(Flags | OMP_IDENT_BARRIER_IMPL);
-  }
+  unsigned Flags;
+  if (Kind == OMPD_for)
+    Flags = OMP_IDENT_BARRIER_IMPL_FOR;
+  else if (Kind == OMPD_sections)
+    Flags = OMP_IDENT_BARRIER_IMPL_SECTIONS;
+  else if (Kind == OMPD_single)
+    Flags = OMP_IDENT_BARRIER_IMPL_SINGLE;
+  else if (Kind == OMPD_barrier)
+    Flags = OMP_IDENT_BARRIER_EXPL;
+  else
+    Flags = OMP_IDENT_BARRIER_IMPL;
   // Build call __kmpc_cancel_barrier(loc, thread_id) or __kmpc_barrier(loc,
   // thread_id);
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc, Flags),
@@ -1725,28 +1932,6 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
   }
   CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_barrier), Args);
 }
-
-/// \brief Schedule types for 'omp for' loops (these enumerators are taken from
-/// the enum sched_type in kmp.h).
-enum OpenMPSchedType {
-  /// \brief Lower bound for default (unordered) versions.
-  OMP_sch_lower = 32,
-  OMP_sch_static_chunked = 33,
-  OMP_sch_static = 34,
-  OMP_sch_dynamic_chunked = 35,
-  OMP_sch_guided_chunked = 36,
-  OMP_sch_runtime = 37,
-  OMP_sch_auto = 38,
-  /// \brief Lower bound for 'ordered' versions.
-  OMP_ord_lower = 64,
-  OMP_ord_static_chunked = 65,
-  OMP_ord_static = 66,
-  OMP_ord_dynamic_chunked = 67,
-  OMP_ord_guided_chunked = 68,
-  OMP_ord_runtime = 69,
-  OMP_ord_auto = 70,
-  OMP_sch_default = OMP_sch_static,
-};
 
 /// \brief Map the OpenMP loop schedule to the runtime enumeration.
 static OpenMPSchedType getRuntimeSchedule(OpenMPScheduleClauseKind ScheduleKind,
@@ -1805,13 +1990,13 @@ void CGOpenMPRuntime::emitForDispatchInit(CodeGenFunction &CGF,
   if (Chunk == nullptr)
     Chunk = CGF.Builder.getIntN(IVSize, 1);
   llvm::Value *Args[] = {
-    emitUpdateLocation(CGF, Loc, OMP_IDENT_KMPC),
-    getThreadID(CGF, Loc),
-    CGF.Builder.getInt32(Schedule), // Schedule type
-    CGF.Builder.getIntN(IVSize, 0), // Lower
-    UB,                             // Upper
-    CGF.Builder.getIntN(IVSize, 1), // Stride
-    Chunk                           // Chunk
+      emitUpdateLocation(CGF, Loc),
+      getThreadID(CGF, Loc),
+      CGF.Builder.getInt32(Schedule), // Schedule type
+      CGF.Builder.getIntN(IVSize, 0), // Lower
+      UB,                             // Upper
+      CGF.Builder.getIntN(IVSize, 1), // Stride
+      Chunk                           // Chunk
   };
   CGF.EmitRuntimeCall(createDispatchInitFunction(IVSize, IVSigned), Args);
 }
@@ -1847,15 +2032,15 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
            "expected static chunked schedule");
   }
   llvm::Value *Args[] = {
-    emitUpdateLocation(CGF, Loc, OMP_IDENT_KMPC),
-    getThreadID(CGF, Loc),
-    CGF.Builder.getInt32(Schedule), // Schedule type
-    IL.getPointer(),                // &isLastIter
-    LB.getPointer(),                // &LB
-    UB.getPointer(),                // &UB
-    ST.getPointer(),                // &Stride
-    CGF.Builder.getIntN(IVSize, 1), // Incr
-    Chunk                           // Chunk
+      emitUpdateLocation(CGF, Loc),
+      getThreadID(CGF, Loc),
+      CGF.Builder.getInt32(Schedule), // Schedule type
+      IL.getPointer(),                // &isLastIter
+      LB.getPointer(),                // &LB
+      UB.getPointer(),                // &UB
+      ST.getPointer(),                // &Stride
+      CGF.Builder.getIntN(IVSize, 1), // Incr
+      Chunk                           // Chunk
   };
   CGF.EmitRuntimeCall(createForStaticInitFunction(IVSize, IVSigned), Args);
 }
@@ -1865,8 +2050,7 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
   if (!CGF.HaveInsertPoint())
     return;
   // Call __kmpc_for_static_fini(ident_t *loc, kmp_int32 tid);
-  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc, OMP_IDENT_KMPC),
-                         getThreadID(CGF, Loc)};
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc)};
   CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_for_static_fini),
                       Args);
 }
@@ -1878,8 +2062,7 @@ void CGOpenMPRuntime::emitForOrderedIterationEnd(CodeGenFunction &CGF,
   if (!CGF.HaveInsertPoint())
     return;
   // Call __kmpc_for_dynamic_fini_(4|8)[u](ident_t *loc, kmp_int32 tid);
-  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc, OMP_IDENT_KMPC),
-                         getThreadID(CGF, Loc)};
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc)};
   CGF.EmitRuntimeCall(createDispatchFiniFunction(IVSize, IVSigned), Args);
 }
 
@@ -1893,7 +2076,8 @@ llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
   //          kmp_int[32|64] *p_lower, kmp_int[32|64] *p_upper,
   //          kmp_int[32|64] *p_stride);
   llvm::Value *Args[] = {
-      emitUpdateLocation(CGF, Loc, OMP_IDENT_KMPC), getThreadID(CGF, Loc),
+      emitUpdateLocation(CGF, Loc),
+      getThreadID(CGF, Loc),
       IL.getPointer(), // &isLastIter
       LB.getPointer(), // &Lower
       UB.getPointer(), // &Upper
@@ -3384,9 +3568,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 
   // 4. Build res = __kmpc_reduce{_nowait}(<loc>, <gtid>, <n>, sizeof(RedList),
   // RedList, reduce_func, &<lock>);
-  auto *IdentTLoc = emitUpdateLocation(
-      CGF, Loc,
-      static_cast<OpenMPLocationFlags>(OMP_IDENT_KMPC | OMP_ATOMIC_REDUCE));
+  auto *IdentTLoc = emitUpdateLocation(CGF, Loc, OMP_ATOMIC_REDUCE);
   auto *ThreadId = getThreadID(CGF, Loc);
   auto *ReductionArrayTySize = CGF.getTypeSize(ReductionArrayTy);
   auto *RL =

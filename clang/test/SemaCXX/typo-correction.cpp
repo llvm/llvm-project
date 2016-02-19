@@ -670,3 +670,12 @@ struct B0 {
   int : 0 |         // expected-error {{invalid operands to binary expression}}
       (struct B0)e; // expected-error {{use of undeclared identifier}}
 };
+
+namespace {
+struct a0is0 {};
+struct b0is0 {};
+int g() {
+  0 [                 // expected-error {{subscripted value is not an array}}
+      sizeof(c0is0)]; // expected-error {{use of undeclared identifier}}
+};
+}
