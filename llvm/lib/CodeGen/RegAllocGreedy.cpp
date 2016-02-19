@@ -954,22 +954,28 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
 
     // Interference for the live-in value.
     if (BI.LiveIn) {
-      if (Intf.first() <= Indexes->getMBBStartIdx(BC.Number))
-        BC.Entry = SpillPlacement::MustSpill, ++Ins;
-      else if (Intf.first() < BI.FirstInstr)
-        BC.Entry = SpillPlacement::PrefSpill, ++Ins;
-      else if (Intf.first() < BI.LastInstr)
+      if (Intf.first() <= Indexes->getMBBStartIdx(BC.Number)) {
+        BC.Entry = SpillPlacement::MustSpill;
         ++Ins;
+      } else if (Intf.first() < BI.FirstInstr) {
+        BC.Entry = SpillPlacement::PrefSpill;
+        ++Ins;
+      } else if (Intf.first() < BI.LastInstr) {
+        ++Ins;
+      }
     }
 
     // Interference for the live-out value.
     if (BI.LiveOut) {
-      if (Intf.last() >= SA->getLastSplitPoint(BC.Number))
-        BC.Exit = SpillPlacement::MustSpill, ++Ins;
-      else if (Intf.last() > BI.LastInstr)
-        BC.Exit = SpillPlacement::PrefSpill, ++Ins;
-      else if (Intf.last() > BI.FirstInstr)
+      if (Intf.last() >= SA->getLastSplitPoint(BC.Number)) {
+        BC.Exit = SpillPlacement::MustSpill;
         ++Ins;
+      } else if (Intf.last() > BI.LastInstr) {
+        BC.Exit = SpillPlacement::PrefSpill;
+        ++Ins;
+      } else if (Intf.last() > BI.FirstInstr) {
+        ++Ins;
+      }
     }
 
     // Accumulate the total frequency of inserted spill code.
@@ -1392,8 +1398,10 @@ unsigned RAGreedy::calculateRegionSplitCost(LiveInterval &VirtReg,
         if (i == BestCand || !GlobalCand[i].PhysReg)
           continue;
         unsigned Count = GlobalCand[i].LiveBundles.count();
-        if (Count < WorstCount)
-          Worst = i, WorstCount = Count;
+        if (Count < WorstCount) {
+          Worst = i;
+          WorstCount = Count;
+        }
       }
       --NumCands;
       GlobalCand[Worst] = GlobalCand[NumCands];

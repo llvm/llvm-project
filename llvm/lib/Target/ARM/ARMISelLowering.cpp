@@ -8579,7 +8579,7 @@ static SDValue AddCombineToVPADDL(SDNode *N, SDValue N0, SDValue N1,
   // Get widened type and narrowed type.
   MVT widenType;
   unsigned numElem = VT.getVectorNumElements();
-  
+
   EVT inputLaneType = Vec.getValueType().getVectorElementType();
   switch (inputLaneType.getSimpleVT().SimpleTy) {
     case MVT::i8: widenType = MVT::getVectorVT(MVT::i16, numElem); break;
@@ -10559,7 +10559,7 @@ SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &D
   } else {
     assert(CC == ARMCC::NE && "How can a CMPZ node not be EQ or NE?");
   }
-  
+
   if (Op1->getOpcode() != ISD::OR)
     return SDValue();
 
@@ -10589,7 +10589,7 @@ SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &D
   SDLoc dl(X);
   EVT VT = X.getValueType();
   unsigned BitInX = AndC->getAPIntValue().logBase2();
-  
+
   if (BitInX != 0) {
     // We must shift X first.
     X = DAG.getNode(ISD::SRL, dl, VT, X,

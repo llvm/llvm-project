@@ -27,6 +27,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -5914,13 +5915,8 @@ int LLParser::ParseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
     return Error(CmpLoc, "compare value and pointer type do not match");
   if (cast<PointerType>(Ptr->getType())->getElementType() != New->getType())
     return Error(NewLoc, "new value and pointer type do not match");
-  if (!New->getType()->isIntegerTy())
-    return Error(NewLoc, "cmpxchg operand must be an integer");
-  unsigned Size = New->getType()->getPrimitiveSizeInBits();
-  if (Size < 8 || (Size & (Size - 1)))
-    return Error(NewLoc, "cmpxchg operand must be power-of-two byte-sized"
-                         " integer");
-
+  if (!New->getType()->isFirstClassType())
+    return Error(NewLoc, "cmpxchg operand must be a first class value");
   AtomicCmpXchgInst *CXI = new AtomicCmpXchgInst(
       Ptr, Cmp, New, SuccessOrdering, FailureOrdering, Scope);
   CXI->setVolatile(isVolatile);

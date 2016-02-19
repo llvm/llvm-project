@@ -677,25 +677,33 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
       // now, just use the tightest assertzext/assertsext possible.
       bool isSExt = true;
       EVT FromVT(MVT::Other);
-      if (NumSignBits == RegSize)
-        isSExt = true, FromVT = MVT::i1;   // ASSERT SEXT 1
-      else if (NumZeroBits >= RegSize-1)
-        isSExt = false, FromVT = MVT::i1;  // ASSERT ZEXT 1
-      else if (NumSignBits > RegSize-8)
-        isSExt = true, FromVT = MVT::i8;   // ASSERT SEXT 8
-      else if (NumZeroBits >= RegSize-8)
-        isSExt = false, FromVT = MVT::i8;  // ASSERT ZEXT 8
-      else if (NumSignBits > RegSize-16)
-        isSExt = true, FromVT = MVT::i16;  // ASSERT SEXT 16
-      else if (NumZeroBits >= RegSize-16)
-        isSExt = false, FromVT = MVT::i16; // ASSERT ZEXT 16
-      else if (NumSignBits > RegSize-32)
-        isSExt = true, FromVT = MVT::i32;  // ASSERT SEXT 32
-      else if (NumZeroBits >= RegSize-32)
-        isSExt = false, FromVT = MVT::i32; // ASSERT ZEXT 32
-      else
+      if (NumSignBits == RegSize) {
+        isSExt = true;   // ASSERT SEXT 1
+        FromVT = MVT::i1;
+      } else if (NumZeroBits >= RegSize - 1) {
+        isSExt = false;  // ASSERT ZEXT 1
+        FromVT = MVT::i1;
+      } else if (NumSignBits > RegSize - 8) {
+        isSExt = true;   // ASSERT SEXT 8
+        FromVT = MVT::i8;
+      } else if (NumZeroBits >= RegSize - 8) {
+        isSExt = false;  // ASSERT ZEXT 8
+        FromVT = MVT::i8;
+      } else if (NumSignBits > RegSize - 16) {
+        isSExt = true;   // ASSERT SEXT 16
+        FromVT = MVT::i16;
+      } else if (NumZeroBits >= RegSize - 16) {
+        isSExt = false;  // ASSERT ZEXT 16
+        FromVT = MVT::i16;
+      } else if (NumSignBits > RegSize - 32) {
+        isSExt = true;   // ASSERT SEXT 32
+        FromVT = MVT::i32;
+      } else if (NumZeroBits >= RegSize - 32) {
+        isSExt = false;  // ASSERT ZEXT 32
+        FromVT = MVT::i32;
+      } else {
         continue;
-
+      }
       // Add an assertion node.
       assert(FromVT != MVT::Other);
       Parts[i] = DAG.getNode(isSExt ? ISD::AssertSext : ISD::AssertZext, dl,

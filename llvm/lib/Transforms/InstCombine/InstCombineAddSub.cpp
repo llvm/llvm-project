@@ -123,11 +123,18 @@ namespace {
     bool isConstant() const { return Val == nullptr; }
     bool isZero() const { return Coeff.isZero(); }
 
-    void set(short Coefficient, Value *V) { Coeff.set(Coefficient), Val = V; }
-    void set(const APFloat& Coefficient, Value *V)
-      { Coeff.set(Coefficient); Val = V; }
-    void set(const ConstantFP* Coefficient, Value *V)
-      { Coeff.set(Coefficient->getValueAPF()); Val = V; }
+    void set(short Coefficient, Value *V) {
+      Coeff.set(Coefficient);
+      Val = V;
+    }
+    void set(const APFloat &Coefficient, Value *V) {
+      Coeff.set(Coefficient);
+      Val = V;
+    }
+    void set(const ConstantFP *Coefficient, Value *V) {
+      Coeff.set(Coefficient->getValueAPF());
+      Val = V;
+    }
 
     void negate() { Coeff.negate(); }
 

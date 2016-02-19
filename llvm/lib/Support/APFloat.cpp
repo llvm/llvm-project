@@ -501,7 +501,9 @@ powerOf5(integerPart *dst, unsigned int power)
 
       /* Now result is in p1 with partsCount parts and p2 is scratch
          space.  */
-      tmp = p1, p1 = p2, p2 = tmp;
+      tmp = p1;
+      p1 = p2;
+      p2 = tmp;
     }
 
     pow5 += pc;

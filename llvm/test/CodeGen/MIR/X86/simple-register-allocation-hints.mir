@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after machine-scheduler -stop-after machine-scheduler -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -start-after machine-scheduler -stop-after machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that the MIR parser parses simple register allocation hints
 # correctly.
 

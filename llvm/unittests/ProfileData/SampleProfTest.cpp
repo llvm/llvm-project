@@ -55,6 +55,10 @@ struct SampleProfTest : ::testing::Test {
     FooSamples.addTotalSamples(7711);
     FooSamples.addHeadSamples(610);
     FooSamples.addBodySamples(1, 0, 610);
+    FooSamples.addBodySamples(2, 0, 600);
+    FooSamples.addBodySamples(4, 0, 60000);
+    FooSamples.addBodySamples(8, 0, 60351);
+    FooSamples.addBodySamples(10, 0, 605);
 
     StringRef BarName("_Z3bari");
     FunctionSamples BarSamples;
@@ -88,6 +92,32 @@ struct SampleProfTest : ::testing::Test {
     FunctionSamples &ReadBarSamples = ReadProfiles[BarName];
     ASSERT_EQ(20301u, ReadBarSamples.getTotalSamples());
     ASSERT_EQ(1437u, ReadBarSamples.getHeadSamples());
+
+    SampleProfileSummary &Summary = Reader->getSummary();
+    ASSERT_EQ(123603u, Summary.getTotalSamples());
+    ASSERT_EQ(6u, Summary.getNumLinesWithSamples());
+    ASSERT_EQ(2u, Summary.getNumFunctions());
+    ASSERT_EQ(1437u, Summary.getMaxHeadSamples());
+    ASSERT_EQ(60351u, Summary.getMaxSamplesPerLine());
+
+    std::vector<ProfileSummaryEntry> &Details = Summary.getDetailedSummary();
+    uint32_t Cutoff = 800000;
+    auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
+      return PE.Cutoff == Cutoff;
+    };
+    auto EightyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
+    Cutoff = 900000;
+    auto NinetyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
+    Cutoff = 950000;
+    auto NinetyFivePerc =
+        std::find_if(Details.begin(), Details.end(), Predicate);
+    Cutoff = 990000;
+    auto NinetyNinePerc =
+        std::find_if(Details.begin(), Details.end(), Predicate);
+    ASSERT_EQ(60000u, EightyPerc->MinCount);
+    ASSERT_EQ(60000u, NinetyPerc->MinCount);
+    ASSERT_EQ(60000u, NinetyFivePerc->MinCount);
+    ASSERT_EQ(610u, NinetyNinePerc->MinCount);
   }
 };
 

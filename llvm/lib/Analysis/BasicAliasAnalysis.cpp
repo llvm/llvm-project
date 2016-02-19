@@ -1554,7 +1554,8 @@ bool BasicAAResult::constantOffsetHeuristic(
   unsigned V0ZExtBits = 0, V0SExtBits = 0, V1ZExtBits = 0, V1SExtBits = 0;
   const Value *V0 = GetLinearExpression(Var0.V, V0Scale, V0Offset, V0ZExtBits,
                                         V0SExtBits, DL, 0, AC, DT, NSW, NUW);
-  NSW = true, NUW = true;
+  NSW = true;
+  NUW = true;
   const Value *V1 = GetLinearExpression(Var1.V, V1Scale, V1Offset, V1ZExtBits,
                                         V1SExtBits, DL, 0, AC, DT, NSW, NUW);
 

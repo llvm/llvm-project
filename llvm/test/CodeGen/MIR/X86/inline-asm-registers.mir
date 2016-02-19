@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after block-placement -stop-after block-placement -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -start-after block-placement -stop-after block-placement -o /dev/null %s 2>&1 | FileCheck %s
 
 --- |
   define i64 @test(i64 %x, i64 %y) #0 {

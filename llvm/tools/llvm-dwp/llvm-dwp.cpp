@@ -12,6 +12,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
@@ -237,7 +238,7 @@ static void writeIndex(MCStreamer &Out, MCSection *Section,
     auto H = S & Mask;
     while (Buckets[H]) {
       assert(S != IndexEntries[Buckets[H] - 1].Signature &&
-             "Duplicate type unit");
+             "Duplicate unit");
       H = (H + (((S >> 32) & Mask) | 1)) % Buckets.size();
     }
     Buckets[H] = i + 1;
@@ -270,6 +271,22 @@ static void writeIndex(MCStreamer &Out, MCSection *Section,
   writeIndexTable(Out, ContributionOffsets, IndexEntries,
                   &DWARFUnitIndex::Entry::SectionContribution::Length);
 }
+static bool consumeCompressedDebugSectionHeader(StringRef &data,
+                                                uint64_t &OriginalSize) {
+  // Consume "ZLIB" prefix.
+  if (!data.startswith("ZLIB"))
+    return false;
+  data = data.substr(4);
+  // Consume uncompressed section size (big-endian 8 bytes).
+  DataExtractor extractor(data, false, 8);
+  uint32_t Offset = 0;
+  OriginalSize = extractor.getU64(&Offset);
+  if (Offset == 0)
+    return false;
+  data = data.substr(Offset);
+  return true;
+}
+
 static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
@@ -311,19 +328,42 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
     StringRef CurCUIndexSection;
     StringRef CurTUIndexSection;
 
+    SmallVector<SmallString<32>, 4> UncompressedSections;
+
     for (const auto &Section : ErrOrObj->getBinary()->sections()) {
+      if (Section.isBSS())
+        continue;
+      if (Section.isVirtual())
+        continue;
+
       StringRef Name;
       if (std::error_code Err = Section.getName(Name))
         return Err;
 
-      auto SectionPair =
-          KnownSections.find(Name.substr(Name.find_first_not_of("._")));
-      if (SectionPair == KnownSections.end())
-        continue;
+      Name = Name.substr(Name.find_first_not_of("._"));
 
       StringRef Contents;
       if (auto Err = Section.getContents(Contents))
         return Err;
+
+      if (Name.startswith("zdebug_")) {
+        uint64_t OriginalSize;
+        if (!zlib::isAvailable() ||
+            !consumeCompressedDebugSectionHeader(Contents, OriginalSize))
+          return make_error_code(std::errc::invalid_argument);
+        UncompressedSections.resize(UncompressedSections.size() + 1);
+        if (zlib::uncompress(Contents, UncompressedSections.back(), OriginalSize) !=
+            zlib::StatusOK) {
+          UncompressedSections.pop_back();
+          continue;
+        }
+        Name = Name.substr(1);
+        Contents = UncompressedSections.back();
+      }
+
+      auto SectionPair = KnownSections.find(Name);
+      if (SectionPair == KnownSections.end())
+        continue;
 
       if (DWARFSectionKind Kind = SectionPair->second.second) {
         auto Index = Kind - DW_SECT_INFO;

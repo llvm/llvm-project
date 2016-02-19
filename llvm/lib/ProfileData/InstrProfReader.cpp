@@ -595,9 +595,8 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
   } else {
     // For older version of profile data, we need to compute on the fly:
     using namespace IndexedInstrProf;
-    std::vector<uint32_t> Cutoffs(&SummaryCutoffs[0],
-                                  &SummaryCutoffs[NumSummaryCutoffs]);
-    this->Summary = llvm::make_unique<InstrProfSummary>(Cutoffs);
+    this->Summary =
+        llvm::make_unique<InstrProfSummary>(ProfileSummary::DefaultCutoffs);
     this->Summary->computeDetailedSummary();
     return Cur;
   }

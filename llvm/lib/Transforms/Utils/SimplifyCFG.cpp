@@ -2190,16 +2190,19 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
     bool InvertPredCond = false;
 
     if (BI->isConditional()) {
-      if (PBI->getSuccessor(0) == TrueDest)
+      if (PBI->getSuccessor(0) == TrueDest) {
         Opc = Instruction::Or;
-      else if (PBI->getSuccessor(1) == FalseDest)
+      } else if (PBI->getSuccessor(1) == FalseDest) {
         Opc = Instruction::And;
-      else if (PBI->getSuccessor(0) == FalseDest)
-        Opc = Instruction::And, InvertPredCond = true;
-      else if (PBI->getSuccessor(1) == TrueDest)
-        Opc = Instruction::Or, InvertPredCond = true;
-      else
+      } else if (PBI->getSuccessor(0) == FalseDest) {
+        Opc = Instruction::And;
+        InvertPredCond = true;
+      } else if (PBI->getSuccessor(1) == TrueDest) {
+        Opc = Instruction::Or;
+        InvertPredCond = true;
+      } else {
         continue;
+      }
     } else {
       if (PBI->getSuccessor(0) != TrueDest && PBI->getSuccessor(1) != TrueDest)
         continue;
@@ -2750,16 +2753,21 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     return false;
 
   int PBIOp, BIOp;
-  if (PBI->getSuccessor(0) == BI->getSuccessor(0))
-    PBIOp = BIOp = 0;
-  else if (PBI->getSuccessor(0) == BI->getSuccessor(1))
-    PBIOp = 0, BIOp = 1;
-  else if (PBI->getSuccessor(1) == BI->getSuccessor(0))
-    PBIOp = 1, BIOp = 0;
-  else if (PBI->getSuccessor(1) == BI->getSuccessor(1))
-    PBIOp = BIOp = 1;
-  else
+  if (PBI->getSuccessor(0) == BI->getSuccessor(0)) {
+    PBIOp = 0;
+    BIOp = 0;
+  } else if (PBI->getSuccessor(0) == BI->getSuccessor(1)) {
+    PBIOp = 0;
+    BIOp = 1;
+  } else if (PBI->getSuccessor(1) == BI->getSuccessor(0)) {
+    PBIOp = 1;
+    BIOp = 0;
+  } else if (PBI->getSuccessor(1) == BI->getSuccessor(1)) {
+    PBIOp = 1;
+    BIOp = 1;
+  } else {
     return false;
+  }
 
   // Check to make sure that the other destination of this branch
   // isn't BB itself.  If so, this is an infinite loop that will

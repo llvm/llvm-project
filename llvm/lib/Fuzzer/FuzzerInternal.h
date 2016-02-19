@@ -65,9 +65,9 @@ typedef FixedWord<27> Word; // 28 bytes.
 
 bool IsFile(const std::string &Path);
 std::string FileToString(const std::string &Path);
-Unit FileToVector(const std::string &Path);
+Unit FileToVector(const std::string &Path, size_t MaxSize = 0);
 void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V,
-                            long *Epoch);
+                            long *Epoch, size_t MaxSize);
 void WriteToFile(const Unit &U, const std::string &Path);
 void CopyFileToErr(const std::string &Path);
 // Returns "Dir/FileName" or equivalent for the current OS.
@@ -302,9 +302,9 @@ public:
   void InitializeTraceState();
   void AssignTaintLabels(uint8_t *Data, size_t Size);
   size_t CorpusSize() const { return Corpus.size(); }
-  void ReadDir(const std::string &Path, long *Epoch) {
+  void ReadDir(const std::string &Path, long *Epoch, size_t MaxSize) {
     Printf("Loading corpus: %s\n", Path.c_str());
-    ReadDirToVectorOfUnits(Path.c_str(), &Corpus, Epoch);
+    ReadDirToVectorOfUnits(Path.c_str(), &Corpus, Epoch, MaxSize);
   }
   void RereadOutputCorpus();
   // Save the current corpus to OutputCorpus.

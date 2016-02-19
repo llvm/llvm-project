@@ -55,11 +55,17 @@ static std::vector<std::string> ListFilesInDir(const std::string &Dir,
   return V;
 }
 
-Unit FileToVector(const std::string &Path) {
+Unit FileToVector(const std::string &Path, size_t MaxSize) {
   std::ifstream T(Path);
   if (!T) {
     Printf("No such directory: %s; exiting\n", Path.c_str());
     exit(1);
+  }
+  if (MaxSize) {
+    Unit Res(MaxSize);
+    T.read(reinterpret_cast<char*>(Res.data()), MaxSize);
+    Res.resize(T.gcount());
+    return Res;
   }
   return Unit((std::istreambuf_iterator<char>(T)),
               std::istreambuf_iterator<char>());
@@ -84,16 +90,16 @@ void WriteToFile(const Unit &U, const std::string &Path) {
 }
 
 void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V,
-                            long *Epoch) {
+                            long *Epoch, size_t MaxSize) {
   long E = Epoch ? *Epoch : 0;
   auto Files = ListFilesInDir(Path, Epoch);
   for (size_t i = 0; i < Files.size(); i++) {
     auto &X = Files[i];
     auto FilePath = DirPlusFile(Path, X);
     if (Epoch && GetEpoch(FilePath) < E) continue;
-    if ((i % 1000) == 0 && i)
+    if ((i & (i - 1)) == 0 && i >= 1024)
       Printf("Loaded %zd/%zd files from %s\n", i, Files.size(), Path);
-    V->push_back(FileToVector(FilePath));
+    V->push_back(FileToVector(FilePath, MaxSize));
   }
 }
 

@@ -1186,7 +1186,8 @@ int FunctionComparator::cmpBasicBlocks(const BasicBlock *BBL,
       }
     }
 
-    ++InstL, ++InstR;
+    ++InstL;
+    ++InstR;
   } while (InstL != InstLE && InstR != InstRE);
 
   if (InstL != InstLE && InstR == InstRE)

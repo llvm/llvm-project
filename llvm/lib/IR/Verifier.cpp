@@ -2979,8 +2979,9 @@ void Verifier::visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI) {
   PointerType *PTy = dyn_cast<PointerType>(CXI.getOperand(0)->getType());
   Assert(PTy, "First cmpxchg operand must be a pointer.", &CXI);
   Type *ElTy = PTy->getElementType();
-  Assert(ElTy->isIntegerTy(), "cmpxchg operand must have integer type!", &CXI,
-         ElTy);
+  Assert(ElTy->isIntegerTy() || ElTy->isPointerTy(),
+        "cmpxchg operand must have integer or pointer type",
+         ElTy, &CXI);
   checkAtomicMemAccessSize(M, ElTy, &CXI);
   Assert(ElTy == CXI.getOperand(1)->getType(),
          "Expected value type does not match pointer operand type!", &CXI,

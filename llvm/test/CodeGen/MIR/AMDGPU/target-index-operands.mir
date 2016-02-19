@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=SI -start-after postrapseudos -stop-after postrapseudos -o /dev/null %s | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=SI -start-after postrapseudos -stop-after postrapseudos -o /dev/null %s 2>&1 | FileCheck %s
 # This test verifies that the MIR parser can parse target index operands.
 
 --- |

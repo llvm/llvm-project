@@ -168,9 +168,13 @@ AsmToken AsmLexer::LexIdentifier() {
 ///           C-Style Comment: /* ... */
 AsmToken AsmLexer::LexSlash() {
   switch (*CurPtr) {
-  case '*': break; // C style comment.
-  case '/': return ++CurPtr, LexLineComment();
-  default:  return AsmToken(AsmToken::Slash, StringRef(CurPtr-1, 1));
+  case '*':
+    break; // C style comment.
+  case '/':
+    ++CurPtr;
+    return LexLineComment();
+  default:
+    return AsmToken(AsmToken::Slash, StringRef(CurPtr - 1, 1));
   }
 
   // C Style comment.
@@ -557,21 +561,29 @@ AsmToken AsmLexer::LexToken() {
   case '@': return AsmToken(AsmToken::At, StringRef(TokStart, 1));
   case '\\': return AsmToken(AsmToken::BackSlash, StringRef(TokStart, 1));
   case '=':
-    if (*CurPtr == '=')
-      return ++CurPtr, AsmToken(AsmToken::EqualEqual, StringRef(TokStart, 2));
+    if (*CurPtr == '=') {
+      ++CurPtr;
+      return AsmToken(AsmToken::EqualEqual, StringRef(TokStart, 2));
+    }
     return AsmToken(AsmToken::Equal, StringRef(TokStart, 1));
   case '|':
-    if (*CurPtr == '|')
-      return ++CurPtr, AsmToken(AsmToken::PipePipe, StringRef(TokStart, 2));
+    if (*CurPtr == '|') {
+      ++CurPtr;
+      return AsmToken(AsmToken::PipePipe, StringRef(TokStart, 2));
+    }
     return AsmToken(AsmToken::Pipe, StringRef(TokStart, 1));
   case '^': return AsmToken(AsmToken::Caret, StringRef(TokStart, 1));
   case '&':
-    if (*CurPtr == '&')
-      return ++CurPtr, AsmToken(AsmToken::AmpAmp, StringRef(TokStart, 2));
+    if (*CurPtr == '&') {
+      ++CurPtr;
+      return AsmToken(AsmToken::AmpAmp, StringRef(TokStart, 2));
+    }
     return AsmToken(AsmToken::Amp, StringRef(TokStart, 1));
   case '!':
-    if (*CurPtr == '=')
-      return ++CurPtr, AsmToken(AsmToken::ExclaimEqual, StringRef(TokStart, 2));
+    if (*CurPtr == '=') {
+      ++CurPtr;
+      return AsmToken(AsmToken::ExclaimEqual, StringRef(TokStart, 2));
+    }
     return AsmToken(AsmToken::Exclaim, StringRef(TokStart, 1));
   case '%': return AsmToken(AsmToken::Percent, StringRef(TokStart, 1));
   case '/': return LexSlash();
@@ -583,21 +595,28 @@ AsmToken AsmLexer::LexToken() {
     return LexDigit();
   case '<':
     switch (*CurPtr) {
-    case '<': return ++CurPtr, AsmToken(AsmToken::LessLess,
-                                        StringRef(TokStart, 2));
-    case '=': return ++CurPtr, AsmToken(AsmToken::LessEqual,
-                                        StringRef(TokStart, 2));
-    case '>': return ++CurPtr, AsmToken(AsmToken::LessGreater,
-                                        StringRef(TokStart, 2));
-    default: return AsmToken(AsmToken::Less, StringRef(TokStart, 1));
+    case '<':
+      ++CurPtr;
+      return AsmToken(AsmToken::LessLess, StringRef(TokStart, 2));
+    case '=':
+      ++CurPtr;
+      return AsmToken(AsmToken::LessEqual, StringRef(TokStart, 2));
+    case '>':
+      ++CurPtr;
+      return AsmToken(AsmToken::LessGreater, StringRef(TokStart, 2));
+    default:
+      return AsmToken(AsmToken::Less, StringRef(TokStart, 1));
     }
   case '>':
     switch (*CurPtr) {
-    case '>': return ++CurPtr, AsmToken(AsmToken::GreaterGreater,
-                                        StringRef(TokStart, 2));
-    case '=': return ++CurPtr, AsmToken(AsmToken::GreaterEqual,
-                                        StringRef(TokStart, 2));
-    default: return AsmToken(AsmToken::Greater, StringRef(TokStart, 1));
+    case '>':
+      ++CurPtr;
+      return AsmToken(AsmToken::GreaterGreater, StringRef(TokStart, 2));
+    case '=':
+      ++CurPtr;
+      return AsmToken(AsmToken::GreaterEqual, StringRef(TokStart, 2));
+    default:
+      return AsmToken(AsmToken::Greater, StringRef(TokStart, 1));
     }
 
   // TODO: Quoted identifiers (objc methods etc)

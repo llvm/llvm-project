@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -42,7 +43,6 @@ public:
   std::error_code write(const StringMap<FunctionSamples> &ProfileMap) {
     if (std::error_code EC = writeHeader(ProfileMap))
       return EC;
-
     for (const auto &I : ProfileMap) {
       StringRef FName = I.first();
       const FunctionSamples &Profile = I.second;
@@ -75,6 +75,12 @@ protected:
 
   /// \brief Output stream where to emit the profile to.
   std::unique_ptr<raw_ostream> OutputStream;
+
+  /// \brief Profile summary.
+  std::unique_ptr<SampleProfileSummary> Summary;
+
+  /// \brief Compute summary for this profile.
+  void computeSummary(const StringMap<FunctionSamples> &ProfileMap);
 };
 
 /// \brief Sample-based profile writer (text format).
@@ -113,6 +119,7 @@ protected:
 
   std::error_code
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+  std::error_code writeSummary();
   std::error_code writeNameIdx(StringRef FName);
   std::error_code writeBody(StringRef FName, const FunctionSamples &S);
 

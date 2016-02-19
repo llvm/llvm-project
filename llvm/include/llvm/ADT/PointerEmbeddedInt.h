@@ -45,7 +45,9 @@ class PointerEmbeddedInt {
     Mask = static_cast<uintptr_t>(-1) << Bits
   };
 
-  static constexpr const struct RawValueTag {} RawValue = RawValueTag();
+  struct RawValueTag {
+    explicit RawValueTag() = default;
+  };
 
   friend class PointerLikeTypeTraits<PointerEmbeddedInt>;
 
@@ -86,10 +88,10 @@ public:
     return reinterpret_cast<void *>(P.Value);
   }
   static inline T getFromVoidPointer(void *P) {
-    return T(reinterpret_cast<uintptr_t>(P), T::RawValue);
+    return T(reinterpret_cast<uintptr_t>(P), typename T::RawValueTag());
   }
   static inline T getFromVoidPointer(const void *P) {
-    return T(reinterpret_cast<uintptr_t>(P), T::RawValue);
+    return T(reinterpret_cast<uintptr_t>(P), typename T::RawValueTag());
   }
 
   enum { NumLowBitsAvailable = T::Shift };

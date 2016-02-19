@@ -55,7 +55,6 @@ class SjLjEHPrepare : public FunctionPass {
   Constant *StackAddrFn;
   Constant *StackRestoreFn;
   Constant *LSDAAddrFn;
-  Value *PersonalityFn;
   Constant *CallSiteFn;
   Constant *FuncCtxFn;
   AllocaInst *FuncCtx;
@@ -103,21 +102,6 @@ bool SjLjEHPrepare::doInitialization(Module &M) {
                                       VoidPtrTy,         // __lsda
                                       doubleUnderJBufTy, // __jbuf
                                       nullptr);
-  RegisterFn = M.getOrInsertFunction(
-      "_Unwind_SjLj_Register", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(FunctionContextTy), (Type *)nullptr);
-  UnregisterFn = M.getOrInsertFunction(
-      "_Unwind_SjLj_Unregister", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(FunctionContextTy), (Type *)nullptr);
-  FrameAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::frameaddress);
-  StackAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::stacksave);
-  StackRestoreFn = Intrinsic::getDeclaration(&M, Intrinsic::stackrestore);
-  BuiltinSetupDispatchFn =
-    Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_setup_dispatch);
-  LSDAAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_lsda);
-  CallSiteFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_callsite);
-  FuncCtxFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_functioncontext);
-  PersonalityFn = nullptr;
 
   return true;
 }
@@ -226,8 +210,7 @@ Value *SjLjEHPrepare::setupFunctionContext(Function &F,
 
   // Personality function
   IRBuilder<> Builder(EntryBB->getTerminator());
-  if (!PersonalityFn)
-    PersonalityFn = F.getPersonalityFn();
+  Value *PersonalityFn = F.getPersonalityFn();
   Value *PersonalityFieldPtr = Builder.CreateConstGEP2_32(
       FunctionContextTy, FuncCtx, 0, 3, "pers_fn_gep");
   Builder.CreateStore(
@@ -490,6 +473,22 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
 }
 
 bool SjLjEHPrepare::runOnFunction(Function &F) {
+  Module &M = *F.getParent();
+  RegisterFn = M.getOrInsertFunction(
+      "_Unwind_SjLj_Register", Type::getVoidTy(M.getContext()),
+      PointerType::getUnqual(FunctionContextTy), (Type *)nullptr);
+  UnregisterFn = M.getOrInsertFunction(
+      "_Unwind_SjLj_Unregister", Type::getVoidTy(M.getContext()),
+      PointerType::getUnqual(FunctionContextTy), (Type *)nullptr);
+  FrameAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::frameaddress);
+  StackAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::stacksave);
+  StackRestoreFn = Intrinsic::getDeclaration(&M, Intrinsic::stackrestore);
+  BuiltinSetupDispatchFn =
+    Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_setup_dispatch);
+  LSDAAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_lsda);
+  CallSiteFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_callsite);
+  FuncCtxFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_functioncontext);
+
   bool Res = setupEntryBlockAndCallSites(F);
   return Res;
 }

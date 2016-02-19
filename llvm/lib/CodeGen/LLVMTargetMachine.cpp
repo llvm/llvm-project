@@ -165,7 +165,7 @@ bool LLVMTargetMachine::addPassesToEmitFile(
     return true;
 
   if (StopAfter) {
-    PM.add(createPrintMIRPass(outs()));
+    PM.add(createPrintMIRPass(errs()));
     return false;
   }
 

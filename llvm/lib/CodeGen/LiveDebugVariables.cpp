@@ -172,8 +172,10 @@ public:
       return L1;
     // Splice L2 before L1's members.
     UserValue *End = L2;
-    while (End->next)
-      End->leader = L1, End = End->next;
+    while (End->next) {
+      End->leader = L1;
+      End = End->next;
+    }
     End->leader = L1;
     End->next = L1->next;
     L1->next = L2;
@@ -554,8 +556,10 @@ void UserValue::extendDef(SlotIndex Idx, unsigned LocNo, LiveRange *LR,
         Kills->push_back(Start);
       return;
     }
-    if (Segment->end < Stop)
-      Stop = Segment->end, ToEnd = false;
+    if (Segment->end < Stop) {
+      Stop = Segment->end;
+      ToEnd = false;
+    }
   }
 
   // There could already be a short def at Start.
@@ -569,8 +573,10 @@ void UserValue::extendDef(SlotIndex Idx, unsigned LocNo, LiveRange *LR,
   }
 
   // Limited by the next def.
-  if (I.valid() && I.start() < Stop)
-    Stop = I.start(), ToEnd = false;
+  if (I.valid() && I.start() < Stop) {
+    Stop = I.start();
+    ToEnd = false;
+  }
   // Limited by VNI's live range.
   else if (!ToEnd && Kills)
     Kills->push_back(Stop);

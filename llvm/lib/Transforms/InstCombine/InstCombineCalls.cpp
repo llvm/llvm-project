@@ -2473,7 +2473,8 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
                                                  Idx + (Idx >= NestIdx), B));
           }
 
-          ++Idx, ++I;
+          ++Idx;
+          ++I;
         } while (1);
       }
 
@@ -2507,7 +2508,8 @@ InstCombiner::transformCallThroughTrampoline(CallSite CS,
           // Add the original type.
           NewTypes.push_back(*I);
 
-          ++Idx, ++I;
+          ++Idx;
+          ++I;
         } while (1);
       }
 

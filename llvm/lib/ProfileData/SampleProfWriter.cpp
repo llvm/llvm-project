@@ -120,6 +120,10 @@ std::error_code SampleProfileWriterBinary::writeHeader(
   encodeULEB128(SPMagic(), OS);
   encodeULEB128(SPVersion(), OS);
 
+  computeSummary(ProfileMap);
+  if (auto EC = writeSummary())
+    return EC;
+
   // Generate the name table for all the functions referenced in the profile.
   for (const auto &I : ProfileMap) {
     addName(I.first());
@@ -132,10 +136,25 @@ std::error_code SampleProfileWriterBinary::writeHeader(
     OS << N.first;
     encodeULEB128(0, OS);
   }
-
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileWriterBinary::writeSummary() {
+  auto &OS = *OutputStream;
+  encodeULEB128(Summary->getTotalSamples(), OS);
+  encodeULEB128(Summary->getMaxSamplesPerLine(), OS);
+  encodeULEB128(Summary->getMaxHeadSamples(), OS);
+  encodeULEB128(Summary->getNumLinesWithSamples(), OS);
+  encodeULEB128(Summary->getNumFunctions(), OS);
+  std::vector<ProfileSummaryEntry> &Entries = Summary->getDetailedSummary();
+  encodeULEB128(Entries.size(), OS);
+  for (auto Entry : Entries) {
+    encodeULEB128(Entry.Cutoff, OS);
+    encodeULEB128(Entry.MinCount, OS);
+    encodeULEB128(Entry.NumCounts, OS);
+  }
+  return sampleprof_error::success;
+}
 std::error_code SampleProfileWriterBinary::writeBody(StringRef FName,
                                                      const FunctionSamples &S) {
   auto &OS = *OutputStream;
@@ -237,4 +256,14 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
     return EC;
 
   return std::move(Writer);
+}
+
+void SampleProfileWriter::computeSummary(
+    const StringMap<FunctionSamples> &ProfileMap) {
+  Summary.reset(new SampleProfileSummary(ProfileSummary::DefaultCutoffs));
+  for (const auto &I : ProfileMap) {
+    const FunctionSamples &Profile = I.second;
+    Summary->addRecord(Profile);
+  }
+  Summary->computeDetailedSummary();
 }

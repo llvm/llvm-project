@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=powerpc64-unknown-linux-gnu -start-after machine-combiner -stop-after machine-combiner -o /dev/null %s | FileCheck %s
+# RUN: llc -mtriple=powerpc64-unknown-linux-gnu -start-after machine-combiner -stop-after machine-combiner -o /dev/null %s 2>&1 | FileCheck %s
 # PR24724
 
 --- |

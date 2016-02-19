@@ -3674,10 +3674,14 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     // Analyze the case when either Op0 or Op1 is an add instruction.
     // Op0 = A + B (or A and B are null); Op1 = C + D (or C and D are null).
     Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
-    if (BO0 && BO0->getOpcode() == Instruction::Add)
-      A = BO0->getOperand(0), B = BO0->getOperand(1);
-    if (BO1 && BO1->getOpcode() == Instruction::Add)
-      C = BO1->getOperand(0), D = BO1->getOperand(1);
+    if (BO0 && BO0->getOpcode() == Instruction::Add) {
+      A = BO0->getOperand(0);
+      B = BO0->getOperand(1);
+    }
+    if (BO1 && BO1->getOpcode() == Instruction::Add) {
+      C = BO1->getOperand(0);
+      D = BO1->getOperand(1);
+    }
 
     // icmp (X+cst) < 0 --> X < -cst
     if (NoOp0WrapProblem && ICmpInst::isSigned(Pred) && match(Op1, m_Zero()))
@@ -3794,11 +3798,18 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
 
     // Analyze the case when either Op0 or Op1 is a sub instruction.
     // Op0 = A - B (or A and B are null); Op1 = C - D (or C and D are null).
-    A = nullptr; B = nullptr; C = nullptr; D = nullptr;
-    if (BO0 && BO0->getOpcode() == Instruction::Sub)
-      A = BO0->getOperand(0), B = BO0->getOperand(1);
-    if (BO1 && BO1->getOpcode() == Instruction::Sub)
-      C = BO1->getOperand(0), D = BO1->getOperand(1);
+    A = nullptr;
+    B = nullptr;
+    C = nullptr;
+    D = nullptr;
+    if (BO0 && BO0->getOpcode() == Instruction::Sub) {
+      A = BO0->getOperand(0);
+      B = BO0->getOperand(1);
+    }
+    if (BO1 && BO1->getOpcode() == Instruction::Sub) {
+      C = BO1->getOperand(0);
+      D = BO1->getOperand(1);
+    }
 
     // icmp (X-Y), X -> icmp 0, Y for equalities or if there is no overflow.
     if (A == Op1 && NoOp0WrapProblem)

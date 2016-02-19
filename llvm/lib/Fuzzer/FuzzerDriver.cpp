@@ -356,7 +356,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
   F.RereadOutputCorpus();
   for (auto &inp : *Inputs)
     if (inp != Options.OutputCorpus)
-      F.ReadDir(inp, nullptr);
+      F.ReadDir(inp, nullptr, Options.MaxLen);
 
   if (F.CorpusSize() == 0)
     F.AddToCorpus(Unit());  // Can't fuzz empty corpus, so add an empty input.

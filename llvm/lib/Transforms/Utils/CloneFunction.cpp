@@ -529,7 +529,8 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
           PN->setIncomingBlock(pred, MappedBlock);
         } else {
           PN->removeIncomingValue(pred, false);
-          --pred, --e;  // Revisit the next entry.
+          --pred;  // Revisit the next entry.
+          --e;
         }
       } 
     }

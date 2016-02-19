@@ -1,4 +1,4 @@
-# RUN: llc -mtriple thumbv7-apple-ios -start-after block-placement -stop-after block-placement -o /dev/null %s | FileCheck %s
+# RUN: llc -mtriple thumbv7-apple-ios -start-after block-placement -stop-after block-placement -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that the MIR parser parses the bundled machine instructions
 # and 'internal' register flags correctly.
 
