@@ -1,4 +1,4 @@
-// REQUIRES: has_sancovcc, x86_64-linux
+// REQUIRES: has_sancovcc, x86_64-linux, asan-dynamic-runtime
 // RUN: %clangxx_asan_static -fsanitize-coverage=func %s -o %t
 // RUN: rm -rf %T/coverage_html_report
 // RUN: mkdir -p %T/coverage_html_report
