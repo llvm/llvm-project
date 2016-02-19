@@ -446,7 +446,11 @@ void BitcodeFile::parse() {
     raw_svector_ostream OS(Name);
     Sym.printName(OS);
     StringRef NameRef = Saver.save(StringRef(Name));
-    SymbolBody *Body = new (Alloc) DefinedBitcode(NameRef);
+    SymbolBody *Body;
+    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+      Body = new (Alloc) Undefined(NameRef, false, STV_DEFAULT, false);
+    else
+      Body = new (Alloc) DefinedBitcode(NameRef);
     SymbolBodies.push_back(Body);
   }
 }
