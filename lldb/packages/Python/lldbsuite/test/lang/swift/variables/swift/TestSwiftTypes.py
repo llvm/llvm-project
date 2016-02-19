@@ -84,6 +84,17 @@ class TestSwiftTypes(TestBase):
         self.expect("p/x int64_minus_two"  , substrs = ['0xfffffffffffffffe'])
         self.expect("p/u ~1"  , substrs = ['18446744073709551614'])
         self.expect("p/d ~1"  , substrs = ['-2'])
+        
+        self.expect('frame variable uint8_max', substrs=['-1'], matching=False)
+        self.expect('frame variable uint16_max', substrs=['-1'], matching=False)
+        self.expect('frame variable uint32_max', substrs=['-1'], matching=False)
+        self.expect('frame variable uint64_max', substrs=['-1'], matching=False)
+        self.expect('frame variable uint_max', substrs=['-1'], matching=False)
+
+        self.expect('frame variable uint8_max', substrs=['255'])
+        self.expect('frame variable uint16_max', substrs=['65535'])
+        self.expect('frame variable uint32_max', substrs=['4294967295'])
+        self.expect('frame variable uint64_max', substrs=['18446744073709551615'])
 
 if __name__ == '__main__':
     import atexit
