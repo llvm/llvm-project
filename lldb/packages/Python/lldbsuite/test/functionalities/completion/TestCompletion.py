@@ -10,6 +10,7 @@ import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 
 class CommandLineCompletionTestCase(TestBase):
@@ -256,7 +257,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('target va', 'target variable ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @expectedFailureDarwin("llvm.org/pr25485")
+    @expectedFailureAll(oslist=lldbplatform.darwin_all, bugnumber="llvm.org/pr25485")
     def test_symbol_name(self):
         self.build()
         self.complete_from_to('''file a.out

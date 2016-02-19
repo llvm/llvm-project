@@ -288,6 +288,16 @@ public:
     GetArchitectureName () const;
 
     //------------------------------------------------------------------
+    /// Returns a string representing current architecture as a target CPU
+    /// for tools like compiler, disassembler etc.
+    ///
+    /// @return A string representing target CPU for the current
+    ///         architecture.
+    //------------------------------------------------------------------
+    std::string
+    GetClangTargetCPU ();
+
+    //------------------------------------------------------------------
     /// Clears the object state.
     ///
     /// Clears the object state back to a default invalid state.

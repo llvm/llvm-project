@@ -72,7 +72,10 @@ public:
 
     bool
     GetDescription (lldb::SBStream &description) const;
-    
+
+    void
+    AppendPathComponent (const char *file_or_directory);
+
     %pythoncode %{
         def __get_fullpath__(self):
             spec_dir = self.GetDirectory()

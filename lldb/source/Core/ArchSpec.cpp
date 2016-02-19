@@ -511,6 +511,56 @@ ArchSpec::GetArchitectureName () const
     return "unknown";
 }
 
+std::string
+ArchSpec::GetClangTargetCPU ()
+{
+    std::string cpu;
+    const llvm::Triple::ArchType machine = GetMachine();
+
+    if (machine == llvm::Triple::mips ||
+        machine == llvm::Triple::mipsel ||
+        machine == llvm::Triple::mips64 ||
+        machine == llvm::Triple::mips64el)
+    {
+        switch (m_core)
+        {
+        case ArchSpec::eCore_mips32:
+        case ArchSpec::eCore_mips32el:
+            cpu = "mips32"; break;
+        case ArchSpec::eCore_mips32r2:
+        case ArchSpec::eCore_mips32r2el:
+            cpu = "mips32r2"; break;
+        case ArchSpec::eCore_mips32r3:
+        case ArchSpec::eCore_mips32r3el:
+            cpu = "mips32r3"; break;
+        case ArchSpec::eCore_mips32r5:
+        case ArchSpec::eCore_mips32r5el:
+            cpu = "mips32r5"; break;
+        case ArchSpec::eCore_mips32r6:
+        case ArchSpec::eCore_mips32r6el:
+            cpu = "mips32r6"; break;
+        case ArchSpec::eCore_mips64:
+        case ArchSpec::eCore_mips64el:
+            cpu = "mips64"; break;
+        case ArchSpec::eCore_mips64r2:
+        case ArchSpec::eCore_mips64r2el:
+            cpu = "mips64r2"; break;
+        case ArchSpec::eCore_mips64r3:
+        case ArchSpec::eCore_mips64r3el:
+            cpu = "mips64r3"; break;
+        case ArchSpec::eCore_mips64r5:
+        case ArchSpec::eCore_mips64r5el:
+            cpu = "mips64r5"; break;
+        case ArchSpec::eCore_mips64r6:
+        case ArchSpec::eCore_mips64r6el:
+            cpu = "mips64r6"; break;
+        default:
+            break;
+        }
+    }
+    return cpu;
+}
+
 uint32_t
 ArchSpec::GetMachOCPUType () const
 {

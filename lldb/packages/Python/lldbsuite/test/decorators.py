@@ -4,6 +4,7 @@ from __future__ import absolute_import
 # System modules
 from distutils.version import LooseVersion, StrictVersion
 from functools import wraps
+import itertools
 import os
 import re
 import sys
@@ -20,6 +21,7 @@ from . import configuration
 from . import test_categories
 from .result_formatter import EventBuilder
 from lldbsuite.support import funcutils
+from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
 
 class DecorateMode:
@@ -138,8 +140,8 @@ def _decorateTest(mode,
                  swig_version=None, py_version=None,
                  remote=None):
     def fn(self):
-        skip_for_os = _match_decorator_property(oslist, self.getPlatform())
-        skip_for_hostos = _match_decorator_property(hostoslist, lldbplatformutil.getHostPlatform())
+        skip_for_os = _match_decorator_property(lldbplatform.translate(oslist), self.getPlatform())
+        skip_for_hostos = _match_decorator_property(lldbplatform.translate(hostoslist), lldbplatformutil.getHostPlatform())
         skip_for_compiler = _match_decorator_property(compiler, self.getCompiler()) and self.expectedCompilerVersion(compiler_version)
         skip_for_arch = _match_decorator_property(archs, self.getArchitecture())
         skip_for_debug_info = _match_decorator_property(debug_info, self.debug_info)
@@ -296,10 +298,10 @@ def expectedFailureOS(oslist, bugnumber=None, compilers=None, debug_info=None, a
 
 def expectedFailureDarwin(bugnumber=None, compilers=None, debug_info=None):
     # For legacy reasons, we support both "darwin" and "macosx" as OS X triples.
-    return expectedFailureOS(lldbplatformutil.getDarwinOSTriples(), bugnumber, compilers, debug_info=debug_info)
+    return expectedFailureOS(lldbplatform.darwin_all, bugnumber, compilers, debug_info=debug_info)
 
 def expectedFailureFreeBSD(bugnumber=None, compilers=None, debug_info=None):
-    return expectedFailureOS(['freebsd'], bugnumber, compilers, debug_info=debug_info)
+    return expectedFailureOS(lldbplatform.freebsd, bugnumber, compilers, debug_info=debug_info)
 
 def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
     """ Mark a test as xfail for Android.
@@ -426,7 +428,7 @@ def skipIfNetBSD(func):
 
 def skipIfDarwin(func):
     """Decorate the item to skip tests that should be skipped on Darwin."""
-    return skipIfPlatform(lldbplatformutil.getDarwinOSTriples())(func)
+    return skipIfPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
 
 def skipIfLinux(func):
     """Decorate the item to skip tests that should be skipped on Linux."""

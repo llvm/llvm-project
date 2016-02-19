@@ -1,9 +1,27 @@
+; RUN: opt %loadPolly -analyze -polly-scops %s | FileCheck %s --check-prefix=SCOP
 ; RUN: opt %loadPolly -S -polly-codegen %s | FileCheck %s
 ;
 ; The offset of the %tmp1 load wrt. to %buff (62 bytes) is not divisible
-; by the type size (i32 = 4 bytes), thus we will bail out.
+; by the type size (i32 = 4 bytes), thus we will have to represent %buff
+; with a smaller type. In this case i16 is sufficient to represent the
+; 62 byte offset accurately.
 ;
-; CHECK-NOT: polly.start
+; SCOP:    Invariant Accesses: {
+; SCOP:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; SCOP:                { Stmt_if_end_6[] -> MemRef_buff[o0] : 31 <= o0 <= 32 };
+; SCOP:            Execution Context: {  :  }
+; SCOP:    }
+; SCOP:    Arrays {
+; SCOP:        i16 MemRef_buff[*]; // Element size 2
+; SCOP:        i32 MemRef_key_0; // Element size 4
+; SCOP:    }
+;
+; CHECK-LABEL: polly.preload.begin:
+; CHECK-NEXT:    %polly.access.cast.buff = bitcast i8* %buff to i16*
+; CHECK-NEXT:    %polly.access.buff = getelementptr i16, i16* %polly.access.cast.buff, i64 31
+; CHECK-NEXT:    %polly.access.buff.cast = bitcast i16* %polly.access.buff to i32*
+; CHECK-NEXT:    %polly.access.buff.load = load i32, i32* %polly.access.buff.cast, align 4
+; CHECK-NEXT:    store i32 %polly.access.buff.load, i32* %tmp1.preload.s2a
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

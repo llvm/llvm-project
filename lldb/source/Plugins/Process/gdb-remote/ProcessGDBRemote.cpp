@@ -500,7 +500,21 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
         }
     }
 
-    if (GetGDBServerRegisterInfo ())
+    const ArchSpec &target_arch = GetTarget().GetArchitecture();
+    const ArchSpec &remote_host_arch = m_gdb_comm.GetHostArchitecture();
+    const ArchSpec &remote_process_arch = m_gdb_comm.GetProcessArchitecture();
+
+    // Use the process' architecture instead of the host arch, if available
+    ArchSpec arch_to_use;
+    if (remote_process_arch.IsValid ())
+        arch_to_use = remote_process_arch;
+    else
+        arch_to_use = remote_host_arch;
+    
+    if (!arch_to_use.IsValid())
+        arch_to_use = target_arch;
+
+    if (GetGDBServerRegisterInfo (arch_to_use))
         return;
 
     char packet[128];
@@ -640,7 +654,12 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
                     reg_info.invalidate_regs = invalidate_regs.data();
                 }
 
-                AugmentRegisterInfoViaABI (reg_info, reg_name, GetABI ());
+                // We have to make a temporary ABI here, and not use the GetABI because this code
+                // gets called in DidAttach, when the target architecture (and consequently the ABI we'll get from
+                // the process) may be wrong.
+                ABISP abi_to_use = ABI::FindPlugin(arch_to_use);
+
+                AugmentRegisterInfoViaABI (reg_info, reg_name, abi_to_use);
 
                 m_register_info.AddRegister(reg_info, reg_name, alt_name, set_name);
             }
@@ -668,22 +687,11 @@ ProcessGDBRemote::BuildDynamicRegisterInfo (bool force)
     // add composite registers to the existing primordial ones.
     bool from_scratch = (m_register_info.GetNumRegisters() == 0);
 
-    const ArchSpec &target_arch = GetTarget().GetArchitecture();
-    const ArchSpec &remote_host_arch = m_gdb_comm.GetHostArchitecture();
-    const ArchSpec &remote_process_arch = m_gdb_comm.GetProcessArchitecture();
-
-    // Use the process' architecture instead of the host arch, if available
-    ArchSpec remote_arch;
-    if (remote_process_arch.IsValid ())
-        remote_arch = remote_process_arch;
-    else
-        remote_arch = remote_host_arch;
-
     if (!target_arch.IsValid())
     {
-        if (remote_arch.IsValid()
-              && (remote_arch.GetMachine() == llvm::Triple::arm || remote_arch.GetMachine() == llvm::Triple::thumb)
-              && remote_arch.GetTriple().getVendor() == llvm::Triple::Apple)
+        if (arch_to_use.IsValid()
+              && (arch_to_use.GetMachine() == llvm::Triple::arm || arch_to_use.GetMachine() == llvm::Triple::thumb)
+              && arch_to_use.GetTriple().getVendor() == llvm::Triple::Apple)
             m_register_info.HardcodeARMRegisters(from_scratch);
     }
     else if (target_arch.GetMachine() == llvm::Triple::arm
@@ -4531,7 +4539,7 @@ ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemot
 // return:  'true'  on success
 //          'false' on failure
 bool
-ProcessGDBRemote::GetGDBServerRegisterInfo ()
+ProcessGDBRemote::GetGDBServerRegisterInfo (ArchSpec &arch_to_use)
 {
     // Make sure LLDB has an XML parser it can use first
     if (!XMLDocument::XMLEnabled())
@@ -4610,9 +4618,12 @@ ProcessGDBRemote::GetGDBServerRegisterInfo ()
                 return true; // Keep iterating through all children of the target_node
             });
 
+            // Don't use Process::GetABI, this code gets called from DidAttach, and in that context we haven't
+            // set the Target's architecture yet, so the ABI is also potentially incorrect.
+            ABISP abi_to_use_sp = ABI::FindPlugin(arch_to_use);
             if (feature_node)
             {
-                ParseRegisters(feature_node, target_info, this->m_register_info, GetABI());
+                ParseRegisters(feature_node, target_info, this->m_register_info, abi_to_use_sp);
             }
 
             for (const auto &include : target_info.includes)
@@ -4630,10 +4641,10 @@ ProcessGDBRemote::GetGDBServerRegisterInfo ()
                 XMLNode include_feature_node = include_xml_document.GetRootElement("feature");
                 if (include_feature_node)
                 {
-                    ParseRegisters(include_feature_node, target_info, this->m_register_info, GetABI());
+                    ParseRegisters(include_feature_node, target_info, this->m_register_info, abi_to_use_sp);
                 }
             }
-            this->m_register_info.Finalize(GetTarget().GetArchitecture());
+            this->m_register_info.Finalize(arch_to_use);
         }
     }
 

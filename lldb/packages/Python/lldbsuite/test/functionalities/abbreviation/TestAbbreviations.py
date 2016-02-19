@@ -16,7 +16,6 @@ class AbbreviationsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFlakeyFreeBSD("llvm.org/pr22611 thread race condition breaks prompt setting")
     @no_debug_info_test
     def test_command_abbreviations_and_aliases (self):
         command_interpreter = self.dbg.GetCommandInterpreter()

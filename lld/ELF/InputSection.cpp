@@ -273,7 +273,7 @@ EHInputSection<ELFT>::EHInputSection(ObjectFile<ELFT> *F,
     : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::EHFrame) {
   // Mark .eh_frame sections as live by default because there are
   // usually no relocations that point to .eh_frames. Otherwise,
- // the garbage collector would drop all .eh_frame sections.
+  // the garbage collector would drop all .eh_frame sections.
   this->Live = true;
 }
 

@@ -16,6 +16,7 @@
 #include "isl/map.h"
 #include "isl/schedule.h"
 #include "isl/set.h"
+#include "isl/space.h"
 #include "isl/union_map.h"
 #include "isl/union_set.h"
 #include "isl/val.h"
@@ -126,6 +127,11 @@ std::string polly::stringFromIslObj(__isl_keep isl_aff *aff) {
 std::string polly::stringFromIslObj(__isl_keep isl_pw_aff *pwaff) {
   return stringFromIslObjInternal(pwaff, isl_pw_aff_get_ctx,
                                   isl_printer_print_pw_aff);
+}
+
+std::string polly::stringFromIslObj(__isl_keep isl_space *space) {
+  return stringFromIslObjInternal(space, isl_space_get_ctx,
+                                  isl_printer_print_space);
 }
 
 static void replace(std::string &str, const std::string &find,
