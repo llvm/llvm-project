@@ -531,6 +531,13 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
+
+  // If we're building a module, notify the API notes manager.
+  if (!getLangOpts().CurrentModule.empty()) {
+    (void)TheSema->APINotes.loadCurrentModuleAPINotes(
+            getLangOpts().CurrentModule,
+            getAPINotesOpts().ModuleSearchPaths);
+  }
 }
 
 // Output Files
