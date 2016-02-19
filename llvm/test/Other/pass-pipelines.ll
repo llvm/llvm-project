@@ -38,24 +38,12 @@
 ; CHECK-O2-NOT: Manager
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NOT: Manager
-; FIXME: We shouldn't have this extra loop pass manager!
-; CHECK-O2: Loop Pass Manager
-; CHECK-O2-NOT: Manager
-; FIXME: Yet another pointless loop pass manager!
-; CHECK-O2: Loop Pass Manager
-; CHECK-O2-NOT: Manager
 ; FIXME: We shouldn't be pulling out to simplify-cfg and instcombine and
 ; causing new loop pass managers.
 ; CHECK-O2: Simplify the CFG
 ; CHECK-O2-NOT: Manager
 ; CHECK-O2: Combine redundant instructions
 ; CHECK-O2-NOT: Manager
-; CHECK-O2: Loop Pass Manager
-; CHECK-O2-NOT: Manager
-; FIXME: Yet another pointless loop pass manager!
-; CHECK-O2: Loop Pass Manager
-; CHECK-O2-NOT: Manager
-; FIXME: Yet another pointless loop pass manager!
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NOT: Manager
 ; FIXME: It isn't clear that we need yet another loop pass pipeline

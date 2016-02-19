@@ -1482,7 +1482,6 @@ static int readModRM(struct InternalInstruction* insn) {
     case TYPE_XMM128:                                     \
     case TYPE_XMM64:                                      \
     case TYPE_XMM32:                                      \
-    case TYPE_XMM:                                        \
       return prefix##_XMM0 + index;                       \
     case TYPE_VK1:                                        \
     case TYPE_VK2:                                        \

@@ -385,6 +385,14 @@ bool checkStringMetadataIntoLoop(Loop *TheLoop, StringRef Name);
 /// \brief Set input string into loop metadata by keeping other values intact.
 void addStringMetadataToLoop(Loop *TheLoop, const char *MDString, 
                              unsigned V = 0);
+
+/// Helper to consistently add the set of standard passes to a loop pass's \c
+/// AnalysisUsage.
+///
+/// All loop passes should call this as part of implementing their \c
+/// getAnalysisUsage.
+void getLoopAnalysisUsage(AnalysisUsage &AU);
+
 }
 
 #endif

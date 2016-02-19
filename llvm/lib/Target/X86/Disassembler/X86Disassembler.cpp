@@ -826,7 +826,6 @@ static bool translateRM(MCInst &mcInst, const OperandSpecifier &operand,
   case TYPE_R64:
   case TYPE_Rv:
   case TYPE_MM64:
-  case TYPE_XMM:
   case TYPE_XMM32:
   case TYPE_XMM64:
   case TYPE_XMM128:
