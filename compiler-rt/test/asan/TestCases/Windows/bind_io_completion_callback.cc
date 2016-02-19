@@ -6,8 +6,7 @@
 // the rest is built with Clang.  This represents the typical scenario when we
 // build a large project using "clang-cl -fallback -fsanitize=address".
 //
-// RUN: cl -c %s -Fo%t.obj
-// RUN: %clangxx_asan -o %t.exe %s %t.obj
+// RUN: %clangxx_asan %s -o %t.exe
 // RUN: %run %t.exe 2>&1 | FileCheck %s
 
 #include <windows.h>
@@ -15,7 +14,6 @@
 
 void ThrowAndCatch();
 
-#if !defined(__clang__)
 __declspec(noinline)
 void Throw() {
   fprintf(stderr, "Throw\n");
@@ -32,7 +30,6 @@ void ThrowAndCatch() {
 // CHECK: Catch
   }
 }
-#else
 
 char buffer[65536];
 HANDLE done;
@@ -62,9 +59,8 @@ int main(int argc, char **argv) {
       GetLastError() != ERROR_IO_PENDING)
     return 4;
 
-  if (WAIT_OBJECT_0 != WaitForSingleObject(done, INFINITE))
+  if (WAIT_OBJECT_0 != WaitForSingleObject(done, 10 * 1000))
     return 5;
   fprintf(stderr, "Done!\n");
 // CHECK: Done!
 }
-#endif
