@@ -238,6 +238,75 @@ void testConsistencyAssign(Person *p) {
 }
 @end
 
+//------
+// Setter ivar invalidation.
+//------
+
+@interface ClassWithSetters
+// Note: These properties have implicit @synthesize implementations to be
+// backed with ivars.
+@property (assign) int propWithIvar1;
+@property (assign) int propWithIvar2;
+
+@property (retain) NSNumber *retainedProperty;
+
+@end
+
+@interface ClassWithSetters (InOtherTranslationUnit)
+// The implementation of this property is in another translation unit.
+// We don't know whether it is backed by an ivar or not.
+@property (assign) int propInOther;
+@end
+
+@implementation ClassWithSetters
+- (void) testSettingPropWithIvarInvalidatesExactlyThatIvar; {
+  _propWithIvar1 = 1;
+  _propWithIvar2 = 2;
+  self.propWithIvar1 = 66;
+
+  // Calling the setter of a property backed by the instance variable
+  // should invalidate the storage for the instance variable but not
+  // the rest of the receiver. Ideally we would model the setter completely
+  // but doing so would cause the new value to escape when it is bound
+  // to the ivar. This would cause bad false negatives in the retain count
+  // checker. (There is a test for this scenario in
+  // testWriteRetainedValueToRetainedProperty below).
+  clang_analyzer_eval(_propWithIvar1 == 66); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(_propWithIvar2 == 2);  // expected-warning{{TRUE}}
+
+  _propWithIvar1 = 1;
+  [self setPropWithIvar1:66];
+
+  clang_analyzer_eval(_propWithIvar1 == 66); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(_propWithIvar2 == 2);  // expected-warning{{TRUE}}
+}
+
+- (void) testSettingPropWithoutIvarInvalidatesEntireInstance; {
+  _propWithIvar1 = 1;
+  _propWithIvar2 = 2;
+  self.propInOther = 66;
+
+  clang_analyzer_eval(_propWithIvar1 == 66); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(_propWithIvar2 == 2);  // expected-warning{{UNKNOWN}}
+
+  _propWithIvar1 = 1;
+  _propWithIvar2 = 2;
+  [self setPropInOther:66];
+
+  clang_analyzer_eval(_propWithIvar1 == 66); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(_propWithIvar2 == 2);  // expected-warning{{UNKNOWN}}
+}
+
+#if !__has_feature(objc_arc)
+- (void) testWriteRetainedValueToRetainedProperty; {
+  NSNumber *number = [[NSNumber alloc] initWithInteger:5]; // expected-warning {{Potential leak of an object stored into 'number'}}
+
+  // Make sure we catch this leak.
+  self.retainedProperty = number;
+}
+#endif
+@end
+
 #if !__has_feature(objc_arc)
 void testOverrelease(Person *p, int coin) {
   switch (coin) {

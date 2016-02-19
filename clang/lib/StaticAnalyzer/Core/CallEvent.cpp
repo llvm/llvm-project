@@ -678,9 +678,26 @@ ArrayRef<ParmVarDecl*> ObjCMethodCall::parameters() const {
   return D->parameters();
 }
 
-void
-ObjCMethodCall::getExtraInvalidatedValues(ValueList &Values,
-                  RegionAndSymbolInvalidationTraits *ETraits) const {
+void ObjCMethodCall::getExtraInvalidatedValues(
+    ValueList &Values, RegionAndSymbolInvalidationTraits *ETraits) const {
+
+  // If the method call is a setter for property known to be backed by
+  // an instance variable, don't invalidate the entire receiver, just
+  // the storage for that instance variable.
+  if (const ObjCPropertyDecl *PropDecl = getAccessedProperty()) {
+    if (const ObjCIvarDecl *PropIvar = PropDecl->getPropertyIvarDecl()) {
+      SVal IvarLVal = getState()->getLValue(PropIvar, getReceiverSVal());
+      const MemRegion *IvarRegion = IvarLVal.getAsRegion();
+      ETraits->setTrait(
+          IvarRegion,
+          RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
+      ETraits->setTrait(IvarRegion,
+                        RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
+      Values.push_back(IvarLVal);
+      return;
+    }
+  }
+
   Values.push_back(getReceiverSVal());
 }
 
@@ -740,6 +757,18 @@ const PseudoObjectExpr *ObjCMethodCall::getContainingPseudoObjectExpr() const {
   return ObjCMessageDataTy::getFromOpaqueValue(Data).getPointer();
 }
 
+static const Expr *
+getSyntacticFromForPseudoObjectExpr(const PseudoObjectExpr *POE) {
+  const Expr *Syntactic = POE->getSyntacticForm();
+
+  // This handles the funny case of assigning to the result of a getter.
+  // This can happen if the getter returns a non-const reference.
+  if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(Syntactic))
+    Syntactic = BO->getLHS();
+
+  return Syntactic;
+}
+
 ObjCMessageKind ObjCMethodCall::getMessageKind() const {
   if (!Data) {
 
@@ -749,12 +778,7 @@ ObjCMessageKind ObjCMethodCall::getMessageKind() const {
 
     // Check if parent is a PseudoObjectExpr.
     if (const PseudoObjectExpr *POE = dyn_cast_or_null<PseudoObjectExpr>(S)) {
-      const Expr *Syntactic = POE->getSyntacticForm();
-
-      // This handles the funny case of assigning to the result of a getter.
-      // This can happen if the getter returns a non-const reference.
-      if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(Syntactic))
-        Syntactic = BO->getLHS();
+      const Expr *Syntactic = getSyntacticFromForPseudoObjectExpr(POE);
 
       ObjCMessageKind K;
       switch (Syntactic->getStmtClass()) {
@@ -790,6 +814,27 @@ ObjCMessageKind ObjCMethodCall::getMessageKind() const {
   return static_cast<ObjCMessageKind>(Info.getInt());
 }
 
+const ObjCPropertyDecl *ObjCMethodCall::getAccessedProperty() const {
+  // Look for properties accessed with property syntax (foo.bar = ...)
+  if ( getMessageKind() == OCM_PropertyAccess) {
+    const PseudoObjectExpr *POE = getContainingPseudoObjectExpr();
+    assert(POE && "Property access without PseudoObjectExpr?");
+
+    const Expr *Syntactic = getSyntacticFromForPseudoObjectExpr(POE);
+    auto *RefExpr = cast<ObjCPropertyRefExpr>(Syntactic);
+
+    if (RefExpr->isExplicitProperty())
+      return RefExpr->getExplicitProperty();
+  }
+
+  // Look for properties accessed with method syntax ([foo setBar:...]).
+  const ObjCMethodDecl *MD = getDecl();
+  if (!MD || !MD->isPropertyAccessor())
+    return nullptr;
+
+  // Note: This is potentially quite slow.
+  return MD->findPropertyDecl();
+}
 
 bool ObjCMethodCall::canBeOverridenInSubclass(ObjCInterfaceDecl *IDecl,
                                              Selector Sel) const {
