@@ -1002,11 +1002,13 @@ void RAFast::AllocateBasicBlock() {
 
     unsigned DefOpEnd = MI->getNumOperands();
     if (MI->isCall()) {
-      // Spill all virtregs before a call. This serves two purposes: 1. If an
+      // Spill all virtregs before a call. This serves one purpose: If an
       // exception is thrown, the landing pad is going to expect to find
-      // registers in their spill slots, and 2. we don't have to wade through
-      // all the <imp-def> operands on the call instruction.
-      DefOpEnd = VirtOpEnd;
+      // registers in their spill slots.
+      // Note: although this is appealing to just consider all definitions
+      // as call-clobbered, this is not correct because some of those
+      // definitions may be used later on and we do not want to reuse
+      // those for virtual registers in between.
       DEBUG(dbgs() << "  Spilling remaining registers before call.\n");
       spillAll(MI);
 
