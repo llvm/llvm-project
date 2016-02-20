@@ -313,6 +313,10 @@ private:
     FindInRuntimes(const std::vector<SearchSpec> &specs,
                    const lldb_private::SymbolContext &sc);
     
+    lldb::addr_t
+    FindInUserDefinedSymbols(const std::vector<SearchSpec> &specs,
+                             const lldb_private::SymbolContext &sc);
+
     void
     ReportSymbolLookupError(const ConstString &name);
 
