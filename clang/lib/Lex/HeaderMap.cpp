@@ -20,7 +20,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
-#include <cstdio>
+#include "llvm/Support/Debug.h"
 #include <memory>
 using namespace clang;
 
@@ -168,9 +168,8 @@ LLVM_DUMP_METHOD void HeaderMapImpl::dump() const {
   const HMapHeader &Hdr = getHeader();
   unsigned NumBuckets = getEndianAdjustedWord(Hdr.NumBuckets);
 
-  fprintf(stderr, "Header Map %s:\n  %d buckets, %d entries\n",
-          getFileName(), NumBuckets,
-          getEndianAdjustedWord(Hdr.NumEntries));
+  llvm::dbgs() << "Header Map " << getFileName() << ":\n  " << NumBuckets
+               << ", " << getEndianAdjustedWord(Hdr.NumEntries) << "\n";
 
   for (unsigned i = 0; i != NumBuckets; ++i) {
     HMapBucket B = getBucket(i);
@@ -179,7 +178,8 @@ LLVM_DUMP_METHOD void HeaderMapImpl::dump() const {
     const char *Key    = getString(B.Key);
     const char *Prefix = getString(B.Prefix);
     const char *Suffix = getString(B.Suffix);
-    fprintf(stderr, "  %d. %s -> '%s' '%s'\n", i, Key, Prefix, Suffix);
+    llvm::dbgs() << "  " << i << ". " << Key << " -> '" << Prefix << "' '"
+                 << Suffix << "'\n";
   }
 }
 
