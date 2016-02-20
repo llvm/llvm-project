@@ -64,9 +64,6 @@
 #include "clang/AST/DeclObjC.h"
 
 #include <vector>
-#if defined(__APPLE__)
-#include "Plugins/Platform/MacOSX/PlatformiOSSimulator.h"
-#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1859,17 +1856,14 @@ AppleObjCRuntimeV2::WarnIfNoClassesFound (bool globally)
     if (!globally && m_warn_if_no_classes_cached.in_shared_cache)
         return;
 
-#if defined(__APPLE__)
     if (m_process &&
         m_process->GetTarget().GetPlatform() &&
-        m_process->GetTarget().GetPlatform()->GetPluginName() == PlatformiOSSimulator::GetPluginNameStatic())
+        m_process->GetTarget().GetPlatform()->GetPluginName().GetStringRef().endswith("-simulator"))
     {
-        // the iOS simulator does not have the objc_opt_ro class table
-        // so don't actually complain to the user
+        // Simulators do not have the objc_opt_ro class table so don't actually complain to the user
         m_noclasses_warning_emitted = true;
         return;
     }
-#endif
 
     Debugger &debugger(GetProcess()->GetTarget().GetDebugger());
     StreamSP debugger_async_out_sp = debugger.GetAsyncOutputStream();
