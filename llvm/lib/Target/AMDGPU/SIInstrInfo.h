@@ -406,18 +406,11 @@ public:
   unsigned readlaneVGPRToSGPR(unsigned SrcReg, MachineInstr *UseMI,
                           MachineRegisterInfo &MRI) const;
 
+  void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr *MI) const;
+
   /// \brief Legalize all operands in this instruction.  This function may
   /// create new instruction and insert them before \p MI.
   void legalizeOperands(MachineInstr *MI) const;
-
-  /// \brief Split an SMRD instruction into two smaller loads of half the
-  //  size storing the results in \p Lo and \p Hi.
-  void splitSMRD(MachineInstr *MI, const TargetRegisterClass *HalfRC,
-                 unsigned HalfImmOp, unsigned HalfSGPROp,
-                 MachineInstr *&Lo, MachineInstr *&Hi) const;
-
-  void moveSMRDToVALU(MachineInstr *MI, MachineRegisterInfo &MRI,
-                      SmallVectorImpl<MachineInstr *> &Worklist) const;
 
   /// \brief Replace this instruction's opcode with the equivalent VALU
   /// opcode.  This function will also move the users of \p MI to the

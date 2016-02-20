@@ -61,6 +61,7 @@ using namespace llvm;
 
 CFLAAResult::CFLAAResult(const TargetLibraryInfo &TLI) : AAResultBase(TLI) {}
 CFLAAResult::CFLAAResult(CFLAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
+CFLAAResult::~CFLAAResult() {}
 
 // \brief Information we have about a function and would like to keep around
 struct CFLAAResult::FunctionInfo {

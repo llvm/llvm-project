@@ -53,10 +53,14 @@ done:                                             ; preds = %loop
 ; Test moving an SMRD instruction to the VALU
 
 ; GCN-LABEL: {{^}}smrd_valu:
-; FIXME: We should be using flat load for HSA.
-; GCN: buffer_load_dword [[OUT:v[0-9]+]]
-; GCN-NOHSA: buffer_store_dword [[OUT]]
-; GCN-HSA: flat_store_dword {{.*}}, [[OUT]]
+; SI: s_movk_i32 [[OFFSET:s[0-9]+]], 0x2ee0
+; GCN: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
+; GCN: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
+; SI: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, [[OFFSET]]
+; CI: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0xbb8
+; GCN: v_mov_b32_e32 [[V_OUT:v[0-9]+]], [[OUT]]
+; GCN-NOHSA: buffer_store_dword [[V_OUT]]
+; GCN-HSA: flat_store_dword {{.*}}, [[V_OUT]]
 define void @smrd_valu(i32 addrspace(2)* addrspace(1)* %in, i32 %a, i32 %b, i32 addrspace(1)* %out) #1 {
 entry:
   %tmp = icmp ne i32 %a, 0

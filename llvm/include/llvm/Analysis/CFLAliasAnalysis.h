@@ -34,6 +34,7 @@ class CFLAAResult : public AAResultBase<CFLAAResult> {
 public:
   explicit CFLAAResult(const TargetLibraryInfo &TLI);
   CFLAAResult(CFLAAResult &&Arg);
+  ~CFLAAResult();
 
   /// Handle invalidation events from the new pass manager.
   ///

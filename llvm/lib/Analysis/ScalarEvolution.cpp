@@ -1903,7 +1903,7 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
         // the map.
         SmallVector<const SCEV *, 4> MulOps(Mul->op_begin()+1, Mul->op_end());
         const SCEV *Key = SE.getMulExpr(MulOps);
-        auto Pair = M.insert(std::make_pair(Key, NewScale));
+        auto Pair = M.insert({Key, NewScale});
         if (Pair.second) {
           NewOps.push_back(Pair.first->first);
         } else {
@@ -1916,7 +1916,7 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
     } else {
       // An ordinary operand. Update the map.
       std::pair<DenseMap<const SCEV *, APInt>::iterator, bool> Pair =
-        M.insert(std::make_pair(Ops[i], Scale));
+          M.insert({Ops[i], Scale});
       if (Pair.second) {
         NewOps.push_back(Pair.first->first);
       } else {
@@ -3346,7 +3346,7 @@ bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
   FindAddRecurrence F;
   SCEVTraversal<FindAddRecurrence> ST(F);
   ST.visitAll(S);
-  HasRecMap.insert(std::make_pair(S, F.FoundOne));
+  HasRecMap.insert({S, F.FoundOne});
   return F.FoundOne;
 }
 
@@ -3393,7 +3393,7 @@ const SCEV *ScalarEvolution::getSCEV(Value *V) {
     // V, so it is needed to double check whether V->S is inserted into
     // ValueExprMap before insert S->V into ExprValueMap.
     std::pair<ValueExprMapType::iterator, bool> Pair =
-        ValueExprMap.insert(std::make_pair(SCEVCallbackVH(V, this), S));
+        ValueExprMap.insert({SCEVCallbackVH(V, this), S});
     if (Pair.second)
       ExprValueMap[S].insert(V);
   }
@@ -3694,10 +3694,10 @@ ScalarEvolution::ForgetSymbolicName(Instruction *PN, const SCEV *SymName) {
 namespace {
 class SCEVInitRewriter : public SCEVRewriteVisitor<SCEVInitRewriter> {
 public:
-  static const SCEV *rewrite(const SCEV *Scev, const Loop *L,
+  static const SCEV *rewrite(const SCEV *S, const Loop *L,
                              ScalarEvolution &SE) {
     SCEVInitRewriter Rewriter(L, SE);
-    const SCEV *Result = Rewriter.visit(Scev);
+    const SCEV *Result = Rewriter.visit(S);
     return Rewriter.isValid() ? Result : SE.getCouldNotCompute();
   }
 
@@ -3727,10 +3727,10 @@ private:
 
 class SCEVShiftRewriter : public SCEVRewriteVisitor<SCEVShiftRewriter> {
 public:
-  static const SCEV *rewrite(const SCEV *Scev, const Loop *L,
+  static const SCEV *rewrite(const SCEV *S, const Loop *L,
                              ScalarEvolution &SE) {
     SCEVShiftRewriter Rewriter(L, SE);
-    const SCEV *Result = Rewriter.visit(Scev);
+    const SCEV *Result = Rewriter.visit(S);
     return Rewriter.isValid() ? Result : SE.getCouldNotCompute();
   }
 
@@ -3788,7 +3788,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
     const SCEV *SymbolicName = getUnknown(PN);
     assert(ValueExprMap.find_as(PN) == ValueExprMap.end() &&
            "PHI node already processed?");
-    ValueExprMap.insert(std::make_pair(SCEVCallbackVH(PN, this), SymbolicName));
+    ValueExprMap.insert({SCEVCallbackVH(PN, this), SymbolicName});
 
     // Using this symbolic name for the PHI, analyze the value coming around
     // the back-edge.
@@ -5018,7 +5018,7 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // code elsewhere that it shouldn't attempt to request a new
   // backedge-taken count, which could result in infinite recursion.
   std::pair<DenseMap<const Loop *, BackedgeTakenInfo>::iterator, bool> Pair =
-    BackedgeTakenCounts.insert(std::make_pair(L, BackedgeTakenInfo()));
+      BackedgeTakenCounts.insert({L, BackedgeTakenInfo()});
   if (!Pair.second)
     return Pair.first->second;
 
@@ -5285,7 +5285,7 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L) {
       // we won't be able to compute an exact value for the loop.
       CouldComputeBECount = false;
     else
-      ExitCounts.push_back(std::make_pair(ExitBB, EL.Exact));
+      ExitCounts.push_back({ExitBB, EL.Exact});
 
     // 2. Derive the loop's MaxBECount from each exit's max number of
     // non-exiting iterations. Partition the loop exits into two kinds:
@@ -6571,7 +6571,7 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
   // We currently can only solve this if the coefficients are constants.
   if (!LC || !MC || !NC) {
     const SCEV *CNC = SE.getCouldNotCompute();
-    return std::make_pair(CNC, CNC);
+    return {CNC, CNC};
   }
 
   uint32_t BitWidth = LC->getAPInt().getBitWidth();
@@ -6600,7 +6600,7 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
     if (SqrtTerm.isNegative()) {
       // The loop is provably infinite.
       const SCEV *CNC = SE.getCouldNotCompute();
-      return std::make_pair(CNC, CNC);
+      return {CNC, CNC};
     }
 
     // Compute sqrt(B^2-4ac). This is guaranteed to be the nearest
@@ -6613,7 +6613,7 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
     APInt TwoA(A << 1);
     if (TwoA.isMinValue()) {
       const SCEV *CNC = SE.getCouldNotCompute();
-      return std::make_pair(CNC, CNC);
+      return {CNC, CNC};
     }
 
     LLVMContext &Context = SE.getContext();
@@ -6623,8 +6623,7 @@ SolveQuadraticEquation(const SCEVAddRecExpr *AddRec, ScalarEvolution &SE) {
     ConstantInt *Solution2 =
       ConstantInt::get(Context, (NegB - SqrtVal).sdiv(TwoA));
 
-    return std::make_pair(SE.getConstant(Solution1),
-                          SE.getConstant(Solution2));
+    return {SE.getConstant(Solution1), SE.getConstant(Solution2)};
   } // end APIntOps namespace
 }
 
@@ -6834,15 +6833,15 @@ ScalarEvolution::getPredecessorWithUniqueSuccessorForBB(BasicBlock *BB) {
   // predecessor to the block that does not go through the direct edge
   // from the predecessor to the block.
   if (BasicBlock *Pred = BB->getSinglePredecessor())
-    return std::make_pair(Pred, BB);
+    return {Pred, BB};
 
   // A loop's header is defined to be a block that dominates the loop.
   // If the header has a unique predecessor outside the loop, it must be
   // a block that has exactly one successor that can reach the loop.
   if (Loop *L = LI.getLoopFor(BB))
-    return std::make_pair(L->getLoopPredecessor(), L->getHeader());
+    return {L->getLoopPredecessor(), L->getHeader()};
 
-  return std::pair<BasicBlock *, BasicBlock *>();
+  return {nullptr, nullptr};
 }
 
 /// HasSameValue - SCEV structural equivalence is usually sufficient for
@@ -9648,14 +9647,13 @@ namespace {
 
 class SCEVPredicateRewriter : public SCEVRewriteVisitor<SCEVPredicateRewriter> {
 public:
-  // Rewrites Scev in the context of a loop L and the predicate A.
+  // Rewrites \p S in the context of a loop L and the predicate A.
   // If Assume is true, rewrite is free to add further predicates to A
   // such that the result will be an AddRecExpr.
-  static const SCEV *rewrite(const SCEV *Scev, const Loop *L,
-                             ScalarEvolution &SE, SCEVUnionPredicate &A,
-                             bool Assume) {
+  static const SCEV *rewrite(const SCEV *S, const Loop *L, ScalarEvolution &SE,
+                             SCEVUnionPredicate &A, bool Assume) {
     SCEVPredicateRewriter Rewriter(L, SE, A, Assume);
-    return Rewriter.visit(Scev);
+    return Rewriter.visit(S);
   }
 
   SCEVPredicateRewriter(const Loop *L, ScalarEvolution &SE,
@@ -9724,15 +9722,15 @@ private:
 };
 } // end anonymous namespace
 
-const SCEV *ScalarEvolution::rewriteUsingPredicate(const SCEV *Scev,
-                                                   const Loop *L,
+const SCEV *ScalarEvolution::rewriteUsingPredicate(const SCEV *S, const Loop *L,
                                                    SCEVUnionPredicate &Preds) {
-  return SCEVPredicateRewriter::rewrite(Scev, L, *this, Preds, false);
+  return SCEVPredicateRewriter::rewrite(S, L, *this, Preds, false);
 }
 
-const SCEV *ScalarEvolution::convertSCEVToAddRecWithPredicates(
-    const SCEV *Scev, const Loop *L, SCEVUnionPredicate &Preds) {
-  return SCEVPredicateRewriter::rewrite(Scev, L, *this, Preds, true);
+const SCEV *
+ScalarEvolution::convertSCEVToAddRecWithPredicates(const SCEV *S, const Loop *L,
+                                                   SCEVUnionPredicate &Preds) {
+  return SCEVPredicateRewriter::rewrite(S, L, *this, Preds, true);
 }
 
 /// SCEV predicates

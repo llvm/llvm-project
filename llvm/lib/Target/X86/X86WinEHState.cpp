@@ -114,9 +114,6 @@ INITIALIZE_PASS(WinEHStatePass, "x86-winehstate",
 
 bool WinEHStatePass::doInitialization(Module &M) {
   TheModule = &M;
-  FrameEscape = Intrinsic::getDeclaration(TheModule, Intrinsic::localescape);
-  FrameRecover = Intrinsic::getDeclaration(TheModule, Intrinsic::localrecover);
-  FrameAddress = Intrinsic::getDeclaration(TheModule, Intrinsic::frameaddress);
   return false;
 }
 
@@ -161,6 +158,10 @@ bool WinEHStatePass::runOnFunction(Function &F) {
   }
   if (!HasPads)
     return false;
+
+  FrameEscape = Intrinsic::getDeclaration(TheModule, Intrinsic::localescape);
+  FrameRecover = Intrinsic::getDeclaration(TheModule, Intrinsic::localrecover);
+  FrameAddress = Intrinsic::getDeclaration(TheModule, Intrinsic::frameaddress);
 
   // Disable frame pointer elimination in this function.
   // FIXME: Do the nested handlers need to keep the parent ebp in ebp, or can we

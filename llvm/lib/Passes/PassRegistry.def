@@ -69,12 +69,17 @@ FUNCTION_ANALYSIS("targetir",
   FUNCTION_ANALYSIS(NAME, CREATE_PASS)
 #endif
 FUNCTION_ALIAS_ANALYSIS("basic-aa", BasicAA())
+FUNCTION_ALIAS_ANALYSIS("cfl-aa", CFLAA())
+FUNCTION_ALIAS_ANALYSIS("scev-aa", SCEVAA())
+FUNCTION_ALIAS_ANALYSIS("scoped-noalias-aa", ScopedNoAliasAA())
+FUNCTION_ALIAS_ANALYSIS("type-based-aa", TypeBasedAA())
 #undef FUNCTION_ALIAS_ANALYSIS
 #undef FUNCTION_ANALYSIS
 
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+FUNCTION_PASS("aa-eval", AAEvaluator())
 FUNCTION_PASS("adce", ADCEPass())
 FUNCTION_PASS("early-cse", EarlyCSEPass())
 FUNCTION_PASS("instcombine", InstCombinePass())
