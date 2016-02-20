@@ -107,7 +107,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                                                 VersionTuple(),
                                                 VersionTuple(),
                                                 /*Unavailable=*/true,
-                                                Info.UnavailableMsg));
+                                                Info.UnavailableMsg,
+                                                /*Nopartial=*/true));
   }
 }
 
