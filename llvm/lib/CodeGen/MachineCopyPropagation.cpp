@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
@@ -143,10 +142,9 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       unsigned Def = MI->getOperand(0).getReg();
       unsigned Src = MI->getOperand(1).getReg();
 
-      if (TargetRegisterInfo::isVirtualRegister(Def) ||
-          TargetRegisterInfo::isVirtualRegister(Src))
-        report_fatal_error("MachineCopyPropagation should be run after"
-                           " register allocation!");
+      assert(!TargetRegisterInfo::isVirtualRegister(Def) &&
+             !TargetRegisterInfo::isVirtualRegister(Src) &&
+             "MachineCopyPropagation should be run after register allocation!");
 
       DenseMap<unsigned, MachineInstr*>::iterator CI = AvailCopyMap.find(Src);
       if (CI != AvailCopyMap.end()) {
@@ -240,9 +238,8 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       if (!Reg)
         continue;
 
-      if (TargetRegisterInfo::isVirtualRegister(Reg))
-        report_fatal_error("MachineCopyPropagation should be run after"
-                           " register allocation!");
+      assert(!TargetRegisterInfo::isVirtualRegister(Reg) &&
+             "MachineCopyPropagation should be run after register allocation!");
 
       if (MO.isDef()) {
         Defs.push_back(Reg);
