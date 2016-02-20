@@ -2,18 +2,18 @@
 Tests that C++ member and static variables are available where they should be.
 """
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class CPPThisTestCase(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
     #rdar://problem/9962849
-    @expectedFailureAll(compiler="gcc", bugnumber="llvm.org/pr15439 The 'this' pointer isn't available during expression evaluation when stopped in an inlined member function")
-    @expectedFailureAll(compiler="icc", bugnumber="ICC doesn't emit correct DWARF inline debug info for inlined member functions.")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureGcc # llvm.org/pr15439 The 'this' pointer isn't available during expression evaluation when stopped in an inlined member function.
+    @expectedFailureIcc # ICC doesn't emit correct DWARF inline debug info for inlined member functions
+    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureWindows("llvm.org/pr24490: We shouldn't be using platform-specific names like `getpid` in tests")
     @expectedFlakeyClang(bugnumber='llvm.org/pr23012', compiler_version=['>=','3.6']) # failed with totclang - clang3.7
     def test_with_run_command(self):
         """Test that the appropriate member variables are available when stopped in C++ static, inline, and const methods"""

@@ -442,13 +442,9 @@ Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, Dum
     case DumpStyleModuleWithFileAddress:
         if (section_sp)
         {
-            ModuleSP module_sp = section_sp->GetModule();
-            if (module_sp)
-                s->Printf("%s[", module_sp->GetFileSpec().GetFilename().AsCString("<Unknown>"));
-            else
-                s->Printf("%s[","<Unknown>");
+            s->Printf("%s[", section_sp->GetModule()->GetFileSpec().GetFilename().AsCString("<Unknown>"));
         }
-        LLVM_FALLTHROUGH;
+        // Fall through
     case DumpStyleFileAddress:
         {
             addr_t file_addr = GetFileAddress();

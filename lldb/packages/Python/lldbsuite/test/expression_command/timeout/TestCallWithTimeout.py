@@ -7,9 +7,8 @@ from __future__ import print_function
 
 
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class ExprCommandWithTimeoutsTestCase(TestBase):
 
@@ -24,7 +23,8 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
 
 
     @expectedFlakeyFreeBSD("llvm.org/pr19605")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFlakeyLinux("llvm.org/pr20275")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test(self):
         """Test calling std::String member function."""
         self.build()

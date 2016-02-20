@@ -9,16 +9,15 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class WatchpointForMultipleThreadsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureWindows("llvm.org/pr24446") # WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows
     def test_watchpoint_multiple_threads(self):
         """Test that lldb watchpoint works for multiple threads."""
         self.build()
@@ -26,7 +25,7 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
         self.hello_multiple_threads()
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureWindows("llvm.org/pr24446") # WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows
     def test_watchpoint_multiple_threads_wp_set_and_then_delete(self):
         """Test that lldb watchpoint works for multiple threads, and after the watchpoint is deleted, the watchpoint event should no longer fires."""
         self.build()

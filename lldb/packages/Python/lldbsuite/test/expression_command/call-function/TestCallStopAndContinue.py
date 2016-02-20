@@ -7,9 +7,8 @@ from __future__ import print_function
 
 
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class ExprCommandCallStopContinueTestCase(TestBase):
 
@@ -25,7 +24,7 @@ class ExprCommandCallStopContinueTestCase(TestBase):
                                 '{ 5, "five" }')
 
     @expectedFlakeyDarwin("llvm.org/pr20274")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test(self):
         """Test gathering result from interrupted function call."""
         self.build()

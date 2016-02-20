@@ -35,12 +35,12 @@ using namespace lldb_private;
 
 static char ID;
 
-#define VALID_POINTER_CHECK_NAME "_$__lldb_valid_pointer_check"
+#define VALID_POINTER_CHECK_NAME "$__lldb_valid_pointer_check"
 #define VALID_OBJC_OBJECT_CHECK_NAME "$__lldb_objc_object_check"
 
 static const char g_valid_pointer_check_text[] =
 "extern \"C\" void\n"
-"_$__lldb_valid_pointer_check (unsigned char *$__lldb_arg_ptr)\n"
+"$__lldb_valid_pointer_check (unsigned char *$__lldb_arg_ptr)\n"
 "{\n"
 "    unsigned char $__lldb_local_val = *$__lldb_arg_ptr;\n"
 "}";
@@ -506,32 +506,6 @@ protected:
 
         return true;
     }
-    
-    static llvm::Function *GetFunction(llvm::Value *value)
-    {
-        if (llvm::Function *function = llvm::dyn_cast<llvm::Function>(value))
-        {
-            return function;
-        }
-        
-        if (llvm::ConstantExpr *const_expr = llvm::dyn_cast<llvm::ConstantExpr>(value))
-        {
-            switch (const_expr->getOpcode())
-            {
-            default:
-                return nullptr;
-            case llvm::Instruction::BitCast:
-                return GetFunction(const_expr->getOperand(0));
-            }
-        }
-        
-        return nullptr;
-    }
-    
-    static llvm::Function *GetCalledFunction(llvm::CallInst *inst)
-    {
-        return GetFunction(inst->getCalledValue());
-    }
 
     bool InspectInstruction(llvm::Instruction &i) override
     {
@@ -541,12 +515,35 @@ protected:
 
         if (call_inst)
         {
-            const llvm::Function *called_function = GetCalledFunction(call_inst);
-            
-            if (!called_function)
+            // This metadata is set by IRForTarget::MaybeHandleCall().
+
+            MDNode *metadata = call_inst->getMetadata("lldb.call.realName");
+
+            if (!metadata)
                 return true;
-            
-            std::string name_str = called_function->getName().str();
+
+            if (metadata->getNumOperands() != 1)
+            {
+                if (log)
+                    log->Printf("Function call metadata has %d operands for [%p] %s",
+                                metadata->getNumOperands(),
+                                static_cast<void*>(call_inst),
+                                PrintValue(call_inst).c_str());
+                return false;
+            }
+
+            MDString *real_name = dyn_cast<MDString>(metadata->getOperand(0));
+
+            if (!real_name)
+            {
+                if (log)
+                    log->Printf("Function call metadata is not an MDString for [%p] %s",
+                                static_cast<void*>(call_inst),
+                                PrintValue(call_inst).c_str());
+                return false;
+            }
+
+            std::string name_str = real_name->getString();
             const char* name_cstr = name_str.c_str();
 
             if (log)

@@ -241,7 +241,6 @@ Language::LanguageIsCPlusPlus (LanguageType language)
         case eLanguageTypeC_plus_plus_03:
         case eLanguageTypeC_plus_plus_11:
         case eLanguageTypeC_plus_plus_14:
-        case eLanguageTypeObjC_plus_plus:
             return true;
         default:
             return false;

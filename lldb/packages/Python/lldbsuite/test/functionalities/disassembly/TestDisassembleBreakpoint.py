@@ -8,15 +8,14 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class DisassemblyTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="function names print fully demangled instead of name-only")
+    @expectedFailureWindows # Function name prints fully demangled instead of name-only
     def test(self):
         self.build()
         exe = os.path.join (os.getcwd(), "a.out")

@@ -180,7 +180,7 @@ UnixSignals::GetShortName(ConstString name) const
 {
     if (name)
     {
-      const char* signame = name.AsCString();
+      char* signame = (char*)(name.AsCString());
       return ConstString(signame + 3); // Remove "SIG" from name
     }
     return name;

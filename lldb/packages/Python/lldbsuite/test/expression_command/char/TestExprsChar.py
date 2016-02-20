@@ -3,9 +3,8 @@ from __future__ import print_function
 
 
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class ExprCharTestCase(TestBase):
 
@@ -53,17 +52,18 @@ class ExprCharTestCase(TestBase):
         self.assertTrue(value.GetError().Success())
         self.assertEqual(value.GetValueAsSigned(0), 3)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test_default_char(self):
         self.do_test()
 
-    @expectedFailureAll(archs=["arm", "aarch64"], bugnumber="llvm.org/pr23069")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureArch("arm", "llvm.org/pr23069")
+    @expectedFailureArch("aarch64", "llvm.org/pr23069")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test_signed_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-fsigned-char'})
 
-    @expectedFailureAll(archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr23069")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
-    @expectedFailureAll(triple = 'mips*', bugnumber="llvm.org/pr23069")
+    @expectedFailurei386("llvm.org/pr23069")
+    @expectedFailurex86_64("llvm.org/pr23069")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test_unsigned_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-funsigned-char'})

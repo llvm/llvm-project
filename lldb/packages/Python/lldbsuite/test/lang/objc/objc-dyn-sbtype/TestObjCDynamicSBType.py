@@ -8,9 +8,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 @skipUnlessDarwin
 class ObjCDynamicSBTypeTestCase(TestBase):
@@ -26,7 +25,7 @@ class ObjCDynamicSBTypeTestCase(TestBase):
         self.main_source = "main.m"
         self.line = line_number(self.main_source, '// Set breakpoint here.')
 
-    @skipIf(archs="i[3-6]86")
+    @skipIfi386
     def test_dyn(self):
         """Test that we are able to properly report a usable dynamic type."""
         d = {'EXE': self.exe_name}

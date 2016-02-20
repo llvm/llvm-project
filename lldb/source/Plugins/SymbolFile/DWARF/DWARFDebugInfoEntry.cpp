@@ -942,7 +942,7 @@ DWARFDebugInfoEntry::GetAttributes (const DWARFCompileUnit* cu,
                     // referencing this DIE because curr_depth is not zero
                     break;  
                 }
-                LLVM_FALLTHROUGH;
+                // Fall through...
             default:
                 attributes.Append(cu, offset, attr, form);
                 break;

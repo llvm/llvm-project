@@ -85,7 +85,6 @@ OptionValuePathMappings::SetValueFromString (llvm::StringRef value, VarSetOperat
             }
             m_path_mappings.Clear(m_notify_changes);
             // Fall through to append case
-            LLVM_FALLTHROUGH;
         case eVarSetOperationAppend:
             if (argc < 2 || (argc & 1))
             {

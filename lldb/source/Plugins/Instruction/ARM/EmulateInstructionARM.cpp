@@ -13062,15 +13062,6 @@ EmulateInstructionARM::ReadInstruction ()
                 m_opcode_mode = eModeARM;
                 m_opcode.SetOpcode32 (MemARead(read_inst_context, pc, 4, 0, &success), GetByteOrder());
             }
-
-            if (!m_ignore_conditions)
-            {
-                // If we are not ignoreing the conditions then init the it session from the current
-                // value of cpsr.
-                uint32_t it = (Bits32(m_opcode_cpsr, 15, 10) << 2) | Bits32(m_opcode_cpsr, 26, 25);
-                if (it != 0)
-                    m_it_session.InitIT(it);
-            }
         }
     }
     if (!success)
@@ -13581,13 +13572,20 @@ EmulateInstructionARM::WriteFlags (Context &context,
 bool
 EmulateInstructionARM::EvaluateInstruction (uint32_t evaluate_options)
 {
+    // Advance the ITSTATE bits to their values for the next instruction.
+    if (m_opcode_mode == eModeThumb && m_it_session.InITBlock())
+        m_it_session.ITAdvance();
+
     ARMOpcode *opcode_data = NULL;
    
     if (m_opcode_mode == eModeThumb)
         opcode_data = GetThumbOpcodeForInstruction (m_opcode.GetOpcode32(), m_arm_isa);
     else if (m_opcode_mode == eModeARM)
         opcode_data = GetARMOpcodeForInstruction (m_opcode.GetOpcode32(), m_arm_isa);
-
+        
+    if (opcode_data == NULL)
+        return false;
+    
     const bool auto_advance_pc = evaluate_options & eEmulateInstructionOptionAutoAdvancePC;
     m_ignore_conditions = evaluate_options & eEmulateInstructionOptionIgnoreConditions;
                  
@@ -13611,48 +13609,41 @@ EmulateInstructionARM::EvaluateInstruction (uint32_t evaluate_options)
         if (!success)
             return false;
     }
-
-    // Call the Emulate... function if we managed to decode the opcode.
-    if (opcode_data)
-    {
-        success = (this->*opcode_data->callback) (m_opcode.GetOpcode32(), opcode_data->encoding);  
-        if (!success)
-            return false;
-    }
-
-    // Advance the ITSTATE bits to their values for the next instruction if we haven't just executed
-    // an IT instruction what initialized it.
-    if (m_opcode_mode == eModeThumb && m_it_session.InITBlock() &&
-        (opcode_data == nullptr || opcode_data->callback != &EmulateInstructionARM::EmulateIT))
-        m_it_session.ITAdvance();
-
+    
+    // Call the Emulate... function.
+    success = (this->*opcode_data->callback) (m_opcode.GetOpcode32(), opcode_data->encoding);  
+    if (!success)
+        return false;
+        
     if (auto_advance_pc)
     {
         uint32_t after_pc_value = ReadRegisterUnsigned (eRegisterKindDWARF, dwarf_pc, 0, &success);
         if (!success)
             return false;
-
+            
         if (auto_advance_pc && (after_pc_value == orig_pc_value))
         {
-            after_pc_value += m_opcode.GetByteSize();
-
+            if (opcode_data->size == eSize32)
+                after_pc_value += 4;
+            else if (opcode_data->size == eSize16)
+                after_pc_value += 2;
+                
             EmulateInstruction::Context context;
             context.type = eContextAdvancePC;
             context.SetNoArgs();
             if (!WriteRegisterUnsigned (context, eRegisterKindDWARF, dwarf_pc, after_pc_value))
                 return false;
+                
         }
     }
     return true;
 }
 
-EmulateInstruction::InstructionCondition
-EmulateInstructionARM::GetInstructionCondition()
+bool
+EmulateInstructionARM::IsInstructionConditional()
 {
     const uint32_t cond = CurrentCond (m_opcode.GetOpcode32());
-    if (cond == 0xe || cond == 0xf || cond == UINT32_MAX)
-        return EmulateInstruction::UnconditionalCondition;
-    return cond;
+    return cond != 0xe && cond != 0xf && cond != UINT32_MAX;
 }
 
 bool

@@ -6,11 +6,8 @@ from __future__ import print_function
 
 import os, sys
 import lldb
-from lldbsuite.test.lldbbench import *
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
 from lldbsuite.test import configuration
-from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbbench import *
 
 class CompileRunToBreakpointBench(BenchBase):
 
@@ -27,7 +24,7 @@ class CompileRunToBreakpointBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
     def test_run_lldb_then_gdb(self):
         """Benchmark turnaround time with lldb vs. gdb."""
         print()

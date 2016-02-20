@@ -8,15 +8,14 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class TypeCompletionTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(compiler="icc", bugnumber="often fails with 'NameAndAddress should be valid.")
+    @expectedFailureIcc # often fails with 'NameAndAddress should be valid'
     # Fails with gcc 4.8.1 with llvm.org/pr15301 LLDB prints incorrect sizes of STL containers
     def test_with_run_command(self):
         """Check that types only get completed when necessary."""

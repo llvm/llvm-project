@@ -7,11 +7,10 @@ from __future__ import print_function
 
 
 import os, time
-import os.path
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
+import os.path
 
 class PythonSynthDataFormatterTestCase(TestBase):
 

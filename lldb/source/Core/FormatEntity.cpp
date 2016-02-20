@@ -751,7 +751,7 @@ DumpValue (Stream &s,
 
         case FormatEntity::Entry::Type::ScriptVariableSynthetic:
             is_script = true;
-            LLVM_FALLTHROUGH;
+            // Fall through
         case FormatEntity::Entry::Type::VariableSynthetic:
             custom_format = entry.fmt;
             val_obj_display = (ValueObject::ValueObjectRepresentationStyle)entry.number;

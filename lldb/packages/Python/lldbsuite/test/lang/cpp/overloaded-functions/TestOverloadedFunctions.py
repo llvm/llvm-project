@@ -3,9 +3,8 @@ Tests that functions with the same name are resolved correctly.
 """
 
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class CPPStaticMethodsTestCase(TestBase):
     
@@ -15,7 +14,7 @@ class CPPStaticMethodsTestCase(TestBase):
         TestBase.setUp(self)
         self.line = line_number('main.cpp', '// breakpoint')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_with_run_command(self):
         """Test that functions with the same name are resolved correctly"""
         self.build()

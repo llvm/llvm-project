@@ -227,6 +227,29 @@ namespace  lldb_private {
             size_t
             GetIndexOfChildWithName(const ConstString &name) override;
         };
+        
+        class NSArrayCodeRunningSyntheticFrontEnd : public SyntheticChildrenFrontEnd
+        {
+        public:
+            NSArrayCodeRunningSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp);
+
+            ~NSArrayCodeRunningSyntheticFrontEnd() override = default;
+
+            size_t
+            CalculateNumChildren() override;
+            
+            lldb::ValueObjectSP
+            GetChildAtIndex(size_t idx) override;
+            
+            bool
+            Update() override;
+            
+            bool
+            MightHaveChildren() override;
+            
+            size_t
+            GetIndexOfChildWithName(const ConstString &name) override;
+        };
     } // namespace formatters
 } // namespace lldb_private
 
@@ -289,7 +312,10 @@ lldb_private::formatters::NSArraySummaryProvider (ValueObject& valobj, Stream& s
             return false;
     }
     else
+    {
+        if (!ExtractValueFromObjCExpression(valobj, "int", "count", value))
             return false;
+    }
     
     std::string prefix,suffix;
     if (Language* language = Language::FindPlugin(options.GetLanguage()))
@@ -714,6 +740,53 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCre
         else
             return (new NSArrayMSyntheticFrontEnd_109(valobj_sp));
     }
-    
-    return nullptr;
+    else
+    {
+        return (new NSArrayCodeRunningSyntheticFrontEnd(valobj_sp));
+    }
+}
+
+lldb_private::formatters::NSArrayCodeRunningSyntheticFrontEnd::NSArrayCodeRunningSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
+SyntheticChildrenFrontEnd(*valobj_sp.get())
+{}
+
+size_t
+lldb_private::formatters::NSArrayCodeRunningSyntheticFrontEnd::CalculateNumChildren ()
+{
+    uint64_t count = 0;
+    if (ExtractValueFromObjCExpression(m_backend, "int", "count", count))
+        return count;
+    return 0;
+}
+
+lldb::ValueObjectSP
+lldb_private::formatters::NSArrayCodeRunningSyntheticFrontEnd::GetChildAtIndex (size_t idx)
+{
+    StreamString idx_name;
+    idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
+    lldb::ValueObjectSP valobj_sp = CallSelectorOnObject(m_backend,"id","objectAtIndex:",idx);
+    if (valobj_sp)
+    {
+        valobj_sp->SetPreferredDisplayLanguage(m_backend.GetPreferredDisplayLanguage());
+        valobj_sp->SetName(ConstString(idx_name.GetData()));
+    }
+    return valobj_sp;
+}
+
+bool
+lldb_private::formatters::NSArrayCodeRunningSyntheticFrontEnd::Update()
+{
+    return false;
+}
+
+bool
+lldb_private::formatters::NSArrayCodeRunningSyntheticFrontEnd::MightHaveChildren ()
+{
+    return true;
+}
+
+size_t
+lldb_private::formatters::NSArrayCodeRunningSyntheticFrontEnd::GetIndexOfChildWithName (const ConstString &name)
+{
+    return 0;
 }

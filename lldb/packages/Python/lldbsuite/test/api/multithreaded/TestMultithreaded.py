@@ -6,9 +6,8 @@ from __future__ import print_function
 
 
 import os, re
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 import subprocess
 import unittest2
 
@@ -54,7 +53,7 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfNoSBHeaders
     @skipIfWindows # clang-cl does not support throw or catch (llvm.org/pr24538)
     @expectedFlakeyFreeBSD
-    @expectedFailureAll(oslist=["linux"])
+    @expectedFailureLinux
     def test_sb_api_listener_resume(self):
         """ Test that a process can be resumed from a non-main thread. """
         self.build_and_test('driver.cpp listener_test.cpp test_listener_resume.cpp',

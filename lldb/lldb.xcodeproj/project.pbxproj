@@ -114,7 +114,6 @@
 		236124A41986B4E2004EFC37 /* IOObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A21986B4E2004EFC37 /* IOObject.cpp */; };
 		236124A51986B4E2004EFC37 /* Socket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A31986B4E2004EFC37 /* Socket.cpp */; };
 		2377C2F819E613C100737875 /* PipePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2377C2F719E613C100737875 /* PipePosix.cpp */; };
-		239481861C59EBDD00DF7168 /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 239481851C59EBDD00DF7168 /* libncurses.dylib */; };
 		239504DE1BDD453200963CEA /* SocketAddressTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */; };
 		239504DF1BDD453200963CEA /* SocketTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93A1BDD332400BA9A93 /* SocketTest.cpp */; };
 		239504E01BDD453200963CEA /* SymbolsTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */; };
@@ -810,7 +809,6 @@
 		942F52261BC44E780004C182 /* NSIndexPath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B9E50C1BBEFCF6000A48DC /* NSIndexPath.cpp */; };
 		942F52271BC44E780004C182 /* NSSet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B9E50D1BBEFCF6000A48DC /* NSSet.cpp */; };
 		942F52281BC44E780004C182 /* NSString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B9E5141BBF3199000A48DC /* NSString.cpp */; };
-		9428BC2C1C6E64E4002A24D7 /* LibCxxAtomic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9428BC291C6E64DC002A24D7 /* LibCxxAtomic.cpp */; };
 		94380B8219940B0A00BFE4A8 /* StringLexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94380B8119940B0A00BFE4A8 /* StringLexer.cpp */; };
 		9438287719F5A40B00134CD1 /* SwiftMangledNameVisitor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9438287619F5A40B00134CD1 /* SwiftMangledNameVisitor.cpp */; };
 		943BDEFE1AA7B2F800789CE8 /* LLDBAssert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 943BDEFD1AA7B2F800789CE8 /* LLDBAssert.cpp */; };
@@ -1269,7 +1267,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
+				AF90106515AB7D3600FF120D /* lldb.1 in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -1343,7 +1341,6 @@
 		236124A71986B50E004EFC37 /* Socket.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Socket.h; path = include/lldb/Host/Socket.h; sourceTree = "<group>"; };
 		2377C2F719E613C100737875 /* PipePosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PipePosix.cpp; sourceTree = "<group>"; };
 		237C577A19AF9D9F00213D59 /* HostInfoLinux.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = HostInfoLinux.h; path = include/lldb/Host/linux/HostInfoLinux.h; sourceTree = SOURCE_ROOT; };
-		239481851C59EBDD00DF7168 /* libncurses.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libncurses.dylib; path = ../../../../../usr/lib/libncurses.dylib; sourceTree = "<group>"; };
 		239504C21BDD3FD600963CEA /* gtest_common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = gtest_common.h; sourceTree = "<group>"; };
 		239504C61BDD3FF300963CEA /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		239504D41BDD451400963CEA /* lldb-gtest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -2684,8 +2681,6 @@
 		942B8F7A1AC482E5008C2EEF /* RegisterContextPOSIX_arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RegisterContextPOSIX_arm64.h; path = Utility/RegisterContextPOSIX_arm64.h; sourceTree = "<group>"; };
 		942B8F7C1AC48372008C2EEF /* RegisterContextPOSIXCore_arm64.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextPOSIXCore_arm64.cpp; sourceTree = "<group>"; };
 		942B8F7D1AC48372008C2EEF /* RegisterContextPOSIXCore_arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RegisterContextPOSIXCore_arm64.h; sourceTree = "<group>"; };
-		9428BC291C6E64DC002A24D7 /* LibCxxAtomic.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxAtomic.cpp; path = Language/CPlusPlus/LibCxxAtomic.cpp; sourceTree = "<group>"; };
-		9428BC2A1C6E64DC002A24D7 /* LibCxxAtomic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LibCxxAtomic.h; path = Language/CPlusPlus/LibCxxAtomic.h; sourceTree = "<group>"; };
 		94380B8019940B0300BFE4A8 /* StringLexer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = StringLexer.h; path = include/lldb/Utility/StringLexer.h; sourceTree = "<group>"; };
 		94380B8119940B0A00BFE4A8 /* StringLexer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringLexer.cpp; path = source/Utility/StringLexer.cpp; sourceTree = "<group>"; };
 		9438287519F5A3F000134CD1 /* SwiftMangledNameVisitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftMangledNameVisitor.h; path = include/lldb/Symbol/SwiftMangledNameVisitor.h; sourceTree = "<group>"; };
@@ -3137,7 +3132,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				239481861C59EBDD00DF7168 /* libncurses.dylib in Frameworks */,
 				2669424D1A6DC32B0063BE93 /* LLDB.framework in Frameworks */,
 				49A9B8C21BB4AF1C006D7743 /* libncurses.dylib in Frameworks */,
 			);
@@ -3194,7 +3188,6 @@
 		08FB7794FE84155DC02AAC07 /* lldb */ = {
 			isa = PBXGroup;
 			children = (
-				239481851C59EBDD00DF7168 /* libncurses.dylib */,
 				2326CF4E1BDD687800A5CEAC /* libpanel.dylib */,
 				2326CF4C1BDD684B00A5CEAC /* libedit.dylib */,
 				2326CF4A1BDD681800A5CEAC /* libz.dylib */,
@@ -5820,8 +5813,6 @@
 				945261B31B9A11E800BF138D /* CxxStringTypes.cpp */,
 				945261B61B9A11E800BF138D /* LibCxx.h */,
 				945261B51B9A11E800BF138D /* LibCxx.cpp */,
-				9428BC2A1C6E64DC002A24D7 /* LibCxxAtomic.h */,
-				9428BC291C6E64DC002A24D7 /* LibCxxAtomic.cpp */,
 				945261B71B9A11E800BF138D /* LibCxxInitializerList.cpp */,
 				945261B81B9A11E800BF138D /* LibCxxList.cpp */,
 				945261B91B9A11E800BF138D /* LibCxxMap.cpp */,
@@ -6264,7 +6255,7 @@
 /* Begin PBXLegacyTarget section */
 		2387551E1C24974600CCE8C3 /* lldb-python-test-suite */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb --results-formatter lldbsuite.test.xunit_formatter.XunitFormatter --results-file $(BUILD_DIR)/test-results.xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
+			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb --results-formatter lldbsuite.test.xunit_formatter.XunitFormatter --results-file $(BUILD_DIR)/test-results.xml --rerun-all-issues --env TERM=vt100";
 			buildConfigurationList = 238755241C24974600CCE8C3 /* Build configuration list for PBXLegacyTarget "lldb-python-test-suite" */;
 			buildPhases = (
 			);
@@ -7128,7 +7119,6 @@
 				3FDFE53519A29327009756A7 /* HostInfoBase.cpp in Sources */,
 				26474CBE18D0CB2D0073DEBA /* RegisterContextMach_i386.cpp in Sources */,
 				2689008613353E2200698AC0 /* Options.cpp in Sources */,
-				9428BC2C1C6E64E4002A24D7 /* LibCxxAtomic.cpp in Sources */,
 				2689008713353E2200698AC0 /* ScriptInterpreter.cpp in Sources */,
 				260A63191861009E00FECF8E /* IOHandler.cpp in Sources */,
 				2689008D13353E4200698AC0 /* DynamicLoaderMacOSXDYLD.cpp in Sources */,
@@ -7848,6 +7838,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
+					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -7855,7 +7846,6 @@
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
-					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
@@ -7968,6 +7958,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
+					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -7975,7 +7966,6 @@
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
-					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
@@ -8149,6 +8139,7 @@
 				OBJROOT = "$(SYMROOT)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
+					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -11978,6 +11969,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = "CustomSwift-Debug";
@@ -12070,11 +12062,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-Wparentheses",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*]" = (
-					"$(inherited)",
-					"-Wparentheses",
 				);
 				OTHER_LDFLAGS = "";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
@@ -12219,10 +12206,12 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
+					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
@@ -12535,6 +12524,7 @@
 				OBJROOT = "$(SYMROOT)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
+					"-flimit-debug-info",
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
@@ -12542,7 +12532,6 @@
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
-					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = "";
 				SDKROOT = macosx.internal;
@@ -12561,6 +12550,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = "CustomSwift-Release";
@@ -12797,10 +12787,12 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
+					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
@@ -12957,10 +12949,12 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
+					"-flimit-debug-info",
 					"-Wparentheses",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";

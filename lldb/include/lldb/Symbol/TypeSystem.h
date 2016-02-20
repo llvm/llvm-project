@@ -148,9 +148,7 @@ public:
     //----------------------------------------------------------------------
     
     virtual std::vector<CompilerDecl>
-    DeclContextFindDeclByName (void *opaque_decl_ctx,
-                               ConstString name,
-                               const bool ignore_imported_decls);
+    DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name);
 
     virtual bool
     DeclContextIsStructUnionOrClass (void *opaque_decl_ctx) = 0;

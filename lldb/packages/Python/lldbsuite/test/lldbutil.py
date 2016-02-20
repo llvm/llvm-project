@@ -84,7 +84,7 @@ def int_to_bytearray(val, bytesize):
         return None
 
     packed = struct.pack(fmt, val)
-    return bytearray(packed)
+    return bytearray(list(map(ord, packed)))
 
 def bytearray_to_int(bytes, bytesize):
     """Utility function to convert a bytearray into an integer.
@@ -108,7 +108,7 @@ def bytearray_to_int(bytes, bytesize):
     else:
         return None
 
-    unpacked = struct.unpack_from(fmt, bytes)
+    unpacked = struct.unpack(fmt, str(bytes))
     return unpacked[0]
 
 
@@ -548,7 +548,7 @@ def get_stopped_thread(process, reason):
         return None
     return threads[0]
 
-def get_threads_stopped_at_breakpoint_id(process, bpid):
+def get_threads_stopped_at_breakpoint (process, bkpt):
     """ For a stopped process returns the thread stopped at the breakpoint passed in bkpt"""
     stopped_threads = []
     threads = []
@@ -561,25 +561,10 @@ def get_threads_stopped_at_breakpoint_id(process, bpid):
     for thread in stopped_threads:
         # Make sure we've hit our breakpoint...
         break_id = thread.GetStopReasonDataAtIndex (0)
-        if break_id == bpid:
+        if break_id == bkpt.GetID():
             threads.append(thread)
 
     return threads
-
-def get_threads_stopped_at_breakpoint (process, bkpt):
-    return get_threads_stopped_at_breakpoint_id(process, bkpt.GetID())
-
-def get_one_thread_stopped_at_breakpoint_id(process, bpid, require_exactly_one = True):
-    threads = get_threads_stopped_at_breakpoint_id(process, bpid)
-    if len(threads) == 0:
-        return None
-    if require_exactly_one and len(threads) != 1:
-        return None
-
-    return threads[0]
-
-def get_one_thread_stopped_at_breakpoint(process, bkpt, require_exactly_one = True):
-    return get_one_thread_stopped_at_breakpoint_id(process, bkpt.GetID(), require_exactly_one)
 
 def is_thread_crashed (test, thread):
     """In the test suite we dereference a null pointer to simulate a crash. The way this is

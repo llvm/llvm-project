@@ -2,15 +2,14 @@
 Tests that C strings work as expected in expressions
 """
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class CStringsTestCase(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test_with_run_command(self):
         """Tests that C strings work as expected in expressions"""
         self.build()

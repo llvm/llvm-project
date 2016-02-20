@@ -8,9 +8,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class StdMapDataFormatterTestCase(TestBase):
 
@@ -22,7 +21,7 @@ class StdMapDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @expectedFailureAll(compiler="icc", bugnumber="llvm.org/pr15301 LLDB prints incorrect sizes of STL containers")
+    @expectedFailureIcc   # llvm.org/pr15301: LLDB prints incorrect size of libstdc++ containers
     @skipIfWindows # libstdcpp not ported to Windows
     @skipIfFreeBSD
     def test_with_run_command(self):

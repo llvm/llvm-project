@@ -10,9 +10,8 @@ from __future__ import print_function
 import unittest2
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 # this test case fails because of rdar://12991846
 # the expression parser does not deal correctly with Unicode expressions
@@ -27,26 +26,26 @@ from lldbsuite.test import lldbutil
 #  [5] = e\0\0\0
 #}
 
-class UnicodeLiteralsTestCase(TestBase):
+class Rdar12991846TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @unittest2.expectedFailure("rdar://18684408")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr1(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
         self.rdar12991846(expr=1)
 
     @unittest2.expectedFailure("rdar://18684408")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr2(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
         self.rdar12991846(expr=2)
 
     @unittest2.expectedFailure("rdar://18684408")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr3(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()

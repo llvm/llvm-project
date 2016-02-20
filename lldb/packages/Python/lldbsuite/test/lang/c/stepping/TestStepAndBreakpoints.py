@@ -6,9 +6,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class TestCStepping(TestBase):
 
@@ -23,10 +22,10 @@ class TestCStepping(TestBase):
         # Find the line numbers that we will step to in main:
         self.main_source = "main.c"
 
-    @add_test_categories(['pyapi'])
     @expectedFailureFreeBSD('llvm.org/pr17932')
-    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr14437")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24777")
+    @expectedFailureLinux # llvm.org/pr14437
+    @expectedFailureWindows("llvm.org/pr24777")
+    @add_test_categories(['pyapi'])
     def test_and_python_api(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
         self.build()
@@ -156,14 +155,9 @@ class TestCStepping(TestBase):
         current_file = frame.GetLineEntry().GetFileSpec()
 
         break_in_b.SetEnabled(True)
-        options = lldb.SBExpressionOptions()
-        options.SetIgnoreBreakpoints(False)
-        options.SetFetchDynamicValue(False)
-        options.SetUnwindOnError(False)
-        frame.EvaluateExpression ("b (4)", options)
+        frame.EvaluateExpression ("b (4)", lldb.eNoDynamicValues, False)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint (process, break_in_b)
-
         if len(threads) != 1:
             self.fail ("Failed to stop at breakpoint in b when calling b.")
         thread = threads[0]

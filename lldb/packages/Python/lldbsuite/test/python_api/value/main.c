@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include <stdio.h>
-#include <stdint.h>
 
 // This simple program is to test the lldb Python API SBValue.GetChildAtIndex().
 
@@ -39,9 +38,6 @@ struct MyStruct
 
 int main (int argc, char const *argv[])
 {
-    uint32_t uinthex = 0xE0A35F10;
-    int32_t  sinthex = 0xE0A35F10;
-
     int i;
     MyInt a = 12345;
     struct MyStruct s = { 11, 22 };

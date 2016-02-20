@@ -8,9 +8,7 @@ from __future__ import print_function
 
 import os, time, re
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class SettingsCommandTestCase(TestBase):
 
@@ -176,7 +174,7 @@ class SettingsCommandTestCase(TestBase):
         self.expect("settings show auto-confirm", SETTING_MSG("auto-confirm"),
             startstr = "auto-confirm (boolean) = false")
 
-    @skipIf(archs=no_match(['x86_64', 'i386', 'i686']))
+    @skipUnlessArch(['x86_64', 'i386', 'i686'])
     def test_disassembler_settings(self):
         """Test that user options for the disassembler take effect."""
         self.build()
@@ -210,6 +208,7 @@ class SettingsCommandTestCase(TestBase):
         self.expect("disassemble -n numberfn",
             substrs = ["5ah"])
 
+    @expectedFailureWindows("llvm.org/pr24579")
     def test_run_args_and_env_vars(self):
         """Test that run-args and env-vars are passed to the launched process."""
         self.build()

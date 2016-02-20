@@ -8,15 +8,13 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class NestedPersistentTypesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test_persistent_types(self):
         """Test that nested persistent types work."""
         self.build()

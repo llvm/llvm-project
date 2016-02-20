@@ -597,7 +597,7 @@ StackFrame::GetInScopeVariableList (bool get_file_globals)
                                      var_list_sp.get());
     }
                      
-    if (m_sc.comp_unit && get_file_globals)
+    if (m_sc.comp_unit)
     {
         VariableListSP global_variable_list_sp (m_sc.comp_unit->GetVariableList(true));
         if (global_variable_list_sp)
@@ -756,7 +756,7 @@ StackFrame::GetValueForVariableExpressionPath (const char *var_expr_cstr,
                             }
                         }
                         var_path.erase (0, 1); // Remove the '-'
-                        LLVM_FALLTHROUGH;
+                        // Fall through
                     case '.':
                         {
                             const bool expr_is_ptr = var_path[0] == '>';
@@ -1582,12 +1582,12 @@ StackFrame::GetStatus (Stream& strm,
             case Debugger::eStopDisassemblyTypeNoDebugInfo:
                 if (have_debuginfo)
                     break;
-                LLVM_FALLTHROUGH;
+                // Fall through to next case
 
             case Debugger::eStopDisassemblyTypeNoSource:
                 if (have_source)
                     break;
-                LLVM_FALLTHROUGH;
+                // Fall through to next case
 
             case Debugger::eStopDisassemblyTypeAlways:
                 if (target)

@@ -3,9 +3,8 @@
 import os, time
 import unittest2
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class TestGoUserExpression(TestBase):
 

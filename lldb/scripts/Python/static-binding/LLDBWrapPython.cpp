@@ -7767,16 +7767,14 @@ SWIGINTERN PyObject *_wrap_SBBreakpoint_SetThreadID(PyObject *SWIGUNUSEDPARM(sel
   }
   arg1 = reinterpret_cast< lldb::SBBreakpoint * >(argp1);
   {
-    using namespace lldb_private;
-    if (PythonInteger::Check(obj1))
-    {
-      PythonInteger py_int(PyRefType::Borrowed, obj1);
-      arg2 = static_cast<lldb::tid_t>(py_int.GetInteger());
-    }
+    if (PyInt_Check(obj1))
+    arg2 = PyInt_AsLong(obj1);
+    else if (PyLong_Check(obj1))
+    arg2 = PyLong_AsLongLong(obj1);
     else
     {
       PyErr_SetString(PyExc_ValueError, "Expecting an integer");
-      return nullptr;
+      return NULL;
     }
   }
   {
@@ -9061,16 +9059,14 @@ SWIGINTERN PyObject *_wrap_SBBreakpointLocation_SetThreadID(PyObject *SWIGUNUSED
   }
   arg1 = reinterpret_cast< lldb::SBBreakpointLocation * >(argp1);
   {
-    using namespace lldb_private;
-    if (PythonInteger::Check(obj1))
-    {
-      PythonInteger py_int(PyRefType::Borrowed, obj1);
-      arg2 = static_cast<lldb::tid_t>(py_int.GetInteger());
-    }
+    if (PyInt_Check(obj1))
+    arg2 = PyInt_AsLong(obj1);
+    else if (PyLong_Check(obj1))
+    arg2 = PyLong_AsLongLong(obj1);
     else
     {
       PyErr_SetString(PyExc_ValueError, "Expecting an integer");
-      return nullptr;
+      return NULL;
     }
   }
   {
@@ -15533,8 +15529,9 @@ SWIGINTERN PyObject *_wrap_SBData_ReadRawData(PyObject *SWIGUNUSEDPARM(self), Py
       resultobj = Py_None;
       Py_INCREF(resultobj);
     } else {
-      lldb_private::PythonBytes bytes(static_cast<const uint8_t*>(arg4), result);
-      resultobj = bytes.release();
+      llvm::StringRef ref(static_cast<const char*>(arg4), result);
+      lldb_private::PythonString string(ref);
+      resultobj = string.release();
     }
     free(arg4);
   }
@@ -15581,24 +15578,16 @@ SWIGINTERN PyObject *_wrap_SBData_SetData(PyObject *SWIGUNUSEDPARM(self), PyObje
   }
   arg2 = reinterpret_cast< lldb::SBError * >(argp2);
   {
-    using namespace lldb_private;
-    if (PythonString::Check(obj2)) {
-      PythonString str(PyRefType::Borrowed, obj2);
-      arg3 = (void*)str.GetString().data();
-      arg4 = str.GetSize();
+    if (PyString_Check(obj2)) {
+      arg3 = (void *) PyString_AsString(obj2);
+      arg4 = PyString_Size(obj2);
     }
-    else if(PythonByteArray::Check(obj2)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, obj2);
-      arg3 = (void*)bytearray.GetBytes().data();
-      arg4 = bytearray.GetSize();
-    }
-    else if (PythonBytes::Check(obj2)) {
-      PythonBytes bytes(PyRefType::Borrowed, obj2);
-      arg3 = (void*)bytes.GetBytes().data();
-      arg4 = bytes.GetSize();
+    else if(PyByteArray_Check(obj2)) {
+      arg3 = (void *) PyByteArray_AsString(obj2);
+      arg4 = PyByteArray_Size(obj2);
     }
     else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
+      PyErr_SetString(PyExc_ValueError, "Expecting a string");
       return NULL;
     }
   }
@@ -18613,29 +18602,30 @@ SWIGINTERN PyObject *_wrap_SBDebugger_EnableLog(PyObject *SWIGUNUSEDPARM(self), 
   }
   arg2 = reinterpret_cast< char * >(buf2);
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj2)) {
-      PythonList list(PyRefType::Borrowed, obj2);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj2);
+      int size = py_list.GetSize();
+      
       arg3 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg3);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg3[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg3[i] = 0;
+      
+      arg3[size] = 0;
     } else if (obj2 == Py_None) {
-      arg3 =  NULL;
+      arg3 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   {
@@ -18719,24 +18709,16 @@ SWIGINTERN PyObject *_wrap_SBDebugger_DispatchInput(PyObject *SWIGUNUSEDPARM(sel
   }
   arg1 = reinterpret_cast< lldb::SBDebugger * >(argp1);
   {
-    using namespace lldb_private;
-    if (PythonString::Check(obj1)) {
-      PythonString str(PyRefType::Borrowed, obj1);
-      arg2 = (void*)str.GetString().data();
-      arg3 = str.GetSize();
+    if (PyString_Check(obj1)) {
+      arg2 = static_cast<void *>(PyString_AsString(obj1));
+      arg3 = PyString_Size(obj1);
     }
-    else if(PythonByteArray::Check(obj1)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, obj1);
-      arg2 = (void*)bytearray.GetBytes().data();
-      arg3 = bytearray.GetSize();
-    }
-    else if (PythonBytes::Check(obj1)) {
-      PythonBytes bytes(PyRefType::Borrowed, obj1);
-      arg2 = (void*)bytes.GetBytes().data();
-      arg3 = bytes.GetSize();
+    else if(PyByteArray_Check(obj1)) {
+      arg2 = static_cast<void *>(PyByteArray_AsString(obj1));
+      arg3 = PyByteArray_Size(obj1);
     }
     else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
+      PyErr_SetString(PyExc_ValueError, "Expecting a string or byte array");
       return NULL;
     }
   }
@@ -21331,21 +21313,13 @@ SWIGINTERN PyObject *_wrap_new_SBEvent__SWIG_2(PyObject *SWIGUNUSEDPARM(self), P
   } 
   arg1 = static_cast< uint32_t >(val1);
   {
-    using namespace lldb_private;
-    if (PythonString::Check(obj1)) {
-      PythonString str(PyRefType::Borrowed, obj1);
-      arg2 = (char*)str.GetString().data();
-      arg3 = str.GetSize();
+    if (PyString_Check(obj1)) {
+      arg2 = (char *) PyString_AsString(obj1);
+      arg3 = PyString_Size(obj1);
     }
-    else if(PythonByteArray::Check(obj1)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, obj1);
-      arg2 = (char*)bytearray.GetBytes().data();
-      arg3 = bytearray.GetSize();
-    }
-    else if (PythonBytes::Check(obj1)) {
-      PythonBytes bytes(PyRefType::Borrowed, obj1);
-      arg2 = (char*)bytes.GetBytes().data();
-      arg3 = bytes.GetSize();
+    else if(PyByteArray_Check(obj1)) {
+      arg2 = (char *) PyByteArray_AsString(obj1);
+      arg3 = PyByteArray_Size(obj1);
     }
     else {
       PyErr_SetString(PyExc_ValueError, "Expecting a string");
@@ -24363,43 +24337,6 @@ SWIGINTERN PyObject *_wrap_SBFileSpec_GetDescription(PyObject *SWIGUNUSEDPARM(se
   resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_SBFileSpec_AppendPathComponent(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBFileSpec *arg1 = (lldb::SBFileSpec *) 0 ;
-  char *arg2 = (char *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  int res2 ;
-  char *buf2 = 0 ;
-  int alloc2 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OO:SBFileSpec_AppendPathComponent",&obj0,&obj1)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBFileSpec, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBFileSpec_AppendPathComponent" "', argument " "1"" of type '" "lldb::SBFileSpec *""'"); 
-  }
-  arg1 = reinterpret_cast< lldb::SBFileSpec * >(argp1);
-  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
-  if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBFileSpec_AppendPathComponent" "', argument " "2"" of type '" "char const *""'");
-  }
-  arg2 = reinterpret_cast< char * >(buf2);
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    (arg1)->AppendPathComponent((char const *)arg2);
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_Py_Void();
-  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
-  return resultobj;
-fail:
-  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
   return NULL;
 }
 
@@ -27577,23 +27514,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_SBHostOS_GetUserHomeDirectory(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBFileSpec result;
-  
-  if (!PyArg_ParseTuple(args,(char *)":SBHostOS_GetUserHomeDirectory")) SWIG_fail;
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    result = lldb::SBHostOS::GetUserHomeDirectory();
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_NewPointerObj((new lldb::SBFileSpec(static_cast< const lldb::SBFileSpec& >(result))), SWIGTYPE_p_lldb__SBFileSpec, SWIG_POINTER_OWN |  0 );
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_SBHostOS_ThreadCreated(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   char *arg1 = (char *) 0 ;
@@ -28257,32 +28177,6 @@ SWIGINTERN PyObject *_wrap_SBInstruction_DoesBranch(PyObject *SWIGUNUSEDPARM(sel
   {
     SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (bool)(arg1)->DoesBranch();
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_From_bool(static_cast< bool >(result));
-  return resultobj;
-fail:
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_SBInstruction_HasDelaySlot(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBInstruction *arg1 = (lldb::SBInstruction *) 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  PyObject * obj0 = 0 ;
-  bool result;
-  
-  if (!PyArg_ParseTuple(args,(char *)"O:SBInstruction_HasDelaySlot",&obj0)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBInstruction, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBInstruction_HasDelaySlot" "', argument " "1"" of type '" "lldb::SBInstruction *""'"); 
-  }
-  arg1 = reinterpret_cast< lldb::SBInstruction * >(argp1);
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    result = (bool)(arg1)->HasDelaySlot();
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
@@ -29093,29 +28987,30 @@ SWIGINTERN PyObject *_wrap_new_SBLaunchInfo(PyObject *SWIGUNUSEDPARM(self), PyOb
   
   if (!PyArg_ParseTuple(args,(char *)"O:new_SBLaunchInfo",&obj0)) SWIG_fail;
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj0)) {
-      PythonList list(PyRefType::Borrowed, obj0);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj0);
+      int size = py_list.GetSize();
+      
       arg1 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg1);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg1[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg1[i] = 0;
+      
+      arg1[size] = 0;
     } else if (obj0 == Py_None) {
-      arg1 =  NULL;
+      arg1 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   {
@@ -29555,29 +29450,30 @@ SWIGINTERN PyObject *_wrap_SBLaunchInfo_SetArguments(PyObject *SWIGUNUSEDPARM(se
   }
   arg1 = reinterpret_cast< lldb::SBLaunchInfo * >(argp1);
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj1)) {
-      PythonList list(PyRefType::Borrowed, obj1);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj1);
+      int size = py_list.GetSize();
+      
       arg2 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg2);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg2[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg2[i] = 0;
+      
+      arg2[size] = 0;
     } else if (obj1 == Py_None) {
-      arg2 =  NULL;
+      arg2 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   ecode3 = SWIG_AsVal_bool(obj2, &val3);
@@ -29684,29 +29580,30 @@ SWIGINTERN PyObject *_wrap_SBLaunchInfo_SetEnvironmentEntries(PyObject *SWIGUNUS
   }
   arg1 = reinterpret_cast< lldb::SBLaunchInfo * >(argp1);
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj1)) {
-      PythonList list(PyRefType::Borrowed, obj1);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj1);
+      int size = py_list.GetSize();
+      
       arg2 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg2);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg2[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg2[i] = 0;
+      
+      arg2[size] = 0;
     } else if (obj1 == Py_None) {
-      arg2 =  NULL;
+      arg2 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   ecode3 = SWIG_AsVal_bool(obj2, &val3);
@@ -37011,21 +36908,13 @@ SWIGINTERN PyObject *_wrap_SBProcess_PutSTDIN(PyObject *SWIGUNUSEDPARM(self), Py
   }
   arg1 = reinterpret_cast< lldb::SBProcess * >(argp1);
   {
-    using namespace lldb_private;
-    if (PythonString::Check(obj1)) {
-      PythonString str(PyRefType::Borrowed, obj1);
-      arg2 = (char*)str.GetString().data();
-      arg3 = str.GetSize();
+    if (PyString_Check(obj1)) {
+      arg2 = (char *) PyString_AsString(obj1);
+      arg3 = PyString_Size(obj1);
     }
-    else if(PythonByteArray::Check(obj1)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, obj1);
-      arg2 = (char*)bytearray.GetBytes().data();
-      arg3 = bytearray.GetSize();
-    }
-    else if (PythonBytes::Check(obj1)) {
-      PythonBytes bytes(PyRefType::Borrowed, obj1);
-      arg2 = (char*)bytes.GetBytes().data();
-      arg3 = bytes.GetSize();
+    else if(PyByteArray_Check(obj1)) {
+      arg2 = (char *) PyByteArray_AsString(obj1);
+      arg3 = PyByteArray_Size(obj1);
     }
     else {
       PyErr_SetString(PyExc_ValueError, "Expecting a string");
@@ -37421,55 +37310,57 @@ SWIGINTERN PyObject *_wrap_SBProcess_RemoteLaunch(PyObject *SWIGUNUSEDPARM(self)
   }
   arg1 = reinterpret_cast< lldb::SBProcess * >(argp1);
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj1)) {
-      PythonList list(PyRefType::Borrowed, obj1);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj1);
+      int size = py_list.GetSize();
+      
       arg2 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg2);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg2[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg2[i] = 0;
+      
+      arg2[size] = 0;
     } else if (obj1 == Py_None) {
-      arg2 =  NULL;
+      arg2 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj2)) {
-      PythonList list(PyRefType::Borrowed, obj2);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj2);
+      int size = py_list.GetSize();
+      
       arg3 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg3);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg3[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg3[i] = 0;
+      
+      arg3[size] = 0;
     } else if (obj2 == Py_None) {
-      arg3 =  NULL;
+      arg3 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   res4 = SWIG_AsCharPtrAndSize(obj3, &buf4, NULL, &alloc4);
@@ -37620,16 +37511,14 @@ SWIGINTERN PyObject *_wrap_SBProcess_GetThreadByID(PyObject *SWIGUNUSEDPARM(self
   }
   arg1 = reinterpret_cast< lldb::SBProcess * >(argp1);
   {
-    using namespace lldb_private;
-    if (PythonInteger::Check(obj1))
-    {
-      PythonInteger py_int(PyRefType::Borrowed, obj1);
-      arg2 = static_cast<lldb::tid_t>(py_int.GetInteger());
-    }
+    if (PyInt_Check(obj1))
+    arg2 = PyInt_AsLong(obj1);
+    else if (PyLong_Check(obj1))
+    arg2 = PyLong_AsLongLong(obj1);
     else
     {
       PyErr_SetString(PyExc_ValueError, "Expecting an integer");
-      return nullptr;
+      return NULL;
     }
   }
   {
@@ -37726,16 +37615,14 @@ SWIGINTERN PyObject *_wrap_SBProcess_CreateOSPluginThread(PyObject *SWIGUNUSEDPA
   }
   arg1 = reinterpret_cast< lldb::SBProcess * >(argp1);
   {
-    using namespace lldb_private;
-    if (PythonInteger::Check(obj1))
-    {
-      PythonInteger py_int(PyRefType::Borrowed, obj1);
-      arg2 = static_cast<lldb::tid_t>(py_int.GetInteger());
-    }
+    if (PyInt_Check(obj1))
+    arg2 = PyInt_AsLong(obj1);
+    else if (PyLong_Check(obj1))
+    arg2 = PyLong_AsLongLong(obj1);
     else
     {
       PyErr_SetString(PyExc_ValueError, "Expecting an integer");
-      return nullptr;
+      return NULL;
     }
   }
   ecode3 = SWIG_AsVal_unsigned_SS_long_SS_long(obj2, &val3);
@@ -37810,16 +37697,14 @@ SWIGINTERN PyObject *_wrap_SBProcess_SetSelectedThreadByID(PyObject *SWIGUNUSEDP
   }
   arg1 = reinterpret_cast< lldb::SBProcess * >(argp1);
   {
-    using namespace lldb_private;
-    if (PythonInteger::Check(obj1))
-    {
-      PythonInteger py_int(PyRefType::Borrowed, obj1);
-      arg2 = static_cast<lldb::tid_t>(py_int.GetInteger());
-    }
+    if (PyInt_Check(obj1))
+    arg2 = PyInt_AsLong(obj1);
+    else if (PyLong_Check(obj1))
+    arg2 = PyLong_AsLongLong(obj1);
     else
     {
       PyErr_SetString(PyExc_ValueError, "Expecting an integer");
-      return nullptr;
+      return NULL;
     }
   }
   {
@@ -38472,8 +38357,9 @@ SWIGINTERN PyObject *_wrap_SBProcess_ReadMemory(PyObject *SWIGUNUSEDPARM(self), 
       resultobj = Py_None;
       Py_INCREF(resultobj);
     } else {
-      lldb_private::PythonBytes bytes(static_cast<const uint8_t*>(arg3), result);
-      resultobj = bytes.release();
+      llvm::StringRef ref(static_cast<const char*>(arg3), result);
+      lldb_private::PythonString string(ref);
+      resultobj = string.release();
     }
     free(arg3);
   }
@@ -38514,24 +38400,16 @@ SWIGINTERN PyObject *_wrap_SBProcess_WriteMemory(PyObject *SWIGUNUSEDPARM(self),
   } 
   arg2 = static_cast< lldb::addr_t >(val2);
   {
-    using namespace lldb_private;
-    if (PythonString::Check(obj2)) {
-      PythonString str(PyRefType::Borrowed, obj2);
-      arg3 = (void*)str.GetString().data();
-      arg4 = str.GetSize();
+    if (PyString_Check(obj2)) {
+      arg3 = (void *) PyString_AsString(obj2);
+      arg4 = PyString_Size(obj2);
     }
-    else if(PythonByteArray::Check(obj2)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, obj2);
-      arg3 = (void*)bytearray.GetBytes().data();
-      arg4 = bytearray.GetSize();
-    }
-    else if (PythonBytes::Check(obj2)) {
-      PythonBytes bytes(PyRefType::Borrowed, obj2);
-      arg3 = (void*)bytes.GetBytes().data();
-      arg4 = bytes.GetSize();
+    else if(PyByteArray_Check(obj2)) {
+      arg3 = (void *) PyByteArray_AsString(obj2);
+      arg4 = PyByteArray_Size(obj2);
     }
     else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
+      PyErr_SetString(PyExc_ValueError, "Expecting a string");
       return NULL;
     }
   }
@@ -38586,16 +38464,19 @@ SWIGINTERN PyObject *_wrap_SBProcess_ReadCStringFromMemory(PyObject *SWIGUNUSEDP
   } 
   arg2 = static_cast< lldb::addr_t >(val2);
   {
-    if (!PyInt_Check(obj2)) {
-      PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+    if (PyInt_Check(obj2)) {
+      arg4 = PyInt_AsLong(obj2);
+    } else if (PyLong_Check(obj2)) {
+      arg4 = PyLong_AsLong(obj2);
+    } else {
+      PyErr_SetString(PyExc_ValueError, "Expecting an integer or long object");
       return NULL;
     }
-    arg4 = PyInt_AsLong(obj2);
     if (arg4 <= 0) {
       PyErr_SetString(PyExc_ValueError, "Positive integer expected");
       return NULL;
     }
-    arg3 = (char *) malloc(arg4);
+    arg3 = (void *) malloc(arg4);
   }
   res5 = SWIG_ConvertPtr(obj3, &argp5, SWIGTYPE_p_lldb__SBError,  0 );
   if (!SWIG_IsOK(res5)) {
@@ -41655,29 +41536,30 @@ SWIGINTERN PyObject *_wrap_SBStringList_AppendList__SWIG_0(PyObject *SWIGUNUSEDP
   }
   arg1 = reinterpret_cast< lldb::SBStringList * >(argp1);
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj1)) {
-      PythonList list(PyRefType::Borrowed, obj1);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj1);
+      int size = py_list.GetSize();
+      
       arg2 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg2);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg2[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg2[i] = 0;
+      
+      arg2[size] = 0;
     } else if (obj1 == Py_None) {
-      arg2 =  NULL;
+      arg2 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   ecode3 = SWIG_AsVal_int(obj2, &val3);
@@ -41772,14 +41654,12 @@ SWIGINTERN PyObject *_wrap_SBStringList_AppendList(PyObject *self, PyObject *arg
       {
         /* Check if is a list  */
         _v = 1;
-        using namespace lldb_private;
-        if (PythonList::Check(argv[1])) {
-          PythonList list(PyRefType::Borrowed, argv[1]);
-          int size = list.GetSize();
+        if (PyList_Check(argv[1])) {
+          int size = PyList_Size(argv[1]);
           int i = 0;
           for (i = 0; i < size; i++) {
-            PythonString s = list.GetItemAtIndex(i).AsType<PythonString>();
-            if (!s.IsAllocated()) {
+            PyObject *o = PyList_GetItem(argv[1],i);
+            if (!PyString_Check(o)) {
               _v = 0; 
             }
           }
@@ -44035,55 +43915,57 @@ SWIGINTERN PyObject *_wrap_SBTarget_Launch__SWIG_0(PyObject *SWIGUNUSEDPARM(self
   }
   arg2 = reinterpret_cast< lldb::SBListener * >(argp2);
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj2)) {
-      PythonList list(PyRefType::Borrowed, obj2);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj2);
+      int size = py_list.GetSize();
+      
       arg3 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg3);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg3[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg3[i] = 0;
+      
+      arg3[size] = 0;
     } else if (obj2 == Py_None) {
-      arg3 =  NULL;
+      arg3 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj3)) {
-      PythonList list(PyRefType::Borrowed, obj3);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj3);
+      int size = py_list.GetSize();
+      
       arg4 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg4);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg4[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg4[i] = 0;
+      
+      arg4[size] = 0;
     } else if (obj3 == Py_None) {
-      arg4 =  NULL;
+      arg4 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   res5 = SWIG_AsCharPtrAndSize(obj4, &buf5, NULL, &alloc5);
@@ -44180,55 +44062,57 @@ SWIGINTERN PyObject *_wrap_SBTarget_LaunchSimple(PyObject *SWIGUNUSEDPARM(self),
   }
   arg1 = reinterpret_cast< lldb::SBTarget * >(argp1);
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj1)) {
-      PythonList list(PyRefType::Borrowed, obj1);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj1);
+      int size = py_list.GetSize();
+      
       arg2 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg2);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg2[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg2[i] = 0;
+      
+      arg2[size] = 0;
     } else if (obj1 == Py_None) {
-      arg2 =  NULL;
+      arg2 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   {
-    using namespace lldb_private;
     /* Check if is a list  */
+    using namespace lldb_private;
     if (PythonList::Check(obj2)) {
-      PythonList list(PyRefType::Borrowed, obj2);
-      int size = list.GetSize();
-      int i = 0;
+      PythonList py_list(PyRefType::Borrowed, obj2);
+      int size = py_list.GetSize();
+      
       arg3 = (char**)malloc((size+1)*sizeof(char*));
-      for (i = 0; i < size; i++) {
-        PythonString py_str = list.GetItemAtIndex(i).AsType<PythonString>();
-        if (!py_str.IsAllocated()) {
+      for (int i = 0; i < size; i++) {
+        PythonObject o = py_list.GetItemAtIndex(i);
+        if (!PythonString::Check(o.get())) {
           PyErr_SetString(PyExc_TypeError,"list must contain strings");
           free(arg3);
           return nullptr;
         }
-        
+        auto py_str = o.AsType<PythonString>();
         arg3[i] = const_cast<char*>(py_str.GetString().data());
       }
-      arg3[i] = 0;
+      
+      arg3[size] = 0;
     } else if (obj2 == Py_None) {
-      arg3 =  NULL;
+      arg3 = nullptr;
     } else {
       PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
+      return nullptr;
     }
   }
   res4 = SWIG_AsCharPtrAndSize(obj3, &buf4, NULL, &alloc4);
@@ -44354,14 +44238,12 @@ SWIGINTERN PyObject *_wrap_SBTarget_Launch(PyObject *self, PyObject *args) {
         {
           /* Check if is a list  */
           _v = 1;
-          using namespace lldb_private;
-          if (PythonList::Check(argv[2])) {
-            PythonList list(PyRefType::Borrowed, argv[2]);
-            int size = list.GetSize();
+          if (PyList_Check(argv[2])) {
+            int size = PyList_Size(argv[2]);
             int i = 0;
             for (i = 0; i < size; i++) {
-              PythonString s = list.GetItemAtIndex(i).AsType<PythonString>();
-              if (!s.IsAllocated()) {
+              PyObject *o = PyList_GetItem(argv[2],i);
+              if (!PyString_Check(o)) {
                 _v = 0; 
               }
             }
@@ -44375,14 +44257,12 @@ SWIGINTERN PyObject *_wrap_SBTarget_Launch(PyObject *self, PyObject *args) {
           {
             /* Check if is a list  */
             _v = 1;
-            using namespace lldb_private;
-            if (PythonList::Check(argv[3])) {
-              PythonList list(PyRefType::Borrowed, argv[3]);
-              int size = list.GetSize();
+            if (PyList_Check(argv[3])) {
+              int size = PyList_Size(argv[3]);
               int i = 0;
               for (i = 0; i < size; i++) {
-                PythonString s = list.GetItemAtIndex(i).AsType<PythonString>();
-                if (!s.IsAllocated()) {
+                PyObject *o = PyList_GetItem(argv[3],i);
+                if (!PyString_Check(o)) {
                   _v = 0; 
                 }
               }
@@ -46349,8 +46229,9 @@ SWIGINTERN PyObject *_wrap_SBTarget_ReadMemory(PyObject *SWIGUNUSEDPARM(self), P
       resultobj = Py_None;
       Py_INCREF(resultobj);
     } else {
-      lldb_private::PythonBytes bytes(static_cast<const uint8_t*>(arg3), result);
-      resultobj = bytes.release();
+      llvm::StringRef ref(static_cast<const char*>(arg3), result);
+      lldb_private::PythonString string(ref);
+      resultobj = string.release();
     }
     free(arg3);
   }
@@ -48806,24 +48687,16 @@ SWIGINTERN PyObject *_wrap_SBTarget_GetInstructions(PyObject *SWIGUNUSEDPARM(sel
     }
   }
   {
-    using namespace lldb_private;
-    if (PythonString::Check(obj2)) {
-      PythonString str(PyRefType::Borrowed, obj2);
-      arg3 = (void*)str.GetString().data();
-      arg4 = str.GetSize();
+    if (PyString_Check(obj2)) {
+      arg3 = (void *) PyString_AsString(obj2);
+      arg4 = PyString_Size(obj2);
     }
-    else if(PythonByteArray::Check(obj2)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, obj2);
-      arg3 = (void*)bytearray.GetBytes().data();
-      arg4 = bytearray.GetSize();
-    }
-    else if (PythonBytes::Check(obj2)) {
-      PythonBytes bytes(PyRefType::Borrowed, obj2);
-      arg3 = (void*)bytes.GetBytes().data();
-      arg4 = bytes.GetSize();
+    else if(PyByteArray_Check(obj2)) {
+      arg3 = (void *) PyByteArray_AsString(obj2);
+      arg4 = PyByteArray_Size(obj2);
     }
     else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
+      PyErr_SetString(PyExc_ValueError, "Expecting a string");
       return NULL;
     }
   }
@@ -48884,24 +48757,16 @@ SWIGINTERN PyObject *_wrap_SBTarget_GetInstructionsWithFlavor(PyObject *SWIGUNUS
   }
   arg3 = reinterpret_cast< char * >(buf3);
   {
-    using namespace lldb_private;
-    if (PythonString::Check(obj3)) {
-      PythonString str(PyRefType::Borrowed, obj3);
-      arg4 = (void*)str.GetString().data();
-      arg5 = str.GetSize();
+    if (PyString_Check(obj3)) {
+      arg4 = (void *) PyString_AsString(obj3);
+      arg5 = PyString_Size(obj3);
     }
-    else if(PythonByteArray::Check(obj3)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, obj3);
-      arg4 = (void*)bytearray.GetBytes().data();
-      arg5 = bytearray.GetSize();
-    }
-    else if (PythonBytes::Check(obj3)) {
-      PythonBytes bytes(PyRefType::Borrowed, obj3);
-      arg4 = (void*)bytes.GetBytes().data();
-      arg5 = bytes.GetSize();
+    else if(PyByteArray_Check(obj3)) {
+      arg4 = (void *) PyByteArray_AsString(obj3);
+      arg5 = PyByteArray_Size(obj3);
     }
     else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
+      PyErr_SetString(PyExc_ValueError, "Expecting a string");
       return NULL;
     }
   }
@@ -50377,139 +50242,14 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_SBThread_StepInto__SWIG_4(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBThread *arg1 = (lldb::SBThread *) 0 ;
-  char *arg2 = (char *) 0 ;
-  uint32_t arg3 ;
-  lldb::SBError *arg4 = 0 ;
-  lldb::RunMode arg5 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  int res2 ;
-  char *buf2 = 0 ;
-  int alloc2 = 0 ;
-  unsigned int val3 ;
-  int ecode3 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  int val5 ;
-  int ecode5 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  PyObject * obj2 = 0 ;
-  PyObject * obj3 = 0 ;
-  PyObject * obj4 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OOOOO:SBThread_StepInto",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBThread, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBThread_StepInto" "', argument " "1"" of type '" "lldb::SBThread *""'"); 
-  }
-  arg1 = reinterpret_cast< lldb::SBThread * >(argp1);
-  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
-  if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBThread_StepInto" "', argument " "2"" of type '" "char const *""'");
-  }
-  arg2 = reinterpret_cast< char * >(buf2);
-  ecode3 = SWIG_AsVal_unsigned_SS_int(obj2, &val3);
-  if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "SBThread_StepInto" "', argument " "3"" of type '" "uint32_t""'");
-  } 
-  arg3 = static_cast< uint32_t >(val3);
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_lldb__SBError,  0 );
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "SBThread_StepInto" "', argument " "4"" of type '" "lldb::SBError &""'"); 
-  }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBThread_StepInto" "', argument " "4"" of type '" "lldb::SBError &""'"); 
-  }
-  arg4 = reinterpret_cast< lldb::SBError * >(argp4);
-  ecode5 = SWIG_AsVal_int(obj4, &val5);
-  if (!SWIG_IsOK(ecode5)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "SBThread_StepInto" "', argument " "5"" of type '" "lldb::RunMode""'");
-  } 
-  arg5 = static_cast< lldb::RunMode >(val5);
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    (arg1)->StepInto((char const *)arg2,arg3,*arg4,arg5);
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_Py_Void();
-  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
-  return resultobj;
-fail:
-  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
-  return NULL;
-}
-
-
-SWIGINTERN PyObject *_wrap_SBThread_StepInto__SWIG_5(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  lldb::SBThread *arg1 = (lldb::SBThread *) 0 ;
-  char *arg2 = (char *) 0 ;
-  uint32_t arg3 ;
-  lldb::SBError *arg4 = 0 ;
-  void *argp1 = 0 ;
-  int res1 = 0 ;
-  int res2 ;
-  char *buf2 = 0 ;
-  int alloc2 = 0 ;
-  unsigned int val3 ;
-  int ecode3 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  PyObject * obj2 = 0 ;
-  PyObject * obj3 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OOOO:SBThread_StepInto",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
-  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBThread, 0 |  0 );
-  if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBThread_StepInto" "', argument " "1"" of type '" "lldb::SBThread *""'"); 
-  }
-  arg1 = reinterpret_cast< lldb::SBThread * >(argp1);
-  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
-  if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBThread_StepInto" "', argument " "2"" of type '" "char const *""'");
-  }
-  arg2 = reinterpret_cast< char * >(buf2);
-  ecode3 = SWIG_AsVal_unsigned_SS_int(obj2, &val3);
-  if (!SWIG_IsOK(ecode3)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "SBThread_StepInto" "', argument " "3"" of type '" "uint32_t""'");
-  } 
-  arg3 = static_cast< uint32_t >(val3);
-  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_lldb__SBError,  0 );
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "SBThread_StepInto" "', argument " "4"" of type '" "lldb::SBError &""'"); 
-  }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBThread_StepInto" "', argument " "4"" of type '" "lldb::SBError &""'"); 
-  }
-  arg4 = reinterpret_cast< lldb::SBError * >(argp4);
-  {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    (arg1)->StepInto((char const *)arg2,arg3,*arg4);
-    SWIG_PYTHON_THREAD_END_ALLOW;
-  }
-  resultobj = SWIG_Py_Void();
-  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
-  return resultobj;
-fail:
-  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_SBThread_StepInto(PyObject *self, PyObject *args) {
   int argc;
-  PyObject *argv[6];
+  PyObject *argv[4];
   int ii;
   
   if (!PyTuple_Check(args)) SWIG_fail;
   argc = (int)PyObject_Length(args);
-  for (ii = 0; (ii < argc) && (ii < 5); ii++) {
+  for (ii = 0; (ii < argc) && (ii < 3); ii++) {
     argv[ii] = PyTuple_GET_ITEM(args,ii);
   }
   if (argc == 1) {
@@ -50568,60 +50308,6 @@ SWIGINTERN PyObject *_wrap_SBThread_StepInto(PyObject *self, PyObject *args) {
       }
     }
   }
-  if (argc == 4) {
-    int _v;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBThread, 0);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      int res = SWIG_AsCharPtrAndSize(argv[1], 0, NULL, 0);
-      _v = SWIG_CheckState(res);
-      if (_v) {
-        {
-          int res = SWIG_AsVal_unsigned_SS_int(argv[2], NULL);
-          _v = SWIG_CheckState(res);
-        }
-        if (_v) {
-          void *vptr = 0;
-          int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_lldb__SBError, 0);
-          _v = SWIG_CheckState(res);
-          if (_v) {
-            return _wrap_SBThread_StepInto__SWIG_5(self, args);
-          }
-        }
-      }
-    }
-  }
-  if (argc == 5) {
-    int _v;
-    void *vptr = 0;
-    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBThread, 0);
-    _v = SWIG_CheckState(res);
-    if (_v) {
-      int res = SWIG_AsCharPtrAndSize(argv[1], 0, NULL, 0);
-      _v = SWIG_CheckState(res);
-      if (_v) {
-        {
-          int res = SWIG_AsVal_unsigned_SS_int(argv[2], NULL);
-          _v = SWIG_CheckState(res);
-        }
-        if (_v) {
-          void *vptr = 0;
-          int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_lldb__SBError, 0);
-          _v = SWIG_CheckState(res);
-          if (_v) {
-            {
-              int res = SWIG_AsVal_int(argv[4], NULL);
-              _v = SWIG_CheckState(res);
-            }
-            if (_v) {
-              return _wrap_SBThread_StepInto__SWIG_4(self, args);
-            }
-          }
-        }
-      }
-    }
-  }
   
 fail:
   SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'SBThread_StepInto'.\n"
@@ -50629,9 +50315,7 @@ fail:
     "    StepInto(lldb::SBThread *,lldb::RunMode)\n"
     "    StepInto(lldb::SBThread *)\n"
     "    StepInto(lldb::SBThread *,char const *,lldb::RunMode)\n"
-    "    StepInto(lldb::SBThread *,char const *)\n"
-    "    StepInto(lldb::SBThread *,char const *,uint32_t,lldb::SBError &,lldb::RunMode)\n"
-    "    StepInto(lldb::SBThread *,char const *,uint32_t,lldb::SBError &)\n");
+    "    StepInto(lldb::SBThread *,char const *)\n");
   return NULL;
 }
 
@@ -67623,7 +67307,6 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBFileSpec_GetPath", _wrap_SBFileSpec_GetPath, METH_VARARGS, (char *)"SBFileSpec_GetPath(SBFileSpec self, char dst_path, size_t dst_len) -> uint32_t"},
 	 { (char *)"SBFileSpec_ResolvePath", _wrap_SBFileSpec_ResolvePath, METH_VARARGS, (char *)"SBFileSpec_ResolvePath(char src_path, char dst_path, size_t dst_len) -> int"},
 	 { (char *)"SBFileSpec_GetDescription", _wrap_SBFileSpec_GetDescription, METH_VARARGS, (char *)"SBFileSpec_GetDescription(SBFileSpec self, SBStream description) -> bool"},
-	 { (char *)"SBFileSpec_AppendPathComponent", _wrap_SBFileSpec_AppendPathComponent, METH_VARARGS, (char *)"SBFileSpec_AppendPathComponent(SBFileSpec self, char file_or_directory)"},
 	 { (char *)"SBFileSpec___str__", _wrap_SBFileSpec___str__, METH_VARARGS, (char *)"SBFileSpec___str__(SBFileSpec self) -> PyObject"},
 	 { (char *)"SBFileSpec_swigregister", SBFileSpec_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_SBFileSpecList", _wrap_new_SBFileSpecList, METH_VARARGS, (char *)"\n"
@@ -67835,7 +67518,6 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBHostOS_GetProgramFileSpec", _wrap_SBHostOS_GetProgramFileSpec, METH_VARARGS, (char *)"SBHostOS_GetProgramFileSpec() -> SBFileSpec"},
 	 { (char *)"SBHostOS_GetLLDBPythonPath", _wrap_SBHostOS_GetLLDBPythonPath, METH_VARARGS, (char *)"SBHostOS_GetLLDBPythonPath() -> SBFileSpec"},
 	 { (char *)"SBHostOS_GetLLDBPath", _wrap_SBHostOS_GetLLDBPath, METH_VARARGS, (char *)"SBHostOS_GetLLDBPath(PathType path_type) -> SBFileSpec"},
-	 { (char *)"SBHostOS_GetUserHomeDirectory", _wrap_SBHostOS_GetUserHomeDirectory, METH_VARARGS, (char *)"SBHostOS_GetUserHomeDirectory() -> SBFileSpec"},
 	 { (char *)"SBHostOS_ThreadCreated", _wrap_SBHostOS_ThreadCreated, METH_VARARGS, (char *)"SBHostOS_ThreadCreated(char name)"},
 	 { (char *)"SBHostOS_ThreadCreate", _wrap_SBHostOS_ThreadCreate, METH_VARARGS, (char *)"SBHostOS_ThreadCreate(char name, thread_func_t arg1, void thread_arg, SBError err) -> thread_t"},
 	 { (char *)"SBHostOS_ThreadCancel", _wrap_SBHostOS_ThreadCancel, METH_VARARGS, (char *)"SBHostOS_ThreadCancel(thread_t thread, SBError err) -> bool"},
@@ -67858,7 +67540,6 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBInstruction_GetData", _wrap_SBInstruction_GetData, METH_VARARGS, (char *)"SBInstruction_GetData(SBInstruction self, SBTarget target) -> SBData"},
 	 { (char *)"SBInstruction_GetByteSize", _wrap_SBInstruction_GetByteSize, METH_VARARGS, (char *)"SBInstruction_GetByteSize(SBInstruction self) -> size_t"},
 	 { (char *)"SBInstruction_DoesBranch", _wrap_SBInstruction_DoesBranch, METH_VARARGS, (char *)"SBInstruction_DoesBranch(SBInstruction self) -> bool"},
-	 { (char *)"SBInstruction_HasDelaySlot", _wrap_SBInstruction_HasDelaySlot, METH_VARARGS, (char *)"SBInstruction_HasDelaySlot(SBInstruction self) -> bool"},
 	 { (char *)"SBInstruction_Print", _wrap_SBInstruction_Print, METH_VARARGS, (char *)"SBInstruction_Print(SBInstruction self, FILE out)"},
 	 { (char *)"SBInstruction_GetDescription", _wrap_SBInstruction_GetDescription, METH_VARARGS, (char *)"SBInstruction_GetDescription(SBInstruction self, SBStream description) -> bool"},
 	 { (char *)"SBInstruction_EmulateWithFrame", _wrap_SBInstruction_EmulateWithFrame, METH_VARARGS, (char *)"SBInstruction_EmulateWithFrame(SBInstruction self, SBFrame frame, uint32_t evaluate_options) -> bool"},
@@ -69344,17 +69025,7 @@ static PyMethodDef SwigMethods[] = {
 		"StepInto(RunMode stop_other_threads = eOnlyDuringStepping)\n"
 		"StepInto()\n"
 		"StepInto(char target_name, RunMode stop_other_threads = eOnlyDuringStepping)\n"
-		"StepInto(char target_name)\n"
-		"\n"
-		"    Step  the current thread from the current source line to the line given by end_line, stopping if\n"
-		"    the thread steps into the function given by target_name.  If target_name is None, then stepping will stop\n"
-		"    in any of the places we would normally stop.\n"
-		"    \n"
-		"\n"
-		"    Step  the current thread from the current source line to the line given by end_line, stopping if\n"
-		"    the thread steps into the function given by target_name.  If target_name is None, then stepping will stop\n"
-		"    in any of the places we would normally stop.\n"
-		"    \n"
+		"SBThread_StepInto(SBThread self, char target_name)\n"
 		""},
 	 { (char *)"SBThread_StepOut", _wrap_SBThread_StepOut, METH_VARARGS, (char *)"SBThread_StepOut(SBThread self)"},
 	 { (char *)"SBThread_StepOutOfFrame", _wrap_SBThread_StepOutOfFrame, METH_VARARGS, (char *)"SBThread_StepOutOfFrame(SBThread self, SBFrame frame)"},

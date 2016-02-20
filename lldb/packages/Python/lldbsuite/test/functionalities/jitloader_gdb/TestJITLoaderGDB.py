@@ -2,12 +2,13 @@
 
 from __future__ import print_function
 
+
+
 import unittest2
 import os
 import lldb
-from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.lldbutil as lldbutil
 import re
 
 
@@ -15,7 +16,7 @@ class JITLoaderGDBTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipTestIfFn(lambda : "Skipped because the test crashes the test runner", bugnumber="llvm.org/pr24702")
+    @skipTestIfFn(lambda x: True, "llvm.org/pr24702", "Skipped because the test crashes the test runner")
     @unittest2.expectedFailure("llvm.org/pr24702")
     def test_bogus_values(self):
         """Test that we handle inferior misusing the GDB JIT interface"""

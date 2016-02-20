@@ -56,7 +56,7 @@ macro(add_lldb_library name)
   if (PARAM_OBJECT)
     add_library(${name} ${libkind} ${srcs})
   else()
-    llvm_add_library(${name} ${libkind} DISABLE_LLVM_LINK_LLVM_DYLIB ${srcs})
+    llvm_add_library(${name} ${libkind} ${srcs})
 
     lldb_link_common_libs(${name} "${libkind}")
 
@@ -99,7 +99,7 @@ macro(add_lldb_library name)
 endmacro(add_lldb_library)
 
 macro(add_lldb_executable name)
-  add_llvm_executable(${name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
+  add_llvm_executable(${name} ${ARGN})
   set_target_properties(${name} PROPERTIES FOLDER "lldb executables")
   set_target_properties(${name} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 endmacro(add_lldb_executable)

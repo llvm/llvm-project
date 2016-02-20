@@ -57,7 +57,7 @@ Symtab::Resize(size_t count)
     // Clients should grab the mutex from this symbol table and lock it manually
     // when calling this function to avoid performance issues.
     m_symbols.resize (count);
-    return m_symbols.empty() ? nullptr : &m_symbols[0];
+    return &m_symbols[0];
 }
 
 uint32_t
@@ -995,11 +995,9 @@ Symtab::InitAddressIndexes()
                     if (end_section_file_addr > symbol_file_addr)
                     {
                         Symbol &symbol = m_symbols[entry.data];
-                        if (!symbol.GetByteSizeIsValid())
-                        {
-                            symbol.SetByteSize(end_section_file_addr - symbol_file_addr);
-                            symbol.SetSizeIsSynthesized(true);
-                        }
+
+                        symbol.SetByteSize(end_section_file_addr - symbol_file_addr);
+                        symbol.SetSizeIsSynthesized(true);
                     }
                 }
             }
@@ -1065,15 +1063,18 @@ Symtab::FindSymbolContainingFileAddress (addr_t file_addr, const uint32_t* index
             return info.match_symbol;
         }
 
-        if (!info.match_symbol->GetByteSizeIsValid())
+        const size_t symbol_byte_size = info.match_symbol->GetByteSize();
+        
+        if (symbol_byte_size == 0)
         {
-            // The matched symbol dosn't have a valid byte size so lets just go with that match...
+            // We weren't able to find the size of the symbol so lets just go 
+            // with that match we found in our search...
             return info.match_symbol;
         }
 
         // We were able to figure out a symbol size so lets make sure our 
         // offset puts "file_addr" in the symbol's address range.
-        if (info.match_offset < info.match_symbol->GetByteSize())
+        if (info.match_offset < symbol_byte_size)
             return info.match_symbol;
     }
     return nullptr;
@@ -1089,32 +1090,8 @@ Symtab::FindSymbolContainingFileAddress (addr_t file_addr)
 
     const FileRangeToIndexMap::Entry *entry = m_file_addr_to_index.FindEntryThatContains(file_addr);
     if (entry)
-    {
-        Symbol* symbol = SymbolAtIndex(entry->data);
-        if (symbol->ContainsFileAddress(file_addr))
-            return symbol;
-    }
+        return SymbolAtIndex(entry->data);
     return nullptr;
-}
-
-void
-Symtab::ForEachSymbolContainingFileAddress(addr_t file_addr, std::function<bool(Symbol *)> const &callback)
-{
-    Mutex::Locker locker (m_mutex);
-
-    if (!m_file_addr_to_index_computed)
-        InitAddressIndexes();
-
-    std::vector<uint32_t> all_addr_indexes;
-
-    // Get all symbols with file_addr
-    const size_t addr_match_count = m_file_addr_to_index.FindEntryIndexesThatContain(file_addr, all_addr_indexes);
-
-    for (size_t i = 0; i < addr_match_count; ++i)
-    {
-        if (!callback(SymbolAtIndex(all_addr_indexes[i])))
-        break;
-    }
 }
 
 void

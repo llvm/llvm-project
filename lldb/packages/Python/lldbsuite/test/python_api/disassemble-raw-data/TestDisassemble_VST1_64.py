@@ -9,15 +9,14 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class Disassemble_VST1_64(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipTestIfFn(lambda : True, "llvm.org/pr24575: all tests get ERRORs in dotest.py after this")
+    @skipIf(True) # llvm.org/pr24575: all tests get ERRORs in dotest.py after this
     @add_test_categories(['pyapi'])
     @no_debug_info_test
     def test_disassemble_invalid_vst_1_64_raw_data(self):

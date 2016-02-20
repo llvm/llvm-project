@@ -8,15 +8,13 @@ from __future__ import print_function
 
 import os
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class CommandRegexTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureHostWindows("llvm.org/pr22274: need a pexpect replacement for windows")
     @no_debug_info_test
     def test_command_regex(self):
         """Test a simple scenario of 'command regex' invocation and subsequent use."""

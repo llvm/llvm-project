@@ -403,7 +403,7 @@ Communication::ReadThread (lldb::thread_arg_t p)
         case eConnectionStatusNoConnection:     // No connection
         case eConnectionStatusLostConnection:   // Lost connection while connected to a valid connection
             done = true;
-            LLVM_FALLTHROUGH;
+            // Fall through...
         case eConnectionStatusTimedOut:         // Request timed out
             if (log)
                 error.LogIfError (log,

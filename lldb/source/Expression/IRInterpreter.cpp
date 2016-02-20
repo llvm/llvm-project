@@ -33,7 +33,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <map>
@@ -464,45 +463,6 @@ static const char *memory_read_error                = "Interpreter couldn't read
 static const char *infinite_loop_error              = "Interpreter ran for too many cycles";
 //static const char *bad_result_error                 = "Result of expression is in bad memory";
 
-static bool
-CanResolveConstant (llvm::Constant *constant)
-{
-    switch (constant->getValueID())
-    {
-    default:
-        return false;
-    case Value::ConstantIntVal:
-    case Value::ConstantFPVal:
-        return true;
-    case Value::ConstantExprVal:
-        if (const ConstantExpr *constant_expr = dyn_cast<ConstantExpr>(constant))
-        {
-            switch (constant_expr->getOpcode())
-            {
-                default:
-                    return false;
-                case Instruction::IntToPtr:
-                case Instruction::PtrToInt:
-                case Instruction::BitCast:
-                    return CanResolveConstant(constant_expr->getOperand(0));
-                case Instruction::GetElementPtr:
-                {
-                    ConstantExpr::const_op_iterator op_cursor = constant_expr->op_begin();
-                    Constant *base = dyn_cast<Constant>(*op_cursor);
-                    if (!base)
-                        return false;
-                    
-                    return CanResolveConstant(base);
-                }
-            }
-        } else {
-            return false;
-        }
-    case Value::ConstantPointerNullVal:
-        return true;
-    }
-}
-
 bool
 IRInterpreter::CanInterpret (llvm::Module &module,
                              llvm::Function &function,
@@ -645,17 +605,6 @@ IRInterpreter::CanInterpret (llvm::Module &module,
                     {
                         if (log)
                             log->Printf("Unsupported operand type: %s", PrintType(operand_type).c_str());
-                        error.SetErrorString(unsupported_operand_error);
-                        return false;
-                    }
-                }
-                
-                if (Constant *constant = llvm::dyn_cast<Constant>(operand))
-                {
-                    if (!CanResolveConstant(constant))
-                    {
-                        if (log)
-                            log->Printf("Unsupported constant: %s", PrintValue(constant).c_str());
                         error.SetErrorString(unsupported_operand_error);
                         return false;
                     }

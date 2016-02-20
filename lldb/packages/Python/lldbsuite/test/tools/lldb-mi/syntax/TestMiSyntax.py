@@ -7,9 +7,7 @@ from __future__ import print_function
 
 
 import lldbmi_testcase
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
@@ -67,7 +65,7 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureAll(oslist=["linux"], bugnumber="Failing in ~6/600 dosep runs (build 3120-3122)")
+    @expectedFailureAll("rdar://problem/23625311", oslist=["macosx", "linux"])
     def test_lldbmi_process_output(self):
         """Test that 'lldb-mi --interpreter' wraps process output correctly."""
 

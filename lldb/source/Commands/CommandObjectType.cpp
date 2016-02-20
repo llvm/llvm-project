@@ -1282,12 +1282,9 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed
             {
                 case 'w':
                     m_category_regex.SetCurrentValue(option_arg);
-                    m_category_regex.SetOptionWasSet();
                     break;
                 case 'l':
                     error = m_category_language.SetValueFromString(option_arg);
-                    if (error.Success())
-                        m_category_language.SetOptionWasSet();
                     break;
                 default:
                     error.SetErrorStringWithFormat ("unrecognized option '%c'", short_option);
@@ -1387,7 +1384,7 @@ protected:
         
         if (argc == 1)
         {
-            const char* arg = command.GetArgumentAtIndex(0);
+            const char* arg = command.GetArgumentAtIndex(1);
             formatter_regex.reset(new RegularExpression());
             if (!formatter_regex->Compile(arg))
             {

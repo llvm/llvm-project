@@ -8,16 +8,14 @@ from __future__ import print_function
 
 import os
 import lldb
-from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 
 
 def python_leaky_fd_version(test):
     import sys
     # Python random module leaks file descriptors on some versions.
-    return (sys.version_info >= (2, 7, 8) and sys.version_info < (2, 7, 10),
-            "Python random module leaks file descriptors in this python version")
+    return sys.version_info >= (2, 7, 8) and sys.version_info < (2, 7, 10)
 
 
 class AvoidsFdLeakTestCase(TestBase):

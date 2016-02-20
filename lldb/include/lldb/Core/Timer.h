@@ -50,6 +50,9 @@ public:
     //--------------------------------------------------------------
     ~Timer();
 
+    static void
+    Initialize ();
+
     void
     Dump ();
 
@@ -87,6 +90,7 @@ protected:
     static std::atomic<bool> g_quiet;
     static std::atomic<unsigned> g_display_depth;
     static std::mutex g_file_mutex;
+    static FILE* g_file;
 
 private:
     Timer();

@@ -383,9 +383,6 @@ public:
                     bool prefer_file_cache,
                     Stream &strm);
 
-    bool
-    ContainsFileAddress (lldb::addr_t file_addr) const;
-
 protected:
     // This is the internal guts of ResolveReExportedSymbol, it assumes reexport_name is not null, and that module_spec
     // is valid.  We track the modules we've already seen to make sure we don't get caught in a cycle.

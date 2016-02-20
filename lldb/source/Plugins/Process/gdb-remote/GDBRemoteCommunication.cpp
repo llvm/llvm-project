@@ -845,7 +845,7 @@ GDBRemoteCommunication::CheckForPacket (const uint8_t *src, size_t src_len, Stri
 
             case '%': // Async notify packet
                 isNotifyPacket = true;
-                LLVM_FALLTHROUGH;
+                // Intentional fall through
 
             case '$':
                 // Look for a standard gdb packet?

@@ -8,9 +8,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class WatchLocationUsingWatchpointSetTestCase(TestBase):
 
@@ -28,8 +27,7 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         # Build dictionary to have unique executable names for each test method.
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureAll(oslist=["linux"], archs=['aarch64', 'arm'], bugnumber="llvm.org/pr26031")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureWindows("llvm.org/pr24446") # WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows
     def test_watchlocation_using_watchpoint_set(self):
         """Test watching a location with 'watchpoint set expression -w write -s size' option."""
         self.build()

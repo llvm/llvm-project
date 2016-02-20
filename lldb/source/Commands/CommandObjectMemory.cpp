@@ -15,7 +15,6 @@
 // C++ Includes
 // Other libraries and framework includes
 #include "clang/AST/Decl.h"
-
 // Project includes
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"
@@ -41,8 +40,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
-
-#include "lldb/lldb-private.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -491,7 +488,7 @@ protected:
                     {
                     case '*':
                         ++pointer_count;
-                        LLVM_FALLTHROUGH;
+                        // fall through...
                     case ' ':
                     case '\t':
                         type_str.erase(type_str.size()-1);

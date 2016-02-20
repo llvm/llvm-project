@@ -6,9 +6,8 @@ from __future__ import print_function
 
 import os, sys, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class ProcessIOTestCase(TestBase):
 
@@ -30,7 +29,6 @@ class ProcessIOTestCase(TestBase):
 
     @skipIfWindows # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
-    @expectedFlakeyAndroid(bugnumber="llvm.org/pr26437", api_levels=[21,22])
     def test_stdin_by_api(self):
         """Exercise SBProcess.PutSTDIN()."""
         self.build()
@@ -41,7 +39,6 @@ class ProcessIOTestCase(TestBase):
 
     @skipIfWindows # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
-    @expectedFlakeyAndroid(bugnumber="llvm.org/pr26437", api_levels=[21,22])
     def test_stdin_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDIN without specifying STDOUT or STDERR."""
         self.build()
@@ -53,7 +50,6 @@ class ProcessIOTestCase(TestBase):
 
     @skipIfWindows # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
-    @expectedFlakeyAndroid(bugnumber="llvm.org/pr26437", api_levels=[21,22])
     def test_stdout_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDOUT without specifying STDIN or STDERR."""
         self.build()
@@ -66,7 +62,6 @@ class ProcessIOTestCase(TestBase):
 
     @skipIfWindows # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
-    @expectedFlakeyAndroid(bugnumber="llvm.org/pr26437", api_levels=[21,22])
     def test_stderr_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDERR without specifying STDIN or STDOUT."""
         self.build()
@@ -79,7 +74,6 @@ class ProcessIOTestCase(TestBase):
 
     @skipIfWindows # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
-    @expectedFlakeyAndroid(bugnumber="llvm.org/pr26437", api_levels=[21,22])
     def test_stdout_stderr_redirection(self):
         """Exercise SBLaunchInfo::AddOpenFileAction() for STDOUT and STDERR without redirecting STDIN."""
         self.build()

@@ -20,6 +20,11 @@
 // work around LLVM pr18841 to avoid seg faults in the stock Python
 // readline.so linked against GNU readline.
 
+static struct PyMethodDef moduleMethods[] =
+{
+    {nullptr, nullptr, 0, nullptr}
+};
+
 #ifndef LLDB_DISABLE_LIBEDIT
 PyDoc_STRVAR(
     moduleDocumentation,
@@ -30,33 +35,9 @@ PyDoc_STRVAR(
     "Stub module meant to avoid linking GNU readline.");
 #endif
 
-#if PY_MAJOR_VERSION >= 3
-static struct PyModuleDef readline_module =
-{
-    PyModuleDef_HEAD_INIT, // m_base
-    "readline",            // m_name
-    moduleDocumentation,   // m_doc
-    -1,                    // m_size
-    nullptr,               // m_methods
-    nullptr,               // m_reload
-    nullptr,               // m_traverse
-    nullptr,               // m_clear
-    nullptr,               // m_free
-};
-#else
-static struct PyMethodDef moduleMethods[] =
-{
-    {nullptr, nullptr, 0, nullptr}
-};
-#endif
-
 #ifndef LLDB_DISABLE_LIBEDIT
 static char*
-#if PY_MAJOR_VERSION >= 3
-simple_readline(FILE *stdin, FILE *stdout, const char *prompt)
-#else
 simple_readline(FILE *stdin, FILE *stdout, char *prompt)
-#endif
 {
     rl_instream = stdin;
     rl_outstream = stdout;
@@ -86,15 +67,10 @@ initreadline(void)
 #ifndef LLDB_DISABLE_LIBEDIT
     PyOS_ReadlineFunctionPointer = simple_readline;
 #endif
-
-#if PY_MAJOR_VERSION >= 3
-    return PyModule_Create(&readline_module);
-#else
     Py_InitModule4(
         "readline",
         moduleMethods,
         moduleDocumentation,
         static_cast<PyObject *>(NULL),
         PYTHON_API_VERSION);
-#endif
 }

@@ -1,13 +1,12 @@
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class TestWithLimitDebugInfo(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(debug_info=no_match(["dwarf"]))
+    @skipIf(debug_info=not_in(["dwarf"]))
     def test_limit_debug_info(self):
         self.build()
 

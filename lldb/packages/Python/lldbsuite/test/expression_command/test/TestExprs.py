@@ -19,9 +19,8 @@ import unittest2
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class BasicExprCommandsTestCase(TestBase):
 
@@ -57,7 +56,7 @@ class BasicExprCommandsTestCase(TestBase):
             patterns = ["\(float\) \$.* = 2\.234"])
         # (float) $2 = 2.234
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test_many_expr_commands(self):
         self.build_and_run()
 
@@ -99,7 +98,7 @@ class BasicExprCommandsTestCase(TestBase):
         # (const char *) $8 = 0x... "/Volumes/data/lldb/svn/trunk/test/expression_command/test/a.out"
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureWindows # Test crashes
     def test_evaluate_expression_python(self):
         """Test SBFrame.EvaluateExpression() API for evaluating an expression."""
         self.build()
@@ -131,8 +130,12 @@ class BasicExprCommandsTestCase(TestBase):
                       "instead the actual state is: '%s'" %
                       lldbutil.state_type_to_str(process.GetState()))
 
-        thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint)
-        self.assertIsNotNone(thread, "Expected one thread to be stopped at the breakpoint")
+        # The stop reason of the thread should be breakpoint.
+        thread = process.GetThreadAtIndex(0)
+        if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
+            from lldbsuite.test.lldbutil import stop_reason_to_str
+            self.fail(STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS %
+                      stop_reason_to_str(thread.GetStopReason()))
 
         # The filename of frame #0 should be 'main.cpp' and function is main.
         self.expect(lldbutil.get_filenames(thread)[0],
@@ -195,7 +198,7 @@ class BasicExprCommandsTestCase(TestBase):
 
     # rdar://problem/8686536
     # CommandInterpreter::HandleCommand is stripping \'s from input for WantsRawCommand commands
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test_expr_commands_can_handle_quotes(self):
         """Throw some expression commands with quotes at lldb."""
         self.build()

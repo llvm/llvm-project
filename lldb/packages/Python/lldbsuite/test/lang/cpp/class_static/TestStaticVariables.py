@@ -8,9 +8,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class StaticVariableTestCase(TestBase):
 
@@ -22,7 +21,7 @@ class StaticVariableTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    @expectedFailureWindows("llvm.org/pr24764")
     def test_with_run_command(self):
         """Test that file and class static variables display correctly."""
         self.build()
@@ -50,8 +49,9 @@ class StaticVariableTestCase(TestBase):
                 startstr = "(int) A::g_points[1].x = 11")
 
     @expectedFailureDarwin(9980907)
-    @expectedFailureAll(compiler=["clang", "gcc"], bugnumber="Compiler emits incomplete debug info")
+    @expectedFailureClang('Clang emits incomplete debug info.')
     @expectedFailureFreeBSD('llvm.org/pr20550 failing on FreeBSD-11')
+    @expectedFailureGcc('GCC emits incomplete debug info.')
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test Python APIs on file and class static variables."""
@@ -69,8 +69,11 @@ class StaticVariableTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
+        thread = process.GetThreadAtIndex(0)
+        if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
+            from lldbsuite.test.lldbutil import stop_reason_to_str
+            self.fail(STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS %
+                      stop_reason_to_str(thread.GetStopReason()))
 
         # Get the SBValue of 'A::g_points' and 'g_points'.
         frame = thread.GetFrameAtIndex(0)

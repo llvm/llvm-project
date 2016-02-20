@@ -8,9 +8,8 @@ from __future__ import print_function
 
 
 import os, re
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class SBDirCheckerCase(TestBase):
 

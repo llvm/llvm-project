@@ -316,7 +316,6 @@ OptionValueArray::SetArgs (const Args &args, VarSetOperationType op)
     case eVarSetOperationAssign:
         m_values.clear();
         // Fall through to append case
-        LLVM_FALLTHROUGH;
     case eVarSetOperationAppend:
         for (size_t i=0; i<argc; ++i)
         {

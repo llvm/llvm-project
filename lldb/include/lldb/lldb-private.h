@@ -24,7 +24,6 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "lldb/lldb-private-types.h"
-#include "lldb/lldb-private-defines.h"
 
 namespace lldb_private {
 

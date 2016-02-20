@@ -6,9 +6,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class TestObjCStaticMethodStripped(TestBase):
 
@@ -23,7 +22,8 @@ class TestObjCStaticMethodStripped(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
-    @skipIf(debug_info=no_match("dsym"), bugnumber="This test requires a stripped binary and a dSYM")
+    @skipIfDwarf    # This test requires a stripped binary and a dSYM
+    @skipIfDWO      # This test requires a stripped binary and a dSYM
     #<rdar://problem/12042992>
     def test_with_python_api(self):
         """Test calling functions in static methods with a stripped binary."""

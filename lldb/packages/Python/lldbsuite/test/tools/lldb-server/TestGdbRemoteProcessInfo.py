@@ -1,13 +1,12 @@
 from __future__ import print_function
 
 
-import sys
 
 import gdbremote_testcase
 import lldbgdbserverutils
-from lldbsuite.test.decorators import *
+import sys
+
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 

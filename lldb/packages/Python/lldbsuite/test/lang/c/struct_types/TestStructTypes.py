@@ -1,4 +1,4 @@
-from lldbsuite.test import lldbinline
-from lldbsuite.test import decorators
+import lldbsuite.test.lldbinline as lldbinline
+import lldbsuite.test.lldbtest as lldbtest
 
-lldbinline.MakeInlineTest(__file__, globals(), [decorators.expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")] )
+lldbinline.MakeInlineTest(__file__, globals(), [lldbtest.expectedFailureWindows("llvm.org/pr24764")] )

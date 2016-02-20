@@ -9,16 +9,14 @@ from __future__ import print_function
 import os, time
 import lldb
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class LibcxxMultiMapDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows # libc++ not ported to Windows yet
-    @skipIf(compiler="gcc")
+    @skipIfGcc
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

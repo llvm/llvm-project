@@ -8,12 +8,10 @@ from __future__ import print_function
 
 import os, time
 import re
-
 import lldb
-from lldbsuite.support import seven
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.support.seven as seven
 
 def execute_command (command):
     # print('%% %s' % (command))

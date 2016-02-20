@@ -611,8 +611,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode (Target &target, BreakpointSite 
         break;
 
     case llvm::Triple::thumb:
-        bp_is_thumb = true;
-        LLVM_FALLTHROUGH;
+        bp_is_thumb = true; // Fall through...
     case llvm::Triple::arm:
         {
             static const uint8_t g_arm_breakpoint_opcode[] = { 0xFE, 0xDE, 0xFF, 0xE7 };

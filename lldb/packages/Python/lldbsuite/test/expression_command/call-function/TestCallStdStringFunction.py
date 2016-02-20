@@ -7,9 +7,8 @@ from __future__ import print_function
 
 
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class ExprCommandCallFunctionTestCase(TestBase):
 
@@ -22,9 +21,9 @@ class ExprCommandCallFunctionTestCase(TestBase):
         self.line = line_number('main.cpp',
                                 '// Please test these expressions while stopped at this line:')
 
-    @expectedFailureAll(compiler="icc", bugnumber="llvm.org/pr14437, fails with ICC 13.1")
+    @expectedFailureIcc # llvm.org/pr14437, fails with ICC 13.1
     @expectedFailureFreeBSD('llvm.org/pr17807') # Fails on FreeBSD buildbot
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test_with(self):
         """Test calling std::String member function."""
         self.build()

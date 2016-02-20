@@ -23,7 +23,6 @@
 
 #include "CxxStringTypes.h"
 #include "LibCxx.h"
-#include "LibCxxAtomic.h"
 #include "LibStdcpp.h"
 
 #include <cstring>
@@ -530,8 +529,7 @@ LoadLibCxxFormatters (lldb::TypeCategoryImplSP cpp_category_sp)
     AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibcxxStdMapSyntheticFrontEndCreator, "libc++ std::multimap synthetic children", ConstString("^std::__1::multimap<.+> >(( )?&)?$"), stl_synth_flags, true);
     AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEndCreator, "libc++ std::unordered containers synthetic children", ConstString("^(std::__1::)unordered_(multi)?(map|set)<.+> >$"), stl_synth_flags, true);
     AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibcxxInitializerListSyntheticFrontEndCreator, "libc++ std::initializer_list synthetic children", ConstString("^std::initializer_list<.+>(( )?&)?$"), stl_synth_flags, true);
-    AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibcxxAtomicSyntheticFrontEndCreator, "libc++ std::atomic synthetic children", ConstString("^std::__1::atomic<.+>$"), stl_synth_flags, true);
-
+    
     cpp_category_sp->GetRegexTypeSyntheticsContainer()->Add(RegularExpressionSP(new RegularExpression("^(std::__1::)deque<.+>(( )?&)?$")),
                                                                SyntheticChildrenSP(new ScriptedSyntheticChildren(stl_synth_flags,
                                                                                                                  "lldb.formatters.cpp.libcxx.stddeque_SynthProvider")));
@@ -552,7 +550,6 @@ LoadLibCxxFormatters (lldb::TypeCategoryImplSP cpp_category_sp)
     AddCXXSummary(cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider, "libc++ std::multiset summary provider", ConstString("^std::__1::multiset<.+>(( )?&)?$"), stl_summary_flags, true);
     AddCXXSummary(cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider, "libc++ std::multimap summary provider", ConstString("^std::__1::multimap<.+>(( )?&)?$"), stl_summary_flags, true);
     AddCXXSummary(cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider, "libc++ std::unordered containers summary provider", ConstString("^(std::__1::)unordered_(multi)?(map|set)<.+> >$"), stl_summary_flags, true);
-    AddCXXSummary(cpp_category_sp, lldb_private::formatters::LibCxxAtomicSummaryProvider, "libc++ std::atomic summary provider", ConstString("^std::__1::atomic<.+>$"), stl_summary_flags, true);
     
     stl_summary_flags.SetSkipPointers(true);
     
@@ -563,6 +560,8 @@ LoadLibCxxFormatters (lldb::TypeCategoryImplSP cpp_category_sp)
     
     AddCXXSummary(cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider, "libc++ std::vector<bool> summary provider", ConstString("std::__1::vector<bool, std::__1::allocator<bool> >"), stl_summary_flags);
     AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEndCreator, "std::map iterator synthetic children", ConstString("^std::__1::__map_iterator<.+>$"), stl_synth_flags, true);
+    
+    AddFilter(cpp_category_sp, {"__a_"}, "libc++ std::atomic filter", ConstString("^std::__1::atomic<.*>$"), stl_synth_flags, true);
 #endif
 }
 

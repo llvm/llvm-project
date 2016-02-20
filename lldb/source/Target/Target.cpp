@@ -1962,7 +1962,7 @@ Target::CalculateTarget ()
 ProcessSP
 Target::CalculateProcess ()
 {
-    return m_process_sp;
+    return ProcessSP();
 }
 
 ThreadSP
@@ -2488,18 +2488,18 @@ Target::GetBreakableLoadAddress (lldb::addr_t addr)
             SymbolContext sc;
             uint32_t resolve_scope = eSymbolContextFunction | eSymbolContextSymbol;
             temp_addr_module_sp->ResolveSymbolContextForAddress(resolved_addr, resolve_scope, sc);
-            Address sym_addr;
             if (sc.function)
-                sym_addr = sc.function->GetAddressRange().GetBaseAddress();
+            {
+                function_start = sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(this);
+                if (function_start == LLDB_INVALID_ADDRESS)
+                    function_start = sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+            }
             else if (sc.symbol)
-                sym_addr = sc.symbol->GetAddress();
-
-            function_start = sym_addr.GetLoadAddress(this);
-            if (function_start == LLDB_INVALID_ADDRESS)
+            {
+                Address sym_addr = sc.symbol->GetAddress();
                 function_start = sym_addr.GetFileAddress();
-
-            if (function_start)
-                current_offset = addr - function_start;
+            }
+            current_offset = addr - function_start;
         }
 
         // If breakpoint address is start of function then we dont have to do anything.
@@ -4327,12 +4327,6 @@ Target::TargetEventData::GetFlavorString ()
 void
 Target::TargetEventData::Dump (Stream *s) const
 {
-    for (size_t i = 0; i < m_module_list.GetSize(); ++i)
-    {
-        if (i != 0)
-             *s << ", ";
-        m_module_list.GetModuleAtIndex(i)->GetDescription(s, lldb::eDescriptionLevelBrief);
-    }
 }
 
 const Target::TargetEventData *

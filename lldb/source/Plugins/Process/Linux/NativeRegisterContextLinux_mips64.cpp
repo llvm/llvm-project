@@ -1388,15 +1388,7 @@ NativeRegisterContextLinux_mips64::DoReadRegisterValue(uint32_t offset,
     {
         lldb_private::ArchSpec arch;
         if (m_thread.GetProcess()->GetArchitecture(arch))
-        {
-            void* target_address = ((uint8_t*)&regs) + offset + 4 * (arch.GetMachine() == llvm::Triple::mips);
-            uint32_t target_size;
-            if ((::strcmp(reg_name, "sr") == 0) || (::strcmp(reg_name, "cause") == 0) || (::strcmp(reg_name, "config5") == 0))
-                target_size = 4;
-            else
-                target_size = arch.GetFlags() & lldb_private::ArchSpec::eMIPSABI_O32 ? 4 : 8;
-            value.SetBytes(target_address, target_size, arch.GetByteOrder());
-        }
+            value.SetBytes((void *)(((unsigned char *)&regs) + offset + 4 * (arch.GetMachine() == llvm::Triple::mips)), arch.GetFlags() & lldb_private::ArchSpec::eMIPSABI_O32 ? 4 : 8, arch.GetByteOrder());
         else
             error.SetErrorString("failed to get architecture");
     }

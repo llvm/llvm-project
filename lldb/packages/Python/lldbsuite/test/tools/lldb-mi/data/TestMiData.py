@@ -8,9 +8,7 @@ from __future__ import print_function
 
 import unittest2
 import lldbmi_testcase
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class MiDataTestCase(lldbmi_testcase.MiTestCaseBase):
 

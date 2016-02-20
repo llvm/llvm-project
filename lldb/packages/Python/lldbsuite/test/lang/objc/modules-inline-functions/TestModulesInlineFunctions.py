@@ -4,16 +4,15 @@ from __future__ import print_function
 
 
 
-from distutils.version import StrictVersion
-
 import unittest2
 import os, time
-import platform
-
 import lldb
-from lldbsuite.test.decorators import *
+import platform
+import lldbsuite.test.lldbutil as lldbutil
+
+from distutils.version import StrictVersion
+
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class ModulesInlineFunctionsTestCase(TestBase):
 

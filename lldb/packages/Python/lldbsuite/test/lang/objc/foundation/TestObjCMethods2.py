@@ -8,9 +8,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 @skipUnlessDarwin
 class FoundationTestCase2(TestBase):
@@ -135,7 +134,7 @@ class FoundationTestCase2(TestBase):
             patterns = ["\(MyString\) \$.* = ", "\(MyBase\)", "\(NSObject\)", "\(Class\)"])
         self.runCmd("process continue")
 
-    @expectedFailureAll(archs=["i[3-6]86"])
+    @expectedFailurei386
     def test_NSError_po(self):
         """Test that po of the result of an unknown method doesn't require a cast."""
         self.build()

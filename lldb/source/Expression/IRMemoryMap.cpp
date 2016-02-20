@@ -53,8 +53,6 @@ IRMemoryMap::FindSpace (size_t size, bool zero_memory)
     lldb::ProcessSP process_sp = m_process_wp.lock();
 
     lldb::addr_t ret = LLDB_INVALID_ADDRESS;
-    if (size == 0)
-        return ret;
 
     if (process_sp && process_sp->CanJIT() && process_sp->IsAlive())
     {
@@ -71,13 +69,37 @@ IRMemoryMap::FindSpace (size_t size, bool zero_memory)
             return ret;
     }
 
-    ret = 0;
-    if (!m_allocations.empty())
+    for (int iterations = 0; iterations < 16; ++iterations)
     {
-        auto back = m_allocations.rbegin();
-        lldb::addr_t addr = back->first;
-        size_t alloc_size = back->second.m_size;
-        ret = llvm::alignTo(addr+alloc_size, 4096);
+        lldb::addr_t candidate = LLDB_INVALID_ADDRESS;
+
+        switch (target_sp->GetArchitecture().GetAddressByteSize())
+        {
+        case 4:
+            {
+                uint32_t random_data = rand();
+                candidate = random_data;
+                candidate &= ~0xfffull;
+                break;
+            }
+        case 8:
+            {
+                uint32_t random_low = rand();
+                uint32_t random_high = rand();
+                candidate = random_high;
+                candidate <<= 32ull;
+                candidate |= random_low;
+                candidate &= ~0xfffull;
+                break;
+            }
+        }
+
+        if (IntersectsAllocation(candidate, size))
+            continue;
+
+        ret = candidate;
+
+        return ret;
     }
 
     return ret;
@@ -259,6 +281,7 @@ IRMemoryMap::Malloc (size_t size, uint8_t alignment, uint32_t permissions, Alloc
             error.SetErrorString("Couldn't malloc: address space is full");
             return LLDB_INVALID_ADDRESS;
         }
+
         break;
     case eAllocationPolicyMirror:
         process_sp = m_process_wp.lock();
@@ -273,6 +296,7 @@ IRMemoryMap::Malloc (size_t size, uint8_t alignment, uint32_t permissions, Alloc
 
             if (!error.Success())
                 return LLDB_INVALID_ADDRESS;
+
         }
         else
         {

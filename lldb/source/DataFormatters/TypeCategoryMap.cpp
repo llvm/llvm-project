@@ -231,7 +231,7 @@ TypeCategoryMap::GetFormat (FormattersMatchData& match_data)
     {
         for (auto match : match_data.GetMatchesVector())
         {
-            log->Printf("[CategoryMap::GetFormat] candidate match = %s %s %s %s reason = %" PRIu32,
+            log->Printf("[CategoryMap::GetSummaryFormat] candidate match = %s %s %s %s reason = %" PRIu32,
                         match.GetTypeName().GetCString(),
                         match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
                         match.DidStripReference() ? "strip-reference" : "no-strip-reference",
@@ -309,7 +309,7 @@ TypeCategoryMap::GetSyntheticChildren (FormattersMatchData& match_data)
     {
         for (auto match : match_data.GetMatchesVector())
         {
-            log->Printf("[CategoryMap::GetSyntheticChildren] candidate match = %s %s %s %s reason = %" PRIu32,
+            log->Printf("[CategoryMap::GetSummaryFormat] candidate match = %s %s %s %s reason = %" PRIu32,
                         match.GetTypeName().GetCString(),
                         match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
                         match.DidStripReference() ? "strip-reference" : "no-strip-reference",

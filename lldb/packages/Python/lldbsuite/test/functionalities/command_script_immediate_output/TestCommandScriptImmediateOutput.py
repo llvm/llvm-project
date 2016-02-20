@@ -8,15 +8,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-<<<<<<< HEAD
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbpexpect import *
-=======
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test.lldbpexpect import *
-from lldbsuite.test import lldbutil
->>>>>>> origin/upstream
 
 class CommandScriptImmediateOutputTestCase (PExpectTest):
 
@@ -27,14 +20,9 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
         PExpectTest.setUp(self)
 
     @skipIfRemote # test not remote-ready llvm.org/pr24813
-<<<<<<< HEAD
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     @expectedFlakeyLinux("llvm.org/pr25172")
     @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
-=======
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
-    @expectedFailureAll(oslist=["freebsd","linux"], bugnumber="llvm.org/pr26139")
->>>>>>> origin/upstream
     def test_command_script_immediate_output (self):
         """Test that LLDB correctly allows scripted commands to set an immediate output file."""
         self.launch(timeout=5)

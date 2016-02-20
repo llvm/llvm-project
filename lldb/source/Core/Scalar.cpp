@@ -1875,7 +1875,7 @@ Scalar::operator>>= (const Scalar& rhs)
              case e_sint128:
              case e_uint128:
              {
-                 m_integer = m_integer.ashr(*(const uint_t *)rhs.m_integer.getRawData());
+                 m_integer >> *rhs.m_integer.getRawData();
                  break;
              }
         }

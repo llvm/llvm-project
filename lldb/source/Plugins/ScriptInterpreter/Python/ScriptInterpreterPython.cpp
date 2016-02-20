@@ -146,7 +146,7 @@ private:
         size_t size = 0;
         static wchar_t *g_python_home = Py_DecodeLocale(LLDB_PYTHON_HOME, &size);
 #else
-        static char g_python_home[] = LLDB_PYTHON_HOME;
+        static char *g_python_home = LLDB_PYTHON_HOME;
 #endif
         Py_SetPythonHome(g_python_home);
 #endif
@@ -1019,7 +1019,7 @@ ScriptInterpreterPython::Interrupt()
 
     if (IsExecutingPython())
     {
-        PyThreadState *state = PyThreadState_GET();
+        PyThreadState *state = PyThreadState_Get();
         if (!state)
             state = GetThreadState();
         if (state)
@@ -1692,10 +1692,10 @@ ScriptInterpreterPython::OSPlugin_RegisterContextData(StructuredData::ObjectSP o
         PyErr_Clear();
     }
 
-    assert(PythonBytes::Check(py_return.get()) && "get_register_data returned unknown object type!");
+    assert(PythonString::Check(py_return.get()) && "get_register_data returned unknown object type!");
 
-    PythonBytes result(PyRefType::Borrowed, py_return.get());
-    return result.CreateStructuredString();
+    PythonString result_string(PyRefType::Borrowed, py_return.get());
+    return result_string.CreateStructuredString();
 }
 
 StructuredData::DictionarySP

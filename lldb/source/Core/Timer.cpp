@@ -40,7 +40,9 @@ namespace
 std::atomic<bool> Timer::g_quiet(true);
 std::atomic<unsigned> Timer::g_display_depth(0);
 std::mutex Timer::g_file_mutex;
+FILE* Timer::g_file = nullptr;
 
+static lldb::thread_key_t g_key;
 
 static Mutex &
 GetCategoryMutex()
@@ -56,17 +58,10 @@ GetCategoryMap()
     return g_category_map;
 }
 
-static void
-ThreadSpecificCleanup(void *p)
-{
-    delete static_cast<TimerStack *>(p);
-}
 
 static TimerStack *
 GetTimerStackForCurrentThread ()
 {
-    static lldb::thread_key_t g_key = Host::ThreadLocalStorageCreate(ThreadSpecificCleanup);
-
     void *timer_stack = Host::ThreadLocalStorageGet(g_key);
     if (timer_stack == NULL)
     {
@@ -77,9 +72,22 @@ GetTimerStackForCurrentThread ()
 }
 
 void
+ThreadSpecificCleanup (void *p)
+{
+    delete (TimerStack *)p;
+}
+
+void
 Timer::SetQuiet (bool value)
 {
     g_quiet = value;
+}
+
+void
+Timer::Initialize ()
+{
+    Timer::g_file = stdout;
+    g_key = Host::ThreadLocalStorageCreate(ThreadSpecificCleanup);
 }
 
 Timer::Timer (const char *category, const char *format, ...) :
@@ -100,15 +108,15 @@ Timer::Timer (const char *category, const char *format, ...) :
             std::lock_guard<std::mutex> lock(g_file_mutex);
 
             // Indent
-            ::fprintf(stdout, "%*s", stack->m_depth * TIMER_INDENT_AMOUNT, "");
+            ::fprintf (g_file, "%*s", stack->m_depth * TIMER_INDENT_AMOUNT, "");
             // Print formatted string
             va_list args;
             va_start (args, format);
-            ::vfprintf(stdout, format, args);
+            ::vfprintf (g_file, format, args);
             va_end (args);
 
             // Newline
-            ::fprintf(stdout, "\n");
+            ::fprintf (g_file, "\n");
         }
         TimeValue start_time(TimeValue::Now());
         m_total_start = start_time;
@@ -153,8 +161,11 @@ Timer::~Timer()
         if (g_quiet == false)
         {
             std::lock_guard<std::mutex> lock(g_file_mutex);
-            ::fprintf(stdout, "%*s%.9f sec (%.9f sec)\n", (stack->m_depth - 1) * TIMER_INDENT_AMOUNT, "",
-                      total_nsec / 1000000000.0, timer_nsec / 1000000000.0);
+            ::fprintf (g_file,
+                       "%*s%.9f sec (%.9f sec)\n",
+                       (stack->m_depth - 1) *TIMER_INDENT_AMOUNT, "",
+                       total_nsec / 1000000000.0,
+                       timer_nsec / 1000000000.0);
         }
 
         // Keep total results for each category so we can dump results.

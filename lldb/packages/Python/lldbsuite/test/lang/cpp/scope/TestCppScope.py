@@ -2,16 +2,15 @@
 Test scopes in C++.
 """
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class TestCppScopes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureDarwin
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    @expectedFailureWindows("llvm.org/pr24764")
     def test_with_run_command(self):
         self.build()
 

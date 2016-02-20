@@ -10,9 +10,8 @@ from __future__ import print_function
 import os, os.path, time
 import lldb
 import string
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 file_index = 0
 @skipUnlessDarwin

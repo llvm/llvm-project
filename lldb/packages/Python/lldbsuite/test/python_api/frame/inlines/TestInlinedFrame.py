@@ -9,9 +9,8 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class InlinedFrameAPITestCase(TestBase):
 
@@ -61,10 +60,7 @@ class InlinedFrameAPITestCase(TestBase):
         #
         #     outer_inline (argc);
         #
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
-
-        frame0 = thread.GetFrameAtIndex(0)
+        frame0 = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
         if frame0.IsInlined():
             filename = frame0.GetLineEntry().GetFileSpec().GetFilename()
             self.assertTrue(filename == self.source)

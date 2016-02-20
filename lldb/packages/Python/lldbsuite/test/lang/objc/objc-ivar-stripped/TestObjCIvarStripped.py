@@ -6,9 +6,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class TestObjCIvarStripped(TestBase):
 
@@ -22,7 +21,8 @@ class TestObjCIvarStripped(TestBase):
         self.stop_line = line_number(self.main_source, '// Set breakpoint here.')
 
     @skipUnlessDarwin
-    @skipIf(debug_info=no_match("dsym"), bugnumber="This test requires a stripped binary and a dSYM")
+    @skipIfDwarf    # This test requires a stripped binary and a dSYM
+    @skipIfDWO      # This test requires a stripped binary and a dSYM
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test that we can find stripped Objective-C ivars in the runtime"""

@@ -92,9 +92,6 @@ CommandObjectMultiword::LoadSubCommand
     const CommandObjectSP& cmd_obj
 )
 {
-    if (cmd_obj.get())
-        assert((&GetCommandInterpreter() == &cmd_obj->GetCommandInterpreter()) && "tried to add a CommandObject from a different interpreter");
-    
     CommandMap::iterator pos;
     bool success = true;
 

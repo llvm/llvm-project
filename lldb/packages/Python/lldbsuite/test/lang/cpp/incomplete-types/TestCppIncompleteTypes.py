@@ -1,13 +1,13 @@
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class TestCppIncompleteTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(compiler="gcc")
+    @expectedFailureFreeBSD("llvm.org/pr25626 test executable not built correctly on FreeBSD")
+    @skipIfGcc
     def test_limit_debug_info(self):
         self.build()
         frame = self.get_test_frame('limit')
@@ -20,7 +20,7 @@ class TestCppIncompleteTypes(TestBase):
         self.assertTrue(value_a.IsValid(), "'expr a' results in a valid SBValue object")
         self.assertTrue(value_a.GetError().Success(), "'expr a' is successful")
 
-    @skipIf(compiler="gcc")
+    @skipIfGcc
     @skipIfWindows # Clang on Windows asserts in external record layout in this case.
     def test_partial_limit_debug_info(self):
         self.build()

@@ -6,16 +6,15 @@ from __future__ import print_function
 
 import os
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 
 class ExprSyscallTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
+    @expectedFailureWindows("llvm.org/pr21765") # Also getpid() is not a function on Windows anyway
     def test_setpgid(self):
         self.build()
         self.expr_syscall()

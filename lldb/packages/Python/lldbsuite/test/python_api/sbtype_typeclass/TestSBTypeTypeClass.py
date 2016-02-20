@@ -1,4 +1,4 @@
-from lldbsuite.test import decorators
-from lldbsuite.test import lldbinline
+import lldbsuite.test.lldbinline as lldbinline
+import lldbsuite.test.lldbtest as lldbtest
 
-lldbinline.MakeInlineTest(__file__, globals(), [decorators.skipIfFreeBSD,decorators.skipIfLinux,decorators.skipIfWindows])
+lldbinline.MakeInlineTest(__file__, globals(), [lldbtest.skipIfFreeBSD,lldbtest.skipIfLinux,lldbtest.skipIfWindows])

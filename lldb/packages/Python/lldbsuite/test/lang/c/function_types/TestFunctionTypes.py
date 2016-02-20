@@ -6,9 +6,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class FunctionTypesTestCase(TestBase):
 
@@ -38,7 +37,7 @@ class FunctionTypesTestCase(TestBase):
             substrs = ['a.out`string_not_empty',
                        'stop reason = breakpoint'])
     
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureWindows("llvm.org/pr21765")
     def test_pointers(self):
         """Test that a function pointer to 'printf' works and can be called."""
         self.build()

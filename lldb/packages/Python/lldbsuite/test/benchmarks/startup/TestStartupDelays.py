@@ -8,7 +8,6 @@ import os, sys
 import lldb
 from lldbsuite.test import configuration
 from lldbsuite.test import lldbtest_config
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
 
 class StartupDelaysBench(BenchBase):
@@ -28,7 +27,7 @@ class StartupDelaysBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
     def test_startup_delay(self):
         """Test start up delays creating a target, setting a breakpoint, and run to breakpoint stop."""
         print()

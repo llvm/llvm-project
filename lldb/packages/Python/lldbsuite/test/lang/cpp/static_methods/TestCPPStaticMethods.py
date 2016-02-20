@@ -3,9 +3,8 @@ Tests expressions that distinguish between static and non-static methods.
 """
 
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class CPPStaticMethodsTestCase(TestBase):
     
@@ -15,7 +14,7 @@ class CPPStaticMethodsTestCase(TestBase):
         TestBase.setUp(self)
         self.line = line_number('main.cpp', '// Break at this line')
 
-    @expectedFailureAll(oslist=["windows"])
+    @expectedFailureWindows
     def test_with_run_command(self):
         """Test that static methods are properly distinguished from regular methods"""
         self.build()

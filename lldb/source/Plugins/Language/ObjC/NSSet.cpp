@@ -277,7 +277,7 @@ lldb_private::formatters::NSSetSummaryProvider (ValueObject& valobj, Stream& str
         auto iter = map.find(class_name_cs), end = map.end();
         if (iter != end)
             return iter->second(valobj, stream, options);
-        else
+        if (!ExtractValueFromObjCExpression(valobj, "int", "count", value))
             return false;
     }
     
@@ -349,7 +349,7 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSSetSyntheticFrontEndCreat
         auto iter = map.find(class_name_cs), end = map.end();
         if (iter != end)
             return iter->second(synth, valobj_sp);
-        return nullptr;
+        return /*(new NSSetCodeRunningSyntheticFrontEnd(valobj_sp))*/ NULL;
     }
 }
 

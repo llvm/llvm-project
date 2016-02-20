@@ -8,9 +8,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class ValueMD5CrashTestCase(TestBase):
 
@@ -22,7 +21,7 @@ class ValueMD5CrashTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// break here')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
+    @expectedFailureWindows("llvm.org/pr24663")
     def test_with_run_command(self):
         """Verify that the hash computing logic for ValueObject's values can't crash us."""
         self.build()

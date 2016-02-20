@@ -571,18 +571,7 @@ Module::ResolveSymbolContextForAddress (const Address& so_addr, uint32_t resolve
             Symtab *symtab = sym_vendor->GetSymtab();
             if (symtab && so_addr.IsSectionOffset())
             {
-                Symbol *matching_symbol = nullptr;
-
-                symtab->ForEachSymbolContainingFileAddress(so_addr.GetFileAddress(),
-                                                           [&matching_symbol](Symbol *symbol) -> bool {
-                                                               if (symbol->GetType() != eSymbolTypeInvalid)
-                                                               {
-                                                                   matching_symbol = symbol;
-                                                                   return false; // Stop iterating
-                                                               }
-                                                               return true; // Keep iterating
-                                                           });
-                sc.symbol = matching_symbol;
+                sc.symbol = symtab->FindSymbolContainingFileAddress(so_addr.GetFileAddress());
                 if (!sc.symbol &&
                     resolve_scope & eSymbolContextFunction && !(resolved_flags & eSymbolContextFunction))
                 {

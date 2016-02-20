@@ -452,12 +452,7 @@ CMICmnLLDBDebugSessionInfo::MIResponseForVariableInfoInternal(const VariableInfo
     {
         CMICmnMIValueTuple miValueTuple;
         lldb::SBValue value = vwrSBValueList.GetValueAtIndex(i);
-        // If one stops inside try block with, which catch clause type is unnamed 
-        // (e.g std::exception&) then value name will be nullptr as well as value pointer
-        const char* name = value.GetName();
-        if (name == nullptr)
-            continue;
-        const CMICmnMIValueConst miValueConst(name);
+        const CMICmnMIValueConst miValueConst(value.GetName());
         const CMICmnMIValueResult miValueResultName("name", miValueConst);
         if (vbMarkArgs && vbIsArgs)
         {

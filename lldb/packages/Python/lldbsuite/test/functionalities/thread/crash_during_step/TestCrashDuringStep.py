@@ -8,9 +8,8 @@ from __future__ import print_function
 
 import os
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class CreateDuringStepTestCase(TestBase):
 
@@ -20,9 +19,9 @@ class CreateDuringStepTestCase(TestBase):
         TestBase.setUp(self)
         self.breakpoint = line_number('main.cpp', '// Set breakpoint here')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureWindows("llvm.org/pr24778")
     @expectedFailureAndroid("llvm.org/pr24497", archs=['arm', 'aarch64'])
-    @expectedFailureAll(triple = re.compile('^mips'))    # IO error due to breakpoint at invalid address
+    @expectedFailureAll(archs=['mips', 'mipsel', 'mips64', 'mips64el'])    # IO error due to breakpoint at invalid address
     def test_step_inst_with(self):
         """Test thread creation during step-inst handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -39,8 +38,11 @@ class CreateDuringStepTestCase(TestBase):
 
         # The stop reason should be breakpoint.
         self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), STOPPED_DUE_TO_BREAKPOINT)
+        self.assertEqual(lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint).IsValid(), 1,
+                STOPPED_DUE_TO_BREAKPOINT)
+
+        thread = process.GetThreadAtIndex(0)
+        self.assertTrue(thread and thread.IsValid(), "Thread is valid")
 
         # Keep stepping until the inferior crashes
         while process.GetState() == lldb.eStateStopped and not lldbutil.is_thread_crashed(self, thread):

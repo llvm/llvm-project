@@ -9,9 +9,8 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 # rdar://problem/8532131
 # lldb not able to digest the clang-generated debug info correctly with respect to function name
@@ -33,7 +32,6 @@ class ConditionalBreakTestCase(TestBase):
         self.build()
         self.simulate_conditional_break_by_user()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265: args in frames other than #0 are not evaluated correctly")
     def do_conditional_break(self):
         """Exercise some thread and frame APIs to break if c() is called by a()."""
         exe = os.path.join(os.getcwd(), "a.out")
@@ -66,8 +64,7 @@ class ConditionalBreakTestCase(TestBase):
         for j in range(10):
             if self.TraceOn():
                 print("j is: ", j)
-            thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint)
-            self.assertIsNotNone(thread, "Expected one thread to be stopped at the breakpoint")
+            thread = process.GetThreadAtIndex(0)
             
             if thread.GetNumFrames() >= 2:
                 frame0 = thread.GetFrameAtIndex(0)
@@ -85,8 +82,8 @@ class ConditionalBreakTestCase(TestBase):
 
                     # And the local variable 'val' should have a value of (int) 3.
                     val = frame1.FindVariable("val")
-                    self.assertEqual("int", val.GetTypeName())
-                    self.assertEqual("3", val.GetValue())
+                    self.assertTrue(val.GetTypeName() == "int", "'val' has int type")
+                    self.assertTrue(val.GetValue() == "3", "'val' has a value of 3")
                     break
 
             process.Continue()

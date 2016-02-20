@@ -8,11 +8,10 @@ from __future__ import print_function
 
 import os
 import re
-import sys
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
+import sys
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class PythonBreakpointCommandSettingTestCase(TestBase):
 

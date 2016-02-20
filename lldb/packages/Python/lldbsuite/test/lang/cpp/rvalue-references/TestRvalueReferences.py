@@ -3,17 +3,16 @@ Tests that rvalue references are supported in C++
 """
 
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class RvalueReferencesTestCase(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
     #rdar://problem/11479676
-    @expectedFailureAll(compiler="icc", bugnumber="ICC (13.1, 14-beta) do not emit DW_TAG_rvalue_reference_type.")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureIcc("ICC (13.1, 14-beta) do not emit DW_TAG_rvalue_reference_type.")
+    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_with_run_command(self):
         """Test that rvalues are supported in the C++ expression parser"""
         self.build()

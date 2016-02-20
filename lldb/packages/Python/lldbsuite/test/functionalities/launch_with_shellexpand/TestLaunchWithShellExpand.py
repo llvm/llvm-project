@@ -8,15 +8,16 @@ from __future__ import print_function
 import lldb
 import os
 import time
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class LaunchWithShellExpandTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows", "linux", "freebsd"], bugnumber="llvm.org/pr24778 llvm.org/pr22627")
+    @expectedFailureFreeBSD("llvm.org/pr22627 process launch w/ shell expansion not working")
+    @expectedFailureLinux("llvm.org/pr22627 process launch w/ shell expansion not working")
+    @expectedFailureWindows("llvm.org/pr24778")
     def test(self):
         self.build()
         exe = os.path.join (os.getcwd(), "a.out")

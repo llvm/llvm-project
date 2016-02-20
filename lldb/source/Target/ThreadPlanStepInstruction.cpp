@@ -239,8 +239,7 @@ ThreadPlanStepInstruction::ShouldStop (Event *event_ptr)
     }
     else
     {
-        lldb::addr_t pc_addr = m_thread.GetRegisterContext()->GetPC(0);
-        if (pc_addr != m_instruction_addr)
+        if (m_thread.GetRegisterContext()->GetPC(0) != m_instruction_addr)
         {
             if (--m_iteration_count <= 0)
             {

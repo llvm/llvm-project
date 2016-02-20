@@ -8,11 +8,10 @@ from __future__ import print_function
 
 
 import os, time
-import datetime
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import datetime
+import lldbsuite.test.lldbutil as lldbutil
 
 class NSStringDataFormatterTestCase(TestBase):
 

@@ -5,6 +5,7 @@
 int main (int argc, char **argv)
 {
   char *evil = getenv("EVIL");
+  puts(evil);
 
-  return 0;  // Set breakpoint here.
+  return 0;
 }

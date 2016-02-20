@@ -7,9 +7,7 @@ from __future__ import print_function
 
 
 import lldbmi_testcase
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
@@ -17,7 +15,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr25000: lldb-mi does not receive broadcasted notification from Core/Process about process stopped")
+    @expectedFailureLinux # llvm.org/pr25000: lldb-mi does not receive broadcasted notification from Core/Process about process stopped
     def test_lldbmi_exec_run(self):
         """Test that 'lldb-mi --interpreter' can stop at entry."""
 
@@ -206,7 +204,7 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureAll(archs=["i[3-6]86"], bugnumber="xfail to get buildbot green, failing config: i386 binary running on ubuntu 14.04 x86_64")
+    @expectedFailurei386 #xfail to get buildbot green, failing config: i386 binary running on ubuntu 14.04 x86_64
     def test_lldbmi_exec_next_instruction(self):
         """Test that 'lldb-mi --interpreter' works for instruction stepping."""
 

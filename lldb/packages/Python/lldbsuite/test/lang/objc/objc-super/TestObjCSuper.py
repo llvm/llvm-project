@@ -6,9 +6,8 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class TestObjCSuperMethod(TestBase):
 
@@ -22,7 +21,7 @@ class TestObjCSuperMethod(TestBase):
         self.break_line = line_number(self.main_source, '// Set breakpoint here.')
 
     @skipUnlessDarwin
-    @expectedFailureAll(archs=["i[3-6]86"])
+    @expectedFailurei386
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test calling methods on super."""

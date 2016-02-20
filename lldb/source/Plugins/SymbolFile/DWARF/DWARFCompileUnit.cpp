@@ -1209,12 +1209,6 @@ DWARFCompileUnit::GetProducerVersionUpdate()
     return m_producer_version_update;
 }
 
-// Remove this once GOOGLE_RenderScript is available in our LLVM.
-#if !defined(DW_LANG_GOOGLE_RenderScript)
-// HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript)
-#define DW_LANG_GOOGLE_RenderScript 0x8e57
-#endif
-
 LanguageType
 DWARFCompileUnit::LanguageTypeFromDWARF(uint64_t val) 
 {
@@ -1224,7 +1218,7 @@ DWARFCompileUnit::LanguageTypeFromDWARF(uint64_t val)
     {
     case DW_LANG_Mips_Assembler:
         return eLanguageTypeMipsAssembler;
-    case DW_LANG_GOOGLE_RenderScript:
+    case 0x8e57: // FIXME: needs to be added to llvm
         return eLanguageTypeExtRenderScript;
     default:
         return static_cast<LanguageType>(val);

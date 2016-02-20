@@ -6,9 +6,8 @@ from __future__ import print_function
 
 import os
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 
 class ChangeProcessGroupTestCase(TestBase):
@@ -45,7 +44,7 @@ class ChangeProcessGroupTestCase(TestBase):
                 print(msg)
             if i < max_attempts:
                 # Exponential backoff!
-                time.sleep(pow(2, i) * 0.30)
+                time.sleep(pow(2, i) * 0.25)
         else:
             self.fail("Child PID file %s not found even after %d attempts." % (pid_file_path, max_attempts))
 

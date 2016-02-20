@@ -9,16 +9,15 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class ThreadSpecificBreakTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"])
+    @expectedFailureWindows # Thread specific breakpoints cause the inferior to crash
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""
         self.build()

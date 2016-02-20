@@ -1367,7 +1367,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont (StringExtractorGDBRemote &packet
                 thread_action.signal = packet.GetHexMaxU32 (false, 0);
                 if (thread_action.signal == 0)
                     return SendIllFormedResponse (packet, "Could not parse signal in vCont packet C action");
-                LLVM_FALLTHROUGH;
+                // Fall through to next case...
 
             case 'c':
                 // Continue
@@ -1378,7 +1378,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont (StringExtractorGDBRemote &packet
                 thread_action.signal = packet.GetHexMaxU32 (false, 0);
                 if (thread_action.signal == 0)
                     return SendIllFormedResponse (packet, "Could not parse signal in vCont packet S action");
-                LLVM_FALLTHROUGH;
+                // Fall through to next case...
 
             case 's':
                 // Step

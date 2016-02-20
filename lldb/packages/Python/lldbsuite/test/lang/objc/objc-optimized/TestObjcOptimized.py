@@ -13,11 +13,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
-import re
-
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
+import re
 
 # rdar://problem/9087739
 # test failure: objc_optimized does not work for "-C clang -A i386"

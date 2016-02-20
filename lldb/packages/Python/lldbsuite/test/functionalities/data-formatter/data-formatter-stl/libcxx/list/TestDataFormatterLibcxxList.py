@@ -8,9 +8,8 @@ from __future__ import print_function
 
 import os, time, re
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
+import lldbsuite.test.lldbutil as lldbutil
 
 class LibcxxListDataFormatterTestCase(TestBase):
 
@@ -25,7 +24,7 @@ class LibcxxListDataFormatterTestCase(TestBase):
         self.line3 = line_number('main.cpp', '// Set third break point at this line.')
         self.line4 = line_number('main.cpp', '// Set fourth break point at this line.')
 
-    @skipIf(compiler="gcc")
+    @skipIfGcc
     @skipIfWindows # libc++ not ported to Windows yet
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
