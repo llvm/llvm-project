@@ -28,6 +28,7 @@ class IncompleteModulesTestCase(TestBase):
     @expectedFailureDarwin("rdar://24543255")
     @unittest2.expectedFailure("rdar://20416388")
     @unittest2.skipIf(platform.system() != "Darwin" or StrictVersion('12.0.0') > platform.release(), "Only supported on Darwin 12.0.0+")
+    @skipIfDarwin  # https://bugs.swift.org/browse/SR-779
     def test_expr(self):
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")
