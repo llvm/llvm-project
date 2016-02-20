@@ -1155,6 +1155,7 @@ public:
   iterator end() { return MemAccs.end(); }
   const_iterator begin() const { return MemAccs.begin(); }
   const_iterator end() const { return MemAccs.end(); }
+  size_t size() const { return MemAccs.size(); }
 
   unsigned getNumParams() const;
   unsigned getNumIterators() const;

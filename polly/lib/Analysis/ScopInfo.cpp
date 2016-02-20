@@ -775,8 +775,11 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
       AccessValue(AccessValue), IsAffine(Affine),
       Subscripts(Subscripts.begin(), Subscripts.end()), AccessRelation(nullptr),
       NewAccessRelation(nullptr) {
+  static const std::string TypeStrings[] = {"", "_Read", "_Write", "_MayWrite"};
+  const std::string Access = TypeStrings[Type] + utostr(Stmt->size()) + "_";
 
-  std::string IdName = "__polly_array_ref";
+  std::string IdName =
+      getIslCompatibleName(Stmt->getBaseName(), Access, BaseName);
   Id = isl_id_alloc(Stmt->getParent()->getIslCtx(), IdName.c_str(), this);
 }
 

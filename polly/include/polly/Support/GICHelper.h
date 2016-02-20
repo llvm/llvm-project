@@ -26,6 +26,7 @@ struct isl_union_set;
 struct isl_schedule;
 struct isl_multi_aff;
 struct isl_pw_multi_aff;
+struct isl_union_pw_multi_aff;
 struct isl_aff;
 struct isl_pw_aff;
 struct isl_val;
@@ -49,6 +50,7 @@ std::string stringFromIslObj(__isl_keep isl_union_set *uset);
 std::string stringFromIslObj(__isl_keep isl_schedule *schedule);
 std::string stringFromIslObj(__isl_keep isl_multi_aff *maff);
 std::string stringFromIslObj(__isl_keep isl_pw_multi_aff *pma);
+std::string stringFromIslObj(__isl_keep isl_union_pw_multi_aff *upma);
 std::string stringFromIslObj(__isl_keep isl_aff *aff);
 std::string stringFromIslObj(__isl_keep isl_pw_aff *pwaff);
 std::string stringFromIslObj(__isl_keep isl_space *space);
@@ -87,6 +89,12 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_multi_aff *MA) {
   OS << polly::stringFromIslObj(MA);
+  return OS;
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     __isl_keep isl_union_pw_multi_aff *UPMA) {
+  OS << polly::stringFromIslObj(UPMA);
   return OS;
 }
 

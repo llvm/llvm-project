@@ -211,6 +211,12 @@
 // RUN: %clang_cl /FI asdf.h -### -- %s 2>&1 | FileCheck -check-prefix=FI_ %s
 // FI_: "-include" "asdf.h"
 
+// RUN: %clang_cl /c /GX -### -- %s 2>&1 | FileCheck -check-prefix=GX %s
+// GX: "-fcxx-exceptions" "-fexceptions"
+
+// RUN: %clang_cl /c /GX /GX- -### -- %s 2>&1 | FileCheck -check-prefix=GX_ %s
+// GX_-NOT: "-fcxx-exceptions" "-fexceptions"
+
 // We forward any unrecognized -W diagnostic options to cc1.
 // RUN: %clang_cl -Wunused-pragmas -### -- %s 2>&1 | FileCheck -check-prefix=WJoined %s
 // WJoined: "-cc1"

@@ -7,12 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommandObjectHelp.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "CommandObjectHelp.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/Options.h"
@@ -45,17 +44,15 @@ CommandObjectHelp::CommandObjectHelp (CommandInterpreter &interpreter) :
     m_arguments.push_back (arg);
 }
 
-CommandObjectHelp::~CommandObjectHelp()
-{
-}
+CommandObjectHelp::~CommandObjectHelp() = default;
 
 OptionDefinition
 CommandObjectHelp::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_ALL, false, "hide-aliases", 'a', OptionParser::eNoArgument, NULL, NULL, 0, eArgTypeNone,         "Hide aliases in the command list."},
-    { LLDB_OPT_SET_ALL, false, "hide-user-commands", 'u', OptionParser::eNoArgument, NULL, NULL, 0, eArgTypeNone,         "Hide user-defined commands from the list."},
-    { LLDB_OPT_SET_ALL, false, "show-hidden-commands", 'h', OptionParser::eNoArgument, NULL, NULL, 0, eArgTypeNone,         "Include commands prefixed with an underscore."},
-    { 0, false, NULL, 0, 0, 0, NULL, 0, eArgTypeNone, NULL }
+    { LLDB_OPT_SET_ALL, false, "hide-aliases", 'a', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,         "Hide aliases in the command list."},
+    { LLDB_OPT_SET_ALL, false, "hide-user-commands", 'u', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,         "Hide user-defined commands from the list."},
+    { LLDB_OPT_SET_ALL, false, "show-hidden-commands", 'h', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,         "Include commands prefixed with an underscore."},
+    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
 
 bool
@@ -88,7 +85,7 @@ CommandObjectHelp::DoExecute (Args& command, CommandReturnObject &result)
         bool is_alias_command = m_interpreter.AliasExists (command.GetArgumentAtIndex (0));
         std::string alias_name = command.GetArgumentAtIndex(0);
         
-        if (cmd_obj != NULL)
+        if (cmd_obj != nullptr)
         {
             StringList matches;
             bool all_okay = true;
@@ -107,7 +104,7 @@ CommandObjectHelp::DoExecute (Args& command, CommandReturnObject &result)
                 {
                     CommandObject *found_cmd;
                     found_cmd = sub_cmd_obj->GetSubcommandObject(sub_command.c_str(), &matches);
-                    if (found_cmd == NULL)
+                    if (found_cmd == nullptr)
                         all_okay = false;
                     else if (matches.GetSize() > 1)
                         all_okay = false;
@@ -116,7 +113,7 @@ CommandObjectHelp::DoExecute (Args& command, CommandReturnObject &result)
                 }
             }
             
-            if (!all_okay || (sub_cmd_obj == NULL))
+            if (!all_okay || (sub_cmd_obj == nullptr))
             {
                 std::string cmd_string;
                 command.GetCommandString (cmd_string);
@@ -198,16 +195,13 @@ CommandObjectHelp::DoExecute (Args& command, CommandReturnObject &result)
 }
 
 int
-CommandObjectHelp::HandleCompletion
-(
-    Args &input,
-    int &cursor_index,
-    int &cursor_char_position,
-    int match_start_point,
-    int max_return_elements,
-    bool &word_complete,
-    StringList &matches
-)
+CommandObjectHelp::HandleCompletion(Args &input,
+                                    int &cursor_index,
+                                    int &cursor_char_position,
+                                    int match_start_point,
+                                    int max_return_elements,
+                                    bool &word_complete,
+                                    StringList &matches)
 {
     // Return the completions of the commands in the help system:
     if (cursor_index == 0)

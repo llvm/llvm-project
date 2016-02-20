@@ -161,7 +161,13 @@ class LibcxxTestFormat(object):
                        'expected-error', 'expected-no-diagnostics']
         use_verify = self.use_verify_for_fail and \
                      any([tag in contents for tag in verify_tags])
-        extra_flags = ['-fsyntax-only']
+        # FIXME(EricWF): GCC 5 does not evaluate static assertions that
+        # are dependant on a template parameter when '-fsyntax-only' is passed.
+        # This is fixed in GCC 6. However for now we only pass "-fsyntax-only"
+        # when using Clang.
+        extra_flags = []
+        if self.cxx.type != 'gcc':
+            extra_flags += ['-fsyntax-only']
         if use_verify:
             extra_flags += ['-Xclang', '-verify',
                             '-Xclang', '-verify-ignore-unexpected=note']

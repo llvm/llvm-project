@@ -564,13 +564,11 @@ class __map_node_destructor
 {
     typedef _Allocator                          allocator_type;
     typedef allocator_traits<allocator_type>    __alloc_traits;
-    typedef typename __alloc_traits::value_type::value_type value_type;
+
 public:
     typedef typename __alloc_traits::pointer    pointer;
-private:
-    typedef typename value_type::value_type::first_type     first_type;
-    typedef typename value_type::value_type::second_type    second_type;
 
+private:
     allocator_type& __na_;
 
     __map_node_destructor& operator=(const __map_node_destructor&);
@@ -615,7 +613,7 @@ template <class _Key, class _Tp, class _Compare, class _Allocator>
     class multimap;
 template <class _TreeIterator> class __map_const_iterator;
 
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _Key, class _Tp>
 union __value_type
@@ -697,19 +695,17 @@ struct __extract_key_value_types<__value_type<_Key, _Tp> >
 template <class _TreeIterator>
 class _LIBCPP_TYPE_VIS_ONLY __map_iterator
 {
+    typedef typename _TreeIterator::_NodeTypes                   _NodeTypes;
+    typedef typename _TreeIterator::__pointer_traits             __pointer_traits;
+
     _TreeIterator __i_;
 
-    typedef typename _TreeIterator::__pointer_traits             __pointer_traits;
-    typedef typename _TreeIterator::value_type __value_type;
-    typedef typename __extract_key_value_types<__value_type>::__key_type    __key_type;
-    typedef typename __extract_key_value_types<__value_type>::__mapped_type __mapped_type;
 public:
     typedef bidirectional_iterator_tag                           iterator_category;
-    typedef pair<__key_type, __mapped_type>                      value_type;
+    typedef typename _NodeTypes::__map_value_type                value_type;
     typedef typename _TreeIterator::difference_type              difference_type;
     typedef value_type&                                          reference;
-    typedef typename __rebind_pointer<typename __pointer_traits::pointer, value_type>::type
-        pointer;
+    typedef typename _NodeTypes::__map_value_type_pointer        pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __map_iterator() _NOEXCEPT {}
@@ -758,19 +754,17 @@ public:
 template <class _TreeIterator>
 class _LIBCPP_TYPE_VIS_ONLY __map_const_iterator
 {
+    typedef typename _TreeIterator::_NodeTypes                   _NodeTypes;
+    typedef typename _TreeIterator::__pointer_traits             __pointer_traits;
+
     _TreeIterator __i_;
 
-    typedef typename _TreeIterator::__pointer_traits             __pointer_traits;
-    typedef typename _TreeIterator::value_type __value_type;
-    typedef typename __extract_key_value_types<__value_type>::__key_type    __key_type;
-    typedef typename __extract_key_value_types<__value_type>::__mapped_type __mapped_type;
 public:
     typedef bidirectional_iterator_tag                           iterator_category;
-    typedef pair<__key_type, __mapped_type>                      value_type;
+    typedef typename _NodeTypes::__map_value_type                value_type;
     typedef typename _TreeIterator::difference_type              difference_type;
     typedef const value_type&                                    reference;
-    typedef typename __rebind_pointer<typename __pointer_traits::pointer, const value_type>::type
-        pointer;
+    typedef typename _NodeTypes::__const_map_value_type_pointer  pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __map_const_iterator() _NOEXCEPT {}
@@ -1332,9 +1326,8 @@ private:
     typedef typename __base::__node                    __node;
     typedef typename __base::__node_allocator          __node_allocator;
     typedef typename __base::__node_pointer            __node_pointer;
-    typedef typename __base::__node_const_pointer      __node_const_pointer;
     typedef typename __base::__node_base_pointer       __node_base_pointer;
-    typedef typename __base::__node_base_const_pointer __node_base_const_pointer;
+
     typedef __map_node_destructor<__node_allocator> _Dp;
     typedef unique_ptr<__node, _Dp> __node_holder;
 
@@ -1350,20 +1343,27 @@ private:
 #endif
     __node_holder __construct_node_with_key(const key_type& __k);
 
+    __node_base_pointer const&
+    __find_equal_key(__node_base_pointer& __parent, const key_type& __k) const;
+
+    _LIBCPP_INLINE_VISIBILITY
     __node_base_pointer&
-        __find_equal_key(__node_base_pointer& __parent, const key_type& __k);
-    __node_base_const_pointer
-        __find_equal_key(__node_base_const_pointer& __parent, const key_type& __k) const;
+    __find_equal_key(__node_base_pointer& __parent, const key_type& __k) {
+        map const* __const_this = this;
+        return const_cast<__node_base_pointer&>(
+            __const_this->__find_equal_key(__parent, __k));
+    }
 };
 
-// Find place to insert if __k doesn't exist
-// Set __parent to parent of null leaf
-// Return reference to null leaf
+
+// Find __k
+// Set __parent to parent of null leaf and
+//    return reference to null leaf iv __k does not exist.
 // If __k exists, set parent to node of __k and return reference to node of __k
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-typename map<_Key, _Tp, _Compare, _Allocator>::__node_base_pointer&
+typename map<_Key, _Tp, _Compare, _Allocator>::__node_base_pointer const&
 map<_Key, _Tp, _Compare, _Allocator>::__find_equal_key(__node_base_pointer& __parent,
-                                                       const key_type& __k)
+                                                       const key_type& __k) const
 {
     __node_pointer __nd = __tree_.__root();
     if (__nd != nullptr)
@@ -1399,51 +1399,6 @@ map<_Key, _Tp, _Compare, _Allocator>::__find_equal_key(__node_base_pointer& __pa
     }
     __parent = static_cast<__node_base_pointer>(__tree_.__end_node());
     return __parent->__left_;
-}
-
-// Find __k
-// Set __parent to parent of null leaf and
-//    return reference to null leaf iv __k does not exist.
-// If __k exists, set parent to node of __k and return reference to node of __k
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-typename map<_Key, _Tp, _Compare, _Allocator>::__node_base_const_pointer
-map<_Key, _Tp, _Compare, _Allocator>::__find_equal_key(__node_base_const_pointer& __parent,
-                                                       const key_type& __k) const
-{
-    __node_const_pointer __nd = __tree_.__root();
-    if (__nd != nullptr)
-    {
-        while (true)
-        {
-            if (__tree_.value_comp().key_comp()(__k, __nd->__value_.__cc.first))
-            {
-                if (__nd->__left_ != nullptr)
-                    __nd = static_cast<__node_pointer>(__nd->__left_);
-                else
-                {
-                    __parent = static_cast<__node_base_pointer>(__nd);
-                    return const_cast<const __node_base_const_pointer&>(__parent->__left_);
-                }
-            }
-            else if (__tree_.value_comp().key_comp()(__nd->__value_.__cc.first, __k))
-            {
-                if (__nd->__right_ != nullptr)
-                    __nd = static_cast<__node_pointer>(__nd->__right_);
-                else
-                {
-                    __parent = static_cast<__node_base_pointer>(__nd);
-                    return const_cast<const __node_base_const_pointer&>(__parent->__right_);
-                }
-            }
-            else
-            {
-                __parent = static_cast<__node_base_pointer>(__nd);
-                return __parent;
-            }
-        }
-    }
-    __parent = static_cast<__node_base_pointer>(__tree_.__end_node());
-    return const_cast<const __node_base_const_pointer&>(__parent->__left_);
 }
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -1587,13 +1542,13 @@ template <class _Key, class _Tp, class _Compare, class _Allocator>
 const _Tp&
 map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const
 {
-    __node_base_const_pointer __parent;
-    __node_base_const_pointer __child = __find_equal_key(__parent, __k);
+    __node_base_pointer __parent;
+    __node_base_pointer __child = __find_equal_key(__parent, __k);
 #ifndef _LIBCPP_NO_EXCEPTIONS
     if (__child == nullptr)
         throw out_of_range("map::at:  key not found");
 #endif  // _LIBCPP_NO_EXCEPTIONS
-    return static_cast<__node_const_pointer>(__child)->__value_.__cc.second;
+    return static_cast<__node_pointer>(__child)->__value_.__cc.second;
 }
 
 #if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
@@ -2077,7 +2032,7 @@ private:
     typedef typename __base::__node                    __node;
     typedef typename __base::__node_allocator          __node_allocator;
     typedef typename __base::__node_pointer            __node_pointer;
-    typedef typename __base::__node_const_pointer      __node_const_pointer;
+
     typedef __map_node_destructor<__node_allocator> _Dp;
     typedef unique_ptr<__node, _Dp> __node_holder;
 

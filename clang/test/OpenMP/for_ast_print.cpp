@@ -26,9 +26,15 @@ public:
 #pragma omp for private(a) private(this->a) private(T::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
+#pragma omp for lastprivate(a) lastprivate(this->a) lastprivate(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
   }
   S7 &operator=(S7 &s) {
 #pragma omp for private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+#pragma omp for lastprivate(a) lastprivate(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
@@ -36,15 +42,21 @@ public:
 };
 
 // CHECK: #pragma omp for private(this->a) private(this->a) private(this->S::a)
+// CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(this->S::a)
 // CHECK: #pragma omp for private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(T::a)
 // CHECK: #pragma omp for private(this->a) private(this->a)
+// CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a)
 
 class S8 : public S7<S> {
   S8() {}
 
 public:
   S8(int v) : S7<S>(v){
-#pragma omp for private(a) private(this->a) private(S7<S>::a) 
+#pragma omp for private(a) private(this->a) private(S7<S>::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+#pragma omp for lastprivate(a) lastprivate(this->a) lastprivate(S7<S>::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -52,12 +64,17 @@ public:
 #pragma omp for private(a) private(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
+#pragma omp for lastprivate(a) lastprivate(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
     return *this;
   }
 };
 
 // CHECK: #pragma omp for private(this->a) private(this->a) private(this->S7<S>::a)
+// CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(this->S7<S>::a)
 // CHECK: #pragma omp for private(this->a) private(this->a)
+// CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a)
 
 template <class T, int N>
 T tmain(T argc) {
