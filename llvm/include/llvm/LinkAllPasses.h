@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasSetTracker.h"
+#include "llvm/Analysis/AliasAnalysisEvaluator.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFLAliasAnalysis.h"
 #include "llvm/Analysis/CallPrinter.h"

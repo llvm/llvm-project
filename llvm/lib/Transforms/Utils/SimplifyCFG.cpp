@@ -811,11 +811,9 @@ static int ConstantIntSortPredicate(ConstantInt *const *P1,
                                     ConstantInt *const *P2) {
   const ConstantInt *LHS = *P1;
   const ConstantInt *RHS = *P2;
-  if (LHS->getValue().ult(RHS->getValue()))
-    return 1;
-  if (LHS->getValue() == RHS->getValue())
+  if (LHS == RHS)
     return 0;
-  return -1;
+  return LHS->getValue().ult(RHS->getValue()) ? 1 : -1;
 }
 
 static inline bool HasBranchWeights(const Instruction* I) {
@@ -3371,7 +3369,7 @@ bool SimplifyCFGOpt::SimplifySingleResume(ResumeInst *RI) {
   return true;
 }
 
-bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
+static bool removeEmptyCleanup(CleanupReturnInst *RI) {
   // If this is a trivial cleanup pad that executes no instructions, it can be
   // eliminated.  If the cleanup pad continues to the caller, any predecessor
   // that is an EH pad will be updated to continue to the caller and any
@@ -3487,6 +3485,49 @@ bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
   // The cleanup pad is now unreachable.  Zap it.
   BB->eraseFromParent();
   return true;
+}
+
+// Try to merge two cleanuppads together.
+static bool mergeCleanupPad(CleanupReturnInst *RI) {
+  // Skip any cleanuprets which unwind to caller, there is nothing to merge
+  // with.
+  BasicBlock *UnwindDest = RI->getUnwindDest();
+  if (!UnwindDest)
+    return false;
+
+  // This cleanupret isn't the only predecessor of this cleanuppad, it wouldn't
+  // be safe to merge without code duplication.
+  if (UnwindDest->getSinglePredecessor() != RI->getParent())
+    return false;
+
+  // Verify that our cleanuppad's unwind destination is another cleanuppad.
+  auto *SuccessorCleanupPad = dyn_cast<CleanupPadInst>(&UnwindDest->front());
+  if (!SuccessorCleanupPad)
+    return false;
+
+  CleanupPadInst *PredecessorCleanupPad = RI->getCleanupPad();
+  // Replace any uses of the successor cleanupad with the predecessor pad
+  // The only cleanuppad uses should be this cleanupret, it's cleanupret and
+  // funclet bundle operands.
+  SuccessorCleanupPad->replaceAllUsesWith(PredecessorCleanupPad);
+  // Remove the old cleanuppad.
+  SuccessorCleanupPad->eraseFromParent();
+  // Now, we simply replace the cleanupret with a branch to the unwind
+  // destination.
+  BranchInst::Create(UnwindDest, RI->getParent());
+  RI->eraseFromParent();
+
+  return true;
+}
+
+bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
+  if (removeEmptyCleanup(RI))
+    return true;
+
+  if (mergeCleanupPad(RI))
+    return true;
+
+  return false;
 }
 
 bool SimplifyCFGOpt::SimplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
@@ -4978,7 +5019,7 @@ static bool TryToMergeLandingPad(LandingPadInst *LPad, BranchInst *BI,
     if (!BI2 || !BI2->isIdenticalTo(BI))
       continue;
 
-    // We've found an identical block.  Update our predeccessors to take that
+    // We've found an identical block.  Update our predecessors to take that
     // path instead and make ourselves dead.
     SmallSet<BasicBlock *, 16> Preds;
     Preds.insert(pred_begin(BB), pred_end(BB));

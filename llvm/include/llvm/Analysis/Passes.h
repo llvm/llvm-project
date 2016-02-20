@@ -25,13 +25,6 @@ namespace llvm {
 
   //===--------------------------------------------------------------------===//
   //
-  // createAAEvalPass - This pass implements a simple N^2 alias analysis
-  // accuracy evaluator.
-  //
-  FunctionPass *createAAEvalPass();
-
-  //===--------------------------------------------------------------------===//
-  //
   // createObjCARCAAWrapperPass - This pass implements ObjC-ARC-based
   // alias analysis.
   //

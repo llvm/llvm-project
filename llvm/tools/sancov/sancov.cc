@@ -721,7 +721,8 @@ public:
       if (!ProcessedFunctions.insert(FunctionName).second)
         continue;
 
-      Result[FileLoc{FileName, Loc.Loc.Line}].insert(FunctionName);
+      auto FLoc = FileLoc{FileName, Loc.Loc.Line};
+      Result[FLoc].insert(FunctionName);
     }
     return Result;
   }

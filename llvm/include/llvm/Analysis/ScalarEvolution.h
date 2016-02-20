@@ -1378,12 +1378,11 @@ namespace llvm {
                      SCEVWrapPredicate::IncrementWrapFlags AddedFlags);
 
     /// Re-writes the SCEV according to the Predicates in \p Preds.
-    const SCEV *rewriteUsingPredicate(const SCEV *Scev, const Loop *L,
+    const SCEV *rewriteUsingPredicate(const SCEV *S, const Loop *L,
                                       SCEVUnionPredicate &A);
-    /// Tries to convert the \p Scev expression to an AddRec expression,
+    /// Tries to convert the \p S expression to an AddRec expression,
     /// adding additional predicates to \p Preds as required.
-    const SCEV *convertSCEVToAddRecWithPredicates(const SCEV *Scev,
-                                                  const Loop *L,
+    const SCEV *convertSCEVToAddRecWithPredicates(const SCEV *S, const Loop *L,
                                                   SCEVUnionPredicate &Preds);
 
   private:

@@ -311,8 +311,11 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
     WithinFunction = true;
 
     if (Loc.getFileNum() != LastLoc->getFileNum()) {
+      // File ids are 1 based, and each file checksum table entry is 8 bytes
+      // long. See emitFileChecksums above.
+      unsigned FileOffset = 8 * (Loc.getFileNum() - 1);
       compressAnnotation(ChangeFile, Buffer);
-      compressAnnotation(Loc.getFileNum(), Buffer);
+      compressAnnotation(FileOffset, Buffer);
     }
 
     int LineDelta = Loc.getLine() - LastLoc->getLine();

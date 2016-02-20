@@ -1142,6 +1142,9 @@ namespace llvm {
     MachineBasicBlock *EmitLoweredSegAlloca(MachineInstr *MI,
                                             MachineBasicBlock *BB) const;
 
+    MachineBasicBlock *EmitLoweredTLSAddr(MachineInstr *MI,
+                                          MachineBasicBlock *BB) const;
+
     MachineBasicBlock *EmitLoweredTLSCall(MachineInstr *MI,
                                           MachineBasicBlock *BB) const;
 

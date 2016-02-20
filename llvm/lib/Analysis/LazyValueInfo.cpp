@@ -102,7 +102,7 @@ public:
   }
   static LVILatticeVal getRange(ConstantRange CR) {
     LVILatticeVal Res;
-    Res.markConstantRange(CR);
+    Res.markConstantRange(std::move(CR));
     return Res;
   }
   static LVILatticeVal getOverdefined() {
@@ -176,13 +176,13 @@ public:
   }
 
   /// Return true if this is a change in status.
-  bool markConstantRange(const ConstantRange NewR) {
+  bool markConstantRange(ConstantRange NewR) {
     if (isConstantRange()) {
       if (NewR.isEmptySet())
         return markOverdefined();
 
       bool changed = Range != NewR;
-      Range = NewR;
+      Range = std::move(NewR);
       return changed;
     }
 
@@ -191,7 +191,7 @@ public:
       return markOverdefined();
 
     Tag = constantrange;
-    Range = NewR;
+    Range = std::move(NewR);
     return true;
   }
 
@@ -354,7 +354,7 @@ static LVILatticeVal intersect(LVILatticeVal A, LVILatticeVal B) {
   // Note: An empty range is implicitly converted to overdefined internally.
   // TODO: We could instead use Undefined here since we've proven a conflict
   // and thus know this path must be unreachable. 
-  return LVILatticeVal::getRange(Range);
+  return LVILatticeVal::getRange(std::move(Range));
 }
 
 //===----------------------------------------------------------------------===//
@@ -612,8 +612,7 @@ static LVILatticeVal getFromRangeMetadata(Instruction *BBI) {
   case Instruction::Invoke:
     if (MDNode *Ranges = BBI->getMetadata(LLVMContext::MD_range)) 
       if (isa<IntegerType>(BBI->getType())) {
-        ConstantRange Result = getConstantRangeFromMetadata(*Ranges);
-        return LVILatticeVal::getRange(Result);
+        return LVILatticeVal::getRange(getConstantRangeFromMetadata(*Ranges));
       }
     break;
   };
@@ -1054,7 +1053,7 @@ bool getValueFromFromCondition(Value *Val, ICmpInst *ICI,
       // If we're interested in the false dest, invert the condition.
       if (!isTrueDest) TrueValues = TrueValues.inverse();
 
-      Result = LVILatticeVal::getRange(TrueValues);
+      Result = LVILatticeVal::getRange(std::move(TrueValues));
       return true;
     }
   }
@@ -1114,7 +1113,7 @@ static bool getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
       } else if (i.getCaseSuccessor() == BBTo)
         EdgesVals = EdgesVals.unionWith(EdgeVal);
     }
-    Result = LVILatticeVal::getRange(EdgesVals);
+    Result = LVILatticeVal::getRange(std::move(EdgesVals));
     return true;
   }
   return false;

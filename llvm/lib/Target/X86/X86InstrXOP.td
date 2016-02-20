@@ -246,6 +246,13 @@ multiclass xop4op<bits<8> opc, string OpcodeStr, Intrinsic Int> {
              (Int VR128:$src1, (bitconvert (loadv2i64 addr:$src2)),
               VR128:$src3))]>,
            XOP_4V, VEX_I8IMM;
+  // For disassembler
+  let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
+  def rr_REV : IXOPi8<opc, MRMSrcReg, (outs VR128:$dst),
+           (ins VR128:$src1, VR128:$src2, VR128:$src3),
+           !strconcat(OpcodeStr,
+           "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
+           []>, XOP_4V, VEX_I8IMM, VEX_W, MemOp4;
 }
 
 let ExeDomain = SSEPackedInt in {
@@ -276,6 +283,13 @@ multiclass xop4op256<bits<8> opc, string OpcodeStr, Intrinsic Int> {
              (Int VR256:$src1, (bitconvert (loadv4i64 addr:$src2)),
               VR256:$src3))]>,
            XOP_4V, VEX_I8IMM, VEX_L;
+  // For disassembler
+  let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
+  def rrY_REV : IXOPi8<opc, MRMSrcReg, (outs VR256:$dst),
+           (ins VR256:$src1, VR256:$src2, VR256:$src3),
+           !strconcat(OpcodeStr,
+           "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
+           []>, XOP_4V, VEX_I8IMM, VEX_W, MemOp4, VEX_L;
 }
 
 let ExeDomain = SSEPackedInt in
@@ -312,6 +326,14 @@ multiclass xop5op<bits<8> opc, string OpcodeStr, Intrinsic Int128,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         [(set VR128:$dst,
            (Int128 VR128:$src1, (ld_128 addr:$src2), VR128:$src3, imm:$src4))]>;
+  // For disassembler
+  let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
+  def rr_REV : IXOP5<opc, MRMSrcReg, (outs VR128:$dst),
+        (ins VR128:$src1, VR128:$src2, VR128:$src3, u8imm:$src4),
+        !strconcat(OpcodeStr,
+        "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
+        []>, VEX_W, MemOp4;
+
   def rrY : IXOP5<opc, MRMSrcReg, (outs VR256:$dst),
         (ins VR256:$src1, VR256:$src2, VR256:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
@@ -332,6 +354,13 @@ multiclass xop5op<bits<8> opc, string OpcodeStr, Intrinsic Int128,
         [(set VR256:$dst,
            (Int256 VR256:$src1, (ld_256 addr:$src2), VR256:$src3, imm:$src4))]>,
         VEX_L;
+  // For disassembler
+  let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
+  def rrY_REV : IXOP5<opc, MRMSrcReg, (outs VR256:$dst),
+        (ins VR256:$src1, VR256:$src2, VR256:$src3, u8imm:$src4),
+        !strconcat(OpcodeStr,
+        "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
+        []>, VEX_W, MemOp4, VEX_L;
 }
 
 let ExeDomain = SSEPackedDouble in
