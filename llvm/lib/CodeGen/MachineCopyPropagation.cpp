@@ -35,12 +35,12 @@ namespace {
   class MachineCopyPropagation : public MachineFunctionPass {
     const TargetRegisterInfo *TRI;
     const TargetInstrInfo *TII;
-    MachineRegisterInfo *MRI;
+    const MachineRegisterInfo *MRI;
 
   public:
     static char ID; // Pass identification, replacement for typeid
     MachineCopyPropagation() : MachineFunctionPass(ID) {
-     initializeMachineCopyPropagationPass(*PassRegistry::getPassRegistry());
+      initializeMachineCopyPropagationPass(*PassRegistry::getPassRegistry());
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override;
@@ -49,8 +49,7 @@ namespace {
     typedef SmallVector<unsigned, 4> DestList;
     typedef DenseMap<unsigned, DestList> SourceMap;
 
-    void SourceNoLongerAvailable(unsigned Reg,
-                                 SourceMap &SrcMap,
+    void SourceNoLongerAvailable(unsigned Reg, SourceMap &SrcMap,
                                  DenseMap<unsigned, MachineInstr*> &AvailCopyMap);
     bool CopyPropagateBlock(MachineBasicBlock &MBB);
   };
@@ -62,19 +61,15 @@ INITIALIZE_PASS(MachineCopyPropagation, "machine-cp",
                 "Machine Copy Propagation Pass", false, false)
 
 void
-MachineCopyPropagation::SourceNoLongerAvailable(unsigned Reg,
-                              SourceMap &SrcMap,
+MachineCopyPropagation::SourceNoLongerAvailable(unsigned Reg, SourceMap &SrcMap,
                               DenseMap<unsigned, MachineInstr*> &AvailCopyMap) {
   for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
     SourceMap::iterator SI = SrcMap.find(*AI);
     if (SI != SrcMap.end()) {
       const DestList& Defs = SI->second;
-      for (DestList::const_iterator I = Defs.begin(), E = Defs.end();
-           I != E; ++I) {
-        unsigned MappedDef = *I;
+      for (unsigned MappedDef : Defs) {
         // Source of copy is no longer available for propagation.
-        AvailCopyMap.erase(MappedDef);
-        for (MCSubRegIterator SR(MappedDef, TRI); SR.isValid(); ++SR)
+        for (MCSubRegIterator SR(MappedDef, TRI, true); SR.isValid(); ++SR)
           AvailCopyMap.erase(*SR);
       }
     }
@@ -86,16 +81,12 @@ static bool NoInterveningSideEffect(const MachineInstr *CopyMI,
   const MachineBasicBlock *MBB = CopyMI->getParent();
   if (MI->getParent() != MBB)
     return false;
-  MachineBasicBlock::const_iterator I = CopyMI;
-  MachineBasicBlock::const_iterator E = MBB->end();
-  MachineBasicBlock::const_iterator E2 = MI;
 
-  ++I;
-  while (I != E && I != E2) {
+  for (MachineBasicBlock::const_iterator I = std::next(CopyMI->getIterator()),
+       E = MBB->end(), E2 = MI->getIterator(); I != E && I != E2; ++I) {
     if (I->hasUnmodeledSideEffects() || I->isCall() ||
         I->isTerminator())
       return false;
-    ++I;
   }
   return true;
 }
@@ -109,7 +100,7 @@ static bool NoInterveningSideEffect(const MachineInstr *CopyMI,
 /// But not
 /// ecx = mov eax
 /// al  = mov ch
-static bool isNopCopy(MachineInstr *CopyMI, unsigned Def, unsigned Src,
+static bool isNopCopy(const MachineInstr *CopyMI, unsigned Def, unsigned Src,
                       const TargetRegisterInfo *TRI) {
   unsigned SrcSrc = CopyMI->getOperand(1).getReg();
   if (Def == SrcSrc)
@@ -170,8 +161,9 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
           // Clear any kills of Def between CopyMI and MI. This extends the
           // live range.
-          for (MachineBasicBlock::iterator I = CopyMI, E = MI; I != E; ++I)
-            I->clearRegisterKills(Def, TRI);
+          for (MachineInstr &MMI
+               : make_range(CopyMI->getIterator(), MI->getIterator()))
+            MMI.clearRegisterKills(Def, TRI);
 
           MI->eraseFromParent();
           Changed = true;
@@ -192,7 +184,8 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       DEBUG(dbgs() << "MCP: Copy is a deletion candidate: "; MI->dump());
 
       // Copy is now a candidate for deletion.
-      MaybeDeadCopies.insert(MI);
+      if (!MRI->isReserved(Def))
+        MaybeDeadCopies.insert(MI);
 
       // If 'Src' is previously source of another copy, then this earlier copy's
       // source is no longer available. e.g.
@@ -217,21 +210,19 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       // Remember source that's copied to Def. Once it's clobbered, then
       // it's no longer available for copy propagation.
-      if (std::find(SrcMap[Src].begin(), SrcMap[Src].end(), Def) ==
-          SrcMap[Src].end()) {
-        SrcMap[Src].push_back(Def);
-      }
+      SmallVectorImpl<unsigned> &DestList = SrcMap[Src];
+      if (std::find(DestList.begin(), DestList.end(), Def) == DestList.end())
+        DestList.push_back(Def);
 
       continue;
     }
 
     // Not a copy.
     SmallVector<unsigned, 2> Defs;
-    int RegMaskOpNum = -1;
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI->getOperand(i);
+    const MachineOperand *RegMask = nullptr;
+    for (const MachineOperand &MO : MI->operands()) {
       if (MO.isRegMask())
-        RegMaskOpNum = i;
+        RegMask = &MO;
       if (!MO.isReg())
         continue;
       unsigned Reg = MO.getReg();
@@ -269,18 +260,16 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
     // a large set of registers.  It is possible to use the register mask to
     // prune the available copies, but treat it like a basic block boundary for
     // now.
-    if (RegMaskOpNum >= 0) {
+    if (RegMask) {
       // Erase any MaybeDeadCopies whose destination register is clobbered.
-      const MachineOperand &MaskMO = MI->getOperand(RegMaskOpNum);
-      for (SmallSetVector<MachineInstr*, 8>::iterator
-           DI = MaybeDeadCopies.begin(), DE = MaybeDeadCopies.end();
-           DI != DE; ++DI) {
-        unsigned Reg = (*DI)->getOperand(0).getReg();
-        if (MRI->isReserved(Reg) || !MaskMO.clobbersPhysReg(Reg))
+      for (MachineInstr *MaybeDead : MaybeDeadCopies) {
+        unsigned Reg = MaybeDead->getOperand(0).getReg();
+        assert(!MRI->isReserved(Reg));
+        if (!RegMask->clobbersPhysReg(Reg))
           continue;
         DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: ";
-              (*DI)->dump());
-        (*DI)->eraseFromParent();
+              MaybeDead->dump());
+        MaybeDead->eraseFromParent();
         Changed = true;
         ++NumDeletes;
       }
@@ -293,9 +282,7 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       continue;
     }
 
-    for (unsigned i = 0, e = Defs.size(); i != e; ++i) {
-      unsigned Reg = Defs[i];
-
+    for (unsigned Reg : Defs) {
       // No longer defined by a copy.
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
         CopyMap.erase(*AI);
@@ -312,14 +299,11 @@ bool MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
   // If MBB does have successors, then conservative assume the defs are live-out
   // since we don't want to trust live-in lists.
   if (MBB.succ_empty()) {
-    for (SmallSetVector<MachineInstr*, 8>::iterator
-           DI = MaybeDeadCopies.begin(), DE = MaybeDeadCopies.end();
-         DI != DE; ++DI) {
-      if (!MRI->isReserved((*DI)->getOperand(0).getReg())) {
-        (*DI)->eraseFromParent();
-        Changed = true;
-        ++NumDeletes;
-      }
+    for (MachineInstr *MaybeDead : MaybeDeadCopies) {
+      assert(!MRI->isReserved(MaybeDead->getOperand(0).getReg()));
+      MaybeDead->eraseFromParent();
+      Changed = true;
+      ++NumDeletes;
     }
   }
 
@@ -336,8 +320,8 @@ bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
 
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I)
-    Changed |= CopyPropagateBlock(*I);
+  for (MachineBasicBlock &MBB : MF)
+    Changed |= CopyPropagateBlock(MBB);
 
   return Changed;
 }
