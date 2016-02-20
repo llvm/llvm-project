@@ -183,7 +183,7 @@ FormatCache::GetFormat (const ConstString& type,lldb::TypeFormatImplSP& format_s
 {
     Mutex::Locker lock(m_mutex);
     auto entry = GetEntry(type);
-    if (entry.IsSummaryCached())
+    if (entry.IsFormatCached())
     {
 #ifdef LLDB_CONFIGURATION_DEBUG
         m_cache_hits++;

@@ -38,6 +38,7 @@
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStringList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBProcess.h"
@@ -442,13 +443,24 @@ Driver::OptionData::Clear ()
     m_script_lang = lldb::eScriptLanguageDefault;
     m_initial_commands.clear ();
     m_after_file_commands.clear ();
-    // If there is a local .lldbinit, source that:
-    SBFileSpec local_lldbinit("./.lldbinit", true);
-    if (local_lldbinit.Exists())
+
+    // If there is a local .lldbinit, add that to the
+    // list of things to be sourced, if the settings
+    // permit it.
+    SBFileSpec local_lldbinit (".lldbinit", true);
+
+    SBFileSpec homedir_dot_lldb = SBHostOS::GetUserHomeDirectory();
+    homedir_dot_lldb.AppendPathComponent (".lldbinit");
+
+    // Only read .lldbinit in the current working directory
+    // if it's not the same as the .lldbinit in the home
+    // directory (which is already being read in).
+    if (local_lldbinit.Exists()
+        && strcmp (local_lldbinit.GetDirectory(), homedir_dot_lldb.GetDirectory()) != 0)
     {
         char path[2048];
         local_lldbinit.GetPath(path, 2047);
-        InitialCmdEntry entry(path, true, true);
+        InitialCmdEntry entry(path, true, true, true);
         m_after_file_commands.push_back (entry);
     }
     
@@ -489,18 +501,18 @@ Driver::OptionData::AddInitialCommand (const char *command, CommandPlacement pla
     {
         SBFileSpec file(command);
         if (file.Exists())
-            command_set->push_back (InitialCmdEntry(command, is_file));
+            command_set->push_back (InitialCmdEntry(command, is_file, false));
         else if (file.ResolveExecutableLocation())
         {
             char final_path[PATH_MAX];
             file.GetPath (final_path, sizeof(final_path));
-            command_set->push_back (InitialCmdEntry(final_path, is_file));
+            command_set->push_back (InitialCmdEntry(final_path, is_file, false));
         }
         else
             error.SetErrorStringWithFormat("file specified in --source (-s) option doesn't exist: '%s'", optarg);
     }
     else
-        command_set->push_back (InitialCmdEntry(command, is_file));
+        command_set->push_back (InitialCmdEntry(command, is_file, false));
 }
 
 void
@@ -553,6 +565,30 @@ Driver::WriteCommandsForSourcing (CommandPlacement placement, SBStream &strm)
         const char *command = command_entry.contents.c_str();
         if (command_entry.is_file)
         {
+            // If this command_entry is a file to be sourced, and it's the ./.lldbinit file (the .lldbinit
+            // file in the current working directory), only read it if target.load-cwd-lldbinit is 'true'.
+            if (command_entry.is_cwd_lldbinit_file_read)
+            {
+                SBStringList strlist = m_debugger.GetInternalVariableValue ("target.load-cwd-lldbinit", 
+                                                                            m_debugger.GetInstanceName());
+                if (strlist.GetSize() == 1 && strcmp (strlist.GetStringAtIndex(0), "warn") == 0)
+                {
+                    FILE *output = m_debugger.GetOutputFileHandle ();
+                    ::fprintf (output, 
+                            "There is a .lldbinit file in the current directory which is not being read.\n"
+                            "To silence this warning without sourcing in the local .lldbinit,\n"
+                            "add the following to the lldbinit file in your home directory:\n"
+                            "    settings set target.load-cwd-lldbinit false\n"
+                            "To allow lldb to source .lldbinit files in the current working directory,\n"
+                            "set the value of this variable to true.  Only do so if you understand and\n"
+                            "accept the security risk.\n");
+                    return;
+                }
+                if (strlist.GetSize() == 1 && strcmp (strlist.GetStringAtIndex(0), "false") == 0)
+                {
+                    return;
+                }
+            }
             bool source_quietly = m_option_data.m_source_quietly || command_entry.source_quietly;
             strm.Printf("command source -s %i '%s'\n", source_quietly, command);
         }
@@ -1036,7 +1072,7 @@ Driver::MainLoop ()
     SBStream commands_stream;
     
     // First source in the commands specified to be run before the file arguments are processed.
-    WriteCommandsForSourcing(eCommandPlacementBeforeFile, commands_stream);
+    WriteCommandsForSourcing (eCommandPlacementBeforeFile, commands_stream);
         
     const size_t num_args = m_option_data.m_args.size();
     if (num_args > 0)

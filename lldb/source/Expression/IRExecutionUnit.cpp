@@ -924,6 +924,22 @@ IRExecutionUnit::FindInRuntimes(const std::vector<SearchSpec> &specs, const lldb
 }
 
 lldb::addr_t
+IRExecutionUnit::FindInUserDefinedSymbols(const std::vector<SearchSpec> &specs, const lldb_private::SymbolContext &sc)
+{
+    lldb::TargetSP target_sp = sc.target_sp;
+
+    for (const SearchSpec &spec : specs)
+    {
+        lldb::addr_t symbol_load_addr = target_sp->GetPersistentSymbol(spec.name);
+
+        if (symbol_load_addr != LLDB_INVALID_ADDRESS)
+            return symbol_load_addr;
+    }
+
+    return LLDB_INVALID_ADDRESS;
+}
+
+lldb::addr_t
 IRExecutionUnit::FindSymbol(const lldb_private::ConstString &name)
 {
     std::vector<SearchSpec> candidate_C_names;
@@ -934,13 +950,16 @@ IRExecutionUnit::FindSymbol(const lldb_private::ConstString &name)
     lldb::addr_t ret = FindInSymbols(candidate_C_names, m_sym_ctx);
     if (ret == LLDB_INVALID_ADDRESS)
         ret = FindInRuntimes(candidate_C_names, m_sym_ctx);
-    
+
+    if (ret == LLDB_INVALID_ADDRESS)
+        ret = FindInUserDefinedSymbols(candidate_C_names, m_sym_ctx);
+
     if (ret == LLDB_INVALID_ADDRESS)
     {
         CollectCandidateCPlusPlusNames(candidate_CPlusPlus_names, candidate_C_names, m_sym_ctx);
         ret = FindInSymbols(candidate_CPlusPlus_names, m_sym_ctx);
     }
-    
+
     return ret;
 }
 
