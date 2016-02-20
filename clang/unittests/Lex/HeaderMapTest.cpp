@@ -92,4 +92,13 @@ TEST(HeaderMapTest, checkHeaderValidButEmpty) {
   ASSERT_TRUE(NeedsSwap);
 }
 
+TEST(HeaderMapTest, checkHeader3Buckets) {
+  MapFile<3, 1> File;
+  ASSERT_EQ(3 * sizeof(HMapBucket), sizeof(File.Buckets));
+
+  File.init();
+  bool NeedsSwap;
+  ASSERT_FALSE(HeaderMapImpl::checkHeader(*File.getBuffer(), NeedsSwap));
+}
+
 } // end namespace

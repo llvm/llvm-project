@@ -19,6 +19,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include <cstdio>
 #include <memory>
 using namespace clang;
@@ -80,6 +81,15 @@ bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
     return false;  // Not a header map.
 
   if (Header->Reserved != 0)
+    return false;
+
+  // Check the number of buckets.
+  auto NumBuckets = NeedsByteSwap
+                        ? llvm::sys::getSwappedBytes(Header->NumBuckets)
+                        : Header->NumBuckets;
+
+  // If the number of buckets is not a power of two, the headermap is corrupt.
+  if (NumBuckets & (NumBuckets - 1))
     return false;
 
   // Okay, everything looks good.
@@ -191,10 +201,8 @@ StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
   const HMapHeader &Hdr = getHeader();
   unsigned NumBuckets = getEndianAdjustedWord(Hdr.NumBuckets);
 
-  // If the number of buckets is not a power of two, the headermap is corrupt.
-  // Don't probe infinitely.
-  if (NumBuckets & (NumBuckets-1))
-    return StringRef();
+  // Don't probe infinitely.  This should be checked before constructing.
+  assert(!(NumBuckets & (NumBuckets - 1)) && "Expected power of 2");
 
   // Linearly probe the hash table.
   for (unsigned Bucket = HashHMapKey(Filename);; ++Bucket) {
