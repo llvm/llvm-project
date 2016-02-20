@@ -42,6 +42,8 @@ endif()
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   if(INTERNAL_INSTALL_PREFIX)
     set(INSTALL_DESTINATION "${INTERNAL_INSTALL_PREFIX}/bin")
+    set_property(TARGET c-index-test APPEND PROPERTY INSTALL_RPATH
+       "@executable_path/../../lib")
   else()
     set(INSTALL_DESTINATION bin)
   endif()
