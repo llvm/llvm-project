@@ -1,4 +1,4 @@
-//===-- CommandObjectPlugin.cpp ----------------------------------*- C++ -*-===//
+//===-- CommandObjectPlugin.cpp ---------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "CommandObjectPlugin.h"
-
 #include "lldb/Host/Host.h"
-
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
@@ -19,13 +21,12 @@ using namespace lldb_private;
 
 class CommandObjectPluginLoad : public CommandObjectParsed
 {
-private:
 public:
     CommandObjectPluginLoad (CommandInterpreter &interpreter) :
-    CommandObjectParsed (interpreter,
-                         "plugin load",
-                         "Import a dylib that implements an LLDB plugin.",
-                         NULL)
+        CommandObjectParsed(interpreter,
+                            "plugin load",
+                            "Import a dylib that implements an LLDB plugin.",
+                            nullptr)
     {
         CommandArgumentEntry arg1;
         CommandArgumentData cmd_arg;
@@ -40,11 +41,9 @@ public:
         // Push the data for the first argument into the m_arguments vector.
         m_arguments.push_back (arg1);
     }
-    
-    ~CommandObjectPluginLoad () override
-    {
-    }
-    
+
+    ~CommandObjectPluginLoad() override = default;
+
     int
     HandleArgumentCompletion (Args &input,
                               int &cursor_index,
@@ -58,14 +57,14 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
         
-        CommandCompletions::InvokeCommonCompletionCallbacks (m_interpreter,
-                                                             CommandCompletions::eDiskFileCompletion,
-                                                             completion_str.c_str(),
-                                                             match_start_point,
-                                                             max_return_elements,
-                                                             NULL,
-                                                             word_complete,
-                                                             matches);
+        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+                                                            CommandCompletions::eDiskFileCompletion,
+                                                            completion_str.c_str(),
+                                                            match_start_point,
+                                                            max_return_elements,
+                                                            nullptr,
+                                                            word_complete,
+                                                            matches);
         return matches.GetSize();
     }
 
@@ -109,6 +108,4 @@ CommandObjectMultiword (interpreter,
     LoadSubCommand ("load",  CommandObjectSP (new CommandObjectPluginLoad (interpreter)));
 }
     
-CommandObjectPlugin::~CommandObjectPlugin ()
-{
-}
+CommandObjectPlugin::~CommandObjectPlugin() = default;

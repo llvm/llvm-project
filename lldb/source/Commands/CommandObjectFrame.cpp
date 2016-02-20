@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommandObjectFrame.h"
-
 // C Includes
 // C++ Includes
 #include <string>
+
 // Other libraries and framework includes
 // Project includes
+#include "CommandObjectFrame.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
@@ -58,7 +58,6 @@ using namespace lldb_private;
 class CommandObjectFrameInfo : public CommandObjectParsed
 {
 public:
-
     CommandObjectFrameInfo (CommandInterpreter &interpreter) :
         CommandObjectParsed (interpreter,
                              "frame info",
@@ -71,9 +70,7 @@ public:
     {
     }
 
-    ~CommandObjectFrameInfo () override
-    {
-    }
+    ~CommandObjectFrameInfo() override = default;
 
 protected:
     bool
@@ -94,20 +91,16 @@ protected:
 class CommandObjectFrameSelect : public CommandObjectParsed
 {
 public:
-
-   class CommandOptions : public Options
+    class CommandOptions : public Options
     {
     public:
-
         CommandOptions (CommandInterpreter &interpreter) :
             Options(interpreter)
         {
             OptionParsingStarting ();
         }
 
-        ~CommandOptions () override
-        {
-        }
+        ~CommandOptions() override = default;
 
         Error
         SetOptionValue (uint32_t option_idx, const char *option_arg) override
@@ -150,14 +143,14 @@ public:
     };
     
     CommandObjectFrameSelect (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "frame select",
-                             "Select a frame by index from within the current thread and make it the current frame.",
-                             NULL,
-                             eCommandRequiresThread        |
-                             eCommandTryTargetAPILock      |
-                             eCommandProcessMustBeLaunched |
-                             eCommandProcessMustBePaused   ),
+        CommandObjectParsed(interpreter,
+                            "frame select",
+                            "Select a frame by index from within the current thread and make it the current frame.",
+                            nullptr,
+                            eCommandRequiresThread        |
+                            eCommandTryTargetAPILock      |
+                            eCommandProcessMustBeLaunched |
+                            eCommandProcessMustBePaused   ),
         m_options (interpreter)
     {
         CommandArgumentEntry arg;
@@ -174,16 +167,13 @@ public:
         m_arguments.push_back (arg);
     }
 
-    ~CommandObjectFrameSelect () override
-    {
-    }
+    ~CommandObjectFrameSelect() override = default;
 
     Options *
     GetOptions () override
     {
         return &m_options;
     }
-
 
 protected:
     bool
@@ -283,16 +273,16 @@ protected:
         
         return result.Succeeded();
     }
-protected:
 
+protected:
     CommandOptions m_options;
 };
 
 OptionDefinition
 CommandObjectFrameSelect::CommandOptions::g_option_table[] =
 {
-{ LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeOffset, "A relative frame index offset from the current frame index."},
-{ 0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL }
+    { LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset, "A relative frame index offset from the current frame index."},
+    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
 
 #pragma mark CommandObjectFrameVariable
@@ -302,22 +292,21 @@ CommandObjectFrameSelect::CommandOptions::g_option_table[] =
 class CommandObjectFrameVariable : public CommandObjectParsed
 {
 public:
-
     CommandObjectFrameVariable (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "frame variable",
-                             "Show frame variables. All argument and local variables "
-                             "that are in scope will be shown when no arguments are given. "
-                             "If any arguments are specified, they can be names of "
-                             "argument, local, file static and file global variables. "
-                             "Children of aggregate variables can be specified such as "
-                             "'var->child.x'.",
-                             NULL,
-                             eCommandRequiresFrame |
-                             eCommandTryTargetAPILock |
-                             eCommandProcessMustBeLaunched |
-                             eCommandProcessMustBePaused |
-                             eCommandRequiresProcess),
+        CommandObjectParsed(interpreter,
+                            "frame variable",
+                            "Show frame variables. All argument and local variables "
+                            "that are in scope will be shown when no arguments are given. "
+                            "If any arguments are specified, they can be names of "
+                            "argument, local, file static and file global variables. "
+                            "Children of aggregate variables can be specified such as "
+                            "'var->child.x'.",
+                            nullptr,
+                            eCommandRequiresFrame |
+                            eCommandTryTargetAPILock |
+                            eCommandProcessMustBeLaunched |
+                            eCommandProcessMustBePaused |
+                            eCommandRequiresProcess),
         m_option_group (interpreter),
         m_option_variable(true), // Include the frame specific options by passing "true"
         m_option_format (eFormatDefault),
@@ -342,16 +331,13 @@ public:
         m_option_group.Finalize();
     }
 
-    ~CommandObjectFrameVariable () override
-    {
-    }
+    ~CommandObjectFrameVariable() override = default;
 
     Options *
     GetOptions () override
     {
         return &m_option_group;
     }
-    
     
     int
     HandleArgumentCompletion (Args &input,
@@ -367,14 +353,14 @@ public:
         std::string completion_str (input.GetArgumentAtIndex(cursor_index));
         completion_str.erase (cursor_char_position);
         
-        CommandCompletions::InvokeCommonCompletionCallbacks (m_interpreter,
-                                                             CommandCompletions::eVariablePathCompletion,
-                                                             completion_str.c_str(),
-                                                             match_start_point,
-                                                             max_return_elements,
-                                                             NULL,
-                                                             word_complete,
-                                                             matches);
+        CommandCompletions::InvokeCommonCompletionCallbacks(m_interpreter,
+                                                            CommandCompletions::eVariablePathCompletion,
+                                                            completion_str.c_str(),
+                                                            match_start_point,
+                                                            max_return_elements,
+                                                            nullptr,
+                                                            word_complete,
+                                                            matches);
         return matches.GetSize();
     }
 
@@ -397,7 +383,7 @@ protected:
         VariableSP var_sp;
         ValueObjectSP valobj_sp;
 
-        const char *name_cstr = NULL;
+        const char *name_cstr = nullptr;
         size_t idx;
         
         TypeSummaryImplSP summary_format_sp;
@@ -423,7 +409,7 @@ protected:
 
                 // If we have any args to the variable command, we will make
                 // variable objects from them...
-                for (idx = 0; (name_cstr = command.GetArgumentAtIndex(idx)) != NULL; ++idx)
+                for (idx = 0; (name_cstr = command.GetArgumentAtIndex(idx)) != nullptr; ++idx)
                 {
                     if (m_option_variable.use_regex)
                     {
@@ -502,12 +488,12 @@ protected:
                             options.SetVariableFormatDisplayLanguage(valobj_sp->GetPreferredDisplayLanguage());
 
                             Stream &output_stream = result.GetOutputStream();
-                            options.SetRootValueObjectName(valobj_sp->GetParent() ? name_cstr : NULL);
+                            options.SetRootValueObjectName(valobj_sp->GetParent() ? name_cstr : nullptr);
                             valobj_sp->Dump(output_stream,options);
                         }
                         else
                         {
-                            const char *error_cstr = error.AsCString(NULL);
+                            const char *error_cstr = error.AsCString(nullptr);
                             if (error_cstr)
                                 result.GetErrorStream().Printf("error: %s\n", error_cstr);
                             else
@@ -572,8 +558,8 @@ protected:
                                 // that are not in scope to avoid extra unneeded output
                                 if (valobj_sp->IsInScope ())
                                 {
-                                    if (false == valobj_sp->GetTargetSP()->GetDisplayRuntimeSupportValues() &&
-                                        true == valobj_sp->IsRuntimeSupportValue())
+                                    if (!valobj_sp->GetTargetSP()->GetDisplayRuntimeSupportValues() &&
+                                        valobj_sp->IsRuntimeSupportValue())
                                         continue;
                                     
                                     if (!scope_string.empty())
@@ -607,14 +593,13 @@ protected:
         
         return result.Succeeded();
     }
-protected:
 
+protected:
     OptionGroupOptions m_option_group;
     OptionGroupVariable m_option_variable;
     OptionGroupFormat m_option_format;
     OptionGroupValueObjectDisplay m_varobj_options;
 };
-
 
 #pragma mark CommandObjectMultiwordFrame
 
@@ -633,7 +618,4 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame (CommandInterpreter &in
     LoadSubCommand ("variable", CommandObjectSP (new CommandObjectFrameVariable (interpreter)));
 }
 
-CommandObjectMultiwordFrame::~CommandObjectMultiwordFrame ()
-{
-}
-
+CommandObjectMultiwordFrame::~CommandObjectMultiwordFrame() = default;

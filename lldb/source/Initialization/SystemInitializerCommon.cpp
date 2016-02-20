@@ -194,5 +194,6 @@ SystemInitializerCommon::Terminate()
 #endif
     OperatingSystemGo::Terminate();
 
+    HostInfo::Terminate();
     Log::Terminate();
 }

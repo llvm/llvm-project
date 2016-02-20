@@ -10,7 +10,7 @@ class TestCppNsImport(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureFreeBSD("llvm.org/pr25925")
+    @expectedFailureAll(oslist=['freebsd'], bugnumber="llvm.org/pr25925")
     @expectedFailureAll(compiler="gcc", compiler_version=[">", "4.9"])
     def test_with_run_command(self):
         """Tests imported namespaces in C++."""

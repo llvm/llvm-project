@@ -15,7 +15,7 @@ class CrashingRecursiveInferiorTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureFreeBSD("llvm.org/pr23699 SIGSEGV is reported as exception, not signal")
+    @expectedFailureAll(oslist=['freebsd'], bugnumber="llvm.org/pr23699 SIGSEGV is reported as exception, not signal")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_recursive_inferior_crashing(self):
         """Test that lldb reliably catches the inferior crashing (command)."""
@@ -47,7 +47,7 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.build()
         self.recursive_inferior_crashing_step()
 
-    @expectedFailureFreeBSD('llvm.org/pr24939')
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr24939')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureAndroid(archs=['aarch64'], api_levels=list(range(21 + 1))) # No eh_frame for sa_restorer
     def test_recursive_inferior_crashing_step_after_break(self):
@@ -55,7 +55,6 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.build()
         self.recursive_inferior_crashing_step_after_break()
 
-    @expectedFailureFreeBSD('llvm.org/pr15989') # Couldn't allocate space for the stack frame
     @skipIfLinux # Inferior exits after stepping after a segfault. This is working as intended IMHO.
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_recursive_inferior_crashing_expr_step_and_expr(self):

@@ -162,15 +162,15 @@ static bool shouldMerge(const typename ELFFile<ELFT>::Elf_Shdr &Sec) {
   if (!EntSize || Sec.sh_size % EntSize)
     fatal("SHF_MERGE section size must be a multiple of sh_entsize");
 
-  // Don't try to merge if the aligment is larger than the sh_entsize.
+  // Don't try to merge if the aligment is larger than the sh_entsize and this
+  // is not SHF_STRINGS.
   //
-  // If this is not a SHF_STRINGS, we would need to pad after every entity. It
-  // would be equivalent for the producer of the .o to just set a larger
+  // Since this is not a SHF_STRINGS, we would need to pad after every entity.
+  // It would be equivalent for the producer of the .o to just set a larger
   // sh_entsize.
-  //
-  // If this is a SHF_STRINGS, the larger alignment makes sense. Unfortunately
-  // it would complicate tail merging. This doesn't seem that common to
-  // justify the effort.
+  if (Flags & SHF_STRINGS)
+    return true;
+
   if (Sec.sh_addralign > EntSize)
     return false;
 
@@ -446,7 +446,11 @@ void BitcodeFile::parse() {
     raw_svector_ostream OS(Name);
     Sym.printName(OS);
     StringRef NameRef = Saver.save(StringRef(Name));
-    SymbolBody *Body = new (Alloc) DefinedBitcode(NameRef);
+    SymbolBody *Body;
+    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+      Body = new (Alloc) Undefined(NameRef, false, STV_DEFAULT, false);
+    else
+      Body = new (Alloc) DefinedBitcode(NameRef);
     SymbolBodies.push_back(Body);
   }
 }

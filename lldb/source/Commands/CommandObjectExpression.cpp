@@ -7,12 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommandObjectExpression.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+
 // Project includes
+#include "CommandObjectExpression.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
@@ -32,8 +34,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -43,30 +43,26 @@ CommandObjectExpression::CommandOptions::CommandOptions () :
 {
 }
 
-
-CommandObjectExpression::CommandOptions::~CommandOptions ()
-{
-}
+CommandObjectExpression::CommandOptions::~CommandOptions() = default;
 
 static OptionEnumValueElement g_description_verbosity_type[] =
 {
     { eLanguageRuntimeDescriptionDisplayVerbosityCompact,      "compact",       "Only show the description string"},
     { eLanguageRuntimeDescriptionDisplayVerbosityFull,         "full",          "Show the full output, including persistent variable's name and type"},
-    { 0, NULL, NULL }
+    { 0, nullptr, nullptr }
 };
 
 OptionDefinition
 CommandObjectExpression::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "all-threads",        'a', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeBoolean,    "Should we run all threads if the execution doesn't complete on one thread."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "ignore-breakpoints", 'i', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeBoolean,    "Ignore breakpoint hits while running expressions"},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "timeout",            't', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeUnsignedInteger,  "Timeout value (in microseconds) for running the expression."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "unwind-on-error",    'u', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeBoolean,    "Clean up program state if the expression causes a crash, or raises a signal.  Note, unlike gdb hitting a breakpoint is controlled by another option (-i)."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "debug",              'g', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone,       "When specified, debug the JIT code by setting a breakpoint on the first instruction and forcing breakpoints to not be ignored (-i0) and no unwinding to happen on error (-u0)."},
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "language",           'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLanguage,   "Specifies the Language to use when parsing the expression.  If not set the target.language setting is used." },
-    { LLDB_OPT_SET_1, false, "description-verbosity", 'v', OptionParser::eOptionalArgument, NULL, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity,        "How verbose should the output of this expression be, if the object description is asked for."},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "all-threads",        'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Should we run all threads if the execution doesn't complete on one thread."},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "ignore-breakpoints", 'i', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Ignore breakpoint hits while running expressions"},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "timeout",            't', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger,  "Timeout value (in microseconds) for running the expression."},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "unwind-on-error",    'u', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Clean up program state if the expression causes a crash, or raises a signal.  Note, unlike gdb hitting a breakpoint is controlled by another option (-i)."},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "debug",              'g', OptionParser::eNoArgument      , nullptr, nullptr, 0, eArgTypeNone,       "When specified, debug the JIT code by setting a breakpoint on the first instruction and forcing breakpoints to not be ignored (-i0) and no unwinding to happen on error (-u0)."},
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "language",           'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,   "Specifies the Language to use when parsing the expression.  If not set the target.language setting is used." },
+    { LLDB_OPT_SET_1, false, "description-verbosity", 'v', OptionParser::eOptionalArgument, nullptr, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity,        "How verbose should the output of this expression be, if the object description is asked for."},
 };
-
 
 uint32_t
 CommandObjectExpression::CommandOptions::GetNumDefinitions ()
@@ -165,7 +161,7 @@ void
 CommandObjectExpression::CommandOptions::OptionParsingStarting (CommandInterpreter &interpreter)
 {
     Process *process = interpreter.GetExecutionContext().GetProcessPtr();
-    if (process != NULL)
+    if (process != nullptr)
     {
         ignore_breakpoints = process->GetIgnoreBreakpointsInExpressions();
         unwind_on_error    = process->GetUnwindOnErrorInExpressions();
@@ -191,11 +187,11 @@ CommandObjectExpression::CommandOptions::GetDefinitions ()
 }
 
 CommandObjectExpression::CommandObjectExpression (CommandInterpreter &interpreter) :
-    CommandObjectRaw (interpreter,
-                      "expression",
-                      "Evaluate an expression in the current program context, using user defined variables and variables currently in scope.",
-                      NULL,
-                      eCommandProcessMustBePaused | eCommandTryTargetAPILock),
+    CommandObjectRaw(interpreter,
+                     "expression",
+                     "Evaluate an expression in the current program context, using user defined variables and variables currently in scope.",
+                     nullptr,
+                     eCommandProcessMustBePaused | eCommandTryTargetAPILock),
     IOHandlerDelegate (IOHandlerDelegate::Completion::Expression),
     m_option_group (interpreter),
     m_format_options (eFormatDefault),
@@ -259,9 +255,7 @@ Examples:
     m_option_group.Finalize();
 }
 
-CommandObjectExpression::~CommandObjectExpression ()
-{
-}
+CommandObjectExpression::~CommandObjectExpression() = default;
 
 Options *
 CommandObjectExpression::GetOptions ()
@@ -270,13 +264,10 @@ CommandObjectExpression::GetOptions ()
 }
 
 bool
-CommandObjectExpression::EvaluateExpression 
-(
-    const char *expr, 
-    Stream *output_stream, 
-    Stream *error_stream,
-    CommandReturnObject *result
-)
+CommandObjectExpression::EvaluateExpression(const char *expr,
+                                            Stream *output_stream,
+                                            Stream *error_stream,
+                                            CommandReturnObject *result)
 {
     // Don't use m_exe_ctx as this might be called asynchronously
     // after the command object DoExecute has finished when doing
@@ -433,15 +424,15 @@ CommandObjectExpression::GetMultilineExpression ()
     Debugger &debugger = GetCommandInterpreter().GetDebugger();
     bool color_prompt = debugger.GetUseColor();
     const bool multiple_lines = true; // Get multiple lines
-    IOHandlerSP io_handler_sp (new IOHandlerEditline (debugger,
-                                                      IOHandler::Type::Expression,
-                                                      "lldb-expr",      // Name of input reader for history
-                                                      NULL,             // No prompt
-                                                      NULL,             // Continuation prompt
-                                                      multiple_lines,
-                                                      color_prompt,
-                                                      1,                // Show line numbers starting at 1
-                                                      *this));
+    IOHandlerSP io_handler_sp(new IOHandlerEditline(debugger,
+                                                    IOHandler::Type::Expression,
+                                                    "lldb-expr",      // Name of input reader for history
+                                                    nullptr,          // No prompt
+                                                    nullptr,          // Continuation prompt
+                                                    multiple_lines,
+                                                    color_prompt,
+                                                    1,                // Show line numbers starting at 1
+                                                    *this));
     
     StreamFileSP output_sp(io_handler_sp->GetOutputStreamFile());
     if (output_sp)
@@ -453,15 +444,12 @@ CommandObjectExpression::GetMultilineExpression ()
 }
 
 bool
-CommandObjectExpression::DoExecute
-(
-    const char *command,
-    CommandReturnObject &result
-)
+CommandObjectExpression::DoExecute(const char *command,
+                                   CommandReturnObject &result)
 {
     m_option_group.NotifyOptionParsingStarting();
 
-    const char * expr = NULL;
+    const char * expr = nullptr;
 
     if (command[0] == '\0')
     {
@@ -472,7 +460,7 @@ CommandObjectExpression::DoExecute
     if (command[0] == '-')
     {
         // We have some options and these options MUST end with --.
-        const char *end_options = NULL;
+        const char *end_options = nullptr;
         const char *s = command;
         while (s && s[0])
         {
@@ -568,7 +556,7 @@ CommandObjectExpression::DoExecute
                 }
             }
             // No expression following options
-            else if (expr == NULL || expr[0] == '\0')
+            else if (expr == nullptr || expr[0] == '\0')
             {
                 GetMultilineExpression ();
                 return result.Succeeded();
@@ -576,7 +564,7 @@ CommandObjectExpression::DoExecute
         }
     }
 
-    if (expr == NULL)
+    if (expr == nullptr)
         expr = command;
     
     if (EvaluateExpression (expr, &(result.GetOutputStream()), &(result.GetErrorStream()), &result))
@@ -585,4 +573,3 @@ CommandObjectExpression::DoExecute
     result.SetStatus (eReturnStatusFailed);
     return false;
 }
-

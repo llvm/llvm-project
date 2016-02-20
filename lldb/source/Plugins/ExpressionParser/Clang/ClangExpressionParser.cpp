@@ -87,21 +87,6 @@ using namespace lldb_private;
 // Utility Methods for Clang
 //===----------------------------------------------------------------------===//
 
-std::string GetBuiltinIncludePath(const char *Argv0) {
-    SmallString<128> P(llvm::sys::fs::getMainExecutable(
-        Argv0, (void *)(intptr_t) GetBuiltinIncludePath));
-
-    if (!P.empty()) {
-        llvm::sys::path::remove_filename(P); // Remove /clang from foo/bin/clang
-        llvm::sys::path::remove_filename(P); // Remove /bin   from foo/bin
-
-        // Get foo/lib/clang/<version>/include
-        llvm::sys::path::append(P, "lib", "clang", CLANG_VERSION_STRING,
-                                "include");
-    }
-
-    return P.str();
-}
 
 class ClangExpressionParser::LLDBPreprocessorCallbacks : public PPCallbacks
 {
@@ -450,37 +435,34 @@ ClangExpressionParser::~ClangExpressionParser()
 }
 
 unsigned
-ClangExpressionParser::Parse (Stream &stream)
+ClangExpressionParser::Parse(Stream &stream)
 {
-    TextDiagnosticBuffer *diag_buf = static_cast<TextDiagnosticBuffer*>(m_compiler->getDiagnostics().getClient());
-
-    diag_buf->FlushDiagnostics (m_compiler->getDiagnostics());
+    TextDiagnosticBuffer *diag_buf = static_cast<TextDiagnosticBuffer *>(m_compiler->getDiagnostics().getClient());
+    diag_buf->FlushDiagnostics(m_compiler->getDiagnostics());
 
     const char *expr_text = m_expr.Text();
 
-    clang::SourceManager &SourceMgr = m_compiler->getSourceManager();
+    clang::SourceManager &source_mgr = m_compiler->getSourceManager();
     bool created_main_file = false;
     if (m_compiler->getCodeGenOpts().getDebugInfo() == codegenoptions::FullDebugInfo)
     {
-        std::string temp_source_path;
-
         int temp_fd = -1;
         llvm::SmallString<PATH_MAX> result_path;
         FileSpec tmpdir_file_spec;
         if (HostInfo::GetLLDBPath(lldb::ePathTypeLLDBTempSystemDir, tmpdir_file_spec))
         {
             tmpdir_file_spec.AppendPathComponent("lldb-%%%%%%.expr");
-            temp_source_path = tmpdir_file_spec.GetPath();
+            std::string temp_source_path = tmpdir_file_spec.GetPath();
             llvm::sys::fs::createUniqueFile(temp_source_path, temp_fd, result_path);
         }
         else
         {
             llvm::sys::fs::createTemporaryFile("lldb", "expr", temp_fd, result_path);
         }
-        
+
         if (temp_fd != -1)
         {
-            lldb_private::File file (temp_fd, true);
+            lldb_private::File file(temp_fd, true);
             const size_t expr_text_len = strlen(expr_text);
             size_t bytes_written = expr_text_len;
             if (file.Write(expr_text, bytes_written).Success())
@@ -488,9 +470,8 @@ ClangExpressionParser::Parse (Stream &stream)
                 if (bytes_written == expr_text_len)
                 {
                     file.Close();
-                    SourceMgr.setMainFileID(SourceMgr.createFileID(
-                        m_file_manager->getFile(result_path),
-                        SourceLocation(), SrcMgr::C_User));
+                    source_mgr.setMainFileID(source_mgr.createFileID(m_file_manager->getFile(result_path),
+                                                                     SourceLocation(), SrcMgr::C_User));
                     created_main_file = true;
                 }
             }
@@ -500,7 +481,7 @@ ClangExpressionParser::Parse (Stream &stream)
     if (!created_main_file)
     {
         std::unique_ptr<MemoryBuffer> memory_buffer = MemoryBuffer::getMemBufferCopy(expr_text, __FUNCTION__);
-        SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(memory_buffer)));
+        source_mgr.setMainFileID(source_mgr.createFileID(std::move(memory_buffer)));
     }
 
     diag_buf->BeginSourceFile(m_compiler->getLangOpts(), &m_compiler->getPreprocessor());
@@ -525,34 +506,25 @@ ClangExpressionParser::Parse (Stream &stream)
 
     diag_buf->EndSourceFile();
 
-    TextDiagnosticBuffer::const_iterator diag_iterator;
+    unsigned num_errors = diag_buf->getNumErrors();
 
-    int num_errors = 0;
-    
     if (m_pp_callbacks && m_pp_callbacks->hasErrors())
     {
         num_errors++;
-        
         stream.PutCString(m_pp_callbacks->getErrorString().c_str());
     }
 
-    for (diag_iterator = diag_buf->warn_begin();
-         diag_iterator != diag_buf->warn_end();
-         ++diag_iterator)
-        stream.Printf("warning: %s\n", (*diag_iterator).second.c_str());
+    for (TextDiagnosticBuffer::const_iterator warn = diag_buf->warn_begin(), warn_end = diag_buf->warn_end();
+         warn != warn_end; ++warn)
+        stream.Printf("warning: %s\n", warn->second.c_str());
 
-    for (diag_iterator = diag_buf->err_begin();
-         diag_iterator != diag_buf->err_end();
-         ++diag_iterator)
-    {
-        num_errors++;
-        stream.Printf("error: %s\n", (*diag_iterator).second.c_str());
-    }
+    for (TextDiagnosticBuffer::const_iterator err = diag_buf->err_begin(), err_end = diag_buf->err_end();
+         err != err_end; ++err)
+        stream.Printf("error: %s\n", err->second.c_str());
 
-    for (diag_iterator = diag_buf->note_begin();
-         diag_iterator != diag_buf->note_end();
-         ++diag_iterator)
-        stream.Printf("note: %s\n", (*diag_iterator).second.c_str());
+    for (TextDiagnosticBuffer::const_iterator note = diag_buf->note_begin(), note_end = diag_buf->note_end();
+         note != note_end; ++note)
+        stream.Printf("note: %s\n", note->second.c_str());
 
     if (!num_errors)
     {

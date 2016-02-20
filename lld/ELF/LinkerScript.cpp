@@ -85,7 +85,20 @@ template <class ELFT> bool SectionRule::match(InputSectionBase<ELFT> *S) {
 class elf2::ScriptParser {
 public:
   ScriptParser(BumpPtrAllocator *A, StringRef S, bool B)
-      : Saver(*A), Tokens(tokenize(S)), IsUnderSysroot(B) {}
+      : Saver(*A), Tokens(tokenize(S)), IsUnderSysroot(B) {
+    Cmd["ENTRY"] = std::mem_fn(&ScriptParser::readEntry);
+    Cmd["EXTERN"] = std::mem_fn(&ScriptParser::readExtern);
+    Cmd["GROUP"] = std::mem_fn(&ScriptParser::readGroup);
+    Cmd["INCLUDE"] = std::mem_fn(&ScriptParser::readInclude);
+    Cmd["INPUT"] = std::mem_fn(&ScriptParser::readGroup);
+    Cmd["OUTPUT"] = std::mem_fn(&ScriptParser::readOutput);
+    Cmd["OUTPUT_ARCH"] = std::mem_fn(&ScriptParser::readOutputArch);
+    Cmd["OUTPUT_FORMAT"] = std::mem_fn(&ScriptParser::readOutputFormat);
+    Cmd["SEARCH_DIR"] = std::mem_fn(&ScriptParser::readSearchDir);
+    Cmd["SECTIONS"] = std::mem_fn(&ScriptParser::readSections);
+    Cmd[";"] = [](ScriptParser &) {};
+  }
+
   void run();
 
 private:
@@ -114,37 +127,21 @@ private:
 
   StringSaver Saver;
   std::vector<StringRef> Tokens;
-  bool Error = false;
+  llvm::StringMap<std::function<void(ScriptParser &)>> Cmd;
   size_t Pos = 0;
   bool IsUnderSysroot;
+  bool Error = false;
 };
 
 void ScriptParser::run() {
   while (!atEOF()) {
     StringRef Tok = next();
-    if (Tok == ";")
-      continue;
-    if (Tok == "ENTRY") {
-      readEntry();
-    } else if (Tok == "EXTERN") {
-      readExtern();
-    } else if (Tok == "GROUP" || Tok == "INPUT") {
-      readGroup();
-    } else if (Tok == "INCLUDE") {
-      readInclude();
-    } else if (Tok == "OUTPUT") {
-      readOutput();
-    } else if (Tok == "OUTPUT_ARCH") {
-      readOutputArch();
-    } else if (Tok == "OUTPUT_FORMAT") {
-      readOutputFormat();
-    } else if (Tok == "SEARCH_DIR") {
-      readSearchDir();
-    } else if (Tok == "SECTIONS") {
-      readSections();
+    auto It = Cmd.find(Tok);
+    if (It != Cmd.end()) {
+      std::function<void(ScriptParser &)> &Handler = It->second;
+      Handler(*this);
     } else {
       setError("unknown directive: " + Tok);
-      return;
     }
   }
 }

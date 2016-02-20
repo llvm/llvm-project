@@ -7,12 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommandObjectArgs.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "CommandObjectArgs.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -44,10 +43,7 @@ CommandObjectArgs::CommandOptions::CommandOptions (CommandInterpreter &interpret
     OptionParsingStarting();
 }
 
-
-CommandObjectArgs::CommandOptions::~CommandOptions ()
-{
-}
+CommandObjectArgs::CommandOptions::~CommandOptions() = default;
 
 Error
 CommandObjectArgs::CommandOptions::SetOptionValue (uint32_t option_idx, const char *option_arg)
@@ -80,9 +76,7 @@ CommandObjectArgs::CommandObjectArgs (CommandInterpreter &interpreter) :
 {
 }
 
-CommandObjectArgs::~CommandObjectArgs ()
-{
-}
+CommandObjectArgs::~CommandObjectArgs() = default;
 
 Options *
 CommandObjectArgs::GetOptions ()
@@ -94,8 +88,7 @@ bool
 CommandObjectArgs::DoExecute (Args& args, CommandReturnObject &result)
 {
     ConstString target_triple;
-    
-    
+
     Process *process = m_exe_ctx.GetProcessPtr();
     if (!process)
     {
@@ -263,7 +256,6 @@ CommandObjectArgs::DoExecute (Args& args, CommandReturnObject &result)
 OptionDefinition
 CommandObjectArgs::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "debug", 'g', OptionParser::eNoArgument, NULL, NULL, 0, eArgTypeNone, "Enable verbose debug logging of the expression parsing and evaluation."},
-    { 0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL }
+    { LLDB_OPT_SET_1, false, "debug", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Enable verbose debug logging of the expression parsing and evaluation."},
+    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
-

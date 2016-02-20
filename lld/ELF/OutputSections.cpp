@@ -1223,8 +1223,9 @@ template <class ELFT> void EHOutputSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 MergeOutputSection<ELFT>::MergeOutputSection(StringRef Name, uint32_t Type,
-                                             uintX_t Flags)
-    : OutputSectionBase<ELFT>(Name, Type, Flags) {}
+                                             uintX_t Flags, uintX_t Alignment)
+    : OutputSectionBase<ELFT>(Name, Type, Flags),
+      Builder(llvm::StringTableBuilder::RAW, Alignment) {}
 
 template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   if (shouldTailMerge()) {

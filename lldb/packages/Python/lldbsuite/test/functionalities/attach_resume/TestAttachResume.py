@@ -19,7 +19,7 @@ class AttachResumeTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfRemote
-    @expectedFailureFreeBSD('llvm.org/pr19310')
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr19310')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_attach_continue_interrupt_detach(self):
         """Test attach/continue/interrupt/detach"""

@@ -34,6 +34,8 @@ class HostInfoBase
 
   public:
     static void Initialize();
+    static void
+    Terminate();
 
     //------------------------------------------------------------------
     /// Returns the number of CPUs on this current host.
