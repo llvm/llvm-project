@@ -11589,6 +11589,13 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
     }
   }
 
+  // If C++ exceptions are enabled but we are told extern "C" functions cannot
+  // throw, add an implicit nothrow attribute to any extern "C" function we come
+  // across.
+  if (getLangOpts().CXXExceptions && getLangOpts().ExternCNoUnwind &&
+      FD->isExternC() && !FD->hasAttr<NoThrowAttr>())
+    FD->addAttr(NoThrowAttr::CreateImplicit(Context, FD->getLocation()));
+
   IdentifierInfo *Name = FD->getIdentifier();
   if (!Name)
     return;

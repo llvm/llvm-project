@@ -511,10 +511,10 @@ def main_file_name : Separate<["-"], "main-file-name">,
 
 def fblocks_runtime_optional : Flag<["-"], "fblocks-runtime-optional">,
   HelpText<"Weakly link in the blocks runtime">;
+def fexternc_nounwind : Flag<["-"], "fexternc-nounwind">,
+  HelpText<"Assume all functions with C linkage do not unwind">;
 def fsjlj_exceptions : Flag<["-"], "fsjlj-exceptions">,
   HelpText<"Use SjLj style exceptions">;
-def fnew_ms_eh: Flag<["-"], "fnew-ms-eh">,
-  HelpText<"Use the new IR representation for MS exceptions">;
 def split_dwarf_file : Separate<["-"], "split-dwarf-file">,
   HelpText<"File name to use for split dwarf debug info output">;
 def fno_wchar : Flag<["-"], "fno-wchar">,

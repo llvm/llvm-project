@@ -250,7 +250,6 @@ unsigned long __cdecl _lrotl(unsigned long, int);
 static __inline__
 unsigned long __cdecl _lrotr(unsigned long, int);
 static __inline__
-static __inline__
 void _ReadBarrier(void);
 static __inline__
 void _ReadWriteBarrier(void);
