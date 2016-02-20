@@ -22,10 +22,11 @@ namespace llvm {
   class MemoryBuffer;
 }
 namespace clang {
-  class FileEntry;
-  class FileManager;
-  struct HMapBucket;
-  struct HMapHeader;
+
+class FileEntry;
+class FileManager;
+struct HMapBucket;
+struct HMapHeader;
 
 /// This class represents an Apple concept known as a 'header map'.  To the
 /// \#include file resolution process, it basically acts like a directory of
@@ -37,6 +38,7 @@ class HeaderMap {
 
   HeaderMap(std::unique_ptr<const llvm::MemoryBuffer> File, bool BSwap)
       : FileBuffer(std::move(File)), NeedsBSwap(BSwap) {}
+
 public:
   /// HeaderMap::Create - This attempts to load the specified file as a header
   /// map.  If it doesn't look like a HeaderMap, it gives up and returns null.
