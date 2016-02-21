@@ -3448,8 +3448,10 @@ CGObjCMac::EmitClassExtension(const ObjCImplementationDecl *ID,
 
   llvm::Constant *Values[3];
   Values[0] = llvm::ConstantInt::get(ObjCTypes.IntTy, Size);
-  Values[1] = nullptr;
-  if (!isClassProperty)
+  if (isClassProperty) {
+    llvm::Type *PtrTy = CGM.Int8PtrTy;
+    Values[1] = llvm::Constant::getNullValue(PtrTy);
+  } else
     Values[1] = BuildWeakIvarLayout(ID, CharUnits::Zero(), InstanceSize,
                                     hasMRCWeakIvars);
   if (isClassProperty)
