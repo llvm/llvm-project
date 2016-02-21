@@ -5,11 +5,14 @@ from __future__ import print_function
 
 
 import unittest2
-import os, time
-import lldb
-from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+import os
 import subprocess
+import time
+
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class HiddenIvarsTestCase(TestBase):
 
@@ -26,8 +29,7 @@ class HiddenIvarsTestCase(TestBase):
         self.shlib_names = ["InternalDefiner"]
 
     @skipUnlessDarwin
-    @skipIfDwarf    # This test requires a stripped binary and a dSYM
-    @skipIfDWO      # This test requires a stripped binary and a dSYM
+    @skipIf(debug_info=no_match("dsym"), bugnumber="This test requires a stripped binary and a dSYM")
     def test_expr_stripped(self):
         if self.getArchitecture() == 'i386':
             self.skipTest("requires modern objc runtime")
@@ -44,8 +46,7 @@ class HiddenIvarsTestCase(TestBase):
             self.expr(False)
 
     @skipUnlessDarwin
-    @skipIfDwarf    # This test requires a stripped binary and a dSYM
-    @skipIfDWO      # This test requires a stripped binary and a dSYM
+    @skipIf(debug_info=no_match("dsym"), bugnumber="This test requires a stripped binary and a dSYM")
     def test_frame_variable_stripped(self):
         if self.getArchitecture() == 'i386':
             self.skipTest("requires modern objc runtime")

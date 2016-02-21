@@ -6,51 +6,52 @@ from __future__ import print_function
 
 import os, time
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
-import lldbsuite.test.lldbplatformutil as lldbplatformutil
+from lldbsuite.test import lldbutil
+from lldbsuite.test import lldbplatformutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 class AssertingInferiorTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailurei386("llvm.org/pr25338")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
+    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr25338")
     def test_inferior_asserting(self):
         """Test that lldb reliably catches the inferior asserting (command)."""
         self.build()
         self.inferior_asserting()
 
-    @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
     @expectedFailureAndroid(api_levels=list(range(16 + 1))) # b.android.com/179836
     def test_inferior_asserting_register(self):
         """Test that lldb reliably reads registers from the inferior after asserting (command)."""
         self.build()
         self.inferior_asserting_registers()
 
-    @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailurei386("llvm.org/pr25338")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
+    @expectedFailureAll(oslist=["linux"], archs=["aarch64", "arm"], bugnumber="llvm.org/pr25338")
     def test_inferior_asserting_disassemble(self):
         """Test that lldb reliably disassembles frames after asserting (command)."""
         self.build()
         self.inferior_asserting_disassemble()
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
     def test_inferior_asserting_python(self):
         """Test that lldb reliably catches the inferior asserting (Python API)."""
         self.build()
         self.inferior_asserting_python()
 
-    @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailurei386("llvm.org/pr25338")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
+    @expectedFailureAll(oslist=["linux"], archs=["aarch64", "arm"], bugnumber="llvm.org/pr25338")
     def test_inferior_asserting_expr(self):
         """Test that the lldb expression interpreter can read from the inferior after asserting (command)."""
         self.build()
         self.inferior_asserting_expr()
 
-    @expectedFailureWindows("llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
-    @expectedFailurei386("llvm.org/pr25338")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
+    @expectedFailureAll(oslist=["linux"], archs=["aarch64", "arm"], bugnumber="llvm.org/pr25338")
     def test_inferior_asserting_step(self):
         """Test that lldb functions correctly after stepping through a call to assert()."""
         self.build()
@@ -60,7 +61,8 @@ class AssertingInferiorTestCase(TestBase):
         lldbutil.run_break_set_by_file_and_line (self, "main.c", line, num_expected_locations=1, loc_exact=True)
 
     def check_stop_reason(self):
-        if matchAndroid(api_levels=list(range(1, 16+1)))(self):
+        matched = lldbplatformutil.match_android_device(self.getArchitecture(), valid_api_levels=list(range(1, 16+1)))
+        if matched:
             # On android until API-16 the abort() call ended in a sigsegv instead of in a sigabrt
             stop_reason = 'stop reason = signal SIGSEGV'
         else:

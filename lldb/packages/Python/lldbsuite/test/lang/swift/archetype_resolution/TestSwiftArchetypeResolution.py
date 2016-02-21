@@ -14,6 +14,7 @@ Test that archetype-typed objects get resolved to their proper location in memor
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -23,7 +24,7 @@ class TestSwiftArchetypeResolution(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @swiftTest
+    @decorators.swiftTest
     def test_swift_archetype_resolution(self):
         """Test that archetype-typed objects get resolved to their proper location in memory"""
         self.build()

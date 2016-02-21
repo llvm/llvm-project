@@ -17,8 +17,9 @@ from __future__ import print_function
 import unittest2
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 test_source_dirs = ["."]
 

@@ -838,7 +838,8 @@ CommandObjectBreakpointSet::CommandOptions::g_option_table[] =
     { LLDB_OPT_SET_9, true, "source-pattern-regexp", 'p', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeRegularExpression,
         "Set the breakpoint by specifying a regular expression which is matched against the source text in a source file or files "
         "specified with the -f option.  The -f option can be specified more than once.  "
-        "If no source files are specified, uses the current \"default source file\"" },
+        "If no source files are specified, uses the current \"default source file\".  "
+        "If you want to match against all source files, pass the \"--all-files\" option." },
 
     { LLDB_OPT_SET_9, false, "all-files", 'A', OptionParser::eNoArgument,   NULL, NULL, 0, eArgTypeNone,
         "All files are searched for source pattern matches." },

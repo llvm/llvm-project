@@ -14,16 +14,16 @@
 import os, time
 import unittest2
 import lldb
+import lldbsuite.test.decorators as decorators
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
-from lldbsuite.test.lldbtest import no_debug_info_test, expectedFailureLinux, swiftTest
 
 class REPLBreakpointsTestCase (REPLTest):
 
     mydir = REPLTest.compute_mydir(__file__)
 
-    @swiftTest
-    @no_debug_info_test
-    @expectedFailureLinux("rdar://23091701")
+    @decorators.swiftTest
+    @decorators.no_debug_info_test
+    @decorators.expectedFailureAll(oslist=["linux"], bugnumber="rdar://23091701")
     def testREPL(self):
         REPLTest.testREPL(self)
 

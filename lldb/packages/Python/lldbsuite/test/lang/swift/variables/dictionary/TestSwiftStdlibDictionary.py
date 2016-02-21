@@ -14,6 +14,7 @@ Tests that we properly vend synthetic children for Swift.Dictionary
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -23,7 +24,7 @@ class TestSwiftStdlibDictionary(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @swiftTest
+    @decorators.swiftTest
     def test_swift_stdlib_dictionary(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary"""
         self.build()

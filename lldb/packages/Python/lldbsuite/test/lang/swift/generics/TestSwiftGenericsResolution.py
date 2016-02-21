@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -14,6 +14,7 @@ Check that we can correctly figure out the dynamic type of generic things
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -22,6 +23,7 @@ class SwiftDynamicTypeGenericsTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @decorators.swiftTest
     def test_genericresolution_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
         self.build()

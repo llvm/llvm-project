@@ -14,6 +14,7 @@ Tests that we properly vend synthetic children for Swift.Dictionary<NSObject,Any
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -23,8 +24,8 @@ class TestDictionaryNSObjectAnyObject(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
-    @swiftTest
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
     def test_dictionary_nsobject_any_object(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary<NSObject,AnyObject>"""
         self.build()

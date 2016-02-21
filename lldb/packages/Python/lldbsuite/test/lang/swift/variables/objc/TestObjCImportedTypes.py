@@ -2,18 +2,19 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
 # See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 #
 # ------------------------------------------------------------------------------
-"""
+"""n
 Test that we are able to deal with ObjC-imported types
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -23,9 +24,9 @@ class TestSwiftObjCImportedTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @swiftTest
-    @skipUnlessDarwin
-    @expectedFailureDarwin("rdar://15930675")
+    @decorators.swiftTest
+    @decorators.skipUnlessDarwin
+    @decorators.expectedFailureDarwin("rdar://15930675")
     def test_swift_objc_imported_types(self):
         """Test that we are able to deal with ObjC-imported types"""
         self.build()

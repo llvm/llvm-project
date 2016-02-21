@@ -88,6 +88,7 @@ OptionValueFileSpecList::SetValueFromString (llvm::StringRef value, VarSetOperat
         case eVarSetOperationAssign:
             m_current_value.Clear();
             // Fall through to append case
+            LLVM_FALLTHROUGH;
         case eVarSetOperationAppend:
             if (argc > 0)
             {

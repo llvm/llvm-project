@@ -27,7 +27,7 @@ namespace {
 const int kDomain = AF_INET;
 const int kType   = SOCK_DGRAM;
 
-const Error kNotSupported("Not supported");
+static const char *g_not_supported_error = "Not supported";
 
 }
 
@@ -55,19 +55,19 @@ UDPSocket::Send(const void *buf, const size_t num_bytes)
 Error
 UDPSocket::Connect(llvm::StringRef name)
 {
-    return kNotSupported;
+    return Error("%s", g_not_supported_error);
 }
 
 Error
 UDPSocket::Listen(llvm::StringRef name, int backlog)
 {
-    return kNotSupported;
+    return Error("%s", g_not_supported_error);
 }
 
 Error
 UDPSocket::Accept(llvm::StringRef name, bool child_processes_inherit, Socket *&socket)
 {
-    return kNotSupported;
+    return Error("%s", g_not_supported_error);
 }
 
 Error

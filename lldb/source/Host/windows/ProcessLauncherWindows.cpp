@@ -17,6 +17,31 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace
+{
+void
+CreateEnvironmentBuffer(const Args &env, std::vector<char> &buffer)
+{
+    if (env.GetArgumentCount() == 0)
+        return;
+
+    int bytes = 0;
+    for (int i = 0; i < env.GetArgumentCount(); ++i)
+        bytes += strlen(env.GetArgumentAtIndex(i)) + sizeof(char);
+    bytes += sizeof(char);
+    buffer.resize(bytes);
+    char *cur_entry = &buffer[0];
+    for (int i = 0; i < env.GetArgumentCount(); ++i)
+    {
+        ::strcpy(cur_entry, env.GetArgumentAtIndex(i));
+        cur_entry += strlen(cur_entry) + sizeof(char);
+    }
+    // Environment buffer is a null terminated list of null terminated
+    // strings, so it is terminated by two null bytes.
+    buffer.back() = 0;
+}
+}
+
 HostProcess
 ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info, Error &error)
 {
@@ -49,10 +74,16 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info, Erro
     if (launch_info.GetFlags().Test(eLaunchFlagDebug))
         flags |= DEBUG_ONLY_THIS_PROCESS;
 
+    auto &env = const_cast<Args &>(launch_info.GetEnvironmentEntries());
+    LPVOID env_block = nullptr;
+    ::CreateEnvironmentBuffer(env, environment);
+    if (!environment.empty())
+        env_block = environment.data();
+
     executable = launch_info.GetExecutableFile().GetPath();
     launch_info.GetArguments().GetQuotedCommandString(commandLine);
-    BOOL result = ::CreateProcessA(executable.c_str(), const_cast<char *>(commandLine.c_str()), NULL, NULL, TRUE, flags, NULL,
-                                   launch_info.GetWorkingDirectory().GetCString(), &startupinfo, &pi);
+    BOOL result = ::CreateProcessA(executable.c_str(), const_cast<char *>(commandLine.c_str()), NULL, NULL, TRUE, flags,
+                                   env_block, launch_info.GetWorkingDirectory().GetCString(), &startupinfo, &pi);
     if (result)
     {
         // Do not call CloseHandle on pi.hProcess, since we want to pass that back through the HostProcess.

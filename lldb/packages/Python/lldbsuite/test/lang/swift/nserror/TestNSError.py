@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -14,6 +14,7 @@ Tests that Swift displays NSError correctly
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
@@ -22,8 +23,9 @@ class SwiftNSErrorTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
-    @swiftTest
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
+    @decorators.expectedFailureAll(bugnumber="https://bugs.swift.org/browse/SR-782")
     def test_swift_nserror(self):
         """Tests that Swift displays NSError correctly"""
         self.build()

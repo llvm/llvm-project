@@ -4,7 +4,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -23,13 +23,14 @@ from __future__ import print_function
 import os, time
 import lldb
 from lldbsuite.test.lldbbench import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 
 class TestBenchmarkSwiftDictionary(BenchBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @benchmarks_test
+    @decorators.benchmarks_test
     def test_run_command(self):
         """Benchmark the Swift dictionary data formatter"""
         self.build()

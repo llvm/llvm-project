@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -13,6 +13,7 @@
 Check formatting for Swift.Array<T>
 """
 import lldb
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -28,7 +29,7 @@ class TestSwiftArrayType(lldbtest.TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    @lldbtest.swiftTest
+    @decorators.swiftTest
     def test_array(self):
         """Check formatting for Swift.Array<T>"""
         self.build()

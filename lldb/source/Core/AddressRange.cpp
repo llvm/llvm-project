@@ -163,7 +163,7 @@ AddressRange::Dump(Stream *s, Target *target, Address::DumpStyle style, Address:
 
     case Address::DumpStyleModuleWithFileAddress:
         show_module = true;
-        // fall through
+        LLVM_FALLTHROUGH;
     case Address::DumpStyleFileAddress:
         vmaddr = m_base_addr.GetFileAddress();
         break;

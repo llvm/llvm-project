@@ -414,6 +414,20 @@ GetReturnValuePassedInMemory(Thread &thread, RegisterContext* reg_ctx, size_t by
     return true;
 }
 
+bool
+ABISysV_arm::IsArmHardFloat (Thread &thread) const
+{
+    ProcessSP process_sp (thread.GetProcess());
+    if (process_sp)
+    {
+        const ArchSpec &arch (process_sp->GetTarget().GetArchitecture());
+
+        return (arch.GetFlags() & ArchSpec::eARM_abi_hard_float) != 0;
+    }
+
+    return false;
+}
+
 ValueObjectSP
 ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
                                        lldb_private::CompilerType &compiler_type) const
@@ -516,19 +530,42 @@ ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
                 case 64:
                 {
                     static_assert(sizeof(double) == sizeof(uint64_t), "");
-                    const RegisterInfo *r1_reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
-                    uint64_t raw_value;
-                    raw_value = reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
-                    raw_value |= ((uint64_t)(reg_ctx->ReadRegisterAsUnsigned(r1_reg_info, 0) & UINT32_MAX)) << 32;
-                    value.GetScalar() = *reinterpret_cast<double*>(&raw_value);
+
+                    if (IsArmHardFloat(thread))
+                    {
+                        RegisterValue reg_value;
+                        const RegisterInfo *d0_reg_info = reg_ctx->GetRegisterInfoByName("d0", 0);
+                        reg_ctx->ReadRegister(d0_reg_info, reg_value);
+                        value.GetScalar() = reg_value.GetAsDouble();
+                    }
+                    else
+                    {
+                        uint64_t raw_value;
+                        const RegisterInfo *r1_reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
+                        raw_value = reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
+                        raw_value |= ((uint64_t)(reg_ctx->ReadRegisterAsUnsigned(r1_reg_info, 0) & UINT32_MAX)) << 32;
+                        value.GetScalar() = *reinterpret_cast<double*>(&raw_value);
+                    }
                     break;
                 }
                 case 16: // Half precision returned after a conversion to single precision
                 case 32:
                 {
                     static_assert(sizeof(float) == sizeof(uint32_t), "");
-                    uint32_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
-                    value.GetScalar() = *reinterpret_cast<float*>(&raw_value);
+
+                    if (IsArmHardFloat(thread))
+                    {
+                        RegisterValue reg_value;
+                        const RegisterInfo *s0_reg_info = reg_ctx->GetRegisterInfoByName("s0", 0);
+                        reg_ctx->ReadRegister(s0_reg_info, reg_value);
+                        value.GetScalar() = reg_value.GetAsFloat();
+                    }
+                    else
+                    {
+                        uint32_t raw_value;
+                        raw_value = reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
+                        value.GetScalar() = *reinterpret_cast<float*>(&raw_value);
+                    }
                     break;
                 }
             }
@@ -542,6 +579,82 @@ ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
     else if (compiler_type.IsAggregateType())
     {
         size_t byte_size = compiler_type.GetByteSize(&thread);
+        if (IsArmHardFloat(thread))
+        {
+            CompilerType base_type;
+            const uint32_t homogeneous_count = compiler_type.IsHomogeneousAggregate (&base_type);
+
+            if (homogeneous_count > 0 && homogeneous_count <= 4)
+            {
+                if (base_type.IsFloatingPointType(float_count, is_complex))
+                {
+                    if (float_count == 1 && !is_complex)
+                    {
+                        ProcessSP process_sp (thread.GetProcess());
+                        ByteOrder byte_order = process_sp->GetByteOrder();
+
+                        DataBufferSP data_sp (new DataBufferHeap(byte_size, 0));
+                        const size_t base_byte_size = base_type.GetByteSize(nullptr);
+                        uint32_t data_offset = 0;
+
+                        for (uint32_t reg_index = 0; reg_index < homogeneous_count; reg_index++)
+                        {
+                            uint32_t regnum = 0;
+
+                            if (base_byte_size == 4)
+                                regnum = dwarf_s0 + reg_index;
+                            else if (base_byte_size == 8)
+                                regnum = dwarf_d0 + reg_index;
+                            else
+                                break;
+
+                            const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo (eRegisterKindDWARF, regnum);
+                            if (reg_info == NULL)
+                                break;
+
+                            RegisterValue reg_value;
+                            if (!reg_ctx->ReadRegister(reg_info, reg_value))
+                                break;
+
+                            // Make sure we have enough room in "data_sp"
+                            if ((data_offset + base_byte_size) <= data_sp->GetByteSize())
+                            {
+                                Error error;
+                                const size_t bytes_copied = reg_value.GetAsMemoryData (reg_info,
+                                                                                       data_sp->GetBytes() + data_offset,
+                                                                                       base_byte_size,
+                                                                                       byte_order,
+                                                                                       error);
+                                if (bytes_copied != base_byte_size)
+                                    break;
+
+                                data_offset += bytes_copied;
+                            }
+                        }
+
+                        if (data_offset == byte_size)
+                        {
+                            DataExtractor data;
+                            data.SetByteOrder(byte_order);
+                            data.SetAddressByteSize(process_sp->GetAddressByteSize());
+                            data.SetData(data_sp);
+
+                            return ValueObjectConstResult::Create (&thread, compiler_type, ConstString(""), data);
+                        }
+                        else
+                        {   // Some error occurred while getting values from registers
+                            return return_valobj_sp;
+                        }
+
+                    }
+                    else
+                    {   // TODO: Add code to handle complex and vector types.
+                        return return_valobj_sp;
+                    }
+                }
+            }
+        }
+
         if (byte_size <= 4)
         {
             RegisterValue r0_reg_value;

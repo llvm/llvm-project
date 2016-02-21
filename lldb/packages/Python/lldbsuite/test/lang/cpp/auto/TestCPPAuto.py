@@ -2,14 +2,16 @@
 Tests that auto types work
 """
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class CPPAutoTestCase(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureGcc("GCC does not generate complete debug info")
+    @expectedFailureAll(compiler="gcc", bugnumber="GCC generates incomplete debug info")
+    @expectedFailureAll(oslist=['windows'], bugnumber="llvm.org/pr26339")
     def test_with_run_command(self):
         """Test that auto types work in the expression parser"""
         self.build()

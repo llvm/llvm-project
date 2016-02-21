@@ -14,16 +14,16 @@
 import os, time
 import unittest2
 import lldb
+import lldbsuite.test.decorators as decorators
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
-import lldbsuite.test.lldbtest as lldbtest
 
 class REPLNSStringTestCase (REPLTest):
 
     mydir = REPLTest.compute_mydir(__file__)
     
-    @lldbtest.swiftTest
-    @lldbtest.skipUnlessDarwin
-    @lldbtest.no_debug_info_test
+    @decorators.swiftTest
+    @decorators.skipUnlessDarwin
+    @decorators.no_debug_info_test
     def testREPL(self):
         REPLTest.testREPL(self)
 

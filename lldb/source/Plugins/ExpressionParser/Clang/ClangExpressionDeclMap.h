@@ -265,25 +265,6 @@ public:
                      uint64_t &ptr);
     
     //------------------------------------------------------------------
-    /// [Used by IRForTarget] Get the address of a function given nothing
-    /// but its name.  Some functions are needed but didn't get Decls made
-    /// during parsing -- specifically, sel_registerName is never called
-    /// in the generated IR but we need to call it nonetheless.
-    ///
-    /// @param[in] name
-    ///     The name of the function.  
-    ///
-    /// @param[out] ptr
-    ///     The absolute address of the function in the target.
-    ///
-    /// @return
-    ///     True if the address could be retrieved; false otherwise.
-    //------------------------------------------------------------------
-    bool 
-    GetFunctionAddress (const ConstString &name,
-                        uint64_t &ptr);
-    
-    //------------------------------------------------------------------
     /// [Used by IRForTarget] Get the address of a symbol given nothing
     /// but its name.
     ///
@@ -707,6 +688,9 @@ private:
     AddThisType(NameSearchContext &context,
                 TypeFromUser &type,
                 unsigned int current_id);
+
+    ClangASTContext *
+    GetClangASTContext();
 };
     
 } // namespace lldb_private

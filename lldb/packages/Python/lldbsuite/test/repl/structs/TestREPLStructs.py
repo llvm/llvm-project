@@ -12,13 +12,13 @@
 """Test that we can define and use structs in the REPL"""
 
 import lldbsuite.test.lldbrepl as lldbrepl
-import lldbsuite.test.lldbtest as lldbtest
+import lldbsuite.test.decorators as decorators
 
 class REPLStructsTestCase(lldbrepl.REPLTest):
 
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
-    @lldbtest.expectedFailureAll("rdar://problem/23545959")
+    @decorators.expectedFailureAll("rdar://problem/23545959")
     def doTest(self):
         self.command('''struct foo {
           var bar : Int

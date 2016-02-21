@@ -8,15 +8,16 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class BreakpointLocationsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows("llvm.org/pr24528")
-    @expectedFailureAll(oslist=["linux"], compiler="clang", compiler_version=["=", "3.8"], archs=["i386"], debug_info="dwo")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @expectedFailureAll(oslist=["linux"], compiler="clang", compiler_version=[">=", "3.8"], archs=["i386"], debug_info="dwo")
     def test(self):
         """Test breakpoint enable/disable for a breakpoint ID with multiple locations."""
         self.build()

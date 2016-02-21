@@ -953,7 +953,8 @@ PrepareCommandsForSourcing (const char *commands_data, size_t commands_size, int
         {
             fprintf(stderr, "error: write(%i, %p, %" PRIu64 ") failed (errno = %i) "
                             "when trying to open LLDB commands pipe\n",
-                    fds[WRITE], commands_data, static_cast<uint64_t>(commands_size), errno);
+                    fds[WRITE], static_cast<const void *>(commands_data),
+                    static_cast<uint64_t>(commands_size), errno);
         }
         else if (static_cast<size_t>(nrwr) == commands_size)
         {

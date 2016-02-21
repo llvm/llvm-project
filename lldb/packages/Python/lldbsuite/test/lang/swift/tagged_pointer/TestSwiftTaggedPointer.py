@@ -14,6 +14,7 @@ Test that tagged pointers are formatted correctly in a Swift context
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -23,8 +24,8 @@ class TestSwiftTaggedPointers(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
-    @swiftTest
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
     def test_swift_tagged_pointers(self):
         """Test that tagged pointers are formatted correctly in a Swift context"""
         self.build()

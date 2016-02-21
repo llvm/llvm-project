@@ -9,8 +9,9 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 @skipIfWindows # Windows doesn't have dlopen and friends, dynamic libraries work differently
 class LoadUnloadTestCase(TestBase):
@@ -125,7 +126,6 @@ class LoadUnloadTestCase(TestBase):
             substrs = [new_dylib])
 
     @skipIfFreeBSD # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
-    @skipUnlessListedRemote(['android'])
     @expectedFailureAndroid # wrong source file shows up for hidden library
     @skipIfWindows # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_dyld_library_path(self):
@@ -182,7 +182,6 @@ class LoadUnloadTestCase(TestBase):
 
     @expectedFailureAll(bugnumber="llvm.org/pr25805", hostoslist=["windows"], compiler="gcc", archs=["i386"], triple='.*-android')
     @skipIfFreeBSD # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
-    @skipUnlessListedRemote(['android'])
     @skipIfWindows # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
@@ -241,7 +240,6 @@ class LoadUnloadTestCase(TestBase):
         self.runCmd("process continue")
 
     @skipIfFreeBSD # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
-    @skipUnlessListedRemote(['android'])
     def test_load_unload(self):
         """Test breakpoint by name works correctly with dlopen'ing."""
 
@@ -283,7 +281,6 @@ class LoadUnloadTestCase(TestBase):
             substrs = [' resolved, hit count = 2'])
 
     @skipIfFreeBSD # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
-    @skipUnlessListedRemote(['android'])
     @skipIfWindows # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_step_over_load (self):
         """Test stepping over code that loads a shared library works correctly."""
@@ -313,7 +310,6 @@ class LoadUnloadTestCase(TestBase):
                       'stop reason = step over'])
 
     @skipIfFreeBSD # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
-    @skipUnlessListedRemote(['android'])
     @skipIfWindows # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @unittest2.expectedFailure("llvm.org/pr25806")
     def test_static_init_during_load (self):

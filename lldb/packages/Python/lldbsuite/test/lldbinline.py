@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+import lldbsuite.test.test_categories as test_categories
 # System modules
 import os
 
@@ -13,6 +14,7 @@ import os
 import lldb
 from .lldbtest import *
 from . import lldbutil
+from .decorators import *
 
 def source_type(filename):
     _, extension = os.path.splitext(filename)
@@ -201,9 +203,15 @@ def MakeInlineTest(__file, __globals, decorators=None):
     test = type(test_name, (InlineTest,), {'using_dsym': None})
     test.name = test_name
 
-    test.test_with_dsym = ApplyDecoratorsToFunction(test._InlineTest__test_with_dsym, decorators)
-    test.test_with_dwarf = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwarf, decorators)
-    test.test_with_dwo = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwo, decorators)
+    target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    supported_categories = [x for x in set(test_categories.debug_info_categories) 
+                            if test_categories.is_supported_on_platform(x, target_platform)]
+    if "dsym" in supported_categories:
+        test.test_with_dsym = ApplyDecoratorsToFunction(test._InlineTest__test_with_dsym, decorators)
+    if "dwarf" in supported_categories:
+        test.test_with_dwarf = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwarf, decorators)
+    if "dwo" in supported_categories:
+        test.test_with_dwo = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwo, decorators)
 
     # Add the test case to the globals, and hide InlineTest
     __globals.update({test_name : test})

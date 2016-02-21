@@ -8,6 +8,7 @@ import os, sys
 import lldb
 from lldbsuite.test import configuration
 from lldbsuite.test import lldbtest_config
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
 
 class FrameVariableResponseBench(BenchBase):
@@ -22,7 +23,7 @@ class FrameVariableResponseBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureWindows("llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_startup_delay(self):
         """Test response time for the 'frame variable' command."""
         print()

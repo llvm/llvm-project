@@ -15,6 +15,7 @@ Test that we correctly find private extension decls across modules
 import commands
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -33,8 +34,8 @@ class TestSwiftCrossModuleExtension(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
-    @swiftTest
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
     def test_cross_module_extension(self):
         """Test that we correctly find private extension decls across modules"""
         self.buildAll()

@@ -10,7 +10,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class HelpCommandTestCase(TestBase):
 
@@ -85,8 +87,12 @@ class HelpCommandTestCase(TestBase):
         valid_version_patterns = []
 
         # Add the Swift OSS version pattern
-        valid_version_patterns.append(
-            r"^lldb-(local|buildbot)-\d{4}-\d{2}-\d{2} \((LLDB [^,)]+(, (LLVM|Clang|Swift-\d+\.\d+) [^,)]+){0,3})?\)$"
+        valid_version_patterns.extend([
+            # It's okay for the local build to not have a date.  This happens in Xcode builds.
+            r"^lldb-local(-\d{4}-\d{2}-\d{2})? \((LLDB [^,)]+(, (LLVM|Clang|Swift-\d+\.\d+) [^,)]+){0,3})?\)$",
+            # But it's not okay for the buildbot to be missing a date.  This shouldn't happen in a build-script-based build.
+            r"^lldb-buildbot-\d{4}-\d{2}-\d{2} \((LLDB [^,)]+(, (LLVM|Clang|Swift-\d+\.\d+) [^,)]+){0,3})?\)$",
+            ]
             )
 
         # Add valid llvm.org and official Apple Xcode LLDB version patterns

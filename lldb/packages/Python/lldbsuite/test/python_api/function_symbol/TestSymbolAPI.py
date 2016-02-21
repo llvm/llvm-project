@@ -9,8 +9,9 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class SymbolAPITestCase(TestBase):
 
@@ -24,7 +25,6 @@ class SymbolAPITestCase(TestBase):
         self.line2 = line_number('main.c', '// Find the line number for breakpoint 2 here.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24778")
     def test(self):
         """Exercise some SBSymbol and SBAddress APIs."""
         self.build()

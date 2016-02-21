@@ -3,6 +3,7 @@ Test that formatter categories can work for multiple languages
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
@@ -10,8 +11,8 @@ class TestMultilangFormatterCategories(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
-    @swiftTest
-    @skipUnlessDarwin
+    @decorators.swiftTest
+    @decorators.skipUnlessDarwin
     def test_multilang_formatter_categories(self):
         """Test that formatter categories can work for multiple languages"""
         self.build()

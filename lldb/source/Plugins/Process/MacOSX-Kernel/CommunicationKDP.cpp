@@ -326,6 +326,7 @@ CommunicationKDP::CheckForPacket (const uint8_t *src, size_t src_len, DataExtrac
                 SendRequestPacketNoLock (request_ack_packet);
             }
             // Fall through to case below to get packet contents
+            LLVM_FALLTHROUGH;
         case ePacketTypeReply | KDP_CONNECT:
         case ePacketTypeReply | KDP_DISCONNECT:
         case ePacketTypeReply | KDP_HOSTINFO:

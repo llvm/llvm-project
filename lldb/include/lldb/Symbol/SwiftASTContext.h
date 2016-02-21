@@ -527,7 +527,10 @@ public:
     //----------------------------------------------------------------------
     
     std::vector<CompilerDecl>
-    DeclContextFindDeclByName (void *opaque_decl_ctx, ConstString name) override { return {}; }
+    DeclContextFindDeclByName (void *opaque_decl_ctx,
+                               ConstString name,
+                               const bool ignore_imported_decls) override
+    { return {}; }
     
     bool
     DeclContextIsStructUnionOrClass (void *opaque_decl_ctx) override;

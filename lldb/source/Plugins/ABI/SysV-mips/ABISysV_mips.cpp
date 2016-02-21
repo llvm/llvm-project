@@ -242,16 +242,27 @@ ABISysV_mips::PrepareTrivialCall (Thread &thread,
     const RegisterInfo *sp_reg_info = reg_ctx->GetRegisterInfo (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
     const RegisterInfo *ra_reg_info = reg_ctx->GetRegisterInfo (eRegisterKindGeneric, LLDB_REGNUM_GENERIC_RA);
     const RegisterInfo *r25_info = reg_ctx->GetRegisterInfoByName("r25", 0);
+    const RegisterInfo *r0_info = reg_ctx->GetRegisterInfoByName("zero", 0);
 
     if (log)
-    log->Printf("Writing SP: 0x%" PRIx64, (uint64_t)sp);
+        log->Printf("Writing R0: 0x%" PRIx64, (uint64_t)0);
+
+    /* Write r0 with 0, in case we are stopped in syscall,
+     * such setting prevents automatic decrement of the PC.
+     * This clears the bug 23659 for MIPS.
+    */ 
+    if (!reg_ctx->WriteRegisterFromUnsigned (r0_info, (uint64_t)0))
+        return false;
+
+    if (log)
+        log->Printf("Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
     // Set "sp" to the requested value
     if (!reg_ctx->WriteRegisterFromUnsigned (sp_reg_info, sp))
         return false;
 
     if (log)
-    log->Printf("Writing RA: 0x%" PRIx64, (uint64_t)return_addr);
+        log->Printf("Writing RA: 0x%" PRIx64, (uint64_t)return_addr);
 
     // Set "ra" to the return address
     if (!reg_ctx->WriteRegisterFromUnsigned (ra_reg_info, return_addr))

@@ -6,14 +6,15 @@ from __future__ import print_function
 
 import os
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class DebugBreakTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(archs=not_in(["i386", "i686"]))
+    @skipIf(archs=no_match(["i386", "i686"]))
     @no_debug_info_test
     def test_asm_int_3(self):
         """Test that intrinsics like `__debugbreak();` and `asm {"int3"}` are treated like breakpoints."""
@@ -26,13 +27,15 @@ class DebugBreakTestCase(TestBase):
 
         # We've hit the first stop, so grab the frame.
         self.assertEqual(process.GetState(), lldb.eStateStopped)
-        thread = process.GetThreadAtIndex(0)
+        stop_reason = lldb.eStopReasonException if (lldbplatformutil.getPlatform()=="windows") else lldb.eStopReasonSignal
+        thread = lldbutil.get_stopped_thread(process, stop_reason)
+        self.assertIsNotNone(thread, "Unable to find thread stopped at the __debugbreak()")
         frame = thread.GetFrameAtIndex(0)
 
         # We should be in funciton 'bar'.
         self.assertTrue(frame.IsValid())
         function_name = frame.GetFunctionName()
-        self.assertTrue('bar' in function_name)
+        self.assertTrue('bar' in function_name, "Unexpected function name {}".format(function_name))
 
         # We should be able to evaluate the parameter foo.
         value = frame.EvaluateExpression('*foo')

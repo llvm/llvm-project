@@ -1878,7 +1878,19 @@ SwiftExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
         if (log)
             log->Printf("Found function %s for %s", function_name.AsCString(), "$__lldb_expr");
     }
-    
+
+    // Retrieve an appropriate symbol context.
+    SymbolContext sc;
+
+    if (lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP())
+    {
+        sc = frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
+    }
+    else if (lldb::TargetSP target_sp = exe_ctx.GetTargetSP())
+    {
+        sc.target_sp = target_sp;
+    }
+
     std::vector<std::string> features;
     
     std::unique_ptr<llvm::LLVMContext> llvm_context_up;
@@ -1886,6 +1898,7 @@ SwiftExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
                                                    m_module, // handed off here
                                                    function_name,
                                                    exe_ctx.GetTargetSP(),
+                                                   sc,
                                                    features));
                                                
     // TODO figure out some way to work ClangExpressionDeclMap into this or do the equivalent

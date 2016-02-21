@@ -8,8 +8,9 @@ from __future__ import print_function
 import lldb
 import os
 import time
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class TestRerun(TestBase):
 
@@ -31,19 +32,9 @@ class TestRerun(TestBase):
         self.runCmd("process launch 1 2 3")
 
         process = self.process()
-
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
-                        STOPPED_DUE_TO_BREAKPOINT)
-
-        thread = process.GetThreadAtIndex (0)
-
-        self.assertTrue (thread.IsValid(),
-                         "Process stopped at 'main' should have a valid thread");
-
-        stop_reason = thread.GetStopReason()
-        
-        self.assertTrue (stop_reason == lldb.eStopReasonBreakpoint,
-                         "Thread in process stopped in 'main' should have a stop reason of eStopReasonBreakpoint");
+        thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint)
+        self.assertIsNotNone(thread, "Process should be stopped at a breakpoint in main")
+        self.assertTrue(thread.IsValid(), "Stopped thread is not valid")
 
         self.expect("frame variable argv[1]", substrs=['1'])
         self.expect("frame variable argv[2]", substrs=['2'])
@@ -57,19 +48,10 @@ class TestRerun(TestBase):
         self.runCmd("process launch")
 
         process = self.process()
-        
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
-                        STOPPED_DUE_TO_BREAKPOINT)
+        thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint)
 
-        thread = process.GetThreadAtIndex (0)
-
-        self.assertTrue (thread.IsValid(),
-                         "Process stopped at 'main' should have a valid thread");
-
-        stop_reason = thread.GetStopReason()
-        
-        self.assertTrue (stop_reason == lldb.eStopReasonBreakpoint,
-                         "Thread in process stopped in 'main' should have a stop reason of eStopReasonBreakpoint");
+        self.assertIsNotNone(thread, "Process should be stopped at a breakpoint in main");
+        self.assertTrue(thread.IsValid(), "Stopped thread is not valid")
 
         self.expect("frame variable argv[1]", substrs=['1'])
         self.expect("frame variable argv[2]", substrs=['2'])

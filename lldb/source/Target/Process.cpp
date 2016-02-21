@@ -1604,7 +1604,7 @@ Process::IsAlive ()
         case eStateDetached:
         case eStateExited:
             return false;
-            
+
         case eStateConnected:
         case eStateAttaching:
         case eStateLaunching:
@@ -1614,6 +1614,8 @@ Process::IsAlive ()
         case eStateCrashed:
         case eStateSuspended:
             return true;
+        default:
+            return false;
     }
 }
 
@@ -4028,7 +4030,7 @@ Process::ShouldBroadcastEvent (Event *event_ptr)
             m_stdio_communication.StopReadThread();
             m_stdin_forward = false;
 
-            // fall-through
+            LLVM_FALLTHROUGH;
         case eStateConnected:
         case eStateAttaching:
         case eStateLaunching:
@@ -4209,8 +4211,8 @@ Process::StartPrivateStateThread (bool is_secondary_thread)
     }
 
     // Create the private state thread, and start it running.
-    PrivateStateThreadArgs args = {this, is_secondary_thread};
-    m_private_state_thread = ThreadLauncher::LaunchThread(thread_name, Process::PrivateStateThread, (void *) &args, NULL, 8 * 1024 * 1024);
+    PrivateStateThreadArgs *args_ptr = new PrivateStateThreadArgs(this, is_secondary_thread);
+    m_private_state_thread = ThreadLauncher::LaunchThread(thread_name, Process::PrivateStateThread, (void *) args_ptr, NULL, 8 * 1024 * 1024);
     if (m_private_state_thread.IsJoinable())
     {
         ResumePrivateStateThread();
@@ -4452,8 +4454,9 @@ Process::HaltPrivate()
 thread_result_t
 Process::PrivateStateThread (void *arg)
 {
-    PrivateStateThreadArgs *real_args = static_cast<PrivateStateThreadArgs *> (arg);
-    thread_result_t result = real_args->process->RunPrivateStateThread(real_args->is_secondary_thread);
+    PrivateStateThreadArgs real_args = *static_cast<PrivateStateThreadArgs *> (arg);
+    free (arg);
+    thread_result_t result = real_args.process->RunPrivateStateThread(real_args.is_secondary_thread);
     return result;
 }
 

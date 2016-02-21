@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -14,6 +14,7 @@ Test that we find the right file-local private decls using the discriminator
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
@@ -42,8 +43,8 @@ class TestFilePrivate(TestBase):
         report_str = "%s expected: %s got: %s"%(expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
-    @swiftTest
-    @unittest2.expectedFailure("rdar://23236790")
+    @decorators.swiftTest
+    @decorators.expectedFailureAll(bugnumber="rdar://23236790")
     def test(self):
         """Test that we find the right file-local private decls using the discriminator"""
         self.build()
