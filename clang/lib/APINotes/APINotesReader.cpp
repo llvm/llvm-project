@@ -39,6 +39,13 @@ namespace {
       = std::string(reinterpret_cast<const char *>(data),
                     reinterpret_cast<const char *>(data) + msgLength);
     data += msgLength;
+
+    unsigned swiftNameLength
+      = endian::readNext<uint16_t, little, unaligned>(data);
+    info.SwiftName
+      = std::string(reinterpret_cast<const char *>(data),
+                    reinterpret_cast<const char *>(data) + swiftNameLength);
+    data += swiftNameLength;
   }
 
   /// Used to deserialize the on-disk identifier table.
