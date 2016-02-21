@@ -2117,7 +2117,11 @@ class X86TargetInfo : public TargetInfo {
   bool HasAVX512DQ = false;
   bool HasAVX512BW = false;
   bool HasAVX512VL = false;
+  bool HasAVX512VBMI = false;
+  bool HasAVX512IFMA = false;
   bool HasSHA = false;
+  bool HasMPX = false;
+  bool HasSGX = false;
   bool HasCX16 = false;
   bool HasFXSR = false;
   bool HasXSAVE = false;
@@ -2125,6 +2129,12 @@ class X86TargetInfo : public TargetInfo {
   bool HasXSAVEC = false;
   bool HasXSAVES = false;
   bool HasPKU = false;
+  bool HasCLFLUSHOPT = false;
+  bool HasPCOMMIT = false;
+  bool HasCLWB = false;
+  bool HasUMIP = false;
+  bool HasMOVBE = false;
+  bool HasPREFETCHWT1 = false;
 
   /// \brief Enumeration of all of the X86 CPUs supported by Clang.
   ///
@@ -2225,9 +2235,17 @@ class X86TargetInfo : public TargetInfo {
     /// Broadwell microarchitecture based processors.
     CK_Broadwell,
 
-    /// \name Skylake
-    /// Skylake microarchitecture based processors.
-    CK_Skylake,
+    /// \name Skylake Client
+    /// Skylake client microarchitecture based processors.
+    CK_SkylakeClient,
+
+    /// \name Skylake Server
+    /// Skylake server microarchitecture based processors.
+    CK_SkylakeServer,
+
+    /// \name Cannonlake Client
+    /// Cannonlake client microarchitecture based processors.
+    CK_Cannonlake,
 
     /// \name Knights Landing
     /// Knights Landing processor.
@@ -2332,8 +2350,10 @@ class X86TargetInfo : public TargetInfo {
         .Case("haswell", CK_Haswell)
         .Case("core-avx2", CK_Haswell) // Legacy name.
         .Case("broadwell", CK_Broadwell)
-        .Case("skylake", CK_Skylake)
-        .Case("skx", CK_Skylake) // Legacy name.
+        .Case("skylake", CK_SkylakeClient)
+        .Case("skylake-avx512", CK_SkylakeServer)
+        .Case("skx", CK_SkylakeServer) // Legacy name.
+        .Case("cannonlake", CK_Cannonlake)
         .Case("knl", CK_KNL)
         .Case("k6", CK_K6)
         .Case("k6-2", CK_K6_2)
@@ -2508,7 +2528,9 @@ public:
     case CK_IvyBridge:
     case CK_Haswell:
     case CK_Broadwell:
-    case CK_Skylake:
+    case CK_SkylakeClient:
+    case CK_SkylakeServer:
+    case CK_Cannonlake:
     case CK_KNL:
     case CK_Athlon64:
     case CK_Athlon64SSE3:
@@ -2618,15 +2640,28 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "cx16", true);
     break;
-  case CK_Skylake:
+  case CK_Cannonlake:
+    setFeatureEnabledImpl(Features, "avx512ifma", true);
+    setFeatureEnabledImpl(Features, "avx512vbmi", true);
+    setFeatureEnabledImpl(Features, "sha", true);
+    setFeatureEnabledImpl(Features, "umip", true);
+    // FALLTHROUGH
+  case CK_SkylakeServer:
     setFeatureEnabledImpl(Features, "avx512f", true);
     setFeatureEnabledImpl(Features, "avx512cd", true);
     setFeatureEnabledImpl(Features, "avx512dq", true);
     setFeatureEnabledImpl(Features, "avx512bw", true);
     setFeatureEnabledImpl(Features, "avx512vl", true);
+    setFeatureEnabledImpl(Features, "pku", true);
+    setFeatureEnabledImpl(Features, "pcommit", true);
+    setFeatureEnabledImpl(Features, "clwb", true);
+    // FALLTHROUGH
+  case CK_SkylakeClient:
     setFeatureEnabledImpl(Features, "xsavec", true);
     setFeatureEnabledImpl(Features, "xsaves", true);
-    setFeatureEnabledImpl(Features, "pku", true);
+    setFeatureEnabledImpl(Features, "mpx", true);
+    setFeatureEnabledImpl(Features, "sgx", true);
+    setFeatureEnabledImpl(Features, "clflushopt", true);
     // FALLTHROUGH
   case CK_Broadwell:
     setFeatureEnabledImpl(Features, "rdseed", true);
@@ -2639,6 +2674,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "bmi2", true);
     setFeatureEnabledImpl(Features, "rtm", true);
     setFeatureEnabledImpl(Features, "fma", true);
+    setFeatureEnabledImpl(Features, "movbe", true);
     // FALLTHROUGH
   case CK_IvyBridge:
     setFeatureEnabledImpl(Features, "rdrnd", true);
@@ -2665,6 +2701,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "avx512cd", true);
     setFeatureEnabledImpl(Features, "avx512er", true);
     setFeatureEnabledImpl(Features, "avx512pf", true);
+    setFeatureEnabledImpl(Features, "prefetchwt1", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "rdseed", true);
     setFeatureEnabledImpl(Features, "adx", true);
@@ -2681,6 +2718,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "cx16", true);
     setFeatureEnabledImpl(Features, "xsaveopt", true);
     setFeatureEnabledImpl(Features, "xsave", true);
+    setFeatureEnabledImpl(Features, "movbe", true);
     break;
   case CK_K6_2:
   case CK_K6_3:
@@ -3038,8 +3076,18 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512BW = true;
     } else if (Feature == "+avx512vl") {
       HasAVX512VL = true;
+    } else if (Feature == "+avx512vbmi") {
+      HasAVX512VBMI = true;
+    } else if (Feature == "+avx512ifma") {
+      HasAVX512IFMA = true;
     } else if (Feature == "+sha") {
       HasSHA = true;
+    } else if (Feature == "+mpx") {
+      HasMPX = true;
+    } else if (Feature == "+movbe") {
+      HasMOVBE = true;
+    } else if (Feature == "+sgx") {
+      HasSGX = true;
     } else if (Feature == "+cx16") {
       HasCX16 = true;
     } else if (Feature == "+fxsr") {
@@ -3054,6 +3102,16 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasXSAVES = true;
     } else if (Feature == "+pku") {
       HasPKU = true;
+    } else if (Feature == "+clflushopt") {
+      HasCLFLUSHOPT = true;
+    } else if (Feature == "+pcommit") {
+      HasPCOMMIT = true;
+    } else if (Feature == "+clwb") {
+      HasCLWB = true;
+    } else if (Feature == "+umip") {
+      HasUMIP = true;
+    } else if (Feature == "+prefetchwt1") {
+      HasPREFETCHWT1 = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -3187,17 +3245,16 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_IvyBridge:
   case CK_Haswell:
   case CK_Broadwell:
+  case CK_SkylakeClient:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
     defineCPUMacros(Builder, "corei7");
     break;
-  case CK_Skylake:
-    // FIXME: Historically, we defined this legacy name, it would be nice to
-    // remove it at some point. This is the only fine-grained CPU macro in the
-    // main intel CPU line, and it would be better to not have these and force
-    // people to use ISA macros.
+  case CK_SkylakeServer:
     defineCPUMacros(Builder, "skx");
+    break;
+  case CK_Cannonlake:
     break;
   case CK_KNL:
     defineCPUMacros(Builder, "knl");
@@ -3439,8 +3496,12 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512dq", HasAVX512DQ)
       .Case("avx512bw", HasAVX512BW)
       .Case("avx512vl", HasAVX512VL)
+      .Case("avx512vbmi", HasAVX512VBMI)
+      .Case("avx512ifma", HasAVX512IFMA)
       .Case("bmi", HasBMI)
       .Case("bmi2", HasBMI2)
+      .Case("clflushopt", HasCLFLUSHOPT)
+      .Case("clwb", HasCLWB)
       .Case("cx16", HasCX16)
       .Case("f16c", HasF16C)
       .Case("fma", HasFMA)
@@ -3451,12 +3512,18 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("mm3dnow", MMX3DNowLevel >= AMD3DNow)
       .Case("mm3dnowa", MMX3DNowLevel >= AMD3DNowAthlon)
       .Case("mmx", MMX3DNowLevel >= MMX)
+      .Case("movbe", HasMOVBE)
+      .Case("mpx", HasMPX)
       .Case("pclmul", HasPCLMUL)
+      .Case("pcommit", HasPCOMMIT)
+      .Case("pku", HasPKU)
       .Case("popcnt", HasPOPCNT)
+      .Case("prefetchwt1", HasPREFETCHWT1)
       .Case("prfchw", HasPRFCHW)
       .Case("rdrnd", HasRDRND)
       .Case("rdseed", HasRDSEED)
       .Case("rtm", HasRTM)
+      .Case("sgx", HasSGX)
       .Case("sha", HasSHA)
       .Case("sse", SSELevel >= SSE1)
       .Case("sse2", SSELevel >= SSE2)
@@ -3466,6 +3533,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sse4.2", SSELevel >= SSE42)
       .Case("sse4a", XOPLevel >= SSE4A)
       .Case("tbm", HasTBM)
+      .Case("umip", HasUMIP)
       .Case("x86", true)
       .Case("x86_32", getTriple().getArch() == llvm::Triple::x86)
       .Case("x86_64", getTriple().getArch() == llvm::Triple::x86_64)
@@ -3474,7 +3542,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("xsavec", HasXSAVEC)
       .Case("xsaves", HasXSAVES)
       .Case("xsaveopt", HasXSAVEOPT)
-      .Case("pku", HasPKU)
       .Default(false);
 }
 
