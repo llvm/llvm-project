@@ -33,12 +33,9 @@ add_lldb_executable(lldb-server
     LLDBServerUtilities.cpp
 )
 
-# The Darwin linker doesn't understand --start-group/--end-group.
-if (LLDB_LINKER_SUPPORTS_GROUPS)
-  target_link_libraries(lldb-server
-                        -Wl,--start-group ${LLDB_USED_LIBS} -Wl,--end-group)
-  target_link_libraries(lldb-server
-                        -Wl,--start-group ${CLANG_USED_LIBS} -Wl,--end-group)
+if (BUILD_SHARED_LIBS )
+  target_link_libraries(lldb-server liblldb)
+  target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
 else()
   # The Darwin linker doesn't understand --start-group/--end-group.
   if (LLDB_LINKER_SUPPORTS_GROUPS)
@@ -60,9 +57,6 @@ else()
 
   target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
 endif()
-llvm_config(lldb-server ${LLVM_LINK_COMPONENTS})
-
-target_link_libraries(lldb-server ${LLDB_SYSTEM_LIBS})
 
 set_target_properties(lldb-server PROPERTIES VERSION ${LLDB_VERSION})
 
