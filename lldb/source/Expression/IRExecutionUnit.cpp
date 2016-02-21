@@ -852,6 +852,10 @@ IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &s
             SymbolContext candidate_sc;
             
             sc_list.GetContextAtIndex(si, candidate_sc);
+            // Make sure we have a valid candidate symbol.
+            if (!candidate_sc.symbol)
+                continue;
+
             if (candidate_sc.function)
             {
                 is_external = true;
