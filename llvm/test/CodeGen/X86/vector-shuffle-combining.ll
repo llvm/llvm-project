@@ -1798,6 +1798,29 @@ define <8 x float> @combine_test22(<2 x float>* %a, <2 x float>* %b) {
   ret <8 x float> %3
 }
 
+; PR22359
+define void @combine_test23(<8 x float> %v, <2 x float>* %ptr) {
+; SSE-LABEL: combine_test23:
+; SSE:       # BB#0:
+; SSE-NEXT:    movups %xmm0, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_test23:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0,1],xmm1[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
+; AVX-NEXT:    vmovups %xmm0, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %idx2 = getelementptr inbounds <2 x float>, <2 x float>* %ptr, i64 1
+  %shuffle0 = shufflevector <8 x float> %v, <8 x float> undef, <2 x i32> <i32 0, i32 1>
+  %shuffle1 = shufflevector <8 x float> %v, <8 x float> undef, <2 x i32> <i32 2, i32 3>
+  store <2 x float> %shuffle0, <2 x float>* %ptr, align 8
+  store <2 x float> %shuffle1, <2 x float>* %idx2, align 8
+  ret void
+}
+
 ; Check some negative cases.
 ; FIXME: Do any of these really make sense? Are they redundant with the above tests?
 

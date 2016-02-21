@@ -7388,11 +7388,9 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
 
       if (N0.getValueType() == MVT::ppcf128 && !LegalTypes) {
         APInt SignBit = APInt::getSignBit(VT.getSizeInBits() / 2);
-        SDValue Cst = DAG.getNode(ISD::BITCAST, SDLoc(N0.getOperand(0)), VT,
-                                  N0.getOperand(0));
+        SDValue Cst = DAG.getBitcast(VT, N0.getOperand(0));
         AddToWorklist(Cst.getNode());
-        SDValue X = DAG.getNode(ISD::BITCAST, SDLoc(N0.getOperand(1)), VT,
-                                N0.getOperand(1));
+        SDValue X = DAG.getBitcast(VT, N0.getOperand(1));
         AddToWorklist(X.getNode());
         SDValue XorResult = DAG.getNode(ISD::XOR, SDLoc(N0), VT, Cst, X);
         AddToWorklist(XorResult.getNode());
@@ -8969,9 +8967,7 @@ static SDValue FoldIntToFPToInt(SDNode *N, SelectionDAG &DAG) {
     }
     if (VT.getScalarSizeInBits() < SrcVT.getScalarSizeInBits())
       return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Src);
-    if (SrcVT == VT)
-      return Src;
-    return DAG.getNode(ISD::BITCAST, SDLoc(N), VT, Src);
+    return DAG.getBitcast(VT, Src);
   }
   return SDValue();
 }

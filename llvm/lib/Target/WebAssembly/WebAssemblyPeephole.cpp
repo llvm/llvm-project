@@ -48,16 +48,22 @@ FunctionPass *llvm::createWebAssemblyPeephole() {
   return new WebAssemblyPeephole();
 }
 
+static const TargetRegisterClass *GetRegClass(const MachineRegisterInfo &MRI,
+                                              unsigned RegNo) {
+  return TargetRegisterInfo::isVirtualRegister(RegNo)
+             ? MRI.getRegClass(RegNo)
+             : MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(RegNo);
+}
+
 /// If desirable, rewrite NewReg to a discard register.
 static bool MaybeRewriteToDiscard(unsigned OldReg, unsigned NewReg,
                                   MachineOperand &MO,
                                   WebAssemblyFunctionInfo &MFI,
                                   MachineRegisterInfo &MRI) {
   bool Changed = false;
-  // TODO: Handle SP/physregs
-  if (OldReg == NewReg && TargetRegisterInfo::isVirtualRegister(NewReg)) {
+  if (OldReg == NewReg) {
     Changed = true;
-    unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
+    unsigned NewReg = MRI.createVirtualRegister(GetRegClass(MRI, OldReg));
     MO.setReg(NewReg);
     MO.setIsDead();
     MFI.stackifyVReg(NewReg);
@@ -121,9 +127,7 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
               unsigned OldReg = MO.getReg();
               unsigned NewReg = Op2.getReg();
 
-              // TODO: Handle SP/physregs in MaybeRewriteToDiscard
-              if (TargetRegisterInfo::isVirtualRegister(NewReg) &&
-                  (MRI.getRegClass(NewReg) != MRI.getRegClass(OldReg)))
+              if (GetRegClass(MRI, NewReg) != GetRegClass(MRI, OldReg))
                 report_fatal_error("Peephole: call to builtin function with "
                                    "wrong signature, from/to mismatch");
               Changed |= MaybeRewriteToDiscard(OldReg, NewReg, MO, MFI, MRI);

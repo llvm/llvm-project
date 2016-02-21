@@ -391,10 +391,12 @@ declare <4 x double> @llvm.x86.avx.vperm2f128.pd.256(<4 x double>, <4 x double>,
 define <8 x float> @test_mm256_permute2f128_ps(<8 x float> %a0, <8 x float> %a1) {
 ; X32-LABEL: test_mm256_permute2f128_ps:
 ; X32:       # BB#0:
+; X32-NEXT:    vmovaps %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_permute2f128_ps:
 ; X64:       # BB#0:
+; X64-NEXT:    vmovaps %ymm1, %ymm0
 ; X64-NEXT:    retq
   %res = call <8 x float> @llvm.x86.avx.vperm2f128.ps.256(<8 x float> %a0, <8 x float> %a1, i8 50)
   ret <8 x float> %res

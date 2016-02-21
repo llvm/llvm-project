@@ -27,6 +27,7 @@ class Argument;
 class AssemblyAnnotationWriter;
 class BasicBlock;
 class Constant;
+class ConstantData;
 class DataLayout;
 class Function;
 class GlobalAlias;
@@ -682,6 +683,13 @@ template <> struct isa_impl<Constant, Value> {
   static inline bool doit(const Value &Val) {
     return Val.getValueID() >= Value::ConstantFirstVal &&
       Val.getValueID() <= Value::ConstantLastVal;
+  }
+};
+
+template <> struct isa_impl<ConstantData, Value> {
+  static inline bool doit(const Value &Val) {
+    return Val.getValueID() >= Value::ConstantDataFirstVal &&
+           Val.getValueID() <= Value::ConstantDataLastVal;
   }
 };
 

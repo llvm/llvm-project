@@ -59,7 +59,8 @@ namespace llvm {
     /// \brief Given a mergeable constant with the specified size and relocation
     /// information, return a section that it should be placed in.
     MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                     const Constant *C) const override;
+                                     const Constant *C,
+                                     unsigned &Align) const override;
   };
 
 } // end namespace llvm

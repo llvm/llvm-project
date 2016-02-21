@@ -24,13 +24,13 @@ declare void @ext_byval_func_empty(%EmptyStruct* byval)
 define void @byval_arg(%SmallStruct* %ptr) {
  ; CHECK: .param i32
  ; Subtract 16 from SP (SP is 16-byte aligned)
- ; CHECK: i32.const [[L1:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.load [[L1]]=, 0([[L1]])
- ; CHECK-NEXT: i32.const [[L2:.+]]=, 16
- ; CHECK-NEXT: i32.sub [[SP:.+]]=, [[L1]], [[L2]]
+ ; CHECK: i32.const $push[[L1:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.load $push[[L2:.+]]=, 0($pop[[L1]])
+ ; CHECK-NEXT: i32.const $push[[L3:.+]]=, 16
+ ; CHECK-NEXT: i32.sub [[SP:.+]]=, $pop[[L2]], $pop[[L3]]
  ; Ensure SP is stored back before the call
- ; CHECK-NEXT: i32.const [[L3:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.store {{.*}}=, 0([[L3]]), [[SP]]
+ ; CHECK-NEXT: i32.const $push[[L4:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.store {{.*}}=, 0($pop[[L4]]), [[SP]]
  ; Copy the SmallStruct argument to the stack (SP+12, original SP-4)
  ; CHECK-NEXT: i32.load $push[[L4:.+]]=, 0($0)
  ; CHECK-NEXT: i32.store {{.*}}=, 12([[SP]]), $pop[[L4]]
@@ -40,10 +40,10 @@ define void @byval_arg(%SmallStruct* %ptr) {
  ; CHECK-NEXT: call ext_byval_func@FUNCTION, [[L5]]
  call void @ext_byval_func(%SmallStruct* byval %ptr)
  ; Restore the stack
- ; CHECK-NEXT: i32.const [[L6:.+]]=, 16
- ; CHECK-NEXT: i32.add [[SP]]=, [[SP]], [[L6]]
- ; CHECK-NEXT: i32.const [[L7:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.store {{.*}}=, 0([[L7]]), [[SP]]
+ ; CHECK-NEXT: i32.const $push[[L6:.+]]=, 16
+ ; CHECK-NEXT: i32.add [[SP]]=, [[SP]], $pop[[L6]]
+ ; CHECK-NEXT: i32.const $push[[L7:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.store {{.*}}=, 0($pop[[L7]]), [[SP]]
  ; CHECK-NEXT: return
  ret void
 }
@@ -52,8 +52,8 @@ define void @byval_arg(%SmallStruct* %ptr) {
 define void @byval_arg_align8(%SmallStruct* %ptr) {
  ; CHECK: .param i32
  ; Don't check the entire SP sequence, just enough to get the alignment.
- ; CHECK: i32.const [[L2:.+]]=, 16
- ; CHECK-NEXT: i32.sub [[SP:.+]]=, {{.+}}, [[L2]]
+ ; CHECK: i32.const $push[[L1:.+]]=, 16
+ ; CHECK-NEXT: i32.sub [[SP:.+]]=, {{.+}}, $pop[[L1]]
  ; Copy the SmallStruct argument to the stack (SP+8, original SP-8)
  ; CHECK: i32.load $push[[L4:.+]]=, 0($0):p2align=3
  ; CHECK-NEXT: i32.store {{.*}}=, 8([[SP]]):p2align=3, $pop[[L4]]
@@ -69,8 +69,8 @@ define void @byval_arg_align8(%SmallStruct* %ptr) {
 define void @byval_arg_double(%AlignedStruct* %ptr) {
  ; CHECK: .param i32
  ; Subtract 16 from SP (SP is 16-byte aligned)
- ; CHECK: i32.const [[L2:.+]]=, 16
- ; CHECK-NEXT: i32.sub [[SP:.+]]=, {{.+}}, [[L2]]
+ ; CHECK: i32.const $push[[L1:.+]]=, 16
+ ; CHECK-NEXT: i32.sub [[SP:.+]]=, {{.+}}, $pop[[L1]]
  ; Copy the AlignedStruct argument to the stack (SP+0, original SP-16)
  ; Just check the last load/store pair of the memcpy
  ; CHECK: i64.load $push[[L4:.+]]=, 0($0)
@@ -107,10 +107,11 @@ define void @byval_empty_callee(%EmptyStruct* byval %ptr) {
 }
 
 ; Call memcpy for "big" byvals.
-; TODO: When the prolog/epilog sequences are optimized, refine these checks to
-; be more specific.
-
 ; CHECK-LABEL: big_byval:
+; CHECK: i32.const $push[[L1:.+]]=, __stack_pointer
+; CHECK-NEXT: i32.load $push[[L2:.+]]=, 0($pop[[L1]])
+; CHECK-NEXT: i32.const $push[[L3:.+]]=, 131072
+; CHECK-NEXT: i32.sub [[SP:.+]]=, $pop[[L2]], $pop[[L3]]
 ; CHECK:      i32.call       ${{[^,]+}}=, memcpy@FUNCTION,
 ; CHECK-NEXT: call           big_byval_callee@FUNCTION,
 %big = type [131072 x i8]

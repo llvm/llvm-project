@@ -42,6 +42,8 @@ using namespace llvm;
 
 void Constant::anchor() { }
 
+void ConstantData::anchor() {}
+
 bool Constant::isNegativeZeroValue() const {
   // Floating point values have an explicit -0.0 value.
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
@@ -521,8 +523,8 @@ void Constant::removeDeadConstantUsers() const {
 
 void ConstantInt::anchor() { }
 
-ConstantInt::ConstantInt(IntegerType *Ty, const APInt& V)
-  : Constant(Ty, ConstantIntVal, nullptr, 0), Val(V) {
+ConstantInt::ConstantInt(IntegerType *Ty, const APInt &V)
+    : ConstantData(Ty, ConstantIntVal), Val(V) {
   assert(V.getBitWidth() == Ty->getBitWidth() && "Invalid constant for type");
 }
 
@@ -748,8 +750,8 @@ Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
   return C;
 }
 
-ConstantFP::ConstantFP(Type *Ty, const APFloat& V)
-  : Constant(Ty, ConstantFPVal, nullptr, 0), Val(V) {
+ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
+    : ConstantData(Ty, ConstantFPVal), Val(V) {
   assert(&V.getSemantics() == TypeToFloatSemantics(Ty) &&
          "FP type Mismatch");
 }
@@ -2814,34 +2816,6 @@ void Constant::handleOperandChange(Value *From, Value *To) {
 
   // Delete the old constant!
   destroyConstant();
-}
-
-Value *ConstantInt::handleOperandChangeImpl(Value *From, Value *To) {
-  llvm_unreachable("Unsupported class for handleOperandChange()!");
-}
-
-Value *ConstantFP::handleOperandChangeImpl(Value *From, Value *To) {
-  llvm_unreachable("Unsupported class for handleOperandChange()!");
-}
-
-Value *ConstantTokenNone::handleOperandChangeImpl(Value *From, Value *To) {
-  llvm_unreachable("Unsupported class for handleOperandChange()!");
-}
-
-Value *UndefValue::handleOperandChangeImpl(Value *From, Value *To) {
-  llvm_unreachable("Unsupported class for handleOperandChange()!");
-}
-
-Value *ConstantPointerNull::handleOperandChangeImpl(Value *From, Value *To) {
-  llvm_unreachable("Unsupported class for handleOperandChange()!");
-}
-
-Value *ConstantAggregateZero::handleOperandChangeImpl(Value *From, Value *To) {
-  llvm_unreachable("Unsupported class for handleOperandChange()!");
-}
-
-Value *ConstantDataSequential::handleOperandChangeImpl(Value *From, Value *To) {
-  llvm_unreachable("Unsupported class for handleOperandChange()!");
 }
 
 Value *ConstantArray::handleOperandChangeImpl(Value *From, Value *To) {
