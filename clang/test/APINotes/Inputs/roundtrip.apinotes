@@ -6,12 +6,14 @@ Classes:
   - Name:            NSCell
     Availability:    available
     AvailabilityMsg: ''
+    SwiftName:       ''
     Methods:         
       - Selector:        init
         MethodKind:      Instance
         NullabilityOfRet: U
         Availability:    available
         AvailabilityMsg: ''
+        SwiftName:       ''
         DesignatedInit:  true
       - Selector:        'initImageCell:'
         MethodKind:      Instance
@@ -19,6 +21,7 @@ Classes:
         NullabilityOfRet: U
         Availability:    available
         AvailabilityMsg: ''
+        SwiftName:       ''
         DesignatedInit:  true
       - Selector:        'initTextCell:'
         MethodKind:      Instance
@@ -26,6 +29,7 @@ Classes:
         NullabilityOfRet: U
         Availability:    available
         AvailabilityMsg: ''
+        SwiftName:       ''
         DesignatedInit:  true
       - Selector:        'initWithCoder:'
         MethodKind:      Instance
@@ -33,12 +37,14 @@ Classes:
         NullabilityOfRet: U
         Availability:    available
         AvailabilityMsg: ''
+        SwiftName:       ''
         DesignatedInit:  true
         Required:        true
   - Name:            NSView
     AuditedForNullability: true
     Availability:    available
     AvailabilityMsg: ''
+    SwiftName:       ''
     Methods:         
       - Selector:        'addSubview:'
         MethodKind:      Instance
@@ -46,34 +52,41 @@ Classes:
         NullabilityOfRet: N
         Availability:    available
         AvailabilityMsg: ''
+        SwiftName:       ''
       - Selector:        'addSubview:positioned:relativeTo:'
         MethodKind:      Instance
         Nullability:     [ N, N, O ]
         NullabilityOfRet: N
         Availability:    available
         AvailabilityMsg: ''
+        SwiftName:       ''
       - Selector:        'beginDraggingSessionWithItems:event:source:'
         MethodKind:      Instance
         Nullability:     [ U, U, N ]
         NullabilityOfRet: N
         Availability:    available
         AvailabilityMsg: ''
+        SwiftName:       'beginDragginSession(_:event:source:)'
     Properties:      
       - Name:            enclosingScrollView
         Nullability:     O
         Availability:    available
         AvailabilityMsg: ''
+        SwiftName:       enclosing
       - Name:            makeBackingLayer
         Nullability:     N
         Availability:    available
         AvailabilityMsg: ''
+        SwiftName:       ''
 Functions:       
   - Name:            NSAvailableWindowDepths
     NullabilityOfRet: N
     Availability:    available
     AvailabilityMsg: ''
+    SwiftName:       'availableWindowDepths()'
 Globals:         
   - Name:            NSCalibratedWhiteColorSpace
     Nullability:     N
     Availability:    available
     AvailabilityMsg: ''
+    SwiftName:       calibratedWhite

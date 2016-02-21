@@ -93,22 +93,39 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability) {
   }
 }
 
+/// Copy a string into ASTContext-allocated memory.
+static StringRef CopyString(ASTContext &ctx, StringRef string) {
+  void *mem = ctx.Allocate(string.size(), alignof(char));
+  memcpy(mem, string.data(), string.size());
+  return StringRef(static_cast<char *>(mem), string.size());
+}
+
 static void ProcessAPINotes(Sema &S, Decl *D,
                             const api_notes::CommonEntityInfo &Info) {
   // Availability
   if (Info.Unavailable && !D->hasAttr<UnavailableAttr>()) {
-    D->addAttr(UnavailableAttr::CreateImplicit(S.Context, Info.UnavailableMsg));
+    D->addAttr(UnavailableAttr::CreateImplicit(S.Context,
+					       CopyString(S.Context,
+							  Info.UnavailableMsg)));
   }
 
   if (Info.UnavailableInSwift) {
-    D->addAttr(AvailabilityAttr::CreateImplicit(S.Context, 
-                                                &S.Context.Idents.get("swift"),
-                                                VersionTuple(),
-                                                VersionTuple(),
-                                                VersionTuple(),
-                                                /*Unavailable=*/true,
-                                                Info.UnavailableMsg,
-                                                /*Nopartial=*/true));
+    D->addAttr(AvailabilityAttr::CreateImplicit(
+		 S.Context,
+                 &S.Context.Idents.get("swift"),
+                 VersionTuple(),
+                 VersionTuple(),
+                 VersionTuple(),
+                 /*Unavailable=*/true,
+                 CopyString(S.Context, Info.UnavailableMsg),
+                 /*Nopartial=*/true));
+  }
+
+  // swift_name
+  if (!Info.SwiftName.empty() && !D->hasAttr<SwiftNameAttr>()) {
+    D->addAttr(SwiftNameAttr::CreateImplicit(S.Context,
+					     CopyString(S.Context,
+							Info.SwiftName)));
   }
 }
 
