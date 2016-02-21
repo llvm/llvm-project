@@ -154,16 +154,29 @@ static std::string scalarConstantToHexString(const Constant *C) {
 }
 
 MCSection *X86WindowsTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C,
+    unsigned &Align) const {
   if (Kind.isMergeableConst() && C) {
     const unsigned Characteristics = COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                      COFF::IMAGE_SCN_MEM_READ |
                                      COFF::IMAGE_SCN_LNK_COMDAT;
     std::string COMDATSymName;
-    if (Kind.isMergeableConst4() || Kind.isMergeableConst8())
-      COMDATSymName = "__real@" + scalarConstantToHexString(C);
-    else if (Kind.isMergeableConst16())
-      COMDATSymName = "__xmm@" + scalarConstantToHexString(C);
+    if (Kind.isMergeableConst4()) {
+      if (Align <= 4) {
+        COMDATSymName = "__real@" + scalarConstantToHexString(C);
+        Align = 4;
+      }
+    } else if (Kind.isMergeableConst8()) {
+      if (Align <= 8) {
+        COMDATSymName = "__real@" + scalarConstantToHexString(C);
+        Align = 8;
+      }
+    } else if (Kind.isMergeableConst16()) {
+      if (Align <= 16) {
+        COMDATSymName = "__xmm@" + scalarConstantToHexString(C);
+        Align = 16;
+      }
+    }
 
     if (!COMDATSymName.empty())
       return getContext().getCOFFSection(".rdata", Characteristics, Kind,
@@ -171,5 +184,5 @@ MCSection *X86WindowsTargetObjectFile::getSectionForConstant(
                                          COFF::IMAGE_COMDAT_SELECT_ANY);
   }
 
-  return TargetLoweringObjectFile::getSectionForConstant(DL, Kind, C);
+  return TargetLoweringObjectFile::getSectionForConstant(DL, Kind, C, Align);
 }

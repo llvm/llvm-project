@@ -61,8 +61,8 @@ define void @set_no(i8* %dst, i8 %src, i32 %len) {
 
 
 ; CHECK-LABEL: frame_index:
-; CHECK: i32.call $discard=, memset@FUNCTION, $3, $pop1, $pop0{{$}}
-; CHECK: i32.call $discard=, memset@FUNCTION, $4, $pop3, $pop2{{$}}
+; CHECK: i32.call $discard=, memset@FUNCTION, $0, $pop1, $pop0{{$}}
+; CHECK: i32.call $discard=, memset@FUNCTION, $1, $pop3, $pop2{{$}}
 ; CHECK: return{{$}}
 define void @frame_index() {
 entry:

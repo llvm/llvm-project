@@ -1199,9 +1199,10 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // Emit __morestack address if needed for indirect calls.
   if (MMI->usesMorestackAddr()) {
+    unsigned Align = 1;
     MCSection *ReadOnlySection = getObjFileLowering().getSectionForConstant(
         getDataLayout(), SectionKind::getReadOnly(),
-        /*C=*/nullptr);
+        /*C=*/nullptr, Align);
     OutStreamer->SwitchSection(ReadOnlySection);
 
     MCSymbol *AddrSymbol =
@@ -1291,8 +1292,8 @@ void AsmPrinter::EmitConstantPool() {
     if (!CPE.isMachineConstantPoolEntry())
       C = CPE.Val.ConstVal;
 
-    MCSection *S =
-        getObjFileLowering().getSectionForConstant(getDataLayout(), Kind, C);
+    MCSection *S = getObjFileLowering().getSectionForConstant(getDataLayout(),
+                                                              Kind, C, Align);
 
     // The number of sections are small, just do a linear search from the
     // last section to the first.

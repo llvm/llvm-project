@@ -73,7 +73,7 @@ define float @pr23966(i32 %a) {
 
 ; CHECK:              .globl  __real@bf8000003f800000
 ; CHECK-NEXT:         .section        .rdata,"dr",discard,__real@bf8000003f800000
-; CHECK-NEXT:         .p2align  2
+; CHECK-NEXT:         .p2align  3
 ; CHECK-NEXT: __real@bf8000003f800000:
 ; CHECK-NEXT:         .long   1065353216
 ; CHECK-NEXT:         .long   3212836864

@@ -351,7 +351,8 @@ bool TargetLoweringObjectFileELF::shouldPutJumpTableInFunctionSection(
 /// Given a mergeable constant with the specified size and relocation
 /// information, return a section that it should be placed in.
 MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C,
+    unsigned &Align) const {
   if (Kind.isMergeableConst4() && MergeableConst4Section)
     return MergeableConst4Section;
   if (Kind.isMergeableConst8() && MergeableConst8Section)
@@ -636,7 +637,8 @@ MCSection *TargetLoweringObjectFileMachO::SelectSectionForGlobal(
 }
 
 MCSection *TargetLoweringObjectFileMachO::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C,
+    unsigned &Align) const {
   // If this constant requires a relocation, we have to put it in the data
   // segment, not in the text segment.
   if (Kind.isData() || Kind.isReadOnlyWithRel())

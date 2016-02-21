@@ -558,16 +558,20 @@ SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
     // need to insert some kind of instruction that can take an FI operand and
     // produces a value usable by CopyToReg (i.e. in a vreg). So insert a dummy
     // copy_local between Op and its FI operand.
+    SDValue Chain = Op.getOperand(0);
     SDLoc DL(Op);
+    unsigned Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();
     EVT VT = Src.getValueType();
     SDValue Copy(
         DAG.getMachineNode(VT == MVT::i32 ? WebAssembly::COPY_LOCAL_I32
                                           : WebAssembly::COPY_LOCAL_I64,
                            DL, VT, Src),
         0);
-    return DAG.getCopyToReg(Op.getOperand(0), DL,
-                            cast<RegisterSDNode>(Op.getOperand(1))->getReg(),
-                            Copy);
+    return Op.getNode()->getNumValues() == 1
+               ? DAG.getCopyToReg(Chain, DL, Reg, Copy)
+               : DAG.getCopyToReg(Chain, DL, Reg, Copy, Op.getNumOperands() == 4
+                                                            ? Op.getOperand(3)
+                                                            : SDValue());
   }
   return SDValue();
 }
