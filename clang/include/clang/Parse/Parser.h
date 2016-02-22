@@ -134,8 +134,8 @@ class Parser : public CodeCompletionHandler {
   /// \brief Identifier for "message".
   IdentifierInfo *Ident_message;
 
-  /// \brief Identifier for "nopartial".
-  IdentifierInfo *Ident_nopartial;
+  /// \brief Identifier for "strict".
+  IdentifierInfo *Ident_strict;
 
   /// C++0x contextual keywords.
   mutable IdentifierInfo *Ident_final;

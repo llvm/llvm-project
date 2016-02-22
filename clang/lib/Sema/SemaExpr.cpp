@@ -159,12 +159,11 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
       break;
 
     case AR_NotYetIntroduced: {
-      // With nopartial, the compiler will emit delayed error just like how
-      // "deprecated, unavailable" are handled.
+      // With strict, the compiler will emit unavailable error.
       AvailabilityAttr *AA = D->getAttr<AvailabilityAttr>();
-      if (AA && AA->getNopartial() &&
+      if (AA && AA->getStrict() &&
           S.getCurContextAvailability() != AR_NotYetIntroduced)
-        S.EmitAvailabilityWarning(Sema::AD_NotYetIntroduced,
+        S.EmitAvailabilityWarning(Sema::AD_Unavailable,
                                   D, Message, Loc, UnknownObjCClass, ObjCPDecl,
                                   ObjCPropertyAccess);
 
