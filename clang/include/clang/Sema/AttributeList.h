@@ -157,13 +157,13 @@ private:
                                                        + NumArgs)[index];
   }
 
-  /// The location of the 'nopartial' keyword in an availability attribute.
-  SourceLocation *getNopartialSlot() {
+  /// The location of the 'strict' keyword in an availability attribute.
+  SourceLocation *getStrictSlot() {
     return reinterpret_cast<SourceLocation*>(
                &getAvailabilitySlot(ObsoletedSlot) + 1);
   }
 
-  SourceLocation const *getNopartialSlot() const {
+  SourceLocation const *getStrictSlot() const {
     return reinterpret_cast<SourceLocation const*>(
                &getAvailabilitySlot(ObsoletedSlot) + 1);
   }
@@ -244,7 +244,7 @@ private:
                 const AvailabilityChange &obsoleted,
                 SourceLocation unavailable, 
                 const Expr *messageExpr,
-                Syntax syntaxUsed, SourceLocation nopartial)
+                Syntax syntaxUsed, SourceLocation strict)
     : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
       ScopeLoc(scopeLoc), EllipsisLoc(), NumArgs(1), SyntaxUsed(syntaxUsed),
       Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
@@ -256,7 +256,7 @@ private:
     new (&getAvailabilitySlot(IntroducedSlot)) AvailabilityChange(introduced);
     new (&getAvailabilitySlot(DeprecatedSlot)) AvailabilityChange(deprecated);
     new (&getAvailabilitySlot(ObsoletedSlot)) AvailabilityChange(obsoleted);
-    memcpy(getNopartialSlot(), &nopartial, sizeof(SourceLocation));
+    memcpy(getStrictSlot(), &strict, sizeof(SourceLocation));
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
 
@@ -424,9 +424,9 @@ public:
     return getAvailabilitySlot(ObsoletedSlot);
   }
 
-  SourceLocation getNopartialLoc() const {
+  SourceLocation getStrictLoc() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
-    return *getNopartialSlot();
+    return *getStrictSlot();
   }
 
   SourceLocation getUnavailableLoc() const {
@@ -624,13 +624,13 @@ public:
                         SourceLocation unavailable,
                         const Expr *MessageExpr,
                         AttributeList::Syntax syntax,
-                        SourceLocation nopartial) {
+                        SourceLocation strict) {
     void *memory = allocate(AttributeFactory::AvailabilityAllocSize);
     return add(new (memory) AttributeList(attrName, attrRange,
                                           scopeName, scopeLoc,
                                           Param, introduced, deprecated,
                                           obsoleted, unavailable, MessageExpr,
-                                          syntax, nopartial));
+                                          syntax, strict));
   }
 
   AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
@@ -760,11 +760,11 @@ public:
                         SourceLocation unavailable,
                         const Expr *MessageExpr,
                         AttributeList::Syntax syntax,
-                        SourceLocation nopartial) {
+                        SourceLocation strict) {
     AttributeList *attr =
       pool.create(attrName, attrRange, scopeName, scopeLoc, Param, introduced,
                   deprecated, obsoleted, unavailable, MessageExpr, syntax,
-                  nopartial);
+                  strict);
     add(attr);
     return attr;
   }

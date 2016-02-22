@@ -35,9 +35,6 @@ DelayedDiagnostic::makeAvailability(Sema::AvailabilityDiagnostic AD,
     case Sema::AD_Unavailable:
       DD.Kind = Unavailable;
       break;
-    case Sema::AD_NotYetIntroduced:
-      DD.Kind = NotYetIntroduced;
-      break;
     case Sema::AD_Partial:
       llvm_unreachable("AD_Partial diags should not be delayed");
   }
@@ -66,7 +63,6 @@ void DelayedDiagnostic::Destroy() {
 
   case Deprecation:
   case Unavailable:
-  case NotYetIntroduced:
     delete [] DeprecationData.Message;
     break;
 

@@ -2286,6 +2286,41 @@ _mm256_maskz_cvtepi8_epi16 (__mmask16 __U, __m128i __A)
 }
 
 
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_cvtepu8_epi16 (__m128i __W, __mmask32 __U, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovzxbw128_mask ((__v16qi) __A,
+                (__v8hi) __W,
+                (__mmask8) __U);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_cvtepu8_epi16 (__mmask8 __U, __m128i __A)
+{
+  return (__m128i) __builtin_ia32_pmovzxbw128_mask ((__v16qi) __A,
+                (__v8hi)
+                _mm_setzero_si128 (),
+                (__mmask8) __U);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_mask_cvtepu8_epi16 (__m256i __W, __mmask32 __U, __m128i __A)
+{
+  return (__m256i) __builtin_ia32_pmovzxbw256_mask ((__v16qi) __A,
+                (__v16hi) __W,
+                (__mmask16) __U);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_maskz_cvtepu8_epi16 (__mmask16 __U, __m128i __A)
+{
+  return (__m256i) __builtin_ia32_pmovzxbw256_mask ((__v16qi) __A,
+                (__v16hi)
+                _mm256_setzero_si256 (),
+                (__mmask16) __U);
+}
+
+
 #define _mm_cmp_epi8_mask(a, b, p) __extension__ ({ \
   (__mmask16)__builtin_ia32_cmpb128_mask((__v16qi)(__m128i)(a), \
                                          (__v16qi)(__m128i)(b), \
