@@ -86,10 +86,6 @@ namespace platform_netbsd {
                           lldb::ModuleSP &module_sp,
                           const FileSpecList *module_search_paths_ptr) override;
 
-        size_t
-        GetSoftwareBreakpointTrapOpcode(Target &target,
-                                        BreakpointSite *bp_site) override;
-
         bool
         GetRemoteOSVersion () override;
 

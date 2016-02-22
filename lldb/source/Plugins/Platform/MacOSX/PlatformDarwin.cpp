@@ -583,22 +583,13 @@ PlatformDarwin::GetSharedModule (const ModuleSpec &module_spec,
 size_t
 PlatformDarwin::GetSoftwareBreakpointTrapOpcode (Target &target, BreakpointSite *bp_site)
 {
-    const uint8_t *trap_opcode = NULL;
+    const uint8_t *trap_opcode = nullptr;
     uint32_t trap_opcode_size = 0;
     bool bp_is_thumb = false;
-        
+
     llvm::Triple::ArchType machine = target.GetArchitecture().GetMachine();
     switch (machine)
     {
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-        {
-            static const uint8_t g_i386_breakpoint_opcode[] = { 0xCC };
-            trap_opcode = g_i386_breakpoint_opcode;
-            trap_opcode_size = sizeof(g_i386_breakpoint_opcode);
-        }
-        break;
-
     case llvm::Triple::aarch64:
         {
             // TODO: fix this with actual darwin breakpoint opcode for arm64.
@@ -635,7 +626,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode (Target &target, BreakpointSite 
             trap_opcode_size = sizeof(g_arm_breakpoint_opcode);
         }
         break;
-        
+
     case llvm::Triple::ppc:
     case llvm::Triple::ppc64:
         {
@@ -644,12 +635,11 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode (Target &target, BreakpointSite 
             trap_opcode_size = sizeof(g_ppc_breakpoint_opcode);
         }
         break;
-        
+
     default:
-        assert(!"Unhandled architecture in PlatformDarwin::GetSoftwareBreakpointTrapOpcode()");
-        break;
+        return Platform::GetSoftwareBreakpointTrapOpcode(target, bp_site);
     }
-    
+
     if (trap_opcode && trap_opcode_size)
     {
         if (bp_site->SetTrapOpcode(trap_opcode, trap_opcode_size))

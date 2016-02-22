@@ -321,42 +321,6 @@ PlatformWindows::ResolveExecutable (const ModuleSpec &ms,
     return error;
 }
 
-size_t
-PlatformWindows::GetSoftwareBreakpointTrapOpcode (Target &target, BreakpointSite *bp_site)
-{
-    ArchSpec arch = target.GetArchitecture();
-    const uint8_t *trap_opcode = nullptr;
-    size_t trap_opcode_size = 0;
-
-    switch (arch.GetMachine())
-    {
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-        {
-            static const uint8_t g_i386_opcode[] = { 0xCC };
-            trap_opcode = g_i386_opcode;
-            trap_opcode_size = sizeof(g_i386_opcode);
-        }
-        break;
-
-    case llvm::Triple::hexagon:
-        {
-            static const uint8_t g_hex_opcode[] = { 0x0c, 0xdb, 0x00, 0x54 };
-            trap_opcode = g_hex_opcode;
-            trap_opcode_size = sizeof(g_hex_opcode);
-        }
-        break;
-    default:
-        llvm_unreachable("Unhandled architecture in PlatformWindows::GetSoftwareBreakpointTrapOpcode()");
-        break;
-    }
-
-    if (bp_site->SetTrapOpcode(trap_opcode, trap_opcode_size))
-        return trap_opcode_size;
-
-    return 0;
-}
-
 bool
 PlatformWindows::GetRemoteOSVersion ()
 {
