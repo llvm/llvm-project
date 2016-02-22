@@ -685,9 +685,14 @@ are:
   Apple's watchOS operating system.  The minimum deployment target is specified by
   the ``-mwatchos-version-min=*version*`` command-line argument.
 
-A declaration can be used even when deploying back to a platform version prior
-to when the declaration was introduced.  When this happens, the declaration is
-`weakly linked
+An optional nopartial can be placed after the platform name.
+With the optional nopartial, when deploying back to a platform version prior to
+when the declaration was introduced, Clang emits an error specifying that the
+function is not introduced yet.
+
+Without the optional nopartial, a declaration can be used even when deploying back
+to a platform version prior to when the declaration was introduced.  When this
+happens, the declaration is `weakly linked
 <https://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/BPFrameworks/Concepts/WeakLinking.html>`_,
 as if the ``weak_import`` attribute were added to the declaration.  A
 weakly-linked declaration may or may not be present a run-time, and a program
