@@ -113,8 +113,7 @@ private:
 /// the complete parsing of the current declaration.
 class DelayedDiagnostic {
 public:
-  enum DDKind { Deprecation, Unavailable, Access, ForbiddenType,
-                NotYetIntroduced };
+  enum DDKind { Deprecation, Unavailable, Access, ForbiddenType };
 
   unsigned char Kind; // actually a DDKind
   bool Triggered;
@@ -166,15 +165,13 @@ public:
   }
 
   const NamedDecl *getDeprecationDecl() const {
-    assert((Kind == Deprecation || Kind == Unavailable ||
-            Kind == NotYetIntroduced) &&
+    assert((Kind == Deprecation || Kind == Unavailable) &&
            "Not a deprecation diagnostic.");
     return DeprecationData.Decl;
   }
 
   StringRef getDeprecationMessage() const {
-    assert((Kind == Deprecation || Kind == Unavailable ||
-            Kind == NotYetIntroduced) &&
+    assert((Kind == Deprecation || Kind == Unavailable) &&
            "Not a deprecation diagnostic.");
     return StringRef(DeprecationData.Message,
                            DeprecationData.MessageLen);
