@@ -44,9 +44,6 @@ const uptr kWordSizeInBits = 8 * kWordSize;
 
 const uptr kMaxPathLength = 4096;
 
-// 16K loaded modules should be enough for everyone.
-static const uptr kMaxNumberOfModules = 1 << 14;
-
 const uptr kMaxThreadStackSize = 1 << 30;  // 1Gb
 
 static const uptr kErrorMessageBufferSize = 1 << 16;
@@ -666,13 +663,33 @@ class LoadedModule {
   IntrusiveList<AddressRange> ranges_;
 };
 
-// OS-dependent function that fills array with descriptions of at most
-// "max_modules" currently loaded modules. Returns the number of
-// initialized modules. If filter is nonzero, ignores modules for which
-// filter(full_name) is false.
-typedef bool (*string_predicate_t)(const char *);
-uptr GetListOfModules(LoadedModule *modules, uptr max_modules,
-                      string_predicate_t filter);
+// List of LoadedModules. OS-dependent implementation is responsible for
+// filling this information.
+class ListOfModules {
+ public:
+  ListOfModules() : modules_(kInitialCapacity) {}
+  ~ListOfModules() { clear(); }
+  void init();
+  const LoadedModule *begin() const { return modules_.begin(); }
+  LoadedModule *begin() { return modules_.begin(); }
+  const LoadedModule *end() const { return modules_.end(); }
+  LoadedModule *end() { return modules_.end(); }
+  uptr size() const { return modules_.size(); }
+  const LoadedModule &operator[](uptr i) const {
+    CHECK_LT(i, modules_.size());
+    return modules_[i];
+  }
+
+ private:
+  void clear() {
+    for (auto &module : modules_) module.clear();
+    modules_.clear();
+  }
+
+  InternalMmapVector<LoadedModule> modules_;
+  // We rarely have more than 16K loaded modules.
+  static const uptr kInitialCapacity = 1 << 14;
+};
 
 // Callback type for iterating over a set of memory ranges.
 typedef void (*RangeIteratorCallback)(uptr begin, uptr end, void *arg);
