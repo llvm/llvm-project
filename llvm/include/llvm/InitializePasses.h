@@ -163,6 +163,8 @@ void initializeLiveStacksPass(PassRegistry&);
 void initializeLiveVariablesPass(PassRegistry&);
 void initializeLoaderPassPass(PassRegistry&);
 void initializeLocalStackSlotPassPass(PassRegistry&);
+void initializeLoopDataPrefetchPass(PassRegistry&);
+void initializeLoopPassPass(PassRegistry&);
 void initializeLoopDeletionPass(PassRegistry&);
 void initializeLoopExtractorPass(PassRegistry&);
 void initializeLoopInfoWrapperPassPass(PassRegistry&);
