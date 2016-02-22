@@ -630,3 +630,88 @@ loop2b:                                           ; preds = %loop1
 end:
   ret void
 }
+
+; Don't do shrink-wrapping when we need to re-align the stack pointer.
+; See bug 26642.
+; CHECK-LABEL: stack_realign:
+; CHECK-NOT: lsl w[[LSL1:[0-9]+]], w0, w1
+; CHECK-NOT: lsl w[[LSL2:[0-9]+]], w1, w0
+; CHECK: stp x29, x30, [sp, #-16]!
+; CHECK: mov x29, sp
+; CHECK: sub x{{[0-9]+}}, sp, #16
+; CHECK-DAG: lsl w[[LSL1:[0-9]+]], w0, w1
+; CHECK-DAG: lsl w[[LSL2:[0-9]+]], w1, w0
+; CHECK-DAG: str w[[LSL1]],
+; CHECK-DAG: str w[[LSL2]],
+
+define i32 @stack_realign(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2) {
+  %tmp = alloca i32, align 32
+  %shl1 = shl i32 %a, %b
+  %shl2 = shl i32 %b, %a
+  %tmp2 = icmp slt i32 %a, %b
+  br i1 %tmp2, label %true, label %false
+
+true:
+  store i32 %a, i32* %tmp, align 4
+  %tmp4 = load i32, i32* %tmp
+  br label %false
+
+false:
+  %tmp.0 = phi i32 [ %tmp4, %true ], [ %a, %0 ]
+  store i32 %shl1, i32* %ptr1
+  store i32 %shl2, i32* %ptr2
+  ret i32 %tmp.0
+}
+
+; Re-aligned stack pointer with all caller-save regs live.  See bug
+; 26642.  In this case we currently avoid shrink wrapping because
+; ensuring we have a scratch register to re-align the stack pointer is
+; too complicated.  Output should be the same for both enabled and
+; disabled shrink wrapping.
+; CHECK-LABEL: stack_realign2:
+; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #-{{[0-9]+}}]!
+; CHECK: add x29, sp, #{{[0-9]+}}
+; CHECK: lsl {{w[0-9]+}}, w0, w1
+
+define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, i32* %ptr4, i32* %ptr5, i32* %ptr6) {
+  %tmp = alloca i32, align 32
+  %tmp1 = shl i32 %a, %b
+  %tmp2 = shl i32 %b, %a
+  %tmp3 = lshr i32 %a, %b
+  %tmp4 = lshr i32 %b, %a
+  %tmp5 = add i32 %b, %a
+  %tmp6 = sub i32 %b, %a
+  %tmp7 = add i32 %tmp1, %tmp2
+  %tmp8 = sub i32 %tmp2, %tmp3
+  %tmp9 = add i32 %tmp3, %tmp4
+  %tmp10 = add i32 %tmp4, %tmp5
+  %cmp = icmp slt i32 %a, %b
+  br i1 %cmp, label %true, label %false
+
+true:
+  store i32 %a, i32* %tmp, align 4
+  call void asm sideeffect "nop", "~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28}"() nounwind
+  br label %false
+
+false:
+  store i32 %tmp1, i32* %ptr1, align 4
+  store i32 %tmp2, i32* %ptr2, align 4
+  store i32 %tmp3, i32* %ptr3, align 4
+  store i32 %tmp4, i32* %ptr4, align 4
+  store i32 %tmp5, i32* %ptr5, align 4
+  store i32 %tmp6, i32* %ptr6, align 4
+  %idx1 = getelementptr inbounds i32, i32* %ptr1, i64 1
+  store i32 %a, i32* %idx1, align 4
+  %idx2 = getelementptr inbounds i32, i32* %ptr1, i64 2
+  store i32 %b, i32* %idx2, align 4
+  %idx3 = getelementptr inbounds i32, i32* %ptr1, i64 3
+  store i32 %tmp7, i32* %idx3, align 4
+  %idx4 = getelementptr inbounds i32, i32* %ptr1, i64 4
+  store i32 %tmp8, i32* %idx4, align 4
+  %idx5 = getelementptr inbounds i32, i32* %ptr1, i64 5
+  store i32 %tmp9, i32* %idx5, align 4
+  %idx6 = getelementptr inbounds i32, i32* %ptr1, i64 6
+  store i32 %tmp10, i32* %idx6, align 4
+
+  ret void
+}
