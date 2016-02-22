@@ -1759,14 +1759,6 @@ static int readOperands(struct InternalInstruction* insn) {
       if (Op.encoding != ENCODING_REG && insn->eaDisplacement == EA_DISP_8)
         insn->displacement *= 1 << (Op.encoding - ENCODING_RM);
       break;
-    case ENCODING_CB:
-    case ENCODING_CW:
-    case ENCODING_CD:
-    case ENCODING_CP:
-    case ENCODING_CO:
-    case ENCODING_CT:
-      dbgprintf(insn, "We currently don't hande code-offset encodings");
-      return -1;
     case ENCODING_IB:
       if (sawRegImm) {
         /* Saw a register immediate so don't read again and instead split the

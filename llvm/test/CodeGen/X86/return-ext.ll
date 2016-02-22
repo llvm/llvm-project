@@ -1,5 +1,11 @@
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -fixup-byte-word-insts=0 | \
+; RUN:   FileCheck -check-prefix=CHECK -check-prefix=BWOFF %s
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -fixup-byte-word-insts=1 | \
+; RUN:   FileCheck -check-prefix=CHECK -check-prefix=BWON %s
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -fixup-byte-word-insts=0 | \
+; RUN:   FileCheck -check-prefix=CHECK -check-prefix=BWOFF %s
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -fixup-byte-word-insts=1 | \
+; RUN:   FileCheck -check-prefix=CHECK -check-prefix=BWON %s
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin | FileCheck -check-prefix=DARWIN %s
 
 
@@ -71,7 +77,8 @@ entry:
 
 ; i16 return values are not extended.
 ; CHECK-LABEL: unsigned_i16:
-; CHECK:			 movw
+; BWOFF:       movw
+; BWON:        movzwl
 ; CHECK-NEXT:  addw
 ; CHECK-NEXT:  ret
 

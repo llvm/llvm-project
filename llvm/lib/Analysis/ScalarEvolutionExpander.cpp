@@ -1654,9 +1654,9 @@ Value *SCEVExpander::expand(const SCEV *S) {
       // there) so that it is guaranteed to dominate any user inside the loop.
       if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
         InsertPt = &*L->getHeader()->getFirstInsertionPt();
-      while (InsertPt != Builder.GetInsertPoint()
-             && (isInsertedInstruction(InsertPt)
-                 || isa<DbgInfoIntrinsic>(InsertPt))) {
+      while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
+             (isInsertedInstruction(InsertPt) ||
+              isa<DbgInfoIntrinsic>(InsertPt))) {
         InsertPt = &*std::next(InsertPt->getIterator());
       }
       break;

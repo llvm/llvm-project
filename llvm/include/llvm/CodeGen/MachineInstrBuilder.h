@@ -51,6 +51,8 @@ public:
   /// Create a MachineInstrBuilder for manipulating an existing instruction.
   /// F must be the machine function that was used to allocate I.
   MachineInstrBuilder(MachineFunction &F, MachineInstr *I) : MF(&F), MI(I) {}
+  MachineInstrBuilder(MachineFunction &F, MachineBasicBlock::iterator I)
+      : MF(&F), MI(&*I) {}
 
   /// Allow automatic conversion to the machine instruction we are working on.
   operator MachineInstr*() const { return MI; }
@@ -470,7 +472,7 @@ public:
     if (I == Begin) {
       if (!empty())
         MI->bundleWithSucc();
-      Begin = MI->getIterator();
+      Begin = MI->getInstrIterator();
       return *this;
     }
     if (I == End) {

@@ -535,7 +535,7 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
                      UE = Tracker.Uses.end();
                  UI != UE; ++UI) {
               Node->Uses.push_back(AG[*UI]);
-              if (*UI != A)
+              if (*UI != &*A)
                 HasNonLocalUses = true;
             }
           }

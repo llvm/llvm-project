@@ -198,7 +198,7 @@ VLIWPacketizerList::~VLIWPacketizerList() {
 void VLIWPacketizerList::endPacket(MachineBasicBlock *MBB, MachineInstr *MI) {
   if (CurrentPacketMIs.size() > 1) {
     MachineInstr *MIFirst = CurrentPacketMIs.front();
-    finalizeBundle(*MBB, MIFirst->getIterator(), MI->getIterator());
+    finalizeBundle(*MBB, MIFirst->getInstrIterator(), MI->getInstrIterator());
   }
   CurrentPacketMIs.clear();
   ResourceTracker->clearResources();

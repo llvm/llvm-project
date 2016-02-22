@@ -440,8 +440,8 @@ ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
 
 bool ARMBaseInstrInfo::isPredicated(const MachineInstr *MI) const {
   if (MI->isBundle()) {
-    MachineBasicBlock::const_instr_iterator I = MI->getIterator();
-    MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
+    auto I = MI->getInstrIterator();
+    auto E = MI->getParent()->instr_end();
     while (++I != E && I->isInsideBundle()) {
       int PIdx = I->findFirstPredOperandIdx();
       if (PIdx != -1 && I->getOperand(PIdx).getImm() != ARMCC::AL)
@@ -647,8 +647,8 @@ unsigned ARMBaseInstrInfo::GetInstSizeInBytes(const MachineInstr *MI) const {
 
 unsigned ARMBaseInstrInfo::getInstBundleLength(const MachineInstr *MI) const {
   unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI->getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
+  auto I = MI->getInstrIterator();
+  auto E = MI->getParent()->instr_end();
   while (++I != E && I->isInsideBundle()) {
     assert(!I->isBundle() && "No nested bundle!");
     Size += GetInstSizeInBytes(&*I);
@@ -3432,7 +3432,7 @@ static const MachineInstr *getBundledUseMI(const TargetRegisterInfo *TRI,
                                            unsigned &UseIdx, unsigned &Dist) {
   Dist = 0;
 
-  MachineBasicBlock::const_instr_iterator II = ++MI->getIterator();
+  auto II = ++MI->getInstrIterator();
   assert(II->isInsideBundle() && "Empty bundle?");
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
 
@@ -3975,8 +3975,8 @@ unsigned ARMBaseInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   // other passes may query the latency of a bundled instruction.
   if (MI->isBundle()) {
     unsigned Latency = 0;
-    MachineBasicBlock::const_instr_iterator I = MI->getIterator();
-    MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
+    auto I = MI->getInstrIterator();
+    auto E = MI->getParent()->instr_end();
     while (++I != E && I->isInsideBundle()) {
       if (I->getOpcode() != ARM::t2IT)
         Latency += getInstrLatency(ItinData, &*I, PredCost);

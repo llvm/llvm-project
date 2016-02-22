@@ -277,7 +277,7 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
     }
     assert(HasInsideLoopPreds && "Loop block has no in-loop predecessors!");
     assert(HasInsideLoopSuccs && "Loop block has no in-loop successors!");
-    assert(BB != getHeader()->getParent()->begin() &&
+    assert(BB != &getHeader()->getParent()->front() &&
            "Loop contains function entry block!");
 
     NumVisited++;

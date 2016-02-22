@@ -436,7 +436,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
       // If it's an invoke, we have to cross a block boundary. And we have
       // to carefully dodge no-op instructions.
       do {
-        if (&*BBI == InstParent->begin()) {
+        if (BBI == InstParent->begin()) {
           BasicBlock *Pred = InstParent->getSinglePredecessor();
           if (!Pred)
             goto decline_rv_optimization;

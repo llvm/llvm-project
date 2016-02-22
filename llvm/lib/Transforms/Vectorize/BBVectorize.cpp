@@ -1259,7 +1259,7 @@ namespace {
       bool JAfterStart = IAfterStart;
       BasicBlock::iterator J = std::next(I);
       for (unsigned ss = 0; J != E && ss <= Config.SearchLimit; ++J, ++ss) {
-        if (&*J == Start)
+        if (J == Start)
           JAfterStart = true;
 
         // Determine if J uses I, if so, exit the loop.

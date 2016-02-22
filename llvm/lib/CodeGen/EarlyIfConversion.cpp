@@ -278,7 +278,7 @@ bool SSAIfConv::findInsertionPoint() {
   while (I != B) {
     --I;
     // Some of the conditional code depends in I.
-    if (InsertAfter.count(I)) {
+    if (InsertAfter.count(&*I)) {
       DEBUG(dbgs() << "Can't insert code after " << *I);
       return false;
     }
@@ -718,7 +718,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   // TBB / FBB data dependencies may delay the select even more.
   MachineTraceMetrics::Trace HeadTrace = MinInstr->getTrace(IfConv.Head);
   unsigned BranchDepth =
-    HeadTrace.getInstrCycles(IfConv.Head->getFirstTerminator()).Depth;
+      HeadTrace.getInstrCycles(*IfConv.Head->getFirstTerminator()).Depth;
   DEBUG(dbgs() << "Branch depth: " << BranchDepth << '\n');
 
   // Look at all the tail phis, and compute the critical path extension caused
@@ -726,8 +726,8 @@ bool EarlyIfConverter::shouldConvertIf() {
   MachineTraceMetrics::Trace TailTrace = MinInstr->getTrace(IfConv.Tail);
   for (unsigned i = 0, e = IfConv.PHIs.size(); i != e; ++i) {
     SSAIfConv::PHIInfo &PI = IfConv.PHIs[i];
-    unsigned Slack = TailTrace.getInstrSlack(PI.PHI);
-    unsigned MaxDepth = Slack + TailTrace.getInstrCycles(PI.PHI).Depth;
+    unsigned Slack = TailTrace.getInstrSlack(*PI.PHI);
+    unsigned MaxDepth = Slack + TailTrace.getInstrCycles(*PI.PHI).Depth;
     DEBUG(dbgs() << "Slack " << Slack << ":\t" << *PI.PHI);
 
     // The condition is pulled into the critical path.
@@ -742,7 +742,7 @@ bool EarlyIfConverter::shouldConvertIf() {
     }
 
     // The TBB value is pulled into the critical path.
-    unsigned TDepth = adjCycles(TBBTrace.getPHIDepth(PI.PHI), PI.TCycles);
+    unsigned TDepth = adjCycles(TBBTrace.getPHIDepth(*PI.PHI), PI.TCycles);
     if (TDepth > MaxDepth) {
       unsigned Extra = TDepth - MaxDepth;
       DEBUG(dbgs() << "TBB data adds " << Extra << " cycles.\n");
@@ -753,7 +753,7 @@ bool EarlyIfConverter::shouldConvertIf() {
     }
 
     // The FBB value is pulled into the critical path.
-    unsigned FDepth = adjCycles(FBBTrace.getPHIDepth(PI.PHI), PI.FCycles);
+    unsigned FDepth = adjCycles(FBBTrace.getPHIDepth(*PI.PHI), PI.FCycles);
     if (FDepth > MaxDepth) {
       unsigned Extra = FDepth - MaxDepth;
       DEBUG(dbgs() << "FBB data adds " << Extra << " cycles.\n");

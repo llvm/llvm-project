@@ -373,6 +373,7 @@ StringRef sys::getHostCPUName() {
 
       // Skylake:
       case 78:
+        return "skylake-avx512";
       case 94:
         return "skylake";
 

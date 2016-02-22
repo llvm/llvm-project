@@ -474,7 +474,7 @@ def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
 // FIXME: define SKL model
 class SkylakeClientProc<string Name> : ProcModel<Name, HaswellModel,
                                                  SKLFeatures.Value, []>;
-def : SkylakeClientProc<"skl">;
+def : SkylakeClientProc<"skylake">;
 
 // FIXME: define KNL model
 class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
@@ -508,7 +508,7 @@ def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
 // FIXME: define SKX model
 class SkylakeServerProc<string Name> : ProcModel<Name, HaswellModel,
                                                  SKXFeatures.Value, []>;
-def : SkylakeServerProc<"skylake">;
+def : SkylakeServerProc<"skylake-avx512">;
 def : SkylakeServerProc<"skx">; // Legacy alias.
 
 def CNLFeatures : ProcessorFeatures<SKXFeatures.Value, [
@@ -520,7 +520,6 @@ def CNLFeatures : ProcessorFeatures<SKXFeatures.Value, [
 class CannonlakeProc<string Name> : ProcModel<Name, HaswellModel,
                                               CNLFeatures.Value, []>;
 def : CannonlakeProc<"cannonlake">;
-def : CannonlakeProc<"cnl">;
 
 // AMD CPUs.
 

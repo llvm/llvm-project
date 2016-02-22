@@ -14,15 +14,15 @@
 
 ; Intel chips with fast unaligned memory accesses
 
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=silvermont    2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=nehalem       2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=westmere      2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=sandybridge   2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=ivybridge     2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=haswell       2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=broadwell     2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=knl           2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=skylake       2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=silvermont     2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=nehalem        2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=westmere       2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=sandybridge    2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=ivybridge      2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=haswell        2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=broadwell      2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=knl            2>&1 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mcpu=skylake-avx512 2>&1 | FileCheck %s --check-prefix=FAST
 
 ; AMD chips with slow unaligned memory accesses
 

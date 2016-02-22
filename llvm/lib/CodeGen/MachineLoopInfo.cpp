@@ -50,11 +50,12 @@ void MachineLoopInfo::getAnalysisUsage(AnalysisUsage &AU) const {
 MachineBasicBlock *MachineLoop::getTopBlock() {
   MachineBasicBlock *TopMBB = getHeader();
   MachineFunction::iterator Begin = TopMBB->getParent()->begin();
-  if (TopMBB != Begin) {
+  if (TopMBB->getIterator() != Begin) {
     MachineBasicBlock *PriorMBB = &*std::prev(TopMBB->getIterator());
     while (contains(PriorMBB)) {
       TopMBB = PriorMBB;
-      if (TopMBB == Begin) break;
+      if (TopMBB->getIterator() == Begin)
+        break;
       PriorMBB = &*std::prev(TopMBB->getIterator());
     }
   }
@@ -64,7 +65,7 @@ MachineBasicBlock *MachineLoop::getTopBlock() {
 MachineBasicBlock *MachineLoop::getBottomBlock() {
   MachineBasicBlock *BotMBB = getHeader();
   MachineFunction::iterator End = BotMBB->getParent()->end();
-  if (BotMBB != std::prev(End)) {
+  if (BotMBB->getIterator() != std::prev(End)) {
     MachineBasicBlock *NextMBB = &*std::next(BotMBB->getIterator());
     while (contains(NextMBB)) {
       BotMBB = NextMBB;
