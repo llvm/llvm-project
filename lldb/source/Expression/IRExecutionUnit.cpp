@@ -813,9 +813,62 @@ IRExecutionUnit::CollectCandidateCPlusPlusNames(std::vector<IRExecutionUnit::Sea
 lldb::addr_t
 IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &specs, const lldb_private::SymbolContext &sc)
 {
+    Target *target = sc.target_sp.get();
+
+    if (!target)
+    {
+        // we shouldn't be doing any symbol lookup at all without a target
+        return LLDB_INVALID_ADDRESS;
+    }
+
     for (const SearchSpec &spec : specs)
     {
         SymbolContextList sc_list;
+
+        lldb::addr_t best_internal_load_address = LLDB_INVALID_ADDRESS;
+
+        std::function<bool (lldb::addr_t &, SymbolContextList &, const lldb_private::SymbolContext &)> get_external_load_address =
+            [&best_internal_load_address, target](lldb::addr_t &load_address,
+                                                  SymbolContextList &sc_list,
+                                                  const lldb_private::SymbolContext &sc) -> lldb::addr_t
+        {
+            load_address = LLDB_INVALID_ADDRESS;
+
+            for (size_t si = 0, se = sc_list.GetSize(); si < se; ++si)
+            {
+                SymbolContext candidate_sc;
+
+                sc_list.GetContextAtIndex(si, candidate_sc);
+
+                const bool is_external = (candidate_sc.function) ||
+                                         (candidate_sc.symbol && candidate_sc.symbol->IsExternal());
+
+                AddressRange range;
+
+                if (candidate_sc.GetAddressRange(lldb::eSymbolContextFunction | lldb::eSymbolContextSymbol,
+                                                 0,
+                                                 false,
+                                                 range))
+                {
+                    load_address = range.GetBaseAddress().GetCallableLoadAddress(target);
+
+                    if (load_address != LLDB_INVALID_ADDRESS)
+                    {
+                        if (is_external)
+                        {
+                            return true;
+                        }
+                        else if (best_internal_load_address == LLDB_INVALID_ADDRESS)
+                        {
+                            best_internal_load_address = load_address;
+                            load_address = LLDB_INVALID_ADDRESS;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        };
         
         if (sc.module_sp)
         {
@@ -827,6 +880,17 @@ IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &s
                                         true,  // append
                                         sc_list);
         }
+
+        lldb::addr_t load_address = LLDB_INVALID_ADDRESS;
+
+        if (get_external_load_address(load_address, sc_list, sc))
+        {
+            return load_address;
+        }
+        else
+        {
+            sc_list.Clear();
+        }
     
         if (sc_list.GetSize() == 0 && sc.target_sp)
         {
@@ -837,60 +901,33 @@ IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &s
                                                     true,  // append
                                                     sc_list);
         }
-        
+
+        if (get_external_load_address(load_address, sc_list, sc))
+        {
+            return load_address;
+        }
+        else
+        {
+            sc_list.Clear();
+        }
+
         if (sc_list.GetSize() == 0 && sc.target_sp)
         {
             sc.target_sp->GetImages().FindSymbolsWithNameAndType(spec.name, lldb::eSymbolTypeAny, sc_list);
         }
 
-        lldb::addr_t best_internal_load_address = LLDB_INVALID_ADDRESS;
-        
-        for (size_t si = 0, se = sc_list.GetSize(); si < se; ++si)
+        if (get_external_load_address(load_address, sc_list, sc))
         {
-            bool is_external = false;
-            
-            SymbolContext candidate_sc;
-            
-            sc_list.GetContextAtIndex(si, candidate_sc);
-            // Make sure we have a valid candidate symbol.
-            if (!candidate_sc.symbol)
-                continue;
-
-            if (candidate_sc.function)
-            {
-                is_external = true;
-            }
-            else if (sc.symbol)
-            {
-                if (sc.symbol->IsExternal())
-                {
-                    is_external = true;
-                }
-            }
-            
-            lldb::addr_t load_address = candidate_sc.symbol->ResolveCallableAddress(*sc.target_sp);
-            
-            if (load_address == LLDB_INVALID_ADDRESS)
-                load_address = candidate_sc.symbol->GetAddress().GetLoadAddress(sc.target_sp.get());
-
-            if (load_address != LLDB_INVALID_ADDRESS)
-            {
-                if (is_external)
-                {
-                    return load_address;
-                }
-                else
-                {
-                    best_internal_load_address = load_address;
-                }
-            }
+            return load_address;
         }
+        // if there are any searches we try after this, add an sc_list.Clear() in an "else" clause here
+
         if (best_internal_load_address != LLDB_INVALID_ADDRESS)
         {
             return best_internal_load_address;
         }
     }
-    
+
     return LLDB_INVALID_ADDRESS;
 }
 
