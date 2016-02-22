@@ -70,6 +70,7 @@ class SCEVUnknown;
 class CallInst;
 class Instruction;
 class Value;
+class IntrinsicInst;
 }
 
 namespace polly {
@@ -328,11 +329,21 @@ private:
   /// @return True if R is a Scop, false otherwise.
   bool isValidRegion(DetectionContext &Context) const;
 
+  /// @brief Check if an intrinsic call can be part of a Scop.
+  ///
+  /// @param II      The intrinsic call instruction to check.
+  /// @param Context The current detection context.
+  ///
+  /// @return True if the call instruction is valid, false otherwise.
+  bool isValidIntrinsicInst(IntrinsicInst &II, DetectionContext &Context) const;
+
   /// @brief Check if a call instruction can be part of a Scop.
   ///
-  /// @param CI The call instruction to check.
+  /// @param CI      The call instruction to check.
+  /// @param Context The current detection context.
+  ///
   /// @return True if the call instruction is valid, false otherwise.
-  static bool isValidCallInst(CallInst &CI);
+  bool isValidCallInst(CallInst &CI, DetectionContext &Context) const;
 
   /// @brief Check if the given loads could be invariant and can be hoisted.
   ///
@@ -354,6 +365,15 @@ private:
   /// @return True if the value represented by Val is invariant in the region
   ///         identified by Reg.
   bool isInvariant(const Value &Val, const Region &Reg) const;
+
+  /// @brief Check if the memory access caused by @p Inst is valid.
+  ///
+  /// @param Inst    The access instruction.
+  /// @param AF      The access function.
+  /// @param BP      The access base pointer.
+  /// @param Context The current detection context.
+  bool isValidAccess(Instruction *Inst, const SCEV *AF, const SCEVUnknown *BP,
+                     DetectionContext &Context) const;
 
   /// @brief Check if a memory access can be part of a Scop.
   ///

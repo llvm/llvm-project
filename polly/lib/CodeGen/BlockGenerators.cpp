@@ -1313,9 +1313,9 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, const PHINode *PHI,
   PHICopy->addIncoming(OpCopy, BBCopy);
 }
 
-Value *RegionGenerator::copyPHIInstruction(ScopStmt &Stmt, PHINode *PHI,
-                                           ValueMapT &BBMap,
-                                           LoopToScevMapT &LTS) {
+void RegionGenerator::copyPHIInstruction(ScopStmt &Stmt, PHINode *PHI,
+                                         ValueMapT &BBMap,
+                                         LoopToScevMapT &LTS) {
   unsigned NumIncoming = PHI->getNumIncomingValues();
   PHINode *PHICopy =
       Builder.CreatePHI(PHI->getType(), NumIncoming, "polly." + PHI->getName());
@@ -1324,5 +1324,4 @@ Value *RegionGenerator::copyPHIInstruction(ScopStmt &Stmt, PHINode *PHI,
 
   for (unsigned u = 0; u < NumIncoming; u++)
     addOperandToPHI(Stmt, PHI, PHICopy, PHI->getIncomingBlock(u), LTS);
-  return PHICopy;
 }
