@@ -6,7 +6,7 @@ void f2(int) __attribute__((availability(macosx,introduced=10.4,deprecated=10.5)
 void f3(int) __attribute__((availability(macosx,introduced=10.6)));
 void f4(int) __attribute__((availability(macosx,introduced=10.1,deprecated=10.3,obsoleted=10.5), availability(ios,introduced=2.0,deprecated=3.0))); // expected-note{{explicitly marked unavailable}}
 void f5(int) __attribute__((availability(ios,introduced=3.2), availability(macosx,unavailable))); // expected-note{{'f5' has been explicitly marked unavailable here}}
-void f6(int) __attribute__((availability(macosx,nopartial,introduced=10.6))); //expected-note{{'f6' has been explicitly marked not-yet-introduced here}}
+void f6(int) __attribute__((availability(macosx,strict,introduced=10.6))); //expected-note{{'f6' has been explicitly marked unavailable here}}
 
 void test() {
   f0(0);
@@ -15,7 +15,7 @@ void test() {
   f3(0);
   f4(0); // expected-error{{f4' is unavailable: obsoleted in OS X 10.5}}
   f5(0); // expected-error{{'f5' is unavailable: not available on OS X}}
-  f6(0); // expected-error{{'f6' is not introduced yet: introduced in OS X 10.6}}
+  f6(0); // expected-error{{'f6' is unavailable: introduced in OS X 10.6}}
 }
 
 // rdar://10535640

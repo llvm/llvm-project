@@ -685,19 +685,20 @@ are:
   Apple's watchOS operating system.  The minimum deployment target is specified by
   the ``-mwatchos-version-min=*version*`` command-line argument.
 
-An optional nopartial can be placed after the platform name.
-With the optional nopartial, when deploying back to a platform version prior to
-when the declaration was introduced, Clang emits an error specifying that the
-function is not introduced yet.
-
-Without the optional nopartial, a declaration can be used even when deploying back
-to a platform version prior to when the declaration was introduced.  When this
-happens, the declaration is `weakly linked
+A declaration can typically be used even when deploying back to a platform
+version prior to when the declaration was introduced.  When this happens, the
+declaration is `weakly linked
 <https://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/BPFrameworks/Concepts/WeakLinking.html>`_,
 as if the ``weak_import`` attribute were added to the declaration.  A
 weakly-linked declaration may or may not be present a run-time, and a program
 can determine whether the declaration is present by checking whether the
 address of that declaration is non-NULL.
+
+The flag ``strict`` disallows using API when deploying back to a
+platform version prior to when the declaration was introduced.  An
+attempt to use such API before its introduction causes a hard error.
+Weakly-linking is almost always a better API choice, since it allows
+users to query availability at runtime.
 
 If there are multiple declarations of the same entity, the availability
 attributes must either match on a per-platform basis or later
