@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -fixup-byte-word-insts=1 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWON %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -fixup-byte-word-insts=0 < %s | FileCheck -check-prefix=CHECK -check-prefix=BWOFF %s
 ; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx -addr-sink-using-gep=1 < %s | FileCheck %s
 
 %struct.A = type { i8, i8, i8, i8, i8, i8, i8, i8 }
@@ -147,7 +148,8 @@ define void @merge_nonconst_store(i32 %count, i8 %zz, %struct.A* nocapture %p) n
 
 ; CHECK-LABEL: merge_loads_i16:
 ;  load:
-; CHECK: movw
+; BWON:  movzwl
+; BWOFF: movw
 ;  store:
 ; CHECK: movw
 ; CHECK: ret
@@ -180,7 +182,8 @@ define void @merge_loads_i16(i32 %count, %struct.A* noalias nocapture %q, %struc
 
 ; The loads and the stores are interleaved. Can't merge them.
 ; CHECK-LABEL: no_merge_loads:
-; CHECK: movb
+; BWON:  movzbl
+; BWOFF: movb
 ; CHECK: movb
 ; CHECK: movb
 ; CHECK: movb
