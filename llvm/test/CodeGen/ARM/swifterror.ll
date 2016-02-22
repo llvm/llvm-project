@@ -140,7 +140,7 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0: mov r0, #16
 ; CHECK-O0: malloc
 ; CHECK-O0: mov [[ID:r[0-9]+]], r0
-; CHECK-O0: mov [[ID2:r[0-9]+]], #1
+; CHECK-O0: mov [[ID2:[lr0-9]+]], #1
 ; CHECK-O0: strb [[ID2]], [r0, #8]
 ; CHECK-O0: mov r6, [[ID]]
 ; reload from stack
