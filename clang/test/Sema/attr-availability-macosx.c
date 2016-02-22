@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 "-triple" "x86_64-apple-darwin9.0.0" -fsyntax-only -verify %s
 
+#if !__has_feature(attribute_availability_with_strict)
+#error "Missing __has_feature"
+#endif
+
 void f0(int) __attribute__((availability(macosx,introduced=10.4,deprecated=10.6)));
 void f1(int) __attribute__((availability(macosx,introduced=10.5)));
 void f2(int) __attribute__((availability(macosx,introduced=10.4,deprecated=10.5))); // expected-note {{'f2' has been explicitly marked deprecated here}}
