@@ -502,12 +502,8 @@ protected:
   ///
   /// The implementation in the BlockGenerator is trivial, however it allows
   /// subclasses to handle PHIs different.
-  ///
-  /// @returns The nullptr as the BlockGenerator does not copy PHIs.
-  virtual Value *copyPHIInstruction(ScopStmt &, PHINode *, ValueMapT &,
-                                    LoopToScevMapT &) {
-    return nullptr;
-  }
+  virtual void copyPHIInstruction(ScopStmt &, PHINode *, ValueMapT &,
+                                  LoopToScevMapT &) {}
 
   /// @brief Copy a single Instruction.
   ///
@@ -824,11 +820,9 @@ private:
   /// @param BBMap     A mapping from old values to their new values
   ///                  (for values recalculated within this basic block).
   /// @param LTS       A map from old loops to new induction variables as SCEVs.
-  ///
-  /// @returns The copied instruction or nullptr if no copy was made.
-  virtual Value *copyPHIInstruction(ScopStmt &Stmt, PHINode *Inst,
-                                    ValueMapT &BBMap,
-                                    LoopToScevMapT &LTS) override;
+  virtual void copyPHIInstruction(ScopStmt &Stmt, PHINode *Inst,
+                                  ValueMapT &BBMap,
+                                  LoopToScevMapT &LTS) override;
 };
 }
 #endif

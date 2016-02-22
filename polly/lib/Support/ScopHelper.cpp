@@ -249,10 +249,15 @@ private:
   const SCEV *visitUnknown(const SCEVUnknown *E) {
 
     // If a value mapping was given try if the underlying value is remapped.
-    if (VMap)
-      if (Value *NewVal = VMap->lookup(E->getValue()))
-        if (NewVal != E->getValue())
-          return visit(SE.getSCEV(NewVal));
+    Value *NewVal = VMap ? VMap->lookup(E->getValue()) : nullptr;
+    if (NewVal) {
+      auto *NewE = SE.getSCEV(NewVal);
+
+      // While the mapped value might be different the SCEV representation might
+      // not be. To this end we will check before we go into recursion here.
+      if (E != NewE)
+        return visit(NewE);
+    }
 
     Instruction *Inst = dyn_cast<Instruction>(E->getValue());
     if (!Inst || (Inst->getOpcode() != Instruction::SRem &&

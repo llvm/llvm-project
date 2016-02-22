@@ -120,6 +120,11 @@ std::string polly::stringFromIslObj(__isl_keep isl_pw_multi_aff *pma) {
                                   isl_printer_print_pw_multi_aff);
 }
 
+std::string polly::stringFromIslObj(__isl_keep isl_union_pw_multi_aff *upma) {
+  return stringFromIslObjInternal(upma, isl_union_pw_multi_aff_get_ctx,
+                                  isl_printer_print_union_pw_multi_aff);
+}
+
 std::string polly::stringFromIslObj(__isl_keep isl_aff *aff) {
   return stringFromIslObjInternal(aff, isl_aff_get_ctx, isl_printer_print_aff);
 }

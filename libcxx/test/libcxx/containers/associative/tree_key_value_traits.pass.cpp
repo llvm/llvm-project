@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__hash_table>
-#include <unordered_map>
-#include <unordered_set>
+#include <__tree>
+#include <map>
+#include <set>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -18,7 +18,7 @@
 void testKeyValueTrait() {
   {
     typedef int Tp;
-    typedef std::__hash_key_value_types<Tp> Traits;
+    typedef std::__tree_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, int>::value), "");
     static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, Tp>::value), "");
@@ -26,7 +26,7 @@ void testKeyValueTrait() {
   }
   {
     typedef std::pair<int, int> Tp;
-    typedef std::__hash_key_value_types<Tp> Traits;
+    typedef std::__tree_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, Tp>::value), "");
@@ -34,15 +34,15 @@ void testKeyValueTrait() {
   }
   {
     typedef std::pair<const int, int> Tp;
-    typedef std::__hash_key_value_types<Tp> Traits;
+    typedef std::__tree_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");
     static_assert((std::is_same<Traits::__container_value_type, Tp>::value), "");
     static_assert(Traits::__is_map == false, "");
   }
   {
-    typedef std::__hash_value_type<int, int> Tp;
-    typedef std::__hash_key_value_types<Tp> Traits;
+    typedef std::__value_type<int, int> Tp;
+    typedef std::__tree_key_value_types<Tp> Traits;
     static_assert((std::is_same<Traits::key_type, int>::value), "");
     static_assert((std::is_same<Traits::mapped_type, int>::value), "");
     static_assert((std::is_same<Traits::__node_value_type, Tp>::value), "");

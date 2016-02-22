@@ -71,33 +71,6 @@ static cl::opt<bool> DetectParallel("polly-ast-detect-parallel",
                                     cl::init(false), cl::ZeroOrMore,
                                     cl::cat(PollyCategory));
 
-namespace polly {
-class IslAst {
-public:
-  static IslAst *create(Scop *Scop, const Dependences &D);
-  ~IslAst();
-
-  /// Print a source code representation of the program.
-  void pprint(llvm::raw_ostream &OS);
-
-  __isl_give isl_ast_node *getAst();
-
-  /// @brief Get the run-time conditions for the Scop.
-  __isl_give isl_ast_expr *getRunCondition();
-
-private:
-  Scop *S;
-  isl_ast_node *Root;
-  isl_ast_expr *RunCondition;
-  std::shared_ptr<isl_ctx> Ctx;
-
-  IslAst(Scop *Scop);
-  void init(const Dependences &D);
-
-  void buildRunCondition(__isl_keep isl_ast_build *Build);
-};
-} // End namespace polly.
-
 /// @brief Free an IslAstUserPayload object pointed to by @p Ptr
 static void freeIslAstUserPayload(void *Ptr) {
   delete ((IslAstInfo::IslAstUserPayload *)Ptr);

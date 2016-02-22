@@ -110,7 +110,7 @@ template <class _HashIterator> class _LIBCPP_TYPE_VIS_ONLY __hash_map_iterator;
 template <class _HashIterator> class _LIBCPP_TYPE_VIS_ONLY __hash_map_const_iterator;
 
 template <class _Tp>
-struct __key_value_types {
+struct __hash_key_value_types {
   static_assert(!is_reference<_Tp>::value && !is_const<_Tp>::value, "");
   typedef _Tp key_type;
   typedef _Tp __node_value_type;
@@ -138,7 +138,7 @@ struct __key_value_types {
 };
 
 template <class _Key, class _Tp>
-struct __key_value_types<__hash_value_type<_Key, _Tp> > {
+struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
   typedef _Key                                         key_type;
   typedef _Tp                                          mapped_type;
   typedef __hash_value_type<_Key, _Tp>                 __node_value_type;
@@ -181,12 +181,12 @@ struct __key_value_types<__hash_value_type<_Key, _Tp> > {
 
 };
 
-template <class _Tp, class _AllocPtr, class _KVTypes = __key_value_types<_Tp>,
+template <class _Tp, class _AllocPtr, class _KVTypes = __hash_key_value_types<_Tp>,
           bool = _KVTypes::__is_map>
-struct __map_pointer_types {};
+struct __hash_map_pointer_types {};
 
 template <class _Tp, class _AllocPtr, class _KVTypes>
-struct __map_pointer_types<_Tp, _AllocPtr, _KVTypes, true> {
+struct __hash_map_pointer_types<_Tp, _AllocPtr, _KVTypes, true> {
   typedef typename _KVTypes::__map_value_type   _Mv;
   typedef typename __rebind_pointer<_AllocPtr, _Mv>::type
                                                        __map_value_type_pointer;
@@ -199,10 +199,10 @@ struct __hash_node_types;
 
 template <class _NodePtr, class _Tp, class _VoidPtr>
 struct __hash_node_types<_NodePtr, __hash_node<_Tp, _VoidPtr> >
-    : public __key_value_types<_Tp>, __map_pointer_types<_Tp, _VoidPtr>
+    : public __hash_key_value_types<_Tp>, __hash_map_pointer_types<_Tp, _VoidPtr>
 
 {
-  typedef __key_value_types<_Tp>           __base;
+  typedef __hash_key_value_types<_Tp>           __base;
 
 public:
   typedef ptrdiff_t difference_type;

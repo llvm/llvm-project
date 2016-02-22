@@ -233,7 +233,7 @@ static isl_stat getMaxScheduleDim(__isl_take isl_map *Map, void *User) {
   return isl_stat_ok;
 }
 
-__isl_give isl_union_map *
+static __isl_give isl_union_map *
 addZeroPaddingToSchedule(__isl_take isl_union_map *Schedule) {
   unsigned int MaxScheduleDim = 0;
 
@@ -252,6 +252,20 @@ addZeroPaddingToSchedule(__isl_take isl_union_map *Schedule) {
   Schedule = isl_union_map_apply_range(Schedule, ExtensionMap);
 
   return Schedule;
+}
+
+static __isl_give isl_union_flow *buildFlow(__isl_keep isl_union_map *Snk,
+                                            __isl_keep isl_union_map *Src,
+                                            __isl_keep isl_union_map *MaySrc,
+                                            __isl_keep isl_schedule *Schedule) {
+  isl_union_access_info *AI;
+
+  AI = isl_union_access_info_from_sink(isl_union_map_copy(Snk));
+  AI = isl_union_access_info_set_may_source(AI, isl_union_map_copy(MaySrc));
+  if (Src)
+    AI = isl_union_access_info_set_must_source(AI, isl_union_map_copy(Src));
+  AI = isl_union_access_info_set_schedule(AI, isl_schedule_copy(Schedule));
+  return isl_union_access_info_compute_flow(AI);
 }
 
 void Dependences::calculateDependences(Scop &S) {
@@ -295,23 +309,14 @@ void Dependences::calculateDependences(Scop &S) {
   RAW = WAW = WAR = RED = nullptr;
 
   if (OptAnalysisType == VALUE_BASED_ANALYSIS) {
-    isl_union_access_info *AI;
     isl_union_flow *Flow;
 
-    AI = isl_union_access_info_from_sink(isl_union_map_copy(Read));
-    AI = isl_union_access_info_set_must_source(AI, isl_union_map_copy(Write));
-    AI = isl_union_access_info_set_may_source(AI, isl_union_map_copy(MayWrite));
-    AI = isl_union_access_info_set_schedule(AI, isl_schedule_copy(Schedule));
-    Flow = isl_union_access_info_compute_flow(AI);
+    Flow = buildFlow(Read, Write, MayWrite, Schedule);
 
     RAW = isl_union_flow_get_must_dependence(Flow);
     isl_union_flow_free(Flow);
 
-    AI = isl_union_access_info_from_sink(isl_union_map_copy(Write));
-    AI = isl_union_access_info_set_must_source(AI, isl_union_map_copy(Write));
-    AI = isl_union_access_info_set_may_source(AI, isl_union_map_copy(Read));
-    AI = isl_union_access_info_set_schedule(AI, Schedule);
-    Flow = isl_union_access_info_compute_flow(AI);
+    Flow = buildFlow(Write, Write, Read, Schedule);
 
     WAW = isl_union_flow_get_must_dependence(Flow);
     WAR = isl_union_flow_get_may_dependence(Flow);
@@ -322,36 +327,29 @@ void Dependences::calculateDependences(Scop &S) {
     // WAR, refactoring Polly to only track general non-flow dependences may
     // improve performance.
     WAR = isl_union_map_subtract(WAR, isl_union_map_copy(WAW));
+
     isl_union_flow_free(Flow);
+    isl_schedule_free(Schedule);
   } else {
-    isl_union_access_info *AI;
     isl_union_flow *Flow;
 
     Write = isl_union_map_union(Write, isl_union_map_copy(MayWrite));
 
-    AI = isl_union_access_info_from_sink(isl_union_map_copy(Read));
-    AI = isl_union_access_info_set_may_source(AI, isl_union_map_copy(Write));
-    AI = isl_union_access_info_set_schedule(AI, isl_schedule_copy(Schedule));
-    Flow = isl_union_access_info_compute_flow(AI);
+    Flow = buildFlow(Read, nullptr, Write, Schedule);
 
     RAW = isl_union_flow_get_may_dependence(Flow);
     isl_union_flow_free(Flow);
 
-    AI = isl_union_access_info_from_sink(isl_union_map_copy(Write));
-    AI = isl_union_access_info_set_may_source(AI, isl_union_map_copy(Read));
-    AI = isl_union_access_info_set_schedule(AI, isl_schedule_copy(Schedule));
-    Flow = isl_union_access_info_compute_flow(AI);
+    Flow = buildFlow(Write, nullptr, Read, Schedule);
 
     WAR = isl_union_flow_get_may_dependence(Flow);
     isl_union_flow_free(Flow);
 
-    AI = isl_union_access_info_from_sink(isl_union_map_copy(Write));
-    AI = isl_union_access_info_set_may_source(AI, isl_union_map_copy(Write));
-    AI = isl_union_access_info_set_schedule(AI, Schedule);
-    Flow = isl_union_access_info_compute_flow(AI);
+    Flow = buildFlow(Write, nullptr, Write, Schedule);
 
     WAW = isl_union_flow_get_may_dependence(Flow);
     isl_union_flow_free(Flow);
+    isl_schedule_free(Schedule);
   }
 
   isl_union_map_free(MayWrite);

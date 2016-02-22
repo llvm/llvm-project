@@ -34,8 +34,8 @@
 //
 // * Side effect free functions call
 //
-// Only function calls and intrinsics that do not have side effects are allowed
-// (readnone).
+// Function calls and intrinsics that do not have side effects (readnone)
+// or memory intrinsics (memset, memcpy, memmove) are allowed.
 //
 // The Scop detection finds the largest Scops by checking if the largest
 // region is a Scop. If this is not the case, its canonical subregions are
@@ -453,12 +453,16 @@ bool ScopDetection::isValidCFG(BasicBlock &BB, bool IsLoopBranch,
   return isValidSwitch(BB, SI, Condition, IsLoopBranch, Context);
 }
 
-bool ScopDetection::isValidCallInst(CallInst &CI) {
+bool ScopDetection::isValidCallInst(CallInst &CI,
+                                    DetectionContext &Context) const {
   if (CI.doesNotReturn())
     return false;
 
   if (CI.doesNotAccessMemory())
     return true;
+
+  if (auto *II = dyn_cast<IntrinsicInst>(&CI))
+    return isValidIntrinsicInst(*II, Context);
 
   Function *CalledFunction = CI.getCalledFunction();
 
@@ -466,8 +470,47 @@ bool ScopDetection::isValidCallInst(CallInst &CI) {
   if (CalledFunction == 0)
     return false;
 
-  if (isIgnoredIntrinsic(&CI))
+  return false;
+}
+
+bool ScopDetection::isValidIntrinsicInst(IntrinsicInst &II,
+                                         DetectionContext &Context) const {
+  if (isIgnoredIntrinsic(&II))
     return true;
+
+  // The closest loop surrounding the call instruction.
+  Loop *L = LI->getLoopFor(II.getParent());
+
+  // The access function and base pointer for memory intrinsics.
+  const SCEV *AF;
+  const SCEVUnknown *BP;
+
+  switch (II.getIntrinsicID()) {
+  // Memory intrinsics that can be represented are supported.
+  case llvm::Intrinsic::memmove:
+  case llvm::Intrinsic::memcpy:
+    AF = SE->getSCEVAtScope(cast<MemTransferInst>(II).getSource(), L);
+    BP = dyn_cast<SCEVUnknown>(SE->getPointerBase(AF));
+    // Bail if the source pointer is not valid.
+    if (!isValidAccess(&II, AF, BP, Context))
+      return false;
+  // Fall through
+  case llvm::Intrinsic::memset:
+    AF = SE->getSCEVAtScope(cast<MemIntrinsic>(II).getDest(), L);
+    BP = dyn_cast<SCEVUnknown>(SE->getPointerBase(AF));
+    // Bail if the destination pointer is not valid.
+    if (!isValidAccess(&II, AF, BP, Context))
+      return false;
+
+    // Bail if the length is not affine.
+    if (!isAffine(SE->getSCEVAtScope(cast<MemIntrinsic>(II).getLength(), L),
+                  Context))
+      return false;
+
+    return true;
+  default:
+    break;
+  }
 
   return false;
 }
@@ -762,68 +805,68 @@ bool ScopDetection::hasAffineMemoryAccesses(DetectionContext &Context) const {
   return true;
 }
 
-bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
-                                        DetectionContext &Context) const {
-  Region &CurRegion = Context.CurRegion;
+bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
+                                  const SCEVUnknown *BP,
+                                  DetectionContext &Context) const {
 
-  Value *Ptr = Inst.getPointerOperand();
-  Loop *L = LI->getLoopFor(Inst.getParent());
-  const SCEV *AccessFunction = SE->getSCEVAtScope(Ptr, L);
-  const SCEVUnknown *BasePointer;
-  Value *BaseValue;
-
-  BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFunction));
-
-  if (!BasePointer)
+  if (!BP)
     return invalid<ReportNoBasePtr>(Context, /*Assert=*/true, Inst);
 
-  BaseValue = BasePointer->getValue();
-
-  if (isa<UndefValue>(BaseValue))
+  auto *BV = BP->getValue();
+  if (isa<UndefValue>(BV))
     return invalid<ReportUndefBasePtr>(Context, /*Assert=*/true, Inst);
+
+  // FIXME: Think about allowing IntToPtrInst
+  if (IntToPtrInst *Inst = dyn_cast<IntToPtrInst>(BV))
+    return invalid<ReportIntToPtr>(Context, /*Assert=*/true, Inst);
 
   // Check that the base address of the access is invariant in the current
   // region.
-  if (!isInvariant(*BaseValue, CurRegion))
-    return invalid<ReportVariantBasePtr>(Context, /*Assert=*/true, BaseValue,
-                                         Inst);
+  if (!isInvariant(*BV, Context.CurRegion))
+    return invalid<ReportVariantBasePtr>(Context, /*Assert=*/true, BV, Inst);
 
-  AccessFunction = SE->getMinusSCEV(AccessFunction, BasePointer);
+  AF = SE->getMinusSCEV(AF, BP);
 
-  const SCEV *Size = SE->getElementSize(Inst);
-  if (Context.ElementSize[BasePointer]) {
-    if (!AllowDifferentTypes && Context.ElementSize[BasePointer] != Size)
-      return invalid<ReportDifferentArrayElementSize>(Context, /*Assert=*/true,
-                                                      Inst, BaseValue);
-
-    Context.ElementSize[BasePointer] =
-        SE->getSMinExpr(Size, Context.ElementSize[BasePointer]);
+  const SCEV *Size;
+  if (!isa<MemIntrinsic>(Inst)) {
+    Size = SE->getElementSize(Inst);
   } else {
-    Context.ElementSize[BasePointer] = Size;
+    auto *SizeTy =
+        SE->getEffectiveSCEVType(PointerType::getInt8PtrTy(SE->getContext()));
+    Size = SE->getConstant(SizeTy, 8);
   }
 
-  bool isVariantInNonAffineLoop = false;
+  if (Context.ElementSize[BP]) {
+    if (!AllowDifferentTypes && Context.ElementSize[BP] != Size)
+      return invalid<ReportDifferentArrayElementSize>(Context, /*Assert=*/true,
+                                                      Inst, BV);
+
+    Context.ElementSize[BP] = SE->getSMinExpr(Size, Context.ElementSize[BP]);
+  } else {
+    Context.ElementSize[BP] = Size;
+  }
+
+  bool IsVariantInNonAffineLoop = false;
   SetVector<const Loop *> Loops;
-  findLoops(AccessFunction, Loops);
+  findLoops(AF, Loops);
   for (const Loop *L : Loops)
     if (Context.BoxedLoopsSet.count(L))
-      isVariantInNonAffineLoop = true;
+      IsVariantInNonAffineLoop = true;
 
-  if (PollyDelinearize && !isVariantInNonAffineLoop) {
-    Context.Accesses[BasePointer].push_back({Inst, AccessFunction});
+  bool IsAffine = !IsVariantInNonAffineLoop && isAffine(AF, Context, BV);
+  // Do not try to delinearize memory intrinsics and force them to be affine.
+  if (isa<MemIntrinsic>(Inst) && !IsAffine) {
+    return invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, AF, Inst,
+                                          BV);
+  } else if (PollyDelinearize && !IsVariantInNonAffineLoop) {
+    Context.Accesses[BP].push_back({Inst, AF});
 
-    if (!isAffine(AccessFunction, Context, BaseValue))
-      Context.NonAffineAccesses.insert(BasePointer);
-  } else if (!AllowNonAffine) {
-    if (isVariantInNonAffineLoop ||
-        !isAffine(AccessFunction, Context, BaseValue))
-      return invalid<ReportNonAffineAccess>(Context, /*Assert=*/true,
-                                            AccessFunction, Inst, BaseValue);
+    if (!IsAffine)
+      Context.NonAffineAccesses.insert(BP);
+  } else if (!AllowNonAffine && !IsAffine) {
+    return invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, AF, Inst,
+                                          BV);
   }
-
-  // FIXME: Think about allowing IntToPtrInst
-  if (IntToPtrInst *Inst = dyn_cast<IntToPtrInst>(BaseValue))
-    return invalid<ReportIntToPtr>(Context, /*Assert=*/true, Inst);
 
   if (IgnoreAliasing)
     return true;
@@ -831,9 +874,9 @@ bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
   // Check if the base pointer of the memory access does alias with
   // any other pointer. This cannot be handled at the moment.
   AAMDNodes AATags;
-  Inst.getAAMetadata(AATags);
+  Inst->getAAMetadata(AATags);
   AliasSet &AS = Context.AST.getAliasSetForPointer(
-      BaseValue, MemoryLocation::UnknownSize, AATags);
+      BP->getValue(), MemoryLocation::UnknownSize, AATags);
 
   if (!AS.isMustAlias()) {
     if (PollyUseRuntimeAliasChecks) {
@@ -845,9 +888,9 @@ bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
       // However, we can ignore loads that will be hoisted.
       for (const auto &Ptr : AS) {
         Instruction *Inst = dyn_cast<Instruction>(Ptr.getValue());
-        if (Inst && CurRegion.contains(Inst)) {
+        if (Inst && Context.CurRegion.contains(Inst)) {
           auto *Load = dyn_cast<LoadInst>(Inst);
-          if (Load && isHoistableLoad(Load, CurRegion, *LI, *SE)) {
+          if (Load && isHoistableLoad(Load, Context.CurRegion, *LI, *SE)) {
             Context.RequiredILS.insert(Load);
             continue;
           }
@@ -866,6 +909,18 @@ bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
   return true;
 }
 
+bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
+                                        DetectionContext &Context) const {
+  Value *Ptr = Inst.getPointerOperand();
+  Loop *L = LI->getLoopFor(Inst.getParent());
+  const SCEV *AccessFunction = SE->getSCEVAtScope(Ptr, L);
+  const SCEVUnknown *BasePointer;
+
+  BasePointer = dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFunction));
+
+  return isValidAccess(Inst, AccessFunction, BasePointer, Context);
+}
+
 bool ScopDetection::isValidInstruction(Instruction &Inst,
                                        DetectionContext &Context) const {
   for (auto &Op : Inst.operands()) {
@@ -880,7 +935,7 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
 
   // We only check the call instruction but not invoke instruction.
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
-    if (isValidCallInst(*CI))
+    if (isValidCallInst(*CI, Context))
       return true;
 
     return invalid<ReportFuncCall>(Context, /*Assert=*/true, &Inst);
