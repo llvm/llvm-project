@@ -22336,7 +22336,7 @@ X86TargetLowering::EmitLoweredTLSAddr(MachineInstr *MI,
   // We need this because TLSADDR is lowered into calls
   // inside MC, therefore without the two markers shrink-wrapping
   // may push the prologue/epilogue pass them.
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
   DebugLoc DL = MI->getDebugLoc();
   MachineFunction &MF = *BB->getParent();
 
