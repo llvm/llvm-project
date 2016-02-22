@@ -43,9 +43,8 @@ class MemoryMappingLayout {
   // instead of aborting.
   static void CacheMemoryMappings();
 
-  // Stores the list of mapped objects into an array.
-  uptr DumpListOfModules(LoadedModule *modules, uptr max_modules,
-                         string_predicate_t filter);
+  // Adds all mapped objects into a vector.
+  void DumpListOfModules(InternalMmapVector<LoadedModule> *modules);
 
   // Memory protection masks.
   static const uptr kProtectionRead = 1;

@@ -427,7 +427,7 @@ class ModuleCache;
 
         virtual size_t
         GetSoftwareBreakpointTrapOpcode (Target &target,
-                                         BreakpointSite *bp_site) = 0;
+                                         BreakpointSite *bp_site);
 
         //------------------------------------------------------------------
         /// Launch a new process on a platform, not necessarily for 

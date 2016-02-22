@@ -805,11 +805,12 @@ static void GenerateHtmlReport(const InternalMmapVector<char *> &cov_files) {
     sancov_argv.push_back(internal_strdup(cov_file));
   }
 
-  InternalScopedBuffer<LoadedModule> LoadedModules(kMaxNumberOfModules);
-  uptr n_modules = GetListOfModules(LoadedModules.data(), kMaxNumberOfModules,
-                                    /* filter */ nullptr);
-  for (uptr i = 0; i < n_modules; ++i) {
-    sancov_argv.push_back(internal_strdup(LoadedModules[i].full_name()));
+  {
+    ListOfModules modules;
+    modules.init();
+    for (const LoadedModule &module : modules) {
+      sancov_argv.push_back(internal_strdup(module.full_name()));
+    }
   }
 
   InternalScopedString report_path(kMaxPathLength);
