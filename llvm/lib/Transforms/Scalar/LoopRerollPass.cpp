@@ -14,7 +14,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -128,9 +128,8 @@ NumToleratedFailedMatches("reroll-num-tolerated-failed-matches", cl::init(400),
 
 namespace {
   enum IterationLimits {
-    /// The maximum number of iterations that we'll try and reroll. This
-    /// has to be less than 25 in order to fit into a SmallBitVector.
-    IL_MaxRerollIterations = 16,
+    /// The maximum number of iterations that we'll try and reroll.
+    IL_MaxRerollIterations = 32,
     /// The bitvector index used by loop induction variables and other
     /// instructions that belong to all iterations.
     IL_All,
@@ -365,7 +364,7 @@ namespace {
       void replace(const SCEV *IterCount);
 
     protected:
-      typedef MapVector<Instruction*, SmallBitVector> UsesTy;
+      typedef MapVector<Instruction*, BitVector> UsesTy;
 
       bool findRootsRecursive(Instruction *IVU,
                               SmallInstructionSet SubsumedInsts);

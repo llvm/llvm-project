@@ -20,10 +20,6 @@ va-arg-22.c
 920908-1.c
 pr38151.c
 
-# SelectionDAGNodes.h:943: llvm::SDValue::SDValue(llvm::SDNode *, unsigned int): Assertion `(!Node || ResNo < Node->getNumValues()) && "Invalid result number for the given node!"' failed.
-pr53645.c
-pr53645-2.c
-
 # multiple-entry loops are not supported yet.
 pr38051.c
 

@@ -152,7 +152,7 @@ class OrcI386 {
 public:
   static const unsigned PointerSize = 4;
   static const unsigned TrampolineSize = 8;
-  static const unsigned ResolverCodeSize = 0x66;
+  static const unsigned ResolverCodeSize = 0x4a;
 
   typedef GenericIndirectStubsInfo<8> IndirectStubsInfo;
 

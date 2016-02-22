@@ -5590,7 +5590,10 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   EVT LDBaseVT = EltBase.getValueType();
 
   // Consecutive loads can contain UNDEFS but not ZERO elements.
+  // Consecutive loads with UNDEFs and ZEROs elements require a
+  // an additional shuffle stage to clear the ZERO elements.
   bool IsConsecutiveLoad = true;
+  bool IsConsecutiveLoadWithZeros = true;
   for (int i = FirstLoadedElt + 1; i <= LastLoadedElt; ++i) {
     if (LoadMask[i]) {
       SDValue Elt = PeekThroughBitcast(Elts[i]);
@@ -5599,6 +5602,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                                  Elt.getValueType().getStoreSizeInBits() / 8,
                                  i - FirstLoadedElt)) {
         IsConsecutiveLoad = false;
+        IsConsecutiveLoadWithZeros = false;
         break;
       }
     } else if (ZeroMask[i]) {
@@ -5628,8 +5632,9 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   // LOAD - all consecutive load/undefs (must start/end with a load).
   // If we have found an entire vector of loads and undefs, then return a large
   // load of the entire vector width starting at the base pointer.
-  if (IsConsecutiveLoad && FirstLoadedElt == 0 &&
-      LastLoadedElt == (int)(NumElems - 1) && ZeroMask.none()) {
+  // If the vector contains zeros, then attempt to shuffle those elements.
+  if (FirstLoadedElt == 0 && LastLoadedElt == (int)(NumElems - 1) &&
+      (IsConsecutiveLoad || IsConsecutiveLoadWithZeros)) {
     assert(LDBase && "Did not find base load for merging consecutive loads");
     EVT EltVT = LDBase->getValueType(0);
     // Ensure that the input vector size for the merged loads matches the
@@ -5640,7 +5645,24 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     if (isAfterLegalize && !TLI.isOperationLegal(ISD::LOAD, VT))
       return SDValue();
 
-    return CreateLoad(VT, LDBase);
+    if (IsConsecutiveLoad)
+      return CreateLoad(VT, LDBase);
+
+    // IsConsecutiveLoadWithZeros - we need to create a shuffle of the loaded
+    // vector and a zero vector to clear out the zero elements.
+    if (!isAfterLegalize && NumElems == VT.getVectorNumElements()) {
+      SmallVector<int, 4> ClearMask(NumElems, -1);
+      for (unsigned i = 0; i < NumElems; ++i) {
+        if (ZeroMask[i])
+          ClearMask[i] = i + NumElems;
+        else if (LoadMask[i])
+          ClearMask[i] = i;
+      }
+      SDValue V = CreateLoad(VT, LDBase);
+      SDValue Z = VT.isInteger() ? DAG.getConstant(0, DL, VT)
+                                 : DAG.getConstantFP(0.0, DL, VT);
+      return DAG.getVectorShuffle(VT, DL, V, Z, ClearMask);
+    }
   }
 
   int LoadSize =

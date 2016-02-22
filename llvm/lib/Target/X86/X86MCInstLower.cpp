@@ -988,7 +988,7 @@ static MachineBasicBlock::const_iterator
 PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
   const MachineBasicBlock *MBB = MBBI->getParent();
   while (MBBI == MBB->begin()) {
-    if (MBB == MBB->getParent()->begin())
+    if (MBB == &MBB->getParent()->front())
       return nullptr;
     MBB = MBB->getPrevNode();
     MBBI = MBB->end();

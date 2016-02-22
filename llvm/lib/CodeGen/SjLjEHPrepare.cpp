@@ -419,7 +419,7 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
   // directly to the caller's context, which is what we want anyway, so no need
   // to do anything here.
   for (BasicBlock &BB : F) {
-    if (&BB == F.begin())
+    if (&BB == &F.front())
       continue;
     for (Instruction &I : BB)
       if (I.mayThrow())
@@ -434,7 +434,7 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
   // Following any allocas not in the entry block, update the saved SP in the
   // jmpbuf to the new value.
   for (BasicBlock &BB : F) {
-    if (&BB == F.begin())
+    if (&BB == &F.front())
       continue;
     for (Instruction &I : BB) {
       if (auto *CI = dyn_cast<CallInst>(&I)) {

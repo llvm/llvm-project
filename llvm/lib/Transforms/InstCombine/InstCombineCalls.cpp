@@ -60,6 +60,23 @@ static Type *reduceToSingleValueType(Type *T) {
   return T;
 }
 
+/// Return a constant boolean vector that has true elements in all positions
+/// where the input constant data vector has an element with the sign bit set.
+static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
+  SmallVector<Constant *, 32> BoolVec;
+  IntegerType *BoolTy = Type::getInt1Ty(V->getContext());
+  for (unsigned I = 0, E = V->getNumElements(); I != E; ++I) {
+    Constant *Elt = V->getElementAsConstant(I);
+    assert((isa<ConstantInt>(Elt) || isa<ConstantFP>(Elt)) &&
+           "Unexpected constant data vector element type");
+    bool Sign = V->getElementType()->isIntegerTy()
+                    ? cast<ConstantInt>(Elt)->isNegative()
+                    : cast<ConstantFP>(Elt)->isNegative();
+    BoolVec.push_back(ConstantInt::get(BoolTy, Sign));
+  }
+  return ConstantVector::get(BoolVec);
+}
+
 Instruction *InstCombiner::SimplifyMemTransfer(MemIntrinsic *MI) {
   unsigned DstAlign = getKnownAlignment(MI->getArgOperand(0), DL, MI, AC, DT);
   unsigned SrcAlign = getKnownAlignment(MI->getArgOperand(1), DL, MI, AC, DT);
@@ -1476,28 +1493,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(CI, Op0);
 
     // Constant Mask - select 1st/2nd argument lane based on top bit of mask.
-    if (auto C = dyn_cast<ConstantDataVector>(Mask)) {
-      auto Tyi1 = Builder->getInt1Ty();
-      auto SelectorType = cast<VectorType>(Mask->getType());
-      auto EltTy = SelectorType->getElementType();
-      unsigned Size = SelectorType->getNumElements();
-      unsigned BitWidth =
-          EltTy->isFloatTy()
-              ? 32
-              : (EltTy->isDoubleTy() ? 64 : EltTy->getIntegerBitWidth());
-      assert((BitWidth == 64 || BitWidth == 32 || BitWidth == 8) &&
-             "Wrong arguments for variable blend intrinsic");
-      SmallVector<Constant *, 32> Selectors;
-      for (unsigned I = 0; I < Size; ++I) {
-        // The intrinsics only read the top bit
-        uint64_t Selector;
-        if (BitWidth == 8)
-          Selector = C->getElementAsInteger(I);
-        else
-          Selector = C->getElementAsAPFloat(I).bitcastToAPInt().getZExtValue();
-        Selectors.push_back(ConstantInt::get(Tyi1, Selector >> (BitWidth - 1)));
-      }
-      auto NewSelector = ConstantVector::get(Selectors);
+    if (auto *ConstantMask = dyn_cast<ConstantDataVector>(Mask)) {
+      Constant *NewSelector = getNegativeIsTrueBoolVec(ConstantMask);
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
     break;

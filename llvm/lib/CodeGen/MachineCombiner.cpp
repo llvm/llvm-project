@@ -156,7 +156,7 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
       } else {
         MachineInstr *DefInstr = getOperandDef(MO);
         if (DefInstr) {
-          DepthOp = BlockTrace.getInstrCycles(DefInstr).Depth;
+          DepthOp = BlockTrace.getInstrCycles(*DefInstr).Depth;
           LatencyOp = TSchedModel.computeOperandLatency(
               DefInstr, DefInstr->findRegisterDefOperandIdx(MO.getReg()),
               InstrPtr, InstrPtr->findRegisterUseOperandIdx(MO.getReg()));
@@ -198,7 +198,7 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
     RI++;
     MachineInstr *UseMO = RI->getParent();
     unsigned LatencyOp = 0;
-    if (UseMO && BlockTrace.isDepInTrace(Root, UseMO)) {
+    if (UseMO && BlockTrace.isDepInTrace(*Root, *UseMO)) {
       LatencyOp = TSchedModel.computeOperandLatency(
           NewRoot, NewRoot->findRegisterDefOperandIdx(MO.getReg()), UseMO,
           UseMO->findRegisterUseOperandIdx(MO.getReg()));
@@ -250,7 +250,7 @@ bool MachineCombiner::improvesCriticalPathLen(
 
   // Get depth and latency of NewRoot and Root.
   unsigned NewRootDepth = getDepth(InsInstrs, InstrIdxForVirtReg, BlockTrace);
-  unsigned RootDepth = BlockTrace.getInstrCycles(Root).Depth;
+  unsigned RootDepth = BlockTrace.getInstrCycles(*Root).Depth;
 
   DEBUG(dbgs() << "DEPENDENCE DATA FOR " << Root << "\n";
         dbgs() << " NewRootDepth: " << NewRootDepth << "\n";
@@ -269,7 +269,7 @@ bool MachineCombiner::improvesCriticalPathLen(
   // even if the instruction depths (data dependency cycles) become worse.
   unsigned NewRootLatency = getLatency(Root, NewRoot, BlockTrace);
   unsigned RootLatency = TSchedModel.computeInstrLatency(Root);
-  unsigned RootSlack = BlockTrace.getInstrSlack(Root);
+  unsigned RootSlack = BlockTrace.getInstrSlack(*Root);
 
   DEBUG(dbgs() << " NewRootLatency: " << NewRootLatency << "\n";
         dbgs() << " RootLatency: " << RootLatency << "\n";

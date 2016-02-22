@@ -390,6 +390,8 @@ bool llvm::expandRemainder(BinaryOperator *Rem) {
     Value *Remainder = generateSignedRemainderCode(Rem->getOperand(0),
                                                    Rem->getOperand(1), Builder);
 
+    // Check whether this is the insert point while Rem is still valid.
+    bool IsInsertPoint = Rem->getIterator() == Builder.GetInsertPoint();
     Rem->replaceAllUsesWith(Remainder);
     Rem->dropAllReferences();
     Rem->eraseFromParent();
@@ -397,7 +399,7 @@ bool llvm::expandRemainder(BinaryOperator *Rem) {
     // If we didn't actually generate an urem instruction, we're done
     // This happens for example if the input were constant. In this case the
     // Builder insertion point was unchanged
-    if (Rem == Builder.GetInsertPoint().getNodePtrUnchecked())
+    if (IsInsertPoint)
       return true;
 
     BinaryOperator *BO = dyn_cast<BinaryOperator>(Builder.GetInsertPoint());
@@ -446,6 +448,9 @@ bool llvm::expandDivision(BinaryOperator *Div) {
     // Lower the code to unsigned division, and reset Div to point to the udiv.
     Value *Quotient = generateSignedDivisionCode(Div->getOperand(0),
                                                  Div->getOperand(1), Builder);
+
+    // Check whether this is the insert point while Div is still valid.
+    bool IsInsertPoint = Div->getIterator() == Builder.GetInsertPoint();
     Div->replaceAllUsesWith(Quotient);
     Div->dropAllReferences();
     Div->eraseFromParent();
@@ -453,7 +458,7 @@ bool llvm::expandDivision(BinaryOperator *Div) {
     // If we didn't actually generate an udiv instruction, we're done
     // This happens for example if the input were constant. In this case the
     // Builder insertion point was unchanged
-    if (Div == Builder.GetInsertPoint().getNodePtrUnchecked())
+    if (IsInsertPoint)
       return true;
 
     BinaryOperator *BO = dyn_cast<BinaryOperator>(Builder.GetInsertPoint());

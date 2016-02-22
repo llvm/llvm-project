@@ -655,17 +655,17 @@ static bool getDataDeps(const MachineInstr *UseMI,
 // Get the input data dependencies of a PHI instruction, using Pred as the
 // preferred predecessor.
 // This will add at most one dependency to Deps.
-static void getPHIDeps(const MachineInstr *UseMI,
+static void getPHIDeps(const MachineInstr &UseMI,
                        SmallVectorImpl<DataDep> &Deps,
                        const MachineBasicBlock *Pred,
                        const MachineRegisterInfo *MRI) {
   // No predecessor at the beginning of a trace. Ignore dependencies.
   if (!Pred)
     return;
-  assert(UseMI->isPHI() && UseMI->getNumOperands() % 2 && "Bad PHI");
-  for (unsigned i = 1; i != UseMI->getNumOperands(); i += 2) {
-    if (UseMI->getOperand(i + 1).getMBB() == Pred) {
-      unsigned Reg = UseMI->getOperand(i).getReg();
+  assert(UseMI.isPHI() && UseMI.getNumOperands() % 2 && "Bad PHI");
+  for (unsigned i = 1; i != UseMI.getNumOperands(); i += 2) {
+    if (UseMI.getOperand(i + 1).getMBB() == Pred) {
+      unsigned Reg = UseMI.getOperand(i).getReg();
       Deps.push_back(DataDep(MRI, Reg, i));
       return;
     }
@@ -827,7 +827,7 @@ computeInstrDepths(const MachineBasicBlock *MBB) {
       // Collect all data dependencies.
       Deps.clear();
       if (UseMI.isPHI())
-        getPHIDeps(&UseMI, Deps, TBI.Pred, MTM.MRI);
+        getPHIDeps(UseMI, Deps, TBI.Pred, MTM.MRI);
       else if (getDataDeps(&UseMI, Deps, MTM.MRI))
         updatePhysDepsDownwards(&UseMI, Deps, RegUnits, MTM.TRI);
 
@@ -1052,7 +1052,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
         if (!PHI.isPHI())
           break;
         Deps.clear();
-        getPHIDeps(&PHI, Deps, MBB, MTM.MRI);
+        getPHIDeps(PHI, Deps, MBB, MTM.MRI);
         if (!Deps.empty()) {
           // Loop header PHI heights are all 0.
           unsigned Height = TBI.Succ ? Cycles.lookup(&PHI).Height : 0;
@@ -1147,26 +1147,25 @@ MachineTraceMetrics::Ensemble::getTrace(const MachineBasicBlock *MBB) {
 }
 
 unsigned
-MachineTraceMetrics::Trace::getInstrSlack(const MachineInstr *MI) const {
-  assert(MI && "Not an instruction.");
-  assert(getBlockNum() == unsigned(MI->getParent()->getNumber()) &&
+MachineTraceMetrics::Trace::getInstrSlack(const MachineInstr &MI) const {
+  assert(getBlockNum() == unsigned(MI.getParent()->getNumber()) &&
          "MI must be in the trace center block");
   InstrCycles Cyc = getInstrCycles(MI);
   return getCriticalPath() - (Cyc.Depth + Cyc.Height);
 }
 
 unsigned
-MachineTraceMetrics::Trace::getPHIDepth(const MachineInstr *PHI) const {
+MachineTraceMetrics::Trace::getPHIDepth(const MachineInstr &PHI) const {
   const MachineBasicBlock *MBB = TE.MTM.MF->getBlockNumbered(getBlockNum());
   SmallVector<DataDep, 1> Deps;
   getPHIDeps(PHI, Deps, MBB, TE.MTM.MRI);
   assert(Deps.size() == 1 && "PHI doesn't have MBB as a predecessor");
   DataDep &Dep = Deps.front();
-  unsigned DepCycle = getInstrCycles(Dep.DefMI).Depth;
+  unsigned DepCycle = getInstrCycles(*Dep.DefMI).Depth;
   // Add latency if DefMI is a real instruction. Transients get latency 0.
   if (!Dep.DefMI->isTransient())
-    DepCycle += TE.MTM.SchedModel
-      .computeOperandLatency(Dep.DefMI, Dep.DefOp, PHI, Dep.UseOp);
+    DepCycle += TE.MTM.SchedModel.computeOperandLatency(Dep.DefMI, Dep.DefOp,
+                                                        &PHI, Dep.UseOp);
   return DepCycle;
 }
 
@@ -1252,13 +1251,13 @@ unsigned MachineTraceMetrics::Trace::getResourceLength(
   return std::max(Instrs, PRMax);
 }
 
-bool MachineTraceMetrics::Trace::isDepInTrace(const MachineInstr *DefMI,
-                                              const MachineInstr *UseMI) const {
-  if (DefMI->getParent() == UseMI->getParent())
+bool MachineTraceMetrics::Trace::isDepInTrace(const MachineInstr &DefMI,
+                                              const MachineInstr &UseMI) const {
+  if (DefMI.getParent() == UseMI.getParent())
     return true;
 
-  const TraceBlockInfo &DepTBI = TE.BlockInfo[DefMI->getParent()->getNumber()];
-  const TraceBlockInfo &TBI = TE.BlockInfo[UseMI->getParent()->getNumber()];
+  const TraceBlockInfo &DepTBI = TE.BlockInfo[DefMI.getParent()->getNumber()];
+  const TraceBlockInfo &TBI = TE.BlockInfo[UseMI.getParent()->getNumber()];
 
   return DepTBI.isUsefulDominator(TBI);
 }

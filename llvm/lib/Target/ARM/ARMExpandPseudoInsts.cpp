@@ -731,7 +731,7 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
   HI16.addImm(Pred).addReg(PredReg);
 
   if (RequiresBundling)
-    finalizeBundle(MBB, LO16->getIterator(), MBBI->getIterator());
+    finalizeBundle(MBB, LO16->getInstrIterator(), MBBI->getInstrIterator());
 
   TransferImpOps(MI, LO16, HI16);
   MI.eraseFromParent();

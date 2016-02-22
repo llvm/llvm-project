@@ -172,35 +172,38 @@ void OrcI386::writeResolverCode(uint8_t *ResolverMem, JITReentryFn ReentryFn,
                                               // resolver_entry:
     0x55,                                     // 0x00: pushl    %ebp
     0x89, 0xe5,                               // 0x01: movl     %esp, %ebp
-    0x50,                                     // 0x03: pushl    %eax
-    0x53,                                     // 0x04: pushl    %ebx
-    0x51,                                     // 0x05: pushl    %ecx
-    0x52,                                     // 0x06: pushl    %edx
-    0x56,                                     // 0x07: pushl    %esi
-    0x57,                                     // 0x08: pushl    %edi
-    0x81, 0xec, 0x1C, 0x02, 0x00, 0x00,       // 0x09: subl     $0x21C, %esp
-    0x0f, 0xae, 0x44, 0x24, 0x10,             // 0x0f: fxsave   0x10(%esp)
-    0x8b, 0x75, 0x04,                         // 0x14: movl     0x4(%ebp), %esi
-    0x83, 0xee, 0x05,                         // 0x17: subl     $0x5, %esi
-    0x89, 0x74, 0x24, 0x04,                   // 0x1a: movl     %esi, 0x4(%esp)
-    0xc7, 0x04, 0x24, 0x00, 0x00, 0x00, 0x00, // 0x1e: movl     <cbmgr>, (%esp)
-    0xb8, 0x00, 0x00, 0x00, 0x00,             // 0x25: movl     <reentry>, %eax
-    0xff, 0xd0,                               // 0x2a: calll    *%eax
-    0x89, 0x45, 0x04,                         // 0x2c: movl     %eax, 0x4(%ebp)
-    0x0f, 0xae, 0x4c, 0x24, 0x10,             // 0x2f: fxrstor  0x10(%esp)
-    0x81, 0xc4, 0x1c, 0x02, 0x00, 0x00,       // 0x34: addl     $0x21C, %esp
-    0x5f,                                     // 0x3a: popl     %edi
-    0x5e,                                     // 0x3b: popl     %esi
-    0x5a,                                     // 0x3c: popl     %edx
-    0x59,                                     // 0x3d: popl     %ecx
-    0x5b,                                     // 0x3e: popl     %ebx
-    0x58,                                     // 0x3f: popl     %eax
-    0x5d,                                     // 0x40: popl     %ebp
-    0xc3                                      // 0x41: retl
+    0x54,                                     // 0x03: pushl    %esp
+    0x83, 0xe4, 0xf0,                         // 0x04: andl     $-0x10, %esp
+    0x50,                                     // 0x07: pushl    %eax
+    0x53,                                     // 0x08: pushl    %ebx
+    0x51,                                     // 0x09: pushl    %ecx
+    0x52,                                     // 0x0a: pushl    %edx
+    0x56,                                     // 0x0b: pushl    %esi
+    0x57,                                     // 0x0c: pushl    %edi
+    0x81, 0xec, 0x18, 0x02, 0x00, 0x00,       // 0x0d: subl     $0x218, %esp
+    0x0f, 0xae, 0x44, 0x24, 0x10,             // 0x13: fxsave   0x10(%esp)
+    0x8b, 0x75, 0x04,                         // 0x18: movl     0x4(%ebp), %esi
+    0x83, 0xee, 0x05,                         // 0x1b: subl     $0x5, %esi
+    0x89, 0x74, 0x24, 0x04,                   // 0x1e: movl     %esi, 0x4(%esp)
+    0xc7, 0x04, 0x24, 0x00, 0x00, 0x00, 0x00, // 0x22: movl     <cbmgr>, (%esp)
+    0xb8, 0x00, 0x00, 0x00, 0x00,             // 0x29: movl     <reentry>, %eax
+    0xff, 0xd0,                               // 0x2e: calll    *%eax
+    0x89, 0x45, 0x04,                         // 0x30: movl     %eax, 0x4(%ebp)
+    0x0f, 0xae, 0x4c, 0x24, 0x10,             // 0x33: fxrstor  0x10(%esp)
+    0x81, 0xc4, 0x18, 0x02, 0x00, 0x00,       // 0x38: addl     $0x218, %esp
+    0x5f,                                     // 0x3e: popl     %edi
+    0x5e,                                     // 0x3f: popl     %esi
+    0x5a,                                     // 0x40: popl     %edx
+    0x59,                                     // 0x41: popl     %ecx
+    0x5b,                                     // 0x42: popl     %ebx
+    0x58,                                     // 0x43: popl     %eax
+    0x8b, 0x65, 0xfc,                         // 0x44: movl     -0x4(%ebp), %esp
+    0x5d,                                     // 0x48: popl     %ebp
+    0xc3                                      // 0x49: retl
   };
 
-  const unsigned ReentryFnAddrOffset = 0x26;
-  const unsigned CallbackMgrAddrOffset = 0x21;
+  const unsigned ReentryFnAddrOffset = 0x2a;
+  const unsigned CallbackMgrAddrOffset = 0x25;
 
   memcpy(ResolverMem, ResolverCode, sizeof(ResolverCode));
   memcpy(ResolverMem + ReentryFnAddrOffset, &ReentryFn, sizeof(ReentryFn));

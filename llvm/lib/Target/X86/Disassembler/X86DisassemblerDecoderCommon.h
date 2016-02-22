@@ -352,12 +352,6 @@ enum ModRMDecisionType {
   ENUM_ENTRY(ENCODING_RM_CD64,"R/M operand with CDisp scaling of 64")          \
   ENUM_ENTRY(ENCODING_VVVV,   "Register operand in VEX.vvvv byte.")            \
   ENUM_ENTRY(ENCODING_WRITEMASK, "Register operand in EVEX.aaa byte.")         \
-  ENUM_ENTRY(ENCODING_CB,     "1-byte code offset (possible new CS value)")    \
-  ENUM_ENTRY(ENCODING_CW,     "2-byte")                                        \
-  ENUM_ENTRY(ENCODING_CD,     "4-byte")                                        \
-  ENUM_ENTRY(ENCODING_CP,     "6-byte")                                        \
-  ENUM_ENTRY(ENCODING_CO,     "8-byte")                                        \
-  ENUM_ENTRY(ENCODING_CT,     "10-byte")                                       \
   ENUM_ENTRY(ENCODING_IB,     "1-byte immediate")                              \
   ENUM_ENTRY(ENCODING_IW,     "2-byte")                                        \
   ENUM_ENTRY(ENCODING_ID,     "4-byte")                                        \

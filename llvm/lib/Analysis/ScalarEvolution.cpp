@@ -3895,6 +3895,12 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         }
       }
     }
+
+    // Remove the temporary PHI node SCEV that has been inserted while intending
+    // to create an AddRecExpr for this PHI node. We can not keep this temporary
+    // as it will prevent later (possibly simpler) SCEV expressions to be added
+    // to the ValueExprMap.
+    ValueExprMap.erase(PN);
   }
 
   return nullptr;

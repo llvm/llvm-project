@@ -257,7 +257,7 @@ bool Thumb2ITBlockPass::InsertITInstructions(MachineBasicBlock &MBB) {
 
     // Finalize the bundle.
     finalizeBundle(MBB, InsertPos.getInstrIterator(),
-                   ++LastITMI->getIterator());
+                   ++LastITMI->getInstrIterator());
 
     Modified = true;
     ++NumITs;

@@ -1,5 +1,37 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
+define double @test_vfrcz_sd_0(double %a) {
+; CHECK-LABEL: @test_vfrcz_sd_0
+; CHECK-NEXT: %1 = insertelement <2 x double> undef, double %a, i32 0
+; CHECK-NEXT: %2 = insertelement <2 x double> %1, double 1.000000e+00, i32 1
+; CHECK-NEXT: %3 = tail call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> %2)
+; CHECK-NEXT: %4 = extractelement <2 x double> %3, i32 0
+; CHECK-NEXT: ret double %4
+  %1 = insertelement <2 x double> undef, double %a, i32 0
+  %2 = insertelement <2 x double> %1, double 1.000000e+00, i32 1
+  %3 = tail call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> %2)
+  %4 = extractelement <2 x double> %3, i32 0
+  ret double %4
+}
+
+define float @test_vfrcz_ss_0(float %a) {
+; CHECK-LABEL: @test_vfrcz_ss_0
+; CHECK-NEXT: %1 = insertelement <4 x float> undef, float %a, i32 0
+; CHECK-NEXT: %2 = insertelement <4 x float> %1, float 1.000000e+00, i32 1
+; CHECK-NEXT: %3 = insertelement <4 x float> %2, float 2.000000e+00, i32 2
+; CHECK-NEXT: %4 = insertelement <4 x float> %3, float 3.000000e+00, i32 3
+; CHECK-NEXT: %5 = tail call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> %4)
+; CHECK-NEXT: %6 = extractelement <4 x float> %5, i32 0
+; CHECK-NEXT: ret float %6
+  %1 = insertelement <4 x float> undef, float %a, i32 0
+  %2 = insertelement <4 x float> %1, float 1.000000e+00, i32 1
+  %3 = insertelement <4 x float> %2, float 2.000000e+00, i32 2
+  %4 = insertelement <4 x float> %3, float 3.000000e+00, i32 3
+  %5 = tail call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> %4)
+  %6 = extractelement <4 x float> %5, i32 0
+  ret float %6
+}
+
 define <2 x i64> @cmp_slt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @cmp_slt_v2i64
 ; CHECK-NEXT: %1 = icmp slt <2 x i64> %a, %b
@@ -135,6 +167,9 @@ define <16 x i8> @cmp_ufalse_v16i8(<16 x i8> %a, <16 x i8> %b) {
   %1 = tail call <16 x i8> @llvm.x86.xop.vpcomfalseub(<16 x i8> %a, <16 x i8> %b)
   ret <16 x i8> %1
 }
+
+declare <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double>) nounwind readnone
+declare <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float>) nounwind readnone
 
 declare <16 x i8> @llvm.x86.xop.vpcomltb(<16 x i8>, <16 x i8>) nounwind readnone
 declare <8 x i16> @llvm.x86.xop.vpcomltw(<8 x i16>, <8 x i16>) nounwind readnone

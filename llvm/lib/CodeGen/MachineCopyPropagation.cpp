@@ -90,8 +90,10 @@ static bool NoInterveningSideEffect(const MachineInstr *CopyMI,
   if (MI->getParent() != MBB)
     return false;
 
-  for (MachineBasicBlock::const_iterator I = std::next(CopyMI->getIterator()),
-       E = MBB->end(), E2 = MI->getIterator(); I != E && I != E2; ++I) {
+  for (MachineBasicBlock::const_instr_iterator
+           I = std::next(CopyMI->getInstrIterator()),
+           E = MBB->instr_end(), E2 = MI->getInstrIterator();
+       I != E && I != E2; ++I) {
     if (I->hasUnmodeledSideEffects() || I->isCall() ||
         I->isTerminator())
       return false;
@@ -163,8 +165,8 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
           // Clear any kills of Def between CopyMI and MI. This extends the
           // live range.
-          for (MachineInstr &MMI
-               : make_range(CopyMI->getIterator(), MI->getIterator()))
+          for (MachineInstr &MMI :
+               make_range(CopyMI->getInstrIterator(), MI->getInstrIterator()))
             MMI.clearRegisterKills(Def, TRI);
 
           MI->eraseFromParent();

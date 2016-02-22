@@ -973,17 +973,17 @@ void X86MCCodeEmitter::EmitVEXOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
              VEX_PP, CurByte, OS);
     if (EncodeRC)
       EmitByte((EVEX_z  << 7) |
-              (EVEX_rc << 5) |
-              (EVEX_b  << 4) |
-              (EVEX_V2 << 3) |
-              EVEX_aaa, CurByte, OS);
+               (EVEX_rc << 5) |
+               (EVEX_b  << 4) |
+               (EVEX_V2 << 3) |
+               EVEX_aaa, CurByte, OS);
     else
       EmitByte((EVEX_z  << 7) |
-              (EVEX_L2 << 6) |
-              (VEX_L   << 5) |
-              (EVEX_b  << 4) |
-              (EVEX_V2 << 3) |
-              EVEX_aaa, CurByte, OS);
+               (EVEX_L2 << 6) |
+               (VEX_L   << 5) |
+               (EVEX_b  << 4) |
+               (EVEX_V2 << 3) |
+               EVEX_aaa, CurByte, OS);
   }
 }
 

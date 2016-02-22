@@ -2286,7 +2286,7 @@ bool Reassociate::runOnFunction(Function &F) {
         EraseInst(&*II++);
       } else {
         OptimizeInst(&*II);
-        assert(II->getParent() == BI && "Moved to a different block!");
+        assert(II->getParent() == &*BI && "Moved to a different block!");
         ++II;
       }
 

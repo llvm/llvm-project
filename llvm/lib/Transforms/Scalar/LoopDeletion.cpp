@@ -122,6 +122,9 @@ bool LoopDeletion::runOnLoop(Loop *L, LPPassManager &) {
   if (skipOptnoneFunction(L))
     return false;
 
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  assert(L->isLCSSAForm(DT) && "Expected LCSSA!");
+
   // We can only remove the loop if there is a preheader that we can
   // branch from after removing it.
   BasicBlock *preheader = L->getLoopPreheader();
@@ -194,7 +197,6 @@ bool LoopDeletion::runOnLoop(Loop *L, LPPassManager &) {
 
   // Update the dominator tree and remove the instructions and blocks that will
   // be deleted from the reference counting scheme.
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   SmallVector<DomTreeNode*, 8> ChildNodes;
   for (Loop::block_iterator LI = L->block_begin(), LE = L->block_end();
        LI != LE; ++LI) {
