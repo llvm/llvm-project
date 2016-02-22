@@ -179,6 +179,33 @@ Several additional features/bugfixes have been added to the previous standards:
 
 - Improved diagnostics for function pointers.
 
+OpenMP Support in Clang
+---------------------
+
+OpenMP 3.1 is fully supported and is enabled by default with -fopenmp 
+which now uses the clang OpenMP library instead of the GCC OpenMP library.
+The runtime can be built in-tree.  
+
+In addition to OpenMP 3.1, several important elements of the OpenMP 4.0/4.5 
+are supported as well. We continue to aim to complete OpenMP 4.5
+
+- ``map`` clause
+- task dependencies
+- ``num_teams`` clause
+- ``thread_limit`` clause
+- ``target`` and ``target data`` directive
+- ``target`` directive with implicit data mapping
+- ``target enter data`` and ``target exit data`` directive
+- Array sections [2.4, Array Sections].
+- Directive name modifiers for ``if`` clause [2.12, if Clause].
+- ``linear`` clause can be used in loop-based directives [2.7.2, loop Construct].
+- ``simdlen`` clause [2.8, SIMD Construct].
+- ``hint`` clause [2.13.2, critical Construct].
+- Parsing/semantic analysis of all non-device directives introduced in OpenMP 4.5.
+
+The codegen for OpenMP constructs was significantly improved allowing us to produce much more stable and fast code.
+Full test cases of IR are also implemented.
+
 CUDA Support in Clang
 ---------------------
 Clang has experimental support for end-to-end CUDA compilation now:
