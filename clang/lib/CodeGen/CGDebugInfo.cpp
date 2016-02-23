@@ -2051,24 +2051,22 @@ llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
   // If this is just a forward declaration, construct an appropriately
   // marked node and just return it.
   if (isImportedFromModule || !ED->getDefinition()) {
+    // Note that it is possible for enums to be created as part of
+    // their own declcontext. In this case a FwdDecl will be created
+    // twice. This doesn't cause a problem because both FwdDecls are
+    // entered into the ReplaceMap: finalize() will replace the first
+    // FwdDecl with the second and then replace the second with
+    // complete type.
+    llvm::DIScope *EDContext = getDeclContextDescriptor(ED);
     llvm::DIFile *DefUnit = getOrCreateFile(ED->getLocation());
-
-    // It is possible for enums to be created as part of their own
-    // declcontext. We need to cache a placeholder to avoid the type being
-    // created twice before hitting the cache.
     llvm::TempDIScope TmpContext(DBuilder.createReplaceableCompositeType(
         llvm::dwarf::DW_TAG_enumeration_type, "", TheCU, DefUnit, 0));
 
     unsigned Line = getLineNumber(ED->getLocation());
     StringRef EDName = ED->getName();
     llvm::DIType *RetTy = DBuilder.createReplaceableCompositeType(
-        llvm::dwarf::DW_TAG_enumeration_type, EDName, TmpContext.get(), DefUnit,
-        Line, 0, Size, Align, llvm::DINode::FlagFwdDecl, FullName);
-
-    // Cache the enum type so it is available when building the declcontext
-    // and replace the declcontect with the real thing.
-    TypeCache[Ty].reset(RetTy);
-    TmpContext->replaceAllUsesWith(getDeclContextDescriptor(ED));
+        llvm::dwarf::DW_TAG_enumeration_type, EDName, EDContext, DefUnit, Line,
+        0, Size, Align, llvm::DINode::FlagFwdDecl, FullName);
 
     ReplaceMap.emplace_back(
         std::piecewise_construct, std::make_tuple(Ty),
