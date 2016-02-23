@@ -2252,6 +2252,29 @@ GetCurrentToolchainPath ()
     return std::string();
 }
 
+static std::string
+GetCurrentCLToolsPath ()
+{
+    const char substr[] = "/CommandLineTools/";
+
+    {
+        FileSpec fspec;
+
+        if (HostInfo::GetLLDBPath (ePathTypeLLDBShlibDir, fspec))
+        {
+            std::string path_to_shlib = fspec.GetPath();
+            size_t pos = path_to_shlib.rfind(substr);
+            if (pos != std::string::npos)
+            {
+                path_to_shlib.erase(pos + strlen(substr));
+                return path_to_shlib;
+            }
+        }
+    }
+
+    return std::string();
+}
+
 namespace {
 
 enum class SDKType {
@@ -2617,6 +2640,23 @@ GetResourceDir ()
                 if (FileSpec(xcode_contents_path, false).IsDirectory())
                 {
                     g_cached_resource_dir = ConstString(xcode_contents_path);
+                    return;
+                }
+            }
+        }
+
+        // We're not in Xcode.  We must be in the command-line tools.
+
+        {
+            std::string cl_tools_path = GetCurrentCLToolsPath();
+
+            if (!cl_tools_path.empty())
+            {
+                cl_tools_path.append("usr/lib/swift");
+
+                if (FileSpec(cl_tools_path, false).IsDirectory())
+                {
+                    g_cached_resource_dir = ConstString(cl_tools_path);
                     return;
                 }
             }
