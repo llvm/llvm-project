@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -13,6 +13,7 @@
 Test the Any type
 """
 import lldb
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -23,7 +24,7 @@ class TestSwiftAnyType(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @lldbtest.swiftTest
+    @decorators.swiftTest
     def test_any_type(self):
         """Test the Any type"""
         self.build()

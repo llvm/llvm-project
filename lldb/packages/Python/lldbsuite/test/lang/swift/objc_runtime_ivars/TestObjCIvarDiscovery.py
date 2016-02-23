@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -14,6 +14,7 @@ Test that we can correctly see ivars from the Objective-C runtime
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -35,8 +36,8 @@ class TestObjCIVarDiscovery(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
-    @unittest2.expectedFailure("rdar://19135721")
+    @decorators.skipUnlessDarwin
+    @decorators.expectedFailureAll(bugnumber="rdar://19135721")
     def test_nodbg(self):
         if self.getArchitecture() == 'x86_64':
             execute_command("make exec_nodbg")
@@ -45,8 +46,8 @@ class TestObjCIVarDiscovery(TestBase):
             self.skipTest("This test requires x86_64 as the architecture "
                           "for the inferior")
 
-    @skipUnlessDarwin
-    @unittest2.expectedFailure("Cannot find complete type from dSYM")
+    @decorators.skipUnlessDarwin
+    @decorators.expectedFailureAll(bugnumber="Cannot find complete type from dSYM")
     def test_dbg(self):
         if self.getArchitecture() == 'x86_64':
             execute_command("make exec")

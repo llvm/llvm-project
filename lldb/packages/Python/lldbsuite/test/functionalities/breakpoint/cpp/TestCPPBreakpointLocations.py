@@ -8,14 +8,15 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class TestCPPBreakpointLocations(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows("llvm.org/pr24764")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test (self):
         self.build ()
         self.breakpoint_id_tests ()

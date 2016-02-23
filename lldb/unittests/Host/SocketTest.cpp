@@ -116,7 +116,11 @@ TEST_F (SocketTest, DecodeHostAndPort)
     EXPECT_FALSE (Socket::DecodeHostAndPort ("google.com:-1138", host_str, port_str, port, &error));
     EXPECT_TRUE (error.Fail ());
     EXPECT_STREQ ("invalid host:port specification: 'google.com:-1138'", error.AsCString ());
-    
+
+    EXPECT_FALSE(Socket::DecodeHostAndPort("google.com:65536", host_str, port_str, port, &error));
+    EXPECT_TRUE(error.Fail());
+    EXPECT_STREQ("invalid host:port specification: 'google.com:65536'", error.AsCString());
+
     EXPECT_TRUE (Socket::DecodeHostAndPort ("12345", host_str, port_str, port, &error));
     EXPECT_STREQ ("", host_str.c_str ());
     EXPECT_STREQ ("12345", port_str.c_str ());
@@ -128,6 +132,12 @@ TEST_F (SocketTest, DecodeHostAndPort)
     EXPECT_STREQ ("0", port_str.c_str ());
     EXPECT_EQ (0, port);
     EXPECT_TRUE (error.Success ());
+
+    EXPECT_TRUE(Socket::DecodeHostAndPort("*:65535", host_str, port_str, port, &error));
+    EXPECT_STREQ("*", host_str.c_str());
+    EXPECT_STREQ("65535", port_str.c_str());
+    EXPECT_EQ(65535, port);
+    EXPECT_TRUE(error.Success());
 }
 
 #ifndef LLDB_DISABLE_POSIX

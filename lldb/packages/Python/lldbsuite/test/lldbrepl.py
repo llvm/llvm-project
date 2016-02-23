@@ -18,7 +18,8 @@ import sys
 import pexpect
 import swift
 import re
-from lldbtest import no_debug_info_test
+from lldbsuite.test.decorators import no_debug_info_test
+from lldbsuite.test.decorators import swiftTest
 
 class REPLTest(PExpectTest):
     

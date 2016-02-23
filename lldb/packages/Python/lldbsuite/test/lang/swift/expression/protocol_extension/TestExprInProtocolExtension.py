@@ -14,6 +14,7 @@ Tests scoped variables with swift expressions
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -23,7 +24,7 @@ class TestSwiftExprInProtocolExtension(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @swiftTest
+    @decorators.swiftTest
     def test_protocol_extension(self):
         """Tests that swift expressions in protocol extension functions behave correctly"""
         self.build()

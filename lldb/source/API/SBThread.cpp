@@ -796,6 +796,13 @@ SBThread::StepInto (lldb::RunMode stop_other_threads)
 void
 SBThread::StepInto (const char *target_name, lldb::RunMode stop_other_threads)
 {
+    SBError error;
+    StepInto(target_name, LLDB_INVALID_LINE_NUMBER, error, stop_other_threads);
+}
+
+void
+SBThread::StepInto (const char *target_name, uint32_t end_line, SBError &error, lldb::RunMode stop_other_threads)
+{
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
 
     Mutex::Locker api_locker;
@@ -817,11 +824,20 @@ SBThread::StepInto (const char *target_name, lldb::RunMode stop_other_threads)
 
         if (frame_sp && frame_sp->HasDebugInformation ())
         {
+            SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
+            AddressRange range;
+            if (end_line == LLDB_INVALID_LINE_NUMBER)
+                range = sc.line_entry.range;
+            else
+            {
+                if (!sc.GetAddressRangeFromHereToEndLine(end_line, range, error.ref()))
+                    return;
+            }
+            
             const LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate;
             const LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate;
-            SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
             new_plan_sp = thread->QueueThreadPlanForStepInRange (abort_other_plans,
-                                                              sc.line_entry,
+                                                              range,
                                                               sc,
                                                               target_name,
                                                               stop_other_threads,
@@ -835,8 +851,7 @@ SBThread::StepInto (const char *target_name, lldb::RunMode stop_other_threads)
                                                                            stop_other_threads);
         }
 
-        // This returns an error, we should use it!
-        ResumeNewPlan (exe_ctx, new_plan_sp.get());
+        error = ResumeNewPlan (exe_ctx, new_plan_sp.get());
     }
 }
 

@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -14,6 +14,7 @@ Test that we correctly find private decls
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -30,8 +31,8 @@ class TestSwiftPrivateDeclName(TestBase):
         self.b_source = "b.swift"
         self.b_source_spec = lldb.SBFileSpec(self.b_source)
 
-    @swiftTest
-    @unittest2.expectedFailure("rdar://23236790")
+    @decorators.swiftTest
+    @decorators.expectedFailureAll(bugnumber="rdar://23236790")
     def test_swift_private_decl_name(self):
         """Test that we correctly find private decls"""
         self.build()

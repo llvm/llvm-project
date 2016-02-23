@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -14,6 +14,7 @@ Test expressions in the context of class functions
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -23,8 +24,9 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @swiftTest
-    @skipIfLinux  # bugs.swift.org/SR-798
+    @decorators.swiftTest
+    @decorators.swiftTest
+    @decorators.skipIfLinux  # bugs.swift.org/SR-798
     def test_expressions_in_class_functions(self):
         """Test expressions in class func contexts"""
         self.build()

@@ -12,7 +12,7 @@ import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
-class UnsignedTypesTestCase(TestBase):
+class SignedTypesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -48,7 +48,7 @@ class UnsignedTypesTestCase(TestBase):
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
             substrs = [' resolved, hit count = 1'])
 
-        # Execute the assignment statement.
+        # Execute the puts().
         self.runCmd("thread step-over")
 
         # Test that signed types display correctly.

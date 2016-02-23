@@ -1000,7 +1000,8 @@ SBProcess::GetRestartedFromEvent (const SBEvent &event)
     bool ret_val = Process::ProcessEventData::GetRestartedFromEvent (event.get());
 
     if (log)
-        log->Printf ("SBProcess::%s (event.sp=%p) => %d", __FUNCTION__, event.get(), ret_val);
+        log->Printf ("SBProcess::%s (event.sp=%p) => %d", __FUNCTION__,
+                     static_cast<void*>(event.get()), ret_val);
 
     return ret_val;
 }

@@ -6,15 +6,16 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class TypedefTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(bugnumber="llvm.org/pr19238", compiler="clang")
-    @expectedFailureAll(bugnumber="llvm.org/pr25626 expectedFailureClang fails on FreeBSD", oslist=["freebsd"])
+    @expectedFailureAll(compiler="clang", bugnumber="llvm.org/pr19238")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr25626 expectedFailureClang fails on FreeBSD")
     def test_typedef(self):
         """Test 'image lookup -t a' and check for correct display at different scopes."""
         self.build()

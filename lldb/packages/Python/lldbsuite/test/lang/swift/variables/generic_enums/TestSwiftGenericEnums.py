@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -14,6 +14,7 @@ Test that we handle reasonably generically-typed enums
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -23,8 +24,8 @@ class TestSwiftGenericEnumTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @swiftTest
-    @unittest2.expectedFailure("Pending investigation")
+    @decorators.swiftTest
+    @decorators.expectedFailureAll(bugnumber="Pending investigation")
     def test_swift_generic_enum_types(self):
         """Test that we handle reasonably generically-typed enums"""
         self.build()

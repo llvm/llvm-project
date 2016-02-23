@@ -8,16 +8,17 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class InitializerListTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows # libc++ not ported to Windows yet
-    @skipIfGcc
-    @expectedFailureLinux # fails on clang 3.5 and tot
+    @skipIf(compiler="gcc")
+    @expectedFailureAll(oslist=["linux"], bugnumber="fails on clang 3.5 and tot")
     def test(self):
         """Test that that file and class static variables display correctly."""
         self.build()

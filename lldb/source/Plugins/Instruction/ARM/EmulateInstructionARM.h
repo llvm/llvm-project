@@ -166,8 +166,8 @@ public:
     bool
     EvaluateInstruction (uint32_t evaluate_options) override;
 
-    bool
-    IsInstructionConditional() override;
+    InstructionCondition
+    GetInstructionCondition() override;
 
     bool
     TestEmulation (Stream *out_stream, ArchSpec &arch, OptionValueDictionary *test_data)  override;

@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class Radar9673644TestCase(TestBase):
 
@@ -22,7 +23,7 @@ class Radar9673644TestCase(TestBase):
         self.main_source = "main.c"
         self.line = line_number(self.main_source, '// Set breakpoint here.')
 
-    @expectedFailureWindows("llvm.org/pr21765")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_expr_commands(self):
         """The following expression commands should just work."""
         self.build()

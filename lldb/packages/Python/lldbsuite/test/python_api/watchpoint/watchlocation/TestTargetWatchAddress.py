@@ -9,8 +9,9 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class TargetWatchAddressAPITestCase(TestBase):
 
@@ -28,7 +29,7 @@ class TargetWatchAddressAPITestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureWindows("llvm.org/pr24446")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test_watch_address(self):
         """Exercise SBTarget.WatchAddress() API to set a watchpoint."""
         self.build()

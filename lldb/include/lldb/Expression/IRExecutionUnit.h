@@ -28,6 +28,7 @@
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Host/Mutex.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolContext.h"
 
 namespace llvm {
     
@@ -71,6 +72,7 @@ public:
                      std::unique_ptr<llvm::Module> &module_ap,
                      ConstString &name,
                      const lldb::TargetSP &target_sp,
+                     const SymbolContext &sym_ctx,
                      std::vector<std::string> &cpu_features);
     
     //------------------------------------------------------------------
@@ -220,6 +222,9 @@ public:
     static Mutex &
     GetLLVMGlobalContextMutex ();
     
+    lldb::addr_t
+    FindSymbol(const ConstString &name);
+
 private:
     //------------------------------------------------------------------
     /// Look up the object in m_address_map that contains a given address,
@@ -288,7 +293,30 @@ private:
     Error
     DisassembleFunction (Stream &stream,
                          lldb::ProcessSP &process_sp);
+
+    struct SearchSpec;
     
+    void
+    CollectCandidateCNames(std::vector<SearchSpec> &C_specs,
+                           const ConstString &name);
+    
+    void
+    CollectCandidateCPlusPlusNames(std::vector<SearchSpec> &CPP_specs,
+                                   const std::vector<SearchSpec> &C_specs,
+                                   const SymbolContext &sc);
+    
+    lldb::addr_t
+    FindInSymbols(const std::vector<SearchSpec> &specs,
+                  const lldb_private::SymbolContext &sc);
+    
+    lldb::addr_t
+    FindInRuntimes(const std::vector<SearchSpec> &specs,
+                   const lldb_private::SymbolContext &sc);
+    
+    lldb::addr_t
+    FindInUserDefinedSymbols(const std::vector<SearchSpec> &specs,
+                             const lldb_private::SymbolContext &sc);
+
     void
     ReportSymbolLookupError(const ConstString &name);
 
@@ -373,9 +401,6 @@ private:
             return;
         }
         
-        //------------------------------------------------------------------
-        /// Passthrough interface stub
-        //------------------------------------------------------------------
         uint64_t getSymbolAddress(const std::string &Name) override;
 
         void *getPointerToNamedFunction(const std::string &Name,
@@ -448,12 +473,15 @@ private:
     std::vector<JittedFunction>             m_jitted_functions;     ///< A vector of all functions that have been JITted into machine code
     std::vector<JittedGlobalVariable>       m_jitted_global_variables; ///< A vector of all functions that have been JITted into machine code
     const ConstString                       m_name;
+    SymbolContext                           m_sym_ctx;              ///< Used for symbol lookups
     std::vector<ConstString>                m_failed_lookups;
     
     std::atomic<bool>                       m_did_jit;
 
     lldb::addr_t                            m_function_load_addr;
     lldb::addr_t                            m_function_end_load_addr;
+    
+    bool                                    m_strip_underscore;     ///< True for platforms where global symbols have a _ prefix
 };
 
 } // namespace lldb_private

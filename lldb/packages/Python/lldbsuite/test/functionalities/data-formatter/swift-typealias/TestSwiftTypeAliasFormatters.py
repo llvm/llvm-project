@@ -2,7 +2,7 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2015 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -14,6 +14,7 @@ Test that Swift typealiases get formatted properly
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
@@ -26,7 +27,7 @@ class TestSwiftTypeAliasFormatters(TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec (self.main_source)
 
-    @swiftTest
+    @decorators.swiftTest
     def test_swift_type_alias_formatters(self):
         """Test that Swift typealiases get formatted properly"""
         self.build()

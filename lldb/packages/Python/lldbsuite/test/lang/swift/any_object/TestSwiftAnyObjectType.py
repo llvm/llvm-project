@@ -14,6 +14,7 @@ Test the AnyObject type
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -23,7 +24,7 @@ class TestSwiftAnyObjectType(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @swiftTest
+    @decorators.swiftTest
     def test_any_object_type(self):
         """Test the Any type"""
         self.build()

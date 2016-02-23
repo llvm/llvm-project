@@ -6,8 +6,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class TestObjCIvarsInBlocks(TestBase):
 
@@ -23,7 +24,7 @@ class TestObjCIvarsInBlocks(TestBase):
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
-    @expectedFailurei386 # This test requires the 2.0 runtime, so it will fail on i386.
+    @expectedFailureAll(archs=["i[3-6]86"], bugnumber="This test requires the 2.0 runtime, so it will fail on i386")
     def test_with_python_api(self):
         """Test printing the ivars of the self when captured in blocks"""
         self.build()

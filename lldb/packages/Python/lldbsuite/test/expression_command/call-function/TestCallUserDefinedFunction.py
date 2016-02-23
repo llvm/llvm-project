@@ -12,8 +12,9 @@ from __future__ import print_function
 
 
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class ExprCommandCallUserDefinedFunction(TestBase):
 
@@ -26,7 +27,7 @@ class ExprCommandCallUserDefinedFunction(TestBase):
         self.line = line_number('main.cpp',
                                 '// Please test these expressions while stopped at this line:')
     @expectedFlakeyDsym("llvm.org/pr20274")
-    @expectedFailureWindows("llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test(self):
         """Test return values of user defined function calls."""
         self.build()

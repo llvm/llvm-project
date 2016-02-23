@@ -8,7 +8,9 @@ from __future__ import print_function
 
 
 import lldbmi_testcase
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
 
@@ -108,7 +110,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^error,msg=\"The request ''print' expects option-name and \"on\" or \"off\"' failed.\"")
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi working on Windows
-    @expectedFailureGcc("https://llvm.org/bugs/show_bug.cgi?id=23357")
+    @expectedFailureAll(compiler="gcc", bugnumber="llvm.org/pr23357")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_gdb_set_show_print_expand_aggregates(self):
         """Test that 'lldb-mi --interpreter' can expand aggregates everywhere."""
@@ -167,7 +169,7 @@ class MiGdbSetShowTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^error,msg=\"The request ''print' expects option-name and \"on\" or \"off\"' failed.\"")
 
     @skipIfWindows #llvm.org/pr24452: Get lldb-mi working on Windows
-    @expectedFailureGcc("https://llvm.org/bugs/show_bug.cgi?id=23357")
+    @expectedFailureAll(compiler="gcc", bugnumber="llvm.org/pr23357")
     @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_gdb_set_show_print_aggregate_field_names(self):
         """Test that 'lldb-mi --interpreter' can expand aggregates everywhere."""

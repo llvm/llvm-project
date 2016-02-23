@@ -4,10 +4,14 @@ from __future__ import print_function
 
 
 
-import os, sys, time
-import lldb
+import os
+import sys
 import time
+
+import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class HelloWorldTestCase(TestBase):
 
@@ -64,18 +68,14 @@ class HelloWorldTestCase(TestBase):
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        thread = process.GetThreadAtIndex(0)
-        if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
-            from lldbsuite.test.lldbutil import stop_reason_to_str
-            self.fail(STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS %
-                      stop_reason_to_str(thread.GetStopReason()))
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         # The breakpoint should have a hit count of 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1, BREAKPOINT_HIT_ONCE)
+        self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24600")
-    @expectedFailurei386("llvm.org/pr25338")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24600")
     @skipIfiOSSimulator
     def test_with_attach_to_process_with_id_api(self):
         """Create target, spawn a process, and attach to it with process id."""
@@ -104,8 +104,7 @@ class HelloWorldTestCase(TestBase):
                        '(int)argc=3'])
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows("llvm.org/pr24600")
-    @expectedFailurei386("llvm.org/pr25338")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24600")
     @skipIfiOSSimulator
     def test_with_attach_to_process_with_name_api(self):
         """Create target, spawn a process, and attach to it with process name."""

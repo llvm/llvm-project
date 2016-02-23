@@ -6,15 +6,16 @@ from __future__ import print_function
 
 import os, time
 import lldb
-from lldbsuite.test import configuration
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import configuration
+from lldbsuite.test import lldbutil
 
 class ChangedInferiorTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfHostWindows
+    @skipIf(hostoslist=["windows"])
     def test_inferior_crashing(self):
         """Test lldb reloads the inferior after it was changed during the session."""
         self.build()

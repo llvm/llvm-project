@@ -4,11 +4,12 @@ from __future__ import print_function
 
 
 
+from math import fabs
 import os
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from math import fabs
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class SBDataAPICase(TestBase):
 
@@ -38,8 +39,9 @@ class SBDataAPICase(TestBase):
         target = self.dbg.GetSelectedTarget()
         
         process = target.GetProcess()
-        
-        thread = process.GetThreadAtIndex(0)
+
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread)
 
         frame = thread.GetSelectedFrame()
         if self.TraceOn():

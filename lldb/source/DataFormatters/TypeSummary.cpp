@@ -256,14 +256,27 @@ std::string
 ScriptSummaryFormat::GetDescription ()
 {
     StreamString sstr;
-    sstr.Printf ("%s%s%s%s%s%s%s\n%s",       Cascades() ? "" : " (not cascading)",
+    sstr.Printf ("%s%s%s%s%s%s%s\n  ",       Cascades() ? "" : " (not cascading)",
                  !DoesPrintChildren(nullptr) ? "" : " (show children)",
                  !DoesPrintValue(nullptr) ? " (hide value)" : "",
                  IsOneLiner() ? " (one-line printout)" : "",
                  SkipsPointers() ? " (skip pointers)" : "",
                  SkipsReferences() ? " (skip references)" : "",
-                 HideNames(nullptr) ? " (hide member names)" : "",
-                 m_python_script.c_str());
+                 HideNames(nullptr) ? " (hide member names)" : "");
+    if (m_python_script.empty())
+    {
+        if (m_function_name.empty())
+        {
+            sstr.PutCString("no backing script");
+        }
+        else
+        {
+            sstr.PutCString(m_function_name.c_str());
+        }
+    }
+    else
+    {
+        sstr.PutCString(m_python_script.c_str());
+    }
     return sstr.GetString();
-    
 }

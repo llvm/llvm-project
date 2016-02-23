@@ -3076,6 +3076,16 @@ class SBDebugger(_object):
                 print('Unexpected process state: %s, killing process...' % debugger.StateAsCString (state))
                 process.Kill()
 
+    Sometimes you need to create an empty target that will get filled in later.  The most common use for this
+    is to attach to a process by name or pid where you don't know the executable up front.  The most convenient way
+    to do this is:
+
+    target = debugger.CreateTarget('')
+    error = lldb.SBError()
+    process = target.AttachToProcessWithName(debugger.GetListener(), 'PROCESS_NAME', False, error)
+
+    or the equivalent arguments for AttachToProcessWithID.
+
     """
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, SBDebugger, name, value)
@@ -4242,6 +4252,10 @@ class SBFileSpec(_object):
         """GetDescription(self, SBStream description) -> bool"""
         return _lldb.SBFileSpec_GetDescription(self, *args)
 
+    def AppendPathComponent(self, *args):
+        """AppendPathComponent(self, str file_or_directory)"""
+        return _lldb.SBFileSpec_AppendPathComponent(self, *args)
+
     def __get_fullpath__(self):
         spec_dir = self.GetDirectory()
         spec_file = self.GetFilename()
@@ -4937,6 +4951,12 @@ class SBHostOS(_object):
 
     if _newclass:GetLLDBPath = staticmethod(GetLLDBPath)
     __swig_getmethods__["GetLLDBPath"] = lambda x: GetLLDBPath
+    def GetUserHomeDirectory():
+        """GetUserHomeDirectory() -> SBFileSpec"""
+        return _lldb.SBHostOS_GetUserHomeDirectory()
+
+    if _newclass:GetUserHomeDirectory = staticmethod(GetUserHomeDirectory)
+    __swig_getmethods__["GetUserHomeDirectory"] = lambda x: GetUserHomeDirectory
     def ThreadCreated(*args):
         """ThreadCreated(str name)"""
         return _lldb.SBHostOS_ThreadCreated(*args)
@@ -4988,6 +5008,10 @@ def SBHostOS_GetLLDBPythonPath():
 def SBHostOS_GetLLDBPath(*args):
   """SBHostOS_GetLLDBPath(PathType path_type) -> SBFileSpec"""
   return _lldb.SBHostOS_GetLLDBPath(*args)
+
+def SBHostOS_GetUserHomeDirectory():
+  """SBHostOS_GetUserHomeDirectory() -> SBFileSpec"""
+  return _lldb.SBHostOS_GetUserHomeDirectory()
 
 def SBHostOS_ThreadCreated(*args):
   """SBHostOS_ThreadCreated(str name)"""
@@ -5062,6 +5086,10 @@ class SBInstruction(_object):
     def DoesBranch(self):
         """DoesBranch(self) -> bool"""
         return _lldb.SBInstruction_DoesBranch(self)
+
+    def HasDelaySlot(self):
+        """HasDelaySlot(self) -> bool"""
+        return _lldb.SBInstruction_HasDelaySlot(self)
 
     def Print(self, *args):
         """Print(self, FILE out)"""
@@ -9327,6 +9355,15 @@ class SBThread(_object):
         StepInto(self)
         StepInto(self, str target_name, RunMode stop_other_threads = eOnlyDuringStepping)
         StepInto(self, str target_name)
+
+            Step  the current thread from the current source line to the line given by end_line, stopping if
+            the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
+            in any of the places we would normally stop.
+            
+
+            Step  the current thread from the current source line to the line given by end_line, stopping if
+            the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
+            in any of the places we would normally stop.
         """
         return _lldb.SBThread_StepInto(self, *args)
 
@@ -12535,11 +12572,13 @@ class value(object):
         return complex (int(self))
         
     def __int__(self):
+        is_num,is_sign = is_numeric_type(self.sbvalue.GetType().GetCanonicalType().GetBasicType())
+        if is_num and not is_sign: return self.sbvalue.GetValueAsUnsigned()
         return self.sbvalue.GetValueAsSigned()
-        
+
     def __long__(self):
-        return self.sbvalue.GetValueAsSigned()
-        
+        return self.__int__()
+
     def __float__(self):
         return float (self.sbvalue.GetValueAsSigned())
         
@@ -12591,6 +12630,46 @@ class SBSyntheticValueProvider(object):
     def has_children(self):
         return False
 
+
+
+# given an lldb.SBBasicType it returns a tuple
+# (is_numeric, is_signed)
+# the value of is_signed is undefined if is_numeric == false
+def is_numeric_type(basic_type):
+    if basic_type == eBasicTypeInvalid: return (False,False)
+    if basic_type == eBasicTypeVoid: return (False,False)
+    if basic_type == eBasicTypeChar: return (True,False)
+    if basic_type == eBasicTypeSignedChar: return (True,True)
+    if basic_type == eBasicTypeUnsignedChar: return (True,False)
+    if basic_type == eBasicTypeWChar: return (True,False)
+    if basic_type == eBasicTypeSignedWChar: return (True,True)
+    if basic_type == eBasicTypeUnsignedWChar: return (True,False)
+    if basic_type == eBasicTypeChar16: return (True,False)
+    if basic_type == eBasicTypeChar32: return (True,False)
+    if basic_type == eBasicTypeShort: return (True,True)
+    if basic_type == eBasicTypeUnsignedShort: return (True,False)
+    if basic_type == eBasicTypeInt: return (True,True)
+    if basic_type == eBasicTypeUnsignedInt: return (True,False)
+    if basic_type == eBasicTypeLong: return (True,True)
+    if basic_type == eBasicTypeUnsignedLong: return (True,False)
+    if basic_type == eBasicTypeLongLong: return (True,True)
+    if basic_type == eBasicTypeUnsignedLongLong: return (True,False)
+    if basic_type == eBasicTypeInt128: return (True,True)
+    if basic_type == eBasicTypeUnsignedInt128: return (True,False)
+    if basic_type == eBasicTypeBool: return (False,False)
+    if basic_type == eBasicTypeHalf: return (True,True)
+    if basic_type == eBasicTypeFloat: return (True,True)
+    if basic_type == eBasicTypeDouble: return (True,True)
+    if basic_type == eBasicTypeLongDouble: return (True,True)
+    if basic_type == eBasicTypeFloatComplex: return (True,True)
+    if basic_type == eBasicTypeDoubleComplex: return (True,True)
+    if basic_type == eBasicTypeLongDoubleComplex: return (True,True)
+    if basic_type == eBasicTypeObjCID: return (False,False)
+    if basic_type == eBasicTypeObjCClass: return (False,False)
+    if basic_type == eBasicTypeObjCSel: return (False,False)
+    if basic_type == eBasicTypeNullPtr: return (False,False)
+    #if basic_type == eBasicTypeOther:
+    return (False,False)
 
 
 

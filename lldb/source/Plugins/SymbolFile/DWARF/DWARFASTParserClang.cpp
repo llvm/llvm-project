@@ -346,6 +346,7 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                                 break;
                             }
                             // Fall through to base type below in case we can handle the type there...
+                            LLVM_FALLTHROUGH;
 
                         case DW_TAG_base_type:
                             resolve_state = Type::eResolveStateFull;
@@ -2992,7 +2993,7 @@ DWARFASTParserClang::ParseChildMembers (const SymbolContext& sc,
 
                                         if (member_byte_offset >= parent_byte_size)
                                         {
-                                            if (member_array_size != 1)
+                                            if (member_array_size != 1 && (member_array_size != 0 || member_byte_offset > parent_byte_size))
                                             {
                                                 module_sp->ReportError ("0x%8.8" PRIx64 ": DW_TAG_member '%s' refers to type 0x%8.8" PRIx64 " which extends beyond the bounds of 0x%8.8" PRIx64,
                                                                         die.GetID(),

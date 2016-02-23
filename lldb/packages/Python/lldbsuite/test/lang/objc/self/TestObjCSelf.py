@@ -2,8 +2,9 @@
 Tests that ObjC member variables are available where they should be.
 """
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class ObjCSelfTestCase(TestBase):
     

@@ -6,9 +6,11 @@ from __future__ import print_function
 
 import os
 import lldb
-from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
 import re
+from lldbsuite.test.lldbplatformutil import getDarwinOSTriples
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 
 @skipIfWindows # signals do not exist on Windows
@@ -148,8 +150,7 @@ class RaiseTestCase(TestBase):
         # reset signal handling to default
         self.set_handle(signal, default_pass, default_stop, default_notify)
 
-    @expectedFailureLinux("llvm.org/pr24530") # the signal the inferior generates gets lost
-    @expectedFailureDarwin("llvm.org/pr24530") # the signal the inferior generates gets lost
+    @expectedFailureAll(oslist=["linux"]+getDarwinOSTriples(), bugnumber="llvm.org/pr20231")
     def test_restart_bug(self):
         """Test that we catch a signal in the edge case where the process receives it while we are
         about to interrupt it"""

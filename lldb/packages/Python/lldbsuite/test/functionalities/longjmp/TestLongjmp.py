@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import os
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class LongjmpTestCase(TestBase):
 
@@ -20,8 +21,8 @@ class LongjmpTestCase(TestBase):
 
     @skipIfDarwin # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
     @skipIfFreeBSD # llvm.org/pr17214
-    @expectedFailureLinux("llvm.org/pr20231")
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr20231")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_step_out(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-out."""
         self.build()
@@ -29,8 +30,8 @@ class LongjmpTestCase(TestBase):
 
     @skipIfDarwin # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
     @skipIfFreeBSD # llvm.org/pr17214
-    @expectedFailureLinux("llvm.org/pr20231")
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr20231")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_step_over(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-over a longjmp."""
         self.build()
@@ -38,8 +39,8 @@ class LongjmpTestCase(TestBase):
 
     @skipIfDarwin # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
     @skipIfFreeBSD # llvm.org/pr17214
-    @expectedFailureLinux("llvm.org/pr20231")
-    @expectedFailureWindows("llvm.org/pr24778")
+    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr20231")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_step_back_out(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-out after thread step-in."""
         self.build()

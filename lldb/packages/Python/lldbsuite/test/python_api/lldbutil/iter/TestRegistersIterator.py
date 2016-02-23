@@ -9,7 +9,9 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 class RegistersIteratorTestCase(TestBase):
 
@@ -22,7 +24,7 @@ class RegistersIteratorTestCase(TestBase):
         self.line1 = line_number('main.cpp', '// Set break point at this line.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureWindows # Test crashes
+    @expectedFailureAll(oslist=["windows"])
     def test_iter_registers(self):
         """Test iterator works correctly for lldbutil.iter_registers()."""
         self.build()

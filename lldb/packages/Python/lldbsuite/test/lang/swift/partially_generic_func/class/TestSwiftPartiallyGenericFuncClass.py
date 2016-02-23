@@ -10,6 +10,6 @@
 #
 # ------------------------------------------------------------------------------
 import lldbsuite.test.lldbinline as lldbinline
-import lldbsuite.test.lldbtest as lldbtest
+import lldbsuite.test.decorators as decorators
 
-lldbinline.MakeInlineTest(__file__, globals(), decorators=lldbtest.skipIfLinux)  # bugs.swift.org/SR-799
+lldbinline.MakeInlineTest(__file__, globals(), decorators=decorators.skipIfLinux)  # bugs.swift.org/SR-799

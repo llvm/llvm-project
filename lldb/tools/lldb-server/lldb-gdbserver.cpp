@@ -531,7 +531,7 @@ main_gdbserver (int argc, char *argv[])
         exit(option_error);
     }
 
-    if (!LLDBServerUtilities::SetupLogging(log_file, log_channels, 0))
+    if (!LLDBServerUtilities::SetupLogging(log_file, log_channels, LLDB_LOG_OPTION_PREPEND_TIMESTAMP))
         return -1;
 
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (GDBR_LOG_VERBOSE));

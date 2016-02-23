@@ -14,6 +14,7 @@ Tests that the expression parser can auto-import and hand-import sub-modules
 """
 import lldb
 from lldbsuite.test.lldbtest import *
+import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
@@ -21,8 +22,8 @@ class TestSwiftSubmoduleImport(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
     
-    @skipUnlessDarwin
-    @swiftTest
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
     def test_swift_submodule_import(self):
         """Tests that swift expressions can import sub-modules correctly"""
         self.build()

@@ -8,15 +8,16 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class DeadStripTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureWindows("llvm.org/pr24778")
-    @expectedFailureDwo("llvm.org/pr25087")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureAll(debug_info="dwo", bugnumber="llvm.org/pr25087")
     @skipIfFreeBSD # The -dead_strip linker option isn't supported on FreeBSD versions of ld.
     def test(self):
         """Test breakpoint works correctly with dead-code stripping."""

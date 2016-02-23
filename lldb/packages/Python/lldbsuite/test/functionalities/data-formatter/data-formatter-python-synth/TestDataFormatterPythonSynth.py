@@ -8,8 +8,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class PythonSynthDataFormatterTestCase(TestBase):
 
@@ -68,6 +69,7 @@ class PythonSynthDataFormatterTestCase(TestBase):
         # now set up the synth
         self.runCmd("script from fooSynthProvider import *")
         self.runCmd("type synth add -l fooSynthProvider foo")
+        self.expect("type synthetic list foo", substrs=['fooSynthProvider'])
 
         # check that we get the two real vars and the fake_a variables
         self.expect("frame variable f00_1",

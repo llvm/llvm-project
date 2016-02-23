@@ -10,7 +10,7 @@
 #
 # ------------------------------------------------------------------------------
 import lldbsuite.test.lldbinline as lldbinline
-import unittest2
+import lldbsuite.test.decorators as decorators
 
-lldbinline.MakeInlineTest(__file__, globals(), decorators=unittest2.expectedFailure)
+lldbinline.MakeInlineTest(__file__, globals(), decorators=decorators.expectedFailureAll())
 

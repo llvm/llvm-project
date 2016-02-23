@@ -6,10 +6,11 @@ from __future__ import print_function
 
 
 import os
-import lldb
-from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
 import shutil
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
 
 
 _EXE_NAME = 'CompDirSymLink'  # Must match Makefile
@@ -27,21 +28,21 @@ class CompDirSymLinkTestCase(TestBase):
         self.line = line_number(_SRC_FILE, '// Set break point at this line.')
         self.src_path = os.path.join(os.getcwd(), _SRC_FILE)
 
-    @skipIfHostWindows
+    @skipIf(hostoslist=["windows"])
     def test_symlink_paths_set(self):
         pwd_symlink = self.create_src_symlink()
         self.doBuild(pwd_symlink)
         self.runCmd("settings set %s %s" % (_COMP_DIR_SYM_LINK_PROP, pwd_symlink))
         lldbutil.run_break_set_by_file_and_line(self, self.src_path, self.line)
 
-    @skipUnlessHostLinux
+    @skipIf(hostoslist=no_match(["linux"]))
     def test_symlink_paths_set_procselfcwd(self):
         pwd_symlink = '/proc/self/cwd'
         self.doBuild(pwd_symlink)
         self.runCmd("settings set %s %s" % (_COMP_DIR_SYM_LINK_PROP, pwd_symlink))
         lldbutil.run_break_set_by_file_and_line(self, self.src_path, self.line)
 
-    @skipIfHostWindows
+    @skipIf(hostoslist=["windows"])
     def test_symlink_paths_unset(self):
         pwd_symlink = self.create_src_symlink()
         self.doBuild(pwd_symlink)

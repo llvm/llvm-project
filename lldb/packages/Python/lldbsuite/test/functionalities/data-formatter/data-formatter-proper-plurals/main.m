@@ -22,16 +22,11 @@ int main (int argc, const char * argv[])
     CFMutableBagRef mutable_bag_ref = CFBagCreateMutable(NULL, 15, NULL);
     CFBagSetValue(mutable_bag_ref, CFSTR("Hello world"));
 
-    NSCountedSet *nscounted_set = [[NSCountedSet alloc] initWithCapacity:5];
-    [nscounted_set addObject:@"foo"];
-
     NSMutableIndexSet *imset = [[NSMutableIndexSet alloc] init];
     [imset addIndex:4];
 
     CFBinaryHeapRef binheap_ref = CFBinaryHeapCreate(NULL, 15, &kCFStringBinaryHeapCallBacks, NULL);
     CFBinaryHeapAddValue(binheap_ref, CFSTR("Hello world"));
-
-    NSSet* nsset = [[NSSet alloc] initWithObjects:@"foo",nil];
 
     NSData *immutableData = [[NSData alloc] initWithBytes:"HELLO" length:1];
 

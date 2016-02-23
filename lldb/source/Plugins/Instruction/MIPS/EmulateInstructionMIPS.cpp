@@ -1142,7 +1142,7 @@ EmulateInstructionMIPS::Emulate_SWSP (llvm::MCInst& insn)
     // We look for sp based non-volatile register stores.
     if (base == dwarf_sp_mips && nonvolatile_reg_p (src))
     {
-        RegisterInfo reg_info_src;
+        RegisterInfo reg_info_src = {};
         Context context;
         RegisterValue data_src;
         context.type = eContextPushRegisterOnStack;
