@@ -253,11 +253,18 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
 
     if (IsRela) {
       uintX_t VA = 0;
-      if (Rel.UseSymVA)
+      if (Rel.UseSymVA) {
         VA = Sym->getVA<ELFT>();
-      else if (Rel.TargetSec)
+      } else if (Rel.TargetSec) {
         VA = Rel.TargetSec->getOffset(Rel.OffsetInTargetSec) +
              Rel.TargetSec->OutSec->getVA();
+      } else if (!Sym && Rel.OffsetSec) {
+        // Sym equal to nullptr means the dynamic relocation is against a
+        // local symbol represented by Rel.SymIndex.
+        ObjectFile<ELFT> *File = Rel.OffsetSec->getFile();
+        const Elf_Sym *LocalSym = File->getLocalSymbol(Rel.SymIndex);
+        VA = getLocalTarget(*File, *LocalSym, 0);
+      }
       reinterpret_cast<Elf_Rela *>(P)->r_addend = Rel.Addend + VA;
     }
 
@@ -862,7 +869,6 @@ elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
                         const Elf_Rel_Impl<ELFT, IsRela> &RI,
                         typename ELFFile<ELFT>::uintX_t Addend) {
   typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
 
   // PPC64 has a special relocation representing the TOC base pointer
   // that does not have a corresponding symbol.
@@ -875,10 +881,22 @@ elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
   if (!Sym)
     fatal("Unsupported relocation without symbol");
 
-  InputSectionBase<ELFT> *Section = File.getSection(*Sym);
+  return getLocalTarget(File, *Sym, Addend);
+}
 
-  if (Sym->getType() == STT_TLS)
-    return (Section->OutSec->getVA() + Section->getOffset(*Sym) + Addend) -
+template <class ELFT>
+typename ELFFile<ELFT>::uintX_t
+elf2::getLocalTarget(const ObjectFile<ELFT> &File,
+                     const typename ELFFile<ELFT>::Elf_Sym &Sym,
+                     typename ELFFile<ELFT>::uintX_t Addend) {
+  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+
+  InputSectionBase<ELFT> *Section = File.getSection(Sym);
+  if (!Section)
+    return Addend;
+
+  if (Sym.getType() == STT_TLS)
+    return (Section->OutSec->getVA() + Section->getOffset(Sym) + Addend) -
            Out<ELFT>::TlsPhdr->p_vaddr;
 
   // According to the ELF spec reference to a local symbol from outside
@@ -888,8 +906,8 @@ elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
   if (Section == &InputSection<ELFT>::Discarded || !Section->isLive())
     return Addend;
 
-  uintX_t Offset = Sym->st_value;
-  if (Sym->getType() == STT_SECTION) {
+  uintX_t Offset = Sym.st_value;
+  if (Sym.getType() == STT_SECTION) {
     Offset += Addend;
     Addend = 0;
   }
@@ -1647,5 +1665,18 @@ template uint64_t getLocalRelTarget(const ObjectFile<ELF64LE> &,
 template uint64_t getLocalRelTarget(const ObjectFile<ELF64BE> &,
                                     const ELFFile<ELF64BE>::Elf_Rela &,
                                     uint64_t);
+
+template uint32_t getLocalTarget(const ObjectFile<ELF32LE> &,
+                                 const ELFFile<ELF32LE>::Elf_Sym &Sym,
+                                 uint32_t);
+template uint32_t getLocalTarget(const ObjectFile<ELF32BE> &,
+                                 const ELFFile<ELF32BE>::Elf_Sym &Sym,
+                                 uint32_t);
+template uint64_t getLocalTarget(const ObjectFile<ELF64LE> &,
+                                 const ELFFile<ELF64LE>::Elf_Sym &Sym,
+                                 uint64_t);
+template uint64_t getLocalTarget(const ObjectFile<ELF64BE> &,
+                                 const ELFFile<ELF64BE>::Elf_Sym &Sym,
+                                 uint64_t);
 }
 }

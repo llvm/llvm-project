@@ -311,9 +311,16 @@ void Writer<ELFT>::scanRelocs(
     if (handleTlsRelocation<ELFT>(Type, Body, C, RI))
       continue;
 
-    if (Target->needsDynRelative(Type))
-      Out<ELFT>::RelaDyn->addReloc({Target->RelativeRel, &C, RI.r_offset, true,
-                                    Body, getAddend<ELFT>(RI)});
+    if (Target->needsDynRelative(Type)) {
+      // If Body is null it means the relocation is against a local symbol
+      // and thus we need to pass the local symbol index instead.
+      if (Body)
+        Out<ELFT>::RelaDyn->addReloc({Target->RelativeRel, &C, RI.r_offset, true,
+                                      Body, getAddend<ELFT>(RI)});
+      else
+        Out<ELFT>::RelaDyn->addReloc({Target->RelativeRel, &C, RI.r_offset, false,
+                                      SymIndex, getAddend<ELFT>(RI)});
+    }
 
     // MIPS has a special rule to create GOTs for local symbols.
     if (Config->EMachine == EM_MIPS && !canBePreempted(Body, true) &&

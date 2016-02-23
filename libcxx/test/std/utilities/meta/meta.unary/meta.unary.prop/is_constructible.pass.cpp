@@ -99,4 +99,13 @@ int main()
     test_is_not_constructible<int&> ();
     test_is_not_constructible<Abstract> ();
     test_is_not_constructible<AbstractDestructor> ();
+
+//  LWG 2560
+    test_is_not_constructible<void()> ();
+#if TEST_STD_VERS > 11
+    test_is_not_constructible<void() const> ();
+    test_is_not_constructible<void() volatile> ();
+    test_is_not_constructible<void() &> ();
+    test_is_not_constructible<void() &&> ();
+#endif
 }

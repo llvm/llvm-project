@@ -182,6 +182,7 @@ public:
   unsigned getTlsGotRel(unsigned Type) const override;
   bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
+  bool needsDynRelative(unsigned Type) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
@@ -1212,6 +1213,7 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 
 AArch64TargetInfo::AArch64TargetInfo() {
   CopyRel = R_AARCH64_COPY;
+  RelativeRel = R_AARCH64_RELATIVE;
   IRelativeRel = R_AARCH64_IRELATIVE;
   GotRel = R_AARCH64_GLOB_DAT;
   PltRel = R_AARCH64_JUMP_SLOT;
@@ -1317,6 +1319,10 @@ bool AArch64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
   case R_AARCH64_LDST128_ABS_LO12_NC:
     return true;
   }
+}
+
+bool AArch64TargetInfo::needsDynRelative(unsigned Type) const {
+  return Config->Shared && Type == R_AARCH64_ABS64;
 }
 
 bool AArch64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
