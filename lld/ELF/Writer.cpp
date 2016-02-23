@@ -311,16 +311,9 @@ void Writer<ELFT>::scanRelocs(
     if (handleTlsRelocation<ELFT>(Type, Body, C, RI))
       continue;
 
-    if (Target->needsDynRelative(Type)) {
-      // If Body is null it means the relocation is against a local symbol
-      // and thus we need to pass the local symbol index instead.
-      if (Body)
-        Out<ELFT>::RelaDyn->addReloc({Target->RelativeRel, &C, RI.r_offset, true,
-                                      Body, getAddend<ELFT>(RI)});
-      else
-        Out<ELFT>::RelaDyn->addReloc({Target->RelativeRel, &C, RI.r_offset, false,
-                                      SymIndex, getAddend<ELFT>(RI)});
-    }
+    if (Target->needsDynRelative(Type))
+      Out<ELFT>::RelaDyn->addReloc({Target->RelativeRel, &C, RI.r_offset, true,
+                                    Body, getAddend<ELFT>(RI)});
 
     // MIPS has a special rule to create GOTs for local symbols.
     if (Config->EMachine == EM_MIPS && !canBePreempted(Body, true) &&
@@ -335,7 +328,7 @@ void Writer<ELFT>::scanRelocs(
     if (auto *B = dyn_cast_or_null<SharedSymbol<ELFT>>(Body)) {
       if (B->needsCopy())
         continue;
-      if (Target->needsCopyRel(Type, *B)) {
+      if (Target->needsCopyRel<ELFT>(Type, *B)) {
         B->NeedsCopyOrPltAddr = true;
         Out<ELFT>::RelaDyn->addReloc(
             {Target->CopyRel, DynamicReloc<ELFT>::Off_Bss, B});
@@ -1344,7 +1337,8 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     if (PageAlign.count(Sec))
       Align = std::max<uintX_t>(Align, Target->PageSize);
 
-    FileOff = alignTo(FileOff, Align);
+    if (Sec->getType() != SHT_NOBITS)
+      FileOff = alignTo(FileOff, Align);
     Sec->setFileOffset(FileOff);
     if (Sec->getType() != SHT_NOBITS)
       FileOff += Sec->getSize();

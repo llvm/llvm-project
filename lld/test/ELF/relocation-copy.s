@@ -23,7 +23,7 @@ movl $z, %edx
 // CHECK-NEXT:   SHF_WRITE (0x1)
 // CHECK-NEXT:  ]
 // CHECK-NEXT:  Address: 0x13000
-// CHECK-NEXT:  Offset: 0x3000
+// CHECK-NEXT:  Offset:
 // CHECK-NEXT:  Size: 24
 // CHECK-NEXT:  Link: 0
 // CHECK-NEXT:  Info: 0

@@ -67,7 +67,7 @@ internal:
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
 // CHECK-NEXT: Address: 0x12000
-// CHECK-NEXT: Offset: 0x2000
+// CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 4
 
 // CHECK:      Symbols [

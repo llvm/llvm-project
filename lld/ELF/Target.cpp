@@ -181,8 +181,8 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   unsigned getTlsGotRel(unsigned Type) const override;
   bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
+  bool isRelRelative(uint32_t Type) const override;
   bool needsCopyRelImpl(uint32_t Type) const override;
-  bool needsDynRelative(unsigned Type) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
@@ -275,25 +275,9 @@ template <typename ELFT> static bool mayNeedCopy(const SymbolBody &S) {
   return SS->Sym.getType() == STT_OBJECT;
 }
 
+template <class ELFT>
 bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  bool MayNeed;
-  switch (Config->EKind) {
-  case ELF32LEKind:
-    MayNeed = mayNeedCopy<ELF32LE>(S);
-    break;
-  case ELF64LEKind:
-    MayNeed = mayNeedCopy<ELF64LE>(S);
-    break;
-  case ELF32BEKind:
-    MayNeed = mayNeedCopy<ELF32BE>(S);
-    break;
-  case ELF64BEKind:
-    MayNeed = mayNeedCopy<ELF64BE>(S);
-    break;
-  default:
-    llvm_unreachable("Invalid ELF kind");
-  }
-  return MayNeed && needsCopyRelImpl(Type);
+  return mayNeedCopy<ELFT>(S) && needsCopyRelImpl(Type);
 }
 
 bool TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
@@ -725,7 +709,7 @@ bool X86_64TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
 
 TargetInfo::PltNeed X86_64TargetInfo::needsPlt(uint32_t Type,
                                                const SymbolBody &S) const {
-  if (needsCopyRel(Type, S))
+  if (needsCopyRel<ELF64LE>(Type, S))
     return Plt_No;
   if (isGnuIFunc<ELF64LE>(S))
     return Plt_Explicit;
@@ -1225,6 +1209,8 @@ AArch64TargetInfo::AArch64TargetInfo() {
   PltZeroSize = 32;
 }
 
+bool AArch64TargetInfo::isRelRelative(uint32_t Type) const { return false; }
+
 bool AArch64TargetInfo::isTlsGlobalDynamicRel(unsigned Type) const {
   return Type == R_AARCH64_TLSDESC_ADR_PAGE21 ||
          Type == R_AARCH64_TLSDESC_LD64_LO12_NC ||
@@ -1319,10 +1305,6 @@ bool AArch64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
   case R_AARCH64_LDST128_ABS_LO12_NC:
     return true;
   }
-}
-
-bool AArch64TargetInfo::needsDynRelative(unsigned Type) const {
-  return Config->Shared && Type == R_AARCH64_ABS64;
 }
 
 bool AArch64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
@@ -1714,7 +1696,7 @@ bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, SymbolBody &S) const {
 template <class ELFT>
 TargetInfo::PltNeed MipsTargetInfo<ELFT>::needsPlt(uint32_t Type,
                                                    const SymbolBody &S) const {
-  if (needsCopyRel(Type, S))
+  if (needsCopyRel<ELFT>(Type, S))
     return Plt_No;
   if (Type == R_MIPS_26 && canBePreempted(&S, false))
     return Plt_Explicit;
@@ -1859,5 +1841,14 @@ template uint32_t getMipsGpAddr<ELF32LE>();
 template uint32_t getMipsGpAddr<ELF32BE>();
 template uint64_t getMipsGpAddr<ELF64LE>();
 template uint64_t getMipsGpAddr<ELF64BE>();
+
+template bool TargetInfo::needsCopyRel<ELF32LE>(uint32_t,
+                                                const SymbolBody &) const;
+template bool TargetInfo::needsCopyRel<ELF32BE>(uint32_t,
+                                                const SymbolBody &) const;
+template bool TargetInfo::needsCopyRel<ELF64LE>(uint32_t,
+                                                const SymbolBody &) const;
+template bool TargetInfo::needsCopyRel<ELF64BE>(uint32_t,
+                                                const SymbolBody &) const;
 }
 }

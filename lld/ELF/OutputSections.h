@@ -53,12 +53,6 @@ getLocalRelTarget(const ObjectFile<ELFT> &File,
                   const llvm::object::Elf_Rel_Impl<ELFT, IsRela> &Rel,
                   typename llvm::object::ELFFile<ELFT>::uintX_t Addend);
 
-template <class ELFT>
-typename llvm::object::ELFFile<ELFT>::uintX_t
-getLocalTarget(const ObjectFile<ELFT> &File,
-               const typename llvm::object::ELFFile<ELFT>::Elf_Sym &Sym,
-               typename llvm::object::ELFFile<ELFT>::uintX_t Addend);
-
 bool canBePreempted(const SymbolBody *Body, bool NeedsGot);
 
 // This represents a section in an output file.
@@ -193,7 +187,6 @@ template <class ELFT> struct DynamicReloc {
   } OKind;
 
   SymbolBody *Sym = nullptr;
-  uint32_t SymIndex = 0;
   InputSectionBase<ELFT> *OffsetSec = nullptr;
   uintX_t OffsetInSec = 0;
   bool UseSymVA = false;
@@ -211,12 +204,6 @@ template <class ELFT> struct DynamicReloc {
                uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
                uintX_t Addend)
       : Type(Type), OKind(Off_Sec), Sym(Sym), OffsetSec(OffsetSec),
-        OffsetInSec(OffsetInSec), UseSymVA(UseSymVA), Addend(Addend) {}
-
-  DynamicReloc(uint32_t Type, InputSectionBase<ELFT> *OffsetSec,
-               uintX_t OffsetInSec, bool UseSymVA, uint32_t SymIndex,
-               uintX_t Addend)
-      : Type(Type), OKind(Off_Sec), SymIndex(SymIndex), OffsetSec(OffsetSec),
         OffsetInSec(OffsetInSec), UseSymVA(UseSymVA), Addend(Addend) {}
 
   DynamicReloc(uint32_t Type, InputSectionBase<ELFT> *OffsetSec,
@@ -267,7 +254,6 @@ private:
 
 template <class ELFT>
 class RelocationSection final : public OutputSectionBase<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
