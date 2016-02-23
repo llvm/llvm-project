@@ -151,7 +151,7 @@ __llvm_profile_gather_value_data(uint64_t *ValueDataSize) {
    * Compute the total Size of the buffer to hold ValueProfData
    * structures for functions with value profile data.
    */
-  for (I = (__llvm_profile_data *)DataBegin; I != DataEnd; ++I) {
+  for (I = (__llvm_profile_data *)DataBegin; I < DataEnd; ++I) {
     ValueProfRuntimeRecord R;
     if (initializeValueProfRuntimeRecord(&R, I->NumValueSites, I->Values))
       PROF_OOM_RETURN("Failed to write value profile data ");
