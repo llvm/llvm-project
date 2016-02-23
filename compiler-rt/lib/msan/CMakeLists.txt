@@ -58,8 +58,7 @@ foreach(arch ${MSAN_SUPPORTED_ARCH})
   endif()
 endforeach()
 
-add_compiler_rt_resource_file(msan_blacklist msan_blacklist.txt)
-add_dependencies(msan msan_blacklist)
+add_compiler_rt_resource_file(msan_blacklist msan_blacklist.txt msan)
 add_dependencies(compiler-rt msan)
 
 if(COMPILER_RT_INCLUDE_TESTS)
