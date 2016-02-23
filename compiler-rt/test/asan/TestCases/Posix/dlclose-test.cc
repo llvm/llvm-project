@@ -11,8 +11,8 @@
 
 // This sublte test assumes that after a foo.so is dlclose-d
 // we can mmap the region of memory that has been occupied by the library.
-// It works on i368/x86_64 Linux, but not necessary anywhere else.
-// REQUIRES: x86_64-supported-target,i386-supported-target
+// It works on x86 Linux, but not necessary anywhere else.
+// REQUIRES: x86-target-arch
 
 // RUN: %clangxx_asan -O0 -DSHARED_LIB %s -fPIC -shared -o %t-so.so
 // RUN: %clangxx_asan -O0 %s %libdl -o %t && %run %t 2>&1 | FileCheck %s

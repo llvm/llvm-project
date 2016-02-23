@@ -4,7 +4,7 @@
 // RUN: %env_asan_opts=dump_instruction_bytes=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-DUMP
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NODUMP
 //
-// REQUIRES: x86_64-supported-target,i386-supported-target
+// REQUIRES: x86-target-arch
 
 int main() {
 #if defined(__x86_64__)

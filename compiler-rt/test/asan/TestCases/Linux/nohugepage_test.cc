@@ -9,7 +9,7 @@
 // Would be great to run the test with no_huge_pages_for_shadow=0, but
 // the result will depend on the OS version and settings...
 //
-// REQUIRES: x86_64-supported-target, asan-64-bits
+// REQUIRES: x86_64-target-arch
 //
 // WARNING: this test is very subtle and may nto work on some systems.
 // If this is the case we'll need to futher improve it or disable it.

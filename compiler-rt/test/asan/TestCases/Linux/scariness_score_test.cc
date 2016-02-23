@@ -32,7 +32,7 @@
 // RUN: not %run %t 26 2>&1 | FileCheck %s --check-prefix=CHECK26
 // RUN: not %run %t 27 2>&1 | FileCheck %s --check-prefix=CHECK27
 // Parts of the test are too platform-specific:
-// REQUIRES: x86_64-supported-target
+// REQUIRES: x86_64-target-arch
 // REQUIRES: shell
 #include <stdlib.h>
 #include <stdio.h>
