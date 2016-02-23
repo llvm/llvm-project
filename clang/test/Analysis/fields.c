@@ -16,7 +16,7 @@ struct s {
 
 void f() {
   struct s a;
-  int *p = &(a.n) + 1;
+  int *p = &(a.n) + 1; // expected-warning{{Pointer arithmetic on}}
 }
 
 typedef struct {
