@@ -101,4 +101,12 @@ TEST(HeaderMapTest, checkHeader3Buckets) {
   ASSERT_FALSE(HeaderMapImpl::checkHeader(*File.getBuffer(), NeedsSwap));
 }
 
+TEST(HeaderMapTest, checkHeaderNotEnoughBuckets) {
+  MapFile<1, 1> File;
+  File.init();
+  File.Header.NumBuckets = 8;
+  bool NeedsSwap;
+  ASSERT_FALSE(HeaderMapImpl::checkHeader(*File.getBuffer(), NeedsSwap));
+}
+
 } // end namespace

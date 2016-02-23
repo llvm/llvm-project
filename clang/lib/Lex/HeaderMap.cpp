@@ -83,13 +83,15 @@ bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
   if (Header->Reserved != 0)
     return false;
 
-  // Check the number of buckets.
+  // Check the number of buckets.  It should be a power of two, and there
+  // should be enough space in the file for all of them.
   auto NumBuckets = NeedsByteSwap
                         ? llvm::sys::getSwappedBytes(Header->NumBuckets)
                         : Header->NumBuckets;
-
-  // If the number of buckets is not a power of two, the headermap is corrupt.
   if (NumBuckets & (NumBuckets - 1))
+    return false;
+  if (File.getBufferSize() <
+      sizeof(HMapHeader) + sizeof(HMapBucket) * NumBuckets)
     return false;
 
   // Okay, everything looks good.
@@ -122,21 +124,19 @@ const HMapHeader &HeaderMapImpl::getHeader() const {
 /// bswap'ing its fields as appropriate.  If the bucket number is not valid,
 /// this return a bucket with an empty key (0).
 HMapBucket HeaderMapImpl::getBucket(unsigned BucketNo) const {
+  assert(FileBuffer->getBufferSize() >=
+             sizeof(HMapHeader) + sizeof(HMapBucket) * BucketNo &&
+         "Expected bucket to be in range");
+
   HMapBucket Result;
   Result.Key = HMAP_EmptyBucketKey;
 
   const HMapBucket *BucketArray =
     reinterpret_cast<const HMapBucket*>(FileBuffer->getBufferStart() +
                                         sizeof(HMapHeader));
-
   const HMapBucket *BucketPtr = BucketArray+BucketNo;
-  if ((const char*)(BucketPtr+1) > FileBuffer->getBufferEnd()) {
-    Result.Prefix = 0;
-    Result.Suffix = 0;
-    return Result;  // Invalid buffer, corrupt hmap.
-  }
 
-  // Otherwise, the bucket is valid.  Load the values, bswapping as needed.
+  // Load the values, bswapping as needed.
   Result.Key    = getEndianAdjustedWord(BucketPtr->Key);
   Result.Prefix = getEndianAdjustedWord(BucketPtr->Prefix);
   Result.Suffix = getEndianAdjustedWord(BucketPtr->Suffix);
