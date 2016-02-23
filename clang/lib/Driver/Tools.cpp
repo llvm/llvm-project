@@ -5842,8 +5842,10 @@ static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args) {
     }
   }
   // The /GX, /GX- flags are only processed if there are not /EH flags.
+  // The default is that /GX is not specified.
   if (EHArgs.empty() &&
-      Args.hasFlag(options::OPT__SLASH_GX, options::OPT__SLASH_GX_)) {
+      Args.hasFlag(options::OPT__SLASH_GX, options::OPT__SLASH_GX_,
+                   /*default=*/false)) {
     EH.Synch = true;
     EH.NoUnwindC = true;
   }
