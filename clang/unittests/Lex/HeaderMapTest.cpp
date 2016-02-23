@@ -143,6 +143,15 @@ TEST(HeaderMapTest, checkHeader3Buckets) {
   ASSERT_FALSE(HeaderMapImpl::checkHeader(*File.getBuffer(), NeedsSwap));
 }
 
+TEST(HeaderMapTest, checkHeader0Buckets) {
+  // Create with 1 bucket to avoid 0-sized arrays.
+  MapFile<1, 1> File;
+  File.init();
+  File.Header.NumBuckets = 0;
+  bool NeedsSwap;
+  ASSERT_FALSE(HeaderMapImpl::checkHeader(*File.getBuffer(), NeedsSwap));
+}
+
 TEST(HeaderMapTest, checkHeaderNotEnoughBuckets) {
   MapFile<1, 1> File;
   File.init();
@@ -176,7 +185,7 @@ template <class FileTy, class PaddingTy> struct PaddedFile {
   PaddingTy Padding;
 };
 
-TEST(HeaderMapTest, lookupFilenameTruncated) {
+TEST(HeaderMapTest, lookupFilenameTruncatedSuffix) {
   typedef MapFile<2, 64 - sizeof(HMapHeader) - 2 * sizeof(HMapBucket)> FileTy;
   static_assert(std::is_standard_layout<FileTy>::value,
                 "Expected standard layout");
@@ -206,10 +215,44 @@ TEST(HeaderMapTest, lookupFilenameTruncated) {
   HeaderMapImpl Map(File.getBuffer(), NeedsSwap);
 
   // The string for "c" runs to the end of File.  Check that the suffix
-  // ("cxxxx...") is ignored.  Another option would be to return an empty
-  // filename altogether.
+  // ("cxxxx...") is detected as truncated, and an empty string is returned.
   SmallString<24> DestPath;
-  ASSERT_EQ("b", Map.lookupFilename("a", DestPath));
+  ASSERT_EQ("", Map.lookupFilename("a", DestPath));
+}
+
+TEST(HeaderMapTest, lookupFilenameTruncatedPrefix) {
+  typedef MapFile<2, 64 - sizeof(HMapHeader) - 2 * sizeof(HMapBucket)> FileTy;
+  static_assert(std::is_standard_layout<FileTy>::value,
+                "Expected standard layout");
+  static_assert(sizeof(FileTy) == 64, "check the math");
+  PaddedFile<FileTy, uint64_t> P;
+  auto &File = P.File;
+  auto &Padding = P.Padding;
+  File.init();
+
+  FileMaker<FileTy> Maker(File);
+  auto a = Maker.addString("a");
+  auto c = Maker.addString("c");
+  auto b = Maker.addString("b"); // Store the prefix last.
+  Maker.addBucket(getHash("a"), a, b, c);
+
+  // Add 'x' characters to cause an overflow into Padding.
+  ASSERT_EQ('b', File.Bytes[5]);
+  for (unsigned I = 6; I < sizeof(File.Bytes); ++I) {
+    ASSERT_EQ(0, File.Bytes[I]);
+    File.Bytes[I] = 'x';
+  }
+  Padding = 0xffffffff; // Padding won't stop it either.
+
+  bool NeedsSwap;
+  ASSERT_TRUE(HeaderMapImpl::checkHeader(*File.getBuffer(), NeedsSwap));
+  ASSERT_FALSE(NeedsSwap);
+  HeaderMapImpl Map(File.getBuffer(), NeedsSwap);
+
+  // The string for "b" runs to the end of File.  Check that the prefix
+  // ("bxxxx...") is detected as truncated, and an empty string is returned.
+  SmallString<24> DestPath;
+  ASSERT_EQ("", Map.lookupFilename("a", DestPath));
 }
 
 } // end namespace

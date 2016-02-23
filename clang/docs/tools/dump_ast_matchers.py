@@ -264,6 +264,16 @@ def act_on_decl(declaration, comment, allowed_types):
       add_matcher('*', name, 'Matcher<*>', comment)
       return
 
+    # Parse Variadic functions.
+    m = re.match(
+        r"""^.*llvm::VariadicFunction\s*<\s*([^,]+),\s*([^,]+),\s*[^>]+>\s*
+              ([a-zA-Z]*)\s*=\s*{.*};$""",
+        declaration, flags=re.X)
+    if m:
+      result, arg, name = m.groups()[:3]
+      add_matcher(result, name, '%s, ..., %s' % (arg, arg), comment)
+      return
+
     # Parse Variadic operator matchers.
     m = re.match(
         r"""^.*VariadicOperatorMatcherFunc\s*<\s*([^,]+),\s*([^\s>]+)\s*>\s*

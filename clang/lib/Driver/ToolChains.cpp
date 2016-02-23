@@ -4468,6 +4468,11 @@ Tool *MyriadToolChain::buildLinker() const {
 WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
                          const llvm::opt::ArgList &Args)
   : ToolChain(D, Triple, Args) {
+
+  assert(Triple.isArch32Bit() != Triple.isArch64Bit());
+  getFilePaths().push_back(
+      getDriver().SysRoot + "/lib" + (Triple.isArch32Bit() ? "32" : "64"));
+
   // Use LLD by default.
   DefaultLinker = "lld";
 }

@@ -191,6 +191,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasAncestor);
   REGISTER_MATCHER(hasAnyArgument);
   REGISTER_MATCHER(hasAnyConstructorInitializer);
+  REGISTER_MATCHER(hasAnyName);
   REGISTER_MATCHER(hasAnyParameter);
   REGISTER_MATCHER(hasAnySubstatement);
   REGISTER_MATCHER(hasAnyTemplateArgument);

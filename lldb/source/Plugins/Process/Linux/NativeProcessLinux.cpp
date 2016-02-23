@@ -58,7 +58,6 @@
 
 #include "lldb/Host/linux/Personality.h"
 #include "lldb/Host/linux/Ptrace.h"
-#include "lldb/Host/linux/Signalfd.h"
 #include "lldb/Host/linux/Uio.h"
 #include "lldb/Host/android/Android.h"
 
@@ -2656,43 +2655,6 @@ NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
 }
 
 Error
-NativeProcessLinux::Resume (lldb::tid_t tid, uint32_t signo)
-{
-    Log *log (GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
-
-    if (log)
-        log->Printf ("NativeProcessLinux::%s() resuming thread = %"  PRIu64 " with signal %s", __FUNCTION__, tid,
-                                 Host::GetSignalAsCString(signo));
-
-
-
-    intptr_t data = 0;
-
-    if (signo != LLDB_INVALID_SIGNAL_NUMBER)
-        data = signo;
-
-    Error error = PtraceWrapper(PTRACE_CONT, tid, nullptr, (void*)data);
-
-    if (log)
-        log->Printf ("NativeProcessLinux::%s() resuming thread = %"  PRIu64 " result = %s", __FUNCTION__, tid, error.Success() ? "true" : "false");
-    return error;
-}
-
-Error
-NativeProcessLinux::SingleStep(lldb::tid_t tid, uint32_t signo)
-{
-    intptr_t data = 0;
-
-    if (signo != LLDB_INVALID_SIGNAL_NUMBER)
-        data = signo;
-
-    // If hardware single-stepping is not supported, we just do a continue. The breakpoint on the
-    // next instruction has been setup in NativeProcessLinux::Resume.
-    return PtraceWrapper(SupportHardwareSingleStepping() ? PTRACE_SINGLESTEP : PTRACE_CONT,
-            tid, nullptr, (void*)data);
-}
-
-Error
 NativeProcessLinux::GetSignalInfo(lldb::tid_t tid, void *siginfo)
 {
     return PtraceWrapper(PTRACE_GETSIGINFO, tid, nullptr, siginfo);
@@ -2980,16 +2942,14 @@ NativeProcessLinux::ResumeThread(NativeThreadLinux &thread, lldb::StateType stat
     {
     case eStateRunning:
     {
-        thread.SetRunning();
-        const auto resume_result = Resume(thread.GetID(), signo);
+        const auto resume_result = thread.Resume(signo);
         if (resume_result.Success())
             SetState(eStateRunning, true);
         return resume_result;
     }
     case eStateStepping:
     {
-        thread.SetStepping();
-        const auto step_result = SingleStep(thread.GetID(), signo);
+        const auto step_result = thread.SingleStep(signo);
         if (step_result.Success())
             SetState(eStateRunning, true);
         return step_result;

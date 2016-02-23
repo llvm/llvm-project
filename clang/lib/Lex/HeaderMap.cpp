@@ -16,6 +16,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -86,10 +87,10 @@ bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
 
   // Check the number of buckets.  It should be a power of two, and there
   // should be enough space in the file for all of them.
-  auto NumBuckets = NeedsByteSwap
-                        ? llvm::sys::getSwappedBytes(Header->NumBuckets)
-                        : Header->NumBuckets;
-  if (NumBuckets & (NumBuckets - 1))
+  uint32_t NumBuckets = NeedsByteSwap
+                            ? llvm::sys::getSwappedBytes(Header->NumBuckets)
+                            : Header->NumBuckets;
+  if (!llvm::isPowerOf2_32(NumBuckets))
     return false;
   if (File.getBufferSize() <
       sizeof(HMapHeader) + sizeof(HMapBucket) * NumBuckets)
@@ -144,15 +145,13 @@ HMapBucket HeaderMapImpl::getBucket(unsigned BucketNo) const {
   return Result;
 }
 
-/// getString - Look up the specified string in the string table.  If the string
-/// index is not valid, it returns an empty string.
-StringRef HeaderMapImpl::getString(unsigned StrTabIdx) const {
+Optional<StringRef> HeaderMapImpl::getString(unsigned StrTabIdx) const {
   // Add the start of the string table to the idx.
   StrTabIdx += getEndianAdjustedWord(getHeader().StringsOffset);
 
   // Check for invalid index.
   if (StrTabIdx >= FileBuffer->getBufferSize())
-    return "";
+    return None;
 
   const char *Data = FileBuffer->getBufferStart() + StrTabIdx;
   unsigned MaxLen = FileBuffer->getBufferSize() - StrTabIdx;
@@ -160,7 +159,7 @@ StringRef HeaderMapImpl::getString(unsigned StrTabIdx) const {
 
   // Check whether the buffer is null-terminated.
   if (Len == MaxLen && Data[Len - 1])
-    return "";
+    return None;
 
   return StringRef(Data, Len);
 }
@@ -177,13 +176,19 @@ LLVM_DUMP_METHOD void HeaderMapImpl::dump() const {
   llvm::dbgs() << "Header Map " << getFileName() << ":\n  " << NumBuckets
                << ", " << getEndianAdjustedWord(Hdr.NumEntries) << "\n";
 
+  auto getStringOrInvalid = [this](unsigned Id) -> StringRef {
+    if (Optional<StringRef> S = getString(Id))
+      return *S;
+    return "<invalid>";
+  };
+
   for (unsigned i = 0; i != NumBuckets; ++i) {
     HMapBucket B = getBucket(i);
     if (B.Key == HMAP_EmptyBucketKey) continue;
 
-    StringRef Key    = getString(B.Key);
-    StringRef Prefix = getString(B.Prefix);
-    StringRef Suffix = getString(B.Suffix);
+    StringRef Key = getStringOrInvalid(B.Key);
+    StringRef Prefix = getStringOrInvalid(B.Prefix);
+    StringRef Suffix = getStringOrInvalid(B.Suffix);
     llvm::dbgs() << "  " << i << ". " << Key << " -> '" << Prefix << "' '"
                  << Suffix << "'\n";
   }
@@ -208,7 +213,7 @@ StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
   unsigned NumBuckets = getEndianAdjustedWord(Hdr.NumBuckets);
 
   // Don't probe infinitely.  This should be checked before constructing.
-  assert(!(NumBuckets & (NumBuckets - 1)) && "Expected power of 2");
+  assert(llvm::isPowerOf2_32(NumBuckets) && "Expected power of 2");
 
   // Linearly probe the hash table.
   for (unsigned Bucket = HashHMapKey(Filename);; ++Bucket) {
@@ -216,16 +221,22 @@ StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
     if (B.Key == HMAP_EmptyBucketKey) return StringRef(); // Hash miss.
 
     // See if the key matches.  If not, probe on.
-    if (!Filename.equals_lower(getString(B.Key)))
+    Optional<StringRef> Key = getString(B.Key);
+    if (LLVM_UNLIKELY(!Key))
+      continue;
+    if (!Filename.equals_lower(*Key))
       continue;
 
     // If so, we have a match in the hash table.  Construct the destination
     // path.
-    StringRef Prefix = getString(B.Prefix);
-    StringRef Suffix = getString(B.Suffix);
+    Optional<StringRef> Prefix = getString(B.Prefix);
+    Optional<StringRef> Suffix = getString(B.Suffix);
+
     DestPath.clear();
-    DestPath.append(Prefix.begin(), Prefix.end());
-    DestPath.append(Suffix.begin(), Suffix.end());
+    if (LLVM_LIKELY(Prefix && Suffix)) {
+      DestPath.append(Prefix->begin(), Prefix->end());
+      DestPath.append(Suffix->begin(), Suffix->end());
+    }
     return StringRef(DestPath.begin(), DestPath.size());
   }
 }
