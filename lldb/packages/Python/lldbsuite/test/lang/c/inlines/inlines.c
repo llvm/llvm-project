@@ -23,7 +23,7 @@ inner_inline (int inner_input, int mod_value)
   int inner_result;
   inner_result = inner_input % mod_value;
   printf ("Returning: %d.\n", inner_result);
-  return not_inlined_1 (inner_result);
+  return not_inlined_1 (inner_result); // Set break point at this line.
 }
 
 INLINE_ME int

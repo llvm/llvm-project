@@ -266,7 +266,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     return;
   }
 
-  if (New->isTls() != Existing->isTls()) {
+  if (New->IsTls != Existing->IsTls) {
     error("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
     return;
   }
@@ -321,10 +321,13 @@ void SymbolTable<ELFT>::addMemberFile(Undefined *Undef, Lazy *L) {
   // If a strong undefined symbol never shows up, this lazy symbol will
   // get to the end of the link and must be treated as the weak undefined one.
   // We set UsedInRegularObj in a similar way to what is done with shared
-  // symbols and mark it as weak to reduce how many special cases are needed.
+  // symbols and copy information to reduce how many special cases are needed.
   if (Undef->isWeak()) {
     L->setUsedInRegularObj();
     L->setWeak();
+
+    // FIXME: Do we need to copy more?
+    L->IsTls = Undef->IsTls;
     return;
   }
 

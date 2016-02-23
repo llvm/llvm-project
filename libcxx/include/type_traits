@@ -959,34 +959,15 @@ template <class _Tp> _LIBCPP_CONSTEXPR bool is_compound_v
 
 
 // __is_referenceable  [defns.referenceable]
-template <class _Tp> struct __is_referenceable
-    : public std::integral_constant<bool, is_object<_Tp>::value || is_reference<_Tp>::value> {};
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-template <class _Ret, class... _Args>
-struct __is_referenceable<_Ret(_Args...)>           : public std::true_type {};
+struct __is_referenceable_impl {
+    template <class _Tp> static _Tp& __test(int);
+    template <class _Tp> static __two __test(...);
+};
 
-template <class _Ret, class... _Args>
-struct __is_referenceable<_Ret(_Args..., ...)>      : public std::true_type {};
-#else
-template <class _Ret>
-struct __is_referenceable<_Ret()>                   : public std::true_type {};
-template <class _Ret, class _A0>
-struct __is_referenceable<_Ret(_A0)>                : public std::true_type {};
-template <class _Ret, class _A0, class _A1>
-struct __is_referenceable<_Ret(_A0, _A1)>           : public std::true_type {};
-template <class _Ret, class _A0, class _A1, class _A2>
-struct __is_referenceable<_Ret(_A0, _A1, _A2)>      : public std::true_type {};
-
-template <class _Ret>
-struct __is_referenceable<_Ret(...)>                : public std::true_type {};
-template <class _Ret, class _A0>
-struct __is_referenceable<_Ret(_A0, ...)>           : public std::true_type {};
-template <class _Ret, class _A0, class _A1>
-struct __is_referenceable<_Ret(_A0, _A1, ...)>      : public std::true_type {};
-template <class _Ret, class _A0, class _A1, class _A2>
-struct __is_referenceable<_Ret(_A0, _A1, _A2, ...)> : public std::true_type {};
-#endif
+template <class _Tp>
+struct __is_referenceable : std::integral_constant<bool,
+    !std::is_same<decltype(__is_referenceable_impl::__test<_Tp>(0)), __two>::value> {};
 
 
 // add_const

@@ -84,7 +84,6 @@ public:
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
-  bool isTls() const { return IsTls; }
   bool isFunc() const { return IsFunc; }
 
   // Returns the symbol name.
@@ -154,8 +153,9 @@ public:
   // symbol or if the symbol should point to its plt entry.
   unsigned NeedsCopyOrPltAddr : 1;
 
-protected:
   unsigned IsTls : 1;
+
+protected:
   unsigned IsFunc : 1;
 
   StringRef Name;
