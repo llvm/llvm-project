@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Lex/HeaderMap.h"
+#include "clang/Lex/HeaderMapTypes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "llvm/ADT/SmallString.h"
@@ -21,38 +22,6 @@
 #include <cstdio>
 #include <memory>
 using namespace clang;
-
-//===----------------------------------------------------------------------===//
-// Data Structures and Manifest Constants
-//===----------------------------------------------------------------------===//
-
-enum {
-  HMAP_HeaderMagicNumber = ('h' << 24) | ('m' << 16) | ('a' << 8) | 'p',
-  HMAP_HeaderVersion = 1,
-
-  HMAP_EmptyBucketKey = 0
-};
-
-namespace clang {
-struct HMapBucket {
-  uint32_t Key;          // Offset (into strings) of key.
-
-  uint32_t Prefix;     // Offset (into strings) of value prefix.
-  uint32_t Suffix;     // Offset (into strings) of value suffix.
-};
-
-struct HMapHeader {
-  uint32_t Magic;           // Magic word, also indicates byte order.
-  uint16_t Version;         // Version number -- currently 1.
-  uint16_t Reserved;        // Reserved for future use - zero for now.
-  uint32_t StringsOffset;   // Offset to start of string pool.
-  uint32_t NumEntries;      // Number of entries in the string table.
-  uint32_t NumBuckets;      // Number of buckets (always a power of 2).
-  uint32_t MaxValueLength;  // Length of longest result path (excluding nul).
-  // An array of 'NumBuckets' HMapBucket objects follows this header.
-  // Strings follow the buckets, at StringsOffset.
-};
-} // end namespace clang.
 
 /// HashHMapKey - This is the 'well known' hash function required by the file
 /// format, used to look up keys in the hash table.  The hash table uses simple
@@ -82,15 +51,25 @@ const HeaderMap *HeaderMap::Create(const FileEntry *FE, FileManager &FM) {
   if (FileSize <= sizeof(HMapHeader)) return nullptr;
 
   auto FileBuffer = FM.getBufferForFile(FE);
-  if (!FileBuffer) return nullptr;  // Unreadable file?
-  const char *FileStart = (*FileBuffer)->getBufferStart();
+  if (!FileBuffer || !*FileBuffer)
+    return nullptr;
+  bool NeedsByteSwap;
+  if (!checkHeader(**FileBuffer, NeedsByteSwap))
+    return nullptr;
+  return new HeaderMap(std::move(*FileBuffer), NeedsByteSwap);
+}
+
+bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
+                                bool &NeedsByteSwap) {
+  if (File.getBufferSize() <= sizeof(HMapHeader))
+    return false;
+  const char *FileStart = File.getBufferStart();
 
   // We know the file is at least as big as the header, check it now.
   const HMapHeader *Header = reinterpret_cast<const HMapHeader*>(FileStart);
 
   // Sniff it to see if it's a headermap by checking the magic number and
   // version.
-  bool NeedsByteSwap;
   if (Header->Magic == HMAP_HeaderMagicNumber &&
       Header->Version == HMAP_HeaderVersion)
     NeedsByteSwap = false;
@@ -98,12 +77,13 @@ const HeaderMap *HeaderMap::Create(const FileEntry *FE, FileManager &FM) {
            Header->Version == llvm::ByteSwap_16(HMAP_HeaderVersion))
     NeedsByteSwap = true;  // Mixed endianness headermap.
   else
-    return nullptr;  // Not a header map.
+    return false;  // Not a header map.
 
-  if (Header->Reserved != 0) return nullptr;
+  if (Header->Reserved != 0)
+    return false;
 
-  // Okay, everything looks good, create the header map.
-  return new HeaderMap(std::move(*FileBuffer), NeedsByteSwap);
+  // Okay, everything looks good.
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -112,18 +92,18 @@ const HeaderMap *HeaderMap::Create(const FileEntry *FE, FileManager &FM) {
 
 
 /// getFileName - Return the filename of the headermap.
-const char *HeaderMap::getFileName() const {
+const char *HeaderMapImpl::getFileName() const {
   return FileBuffer->getBufferIdentifier();
 }
 
-unsigned HeaderMap::getEndianAdjustedWord(unsigned X) const {
+unsigned HeaderMapImpl::getEndianAdjustedWord(unsigned X) const {
   if (!NeedsBSwap) return X;
   return llvm::ByteSwap_32(X);
 }
 
 /// getHeader - Return a reference to the file header, in unbyte-swapped form.
 /// This method cannot fail.
-const HMapHeader &HeaderMap::getHeader() const {
+const HMapHeader &HeaderMapImpl::getHeader() const {
   // We know the file is at least as big as the header.  Return it.
   return *reinterpret_cast<const HMapHeader*>(FileBuffer->getBufferStart());
 }
@@ -131,7 +111,7 @@ const HMapHeader &HeaderMap::getHeader() const {
 /// getBucket - Return the specified hash table bucket from the header map,
 /// bswap'ing its fields as appropriate.  If the bucket number is not valid,
 /// this return a bucket with an empty key (0).
-HMapBucket HeaderMap::getBucket(unsigned BucketNo) const {
+HMapBucket HeaderMapImpl::getBucket(unsigned BucketNo) const {
   HMapBucket Result;
   Result.Key = HMAP_EmptyBucketKey;
 
@@ -155,7 +135,7 @@ HMapBucket HeaderMap::getBucket(unsigned BucketNo) const {
 
 /// getString - Look up the specified string in the string table.  If the string
 /// index is not valid, it returns an empty string.
-const char *HeaderMap::getString(unsigned StrTabIdx) const {
+const char *HeaderMapImpl::getString(unsigned StrTabIdx) const {
   // Add the start of the string table to the idx.
   StrTabIdx += getEndianAdjustedWord(getHeader().StringsOffset);
 
@@ -174,7 +154,7 @@ const char *HeaderMap::getString(unsigned StrTabIdx) const {
 //===----------------------------------------------------------------------===//
 
 /// dump - Print the contents of this headermap to stderr.
-LLVM_DUMP_METHOD void HeaderMap::dump() const {
+LLVM_DUMP_METHOD void HeaderMapImpl::dump() const {
   const HMapHeader &Hdr = getHeader();
   unsigned NumBuckets = getEndianAdjustedWord(Hdr.NumBuckets);
 
@@ -199,15 +179,15 @@ const FileEntry *HeaderMap::LookupFile(
     StringRef Filename, FileManager &FM) const {
 
   SmallString<1024> Path;
-  StringRef Dest = lookupFilename(Filename, Path);
+  StringRef Dest = HeaderMapImpl::lookupFilename(Filename, Path);
   if (Dest.empty())
     return nullptr;
 
   return FM.getFile(Dest);
 }
 
-StringRef HeaderMap::lookupFilename(StringRef Filename,
-                                    SmallVectorImpl<char> &DestPath) const {
+StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
+                                        SmallVectorImpl<char> &DestPath) const {
   const HMapHeader &Hdr = getHeader();
   unsigned NumBuckets = getEndianAdjustedWord(Hdr.NumBuckets);
 
