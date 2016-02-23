@@ -389,7 +389,8 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   uint32_t Offset = Target.getConstant();
   if (IsPCRel && RelocType == MachO::ARM_RELOC_VANILLA)
     Offset += 1 << Log2Size;
-  if (Offset && A && !Writer->doesSymbolRequireExternRelocation(*A))
+  if (Offset && A && !Writer->doesSymbolRequireExternRelocation(*A) &&
+      RelocType != MachO::ARM_RELOC_HALF)
     return RecordARMScatteredRelocation(Writer, Asm, Layout, Fragment, Fixup,
                                         Target, RelocType, Log2Size,
                                         FixedValue);
@@ -447,8 +448,10 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   // Even when it's not a scattered relocation, movw/movt always uses
   // a PAIR relocation.
   if (Type == MachO::ARM_RELOC_HALF) {
-    // The other-half value only gets populated for the movt and movw
-    // relocation entries.
+    // The entire addend is needed to correctly apply a relocation. One half is
+    // extracted from the instruction itself, the other comes from this
+    // PAIR. I.e. it's correct that we insert the high bits of the addend in the
+    // MOVW case here.  relocation entries.
     uint32_t Value = 0;
     switch ((unsigned)Fixup.getKind()) {
     default: break;
