@@ -372,7 +372,7 @@ protected:
 
   /// Shrinks vector element sizes based on information in "MinBWs".
   void truncateToMinimalBitwidths();
-  
+
   /// A helper function that computes the predicate of the block BB, assuming
   /// that the header block of the loop is set to True. It returns the *entry*
   /// mask for the block BB.
@@ -383,7 +383,7 @@ protected:
 
   /// A helper function to vectorize a single BB within the innermost loop.
   void vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV);
-  
+
   /// Vectorize a single PHINode in a block. This method handles the induction
   /// variable canonicalization. It supports both VF = 1 for unrolled loops and
   /// arbitrary length vectors.
@@ -2477,7 +2477,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
       if (Legal->isMaskRequired(SI))
         NewSI = Builder.CreateMaskedStore(StoredVal[Part], VecPtr, Alignment,
                                           Mask[Part]);
-      else 
+      else
         NewSI = Builder.CreateAlignedStore(StoredVal[Part], VecPtr, Alignment);
       propagateMetadata(NewSI, SI);
     }
@@ -2624,7 +2624,7 @@ PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
   auto *Induction = Builder.CreatePHI(Start->getType(), 2, "index");
 
   Builder.SetInsertPoint(Latch->getTerminator());
-  
+
   // Create i+1 and fill the PHINode.
   Value *Next = Builder.CreateAdd(Induction, Step, "index.next");
   Induction->addIncoming(Start, L->getLoopPreheader());
@@ -2632,7 +2632,7 @@ PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
   // Create the compare.
   Value *ICmp = Builder.CreateICmpEQ(Next, End);
   Builder.CreateCondBr(ICmp, L->getExitBlock(), Header);
-  
+
   // Now we have two terminators. Remove the old one from the block.
   Latch->getTerminator()->eraseFromParent();
 
@@ -2651,7 +2651,7 @@ Value *InnerLoopVectorizer::getOrCreateTripCount(Loop *L) {
          "Invalid loop count");
 
   Type *IdxTy = Legal->getWidestInductionType();
-  
+
   // The exit count might have the type of i64 while the phi is i32. This can
   // happen if we have an induction variable that is sign extended before the
   // compare. The only way that we get a backedge taken count is that the
@@ -2661,7 +2661,7 @@ Value *InnerLoopVectorizer::getOrCreateTripCount(Loop *L) {
       IdxTy->getPrimitiveSizeInBits())
     BackedgeTakenCount = SE->getTruncateOrNoop(BackedgeTakenCount, IdxTy);
   BackedgeTakenCount = SE->getNoopOrZeroExtend(BackedgeTakenCount, IdxTy);
-  
+
   // Get the total trip count from the count by adding 1.
   const SCEV *ExitCount = SE->getAddExpr(
       BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
@@ -2688,10 +2688,10 @@ Value *InnerLoopVectorizer::getOrCreateTripCount(Loop *L) {
 Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
   if (VectorTripCount)
     return VectorTripCount;
-  
+
   Value *TC = getOrCreateTripCount(L);
   IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
-  
+
   // Now we need to generate the expression for N - (N % VF), which is
   // the part that the vectorized body will execute.
   // The loop step is equal to the vectorization factor (num of SIMD elements)
@@ -2715,7 +2715,7 @@ void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
     Builder.CreateICmpULT(Count,
                           ConstantInt::get(Count->getType(), VF * UF),
                           "min.iters.check");
-  
+
   BasicBlock *NewBB = BB->splitBasicBlock(BB->getTerminator(),
                                           "min.iters.checked");
   if (L->getParentLoop())
@@ -2730,7 +2730,7 @@ void InnerLoopVectorizer::emitVectorLoopEnteredCheck(Loop *L,
   Value *TC = getOrCreateVectorTripCount(L);
   BasicBlock *BB = L->getLoopPreheader();
   IRBuilder<> Builder(BB->getTerminator());
-  
+
   // Now, compare the new count to zero. If it is zero skip the vector loop and
   // jump to the scalar loop.
   Value *Cmp = Builder.CreateICmpEQ(TC, Constant::getNullValue(TC->getType()),
@@ -2896,7 +2896,7 @@ void InnerLoopVectorizer::createEmptyLoop() {
   // checks into a separate block to make the more common case of few elements
   // faster.
   emitMemRuntimeChecks(Lp, ScalarPH);
-  
+
   // Generate the induction variable.
   // The loop step is equal to the vectorization factor (num of SIMD elements)
   // times the unroll factor (num of SIMD instructions).
@@ -3512,7 +3512,7 @@ void InnerLoopVectorizer::vectorizeLoop() {
 
   // Make sure DomTree is updated.
   updateAnalysis();
-  
+
   // Predicate any stores.
   for (auto KV : PredicatedStores) {
     BasicBlock::iterator I(KV.first);
@@ -3787,7 +3787,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
       VectorParts &Cond = getVectorValue(it->getOperand(0));
       VectorParts &Op0  = getVectorValue(it->getOperand(1));
       VectorParts &Op1  = getVectorValue(it->getOperand(2));
-      
+
       Value *ScalarCond = (VF == 1) ? Cond[0] :
         Builder.CreateExtractElement(Cond[0], Builder.getInt32(0));
 
@@ -4486,7 +4486,7 @@ bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB)  {
 
 bool LoopVectorizationLegality::blockCanBePredicated(BasicBlock *BB,
                                            SmallPtrSetImpl<Value *> &SafePtrs) {
-  
+
   for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; ++it) {
     // Check that we don't have a constant expression that can trap as operand.
     for (Instruction::op_iterator OI = it->op_begin(), OE = it->op_end();
@@ -4519,7 +4519,7 @@ bool LoopVectorizationLegality::blockCanBePredicated(BasicBlock *BB,
 
       bool isSafePtr = (SafePtrs.count(SI->getPointerOperand()) != 0);
       bool isSinglePredecessor = SI->getParent()->getSinglePredecessor();
-      
+
       if (++NumPredStores > NumberOfStoresToPredicate || !isSafePtr ||
           !isSinglePredecessor) {
         // Build a masked store if it is legal for the target, otherwise
@@ -5540,7 +5540,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, unsigned VF) {
         Legal->isInductionVariable(I->getOperand(0)))
       return TTI.getCastInstrCost(I->getOpcode(), I->getType(),
                                   I->getOperand(0)->getType());
-    
+
     Type *SrcScalarTy = I->getOperand(0)->getType();
     Type *SrcVecTy = ToVectorTy(SrcScalarTy, VF);
     if (VF > 1 && MinBWs.count(I)) {
@@ -5561,7 +5561,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, unsigned VF) {
                                              MinVecTy);
       }
     }
-    
+
     return TTI.getCastInstrCost(I->getOpcode(), VectorTy, SrcVecTy);
   }
   case Instruction::Call: {
