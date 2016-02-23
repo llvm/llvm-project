@@ -1,4 +1,4 @@
-//===--- BCRecordLayout.h - Convenience wrappers for bitcode ----*- C++ -*-===//
+//===--- RecordLayout.h - Convenience wrappers for bitcode ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -33,7 +33,6 @@
 #define LLVM_BITCODE_RECORDLAYOUT_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Fixnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Bitcode/BitCodes.h"
 #include "llvm/Bitcode/BitstreamWriter.h"
@@ -103,13 +102,6 @@ public:
     assert(data >= 0 && "cannot encode signed integers");
     assert(llvm::isUInt<Width>(data) &&
            "data value does not fit in the given bit width");
-  }
-
-  using value_type = Fixnum<Width>;
-
-  template<typename T>
-  static value_type convert(T rawValue) {
-    return static_cast<value_type>(rawValue);
   }
 };
 
