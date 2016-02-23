@@ -96,8 +96,8 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
 
   // This is a physreg implicit-def.
   // Look for the first instruction to use or define an alias.
-  auto UserMI = MI->getInstrIterator();
-  auto UserE = MI->getParent()->instr_end();
+  MachineBasicBlock::instr_iterator UserMI = MI->getIterator();
+  MachineBasicBlock::instr_iterator UserE = MI->getParent()->instr_end();
   bool Found = false;
   for (++UserMI; UserMI != UserE; ++UserMI) {
     for (MachineOperand &MO : UserMI->operands()) {

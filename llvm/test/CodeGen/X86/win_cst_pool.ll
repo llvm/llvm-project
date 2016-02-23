@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-win32 -mattr=sse2 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-win32 -mattr=sse2 -mattr=avx | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
@@ -77,3 +77,17 @@ define float @pr23966(i32 %a) {
 ; CHECK-NEXT: __real@bf8000003f800000:
 ; CHECK-NEXT:         .long   1065353216
 ; CHECK-NEXT:         .long   3212836864
+
+define <4 x i64> @ymm() {
+entry:
+  ret <4 x i64> <i64 8589934593, i64 17179869187, i64 8589934593, i64 17179869187>
+}
+
+; CHECK:	.globl	__ymm@0000000400000003000000020000000100000004000000030000000200000001
+; CHECK:	.section	.rdata,"dr",discard,__ymm@0000000400000003000000020000000100000004000000030000000200000001
+; CHECK:	.p2align	5
+; CHECK: __ymm@0000000400000003000000020000000100000004000000030000000200000001:
+; CHECK: 	.quad	8589934593              # 0x200000001
+; CHECK: 	.quad	17179869187             # 0x400000003
+; CHECK: 	.quad	8589934593              # 0x200000001
+; CHECK: 	.quad	17179869187

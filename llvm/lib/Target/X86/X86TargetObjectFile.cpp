@@ -176,6 +176,11 @@ MCSection *X86WindowsTargetObjectFile::getSectionForConstant(
         COMDATSymName = "__xmm@" + scalarConstantToHexString(C);
         Align = 16;
       }
+    } else if (Kind.isMergeableConst32()) {
+      if (Align <= 32) {
+        COMDATSymName = "__ymm@" + scalarConstantToHexString(C);
+        Align = 32;
+      }
     }
 
     if (!COMDATSymName.empty())

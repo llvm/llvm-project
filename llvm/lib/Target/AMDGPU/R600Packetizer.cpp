@@ -85,7 +85,7 @@ private:
       if (LastDstChan >= BISlot)
         isTrans = true;
       LastDstChan = BISlot;
-      if (TII->isPredicated(&*BI))
+      if (TII->isPredicated(*BI))
         continue;
       int OperandIdx = TII->getOperandIdx(BI->getOpcode(), AMDGPU::OpName::write);
       if (OperandIdx > -1 && BI->getOperand(OperandIdx).getImm() == 0)

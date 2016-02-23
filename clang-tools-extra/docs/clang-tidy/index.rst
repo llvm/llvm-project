@@ -546,11 +546,12 @@ It's advised to make the checks as specific as possible to avoid checks matching
 to incorrect parts of the input. Use ``[[@LINE+X]]``/``[[@LINE-X]]``
 substitutions and distinct function and variable names in the test code.
 
-Here's an example of a test using the ``check_clang_tidy.py`` script:
+Here's an example of a test using the ``check_clang_tidy.py`` script (the full
+source code is at `test/clang-tidy/google-readability-casting.cpp`_):
 
 .. code-block:: bash
 
-  // RUN: %python %S/check_clang_tidy.py %s google-readability-casting %t
+  // RUN: %check_clang_tidy %s google-readability-casting %t
 
   void f(int a) {
     int b = (int)a;
@@ -558,8 +559,25 @@ Here's an example of a test using the ``check_clang_tidy.py`` script:
     // CHECK-FIXES: int b = a;
   }
 
+There are many dark corners in the C++ language, and it may be difficult to make
+your check work perfectly in all cases, especially if it issues fixit hints. The
+most frequent pitfalls are macros and templates:
+
+1. code written in a macro body/template definition may have a different meaning
+   depending on the macro expansion/template instantiation;
+2. multiple macro expansions/template instantiations may result in the same code
+   being inspected by the check multiple times (possibly, with different
+   meanings, see 1), and the same warning (or a slightly different one) may be
+   issued by the check multipe times; clang-tidy will deduplicate _identical_
+   warnings, but if the warnings are slightly different, all of them will be
+   shown to the user (and used for applying fixes, if any);
+3. making replacements to a macro body/template definition may be fine for some
+   macro expansions/template instantiations, but easily break some other
+   expansions/instantiations.
+
 .. _lit: http://llvm.org/docs/CommandGuide/lit.html
 .. _FileCheck: http://llvm.org/docs/CommandGuide/FileCheck.html
+.. _test/clang-tidy/google-readability-casting.cpp: http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/test/clang-tidy/google-readability-casting.cpp
 
 
 Running clang-tidy on LLVM

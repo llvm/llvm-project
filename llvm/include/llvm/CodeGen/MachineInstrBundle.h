@@ -116,10 +116,10 @@ protected:
   ///
   explicit MachineOperandIteratorBase(MachineInstr *MI, bool WholeBundle) {
     if (WholeBundle) {
-      InstrI = getBundleStart(MI)->getInstrIterator();
+      InstrI = getBundleStart(MI)->getIterator();
       InstrE = MI->getParent()->instr_end();
     } else {
-      InstrI = InstrE = MI->getInstrIterator();
+      InstrI = InstrE = MI->getIterator();
       ++InstrE;
     }
     OpI = InstrI->operands_begin();

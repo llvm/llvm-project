@@ -230,20 +230,20 @@ public:
   }
 
   // Predication support.
-  bool isPredicated(const MachineInstr *MI) const override;
+  bool isPredicated(const MachineInstr &MI) const override;
 
-  bool isUnpredicatedTerminator(const MachineInstr *MI) const override;
+  bool isUnpredicatedTerminator(const MachineInstr &MI) const override;
 
-  bool PredicateInstruction(MachineInstr *MI,
+  bool PredicateInstruction(MachineInstr &MI,
                             ArrayRef<MachineOperand> Pred) const override;
 
   bool SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
                          ArrayRef<MachineOperand> Pred2) const override;
 
-  bool DefinesPredicate(MachineInstr *MI,
+  bool DefinesPredicate(MachineInstr &MI,
                         std::vector<MachineOperand> &Pred) const override;
 
-  bool isPredicable(MachineInstr *MI) const override;
+  bool isPredicable(MachineInstr &MI) const override;
 
   // Comparison optimization.
 

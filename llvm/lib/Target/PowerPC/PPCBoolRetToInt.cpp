@@ -119,7 +119,7 @@ class PPCBoolRetToInt : public FunctionPass {
             Promotable.insert(P);
 
     SmallVector<const PHINode *, 8> ToRemove;
-    for (const auto &P : Promotable) {
+    for (const PHINode *P : Promotable) {
       // Condition 2 and 3
       auto IsValidUser = [] (const Value *V) -> bool {
         return isa<ReturnInst>(V) || isa<CallInst>(V) || isa<PHINode>(V) ||
@@ -146,7 +146,7 @@ class PPCBoolRetToInt : public FunctionPass {
         Promotable.erase(User);
       ToRemove.clear();
 
-      for (const auto &P : Promotable) {
+      for (const PHINode *P : Promotable) {
         // Condition 4 and 5
         const auto &Users = P->users();
         const auto &Operands = P->operands();
@@ -199,11 +199,11 @@ class PPCBoolRetToInt : public FunctionPass {
     // Presently, we only know how to handle PHINode, Constant, and Arguments.
     // Potentially, bitwise operations (AND, OR, XOR, NOT) and sign extension
     // could also be handled in the future.
-    for (const auto &V : Defs)
+    for (Value *V : Defs)
       if (!isa<PHINode>(V) && !isa<Constant>(V) && !isa<Argument>(V))
         return false;
 
-    for (const auto &V : Defs)
+    for (Value *V : Defs)
       if (const PHINode *P = dyn_cast<PHINode>(V))
         if (!PromotablePHINodes.count(P))
           return false;
@@ -214,7 +214,7 @@ class PPCBoolRetToInt : public FunctionPass {
       ++NumBoolCallPromotion;
     ++NumBoolToIntPromotion;
 
-    for (const auto &V : Defs)
+    for (Value *V : Defs)
       if (!BoolToIntMap.count(V))
         BoolToIntMap[V] = translate(V);
 

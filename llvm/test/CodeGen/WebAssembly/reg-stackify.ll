@@ -347,4 +347,22 @@ define i32 @store_past_invar_load(i32 %a, i32* %p1, i32* dereferenceable(4) %p2)
   ret i32 %b
 }
 
+; CHECK-LABEL: ignore_dbg_value:
+; CHECK-NEXT: unreachable
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
+define void @ignore_dbg_value() {
+  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !1, metadata !7), !dbg !8
+  unreachable
+}
+
+!llvm.module.flags = !{!9}
+
 !0 = !{}
+!1 = !DILocalVariable(name: "nzcnt", scope: !2, file: !3, line: 15, type: !6)
+!2 = distinct !DISubprogram(name: "test", scope: !3, file: !3, line: 10, type: !4, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, variables: !0)
+!3 = !DIFile(filename: "test.c", directory: "/")
+!4 = !DISubroutineType(types: !0)
+!6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+!7 = !DIExpression()
+!8 = !DILocation(line: 15, column: 6, scope: !2)
+!9 = !{i32 2, !"Debug Info Version", i32 3}

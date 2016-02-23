@@ -1773,8 +1773,8 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
 
     for (auto &In : B) {
       int LFI, SFI;
-      bool Load = HII.isLoadFromStackSlot(&In, LFI) && !HII.isPredicated(&In);
-      bool Store = HII.isStoreToStackSlot(&In, SFI) && !HII.isPredicated(&In);
+      bool Load = HII.isLoadFromStackSlot(&In, LFI) && !HII.isPredicated(In);
+      bool Store = HII.isStoreToStackSlot(&In, SFI) && !HII.isPredicated(In);
       if (Load && Store) {
         // If it's both a load and a store, then we won't handle it.
         BadFIs.insert(LFI);

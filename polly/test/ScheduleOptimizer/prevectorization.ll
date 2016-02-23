@@ -65,7 +65,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 ; CHECK:   for (int c1 = 0; c1 <= 47; c1 += 1)
 ; CHECK:     for (int c2 = 0; c2 <= 31; c2 += 1)
 ; CHECK:       for (int c3 = 0; c3 <= 7; c3 += 1)
-; CHECK:         #pragma simd
+; CHECK:         // SIMD
 ; CHECK:         for (int c4 = 0; c4 <= 3; c4 += 1)
 ; CHECK:           Stmt_for_body3(32 * c0 + c2, 32 * c1 + 4 * c3 + c4);
 ; CHECK: #pragma known-parallel
@@ -75,7 +75,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 ; CHECK:       for (int c3 = 0; c3 <= 31; c3 += 1)
 ; CHECK:         for (int c4 = 0; c4 <= 7; c4 += 1)
 ; CHECK:           for (int c5 = 0; c5 <= 31; c5 += 1)
-; CHECK:             #pragma simd
+; CHECK:             // SIMD
 ; CHECK:             for (int c6 = 0; c6 <= 3; c6 += 1)
 ; CHECK:               Stmt_for_body8(32 * c0 + c3, 32 * c1 + 4 * c4 + c6, 32 * c2 + c5);
 
@@ -85,7 +85,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 ; VEC16:     for (int c1 = 0; c1 <= 47; c1 += 1)
 ; VEC16:       for (int c2 = 0; c2 <= 31; c2 += 1)
 ; VEC16:         for (int c3 = 0; c3 <= 1; c3 += 1)
-; VEC16:           #pragma simd
+; VEC16:           // SIMD
 ; VEC16:           for (int c4 = 0; c4 <= 15; c4 += 1)
 ; VEC16:             Stmt_for_body3(32 * c0 + c2, 32 * c1 + 16 * c3 + c4);
 ; VEC16:   #pragma known-parallel
@@ -95,7 +95,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 ; VEC16:         for (int c3 = 0; c3 <= 31; c3 += 1)
 ; VEC16:           for (int c4 = 0; c4 <= 1; c4 += 1)
 ; VEC16:             for (int c5 = 0; c5 <= 31; c5 += 1)
-; VEC16:               #pragma simd
+; VEC16:               // SIMD
 ; VEC16:               for (int c6 = 0; c6 <= 15; c6 += 1)
 ; VEC16:                 Stmt_for_body8(32 * c0 + c3, 32 * c1 + 16 * c4 + c6, 32 * c2 + c5);
 ; VEC16: }

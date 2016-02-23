@@ -22,6 +22,10 @@ CGSCCAnalysisManagerModuleProxy::run(Module &M) {
 }
 
 CGSCCAnalysisManagerModuleProxy::Result::~Result() {
+  // CGAM is cleared in a moved from state where there is nothing to do.
+  if (!CGAM)
+    return;
+
   // Clear out the analysis manager if we're being destroyed -- it means we
   // didn't even see an invalidate call when we got invalidated.
   CGAM->clear();
@@ -46,11 +50,14 @@ char FunctionAnalysisManagerCGSCCProxy::PassID;
 
 FunctionAnalysisManagerCGSCCProxy::Result
 FunctionAnalysisManagerCGSCCProxy::run(LazyCallGraph::SCC &C) {
-  assert(FAM->empty() && "Function analyses ran prior to the CGSCC proxy!");
   return Result(*FAM);
 }
 
 FunctionAnalysisManagerCGSCCProxy::Result::~Result() {
+  // FAM is cleared in a moved from state where there is nothing to do.
+  if (!FAM)
+    return;
+
   // Clear out the analysis manager if we're being destroyed -- it means we
   // didn't even see an invalidate call when we got invalidated.
   FAM->clear();

@@ -117,3 +117,37 @@ Exit:
   %a_lcssa2 = phi i8* [ %a_lcssa1, %L2_exit ]
   ret void
 }
+
+; PR26688
+; CHECK-LABEL: @foo4
+define i8 @foo4() {
+entry:
+  br label %L1_header
+
+L1_header:
+  %x = icmp eq i32 1, 0
+  br label %L2_header
+
+L2_header:
+  br label %L3_header
+
+L3_header:
+  br i1 true, label %L2_header, label %L3_exiting
+
+L3_exiting:
+  br i1 true, label %L3_body, label %L1_latch
+
+; CHECK:      L3_body:
+; CHECK-NEXT:   %x.lcssa = phi i1
+L3_body:
+  br i1 %x, label %L3_latch, label %L3_latch
+
+L3_latch:
+  br i1 false, label %L3_header, label %exit
+
+L1_latch:
+  br label %L1_header
+
+exit:
+  ret i8 0
+}

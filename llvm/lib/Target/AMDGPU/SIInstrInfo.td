@@ -861,6 +861,11 @@ multiclass SOP2_64_32 <sop2 op, string opName, list<dag> pattern> : SOP2_m <
     opName#" $dst, $src0, $src1", pattern
 >;
 
+multiclass SOP2_64_32_32 <sop2 op, string opName, list<dag> pattern> : SOP2_m <
+    op, opName, (outs SReg_64:$dst), (ins SSrc_32:$src0, SSrc_32:$src1),
+    opName#" $dst, $src0, $src1", pattern
+>;
+
 class SOPC_Helper <bits<7> op, RegisterOperand rc, ValueType vt,
                     string opName, PatLeaf cond> : SOPC <
   op, (outs), (ins rc:$src0, rc:$src1),
@@ -1073,7 +1078,7 @@ def InputMods : OperandWithDefaultOps <i32, (ops (i32 0))> {
 }
 
 def InputModsMatchClass : AsmOperandClass {
-  let Name = "RegWithInputMods";
+  let Name = "RegOrImmWithInputMods";
 }
 
 def InputModsNoDefault : Operand <i32> {
@@ -2217,6 +2222,7 @@ class DS_Real_si <bits<8> op, string opName, dag outs, dag ins, string asm> :
   DSe <op>,
   SIMCInstr <opName, SISubtarget.SI> {
   let isCodeGenOnly = 0;
+  let AssemblerPredicates = [isSICI];
   let DecoderNamespace="SICI";
   let DisableDecoder = DisableSIDecoder;
 }
@@ -2225,6 +2231,8 @@ class DS_Real_vi <bits<8> op, string opName, dag outs, dag ins, string asm> :
   DS <outs, ins, asm, []>,
   DSe_vi <op>,
   SIMCInstr <opName, SISubtarget.VI> {
+  let isCodeGenOnly = 0;
+  let AssemblerPredicates = [isVI];
   let DecoderNamespace="VI";
   let DisableDecoder = DisableVIDecoder;
 }
@@ -2236,7 +2244,6 @@ class DS_Off16_Real_si <bits<8> op, string opName, dag outs, dag ins, string asm
   bits<16> offset;
   let offset0 = offset{7-0};
   let offset1 = offset{15-8};
-  let isCodeGenOnly = 0;
 }
 
 class DS_Off16_Real_vi <bits<8> op, string opName, dag outs, dag ins, string asm> :

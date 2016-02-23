@@ -153,7 +153,10 @@ Here is an example of a minimal amd_kernel_code_t specification:
    .hsa_code_object_version 1,0
    .hsa_code_object_isa
 
-   .text
+   .hsatext
+   .globl  hello_world
+   .p2align 8
+   .amdgpu_hsa_kernel hello_world
 
    hello_world:
 
@@ -173,5 +176,7 @@ Here is an example of a minimal amd_kernel_code_t specification:
      s_waitcnt lgkmcnt(0)
      v_mov_b32 v1, s0
      v_mov_b32 v2, s1
-     flat_store_dword v0, v[1:2]
+     flat_store_dword v[1:2], v0
      s_endpgm
+.Lfunc_end0:
+        .size   hello_world, .Lfunc_end0-hello_world

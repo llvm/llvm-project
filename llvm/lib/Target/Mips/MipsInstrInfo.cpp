@@ -184,7 +184,7 @@ MipsInstrInfo::BranchType MipsInstrInfo::AnalyzeBranch(
   while (I != REnd && I->isDebugValue())
     ++I;
 
-  if (I == REnd || !isUnpredicatedTerminator(&*I)) {
+  if (I == REnd || !isUnpredicatedTerminator(*I)) {
     // This block ends with no branches (it just falls through to its succ).
     // Leave TBB/FBB null.
     TBB = FBB = nullptr;
@@ -208,7 +208,7 @@ MipsInstrInfo::BranchType MipsInstrInfo::AnalyzeBranch(
     SecondLastOpc = getAnalyzableBrOpc(SecondLastInst->getOpcode());
 
     // Not an analyzable branch (must be an indirect jump).
-    if (isUnpredicatedTerminator(SecondLastInst) && !SecondLastOpc)
+    if (isUnpredicatedTerminator(*SecondLastInst) && !SecondLastOpc)
       return BT_None;
   }
 
@@ -227,7 +227,7 @@ MipsInstrInfo::BranchType MipsInstrInfo::AnalyzeBranch(
 
   // If we reached here, there are two branches.
   // If there are three terminators, we don't know what sort of block this is.
-  if (++I != REnd && isUnpredicatedTerminator(&*I))
+  if (++I != REnd && isUnpredicatedTerminator(*I))
     return BT_None;
 
   BranchInstrs.insert(BranchInstrs.begin(), SecondLastInst);

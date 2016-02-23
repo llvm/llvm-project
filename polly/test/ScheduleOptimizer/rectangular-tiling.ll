@@ -74,10 +74,10 @@
 ; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:       for (int c3 = 0; c3 <= 1; c3 += 1)
 ; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:         for (int c4 = 0; c4 <= 7; c4 += 1)
 ; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:           for (int c5 = 0; c5 <= 1; c5 += 1) {
-; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:             #pragma simd
+; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:             // SIMD
 ; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:             for (int c8 = 0; c8 <= 3; c8 += 1)
 ; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:               Stmt_for_body3(256 * c0 + 16 * c2 + 2 * c4, 16 * c1 + 8 * c3 + 4 * c5 + c8);
-; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:             #pragma simd
+; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:             // SIMD
 ; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:             for (int c8 = 0; c8 <= 3; c8 += 1)
 ; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:               Stmt_for_body3(256 * c0 + 16 * c2 + 2 * c4 + 1, 16 * c1 + 8 * c3 + 4 * c5 + c8);
 ; TWO-PLUS-REGISTER-PLUS-VECTORIZATION:           }

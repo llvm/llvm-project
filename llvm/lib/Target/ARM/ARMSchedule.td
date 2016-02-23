@@ -94,7 +94,7 @@ def : PredicateProlog<[{
   (void)TII;
 }]>;
 
-def IsPredicatedPred : SchedPredicate<[{TII->isPredicated(MI)}]>;
+def IsPredicatedPred : SchedPredicate<[{TII->isPredicated(*MI)}]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Itinerary classes used for ARM

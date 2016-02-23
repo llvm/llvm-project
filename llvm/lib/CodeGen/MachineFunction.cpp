@@ -852,6 +852,8 @@ MachineConstantPoolEntry::getSectionKind(const DataLayout *DL) const {
     return SectionKind::getMergeableConst8();
   case 16:
     return SectionKind::getMergeableConst16();
+  case 32:
+    return SectionKind::getMergeableConst32();
   default:
     return SectionKind::getReadOnly();
   }

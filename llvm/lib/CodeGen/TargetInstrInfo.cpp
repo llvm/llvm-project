@@ -256,32 +256,31 @@ bool TargetInstrInfo::findCommutedOpIndices(MachineInstr *MI,
   return true;
 }
 
-bool
-TargetInstrInfo::isUnpredicatedTerminator(const MachineInstr *MI) const {
-  if (!MI->isTerminator()) return false;
+bool TargetInstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
+  if (!MI.isTerminator()) return false;
 
   // Conditional branch is a special case.
-  if (MI->isBranch() && !MI->isBarrier())
+  if (MI.isBranch() && !MI.isBarrier())
     return true;
-  if (!MI->isPredicable())
+  if (!MI.isPredicable())
     return true;
   return !isPredicated(MI);
 }
 
 bool TargetInstrInfo::PredicateInstruction(
-    MachineInstr *MI, ArrayRef<MachineOperand> Pred) const {
+    MachineInstr &MI, ArrayRef<MachineOperand> Pred) const {
   bool MadeChange = false;
 
-  assert(!MI->isBundle() &&
+  assert(!MI.isBundle() &&
          "TargetInstrInfo::PredicateInstruction() can't handle bundles");
 
-  const MCInstrDesc &MCID = MI->getDesc();
-  if (!MI->isPredicable())
+  const MCInstrDesc &MCID = MI.getDesc();
+  if (!MI.isPredicable())
     return false;
 
-  for (unsigned j = 0, i = 0, e = MI->getNumOperands(); i != e; ++i) {
+  for (unsigned j = 0, i = 0, e = MI.getNumOperands(); i != e; ++i) {
     if (MCID.OpInfo[i].isPredicate()) {
-      MachineOperand &MO = MI->getOperand(i);
+      MachineOperand &MO = MI.getOperand(i);
       if (MO.isReg()) {
         MO.setReg(Pred[j].getReg());
         MadeChange = true;
@@ -1035,7 +1034,7 @@ unsigned TargetInstrInfo::defaultDefLatency(const MCSchedModel &SchedModel,
   return 1;
 }
 
-unsigned TargetInstrInfo::getPredicationCost(const MachineInstr *) const {
+unsigned TargetInstrInfo::getPredicationCost(const MachineInstr &) const {
   return 0;
 }
 

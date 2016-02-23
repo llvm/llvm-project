@@ -368,7 +368,7 @@ void AggressiveAntiDepBreaker::PrescanInstruction(MachineInstr *MI,
     // reference either system calls or the register directly. Skip it until we
     // can tell user specified registers from compiler-specified.
     if (MI->isCall() || MI->hasExtraDefRegAllocReq() ||
-        TII->isPredicated(MI) || MI->isInlineAsm()) {
+        TII->isPredicated(*MI) || MI->isInlineAsm()) {
       DEBUG(if (State->GetGroup(Reg) != 0) dbgs() << "->g0(alloc-req)");
       State->UnionGroups(Reg, 0);
     }
@@ -444,9 +444,8 @@ void AggressiveAntiDepBreaker::ScanInstruction(MachineInstr *MI,
   // instruction which may not be executed. The second R6 def may or may not
   // re-define R6 so it's not safe to change it since the last R6 use cannot be
   // changed.
-  bool Special = MI->isCall() ||
-    MI->hasExtraSrcRegAllocReq() ||
-    TII->isPredicated(MI) || MI->isInlineAsm();
+  bool Special = MI->isCall() || MI->hasExtraSrcRegAllocReq() ||
+                 TII->isPredicated(*MI) || MI->isInlineAsm();
 
   // Scan the register uses for this instruction and update
   // live-ranges, groups and RegRefs.

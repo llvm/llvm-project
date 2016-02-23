@@ -840,7 +840,7 @@ MachineInstr *ARMLoadStoreOpt::MergeOpsUpdate(const MergeCandidate &Cand) {
   unsigned Base = getLoadStoreBaseOp(*First).getReg();
   bool BaseKill = LatestMI->killsRegister(Base);
   unsigned PredReg = 0;
-  ARMCC::CondCodes Pred = getInstrPredicate(First, PredReg);
+  ARMCC::CondCodes Pred = getInstrPredicate(*First, PredReg);
   DebugLoc DL = First->getDebugLoc();
   MachineInstr *Merged = nullptr;
   if (Cand.CanMergeToLSDouble)
@@ -1102,7 +1102,7 @@ static int isIncrementOrDecrement(const MachineInstr &MI, unsigned Reg,
   unsigned MIPredReg;
   if (MI.getOperand(0).getReg() != Reg ||
       MI.getOperand(1).getReg() != Reg ||
-      getInstrPredicate(&MI, MIPredReg) != Pred ||
+      getInstrPredicate(MI, MIPredReg) != Pred ||
       MIPredReg != PredReg)
     return 0;
 
@@ -1169,7 +1169,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   unsigned Base = BaseOP.getReg();
   bool BaseKill = BaseOP.isKill();
   unsigned PredReg = 0;
-  ARMCC::CondCodes Pred = getInstrPredicate(MI, PredReg);
+  ARMCC::CondCodes Pred = getInstrPredicate(*MI, PredReg);
   unsigned Opcode = MI->getOpcode();
   DebugLoc DL = MI->getDebugLoc();
 
@@ -1291,7 +1291,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
     return false;
 
   unsigned PredReg = 0;
-  ARMCC::CondCodes Pred = getInstrPredicate(MI, PredReg);
+  ARMCC::CondCodes Pred = getInstrPredicate(*MI, PredReg);
   int Bytes = getLSMultipleTransferSize(MI);
   MachineBasicBlock &MBB = *MI->getParent();
   MachineBasicBlock::iterator MBBI(MI);
@@ -1388,7 +1388,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
     return false;
 
   unsigned PredReg;
-  ARMCC::CondCodes Pred = getInstrPredicate(&MI, PredReg);
+  ARMCC::CondCodes Pred = getInstrPredicate(MI, PredReg);
   MachineBasicBlock::iterator MBBI(MI);
   MachineBasicBlock &MBB = *MI.getParent();
   int Offset;
@@ -1549,7 +1549,7 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
   bool OffUndef = isT2 ? false : MI->getOperand(3).isUndef();
   int OffImm = getMemoryOpOffset(MI);
   unsigned PredReg = 0;
-  ARMCC::CondCodes Pred = getInstrPredicate(MI, PredReg);
+  ARMCC::CondCodes Pred = getInstrPredicate(*MI, PredReg);
 
   if (OddRegNum > EvenRegNum && OffImm == 0) {
     // Ascending register numbers and no offset. It's safe to change it to a
@@ -1655,7 +1655,7 @@ bool ARMLoadStoreOpt::LoadStoreMultipleOpti(MachineBasicBlock &MBB) {
       unsigned Reg = MO.getReg();
       unsigned Base = getLoadStoreBaseOp(*MBBI).getReg();
       unsigned PredReg = 0;
-      ARMCC::CondCodes Pred = getInstrPredicate(MBBI, PredReg);
+      ARMCC::CondCodes Pred = getInstrPredicate(*MBBI, PredReg);
       int Offset = getMemoryOpOffset(MBBI);
       if (CurrBase == 0) {
         // Start of a new chain.
@@ -2056,7 +2056,7 @@ ARMPreAllocLoadStoreOpt::CanFormLdStDWord(MachineInstr *Op0, MachineInstr *Op1,
   if (FirstReg == SecondReg)
     return false;
   BaseReg = Op0->getOperand(1).getReg();
-  Pred = getInstrPredicate(Op0, PredReg);
+  Pred = getInstrPredicate(*Op0, PredReg);
   dl = Op0->getDebugLoc();
   return true;
 }
@@ -2250,7 +2250,7 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
       if (!isMemoryOp(*MI))
         continue;
       unsigned PredReg = 0;
-      if (getInstrPredicate(MI, PredReg) != ARMCC::AL)
+      if (getInstrPredicate(*MI, PredReg) != ARMCC::AL)
         continue;
 
       int Opc = MI->getOpcode();

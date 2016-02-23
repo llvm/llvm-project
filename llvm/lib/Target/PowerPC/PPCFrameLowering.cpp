@@ -653,7 +653,7 @@ PPCFrameLowering::findScratchRegister(MachineBasicBlock *MBB,
 
   // Now that we've done our best to provide both registers, double check
   // whether we were unable to provide enough.
-  if (BV.empty() || (BV.count() < 2 && TwoUniqueRegsRequired))
+  if (BV.count() < (TwoUniqueRegsRequired ? 2 : 1))
     return false;
 
   return true;

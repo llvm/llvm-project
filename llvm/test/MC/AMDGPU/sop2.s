@@ -106,8 +106,8 @@ s_ashr_i64 s[2:3], s[4:5], s6
 // CHECK: s_bfm_b32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x92]
 s_bfm_b32 s2, s4, s6
 
-// CHECK: s_bfm_b64 s[2:3], s[4:5], s[6:7] ; encoding: [0x04,0x06,0x82,0x92]
-s_bfm_b64 s[2:3], s[4:5], s[6:7]
+// CHECK: s_bfm_b64 s[2:3], s4, s6 ; encoding: [0x04,0x06,0x82,0x92]
+s_bfm_b64 s[2:3], s4, s6
 
 // CHECK: s_mul_i32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x93]
 s_mul_i32 s2, s4, s6
@@ -118,8 +118,8 @@ s_bfe_u32 s2, s4, s6
 // CHECK: s_bfe_i32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x94]
 s_bfe_i32 s2, s4, s6
 
-// CHECK: s_bfe_u64 s[2:3], s[4:5], s[6:7] ; encoding: [0x04,0x06,0x82,0x94]
-s_bfe_u64 s[2:3], s[4:5], s[6:7]
+// CHECK: s_bfe_u64 s[2:3], s[4:5], s6 ; encoding: [0x04,0x06,0x82,0x94]
+s_bfe_u64 s[2:3], s[4:5], s6
 
 // CHECK: s_bfe_i64 s[2:3], s[4:5], s6 ; encoding: [0x04,0x06,0x02,0x95]
 s_bfe_i64 s[2:3], s[4:5], s6

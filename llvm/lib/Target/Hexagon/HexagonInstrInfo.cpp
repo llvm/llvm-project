@@ -424,7 +424,7 @@ bool HexagonInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
       return false;
     --I;
   }
-  if (!isUnpredicatedTerminator(&*I))
+  if (!isUnpredicatedTerminator(*I))
     return false;
 
   // Get the last instruction in the block.
@@ -432,7 +432,7 @@ bool HexagonInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   MachineInstr *SecondLastInst = nullptr;
   // Find one more terminator if present.
   for (;;) {
-    if (&*I != LastInst && !I->isBundle() && isUnpredicatedTerminator(&*I)) {
+    if (&*I != LastInst && !I->isBundle() && isUnpredicatedTerminator(*I)) {
       if (!SecondLastInst)
         SecondLastInst = &*I;
       else
@@ -520,7 +520,7 @@ bool HexagonInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   // executed, so remove it.
   if (SecLastOpcode == Hexagon::J2_jump && LastOpcode == Hexagon::J2_jump) {
     TBB = SecondLastInst->getOperand(0).getMBB();
-    I = LastInst->getInstrIterator();
+    I = LastInst->getIterator();
     if (AllowModify)
       I->eraseFromParent();
     return false;
@@ -585,7 +585,7 @@ unsigned HexagonInstrInfo::InsertBranch(MachineBasicBlock &MBB,
       MachineBasicBlock *NewTBB, *NewFBB;
       SmallVector<MachineOperand, 4> Cond;
       MachineInstr *Term = MBB.getFirstTerminator();
-      if (Term != MBB.end() && isPredicated(Term) &&
+      if (Term != MBB.end() && isPredicated(*Term) &&
           !AnalyzeBranch(MBB, NewTBB, NewFBB, Cond, false)) {
         MachineBasicBlock *NextBB = &*++MBB.getIterator();
         if (NewTBB == NextBB) {
@@ -1211,20 +1211,19 @@ void HexagonInstrInfo::insertNoop(MachineBasicBlock &MBB,
 // if (!p0.new) R1 = add(R2, R3)
 // Note: New-value stores are not included here as in the current
 // implementation, we don't need to check their predicate sense.
-bool HexagonInstrInfo::isPredicated(const MachineInstr *MI) const {
-  const uint64_t F = MI->getDesc().TSFlags;
+bool HexagonInstrInfo::isPredicated(const MachineInstr &MI) const {
+  const uint64_t F = MI.getDesc().TSFlags;
   return (F >> HexagonII::PredicatedPos) & HexagonII::PredicatedMask;
 }
 
-
-bool HexagonInstrInfo::PredicateInstruction(MachineInstr *MI,
-      ArrayRef<MachineOperand> Cond) const {
+bool HexagonInstrInfo::PredicateInstruction(
+    MachineInstr &MI, ArrayRef<MachineOperand> Cond) const {
   if (Cond.empty() || isNewValueJump(Cond[0].getImm()) ||
       isEndLoopN(Cond[0].getImm())) {
-    DEBUG(dbgs() << "\nCannot predicate:"; MI->dump(););
+    DEBUG(dbgs() << "\nCannot predicate:"; MI.dump(););
     return false;
   }
-  int Opc = MI->getOpcode();
+  int Opc = MI.getOpcode();
   assert (isPredicable(MI) && "Expected predicable instruction");
   bool invertJump = predOpcodeHasNot(Cond);
 
@@ -1233,13 +1232,13 @@ bool HexagonInstrInfo::PredicateInstruction(MachineInstr *MI,
   // plicated manipulations with the operands (handling tied operands,
   // etc.), build a new temporary instruction, then overwrite MI with it.
 
-  MachineBasicBlock &B = *MI->getParent();
-  DebugLoc DL = MI->getDebugLoc();
+  MachineBasicBlock &B = *MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
   unsigned PredOpc = getCondOpcode(Opc, invertJump);
   MachineInstrBuilder T = BuildMI(B, MI, DL, get(PredOpc));
-  unsigned NOp = 0, NumOps = MI->getNumOperands();
+  unsigned NOp = 0, NumOps = MI.getNumOperands();
   while (NOp < NumOps) {
-    MachineOperand &Op = MI->getOperand(NOp);
+    MachineOperand &Op = MI.getOperand(NOp);
     if (!Op.isReg() || !Op.isDef() || Op.isImplicit())
       break;
     T.addOperand(Op);
@@ -1252,15 +1251,15 @@ bool HexagonInstrInfo::PredicateInstruction(MachineInstr *MI,
   assert(GotPredReg);
   T.addReg(PredReg, PredRegFlags);
   while (NOp < NumOps)
-    T.addOperand(MI->getOperand(NOp++));
+    T.addOperand(MI.getOperand(NOp++));
 
-  MI->setDesc(get(PredOpc));
-  while (unsigned n = MI->getNumOperands())
-    MI->RemoveOperand(n-1);
+  MI.setDesc(get(PredOpc));
+  while (unsigned n = MI.getNumOperands())
+    MI.RemoveOperand(n-1);
   for (unsigned i = 0, n = T->getNumOperands(); i < n; ++i)
-    MI->addOperand(T->getOperand(i));
+    MI.addOperand(T->getOperand(i));
 
-  auto TI = T->getInstrIterator();
+  MachineBasicBlock::instr_iterator TI = T->getIterator();
   B.erase(TI);
 
   MachineRegisterInfo &MRI = B.getParent()->getRegInfo();
@@ -1275,12 +1274,11 @@ bool HexagonInstrInfo::SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
   return false;
 }
 
-
-bool HexagonInstrInfo::DefinesPredicate(MachineInstr *MI,
-                                   std::vector<MachineOperand> &Pred) const {
+bool HexagonInstrInfo::DefinesPredicate(
+    MachineInstr &MI, std::vector<MachineOperand> &Pred) const {
   auto &HRI = getRegisterInfo();
-  for (unsigned oper = 0; oper < MI->getNumOperands(); ++oper) {
-    MachineOperand MO = MI->getOperand(oper);
+  for (unsigned oper = 0; oper < MI.getNumOperands(); ++oper) {
+    MachineOperand MO = MI.getOperand(oper);
     if (MO.isReg() && MO.isDef()) {
       const TargetRegisterClass* RC = HRI.getMinimalPhysRegClass(MO.getReg());
       if (RC == &Hexagon::PredRegsRegClass) {
@@ -1292,14 +1290,14 @@ bool HexagonInstrInfo::DefinesPredicate(MachineInstr *MI,
   return false;
 }
 
-bool HexagonInstrInfo::isPredicable(MachineInstr *MI) const {
-  bool isPred = MI->getDesc().isPredicable();
+bool HexagonInstrInfo::isPredicable(MachineInstr &MI) const {
+  bool isPred = MI.getDesc().isPredicable();
 
   if (!isPred)
     return false;
 
-  const int Opc = MI->getOpcode();
-  int NumOperands = MI->getNumOperands();
+  const int Opc = MI.getOpcode();
+  int NumOperands = MI.getNumOperands();
 
   // Keep a flag for upto 4 operands in the instructions, to indicate if
   // that operand has been constant extended.
@@ -1308,64 +1306,64 @@ bool HexagonInstrInfo::isPredicable(MachineInstr *MI) const {
     NumOperands = 4;
 
   for (int i = 0; i < NumOperands; i++)
-    OpCExtended[i] = (isOperandExtended(MI, i) && isConstExtended(MI));
+    OpCExtended[i] = (isOperandExtended(&MI, i) && isConstExtended(&MI));
 
   switch(Opc) {
   case Hexagon::A2_tfrsi:
-    return (isOperandExtended(MI, 1) && isConstExtended(MI)) ||
-           isInt<12>(MI->getOperand(1).getImm());
+    return (isOperandExtended(&MI, 1) && isConstExtended(&MI)) ||
+           isInt<12>(MI.getOperand(1).getImm());
 
   case Hexagon::S2_storerd_io:
-    return isShiftedUInt<6,3>(MI->getOperand(1).getImm());
+    return isShiftedUInt<6,3>(MI.getOperand(1).getImm());
 
   case Hexagon::S2_storeri_io:
   case Hexagon::S2_storerinew_io:
-    return isShiftedUInt<6,2>(MI->getOperand(1).getImm());
+    return isShiftedUInt<6,2>(MI.getOperand(1).getImm());
 
   case Hexagon::S2_storerh_io:
   case Hexagon::S2_storerhnew_io:
-    return isShiftedUInt<6,1>(MI->getOperand(1).getImm());
+    return isShiftedUInt<6,1>(MI.getOperand(1).getImm());
 
   case Hexagon::S2_storerb_io:
   case Hexagon::S2_storerbnew_io:
-    return isUInt<6>(MI->getOperand(1).getImm());
+    return isUInt<6>(MI.getOperand(1).getImm());
 
   case Hexagon::L2_loadrd_io:
-    return isShiftedUInt<6,3>(MI->getOperand(2).getImm());
+    return isShiftedUInt<6,3>(MI.getOperand(2).getImm());
 
   case Hexagon::L2_loadri_io:
-    return isShiftedUInt<6,2>(MI->getOperand(2).getImm());
+    return isShiftedUInt<6,2>(MI.getOperand(2).getImm());
 
   case Hexagon::L2_loadrh_io:
   case Hexagon::L2_loadruh_io:
-    return isShiftedUInt<6,1>(MI->getOperand(2).getImm());
+    return isShiftedUInt<6,1>(MI.getOperand(2).getImm());
 
   case Hexagon::L2_loadrb_io:
   case Hexagon::L2_loadrub_io:
-    return isUInt<6>(MI->getOperand(2).getImm());
+    return isUInt<6>(MI.getOperand(2).getImm());
 
   case Hexagon::L2_loadrd_pi:
-    return isShiftedInt<4,3>(MI->getOperand(3).getImm());
+    return isShiftedInt<4,3>(MI.getOperand(3).getImm());
 
   case Hexagon::L2_loadri_pi:
-    return isShiftedInt<4,2>(MI->getOperand(3).getImm());
+    return isShiftedInt<4,2>(MI.getOperand(3).getImm());
 
   case Hexagon::L2_loadrh_pi:
   case Hexagon::L2_loadruh_pi:
-    return isShiftedInt<4,1>(MI->getOperand(3).getImm());
+    return isShiftedInt<4,1>(MI.getOperand(3).getImm());
 
   case Hexagon::L2_loadrb_pi:
   case Hexagon::L2_loadrub_pi:
-    return isInt<4>(MI->getOperand(3).getImm());
+    return isInt<4>(MI.getOperand(3).getImm());
 
   case Hexagon::S4_storeirb_io:
   case Hexagon::S4_storeirh_io:
   case Hexagon::S4_storeiri_io:
-    return (OpCExtended[1] || isUInt<6>(MI->getOperand(1).getImm())) &&
-           (OpCExtended[2] || isInt<6>(MI->getOperand(2).getImm()));
+    return (OpCExtended[1] || isUInt<6>(MI.getOperand(1).getImm())) &&
+           (OpCExtended[2] || isInt<6>(MI.getOperand(2).getImm()));
 
   case Hexagon::A2_addi:
-    return isInt<8>(MI->getOperand(2).getImm());
+    return isInt<8>(MI.getOperand(2).getImm());
 
   case Hexagon::A2_aslh:
   case Hexagon::A2_asrh:
@@ -1662,13 +1660,13 @@ bool HexagonInstrInfo::isCompoundBranchInstr(const MachineInstr *MI) const {
 
 
 bool HexagonInstrInfo::isCondInst(const MachineInstr *MI) const {
-  return (MI->isBranch() && isPredicated(MI)) ||
+  return (MI->isBranch() && isPredicated(*MI)) ||
          isConditionalTransfer(MI) ||
          isConditionalALU32(MI)    ||
          isConditionalLoad(MI)     ||
          // Predicated stores which don't have a .new on any operands.
-         (MI->mayStore() && isPredicated(MI) && !isNewValueStore(MI) &&
-          !isPredicatedNew(MI));
+         (MI->mayStore() && isPredicated(*MI) && !isNewValueStore(MI) &&
+          !isPredicatedNew(*MI));
 }
 
 
@@ -1733,7 +1731,7 @@ bool HexagonInstrInfo::isConditionalALU32(const MachineInstr* MI) const {
 // FIXME - Function name and it's functionality don't match.
 // It should be renamed to hasPredNewOpcode()
 bool HexagonInstrInfo::isConditionalLoad(const MachineInstr* MI) const {
-  if (!MI->getDesc().mayLoad() || !isPredicated(MI))
+  if (!MI->getDesc().mayLoad() || !isPredicated(*MI))
     return false;
 
   int PNewOpcode = Hexagon::getPredNewOpcode(MI->getOpcode());
@@ -1939,8 +1937,7 @@ bool HexagonInstrInfo::isDotCurInst(const MachineInstr* MI) const {
 // Returns true, if any one of the operands is a dot new
 // insn, whether it is predicated dot new or register dot new.
 bool HexagonInstrInfo::isDotNewInst(const MachineInstr* MI) const {
-  if (isNewValueInst(MI) ||
-     (isPredicated(MI) && isPredicatedNew(MI)))
+  if (isNewValueInst(MI) || (isPredicated(*MI) && isPredicatedNew(*MI)))
     return true;
 
   return false;
@@ -2305,8 +2302,8 @@ bool HexagonInstrInfo::isPostIncrement(const MachineInstr* MI) const {
 }
 
 
-bool HexagonInstrInfo::isPredicatedNew(const MachineInstr *MI) const {
-  const uint64_t F = MI->getDesc().TSFlags;
+bool HexagonInstrInfo::isPredicatedNew(const MachineInstr &MI) const {
+  const uint64_t F = MI.getDesc().TSFlags;
   assert(isPredicated(MI));
   return (F >> HexagonII::PredicatedNewPos) & HexagonII::PredicatedNewMask;
 }
@@ -2319,8 +2316,8 @@ bool HexagonInstrInfo::isPredicatedNew(unsigned Opcode) const {
 }
 
 
-bool HexagonInstrInfo::isPredicatedTrue(const MachineInstr *MI) const {
-  const uint64_t F = MI->getDesc().TSFlags;
+bool HexagonInstrInfo::isPredicatedTrue(const MachineInstr &MI) const {
+  const uint64_t F = MI.getDesc().TSFlags;
   return !((F >> HexagonII::PredicatedFalsePos) &
            HexagonII::PredicatedFalseMask);
 }
@@ -3084,7 +3081,7 @@ bool HexagonInstrInfo::getBaseAndOffsetPosition(const MachineInstr *MI,
   } else
     return false;
 
-  if (isPredicated(MI)) {
+  if (isPredicated(*MI)) {
     BasePos++;
     OffsetPos++;
   }
@@ -3138,7 +3135,7 @@ SmallVector<MachineInstr*, 2> HexagonInstrInfo::getBranchingInstrs(
       return Jumpers;
     --I;
   }
-  if (!isUnpredicatedTerminator(&*I))
+  if (!isUnpredicatedTerminator(*I))
     return Jumpers;
 
   // Get the last instruction in the block.
@@ -3147,7 +3144,7 @@ SmallVector<MachineInstr*, 2> HexagonInstrInfo::getBranchingInstrs(
   MachineInstr *SecondLastInst = nullptr;
   // Find one more terminator if present.
   do {
-    if (&*I != LastInst && !I->isBundle() && isUnpredicatedTerminator(&*I)) {
+    if (&*I != LastInst && !I->isBundle() && isUnpredicatedTerminator(*I)) {
       if (!SecondLastInst) {
         SecondLastInst = &*I;
         Jumpers.push_back(SecondLastInst);
@@ -4106,7 +4103,7 @@ bool HexagonInstrInfo::invertAndChangeJumpTarget(
     --TargetPos;
   assert((TargetPos >= 0) && MI->getOperand(TargetPos).isMBB());
   MI->getOperand(TargetPos).setMBB(NewTarget);
-  if (EnableBranchPrediction && isPredicatedNew(MI)) {
+  if (EnableBranchPrediction && isPredicatedNew(*MI)) {
     NewOpcode = reversePrediction(NewOpcode);
   }
   MI->setDesc(get(NewOpcode));

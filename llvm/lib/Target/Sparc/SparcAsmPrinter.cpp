@@ -267,8 +267,8 @@ void SparcAsmPrinter::EmitInstruction(const MachineInstr *MI)
     LowerGETPCXAndEmitMCInsts(MI, getSubtargetInfo());
     return;
   }
-  auto I = MI->getInstrIterator();
-  auto E = MI->getParent()->instr_end();
+  MachineBasicBlock::const_instr_iterator I = MI->getIterator();
+  MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
   do {
     MCInst TmpInst;
     LowerSparcMachineInstrToMCInst(&*I, TmpInst, *this);

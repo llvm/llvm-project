@@ -49,17 +49,26 @@ typedef AnalysisManager<LazyCallGraph::SCC> CGSCCAnalysisManager;
 /// never use a CGSCC analysis manager from within (transitively) a module
 /// pass manager unless your parent module pass has received a proxy result
 /// object for it.
+///
+/// Note that the proxy's result is a move-only object and represents ownership
+/// of the validity of the analyses in the \c CGSCCAnalysisManager it provides.
 class CGSCCAnalysisManagerModuleProxy {
 public:
   class Result {
   public:
     explicit Result(CGSCCAnalysisManager &CGAM) : CGAM(&CGAM) {}
-    // We have to explicitly define all the special member functions because
-    // MSVC refuses to generate them.
-    Result(const Result &Arg) : CGAM(Arg.CGAM) {}
-    Result(Result &&Arg) : CGAM(std::move(Arg.CGAM)) {}
-    Result &operator=(Result RHS) {
-      std::swap(CGAM, RHS.CGAM);
+    Result(Result &&Arg) : CGAM(std::move(Arg.CGAM)) {
+      // We have to null out the analysis manager in the moved-from state
+      // because we are taking ownership of its responsibilty to clear the
+      // analysis state.
+      Arg.CGAM = nullptr;
+    }
+    Result &operator=(Result &&RHS) {
+      CGAM = RHS.CGAM;
+      // We have to null out the analysis manager in the moved-from state
+      // because we are taking ownership of its responsibilty to clear the
+      // analysis state.
+      RHS.CGAM = nullptr;
       return *this;
     }
     ~Result();
@@ -275,17 +284,27 @@ createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass) {
 /// never use a function analysis manager from within (transitively) a CGSCC
 /// pass manager unless your parent CGSCC pass has received a proxy result
 /// object for it.
+///
+/// Note that the proxy's result is a move-only object and represents ownership
+/// of the validity of the analyses in the \c FunctionAnalysisManager it
+/// provides.
 class FunctionAnalysisManagerCGSCCProxy {
 public:
   class Result {
   public:
     explicit Result(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
-    // We have to explicitly define all the special member functions because
-    // MSVC refuses to generate them.
-    Result(const Result &Arg) : FAM(Arg.FAM) {}
-    Result(Result &&Arg) : FAM(std::move(Arg.FAM)) {}
-    Result &operator=(Result RHS) {
-      std::swap(FAM, RHS.FAM);
+    Result(Result &&Arg) : FAM(std::move(Arg.FAM)) {
+      // We have to null out the analysis manager in the moved-from state
+      // because we are taking ownership of the responsibilty to clear the
+      // analysis state.
+      Arg.FAM = nullptr;
+    }
+    Result &operator=(Result &&RHS) {
+      FAM = RHS.FAM;
+      // We have to null out the analysis manager in the moved-from state
+      // because we are taking ownership of the responsibilty to clear the
+      // analysis state.
+      RHS.FAM = nullptr;
       return *this;
     }
     ~Result();

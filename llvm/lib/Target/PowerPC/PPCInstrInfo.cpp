@@ -453,14 +453,14 @@ bool PPCInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TBB,
   if (I == MBB.end())
     return false;
 
-  if (!isUnpredicatedTerminator(I))
+  if (!isUnpredicatedTerminator(*I))
     return false;
 
   // Get the last instruction in the block.
   MachineInstr *LastInst = I;
 
   // If there is only one terminator instruction, process it.
-  if (I == MBB.begin() || !isUnpredicatedTerminator(--I)) {
+  if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
     if (LastInst->getOpcode() == PPC::B) {
       if (!LastInst->getOperand(0).isMBB())
         return true;
@@ -522,8 +522,7 @@ bool PPCInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TBB,
   MachineInstr *SecondLastInst = I;
 
   // If there are three terminators, we don't know what sort of block this is.
-  if (SecondLastInst && I != MBB.begin() &&
-      isUnpredicatedTerminator(--I))
+  if (SecondLastInst && I != MBB.begin() && isUnpredicatedTerminator(*--I))
     return true;
 
   // If the block ends with PPC::B and PPC:BCC, handle it.
@@ -1299,7 +1298,7 @@ bool PPCInstrInfo::isProfitableToIfCvt(MachineBasicBlock &TMBB,
 }
 
 
-bool PPCInstrInfo::isPredicated(const MachineInstr *MI) const {
+bool PPCInstrInfo::isPredicated(const MachineInstr &MI) const {
   // The predicated branches are identified by their type, not really by the
   // explicit presence of a predicate. Furthermore, some of them can be
   // predicated more than once. Because if conversion won't try to predicate
@@ -1310,73 +1309,71 @@ bool PPCInstrInfo::isPredicated(const MachineInstr *MI) const {
   return false;
 }
 
-bool PPCInstrInfo::isUnpredicatedTerminator(const MachineInstr *MI) const {
-  if (!MI->isTerminator())
+bool PPCInstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
+  if (!MI.isTerminator())
     return false;
 
   // Conditional branch is a special case.
-  if (MI->isBranch() && !MI->isBarrier())
+  if (MI.isBranch() && !MI.isBarrier())
     return true;
 
   return !isPredicated(MI);
 }
 
-bool PPCInstrInfo::PredicateInstruction(MachineInstr *MI,
+bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
                                         ArrayRef<MachineOperand> Pred) const {
-  unsigned OpC = MI->getOpcode();
+  unsigned OpC = MI.getOpcode();
   if (OpC == PPC::BLR || OpC == PPC::BLR8) {
     if (Pred[1].getReg() == PPC::CTR8 || Pred[1].getReg() == PPC::CTR) {
       bool isPPC64 = Subtarget.isPPC64();
-      MI->setDesc(get(Pred[0].getImm() ?
-                      (isPPC64 ? PPC::BDNZLR8 : PPC::BDNZLR) :
-                      (isPPC64 ? PPC::BDZLR8  : PPC::BDZLR)));
+      MI.setDesc(get(Pred[0].getImm() ? (isPPC64 ? PPC::BDNZLR8 : PPC::BDNZLR)
+                                      : (isPPC64 ? PPC::BDZLR8 : PPC::BDZLR)));
     } else if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
-      MI->setDesc(get(PPC::BCLR));
-      MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-        .addReg(Pred[1].getReg());
+      MI.setDesc(get(PPC::BCLR));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg());
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
-      MI->setDesc(get(PPC::BCLRn));
-      MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-        .addReg(Pred[1].getReg());
+      MI.setDesc(get(PPC::BCLRn));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg());
     } else {
-      MI->setDesc(get(PPC::BCCLR));
-      MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-        .addImm(Pred[0].getImm())
-        .addReg(Pred[1].getReg());
+      MI.setDesc(get(PPC::BCCLR));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addImm(Pred[0].getImm())
+          .addReg(Pred[1].getReg());
     }
 
     return true;
   } else if (OpC == PPC::B) {
     if (Pred[1].getReg() == PPC::CTR8 || Pred[1].getReg() == PPC::CTR) {
       bool isPPC64 = Subtarget.isPPC64();
-      MI->setDesc(get(Pred[0].getImm() ?
-                      (isPPC64 ? PPC::BDNZ8 : PPC::BDNZ) :
-                      (isPPC64 ? PPC::BDZ8  : PPC::BDZ)));
+      MI.setDesc(get(Pred[0].getImm() ? (isPPC64 ? PPC::BDNZ8 : PPC::BDNZ)
+                                      : (isPPC64 ? PPC::BDZ8 : PPC::BDZ)));
     } else if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
-      MachineBasicBlock *MBB = MI->getOperand(0).getMBB();
-      MI->RemoveOperand(0);
+      MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
+      MI.RemoveOperand(0);
 
-      MI->setDesc(get(PPC::BC));
-      MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-        .addReg(Pred[1].getReg())
-        .addMBB(MBB);
+      MI.setDesc(get(PPC::BC));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg())
+          .addMBB(MBB);
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
-      MachineBasicBlock *MBB = MI->getOperand(0).getMBB();
-      MI->RemoveOperand(0);
+      MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
+      MI.RemoveOperand(0);
 
-      MI->setDesc(get(PPC::BCn));
-      MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-        .addReg(Pred[1].getReg())
-        .addMBB(MBB);
+      MI.setDesc(get(PPC::BCn));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg())
+          .addMBB(MBB);
     } else {
-      MachineBasicBlock *MBB = MI->getOperand(0).getMBB();
-      MI->RemoveOperand(0);
+      MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
+      MI.RemoveOperand(0);
 
-      MI->setDesc(get(PPC::BCC));
-      MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-        .addImm(Pred[0].getImm())
-        .addReg(Pred[1].getReg())
-        .addMBB(MBB);
+      MI.setDesc(get(PPC::BCC));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addImm(Pred[0].getImm())
+          .addReg(Pred[1].getReg())
+          .addMBB(MBB);
     }
 
     return true;
@@ -1389,24 +1386,24 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr *MI,
     bool isPPC64 = Subtarget.isPPC64();
 
     if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
-      MI->setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8 : PPC::BCCTR8) :
-                                (setLR ? PPC::BCCTRL  : PPC::BCCTR)));
-      MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-        .addReg(Pred[1].getReg());
+      MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8 : PPC::BCCTR8)
+                             : (setLR ? PPC::BCCTRL : PPC::BCCTR)));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg());
       return true;
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
-      MI->setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8n : PPC::BCCTR8n) :
-                                (setLR ? PPC::BCCTRLn  : PPC::BCCTRn)));
-      MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-        .addReg(Pred[1].getReg());
+      MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8n : PPC::BCCTR8n)
+                             : (setLR ? PPC::BCCTRLn : PPC::BCCTRn)));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addReg(Pred[1].getReg());
       return true;
     }
 
-    MI->setDesc(get(isPPC64 ? (setLR ? PPC::BCCCTRL8 : PPC::BCCCTR8) :
-                              (setLR ? PPC::BCCCTRL  : PPC::BCCCTR)));
-    MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-      .addImm(Pred[0].getImm())
-      .addReg(Pred[1].getReg());
+    MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCCTRL8 : PPC::BCCCTR8)
+                           : (setLR ? PPC::BCCCTRL : PPC::BCCCTR)));
+    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+        .addImm(Pred[0].getImm())
+        .addReg(Pred[1].getReg());
     return true;
   }
 
@@ -1444,7 +1441,7 @@ bool PPCInstrInfo::SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
   return false;
 }
 
-bool PPCInstrInfo::DefinesPredicate(MachineInstr *MI,
+bool PPCInstrInfo::DefinesPredicate(MachineInstr &MI,
                                     std::vector<MachineOperand> &Pred) const {
   // Note: At the present time, the contents of Pred from this function is
   // unused by IfConversion. This implementation follows ARM by pushing the
@@ -1457,8 +1454,8 @@ bool PPCInstrInfo::DefinesPredicate(MachineInstr *MI,
       &PPC::CTRRCRegClass, &PPC::CTRRC8RegClass };
 
   bool Found = false;
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     for (unsigned c = 0; c < array_lengthof(RCs) && !Found; ++c) {
       const TargetRegisterClass *RC = RCs[c];
       if (MO.isReg()) {
@@ -1480,8 +1477,8 @@ bool PPCInstrInfo::DefinesPredicate(MachineInstr *MI,
   return Found;
 }
 
-bool PPCInstrInfo::isPredicable(MachineInstr *MI) const {
-  unsigned OpC = MI->getOpcode();
+bool PPCInstrInfo::isPredicable(MachineInstr &MI) const {
+  unsigned OpC = MI.getOpcode();
   switch (OpC) {
   default:
     return false;

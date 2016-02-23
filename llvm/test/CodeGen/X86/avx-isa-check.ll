@@ -654,3 +654,12 @@ define <4 x float> @test_x86_fmsub_ps(<4 x float> %a0, <4 x float> %a1, <4 x flo
   %res = fsub <4 x float> %x, %a2
   ret <4 x float> %res
 }
+
+define <32 x i8> @test_cmpgtb(<32 x i8> %A) {
+; generate the follow code
+;	 vpxor	 %ymm1, %ymm1, %ymm1
+;  vpcmpgtb %ymm0, %ymm1, %ymm0
+  %B = ashr <32 x i8> %A, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  ret <32 x i8> %B
+}
+

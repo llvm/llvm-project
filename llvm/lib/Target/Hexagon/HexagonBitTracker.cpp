@@ -937,7 +937,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr *BI,
 
 bool HexagonEvaluator::evaluateLoad(const MachineInstr *MI,
       const CellMapType &Inputs, CellMapType &Outputs) const {
-  if (TII.isPredicated(MI))
+  if (TII.isPredicated(*MI))
     return false;
   assert(MI->mayLoad() && "A load that mayn't?");
   unsigned Opc = MI->getOpcode();

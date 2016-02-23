@@ -124,4 +124,29 @@ a:
         xor       $s2,$a0,$s8
         xor       $2, 4                # CHECK: xori $2, $2, 4         # encoding: [0x38,0x42,0x00,0x04]
 
+        .set at
+        trunc.w.s  $f4,$f6,$4
+        # CHECK:                cfc1    $4, $ra                 # encoding: [0x44,0x44,0xf8,0x00]
+        # CHECK:                cfc1    $4, $ra                 # encoding: [0x44,0x44,0xf8,0x00]
+        # CHECK:                nop                             # encoding: [0x00,0x00,0x00,0x00]
+        # CHECK:                ori     $1, $4, 3               # encoding: [0x34,0x81,0x00,0x03]
+        # CHECK:                xori    $1, $1, 2               # encoding: [0x38,0x21,0x00,0x02]
+        # CHECK:                ctc1    $1, $ra                 # encoding: [0x44,0xc1,0xf8,0x00]
+        # CHECK:                nop                             # encoding: [0x00,0x00,0x00,0x00]
+        # CHECK:                cvt.w.s $f4, $f6                # encoding: [0x46,0x00,0x31,0x24]
+        # CHECK:                ctc1    $4, $ra                 # encoding: [0x44,0xc4,0xf8,0x00]
+        # CHECK:                nop                             # encoding: [0x00,0x00,0x00,0x00]
+
+        trunc.w.d  $f4,$f6,$4
+        # CHECK:                cfc1    $4, $ra                 # encoding: [0x44,0x44,0xf8,0x00]
+        # CHECK:                cfc1    $4, $ra                 # encoding: [0x44,0x44,0xf8,0x00]
+        # CHECK:                nop                             # encoding: [0x00,0x00,0x00,0x00]
+        # CHECK:                ori     $1, $4, 3               # encoding: [0x34,0x81,0x00,0x03]
+        # CHECK:                xori    $1, $1, 2               # encoding: [0x38,0x21,0x00,0x02]
+        # CHECK:                ctc1    $1, $ra                 # encoding: [0x44,0xc1,0xf8,0x00]
+        # CHECK:                nop                             # encoding: [0x00,0x00,0x00,0x00]
+        # CHECK:                cvt.w.d $f4, $f6                # encoding: [0x46,0x20,0x31,0x24]
+        # CHECK:                ctc1    $4, $ra                 # encoding: [0x44,0xc4,0xf8,0x00]
+        # CHECK:                nop                             # encoding: [0x00,0x00,0x00,0x00]
+
 1:

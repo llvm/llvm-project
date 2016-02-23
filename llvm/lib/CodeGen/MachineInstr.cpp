@@ -934,7 +934,7 @@ MachineInstr::mergeMemRefsWith(const MachineInstr& Other) {
 
 bool MachineInstr::hasPropertyInBundle(unsigned Mask, QueryType Type) const {
   assert(!isBundledWithPred() && "Must be called on bundle header");
-  for (auto MII = getInstrIterator();; ++MII) {
+  for (MachineBasicBlock::const_instr_iterator MII = getIterator();; ++MII) {
     if (MII->getDesc().getFlags() & Mask) {
       if (Type == AnyInBundle)
         return true;
@@ -958,10 +958,10 @@ bool MachineInstr::isIdenticalTo(const MachineInstr *Other,
 
   if (isBundle()) {
     // Both instructions are bundles, compare MIs inside the bundle.
-    auto I1 = getInstrIterator();
-    auto E1 = getParent()->instr_end();
-    auto I2 = Other->getInstrIterator();
-    auto E2 = Other->getParent()->instr_end();
+    MachineBasicBlock::const_instr_iterator I1 = getIterator();
+    MachineBasicBlock::const_instr_iterator E1 = getParent()->instr_end();
+    MachineBasicBlock::const_instr_iterator I2 = Other->getIterator();
+    MachineBasicBlock::const_instr_iterator E2= Other->getParent()->instr_end();
     while (++I1 != E1 && I1->isInsideBundle()) {
       ++I2;
       if (I2 == E2 || !I2->isInsideBundle() || !I1->isIdenticalTo(&*I2, Check))
@@ -1069,7 +1069,8 @@ unsigned MachineInstr::getNumExplicitOperands() const {
 void MachineInstr::bundleWithPred() {
   assert(!isBundledWithPred() && "MI is already bundled with its predecessor");
   setFlag(BundledPred);
-  auto Pred = --getInstrIterator();
+  MachineBasicBlock::instr_iterator Pred = getIterator();
+  --Pred;
   assert(!Pred->isBundledWithSucc() && "Inconsistent bundle flags");
   Pred->setFlag(BundledSucc);
 }
@@ -1077,7 +1078,8 @@ void MachineInstr::bundleWithPred() {
 void MachineInstr::bundleWithSucc() {
   assert(!isBundledWithSucc() && "MI is already bundled with its successor");
   setFlag(BundledSucc);
-  auto Succ = ++getInstrIterator();
+  MachineBasicBlock::instr_iterator Succ = getIterator();
+  ++Succ;
   assert(!Succ->isBundledWithPred() && "Inconsistent bundle flags");
   Succ->setFlag(BundledPred);
 }
@@ -1085,7 +1087,8 @@ void MachineInstr::bundleWithSucc() {
 void MachineInstr::unbundleFromPred() {
   assert(isBundledWithPred() && "MI isn't bundled with its predecessor");
   clearFlag(BundledPred);
-  auto Pred = --getInstrIterator();
+  MachineBasicBlock::instr_iterator Pred = getIterator();
+  --Pred;
   assert(Pred->isBundledWithSucc() && "Inconsistent bundle flags");
   Pred->clearFlag(BundledSucc);
 }
@@ -1093,7 +1096,8 @@ void MachineInstr::unbundleFromPred() {
 void MachineInstr::unbundleFromSucc() {
   assert(isBundledWithSucc() && "MI isn't bundled with its successor");
   clearFlag(BundledSucc);
-  auto Succ = ++getInstrIterator();
+  MachineBasicBlock::instr_iterator Succ = getIterator();
+  ++Succ;
   assert(Succ->isBundledWithPred() && "Inconsistent bundle flags");
   Succ->clearFlag(BundledPred);
 }
@@ -1228,7 +1232,7 @@ const TargetRegisterClass *MachineInstr::getRegClassConstraintEffect(
 /// Return the number of instructions inside the MI bundle, not counting the
 /// header instruction.
 unsigned MachineInstr::getBundleSize() const {
-  auto I = getInstrIterator();
+  MachineBasicBlock::const_instr_iterator I = getIterator();
   unsigned Size = 0;
   while (I->isBundledWithSucc()) {
     ++Size;

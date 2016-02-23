@@ -590,6 +590,11 @@ TailDuplicatePass::shouldTailDuplicate(const MachineFunction &MF,
     if (MI.isNotDuplicable())
       return false;
 
+    // Convergent instructions can be duplicated only if doing so doesn't add
+    // new control dependencies, which is what we're going to do here.
+    if (MI.isConvergent())
+      return false;
+
     // Do not duplicate 'return' instructions if this is a pre-regalloc run.
     // A return may expand into a lot more instructions (e.g. reload of callee
     // saved registers) after PEI.

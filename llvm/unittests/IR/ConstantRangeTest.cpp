@@ -577,17 +577,17 @@ TEST(ConstantRange, MakeOverflowingRegion) {
   for (int Const : {0, -1, -2, 1, 2, IntMin4Bits, IntMax4Bits}) {
     APInt C(4, Const, true /* = isSigned */);
 
-    auto NUWRegion =
-      ConstantRange::makeNoWrapRegion(Instruction::Add, C, OBO::NoUnsignedWrap);
+    auto NUWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Add, C, OBO::NoUnsignedWrap);
 
     EXPECT_FALSE(NUWRegion.isEmptySet());
 
-    auto NSWRegion =
-      ConstantRange::makeNoWrapRegion(Instruction::Add, C, OBO::NoSignedWrap);
+    auto NSWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Add, C, OBO::NoSignedWrap);
 
     EXPECT_FALSE(NSWRegion.isEmptySet());
 
-    auto NoWrapRegion = ConstantRange::makeNoWrapRegion(
+    auto NoWrapRegion = ConstantRange::makeGuaranteedNoWrapRegion(
         Instruction::Add, C, OBO::NoSignedWrap | OBO::NoUnsignedWrap);
 
     EXPECT_FALSE(NoWrapRegion.isEmptySet());

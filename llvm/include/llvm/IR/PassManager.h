@@ -618,6 +618,10 @@ typedef AnalysisManager<Function> FunctionAnalysisManager;
 /// never use a function analysis manager from within (transitively) a module
 /// pass manager unless your parent module pass has received a proxy result
 /// object for it.
+///
+/// Note that the proxy's result is a move-only object and represents ownership
+/// of the validity of the analyses in the \c FunctionAnalysisManager it
+/// provides.
 class FunctionAnalysisManagerModuleProxy {
 public:
   class Result;
@@ -665,12 +669,18 @@ private:
 class FunctionAnalysisManagerModuleProxy::Result {
 public:
   explicit Result(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  Result(const Result &Arg) : FAM(Arg.FAM) {}
-  Result(Result &&Arg) : FAM(std::move(Arg.FAM)) {}
-  Result &operator=(Result RHS) {
-    std::swap(FAM, RHS.FAM);
+  Result(Result &&Arg) : FAM(std::move(Arg.FAM)) {
+    // We have to null out the analysis manager in the moved-from state
+    // because we are taking ownership of the responsibilty to clear the
+    // analysis state.
+    Arg.FAM = nullptr;
+  }
+  Result &operator=(Result &&RHS) {
+    FAM = RHS.FAM;
+    // We have to null out the analysis manager in the moved-from state
+    // because we are taking ownership of the responsibilty to clear the
+    // analysis state.
+    RHS.FAM = nullptr;
     return *this;
   }
   ~Result();

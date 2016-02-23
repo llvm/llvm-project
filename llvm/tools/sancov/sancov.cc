@@ -364,7 +364,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
   if (SanCovAddrs.empty())
     Fail("__sanitizer_cov* functions not found");
 
-  for (const auto Section : O.sections()) {
+  for (object::SectionRef Section : O.sections()) {
     if (Section.isVirtual() || !Section.isText()) // llvm-objdump does the same.
       continue;
     uint64_t SectionAddr = Section.getAddress();

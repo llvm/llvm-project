@@ -70,9 +70,7 @@ private:
 /// getITInstrPredicate - Valid only in Thumb2 mode. This function is identical
 /// to llvm::getInstrPredicate except it returns AL for conditional branch
 /// instructions which are "predicated", but are not in IT blocks.
-ARMCC::CondCodes getITInstrPredicate(const MachineInstr *MI, unsigned &PredReg);
-
-
+ARMCC::CondCodes getITInstrPredicate(const MachineInstr &MI, unsigned &PredReg);
 }
 
 #endif
