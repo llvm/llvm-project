@@ -258,7 +258,7 @@ static void CloneLoopBlocks(Loop *L, Value *NewIter, const bool UnrollProlog,
 /// run-time trip-count.
 ///
 /// This method assumes that the loop unroll factor is total number
-/// of loop bodes in the loop after unrolling. (Some folks refer
+/// of loop bodies in the loop after unrolling. (Some folks refer
 /// to the unroll factor as the number of *extra* copies added).
 /// We assume also that the loop unroll factor is a power-of-two. So, after
 /// unrolling the loop, the number of loop bodies executed is 2,
