@@ -249,16 +249,17 @@ static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
     return true;
   }
 
-  if (!Body || !Body->isTls())
+  if (!Body || !Body->IsTls)
     return false;
 
   if (Target->isTlsGlobalDynamicRel(Type)) {
-    if (!Target->canRelaxTls(Type, Body) &&
-        Out<ELFT>::Got->addDynTlsEntry(Body)) {
-      Out<ELFT>::RelaDyn->addReloc(
-          {Target->TlsModuleIndexRel, DynamicReloc<ELFT>::Off_GTlsIndex, Body});
-      Out<ELFT>::RelaDyn->addReloc(
-          {Target->TlsOffsetRel, DynamicReloc<ELFT>::Off_GTlsOffset, Body});
+    if (!Target->canRelaxTls(Type, Body)) {
+      if (Out<ELFT>::Got->addDynTlsEntry(Body)) {
+        Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel,
+                                      DynamicReloc<ELFT>::Off_GTlsIndex, Body});
+        Out<ELFT>::RelaDyn->addReloc(
+            {Target->TlsOffsetRel, DynamicReloc<ELFT>::Off_GTlsOffset, Body});
+      }
       return true;
     }
     if (!canBePreempted(Body, true))
@@ -405,7 +406,7 @@ void Writer<ELFT>::scanRelocs(
       if (CBP || Dynrel) {
         uint32_t DynType;
         if (CBP)
-          DynType = Body->isTls() ? Target->TlsGotRel : Target->GotRel;
+          DynType = Body->IsTls ? Target->TlsGotRel : Target->GotRel;
         else
           DynType = Target->RelativeRel;
         Out<ELFT>::RelaDyn->addReloc(

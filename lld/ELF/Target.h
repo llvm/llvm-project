@@ -63,7 +63,7 @@ public:
                            uint8_t *PairedLoc = nullptr) const = 0;
   virtual bool isGotRelative(uint32_t Type) const;
   virtual bool canRelaxTls(unsigned Type, const SymbolBody *S) const;
-  virtual bool needsCopyRel(uint32_t Type, const SymbolBody &S) const;
+  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const;
   virtual unsigned relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                             uint64_t P, uint64_t SA, const SymbolBody *S) const;
   virtual ~TargetInfo();
@@ -91,6 +91,9 @@ public:
   unsigned GotHeaderEntriesNum = 0;
   unsigned GotPltHeaderEntriesNum = 3;
   bool UseLazyBinding = false;
+
+private:
+  virtual bool needsCopyRelImpl(uint32_t Type) const;
 };
 
 uint64_t getPPC64TocBase();

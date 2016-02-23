@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CommandObjectRegister.h"
-
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
+#include "llvm/ADT/STLExtras.h"
+
 // Project includes
+#include "CommandObjectRegister.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
@@ -30,7 +31,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Thread.h"
-#include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -42,14 +42,14 @@ class CommandObjectRegisterRead : public CommandObjectParsed
 {
 public:
     CommandObjectRegisterRead (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter, 
-                             "register read",
-                             "Dump the contents of one or more register values from the current frame.  If no register is specified, dumps them all.",
-                             NULL,
-                             eCommandRequiresFrame         |
-                             eCommandRequiresRegContext    |
-                             eCommandProcessMustBeLaunched |
-                             eCommandProcessMustBePaused   ),
+        CommandObjectParsed(interpreter, 
+                            "register read",
+                            "Dump the contents of one or more register values from the current frame.  If no register is specified, dumps them all.",
+                            nullptr,
+                            eCommandRequiresFrame         |
+                            eCommandRequiresRegContext    |
+                            eCommandProcessMustBeLaunched |
+                            eCommandProcessMustBePaused   ),
         m_option_group (interpreter),
         m_format_options (eFormatDefault),
         m_command_options ()
@@ -71,12 +71,9 @@ public:
         m_option_group.Append (&m_format_options, OptionGroupFormat::OPTION_GROUP_FORMAT | OptionGroupFormat::OPTION_GROUP_GDB_FMT, LLDB_OPT_SET_ALL);
         m_option_group.Append (&m_command_options);
         m_option_group.Finalize();
-
     }
 
-    ~CommandObjectRegisterRead () override
-    {
-    }
+    ~CommandObjectRegisterRead() override = default;
 
     Options *
     GetOptions () override
@@ -175,7 +172,7 @@ protected:
         Stream &strm = result.GetOutputStream();
         RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext ();
 
-        const RegisterInfo *reg_info = NULL;
+        const RegisterInfo *reg_info = nullptr;
         if (command.GetArgumentCount() == 0)
         {
             size_t set_idx;
@@ -184,9 +181,9 @@ protected:
             const size_t set_array_size = m_command_options.set_indexes.GetSize();
             if (set_array_size > 0)
             {
-                for (size_t i=0; i<set_array_size; ++i)
+                for (size_t i = 0; i < set_array_size; ++i)
                 {
-                    set_idx = m_command_options.set_indexes[i]->GetUInt64Value (UINT32_MAX, NULL);
+                    set_idx = m_command_options.set_indexes[i]->GetUInt64Value(UINT32_MAX, nullptr);
                     if (set_idx < reg_ctx->GetRegisterSetCount())
                     {
                         if (!DumpRegisterSet (m_exe_ctx, strm, reg_ctx, set_idx))
@@ -234,7 +231,7 @@ protected:
             else
             {
                 const char *arg_cstr;
-                for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != NULL; ++arg_idx)
+                for (int arg_idx = 0; (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr; ++arg_idx)
                 {
                     // in most LLDB commands we accept $rbx as the name for register RBX - and here we would
                     // reject it and non-existant. we should be more consistent towards the user and allow them
@@ -269,12 +266,9 @@ protected:
             alternate_name (false, false)
         {
         }
-        
-        ~CommandOptions () override
-        {
-        }
-        
-        
+
+        ~CommandOptions() override = default;
+
         uint32_t
         GetNumDefinitions () override;
 
@@ -350,9 +344,9 @@ protected:
 const OptionDefinition
 CommandObjectRegisterRead::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_ALL, false, "alternate", 'A', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone      , "Display register names using the alternate register name if there is one."},
-    { LLDB_OPT_SET_1  , false, "set"      , 's', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeIndex     , "Specify which register sets to dump by index."},
-    { LLDB_OPT_SET_2  , false, "all"      , 'a', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone      , "Show all register sets."},
+    { LLDB_OPT_SET_ALL, false, "alternate", 'A', OptionParser::eNoArgument      , nullptr, nullptr, 0, eArgTypeNone      , "Display register names using the alternate register name if there is one."},
+    { LLDB_OPT_SET_1  , false, "set"      , 's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeIndex     , "Specify which register sets to dump by index."},
+    { LLDB_OPT_SET_2  , false, "all"      , 'a', OptionParser::eNoArgument      , nullptr, nullptr, 0, eArgTypeNone      , "Show all register sets."},
 };
 
 uint32_t
@@ -361,7 +355,6 @@ CommandObjectRegisterRead::CommandOptions::GetNumDefinitions ()
     return llvm::array_lengthof(g_option_table);
 }
 
-
 //----------------------------------------------------------------------
 // "register write"
 //----------------------------------------------------------------------
@@ -369,14 +362,14 @@ class CommandObjectRegisterWrite : public CommandObjectParsed
 {
 public:
     CommandObjectRegisterWrite (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "register write",
-                             "Modify a single register value.",
-                             NULL,
-                             eCommandRequiresFrame         |
-                             eCommandRequiresRegContext    |
-                             eCommandProcessMustBeLaunched |
-                             eCommandProcessMustBePaused)
+        CommandObjectParsed(interpreter,
+                            "register write",
+                            "Modify a single register value.",
+                            nullptr,
+                            eCommandRequiresFrame         |
+                            eCommandRequiresRegContext    |
+                            eCommandProcessMustBeLaunched |
+                            eCommandProcessMustBePaused)
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -402,9 +395,7 @@ public:
         m_arguments.push_back (arg2);
     }
 
-    ~CommandObjectRegisterWrite () override
-    {
-    }
+    ~CommandObjectRegisterWrite() override = default;
 
 protected:
     bool
@@ -422,8 +413,7 @@ protected:
         {
             const char *reg_name = command.GetArgumentAtIndex(0);
             const char *value_str = command.GetArgumentAtIndex(1);
-            
-            
+
             // in most LLDB commands we accept $rbx as the name for register RBX - and here we would
             // reject it and non-existant. we should be more consistent towards the user and allow them
             // to say reg write $rbx - internally, however, we should be strict and not allow ourselves
@@ -474,7 +464,6 @@ protected:
     }
 };
 
-
 //----------------------------------------------------------------------
 // CommandObjectRegister constructor
 //----------------------------------------------------------------------
@@ -488,10 +477,4 @@ CommandObjectRegister::CommandObjectRegister(CommandInterpreter &interpreter) :
     LoadSubCommand ("write", CommandObjectSP (new CommandObjectRegisterWrite (interpreter)));
 }
 
-
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-CommandObjectRegister::~CommandObjectRegister()
-{
-}
+CommandObjectRegister::~CommandObjectRegister() = default;

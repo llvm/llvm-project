@@ -39,6 +39,11 @@ static_assert(( std::__is_referenceable<Foo &&>::value), "");
 static_assert(( std::__is_referenceable<const Foo &&>::value), "");
 #endif
 
+static_assert(( std::__is_referenceable<int   __attribute__((__vector_size__( 8)))>::value), "");
+static_assert(( std::__is_referenceable<const int   __attribute__((__vector_size__( 8)))>::value), "");
+static_assert(( std::__is_referenceable<float __attribute__((__vector_size__(16)))>::value), "");
+static_assert(( std::__is_referenceable<const float __attribute__((__vector_size__(16)))>::value), "");
+
 // Functions without cv-qualifiers are referenceable 
 static_assert(( std::__is_referenceable<void ()>::value), "");
 #if TEST_STD_VER >= 11

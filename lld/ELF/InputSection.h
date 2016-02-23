@@ -12,6 +12,7 @@
 
 #include "Config.h"
 #include "lld/Core/LLVM.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Object/ELF.h"
 
 namespace lld {
@@ -160,7 +161,7 @@ public:
   void writeTo(uint8_t *Buf);
 
   // Relocation sections that refer to this one.
-  SmallVector<const Elf_Shdr *, 1> RelocSections;
+  llvm::TinyPtrVector<const Elf_Shdr *> RelocSections;
 
   // The offset from beginning of the output sections this section was assigned
   // to. The writer sets a value.

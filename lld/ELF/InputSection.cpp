@@ -216,7 +216,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
         SymVA = Out<ELFT>::Got->getMipsLocalFullAddr(*Body);
       else
         SymVA = Body->getGotVA<ELFT>();
-      if (Body->isTls())
+      if (Body->IsTls)
         Type = Target->getTlsGotRel(Type);
     } else if (!Target->needsCopyRel(Type, *Body) &&
                isa<SharedSymbol<ELFT>>(*Body)) {

@@ -90,7 +90,7 @@ public:
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
+  bool needsCopyRelImpl(uint32_t Type) const override;
   bool needsDynRelative(unsigned Type) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
@@ -125,7 +125,7 @@ public:
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
+  bool needsCopyRelImpl(uint32_t Type) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
@@ -181,7 +181,7 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   unsigned getTlsGotRel(unsigned Type) const override;
   bool isTlsDynRel(unsigned Type, const SymbolBody &S) const override;
-  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
+  bool needsCopyRelImpl(uint32_t Type) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
@@ -217,7 +217,7 @@ public:
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
   void writeGotHeader(uint8_t *Buf) const override;
-  bool needsCopyRel(uint32_t Type, const SymbolBody &S) const override;
+  bool needsCopyRelImpl(uint32_t Type) const override;
   bool needsGot(uint32_t Type, SymbolBody &S) const override;
   PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
@@ -263,8 +263,36 @@ bool TargetInfo::canRelaxTls(unsigned Type, const SymbolBody *S) const {
 
 uint64_t TargetInfo::getVAStart() const { return Config->Shared ? 0 : VAStart; }
 
+bool TargetInfo::needsCopyRelImpl(uint32_t Type) const { return false; }
+
+template <typename ELFT> static bool mayNeedCopy(const SymbolBody &S) {
+  if (Config->Shared)
+    return false;
+  auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S);
+  if (!SS)
+    return false;
+  return SS->Sym.getType() == STT_OBJECT;
+}
+
 bool TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  return false;
+  bool MayNeed;
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    MayNeed = mayNeedCopy<ELF32LE>(S);
+    break;
+  case ELF64LEKind:
+    MayNeed = mayNeedCopy<ELF64LE>(S);
+    break;
+  case ELF32BEKind:
+    MayNeed = mayNeedCopy<ELF32BE>(S);
+    break;
+  case ELF64BEKind:
+    MayNeed = mayNeedCopy<ELF64BE>(S);
+    break;
+  default:
+    llvm_unreachable("Invalid ELF kind");
+  }
+  return MayNeed && needsCopyRelImpl(Type);
 }
 
 bool TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
@@ -395,15 +423,12 @@ void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltZeroSize - 16);
 }
 
-bool X86TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  if (Type == R_386_32 || Type == R_386_16 || Type == R_386_8)
-    if (auto *SS = dyn_cast<SharedSymbol<ELF32LE>>(&S))
-      return SS->Sym.getType() == STT_OBJECT;
-  return false;
+bool X86TargetInfo::needsCopyRelImpl(uint32_t Type) const {
+  return Type == R_386_32 || Type == R_386_16 || Type == R_386_8;
 }
 
 bool X86TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
-  if (S.isTls() && Type == R_386_TLS_GD)
+  if (S.IsTls && Type == R_386_TLS_GD)
     return Target->canRelaxTls(Type, &S) && canBePreempted(&S, true);
   if (Type == R_386_TLS_GOTIE || Type == R_386_TLS_IE)
     return !canRelaxTls(Type, &S);
@@ -475,7 +500,7 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
 }
 
 bool X86TargetInfo::canRelaxTls(unsigned Type, const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->isTls()))
+  if (Config->Shared || (S && !S->IsTls))
     return false;
   return Type == R_386_TLS_LDO_32 || Type == R_386_TLS_LDM ||
          Type == R_386_TLS_GD ||
@@ -665,12 +690,9 @@ void X86_64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltZeroSize - 16);
 }
 
-bool X86_64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  if (Type == R_X86_64_32S || Type == R_X86_64_32 || Type == R_X86_64_PC32 ||
-      Type == R_X86_64_64)
-    if (auto *SS = dyn_cast<SharedSymbol<ELF64LE>>(&S))
-      return SS->Sym.getType() == STT_OBJECT;
-  return false;
+bool X86_64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
+  return Type == R_X86_64_32S || Type == R_X86_64_32 || Type == R_X86_64_PC32 ||
+         Type == R_X86_64_64;
 }
 
 bool X86_64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
@@ -736,9 +758,11 @@ TargetInfo::PltNeed X86_64TargetInfo::needsPlt(uint32_t Type,
     // that points to the real function is a dedicated got entry used by the
     // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
     // R_386_JMP_SLOT, etc).
-    if (!S.isShared())
-      return Plt_No;
-    return Plt_Implicit;
+    if (auto *SS = dyn_cast<SharedSymbol<ELF64LE>>(&S)) {
+      if (SS->Sym.getType() == STT_FUNC)
+        return Plt_Implicit;
+    }
+    return Plt_No;
   case R_X86_64_PLT32:
     if (canBePreempted(&S, true))
       return Plt_Explicit;
@@ -766,7 +790,7 @@ bool X86_64TargetInfo::isSizeRel(uint32_t Type) const {
 }
 
 bool X86_64TargetInfo::canRelaxTls(unsigned Type, const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->isTls()))
+  if (Config->Shared || (S && !S->IsTls))
     return false;
   return Type == R_X86_64_TLSGD || Type == R_X86_64_TLSLD ||
          Type == R_X86_64_DTPOFF32 ||
@@ -1276,9 +1300,7 @@ bool AArch64TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
          Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC;
 }
 
-bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
-  if (Config->Shared)
-    return false;
+bool AArch64TargetInfo::needsCopyRelImpl(uint32_t Type) const {
   switch (Type) {
   default:
     return false;
@@ -1293,9 +1315,7 @@ bool AArch64TargetInfo::needsCopyRel(uint32_t Type, const SymbolBody &S) const {
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
-    if (auto *SS = dyn_cast<SharedSymbol<ELF64LE>>(&S))
-      return SS->Sym.getType() == STT_OBJECT;
-    return false;
+    return true;
   }
 }
 
@@ -1454,7 +1474,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
 }
 
 bool AArch64TargetInfo::canRelaxTls(unsigned Type, const SymbolBody *S) const {
-  if (Config->Shared || (S && !S->isTls()))
+  if (Config->Shared || (S && !S->IsTls))
     return false;
 
   // Global-Dynamic relocs can be relaxed to Initial-Exec if the target is
@@ -1676,14 +1696,8 @@ void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsCopyRel(uint32_t Type,
-                                        const SymbolBody &S) const {
-  if (Config->Shared)
-    return false;
-  if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
-    if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S))
-      return SS->Sym.getType() == STT_OBJECT;
-  return false;
+bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
+  return Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type);
 }
 
 template <class ELFT>

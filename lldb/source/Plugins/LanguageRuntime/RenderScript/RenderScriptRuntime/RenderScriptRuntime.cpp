@@ -2685,8 +2685,8 @@ RSModuleDescriptor::ParseRSInfo()
         }
     }
 
-    std::array<char, MAXLINE> name = {'\0'};
-    std::array<char, MAXLINE> value = {'\0'};
+    std::array<char, MAXLINE> name{{'\0'}};
+    std::array<char, MAXLINE> value{{'\0'}};
 
     // parse all text lines of .rs.info
     for (auto line = info_lines.begin(); line != info_lines.end(); ++line)
