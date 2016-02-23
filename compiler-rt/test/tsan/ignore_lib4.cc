@@ -1,6 +1,7 @@
 // RUN: %clangxx_tsan -O1 %s -DLIB -fPIC -shared -o %T/libignore_lib4.so
 // RUN: %clangxx_tsan -O1 %s -o %t
-// RUN: %env_tsan_opts=suppressions='%s.supp' %run %t 2>&1 | FileCheck %s
+// RUN: echo "called_from_lib:libignore_lib4.so" > %t.supp
+// RUN: %env_tsan_opts=suppressions='%t.supp' %run %t 2>&1 | FileCheck %s
 
 // Longjmp assembly has not been implemented for mips64 yet
 // XFAIL: mips64
