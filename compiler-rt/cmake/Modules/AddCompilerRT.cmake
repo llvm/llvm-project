@@ -125,10 +125,31 @@ function(add_compiler_rt_runtime name type)
   endif()
 
   if(LIB_PARENT_TARGET)
-    set(COMPONENT_OPTION COMPONENT ${LIB_PARENT_TARGET})
+    # If the parent targets aren't created we should create them
+    if(NOT TARGET ${LIB_PARENT_TARGET})
+      add_custom_target(${LIB_PARENT_TARGET})
+    endif()
+    if(NOT TARGET install-${LIB_PARENT_TARGET})
+      # The parent install target specifies the parent component to scrape up
+      # anything not installed by the individual install targets, and to handle
+      # installation when running the multi-configuration generators.
+      add_custom_target(install-${LIB_PARENT_TARGET}
+                        DEPENDS ${LIB_PARENT_TARGET}
+                        COMMAND "${CMAKE_COMMAND}"
+                                -DCMAKE_INSTALL_COMPONENT=${LIB_PARENT_TARGET}
+                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+    endif()
   endif()
 
   foreach(libname ${libnames})
+    # If you have are using a multi-configuration generator we don't generate
+    # per-library install rules, so we fall back to the parent target COMPONENT
+    if(CMAKE_CONFIGURATION_TYPES AND LIB_PARENT_TARGET)
+      set(COMPONENT_OPTION COMPONENT ${LIB_PARENT_TARGET})
+    else()
+      set(COMPONENT_OPTION COMPONENT ${libname})
+    endif()
+
     add_library(${libname} ${type} ${sources_${libname}})
     set_target_compile_flags(${libname} ${extra_cflags_${libname}})
     set_target_link_flags(${libname} ${extra_linkflags_${libname}})
@@ -150,6 +171,21 @@ function(add_compiler_rt_runtime name type)
               ${COMPONENT_OPTION}
       RUNTIME DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR}
               ${COMPONENT_OPTION})
+
+    # We only want to generate per-library install targets if you aren't using
+    # an IDE because the extra targets get cluttered in IDEs.
+    if(NOT CMAKE_CONFIGURATION_TYPES)
+      add_custom_target(install-${libname}
+                        DEPENDS ${libname}
+                        COMMAND "${CMAKE_COMMAND}"
+                                -DCMAKE_INSTALL_COMPONENT=${libname}
+                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      # If you have a parent target specified, we bind the new install target
+      # to the parent install target.
+      if(LIB_PARENT_TARGET)
+        add_dependencies(install-${LIB_PARENT_TARGET} install-${libname})
+      endif()
+    endif()
     if(APPLE)
       set_target_properties(${libname} PROPERTIES
       OSX_ARCHITECTURES "${LIB_ARCHS_${libname}}")
@@ -160,7 +196,7 @@ function(add_compiler_rt_runtime name type)
     endif()
   endforeach()
   if(LIB_PARENT_TARGET)
-    add_dependencies(${LIB_PARENT_TARGET} ${libnames})
+    add_dependencies(${LIB_PARENT_TARGET} ${libname})
   endif()
 endfunction()
 
