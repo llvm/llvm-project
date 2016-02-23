@@ -14,6 +14,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ManagedStatic.h"
 
 namespace clang {
@@ -293,15 +294,28 @@ bool AnyOfVariadicOperator(const ast_type_traits::DynTypedNode &DynNode,
   return false;
 }
 
-HasNameMatcher::HasNameMatcher(std::string NameRef)
-    : UseUnqualifiedMatch(NameRef.find("::") == NameRef.npos),
-      Name(std::move(NameRef)) {
-  assert(!Name.empty());
+Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs) {
+  std::vector<std::string> Names;
+  for (auto *Name : NameRefs)
+    Names.emplace_back(*Name);
+  return internal::Matcher<NamedDecl>(
+      new internal::HasNameMatcher(std::move(Names)));
+}
+
+HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
+    : UseUnqualifiedMatch(std::all_of(
+          N.begin(), N.end(),
+          [](StringRef Name) { return Name.find("::") == Name.npos; })),
+      Names(std::move(N)) {
+#ifndef NDEBUG
+  for (StringRef Name : Names)
+    assert(!Name.empty());
+#endif
 }
 
 namespace {
 
-bool ConsumeNameSuffix(StringRef &FullName, StringRef Suffix) {
+bool consumeNameSuffix(StringRef &FullName, StringRef Suffix) {
   StringRef Name = FullName;
   if (!Name.endswith(Suffix))
     return false;
@@ -315,42 +329,101 @@ bool ConsumeNameSuffix(StringRef &FullName, StringRef Suffix) {
   return true;
 }
 
-bool ConsumeNodeName(StringRef &Name, const NamedDecl &Node) {
+StringRef getNodeName(const NamedDecl &Node, llvm::SmallString<128> &Scratch) {
   // Simple name.
   if (Node.getIdentifier())
-    return ConsumeNameSuffix(Name, Node.getName());
+    return Node.getName();
 
   if (Node.getDeclName()) {
     // Name needs to be constructed.
-    llvm::SmallString<128> NodeName;
-    llvm::raw_svector_ostream OS(NodeName);
+    Scratch.clear();
+    llvm::raw_svector_ostream OS(Scratch);
     Node.printName(OS);
-    return ConsumeNameSuffix(Name, OS.str());
+    return OS.str();
   }
 
-  return ConsumeNameSuffix(Name, "(anonymous)");
+  return "(anonymous)";
 }
+
+StringRef getNodeName(const RecordDecl &Node, llvm::SmallString<128> &Scratch) {
+  if (Node.getIdentifier()) {
+    return Node.getName();
+  }
+  Scratch.clear();
+  return ("(anonymous " + Node.getKindName() + ")").toStringRef(Scratch);
+}
+
+StringRef getNodeName(const NamespaceDecl &Node,
+                      llvm::SmallString<128> &Scratch) {
+  return Node.isAnonymousNamespace() ? "(anonymous namespace)" : Node.getName();
+}
+
+
+class PatternSet {
+public:
+  PatternSet(ArrayRef<std::string> Names) {
+    for (StringRef Name : Names)
+      Patterns.push_back({Name, Name.startswith("::")});
+  }
+
+  /// Consumes the name suffix from each pattern in the set and removes the ones
+  /// that didn't match.
+  /// Return true if there are still any patterns left.
+  bool consumeNameSuffix(StringRef NodeName, bool CanSkip) {
+    for (size_t I = 0; I < Patterns.size();) {
+      if (internal::consumeNameSuffix(Patterns[I].P, NodeName) ||
+          CanSkip) {
+        ++I;
+      } else {
+        Patterns.erase(Patterns.begin() + I);
+      }
+    }
+    return !Patterns.empty();
+  }
+
+  /// Check if any of the patterns are a match.
+  /// A match will be a pattern that was fully consumed, that also matches the
+  /// 'fully qualified' requirement.
+  bool foundMatch(bool AllowFullyQualified) const {
+    for (auto& P: Patterns)
+      if (P.P.empty() && (AllowFullyQualified || !P.IsFullyQualified))
+        return true;
+    return false;
+  }
+
+private:
+  struct Pattern {
+    StringRef P;
+    bool IsFullyQualified;
+  };
+  llvm::SmallVector<Pattern, 8> Patterns;
+};
 
 }  // namespace
 
 bool HasNameMatcher::matchesNodeUnqualified(const NamedDecl &Node) const {
   assert(UseUnqualifiedMatch);
-  StringRef NodeName = Name;
-  return ConsumeNodeName(NodeName, Node) && NodeName.empty();
+  llvm::SmallString<128> Scratch;
+  StringRef NodeName = getNodeName(Node, Scratch);
+  return std::any_of(Names.begin(), Names.end(), [&](StringRef Name) {
+    return consumeNameSuffix(Name, NodeName) && Name.empty();
+  });
 }
 
 bool HasNameMatcher::matchesNodeFullFast(const NamedDecl &Node) const {
+  PatternSet Patterns(Names);
+  llvm::SmallString<128> Scratch;
+
   // This function is copied and adapted from NamedDecl::printQualifiedName()
   // By matching each part individually we optimize in a couple of ways:
   //  - We can exit early on the first failure.
   //  - We can skip inline/anonymous namespaces without another pass.
   //  - We print one name at a time, reducing the chance of overflowing the
   //    inlined space of the SmallString.
-  StringRef Pattern = Name;
-  const bool IsFullyQualified = Pattern.startswith("::");
 
   // First, match the name.
-  if (!ConsumeNodeName(Pattern, Node))
+  if (!Patterns.consumeNameSuffix(getNodeName(Node, Scratch),
+                                  /*CanSkip=*/false))
     return false;
 
   // Try to match each declaration context.
@@ -358,36 +431,25 @@ bool HasNameMatcher::matchesNodeFullFast(const NamedDecl &Node) const {
   const DeclContext *Ctx = Node.getDeclContext();
 
   if (Ctx->isFunctionOrMethod())
-    return Pattern.empty() && !IsFullyQualified;
+    return Patterns.foundMatch(/*AllowFullyQualified=*/false);
 
-  for (; !Pattern.empty() && Ctx && isa<NamedDecl>(Ctx);
-       Ctx = Ctx->getParent()) {
+  for (; Ctx && isa<NamedDecl>(Ctx); Ctx = Ctx->getParent()) {
+    if (Patterns.foundMatch(/*AllowFullyQualified=*/false))
+      return true;
+
     if (const auto *ND = dyn_cast<NamespaceDecl>(Ctx)) {
-      StringRef NSName =
-          ND->isAnonymousNamespace() ? "(anonymous namespace)" : ND->getName();
-
-      // If it matches, continue.
-      if (ConsumeNameSuffix(Pattern, NSName))
+      // If it matches (or we can skip it), continue.
+      if (Patterns.consumeNameSuffix(getNodeName(*ND, Scratch),
+                                     /*CanSkip=*/ND->isAnonymousNamespace() ||
+                                         ND->isInline()))
         continue;
-      // If it didn't match but we can skip it, continue.
-      if (ND->isAnonymousNamespace() || ND->isInline())
-        continue;
-
       return false;
     }
     if (const auto *RD = dyn_cast<RecordDecl>(Ctx)) {
       if (!isa<ClassTemplateSpecializationDecl>(Ctx)) {
-        if (RD->getIdentifier()) {
-          if (ConsumeNameSuffix(Pattern, RD->getName()))
-            continue;
-        } else {
-          llvm::SmallString<128> NodeName;
-          NodeName += StringRef("(anonymous ");
-          NodeName += RD->getKindName();
-          NodeName += ')';
-          if (ConsumeNameSuffix(Pattern, NodeName))
-            continue;
-        }
+        if (Patterns.consumeNameSuffix(getNodeName(*RD, Scratch),
+                                       /*CanSkip=*/false))
+          continue;
 
         return false;
       }
@@ -398,16 +460,10 @@ bool HasNameMatcher::matchesNodeFullFast(const NamedDecl &Node) const {
     return matchesNodeFullSlow(Node);
   }
 
-  // If we are fully qualified, we must not have any leftover context.
-  if (IsFullyQualified && Ctx && isa<NamedDecl>(Ctx))
-    return false;
-
-  return Pattern.empty();
+  return Patterns.foundMatch(/*AllowFullyQualified=*/true);
 }
 
 bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
-  const StringRef Pattern = Name;
-
   const bool SkipUnwrittenCases[] = {false, true};
   for (bool SkipUnwritten : SkipUnwrittenCases) {
     llvm::SmallString<128> NodeName = StringRef("::");
@@ -423,12 +479,14 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
 
     const StringRef FullName = OS.str();
 
-    if (Pattern.startswith("::")) {
-      if (FullName == Pattern)
+    for (const StringRef Pattern : Names) {
+      if (Pattern.startswith("::")) {
+        if (FullName == Pattern)
+          return true;
+      } else if (FullName.endswith(Pattern) &&
+                 FullName.drop_back(Pattern.size()).endswith("::")) {
         return true;
-    } else if (FullName.endswith(Pattern) &&
-               FullName.drop_back(Pattern.size()).endswith("::")) {
-      return true;
+      }
     }
   }
 

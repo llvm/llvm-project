@@ -637,10 +637,10 @@ private:
 
 /// \brief Matches named declarations with a specific name.
 ///
-/// See \c hasName() in ASTMatchers.h for details.
+/// See \c hasName() and \c hasAnyName() in ASTMatchers.h for details.
 class HasNameMatcher : public SingleNodeMatcherInterface<NamedDecl> {
  public:
-  explicit HasNameMatcher(std::string Name);
+  explicit HasNameMatcher(std::vector<std::string> Names);
 
   bool matchesNode(const NamedDecl &Node) const override;
 
@@ -667,8 +667,12 @@ class HasNameMatcher : public SingleNodeMatcherInterface<NamedDecl> {
   bool matchesNodeFullSlow(const NamedDecl &Node) const;
 
   const bool UseUnqualifiedMatch;
-  const std::string Name;
+  const std::vector<std::string> Names;
 };
+
+/// \brief Trampoline function to use VariadicFunction<> to construct a
+///        HasNameMatcher.
+Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs);
 
 /// \brief Matches declarations for QualType and CallExpr.
 ///

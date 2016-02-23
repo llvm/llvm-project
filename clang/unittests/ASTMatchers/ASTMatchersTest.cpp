@@ -2881,6 +2881,19 @@ TEST(Matcher, HasNameSupportsFunctionScope) {
   EXPECT_TRUE(matches(code, fieldDecl(hasName("::a::F(int)::S::m"))));
 }
 
+TEST(Matcher, HasAnyName) {
+  const std::string Code = "namespace a { namespace b { class C; } }";
+
+  EXPECT_TRUE(matches(Code, recordDecl(hasAnyName("XX", "a::b::C"))));
+  EXPECT_TRUE(matches(Code, recordDecl(hasAnyName("a::b::C", "XX"))));
+  EXPECT_TRUE(matches(Code, recordDecl(hasAnyName("XX::C", "a::b::C"))));
+  EXPECT_TRUE(matches(Code, recordDecl(hasAnyName("XX", "C"))));
+
+  EXPECT_TRUE(notMatches(Code, recordDecl(hasAnyName("::C", "::b::C"))));
+  EXPECT_TRUE(
+      matches(Code, recordDecl(hasAnyName("::C", "::b::C", "::a::b::C"))));
+}
+
 TEST(Matcher, IsDefinition) {
   DeclarationMatcher DefinitionOfClassA =
       recordDecl(hasName("A"), isDefinition());

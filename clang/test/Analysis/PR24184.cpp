@@ -12,7 +12,7 @@ int a;
 typedef int *vcreate_t(int *, DATA_TYPE, int, int);
 void fn1(unsigned, unsigned) {
   char b = 0;
-  for (; 1; a++, &b + a * 0) // expected-warning{{Pointer arithmetic done on non-array variables means reliance on memory layout, which is dangerous}}
+  for (; 1; a++, &b + a * 0)
     ;
 }
 
@@ -55,7 +55,7 @@ void fn1_1(void *p1, const void *p2) { p1 != p2; }
 void fn2_1(uint32_t *p1, unsigned char *p2, uint32_t p3) {
   unsigned i = 0;
   for (0; i < p3; i++)
-    fn1_1(p1 + i, p2 + i * 0);    // expected-warning{{Pointer arithmetic done on non-array variables means reliance on memory layout, which is dangerous}}
+    fn1_1(p1 + i, p2 + i * 0);
 }
 
 struct A_1 {
