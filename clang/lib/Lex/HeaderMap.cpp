@@ -86,10 +86,10 @@ bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
 
   // Check the number of buckets.  It should be a power of two, and there
   // should be enough space in the file for all of them.
-  auto NumBuckets = NeedsByteSwap
-                        ? llvm::sys::getSwappedBytes(Header->NumBuckets)
-                        : Header->NumBuckets;
-  if (NumBuckets & (NumBuckets - 1))
+  uint32_t NumBuckets = NeedsByteSwap
+                            ? llvm::sys::getSwappedBytes(Header->NumBuckets)
+                            : Header->NumBuckets;
+  if (!llvm::isPowerOf2_32(NumBuckets))
     return false;
   if (File.getBufferSize() <
       sizeof(HMapHeader) + sizeof(HMapBucket) * NumBuckets)
@@ -208,7 +208,7 @@ StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
   unsigned NumBuckets = getEndianAdjustedWord(Hdr.NumBuckets);
 
   // Don't probe infinitely.  This should be checked before constructing.
-  assert(!(NumBuckets & (NumBuckets - 1)) && "Expected power of 2");
+  assert(llvm::isPowerOf2_32(NumBuckets) && "Expected power of 2");
 
   // Linearly probe the hash table.
   for (unsigned Bucket = HashHMapKey(Filename);; ++Bucket) {
