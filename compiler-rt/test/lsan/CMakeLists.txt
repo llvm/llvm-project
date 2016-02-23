@@ -8,6 +8,7 @@ if(APPLE)
 endif()
 
 foreach(arch ${LSAN_TEST_ARCH})
+  set(LSAN_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}" LSAN_TEST_CONFIG_SUFFIX)
   if(ANDROID OR ${arch} MATCHES "arm|aarch64")
     # This is only true if we are cross-compiling.
