@@ -52,6 +52,13 @@ void Preprocessor::appendMacroDirective(IdentifierInfo *II, MacroDirective *MD){
   StoredMD.setLatest(MD);
   StoredMD.overrideActiveModuleMacros(*this, II);
 
+  if (needModuleMacros()) {
+    // Track that we created a new macro directive, so we know we should
+    // consider building a ModuleMacro for it when we get to the end of
+    // the module.
+    PendingModuleMacroNames.push_back(II);
+  }
+
   // Set up the identifier as having associated macro history.
   II->setHasMacroDefinition(true);
   if (!MD->isDefined() && LeafModuleMacros.find(II) == LeafModuleMacros.end())
