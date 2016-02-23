@@ -112,7 +112,7 @@ FoldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
     if (DomTreeNode *DTN = DT->getNode(BB)) {
       DomTreeNode *PredDTN = DT->getNode(OnlyPred);
       SmallVector<DomTreeNode *, 8> Children(DTN->begin(), DTN->end());
-      for (auto DI : Children)
+      for (auto *DI : Children)
         DT->changeImmediateDominator(DI, PredDTN);
 
       DT->eraseNode(BB);
