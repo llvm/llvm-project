@@ -73,8 +73,9 @@ static inline void RemapInstruction(Instruction *I,
 /// of loops that have already been forgotten to prevent redundant, expensive
 /// calls to ScalarEvolution::forgetLoop.  Returns the new combined block.
 static BasicBlock *
-FoldBlockIntoPredecessor(BasicBlock *BB, LoopInfo* LI, ScalarEvolution *SE,
-                         SmallPtrSetImpl<Loop *> &ForgottenLoops) {
+FoldBlockIntoPredecessor(BasicBlock *BB, LoopInfo *LI, ScalarEvolution *SE,
+                         SmallPtrSetImpl<Loop *> &ForgottenLoops,
+                         DominatorTree *DT) {
   // Merge basic blocks into their predecessor if there is only one distinct
   // pred, and if there is only one distinct successor of the predecessor, and
   // if there are no PHI nodes.
@@ -106,7 +107,18 @@ FoldBlockIntoPredecessor(BasicBlock *BB, LoopInfo* LI, ScalarEvolution *SE,
   // OldName will be valid until erased.
   StringRef OldName = BB->getName();
 
-  // Erase basic block from the function...
+  // Erase the old block and update dominator info.
+  if (DT)
+    if (DomTreeNode *DTN = DT->getNode(BB)) {
+      DomTreeNode *PredDTN = DT->getNode(OnlyPred);
+      SmallVector<DomTreeNode *, 8> Children(DTN->begin(), DTN->end());
+      for (SmallVectorImpl<DomTreeNode *>::iterator DI = Children.begin(),
+                                                    DE = Children.end();
+           DI != DE; ++DI)
+        DT->changeImmediateDominator(*DI, PredDTN);
+
+      DT->eraseNode(BB);
+    }
 
   // ScalarEvolution holds references to loop exit blocks.
   if (SE) {
@@ -424,6 +436,22 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
 
       NewBlocks.push_back(New);
       UnrolledLoopBlocks.push_back(New);
+
+      // Update DomTree: since we just copy the loop body, and each copy has a
+      // dedicated entry block (copy of the header block), this header's copy
+      // dominates all copied blocks. That means, dominance relations in the
+      // copied body are the same as in the original body.
+      if (DT) {
+        if (*BB == Header)
+          DT->addNewBlock(New, Latches[It - 1]);
+        else {
+          auto BBDomNode = DT->getNode(*BB);
+          auto BBIDom = BBDomNode->getIDom();
+          BasicBlock *OriginalBBIDom = BBIDom->getBlock();
+          DT->addNewBlock(
+              New, cast<BasicBlock>(LastValueMap[cast<Value>(OriginalBBIDom)]));
+        }
+      }
     }
 
     // Remap all instructions in the most recent iteration
@@ -505,6 +533,22 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
       Term->eraseFromParent();
     }
   }
+  // Update dominators of loop exit blocks.
+  // Immediate dominator of an exit block might change, because we add more
+  // routes which can lead to the exit: we can now reach it from the copied
+  // iterations too. Thus, the new idom of the exit block will be the nearest
+  // common dominator of the previous idom and common dominator of all copies of
+  // the exiting block. This is equivalent to the nearest common dominator of
+  // the previous idom and the first latch, which dominates all copies of the
+  // exiting block.
+  if (DT && Count > 1) {
+    for (auto Exit : ExitBlocks) {
+      BasicBlock *PrevIDom = DT->getNode(Exit)->getIDom()->getBlock();
+      BasicBlock *NewIDom =
+          DT->findNearestCommonDominator(PrevIDom, Latches[0]);
+      DT->changeImmediateDominator(Exit, NewIDom);
+    }
+  }
 
   // Merge adjacent basic blocks, if possible.
   SmallPtrSet<Loop *, 4> ForgottenLoops;
@@ -512,8 +556,8 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
     BranchInst *Term = cast<BranchInst>(Latches[i]->getTerminator());
     if (Term->isUnconditional()) {
       BasicBlock *Dest = Term->getSuccessor(0);
-      if (BasicBlock *Fold = FoldBlockIntoPredecessor(Dest, LI, SE,
-                                                      ForgottenLoops)) {
+      if (BasicBlock *Fold =
+              FoldBlockIntoPredecessor(Dest, LI, SE, ForgottenLoops, DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
         UnrolledLoopBlocks.erase(std::remove(UnrolledLoopBlocks.begin(),
@@ -527,10 +571,12 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount,
   // whole function's cache.
   AC->clear();
 
-  // FIXME: Reconstruct dom info, because it is not preserved properly.
-  // Incrementally updating domtree after loop unrolling would be easy.
-  if (DT)
+  // FIXME: We only preserve DT info for complete unrolling now. Incrementally
+  // updating domtree after partial loop unrolling should also be easy.
+  if (DT && !CompletelyUnroll)
     DT->recalculate(*L->getHeader()->getParent());
+  else
+    DEBUG(DT->verifyDomTree());
 
   // Simplify any new induction variables in the partially unrolled loop.
   if (SE && !CompletelyUnroll) {
