@@ -7,11 +7,14 @@
 //
 //===--------------------------------------------------------------===//
 
+#include "clang/Basic/CharInfo.h"
 #include "clang/Lex/HeaderMap.h"
 #include "clang/Lex/HeaderMapTypes.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "gtest/gtest.h"
+#include <cassert>
 
 using namespace clang;
 using namespace llvm;
@@ -45,6 +48,45 @@ template <unsigned NumBuckets, unsigned NumBytes> struct MapFile {
         StringRef(reinterpret_cast<const char *>(this), sizeof(MapFile)),
         "header",
         /* RequresNullTerminator */ false);
+  }
+};
+
+// The header map hash function.
+static inline unsigned getHash(StringRef Str) {
+  unsigned Result = 0;
+  for (char C : Str)
+    Result += toLowercase(C) * 13;
+  return Result;
+}
+
+template <class FileTy> struct FileMaker {
+  FileTy &File;
+  unsigned SI = 1;
+  unsigned BI = 0;
+  FileMaker(FileTy &File) : File(File) {}
+
+  unsigned addString(StringRef S) {
+    assert(SI + S.size() + 1 <= sizeof(File.Bytes));
+    std::copy(S.begin(), S.end(), File.Bytes + SI);
+    auto OldSI = SI;
+    SI += S.size() + 1;
+    return OldSI;
+  }
+  void addBucket(unsigned Hash, unsigned Key, unsigned Prefix, unsigned Suffix) {
+    assert(!(File.Header.NumBuckets & (File.Header.NumBuckets - 1)));
+    unsigned I = Hash & (File.Header.NumBuckets - 1);
+    do {
+      if (!File.Buckets[I].Key) {
+        File.Buckets[I].Key = Key;
+        File.Buckets[I].Prefix = Prefix;
+        File.Buckets[I].Suffix = Suffix;
+        ++File.Header.NumEntries;
+        return;
+      }
+      ++I;
+      I &= File.Header.NumBuckets - 1;
+    } while (I != (Hash & (File.Header.NumBuckets - 1)));
+    llvm_unreachable("no empty buckets");
   }
 };
 
@@ -107,6 +149,26 @@ TEST(HeaderMapTest, checkHeaderNotEnoughBuckets) {
   File.Header.NumBuckets = 8;
   bool NeedsSwap;
   ASSERT_FALSE(HeaderMapImpl::checkHeader(*File.getBuffer(), NeedsSwap));
+}
+
+TEST(HeaderMapTest, lookupFilename) {
+  typedef MapFile<2, 7> FileTy;
+  FileTy File;
+  File.init();
+
+  FileMaker<FileTy> Maker(File);
+  auto a = Maker.addString("a");
+  auto b = Maker.addString("b");
+  auto c = Maker.addString("c");
+  Maker.addBucket(getHash("a"), a, b, c);
+
+  bool NeedsSwap;
+  ASSERT_TRUE(HeaderMapImpl::checkHeader(*File.getBuffer(), NeedsSwap));
+  ASSERT_FALSE(NeedsSwap);
+  HeaderMapImpl Map(File.getBuffer(), NeedsSwap);
+
+  SmallString<8> DestPath;
+  ASSERT_EQ("bc", Map.lookupFilename("a", DestPath));
 }
 
 } // end namespace
