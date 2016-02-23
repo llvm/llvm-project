@@ -33,6 +33,7 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
 #include "clang/AST/DeclCXX.h"
@@ -1515,44 +1516,72 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
 
                         if (!type_handled)
                         {
-                            // We just have a function that isn't part of a class
-                            clang::FunctionDecl *function_decl = m_ast.CreateFunctionDeclaration (ignore_containing_context ? m_ast.GetTranslationUnitDecl() : containing_decl_ctx,
-                                                                                                  type_name_cstr,
-                                                                                                  clang_type,
-                                                                                                  storage,
-                                                                                                  is_inline);
-
-                            //                            if (template_param_infos.GetSize() > 0)
-                            //                            {
-                            //                                clang::FunctionTemplateDecl *func_template_decl = CreateFunctionTemplateDecl (containing_decl_ctx,
-                            //                                                                                                              function_decl,
-                            //                                                                                                              type_name_cstr,
-                            //                                                                                                              template_param_infos);
-                            //
-                            //                                CreateFunctionTemplateSpecializationInfo (function_decl,
-                            //                                                                          func_template_decl,
-                            //                                                                          template_param_infos);
-                            //                            }
-                            // Add the decl to our DIE to decl context map
-                            assert (function_decl);
-                            LinkDeclContextToDIE(function_decl, die);
-                            if (!function_param_decls.empty())
-                                m_ast.SetFunctionParameters (function_decl,
-                                                             &function_param_decls.front(),
-                                                             function_param_decls.size());
-
-                            ClangASTMetadata metadata;
-                            metadata.SetUserID(die.GetID());
-
-                            if (!object_pointer_name.empty())
+                            clang::FunctionDecl *function_decl = nullptr;
+                            
+                            if (abstract_origin_die_form.IsValid())
                             {
-                                metadata.SetObjectPtrName(object_pointer_name.c_str());
-                                if (log)
-                                    log->Printf ("Setting object pointer name: %s on function object %p.",
-                                                 object_pointer_name.c_str(),
-                                                 static_cast<void*>(function_decl));
+                                DWARFDIE abs_die = dwarf->DebugInfo()->GetDIE (DIERef(abstract_origin_die_form));
+
+                                SymbolContext sc;
+                                
+                                if (dwarf->ResolveType (abs_die))
+                                {
+                                    function_decl = llvm::dyn_cast_or_null<clang::FunctionDecl>(GetCachedClangDeclContextForDIE(abs_die));
+                            
+                                    if (function_decl)
+                                    {
+                                        LinkDeclContextToDIE(function_decl, die);
+                                    }
+                                }
                             }
-                            m_ast.SetMetadata (function_decl, metadata);
+
+                            if (!function_decl)
+                            {
+                                // We just have a function that isn't part of a class
+                                function_decl = m_ast.CreateFunctionDeclaration (ignore_containing_context ? m_ast.GetTranslationUnitDecl() : containing_decl_ctx,
+                                                                                                      type_name_cstr,
+                                                                                                      clang_type,
+                                                                                                      storage,
+                                                                                                      is_inline);
+
+                                //                            if (template_param_infos.GetSize() > 0)
+                                //                            {
+                                //                                clang::FunctionTemplateDecl *func_template_decl = CreateFunctionTemplateDecl (containing_decl_ctx,
+                                //                                                                                                              function_decl,
+                                //                                                                                                              type_name_cstr,
+                                //                                                                                                              template_param_infos);
+                                //
+                                //                                CreateFunctionTemplateSpecializationInfo (function_decl,
+                                //                                                                          func_template_decl,
+                                //                                                                          template_param_infos);
+                                //                            }
+                                // Add the decl to our DIE to decl context map
+                                
+                                lldbassert (function_decl);
+                                
+                                if (function_decl)
+                                {
+                                    LinkDeclContextToDIE(function_decl, die);
+                                    
+                                    if (!function_param_decls.empty())
+                                        m_ast.SetFunctionParameters (function_decl,
+                                                                     &function_param_decls.front(),
+                                                                     function_param_decls.size());
+                                    
+                                    ClangASTMetadata metadata;
+                                    metadata.SetUserID(die.GetID());
+                                    
+                                    if (!object_pointer_name.empty())
+                                    {
+                                        metadata.SetObjectPtrName(object_pointer_name.c_str());
+                                        if (log)
+                                            log->Printf ("Setting object pointer name: %s on function object %p.",
+                                                         object_pointer_name.c_str(),
+                                                         static_cast<void*>(function_decl));
+                                    }
+                                    m_ast.SetMetadata (function_decl, metadata);
+                                }
+                            }
                         }
                     }
                     type_sp.reset( new Type (die.GetID(),

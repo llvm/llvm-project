@@ -9,7 +9,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 class TestStepOverWatchpoint(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -19,6 +18,7 @@ class TestStepOverWatchpoint(TestBase):
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureAll(oslist=["linux"], archs=['aarch64', 'arm'], bugnumber="llvm.org/pr26031")
+    @expectedFailureAll(oslist=["linux"], bugnumber="bugs.swift.org/SR-796")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test(self):
         """Test stepping over watchpoints."""
