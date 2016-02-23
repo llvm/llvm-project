@@ -1,4 +1,4 @@
-//===--- APINotesFormat.h - The internals of API notes files ------*- C++ -*-===//
+//===--- APINotesFormat.h - The internals of API notes files ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/RecordLayout.h"
 
@@ -37,13 +38,13 @@ const uint16_t VERSION_MAJOR = 0;
 /// When the format changes IN ANY WAY, this number should be incremented.
 const uint16_t VERSION_MINOR = 8;
 
-using IdentifierID = Fixnum<31>;
+using IdentifierID = PointerEmbeddedInt<unsigned, 31>;
 using IdentifierIDField = BCVBR<16>;
 
-using SelectorID = Fixnum<31>;
+using SelectorID = PointerEmbeddedInt<unsigned, 31>;
 using SelectorIDField = BCVBR<16>;
 
-using StoredContextID = Fixnum<31>;
+using StoredContextID = PointerEmbeddedInt<unsigned, 31>;
 
 /// The various types of blocks that can occur within a API notes file.
 ///

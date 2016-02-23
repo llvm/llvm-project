@@ -125,7 +125,7 @@ namespace {
     
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
       auto nameID
-        = endian::readNext<IdentifierID, little, unaligned>(data);
+        = endian::readNext<uint32_t, little, unaligned>(data);
       auto isProtocol = endian::readNext<uint8_t, little, unaligned>(data);
       return { nameID, isProtocol };
     }
@@ -133,7 +133,7 @@ namespace {
     static data_type ReadData(internal_key_type key, const uint8_t *data,
                               unsigned length) {
       data_type result;
-      result.first = endian::readNext<StoredContextID, little, unaligned>(data);
+      result.first = endian::readNext<uint32_t, little, unaligned>(data);
       readCommonEntityInfo(data, result.second);
       if (*data++) {
         result.second.setDefaultNullability(static_cast<NullabilityKind>(*data));
@@ -187,8 +187,8 @@ namespace {
     }
     
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
-      auto classID = endian::readNext<IdentifierID, little, unaligned>(data);
-      auto nameID = endian::readNext<IdentifierID, little, unaligned>(data);
+      auto classID = endian::readNext<uint32_t, little, unaligned>(data);
+      auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
       return { classID, nameID };
     }
     
@@ -247,8 +247,8 @@ namespace {
     }
     
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
-      auto classID = endian::readNext<IdentifierID, little, unaligned>(data);
-      auto selectorID = endian::readNext<SelectorID, little, unaligned>(data);
+      auto classID = endian::readNext<uint32_t, little, unaligned>(data);
+      auto selectorID = endian::readNext<uint32_t, little, unaligned>(data);
       auto isInstance = endian::readNext<uint8_t, little, unaligned>(data);
       return internal_key_type{ classID, selectorID, isInstance };
     }
@@ -299,17 +299,17 @@ namespace {
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
       internal_key_type key;
       key.NumPieces = endian::readNext<uint16_t, little, unaligned>(data);
-      unsigned numIdents = (length - sizeof(uint16_t)) / sizeof(IdentifierID);
+      unsigned numIdents = (length - sizeof(uint16_t)) / sizeof(uint32_t);
       for (unsigned i = 0; i != numIdents; ++i) {
         key.Identifiers.push_back(
-          endian::readNext<IdentifierID, little, unaligned>(data));
+          endian::readNext<uint32_t, little, unaligned>(data));
       }
       return key;
     }
     
     static data_type ReadData(internal_key_type key, const uint8_t *data,
                               unsigned length) {
-      return endian::readNext<SelectorID, little, unaligned>(data);
+      return endian::readNext<uint32_t, little, unaligned>(data);
     }
   };
 
@@ -346,7 +346,7 @@ namespace {
     }
     
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
-      auto nameID = endian::readNext<IdentifierID, little, unaligned>(data);
+      auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
       return nameID;
     }
     
@@ -391,7 +391,7 @@ namespace {
     }
     
     static internal_key_type ReadKey(const uint8_t *data, unsigned length) {
-      auto nameID = endian::readNext<IdentifierID, little, unaligned>(data);
+      auto nameID = endian::readNext<uint32_t, little, unaligned>(data);
       return nameID;
     }
     
