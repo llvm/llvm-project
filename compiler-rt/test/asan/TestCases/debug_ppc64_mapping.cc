@@ -1,7 +1,7 @@
 // RUN: %clang_asan -O0 %s -o %t
 // RUN: %env_asan_opts=verbosity=0 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-PPC64-V0
 // RUN: %env_asan_opts=verbosity=2 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-PPC64
-// REQUIRES: powerpc64-supported-target
+// REQUIRES: powerpc64-target-arch
 
 #include <stdio.h>
 

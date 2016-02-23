@@ -6,7 +6,7 @@
 // RUN: %clangxx_asan -O3 %s -o %t && %run %t 2>&1 | FileCheck %s
 //
 // This test is too sublte to try on non-x86 arch for now.
-// REQUIRES: x86_64-supported-target,i386-supported-target
+// REQUIRES: x86-target-arch
 
 #include <stdio.h>
 #include <ucontext.h>

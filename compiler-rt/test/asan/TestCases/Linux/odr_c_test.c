@@ -6,7 +6,7 @@
 // RUN: %clang_asan %s -fPIE %t-1.so %t-2.so -Wl,-R`pwd` -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
-// REQUIRES: x86_64-supported-target
+// REQUIRES: x86_64-target-arch
 //
 // CHECK: The following global variable is not properly aligned.
 // CHECK: ERROR: AddressSanitizer: odr-violation
