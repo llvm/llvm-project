@@ -145,7 +145,7 @@ HMapBucket HeaderMapImpl::getBucket(unsigned BucketNo) const {
 
 /// getString - Look up the specified string in the string table.  If the string
 /// index is not valid, it returns an empty string.
-const char *HeaderMapImpl::getString(unsigned StrTabIdx) const {
+StringRef HeaderMapImpl::getString(unsigned StrTabIdx) const {
   // Add the start of the string table to the idx.
   StrTabIdx += getEndianAdjustedWord(getHeader().StringsOffset);
 
@@ -175,9 +175,9 @@ LLVM_DUMP_METHOD void HeaderMapImpl::dump() const {
     HMapBucket B = getBucket(i);
     if (B.Key == HMAP_EmptyBucketKey) continue;
 
-    const char *Key    = getString(B.Key);
-    const char *Prefix = getString(B.Prefix);
-    const char *Suffix = getString(B.Suffix);
+    StringRef Key    = getString(B.Key);
+    StringRef Prefix = getString(B.Prefix);
+    StringRef Suffix = getString(B.Suffix);
     llvm::dbgs() << "  " << i << ". " << Key << " -> '" << Prefix << "' '"
                  << Suffix << "'\n";
   }

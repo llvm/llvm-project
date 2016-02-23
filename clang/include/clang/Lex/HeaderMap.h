@@ -55,7 +55,7 @@ private:
   unsigned getEndianAdjustedWord(unsigned X) const;
   const HMapHeader &getHeader() const;
   HMapBucket getBucket(unsigned BucketNo) const;
-  const char *getString(unsigned StrTabIdx) const;
+  StringRef getString(unsigned StrTabIdx) const;
 };
 
 /// This class represents an Apple concept known as a 'header map'.  To the
