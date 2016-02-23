@@ -10,6 +10,7 @@ to see a description of the supported command line arguments.
 
 # Python modules:
 import io
+import sys
 
 # Third party modules
 import six
@@ -29,7 +30,13 @@ def _encoded_write(old_write, encoding):
         # If we were asked to write a `str` (in Py2) or a `bytes` (in Py3) decode it
         # as unicode before attempting to write.
         if isinstance(s, six.binary_type):
-            s = s.decode(encoding)
+            try:
+                s = s.decode(encoding)
+            except UnicodeError as err:
+                sys.stderr.write(
+                    "attempted to write non-unicode-conformant byte "
+                    "string '{}', ignoring decode step: {}\n".format(s, err))
+                s = u""
         return old_write(s)
     return impl
 
