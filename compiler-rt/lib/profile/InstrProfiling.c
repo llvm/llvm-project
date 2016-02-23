@@ -46,7 +46,7 @@ COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
   const __llvm_profile_data *DI;
-  for (DI = DataBegin; DI != DataEnd; ++DI) {
+  for (DI = DataBegin; DI < DataEnd; ++DI) {
     uint64_t CurrentVSiteCount = 0;
     uint32_t VKI, i;
     if (!DI->Values)
