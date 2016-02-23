@@ -32,9 +32,6 @@ namespace clang {
 /// symlinks to files.  Its advantages are that it is dense and more efficient
 /// to create and process than a directory of symlinks.
 class HeaderMap {
-  HeaderMap(const HeaderMap &) = delete;
-  void operator=(const HeaderMap &) = delete;
-
   std::unique_ptr<const llvm::MemoryBuffer> FileBuffer;
   bool NeedsBSwap;
 
