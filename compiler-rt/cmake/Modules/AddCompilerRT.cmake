@@ -242,7 +242,7 @@ macro(add_compiler_rt_test test_suite test_name)
   add_dependencies(${test_suite} ${test_name})
 endmacro()
 
-macro(add_compiler_rt_resource_file target_name file_name)
+macro(add_compiler_rt_resource_file target_name file_name component)
   set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
   set(dst_file "${COMPILER_RT_OUTPUT_DIR}/${file_name}")
   add_custom_command(OUTPUT ${dst_file}
@@ -251,7 +251,10 @@ macro(add_compiler_rt_resource_file target_name file_name)
     COMMENT "Copying ${file_name}...")
   add_custom_target(${target_name} DEPENDS ${dst_file})
   # Install in Clang resource directory.
-  install(FILES ${file_name} DESTINATION ${COMPILER_RT_INSTALL_PATH})
+  install(FILES ${file_name}
+    DESTINATION ${COMPILER_RT_INSTALL_PATH}
+    COMPONENT ${component})
+  add_dependencies(${component} ${target_name})
 endmacro()
 
 macro(add_compiler_rt_script name)

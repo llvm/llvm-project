@@ -219,8 +219,7 @@ else()
   endforeach()
 endif()
 
-add_compiler_rt_resource_file(asan_blacklist asan_blacklist.txt)
-add_dependencies(asan asan_blacklist)
+add_compiler_rt_resource_file(asan_blacklist asan_blacklist.txt asan)
 add_dependencies(compiler-rt asan)
 
 add_subdirectory(scripts)
