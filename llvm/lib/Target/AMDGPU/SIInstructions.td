@@ -307,7 +307,7 @@ defm S_ASHR_I64 : SOP2_64_32 <sop2<0x23, 0x21>, "s_ashr_i64",
 
 defm S_BFM_B32 : SOP2_32 <sop2<0x24, 0x22>, "s_bfm_b32",
   [(set i32:$dst, (AMDGPUbfm i32:$src0, i32:$src1))]>;
-defm S_BFM_B64 : SOP2_64 <sop2<0x25, 0x23>, "s_bfm_b64", []>;
+defm S_BFM_B64 : SOP2_64_32_32 <sop2<0x25, 0x23>, "s_bfm_b64", []>;
 defm S_MUL_I32 : SOP2_32 <sop2<0x26, 0x24>, "s_mul_i32",
   [(set i32:$dst, (mul i32:$src0, i32:$src1))]
 >;
@@ -317,7 +317,7 @@ defm S_MUL_I32 : SOP2_32 <sop2<0x26, 0x24>, "s_mul_i32",
 let Defs = [SCC] in {
 defm S_BFE_U32 : SOP2_32 <sop2<0x27, 0x25>, "s_bfe_u32", []>;
 defm S_BFE_I32 : SOP2_32 <sop2<0x28, 0x26>, "s_bfe_i32", []>;
-defm S_BFE_U64 : SOP2_64 <sop2<0x29, 0x27>, "s_bfe_u64", []>;
+defm S_BFE_U64 : SOP2_64_32 <sop2<0x29, 0x27>, "s_bfe_u64", []>;
 defm S_BFE_I64 : SOP2_64_32 <sop2<0x2a, 0x28>, "s_bfe_i64", []>;
 } // End Defs = [SCC]
 

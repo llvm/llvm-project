@@ -436,7 +436,7 @@ enum PredicateKind {
 
 /// Returns true if an instruction is predicated on p0 and false if it's
 /// predicated on !p0.
-static PredicateKind getPredicateSense(const MachineInstr *MI,
+static PredicateKind getPredicateSense(const MachineInstr &MI,
                                        const HexagonInstrInfo *HII) {
   if (!HII->isPredicated(MI))
     return PK_Unknown;
@@ -570,8 +570,8 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr *MI,
 
   // If the source that feeds the store is predicated, new value store must
   // also be predicated.
-  if (HII->isPredicated(PacketMI)) {
-    if (!HII->isPredicated(MI))
+  if (HII->isPredicated(*PacketMI)) {
+    if (!HII->isPredicated(*MI))
       return false;
 
     // Check to make sure that they both will have their predicates
@@ -613,8 +613,8 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr *MI,
     // 3) Both new-value register producer and user should have same predicate
     // sense, i.e, either both should be negated or both should be non-negated.
     if (predRegNumDst != predRegNumSrc ||
-        HII->isDotNewInst(PacketMI) != HII->isDotNewInst(MI)  ||
-        getPredicateSense(MI, HII) != getPredicateSense(PacketMI, HII))
+        HII->isDotNewInst(PacketMI) != HII->isDotNewInst(MI) ||
+        getPredicateSense(*MI, HII) != getPredicateSense(*PacketMI, HII))
       return false;
   }
 
@@ -793,7 +793,7 @@ bool HexagonPacketizerList::restrictingDepExistInPacket(MachineInstr* MI,
 
   for (auto I : CurrentPacketMIs) {
     // We only care for dependencies to predicated instructions
-    if (!HII->isPredicated(I))
+    if (!HII->isPredicated(*I))
       continue;
 
     // Scheduling Unit for current insn in the packet
@@ -817,13 +817,13 @@ bool HexagonPacketizerList::restrictingDepExistInPacket(MachineInstr* MI,
 
 
 /// Gets the predicate register of a predicated instruction.
-static unsigned getPredicatedRegister(MachineInstr *MI,
+static unsigned getPredicatedRegister(MachineInstr &MI,
                                       const HexagonInstrInfo *QII) {
   /// We use the following rule: The first predicate register that is a use is
   /// the predicate register of a predicated instruction.
   assert(QII->isPredicated(MI) && "Must be predicated instruction");
 
-  for (auto &Op : MI->operands()) {
+  for (auto &Op : MI.operands()) {
     if (Op.isReg() && Op.getReg() && Op.isUse() &&
         Hexagon::PredRegsRegClass.contains(Op.getReg()))
       return Op.getReg();
@@ -835,8 +835,8 @@ static unsigned getPredicatedRegister(MachineInstr *MI,
 
 // Given two predicated instructions, this function detects whether
 // the predicates are complements.
-bool HexagonPacketizerList::arePredicatesComplements(MachineInstr *MI1,
-                                                     MachineInstr *MI2) {
+bool HexagonPacketizerList::arePredicatesComplements(MachineInstr &MI1,
+                                                     MachineInstr &MI2) {
   // If we don't know the predicate sense of the instructions bail out early, we
   // need it later.
   if (getPredicateSense(MI1, HII) == PK_Unknown ||
@@ -844,7 +844,7 @@ bool HexagonPacketizerList::arePredicatesComplements(MachineInstr *MI1,
     return false;
 
   // Scheduling unit for candidate.
-  SUnit *SU = MIToSUnit[MI1];
+  SUnit *SU = MIToSUnit[&MI1];
 
   // One corner case deals with the following scenario:
   // Trying to add
@@ -898,7 +898,7 @@ bool HexagonPacketizerList::arePredicatesComplements(MachineInstr *MI1,
          Hexagon::PredRegsRegClass.contains(PReg1) &&
          Hexagon::PredRegsRegClass.contains(PReg2) &&
          getPredicateSense(MI1, HII) != getPredicateSense(MI2, HII) &&
-         HII->isDotNewInst(MI1) == HII->isDotNewInst(MI2);
+         HII->isDotNewInst(&MI1) == HII->isDotNewInst(&MI2);
 }
 
 // Initialize packetizer flags.
@@ -1045,7 +1045,7 @@ bool HexagonPacketizerList::hasDeadDependence(const MachineInstr *I,
   // defining the same (dead) register.
   if (I->isCall() || J->isCall())
     return false;
-  if (HII->isPredicated(I) || HII->isPredicated(J))
+  if (HII->isPredicated(*I) || HII->isPredicated(*J))
     return false;
 
   BitVector DeadDefs(Hexagon::NUM_TARGET_REGS);
@@ -1085,7 +1085,7 @@ bool HexagonPacketizerList::hasControlDependence(const MachineInstr *I,
   auto isBadForLoopN = [this] (const MachineInstr *MI) -> bool {
     if (MI->isCall() || HII->isDeallocRet(MI) || HII->isNewValueJump(MI))
       return true;
-    if (HII->isPredicated(MI) && HII->isPredicatedNew(MI) && HII->isJumpR(MI))
+    if (HII->isPredicated(*MI) && HII->isPredicatedNew(*MI) && HII->isJumpR(MI))
       return true;
     return false;
   };
@@ -1275,8 +1275,8 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
 
     // For predicated instructions, if the predicates are complements then
     // there can be no dependence.
-    if (HII->isPredicated(I) && HII->isPredicated(J) &&
-        arePredicatesComplements(I, J)) {
+    if (HII->isPredicated(*I) && HII->isPredicated(*J) &&
+        arePredicatesComplements(*I, *J)) {
       // Not always safe to do this translation.
       // DAG Builder attempts to reduce dependence edges using transitive
       // nature of dependencies. Here is an example:

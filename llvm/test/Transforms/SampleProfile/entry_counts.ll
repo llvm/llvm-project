@@ -8,6 +8,13 @@ entry:
   ret void, !dbg !9
 }
 
+; This function does not have profile, check if function_entry_count is 0
+; CHECK: {{.*}} = !{!"function_entry_count", i64 0}
+define void @no_profile() {
+entry:
+  ret void
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7}
 !llvm.ident = !{!8}

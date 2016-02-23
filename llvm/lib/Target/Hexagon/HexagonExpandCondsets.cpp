@@ -421,7 +421,7 @@ void HexagonExpandCondsets::addInstrToLiveness(MachineInstr *MI) {
   DEBUG(dbgs() << "adding liveness info for instr\n  " << MX << "  " << *MI);
 
   MX = MX.getRegSlot();
-  bool Predicated = HII->isPredicated(MI);
+  bool Predicated = HII->isPredicated(*MI);
   MachineBasicBlock *MB = MI->getParent();
 
   // Strip all implicit uses from predicated instructions. They will be
@@ -748,7 +748,7 @@ bool HexagonExpandCondsets::splitInBlock(MachineBasicBlock &B) {
 
 
 bool HexagonExpandCondsets::isPredicable(MachineInstr *MI) {
-  if (HII->isPredicated(MI) || !HII->isPredicable(MI))
+  if (HII->isPredicated(*MI) || !HII->isPredicable(*MI))
     return false;
   if (MI->hasUnmodeledSideEffects() || MI->mayStore())
     return false;
@@ -784,8 +784,8 @@ MachineInstr *HexagonExpandCondsets::getReachingDefForPred(RegisterRef RD,
     MachineInstr *MI = &*I;
     // Check if this instruction can be ignored, i.e. if it is predicated
     // on the complementary condition.
-    if (PredValid && HII->isPredicated(MI)) {
-      if (MI->readsRegister(PredR) && (Cond != HII->isPredicatedTrue(MI)))
+    if (PredValid && HII->isPredicated(*MI)) {
+      if (MI->readsRegister(PredR) && (Cond != HII->isPredicatedTrue(*MI)))
         continue;
     }
 
@@ -945,9 +945,9 @@ void HexagonExpandCondsets::renameInRange(RegisterRef RO, RegisterRef RN,
     MachineInstr *MI = &*I;
     // Do not touch instructions that are not predicated, or are predicated
     // on the opposite condition.
-    if (!HII->isPredicated(MI))
+    if (!HII->isPredicated(*MI))
       continue;
-    if (!MI->readsRegister(PredR) || (Cond != HII->isPredicatedTrue(MI)))
+    if (!MI->readsRegister(PredR) || (Cond != HII->isPredicatedTrue(*MI)))
       continue;
 
     for (auto &Op : MI->operands()) {
@@ -1014,8 +1014,8 @@ bool HexagonExpandCondsets::predicate(MachineInstr *TfrI, bool Cond) {
     // By default assume that the instruction executes on the same condition
     // as TfrI (Exec_Then), and also on the opposite one (Exec_Else).
     unsigned Exec = Exec_Then | Exec_Else;
-    if (PredValid && HII->isPredicated(MI) && MI->readsRegister(PredR))
-      Exec = (Cond == HII->isPredicatedTrue(MI)) ? Exec_Then : Exec_Else;
+    if (PredValid && HII->isPredicated(*MI) && MI->readsRegister(PredR))
+      Exec = (Cond == HII->isPredicatedTrue(*MI)) ? Exec_Then : Exec_Else;
 
     for (auto &Op : MI->operands()) {
       if (!Op.isReg())
@@ -1119,11 +1119,9 @@ void HexagonExpandCondsets::removeImplicitUses(MachineInstr *MI) {
 
 
 void HexagonExpandCondsets::removeImplicitUses(MachineBasicBlock &B) {
-  for (MachineBasicBlock::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-    MachineInstr *MI = &*I;
+  for (MachineInstr &MI : B)
     if (HII->isPredicated(MI))
-      removeImplicitUses(MI);
-  }
+      removeImplicitUses(&MI);
 }
 
 
@@ -1290,13 +1288,13 @@ bool HexagonExpandCondsets::coalesceSegments(MachineFunction &MF) {
     if (S1.isReg()) {
       RegisterRef RS = S1;
       MachineInstr *RDef = getReachingDefForPred(RS, CI, RP.Reg, true);
-      if (!RDef || !HII->isPredicable(RDef))
+      if (!RDef || !HII->isPredicable(*RDef))
         Done = coalesceRegisters(RD, RegisterRef(S1));
     }
     if (!Done && S2.isReg()) {
       RegisterRef RS = S2;
       MachineInstr *RDef = getReachingDefForPred(RS, CI, RP.Reg, false);
-      if (!RDef || !HII->isPredicable(RDef))
+      if (!RDef || !HII->isPredicable(*RDef))
         Done = coalesceRegisters(RD, RegisterRef(S2));
     }
     Changed |= Done;

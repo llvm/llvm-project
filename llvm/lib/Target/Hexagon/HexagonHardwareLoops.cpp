@@ -1295,7 +1295,7 @@ bool HexagonHardwareLoops::orderBumpCompare(MachineInstr *BumpI,
   // Out of order.
   unsigned PredR = CmpI->getOperand(0).getReg();
   bool FoundBump = false;
-  instr_iterator CmpIt = CmpI->getInstrIterator(), NextIt = std::next(CmpIt);
+  instr_iterator CmpIt = CmpI->getIterator(), NextIt = std::next(CmpIt);
   for (instr_iterator I = NextIt, E = BB->instr_end(); I != E; ++I) {
     MachineInstr *In = &*I;
     for (unsigned i = 0, n = In->getNumOperands(); i < n; ++i) {
@@ -1307,7 +1307,7 @@ bool HexagonHardwareLoops::orderBumpCompare(MachineInstr *BumpI,
     }
 
     if (In == BumpI) {
-      BB->splice(++BumpI->getInstrIterator(), BB, CmpI->getInstrIterator());
+      BB->splice(++BumpI->getIterator(), BB, CmpI->getIterator());
       FoundBump = true;
       break;
     }

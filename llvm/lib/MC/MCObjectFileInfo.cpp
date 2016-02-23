@@ -469,6 +469,10 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
       Ctx->getELFSection(".rodata.cst16", ELF::SHT_PROGBITS,
                          ELF::SHF_ALLOC | ELF::SHF_MERGE, 16, "");
 
+  MergeableConst32Section =
+      Ctx->getELFSection(".rodata.cst32", ELF::SHT_PROGBITS,
+                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 32, "");
+
   StaticCtorSection = Ctx->getELFSection(".ctors", ELF::SHT_PROGBITS,
                                          ELF::SHF_ALLOC | ELF::SHF_WRITE);
 

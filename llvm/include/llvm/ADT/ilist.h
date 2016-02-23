@@ -638,7 +638,7 @@ public:
 
   /// \brief Get the previous node, or \c nullptr for the list head.
   NodeTy *getPrevNode(NodeTy &N) const {
-    auto I = static_cast<ilist_node<NodeTy> &>(N).getIterator();
+    auto I = N.getIterator();
     if (I == begin())
       return nullptr;
     return &*std::prev(I);
@@ -650,7 +650,7 @@ public:
 
   /// \brief Get the next node, or \c nullptr for the list tail.
   NodeTy *getNextNode(NodeTy &N) const {
-    auto Next = std::next(static_cast<ilist_node<NodeTy> &>(N).getIterator());
+    auto Next = std::next(N.getIterator());
     if (Next == end())
       return nullptr;
     return &*Next;

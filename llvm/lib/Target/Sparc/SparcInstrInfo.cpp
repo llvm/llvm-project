@@ -148,7 +148,7 @@ bool SparcInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   if (I == MBB.end())
     return false;
 
-  if (!isUnpredicatedTerminator(I))
+  if (!isUnpredicatedTerminator(*I))
     return false;
 
   // Get the last instruction in the block.
@@ -156,7 +156,7 @@ bool SparcInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   unsigned LastOpc = LastInst->getOpcode();
 
   // If there is only one terminator instruction, process it.
-  if (I == MBB.begin() || !isUnpredicatedTerminator(--I)) {
+  if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
     if (isUncondBranchOpcode(LastOpc)) {
       TBB = LastInst->getOperand(0).getMBB();
       return false;
@@ -180,7 +180,7 @@ bool SparcInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
       LastInst->eraseFromParent();
       LastInst = SecondLastInst;
       LastOpc = LastInst->getOpcode();
-      if (I == MBB.begin() || !isUnpredicatedTerminator(--I)) {
+      if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
         // Return now the only terminator is an unconditional branch.
         TBB = LastInst->getOperand(0).getMBB();
         return false;
@@ -192,7 +192,7 @@ bool SparcInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   }
 
   // If there are three terminators, we don't know what sort of block this is.
-  if (SecondLastInst && I != MBB.begin() && isUnpredicatedTerminator(--I))
+  if (SecondLastInst && I != MBB.begin() && isUnpredicatedTerminator(*--I))
     return true;
 
   // If the block ends with a B and a Bcc, handle it.

@@ -305,7 +305,7 @@ public:
                                           unsigned SrcOpIdx2) const;
 
   // Branch analysis.
-  bool isUnpredicatedTerminator(const MachineInstr* MI) const override;
+  bool isUnpredicatedTerminator(const MachineInstr &MI) const override;
   bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,

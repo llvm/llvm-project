@@ -168,9 +168,9 @@ namespace llvm {
 
   unsigned RemoveBranch(MachineBasicBlock &MBB) const override;
 
-  bool isPredicated(const MachineInstr *MI) const override;
+  bool isPredicated(const MachineInstr &MI) const override;
 
-  bool isPredicable(MachineInstr *MI) const override;
+  bool isPredicable(MachineInstr &MI) const override;
 
   bool
    isProfitableToDupForIfCvt(MachineBasicBlock &MBB, unsigned NumCyles,
@@ -187,8 +187,8 @@ namespace llvm {
                        unsigned NumFCycles, unsigned ExtraFCycles,
                        BranchProbability Probability) const override;
 
-  bool DefinesPredicate(MachineInstr *MI,
-                                  std::vector<MachineOperand> &Pred) const override;
+  bool DefinesPredicate(MachineInstr &MI,
+                        std::vector<MachineOperand> &Pred) const override;
 
   bool SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
                          ArrayRef<MachineOperand> Pred2) const override;
@@ -196,10 +196,10 @@ namespace llvm {
   bool isProfitableToUnpredicate(MachineBasicBlock &TMBB,
                                           MachineBasicBlock &FMBB) const override;
 
-  bool PredicateInstruction(MachineInstr *MI,
+  bool PredicateInstruction(MachineInstr &MI,
                             ArrayRef<MachineOperand> Pred) const override;
 
-  unsigned int getPredicationCost(const MachineInstr *) const override;
+  unsigned int getPredicationCost(const MachineInstr &) const override;
 
   unsigned int getInstrLatency(const InstrItineraryData *ItinData,
                                const MachineInstr *MI,

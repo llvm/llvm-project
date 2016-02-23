@@ -93,7 +93,7 @@ protected:
   bool canPromoteToNewValueStore(const MachineInstr* MI,
                                  const MachineInstr* PacketMI, unsigned DepReg);
   bool demoteToDotOld(MachineInstr* MI);
-  bool arePredicatesComplements(MachineInstr* MI1, MachineInstr* MI2);
+  bool arePredicatesComplements(MachineInstr &MI1, MachineInstr &MI2);
   bool restrictingDepExistInPacket(MachineInstr*, unsigned);
   bool isNewifiable(const MachineInstr *MI);
   bool isCurifiable(MachineInstr* MI);

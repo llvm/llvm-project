@@ -173,8 +173,9 @@ void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  auto I = MI->getInstrIterator();
-  auto E = MI->getParent()->instr_end();
+
+  MachineBasicBlock::const_instr_iterator I = MI->getIterator();
+  MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
 
   do {
     // Do any auto-generated pseudo lowerings.

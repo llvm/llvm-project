@@ -127,9 +127,9 @@ ConstantRange ConstantRange::makeSatisfyingICmpRegion(CmpInst::Predicate Pred,
       .inverse();
 }
 
-ConstantRange ConstantRange::makeNoWrapRegion(Instruction::BinaryOps BinOp,
-                                              const APInt &C,
-                                              unsigned NoWrapKind) {
+ConstantRange
+ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
+                                          const APInt &C, unsigned NoWrapKind) {
   typedef OverflowingBinaryOperator OBO;
 
   // Computes the intersection of CR0 and CR1.  It is different from

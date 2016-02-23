@@ -118,7 +118,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
     // Insert a copy from X0 to TLSBaseAddrReg for later.
     MachineInstr *Copy =
-        BuildMI(*I->getParent(), ++I->getInstrIterator(), I->getDebugLoc(),
+        BuildMI(*I->getParent(), ++I->getIterator(), I->getDebugLoc(),
                 TII->get(TargetOpcode::COPY), *TLSBaseAddrReg)
             .addReg(AArch64::X0);
 

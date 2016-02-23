@@ -243,7 +243,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
       // Look for Predicated instructions.
       if (!DisablePNotP) {
         bool Done = false;
-        if (QII->isPredicated(MI)) {
+        if (QII->isPredicated(*MI)) {
           MachineOperand &Op0 = MI->getOperand(0);
           unsigned Reg0 = Op0.getReg();
           const TargetRegisterClass *RC0 = MRI->getRegClass(Reg0);

@@ -202,6 +202,7 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalValue *GV,
       case 4:  return SectionKind::getMergeableConst4();
       case 8:  return SectionKind::getMergeableConst8();
       case 16: return SectionKind::getMergeableConst16();
+      case 32: return SectionKind::getMergeableConst32();
       default:
         return SectionKind::getReadOnly();
       }

@@ -289,7 +289,7 @@ ARMBaseInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TBB,
 
   // Walk backwards from the end of the basic block until the branch is
   // analyzed or we give up.
-  while (isPredicated(I) || I->isTerminator() || I->isDebugValue()) {
+  while (isPredicated(*I) || I->isTerminator() || I->isDebugValue()) {
 
     // Flag to be raised on unanalyzeable instructions. This is useful in cases
     // where we want to clean up on the end of the basic block before we bail
@@ -322,7 +322,7 @@ ARMBaseInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TBB,
       Cond.push_back(I->getOperand(2));
     } else if (I->isReturn()) {
       // Returns can't be analyzed, but we should run cleanup.
-      CantAnalyze = !isPredicated(I);
+      CantAnalyze = !isPredicated(*I);
     } else {
       // We encountered other unrecognized terminator. Bail out immediately.
       return true;
@@ -330,7 +330,7 @@ ARMBaseInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TBB,
 
     // Cleanup code - to be run for unpredicated unconditional branches and
     //                returns.
-    if (!isPredicated(I) &&
+    if (!isPredicated(*I) &&
           (isUncondBranchOpcode(I->getOpcode()) ||
            isIndirectBranchOpcode(I->getOpcode()) ||
            isJumpTableBranchOpcode(I->getOpcode()) ||
@@ -438,10 +438,10 @@ ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   return false;
 }
 
-bool ARMBaseInstrInfo::isPredicated(const MachineInstr *MI) const {
-  if (MI->isBundle()) {
-    auto I = MI->getInstrIterator();
-    auto E = MI->getParent()->instr_end();
+bool ARMBaseInstrInfo::isPredicated(const MachineInstr &MI) const {
+  if (MI.isBundle()) {
+    MachineBasicBlock::const_instr_iterator I = MI.getIterator();
+    MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
     while (++I != E && I->isInsideBundle()) {
       int PIdx = I->findFirstPredOperandIdx();
       if (PIdx != -1 && I->getOperand(PIdx).getImm() != ARMCC::AL)
@@ -450,26 +450,26 @@ bool ARMBaseInstrInfo::isPredicated(const MachineInstr *MI) const {
     return false;
   }
 
-  int PIdx = MI->findFirstPredOperandIdx();
-  return PIdx != -1 && MI->getOperand(PIdx).getImm() != ARMCC::AL;
+  int PIdx = MI.findFirstPredOperandIdx();
+  return PIdx != -1 && MI.getOperand(PIdx).getImm() != ARMCC::AL;
 }
 
-bool ARMBaseInstrInfo::
-PredicateInstruction(MachineInstr *MI, ArrayRef<MachineOperand> Pred) const {
-  unsigned Opc = MI->getOpcode();
+bool ARMBaseInstrInfo::PredicateInstruction(
+    MachineInstr &MI, ArrayRef<MachineOperand> Pred) const {
+  unsigned Opc = MI.getOpcode();
   if (isUncondBranchOpcode(Opc)) {
-    MI->setDesc(get(getMatchingCondBranchOpcode(Opc)));
-    MachineInstrBuilder(*MI->getParent()->getParent(), MI)
+    MI.setDesc(get(getMatchingCondBranchOpcode(Opc)));
+    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
       .addImm(Pred[0].getImm())
       .addReg(Pred[1].getReg());
     return true;
   }
 
-  int PIdx = MI->findFirstPredOperandIdx();
+  int PIdx = MI.findFirstPredOperandIdx();
   if (PIdx != -1) {
-    MachineOperand &PMO = MI->getOperand(PIdx);
+    MachineOperand &PMO = MI.getOperand(PIdx);
     PMO.setImm(Pred[0].getImm());
-    MI->getOperand(PIdx+1).setReg(Pred[1].getReg());
+    MI.getOperand(PIdx+1).setReg(Pred[1].getReg());
     return true;
   }
   return false;
@@ -501,11 +501,11 @@ bool ARMBaseInstrInfo::SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
   }
 }
 
-bool ARMBaseInstrInfo::DefinesPredicate(MachineInstr *MI,
-                                    std::vector<MachineOperand> &Pred) const {
+bool ARMBaseInstrInfo::DefinesPredicate(
+    MachineInstr &MI, std::vector<MachineOperand> &Pred) const {
   bool Found = false;
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if ((MO.isRegMask() && MO.clobbersPhysReg(ARM::CPSR)) ||
         (MO.isReg() && MO.isDef() && MO.getReg() == ARM::CPSR)) {
       Pred.push_back(MO);
@@ -555,21 +555,21 @@ static bool isEligibleForITBlock(const MachineInstr *MI) {
 /// isPredicable - Return true if the specified instruction can be predicated.
 /// By default, this returns true for every instruction with a
 /// PredicateOperand.
-bool ARMBaseInstrInfo::isPredicable(MachineInstr *MI) const {
-  if (!MI->isPredicable())
+bool ARMBaseInstrInfo::isPredicable(MachineInstr &MI) const {
+  if (!MI.isPredicable())
     return false;
 
-  if (!isEligibleForITBlock(MI))
+  if (!isEligibleForITBlock(&MI))
     return false;
 
   ARMFunctionInfo *AFI =
-    MI->getParent()->getParent()->getInfo<ARMFunctionInfo>();
+      MI.getParent()->getParent()->getInfo<ARMFunctionInfo>();
 
   if (AFI->isThumb2Function()) {
     if (getSubtarget().restrictIT())
-      return isV8EligibleForIT(MI);
+      return isV8EligibleForIT(&MI);
   } else { // non-Thumb
-    if ((MI->getDesc().TSFlags & ARMII::DomainMask) == ARMII::DomainNEON)
+    if ((MI.getDesc().TSFlags & ARMII::DomainMask) == ARMII::DomainNEON)
       return false;
   }
 
@@ -647,8 +647,8 @@ unsigned ARMBaseInstrInfo::GetInstSizeInBytes(const MachineInstr *MI) const {
 
 unsigned ARMBaseInstrInfo::getInstBundleLength(const MachineInstr *MI) const {
   unsigned Size = 0;
-  auto I = MI->getInstrIterator();
-  auto E = MI->getParent()->instr_end();
+  MachineBasicBlock::const_instr_iterator I = MI->getIterator();
+  MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
   while (++I != E && I->isInsideBundle()) {
     assert(!I->isBundle() && "No nested bundle!");
     Size += GetInstSizeInBytes(&*I);
@@ -1718,7 +1718,7 @@ isProfitableToIfCvt(MachineBasicBlock &MBB,
               CmpMI->getOpcode() == ARM::t2CMPri) {
             unsigned Reg = CmpMI->getOperand(0).getReg();
             unsigned PredReg = 0;
-            ARMCC::CondCodes P = getInstrPredicate(CmpMI, PredReg);
+            ARMCC::CondCodes P = getInstrPredicate(*CmpMI, PredReg);
             if (P == ARMCC::AL && CmpMI->getOperand(1).getImm() == 0 &&
                 isARMLowRegister(Reg))
               return false;
@@ -1773,16 +1773,16 @@ ARMBaseInstrInfo::isProfitableToUnpredicate(MachineBasicBlock &TMBB,
 /// getInstrPredicate - If instruction is predicated, returns its predicate
 /// condition, otherwise returns AL. It also returns the condition code
 /// register by reference.
-ARMCC::CondCodes
-llvm::getInstrPredicate(const MachineInstr *MI, unsigned &PredReg) {
-  int PIdx = MI->findFirstPredOperandIdx();
+ARMCC::CondCodes llvm::getInstrPredicate(const MachineInstr &MI,
+                                         unsigned &PredReg) {
+  int PIdx = MI.findFirstPredOperandIdx();
   if (PIdx == -1) {
     PredReg = 0;
     return ARMCC::AL;
   }
 
-  PredReg = MI->getOperand(PIdx+1).getReg();
-  return (ARMCC::CondCodes)MI->getOperand(PIdx).getImm();
+  PredReg = MI.getOperand(PIdx+1).getReg();
+  return (ARMCC::CondCodes)MI.getOperand(PIdx).getImm();
 }
 
 
@@ -1806,7 +1806,7 @@ MachineInstr *ARMBaseInstrInfo::commuteInstructionImpl(MachineInstr *MI,
   case ARM::t2MOVCCr: {
     // MOVCC can be commuted by inverting the condition.
     unsigned PredReg = 0;
-    ARMCC::CondCodes CC = getInstrPredicate(MI, PredReg);
+    ARMCC::CondCodes CC = getInstrPredicate(*MI, PredReg);
     // MOVCC AL can't be inverted. Shouldn't happen.
     if (CC == ARMCC::AL || PredReg != ARM::CPSR)
       return nullptr;
@@ -2395,7 +2395,7 @@ optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg, unsigned SrcReg2,
 
   // Masked compares sometimes use the same register as the corresponding 'and'.
   if (CmpMask != ~0) {
-    if (!isSuitableForMask(MI, SrcReg, CmpMask, false) || isPredicated(MI)) {
+    if (!isSuitableForMask(MI, SrcReg, CmpMask, false) || isPredicated(*MI)) {
       MI = nullptr;
       for (MachineRegisterInfo::use_instr_iterator
            UI = MRI->use_instr_begin(SrcReg), UE = MRI->use_instr_end();
@@ -2403,7 +2403,7 @@ optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg, unsigned SrcReg2,
         if (UI->getParent() != CmpInstr->getParent()) continue;
         MachineInstr *PotentialAND = &*UI;
         if (!isSuitableForMask(PotentialAND, SrcReg, CmpMask, true) ||
-            isPredicated(PotentialAND))
+            isPredicated(*PotentialAND))
           continue;
         MI = PotentialAND;
         break;
@@ -2471,7 +2471,7 @@ optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg, unsigned SrcReg2,
   if (!MI) MI = Sub;
 
   // We can't use a predicated instruction - it doesn't always write the flags.
-  if (isPredicated(MI))
+  if (isPredicated(*MI))
     return false;
 
   switch (MI->getOpcode()) {
@@ -2618,7 +2618,7 @@ optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg, unsigned SrcReg2,
     // Toggle the optional operand to CPSR.
     MI->getOperand(5).setReg(ARM::CPSR);
     MI->getOperand(5).setIsDef(true);
-    assert(!isPredicated(MI) && "Can't use flags from predicated instruction");
+    assert(!isPredicated(*MI) && "Can't use flags from predicated instruction");
     CmpInstr->eraseFromParent();
 
     // Modify the condition code of operands in OperandsToUpdate.
@@ -3432,7 +3432,7 @@ static const MachineInstr *getBundledUseMI(const TargetRegisterInfo *TRI,
                                            unsigned &UseIdx, unsigned &Dist) {
   Dist = 0;
 
-  auto II = ++MI->getInstrIterator();
+  MachineBasicBlock::const_instr_iterator II = ++MI->getIterator();
   assert(II->isInsideBundle() && "Empty bundle?");
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
 
@@ -3946,15 +3946,15 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   return Latency;
 }
 
-unsigned ARMBaseInstrInfo::getPredicationCost(const MachineInstr *MI) const {
-   if (MI->isCopyLike() || MI->isInsertSubreg() ||
-      MI->isRegSequence() || MI->isImplicitDef())
+unsigned ARMBaseInstrInfo::getPredicationCost(const MachineInstr &MI) const {
+  if (MI.isCopyLike() || MI.isInsertSubreg() || MI.isRegSequence() ||
+      MI.isImplicitDef())
     return 0;
 
-  if (MI->isBundle())
+  if (MI.isBundle())
     return 0;
 
-  const MCInstrDesc &MCID = MI->getDesc();
+  const MCInstrDesc &MCID = MI.getDesc();
 
   if (MCID.isCall() || MCID.hasImplicitDefOfPhysReg(ARM::CPSR)) {
     // When predicated, CPSR is an additional source operand for CPSR updating
@@ -3975,8 +3975,8 @@ unsigned ARMBaseInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   // other passes may query the latency of a bundled instruction.
   if (MI->isBundle()) {
     unsigned Latency = 0;
-    auto I = MI->getInstrIterator();
-    auto E = MI->getParent()->instr_end();
+    MachineBasicBlock::const_instr_iterator I = MI->getIterator();
+    MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
     while (++I != E && I->isInsideBundle()) {
       if (I->getOpcode() != ARM::t2IT)
         Latency += getInstrLatency(ItinData, &*I, PredCost);
@@ -4152,12 +4152,12 @@ ARMBaseInstrInfo::getExecutionDomain(const MachineInstr *MI) const {
   if (Subtarget.hasNEON()) {
     // VMOVD, VMOVRS and VMOVSR are VFP instructions, but can be changed to NEON
     // if they are not predicated.
-    if (MI->getOpcode() == ARM::VMOVD && !isPredicated(MI))
+    if (MI->getOpcode() == ARM::VMOVD && !isPredicated(*MI))
       return std::make_pair(ExeVFP, (1 << ExeVFP) | (1 << ExeNEON));
 
     // CortexA9 is particularly picky about mixing the two and wants these
     // converted.
-    if (Subtarget.isCortexA9() && !isPredicated(MI) &&
+    if (Subtarget.isCortexA9() && !isPredicated(*MI) &&
         (MI->getOpcode() == ARM::VMOVRS || MI->getOpcode() == ARM::VMOVSR ||
          MI->getOpcode() == ARM::VMOVS))
       return std::make_pair(ExeVFP, (1 << ExeVFP) | (1 << ExeNEON));
@@ -4252,7 +4252,7 @@ ARMBaseInstrInfo::setExecutionDomain(MachineInstr *MI, unsigned Domain) const {
         break;
 
       // Zap the predicate operands.
-      assert(!isPredicated(MI) && "Cannot predicate a VORRd");
+      assert(!isPredicated(*MI) && "Cannot predicate a VORRd");
 
       // Make sure we've got NEON instructions.
       assert(Subtarget.hasNEON() && "VORRd requires NEON");
@@ -4273,7 +4273,7 @@ ARMBaseInstrInfo::setExecutionDomain(MachineInstr *MI, unsigned Domain) const {
     case ARM::VMOVRS:
       if (Domain != ExeNEON)
         break;
-      assert(!isPredicated(MI) && "Cannot predicate a VGETLN");
+      assert(!isPredicated(*MI) && "Cannot predicate a VGETLN");
 
       // Source instruction is %RDst = VMOVRS %SSrc, 14, %noreg (; implicits)
       DstReg = MI->getOperand(0).getReg();
@@ -4299,7 +4299,7 @@ ARMBaseInstrInfo::setExecutionDomain(MachineInstr *MI, unsigned Domain) const {
     case ARM::VMOVSR: {
       if (Domain != ExeNEON)
         break;
-      assert(!isPredicated(MI) && "Cannot predicate a VSETLN");
+      assert(!isPredicated(*MI) && "Cannot predicate a VSETLN");
 
       // Source instruction is %SDst = VMOVSR %RSrc, 14, %noreg (; implicits)
       DstReg = MI->getOperand(0).getReg();

@@ -163,9 +163,8 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr *MI) {
   // instruction which may not be executed. The second R6 def may or may not
   // re-define R6 so it's not safe to change it since the last R6 use cannot be
   // changed.
-  bool Special = MI->isCall() ||
-    MI->hasExtraSrcRegAllocReq() ||
-    TII->isPredicated(MI);
+  bool Special =
+      MI->isCall() || MI->hasExtraSrcRegAllocReq() || TII->isPredicated(*MI);
 
   // Scan the register operands for this instruction and update
   // Classes and RegRefs.
@@ -241,7 +240,7 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr *MI,
   // instruction are now dead.
   assert(!MI->isKill() && "Attempting to scan a kill instruction");
 
-  if (!TII->isPredicated(MI)) {
+  if (!TII->isPredicated(*MI)) {
     // Predicated defs are modeled as read + write, i.e. similar to two
     // address updates.
     for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
@@ -585,7 +584,7 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
     // If MI's defs have a special allocation requirement, don't allow
     // any def registers to be changed. Also assume all registers
     // defined in a call must not be changed (ABI).
-    if (MI->isCall() || MI->hasExtraDefRegAllocReq() || TII->isPredicated(MI))
+    if (MI->isCall() || MI->hasExtraDefRegAllocReq() || TII->isPredicated(*MI))
       // If this instruction's defs have special allocation requirement, don't
       // break this anti-dependency.
       AntiDepReg = 0;

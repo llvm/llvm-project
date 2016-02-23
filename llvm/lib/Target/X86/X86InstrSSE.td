@@ -4277,17 +4277,17 @@ let ExeDomain = SSEPackedInt, SchedRW = [WriteVecShift], hasSideEffects = 0 in {
 //===---------------------------------------------------------------------===//
 
 defm PCMPEQB : PDI_binop_all<0x74, "pcmpeqb", X86pcmpeq, v16i8, v32i8,
-                             SSE_INTALU_ITINS_P, 1, NoVLX_Or_NoBWI>;
+                             SSE_INTALU_ITINS_P, 1, TruePredicate>;
 defm PCMPEQW : PDI_binop_all<0x75, "pcmpeqw", X86pcmpeq, v8i16, v16i16,
-                             SSE_INTALU_ITINS_P, 1, NoVLX_Or_NoBWI>;
+                             SSE_INTALU_ITINS_P, 1, TruePredicate>;
 defm PCMPEQD : PDI_binop_all<0x76, "pcmpeqd", X86pcmpeq, v4i32, v8i32,
-                             SSE_INTALU_ITINS_P, 1, NoVLX>;
+                             SSE_INTALU_ITINS_P, 1, TruePredicate>;
 defm PCMPGTB : PDI_binop_all<0x64, "pcmpgtb", X86pcmpgt, v16i8, v32i8,
-                             SSE_INTALU_ITINS_P, 0, NoVLX_Or_NoBWI>;
+                             SSE_INTALU_ITINS_P, 0, TruePredicate>;
 defm PCMPGTW : PDI_binop_all<0x65, "pcmpgtw", X86pcmpgt, v8i16, v16i16,
-                             SSE_INTALU_ITINS_P, 0, NoVLX_Or_NoBWI>;
+                             SSE_INTALU_ITINS_P, 0, TruePredicate>;
 defm PCMPGTD : PDI_binop_all<0x66, "pcmpgtd", X86pcmpgt, v4i32, v8i32,
-                             SSE_INTALU_ITINS_P, 0, NoVLX>;
+                             SSE_INTALU_ITINS_P, 0, TruePredicate>;
 
 //===---------------------------------------------------------------------===//
 // SSE2 - Packed Integer Shuffle Instructions

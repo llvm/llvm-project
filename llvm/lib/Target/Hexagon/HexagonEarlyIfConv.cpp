@@ -445,7 +445,7 @@ unsigned HexagonEarlyIfConversion::computePhiCost(MachineBasicBlock *B) const {
     }
     MachineInstr *Def1 = MRI->getVRegDef(RO1.getReg());
     MachineInstr *Def3 = MRI->getVRegDef(RO3.getReg());
-    if (!TII->isPredicable(Def1) || !TII->isPredicable(Def3))
+    if (!TII->isPredicable(*Def1) || !TII->isPredicable(*Def3))
       Cost++;
   }
   return Cost;

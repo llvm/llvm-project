@@ -423,7 +423,11 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
       // Don't nest anything inside an inline asm, because we don't have
       // constraints for $push inputs.
       if (Insert->getOpcode() == TargetOpcode::INLINEASM)
-        break;
+        continue;
+
+      // Ignore debugging intrinsics.
+      if (Insert->getOpcode() == TargetOpcode::DBG_VALUE)
+        continue;
 
       // Iterate through the inputs in reverse order, since we'll be pulling
       // operands off the stack in LIFO order.

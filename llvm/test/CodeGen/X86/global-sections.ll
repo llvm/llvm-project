@@ -298,3 +298,14 @@ bb7:
 
 ; WIN32-SECTIONS: .section      .rdata,"dr",one_only,_G15
 ; WIN32-SECTIONS: _G15:
+
+@G16 = unnamed_addr constant i256 0
+
+; LINUX: .section        .rodata.cst32,"aM",@progbits,32
+; LINUX: G16:
+
+; LINUX-SECTIONS: .section      .rodata.cst32,"aM",@progbits,32
+; LINUX-SECTIONS: G16:
+
+; WIN32-SECTIONS: .section      .rdata,"dr",one_only,_G16
+; WIN32-SECTIONS: _G16:

@@ -81,6 +81,7 @@ entry:
 ; we'd have commoned these, but that's a missed optimization, not correctness.
 ; CHECK-DAG: [ [[DISCARD:%.*.base.relocated.casted]], %loop ]
 ; CHECK-NOT: extra.base
+; CHECK: next.base = select
 ; CHECK: next = select
 ; CHECK: extra2.base = select
 ; CHECK: extra2 = select
@@ -107,7 +108,8 @@ taken:                                            ; preds = %entry
 
 merge:                                            ; preds = %taken, %entry
 ; CHECK-LABEL: merge:
-; CHECK-NEXT: %bdv = phi
+; CHECK-NEXT: phi
+; CHECK-NEXT: phi
 ; CHECK-NEXT: gc.statepoint
   %bdv = phi i64 addrspace(1)* [ %obj, %entry ], [ %obj2, %taken ]
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
@@ -124,7 +126,7 @@ taken:                                            ; preds = %entry
 
 merge:                                            ; preds = %taken, %entry
 ; CHECK-LABEL: merge:
-; CHECK-NEXT: %bdv = phi
+; CHECK-NEXT: phi
 ; CHECK-NEXT: gc.statepoint
   %bdv = phi i64 addrspace(1)* [ %obj, %entry ], [ %obj, %taken ]
   call void @foo() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
@@ -138,7 +140,8 @@ entry:
 
 merge:                                            ; preds = %merge, %entry
 ; CHECK-LABEL: merge:
-; CHECK-NEXT: %bdv = phi
+; CHECK-NEXT: phi
+; CHECK-NEXT: phi
 ; CHECK-NEXT: br i1
   %bdv = phi i64 addrspace(1)* [ %obj, %entry ], [ %obj2, %merge ]
   br i1 %cnd, label %merge, label %next

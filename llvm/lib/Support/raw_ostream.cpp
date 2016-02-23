@@ -623,6 +623,7 @@ void raw_fd_ostream::close() {
 }
 
 uint64_t raw_fd_ostream::seek(uint64_t off) {
+  assert(SupportsSeeking && "Stream does not support seeking!");
   flush();
   pos = ::lseek(FD, off, SEEK_SET);
   if (pos == (uint64_t)-1)

@@ -591,7 +591,7 @@ void HexagonAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   if (MI->isBundle()) {
     const MachineBasicBlock* MBB = MI->getParent();
-    auto MII = MI->getInstrIterator();
+    MachineBasicBlock::const_instr_iterator MII = MI->getIterator();
     unsigned IgnoreCount = 0;
 
     for (++MII; MII != MBB->instr_end() && MII->isInsideBundle(); ++MII)

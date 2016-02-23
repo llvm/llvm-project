@@ -134,8 +134,11 @@ define void @dynamic_alloca(i32 %alloc) {
  ; CHECK: i32.const $push[[L1:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.load [[SP:.+]]=, 0($pop[[L1]])
  ; CHECK-NEXT: copy_local [[FP:.+]]=, [[SP]]
- ; Target independent codegen bumps the stack pointer
- ; CHECK: i32.const $push[[L4:.+]]=, __stack_pointer{{$}}
+ ; Target independent codegen bumps the stack pointer.
+ ; CHECK: i32.sub
+ ; CHECK-NEXT: copy_local [[SP]]=,
+ ; Check that SP is written back to memory after decrement
+ ; CHECK-NEXT: i32.const $push[[L4:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: i32.store $discard=, 0($pop[[L4]]), [[SP]]
  %r = alloca i32, i32 %alloc
  ; Target-independent codegen also calculates the store addr
@@ -145,14 +148,20 @@ define void @dynamic_alloca(i32 %alloc) {
  ret void
 }
 
-
 ; CHECK-LABEL: dynamic_static_alloca:
 define void @dynamic_static_alloca(i32 %alloc) {
+ ; Decrement SP in the prolog by the static amount and writeback to memory.
  ; CHECK: i32.const $push[[L1:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.load $push[[L2:.+]]=, 0($pop[[L1]])
  ; CHECK-NEXT: i32.const $push[[L3:.+]]=, 16
  ; CHECK-NEXT: i32.sub [[SP:.+]]=, $pop[[L2]], $pop[[L3]]
  ; CHECK-NEXT: copy_local [[FP:.+]]=, [[SP]]
+ ; CHECK-NEXT: i32.const $push[[L4:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.store {{.*}}=, 0($pop[[L4]]), [[SP]]
+ ; Decrement SP in the body by the dynamic amount.
+ ; CHECK: i32.sub
+ ; CHECK: copy_local [[SP]]=,
+ ; Writeback to memory.
  ; CHECK-NEXT: i32.const $push[[L4:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.store {{.*}}=, 0($pop[[L4]]), [[SP]]
  %r1 = alloca i32
@@ -194,8 +203,6 @@ declare i8* @llvm.frameaddress(i32)
 ; CHECK: i32.const $push[[L1:.+]]=, __stack_pointer
 ; CHECK-NEXT: i32.load [[SP:.+]]=, 0($pop[[L1]])
 ; CHECK-NEXT: copy_local [[FP:.+]]=, [[SP]]
-; CHECK-NEXT: i32.const $push[[L2:.+]]=, __stack_pointer{{$}}
-; CHECK-NEXT: i32.store $discard=, 0($pop[[L2]]), [[SP]]
 ; CHECK-NEXT: call use_i8_star@FUNCTION, [[FP]]
 ; CHECK-NEXT: i32.const $push[[L6:.+]]=, __stack_pointer
 ; CHECK-NEXT: i32.store [[SP]]=, 0($pop[[L6]]), [[FP]]

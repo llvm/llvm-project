@@ -1,25 +1,5 @@
 # Tests which are known to fail from the GCC torture test suite.
 
-# Unknown type!
-# UNREACHABLE executed at /s/llvm-upstream/llvm/lib/IR/ValueTypes.cpp:280!
-# This is what happens when there is a struct operand to va_arg
-920625-1.c
-931004-10.c
-931004-12.c
-931004-14.c
-931004-2.c
-931004-4.c
-931004-6.c
-931004-8.c
-pr44575.c
-stdarg-3.c
-strct-stdarg-1.c
-strct-varg-1.c
-va-arg-pack-1.c
-va-arg-22.c
-920908-1.c
-pr38151.c
-
 # multiple-entry loops are not supported yet.
 pr38051.c
 

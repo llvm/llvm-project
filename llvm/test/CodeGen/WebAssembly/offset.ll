@@ -125,6 +125,17 @@ define i64 @load_i64_with_unfolded_gep_offset(i64* %p) {
   ret i64 %t
 }
 
+; CHECK-LABEL: load_i32_with_folded_or_offset:
+; CHECK: i32.load8_s $push{{[0-9]+}}=, 2($pop{{[0-9]+}}){{$}}
+define i32 @load_i32_with_folded_or_offset(i32 %x) {
+  %and = and i32 %x, -4
+  %t0 = inttoptr i32 %and to i8*
+  %arrayidx = getelementptr inbounds i8, i8* %t0, i32 2
+  %t1 = load i8, i8* %arrayidx, align 1
+  %conv = sext i8 %t1 to i32
+  ret i32 %conv
+}
+
 ; Same as above but with store.
 
 ; CHECK-LABEL: store_i32_with_folded_offset:
@@ -242,6 +253,16 @@ define void @store_i64_with_unfolded_offset(i64* %p) {
 define void @store_i64_with_unfolded_gep_offset(i64* %p) {
   %s = getelementptr i64, i64* %p, i32 3
   store i64 0, i64* %s
+  ret void
+}
+
+; CHECK-LABEL: store_i32_with_folded_or_offset:
+; CHECK: i32.store8 $discard=, 2($pop{{[0-9]+}}), $pop{{[0-9]+}}{{$}}
+define void @store_i32_with_folded_or_offset(i32 %x) {
+  %and = and i32 %x, -4
+  %t0 = inttoptr i32 %and to i8*
+  %arrayidx = getelementptr inbounds i8, i8* %t0, i32 2
+  store i8 0, i8* %arrayidx, align 1
   ret void
 }
 

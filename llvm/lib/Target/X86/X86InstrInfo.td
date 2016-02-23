@@ -728,6 +728,8 @@ def vectoraddr : ComplexPattern<iPTR, 5, "selectVectorAddr", [],[SDNPWantParent]
 
 //===----------------------------------------------------------------------===//
 // X86 Instruction Predicate Definitions.
+def TruePredicate : Predicate<"true">;
+
 def HasCMov      : Predicate<"Subtarget->hasCMov()">;
 def NoCMov       : Predicate<"!Subtarget->hasCMov()">;
 

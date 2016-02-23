@@ -150,14 +150,14 @@ bool NVPTXInstrInfo::AnalyzeBranch(
     SmallVectorImpl<MachineOperand> &Cond, bool AllowModify) const {
   // If the block has no terminators, it just falls into the block after it.
   MachineBasicBlock::iterator I = MBB.end();
-  if (I == MBB.begin() || !isUnpredicatedTerminator(--I))
+  if (I == MBB.begin() || !isUnpredicatedTerminator(*--I))
     return false;
 
   // Get the last instruction in the block.
   MachineInstr *LastInst = I;
 
   // If there is only one terminator instruction, process it.
-  if (I == MBB.begin() || !isUnpredicatedTerminator(--I)) {
+  if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
     if (LastInst->getOpcode() == NVPTX::GOTO) {
       TBB = LastInst->getOperand(0).getMBB();
       return false;
@@ -175,7 +175,7 @@ bool NVPTXInstrInfo::AnalyzeBranch(
   MachineInstr *SecondLastInst = I;
 
   // If there are three terminators, we don't know what sort of block this is.
-  if (SecondLastInst && I != MBB.begin() && isUnpredicatedTerminator(--I))
+  if (SecondLastInst && I != MBB.begin() && isUnpredicatedTerminator(*--I))
     return true;
 
   // If the block ends with NVPTX::GOTO and NVPTX:CBranch, handle it.

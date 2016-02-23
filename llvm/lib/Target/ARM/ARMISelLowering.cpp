@@ -1042,7 +1042,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setMinStackArgumentAlignment(4);
 
   // Prefer likely predicted branches to selects on out-of-order cores.
-  PredictableSelectIsExpensive = Subtarget->isLikeA9();
+  PredictableSelectIsExpensive = Subtarget->getSchedModel().isOutOfOrder();
 
   setMinFunctionAlignment(Subtarget->isThumb() ? 1 : 2);
 }

@@ -1969,15 +1969,14 @@ StrengthenNoWrapFlags(ScalarEvolution *SE, SCEVTypes Type,
 
     const APInt &C = cast<SCEVConstant>(Ops[0])->getAPInt();
     if (!(SignOrUnsignWrap & SCEV::FlagNSW)) {
-      auto NSWRegion =
-        ConstantRange::makeNoWrapRegion(Instruction::Add, C, OBO::NoSignedWrap);
+      auto NSWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Add, C, OBO::NoSignedWrap);
       if (NSWRegion.contains(SE->getSignedRange(Ops[1])))
         Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
     }
     if (!(SignOrUnsignWrap & SCEV::FlagNUW)) {
-      auto NUWRegion =
-        ConstantRange::makeNoWrapRegion(Instruction::Add, C,
-                                        OBO::NoUnsignedWrap);
+      auto NUWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Add, C, OBO::NoUnsignedWrap);
       if (NUWRegion.contains(SE->getUnsignedRange(Ops[1])))
         Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
     }

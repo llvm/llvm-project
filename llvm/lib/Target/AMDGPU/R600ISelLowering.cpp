@@ -1784,6 +1784,26 @@ EVT R600TargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
    return VT.changeVectorElementTypeToInteger();
 }
 
+bool R600TargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
+                                                        unsigned AddrSpace,
+                                                        unsigned Align,
+                                                        bool *IsFast) const {
+  if (IsFast)
+    *IsFast = false;
+
+  if (!VT.isSimple() || VT == MVT::Other)
+    return false;
+
+  if (VT.bitsLT(MVT::i32))
+    return false;
+
+  // TODO: This is a rough estimate.
+  if (IsFast)
+    *IsFast = true;
+
+  return VT.bitsGT(MVT::i32) && Align % 4 == 0;
+}
+
 static SDValue CompactSwizzlableVector(
   SelectionDAG &DAG, SDValue VectorEntry,
   DenseMap<unsigned, unsigned> &RemapSwizzle) {

@@ -309,10 +309,12 @@ a:
         tne       $6,$17               # CHECK: tne $6, $17            # encoding: [0x00,0xd1,0x00,0x36]
         tne       $7,$8,885            # CHECK: tne $7, $8, 885        # encoding: [0x00,0xe8,0xdd,0x76]
         tnei      $12,-29647
-        trunc.l.d $f23,$f23
-        trunc.l.s $f28,$f31
-        trunc.w.d $f22,$f15
-        trunc.w.s $f28,$f30
+        trunc.l.d $f23,$f23            # CHECK: trunc.l.d $f23, $f23   # encoding: [0x46,0x20,0xbd,0xc9]
+        trunc.l.s $f28,$f31            # CHECK: trunc.l.s $f28, $f31   # encoding: [0x46,0x00,0xff,0x09]
+        trunc.w.d $f22,$f15            # CHECK: trunc.w.d $f22, $f15   # encoding: [0x46,0x20,0x7d,0x8d]
+        trunc.w.s $f28,$f30            # CHECK: trunc.w.s $f28, $f30   # encoding: [0x46,0x00,0xf7,0x0d]
+        trunc.w.d $f4,$f6,$4           # CHECK: trunc.w.d $f4, $f6     # encoding: [0x46,0x20,0x31,0x0d]
+        trunc.w.s $f4,$f6,$4           # CHECK: trunc.w.s $f4, $f6     # encoding: [0x46,0x00,0x31,0x0d]
         xor       $s2,$a0,$s8
         xor       $2, 4                # CHECK: xori $2, $2, 4         # encoding: [0x38,0x42,0x00,0x04]
         wsbh      $k1,$9

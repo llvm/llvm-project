@@ -1,6 +1,6 @@
 ; RUN: opt < %s -rewrite-statepoints-for-gc -spp-print-base-pointers -S 2>&1 | FileCheck %s
 
-; CHECK: derived %obj_to_consume base %obj_to_consume
+; CHECK: derived %obj_to_consume base %obj_to_consume.base
 
 declare void @foo()
 

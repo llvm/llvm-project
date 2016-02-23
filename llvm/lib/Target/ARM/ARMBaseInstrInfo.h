@@ -135,24 +135,24 @@ public:
   ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
   // Predication support.
-  bool isPredicated(const MachineInstr *MI) const override;
+  bool isPredicated(const MachineInstr &MI) const override;
 
-  ARMCC::CondCodes getPredicate(const MachineInstr *MI) const {
-    int PIdx = MI->findFirstPredOperandIdx();
-    return PIdx != -1 ? (ARMCC::CondCodes)MI->getOperand(PIdx).getImm()
+  ARMCC::CondCodes getPredicate(const MachineInstr &MI) const {
+    int PIdx = MI.findFirstPredOperandIdx();
+    return PIdx != -1 ? (ARMCC::CondCodes)MI.getOperand(PIdx).getImm()
                       : ARMCC::AL;
   }
 
-  bool PredicateInstruction(MachineInstr *MI,
-                    ArrayRef<MachineOperand> Pred) const override;
+  bool PredicateInstruction(MachineInstr &MI,
+                            ArrayRef<MachineOperand> Pred) const override;
 
   bool SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
                          ArrayRef<MachineOperand> Pred2) const override;
 
-  bool DefinesPredicate(MachineInstr *MI,
+  bool DefinesPredicate(MachineInstr &MI,
                         std::vector<MachineOperand> &Pred) const override;
 
-  bool isPredicable(MachineInstr *MI) const override;
+  bool isPredicable(MachineInstr &MI) const override;
 
   /// GetInstSize - Returns the size of the specified MachineInstr.
   ///
@@ -327,7 +327,7 @@ private:
                         const MCInstrDesc &UseMCID,
                         unsigned UseIdx, unsigned UseAlign) const;
 
-  unsigned getPredicationCost(const MachineInstr *MI) const override;
+  unsigned getPredicationCost(const MachineInstr &MI) const override;
 
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr *MI,
@@ -447,7 +447,7 @@ static inline bool isPushOpcode(int Opc) {
 /// getInstrPredicate - If instruction is predicated, returns its predicate
 /// condition, otherwise returns AL. It also returns the condition code
 /// register by reference.
-ARMCC::CondCodes getInstrPredicate(const MachineInstr *MI, unsigned &PredReg);
+ARMCC::CondCodes getInstrPredicate(const MachineInstr &MI, unsigned &PredReg);
 
 unsigned getMatchingCondBranchOpcode(unsigned Opc);
 

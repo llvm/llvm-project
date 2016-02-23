@@ -254,9 +254,11 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
       FuncInfo.FuncletBaseStateMap[CatchPad] = CatchLow;
       for (const User *U : CatchPad->users()) {
         const auto *UserI = cast<Instruction>(U);
-        if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI))
-          if (InnerCatchSwitch->getUnwindDest() == CatchSwitch->getUnwindDest())
+        if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI)) {
+          BasicBlock *UnwindDest = InnerCatchSwitch->getUnwindDest();
+          if (!UnwindDest || UnwindDest == CatchSwitch->getUnwindDest())
             calculateCXXStateNumbers(FuncInfo, UserI, CatchLow);
+        }
         if (auto *InnerCleanupPad = dyn_cast<CleanupPadInst>(UserI)) {
           BasicBlock *UnwindDest = getCleanupRetUnwindDest(InnerCleanupPad);
           // If a nested cleanup pad reports a null unwind destination and the
@@ -361,9 +363,11 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
     // outside the __try.
     for (const User *U : CatchPad->users()) {
       const auto *UserI = cast<Instruction>(U);
-      if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI))
-        if (InnerCatchSwitch->getUnwindDest() == CatchSwitch->getUnwindDest())
+      if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI)) {
+        BasicBlock *UnwindDest = InnerCatchSwitch->getUnwindDest();
+        if (!UnwindDest || UnwindDest == CatchSwitch->getUnwindDest())
           calculateSEHStateNumbers(FuncInfo, UserI, ParentState);
+      }
       if (auto *InnerCleanupPad = dyn_cast<CleanupPadInst>(UserI)) {
         BasicBlock *UnwindDest = getCleanupRetUnwindDest(InnerCleanupPad);
         // If a nested cleanup pad reports a null unwind destination and the

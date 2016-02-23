@@ -25,7 +25,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
@@ -139,21 +138,6 @@ private:
 public:
   const MachineBasicBlock* getParent() const { return Parent; }
   MachineBasicBlock* getParent() { return Parent; }
-
-  // Disallow getIterator(), since it's ambiguous.
-  void getIterator() = delete;
-  typedef ilist_iterator<MachineInstr> instr_iterator;
-  typedef ilist_iterator<const MachineInstr> const_instr_iterator;
-  instr_iterator getInstrIterator() { return instr_iterator(this); }
-  const_instr_iterator getInstrIterator() const {
-    return const_instr_iterator(this);
-  }
-  typedef MachineInstrBundleIterator<MachineInstr> bundle_iterator;
-  typedef MachineInstrBundleIterator<const MachineInstr> const_bundle_iterator;
-  bundle_iterator getBundleIterator() { return bundle_iterator(this); }
-  const_bundle_iterator getBundleIterator() const {
-    return const_bundle_iterator(this);
-  }
 
   /// Return the asm printer flags bitvector.
   uint8_t getAsmPrinterFlags() const { return AsmPrinterFlags; }

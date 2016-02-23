@@ -1,6 +1,6 @@
 ; Test that we can correctly handle vectors of pointers in statepoint 
 ; rewriting.  
-; RUN: opt < %s -rewrite-statepoints-for-gc -rs4gc-split-vector-values=0 -S | FileCheck  %s
+; RUN: opt < %s -rewrite-statepoints-for-gc -S | FileCheck  %s
 
 ; A non-vector relocation for comparison
 define i64 addrspace(1)* @test(i64 addrspace(1)* %obj) gc "statepoint-example" {
@@ -73,7 +73,10 @@ exceptional_return:                               ; preds = %entry
 define <2 x i64 addrspace(1)*> @test5(i64 addrspace(1)* %p) gc "statepoint-example" {
 ; CHECK-LABEL: test5
 ; CHECK: insertelement
+; CHECK-NEXT: insertelement
 ; CHECK-NEXT: gc.statepoint
+; CHECK-NEXT: gc.relocate
+; CHECK-NEXT: bitcast
 ; CHECK-NEXT: gc.relocate
 ; CHECK-NEXT: bitcast
 ; CHECK-NEXT: ret <2 x i64 addrspace(1)*> %vec.relocated.casted
@@ -100,7 +103,10 @@ untaken:                                          ; preds = %entry
 merge:                                            ; preds = %untaken, %taken
 ; CHECK-LABEL: merge:
 ; CHECK-NEXT: = phi
+; CHECK-NEXT: = phi
 ; CHECK-NEXT: gc.statepoint
+; CHECK-NEXT: gc.relocate
+; CHECK-NEXT: bitcast
 ; CHECK-NEXT: gc.relocate
 ; CHECK-NEXT: bitcast
 ; CHECK-NEXT: ret <2 x i64 addrspace(1)*>

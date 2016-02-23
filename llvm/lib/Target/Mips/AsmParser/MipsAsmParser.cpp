@@ -220,6 +220,9 @@ class MipsAsmParser : public MCTargetAsmParser {
                  SmallVectorImpl<MCInst> &Instructions, const bool IsMips64,
                  const bool Signed);
 
+  bool expandTrunc(MCInst &Inst, bool IsDouble, bool Is64FPU, SMLoc IDLoc,
+                   SmallVectorImpl<MCInst> &Instructions);
+
   bool expandUlh(MCInst &Inst, bool Signed, SMLoc IDLoc,
                  SmallVectorImpl<MCInst> &Instructions);
 
@@ -2054,6 +2057,15 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc,
   case Mips::DUDivMacro:
     return expandDiv(Inst, IDLoc, Instructions, true, false) ? MER_Fail
                                                              : MER_Success;
+  case Mips::PseudoTRUNC_W_S:
+    return expandTrunc(Inst, false, false, IDLoc, Instructions) ? MER_Fail
+                                                                : MER_Success;
+  case Mips::PseudoTRUNC_W_D32:
+    return expandTrunc(Inst, true, false, IDLoc, Instructions) ? MER_Fail
+                                                               : MER_Success;
+  case Mips::PseudoTRUNC_W_D:
+    return expandTrunc(Inst, true, true, IDLoc, Instructions) ? MER_Fail
+                                                              : MER_Success;
   case Mips::Ulh:
     return expandUlh(Inst, true, IDLoc, Instructions) ? MER_Fail : MER_Success;
   case Mips::Ulhu:
@@ -3054,6 +3066,44 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc,
     emitII(Mips::BREAK, 0x6, 0, IDLoc, Instructions);
   }
   emitR(Mips::MFLO, RsReg, IDLoc, Instructions);
+  return false;
+}
+
+bool MipsAsmParser::expandTrunc(MCInst &Inst, bool IsDouble, bool Is64FPU,
+                                SMLoc IDLoc,
+                                SmallVectorImpl<MCInst> &Instructions) {
+
+  assert(Inst.getNumOperands() == 3 && "Invalid operand count");
+  assert(Inst.getOperand(0).isReg() && Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isReg() && "Invalid instruction operand.");
+
+  unsigned FirstReg = Inst.getOperand(0).getReg();
+  unsigned SecondReg = Inst.getOperand(1).getReg();
+  unsigned ThirdReg = Inst.getOperand(2).getReg();
+
+  if (hasMips1() && !hasMips2()) {
+    unsigned ATReg = getATReg(IDLoc);
+    if (!ATReg)
+      return true;
+    emitRR(Mips::CFC1, ThirdReg, Mips::RA, IDLoc, Instructions);
+    emitRR(Mips::CFC1, ThirdReg, Mips::RA, IDLoc, Instructions);
+    createNop(false, IDLoc, Instructions);
+    emitRRI(Mips::ORi, ATReg, ThirdReg, 0x3, IDLoc, Instructions);
+    emitRRI(Mips::XORi, ATReg, ATReg, 0x2, IDLoc, Instructions);
+    emitRR(Mips::CTC1, Mips::RA, ATReg, IDLoc, Instructions);
+    createNop(false, IDLoc, Instructions);
+    emitRR(IsDouble ? (Is64FPU ? Mips::CVT_W_D64 : Mips::CVT_W_D32)
+                    : Mips::CVT_W_S,
+           FirstReg, SecondReg, IDLoc, Instructions);
+    emitRR(Mips::CTC1, Mips::RA, ThirdReg, IDLoc, Instructions);
+    createNop(false, IDLoc, Instructions);
+    return false;
+  }
+
+  emitRR(IsDouble ? (Is64FPU ? Mips::TRUNC_W_D64 : Mips::TRUNC_W_D32)
+                  : Mips::TRUNC_W_S,
+         FirstReg, SecondReg, IDLoc, Instructions);
+
   return false;
 }
 

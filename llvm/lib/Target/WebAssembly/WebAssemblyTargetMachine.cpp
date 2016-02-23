@@ -184,7 +184,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   disablePass(&PrologEpilogCodeInserterID);
   // Fails with: should be run after register allocation.
   disablePass(&MachineCopyPropagationID);
-  disablePass(&TailDuplicateID);
 
   if (getOptLevel() != CodeGenOpt::None) {
     // Mark registers as representing wasm's expression stack.

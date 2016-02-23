@@ -551,6 +551,20 @@ class ExtractElementF64Base<RegisterOperand RO> :
 def ExtractElementF64 : ExtractElementF64Base<AFGR64Opnd>, FGR_32, HARDFLOAT;
 def ExtractElementF64_64 : ExtractElementF64Base<FGR64Opnd>, FGR_64, HARDFLOAT;
 
+def PseudoTRUNC_W_S : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
+                                        (ins FGR32Opnd:$fs, GPR32Opnd:$rs),
+                                        "trunc.w.s\t$fd, $fs, $rs">;
+
+def PseudoTRUNC_W_D32 : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
+                                          (ins AFGR64Opnd:$fs, GPR32Opnd:$rs),
+                                          "trunc.w.d\t$fd, $fs, $rs">,
+                        FGR_32, HARDFLOAT;
+
+def PseudoTRUNC_W_D : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
+                                        (ins FGR64Opnd:$fs, GPR32Opnd:$rs),
+                                        "trunc.w.d\t$fd, $fs, $rs">,
+                      FGR_64, HARDFLOAT;
+
 //===----------------------------------------------------------------------===//
 // InstAliases.
 //===----------------------------------------------------------------------===//

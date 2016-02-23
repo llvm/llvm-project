@@ -21,6 +21,7 @@
 #define LLVM_PROFILEDATA_PROFILE_COMMON_H
 
 namespace llvm {
+class Function;
 namespace IndexedInstrProf {
 struct Summary;
 }
@@ -28,6 +29,8 @@ namespace sampleprof {
 class FunctionSamples;
 }
 struct InstrProfRecord;
+inline const char *getHotSectionPrefix() { return ".hot"; }
+inline const char *getUnlikelySectionPrefix() { return ".unlikely"; }
 // The profile summary is one or more (Cutoff, MinCount, NumCounts) triplets.
 // The semantics of counts depend on the type of profile. For instrumentation
 // profile, counts are block counts and for sample profile, counts are
@@ -66,6 +69,10 @@ protected:
 
 public:
   static const int Scale = 1000000;
+  // \brief Returns true if F is a hot function.
+  static bool isFunctionHot(const Function *F);
+  // \brief Returns true if F is unlikley executed.
+  static bool isFunctionUnlikely(const Function *F);
   inline std::vector<ProfileSummaryEntry> &getDetailedSummary();
   void computeDetailedSummary();
   /// \brief A vector of useful cutoff values for detailed summary.

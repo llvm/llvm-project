@@ -674,7 +674,7 @@ bool RegisterAliasInfo::alias(RegisterRef RA, RegisterRef RB) const {
 // unchanged across this def.
 bool TargetOperandInfo::isPreserving(const MachineInstr &In, unsigned OpNum)
       const {
-  return TII.isPredicated(&In);
+  return TII.isPredicated(In);
 }
 
 // Check if the definition of RR produces an unspecified value.
@@ -1179,7 +1179,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
       ImpUses.insert({R, 0});
 
   bool IsCall = In.isCall(), IsReturn = In.isReturn();
-  bool IsPredicated = TII.isPredicated(&In);
+  bool IsPredicated = TII.isPredicated(In);
   unsigned NumOps = In.getNumOperands();
 
   // Avoid duplicate implicit defs. This will not detect cases of implicit

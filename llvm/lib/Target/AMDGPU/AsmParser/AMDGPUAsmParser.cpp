@@ -79,6 +79,7 @@ public:
     bool IsFPImm;
     ImmTy Type;
     int64_t Val;
+    int Modifiers;
   };
 
   struct RegOp {
@@ -109,15 +110,20 @@ public:
   }
 
   void addRegOrImmOperands(MCInst &Inst, unsigned N) const {
-    if (isReg())
+    if (isRegKind())
       addRegOperands(Inst, N);
     else
       addImmOperands(Inst, N);
   }
 
-  void addRegWithInputModsOperands(MCInst &Inst, unsigned N) const {
-    Inst.addOperand(MCOperand::createImm(Reg.Modifiers));
-    addRegOperands(Inst, N);
+  void addRegOrImmWithInputModsOperands(MCInst &Inst, unsigned N) const {
+    if (isRegKind()) {
+      Inst.addOperand(MCOperand::createImm(Reg.Modifiers));
+      addRegOperands(Inst, N);
+    } else {
+      Inst.addOperand(MCOperand::createImm(Imm.Modifiers));
+      addImmOperands(Inst, N);
+    }
   }
 
   void addSoppBrTargetOperands(MCInst &Inst, unsigned N) const {
@@ -143,12 +149,18 @@ public:
     return Kind == Immediate;
   }
 
-  bool isInlineImm() const {
-    float F = BitsToFloat(Imm.Val);
-    // TODO: Add 0.5pi for VI
-    return isImm() && ((Imm.Val <= 64 && Imm.Val >= -16) ||
+  bool isInlinableImm() const {
+    if (!isImm() || Imm.Type != AMDGPUOperand::ImmTyNone /* Only plain
+      immediates are inlinable (e.g. "clamp" attribute is not) */ )
+      return false;
+    // TODO: We should avoid using host float here. It would be better to
+    // check the float bit values which is what a few other places do. 
+    // We've had bot failures before due to weird NaN support on mips hosts.
+    const float F = BitsToFloat(Imm.Val);
+    // TODO: Add 1/(2*pi) for VI
+    return (Imm.Val <= 64 && Imm.Val >= -16) ||
            (F == 0.0 || F == 0.5 || F == -0.5 || F == 1.0 || F == -1.0 ||
-           F == 2.0 || F == -2.0 || F == 4.0 || F == -4.0));
+           F == 2.0 || F == -2.0 || F == 4.0 || F == -4.0);
   }
 
   bool isDSOffset0() const {
@@ -178,8 +190,8 @@ public:
     return Kind == Register && Reg.Modifiers == 0;
   }
 
-  bool isRegWithInputMods() const {
-    return Kind == Register;
+  bool isRegOrImmWithInputMods() const {
+    return Kind == Register || isInlinableImm();
   }
 
   bool isClamp() const {
@@ -195,13 +207,16 @@ public:
   }
 
   void setModifiers(unsigned Mods) {
-    assert(isReg());
-    Reg.Modifiers = Mods;
+    assert(isReg() || (isImm() && Imm.Modifiers == 0));
+    if (isReg())
+      Reg.Modifiers = Mods;
+    else
+      Imm.Modifiers = Mods;
   }
 
   bool hasModifiers() const {
-    assert(isRegKind());
-    return Reg.Modifiers != 0;
+    assert(isRegKind() || isImm());
+    return isRegKind() ? Reg.Modifiers != 0 : Imm.Modifiers != 0;
   }
 
   unsigned getReg() const override {
@@ -217,36 +232,42 @@ public:
   }
 
   bool isSCSrc32() const {
-    return isInlineImm() || (isReg() && isRegClass(AMDGPU::SReg_32RegClassID));
-  }
-
-  bool isSSrc32() const {
-    return isImm() || (isReg() && isRegClass(AMDGPU::SReg_32RegClassID));
-  }
-
-  bool isSSrc64() const {
-    return isImm() || isInlineImm() ||
-           (isReg() && isRegClass(AMDGPU::SReg_64RegClassID));
+    return isInlinableImm() || (isReg() && isRegClass(AMDGPU::SReg_32RegClassID));
   }
 
   bool isSCSrc64() const {
-    return (isReg() && isRegClass(AMDGPU::SReg_64RegClassID)) || isInlineImm();
+    return isInlinableImm() || (isReg() && isRegClass(AMDGPU::SReg_64RegClassID));
+  }
+
+  bool isSSrc32() const {
+    return isImm() || isSCSrc32();
+  }
+
+  bool isSSrc64() const {
+    // TODO: Find out how SALU supports extension of 32-bit literals to 64 bits.
+    // See isVSrc64().
+    return isImm() || isSCSrc64();
   }
 
   bool isVCSrc32() const {
-    return isInlineImm() || (isReg() && isRegClass(AMDGPU::VS_32RegClassID));
+    return isInlinableImm() || (isReg() && isRegClass(AMDGPU::VS_32RegClassID));
   }
 
   bool isVCSrc64() const {
-    return isInlineImm() || (isReg() && isRegClass(AMDGPU::VS_64RegClassID));
+    return isInlinableImm() || (isReg() && isRegClass(AMDGPU::VS_64RegClassID));
   }
 
   bool isVSrc32() const {
-    return isImm() || (isReg() && isRegClass(AMDGPU::VS_32RegClassID));
+    return isImm() || isVCSrc32();
   }
 
   bool isVSrc64() const {
-    return isImm() || (isReg() && isRegClass(AMDGPU::VS_64RegClassID));
+    // TODO: Check if the 64-bit value (coming from assembly source) can be 
+    // narrowed to 32 bits (in the instruction stream). That require knowledge
+    // of instruction type (unsigned/signed, floating or "untyped"/B64),
+    // see [AMD GCN3 ISA 6.3.1].
+    // TODO: How 64-bit values are formed from 32-bit literals in _B64 insns?
+    return isImm() || isVCSrc64();
   }
 
   bool isMem() const override {
@@ -275,7 +296,10 @@ public:
       OS << "<register " << getReg() << " mods: " << Reg.Modifiers << '>';
       break;
     case Immediate:
-      OS << getImm();
+      if (Imm.Type != AMDGPUOperand::ImmTyNone)
+        OS << getImm();
+      else 
+        OS << '<' << getImm() << " mods: " << Imm.Modifiers << '>';
       break;
     case Token:
       OS << '\'' << getToken() << '\'';
@@ -293,6 +317,7 @@ public:
     Op->Imm.Val = Val;
     Op->Imm.IsFPImm = IsFPImm;
     Op->Imm.Type = Type;
+    Op->Imm.Modifiers = 0;
     Op->StartLoc = Loc;
     Op->EndLoc = Loc;
     return Op;
@@ -1099,6 +1124,8 @@ static bool operandsHaveModifiers(const OperandVector &Operands) {
     const AMDGPUOperand &Op = ((AMDGPUOperand&)*Operands[i]);
     if (Op.isRegKind() && Op.hasModifiers())
       return true;
+    if (Op.isImm() && Op.hasModifiers())
+      return true;
     if (Op.isImm() && (Op.getImmTy() == AMDGPUOperand::ImmTyOMod ||
                        Op.getImmTy() == AMDGPUOperand::ImmTyClamp))
       return true;
@@ -1843,7 +1870,7 @@ AMDGPUAsmParser::parseVOP3OptionalOps(OperandVector &Operands) {
       // previous register operands have modifiers
       for (unsigned i = 2, e = Operands.size(); i != e; ++i) {
         AMDGPUOperand &Op = ((AMDGPUOperand&)*Operands[i]);
-        if (Op.isReg())
+        if ((Op.isReg() || Op.isImm()) && !Op.hasModifiers())
           Op.setModifiers(0);
       }
     }
@@ -1892,14 +1919,12 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands) {
   unsigned ClampIdx = 0, OModIdx = 0;
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
-    if (Op.isRegWithInputMods()) {
-      Op.addRegWithInputModsOperands(Inst, 2);
+    if (Op.isRegOrImmWithInputMods()) {
+      Op.addRegOrImmWithInputModsOperands(Inst, 2);
     } else if (Op.isClamp()) {
       ClampIdx = I;
     } else if (Op.isOMod()) {
       OModIdx = I;
-    } else if (Op.isImm()) {
-      Op.addImmOperands(Inst, 1);
     } else {
       assert(false);
     }
