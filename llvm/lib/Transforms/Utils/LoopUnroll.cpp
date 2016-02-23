@@ -142,9 +142,13 @@ static bool needToInsertPhisForLCSSA(Loop *L, std::vector<BasicBlock *> Blocks,
       continue;
     for (Instruction &I : *BB) {
       for (Use &U : I.operands()) {
-        if (auto Def = dyn_cast<Instruction>(U))
-          if (LI->getLoopFor(Def->getParent()) == L)
+        if (auto Def = dyn_cast<Instruction>(U)) {
+          Loop *DefLoop = LI->getLoopFor(Def->getParent());
+          if (!DefLoop)
+            continue;
+          if (DefLoop->contains(L))
             return true;
+        }
       }
     }
   }
