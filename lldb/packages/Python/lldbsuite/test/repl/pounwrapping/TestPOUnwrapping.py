@@ -12,12 +12,13 @@
 """Test that we can correctly handle a nested generic type."""
 
 import lldbsuite.test.lldbrepl as lldbrepl
-
+import lldbsuite.test.decorators as decorators
 
 class REPLBasicTestCase(lldbrepl.REPLTest):
 
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
+    @decorators.expectedFailureAll(oslist=["linux"], bugnumber="bugs.swift.org/SR-801")
     def doTest(self):
         self.command(
             '''class Foo<T,U> {
