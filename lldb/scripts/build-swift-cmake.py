@@ -120,7 +120,8 @@ else:
 
     if uname != "Darwin":
         # we don't build with Xcode, so we can actually install
-        build_script_impl_arguments += [ "--install-swift", "--install-lldb", "--install-prefix", "/usr", "--install-destdir", os.getcwd() + "/install", "--swift-install-components=compiler;clang-builtin-headers;stdlib;stdlib-experimental;sdk-overlay;editor-integration;tools;testsuite-tools;dev" ]
+        # build_script_impl_arguments += [ "--install-swift", "--install-lldb", "--install-prefix", "/usr", "--install-destdir", os.getcwd() + "/install", "--swift-install-components=compiler;clang-builtin-headers;stdlib;stdlib-experimental;sdk-overlay;editor-integration;tools;testsuite-tools;dev" ]
+        build_script_impl_arguments += [ "--install-swift", "--install-lldb", "--install-destdir", os.getcwd() + "/install", "--swift-install-components=compiler;clang-builtin-headers;stdlib;stdlib-experimental;sdk-overlay;editor-integration;tools;testsuite-tools;dev" ]
 
     # build_script_impl_arguments += ["--reconfigure"]
 
