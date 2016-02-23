@@ -12,7 +12,6 @@ int clang_analyzer_eval(int);
 }
 @end
 
-
 @implementation Sub
 - (void)callMethodOnSuperInCXXLambda; {
   // Explicit capture.
@@ -23,6 +22,20 @@ int clang_analyzer_eval(int);
   // Implicit capture.
   [=]() {
     [super superMethod];
+  }();
+}
+
+// Make sure to properly handle super-calls when a block captures
+// a local variable named 'self'.
+- (void)callMethodOnSuperInCXXLambdaWithRedefinedSelf; {
+  /*__weak*/ Sub *weakSelf = self;
+  // Implicit capture. (Sema outlaws explicit capture of a redefined self
+  // and a call to super [which uses the original self]).
+  [=]() {
+    Sub *self = weakSelf;
+    [=]() {
+      [super superMethod];
+    }();
   }();
 }
 
