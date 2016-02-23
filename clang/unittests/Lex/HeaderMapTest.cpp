@@ -15,6 +15,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "gtest/gtest.h"
 #include <cassert>
+#include <type_traits>
 
 using namespace clang;
 using namespace llvm;
@@ -169,6 +170,47 @@ TEST(HeaderMapTest, lookupFilename) {
 
   SmallString<8> DestPath;
   ASSERT_EQ("bc", Map.lookupFilename("a", DestPath));
+}
+
+template <class FileTy, class PaddingTy> struct PaddedFile {
+  FileTy File;
+  PaddingTy Padding;
+};
+
+TEST(HeaderMapTest, lookupFilenameTruncated) {
+  typedef MapFile<2, 64 - sizeof(HMapHeader) - 2 * sizeof(HMapBucket)> FileTy;
+  static_assert(std::is_standard_layout<FileTy>::value,
+                "Expected standard layout");
+  static_assert(sizeof(FileTy) == 64, "check the math");
+  PaddedFile<FileTy, uint64_t> P;
+  auto &File = P.File;
+  auto &Padding = P.Padding;
+  File.init();
+
+  FileMaker<FileTy> Maker(File);
+  auto a = Maker.addString("a");
+  auto b = Maker.addString("b");
+  auto c = Maker.addString("c");
+  Maker.addBucket(getHash("a"), a, b, c);
+
+  // Add 'x' characters to cause an overflow into Padding.
+  ASSERT_EQ('c', File.Bytes[5]);
+  for (unsigned I = 6; I < sizeof(File.Bytes); ++I) {
+    ASSERT_EQ(0, File.Bytes[I]);
+    File.Bytes[I] = 'x';
+  }
+  Padding = 0xffffffff; // Padding won't stop it either.
+
+  bool NeedsSwap;
+  ASSERT_TRUE(HeaderMapImpl::checkHeader(*File.getBuffer(), NeedsSwap));
+  ASSERT_FALSE(NeedsSwap);
+  HeaderMapImpl Map(File.getBuffer(), NeedsSwap);
+
+  // The string for "c" runs to the end of File.  Check that the suffix
+  // ("cxxxx...") is ignored.  Another option would be to return an empty
+  // filename altogether.
+  SmallString<24> DestPath;
+  ASSERT_EQ("b", Map.lookupFilename("a", DestPath));
 }
 
 } // end namespace

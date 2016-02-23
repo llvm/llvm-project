@@ -21,6 +21,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/Debug.h"
+#include <cstring>
 #include <memory>
 using namespace clang;
 
@@ -151,12 +152,17 @@ StringRef HeaderMapImpl::getString(unsigned StrTabIdx) const {
 
   // Check for invalid index.
   if (StrTabIdx >= FileBuffer->getBufferSize())
-    return nullptr;
+    return "";
 
-  // Otherwise, we have a valid pointer into the file.  Just return it.  We know
-  // that the "string" can not overrun the end of the file, because the buffer
-  // is nul terminated by virtue of being a MemoryBuffer.
-  return FileBuffer->getBufferStart()+StrTabIdx;
+  const char *Data = FileBuffer->getBufferStart() + StrTabIdx;
+  unsigned MaxLen = FileBuffer->getBufferSize() - StrTabIdx;
+  unsigned Len = strnlen(Data, MaxLen);
+
+  // Check whether the buffer is null-terminated.
+  if (Len == MaxLen && Data[Len - 1])
+    return "";
+
+  return StringRef(Data, Len);
 }
 
 //===----------------------------------------------------------------------===//
