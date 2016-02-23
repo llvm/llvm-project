@@ -22,6 +22,7 @@ class SwiftDynamicTypeGenericsTest(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureLinux("bugs.swift.org/SR-797")
     def test_genericresolution_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
         self.build()

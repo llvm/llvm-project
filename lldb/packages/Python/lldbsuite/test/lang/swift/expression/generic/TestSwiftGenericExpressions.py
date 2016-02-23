@@ -29,12 +29,14 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @lldbtest.swiftTest
+    @lldbtest.expectedFailureLinux("bugs.swift.org/SR-797")
     def test_generic_expressions(self):
         """Test expressions in generic contexts"""
         self.build()
         self.do_test()
 
     @lldbtest.swiftTest
+    @lldbtest.expectedFailureLinux("bugs.swift.org/SR-797")
     def test_ivars_in_generic_expressions(self):
         """Test ivar access through expressions in generic contexts"""
         self.build()

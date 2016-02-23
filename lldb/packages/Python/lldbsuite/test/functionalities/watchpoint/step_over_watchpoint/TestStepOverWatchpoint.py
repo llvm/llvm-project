@@ -8,7 +8,6 @@ import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
-
 class TestStepOverWatchpoint(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -18,6 +17,7 @@ class TestStepOverWatchpoint(TestBase):
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureWindows("llvm.org/pr24446")
+    @expectedFailureLinux("bugs.swift.org/SR-796")
     def test(self):
         """Test stepping over watchpoints."""
         self.build()
