@@ -20,10 +20,31 @@
 static char global_string[] = "global";
 static size_t global_string_length = 6;
 
+const char kStackReadUnderflow[] = "READ.*underflows this variable";
+const char kStackReadOverflow[] = "READ.*overflows this variable";
+
+namespace {
+enum class OOBKind {
+  Heap,
+  Stack,
+  Global,
+};
+
+string LeftOOBReadMessage(OOBKind oob_kind, int oob_distance) {
+  return oob_kind == OOBKind::Stack ? kStackReadUnderflow
+                                    : ::LeftOOBReadMessage(oob_distance);
+}
+
+string RightOOBReadMessage(OOBKind oob_kind, int oob_distance) {
+  return oob_kind == OOBKind::Stack ? kStackReadOverflow
+                                    : ::RightOOBReadMessage(oob_distance);
+}
+}  // namespace
+
 // Input to a test is a zero-terminated string str with given length
 // Accesses to the bytes to the left and to the right of str
 // are presumed to produce OOB errors
-void StrLenOOBTestTemplate(char *str, size_t length, bool is_global) {
+void StrLenOOBTestTemplate(char *str, size_t length, OOBKind oob_kind) {
   // Normal strlen calls
   EXPECT_EQ(strlen(str), length);
   if (length > 0) {
@@ -31,17 +52,18 @@ void StrLenOOBTestTemplate(char *str, size_t length, bool is_global) {
     EXPECT_EQ(0U, strlen(str + length));
   }
   // Arg of strlen is not malloced, OOB access
-  if (!is_global) {
+  if (oob_kind != OOBKind::Global) {
     // We don't insert RedZones to the left of global variables
-    EXPECT_DEATH(Ident(strlen(str - 1)), LeftOOBReadMessage(1));
-    EXPECT_DEATH(Ident(strlen(str - 5)), LeftOOBReadMessage(5));
+    EXPECT_DEATH(Ident(strlen(str - 1)), LeftOOBReadMessage(oob_kind, 1));
+    EXPECT_DEATH(Ident(strlen(str - 5)), LeftOOBReadMessage(oob_kind, 5));
   }
-  EXPECT_DEATH(Ident(strlen(str + length + 1)), RightOOBReadMessage(0));
+  EXPECT_DEATH(Ident(strlen(str + length + 1)),
+               RightOOBReadMessage(oob_kind, 0));
   // Overwrite terminator
   str[length] = 'a';
   // String is not zero-terminated, strlen will lead to OOB access
-  EXPECT_DEATH(Ident(strlen(str)), RightOOBReadMessage(0));
-  EXPECT_DEATH(Ident(strlen(str + length)), RightOOBReadMessage(0));
+  EXPECT_DEATH(Ident(strlen(str)), RightOOBReadMessage(oob_kind, 0));
+  EXPECT_DEATH(Ident(strlen(str + length)), RightOOBReadMessage(oob_kind, 0));
   // Restore terminator
   str[length] = 0;
 }
@@ -57,11 +79,9 @@ TEST(AddressSanitizer, StrLenOOBTest) {
   }
   heap_string[length] = 0;
   stack_string[length] = 0;
-  StrLenOOBTestTemplate(heap_string, length, false);
-  // TODO(samsonov): Fix expected messages in StrLenOOBTestTemplate to
-  //      make test for stack_string work. Or move it to output tests.
-  // StrLenOOBTestTemplate(stack_string, length, false);
-  StrLenOOBTestTemplate(global_string, global_string_length, true);
+  StrLenOOBTestTemplate(heap_string, length, OOBKind::Heap);
+  StrLenOOBTestTemplate(stack_string, length, OOBKind::Stack);
+  StrLenOOBTestTemplate(global_string, global_string_length, OOBKind::Global);
   free(heap_string);
 }
 

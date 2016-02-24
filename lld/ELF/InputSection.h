@@ -42,10 +42,9 @@ public:
   InputSectionBase(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
                    Kind SectionKind);
   OutputSectionBase<ELFT> *OutSec = nullptr;
+  uint32_t Align = 1;
 
   // Used for garbage collection.
-  // Live bit makes sense only when Config->GcSections is true.
-  bool isLive() const { return !Config->GcSections || Live; }
   bool Live = false;
 
   // Returns the size of this section (even if this is a common or BSS.)
@@ -56,14 +55,6 @@ public:
   StringRef getSectionName() const;
   const Elf_Shdr *getSectionHdr() const { return Header; }
   ObjectFile<ELFT> *getFile() const { return File; }
-
-  // The writer sets and uses the addresses.
-  uintX_t getAlign() {
-    // The ELF spec states that a value of 0 means the section has no alignment
-    // constraits.
-    return std::max<uintX_t>(Header->sh_addralign, 1);
-  }
-
   uintX_t getOffset(const Elf_Sym &Sym);
 
   // Translate an offset in the input section to an offset in the output
@@ -73,8 +64,8 @@ public:
   ArrayRef<uint8_t> getSectionData() const;
 
   // Returns a section that Rel is pointing to. Used by the garbage collector.
-  InputSectionBase<ELFT> *getRelocTarget(const Elf_Rel &Rel);
-  InputSectionBase<ELFT> *getRelocTarget(const Elf_Rela &Rel);
+  InputSectionBase<ELFT> *getRelocTarget(const Elf_Rel &Rel) const;
+  InputSectionBase<ELFT> *getRelocTarget(const Elf_Rela &Rel) const;
 
   template <bool isRela>
   using RelIteratorRange =

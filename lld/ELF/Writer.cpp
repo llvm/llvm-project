@@ -549,7 +549,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
         continue;
       if (Sym.st_shndx != SHN_ABS) {
         InputSectionBase<ELFT> *Section = F->getSection(Sym);
-        if (!Section->isLive())
+        if (!Section->Live)
           continue;
       }
       ++Out<ELFT>::SymTab->NumLocals;
@@ -744,7 +744,7 @@ StringRef Writer<ELFT>::getOutputSectionName(InputSectionBase<ELFT> *S) const {
 template <class ELFT>
 void reportDiscarded(InputSectionBase<ELFT> *IS,
                      const std::unique_ptr<ObjectFile<ELFT>> &File) {
-  if (!Config->PrintGcSections || !IS || IS->isLive())
+  if (!Config->PrintGcSections || !IS || IS->Live)
     return;
   llvm::errs() << "removing unused section from '" << IS->getSectionName()
                << "' in file '" << File->getName() << "'\n";
@@ -752,7 +752,7 @@ void reportDiscarded(InputSectionBase<ELFT> *IS,
 
 template <class ELFT>
 bool Writer<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) const {
-  return !S || !S->isLive() || S == &InputSection<ELFT>::Discarded ||
+  return !S || !S->Live || S == &InputSection<ELFT>::Discarded ||
          Script->isDiscarded(S);
 }
 
@@ -786,7 +786,7 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
     if (&D->Sym == &ElfSym<ELFT>::Ignored)
       return false;
     // Exclude symbols pointing to garbage-collected sections.
-    if (D->Section && !D->Section->isLive())
+    if (D->Section && !D->Section->Live)
       return false;
   }
   return true;

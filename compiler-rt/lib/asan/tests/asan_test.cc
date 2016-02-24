@@ -809,9 +809,6 @@ TEST(AddressSanitizer, DISABLED_MemIntrinsicUnalignedAccessTest) {
   free(s);
 }
 
-// TODO(samsonov): Add a test with malloc(0)
-// TODO(samsonov): Add tests for str* and mem* functions.
-
 NOINLINE static int LargeFunction(bool do_bad_access) {
   int *x = new int[100];
   x[0]++;
