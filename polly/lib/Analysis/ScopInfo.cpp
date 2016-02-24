@@ -303,7 +303,7 @@ void MemoryAccess::updateDimensionality() {
   auto DimsAccess = isl_space_dim(AccessSpace, isl_dim_set);
   auto DimsMissing = DimsArray - DimsAccess;
 
-  auto *BB = getStatement()->getParent()->getRegion().getEntry();
+  auto *BB = getStatement()->getEntryBlock();
   auto &DL = BB->getModule()->getDataLayout();
   unsigned ArrayElemSize = SAI->getElemSizeInBytes();
   unsigned ElemBytes = DL.getTypeAllocSize(getElementType());
@@ -966,8 +966,7 @@ isl_map *ScopStmt::getSchedule() const {
 }
 
 __isl_give isl_pw_aff *ScopStmt::getPwAff(const SCEV *E) {
-  return getParent()->getPwAff(E, isBlockStmt() ? getBasicBlock()
-                                                : getRegion()->getEntry());
+  return getParent()->getPwAff(E, getEntryBlock());
 }
 
 void ScopStmt::restrictDomain(__isl_take isl_set *NewDomain) {
@@ -1006,7 +1005,7 @@ void ScopStmt::addAccess(MemoryAccess *Access) {
     MAL.emplace_front(Access);
   } else if (Access->isValueKind() && Access->isWrite()) {
     Instruction *AccessVal = cast<Instruction>(Access->getAccessValue());
-    assert(Parent.getStmtForBasicBlock(AccessVal->getParent()) == this);
+    assert(Parent.getStmtFor(AccessVal) == this);
     assert(!ValueWrites.lookup(AccessVal));
 
     ValueWrites[AccessVal] = Access;
@@ -1279,9 +1278,7 @@ buildConditionSets(Scop &S, TerminatorInst *TI, Loop *L,
 }
 
 void ScopStmt::buildDomain() {
-  isl_id *Id;
-
-  Id = isl_id_alloc(getIslCtx(), getBaseName(), this);
+  isl_id *Id = isl_id_alloc(getIslCtx(), getBaseName(), this);
 
   Domain = getParent()->getDomainConditions(this);
   Domain = isl_set_set_tuple_id(Domain, Id);
@@ -1531,6 +1528,18 @@ std::string ScopStmt::getScheduleStr() const {
   auto Str = stringFromIslObj(S);
   isl_map_free(S);
   return Str;
+}
+
+BasicBlock *ScopStmt::getEntryBlock() const {
+  if (isBlockStmt())
+    return getBasicBlock();
+  return getRegion()->getEntry();
+}
+
+RegionNode *ScopStmt::getRegionNode() const {
+  if (isRegionStmt())
+    return getRegion()->getNode();
+  return getParent()->getRegion().getBBNode(getBasicBlock());
 }
 
 unsigned ScopStmt::getNumParams() const { return Parent.getNumParams(); }
@@ -2113,9 +2122,7 @@ static inline __isl_give isl_set *addDomainDimId(__isl_take isl_set *Domain,
 }
 
 isl_set *Scop::getDomainConditions(ScopStmt *Stmt) {
-  BasicBlock *BB = Stmt->isBlockStmt() ? Stmt->getBasicBlock()
-                                       : Stmt->getRegion()->getEntry();
-  return getDomainConditions(BB);
+  return getDomainConditions(Stmt->getEntryBlock());
 }
 
 isl_set *Scop::getDomainConditions(BasicBlock *BB) {
@@ -2874,13 +2881,11 @@ void Scop::simplifySCoP(bool RemoveIgnoredStmts, DominatorTree &DT,
                         LoopInfo &LI) {
   for (auto StmtIt = Stmts.begin(), StmtEnd = Stmts.end(); StmtIt != StmtEnd;) {
     ScopStmt &Stmt = *StmtIt;
-    RegionNode *RN = Stmt.isRegionStmt()
-                         ? Stmt.getRegion()->getNode()
-                         : getRegion().getBBNode(Stmt.getBasicBlock());
+    RegionNode *RN = Stmt.getRegionNode();
 
     bool RemoveStmt = StmtIt->isEmpty();
     if (!RemoveStmt)
-      RemoveStmt = isl_set_is_empty(DomainMap[getRegionNodeBasicBlock(RN)]);
+      RemoveStmt = isl_set_is_empty(DomainMap[Stmt.getEntryBlock()]);
     if (!RemoveStmt)
       RemoveStmt = (RemoveIgnoredStmts && isIgnored(RN, DT, LI));
 
@@ -3013,8 +3018,7 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
   //       generation would otherwise use the old value.
 
   auto &Stmt = *Access->getStatement();
-  BasicBlock *BB =
-      Stmt.isBlockStmt() ? Stmt.getBasicBlock() : Stmt.getRegion()->getEntry();
+  BasicBlock *BB = Stmt.getEntryBlock();
 
   if (Access->isScalarKind() || Access->isWrite() || !Access->isAffine())
     return false;
@@ -3034,7 +3038,7 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
     assert(BasePtrInst && R.contains(BasePtrInst));
     if (!isa<LoadInst>(BasePtrInst))
       return false;
-    auto *BasePtrStmt = getStmtForBasicBlock(BasePtrInst->getParent());
+    auto *BasePtrStmt = getStmtFor(BasePtrInst);
     assert(BasePtrStmt);
     auto *BasePtrMA = BasePtrStmt->getArrayAccessOrNULLFor(BasePtrInst);
     if (BasePtrMA && !isHoistableAccess(BasePtrMA, Writes))
@@ -3081,7 +3085,7 @@ void Scop::verifyInvariantLoads(ScopDetection &SD) {
   auto &RIL = *SD.getRequiredInvariantLoads(&getRegion());
   for (LoadInst *LI : RIL) {
     assert(LI && getRegion().contains(LI));
-    ScopStmt *Stmt = getStmtForBasicBlock(LI->getParent());
+    ScopStmt *Stmt = getStmtFor(LI);
     if (Stmt && Stmt->getArrayAccessOrNULLFor(LI)) {
       invalidate(INVARIANTLOAD, LI->getDebugLoc());
       return;
@@ -3481,7 +3485,7 @@ ScalarEvolution *Scop::getSE() const { return SE; }
 
 bool Scop::isIgnored(RegionNode *RN, DominatorTree &DT, LoopInfo &LI) {
   BasicBlock *BB = getRegionNodeBasicBlock(RN);
-  ScopStmt *Stmt = getStmtForRegionNode(RN);
+  ScopStmt *Stmt = getStmtFor(RN);
 
   // If there is no stmt, then it already has been removed.
   if (!Stmt)
@@ -3677,7 +3681,7 @@ void Scop::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack,
   auto &LoopData = LoopStack.back();
   LoopData.NumBlocksProcessed += getNumBlocksInRegionNode(RN);
 
-  if (auto *Stmt = getStmtForRegionNode(RN)) {
+  if (auto *Stmt = getStmtFor(RN)) {
     auto *UDomain = isl_union_set_from_set(Stmt->getDomain());
     auto *StmtSchedule = isl_schedule_from_domain(UDomain);
     LoopData.Schedule = combineInSequence(LoopData.Schedule, StmtSchedule);
@@ -3713,15 +3717,23 @@ void Scop::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack,
   }
 }
 
-ScopStmt *Scop::getStmtForBasicBlock(BasicBlock *BB) const {
+ScopStmt *Scop::getStmtFor(BasicBlock *BB) const {
   auto StmtMapIt = StmtMap.find(BB);
   if (StmtMapIt == StmtMap.end())
     return nullptr;
   return StmtMapIt->second;
 }
 
-ScopStmt *Scop::getStmtForRegionNode(RegionNode *RN) const {
-  return getStmtForBasicBlock(getRegionNodeBasicBlock(RN));
+ScopStmt *Scop::getStmtFor(RegionNode *RN) const {
+  if (RN->isSubRegion())
+    return getStmtFor(RN->getNodeAs<Region>());
+  return getStmtFor(RN->getNodeAs<BasicBlock>());
+}
+
+ScopStmt *Scop::getStmtFor(Region *R) const {
+  ScopStmt *Stmt = getStmtFor(R->getEntry());
+  assert(!Stmt || Stmt->getRegion() == R);
+  return Stmt;
 }
 
 int Scop::getRelativeLoopDepth(const Loop *L) const {
@@ -4079,7 +4091,7 @@ MemoryAccess *ScopInfo::addMemoryAccess(BasicBlock *BB, Instruction *Inst,
                                         ArrayRef<const SCEV *> Subscripts,
                                         ArrayRef<const SCEV *> Sizes,
                                         ScopArrayInfo::MemoryKind Kind) {
-  ScopStmt *Stmt = scop->getStmtForBasicBlock(BB);
+  ScopStmt *Stmt = scop->getStmtFor(BB);
 
   // Do not create a memory access for anything not in the SCoP. It would be
   // ignored anyway.
@@ -4132,7 +4144,7 @@ void ScopInfo::addArrayAccess(MemAccInst MemAccInst,
 }
 
 void ScopInfo::ensureValueWrite(Instruction *Inst) {
-  ScopStmt *Stmt = scop->getStmtForBasicBlock(Inst->getParent());
+  ScopStmt *Stmt = scop->getStmtFor(Inst);
 
   // Inst not defined within this SCoP.
   if (!Stmt)
@@ -4170,10 +4182,9 @@ void ScopInfo::ensureValueRead(Value *V, BasicBlock *UserBB) {
   // no defining ScopStmt if the value is a function argument, a global value,
   // or defined outside the SCoP.
   Instruction *ValueInst = dyn_cast<Instruction>(V);
-  ScopStmt *ValueStmt =
-      ValueInst ? scop->getStmtForBasicBlock(ValueInst->getParent()) : nullptr;
+  ScopStmt *ValueStmt = ValueInst ? scop->getStmtFor(ValueInst) : nullptr;
 
-  ScopStmt *UserStmt = scop->getStmtForBasicBlock(UserBB);
+  ScopStmt *UserStmt = scop->getStmtFor(UserBB);
 
   // We do not model uses outside the scop.
   if (!UserStmt)
@@ -4201,7 +4212,7 @@ void ScopInfo::ensureValueRead(Value *V, BasicBlock *UserBB) {
 
 void ScopInfo::ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
                               Value *IncomingValue, bool IsExitBlock) {
-  ScopStmt *IncomingStmt = scop->getStmtForBasicBlock(IncomingBlock);
+  ScopStmt *IncomingStmt = scop->getStmtFor(IncomingBlock);
   if (!IncomingStmt)
     return;
 
@@ -4220,10 +4231,9 @@ void ScopInfo::ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
   }
 
   MemoryAccess *Acc = addMemoryAccess(
-      IncomingStmt->isBlockStmt() ? IncomingBlock
-                                  : IncomingStmt->getRegion()->getEntry(),
-      PHI, MemoryAccess::MUST_WRITE, PHI, PHI->getType(), true, PHI,
-      ArrayRef<const SCEV *>(), ArrayRef<const SCEV *>(),
+      IncomingStmt->getEntryBlock(), PHI, MemoryAccess::MUST_WRITE, PHI,
+      PHI->getType(), true, PHI, ArrayRef<const SCEV *>(),
+      ArrayRef<const SCEV *>(),
       IsExitBlock ? ScopArrayInfo::MK_ExitPHI : ScopArrayInfo::MK_PHI);
   assert(Acc);
   Acc->addIncoming(IncomingBlock, IncomingValue);

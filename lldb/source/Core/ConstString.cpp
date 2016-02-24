@@ -265,8 +265,25 @@ ConstString::GetLength () const
     return StringPool().GetConstCStringLength (m_string);
 }
 
+bool
+ConstString::Equals(const ConstString &lhs, const ConstString &rhs, const bool case_sensitive)
+{
+    if (lhs.m_string == rhs.m_string)
+        return true;
+
+    // Since the pointers weren't equal, and identical ConstStrings always have identical pointers,
+    // the result must be false for case sensitive equality test.
+    if (case_sensitive)
+        return false;
+
+    // perform case insensitive equality test
+    llvm::StringRef lhs_string_ref(lhs.m_string, StringPool().GetConstCStringLength(lhs.m_string));
+    llvm::StringRef rhs_string_ref(rhs.m_string, StringPool().GetConstCStringLength(rhs.m_string));
+    return lhs_string_ref.equals_lower(rhs_string_ref);
+}
+
 int
-ConstString::Compare (const ConstString& lhs, const ConstString& rhs)
+ConstString::Compare(const ConstString &lhs, const ConstString &rhs, const bool case_sensitive)
 {
     // If the iterators are the same, this is the same string
     const char *lhs_cstr = lhs.m_string;
@@ -277,7 +294,15 @@ ConstString::Compare (const ConstString& lhs, const ConstString& rhs)
     {
         llvm::StringRef lhs_string_ref (lhs_cstr, StringPool().GetConstCStringLength (lhs_cstr));
         llvm::StringRef rhs_string_ref (rhs_cstr, StringPool().GetConstCStringLength (rhs_cstr));
-        return lhs_string_ref.compare(rhs_string_ref);
+
+        if (case_sensitive)
+        {
+            return lhs_string_ref.compare(rhs_string_ref);
+        }
+        else
+        {
+            return lhs_string_ref.compare_lower(rhs_string_ref);
+        }
     }
 
     if (lhs_cstr)

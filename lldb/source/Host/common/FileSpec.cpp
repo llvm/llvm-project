@@ -396,60 +396,62 @@ FileSpec::operator!() const
 bool
 FileSpec::operator== (const FileSpec& rhs) const
 {
-    if (m_filename == rhs.m_filename)
+    // case sensitivity of equality test
+    const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
+
+    if (!ConstString::Equals(m_filename, rhs.m_filename, case_sensitive))
+        return false;
+
+    if (ConstString::Equals(m_directory, rhs.m_directory, case_sensitive))
+        return true;
+
+    // TODO: determine if we want to keep this code in here.
+    // The code below was added to handle a case where we were
+    // trying to set a file and line breakpoint and one path
+    // was resolved, and the other not and the directory was
+    // in a mount point that resolved to a more complete path:
+    // "/tmp/a.c" == "/private/tmp/a.c". I might end up pulling
+    // this out...
+    if (IsResolved() && rhs.IsResolved())
     {
-        if (m_directory == rhs.m_directory)
-            return true;
-        
-        // TODO: determine if we want to keep this code in here.
-        // The code below was added to handle a case where we were
-        // trying to set a file and line breakpoint and one path
-        // was resolved, and the other not and the directory was
-        // in a mount point that resolved to a more complete path:
-        // "/tmp/a.c" == "/private/tmp/a.c". I might end up pulling
-        // this out...
-        if (IsResolved() && rhs.IsResolved())
-        {
-            // Both paths are resolved, no need to look further...
-            return false;
-        }
-        
-        FileSpec resolved_lhs(*this);
-
-        // If "this" isn't resolved, resolve it
-        if (!IsResolved())
-        {
-            if (resolved_lhs.ResolvePath())
-            {
-                // This path wasn't resolved but now it is. Check if the resolved
-                // directory is the same as our unresolved directory, and if so, 
-                // we can mark this object as resolved to avoid more future resolves
-                m_is_resolved = (m_directory == resolved_lhs.m_directory);
-            }
-            else
-                return false;
-        }
-        
-        FileSpec resolved_rhs(rhs);
-        if (!rhs.IsResolved())
-        {
-            if (resolved_rhs.ResolvePath())
-            {
-                // rhs's path wasn't resolved but now it is. Check if the resolved
-                // directory is the same as rhs's unresolved directory, and if so, 
-                // we can mark this object as resolved to avoid more future resolves
-                rhs.m_is_resolved = (rhs.m_directory == resolved_rhs.m_directory);
-            }
-            else
-                return false;
-        }
-
-        // If we reach this point in the code we were able to resolve both paths
-        // and since we only resolve the paths if the basenames are equal, then
-        // we can just check if both directories are equal...
-        return resolved_lhs.GetDirectory() == resolved_rhs.GetDirectory();
+        // Both paths are resolved, no need to look further...
+        return false;
     }
-    return false;
+
+    FileSpec resolved_lhs(*this);
+
+    // If "this" isn't resolved, resolve it
+    if (!IsResolved())
+    {
+        if (resolved_lhs.ResolvePath())
+        {
+            // This path wasn't resolved but now it is. Check if the resolved
+            // directory is the same as our unresolved directory, and if so,
+            // we can mark this object as resolved to avoid more future resolves
+            m_is_resolved = (m_directory == resolved_lhs.m_directory);
+        }
+        else
+            return false;
+    }
+
+    FileSpec resolved_rhs(rhs);
+    if (!rhs.IsResolved())
+    {
+        if (resolved_rhs.ResolvePath())
+        {
+            // rhs's path wasn't resolved but now it is. Check if the resolved
+            // directory is the same as rhs's unresolved directory, and if so,
+            // we can mark this object as resolved to avoid more future resolves
+            rhs.m_is_resolved = (rhs.m_directory == resolved_rhs.m_directory);
+        }
+        else
+            return false;
+    }
+
+    // If we reach this point in the code we were able to resolve both paths
+    // and since we only resolve the paths if the basenames are equal, then
+    // we can just check if both directories are equal...
+    return ConstString::Equals(m_directory, rhs.m_directory, case_sensitive);
 }
 
 //------------------------------------------------------------------
@@ -507,6 +509,9 @@ FileSpec::Compare(const FileSpec& a, const FileSpec& b, bool full)
 {
     int result = 0;
 
+    // case sensitivity of compare
+    const bool case_sensitive = a.IsCaseSensitive() || b.IsCaseSensitive();
+
     // If full is true, then we must compare both the directory and filename.
 
     // If full is false, then if either directory is empty, then we match on
@@ -516,32 +521,35 @@ FileSpec::Compare(const FileSpec& a, const FileSpec& b, bool full)
 
     if (full || (a.m_directory && b.m_directory))
     {
-        result = ConstString::Compare(a.m_directory, b.m_directory);
+        result = ConstString::Compare(a.m_directory, b.m_directory, case_sensitive);
         if (result)
             return result;
     }
-    return ConstString::Compare (a.m_filename, b.m_filename);
+    return ConstString::Compare(a.m_filename, b.m_filename, case_sensitive);
 }
 
 bool
 FileSpec::Equal (const FileSpec& a, const FileSpec& b, bool full, bool remove_backups)
 {
+    // case sensitivity of equality test
+    const bool case_sensitive = a.IsCaseSensitive() || b.IsCaseSensitive();
+
     if (!full && (a.GetDirectory().IsEmpty() || b.GetDirectory().IsEmpty()))
-        return a.m_filename == b.m_filename;
+        return ConstString::Equals(a.m_filename, b.m_filename, case_sensitive);
     else if (remove_backups == false)
         return a == b;
     else
     {
-        if (a.m_filename != b.m_filename)
+        if (!ConstString::Equals(a.m_filename, b.m_filename, case_sensitive))
             return false;
-        if (a.m_directory == b.m_directory)
+        if (ConstString::Equals(a.m_directory, b.m_directory, case_sensitive))
             return true;
         ConstString a_without_dots;
         ConstString b_without_dots;
 
         RemoveBackupDots (a.m_directory, a_without_dots);
         RemoveBackupDots (b.m_directory, b_without_dots);
-        return a_without_dots == b_without_dots;
+        return ConstString::Equals(a_without_dots, b_without_dots, case_sensitive);
     }
 }
 

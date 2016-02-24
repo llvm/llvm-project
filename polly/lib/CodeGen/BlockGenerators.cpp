@@ -198,8 +198,7 @@ BlockGenerator::generateLocationAccessed(ScopStmt &Stmt, MemAccInst Inst,
 }
 
 Loop *BlockGenerator::getLoopForStmt(const ScopStmt &Stmt) const {
-  auto *StmtBB =
-      Stmt.isBlockStmt() ? Stmt.getBasicBlock() : Stmt.getRegion()->getEntry();
+  auto *StmtBB = Stmt.getEntryBlock();
   return LI.getLoopFor(StmtBB);
 }
 
@@ -403,6 +402,10 @@ void BlockGenerator::generateScalarLoads(ScopStmt &Stmt, ValueMapT &BBMap) {
       continue;
 
     auto *Address = getOrCreateAlloca(*MA);
+    assert((!isa<Instruction>(Address) ||
+            DT.dominates(cast<Instruction>(Address)->getParent(),
+                         Builder.GetInsertBlock())) &&
+           "Domination violation");
     BBMap[MA->getBaseAddr()] =
         Builder.CreateLoad(Address, Address->getName() + ".reload");
   }
@@ -435,6 +438,14 @@ void BlockGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
     auto *Address = getOrCreateAlloca(*MA);
 
     Val = getNewValue(Stmt, Val, BBMap, LTS, L);
+    assert((!isa<Instruction>(Val) ||
+            DT.dominates(cast<Instruction>(Val)->getParent(),
+                         Builder.GetInsertBlock())) &&
+           "Domination violation");
+    assert((!isa<Instruction>(Address) ||
+            DT.dominates(cast<Instruction>(Address)->getParent(),
+                         Builder.GetInsertBlock())) &&
+           "Domination violation");
     Builder.CreateStore(Val, Address);
   }
 }
@@ -1266,6 +1277,14 @@ void RegionGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
     Value *NewVal = getExitScalar(MA, LTS, BBMap);
     Value *Address = getOrCreateAlloca(*MA);
+    assert((!isa<Instruction>(NewVal) ||
+            DT.dominates(cast<Instruction>(NewVal)->getParent(),
+                         Builder.GetInsertBlock())) &&
+           "Domination violation");
+    assert((!isa<Instruction>(Address) ||
+            DT.dominates(cast<Instruction>(Address)->getParent(),
+                         Builder.GetInsertBlock())) &&
+           "Domination violation");
     Builder.CreateStore(NewVal, Address);
   }
 }

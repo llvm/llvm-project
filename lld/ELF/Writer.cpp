@@ -362,7 +362,7 @@ void Writer<ELFT>::scanRelocs(
     // for the symbol.
     TargetInfo::PltNeed NeedPlt = TargetInfo::Plt_No;
     if (Body)
-      NeedPlt = Target->needsPlt(Type, *Body);
+      NeedPlt = Target->needsPlt<ELFT>(Type, *Body);
     if (NeedPlt) {
       if (NeedPlt == TargetInfo::Plt_Implicit)
         Body->NeedsCopyOrPltAddr = true;
@@ -515,7 +515,7 @@ static bool shouldKeepInSymtab(const ObjectFile<ELFT> &File, StringRef SymName,
 
   InputSectionBase<ELFT> *Sec = File.getSection(Sym);
   // If sym references a section in a discarded group, don't keep it.
-  if (Sec == &InputSection<ELFT>::Discarded)
+  if (Sec == InputSection<ELFT>::Discarded)
     return false;
 
   if (Config->DiscardNone)
@@ -752,7 +752,7 @@ void reportDiscarded(InputSectionBase<ELFT> *IS,
 
 template <class ELFT>
 bool Writer<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) const {
-  return !S || !S->Live || S == &InputSection<ELFT>::Discarded ||
+  return !S || S == InputSection<ELFT>::Discarded || !S->Live ||
          Script->isDiscarded(S);
 }
 
