@@ -265,7 +265,7 @@ namespace {
   /// Retrieve the serialized size of the given CommonEntityInfo, for use in
   /// on-disk hash tables.
   static unsigned getCommonEntityInfoSize(const CommonEntityInfo &info) {
-    return 3 + info.UnavailableMsg.size();
+    return 5 + info.UnavailableMsg.size() + info.SwiftName.size();
   }
 
   /// Emit a serialized representation of the common entity information.
@@ -275,6 +275,8 @@ namespace {
     writer.write<uint8_t>(info.Unavailable << 1 | info.UnavailableInSwift);
     writer.write<uint16_t>(info.UnavailableMsg.size());
     out.write(info.UnavailableMsg.c_str(), info.UnavailableMsg.size());
+    writer.write<uint16_t>(info.SwiftName.size());
+    out.write(info.SwiftName.c_str(), info.SwiftName.size());
   }
 
   /// Used to serialize the on-disk Objective-C context table.
