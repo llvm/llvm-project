@@ -4332,6 +4332,17 @@ static bool isSequentialOrUndefInRange(ArrayRef<int> Mask,
   return true;
 }
 
+/// Return true if every element in Mask, beginning
+/// from position Pos and ending in Pos+Size, falls within the specified
+/// sequential range (Low, Low+Size], or is undef or is zero.
+static bool isSequentialOrUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
+                                             unsigned Size, int Low) {
+  for (unsigned i = Pos, e = Pos + Size; i != e; ++i, ++Low)
+    if (!isUndefOrZero(Mask[i]) && Mask[i] != Low)
+      return false;
+  return true;
+}
+
 /// Return true if the specified EXTRACT_SUBVECTOR operand specifies a vector
 /// extract that is suitable for instruction that extract 128 or 256 bit vectors
 static bool isVEXTRACTIndex(SDNode *N, unsigned vecWidth) {
@@ -12301,6 +12312,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   MVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
 
   if (EltVT == MVT::i1)
     return InsertBitToMaskVector(Op, DAG);
@@ -12313,6 +12325,19 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     return SDValue();
   auto *N2C = cast<ConstantSDNode>(N2);
   unsigned IdxVal = N2C->getZExtValue();
+
+  // If we are clearing out a element, we do this more efficiently with a
+  // blend shuffle than a costly integer insertion.
+  // TODO: would other rematerializable values (e.g. allbits) benefit as well?
+  // TODO: pre-SSE41 targets will tend to use bit masking - this could still
+  // be beneficial if we are inserting several zeros and can combine the masks.
+  if (X86::isZeroNode(N1) && Subtarget.hasSSE41() && NumElts <= 8) {
+    SmallVector<int, 8> ClearMask;
+    for (unsigned i = 0; i != NumElts; ++i)
+      ClearMask.push_back(i == IdxVal ? i + NumElts : i);
+    SDValue ZeroVector = getZeroVector(VT, Subtarget, DAG, dl);
+    return DAG.getVectorShuffle(VT, dl, N0, ZeroVector, ClearMask);
+  }
 
   // If the vector is wider than 128 bits, extract the 128-bit subvector, insert
   // into that, and then insert the subvector back into the result.
@@ -23650,6 +23675,53 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
     DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
                   /*AddTo*/ true);
     return true;
+  }
+
+  // Attempt to blend with zero.
+  if (VT.getVectorNumElements() <= 8 &&
+      ((Subtarget.hasSSE41() && VT.is128BitVector()) ||
+       (Subtarget.hasAVX() && VT.is256BitVector()))) {
+    // Convert VT to a type compatible with X86ISD::BLENDI.
+    // TODO - add 16i16 support (requires lane duplication).
+    MVT ShuffleVT = VT;
+    if (Subtarget.hasAVX2()) {
+      if (VT == MVT::v4i64)
+        ShuffleVT = MVT::v8i32;
+      else if (VT == MVT::v2i64)
+        ShuffleVT = MVT::v4i32;
+    } else {
+      if (VT == MVT::v2i64 || VT == MVT::v4i32)
+        ShuffleVT = MVT::v8i16;
+      else if (VT == MVT::v4i64)
+        ShuffleVT = MVT::v4f64;
+      else if (VT == MVT::v8i32)
+        ShuffleVT = MVT::v8f32;
+    }
+
+    if (isSequentialOrUndefOrZeroInRange(Mask, /*Pos*/ 0, /*Size*/ Mask.size(),
+                                         /*Low*/ 0) &&
+        Mask.size() <= ShuffleVT.getVectorNumElements()) {
+      unsigned BlendMask = 0;
+      unsigned ShuffleSize = ShuffleVT.getVectorNumElements();
+      unsigned MaskRatio = ShuffleSize / Mask.size();
+
+      for (unsigned i = 0; i != ShuffleSize; ++i)
+        if (Mask[i / MaskRatio] < 0)
+          BlendMask |= 1u << i;
+
+      if (Root.getOpcode() != X86ISD::BLENDI ||
+          Root->getConstantOperandVal(2) != BlendMask) {
+        SDValue Zero = getZeroVector(ShuffleVT, Subtarget, DAG, DL);
+        Res = DAG.getBitcast(ShuffleVT, Input);
+        DCI.AddToWorklist(Res.getNode());
+        Res = DAG.getNode(X86ISD::BLENDI, DL, ShuffleVT, Res, Zero,
+                          DAG.getConstant(BlendMask, DL, MVT::i8));
+        DCI.AddToWorklist(Res.getNode());
+        DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                      /*AddTo*/ true);
+        return true;
+      }
+    }
   }
 
   // Don't try to re-form single instruction chains under any circumstances now

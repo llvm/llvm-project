@@ -501,6 +501,12 @@ public:
     return const_cast<Value*>(this)->stripInBoundsOffsets();
   }
 
+  /// \brief Returns an alignment of the pointer value.
+  ///
+  /// Returns an alignment which is either specified explicitly, e.g. via
+  /// align attribute of a function argument, or guaranteed by DataLayout.
+  unsigned getPointerAlignment(const DataLayout &DL) const;
+
   /// \brief Translate PHI node to its predecessor from the given basic block.
   ///
   /// If this value is a PHI node with CurBB as its parent, return the value in

@@ -78,10 +78,12 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   if (RC == &MSP430::GR16RegClass)
     BuildMI(MBB, MI, DL, get(MSP430::MOV16rm))
-      .addReg(DestReg).addFrameIndex(FrameIdx).addImm(0).addMemOperand(MMO);
+      .addReg(DestReg, getDefRegState(true)).addFrameIndex(FrameIdx)
+      .addImm(0).addMemOperand(MMO);
   else if (RC == &MSP430::GR8RegClass)
     BuildMI(MBB, MI, DL, get(MSP430::MOV8rm))
-      .addReg(DestReg).addFrameIndex(FrameIdx).addImm(0).addMemOperand(MMO);
+      .addReg(DestReg, getDefRegState(true)).addFrameIndex(FrameIdx)
+      .addImm(0).addMemOperand(MMO);
   else
     llvm_unreachable("Cannot store this register to stack slot!");
 }

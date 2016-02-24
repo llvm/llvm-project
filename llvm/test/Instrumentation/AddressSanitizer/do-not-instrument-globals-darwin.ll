@@ -11,9 +11,11 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 @.str_noinst = private unnamed_addr constant [4 x i8] c"aaa\00", section "llvm.metadata"
 @.str_noinst_prof = private unnamed_addr constant [4 x i8] c"aaa\00", section "__DATA,__llvm_covmap"
+@.str_noinst_LLVM = private unnamed_addr constant [4 x i8] c"aaa\00", section "__LLVM,__not_visible"
 @.str_inst = private unnamed_addr constant [4 x i8] c"aaa\00"
 
 ; CHECK-NOT: {{asan_gen.*str_noinst}}
 ; CHECK-NOT: {{asan_gen.*str_noinst_prof}}
+; CHECK-NOT: {{asan_gen.*str_noinst_LLVM}}
 ; CHECK: {{asan_gen.*str_inst}}
 ; CHECK: @asan.module_ctor

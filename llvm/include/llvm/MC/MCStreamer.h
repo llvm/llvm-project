@@ -222,6 +222,8 @@ public:
     return DwarfFrameInfos;
   }
 
+  bool hasUnfinishedDwarfFrameInfo();
+
   unsigned getNumWinFrameInfos() { return WinFrameInfos.size(); }
   ArrayRef<WinEH::FrameInfo *> getWinFrameInfos() const {
     return WinFrameInfos;

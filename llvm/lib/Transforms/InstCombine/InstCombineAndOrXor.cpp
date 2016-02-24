@@ -1245,7 +1245,8 @@ static Instruction *matchDeMorgansLaws(BinaryOperator &I,
 
 Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
   auto LogicOpc = I.getOpcode();
-  assert((LogicOpc == Instruction::And || LogicOpc == Instruction::Or) &&
+  assert((LogicOpc == Instruction::And || LogicOpc == Instruction::Or ||
+          LogicOpc == Instruction::Xor) &&
          "Unexpected opcode for bitwise logic folding");
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -1276,6 +1277,10 @@ Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
                                         I.getName());
     return CastInst::Create(CastOpcode, NewOp, DestTy);
   }
+
+  // For now, only 'and'/'or' have optimizations after this.
+  if (LogicOpc == Instruction::Xor)
+    return nullptr;
 
   // If this is logic(cast(icmp), cast(icmp)), try to fold this even if the
   // cast is otherwise not optimizable.  This happens for vector sexts.
@@ -2732,23 +2737,8 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
         }
       }
 
-  // fold (xor (cast A), (cast B)) -> (cast (xor A, B))
-  if (CastInst *Op0C = dyn_cast<CastInst>(Op0)) {
-    if (CastInst *Op1C = dyn_cast<CastInst>(Op1))
-      if (Op0C->getOpcode() == Op1C->getOpcode()) { // same cast kind?
-        Type *SrcTy = Op0C->getOperand(0)->getType();
-        if (SrcTy == Op1C->getOperand(0)->getType() && SrcTy->isIntegerTy() &&
-            // Only do this if the casts both really cause code to be generated.
-            ShouldOptimizeCast(Op0C->getOpcode(), Op0C->getOperand(0),
-                               I.getType()) &&
-            ShouldOptimizeCast(Op1C->getOpcode(), Op1C->getOperand(0),
-                               I.getType())) {
-          Value *NewOp = Builder->CreateXor(Op0C->getOperand(0),
-                                            Op1C->getOperand(0), I.getName());
-          return CastInst::Create(Op0C->getOpcode(), NewOp, I.getType());
-        }
-      }
-  }
+  if (Instruction *CastedXor = foldCastedBitwiseLogic(I))
+    return CastedXor;
 
   return Changed ? &I : nullptr;
 }

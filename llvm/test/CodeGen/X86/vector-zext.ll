@@ -1162,8 +1162,8 @@ define <4 x i64> @shuf_zext_4i32_to_4i64(<4 x i32> %A) nounwind uwtable readnone
 ; AVX1-LABEL: shuf_zext_4i32_to_4i64:
 ; AVX1:       # BB#0: # %entry
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
-; AVX1-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5,6,7]
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,0,3,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -1592,8 +1592,8 @@ define <4 x i64> @shuf_zext_4i32_to_4i64_offset1(<4 x i32> %A) nounwind uwtable 
 ; AVX1-LABEL: shuf_zext_4i32_to_4i64_offset1:
 ; AVX1:       # BB#0: # %entry
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[3],zero,zero,zero
-; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0,1],xmm0[2],xmm2[3]
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

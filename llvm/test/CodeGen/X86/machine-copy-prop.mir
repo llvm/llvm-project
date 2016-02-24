@@ -1,0 +1,59 @@
+# RUN: llc -march=x86 -run-pass machine-cp -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+  declare void @foo()
+  define void @copyprop_remove_kill0() { ret void }
+  define void @copyprop_remove_kill1() { ret void }
+  define void @copyprop_remove_kill2() { ret void }
+...
+---
+# The second copy is redundand and will be removed, check that we also remove
+# the kill flag of intermediate instructions.
+# CHECK-LABEL: name: copyprop_remove_kill0
+# CHECK: bb.0:
+# CHECK-NEXT: %rax = COPY %rdi
+# CHECK-NEXT: NOOP implicit %rdi
+# CHECK-NOT: COPY
+# CHECK-NEXT: NOOP implicit %rax, implicit %rdi
+name: copyprop_remove_kill0
+body: |
+  bb.0:
+    %rax = COPY %rdi
+    NOOP implicit killed %rdi
+    %rdi = COPY %rax
+    NOOP implicit %rax, implicit %rdi
+...
+---
+# The second copy is redundand and will be removed, check that we also remove
+# the kill flag of intermediate instructions.
+# CHECK-LABEL: name: copyprop_remove_kill1
+# CHECK: bb.0:
+# CHECK-NEXT: %rax = COPY %rdi
+# CHECK-NEXT: NOOP implicit %edi
+# CHECK-NOT: COPY
+# CHECK-NEXT: NOOP implicit %rax, implicit %rdi
+name: copyprop_remove_kill1
+body: |
+  bb.0:
+    %rax = COPY %rdi
+    NOOP implicit killed %edi
+    %rdi = COPY %rax
+    NOOP implicit %rax, implicit %rdi
+...
+---
+# The second copy is redundand and will be removed, check that we also remove
+# the kill flag of intermediate instructions.
+# CHECK-LABEL: name: copyprop_remove_kill2
+# CHECK: bb.0:
+# CHECK-NEXT: %ax = COPY %di
+# CHECK-NEXT: NOOP implicit %rdi
+# CHECK-NOT: COPY
+# CHECK-NEXT: NOOP implicit %rax, implicit %rdi
+name: copyprop_remove_kill2
+body: |
+  bb.0:
+    %ax = COPY %di
+    NOOP implicit killed %rdi
+    %di = COPY %ax
+    NOOP implicit %rax, implicit %rdi
+...
