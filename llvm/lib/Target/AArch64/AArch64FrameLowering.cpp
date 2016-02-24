@@ -607,7 +607,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   //
   // AArch64TargetLowering::LowerCall figures out ArgumentPopSize and keeps
   // it as the 2nd argument of AArch64ISD::TC_RETURN.
-  NumBytes += ArgumentPopSize;
 
   // Move past the restores of the callee-saved registers.
   MachineBasicBlock::iterator LastPopI = MBB.getFirstTerminator();
@@ -623,12 +622,23 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   assert(NumBytes >= 0 && "Negative stack allocation size!?");
 
   if (!hasFP(MF)) {
+    bool RedZone = canUseRedZone(MF);
     // If this was a redzone leaf function, we don't need to restore the
-    // stack pointer.
-    if (!canUseRedZone(MF))
-      emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP, NumBytes,
-                      TII, MachineInstr::FrameDestroy);
-    return;
+    // stack pointer (but we may need to pop stack args for fastcc).
+    if (RedZone && ArgumentPopSize == 0)
+      return;
+
+    bool NoCalleeSaveRestore = AFI->getCalleeSavedStackSize() == 0;
+    int StackRestoreBytes = RedZone ? 0 : NumBytes;
+    if (NoCalleeSaveRestore)
+      StackRestoreBytes += ArgumentPopSize;
+    emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
+                    StackRestoreBytes, TII, MachineInstr::FrameDestroy);
+    // If we were able to combine the local stack pop with the argument pop,
+    // then we're done.
+    if (NoCalleeSaveRestore || ArgumentPopSize == 0)
+      return;
+    NumBytes = 0;
   }
 
   // Restore the original stack pointer.
@@ -639,6 +649,13 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::FP,
                     -AFI->getCalleeSavedStackSize() + 16, TII,
                     MachineInstr::FrameDestroy);
+
+  // This must be placed after the callee-save restore code because that code
+  // assumes the SP is at the same location as it was after the callee-save save
+  // code in the prologue.
+  if (ArgumentPopSize)
+    emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
+                    ArgumentPopSize, TII, MachineInstr::FrameDestroy);
 }
 
 /// getFrameIndexReference - Provide a base+offset reference to an FI slot for

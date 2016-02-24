@@ -1420,6 +1420,19 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     }
   }
 
+  // Determine if we are dealing with a call in an EHPad which does not unwind
+  // to caller.
+  bool EHPadForCallUnwindsLocally = false;
+  if (CallSiteEHPad && CS.isCall()) {
+    UnwindDestMemoTy FuncletUnwindMap;
+    Value *CallSiteUnwindDestToken =
+        getUnwindDestToken(CallSiteEHPad, FuncletUnwindMap);
+
+    EHPadForCallUnwindsLocally =
+        CallSiteUnwindDestToken &&
+        !isa<ConstantTokenNone>(CallSiteUnwindDestToken);
+  }
+
   // Get an iterator to the last basic block in the function, which will have
   // the new function inlined after it.
   Function::iterator LastBlock = --Caller->end();
@@ -1762,6 +1775,14 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
         OpBundles.clear();
       }
+
+      // It is problematic if the inlinee has a cleanupret which unwinds to
+      // caller and we inline it into a call site which doesn't unwind but into
+      // an EH pad that does.  Such an edge must be dynamically unreachable.
+      // As such, we replace the cleanupret with unreachable.
+      if (auto *CleanupRet = dyn_cast<CleanupReturnInst>(BB->getTerminator()))
+        if (CleanupRet->unwindsToCaller() && EHPadForCallUnwindsLocally)
+          changeToUnreachable(CleanupRet, /*UseLLVMTrap=*/false);
 
       Instruction *I = BB->getFirstNonPHI();
       if (!I->isEHPad())

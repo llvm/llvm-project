@@ -95,21 +95,11 @@ template <class ELFT> bool SectionRule::match(InputSectionBase<ELFT> *S) {
 }
 
 class elf2::ScriptParser {
+  typedef void (ScriptParser::*Handler)();
+
 public:
   ScriptParser(BumpPtrAllocator *A, StringRef S, bool B)
-      : Saver(*A), Tokens(tokenize(S)), IsUnderSysroot(B) {
-    Cmd["ENTRY"] = std::mem_fn(&ScriptParser::readEntry);
-    Cmd["EXTERN"] = std::mem_fn(&ScriptParser::readExtern);
-    Cmd["GROUP"] = std::mem_fn(&ScriptParser::readGroup);
-    Cmd["INCLUDE"] = std::mem_fn(&ScriptParser::readInclude);
-    Cmd["INPUT"] = std::mem_fn(&ScriptParser::readGroup);
-    Cmd["OUTPUT"] = std::mem_fn(&ScriptParser::readOutput);
-    Cmd["OUTPUT_ARCH"] = std::mem_fn(&ScriptParser::readOutputArch);
-    Cmd["OUTPUT_FORMAT"] = std::mem_fn(&ScriptParser::readOutputFormat);
-    Cmd["SEARCH_DIR"] = std::mem_fn(&ScriptParser::readSearchDir);
-    Cmd["SECTIONS"] = std::mem_fn(&ScriptParser::readSections);
-    Cmd[";"] = [](ScriptParser &) {};
-  }
+      : Saver(*A), Tokens(tokenize(S)), IsUnderSysroot(B) {}
 
   void run();
 
@@ -129,6 +119,7 @@ private:
   void readExtern();
   void readGroup();
   void readInclude();
+  void readNothing() {}
   void readOutput();
   void readOutputArch();
   void readOutputFormat();
@@ -140,22 +131,32 @@ private:
 
   StringSaver Saver;
   std::vector<StringRef> Tokens;
-  llvm::StringMap<std::function<void(ScriptParser &)>> Cmd;
+  const static StringMap<Handler> Cmd;
   size_t Pos = 0;
   bool IsUnderSysroot;
   bool Error = false;
 };
 
+const StringMap<elf2::ScriptParser::Handler> elf2::ScriptParser::Cmd = {
+    {"ENTRY", &ScriptParser::readEntry},
+    {"EXTERN", &ScriptParser::readExtern},
+    {"GROUP", &ScriptParser::readGroup},
+    {"INCLUDE", &ScriptParser::readInclude},
+    {"INPUT", &ScriptParser::readGroup},
+    {"OUTPUT", &ScriptParser::readOutput},
+    {"OUTPUT_ARCH", &ScriptParser::readOutputArch},
+    {"OUTPUT_FORMAT", &ScriptParser::readOutputFormat},
+    {"SEARCH_DIR", &ScriptParser::readSearchDir},
+    {"SECTIONS", &ScriptParser::readSections},
+    {";", &ScriptParser::readNothing}};
+
 void ScriptParser::run() {
   while (!atEOF()) {
     StringRef Tok = next();
-    auto It = Cmd.find(Tok);
-    if (It != Cmd.end()) {
-      std::function<void(ScriptParser &)> &Handler = It->second;
-      Handler(*this);
-    } else {
+    if (Handler Fn = Cmd.lookup(Tok))
+      (this->*Fn)();
+    else
       setError("unknown directive: " + Tok);
-    }
   }
 }
 

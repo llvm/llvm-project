@@ -53,6 +53,11 @@ static cl::opt<bool>
 AdjustJumpTableBlocks("arm-adjust-jump-tables", cl::Hidden, cl::init(true),
           cl::desc("Adjust basic block layout to better use TB[BH]"));
 
+static cl::opt<unsigned>
+CPMaxIteration("arm-constant-island-max-iteration", cl::Hidden, cl::init(30),
+          cl::desc("The max number of iteration for converge"));
+
+
 /// UnknownPadding - Return the worst case padding that could result from
 /// unknown offset bits.  This does not include alignment padding caused by
 /// known offset bits.
@@ -293,10 +298,10 @@ namespace {
     unsigned getCombinedIndex(const MachineInstr *CPEMI);
     int findInRangeCPEntry(CPUser& U, unsigned UserOffset);
     bool findAvailableWater(CPUser&U, unsigned UserOffset,
-                            water_iterator &WaterIter);
+                            water_iterator &WaterIter, bool CloserWater);
     void createNewWater(unsigned CPUserIndex, unsigned UserOffset,
                         MachineBasicBlock *&NewMBB);
-    bool handleConstantPoolUser(unsigned CPUserIndex);
+    bool handleConstantPoolUser(unsigned CPUserIndex, bool CloserWater);
     void removeDeadCPEMI(MachineInstr *CPEMI);
     bool removeUnusedCPEntries();
     bool isCPEntryInRange(MachineInstr *MI, unsigned UserOffset,
@@ -456,8 +461,11 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
     DEBUG(dbgs() << "Beginning CP iteration #" << NoCPIters << '\n');
     bool CPChange = false;
     for (unsigned i = 0, e = CPUsers.size(); i != e; ++i)
-      CPChange |= handleConstantPoolUser(i);
-    if (CPChange && ++NoCPIters > 30)
+      // For most inputs, it converges in no more than 5 iterations.
+      // If it doens't end in 10, the input may have huge BB or many CPEs.
+      // In this case, we will try differnt heuristics.
+      CPChange |= handleConstantPoolUser(i, NoCPIters >= CPMaxIteration / 2);
+    if (CPChange && ++NoCPIters > CPMaxIteration)
       report_fatal_error("Constant Island pass failed to converge!");
     DEBUG(dumpBBs());
 
@@ -1293,11 +1301,27 @@ static inline unsigned getUnconditionalBrDisp(int Opc) {
 /// move to a lower address, so search backward from the end of the list and
 /// prefer the first water that is in range.
 bool ARMConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
-                                      water_iterator &WaterIter) {
+                                            water_iterator &WaterIter,
+                                            bool CloserWater) {
   if (WaterList.empty())
     return false;
 
   unsigned BestGrowth = ~0u;
+  // The nearest water without splitting the UserBB is right after it.
+  // If the distance is still large (we have a big BB), then we need to split it
+  // if we don't converge after certain iterations. This helps the following
+  // situation to converge:
+  //   BB0:
+  //      Big BB
+  //   BB1:
+  //      Constant Pool
+  // When a CP access is out of range, BB0 may be used as water. However,
+  // inserting islands between BB0 and BB1 makes other accesses out of range.
+  MachineBasicBlock *UserBB = U.MI->getParent();
+  unsigned MinNoSplitDisp =
+      BBInfo[UserBB->getNumber()].postOffset(getCPELogAlign(U.CPEMI));
+  if (CloserWater && MinNoSplitDisp > U.getMaxDisp() / 2)
+    return false;
   for (water_iterator IP = std::prev(WaterList.end()), B = WaterList.begin();;
        --IP) {
     MachineBasicBlock* WaterBB = *IP;
@@ -1309,6 +1333,8 @@ bool ARMConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
     // should be relatively uncommon and when it does happen, we want to be
     // sure to take advantage of it for all the CPEs near that block, so that
     // we don't insert more branches than necessary.
+    // When CloserWater is true, we try to find the lowest address after (or
+    // equal to) user MI's BB no matter of padding growth.
     unsigned Growth;
     if (isWaterInRange(UserOffset, WaterBB, U, Growth) &&
         (WaterBB->getNumber() < U.HighWaterMark->getNumber() ||
@@ -1320,8 +1346,11 @@ bool ARMConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
       DEBUG(dbgs() << "Found water after BB#" << WaterBB->getNumber()
                    << " Growth=" << Growth << '\n');
 
-      // Keep looking unless it is perfect.
-      if (BestGrowth == 0)
+      if (CloserWater && WaterBB == U.MI->getParent())
+        return true;
+      // Keep looking unless it is perfect and we're not looking for the lowest
+      // possible address.
+      if (!CloserWater && BestGrowth == 0)
         return true;
     }
     if (IP == B)
@@ -1479,7 +1508,8 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
 /// is out-of-range.  If so, pick up the constant pool value and move it some
 /// place in-range.  Return true if we changed any addresses (thus must run
 /// another pass of branch lengthening), false otherwise.
-bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex) {
+bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
+                                                bool CloserWater) {
   CPUser &U = CPUsers[CPUserIndex];
   MachineInstr *UserMI = U.MI;
   MachineInstr *CPEMI  = U.CPEMI;
@@ -1502,7 +1532,7 @@ bool ARMConstantIslands::handleConstantPoolUser(unsigned CPUserIndex) {
   MachineBasicBlock *NewIsland = MF->CreateMachineBasicBlock();
   MachineBasicBlock *NewMBB;
   water_iterator IP;
-  if (findAvailableWater(U, UserOffset, IP)) {
+  if (findAvailableWater(U, UserOffset, IP, CloserWater)) {
     DEBUG(dbgs() << "Found water in range\n");
     MachineBasicBlock *WaterBB = *IP;
 

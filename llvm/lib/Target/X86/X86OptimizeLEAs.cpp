@@ -60,12 +60,6 @@ static inline bool isIdenticalOp(const MachineOperand &MO1,
 static bool isSimilarDispOp(const MachineOperand &MO1,
                             const MachineOperand &MO2);
 
-/// \brief Returns true if the type of \p MO is valid for address displacement
-/// operand. According to X86DAGToDAGISel::getAddressOperands allowed types are:
-/// MO_Immediate, MO_ConstantPoolIndex, MO_JumpTableIndex, MO_ExternalSymbol,
-/// MO_GlobalAddress, MO_BlockAddress or MO_MCSymbol.
-static inline bool isValidDispOp(const MachineOperand &MO);
-
 /// \brief Returns true if the instruction is LEA.
 static inline bool isLEA(const MachineInstr &MI);
 
@@ -188,6 +182,13 @@ static inline bool isIdenticalOp(const MachineOperand &MO1,
           !TargetRegisterInfo::isPhysicalRegister(MO1.getReg()));
 }
 
+#ifndef NDEBUG
+static bool isValidDispOp(const MachineOperand &MO) {
+  return MO.isImm() || MO.isCPI() || MO.isJTI() || MO.isSymbol() ||
+         MO.isGlobal() || MO.isBlockAddress() || MO.isMCSymbol();
+}
+#endif
+
 static bool isSimilarDispOp(const MachineOperand &MO1,
                             const MachineOperand &MO2) {
   assert(isValidDispOp(MO1) && isValidDispOp(MO2) &&
@@ -203,11 +204,6 @@ static bool isSimilarDispOp(const MachineOperand &MO1,
           MO1.getBlockAddress() == MO2.getBlockAddress()) ||
          (MO1.isMCSymbol() && MO2.isMCSymbol() &&
           MO1.getMCSymbol() == MO2.getMCSymbol());
-}
-
-static inline bool isValidDispOp(const MachineOperand &MO) {
-  return MO.isImm() || MO.isCPI() || MO.isJTI() || MO.isSymbol() ||
-         MO.isGlobal() || MO.isBlockAddress() || MO.isMCSymbol();
 }
 
 static inline bool isLEA(const MachineInstr &MI) {

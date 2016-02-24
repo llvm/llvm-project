@@ -135,6 +135,34 @@ define void @test_csinv(i32 %lhs32, i32 %rhs32, i64 %lhs64) minsize {
 ; CHECK: ret
 }
 
+define void @test_csinv0(i32 %lhs32, i32 %rhs32, i64 %lhs64, i64 %rhs64) minsize {
+; CHECK-LABEL: test_csinv0:
+
+  %tst1 = icmp ugt i32 %lhs32, %rhs32
+  %val1 = select i1 %tst1, i32 0, i32 -1
+  store volatile i32 %val1, i32* @var32
+; CHECK: cmp [[LHS:w[0-9]+]], [[RHS:w[0-9]+]]
+; CHECK: csetm {{w[0-9]+}}, ls
+
+  %rhs2 = add i32 %rhs32, 42
+  %tst2 = icmp sle i32 %lhs32, %rhs2
+  %val2 = select i1 %tst2, i32 -1, i32 %rhs2
+  store volatile i32 %val2, i32* @var32
+; CHECK: cmp [[LHS2:w[0-9]+]], [[RHS2:w[0-9]+]]
+; CHECK: csinv {{w[0-9]+}}, [[RHS2]], wzr, gt
+
+; Note that commuting rhs and lhs in the select changes ugt to ule (i.e. hi to ls).
+  %rhs3 = mul i64 %rhs64, 19
+  %tst3 = icmp ugt i64 %lhs64, %rhs3
+  %val3 = select i1 %tst3, i64 %rhs3, i64 -1
+  store volatile i64 %val3, i64* @var64
+; CHECK: cmp [[LHS3:x[0-9]+]], [[RHS3:x[0-9]+]]
+; CHECK: csinv {{x[0-9]+}}, [[RHS3]], xzr, hi
+
+  ret void
+; CHECK: ret
+}
+
 define void @test_csneg(i32 %lhs32, i32 %rhs32, i64 %lhs64) minsize {
 ; CHECK-LABEL: test_csneg:
 
