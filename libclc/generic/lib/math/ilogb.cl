@@ -41,7 +41,7 @@ _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, int, ilogb, float);
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-_CLC_OVERLOAD _CLC_DEF ilogb(double x) {
+_CLC_OVERLOAD _CLC_DEF int ilogb(double x) {
     ulong ux = as_ulong(x);
     ulong ax = ux & ~SIGNBIT_DP64;
     int r = (int) (ax >> EXPSHIFTBITS_DP64) - EXPBIAS_DP64;

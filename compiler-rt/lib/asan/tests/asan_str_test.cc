@@ -20,8 +20,18 @@
 static char global_string[] = "global";
 static size_t global_string_length = 6;
 
-const char kStackReadUnderflow[] = "READ.*underflows this variable";
-const char kStackReadOverflow[] = "READ.*overflows this variable";
+const char kStackReadUnderflow[] =
+#if !GTEST_USES_SIMPLE_RE
+    ASAN_PCRE_DOTALL
+    "READ.*"
+#endif
+    "underflows this variable";
+const char kStackReadOverflow[] =
+#if !GTEST_USES_SIMPLE_RE
+    ASAN_PCRE_DOTALL
+    "READ.*"
+#endif
+    "overflows this variable";
 
 namespace {
 enum class OOBKind {
