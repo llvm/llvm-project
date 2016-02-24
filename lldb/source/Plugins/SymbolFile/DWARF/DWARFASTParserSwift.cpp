@@ -21,6 +21,7 @@
 #include "swift/AST/ASTContext.h"
 
 #include "lldb/Core/Error.h"
+#include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -119,8 +120,31 @@ DWARFASTParserSwift::ParseTypeFromDWARF (const SymbolContext& sc,
     if (!compiler_type && name)
     {
         if (name.GetStringRef().startswith("$swift.") ||
-            name.GetStringRef().startswith("_TtBp")) {
-            compiler_type = CompilerType(m_ast.GetASTContext(), m_ast.GetASTContext()->TheRawPointerType);
+            name.GetStringRef().startswith("_TtBp"))
+        {
+            swift::ASTContext *swift_ast_ctx = m_ast.GetASTContext();
+            if (swift_ast_ctx)
+                compiler_type = CompilerType(swift_ast_ctx, swift_ast_ctx->TheRawPointerType);
+            else
+            {
+                if (log)
+                {
+                    const char *file_name = "<unknown>";
+                    SymbolFile *sym_file = m_ast.GetSymbolFile();
+                    if (sym_file)
+                    {
+                        ObjectFile *obj_file = sym_file->GetObjectFile();
+                        if (obj_file)
+                        {
+                            ModuleSP module_sp = obj_file->GetModule();
+                            if (module_sp)
+                                file_name = module_sp->GetFileSpec().GetFilename().AsCString();
+                        }
+                    }
+                    log->Printf("Got null AST context while looking up %s in %s.", name.AsCString(), file_name);
+                }
+                return TypeSP();
+            }
         }
     }
 
