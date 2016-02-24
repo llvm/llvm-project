@@ -210,3 +210,25 @@ void testCallContainingWithSignature5()
   });
 }
 
+__attribute__((objc_root_class))
+@interface SuperClass
+- (void)someMethod;
+@end
+
+@interface SomeClass : SuperClass
+@end
+
+// Make sure to properly handle super-calls when a block captures
+// a local variable named 'self'.
+@implementation SomeClass
+-(void)foo; {
+  /*__weak*/ SomeClass *weakSelf = self;
+  (void)(^(void) {
+    SomeClass *self = weakSelf;
+    (void)(^(void) {
+      (void)self;
+      [super someMethod]; // no-warning
+    });
+  });
+}
+@end

@@ -44,12 +44,7 @@ void instantiate(int x) {
   buildBytes(x);
 }
 
-// CHECK: ![[UNION:[0-9]+]] = !DICompositeType(tag: DW_TAG_union_type,
-// CHECK-NOT: name:
-// CHECK: elements
 // CHECK: [[FILE:.*]] = !DIFile(filename: "{{.*}}debug-info-anon-union-vars.cpp",
-// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "i", scope: ![[UNION]],
-// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "c", scope: ![[UNION]],
 // CHECK: !DIGlobalVariable(name: "c",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
 // CHECK: !DIGlobalVariable(name: "d",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
 // CHECK: !DIGlobalVariable(name: "a",{{.*}} file: [[FILE]], line: 6,{{.*}} isLocal: true, isDefinition: true
@@ -60,4 +55,9 @@ void instantiate(int x) {
 // CHECK: !DILocalVariable(name: "c", {{.*}}, flags: DIFlagArtificial
 // CHECK: !DILocalVariable(
 // CHECK-NOT: name:
-// CHECK: type: ![[UNION]]
+// CHECK: type: ![[UNION:[0-9]+]]
+// CHECK: ![[UNION]] = !DICompositeType(tag: DW_TAG_union_type,
+// CHECK-NOT: name:
+// CHECK: elements
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "i", scope: ![[UNION]],
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "c", scope: ![[UNION]],

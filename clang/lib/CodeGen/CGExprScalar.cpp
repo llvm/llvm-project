@@ -3366,9 +3366,11 @@ Value *ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
 
   llvm::Type *ArgTy = ConvertType(VE->getType());
 
-  // If EmitVAArg fails, we fall back to the LLVM instruction.
-  if (!ArgPtr.isValid())
-    return Builder.CreateVAArg(ArgValue.getPointer(), ArgTy);
+  // If EmitVAArg fails, emit an error.
+  if (!ArgPtr.isValid()) {
+    CGF.ErrorUnsupported(VE, "va_arg expression");
+    return llvm::UndefValue::get(ArgTy);
+  }
 
   // FIXME Volatility.
   llvm::Value *Val = Builder.CreateLoad(ArgPtr);

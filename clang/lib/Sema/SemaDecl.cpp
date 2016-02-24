@@ -6714,6 +6714,19 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     NewVD->setInvalidDecl();
     return;
   }
+
+  // OpenCL v2.0 s6.12.5 - Blocks with variadic arguments are not supported.
+  if (LangOpts.OpenCL && T->isBlockPointerType()) {
+    const BlockPointerType *BlkTy = T->getAs<BlockPointerType>();
+    const FunctionProtoType *FTy =
+        BlkTy->getPointeeType()->getAs<FunctionProtoType>();
+    if (FTy->isVariadic()) {
+      Diag(NewVD->getLocation(), diag::err_opencl_block_proto_variadic)
+          << T << NewVD->getSourceRange();
+      NewVD->setInvalidDecl();
+      return;
+    }
+  }
 }
 
 /// \brief Perform semantic checking on a newly-created variable

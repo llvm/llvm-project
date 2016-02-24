@@ -7745,6 +7745,14 @@ def err_atomic_init_constant : Error<
   " in the declaration statement in the program scope">;
 def err_opencl_implicit_vector_conversion : Error<
   "implicit conversions between vector types (%0 and %1) are not permitted">;
+def err_opencl_dereferencing : Error<
+  "dereferencing pointer of type %0 is not allowed in OpenCL">;
+def err_opencl_block_proto_variadic : Error<
+  "invalid block prototype, variadic arguments are not allowed in OpenCL">;
+def err_opencl_invalid_type_array : Error<
+  "array of %0 type is invalid in OpenCL">;
+def err_opencl_ternary_with_block : Error<
+  "block type cannot be used as expression in ternary expression in OpenCL">;
 
 // OpenCL v2.0 s6.13.6 -- Builtin Pipe Functions
 def err_opencl_builtin_pipe_first_arg : Error<
