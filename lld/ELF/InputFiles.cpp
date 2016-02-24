@@ -186,18 +186,18 @@ void elf2::ObjectFile<ELFT>::initializeSections(
   const ELFFile<ELFT> &Obj = this->ELFObj;
   for (const Elf_Shdr &Sec : Obj.sections()) {
     ++I;
-    if (Sections[I] == &InputSection<ELFT>::Discarded)
+    if (Sections[I] == InputSection<ELFT>::Discarded)
       continue;
 
     switch (Sec.sh_type) {
     case SHT_GROUP:
-      Sections[I] = &InputSection<ELFT>::Discarded;
+      Sections[I] = InputSection<ELFT>::Discarded;
       if (ComdatGroups.insert(getShtGroupSignature(Sec)).second)
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
           fatal("Invalid section index in group");
-        Sections[SecIndex] = &InputSection<ELFT>::Discarded;
+        Sections[SecIndex] = InputSection<ELFT>::Discarded;
       }
       break;
     case SHT_SYMTAB:
@@ -222,7 +222,7 @@ void elf2::ObjectFile<ELFT>::initializeSections(
       // Strictly speaking, a relocation section must be included in the
       // group of the section it relocates. However, LLVM 3.3 and earlier
       // would fail to do so, so we gracefully handle that case.
-      if (RelocatedSection == &InputSection<ELFT>::Discarded)
+      if (RelocatedSection == InputSection<ELFT>::Discarded)
         continue;
       if (!RelocatedSection)
         fatal("Unsupported relocation reference");
@@ -255,7 +255,7 @@ elf2::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // is controlled only by the command line option (-z execstack) in LLD,
   // .note.GNU-stack is ignored.
   if (Name == ".note.GNU-stack")
-    return &InputSection<ELFT>::Discarded;
+    return InputSection<ELFT>::Discarded;
 
   // A MIPS object file has a special section that contains register
   // usage info, which needs to be handled by the linker specially.
@@ -313,7 +313,7 @@ SymbolBody *elf2::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_WEAK:
   case STB_GNU_UNIQUE: {
     InputSectionBase<ELFT> *Sec = getSection(*Sym);
-    if (Sec == &InputSection<ELFT>::Discarded)
+    if (Sec == InputSection<ELFT>::Discarded)
       return new (Alloc) UndefinedElf<ELFT>(Name, *Sym);
     return new (Alloc) DefinedRegular<ELFT>(Name, *Sym, Sec);
   }

@@ -40,7 +40,6 @@
 #include "DNBLog.h"
 #include "MachProcess.h"
 #include "DNBDataRef.h"
-#include "stack_logging.h"
 
 #ifdef WITH_SPRINGBOARD
 
@@ -1051,90 +1050,6 @@ MachTask::DeallocateMemory (nub_addr_t addr)
         
     }
     return false;
-}
-
-static void foundStackLog(mach_stack_logging_record_t record, void *context) {
-    *((bool*)context) = true;
-}
-
-bool
-MachTask::HasMallocLoggingEnabled ()
-{
-    bool found = false;
-    
-    __mach_stack_logging_enumerate_records(m_task, 0x0, foundStackLog, &found);
-    return found;
-}
-
-struct history_enumerator_impl_data
-{
-    MachMallocEvent *buffer;
-    uint32_t        *position;
-    uint32_t         count;
-};
-
-static void history_enumerator_impl(mach_stack_logging_record_t record, void* enum_obj)
-{
-    history_enumerator_impl_data *data = (history_enumerator_impl_data*)enum_obj;
-    
-    if (*data->position >= data->count)
-        return;
-    
-    data->buffer[*data->position].m_base_address = record.address;
-    data->buffer[*data->position].m_size = record.argument;
-    data->buffer[*data->position].m_event_id = record.stack_identifier;
-    data->buffer[*data->position].m_event_type = record.type_flags == stack_logging_type_alloc ?   eMachMallocEventTypeAlloc :
-                                                 record.type_flags == stack_logging_type_dealloc ? eMachMallocEventTypeDealloc :
-                                                                                                   eMachMallocEventTypeOther;
-    *data->position+=1;
-}
-
-bool
-MachTask::EnumerateMallocRecords (MachMallocEvent *event_buffer,
-                                  uint32_t buffer_size,
-                                  uint32_t *count)
-{
-    return EnumerateMallocRecords(0,
-                                  event_buffer,
-                                  buffer_size,
-                                  count);
-}
-
-bool
-MachTask::EnumerateMallocRecords (mach_vm_address_t address,
-                                  MachMallocEvent *event_buffer,
-                                  uint32_t buffer_size,
-                                  uint32_t *count)
-{
-    if (!event_buffer || !count)
-        return false;
-    
-    if (buffer_size == 0)
-        return false;
-    
-    *count = 0;
-    history_enumerator_impl_data data = { event_buffer, count, buffer_size };
-    __mach_stack_logging_enumerate_records(m_task, address, history_enumerator_impl, &data);
-    return (*count > 0);
-}
-
-bool
-MachTask::EnumerateMallocFrames (MachMallocEventId event_id,
-                                 mach_vm_address_t *function_addresses_buffer,
-                                 uint32_t buffer_size,
-                                 uint32_t *count)
-{
-    if (!function_addresses_buffer || !count)
-        return false;
-    
-    if (buffer_size == 0)
-        return false;
-    
-    __mach_stack_logging_frames_for_uniqued_stack(m_task, event_id, &function_addresses_buffer[0], buffer_size, count);
-    *count -= 1;
-    if (function_addresses_buffer[*count-1] < PageSize())
-        *count -= 1;
-    return (*count > 0);
 }
 
 nub_size_t

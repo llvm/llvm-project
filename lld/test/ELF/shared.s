@@ -291,5 +291,5 @@
 
 .global _start
 _start:
-.long bar
-.long zed
+.long bar@GOT
+.long zed@GOT

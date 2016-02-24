@@ -50,7 +50,7 @@ public:
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const { return Header->sh_size; }
 
-  static InputSectionBase<ELFT> Discarded;
+  static InputSectionBase<ELFT> *Discarded;
 
   StringRef getSectionName() const;
   const Elf_Shdr *getSectionHdr() const { return Header; }
@@ -81,9 +81,8 @@ private:
 };
 
 template <class ELFT>
-InputSectionBase<ELFT>
-    InputSectionBase<ELFT>::Discarded(nullptr, nullptr,
-                                      InputSectionBase<ELFT>::Regular);
+InputSectionBase<ELFT> *
+    InputSectionBase<ELFT>::Discarded = (InputSectionBase<ELFT> *)-1ULL;
 
 // Usually sections are copied to the output as atomic chunks of data,
 // but some special types of sections are split into small pieces of data

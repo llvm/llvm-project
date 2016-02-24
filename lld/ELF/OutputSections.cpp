@@ -884,7 +884,7 @@ elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
   // the group are not allowed. Unfortunately .eh_frame breaks that rule
   // and must be treated specially. For now we just replace the symbol with
   // 0.
-  if (Section == &InputSection<ELFT>::Discarded || !Section->Live)
+  if (Section == InputSection<ELFT>::Discarded || !Section->Live)
     return Addend;
 
   uintX_t Offset = Sym->st_value;
@@ -1147,7 +1147,7 @@ void EHOutputSection<ELFT>::addSectionAux(
       if (!HasReloc)
         fatal("FDE doesn't reference another section");
       InputSectionBase<ELFT> *Target = S->getRelocTarget(*RelI);
-      if (Target != &InputSection<ELFT>::Discarded && Target->Live) {
+      if (Target != InputSection<ELFT>::Discarded && Target->Live) {
         uint32_t CieOffset = Offset + 4 - ID;
         auto I = OffsetToIndex.find(CieOffset);
         if (I == OffsetToIndex.end())

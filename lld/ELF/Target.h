@@ -55,9 +55,12 @@ public:
   virtual bool isSizeRel(uint32_t Type) const;
   virtual bool needsDynRelative(unsigned Type) const { return false; }
   virtual bool needsGot(uint32_t Type, SymbolBody &S) const;
+  virtual bool refersToGotEntry(uint32_t Type) const;
 
   enum PltNeed { Plt_No, Plt_Explicit, Plt_Implicit };
-  virtual PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const;
+  template <class ELFT>
+  PltNeed needsPlt(uint32_t Type, const SymbolBody &S) const;
+
   virtual void relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                            uint64_t P, uint64_t SA, uint64_t ZA = 0,
                            uint8_t *PairedLoc = nullptr) const = 0;
@@ -95,6 +98,7 @@ public:
 
 private:
   virtual bool needsCopyRelImpl(uint32_t Type) const;
+  virtual bool needsPltImpl(uint32_t Type, const SymbolBody &S) const;
 };
 
 uint64_t getPPC64TocBase();

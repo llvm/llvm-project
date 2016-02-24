@@ -863,7 +863,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
           if (Address &&
               SE.getUnknown(UndefValue::get(Address->getType())) ==
                   SE.getPointerBase(SE.getSCEV(Address))) {
-          } else if (S.getStmtForBasicBlock(Inst->getParent())) {
+          } else if (S.getStmtFor(Inst)) {
             IsDead = false;
           } else {
             auto *Domain = S.getDomainConditions(Inst->getParent());

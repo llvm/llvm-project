@@ -1531,38 +1531,42 @@ JITTemplate(ExpressionStrings e)
     // Format strings containing the expressions we may need to evaluate.
     static std::array<const char*, _eExprLast> runtimeExpressions = {{
      // Mangled GetOffsetPointer(Allocation*, xoff, yoff, zoff, lod, cubemap)
-     "(int*)_Z12GetOffsetPtrPKN7android12renderscript10AllocationEjjjj23RsAllocationCubemapFace(0x%lx, %u, %u, %u, 0, 0)",
+     "(int*)_Z12GetOffsetPtrPKN7android12renderscript10AllocationEjjjj23RsAllocationCubemapFace"
+     "(0x%" PRIx64 ", %" PRIu32 ", %" PRIu32 ", %" PRIu32 ", 0, 0)",
 
      // Type* rsaAllocationGetType(Context*, Allocation*)
-     "(void*)rsaAllocationGetType(0x%lx, 0x%lx)",
+     "(void*)rsaAllocationGetType(0x%" PRIx64 ", 0x%" PRIx64 ")",
 
      // rsaTypeGetNativeData(Context*, Type*, void* typeData, size)
      // Pack the data in the following way mHal.state.dimX; mHal.state.dimY; mHal.state.dimZ;
      // mHal.state.lodCount; mHal.state.faces; mElement; into typeData
      // Need to specify 32 or 64 bit for uint_t since this differs between devices
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[0]", // X dim
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[1]", // Y dim
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[2]", // Z dim
-     "uint%u_t data[6]; (void*)rsaTypeGetNativeData(0x%lx, 0x%lx, data, 6); data[5]", // Element ptr
+     "uint%" PRIu32 "_t data[6]; (void*)rsaTypeGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 6); data[0]", // X dim
+     "uint%" PRIu32 "_t data[6]; (void*)rsaTypeGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 6); data[1]", // Y dim
+     "uint%" PRIu32 "_t data[6]; (void*)rsaTypeGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 6); data[2]", // Z dim
+     "uint%" PRIu32 "_t data[6]; (void*)rsaTypeGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 6); data[5]", // Element ptr
 
      // rsaElementGetNativeData(Context*, Element*, uint32_t* elemData,size)
      // Pack mType; mKind; mNormalized; mVectorSize; NumSubElements into elemData
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[0]", // Type
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[1]", // Kind
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[3]", // Vector Size
-     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%lx, 0x%lx, data, 5); data[4]", // Field Count
+     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 5); data[0]", // Type
+     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 5); data[1]", // Kind
+     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 5); data[3]", // Vector Size
+     "uint32_t data[5]; (void*)rsaElementGetNativeData(0x%" PRIx64 ", 0x%" PRIx64 ", data, 5); data[4]", // Field Count
 
-      // rsaElementGetSubElements(RsContext con, RsElement elem, uintptr_t *ids, const char **names,
-      // size_t *arraySizes, uint32_t dataSize)
-      // Needed for Allocations of structs to gather details about fields/Subelements
-     "void *ids[%u]; const char *names[%u]; size_t arr_size[%u];"
-     "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); ids[%u]",     // Element* of field
+     // rsaElementGetSubElements(RsContext con, RsElement elem, uintptr_t *ids, const char **names,
+     // size_t *arraySizes, uint32_t dataSize)
+     // Needed for Allocations of structs to gather details about fields/Subelements
+     // Element* of field
+     "void* ids[%" PRIu32 "]; const char* names[%" PRIu32 "]; size_t arr_size[%" PRIu32 "];"
+     "(void*)rsaElementGetSubElements(0x%" PRIx64 ", 0x%" PRIx64 ", ids, names, arr_size, %" PRIu32 "); ids[%" PRIu32 "]",
 
-     "void *ids[%u]; const char *names[%u]; size_t arr_size[%u];"
-     "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); names[%u]",   // Name of field
+     // Name of field
+     "void* ids[%" PRIu32 "]; const char* names[%" PRIu32 "]; size_t arr_size[%" PRIu32 "];"
+     "(void*)rsaElementGetSubElements(0x%" PRIx64 ", 0x%" PRIx64 ", ids, names, arr_size, %" PRIu32 "); names[%" PRIu32 "]",
 
-     "void *ids[%u]; const char *names[%u]; size_t arr_size[%u];"
-     "(void*)rsaElementGetSubElements(0x%lx, 0x%lx, ids, names, arr_size, %u); arr_size[%u]" // Array size of field
+     // Array size of field
+     "void* ids[%" PRIu32 "]; const char* names[%" PRIu32 "]; size_t arr_size[%" PRIu32 "];"
+     "(void*)rsaElementGetSubElements(0x%" PRIx64 ", 0x%" PRIx64 ", ids, names, arr_size, %" PRIu32 "); arr_size[%" PRIu32 "]"
     }};
 
     return runtimeExpressions[e];

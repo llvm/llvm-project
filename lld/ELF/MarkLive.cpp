@@ -118,7 +118,7 @@ template <class ELFT> void elf2::markLive(SymbolTable<ELFT> *Symtab) {
   // script KEEP command.
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab->getObjectFiles())
     for (InputSectionBase<ELFT> *Sec : F->getSections())
-      if (Sec && Sec != &InputSection<ELFT>::Discarded)
+      if (Sec && Sec != InputSection<ELFT>::Discarded)
         if (isReserved(Sec) || Script->shouldKeep<ELFT>(Sec))
           Enqueue(Sec);
 

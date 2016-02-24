@@ -291,12 +291,37 @@ public:
     }
 
     //------------------------------------------------------------------
+    /// Equal to operator
+    ///
+    /// Returns true if this string is equal to the string in \a rhs.
+    /// If case sensitive equality is tested, this operation is very
+    /// fast as it results in a pointer comparison since all strings
+    /// are in a uniqued in a global string pool.
+    ///
+    /// @param[in] rhs
+    ///     The Left Hand Side const ConstString object reference.
+    ///
+    /// @param[in] rhs
+    ///     The Right Hand Side const ConstString object reference.
+    ///
+    /// @param[in] case_sensitive
+    ///     Case sensitivity. If true, case sensitive equality
+    ///     will be tested, otherwise character case will be ignored
+    ///
+    /// @return
+    ///     @li \b true if this object is equal to \a rhs.
+    ///     @li \b false if this object is not equal to \a rhs.
+    //------------------------------------------------------------------
+    static bool
+    Equals(const ConstString &lhs, const ConstString &rhs, const bool case_sensitive = true);
+
+    //------------------------------------------------------------------
     /// Compare two string objects.
     ///
     /// Compares the C string values contained in \a lhs and \a rhs and
     /// returns an integer result.
     ///
-    /// NOTE: only call this function when you want a true string 
+    /// NOTE: only call this function when you want a true string
     /// comparison. If you want string equality use the, use the ==
     /// operator as it is much more efficient. Also if you want string
     /// inequality, use the != operator for the same reasons.
@@ -307,13 +332,17 @@ public:
     /// @param[in] rhs
     ///     The Right Hand Side const ConstString object reference.
     ///
+    /// @param[in] case_sensitive
+    ///     Case sensitivity of compare. If true, case sensitive compare
+    ///     will be performed, otherwise character case will be ignored
+    ///
     /// @return
     ///     @li -1 if lhs < rhs
     ///     @li 0 if lhs == rhs
     ///     @li 1 if lhs > rhs
     //------------------------------------------------------------------
     static int
-    Compare (const ConstString& lhs, const ConstString& rhs);
+    Compare(const ConstString &lhs, const ConstString &rhs, const bool case_sensitive = true);
 
     //------------------------------------------------------------------
     /// Dump the object description to a stream.

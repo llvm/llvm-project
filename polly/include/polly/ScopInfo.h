@@ -663,6 +663,7 @@ public:
   /// @param IncomingValue The value when reacing the PHI from the @p
   ///                      IncomingBlock.
   void addIncoming(BasicBlock *IncomingBlock, Value *IncomingValue) {
+    assert(!isRead());
     assert(isAnyPHIKind());
     Incoming.emplace_back(std::make_pair(IncomingBlock, IncomingValue));
   }
@@ -1075,6 +1076,16 @@ public:
 
   /// @brief Return true if this statement represents a whole region.
   bool isRegionStmt() const { return R != nullptr; }
+
+  /// @brief Return a BasicBlock from this statement.
+  ///
+  /// For block statements, it returns the BasicBlock itself. For subregion
+  /// statements, return its entry block.
+  BasicBlock *getEntryBlock() const;
+
+  /// @brief Return RegionInfo's RegionNode for this statements' BB or
+  ///        subregion.
+  RegionNode *getRegionNode() const;
 
   /// @brief Return true if this statement does not contain any accesses.
   bool isEmpty() const { return MemAccs.empty(); }
@@ -1858,13 +1869,24 @@ public:
   /// @brief Get an isl string representing the boundary context.
   std::string getBoundaryContextStr() const;
 
-  /// @brief Return the stmt for the given @p BB or nullptr if none.
-  ScopStmt *getStmtForBasicBlock(BasicBlock *BB) const;
+  /// @brief Return the ScopStmt for the given @p BB or nullptr if there is
+  ///        none.
+  ScopStmt *getStmtFor(BasicBlock *BB) const;
+
+  /// @brief Return the ScopStmt that represents the Region @p R, or nullptr if
+  ///        it is not represented by any statement in this Scop.
+  ScopStmt *getStmtFor(Region *R) const;
 
   /// @brief Return the ScopStmt that represents @p RN; can return nullptr if
-  /// the RegionNode is not within the SCoP or has been removed due to
-  /// simplifications.
-  ScopStmt *getStmtForRegionNode(RegionNode *RN) const;
+  ///        the RegionNode is not within the SCoP or has been removed due to
+  ///        simplifications.
+  ScopStmt *getStmtFor(RegionNode *RN) const;
+
+  /// @brief Return the ScopStmt an instruction belongs to, or nullptr if it
+  ///        does not belong to any statement in this Scop.
+  ScopStmt *getStmtFor(Instruction *Inst) const {
+    return getStmtFor(Inst->getParent());
+  }
 
   /// @brief Return the number of statements in the SCoP.
   size_t getSize() const { return Stmts.size(); }

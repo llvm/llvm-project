@@ -28,14 +28,11 @@ InputSectionBase<ELFT>::InputSectionBase(ObjectFile<ELFT> *File,
     : Header(Header), File(File), SectionKind(SectionKind) {
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
-  // NB: "Discarded" section is initialized at start-up and when it
-  // happens Config is still null.
-  Live = Config && !Config->GcSections;
+  Live = !Config->GcSections;
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
-  if (Header)
-    Align = std::max<uintX_t>(Header->sh_addralign, 1);
+  Align = std::max<uintX_t>(Header->sh_addralign, 1);
 }
 
 template <class ELFT> StringRef InputSectionBase<ELFT>::getSectionName() const {
@@ -217,7 +214,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     }
 
     uintX_t SymVA = Body->getVA<ELFT>();
-    if (Target->needsPlt(Type, *Body)) {
+    if (Target->needsPlt<ELFT>(Type, *Body)) {
       SymVA = Body->getPltVA<ELFT>();
     } else if (Target->needsGot(Type, *Body)) {
       if (Config->EMachine == EM_MIPS && !canBePreempted(Body, true))
