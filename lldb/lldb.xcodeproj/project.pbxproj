@@ -798,6 +798,7 @@
 		942612F81B952C9B00EF842E /* ObjCLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B6385E1B8FB7A2004FE1E4 /* ObjCLanguage.cpp */; };
 		942829561A89614C00521B30 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 942829551A89614C00521B30 /* JSON.cpp */; };
 		942829CC1A89839300521B30 /* liblldb-core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2689FFCA13353D7A00698AC0 /* liblldb-core.a */; };
+		9428BC2C1C6E64E4002A24D7 /* LibCxxAtomic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9428BC291C6E64DC002A24D7 /* LibCxxAtomic.cpp */; };
 		942B8F781AC48287008C2EEF /* RegisterContextFreeBSD_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 942B8F761AC48282008C2EEF /* RegisterContextFreeBSD_arm64.cpp */; };
 		942B8F7B1AC482E9008C2EEF /* RegisterContextPOSIX_arm64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 942B8F791AC482E5008C2EEF /* RegisterContextPOSIX_arm64.cpp */; };
 		942F521F1BC44E6D0004C182 /* CF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B9E5021BBEFCF6000A48DC /* CF.cpp */; };
@@ -810,7 +811,6 @@
 		942F52261BC44E780004C182 /* NSIndexPath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B9E50C1BBEFCF6000A48DC /* NSIndexPath.cpp */; };
 		942F52271BC44E780004C182 /* NSSet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B9E50D1BBEFCF6000A48DC /* NSSet.cpp */; };
 		942F52281BC44E780004C182 /* NSString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B9E5141BBF3199000A48DC /* NSString.cpp */; };
-		9428BC2C1C6E64E4002A24D7 /* LibCxxAtomic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9428BC291C6E64DC002A24D7 /* LibCxxAtomic.cpp */; };
 		94380B8219940B0A00BFE4A8 /* StringLexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94380B8119940B0A00BFE4A8 /* StringLexer.cpp */; };
 		9438287719F5A40B00134CD1 /* SwiftMangledNameVisitor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9438287619F5A40B00134CD1 /* SwiftMangledNameVisitor.cpp */; };
 		943BDEFE1AA7B2F800789CE8 /* LLDBAssert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 943BDEFD1AA7B2F800789CE8 /* LLDBAssert.cpp */; };
@@ -1269,7 +1269,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
+				AF90106515AB7D3600FF120D /* lldb.1 in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2678,14 +2678,14 @@
 		942829541A89614000521B30 /* JSON.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = JSON.h; path = include/lldb/Utility/JSON.h; sourceTree = "<group>"; };
 		942829551A89614C00521B30 /* JSON.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JSON.cpp; path = source/Utility/JSON.cpp; sourceTree = "<group>"; };
 		942829C01A89835300521B30 /* lldb-argdumper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-argdumper"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9428BC291C6E64DC002A24D7 /* LibCxxAtomic.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxAtomic.cpp; path = Language/CPlusPlus/LibCxxAtomic.cpp; sourceTree = "<group>"; };
+		9428BC2A1C6E64DC002A24D7 /* LibCxxAtomic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LibCxxAtomic.h; path = Language/CPlusPlus/LibCxxAtomic.h; sourceTree = "<group>"; };
 		942B8F761AC48282008C2EEF /* RegisterContextFreeBSD_arm64.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextFreeBSD_arm64.cpp; path = Utility/RegisterContextFreeBSD_arm64.cpp; sourceTree = "<group>"; };
 		942B8F771AC48282008C2EEF /* RegisterContextFreeBSD_arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RegisterContextFreeBSD_arm64.h; path = Utility/RegisterContextFreeBSD_arm64.h; sourceTree = "<group>"; };
 		942B8F791AC482E5008C2EEF /* RegisterContextPOSIX_arm64.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextPOSIX_arm64.cpp; path = Utility/RegisterContextPOSIX_arm64.cpp; sourceTree = "<group>"; };
 		942B8F7A1AC482E5008C2EEF /* RegisterContextPOSIX_arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RegisterContextPOSIX_arm64.h; path = Utility/RegisterContextPOSIX_arm64.h; sourceTree = "<group>"; };
 		942B8F7C1AC48372008C2EEF /* RegisterContextPOSIXCore_arm64.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextPOSIXCore_arm64.cpp; sourceTree = "<group>"; };
 		942B8F7D1AC48372008C2EEF /* RegisterContextPOSIXCore_arm64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RegisterContextPOSIXCore_arm64.h; sourceTree = "<group>"; };
-		9428BC291C6E64DC002A24D7 /* LibCxxAtomic.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxAtomic.cpp; path = Language/CPlusPlus/LibCxxAtomic.cpp; sourceTree = "<group>"; };
-		9428BC2A1C6E64DC002A24D7 /* LibCxxAtomic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LibCxxAtomic.h; path = Language/CPlusPlus/LibCxxAtomic.h; sourceTree = "<group>"; };
 		94380B8019940B0300BFE4A8 /* StringLexer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = StringLexer.h; path = include/lldb/Utility/StringLexer.h; sourceTree = "<group>"; };
 		94380B8119940B0A00BFE4A8 /* StringLexer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringLexer.cpp; path = source/Utility/StringLexer.cpp; sourceTree = "<group>"; };
 		9438287519F5A3F000134CD1 /* SwiftMangledNameVisitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftMangledNameVisitor.h; path = include/lldb/Symbol/SwiftMangledNameVisitor.h; sourceTree = "<group>"; };
@@ -6597,7 +6597,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = "/bin/sh -x";
-			shellScript = "cd $SOURCE_ROOT\n\n# Ensure the build directory exists.\nmkdir -p $CONFIGURATION_BUILD_DIR\n\n# Delete the file if it already exists.\nVCS_FILE=$CONFIGURATION_BUILD_DIR/lldb_revision.h\nif [ -f \"$VCS_FILE\" ]; then\n    rm $VCS_FILE\nfi\n\n# Create it empty.\ntouch $VCS_FILE\n\n# Fill the contents of the file with the revision if we can detect it.\nLLDB_REVISION=$(python $SOURCE_ROOT/scripts/get_vcs_revision.py)\nif [ -n \"$LLDB_REVISION\" ]; then\n    echo \"#define LLDB_REVISION \\\"${LLDB_REVISION}\\\"\" >> $VCS_FILE\nfi";
+			shellScript = "cd $SOURCE_ROOT\n\n# Ensure the build directory exists.\nmkdir -p $CONFIGURATION_BUILD_DIR\n\n# VCS_FILE_OLD is the existing version file.\n# VCS_FILE is the new version file we'll write.\n# We'll only replace the old one if the new one has\n# different content.  If the old file doesn't exist,\n# we'll copy the new one over.\nVCS_FILE_OLD=$CONFIGURATION_BUILD_DIR/lldb_revision.h\nVCS_FILE=$CONFIGURATION_BUILD_DIR/lldb_revision-new.h\n\n# Create it empty.\ntouch $VCS_FILE\n\n# Fill the contents of the file with the revision if we can detect it.\nLLDB_REVISION=$(python $SOURCE_ROOT/scripts/get_vcs_revision.py)\nif [ -n \"$LLDB_REVISION\" ]; then\n    echo \"#define LLDB_REVISION \\\"${LLDB_REVISION}\\\"\" >> $VCS_FILE\nfi\n\nif [ -f \"$VCS_FILE_OLD\" ]; then\n    # The old file exists.  Check if we have new content.  If not,\n    # don't perturb the old file --- that would just force us to\n    # rebuild the driver for no reason.\n    diff \"$VCS_FILE\" \"$VCS_FILE_OLD\" && rm \"$VCS_FILE\" && exit 0\n\n    # If we get here, it means the new revision file content is\n    # different from the old one.  We've got a new version stamp,\n    # use it below.\nfi\n\n# Replace the old VCS file with the new one.\nmv \"$VCS_FILE\" \"$VCS_FILE_OLD\"";
 		};
 		261B5A7511C3FA6F00AABD0A /* Fixup Framework Headers */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -12059,6 +12059,10 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				"OTHER_CFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-Wparentheses",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -12070,10 +12074,6 @@
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
-					"-Wparentheses",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*]" = (
-					"$(inherited)",
 					"-Wparentheses",
 				);
 				OTHER_LDFLAGS = "";
