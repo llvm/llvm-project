@@ -33,7 +33,7 @@ if(CMAKE_VERSION VERSION_LESS 2.8.12)
   set(cmake_2_8_12_PRIVATE)
   if(APPLE)
     set(CMAKE_MACOSX_RPATH On)
-  endif
+  endif()
 else()
   # Use ${cmake_2_8_12_KEYWORD} intead of KEYWORD in target_link_libraries().
   set(cmake_2_8_12_INTERFACE INTERFACE)
