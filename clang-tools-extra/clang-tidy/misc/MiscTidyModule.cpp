@@ -15,6 +15,7 @@
 #include "AssignOperatorSignatureCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "DefinitionsInHeadersCheck.h"
+#include "ForwardDeclarationNamespaceCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncorrectRoundings.h"
 #include "InefficientAlgorithmCheck.h"
@@ -55,6 +56,8 @@ public:
         "misc-bool-pointer-implicit-conversion");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
+    CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
+        "misc-forward-declaration-namespace");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "misc-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectRoundings>(

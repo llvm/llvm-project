@@ -3100,9 +3100,11 @@ ClangASTContext::IsHomogeneousAggregate (lldb::opaque_compiler_type_t type, Comp
                         bool is_hva = false;
                         bool is_hfa = false;
                         clang::QualType base_qual_type;
+                        uint64_t base_bitwidth = 0;
                         for (field_pos = record_decl->field_begin(); field_pos != field_end; ++field_pos)
                         {
                             clang::QualType field_qual_type = field_pos->getType();
+                            uint64_t field_bitwidth = getASTContext()->getTypeSize (qual_type);
                             if (field_qual_type->isFloatingType())
                             {
                                 if (field_qual_type->isComplexType())
@@ -3123,22 +3125,21 @@ ClangASTContext::IsHomogeneousAggregate (lldb::opaque_compiler_type_t type, Comp
                             }
                             else if (field_qual_type->isVectorType() || field_qual_type->isExtVectorType())
                             {
-                                const clang::VectorType *array = field_qual_type.getTypePtr()->getAs<clang::VectorType>();
-                                if (array && array->getNumElements() <= 4)
+                                if (num_fields == 0)
                                 {
-                                    if (num_fields == 0)
-                                        base_qual_type = array->getElementType();
-                                    else
-                                    {
-                                        if (is_hfa)
-                                            return 0;
-                                        is_hva = true;
-                                        if (field_qual_type.getTypePtr() != base_qual_type.getTypePtr())
-                                            return 0;
-                                    }
+                                    base_qual_type = field_qual_type;
+                                    base_bitwidth = field_bitwidth;
                                 }
                                 else
-                                    return 0;
+                                {
+                                    if (is_hfa)
+                                        return 0;
+                                    is_hva = true;
+                                    if (base_bitwidth != field_bitwidth)
+                                        return 0;
+                                    if (field_qual_type.getTypePtr() != base_qual_type.getTypePtr())
+                                        return 0;
+                                }
                             }
                             else
                                 return 0;
