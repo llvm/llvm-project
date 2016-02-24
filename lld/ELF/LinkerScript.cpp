@@ -66,8 +66,9 @@ int LinkerScript::compareSections(StringRef A, StringRef B) {
   return I < J ? -1 : 1;
 }
 
-// Returns true if S matches T. S may contain a meta character '*'
-// which matches zero or more occurrences of any character.
+// Returns true if S matches T. S can contain glob meta-characters.
+// The asterisk ('*') matches zero or more characacters, and the question
+// mark ('?') matches one character.
 static bool matchStr(StringRef S, StringRef T) {
   for (;;) {
     if (S.empty())
@@ -82,7 +83,7 @@ static bool matchStr(StringRef S, StringRef T) {
           return true;
       return false;
     }
-    if (T.empty() || S[0] != T[0])
+    if (T.empty() || (S[0] != T[0] && S[0] != '?'))
       return false;
     S = S.substr(1);
     T = T.substr(1);
