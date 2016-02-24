@@ -1,7 +1,12 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM --check-prefix=ITANIUM-NDIAG --check-prefix=NDIAG %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=MS --check-prefix=NDIAG %s
+// Tests for the cfi-vcall feature:
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=ITANIUM --check-prefix=ITANIUM-NDIAG --check-prefix=NDIAG %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=ITANIUM --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=ITANIUM --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=MS --check-prefix=NDIAG %s
+
+// Tests for the whole-program-vtables feature:
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM %s
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=MS %s
 
 // MS: @[[VTA:[0-9]*]] {{.*}} comdat($"\01??_7A@@6B@")
 // MS: @[[VTB:[0-9]*]] {{.*}} comdat($"\01??_7B@@6B0@@")
@@ -53,9 +58,9 @@ void D::f() {
 void D::h() {
 }
 
-// DIAG: @[[SRC:.*]] = private unnamed_addr constant [{{.*}} x i8] c"{{.*}}cfi-vcall.cpp\00", align 1
+// DIAG: @[[SRC:.*]] = private unnamed_addr constant [{{.*}} x i8] c"{{.*}}bitsets.cpp\00", align 1
 // DIAG: @[[TYPE:.*]] = private unnamed_addr constant { i16, i16, [4 x i8] } { i16 -1, i16 0, [4 x i8] c"'A'\00" }
-// DIAG: @[[BADTYPESTATIC:.*]] = private unnamed_addr global { i8, { [{{.*}} x i8]*, i32, i32 }, { i16, i16, [4 x i8] }* } { i8 0, { [{{.*}} x i8]*, i32, i32 } { [{{.*}} x i8]* @[[SRC]], i32 [[@LINE+23]], i32 3 }, { i16, i16, [4 x i8] }* @[[TYPE]] }
+// DIAG: @[[BADTYPESTATIC:.*]] = private unnamed_addr global { i8, { [{{.*}} x i8]*, i32, i32 }, { i16, i16, [4 x i8] }* } { i8 0, { [{{.*}} x i8]*, i32, i32 } { [{{.*}} x i8]* @[[SRC]], i32 [[@LINE+24]], i32 3 }, { i16, i16, [4 x i8] }* @[[TYPE]] }
 
 // ITANIUM: define void @_Z2afP1A
 // MS: define void @"\01?af@@YAXPEAUA@@@Z"
@@ -63,10 +68,11 @@ void af(A *a) {
   // ITANIUM: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* [[VT:%[^ ]*]], metadata !"_ZTS1A")
   // MS: [[P:%[^ ]*]] = call i1 @llvm.bitset.test(i8* [[VT:%[^ ]*]], metadata !"?AUA@@")
   // DIAG-NEXT: [[VTVALID0:%[^ ]*]] = call i1 @llvm.bitset.test(i8* [[VT]], metadata !"all-vtables")
-  // CHECK-NEXT: br i1 [[P]], label %[[CONTBB:[^ ,]*]], label %[[TRAPBB:[^ ,]*]]
-  // CHECK-NEXT: {{^$}}
+  // VTABLE-OPT: call void @llvm.assume(i1 [[P]])
+  // CFI-NEXT: br i1 [[P]], label %[[CONTBB:[^ ,]*]], label %[[TRAPBB:[^ ,]*]]
+  // CFI-NEXT: {{^$}}
 
-  // CHECK: [[TRAPBB]]
+  // CFI: [[TRAPBB]]
   // NDIAG-NEXT: call void @llvm.trap()
   // NDIAG-NEXT: unreachable
   // DIAG-NEXT: [[VTINT:%[^ ]*]] = ptrtoint i8* [[VT]] to i64
@@ -76,8 +82,8 @@ void af(A *a) {
   // DIAG-RECOVER-NEXT: call void @__ubsan_handle_cfi_check_fail(i8* getelementptr inbounds ({{.*}} @[[BADTYPESTATIC]], i32 0, i32 0), i64 [[VTINT]], i64 [[VTVALID]])
   // DIAG-RECOVER-NEXT: br label %[[CONTBB]]
 
-  // CHECK: [[CONTBB]]
-  // CHECK: call void %
+  // CFI: [[CONTBB]]
+  // CFI: call void %
   a->f();
 }
 
@@ -109,7 +115,7 @@ void dh1(D *d) {
 // MS: define internal void @"\01?df2@@YAXPEAUD@?A@@@Z"
 __attribute__((no_sanitize("cfi")))
 void df2(D *d) {
-  // CHECK-NOT: call i1 @llvm.bitset.test
+  // CFI-NOT: call i1 @llvm.bitset.test
   d->f();
 }
 
@@ -117,7 +123,7 @@ void df2(D *d) {
 // MS: define internal void @"\01?df3@@YAXPEAUD@?A@@@Z"
 __attribute__((no_sanitize("address"))) __attribute__((no_sanitize("cfi-vcall")))
 void df3(D *d) {
-  // CHECK-NOT: call i1 @llvm.bitset.test
+  // CFI-NOT: call i1 @llvm.bitset.test
   d->f();
 }
 

@@ -97,7 +97,9 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
       NSConcreteStackBlock(nullptr), BlockObjectAssign(nullptr),
       BlockObjectDispose(nullptr), BlockDescriptorType(nullptr),
       GenericBlockLiteralType(nullptr), LifetimeStartFn(nullptr),
-      LifetimeEndFn(nullptr), SanitizerMD(new SanitizerMetadata(*this)) {
+      LifetimeEndFn(nullptr), SanitizerMD(new SanitizerMetadata(*this)),
+      WholeProgramVTablesBlacklist(CGO.WholeProgramVTablesBlacklistFiles,
+                                   C.getSourceManager()) {
 
   // Initialize the type cache.
   llvm::LLVMContext &LLVMContext = M.getContext();

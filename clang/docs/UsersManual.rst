@@ -1053,6 +1053,21 @@ are listed below.
    the behavior of sanitizers in the ``cfi`` group to allow checking
    of cross-DSO virtual and indirect calls.
 
+.. option:: -fwhole-program-vtables
+
+   Enable whole-program vtable optimizations, such as single-implementation
+   devirtualization and virtual constant propagation. Requires ``-flto``.
+
+   By default, the compiler will assume that all type hierarchies are
+   closed except those in the ``std`` namespace, the ``stdext`` namespace
+   and classes with the ``__declspec(uuid())`` attribute.
+
+.. option:: -fwhole-program-vtables-blacklist=path
+
+   Allows the user to specify the path to a list of additional classes to
+   blacklist from whole-program vtable optimizations. This list is in the
+   :ref:`CFI blacklist <cfi-blacklist>` format.
+
 .. option:: -fno-assume-sane-operator-new
 
    Don't assume that the C++'s new operator is sane.

@@ -505,7 +505,7 @@ void test31() {
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
   gi = __builtin_object_size(ds1[9].snd, 1);
 
-  // CHECH: store i32 2
+  // CHECK: store i32 2
   gi = __builtin_object_size(&ss[9].snd[0], 1);
 
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)

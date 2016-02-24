@@ -2040,6 +2040,8 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
     ToData.HasIrrelevantDestructor = FromData.HasIrrelevantDestructor;
     ToData.HasConstexprNonCopyMoveConstructor
       = FromData.HasConstexprNonCopyMoveConstructor;
+    ToData.HasDefaultedDefaultConstructor
+      = FromData.HasDefaultedDefaultConstructor;
     ToData.DefaultedDefaultConstructorIsConstexpr
       = FromData.DefaultedDefaultConstructorIsConstexpr;
     ToData.HasConstexprDefaultConstructor

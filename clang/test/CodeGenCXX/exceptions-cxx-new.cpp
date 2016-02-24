@@ -72,6 +72,6 @@ void test_cleanup() {
 // CHECK:   ret void
 
 // CHECK: [[TERMINATE]]
-// CHECK:   cleanuppad within none []
-// CHECK-NEXT:   call void @"\01?terminate@@YAXXZ"()
+// CHECK:   %[[CLEANUPPAD:.*]] = cleanuppad within none []
+// CHECK-NEXT:   call void @"\01?terminate@@YAXXZ"() {{.*}} [ "funclet"(token %[[CLEANUPPAD]]) ]
 

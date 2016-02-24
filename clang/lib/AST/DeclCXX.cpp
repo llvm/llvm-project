@@ -61,6 +61,7 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       DefaultedDestructorIsDeleted(false), HasTrivialSpecialMembers(SMF_All),
       DeclaredNonTrivialSpecialMembers(0), HasIrrelevantDestructor(true),
       HasConstexprNonCopyMoveConstructor(false),
+      HasDefaultedDefaultConstructor(false),
       DefaultedDefaultConstructorIsConstexpr(true),
       HasConstexprDefaultConstructor(false),
       HasNonLiteralTypeFieldsOrBases(false), ComputedVisibleConversions(false),
@@ -497,6 +498,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         data().UserProvidedDefaultConstructor = true;
       if (Constructor->isConstexpr())
         data().HasConstexprDefaultConstructor = true;
+      if (Constructor->isDefaulted())
+        data().HasDefaultedDefaultConstructor = true;
     }
 
     if (!FunTmpl) {

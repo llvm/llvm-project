@@ -5558,6 +5558,7 @@ void ASTWriter::AddCXXDefinitionData(const CXXRecordDecl *D, RecordDataImpl &Rec
   Record.push_back(Data.DeclaredNonTrivialSpecialMembers);
   Record.push_back(Data.HasIrrelevantDestructor);
   Record.push_back(Data.HasConstexprNonCopyMoveConstructor);
+  Record.push_back(Data.HasDefaultedDefaultConstructor);
   Record.push_back(Data.DefaultedDefaultConstructorIsConstexpr);
   Record.push_back(Data.HasConstexprDefaultConstructor);
   Record.push_back(Data.HasNonLiteralTypeFieldsOrBases);

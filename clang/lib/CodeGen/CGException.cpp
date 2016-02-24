@@ -1326,11 +1326,13 @@ llvm::BasicBlock *CodeGenFunction::getTerminateHandler() {
   TerminateHandler = createBasicBlock("terminate.handler");
   Builder.SetInsertPoint(TerminateHandler);
   llvm::Value *Exn = nullptr;
+  SaveAndRestore<llvm::Instruction *> RestoreCurrentFuncletPad(
+      CurrentFuncletPad);
   if (EHPersonality::get(*this).usesFuncletPads()) {
     llvm::Value *ParentPad = CurrentFuncletPad;
     if (!ParentPad)
       ParentPad = llvm::ConstantTokenNone::get(CGM.getLLVMContext());
-    Builder.CreateCleanupPad(ParentPad);
+    CurrentFuncletPad = Builder.CreateCleanupPad(ParentPad);
   } else {
     if (getLangOpts().CPlusPlus)
       Exn = getExceptionFromSlot();

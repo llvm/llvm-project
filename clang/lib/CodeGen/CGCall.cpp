@@ -1595,6 +1595,14 @@ void CodeGenModule::ConstructAttributeList(
     }
   }
 
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
+    // Conservatively, mark all functions and calls in CUDA as convergent
+    // (meaning, they may call an intrinsically convergent op, such as
+    // __syncthreads(), and so can't have certain optimizations applied around
+    // them).  LLVM will remove this attribute where it safely can.
+    FuncAttrs.addAttribute(llvm::Attribute::Convergent);
+  }
+
   ClangToLLVMArgMapping IRFunctionArgs(getContext(), FI);
 
   QualType RetTy = FI.getReturnType();
@@ -3064,16 +3072,6 @@ CodeGenFunction::EmitRuntimeCall(llvm::Value *callee,
   return EmitRuntimeCall(callee, None, name);
 }
 
-/// Emits a simple call (never an invoke) to the given runtime function.
-llvm::CallInst *
-CodeGenFunction::EmitRuntimeCall(llvm::Value *callee,
-                                 ArrayRef<llvm::Value*> args,
-                                 const llvm::Twine &name) {
-  llvm::CallInst *call = Builder.CreateCall(callee, args, name);
-  call->setCallingConv(getRuntimeCC());
-  return call;
-}
-
 // Calls which may throw must have operand bundles indicating which funclet
 // they are nested within.
 static void
@@ -3090,6 +3088,19 @@ getBundlesForFunclet(llvm::Value *Callee, llvm::Instruction *CurrentFuncletPad,
     return;
 
   BundleList.emplace_back("funclet", CurrentFuncletPad);
+}
+
+/// Emits a simple call (never an invoke) to the given runtime function.
+llvm::CallInst *
+CodeGenFunction::EmitRuntimeCall(llvm::Value *callee,
+                                 ArrayRef<llvm::Value*> args,
+                                 const llvm::Twine &name) {
+  SmallVector<llvm::OperandBundleDef, 1> BundleList;
+  getBundlesForFunclet(callee, CurrentFuncletPad, BundleList);
+
+  llvm::CallInst *call = Builder.CreateCall(callee, args, BundleList, name);
+  call->setCallingConv(getRuntimeCC());
+  return call;
 }
 
 /// Emits a call or invoke to the given noreturn runtime function.

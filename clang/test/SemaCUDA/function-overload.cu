@@ -302,3 +302,13 @@ struct m_hdd {
   __host__ __device__ void operator delete(void *ptr) {} // expected-note {{previous declaration is here}}
   __device__ void operator delete(void *ptr) {} // expected-error {{class member cannot be redeclared}}
 };
+
+// __global__ functions can't be overloaded based on attribute
+// difference.
+struct G {
+  friend void friend_of_g(G &arg);
+private:
+  int x;
+};
+__global__ void friend_of_g(G &arg) { int x = arg.x; } // expected-note {{previous definition is here}}
+void friend_of_g(G &arg) { int x = arg.x; } // expected-error {{redefinition of 'friend_of_g'}}

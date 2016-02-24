@@ -134,3 +134,13 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
       VERBATIM)
   endif()
 endif()
+
+set(src "${CMAKE_CURRENT_SOURCE_DIR}/vtables_blacklist.txt")
+set(dst "${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/vtables_blacklist.txt")
+add_custom_command(OUTPUT ${dst}
+                   DEPENDS ${src}
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+                   COMMENT "Copying vtables blacklist")
+add_custom_target(vtables_blacklist DEPENDS ${dst})
+add_dependencies(clang vtables_blacklist)
+install(FILES ${src} DESTINATION lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION})
