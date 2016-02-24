@@ -5,6 +5,11 @@
 
 // Longjmp assembly has not been implemented for mips64 yet
 // XFAIL: mips64
+// ppc64be bots failed with "FileCheck error: '-' is empty".
+// UNSUPPORTED: powerpc64
+// aarch64 bots failed with "called_from_lib suppression 'libignore_lib4.so'
+//                           is matched against 2 libraries".
+// UNSUPPORTED: aarch64
 
 // Test longjmp in ignored lib.
 // It used to crash since we jumped out of ScopedInterceptor scope.
