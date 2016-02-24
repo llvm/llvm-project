@@ -31,12 +31,18 @@ if(CMAKE_VERSION VERSION_LESS 2.8.12)
   # Invalidate a couple of keywords.
   set(cmake_2_8_12_INTERFACE)
   set(cmake_2_8_12_PRIVATE)
+  if(APPLE)
+    set(CMAKE_MACOSX_RPATH On)
+  endif
 else()
   # Use ${cmake_2_8_12_KEYWORD} intead of KEYWORD in target_link_libraries().
   set(cmake_2_8_12_INTERFACE INTERFACE)
   set(cmake_2_8_12_PRIVATE PRIVATE)
   if(POLICY CMP0022)
     cmake_policy(SET CMP0022 NEW) # automatic when 2.8.12 is required
+  endif()
+  if(POLICY CMP0042)
+    cmake_policy(SET CMP0042 NEW) # automatic when 2.8.12 is required
   endif()
 endif()
 
