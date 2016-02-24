@@ -289,6 +289,10 @@ ScheduleTreeOptimizer::prevectSchedBand(__isl_take isl_schedule_node *Node,
       Node, isl_union_set_read_from_str(Ctx, "{ unroll[x]: 1 = 0 }"));
   Node = isl_schedule_node_band_sink(Node);
   Node = isl_schedule_node_child(Node, 0);
+  if (isl_schedule_node_get_type(Node) == isl_schedule_node_leaf)
+    Node = isl_schedule_node_parent(Node);
+  isl_id *LoopMarker = isl_id_alloc(Ctx, "SIMD", nullptr);
+  Node = isl_schedule_node_insert_mark(Node, LoopMarker);
   return Node;
 }
 

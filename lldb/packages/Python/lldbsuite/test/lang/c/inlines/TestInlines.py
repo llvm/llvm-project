@@ -4,8 +4,9 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import lldbutil
 
 class InlinesTestCase(TestBase):
 
@@ -17,6 +18,7 @@ class InlinesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('inlines.c', '// Set break point at this line.')
 
+    @expectedFailureAll("llvm.org/pr26710", oslist=["linux"], compiler="gcc")
     def test(self):
         """Test that local variables are visible in expressions."""
         self.build()

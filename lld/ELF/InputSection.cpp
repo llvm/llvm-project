@@ -25,7 +25,18 @@ template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Header,
                                          Kind SectionKind)
-    : Header(Header), File(File), SectionKind(SectionKind) {}
+    : Header(Header), File(File), SectionKind(SectionKind) {
+  // The garbage collector sets sections' Live bits.
+  // If GC is disabled, all sections are considered live by default.
+  // NB: "Discarded" section is initialized at start-up and when it
+  // happens Config is still null.
+  Live = Config && !Config->GcSections;
+
+  // The ELF spec states that a value of 0 means the section has
+  // no alignment constraits.
+  if (Header)
+    Align = std::max<uintX_t>(Header->sh_addralign, 1);
+}
 
 template <class ELFT> StringRef InputSectionBase<ELFT>::getSectionName() const {
   ErrorOr<StringRef> Name = File->getObj().getSectionName(this->Header);
@@ -68,7 +79,7 @@ InputSectionBase<ELFT>::getOffset(const Elf_Sym &Sym) {
 // Returns a section that Rel relocation is pointing to.
 template <class ELFT>
 InputSectionBase<ELFT> *
-InputSectionBase<ELFT>::getRelocTarget(const Elf_Rel &Rel) {
+InputSectionBase<ELFT>::getRelocTarget(const Elf_Rel &Rel) const {
   // Global symbol
   uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
   if (SymbolBody *B = File->getSymbolBody(SymIndex))
@@ -83,7 +94,7 @@ InputSectionBase<ELFT>::getRelocTarget(const Elf_Rel &Rel) {
 
 template <class ELFT>
 InputSectionBase<ELFT> *
-InputSectionBase<ELFT>::getRelocTarget(const Elf_Rela &Rel) {
+InputSectionBase<ELFT>::getRelocTarget(const Elf_Rela &Rel) const {
   return getRelocTarget(reinterpret_cast<const Elf_Rel &>(Rel));
 }
 
@@ -218,7 +229,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
         SymVA = Body->getGotVA<ELFT>();
       if (Body->IsTls)
         Type = Target->getTlsGotRel(Type);
-    } else if (!Target->needsCopyRel(Type, *Body) &&
+    } else if (!Target->needsCopyRel<ELFT>(Type, *Body) &&
                isa<SharedSymbol<ELFT>>(*Body)) {
       continue;
     } else if (Target->isTlsDynRel(Type, *Body)) {

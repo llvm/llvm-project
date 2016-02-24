@@ -56,14 +56,14 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 ; CHECK: #pragma known-parallel
 ; CHECK: for (int c0 = 0; c0 <= 1535; c0 += 1)
 ; CHECK:   for (int c1 = 0; c1 <= 383; c1 += 1)
-; CHECK:     #pragma simd
+; CHECK:       // SIMD
 ; CHECK:     for (int c2 = 0; c2 <= 3; c2 += 1)
 ; CHECK:       Stmt_for_body3(c0, 4 * c1 + c2);
 ; CHECK: #pragma known-parallel
 ; CHECK: for (int c0 = 0; c0 <= 1535; c0 += 1)
 ; CHECK:   for (int c1 = 0; c1 <= 383; c1 += 1)
 ; CHECK:     for (int c2 = 0; c2 <= 1535; c2 += 1)
-; CHECK:       #pragma simd
+; CHECK:       // SIMD
 ; CHECK:       for (int c3 = 0; c3 <= 3; c3 += 1)
 ; CHECK:         Stmt_for_body8(c0, 4 * c1 + c3, c2);
 

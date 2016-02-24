@@ -127,6 +127,9 @@ namespace process_linux {
                       size_t data_size = 0,
                       long *result = nullptr);
 
+        bool
+        SupportHardwareSingleStepping() const;
+
     protected:
         // ---------------------------------------------------------------------
         // NativeProcessProtocol protected interface
@@ -239,9 +242,6 @@ namespace process_linux {
         void
         MonitorSignal(const siginfo_t &info, NativeThreadLinux &thread, bool exited);
 
-        bool
-        SupportHardwareSingleStepping() const;
-
         Error
         SetupSoftwareSingleStepping(NativeThreadLinux &thread);
 
@@ -284,16 +284,6 @@ namespace process_linux {
         /// message.
         Error
         GetEventMessage(lldb::tid_t tid, unsigned long *message);
-
-        /// Resumes the given thread.  If @p signo is anything but
-        /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
-        Error
-        Resume(lldb::tid_t tid, uint32_t signo);
-
-        /// Single steps the given thread.  If @p signo is anything but
-        /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
-        Error
-        SingleStep(lldb::tid_t tid, uint32_t signo);
 
         void
         NotifyThreadDeath (lldb::tid_t tid);

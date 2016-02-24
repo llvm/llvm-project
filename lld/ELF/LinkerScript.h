@@ -25,12 +25,16 @@ template <class ELFT> class InputSectionBase;
 // This class represents each rule in SECTIONS command.
 class SectionRule {
 public:
-  SectionRule(StringRef D, StringRef S) : Dest(D), SectionPattern(S) {}
+  SectionRule(StringRef D, StringRef S, bool Keep)
+      : Dest(D), Keep(Keep), SectionPattern(S) {}
 
   // Returns true if S should be in Dest section.
   template <class ELFT> bool match(InputSectionBase<ELFT> *S);
 
   StringRef Dest;
+
+  // KEEP command saves unused sections even if --gc-sections is specified.
+  bool Keep = false;
 
 private:
   StringRef SectionPattern;
@@ -47,9 +51,12 @@ public:
 
   template <class ELFT> StringRef getOutputSection(InputSectionBase<ELFT> *S);
   template <class ELFT> bool isDiscarded(InputSectionBase<ELFT> *S);
+  template <class ELFT> bool shouldKeep(InputSectionBase<ELFT> *S);
   int compareSections(StringRef A, StringRef B);
 
 private:
+  template <class ELFT> SectionRule *find(InputSectionBase<ELFT> *S);
+
   // SECTIONS commands.
   std::vector<SectionRule> Sections;
 

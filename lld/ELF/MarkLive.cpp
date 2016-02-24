@@ -21,6 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputSection.h"
+#include "LinkerScript.h"
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -113,11 +114,13 @@ template <class ELFT> void elf2::markLive(SymbolTable<ELFT> *Symtab) {
     }
   }
 
-  // Preserve special sections.
+  // Preserve special sections and those which are specified in linker
+  // script KEEP command.
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab->getObjectFiles())
     for (InputSectionBase<ELFT> *Sec : F->getSections())
-      if (Sec && Sec != &InputSection<ELFT>::Discarded && isReserved(Sec))
-        Enqueue(Sec);
+      if (Sec && Sec != &InputSection<ELFT>::Discarded)
+        if (isReserved(Sec) || Script->shouldKeep<ELFT>(Sec))
+          Enqueue(Sec);
 
   // Mark all reachable sections.
   while (!Q.empty())

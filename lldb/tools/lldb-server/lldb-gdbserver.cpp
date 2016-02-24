@@ -414,13 +414,6 @@ main_gdbserver (int argc, char *argv[])
     signal (SIGPIPE, signal_handler);
     MainLoop::SignalHandleUP sighup_handle = mainloop.RegisterSignal(SIGHUP, sighup_handler, error);
 #endif
-#ifdef __linux__
-    // Block delivery of SIGCHLD on linux. NativeProcessLinux will read it using signalfd.
-    sigset_t set;
-    sigemptyset(&set);
-    sigaddset(&set, SIGCHLD);
-    pthread_sigmask(SIG_BLOCK, &set, NULL);
-#endif
 
     const char *progname = argv[0];
     const char *subcommand = argv[1];

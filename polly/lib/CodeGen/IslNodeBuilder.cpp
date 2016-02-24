@@ -352,9 +352,24 @@ void IslNodeBuilder::createUserVector(__isl_take isl_ast_node *User,
 }
 
 void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
+  auto *Id = isl_ast_node_mark_get_id(Node);
   auto Child = isl_ast_node_mark_get_node(Node);
-  create(Child);
   isl_ast_node_free(Node);
+  // If a child node of a 'SIMD mark' is a loop that has a single iteration,
+  // it will be optimized away and we should skip it.
+  if (!strcmp(isl_id_get_name(Id), "SIMD") &&
+      isl_ast_node_get_type(Child) == isl_ast_node_for) {
+    bool Vector = PollyVectorizerChoice == VECTORIZER_POLLY;
+    int VectorWidth = getNumberOfIterations(Child);
+    if (Vector && 1 < VectorWidth && VectorWidth <= 16)
+      createForVector(Child, VectorWidth);
+    else
+      createForSequential(Child, true);
+    isl_id_free(Id);
+    return;
+  }
+  create(Child);
+  isl_id_free(Id);
 }
 
 void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
@@ -417,7 +432,8 @@ void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
   isl_ast_expr_free(Iterator);
 }
 
-void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For) {
+void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For,
+                                         bool KnownParallel) {
   isl_ast_node *Body;
   isl_ast_expr *Init, *Inc, *Iterator, *UB;
   isl_id *IteratorID;
@@ -428,8 +444,8 @@ void IslNodeBuilder::createForSequential(__isl_take isl_ast_node *For) {
   CmpInst::Predicate Predicate;
   bool Parallel;
 
-  Parallel =
-      IslAstInfo::isParallel(For) && !IslAstInfo::isReductionParallel(For);
+  Parallel = KnownParallel || (IslAstInfo::isParallel(For) &&
+                               !IslAstInfo::isReductionParallel(For));
 
   Body = isl_ast_node_for_get_body(For);
 
@@ -647,7 +663,7 @@ void IslNodeBuilder::createFor(__isl_take isl_ast_node *For) {
     createForParallel(For);
     return;
   }
-  createForSequential(For);
+  createForSequential(For, false);
 }
 
 void IslNodeBuilder::createIf(__isl_take isl_ast_node *If) {

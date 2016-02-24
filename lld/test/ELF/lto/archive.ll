@@ -5,6 +5,8 @@
 ; RUN: llvm-as %s -o %t2.o
 ; RUN: ld.lld -m elf_x86_64 %t2.o %t.a -o %t3 -shared
 ; RUN: llvm-readobj -t %t3 | FileCheck %s
+; RUN: ld.lld -m elf_x86_64 %t2.o --whole-archive %t.a -o %t3 -shared
+; RUN: llvm-readobj -t %t3 | FileCheck %s
 
 
 ; CHECK:      Name: g (

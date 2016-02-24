@@ -209,13 +209,6 @@ std::unique_ptr<InputFile> Lazy::getMember() {
   // read from the library.
   if (MBRef.getBuffer().empty())
     return std::unique_ptr<InputFile>(nullptr);
-
-  if (sys::fs::identify_magic(MBRef.getBuffer()) ==
-      sys::fs::file_magic::bitcode) {
-    auto Ret = make_unique<BitcodeFile>(MBRef);
-    Ret->ArchiveName = File->getName();
-    return std::move(Ret);
-  }
   return createObjectFile(MBRef, File->getName());
 }
 

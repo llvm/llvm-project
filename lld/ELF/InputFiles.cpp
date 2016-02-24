@@ -491,7 +491,12 @@ static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
 
 std::unique_ptr<InputFile> elf2::createObjectFile(MemoryBufferRef MB,
                                                   StringRef ArchiveName) {
-  std::unique_ptr<InputFile> F = createELFFile<ObjectFile>(MB);
+  using namespace sys::fs;
+  std::unique_ptr<InputFile> F;
+  if (identify_magic(MB.getBuffer()) == file_magic::bitcode)
+    F.reset(new BitcodeFile(MB));
+  else
+    F = createELFFile<ObjectFile>(MB);
   F->ArchiveName = ArchiveName;
   return F;
 }

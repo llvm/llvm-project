@@ -113,9 +113,6 @@ void LinkerDriver::addFile(StringRef Path) {
   case file_magic::elf_shared_object:
     Files.push_back(createSharedFile(MBRef));
     return;
-  case sys::fs::file_magic::bitcode:
-    Files.push_back(make_unique<BitcodeFile>(MBRef));
-    return;
   default:
     Files.push_back(createObjectFile(MBRef));
   }

@@ -737,11 +737,10 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *S = cast<InputSection<ELFT>>(C);
   Sections.push_back(S);
   S->OutSec = this;
-  uint32_t Align = S->getAlign();
-  this->updateAlign(Align);
+  this->updateAlign(S->Align);
 
   uintX_t Off = this->Header.sh_size;
-  Off = alignTo(Off, Align);
+  Off = alignTo(Off, S->Align);
   S->OutSecOff = Off;
   Off += S->getSize();
   this->Header.sh_size = Off;
@@ -765,7 +764,7 @@ static int getPriority(StringRef S) {
 template <class ELFT> void OutputSection<ELFT>::reassignOffsets() {
   uintX_t Off = 0;
   for (InputSection<ELFT> *S : Sections) {
-    Off = alignTo(Off, S->getAlign());
+    Off = alignTo(Off, S->Align);
     S->OutSecOff = Off;
     Off += S->getSize();
   }
@@ -885,7 +884,7 @@ elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
   // the group are not allowed. Unfortunately .eh_frame breaks that rule
   // and must be treated specially. For now we just replace the symbol with
   // 0.
-  if (Section == &InputSection<ELFT>::Discarded || !Section->isLive())
+  if (Section == &InputSection<ELFT>::Discarded || !Section->Live)
     return Addend;
 
   uintX_t Offset = Sym->st_value;
@@ -1098,7 +1097,7 @@ void EHOutputSection<ELFT>::addSectionAux(
   const endianness E = ELFT::TargetEndianness;
 
   S->OutSec = this;
-  this->updateAlign(S->getAlign());
+  this->updateAlign(S->Align);
   Sections.push_back(S);
 
   ArrayRef<uint8_t> SecData = S->getSectionData();
@@ -1148,7 +1147,7 @@ void EHOutputSection<ELFT>::addSectionAux(
       if (!HasReloc)
         fatal("FDE doesn't reference another section");
       InputSectionBase<ELFT> *Target = S->getRelocTarget(*RelI);
-      if (Target != &InputSection<ELFT>::Discarded && Target->isLive()) {
+      if (Target != &InputSection<ELFT>::Discarded && Target->Live) {
         uint32_t CieOffset = Offset + 4 - ID;
         auto I = OffsetToIndex.find(CieOffset);
         if (I == OffsetToIndex.end())
@@ -1256,7 +1255,7 @@ template <class ELFT>
 void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *S = cast<MergeInputSection<ELFT>>(C);
   S->OutSec = this;
-  this->updateAlign(S->getAlign());
+  this->updateAlign(S->Align);
 
   ArrayRef<uint8_t> D = S->getSectionData();
   StringRef Data((const char *)D.data(), D.size());

@@ -31,16 +31,27 @@ using namespace lld::elf2;
 LinkerScript *elf2::Script;
 
 template <class ELFT>
-StringRef LinkerScript::getOutputSection(InputSectionBase<ELFT> *S) {
+SectionRule *LinkerScript::find(InputSectionBase<ELFT> *S) {
   for (SectionRule &R : Sections)
     if (R.match(S))
-      return R.Dest;
-  return "";
+      return &R;
+  return nullptr;
+}
+
+template <class ELFT>
+StringRef LinkerScript::getOutputSection(InputSectionBase<ELFT> *S) {
+  SectionRule *R = find(S);
+  return R ? R->Dest : "";
 }
 
 template <class ELFT>
 bool LinkerScript::isDiscarded(InputSectionBase<ELFT> *S) {
   return getOutputSection(S) == "/DISCARD/";
+}
+
+template <class ELFT> bool LinkerScript::shouldKeep(InputSectionBase<ELFT> *S) {
+  SectionRule *R = find(S);
+  return R && R->Keep;
 }
 
 // A compartor to sort output sections. Returns -1 or 1 if both
@@ -124,6 +135,7 @@ private:
   void readSections();
 
   void readOutputSectionDescription();
+  void readSectionPatterns(StringRef OutSec, bool Keep);
 
   StringSaver Saver;
   std::vector<StringRef> Tokens;
@@ -374,16 +386,29 @@ void ScriptParser::readSections() {
     readOutputSectionDescription();
 }
 
+void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
+  expect("(");
+  while (!Error && !skip(")"))
+    Script->Sections.emplace_back(OutSec, next(), Keep);
+}
+
 void ScriptParser::readOutputSectionDescription() {
   StringRef OutSec = next();
   Script->SectionOrder.push_back(OutSec);
   expect(":");
   expect("{");
   while (!Error && !skip("}")) {
-    next(); // Skip input file name.
-    expect("(");
-    while (!Error && !skip(")"))
-      Script->Sections.push_back({OutSec, next()});
+    StringRef Tok = next();
+    if (Tok == "*") {
+      readSectionPatterns(OutSec, false);
+    } else if (Tok == "KEEP") {
+      expect("(");
+      next(); // Skip *
+      readSectionPatterns(OutSec, true);
+      expect(")");
+    } else {
+      setError("Unknown command " + Tok);
+    }
   }
 }
 
@@ -411,6 +436,11 @@ template bool LinkerScript::isDiscarded(InputSectionBase<ELF32LE> *);
 template bool LinkerScript::isDiscarded(InputSectionBase<ELF32BE> *);
 template bool LinkerScript::isDiscarded(InputSectionBase<ELF64LE> *);
 template bool LinkerScript::isDiscarded(InputSectionBase<ELF64BE> *);
+
+template bool LinkerScript::shouldKeep(InputSectionBase<ELF32LE> *);
+template bool LinkerScript::shouldKeep(InputSectionBase<ELF32BE> *);
+template bool LinkerScript::shouldKeep(InputSectionBase<ELF64LE> *);
+template bool LinkerScript::shouldKeep(InputSectionBase<ELF64BE> *);
 
 template bool SectionRule::match(InputSectionBase<ELF32LE> *);
 template bool SectionRule::match(InputSectionBase<ELF32BE> *);

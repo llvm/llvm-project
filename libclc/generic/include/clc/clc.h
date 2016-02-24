@@ -62,6 +62,7 @@
 #include <clc/math/half_rsqrt.h>
 #include <clc/math/half_sqrt.h>
 #include <clc/math/hypot.h>
+#include <clc/math/ilogb.h>
 #include <clc/math/ldexp.h>
 #include <clc/math/log.h>
 #include <clc/math/log10.h>
