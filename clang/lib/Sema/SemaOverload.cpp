@@ -1129,7 +1129,10 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
     // Don't allow mixing of HD with other kinds. This guarantees that
     // we have only one viable function with this signature on any
     // side of CUDA compilation .
-    if ((NewTarget == CFT_HostDevice) || (OldTarget == CFT_HostDevice))
+    // __global__ functions can't be overloaded based on attribute
+    // difference because, like HD, they also exist on both sides.
+    if ((NewTarget == CFT_HostDevice) || (OldTarget == CFT_HostDevice) ||
+        (NewTarget == CFT_Global) || (OldTarget == CFT_Global))
       return false;
 
     // Allow overloading of functions with same signature, but
@@ -5955,34 +5958,27 @@ EnableIfAttr *Sema::CheckEnableIf(FunctionDecl *Function, ArrayRef<Expr *> Args,
   bool ContainsValueDependentExpr = false;
 
   // Convert the arguments.
-  for (unsigned i = 0, e = Args.size(); i != e; ++i) {
-    if (i == 0 && !MissingImplicitThis && isa<CXXMethodDecl>(Function) &&
+  for (unsigned I = 0, E = Args.size(); I != E; ++I) {
+    ExprResult R;
+    if (I == 0 && !MissingImplicitThis && isa<CXXMethodDecl>(Function) &&
         !cast<CXXMethodDecl>(Function)->isStatic() &&
         !isa<CXXConstructorDecl>(Function)) {
       CXXMethodDecl *Method = cast<CXXMethodDecl>(Function);
-      ExprResult R =
-        PerformObjectArgumentInitialization(Args[0], /*Qualifier=*/nullptr,
-                                            Method, Method);
-      if (R.isInvalid()) {
-        InitializationFailed = true;
-        break;
-      }
-      ContainsValueDependentExpr |= R.get()->isValueDependent();
-      ConvertedArgs.push_back(R.get());
+      R = PerformObjectArgumentInitialization(Args[0], /*Qualifier=*/nullptr,
+                                              Method, Method);
     } else {
-      ExprResult R =
-        PerformCopyInitialization(InitializedEntity::InitializeParameter(
-                                                Context,
-                                                Function->getParamDecl(i)),
-                                  SourceLocation(),
-                                  Args[i]);
-      if (R.isInvalid()) {
-        InitializationFailed = true;
-        break;
-      }
-      ContainsValueDependentExpr |= R.get()->isValueDependent();
-      ConvertedArgs.push_back(R.get());
+      R = PerformCopyInitialization(InitializedEntity::InitializeParameter(
+                                        Context, Function->getParamDecl(I)),
+                                    SourceLocation(), Args[I]);
     }
+
+    if (R.isInvalid()) {
+      InitializationFailed = true;
+      break;
+    }
+
+    ContainsValueDependentExpr |= R.get()->isValueDependent();
+    ConvertedArgs.push_back(R.get());
   }
 
   if (InitializationFailed || Trap.hasErrorOccurred())

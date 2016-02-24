@@ -4,7 +4,7 @@
 // CHECK: @"\01l_OBJC_$_CLASS_PROP_LIST_Proto" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_PROTOCOL_$_Proto" = {{.*}} global %struct._protocol_t { {{.*}} i32 96, i32 {{.*}} @"\01l_OBJC_$_CLASS_PROP_LIST_Proto" {{.*}} }
 // CHECK: @"\01l_OBJC_$_CLASS_PROP_LIST_Foo_$_Category" = private global {{.*}} section "__DATA, __objc_const", align 8
-// CHECK: @"\01l_OBJC_$_CATEGORY_Foo_$_Category" = private global %struct._category_t { {{.*}} @"\01l_OBJC_$_CLASS_PROP_LIST_Foo_$_Category" {{.*}} }, section "__DATA, __objc_const", align 8
+// CHECK: @"\01l_OBJC_$_CATEGORY_Foo_$_Category" = private global %struct._category_t { {{.*}} @"\01l_OBJC_$_CLASS_PROP_LIST_Foo_$_Category" {{.*}}, i32 64 }, section "__DATA, __objc_const", align 8
 
 // CHECK: @"\01l_OBJC_$_CLASS_PROP_LIST_C" = private global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"\01l_OBJC_METACLASS_RO_$_C" = private global %struct._class_ro_t { {{.*}} @"\01l_OBJC_$_CLASS_PROP_LIST_C" {{.*}} }, section "__DATA, __objc_const", align 8

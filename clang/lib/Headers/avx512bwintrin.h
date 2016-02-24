@@ -1589,6 +1589,54 @@ _mm512_maskz_cvtepu8_epi16 (__mmask32 __U, __m256i __A)
                                           (__v32hi)(__m512i)(b), \
                                           (p), (__mmask32)(m)); })
 
+#define _mm512_shufflehi_epi16( __A, __imm) __extension__ ({ \
+__builtin_ia32_pshufhw512_mask ((__v32hi)( __A),\
+              ( __imm),\
+               (__v32hi)\
+               _mm512_setzero_hi (),\
+               (__mmask32) -1);\
+})
+
+#define _mm512_mask_shufflehi_epi16( __W, __U, __A ,__imm) __extension__ ({ \
+__builtin_ia32_pshufhw512_mask ((__v32hi) (__A),\
+               (__imm),\
+               (__v32hi)( __W),\
+               (__mmask32)( __U));\
+})
+
+
+#define _mm512_maskz_shufflehi_epi16( __U, __A ,__imm) __extension__ ({ \
+__builtin_ia32_pshufhw512_mask ((__v32hi) (__A),\
+               (__imm),\
+               (__v32hi)\
+               _mm512_setzero_hi (),\
+               (__mmask32)( __U));\
+})
+
+#define _mm512_shufflelo_epi16( __A, __imm) __extension__ ({ \
+__builtin_ia32_pshuflw512_mask ((__v32hi)( __A),\
+              ( __imm),\
+               (__v32hi)\
+               _mm512_setzero_hi (),\
+               (__mmask32) -1);\
+})
+
+
+#define _mm512_mask_shufflelo_epi16( __W, __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_pshuflw512_mask ((__v32hi) (__A),\
+               (__imm),\
+               (__v32hi)( __W),\
+               (__mmask32)( __U));\
+})
+
+
+#define _mm512_maskz_shufflelo_epi16( __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_pshuflw512_mask ((__v32hi) (__A),\
+               (__imm),\
+               (__v32hi)\
+               _mm512_setzero_hi (),\
+               (__mmask32)( __U));\
+})
 
 #undef __DEFAULT_FN_ATTRS
 

@@ -1401,13 +1401,19 @@ public:
 
   /// EmitVTablePtrCheckForCall - Virtual method MD is being called via VTable.
   /// If vptr CFI is enabled, emit a check that VTable is valid.
-  void EmitVTablePtrCheckForCall(const CXXMethodDecl *MD, llvm::Value *VTable,
+  void EmitVTablePtrCheckForCall(const CXXRecordDecl *RD, llvm::Value *VTable,
                                  CFITypeCheckKind TCK, SourceLocation Loc);
 
   /// EmitVTablePtrCheck - Emit a check that VTable is a valid virtual table for
   /// RD using llvm.bitset.test.
   void EmitVTablePtrCheck(const CXXRecordDecl *RD, llvm::Value *VTable,
                           CFITypeCheckKind TCK, SourceLocation Loc);
+
+  /// If whole-program virtual table optimization is enabled, emit an assumption
+  /// that VTable is a member of the type's bitset. Or, if vptr CFI is enabled,
+  /// emit a check that VTable is a member of the type's bitset.
+  void EmitBitSetCodeForVCall(const CXXRecordDecl *RD, llvm::Value *VTable,
+                              SourceLocation Loc);
 
   /// CanDevirtualizeMemberFunctionCalls - Checks whether virtual calls on given
   /// expr can be devirtualized.

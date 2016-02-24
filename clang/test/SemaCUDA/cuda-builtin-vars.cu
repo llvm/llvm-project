@@ -34,20 +34,20 @@ void kernel(int *out) {
 
   out[i++] = warpSize;
   warpSize = 0; // expected-error {{cannot assign to variable 'warpSize' with const-qualified type 'const int'}}
-  // expected-note@cuda_builtin_vars.h:104 {{variable 'warpSize' declared const here}}
+  // expected-note@cuda_builtin_vars.h:* {{variable 'warpSize' declared const here}}
 
   // Make sure we can't construct or assign to the special variables.
   __cuda_builtin_threadIdx_t x; // expected-error {{calling a private constructor of class '__cuda_builtin_threadIdx_t'}}
-  // expected-note@cuda_builtin_vars.h:67 {{declared private here}}
+  // expected-note@cuda_builtin_vars.h:* {{declared private here}}
 
   __cuda_builtin_threadIdx_t y = threadIdx; // expected-error {{calling a private constructor of class '__cuda_builtin_threadIdx_t'}}
-  // expected-note@cuda_builtin_vars.h:67 {{declared private here}}
+  // expected-note@cuda_builtin_vars.h:* {{declared private here}}
 
   threadIdx = threadIdx; // expected-error {{'operator=' is a private member of '__cuda_builtin_threadIdx_t'}}
-  // expected-note@cuda_builtin_vars.h:67 {{declared private here}}
+  // expected-note@cuda_builtin_vars.h:* {{declared private here}}
 
   void *ptr = &threadIdx; // expected-error {{'operator&' is a private member of '__cuda_builtin_threadIdx_t'}}
-  // expected-note@cuda_builtin_vars.h:67 {{declared private here}}
+  // expected-note@cuda_builtin_vars.h:* {{declared private here}}
 
   // Following line should've caused an error as one is not allowed to
   // take address of a built-in variable in CUDA. Alas there's no way

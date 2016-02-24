@@ -382,7 +382,7 @@ __device__ void df() {
 // CHECK:   call void @_ZN4NETCC1IJEEEDpT_(%struct.NETC* %netc)
 // CHECK:   call void @_ZN7EC_I_ECC1Ev(%struct.EC_I_EC* %ec_i_ec)
 // CHECK:   call void @_ZN8EC_I_EC1C1Ev(%struct.EC_I_EC1* %ec_i_ec1)
-// CHECK:   call void @_ZN5T_V_TC1Ev(%struct.T_V_T* %t_v_t) #3
+// CHECK:   call void @_ZN5T_V_TC1Ev(%struct.T_V_T* %t_v_t)
 // CHECK:   call void @_ZN7T_B_NECC1Ev(%struct.T_B_NEC* %t_b_nec)
 // CHECK:   call void @_ZN7T_F_NECC1Ev(%struct.T_F_NEC* %t_f_nec)
 // CHECK:   call void @_ZN8T_FA_NECC1Ev(%struct.T_FA_NEC* %t_fa_nec)

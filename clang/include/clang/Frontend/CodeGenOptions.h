@@ -201,6 +201,9 @@ public:
   /// \brief A list of all -fno-builtin-* function names (e.g., memset).
   std::vector<std::string> NoBuiltinFuncs;
 
+  /// List of blacklist files for the whole-program vtable optimization feature.
+  std::vector<std::string> WholeProgramVTablesBlacklistFiles;
+
 public:
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)

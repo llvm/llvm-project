@@ -2485,15 +2485,35 @@ LeastDerivedClassWithSameLayout(const CXXRecordDecl *RD) {
       RD->bases_begin()->getType()->getAsCXXRecordDecl());
 }
 
-void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXMethodDecl *MD,
+void CodeGenFunction::EmitBitSetCodeForVCall(const CXXRecordDecl *RD,
+                                             llvm::Value *VTable,
+                                             SourceLocation Loc) {
+  if (CGM.getCodeGenOpts().WholeProgramVTables &&
+      !CGM.IsBitSetBlacklistedRecord(RD)) {
+    llvm::Metadata *MD =
+        CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
+    llvm::Value *BitSetName =
+        llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
+
+    llvm::Value *CastedVTable = Builder.CreateBitCast(VTable, Int8PtrTy);
+    llvm::Value *BitSetTest =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::bitset_test),
+                           {CastedVTable, BitSetName});
+    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::assume), BitSetTest);
+  }
+
+  if (SanOpts.has(SanitizerKind::CFIVCall))
+    EmitVTablePtrCheckForCall(RD, VTable, CodeGenFunction::CFITCK_VCall, Loc);
+}
+
+void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
                                                 llvm::Value *VTable,
                                                 CFITypeCheckKind TCK,
                                                 SourceLocation Loc) {
-  const CXXRecordDecl *ClassDecl = MD->getParent();
   if (!SanOpts.has(SanitizerKind::CFICastStrict))
-    ClassDecl = LeastDerivedClassWithSameLayout(ClassDecl);
+    RD = LeastDerivedClassWithSameLayout(RD);
 
-  EmitVTablePtrCheck(ClassDecl, VTable, TCK, Loc);
+  EmitVTablePtrCheck(RD, VTable, TCK, Loc);
 }
 
 void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T,
@@ -2545,7 +2565,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
                                          llvm::Value *VTable,
                                          CFITypeCheckKind TCK,
                                          SourceLocation Loc) {
-  if (CGM.IsCFIBlacklistedRecord(RD))
+  if (CGM.IsBitSetBlacklistedRecord(RD))
     return;
 
   SanitizerScope SanScope(this);

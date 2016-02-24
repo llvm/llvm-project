@@ -1503,10 +1503,7 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
 void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
                                               const CXXRecordDecl *RD,
                                               llvm::GlobalVariable *VTable) {
-  if (!getContext().getLangOpts().Sanitize.has(SanitizerKind::CFIVCall) &&
-      !getContext().getLangOpts().Sanitize.has(SanitizerKind::CFINVCall) &&
-      !getContext().getLangOpts().Sanitize.has(SanitizerKind::CFIDerivedCast) &&
-      !getContext().getLangOpts().Sanitize.has(SanitizerKind::CFIUnrelatedCast))
+  if (!CGM.NeedVTableBitSets())
     return;
 
   llvm::NamedMDNode *BitsetsMD =
@@ -1522,13 +1519,13 @@ void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
           : CharUnits::Zero();
 
   if (Info->PathToBaseWithVPtr.empty()) {
-    if (!CGM.IsCFIBlacklistedRecord(RD))
+    if (!CGM.IsBitSetBlacklistedRecord(RD))
       CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, RD);
     return;
   }
 
   // Add a bitset entry for the least derived base belonging to this vftable.
-  if (!CGM.IsCFIBlacklistedRecord(Info->PathToBaseWithVPtr.back()))
+  if (!CGM.IsBitSetBlacklistedRecord(Info->PathToBaseWithVPtr.back()))
     CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint,
                                 Info->PathToBaseWithVPtr.back());
 
@@ -1548,12 +1545,12 @@ void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
       Offset = VBI->second.VBaseOffset;
     if (!Offset.isZero())
       return;
-    if (!CGM.IsCFIBlacklistedRecord(DerivedRD))
+    if (!CGM.IsBitSetBlacklistedRecord(DerivedRD))
       CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, DerivedRD);
   }
 
   // Finally do the same for the most derived class.
-  if (Info->FullOffsetInMDC.isZero() && !CGM.IsCFIBlacklistedRecord(RD))
+  if (Info->FullOffsetInMDC.isZero() && !CGM.IsBitSetBlacklistedRecord(RD))
     CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, RD);
 }
 
@@ -1822,9 +1819,9 @@ llvm::Value *MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
   MicrosoftVTableContext::MethodVFTableLocation ML =
       CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
-  if (CGF.SanOpts.has(SanitizerKind::CFIVCall))
-    CGF.EmitVTablePtrCheck(getClassAtVTableLocation(getContext(), GD, ML),
-                           VTable, CodeGenFunction::CFITCK_VCall, Loc);
+  if (CGM.NeedVTableBitSets())
+    CGF.EmitBitSetCodeForVCall(getClassAtVTableLocation(getContext(), GD, ML),
+                               VTable, Loc);
 
   llvm::Value *VFuncPtr =
       Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");

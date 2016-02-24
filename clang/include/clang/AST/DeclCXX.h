@@ -421,6 +421,10 @@ class CXXRecordDecl : public RecordDecl {
     /// constructor which is neither the copy nor move constructor.
     bool HasConstexprNonCopyMoveConstructor : 1;
 
+    /// \brief True if this class has a (possibly implicit) defaulted default
+    /// constructor.
+    bool HasDefaultedDefaultConstructor : 1;
+
     /// \brief True if a defaulted default constructor for this class would
     /// be constexpr.
     bool DefaultedDefaultConstructorIsConstexpr : 1;
@@ -1278,7 +1282,8 @@ public:
   /// per core issue 253.
   bool allowConstDefaultInit() const {
     return !data().HasUninitializedFields ||
-           hasUserProvidedDefaultConstructor();
+           !(data().HasDefaultedDefaultConstructor ||
+             needsImplicitDefaultConstructor());
   }
 
   /// \brief Determine whether this class has a destructor which has no

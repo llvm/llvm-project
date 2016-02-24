@@ -489,6 +489,8 @@ private:
   /// MDNodes.
   llvm::DenseMap<QualType, llvm::Metadata *> MetadataIdMap;
 
+  SanitizerBlacklist WholeProgramVTablesBlacklist;
+
 public:
   CodeGenModule(ASTContext &C, const HeaderSearchOptions &headersearchopts,
                 const PreprocessorOptions &ppopts,
@@ -1108,9 +1110,12 @@ public:
   /// \param D Threadprivate declaration.
   void EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D);
 
-  /// Returns whether the given record is blacklisted from control flow
-  /// integrity checks.
-  bool IsCFIBlacklistedRecord(const CXXRecordDecl *RD);
+  /// Returns whether we need bit sets attached to vtables.
+  bool NeedVTableBitSets();
+
+  /// Returns whether the given record is blacklisted from whole-program
+  /// transformations (i.e. CFI or whole-program vtable optimization).
+  bool IsBitSetBlacklistedRecord(const CXXRecordDecl *RD);
 
   /// Emit bit set entries for the given vtable using the given layout if
   /// vptr CFI is enabled.

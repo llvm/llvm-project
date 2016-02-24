@@ -74,6 +74,33 @@ struct some_init_container_ctor {
 struct no_fields_container {
   no_fields nf;
 };
+struct param_pack_ctor {
+  template <typename... T>
+  param_pack_ctor(T...);
+  int n;
+};
+struct param_pack_ctor_field {
+  param_pack_ctor ndc;
+};
+struct multi_param_pack_ctor {
+  template <typename... T, typename... U>
+  multi_param_pack_ctor(T..., U..., int f = 0);
+  int n;
+};
+struct ignored_template_ctor_and_def {
+  template <class T> ignored_template_ctor_and_def(T* f = nullptr);
+  ignored_template_ctor_and_def() = default;
+  int field;
+};
+template<bool, typename = void> struct enable_if {};
+template<typename T> struct enable_if<true, T> { typedef T type; };
+struct multi_param_pack_and_defaulted {
+  template <typename... T,
+            typename enable_if<sizeof...(T) != 0>::type* = nullptr>
+  multi_param_pack_and_defaulted(T...);
+  multi_param_pack_and_defaulted() = default;
+  int n;
+};
 
 void constobjs() {
   const no_fields nf; // ok
@@ -88,6 +115,12 @@ void constobjs() {
   const some_init_container sicon; // expected-error {{default initialization of an object of const type 'const some_init_container' without a user-provided default constructor}}
   const some_init_container_ctor siconc; // ok
   const no_fields_container nfc; // ok
+  const param_pack_ctor ppc; // ok
+  const param_pack_ctor_field ppcf; // ok
+  const multi_param_pack_ctor mppc; // ok
+  const multi_param_pack_and_defaulted mppad; // expected-error {{default initialization of an object of const type 'const multi_param_pack_and_defaulted' without a user-provided default constructor}}
+  const ignored_template_ctor_and_def itcad; // expected-error {{default initialization of an object of const type 'const ignored_template_ctor_and_def' without a user-provided default constructor}}
+
 }
 
 struct non_const_derived : non_const_copy {

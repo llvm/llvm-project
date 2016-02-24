@@ -163,39 +163,17 @@ int Compilation::ExecuteCommand(const Command &C,
   return ExecutionFailed ? 1 : Res;
 }
 
-typedef SmallVectorImpl< std::pair<int, const Command *> > FailingCommandList;
-
-static bool ActionFailed(const Action *A,
-                         const FailingCommandList &FailingCommands) {
-
-  if (FailingCommands.empty())
-    return false;
-
-  for (FailingCommandList::const_iterator CI = FailingCommands.begin(),
-         CE = FailingCommands.end(); CI != CE; ++CI)
-    if (A == &(CI->second->getSource()))
-      return true;
-
-  for (const Action *AI : A->inputs())
-    if (ActionFailed(AI, FailingCommands))
-      return true;
-
-  return false;
-}
-
-static bool InputsOk(const Command &C,
-                     const FailingCommandList &FailingCommands) {
-  return !ActionFailed(&C.getSource(), FailingCommands);
-}
-
-void Compilation::ExecuteJobs(const JobList &Jobs,
-                              FailingCommandList &FailingCommands) const {
+void Compilation::ExecuteJobs(
+    const JobList &Jobs,
+    SmallVectorImpl<std::pair<int, const Command *>> &FailingCommands) const {
   for (const auto &Job : Jobs) {
-    if (!InputsOk(Job, FailingCommands))
-      continue;
     const Command *FailingCommand = nullptr;
-    if (int Res = ExecuteCommand(Job, FailingCommand))
+    if (int Res = ExecuteCommand(Job, FailingCommand)) {
       FailingCommands.push_back(std::make_pair(Res, FailingCommand));
+      // Bail as soon as one command fails, so we don't output duplicate error
+      // messages if we die on e.g. the same file.
+      return;
+    }
   }
 }
 
