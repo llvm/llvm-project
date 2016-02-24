@@ -1433,7 +1433,7 @@ multiclass V_CNDMASK <vop2 op, string name> {
 
   defm _e64  : VOP3_m <
       op, VOP_CNDMASK.Outs, VOP_CNDMASK.Ins64,
-      name#!cast<string>(VOP_CNDMASK.Asm64), [], name, 3>;
+      name#!cast<string>(VOP_CNDMASK.Asm64), [], name, 3, 0>;
 }
 
 defm V_CNDMASK_B32 : V_CNDMASK<vop2<0x0>, "v_cndmask_b32">;

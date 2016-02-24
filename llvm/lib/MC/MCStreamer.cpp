@@ -174,6 +174,11 @@ MCDwarfFrameInfo *MCStreamer::getCurrentDwarfFrameInfo() {
   return &DwarfFrameInfos.back();
 }
 
+bool MCStreamer::hasUnfinishedDwarfFrameInfo() {
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  return CurFrame && !CurFrame->End;
+}
+
 void MCStreamer::EnsureValidDwarfFrame() {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame || CurFrame->End)
@@ -238,8 +243,7 @@ void MCStreamer::EmitCFISections(bool EH, bool Debug) {
 }
 
 void MCStreamer::EmitCFIStartProc(bool IsSimple) {
-  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
-  if (CurFrame && !CurFrame->End)
+  if (hasUnfinishedDwarfFrameInfo())
     report_fatal_error("Starting a frame before finishing the previous one!");
 
   MCDwarfFrameInfo Frame;

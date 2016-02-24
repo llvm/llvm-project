@@ -278,8 +278,8 @@ define <8 x float> @merge_8f32_2f32_23z5(<2 x float>* %ptr) nounwind uwtable noi
 ; X32-AVX-LABEL: merge_8f32_2f32_23z5:
 ; X32-AVX:       # BB#0:
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX-NEXT:    vxorpd %ymm0, %ymm0, %ymm0
-; X32-AVX-NEXT:    vblendpd {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3]
+; X32-AVX-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; X32-AVX-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3],ymm0[4,5],mem[6,7]
 ; X32-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds <2 x float>, <2 x float>* %ptr, i64 2
   %ptr1 = getelementptr inbounds <2 x float>, <2 x float>* %ptr, i64 3

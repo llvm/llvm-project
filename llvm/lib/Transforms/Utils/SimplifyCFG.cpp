@@ -3521,6 +3521,12 @@ static bool mergeCleanupPad(CleanupReturnInst *RI) {
 }
 
 bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
+  // It is possible to transiantly have an undef cleanuppad operand because we
+  // have deleted some, but not all, dead blocks.
+  // Eventually, this block will be deleted.
+  if (isa<UndefValue>(RI->getOperand(0)))
+    return false;
+
   if (removeEmptyCleanup(RI))
     return true;
 

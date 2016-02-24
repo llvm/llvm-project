@@ -117,12 +117,14 @@ define <4 x float> @insertps_undef_input0(<4 x float> %a0, <4 x float> %a1) {
 define <4 x float> @insertps_undef_input1(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: insertps_undef_input1:
 ; SSE:       # BB#0:
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,zero,zero,xmm0[3]
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insertps_undef_input1:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,zero,zero,xmm0[3]
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3]
 ; AVX-NEXT:    retq
   %res0 = fadd <4 x float> %a1, <float 1.0, float 1.0, float 1.0, float 1.0>
   %res1 = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %res0, i8 21)

@@ -498,8 +498,8 @@ define <8 x i32> @constant_rotate_v8i32(<8 x i32> %a) nounwind {
   ret <8 x i32> %or
 }
 
-define <16 x i16> @constant_rotate_v8i16(<16 x i16> %a) nounwind {
-; AVX1-LABEL: constant_rotate_v8i16:
+define <16 x i16> @constant_rotate_v16i16(<16 x i16> %a) nounwind {
+; AVX1-LABEL: constant_rotate_v16i16:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
@@ -533,7 +533,7 @@ define <16 x i16> @constant_rotate_v8i16(<16 x i16> %a) nounwind {
 ; AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: constant_rotate_v8i16:
+; AVX2-LABEL: constant_rotate_v16i16:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm1
 ; AVX2-NEXT:    vpxor %ymm2, %ymm2, %ymm2
@@ -550,7 +550,7 @@ define <16 x i16> @constant_rotate_v8i16(<16 x i16> %a) nounwind {
 ; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; XOPAVX1-LABEL: constant_rotate_v8i16:
+; XOPAVX1-LABEL: constant_rotate_v16i16:
 ; XOPAVX1:       # BB#0:
 ; XOPAVX1-NEXT:    vpshlw {{.*}}(%rip), %xmm0, %xmm1
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
@@ -565,7 +565,7 @@ define <16 x i16> @constant_rotate_v8i16(<16 x i16> %a) nounwind {
 ; XOPAVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
-; XOPAVX2-LABEL: constant_rotate_v8i16:
+; XOPAVX2-LABEL: constant_rotate_v16i16:
 ; XOPAVX2:       # BB#0:
 ; XOPAVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm1
 ; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
