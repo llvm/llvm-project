@@ -70,7 +70,7 @@ clang::createInvocationFromCommandLine(ArrayRef<const char *> ArgList,
     for (auto &A : C->getActions()){
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
-        A = *A->begin();
+        A = *A->input_begin();
       if (isa<driver::CudaDeviceAction>(A)) {
         CudaCompilation = true;
         break;

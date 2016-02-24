@@ -967,12 +967,9 @@ void AggExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
   Address ArgValue = Address::invalid();
   Address ArgPtr = CGF.EmitVAArg(VE, ArgValue);
 
+  // If EmitVAArg fails, emit an error.
   if (!ArgPtr.isValid()) {
-    // If EmitVAArg fails, we fall back to the LLVM instruction.
-    llvm::Value *Val = Builder.CreateVAArg(ArgValue.getPointer(),
-                                           CGF.ConvertType(VE->getType()));
-    if (!Dest.isIgnored())
-      Builder.CreateStore(Val, Dest.getAddress());
+    CGF.ErrorUnsupported(VE, "aggregate va_arg expression");
     return;
   }
 

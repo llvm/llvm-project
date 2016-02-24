@@ -176,8 +176,8 @@ static bool ActionFailed(const Action *A,
     if (A == &(CI->second->getSource()))
       return true;
 
-  for (Action::const_iterator AI = A->begin(), AE = A->end(); AI != AE; ++AI)
-    if (ActionFailed(*AI, FailingCommands))
+  for (const Action *AI : A->inputs())
+    if (ActionFailed(AI, FailingCommands))
       return true;
 
   return false;

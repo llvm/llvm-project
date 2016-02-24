@@ -41,8 +41,10 @@ namespace driver {
 class Action {
 public:
   typedef ActionList::size_type size_type;
-  typedef ActionList::iterator iterator;
-  typedef ActionList::const_iterator const_iterator;
+  typedef ActionList::iterator input_iterator;
+  typedef ActionList::const_iterator input_const_iterator;
+  typedef llvm::iterator_range<input_iterator> input_range;
+  typedef llvm::iterator_range<input_const_iterator> input_const_range;
 
   enum ActionClass {
     InputClass = 0,
@@ -98,10 +100,14 @@ public:
 
   size_type size() const { return Inputs.size(); }
 
-  iterator begin() { return Inputs.begin(); }
-  iterator end() { return Inputs.end(); }
-  const_iterator begin() const { return Inputs.begin(); }
-  const_iterator end() const { return Inputs.end(); }
+  input_iterator input_begin() { return Inputs.begin(); }
+  input_iterator input_end() { return Inputs.end(); }
+  input_range inputs() { return input_range(input_begin(), input_end()); }
+  input_const_iterator input_begin() const { return Inputs.begin(); }
+  input_const_iterator input_end() const { return Inputs.end(); }
+  input_const_range inputs() const {
+    return input_const_range(input_begin(), input_end());
+  }
 };
 
 class InputAction : public Action {

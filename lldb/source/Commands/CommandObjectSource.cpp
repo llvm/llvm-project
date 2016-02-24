@@ -35,7 +35,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-
 #pragma mark CommandObjectSourceInfo
 //----------------------------------------------------------------------
 // CommandObjectSourceInfo - debug line entries dumping command
@@ -43,13 +42,12 @@ using namespace lldb_private;
 
 class CommandObjectSourceInfo : public CommandObjectParsed
 {
-
     class CommandOptions : public Options
     {
     public:
         CommandOptions (CommandInterpreter &interpreter) : Options(interpreter) {}
 
-        ~CommandOptions () override {}
+        ~CommandOptions() override = default;
 
         Error
         SetOptionValue (uint32_t option_idx, const char *option_arg) override
@@ -119,6 +117,7 @@ class CommandObjectSourceInfo : public CommandObjectParsed
         {
             return g_option_table;
         }
+
         static OptionDefinition g_option_table[];
 
         // Instance variables to hold the values for command options.
@@ -133,15 +132,18 @@ class CommandObjectSourceInfo : public CommandObjectParsed
     };
 
 public:
-    CommandObjectSourceInfo (CommandInterpreter &interpreter)
-        : CommandObjectParsed(interpreter, "source info", "Display source line information (as specified) based "
-                                                          "on the current executable's debug info.",
-                              NULL, eCommandRequiresTarget),
-          m_options(interpreter)
+    CommandObjectSourceInfo (CommandInterpreter &interpreter) :
+        CommandObjectParsed(interpreter,
+                            "source info",
+                            "Display source line information (as specified) based "
+                            "on the current executable's debug info.",
+                            nullptr,
+                            eCommandRequiresTarget),
+        m_options(interpreter)
     {
     }
 
-    ~CommandObjectSourceInfo () override {}
+    ~CommandObjectSourceInfo() override = default;
 
     Options *
     GetOptions () override
@@ -150,7 +152,6 @@ public:
     }
 
 protected:
-
     // Dump the line entries in each symbol context.
     // Return the number of entries found.
     // If module_list is set, only dump lines contained in one of the modules.
@@ -172,7 +173,7 @@ protected:
         if (file_spec)
         {
             assert(file_spec.GetFilename().AsCString());
-            has_path = (file_spec.GetDirectory().AsCString() != 0);
+            has_path = (file_spec.GetDirectory().AsCString() != nullptr);
         }
     
         // Dump all the line entries for the file in the list.
@@ -240,7 +241,7 @@ protected:
         if (cu)
         {
             assert(file_spec.GetFilename().AsCString());
-            bool has_path = (file_spec.GetDirectory().AsCString() != 0);
+            bool has_path = (file_spec.GetDirectory().AsCString() != nullptr);
             const FileSpecList &cu_file_list = cu->GetSupportFiles();
             size_t file_idx = cu_file_list.FindFileIndex(0, file_spec, has_path);
             if (file_idx != UINT32_MAX)
@@ -390,7 +391,7 @@ protected:
                     else
                     {
                         StreamString addr_strm;
-                        so_addr.Dump(&addr_strm, NULL, Address::DumpStyleModuleWithFileAddress);
+                        so_addr.Dump(&addr_strm, nullptr, Address::DumpStyleModuleWithFileAddress);
                         error_strm.Printf("Address 0x%" PRIx64 " resolves to %s, but there is"
                                           " no source information available for this address.\n",
                                           addr, addr_strm.GetData());
@@ -399,7 +400,7 @@ protected:
                 else
                 {
                     StreamString addr_strm;
-                    so_addr.Dump(&addr_strm, NULL, Address::DumpStyleModuleWithFileAddress);
+                    so_addr.Dump(&addr_strm, nullptr, Address::DumpStyleModuleWithFileAddress);
                     error_strm.Printf("Address 0x%" PRIx64 " resolves to %s, but it cannot"
                                       " be found in any modules.\n",
                                       addr, addr_strm.GetData());
@@ -573,7 +574,7 @@ protected:
     DumpLinesForFrame (CommandReturnObject &result)
     {
         StackFrame *cur_frame = m_exe_ctx.GetFramePtr();
-        if (cur_frame == NULL)
+        if (cur_frame == nullptr)
         {
             result.AppendError("No selected frame to use to find the default source.");
             return false;
@@ -613,10 +614,10 @@ protected:
         }
 
         Target *target = m_exe_ctx.GetTargetPtr();
-        if (target == NULL)
+        if (target == nullptr)
         {
             target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-            if (target == NULL)
+            if (target == nullptr)
             {
                 result.AppendError("invalid target, create a debug target using the "
                                    "'target create' command.");
@@ -631,7 +632,7 @@ protected:
 
         // Collect the list of modules to search.
         m_module_list.Clear();
-        if (m_options.modules.size() > 0)
+        if (!m_options.modules.empty())
         {
             for (size_t i = 0, e = m_options.modules.size(); i < e; ++i)
             {
@@ -699,26 +700,25 @@ protected:
 };
 
 OptionDefinition CommandObjectSourceInfo::CommandOptions::g_option_table[] = {
-    {LLDB_OPT_SET_ALL, false, "count", 'c', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeCount,
+    {LLDB_OPT_SET_ALL, false, "count", 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,
      "The number of line entries to display."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "shlib", 's', OptionParser::eRequiredArgument, NULL, NULL,
+    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "shlib", 's', OptionParser::eRequiredArgument, nullptr, nullptr,
      CommandCompletions::eModuleCompletion, eArgTypeShlibName,
      "Look up the source in the given module or shared library (can be "
      "specified more than once)."},
-    {LLDB_OPT_SET_1, false, "file", 'f', OptionParser::eRequiredArgument, NULL, NULL,
+    {LLDB_OPT_SET_1, false, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr,
      CommandCompletions::eSourceFileCompletion, eArgTypeFilename, "The file from which to display source."},
-    {LLDB_OPT_SET_1, false, "line", 'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLineNum,
+    {LLDB_OPT_SET_1, false, "line", 'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,
      "The line number at which to start the displaying lines."},
-    {LLDB_OPT_SET_1, false, "end-line", 'e', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLineNum,
+    {LLDB_OPT_SET_1, false, "end-line", 'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,
      "The line number at which to stop displaying lines."},
-    {LLDB_OPT_SET_2, false, "name", 'n', OptionParser::eRequiredArgument, NULL, NULL,
+    {LLDB_OPT_SET_2, false, "name", 'n', OptionParser::eRequiredArgument, nullptr, nullptr,
      CommandCompletions::eSymbolCompletion, eArgTypeSymbol, "The name of a function whose source to display."},
-    {LLDB_OPT_SET_3, false, "address", 'a', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeAddressOrExpression,
+    {LLDB_OPT_SET_3, false, "address", 'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddressOrExpression,
      "Lookup the address and display the source information for the "
      "corresponding file and line."},
-    {0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL}
+    {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
 };
-
 
 #pragma mark CommandObjectSourceList
 //-------------------------------------------------------------------------
@@ -727,7 +727,6 @@ OptionDefinition CommandObjectSourceInfo::CommandOptions::g_option_table[] = {
 
 class CommandObjectSourceList : public CommandObjectParsed
 {
-
     class CommandOptions : public Options
     {
     public:
@@ -736,9 +735,7 @@ class CommandObjectSourceList : public CommandObjectParsed
         {
         }
 
-        ~CommandOptions () override
-        {
-        }
+        ~CommandOptions() override = default;
 
         Error
         SetOptionValue (uint32_t option_idx, const char *option_arg) override
@@ -810,6 +807,7 @@ class CommandObjectSourceList : public CommandObjectParsed
         {
             return g_option_table;
         }
+
         static OptionDefinition g_option_table[];
 
         // Instance variables to hold the values for command options.
@@ -826,19 +824,16 @@ class CommandObjectSourceList : public CommandObjectParsed
  
 public:   
     CommandObjectSourceList(CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "source list",
-                             "Display source code (as specified) based on the current executable's debug info.",
-                             NULL,
-                             eCommandRequiresTarget), 
+        CommandObjectParsed(interpreter,
+                            "source list",
+                            "Display source code (as specified) based on the current executable's debug info.",
+                            nullptr,
+                            eCommandRequiresTarget),
         m_options (interpreter)
     {
     }
 
-    ~CommandObjectSourceList () override
-    {
-    }
-
+    ~CommandObjectSourceList() override = default;
 
     Options *
     GetOptions () override
@@ -853,7 +848,7 @@ public:
         // values for this invocation...  I have to scan the arguments directly.
         size_t num_args = current_command_args.GetArgumentCount();
         bool is_reverse = false;
-        for (size_t i = 0 ; i < num_args; i++)
+        for (size_t i = 0; i < num_args; i++)
         {
             const char *arg = current_command_args.GetArgumentAtIndex(i);
             if (arg && (strcmp(arg, "-r") == 0 || strcmp(arg, "--reverse") == 0))
@@ -875,7 +870,6 @@ public:
     }
 
 protected:
-
     struct SourceInfo
     {
         ConstString function;
@@ -950,7 +944,7 @@ protected:
             uint32_t end_line;
             FileSpec end_file;
             
-            if (sc.block == NULL)
+            if (sc.block == nullptr)
             {
                 // Not an inlined function
                 sc.function->GetStartLineSourceInfo (start_file, start_line);
@@ -1194,7 +1188,7 @@ protected:
                 // in all modules
                 const ModuleList &module_list = target->GetImages();
                 const size_t num_modules = module_list.GetSize();
-                for (size_t i=0; i<num_modules; ++i)
+                for (size_t i = 0; i < num_modules; ++i)
                 {
                     ModuleSP module_sp (module_list.GetModuleAtIndex(i));
                     if (module_sp && module_sp->ResolveFileAddress(m_options.address, so_addr))
@@ -1231,7 +1225,7 @@ protected:
                         }
                         else
                         {
-                            so_addr.Dump(&error_strm, NULL, Address::DumpStyleModuleWithFileAddress);
+                            so_addr.Dump(&error_strm, nullptr, Address::DumpStyleModuleWithFileAddress);
                             result.AppendErrorWithFormat("address resolves to %s, but there is no line table information available for this address.\n",
                                                          error_strm.GetData());
                             result.SetStatus (eReturnStatusFailed);
@@ -1248,7 +1242,7 @@ protected:
                 }
             }
             uint32_t num_matches = sc_list.GetSize();
-            for (uint32_t i=0; i<num_matches; ++i)
+            for (uint32_t i = 0; i < num_matches; ++i)
             {
                 SymbolContext sc;
                 sc_list.GetContextAtIndex(i, sc);
@@ -1339,7 +1333,6 @@ protected:
                 {
                     result.SetStatus (eReturnStatusSuccessFinishResult);
                 }
-
             }
         }
         else
@@ -1350,7 +1343,7 @@ protected:
             SymbolContextList sc_list;
             size_t num_matches = 0;
             
-            if (m_options.modules.size() > 0)
+            if (!m_options.modules.empty())
             {
                 ModuleList matching_modules;
                 for (size_t i = 0, e = m_options.modules.size(); i < e; ++i)
@@ -1389,7 +1382,7 @@ protected:
             if (num_matches > 1)
             {
                 bool got_multiple = false;
-                FileSpec *test_cu_spec = NULL;
+                FileSpec *test_cu_spec = nullptr;
 
                 for (unsigned i = 0; i < num_matches; i++)
                 {
@@ -1461,27 +1454,27 @@ protected:
     {
         if (m_breakpoint_locations.GetFileLineMatches().GetSize() > 0)
             return &m_breakpoint_locations.GetFileLineMatches();
-        return NULL;
+        return nullptr;
     }
+
     CommandOptions m_options;
     FileLineResolver m_breakpoint_locations;
     std::string    m_reverse_name;
-
 };
 
 OptionDefinition
 CommandObjectSourceList::CommandOptions::g_option_table[] =
 {
-{ LLDB_OPT_SET_ALL, false, "count",  'c', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeCount,   "The number of source lines to display."},
+{ LLDB_OPT_SET_ALL, false, "count",  'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,   "The number of source lines to display."},
 { LLDB_OPT_SET_1  |
-  LLDB_OPT_SET_2  , false, "shlib",  's', OptionParser::eRequiredArgument, NULL, NULL, CommandCompletions::eModuleCompletion, eArgTypeShlibName, "Look up the source file in the given shared library."},
-{ LLDB_OPT_SET_ALL, false, "show-breakpoints", 'b', OptionParser::eNoArgument, NULL, NULL, 0, eArgTypeNone, "Show the line table locations from the debug information that indicate valid places to set source level breakpoints."},
-{ LLDB_OPT_SET_1  , false, "file",   'f', OptionParser::eRequiredArgument, NULL, NULL, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,    "The file from which to display source."},
-{ LLDB_OPT_SET_1  , false, "line",   'l', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeLineNum,    "The line number at which to start the display source."},
-{ LLDB_OPT_SET_2  , false, "name",   'n', OptionParser::eRequiredArgument, NULL, NULL, CommandCompletions::eSymbolCompletion, eArgTypeSymbol,    "The name of a function whose source to display."},
-{ LLDB_OPT_SET_3  , false, "address",'a', OptionParser::eRequiredArgument, NULL, NULL, 0, eArgTypeAddressOrExpression, "Lookup the address and display the source information for the corresponding file and line."},
-{ LLDB_OPT_SET_4, false, "reverse", 'r', OptionParser::eNoArgument, NULL, NULL, 0, eArgTypeNone, "Reverse the listing to look backwards from the last displayed block of source."},
-{ 0, false, NULL, 0, 0, NULL, NULL, 0, eArgTypeNone, NULL }
+  LLDB_OPT_SET_2  , false, "shlib",  's', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eModuleCompletion, eArgTypeShlibName, "Look up the source file in the given shared library."},
+{ LLDB_OPT_SET_ALL, false, "show-breakpoints", 'b', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Show the line table locations from the debug information that indicate valid places to set source level breakpoints."},
+{ LLDB_OPT_SET_1  , false, "file",   'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,    "The file from which to display source."},
+{ LLDB_OPT_SET_1  , false, "line",   'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,    "The line number at which to start the display source."},
+{ LLDB_OPT_SET_2  , false, "name",   'n', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeSymbol,    "The name of a function whose source to display."},
+{ LLDB_OPT_SET_3  , false, "address",'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddressOrExpression, "Lookup the address and display the source information for the corresponding file and line."},
+{ LLDB_OPT_SET_4, false, "reverse", 'r', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Reverse the listing to look backwards from the last displayed block of source."},
+{ 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
 };
 
 #pragma mark CommandObjectMultiwordSource
@@ -1499,7 +1492,4 @@ CommandObjectMultiwordSource::CommandObjectMultiwordSource (CommandInterpreter &
     LoadSubCommand ("list",   CommandObjectSP (new CommandObjectSourceList (interpreter)));
 }
 
-CommandObjectMultiwordSource::~CommandObjectMultiwordSource ()
-{
-}
-
+CommandObjectMultiwordSource::~CommandObjectMultiwordSource() = default;

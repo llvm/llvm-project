@@ -83,7 +83,11 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::UsingShadow:
   case Decl::ObjCTypeParam:
     llvm_unreachable("Declaration should not be in declstmts!");
-  case Decl::Function:     // void X();
+  case Decl::Function:  // void X();
+  case Decl::Record:    // struct/union/class X;
+  case Decl::Enum:      // enum X;
+  case Decl::EnumConstant: // enum ? { X = ? }
+  case Decl::CXXRecord: // struct/union/class X; [C++]
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
   case Decl::Label:        // __label__ x;
   case Decl::Import:
@@ -93,21 +97,13 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
     // None of these decls require codegen support.
     return;
 
-  case Decl::Record:       // struct/union/class X;
-  case Decl::Enum:         // enum X;
-  case Decl::EnumConstant: // enum ? { X = ? }
-  case Decl::CXXRecord:    // struct/union/class X; [C++]
-    if (CGDebugInfo *DI = getDebugInfo())
-      DI->recordDeclarationLexicalScope(D);
-    return;
-
   case Decl::NamespaceAlias:
     if (CGDebugInfo *DI = getDebugInfo())
-      DI->EmitNamespaceAlias(cast<NamespaceAliasDecl>(D));
+        DI->EmitNamespaceAlias(cast<NamespaceAliasDecl>(D));
     return;
   case Decl::Using:          // using X; [C++]
     if (CGDebugInfo *DI = getDebugInfo())
-      DI->EmitUsingDecl(cast<UsingDecl>(D));
+        DI->EmitUsingDecl(cast<UsingDecl>(D));
     return;
   case Decl::UsingDirective: // using namespace X; [C++]
     if (CGDebugInfo *DI = getDebugInfo())
@@ -124,9 +120,6 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::TypeAlias: {  // using X = int; [C++0x]
     const TypedefNameDecl &TD = cast<TypedefNameDecl>(D);
     QualType Ty = TD.getUnderlyingType();
-
-    if (CGDebugInfo *DI = getDebugInfo())
-      DI->recordDeclarationLexicalScope(D);
 
     if (Ty->isVariablyModifiedType())
       EmitVariablyModifiedType(Ty);

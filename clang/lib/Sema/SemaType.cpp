@@ -2175,6 +2175,15 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     Diag(Loc, diag::warn_vla_used);
   }
 
+  // OpenCL v2.0 s6.12.5 - Arrays of blocks are not supported.
+  if (getLangOpts().OpenCL) {
+    const QualType ArrType = Context.getBaseElementType(T);
+    if (ArrType->isBlockPointerType()) {
+      Diag(Loc, diag::err_opencl_invalid_type_array) << ArrType;
+      return QualType();
+    }
+  }
+
   return T;
 }
 

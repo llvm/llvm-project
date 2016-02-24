@@ -948,15 +948,15 @@ static unsigned PrintActions1(const Compilation &C, Action *A,
     os << "\"" << IA->getInputArg().getValue() << "\"";
   } else if (BindArchAction *BIA = dyn_cast<BindArchAction>(A)) {
     os << '"' << BIA->getArchName() << '"' << ", {"
-       << PrintActions1(C, *BIA->begin(), Ids) << "}";
+       << PrintActions1(C, *BIA->input_begin(), Ids) << "}";
   } else if (CudaDeviceAction *CDA = dyn_cast<CudaDeviceAction>(A)) {
     os << '"'
        << (CDA->getGpuArchName() ? CDA->getGpuArchName() : "(multiple archs)")
-       << '"' << ", {" << PrintActions1(C, *CDA->begin(), Ids) << "}";
+       << '"' << ", {" << PrintActions1(C, *CDA->input_begin(), Ids) << "}";
   } else {
     const ActionList *AL;
     if (CudaHostAction *CHA = dyn_cast<CudaHostAction>(A)) {
-      os << "{" << PrintActions1(C, *CHA->begin(), Ids) << "}"
+      os << "{" << PrintActions1(C, *CHA->input_begin(), Ids) << "}"
          << ", gpu binaries ";
       AL = &CHA->getDeviceActions();
     } else
@@ -996,7 +996,7 @@ static bool ContainsCompileOrAssembleAction(const Action *A) {
       isa<AssembleJobAction>(A))
     return true;
 
-  for (const Action *Input : *A)
+  for (const Action *Input : A->inputs())
     if (ContainsCompileOrAssembleAction(Input))
       return true;
 
@@ -1747,8 +1747,8 @@ static const Tool *selectToolForJob(Compilation &C, bool SaveTemps,
     // Compile job may be wrapped in CudaHostAction, extract it if
     // that's the case and update CollapsedCHA if we combine phases.
     CudaHostAction *CHA = dyn_cast<CudaHostAction>(*BackendInputs->begin());
-    JobAction *CompileJA =
-        cast<CompileJobAction>(CHA ? *CHA->begin() : *BackendInputs->begin());
+    JobAction *CompileJA = cast<CompileJobAction>(
+        CHA ? *CHA->input_begin() : *BackendInputs->begin());
     assert(CompileJA && "Backend job is not preceeded by compile job.");
     const Tool *Compiler = TC->SelectTool(*CompileJA);
     if (!Compiler)
@@ -1770,7 +1770,7 @@ static const Tool *selectToolForJob(Compilation &C, bool SaveTemps,
     // that's the case and update CollapsedCHA if we combine phases.
     CudaHostAction *CHA = dyn_cast<CudaHostAction>(*Inputs->begin());
     JobAction *CompileJA =
-        cast<CompileJobAction>(CHA ? *CHA->begin() : *Inputs->begin());
+        cast<CompileJobAction>(CHA ? *CHA->input_begin() : *Inputs->begin());
     assert(CompileJA && "Backend job is not preceeded by compile job.");
     const Tool *Compiler = TC->SelectTool(*CompileJA);
     if (!Compiler)
@@ -1841,7 +1841,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
     }
     // Override current action with a real host compile action and continue
     // processing it.
-    A = *CHA->begin();
+    A = *CHA->input_begin();
   }
 
   if (const InputAction *IA = dyn_cast<InputAction>(A)) {
@@ -1867,7 +1867,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
     else
       TC = &C.getDefaultToolChain();
 
-    return BuildJobsForAction(C, *BAA->begin(), TC, ArchName, AtTopLevel,
+    return BuildJobsForAction(C, *BAA->input_begin(), TC, ArchName, AtTopLevel,
                               MultipleArchs, LinkingOutput, CachedResults);
   }
 
@@ -1875,11 +1875,11 @@ InputInfo Driver::BuildJobsForActionNoCache(
     // Initial processing of CudaDeviceAction carries host params.
     // Call BuildJobsForAction() again, now with correct device parameters.
     InputInfo II = BuildJobsForAction(
-        C, *CDA->begin(), C.getCudaDeviceToolChain(), CDA->getGpuArchName(),
-        CDA->isAtTopLevel(), /*MultipleArchs*/ true, LinkingOutput,
-        CachedResults);
-    // Currently II's Action is *CDA->begin().  Set it to CDA instead, so that
-    // one can retrieve II's GPU arch.
+        C, *CDA->input_begin(), C.getCudaDeviceToolChain(),
+        CDA->getGpuArchName(), CDA->isAtTopLevel(), /*MultipleArchs=*/true,
+        LinkingOutput, CachedResults);
+    // Currently II's Action is *CDA->input_begin().  Set it to CDA instead, so
+    // that one can retrieve II's GPU arch.
     II.setAction(A);
     return II;
   }
@@ -2364,7 +2364,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
 
 bool Driver::ShouldUseClangCompiler(const JobAction &JA) const {
   // Say "no" if there is not exactly one input of a type clang understands.
-  if (JA.size() != 1 || !types::isAcceptedByClang((*JA.begin())->getType()))
+  if (JA.size() != 1 ||
+      !types::isAcceptedByClang((*JA.input_begin())->getType()))
     return false;
 
   // And say "no" if this is not a kind of action clang understands.
