@@ -67,12 +67,16 @@ public:
   /// Whether this entity is marked unavailable.
   unsigned Unavailable : 1;
 
-  CommonEntityInfo() : Unavailable(0) { }
+  /// Whether this entity is marked unavailable in Swift.
+  unsigned UnavailableInSwift : 1;
+
+  CommonEntityInfo() : Unavailable(0), UnavailableInSwift(0) { }
 
   friend bool operator==(const CommonEntityInfo &lhs,
                          const CommonEntityInfo &rhs) {
     return lhs.UnavailableMsg == rhs.UnavailableMsg &&
-           lhs.Unavailable == rhs.Unavailable;
+           lhs.Unavailable == rhs.Unavailable &&
+           lhs.UnavailableInSwift == rhs.UnavailableInSwift;
   }
 
   friend bool operator!=(const CommonEntityInfo &lhs,
@@ -85,6 +89,14 @@ public:
     // Merge unavailability.
     if (rhs.Unavailable) {
       lhs.Unavailable = true;
+      if (rhs.UnavailableMsg.length() != 0 &&
+          lhs.UnavailableMsg.length() == 0) {
+        lhs.UnavailableMsg = rhs.UnavailableMsg;
+      }
+    }
+
+    if (rhs.UnavailableInSwift) {
+      lhs.UnavailableInSwift = true;
       if (rhs.UnavailableMsg.length() != 0 &&
           lhs.UnavailableMsg.length() == 0) {
         lhs.UnavailableMsg = rhs.UnavailableMsg;
