@@ -208,10 +208,7 @@ static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
 /// Process API notes that are associated with this declaration, mapping them
 /// to attributes as appropriate.
 void Sema::ProcessAPINotes(Decl *D) {
-  if (!Context.getLangOpts().APINotes)
-    return;
-  
-  if (!D || D->getLocation().isInvalid())
+  if (!D)
     return;
 
   // Globals.

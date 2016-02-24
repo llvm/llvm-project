@@ -1312,6 +1312,12 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
     Opts.AddVFSOverlayFile(A->getValue());
 }
 
+static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args) {
+  using namespace options;
+  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
+    Opts.ModuleSearchPaths.push_back(A->getValue());
+}
+
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
                                          LangStandard::Kind LangStd) {
   // Set some properties which depend solely on the input kind; it would be nice
@@ -2077,6 +2083,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags,
                               Res.getTargetOpts());
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args);
+  ParseAPINotesArgs(Res.getAPINotesOpts(), Args);
+
   if (DashX == IK_AST || DashX == IK_LLVM_IR) {
     // ObjCAAutoRefCount and Sanitize LangOpts are used to setup the
     // PassManager in BackendUtil.cpp. They need to be initializd no matter
