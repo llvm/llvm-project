@@ -1810,3 +1810,72 @@ define <64 x i16> @test21(<64 x i16> %x , <64 x i1> %mask) nounwind readnone {
   ret <64 x i16> %ret
 }
 
+define <16 x i16> @shuffle_zext_16x8_to_16x16(<16 x i8> %a) nounwind readnone {
+; ALL-LABEL: shuffle_zext_16x8_to_16x16:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; ALL-NEXT:    retq
+  %1 = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <32 x i32> <i32 0, i32 16, i32 1, i32 16, i32 2, i32 16, i32 3, i32 16, i32 4, i32 16, i32 5, i32 16, i32 6, i32 16, i32 7, i32 16, i32 8, i32 16, i32 9, i32 16, i32 10, i32 16, i32 11, i32 16, i32 12, i32 16, i32 13, i32 16, i32 14, i32 16, i32 15, i32 16>
+  %2 = bitcast <32 x i8> %1 to <16 x i16>
+  ret <16 x i16> %2
+}
+
+define <16 x i16> @zext_32x8_to_16x16(<32 x i8> %a) {
+; ALL-LABEL: zext_32x8_to_16x16:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; ALL-NEXT:    retq
+  %1 = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 1, i32 32, i32 2, i32 32, i32 3, i32 32, i32 4, i32 32, i32 5, i32 32, i32 6, i32 32, i32 7, i32 32, i32 8, i32 32, i32 9, i32 32, i32 10, i32 32, i32 11, i32 32, i32 12, i32 32, i32 13, i32 32, i32 14, i32 32, i32 15, i32 32>
+  %2 = bitcast <32 x i8> %1 to <16 x i16>
+  ret <16 x i16> %2
+}
+
+define <8 x i32> @zext_32x8_to_8x32(<32 x i8> %a) {
+; ALL-LABEL: zext_32x8_to_8x32:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; ALL-NEXT:    retq
+  %1 = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 32, i32 32, i32 1, i32 32, i32 32, i32 32, i32 2, i32 32, i32 32, i32 32, i32 3, i32 32, i32 32, i32 32, i32 4, i32 32, i32 32, i32 32, i32 5, i32 32, i32 32, i32 32, i32 6, i32 32, i32 32, i32 32, i32 7, i32 32, i32 32, i32 32>
+  %2 = bitcast <32 x i8> %1 to <8 x i32>
+  ret <8 x i32> %2
+}
+
+define <4 x i64> @zext_32x8_to_4x64(<32 x i8> %a) {
+; ALL-LABEL: zext_32x8_to_4x64:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
+; ALL-NEXT:    retq
+  %1 = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 0, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 1, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 2, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 3, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
+  %2 = bitcast <32 x i8> %1 to <4 x i64>
+  ret <4 x i64> %2
+}
+
+define <8 x i32> @zext_16x16_to_8x32(<16 x i16> %a) {
+; ALL-LABEL: zext_16x16_to_8x32:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; ALL-NEXT:    retq
+  %1 = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 1, i32 16, i32 2, i32 16, i32 3, i32 16, i32 4, i32 16, i32 5, i32 16, i32 6, i32 16, i32 7, i32 16>
+  %2 = bitcast <16 x i16> %1 to <8 x i32>
+  ret <8 x i32> %2
+}
+
+define <4 x i64> @zext_16x16_to_4x64(<16 x i16> %a) {
+; ALL-LABEL: zext_16x16_to_4x64:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; ALL-NEXT:    retq
+  %1 = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 16, i32 16, i32 1, i32 16, i32 16, i32 16, i32 2, i32 16, i32 16, i32 16, i32 3, i32 16, i32 16, i32 16>
+  %2 = bitcast <16 x i16> %1 to <4 x i64>
+  ret <4 x i64> %2
+}
+
+define <4 x i64> @zext_8x32_to_4x64(<8 x i32> %a) {
+; ALL-LABEL: zext_8x32_to_4x64:
+; ALL:       ## BB#0:
+; ALL-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; ALL-NEXT:    retq
+  %1 = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 1, i32 8, i32 2, i32 8, i32 3, i32 8>
+  %2 = bitcast <8 x i32> %1 to <4 x i64>
+  ret <4 x i64> %2
+}

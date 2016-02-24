@@ -19,9 +19,15 @@
 #include "llvm/Target/TargetFrameLowering.h"
 
 namespace llvm {
+class MachineFrameInfo;
 
 class WebAssemblyFrameLowering final : public TargetFrameLowering {
  public:
+  /// Size of the red zone for the user stack (leaf functions can use this much
+  /// space below the stack pointer without writing it back to memory).
+  // TODO: (ABI) Revisit and decide how large it should be.
+  static const size_t RedZoneSize = 128;
+
   WebAssemblyFrameLowering()
       : TargetFrameLowering(StackGrowsDown, /*StackAlignment=*/16,
                             /*LocalAreaOffset=*/0,
@@ -38,6 +44,11 @@ class WebAssemblyFrameLowering final : public TargetFrameLowering {
 
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
+
+ private:
+  bool needsSP(const MachineFunction &MF, const MachineFrameInfo &MFI) const;
+  bool needsSPWriteback(const MachineFunction &MF,
+                        const MachineFrameInfo &MFI) const;
 };
 
 }  // end namespace llvm

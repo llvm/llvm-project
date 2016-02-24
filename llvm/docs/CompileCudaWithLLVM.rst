@@ -171,3 +171,9 @@ customizable target-independent optimization pipeline.
   32-bit ones on NVIDIA GPUs due to lack of a divide unit. Many of the 64-bit
   divides in our benchmarks have a divisor and dividend which fit in 32-bits at
   runtime. This optimization provides a fast path for this common case.
+
+Obtaining Help
+==============
+
+To obtain help on LLVM in general and its CUDA support, see `the LLVM
+community <http://llvm.org/docs/#mailing-lists>`_.

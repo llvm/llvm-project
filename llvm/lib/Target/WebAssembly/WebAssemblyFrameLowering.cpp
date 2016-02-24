@@ -34,7 +34,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-frame-info"
 
-// TODO: Implement a red zone?
 // TODO: wasm64
 // TODO: Emit TargetOpcode::CFI_INSTRUCTION instructions
 
@@ -57,6 +56,24 @@ bool WebAssemblyFrameLowering::hasFP(const MachineFunction &MF) const {
 bool WebAssemblyFrameLowering::hasReservedCallFrame(
     const MachineFunction &MF) const {
   return !MF.getFrameInfo()->hasVarSizedObjects();
+}
+
+
+/// Returns true if this function needs a local user-space stack pointer.
+/// Unlike a machine stack pointer, the wasm user stack pointer is a global
+/// variable, so it is loaded into a register in the prolog.
+bool WebAssemblyFrameLowering::needsSP(const MachineFunction &MF,
+                                       const MachineFrameInfo &MFI) const {
+  return MFI.getStackSize() || MFI.adjustsStack() || hasFP(MF);
+}
+
+/// Returns true if the local user-space stack pointer needs to be written back
+/// to memory by this function (this is not meaningful if needsSP is false). If
+/// false, the stack red zone can be used and only a local SP is needed.
+bool WebAssemblyFrameLowering::needsSPWriteback(
+    const MachineFunction &MF, const MachineFrameInfo &MFI) const {
+  return MFI.getStackSize() > RedZoneSize || MFI.hasCalls() ||
+         MF.getFunction()->hasFnAttribute(Attribute::NoRedZone);
 }
 
 static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,
@@ -88,7 +105,8 @@ void WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
   assert(!I->getOperand(0).getImm() && hasFP(MF) &&
          "Call frame pseudos should only be used for dynamic stack adjustment");
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-  if (I->getOpcode() == TII->getCallFrameDestroyOpcode()) {
+  if (I->getOpcode() == TII->getCallFrameDestroyOpcode() &&
+      needsSPWriteback(MF, *MF.getFrameInfo())) {
     DebugLoc DL = I->getDebugLoc();
     writeSPToMemory(WebAssembly::SP32, MF, MBB, I, DL);
   }
@@ -103,8 +121,8 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
          "WebAssembly should not have callee-saved registers");
   auto *WFI = MF.getInfo<WebAssemblyFunctionInfo>();
 
+  if (!needsSP(MF, *MFI)) return;
   uint64_t StackSize = MFI->getStackSize();
-  if (!StackSize && !MFI->adjustsStack() && !hasFP(MF)) return;
 
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto &MRI = MF.getRegInfo();
@@ -152,7 +170,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
             WebAssembly::FP32)
         .addReg(WebAssembly::SP32);
   }
-  if (StackSize) {
+  if (StackSize && needsSPWriteback(MF, *MFI)) {
     writeSPToMemory(WebAssembly::SP32, MF, MBB, InsertPt, DL);
   }
 }
@@ -161,7 +179,7 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
                                             MachineBasicBlock &MBB) const {
   auto *MFI = MF.getFrameInfo();
   uint64_t StackSize = MFI->getStackSize();
-  if (!StackSize && !MFI->adjustsStack() && !hasFP(MF)) return;
+  if (!needsSP(MF, *MFI) || !needsSPWriteback(MF, *MFI)) return;
   auto *WFI = MF.getInfo<WebAssemblyFunctionInfo>();
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto &MRI = MF.getRegInfo();

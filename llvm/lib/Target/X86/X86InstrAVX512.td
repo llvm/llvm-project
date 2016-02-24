@@ -6351,6 +6351,14 @@ multiclass avx512_extend_common<bits<8> opc, string OpcodeStr,
   }
 }
 
+// support full register inputs (like SSE paterns)
+multiclass avx512_extend_lowering<SDNode OpNode, X86VectorVTInfo To,
+                                  X86VectorVTInfo From, SubRegIndex SubRegIdx> {
+  def : Pat<(To.VT (OpNode (From.VT From.RC:$src))),
+            (!cast<Instruction>(NAME#To.ZSuffix#"rr") 
+              (EXTRACT_SUBREG From.RC:$src, SubRegIdx))>;
+}
+
 multiclass avx512_extend_BW<bits<8> opc, string OpcodeStr, SDNode OpNode,
           string ExtTy,PatFrag LdFrag = !cast<PatFrag>(ExtTy#"extloadvi8")> {
   let Predicates = [HasVLX, HasBWI] in {
@@ -6360,6 +6368,7 @@ multiclass avx512_extend_BW<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
     defm Z256:  avx512_extend_common<opc, OpcodeStr, v16i16x_info,
                     v16i8x_info, i128mem, LdFrag, OpNode>,
+                avx512_extend_lowering<OpNode, v16i16x_info, v32i8x_info, sub_xmm>,
                      EVEX_CD8<8, CD8VH>, T8PD, EVEX_V256;
   }
   let Predicates = [HasBWI] in {
@@ -6378,6 +6387,7 @@ multiclass avx512_extend_BD<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
     defm Z256:  avx512_extend_common<opc, OpcodeStr, v8i32x_info,
                    v16i8x_info, i64mem, LdFrag, OpNode>,
+                avx512_extend_lowering<OpNode, v8i32x_info, v32i8x_info, sub_xmm>,
                          EVEX_CD8<8, CD8VQ>, T8PD, EVEX_V256;
   }
   let Predicates = [HasAVX512] in {
@@ -6396,6 +6406,7 @@ multiclass avx512_extend_BQ<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
     defm Z256:  avx512_extend_common<opc, OpcodeStr, v4i64x_info,
                    v16i8x_info, i32mem, LdFrag, OpNode>,
+                avx512_extend_lowering<OpNode, v4i64x_info, v32i8x_info, sub_xmm>,
                      EVEX_CD8<8, CD8VO>, T8PD, EVEX_V256;
   }
   let Predicates = [HasAVX512] in {
@@ -6414,6 +6425,7 @@ multiclass avx512_extend_WD<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
     defm Z256:  avx512_extend_common<opc, OpcodeStr, v8i32x_info,
                    v8i16x_info, i128mem, LdFrag, OpNode>,
+                avx512_extend_lowering<OpNode, v8i32x_info, v16i16x_info, sub_xmm>,
                      EVEX_CD8<16, CD8VH>, T8PD, EVEX_V256;
   }
   let Predicates = [HasAVX512] in {
@@ -6432,6 +6444,7 @@ multiclass avx512_extend_WQ<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
     defm Z256:  avx512_extend_common<opc, OpcodeStr, v4i64x_info,
                    v8i16x_info, i64mem, LdFrag, OpNode>,
+                avx512_extend_lowering<OpNode, v4i64x_info, v16i16x_info, sub_xmm>,
                      EVEX_CD8<16, CD8VQ>, T8PD, EVEX_V256;
   }
   let Predicates = [HasAVX512] in {
@@ -6451,6 +6464,7 @@ multiclass avx512_extend_DQ<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
     defm Z256:  avx512_extend_common<opc, OpcodeStr, v4i64x_info,
                    v4i32x_info, i128mem, LdFrag, OpNode>,
+                avx512_extend_lowering<OpNode, v4i64x_info, v8i32x_info, sub_xmm>,
                      EVEX_CD8<32, CD8VH>, T8PD, EVEX_V256;
   }
   let Predicates = [HasAVX512] in {

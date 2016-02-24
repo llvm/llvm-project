@@ -178,5 +178,5 @@ Here is an example of a minimal amd_kernel_code_t specification:
      v_mov_b32 v2, s1
      flat_store_dword v[1:2], v0
      s_endpgm
-.Lfunc_end0:
+   .Lfunc_end0:
         .size   hello_world, .Lfunc_end0-hello_world

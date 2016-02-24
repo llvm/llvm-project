@@ -2,7 +2,7 @@
 ; RUN:   | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-LIBCALL -check-prefix=BWON
 ; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=-f16c -asm-verbose=false -fixup-byte-word-insts=0 \
 ; RUN:   | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-LIBCALL -check-prefix=BWOFF
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=+f16c -asm-verbose=false -fixup-byte-word-insts=1 \ 
+; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=+f16c -asm-verbose=false -fixup-byte-word-insts=1 \
 ; RUN:    | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-F16C -check-prefix=BWON
 ; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr +sse2 -asm-verbose=false -fixup-byte-word-insts=0  \
 ; RUN:    | FileCheck %s -check-prefix=CHECK-I686

@@ -4043,17 +4043,20 @@ bool X86::isCalleePop(CallingConv::ID CallingConv,
 /// \brief Return true if the condition is an unsigned comparison operation.
 static bool isX86CCUnsigned(unsigned X86CC) {
   switch (X86CC) {
-  default: llvm_unreachable("Invalid integer condition!");
-  case X86::COND_E:     return true;
-  case X86::COND_G:     return false;
-  case X86::COND_GE:    return false;
-  case X86::COND_L:     return false;
-  case X86::COND_LE:    return false;
-  case X86::COND_NE:    return true;
-  case X86::COND_B:     return true;
-  case X86::COND_A:     return true;
-  case X86::COND_BE:    return true;
-  case X86::COND_AE:    return true;
+  default:
+    llvm_unreachable("Invalid integer condition!");
+  case X86::COND_E:
+  case X86::COND_NE:
+  case X86::COND_B:
+  case X86::COND_A:
+  case X86::COND_BE:
+  case X86::COND_AE:
+    return true;
+  case X86::COND_G:
+  case X86::COND_GE:
+  case X86::COND_L:
+  case X86::COND_LE:
+    return false;
   }
 }
 
@@ -24428,8 +24431,6 @@ static SDValue PerformShuffleCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const X86Subtarget &Subtarget) {
   SDLoc dl(N);
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
 
   // Don't create instructions with illegal types after legalize types has run.
@@ -24461,8 +24462,13 @@ static SDValue PerformShuffleCombine(SDNode *N, SelectionDAG &DAG,
   // potentially need to be further expanded (or custom lowered) into a
   // less optimal sequence of dag nodes.
   if (!DCI.isBeforeLegalize() && DCI.isBeforeLegalizeOps() &&
-      N1.getOpcode() == ISD::UNDEF && N0.hasOneUse() &&
-      N0.getOpcode() == ISD::BITCAST) {
+      N->getOpcode() == ISD::VECTOR_SHUFFLE &&
+      N->getOperand(0).getOpcode() == ISD::BITCAST &&
+      N->getOperand(1).getOpcode() == ISD::UNDEF &&
+      N->getOperand(0).hasOneUse()) {
+    SDValue N0 = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+
     SDValue BC0 = N0.getOperand(0);
     EVT SVT = BC0.getValueType();
     unsigned Opcode = BC0.getOpcode();
