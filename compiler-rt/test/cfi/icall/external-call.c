@@ -1,4 +1,4 @@
-// RUN: %clangxx_cfi -o %t1 %s
+// RUN: %clang_cfi -lm -o %t1 %s
 // RUN: %t1 c 1 2>&1 | FileCheck --check-prefix=CFI %s
 // RUN: %t1 s 2 2>&1 | FileCheck --check-prefix=CFI %s
 
