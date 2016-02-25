@@ -811,8 +811,6 @@ end:
 ;
 ; Load the value of b.
 ; CHECK: movb _b(%rip), [[BOOL:%cl]]
-; Extract i1 from the loaded value.
-; CHECK-NEXT: andb $1, [[BOOL]]
 ; Create the zero value for the select assignment.
 ; CHECK-NEXT: xorl [[CMOVE_VAL:%eax]], [[CMOVE_VAL]]
 ; CHECK-NEXT: testb [[BOOL]], [[BOOL]]

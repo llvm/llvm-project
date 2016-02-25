@@ -478,6 +478,13 @@ public:
     return DebugLoc();
   }
 
+  StringRef getName() const {
+    if (BasicBlock *Header = getHeader())
+      if (Header->hasName())
+        return Header->getName();
+    return "<unnamed loop>";
+  }
+
 private:
   friend class LoopInfoBase<BasicBlock, Loop>;
   explicit Loop(BasicBlock *BB) : LoopBase<BasicBlock, Loop>(BB) {}

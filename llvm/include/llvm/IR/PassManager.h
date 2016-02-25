@@ -46,6 +46,7 @@
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/TypeName.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/type_traits.h"
 #include <list>
@@ -199,7 +200,7 @@ public:
     PreservedAnalyses PA = PreservedAnalyses::all();
 
     if (DebugLogging)
-      dbgs() << "Starting pass manager run.\n";
+      dbgs() << "Starting " << getTypeName<IRUnitT>() << " pass manager run.\n";
 
     for (unsigned Idx = 0, Size = Passes.size(); Idx != Size; ++Idx) {
       if (DebugLogging)
@@ -228,7 +229,7 @@ public:
     }
 
     if (DebugLogging)
-      dbgs() << "Finished pass manager run.\n";
+      dbgs() << "Finished " << getTypeName<IRUnitT>() << " pass manager run.\n";
 
     return PA;
   }

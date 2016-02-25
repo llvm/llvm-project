@@ -279,3 +279,24 @@ define i32 @test36(i32 %V) {
   %b = extractelement <4 x i32> undef, i32 %V
   ret i32 %b
 }
+
+; CHECK-LABEL: @test37
+; CHECK: ret i32 undef
+define i32 @test37() {
+  %b = udiv i32 undef, undef
+  ret i32 %b
+}
+
+; CHECK-LABEL: @test38
+; CHECK: ret i32 undef
+define i32 @test38(i32 %a) {
+  %b = udiv i32 %a, undef
+  ret i32 %b
+}
+
+; CHECK-LABEL: @test39
+; CHECK: ret i32 undef
+define i32 @test39() {
+  %b = udiv i32 0, undef
+  ret i32 %b
+}

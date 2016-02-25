@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -59,6 +60,13 @@ public:
   /// still manually register any additional analyses. Callers can also
   /// pre-register analyses and this will not override those.
   void registerFunctionAnalyses(FunctionAnalysisManager &FAM);
+
+  /// \brief Registers all available loop analysis passes.
+  ///
+  /// This is an interface that can be used to populate a \c LoopAnalysisManager
+  /// with all registered loop analyses. Callers can still manually register any
+  /// additional analyses.
+  void registerLoopAnalyses(LoopAnalysisManager &LAM);
 
   /// \brief Parse a textual pass pipeline description into a \c ModulePassManager.
   ///
@@ -112,7 +120,10 @@ private:
   bool parseModulePassName(ModulePassManager &MPM, StringRef Name);
   bool parseCGSCCPassName(CGSCCPassManager &CGPM, StringRef Name);
   bool parseFunctionPassName(FunctionPassManager &FPM, StringRef Name);
+  bool parseLoopPassName(LoopPassManager &LPM, StringRef Name);
   bool parseAAPassName(AAManager &AA, StringRef Name);
+  bool parseLoopPassPipeline(LoopPassManager &LPM, StringRef &PipelineText,
+                             bool VerifyEachPass, bool DebugLogging);
   bool parseFunctionPassPipeline(FunctionPassManager &FPM,
                                  StringRef &PipelineText, bool VerifyEachPass,
                                  bool DebugLogging);
@@ -121,7 +132,6 @@ private:
   bool parseModulePassPipeline(ModulePassManager &MPM, StringRef &PipelineText,
                                bool VerifyEachPass, bool DebugLogging);
 };
-
 }
 
 #endif

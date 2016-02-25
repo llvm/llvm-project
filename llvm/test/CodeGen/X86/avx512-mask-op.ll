@@ -1586,7 +1586,6 @@ define void @f1(i32 %c) {
 ; KNL-LABEL: f1:
 ; KNL:       ## BB#0: ## %entry
 ; KNL-NEXT:    movzbl {{.*}}(%rip), %edi
-; KNL-NEXT:    andl $1, %edi
 ; KNL-NEXT:    movl %edi, %eax
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k0
@@ -1601,7 +1600,6 @@ define void @f1(i32 %c) {
 ; SKX-LABEL: f1:
 ; SKX:       ## BB#0: ## %entry
 ; SKX-NEXT:    movzbl {{.*}}(%rip), %edi
-; SKX-NEXT:    andl $1, %edi
 ; SKX-NEXT:    movl %edi, %eax
 ; SKX-NEXT:    andl $1, %eax
 ; SKX-NEXT:    kmovw %eax, %k0
@@ -1622,3 +1620,24 @@ entry:
 
 declare void @f2(i32) #1
 
+define void @store_i16_i1(i16 %x, i1 *%y) {
+; CHECK-LABEL: store_i16_i1:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:    retq
+  %c = trunc i16 %x to i1
+  store i1 %c, i1* %y
+  ret void
+}
+
+define void @store_i8_i1(i8 %x, i1 *%y) {
+; CHECK-LABEL: store_i8_i1:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:    retq
+  %c = trunc i8 %x to i1
+  store i1 %c, i1* %y
+  ret void
+}

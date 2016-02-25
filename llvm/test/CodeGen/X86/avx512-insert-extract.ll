@@ -190,7 +190,6 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 
 ;CHECK-LABEL: test15
 ;CHECK: movb (%rdi), %al
-;CHECK: andb $1, %al
 ;CHECK: movw    $-1, %ax
 ;CHECK: cmovew
 define i16 @test15(i1 *%addr) {
@@ -202,7 +201,6 @@ define i16 @test15(i1 *%addr) {
 
 ;CHECK-LABEL: test16
 ;CHECK: movb (%rdi), %al
-;CHECK: andw $1, %ax
 ;CHECK: kmovw
 ;CHECK: kshiftlw        $10
 ;CHECK: korw
