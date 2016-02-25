@@ -33,7 +33,7 @@ static void *server_thread_udp(void *data) {
     fprintf(stderr, "ERROR on binding\n");
 
   recvfrom(sockfd, buf, kBufSize, 0, NULL, NULL); // BOOM
-  // CHECK: {{WRITE of size 10 at 0x.* thread T1}}
+  // CHECK: {{WRITE of size 9 at 0x.* thread T1}}
   // CHECK: {{    #1 0x.* in server_thread_udp.*recvfrom.cc:}}[[@LINE-2]]
   // CHECK: {{Address 0x.* is located in stack of thread T1 at offset}}
   // CHECK-NEXT: in{{.*}}server_thread_udp{{.*}}recvfrom.cc
