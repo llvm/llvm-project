@@ -510,7 +510,7 @@ class InternalMmapVectorNoCtor {
       uptr new_capacity = RoundUpToPowerOfTwo(size_ + 1);
       Resize(new_capacity);
     }
-    data_[size_++] = element;
+    internal_memcpy(&data_[size_++], &element, sizeof(T));
   }
   T &back() {
     CHECK_GT(size_, 0);
