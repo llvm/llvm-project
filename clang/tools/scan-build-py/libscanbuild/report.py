@@ -35,7 +35,12 @@ def report_directory(hint, keep):
     keep -- a boolean value to keep or delete the empty report directory. """
 
     stamp = time.strftime('scan-build-%Y-%m-%d-%H%M%S-', time.localtime())
-    name = tempfile.mkdtemp(prefix=stamp, dir=hint)
+
+    parentdir = os.path.abspath(hint)
+    if not os.path.exists(parentdir):
+        os.makedirs(parentdir)
+
+    name = tempfile.mkdtemp(prefix=stamp, dir=parentdir)
 
     logging.info('Report directory created: %s', name)
 
