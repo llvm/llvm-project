@@ -5,8 +5,9 @@
 
 // Longjmp assembly has not been implemented for mips64 yet
 // XFAIL: mips64
-// ppc64be bots failed with "FileCheck error: '-' is empty".
-// UNSUPPORTED: powerpc64
+// powerpc64 big endian bots failed with "FileCheck error: '-' is empty" due
+// to a segmentation fault.
+// UNSUPPORTED: powerpc64-unknown-linux-gnu
 // aarch64 bots failed with "called_from_lib suppression 'libignore_lib4.so'
 //                           is matched against 2 libraries".
 // UNSUPPORTED: aarch64
