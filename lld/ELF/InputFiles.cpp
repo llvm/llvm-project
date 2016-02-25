@@ -450,10 +450,12 @@ void BitcodeFile::parse() {
     Sym.printName(OS);
     StringRef NameRef = Saver.save(StringRef(Name));
     SymbolBody *Body;
-    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+    uint32_t Flags = Sym.getFlags();
+    if (Flags & BasicSymbolRef::SF_Undefined)
       Body = new (Alloc) Undefined(NameRef, false, STV_DEFAULT, false);
     else
-      Body = new (Alloc) DefinedBitcode(NameRef);
+      Body =
+          new (Alloc) DefinedBitcode(NameRef, Flags & BasicSymbolRef::SF_Weak);
     SymbolBodies.push_back(Body);
   }
 }

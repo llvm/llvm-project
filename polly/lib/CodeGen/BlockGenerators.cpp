@@ -675,9 +675,8 @@ Value *VectorBlockGenerator::generateStrideOneLoad(
   Type *VectorPtrType = getVectorPtrTy(Pointer, VectorWidth);
   unsigned Offset = NegativeStride ? VectorWidth - 1 : 0;
 
-  Value *NewPointer = nullptr;
-  NewPointer = generateLocationAccessed(Stmt, Load, ScalarMaps[Offset],
-                                        VLTS[Offset], NewAccesses);
+  Value *NewPointer = generateLocationAccessed(Stmt, Load, ScalarMaps[Offset],
+                                               VLTS[Offset], NewAccesses);
   Value *VectorPtr =
       Builder.CreateBitCast(NewPointer, VectorPtrType, "vector_ptr");
   LoadInst *VecLoad =

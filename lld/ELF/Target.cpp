@@ -228,6 +228,7 @@ public:
                    uint8_t *PairedLoc = nullptr) const override;
   bool isHintRel(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
+  bool refersToGotEntry(uint32_t Type) const override;
 };
 } // anonymous namespace
 
@@ -1705,8 +1706,12 @@ bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
 
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, SymbolBody &S) const {
-  return needsPlt<ELFT>(Type, S) || Type == R_MIPS_GOT16 ||
-         Type == R_MIPS_CALL16;
+  return needsPlt<ELFT>(Type, S) || refersToGotEntry(Type);
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::refersToGotEntry(uint32_t Type) const {
+  return Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16;
 }
 
 template <class ELFT>
@@ -1715,8 +1720,6 @@ bool MipsTargetInfo<ELFT>::needsPltImpl(uint32_t Type,
   if (needsCopyRel<ELFT>(Type, S))
     return false;
   if (Type == R_MIPS_26 && canBePreempted(&S, false))
-    return true;
-  if (!isRelRelative(Type) && S.isShared())
     return true;
   return false;
 }

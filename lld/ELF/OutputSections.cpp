@@ -1509,6 +1509,14 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
       ESym->st_shndx = OutSec->SectionIndex;
     else if (isa<DefinedRegular<ELFT>>(Body))
       ESym->st_shndx = SHN_ABS;
+
+    // On MIPS we need to mark symbol which has a PLT entry and requires pointer
+    // equality by STO_MIPS_PLT flag. That is necessary to help dynamic linker
+    // distinguish such symbols and MIPS lazy-binding stubs.
+    // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
+    if (Config->EMachine == EM_MIPS && Body->isInPlt() &&
+        Body->NeedsCopyOrPltAddr)
+      ESym->st_other |= ELF::STO_MIPS_PLT;
     ++ESym;
   }
 }

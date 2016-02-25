@@ -190,7 +190,7 @@ public:
 
 class DefinedBitcode : public Defined {
 public:
-  DefinedBitcode(StringRef Name);
+  DefinedBitcode(StringRef Name, bool IsWeak);
   static bool classof(const SymbolBody *S);
 };
 
