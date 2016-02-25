@@ -115,6 +115,8 @@ lldb_private::GetSectionTypeAsCString(lldb::SectionType sect_type)
             return "compact-unwind";
         case eSectionTypeGoSymtab:
             return "go-symtab";
+        case eSectionTypeAbsoluteAddress:
+            return "absolute";
         case eSectionTypeOther:
             return "regular";
     }

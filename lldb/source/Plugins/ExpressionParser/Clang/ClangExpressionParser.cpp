@@ -542,13 +542,12 @@ static bool FindFunctionInModule (ConstString &mangled_name,
                                   llvm::Module *module,
                                   const char *orig_name)
 {
-    for (llvm::Module::iterator fi = module->getFunctionList().begin(), fe = module->getFunctionList().end();
-         fi != fe;
-         ++fi)
+    for (const auto &func : module->getFunctionList())
     {
-        if (fi->getName().str().find(orig_name) != std::string::npos)
+        const StringRef &name = func.getName();
+        if (name.find(orig_name) != StringRef::npos)
         {
-            mangled_name.SetCString(fi->getName().str().c_str());
+            mangled_name.SetString(name);
             return true;
         }
     }

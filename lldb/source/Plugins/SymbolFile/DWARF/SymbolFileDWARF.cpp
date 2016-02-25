@@ -4091,6 +4091,7 @@ SymbolFileDWARF::ParseVariableDIE
             bool location_is_const_value_data = false;
             bool has_explicit_location = false;
             DWARFFormValue const_value;
+            Variable::RangeList scope_ranges;
             //AccessType accessibility = eAccessNone;
 
             for (i=0; i<num_attributes; ++i)
@@ -4206,13 +4207,44 @@ SymbolFileDWARF::ParseVariableDIE
                             spec_die = debug_info->GetDIE(DIERef(form_value));
                         break;
                     }
+                    case DW_AT_start_scope:
+                    {
+                        if (form_value.Form() == DW_FORM_sec_offset)
+                        {
+                            DWARFRangeList dwarf_scope_ranges;
+                            const DWARFDebugRanges* debug_ranges = DebugRanges();
+                            debug_ranges->FindRanges(form_value.Unsigned(), dwarf_scope_ranges);
+
+                            // All DW_AT_start_scope are relative to the base address of the
+                            // compile unit. We add the compile unit base address to make
+                            // sure all the addresses are properly fixed up.
+                            for (size_t i = 0, count = dwarf_scope_ranges.GetSize(); i < count; ++i)
+                            {
+                                const DWARFRangeList::Entry& range = dwarf_scope_ranges.GetEntryRef(i);
+                                scope_ranges.Append(range.GetRangeBase() + die.GetCU()->GetBaseAddress(),
+                                                    range.GetByteSize());
+                            }
+                        }
+                        else
+                        {
+                            // TODO: Handle the case when DW_AT_start_scope have form constant. The 
+                            // dwarf spec is a bit ambiguous about what is the expected behavior in
+                            // case the enclosing block have a non coninious address range and the
+                            // DW_AT_start_scope entry have a form constant. 
+                            GetObjectFile()->GetModule()->ReportWarning ("0x%8.8" PRIx64 ": DW_AT_start_scope has unsupported form type (0x%x)\n",
+                                                                         die.GetID(),
+                                                                         form_value.Form());
+                        }
+
+                        scope_ranges.Sort();
+                        scope_ranges.CombineConsecutiveRanges();
+                    }
                     case DW_AT_artificial:      is_artificial = form_value.Boolean(); break;
                     case DW_AT_accessibility:   break; //accessibility = DW_ACCESS_to_AccessType(form_value.Unsigned()); break;
                     case DW_AT_declaration:
                     case DW_AT_description:
                     case DW_AT_endianity:
                     case DW_AT_segment:
-                    case DW_AT_start_scope:
                     case DW_AT_visibility:
                     default:
                     case DW_AT_abstract_origin:
@@ -4392,19 +4424,20 @@ SymbolFileDWARF::ParseVariableDIE
             if (symbol_context_scope)
             {
                 SymbolFileTypeSP type_sp(new SymbolFileType(*this, DIERef(type_die_form).GetUID()));
-                
+
                 if (const_value.Form() && type_sp && type_sp->GetType())
                     location.CopyOpcodeData(const_value.Unsigned(), type_sp->GetType()->GetByteSize(), die.GetCU()->GetAddressByteSize());
-                
+
                 var_sp.reset (new Variable (die.GetID(),
-                                            name, 
+                                            name,
                                             mangled,
                                             type_sp,
-                                            scope, 
-                                            symbol_context_scope, 
-                                            &decl, 
-                                            location, 
-                                            is_external, 
+                                            scope,
+                                            symbol_context_scope,
+                                            scope_ranges,
+                                            &decl,
+                                            location,
+                                            is_external,
                                             is_artificial,
                                             is_static_member));
                 

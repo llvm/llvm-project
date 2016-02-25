@@ -1388,6 +1388,7 @@ ObjectFileMachO::GetAddressClass (lldb::addr_t file_addr)
                     case eSectionTypeCompactUnwind:
                         return eAddressClassRuntime;
 
+                    case eSectionTypeAbsoluteAddress:
                     case eSectionTypeELFSymbolTable:
                     case eSectionTypeELFDynamicSymbols:
                     case eSectionTypeELFRelocationEntries:

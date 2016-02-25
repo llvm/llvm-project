@@ -19,7 +19,7 @@ namespace readability {
 
 /// Finds usages of C-style casts.
 ///
-/// http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml?showone=Casting#Casting
+/// https://google.github.io/styleguide/cppguide.html#Casting
 ///
 /// Corresponding cpplint.py check name: 'readability/casting'.
 ///

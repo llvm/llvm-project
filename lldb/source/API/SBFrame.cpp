@@ -789,9 +789,10 @@ SBFrame::FindVariable (const char *name, lldb::DynamicValueType use_dynamic)
                     const bool get_parent_variables = true;
                     const bool stop_if_block_is_inlined_function = true;
 
-                    if (sc.block->AppendVariables (can_create, 
+                    if (sc.block->AppendVariables (can_create,
                                                    get_parent_variables,
                                                    stop_if_block_is_inlined_function,
+                                                   [frame](Variable* v) { return v->IsInScope(frame); },
                                                    &variable_list))
                     {
                         var_sp = variable_list.FindVariable (ConstString(name));
@@ -887,6 +888,7 @@ SBFrame::FindValue (const char *name, ValueType value_type, lldb::DynamicValueTy
                             sc.block->AppendVariables(can_create,
                                                       get_parent_variables,
                                                       stop_if_block_is_inlined_function,
+                                                      [frame](Variable* v) { return v->IsInScope(frame); },
                                                       &variable_list);
                         if (value_type == eValueTypeVariableGlobal)
                         {
