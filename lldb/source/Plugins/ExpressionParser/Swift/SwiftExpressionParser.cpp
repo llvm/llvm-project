@@ -690,7 +690,8 @@ AddRequiredAliases(Block *block,
             }
         }
         
-        if (!llvm::isa<SwiftASTContext>(self_type.GetTypeSystem()))
+
+        if (!self_type.IsValid() || !llvm::isa<SwiftASTContext>(self_type.GetTypeSystem()))
             break;
         
         // Import before getting the unbound version, because the unbound version may not be in the mangled name map
