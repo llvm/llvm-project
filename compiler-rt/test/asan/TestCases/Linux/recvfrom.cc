@@ -1,9 +1,7 @@
 // Test that ASan detects buffer overflow on read from socket via recvfrom.
 //
-// RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan %s -o %t && not %run %t 2>&1 | FileCheck %s
+// UNSUPPORTED: android
 
 #include <stdio.h>
 #include <unistd.h>
