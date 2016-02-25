@@ -4684,7 +4684,7 @@ protected:
                         {
                             module_spec.GetArchitecture() = target->GetArchitecture();
                         }
-                        success |= module_spec.GetFileSpec().Exists();
+                        success |= module_spec.GetUUID().IsValid() || module_spec.GetFileSpec().Exists();
                     }
                 }
 

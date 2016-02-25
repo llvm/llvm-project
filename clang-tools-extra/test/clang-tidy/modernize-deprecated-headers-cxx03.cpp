@@ -1,4 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-deprecated-headers %t -- -- -std=c++03 -isystem %S/Inputs/Headers
+// REQUIRES: target-headers
 
 #include <assert.h>
 #include <complex.h>
