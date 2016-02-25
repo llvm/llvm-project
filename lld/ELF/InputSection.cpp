@@ -105,6 +105,43 @@ bool InputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT>
+InputSectionBase<ELFT> *InputSection<ELFT>::getRelocatedSection() {
+  assert(this->Header->sh_type == SHT_RELA || this->Header->sh_type == SHT_REL);
+  ArrayRef<InputSectionBase<ELFT> *> Sections = this->File->getSections();
+  return Sections[this->Header->sh_info];
+}
+
+// This is used for -r. We can't use memcpy to copy relocations because we need
+// to update symbol table offset and section index for each relocation. So we
+// copy relocations one by one.
+template <class ELFT>
+template <bool isRela>
+void InputSection<ELFT>::copyRelocations(uint8_t *Buf,
+                                         RelIteratorRange<isRela> Rels) {
+  typedef Elf_Rel_Impl<ELFT, isRela> RelType;
+  InputSectionBase<ELFT> *RelocatedSection = getRelocatedSection();
+
+  for (const RelType &Rel : Rels) {
+    uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
+    uint32_t Type = Rel.getType(Config->Mips64EL);
+    const Elf_Shdr *SymTab = this->File->getSymbolTable();
+
+    RelType *P = reinterpret_cast<RelType *>(Buf);
+    Buf += sizeof(RelType);
+
+    // Relocation for local symbol here means that it is probably
+    // rel[a].eh_frame section which has references to
+    // sections in r_info field. Also needs fix for addend.
+    if (SymIndex < SymTab->sh_info)
+      fatal("Relocation against local symbols is not supported yet");
+
+    SymbolBody *Body = this->File->getSymbolBody(SymIndex)->repl();
+    P->r_offset = RelocatedSection->getOffset(Rel.r_offset);
+    P->setSymbolAndType(Body->DynsymIndex, Type, Config->Mips64EL);
+  }
+}
+
+template <class ELFT>
 template <bool isRela>
 uint8_t *
 InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t SymIndex,
@@ -256,9 +293,21 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
     return;
   // Copy section contents from source object file to output file.
   ArrayRef<uint8_t> Data = this->getSectionData();
+  ELFFile<ELFT> &EObj = this->File->getObj();
+
+  // That happens with -r. In that case we need fix the relocation position and
+  // target. No relocations are applied.
+  if (this->Header->sh_type == SHT_RELA) {
+    this->copyRelocations(Buf + OutSecOff, EObj.relas(this->Header));
+    return;
+  }
+  if (this->Header->sh_type == SHT_REL) {
+    this->copyRelocations(Buf + OutSecOff, EObj.rels(this->Header));
+    return;
+  }
+
   memcpy(Buf + OutSecOff, Data.data(), Data.size());
 
-  ELFFile<ELFT> &EObj = this->File->getObj();
   uint8_t *BufEnd = Buf + OutSecOff + Data.size();
   // Iterate over all relocation sections that apply to this section.
   for (const Elf_Shdr *RelSec : this->RelocSections) {

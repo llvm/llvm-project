@@ -5333,6 +5333,43 @@ INTERCEPTOR(char *, ctermid_r, char *s) {
 #define INIT_CTERMID_R
 #endif
 
+#if SANITIZER_INTERCEPT_RECV_RECVFROM
+INTERCEPTOR(SSIZE_T, recv, int fd, void *buf, SIZE_T len, int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, recv, fd, buf, len, flags);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  SSIZE_T res = REAL(recv)(fd, buf, len, flags);
+  if (res > 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, len);
+  }
+  if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  return res;
+}
+
+INTERCEPTOR(SSIZE_T, recvfrom, int fd, void *buf, SIZE_T len, int flags,
+            void *srcaddr, int *addrlen) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, recvfrom, fd, buf, len, flags, srcaddr,
+                           addrlen);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  SIZE_T srcaddr_sz;
+  if (srcaddr) srcaddr_sz = *addrlen;
+  SSIZE_T res = REAL(recvfrom)(fd, buf, len, flags, srcaddr, addrlen);
+  if (res > 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, len);
+    if (srcaddr)
+      COMMON_INTERCEPTOR_INITIALIZE_RANGE(srcaddr,
+                                          Min((SIZE_T)*addrlen, srcaddr_sz));
+  }
+  return res;
+}
+#define INIT_RECV_RECVFROM          \
+  COMMON_INTERCEPT_FUNCTION(recv);  \
+  COMMON_INTERCEPT_FUNCTION(recvfrom);
+#else
+#define INIT_RECV_RECVFROM
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -5509,4 +5546,5 @@ static void InitializeCommonInterceptors() {
   INIT_PROCESS_VM_READV;
   INIT_CTERMID;
   INIT_CTERMID_R;
+  INIT_RECV_RECVFROM;
 }

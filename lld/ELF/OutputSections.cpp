@@ -24,6 +24,19 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf2;
 
+static bool isAlpha(char C) {
+  return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z') || C == '_';
+}
+
+static bool isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
+
+// Returns true if S is valid as a C language identifier.
+bool elf2::isValidCIdentifier(StringRef S) {
+  if (S.empty() || !isAlpha(S[0]))
+    return false;
+  return std::all_of(S.begin() + 1, S.end(), isAlnum);
+}
+
 template <class ELFT>
 OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
                                            uintX_t Flags)
@@ -728,9 +741,24 @@ template <class ELFT> void EhFrameHeader<ELFT>::reserveFde() {
 }
 
 template <class ELFT>
-OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type,
-                                   uintX_t Flags)
-    : OutputSectionBase<ELFT>(Name, Type, Flags) {}
+OutputSection<ELFT>::OutputSection(StringRef Name, uint32_t Type, uintX_t Flags)
+    : OutputSectionBase<ELFT>(Name, Type, Flags) {
+  if (Type == SHT_RELA)
+    this->Header.sh_entsize = sizeof(Elf_Rela);
+  else if (Type == SHT_REL)
+    this->Header.sh_entsize = sizeof(Elf_Rel);
+}
+
+template <class ELFT> void OutputSection<ELFT>::finalize() {
+  uint32_t Type = this->Header.sh_type;
+  if (Type != SHT_RELA && Type != SHT_REL)
+    return;
+  this->Header.sh_link = Out<ELFT>::SymTab->SectionIndex;
+  // sh_info for SHT_REL[A] sections should contain the section header index of
+  // the section to which the relocation applies.
+  InputSectionBase<ELFT> *S = Sections[0]->getRelocatedSection();
+  this->Header.sh_info = S->OutSec->SectionIndex;
+}
 
 template <class ELFT>
 void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
@@ -1367,6 +1395,13 @@ template <class ELFT> void SymbolTableSection<ELFT>::finalize() {
   this->Header.sh_size = getNumSymbols() * sizeof(Elf_Sym);
   this->Header.sh_link = StrTabSec.SectionIndex;
   this->Header.sh_info = NumLocals + 1;
+
+  if (Config->Relocatable) {
+    size_t I = NumLocals;
+    for (const std::pair<SymbolBody *, size_t> &P : Symbols)
+      P.first->DynsymIndex = ++I;
+    return;
+  }
 
   if (!StrTabSec.isDynamic()) {
     std::stable_sort(Symbols.begin(), Symbols.end(),

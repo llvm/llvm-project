@@ -226,7 +226,10 @@ void elf2::ObjectFile<ELFT>::initializeSections(
         continue;
       if (!RelocatedSection)
         fatal("Unsupported relocation reference");
-      if (auto *S = dyn_cast<InputSection<ELFT>>(RelocatedSection)) {
+      if (Config->Relocatable) {
+        // For -r, relocation sections are handled as regular input sections.
+        Sections[I] = new (Alloc) InputSection<ELFT>(this, &Sec);
+      } else if (auto *S = dyn_cast<InputSection<ELFT>>(RelocatedSection)) {
         S->RelocSections.push_back(&Sec);
       } else if (auto *S = dyn_cast<EHInputSection<ELFT>>(RelocatedSection)) {
         if (S->RelocSection)

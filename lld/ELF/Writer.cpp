@@ -69,6 +69,7 @@ private:
   void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
   void createPhdrs();
   void assignAddresses();
+  void assignAddressesRelocatable();
   void fixAbsoluteSymbols();
   bool openFile();
   void writeHeader();
@@ -93,13 +94,15 @@ private:
   std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> OwningSections;
 
   // We create a section for the ELF header and one for the program headers.
-  const unsigned NumDummySections = 2;
   ArrayRef<OutputSectionBase<ELFT> *> getSections() const {
-    return makeArrayRef(OutputSections).slice(NumDummySections);
+    return makeArrayRef(OutputSections).slice(dummySectionsNum());
   }
   unsigned getNumSections() const {
-    return OutputSections.size() + 1 - NumDummySections;
+    return OutputSections.size() + 1 - dummySectionsNum();
   }
+  // Usually there are 2 dummies sections: ELF header and program header.
+  // Relocatable output does not require program headers to be created.
+  unsigned dummySectionsNum() const { return Config->Relocatable ? 1 : 2; }
 
   void addRelIpltSymbols();
   void addStartEndSymbols();
@@ -193,8 +196,12 @@ template <class ELFT> void Writer<ELFT>::run() {
   addReservedSymbols();
   if (!createSections())
     return;
-  createPhdrs();
-  assignAddresses();
+  if (!Config->Relocatable) {
+    createPhdrs();
+    assignAddresses();
+  } else {
+    assignAddressesRelocatable();
+  }
   fixAbsoluteSymbols();
   if (!openFile())
     return;
@@ -495,7 +502,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &S,
 
 template <class ELFT>
 static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
-  if (Config->Shared && !Config->NoUndefined)
+  if ((Config->Relocatable || Config->Shared) && !Config->NoUndefined)
     return;
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();
@@ -928,7 +935,8 @@ template <class ELFT> static void sortCtorsDtors(OutputSectionBase<ELFT> *S) {
 // Create output section objects and add them to OutputSections.
 template <class ELFT> bool Writer<ELFT>::createSections() {
   OutputSections.push_back(Out<ELFT>::ElfHeader);
-  OutputSections.push_back(Out<ELFT>::ProgramHeaders);
+  if (!Config->Relocatable)
+    OutputSections.push_back(Out<ELFT>::ProgramHeaders);
 
   // Add .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
@@ -1040,8 +1048,8 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   std::stable_sort(OutputSections.begin(), OutputSections.end(),
                    compareSections<ELFT>);
 
-  for (unsigned I = NumDummySections, N = OutputSections.size(); I < N; ++I)
-    OutputSections[I]->SectionIndex = I + 1 - NumDummySections;
+  for (unsigned I = dummySectionsNum(), N = OutputSections.size(); I < N; ++I)
+    OutputSections[I]->SectionIndex = I + 1 - dummySectionsNum();
 
   for (OutputSectionBase<ELFT> *Sec : getSections())
     Sec->setSHName(Out<ELFT>::ShStrTab->addString(Sec->getName()));
@@ -1148,19 +1156,6 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
          Out<ELFT>::Dynamic->InitArraySec);
   Define("__fini_array_start", "__fini_array_end",
          Out<ELFT>::Dynamic->FiniArraySec);
-}
-
-static bool isAlpha(char C) {
-  return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z') || C == '_';
-}
-
-static bool isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
-
-// Returns true if S is valid as a C language identifier.
-static bool isValidCIdentifier(StringRef S) {
-  if (S.empty() || !isAlpha(S[0]))
-    return false;
-  return std::all_of(S.begin() + 1, S.end(), isAlnum);
 }
 
 // If a section name is valid as a C identifier (which is rare because of
@@ -1304,6 +1299,21 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     AddHdr(PT_GNU_STACK, PF_R | PF_W);
 }
 
+// Used for relocatable output (-r). In this case we create only ELF file
+// header, do not create program headers. Also assign of section addresses
+// is very straightforward: we just put all sections sequentually to the file.
+template <class ELFT> void Writer<ELFT>::assignAddressesRelocatable() {
+  Out<ELFT>::ElfHeader->setSize(sizeof(Elf_Ehdr));
+  uintX_t FileOff = 0;
+  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
+    FileOff = alignTo(FileOff, Sec->getAlign());
+    Sec->setFileOffset(FileOff);
+    FileOff += Sec->getSize();
+  }
+  SectionHeaderOff = alignTo(FileOff, sizeof(uintX_t));
+  FileSize = SectionHeaderOff + getNumSections() * sizeof(Elf_Shdr);
+}
+
 // Visits all headers in PhdrTable and assigns the adresses to
 // the output sections. Also creates common and special headers.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
@@ -1445,19 +1455,28 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   auto &FirstObj = cast<ELFFileBase<ELFT>>(*Config->FirstElf);
   EHdr->e_ident[EI_OSABI] = FirstObj.getOSABI();
 
-  EHdr->e_type = Config->Shared ? ET_DYN : ET_EXEC;
+  if (Config->Shared)
+    EHdr->e_type = ET_DYN;
+  else if (Config->Relocatable)
+    EHdr->e_type = ET_REL;
+  else
+    EHdr->e_type = ET_EXEC;
+
   EHdr->e_machine = FirstObj.getEMachine();
   EHdr->e_version = EV_CURRENT;
   EHdr->e_entry = getEntryAddr<ELFT>();
-  EHdr->e_phoff = sizeof(Elf_Ehdr);
   EHdr->e_shoff = SectionHeaderOff;
   EHdr->e_flags = getELFFlags();
   EHdr->e_ehsize = sizeof(Elf_Ehdr);
-  EHdr->e_phentsize = sizeof(Elf_Phdr);
   EHdr->e_phnum = Phdrs.size();
   EHdr->e_shentsize = sizeof(Elf_Shdr);
   EHdr->e_shnum = getNumSections();
   EHdr->e_shstrndx = Out<ELFT>::ShStrTab->SectionIndex;
+
+  if (!Config->Relocatable) {
+    EHdr->e_phoff = sizeof(Elf_Ehdr);
+    EHdr->e_phentsize = sizeof(Elf_Phdr);
+  }
 
   // Write the program header table.
   auto *HBuf = reinterpret_cast<Elf_Phdr *>(Buf + EHdr->e_phoff);

@@ -94,7 +94,8 @@ def print_gc_sections: Flag<["--"], "print-gc-sections">,
 def rpath : Separate<["-"], "rpath">,
   HelpText<"Add a DT_RUNPATH to the output">;
 
-def relocatable : Flag<["--"], "relocatable">;
+def relocatable : Flag<["--"], "relocatable">,
+  HelpText<"Create relocatable object file">;
 
 def script : Separate<["--"], "script">, HelpText<"Read linker script">;
 

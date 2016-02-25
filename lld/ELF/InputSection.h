@@ -158,6 +158,16 @@ public:
   uint64_t OutSecOff = 0;
 
   static bool classof(const InputSectionBase<ELFT> *S);
+
+  InputSectionBase<ELFT> *getRelocatedSection();
+
+private:
+  template <bool isRela>
+  using RelIteratorRange =
+      llvm::iterator_range<const llvm::object::Elf_Rel_Impl<ELFT, isRela> *>;
+
+  template <bool isRela>
+  void copyRelocations(uint8_t *Buf, RelIteratorRange<isRela> Rels);
 };
 
 // MIPS .reginfo section provides information on the registers used by the code

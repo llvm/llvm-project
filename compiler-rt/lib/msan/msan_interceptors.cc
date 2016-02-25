@@ -978,30 +978,6 @@ INTERCEPTOR(int, epoll_pwait, int epfd, void *events, int maxevents,
 #define MSAN_MAYBE_INTERCEPT_EPOLL_PWAIT
 #endif
 
-INTERCEPTOR(SSIZE_T, recv, int fd, void *buf, SIZE_T len, int flags) {
-  ENSURE_MSAN_INITED();
-  SSIZE_T res = REAL(recv)(fd, buf, len, flags);
-  if (res > 0)
-    __msan_unpoison(buf, res);
-  return res;
-}
-
-INTERCEPTOR(SSIZE_T, recvfrom, int fd, void *buf, SIZE_T len, int flags,
-            void *srcaddr, int *addrlen) {
-  ENSURE_MSAN_INITED();
-  SIZE_T srcaddr_sz;
-  if (srcaddr) srcaddr_sz = *addrlen;
-  SSIZE_T res = REAL(recvfrom)(fd, buf, len, flags, srcaddr, addrlen);
-  if (res > 0) {
-    __msan_unpoison(buf, res);
-    if (srcaddr) {
-      SIZE_T sz = *addrlen;
-      __msan_unpoison(srcaddr, Min(sz, srcaddr_sz));
-    }
-  }
-  return res;
-}
-
 INTERCEPTOR(void *, calloc, SIZE_T nmemb, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
   if (UNLIKELY(!msan_inited)) {
@@ -1647,8 +1623,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(gethostname);
   MSAN_MAYBE_INTERCEPT_EPOLL_WAIT;
   MSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;
-  INTERCEPT_FUNCTION(recv);
-  INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(dladdr);
   INTERCEPT_FUNCTION(dlerror);
   INTERCEPT_FUNCTION(dl_iterate_phdr);

@@ -111,6 +111,10 @@ void LinkerDriver::addFile(StringRef Path) {
     Files.push_back(make_unique<ArchiveFile>(MBRef));
     return;
   case file_magic::elf_shared_object:
+    if (Config->Relocatable) {
+      error("Attempted static link of dynamic object " + Path);
+      return;
+    }
     Files.push_back(createSharedFile(MBRef));
     return;
   default:
@@ -130,12 +134,6 @@ void LinkerDriver::addLibrary(StringRef Name) {
 // Some command line options or some combinations of them are not allowed.
 // This function checks for such errors.
 static void checkOptions(opt::InputArgList &Args) {
-  // Traditional linkers can generate re-linkable object files instead
-  // of executables or DSOs. We don't support that since the feature
-  // does not seem to provide more value than the static archiver.
-  if (Args.hasArg(OPT_relocatable))
-    error("-r option is not supported. Use 'ar' command instead.");
-
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (Config->EMachine == EM_MIPS && Config->GnuHash)
@@ -143,6 +141,9 @@ static void checkOptions(opt::InputArgList &Args) {
 
   if (Config->EMachine == EM_AMDGPU && !Config->Entry.empty())
     error("-e option is not valid for AMDGPU.");
+
+  if (Config->Relocatable && Config->Shared)
+    error("-r and -shared may not be used together");
 }
 
 static StringRef
@@ -219,6 +220,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->NoInhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->NoUndefined = Args.hasArg(OPT_no_undefined);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
+  Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->Verbose = Args.hasArg(OPT_verbose);
@@ -236,6 +238,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
+
+  if (Config->Relocatable)
+    Config->StripAll = false;
 
   if (auto *Arg = Args.getLastArg(OPT_O)) {
     StringRef Val = Arg->getValue();
@@ -303,7 +308,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   std::unique_ptr<TargetInfo> TI(createTarget());
   Target = TI.get();
 
-  if (!Config->Shared) {
+  if (!Config->Shared && !Config->Relocatable) {
     // Add entry symbol.
     //
     // There is no entry symbol for AMDGPU binaries, so skip adding one to avoid
