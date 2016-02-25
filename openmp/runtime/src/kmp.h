@@ -369,6 +369,39 @@ enum sched_type {
     kmp_nm_ord_trapezoidal            = 199,
     kmp_nm_upper                      = 200,  /**< upper bound for nomerge values */
 
+#if OMP_41_ENABLED
+    /* Support for OpenMP 4.5 monotonic and nonmonotonic schedule modifiers.
+     * Since we need to distinguish the three possible cases (no modifier, monotonic modifier,
+     * nonmonotonic modifier), we need separate bits for each modifier.
+     * The absence of monotonic does not imply nonmonotonic, especially since 4.5 says
+     * that the behaviour of the "no modifier" case is implementation defined in 4.5,
+     * but will become "nonmonotonic" in 5.0.
+     *
+     * Since we're passing a full 32 bit value, we can use a couple of high bits for these
+     * flags; out of paranoia we avoid the sign bit.
+     *
+     * These modifiers can be or-ed into non-static schedules by the compiler to pass
+     * the additional information.
+     * They will be stripped early in the processing in __kmp_dispatch_init when setting up schedules, so
+     * most of the code won't ever see schedules with these bits set.
+     */
+    kmp_sch_modifier_monotonic      = (1<<29), /**< Set if the monotonic schedule modifier was present */
+    kmp_sch_modifier_nonmonotonic   = (1<<30), /**< Set if the nonmonotonic schedule modifier was present */
+
+# define SCHEDULE_WITHOUT_MODIFIERS(s) (enum sched_type)((s) & ~ (kmp_sch_modifier_nonmonotonic | kmp_sch_modifier_monotonic))
+# define SCHEDULE_HAS_MONOTONIC(s)     (((s) & kmp_sch_modifier_monotonic)    != 0)
+# define SCHEDULE_HAS_NONMONOTONIC(s)  (((s) & kmp_sch_modifier_nonmonotonic) != 0)
+# define SCHEDULE_HAS_NO_MODIFIERS(s)  (((s) & (kmp_sch_modifier_nonmonotonic | kmp_sch_modifier_monotonic)) == 0)
+#else
+    /* By doing this we hope to avoid multiple tests on OMP_41_ENABLED. Compilers can now eliminate tests on compile time
+     * constants and dead code that results from them, so we can leave code guarded by such an if in place.
+     */
+# define SCHEDULE_WITHOUT_MODIFIERS(s) (s)
+# define SCHEDULE_HAS_MONOTONIC(s)     false
+# define SCHEDULE_HAS_NONMONOTONIC(s)  false
+# define SCHEDULE_HAS_NO_MODIFIERS(s)  true
+#endif
+
     kmp_sch_default = kmp_sch_static  /**< default scheduling algorithm */
 };
 
@@ -1026,6 +1059,8 @@ extern int __kmp_place_num_threads_per_core;
 #define KMP_MAX_BRANCH_BITS     31
 
 #define KMP_MAX_ACTIVE_LEVELS_LIMIT INT_MAX
+
+#define KMP_MAX_TASK_PRIORITY_LIMIT INT_MAX
 
 /* Minimum number of threads before switch to TLS gtid (experimentally determined) */
 /* josh TODO: what about OS X* tuning? */
@@ -1965,6 +2000,9 @@ typedef enum kmp_tasking_mode {
 
 extern kmp_tasking_mode_t __kmp_tasking_mode;         /* determines how/when to execute tasks */
 extern kmp_int32 __kmp_task_stealing_constraint;
+#if OMP_41_ENABLED
+    extern kmp_int32 __kmp_max_task_priority; // Set via OMP_MAX_TASK_PRIORITY if specified, defaults to 0 otherwise
+#endif
 
 /* NOTE: kmp_taskdata_t and kmp_task_t structures allocated in single block with taskdata first */
 #define KMP_TASK_TO_TASKDATA(task)     (((kmp_taskdata_t *) task) - 1)
@@ -1983,6 +2021,18 @@ extern kmp_int32 __kmp_task_stealing_constraint;
  */
 typedef kmp_int32 (* kmp_routine_entry_t)( kmp_int32, void * );
 
+#if OMP_40_ENABLED || OMP_41_ENABLED
+typedef union kmp_cmplrdata {
+#if OMP_41_ENABLED
+    kmp_int32           priority;           /**< priority specified by user for the task */
+#endif // OMP_41_ENABLED
+#if OMP_40_ENABLED
+    kmp_routine_entry_t destructors;        /* pointer to function to invoke deconstructors of firstprivate C++ objects */
+#endif // OMP_40_ENABLED
+    /* future data */
+} kmp_cmplrdata_t;
+#endif
+
 /*  sizeof_kmp_task_t passed as arg to kmpc_omp_task call  */
 /*!
  */
@@ -1990,9 +2040,11 @@ typedef struct kmp_task {                   /* GEH: Shouldn't this be aligned so
     void *              shareds;            /**< pointer to block of pointers to shared vars   */
     kmp_routine_entry_t routine;            /**< pointer to routine to call for executing task */
     kmp_int32           part_id;            /**< part id for the task                          */
-#if OMP_40_ENABLED
-    kmp_routine_entry_t destructors;        /* pointer to function to invoke deconstructors of firstprivate C++ objects */
-#endif // OMP_40_ENABLED
+#if OMP_40_ENABLED || OMP_41_ENABLED
+    kmp_cmplrdata_t data1;                  /* Two known optional additions: destructors and priority */
+    kmp_cmplrdata_t data2;                  /* Process destructors first, priority second */
+    /* future data */
+#endif
     /*  private vars  */
 } kmp_task_t;
 
@@ -2091,7 +2143,8 @@ typedef struct kmp_tasking_flags {          /* Total struct must be exactly 32 b
     unsigned destructors_thunk : 1;         /* set if the compiler creates a thunk to invoke destructors from the runtime */
 #if OMP_41_ENABLED
     unsigned proxy       : 1;               /* task is a proxy task (it will be executed outside the context of the RTL) */
-    unsigned reserved    : 11;              /* reserved for compiler use */
+    unsigned priority_specified :1;         /* set if the compiler provides priority setting for the task */
+    unsigned reserved    : 10;              /* reserved for compiler use */
 #else
     unsigned reserved    : 12;              /* reserved for compiler use */
 #endif

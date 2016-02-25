@@ -679,9 +679,9 @@ __kmp_task_finish( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t *resumed_tas
        hence overlapping the destructor invokations with some other work in the
        released tasks.  The OpenMP spec is not specific on when the destructors are
        invoked, so we should be free to choose.
-     */
+    */
     if (taskdata->td_flags.destructors_thunk) {
-        kmp_routine_entry_t destr_thunk = task->destructors;
+        kmp_routine_entry_t destr_thunk = task->data1.destructors;
         KMP_ASSERT(destr_thunk);
         destr_thunk(gtid, task);
     }

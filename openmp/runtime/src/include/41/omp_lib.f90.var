@@ -310,6 +310,11 @@
             integer (kind=omp_nest_lock_kind) lockvar
           end function omp_test_nest_lock
 
+          function omp_get_max_task_priority() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_max_task_priority
+          end function omp_get_max_task_priority
+
 !         ***
 !         *** kmp_* entry points
 !         ***

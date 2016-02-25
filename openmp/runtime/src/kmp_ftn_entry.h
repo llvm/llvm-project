@@ -1089,6 +1089,22 @@ FTN_GET_CANCELLATION_STATUS(int cancel_kind) {
 
 #endif // OMP_40_ENABLED
 
+#if OMP_41_ENABLED
+/* returns the maximum allowed task priority */
+int FTN_STDCALL
+FTN_GET_MAX_TASK_PRIORITY( void )
+{
+#ifdef KMP_STUB
+    return 0;
+#else
+    if ( ! __kmp_init_serial ) {
+        __kmp_serial_initialize();
+    }
+    return __kmp_max_task_priority;
+#endif
+}
+#endif
+
 // GCC compatibility (versioned symbols)
 #ifdef KMP_USE_VERSION_SYMBOLS
 

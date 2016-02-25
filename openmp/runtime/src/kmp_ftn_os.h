@@ -113,6 +113,10 @@
     #define FTN_GET_CANCELLATION_STATUS          kmp_get_cancellation_status
 #endif
 
+#if OMP_41_ENABLED
+    #define FTN_GET_MAX_TASK_PRIORITY            omp_get_max_task_priority
+#endif
+
 #endif /* KMP_FTN_PLAIN */
 
 /* ------------------------------------------------------------------------ */
@@ -208,6 +212,10 @@
 #if OMP_40_ENABLED
     #define FTN_GET_CANCELLATION                 omp_get_cancellation_
     #define FTN_GET_CANCELLATION_STATUS          kmp_get_cancellation_status_
+#endif
+
+#if OMP_41_ENABLED
+    #define FTN_GET_MAX_TASK_PRIORITY            omp_get_max_task_priority_
 #endif
 
 #endif /* KMP_FTN_APPEND */
@@ -307,6 +315,10 @@
     #define FTN_GET_CANCELLATION_STATUS          KMP_GET_CANCELLATION_STATUS
 #endif
 
+#if OMP_41_ENABLED
+    #define FTN_GET_MAX_TASK_PRIORITY            OMP_GET_MAX_TASK_PRIORITY
+#endif
+
 #endif /* KMP_FTN_UPPER */
 
 /* ------------------------------------------------------------------------ */
@@ -402,6 +414,10 @@
 #if OMP_40_ENABLED
     #define FTN_GET_CANCELLATION                 OMP_GET_CANCELLATION_
     #define FTN_GET_CANCELLATION_STATUS          KMP_GET_CANCELLATION_STATUS_
+#endif
+
+#if OMP_41_ENABLED
+    #define FTN_GET_MAX_TASK_PRIORITY            OMP_GET_MAX_TASK_PRIORITY_
 #endif
 
 #endif /* KMP_FTN_UAPPEND */

@@ -497,6 +497,7 @@ kmp_set_warnings_off                        780
 %ifdef OMP_41
     omp_init_lock_with_hint                 870
     omp_init_nest_lock_with_hint            871
+    omp_get_max_task_priority               872
 %endif # OMP_41
 
 %ifndef stub

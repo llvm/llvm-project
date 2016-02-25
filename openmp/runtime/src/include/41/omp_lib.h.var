@@ -292,6 +292,11 @@
           integer (kind=omp_nest_lock_kind) lockvar
         end function omp_test_nest_lock
 
+        function omp_get_max_task_priority() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_get_max_task_priority
+        end function omp_get_max_task_priority
+
 !       ***
 !       *** kmp_* entry points
 !       ***
@@ -482,6 +487,7 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_nest_lock
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_unset_nest_lock
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_test_nest_lock
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_max_task_priority
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_stacksize
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_stacksize_s
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_blocktime
@@ -551,6 +557,7 @@
 !$omp declare target(omp_set_nest_lock )
 !$omp declare target(omp_unset_nest_lock )
 !$omp declare target(omp_test_nest_lock )
+!$omp declare target(omp_get_max_task_priority )
 !$omp declare target(kmp_set_stacksize )
 !$omp declare target(kmp_set_stacksize_s )
 !$omp declare target(kmp_set_blocktime )
