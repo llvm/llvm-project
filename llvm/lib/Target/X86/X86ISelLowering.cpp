@@ -28886,6 +28886,9 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PSHUFD:
   case X86ISD::PSHUFHW:
   case X86ISD::PSHUFLW:
+  case X86ISD::MOVSHDUP:
+  case X86ISD::MOVSLDUP:
+  case X86ISD::MOVDDUP:
   case X86ISD::MOVSS:
   case X86ISD::MOVSD:
   case X86ISD::VPERMILPI:

@@ -948,7 +948,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
     case Instruction::SDiv:
     case Instruction::UDiv:
       // X / undef -> undef
-      if (match(C1, m_Zero()))
+      if (isa<UndefValue>(C2))
         return C2;
       // undef / 0 -> undef
       // undef / 1 -> undef

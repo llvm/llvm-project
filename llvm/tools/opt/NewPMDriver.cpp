@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRPrintingPasses.h"
@@ -62,6 +63,7 @@ bool llvm::runPassPipeline(StringRef Arg0, LLVMContext &Context, Module &M,
     return false;
   }
 
+  LoopAnalysisManager LAM(DebugPM);
   FunctionAnalysisManager FAM(DebugPM);
   CGSCCAnalysisManager CGAM(DebugPM);
   ModuleAnalysisManager MAM(DebugPM);
@@ -73,6 +75,7 @@ bool llvm::runPassPipeline(StringRef Arg0, LLVMContext &Context, Module &M,
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
 
   // Cross register the analysis managers through their proxies.
   MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
@@ -81,6 +84,8 @@ bool llvm::runPassPipeline(StringRef Arg0, LLVMContext &Context, Module &M,
   CGAM.registerPass([&] { return ModuleAnalysisManagerCGSCCProxy(MAM); });
   FAM.registerPass([&] { return CGSCCAnalysisManagerFunctionProxy(CGAM); });
   FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+  FAM.registerPass([&] { return LoopAnalysisManagerFunctionProxy(LAM); });
+  LAM.registerPass([&] { return FunctionAnalysisManagerLoopProxy(FAM); });
 
   ModulePassManager MPM(DebugPM);
   if (VK > VK_NoVerifier)

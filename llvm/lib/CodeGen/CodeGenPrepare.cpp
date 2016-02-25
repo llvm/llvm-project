@@ -4477,17 +4477,6 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
   if (!Cmp || !Cmp->hasOneUse())
     return false;
 
-  Value *CmpOp0 = Cmp->getOperand(0);
-  Value *CmpOp1 = Cmp->getOperand(1);
-
-  // Emit "cmov on compare with a memory operand" as a branch to avoid stalls
-  // on a load from memory. But if the load is used more than once, do not
-  // change the select to a branch because the load is probably needed
-  // regardless of whether the branch is taken or not.
-  if ((isa<LoadInst>(CmpOp0) && CmpOp0->hasOneUse()) ||
-      (isa<LoadInst>(CmpOp1) && CmpOp1->hasOneUse()))
-    return true;
-
   // If either operand of the select is expensive and only needed on one side
   // of the select, we should form a branch.
   if (sinkSelectOperand(TTI, SI->getTrueValue()) ||
