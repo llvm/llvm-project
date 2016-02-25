@@ -103,8 +103,9 @@ void __clear_cache(void *start, void *end) {
          const register int end_reg __asm("r1") = (int) (intptr_t) end;
          const register int flags __asm("r2") = 0;
          const register int syscall_nr __asm("r7") = __ARM_NR_cacheflush;
-        __asm __volatile("svc 0x0" : "=r"(start_reg)
-            : "r"(syscall_nr), "r"(start_reg), "r"(end_reg), "r"(flags) : "r0");
+         __asm __volatile("svc 0x0"
+                          : "=r"(start_reg)
+                          : "r"(syscall_nr), "r"(start_reg), "r"(end_reg));
          if (start_reg != 0) {
              compilerrt_abort();
          }
