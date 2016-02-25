@@ -92,6 +92,28 @@ public:
   static const OMPClauseWithPreInit *get(const OMPClause *C);
 };
 
+/// Class that handles post-update expression for some clauses, like
+/// 'lastprivate', 'reduction' etc.
+class OMPClauseWithPostUpdate {
+  friend class OMPClauseReader;
+  /// Post-update expression for the clause.
+  Expr *PostUpdate;
+protected:
+  /// Set pre-initialization statement for the clause.
+  void setPostUpdateExpr(Expr *S) { PostUpdate = S; }
+  OMPClauseWithPostUpdate(const OMPClause *This) : PostUpdate(nullptr) {
+    assert(get(This) && "get is not tuned.");
+  }
+
+public:
+  /// Get post-update expression for the clause.
+  const Expr *getPostUpdateExpr() const { return PostUpdate; }
+  /// Get post-update expression for the clause.
+  Expr *getPostUpdateExpr() { return PostUpdate; }
+  static OMPClauseWithPostUpdate *get(OMPClause *C);
+  static const OMPClauseWithPostUpdate *get(const OMPClause *C);
+};
+
 /// \brief This represents clauses with the list of variables like 'private',
 /// 'firstprivate', 'copyin', 'shared', or 'reduction' clauses in the
 /// '#pragma omp ...' directives.
@@ -1382,6 +1404,8 @@ public:
 /// with the variables 'a' and 'b'.
 class OMPLastprivateClause final
     : public OMPVarListClause<OMPLastprivateClause>,
+      public OMPClauseWithPreInit,
+      public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPLastprivateClause, Expr *> {
   // There are 4 additional tail-allocated arrays at the end of the class:
   // 1. Contains list of pseudo variables with the default initialization for
@@ -1414,7 +1438,8 @@ class OMPLastprivateClause final
   OMPLastprivateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
                        SourceLocation EndLoc, unsigned N)
       : OMPVarListClause<OMPLastprivateClause>(OMPC_lastprivate, StartLoc,
-                                               LParenLoc, EndLoc, N) {}
+                                               LParenLoc, EndLoc, N),
+        OMPClauseWithPreInit(this), OMPClauseWithPostUpdate(this) {}
 
   /// \brief Build an empty clause.
   ///
@@ -1423,7 +1448,8 @@ class OMPLastprivateClause final
   explicit OMPLastprivateClause(unsigned N)
       : OMPVarListClause<OMPLastprivateClause>(
             OMPC_lastprivate, SourceLocation(), SourceLocation(),
-            SourceLocation(), N) {}
+            SourceLocation(), N),
+        OMPClauseWithPreInit(this), OMPClauseWithPostUpdate(this) {}
 
   /// \brief Get the list of helper expressions for initialization of private
   /// copies for lastprivate variables.
@@ -1496,12 +1522,16 @@ public:
   /// \endcode
   /// Required for proper codegen of final assignment performed by the
   /// lastprivate clause.
-  ///
+  /// \param PreInit Statement that must be executed before entering the OpenMP
+  /// region with this clause.
+  /// \param PostInit Expression that must be executed after exit from the
+  /// OpenMP region with this clause.
   ///
   static OMPLastprivateClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation EndLoc, ArrayRef<Expr *> VL, ArrayRef<Expr *> SrcExprs,
-         ArrayRef<Expr *> DstExprs, ArrayRef<Expr *> AssignmentOps);
+         ArrayRef<Expr *> DstExprs, ArrayRef<Expr *> AssignmentOps,
+         Stmt *PreInit, Expr *PostUpdate);
   /// \brief Creates an empty clause with the place for \a N variables.
   ///
   /// \param C AST context.

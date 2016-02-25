@@ -494,6 +494,7 @@ private:
   template <typename T> bool VisitOMPClauseList(T *Node);
   /// Process clauses with pre-initis.
   bool VisitOMPClauseWithPreInit(OMPClauseWithPreInit *Node);
+  bool VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *Node);
 
   bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue);
 };
@@ -2507,6 +2508,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPClauseWithPreInit(
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPClauseWithPostUpdate(
+    OMPClauseWithPostUpdate *Node) {
+  TRY_TO(TraverseStmt(Node->getPostUpdateExpr()));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPIfClause(OMPIfClause *C) {
   TRY_TO(TraverseStmt(C->getCondition()));
   return true;
@@ -2660,6 +2668,8 @@ template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPLastprivateClause(
     OMPLastprivateClause *C) {
   TRY_TO(VisitOMPClauseList(C));
+  TRY_TO(VisitOMPClauseWithPreInit(C));
+  TRY_TO(VisitOMPClauseWithPostUpdate(C));
   for (auto *E : C->private_copies()) {
     TRY_TO(TraverseStmt(E));
   }

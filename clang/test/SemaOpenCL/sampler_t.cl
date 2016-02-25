@@ -10,4 +10,7 @@ void kernel ker(sampler_t argsmp) {
   foo(glb_smp);
   foo(const_smp);
   foo(5); // expected-error {{sampler_t variable required - got 'int'}}
+  sampler_t sa[] = {argsmp, const_smp}; // expected-error {{array of 'sampler_t' type is invalid in OpenCL}}
 }
+
+void bad(sampler_t*); // expected-error {{pointer to type 'sampler_t' is invalid in OpenCL}}

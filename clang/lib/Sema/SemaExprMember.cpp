@@ -1100,6 +1100,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       // declaration corresponding to the supplied template arguments
       // (while emitting diagnostics as necessary) that will be referenced
       // by this expression.
+      assert((!TemplateArgs || isa<VarTemplateDecl>(MemberDecl)) &&
+             "How did we get template arguments here sans a variable template");
       if (isa<VarTemplateDecl>(MemberDecl)) {
         MemberDecl = getVarTemplateSpecialization(
             *this, cast<VarTemplateDecl>(MemberDecl), TemplateArgs,
@@ -1107,7 +1109,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
         if (!MemberDecl)
           return ExprError();
       }
-      return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), MemberDecl);
+      return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), MemberDecl,
+                                      FoundDecl, TemplateArgs);
     }
     SourceLocation Loc = R.getNameLoc();
     if (SS.getRange().isValid())
