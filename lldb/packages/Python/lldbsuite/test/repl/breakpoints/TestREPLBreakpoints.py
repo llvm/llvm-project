@@ -23,7 +23,7 @@ class REPLBreakpointsTestCase (REPLTest):
 
     @decorators.swiftTest
     @decorators.no_debug_info_test
-    @decorators.expectedFailureAll(oslist=["linux"], bugnumber="rdar://23091701")
+    @decorators.expectedFailureAll(oslist=["macosx", "linux"], bugnumber="rdar://23091701")
     def testREPL(self):
         REPLTest.testREPL(self)
 
