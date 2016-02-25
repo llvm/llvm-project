@@ -269,12 +269,19 @@ public:
   void Visit##Class(const Class *C);
 #include "clang/Basic/OpenMPKinds.def"
   void VistOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
+  void VistOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
 };
 
 void OMPClauseProfiler::VistOMPClauseWithPreInit(
     const OMPClauseWithPreInit *C) {
   if (auto *S = C->getPreInitStmt())
     Profiler->VisitStmt(S);
+}
+
+void OMPClauseProfiler::VistOMPClauseWithPostUpdate(
+    const OMPClauseWithPostUpdate *C) {
+  if (auto *E = C->getPostUpdateExpr())
+    Profiler->VisitStmt(E);
 }
 
 void OMPClauseProfiler::VisitOMPIfClause(const OMPIfClause *C) {
@@ -371,6 +378,8 @@ OMPClauseProfiler::VisitOMPFirstprivateClause(const OMPFirstprivateClause *C) {
 void
 OMPClauseProfiler::VisitOMPLastprivateClause(const OMPLastprivateClause *C) {
   VisitOMPClauseList(C);
+  VistOMPClauseWithPreInit(C);
+  VistOMPClauseWithPostUpdate(C);
   for (auto *E : C->source_exprs()) {
     Profiler->VisitStmt(E);
   }

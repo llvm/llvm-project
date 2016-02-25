@@ -5716,6 +5716,17 @@ Sema::ActOnVariableDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   QualType R = TInfo->getType();
   DeclarationName Name = GetNameForDeclarator(D).getName();
 
+  // OpenCL v2.0 s6.9.b - Image type can only be used as a function argument.
+  // OpenCL v2.0 s6.13.16.1 - Pipe type can only be used as a function
+  // argument.
+  if (getLangOpts().OpenCL && (R->isImageType() || R->isPipeType())) {
+    Diag(D.getIdentifierLoc(),
+         diag::err_opencl_type_can_only_be_used_as_function_parameter)
+        << R;
+    D.setInvalidType();
+    return nullptr;
+  }
+
   DeclSpec::SCS SCSpec = D.getDeclSpec().getStorageClassSpec();
   StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
 
@@ -10743,7 +10754,17 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       Diag(NameLoc, diag::err_arg_with_address_space);
       New->setInvalidDecl();
     }
-  }   
+  }
+
+  // OpenCL v2.0 s6.9b - Pointer to image/sampler cannot be used.
+  // OpenCL v2.0 s6.13.16.1 - Pointer to pipe cannot be used.
+  if (getLangOpts().OpenCL && T->isPointerType()) {
+    const QualType PTy = T->getPointeeType();
+    if (PTy->isImageType() || PTy->isSamplerT() || PTy->isPipeType()) {
+      Diag(NameLoc, diag::err_opencl_pointer_to_type) << PTy;
+      New->setInvalidDecl();
+    }
+  }
 
   return New;
 }

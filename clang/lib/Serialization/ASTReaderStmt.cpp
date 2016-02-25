@@ -1752,6 +1752,7 @@ public:
 #include "clang/Basic/OpenMPKinds.def"
   OMPClause *readClause();
   void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
+  void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
 };
 }
 
@@ -1896,6 +1897,10 @@ void OMPClauseReader::VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C) {
   C->setPreInitStmt(Reader->Reader.ReadSubStmt());
 }
 
+void OMPClauseReader::VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C) {
+  C->setPostUpdateExpr(Reader->Reader.ReadSubExpr());
+}
+
 void OMPClauseReader::VisitOMPIfClause(OMPIfClause *C) {
   C->setNameModifier(static_cast<OpenMPDirectiveKind>(Record[Idx++]));
   C->setNameModifierLoc(Reader->ReadSourceLocation(Record, Idx));
@@ -2020,6 +2025,8 @@ void OMPClauseReader::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
 }
 
 void OMPClauseReader::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  VisitOMPClauseWithPostUpdate(C);
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;

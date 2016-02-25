@@ -1700,7 +1700,7 @@ void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
-  return Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type);
+  return !isRelRelative(Type);
 }
 
 template <class ELFT>
@@ -1716,9 +1716,8 @@ bool MipsTargetInfo<ELFT>::needsPltImpl(uint32_t Type,
     return false;
   if (Type == R_MIPS_26 && canBePreempted(&S, false))
     return true;
-  if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
-    if (S.isShared())
-      return true;
+  if (!isRelRelative(Type) && S.isShared())
+    return true;
   return false;
 }
 
@@ -1826,15 +1825,13 @@ template <class ELFT>
 bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
   switch (Type) {
   default:
-    return false;
-  case R_MIPS_PC16:
-  case R_MIPS_PC19_S2:
-  case R_MIPS_PC21_S2:
-  case R_MIPS_PC26_S2:
-  case R_MIPS_PC32:
-  case R_MIPS_PCHI16:
-  case R_MIPS_PCLO16:
     return true;
+  case R_MIPS_26:
+  case R_MIPS_32:
+  case R_MIPS_64:
+  case R_MIPS_HI16:
+  case R_MIPS_LO16:
+    return false;
   }
 }
 

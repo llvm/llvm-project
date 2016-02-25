@@ -7753,6 +7753,10 @@ def err_opencl_invalid_type_array : Error<
   "array of %0 type is invalid in OpenCL">;
 def err_opencl_ternary_with_block : Error<
   "block type cannot be used as expression in ternary expression in OpenCL">;
+def err_opencl_pointer_to_type : Error<
+  "pointer to type %0 is invalid in OpenCL">;
+def err_opencl_type_can_only_be_used_as_function_parameter : Error <
+  "type %0 can only be used as a function parameter in OpenCL">;
 
 // OpenCL v2.0 s6.13.6 -- Builtin Pipe Functions
 def err_opencl_builtin_pipe_first_arg : Error<

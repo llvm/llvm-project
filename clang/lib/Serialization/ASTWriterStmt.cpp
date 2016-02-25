@@ -1755,6 +1755,7 @@ public:
 #include "clang/Basic/OpenMPKinds.def"
   void writeClause(OMPClause *C);
   void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
+  void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
 };
 }
 
@@ -1767,6 +1768,10 @@ void OMPClauseWriter::writeClause(OMPClause *C) {
 
 void OMPClauseWriter::VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C) {
   Writer->Writer.AddStmt(C->getPreInitStmt());
+}
+
+void OMPClauseWriter::VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C) {
+  Writer->Writer.AddStmt(C->getPostUpdateExpr());
 }
 
 void OMPClauseWriter::VisitOMPIfClause(OMPIfClause *C) {
@@ -1882,6 +1887,8 @@ void OMPClauseWriter::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
 
 void OMPClauseWriter::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
   Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPreInit(C);
+  VisitOMPClauseWithPostUpdate(C);
   Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
   for (auto *VE : C->varlists())
     Writer->Writer.AddStmt(VE);

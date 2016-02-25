@@ -2176,9 +2176,12 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   }
 
   // OpenCL v2.0 s6.12.5 - Arrays of blocks are not supported.
+  // OpenCL v2.0 s6.16.13.1 - Arrays of pipe type are not supported.
+  // OpenCL v2.0 s6.9.b - Arrays of image/sampler type are not supported.
   if (getLangOpts().OpenCL) {
     const QualType ArrType = Context.getBaseElementType(T);
-    if (ArrType->isBlockPointerType()) {
+    if (ArrType->isBlockPointerType() || ArrType->isPipeType() ||
+        ArrType->isSamplerT() || ArrType->isImageType()) {
       Diag(Loc, diag::err_opencl_invalid_type_array) << ArrType;
       return QualType();
     }

@@ -2031,11 +2031,17 @@ public:
   void Visit##Class(const Class *C);
 #include "clang/Basic/OpenMPKinds.def"
   void VisitOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
+  void VisitOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
 };
 
 void OMPClauseEnqueue::VisitOMPClauseWithPreInit(
     const OMPClauseWithPreInit *C) {
   Visitor->AddStmt(C->getPreInitStmt());
+}
+
+void OMPClauseEnqueue::VisitOMPClauseWithPostUpdate(
+    const OMPClauseWithPostUpdate *C) {
+  Visitor->AddStmt(C->getPostUpdateExpr());
 }
 
 void OMPClauseEnqueue::VisitOMPIfClause(const OMPIfClause *C) {
@@ -2152,6 +2158,8 @@ void OMPClauseEnqueue::VisitOMPFirstprivateClause(
 void OMPClauseEnqueue::VisitOMPLastprivateClause(
                                         const OMPLastprivateClause *C) {
   VisitOMPClauseList(C);
+  VisitOMPClauseWithPreInit(C);
+  VisitOMPClauseWithPostUpdate(C);
   for (auto *E : C->private_copies()) {
     Visitor->AddStmt(E);
   }

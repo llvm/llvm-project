@@ -6,3 +6,6 @@ void test2(pipe p){// expected-error {{missing actual type specifier for pipe}}
 }
 void test3(int pipe p){// expected-error {{cannot combine with previous 'int' declaration specifier}}
 }
+void test4() {
+  pipe int p; // expected-error {{type 'pipe' can only be used as a function parameter}}
+}
