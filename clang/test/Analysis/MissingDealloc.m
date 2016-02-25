@@ -128,6 +128,9 @@ IBOutlet NSWindow *window;
 @interface MyClassTest : SenTestCase {
   NSString *resourcePath;
 }
+
+@property (retain) NSObject *ivar;
+
 @end
 
 @interface NSBundle : NSObject {}
@@ -143,4 +146,15 @@ IBOutlet NSWindow *window;
   // do something which uses resourcepath
 }
 @end
+
+//===------------------------------------------------------------------------===
+// Don't warn for clases that aren't subclasses of NSObject
+
+__attribute__((objc_root_class))
+@interface NonNSObjectMissingDealloc
+@property (retain) NSObject *ivar;
+@end
+@implementation NonNSObjectMissingDealloc
+@end
+
 // CHECK: 4 warnings generated.
