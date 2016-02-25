@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class -fobjc-arc %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,alpha.osx.cocoa.Dealloc,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount,alpha.osx.cocoa.Dealloc,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class -fobjc-arc %s
 
 void clang_analyzer_eval(int);
 
@@ -22,6 +22,7 @@ typedef struct _NSZone NSZone;
 -(id)copy;
 -(id)retain;
 -(oneway void)release;
+-(void)dealloc;
 @end
 @interface NSString : NSObject <NSCopying, NSMutableCopying, NSCoding>
 - (NSUInteger)length;
@@ -138,6 +139,14 @@ NSNumber* numberFromMyNumberProperty(MyNumber* aMyNumber)
 
 @implementation Person
 @synthesize name = _name;
+
+-(void)dealloc {
+#if !__has_feature(objc_arc)
+  self.name = [[NSString alloc] init]; // expected-warning {{leak}}
+
+  [super dealloc]; // expected-warning {{The '_name' ivar in 'Person' was retained by a synthesized property but not released before '[super dealloc]}}
+#endif
+}
 @end
 
 #if !__has_feature(objc_arc)
