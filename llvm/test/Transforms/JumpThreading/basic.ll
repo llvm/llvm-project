@@ -476,6 +476,56 @@ exit1:
 ; CHECK: }
 }
 
+
+;;; Verify that we can handle constraint propagation through cast.
+define i32 @test16(i1 %cond) {
+Entry:
+; CHECK-LABEL: @test16(
+	br i1 %cond, label %Merge, label %F1
+
+; CHECK: Entry:
+; CHECK-NEXT:  br i1 %cond, label %F2, label %Merge
+
+F1:
+	%v1 = call i32 @f1()
+	br label %Merge
+
+Merge:
+	%B = phi i32 [1, %Entry], [%v1, %F1]
+	%M = icmp eq i32 %B, 0 
+	%M1 = zext i1 %M to i32
+	%N = icmp eq i32 %M1, 1 
+	br i1 %N, label %T2, label %F2
+
+; CHECK: Merge:
+; CHECK-NOT: phi
+; CHECK-NEXT:   %v1 = call i32 @f1()
+
+T2:
+	%Q = zext i1 %M to i32
+	ret i32 %Q
+
+F2:
+	ret i32 %B
+; CHECK: F2:
+; CHECK-NEXT: phi i32
+}
+
+;;; Just check that ComputeValueKnownInPredecessors() does not return true with
+;;; no values and triggers the assert in ProcessThreadableEdges().
+define i32 @test17() {
+entry:
+	%A = add i32 0, 1
+	%B = icmp eq i32 %A, 0
+	br i1 %B, label %T, label %F
+T:
+	%v1 = call i32 @f1()
+	ret i32 %v1
+F:
+	%v2 = call i32 @f2()
+	ret i32 %v2
+}
+
 ; In this test we check that block duplication is inhibited by the presence
 ; of a function with the 'noduplicate' attribute.
 

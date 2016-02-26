@@ -44,15 +44,11 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <algorithm>
 
 namespace llvm {
-
-// FIXME: Replace this brittle forward declaration with the include of the new
-// PassManager.h when doing so doesn't break the PassManagerBuilder.
-template <typename IRUnitT> class AnalysisManager;
-class PreservedAnalyses;
 
 class DominatorTree;
 class LoopInfo;

@@ -2,7 +2,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK-LABEL: {{^}}image_load:
-;CHECK: image_load {{v\[[0-9]+:[0-9]+\]}}, 15, 0, 0, 0, 0, 0, 0, 0, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
+;CHECK: image_load {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0xf
 define void @image_load() #0 {
 main_body:
   %r = call <4 x float> @llvm.SI.image.load.v4i32(<4 x i32> undef, <8 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
@@ -15,7 +15,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_load_mip:
-;CHECK: image_load_mip {{v\[[0-9]+:[0-9]+\]}}, 15, 0, 0, 0, 0, 0, 0, 0, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
+;CHECK: image_load_mip {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0xf
 define void @image_load_mip() #0 {
 main_body:
   %r = call <4 x float> @llvm.SI.image.load.mip.v4i32(<4 x i32> undef, <8 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
@@ -28,7 +28,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}getresinfo:
-;CHECK: image_get_resinfo {{v\[[0-9]+:[0-9]+\]}}, 15, 0, 0, 0, 0, 0, 0, 0, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}
+;CHECK: image_get_resinfo {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0xf
 define void @getresinfo() #0 {
 main_body:
   %r = call <4 x float> @llvm.SI.getresinfo.i32(i32 undef, <8 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)

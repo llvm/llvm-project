@@ -2571,7 +2571,8 @@ def : Pat<(v4i1 (X86vsrli VK4:$src, (i8 imm:$imm))),
 
 multiclass avx512_load<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                          PatFrag ld_frag, PatFrag mload,
-                         bit IsReMaterializable = 1> {
+                         bit IsReMaterializable = 1,
+                         SDPatternOperator SelectOprr = vselect> {
   let hasSideEffects = 0 in {
   def rr : AVX512PI<opc, MRMSrcReg, (outs _.RC:$dst), (ins _.RC:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), [],
@@ -2597,7 +2598,7 @@ multiclass avx512_load<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                     (ins _.RC:$src0, _.KRCWM:$mask, _.RC:$src1),
                     !strconcat(OpcodeStr, "\t{$src1, ${dst} {${mask}}|",
                     "${dst} {${mask}}, $src1}"),
-                    [(set _.RC:$dst, (_.VT (vselect _.KRCWM:$mask,
+                    [(set _.RC:$dst, (_.VT (SelectOprr _.KRCWM:$mask,
                                         (_.VT _.RC:$src1),
                                         (_.VT _.RC:$src0))))], _.ExeDomain>,
                      EVEX, EVEX_K;
@@ -2650,16 +2651,20 @@ multiclass avx512_alignedload_vl<bits<8> opc, string OpcodeStr,
 multiclass avx512_load_vl<bits<8> opc, string OpcodeStr,
                                   AVX512VLVectorVTInfo _,
                                   Predicate prd,
-                                  bit IsReMaterializable = 1> {
+                                  bit IsReMaterializable = 1,
+                                  SDPatternOperator SelectOprr = vselect> {
   let Predicates = [prd] in
   defm Z : avx512_load<opc, OpcodeStr, _.info512, _.info512.LdFrag,
-                       masked_load_unaligned, IsReMaterializable>, EVEX_V512;
+                       masked_load_unaligned, IsReMaterializable,
+                       SelectOprr>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
   defm Z256 : avx512_load<opc, OpcodeStr, _.info256, _.info256.LdFrag,
-                         masked_load_unaligned, IsReMaterializable>, EVEX_V256;
+                         masked_load_unaligned, IsReMaterializable,
+                         SelectOprr>, EVEX_V256;
   defm Z128 : avx512_load<opc, OpcodeStr, _.info128, _.info128.LdFrag,
-                         masked_load_unaligned, IsReMaterializable>, EVEX_V128;
+                         masked_load_unaligned, IsReMaterializable,
+                         SelectOprr>, EVEX_V128;
   }
 }
 
@@ -2734,11 +2739,13 @@ defm VMOVAPD : avx512_alignedload_vl<0x28, "vmovapd", avx512vl_f64_info,
                avx512_alignedstore_vl<0x29, "vmovapd", avx512vl_f64_info,
                                      HasAVX512>, PD, VEX_W, EVEX_CD8<64, CD8VF>;
 
-defm VMOVUPS : avx512_load_vl<0x10, "vmovups", avx512vl_f32_info, HasAVX512>,
+defm VMOVUPS : avx512_load_vl<0x10, "vmovups", avx512vl_f32_info, HasAVX512,
+                              1, null_frag>,
                avx512_store_vl<0x11, "vmovups", avx512vl_f32_info, HasAVX512>,
                               PS, EVEX_CD8<32, CD8VF>;
 
-defm VMOVUPD : avx512_load_vl<0x10, "vmovupd", avx512vl_f64_info, HasAVX512, 0>,
+defm VMOVUPD : avx512_load_vl<0x10, "vmovupd", avx512vl_f64_info, HasAVX512, 0,
+                              null_frag>,
                avx512_store_vl<0x11, "vmovupd", avx512vl_f64_info, HasAVX512>,
                PD, VEX_W, EVEX_CD8<64, CD8VF>;
 
@@ -2760,11 +2767,13 @@ defm VMOVDQU16 : avx512_load_vl<0x6F, "vmovdqu16", avx512vl_i16_info, HasBWI>,
                  avx512_store_vl<0x7F, "vmovdqu16", avx512vl_i16_info,
                                  HasBWI>, XD, VEX_W, EVEX_CD8<16, CD8VF>;
 
-defm VMOVDQU32 : avx512_load_vl<0x6F, "vmovdqu32", avx512vl_i32_info, HasAVX512>,
+defm VMOVDQU32 : avx512_load_vl<0x6F, "vmovdqu32", avx512vl_i32_info, HasAVX512,
+                                1, null_frag>,
                  avx512_store_vl<0x7F, "vmovdqu32", avx512vl_i32_info,
                                  HasAVX512>, XS, EVEX_CD8<32, CD8VF>;
 
-defm VMOVDQU64 : avx512_load_vl<0x6F, "vmovdqu64", avx512vl_i64_info, HasAVX512>,
+defm VMOVDQU64 : avx512_load_vl<0x6F, "vmovdqu64", avx512vl_i64_info, HasAVX512,
+                                1, null_frag>,
                  avx512_store_vl<0x7F, "vmovdqu64", avx512vl_i64_info,
                                  HasAVX512>, XS, VEX_W, EVEX_CD8<64, CD8VF>;
 

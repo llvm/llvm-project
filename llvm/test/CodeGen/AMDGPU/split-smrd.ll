@@ -4,7 +4,7 @@
 ; Make sure that when we split an smrd instruction in order to move it to
 ; the VALU, we are also moving its users to the VALU.
 ; CHECK-LABEL: {{^}}split_smrd_add_worklist:
-; CHECK: image_sample v{{[0-9]+}}, 1, 0, 0, 0, 0, 0, 0, 0, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; CHECK: image_sample v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x1
 
 define void @split_smrd_add_worklist([34 x <8 x i32>] addrspace(2)* byval %arg) #0 {
 bb:

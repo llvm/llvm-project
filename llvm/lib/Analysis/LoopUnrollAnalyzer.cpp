@@ -37,7 +37,7 @@ bool UnrolledInstAnalyzer::simplifyInstWithSCEV(Instruction *I) {
   }
 
   auto *AR = dyn_cast<SCEVAddRecExpr>(S);
-  if (!AR)
+  if (!AR || AR->getLoop() != L)
     return false;
 
   const SCEV *ValueAtIteration = AR->evaluateAtIteration(IterationNumber, SE);

@@ -908,9 +908,15 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
     if (RegNo == X86::RIZ ||
         X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo) ||
         X86II::isX86_64NonExtLowByteReg(RegNo) ||
-        X86II::isX86_64ExtendedReg(RegNo))
+        X86II::isX86_64ExtendedReg(RegNo) ||
+        X86II::is32ExtendedReg(RegNo))
       return Error(StartLoc, "register %"
                    + Tok.getString() + " is only available in 64-bit mode",
+                   SMRange(StartLoc, EndLoc));
+  } else if (!getSTI().getFeatureBits()[X86::FeatureAVX512]) {
+    if (X86II::is32ExtendedReg(RegNo))
+      return Error(StartLoc, "register %"
+                   + Tok.getString() + " is only available with AVX512",
                    SMRange(StartLoc, EndLoc));
   }
 
@@ -1006,9 +1012,7 @@ std::unique_ptr<X86Operand> X86AsmParser::DefaultMemDIOperand(SMLoc Loc) {
 
 bool X86AsmParser::IsSIReg(unsigned Reg) {
   switch (Reg) {
-  default:
-    llvm_unreachable("Only (R|E)SI and (R|E)DI are expected!");
-    return false;
+  default: llvm_unreachable("Only (R|E)SI and (R|E)DI are expected!");
   case X86::RSI:
   case X86::ESI:
   case X86::SI:
@@ -1023,9 +1027,7 @@ bool X86AsmParser::IsSIReg(unsigned Reg) {
 unsigned X86AsmParser::GetSIDIForRegClass(unsigned RegClassID, unsigned Reg,
                                           bool IsSIReg) {
   switch (RegClassID) {
-  default:
-    llvm_unreachable("Unexpected register class");
-    return Reg;
+  default: llvm_unreachable("Unexpected register class");
   case X86::GR64RegClassID:
     return IsSIReg ? X86::RSI : X86::RDI;
   case X86::GR32RegClassID:

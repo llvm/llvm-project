@@ -1,0 +1,18 @@
+RUN: not llvm-dwp %p/../Inputs/duplicate/c.dwo %p/../Inputs/duplicate/c.dwo -o %t 2>&1 \
+RUN:   | FileCheck --check-prefix=CHECK %s
+
+RUN: not llvm-dwp %p/../Inputs/duplicate/c.dwo %p/../Inputs/duplicate/bc.dwp -o %t 2>&1 \
+RUN:   | FileCheck --check-prefix=CHECK --check-prefix=DWP2 %s
+
+RUN: not llvm-dwp %p/../Inputs/duplicate/ac.dwp %p/../Inputs/duplicate/c.dwo -o %t 2>&1 \
+RUN:   | FileCheck --check-prefix=CHECK --check-prefix=DWP1 %s
+
+RUN: not llvm-dwp %p/../Inputs/duplicate/ac.dwp %p/../Inputs/duplicate/bc.dwp -o %t 2>&1 \
+RUN:   | FileCheck --check-prefix=CHECK --check-prefix=DWP1 --check-prefix=DWP2 %s
+
+Build from a, b, and c.c all containing a single void() func by the name of the file.
+
+CHECK: Duplicate DWO ID ({{.*}}) in 'c.c'
+DWP1-SAME: (from '{{.*}}ac.dwp')
+CHECK-SAME: and 'c.c'
+DWP2-SAME: (from '{{.*}}bc.dwp')

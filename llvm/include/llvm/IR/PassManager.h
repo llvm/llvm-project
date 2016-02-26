@@ -285,8 +285,7 @@ template <typename DerivedT, typename IRUnitT> class AnalysisManagerBase {
   }
 
   AnalysisManagerBase(const AnalysisManagerBase &) = delete;
-  AnalysisManagerBase &
-  operator=(const AnalysisManagerBase &) = delete;
+  AnalysisManagerBase &operator=(const AnalysisManagerBase &) = delete;
 
 protected:
   typedef detail::AnalysisResultConcept<IRUnitT> ResultConceptT;
@@ -534,8 +533,8 @@ private:
       return PA;
 
     if (DebugLogging)
-      dbgs() << "Invalidating all non-preserved analyses for: "
-             << IR.getName() << "\n";
+      dbgs() << "Invalidating all non-preserved analyses for: " << IR.getName()
+             << "\n";
 
     // Clear all the invalidated results associated specifically with this
     // function.
@@ -595,7 +594,8 @@ private:
   /// \brief Map type from a pair of analysis ID and function pointer to an
   /// iterator into a particular result list.
   typedef DenseMap<std::pair<void *, IRUnitT *>,
-                   typename AnalysisResultListT::iterator> AnalysisResultMapT;
+                   typename AnalysisResultListT::iterator>
+      AnalysisResultMapT;
 
   /// \brief Map from an analysis ID and function to a particular cached
   /// analysis result.

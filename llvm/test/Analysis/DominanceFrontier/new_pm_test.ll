@@ -45,6 +45,6 @@ define void @a_linear_impl_fig_1() nounwind {
 ; CHECK-DAG:  DomFrontier for BB %"8" is:    %"{{[1|8]}}" %"{{[1|8]}}"
 ; CHECK-DAG:  DomFrontier for BB %"6" is:    %"4"
 ; CHECK-DAG:  DomFrontier for BB %"7" is:
-; CHECK-DAG:  DomFrontier for BB %"9" is:    %"{{[1|8|9]}}" %"{{[1|8|9]}}"
-; CHECK-DAG:  DomFrontier for BB %"10" is:   %"{{[1|8|9]}}" %"{{[1|8|9]}}"
-; CHECK-DAG:  DomFrontier for BB %"12" is:   %"{{[1|8|9]}}" %"{{[1|8|9]}}"
+; CHECK-DAG:  DomFrontier for BB %"9" is:    %"{{[1|8|9]}}" %"{{[1|8|9]}}" %"{{[1|8|9]}}"
+; CHECK-DAG:  DomFrontier for BB %"10" is:   %"{{[1|8|9]}}" %"{{[1|8|9]}}" %"{{[1|8|9]}}"
+; CHECK-DAG:  DomFrontier for BB %"12" is:   %"{{[1|8|9]}}" %"{{[1|8|9]}}" %"{{[1|8|9]}}"

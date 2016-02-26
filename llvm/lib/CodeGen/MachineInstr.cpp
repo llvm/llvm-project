@@ -882,7 +882,7 @@ void MachineInstr::addMemOperand(MachineFunction &MF,
 }
 
 /// Check to see if the MMOs pointed to by the two MemRefs arrays are
-/// identical. 
+/// identical.
 static bool hasIdenticalMMOs(const MachineInstr &MI1, const MachineInstr &MI2) {
   auto I1 = MI1.memoperands_begin(), E1 = MI1.memoperands_end();
   auto I2 = MI2.memoperands_begin(), E2 = MI2.memoperands_end();
@@ -909,7 +909,7 @@ MachineInstr::mergeMemRefsWith(const MachineInstr& Other) {
   // cases in practice.
   if (hasIdenticalMMOs(*this, Other))
     return std::make_pair(MemRefs, NumMemRefs);
-  
+
   // TODO: consider uniquing elements within the operand lists to reduce
   // space usage and fall back to conservative information less often.
   size_t CombinedNumMemRefs = NumMemRefs + Other.NumMemRefs;
@@ -928,7 +928,7 @@ MachineInstr::mergeMemRefsWith(const MachineInstr& Other) {
                      MemEnd);
   assert(MemEnd - MemBegin == (ptrdiff_t)CombinedNumMemRefs &&
          "missing memrefs");
-  
+
   return std::make_pair(MemBegin, CombinedNumMemRefs);
 }
 

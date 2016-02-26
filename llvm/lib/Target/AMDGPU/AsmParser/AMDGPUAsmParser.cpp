@@ -67,7 +67,12 @@ public:
     ImmTySLC,
     ImmTyTFE,
     ImmTyClamp,
-    ImmTyOMod
+    ImmTyOMod,
+    ImmTyDMask,
+    ImmTyUNorm,
+    ImmTyDA,
+    ImmTyR128,
+    ImmTyLWE,
   };
 
   struct TokOp {
@@ -194,13 +199,30 @@ public:
     return Kind == Register || isInlinableImm();
   }
 
+  bool isImmTy(ImmTy ImmT) const {
+    return isImm() && Imm.Type == ImmT;
+  }
+
   bool isClamp() const {
-    return isImm() && Imm.Type == ImmTyClamp;
+    return isImmTy(ImmTyClamp);
   }
 
   bool isOMod() const {
-    return isImm() && Imm.Type == ImmTyOMod;
+    return isImmTy(ImmTyOMod);
   }
+
+  bool isImmModifier() const {
+    return Kind == Immediate && Imm.Type != ImmTyNone;
+  }
+
+  bool isDMask() const {
+    return isImmTy(ImmTyDMask);
+  }
+
+  bool isUNorm() const { return isImmTy(ImmTyUNorm); }
+  bool isDA() const { return isImmTy(ImmTyDA); }
+  bool isR128() const { return isImmTy(ImmTyUNorm); }
+  bool isLWE() const { return isImmTy(ImmTyLWE); }
 
   bool isMod() const {
     return isClamp() || isOMod();
@@ -497,13 +519,17 @@ public:
 
   OperandMatchResultTy parseDMask(OperandVector &Operands);
   OperandMatchResultTy parseUNorm(OperandVector &Operands);
+  OperandMatchResultTy parseDA(OperandVector &Operands);
   OperandMatchResultTy parseR128(OperandVector &Operands);
+  OperandMatchResultTy parseLWE(OperandVector &Operands);
 
   void cvtId(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3_2_mod(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3_2_nomod(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3_only(MCInst &Inst, const OperandVector &Operands);
   void cvtVOP3(MCInst &Inst, const OperandVector &Operands);
+
+  void cvtMIMG(MCInst &Inst, const OperandVector &Operands);
   OperandMatchResultTy parseVOP3OptionalOps(OperandVector &Operands);
 };
 
@@ -1751,17 +1777,27 @@ void AMDGPUAsmParser::cvtMubuf(MCInst &Inst,
 
 AMDGPUAsmParser::OperandMatchResultTy
 AMDGPUAsmParser::parseDMask(OperandVector &Operands) {
-  return parseIntWithPrefix("dmask", Operands);
+  return parseIntWithPrefix("dmask", Operands, AMDGPUOperand::ImmTyDMask);
 }
 
 AMDGPUAsmParser::OperandMatchResultTy
 AMDGPUAsmParser::parseUNorm(OperandVector &Operands) {
-  return parseNamedBit("unorm", Operands);
+  return parseNamedBit("unorm", Operands, AMDGPUOperand::ImmTyUNorm);
+}
+
+AMDGPUAsmParser::OperandMatchResultTy
+AMDGPUAsmParser::parseDA(OperandVector &Operands) {
+  return parseNamedBit("da", Operands, AMDGPUOperand::ImmTyDA);
 }
 
 AMDGPUAsmParser::OperandMatchResultTy
 AMDGPUAsmParser::parseR128(OperandVector &Operands) {
-  return parseNamedBit("r128", Operands);
+  return parseNamedBit("r128", Operands, AMDGPUOperand::ImmTyR128);
+}
+
+AMDGPUAsmParser::OperandMatchResultTy
+AMDGPUAsmParser::parseLWE(OperandVector &Operands) {
+  return parseNamedBit("lwe", Operands, AMDGPUOperand::ImmTyLWE);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1930,6 +1966,34 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands) {
     Inst.addOperand(MCOperand::createImm(0));
   }
 }
+
+void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands) {
+  OptionalImmIndexMap OptionalIdx;
+
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+
+    // Add the register arguments
+    if (Op.isRegOrImm()) {
+      Op.addRegOrImmOperands(Inst, 1);
+      continue;
+    } else if (Op.isImmModifier()) {
+      OptionalIdx[Op.getImmTy()] = i;
+    } else {
+      assert(false);
+    }
+  }
+
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDMask);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyUNorm);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDA);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyR128);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyLWE);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
+}
+
 
 /// Force static initialization.
 extern "C" void LLVMInitializeAMDGPUAsmParser() {
