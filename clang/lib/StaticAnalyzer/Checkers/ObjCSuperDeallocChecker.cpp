@@ -162,9 +162,9 @@ void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
   StringRef Desc = StringRef();
   auto *IvarRegion = dyn_cast_or_null<ObjCIvarRegion>(PriorSubRegion);
 
+  std::string Buf;
+  llvm::raw_string_ostream OS(Buf);
   if (IvarRegion) {
-    std::string Buf;
-    llvm::raw_string_ostream OS(Buf);
     OS << "use of instance variable '" << *IvarRegion->getDecl() <<
           "' after the instance has been freed with call to [super dealloc]";
     Desc = OS.str();
