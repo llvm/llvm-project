@@ -185,6 +185,9 @@ CommandInterpreter::Initialize ()
 
     LoadCommandDictionary ();
 
+    // An alias arguments vector to reuse - reset it before use...
+    OptionArgVectorSP alias_arguments_vector_sp (new OptionArgVector);
+    
     // Set up some initial aliases.
     CommandObjectSP cmd_obj_sp = GetCommandSPExact ("quit", false);
     if (cmd_obj_sp)
@@ -239,6 +242,11 @@ CommandInterpreter::Initialize ()
     {
         AddAlias ("s", cmd_obj_sp);
         AddAlias ("step", cmd_obj_sp);
+        
+        alias_arguments_vector_sp.reset (new OptionArgVector);
+        ProcessAliasOptionsArgs (cmd_obj_sp, "--end-linenumber block --step-in-target %1", alias_arguments_vector_sp);
+        AddAlias ("sif", cmd_obj_sp);
+        AddOrReplaceAliasOptions("sif", alias_arguments_vector_sp);
     }
 
     cmd_obj_sp = GetCommandSPExact ("thread step-over", false);
@@ -329,8 +337,6 @@ CommandInterpreter::Initialize ()
         AddAlias ("image", cmd_obj_sp);
 
 
-    OptionArgVectorSP alias_arguments_vector_sp (new OptionArgVector);
-    
     cmd_obj_sp = GetCommandSPExact ("expression", false);
     if (cmd_obj_sp)
     {        
@@ -1625,6 +1631,7 @@ CommandInterpreter::PreprocessCommand (std::string &command)
                                     break;
                                 case eExpressionResultUnavailable:
                                     error.SetErrorStringWithFormat ("expression error fetching result for the expression '%s'", expr_str.c_str());
+                                    break;
                                 case eExpressionCompleted:
                                     break;
                                 case eExpressionDiscarded:

@@ -617,6 +617,7 @@ void MemoryAccess::assumeNoOutOfBound() {
 
 void MemoryAccess::buildMemIntrinsicAccessRelation() {
   auto MAI = MemAccInst(getAccessInstruction());
+  (void)MAI;
   assert(MAI.isMemIntrinsic());
   assert(Subscripts.size() == 2 && Sizes.size() == 0);
 

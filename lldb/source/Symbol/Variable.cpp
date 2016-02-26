@@ -828,6 +828,7 @@ PrivateAutoComplete (StackFrame *frame,
                                                             word_complete);                            
                             }
                         }
+                        break;
                     default:
                         break;
                 }
@@ -864,6 +865,7 @@ PrivateAutoComplete (StackFrame *frame,
                                                         matches,
                                                         word_complete);
                         }
+                        break;
                     default:
                         break;
                 }

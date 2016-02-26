@@ -547,8 +547,6 @@ ObjectFile::ReadSectionData (const Section *section, DataExtractor& section_data
         // The object file now contains a full mmap'ed copy of the object file data, so just use this
         return MemoryMapSectionData (section, section_data);
     }
-    section_data.Clear();
-    return 0;
 }
 
 size_t

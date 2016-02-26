@@ -5120,6 +5120,7 @@ ObjectFileMachO::GetEntryPointAddress ()
                         start_address = text_segment_sp->GetFileAddress() + entryoffset;
                     }
                 }
+                break;
 
             default:
                 break;

@@ -277,6 +277,7 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                     if (type_sp)
                         return type_sp;
 
+                LLVM_FALLTHROUGH;
                 case DW_TAG_base_type:
                 case DW_TAG_pointer_type:
                 case DW_TAG_reference_type:

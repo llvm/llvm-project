@@ -187,6 +187,7 @@ StackFrameList::ResetCurrentInlinedDepth ()
                                         break;
                                     }
                                 }
+                                LLVM_FALLTHROUGH;
                             default:
                                 {
                                     // Otherwise, we should set ourselves at the container of the inlining, so that the

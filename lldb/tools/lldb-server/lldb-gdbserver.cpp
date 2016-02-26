@@ -473,6 +473,7 @@ main_gdbserver (int argc, char *argv[])
         case 'U': // unnamed pipe
             if (optarg && optarg[0])
                 unnamed_pipe_fd = StringConvert::ToUInt32(optarg, -1);
+            break;
 
         case 'r':
             // Do nothing, native regs is the default these days

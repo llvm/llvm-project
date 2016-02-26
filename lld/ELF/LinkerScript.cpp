@@ -443,8 +443,3 @@ template bool LinkerScript::shouldKeep(InputSectionBase<ELF32LE> *);
 template bool LinkerScript::shouldKeep(InputSectionBase<ELF32BE> *);
 template bool LinkerScript::shouldKeep(InputSectionBase<ELF64LE> *);
 template bool LinkerScript::shouldKeep(InputSectionBase<ELF64BE> *);
-
-template bool SectionRule::match(InputSectionBase<ELF32LE> *);
-template bool SectionRule::match(InputSectionBase<ELF32BE> *);
-template bool SectionRule::match(InputSectionBase<ELF64LE> *);
-template bool SectionRule::match(InputSectionBase<ELF64BE> *);

@@ -185,14 +185,12 @@ SocketAddress::GetIPAddress () const
     {
         case AF_INET:
             if (inet_ntop(GetFamily(), &m_socket_addr.sa_ipv4.sin_addr, str, sizeof(str)))
-            {
                 return str;
-            }
+            break;
         case AF_INET6:
             if (inet_ntop(GetFamily(), &m_socket_addr.sa_ipv6.sin6_addr, str, sizeof(str)))
-            {
                 return str;
-            }
+            break;
     }
     return "";
 }

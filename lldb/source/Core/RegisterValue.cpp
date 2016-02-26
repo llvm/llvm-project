@@ -239,16 +239,17 @@ RegisterValue::GetScalarValue (Scalar &scalar) const
     {
         case eTypeInvalid:      break;
         case eTypeBytes:
-        {
-            switch (buffer.length)
             {
-            default:    break;
-            case 1:     scalar = *(const uint8_t *)buffer.bytes; return true;
-            case 2:     scalar = *(const uint16_t *)buffer.bytes; return true;
-            case 4:     scalar = *(const uint32_t *)buffer.bytes; return true;
-            case 8:     scalar = *(const uint64_t *)buffer.bytes; return true;
+                switch (buffer.length)
+                {
+                default:    break;
+                case 1:     scalar = *(const uint8_t *)buffer.bytes; return true;
+                case 2:     scalar = *(const uint16_t *)buffer.bytes; return true;
+                case 4:     scalar = *(const uint32_t *)buffer.bytes; return true;
+                case 8:     scalar = *(const uint64_t *)buffer.bytes; return true;
+                }
             }
-        }
+            break;
         case eTypeUInt8:
         case eTypeUInt16:
         case eTypeUInt32:

@@ -346,7 +346,8 @@ DWARFMappedHash::Header::Read (const lldb_private::DWARFDataExtractor &data,
 
             case eAtomTypeTag:          // DW_TAG value for the DIE
                 hash_data.tag = (dw_tag_t)form_value.Unsigned ();
-                
+                break;
+
             case eAtomTypeTypeFlags:    // Flags from enum TypeFlags
                 hash_data.type_flags = (uint32_t)form_value.Unsigned ();
                 break;

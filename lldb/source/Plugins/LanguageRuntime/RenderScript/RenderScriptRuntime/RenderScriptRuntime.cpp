@@ -2486,7 +2486,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     // Write the file header
     size_t num_bytes = sizeof(AllocationDetails::FileHeader);
     if (log)
-        log->Printf("%s - writing File Header, 0x%" PRIx64 " bytes", __FUNCTION__, num_bytes);
+        log->Printf("%s - writing File Header, 0x%" PRIx64 " bytes", __FUNCTION__, (uint64_t)num_bytes);
 
     Error err = file.Write(&head, num_bytes);
     if (!err.Success())
@@ -2500,7 +2500,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     std::shared_ptr<uint8_t> element_header_buffer(new uint8_t[element_header_size]);
     if (element_header_buffer == nullptr)
     {
-        strm.Printf("Internal Error: Couldn't allocate %" PRIu64 " bytes on the heap", element_header_size);
+        strm.Printf("Internal Error: Couldn't allocate %" PRIu64 " bytes on the heap", (uint64_t)element_header_size);
         strm.EOL();
         return false;
     }
@@ -2510,7 +2510,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     // Write headers for allocation element type to file
     num_bytes = element_header_size;
     if (log)
-        log->Printf("%s - writing element headers, 0x%" PRIx64 " bytes.", __FUNCTION__, num_bytes);
+        log->Printf("%s - writing element headers, 0x%" PRIx64 " bytes.", __FUNCTION__, (uint64_t)num_bytes);
 
     err = file.Write(element_header_buffer.get(), num_bytes);
     if (!err.Success())
@@ -2523,7 +2523,7 @@ RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id, const
     // Write allocation data to file
     num_bytes = static_cast<size_t>(*alloc->size.get());
     if (log)
-        log->Printf("%s - writing 0x%" PRIx64 " bytes", __FUNCTION__, num_bytes);
+        log->Printf("%s - writing 0x%" PRIx64 " bytes", __FUNCTION__, (uint64_t)num_bytes);
 
     err = file.Write(buffer.get(), num_bytes);
     if (!err.Success())

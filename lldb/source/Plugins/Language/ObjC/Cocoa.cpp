@@ -531,6 +531,7 @@ lldb_private::formatters::NSNumberSummaryProvider (ValueObject& valobj, Stream& 
                     break;
                 case 17: // 0B10001
                     data_location += 8;
+                    LLVM_FALLTHROUGH;
                 case 4: // 0B0100
                     value = process_sp->ReadUnsignedIntegerFromMemory(data_location, 8, 0, error);
                     if (error.Fail())

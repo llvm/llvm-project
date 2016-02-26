@@ -23,7 +23,13 @@ uint64_t __llvm_profile_get_size_for_buffer(void) {
       DataBegin, DataEnd, CountersBegin, CountersEnd, NamesBegin, NamesEnd);
 }
 
-#define PROFILE_RANGE_SIZE(Range) (Range##End - Range##Begin)
+COMPILER_RT_VISIBILITY
+uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
+                                      const __llvm_profile_data *End) {
+  intptr_t BeginI = (intptr_t)Begin, EndI = (intptr_t)End;
+  return ((EndI + sizeof(__llvm_profile_data) - 1) - BeginI) /
+         sizeof(__llvm_profile_data);
+}
 
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_size_for_buffer_internal(
@@ -31,11 +37,12 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
     const uint64_t *CountersBegin, const uint64_t *CountersEnd,
     const char *NamesBegin, const char *NamesEnd) {
   /* Match logic in __llvm_profile_write_buffer(). */
-  const uint64_t NamesSize = PROFILE_RANGE_SIZE(Names) * sizeof(char);
+  const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
   const uint8_t Padding = __llvm_profile_get_num_padding_bytes(NamesSize);
   return sizeof(__llvm_profile_header) +
-         PROFILE_RANGE_SIZE(Data) * sizeof(__llvm_profile_data) +
-         PROFILE_RANGE_SIZE(Counters) * sizeof(uint64_t) + NamesSize + Padding;
+         (__llvm_profile_get_data_size(DataBegin, DataEnd) *
+          sizeof(__llvm_profile_data)) +
+         (CountersEnd - CountersBegin) * sizeof(uint64_t) + NamesSize + Padding;
 }
 
 COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer(char *Buffer) {

@@ -2630,6 +2630,7 @@ Scalar::ExtractBitfield (uint32_t bit_size,
         case e_double:
             result = SignedBits ((uint64_t )m_float.convertToDouble(), msbit, lsbit);
             m_float = llvm::APFloat((double_t)result);
+            return true;
         case e_long_double:
             m_integer = m_float.bitcastToAPInt();
             result = SignedBits (*m_integer.getRawData(), msbit, lsbit);
