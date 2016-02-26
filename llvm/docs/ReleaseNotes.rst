@@ -227,7 +227,26 @@ If you would like to try the integrated assembler, please use
 Changes to the PowerPC Target
 -----------------------------
 
- During this release ...
+There are numerous improvements to the PowerPC target in this release:
+
+* Shrink wrapping optimization has been enabled for PowerPC Little Endian
+
+* Direct move instructions are used when converting scalars to vectors
+
+* Thread Sanitizer (TSAN) is now supported for PowerPC
+
+* New MI peephole pass to clean up redundand XXPERMDI instructions  
+
+* Add branch hints to highly biased branch instructions (code reaching
+  unreachable terminators and exceptional control flow consructs)
+
+* Promote boolean return values to integer to prevent excessive usage of
+  condition registers
+
+* Additional vector APIs for vector comparisons and vector merges have been
+  added to altivec.h
+
+* Many bugs have been identified and fixed
 
 
 Changes to the X86 Target
