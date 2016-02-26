@@ -48,6 +48,7 @@ namespace {
   private:
     typedef SmallVector<unsigned, 4> DestList;
     typedef DenseMap<unsigned, DestList> SourceMap;
+    typedef DenseMap<unsigned, MachineInstr*> Reg2MIMap;
 
     void SourceNoLongerAvailable(unsigned Reg);
     void CopyPropagateBlock(MachineBasicBlock &MBB);
@@ -55,9 +56,9 @@ namespace {
     /// Candidates for deletion.
     SmallSetVector<MachineInstr*, 8> MaybeDeadCopies;
     /// Def -> available copies map.
-    DenseMap<unsigned, MachineInstr*> AvailCopyMap;
+    Reg2MIMap AvailCopyMap;
     /// Def -> copies map.
-    DenseMap<unsigned, MachineInstr*> CopyMap;
+    Reg2MIMap CopyMap;
     /// Src -> Def map
     SourceMap SrcMap;
     bool Changed;
@@ -175,7 +176,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 
       // If Src is defined by a previous copy, it cannot be eliminated.
       for (MCRegAliasIterator AI(Src, TRI, true); AI.isValid(); ++AI) {
-        CI = CopyMap.find(*AI);
+        Reg2MIMap::iterator CI = CopyMap.find(*AI);
         if (CI != CopyMap.end()) {
           DEBUG(dbgs() << "MCP: Copy is no longer dead: "; CI->second->dump());
           MaybeDeadCopies.remove(CI->second);
@@ -241,7 +242,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       // If 'Reg' is defined by a copy, the copy is no longer a candidate
       // for elimination.
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
-        DenseMap<unsigned, MachineInstr*>::iterator CI = CopyMap.find(*AI);
+        Reg2MIMap::iterator CI = CopyMap.find(*AI);
         if (CI != CopyMap.end()) {
           DEBUG(dbgs() << "MCP: Copy is used - not dead: "; CI->second->dump());
           MaybeDeadCopies.remove(CI->second);
