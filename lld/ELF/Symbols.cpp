@@ -42,6 +42,7 @@ typename ELFFile<ELFT>::uintX_t SymbolBody::getVA() const {
     // This is an absolute symbol.
     if (!SC)
       return D->Sym.st_value;
+    assert(SC->Live);
 
     // Symbol offsets for AMDGPU need to be the offset in bytes of the symbol
     // from the beginning of the section.

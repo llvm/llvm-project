@@ -67,6 +67,7 @@ class Abstract
 };
 
 enum Enum {zero, one};
+struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
@@ -101,4 +102,5 @@ int main()
     test_is_not_integral<bit_zero>();
     test_is_not_integral<NotEmpty>();
     test_is_not_integral<Abstract>();
+    test_is_not_integral<incomplete_type>();
 }

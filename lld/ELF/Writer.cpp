@@ -60,6 +60,7 @@ private:
   void addReservedSymbols();
   bool createSections();
   void addPredefinedSections();
+  bool needsGot();
 
   template <bool isRela>
   void scanRelocs(InputSectionBase<ELFT> &C,
@@ -148,6 +149,7 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   std::unique_ptr<RelocationSection<ELFT>> RelaPlt;
   std::unique_ptr<StringTableSection<ELFT>> StrTab;
   std::unique_ptr<SymbolTableSection<ELFT>> SymTabSec;
+  std::unique_ptr<OutputSection<ELFT>> MipsRldMap;
 
   if (Config->GnuHash)
     GnuHashTab.reset(new GnuHashTableSection<ELFT>);
@@ -161,6 +163,16 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   if (!Config->StripAll) {
     StrTab.reset(new StringTableSection<ELFT>(".strtab", false));
     SymTabSec.reset(new SymbolTableSection<ELFT>(*Symtab, *StrTab));
+  }
+  if (Config->EMachine == EM_MIPS && !Config->Shared) {
+    // This is a MIPS specific section to hold a space within the data segment
+    // of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
+    // See "Dynamic section" in Chapter 5 in the following document:
+    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+    MipsRldMap.reset(new OutputSection<ELFT>(".rld_map", SHT_PROGBITS,
+                                             SHF_ALLOC | SHF_WRITE));
+    MipsRldMap->setSize(sizeof(uintX_t));
+    MipsRldMap->updateAlign(sizeof(uintX_t));
   }
 
   Out<ELFT>::DynStrTab = &DynStrTab;
@@ -179,7 +191,7 @@ template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
   Out<ELFT>::StrTab = StrTab.get();
   Out<ELFT>::SymTab = SymTabSec.get();
   Out<ELFT>::Bss = nullptr;
-  Out<ELFT>::MipsRldMap = nullptr;
+  Out<ELFT>::MipsRldMap = MipsRldMap.get();
   Out<ELFT>::Opd = nullptr;
   Out<ELFT>::OpdBuf = nullptr;
   Out<ELFT>::TlsPhdr = nullptr;
@@ -1073,6 +1085,20 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   return true;
 }
 
+template <class ELFT> bool Writer<ELFT>::needsGot() {
+  if (!Out<ELFT>::Got->empty())
+    return true;
+
+  // We add the .got section to the result for dynamic MIPS target because
+  // its address and properties are mentioned in the .dynamic section.
+  if (Config->EMachine == EM_MIPS && isOutputDynamic())
+    return true;
+
+  // If we have a relocation that is relative to GOT (such as GOTOFFREL),
+  // we need to emit a GOT even if it's empty.
+  return HasGotOffRel;
+}
+
 // This function add Out<ELFT>::* sections to OutputSections.
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   auto Add = [&](OutputSectionBase<ELFT> *C) {
@@ -1093,19 +1119,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     Add(Out<ELFT>::DynStrTab);
     if (Out<ELFT>::RelaDyn->hasRelocs())
       Add(Out<ELFT>::RelaDyn);
-
-    // This is a MIPS specific section to hold a space within the data segment
-    // of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
-    // See "Dynamic section" in Chapter 5 in the following document:
-    // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    if (Config->EMachine == EM_MIPS && !Config->Shared) {
-      Out<ELFT>::MipsRldMap = new OutputSection<ELFT>(".rld_map", SHT_PROGBITS,
-                                                      SHF_ALLOC | SHF_WRITE);
-      Out<ELFT>::MipsRldMap->setSize(sizeof(uintX_t));
-      Out<ELFT>::MipsRldMap->updateAlign(sizeof(uintX_t));
-      OwningSections.emplace_back(Out<ELFT>::MipsRldMap);
-      Add(Out<ELFT>::MipsRldMap);
-    }
+    Add(Out<ELFT>::MipsRldMap);
   }
 
   // We always need to add rel[a].plt to output if it has entries.
@@ -1115,23 +1129,12 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     Out<ELFT>::RelaPlt->Static = !isOutputDynamic();
   }
 
-  bool needsGot = !Out<ELFT>::Got->empty();
-  // We add the .got section to the result for dynamic MIPS target because
-  // its address and properties are mentioned in the .dynamic section.
-  if (Config->EMachine == EM_MIPS)
-    needsGot |= isOutputDynamic();
-  // If we have a relocation that is relative to GOT (such as GOTOFFREL),
-  // we need to emit a GOT even if it's empty.
-  if (HasGotOffRel)
-    needsGot = true;
-
-  if (needsGot)
+  if (needsGot())
     Add(Out<ELFT>::Got);
   if (Out<ELFT>::GotPlt && !Out<ELFT>::GotPlt->empty())
     Add(Out<ELFT>::GotPlt);
   if (!Out<ELFT>::Plt->empty())
     Add(Out<ELFT>::Plt);
-
   if (Out<ELFT>::EhFrameHdr->Live)
     Add(Out<ELFT>::EhFrameHdr);
 }
@@ -1423,6 +1426,20 @@ static typename ELFFile<ELFT>::uintX_t getEntryAddr() {
   return 0;
 }
 
+template <class ELFT> static uint8_t getELFEncoding() {
+  if (ELFT::TargetEndianness == llvm::support::little)
+    return ELFDATA2LSB;
+  return ELFDATA2MSB;
+}
+
+static uint16_t getELFType() {
+  if (Config->Shared)
+    return ET_DYN;
+  if (Config->Relocatable)
+    return ET_REL;
+  return ET_EXEC;
+}
+
 // This function is called after we have assigned address and size
 // to each section. This function fixes some predefined absolute
 // symbol values that depend on section address and size.
@@ -1444,24 +1461,15 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   uint8_t *Buf = Buffer->getBufferStart();
   memcpy(Buf, "\177ELF", 4);
 
+  auto &FirstObj = cast<ELFFileBase<ELFT>>(*Config->FirstElf);
+
   // Write the ELF header.
   auto *EHdr = reinterpret_cast<Elf_Ehdr *>(Buf);
   EHdr->e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
-  EHdr->e_ident[EI_DATA] = ELFT::TargetEndianness == llvm::support::little
-                               ? ELFDATA2LSB
-                               : ELFDATA2MSB;
+  EHdr->e_ident[EI_DATA] = getELFEncoding<ELFT>();
   EHdr->e_ident[EI_VERSION] = EV_CURRENT;
-
-  auto &FirstObj = cast<ELFFileBase<ELFT>>(*Config->FirstElf);
   EHdr->e_ident[EI_OSABI] = FirstObj.getOSABI();
-
-  if (Config->Shared)
-    EHdr->e_type = ET_DYN;
-  else if (Config->Relocatable)
-    EHdr->e_type = ET_REL;
-  else
-    EHdr->e_type = ET_EXEC;
-
+  EHdr->e_type = getELFType();
   EHdr->e_machine = FirstObj.getEMachine();
   EHdr->e_version = EV_CURRENT;
   EHdr->e_entry = getEntryAddr<ELFT>();
@@ -1484,7 +1492,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
     *HBuf++ = P.H;
 
   // Write the section header table. Note that the first table entry is null.
-  auto SHdrs = reinterpret_cast<Elf_Shdr *>(Buf + EHdr->e_shoff);
+  auto *SHdrs = reinterpret_cast<Elf_Shdr *>(Buf + EHdr->e_shoff);
   for (OutputSectionBase<ELFT> *Sec : getSections())
     Sec->writeHeaderTo(++SHdrs);
 }

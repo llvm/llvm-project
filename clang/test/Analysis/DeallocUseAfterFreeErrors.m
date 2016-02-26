@@ -35,8 +35,9 @@ typedef struct objc_selector *SEL;
   return self;
 }
 - (void)dealloc {
-  [super dealloc];
-  [_ivar release];
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  [_ivar release]; // expected-warning {{use of instance variable '_ivar' after 'self' has been deallocated}}
+  // expected-note@-1 {{use of instance variable '_ivar' after 'self' has been deallocated}}
 }
 @end
 
@@ -54,8 +55,59 @@ typedef struct objc_selector *SEL;
   return self;
 }
 - (void)dealloc {
-  [super dealloc];
-  _delegate = nil;
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  _delegate = nil; // expected-warning {{use of instance variable '_delegate' after 'self' has been deallocated}}
+      // expected-note@-1 {{use of instance variable '_delegate' after 'self' has been deallocated}}
+}
+@end
+
+
+struct SomeStruct {
+  int f;
+};
+
+@interface SuperDeallocThenAssignIvarField : NSObject {
+  struct SomeStruct _s;
+}
+@end
+
+@implementation SuperDeallocThenAssignIvarField
+- (void)dealloc {
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  _s.f = 7; // expected-warning {{use of instance variable '_s' after 'self' has been deallocated}}
+      // expected-note@-1 {{use of instance variable '_s' after 'self' has been deallocated}}
+}
+@end
+
+@interface OtherClassWithIvar {
+@public
+  int _otherIvar;
+}
+@end;
+
+@interface SuperDeallocThenAssignIvarIvar : NSObject {
+  OtherClassWithIvar *_ivar;
+}
+@end
+
+@implementation SuperDeallocThenAssignIvarIvar
+- (void)dealloc {
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  _ivar->_otherIvar = 7; // expected-warning {{use of instance variable '_ivar' after 'self' has been deallocated}}
+      // expected-note@-1 {{use of instance variable '_ivar' after 'self' has been deallocated}}
+}
+@end
+
+@interface SuperDeallocThenAssignSelfIvar : NSObject {
+  NSObject *_ivar;
+}
+@end
+
+@implementation SuperDeallocThenAssignSelfIvar
+- (void)dealloc {
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  self->_ivar = nil; // expected-warning {{use of instance variable '_ivar' after 'self' has been deallocated}}
+      // expected-note@-1 {{use of instance variable '_ivar' after 'self' has been deallocated}}
 }
 @end
 
@@ -72,8 +124,9 @@ typedef struct objc_selector *SEL;
   return self;
 }
 - (void)dealloc {
-  [super dealloc];
-  self.ivar = nil;
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  self.ivar = nil; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -90,8 +143,9 @@ typedef struct objc_selector *SEL;
   return self;
 }
 - (void)dealloc {
-  [super dealloc];
-  self.delegate = nil;
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  self.delegate = nil; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -103,8 +157,9 @@ typedef struct objc_selector *SEL;
 - (void)_invalidate {
 }
 - (void)dealloc {
-  [super dealloc];
-  [self _invalidate];
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  [self _invalidate]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -117,8 +172,23 @@ static void _invalidate(NSObject *object) {
 
 @implementation SuperDeallocThenCallNonObjectiveCMethodClass
 - (void)dealloc {
-  [super dealloc];
-  _invalidate(self);
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  _invalidate(self); // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
+}
+@end
+
+@interface SuperDeallocThenCallObjectiveClassMethodClass : NSObject { }
+@end
+
+@implementation SuperDeallocThenCallObjectiveClassMethodClass
++ (void) invalidate:(id)arg; {
+}
+
+- (void)dealloc {
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  [SuperDeallocThenCallObjectiveClassMethodClass invalidate:self]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -132,13 +202,14 @@ static void _invalidate(NSObject *object) {
 - (void)_invalidate {
 }
 - (void)dealloc {
-  if (_ivar) {
+  if (_ivar) { // expected-note {{Taking false branch}}
     [_ivar release];
     [super dealloc];
     return;
   }
-  [super dealloc];
-  [self _invalidate];
+  [super dealloc];    // expected-note {{[super dealloc] called here}}
+  [self _invalidate]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -244,11 +315,15 @@ static void _invalidate(NSObject *object) {
 // Do not warn about calling [super dealloc] twice if when the analyzer has
 // inlined the call to its super deallocator.
 
-@interface SuperClassCallingSuperDealloc : NSObject
+@interface SuperClassCallingSuperDealloc : NSObject {
+  NSObject *_ivar;
+}
 @end
 
 @implementation SuperClassCallingSuperDealloc
 - (void)dealloc; {
+  [_ivar release]; // no-warning
+
   [super dealloc];
 }
 @end
@@ -291,8 +366,8 @@ static void _invalidate(NSObject *object) {
 
 - (void)dealloc; {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  [self anotherMethod];
-  [super dealloc]; // expected-warning {{[super dealloc] should not be called multiple times}}
-  // expected-note@-1 {{[super dealloc] should not be called multiple times}}
+  [self anotherMethod]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
+  [super dealloc];
 }
 @end

@@ -12,13 +12,14 @@
 // function
 
 #include <type_traits>
+#include "test_macros.h"
 
 using namespace std;
 
 class Class {};
 
 enum Enum1 {};
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
 enum class Enum2 : int {};
 #else
 enum Enum2 {};
@@ -28,7 +29,7 @@ template <class T>
 void test()
 {
     static_assert(!std::is_void<T>::value, "");
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     static_assert(!std::is_null_pointer<T>::value, "");
 #endif
     static_assert(!std::is_integral<T>::value, "");
@@ -64,6 +65,7 @@ void test()
     test<__VA_ARGS__ volatile &&>();      \
     test<__VA_ARGS__ const volatile &&>()
 
+struct incomplete_type;
 
 int main()
 {
@@ -75,7 +77,7 @@ int main()
     TEST_REGULAR( void (int, ...) );
     TEST_REGULAR( int (double, ...) );
     TEST_REGULAR( int (double, char, ...) );
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     TEST_REF_QUALIFIED( void () );
     TEST_REF_QUALIFIED( void (int) );
     TEST_REF_QUALIFIED( int (double) );
@@ -85,4 +87,7 @@ int main()
     TEST_REF_QUALIFIED( int (double, ...) );
     TEST_REF_QUALIFIED( int (double, char, ...) );
 #endif
+
+//  LWG#2581
+    static_assert(!std::is_function<incomplete_type>::value, "");
 }

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Error.h"
+#include "Config.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -17,6 +18,11 @@ namespace elf2 {
 
 bool HasError;
 llvm::raw_ostream *ErrorOS;
+
+void log(const Twine &Msg) {
+  if (Config->Verbose)
+    llvm::outs() << Msg << "\n";
+}
 
 void warning(const Twine &Msg) { llvm::errs() << Msg << "\n"; }
 

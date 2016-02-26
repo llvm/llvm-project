@@ -291,7 +291,10 @@ elf2::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
     return nullptr;
   if (Index >= Sections.size() || !Sections[Index])
     fatal("Invalid section index");
-  return Sections[Index];
+  InputSectionBase<ELFT> *S = Sections[Index];
+  if (S == InputSectionBase<ELFT>::Discarded)
+    return S;
+  return S->Repl;
 }
 
 template <class ELFT>

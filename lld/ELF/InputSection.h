@@ -18,6 +18,7 @@
 namespace lld {
 namespace elf2 {
 
+template <class ELFT> class ICF;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
 template <class ELFT> class OutputSectionBase;
@@ -42,10 +43,17 @@ public:
   InputSectionBase(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
                    Kind SectionKind);
   OutputSectionBase<ELFT> *OutSec = nullptr;
-  uint32_t Align = 1;
+  uint32_t Align;
 
   // Used for garbage collection.
-  bool Live = false;
+  bool Live;
+
+  // This pointer points to the "real" instance of this instance.
+  // Usually Repl == this. However, if ICF merges two sections,
+  // Repl pointer of one section points to another section. So,
+  // if you need to get a pointer to this instance, do not use
+  // this but instead this->Repl.
+  InputSectionBase<ELFT> *Repl;
 
   // Returns the size of this section (even if this is a common or BSS.)
   size_t getSize() const { return Header->sh_size; }
@@ -136,6 +144,7 @@ public:
 
 // This corresponds to a non SHF_MERGE section of an input file.
 template <class ELFT> class InputSection : public InputSectionBase<ELFT> {
+  friend ICF<ELFT>;
   typedef InputSectionBase<ELFT> Base;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
@@ -168,6 +177,12 @@ private:
 
   template <bool isRela>
   void copyRelocations(uint8_t *Buf, RelIteratorRange<isRela> Rels);
+
+  // Called by ICF to merge two input sections.
+  void replace(InputSection<ELFT> *Other);
+
+  // Used by ICF.
+  uint64_t GroupId = 0;
 };
 
 // MIPS .reginfo section provides information on the registers used by the code

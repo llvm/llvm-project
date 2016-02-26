@@ -762,6 +762,7 @@ template <class ELFT> void OutputSection<ELFT>::finalize() {
 
 template <class ELFT>
 void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  assert(C->Live);
   auto *S = cast<InputSection<ELFT>>(C);
   Sections.push_back(S);
   S->OutSec = this;
@@ -1516,7 +1517,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     // https://sourceware.org/ml/binutils/2008-07/txt00000.txt
     if (Config->EMachine == EM_MIPS && Body->isInPlt() &&
         Body->NeedsCopyOrPltAddr)
-      ESym->st_other |= ELF::STO_MIPS_PLT;
+      ESym->st_other |= STO_MIPS_PLT;
     ++ESym;
   }
 }

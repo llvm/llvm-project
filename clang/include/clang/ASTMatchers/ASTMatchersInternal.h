@@ -569,32 +569,21 @@ bool matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
   return false;
 }
 
-// Metafunction to determine if type T has a member called
-// getDecl.
-#if defined(_MSC_VER) && !defined(__clang__)
-// For MSVC, we use a weird nonstandard __if_exists statement, as it
-// is not standards-conformant enough to properly compile the standard
-// code below. (At least up through MSVC 2015 require this workaround)
-template <typename T> struct has_getDecl {
-  __if_exists(T::getDecl) {
-    enum { value = 1 };
-  }
-  __if_not_exists(T::getDecl) {
-    enum { value = 0 };
-  }
+// Metafunction to determine if type T has a member called getDecl.
+template <typename Ty>
+class has_getDecl {
+  typedef char yes[1];
+  typedef char no[2];
+
+  template <typename Inner>
+  static yes& test(Inner *I, decltype(I->getDecl()) * = nullptr);
+
+  template <typename>
+  static no& test(...);
+
+public:
+  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
 };
-#else
-// There is a default template inheriting from "false_type". Then, a
-// partial specialization inherits from "true_type". However, this
-// specialization will only exist when the call to getDecl() isn't an
-// error -- it vanishes by SFINAE when the member doesn't exist.
-template <typename> struct type_sink_to_void { typedef void type; };
-template <typename T, typename = void> struct has_getDecl : std::false_type {};
-template <typename T>
-struct has_getDecl<
-    T, typename type_sink_to_void<decltype(std::declval<T>().getDecl())>::type>
-    : std::true_type {};
-#endif
 
 /// \brief Matches overloaded operators with a specific name.
 ///

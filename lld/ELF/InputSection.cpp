@@ -14,9 +14,12 @@
 #include "OutputSections.h"
 #include "Target.h"
 
+#include "llvm/Support/Endian.h"
+
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
+using namespace llvm::support::endian;
 
 using namespace lld;
 using namespace lld::elf2;
@@ -25,7 +28,7 @@ template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Header,
                                          Kind SectionKind)
-    : Header(Header), File(File), SectionKind(SectionKind) {
+    : Header(Header), File(File), SectionKind(SectionKind), Repl(this) {
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
   Live = !Config->GcSections;
@@ -81,7 +84,7 @@ InputSectionBase<ELFT>::getRelocTarget(const Elf_Rel &Rel) const {
   uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
   if (SymbolBody *B = File->getSymbolBody(SymIndex))
     if (auto *D = dyn_cast<DefinedRegular<ELFT>>(B->repl()))
-      return D->Section;
+      return D->Section->Repl;
   // Local symbol
   if (const Elf_Sym *Sym = File->getLocalSymbol(SymIndex))
     if (InputSectionBase<ELFT> *Sec = File->getSection(*Sym))
@@ -141,6 +144,21 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf,
   }
 }
 
+static uint32_t getMipsPairedRelocType(uint32_t Type) {
+  if (Config->EMachine != EM_MIPS)
+    return R_MIPS_NONE;
+  switch (Type) {
+  case R_MIPS_HI16:
+    return R_MIPS_LO16;
+  case R_MIPS_PCHI16:
+    return R_MIPS_PCLO16;
+  case R_MICROMIPS_HI16:
+    return R_MICROMIPS_LO16;
+  default:
+    return R_MIPS_NONE;
+  }
+}
+
 template <class ELFT>
 template <bool isRela>
 uint8_t *
@@ -151,15 +169,7 @@ InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t SymIndex,
   // itself and addend of paired relocation. ABI requires to compute such
   // combined addend in case of REL relocation record format only.
   // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (isRela || Config->EMachine != EM_MIPS)
-    return nullptr;
-  if (Type == R_MIPS_HI16)
-    Type = R_MIPS_LO16;
-  else if (Type == R_MIPS_PCHI16)
-    Type = R_MIPS_PCLO16;
-  else if (Type == R_MICROMIPS_HI16)
-    Type = R_MICROMIPS_LO16;
-  else
+  if (isRela || Type == R_MIPS_NONE)
     return nullptr;
   for (const auto &RI : Rels) {
     if (RI.getType(Config->Mips64EL) != Type)
@@ -225,20 +235,31 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     uintX_t A = getAddend<ELFT>(RI);
     if (!Body) {
       uintX_t SymVA = getLocalRelTarget(*File, RI, A);
+      uint8_t *PairedLoc = nullptr;
       if (Config->EMachine == EM_MIPS) {
         if (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32)
           // We need to adjust SymVA value in case of R_MIPS_GPREL16/32
           // relocations because they use the following expression to calculate
           // the relocation's result for local symbol: S + A + GP0 - G.
           SymVA += File->getMipsGp0();
-        else if (Type == R_MIPS_GOT16)
+        else if (Type == R_MIPS_GOT16) {
           // R_MIPS_GOT16 relocation against local symbol requires index of
           // a local GOT entry which contains page address corresponds
-          // to the symbol address.
-          SymVA = Out<ELFT>::Got->getMipsLocalPageAddr(SymVA);
+          // to sum of the symbol address and addend. The addend in that case
+          // is calculated using addends from R_MIPS_GOT16 and paired
+          // R_MIPS_LO16 relocations.
+          const endianness E = ELFT::TargetEndianness;
+          uint8_t *LowLoc =
+              findMipsPairedReloc(Buf, SymIndex, R_MIPS_LO16, NextRelocs);
+          uint64_t AHL = read32<E>(BufLoc) << 16;
+          if (LowLoc)
+            AHL += SignExtend64<16>(read32<E>(LowLoc));
+          SymVA = Out<ELFT>::Got->getMipsLocalPageAddr(SymVA + AHL);
+        } else
+          PairedLoc = findMipsPairedReloc(
+              Buf, SymIndex, getMipsPairedRelocType(Type), NextRelocs);
       }
-      Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA, 0,
-                          findMipsPairedReloc(Buf, SymIndex, Type, NextRelocs));
+      Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA, 0, PairedLoc);
       continue;
     }
 
@@ -284,7 +305,9 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     }
     uintX_t Size = Body->getSize<ELFT>();
     Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA + A, Size + A,
-                        findMipsPairedReloc(Buf, SymIndex, Type, NextRelocs));
+                        findMipsPairedReloc(Buf, SymIndex,
+                                            getMipsPairedRelocType(Type),
+                                            NextRelocs));
   }
 }
 
@@ -316,6 +339,13 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
     else
       this->relocate(Buf, BufEnd, EObj.rels(RelSec));
   }
+}
+
+template <class ELFT>
+void InputSection<ELFT>::replace(InputSection<ELFT> *Other) {
+  this->Align = std::max(this->Align, Other->Align);
+  Other->Repl = this->Repl;
+  Other->Live = false;
 }
 
 template <class ELFT>

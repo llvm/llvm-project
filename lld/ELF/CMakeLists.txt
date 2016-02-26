@@ -6,6 +6,7 @@ add_lld_library(lldELF2
   Driver.cpp
   DriverUtils.cpp
   Error.cpp
+  ICF.cpp
   InputFiles.cpp
   InputSection.cpp
   LinkerScript.cpp

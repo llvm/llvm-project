@@ -99,5 +99,6 @@ Clang-Tidy Checks
    readability-redundant-control-flow
    readability-redundant-smartptr-get
    readability-redundant-string-cstr
+   readability-redundant-string-init
    readability-simplify-boolean-expr
    readability-uniqueptr-delete-release
