@@ -506,7 +506,7 @@ void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
   assert(!LCtx->inTopFrame() || State->get<UnreleasedIvarMap>().isEmpty());
 }
 
-/// Emits a warning if the current context is -dealloc and \param ReleasedValue
+/// Emits a warning if the current context is -dealloc and ReleasedValue
 /// must not be directly released in a -dealloc. Returns true if a diagnostic
 /// was emitted.
 bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
@@ -626,7 +626,7 @@ void ObjCDeallocChecker::initIdentifierInfoAndSelectors(
   ReleaseSel = Ctx.Selectors.getSelector(0, &ReleaseII);
 }
 
-/// Returns true if \param M is a call to '[super dealloc]'.
+/// Returns true if M is a call to '[super dealloc]'.
 bool ObjCDeallocChecker::isSuperDeallocMessage(
     const ObjCMethodCall &M) const {
   if (M.getOriginExpr()->getReceiverKind() != ObjCMessageExpr::SuperInstance)
@@ -642,7 +642,7 @@ ObjCDeallocChecker::getContainingObjCImpl(const LocationContext *LCtx) const {
   return cast<ObjCImplDecl>(MD->getDeclContext());
 }
 
-/// Returns the property that shadowed by \param PropImpl if one exists and
+/// Returns the property that shadowed by PropImpl if one exists and
 /// nullptr otherwise.
 const ObjCPropertyDecl *ObjCDeallocChecker::findShadowedPropertyDecl(
     const ObjCPropertyImplDecl *PropImpl) const {
@@ -674,8 +674,8 @@ const ObjCPropertyDecl *ObjCDeallocChecker::findShadowedPropertyDecl(
   return nullptr;
 }
 
-/// Remove the \param Value requiring a release from the tracked set for
-/// \param Instance and return the resultant state.
+/// Remove the Value requiring a release from the tracked set for
+/// Instance and return the resultant state.
 ProgramStateRef ObjCDeallocChecker::removeValueRequiringRelease(
     ProgramStateRef State, SymbolRef Instance, SymbolRef Value) const {
   assert(Instance);
@@ -729,7 +729,7 @@ ReleaseRequirement ObjCDeallocChecker::getDeallocReleaseRequirement(
   llvm_unreachable("Unrecognized setter kind");
 }
 
-/// Returns the released value if \param M is a call to -release. Returns
+/// Returns the released value if M is a call to -release. Returns
 /// nullptr otherwise.
 SymbolRef
 ObjCDeallocChecker::getValueExplicitlyReleased(const ObjCMethodCall &M,
@@ -740,7 +740,7 @@ ObjCDeallocChecker::getValueExplicitlyReleased(const ObjCMethodCall &M,
   return M.getReceiverSVal().getAsSymbol();
 }
 
-/// Returns the released value if \param M is a call a setter that releases
+/// Returns the released value if M is a call a setter that releases
 /// and nils out its underlying instance variable.
 SymbolRef
 ObjCDeallocChecker::getValueReleasedByNillingOut(const ObjCMethodCall &M,
@@ -779,15 +779,15 @@ ObjCDeallocChecker::getValueReleasedByNillingOut(const ObjCMethodCall &M,
 }
 
 /// Returns true if the current context is a call to -dealloc and false
-/// otherwise. If true, it also sets \param SelfValOut to the value of
+/// otherwise. If true, it also sets SelfValOut to the value of
 /// 'self'.
 bool ObjCDeallocChecker::isInInstanceDealloc(const CheckerContext &C,
                                              SVal &SelfValOut) const {
   return isInInstanceDealloc(C, C.getLocationContext(), SelfValOut);
 }
 
-/// Returns true if \param LCtx is a call to -dealloc and false
-/// otherwise. If true, it also sets \param SelfValOut to the value of
+/// Returns true if LCtx is a call to -dealloc and false
+/// otherwise. If true, it also sets SelfValOut to the value of
 /// 'self'.
 bool ObjCDeallocChecker::isInInstanceDealloc(const CheckerContext &C,
                                              const LocationContext *LCtx,
@@ -805,7 +805,7 @@ bool ObjCDeallocChecker::isInInstanceDealloc(const CheckerContext &C,
 }
 
 /// Returns true if there is a call to -dealloc anywhere on the stack and false
-/// otherwise. If true, it also sets \param InstanceValOut to the value of
+/// otherwise. If true, it also sets InstanceValOut to the value of
 /// 'self' in the frame for -dealloc.
 bool ObjCDeallocChecker::instanceDeallocIsOnStack(const CheckerContext &C,
                                                   SVal &InstanceValOut) const {
@@ -821,7 +821,7 @@ bool ObjCDeallocChecker::instanceDeallocIsOnStack(const CheckerContext &C,
   return false;
 }
 
-/// Returns true if the \param ID is a class in which which is known to have
+/// Returns true if the ID is a class in which which is known to have
 /// a separate teardown lifecycle. In this case, -dealloc warnings
 /// about missing releases should be suppressed.
 bool ObjCDeallocChecker::classHasSeparateTeardown(
