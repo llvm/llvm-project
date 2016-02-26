@@ -78,8 +78,6 @@ def SDTX86caspairSaveRbx16 : SDTypeProfile<1, 3,
                                            [SDTCisVT<0, i64>, SDTCisPtrTy<1>,
                                            SDTCisVT<2, i64>, SDTCisVT<3, i64>]>;
 
-def SDTX86atomicBinary : SDTypeProfile<2, 3, [SDTCisInt<0>, SDTCisInt<1>,
-                                SDTCisPtrTy<2>, SDTCisInt<3>,SDTCisInt<4>]>;
 def SDTX86Ret     : SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>;
 
 def SDT_X86CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;
