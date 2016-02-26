@@ -2,6 +2,10 @@
 // This test fails when run on powerpc64 (VMA=46).
 // The size of the write reported by Tsan for T1 is 8 instead of 1.
 // XFAIL: powerpc64
+// This test expects pthread_mutex_init in the frame #0 of thread T1 but we
+// get memset at frame #0 because memset that is called from pthread_init_mutex
+// is being intercepted by TSan
+// XFAIL: mips64
 #include "test.h"
 
 pthread_mutex_t Mtx;
