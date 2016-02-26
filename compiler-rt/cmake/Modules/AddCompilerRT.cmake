@@ -196,7 +196,7 @@ function(add_compiler_rt_runtime name type)
     endif()
   endforeach()
   if(LIB_PARENT_TARGET)
-    add_dependencies(${LIB_PARENT_TARGET} ${libname})
+    add_dependencies(${LIB_PARENT_TARGET} ${libnames})
   endif()
 endfunction()
 

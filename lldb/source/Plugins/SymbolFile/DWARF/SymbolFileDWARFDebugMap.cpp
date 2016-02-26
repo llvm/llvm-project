@@ -1297,7 +1297,10 @@ SymbolFileDWARFDebugMap::FindTypes
     {
         ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
             oso_dwarf->FindTypes (sc, name, parent_decl_ctx, append, max_matches, searched_symbol_files, types);
-            return false;
+            if (types.GetSize() >= max_matches)
+                return true;
+            else
+                return false;
         });
     }
 

@@ -9,6 +9,8 @@
 
 // C Includes
 // C++ Includes
+#include <atomic>
+#include <mutex>
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/Process.h"
@@ -832,8 +834,11 @@ const ProcessPropertiesSP &
 Process::GetGlobalProperties()
 {
     static ProcessPropertiesSP g_settings_sp;
-    if (!g_settings_sp)
-        g_settings_sp.reset (new ProcessProperties (NULL));
+    static std::once_flag g_once_flag;
+    std::call_once(g_once_flag,  []() {
+        if (!g_settings_sp)
+            g_settings_sp.reset (new ProcessProperties (NULL));
+    });
     return g_settings_sp;
 }
 
