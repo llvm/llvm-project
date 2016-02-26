@@ -10,6 +10,7 @@
 // RUN: %clang -target x86_64-pc-linux -### -S -O2 %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECK2-64 %s
 // RUN: %clang -target x86_64-pc-linux -### -S -O3 %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECK3-64 %s
 // RUN: %clang -target x86_64-pc-linux -### -S -Os %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECKs-64 %s
+// RUN: %clang -target x86_64-pc-win32-macho -### -S -O3 %s -o %t.s 2>&1 | FileCheck -check-prefix=CHECK-MACHO-64 %s
 
 // Trust the above to get the optimizations right, and just test other targets
 // that want this by default.
@@ -36,3 +37,4 @@
 // CHECK2-64-NOT: -mdisable-fp-elim
 // CHECK3-64-NOT: -mdisable-fp-elim
 // CHECKs-64-NOT: -mdisable-fp-elim
+// CHECK-MACHO-64: -mdisable-fp-elim
