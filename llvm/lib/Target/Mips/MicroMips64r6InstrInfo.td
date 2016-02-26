@@ -28,6 +28,9 @@ class DDIV_MM64R6_ENC : POOL32A_DIVMOD_FM_MMR6<"ddiv", 0b100011000>;
 class DMOD_MM64R6_ENC : POOL32A_DIVMOD_FM_MMR6<"dmod", 0b101011000>;
 class DDIVU_MM64R6_ENC : POOL32A_DIVMOD_FM_MMR6<"ddivu", 0b110011000>;
 class DMODU_MM64R6_ENC : POOL32A_DIVMOD_FM_MMR6<"dmodu", 0b111011000>;
+class DINSU_MM64R6_ENC : POOL32S_EXTBITS_FM_MMR6<0b110100>;
+class DINSM_MM64R6_ENC : POOL32S_EXTBITS_FM_MMR6<0b000100>;
+class DINS_MM64R6_ENC : POOL32S_EXTBITS_FM_MMR6<0b001100>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -90,6 +93,12 @@ class DMOD_MM64R6_DESC : ArithLogicR<"dmod", GPR32Opnd>;
 class DDIVU_MM64R6_DESC : ArithLogicR<"ddivu", GPR32Opnd>;
 class DMODU_MM64R6_DESC : ArithLogicR<"dmodu", GPR32Opnd>;
 
+class DINSU_MM64R6_DESC : InsBase<"dinsu", GPR64Opnd, uimm5_plus32,
+                                  uimm5_inssize_plus1, MipsIns>;
+class DINSM_MM64R6_DESC : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64>;
+class DINS_MM64R6_DESC : InsBase<"dins", GPR64Opnd, uimm5, uimm5_inssize_plus1,
+                                 MipsIns>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -116,4 +125,10 @@ let DecoderNamespace = "MicroMipsR6" in {
                      ISA_MICROMIPS64R6;
   def DMODU_MM64R6 : R6MMR6Rel, DMODU_MM64R6_DESC, DMODU_MM64R6_ENC,
                      ISA_MICROMIPS64R6;
+  def DINSU_MM64R6: R6MMR6Rel, DINSU_MM64R6_DESC, DINSU_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DINSM_MM64R6: R6MMR6Rel, DINSM_MM64R6_DESC, DINSM_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DINS_MM64R6: R6MMR6Rel, DINS_MM64R6_DESC, DINS_MM64R6_ENC,
+                   ISA_MICROMIPS64R6;
 }

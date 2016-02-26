@@ -270,7 +270,7 @@ def t2addrmode_so_reg : MemOperand,
   let EncoderMethod = "getT2AddrModeSORegOpValue";
   let DecoderMethod = "DecodeT2AddrModeSOReg";
   let ParserMatchClass = t2addrmode_so_reg_asmoperand;
-  let MIOperandInfo = (ops GPR:$base, rGPR:$offsreg, i32imm:$offsimm);
+  let MIOperandInfo = (ops GPRnopc:$base, rGPR:$offsreg, i32imm:$offsimm);
 }
 
 // Addresses for the TBB/TBH instructions.

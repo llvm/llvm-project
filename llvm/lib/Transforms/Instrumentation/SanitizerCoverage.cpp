@@ -28,13 +28,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -93,6 +95,11 @@ static cl::opt<bool>
                              cl::desc("Experimental tracing of CMP and similar "
                                       "instructions"),
                              cl::Hidden, cl::init(false));
+
+static cl::opt<bool> ClPruneBlocks(
+    "sanitizer-coverage-prune-blocks",
+    cl::desc("Reduce the number of instrumented blocks (experimental)"),
+    cl::Hidden, cl::init(false));
 
 // Experimental 8-bit counters used as an additional search heuristic during
 // coverage-guided fuzzing.
@@ -298,6 +305,22 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   return true;
 }
 
+static bool shouldInstrumentBlock(const BasicBlock *BB,
+                                  const DominatorTree *DT) {
+  if (!ClPruneBlocks)
+    return true;
+  if (succ_begin(BB) == succ_end(BB))
+    return true;
+
+  // Check if BB dominates all its successors.
+  for (const BasicBlock *SUCC : make_range(succ_begin(BB), succ_end(BB))) {
+    if (!DT->dominates(BB, SUCC))
+      return true;
+  }
+
+  return false;
+}
+
 bool SanitizerCoverageModule::runOnFunction(Function &F) {
   if (F.empty()) return false;
   if (F.getName().find(".module_ctor") != std::string::npos)
@@ -311,11 +334,15 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
   if (Options.CoverageType >= SanitizerCoverageOptions::SCK_Edge)
     SplitAllCriticalEdges(F);
   SmallVector<Instruction*, 8> IndirCalls;
-  SmallVector<BasicBlock*, 16> AllBlocks;
+  SmallVector<BasicBlock *, 16> BlocksToInstrument;
   SmallVector<Instruction*, 8> CmpTraceTargets;
   SmallVector<Instruction*, 8> SwitchTraceTargets;
+
+  DominatorTree DT;
+  DT.recalculate(F);
   for (auto &BB : F) {
-    AllBlocks.push_back(&BB);
+    if (shouldInstrumentBlock(&BB, &DT))
+      BlocksToInstrument.push_back(&BB);
     for (auto &Inst : BB) {
       if (Options.IndirectCalls) {
         CallSite CS(&Inst);
@@ -330,7 +357,8 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
       }
     }
   }
-  InjectCoverage(F, AllBlocks);
+
+  InjectCoverage(F, BlocksToInstrument);
   InjectCoverageForIndirectCalls(F, IndirCalls);
   InjectTraceForCmp(F, CmpTraceTargets);
   InjectTraceForSwitch(F, SwitchTraceTargets);

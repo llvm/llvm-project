@@ -25,8 +25,7 @@ public:
                             true /*StackRealignable*/) {}
 
   void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MBBI,
-                                 unsigned FramePtr) const;
+                                 MachineBasicBlock::iterator MBBI) const;
 
   void eliminateCallFramePseudoInstr(MachineFunction &MF,
                                   MachineBasicBlock &MBB,

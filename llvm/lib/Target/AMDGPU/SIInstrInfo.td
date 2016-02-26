@@ -435,6 +435,7 @@ def MubufOffsetMatchClass : AsmOperandClass {
   let Name = "MubufOffset";
   let ParserMethod = "parseMubufOptionalOps";
   let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
 }
 
 class DSOffsetBaseMatchClass <string parser> : AsmOperandClass {
@@ -442,6 +443,7 @@ class DSOffsetBaseMatchClass <string parser> : AsmOperandClass {
   let ParserMethod = parser;
   let RenderMethod = "addImmOperands";
   let PredicateMethod = "isDSOffset";
+  let IsOptional = 1;
 }
 
 def DSOffsetMatchClass : DSOffsetBaseMatchClass <"parseDSOptionalOps">;
@@ -452,6 +454,7 @@ def DSOffset01MatchClass : AsmOperandClass {
   let ParserMethod = "parseDSOff01OptionalOps";
   let RenderMethod = "addImmOperands";
   let PredicateMethod = "isDSOffset01";
+  let IsOptional = 1;
 }
 
 class GDSBaseMatchClass <string parser> : AsmOperandClass {
@@ -459,6 +462,7 @@ class GDSBaseMatchClass <string parser> : AsmOperandClass {
   let PredicateMethod = "isImm";
   let ParserMethod = parser;
   let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
 }
 
 def GDSMatchClass : GDSBaseMatchClass <"parseDSOptionalOps">;
@@ -469,6 +473,7 @@ class GLCBaseMatchClass <string parser> : AsmOperandClass {
   let PredicateMethod = "isImm";
   let ParserMethod = parser;
   let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
 }
 
 def GLCMubufMatchClass : GLCBaseMatchClass <"parseMubufOptionalOps">;
@@ -479,6 +484,7 @@ class SLCBaseMatchClass <string parser> : AsmOperandClass {
   let PredicateMethod = "isImm";
   let ParserMethod = parser;
   let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
 }
 
 def SLCMubufMatchClass : SLCBaseMatchClass <"parseMubufOptionalOps">;
@@ -490,6 +496,7 @@ class TFEBaseMatchClass <string parser> : AsmOperandClass {
   let PredicateMethod = "isImm";
   let ParserMethod = parser;
   let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
 }
 
 def TFEMubufMatchClass : TFEBaseMatchClass <"parseMubufOptionalOps">;
@@ -523,13 +530,21 @@ def SMRDLiteralOffsetMatchClass : SMRDOffsetBaseMatchClass <
   "isSMRDLiteralOffset"
 >;
 
+class OptionalImmAsmOperand <string OpName> : AsmOperandClass {
+  let Name = "Imm"#OpName;
+  let PredicateMethod = "isImm";
+  let IsOptional = 1;
+}
+
 let OperandType = "OPERAND_IMMEDIATE" in {
 
 def offen : Operand<i1> {
   let PrintMethod = "printOffen";
+  let ParserMatchClass = OptionalImmAsmOperand<"offen">;
 }
 def idxen : Operand<i1> {
   let PrintMethod = "printIdxen";
+  let ParserMatchClass = OptionalImmAsmOperand<"idxen">;
 }
 def addr64 : Operand<i1> {
   let PrintMethod = "printAddr64";
@@ -1651,7 +1666,7 @@ class VOP3_C_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
 }
 
 class VOP3_C_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
-                     bit HasMods = 0, bit VOP3Only = 0> :
+                      bit HasMods = 0, bit VOP3Only = 0> :
   VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
   VOP3ce_vi <op>,
   SIMCInstr <opName#"_e64", SISubtarget.VI> {
@@ -2871,7 +2886,7 @@ multiclass FLAT_ATOMIC <flat op, string asm_name, RegisterClass vdst_rc,
     dag outs_noret = (outs),
     string asm_noret = asm_name#" $addr, $data"#"$slc"#"$tfe"> {
 
-  let mayLoad = 1, mayStore = 1, glc = 0, vdst = 0 in {
+  let mayLoad = 1, mayStore = 1, glc = 0, vdst = 0, AsmMatchConverter = "cvtFlatAtomic" in {
     def "" : FLAT_Pseudo <NAME, outs_noret,
                           (ins VReg_64:$addr, data_rc:$data,
                                slc_flat_atomic:$slc, tfe_flat_atomic:$tfe), []>,
@@ -2888,7 +2903,7 @@ multiclass FLAT_ATOMIC <flat op, string asm_name, RegisterClass vdst_rc,
                             asm_noret>;
   }
 
-  let glc = 1, hasPostISelHook = 1 in {
+  let glc = 1, hasPostISelHook = 1, AsmMatchConverter = "cvtFlatAtomic" in {
     defm _RTN : FLAT_AtomicRet_m <op, (outs vdst_rc:$vdst),
                         (ins VReg_64:$addr, data_rc:$data, slc_flat_atomic:$slc,
                              tfe_flat_atomic:$tfe),

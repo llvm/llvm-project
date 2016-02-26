@@ -241,11 +241,11 @@ public:
          << "' does not contain an entry block!\n";
       return false;
     }
-    for (Function::const_iterator I = F.begin(), E = F.end(); I != E; ++I) {
-      if (I->empty() || !I->back().isTerminator()) {
+    for (const BasicBlock &BB : F) {
+      if (BB.empty() || !BB.back().isTerminator()) {
         OS << "Basic Block in function '" << F.getName()
            << "' does not have terminator!\n";
-        I->printAsOperand(OS, true);
+        BB.printAsOperand(OS, true);
         OS << "\n";
         return false;
       }
@@ -276,30 +276,25 @@ public:
     Broken = false;
 
     // Scan through, checking all of the external function's linkage now...
-    for (Module::const_iterator I = M.begin(), E = M.end(); I != E; ++I) {
-      visitGlobalValue(*I);
+    for (const Function &F : M) {
+      visitGlobalValue(F);
 
       // Check to make sure function prototypes are okay.
-      if (I->isDeclaration())
-        visitFunction(*I);
+      if (F.isDeclaration())
+        visitFunction(F);
     }
 
     // Now that we've visited every function, verify that we never asked to
     // recover a frame index that wasn't escaped.
     verifyFrameRecoverIndices();
+    for (const GlobalVariable &GV : M.globals())
+      visitGlobalVariable(GV);
 
-    for (Module::const_global_iterator I = M.global_begin(), E = M.global_end();
-         I != E; ++I)
-      visitGlobalVariable(*I);
+    for (const GlobalAlias &GA : M.aliases())
+      visitGlobalAlias(GA);
 
-    for (Module::const_alias_iterator I = M.alias_begin(), E = M.alias_end();
-         I != E; ++I)
-      visitGlobalAlias(*I);
-
-    for (Module::const_named_metadata_iterator I = M.named_metadata_begin(),
-                                               E = M.named_metadata_end();
-         I != E; ++I)
-      visitNamedMDNode(*I);
+    for (const NamedMDNode &NMD : M.named_metadata())
+      visitNamedMDNode(NMD);
 
     for (const StringMapEntry<Comdat> &SMEC : M.getComdatSymbolTable())
       visitComdat(SMEC.getValue());
@@ -579,8 +574,8 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
         const ConstantArray *InitArray = dyn_cast<ConstantArray>(Init);
         Assert(InitArray, "wrong initalizer for intrinsic global variable",
                Init);
-        for (unsigned i = 0, e = InitArray->getNumOperands(); i != e; ++i) {
-          Value *V = Init->getOperand(i)->stripPointerCastsNoFollowAliases();
+        for (Value *Op : InitArray->operands()) {
+          Value *V = Op->stripPointerCastsNoFollowAliases();
           Assert(isa<GlobalVariable>(V) || isa<Function>(V) ||
                      isa<GlobalAlias>(V),
                  "invalid llvm.used member", V);
@@ -661,9 +656,7 @@ void Verifier::visitGlobalAlias(const GlobalAlias &GA) {
 }
 
 void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
-  for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i) {
-    MDNode *MD = NMD.getOperand(i);
-
+  for (const MDNode *MD : NMD.operands()) {
     if (NMD.getName() == "llvm.dbg.cu") {
       Assert(MD && isa<DICompileUnit>(MD), "invalid compile unit", &NMD, MD);
     }
@@ -693,8 +686,7 @@ void Verifier::visitMDNode(const MDNode &MD) {
 #include "llvm/IR/Metadata.def"
   }
 
-  for (unsigned i = 0, e = MD.getNumOperands(); i != e; ++i) {
-    Metadata *Op = MD.getOperand(i);
+  for (const Metadata *Op : MD.operands()) {
     if (!Op)
       continue;
     Assert(!isa<LocalAsMetadata>(Op), "Invalid operand for global metadata!",
@@ -1152,8 +1144,7 @@ void Verifier::visitModuleIdents(const Module &M) {
   
   // llvm.ident takes a list of metadata entry. Each entry has only one string.
   // Scan each llvm.ident entry and make sure that this requirement is met.
-  for (unsigned i = 0, e = Idents->getNumOperands(); i != e; ++i) {
-    const MDNode *N = Idents->getOperand(i);
+  for (const MDNode *N : Idents->operands()) {
     Assert(N->getNumOperands() == 1,
            "incorrect number of operands in llvm.ident metadata", N);
     Assert(dyn_cast_or_null<MDString>(N->getOperand(0)),
@@ -1170,13 +1161,11 @@ void Verifier::visitModuleFlags(const Module &M) {
   // Scan each flag, and track the flags and requirements.
   DenseMap<const MDString*, const MDNode*> SeenIDs;
   SmallVector<const MDNode*, 16> Requirements;
-  for (unsigned I = 0, E = Flags->getNumOperands(); I != E; ++I) {
-    visitModuleFlag(Flags->getOperand(I), SeenIDs, Requirements);
-  }
+  for (const MDNode *MDN : Flags->operands())
+    visitModuleFlag(MDN, SeenIDs, Requirements);
 
   // Validate that the requirements in the module are valid.
-  for (unsigned I = 0, E = Requirements.size(); I != E; ++I) {
-    const MDNode *Requirement = Requirements[I];
+  for (const MDNode *Requirement : Requirements) {
     const MDString *Flag = cast<MDString>(Requirement->getOperand(0));
     const Metadata *ReqValue = Requirement->getOperand(1);
 
@@ -1540,9 +1529,9 @@ void Verifier::verifyFunctionMetadata(
   if (MDs.empty())
     return;
 
-  for (unsigned i = 0; i < MDs.size(); i++) {
-    if (MDs[i].first == LLVMContext::MD_prof) {
-      MDNode *MD = MDs[i].second;
+  for (const auto &Pair : MDs) {
+    if (Pair.first == LLVMContext::MD_prof) {
+      MDNode *MD = Pair.second;
       Assert(MD->getNumOperands() == 2,
              "!prof annotations should have exactly 2 operands", MD);
 
@@ -1881,19 +1870,19 @@ void Verifier::visitFunction(const Function &F) {
 
   // Check that the argument values match the function type for this function...
   unsigned i = 0;
-  for (Function::const_arg_iterator I = F.arg_begin(), E = F.arg_end(); I != E;
-       ++I, ++i) {
-    Assert(I->getType() == FT->getParamType(i),
-           "Argument value does not match function argument type!", I,
+  for (const Argument &Arg : F.args()) {
+    Assert(Arg.getType() == FT->getParamType(i),
+           "Argument value does not match function argument type!", &Arg,
            FT->getParamType(i));
-    Assert(I->getType()->isFirstClassType(),
-           "Function arguments must have first-class types!", I);
+    Assert(Arg.getType()->isFirstClassType(),
+           "Function arguments must have first-class types!", &Arg);
     if (!isLLVMdotName) {
-      Assert(!I->getType()->isMetadataTy(),
-             "Function takes metadata but isn't an intrinsic", I, &F);
-      Assert(!I->getType()->isTokenTy(),
-             "Function takes token but isn't an intrinsic", I, &F);
+      Assert(!Arg.getType()->isMetadataTy(),
+             "Function takes metadata but isn't an intrinsic", &Arg, &F);
+      Assert(!Arg.getType()->isTokenTy(),
+             "Function takes token but isn't an intrinsic", &Arg, &F);
     }
+    ++i;
   }
 
   if (!isLLVMdotName)
@@ -2113,11 +2102,11 @@ void Verifier::visitSwitchInst(SwitchInst &SI) {
   // have the same type as the switched-on value.
   Type *SwitchTy = SI.getCondition()->getType();
   SmallPtrSet<ConstantInt*, 32> Constants;
-  for (SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
-    Assert(i.getCaseValue()->getType() == SwitchTy,
+  for (auto &Case : SI.cases()) {
+    Assert(Case.getCaseValue()->getType() == SwitchTy,
            "Switch constants must all be same type as switch value!", &SI);
-    Assert(Constants.insert(i.getCaseValue()).second,
-           "Duplicate integer as switch case", &SI, i.getCaseValue());
+    Assert(Constants.insert(Case.getCaseValue()).second,
+           "Duplicate integer as switch case", &SI, Case.getCaseValue());
   }
 
   visitTerminatorInst(SI);
@@ -2816,8 +2805,8 @@ void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (GEP.getPointerOperandType()->isVectorTy())
       Assert(GEPWidth == GEP.getPointerOperandType()->getVectorNumElements(),
              "Vector GEP result width doesn't match operand's", &GEP);
-    for (unsigned i = 0, e = Idxs.size(); i != e; ++i) {
-      Type *IndexTy = Idxs[i]->getType();
+    for (Value *Idx : Idxs) {
+      Type *IndexTy = Idx->getType();
       if (IndexTy->isVectorTy()) {
         unsigned IndexWidth = IndexTy->getVectorNumElements();
         Assert(IndexWidth == GEPWidth, "Invalid GEP index vector width", &GEP);
@@ -4319,9 +4308,9 @@ bool llvm::verifyModule(const Module &M, raw_ostream *OS) {
   Verifier V(OS ? *OS : NullStr);
 
   bool Broken = false;
-  for (Module::const_iterator I = M.begin(), E = M.end(); I != E; ++I)
-    if (!I->isDeclaration() && !I->isMaterializable())
-      Broken |= !V.verify(*I);
+  for (const Function &F : M)
+    if (!F.isDeclaration() && !F.isMaterializable())
+      Broken |= !V.verify(F);
 
   // Note that this function's return value is inverted from what you would
   // expect of a function called "verify".

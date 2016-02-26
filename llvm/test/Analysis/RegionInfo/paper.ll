@@ -4,6 +4,8 @@
 ; RUN: opt -regions -print-region-style=bb  -analyze < %s 2>&1 | FileCheck -check-prefix=BBIT %s
 ; RUN: opt -regions -print-region-style=rn  -analyze < %s 2>&1 | FileCheck -check-prefix=RNIT %s
 
+; RUN: opt < %s -passes='print<regions>' 2>&1 | FileCheck %s
+
 define void @a_linear_impl_fig_1() nounwind {
 0:
         br label %"1"

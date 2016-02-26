@@ -948,10 +948,11 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
         if (FuncletBundleOperand == FuncletPad)
           continue;
 
-        // Skip call sites which are nounwind intrinsics.
+        // Skip call sites which are nounwind intrinsics or inline asm.
         auto *CalledFn =
             dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
-        if (CalledFn && CalledFn->isIntrinsic() && CS.doesNotThrow())
+        if (CalledFn && ((CalledFn->isIntrinsic() && CS.doesNotThrow()) ||
+                         CS.isInlineAsm()))
           continue;
 
         // This call site was not part of this funclet, remove it.

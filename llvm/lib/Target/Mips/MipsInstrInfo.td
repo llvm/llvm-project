@@ -403,6 +403,16 @@ class ConstantUImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
   let DiagnosticType = "UImm" # Bits # "_" # Offset;
 }
 
+class ConstantUImmRangeAsmOperandClass<int Bottom, int Top,
+                                       list<AsmOperandClass> Supers = []>
+    : AsmOperandClass {
+  let Name = "ConstantUImmRange" # Bottom # "_" # Top;
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isConstantUImmRange<" # Bottom # ", " # Top # ">";
+  let SuperClasses = Supers;
+  let DiagnosticType = "UImmRange" # Bottom # "_" # Top;
+}
+
 class UImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = []>
     : AsmOperandClass {
   let Name = "UImm" # Bits;
@@ -432,6 +442,8 @@ def ConstantSImm6AsmOperandClass
     : ConstantSImmAsmOperandClass<6, [ConstantUImm7AsmOperandClass]>;
 def ConstantUImm5Plus1AsmOperandClass
     : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass], 1>;
+def ConstantUImm5_Range2_64AsmOperandClass
+    : ConstantUImmRangeAsmOperandClass<2, 64, [ConstantUImm6AsmOperandClass]>;
 def ConstantUImm5Plus32AsmOperandClass
     : ConstantUImmAsmOperandClass<5, [ConstantUImm6AsmOperandClass], 32>;
 def ConstantUImm5Plus33AsmOperandClass
@@ -542,6 +554,14 @@ def uimmz       : Operand<i32> {
   let ParserMatchClass = ConstantImmzAsmOperandClass;
 }
 
+// size operand of ins instruction
+def uimm_range_2_64 : Operand<i32> {
+  let PrintMethod = "printUnsignedImm";
+  let EncoderMethod = "getSizeInsEncoding";
+  let DecoderMethod = "DecodeInsSize";
+  let ParserMatchClass = ConstantUImm5_Range2_64AsmOperandClass;
+}
+
 // Unsigned Operands
 foreach I = {1, 2, 3, 4, 5, 6, 7, 8, 10} in
   def uimm # I : Operand<i32> {
@@ -574,6 +594,13 @@ def uimm5_plus33 : Operand<i32> {
   let EncoderMethod = "getUImmWithOffsetEncoding<5, 1>";
   let DecoderMethod = "DecodeUImmWithOffset<5, 1>";
   let ParserMatchClass = ConstantUImm5Plus33AsmOperandClass;
+}
+
+def uimm5_inssize_plus1 : Operand<i32> {
+  let PrintMethod = "printUnsignedImm";
+  let ParserMatchClass = ConstantUImm5Plus1AsmOperandClass;
+  let EncoderMethod = "getSizeInsEncoding";
+  let DecoderMethod = "DecodeInsSize";
 }
 
 def uimm5_plus32_normalize : Operand<i32> {
@@ -1253,8 +1280,8 @@ class ExtBase<string opstr, RegisterOperand RO, Operand PosOpnd,
          FrmR, opstr>, ISA_MIPS32R2;
 
 class InsBase<string opstr, RegisterOperand RO, Operand PosOpnd,
-              SDPatternOperator Op = null_frag>:
-  InstSE<(outs RO:$rt), (ins RO:$rs, PosOpnd:$pos, size_ins:$size, RO:$src),
+              Operand SizeOpnd, SDPatternOperator Op = null_frag>:
+  InstSE<(outs RO:$rt), (ins RO:$rs, PosOpnd:$pos, SizeOpnd:$size, RO:$src),
          !strconcat(opstr, " $rt, $rs, $pos, $size"),
          [(set RO:$rt, (Op RO:$rs, imm:$pos, imm:$size, RO:$src))],
          II_INS, FrmR, opstr>, ISA_MIPS32R2 {
@@ -1738,7 +1765,8 @@ def RDHWR : MMRel, ReadHardware<GPR32Opnd, HWRegsOpnd>, RDHWR_FM;
 // TODO: Add '0 < pos+size <= 32' constraint check to ext instruction
 def EXT : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1, MipsExt>,
           EXT_FM<0>;
-def INS : MMRel, InsBase<"ins", GPR32Opnd, uimm5, MipsIns>, EXT_FM<4>;
+def INS : MMRel, InsBase<"ins", GPR32Opnd, uimm5, uimm5_inssize_plus1, MipsIns>,
+          EXT_FM<4>;
 
 /// Move Control Registers From/To CPU Registers
 def MFC0 : MFC3OP<"mfc0", GPR32Opnd, COP0Opnd>, MFC3OP_FM<0x10, 0>, ISA_MIPS32;

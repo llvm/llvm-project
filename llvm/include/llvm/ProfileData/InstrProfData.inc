@@ -386,6 +386,9 @@ ValueProfData *
 serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
                              ValueProfData *Dst);
 uint32_t getNumValueKindsRT(const void *R);
+ValueProfRecord *getFirstValueProfRecord(ValueProfData *VPD);
+ValueProfRecord *getValueProfRecordNext(ValueProfRecord *VPR);
+InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *VPR);
 
 #undef INSTR_PROF_VALUE_PROF_DATA
 #endif  /* INSTR_PROF_VALUE_PROF_DATA */

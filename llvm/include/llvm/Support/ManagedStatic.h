@@ -22,17 +22,18 @@ namespace llvm {
 
 /// object_creator - Helper method for ManagedStatic.
 template<class C>
-void* object_creator() {
+LLVM_LIBRARY_VISIBILITY void* object_creator() {
   return new C();
 }
 
 /// object_deleter - Helper method for ManagedStatic.
 ///
-template<typename T> struct object_deleter {
-  static void call(void * Ptr) { delete (T*)Ptr; }
+template <typename T> struct LLVM_LIBRARY_VISIBILITY object_deleter {
+  static void call(void *Ptr) { delete (T *)Ptr; }
 };
-template<typename T, size_t N> struct object_deleter<T[N]> {
-  static void call(void * Ptr) { delete[] (T*)Ptr; }
+template <typename T, size_t N>
+struct LLVM_LIBRARY_VISIBILITY object_deleter<T[N]> {
+  static void call(void *Ptr) { delete[](T *)Ptr; }
 };
 
 /// ManagedStaticBase - Common base class for ManagedStatic instances.

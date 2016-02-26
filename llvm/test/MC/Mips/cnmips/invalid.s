@@ -13,3 +13,7 @@ foo:
     bbit1 $19, 64, foo   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
     bbit132 $19, -1, foo # CHECK: :[[@LINE]]:18: error: expected 5-bit unsigned immediate
     bbit132 $19, 32, foo # CHECK: :[[@LINE]]:18: error: expected 5-bit unsigned immediate
+    ins $2, $3, -1, 1    # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
+    ins $2, $3, 32, 1    # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
+    ins $2, $3, 0, -1    # CHECK: :[[@LINE]]:20: error: expected immediate in range 1 .. 32
+    ins $2, $3, 0, 33    # CHECK: :[[@LINE]]:20: error: expected immediate in range 1 .. 32
