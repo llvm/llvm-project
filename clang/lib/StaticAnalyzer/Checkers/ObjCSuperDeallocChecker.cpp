@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This defines ObjCSuperDeallocChecker, a builtin check that warns when
-// [super dealloc] is called twice on the same instance in MRR mode.
+// self is used after a call to [super dealloc] in MRR mode.
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,7 +25,8 @@ using namespace ento;
 
 namespace {
 class ObjCSuperDeallocChecker
-    : public Checker<check::PostObjCMessage, check::PreObjCMessage> {
+    : public Checker<check::PostObjCMessage, check::PreObjCMessage,
+                     check::PreCall, check::Location> {
 
   mutable IdentifierInfo *IIdealloc, *IINSObject;
   mutable Selector SELdealloc;
@@ -40,12 +41,24 @@ public:
   ObjCSuperDeallocChecker();
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
   void checkPreObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
+
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+
+  void checkLocation(SVal l, bool isLoad, const Stmt *S,
+                     CheckerContext &C) const;
+
+private:
+
+  void diagnoseCallArguments(const CallEvent &CE, CheckerContext &C) const;
+
+  void reportUseAfterDealloc(SymbolRef Sym, StringRef Desc, const Stmt *S,
+                             CheckerContext &C) const;
 };
 
 } // End anonymous namespace.
 
 // Remember whether [super dealloc] has previously been called on the
-// a SymbolRef for the receiver.
+// SymbolRef for the receiver.
 REGISTER_SET_WITH_PROGRAMSTATE(CalledSuperDealloc, SymbolRef)
 
 class SuperDeallocBRVisitor final
@@ -71,38 +84,34 @@ public:
 
 void ObjCSuperDeallocChecker::checkPreObjCMessage(const ObjCMethodCall &M,
                                                   CheckerContext &C) const {
-  if (!isSuperDeallocMessage(M))
-    return;
 
   ProgramStateRef State = C.getState();
   SymbolRef ReceiverSymbol = M.getReceiverSVal().getAsSymbol();
-  assert(ReceiverSymbol && "No receiver symbol at call to [super dealloc]?");
+  if (!ReceiverSymbol) {
+    diagnoseCallArguments(M, C);
+    return;
+  }
 
   bool AlreadyCalled = State->contains<CalledSuperDealloc>(ReceiverSymbol);
-
-  // If [super dealloc] has not been called, there is nothing to do. We'll
-  // note the fact that [super dealloc] was called in checkPostObjCMessage.
   if (!AlreadyCalled)
     return;
 
-  // We have a duplicate [super dealloc] method call.
-  // This likely causes a crash, so stop exploring the
-  // path by generating a sink.
-  ExplodedNode *ErrNode = C.generateErrorNode();
-  // If we've already reached this node on another path, return.
-  if (!ErrNode)
-    return;
+  StringRef Desc;
 
-  // Generate the report.
-  std::unique_ptr<BugReport> BR(
-      new BugReport(*DoubleSuperDeallocBugType,
-                    "[super dealloc] should not be called multiple times",
-                    ErrNode));
-  BR->addRange(M.getOriginExpr()->getSourceRange());
-  BR->addVisitor(llvm::make_unique<SuperDeallocBRVisitor>(ReceiverSymbol));
-  C.emitReport(std::move(BR));
+  if (isSuperDeallocMessage(M)) {
+    Desc = "[super dealloc] should not be called multiple times";
+  } else {
+    Desc = StringRef();
+  }
+
+  reportUseAfterDealloc(ReceiverSymbol, Desc, M.getOriginExpr(), C);
 
   return;
+}
+
+void ObjCSuperDeallocChecker::checkPreCall(const CallEvent &Call,
+                                           CheckerContext &C) const {
+  diagnoseCallArguments(Call, C);
 }
 
 void ObjCSuperDeallocChecker::checkPostObjCMessage(const ObjCMethodCall &M,
@@ -120,6 +129,92 @@ void ObjCSuperDeallocChecker::checkPostObjCMessage(const ObjCMethodCall &M,
   // calls [super dealloc].
   State = State->add<CalledSuperDealloc>(ReceiverSymbol);
   C.addTransition(State);
+}
+
+void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
+                                  CheckerContext &C) const {
+  SymbolRef BaseSym = L.getLocSymbolInBase();
+  if (!BaseSym)
+    return;
+
+  ProgramStateRef State = C.getState();
+
+  if (!State->contains<CalledSuperDealloc>(BaseSym))
+    return;
+
+  const MemRegion *R = L.getAsRegion();
+  if (!R)
+    return;
+
+  // Climb the super regions to find the base symbol while recording
+  // the second-to-last region for error reporting.
+  const MemRegion *PriorSubRegion = nullptr;
+  while (const SubRegion *SR = dyn_cast<SubRegion>(R)) {
+    if (const SymbolicRegion *SymR = dyn_cast<SymbolicRegion>(SR)) {
+      BaseSym = SymR->getSymbol();
+      break;
+    } else {
+      R = SR->getSuperRegion();
+      PriorSubRegion = SR;
+    }
+  }
+
+  StringRef Desc = StringRef();
+  auto *IvarRegion = dyn_cast_or_null<ObjCIvarRegion>(PriorSubRegion);
+
+  std::string Buf;
+  llvm::raw_string_ostream OS(Buf);
+  if (IvarRegion) {
+    OS << "use of instance variable '" << *IvarRegion->getDecl() <<
+          "' after 'self' has been deallocated";
+    Desc = OS.str();
+  }
+
+  reportUseAfterDealloc(BaseSym, Desc, S, C);
+}
+
+/// Report a use-after-dealloc on \param Sym. If not empty,
+/// \param Desc will be used to describe the error; otherwise,
+/// a default warning will be used.
+void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
+                                                    StringRef Desc,
+                                                    const Stmt *S,
+                                                    CheckerContext &C) const {
+  // We have a use of self after free.
+  // This likely causes a crash, so stop exploring the
+  // path by generating a sink.
+  ExplodedNode *ErrNode = C.generateErrorNode();
+  // If we've already reached this node on another path, return.
+  if (!ErrNode)
+    return;
+
+  if (Desc.empty())
+    Desc = "use of 'self' after it has been deallocated";
+
+  // Generate the report.
+  std::unique_ptr<BugReport> BR(
+      new BugReport(*DoubleSuperDeallocBugType, Desc, ErrNode));
+  BR->addRange(S->getSourceRange());
+  BR->addVisitor(llvm::make_unique<SuperDeallocBRVisitor>(Sym));
+  C.emitReport(std::move(BR));
+}
+
+/// Diagnose if any of the arguments to \param CE have already been
+/// dealloc'd.
+void ObjCSuperDeallocChecker::diagnoseCallArguments(const CallEvent &CE,
+                                                    CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  unsigned ArgCount = CE.getNumArgs();
+  for (unsigned I = 0; I < ArgCount; I++) {
+    SymbolRef Sym = CE.getArgSVal(I).getAsSymbol();
+    if (!Sym)
+      continue;
+
+    if (State->contains<CalledSuperDealloc>(Sym)) {
+      reportUseAfterDealloc(Sym, StringRef(), CE.getArgExpr(I), C);
+      return;
+    }
+  }
 }
 
 ObjCSuperDeallocChecker::ObjCSuperDeallocChecker()
