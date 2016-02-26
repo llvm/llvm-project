@@ -144,9 +144,11 @@ endif
 #   o cxx_linker
 #----------------------------------------------------------------------
 SWIFTCC ?= $(shell $(LEVEL)/find-swift.py)
-SWIFTLIBS ?= $(shell $(LEVEL)/find-swift.py -l)
-SWIFTSDKROOT ?= $(shell $(LEVEL)/find-swift.py -s)
-
+ifeq "$(SDKROOT)" ""
+	SWIFTSDKROOT = $(shell $(LEVEL)/find-swift.py -s)
+else
+	SWIFTSDKROOT = $(SDKROOT)
+endif
 
 #----------------------------------------------------------------------
 # ARCHFLAG is the flag used to tell the compiler which architecture
@@ -421,8 +423,8 @@ endif
 # Check if we need the Swift/ObjC interop features
 #----------------------------------------------------------------------
 ifeq "$(SWIFT_OBJC_INTEROP)" "1"
-	SWIFTFLAGS += -framework Cocoa
-	LDFLAGS +=-lswiftObjectiveC -lswiftFoundation -framework Cocoa -framework QuartzCore
+	SWIFTFLAGS += -framework Foundation -framework CoreGraphics
+	LDFLAGS +=-lswiftObjectiveC -lswiftFoundation -framework Foundation -framework CoreGraphics
 endif
 
 #----------------------------------------------------------------------

@@ -9,7 +9,7 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-import Cocoa
+import Foundation
 
 class SwiftClass {
 	var ns_a: NSString

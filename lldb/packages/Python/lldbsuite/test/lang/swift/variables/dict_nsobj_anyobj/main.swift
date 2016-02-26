@@ -9,7 +9,7 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-import Cocoa
+import Foundation
 
 func main() {
   var d1: Dictionary<Int,Int> = [1:1,2:2,3:3,4:4]

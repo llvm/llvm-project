@@ -9,14 +9,20 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
+#if os(iOS)
+import UIKit
+typealias Color = UIColor
+#else
 import Cocoa
+typealias Color = NSColor
+#endif
 
 func main() {
-  var optColor_Some : NSColor? = NSColor.redColor()
-  var uoptColor_Some : NSColor! = NSColor.redColor()
+  var optColor_Some : Color? = Color.redColor()
+  var uoptColor_Some : Color! = Color.redColor()
 
-  var optColor_None : NSColor? = nil
-  var uoptColor_None : NSColor! = nil
+  var optColor_None : Color? = nil
+  var uoptColor_None : Color! = nil
 
   print("//Set breakpoint here") // Set breakpoint here
 }

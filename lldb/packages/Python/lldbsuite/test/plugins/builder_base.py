@@ -78,8 +78,7 @@ def getCCSpec(compiler):
     # Note the leading space character.
     if cc:
         if swiftcc:
-            return (" CC=" + cc + " SWIFTCC=" + swiftcc + " SWIFTLIBS=\"" + swift.getSwiftLibraryPath() +
-                "\" SWIFTSDKROOT=\"" + swift.getSwiftSDKRoot() + "\"")
+            return (" CC=" + cc + " SWIFTCC=" + swiftcc )
         else:
             return "CC=\"%s\"" % cc
     return ""
