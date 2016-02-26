@@ -2215,9 +2215,9 @@ def : Pat <
 class SampleRawPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
   (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, i32:$dmask, i32:$unorm,
         i32:$r128, i32:$da, i32:$glc, i32:$slc, i32:$tfe, i32:$lwe),
-  (opcode (as_i32imm $dmask), (as_i1imm $unorm), (as_i1imm $glc), (as_i1imm $da),
-          (as_i1imm $r128), (as_i1imm $tfe), (as_i1imm $lwe), (as_i1imm $slc),
-          $addr, $rsrc, $sampler)
+  (opcode $addr, $rsrc, $sampler,
+          (as_i32imm $dmask), (as_i1imm $unorm), (as_i1imm $glc), (as_i1imm $slc),
+          (as_i1imm $r128), (as_i1imm $tfe), (as_i1imm $lwe), (as_i1imm $da))
 >;
 
 multiclass SampleRawPatterns<SDPatternOperator name, string opcode> {
@@ -2232,9 +2232,9 @@ multiclass SampleRawPatterns<SDPatternOperator name, string opcode> {
 class ImagePattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
   (name vt:$addr, v8i32:$rsrc, imm:$dmask, imm:$unorm,
         imm:$r128, imm:$da, imm:$glc, imm:$slc, imm:$tfe, imm:$lwe),
-  (opcode (as_i32imm $dmask), (as_i1imm $unorm), (as_i1imm $glc), (as_i1imm $da),
-          (as_i1imm $r128), (as_i1imm $tfe), (as_i1imm $lwe), (as_i1imm $slc),
-          $addr, $rsrc)
+  (opcode $addr, $rsrc,
+          (as_i32imm $dmask), (as_i1imm $unorm), (as_i1imm $glc), (as_i1imm $slc),
+          (as_i1imm $r128), (as_i1imm $tfe), (as_i1imm $lwe), (as_i1imm $da))
 >;
 
 multiclass ImagePatterns<SDPatternOperator name, string opcode> {
@@ -2246,8 +2246,9 @@ multiclass ImagePatterns<SDPatternOperator name, string opcode> {
 class ImageLoadPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
   (name vt:$addr, v8i32:$rsrc, imm:$dmask, imm:$r128, imm:$da, imm:$glc,
         imm:$slc),
-  (opcode (as_i32imm $dmask), 1, (as_i1imm $glc), (as_i1imm $da),
-          (as_i1imm $r128), 0, 0, (as_i1imm $slc), $addr, $rsrc)
+  (opcode $addr, $rsrc,
+          (as_i32imm $dmask), 1, (as_i1imm $glc), (as_i1imm $slc),
+          (as_i1imm $r128), 0, 0, (as_i1imm $da))
 >;
 
 multiclass ImageLoadPatterns<SDPatternOperator name, string opcode> {
@@ -2259,8 +2260,9 @@ multiclass ImageLoadPatterns<SDPatternOperator name, string opcode> {
 class ImageStorePattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
   (name v4f32:$data, vt:$addr, v8i32:$rsrc, i32:$dmask, imm:$r128, imm:$da,
         imm:$glc, imm:$slc),
-  (opcode $data, (as_i32imm $dmask), 1, (as_i1imm $glc), (as_i1imm $da),
-          (as_i1imm $r128), 0, 0, (as_i1imm $slc), $addr, $rsrc)
+  (opcode $data, $addr, $rsrc,
+          (as_i32imm $dmask), 1, (as_i1imm $glc), (as_i1imm $slc),
+          (as_i1imm $r128), 0, 0, (as_i1imm $da))
 >;
 
 multiclass ImageStorePatterns<SDPatternOperator name, string opcode> {
@@ -2373,34 +2375,34 @@ defm : ImageStorePatterns<int_amdgcn_image_store_mip, "IMAGE_STORE_MIP">;
 /* SIsample for simple 1D texture lookup */
 def : Pat <
   (SIsample i32:$addr, v8i32:$rsrc, v4i32:$sampler, imm),
-  (IMAGE_SAMPLE_V4_V1 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc, $sampler)
+  (IMAGE_SAMPLE_V4_V1 $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 0)
 >;
 
 class SamplePattern<SDNode name, MIMG opcode, ValueType vt> : Pat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, imm),
-    (opcode 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc, $sampler)
+    (opcode $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 0)
 >;
 
 class SampleRectPattern<SDNode name, MIMG opcode, ValueType vt> : Pat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_RECT),
-    (opcode 0xf, 1, 0, 0, 0, 0, 0, 0, $addr, $rsrc, $sampler)
+    (opcode $addr, $rsrc, $sampler, 0xf, 1, 0, 0, 0, 0, 0, 0)
 >;
 
 class SampleArrayPattern<SDNode name, MIMG opcode, ValueType vt> : Pat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_ARRAY),
-    (opcode 0xf, 0, 0, 1, 0, 0, 0, 0, $addr, $rsrc, $sampler)
+    (opcode $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 1)
 >;
 
 class SampleShadowPattern<SDNode name, MIMG opcode,
                           ValueType vt> : Pat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_SHADOW),
-    (opcode 0xf, 0, 0, 0, 0, 0, 0, 0, $addr, $rsrc, $sampler)
+    (opcode $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 0)
 >;
 
 class SampleShadowArrayPattern<SDNode name, MIMG opcode,
                                ValueType vt> : Pat <
     (name vt:$addr, v8i32:$rsrc, v4i32:$sampler, TEX_SHADOW_ARRAY),
-    (opcode 0xf, 0, 0, 1, 0, 0, 0, 0, $addr, $rsrc, $sampler)
+    (opcode $addr, $rsrc, $sampler, 0xf, 0, 0, 0, 0, 0, 0, 1)
 >;
 
 /* SIsample* for texture lookups consuming more address parameters */

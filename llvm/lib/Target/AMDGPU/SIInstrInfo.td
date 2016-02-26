@@ -533,7 +533,28 @@ def SMRDLiteralOffsetMatchClass : SMRDOffsetBaseMatchClass <
 class OptionalImmAsmOperand <string OpName> : AsmOperandClass {
   let Name = "Imm"#OpName;
   let PredicateMethod = "isImm";
+  let RenderMethod = "addImmOperands";
   let IsOptional = 1;
+}
+
+def DMaskMatchClass : AsmOperandClass {
+  let Name = "DMask";
+  let PredicateMethod = "isDMask";
+  let ParserMethod = "parseDMask";
+  let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
+}
+
+class NamedBitMatchClass<string BitName> : AsmOperandClass {
+  let Name = "Imm"#BitName;
+  let PredicateMethod = "is"#BitName;
+  let ParserMethod = "parse"#BitName;
+  let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
+}
+
+class NamedBitOperand<string BitName> : Operand<i1> {
+  let PrintMethod = "print"#BitName;
 }
 
 let OperandType = "OPERAND_IMMEDIATE" in {
@@ -622,7 +643,29 @@ def smrd_literal_offset : Operand <i32> {
   let ParserMatchClass = SMRDLiteralOffsetMatchClass;
 }
 
+def dmask : Operand <i32> {
+  let PrintMethod = "printDMask";
+  let ParserMatchClass = DMaskMatchClass;
+}
+
+def unorm : NamedBitOperand<"UNorm"> {
+  let ParserMatchClass = NamedBitMatchClass<"UNorm">;
+}
+
+def da : NamedBitOperand<"DA"> {
+  let ParserMatchClass = NamedBitMatchClass<"DA">;
+}
+
+def r128 : NamedBitOperand<"R128"> {
+  let ParserMatchClass = NamedBitMatchClass<"R128">;
+}
+
+def lwe : NamedBitOperand<"LWE"> {
+  let ParserMatchClass = NamedBitMatchClass<"LWE">;
+}
+
 } // End OperandType = "OPERAND_IMMEDIATE"
+
 
 def VOPDstS64 : VOPDstOperand <SReg_64>;
 
@@ -2923,6 +2966,7 @@ class MIMG_Helper <bits<7> op, dag outs, dag ins, string asm,
   let hasPostISelHook = 1;
   let DecoderNamespace = dns;
   let isAsmParserOnly = !if(!eq(dns,""), 1, 0);
+  let AsmMatchConverter = "cvtMIMG";
 }
 
 class MIMG_NoSampler_Helper <bits<7> op, string asm,
@@ -2931,11 +2975,10 @@ class MIMG_NoSampler_Helper <bits<7> op, string asm,
                              string dns=""> : MIMG_Helper <
   op,
   (outs dst_rc:$vdata),
-  (ins i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
-       i1imm:$tfe, i1imm:$lwe, i1imm:$slc, addr_rc:$vaddr,
-       SReg_256:$srsrc),
-  asm#" $vdata, $dmask, $unorm, $glc, $da, $r128,"
-     #" $tfe, $lwe, $slc, $vaddr, $srsrc",
+  (ins addr_rc:$vaddr, SReg_256:$srsrc,
+       dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+       r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+  asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da",
   dns> {
   let ssamp = 0;
 }
@@ -2964,11 +3007,11 @@ class MIMG_Store_Helper <bits<7> op, string asm,
                          RegisterClass addr_rc> : MIMG_Helper <
   op,
   (outs),
-  (ins data_rc:$vdata, i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
-       i1imm:$tfe, i1imm:$lwe, i1imm:$slc, addr_rc:$vaddr,
-       SReg_256:$srsrc),
-  asm#" $vdata, $dmask, $unorm, $glc, $da, $r128,"
-     #" $tfe, $lwe, $slc, $vaddr, $srsrc"> {
+  (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
+       dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+       r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+  asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
+     > {
   let ssamp = 0;
   let mayLoad = 1; // TableGen requires this for matching with the intrinsics
   let mayStore = 1;
@@ -3001,11 +3044,10 @@ class MIMG_Sampler_Helper <bits<7> op, string asm,
                            string dns=""> : MIMG_Helper <
   op,
   (outs dst_rc:$vdata),
-  (ins i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
-       i1imm:$tfe, i1imm:$lwe, i1imm:$slc, src_rc:$vaddr,
-       SReg_256:$srsrc, SReg_128:$ssamp),
-  asm#" $vdata, $dmask, $unorm, $glc, $da, $r128,"
-     #" $tfe, $lwe, $slc, $vaddr, $srsrc, $ssamp",
+  (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
+       dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+       r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+  asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da",
   dns> {
   let WQM = wqm;
 }
@@ -3040,11 +3082,10 @@ class MIMG_Gather_Helper <bits<7> op, string asm,
                           RegisterClass src_rc, int wqm> : MIMG <
   op,
   (outs dst_rc:$vdata),
-  (ins i32imm:$dmask, i1imm:$unorm, i1imm:$glc, i1imm:$da, i1imm:$r128,
-       i1imm:$tfe, i1imm:$lwe, i1imm:$slc, src_rc:$vaddr,
-       SReg_256:$srsrc, SReg_128:$ssamp),
-  asm#" $vdata, $dmask, $unorm, $glc, $da, $r128,"
-     #" $tfe, $lwe, $slc, $vaddr, $srsrc, $ssamp",
+  (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
+       dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+       r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+  asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da",
   []> {
   let mayLoad = 1;
   let mayStore = 0;

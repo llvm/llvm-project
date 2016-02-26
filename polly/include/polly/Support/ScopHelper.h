@@ -150,25 +150,15 @@ public:
     return *this;
   }
 
+  llvm::Instruction *get() const {
+    assert(I && "Unexpected nullptr!");
+    return I;
+  }
   operator llvm::Instruction *() const { return asInstruction(); }
+  llvm::Instruction *operator->() const { return get(); }
+
   explicit operator bool() const { return isInstruction(); }
   bool operator!() const { return isNull(); }
-
-  llvm::Value *getOperand(unsigned i) const { return I->getOperand(i); }
-  llvm::BasicBlock *getParent() const { return I->getParent(); }
-  llvm::LLVMContext &getContext() const { return I->getContext(); }
-  void getAAMetadata(llvm::AAMDNodes &N, bool Merge = false) const {
-    I->getAAMetadata(N, Merge);
-  }
-
-  /// @brief Get the debug location of this instruction.
-  ///
-  /// @returns The debug location of this instruction.
-  const llvm::DebugLoc &getDebugLoc() const {
-    if (I)
-      return I->getDebugLoc();
-    llvm_unreachable("Operation not supported on nullptr");
-  }
 
   llvm::Value *getValueOperand() const {
     if (isLoad())

@@ -57,12 +57,22 @@ struct ClangTidyError {
     Error = DiagnosticsEngine::Error
   };
 
-  ClangTidyError(StringRef CheckName, Level DiagLevel, bool IsWarningAsError);
+  ClangTidyError(StringRef CheckName, Level DiagLevel, bool IsWarningAsError,
+                 StringRef BuildDirectory);
 
   std::string CheckName;
   ClangTidyMessage Message;
   tooling::Replacements Fix;
   SmallVector<ClangTidyMessage, 1> Notes;
+
+  // A build directory of the diagnostic source file.
+  //
+  // It's an absolute path which is `directory` field of the source file in
+  // compilation database. If users don't specify the compilation database
+  // directory, it is the current directory where clang-tidy runs.
+  //
+  // Note: it is empty in unittest.
+  std::string BuildDirectory;
 
   Level DiagLevel;
   bool IsWarningAsError;
@@ -198,6 +208,16 @@ public:
   void setCheckProfileData(ProfileData *Profile);
   ProfileData *getCheckProfileData() const { return Profile; }
 
+  /// \brief Should be called when starting to process new translation unit.
+  void setCurrentBuildDirectory(StringRef BuildDirectory) {
+    CurrentBuildDirectory = BuildDirectory;
+  }
+
+  /// \brief Returns build directory of the current translation unit.
+  const std::string &getCurrentBuildDirectory() {
+    return CurrentBuildDirectory;
+  }
+
 private:
   // Calls setDiagnosticsEngine() and storeError().
   friend class ClangTidyDiagnosticConsumer;
@@ -221,6 +241,8 @@ private:
   LangOptions LangOpts;
 
   ClangTidyStats Stats;
+
+  std::string CurrentBuildDirectory;
 
   llvm::DenseMap<unsigned, std::string> CheckNamesByDiagnosticID;
 

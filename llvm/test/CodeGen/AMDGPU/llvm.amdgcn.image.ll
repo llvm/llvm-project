@@ -2,7 +2,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK-LABEL: {{^}}image_load_v4i32:
-;CHECK: image_load v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v[0:3], s[0:7]
+;CHECK: image_load v[0:3], v[0:3], s[0:7] dmask:0xf unorm
 ;CHECK: s_waitcnt vmcnt(0)
 define <4 x float> @image_load_v4i32(<8 x i32> inreg %rsrc, <4 x i32> %c) #0 {
 main_body:
@@ -11,7 +11,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_load_v2i32:
-;CHECK: image_load v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v[0:1], s[0:7]
+;CHECK: image_load v[0:3], v[0:1], s[0:7] dmask:0xf unorm
 ;CHECK: s_waitcnt vmcnt(0)
 define <4 x float> @image_load_v2i32(<8 x i32> inreg %rsrc, <2 x i32> %c) #0 {
 main_body:
@@ -20,7 +20,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_load_i32:
-;CHECK: image_load v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v0, s[0:7]
+;CHECK: image_load v[0:3], v0, s[0:7] dmask:0xf unorm
 ;CHECK: s_waitcnt vmcnt(0)
 define <4 x float> @image_load_i32(<8 x i32> inreg %rsrc, i32 %c) #0 {
 main_body:
@@ -29,7 +29,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_load_mip:
-;CHECK: image_load_mip v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v[0:3], s[0:7]
+;CHECK: image_load_mip v[0:3], v[0:3], s[0:7] dmask:0xf unorm
 ;CHECK: s_waitcnt vmcnt(0)
 define <4 x float> @image_load_mip(<8 x i32> inreg %rsrc, <4 x i32> %c) #0 {
 main_body:
@@ -38,7 +38,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_load_1:
-;CHECK: image_load v0, 1, -1, 0, 0, 0, 0, 0, 0, v[0:3], s[0:7]
+;CHECK: image_load v0, v[0:3], s[0:7] dmask:0x1 unorm
 ;CHECK: s_waitcnt vmcnt(0)
 define float @image_load_1(<8 x i32> inreg %rsrc, <4 x i32> %c) #0 {
 main_body:
@@ -49,7 +49,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_store_v4i32:
-;CHECK: image_store v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v[4:7], s[0:7]
+;CHECK: image_store v[0:3], v[4:7], s[0:7] dmask:0xf unorm
 define void @image_store_v4i32(<8 x i32> inreg %rsrc, <4 x float> %data, <4 x i32> %coords) #0 {
 main_body:
   call void @llvm.amdgcn.image.store.v4i32(<4 x float> %data, <4 x i32> %coords, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
@@ -57,7 +57,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_store_v2i32:
-;CHECK: image_store v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v[4:5], s[0:7]
+;CHECK: image_store v[0:3], v[4:5], s[0:7] dmask:0xf unorm
 define void @image_store_v2i32(<8 x i32> inreg %rsrc, <4 x float> %data, <2 x i32> %coords) #0 {
 main_body:
   call void @llvm.amdgcn.image.store.v2i32(<4 x float> %data, <2 x i32> %coords, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
@@ -65,7 +65,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_store_i32:
-;CHECK: image_store v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v4, s[0:7]
+;CHECK: image_store v[0:3], v4, s[0:7] dmask:0xf unorm
 define void @image_store_i32(<8 x i32> inreg %rsrc, <4 x float> %data, i32 %coords) #0 {
 main_body:
   call void @llvm.amdgcn.image.store.i32(<4 x float> %data, i32 %coords, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
@@ -73,7 +73,7 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}image_store_mip:
-;CHECK: image_store_mip v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v[4:7], s[0:7]
+;CHECK: image_store_mip v[0:3], v[4:7], s[0:7] dmask:0xf unorm
 define void @image_store_mip(<8 x i32> inreg %rsrc, <4 x float> %data, <4 x i32> %coords) #0 {
 main_body:
   call void @llvm.amdgcn.image.store.mip.v4i32(<4 x float> %data, <4 x i32> %coords, <8 x i32> %rsrc, i32 15, i1 0, i1 0, i1 0, i1 0)
@@ -83,11 +83,11 @@ main_body:
 ; Ideally, the register allocator would avoid the wait here
 ;
 ;CHECK-LABEL: {{^}}image_store_wait:
-;CHECK: image_store v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v4, s[0:7]
+;CHECK: image_store v[0:3], v4, s[0:7] dmask:0xf unorm
 ;CHECK: s_waitcnt vmcnt(0) expcnt(0)
-;CHECK: image_load v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v4, s[8:15]
+;CHECK: image_load v[0:3], v4, s[8:15] dmask:0xf unorm
 ;CHECK: s_waitcnt vmcnt(0)
-;CHECK: image_store v[0:3], 15, -1, 0, 0, 0, 0, 0, 0, v4, s[16:23]
+;CHECK: image_store v[0:3], v4, s[16:23] dmask:0xf unorm
 define void @image_store_wait(<8 x i32> inreg, <8 x i32> inreg, <8 x i32> inreg, <4 x float>, i32) #0 {
 main_body:
   call void @llvm.amdgcn.image.store.i32(<4 x float> %3, i32 %4, <8 x i32> %0, i32 15, i1 0, i1 0, i1 0, i1 0)

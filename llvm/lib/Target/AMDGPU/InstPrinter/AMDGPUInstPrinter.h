@@ -38,6 +38,7 @@ private:
   void printU8ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printNamedBit(const MCInst* MI, unsigned OpNo, raw_ostream& O, const char* BitName);
   void printOffen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printIdxen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printAddr64(const MCInst *MI, unsigned OpNo, raw_ostream &O);
@@ -49,6 +50,11 @@ private:
   void printGLC(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printSLC(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printTFE(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printDMask(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printUNorm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printDA(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printR128(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printLWE(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printRegOperand(unsigned RegNo, raw_ostream &O);
   void printVOPDst(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printImmediate32(uint32_t I, raw_ostream &O);

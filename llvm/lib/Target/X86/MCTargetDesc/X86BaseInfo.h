@@ -734,12 +734,12 @@ namespace X86II {
   /// isX86_64ExtendedReg - Is the MachineOperand a x86-64 extended (r8 or
   /// higher) register?  e.g. r8, xmm8, xmm13, etc.
   inline bool isX86_64ExtendedReg(unsigned RegNo) {
-    if ((RegNo > X86::XMM7 && RegNo <= X86::XMM15) ||
-        (RegNo > X86::XMM23 && RegNo <= X86::XMM31) ||
-        (RegNo > X86::YMM7 && RegNo <= X86::YMM15) ||
-        (RegNo > X86::YMM23 && RegNo <= X86::YMM31) ||
-        (RegNo > X86::ZMM7 && RegNo <= X86::ZMM15) ||
-        (RegNo > X86::ZMM23 && RegNo <= X86::ZMM31))
+    if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM15) ||
+        (RegNo >= X86::XMM24 && RegNo <= X86::XMM31) ||
+        (RegNo >= X86::YMM8 && RegNo <= X86::YMM15) ||
+        (RegNo >= X86::YMM24 && RegNo <= X86::YMM31) ||
+        (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM15) ||
+        (RegNo >= X86::ZMM24 && RegNo <= X86::ZMM31))
       return true;
 
     switch (RegNo) {
@@ -762,9 +762,9 @@ namespace X86II {
   /// is32ExtendedReg - Is the MemoryOperand a 32 extended (zmm16 or higher)
   /// registers? e.g. zmm21, etc.
   static inline bool is32ExtendedReg(unsigned RegNo) {
-    return ((RegNo > X86::XMM15 && RegNo <= X86::XMM31) ||
-            (RegNo > X86::YMM15 && RegNo <= X86::YMM31) ||
-            (RegNo > X86::ZMM15 && RegNo <= X86::ZMM31));
+    return ((RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
+            (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
+            (RegNo >= X86::ZMM16 && RegNo <= X86::ZMM31));
   }
 
 

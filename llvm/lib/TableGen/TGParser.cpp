@@ -2542,7 +2542,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
       // The record name construction goes as follow:
       //  - If the def name is a string, prepend the prefix.
       //  - If the def name is a more complex pattern, use that pattern.
-      // As a result, the record is instanciated before resolving
+      // As a result, the record is instantiated before resolving
       // arguments, as it would make its name a string.
       Record *CurRec = InstantiateMulticlassDef(*MC, DefProto.get(), DefmPrefix,
                                                 SMRange(DefmLoc,
@@ -2551,7 +2551,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
       if (!CurRec)
         return true;
 
-      // Now that the record is instanciated, we can resolve arguments.
+      // Now that the record is instantiated, we can resolve arguments.
       if (ResolveMulticlassDefArgs(*MC, CurRec, DefmLoc, SubClassLoc,
                                    TArgs, TemplateVals, true/*Delete args*/))
         return Error(SubClassLoc, "could not instantiate def");

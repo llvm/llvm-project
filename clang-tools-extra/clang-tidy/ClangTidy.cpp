@@ -107,6 +107,10 @@ public:
     DiagPrinter->BeginSourceFile(LangOpts);
   }
 
+  SourceManager& getSourceManager() {
+    return SourceMgr;
+  }
+
   void reportDiagnostic(const ClangTidyError &Error) {
     const ClangTidyMessage &Message = Error.Message;
     SourceLocation Loc = getLocation(Message.FilePath, Message.FileOffset);
@@ -124,7 +128,10 @@ public:
       auto Diag = Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
                   << Message.Message << Name;
       for (const tooling::Replacement &Fix : Error.Fix) {
-        SourceLocation FixLoc = getLocation(Fix.getFilePath(), Fix.getOffset());
+        SmallString<128> FixAbsoluteFilePath = Fix.getFilePath();
+        Files.makeAbsolutePath(FixAbsoluteFilePath);
+        SourceLocation FixLoc =
+            getLocation(FixAbsoluteFilePath, Fix.getOffset());
         SourceLocation FixEndLoc = FixLoc.getLocWithOffset(Fix.getLength());
         Diag << FixItHint::CreateReplacement(SourceRange(FixLoc, FixEndLoc),
                                              Fix.getReplacementText());
@@ -231,6 +238,13 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   Context.setSourceManager(&Compiler.getSourceManager());
   Context.setCurrentFile(File);
   Context.setASTContext(&Compiler.getASTContext());
+
+  auto WorkingDir = Compiler.getSourceManager()
+                        .getFileManager()
+                        .getVirtualFileSystem()
+                        ->getCurrentWorkingDirectory();
+  if (WorkingDir)
+    Context.setCurrentBuildDirectory(WorkingDir.get());
 
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
   CheckFactories->createChecks(&Context, Checks);
@@ -446,8 +460,24 @@ runClangTidy(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
 void handleErrors(const std::vector<ClangTidyError> &Errors, bool Fix,
                   unsigned &WarningsAsErrorsCount) {
   ErrorReporter Reporter(Fix);
-  for (const ClangTidyError &Error : Errors)
+  vfs::FileSystem &FileSystem =
+      *Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
+  auto InitialWorkingDir = FileSystem.getCurrentWorkingDirectory();
+  if (!InitialWorkingDir)
+    llvm::report_fatal_error("Cannot get current working path.");
+
+  for (const ClangTidyError &Error : Errors) {
+    if (!Error.BuildDirectory.empty()) {
+      // By default, the working directory of file system is the current
+      // clang-tidy running directory.
+      //
+      // Change the directory to the one used during the analysis.
+      FileSystem.setCurrentWorkingDirectory(Error.BuildDirectory);
+    }
     Reporter.reportDiagnostic(Error);
+    // Return to the initial directory to correctly resolve next Error.
+    FileSystem.setCurrentWorkingDirectory(InitialWorkingDir.get());
+  }
   Reporter.Finish();
   WarningsAsErrorsCount += Reporter.getWarningsAsErrorsCount();
 }

@@ -530,8 +530,7 @@ int AArch64A57FPLoadBalancing::scavengeRegister(Chain *G, Color C,
   for (auto Reg : Ord) {
     if (!AvailableRegs[Reg])
       continue;
-    if ((C == Color::Even && (Reg % 2) == 0) ||
-        (C == Color::Odd && (Reg % 2) == 1))
+    if (C == getColor(Reg))
       return Reg;
   }
 

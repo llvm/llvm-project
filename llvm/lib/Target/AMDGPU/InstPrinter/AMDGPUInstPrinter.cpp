@@ -53,22 +53,25 @@ void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
   O << formatDec(MI->getOperand(OpNo).getImm() & 0xffff);
 }
 
+void AMDGPUInstPrinter::printNamedBit(const MCInst* MI, unsigned OpNo, raw_ostream& O, const char* BitName) {
+  if (MI->getOperand(OpNo).getImm()) {
+    O << " " << BitName;
+  }
+}
+
 void AMDGPUInstPrinter::printOffen(const MCInst *MI, unsigned OpNo,
                                    raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " offen";
+  printNamedBit(MI, OpNo, O, "offen");
 }
 
 void AMDGPUInstPrinter::printIdxen(const MCInst *MI, unsigned OpNo,
                                    raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " idxen";
+  printNamedBit(MI, OpNo, O, "idxen");
 }
 
 void AMDGPUInstPrinter::printAddr64(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " addr64";
+  printNamedBit(MI, OpNo, O, "addr64");
 }
 
 void AMDGPUInstPrinter::printMBUFOffset(const MCInst *MI, unsigned OpNo,
@@ -106,26 +109,50 @@ void AMDGPUInstPrinter::printDSOffset1(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printGDS(const MCInst *MI, unsigned OpNo,
                                  raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " gds";
+  printNamedBit(MI, OpNo, O, "gds");
 }
 
 void AMDGPUInstPrinter::printGLC(const MCInst *MI, unsigned OpNo,
                                  raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " glc";
+  printNamedBit(MI, OpNo, O, "glc");
 }
 
 void AMDGPUInstPrinter::printSLC(const MCInst *MI, unsigned OpNo,
                                  raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " slc";
+  printNamedBit(MI, OpNo, O, "slc");
 }
 
 void AMDGPUInstPrinter::printTFE(const MCInst *MI, unsigned OpNo,
                                  raw_ostream &O) {
-  if (MI->getOperand(OpNo).getImm())
-    O << " tfe";
+  printNamedBit(MI, OpNo, O, "tfe");
+}
+
+void AMDGPUInstPrinter::printDMask(const MCInst *MI, unsigned OpNo,
+                                   raw_ostream &O) {
+  if (MI->getOperand(OpNo).getImm()) {
+    O << " dmask:";
+    printU16ImmOperand(MI, OpNo, O);
+  }
+}
+
+void AMDGPUInstPrinter::printUNorm(const MCInst *MI, unsigned OpNo,
+                                   raw_ostream &O) {
+  printNamedBit(MI, OpNo, O, "unorm");
+}
+
+void AMDGPUInstPrinter::printDA(const MCInst *MI, unsigned OpNo,
+                                   raw_ostream &O) {
+  printNamedBit(MI, OpNo, O, "da");
+}
+
+void AMDGPUInstPrinter::printR128(const MCInst *MI, unsigned OpNo,
+                                   raw_ostream &O) {
+  printNamedBit(MI, OpNo, O, "r128");
+}
+
+void AMDGPUInstPrinter::printLWE(const MCInst *MI, unsigned OpNo,
+                                   raw_ostream &O) {
+  printNamedBit(MI, OpNo, O, "lwe");
 }
 
 void AMDGPUInstPrinter::printRegOperand(unsigned reg, raw_ostream &O,

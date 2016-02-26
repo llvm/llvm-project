@@ -15,11 +15,9 @@
 #define LLVM_ANALYSIS_POSTDOMINATORS_H
 
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
-// FIXME: Replace this brittle forward declaration with the include of the new
-// PassManager.h when doing so doesn't break the PassManagerBuilder.
-class PreservedAnalyses;
 
 /// PostDominatorTree Class - Concrete subclass of DominatorTree that is used to
 /// compute the post-dominator tree.

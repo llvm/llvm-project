@@ -2,7 +2,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga | FileCheck %s
 
 ; CHECK-LABEL: {{^}}v1:
-; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, 13
+; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0xd
 define void @v1(i32 %a1) #0 {
 entry:
   %0 = insertelement <1 x i32> undef, i32 %a1, i32 0
@@ -15,7 +15,7 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}v2:
-; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, 11
+; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0xb
 define void @v2(i32 %a1) #0 {
 entry:
   %0 = insertelement <1 x i32> undef, i32 %a1, i32 0
@@ -28,7 +28,7 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}v3:
-; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, 14
+; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0xe
 define void @v3(i32 %a1) #0 {
 entry:
   %0 = insertelement <1 x i32> undef, i32 %a1, i32 0
@@ -41,7 +41,7 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}v4:
-; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, 7
+; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x7
 define void @v4(i32 %a1) #0 {
 entry:
   %0 = insertelement <1 x i32> undef, i32 %a1, i32 0
@@ -54,7 +54,7 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}v5:
-; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, 10
+; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0xa
 define void @v5(i32 %a1) #0 {
 entry:
   %0 = insertelement <1 x i32> undef, i32 %a1, i32 0
@@ -66,7 +66,7 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}v6:
-; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, 6
+; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x6
 define void @v6(i32 %a1) #0 {
 entry:
   %0 = insertelement <1 x i32> undef, i32 %a1, i32 0
@@ -78,7 +78,7 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}v7:
-; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, 9
+; CHECK: image_sample {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} dmask:0x9
 define void @v7(i32 %a1) #0 {
 entry:
   %0 = insertelement <1 x i32> undef, i32 %a1, i32 0

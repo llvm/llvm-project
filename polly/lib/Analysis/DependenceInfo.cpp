@@ -129,6 +129,10 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
 
   *StmtSchedule =
       isl_union_map_intersect_params(*StmtSchedule, S.getAssumedContext());
+
+  *Read = isl_union_map_coalesce(*Read);
+  *Write = isl_union_map_coalesce(*Write);
+  *MayWrite = isl_union_map_coalesce(*MayWrite);
 }
 
 /// @brief Fix all dimension of @p Zero to 0 and add it to @p user
@@ -292,10 +296,6 @@ void Dependences::calculateDependences(Scop &S) {
       isl_union_map_free(ScheduleMap);
     }
   }
-
-  Read = isl_union_map_coalesce(Read);
-  Write = isl_union_map_coalesce(Write);
-  MayWrite = isl_union_map_coalesce(MayWrite);
 
   long MaxOpsOld = isl_ctx_get_max_operations(IslCtx.get());
   if (OptComputeOut)

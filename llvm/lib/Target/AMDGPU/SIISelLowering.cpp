@@ -2657,7 +2657,8 @@ void SITargetLowering::adjustWritemask(MachineSDNode *&Node,
                                        SelectionDAG &DAG) const {
   SDNode *Users[4] = { };
   unsigned Lane = 0;
-  unsigned OldDmask = Node->getConstantOperandVal(0);
+  unsigned DmaskIdx = (Node->getNumOperands() - Node->getNumValues() == 9) ? 2 : 3;
+  unsigned OldDmask = Node->getConstantOperandVal(DmaskIdx);
   unsigned NewDmask = 0;
 
   // Try to figure out the used register components
@@ -2697,8 +2698,9 @@ void SITargetLowering::adjustWritemask(MachineSDNode *&Node,
 
   // Adjust the writemask in the node
   std::vector<SDValue> Ops;
+  Ops.insert(Ops.end(), Node->op_begin(), Node->op_begin() + DmaskIdx);
   Ops.push_back(DAG.getTargetConstant(NewDmask, SDLoc(Node), MVT::i32));
-  Ops.insert(Ops.end(), Node->op_begin() + 1, Node->op_end());
+  Ops.insert(Ops.end(), Node->op_begin() + DmaskIdx + 1, Node->op_end());
   Node = (MachineSDNode*)DAG.UpdateNodeOperands(Node, Ops);
 
   // If we only got one lane, replace it with a copy
@@ -2796,7 +2798,8 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
 
   if (TII->isMIMG(*MI)) {
     unsigned VReg = MI->getOperand(0).getReg();
-    unsigned Writemask = MI->getOperand(1).getImm();
+    unsigned DmaskIdx = MI->getNumOperands() == 12 ? 3 : 4;
+    unsigned Writemask = MI->getOperand(DmaskIdx).getImm();
     unsigned BitsSet = 0;
     for (unsigned i = 0; i < 4; ++i)
       BitsSet += Writemask & (1 << i) ? 1 : 0;

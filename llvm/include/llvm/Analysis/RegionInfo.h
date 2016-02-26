@@ -41,16 +41,12 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/PassManager.h"
 #include <map>
 #include <memory>
 #include <set>
 
 namespace llvm {
-
-// FIXME: Replace this brittle forward declaration with the include of the new
-// PassManager.h when doing so doesn't break the PassManagerBuilder.
-template <typename IRUnitT> class AnalysisManager;
-class PreservedAnalyses;
 
 // Class to be specialized for different users of RegionInfo
 // (i.e. BasicBlocks or MachineBasicBlocks). This is only to avoid needing to
