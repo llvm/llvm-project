@@ -1629,7 +1629,11 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(getrusage);
   INTERCEPT_FUNCTION(sigaction);
   INTERCEPT_FUNCTION(signal);
+#if defined(__mips__)
+  INTERCEPT_FUNCTION_VER(pthread_create, "GLIBC_2.2");
+#else
   INTERCEPT_FUNCTION(pthread_create);
+#endif
   INTERCEPT_FUNCTION(pthread_key_create);
   INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(tzset);
