@@ -70,7 +70,52 @@ static cl::opt<enum AnalysisType> OptAnalysisType(
     cl::Hidden, cl::init(VALUE_BASED_ANALYSIS), cl::ZeroOrMore,
     cl::cat(PollyCategory));
 
+enum AnalyisLevel {
+  STATEMENT_LEVEL_ANALYSIS = 0,
+  REFERENCE_LEVEL_ANALYSIS,
+  ACCESS_LEVEL_ANALYSIS
+};
+static cl::opt<enum AnalyisLevel> OptAnalysisLevel(
+    "polly-dependences-analysis-level",
+    cl::desc("The level of dependence analysis"),
+    cl::values(clEnumValN(STATEMENT_LEVEL_ANALYSIS, "statement-level",
+                          "Statement-level analysis"),
+               clEnumValN(REFERENCE_LEVEL_ANALYSIS, "reference-level",
+                          "Memory reference level analysis that distinguish"
+                          " accessed references in the same statement"),
+               clEnumValN(ACCESS_LEVEL_ANALYSIS, "access-level",
+                          "Memory reference level analysis that distinguish"
+                          " access instructions in the same statement"),
+               clEnumValEnd),
+    cl::Hidden, cl::init(STATEMENT_LEVEL_ANALYSIS), cl::ZeroOrMore,
+    cl::cat(PollyCategory));
+
 //===----------------------------------------------------------------------===//
+
+/// @brief Tag the @p Relation domain with @p TagId
+static __isl_give isl_map *tag(__isl_take isl_map *Relation,
+                               __isl_take isl_id *TagId) {
+  isl_space *Space = isl_map_get_space(Relation);
+  Space = isl_space_drop_dims(Space, isl_dim_out, 0, isl_map_n_out(Relation));
+  Space = isl_space_set_tuple_id(Space, isl_dim_out, TagId);
+  isl_multi_aff *Tag = isl_multi_aff_domain_map(Space);
+  Relation = isl_map_preimage_domain_multi_aff(Relation, Tag);
+  return Relation;
+}
+
+/// @brief Tag the @p Relation domain with either MA->getArrayId() or
+///        MA->getId() based on @p TagLevel
+static __isl_give isl_map *tag(__isl_take isl_map *Relation, MemoryAccess *MA,
+                               AnalyisLevel TagLevel) {
+  if (TagLevel == REFERENCE_LEVEL_ANALYSIS)
+    return tag(Relation, MA->getArrayId());
+
+  if (TagLevel == ACCESS_LEVEL_ANALYSIS)
+    return tag(Relation, MA->getId());
+
+  // No need to tag at the statement level.
+  return Relation;
+}
 
 /// @brief Collect information about the SCoP @p S.
 static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
@@ -116,7 +161,14 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
             Schedule,
             isl_map_reverse(isl_map_domain_map(isl_map_copy(accdom))));
         accdom = isl_map_range_map(accdom);
+
         *AccessSchedule = isl_union_map_add_map(*AccessSchedule, Schedule);
+      } else {
+        accdom = tag(accdom, MA, OptAnalysisLevel);
+        if (OptAnalysisLevel > STATEMENT_LEVEL_ANALYSIS) {
+          isl_map *Schedule = tag(Stmt.getSchedule(), MA, OptAnalysisLevel);
+          *StmtSchedule = isl_union_map_add_map(*StmtSchedule, Schedule);
+        }
       }
 
       if (MA->isRead())
@@ -124,7 +176,9 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
       else
         *Write = isl_union_map_add_map(*Write, accdom);
     }
-    *StmtSchedule = isl_union_map_add_map(*StmtSchedule, Stmt.getSchedule());
+
+    if (OptAnalysisLevel == STATEMENT_LEVEL_ANALYSIS)
+      *StmtSchedule = isl_union_map_add_map(*StmtSchedule, Stmt.getSchedule());
   }
 
   *StmtSchedule =
@@ -269,7 +323,11 @@ static __isl_give isl_union_flow *buildFlow(__isl_keep isl_union_map *Snk,
   if (Src)
     AI = isl_union_access_info_set_must_source(AI, isl_union_map_copy(Src));
   AI = isl_union_access_info_set_schedule(AI, isl_schedule_copy(Schedule));
-  return isl_union_access_info_compute_flow(AI);
+  auto Flow = isl_union_access_info_compute_flow(AI);
+  DEBUG(if (!Flow) dbgs() << "last error: "
+                          << isl_ctx_last_error(isl_schedule_get_ctx(Schedule))
+                          << '\n';);
+  return Flow;
 }
 
 void Dependences::calculateDependences(Scop &S) {
@@ -280,9 +338,22 @@ void Dependences::calculateDependences(Scop &S) {
 
   collectInfo(S, &Read, &Write, &MayWrite, &AccessSchedule, &StmtSchedule);
 
+  DEBUG(dbgs() << "Read: " << Read << '\n';
+        dbgs() << "Write: " << Write << '\n';
+        dbgs() << "MayWrite: " << MayWrite << '\n';
+        dbgs() << "AccessSchedule: " << AccessSchedule << '\n';
+        dbgs() << "StmtSchedule: " << StmtSchedule << '\n';);
+
   if (isl_union_map_is_empty(AccessSchedule)) {
     isl_union_map_free(AccessSchedule);
     Schedule = S.getScheduleTree();
+    // Tag the schedule tree if we want fine-grain dependence info
+    if (OptAnalysisLevel > STATEMENT_LEVEL_ANALYSIS) {
+      auto TaggedDom = isl_union_map_domain((isl_union_map_copy(StmtSchedule)));
+      auto TaggedMap = isl_union_set_unwrap(TaggedDom);
+      auto Tags = isl_union_map_domain_map_union_pw_multi_aff(TaggedMap);
+      Schedule = isl_schedule_pullback_union_pw_multi_aff(Schedule, Tags);
+    }
   } else {
     auto *ScheduleMap =
         isl_union_map_union(AccessSchedule, isl_union_map_copy(StmtSchedule));
@@ -304,7 +375,8 @@ void Dependences::calculateDependences(Scop &S) {
 
   DEBUG(dbgs() << "Read: " << Read << "\n";
         dbgs() << "Write: " << Write << "\n";
-        dbgs() << "MayWrite: " << MayWrite << "\n");
+        dbgs() << "MayWrite: " << MayWrite << "\n";
+        dbgs() << "Schedule: " << Schedule << "\n");
 
   RAW = WAW = WAR = RED = nullptr;
 

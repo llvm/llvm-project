@@ -4949,6 +4949,7 @@ public:
 // FD_ZERO, FD_SET are not supported on windows
 #ifndef _WIN32
         const int pipe_read_fd = m_pipe.GetReadFileDescriptor();
+        m_is_running = true;
         while (!GetIsDone())
         {
             fd_set read_fdset;
@@ -4957,6 +4958,7 @@ public:
             FD_SET (pipe_read_fd, &read_fdset);
             const int nfds = std::max<int>(read_fd, pipe_read_fd) + 1;
             int num_set_fds = select (nfds, &read_fdset, NULL, NULL, NULL);
+
             if (num_set_fds < 0)
             {
                 const int select_errno = errno;
@@ -5000,6 +5002,7 @@ public:
                 }
             }
         }
+        m_is_running = false;
 #endif
         terminal_state.Restore();
     }
@@ -5007,9 +5010,24 @@ public:
     void
     Cancel () override
     {
-        char ch = 'q';  // Send 'q' for quit
-        size_t bytes_written = 0;
-        m_pipe.Write(&ch, 1, bytes_written);
+        SetIsDone(true);
+        // Only write to our pipe to cancel if we are in IOHandlerProcessSTDIO::Run().
+        // We can end up with a python command that is being run from the command
+        // interpreter:
+        //
+        // (lldb) step_process_thousands_of_times
+        //
+        // In this case the command interpreter will be in the middle of handling
+        // the command and if the process pushes and pops the IOHandler thousands
+        // of times, we can end up writing to m_pipe without ever consuming the
+        // bytes from the pipe in IOHandlerProcessSTDIO::Run() and end up
+        // deadlocking when the pipe gets fed up and blocks until data is consumed.
+        if (m_is_running)
+        {
+            char ch = 'q';  // Send 'q' for quit
+            size_t bytes_written = 0;
+            m_pipe.Write(&ch, 1, bytes_written);
+        }
     }
 
     bool
@@ -5056,6 +5074,7 @@ protected:
     File m_read_file;   // Read from this file (usually actual STDIN for LLDB
     File m_write_file;  // Write to this file (usually the master pty for getting io to debuggee)
     Pipe m_pipe;
+    std::atomic<bool> m_is_running;
 };
 
 void

@@ -1,4 +1,6 @@
 ; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-dependences -polly-dependences-analysis-level=reference-level -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-dependences -polly-dependences-analysis-level=access-level -analyze < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     {  }

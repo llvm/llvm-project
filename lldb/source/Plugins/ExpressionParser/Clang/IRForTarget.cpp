@@ -134,8 +134,6 @@ IRForTarget::FixFunctionLinkage(llvm::Function &llvm_function)
 {
     llvm_function.setLinkage(GlobalValue::ExternalLinkage);
 
-    std::string name = llvm_function.getName().str();
-
     return true;
 }
 

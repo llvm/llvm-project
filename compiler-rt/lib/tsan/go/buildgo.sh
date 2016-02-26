@@ -14,7 +14,6 @@ SRCS="
 	../rtl/tsan_rtl_mutex.cc
 	../rtl/tsan_rtl_report.cc
 	../rtl/tsan_rtl_thread.cc
-	../rtl/tsan_rtl_proc.cc
 	../rtl/tsan_stack_trace.cc
 	../rtl/tsan_stat.cc
 	../rtl/tsan_suppressions.cc
@@ -124,7 +123,7 @@ if [ "$SILENT" != "1" ]; then
 fi
 $CC $DIR/gotsan.cc -c -o $DIR/race_$SUFFIX.syso $FLAGS $CFLAGS
 
-$CC test.c $DIR/race_$SUFFIX.syso -m64 -g -o $DIR/test $OSLDFLAGS
+$CC test.c $DIR/race_$SUFFIX.syso -m64 -o $DIR/test $OSLDFLAGS
 
 export GORACE="exitcode=0 atexit_sleep_ms=0"
 if [ "$SILENT" != "1" ]; then

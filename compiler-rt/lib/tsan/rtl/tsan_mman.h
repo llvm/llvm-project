@@ -21,8 +21,8 @@ const uptr kDefaultAlignment = 16;
 
 void InitializeAllocator();
 void ReplaceSystemMalloc();
-void AllocatorProcStart(Processor *proc);
-void AllocatorProcFinish(Processor *proc);
+void AllocatorThreadStart(ThreadState *thr);
+void AllocatorThreadFinish(ThreadState *thr);
 void AllocatorPrintStats();
 
 // For user allocations.
@@ -46,7 +46,6 @@ enum MBlockType {
   MBlockShadowStack,
   MBlockSync,
   MBlockClock,
-  MBlockProcessor,
   MBlockThreadContex,
   MBlockDeadInfo,
   MBlockRacyStacks,
