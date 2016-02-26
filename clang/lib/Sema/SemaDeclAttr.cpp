@@ -5335,6 +5335,40 @@ static bool handleCommonAttributeFeatures(Sema &S, Scope *scope, Decl *D,
   return false;
 }
 
+static void handleOpenCLAccessAttr(Sema &S, Decl *D,
+                                   const AttributeList &Attr) {
+  if (D->isInvalidDecl())
+    return;
+
+  // Check if there is only one access qualifier.
+  if (D->hasAttr<OpenCLAccessAttr>()) {
+    S.Diag(Attr.getLoc(), diag::err_opencl_multiple_access_qualifiers)
+        << D->getSourceRange();
+    D->setInvalidDecl(true);
+    return;
+  }
+
+  // OpenCL v2.0 s6.6 - read_write can be used for image types to specify that an
+  // image object can be read and written.
+  // OpenCL v2.0 s6.13.6 - A kernel cannot read from and write to the same pipe
+  // object. Using the read_write (or __read_write) qualifier with the pipe
+  // qualifier is a compilation error.
+  if (const ParmVarDecl *PDecl = dyn_cast<ParmVarDecl>(D)) {
+    const Type *DeclTy = PDecl->getType().getCanonicalType().getTypePtr();
+    if (Attr.getName()->getName().find("read_write") != StringRef::npos) {
+      if (S.getLangOpts().OpenCLVersion < 200 || DeclTy->isPipeType()) {
+        S.Diag(Attr.getLoc(), diag::err_opencl_invalid_read_write)
+            << Attr.getName() << PDecl->getType() << DeclTy->isImageType();
+        D->setInvalidDecl(true);
+        return;
+      }
+    }
+  }
+
+  D->addAttr(::new (S.Context) OpenCLAccessAttr(
+      Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -5744,8 +5778,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_OpenCLKernel:
     handleSimpleAttribute<OpenCLKernelAttr>(S, D, Attr);
     break;
-  case AttributeList::AT_OpenCLImageAccess:
-    handleSimpleAttribute<OpenCLImageAccessAttr>(S, D, Attr);
+  case AttributeList::AT_OpenCLAccess:
+    handleOpenCLAccessAttr(S, D, Attr);
     break;
   case AttributeList::AT_InternalLinkage:
     handleInternalLinkageAttr(S, D, Attr);

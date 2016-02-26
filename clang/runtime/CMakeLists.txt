@@ -142,5 +142,7 @@ add_custom_command(OUTPUT ${dst}
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
                    COMMENT "Copying vtables blacklist")
 add_custom_target(vtables_blacklist DEPENDS ${dst})
-add_dependencies(clang vtables_blacklist)
+if(TARGET clang)
+  add_dependencies(clang vtables_blacklist)
+endif()
 install(FILES ${src} DESTINATION lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION})

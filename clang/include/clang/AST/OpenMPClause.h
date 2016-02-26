@@ -1524,7 +1524,7 @@ public:
   /// lastprivate clause.
   /// \param PreInit Statement that must be executed before entering the OpenMP
   /// region with this clause.
-  /// \param PostInit Expression that must be executed after exit from the
+  /// \param PostUpdate Expression that must be executed after exit from the
   /// OpenMP region with this clause.
   ///
   static OMPLastprivateClause *

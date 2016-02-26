@@ -265,11 +265,9 @@ static StringRef getFunctionName(CallExpr *Call) {
 }
 
 /// Returns OpenCL access qual.
-// TODO: Refine OpenCLImageAccessAttr to OpenCLAccessAttr since pipe can use
-// it too
-static OpenCLImageAccessAttr *getOpenCLArgAccess(const Decl *D) {
-  if (D->hasAttr<OpenCLImageAccessAttr>())
-    return D->getAttr<OpenCLImageAccessAttr>();
+static OpenCLAccessAttr *getOpenCLArgAccess(const Decl *D) {
+  if (D->hasAttr<OpenCLAccessAttr>())
+    return D->getAttr<OpenCLAccessAttr>();
   return nullptr;
 }
 
@@ -282,7 +280,7 @@ static bool checkOpenCLPipeArg(Sema &S, CallExpr *Call) {
         << getFunctionName(Call) << Arg0->getSourceRange();
     return true;
   }
-  OpenCLImageAccessAttr *AccessQual =
+  OpenCLAccessAttr *AccessQual =
       getOpenCLArgAccess(cast<DeclRefExpr>(Arg0)->getDecl());
   // Validates the access qualifier is compatible with the call.
   // OpenCL v2.0 s6.13.16 - The access qualifiers for pipe should only be

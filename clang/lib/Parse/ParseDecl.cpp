@@ -4989,7 +4989,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
   tok::TokenKind Kind = Tok.getKind();
 
   if (D.getDeclSpec().isTypeSpecPipe() && !isPipeDeclerator(D)) {
-    DeclSpec &DS = D.getMutableDeclSpec();
+    DeclSpec DS(AttrFactory);
+    ParseTypeQualifierListOpt(DS);
 
     D.AddTypeInfo(
         DeclaratorChunk::getPipe(DS.getTypeQualifiers(), DS.getPipeLoc()),

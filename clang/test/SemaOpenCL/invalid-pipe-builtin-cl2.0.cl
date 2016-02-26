@@ -21,7 +21,7 @@ void test1(read_only pipe int p, global int* ptr){
   // commit_read/write_pipe
   commit_read_pipe(tmp, rid);    // expected-error{{first argument to commit_read_pipe must be a pipe type}}
   work_group_commit_read_pipe(p, tmp);    // expected-error{{invalid argument type to function work_group_commit_read_pipe (expecting 'reserve_id_t')}}
-  sub_group_commit_write_pipe(p, tmp);    // expected-error{{nvalid pipe access modifier (expecting write_only)}}
+  sub_group_commit_write_pipe(p, tmp);    // expected-error{{invalid pipe access modifier (expecting write_only)}}
 }
 
 void test2(write_only pipe int p, global int* ptr){
@@ -45,7 +45,7 @@ void test2(write_only pipe int p, global int* ptr){
   // commit_read/write_pipe
   commit_write_pipe(tmp, rid);    // expected-error{{first argument to commit_write_pipe must be a pipe type}}
   work_group_commit_write_pipe(p, tmp);    // expected-error{{invalid argument type to function work_group_commit_write_pipe (expecting 'reserve_id_t')}}
-  sub_group_commit_read_pipe(p, tmp);    // expected-error{{nvalid pipe access modifier (expecting read_only)}}
+  sub_group_commit_read_pipe(p, tmp);    // expected-error{{invalid pipe access modifier (expecting read_only)}}
 }
 
 void test3(){

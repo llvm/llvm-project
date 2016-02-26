@@ -4427,6 +4427,15 @@ public:
   void VisitIgnoredValue(const Expr *E) {
     EvaluateIgnoredValue(Info, E);
   }
+
+  /// Potentially visit a MemberExpr's base expression.
+  void VisitIgnoredBaseExpression(const Expr *E) {
+    // While MSVC doesn't evaluate the base expression, it does diagnose the
+    // presence of side-effecting behavior.
+    if (Info.getLangOpts().MSVCCompat && !E->HasSideEffects(Info.Ctx))
+      return;
+    VisitIgnoredValue(E);
+  }
 };
 
 }
@@ -4750,14 +4759,14 @@ bool LValueExprEvaluator::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 bool LValueExprEvaluator::VisitMemberExpr(const MemberExpr *E) {
   // Handle static data members.
   if (const VarDecl *VD = dyn_cast<VarDecl>(E->getMemberDecl())) {
-    VisitIgnoredValue(E->getBase());
+    VisitIgnoredBaseExpression(E->getBase());
     return VisitVarDecl(E, VD);
   }
 
   // Handle static member functions.
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(E->getMemberDecl())) {
     if (MD->isStatic()) {
-      VisitIgnoredValue(E->getBase());
+      VisitIgnoredBaseExpression(E->getBase());
       return Success(MD);
     }
   }
@@ -6078,7 +6087,7 @@ public:
   }
   bool VisitMemberExpr(const MemberExpr *E) {
     if (CheckReferencedDecl(E, E->getMemberDecl())) {
-      VisitIgnoredValue(E->getBase());
+      VisitIgnoredBaseExpression(E->getBase());
       return true;
     }
 
