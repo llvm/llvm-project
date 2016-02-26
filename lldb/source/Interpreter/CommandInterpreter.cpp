@@ -337,6 +337,8 @@ CommandInterpreter::Initialize ()
         AddAlias ("image", cmd_obj_sp);
 
 
+    alias_arguments_vector_sp.reset(new OptionArgVector);
+
     cmd_obj_sp = GetCommandSPExact ("expression", false);
     if (cmd_obj_sp)
     {        
