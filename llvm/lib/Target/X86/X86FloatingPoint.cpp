@@ -1546,8 +1546,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
       --e;
     }
 
-    // We may have been carrying spurious live-ins, so make sure only the returned
-    // registers are left live.
+    // We may have been carrying spurious live-ins, so make sure only the
+    // returned registers are left live.
     adjustLiveRegs(LiveMask, MI);
     if (!LiveMask) return;  // Quick check to see if any are possible.
 

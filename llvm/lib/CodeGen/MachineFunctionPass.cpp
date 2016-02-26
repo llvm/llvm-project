@@ -53,7 +53,7 @@ void MachineFunctionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   // because CodeGen overloads that to mean preserving the MachineBasicBlock
   // CFG in addition to the LLVM IR CFG.
   AU.addPreserved<BasicAAWrapperPass>();
-  AU.addPreserved<DominanceFrontier>();
+  AU.addPreserved<DominanceFrontierWrapperPass>();
   AU.addPreserved<DominatorTreeWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addPreserved<GlobalsAAWrapperPass>();

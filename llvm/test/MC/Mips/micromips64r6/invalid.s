@@ -33,13 +33,17 @@
   dextu $2, $3, 64, 1  # CHECK: :[[@LINE]]:17: error: expected immediate in range 32 .. 63
   dextu $2, $3, 32, 0  # CHECK: :[[@LINE]]:21: error: expected immediate in range 1 .. 32
   dextu $2, $3, 32, 33 # CHECK: :[[@LINE]]:21: error: expected immediate in range 1 .. 32
-  # FIXME: Check size on dins*
-  dins $2, $3, -1, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
-  dins $2, $3, 64, 1   # CHECK: :[[@LINE]]:16: error: expected 6-bit unsigned immediate
+  dins $2, $3, 31, 33  # CHECK: :[[@LINE]]:20: error: expected immediate in range 1 .. 32
+  dins $2, $3, 31, 0   # CHECK: :[[@LINE]]:20: error: expected immediate in range 1 .. 32
+  # FIXME: Check '32 <= pos + size <= 64' constraint on dinsm
   dinsm $2, $3, -1, 1  # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
   dinsm $2, $3, 32, 1  # CHECK: :[[@LINE]]:17: error: expected 5-bit unsigned immediate
+  dinsm $2, $3, 31, 0  # CHECK: :[[@LINE]]:21: error: expected immediate in range 2 .. 64
+  dinsm $2, $3, 31, 65 # CHECK: :[[@LINE]]:21: error: expected immediate in range 2 .. 64
   dinsu $2, $3, 31, 1  # CHECK: :[[@LINE]]:17: error: expected immediate in range 32 .. 63
   dinsu $2, $3, 64, 1  # CHECK: :[[@LINE]]:17: error: expected immediate in range 32 .. 63
+  dinsu $2, $3, 63, 0  # CHECK: :[[@LINE]]:21: error: expected immediate in range 1 .. 32
+  dinsu $2, $3, 32, 33 # CHECK: :[[@LINE]]:21: error: expected immediate in range 1 .. 32
   # FIXME: Check '0 < pos + size <= 32' constraint on ext
   ext $2, $3, -1, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
   ext $2, $3, 32, 31       # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
