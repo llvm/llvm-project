@@ -47,7 +47,7 @@ struct SyncVar {
   SyncClock clock;
 
   void Init(ThreadState *thr, uptr pc, uptr addr, u64 uid);
-  void Reset(ThreadState *thr);
+  void Reset(Processor *proc);
 
   u64 GetId() const {
     // 47 lsb is addr, then 14 bits is low part of uid, then 3 zero bits.
@@ -72,9 +72,9 @@ class MetaMap {
   MetaMap();
 
   void AllocBlock(ThreadState *thr, uptr pc, uptr p, uptr sz);
-  uptr FreeBlock(ThreadState *thr, uptr pc, uptr p);
-  bool FreeRange(ThreadState *thr, uptr pc, uptr p, uptr sz);
-  void ResetRange(ThreadState *thr, uptr pc, uptr p, uptr sz);
+  uptr FreeBlock(Processor *proc, uptr p);
+  bool FreeRange(Processor *proc, uptr p, uptr sz);
+  void ResetRange(Processor *proc, uptr p, uptr sz);
   MBlock* GetBlock(uptr p);
 
   SyncVar* GetOrCreateAndLock(ThreadState *thr, uptr pc,
@@ -83,7 +83,7 @@ class MetaMap {
 
   void MoveMemory(uptr src, uptr dst, uptr sz);
 
-  void OnThreadIdle(ThreadState *thr);
+  void OnProcIdle(Processor *proc);
 
  private:
   static const u32 kFlagMask  = 3u << 30;
