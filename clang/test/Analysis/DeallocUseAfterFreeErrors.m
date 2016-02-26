@@ -36,8 +36,8 @@ typedef struct objc_selector *SEL;
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  [_ivar release]; // expected-warning {{use of instance variable '_ivar' after the instance has been freed with call to [super dealloc]}}
-  // expected-note@-1 {{use of instance variable '_ivar' after the instance has been freed with call to [super dealloc]}}
+  [_ivar release]; // expected-warning {{use of instance variable '_ivar' after 'self' has been deallocated}}
+  // expected-note@-1 {{use of instance variable '_ivar' after 'self' has been deallocated}}
 }
 @end
 
@@ -56,8 +56,8 @@ typedef struct objc_selector *SEL;
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  _delegate = nil; // expected-warning {{use of instance variable '_delegate' after the instance has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of instance variable '_delegate' after the instance has been freed with call to [super dealloc]}}
+  _delegate = nil; // expected-warning {{use of instance variable '_delegate' after 'self' has been deallocated}}
+      // expected-note@-1 {{use of instance variable '_delegate' after 'self' has been deallocated}}
 }
 @end
 
@@ -74,8 +74,8 @@ struct SomeStruct {
 @implementation SuperDeallocThenAssignIvarField
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  _s.f = 7; // expected-warning {{use of instance variable '_s' after the instance has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of instance variable '_s' after the instance has been freed with call to [super dealloc]}}
+  _s.f = 7; // expected-warning {{use of instance variable '_s' after 'self' has been deallocated}}
+      // expected-note@-1 {{use of instance variable '_s' after 'self' has been deallocated}}
 }
 @end
 
@@ -93,8 +93,21 @@ struct SomeStruct {
 @implementation SuperDeallocThenAssignIvarIvar
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  _ivar->_otherIvar = 7; // expected-warning {{use of instance variable '_ivar' after the instance has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of instance variable '_ivar' after the instance has been freed with call to [super dealloc]}}
+  _ivar->_otherIvar = 7; // expected-warning {{use of instance variable '_ivar' after 'self' has been deallocated}}
+      // expected-note@-1 {{use of instance variable '_ivar' after 'self' has been deallocated}}
+}
+@end
+
+@interface SuperDeallocThenAssignSelfIvar : NSObject {
+  NSObject *_ivar;
+}
+@end
+
+@implementation SuperDeallocThenAssignSelfIvar
+- (void)dealloc {
+  [super dealloc]; // expected-note {{[super dealloc] called here}}
+  self->_ivar = nil; // expected-warning {{use of instance variable '_ivar' after 'self' has been deallocated}}
+      // expected-note@-1 {{use of instance variable '_ivar' after 'self' has been deallocated}}
 }
 @end
 
@@ -112,8 +125,8 @@ struct SomeStruct {
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  self.ivar = nil; // expected-warning {{use of 'self' after it has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of 'self' after it has been freed with call to [super dealloc]}}
+  self.ivar = nil; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -131,8 +144,8 @@ struct SomeStruct {
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  self.delegate = nil; // expected-warning {{use of 'self' after it has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of 'self' after it has been freed with call to [super dealloc]}}
+  self.delegate = nil; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -145,8 +158,8 @@ struct SomeStruct {
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  [self _invalidate]; // expected-warning {{use of 'self' after it has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of 'self' after it has been freed with call to [super dealloc]}}
+  [self _invalidate]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -160,8 +173,8 @@ static void _invalidate(NSObject *object) {
 @implementation SuperDeallocThenCallNonObjectiveCMethodClass
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  _invalidate(self); // expected-warning {{use of 'self' after it has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of 'self' after it has been freed with call to [super dealloc]}}
+  _invalidate(self); // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -174,8 +187,8 @@ static void _invalidate(NSObject *object) {
 
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  [SuperDeallocThenCallObjectiveClassMethodClass invalidate:self]; // expected-warning {{use of 'self' after it has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of 'self' after it has been freed with call to [super dealloc]}}
+  [SuperDeallocThenCallObjectiveClassMethodClass invalidate:self]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -195,8 +208,8 @@ static void _invalidate(NSObject *object) {
     return;
   }
   [super dealloc];    // expected-note {{[super dealloc] called here}}
-  [self _invalidate]; // expected-warning {{use of 'self' after it has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of 'self' after it has been freed with call to [super dealloc]}}
+  [self _invalidate]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
 }
 @end
 
@@ -353,8 +366,8 @@ static void _invalidate(NSObject *object) {
 
 - (void)dealloc; {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  [self anotherMethod]; // expected-warning {{use of 'self' after it has been freed with call to [super dealloc]}}
-      // expected-note@-1 {{use of 'self' after it has been freed with call to [super dealloc]}}
+  [self anotherMethod]; // expected-warning {{use of 'self' after it has been deallocated}}
+      // expected-note@-1 {{use of 'self' after it has been deallocated}}
   [super dealloc];
 }
 @end
