@@ -46,6 +46,9 @@ void check_string_literal( FILE* fp, const char* s, char *buf, ... ) {
 
   vscanf(s, ap); // expected-warning {{format string is not a string literal}}
 
+  const char *const fmt = "%d"; // FIXME -- defined here
+  printf(fmt, 1, 2); // expected-warning{{data argument not used}}
+
   // rdar://6079877
   printf("abc"
          "%*d", 1, 1); // no-warning
@@ -86,6 +89,20 @@ void check_conditional_literal(const char* s, int i) {
   printf(i == 0 ? (i == 1 ? "yes" : "no") : "dont know"); // no-warning
   printf(i == 0 ? (i == 1 ? s : "no") : "dont know"); // expected-warning{{format string is not a string literal}}
   printf("yes" ?: "no %d", 1); // expected-warning{{data argument not used by format string}}
+  printf(0 ? "yes %s" : "no %d", 1); // no-warning
+  printf(0 ? "yes %d" : "no %s", 1); // expected-warning{{format specifies type 'char *'}}
+
+  printf(0 ? "yes" : "no %d", 1); // no-warning
+  printf(0 ? "yes %d" : "no", 1); // expected-warning{{data argument not used by format string}}
+  printf(1 ? "yes" : "no %d", 1); // expected-warning{{data argument not used by format string}}
+  printf(1 ? "yes %d" : "no", 1); // no-warning
+  printf(i ? "yes" : "no %d", 1); // no-warning
+  printf(i ? "yes %s" : "no %d", 1); // expected-warning{{format specifies type 'char *'}}
+  printf(i ? "yes" : "no %d", 1, 2); // expected-warning{{data argument not used by format string}}
+
+  printf(i ? "%*s" : "-", i, s); // no-warning
+  printf(i ? "yes" : 0 ? "no %*d" : "dont know %d", 1, 2); // expected-warning{{data argument not used by format string}}
+  printf(i ? "%i\n" : "%i %s %s\n", i, s); // expected-warning{{more '%' conversions than data arguments}}
 }
 
 void check_writeback_specifier()
@@ -519,7 +536,7 @@ void pr9751() {
 
   // Make sure that the "format string is defined here" note is not emitted
   // when the original string is within the argument expression.
-  printf(1 ? "yes %d" : "no %d"); // expected-warning 2{{more '%' conversions than data arguments}}
+  printf(1 ? "yes %d" : "no %d"); // expected-warning{{more '%' conversions than data arguments}}
 
   const char kFormat17[] = "%hu"; // expected-note{{format string is defined here}}}
   printf(kFormat17, (int[]){0}); // expected-warning{{format specifies type 'unsigned short' but the argument}}

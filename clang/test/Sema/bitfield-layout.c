@@ -255,7 +255,7 @@ struct g13 {
 CHECK_SIZE(struct, g13, 16);
 CHECK_ALIGN(struct, g13, 8);
 CHECK_OFFSET(struct, g13, c, 8);
-#elif (__x86_64__)
+#elif defined(__x86_64__)
 CHECK_SIZE(struct, g13, 9);
 CHECK_ALIGN(struct, g13, 1);
 CHECK_OFFSET(struct, g13, c, 8);
@@ -274,7 +274,7 @@ struct __attribute__((packed)) g14 {
 CHECK_SIZE(struct, g14, 16);
 CHECK_ALIGN(struct, g14, 8);
 CHECK_OFFSET(struct, g14, c, 8);
-#elif (__x86_64__)
+#elif defined(__x86_64__)
 CHECK_SIZE(struct, g14, 9);
 CHECK_ALIGN(struct, g14, 1);
 CHECK_OFFSET(struct, g14, c, 8);
