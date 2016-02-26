@@ -59,6 +59,8 @@ public:
     void        BuildAddressRangeTable (SymbolFileDWARF* dwarf2Data,
                                         DWARFDebugAranges* debug_aranges);
 
+    lldb::ByteOrder
+    GetByteOrder() const;
 
     lldb_private::TypeSystem *
                 GetTypeSystem();

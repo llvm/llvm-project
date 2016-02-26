@@ -780,7 +780,7 @@ static __isl_give isl_printer *print_optional_disjunct(
 	__isl_keep isl_basic_map *bmap, __isl_keep isl_space *space,
 	__isl_take isl_printer *p, int latex)
 {
-	if (isl_basic_map_is_universe(bmap))
+	if (isl_basic_map_plain_is_universe(bmap))
 		return p;
 
 	p = isl_printer_print_str(p, ": ");
@@ -937,7 +937,7 @@ static __isl_give isl_printer *print_disjuncts(__isl_keep isl_map *map,
 		isl_bool is_universe;
 
 		hull = isl_map_plain_unshifted_simple_hull(isl_map_copy(map));
-		is_universe = isl_basic_map_is_universe(hull);
+		is_universe = isl_basic_map_plain_is_universe(hull);
 		if (is_universe < 0)
 			p = isl_printer_free(p);
 		else if (!is_universe)

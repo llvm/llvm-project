@@ -1221,8 +1221,15 @@ StackFrame::GetFrameBaseValue (Scalar &frame_base, Error *error_ptr)
             if (m_sc.function->GetFrameBaseExpression().IsLocationList())
                 loclist_base_addr = m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress (exe_ctx.GetTargetPtr());
 
-            if (!m_sc.function->GetFrameBaseExpression().Evaluate(&exe_ctx, nullptr, nullptr, nullptr, loclist_base_addr,
-                                                                  nullptr, expr_value, &m_frame_base_error))
+            if (m_sc.function->GetFrameBaseExpression().Evaluate(&exe_ctx,
+                                                                 nullptr,
+                                                                 nullptr,
+                                                                 nullptr,
+                                                                 loclist_base_addr,
+                                                                 nullptr,
+                                                                 nullptr,
+                                                                 expr_value,
+                                                                 &m_frame_base_error) == false)
             {
                 // We should really have an error if evaluate returns, but in case
                 // we don't, lets set the error to something at least.

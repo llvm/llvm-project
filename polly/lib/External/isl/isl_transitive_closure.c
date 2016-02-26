@@ -435,6 +435,7 @@ static int empty_path_is_identity(__isl_keep isl_basic_map *path, unsigned pos)
 		goto error;
 	isl_seq_clr(test->eq[k], 1 + isl_basic_map_total_dim(test));
 	isl_int_set_si(test->eq[k][pos], 1);
+	test = isl_basic_map_gauss(test, NULL);
 	id = isl_basic_map_identity(isl_basic_map_get_space(path));
 	is_id = isl_basic_map_is_equal(test, id);
 	isl_basic_map_free(test);

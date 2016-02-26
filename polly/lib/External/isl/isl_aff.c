@@ -3326,6 +3326,24 @@ isl_bool isl_pw_aff_is_cst(__isl_keep isl_pw_aff *pwaff)
 	return isl_bool_true;
 }
 
+/* Are all elements of "mpa" piecewise constants?
+ */
+isl_bool isl_multi_pw_aff_is_cst(__isl_keep isl_multi_pw_aff *mpa)
+{
+	int i;
+
+	if (!mpa)
+		return isl_bool_error;
+
+	for (i = 0; i < mpa->n; ++i) {
+		isl_bool is_cst = isl_pw_aff_is_cst(mpa->p[i]);
+		if (is_cst < 0 || !is_cst)
+			return is_cst;
+	}
+
+	return isl_bool_true;
+}
+
 /* Return the product of "aff1" and "aff2".
  *
  * If either of the two is NaN, then the result is NaN.

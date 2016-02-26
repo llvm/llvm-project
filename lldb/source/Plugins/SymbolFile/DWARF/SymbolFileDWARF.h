@@ -70,6 +70,7 @@ public:
     friend class DWARFCompileUnit;
     friend class DWARFASTParserClang;
     friend class DWARFASTParserGo;
+    friend class DWARFASTParserJava;
 
     //------------------------------------------------------------------
     // Static Functions

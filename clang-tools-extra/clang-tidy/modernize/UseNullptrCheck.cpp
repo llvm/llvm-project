@@ -327,7 +327,7 @@ private:
                NullMacros.end();
       }
 
-      MacroLoc = SM.getImmediateExpansionRange(ArgLoc).first;
+      MacroLoc = SM.getExpansionRange(ArgLoc).first;
 
       ArgLoc = Expansion.getSpellingLoc().getLocWithOffset(LocInfo.second);
       if (ArgLoc.isFileID())

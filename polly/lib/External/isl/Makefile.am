@@ -108,6 +108,7 @@ libisl_la_SOURCES = \
 	isl_hash.c \
 	isl_hash_private.h \
 	isl_id_to_ast_expr.c \
+	isl_id_to_id.c \
 	isl_id_to_pw_aff.c \
 	isl_ilp.c \
 	isl_ilp_private.h \
@@ -255,6 +256,7 @@ pkginclude_HEADERS = \
 	include/isl/flow.h \
 	include/isl/id.h \
 	include/isl/id_to_ast_expr.h \
+	include/isl/id_to_id.h \
 	include/isl/id_to_pw_aff.h \
 	include/isl/ilp.h \
 	include/isl/hash.h \
@@ -273,6 +275,7 @@ pkginclude_HEADERS = \
 	include/isl/polynomial.h \
 	include/isl/polynomial_type.h \
 	include/isl/printer.h \
+	include/isl/printer_type.h \
 	include/isl/schedule.h \
 	include/isl/schedule_node.h \
 	include/isl/schedule_type.h \

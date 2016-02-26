@@ -208,9 +208,9 @@ int main(int argc, char **argv)
 
 	options = cg_options_new_with_defaults();
 	assert(options);
-	argc = cg_options_parse(options, argc, argv, ISL_ARG_ALL);
-
 	ctx = isl_ctx_alloc_with_options(&options_args, options);
+	isl_options_set_ast_build_detect_min_max(ctx, 1);
+	argc = cg_options_parse(options, argc, argv, ISL_ARG_ALL);
 
 	s = isl_stream_new_file(ctx, stdin);
 	obj = isl_stream_read_obj(s);

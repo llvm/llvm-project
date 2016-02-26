@@ -379,13 +379,17 @@ ObjectFile::GetAddressClass (addr_t file_addr)
                     case eSectionTypeARMextab:
                     case eSectionTypeCompactUnwind:
                         return eAddressClassRuntime;
-                    case eSectionTypeAbsoluteAddress:
                     case eSectionTypeELFSymbolTable:
                     case eSectionTypeELFDynamicSymbols:
                     case eSectionTypeELFRelocationEntries:
                     case eSectionTypeELFDynamicLinkInfo:
                     case eSectionTypeOther:
                         return eAddressClassUnknown;
+                    case eSectionTypeAbsoluteAddress:
+                        // In case of absolute sections decide the address class based on the symbol
+                        // type because the section type isn't specify if it is a code or a data
+                        // section.
+                        break;
                     }
                 }
             }

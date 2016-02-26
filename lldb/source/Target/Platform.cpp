@@ -2096,6 +2096,7 @@ Platform::GetSoftwareBreakpointTrapOpcode(Target &target, BreakpointSite *bp_sit
         }
         break;
 
+    case llvm::Triple::mips:
     case llvm::Triple::mips64:
         {
             static const uint8_t g_hex_opcode[] = {0x00, 0x00, 0x00, 0x0d};
@@ -2104,6 +2105,7 @@ Platform::GetSoftwareBreakpointTrapOpcode(Target &target, BreakpointSite *bp_sit
         }
         break;
 
+    case llvm::Triple::mipsel:
     case llvm::Triple::mips64el:
         {
             static const uint8_t g_hex_opcode[] = {0x0d, 0x00, 0x00, 0x00};

@@ -711,6 +711,7 @@ __isl_give isl_multi_pw_aff *isl_multi_pw_aff_gist(
 __isl_give isl_multi_pw_aff *isl_multi_pw_aff_gist_params(
 	__isl_take isl_multi_pw_aff *mpa, __isl_take isl_set *set);
 
+isl_bool isl_multi_pw_aff_is_cst(__isl_keep isl_multi_pw_aff *mpa);
 isl_bool isl_multi_pw_aff_is_equal(__isl_keep isl_multi_pw_aff *mpa1,
 	__isl_keep isl_multi_pw_aff *mpa2);
 

@@ -284,6 +284,8 @@ static int same_solution(struct isl_partial_sol *s1, struct isl_partial_sol *s2,
  * and represent the same solution, then their domains are combined.
  * This combined domain is the same as the current context domain
  * as sol_pop is called each time we move back to a higher level.
+ * If the outer level (0) has been reached, then all partial solutions
+ * at the current level are also popped off.
  */
 static void sol_pop(struct isl_sol *sol)
 {
@@ -293,15 +295,15 @@ static void sol_pop(struct isl_sol *sol)
 	if (sol->error)
 		return;
 
-	if (sol->level == 0) {
+	partial = sol->partial;
+	if (!partial)
+		return;
+
+	if (partial->level == 0 && sol->level == 0) {
 		for (partial = sol->partial; partial; partial = sol->partial)
 			sol_pop_one(sol);
 		return;
 	}
-
-	partial = sol->partial;
-	if (!partial)
-		return;
 
 	if (partial->level <= sol->level)
 		return;
@@ -343,6 +345,12 @@ static void sol_pop(struct isl_sol *sol)
 		}
 	} else
 		sol_pop_one(sol);
+
+	if (sol->level == 0) {
+		for (partial = sol->partial; partial; partial = sol->partial)
+			sol_pop_one(sol);
+		return;
+	}
 
 	if (0)
 error:		sol->error = 1;

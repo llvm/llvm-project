@@ -3,6 +3,7 @@
 
 #include <isl/printer.h>
 #include <isl_yaml.h>
+#include <isl/id_to_id.h>
 
 struct isl_printer_ops;
 
@@ -17,6 +18,10 @@ struct isl_printer_ops;
  * yaml_size is the size of this arrays, while yaml_depth
  * is the number of elements currently in use.
  * yaml_state may be NULL if no YAML printing is being performed.
+ *
+ * notes keeps track of arbitrary notes as a mapping between
+ * name identifiers and note identifiers.  It may be NULL
+ * if there are no notes yet.
  */
 struct isl_printer {
 	struct isl_ctx	*ctx;
@@ -37,6 +42,8 @@ struct isl_printer {
 	int			yaml_depth;
 	int			yaml_size;
 	enum isl_yaml_state	*yaml_state;
+
+	isl_id_to_id	*notes;
 };
 
 __isl_give isl_printer *isl_printer_set_dump(__isl_take isl_printer *p,

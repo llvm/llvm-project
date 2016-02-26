@@ -706,6 +706,12 @@
 		4CF3D80C15AF4DC800845BF3 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EDB919B414F6F10D008FF64B /* Security.framework */; };
 		4CF52AF51428291E0051E832 /* SBFileSpecList.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CF52AF41428291E0051E832 /* SBFileSpecList.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4CF52AF8142829390051E832 /* SBFileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CF52AF7142829390051E832 /* SBFileSpecList.cpp */; };
+		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; settings = {ASSET_TAGS = (); }; };
+		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; settings = {ASSET_TAGS = (); }; };
+		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; settings = {ASSET_TAGS = (); }; };
+		6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = 6D0F614B1C80AB0400A4ECEE /* JavaLanguageRuntime.h */; settings = {ASSET_TAGS = (); }; };
+		6D0F61591C80AB3500A4ECEE /* JavaFormatterFunctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61511C80AB3000A4ECEE /* JavaFormatterFunctions.cpp */; settings = {ASSET_TAGS = (); }; };
+		6D0F615A1C80AB3900A4ECEE /* JavaLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61531C80AB3000A4ECEE /* JavaLanguage.cpp */; settings = {ASSET_TAGS = (); }; };
 		6D55B2901A8A806200A70529 /* GDBRemoteCommunicationServerCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D55B28D1A8A806200A70529 /* GDBRemoteCommunicationServerCommon.cpp */; };
 		6D55B2911A8A806200A70529 /* GDBRemoteCommunicationServerLLGS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D55B28E1A8A806200A70529 /* GDBRemoteCommunicationServerLLGS.cpp */; };
 		6D55B2921A8A806200A70529 /* GDBRemoteCommunicationServerPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D55B28F1A8A806200A70529 /* GDBRemoteCommunicationServerPlatform.cpp */; };
@@ -2417,6 +2423,17 @@
 		69A01E1E1236C5D400C660B5 /* Mutex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Mutex.cpp; sourceTree = "<group>"; };
 		69A01E1F1236C5D400C660B5 /* Symbols.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Symbols.cpp; sourceTree = "<group>"; };
 		69A01E201236C5D400C660B5 /* TimeValue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TimeValue.cpp; sourceTree = "<group>"; };
+		6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DebugMacros.h; path = include/lldb/Symbol/DebugMacros.h; sourceTree = "<group>"; };
+		6D0F613D1C80AA8900A4ECEE /* JavaASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaASTContext.h; path = include/lldb/Symbol/JavaASTContext.h; sourceTree = "<group>"; };
+		6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaASTContext.cpp; path = source/Symbol/JavaASTContext.cpp; sourceTree = "<group>"; };
+		6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFASTParserJava.cpp; sourceTree = "<group>"; };
+		6D0F61451C80AACF00A4ECEE /* DWARFASTParserJava.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFASTParserJava.h; sourceTree = "<group>"; };
+		6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaLanguageRuntime.cpp; path = Java/JavaLanguageRuntime.cpp; sourceTree = "<group>"; };
+		6D0F614B1C80AB0400A4ECEE /* JavaLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaLanguageRuntime.h; path = Java/JavaLanguageRuntime.h; sourceTree = "<group>"; };
+		6D0F61511C80AB3000A4ECEE /* JavaFormatterFunctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaFormatterFunctions.cpp; path = Language/Java/JavaFormatterFunctions.cpp; sourceTree = "<group>"; };
+		6D0F61521C80AB3000A4ECEE /* JavaFormatterFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaFormatterFunctions.h; path = Language/Java/JavaFormatterFunctions.h; sourceTree = "<group>"; };
+		6D0F61531C80AB3000A4ECEE /* JavaLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaLanguage.cpp; path = Language/Java/JavaLanguage.cpp; sourceTree = "<group>"; };
+		6D0F61541C80AB3000A4ECEE /* JavaLanguage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaLanguage.h; path = Language/Java/JavaLanguage.h; sourceTree = "<group>"; };
 		6D55B28D1A8A806200A70529 /* GDBRemoteCommunicationServerCommon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteCommunicationServerCommon.cpp; sourceTree = "<group>"; };
 		6D55B28E1A8A806200A70529 /* GDBRemoteCommunicationServerLLGS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteCommunicationServerLLGS.cpp; sourceTree = "<group>"; };
 		6D55B28F1A8A806200A70529 /* GDBRemoteCommunicationServerPlatform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteCommunicationServerPlatform.cpp; sourceTree = "<group>"; };
@@ -3299,6 +3316,8 @@
 		260C89B210F57C5600BB2B04 /* DWARF */ = {
 			isa = PBXGroup;
 			children = (
+				6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */,
+				6D0F61451C80AACF00A4ECEE /* DWARFASTParserJava.h */,
 				6D95DC031B9DC06F000E318A /* DIERef.h */,
 				6D95DC041B9DC06F000E318A /* SymbolFileDWARFDwo.h */,
 				6D95DBFD1B9DC057000E318A /* DIERef.cpp */,
@@ -4374,6 +4393,9 @@
 		26BC7C4B10F1B6C100F91463 /* Symbol */ = {
 			isa = PBXGroup;
 			children = (
+				6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */,
+				6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */,
+				6D0F613D1C80AA8900A4ECEE /* JavaASTContext.h */,
 				6D9AB3DE1BB2B76B003F2289 /* TypeMap.h */,
 				6D9AB3DC1BB2B74E003F2289 /* TypeMap.cpp */,
 				6D99A3621BBC2F3200979793 /* ArmUnwindInfo.cpp */,
@@ -5322,6 +5344,7 @@
 		4CCA643A13B40B82003BDF98 /* LanguageRuntime */ = {
 			isa = PBXGroup;
 			children = (
+				6D0F61491C80AAF200A4ECEE /* Java */,
 				AE44FB3B1BB485730033EB62 /* Go */,
 				49724D961AD6ECFA0033C538 /* RenderScript */,
 				4CCA643B13B40B82003BDF98 /* CPlusPlus */,
@@ -5436,6 +5459,26 @@
 			);
 			name = common;
 			path = source/Host/common;
+			sourceTree = "<group>";
+		};
+		6D0F61491C80AAF200A4ECEE /* Java */ = {
+			isa = PBXGroup;
+			children = (
+				6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */,
+				6D0F614B1C80AB0400A4ECEE /* JavaLanguageRuntime.h */,
+			);
+			name = Java;
+			sourceTree = "<group>";
+		};
+		6D0F61501C80AB1400A4ECEE /* Java */ = {
+			isa = PBXGroup;
+			children = (
+				6D0F61511C80AB3000A4ECEE /* JavaFormatterFunctions.cpp */,
+				6D0F61521C80AB3000A4ECEE /* JavaFormatterFunctions.h */,
+				6D0F61531C80AB3000A4ECEE /* JavaLanguage.cpp */,
+				6D0F61541C80AB3000A4ECEE /* JavaLanguage.h */,
+			);
+			name = Java;
 			sourceTree = "<group>";
 		};
 		6D55B29B1A8CCFF000A70529 /* android */ = {
@@ -5570,6 +5613,7 @@
 		94B638541B8FABEA004FE1E4 /* Language */ = {
 			isa = PBXGroup;
 			children = (
+				6D0F61501C80AB1400A4ECEE /* Java */,
 				94B6385A1B8FB109004FE1E4 /* CPlusPlus */,
 				AE44FB431BB4BAC20033EB62 /* Go */,
 				94B638551B8FAC87004FE1E4 /* ObjC */,
@@ -5909,6 +5953,7 @@
 				AF8AD63A1BEC28C400150209 /* PlatformRemoteAppleWatch.h in Headers */,
 				257906651BD5AFD000178368 /* Acceptor.h in Headers */,
 				260A63171861008E00FECF8E /* IOHandler.h in Headers */,
+				6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */,
 				AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */,
 				AF8AD6311BEC28A400150209 /* PlatformAppleWatchSimulator.h in Headers */,
 			);
@@ -6482,6 +6527,7 @@
 				2689002613353DDE00698AC0 /* CommandObjectSyntax.cpp in Sources */,
 				267A48011B1411E40021A5BC /* XML.cpp in Sources */,
 				AF8AD6371BEC28C400150209 /* PlatformRemoteAppleTV.cpp in Sources */,
+				6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */,
 				2666ADC61B3CB675001FAFD3 /* DynamicLoaderHexagonDYLD.cpp in Sources */,
 				3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */,
 				4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */,
@@ -6568,6 +6614,7 @@
 				2689005813353E0400698AC0 /* ValueObjectChild.cpp in Sources */,
 				E7723D441AC4A7FB002BA082 /* RegisterContextPOSIXCore_arm64.cpp in Sources */,
 				233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */,
+				6D0F61591C80AB3500A4ECEE /* JavaFormatterFunctions.cpp in Sources */,
 				2689005913353E0400698AC0 /* ValueObjectConstResult.cpp in Sources */,
 				2689005A13353E0400698AC0 /* ValueObjectList.cpp in Sources */,
 				2689005B13353E0400698AC0 /* ValueObjectRegister.cpp in Sources */,
@@ -6615,6 +6662,7 @@
 				257E47171AA56C2000A62F81 /* ModuleCache.cpp in Sources */,
 				2689007413353E1A00698AC0 /* Terminal.cpp in Sources */,
 				2689007513353E1A00698AC0 /* TimeValue.cpp in Sources */,
+				6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */,
 				2689007613353E1A00698AC0 /* CFCBundle.cpp in Sources */,
 				94BA8B70176F97CE005A91B5 /* CommandHistory.cpp in Sources */,
 				2689007713353E1A00698AC0 /* CFCData.cpp in Sources */,
@@ -6809,6 +6857,7 @@
 				2689010C13353E6F00698AC0 /* UnixSignals.cpp in Sources */,
 				2689011013353E8200698AC0 /* SharingPtr.cpp in Sources */,
 				2689011113353E8200698AC0 /* StringExtractor.cpp in Sources */,
+				6D0F615A1C80AB3900A4ECEE /* JavaLanguage.cpp in Sources */,
 				2689011213353E8200698AC0 /* StringExtractorGDBRemote.cpp in Sources */,
 				2689011313353E8200698AC0 /* PseudoTerminal.cpp in Sources */,
 				E7723D4C1AC4A944002BA082 /* RegisterContextPOSIX_arm64.cpp in Sources */,
@@ -6834,6 +6883,7 @@
 				2377C2F819E613C100737875 /* PipePosix.cpp in Sources */,
 				AF77E0931A033C7F0096C0EA /* ABISysV_ppc64.cpp in Sources */,
 				26D5E15F135BAEA2006EA0A7 /* OptionGroupArchitecture.cpp in Sources */,
+				6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */,
 				26D5E163135BB054006EA0A7 /* OptionGroupPlatform.cpp in Sources */,
 				94CD131A19BA33B400DB7BED /* TypeValidator.cpp in Sources */,
 				26BD407F135D2AE000237D80 /* FileLineResolver.cpp in Sources */,

@@ -98,7 +98,7 @@ public:
 
 private:
   virtual bool needsCopyRelImpl(uint32_t Type) const;
-  virtual bool needsPltImpl(uint32_t Type, const SymbolBody &S) const;
+  virtual bool needsPltImpl(uint32_t Type) const;
 };
 
 uint64_t getPPC64TocBase();

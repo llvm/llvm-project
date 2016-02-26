@@ -111,6 +111,17 @@ public:
   ///          GlobalMap.
   Value *getOrCreateScalarAlloca(Value *ScalarBase);
 
+  /// @brief Remove a Value's allocation from the ScalarMap.
+  ///
+  /// This function allows to remove values from the ScalarMap. This is useful
+  /// if the corresponding alloca instruction will be deleted (or moved into
+  /// another module), as without removing these values the underlying
+  /// AssertingVH will trigger due to us still keeping reference to this
+  /// scalar.
+  ///
+  /// @param ScalarBase The value to remove.
+  void freeScalarAlloc(Value *ScalarBase) { ScalarMap.erase(ScalarBase); }
+
   /// @brief Return the PHi-node alloca for @p ScalarBase
   ///
   /// If no alloca was mapped to @p ScalarBase a new one is created.

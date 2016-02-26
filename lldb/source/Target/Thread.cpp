@@ -9,6 +9,7 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -58,10 +59,14 @@ using namespace lldb_private;
 const ThreadPropertiesSP &
 Thread::GetGlobalProperties()
 {
-    static ThreadPropertiesSP g_settings_sp;
-    if (!g_settings_sp)
-        g_settings_sp.reset (new ThreadProperties (true));
-    return g_settings_sp;
+    // NOTE: intentional leak so we don't crash if global destructor chain gets
+    // called as other threads still use the result of this function
+    static ThreadPropertiesSP *g_settings_sp_ptr = nullptr;
+    static std::once_flag g_once_flag;
+    std::call_once(g_once_flag,  []() {
+        g_settings_sp_ptr = new ThreadPropertiesSP(new ThreadProperties (true));
+    });
+    return *g_settings_sp_ptr;
 }
 
 static PropertyDefinition

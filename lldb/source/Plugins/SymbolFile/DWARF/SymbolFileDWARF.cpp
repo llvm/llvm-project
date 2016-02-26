@@ -1063,7 +1063,6 @@ SymbolFileDWARF::ParseCompileUnitSupportFiles (const SymbolContext& sc, FileSpec
         if (cu_die)
         {
             const char * cu_comp_dir = resolveCompDir(cu_die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr));
-
             const dw_offset_t stmt_list = cu_die.GetAttributeValueAsUnsigned(DW_AT_stmt_list, DW_INVALID_OFFSET);
             if (stmt_list != DW_INVALID_OFFSET)
             {
@@ -1832,7 +1831,7 @@ SymbolFileDWARF::GetGlobalAranges()
                                 const DWARFExpression &location = var_sp->LocationExpression();
                                 Value location_result;
                                 Error error;
-                                if (location.Evaluate(NULL, NULL, NULL, LLDB_INVALID_ADDRESS, NULL, location_result, &error))
+                                if (location.Evaluate(nullptr, nullptr, nullptr, LLDB_INVALID_ADDRESS, nullptr, nullptr, location_result, &error))
                                 {
                                     if (location_result.GetValueType() == Value::eValueTypeFileAddress)
                                     {

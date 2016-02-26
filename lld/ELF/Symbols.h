@@ -346,6 +346,12 @@ template <class ELFT> struct ElfSym {
   // output file's symbol table. It has weak binding and can be substituted.
   static Elf_Sym Ignored;
 
+  // The content for _etext and etext symbols.
+  static Elf_Sym Etext;
+
+  // The content for _edata and edata symbols.
+  static Elf_Sym Edata;
+
   // The content for _end and end symbols.
   static Elf_Sym End;
 
@@ -359,6 +365,8 @@ template <class ELFT> struct ElfSym {
 };
 
 template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::Ignored;
+template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::Etext;
+template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::Edata;
 template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::End;
 template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::MipsGp;
 template <class ELFT>

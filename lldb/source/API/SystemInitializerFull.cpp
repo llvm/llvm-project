@@ -26,6 +26,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/GoASTContext.h"
+#include "lldb/Symbol/JavaASTContext.h"
 
 #include "Plugins/ABI/MacOSX-i386/ABIMacOSX_i386.h"
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
@@ -46,12 +47,14 @@
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/Go/GoLanguage.h"
+#include "Plugins/Language/Java/JavaLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/ItaniumABI/ItaniumABILanguageRuntime.h"
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV1.h"
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
 #include "Plugins/LanguageRuntime/Go/GoLanguageRuntime.h"
+#include "Plugins/LanguageRuntime/Java/JavaLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
 #include "Plugins/MemoryHistory/asan/MemoryHistoryASan.h"
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
@@ -272,6 +275,7 @@ SystemInitializerFull::Initialize()
 
     ClangASTContext::Initialize();
     GoASTContext::Initialize();
+    JavaASTContext::Initialize();
 
     ABIMacOSX_i386::Initialize();
     ABIMacOSX_arm::Initialize();
@@ -308,9 +312,11 @@ SystemInitializerFull::Initialize()
     SystemRuntimeMacOSX::Initialize();
     RenderScriptRuntime::Initialize();
     GoLanguageRuntime::Initialize();
+    JavaLanguageRuntime::Initialize();
 
     CPlusPlusLanguage::Initialize();
     GoLanguage::Initialize();
+    JavaLanguage::Initialize();
     ObjCLanguage::Initialize();
     ObjCPlusPlusLanguage::Initialize();
 
@@ -391,6 +397,7 @@ SystemInitializerFull::Terminate()
 
     ClangASTContext::Terminate();
     GoASTContext::Terminate();
+    JavaASTContext::Terminate();
 
     ABIMacOSX_i386::Terminate();
     ABIMacOSX_arm::Terminate();
@@ -425,9 +432,11 @@ SystemInitializerFull::Terminate()
     AppleObjCRuntimeV1::Terminate();
     SystemRuntimeMacOSX::Terminate();
     RenderScriptRuntime::Terminate();
+    JavaLanguageRuntime::Terminate();
 
     CPlusPlusLanguage::Terminate();
     GoLanguage::Terminate();
+    JavaLanguage::Terminate();
     ObjCLanguage::Terminate();
     ObjCPlusPlusLanguage::Terminate();
 

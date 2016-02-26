@@ -203,6 +203,7 @@ set (ISL_FILES
     isl/isl_hash.c
     isl/isl_id.c
     isl/isl_id_to_ast_expr.c
+    isl/isl_id_to_id.c
     isl/isl_id_to_pw_aff.c
     isl/isl_ilp.c
     isl/isl_imath.c
