@@ -171,6 +171,12 @@ static cl::opt<bool>
                 cl::Hidden, cl::init(false), cl::ZeroOrMore,
                 cl::cat(PollyCategory));
 
+bool polly::PollyInvariantLoadHoisting;
+static cl::opt<bool, true> XPollyInvariantLoadHoisting(
+    "polly-invariant-load-hoisting", cl::desc("Hoist invariant loads."),
+    cl::location(PollyInvariantLoadHoisting), cl::Hidden, cl::ZeroOrMore,
+    cl::init(true), cl::cat(PollyCategory));
+
 /// @brief The minimal trip count under which loops are considered unprofitable.
 static const unsigned MIN_LOOP_TRIP_COUNT = 8;
 
@@ -303,6 +309,9 @@ bool ScopDetection::addOverApproximatedRegion(Region *AR,
 bool ScopDetection::onlyValidRequiredInvariantLoads(
     InvariantLoadsSetTy &RequiredILS, DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
+
+  if (!PollyInvariantLoadHoisting && !RequiredILS.empty())
+    return false;
 
   for (LoadInst *Load : RequiredILS)
     if (!isHoistableLoad(Load, CurRegion, *LI, *SE))
@@ -980,8 +989,8 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
 
   // Check the access function.
   if (auto MemInst = MemAccInst::dyn_cast(Inst)) {
-    Context.hasStores |= MemInst.isLoad();
-    Context.hasLoads |= MemInst.isStore();
+    Context.hasStores |= MemInst.isStore();
+    Context.hasLoads |= MemInst.isLoad();
     if (!MemInst.isSimple())
       return invalid<ReportNonSimpleMemoryAccess>(Context, /*Assert=*/true,
                                                   &Inst);

@@ -2703,10 +2703,10 @@ DWARFASTParserClang::ParseChildMembers (const SymbolContext& sc,
                                         const DWARFDataExtractor& debug_info_data = die.GetDWARF()->get_debug_info_data();
                                         uint32_t block_length = form_value.Unsigned();
                                         uint32_t block_offset = form_value.BlockData() - debug_info_data.GetDataStart();
-                                        if (DWARFExpression::Evaluate(NULL, // ExecutionContext *
-                                                                      NULL, // ClangExpressionVariableList *
-                                                                      NULL, // ClangExpressionDeclMap *
-                                                                      NULL, // RegisterContext *
+                                        if (DWARFExpression::Evaluate(nullptr, // ExecutionContext *
+                                                                      nullptr, // ClangExpressionVariableList *
+                                                                      nullptr, // ClangExpressionDeclMap *
+                                                                      nullptr, // RegisterContext *
                                                                       module_sp,
                                                                       debug_info_data,
                                                                       die.GetCU(),
@@ -2714,8 +2714,9 @@ DWARFASTParserClang::ParseChildMembers (const SymbolContext& sc,
                                                                       block_length,
                                                                       eRegisterKindDWARF,
                                                                       &initialValue,
+                                                                      nullptr,
                                                                       memberOffset,
-                                                                      NULL))
+                                                                      nullptr))
                                         {
                                             member_byte_offset = memberOffset.ResolveValue(NULL).UInt();
                                         }
@@ -3129,10 +3130,10 @@ DWARFASTParserClang::ParseChildMembers (const SymbolContext& sc,
                                         const DWARFDataExtractor& debug_info_data = die.GetDWARF()->get_debug_info_data();
                                         uint32_t block_length = form_value.Unsigned();
                                         uint32_t block_offset = form_value.BlockData() - debug_info_data.GetDataStart();
-                                        if (DWARFExpression::Evaluate (NULL,
-                                                                       NULL,
-                                                                       NULL,
-                                                                       NULL,
+                                        if (DWARFExpression::Evaluate (nullptr,
+                                                                       nullptr,
+                                                                       nullptr,
+                                                                       nullptr,
                                                                        module_sp,
                                                                        debug_info_data,
                                                                        die.GetCU(),
@@ -3140,8 +3141,9 @@ DWARFASTParserClang::ParseChildMembers (const SymbolContext& sc,
                                                                        block_length,
                                                                        eRegisterKindDWARF,
                                                                        &initialValue,
+                                                                       nullptr,
                                                                        memberOffset,
-                                                                       NULL))
+                                                                       nullptr))
                                         {
                                             member_byte_offset = memberOffset.ResolveValue(NULL).UInt();
                                         }

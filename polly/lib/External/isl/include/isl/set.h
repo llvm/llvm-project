@@ -130,6 +130,8 @@ __isl_give isl_basic_set *isl_basic_set_list_intersect(
 __isl_give isl_basic_set *isl_basic_set_list_product(
 	__isl_take struct isl_basic_set_list *list);
 
+__isl_give isl_set *isl_set_list_union(__isl_take isl_set_list *list);
+
 __isl_give isl_basic_set *isl_basic_set_read_from_file(isl_ctx *ctx,
 	FILE *input);
 __isl_constructor
@@ -218,6 +220,7 @@ __isl_give isl_set *isl_set_from_params(__isl_take isl_set *set);
 int isl_basic_set_dims_get_sign(__isl_keep isl_basic_set *bset,
 	enum isl_dim_type type, unsigned pos, unsigned n, int *signs);
 
+isl_bool isl_basic_set_plain_is_universe(__isl_keep isl_basic_set *bset);
 isl_bool isl_basic_set_is_universe(__isl_keep isl_basic_set *bset);
 isl_bool isl_basic_set_plain_is_empty(__isl_keep isl_basic_set *bset);
 __isl_export

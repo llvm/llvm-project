@@ -715,7 +715,7 @@ DWARFASTParserGo::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &par
                                                                       NULL, // RegisterContext *
                                                                       module_sp, debug_info_data, die.GetCU(),
                                                                       block_offset, block_length, eRegisterKindDWARF,
-                                                                      &initialValue, memberOffset, NULL))
+                                                                      &initialValue, NULL, memberOffset, NULL))
                                         {
                                             member_byte_offset = memberOffset.ResolveValue(NULL).UInt();
                                         }

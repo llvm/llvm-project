@@ -272,6 +272,7 @@ __isl_null isl_printer *isl_printer_free(__isl_take isl_printer *p)
 	free(p->prefix);
 	free(p->suffix);
 	free(p->yaml_state);
+	isl_id_to_id_free(p->notes);
 	isl_ctx_deref(p->ctx);
 	free(p);
 
@@ -382,6 +383,63 @@ int isl_printer_get_output_format(__isl_keep isl_printer *p)
 	if (!p)
 		return -1;
 	return p->output_format;
+}
+
+/* Does "p" have a note with identifier "id"?
+ */
+isl_bool isl_printer_has_note(__isl_keep isl_printer *p,
+	__isl_keep isl_id *id)
+{
+	if (!p || !id)
+		return isl_bool_error;
+	if (!p->notes)
+		return isl_bool_false;
+	return isl_id_to_id_has(p->notes, id);
+}
+
+/* Retrieve the note identified by "id" from "p".
+ * The note is assumed to exist.
+ */
+__isl_give isl_id *isl_printer_get_note(__isl_keep isl_printer *p,
+	__isl_take isl_id *id)
+{
+	isl_bool has_note;
+
+	has_note = isl_printer_has_note(p, id);
+	if (has_note < 0)
+		goto error;
+	if (!has_note)
+		isl_die(isl_printer_get_ctx(p), isl_error_invalid,
+			"no such note", goto error);
+
+	return isl_id_to_id_get(p->notes, id);
+error:
+	isl_id_free(id);
+	return NULL;
+}
+
+/* Associate "note" to the identifier "id" in "p",
+ * replacing the previous note associated to the identifier, if any.
+ */
+__isl_give isl_printer *isl_printer_set_note(__isl_take isl_printer *p,
+	__isl_take isl_id *id, __isl_take isl_id *note)
+{
+	if (!p || !id || !note)
+		goto error;
+	if (!p->notes) {
+		p->notes = isl_id_to_id_alloc(isl_printer_get_ctx(p), 1);
+		if (!p->notes)
+			goto error;
+	}
+	p->notes = isl_id_to_id_set(p->notes, id, note);
+	if (!p->notes)
+		return isl_printer_free(p);
+	return p;
+error:
+	isl_printer_free(p);
+	isl_id_free(id);
+	isl_id_free(note);
+	return NULL;
 }
 
 /* Keep track of whether the printing to "p" is being performed from

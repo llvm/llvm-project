@@ -23,6 +23,7 @@ set( LLDB_USED_LIBS
   
   lldbPluginCPlusPlusLanguage
   lldbPluginGoLanguage
+  lldbPluginJavaLanguage
   lldbPluginObjCLanguage
   lldbPluginObjCPlusPlusLanguage
 
@@ -50,6 +51,7 @@ set( LLDB_USED_LIBS
   lldbPluginAppleObjCRuntime
   lldbPluginRenderScriptRuntime
   lldbPluginLanguageRuntimeGo
+  lldbPluginLanguageRuntimeJava
   lldbPluginCXXItaniumABI
   lldbPluginABIMacOSX_arm
   lldbPluginABIMacOSX_arm64

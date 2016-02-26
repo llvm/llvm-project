@@ -281,7 +281,7 @@ static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
       }
       return true;
     }
-    if (!canBePreempted(Body, true))
+    if (!canBePreempted(Body))
       return true;
   }
   return !Target->isTlsDynRel(Type, *Body);
@@ -327,6 +327,7 @@ void Writer<ELFT>::scanRelocs(
     if (Body)
       Body = Body->repl();
 
+    bool CBP = canBePreempted(Body);
     if (handleTlsRelocation<ELFT>(Type, Body, C, RI))
       continue;
 
@@ -335,7 +336,7 @@ void Writer<ELFT>::scanRelocs(
                                     Body, getAddend<ELFT>(RI)});
 
     // MIPS has a special rule to create GOTs for local symbols.
-    if (Config->EMachine == EM_MIPS && !canBePreempted(Body, true) &&
+    if (Config->EMachine == EM_MIPS && !CBP &&
         (Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16)) {
       // FIXME (simon): Do not add so many redundant entries.
       Out<ELFT>::Got->addMipsLocalEntry();
@@ -362,7 +363,6 @@ void Writer<ELFT>::scanRelocs(
       if (Body->isInPlt())
         continue;
       Out<ELFT>::Plt->addEntry(Body);
-      bool CBP = canBePreempted(Body, /*NeedsGot=*/true);
       if (Target->UseLazyBinding) {
         Out<ELFT>::GotPlt->addEntry(Body);
         Out<ELFT>::RelaPlt->addReloc(
@@ -419,7 +419,6 @@ void Writer<ELFT>::scanRelocs(
         continue;
       }
 
-      bool CBP = canBePreempted(Body, /*NeedsGot=*/true);
       bool Dynrel = Config->Shared && !Target->isRelRelative(Type) &&
                     !Target->isSizeRel(Type);
       if (CBP || Dynrel) {
@@ -452,7 +451,7 @@ void Writer<ELFT>::scanRelocs(
         continue;
     }
 
-    if (canBePreempted(Body, /*NeedsGot=*/false)) {
+    if (CBP) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       Out<ELFT>::RelaDyn->addReloc({Target->getDynRel(Type), &C, RI.r_offset,
@@ -915,20 +914,22 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   if (!isOutputDynamic())
     Symtab.addIgnored("__tls_get_addr");
 
-  // If the "_end" symbol is referenced, it is expected to point to the address
-  // right after the data segment. Usually, this symbol points to the end
-  // of .bss section or to the end of .data section if .bss section is absent.
-  // We don't know the final address of _end yet, so just add a symbol here,
-  // and fix ElfSym<ELFT>::End.st_value later.
-  if (Symtab.find("_end"))
-    Symtab.addAbsolute("_end", ElfSym<ELFT>::End);
+  auto Define = [this](StringRef S, Elf_Sym &Sym) {
+    if (Symtab.find(S))
+      Symtab.addAbsolute(S, Sym);
 
-  // Define "end" as an alias to "_end" if it is used but not defined.
-  // We don't want to define that unconditionally because we don't want to
-  // break programs that uses "end" as a regular symbol.
-  if (SymbolBody *B = Symtab.find("end"))
-    if (B->isUndefined())
-      Symtab.addAbsolute("end", ElfSym<ELFT>::End);
+    // The name without the underscore is not a reserved name,
+    // so it is defined only when there is a reference against it.
+    assert(S.startswith("_"));
+    S = S.substr(1);
+    if (SymbolBody *B = Symtab.find(S))
+      if (B->isUndefined())
+        Symtab.addAbsolute(S, Sym);
+  };
+
+  Define("_end", ElfSym<ELFT>::End);
+  Define("_etext", ElfSym<ELFT>::Etext);
+  Define("_edata", ElfSym<ELFT>::Edata);
 }
 
 // Sort input sections by section name suffixes for
@@ -1455,6 +1456,17 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
   // Update MIPS _gp absolute symbol so that it points to the static data.
   if (Config->EMachine == EM_MIPS)
     ElfSym<ELFT>::MipsGp.st_value = getMipsGpAddr<ELFT>();
+
+  // _etext points to location after the last read-only loadable segment.
+  // _edata points to the end of the last non SHT_NOBITS section.
+  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
+    if (!(Sec->getFlags() & SHF_ALLOC))
+      continue;
+    if (!(Sec->getFlags() & SHF_WRITE))
+      ElfSym<ELFT>::Etext.st_value = Sec->getVA() + Sec->getSize();
+    if (Sec->getType() != SHT_NOBITS)
+      ElfSym<ELFT>::Edata.st_value = Sec->getVA() + Sec->getSize();
+  }
 }
 
 template <class ELFT> void Writer<ELFT>::writeHeader() {

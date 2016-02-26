@@ -4308,7 +4308,7 @@ static __isl_give isl_schedule_node *isl_schedule_node_order_before_or_after(
 {
 	enum isl_schedule_node_type ancestors[] =
 		{ isl_schedule_node_filter, isl_schedule_node_sequence };
-	isl_union_set *node_domain, *node_filter = NULL;
+	isl_union_set *node_domain, *node_filter = NULL, *parent_filter;
 	isl_schedule_node *node2;
 	isl_schedule_tree *tree1, *tree2;
 	int empty1, empty2;
@@ -4322,8 +4322,6 @@ static __isl_give isl_schedule_node *isl_schedule_node_order_before_or_after(
 	in_seq = has_ancestors(node, 2, ancestors);
 	if (in_seq < 0)
 		goto error;
-	if (in_seq)
-		node = isl_schedule_node_parent(node);
 	node_domain = isl_schedule_node_get_domain(node);
 	filter = isl_union_set_gist(filter, isl_union_set_copy(node_domain));
 	node_filter = isl_union_set_copy(node_domain);
@@ -4340,14 +4338,22 @@ static __isl_give isl_schedule_node *isl_schedule_node_order_before_or_after(
 		return node;
 	}
 
+	if (in_seq) {
+		node = isl_schedule_node_parent(node);
+		parent_filter = isl_schedule_node_filter_get_filter(node);
+		node_filter = isl_union_set_intersect(node_filter,
+					    isl_union_set_copy(parent_filter));
+		filter = isl_union_set_intersect(filter, parent_filter);
+	}
+
 	node2 = isl_schedule_node_copy(node);
 	node = isl_schedule_node_gist(node, isl_union_set_copy(node_filter));
 	node2 = isl_schedule_node_gist(node2, isl_union_set_copy(filter));
 	tree1 = isl_schedule_node_get_tree(node);
 	tree2 = isl_schedule_node_get_tree(node2);
-	isl_schedule_node_free(node2);
 	tree1 = isl_schedule_tree_insert_filter(tree1, node_filter);
 	tree2 = isl_schedule_tree_insert_filter(tree2, filter);
+	isl_schedule_node_free(node2);
 
 	if (before) {
 		tree1 = isl_schedule_tree_sequence_pair(tree2, tree1);

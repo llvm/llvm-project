@@ -272,10 +272,11 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     }
 
     uintX_t SymVA = Body->getVA<ELFT>();
+    bool CBP = canBePreempted(Body);
     if (Target->needsPlt<ELFT>(Type, *Body)) {
       SymVA = Body->getPltVA<ELFT>();
     } else if (Target->needsGot(Type, *Body)) {
-      if (Config->EMachine == EM_MIPS && !canBePreempted(Body, true))
+      if (Config->EMachine == EM_MIPS && !CBP)
         // Under some conditions relocations against non-local symbols require
         // entries in the local part of MIPS GOT. In that case we need an entry
         // initialized by full address of the symbol.
@@ -289,7 +290,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
       continue;
     } else if (Target->isTlsDynRel(Type, *Body)) {
       continue;
-    } else if (Target->isSizeRel(Type) && canBePreempted(Body, false)) {
+    } else if (Target->isSizeRel(Type) && CBP) {
       // A SIZE relocation is supposed to set a symbol size, but if a symbol
       // can be preempted, the size at runtime may be different than link time.
       // If that's the case, we leave the field alone rather than filling it

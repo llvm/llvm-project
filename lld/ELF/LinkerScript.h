@@ -40,6 +40,11 @@ private:
   StringRef SectionPattern;
 };
 
+struct OutSection {
+  StringRef Name;
+  std::vector<uint8_t> Filler;
+};
+
 // This is a runner of the linker script.
 class LinkerScript {
   friend class ScriptParser;
@@ -50,6 +55,7 @@ public:
   void read(MemoryBufferRef MB);
 
   template <class ELFT> StringRef getOutputSection(InputSectionBase<ELFT> *S);
+  ArrayRef<uint8_t> getFiller(StringRef Name);
   template <class ELFT> bool isDiscarded(InputSectionBase<ELFT> *S);
   template <class ELFT> bool shouldKeep(InputSectionBase<ELFT> *S);
   int compareSections(StringRef A, StringRef B);
@@ -60,8 +66,9 @@ private:
   // SECTIONS commands.
   std::vector<SectionRule> Sections;
 
-  // Output sections are sorted by this order.
-  std::vector<StringRef> SectionOrder;
+  // Output sections information.
+  // They are sorted by the order of the container.
+  std::vector<OutSection> OutSections;
 
   llvm::BumpPtrAllocator Alloc;
 };

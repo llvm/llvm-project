@@ -1191,7 +1191,7 @@ struct isl_set *isl_set_preimage(struct isl_set *set, struct isl_mat *mat)
 
 	set = isl_set_cow(set);
 	if (!set)
-		return NULL;
+		goto error;
 
 	for (i = 0; i < set->n; ++i) {
 		set->p[i] = isl_basic_set_preimage(set->p[i],

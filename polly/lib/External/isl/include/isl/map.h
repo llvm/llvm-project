@@ -279,6 +279,7 @@ __isl_give isl_val *isl_basic_map_plain_get_val_if_fixed(
 	enum isl_dim_type type, unsigned pos);
 
 int isl_basic_map_image_is_bounded(__isl_keep isl_basic_map *bmap);
+isl_bool isl_basic_map_plain_is_universe(__isl_keep isl_basic_map *bmap);
 isl_bool isl_basic_map_is_universe(__isl_keep isl_basic_map *bmap);
 isl_bool isl_basic_map_plain_is_empty(__isl_keep isl_basic_map *bmap);
 __isl_export

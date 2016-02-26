@@ -3,13 +3,12 @@
 
 #include <stdio.h>
 #include <isl/ctx.h>
+#include <isl/printer_type.h>
+#include <isl/id.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-struct isl_printer;
-typedef struct isl_printer isl_printer;
 
 __isl_give isl_printer *isl_printer_to_file(isl_ctx *ctx, FILE *file);
 __isl_give isl_printer *isl_printer_to_str(isl_ctx *ctx);
@@ -50,6 +49,13 @@ __isl_give isl_printer *isl_printer_set_suffix(__isl_take isl_printer *p,
 	const char *suffix);
 __isl_give isl_printer *isl_printer_set_isl_int_width(__isl_take isl_printer *p,
 	int width);
+
+isl_bool isl_printer_has_note(__isl_keep isl_printer *p,
+	__isl_keep isl_id *id);
+__isl_give isl_id *isl_printer_get_note(__isl_keep isl_printer *p,
+	__isl_take isl_id *id);
+__isl_give isl_printer *isl_printer_set_note(__isl_take isl_printer *p,
+	__isl_take isl_id *id, __isl_take isl_id *note);
 
 __isl_give isl_printer *isl_printer_start_line(__isl_take isl_printer *p);
 __isl_give isl_printer *isl_printer_end_line(__isl_take isl_printer *p);

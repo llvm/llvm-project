@@ -56,6 +56,15 @@ public:
   /// @brief Get the run-time conditions for the Scop.
   __isl_give isl_ast_expr *getRunCondition();
 
+  /// @brief Build run-time condition for scop.
+  ///
+  /// @param S     The scop to build the condition for.
+  /// @param Build The isl_build object to use to build the condition.
+  ///
+  /// @returns An ast expression that describes the necessary run-time check.
+  static isl_ast_expr *buildRunCondition(Scop *S,
+                                         __isl_keep isl_ast_build *Build);
+
 private:
   Scop *S;
   isl_ast_node *Root;
@@ -64,8 +73,6 @@ private:
 
   IslAst(Scop *Scop);
   void init(const Dependences &D);
-
-  void buildRunCondition(__isl_keep isl_ast_build *Build);
 };
 
 class IslAstInfo : public ScopPass {

@@ -183,6 +183,18 @@ void test_macro_args() {
   // CHECK-MESSAGES: :[[@LINE-2]]:24: warning: use nullptr
   // CHECK-FIXES: a[2] = {ENTRY(nullptr), {nullptr}};
 #undef ENTRY
+
+#define assert1(expr) (expr) ? 0 : 1
+#define assert2 assert1
+  int *p;
+  assert2(p == 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use nullptr
+  // CHECK-FIXES: assert2(p == nullptr);
+  assert2(p == NULL);
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use nullptr
+  // CHECK-FIXES: assert2(p == nullptr);
+#undef assert2
+#undef assert1
 }
 
 // One of the ancestor of the cast is a NestedNameSpecifierLoc.

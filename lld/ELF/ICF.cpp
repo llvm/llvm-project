@@ -201,12 +201,12 @@ void ICF<ELFT>::segregate(InputSection<ELFT> **Begin, InputSection<ELFT> **End,
 template <class ELFT>
 void ICF<ELFT>::forEachGroup(std::vector<InputSection<ELFT> *> &V,
                              Comparator Eq) {
-  for (auto I = V.begin(), E = V.end(); I != E;) {
+  for (InputSection<ELFT> **I = V.data(), **E = I + V.size(); I != E;) {
     InputSection<ELFT> *Head = *I;
     auto Bound = std::find_if(I + 1, E, [&](InputSection<ELFT> *S) {
       return S->GroupId != Head->GroupId;
     });
-    segregate(&*I, &*Bound, Eq);
+    segregate(I, Bound, Eq);
     I = Bound;
   }
 }

@@ -7,6 +7,8 @@
  * Ecole Normale Superieure, 45 rue d’Ulm, 75230 Paris, France
  */
 
+#include <string.h>
+
 #include <isl_ast_private.h>
 
 #undef BASE
@@ -1319,6 +1321,84 @@ error:
 	return isl_ast_node_free(node);
 }
 
+/* Traverse the elements of "list" and all their descendants
+ * in depth first preorder.
+ *
+ * Return isl_stat_ok on success and isl_stat_error on failure.
+ */
+static isl_stat nodelist_foreach(__isl_keep isl_ast_node_list *list,
+	isl_bool (*fn)(__isl_keep isl_ast_node *node, void *user), void *user)
+{
+	int i;
+
+	if (!list)
+		return isl_stat_error;
+
+	for (i = 0; i < list->n; ++i) {
+		isl_stat ok;
+		isl_ast_node *node = list->p[i];
+
+		ok = isl_ast_node_foreach_descendant_top_down(node, fn, user);
+		if (ok < 0)
+			return isl_stat_error;
+	}
+
+	return isl_stat_ok;
+}
+
+/* Traverse the descendants of "node" (including the node itself)
+ * in depth first preorder.
+ *
+ * If "fn" returns isl_bool_error on any of the nodes, then the traversal
+ * is aborted.
+ * If "fn" returns isl_bool_false on any of the nodes, then the subtree rooted
+ * at that node is skipped.
+ *
+ * Return isl_stat_ok on success and isl_stat_error on failure.
+ */
+isl_stat isl_ast_node_foreach_descendant_top_down(
+	__isl_keep isl_ast_node *node,
+	isl_bool (*fn)(__isl_keep isl_ast_node *node, void *user), void *user)
+{
+	isl_bool more;
+	isl_stat ok;
+
+	if (!node)
+		return isl_stat_error;
+
+	more = fn(node, user);
+	if (more < 0)
+		return isl_stat_error;
+	if (!more)
+		return isl_stat_ok;
+
+	switch (node->type) {
+	case isl_ast_node_for:
+		node = node->u.f.body;
+		return isl_ast_node_foreach_descendant_top_down(node, fn, user);
+	case isl_ast_node_if:
+		ok = isl_ast_node_foreach_descendant_top_down(node->u.i.then,
+								fn, user);
+		if (ok < 0)
+			return isl_stat_error;
+		if (!node->u.i.else_node)
+			return isl_stat_ok;
+		node = node->u.i.else_node;
+		return isl_ast_node_foreach_descendant_top_down(node, fn, user);
+	case isl_ast_node_block:
+		return nodelist_foreach(node->u.b.children, fn, user);
+	case isl_ast_node_mark:
+		node = node->u.m.node;
+		return isl_ast_node_foreach_descendant_top_down(node, fn, user);
+	case isl_ast_node_user:
+		break;
+	case isl_ast_node_error:
+		return isl_stat_error;
+	}
+
+	return isl_stat_ok;
+}
+
 /* Textual C representation of the various operators.
  */
 static char *op_str[] = {
@@ -1332,6 +1412,7 @@ static char *op_str[] = {
 	[isl_ast_op_add] = "+",
 	[isl_ast_op_sub] = "-",
 	[isl_ast_op_mul] = "*",
+	[isl_ast_op_fdiv_q] = "floord",
 	[isl_ast_op_pdiv_q] = "/",
 	[isl_ast_op_pdiv_r] = "%",
 	[isl_ast_op_zdiv_r] = "%",
@@ -1489,6 +1570,157 @@ static __isl_give isl_printer *print_sub_expr(__isl_take isl_printer *p,
 	return p;
 }
 
+#define isl_ast_op_last	isl_ast_op_address_of
+
+/* Data structure that holds the user-specified textual
+ * representations for the operators.
+ * The entries are either NULL or copies of strings.
+ * A NULL entry means that the default name should be used.
+ */
+struct isl_ast_op_names {
+	char *op_str[isl_ast_op_last + 1];
+};
+
+/* Create an empty struct isl_ast_op_names.
+ */
+static void *create_names(isl_ctx *ctx)
+{
+	return isl_calloc_type(ctx, struct isl_ast_op_names);
+}
+
+/* Free a struct isl_ast_op_names along with all memory
+ * owned by the struct.
+ */
+static void free_names(void *user)
+{
+	int i;
+	struct isl_ast_op_names *names = user;
+
+	if (!user)
+		return;
+
+	for (i = 0; i <= isl_ast_op_last; ++i)
+		free(names->op_str[i]);
+	free(user);
+}
+
+/* Create an identifier that is used to store
+ * an isl_ast_op_names note.
+ */
+static __isl_give isl_id *names_id(isl_ctx *ctx)
+{
+	return isl_id_alloc(ctx, "isl_ast_op_type_names", NULL);
+}
+
+/* Ensure that "p" has a note identified by "id".
+ * If there is no such note yet, then it is created by "note_create" and
+ * scheduled do be freed by "note_free".
+ */
+static __isl_give isl_printer *alloc_note(__isl_take isl_printer *p,
+	__isl_keep isl_id *id, void *(*note_create)(isl_ctx *),
+	void (*note_free)(void *))
+{
+	isl_ctx *ctx;
+	isl_id *note_id;
+	isl_bool has_note;
+	void *note;
+
+	has_note = isl_printer_has_note(p, id);
+	if (has_note < 0)
+		return isl_printer_free(p);
+	if (has_note)
+		return p;
+
+	ctx = isl_printer_get_ctx(p);
+	note = note_create(ctx);
+	if (!note)
+		return isl_printer_free(p);
+	note_id = isl_id_alloc(ctx, NULL, note);
+	if (!note_id)
+		note_free(note);
+	else
+		note_id = isl_id_set_free_user(note_id, note_free);
+
+	p = isl_printer_set_note(p, isl_id_copy(id), note_id);
+
+	return p;
+}
+
+/* Ensure that "p" has an isl_ast_op_names note identified by "id".
+ */
+static __isl_give isl_printer *alloc_names(__isl_take isl_printer *p,
+	__isl_keep isl_id *id)
+{
+	return alloc_note(p, id, &create_names, &free_names);
+}
+
+/* Retrieve the note identified by "id" from "p".
+ * The note is assumed to exist.
+ */
+static void *get_note(__isl_keep isl_printer *p, __isl_keep isl_id *id)
+{
+	void *note;
+
+	id = isl_printer_get_note(p, isl_id_copy(id));
+	note = isl_id_get_user(id);
+	isl_id_free(id);
+
+	return note;
+}
+
+/* Use "name" to print operations of type "type" to "p".
+ *
+ * Store the name in an isl_ast_op_names note attached to "p", such that
+ * it can be retrieved by get_op_str.
+ */
+__isl_give isl_printer *isl_ast_op_type_set_print_name(
+	__isl_take isl_printer *p, enum isl_ast_op_type type,
+	__isl_keep const char *name)
+{
+	isl_id *id;
+	struct isl_ast_op_names *names;
+
+	if (!p)
+		return NULL;
+	if (type > isl_ast_op_last)
+		isl_die(isl_printer_get_ctx(p), isl_error_invalid,
+			"invalid type", return isl_printer_free(p));
+
+	id = names_id(isl_printer_get_ctx(p));
+	p = alloc_names(p, id);
+	names = get_note(p, id);
+	isl_id_free(id);
+	if (!names)
+		return isl_printer_free(p);
+	free(names->op_str[type]);
+	names->op_str[type] = strdup(name);
+
+	return p;
+}
+
+/* Return the textual representation of "type".
+ *
+ * If there is a user-specified name in an isl_ast_op_names note
+ * associated to "p", then return that.
+ * Otherwise, return the default name in op_str.
+ */
+static const char *get_op_str(__isl_keep isl_printer *p,
+	enum isl_ast_op_type type)
+{
+	isl_id *id;
+	isl_bool has_names;
+	struct isl_ast_op_names *names = NULL;
+
+	id = names_id(isl_printer_get_ctx(p));
+	has_names = isl_printer_has_note(p, id);
+	if (has_names >= 0 && has_names)
+		names = get_note(p, id);
+	isl_id_free(id);
+	if (names && names->op_str[type])
+		return names->op_str[type];
+	return op_str[type];
+}
+
 /* Print a min or max reduction "expr".
  */
 static __isl_give isl_printer *print_min_max(__isl_take isl_printer *p,
@@ -1497,7 +1729,7 @@ static __isl_give isl_printer *print_min_max(__isl_take isl_printer *p,
 	int i = 0;
 
 	for (i = 1; i < expr->u.op.n_arg; ++i) {
-		p = isl_printer_print_str(p, op_str[expr->u.op.op]);
+		p = isl_printer_print_str(p, get_op_str(p, expr->u.op.op));
 		p = isl_printer_print_str(p, "(");
 	}
 	p = isl_printer_print_ast_expr(p, expr->u.op.args[0]);
@@ -1574,13 +1806,16 @@ __isl_give isl_printer *isl_printer_print_ast_expr(__isl_take isl_printer *p,
 			break;
 		}
 		if (expr->u.op.n_arg == 1) {
-			p = isl_printer_print_str(p, op_str[expr->u.op.op]);
+			p = isl_printer_print_str(p,
+						get_op_str(p, expr->u.op.op));
 			p = print_sub_expr(p, expr->u.op.op,
 						expr->u.op.args[0], 0);
 			break;
 		}
 		if (expr->u.op.op == isl_ast_op_fdiv_q) {
-			p = isl_printer_print_str(p, "floord(");
+			const char *name = get_op_str(p, isl_ast_op_fdiv_q);
+			p = isl_printer_print_str(p, name);
+			p = isl_printer_print_str(p, "(");
 			p = isl_printer_print_ast_expr(p, expr->u.op.args[0]);
 			p = isl_printer_print_str(p, ", ");
 			p = isl_printer_print_ast_expr(p, expr->u.op.args[1]);
@@ -1608,7 +1843,7 @@ __isl_give isl_printer *isl_printer_print_ast_expr(__isl_take isl_printer *p,
 		p = print_sub_expr(p, expr->u.op.op, expr->u.op.args[0], 1);
 		if (expr->u.op.op != isl_ast_op_member)
 			p = isl_printer_print_str(p, " ");
-		p = isl_printer_print_str(p, op_str[expr->u.op.op]);
+		p = isl_printer_print_str(p, get_op_str(p, expr->u.op.op));
 		if (expr->u.op.op != isl_ast_op_member)
 			p = isl_printer_print_str(p, " ");
 		p = print_sub_expr(p, expr->u.op.op, expr->u.op.args[1], 0);
@@ -2136,28 +2371,124 @@ static int ast_node_list_required_macros(__isl_keep isl_ast_node_list *list,
 	return macros;
 }
 
+/* Data structure for keeping track of whether a macro definition
+ * for a given type has already been printed.
+ * The value is zero if no definition has been printed and non-zero otherwise.
+ */
+struct isl_ast_op_printed {
+	char printed[isl_ast_op_last + 1];
+};
+
+/* Create an empty struct isl_ast_op_printed.
+ */
+static void *create_printed(isl_ctx *ctx)
+{
+	return isl_calloc_type(ctx, struct isl_ast_op_printed);
+}
+
+/* Free a struct isl_ast_op_printed.
+ */
+static void free_printed(void *user)
+{
+	free(user);
+}
+
+/* Ensure that "p" has an isl_ast_op_printed note identified by "id".
+ */
+static __isl_give isl_printer *alloc_printed(__isl_take isl_printer *p,
+	__isl_keep isl_id *id)
+{
+	return alloc_note(p, id, &create_printed, &free_printed);
+}
+
+/* Create an identifier that is used to store
+ * an isl_ast_op_printed note.
+ */
+static __isl_give isl_id *printed_id(isl_ctx *ctx)
+{
+	return isl_id_alloc(ctx, "isl_ast_op_type_printed", NULL);
+}
+
+/* Did the user specify that a macro definition should only be
+ * printed once and has a macro definition for "type" already
+ * been printed to "p"?
+ * If definitions should only be printed once, but a definition
+ * for "p" has not yet been printed, then mark it as having been
+ * printed so that it will not printed again.
+ * The actual printing is taken care of by the caller.
+ */
+static isl_bool already_printed_once(__isl_keep isl_printer *p,
+	enum isl_ast_op_type type)
+{
+	isl_ctx *ctx;
+	isl_id *id;
+	struct isl_ast_op_printed *printed;
+
+	if (!p)
+		return isl_bool_error;
+
+	ctx = isl_printer_get_ctx(p);
+	if (!isl_options_get_ast_print_macro_once(ctx))
+		return isl_bool_false;
+
+	if (type > isl_ast_op_last)
+		isl_die(isl_printer_get_ctx(p), isl_error_invalid,
+			"invalid type", return isl_bool_error);
+
+	id = printed_id(isl_printer_get_ctx(p));
+	p = alloc_printed(p, id);
+	printed = get_note(p, id);
+	isl_id_free(id);
+	if (!printed)
+		return isl_bool_error;
+
+	if (printed->printed[type])
+		return isl_bool_true;
+
+	printed->printed[type] = 1;
+	return isl_bool_false;
+}
+
 /* Print a macro definition for the operator "type".
+ *
+ * If the user has specified that a macro definition should
+ * only be printed once to any given printer and if the macro definition
+ * has already been printed to "p", then do not print the definition.
  */
 __isl_give isl_printer *isl_ast_op_type_print_macro(
 	enum isl_ast_op_type type, __isl_take isl_printer *p)
 {
+	isl_bool skip;
+
+	skip = already_printed_once(p, type);
+	if (skip < 0)
+		return isl_printer_free(p);
+	if (skip)
+		return p;
+
 	switch (type) {
 	case isl_ast_op_min:
 		p = isl_printer_start_line(p);
+		p = isl_printer_print_str(p, "#define ");
+		p = isl_printer_print_str(p, get_op_str(p, type));
 		p = isl_printer_print_str(p,
-			"#define min(x,y)    ((x) < (y) ? (x) : (y))");
+			"(x,y)    ((x) < (y) ? (x) : (y))");
 		p = isl_printer_end_line(p);
 		break;
 	case isl_ast_op_max:
 		p = isl_printer_start_line(p);
+		p = isl_printer_print_str(p, "#define ");
+		p = isl_printer_print_str(p, get_op_str(p, type));
 		p = isl_printer_print_str(p,
-			"#define max(x,y)    ((x) > (y) ? (x) : (y))");
+			"(x,y)    ((x) > (y) ? (x) : (y))");
 		p = isl_printer_end_line(p);
 		break;
 	case isl_ast_op_fdiv_q:
 		p = isl_printer_start_line(p);
+		p = isl_printer_print_str(p, "#define ");
+		p = isl_printer_print_str(p, get_op_str(p, type));
 		p = isl_printer_print_str(p,
-			"#define floord(n,d) "
+			"(n,d) "
 			"(((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))");
 		p = isl_printer_end_line(p);
 		break;
@@ -2166,6 +2497,37 @@ __isl_give isl_printer *isl_ast_op_type_print_macro(
 	}
 
 	return p;
+}
+
+/* Call "fn" for each type of operation represented in the "macros"
+ * bit vector.
+ */
+static isl_stat foreach_ast_op_type(int macros,
+	isl_stat (*fn)(enum isl_ast_op_type type, void *user), void *user)
+{
+	if (macros & ISL_AST_MACRO_MIN && fn(isl_ast_op_min, user) < 0)
+		return isl_stat_error;
+	if (macros & ISL_AST_MACRO_MAX && fn(isl_ast_op_max, user) < 0)
+		return isl_stat_error;
+	if (macros & ISL_AST_MACRO_FLOORD && fn(isl_ast_op_fdiv_q, user) < 0)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
+/* Call "fn" for each type of operation that appears in "expr"
+ * and that requires a macro definition.
+ */
+isl_stat isl_ast_expr_foreach_ast_op_type(__isl_keep isl_ast_expr *expr,
+	isl_stat (*fn)(enum isl_ast_op_type type, void *user), void *user)
+{
+	int macros;
+
+	if (!expr)
+		return isl_stat_error;
+
+	macros = ast_expr_required_macros(expr, 0);
+	return foreach_ast_op_type(macros, fn, user);
 }
 
 /* Call "fn" for each type of operation that appears in "node"
@@ -2180,15 +2542,7 @@ isl_stat isl_ast_node_foreach_ast_op_type(__isl_keep isl_ast_node *node,
 		return isl_stat_error;
 
 	macros = ast_node_required_macros(node, 0);
-
-	if (macros & ISL_AST_MACRO_MIN && fn(isl_ast_op_min, user) < 0)
-		return isl_stat_error;
-	if (macros & ISL_AST_MACRO_MAX && fn(isl_ast_op_max, user) < 0)
-		return isl_stat_error;
-	if (macros & ISL_AST_MACRO_FLOORD && fn(isl_ast_op_fdiv_q, user) < 0)
-		return isl_stat_error;
-
-	return isl_stat_ok;
+	return foreach_ast_op_type(macros, fn, user);
 }
 
 static isl_stat ast_op_type_print_macro(enum isl_ast_op_type type, void *user)
@@ -2201,7 +2555,19 @@ static isl_stat ast_op_type_print_macro(enum isl_ast_op_type type, void *user)
 }
 
 /* Print macro definitions for all the macros used in the result
- * of printing "node.
+ * of printing "expr".
+ */
+__isl_give isl_printer *isl_ast_expr_print_macros(
+	__isl_keep isl_ast_expr *expr, __isl_take isl_printer *p)
+{
+	if (isl_ast_expr_foreach_ast_op_type(expr,
+					    &ast_op_type_print_macro, &p) < 0)
+		return isl_printer_free(p);
+	return p;
+}
+
+/* Print macro definitions for all the macros used in the result
+ * of printing "node".
  */
 __isl_give isl_printer *isl_ast_node_print_macros(
 	__isl_keep isl_ast_node *node, __isl_take isl_printer *p)

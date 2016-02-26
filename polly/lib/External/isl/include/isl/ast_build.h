@@ -20,6 +20,9 @@ int isl_options_get_ast_build_atomic_upper_bound(isl_ctx *ctx);
 isl_stat isl_options_set_ast_build_prefer_pdiv(isl_ctx *ctx, int val);
 int isl_options_get_ast_build_prefer_pdiv(isl_ctx *ctx);
 
+isl_stat isl_options_set_ast_build_detect_min_max(isl_ctx *ctx, int val);
+int isl_options_get_ast_build_detect_min_max(isl_ctx *ctx);
+
 isl_stat isl_options_set_ast_build_exploit_nested_bounds(isl_ctx *ctx, int val);
 int isl_options_get_ast_build_exploit_nested_bounds(isl_ctx *ctx);
 

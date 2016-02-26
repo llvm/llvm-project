@@ -13,9 +13,9 @@
  * "root" is the root of the schedule tree and may be NULL if we
  * have created a band forest corresponding to the schedule.
  *
- * A pointer to "leaf" may be used to represent a leaf of the schedule.
+ * "leaf" may be used to represent a leaf of the schedule.
  * It should not appear as a child to any other isl_schedule_tree objects,
- * but an isl_schedule_node may point to "leaf" if it refers to
+ * but an isl_schedule_node may have "leaf" as its tree if it refers to
  * a leaf of this schedule tree.
  */
 struct isl_schedule {
@@ -24,7 +24,7 @@ struct isl_schedule {
 	isl_band_list *band_forest;
 	isl_schedule_tree *root;
 
-	struct isl_schedule_tree leaf;
+	struct isl_schedule_tree *leaf;
 };
 
 __isl_give isl_schedule *isl_schedule_from_schedule_tree(isl_ctx *ctx,

@@ -869,7 +869,7 @@ using the following functions.
 		__isl_keep const char *name, void *user);
 	__isl_give isl_id *isl_id_set_free_user(
 		__isl_take isl_id *id,
-		__isl_give void (*free_user)(void *user));
+		void (*free_user)(void *user));
 	__isl_give isl_id *isl_id_copy(isl_id *id);
 	__isl_null isl_id *isl_id_free(__isl_take isl_id *id);
 
@@ -3627,6 +3627,25 @@ the file.  When called on a string printer, the buffer is cleared.
 	__isl_give isl_printer *isl_printer_flush(
 		__isl_take isl_printer *p);
 
+The following functions allow the user to attach
+notes to a printer in order to keep track of additional state.
+
+	#include <isl/printer.h>
+	isl_bool isl_printer_has_note(__isl_keep isl_printer *p,
+		__isl_keep isl_id *id);
+	__isl_give isl_id *isl_printer_get_note(
+		__isl_keep isl_printer *p, __isl_take isl_id *id);
+	__isl_give isl_printer *isl_printer_set_note(
+		__isl_take isl_printer *p,
+		__isl_take isl_id *id, __isl_take isl_id *note);
+
+C<isl_printer_set_note> associates the given note to the given
+identifier in the printer.
+C<isl_printer_get_note> retrieves a note associated to an
+identifier, while
+C<isl_printer_has_note> checks if there is such a note.
+C<isl_printer_get_note> fails if the requested note does not exist.
+
 Alternatively, a string representation can be obtained
 directly using the following functions, which always print
 in isl format.
@@ -3700,8 +3719,12 @@ is already known to be empty.
 
 =item * Universality
 
+	isl_bool isl_basic_set_plain_is_universe(
+		__isl_keep isl_basic_set *bset);
 	isl_bool isl_basic_set_is_universe(
 		__isl_keep isl_basic_set *bset);
+	isl_bool isl_basic_map_plain_is_universe(
+		__isl_keep isl_basic_map *bmap);
 	isl_bool isl_basic_map_is_universe(
 		__isl_keep isl_basic_map *bmap);
 	isl_bool isl_set_plain_is_universe(
@@ -3946,6 +3969,8 @@ the input is itself a wrapped relation.
 	#include <isl/aff.h>
 	isl_bool isl_aff_is_cst(__isl_keep isl_aff *aff);
 	isl_bool isl_pw_aff_is_cst(__isl_keep isl_pw_aff *pwaff);
+	isl_bool isl_multi_pw_aff_is_cst(
+		__isl_keep isl_multi_pw_aff *mpa);
 
 Check whether the given expression is a constant.
 
@@ -5732,6 +5757,8 @@ that map to the specified range.
 	__isl_give isl_set *isl_set_union(
 		__isl_take isl_set *set1,
 		__isl_take isl_set *set2);
+	__isl_give isl_set *isl_set_list_union(
+		__isl_take isl_set_list *list);
 
 	#include <isl/map.h>
 	__isl_give isl_map *isl_basic_map_union(
@@ -5752,6 +5779,9 @@ that map to the specified range.
 	__isl_give isl_union_map *isl_union_map_union(
 		__isl_take isl_union_map *umap1,
 		__isl_take isl_union_map *umap2);
+
+The list passed to C<isl_set_list_union> needs to have
+at least one element and all elements need to live in the same space.
 
 =item * Set difference
 
@@ -7253,7 +7283,8 @@ Lists can be printed using
 Associative arrays map isl objects of a specific type to isl objects
 of some (other) specific type.  They are defined for several pairs
 of types, including (C<isl_map>, C<isl_basic_set>),
-(C<isl_id>, C<isl_ast_expr>) and.
+(C<isl_id>, C<isl_ast_expr>),
+(C<isl_id>, C<isl_id>) and
 (C<isl_id>, C<isl_pw_aff>).
 Here, we take associative arrays that map C<isl_id>s to C<isl_ast_expr>s
 as an example.
@@ -9141,6 +9172,21 @@ C<isl_ast_node_mark_get_node> returns the child node that is being marked.
 	__isl_give isl_ast_expr *isl_ast_node_user_get_expr(
 		__isl_keep isl_ast_node *node);
 
+All descendants of a specific node in the AST (including the node itself)
+can be visited
+in depth-first pre-order using the following function.
+
+	#include <isl/ast.h>
+	isl_stat isl_ast_node_foreach_descendant_top_down(
+		__isl_keep isl_ast_node *node,
+		isl_bool (*fn)(__isl_keep isl_ast_node *node,
+			void *user), void *user);
+
+The callback function should return C<isl_bool_true> if the children
+of the given node should be visited and C<isl_bool_false> if they should not.
+It should return C<isl_bool_error> in case of failure, in which case
+the entire traversal is aborted.
+
 Each of the returned C<isl_ast_expr>s can in turn be inspected using
 the following functions.
 
@@ -9164,6 +9210,10 @@ Each type of expression has its own additional properties.
 	int isl_ast_expr_get_op_n_arg(__isl_keep isl_ast_expr *expr);
 	__isl_give isl_ast_expr *isl_ast_expr_get_op_arg(
 		__isl_keep isl_ast_expr *expr, int pos);
+	isl_stat isl_ast_expr_foreach_ast_op_type(
+		__isl_keep isl_ast_expr *expr,
+		isl_stat (*fn)(enum isl_ast_op_type type,
+			void *user), void *user);
 	isl_stat isl_ast_node_foreach_ast_op_type(
 		__isl_keep isl_ast_node *node,
 		isl_stat (*fn)(enum isl_ast_op_type type,
@@ -9173,7 +9223,9 @@ C<isl_ast_expr_get_op_type> returns the type of the operation
 performed.  C<isl_ast_expr_get_op_n_arg> returns the number of
 arguments.  C<isl_ast_expr_get_op_arg> returns the specified
 argument.
-C<isl_ast_node_foreach_ast_op_type> calls C<fn> for each distinct
+C<isl_ast_expr_foreach_ast_op_type> calls C<fn> for each distinct
+C<isl_ast_op_type> that appears in C<expr>.
+C<isl_ast_node_foreach_ast_op_type> does the same for each distinct
 C<isl_ast_op_type> that appears in C<node>.
 The operation type is one of the following.
 
@@ -9493,8 +9545,18 @@ Basic printing can be performed using the following functions.
 More advanced printing can be performed using the following functions.
 
 	#include <isl/ast.h>
+	__isl_give isl_printer *isl_ast_op_type_set_print_name(
+		__isl_take isl_printer *p,
+		enum isl_ast_op_type type,
+		__isl_keep const char *name);
+	isl_stat isl_options_set_ast_print_macro_once(
+		isl_ctx *ctx, int val);
+	int isl_options_get_ast_print_macro_once(isl_ctx *ctx);
 	__isl_give isl_printer *isl_ast_op_type_print_macro(
 		enum isl_ast_op_type type,
+		__isl_take isl_printer *p);
+	__isl_give isl_printer *isl_ast_expr_print_macros(
+		__isl_keep isl_ast_expr *expr,
 		__isl_take isl_printer *p);
 	__isl_give isl_printer *isl_ast_node_print_macros(
 		__isl_keep isl_ast_node *node,
@@ -9515,14 +9577,21 @@ More advanced printing can be performed using the following functions.
 While printing an C<isl_ast_node> in C<ISL_FORMAT_C>,
 C<isl> may print out an AST that makes use of macros such
 as C<floord>, C<min> and C<max>.
+The names of these macros may be modified by a call
+to C<isl_ast_op_type_set_print_name>.  The user-specified
+names are associated to the printer object.
 C<isl_ast_op_type_print_macro> prints out the macro
 corresponding to a specific C<isl_ast_op_type>.
-C<isl_ast_node_print_macros> scans the C<isl_ast_node>
-for expressions where these macros would be used and prints
+If the print-macro-once option is set, then a given macro definition
+is only printed once to any given printer object.
+C<isl_ast_expr_print_macros> scans the C<isl_ast_expr>
+for subexpressions where these macros would be used and prints
 out the required macro definitions.
-Essentially, C<isl_ast_node_print_macros> calls
-C<isl_ast_node_foreach_ast_op_type> with C<isl_ast_op_type_print_macro>
+Essentially, C<isl_ast_expr_print_macros> calls
+C<isl_ast_expr_foreach_ast_op_type> with C<isl_ast_op_type_print_macro>
 as function argument.
+C<isl_ast_node_print_macros> does the same
+for expressions in its C<isl_ast_node> argument.
 C<isl_ast_node_print>, C<isl_ast_node_for_print> and
 C<isl_ast_node_if_print> print an C<isl_ast_node>
 in C<ISL_FORMAT_C>, but allow for some extra control
@@ -9597,6 +9666,10 @@ A block will always be printed by setting the following option.
 	isl_stat isl_options_set_ast_build_prefer_pdiv(isl_ctx *ctx,
 		int val);
 	int isl_options_get_ast_build_prefer_pdiv(isl_ctx *ctx);
+	isl_stat isl_options_set_ast_build_detect_min_max(
+		isl_ctx *ctx, int val);
+	int isl_options_get_ast_build_detect_min_max(
+		isl_ctx *ctx);
 	isl_stat isl_options_set_ast_build_exploit_nested_bounds(
 		isl_ctx *ctx, int val);
 	int isl_options_get_ast_build_exploit_nested_bounds(
@@ -9645,9 +9718,15 @@ If this option is turned off, then the AST generation will
 produce ASTs that may only contain C<isl_ast_op_fdiv_q>
 operators, but no C<isl_ast_op_pdiv_q> or
 C<isl_ast_op_pdiv_r> operators.
-If this options is turned on, then C<isl> will try to convert
+If this option is turned on, then C<isl> will try to convert
 some of the C<isl_ast_op_fdiv_q> operators to (expressions containing)
 C<isl_ast_op_pdiv_q> or C<isl_ast_op_pdiv_r> operators.
+
+=item * ast_build_detect_min_max
+
+If this option is turned on, then C<isl> will try and detect
+min or max-expressions when building AST expressions from
+piecewise affine expressions.
 
 =item * ast_build_exploit_nested_bounds
 

@@ -805,7 +805,7 @@ TSAN_INTERCEPTOR(int, munmap, void *addr, long_t sz) {
   if (sz != 0) {
     // If sz == 0, munmap will return EINVAL and don't unmap any memory.
     DontNeedShadowFor((uptr)addr, sz);
-    ctx->metamap.ResetRange(thr, pc, (uptr)addr, (uptr)sz);
+    ctx->metamap.ResetRange(thr->proc, (uptr)addr, (uptr)sz);
   }
   int res = REAL(munmap)(addr, sz);
   return res;
@@ -900,7 +900,10 @@ STDCXX_INTERCEPTOR(void, __cxa_guard_abort, atomic_uint32_t *g) {
 namespace __tsan {
 void DestroyThreadState() {
   ThreadState *thr = cur_thread();
+  Processor *proc = thr->proc;
   ThreadFinish(thr);
+  ProcUnwire(proc, thr);
+  ProcDestroy(proc);
   ThreadSignalContext *sctx = thr->signal_ctx;
   if (sctx) {
     thr->signal_ctx = 0;
@@ -951,6 +954,8 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
 #endif
     while ((tid = atomic_load(&p->tid, memory_order_acquire)) == 0)
       internal_sched_yield();
+    Processor *proc = ProcCreate();
+    ProcWire(proc, thr);
     ThreadStart(thr, tid, GetTid());
     atomic_store(&p->tid, 0, memory_order_release);
   }

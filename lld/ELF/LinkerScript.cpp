@@ -54,13 +54,22 @@ template <class ELFT> bool LinkerScript::shouldKeep(InputSectionBase<ELFT> *S) {
   return R && R->Keep;
 }
 
+ArrayRef<uint8_t> LinkerScript::getFiller(StringRef Name) {
+  for (OutSection &C : OutSections)
+    if (C.Name == Name)
+      return C.Filler;
+  return {};
+}
+
 // A compartor to sort output sections. Returns -1 or 1 if both
 // A and B are mentioned in linker scripts. Otherwise, returns 0
 // to use the default rule which is implemented in Writer.cpp.
 int LinkerScript::compareSections(StringRef A, StringRef B) {
-  auto E = SectionOrder.end();
-  auto I = std::find(SectionOrder.begin(), E, A);
-  auto J = std::find(SectionOrder.begin(), E, B);
+  auto E = OutSections.end();
+  auto I = std::find_if(OutSections.begin(), E,
+                        [&](OutSection &C) { return C.Name == A; });
+  auto J = std::find_if(OutSections.begin(), E,
+                        [&](OutSection &C) { return C.Name == B; });
   if (I == E || J == E)
     return 0;
   return I < J ? -1 : 1;
@@ -109,6 +118,7 @@ private:
   static StringRef skipSpace(StringRef S);
   bool atEOF();
   StringRef next();
+  StringRef peek();
   bool skip(StringRef Tok);
   void expect(StringRef Expect);
 
@@ -128,6 +138,8 @@ private:
 
   void readOutputSectionDescription();
   void readSectionPatterns(StringRef OutSec, bool Keep);
+
+  std::vector<uint8_t> parseHex(StringRef S);
 
   StringSaver Saver;
   std::vector<StringRef> Tokens;
@@ -231,6 +243,14 @@ StringRef ScriptParser::next() {
     return "";
   }
   return Tokens[Pos++];
+}
+
+StringRef ScriptParser::peek() {
+  StringRef Tok = next();
+  if (Error)
+    return "";
+  --Pos;
+  return Tok;
 }
 
 bool ScriptParser::skip(StringRef Tok) {
@@ -394,24 +414,50 @@ void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
     Script->Sections.emplace_back(OutSec, next(), Keep);
 }
 
+std::vector<uint8_t> ScriptParser::parseHex(StringRef S) {
+  std::vector<uint8_t> Hex;
+  while (!S.empty()) {
+    StringRef B = S.substr(0, 2);
+    S = S.substr(2);
+    uint8_t H;
+    if (B.getAsInteger(16, H)) {
+      setError("Not a HEX value: " + B);
+      return {};
+    }
+    Hex.push_back(H);
+  }
+  return Hex;
+}
+
 void ScriptParser::readOutputSectionDescription() {
-  StringRef OutSec = next();
-  Script->SectionOrder.push_back(OutSec);
+  OutSection OutSec;
+  OutSec.Name = next();
   expect(":");
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();
     if (Tok == "*") {
-      readSectionPatterns(OutSec, false);
+      readSectionPatterns(OutSec.Name, false);
     } else if (Tok == "KEEP") {
       expect("(");
       next(); // Skip *
-      readSectionPatterns(OutSec, true);
+      readSectionPatterns(OutSec.Name, true);
       expect(")");
     } else {
       setError("Unknown command " + Tok);
     }
   }
+  StringRef Tok = peek();
+  if (Tok.startswith("=")) {
+    if (!Tok.startswith("=0x")) {
+      setError("Filler should be a HEX value");
+      return;
+    }
+    Tok = Tok.substr(3); // Skip '=0x'
+    OutSec.Filler = parseHex(Tok);
+    next();
+  }
+  Script->OutSections.push_back(OutSec);
 }
 
 static bool isUnderSysroot(StringRef Path) {

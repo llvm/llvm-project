@@ -186,8 +186,8 @@ am__libisl_la_SOURCES_DIST = mp_get_memory_functions.c isl_int_gmp.h \
 	isl_dim_map.h isl_dim_map.c isl_equalities.c isl_equalities.h \
 	isl_factorization.c isl_factorization.h isl_farkas.c isl_ffs.c \
 	isl_flow.c isl_fold.c isl_hash.c isl_hash_private.h \
-	isl_id_to_ast_expr.c isl_id_to_pw_aff.c isl_ilp.c \
-	isl_ilp_private.h isl_input.c isl_int.h \
+	isl_id_to_ast_expr.c isl_id_to_id.c isl_id_to_pw_aff.c \
+	isl_ilp.c isl_ilp_private.h isl_input.c isl_int.h \
 	isl_local_space_private.h isl_local_space.c isl_lp.c \
 	isl_lp_private.h isl_map.c isl_map_list.c isl_map_simplify.c \
 	isl_map_subtract.c isl_map_private.h isl_map_to_basic_set.c \
@@ -233,19 +233,19 @@ am_libisl_la_OBJECTS = $(am__objects_4) $(am__objects_5) isl_aff.lo \
 	isl_convex_hull.lo isl_ctx.lo isl_deprecated.lo isl_dim_map.lo \
 	isl_equalities.lo isl_factorization.lo isl_farkas.lo \
 	isl_ffs.lo isl_flow.lo isl_fold.lo isl_hash.lo \
-	isl_id_to_ast_expr.lo isl_id_to_pw_aff.lo isl_ilp.lo \
-	isl_input.lo isl_local_space.lo isl_lp.lo isl_map.lo \
-	isl_map_list.lo isl_map_simplify.lo isl_map_subtract.lo \
-	isl_map_to_basic_set.lo isl_mat.lo isl_morph.lo isl_id.lo \
-	isl_obj.lo isl_options.lo isl_output.lo isl_point.lo \
-	isl_polynomial.lo isl_printer.lo print.lo isl_range.lo \
-	isl_reordering.lo isl_sample.lo isl_scan.lo isl_schedule.lo \
-	isl_schedule_band.lo isl_schedule_node.lo isl_schedule_read.lo \
-	isl_schedule_tree.lo isl_scheduler.lo isl_set_list.lo \
-	isl_sort.lo isl_space.lo isl_stream.lo isl_seq.lo isl_tab.lo \
-	isl_tab_pip.lo isl_tarjan.lo isl_transitive_closure.lo \
-	isl_union_map.lo isl_val.lo isl_vec.lo isl_version.lo \
-	isl_vertices.lo
+	isl_id_to_ast_expr.lo isl_id_to_id.lo isl_id_to_pw_aff.lo \
+	isl_ilp.lo isl_input.lo isl_local_space.lo isl_lp.lo \
+	isl_map.lo isl_map_list.lo isl_map_simplify.lo \
+	isl_map_subtract.lo isl_map_to_basic_set.lo isl_mat.lo \
+	isl_morph.lo isl_id.lo isl_obj.lo isl_options.lo isl_output.lo \
+	isl_point.lo isl_polynomial.lo isl_printer.lo print.lo \
+	isl_range.lo isl_reordering.lo isl_sample.lo isl_scan.lo \
+	isl_schedule.lo isl_schedule_band.lo isl_schedule_node.lo \
+	isl_schedule_read.lo isl_schedule_tree.lo isl_scheduler.lo \
+	isl_set_list.lo isl_sort.lo isl_space.lo isl_stream.lo \
+	isl_seq.lo isl_tab.lo isl_tab_pip.lo isl_tarjan.lo \
+	isl_transitive_closure.lo isl_union_map.lo isl_val.lo \
+	isl_vec.lo isl_version.lo isl_vertices.lo
 libisl_la_OBJECTS = $(am_libisl_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -384,14 +384,15 @@ am__pkginclude_HEADERS_DIST = include/isl/val_gmp.h include/isl/aff.h \
 	include/isl/ast_type.h include/isl/ast_build.h \
 	include/isl/band.h include/isl/constraint.h include/isl/ctx.h \
 	include/isl/flow.h include/isl/id.h \
-	include/isl/id_to_ast_expr.h include/isl/id_to_pw_aff.h \
-	include/isl/ilp.h include/isl/hash.h include/isl/hmap.h \
-	include/isl/list.h include/isl/local_space.h include/isl/lp.h \
-	include/isl/mat.h include/isl/map.h \
-	include/isl/map_to_basic_set.h include/isl/map_type.h \
-	include/isl/multi.h include/isl/obj.h include/isl/options.h \
-	include/isl/point.h include/isl/polynomial.h \
-	include/isl/polynomial_type.h include/isl/printer.h \
+	include/isl/id_to_ast_expr.h include/isl/id_to_id.h \
+	include/isl/id_to_pw_aff.h include/isl/ilp.h \
+	include/isl/hash.h include/isl/hmap.h include/isl/list.h \
+	include/isl/local_space.h include/isl/lp.h include/isl/mat.h \
+	include/isl/map.h include/isl/map_to_basic_set.h \
+	include/isl/map_type.h include/isl/multi.h include/isl/obj.h \
+	include/isl/options.h include/isl/point.h \
+	include/isl/polynomial.h include/isl/polynomial_type.h \
+	include/isl/printer.h include/isl/printer_type.h \
 	include/isl/schedule.h include/isl/schedule_node.h \
 	include/isl/schedule_type.h include/isl/set.h \
 	include/isl/set_type.h include/isl/space.h \
@@ -863,6 +864,7 @@ libisl_la_SOURCES = \
 	isl_hash.c \
 	isl_hash_private.h \
 	isl_id_to_ast_expr.c \
+	isl_id_to_id.c \
 	isl_id_to_pw_aff.c \
 	isl_ilp.c \
 	isl_ilp_private.h \
@@ -1007,6 +1009,7 @@ pkginclude_HEADERS = \
 	include/isl/flow.h \
 	include/isl/id.h \
 	include/isl/id_to_ast_expr.h \
+	include/isl/id_to_id.h \
 	include/isl/id_to_pw_aff.h \
 	include/isl/ilp.h \
 	include/isl/hash.h \
@@ -1025,6 +1028,7 @@ pkginclude_HEADERS = \
 	include/isl/polynomial.h \
 	include/isl/polynomial_type.h \
 	include/isl/printer.h \
+	include/isl/printer_type.h \
 	include/isl/schedule.h \
 	include/isl/schedule_node.h \
 	include/isl/schedule_type.h \
@@ -1326,6 +1330,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_hash.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_id.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_id_to_ast_expr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_id_to_id.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_id_to_pw_aff.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_ilp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_imath.Plo@am__quote@

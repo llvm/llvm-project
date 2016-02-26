@@ -1536,7 +1536,7 @@ RegisterContextLLDB::SavedLocationForRegister (uint32_t lldb_regnum, lldb_privat
         dwarfexpr.SetRegisterKind (unwindplan_registerkind);
         Value result;
         Error error;
-        if (dwarfexpr.Evaluate (&exe_ctx, NULL, NULL, this, 0, NULL, result, &error))
+        if (dwarfexpr.Evaluate (&exe_ctx, nullptr, nullptr, this, 0, nullptr, nullptr, result, &error))
         {
             addr_t val;
             val = result.GetScalar().ULongLong();
@@ -1836,7 +1836,7 @@ RegisterContextLLDB::ReadCFAValueForRow (lldb::RegisterKind row_register_kind,
             dwarfexpr.SetRegisterKind (row_register_kind);
             Value result;
             Error error;
-            if (dwarfexpr.Evaluate (&exe_ctx, NULL, NULL, this, 0, NULL, result, &error))
+            if (dwarfexpr.Evaluate (&exe_ctx, nullptr, nullptr, this, 0, nullptr, nullptr, result, &error))
             {
                 cfa_value = result.GetScalar().ULongLong();
 

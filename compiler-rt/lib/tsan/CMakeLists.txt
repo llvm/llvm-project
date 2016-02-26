@@ -41,6 +41,7 @@ set(TSAN_SOURCES
   rtl/tsan_rtl.cc
   rtl/tsan_rtl_mutex.cc
   rtl/tsan_rtl_report.cc
+  rtl/tsan_rtl_proc.cc
   rtl/tsan_rtl_thread.cc
   rtl/tsan_stack_trace.cc
   rtl/tsan_stat.cc
