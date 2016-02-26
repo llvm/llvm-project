@@ -3834,6 +3834,13 @@ __kmp_register_root( int initial_thread )
     KMP_DEBUG_ASSERT( root->r.r_hot_team->t.t_bar[ bs_forkjoin_barrier ].b_arrived == KMP_INIT_BARRIER_STATE );
 
 #if KMP_AFFINITY_SUPPORTED
+# if OMP_40_ENABLED
+    root_thread->th.th_current_place = KMP_PLACE_UNDEFINED;
+    root_thread->th.th_new_place = KMP_PLACE_UNDEFINED;
+    root_thread->th.th_first_place = KMP_PLACE_UNDEFINED;
+    root_thread->th.th_last_place = KMP_PLACE_UNDEFINED;
+# endif
+
     if ( TCR_4(__kmp_init_middle) ) {
         __kmp_affinity_set_init_mask( gtid, TRUE );
     }

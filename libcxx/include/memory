@@ -2548,7 +2548,7 @@ public:
                          typename enable_if<__same_or_less_cv_qualified<_Up*, _Tp*>::value>::type* = 0) const _NOEXCEPT
         {
             static_assert(sizeof(_Tp) > 0, "default_delete can not delete incomplete type");
-            static_assert(!is_void<_Tp>::value, "default_delete can not delete incomplete type");
+            static_assert(!is_void<_Tp>::value, "default_delete can not delete void type");
             delete [] __ptr;
         }
 };
@@ -2918,7 +2918,6 @@ public:
         return __t;
     }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     template <class _Pp>
     _LIBCPP_INLINE_VISIBILITY
     typename enable_if<__same_or_less_cv_qualified<_Pp, pointer>::value, void>::type
@@ -2929,29 +2928,13 @@ public:
         if (__tmp)
             __ptr_.second()(__tmp);
     }
-    _LIBCPP_INLINE_VISIBILITY void reset(nullptr_t) _NOEXCEPT
+    _LIBCPP_INLINE_VISIBILITY void reset(nullptr_t = nullptr) _NOEXCEPT
     {
         pointer __tmp = __ptr_.first();
         __ptr_.first() = nullptr;
         if (__tmp)
             __ptr_.second()(__tmp);
     }
-    _LIBCPP_INLINE_VISIBILITY void reset() _NOEXCEPT
-    {
-        pointer __tmp = __ptr_.first();
-        __ptr_.first() = nullptr;
-        if (__tmp)
-            __ptr_.second()(__tmp);
-    }
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    _LIBCPP_INLINE_VISIBILITY void reset(pointer __p = pointer())
-    {
-        pointer __tmp = __ptr_.first();
-        __ptr_.first() = __p;
-        if (__tmp)
-            __ptr_.second()(__tmp);
-    }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
     _LIBCPP_INLINE_VISIBILITY void swap(unique_ptr& __u) {__ptr_.swap(__u.__ptr_);}
 private:

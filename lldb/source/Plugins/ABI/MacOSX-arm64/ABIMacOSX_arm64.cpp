@@ -670,6 +670,7 @@ ABIMacOSX_arm64::RegisterIsVolatile (const RegisterInfo *reg_info)
                 case '3':                             // x30 aka lr treat as non-volatile
                     if (name[2] == '0')
                       return false;
+                    break;
                 default:
                     return true;
             }

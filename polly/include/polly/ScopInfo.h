@@ -327,6 +327,9 @@ public:
   /// normal scalar array modeling.
   bool isPHIKind() const { return Kind == MK_PHI; };
 
+  /// @brief Is this array info modeling an array?
+  bool isArrayKind() const { return Kind == MK_Array; };
+
   /// @brief Dump a readable representation to stderr.
   void dump() const;
 
@@ -2052,6 +2055,12 @@ class ScopInfo : public RegionPass {
   /// @brief The ScalarEvolution to help building Scop.
   ScalarEvolution *SE;
 
+  /// @brief Set of instructions that might read any memory location.
+  SmallVector<Instruction *, 16> GlobalReads;
+
+  /// @brief Set of all accessed array base pointers.
+  SmallSetVector<Value *, 16> ArrayBasePointers;
+
   // The Scop
   std::unique_ptr<Scop> scop;
 
@@ -2105,6 +2114,19 @@ class ScopInfo : public RegionPass {
   bool buildAccessMemIntrinsic(MemAccInst Inst, Loop *L, Region *R,
                                const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
                                const InvariantLoadsSetTy &ScopRIL);
+
+  /// @brief Try to build a MemoryAccess for a call instruction.
+  ///
+  /// @param Inst       The call instruction that access the memory
+  /// @param L          The parent loop of the instruction
+  /// @param R          The region on which to build the data access dictionary.
+  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
+  /// @param ScopRIL    The required invariant loads equivalence classes.
+  ///
+  /// @returns True if the access could be built, False otherwise.
+  bool buildAccessCallInst(MemAccInst Inst, Loop *L, Region *R,
+                           const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
+                           const InvariantLoadsSetTy &ScopRIL);
 
   /// @brief Build a single-dimensional parameteric sized MemoryAccess
   ///        from the Load/Store instruction.

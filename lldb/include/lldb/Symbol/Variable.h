@@ -17,6 +17,7 @@
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/Core/Mangled.h"
+#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UserID.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Declaration.h"
@@ -27,6 +28,8 @@ class Variable : public UserID,
     public std::enable_shared_from_this<Variable>
 {
 public:
+    typedef RangeVector<lldb::addr_t, lldb::addr_t> RangeList;
+
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
@@ -36,6 +39,7 @@ public:
               const lldb::SymbolFileTypeSP &symfile_type_sp,
               lldb::ValueType scope,
               SymbolContextScope *owner_scope,
+              const RangeList& scope_range,
               Declaration* decl,
               const DWARFExpression& location,
               bool external,
@@ -178,12 +182,14 @@ public:
 
     CompilerDecl
     GetDecl ();
+
 protected:
     ConstString m_name;                 // The basename of the variable (no namespaces)
     Mangled m_mangled;                  // The mangled name of the variable
     lldb::SymbolFileTypeSP m_symfile_type_sp;   // The type pointer of the variable (int, struct, class, etc)
     lldb::ValueType m_scope;            // global, parameter, local
     SymbolContextScope *m_owner_scope;  // The symbol file scope that this variable was defined in
+    RangeList m_scope_range;            // The list of ranges inside the owner's scope where this variable is valid
     Declaration m_declaration;          // Declaration location for this item.
     DWARFExpression m_location;         // The location of this variable that can be fed to DWARFExpression::Evaluate()
     uint8_t m_external:1,               // Visible outside the containing compile unit?

@@ -3138,35 +3138,33 @@ ProcessGDBRemote::DoAllocateMemory (size_t size, uint32_t permissions, Error &er
     Log *log (GetLogIfAnyCategoriesSet (LIBLLDB_LOG_PROCESS|LIBLLDB_LOG_EXPRESSIONS));
     addr_t allocated_addr = LLDB_INVALID_ADDRESS;
 
-    LazyBool supported = m_gdb_comm.SupportsAllocDeallocMemory();
-    switch (supported)
+    if (m_gdb_comm.SupportsAllocDeallocMemory() != eLazyBoolNo)
     {
-        case eLazyBoolCalculate:
-        case eLazyBoolYes:
-            allocated_addr = m_gdb_comm.AllocateMemory (size, permissions);
-            if (allocated_addr != LLDB_INVALID_ADDRESS || supported == eLazyBoolYes)
-                return allocated_addr;
+        allocated_addr = m_gdb_comm.AllocateMemory (size, permissions);
+        if (allocated_addr != LLDB_INVALID_ADDRESS || m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
+            return allocated_addr;
+    }
 
-        case eLazyBoolNo:
-            // Call mmap() to create memory in the inferior..
-            unsigned prot = 0;
-            if (permissions & lldb::ePermissionsReadable)
-                prot |= eMmapProtRead;
-            if (permissions & lldb::ePermissionsWritable)
-                prot |= eMmapProtWrite;
-            if (permissions & lldb::ePermissionsExecutable)
-                prot |= eMmapProtExec;
+    if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolNo)
+    {
+        // Call mmap() to create memory in the inferior..
+        unsigned prot = 0;
+        if (permissions & lldb::ePermissionsReadable)
+            prot |= eMmapProtRead;
+        if (permissions & lldb::ePermissionsWritable)
+            prot |= eMmapProtWrite;
+        if (permissions & lldb::ePermissionsExecutable)
+            prot |= eMmapProtExec;
 
-            if (InferiorCallMmap(this, allocated_addr, 0, size, prot,
-                                 eMmapFlagsAnon | eMmapFlagsPrivate, -1, 0))
-                m_addr_to_mmap_size[allocated_addr] = size;
-            else
-            {
-                allocated_addr = LLDB_INVALID_ADDRESS;
-                if (log)
-                    log->Printf ("ProcessGDBRemote::%s no direct stub support for memory allocation, and InferiorCallMmap also failed - is stub missing register context save/restore capability?", __FUNCTION__);
-            }
-            break;
+        if (InferiorCallMmap(this, allocated_addr, 0, size, prot,
+                             eMmapFlagsAnon | eMmapFlagsPrivate, -1, 0))
+            m_addr_to_mmap_size[allocated_addr] = size;
+        else
+        {
+            allocated_addr = LLDB_INVALID_ADDRESS;
+            if (log)
+                log->Printf ("ProcessGDBRemote::%s no direct stub support for memory allocation, and InferiorCallMmap also failed - is stub missing register context save/restore capability?", __FUNCTION__);
+        }
     }
 
     if (allocated_addr == LLDB_INVALID_ADDRESS)

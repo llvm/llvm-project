@@ -70,7 +70,7 @@ private:
   static bool equalsConstant(const SectionChunk *A, const SectionChunk *B);
   static bool equalsVariable(const SectionChunk *A, const SectionChunk *B);
   bool forEachGroup(std::vector<SectionChunk *> &Chunks, Comparator Eq);
-  bool partition(ChunkIterator Begin, ChunkIterator End, Comparator Eq);
+  bool segregate(ChunkIterator Begin, ChunkIterator End, Comparator Eq);
 
   std::atomic<uint64_t> NextID = { 1 };
 };
@@ -148,7 +148,7 @@ bool ICF::equalsVariable(const SectionChunk *A, const SectionChunk *B) {
   return std::equal(A->Relocs.begin(), A->Relocs.end(), B->Relocs.begin(), Eq);
 }
 
-bool ICF::partition(ChunkIterator Begin, ChunkIterator End, Comparator Eq) {
+bool ICF::segregate(ChunkIterator Begin, ChunkIterator End, Comparator Eq) {
   bool R = false;
   for (auto It = Begin;;) {
     SectionChunk *Head = *It;
@@ -171,7 +171,7 @@ bool ICF::forEachGroup(std::vector<SectionChunk *> &Chunks, Comparator Eq) {
     auto Bound = std::find_if(It + 1, End, [&](SectionChunk *SC) {
       return SC->GroupID != Head->GroupID;
     });
-    if (partition(It, Bound, Eq))
+    if (segregate(It, Bound, Eq))
       R = true;
     It = Bound;
   }

@@ -14,6 +14,7 @@ add_clang_library(clangTidyReadabilityModule
   RedundantControlFlowCheck.cpp
   RedundantStringCStrCheck.cpp
   RedundantSmartptrGetCheck.cpp
+  RedundantStringInitCheck.cpp
   SimplifyBooleanExprCheck.cpp
   UniqueptrDeleteReleaseCheck.cpp
 

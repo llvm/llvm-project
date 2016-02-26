@@ -12,12 +12,13 @@
 // array
 
 #include <type_traits>
+#include "test_macros.h"
 
 template <class T>
 void test_array_imp()
 {
     static_assert(!std::is_void<T>::value, "");
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     static_assert(!std::is_null_pointer<T>::value, "");
 #endif
     static_assert(!std::is_integral<T>::value, "");
@@ -46,10 +47,14 @@ void test_array()
 typedef char array[3];
 typedef const char const_array[3];
 typedef char incomplete_array[];
+struct incomplete_type;
 
 int main()
 {
     test_array<array>();
     test_array<const_array>();
     test_array<incomplete_array>();
+
+//  LWG#2581
+    static_assert(!std::is_array<incomplete_type>::value, "");
 }

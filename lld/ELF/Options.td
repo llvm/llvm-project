@@ -57,6 +57,9 @@ def fini : Separate<["-"], "fini">, MetaVarName<"<symbol>">,
 def hash_style : Separate<["--", "-"], "hash-style">,
   HelpText<"Specify hash style (sysv, gnu or both)">;
 
+def icf : Flag<["--"], "icf=all">,
+  HelpText<"Enable Identical Code Folding.">;
+
 def gc_sections : Flag<["--"], "gc-sections">,
   HelpText<"Enable garbage collection of unused sections">;
 
@@ -94,7 +97,8 @@ def print_gc_sections: Flag<["--"], "print-gc-sections">,
 def rpath : Separate<["-"], "rpath">,
   HelpText<"Add a DT_RUNPATH to the output">;
 
-def relocatable : Flag<["--"], "relocatable">;
+def relocatable : Flag<["--"], "relocatable">,
+  HelpText<"Create relocatable object file">;
 
 def script : Separate<["--"], "script">, HelpText<"Read linker script">;
 

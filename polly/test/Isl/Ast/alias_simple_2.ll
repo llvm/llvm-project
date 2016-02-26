@@ -3,6 +3,7 @@
 ; RUN: opt %loadPolly -polly-ast -analyze -disable-basicaa -tbaa < %s | FileCheck %s --check-prefix=TBAA
 ; RUN: opt %loadPolly -polly-ast -analyze -disable-basicaa -scev-aa < %s | FileCheck %s --check-prefix=SCEV
 ; RUN: opt %loadPolly -polly-ast -analyze -disable-basicaa -globals-aa < %s | FileCheck %s --check-prefix=GLOB
+; RUN: opt %loadPolly -polly-ast -analyze -disable-basicaa -globals-aa -polly-allow-nonaffine < %s | FileCheck %s --check-prefix=NONAFFINE
 ;
 ;    int A[1024], B[1024];
 ;
@@ -17,6 +18,7 @@
 ; TBAA: if (1 && (&MemRef_B[N] <= &MemRef_A[0] || &MemRef_A[N] <= &MemRef_B[0]))
 ; SCEV: if (1 && (&MemRef_B[N] <= &MemRef_A[0] || &MemRef_A[N] <= &MemRef_B[0]))
 ; GLOB: if (1 && (&MemRef_B[N] <= &MemRef_A[0] || &MemRef_A[N] <= &MemRef_B[0]))
+; NONAFFINE: if (1 && (&MemRef_B[N] <= &MemRef_A[0] || &MemRef_A[N] <= &MemRef_B[0]))
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

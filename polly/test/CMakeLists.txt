@@ -95,6 +95,14 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
 
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/update_check.py
+  ${CMAKE_CURRENT_BINARY_DIR}/update_check.py)
+file(COPY ${CMAKE_CURRENT_BINARY_DIR}/update_check.py
+  DESTINATION ${LLVM_TOOLS_BINARY_DIR}
+  FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ
+  GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
 # Add a legacy target spelling: polly-test
 add_custom_target(polly-test)
 set_target_properties(polly-test PROPERTIES FOLDER "Polly")

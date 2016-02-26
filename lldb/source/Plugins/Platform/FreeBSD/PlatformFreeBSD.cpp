@@ -635,8 +635,7 @@ PlatformFreeBSD::GetSoftwareBreakpointTrapOpcode (Target &target, BreakpointSite
                 return 0;
             }
         }
-
-        // Fall through...
+        LLVM_FALLTHROUGH;
     default:
         return Platform::GetSoftwareBreakpointTrapOpcode(target, bp_site);
     }

@@ -228,6 +228,7 @@ public:
                    uint8_t *PairedLoc = nullptr) const override;
   bool isHintRel(uint32_t Type) const override;
   bool isRelRelative(uint32_t Type) const override;
+  bool refersToGotEntry(uint32_t Type) const override;
 };
 } // anonymous namespace
 
@@ -302,6 +303,8 @@ bool TargetInfo::refersToGotEntry(uint32_t Type) const { return false; }
 template <class ELFT>
 TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
                                          const SymbolBody &S) const {
+  if (isGnuIFunc<ELFT>(S))
+    return Plt_Explicit;
   if (needsPltImpl(Type, S))
     return Plt_Explicit;
 
@@ -458,10 +461,7 @@ bool X86TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
 }
 
 bool X86TargetInfo::needsPltImpl(uint32_t Type, const SymbolBody &S) const {
-  if (isGnuIFunc<ELF32LE>(S) ||
-      (Type == R_386_PLT32 && canBePreempted(&S, true)))
-    return true;
-  return false;
+  return Type == R_386_PLT32 && canBePreempted(&S, true);
 }
 
 bool X86TargetInfo::isGotRelative(uint32_t Type) const {
@@ -751,11 +751,6 @@ bool X86_64TargetInfo::isTlsDynRel(unsigned Type, const SymbolBody &S) const {
 }
 
 bool X86_64TargetInfo::needsPltImpl(uint32_t Type, const SymbolBody &S) const {
-  if (needsCopyRel<ELF64LE>(Type, S))
-    return false;
-  if (isGnuIFunc<ELF64LE>(S))
-    return true;
-
   switch (Type) {
   default:
     return Plt_No;
@@ -1336,8 +1331,6 @@ bool AArch64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
 }
 
 bool AArch64TargetInfo::needsPltImpl(uint32_t Type, const SymbolBody &S) const {
-  if (isGnuIFunc<ELF64LE>(S))
-    return true;
   switch (Type) {
   default:
     return false;
@@ -1700,25 +1693,24 @@ void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsCopyRelImpl(uint32_t Type) const {
-  return Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type);
+  return !isRelRelative(Type);
 }
 
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsGot(uint32_t Type, SymbolBody &S) const {
-  return needsPlt<ELFT>(Type, S) || Type == R_MIPS_GOT16 ||
-         Type == R_MIPS_CALL16;
+  return needsPlt<ELFT>(Type, S) || refersToGotEntry(Type);
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::refersToGotEntry(uint32_t Type) const {
+  return Type == R_MIPS_GOT16 || Type == R_MIPS_CALL16;
 }
 
 template <class ELFT>
 bool MipsTargetInfo<ELFT>::needsPltImpl(uint32_t Type,
                                         const SymbolBody &S) const {
-  if (needsCopyRel<ELFT>(Type, S))
-    return false;
   if (Type == R_MIPS_26 && canBePreempted(&S, false))
     return true;
-  if (Type == R_MIPS_HI16 || Type == R_MIPS_LO16 || isRelRelative(Type))
-    if (S.isShared())
-      return true;
   return false;
 }
 
@@ -1826,15 +1818,13 @@ template <class ELFT>
 bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
   switch (Type) {
   default:
-    return false;
-  case R_MIPS_PC16:
-  case R_MIPS_PC19_S2:
-  case R_MIPS_PC21_S2:
-  case R_MIPS_PC26_S2:
-  case R_MIPS_PC32:
-  case R_MIPS_PCHI16:
-  case R_MIPS_PCLO16:
     return true;
+  case R_MIPS_26:
+  case R_MIPS_32:
+  case R_MIPS_64:
+  case R_MIPS_HI16:
+  case R_MIPS_LO16:
+    return false;
   }
 }
 

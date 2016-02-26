@@ -7,6 +7,6 @@ google-build-namespaces
 
 Finds anonymous namespaces in headers.
 
-http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml?showone=Namespaces#Namespaces
+https://google.github.io/styleguide/cppguide.html#Namespaces
 
 Corresponding cpplint.py check name: 'build/namespaces'.

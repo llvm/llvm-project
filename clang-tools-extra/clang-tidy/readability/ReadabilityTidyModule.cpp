@@ -21,6 +21,7 @@
 #include "RedundantControlFlowCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
+#include "RedundantStringInitCheck.h"
 #include "SimplifyBooleanExprCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 
@@ -53,6 +54,8 @@ public:
         "readability-redundant-smartptr-get");
     CheckFactories.registerCheck<RedundantStringCStrCheck>(
         "readability-redundant-string-cstr");
+    CheckFactories.registerCheck<RedundantStringInitCheck>(
+        "readability-redundant-string-init");
     CheckFactories.registerCheck<SimplifyBooleanExprCheck>(
         "readability-simplify-boolean-expr");
     CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(

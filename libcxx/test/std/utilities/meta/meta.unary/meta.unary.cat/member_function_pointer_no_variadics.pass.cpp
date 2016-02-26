@@ -48,6 +48,8 @@ class Class
 {
 };
 
+struct incomplete_type;
+
 int main()
 {
     test_member_function_pointer<void (Class::*)()>();
@@ -73,4 +75,7 @@ int main()
     test_member_function_pointer<void (Class::*)(...) volatile>();
     test_member_function_pointer<void (Class::*)(int, ...) volatile>();
     test_member_function_pointer<void (Class::*)(int, char, ...) volatile>();
+
+//  LWG#2581
+    static_assert(!std::is_member_function_pointer<incomplete_type>::value, "");
 }

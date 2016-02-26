@@ -224,20 +224,9 @@ void DiagnosticScopFound::print(DiagnosticPrinter &DP) const {
 // ScopDetection.
 
 ScopDetection::ScopDetection() : FunctionPass(ID) {
-  if (!PollyUseRuntimeAliasChecks)
-    return;
-
   // Disable runtime alias checks if we ignore aliasing all together.
-  if (IgnoreAliasing) {
+  if (IgnoreAliasing)
     PollyUseRuntimeAliasChecks = false;
-    return;
-  }
-
-  if (AllowNonAffine) {
-    DEBUG(errs() << "WARNING: We disable runtime alias checks as non affine "
-                    "accesses are enabled.\n");
-    PollyUseRuntimeAliasChecks = false;
-  }
 }
 
 template <class RR, typename... Args>
@@ -462,13 +451,49 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
     return true;
 
   if (auto *II = dyn_cast<IntrinsicInst>(&CI))
-    return isValidIntrinsicInst(*II, Context);
+    if (isValidIntrinsicInst(*II, Context))
+      return true;
 
   Function *CalledFunction = CI.getCalledFunction();
 
   // Indirect calls are not supported.
   if (CalledFunction == 0)
     return false;
+
+  switch (AA->getModRefBehavior(CalledFunction)) {
+  case llvm::FMRB_UnknownModRefBehavior:
+    return false;
+  case llvm::FMRB_DoesNotAccessMemory:
+  case llvm::FMRB_OnlyReadsMemory:
+    // Implicitly disable delinearization since we have an unknown
+    // accesses with an unknown access function.
+    Context.HasUnknownAccess = true;
+    Context.AST.add(&CI);
+    return true;
+  case llvm::FMRB_OnlyReadsArgumentPointees:
+  case llvm::FMRB_OnlyAccessesArgumentPointees:
+    for (const auto &Arg : CI.arg_operands()) {
+      if (!Arg->getType()->isPointerTy())
+        continue;
+
+      // Bail if a pointer argument has a base address not known to
+      // ScalarEvolution. Note that a zero pointer is acceptable.
+      auto *ArgSCEV = SE->getSCEVAtScope(Arg, LI->getLoopFor(CI.getParent()));
+      if (ArgSCEV->isZero())
+        continue;
+
+      auto *BP = dyn_cast<SCEVUnknown>(SE->getPointerBase(ArgSCEV));
+      if (!BP)
+        return false;
+
+      // Implicitly disable delinearization since we have an unknown
+      // accesses with an unknown access function.
+      Context.HasUnknownAccess = true;
+    }
+
+    Context.AST.add(&CI);
+    return true;
+  }
 
   return false;
 }
@@ -795,6 +820,11 @@ bool ScopDetection::hasBaseAffineAccesses(
 }
 
 bool ScopDetection::hasAffineMemoryAccesses(DetectionContext &Context) const {
+  // TODO: If we have an unknown access and other non-affine accesses we do
+  //       not try to delinearize them for now.
+  if (Context.HasUnknownAccess && !Context.NonAffineAccesses.empty())
+    return AllowNonAffine;
+
   for (const SCEVUnknown *BasePointer : Context.NonAffineAccesses)
     if (!hasBaseAffineAccesses(Context, BasePointer)) {
       if (KeepGoing)

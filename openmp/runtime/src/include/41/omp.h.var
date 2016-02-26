@@ -62,6 +62,7 @@
     extern int    __KAI_KMPC_CONVENTION  omp_get_thread_limit        (void);
     extern int    __KAI_KMPC_CONVENTION  omp_get_max_active_levels   (void);
     extern void   __KAI_KMPC_CONVENTION  omp_get_schedule            (omp_sched_t *, int *);
+    extern int    __KAI_KMPC_CONVENTION  omp_get_max_task_priority   (void);
 
     /* lock API functions */
     typedef struct omp_lock_t {
@@ -151,6 +152,14 @@
     } omp_proc_bind_t;
 
     extern omp_proc_bind_t __KAI_KMPC_CONVENTION omp_get_proc_bind (void);
+
+    /* OpenMP 4.5 affinity API */
+    extern int  __KAI_KMPC_CONVENTION omp_get_num_places (void);
+    extern int  __KAI_KMPC_CONVENTION omp_get_place_num_procs (int);
+    extern void __KAI_KMPC_CONVENTION omp_get_place_proc_ids (int, int *);
+    extern int  __KAI_KMPC_CONVENTION omp_get_place_num (void);
+    extern int  __KAI_KMPC_CONVENTION omp_get_partition_num_places (void);
+    extern void __KAI_KMPC_CONVENTION omp_get_partition_place_nums (int *);
 
     extern void * __KAI_KMPC_CONVENTION  kmp_malloc  (size_t);
     extern void * __KAI_KMPC_CONVENTION  kmp_calloc  (size_t, size_t);

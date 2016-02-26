@@ -156,6 +156,9 @@ public:
     /// @brief The region has at least one store instruction.
     bool hasStores;
 
+    /// @brief Flag to indicate the region has at least one unknown access.
+    bool HasUnknownAccess;
+
     /// @brief The set of non-affine subregions in the region we analyze.
     NonAffineSubRegionSetTy NonAffineSubRegionSet;
 
@@ -172,7 +175,7 @@ public:
     /// @brief Initialize a DetectionContext from scratch.
     DetectionContext(Region &R, AliasAnalysis &AA, bool Verify)
         : CurRegion(R), AST(AA), Verifying(Verify), Log(&R), hasLoads(false),
-          hasStores(false) {}
+          hasStores(false), HasUnknownAccess(false) {}
 
     /// @brief Initialize a DetectionContext with the data from @p DC.
     DetectionContext(const DetectionContext &&DC)
@@ -181,7 +184,7 @@ public:
           Accesses(std::move(DC.Accesses)),
           NonAffineAccesses(std::move(DC.NonAffineAccesses)),
           ElementSize(std::move(DC.ElementSize)), hasLoads(DC.hasLoads),
-          hasStores(DC.hasStores),
+          hasStores(DC.hasStores), HasUnknownAccess(DC.HasUnknownAccess),
           NonAffineSubRegionSet(std::move(DC.NonAffineSubRegionSet)),
           BoxedLoopsSet(std::move(DC.BoxedLoopsSet)),
           RequiredILS(std::move(DC.RequiredILS)) {

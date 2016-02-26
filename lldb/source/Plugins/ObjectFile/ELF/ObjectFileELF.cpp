@@ -921,10 +921,14 @@ ObjectFileELF::SetLoadAddress (Target &target,
                 // Iterate through the object file sections to find all
                 // of the sections that have SHF_ALLOC in their flag bits.
                 SectionSP section_sp (section_list->GetSectionAtIndex (sect_idx));
-                // if (section_sp && !section_sp->IsThreadSpecific())
                 if (section_sp && section_sp->Test(SHF_ALLOC))
                 {
-                    lldb::addr_t load_addr = section_sp->GetFileAddress() + value;
+                    lldb::addr_t load_addr = section_sp->GetFileAddress();
+                    // We don't want to update the load address of a section with type
+                    // eSectionTypeAbsoluteAddress as they already have the absolute load address
+                    // already specified
+                    if (section_sp->GetType() != eSectionTypeAbsoluteAddress)
+                        load_addr += value;
 
                     // On 32-bit systems the load address have to fit into 4 bytes. The rest of
                     // the bytes are the overflow from the addition.
@@ -2058,6 +2062,8 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
 
     ArchSpec arch;
     GetArchitecture(arch);
+    ModuleSP module_sp(GetModule());
+    SectionList* module_section_list = module_sp ? module_sp->GetSectionList() : nullptr;
 
     // Local cache to avoid doing a FindSectionByName for each symbol. The "const char*" key must
     // came from a ConstString object so they can be compared by pointer
@@ -2083,9 +2089,9 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
 
         SectionSP symbol_section_sp;
         SymbolType symbol_type = eSymbolTypeInvalid;
-        Elf64_Half symbol_idx = symbol.st_shndx;
+        Elf64_Half section_idx = symbol.st_shndx;
 
-        switch (symbol_idx)
+        switch (section_idx)
         {
         case SHN_ABS:
             symbol_type = eSymbolTypeAbsolute;
@@ -2094,7 +2100,7 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
             symbol_type = eSymbolTypeUndefined;
             break;
         default:
-            symbol_section_sp = section_list->GetSectionAtIndex(symbol_idx);
+            symbol_section_sp = section_list->GetSectionAtIndex(section_idx);
             break;
         }
 
@@ -2278,30 +2284,44 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
             }
         }
 
-        // symbol_value_offset may contain 0 for ARM symbols or -1 for
-        // THUMB symbols. See above for more details.
+        // symbol_value_offset may contain 0 for ARM symbols or -1 for THUMB symbols. See above for
+        // more details.
         uint64_t symbol_value = symbol.st_value + symbol_value_offset;
+
+        if (symbol_section_sp == nullptr && section_idx == SHN_ABS && symbol.st_size != 0)
+        {
+            // We don't have a section for a symbol with non-zero size. Create a new section for it
+            // so the address range covered by the symbol is also covered by the module (represented
+            // through the section list). It is needed so module lookup for the addresses covered
+            // by this symbol will be successfull. This case happens for absolute symbols.
+            ConstString fake_section_name(std::string(".absolute.") + symbol_name);
+            symbol_section_sp = std::make_shared<Section>(module_sp,
+                                                          this,
+                                                          SHN_ABS,
+                                                          fake_section_name,
+                                                          eSectionTypeAbsoluteAddress,
+                                                          symbol_value,
+                                                          symbol.st_size,
+                                                          0, 0, 0,
+                                                          SHF_ALLOC);
+
+            module_section_list->AddSection(symbol_section_sp);
+            section_list->AddSection(symbol_section_sp);
+        }
+
         if (symbol_section_sp && CalculateType() != ObjectFile::Type::eTypeObjectFile)
             symbol_value -= symbol_section_sp->GetFileAddress();
 
-        if (symbol_section_sp)
+        if (symbol_section_sp && module_section_list && module_section_list != section_list)
         {
-            ModuleSP module_sp(GetModule());
-            if (module_sp)
-            {
-                SectionList *module_section_list = module_sp->GetSectionList();
-                if (module_section_list && module_section_list != section_list)
-                {
-                    const ConstString &sect_name = symbol_section_sp->GetName();
-                    auto section_it = section_name_to_section.find(sect_name.GetCString());
-                    if (section_it == section_name_to_section.end())
-                        section_it = section_name_to_section.emplace(
-                            sect_name.GetCString(),
-                            module_section_list->FindSectionByName (sect_name)).first;
-                    if (section_it->second && section_it->second->GetFileSize())
-                        symbol_section_sp = section_it->second;
-                }
-            }
+            const ConstString &sect_name = symbol_section_sp->GetName();
+            auto section_it = section_name_to_section.find(sect_name.GetCString());
+            if (section_it == section_name_to_section.end())
+                section_it = section_name_to_section.emplace(
+                    sect_name.GetCString(),
+                    module_section_list->FindSectionByName (sect_name)).first;
+            if (section_it->second && section_it->second->GetFileSize())
+                symbol_section_sp = section_it->second;
         }
 
         bool is_global = symbol.getBinding() == STB_GLOBAL;

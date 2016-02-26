@@ -338,10 +338,9 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     Errors.push_back(ClangTidyError(CheckName, Level, IsWarningAsError));
   }
 
-  // FIXME: Provide correct LangOptions for each file.
-  LangOptions LangOpts;
   ClangTidyDiagnosticRenderer Converter(
-      LangOpts, &Context.DiagEngine->getDiagnosticOptions(), Errors.back());
+      Context.getLangOpts(), &Context.DiagEngine->getDiagnosticOptions(),
+      Errors.back());
   SmallString<100> Message;
   Info.FormatDiagnostic(Message);
   SourceManager *Sources = nullptr;

@@ -1388,6 +1388,7 @@ ObjectFileMachO::GetAddressClass (lldb::addr_t file_addr)
                     case eSectionTypeCompactUnwind:
                         return eAddressClassRuntime;
 
+                    case eSectionTypeAbsoluteAddress:
                     case eSectionTypeELFSymbolTable:
                     case eSectionTypeELFDynamicSymbols:
                     case eSectionTypeELFRelocationEntries:
@@ -5119,6 +5120,7 @@ ObjectFileMachO::GetEntryPointAddress ()
                         start_address = text_segment_sp->GetFileAddress() + entryoffset;
                     }
                 }
+                break;
 
             default:
                 break;

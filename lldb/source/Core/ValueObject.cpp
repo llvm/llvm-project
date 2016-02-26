@@ -2797,6 +2797,7 @@ ValueObject::GetValueForExpressionPath_Impl(const char* expression_cstr,
                 }
                 expression_cstr++; // skip the -
             }
+            LLVM_FALLTHROUGH;
             case '.': // or fallthrough from ->
             {
                 if (options.m_check_dot_vs_arrow_syntax && *expression_cstr == '.' &&

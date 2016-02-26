@@ -226,7 +226,10 @@ void elf2::ObjectFile<ELFT>::initializeSections(
         continue;
       if (!RelocatedSection)
         fatal("Unsupported relocation reference");
-      if (auto *S = dyn_cast<InputSection<ELFT>>(RelocatedSection)) {
+      if (Config->Relocatable) {
+        // For -r, relocation sections are handled as regular input sections.
+        Sections[I] = new (Alloc) InputSection<ELFT>(this, &Sec);
+      } else if (auto *S = dyn_cast<InputSection<ELFT>>(RelocatedSection)) {
         S->RelocSections.push_back(&Sec);
       } else if (auto *S = dyn_cast<EHInputSection<ELFT>>(RelocatedSection)) {
         if (S->RelocSection)
@@ -288,7 +291,10 @@ elf2::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
     return nullptr;
   if (Index >= Sections.size() || !Sections[Index])
     fatal("Invalid section index");
-  return Sections[Index];
+  InputSectionBase<ELFT> *S = Sections[Index];
+  if (S == InputSectionBase<ELFT>::Discarded)
+    return S;
+  return S->Repl;
 }
 
 template <class ELFT>
@@ -447,10 +453,12 @@ void BitcodeFile::parse() {
     Sym.printName(OS);
     StringRef NameRef = Saver.save(StringRef(Name));
     SymbolBody *Body;
-    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+    uint32_t Flags = Sym.getFlags();
+    if (Flags & BasicSymbolRef::SF_Undefined)
       Body = new (Alloc) Undefined(NameRef, false, STV_DEFAULT, false);
     else
-      Body = new (Alloc) DefinedBitcode(NameRef);
+      Body =
+          new (Alloc) DefinedBitcode(NameRef, Flags & BasicSymbolRef::SF_Weak);
     SymbolBodies.push_back(Body);
   }
 }

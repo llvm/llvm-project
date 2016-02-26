@@ -202,7 +202,13 @@ namespace lldb_private {
         {
             m_entries.push_back (entry);
         }
-        
+
+        void
+        Append (B base, S size)
+        {
+            m_entries.emplace_back(base, size);
+        }
+
         bool
         RemoveEntrtAtIndex (uint32_t idx)
         {
@@ -471,7 +477,13 @@ namespace lldb_private {
         {
             m_entries.push_back (entry);
         }
-        
+
+        void
+        Append (B base, S size)
+        {
+            m_entries.emplace_back(base, size);
+        }
+
         bool
         RemoveEntrtAtIndex (uint32_t idx)
         {

@@ -6,7 +6,7 @@
 .global foo
 foo:
 
-.section bar,"a"
+.section .bar,"a"
 zed:
 
 // CHECK:      Name: .strtab

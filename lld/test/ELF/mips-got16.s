@@ -10,17 +10,21 @@
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: __start:
 # CHECK-NEXT:    10000:       8f 88 80 18     lw      $8, -32744($gp)
-# CHECK-NEXT:    10004:       21 08 00 1c     addi    $8, $8, 28
+# CHECK-NEXT:    10004:       21 08 00 2c     addi    $8, $8, 44
 # CHECK-NEXT:    10008:       8f 88 80 1c     lw      $8, -32740($gp)
-# CHECK-NEXT:    1000c:       21 08 00 00     addi    $8, $8, 0
+# CHECK-NEXT:    1000c:       21 08 90 00     addi    $8, $8, -28672
 # CHECK-NEXT:    10010:       8f 88 80 20     lw      $8, -32736($gp)
-# CHECK-NEXT:    10014:       21 08 00 04     addi    $8, $8, 4
-# CHECK-NEXT:    10018:       8f 88 80 24     lw      $8, -32732($gp)
+# CHECK-NEXT:    10014:       21 08 90 04     addi    $8, $8, -28668
+# CHECK-NEXT:    10018:       8f 88 80 20     lw      $8, -32736($gp)
+# CHECK-NEXT:    1001c:       21 08 10 04     addi    $8, $8, 4100
+# CHECK-NEXT:    10020:       8f 88 80 24     lw      $8, -32732($gp)
+# CHECK-NEXT:    10024:       21 08 10 08     addi    $8, $8, 4104
+# CHECK-NEXT:    10028:       8f 88 80 2c     lw      $8, -32724($gp)
 #
 # CHECK: SYMBOL TABLE:
-# CHECK: 0001001c         .text           00000000 $LC0
-# CHECK: 00030000         .data           00000000 $LC1
-# CHECK: 00030004         .data           00000000 .hidden bar
+# CHECK: 0001002c         .text           00000000 $LC0
+# CHECK: 00039000         .data           00000000 $LC1
+# CHECK: 00051008         .data           00000000 .hidden bar
 # CHECK: 00000000         *UND*           00000000 foo
 
 # GOT:      Relocations [
@@ -47,22 +51,38 @@
 # GOT-NEXT:       Address: 0x20008
 # GOT-NEXT:       Access: -32744
 # GOT-NEXT:       Initial: 0x10000
+#                          ^-- (0x1002c + 0x8000) & ~0xffff
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
 # GOT-NEXT:       Address: 0x2000C
 # GOT-NEXT:       Access: -32740
-# GOT-NEXT:       Initial: 0x30000
+# GOT-NEXT:       Initial: 0x40000
+#                          ^-- (0x39000 + 0x8000) & ~0xffff
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
 # GOT-NEXT:       Address: 0x20010
 # GOT-NEXT:       Access: -32736
-# GOT-NEXT:       Initial: 0x30004
+# GOT-NEXT:       Initial: 0x50000
+#                          ^-- (0x39000 + 0x10004 + 0x8000) & ~0xffff
+#                          ^-- (0x39000 + 0x18004 + 0x8000) & ~0xffff
+# GOT-NEXT:     }
+# GOT-NEXT:     Entry {
+# GOT-NEXT:       Address: 0x20014
+# GOT-NEXT:       Access: -32732
+# GOT-NEXT:       Initial: 0x51008
+#                          ^-- 'bar' address
+# GOT-NEXT:     }
+# GOT-NEXT:     Entry {
+# GOT-NEXT:       Address: 0x20018
+# GOT-NEXT:       Access: -32728
+# GOT-NEXT:       Initial: 0x0
+#                          ^-- redundant unused entry
 # GOT-NEXT:     }
 # GOT-NEXT:   ]
 # GOT-NEXT:   Global entries [
 # GOT-NEXT:     Entry {
-# GOT-NEXT:       Address: 0x20014
-# GOT-NEXT:       Access: -32732
+# GOT-NEXT:       Address: 0x2001C
+# GOT-NEXT:       Access: -32724
 # GOT-NEXT:       Initial: 0x0
 # GOT-NEXT:       Value: 0x0
 # GOT-NEXT:       Type: None
@@ -80,6 +100,10 @@ __start:
   addi    $t0,$t0,%lo($LC0)
   lw      $t0,%got($LC1)($gp)
   addi    $t0,$t0,%lo($LC1)
+  lw      $t0,%got($LC1+0x10004)($gp)
+  addi    $t0,$t0,%lo($LC1+0x10004)
+  lw      $t0,%got($LC1+0x18004)($gp)
+  addi    $t0,$t0,%lo($LC1+0x18004)
   lw      $t0,%got(bar)($gp)
   addi    $t0,$t0,%lo(bar)
   lw      $t0,%got(foo)($gp)
@@ -87,7 +111,10 @@ $LC0:
   nop
 
   .data
+  .space 0x9000
 $LC1:
+  .word 0
+  .space 0x18000
   .word 0
 .global bar
 .hidden bar

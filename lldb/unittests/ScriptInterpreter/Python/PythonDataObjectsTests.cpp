@@ -209,14 +209,13 @@ TEST_F(PythonDataObjectsTest, TestPythonBytes)
     PyObject *py_bytes = PyBytes_FromString(test_bytes);
     EXPECT_TRUE(PythonBytes::Check(py_bytes));
     PythonBytes python_bytes(PyRefType::Owned, py_bytes);
-    EXPECT_EQ(PyObjectType::Bytes, python_bytes.GetObjectType());
 
 #if PY_MAJOR_VERSION < 3
     EXPECT_TRUE(PythonString::Check(py_bytes));
     EXPECT_EQ(PyObjectType::String, python_bytes.GetObjectType());
 #else
     EXPECT_FALSE(PythonString::Check(py_bytes));
-    EXPECT_NE(PyObjectType::String, python_bytes.GetObjectType());
+    EXPECT_EQ(PyObjectType::Bytes, python_bytes.GetObjectType());
 #endif
 
     llvm::ArrayRef<uint8_t> bytes = python_bytes.GetBytes();

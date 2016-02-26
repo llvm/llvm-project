@@ -675,9 +675,8 @@ Value *VectorBlockGenerator::generateStrideOneLoad(
   Type *VectorPtrType = getVectorPtrTy(Pointer, VectorWidth);
   unsigned Offset = NegativeStride ? VectorWidth - 1 : 0;
 
-  Value *NewPointer = nullptr;
-  NewPointer = generateLocationAccessed(Stmt, Load, ScalarMaps[Offset],
-                                        VLTS[Offset], NewAccesses);
+  Value *NewPointer = generateLocationAccessed(Stmt, Load, ScalarMaps[Offset],
+                                               VLTS[Offset], NewAccesses);
   Value *VectorPtr =
       Builder.CreateBitCast(NewPointer, VectorPtrType, "vector_ptr");
   LoadInst *VecLoad =
@@ -1027,6 +1026,50 @@ BasicBlock *RegionGenerator::repairDominance(BasicBlock *BB,
   return BBCopyIDom;
 }
 
+// This is to determine whether an llvm::Value (defined in @p BB) is usable when
+// leaving a subregion. The straight-forward DT.dominates(BB, R->getExitBlock())
+// does not work in cases where the exit block has edges from outside the
+// region. In that case the llvm::Value would never be usable in in the exit
+// block. The RegionGenerator however creates an new exit block ('ExitBBCopy')
+// for the subregion's exiting edges only. We need to determine whether an
+// llvm::Value is usable in there. We do this by checking whether it dominates
+// all exiting blocks individually.
+static bool isDominatingSubregionExit(const DominatorTree &DT, Region *R,
+                                      BasicBlock *BB) {
+  for (auto ExitingBB : predecessors(R->getExit())) {
+    // Check for non-subregion incoming edges.
+    if (!R->contains(ExitingBB))
+      continue;
+
+    if (!DT.dominates(BB, ExitingBB))
+      return false;
+  }
+
+  return true;
+}
+
+// Find the direct dominator of the subregion's exit block if the subregion was
+// simplified.
+static BasicBlock *findExitDominator(DominatorTree &DT, Region *R) {
+  BasicBlock *Common = nullptr;
+  for (auto ExitingBB : predecessors(R->getExit())) {
+    // Check for non-subregion incoming edges.
+    if (!R->contains(ExitingBB))
+      continue;
+
+    // First exiting edge.
+    if (!Common) {
+      Common = ExitingBB;
+      continue;
+    }
+
+    Common = DT.findNearestCommonDominator(Common, ExitingBB);
+  }
+
+  assert(Common && R->contains(Common));
+  return Common;
+}
+
 void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
                                isl_id_to_ast_expr *IdToAstExp) {
   assert(Stmt.isRegionStmt() &&
@@ -1119,7 +1162,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
         Blocks.push_back(*SI);
 
     // Remember value in case it is visible after this subregion.
-    if (DT.dominates(BB, ExitBB))
+    if (isDominatingSubregionExit(DT, R, BB))
       ValueMap.insert(RegionMap.begin(), RegionMap.end());
   }
 
@@ -1129,10 +1172,10 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   ExitBBCopy->setName("polly.stmt." + R->getExit()->getName() + ".exit");
   BlockMap[R->getExit()] = ExitBBCopy;
 
-  if (ExitBB == R->getExit())
-    repairDominance(ExitBB, ExitBBCopy);
-  else
-    DT.changeImmediateDominator(ExitBBCopy, BlockMap.lookup(ExitBB));
+  BasicBlock *ExitDomBBCopy = BlockMap.lookup(findExitDominator(DT, R));
+  assert(ExitDomBBCopy && "Common exit dominator must be within region; at "
+                          "least the entry node must match");
+  DT.changeImmediateDominator(ExitBBCopy, ExitDomBBCopy);
 
   // As the block generator doesn't handle control flow we need to add the
   // region control flow by hand after all blocks have been copied.

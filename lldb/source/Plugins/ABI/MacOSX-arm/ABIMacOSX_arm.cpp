@@ -843,6 +843,7 @@ ABIMacOSX_arm::RegisterIsVolatile (const RegisterInfo *reg_info)
                     default:
                         break;
                     }
+                    break;
                 case '4':
                 case '5':
                 case '6':
@@ -878,30 +879,14 @@ ABIMacOSX_arm::RegisterIsVolatile (const RegisterInfo *reg_info)
                     break;
 
                 case '2':
-                    switch (name[2])
-                    {
-                    case '\0':
-                        return true; // s2 is volatile
-                    default:
-                        break;
-                    }
-                    break;
-
                 case '3':
-                    switch (name[2])
-                    {
-                    case '\0':
-                        return true; // s3 is volatile
-                    default:
-                        break;
-                    }
                 case '4':
                 case '5':
                 case '6':
                 case '7':
                 case '8':
                 case '9':
-                    return name[2] == '\0'; // s4 - s9 are volatile
+                    return name[2] == '\0'; // s2 - s9 are volatile
 
                 default:
                     break;
@@ -926,7 +911,8 @@ ABIMacOSX_arm::RegisterIsVolatile (const RegisterInfo *reg_info)
                         default:
                             break;
                     };
-                case '0': 
+                    break;
+                case '0':
                 case '2': 
                 case '3': 
                     return name[2] == '\0'; // q0-q3 are volatile

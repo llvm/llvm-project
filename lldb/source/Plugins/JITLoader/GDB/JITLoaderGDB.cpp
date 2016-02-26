@@ -340,7 +340,9 @@ JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries)
 
             if (module_sp && module_sp->GetObjectFile())
             {
-                bool changed;
+                // load the symbol table right away
+                module_sp->GetObjectFile()->GetSymtab();
+
                 m_jit_objects.insert(std::make_pair(symbolfile_addr, module_sp));
                 if (module_sp->GetObjectFile()->GetPluginName() == ConstString("mach-o"))
                 {
@@ -360,11 +362,9 @@ JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries)
                 }
                 else
                 {
+                    bool changed = false;
                     module_sp->SetLoadAddress(target, 0, true, changed);
                 }
-
-                // load the symbol table right away
-                module_sp->GetObjectFile()->GetSymtab();
 
                 module_list.AppendIfNeeded(module_sp);
 

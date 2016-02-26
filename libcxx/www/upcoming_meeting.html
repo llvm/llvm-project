@@ -70,7 +70,7 @@
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2545">2545</a></td><td>Simplify wording for <tt>bind</tt> without explicitly specified return type</td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2557">2557</a></td><td>Logical operator traits are broken in the zero-argument case</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2558">2558</a></td><td>[fund.ts.v2] Logical operator traits are broken in the zero-argument case</td><td>Jacksonville</td><td>Complete</td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2559">2559</a></td><td>Error in LWG 2234's resolution</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2559">2559</a></td><td>Error in LWG 2234's resolution</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2560">2560</a></td><td><tt>is_constructible</tt> underspecified when applied to a function type</td><td>Jacksonville</td><td>Broken in 3.6; See r261653.</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2565">2565</a></td><td><tt>std::function</tt>'s move constructor should guarantee nothrow for <tt>reference_wrapper</tt>s and function pointers</td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2566">2566</a></td><td>Requirements on the first template parameter of container adaptors</td><td>Jacksonville</td><td></td></tr>
@@ -81,8 +81,8 @@
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2576">2576</a></td><td><tt>istream_iterator</tt> and <tt>ostream_iterator</tt> should use <tt>std::addressof</tt></td><td>Jacksonville</td><td>Patch done; needs tests</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2577">2577</a></td><td><tt>{shared,unique}_lock</tt> should use <tt>std::addressof</tt></td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2579">2579</a></td><td>Inconsistency wrt Allocators in <tt>basic_string</tt> assignment vs. <tt>basic_string::assign</tt></td><td>Jacksonville</td><td><i>Patch Ready</i></td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2581">2581</a></td><td>Specialization of <tt>&lt;type_traits&gt;</tt> variable templates should be prohibited</td><td>Jacksonville</td><td></td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2582">2582</a></td><td>&sect;[res.on.functions]/2's prohibition against incomplete types shouldn't apply to type traits</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2581">2581</a></td><td>Specialization of <tt>&lt;type_traits&gt;</tt> variable templates should be prohibited</td><td>Jacksonville</td><td>Complete</td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2582">2582</a></td><td>&sect;[res.on.functions]/2's prohibition against incomplete types shouldn't apply to type traits</td><td>Jacksonville</td><td>In Progress</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2583">2583</a></td><td>There is no way to supply an allocator for <tt>basic_string(str, pos)</tt></td><td>Jacksonville</td><td><i>Patch Ready</i></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2585">2585</a></td><td><tt>forward_list::resize(size_type, const value_type&amp;)</tt> effects incorrect</td><td>Jacksonville</td><td>Disputed</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2586">2586</a></td><td>Wrong value category used in <tt>scoped_allocator_adaptor::construct()</tt></td><td>Jacksonville</td><td></td></tr>
@@ -104,7 +104,7 @@
 <li>2545 - </li>
 <li>2557 - Cleaning up wording; no code change required.</li>
 <li>2558 - Cleaning up wording; no code change required.</li>
-<li>2559 - </li>
+<li>2559 - Cleaning up wording; no code change required.</li>
 <li>2560 - We already do this; added tests in r261653. <i>More: the new tests fail on green-dragon-09, so I reverted it. Will recommit after green-dragon bots are updated. Probably need to XFAIL for clang3-6 as well (arm bots)</i></li>
 <li>2565 - </li>
 <li>2566 - </li>
@@ -115,11 +115,11 @@
 <li>2576 - This one is simple, but testing it will be hard. I tried making a sublass of istringstream, but it got sliced.</li>
 <li>2577 - This one is simple</li>
 <li>2579 - <i>Done</i></li>
-<li>2581 - </li>
-<li>2582 - </li>
+<li>2581 - Nothing to do here.</li>
+<li>2582 - I've added tests to meta.unary.cat; no code changes needed yet.</li>
 <li>2583 - <i>Done</i></li>
 <li>2585 - This looks easy; but Alisdair wants to NAD this issue.</li>
-<li>2586 - </li>
+<li>2586 - We need to fix <a href="http:/llvm.org/PR24075">PR24075</a> when we do this.</li>
 <li>2590 - We already do this; added tests in r261648.</li>
 </ul>
 

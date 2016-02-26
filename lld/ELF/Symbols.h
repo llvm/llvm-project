@@ -190,7 +190,7 @@ public:
 
 class DefinedBitcode : public Defined {
 public:
-  DefinedBitcode(StringRef Name);
+  DefinedBitcode(StringRef Name, bool IsWeak);
   static bool classof(const SymbolBody *S);
 };
 
@@ -221,15 +221,26 @@ public:
   DefinedRegular(StringRef N, const Elf_Sym &Sym,
                  InputSectionBase<ELFT> *Section)
       : DefinedElf<ELFT>(SymbolBody::DefinedRegularKind, N, Sym),
-        Section(Section) {}
+        Section(Section ? Section->Repl : NullInputSection) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedRegularKind;
   }
 
-  // If this is null, the symbol is absolute.
-  InputSectionBase<ELFT> *Section;
+  // The input section this symbol belongs to. Notice that this is
+  // a reference to a pointer. We are using two levels of indirections
+  // because of ICF. If ICF decides two sections need to be merged, it
+  // manipulates this Section pointers so that they point to the same
+  // section. This is a bit tricky, so be careful to not be confused.
+  // If this is null, the symbol is an absolute symbol.
+  InputSectionBase<ELFT> *&Section;
+
+private:
+  static InputSectionBase<ELFT> *NullInputSection;
 };
+
+template <class ELFT>
+InputSectionBase<ELFT> *DefinedRegular<ELFT>::NullInputSection;
 
 // DefinedSynthetic is a class to represent linker-generated ELF symbols.
 // The difference from the regular symbol is that DefinedSynthetic symbols

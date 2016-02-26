@@ -1257,6 +1257,7 @@ cores_match (const ArchSpec::Core core1, const ArchSpec::Core core2, bool try_in
                 return true;
             try_inverse = false;
         }
+        break;
 
     case ArchSpec::eCore_mips64:
         if (!enforce_exact_match)
@@ -1267,6 +1268,7 @@ cores_match (const ArchSpec::Core core1, const ArchSpec::Core core2, bool try_in
                 return true;
             try_inverse = false;
         }
+        break;
 
     case ArchSpec::eCore_mips64el:
         if (!enforce_exact_match)
@@ -1277,6 +1279,7 @@ cores_match (const ArchSpec::Core core1, const ArchSpec::Core core2, bool try_in
                 return true;
             try_inverse = false;
         }
+        break;
 
     case ArchSpec::eCore_mips64r2:
     case ArchSpec::eCore_mips64r3:

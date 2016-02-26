@@ -63,10 +63,12 @@ struct Configuration {
   bool ExportDynamic;
   bool GcSections;
   bool GnuHash = false;
+  bool ICF;
   bool Mips64EL = false;
   bool NoInhibitExec;
   bool NoUndefined;
   bool PrintGcSections;
+  bool Relocatable;
   bool Shared;
   bool Static = false;
   bool StripAll;

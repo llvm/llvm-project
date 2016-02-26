@@ -648,6 +648,7 @@ ABISysV_arm64::RegisterIsVolatile (const RegisterInfo *reg_info)
                 case '3':                             // x30 (lr) and x31 (sp) treat as non-volatile
                     if (name[2] == '0' || name[2] == '1')
                       return false;
+                    break;
                 default:
                     return true;                      // all volatile cases not handled above fall here.
             }

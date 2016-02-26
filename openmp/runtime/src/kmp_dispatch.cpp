@@ -656,6 +656,14 @@ __kmp_dispatch_init(
             ( &team -> t.t_disp_buffer[ my_buffer_index % KMP_MAX_DISP_BUF ] );
     }
 
+    /* Currently just ignore the monotonic and non-monotonic modifiers (the compiler isn't producing them
+     * yet anyway).
+     * When it is we'll want to look at them somewhere here and use that information to add to our
+     * schedule choice. We shouldn't need to pass them on, they merely affect which schedule we can
+     * legally choose for various dynamic cases. (In paritcular, whether or not a stealing scheme is legal).
+     */
+    schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
+
     /* Pick up the nomerge/ordered bits from the scheduling type */
     if ( (schedule >= kmp_nm_lower) && (schedule < kmp_nm_upper) ) {
         pr->nomerge = TRUE;

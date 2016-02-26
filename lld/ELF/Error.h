@@ -22,6 +22,7 @@ namespace elf2 {
 extern bool HasError;
 extern llvm::raw_ostream *ErrorOS;
 
+void log(const Twine &Msg);
 void warning(const Twine &Msg);
 
 void error(const Twine &Msg);

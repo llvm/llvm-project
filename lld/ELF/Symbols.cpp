@@ -42,6 +42,7 @@ typename ELFFile<ELFT>::uintX_t SymbolBody::getVA() const {
     // This is an absolute symbol.
     if (!SC)
       return D->Sym.st_value;
+    assert(SC->Live);
 
     // Symbol offsets for AMDGPU need to be the offset in bytes of the symbol
     // from the beginning of the section.
@@ -161,8 +162,8 @@ Defined::Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
                  bool IsTls, bool IsFunction)
     : SymbolBody(K, Name, IsWeak, Visibility, IsTls, IsFunction) {}
 
-DefinedBitcode::DefinedBitcode(StringRef Name)
-    : Defined(DefinedBitcodeKind, Name, false, STV_DEFAULT, false, false) {}
+DefinedBitcode::DefinedBitcode(StringRef Name, bool IsWeak)
+    : Defined(DefinedBitcodeKind, Name, IsWeak, STV_DEFAULT, false, false) {}
 
 bool DefinedBitcode::classof(const SymbolBody *S) {
   return S->kind() == DefinedBitcodeKind;

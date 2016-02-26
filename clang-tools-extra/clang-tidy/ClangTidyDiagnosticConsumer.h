@@ -151,7 +151,7 @@ public:
   void setASTContext(ASTContext *Context);
 
   /// \brief Gets the language options from the AST context.
-  LangOptions getLangOpts() const { return LangOpts; }
+  const LangOptions &getLangOpts() const { return LangOpts; }
 
   /// \brief Returns the name of the clang-tidy check which produced this
   /// diagnostic ID.

@@ -1625,6 +1625,7 @@ CommandInterpreter::PreprocessCommand (std::string &command)
                                     break;
                                 case eExpressionResultUnavailable:
                                     error.SetErrorStringWithFormat ("expression error fetching result for the expression '%s'", expr_str.c_str());
+                                    break;
                                 case eExpressionCompleted:
                                     break;
                                 case eExpressionDiscarded:
