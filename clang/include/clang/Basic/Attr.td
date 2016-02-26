@@ -668,7 +668,7 @@ def OpenCLUnrollHint : InheritableAttr {
 
 // This attribute is both a type attribute, and a declaration attribute (for
 // parameter variables).
-def OpenCLImageAccess : Attr {
+def OpenCLAccess : Attr {
   let Spellings = [Keyword<"__read_only">, Keyword<"read_only">,
                    Keyword<"__write_only">, Keyword<"write_only">,
                    Keyword<"__read_write">, Keyword<"read_write">];
@@ -679,7 +679,7 @@ def OpenCLImageAccess : Attr {
                                             Keyword<"read_write">]>,
                    Accessor<"isWriteOnly", [Keyword<"__write_only">,
                                             Keyword<"write_only">]>];
-  let Documentation = [Undocumented];
+  let Documentation = [OpenCLAccessDocs];
 }
 
 def OpenCLPrivateAddressSpace : TypeAttr {

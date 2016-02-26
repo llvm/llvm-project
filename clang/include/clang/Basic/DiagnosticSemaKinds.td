@@ -7768,6 +7768,14 @@ def err_opencl_builtin_pipe_invalid_arg : Error<
 def err_opencl_builtin_pipe_invalid_access_modifier : Error<
   "invalid pipe access modifier (expecting %0)">;
 
+// OpenCL access qualifier
+def err_opencl_invalid_access_qualifier : Error<
+  "access qualifier can only be used for pipe and image type">;
+def err_opencl_invalid_read_write : Error<
+  "access qualifier %0 can not be used for %1 %select{|earlier than OpenCL2.0 version}2">;
+def err_opencl_multiple_access_qualifiers : Error<
+  "multiple access qualifiers">;
+
 // OpenCL Section 6.8.g
 def err_opencl_unknown_type_specifier : Error<
   "OpenCL does not support the '%0' %select{type qualifier|storage class specifier}1">;

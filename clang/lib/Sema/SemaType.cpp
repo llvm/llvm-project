@@ -6249,6 +6249,17 @@ static void HandleNeonVectorTypeAttr(QualType& CurType,
   CurType = S.Context.getVectorType(CurType, numElts, VecKind);
 }
 
+/// Handle OpenCL Access Qualifier Attribute.
+static void HandleOpenCLAccessAttr(QualType &CurType, const AttributeList &Attr,
+                                   Sema &S) {
+  // OpenCL v2.0 s6.6 - Access qualifier can used only for image and pipe type.
+  if (!(CurType->isImageType() || CurType->isPipeType())) {
+    S.Diag(Attr.getLoc(), diag::err_opencl_invalid_access_qualifier);
+    Attr.setInvalid();
+    return;
+  }
+}
+
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL, AttributeList *attrs) {
   // Scan through and apply attributes to this type where it makes sense.  Some
@@ -6344,9 +6355,8 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                                VectorType::NeonPolyVector);
       attr.setUsedAsTypeAttr();
       break;
-    case AttributeList::AT_OpenCLImageAccess:
-      // FIXME: there should be some type checking happening here, I would
-      // imagine, but the original handler's checking was entirely superfluous.
+    case AttributeList::AT_OpenCLAccess:
+      HandleOpenCLAccessAttr(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
 
