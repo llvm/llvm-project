@@ -166,7 +166,7 @@ void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
   llvm::raw_string_ostream OS(Buf);
   if (IvarRegion) {
     OS << "use of instance variable '" << *IvarRegion->getDecl() <<
-          "' after the instance has been freed with call to [super dealloc]";
+          "' after 'self' has been deallocated";
     Desc = OS.str();
   }
 
@@ -189,7 +189,7 @@ void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
     return;
 
   if (Desc.empty())
-    Desc = "use of 'self' after it has been freed with call to [super dealloc]";
+    Desc = "use of 'self' after it has been deallocated";
 
   // Generate the report.
   std::unique_ptr<BugReport> BR(
