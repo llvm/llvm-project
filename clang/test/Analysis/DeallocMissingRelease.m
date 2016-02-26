@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks %s 2>&1 | FileCheck -check-prefix=CHECK %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks -triple x86_64-apple-darwin10 -fobjc-arc -fobjc-runtime-has-weak %s 2>&1 | FileCheck -check-prefix=CHECK-ARC -allow-empty '--implicit-check-not=error:' '--implicit-check-not=warning:' %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks -triple x86_64-apple-darwin10 -fobjc-arc -fobjc-runtime-has-weak -verify %s
 
 #define nil ((id)0)
 
@@ -11,6 +11,11 @@
 #define WEAK_ON_ARC __weak
 #endif
 
+// No diagnostics expected under ARC.
+#if !NON_ARC
+  // expected-no-diagnostics
+#endif
+
 typedef signed char BOOL;
 @protocol NSObject
 - (BOOL)isEqual:(id)object;
@@ -18,6 +23,7 @@ typedef signed char BOOL;
 @end
 
 @interface NSObject <NSObject> {}
++ (instancetype)alloc;
 - (void)dealloc;
 - (id)init;
 - (id)retain;
@@ -26,7 +32,6 @@ typedef signed char BOOL;
 
 typedef struct objc_selector *SEL;
 
-//===------------------------------------------------------------------------===
 // Do not warn about missing release in -dealloc for ivars.
 
 @interface MyIvarClass1 : NSObject {
@@ -87,11 +92,9 @@ typedef struct objc_selector *SEL;
 }
 @end
 
-//===------------------------------------------------------------------------===
 // Warn about missing release in -dealloc for properties.
 
 @interface MyPropertyClass1 : NSObject
-// CHECK: DeallocMissingRelease.m:[[@LINE+1]]:1: warning: The '_ivar' instance variable in 'MyPropertyClass1' was retained by a synthesized property but was not released in 'dealloc'
 @property (copy) NSObject *ivar;
 @end
 
@@ -99,13 +102,12 @@ typedef struct objc_selector *SEL;
 - (void)dealloc
 {
 #if NON_ARC
-  [super dealloc];
+  [super dealloc]; // expected-warning {{The '_ivar' ivar in 'MyPropertyClass1' was copied by a synthesized property but not released before '[super dealloc]'}}
 #endif
 }
 @end
 
 @interface MyPropertyClass2 : NSObject
-// CHECK: DeallocMissingRelease.m:[[@LINE+1]]:1: warning: The '_ivar' instance variable in 'MyPropertyClass2' was retained by a synthesized property but was not released in 'dealloc'
 @property (retain) NSObject *ivar;
 @end
 
@@ -113,7 +115,7 @@ typedef struct objc_selector *SEL;
 - (void)dealloc
 {
 #if NON_ARC
-  [super dealloc];
+  [super dealloc]; // expected-warning {{The '_ivar' ivar in 'MyPropertyClass2' was retained by a synthesized property but not released before '[super dealloc]'}}
 #endif
 }
 @end
@@ -125,14 +127,14 @@ typedef struct objc_selector *SEL;
 @end
 
 @implementation MyPropertyClass3
-// CHECK: DeallocMissingRelease.m:[[@LINE+1]]:1: warning: The '_ivar' instance variable in 'MyPropertyClass3' was retained by a synthesized property but was not released in 'dealloc'
 @synthesize ivar = _ivar;
 - (void)dealloc
 {
 #if NON_ARC
-  [super dealloc];
+  [super dealloc]; // expected-warning {{The '_ivar' ivar in 'MyPropertyClass3' was retained by a synthesized property but not released before '[super dealloc]'}}
 #endif
 }
+
 @end
 
 @interface MyPropertyClass4 : NSObject {
@@ -142,12 +144,11 @@ typedef struct objc_selector *SEL;
 @end
 
 @implementation MyPropertyClass4
-// CHECK: DeallocMissingRelease.m:[[@LINE+1]]:1: warning: The '_blockPropertyIvar' instance variable in 'MyPropertyClass4' was retained by a synthesized property but was not released in 'dealloc'
 @synthesize blockProperty = _blockPropertyIvar;
 - (void)dealloc
 {
 #if NON_ARC
-  [super dealloc];
+  [super dealloc]; // expected-warning {{The '_blockPropertyIvar' ivar in 'MyPropertyClass4' was copied by a synthesized property but not released before '[super dealloc]'}}
 #endif
 }
 @end
@@ -159,16 +160,77 @@ typedef struct objc_selector *SEL;
 @end
 
 @implementation MyPropertyClass5
-@synthesize ivar = _ivar; // no-warning
+@synthesize ivar = _ivar;
 - (void)dealloc
 {
 #if NON_ARC
+  [super dealloc]; // no-warning because it is a weak property
+#endif
+}
+@end
+
+@interface MyPropertyClassWithReturnInDealloc : NSObject {
+  NSObject *_ivar;
+}
+@property (retain) NSObject *ivar;
+@end
+
+@implementation MyPropertyClassWithReturnInDealloc
+@synthesize ivar = _ivar;
+- (void)dealloc
+{
+  return;
+#if NON_ARC
+  // expected-warning@-2{{The '_ivar' ivar in 'MyPropertyClassWithReturnInDealloc' was retained by a synthesized property but not released before '[super dealloc]'}}
   [super dealloc];
 #endif
 }
 @end
 
-//===------------------------------------------------------------------------===
+@interface MyPropertyClassWithReleaseInOtherInstance : NSObject {
+  NSObject *_ivar;
+  MyPropertyClassWithReleaseInOtherInstance *_other;
+}
+@property (retain) NSObject *ivar;
+
+-(void)releaseIvars;
+@end
+
+@implementation MyPropertyClassWithReleaseInOtherInstance
+@synthesize ivar = _ivar;
+
+-(void)releaseIvars; {
+#if NON_ARC
+  [_ivar release];
+#endif
+}
+
+- (void)dealloc
+{
+  [_other releaseIvars];
+#if NON_ARC
+  [super dealloc]; // expected-warning {{The '_ivar' ivar in 'MyPropertyClassWithReleaseInOtherInstance' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+}
+@end
+
+@interface MyPropertyClassWithNeitherReturnNorSuperDealloc : NSObject {
+  NSObject *_ivar;
+}
+@property (retain) NSObject *ivar;
+@end
+
+@implementation MyPropertyClassWithNeitherReturnNorSuperDealloc
+@synthesize ivar = _ivar;
+- (void)dealloc
+{
+}
+#if NON_ARC
+  // expected-warning@-2 {{method possibly missing a [super dealloc] call}} (From Sema)
+  // expected-warning@-3{{The '_ivar' ivar in 'MyPropertyClassWithNeitherReturnNorSuperDealloc' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+@end
+
 // <rdar://problem/6380411>: 'myproperty' has kind 'assign' and thus the
 //  assignment through the setter does not perform a release.
 
@@ -202,40 +264,78 @@ typedef struct objc_selector *SEL;
     // We really should warn because there is a path through -dealloc on which
     // _ivar2 is not released.
 #if NON_ARC
-    [_ivar2 release]; // no-warning
+    [_ivar2 release];
 #endif
   }
 
 #if NON_ARC
-  [super dealloc];
+  [super dealloc]; // expected-warning {{The '_ivar2' ivar in 'ClassWithControlFlowInRelease' was retained by a synthesized property but not released before '[super dealloc]'}}
 #endif
 }
-
 @end
 
-//===------------------------------------------------------------------------===
 // Don't warn when the property is nil'd out in -dealloc
 
 @interface ClassWithNildOutProperty : NSObject
-@property (retain) NSObject *ivar;  // no-warning
+@property (retain) NSObject *ivar;
+@property (assign) int *intPtrProp;
 @end
 
 @implementation ClassWithNildOutProperty
 - (void)dealloc; {
   self.ivar = nil;
 
+  // Make sure to handle setting a non-retainable property to 0.
+  self.intPtrProp = 0;
 #if NON_ARC
-  [super dealloc];
+  [super dealloc];  // no-warning
 #endif
 }
-
 @end
 
-//===------------------------------------------------------------------------===
+// Do warn when the ivar but not the property is nil'd out in -dealloc
+
+@interface ClassWithNildOutIvar : NSObject
+@property (retain) NSObject *ivar;
+@end
+
+@implementation ClassWithNildOutIvar
+- (void)dealloc; {
+  // Oops. Meant self.ivar = nil
+  _ivar = nil;
+
+#if NON_ARC
+  [super dealloc]; // expected-warning {{The '_ivar' ivar in 'ClassWithNildOutIvar' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+}
+@end
+
+// Do warn when the ivar is updated to a different value that is then
+// released.
+
+@interface ClassWithUpdatedIvar : NSObject
+@property (retain) NSObject *ivar;
+@end
+
+@implementation ClassWithUpdatedIvar
+- (void)dealloc; {
+  _ivar = [[NSObject alloc] init];
+
+#if NON_ARC
+  [_ivar release];
+#endif
+
+#if NON_ARC
+  [super dealloc]; // expected-warning {{The '_ivar' ivar in 'ClassWithUpdatedIvar' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+}
+@end
+
+
 // Don't warn when the property is nil'd out with a setter in -dealloc
 
 @interface ClassWithNildOutPropertyViaSetter : NSObject
-@property (retain) NSObject *ivar;  // no-warning
+@property (retain) NSObject *ivar;
 @end
 
 @implementation ClassWithNildOutPropertyViaSetter
@@ -243,10 +343,340 @@ typedef struct objc_selector *SEL;
   [self setIvar:nil];
 
 #if NON_ARC
-  [super dealloc];
+  [super dealloc];  // no-warning
+#endif
+}
+@end
+
+
+// Don't warn about missing releases when -dealloc helpers are called.
+
+@interface ClassWithDeallocHelpers : NSObject
+@property (retain) NSObject *ivarReleasedInMethod;
+@property (retain) NSObject *propNilledOutInMethod;
+
+@property (retain) NSObject *ivarReleasedInFunction;
+@property (retain) NSObject *propNilledOutInFunction;
+
+@property (retain) NSObject *ivarNeverReleased;
+- (void)invalidateInMethod;
+@end
+
+void ReleaseValueHelper(NSObject *iv) {
+#if NON_ARC
+  [iv release];
 #endif
 }
 
+void NilOutPropertyHelper(ClassWithDeallocHelpers *o) {
+  o.propNilledOutInFunction = nil;
+}
+
+@implementation ClassWithDeallocHelpers
+- (void)invalidateInMethod {
+#if NON_ARC
+  [_ivarReleasedInMethod release];
+#endif
+  self.propNilledOutInMethod = nil;
+}
+
+- (void)dealloc; {
+  ReleaseValueHelper(_ivarReleasedInFunction);
+  NilOutPropertyHelper(self);
+
+  [self invalidateInMethod];
+#if NON_ARC
+  [super dealloc]; // expected-warning {{The '_ivarNeverReleased' ivar in 'ClassWithDeallocHelpers' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+}
 @end
 
-// CHECK: 4 warnings generated.
+
+// Don't warn when self in -dealloc escapes.
+
+@interface ClassWhereSelfEscapesViaMethodCall : NSObject
+@property (retain) NSObject *ivar;  // no-warning
+@end
+
+@interface ClassWhereSelfEscapesViaMethodCall (Other)
+- (void)invalidate; // In other translation unit.
+@end
+
+@implementation ClassWhereSelfEscapesViaMethodCall
+- (void)dealloc; {
+  [self invalidate];
+#if NON_ARC
+  [super dealloc];
+#endif
+} // no-warning
+@end
+
+@interface ClassWhereSelfEscapesViaPropertyAccess : NSObject
+@property (retain) NSObject *ivar;
+@end
+
+@interface ClassWhereSelfEscapesViaPropertyAccess (Other)
+// The implementation of this property is unknown and therefore could
+// release ivar.
+@property (retain) NSObject *otherIvar;
+@end
+
+@implementation ClassWhereSelfEscapesViaPropertyAccess
+- (void)dealloc; {
+  self.otherIvar = nil;
+#if NON_ARC
+  [super dealloc];
+#endif
+} // no-warning
+@end
+
+// Don't treat self as escaping when setter called on *synthesized*
+// property.
+
+@interface ClassWhereSelfEscapesViaSynthesizedPropertyAccess : NSObject
+@property (retain) NSObject *ivar;
+@property (retain) NSObject *otherIvar;
+@end
+
+@implementation ClassWhereSelfEscapesViaSynthesizedPropertyAccess
+- (void)dealloc; {
+  self.otherIvar = nil;
+#if NON_ARC
+  [super dealloc];  // expected-warning {{The '_ivar' ivar in 'ClassWhereSelfEscapesViaSynthesizedPropertyAccess' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+}
+@end
+
+// Don't warn when value escapes.
+
+@interface ClassWhereIvarValueEscapes : NSObject
+@property (retain) NSObject *ivar;
+@end
+
+void ReleaseMe(id arg);
+
+@implementation ClassWhereIvarValueEscapes
+- (void)dealloc; {
+
+  ReleaseMe(_ivar);
+
+#if NON_ARC
+  [super dealloc];
+#endif
+} // no-warning
+@end
+
+// Don't warn when value is known to be nil.
+
+@interface ClassWhereIvarIsNil : NSObject
+@property (retain) NSObject *ivarIsNil;
+@end
+
+@implementation ClassWhereIvarIsNil
+- (void)dealloc; {
+
+#if NON_ARC
+  if (_ivarIsNil)
+    [_ivarIsNil release];
+
+  [super dealloc];
+#endif
+} // no-warning
+@end
+
+
+// Don't warn for non-retainable properties.
+
+@interface ClassWithNonRetainableProperty : NSObject
+@property (assign) int *ivar;  // no-warning
+@end
+
+@implementation ClassWithNonRetainableProperty
+- (void)dealloc; {
+#if NON_ARC
+  [super dealloc];
+#endif
+} // no-warning
+@end
+
+
+@interface SuperClassOfClassWithInlinedSuperDealloc : NSObject
+@property (retain) NSObject *propInSuper;
+@end
+
+@implementation SuperClassOfClassWithInlinedSuperDealloc
+- (void)dealloc {
+#if NON_ARC
+  [super dealloc]; // expected-warning {{The '_propInSuper' ivar in 'SuperClassOfClassWithInlinedSuperDealloc' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+}
+@end
+
+@interface ClassWithInlinedSuperDealloc : SuperClassOfClassWithInlinedSuperDealloc
+@property (retain) NSObject *propInSub;
+@end
+
+@implementation ClassWithInlinedSuperDealloc
+- (void)dealloc {
+#if NON_ARC
+  [super dealloc]; // expected-warning {{The '_propInSub' ivar in 'ClassWithInlinedSuperDealloc' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+}
+@end
+
+
+@interface SuperClassOfClassWithInlinedSuperDeallocAndInvalidation : NSObject
+@property (retain) NSObject *propInSuper;
+
+- (void)invalidate;
+@end
+
+@implementation SuperClassOfClassWithInlinedSuperDeallocAndInvalidation
+
+- (void)invalidate {
+#if NON_ARC
+  [_propInSuper release];
+#endif
+  _propInSuper = nil;
+}
+
+- (void)dealloc {
+  [self invalidate];
+#if NON_ARC
+  [super dealloc]; // no-warning
+#endif
+}
+@end
+
+@interface ClassWithInlinedSuperDeallocAndInvalidation : SuperClassOfClassWithInlinedSuperDeallocAndInvalidation
+@property (retain) NSObject *propInSub;
+@end
+
+@implementation ClassWithInlinedSuperDeallocAndInvalidation
+
+- (void)invalidate {
+#if NON_ARC
+  [_propInSub release];
+#endif
+  [super invalidate];
+}
+
+- (void)dealloc {
+#if NON_ARC
+  [super dealloc]; // no-warning
+#endif
+}
+@end
+
+
+@interface SuperClassOfClassThatEscapesBeforeInliningSuper : NSObject
+@property (retain) NSObject *propInSuper;
+@end
+
+@implementation SuperClassOfClassThatEscapesBeforeInliningSuper
+
+- (void)dealloc {
+
+#if NON_ARC
+  [super dealloc]; // expected-warning {{The '_propInSuper' ivar in 'SuperClassOfClassThatEscapesBeforeInliningSuper' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+}
+@end
+
+@interface ClassThatEscapesBeforeInliningSuper : SuperClassOfClassThatEscapesBeforeInliningSuper
+@property (retain) NSObject *propInSub;
+@end
+
+@interface ClassThatEscapesBeforeInliningSuper (Other)
+- (void)invalidate; // No implementation in translation unit.
+@end
+
+@implementation ClassThatEscapesBeforeInliningSuper
+- (void)dealloc {
+  [self invalidate];
+
+#if NON_ARC
+  [super dealloc]; // no-warning
+#endif
+}
+@end
+
+
+#if NON_ARC
+@interface ReleaseIvarInField : NSObject {
+  int _tag;
+  union {
+    NSObject *field1;
+    NSObject *field2;
+  } _someUnion;
+
+  struct {
+    NSObject *field1;
+  } _someStruct;
+}
+@end
+
+@implementation ReleaseIvarInField
+- (void)dealloc {
+  if (_tag) {
+    [_someUnion.field1 release];
+  } else {
+    [_someUnion.field2 release];
+  }
+
+  [_someStruct.field1 release];
+  [super dealloc];
+}
+@end
+#endif
+
+#if NON_ARC
+@interface ReleaseIvarInArray : NSObject {
+  NSObject *_array[3];
+}
+@end
+
+@implementation ReleaseIvarInArray
+- (void)dealloc {
+  for (int i = 0; i < 3; i++) {
+    [_array[i] release];
+  }
+  [super dealloc];
+}
+@end
+#endif
+
+// Don't warn about missing releases for subclasses of SenTestCase or
+// for classes that are not subclasses of NSObject.
+
+@interface SenTestCase : NSObject {}
+@end
+
+@interface MyClassTest : SenTestCase
+@property (retain) NSObject *ivar;
+@end
+
+@implementation MyClassTest
+-(void)tearDown {
+#if NON_ARC
+  [_ivar release];
+#endif
+}
+
+-(void)dealloc; {
+#if NON_ARC
+  [super dealloc]; // no-warning
+#endif
+}
+@end
+
+__attribute__((objc_root_class))
+@interface NonNSObjectMissingDealloc
+@property (retain) NSObject *ivar;
+@end
+@implementation NonNSObjectMissingDealloc
+-(void)dealloc; {
+
+}
+@end
+
