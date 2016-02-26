@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import time
+
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -22,11 +24,21 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         if err.Fail():
             raise RuntimeError("Unable copy '%s' to '%s'.\n>>> %s" % (f, wd, err.GetCString()))
 
+        m = re.search("^(.*)://([^:/]*)", configuration.lldb_platform_url)
+        protocol = m.group(1)
+        hostname = m.group(2)
+        unix_protocol = protocol.startswith("unix-")
+        if unix_protocol:
+            p = re.search("^(.*)-connect", protocol)
+            listen_url = "%s://%s" % (p.group(1), os.path.join(working_dir, "platform-%d.sock" % int(time.time())))
+        else:
+            listen_url = "*:0"
+
         port_file = "%s/port" % working_dir
-        commandline_args = ["platform", "--listen", "*:0", "--socket-file", port_file, "--", "%s/a.out" % working_dir, "foo"]
+        commandline_args = ["platform", "--listen", listen_url, "--socket-file", port_file, "--", "%s/a.out" % working_dir, "foo"]
         self.spawnSubprocess(self.debug_monitor_exe, commandline_args, install_remote=False)
         self.addTearDownHook(self.cleanupSubprocesses)
-        new_port = self.run_shell_cmd("while [ ! -f %s ]; do sleep 0.25; done && cat %s" % (port_file, port_file))
+        socket_id = self.run_shell_cmd("while [ ! -f %s ]; do sleep 0.25; done && cat %s" % (port_file, port_file))
 
         new_debugger = lldb.SBDebugger.Create()
         new_debugger.SetAsync(False)
@@ -38,8 +50,12 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         new_debugger.SetSelectedPlatform(new_platform)
         new_interpreter = new_debugger.GetCommandInterpreter()
 
-        m = re.search("(.*):[0-9]+", configuration.lldb_platform_url)
-        command = "platform connect %s:%s" % (m.group(1), new_port)
+        if unix_protocol:
+            connect_url = "%s://%s%s" % (protocol, hostname, socket_id)
+        else:
+            connect_url = "%s://%s:%s" % (protocol, hostname, socket_id)
+
+        command = "platform connect %s" % (connect_url)
         result = lldb.SBCommandReturnObject()
         new_interpreter.HandleCommand(command, result)
         self.assertTrue(result.Succeeded(), "platform process connect failed: %s" % result.GetOutput())

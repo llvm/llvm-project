@@ -386,6 +386,11 @@ public:
             
             case 'e':
                 {
+                    if (strcmp(option_arg, "block") == 0)
+                    {
+                        m_end_line_is_block_end = 1;
+                        break;
+                    }
                     uint32_t tmp_end_line = StringConvert::ToUInt32(option_arg, UINT32_MAX, 0);
                     if (tmp_end_line == UINT32_MAX)
                        error.SetErrorStringWithFormat ("invalid end line number '%s'", option_arg);
@@ -429,6 +434,7 @@ public:
             m_class_name.clear();
             m_step_count = 1;
             m_end_line = LLDB_INVALID_LINE_NUMBER;
+            m_end_line_is_block_end = false;
         }
 
         const OptionDefinition*
@@ -450,6 +456,7 @@ public:
         std::string m_class_name;
         uint32_t m_step_count;
         uint32_t m_end_line;
+        bool     m_end_line_is_block_end;
     };
 
     CommandObjectThreadStepWithTypeAndScope (CommandInterpreter &interpreter,
@@ -587,6 +594,30 @@ protected:
                         result.SetStatus(eReturnStatusFailed);
                         return false;
                     }
+                }
+                else if (m_options.m_end_line_is_block_end)
+                {
+                    Error error;
+                    Block *block = frame->GetSymbolContext(eSymbolContextBlock).block;
+                    if (!block)
+                    {
+                        result.AppendErrorWithFormat("Could not find the current block.");
+                        result.SetStatus(eReturnStatusFailed);
+                        return false;
+                    }
+                    
+                    AddressRange block_range;
+                    Address pc_address = frame->GetFrameCodeAddress();
+                    block->GetRangeContainingAddress(pc_address, block_range);
+                    if (!block_range.GetBaseAddress().IsValid())
+                    {
+                        result.AppendErrorWithFormat("Could not find the current block address.");
+                        result.SetStatus(eReturnStatusFailed);
+                        return false;
+                    }
+                    lldb::addr_t pc_offset_in_block = pc_address.GetFileAddress() - block_range.GetBaseAddress().GetFileAddress();
+                    lldb::addr_t range_length = block_range.GetByteSize() - pc_offset_in_block;
+                    range = AddressRange(pc_address, range_length);
                 }
                 else
                 {
@@ -741,7 +772,9 @@ CommandObjectThreadStepWithTypeAndScope::CommandOptions::g_option_table[] =
 { LLDB_OPT_SET_1, false, "step-in-avoids-no-debug",   'a', OptionParser::eRequiredArgument, nullptr, nullptr,               0, eArgTypeBoolean,     "A boolean value that sets whether stepping into functions will step over functions with no debug information."},
 { LLDB_OPT_SET_1, false, "step-out-avoids-no-debug",  'A', OptionParser::eRequiredArgument, nullptr, nullptr,               0, eArgTypeBoolean,     "A boolean value, if true stepping out of functions will continue to step out till it hits a function with debug information."},
 { LLDB_OPT_SET_1, false, "count",                     'c', OptionParser::eRequiredArgument, nullptr, nullptr,               1, eArgTypeCount,     "How many times to perform the stepping operation - currently only supported for step-inst and next-inst."},
-{ LLDB_OPT_SET_1, false, "end-linenumber",            'e', OptionParser::eRequiredArgument, nullptr, nullptr,               1, eArgTypeLineNum,     "The line at which to stop stepping - defaults to the next line and only supported for step-in and step-over."},
+{ LLDB_OPT_SET_1, false, "end-linenumber",            'e', OptionParser::eRequiredArgument, nullptr, nullptr,               1, eArgTypeLineNum,     "The line at which to stop stepping - defaults to the next line and only supported for step-in and step-over."
+                                                                                                                                              "  You can also pass the string 'block' to step to the end of the current block."
+                                                                                                                                              "  This is particularly useful in conjunction with --step-target to step through a complex calling sequence."},
 { LLDB_OPT_SET_1, false, "run-mode",                  'm', OptionParser::eRequiredArgument, nullptr, g_tri_running_mode, 0, eArgTypeRunMode, "Determine how to run other threads while stepping the current thread."},
 { LLDB_OPT_SET_1, false, "step-over-regexp",          'r', OptionParser::eRequiredArgument, nullptr, nullptr,               0, eArgTypeRegularExpression,   "A regular expression that defines function names to not to stop at when stepping in."},
 { LLDB_OPT_SET_1, false, "step-in-target",            't', OptionParser::eRequiredArgument, nullptr, nullptr,               0, eArgTypeFunctionName,   "The name of the directly called function step in should stop at when stepping into."},
