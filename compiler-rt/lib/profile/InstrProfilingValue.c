@@ -142,8 +142,8 @@ __llvm_profile_gather_value_data(uint64_t *ValueDataSize) {
   if (!ValueDataSize)
     return NULL;
 
-  ValueDataArray =
-      (ValueProfData **)calloc(DataEnd - DataBegin, sizeof(void *));
+  ValueDataArray = (ValueProfData **)calloc(
+      __llvm_profile_get_data_size(DataBegin, DataEnd), sizeof(void *));
   if (!ValueDataArray)
     PROF_OOM_RETURN("Failed to write value profile data ");
 
