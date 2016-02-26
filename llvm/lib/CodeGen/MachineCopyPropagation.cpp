@@ -52,6 +52,7 @@ namespace {
   private:
     void ClobberRegister(unsigned Reg);
     void CopyPropagateBlock(MachineBasicBlock &MBB);
+    bool eraseIfRedundant(MachineInstr &Copy, unsigned Src, unsigned Def);
 
     /// Candidates for deletion.
     SmallSetVector<MachineInstr*, 8> MaybeDeadCopies;
@@ -109,29 +110,61 @@ void MachineCopyPropagation::ClobberRegister(unsigned Reg) {
   }
 }
 
-/// isNopCopy - Return true if the specified copy is really a nop. That is
-/// if the source of the copy is the same of the definition of the copy that
-/// supplied the source. If the source of the copy is a sub-register than it
-/// must check the sub-indices match. e.g.
-/// ecx = mov eax
-/// al  = mov cl
-/// But not
-/// ecx = mov eax
-/// al  = mov ch
-static bool isNopCopy(const MachineInstr *CopyMI, unsigned Def, unsigned Src,
-                      const TargetRegisterInfo *TRI) {
-  unsigned SrcSrc = CopyMI->getOperand(1).getReg();
-  if (Def == SrcSrc)
+/// Return true if \p PreviousCopy did copy register \p Src to register \p Def.
+/// This fact may have been obscured by sub register usage or may not be true at
+/// all even though Src and Def are subregisters of the registers used in
+/// PreviousCopy. e.g.
+/// isNopCopy("ecx = COPY eax", AX, CX) == true
+/// isNopCopy("ecx = COPY eax", AH, CL) == false
+static bool isNopCopy(const MachineInstr &PreviousCopy, unsigned Src,
+                      unsigned Def, const TargetRegisterInfo *TRI) {
+  unsigned PreviousSrc = PreviousCopy.getOperand(1).getReg();
+  unsigned PreviousDef = PreviousCopy.getOperand(0).getReg();
+  if (Src == PreviousSrc) {
+    assert(Def == PreviousDef);
     return true;
-  if (TRI->isSubRegister(SrcSrc, Def)) {
-    unsigned SrcDef = CopyMI->getOperand(0).getReg();
-    unsigned SubIdx = TRI->getSubRegIndex(SrcSrc, Def);
-    if (!SubIdx)
-      return false;
-    return SubIdx == TRI->getSubRegIndex(SrcDef, Src);
   }
+  if (!TRI->isSubRegister(PreviousSrc, Src))
+    return false;
+  unsigned SubIdx = TRI->getSubRegIndex(PreviousSrc, Src);
+  return SubIdx == TRI->getSubRegIndex(PreviousDef, Def);
+}
 
-  return false;
+/// Remove instruction \p Copy if there exists a previous copy that copies the
+/// register \p Src to the register \p Def; This may happen indirectly by
+/// copying the super registers.
+bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy, unsigned Src,
+                                              unsigned Def) {
+  // Avoid eliminating a copy from/to a reserved registers as we cannot predict
+  // the value (Example: The sparc zero register is writable but stays zero).
+  if (MRI->isReserved(Src) || MRI->isReserved(Def))
+    return false;
+
+  // Search for an existing copy.
+  Reg2MIMap::iterator CI = AvailCopyMap.find(Def);
+  if (CI == AvailCopyMap.end())
+    return false;
+
+  // Check that the existing copy uses the correct sub registers.
+  MachineInstr &PrevCopy = *CI->second;
+  if (!isNopCopy(PrevCopy, Src, Def, TRI))
+    return false;
+
+  DEBUG(dbgs() << "MCP: copy is a NOP, removing: "; Copy.dump());
+
+  // Copy was redundantly redefining either Src or Def. Remove earlier kill
+  // flags between Copy and PrevCopy because the value will be reused now.
+  assert(Copy.isCopy());
+  unsigned CopyDef = Copy.getOperand(0).getReg();
+  assert(CopyDef == Src || CopyDef == Def);
+  for (MachineInstr &MI :
+       make_range(PrevCopy.getIterator(), Copy.getIterator()))
+    MI.clearRegisterKills(CopyDef, TRI);
+
+  Copy.eraseFromParent();
+  Changed = true;
+  ++NumDeletes;
+  return true;
 }
 
 void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
@@ -149,38 +182,23 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
              !TargetRegisterInfo::isVirtualRegister(Src) &&
              "MachineCopyPropagation should be run after register allocation!");
 
-      DenseMap<unsigned, MachineInstr*>::iterator CI = AvailCopyMap.find(Src);
-      if (CI != AvailCopyMap.end()) {
-        MachineInstr *CopyMI = CI->second;
-        if (!MRI->isReserved(Def) && isNopCopy(CopyMI, Def, Src, TRI)) {
-          // The two copies cancel out and the source of the first copy
-          // hasn't been overridden, eliminate the second one. e.g.
-          //  %ECX<def> = COPY %EAX<kill>
-          //  ... nothing clobbered EAX.
-          //  %EAX<def> = COPY %ECX
-          // =>
-          //  %ECX<def> = COPY %EAX
-          //
-          // Also avoid eliminating a copy from reserved registers unless the
-          // definition is proven not clobbered. e.g.
-          // %RSP<def> = COPY %RAX
-          // CALL
-          // %RAX<def> = COPY %RSP
-
-          DEBUG(dbgs() << "MCP: copy is a NOP, removing: "; MI->dump());
-
-          // Clear any kills of Def between CopyMI and MI. This extends the
-          // live range.
-          for (MachineInstr &MMI
-               : make_range(CopyMI->getIterator(), MI->getIterator()))
-            MMI.clearRegisterKills(Def, TRI);
-
-          MI->eraseFromParent();
-          Changed = true;
-          ++NumDeletes;
-          continue;
-        }
-      }
+      // The two copies cancel out and the source of the first copy
+      // hasn't been overridden, eliminate the second one. e.g.
+      //  %ECX<def> = COPY %EAX
+      //  ... nothing clobbered EAX.
+      //  %EAX<def> = COPY %ECX
+      // =>
+      //  %ECX<def> = COPY %EAX
+      //
+      // or
+      //
+      //  %ECX<def> = COPY %EAX
+      //  ... nothing clobbered EAX.
+      //  %ECX<def> = COPY %EAX
+      // =>
+      //  %ECX<def> = COPY %EAX
+      if (eraseIfRedundant(*MI, Def, Src) || eraseIfRedundant(*MI, Src, Def))
+        continue;
 
       // If Src is defined by a previous copy, it cannot be eliminated.
       for (MCRegAliasIterator AI(Src, TRI, true); AI.isValid(); ++AI) {
@@ -292,9 +310,8 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
     }
 
     // Any previous copy definition or reading the Defs is no longer available.
-    for (unsigned Reg : Defs) {
+    for (unsigned Reg : Defs)
       ClobberRegister(Reg);
-    }
   }
 
   // If MBB doesn't have successors, delete the copies whose defs are not used.
