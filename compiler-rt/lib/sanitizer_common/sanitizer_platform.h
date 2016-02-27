@@ -162,4 +162,10 @@
 # define MSC_PREREQ(version) 0
 #endif
 
+#if defined(__arm64__) && SANITIZER_IOS
+# define SANITIZER_NON_UNIQUE_TYPEINFO 1
+#else
+# define SANITIZER_NON_UNIQUE_TYPEINFO 0
+#endif
+
 #endif // SANITIZER_PLATFORM_H
