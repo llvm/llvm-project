@@ -517,7 +517,7 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
     return;
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();
-  if (ELFFileBase<ELFT> *File = Symtab.findFile(Sym))
+  if (InputFile *File = Symtab.findFile(Sym))
     Msg += " in " + File->getName().str();
   if (Config->NoInhibitExec)
     warning(Msg);

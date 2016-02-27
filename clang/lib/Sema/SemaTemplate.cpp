@@ -7461,7 +7461,13 @@ Sema::ActOnExplicitInstantiation(Scope *S,
             getDLLAttr(Specialization)->clone(getASTContext()));
         A->setInherited(true);
         Def->addAttr(A);
+
+        // We reject explicit instantiations in class scope, so there should
+        // never be any delayed exported classes to worry about.
+        assert(DelayedDllExportClasses.empty() &&
+               "delayed exports present at explicit instantiation");
         checkClassLevelDLLAttribute(Def);
+        referenceDLLExportedClassMethods();
 
         // Propagate attribute to base class templates.
         for (auto &B : Def->bases()) {

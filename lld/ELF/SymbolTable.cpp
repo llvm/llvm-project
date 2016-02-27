@@ -83,7 +83,7 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   if (auto *F = dyn_cast<BitcodeFile>(FileP)) {
     BitcodeFiles.emplace_back(cast<BitcodeFile>(File.release()));
     F->parse();
-    for (SymbolBody *B : F->SymbolBodies)
+    for (SymbolBody *B : F->getSymbols())
       resolve(B);
     return;
   }
@@ -217,9 +217,13 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
 
 // Returns a file from which symbol B was created.
 // If B does not belong to any file, returns a nullptr.
-template <class ELFT>
-ELFFileBase<ELFT> *SymbolTable<ELFT>::findFile(SymbolBody *B) {
+template <class ELFT> InputFile *SymbolTable<ELFT>::findFile(SymbolBody *B) {
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : ObjectFiles) {
+    ArrayRef<SymbolBody *> Syms = F->getSymbols();
+    if (std::find(Syms.begin(), Syms.end(), B) != Syms.end())
+      return F.get();
+  }
+  for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles) {
     ArrayRef<SymbolBody *> Syms = F->getSymbols();
     if (std::find(Syms.begin(), Syms.end(), B) != Syms.end())
       return F.get();
@@ -228,7 +232,7 @@ ELFFileBase<ELFT> *SymbolTable<ELFT>::findFile(SymbolBody *B) {
 }
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
-template <class ELFT> static std::string getFilename(ELFFileBase<ELFT> *F) {
+static std::string getFilename(InputFile *F) {
   if (!F)
     return "(internal)";
   if (!F->ArchiveName.empty())
@@ -240,8 +244,8 @@ template <class ELFT> static std::string getFilename(ELFFileBase<ELFT> *F) {
 // Used to construct an error message.
 template <class ELFT>
 std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Old, SymbolBody *New) {
-  ELFFileBase<ELFT> *F1 = findFile(Old);
-  ELFFileBase<ELFT> *F2 = findFile(New);
+  InputFile *F1 = findFile(Old);
+  InputFile *F2 = findFile(New);
   StringRef Sym = Old->getName();
   return demangle(Sym) + " in " + getFilename(F1) + " and " + getFilename(F2);
 }

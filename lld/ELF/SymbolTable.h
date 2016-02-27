@@ -64,7 +64,7 @@ public:
   void scanShlibUndefined();
   SymbolBody *find(StringRef Name);
   void wrap(StringRef Name);
-  ELFFileBase<ELFT> *findFile(SymbolBody *B);
+  InputFile *findFile(SymbolBody *B);
 
 private:
   Symbol *insert(SymbolBody *New);

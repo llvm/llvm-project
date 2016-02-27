@@ -1728,6 +1728,24 @@ convert their operands before performing the operation.
 
 Query for this feature with ``__has_builtin(__builtin_add_overflow)``, etc.
 
+Floating point builtins
+---------------------------------------
+
+``__builtin_canonicalize``
+--------------------------
+
+.. code-block:: c
+
+   double __builtin_canonicalize(double);
+   float __builtin_canonicalizef(float);
+   long double__builtin_canonicalizel(long double);
+
+Returns the platform specific canonical encoding of a floating point
+number. This canonicalization is useful for implementing certain
+numeric primitives such as frexp. See `LLVM canonicalize intrinsic
+<http://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic>`_ for
+more information on the semantics.
+
 .. _langext-__c11_atomic:
 
 __c11_atomic builtins

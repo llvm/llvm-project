@@ -3,6 +3,8 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
+typedef unsigned long ulong;
+
 // CHECK-LABEL: @test_div_scale_f64
 // CHECK: call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 true)
 // CHECK-DAG: [[FLAG:%.+]] = extractvalue { double, i1 } %{{.+}}, 1
@@ -167,6 +169,29 @@ void test_class_f64(global double* out, double a, int b)
 void test_s_barrier()
 {
   __builtin_amdgcn_s_barrier();
+}
+
+// CHECK-LABEL: @test_s_memtime
+// CHECK: call i64 @llvm.amdgcn.s.memtime()
+void test_s_memtime(global ulong* out)
+{
+  *out = __builtin_amdgcn_s_memtime();
+}
+
+// CHECK-LABEL: @test_s_memrealtime
+// CHECK: call i64 @llvm.amdgcn.s.memrealtime()
+void test_s_memrealtime(global ulong* out)
+{
+  *out = __builtin_amdgcn_s_memrealtime();
+}
+
+// CHECK-LABEL: @test_s_sleep
+// CHECK: call void @llvm.amdgcn.s.sleep(i32 1)
+// CHECK: call void @llvm.amdgcn.s.sleep(i32 15)
+void test_s_sleep()
+{
+  __builtin_amdgcn_s_sleep(1);
+  __builtin_amdgcn_s_sleep(15);
 }
 
 // CHECK-LABEL: @test_cubeid(

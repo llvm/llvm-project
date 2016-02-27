@@ -8,6 +8,13 @@
 
 #include "ABISysV_i386.h"
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Triple.h"
+
+// Project includes
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Error.h"
@@ -26,13 +33,8 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
-
 using namespace lldb;
 using namespace lldb_private;
-
-
 
 //   This source file uses the following document as a reference:
 //====================================================================
@@ -50,8 +52,6 @@ using namespace lldb_private;
 //
 //                     February 3, 2015
 //====================================================================
-
-
 
 // DWARF Register Number Mapping
 // See Table 2.14 of the reference document (specified on top of this file)
@@ -106,7 +106,6 @@ enum dwarf_regnums
     dwarf_mm6,
     dwarf_mm7
 };
-
 
 static RegisterInfo g_register_infos[] =
 {
@@ -187,10 +186,10 @@ ABISysV_i386::GetRegisterInfoArray (uint32_t &count)
     return g_register_infos;
 }
 
-
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
+
 ABISP
 ABISysV_i386::CreateInstance (const ArchSpec &arch)
 {
@@ -272,7 +271,6 @@ ABISysV_i386::PrepareTrivialCall (Thread &thread,
     return true;
 }
 
-
 static bool
 ReadIntegerArgument (Scalar           &scalar,
                      unsigned int     bit_width,
@@ -293,7 +291,6 @@ ReadIntegerArgument (Scalar           &scalar,
     }
     return false;
 }
-
 
 bool
 ABISysV_i386::GetArgumentValues (Thread &thread,
@@ -348,8 +345,6 @@ ABISysV_i386::GetArgumentValues (Thread &thread,
     }
     return true;
 }
-
-
 
 Error
 ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp, lldb::ValueObjectSP &new_value_sp)
@@ -496,11 +491,10 @@ ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp, lldb::ValueObje
         are yet to be implemented */
         error.SetErrorString ("Currently only Integral and Floating Point clang types are supported.");
     }
-    if(!register_write_successful)
+    if (!register_write_successful)
         error.SetErrorString ("Register writing failed");
     return error;
 }
-
 
 ValueObjectSP
 ABISysV_i386::GetReturnValueObjectSimple (Thread &thread,
@@ -523,21 +517,19 @@ ABISysV_i386::GetReturnValueObjectSimple (Thread &thread,
     unsigned eax_id = reg_ctx->GetRegisterInfoByName("eax", 0)->kinds[eRegisterKindLLDB];
     unsigned edx_id = reg_ctx->GetRegisterInfoByName("edx", 0)->kinds[eRegisterKindLLDB];
 
-
     // Following "IF ELSE" block categorizes various 'Fundamental Data Types'.
     // The terminology 'Fundamental Data Types' used here is adopted from
     // Table 2.1 of the reference document (specified on top of this file)
 
     if (type_flags & eTypeIsPointer)     // 'Pointer'
     {
-        uint32_t ptr = thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) & 0xffffffff ;
+        uint32_t ptr = thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) & 0xffffffff;
         value.SetValueType(Value::eValueTypeScalar);
         value.GetScalar() = ptr;
         return_valobj_sp = ValueObjectConstResult::Create (thread.GetStackFrameAtIndex(0).get(),
                                                            value,
                                                            ConstString(""));
     }
-
     else if ((type_flags & eTypeIsScalar) || (type_flags & eTypeIsEnumeration)) //'Integral' + 'Floating Point'
     {
         value.SetValueType(Value::eValueTypeScalar);
@@ -547,7 +539,7 @@ ABISysV_i386::GetReturnValueObjectSimple (Thread &thread,
         if (type_flags & eTypeIsInteger)    // 'Integral' except enum
         {
             const bool is_signed = ((type_flags & eTypeIsSigned) != 0);
-            uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) & 0xffffffff ;
+            uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) & 0xffffffff;
             raw_value |= (thread.GetRegisterContext()->ReadRegisterAsUnsigned(edx_id, 0) & 0xffffffff) << 32;
 
             switch (byte_size)
@@ -558,7 +550,7 @@ ABISysV_i386::GetReturnValueObjectSimple (Thread &thread,
                 case 16:
                    // For clang::BuiltinType::UInt128 & Int128
                    // ToDo: Need to decide how to handle it
-                   break ;
+                   break;
 
                 case 8:
                     if (is_signed)
@@ -598,17 +590,15 @@ ABISysV_i386::GetReturnValueObjectSimple (Thread &thread,
                                                                     value,
                                                                     ConstString(""));
         }
-
         else if (type_flags & eTypeIsEnumeration)     // handles enum
         {
-            uint32_t enm = thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) & 0xffffffff ;
+            uint32_t enm = thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) & 0xffffffff;
             value.SetValueType(Value::eValueTypeScalar);
             value.GetScalar() = enm;
             return_valobj_sp = ValueObjectConstResult::Create (thread.GetStackFrameAtIndex(0).get(),
                                                                value,
                                                                ConstString(""));
         }
-
         else if (type_flags & eTypeIsFloat)  // 'Floating Point'
         {
             if (byte_size <= 12)      // handles float, double, long double, __float80
@@ -660,19 +650,16 @@ ABISysV_i386::GetReturnValueObjectSimple (Thread &thread,
                                                               return_compiler_type);
             }
         }
-
         else  // Neither 'Integral' nor 'Floating Point'
         {
             // If flow reaches here then check type_flags
             // This type_flags is unhandled
         }
     }
-
     else if (type_flags & eTypeIsComplex)    // 'Complex Floating Point'
     {
        // ToDo: Yet to be implemented
     }
-
     else if (type_flags & eTypeIsVector)    // 'Packed'
     {
         const size_t byte_size = return_compiler_type.GetByteSize(nullptr);
@@ -754,14 +741,12 @@ ABISysV_i386::GetReturnValueObjectSimple (Thread &thread,
             }
         }
     }
-
     else    // 'Decimal Floating Point'
     {
        //ToDo: Yet to be implemented
     }
     return return_valobj_sp;
 }
-
 
 ValueObjectSP
 ABISysV_i386::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_compiler_type) const
@@ -848,7 +833,6 @@ ABISysV_i386::CreateDefaultUnwindPlan (UnwindPlan &unwind_plan)
     return true;
 }
 
-
 // According to "Register Usage" in reference document (specified on top
 // of this source file) ebx, ebp, esi, edi and esp registers are preserved
 // i.e. non-volatile i.e. callee-saved on i386
@@ -893,7 +877,6 @@ ABISysV_i386::RegisterIsCalleeSaved (const RegisterInfo *reg_info)
     return false;
 }
 
-
 void
 ABISysV_i386::Initialize()
 {
@@ -902,24 +885,22 @@ ABISysV_i386::Initialize()
                                    CreateInstance);
 }
 
-
 void
 ABISysV_i386::Terminate()
 {
     PluginManager::UnregisterPlugin (CreateInstance);
 }
 
-
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
+
 lldb_private::ConstString
 ABISysV_i386::GetPluginNameStatic()
 {
     static ConstString g_name("sysv-i386");
     return g_name;
 }
-
 
 lldb_private::ConstString
 ABISysV_i386::GetPluginName()

@@ -40,8 +40,8 @@ kernel void test_num_vgpr0_sgpr0() {
 // X86-NOT: "amdgpu_num_vgpr"
 // X86-NOT: "amdgpu_num_sgpr"
 
-// CHECK-DAG-NOT: "amdgpu_num_vgpr"="0"
-// CHECK-DAG-NOT: "amdgpu_num_sgpr"="0"
+// CHECK-NOT: "amdgpu_num_vgpr"="0"
+// CHECK-NOT: "amdgpu_num_sgpr"="0"
 // CHECK-DAG: attributes [[ATTR_VGPR64]] = { nounwind "amdgpu_num_vgpr"="64"
 // CHECK-DAG: attributes [[ATTR_SGPR32]] = { nounwind "amdgpu_num_sgpr"="32"
 // CHECK-DAG: attributes [[ATTR_VGPR64_SGPR32]] = { nounwind "amdgpu_num_sgpr"="32" "amdgpu_num_vgpr"="64"

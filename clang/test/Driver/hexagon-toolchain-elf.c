@@ -41,7 +41,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK012 %s
 // CHECK012: "-cc1"
-// CHECK012-DAG-NOT: "-internal-isystem"
+// CHECK012-NOT: "-internal-isystem"
 // CHECK012-DAG: "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/include"
 
 // RUN: %clangxx -### -target hexagon-unknown-elf -fno-integrated-as    \
@@ -51,8 +51,8 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK013 %s
 // CHECK013: "-cc1"
-// CHECK013-DAG-NOT: "-internal-isystem"
-// CHECK013-DAG-NOT: "-internal-externc-isystem"
+// CHECK013-NOT: "-internal-isystem"
+// CHECK013-NOT: "-internal-externc-isystem"
 
 // -----------------------------------------------------------------------------
 // Test -mcpu=<cpuname> -mv<number>

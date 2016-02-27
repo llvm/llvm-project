@@ -242,6 +242,10 @@ public:
 
   bool isNull() const { return !I; }
   bool isInstruction() const { return I; }
+
+  llvm::Instruction *asInstruction() const { return I; }
+
+private:
   bool isLoad() const { return I && llvm::isa<llvm::LoadInst>(I); }
   bool isStore() const { return I && llvm::isa<llvm::StoreInst>(I); }
   bool isCallInst() const { return I && llvm::isa<llvm::CallInst>(I); }
@@ -251,7 +255,6 @@ public:
     return I && llvm::isa<llvm::MemTransferInst>(I);
   }
 
-  llvm::Instruction *asInstruction() const { return I; }
   llvm::LoadInst *asLoad() const { return llvm::cast<llvm::LoadInst>(I); }
   llvm::StoreInst *asStore() const { return llvm::cast<llvm::StoreInst>(I); }
   llvm::CallInst *asCallInst() const { return llvm::cast<llvm::CallInst>(I); }
@@ -265,6 +268,20 @@ public:
     return llvm::cast<llvm::MemTransferInst>(I);
   }
 };
+}
+
+namespace llvm {
+/// @brief Specialize simplify_type for MemAccInst to enable dyn_cast and cast
+///        from a MemAccInst object.
+template <> struct simplify_type<polly::MemAccInst> {
+  typedef Instruction *SimpleType;
+  static SimpleType getSimplifiedValue(polly::MemAccInst &I) {
+    return I.asInstruction();
+  }
+};
+}
+
+namespace polly {
 
 /// @brief Check if the PHINode has any incoming Invoke edge.
 ///

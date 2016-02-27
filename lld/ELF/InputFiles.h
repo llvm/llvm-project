@@ -184,10 +184,10 @@ public:
   explicit BitcodeFile(MemoryBufferRef M);
   static bool classof(const InputFile *F);
   void parse();
-
-  std::vector<SymbolBody *> SymbolBodies;
+  ArrayRef<SymbolBody *> getSymbols() { return SymbolBodies; }
 
 private:
+  std::vector<SymbolBody *> SymbolBodies;
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver{Alloc};
 };

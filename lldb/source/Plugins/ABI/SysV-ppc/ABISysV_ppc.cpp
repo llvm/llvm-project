@@ -1,4 +1,4 @@
-//===-- ABISysV_ppc.cpp --------------------------------------*- C++ -*-===//
+//===-- ABISysV_ppc.cpp -----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,6 +9,13 @@
 
 #include "ABISysV_ppc.h"
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Triple.h"
+
+// Project includes
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Error.h"
@@ -26,9 +33,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
-
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -111,49 +115,50 @@ enum dwarf_regnums
 // Note that the size and offset will be updated by platform-specific classes.
 #define DEFINE_GPR(reg, alt, kind1, kind2, kind3, kind4)           \
     { #reg, alt, 8, 0, eEncodingUint, \
-      eFormatHex, { kind1, kind2, kind3, kind4}, NULL, NULL }
+      eFormatHex, { kind1, kind2, kind3, kind4}, nullptr, nullptr }
+
 static const RegisterInfo
 g_register_infos[] =
 {
     // General purpose registers.             eh_frame,                 DWARF,              Generic,    Process Plugin
-    DEFINE_GPR(r0,       NULL,  dwarf_r0,    dwarf_r0,    LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r1,       "sp",  dwarf_r1,    dwarf_r1,    LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r2,       NULL,  dwarf_r2,    dwarf_r2,    LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r3,       "arg1",dwarf_r3,    dwarf_r3,    LLDB_REGNUM_GENERIC_ARG1, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r4,       "arg2",dwarf_r4,    dwarf_r4,    LLDB_REGNUM_GENERIC_ARG2 ,LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r5,       "arg3",dwarf_r5,    dwarf_r5,    LLDB_REGNUM_GENERIC_ARG3, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r6,       "arg4",dwarf_r6,    dwarf_r6,    LLDB_REGNUM_GENERIC_ARG4, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r7,       "arg5",dwarf_r7,    dwarf_r7,    LLDB_REGNUM_GENERIC_ARG5, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r8,       "arg6",dwarf_r8,    dwarf_r8,    LLDB_REGNUM_GENERIC_ARG6, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r9,       "arg7",dwarf_r9,    dwarf_r9,    LLDB_REGNUM_GENERIC_ARG7, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r10,      "arg8",dwarf_r10,   dwarf_r10,   LLDB_REGNUM_GENERIC_ARG8, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r11,      NULL,  dwarf_r11,   dwarf_r11,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r12,      NULL,  dwarf_r12,   dwarf_r12,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r13,      NULL,  dwarf_r13,   dwarf_r13,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r14,      NULL,  dwarf_r14,   dwarf_r14,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r15,      NULL,  dwarf_r15,   dwarf_r15,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r16,      NULL,  dwarf_r16,   dwarf_r16,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r17,      NULL,  dwarf_r17,   dwarf_r17,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r18,      NULL,  dwarf_r18,   dwarf_r18,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r19,      NULL,  dwarf_r19,   dwarf_r19,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r20,      NULL,  dwarf_r20,   dwarf_r20,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r21,      NULL,  dwarf_r21,   dwarf_r21,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r22,      NULL,  dwarf_r22,   dwarf_r22,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r23,      NULL,  dwarf_r23,   dwarf_r23,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r24,      NULL,  dwarf_r24,   dwarf_r24,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r25,      NULL,  dwarf_r25,   dwarf_r25,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r26,      NULL,  dwarf_r26,   dwarf_r26,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r27,      NULL,  dwarf_r27,   dwarf_r27,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r28,      NULL,  dwarf_r28,   dwarf_r28,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r29,      NULL,  dwarf_r29,   dwarf_r29,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r30,      NULL,  dwarf_r30,   dwarf_r30,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r31,      NULL,  dwarf_r31,   dwarf_r31,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(lr,       "lr",  dwarf_lr,    dwarf_lr,    LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(cr,       "cr",  dwarf_cr,    dwarf_cr,    LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(xer,      "xer", dwarf_xer,   dwarf_xer,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(ctr,      "ctr", dwarf_ctr,   dwarf_ctr,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_GPR(pc,       "pc",  dwarf_pc,    dwarf_pc,    LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM),
-    { NULL, NULL, 8, 0, eEncodingUint, eFormatHex, { dwarf_cfa, dwarf_cfa, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM}, NULL, NULL},
+    DEFINE_GPR(r0,       nullptr, dwarf_r0,    dwarf_r0,    LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r1,       "sp",    dwarf_r1,    dwarf_r1,    LLDB_REGNUM_GENERIC_SP, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r2,       nullptr, dwarf_r2,    dwarf_r2,    LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r3,       "arg1",  dwarf_r3,    dwarf_r3,    LLDB_REGNUM_GENERIC_ARG1, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r4,       "arg2",  dwarf_r4,    dwarf_r4,    LLDB_REGNUM_GENERIC_ARG2 ,LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r5,       "arg3",  dwarf_r5,    dwarf_r5,    LLDB_REGNUM_GENERIC_ARG3, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r6,       "arg4",  dwarf_r6,    dwarf_r6,    LLDB_REGNUM_GENERIC_ARG4, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r7,       "arg5",  dwarf_r7,    dwarf_r7,    LLDB_REGNUM_GENERIC_ARG5, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r8,       "arg6",  dwarf_r8,    dwarf_r8,    LLDB_REGNUM_GENERIC_ARG6, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r9,       "arg7",  dwarf_r9,    dwarf_r9,    LLDB_REGNUM_GENERIC_ARG7, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r10,      "arg8",  dwarf_r10,   dwarf_r10,   LLDB_REGNUM_GENERIC_ARG8, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r11,      nullptr, dwarf_r11,   dwarf_r11,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r12,      nullptr, dwarf_r12,   dwarf_r12,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r13,      nullptr, dwarf_r13,   dwarf_r13,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r14,      nullptr, dwarf_r14,   dwarf_r14,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r15,      nullptr, dwarf_r15,   dwarf_r15,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r16,      nullptr, dwarf_r16,   dwarf_r16,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r17,      nullptr, dwarf_r17,   dwarf_r17,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r18,      nullptr, dwarf_r18,   dwarf_r18,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r19,      nullptr, dwarf_r19,   dwarf_r19,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r20,      nullptr, dwarf_r20,   dwarf_r20,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r21,      nullptr, dwarf_r21,   dwarf_r21,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r22,      nullptr, dwarf_r22,   dwarf_r22,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r23,      nullptr, dwarf_r23,   dwarf_r23,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r24,      nullptr, dwarf_r24,   dwarf_r24,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r25,      nullptr, dwarf_r25,   dwarf_r25,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r26,      nullptr, dwarf_r26,   dwarf_r26,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r27,      nullptr, dwarf_r27,   dwarf_r27,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r28,      nullptr, dwarf_r28,   dwarf_r28,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r29,      nullptr, dwarf_r29,   dwarf_r29,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r30,      nullptr, dwarf_r30,   dwarf_r30,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(r31,      nullptr, dwarf_r31,   dwarf_r31,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(lr,       "lr",    dwarf_lr,    dwarf_lr,    LLDB_REGNUM_GENERIC_RA, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(cr,       "cr",    dwarf_cr,    dwarf_cr,    LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM),
+    DEFINE_GPR(xer,      "xer",   dwarf_xer,   dwarf_xer,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(ctr,      "ctr",   dwarf_ctr,   dwarf_ctr,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_GPR(pc,       "pc",    dwarf_pc,    dwarf_pc,    LLDB_REGNUM_GENERIC_PC, LLDB_INVALID_REGNUM),
+    { nullptr, nullptr, 8, 0, eEncodingUint, eFormatHex, { dwarf_cfa, dwarf_cfa, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM}, nullptr, nullptr }
 };
 
 static const uint32_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
@@ -165,7 +170,6 @@ ABISysV_ppc::GetRegisterInfoArray (uint32_t &count)
     return g_register_infos;
 }
 
-
 size_t
 ABISysV_ppc::GetRedZoneSize () const
 {
@@ -175,6 +179,7 @@ ABISysV_ppc::GetRedZoneSize () const
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
+
 ABISP
 ABISysV_ppc::CreateInstance (const ArchSpec &arch)
 {
@@ -216,7 +221,7 @@ ABISysV_ppc::PrepareTrivialCall (Thread &thread,
     if (!reg_ctx)
         return false;
 
-    const RegisterInfo *reg_info = NULL;
+    const RegisterInfo *reg_info = nullptr;
 
     if (args.size() > 8) // TODO handle more than 8 arguments
         return false;
@@ -473,7 +478,6 @@ ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp, lldb::ValueObjec
         {
             error.SetErrorString("We don't support returning longer than 64 bit integer values at present.");
         }
-
     }
     else if (compiler_type.IsFloatingPointType (count, is_complex))
     {
@@ -516,7 +520,6 @@ ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp, lldb::ValueObjec
 
     return error;
 }
-
 
 ValueObjectSP
 ABISysV_ppc::GetReturnValueObjectSimple (Thread &thread,
@@ -625,7 +628,6 @@ ABISysV_ppc::GetReturnValueObjectSimple (Thread &thread,
             return_valobj_sp = ValueObjectConstResult::Create (thread.GetStackFrameAtIndex(0).get(),
                                                                value,
                                                                ConstString(""));
-
     }
     else if (type_flags & eTypeIsPointer)
     {
@@ -641,7 +643,6 @@ ABISysV_ppc::GetReturnValueObjectSimple (Thread &thread,
         const size_t byte_size = return_compiler_type.GetByteSize(nullptr);
         if (byte_size > 0)
         {
-
             const RegisterInfo *altivec_reg = reg_ctx->GetRegisterInfoByName("v2", 0);
             if (altivec_reg)
             {
@@ -738,7 +739,7 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
                 bool is_complex;
                 uint32_t count;
 
-                CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex (idx, name, &field_bit_offset, NULL, NULL);
+                CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(idx, name, &field_bit_offset, nullptr, nullptr);
                 const size_t field_bit_width = field_compiler_type.GetBitSize(&thread);
 
                 // If there are any unaligned fields, this is stored in memory.
@@ -751,8 +752,7 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
                 uint32_t field_byte_width = field_bit_width/8;
                 uint32_t field_byte_offset = field_bit_offset/8;
 
-
-                DataExtractor *copy_from_extractor = NULL;
+                DataExtractor *copy_from_extractor = nullptr;
                 uint32_t       copy_from_offset    = 0;
 
                 if (field_compiler_type.IsIntegerType (is_signed) || field_compiler_type.IsPointerType ())
@@ -772,7 +772,6 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
                             copy_from_extractor = &rdx_data;
                             copy_from_offset = 0;
                             integer_bytes = 8 + field_byte_width;
-
                         }
                     }
                     else if (integer_bytes + field_byte_width <= 16)
@@ -784,7 +783,7 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
                     else
                     {
                         // The last field didn't fit.  I can't see how that would happen w/o the overall size being
-                        // greater than 16 bytes.  For now, return a NULL return value object.
+                        // greater than 16 bytes.  For now, return a nullptr return value object.
                         return return_valobj_sp;
                     }
                 }
@@ -818,8 +817,8 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
                                 CompilerType next_field_compiler_type = return_compiler_type.GetFieldAtIndex (idx + 1,
                                                                                                         name,
                                                                                                         &next_field_bit_offset,
-                                                                                                        NULL,
-                                                                                                        NULL);
+                                                                                                        nullptr,
+                                                                                                        nullptr);
                                 if (next_field_compiler_type.IsIntegerType (is_signed))
                                     in_gpr = true;
                                 else
@@ -828,7 +827,6 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
                                     in_gpr = false;
                                 }
                             }
-
                         }
                         else if (field_byte_offset % 4 == 0)
                         {
@@ -842,8 +840,8 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
                                 CompilerType prev_field_compiler_type = return_compiler_type.GetFieldAtIndex (idx - 1,
                                                                                                         name,
                                                                                                         &prev_field_bit_offset,
-                                                                                                        NULL,
-                                                                                                        NULL);
+                                                                                                        nullptr,
+                                                                                                        nullptr);
                                 if (prev_field_compiler_type.IsIntegerType (is_signed))
                                     in_gpr = true;
                                 else
@@ -852,7 +850,6 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
                                     in_gpr = false;
                                 }
                             }
-
                         }
                         else
                         {
@@ -909,7 +906,6 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
             }
         }
 
-
         // FIXME: This is just taking a guess, r3 may very well no longer hold the return storage location.
         // If we are going to do this right, when we make a new frame we should check to see if it uses a memory
         // return, and if we are at the first instruction and if so stash away the return location.  Then we would
@@ -919,10 +915,10 @@ ABISysV_ppc::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_comp
         {
             unsigned r3_id = reg_ctx_sp->GetRegisterInfoByName("r3", 0)->kinds[eRegisterKindLLDB];
             lldb::addr_t storage_addr = (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(r3_id, 0);
-            return_valobj_sp = ValueObjectMemory::Create (&thread,
-                                                          "",
-                                                          Address (storage_addr, NULL),
-                                                          return_compiler_type);
+            return_valobj_sp = ValueObjectMemory::Create(&thread,
+                                                         "",
+                                                         Address(storage_addr, nullptr),
+                                                         return_compiler_type);
         }
     }
 
@@ -987,8 +983,6 @@ ABISysV_ppc::RegisterIsVolatile (const RegisterInfo *reg_info)
     return !RegisterIsCalleeSaved (reg_info);
 }
 
-
-
 // See "Register Usage" in the
 // "System V Application Binary Interface"
 // "64-bit PowerPC ELF Application Binary Interface Supplement"
@@ -1034,8 +1028,6 @@ ABISysV_ppc::RegisterIsCalleeSaved (const RegisterInfo *reg_info)
     return false;
 }
 
-
-
 void
 ABISysV_ppc::Initialize()
 {
@@ -1060,6 +1052,7 @@ ABISysV_ppc::GetPluginNameStatic()
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
+
 lldb_private::ConstString
 ABISysV_ppc::GetPluginName()
 {
@@ -1071,4 +1064,3 @@ ABISysV_ppc::GetPluginVersion()
 {
     return 1;
 }
-
