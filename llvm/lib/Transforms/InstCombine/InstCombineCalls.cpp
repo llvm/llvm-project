@@ -1654,7 +1654,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
           // If there is a stackrestore below this one, remove this one.
           if (II->getIntrinsicID() == Intrinsic::stackrestore)
             return EraseInstFromFunction(CI);
-          // Otherwise, ignore the intrinsic.
+
+          // Bail if we cross over an intrinsic with side effects, such as
+          // llvm.stacksave, llvm.read_register, or llvm.setjmp.
+          if (II->mayHaveSideEffects()) {
+            CannotRemove = true;
+            break;
+          }
         } else {
           // If we found a non-intrinsic call, we can't remove the stack
           // restore.
