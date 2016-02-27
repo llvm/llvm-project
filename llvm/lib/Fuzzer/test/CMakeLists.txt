@@ -47,6 +47,11 @@ set(TraceBBTests
   SimpleTest
   )
 
+set(TracePCTests
+  FourIndependentBranchesTest
+  FullCoverageSetTest
+  )
+
 set(TestBinaries)
 
 foreach(Test ${Tests})
@@ -111,6 +116,12 @@ add_subdirectory(trace-bb)
 
 foreach(Test ${TraceBBTests})
   set(TestBinaries ${TestBinaries} LLVMFuzzer-${Test}-TraceBB)
+endforeach()
+
+add_subdirectory(trace-pc)
+
+foreach(Test ${TracePCTests})
+  set(TestBinaries ${TestBinaries} LLVMFuzzer-${Test}-TracePC)
 endforeach()
 
 set_target_properties(${TestBinaries}

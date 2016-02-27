@@ -438,9 +438,9 @@ public:
     assert(B != E && "No instructions to bundle");
     ++B;
     while (B != E) {
-      MachineInstr *MI = B;
+      MachineInstr &MI = *B;
       ++B;
-      MI->bundleWithPred();
+      MI.bundleWithPred();
     }
   }
 

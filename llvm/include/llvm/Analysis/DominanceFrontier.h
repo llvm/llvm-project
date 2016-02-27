@@ -168,33 +168,22 @@ extern template class DominanceFrontierBase<BasicBlock>;
 extern template class ForwardDominanceFrontierBase<BasicBlock>;
 
 /// \brief Analysis pass which computes a \c DominanceFrontier.
-class DominanceFrontierAnalysis {
-public:
+struct DominanceFrontierAnalysis : AnalysisBase<DominanceFrontierAnalysis> {
   /// \brief Provide the result typedef for this analysis pass.
   typedef DominanceFrontier Result;
 
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
-
   /// \brief Run the analysis pass over a function and produce a dominator tree.
   DominanceFrontier run(Function &F, AnalysisManager<Function> *AM);
-
-  /// \brief Provide access to a name for this pass for debugging purposes.
-  static StringRef name() { return "DominanceFrontierAnalysis"; }
-
-private:
-  static char PassID;
 };
 
 /// \brief Printer pass for the \c DominanceFrontier.
-class DominanceFrontierPrinterPass {
+class DominanceFrontierPrinterPass
+    : public PassBase<DominanceFrontierPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit DominanceFrontierPrinterPass(raw_ostream &OS);
   PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
-
-  static StringRef name() { return "DominanceFrontierAnalysis"; }
 };
 
 } // End llvm namespace

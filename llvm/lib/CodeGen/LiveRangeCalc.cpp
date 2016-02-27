@@ -42,12 +42,12 @@ void LiveRangeCalc::reset(const MachineFunction *mf,
 
 static void createDeadDef(SlotIndexes &Indexes, VNInfo::Allocator &Alloc,
                           LiveRange &LR, const MachineOperand &MO) {
-    const MachineInstr *MI = MO.getParent();
-    SlotIndex DefIdx =
-        Indexes.getInstructionIndex(MI).getRegSlot(MO.isEarlyClobber());
+  const MachineInstr &MI = *MO.getParent();
+  SlotIndex DefIdx =
+      Indexes.getInstructionIndex(MI).getRegSlot(MO.isEarlyClobber());
 
-    // Create the def in LR. This may find an existing def.
-    LR.createDeadDef(DefIdx, Alloc);
+  // Create the def in LR. This may find an existing def.
+  LR.createDeadDef(DefIdx, Alloc);
 }
 
 void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
@@ -184,7 +184,7 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg,
         // had an early-clobber flag.
         isEarlyClobber = MI->getOperand(DefIdx).isEarlyClobber();
       }
-      UseIdx = Indexes->getInstructionIndex(MI).getRegSlot(isEarlyClobber);
+      UseIdx = Indexes->getInstructionIndex(*MI).getRegSlot(isEarlyClobber);
     }
 
     // MI is reading Reg. We may have visited MI before if it happens to be

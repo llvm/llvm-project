@@ -31,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
@@ -159,8 +160,12 @@ class SanitizerCoverageModule : public ModulePass {
   const char *getPassName() const override {
     return "SanitizerCoverageModule";
   }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<PostDominatorTreeWrapperPass>();
+  }
 
- private:
+private:
   void InjectCoverageForIndirectCalls(Function &F,
                                       ArrayRef<Instruction *> IndirCalls);
   void InjectTraceForCmp(Function &F, ArrayRef<Instruction *> CmpTraceTargets);
@@ -289,36 +294,42 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
       new GlobalVariable(M, ModNameStrConst->getType(), true,
                          GlobalValue::PrivateLinkage, ModNameStrConst);
 
-  Function *CtorFunc;
-  std::tie(CtorFunc, std::ignore) = createSanitizerCtorAndInitFunctions(
-      M, kSanCovModuleCtorName, kSanCovModuleInitName,
-      {Int32PtrTy, IntptrTy, Int8PtrTy, Int8PtrTy},
-      {IRB.CreatePointerCast(RealGuardArray, Int32PtrTy),
-       ConstantInt::get(IntptrTy, N),
-       Options.Use8bitCounters
-           ? IRB.CreatePointerCast(RealEightBitCounterArray, Int8PtrTy)
-           : Constant::getNullValue(Int8PtrTy),
-       IRB.CreatePointerCast(ModuleName, Int8PtrTy)});
+  if (!Options.TracePC) {
+    Function *CtorFunc;
+    std::tie(CtorFunc, std::ignore) = createSanitizerCtorAndInitFunctions(
+        M, kSanCovModuleCtorName, kSanCovModuleInitName,
+        {Int32PtrTy, IntptrTy, Int8PtrTy, Int8PtrTy},
+        {IRB.CreatePointerCast(RealGuardArray, Int32PtrTy),
+          ConstantInt::get(IntptrTy, N),
+          Options.Use8bitCounters
+              ? IRB.CreatePointerCast(RealEightBitCounterArray, Int8PtrTy)
+              : Constant::getNullValue(Int8PtrTy),
+          IRB.CreatePointerCast(ModuleName, Int8PtrTy)});
 
-  appendToGlobalCtors(M, CtorFunc, kSanCtorAndDtorPriority);
+    appendToGlobalCtors(M, CtorFunc, kSanCtorAndDtorPriority);
+  }
 
   return true;
 }
 
-static bool shouldInstrumentBlock(const BasicBlock *BB,
-                                  const DominatorTree *DT) {
+static bool shouldInstrumentBlock(const BasicBlock *BB, const DominatorTree *DT,
+                                  const PostDominatorTree *PDT) {
   if (!ClPruneBlocks)
-    return true;
-  if (succ_begin(BB) == succ_end(BB))
     return true;
 
   // Check if BB dominates all its successors.
+  bool DominatesAll = succ_begin(BB) != succ_end(BB);
   for (const BasicBlock *SUCC : make_range(succ_begin(BB), succ_end(BB))) {
-    if (!DT->dominates(BB, SUCC))
-      return true;
+    DominatesAll &= DT->dominates(BB, SUCC);
   }
 
-  return false;
+  // Check if BB pre-dominates all predecessors.
+  bool PreDominatesAll = pred_begin(BB) != pred_end(BB);
+  for (const BasicBlock *PRED : make_range(pred_begin(BB), pred_end(BB))) {
+    PreDominatesAll &= PDT->dominates(BB, PRED);
+  }
+
+  return !(DominatesAll || PreDominatesAll);
 }
 
 bool SanitizerCoverageModule::runOnFunction(Function &F) {
@@ -338,10 +349,12 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
   SmallVector<Instruction*, 8> CmpTraceTargets;
   SmallVector<Instruction*, 8> SwitchTraceTargets;
 
-  DominatorTree DT;
-  DT.recalculate(F);
+  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+  PostDominatorTree *PDT =
+      &getAnalysis<PostDominatorTreeWrapperPass>(F).getPostDomTree();
+
   for (auto &BB : F) {
-    if (shouldInstrumentBlock(&BB, &DT))
+    if (shouldInstrumentBlock(&BB, DT, PDT))
       BlocksToInstrument.push_back(&BB);
     for (auto &Inst : BB) {
       if (Options.IndirectCalls) {
@@ -544,7 +557,12 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
 }
 
 char SanitizerCoverageModule::ID = 0;
-INITIALIZE_PASS(SanitizerCoverageModule, "sancov",
+INITIALIZE_PASS_BEGIN(SanitizerCoverageModule, "sancov",
+    "SanitizerCoverage: TODO."
+    "ModulePass", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
+INITIALIZE_PASS_END(SanitizerCoverageModule, "sancov",
     "SanitizerCoverage: TODO."
     "ModulePass", false, false)
 ModulePass *llvm::createSanitizerCoverageModulePass(

@@ -875,6 +875,38 @@ lock/incl 1(%rsp)
 // CHECK: lock
 // CHECK: incl 1(%rsp)
 
+
+lock addq %rsi, (%rdi)
+// CHECK: lock
+// CHECK: encoding: [0xf0]
+// CHECK: addq %rsi, (%rdi)
+// CHECK: encoding: [0x48,0x01,0x37]
+
+lock subq %rsi, (%rdi)
+// CHECK: lock
+// CHECK: encoding: [0xf0]
+// CHECK: subq %rsi, (%rdi)
+// CHECK: encoding: [0x48,0x29,0x37]
+
+lock andq %rsi, (%rdi)
+// CHECK: lock
+// CHECK: encoding: [0xf0]
+// CHECK: andq %rsi, (%rdi)
+// CHECK: encoding: [0x48,0x21,0x37]
+
+lock orq %rsi, (%rdi)
+// CHECK: lock
+// CHECK: encoding: [0xf0]
+// CHECK: orq %rsi, (%rdi)
+// CHECK: encoding: [0x48,0x09,0x37]
+
+lock xorq %rsi, (%rdi)
+// CHECK: lock
+// CHECK: encoding: [0xf0]
+// CHECK: xorq %rsi, (%rdi)
+// CHECK: encoding: [0x48,0x31,0x37]
+
+
 // rdar://8033482
 rep movsl
 // CHECK: rep

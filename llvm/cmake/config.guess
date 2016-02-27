@@ -1203,6 +1203,9 @@ EOF
     BePC:Haiku:*:*)	# Haiku running on Intel PC compatible.
 	echo i586-pc-haiku
 	exit ;;
+    x86_64:Haiku:*:*) # Haiku running on x86_64.
+	echo x86_64-unknown-haiku
+	exit ;;
     SX-4:SUPER-UX:*:*)
 	echo sx4-nec-superux${UNAME_RELEASE}
 	exit ;;

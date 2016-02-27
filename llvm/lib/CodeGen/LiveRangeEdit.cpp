@@ -125,7 +125,7 @@ bool LiveRangeEdit::canRematerializeAt(Remat &RM,
   // No defining instruction provided.
   SlotIndex DefIdx;
   if (RM.OrigMI)
-    DefIdx = LIS.getInstructionIndex(RM.OrigMI);
+    DefIdx = LIS.getInstructionIndex(*RM.OrigMI);
   else {
     DefIdx = RM.ParentVNI->def;
     RM.OrigMI = LIS.getInstructionFromIndex(DefIdx);
@@ -152,8 +152,9 @@ SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
   assert(RM.OrigMI && "Invalid remat");
   TII.reMaterialize(MBB, MI, DestReg, 0, RM.OrigMI, tri);
   Rematted.insert(RM.ParentVNI);
-  return LIS.getSlotIndexes()->insertMachineInstrInMaps(--MI, Late)
-           .getRegSlot();
+  return LIS.getSlotIndexes()
+      ->insertMachineInstrInMaps(*--MI, Late)
+      .getRegSlot();
 }
 
 void LiveRangeEdit::eraseVirtReg(unsigned Reg) {
@@ -188,9 +189,8 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
 
   // Since we're moving the DefMI load, make sure we're not extending any live
   // ranges.
-  if (!allUsesAvailableAt(DefMI,
-                          LIS.getInstructionIndex(DefMI),
-                          LIS.getInstructionIndex(UseMI)))
+  if (!allUsesAvailableAt(DefMI, LIS.getInstructionIndex(*DefMI),
+                          LIS.getInstructionIndex(*UseMI)))
     return false;
 
   // We also need to make sure it is safe to move the load.
@@ -210,7 +210,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   if (!FoldMI)
     return false;
   DEBUG(dbgs() << "                folded: " << *FoldMI);
-  LIS.ReplaceMachineInstrInMaps(UseMI, FoldMI);
+  LIS.ReplaceMachineInstrInMaps(*UseMI, *FoldMI);
   UseMI->eraseFromParent();
   DefMI->addRegisterDead(LI->reg, nullptr);
   Dead.push_back(DefMI);
@@ -220,7 +220,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
 
 bool LiveRangeEdit::useIsKill(const LiveInterval &LI,
                               const MachineOperand &MO) const {
-  const MachineInstr *MI = MO.getParent();
+  const MachineInstr &MI = *MO.getParent();
   SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
   if (LI.Query(Idx).isKill())
     return true;
@@ -237,7 +237,7 @@ bool LiveRangeEdit::useIsKill(const LiveInterval &LI,
 /// Find all live intervals that need to shrink, then remove the instruction.
 void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
   assert(MI->allDefsAreDead() && "Def isn't really dead");
-  SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
+  SlotIndex Idx = LIS.getInstructionIndex(*MI).getRegSlot();
 
   // Never delete a bundled instruction.
   if (MI->isBundled()) {
@@ -316,7 +316,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
   } else {
     if (TheDelegate)
       TheDelegate->LRE_WillEraseInstruction(MI);
-    LIS.RemoveMachineInstrFromMaps(MI);
+    LIS.RemoveMachineInstrFromMaps(*MI);
     MI->eraseFromParent();
     ++NumDCEDeleted;
   }

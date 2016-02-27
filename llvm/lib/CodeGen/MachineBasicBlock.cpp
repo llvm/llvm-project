@@ -302,16 +302,16 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << '\n';
   }
 
-  for (const_instr_iterator I = instr_begin(); I != instr_end(); ++I) {
+  for (auto &I : instrs()) {
     if (Indexes) {
-      if (Indexes->hasIndex(&*I))
-        OS << Indexes->getInstructionIndex(&*I);
+      if (Indexes->hasIndex(I))
+        OS << Indexes->getInstructionIndex(I);
       OS << '\t';
     }
     OS << '\t';
-    if (I->isInsideBundle())
+    if (I.isInsideBundle())
       OS << "  * ";
-    I->print(OS, MST);
+    I.print(OS, MST);
   }
 
   // Print the successors of this block according to the CFG.
@@ -826,7 +826,7 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P) {
         E = Terminators.end(); I != E; ++I) {
       if (std::find(NewTerminators.begin(), NewTerminators.end(), *I) ==
           NewTerminators.end())
-       Indexes->removeMachineInstrFromMaps(*I);
+       Indexes->removeMachineInstrFromMaps(**I);
     }
   }
 
@@ -837,13 +837,12 @@ MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P) {
     TII->InsertBranch(*NMBB, Succ, nullptr, Cond, DL);
 
     if (Indexes) {
-      for (instr_iterator I = NMBB->instr_begin(), E = NMBB->instr_end();
-           I != E; ++I) {
+      for (MachineInstr &MI : NMBB->instrs()) {
         // Some instructions may have been moved to NMBB by updateTerminator(),
         // so we first remove any instruction that already has an index.
-        if (Indexes->hasIndex(&*I))
-          Indexes->removeMachineInstrFromMaps(&*I);
-        Indexes->insertMachineInstrInMaps(&*I);
+        if (Indexes->hasIndex(MI))
+          Indexes->removeMachineInstrFromMaps(MI);
+        Indexes->insertMachineInstrInMaps(MI);
       }
     }
   }

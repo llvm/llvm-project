@@ -940,8 +940,6 @@ GlobalsAAResult GlobalsAA::run(Module &M, AnalysisManager<Module> *AM) {
                                         AM->getResult<CallGraphAnalysis>(M));
 }
 
-char GlobalsAA::PassID;
-
 char GlobalsAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(GlobalsAAWrapperPass, "globals-aa",
                       "Globals Alias Analysis", false, true)

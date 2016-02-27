@@ -1847,7 +1847,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setPrefLoopAlignment(4); // 2^4 bytes.
 
   // An out-of-order CPU can speculatively execute past a predictable branch,
-  // but a conditional move could be stalled by an expensive earlier operation. 
+  // but a conditional move could be stalled by an expensive earlier operation.
   PredictableSelectIsExpensive = Subtarget.getSchedModel().isOutOfOrder();
   EnableExtLdPromotion = true;
   setPrefFunctionAlignment(4); // 2^4 bytes.
@@ -26791,9 +26791,60 @@ static SDValue foldXorTruncShiftIntoCmp(SDNode *N, SelectionDAG &DAG) {
   return Cond;
 }
 
+/// Turn vector tests of the signbit in the form of:
+///   xor (sra X, elt_size(X)-1), -1
+/// into:
+///   pcmpgt X, -1
+///
+/// This should be called before type legalization because the pattern may not
+/// persist after that.
+static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
+                                         const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isSimple())
+    return SDValue();
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  default: return SDValue();
+  case MVT::v16i8:
+  case MVT::v8i16:
+  case MVT::v4i32: if (!Subtarget.hasSSE2()) return SDValue(); break;
+  case MVT::v2i64: if (!Subtarget.hasSSE42()) return SDValue(); break;
+  case MVT::v32i8:
+  case MVT::v16i16:
+  case MVT::v8i32:
+  case MVT::v4i64: if (!Subtarget.hasAVX2()) return SDValue(); break;
+  }
+
+  // There must be a shift right algebraic before the xor, and the xor must be a
+  // 'not' operation.
+  SDValue Shift = N->getOperand(0);
+  SDValue Ones = N->getOperand(1);
+  if (Shift.getOpcode() != ISD::SRA || !Shift.hasOneUse() ||
+      !ISD::isBuildVectorAllOnes(Ones.getNode()))
+    return SDValue();
+
+  // The shift should be smearing the sign bit across each vector element.
+  auto *ShiftBV = dyn_cast<BuildVectorSDNode>(Shift.getOperand(1));
+  if (!ShiftBV)
+    return SDValue();
+
+  EVT ShiftEltTy = Shift.getValueType().getVectorElementType();
+  auto *ShiftAmt = ShiftBV->getConstantSplatNode();
+  if (!ShiftAmt || ShiftAmt->getZExtValue() != ShiftEltTy.getSizeInBits() - 1)
+    return SDValue();
+
+  // Create a greater-than comparison against -1. We don't use the more obvious
+  // greater-than-or-equal-to-zero because SSE/AVX don't have that instruction.
+  return DAG.getNode(X86ISD::PCMPGT, SDLoc(N), VT, Shift.getOperand(0), Ones);
+}
+
 static SDValue PerformXorCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const X86Subtarget &Subtarget) {
+  if (SDValue Cmp = foldVectorXorShiftIntoCmp(N, DAG, Subtarget))
+    return Cmp;
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -27652,33 +27703,22 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
   return true;
 }
 
-/// Do target-specific dag combines on floating point adds.
-static SDValue PerformFADDCombine(SDNode *N, SelectionDAG &DAG,
-                                  const X86Subtarget &Subtarget) {
+/// Do target-specific dag combines on floating-point adds/subs.
+static SDValue performFaddFsubCombine(SDNode *N, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+  bool IsFadd = N->getOpcode() == ISD::FADD;
+  assert((IsFadd || N->getOpcode() == ISD::FSUB) && "Wrong opcode");
 
-  // Try to synthesize horizontal adds from adds of shuffles.
+  // Try to synthesize horizontal add/sub from adds/subs of shuffles.
   if (((Subtarget.hasSSE3() && (VT == MVT::v4f32 || VT == MVT::v2f64)) ||
        (Subtarget.hasFp256() && (VT == MVT::v8f32 || VT == MVT::v4f64))) &&
-      isHorizontalBinOp(LHS, RHS, true))
-    return DAG.getNode(X86ISD::FHADD, SDLoc(N), VT, LHS, RHS);
-  return SDValue();
-}
-
-/// Do target-specific dag combines on floating point subs.
-static SDValue PerformFSUBCombine(SDNode *N, SelectionDAG &DAG,
-                                  const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-
-  // Try to synthesize horizontal subs from subs of shuffles.
-  if (((Subtarget.hasSSE3() && (VT == MVT::v4f32 || VT == MVT::v2f64)) ||
-       (Subtarget.hasFp256() && (VT == MVT::v8f32 || VT == MVT::v4f64))) &&
-      isHorizontalBinOp(LHS, RHS, false))
-    return DAG.getNode(X86ISD::FHSUB, SDLoc(N), VT, LHS, RHS);
+      isHorizontalBinOp(LHS, RHS, IsFadd)) {
+    auto NewOpcode = IsFadd ? X86ISD::FHADD : X86ISD::FHSUB;
+    return DAG.getNode(NewOpcode, SDLoc(N), VT, LHS, RHS);
+  }
   return SDValue();
 }
 
@@ -28850,8 +28890,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MSTORE:         return PerformMSTORECombine(N, DAG, Subtarget);
   case ISD::SINT_TO_FP:     return PerformSINT_TO_FPCombine(N, DAG, Subtarget);
   case ISD::UINT_TO_FP:     return PerformUINT_TO_FPCombine(N, DAG, Subtarget);
-  case ISD::FADD:           return PerformFADDCombine(N, DAG, Subtarget);
-  case ISD::FSUB:           return PerformFSUBCombine(N, DAG, Subtarget);
+  case ISD::FADD:
+  case ISD::FSUB:           return performFaddFsubCombine(N, DAG, Subtarget);
   case ISD::FNEG:           return PerformFNEGCombine(N, DAG, Subtarget);
   case ISD::TRUNCATE:       return PerformTRUNCATECombine(N, DAG, Subtarget);
   case X86ISD::FXOR:

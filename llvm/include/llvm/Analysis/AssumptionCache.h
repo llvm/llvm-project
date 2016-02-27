@@ -93,17 +93,8 @@ public:
 ///
 /// This analysis is intended for use with the new pass manager and will vend
 /// assumption caches for a given function.
-class AssumptionAnalysis {
-  static char PassID;
-
-public:
+struct AssumptionAnalysis : AnalysisBase<AssumptionAnalysis> {
   typedef AssumptionCache Result;
-
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
-
-  /// \brief Provide a name for the analysis for debugging and logging.
-  static StringRef name() { return "AssumptionAnalysis"; }
 
   AssumptionAnalysis() {}
   AssumptionAnalysis(const AssumptionAnalysis &Arg) {}
@@ -115,7 +106,7 @@ public:
 };
 
 /// \brief Printer pass for the \c AssumptionAnalysis results.
-class AssumptionPrinterPass {
+class AssumptionPrinterPass : public PassBase<AssumptionPrinterPass> {
   raw_ostream &OS;
 
 public:

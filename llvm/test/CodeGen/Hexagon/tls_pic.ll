@@ -7,7 +7,7 @@
 ; CHECK:          = add(pc, ##_GLOBAL_OFFSET_TABLE_@PCREL)
 ; CHECK-DAG:      = ##src_ie@IEGOT
 ; CHECK-DAG:      = ##dst_ie@IEGOT
-; CHECK-DAG-NOT:  call
+; CHECK-NOT:  call
 define i32 @test_initial_exec() nounwind {
 entry:
   %0 = load i32, i32* @src_ie, align 4

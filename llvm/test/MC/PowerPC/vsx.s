@@ -547,3 +547,113 @@
 # CHECK-BE: mtvsrwz 0, 3                       # encoding: [0x7c,0x03,0x01,0xe6]
 # CHECK-LE: mtvsrwz 0, 3                       # encoding: [0xe6,0x01,0x03,0x7c]
             mtvsrwz 0, 3
+
+# Power9 Instructions:
+
+# Compare Ordered/Unordered
+# CHECK-BE: xscmpoqp 6, 31, 27                 # encoding: [0xff,0x1f,0xd9,0x08]
+# CHECK-LE: xscmpoqp 6, 31, 27                 # encoding: [0x08,0xd9,0x1f,0xff]
+            xscmpoqp 6, 31, 27
+# CHECK-BE: xscmpuqp 6, 31, 27                 # encoding: [0xff,0x1f,0xdd,0x08]
+# CHECK-LE: xscmpuqp 6, 31, 27                 # encoding: [0x08,0xdd,0x1f,0xff]
+            xscmpuqp 6, 31, 27
+
+# Compare Exponents
+# CHECK-BE: xscmpexpdp 6, 63, 27               # encoding: [0xf3,0x1f,0xd9,0xdc]
+# CHECK-LE: xscmpexpdp 6, 63, 27               # encoding: [0xdc,0xd9,0x1f,0xf3]
+            xscmpexpdp 6, 63, 27
+# CHECK-BE: xscmpexpqp 6, 31, 27               # encoding: [0xff,0x1f,0xd9,0x48]
+# CHECK-LE: xscmpexpqp 6, 31, 27               # encoding: [0x48,0xd9,0x1f,0xff]
+            xscmpexpqp 6, 31, 27
+
+# Compare ==, >=, >, !=
+# CHECK-BE: xscmpeqdp 7, 63, 27                # encoding: [0xf0,0xff,0xd8,0x1c]
+# CHECK-LE: xscmpeqdp 7, 63, 27                # encoding: [0x1c,0xd8,0xff,0xf0]
+            xscmpeqdp 7, 63, 27
+# CHECK-BE: xscmpgedp 7, 63, 27                # encoding: [0xf0,0xff,0xd8,0x9c]
+# CHECK-LE: xscmpgedp 7, 63, 27                # encoding: [0x9c,0xd8,0xff,0xf0]
+            xscmpgedp 7, 63, 27
+# CHECK-BE: xscmpgtdp 7, 63, 27                # encoding: [0xf0,0xff,0xd8,0x5c]
+# CHECK-LE: xscmpgtdp 7, 63, 27                # encoding: [0x5c,0xd8,0xff,0xf0]
+            xscmpgtdp 7, 63, 27
+# CHECK-BE: xscmpnedp 7, 63, 27                # encoding: [0xf0,0xff,0xd8,0xdc]
+# CHECK-LE: xscmpnedp 7, 63, 27                # encoding: [0xdc,0xd8,0xff,0xf0]
+            xscmpnedp 7, 63, 27
+
+# Vector Compare Not Equal
+# CHECK-BE: xvcmpnedp 7, 63, 27                # encoding: [0xf0,0xff,0xdb,0xdc]
+# CHECK-LE: xvcmpnedp 7, 63, 27                # encoding: [0xdc,0xdb,0xff,0xf0]
+            xvcmpnedp 7, 63, 27
+# CHECK-BE: xvcmpnedp. 7, 63, 27               # encoding: [0xf0,0xff,0xdf,0xdc]
+# CHECK-LE: xvcmpnedp. 7, 63, 27               # encoding: [0xdc,0xdf,0xff,0xf0]
+            xvcmpnedp. 7, 63, 27
+# CHECK-BE: xvcmpnesp 7, 63, 27                # encoding: [0xf0,0xff,0xda,0xdc]
+# CHECK-LE: xvcmpnesp 7, 63, 27                # encoding: [0xdc,0xda,0xff,0xf0]
+            xvcmpnesp 7, 63, 27
+# CHECK-BE: xvcmpnesp. 7, 63, 27               # encoding: [0xf0,0xff,0xde,0xdc]
+# CHECK-LE: xvcmpnesp. 7, 63, 27               # encoding: [0xdc,0xde,0xff,0xf0]
+            xvcmpnesp. 7, 63, 27
+
+# Convert DP -> QP
+# CHECK-BE: xscvdpqp 7, 27                     # encoding: [0xfc,0xf6,0xde,0x88]
+# CHECK-LE: xscvdpqp 7, 27                     # encoding: [0x88,0xde,0xf6,0xfc]
+            xscvdpqp 7, 27
+
+# Round & Convert QP -> DP
+# CHECK-BE: xscvqpdp 7, 27                     # encoding: [0xfc,0xf4,0xde,0x88]
+# CHECK-LE: xscvqpdp 7, 27                     # encoding: [0x88,0xde,0xf4,0xfc]
+            xscvqpdp 7, 27
+# CHECK-BE: xscvqpdpo 7, 27                    # encoding: [0xfc,0xf4,0xde,0x89]
+# CHECK-LE: xscvqpdpo 7, 27                    # encoding: [0x89,0xde,0xf4,0xfc]
+            xscvqpdpo 7, 27
+
+# Truncate & Convert QP -> (Un)Signed (D)Word
+# CHECK-BE: xscvqpsdz 7, 27                    # encoding: [0xfc,0xf9,0xde,0x88]
+# CHECK-LE: xscvqpsdz 7, 27                    # encoding: [0x88,0xde,0xf9,0xfc]
+            xscvqpsdz 7, 27
+# CHECK-BE: xscvqpswz 7, 27                    # encoding: [0xfc,0xe9,0xde,0x88]
+# CHECK-LE: xscvqpswz 7, 27                    # encoding: [0x88,0xde,0xe9,0xfc]
+            xscvqpswz 7, 27
+# CHECK-BE: xscvqpudz 7, 27                    # encoding: [0xfc,0xf1,0xde,0x88]
+# CHECK-LE: xscvqpudz 7, 27                    # encoding: [0x88,0xde,0xf1,0xfc]
+            xscvqpudz 7, 27
+# CHECK-BE: xscvqpuwz 7, 27                    # encoding: [0xfc,0xe1,0xde,0x88]
+# CHECK-LE: xscvqpuwz 7, 27                    # encoding: [0x88,0xde,0xe1,0xfc]
+            xscvqpuwz 7, 27
+
+# Convert (Un)Signed DWord -> QP
+# CHECK-BE: xscvsdqp 7, 27                     # encoding: [0xfc,0xea,0xde,0x88]
+# CHECK-LE: xscvsdqp 7, 27                     # encoding: [0x88,0xde,0xea,0xfc]
+            xscvsdqp 7, 27
+# CHECK-BE: xscvudqp 7, 27                     # encoding: [0xfc,0xe2,0xde,0x88]
+# CHECK-LE: xscvudqp 7, 27                     # encoding: [0x88,0xde,0xe2,0xfc]
+            xscvudqp 7, 27
+
+# (Round &) Convert DP <-> HP
+# CHECK-BE: xscvdphp 7, 63                     # encoding: [0xf0,0xf1,0xfd,0x6e]
+# CHECK-LE: xscvdphp 7, 63                     # encoding: [0x6e,0xfd,0xf1,0xf0]
+            xscvdphp 7, 63
+# CHECK-BE: xscvhpdp 7, 63                     # encoding: [0xf0,0xf0,0xfd,0x6e]
+# CHECK-LE: xscvhpdp 7, 63                     # encoding: [0x6e,0xfd,0xf0,0xf0]
+            xscvhpdp 7, 63
+
+# HP -> SP
+# CHECK-BE: xvcvhpsp 7, 63                     # encoding: [0xf0,0xf8,0xff,0x6e]
+# CHECK-LE: xvcvhpsp 7, 63                     # encoding: [0x6e,0xff,0xf8,0xf0]
+            xvcvhpsp 7, 63
+# CHECK-BE: xvcvsphp 7, 63                     # encoding: [0xf0,0xf9,0xff,0x6e]
+# CHECK-LE: xvcvsphp 7, 63                     # encoding: [0x6e,0xff,0xf9,0xf0]
+            xvcvsphp 7, 63
+
+# Round to Quad-Precision Integer [with Inexact]
+# CHECK-BE: xsrqpi 1, 7, 27, 2                 # encoding: [0xfc,0xe1,0xdc,0x0a]
+# CHECK-LE: xsrqpi 1, 7, 27, 2                 # encoding: [0x0a,0xdc,0xe1,0xfc]
+            xsrqpi 1, 7, 27, 2
+# CHECK-BE: xsrqpix 1, 7, 27, 2                # encoding: [0xfc,0xe1,0xdc,0x0b]
+# CHECK-LE: xsrqpix 1, 7, 27, 2                # encoding: [0x0b,0xdc,0xe1,0xfc]
+            xsrqpix 1, 7, 27, 2
+
+# Round Quad-Precision to Double-Extended Precision
+# CHECK-BE: xsrqpxp 1, 7, 27, 2                # encoding: [0xfc,0xe1,0xdc,0x4a]
+# CHECK-LE: xsrqpxp 1, 7, 27, 2                # encoding: [0x4a,0xdc,0xe1,0xfc]
+            xsrqpxp 1, 7, 27, 2

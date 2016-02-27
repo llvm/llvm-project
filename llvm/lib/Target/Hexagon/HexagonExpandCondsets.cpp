@@ -340,7 +340,7 @@ void HexagonExpandCondsets::shrinkToUses(unsigned Reg, LiveInterval &LI) {
     }
     // Extend the live segment to the beginning of the next one.
     LiveInterval::iterator End = LI.end();
-    SlotIndex S = LIS->getInstructionIndex(MI).getRegSlot();
+    SlotIndex S = LIS->getInstructionIndex(*MI).getRegSlot();
     LiveInterval::iterator T = LI.FindSegmentContaining(S);
     assert(T != End);
     LiveInterval::iterator N = std::next(T);
@@ -416,8 +416,8 @@ void HexagonExpandCondsets::terminateSegment(LiveInterval::iterator LT,
 /// function is used to update the live intervals while these transformations
 /// are being done.
 void HexagonExpandCondsets::addInstrToLiveness(MachineInstr *MI) {
-  SlotIndex MX = LIS->isNotInMIMap(MI) ? LIS->InsertMachineInstrInMaps(MI)
-                                       : LIS->getInstructionIndex(MI);
+  SlotIndex MX = LIS->isNotInMIMap(*MI) ? LIS->InsertMachineInstrInMaps(*MI)
+                                        : LIS->getInstructionIndex(*MI);
   DEBUG(dbgs() << "adding liveness info for instr\n  " << MX << "  " << *MI);
 
   MX = MX.getRegSlot();
@@ -543,7 +543,7 @@ void HexagonExpandCondsets::addInstrToLiveness(MachineInstr *MI) {
 /// instruction from the program. As with "addInstrToLiveness", this function
 /// is called while the program code is being changed.
 void HexagonExpandCondsets::removeInstrFromLiveness(MachineInstr *MI) {
-  SlotIndex MX = LIS->getInstructionIndex(MI).getRegSlot();
+  SlotIndex MX = LIS->getInstructionIndex(*MI).getRegSlot();
   DEBUG(dbgs() << "removing instr\n  " << MX << "  " << *MI);
 
   // For each def in MI:
@@ -635,7 +635,7 @@ void HexagonExpandCondsets::removeInstrFromLiveness(MachineInstr *MI) {
       continue;
     Uses.push_back(R);
   }
-  LIS->RemoveMachineInstrFromMaps(MI);
+  LIS->RemoveMachineInstrFromMaps(*MI);
   MI->eraseFromParent();
   for (unsigned i = 0, n = Uses.size(); i < n; ++i) {
     LiveInterval &LI = LIS->getInterval(Uses[i]);

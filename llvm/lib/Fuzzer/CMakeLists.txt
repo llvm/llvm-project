@@ -12,6 +12,7 @@ if( LLVM_USE_SANITIZE_COVERAGE )
     FuzzerMutate.cpp
     FuzzerSanitizerOptions.cpp
     FuzzerSHA1.cpp
+    FuzzerTracePC.cpp
     FuzzerUtil.cpp
     )
   add_library(LLVMFuzzerNoMain STATIC

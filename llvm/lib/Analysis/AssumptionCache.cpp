@@ -74,8 +74,6 @@ void AssumptionCache::registerAssumption(CallInst *CI) {
 #endif
 }
 
-char AssumptionAnalysis::PassID;
-
 PreservedAnalyses AssumptionPrinterPass::run(Function &F,
                                              AnalysisManager<Function> *AM) {
   AssumptionCache &AC = AM->getResult<AssumptionAnalysis>(F);

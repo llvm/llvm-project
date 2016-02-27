@@ -136,8 +136,6 @@ ObjCARCAAResult ObjCARCAA::run(Function &F, AnalysisManager<Function> *AM) {
                          AM->getResult<TargetLibraryAnalysis>(F));
 }
 
-char ObjCARCAA::PassID;
-
 char ObjCARCAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ObjCARCAAWrapperPass, "objc-arc-aa",
                       "ObjC-ARC-Based Alias Analysis", false, true)

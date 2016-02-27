@@ -13814,33 +13814,33 @@ SDValue DAGCombiner::SimplifySelect(SDLoc DL, SDValue N0,
 bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
                                     SDValue RHS) {
 
-  // fold (select (setcc x, -0.0, *lt), NaN, (fsqrt x))
-  // The select + setcc is redundant, because fsqrt returns NaN for X < -0.
+  // fold (select (setcc x, [+-]0.0, *lt), NaN, (fsqrt x))
+  // The select + setcc is redundant, because fsqrt returns NaN for X < 0.
   if (const ConstantFPSDNode *NaN = isConstOrConstSplatFP(LHS)) {
     if (NaN->isNaN() && RHS.getOpcode() == ISD::FSQRT) {
       // We have: (select (setcc ?, ?, ?), NaN, (fsqrt ?))
       SDValue Sqrt = RHS;
       ISD::CondCode CC;
       SDValue CmpLHS;
-      const ConstantFPSDNode *NegZero = nullptr;
+      const ConstantFPSDNode *Zero = nullptr;
 
       if (TheSelect->getOpcode() == ISD::SELECT_CC) {
         CC = dyn_cast<CondCodeSDNode>(TheSelect->getOperand(4))->get();
         CmpLHS = TheSelect->getOperand(0);
-        NegZero = isConstOrConstSplatFP(TheSelect->getOperand(1));
+        Zero = isConstOrConstSplatFP(TheSelect->getOperand(1));
       } else {
         // SELECT or VSELECT
         SDValue Cmp = TheSelect->getOperand(0);
         if (Cmp.getOpcode() == ISD::SETCC) {
           CC = dyn_cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
           CmpLHS = Cmp.getOperand(0);
-          NegZero = isConstOrConstSplatFP(Cmp.getOperand(1));
+          Zero = isConstOrConstSplatFP(Cmp.getOperand(1));
         }
       }
-      if (NegZero && NegZero->isNegative() && NegZero->isZero() &&
+      if (Zero && Zero->isZero() &&
           Sqrt.getOperand(0) == CmpLHS && (CC == ISD::SETOLT ||
           CC == ISD::SETULT || CC == ISD::SETLT)) {
-        // We have: (select (setcc x, -0.0, *lt), NaN, (fsqrt x))
+        // We have: (select (setcc x, [+-]0.0, *lt), NaN, (fsqrt x))
         CombineTo(TheSelect, Sqrt);
         return true;
       }

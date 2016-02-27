@@ -929,7 +929,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       RegisterOperands RegOpers;
       RegOpers.collect(*MI, *TRI, MRI, TrackLaneMasks, false);
       if (TrackLaneMasks) {
-        SlotIndex SlotIdx = LIS->getInstructionIndex(MI);
+        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI);
         RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx);
       }
       if (PDiffs != nullptr)

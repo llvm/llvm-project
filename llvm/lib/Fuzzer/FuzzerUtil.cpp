@@ -12,6 +12,7 @@
 #include "FuzzerInternal.h"
 #include <sstream>
 #include <iomanip>
+#include <sys/resource.h>
 #include <sys/time.h>
 #include <cassert>
 #include <cstring>
@@ -215,6 +216,13 @@ std::string Base64(const Unit &U) {
     Res += "=";
   }
   return Res;
+}
+
+size_t GetPeakRSSMb() {
+  struct rusage usage;
+  if (getrusage(RUSAGE_SELF, &usage))
+    return 0;
+  return usage.ru_maxrss >> 10;
 }
 
 }  // namespace fuzzer

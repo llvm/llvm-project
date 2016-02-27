@@ -135,6 +135,9 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
   setOperationAction(ISD::BR_CC, MVT::f64, Expand);
 
+  // On SI this is s_memtime and s_memrealtime on VI.
+  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
+
   for (MVT VT : MVT::integer_valuetypes()) {
     if (VT == MVT::i64)
       continue;

@@ -554,8 +554,8 @@ namespace llvm {
       VAARG_64
 
       // WARNING: Do not add anything in the end unless you want the node to
-      // have memop! In fact, starting from ATOMADD64_DAG all opcodes will be
-      // thought as target memory ops!
+      // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
+      // opcodes will be thought as target memory ops!
     };
   } // end namespace X86ISD
 

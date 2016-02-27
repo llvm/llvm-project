@@ -371,6 +371,10 @@ def IMM16bit : PatLeaf <(imm),
   [{return isUInt<16>(N->getZExtValue());}]
 >;
 
+def SIMM16bit : PatLeaf <(imm),
+  [{return isInt<16>(N->getSExtValue());}]
+>;
+
 def IMM20bit : PatLeaf <(imm),
   [{return isUInt<20>(N->getZExtValue());}]
 >;
@@ -1077,20 +1081,28 @@ multiclass SMRD_m <smrd op, string opName, bit imm, dag outs, dag ins,
   }
 }
 
-multiclass SMRD_Inval <smrd op, string opName,
-                       SDPatternOperator node> {
-  let hasSideEffects = 1, mayStore = 1 in {
-    def "" : SMRD_Pseudo <opName, (outs), (ins), [(node)]>;
+multiclass SMRD_Special <smrd op, string opName, dag outs,
+                       string opStr = "",
+                       list<dag> pattern = []> {
+  let hasSideEffects = 1 in {
+    def "" : SMRD_Pseudo <opName, outs, (ins), pattern>;
 
     let sbase = 0, offset = 0 in {
       let sdst = 0 in {
-        def _si : SMRD_Real_si <op.SI, opName, 0, (outs), (ins), opName>;
+        def _si : SMRD_Real_si <op.SI, opName, 0, outs, (ins), opName#opStr>;
       }
 
       let glc = 0, sdata = 0 in {
-        def _vi : SMRD_Real_vi <op.VI, opName, 0, (outs), (ins), opName>;
+        def _vi : SMRD_Real_vi <op.VI, opName, 0, outs, (ins), opName#opStr>;
       }
     }
+  }
+}
+
+multiclass SMRD_Inval <smrd op, string opName,
+                     SDPatternOperator node> {
+  let mayStore = 1 in {
+    defm : SMRD_Special<op, opName, (outs), "", [(node)]>;
   }
 }
 
@@ -1098,6 +1110,18 @@ class SMEM_Inval <bits<8> op, string opName, SDPatternOperator node> :
   SMRD_Real_vi<op, opName, 0, (outs), (ins), opName, [(node)]> {
   let hasSideEffects = 1;
   let mayStore = 1;
+  let sbase = 0;
+  let sdata = 0;
+  let glc = 0;
+  let offset = 0;
+}
+
+class SMEM_Ret <bits<8> op, string opName, SDPatternOperator node> :
+  SMRD_Real_vi<op, opName, 0, (outs SReg_64:$dst), (ins),
+  opName#" $dst", [(set i64:$dst, (node))]> {
+  let hasSideEffects = 1;
+  let mayStore = ?;
+  let mayLoad = ?;
   let sbase = 0;
   let sdata = 0;
   let glc = 0;

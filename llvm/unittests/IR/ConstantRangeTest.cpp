@@ -450,6 +450,45 @@ TEST_F(ConstantRangeTest, SMax) {
   EXPECT_EQ(One.smax(One), One);
 }
 
+TEST_F(ConstantRangeTest, UMin) {
+  EXPECT_EQ(Full.umin(Full), Full);
+  EXPECT_EQ(Full.umin(Empty), Empty);
+  EXPECT_EQ(Full.umin(Some), ConstantRange(APInt(16, 0), APInt(16, 0xaaa)));
+  EXPECT_EQ(Full.umin(Wrap), Full);
+  EXPECT_EQ(Empty.umin(Empty), Empty);
+  EXPECT_EQ(Empty.umin(Some), Empty);
+  EXPECT_EQ(Empty.umin(Wrap), Empty);
+  EXPECT_EQ(Empty.umin(One), Empty);
+  EXPECT_EQ(Some.umin(Some), Some);
+  EXPECT_EQ(Some.umin(Wrap), ConstantRange(APInt(16, 0), APInt(16, 0xaaa)));
+  EXPECT_EQ(Some.umin(One), One);
+  // TODO: ConstantRange is currently over-conservative here.
+  EXPECT_EQ(Wrap.umin(Wrap), Full);
+  EXPECT_EQ(Wrap.umin(One), ConstantRange(APInt(16, 0), APInt(16, 0xb)));
+  EXPECT_EQ(One.umin(One), One);
+}
+
+TEST_F(ConstantRangeTest, SMin) {
+  EXPECT_EQ(Full.smin(Full), Full);
+  EXPECT_EQ(Full.smin(Empty), Empty);
+  EXPECT_EQ(Full.smin(Some), ConstantRange(APInt(16, (uint64_t)INT16_MIN),
+                                           APInt(16, 0xaaa)));
+  EXPECT_EQ(Full.smin(Wrap), Full);
+  EXPECT_EQ(Empty.smin(Empty), Empty);
+  EXPECT_EQ(Empty.smin(Some), Empty);
+  EXPECT_EQ(Empty.smin(Wrap), Empty);
+  EXPECT_EQ(Empty.smin(One), Empty);
+  EXPECT_EQ(Some.smin(Some), Some);
+  EXPECT_EQ(Some.smin(Wrap), ConstantRange(APInt(16, (uint64_t)INT16_MIN),
+                                           APInt(16, 0xaaa)));
+  EXPECT_EQ(Some.smin(One), One);
+  // TODO: ConstantRange is currently over-conservative here.
+  EXPECT_EQ(Wrap.smin(Wrap), Full);
+  EXPECT_EQ(Wrap.smin(One), ConstantRange(APInt(16, (uint64_t)INT16_MIN),
+                                          APInt(16, 0xb)));
+  EXPECT_EQ(One.smin(One), One);
+}
+
 TEST_F(ConstantRangeTest, UDiv) {
   EXPECT_EQ(Full.udiv(Full), Full);
   EXPECT_EQ(Full.udiv(Empty), Empty);

@@ -37,34 +37,23 @@ struct PostDominatorTree : public DominatorTreeBase<BasicBlock> {
 };
 
 /// \brief Analysis pass which computes a \c PostDominatorTree.
-class PostDominatorTreeAnalysis {
-public:
+struct PostDominatorTreeAnalysis : AnalysisBase<PostDominatorTreeAnalysis> {
   /// \brief Provide the result typedef for this analysis pass.
   typedef PostDominatorTree Result;
-
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
 
   /// \brief Run the analysis pass over a function and produce a post dominator
   ///        tree.
   PostDominatorTree run(Function &F);
-
-  /// \brief Provide access to a name for this pass for debugging purposes.
-  static StringRef name() { return "PostDominatorTreeAnalysis"; }
-
-private:
-  static char PassID;
 };
 
 /// \brief Printer pass for the \c PostDominatorTree.
-class PostDominatorTreePrinterPass {
+class PostDominatorTreePrinterPass
+    : public PassBase<PostDominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit PostDominatorTreePrinterPass(raw_ostream &OS);
   PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
-
-  static StringRef name() { return "PostDominatorTreePrinterPass"; }
 };
 
 struct PostDominatorTreeWrapperPass : public FunctionPass {

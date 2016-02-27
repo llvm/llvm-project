@@ -647,6 +647,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i16, Custom);
       setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i8, Custom);
 
+      setOperationAction(ISD::FNEG, MVT::v4f32, Legal);
+      setOperationAction(ISD::FNEG, MVT::v2f64, Legal);
+
       addRegisterClass(MVT::v2i64, &PPC::VSRCRegClass);
     }
 

@@ -21,6 +21,7 @@
 
 namespace llvm {
 
+extern template class PassManager<Loop>;
 /// \brief The loop pass manager.
 ///
 /// See the documentation for the PassManager template for details. It runs a
@@ -28,6 +29,7 @@ namespace llvm {
 /// typedef serves as a convenient way to refer to this construct.
 typedef PassManager<Loop> LoopPassManager;
 
+extern template class AnalysisManager<Loop>;
 /// \brief The loop analysis manager.
 ///
 /// See the documentation for the AnalysisManager template for detail
@@ -36,146 +38,15 @@ typedef PassManager<Loop> LoopPassManager;
 /// pass manager infrastructure.
 typedef AnalysisManager<Loop> LoopAnalysisManager;
 
-/// \brief A function analysis which acts as a proxy for a loop analysis
-/// manager.
-///
-/// This primarily proxies invalidation information from the function analysis
-/// manager and function pass manager to a loop analysis manager. You should
-/// never use a loop analysis manager from within (transitively) a function
-/// pass manager unless your parent function pass has received a proxy result
-/// object for it.
-class LoopAnalysisManagerFunctionProxy {
-public:
-  class Result {
-  public:
-    explicit Result(LoopAnalysisManager &LAM) : LAM(&LAM) {}
-    // We have to explicitly define all the special member functions because
-    // MSVC refuses to generate them.
-    Result(const Result &Arg) : LAM(Arg.LAM) {}
-    Result(Result &&Arg) : LAM(std::move(Arg.LAM)) {}
-    Result &operator=(Result RHS) {
-      std::swap(LAM, RHS.LAM);
-      return *this;
-    }
-    ~Result();
+extern template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
+/// A proxy from a \c LoopAnalysisManager to a \c Function.
+typedef InnerAnalysisManagerProxy<LoopAnalysisManager, Function>
+    LoopAnalysisManagerFunctionProxy;
 
-    /// \brief Accessor for the \c LoopAnalysisManager.
-    LoopAnalysisManager &getManager() { return *LAM; }
-
-    /// \brief Handler for invalidation of the function.
-    ///
-    /// If this analysis itself is preserved, then we assume that the function
-    /// hasn't changed and thus we don't need to invalidate *all* cached data
-    /// associated with a \c Loop* in the \c LoopAnalysisManager.
-    ///
-    /// Regardless of whether this analysis is marked as preserved, all of the
-    /// analyses in the \c LoopAnalysisManager are potentially invalidated based
-    /// on the set of preserved analyses.
-    bool invalidate(Function &F, const PreservedAnalyses &PA);
-
-  private:
-    LoopAnalysisManager *LAM;
-  };
-
-  static void *ID() { return (void *)&PassID; }
-
-  static StringRef name() { return "LoopAnalysisManagerFunctionProxy"; }
-
-  explicit LoopAnalysisManagerFunctionProxy(LoopAnalysisManager &LAM)
-      : LAM(&LAM) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  LoopAnalysisManagerFunctionProxy(const LoopAnalysisManagerFunctionProxy &Arg)
-      : LAM(Arg.LAM) {}
-  LoopAnalysisManagerFunctionProxy(LoopAnalysisManagerFunctionProxy &&Arg)
-      : LAM(std::move(Arg.LAM)) {}
-  LoopAnalysisManagerFunctionProxy &
-  operator=(LoopAnalysisManagerFunctionProxy RHS) {
-    std::swap(LAM, RHS.LAM);
-    return *this;
-  }
-
-  /// \brief Run the analysis pass and create our proxy result object.
-  ///
-  /// This doesn't do any interesting work, it is primarily used to insert our
-  /// proxy result object into the function analysis cache so that we can proxy
-  /// invalidation to the loop analysis manager.
-  ///
-  /// In debug builds, it will also assert that the analysis manager is empty as
-  /// no queries should arrive at the loop analysis manager prior to this
-  /// analysis being requested.
-  Result run(Function &F);
-
-private:
-  static char PassID;
-
-  LoopAnalysisManager *LAM;
-};
-
-/// \brief A loop analysis which acts as a proxy for a function analysis
-/// manager.
-///
-/// This primarily provides an accessor to a parent function analysis manager to
-/// loop passes. Only the const interface of the function analysis manager is
-/// provided to indicate that once inside of a loop analysis pass you cannot
-/// request a function analysis to actually run. Instead, the user must rely on
-/// the \c getCachedResult API.
-///
-/// This proxy *doesn't* manage the invalidation in any way. That is handled by
-/// the recursive return path of each layer of the pass manager and the
-/// returned PreservedAnalysis set.
-class FunctionAnalysisManagerLoopProxy {
-public:
-  /// \brief Result proxy object for \c FunctionAnalysisManagerLoopProxy.
-  class Result {
-  public:
-    explicit Result(const FunctionAnalysisManager &FAM) : FAM(&FAM) {}
-    // We have to explicitly define all the special member functions because
-    // MSVC refuses to generate them.
-    Result(const Result &Arg) : FAM(Arg.FAM) {}
-    Result(Result &&Arg) : FAM(std::move(Arg.FAM)) {}
-    Result &operator=(Result RHS) {
-      std::swap(FAM, RHS.FAM);
-      return *this;
-    }
-
-    const FunctionAnalysisManager &getManager() const { return *FAM; }
-
-    /// \brief Handle invalidation by ignoring it, this pass is immutable.
-    bool invalidate(Function &) { return false; }
-
-  private:
-    const FunctionAnalysisManager *FAM;
-  };
-
-  static void *ID() { return (void *)&PassID; }
-
-  static StringRef name() { return "FunctionAnalysisManagerLoopProxy"; }
-
-  FunctionAnalysisManagerLoopProxy(const FunctionAnalysisManager &FAM)
-      : FAM(&FAM) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  FunctionAnalysisManagerLoopProxy(const FunctionAnalysisManagerLoopProxy &Arg)
-      : FAM(Arg.FAM) {}
-  FunctionAnalysisManagerLoopProxy(FunctionAnalysisManagerLoopProxy &&Arg)
-      : FAM(std::move(Arg.FAM)) {}
-  FunctionAnalysisManagerLoopProxy &
-  operator=(FunctionAnalysisManagerLoopProxy RHS) {
-    std::swap(FAM, RHS.FAM);
-    return *this;
-  }
-
-  /// \brief Run the analysis pass and create our proxy result object.
-  /// Nothing to see here, it just forwards the \c FAM reference into the
-  /// result.
-  Result run(Loop &) { return Result(*FAM); }
-
-private:
-  static char PassID;
-
-  const FunctionAnalysisManager *FAM;
-};
+extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>;
+/// A proxy from a \c FunctionAnalysisManager to a \c Loop.
+typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>
+    FunctionAnalysisManagerLoopProxy;
 
 /// \brief Adaptor that maps from a function to its loops.
 ///
@@ -184,7 +55,9 @@ private:
 /// FunctionAnalysisManager it will run the \c LoopAnalysisManagerFunctionProxy
 /// analysis prior to running the loop passes over the function to enable a \c
 /// LoopAnalysisManager to be used within this run safely.
-template <typename LoopPassT> class FunctionToLoopPassAdaptor {
+template <typename LoopPassT>
+class FunctionToLoopPassAdaptor
+    : public PassBase<FunctionToLoopPassAdaptor<LoopPassT>> {
 public:
   explicit FunctionToLoopPassAdaptor(LoopPassT Pass)
       : Pass(std::move(Pass)) {}
@@ -249,8 +122,6 @@ public:
     PA.preserve<LoopAnalysisManagerFunctionProxy>();
     return PA;
   }
-
-  static StringRef name() { return "FunctionToLoopPassAdaptor"; }
 
 private:
   LoopPassT Pass;

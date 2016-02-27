@@ -57,6 +57,7 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include <map>
@@ -294,20 +295,15 @@ private:
 /// This class implements the concept of an analysis pass used by the \c
 /// ModuleAnalysisManager to run an analysis over a module and cache the
 /// resulting data.
-class CallGraphAnalysis {
+struct CallGraphAnalysis : AnalysisBase<CallGraphAnalysis> {
 public:
   /// \brief A formulaic typedef to inform clients of the result type.
   typedef CallGraph Result;
-
-  static void *ID() { return (void *)&PassID; }
 
   /// \brief Compute the \c CallGraph for the module \c M.
   ///
   /// The real work here is done in the \c CallGraph constructor.
   CallGraph run(Module *M) { return CallGraph(*M); }
-
-private:
-  static char PassID;
 };
 
 /// \brief The \c ModulePass which wraps up a \c CallGraph and the logic to

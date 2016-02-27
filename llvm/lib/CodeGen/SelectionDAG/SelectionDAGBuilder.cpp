@@ -2446,8 +2446,9 @@ static bool isVectorReductionOp(const User *I) {
         // ElemNumToReduce / 2 elements in another vector.
 
         unsigned ResultElements = ShufInst->getType()->getVectorNumElements();
-        ElemNumToReduce = ResultElements <= ElemNumToReduce ? ResultElements
-                                                            : ElemNumToReduce;
+        if (ResultElements < ElemNum)
+          return false;
+
         if (ElemNumToReduce == 1)
           return false;
         if (!isa<UndefValue>(U->getOperand(1)))
@@ -2460,8 +2461,7 @@ static bool isVectorReductionOp(const User *I) {
             return false;
 
         // There is only one user of this ShuffleVector instruction, which
-        // must
-        // be a reduction operation.
+        // must be a reduction operation.
         if (!U->hasOneUse())
           return false;
 

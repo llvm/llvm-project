@@ -979,15 +979,9 @@ bool isIdentifiedFunctionLocal(const Value *V);
 /// This manager effectively wraps the AnalysisManager for registering alias
 /// analyses. When you register your alias analysis with this manager, it will
 /// ensure the analysis itself is registered with its AnalysisManager.
-class AAManager {
+class AAManager : public AnalysisBase<AAManager> {
 public:
   typedef AAResults Result;
-
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
-
-  /// \brief Provide access to a name for this pass.
-  static StringRef name() { return "AAManager"; }
 
   // This type hase value semantics. We have to spell these out because MSVC
   // won't synthesize them.
@@ -1018,8 +1012,6 @@ public:
   }
 
 private:
-  static char PassID;
-
   SmallVector<void (*)(Function &F, AnalysisManager<Function> &AM,
                        AAResults &AAResults),
               4> FunctionResultGetters;

@@ -124,6 +124,12 @@ def FeatureP8Crypto : SubtargetFeature<"crypto", "HasP8Crypto", "true",
 def FeatureP8Vector  : SubtargetFeature<"power8-vector", "HasP8Vector", "true",
                                         "Enable POWER8 vector instructions",
                                         [FeatureVSX, FeatureP8Altivec]>;
+def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9Altivec", "true",
+                                        "Enable POWER9 Altivec instructions",
+                                        [FeatureP8Altivec]>;
+def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
+                                        "Enable POWER9 vector instructions",
+                                        [FeatureP8Vector, FeatureP9Altivec]>;
 def FeatureDirectMove :
   SubtargetFeature<"direct-move", "HasDirectMove", "true",
                    "Enable Power8 direct move instructions",

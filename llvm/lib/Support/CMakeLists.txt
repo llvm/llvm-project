@@ -23,7 +23,9 @@ elseif( CMAKE_HOST_UNIX )
   if ( LLVM_ENABLE_ZLIB AND HAVE_LIBZ )
     set(system_libs ${system_libs} z)
   endif()
-  set(system_libs ${system_libs} m)
+  if( UNIX AND NOT (BEOS OR HAIKU) )
+    set(system_libs ${system_libs} m)
+  endif()
 endif( MSVC OR MINGW )
 
 add_llvm_library(LLVMSupport

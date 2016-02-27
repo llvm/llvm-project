@@ -789,30 +789,19 @@ template <> struct GraphTraits<Loop*> {
 };
 
 /// \brief Analysis pass that exposes the \c LoopInfo for a function.
-class LoopAnalysis {
-  static char PassID;
-
-public:
+struct LoopAnalysis : AnalysisBase<LoopAnalysis> {
   typedef LoopInfo Result;
-
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
-
-  /// \brief Provide a name for the analysis for debugging and logging.
-  static StringRef name() { return "LoopAnalysis"; }
 
   LoopInfo run(Function &F, AnalysisManager<Function> *AM);
 };
 
 /// \brief Printer pass for the \c LoopAnalysis results.
-class LoopPrinterPass {
+class LoopPrinterPass : public PassBase<LoopPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
-
-  static StringRef name() { return "LoopPrinterPass"; }
 };
 
 /// \brief The legacy pass manager's analysis pass to compute loop information.
@@ -842,7 +831,7 @@ public:
 };
 
 /// \brief Pass for printing a loop's contents as LLVM's text IR assembly.
-class PrintLoopPass {
+class PrintLoopPass : public PassBase<PrintLoopPass> {
   raw_ostream &OS;
   std::string Banner;
 
@@ -851,7 +840,6 @@ public:
   PrintLoopPass(raw_ostream &OS, const std::string &Banner = "");
 
   PreservedAnalyses run(Loop &L);
-  static StringRef name() { return "PrintLoopPass"; }
 };
 
 } // End llvm namespace

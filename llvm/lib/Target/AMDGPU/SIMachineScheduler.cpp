@@ -295,7 +295,7 @@ static bool isDefBetween(unsigned Reg,
     const MachineInstr* MI = &*UI;
     if (MI->isDebugValue())
       continue;
-    SlotIndex InstSlot = LIS->getInstructionIndex(MI).getRegSlot();
+    SlotIndex InstSlot = LIS->getInstructionIndex(*MI).getRegSlot();
     if (InstSlot >= First && InstSlot <= Last)
       return true;
   }
@@ -357,9 +357,9 @@ void SIScheduleBlock::initRegPressure(MachineBasicBlock::iterator BeginBlock,
   for (const auto &RegMaskPair : RPTracker.getPressure().LiveOutRegs) {
     unsigned Reg = RegMaskPair.RegUnit;
     if (TargetRegisterInfo::isVirtualRegister(Reg) &&
-        isDefBetween(Reg, LIS->getInstructionIndex(BeginBlock).getRegSlot(),
-                       LIS->getInstructionIndex(EndBlock).getRegSlot(),
-                       MRI, LIS)) {
+        isDefBetween(Reg, LIS->getInstructionIndex(*BeginBlock).getRegSlot(),
+                     LIS->getInstructionIndex(*EndBlock).getRegSlot(), MRI,
+                     LIS)) {
       LiveOutRegs.insert(Reg);
     }
   }

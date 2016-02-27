@@ -72,8 +72,6 @@ def SDTX86cas : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisInt<1>,
                                      SDTCisVT<2, i8>]>;
 def SDTX86caspair : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
-def SDTX86atomicBinary : SDTypeProfile<2, 3, [SDTCisInt<0>, SDTCisInt<1>,
-                                SDTCisPtrTy<2>, SDTCisInt<3>,SDTCisInt<4>]>;
 def SDTX86Ret     : SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>;
 
 def SDT_X86CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>]>;

@@ -714,6 +714,32 @@ ConstantRange::umax(const ConstantRange &Other) const {
 }
 
 ConstantRange
+ConstantRange::smin(const ConstantRange &Other) const {
+  // X smin Y is: range(smin(X_smin, Y_smin),
+  //                    smin(X_smax, Y_smax))
+  if (isEmptySet() || Other.isEmptySet())
+    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+  APInt NewL = APIntOps::smin(getSignedMin(), Other.getSignedMin());
+  APInt NewU = APIntOps::smin(getSignedMax(), Other.getSignedMax()) + 1;
+  if (NewU == NewL)
+    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+  return ConstantRange(NewL, NewU);
+}
+
+ConstantRange
+ConstantRange::umin(const ConstantRange &Other) const {
+  // X umin Y is: range(umin(X_umin, Y_umin),
+  //                    umin(X_umax, Y_umax))
+  if (isEmptySet() || Other.isEmptySet())
+    return ConstantRange(getBitWidth(), /*isFullSet=*/false);
+  APInt NewL = APIntOps::umin(getUnsignedMin(), Other.getUnsignedMin());
+  APInt NewU = APIntOps::umin(getUnsignedMax(), Other.getUnsignedMax()) + 1;
+  if (NewU == NewL)
+    return ConstantRange(getBitWidth(), /*isFullSet=*/true);
+  return ConstantRange(NewL, NewU);
+}
+
+ConstantRange
 ConstantRange::udiv(const ConstantRange &RHS) const {
   if (isEmptySet() || RHS.isEmptySet() || RHS.getUnsignedMax() == 0)
     return ConstantRange(getBitWidth(), /*isFullSet=*/false);

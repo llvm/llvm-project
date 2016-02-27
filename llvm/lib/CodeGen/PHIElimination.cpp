@@ -159,17 +159,16 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
     unsigned DefReg = DefMI->getOperand(0).getReg();
     if (MRI->use_nodbg_empty(DefReg)) {
       if (LIS)
-        LIS->RemoveMachineInstrFromMaps(DefMI);
+        LIS->RemoveMachineInstrFromMaps(*DefMI);
       DefMI->eraseFromParent();
     }
   }
 
   // Clean up the lowered PHI instructions.
-  for (LoweredPHIMap::iterator I = LoweredPHIs.begin(), E = LoweredPHIs.end();
-       I != E; ++I) {
+  for (auto &I : LoweredPHIs) {
     if (LIS)
-      LIS->RemoveMachineInstrFromMaps(I->first);
-    MF.DeleteMachineInstr(I->first);
+      LIS->RemoveMachineInstrFromMaps(*I.first);
+    MF.DeleteMachineInstr(I.first);
   }
 
   LoweredPHIs.clear();
@@ -310,7 +309,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   // Update LiveIntervals for the new copy or implicit def.
   if (LIS) {
     MachineInstr *NewInstr = std::prev(AfterPHIsIt);
-    SlotIndex DestCopyIndex = LIS->InsertMachineInstrInMaps(NewInstr);
+    SlotIndex DestCopyIndex = LIS->InsertMachineInstrInMaps(*NewInstr);
 
     SlotIndex MBBStartIndex = LIS->getMBBStartIdx(&MBB);
     if (IncomingReg) {
@@ -462,8 +461,8 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
 
     if (LIS) {
       if (NewSrcInstr) {
-        LIS->InsertMachineInstrInMaps(NewSrcInstr);
-        LIS->addSegmentToEndOfBlock(IncomingReg, NewSrcInstr);
+        LIS->InsertMachineInstrInMaps(*NewSrcInstr);
+        LIS->addSegmentToEndOfBlock(IncomingReg, *NewSrcInstr);
       }
 
       if (!SrcUndef &&
@@ -513,7 +512,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
           assert(KillInst->readsRegister(SrcReg) &&
                  "Cannot find kill instruction");
 
-          SlotIndex LastUseIndex = LIS->getInstructionIndex(KillInst);
+          SlotIndex LastUseIndex = LIS->getInstructionIndex(*KillInst);
           SrcLI.removeSegment(LastUseIndex.getRegSlot(),
                               LIS->getMBBEndIdx(&opBlock));
         }
@@ -524,7 +523,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   // Really delete the PHI instruction now, if it is not in the LoweredPHIs map.
   if (reusedIncoming || !IncomingReg) {
     if (LIS)
-      LIS->RemoveMachineInstrFromMaps(MPhi);
+      LIS->RemoveMachineInstrFromMaps(*MPhi);
     MF.DeleteMachineInstr(MPhi);
   }
 }

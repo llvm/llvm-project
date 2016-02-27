@@ -116,8 +116,6 @@ SCEVAAResult SCEVAA::run(Function &F, AnalysisManager<Function> *AM) {
                       AM->getResult<ScalarEvolutionAnalysis>(F));
 }
 
-char SCEVAA::PassID;
-
 char SCEVAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(SCEVAAWrapperPass, "scev-aa",
                       "ScalarEvolution-based Alias Analysis", false, true)

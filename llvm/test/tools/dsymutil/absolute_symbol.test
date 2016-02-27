@@ -14,4 +14,4 @@ We must not consider this symbol for debug info linking as its address
 might conflict with other real symbols in the same file.
 
 CHECK: objc_class_name_Foo
-CHECK-SAME-NOT: objAddr
+CHECK-NOT: objAddr

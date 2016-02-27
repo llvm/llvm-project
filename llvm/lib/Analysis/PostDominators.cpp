@@ -44,8 +44,6 @@ FunctionPass* llvm::createPostDomTree() {
   return new PostDominatorTreeWrapperPass();
 }
 
-char PostDominatorTreeAnalysis::PassID;
-
 PostDominatorTree PostDominatorTreeAnalysis::run(Function &F) {
   PostDominatorTree PDT;
   PDT.recalculate(F);

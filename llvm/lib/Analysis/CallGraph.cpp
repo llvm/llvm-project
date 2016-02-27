@@ -263,8 +263,6 @@ void CallGraphNode::replaceCallEdge(CallSite CS,
 // Out-of-line definitions of CallGraphAnalysis class members.
 //
 
-char CallGraphAnalysis::PassID;
-
 //===----------------------------------------------------------------------===//
 // Implementations of the CallGraphWrapperPass class methods.
 //

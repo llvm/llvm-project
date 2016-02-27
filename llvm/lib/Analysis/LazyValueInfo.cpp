@@ -910,6 +910,37 @@ bool LazyValueInfoCache::solveBlockValueSelect(LVILatticeVal &BBLV,
     return true;
   }
 
+  if (TrueVal.isConstantRange() && FalseVal.isConstantRange()) {
+    ConstantRange TrueCR = TrueVal.getConstantRange();
+    ConstantRange FalseCR = FalseVal.getConstantRange();
+    Value *LHS = nullptr;
+    Value *RHS = nullptr;
+    SelectPatternResult SPR = matchSelectPattern(SI, LHS, RHS);
+    // Is this a min specifically of our two inputs?  (Avoid the risk of
+    // ValueTracking getting smarter looking back past our immediate inputs.)
+    if (SelectPatternResult::isMinOrMax(SPR.Flavor) &&
+        LHS == SI->getTrueValue() && RHS == SI->getFalseValue()) {
+      switch (SPR.Flavor) {
+      default:
+        llvm_unreachable("unexpected minmax type!");
+      case SPF_SMIN:                   /// Signed minimum
+        BBLV.markConstantRange(TrueCR.smin(FalseCR));
+        return true;
+      case SPF_UMIN:                   /// Unsigned minimum
+        BBLV.markConstantRange(TrueCR.umin(FalseCR));
+        return true;
+      case SPF_SMAX:                   /// Signed maximum
+        BBLV.markConstantRange(TrueCR.smax(FalseCR));
+        return true;
+      case SPF_UMAX:                   /// Unsigned maximum        
+        BBLV.markConstantRange(TrueCR.umax(FalseCR));
+        return true;
+      };
+    }
+    
+    // TODO: ABS, NABS from the SelectPatternResult
+  }
+
   // Can we constrain the facts about the true and false values by using the
   // condition itself?  This shows up with idioms like e.g. select(a > 5, a, 5).
   // TODO: We could potentially refine an overdefined true value above.
@@ -924,10 +955,48 @@ bool LazyValueInfoCache::solveBlockValueSelect(LVILatticeVal &BBLV,
 
     TrueVal = intersect(TrueVal, TrueValTaken);
     FalseVal = intersect(FalseVal, FalseValTaken);
-  }
 
-  // TODO: handle idioms like min & max where we can use a more precise merge
-  // when our inputs are constant ranges.
+
+    // Handle clamp idioms such as:
+    //   %24 = constantrange<0, 17>
+    //   %39 = icmp eq i32 %24, 0
+    //   %40 = add i32 %24, -1
+    //   %siv.next = select i1 %39, i32 16, i32 %40
+    //   %siv.next = constantrange<0, 17> not <-1, 17>
+    // In general, this can handle any clamp idiom which tests the edge
+    // condition via an equality or inequality.  
+    ICmpInst::Predicate Pred = ICI->getPredicate();
+    Value *A = ICI->getOperand(0);
+    if (ConstantInt *CIBase = dyn_cast<ConstantInt>(ICI->getOperand(1))) {
+      auto addConstants = [](ConstantInt *A, ConstantInt *B) {
+        assert(A->getType() == B->getType());
+        return ConstantInt::get(A->getType(), A->getValue() + B->getValue());
+      };
+      // See if either input is A + C2, subject to the constraint from the
+      // condition that A != C when that input is used.  We can assume that
+      // that input doesn't include C + C2.
+      ConstantInt *CIAdded;
+      switch (Pred) {
+      default: break;
+      case ICmpInst::ICMP_EQ:
+        if (match(SI->getFalseValue(), m_Add(m_Specific(A),
+                                             m_ConstantInt(CIAdded)))) {
+          auto ResNot = addConstants(CIBase, CIAdded);
+          FalseVal = intersect(FalseVal,
+                               LVILatticeVal::getNot(ResNot));
+        }
+        break;
+      case ICmpInst::ICMP_NE:
+        if (match(SI->getTrueValue(), m_Add(m_Specific(A),
+                                            m_ConstantInt(CIAdded)))) {
+          auto ResNot = addConstants(CIBase, CIAdded);
+          TrueVal = intersect(TrueVal,
+                              LVILatticeVal::getNot(ResNot));
+        }
+        break;
+      };
+    }
+  }
   
   LVILatticeVal Result;  // Start Undefined.
   Result.mergeIn(TrueVal, DL);

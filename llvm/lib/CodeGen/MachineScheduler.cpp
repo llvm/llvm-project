@@ -1039,7 +1039,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
       if (I == BB->end())
         VNI = LI.getVNInfoBefore(LIS->getMBBEndIdx(BB));
       else {
-        LiveQueryResult LRQ = LI.Query(LIS->getInstructionIndex(I));
+        LiveQueryResult LRQ = LI.Query(LIS->getInstructionIndex(*I));
         VNI = LRQ.valueIn();
       }
       // RegisterPressureTracker guarantees that readsReg is true for LiveUses.
@@ -1050,8 +1050,8 @@ void ScheduleDAGMILive::updatePressureDiffs(
         // If this use comes before the reaching def, it cannot be a last use,
         // so decrease its pressure change.
         if (!SU->isScheduled && SU != &ExitSU) {
-          LiveQueryResult LRQ
-            = LI.Query(LIS->getInstructionIndex(SU->getInstr()));
+          LiveQueryResult LRQ =
+              LI.Query(LIS->getInstructionIndex(*SU->getInstr()));
           if (LRQ.valueIn() == VNI) {
             PressureDiff &PDiff = getPressureDiff(SU);
             PDiff.addPressureChange(Reg, true, &MRI);
@@ -1243,8 +1243,7 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
         continue;
 
       // Only consider uses of the phi.
-      LiveQueryResult LRQ =
-        LI.Query(LIS->getInstructionIndex(SU->getInstr()));
+      LiveQueryResult LRQ = LI.Query(LIS->getInstructionIndex(*SU->getInstr()));
       if (!LRQ.valueIn()->isPHIDef())
         continue;
 
@@ -1293,7 +1292,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
       RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(MI).getRegSlot();
+        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
         RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
       } else {
         // Adjust for missing dead-def flags.
@@ -1329,7 +1328,7 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
       RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(MI).getRegSlot();
+        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
         RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
       } else {
         // Adjust for missing dead-def flags.
@@ -1705,9 +1704,9 @@ void CopyConstrain::apply(ScheduleDAGMI *DAG) {
   MachineBasicBlock::iterator FirstPos = nextIfDebug(DAG->begin(), DAG->end());
   if (FirstPos == DAG->end())
     return;
-  RegionBeginIdx = DAG->getLIS()->getInstructionIndex(&*FirstPos);
+  RegionBeginIdx = DAG->getLIS()->getInstructionIndex(*FirstPos);
   RegionEndIdx = DAG->getLIS()->getInstructionIndex(
-    &*priorNonDebug(DAG->end(), DAG->begin()));
+      *priorNonDebug(DAG->end(), DAG->begin()));
 
   for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
     SUnit *SU = &DAG->SUnits[Idx];

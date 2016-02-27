@@ -50,13 +50,25 @@ entry:
   ret void
 }
 
-; SI-LABEL: {{^}}elim_redun_check:
+; SI-LABEL: {{^}}elim_redun_check_neg0:
 ; SI: v_sqrt_f32_e32
 ; SI-NOT: v_cndmask
-define void @elim_redun_check(float addrspace(1)* %out, float %in) {
+define void @elim_redun_check_neg0(float addrspace(1)* %out, float %in) {
 entry:
   %sqrt = call float @llvm.sqrt.f32(float %in)
   %cmp = fcmp olt float %in, -0.000000e+00
+  %res = select i1 %cmp, float 0x7FF8000000000000, float %sqrt
+  store float %res, float addrspace(1)* %out
+  ret void
+}
+
+; SI-LABEL: {{^}}elim_redun_check_pos0:
+; SI: v_sqrt_f32_e32
+; SI-NOT: v_cndmask
+define void @elim_redun_check_pos0(float addrspace(1)* %out, float %in) {
+entry:
+  %sqrt = call float @llvm.sqrt.f32(float %in)
+  %cmp = fcmp olt float %in, 0.000000e+00
   %res = select i1 %cmp, float 0x7FF8000000000000, float %sqrt
   store float %res, float addrspace(1)* %out
   ret void

@@ -999,10 +999,29 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
-    Chain = DAG.getCopyFromReg(Chain, dl, toCallerWindow(RVLocs[i].getLocReg()),
-                               RVLocs[i].getValVT(), InFlag).getValue(1);
-    InFlag = Chain.getValue(2);
-    InVals.push_back(Chain.getValue(0));
+    if (RVLocs[i].getLocVT() == MVT::v2i32) {
+      SDValue Vec = DAG.getNode(ISD::UNDEF, dl, MVT::v2i32);
+      SDValue Lo = DAG.getCopyFromReg(
+          Chain, dl, toCallerWindow(RVLocs[i++].getLocReg()), MVT::i32, InFlag);
+      Chain = Lo.getValue(1);
+      InFlag = Lo.getValue(2);
+      Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v2i32, Vec, Lo,
+                        DAG.getConstant(0, dl, MVT::i32));
+      SDValue Hi = DAG.getCopyFromReg(
+          Chain, dl, toCallerWindow(RVLocs[i].getLocReg()), MVT::i32, InFlag);
+      Chain = Hi.getValue(1);
+      InFlag = Hi.getValue(2);
+      Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v2i32, Vec, Hi,
+                        DAG.getConstant(1, dl, MVT::i32));
+      InVals.push_back(Vec);
+    } else {
+      Chain =
+          DAG.getCopyFromReg(Chain, dl, toCallerWindow(RVLocs[i].getLocReg()),
+                             RVLocs[i].getValVT(), InFlag)
+              .getValue(1);
+      InFlag = Chain.getValue(2);
+      InVals.push_back(Chain.getValue(0));
+    }
   }
 
   return Chain;

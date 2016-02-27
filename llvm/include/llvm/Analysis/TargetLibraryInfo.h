@@ -16,6 +16,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -27,7 +28,6 @@ struct VecDesc {
   const char *VectorFnName;
   unsigned VectorizationFactor;
 };
-class PreservedAnalyses;
 
   namespace LibFunc {
     enum Func {
@@ -262,12 +262,9 @@ public:
 ///
 /// Note that this pass's result cannot be invalidated, it is immutable for the
 /// life of the module.
-class TargetLibraryAnalysis {
+class TargetLibraryAnalysis : public AnalysisBase<TargetLibraryAnalysis> {
 public:
   typedef TargetLibraryInfo Result;
-
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
 
   /// \brief Default construct the library analysis.
   ///
@@ -294,12 +291,7 @@ public:
   TargetLibraryInfo run(Module &M);
   TargetLibraryInfo run(Function &F);
 
-  /// \brief Provide access to a name for this pass for debugging purposes.
-  static StringRef name() { return "TargetLibraryAnalysis"; }
-
 private:
-  static char PassID;
-
   Optional<TargetLibraryInfoImpl> PresetInfoImpl;
 
   StringMap<std::unique_ptr<TargetLibraryInfoImpl>> Impls;

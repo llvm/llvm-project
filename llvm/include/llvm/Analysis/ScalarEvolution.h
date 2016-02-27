@@ -1415,30 +1415,20 @@ namespace llvm {
   };
 
   /// \brief Analysis pass that exposes the \c ScalarEvolution for a function.
-  class ScalarEvolutionAnalysis {
-    static char PassID;
-
-  public:
+  struct ScalarEvolutionAnalysis : AnalysisBase<ScalarEvolutionAnalysis> {
     typedef ScalarEvolution Result;
-
-    /// \brief Opaque, unique identifier for this analysis pass.
-    static void *ID() { return (void *)&PassID; }
-
-    /// \brief Provide a name for the analysis for debugging and logging.
-    static StringRef name() { return "ScalarEvolutionAnalysis"; }
 
     ScalarEvolution run(Function &F, AnalysisManager<Function> *AM);
   };
 
   /// \brief Printer pass for the \c ScalarEvolutionAnalysis results.
-  class ScalarEvolutionPrinterPass {
+  class ScalarEvolutionPrinterPass
+      : public PassBase<ScalarEvolutionPrinterPass> {
     raw_ostream &OS;
 
   public:
     explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
     PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
-
-    static StringRef name() { return "ScalarEvolutionPrinterPass"; }
   };
 
   class ScalarEvolutionWrapperPass : public FunctionPass {

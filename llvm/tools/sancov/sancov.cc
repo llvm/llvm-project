@@ -59,6 +59,7 @@ namespace {
 
 enum ActionType {
   PrintAction,
+  PrintCovPointsAction,
   CoveredFunctionsAction,
   NotCoveredFunctionsAction,
   HtmlReportAction
@@ -67,6 +68,8 @@ enum ActionType {
 cl::opt<ActionType> Action(
     cl::desc("Action (required)"), cl::Required,
     cl::values(clEnumValN(PrintAction, "print", "Print coverage addresses"),
+               clEnumValN(PrintCovPointsAction, "print-coverage-pcs",
+                          "Print coverage instrumentation points addresses."),
                clEnumValN(CoveredFunctionsAction, "covered-functions",
                           "Print all covered funcions."),
                clEnumValN(NotCoveredFunctionsAction, "not-covered-functions",
@@ -447,6 +450,14 @@ std::set<uint64_t> getCoveragePoints(std::string FileName) {
     getObjectCoveragePoints(O, &Result);
   });
   return Result;
+}
+
+static void printCovPoints(std::string ObjFile, raw_ostream &OS) {
+  for (uint64_t Addr : getCoveragePoints(ObjFile)) {
+    OS << "0x";
+    OS.write_hex(Addr);
+    OS << "\n";
+  }
 }
 
 static std::string escapeHtml(const std::string &S) {
@@ -1092,6 +1103,12 @@ int main(int argc, char **argv) {
     FailIfError(CovData);
     CovData.get()->printAddrs(outs());
     return 0;
+  } else if (Action == PrintCovPointsAction) {
+    // -print-coverage-points doesn't need coverage files.
+    for (std::string ObjFile : ClInputFiles) {
+      printCovPoints(ObjFile, outs());
+    }
+    return 0;
   }
 
   auto CovDataSet = CoverageDataSet::readCmdArguments(ClInputFiles);
@@ -1115,6 +1132,7 @@ int main(int argc, char **argv) {
     return 0;
   }
   case PrintAction:
+  case PrintCovPointsAction:
     llvm_unreachable("unsupported action");
   }
 }

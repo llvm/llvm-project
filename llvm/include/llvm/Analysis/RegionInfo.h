@@ -923,37 +923,24 @@ public:
 };
 
 /// \brief Analysis pass that exposes the \c RegionInfo for a function.
-class RegionInfoAnalysis {
-  static char PassID;
-
-public:
+struct RegionInfoAnalysis : AnalysisBase<RegionInfoAnalysis> {
   typedef RegionInfo Result;
-
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
-
-  /// \brief Provide a name for the analysis for debugging and logging.
-  static StringRef name() { return "RegionInfoAnalysis"; }
 
   RegionInfo run(Function &F, AnalysisManager<Function> *AM);
 };
 
 /// \brief Printer pass for the \c RegionInfo.
-class RegionInfoPrinterPass {
+class RegionInfoPrinterPass : public PassBase<RegionInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit RegionInfoPrinterPass(raw_ostream &OS);
   PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
-
-  static StringRef name() { return "RegionInfoPrinterPass"; }
 };
 
 /// \brief Verifier pass for the \c RegionInfo.
-struct RegionInfoVerifierPass {
+struct RegionInfoVerifierPass : PassBase<RegionInfoVerifierPass> {
   PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
-
-  static StringRef name() { return "RegionInfoVerifierPass"; }
 };
 
 template <>
