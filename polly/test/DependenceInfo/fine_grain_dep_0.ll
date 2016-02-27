@@ -1,14 +1,24 @@
-; RUN: opt %loadPolly -polly-dependences -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=reference-level -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-dependences -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=reference-level -analyze < %s | FileCheck %s --check-prefix=REF
+; RUN: opt %loadPolly -polly-dependences -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-level -analyze < %s | FileCheck %s --check-prefix=ACC
 ;
-; CHECK:      RAW dependences:
-; CHECK-NEXT:     [N] -> { [Stmt_for_body[i0] -> MemRef_a[]] -> [Stmt_for_body[4 + i0] -> MemRef_a[]] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> MemRef_b[]] -> [Stmt_for_body[6 + i0] -> MemRef_b[]] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[6 + i0] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[4 + i0] : 0 <= i0 <= -11 + N }
-; CHECK-NEXT: WAR dependences:
-; CHECK-NEXT:     {  }
-; CHECK-NEXT: WAW dependences:
-; CHECK-NEXT:     {  }
-; CHECK-NEXT: Reduction dependences:
-; CHECK-NEXT:     {  }
-;
+; REF:      RAW dependences:
+; REF-NEXT:     [N] -> { [Stmt_for_body[i0] -> MemRef_a[]] -> [Stmt_for_body[4 + i0] -> MemRef_a[]] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> MemRef_b[]] -> [Stmt_for_body[6 + i0] -> MemRef_b[]] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[6 + i0] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[4 + i0] : 0 <= i0 <= -11 + N }
+; REF-NEXT: WAR dependences:
+; REF-NEXT:     {  }
+; REF-NEXT: WAW dependences:
+; REF-NEXT:     {  }
+; REF-NEXT: Reduction dependences:
+; REF-NEXT:     {  }
+
+; ACC:      RAW dependences:
+; ACC-NEXT:   [N] -> { [Stmt_for_body[i0] -> Stmt_for_body_Write3_MemRef_b[]] -> [Stmt_for_body[6 + i0] -> Stmt_for_body_Read2_MemRef_b[]] : 0 <= i0 <= -13 + N; [Stmt_for_body[i0] -> Stmt_for_body_Write1_MemRef_a[]] -> [Stmt_for_body[4 + i0] -> Stmt_for_body_Read0_MemRef_a[]] : 0 <= i0 <= -11 + N; Stmt_for_body[i0] -> Stmt_for_body[6 + i0] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[4 + i0] : 0 <= i0 <= -11 + N }
+; ACC-NEXT: WAR dependences:
+; ACC-NEXT:   [N] -> {  }
+; ACC-NEXT: WAW dependences:
+; ACC-NEXT:   [N] -> {  }
+; ACC-NEXT: Reduction dependences:
+; ACC-NEXT:   [N] -> {  }
+
 ; void test(char a[], char b[], long N) {
 ;   for (long i = 6; i < N; ++i) {
 ;     a[i] = a[i - 4] + i;

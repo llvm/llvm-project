@@ -1931,6 +1931,14 @@ public:
   const ScopArrayInfo *getScopArrayInfo(Value *BasePtr,
                                         ScopArrayInfo::MemoryKind Kind);
 
+  /// @brief Invalidate ScopArrayInfo object for base address.
+  ///
+  /// @param BasePtr The base pointer of the ScopArrayInfo object to invalidate.
+  /// @param Kind    The Kind of the ScopArrayInfo object.
+  void invalidateScopArrayInfo(Value *BasePtr, ScopArrayInfo::MemoryKind Kind) {
+    ScopArrayInfoMap.erase(std::make_pair(BasePtr, Kind));
+  }
+
   void setContext(isl_set *NewContext);
 
   /// @brief Align the parameters in the statement to the scop context

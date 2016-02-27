@@ -120,22 +120,14 @@ private:
 }
 }
 
-// Returns a hash seed for relocation sections for S.
-template <class ELFT> uint64_t ICF<ELFT>::relSize(InputSection<ELFT> *S) {
-  uint64_t Ret = 0;
-  for (const Elf_Shdr *H : S->RelocSections)
-    Ret += H->sh_size;
-  return Ret;
-}
-
 // Returns a hash value for S. Note that the information about
 // relocation targets is not included in the hash value.
 template <class ELFT> uint64_t ICF<ELFT>::getHash(InputSection<ELFT> *S) {
   uint64_t Flags = S->getSectionHdr()->sh_flags;
   uint64_t H = hash_combine(Flags, S->getSize());
-  if (S->RelocSections.empty())
-    return H;
-  return hash_combine(H, relSize(S));
+  for (const Elf_Shdr *Rel : S->RelocSections)
+    H = hash_combine(H, (uint64_t)Rel->sh_size);
+  return H;
 }
 
 // Returns true if Sec is subject of ICF.
