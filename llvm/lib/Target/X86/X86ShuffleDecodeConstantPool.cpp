@@ -119,7 +119,7 @@ void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
     return;
 
   // Support any element type from byte up to element size.
-  // This is necesary primarily because 64-bit elements get split to 32-bit
+  // This is necessary primarily because 64-bit elements get split to 32-bit
   // in the constant pool on 32-bit target.
   unsigned EltTySize = VecEltTy->getIntegerBitWidth();
   if (EltTySize < 8 || EltTySize > ElSize)

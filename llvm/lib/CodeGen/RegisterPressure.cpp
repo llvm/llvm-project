@@ -271,7 +271,7 @@ SlotIndex RegPressureTracker::getCurrSlot() const {
     ++IdxPos;
   if (IdxPos == MBB->end())
     return LIS->getMBBEndIdx(MBB);
-  return LIS->getInstructionIndex(IdxPos).getRegSlot();
+  return LIS->getInstructionIndex(*IdxPos).getRegSlot();
 }
 
 /// Set the boundary for the top of the region and summarize live ins.
@@ -503,7 +503,7 @@ void RegisterOperands::collect(const MachineInstr &MI,
 
 void RegisterOperands::detectDeadDefs(const MachineInstr &MI,
                                       const LiveIntervals &LIS) {
-  SlotIndex SlotIdx = LIS.getInstructionIndex(&MI);
+  SlotIndex SlotIdx = LIS.getInstructionIndex(MI);
   for (auto RI = Defs.begin(); RI != Defs.end(); /*empty*/) {
     unsigned Reg = RI->RegUnit;
     const LiveRange *LR = getLiveRange(LIS, Reg);
@@ -729,7 +729,7 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
 
   SlotIndex SlotIdx;
   if (RequireIntervals)
-    SlotIdx = LIS->getInstructionIndex(CurrPos).getRegSlot();
+    SlotIdx = LIS->getInstructionIndex(*CurrPos).getRegSlot();
 
   // Generate liveness for uses.
   for (const RegisterMaskPair &Use : RegOpers.Uses) {
@@ -794,7 +794,7 @@ void RegPressureTracker::recedeSkipDebugValues() {
 
   SlotIndex SlotIdx;
   if (RequireIntervals)
-    SlotIdx = LIS->getInstructionIndex(CurrPos).getRegSlot();
+    SlotIdx = LIS->getInstructionIndex(*CurrPos).getRegSlot();
 
   // Open the top of the region using slot indexes.
   if (RequireIntervals && isTopClosed())
@@ -808,7 +808,7 @@ void RegPressureTracker::recede(SmallVectorImpl<RegisterMaskPair> *LiveUses) {
   RegisterOperands RegOpers;
   RegOpers.collect(MI, *TRI, *MRI, TrackLaneMasks, false);
   if (TrackLaneMasks) {
-    SlotIndex SlotIdx = LIS->getInstructionIndex(CurrPos).getRegSlot();
+    SlotIndex SlotIdx = LIS->getInstructionIndex(*CurrPos).getRegSlot();
     RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
   } else if (RequireIntervals) {
     RegOpers.detectDeadDefs(MI, *LIS);
@@ -969,7 +969,7 @@ void RegPressureTracker::bumpUpwardPressure(const MachineInstr *MI) {
 
   SlotIndex SlotIdx;
   if (RequireIntervals)
-    SlotIdx = LIS->getInstructionIndex(MI).getRegSlot();
+    SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
 
   // Account for register pressure similar to RegPressureTracker::recede().
   RegisterOperands RegOpers;
@@ -1154,7 +1154,7 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
     if (MO.isUndef())
       continue;
     const MachineInstr *MI = MO.getParent();
-    SlotIndex InstSlot = LIS->getInstructionIndex(MI).getRegSlot();
+    SlotIndex InstSlot = LIS->getInstructionIndex(*MI).getRegSlot();
     if (InstSlot >= PriorUseIdx && InstSlot < NextUseIdx) {
       unsigned SubRegIdx = MO.getSubReg();
       LaneBitmask UseMask = TRI.getSubRegIndexLaneMask(SubRegIdx);
@@ -1214,7 +1214,7 @@ void RegPressureTracker::bumpDownwardPressure(const MachineInstr *MI) {
 
   SlotIndex SlotIdx;
   if (RequireIntervals)
-    SlotIdx = LIS->getInstructionIndex(MI).getRegSlot();
+    SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
 
   // Account for register pressure similar to RegPressureTracker::recede().
   RegisterOperands RegOpers;

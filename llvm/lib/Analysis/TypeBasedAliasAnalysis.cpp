@@ -588,8 +588,6 @@ TypeBasedAAResult TypeBasedAA::run(Function &F, AnalysisManager<Function> *AM) {
   return TypeBasedAAResult(AM->getResult<TargetLibraryAnalysis>(F));
 }
 
-char TypeBasedAA::PassID;
-
 char TypeBasedAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(TypeBasedAAWrapperPass, "tbaa",
                       "Type-Based Alias Analysis", false, true)

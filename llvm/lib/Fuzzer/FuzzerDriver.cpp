@@ -301,6 +301,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
     Printf("Dictionary: %zd entries\n", Dictionary.size());
   Options.SaveArtifacts = !Flags.test_single_input;
   Options.PrintNewCovPcs = Flags.print_new_cov_pcs;
+  Options.PrintFinalStats = Flags.print_final_stats;
 
   unsigned Seed = Flags.seed;
   // Initialize Seed.
@@ -369,6 +370,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
   if (Flags.verbosity)
     Printf("Done %d runs in %zd second(s)\n", F.getTotalNumberOfRuns(),
            F.secondsSinceProcessStartUp());
+  F.PrintFinalStats();
 
   exit(0);  // Don't let F destroy itself.
 }

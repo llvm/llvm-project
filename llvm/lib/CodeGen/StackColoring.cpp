@@ -395,7 +395,7 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
       int Slot = Mo.getIndex();
       assert(Slot >= 0 && "Invalid slot");
 
-      SlotIndex ThisIndex = Indexes->getInstructionIndex(MI);
+      SlotIndex ThisIndex = Indexes->getInstructionIndex(*MI);
 
       if (IsStart) {
         if (!Starts[Slot].isValid() || Starts[Slot] > ThisIndex)
@@ -569,7 +569,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         // If we *don't* protect the user from escaped allocas, don't bother
         // validating the instructions.
         if (!I.isDebugValue() && TouchesMemory && ProtectFromEscapedAllocas) {
-          SlotIndex Index = Indexes->getInstructionIndex(&I);
+          SlotIndex Index = Indexes->getInstructionIndex(I);
           const LiveInterval *Interval = &*Intervals[FromSlot];
           assert(Interval->find(Index) != Interval->end() &&
                  "Found instruction usage outside of live range.");
@@ -628,7 +628,7 @@ void StackColoring::removeInvalidSlotRanges() {
         // Check that the used slot is inside the calculated lifetime range.
         // If it is not, warn about it and invalidate the range.
         LiveInterval *Interval = &*Intervals[Slot];
-        SlotIndex Index = Indexes->getInstructionIndex(&I);
+        SlotIndex Index = Indexes->getInstructionIndex(I);
         if (Interval->find(Index) == Interval->end()) {
           Interval->clear();
           DEBUG(dbgs()<<"Invalidating range #"<<Slot<<"\n");

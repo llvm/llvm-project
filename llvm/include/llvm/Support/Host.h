@@ -16,7 +16,7 @@
 
 #include "llvm/ADT/StringMap.h"
 
-#if defined(__linux__) || defined(__GNU__)
+#if defined(__linux__) || defined(__GNU__) || defined(__HAIKU__)
 #include <endian.h>
 #else
 #if !defined(BYTE_ORDER) && !defined(LLVM_ON_WIN32)

@@ -390,9 +390,6 @@ bool AAResults::canInstructionRangeModRef(const Instruction &I1,
 // Provide a definition for the root virtual destructor.
 AAResults::Concept::~Concept() {}
 
-// Provide a definition for the static object used to identify passes.
-char AAManager::PassID;
-
 namespace {
 /// A wrapper pass for external alias analyses. This just squirrels away the
 /// callback used to run any analyses and register their results.

@@ -1783,3 +1783,138 @@ def : Pat<(i64 (bitconvert f64:$S)),
 def : Pat<(f64 (bitconvert i64:$S)),
           (f64 (MTVSRD $S))>;
 }
+
+// The following VSX instructions were introduced in Power ISA 3.0
+def HasP9Vector : Predicate<"PPCSubTarget->hasP9Vector()">;
+let Predicates = [HasP9Vector] in {
+
+  // [PO VRT XO VRB XO /]
+  class X_VT5_XO5_VB5<bits<6> opcode, bits<5> xo2, bits<10> xo, string opc,
+                      list<dag> pattern>
+    : X_RD5_XO5_RS5<opcode, xo2, xo, (outs vrrc:$vT), (ins vrrc:$vB),
+                    !strconcat(opc, " $vT, $vB"), IIC_VecFP, pattern>;
+
+  // [PO VRT XO VRB XO RO], Round to Odd version of [PO VRT XO VRB XO /]
+  class X_VT5_XO5_VB5_Ro<bits<6> opcode, bits<5> xo2, bits<10> xo, string opc,
+                         list<dag> pattern>
+    : X_VT5_XO5_VB5<opcode, xo2, xo, opc, pattern>, isDOT;
+
+  // [PO VRT XO VRB XO /], but the VRB is only used the left 64 bits (or less),
+  // So we use different operand class for VRB
+  class X_VT5_XO5_VB5_TyVB<bits<6> opcode, bits<5> xo2, bits<10> xo, string opc,
+                           RegisterOperand vbtype, list<dag> pattern>
+    : X_RD5_XO5_RS5<opcode, xo2, xo, (outs vrrc:$vT), (ins vbtype:$vB),
+                    !strconcat(opc, " $vT, $vB"), IIC_VecFP, pattern>;
+
+  // [PO T XO B XO BX TX]
+  class XX2_XT6_XO5_XB6<bits<6> opcode, bits<5> xo2, bits<9> xo, string opc,
+                        RegisterOperand vtype, list<dag> pattern>
+    : XX2_RD6_XO5_RS6<opcode, xo2, xo, (outs vtype:$XT), (ins vtype:$XB),
+                      !strconcat(opc, " $XT, $XB"), IIC_VecFP, pattern>;
+
+  // [PO T A B XO AX BX TX], src and dest register use different operand class
+  class XX3_XT5_XA5_XB5<bits<6> opcode, bits<8> xo, string opc,
+                  RegisterOperand xty, RegisterOperand aty, RegisterOperand bty,
+                  InstrItinClass itin, list<dag> pattern>
+    : XX3Form<opcode, xo, (outs xty:$XT), (ins aty:$XA, bty:$XB),
+              !strconcat(opc, " $XT, $XA, $XB"), itin, pattern>;
+
+  //===--------------------------------------------------------------------===//
+  // Quad/Double-Precision Compare Instructions:
+
+  // [PO BF // VRA VRB XO /]
+  class X_BF3_VA5_VB5<bits<6> opcode, bits<10> xo, string opc,
+                      list<dag> pattern>
+    : XForm_17<opcode, xo, (outs crrc:$crD), (ins vrrc:$VA, vrrc:$VB),
+               !strconcat(opc, " $crD, $VA, $VB"), IIC_FPCompare> {
+    let Pattern = pattern;
+  }
+
+  // QP Compare Ordered/Unordered
+  def XSCMPOQP : X_BF3_VA5_VB5<63, 132, "xscmpoqp", []>;
+  def XSCMPUQP : X_BF3_VA5_VB5<63, 644, "xscmpuqp", []>;
+
+  // DP/QP Compare Exponents
+  def XSCMPEXPDP : XX3Form_1<60, 59,
+                             (outs crrc:$crD), (ins vsfrc:$XA, vsfrc:$XB),
+                             "xscmpexpdp $crD, $XA, $XB", IIC_FPCompare, []>;
+  def XSCMPEXPQP : X_BF3_VA5_VB5<63, 164, "xscmpexpqp", []>;
+
+  // DP Compare ==, >=, >, !=
+  // Use vsrc for XT, because the entire register of XT is set.
+  // XT.dword[1] = 0x0000_0000_0000_0000
+  def XSCMPEQDP : XX3_XT5_XA5_XB5<60,  3, "xscmpeqdp", vsrc, vsfrc, vsfrc,
+                                  IIC_FPCompare, []>;
+  def XSCMPGEDP : XX3_XT5_XA5_XB5<60, 19, "xscmpgedp", vsrc, vsfrc, vsfrc,
+                                  IIC_FPCompare, []>;
+  def XSCMPGTDP : XX3_XT5_XA5_XB5<60, 11, "xscmpgtdp", vsrc, vsfrc, vsfrc,
+                                  IIC_FPCompare, []>;
+  def XSCMPNEDP : XX3_XT5_XA5_XB5<60, 27, "xscmpnedp", vsrc, vsfrc, vsfrc,
+                                  IIC_FPCompare, []>;
+  // Vector Compare Not Equal
+  def XVCMPNEDP  : XX3Form_Rc<60, 123,
+                              (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvcmpnedp  $XT, $XA, $XB", IIC_VecFPCompare, []>;
+  let Defs = [CR6] in
+  def XVCMPNEDPo : XX3Form_Rc<60, 123,
+                              (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvcmpnedp. $XT, $XA, $XB", IIC_VecFPCompare, []>,
+                              isDOT;
+  def XVCMPNESP  : XX3Form_Rc<60,  91,
+                              (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvcmpnesp  $XT, $XA, $XB", IIC_VecFPCompare, []>;
+  let Defs = [CR6] in
+  def XVCMPNESPo : XX3Form_Rc<60,  91,
+                              (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                              "xvcmpnesp. $XT, $XA, $XB", IIC_VecFPCompare, []>,
+                              isDOT;
+
+  //===--------------------------------------------------------------------===//
+  // Quad-Precision Floating-Point Conversion Instructions:
+
+  // Convert DP -> QP
+  def XSCVDPQP  : X_VT5_XO5_VB5_TyVB<63, 22, 836, "xscvdpqp", vsfrc, []>;
+
+  // Round & Convert QP -> DP (dword[1] is set to zero)
+  def XSCVQPDP  : X_VT5_XO5_VB5   <63, 20, 836, "xscvqpdp" , []>;
+  def XSCVQPDPO : X_VT5_XO5_VB5_Ro<63, 20, 836, "xscvqpdpo", []>;
+
+  // Truncate & Convert QP -> (Un)Signed (D)Word (dword[1] is set to zero)
+  def XSCVQPSDZ : X_VT5_XO5_VB5<63, 25, 836, "xscvqpsdz", []>;
+  def XSCVQPSWZ : X_VT5_XO5_VB5<63,  9, 836, "xscvqpswz", []>;
+  def XSCVQPUDZ : X_VT5_XO5_VB5<63, 17, 836, "xscvqpudz", []>;
+  def XSCVQPUWZ : X_VT5_XO5_VB5<63,  1, 836, "xscvqpuwz", []>;
+
+  // Convert (Un)Signed DWord -> QP
+  def XSCVSDQP  : X_VT5_XO5_VB5_TyVB<63, 10, 836, "xscvsdqp", vsfrc, []>;
+  def XSCVUDQP  : X_VT5_XO5_VB5_TyVB<63,  2, 836, "xscvudqp", vsfrc, []>;
+
+  //===--------------------------------------------------------------------===//
+  // Round to Floating-Point Integer Instructions
+
+  // (Round &) Convert DP <-> HP
+  // Note! xscvdphp's src and dest register both use the left 64 bits, so we use
+  // vsfrc for src and dest register. xscvhpdp's src only use the left 16 bits,
+  // but we still use vsfrc for it.
+  def XSCVDPHP : XX2_XT6_XO5_XB6<60, 17, 347, "xscvdphp", vsfrc, []>;
+  def XSCVHPDP : XX2_XT6_XO5_XB6<60, 16, 347, "xscvhpdp", vsfrc, []>;
+
+  // Vector HP -> SP
+  def XVCVHPSP : XX2_XT6_XO5_XB6<60, 24, 475, "xvcvhpsp", vsrc, []>;
+  def XVCVSPHP : XX2_XT6_XO5_XB6<60, 25, 475, "xvcvsphp", vsrc, []>;
+
+  class Z23_VT5_R1_VB5_RMC2_EX1<bits<6> opcode, bits<8> xo, bit ex, string opc,
+                                list<dag> pattern>
+    : Z23Form_1<opcode, xo,
+                (outs vrrc:$vT), (ins u1imm:$r, vrrc:$vB, u2imm:$rmc),
+                !strconcat(opc, " $r, $vT, $vB, $rmc"), IIC_VecFP, pattern> {
+    let RC = ex;
+  }
+
+  // Round to Quad-Precision Integer [with Inexact]
+  def XSRQPI   : Z23_VT5_R1_VB5_RMC2_EX1<63,  5, 0, "xsrqpi" , []>;
+  def XSRQPIX  : Z23_VT5_R1_VB5_RMC2_EX1<63,  5, 1, "xsrqpix", []>;
+
+  // Round Quad-Precision to Double-Extended Precision (fp80)
+  def XSRQPXP  : Z23_VT5_R1_VB5_RMC2_EX1<63, 37, 0, "xsrqpxp", []>;
+} // end HasP9Vector

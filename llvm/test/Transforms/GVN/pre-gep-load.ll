@@ -34,7 +34,7 @@ sw.bb2:                                           ; preds = %if.end, %entry
   %arrayidx5 = getelementptr inbounds double, double* %2, i64 %idxprom3
   %3 = load double, double* %arrayidx5, align 8
 ; CHECK: sw.bb2:
-; CHECK-NEXT-NOT: sext
+; CHECK-NOT: sext
 ; CHECK-NEXT: phi double [
 ; CHECK-NOT: load
   %sub6 = fsub double 3.000000e+00, %3

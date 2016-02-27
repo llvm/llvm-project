@@ -99,7 +99,7 @@ protected:
         //                         %RM<imp-use>; VSLRC:%vreg16,%vreg18,%vreg9
         // and we remove: %vreg5<def> = COPY %vreg9; VSLRC:%vreg5,%vreg9
 
-        SlotIndex FMAIdx = LIS->getInstructionIndex(MI);
+        SlotIndex FMAIdx = LIS->getInstructionIndex(*MI);
 
         VNInfo *AddendValNo =
           LIS->getInterval(MI->getOperand(1).getReg()).Query(FMAIdx).valueIn();
@@ -325,7 +325,7 @@ protected:
         // Remove the (now unused) copy.
 
         DEBUG(dbgs() << "  removing: " << *AddendMI << '\n');
-        LIS->RemoveMachineInstrFromMaps(AddendMI);
+        LIS->RemoveMachineInstrFromMaps(*AddendMI);
         AddendMI->eraseFromParent();
 
         Changed = true;

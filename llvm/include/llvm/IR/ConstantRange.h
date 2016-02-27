@@ -254,6 +254,14 @@ public:
   ConstantRange umax(const ConstantRange &Other) const;
 
   /// Return a new range representing the possible values resulting
+  /// from a signed minimum of a value in this range and a value in \p Other.
+  ConstantRange smin(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from an unsigned minimum of a value in this range and a value in \p Other.
+  ConstantRange umin(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
   /// from an unsigned division of a value in this range and a value in
   /// \p Other.
   ConstantRange udiv(const ConstantRange &Other) const;

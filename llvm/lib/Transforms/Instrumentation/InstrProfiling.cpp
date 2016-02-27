@@ -406,7 +406,8 @@ void InstrProfiling::emitRegistration() {
 
   // Use linker script magic to get data/cnts/name start/end.
   if (Triple(M->getTargetTriple()).isOSLinux() ||
-      Triple(M->getTargetTriple()).isOSFreeBSD())
+      Triple(M->getTargetTriple()).isOSFreeBSD() ||
+      Triple(M->getTargetTriple()).isPS4CPU())
     return;
 
   // Construct the function.

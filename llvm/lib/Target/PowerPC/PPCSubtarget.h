@@ -92,6 +92,8 @@ protected:
   bool HasP8Vector;
   bool HasP8Altivec;
   bool HasP8Crypto;
+  bool HasP9Vector;
+  bool HasP9Altivec;
   bool HasFCPSGN;
   bool HasFSQRT;
   bool HasFRE, HasFRES, HasFRSQRTE, HasFRSQRTES;
@@ -230,6 +232,8 @@ public:
   bool hasP8Vector() const { return HasP8Vector; }
   bool hasP8Altivec() const { return HasP8Altivec; }
   bool hasP8Crypto() const { return HasP8Crypto; }
+  bool hasP9Vector() const { return HasP9Vector; }
+  bool hasP9Altivec() const { return HasP9Altivec; }
   bool hasMFOCRF() const { return HasMFOCRF; }
   bool hasISEL() const { return HasISEL; }
   bool hasPOPCNTD() const { return HasPOPCNTD; }

@@ -40,3 +40,4 @@ entry:
 ; CHECK_PC: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC-NOT: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC: ret void
+; CHECK_PC-NOT: call void @__sanitizer_cov_module_init

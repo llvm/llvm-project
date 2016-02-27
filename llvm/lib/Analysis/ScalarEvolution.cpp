@@ -9554,8 +9554,6 @@ void ScalarEvolution::verify() const {
   // TODO: Verify more things.
 }
 
-char ScalarEvolutionAnalysis::PassID;
-
 ScalarEvolution ScalarEvolutionAnalysis::run(Function &F,
                                              AnalysisManager<Function> *AM) {
   return ScalarEvolution(F, AM->getResult<TargetLibraryAnalysis>(F),

@@ -21,10 +21,7 @@
 
 namespace llvm {
 
-class LowerExpectIntrinsicPass {
-public:
-  static StringRef name() { return "LowerExpectIntrinsicPass"; }
-
+struct LowerExpectIntrinsicPass : PassBase<LowerExpectIntrinsicPass> {
   /// \brief Run the pass over the function.
   ///
   /// This will lower all of th expect intrinsic calls in this function into

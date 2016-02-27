@@ -67,3 +67,6 @@ s_dcache_inv
 s_dcache_inv_vol
 // CI: s_dcache_inv_vol ; encoding: [0x00,0x00,0x40,0xc7]
 // NOSI: error: instruction not supported on this GPU
+
+s_memtime s[0:1]
+// GCN: s_memtime s[0:1] ; encoding: [0x00,0x00,0x80,0xc7]

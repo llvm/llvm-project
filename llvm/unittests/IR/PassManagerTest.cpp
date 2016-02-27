@@ -19,18 +19,12 @@ using namespace llvm;
 
 namespace {
 
-class TestFunctionAnalysis {
+class TestFunctionAnalysis : public AnalysisBase<TestFunctionAnalysis> {
 public:
   struct Result {
     Result(int Count) : InstructionCount(Count) {}
     int InstructionCount;
   };
-
-  /// \brief Returns an opaque, unique ID for this pass type.
-  static void *ID() { return (void *)&PassID; }
-
-  /// \brief Returns the name of the analysis.
-  static StringRef name() { return "TestFunctionAnalysis"; }
 
   TestFunctionAnalysis(int &Runs) : Runs(Runs) {}
 
@@ -46,24 +40,15 @@ public:
   }
 
 private:
-  /// \brief Private static data to provide unique ID.
-  static char PassID;
-
   int &Runs;
 };
 
-char TestFunctionAnalysis::PassID;
-
-class TestModuleAnalysis {
+class TestModuleAnalysis : public AnalysisBase<TestModuleAnalysis> {
 public:
   struct Result {
     Result(int Count) : FunctionCount(Count) {}
     int FunctionCount;
   };
-
-  static void *ID() { return (void *)&PassID; }
-
-  static StringRef name() { return "TestModuleAnalysis"; }
 
   TestModuleAnalysis(int &Runs) : Runs(Runs) {}
 
@@ -76,14 +61,10 @@ public:
   }
 
 private:
-  static char PassID;
-
   int &Runs;
 };
 
-char TestModuleAnalysis::PassID;
-
-struct TestModulePass {
+struct TestModulePass : PassBase<TestModulePass> {
   TestModulePass(int &RunCount) : RunCount(RunCount) {}
 
   PreservedAnalyses run(Module &M) {
@@ -91,18 +72,14 @@ struct TestModulePass {
     return PreservedAnalyses::none();
   }
 
-  static StringRef name() { return "TestModulePass"; }
-
   int &RunCount;
 };
 
-struct TestPreservingModulePass {
+struct TestPreservingModulePass : PassBase<TestPreservingModulePass> {
   PreservedAnalyses run(Module &M) { return PreservedAnalyses::all(); }
-
-  static StringRef name() { return "TestPreservingModulePass"; }
 };
 
-struct TestMinPreservingModulePass {
+struct TestMinPreservingModulePass : PassBase<TestMinPreservingModulePass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager *AM) {
     PreservedAnalyses PA;
 
@@ -112,11 +89,9 @@ struct TestMinPreservingModulePass {
     PA.preserve<FunctionAnalysisManagerModuleProxy>();
     return PA;
   }
-
-  static StringRef name() { return "TestMinPreservingModulePass"; }
 };
 
-struct TestFunctionPass {
+struct TestFunctionPass : PassBase<TestFunctionPass> {
   TestFunctionPass(int &RunCount, int &AnalyzedInstrCount,
                    int &AnalyzedFunctionCount,
                    bool OnlyUseCachedResults = false)
@@ -147,8 +122,6 @@ struct TestFunctionPass {
     return PreservedAnalyses::all();
   }
 
-  static StringRef name() { return "TestFunctionPass"; }
-
   int &RunCount;
   int &AnalyzedInstrCount;
   int &AnalyzedFunctionCount;
@@ -157,15 +130,13 @@ struct TestFunctionPass {
 
 // A test function pass that invalidates all function analyses for a function
 // with a specific name.
-struct TestInvalidationFunctionPass {
+struct TestInvalidationFunctionPass : PassBase<TestInvalidationFunctionPass> {
   TestInvalidationFunctionPass(StringRef FunctionName) : Name(FunctionName) {}
 
   PreservedAnalyses run(Function &F) {
     return F.getName() == Name ? PreservedAnalyses::none()
                                : PreservedAnalyses::all();
   }
-
-  static StringRef name() { return "TestInvalidationFunctionPass"; }
 
   StringRef Name;
 };

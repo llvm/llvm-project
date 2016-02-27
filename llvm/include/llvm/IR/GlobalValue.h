@@ -75,9 +75,9 @@ protected:
   }
 
   Type *ValueType;
-  // Note: VC++ treats enums as signed, so an extra bit is required to prevent
-  // Linkage and Visibility from turning into negative values.
-  LinkageTypes Linkage : 5;   // The linkage of this global
+  // All bitfields use unsigned as the underlying type so that MSVC will pack
+  // them.
+  unsigned Linkage : 4;       // The linkage of this global
   unsigned Visibility : 2;    // The visibility style of this global
   unsigned UnnamedAddr : 1;   // This value's address is not significant
   unsigned DllStorageClass : 2; // DLL storage class
@@ -259,44 +259,40 @@ public:
            Linkage == CommonLinkage || Linkage == ExternalWeakLinkage;
   }
 
-  bool hasExternalLinkage() const { return isExternalLinkage(Linkage); }
+  bool hasExternalLinkage() const { return isExternalLinkage(getLinkage()); }
   bool hasAvailableExternallyLinkage() const {
-    return isAvailableExternallyLinkage(Linkage);
+    return isAvailableExternallyLinkage(getLinkage());
   }
-  bool hasLinkOnceLinkage() const {
-    return isLinkOnceLinkage(Linkage);
+  bool hasLinkOnceLinkage() const { return isLinkOnceLinkage(getLinkage()); }
+  bool hasLinkOnceODRLinkage() const {
+    return isLinkOnceODRLinkage(getLinkage());
   }
-  bool hasLinkOnceODRLinkage() const { return isLinkOnceODRLinkage(Linkage); }
-  bool hasWeakLinkage() const {
-    return isWeakLinkage(Linkage);
+  bool hasWeakLinkage() const { return isWeakLinkage(getLinkage()); }
+  bool hasWeakAnyLinkage() const { return isWeakAnyLinkage(getLinkage()); }
+  bool hasWeakODRLinkage() const { return isWeakODRLinkage(getLinkage()); }
+  bool hasAppendingLinkage() const { return isAppendingLinkage(getLinkage()); }
+  bool hasInternalLinkage() const { return isInternalLinkage(getLinkage()); }
+  bool hasPrivateLinkage() const { return isPrivateLinkage(getLinkage()); }
+  bool hasLocalLinkage() const { return isLocalLinkage(getLinkage()); }
+  bool hasExternalWeakLinkage() const {
+    return isExternalWeakLinkage(getLinkage());
   }
-  bool hasWeakAnyLinkage() const {
-    return isWeakAnyLinkage(Linkage);
-  }
-  bool hasWeakODRLinkage() const {
-    return isWeakODRLinkage(Linkage);
-  }
-  bool hasAppendingLinkage() const { return isAppendingLinkage(Linkage); }
-  bool hasInternalLinkage() const { return isInternalLinkage(Linkage); }
-  bool hasPrivateLinkage() const { return isPrivateLinkage(Linkage); }
-  bool hasLocalLinkage() const { return isLocalLinkage(Linkage); }
-  bool hasExternalWeakLinkage() const { return isExternalWeakLinkage(Linkage); }
-  bool hasCommonLinkage() const { return isCommonLinkage(Linkage); }
+  bool hasCommonLinkage() const { return isCommonLinkage(getLinkage()); }
 
   void setLinkage(LinkageTypes LT) {
     if (isLocalLinkage(LT))
       Visibility = DefaultVisibility;
     Linkage = LT;
   }
-  LinkageTypes getLinkage() const { return Linkage; }
+  LinkageTypes getLinkage() const { return LinkageTypes(Linkage); }
 
   bool isDiscardableIfUnused() const {
-    return isDiscardableIfUnused(Linkage);
+    return isDiscardableIfUnused(getLinkage());
   }
 
-  bool mayBeOverridden() const { return mayBeOverridden(Linkage); }
+  bool mayBeOverridden() const { return mayBeOverridden(getLinkage()); }
 
-  bool isWeakForLinker() const { return isWeakForLinker(Linkage); }
+  bool isWeakForLinker() const { return isWeakForLinker(getLinkage()); }
 
   /// Copy all additional attributes (those not needed to create a GlobalValue)
   /// from the GlobalValue Src to this one.

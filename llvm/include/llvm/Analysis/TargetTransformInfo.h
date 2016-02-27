@@ -25,6 +25,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/DataTypes.h"
 #include <functional>
@@ -34,7 +35,6 @@ namespace llvm {
 class Function;
 class GlobalValue;
 class Loop;
-class PreservedAnalyses;
 class Type;
 class User;
 class Value;
@@ -889,15 +889,9 @@ TargetTransformInfo::TargetTransformInfo(T Impl)
 /// is done in a subtarget specific way and LLVM supports compiling different
 /// functions targeting different subtargets in order to support runtime
 /// dispatch according to the observed subtarget.
-class TargetIRAnalysis {
+class TargetIRAnalysis : public AnalysisBase<TargetIRAnalysis> {
 public:
   typedef TargetTransformInfo Result;
-
-  /// \brief Opaque, unique identifier for this analysis pass.
-  static void *ID() { return (void *)&PassID; }
-
-  /// \brief Provide access to a name for this pass for debugging purposes.
-  static StringRef name() { return "TargetIRAnalysis"; }
 
   /// \brief Default construct a target IR analysis.
   ///
@@ -928,8 +922,6 @@ public:
   Result run(const Function &F);
 
 private:
-  static char PassID;
-
   /// \brief The callback used to produce a result.
   ///
   /// We use a completely opaque callback so that targets can provide whatever

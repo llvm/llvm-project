@@ -22,6 +22,7 @@
 #define LLVM_IR_VERIFIER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/PassManager.h"
 #include <string>
 
 namespace llvm {
@@ -30,7 +31,6 @@ class Function;
 class FunctionPass;
 class ModulePass;
 class Module;
-class PreservedAnalyses;
 class raw_ostream;
 
 /// \brief Check a function for errors, useful for use when debugging a
@@ -60,7 +60,7 @@ bool verifyModule(const Module &M, raw_ostream *OS = nullptr);
 /// nothing to do with \c VerifierPass.
 FunctionPass *createVerifierPass(bool FatalErrors = true);
 
-class VerifierPass {
+class VerifierPass : public PassBase<VerifierPass> {
   bool FatalErrors;
 
 public:
@@ -68,8 +68,6 @@ public:
 
   PreservedAnalyses run(Module &M);
   PreservedAnalyses run(Function &F);
-
-  static StringRef name() { return "VerifierPass"; }
 };
 
 } // End llvm namespace

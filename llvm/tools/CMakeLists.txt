@@ -34,6 +34,7 @@ endif()
 # requires targets specified in DEPENDS to exist before the call to
 # ExternalProject_Add.
 add_llvm_tool_subdirectory(lto)
+add_llvm_tool_subdirectory(gold)
 add_llvm_tool_subdirectory(llvm-ar)
 add_llvm_tool_subdirectory(llvm-config)
 add_llvm_tool_subdirectory(llvm-profdata)

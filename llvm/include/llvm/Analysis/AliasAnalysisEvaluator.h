@@ -26,7 +26,7 @@
 namespace llvm {
 class AAResults;
 
-class AAEvaluator {
+class AAEvaluator : public PassBase<AAEvaluator> {
   int64_t FunctionCount;
   int64_t NoAliasCount, MayAliasCount, PartialAliasCount, MustAliasCount;
   int64_t NoModRefCount, ModCount, RefCount, ModRefCount;

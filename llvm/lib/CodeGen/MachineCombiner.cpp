@@ -281,7 +281,7 @@ bool MachineCombiner::improvesCriticalPathLen(
 
   unsigned NewCycleCount = NewRootDepth + NewRootLatency;
   unsigned OldCycleCount = RootDepth + RootLatency + RootSlack;
-  
+
   return NewCycleCount <= OldCycleCount;
 }
 

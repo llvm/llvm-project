@@ -165,7 +165,7 @@ private:
   void propagateSiblingValue(SibValueMap::iterator, VNInfo *VNI = nullptr);
   void analyzeSiblingValues();
 
-  bool hoistSpill(LiveInterval &SpillLI, MachineInstr *CopyMI);
+  bool hoistSpill(LiveInterval &SpillLI, MachineInstr &CopyMI);
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
 
   void markValueUsed(LiveInterval*, VNInfo*);
@@ -681,7 +681,7 @@ void InlineSpiller::analyzeSiblingValues() {
 
 /// hoistSpill - Given a sibling copy that defines a value to be spilled, insert
 /// a spill at a better location.
-bool InlineSpiller::hoistSpill(LiveInterval &SpillLI, MachineInstr *CopyMI) {
+bool InlineSpiller::hoistSpill(LiveInterval &SpillLI, MachineInstr &CopyMI) {
   SlotIndex Idx = LIS.getInstructionIndex(CopyMI);
   VNInfo *VNI = SpillLI.getVNInfoAt(Idx.getRegSlot());
   assert(VNI && VNI->def == Idx.getRegSlot() && "Not defined by copy");
@@ -743,7 +743,7 @@ bool InlineSpiller::hoistSpill(LiveInterval &SpillLI, MachineInstr *CopyMI) {
   TII.storeRegToStackSlot(*MBB, MII, SVI.SpillReg, false, StackSlot,
                           MRI.getRegClass(SVI.SpillReg), &TRI);
   --MII; // Point to store instruction.
-  LIS.InsertMachineInstrInMaps(MII);
+  LIS.InsertMachineInstrInMaps(*MII);
   DEBUG(dbgs() << "\thoisted: " << SVI.SpillVNI->def << '\t' << *MII);
 
   ++NumSpills;
@@ -781,7 +781,7 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
       MachineInstr *MI = &*(UI++);
       if (!MI->isCopy() && !MI->mayStore())
         continue;
-      SlotIndex Idx = LIS.getInstructionIndex(MI);
+      SlotIndex Idx = LIS.getInstructionIndex(*MI);
       if (LI->getVNInfoAt(Idx) != VNI)
         continue;
 
@@ -860,7 +860,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg,
   if (!RI.Reads)
     return false;
 
-  SlotIndex UseIdx = LIS.getInstructionIndex(MI).getRegSlot(true);
+  SlotIndex UseIdx = LIS.getInstructionIndex(*MI).getRegSlot(true);
   VNInfo *ParentVNI = VirtReg.getVNInfoAt(UseIdx.getBaseIndex());
 
   if (!ParentVNI) {
@@ -1019,7 +1019,7 @@ bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, unsigned Reg) {
     return false;
 
   DEBUG(dbgs() << "Coalescing stack access: " << *MI);
-  LIS.RemoveMachineInstrFromMaps(MI);
+  LIS.RemoveMachineInstrFromMaps(*MI);
   MI->eraseFromParent();
 
   if (IsLoad) {
@@ -1051,7 +1051,7 @@ static void dumpMachineInstrRangeWithSlotIndex(MachineBasicBlock::iterator B,
   dbgs() << '\t' << header << ": " << NextLine;
 
   for (MachineBasicBlock::iterator I = B; I != E; ++I) {
-    SlotIndex Idx = LIS.getInstructionIndex(I).getRegSlot();
+    SlotIndex Idx = LIS.getInstructionIndex(*I).getRegSlot();
 
     // If a register was passed in and this instruction has it as a
     // destination that is marked as an early clobber, print the
@@ -1138,18 +1138,18 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
       continue;
     // FoldMI does not define this physreg. Remove the LI segment.
     assert(MO->isDead() && "Cannot fold physreg def");
-    SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
+    SlotIndex Idx = LIS.getInstructionIndex(*MI).getRegSlot();
     LIS.removePhysRegDefAt(Reg, Idx);
   }
 
-  LIS.ReplaceMachineInstrInMaps(MI, FoldMI);
+  LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
   MI->eraseFromParent();
 
   // Insert any new instructions other than FoldMI into the LIS maps.
   assert(!MIS.empty() && "Unexpected empty span of instructions!");
   for (MachineInstr &MI : MIS)
     if (&MI != FoldMI)
-      LIS.InsertMachineInstrInMaps(&MI);
+      LIS.InsertMachineInstrInMaps(MI);
 
   // TII.foldMemoryOperand may have left some implicit operands on the
   // instruction.  Strip them.
@@ -1252,7 +1252,7 @@ void InlineSpiller::spillAroundUses(unsigned Reg) {
 
     // Find the slot index where this instruction reads and writes OldLI.
     // This is usually the def slot, except for tied early clobbers.
-    SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
+    SlotIndex Idx = LIS.getInstructionIndex(*MI).getRegSlot();
     if (VNInfo *VNI = OldLI.getVNInfoAt(Idx.getRegSlot(true)))
       if (SlotIndex::isSameInstr(Idx, VNI->def))
         Idx = VNI->def;
@@ -1268,7 +1268,7 @@ void InlineSpiller::spillAroundUses(unsigned Reg) {
       }
       if (RI.Writes) {
         // Hoist the spill of a sib-reg copy.
-        if (hoistSpill(OldLI, MI)) {
+        if (hoistSpill(OldLI, *MI)) {
           // This COPY is now dead, the value is already in the stack slot.
           MI->getOperand(0).setIsDead();
           DeadDefs.push_back(MI);
@@ -1349,11 +1349,11 @@ void InlineSpiller::spillAll() {
     for (MachineRegisterInfo::reg_instr_iterator
          RI = MRI.reg_instr_begin(Reg), E = MRI.reg_instr_end();
          RI != E; ) {
-      MachineInstr *MI = &*(RI++);
-      assert(SnippetCopies.count(MI) && "Remaining use wasn't a snippet copy");
+      MachineInstr &MI = *(RI++);
+      assert(SnippetCopies.count(&MI) && "Remaining use wasn't a snippet copy");
       // FIXME: Do this with a LiveRangeEdit callback.
       LIS.RemoveMachineInstrFromMaps(MI);
-      MI->eraseFromParent();
+      MI.eraseFromParent();
     }
   }
 

@@ -68,7 +68,7 @@ SlotIndex SplitAnalysis::computeLastSplitPoint(unsigned Num) {
     if (FirstTerm == MBB->end())
       LSP.first = MBBEnd;
     else
-      LSP.first = LIS.getInstructionIndex(FirstTerm);
+      LSP.first = LIS.getInstructionIndex(*FirstTerm);
 
     // If there is a landing pad successor, also find the call instruction.
     if (!LPad)
@@ -79,7 +79,7 @@ SlotIndex SplitAnalysis::computeLastSplitPoint(unsigned Num) {
          I != E;) {
       --I;
       if (I->isCall()) {
-        LSP.second = LIS.getInstructionIndex(I);
+        LSP.second = LIS.getInstructionIndex(*I);
         break;
       }
     }
@@ -129,7 +129,7 @@ void SplitAnalysis::analyzeUses() {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (MachineOperand &MO : MRI.use_nodbg_operands(CurLI->reg))
     if (!MO.isUndef())
-      UseSlots.push_back(LIS.getInstructionIndex(MO.getParent()).getRegSlot());
+      UseSlots.push_back(LIS.getInstructionIndex(*MO.getParent()).getRegSlot());
 
   array_pod_sort(UseSlots.begin(), UseSlots.end());
 
@@ -438,8 +438,9 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx,
     // Can't remat, just insert a copy from parent.
     CopyMI = BuildMI(MBB, I, DebugLoc(), TII.get(TargetOpcode::COPY), LI->reg)
                .addReg(Edit->getReg());
-    Def = LIS.getSlotIndexes()->insertMachineInstrInMaps(CopyMI, Late)
-            .getRegSlot();
+    Def = LIS.getSlotIndexes()
+              ->insertMachineInstrInMaps(*CopyMI, Late)
+              .getRegSlot();
     ++NumCopies;
   }
 
@@ -638,7 +639,7 @@ void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo*> &Copies) {
 
     DEBUG(dbgs() << "Removing " << Def << '\t' << *MI);
     LIS.removeVRegDefAt(*LI, Def);
-    LIS.RemoveMachineInstrFromMaps(MI);
+    LIS.RemoveMachineInstrFromMaps(*MI);
     MI->eraseFromParent();
 
     // Adjust RegAssign if a register assignment is killed at Def. We want to
@@ -654,7 +655,7 @@ void SplitEditor::removeBackCopies(SmallVectorImpl<VNInfo*> &Copies) {
       DEBUG(dbgs() << "  cannot find simple kill of RegIdx " << RegIdx << '\n');
       forceRecompute(RegIdx, Edit->getParent().getVNInfoAt(Def));
     } else {
-      SlotIndex Kill = LIS.getInstructionIndex(MBBI).getRegSlot();
+      SlotIndex Kill = LIS.getInstructionIndex(*MBBI).getRegSlot();
       DEBUG(dbgs() << "  move kill to " << Kill << '\t' << *MBBI);
       AssignI.setStop(Kill);
     }
@@ -964,7 +965,7 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     // <undef> operands don't really read the register, so it doesn't matter
     // which register we choose.  When the use operand is tied to a def, we must
     // use the same register as the def, so just do that always.
-    SlotIndex Idx = LIS.getInstructionIndex(MI);
+    SlotIndex Idx = LIS.getInstructionIndex(*MI);
     if (MO.isDef() || MO.isUndef())
       Idx = Idx.getRegSlot(MO.isEarlyClobber());
 

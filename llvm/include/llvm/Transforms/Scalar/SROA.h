@@ -51,7 +51,7 @@ class SROALegacyPass;
 ///    onto insert and extract operations on a vector value, and convert them to
 ///    this form. By doing so, it will enable promotion of vector aggregates to
 ///    SSA vector values.
-class SROA {
+class SROA : public PassBase<SROA> {
   LLVMContext *C;
   DominatorTree *DT;
   AssumptionCache *AC;
@@ -100,8 +100,6 @@ class SROA {
 
 public:
   SROA() : C(nullptr), DT(nullptr), AC(nullptr) {}
-
-  static StringRef name() { return "SROA"; }
 
   /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);

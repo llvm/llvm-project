@@ -268,19 +268,19 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
     .addOperand(*Dest1)
     .addReg(DestReg, RegState::Kill, SubRegIdx1);
 
-  LIS->InsertMachineInstrInMaps(Read2);
+  LIS->InsertMachineInstrInMaps(*Read2);
 
   // repairLiveintervalsInRange() doesn't handle physical register, so we have
   // to update the M0 range manually.
-  SlotIndex PairedIndex = LIS->getInstructionIndex(Paired);
+  SlotIndex PairedIndex = LIS->getInstructionIndex(*Paired);
   LiveRange &M0Range = LIS->getRegUnit(*MCRegUnitIterator(AMDGPU::M0, TRI));
   LiveRange::Segment *M0Segment = M0Range.getSegmentContaining(PairedIndex);
   bool UpdateM0Range = M0Segment->end == PairedIndex.getRegSlot();
 
   // The new write to the original destination register is now the copy. Steal
   // the old SlotIndex.
-  LIS->ReplaceMachineInstrInMaps(I, Copy0);
-  LIS->ReplaceMachineInstrInMaps(Paired, Copy1);
+  LIS->ReplaceMachineInstrInMaps(*I, *Copy0);
+  LIS->ReplaceMachineInstrInMaps(*Paired, *Copy1);
 
   I->eraseFromParent();
   Paired->eraseFromParent();
@@ -291,7 +291,7 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
   LIS->createAndComputeVirtRegInterval(DestReg);
 
   if (UpdateM0Range) {
-    SlotIndex Read2Index = LIS->getInstructionIndex(Read2);
+    SlotIndex Read2Index = LIS->getInstructionIndex(*Read2);
     M0Segment->end = Read2Index.getRegSlot();
   }
 
@@ -340,7 +340,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
 
   // repairLiveintervalsInRange() doesn't handle physical register, so we have
   // to update the M0 range manually.
-  SlotIndex PairedIndex = LIS->getInstructionIndex(Paired);
+  SlotIndex PairedIndex = LIS->getInstructionIndex(*Paired);
   LiveRange &M0Range = LIS->getRegUnit(*MCRegUnitIterator(AMDGPU::M0, TRI));
   LiveRange::Segment *M0Segment = M0Range.getSegmentContaining(PairedIndex);
   bool UpdateM0Range = M0Segment->end == PairedIndex.getRegSlot();
@@ -359,8 +359,8 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
   // XXX - How do we express subregisters here?
   unsigned OrigRegs[] = { Data0->getReg(), Data1->getReg(), Addr->getReg() };
 
-  LIS->RemoveMachineInstrFromMaps(I);
-  LIS->RemoveMachineInstrFromMaps(Paired);
+  LIS->RemoveMachineInstrFromMaps(*I);
+  LIS->RemoveMachineInstrFromMaps(*Paired);
   I->eraseFromParent();
   Paired->eraseFromParent();
 
@@ -368,7 +368,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
   LIS->repairIntervalsInRange(MBB, Write2, Write2, OrigRegs);
 
   if (UpdateM0Range) {
-    SlotIndex Write2Index = LIS->getInstructionIndex(Write2);
+    SlotIndex Write2Index = LIS->getInstructionIndex(*Write2);
     M0Segment->end = Write2Index.getRegSlot();
   }
 

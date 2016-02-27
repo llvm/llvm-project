@@ -1454,9 +1454,9 @@ void ConnectedVNInfoEqClasses::Distribute(LiveInterval &LI, LiveInterval *LIV[],
     // called, but it is not a requirement.
     SlotIndex Idx;
     if (MI->isDebugValue())
-      Idx = LIS.getSlotIndexes()->getIndexBefore(MI);
+      Idx = LIS.getSlotIndexes()->getIndexBefore(*MI);
     else
-      Idx = LIS.getInstructionIndex(MI);
+      Idx = LIS.getInstructionIndex(*MI);
     LiveQueryResult LRQ = LI.Query(Idx);
     const VNInfo *VNI = MO.readsReg() ? LRQ.valueIn() : LRQ.valueDefined();
     // In the case of an <undef> use that isn't tied to any def, VNI will be
@@ -1563,7 +1563,7 @@ bool ConnectedSubRegClasses::findComponents(IntEqClasses &Classes,
       const LiveInterval::SubRange &SR = *SRInfo.SR;
       if ((SR.LaneMask & LaneMask) == 0)
         continue;
-      SlotIndex Pos = LIS.getInstructionIndex(MO.getParent());
+      SlotIndex Pos = LIS.getInstructionIndex(*MO.getParent());
       Pos = MO.isDef() ? Pos.getRegSlot(MO.isEarlyClobber())
                        : Pos.getBaseIndex();
       const VNInfo *VNI = SR.getVNInfoAt(Pos);
@@ -1598,7 +1598,7 @@ void ConnectedSubRegClasses::rewriteOperands(const IntEqClasses &Classes,
 
     MachineInstr &MI = *MO.getParent();
 
-    SlotIndex Pos = LIS.getInstructionIndex(&MI);
+    SlotIndex Pos = LIS.getInstructionIndex(MI);
     unsigned SubRegIdx = MO.getSubReg();
     LaneBitmask LaneMask = TRI.getSubRegIndexLaneMask(SubRegIdx);
 
@@ -1672,12 +1672,12 @@ void ConnectedSubRegClasses::computeMainRangesFixFlags(
       // in and out of the instruction anymore. We need to add new dead and kill
       // flags in these cases.
       if (!MO.isUndef()) {
-        SlotIndex Pos = LIS.getInstructionIndex(MO.getParent());
+        SlotIndex Pos = LIS.getInstructionIndex(*MO.getParent());
         if (!LI->liveAt(Pos.getBaseIndex()))
           MO.setIsUndef();
       }
       if (!MO.isDead()) {
-        SlotIndex Pos = LIS.getInstructionIndex(MO.getParent());
+        SlotIndex Pos = LIS.getInstructionIndex(*MO.getParent());
         if (!LI->liveAt(Pos.getDeadSlot()))
           MO.setIsDead();
       }

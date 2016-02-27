@@ -14,8 +14,11 @@
 
 #include "llvm/Support/Compiler.h"
 
-// Anonymous namespace so that we do not step on anyone's toes.
-namespace {
-LLVM_ATTRIBUTE_UNUSED void foo(void) {
+
+namespace llvm {
+// Export a global symbol so that ranlib does not complain
+// about the TOC being empty for the global-isel library when
+// we do not build global-isel.
+LLVM_ATTRIBUTE_UNUSED void DummyFunctionToSilenceRanlib(void) {
 }
 }

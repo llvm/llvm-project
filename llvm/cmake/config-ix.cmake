@@ -13,7 +13,7 @@ include(TestBigEndian)
 
 include(HandleLLVMStdlib)
 
-if( UNIX AND NOT BEOS )
+if( UNIX AND NOT (BEOS OR HAIKU) )
   # Used by check_symbol_exists:
   set(CMAKE_REQUIRED_LIBRARIES m)
 endif()

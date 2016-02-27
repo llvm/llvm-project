@@ -12,9 +12,11 @@ entry:
   %tmp = alloca %X
   call void @f(%X* %tmp)
 ; CHECK: add x0, sp, #8
-; CHECK-NEXT-NOT: mov
+; CHECK-NOT: mov
+; CHECK-NEXT: bl f
   call void @f(%X* %tmp)               
 ; CHECK: add x0, sp, #8
-; CHECK-NEXT-NOT: mov
+; CHECK-NOT: mov
+; CHECK-NEXT: bl f
   ret void 
 }

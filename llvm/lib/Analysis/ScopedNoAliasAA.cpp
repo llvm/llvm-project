@@ -178,8 +178,6 @@ ScopedNoAliasAAResult ScopedNoAliasAA::run(Function &F,
   return ScopedNoAliasAAResult(AM->getResult<TargetLibraryAnalysis>(F));
 }
 
-char ScopedNoAliasAA::PassID;
-
 char ScopedNoAliasAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ScopedNoAliasAAWrapperPass, "scoped-noalias",
                       "Scoped NoAlias Alias Analysis", false, true)
