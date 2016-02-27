@@ -7798,6 +7798,12 @@ bool Sema::CheckUsingShadowDecl(UsingDecl *Using, NamedDecl *Orig,
   for (LookupResult::iterator I = Previous.begin(), E = Previous.end();
          I != E; ++I) {
     NamedDecl *D = (*I)->getUnderlyingDecl();
+    // We can have UsingDecls in our Previous results because we use the same
+    // LookupResult for checking whether the UsingDecl itself is a valid
+    // redeclaration.
+    if (isa<UsingDecl>(D))
+      continue;
+
     if (IsEquivalentForUsingDecl(Context, D, Target)) {
       if (UsingShadowDecl *Shadow = dyn_cast<UsingShadowDecl>(*I))
         PrevShadow = Shadow;
@@ -9536,6 +9542,10 @@ void Sema::ActOnFinishCXXNonNestedClass(Decl *D) {
   if (RD && Context.getTargetInfo().getCXXABI().isMicrosoft())
     getDefaultArgExprsForConstructors(*this, RD);
 
+  referenceDLLExportedClassMethods();
+}
+
+void Sema::referenceDLLExportedClassMethods() {
   if (!DelayedDllExportClasses.empty()) {
     // Calling ReferenceDllExportedMethods might cause the current function to
     // be called again, so use a local copy of DelayedDllExportClasses.

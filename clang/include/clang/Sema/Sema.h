@@ -5307,11 +5307,18 @@ public:
                             ArrayRef<CXXCtorInitializer*> MemInits,
                             bool AnyErrors);
 
+  /// \brief Check class-level dllimport/dllexport attribute. The caller must
+  /// ensure that referenceDLLExportedClassMethods is called some point later
+  /// when all outer classes of Class are complete.
   void checkClassLevelDLLAttribute(CXXRecordDecl *Class);
+
+  void referenceDLLExportedClassMethods();
+
   void propagateDLLAttrToBaseClassTemplate(
       CXXRecordDecl *Class, Attr *ClassAttr,
       ClassTemplateSpecializationDecl *BaseTemplateSpec,
       SourceLocation BaseLoc);
+
   void CheckCompletedCXXClass(CXXRecordDecl *Record);
   void ActOnFinishCXXMemberSpecification(Scope* S, SourceLocation RLoc,
                                          Decl *TagDecl,

@@ -40,8 +40,18 @@ BUILTIN(__builtin_amdgcn_cubeid, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_cubesc, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_cubetc, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_cubema, "ffff", "nc")
+BUILTIN(__builtin_amdgcn_s_memtime, "LUi", "n")
+BUILTIN(__builtin_amdgcn_s_sleep, "vIi", "n")
 
+//===----------------------------------------------------------------------===//
+// VI+ only builtins.
+//===----------------------------------------------------------------------===//
+BUILTIN(__builtin_amdgcn_s_memrealtime, "LUi", "n")
+
+//===----------------------------------------------------------------------===//
 // Legacy names with amdgpu prefix
+//===----------------------------------------------------------------------===//
+
 BUILTIN(__builtin_amdgpu_rsq, "dd", "nc")
 BUILTIN(__builtin_amdgpu_rsqf, "ff", "nc")
 BUILTIN(__builtin_amdgpu_ldexp, "ddi", "nc")

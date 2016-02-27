@@ -1011,17 +1011,24 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
     // Handle map type for map clause.
     ColonProtectionRAIIObject ColonRAII(*this);
 
-    // the first identifier may be a list item, a map-type or
-    //   a map-type-modifier
+    /// The map clause modifier token can be either a identifier or the C++
+    /// delete keyword.
+    auto IsMapClauseModifierToken = [](const Token &Tok) {
+      return Tok.isOneOf(tok::identifier, tok::kw_delete);
+    };
+
+    // The first identifier may be a list item, a map-type or a
+    // map-type-modifier. The map modifier can also be delete which has the same
+    // spelling of the C++ delete keyword.
     MapType = static_cast<OpenMPMapClauseKind>(getOpenMPSimpleClauseType(
-        Kind, Tok.is(tok::identifier) ? PP.getSpelling(Tok) : ""));
+        Kind, IsMapClauseModifierToken(Tok) ? PP.getSpelling(Tok) : ""));
     DepLinMapLoc = Tok.getLocation();
     bool ColonExpected = false;
 
-    if (Tok.is(tok::identifier)) {
+    if (IsMapClauseModifierToken(Tok)) {
       if (PP.LookAhead(0).is(tok::colon)) {
         MapType = static_cast<OpenMPMapClauseKind>(getOpenMPSimpleClauseType(
-            Kind, Tok.is(tok::identifier) ? PP.getSpelling(Tok) : ""));
+            Kind, IsMapClauseModifierToken(Tok) ? PP.getSpelling(Tok) : ""));
         if (MapType == OMPC_MAP_unknown) {
           Diag(Tok, diag::err_omp_unknown_map_type);
         } else if (MapType == OMPC_MAP_always) {
@@ -1029,11 +1036,12 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
         }
         ConsumeToken();
       } else if (PP.LookAhead(0).is(tok::comma)) {
-        if (PP.LookAhead(1).is(tok::identifier) &&
+        if (IsMapClauseModifierToken(PP.LookAhead(1)) &&
             PP.LookAhead(2).is(tok::colon)) {
           MapTypeModifier =
               static_cast<OpenMPMapClauseKind>(getOpenMPSimpleClauseType(
-                   Kind, Tok.is(tok::identifier) ? PP.getSpelling(Tok) : ""));
+                  Kind,
+                  IsMapClauseModifierToken(Tok) ? PP.getSpelling(Tok) : ""));
           if (MapTypeModifier != OMPC_MAP_always) {
             Diag(Tok, diag::err_omp_unknown_map_type_modifier);
             MapTypeModifier = OMPC_MAP_unknown;
@@ -1045,7 +1053,7 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
           ConsumeToken();
 
           MapType = static_cast<OpenMPMapClauseKind>(getOpenMPSimpleClauseType(
-              Kind, Tok.is(tok::identifier) ? PP.getSpelling(Tok) : ""));
+              Kind, IsMapClauseModifierToken(Tok) ? PP.getSpelling(Tok) : ""));
           if (MapType == OMPC_MAP_unknown || MapType == OMPC_MAP_always) {
             Diag(Tok, diag::err_omp_unknown_map_type);
           }

@@ -23,6 +23,10 @@ T tmain(T argc, T *argv) {
 
 #pragma omp target exit data map(release: x[0:10], c)
 
+#pragma omp target exit data map(delete: x[0:10])
+
+#pragma omp target exit data map(always, delete: x[0:10])
+
 #pragma omp target exit data map(from: c) map(release: d)
 
 #pragma omp target exit data map(always,release: e)
@@ -71,6 +75,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp target exit data map(from: c)
 // CHECK-NEXT: #pragma omp target exit data map(from: c) if(b > e)
 // CHECK-NEXT: #pragma omp target exit data map(release: x[0:10],c)
+// CHECK-NEXT: #pragma omp target exit data map(delete: x[0:10])
+// CHECK-NEXT: #pragma omp target exit data map(always,delete: x[0:10])
 // CHECK-NEXT: #pragma omp target exit data map(from: c) map(release: d)
 // CHECK-NEXT: #pragma omp target exit data map(always,release: e)
 // CHECK-NEXT: #pragma omp target exit data nowait map(from: i)
@@ -98,6 +104,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp target exit data map(from: c)
 // CHECK-NEXT: #pragma omp target exit data map(from: c) if(b > e)
 // CHECK-NEXT: #pragma omp target exit data map(release: x[0:10],c)
+// CHECK-NEXT: #pragma omp target exit data map(delete: x[0:10])
+// CHECK-NEXT: #pragma omp target exit data map(always,delete: x[0:10])
 // CHECK-NEXT: #pragma omp target exit data map(from: c) map(release: d)
 // CHECK-NEXT: #pragma omp target exit data map(always,release: e)
 // CHECK-NEXT: #pragma omp target exit data nowait map(from: i)
@@ -125,6 +133,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: #pragma omp target exit data map(from: c)
 // CHECK-NEXT: #pragma omp target exit data map(from: c) if(b > e)
 // CHECK-NEXT: #pragma omp target exit data map(release: x[0:10],c)
+// CHECK-NEXT: #pragma omp target exit data map(delete: x[0:10])
+// CHECK-NEXT: #pragma omp target exit data map(always,delete: x[0:10])
 // CHECK-NEXT: #pragma omp target exit data map(from: c) map(release: d)
 // CHECK-NEXT: #pragma omp target exit data map(always,release: e)
 // CHECK-NEXT: #pragma omp target exit data nowait map(from: i)
@@ -167,6 +177,12 @@ int main (int argc, char **argv) {
 
 #pragma omp target exit data map(from: x[0:10], c)
 // CHECK-NEXT: #pragma omp target exit data map(from: x[0:10],c)
+
+#pragma omp target exit data map(delete: x[0:10])
+// CHECK-NEXT: #pragma omp target exit data map(delete: x[0:10])
+
+#pragma omp target exit data map(always, delete: x[0:10])
+// CHECK-NEXT: #pragma omp target exit data map(always,delete: x[0:10])
 
 #pragma omp target exit data map(from: c) map(release: d)
 // CHECK-NEXT: #pragma omp target exit data map(from: c) map(release: d)

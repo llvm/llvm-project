@@ -2138,6 +2138,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BIprintf:
     if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
       return EmitCUDADevicePrintfCallExpr(E, ReturnValue);
+    break;
+  case Builtin::BI__builtin_canonicalize:
+  case Builtin::BI__builtin_canonicalizef:
+  case Builtin::BI__builtin_canonicalizel:
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::canonicalize));
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
