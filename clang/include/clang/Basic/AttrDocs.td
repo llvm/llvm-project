@@ -1591,11 +1591,12 @@ to declare if they are being read or written by a kernel or function.
 The read_only/__read_only, write_only/__write_only and read_write/__read_write
 names are reserved for use as access qualifiers and shall not be used otherwise.
 
-  .. code-block:: c
+.. code-block:: c
+
   kernel void
   foo (read_only image2d_t imageA,
-      write_only image2d_t imageB) {
-  ...
+       write_only image2d_t imageB) {
+    ...
   }
 
 In the above example imageA is a read-only 2D image object, and imageB is a
