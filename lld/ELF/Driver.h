@@ -17,7 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 extern class LinkerDriver *Driver;
 
@@ -57,7 +57,7 @@ std::string findFromSearchPaths(StringRef Path);
 std::string searchLibrary(StringRef Path);
 std::string buildSysrootedPath(llvm::StringRef Dir, llvm::StringRef File);
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

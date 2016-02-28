@@ -17,7 +17,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 class ScriptParser;
 template <class ELFT> class InputSectionBase;
@@ -75,7 +75,7 @@ private:
 
 extern LinkerScript *Script;
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

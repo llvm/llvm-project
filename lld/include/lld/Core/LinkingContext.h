@@ -33,8 +33,7 @@ class SharedLibraryFile;
 ///
 /// The base class LinkingContext contains the options needed by core linking.
 /// Subclasses of LinkingContext have additional options needed by specific
-/// Writers. For example, ELFLinkingContext has methods that supplies
-/// options to the ELF Writer and ELF Passes.
+/// Writers.
 class LinkingContext {
 public:
   /// \brief The types of output file that the linker creates.

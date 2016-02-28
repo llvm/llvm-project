@@ -1,5 +1,0 @@
-# Test of target specific options
-# RUN: lld -flavor old-gnu -target x86_64 --target1-rel \
-# RUN: %p/../Inputs/foo.o.x86-64 --noinhibit-exec -o %t 2>&1 | FileCheck %s
-
-# CHECK: warning: ignoring unsupported ARM/ELF specific argument: --target1-rel

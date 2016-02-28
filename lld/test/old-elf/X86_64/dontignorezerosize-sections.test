@@ -1,9 +1,0 @@
-# This tests that lld is not ignoring zero sized sections
-RUN: lld -flavor old-gnu -target x86_64-linux %p/Inputs/zerosizedsection.o  \
-RUN: --noinhibit-exec --output-filetype=yaml -o %t
-RUN: FileCheck %s < %t
-
-CHECK:    references:
-CHECK:      - kind:            R_X86_64_16
-CHECK:        offset:          0
-CHECK:        target:          L000

@@ -36,7 +36,7 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
@@ -86,7 +86,7 @@ template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
 // This is the main function of the garbage collector.
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
-template <class ELFT> void elf2::markLive(SymbolTable<ELFT> *Symtab) {
+template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
   SmallVector<InputSection<ELFT> *, 256> Q;
 
   auto Enqueue = [&](InputSectionBase<ELFT> *Sec) {
@@ -133,7 +133,7 @@ template <class ELFT> void elf2::markLive(SymbolTable<ELFT> *Symtab) {
     forEachSuccessor<ELFT>(Q.pop_back_val(), Enqueue);
 }
 
-template void elf2::markLive<ELF32LE>(SymbolTable<ELF32LE> *);
-template void elf2::markLive<ELF32BE>(SymbolTable<ELF32BE> *);
-template void elf2::markLive<ELF64LE>(SymbolTable<ELF64LE> *);
-template void elf2::markLive<ELF64BE>(SymbolTable<ELF64BE> *);
+template void elf::markLive<ELF32LE>(SymbolTable<ELF32LE> *);
+template void elf::markLive<ELF32BE>(SymbolTable<ELF32BE> *);
+template void elf::markLive<ELF64LE>(SymbolTable<ELF64LE> *);
+template void elf::markLive<ELF64BE>(SymbolTable<ELF64BE> *);

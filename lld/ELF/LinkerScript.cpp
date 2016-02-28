@@ -26,9 +26,9 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
-LinkerScript *elf2::Script;
+LinkerScript *elf::Script;
 
 template <class ELFT>
 SectionRule *LinkerScript::find(InputSectionBase<ELFT> *S) {
@@ -103,7 +103,7 @@ template <class ELFT> bool SectionRule::match(InputSectionBase<ELFT> *S) {
   return matchStr(SectionPattern, S->getSectionName());
 }
 
-class elf2::ScriptParser {
+class elf::ScriptParser {
   typedef void (ScriptParser::*Handler)();
 
 public:
@@ -149,7 +149,7 @@ private:
   bool Error = false;
 };
 
-const StringMap<elf2::ScriptParser::Handler> elf2::ScriptParser::Cmd = {
+const StringMap<elf::ScriptParser::Handler> elf::ScriptParser::Cmd = {
     {"ENTRY", &ScriptParser::readEntry},
     {"EXTERN", &ScriptParser::readExtern},
     {"GROUP", &ScriptParser::readGroup},

@@ -11,7 +11,7 @@
 #define LLD_ELF_ICF_H
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 template <class ELFT> class SymbolTable;
 

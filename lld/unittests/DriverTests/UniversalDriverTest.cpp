@@ -21,13 +21,12 @@ using namespace llvm;
 using namespace lld;
 
 TEST(UniversalDriver, flavor) {
-  const char *args[] = {"ld", "-flavor", "old-gnu"};
+  const char *args[] = {"ld", "-flavor", "gnu"};
 
   std::string diags;
   raw_string_ostream os(diags);
   UniversalDriver::link(args, os);
   EXPECT_EQ(os.str().find("failed to determine driver flavor"),
             std::string::npos);
-  EXPECT_NE(os.str().find("No input files"),
-            std::string::npos);
+  EXPECT_NE(os.str().find("no input files"), std::string::npos);
 }

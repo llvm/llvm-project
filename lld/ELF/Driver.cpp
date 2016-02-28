@@ -27,12 +27,12 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
-Configuration *elf2::Config;
-LinkerDriver *elf2::Driver;
+Configuration *elf::Config;
+LinkerDriver *elf::Driver;
 
-bool elf2::link(ArrayRef<const char *> Args, raw_ostream &Error) {
+bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   HasError = false;
   ErrorOS = &Error;
   Configuration C;

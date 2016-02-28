@@ -17,7 +17,7 @@
 #include <vector>
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 class InputFile;
 class SymbolBody;
@@ -88,7 +88,7 @@ struct Configuration {
 // The only instance of Configuration struct.
 extern Configuration *Config;
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

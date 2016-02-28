@@ -26,7 +26,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb_private;
 
@@ -1276,15 +1275,9 @@ public:
         m_register_contents.reset(new DataBufferHeap(register_data.GetDataStart(), register_data.GetByteSize()));
 
         Error write_error;
-
-        Scalar scalar;
-        if (reg_value.GetScalarValue(scalar)) {
-            lldbassert(scalar.GetByteSize() == register_data.GetByteSize());
-            map.WriteScalarToMemory(load_addr, scalar, scalar.GetByteSize(), write_error);
-        } else {
-            map.WriteMemory(load_addr, register_data.GetDataStart(), register_data.GetByteSize(), write_error);
-        }
-
+        
+        map.WriteMemory(load_addr, register_data.GetDataStart(), register_data.GetByteSize(), write_error);
+        
         if (!write_error.Success())
         {
             err.SetErrorStringWithFormat("couldn't write the contents of register %s: %s", m_register_info.name, write_error.AsCString());

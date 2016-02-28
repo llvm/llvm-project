@@ -15,11 +15,9 @@
 #include <vector>
 
 namespace lld {
-class ELFLinkingContext;
 class File;
 class LinkingContext;
 class MachOLinkingContext;
-class PECOFFLinkingContext;
 
 /// \brief The Writer is an abstract class for writing object files, shared
 /// library files, and executable files.  Each file format (e.g. ELF, mach-o,
@@ -41,9 +39,7 @@ protected:
   Writer();
 };
 
-std::unique_ptr<Writer> createWriterELF(const ELFLinkingContext &);
 std::unique_ptr<Writer> createWriterMachO(const MachOLinkingContext &);
-std::unique_ptr<Writer> createWriterPECOFF(const PECOFFLinkingContext &);
 std::unique_ptr<Writer> createWriterYAML(const LinkingContext &);
 } // end namespace lld
 

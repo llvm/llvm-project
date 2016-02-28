@@ -66,13 +66,13 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 template <class ELFT> class ICF {
   typedef typename ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
@@ -120,22 +120,14 @@ private:
 }
 }
 
-// Returns a hash seed for relocation sections for S.
-template <class ELFT> uint64_t ICF<ELFT>::relSize(InputSection<ELFT> *S) {
-  uint64_t Ret = 0;
-  for (const Elf_Shdr *H : S->RelocSections)
-    Ret += H->sh_size;
-  return Ret;
-}
-
 // Returns a hash value for S. Note that the information about
 // relocation targets is not included in the hash value.
 template <class ELFT> uint64_t ICF<ELFT>::getHash(InputSection<ELFT> *S) {
   uint64_t Flags = S->getSectionHdr()->sh_flags;
   uint64_t H = hash_combine(Flags, S->getSize());
-  if (S->RelocSections.empty())
-    return H;
-  return hash_combine(H, relSize(S));
+  for (const Elf_Shdr *Rel : S->RelocSections)
+    H = hash_combine(H, (uint64_t)Rel->sh_size);
+  return H;
 }
 
 // Returns true if Sec is subject of ICF.
@@ -369,11 +361,11 @@ template <class ELFT> void ICF<ELFT>::run(SymbolTable<ELFT> *Symtab) {
 }
 
 // ICF entry point function.
-template <class ELFT> void elf2::doIcf(SymbolTable<ELFT> *Symtab) {
+template <class ELFT> void elf::doIcf(SymbolTable<ELFT> *Symtab) {
   ICF<ELFT>().run(Symtab);
 }
 
-template void elf2::doIcf(SymbolTable<ELF32LE> *);
-template void elf2::doIcf(SymbolTable<ELF32BE> *);
-template void elf2::doIcf(SymbolTable<ELF64LE> *);
-template void elf2::doIcf(SymbolTable<ELF64BE> *);
+template void elf::doIcf(SymbolTable<ELF32LE> *);
+template void elf::doIcf(SymbolTable<ELF32BE> *);
+template void elf::doIcf(SymbolTable<ELF64LE> *);
+template void elf::doIcf(SymbolTable<ELF64BE> *);

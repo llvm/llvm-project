@@ -31,7 +31,7 @@ using namespace llvm::support::endian;
 using namespace llvm::ELF;
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 TargetInfo *Target;
 

@@ -1,4 +1,3 @@
-add_subdirectory(ELF)
 add_subdirectory(MachO)
 add_subdirectory(YAML)
 

@@ -20,7 +20,7 @@
 #include <type_traits>
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 class SymbolBody;
 template <class ELFT> class SymbolTable;
@@ -579,7 +579,7 @@ template <class ELFT> typename Out<ELFT>::Elf_Phdr *Out<ELFT>::TlsPhdr;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ElfHeader;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif // LLD_ELF_OUTPUT_SECTIONS_H

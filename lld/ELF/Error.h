@@ -17,7 +17,7 @@ class raw_ostream;
 }
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 extern bool HasError;
 extern llvm::raw_ostream *ErrorOS;
@@ -47,7 +47,7 @@ template <typename T> void fatal(const ErrorOr<T> &V, const Twine &Prefix) {
 
 template <typename T> void fatal(const ErrorOr<T> &V) { fatal(V.getError()); }
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

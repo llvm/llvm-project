@@ -1,3 +1,0 @@
-.text
-.data
-.word .text

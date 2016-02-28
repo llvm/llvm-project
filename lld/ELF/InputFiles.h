@@ -23,7 +23,7 @@
 #include "llvm/Support/StringSaver.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 using llvm::object::Archive;
 
@@ -231,7 +231,7 @@ std::unique_ptr<InputFile> createObjectFile(MemoryBufferRef MB,
                                             StringRef ArchiveName = "");
 std::unique_ptr<InputFile> createSharedFile(MemoryBufferRef MB);
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif
