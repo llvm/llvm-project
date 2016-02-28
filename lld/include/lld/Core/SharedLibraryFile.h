@@ -30,8 +30,7 @@ public:
   virtual const SharedLibraryAtom *exports(StringRef name,
                                            bool dataSymbolOnly) const = 0;
 
-  // Returns DSO name. It's the soname (ELF), the install name (MachO) or
-  // the import name (Windows).
+  // Returns the install name.
   virtual StringRef getDSOName() const = 0;
 
   const AtomVector<DefinedAtom> &defined() const override {

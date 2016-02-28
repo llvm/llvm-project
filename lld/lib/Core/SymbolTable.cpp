@@ -55,25 +55,6 @@ bool SymbolTable::add(const DefinedAtom &atom) {
   return false;
 }
 
-const Atom *SymbolTable::findGroup(StringRef sym) {
-  NameToAtom::iterator pos = _groupTable.find(sym);
-  if (pos == _groupTable.end())
-    return nullptr;
-  return pos->second;
-}
-
-bool SymbolTable::addGroup(const DefinedAtom &da) {
-  StringRef name = da.name();
-  assert(!name.empty());
-  const Atom *existing = findGroup(name);
-  if (existing == nullptr) {
-    _groupTable[name] = &da;
-    return true;
-  }
-  _replacedAtoms[&da] = existing;
-  return false;
-}
-
 enum NameCollisionResolution {
   NCR_First,
   NCR_Second,
@@ -215,23 +196,8 @@ bool SymbolTable::addByName(const Atom &newAtom) {
                    << " and in " << newUndef->file().path() << "\n";
     }
 
-    const UndefinedAtom *existingFallback = existingUndef->fallback();
-    const UndefinedAtom *newFallback = newUndef->fallback();
-    bool hasDifferentFallback =
-        (existingFallback && newFallback &&
-         existingFallback->name() != newFallback->name());
-    if (hasDifferentFallback) {
-      llvm::errs() << "lld warning: undefined symbol "
-                   << existingUndef->name() << " has different fallback: "
-                   << existingFallback->name() << " in "
-                   << existingUndef->file().path() << " and "
-                   << newFallback->name() << " in "
-                   << newUndef->file().path() << "\n";
-    }
-
-    bool hasNewFallback = newUndef->fallback();
     if (sameCanBeNull)
-      useNew = hasNewFallback;
+      useNew = false;
     else
       useNew = (newUndef->canBeNull() < existingUndef->canBeNull());
     break;

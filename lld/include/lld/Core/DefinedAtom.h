@@ -149,13 +149,6 @@ public:
     typeTLVInitialZeroFill, // TLV initial zero fill data [Darwin]
     typeTLVInitializerPtr,  // pointer to thread local initializer [Darwin]
     typeDSOHandle,          // atom representing DSO handle [Darwin]
-    typeThreadZeroFill,     // Uninitialized thread local data(TBSS) [ELF]
-    typeThreadData,         // Initialized thread local data(TDATA) [ELF]
-    typeRONote,             // Identifies readonly note sections [ELF]
-    typeRWNote,             // Identifies readwrite note sections [ELF]
-    typeNoAlloc,            // Identifies non allocatable sections [ELF]
-    typeGroupComdat,        // Identifies a section group [ELF, COFF]
-    typeGnuLinkOnce,        // Identifies a gnu.linkonce section [ELF]
     typeSectCreate,         // Created via the -sectcreate option [Darwin]
   };
 
@@ -355,16 +348,7 @@ public:
     ContentType atomContentType = contentType();
     return !(atomContentType == DefinedAtom::typeZeroFill ||
              atomContentType == DefinedAtom::typeZeroFillFast ||
-             atomContentType == DefinedAtom::typeTLVInitialZeroFill ||
-             atomContentType == DefinedAtom::typeThreadZeroFill);
-  }
-
-  /// Utility function to check if the atom belongs to a group section
-  /// that represents section groups or .gnu.linkonce sections.
-  bool isGroupParent() const {
-    ContentType atomContentType = contentType();
-    return (atomContentType == DefinedAtom::typeGroupComdat ||
-            atomContentType == DefinedAtom::typeGnuLinkOnce);
+             atomContentType == DefinedAtom::typeTLVInitialZeroFill);
   }
 
   // Returns true if lhs should be placed before rhs in the final output.

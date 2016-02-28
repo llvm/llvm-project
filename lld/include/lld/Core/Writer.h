@@ -20,8 +20,8 @@ class LinkingContext;
 class MachOLinkingContext;
 
 /// \brief The Writer is an abstract class for writing object files, shared
-/// library files, and executable files.  Each file format (e.g. ELF, mach-o,
-/// PECOFF, etc) have a concrete subclass of Writer.
+/// library files, and executable files.  Each file format (e.g. mach-o, etc)
+/// has a concrete subclass of Writer.
 class Writer {
 public:
   virtual ~Writer();

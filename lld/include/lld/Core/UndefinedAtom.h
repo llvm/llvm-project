@@ -57,14 +57,6 @@ public:
 
   static bool classof(const UndefinedAtom *) { return true; }
 
-  /// Returns an undefined atom if this undefined symbol has a synonym.  This is
-  /// mainly used in COFF. In COFF, an unresolved external symbol can have up to
-  /// one optional name (sym2) in addition to its regular name (sym1). If a
-  /// definition of sym1 exists, sym1 is resolved normally. Otherwise, all
-  /// references to sym1 refer to sym2 instead. In that case sym2 must be
-  /// resolved, or link will fail.
-  virtual const UndefinedAtom *fallback() const { return nullptr; }
-
 protected:
   UndefinedAtom() : Atom(definitionUndefined) {}
 };

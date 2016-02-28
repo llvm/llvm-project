@@ -419,6 +419,18 @@ static bool isPreferredLookupResult(Sema &S, Sema::LookupNameKind Kind,
     }
   }
 
+  // VarDecl can have incomplete array types, prefer the one with more complete
+  // array type.
+  if (VarDecl *DVD = dyn_cast<VarDecl>(DUnderlying)) {
+    VarDecl *EVD = cast<VarDecl>(EUnderlying);
+    if (EVD->getType()->isIncompleteType() &&
+        !DVD->getType()->isIncompleteType()) {
+      // Prefer the decl with a more complete type if visible.
+      return S.isVisible(DVD);
+    }
+    return false; // Avoid picking up a newer decl, just because it was newer.
+  }
+
   // For most kinds of declaration, it doesn't really matter which one we pick.
   if (!isa<FunctionDecl>(DUnderlying) && !isa<VarDecl>(DUnderlying)) {
     // If the existing declaration is hidden, prefer the new one. Otherwise,

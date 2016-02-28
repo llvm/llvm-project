@@ -2613,7 +2613,7 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
       // template <typename T> struct S { static T Var[]; }; // #1
       // template <typename T> T S<T>::Var[sizeof(T)]; // #2
       // Only? happens when completing an incomplete array type. In this case
-      // when comparing #1 and #2 we should go through their elements types.
+      // when comparing #1 and #2 we should go through their element type.
       const ArrayType *VarXTy = C.getAsArrayType(VarX->getType());
       const ArrayType *VarYTy = C.getAsArrayType(VarY->getType());
       if (!VarXTy || !VarYTy)

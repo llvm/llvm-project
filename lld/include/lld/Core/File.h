@@ -146,14 +146,6 @@ public:
 
   std::error_code parse();
 
-  // This function is called just before the core linker tries to use
-  // a file. Currently the PECOFF reader uses this to trigger the
-  // driver to parse .drectve section (which contains command line options).
-  // If you want to do something having side effects, don't do that in
-  // doParse() because a file could be pre-loaded speculatively.
-  // Use this hook instead.
-  virtual void beforeLink() {}
-
   // Usually each file owns a std::unique_ptr<MemoryBuffer>.
   // However, there's one special case. If a file is an archive file,
   // the archive file and its children all shares the same memory buffer.

@@ -47,7 +47,6 @@ Registry::loadFile(std::unique_ptr<MemoryBuffer> mb) const {
 
 static const Registry::KindStrings kindStrings[] = {
     {Reference::kindLayoutAfter, "layout-after"},
-    {Reference::kindGroupChild, "group-child"},
     {Reference::kindAssociate, "associate"},
     LLD_KIND_STRING_END};
 

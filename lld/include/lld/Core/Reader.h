@@ -34,8 +34,7 @@ class MachOLinkingContext;
 /// \brief An abstract class for reading object files, library files, and
 /// executable files.
 ///
-/// Each file format (e.g. ELF, mach-o, PECOFF, etc) have a concrete
-/// subclass of Reader.
+/// Each file format (e.g. mach-o, etc) has a concrete subclass of Reader.
 class Reader {
 public:
   virtual ~Reader() {}

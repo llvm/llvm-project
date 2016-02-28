@@ -63,9 +63,6 @@ private:
   bool undefinesAdded(int begin, int end);
   File *getFile(int &index);
 
-  /// \brief Add section group/.gnu.linkonce if it does not exist previously.
-  void maybeAddSectionGroupOrGnuLinkOnce(const DefinedAtom &atom);
-
   /// \brief The main function that iterates over the files to resolve
   void updatePreloadArchiveMap();
   bool resolveUndefines();

@@ -178,31 +178,10 @@ public:
     return nullptr;
   }
 
-  /// \brief Lookup a group parent when there is a reference of type
-  /// kindGroupChild. If there was no group-parent produce an appropriate
-  /// error.
-  const lld::Atom *lookupGroupParent(StringRef name) const {
-    NameToAtom::const_iterator pos = _groupMap.find(name);
-    if (pos != _groupMap.end())
-      return pos->second;
-    _io.setError(Twine("no such group name: ") + name);
-    return nullptr;
-  }
-
 private:
   typedef llvm::StringMap<const lld::Atom *> NameToAtom;
 
   void add(StringRef name, const lld::Atom *atom) {
-    if (const lld::DefinedAtom *da = dyn_cast<DefinedAtom>(atom)) {
-      if (da->isGroupParent()) {
-        if (_groupMap.count(name)) {
-          _io.setError(Twine("duplicate group name: ") + name);
-        } else {
-          _groupMap[name] = atom;
-        }
-        return;
-      }
-    }
     if (_nameMap.count(name)) {
       _io.setError(Twine("duplicate atom name: ") + name);
     } else {
@@ -212,7 +191,6 @@ private:
 
   IO &_io;
   NameToAtom _nameMap;
-  NameToAtom _groupMap;
 };
 
 /// Mapping of Atoms.
@@ -435,13 +413,6 @@ template <> struct ScalarEnumerationTraits<lld::DefinedAtom::ContentType> {
                                           DefinedAtom::typeTLVInitializerPtr);
     io.enumCase(value, "mach_header",     DefinedAtom::typeMachHeader);
     io.enumCase(value, "dso_handle",      DefinedAtom::typeDSOHandle);
-    io.enumCase(value, "thread-data",     DefinedAtom::typeThreadData);
-    io.enumCase(value, "thread-zero-fill",DefinedAtom::typeThreadZeroFill);
-    io.enumCase(value, "ro-note",         DefinedAtom::typeRONote);
-    io.enumCase(value, "rw-note",         DefinedAtom::typeRWNote);
-    io.enumCase(value, "no-alloc",        DefinedAtom::typeNoAlloc);
-    io.enumCase(value, "group-comdat", DefinedAtom::typeGroupComdat);
-    io.enumCase(value, "gnu-linkonce", DefinedAtom::typeGnuLinkOnce);
     io.enumCase(value, "sectcreate",      DefinedAtom::typeSectCreate);
   }
 };
@@ -792,7 +763,7 @@ template <> struct MappingTraits<const lld::DefinedAtom *> {
   public:
     NormalizedAtom(IO &io)
         : _file(fileFromContext(io)), _name(), _refName(), _contentType(),
-          _alignment(1), _content(), _references(), _isGroupChild(false) {
+          _alignment(1), _content(), _references() {
       static uint32_t ordinalCounter = 1;
       _ordinal = ordinalCounter++;
     }
@@ -856,8 +827,6 @@ template <> struct MappingTraits<const lld::DefinedAtom *> {
     DynamicExport dynamicExport() const override { return _dynamicExport; }
     CodeModel codeModel() const override { return _codeModel; }
     ContentPermissions permissions() const override { return _permissions; }
-    void setGroupChild(bool val) { _isGroupChild = val; }
-    bool isGroupChild() const { return _isGroupChild; }
     ArrayRef<uint8_t> rawContent() const override {
       if (!occupiesDiskSpace())
         return ArrayRef<uint8_t>();
@@ -917,7 +886,6 @@ template <> struct MappingTraits<const lld::DefinedAtom *> {
     StringRef                           _sectionName;
     uint64_t                            _sectionSize;
     std::vector<const lld::Reference *> _references;
-    bool _isGroupChild;
   };
 
   static void mapping(IO &io, const lld::DefinedAtom *&atom) {
@@ -972,12 +940,11 @@ template <> struct MappingTraits<const lld::UndefinedAtom *> {
   class NormalizedAtom : public lld::UndefinedAtom {
   public:
     NormalizedAtom(IO &io)
-        : _file(fileFromContext(io)), _name(), _canBeNull(canBeNullNever),
-          _fallback(nullptr) {}
+        : _file(fileFromContext(io)), _name(), _canBeNull(canBeNullNever) {}
 
     NormalizedAtom(IO &io, const lld::UndefinedAtom *atom)
         : _file(fileFromContext(io)), _name(atom->name()),
-          _canBeNull(atom->canBeNull()), _fallback(atom->fallback()) {}
+          _canBeNull(atom->canBeNull()) {}
 
     const lld::UndefinedAtom *denormalize(IO &io) {
       YamlContext *info = reinterpret_cast<YamlContext *>(io.getContext());
@@ -1005,12 +972,10 @@ template <> struct MappingTraits<const lld::UndefinedAtom *> {
     const lld::File &file() const override { return _file; }
     StringRef name() const override { return _name; }
     CanBeNull canBeNull() const override { return _canBeNull; }
-    const UndefinedAtom *fallback() const override { return _fallback; }
 
     const lld::File     &_file;
     StringRef            _name;
     CanBeNull            _canBeNull;
-    const UndefinedAtom *_fallback;
   };
 
   static void mapping(IO &io, const lld::UndefinedAtom *&atom) {
@@ -1020,8 +985,6 @@ template <> struct MappingTraits<const lld::UndefinedAtom *> {
     io.mapRequired("name",        keys->_name);
     io.mapOptional("can-be-null", keys->_canBeNull,
                                   lld::UndefinedAtom::canBeNullNever);
-    io.mapOptional("fallback",    keys->_fallback,
-                                  (const lld::UndefinedAtom *)nullptr);
   }
 };
 
@@ -1201,13 +1164,6 @@ MappingTraits<const lld::File *>::NormalizedFile::denormalize(IO &io) {
     normAtom->bind(nameResolver);
   }
 
-  _definedAtoms._atoms.erase(
-      std::remove_if(_definedAtoms._atoms.begin(), _definedAtoms._atoms.end(),
-                     [](const DefinedAtom *a) {
-        return ((const NormalizedAtom *)a)->isGroupChild();
-      }),
-      _definedAtoms._atoms.end());
-
   return this;
 }
 
@@ -1223,14 +1179,7 @@ inline void MappingTraits<const lld::DefinedAtom *>::NormalizedAtom::bind(
 
 inline void MappingTraits<const lld::Reference *>::NormalizedReference::bind(
     const RefNameResolver &resolver) {
-  typedef MappingTraits<const lld::DefinedAtom *>::NormalizedAtom NormalizedAtom;
-
   _target = resolver.lookup(_targetName);
-
-  if (_mappedKind.ns == lld::Reference::KindNamespace::all &&
-      _mappedKind.value == lld::Reference::kindGroupChild) {
-    ((NormalizedAtom *)const_cast<Atom *>(_target))->setGroupChild(true);
-  }
 }
 
 inline StringRef

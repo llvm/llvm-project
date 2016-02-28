@@ -150,37 +150,6 @@ into an Atom graph.  For instance, you may want the Reader to only accept
 certain architectures.  The options class can be instantiated from command
 line options, or it can be subclassed and the ivars programmatically set.
 
-ELF Section Groups
-~~~~~~~~~~~~~~~~~~
-Reference : `ELF Section Groups <http://mentorembedded.github.io/cxx-abi/abi/prop-72-comdat.html>`_
-
-C++ has many situations where the compiler may need to emit code or data,
-but may not be able to identify a unique compilation unit where it should be
-emitted. The approach chosen by the C++ ABI group to deal with this problem, is
-to allow the compiler to emit the required information in multiple compilation
-units, in a form which allows the linker to remove all but one copy. This is
-essentially the feature called COMDAT in several existing implementations.
-
-The COMDAT sections in ELF are modeled by using '.group' sections in the input
-files. Each '.group' section is associated with a signature. The '.group'
-section has a list of members that are part of the the '.group' which the linker
-selects to appear in the input file(Whichever .group section appeared first
-in the link). References to any of the '.group' members can also appear from
-outside the '.group'.
-
-In lld the the '.group' sections with COMDAT are identified by contentType(
-typeGroupComdat). The '.group' members are identified by using
-**kindGroupChild** references.
-
-The point to be noted here is the 'group child' members would need to be emitted
-in the output file **iff** the group was selected by the resolver.
-
-This is modeled in lld by removing the 'group child' members from the
-definedAtom List.
-
-Any reference to the group-child from **outside the group** is referenced using
-a 'undefined' atom.
-
 Resolving
 ~~~~~~~~~
 
