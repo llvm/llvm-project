@@ -1113,4 +1113,58 @@ __m512i test_mm512_maskz_shufflelo_epi16(__mmask32 __U, __m512i __A) {
   return _mm512_maskz_shufflelo_epi16(__U, __A, 5); 
 }
 
+__m512i test_mm512_sllv_epi16(__m512i __A, __m512i __B) {
+  // CHECK-LABEL: @test_mm512_sllv_epi16
+  // CHECK: @llvm.x86.avx512.mask.psllv
+  return _mm512_sllv_epi16(__A, __B); 
+}
+
+__m512i test_mm512_mask_sllv_epi16(__m512i __W, __mmask32 __U, __m512i __A, __m512i __B) {
+  // CHECK-LABEL: @test_mm512_mask_sllv_epi16
+  // CHECK: @llvm.x86.avx512.mask.psllv
+  return _mm512_mask_sllv_epi16(__W, __U, __A, __B); 
+}
+
+__m512i test_mm512_maskz_sllv_epi16(__mmask32 __U, __m512i __A, __m512i __B) {
+  // CHECK-LABEL: @test_mm512_maskz_sllv_epi16
+  // CHECK: @llvm.x86.avx512.mask.psllv
+  return _mm512_maskz_sllv_epi16(__U, __A, __B); 
+}
+
+__m512i test_mm512_sll_epi16(__m512i __A, __m128i __B) {
+  // CHECK-LABEL: @test_mm512_sll_epi16
+  // CHECK: @llvm.x86.avx512.mask.psll.w.512
+  return _mm512_sll_epi16(__A, __B); 
+}
+
+__m512i test_mm512_mask_sll_epi16(__m512i __W, __mmask32 __U, __m512i __A, __m128i __B) {
+  // CHECK-LABEL: @test_mm512_mask_sll_epi16
+  // CHECK: @llvm.x86.avx512.mask.psll.w.512
+  return _mm512_mask_sll_epi16(__W, __U, __A, __B); 
+}
+
+__m512i test_mm512_maskz_sll_epi16(__mmask32 __U, __m512i __A, __m128i __B) {
+  // CHECK-LABEL: @test_mm512_maskz_sll_epi16
+  // CHECK: @llvm.x86.avx512.mask.psll.w.512
+  return _mm512_maskz_sll_epi16(__U, __A, __B); 
+}
+
+__m512i test_mm512_slli_epi16(__m512i __A) {
+  // CHECK-LABEL: @test_mm512_slli_epi16
+  // CHECK: @llvm.x86.avx512.mask.psll.wi.512
+  return _mm512_slli_epi16(__A, 5); 
+}
+
+__m512i test_mm512_mask_slli_epi16(__m512i __W, __mmask32 __U, __m512i __A) {
+  // CHECK-LABEL: @test_mm512_mask_slli_epi16
+  // CHECK: @llvm.x86.avx512.mask.psll.wi.512
+  return _mm512_mask_slli_epi16(__W, __U, __A, 5); 
+}
+
+__m512i test_mm512_maskz_slli_epi16(__mmask32 __U, __m512i __A) {
+  // CHECK-LABEL: @test_mm512_maskz_slli_epi16
+  // CHECK: @llvm.x86.avx512.mask.psll.wi.512
+  return _mm512_maskz_slli_epi16(__U, __A, 5); 
+}
+
 
