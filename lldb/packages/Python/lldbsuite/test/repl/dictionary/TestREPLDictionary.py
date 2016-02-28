@@ -23,6 +23,7 @@ class REPLDictionaryTestCase (REPLTest):
 
     @decorators.swiftTest
     @decorators.no_debug_info_test
+    @decorators.expectedFailureAll(oslist=['linux'], bugnumber="bugs.swift.org/SR-843")
     def testREPL(self):
         REPLTest.testREPL(self)
 
