@@ -3251,6 +3251,22 @@ void Sema::mergeObjCMethodDecls(ObjCMethodDecl *newMethod,
   CheckObjCMethodOverride(newMethod, oldMethod);
 }
 
+static void diagnoseVarDeclTypeMismatch(Sema &S, VarDecl *New, VarDecl* Old) {
+  assert(!S.Context.hasSameType(New->getType(), Old->getType()));
+
+  S.Diag(New->getLocation(), New->isThisDeclarationADefinition()
+         ? diag::err_redefinition_different_type
+         : diag::err_redeclaration_different_type)
+    << New->getDeclName() << New->getType() << Old->getType();
+
+  diag::kind PrevDiag;
+  SourceLocation OldLocation;
+  std::tie(PrevDiag, OldLocation)
+    = getNoteDiagForInvalidRedeclaration(Old, New);
+  S.Diag(OldLocation, PrevDiag);
+  New->setInvalidDecl();
+}
+
 /// MergeVarDeclTypes - We parsed a variable 'New' which has the same name and
 /// scope as a previous declaration 'Old'.  Figure out how to merge their types,
 /// emitting diagnostics as appropriate.
@@ -3277,21 +3293,40 @@ void Sema::MergeVarDeclTypes(VarDecl *New, VarDecl *Old,
     //   object or function shall be identical, except that declarations for an
     //   array object can specify array types that differ by the presence or
     //   absence of a major array bound (8.3.4).
-    else if (Old->getType()->isIncompleteArrayType() &&
-             New->getType()->isArrayType()) {
+    else if (Old->getType()->isArrayType() && New->getType()->isArrayType()) {
       const ArrayType *OldArray = Context.getAsArrayType(Old->getType());
       const ArrayType *NewArray = Context.getAsArrayType(New->getType());
-      if (Context.hasSameType(OldArray->getElementType(),
-                              NewArray->getElementType()))
-        MergedT = New->getType();
-    } else if (Old->getType()->isArrayType() &&
-               New->getType()->isIncompleteArrayType()) {
-      const ArrayType *OldArray = Context.getAsArrayType(Old->getType());
-      const ArrayType *NewArray = Context.getAsArrayType(New->getType());
-      if (Context.hasSameType(OldArray->getElementType(),
-                              NewArray->getElementType()))
-        MergedT = Old->getType();
-    } else if (New->getType()->isObjCObjectPointerType() &&
+
+      // We are merging a variable declaration New into Old. If it has an array
+      // bound, and that bound differs from Old's bound, we should diagnose the
+      // mismatch.
+      if (!NewArray->isIncompleteArrayType()) {
+        for (VarDecl *PrevVD = Old->getMostRecentDecl(); PrevVD;
+             PrevVD = PrevVD->getPreviousDecl()) {
+          const ArrayType *PrevVDTy = Context.getAsArrayType(PrevVD->getType());
+          if (PrevVDTy->isIncompleteArrayType())
+            continue;
+
+          if (!Context.hasSameType(NewArray, PrevVDTy))
+            return diagnoseVarDeclTypeMismatch(*this, New, PrevVD);
+        }
+      }
+
+      if (OldArray->isIncompleteArrayType() && NewArray->isArrayType()) {
+        if (Context.hasSameType(OldArray->getElementType(),
+                                NewArray->getElementType()))
+          MergedT = New->getType();
+      }
+      // FIXME: Check visibility. New is hidden but has a complete type. If New
+      // has no array bound, it should not inherit one from Old, if Old is not
+      // visible.
+      else if (OldArray->isArrayType() && NewArray->isIncompleteArrayType()) {
+        if (Context.hasSameType(OldArray->getElementType(),
+                                NewArray->getElementType()))
+          MergedT = Old->getType();
+      }
+    }
+    else if (New->getType()->isObjCObjectPointerType() &&
                Old->getType()->isObjCObjectPointerType()) {
       MergedT = Context.mergeObjCGCQualifiers(New->getType(),
                                               Old->getType());
@@ -3317,27 +3352,7 @@ void Sema::MergeVarDeclTypes(VarDecl *New, VarDecl *Old,
         New->setType(Context.DependentTy);
       return;
     }
-
-    // FIXME: Even if this merging succeeds, some other non-visible declaration
-    // of this variable might have an incompatible type. For instance:
-    //
-    //   extern int arr[];
-    //   void f() { extern int arr[2]; }
-    //   void g() { extern int arr[3]; }
-    //
-    // Neither C nor C++ requires a diagnostic for this, but we should still try
-    // to diagnose it.
-    Diag(New->getLocation(), New->isThisDeclarationADefinition()
-                                 ? diag::err_redefinition_different_type
-                                 : diag::err_redeclaration_different_type)
-        << New->getDeclName() << New->getType() << Old->getType();
-
-    diag::kind PrevDiag;
-    SourceLocation OldLocation;
-    std::tie(PrevDiag, OldLocation) =
-        getNoteDiagForInvalidRedeclaration(Old, New);
-    Diag(OldLocation, PrevDiag);
-    return New->setInvalidDecl();
+    return diagnoseVarDeclTypeMismatch(*this, New, Old);
   }
 
   // Don't actually update the type on the new declaration if the old

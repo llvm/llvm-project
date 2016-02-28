@@ -9,6 +9,4 @@ struct basic_string {
 template<typename T>
 T basic_string<T>::_S_empty_rep_storage[sizeof(T)];
 
-extern int a[];
-
 #endif
