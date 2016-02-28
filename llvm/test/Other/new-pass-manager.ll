@@ -20,7 +20,7 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-CGSCC-PASS
 ; CHECK-CGSCC-PASS: Starting llvm::Module pass manager run
 ; CHECK-CGSCC-PASS-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor
-; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}, llvm::Module>
+; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-CGSCC-PASS-NEXT: Starting llvm::LazyCallGraph::SCC pass manager run
 ; CHECK-CGSCC-PASS-NEXT: Running pass: NoOpCGSCCPass
@@ -35,7 +35,7 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-PASS
 ; CHECK-FUNCTION-PASS: Starting llvm::Module pass manager run
 ; CHECK-FUNCTION-PASS-NEXT: Running pass: ModuleToFunctionPassAdaptor
-; CHECK-FUNCTION-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}, llvm::Module>
+; CHECK-FUNCTION-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-FUNCTION-PASS-NEXT: Starting llvm::Function pass manager run
 ; CHECK-FUNCTION-PASS-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-FUNCTION-PASS-NEXT: Finished llvm::Function pass manager run
@@ -65,7 +65,7 @@
 ; CHECK-FUNCTION-PRINT: Starting llvm::Module pass manager run
 ; CHECK-FUNCTION-PRINT: Running pass: VerifierPass
 ; CHECK-FUNCTION-PRINT: Running pass: ModuleToFunctionPassAdaptor
-; CHECK-FUNCTION-PRINT: Running analysis: InnerAnalysisManagerProxy<{{.*}}, llvm::Module>
+; CHECK-FUNCTION-PRINT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-FUNCTION-PRINT: Starting llvm::Function pass manager run
 ; CHECK-FUNCTION-PRINT: Running pass: PrintFunctionPass
 ; CHECK-FUNCTION-PRINT-NOT: ModuleID

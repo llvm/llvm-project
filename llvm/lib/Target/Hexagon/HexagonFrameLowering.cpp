@@ -572,7 +572,7 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
   unsigned NewOpc = Hexagon::L4_return;
   MachineInstr *NewI = BuildMI(MBB, RetI, DL, HII.get(NewOpc));
   // Transfer the function live-out registers.
-  NewI->copyImplicitOps(MF, RetI);
+  NewI->copyImplicitOps(MF, *RetI);
   MBB.erase(RetI);
 }
 
@@ -983,7 +983,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
       DeallocCall = BuildMI(MBB, It, DL, HII.get(ROpc))
           .addExternalSymbol(RestoreFn);
       // Transfer the function live-out registers.
-      DeallocCall->copyImplicitOps(MF, It);
+      DeallocCall->copyImplicitOps(MF, *It);
     }
     addCalleeSaveRegistersAsImpOperand(DeallocCall, MaxR, true);
     return true;

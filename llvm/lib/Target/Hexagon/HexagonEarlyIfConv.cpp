@@ -359,7 +359,7 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
     // update the use of it after predication). PHI uses will be updated
     // to use a result of a MUX, and a MUX cannot be created for predicate
     // registers.
-    for (ConstMIOperands MO(&MI); MO.isValid(); ++MO) {
+    for (ConstMIOperands MO(MI); MO.isValid(); ++MO) {
       if (!MO->isReg() || !MO->isDef())
         continue;
       unsigned R = MO->getReg();
@@ -377,7 +377,7 @@ bool HexagonEarlyIfConversion::isValidCandidate(const MachineBasicBlock *B)
 
 
 bool HexagonEarlyIfConversion::usesUndefVReg(const MachineInstr *MI) const {
-  for (ConstMIOperands MO(MI); MO.isValid(); ++MO) {
+  for (ConstMIOperands MO(*MI); MO.isValid(); ++MO) {
     if (!MO->isReg() || !MO->isUse())
       continue;
     unsigned R = MO->getReg();
@@ -456,7 +456,7 @@ unsigned HexagonEarlyIfConversion::countPredicateDefs(
       const MachineBasicBlock *B) const {
   unsigned PredDefs = 0;
   for (auto &MI : *B) {
-    for (ConstMIOperands MO(&MI); MO.isValid(); ++MO) {
+    for (ConstMIOperands MO(MI); MO.isValid(); ++MO) {
       if (!MO->isReg() || !MO->isDef())
         continue;
       unsigned R = MO->getReg();
@@ -721,7 +721,7 @@ void HexagonEarlyIfConversion::predicateInstr(MachineBasicBlock *ToB,
     assert(COpc);
     MachineInstrBuilder MIB = BuildMI(*ToB, At, DL, TII->get(COpc))
       .addReg(PredR);
-    for (MIOperands MO(MI); MO.isValid(); ++MO)
+    for (MIOperands MO(*MI); MO.isValid(); ++MO)
       MIB.addOperand(*MO);
 
     // Set memory references.
@@ -980,7 +980,7 @@ void HexagonEarlyIfConversion::replacePhiEdges(MachineBasicBlock *OldB,
     MachineBasicBlock *SB = *I;
     MachineBasicBlock::iterator P, N = SB->getFirstNonPHI();
     for (P = SB->begin(); P != N; ++P) {
-      MachineInstr *PN = &*P;
+      MachineInstr &PN = *P;
       for (MIOperands MO(PN); MO.isValid(); ++MO)
         if (MO->isMBB() && MO->getMBB() == OldB)
           MO->setMBB(NewB);

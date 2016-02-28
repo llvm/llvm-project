@@ -2210,7 +2210,7 @@ X86TargetLowering::LowerReturn(SDValue Chain,
                    MVT::i16));
 
   // Copy the result values into the output registers.
-  for (unsigned i = 0; i != RVLocs.size(); ++i) {
+  for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
     CCValAssign &VA = RVLocs[i];
     assert(VA.isRegLoc() && "Can only return in registers!");
     SDValue ValToCopy = OutVals[i];
@@ -6075,7 +6075,7 @@ X86TargetLowering::LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG) const {
                          DAG.getIntPtrConstant(0, dl));
   }
 
-  for (unsigned i = 0; i < NonConstIdx.size(); ++i) {
+  for (unsigned i = 0, e = NonConstIdx.size(); i != e; ++i) {
     unsigned InsertIdx = NonConstIdx[i];
     DstVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, DstVec,
                          Op.getOperand(InsertIdx),
@@ -26367,6 +26367,7 @@ static SDValue VectorZextCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   unsigned SrcSize = SrcType.getScalarSizeInBits();
+  unsigned NumElems = SrcType.getVectorNumElements();
 
   APInt SplatValue, SplatUndef;
   unsigned SplatBitSize;
@@ -26390,7 +26391,7 @@ static SDValue VectorZextCombine(SDNode *N, SelectionDAG &DAG,
   // the source and dest type.
   unsigned ZextRatio = ResSize / SrcSize;
   bool IsZext = true;
-  for (unsigned i = 0; i < SrcType.getVectorNumElements(); ++i) {
+  for (unsigned i = 0; i != NumElems; ++i) {
     if (i % ZextRatio) {
       if (Shuffle->getMaskElt(i) > 0) {
         // Expected undef
@@ -26413,8 +26414,7 @@ static SDValue VectorZextCombine(SDNode *N, SelectionDAG &DAG,
   // a shuffle of the form <0, k, k, k, 1, k, k, k> with zero
   // (instead of undef) where the k elements come from the zero vector.
   SmallVector<int, 8> Mask;
-  unsigned NumElems = SrcType.getVectorNumElements();
-  for (unsigned i = 0; i < NumElems; ++i)
+  for (unsigned i = 0; i != NumElems; ++i)
     if (i % ZextRatio)
       Mask.push_back(NumElems);
     else

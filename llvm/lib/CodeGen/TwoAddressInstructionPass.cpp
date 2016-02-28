@@ -306,7 +306,7 @@ sink3AddrInstruction(MachineInstr *MI, unsigned SavedReg,
   MBB->insert(KillPos, MI);
 
   if (LIS)
-    LIS->handleMove(MI);
+    LIS->handleMove(*MI);
 
   ++Num3AddrSunk;
   return true;
@@ -957,7 +957,7 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
       MachineInstr *CopyMI = MBBI;
       ++MBBI;
       MBB->splice(InsertPos, MBB, CopyMI);
-      LIS->handleMove(CopyMI);
+      LIS->handleMove(*CopyMI);
       InsertPos = CopyMI;
     }
     End = std::next(MachineBasicBlock::iterator(MI));
@@ -969,7 +969,7 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
 
   // Update live variables
   if (LIS) {
-    LIS->handleMove(MI);
+    LIS->handleMove(*MI);
   } else {
     LV->removeVirtualRegisterKilled(Reg, KillMI);
     LV->addVirtualRegisterKilled(Reg, MI);
@@ -1137,7 +1137,7 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
 
   // Update live variables
   if (LIS) {
-    LIS->handleMove(KillMI);
+    LIS->handleMove(*KillMI);
   } else {
     LV->removeVirtualRegisterKilled(Reg, KillMI);
     LV->addVirtualRegisterKilled(Reg, MI);

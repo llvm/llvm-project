@@ -63,15 +63,15 @@ char AArch64RedundantCopyElimination::ID = 0;
 INITIALIZE_PASS(AArch64RedundantCopyElimination, "aarch64-copyelim",
                 "AArch64 redundant copy elimination pass", false, false)
 
-static bool guaranteesZeroRegInBlock(MachineInstr *MI, MachineBasicBlock *MBB) {
-  unsigned Opc = MI->getOpcode();
+static bool guaranteesZeroRegInBlock(MachineInstr &MI, MachineBasicBlock *MBB) {
+  unsigned Opc = MI.getOpcode();
   // Check if the current basic block is the target block to which the
   // CBZ/CBNZ instruction jumps when its Wt/Xt is zero.
   if ((Opc == AArch64::CBZW || Opc == AArch64::CBZX) &&
-      MBB == MI->getOperand(1).getMBB())
+      MBB == MI.getOperand(1).getMBB())
     return true;
   else if ((Opc == AArch64::CBNZW || Opc == AArch64::CBNZX) &&
-           MBB != MI->getOperand(1).getMBB())
+           MBB != MI.getOperand(1).getMBB())
     return true;
 
   return false;
@@ -90,12 +90,12 @@ bool AArch64RedundantCopyElimination::optimizeCopy(MachineBasicBlock *MBB) {
   ++CompBr;
   do {
     --CompBr;
-    if (guaranteesZeroRegInBlock(CompBr, MBB))
+    if (guaranteesZeroRegInBlock(*CompBr, MBB))
       break;
   } while (CompBr != PredMBB->begin() && CompBr->isTerminator());
 
   // We've not found a CBZ/CBNZ, time to bail out.
-  if (!guaranteesZeroRegInBlock(CompBr, MBB))
+  if (!guaranteesZeroRegInBlock(*CompBr, MBB))
     return false;
 
   unsigned TargetReg = CompBr->getOperand(0).getReg();

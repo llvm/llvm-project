@@ -128,7 +128,7 @@ void HexagonGenMux::getDefsUses(const MachineInstr *MI, BitVector &Defs,
       expandReg(*R++, Uses);
 
   // Look over all operands, and collect explicit defs and uses.
-  for (ConstMIOperands Mo(MI); Mo.isValid(); ++Mo) {
+  for (ConstMIOperands Mo(*MI); Mo.isValid(); ++Mo) {
     if (!Mo->isReg() || Mo->isImplicit())
       continue;
     unsigned R = Mo->getReg();

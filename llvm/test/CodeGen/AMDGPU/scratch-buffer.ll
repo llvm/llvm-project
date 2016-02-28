@@ -1,7 +1,5 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck --check-prefix=GCN --check-prefix=DEFAULT-SCRATCH %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=GCN --check-prefix=DEFAULT-SCRATCH %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+huge-scratch-buffer -mcpu=SI < %s | FileCheck --check-prefix=GCN --check-prefix=HUGE-SCRATCH %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+huge-scratch-buffer -mcpu=tonga < %s | FileCheck --check-prefix=GCN --check-prefix=HUGE-SCRATCH %s
+; RUN: llc -verify-machineinstrs -march=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
 
 ; When a frame index offset is more than 12-bits, make sure we don't store
 ; it in mubuf's offset field.
@@ -102,8 +100,7 @@ entry:
 }
 
 ; GCN-LABEL: @pos_vaddr_offse
-; DEFAULT-SCRATCH: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:16
-; HUGE-SCRATCH: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:16
 define void @pos_vaddr_offset(i32 addrspace(1)* %out, i32 %offset) {
 entry:
   %array = alloca [8192 x i32]

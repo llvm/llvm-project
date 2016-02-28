@@ -230,7 +230,7 @@ public:
 
   /// Copy all the implicit operands from OtherMI onto this one.
   const MachineInstrBuilder &
-  copyImplicitOps(const MachineInstr *OtherMI) const {
+  copyImplicitOps(const MachineInstr &OtherMI) const {
     MI->copyImplicitOps(*MF, OtherMI);
     return *this;
   }
@@ -447,7 +447,7 @@ public:
   /// Create an MIBundleBuilder representing an existing instruction or bundle
   /// that has MI as its head.
   explicit MIBundleBuilder(MachineInstr *MI)
-    : MBB(*MI->getParent()), Begin(MI), End(getBundleEnd(MI)) {}
+      : MBB(*MI->getParent()), Begin(MI), End(getBundleEnd(*MI)) {}
 
   /// Return a reference to the basic block containing this bundle.
   MachineBasicBlock &getMBB() const { return MBB; }

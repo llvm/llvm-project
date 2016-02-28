@@ -2530,7 +2530,7 @@ isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
     // If we are the operands of one of the branches, this is not a fall
     // through. Note that targets with delay slots will usually bundle
     // terminators with the delay slot instruction.
-    for (ConstMIBundleOperands OP(&MI); OP.isValid(); ++OP) {
+    for (ConstMIBundleOperands OP(MI); OP.isValid(); ++OP) {
       if (OP->isJTI())
         return false;
       if (OP->isMBB() && OP->getMBB() == MBB)

@@ -351,7 +351,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
 
     // Check for flag reads and clobbers.
     MIOperands::PhysRegInfo PRI =
-        MIOperands(I).analyzePhysReg(AArch64::NZCV, TRI);
+        MIOperands(*I).analyzePhysReg(AArch64::NZCV, TRI);
 
     if (PRI.Read) {
       // The ccmp doesn't produce exactly the same flags as the original

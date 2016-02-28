@@ -1027,7 +1027,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
       for (unsigned i = 0, e = Regs.size(); i < e; ++i)
         MIB.addReg(Regs[i], getDefRegState(true));
       if (DeleteRet && MI != MBB.end()) {
-        MIB.copyImplicitOps(&*MI);
+        MIB.copyImplicitOps(*MI);
         MI->eraseFromParent();
       }
       MI = MIB;

@@ -130,6 +130,25 @@ static const uint16_t IntPairDecoderTable[] = {
   SP::I0_I1, SP::I2_I3, SP::I4_I5, SP::I6_I7,
 };
 
+static const unsigned CPRegDecoderTable[] = {
+  SP::C0,  SP::C1,  SP::C2,  SP::C3,
+  SP::C4,  SP::C5,  SP::C6,  SP::C7,
+  SP::C8,  SP::C9,  SP::C10, SP::C11,
+  SP::C12, SP::C13, SP::C14, SP::C15,
+  SP::C16, SP::C17, SP::C18, SP::C19,
+  SP::C20, SP::C21, SP::C22, SP::C23,
+  SP::C24, SP::C25, SP::C26, SP::C27,
+  SP::C28, SP::C29, SP::C30, SP::C31
+};
+
+
+static const uint16_t CPPairDecoderTable[] = {
+  SP::C0_C1,   SP::C2_C3,   SP::C4_C5,   SP::C6_C7,
+  SP::C8_C9,   SP::C10_C11, SP::C12_C13, SP::C14_C15,
+  SP::C16_C17, SP::C18_C19, SP::C20_C21, SP::C22_C23,
+  SP::C24_C25, SP::C26_C27, SP::C28_C29, SP::C30_C31
+};
+
 static DecodeStatus DecodeIntRegsRegisterClass(MCInst &Inst,
                                                unsigned RegNo,
                                                uint64_t Address,
@@ -191,6 +210,17 @@ static DecodeStatus DecodeQFPRegsRegisterClass(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeCPRegsRegisterClass(MCInst &Inst,
+                                               unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+  unsigned Reg = CPRegDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeFCCRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
                                                const void *Decoder) {
@@ -233,6 +263,16 @@ static DecodeStatus DecodeIntPairRegisterClass(MCInst &Inst, unsigned RegNo,
   return S;
 }
 
+static DecodeStatus DecodeCPPairRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+
+  unsigned RegisterPair = CPPairDecoderTable[RegNo/2];
+  Inst.addOperand(MCOperand::createReg(RegisterPair));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeLoadInt(MCInst &Inst, unsigned insn, uint64_t Address,
                                   const void *Decoder);
 static DecodeStatus DecodeLoadIntPair(MCInst &Inst, unsigned insn, uint64_t Address,
@@ -243,6 +283,10 @@ static DecodeStatus DecodeLoadDFP(MCInst &Inst, unsigned insn, uint64_t Address,
                                   const void *Decoder);
 static DecodeStatus DecodeLoadQFP(MCInst &Inst, unsigned insn, uint64_t Address,
                                   const void *Decoder);
+static DecodeStatus DecodeLoadCP(MCInst &Inst, unsigned insn, uint64_t Address,
+                                  const void *Decoder);
+static DecodeStatus DecodeLoadCPPair(MCInst &Inst, unsigned insn, uint64_t Address,
+                                  const void *Decoder);
 static DecodeStatus DecodeStoreInt(MCInst &Inst, unsigned insn,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeStoreIntPair(MCInst &Inst, unsigned insn,
@@ -252,6 +296,10 @@ static DecodeStatus DecodeStoreFP(MCInst &Inst, unsigned insn,
 static DecodeStatus DecodeStoreDFP(MCInst &Inst, unsigned insn,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeStoreQFP(MCInst &Inst, unsigned insn,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeStoreCP(MCInst &Inst, unsigned insn,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeStoreCPPair(MCInst &Inst, unsigned insn,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCall(MCInst &Inst, unsigned insn,
                                uint64_t Address, const void *Decoder);
@@ -390,6 +438,18 @@ static DecodeStatus DecodeLoadQFP(MCInst &Inst, unsigned insn, uint64_t Address,
                    DecodeQFPRegsRegisterClass);
 }
 
+static DecodeStatus DecodeLoadCP(MCInst &Inst, unsigned insn, uint64_t Address,
+                                  const void *Decoder) {
+  return DecodeMem(Inst, insn, Address, Decoder, true,
+                   DecodeCPRegsRegisterClass);
+}
+
+static DecodeStatus DecodeLoadCPPair(MCInst &Inst, unsigned insn, uint64_t Address,
+                                  const void *Decoder) {
+  return DecodeMem(Inst, insn, Address, Decoder, true,
+                   DecodeCPPairRegisterClass);
+}
+
 static DecodeStatus DecodeStoreInt(MCInst &Inst, unsigned insn,
                                    uint64_t Address, const void *Decoder) {
   return DecodeMem(Inst, insn, Address, Decoder, false,
@@ -418,6 +478,18 @@ static DecodeStatus DecodeStoreQFP(MCInst &Inst, unsigned insn,
                                    uint64_t Address, const void *Decoder) {
   return DecodeMem(Inst, insn, Address, Decoder, false,
                    DecodeQFPRegsRegisterClass);
+}
+
+static DecodeStatus DecodeStoreCP(MCInst &Inst, unsigned insn,
+                                   uint64_t Address, const void *Decoder) {
+  return DecodeMem(Inst, insn, Address, Decoder, false,
+                   DecodeCPRegsRegisterClass);
+}
+
+static DecodeStatus DecodeStoreCPPair(MCInst &Inst, unsigned insn,
+                                   uint64_t Address, const void *Decoder) {
+  return DecodeMem(Inst, insn, Address, Decoder, false,
+                   DecodeCPPairRegisterClass);
 }
 
 static bool tryAddingSymbolicOperand(int64_t Value,  bool isBranch,

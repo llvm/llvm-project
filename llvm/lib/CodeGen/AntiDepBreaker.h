@@ -47,18 +47,18 @@ public:
   
   /// Update liveness information to account for the current
   /// instruction, which will not be scheduled.
-  virtual void Observe(MachineInstr *MI, unsigned Count,
-                       unsigned InsertPosIndex) =0;
-  
+  virtual void Observe(MachineInstr &MI, unsigned Count,
+                       unsigned InsertPosIndex) = 0;
+
   /// Finish anti-dep breaking for a basic block.
   virtual void FinishBlock() =0;
 
   /// Update DBG_VALUE if dependency breaker is updating
   /// other machine instruction to use NewReg.
-  void UpdateDbgValue(MachineInstr *MI, unsigned OldReg, unsigned NewReg) {
-    assert (MI->isDebugValue() && "MI is not DBG_VALUE!");
-    if (MI && MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == OldReg)
-      MI->getOperand(0).setReg(NewReg);
+  void UpdateDbgValue(MachineInstr &MI, unsigned OldReg, unsigned NewReg) {
+    assert(MI.isDebugValue() && "MI is not DBG_VALUE!");
+    if (MI.getOperand(0).isReg() && MI.getOperand(0).getReg() == OldReg)
+      MI.getOperand(0).setReg(NewReg);
   }
 };
 

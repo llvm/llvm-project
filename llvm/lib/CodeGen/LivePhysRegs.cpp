@@ -43,7 +43,7 @@ void LivePhysRegs::removeRegsInMask(const MachineOperand &MO,
 /// Remove Defs, add uses. This is the recommended way of calculating liveness.
 void LivePhysRegs::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
-  for (ConstMIBundleOperands O(&MI); O.isValid(); ++O) {
+  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {
       if (!O->isDef())
         continue;
@@ -56,7 +56,7 @@ void LivePhysRegs::stepBackward(const MachineInstr &MI) {
   }
 
   // Add uses to the set.
-  for (ConstMIBundleOperands O(&MI); O.isValid(); ++O) {
+  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (!O->isReg() || !O->readsReg() || O->isUndef())
       continue;
     unsigned Reg = O->getReg();
@@ -73,7 +73,7 @@ void LivePhysRegs::stepBackward(const MachineInstr &MI) {
 void LivePhysRegs::stepForward(const MachineInstr &MI,
         SmallVectorImpl<std::pair<unsigned, const MachineOperand*>> &Clobbers) {
   // Remove killed registers from the set.
-  for (ConstMIBundleOperands O(&MI); O.isValid(); ++O) {
+  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {
       unsigned Reg = O->getReg();
       if (Reg == 0)

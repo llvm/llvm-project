@@ -235,12 +235,28 @@ def FCC_UL  : FCC_VAL<19>;  // Unordered or Less
 def FCC_LG  : FCC_VAL<18>;  // Less or Greater
 def FCC_NE  : FCC_VAL<17>;  // Not Equal
 def FCC_E   : FCC_VAL<25>;  // Equal
-def FCC_UE  : FCC_VAL<24>;  // Unordered or Equal
-def FCC_GE  : FCC_VAL<25>;  // Greater or Equal
-def FCC_UGE : FCC_VAL<26>;  // Unordered or Greater or Equal
-def FCC_LE  : FCC_VAL<27>;  // Less or Equal
-def FCC_ULE : FCC_VAL<28>;  // Unordered or Less or Equal
-def FCC_O   : FCC_VAL<29>;  // Ordered
+def FCC_UE  : FCC_VAL<26>;  // Unordered or Equal
+def FCC_GE  : FCC_VAL<27>;  // Greater or Equal
+def FCC_UGE : FCC_VAL<28>;  // Unordered or Greater or Equal
+def FCC_LE  : FCC_VAL<29>;  // Less or Equal
+def FCC_ULE : FCC_VAL<30>;  // Unordered or Less or Equal
+def FCC_O   : FCC_VAL<31>;  // Ordered
+
+class CPCC_VAL<int N> : PatLeaf<(i32 N)>;
+def CPCC_3   : CPCC_VAL<39>;  // 3
+def CPCC_2   : CPCC_VAL<38>;  // 2
+def CPCC_23  : CPCC_VAL<37>;  // 2 or 3
+def CPCC_1   : CPCC_VAL<36>;  // 1
+def CPCC_13  : CPCC_VAL<35>;  // 1 or 3
+def CPCC_12  : CPCC_VAL<34>;  // 1 or 2
+def CPCC_123 : CPCC_VAL<33>;  // 1 or 2 or 3
+def CPCC_0   : CPCC_VAL<41>;  // 0
+def CPCC_03  : CPCC_VAL<42>;  // 0 or 3
+def CPCC_02  : CPCC_VAL<43>;  // 0 or 2
+def CPCC_023 : CPCC_VAL<44>;  // 0 or 2 or 3
+def CPCC_01  : CPCC_VAL<45>;  // 0 or 1
+def CPCC_013 : CPCC_VAL<46>;  // 0 or 1 or 3
+def CPCC_012 : CPCC_VAL<47>;  // 0 or 1 or 2
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -445,6 +461,20 @@ let DecoderMethod = "DecodeLoadQFP" in
   defm LDQF  : LoadA<"ldq", 0b100010, 0b110010, load, QFPRegs, f128>,
                Requires<[HasV9, HasHardQuad]>;
 
+let DecoderMethod = "DecodeLoadCP" in 
+  defm LDC   : Load<"ld", 0b110000, load, CoprocRegs, i32>; 
+let DecoderMethod = "DecodeLoadCPPair" in 
+  defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32>;
+
+let DecoderMethod = "DecodeLoadCP", Defs = [CPSR] in {
+  let rd = 0 in {
+    def LDCSRrr : F3_1<3, 0b110001, (outs), (ins MEMrr:$addr),
+                       "ld [$addr], %csr", []>;
+    def LDCSRri : F3_2<3, 0b110001, (outs), (ins MEMri:$addr),
+                       "ld [$addr], %csr", []>;
+  }
+}
+  
 let DecoderMethod = "DecodeLoadFP" in
   let Defs = [FSR] in {
     let rd = 0 in {
@@ -486,21 +516,49 @@ let DecoderMethod = "DecodeStoreQFP" in
   defm STQF  : StoreA<"stq", 0b100110, 0b110110, store, QFPRegs, f128>,
                Requires<[HasV9, HasHardQuad]>;
 
-let DecoderMethod = "DecodeStoreFP" in
-  let Defs = [FSR] in {
-    let rd = 0 in {
+let DecoderMethod = "DecodeStoreCP" in 
+  defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>; 
+  
+let DecoderMethod = "DecodeStoreCPPair" in 
+  defm STDC   : Store<"std", 0b110111, store, CoprocPair, v2i32>;
+  
+let DecoderMethod = "DecodeStoreCP", rd = 0 in {
+  let Defs = [CPSR] in {
+    def STCSRrr : F3_1<3, 0b110101, (outs MEMrr:$addr), (ins),
+                       "st %csr, [$addr]", []>;
+    def STCSRri : F3_2<3, 0b110101, (outs MEMri:$addr), (ins),
+                       "st %csr, [$addr]", []>;
+  }
+  let Defs = [CPQ] in {
+    def STDCQrr : F3_1<3, 0b110110, (outs MEMrr:$addr), (ins),
+                       "std %cq, [$addr]", []>;
+    def STDCQri : F3_2<3, 0b110110, (outs MEMri:$addr), (ins),
+                       "std %cq, [$addr]", []>;
+  }
+}
+
+let DecoderMethod = "DecodeStoreFP" in {
+  let rd = 0 in {
+    let Defs = [FSR] in {
       def STFSRrr : F3_1<3, 0b100101, (outs MEMrr:$addr), (ins),
                      "st %fsr, [$addr]", []>;
       def STFSRri : F3_2<3, 0b100101, (outs MEMri:$addr), (ins),
                      "st %fsr, [$addr]", []>;
     }
-    let rd = 1 in {
-      def STXFSRrr : F3_1<3, 0b100101, (outs MEMrr:$addr), (ins),
-                     "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
-      def STXFSRri : F3_2<3, 0b100101, (outs MEMri:$addr), (ins),
-                     "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+    let Defs = [FQ] in {
+      def STDFQrr : F3_1<3, 0b100110, (outs MEMrr:$addr), (ins),
+                     "std %fq, [$addr]", []>;
+      def STDFQri : F3_2<3, 0b100110, (outs MEMri:$addr), (ins),
+                     "std %fq, [$addr]", []>;
     }
   }
+  let rd = 1, Defs = [FSR] in {
+    def STXFSRrr : F3_1<3, 0b100101, (outs MEMrr:$addr), (ins),
+                   "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+    def STXFSRri : F3_2<3, 0b100101, (outs MEMri:$addr), (ins),
+                   "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+  }
+}
 
 // Section B.8 - SWAP Register with Memory Instruction
 // (Atomic swap)
@@ -755,7 +813,25 @@ let Uses = [FCC0] in {
 let Predicates = [HasV9] in
   defm BPF : FPredBranch;
 
+// Section B.22 - Branch on Co-processor Condition Codes Instructions, p. 123
+let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
 
+// co-processor conditional branch class:
+class CPBranchSP<dag ins, string asmstr, list<dag> pattern>
+ : F2_2<0b111, 0, (outs), ins, asmstr, pattern>;
+
+// co-processor conditional branch with annul class:
+class CPBranchSPA<dag ins, string asmstr, list<dag> pattern>
+ : F2_2<0b111, 1, (outs), ins, asmstr, pattern>;
+
+} // let isBranch = 1, isTerminator = 1, hasDelaySlot = 1
+
+def CBCOND  : CPBranchSP<(ins brtarget:$imm22, CCOp:$cond),
+                          "cb$cond $imm22",
+                          [(SPbrfcc bb:$imm22, imm:$cond)]>;
+def CBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
+                           "cb$cond,a $imm22", []>;
+                           
 // Section B.24 - Call and Link Instruction, p. 125
 // This is the only Format 1 instruction
 let Uses = [O6],

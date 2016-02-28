@@ -121,10 +121,10 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
     // Insert will change value numbers are seen.
     const LiveInterval &LI = LIS.getInterval(Reg);
     VNInfo *DefVNI =
-        MO.isDef() ? LI.getVNInfoAt(LIS.getInstructionIndex(Def).getRegSlot())
-                   : LI.getVNInfoBefore(LIS.getInstructionIndex(Def));
+        MO.isDef() ? LI.getVNInfoAt(LIS.getInstructionIndex(*Def).getRegSlot())
+                   : LI.getVNInfoBefore(LIS.getInstructionIndex(*Def));
     assert(DefVNI && "Instruction input missing value number");
-    VNInfo *InsVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(Insert));
+    VNInfo *InsVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(*Insert));
     if (InsVNI && DefVNI != InsVNI)
       return false;
   }
@@ -206,7 +206,7 @@ RematerializeCheapDef(unsigned Reg, MachineOperand &Op, MachineInstr *Def,
   TII->reMaterialize(MBB, Insert, NewReg, 0, Def, *TRI);
   Op.setReg(NewReg);
   MachineInstr *Clone = &*std::prev(MachineBasicBlock::instr_iterator(Insert));
-  LIS.InsertMachineInstrInMaps(Clone);
+  LIS.InsertMachineInstrInMaps(*Clone);
   LIS.createAndComputeVirtRegInterval(NewReg);
   MFI.stackifyVReg(NewReg);
   ImposeStackOrdering(Clone);
@@ -214,11 +214,11 @@ RematerializeCheapDef(unsigned Reg, MachineOperand &Op, MachineInstr *Def,
   // If that was the last use of the original, delete the original.
   // Otherwise shrink the LiveInterval.
   if (MRI.use_empty(Reg)) {
-    SlotIndex Idx = LIS.getInstructionIndex(Def).getRegSlot();
+    SlotIndex Idx = LIS.getInstructionIndex(*Def).getRegSlot();
     LIS.removePhysRegDefAt(WebAssembly::ARGUMENTS, Idx);
     LIS.removeVRegDefAt(LIS.getInterval(Reg), Idx);
     LIS.removeInterval(Reg);
-    LIS.RemoveMachineInstrFromMaps(Def);
+    LIS.RemoveMachineInstrFromMaps(*Def);
     Def->eraseFromParent();
   } else {
     LIS.shrinkToUses(&LIS.getInterval(Reg));
@@ -263,7 +263,7 @@ static MachineInstr *MoveAndTeeForMultiUse(
                           .addReg(DefReg);
   Op.setReg(TeeReg);
   Def->getOperand(0).setReg(DefReg);
-  LIS.InsertMachineInstrInMaps(Tee);
+  LIS.InsertMachineInstrInMaps(*Tee);
   LIS.removeInterval(Reg);
   LIS.createAndComputeVirtRegInterval(NewReg);
   LIS.createAndComputeVirtRegInterval(TeeReg);
@@ -453,7 +453,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         if (!Def) {
           // MRI doesn't know what the Def is. Try asking LIS.
           const VNInfo *ValNo = LIS.getInterval(Reg).getVNInfoBefore(
-              LIS.getInstructionIndex(Insert));
+              LIS.getInstructionIndex(*Insert));
           if (!ValNo)
             continue;
           Def = LIS.getInstructionFromIndex(ValNo->def);

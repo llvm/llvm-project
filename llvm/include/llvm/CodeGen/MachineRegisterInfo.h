@@ -835,10 +835,10 @@ public:
           advance();
         } while (Op && Op->getParent() == P);
       } else if (ByBundle) {
-        MachineInstr *P = getBundleStart(Op->getParent());
+        MachineInstr &P = getBundleStart(*Op->getParent());
         do {
           advance();
-        } while (Op && getBundleStart(Op->getParent()) == P);
+        } while (Op && &getBundleStart(*Op->getParent()) == &P);
       }
 
       return *this;
@@ -937,10 +937,10 @@ public:
           advance();
         } while (Op && Op->getParent() == P);
       } else if (ByBundle) {
-        MachineInstr *P = getBundleStart(Op->getParent());
+        MachineInstr &P = getBundleStart(*Op->getParent());
         do {
           advance();
-        } while (Op && getBundleStart(Op->getParent()) == P);
+        } while (Op && &getBundleStart(*Op->getParent()) == &P);
       }
 
       return *this;
@@ -952,15 +952,12 @@ public:
     // Retrieve a reference to the current operand.
     MachineInstr &operator*() const {
       assert(Op && "Cannot dereference end iterator!");
-      if (ByBundle) return *(getBundleStart(Op->getParent()));
+      if (ByBundle)
+        return getBundleStart(*Op->getParent());
       return *Op->getParent();
     }
 
-    MachineInstr *operator->() const {
-      assert(Op && "Cannot dereference end iterator!");
-      if (ByBundle) return getBundleStart(Op->getParent());
-      return Op->getParent();
-    }
+    MachineInstr *operator->() const { return &operator*(); }
   };
 };
 

@@ -48,7 +48,7 @@ bool VLIWResourceModel::isResourceAvailable(SUnit *SU) {
   // in the current cycle.
   switch (SU->getInstr()->getOpcode()) {
   default:
-    if (!ResourcesModel->canReserveResources(SU->getInstr()))
+    if (!ResourcesModel->canReserveResources(*SU->getInstr()))
       return false;
   case TargetOpcode::EXTRACT_SUBREG:
   case TargetOpcode::INSERT_SUBREG:
@@ -100,7 +100,7 @@ bool VLIWResourceModel::reserveResources(SUnit *SU) {
 
   switch (SU->getInstr()->getOpcode()) {
   default:
-    ResourcesModel->reserveResources(SU->getInstr());
+    ResourcesModel->reserveResources(*SU->getInstr());
     break;
   case TargetOpcode::EXTRACT_SUBREG:
   case TargetOpcode::INSERT_SUBREG:

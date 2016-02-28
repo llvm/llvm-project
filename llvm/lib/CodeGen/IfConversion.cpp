@@ -580,7 +580,7 @@ bool IfConverter::ValidDiamond(BBInfo &TrueBBI, BBInfo &FalseBBI,
       if (FIB == FIE)
         break;
     }
-    if (!TIB->isIdenticalTo(FIB))
+    if (!TIB->isIdenticalTo(*FIB))
       break;
     ++Dups1;
     ++TIB;
@@ -624,7 +624,7 @@ bool IfConverter::ValidDiamond(BBInfo &TrueBBI, BBInfo &FalseBBI,
       if (FIE == FIB)
         break;
     }
-    if (!TIE->isIdenticalTo(FIE))
+    if (!TIE->isIdenticalTo(*FIE))
       break;
     ++Dups2;
     --TIE;
@@ -1049,7 +1049,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
  * Remove kill flags from operands with a registers in the @p DontKill set.
  */
 static void RemoveKills(MachineInstr &MI, const LivePhysRegs &DontKill) {
-  for (MIBundleOperands O(&MI); O.isValid(); ++O) {
+  for (MIBundleOperands O(MI); O.isValid(); ++O) {
     if (!O->isReg() || !O->isKill())
       continue;
     if (DontKill.contains(O->getReg()))

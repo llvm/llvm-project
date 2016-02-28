@@ -1446,7 +1446,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
 
     bool AllDead = true;
     SmallVector<unsigned,2> Regs;
-    for (ConstMIOperands Op(MI); Op.isValid(); ++Op) {
+    for (ConstMIOperands Op(*MI); Op.isValid(); ++Op) {
       if (!Op->isReg() || !Op->isDef())
         continue;
       unsigned R = Op->getReg();

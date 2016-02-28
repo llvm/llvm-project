@@ -846,9 +846,9 @@ SDValue DAGCombiner::ReassociateOps(unsigned Opc, SDLoc DL,
         return SDValue();
       }
       if (N1.hasOneUse()) {
-        // reassoc. (op y, (op x, c1)) -> (op (op x, y), c1) iff x+c1 has one
+        // reassoc. (op x, (op y, c1)) -> (op (op x, y), c1) iff x+c1 has one
         // use
-        SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N1.getOperand(0), N0);
+        SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N0, N1.getOperand(0));
         if (!OpNode.getNode())
           return SDValue();
         AddToWorklist(OpNode.getNode());

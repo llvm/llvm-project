@@ -1201,7 +1201,7 @@ static void toggleBundleKillFlag(MachineInstr *MI, unsigned Reg,
   // might set it on too many operands.  We will clear as many flags as we
   // can though.
   MachineBasicBlock::instr_iterator Begin = MI->getIterator();
-  MachineBasicBlock::instr_iterator End = getBundleEnd(MI);
+  MachineBasicBlock::instr_iterator End = getBundleEnd(*MI);
   while (Begin != End) {
     for (MachineOperand &MO : (--End)->operands()) {
       if (!MO.isReg() || MO.isDef() || Reg != MO.getReg())
@@ -1335,7 +1335,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
         DEBUG(MI->dump());
         DEBUG(if (MI->getOpcode() == TargetOpcode::BUNDLE) {
           MachineBasicBlock::instr_iterator Begin = MI->getIterator();
-          MachineBasicBlock::instr_iterator End = getBundleEnd(MI);
+          MachineBasicBlock::instr_iterator End = getBundleEnd(*MI);
           while (++Begin != End)
             DEBUG(Begin->dump());
         });
