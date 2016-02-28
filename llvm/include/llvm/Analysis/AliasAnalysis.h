@@ -1024,6 +1024,8 @@ private:
   }
 };
 
+extern template class AnalysisBase<AAManager>;
+
 /// A wrapper pass to provide the legacy pass manager access to a suitably
 /// prepared AAResults object.
 class AAResultsWrapperPass : public FunctionPass {

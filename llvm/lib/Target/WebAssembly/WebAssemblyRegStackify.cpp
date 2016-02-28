@@ -188,7 +188,7 @@ static MachineInstr *MoveForSingleUse(unsigned Reg, MachineInstr *Def,
                                       MachineInstr *Insert, LiveIntervals &LIS,
                                       WebAssemblyFunctionInfo &MFI) {
   MBB.splice(Insert, &MBB, Def);
-  LIS.handleMove(Def);
+  LIS.handleMove(*Def);
   MFI.stackifyVReg(Reg);
   ImposeStackOrdering(Def);
   return Def;
@@ -251,7 +251,7 @@ static MachineInstr *MoveAndTeeForMultiUse(
     MachineInstr *Insert, LiveIntervals &LIS, WebAssemblyFunctionInfo &MFI,
     MachineRegisterInfo &MRI, const WebAssemblyInstrInfo *TII) {
   MBB.splice(Insert, &MBB, Def);
-  LIS.handleMove(Def);
+  LIS.handleMove(*Def);
   const auto *RegClass = MRI.getRegClass(Reg);
   unsigned NewReg = MRI.createVirtualRegister(RegClass);
   unsigned TeeReg = MRI.createVirtualRegister(RegClass);

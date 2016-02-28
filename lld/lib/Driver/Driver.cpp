@@ -11,7 +11,6 @@
 #include "lld/Core/File.h"
 #include "lld/Core/Instrumentation.h"
 #include "lld/Core/LLVM.h"
-#include "lld/Core/Parallel.h"
 #include "lld/Core/PassManager.h"
 #include "lld/Core/Reader.h"
 #include "lld/Core/Resolver.h"
@@ -84,7 +83,7 @@ bool Driver::link(LinkingContext &ctx, raw_ostream &diagnostics) {
 
   for (std::unique_ptr<Node> &ie : ctx.getNodes())
     if (FileNode *node = dyn_cast<FileNode>(ie.get()))
-      ctx.getTaskGroup().spawn([node] { node->getFile()->parse(); });
+      node->getFile()->parse();
 
   std::vector<std::unique_ptr<File>> internalFiles;
   ctx.createInternalFiles(internalFiles);
@@ -108,10 +107,8 @@ bool Driver::link(LinkingContext &ctx, raw_ostream &diagnostics) {
   // Do core linking.
   ScopedTask resolveTask(getDefaultDomain(), "Resolve");
   Resolver resolver(ctx);
-  if (!resolver.resolve()) {
-    ctx.getTaskGroup().sync();
+  if (!resolver.resolve())
     return false;
-  }
   std::unique_ptr<SimpleFile> merged = resolver.resultFile();
   resolveTask.end();
 

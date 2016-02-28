@@ -28,8 +28,6 @@
 #include <vector>
 
 namespace lld {
-SymbolTable::SymbolTable(LinkingContext &context) : _ctx(context) {}
-
 bool SymbolTable::add(const UndefinedAtom &atom) { return addByName(atom); }
 
 bool SymbolTable::add(const SharedLibraryAtom &atom) { return addByName(atom); }
@@ -166,19 +164,16 @@ bool SymbolTable::addByName(const Atom &newAtom) {
       // fallthrough
     }
     case MCR_Error:
-      if (!_ctx.getAllowDuplicates()) {
-        llvm::errs() << "Duplicate symbols: "
-                     << existing->name()
-                     << ":"
-                     << existing->file().path()
-                     << " and "
-                     << newAtom.name()
-                     << ":"
-                     << newAtom.file().path()
-                     << "\n";
-        llvm::report_fatal_error("duplicate symbol error");
-      }
-      useNew = false;
+      llvm::errs() << "Duplicate symbols: "
+                   << existing->name()
+                   << ":"
+                   << existing->file().path()
+                   << " and "
+                   << newAtom.name()
+                   << ":"
+                   << newAtom.file().path()
+                   << "\n";
+      llvm::report_fatal_error("duplicate symbol error");
       break;
     }
     break;
@@ -188,14 +183,6 @@ bool SymbolTable::addByName(const Atom &newAtom) {
     const UndefinedAtom* newUndef = cast<UndefinedAtom>(&newAtom);
 
     bool sameCanBeNull = (existingUndef->canBeNull() == newUndef->canBeNull());
-    if (!sameCanBeNull && _ctx.warnIfCoalesableAtomsHaveDifferentCanBeNull()) {
-      llvm::errs() << "lld warning: undefined symbol "
-                   << existingUndef->name()
-                   << " has different weakness in "
-                   << existingUndef->file().path()
-                   << " and in " << newUndef->file().path() << "\n";
-    }
-
     if (sameCanBeNull)
       useNew = false;
     else
@@ -203,26 +190,6 @@ bool SymbolTable::addByName(const Atom &newAtom) {
     break;
   }
   case NCR_DupShLib: {
-    const SharedLibraryAtom *curShLib = cast<SharedLibraryAtom>(existing);
-    const SharedLibraryAtom *newShLib = cast<SharedLibraryAtom>(&newAtom);
-    bool sameNullness =
-        (curShLib->canBeNullAtRuntime() == newShLib->canBeNullAtRuntime());
-    bool sameName = curShLib->loadName().equals(newShLib->loadName());
-    if (sameName && !sameNullness &&
-        _ctx.warnIfCoalesableAtomsHaveDifferentCanBeNull()) {
-      // FIXME: need diagonstics interface for writing warning messages
-      llvm::errs() << "lld warning: shared library symbol "
-                   << curShLib->name() << " has different weakness in "
-                   << curShLib->file().path() << " and in "
-                   << newShLib->file().path();
-    }
-    if (!sameName && _ctx.warnIfCoalesableAtomsHaveDifferentLoadName()) {
-      // FIXME: need diagonstics interface for writing warning messages
-      llvm::errs() << "lld warning: shared library symbol "
-                   << curShLib->name() << " has different load path in "
-                   << curShLib->file().path() << " and in "
-                   << newShLib->file().path();
-    }
     useNew = false;
     break;
   }
@@ -231,9 +198,6 @@ bool SymbolTable::addByName(const Atom &newAtom) {
     llvm::report_fatal_error("duplicate symbol error");
     break;
   }
-
-  // Give context a chance to change which is kept.
-  _ctx.notifySymbolTableCoalesce(existing, &newAtom, useNew);
 
   if (useNew) {
     // Update name table to use new atom.

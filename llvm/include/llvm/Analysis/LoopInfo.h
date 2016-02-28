@@ -795,6 +795,8 @@ struct LoopAnalysis : AnalysisBase<LoopAnalysis> {
   LoopInfo run(Function &F, AnalysisManager<Function> *AM);
 };
 
+extern template class AnalysisBase<LoopAnalysis>;
+
 /// \brief Printer pass for the \c LoopAnalysis results.
 class LoopPrinterPass : public PassBase<LoopPrinterPass> {
   raw_ostream &OS;

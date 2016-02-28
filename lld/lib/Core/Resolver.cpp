@@ -36,10 +36,8 @@ ErrorOr<bool> Resolver::handleFile(File &file) {
   for (const DefinedAtom *atom : file.defined())
     doDefinedAtom(*atom);
   for (const UndefinedAtom *atom : file.undefined()) {
-    if (doUndefinedAtom(*atom)) {
+    if (doUndefinedAtom(*atom))
       undefAdded = true;
-      maybePreloadArchiveMember(atom->name());
-    }
   }
   for (const SharedLibraryAtom *atom : file.sharedLibrary())
     doSharedLibraryAtom(*atom);
@@ -98,7 +96,6 @@ ErrorOr<bool> Resolver::handleArchiveFile(File &file) {
                               bool dataSymbolOnly)->ErrorOr<bool> {
     if (File *member = archiveFile->find(undefName, dataSymbolOnly)) {
       member->setOrdinal(_ctx.getNextOrdinalAndIncrement());
-      updatePreloadArchiveMap();
       return handleFile(*member);
     }
     return false;
@@ -207,17 +204,6 @@ void Resolver::addAtoms(const std::vector<const DefinedAtom *> &newAtoms) {
     doDefinedAtom(*newAtom);
 }
 
-// Instantiate an archive file member if there's a file containing a
-// defined symbol for a given symbol name. Instantiation is done in a
-// different worker thread and has no visible side effect.
-void Resolver::maybePreloadArchiveMember(StringRef sym) {
-  auto it = _archiveMap.find(sym);
-  if (it == _archiveMap.end())
-    return;
-  ArchiveLibraryFile *archive = it->second;
-  archive->preload(_ctx.getTaskGroup(), sym);
-}
-
 // Returns true if at least one of N previous files has created an
 // undefined symbol.
 bool Resolver::undefinesAdded(int begin, int end) {
@@ -248,23 +234,6 @@ File *Resolver::getFile(int &index) {
   return cast<FileNode>(inputs[index++].get())->getFile();
 }
 
-// Update a map of Symbol -> ArchiveFile. The map is used for speculative
-// file loading.
-void Resolver::updatePreloadArchiveMap() {
-  std::vector<std::unique_ptr<Node>> &nodes = _ctx.getNodes();
-  for (int i = nodes.size() - 1; i >= 0; --i) {
-    auto *fnode = dyn_cast<FileNode>(nodes[i].get());
-    if (!fnode)
-      continue;
-    auto *archive = dyn_cast<ArchiveLibraryFile>(fnode->getFile());
-    if (!archive || _archiveSeen.count(archive))
-      continue;
-    _archiveSeen.insert(archive);
-    for (StringRef sym : archive->getDefinedSymbols())
-      _archiveMap[sym] = archive;
-  }
-}
-
 // Keep adding atoms until _ctx.getNextFile() returns an error. This
 // function is where undefined atoms are resolved.
 bool Resolver::resolveUndefines() {
@@ -287,7 +256,6 @@ bool Resolver::resolveUndefines() {
     }
     DEBUG_WITH_TYPE("resolver",
                     llvm::dbgs() << "Loaded file: " << file->path() << "\n");
-    updatePreloadArchiveMap();
     switch (file->kind()) {
     case File::kindErrorObject:
     case File::kindNormalizedObject:
@@ -503,7 +471,6 @@ void Resolver::removeCoalescedAwayAtoms() {
 bool Resolver::resolve() {
   DEBUG_WITH_TYPE("resolver",
                   llvm::dbgs() << "******** Resolving atom references:\n");
-  updatePreloadArchiveMap();
   if (!resolveUndefines())
     return false;
   updateReferences();

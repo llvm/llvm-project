@@ -216,11 +216,6 @@ public:
   ///
   /// This is used by the linker to order the layout of Atoms so that the
   /// resulting image is stable and reproducible.
-  ///
-  /// Note that this should not be confused with ordinals of exported symbols in
-  /// Windows DLLs. In Windows terminology, ordinals are symbols' export table
-  /// indices (small integers) which can be used instead of symbol names to
-  /// refer items in a DLL.
   virtual uint64_t ordinal() const = 0;
 
   /// \brief the number of bytes of space this atom's content will occupy in the

@@ -308,6 +308,8 @@ DominatorTree DominatorTreeAnalysis::run(Function &F) {
   return DT;
 }
 
+template class llvm::AnalysisBase<DominatorTreeAnalysis>;
+
 DominatorTreePrinterPass::DominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
 
 PreservedAnalyses DominatorTreePrinterPass::run(Function &F,

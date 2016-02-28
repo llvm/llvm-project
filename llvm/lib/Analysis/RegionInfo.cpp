@@ -185,6 +185,8 @@ namespace llvm {
 // RegionInfoAnalysis implementation
 //
 
+template class llvm::AnalysisBase<RegionInfoAnalysis>;
+
 RegionInfo RegionInfoAnalysis::run(Function &F, AnalysisManager<Function> *AM) {
   RegionInfo RI;
   auto *DT = &AM->getResult<DominatorTreeAnalysis>(F);

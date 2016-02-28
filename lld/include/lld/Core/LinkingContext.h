@@ -13,7 +13,6 @@
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
 #include "lld/Core/Node.h"
-#include "lld/Core/Parallel.h"
 #include "lld/Core/Reference.h"
 #include "lld/Core/Reader.h"
 #include "llvm/Support/ErrorOr.h"
@@ -112,35 +111,6 @@ public:
   /// whether core linking considers remaining undefines to be an error.
   bool allowRemainingUndefines() const { return _allowRemainingUndefines; }
 
-  /// In the lld model, a SharedLibraryAtom is a proxy atom for something
-  /// that will be found in a dynamic shared library when the program runs.
-  /// A SharedLibraryAtom optionally contains the name of the shared library
-  /// in which to find the symbol name at runtime.  Core linking may merge
-  /// two SharedLibraryAtom with the same name.  If this method returns true,
-  /// when merging core linking will also verify that they both have the same
-  /// loadName() and if not print a warning.
-  ///
-  /// \todo This should be a method core linking calls so that drivers can
-  /// format the warning as needed.
-  bool warnIfCoalesableAtomsHaveDifferentLoadName() const {
-    return _warnIfCoalesableAtomsHaveDifferentLoadName;
-  }
-
-  /// In C/C++ you can mark a function's prototype with
-  /// __attribute__((weak_import)) or __attribute__((weak)) to say the function
-  /// may not be available at runtime and/or build time and in which case its
-  /// address will evaluate to NULL. In lld this is modeled using the
-  /// UndefinedAtom::canBeNull() method.  During core linking, UndefinedAtom
-  /// with the same name are automatically merged.  If this method returns
-  /// true, core link also verfies that the canBeNull() value for merged
-  /// UndefinedAtoms are the same and warns if not.
-  ///
-  /// \todo This should be a method core linking calls so that drivers can
-  /// format the warning as needed.
-  bool warnIfCoalesableAtomsHaveDifferentCanBeNull() const {
-    return _warnIfCoalesableAtomsHaveDifferentCanBeNull;
-  }
-
   /// Normally, every UndefinedAtom must be replaced by a DefinedAtom or a
   /// SharedLibraryAtom for the link to be successful.  This method controls
   /// whether core linking considers remaining undefines from the shared library
@@ -174,19 +144,12 @@ public:
   }
 
   void setDeadStripping(bool enable) { _deadStrip = enable; }
-  void setAllowDuplicates(bool enable) { _allowDuplicates = enable; }
   void setGlobalsAreDeadStripRoots(bool v) { _globalsAreDeadStripRoots = v; }
   void setSearchArchivesToOverrideTentativeDefinitions(bool search) {
     _searchArchivesToOverrideTentativeDefinitions = search;
   }
   void setSearchSharedLibrariesToOverrideTentativeDefinitions(bool search) {
     _searchSharedLibrariesToOverrideTentativeDefinitions = search;
-  }
-  void setWarnIfCoalesableAtomsHaveDifferentCanBeNull(bool warn) {
-    _warnIfCoalesableAtomsHaveDifferentCanBeNull = warn;
-  }
-  void setWarnIfCoalesableAtomsHaveDifferentLoadName(bool warn) {
-    _warnIfCoalesableAtomsHaveDifferentLoadName = warn;
   }
   void setPrintRemainingUndefines(bool print) {
     _printRemainingUndefines = print;
@@ -197,26 +160,10 @@ public:
   void setAllowShlibUndefines(bool allow) { _allowShlibUndefines = allow; }
   void setLogInputFiles(bool log) { _logInputFiles = log; }
 
-  // Returns true if multiple definitions should not be treated as a
-  // fatal error.
-  bool getAllowDuplicates() const { return _allowDuplicates; }
-
   void appendLLVMOption(const char *opt) { _llvmOptions.push_back(opt); }
-
-  void addAlias(StringRef from, StringRef to) { _aliasSymbols[from] = to; }
-  const std::map<std::string, std::string> &getAliases() const {
-    return _aliasSymbols;
-  }
 
   std::vector<std::unique_ptr<Node>> &getNodes() { return _nodes; }
   const std::vector<std::unique_ptr<Node>> &getNodes() const { return _nodes; }
-
-  /// Notify the LinkingContext when the symbol table found a name collision.
-  /// The useNew parameter specifies which the symbol table plans to keep,
-  /// but that can be changed by the LinkingContext.  This is also an
-  /// opportunity for flavor specific processing.
-  virtual void notifySymbolTableCoalesce(const Atom *existingAtom,
-                                         const Atom *newAtom, bool &useNew) {}
 
   /// This method adds undefined symbols specified by the -u option to the to
   /// the list of undefined symbols known to the linker. This option essentially
@@ -314,8 +261,6 @@ public:
     return std::error_code();
   }
 
-  TaskGroup &getTaskGroup() { return _taskGroup; }
-
   /// @}
 protected:
   LinkingContext(); // Must be subclassed
@@ -331,25 +276,18 @@ protected:
   virtual std::unique_ptr<File> createUndefinedSymbolFile() const;
   std::unique_ptr<File> createUndefinedSymbolFile(StringRef filename) const;
 
-  /// Method to create an internal file for alias symbols
-  std::unique_ptr<File> createAliasSymbolFile() const;
-
   StringRef _outputPath;
   StringRef _entrySymbolName;
   bool _deadStrip;
-  bool _allowDuplicates;
   bool _globalsAreDeadStripRoots;
   bool _searchArchivesToOverrideTentativeDefinitions;
   bool _searchSharedLibrariesToOverrideTentativeDefinitions;
-  bool _warnIfCoalesableAtomsHaveDifferentCanBeNull;
-  bool _warnIfCoalesableAtomsHaveDifferentLoadName;
   bool _printRemainingUndefines;
   bool _allowRemainingUndefines;
   bool _logInputFiles;
   bool _allowShlibUndefines;
   OutputFileType _outputFileType;
   std::vector<StringRef> _deadStripRoots;
-  std::map<std::string, std::string> _aliasSymbols;
   std::vector<const char *> _llvmOptions;
   StringRefVector _initialUndefinedSymbols;
   std::vector<std::unique_ptr<Node>> _nodes;
@@ -360,7 +298,6 @@ protected:
 private:
   /// Validate the subclass bits. Only called by validate.
   virtual bool validateImpl(raw_ostream &diagnostics) = 0;
-  TaskGroup _taskGroup;
 };
 
 } // end namespace lld

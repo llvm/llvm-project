@@ -6,32 +6,122 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-///
-/// This is the entry point to the lld driver. This is a thin wrapper which
-/// dispatches to the given platform specific driver.
-///
+//
+// This is the entry point to the lld driver. This is a thin wrapper which
+// dispatches to the given platform specific driver.
+//
+// If there is -flavor option or -core option, it is dispatched according
+// to the arguments. If the flavor parameter is not present, then it is
+// dispatched according to argv[0].
+//
 //===----------------------------------------------------------------------===//
 
-#include "lld/Core/LLVM.h"
 #include "lld/Driver/Driver.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace lld;
+using namespace llvm;
+using namespace llvm::sys;
 
+enum Flavor {
+  Invalid,
+  Gnu,     // -flavor gnu
+  WinLink, // -flavor link
+  Darwin,  // -flavor darwin
+  Core     // -flavor core or -core
+};
+
+LLVM_ATTRIBUTE_NORETURN static void die(const Twine &S) {
+  errs() << S << "\n";
+  exit(1);
+}
+
+static Flavor getFlavor(StringRef S) {
+  return StringSwitch<Flavor>(S)
+      .Case("ld", Gnu)
+      .Case("ld.lld", Gnu)
+      .Case("gnu", Gnu)
+      .Case("link", WinLink)
+      .Case("darwin", Darwin)
+      .Case("core", Core)
+      .Default(Invalid);
+}
+
+static Flavor parseProgname(StringRef Progname) {
+#if __APPLE__
+  // Use Darwin driver for "ld" on Darwin.
+  if (Progname == "ld")
+    return Darwin;
+#endif
+
+#if LLVM_ON_UNIX
+  // Use GNU driver for "ld" on other Unix-like system.
+  if (Progname == "ld")
+    return Gnu;
+#endif
+
+  // Progname may be something like "lld-gnu". Parse it.
+  SmallVector<StringRef, 3> V;
+  SplitString(Progname, V, "-");
+  for (StringRef S : V)
+    if (Flavor F = getFlavor(S))
+      return F;
+  return Invalid;
+}
+
+static Flavor parseFlavor(std::vector<const char *> &V) {
+  // If the first argument is -core, then core driver.
+  if (V.size() > 1 && V[1] == StringRef("-core")) {
+    V.erase(V.begin() + 1);
+    return Core;
+  }
+
+  // Parse -flavor option.
+  if (V.size() > 1 && V[1] == StringRef("-flavor")) {
+    if (V.size() <= 2)
+      die("missing arg value for '-flavor'");
+    Flavor F = getFlavor(V[2]);
+    if (F == Invalid)
+      die("Unknown flavor: " + StringRef(V[2]));
+    V.erase(V.begin() + 1, V.begin() + 3);
+    return F;
+  }
+
+  // Deduct the flavor from argv[0].
+  StringRef Arg0 = path::filename(V[0]);
+  if (Arg0.endswith_lower(".exe"))
+    Arg0 = Arg0.drop_back(4);
+  return parseProgname(Arg0);
+}
 
 /// Universal linker main(). This linker emulates the gnu, darwin, or
-/// windows linker based on the tool name or if the first argument is
-/// -flavor.
-int main(int argc, const char *argv[]) {
+/// windows linker based on the argv[0] or -flavor option.
+int main(int Argc, const char **Argv) {
   // Standard set up, so program fails gracefully.
-  llvm::sys::PrintStackTraceOnErrorSignal();
-  llvm::PrettyStackTraceProgram stackPrinter(argc, argv);
-  llvm::llvm_shutdown_obj shutdown;
+  sys::PrintStackTraceOnErrorSignal();
+  PrettyStackTraceProgram StackPrinter(Argc, Argv);
+  llvm_shutdown_obj Shutdown;
 
-  return !UniversalDriver::link(
-             llvm::MutableArrayRef<const char *>(argv, argc));
+  std::vector<const char *> Args(Argv, Argv + Argc);
+  switch (parseFlavor(Args)) {
+  case Gnu:
+    return !elf::link(Args);
+  case WinLink:
+    return !coff::link(Args);
+  case Darwin:
+    return !DarwinLdDriver::linkMachO(Args);
+  case Core:
+    return !CoreDriver::link(Args);
+  default:
+    die("-flavor option is missing. Available flavors are "
+        "gnu, darwin or link.");
+  }
 }

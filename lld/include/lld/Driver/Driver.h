@@ -51,18 +51,6 @@ private:
   Driver() = delete;
 };
 
-/// Driver for "universal" lld tool which can mimic any linker command line
-/// parsing once it figures out which command line flavor to use.
-class UniversalDriver : public Driver {
-public:
-  /// Determine flavor and pass control to Driver for that flavor.
-  static bool link(llvm::MutableArrayRef<const char *> args,
-                   raw_ostream &diag = llvm::errs());
-
-private:
-  UniversalDriver() = delete;
-};
-
 /// Driver for darwin/ld64 'ld' command line options.
 class DarwinLdDriver : public Driver {
 public:
@@ -83,7 +71,7 @@ private:
 
 /// Driver for Windows 'link.exe' command line options
 namespace coff {
-void link(llvm::ArrayRef<const char *> args);
+bool link(llvm::ArrayRef<const char *> args);
 }
 
 namespace elf {

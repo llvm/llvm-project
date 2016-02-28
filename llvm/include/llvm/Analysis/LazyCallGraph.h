@@ -906,6 +906,8 @@ struct LazyCallGraphAnalysis : AnalysisBase<LazyCallGraphAnalysis> {
   LazyCallGraph run(Module &M) { return LazyCallGraph(M); }
 };
 
+extern template class AnalysisBase<LazyCallGraphAnalysis>;
+
 /// A pass which prints the call graph to a \c raw_ostream.
 ///
 /// This is primarily useful for testing the analysis.

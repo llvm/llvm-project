@@ -34,8 +34,6 @@ class UndefinedAtom;
 /// if an atom has been coalesced away.
 class SymbolTable {
 public:
-  explicit SymbolTable(LinkingContext &);
-
   /// @brief add atom to symbol table
   bool add(const DefinedAtom &);
 
@@ -98,7 +96,6 @@ private:
   bool addByName(const Atom &);
   bool addByContent(const DefinedAtom &);
 
-  LinkingContext &_ctx;
   AtomToAtom _replacedAtoms;
   NameToAtom _nameTable;
   AtomContentSet _contentTable;

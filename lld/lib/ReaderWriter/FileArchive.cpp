@@ -10,7 +10,6 @@
 #include "lld/Core/ArchiveLibraryFile.h"
 #include "lld/Core/LLVM.h"
 #include "lld/Core/LinkingContext.h"
-#include "lld/Core/Parallel.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
@@ -64,17 +63,6 @@ public:
 
     _membersInstantiated.insert(memberStart);
 
-    // Check if a file is preloaded.
-    {
-      std::lock_guard<std::mutex> lock(_mutex);
-      auto it = _preloaded.find(memberStart);
-      if (it != _preloaded.end()) {
-        std::unique_ptr<Future<File *>> &p = it->second;
-        Future<File *> *future = p.get();
-        return future->get();
-      }
-    }
-
     std::unique_ptr<File> result;
     if (instantiateMember(ci, result))
       return nullptr;
@@ -84,38 +72,6 @@ public:
 
     // Give up the file pointer. It was stored and will be destroyed with destruction of FileArchive
     return file;
-  }
-
-  // Instantiate a member file containing a given symbol name.
-  void preload(TaskGroup &group, StringRef name) override {
-    auto member = _symbolMemberMap.find(name);
-    if (member == _symbolMemberMap.end())
-      return;
-    Archive::child_iterator ci = member->second;
-    if (ci->getError())
-      return;
-
-    // Do nothing if a member is already instantiated.
-    ErrorOr<StringRef> buf = (*ci)->getBuffer();
-    if (!buf)
-      return;
-    const char *memberStart = buf->data();
-    if (_membersInstantiated.count(memberStart))
-      return;
-
-    std::lock_guard<std::mutex> lock(_mutex);
-    if (_preloaded.find(memberStart) != _preloaded.end())
-      return;
-
-    // Instantiate the member
-    auto *future = new Future<File *>();
-    _preloaded[memberStart] = std::unique_ptr<Future<File *>>(future);
-
-    group.spawn([=] {
-      std::unique_ptr<File> result;
-      std::error_code ec = instantiateMember(ci, result);
-      future->set(ec ? nullptr : result.release());
-    });
   }
 
   /// \brief parse each member
@@ -147,15 +103,6 @@ public:
 
   const AtomVector<AbsoluteAtom> &absolute() const override {
     return _noAbsoluteAtoms;
-  }
-
-  /// Returns a set of all defined symbols in the archive.
-  std::set<StringRef> getDefinedSymbols() override {
-    parse();
-    std::set<StringRef> ret;
-    for (const auto &e : _symbolMemberMap)
-      ret.insert(e.first);
-    return ret;
   }
 
 protected:
@@ -271,7 +218,6 @@ private:
   InstantiatedSet _membersInstantiated;
   bool _logLoading;
   std::vector<std::unique_ptr<MemoryBuffer>> _memberBuffers;
-  std::map<const char *, std::unique_ptr<Future<File *>>> _preloaded;
   std::mutex _mutex;
   FileVector _filesReturned;
 };

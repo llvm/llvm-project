@@ -22,6 +22,9 @@ add_lld_library(lldELF
   Option
   MC
   Support
+
+  LINK_LIBS
+  lldConfig
   )
 
 add_dependencies(lldELF ELFOptionsTableGen)

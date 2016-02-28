@@ -176,6 +176,8 @@ struct DominanceFrontierAnalysis : AnalysisBase<DominanceFrontierAnalysis> {
   DominanceFrontier run(Function &F, AnalysisManager<Function> *AM);
 };
 
+extern template class AnalysisBase<DominanceFrontierAnalysis>;
+
 /// \brief Printer pass for the \c DominanceFrontier.
 class DominanceFrontierPrinterPass
     : public PassBase<DominanceFrontierPrinterPass> {

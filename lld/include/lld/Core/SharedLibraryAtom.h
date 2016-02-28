@@ -25,9 +25,7 @@ public:
   };
 
   /// Returns shared library name used to load it at runtime.
-  /// On linux that is the DT_NEEDED name.
   /// On Darwin it is the LC_DYLIB_LOAD dylib name.
-  /// On Windows it is the DLL name that to be referred from .idata section.
   virtual StringRef loadName() const = 0;
 
   /// Returns if shared library symbol can be missing at runtime and if

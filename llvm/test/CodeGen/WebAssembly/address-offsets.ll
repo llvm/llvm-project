@@ -193,7 +193,7 @@ define i32 @load_test11_noinbounds(i32* %p) {
 ; CHECK-NEXT: result    i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -210,7 +210,7 @@ define i32 @load_test12(i32* %p, i32 %n) {
 ; CHECK-NEXT: result    i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -276,7 +276,7 @@ define i32 @load_test16(i32* %p, i32 %n) {
 ; CHECK-NEXT: result    i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -308,7 +308,7 @@ define i32 @load_test18(i32* %p, i32 %n) {
 ; CHECK-NEXT: result    i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -338,7 +338,7 @@ define i32 @load_test20(i32* %p) {
 ; CHECK-NEXT: result    i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, -40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.load  $push5=, 0($pop4){{$}}
@@ -523,7 +523,7 @@ define void @store_test11_noinbounds(i32* %p, i32 %i) {
 ; CHECK-NEXT: param     i32, i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.store $discard=, 0($pop4), $2{{$}}
@@ -539,7 +539,7 @@ define void @store_test12(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.store $discard=, 0($pop4), $2{{$}}
@@ -601,7 +601,7 @@ define void @store_test16(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.store $discard=, 0($pop4), $2{{$}}
@@ -631,7 +631,7 @@ define void @store_test18(i32* %p, i32 %n, i32 %i) {
 ; CHECK-NEXT: param     i32, i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.store $discard=, 0($pop4), $2{{$}}
@@ -659,7 +659,7 @@ define void @store_test20(i32* %p, i32 %i) {
 ; CHECK-NEXT: param     i32, i32, i32{{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.add   $push2=, $pop1, $0{{$}}
+; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
 ; CHECK-NEXT: i32.const $push3=, -40{{$}}
 ; CHECK-NEXT: i32.add   $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT: i32.store $discard=, 0($pop4), $2{{$}}

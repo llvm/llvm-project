@@ -1,5 +1,4 @@
 add_lld_unittest(DriverTests
-  UniversalDriverTest.cpp
   DarwinLdDriverTest.cpp
   )
 

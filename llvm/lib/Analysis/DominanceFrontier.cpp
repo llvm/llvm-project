@@ -56,6 +56,8 @@ LLVM_DUMP_METHOD void DominanceFrontierWrapperPass::dump() const {
 }
 #endif
 
+template class llvm::AnalysisBase<DominanceFrontierAnalysis>;
+
 DominanceFrontier DominanceFrontierAnalysis::run(Function &F,
                                                  FunctionAnalysisManager *AM) {
   DominanceFrontier DF;
