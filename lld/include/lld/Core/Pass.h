@@ -13,7 +13,6 @@
 #include "lld/Core/Atom.h"
 #include "lld/Core/File.h"
 #include "lld/Core/Reference.h"
-#include "lld/Core/range.h"
 #include <vector>
 
 namespace lld {

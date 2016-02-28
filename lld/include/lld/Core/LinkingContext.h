@@ -15,7 +15,6 @@
 #include "lld/Core/Node.h"
 #include "lld/Core/Parallel.h"
 #include "lld/Core/Reference.h"
-#include "lld/Core/range.h"
 #include "lld/Core/Reader.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -241,7 +240,7 @@ public:
 
   /// Return the list of undefined symbols that are specified in the
   /// linker command line, using the -u option.
-  range<const StringRef *> initialUndefinedSymbols() const {
+  ArrayRef<StringRef> initialUndefinedSymbols() const {
     return _initialUndefinedSymbols;
   }
 

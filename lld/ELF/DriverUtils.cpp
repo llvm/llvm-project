@@ -15,6 +15,7 @@
 
 #include "Driver.h"
 #include "Error.h"
+#include "lld/Config/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -76,6 +77,18 @@ opt::InputArgList elf::parseArgs(llvm::BumpPtrAllocator *A,
   if (Unknowns.begin() != Unknowns.end())
     error("unknown argument(s) found");
   return Args;
+}
+
+void elf::printHelp(const char *Argv0) {
+  ELFOptTable Table;
+  Table.PrintHelp(outs(), Argv0, "lld", false);
+}
+
+void elf::printVersion() {
+  outs() << "LLD " << getLLDVersion();
+  std::string S = getLLDRepositoryVersion();
+  if (!S.empty())
+    outs() << " " << S << "\n";
 }
 
 std::string elf::findFromSearchPaths(StringRef Path) {

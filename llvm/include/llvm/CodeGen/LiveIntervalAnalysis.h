@@ -105,7 +105,7 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
     // Calculate the spill weight to assign to a single instruction.
     static float getSpillWeight(bool isDef, bool isUse,
                                 const MachineBlockFrequencyInfo *MBFI,
-                                const MachineInstr *Instr);
+                                const MachineInstr &Instr);
 
     LiveInterval &getInterval(unsigned Reg) {
       if (hasInterval(Reg))
@@ -288,7 +288,7 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
     /// are not supported.
     ///
     /// \param UpdateFlags Update live intervals for nonallocatable physregs.
-    void handleMove(MachineInstr* MI, bool UpdateFlags = false);
+    void handleMove(MachineInstr &MI, bool UpdateFlags = false);
 
     /// moveIntoBundle - Update intervals for operands of MI so that they
     /// begin/end on the SlotIndex for BundleStart.
@@ -298,7 +298,7 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
     /// Requires MI and BundleStart to have SlotIndexes, and assumes
     /// existing liveness is accurate. BundleStart should be the first
     /// instruction in the Bundle.
-    void handleMoveIntoBundle(MachineInstr* MI, MachineInstr* BundleStart,
+    void handleMoveIntoBundle(MachineInstr &MI, MachineInstr &BundleStart,
                               bool UpdateFlags = false);
 
     /// repairIntervalsInRange - Update live intervals for instructions in a

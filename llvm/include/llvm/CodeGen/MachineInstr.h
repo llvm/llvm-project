@@ -742,7 +742,7 @@ public:
 
   /// Return true if this instruction is identical to (same
   /// opcode and same operands as) the specified instruction.
-  bool isIdenticalTo(const MachineInstr *Other,
+  bool isIdenticalTo(const MachineInstr &Other,
                      MICheckType Check = CheckDefs) const;
 
   /// Unlink 'this' from the containing basic block, and return it without
@@ -1154,7 +1154,7 @@ public:
 
   /// Copy implicit register operands from specified
   /// instruction to this instruction.
-  void copyImplicitOps(MachineFunction &MF, const MachineInstr *MI);
+  void copyImplicitOps(MachineFunction &MF, const MachineInstr &MI);
 
   //
   // Debugging support
@@ -1297,7 +1297,7 @@ struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
     if (RHS == getEmptyKey() || RHS == getTombstoneKey() ||
         LHS == getEmptyKey() || LHS == getTombstoneKey())
       return LHS == RHS;
-    return LHS->isIdenticalTo(RHS, MachineInstr::IgnoreVRegDefs);
+    return LHS->isIdenticalTo(*RHS, MachineInstr::IgnoreVRegDefs);
   }
 };
 

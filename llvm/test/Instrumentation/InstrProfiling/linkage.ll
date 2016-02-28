@@ -7,6 +7,7 @@
 @__profn_foo_weak = weak hidden constant [8 x i8] c"foo_weak"
 @"__profn_linkage.ll:foo_internal" = internal constant [23 x i8] c"linkage.ll:foo_internal"
 @__profn_foo_inline = linkonce_odr hidden constant [10 x i8] c"foo_inline"
+@__profn_foo_extern = linkonce_odr hidden constant [10 x i8] c"foo_extern"
 
 ; COMMON: @__profc_foo = hidden global
 ; COMMON: @__profd_foo = hidden global
@@ -33,6 +34,15 @@ define internal void @foo_internal() {
 ; COMMON: @__profd_foo_inline = linkonce_odr hidden global
 define linkonce_odr void @foo_inline() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @__profn_foo_inline, i32 0, i32 0), i64 0, i32 1, i32 0)
+  ret void
+}
+
+; LINUX: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_cnts", comdat($__profv_foo_extern), align 8
+; LINUX: @__profd_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_data", comdat($__profv_foo_extern), align 8
+; OTHER: @__profc_foo_extern = linkonce_odr hidden global
+; OTHER: @__profd_foo_extern = linkonce_odr hidden global
+define available_externally void @foo_extern() {
+  call void @llvm.instrprof.increment(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @__profn_foo_extern, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
 }
 

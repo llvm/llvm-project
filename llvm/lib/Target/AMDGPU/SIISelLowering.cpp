@@ -1178,25 +1178,35 @@ SDValue SITargetLowering::LowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
   FrameIndexSDNode *FINode = cast<FrameIndexSDNode>(Op);
   unsigned FrameIndex = FINode->getIndex();
 
-  // A FrameIndex node represents a 32-bit offset into scratch memory.  If
-  // the high bit of a frame index offset were to be set, this would mean
-  // that it represented an offset of ~2GB * 64 = ~128GB from the start of the
-  // scratch buffer, with 64 being the number of threads per wave.
+  // A FrameIndex node represents a 32-bit offset into scratch memory. If the
+  // high bit of a frame index offset were to be set, this would mean that it
+  // represented an offset of ~2GB * 64 = ~128GB from the start of the scratch
+  // buffer, with 64 being the number of threads per wave.
   //
-  // If we know the machine uses less than 128GB of scratch, then we can
-  // amrk the high bit of the FrameIndex node as known zero,
-  // which is important, because it means in most situations we can
-  // prove that values derived from FrameIndex nodes are non-negative.
-  // This enables us to take advantage of more addressing modes when
-  // accessing scratch buffers, since for scratch reads/writes, the register
-  // offset must always be positive.
+  // The maximum private allocation for the entire GPU is 4G, and we are
+  // concerned with the largest the index could ever be for an individual
+  // workitem. This will occur with the minmum dispatch size. If a program
+  // requires more, the dispatch size will be reduced.
+  //
+  // With this limit, we can mark the high bit of the FrameIndex node as known
+  // zero, which is important, because it means in most situations we can prove
+  // that values derived from FrameIndex nodes are non-negative. This enables us
+  // to take advantage of more addressing modes when accessing scratch buffers,
+  // since for scratch reads/writes, the register offset must always be
+  // positive.
+
+  uint64_t MaxGPUAlloc = UINT64_C(4) * 1024 * 1024 * 1024;
+
+  // XXX - It is unclear if partial dispatch works. Assume it works at half wave
+  // granularity. It is probably a full wave.
+  uint64_t MinGranularity = 32;
+
+  unsigned KnownBits = Log2_64(MaxGPUAlloc / MinGranularity);
+  EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), KnownBits);
 
   SDValue TFI = DAG.getTargetFrameIndex(FrameIndex, MVT::i32);
-  if (Subtarget->enableHugeScratchBuffer())
-    return TFI;
-
   return DAG.getNode(ISD::AssertZext, SL, MVT::i32, TFI,
-                    DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), 31)));
+                     DAG.getValueType(ExtVT));
 }
 
 bool SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {

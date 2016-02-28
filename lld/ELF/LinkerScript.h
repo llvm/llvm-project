@@ -40,11 +40,6 @@ private:
   StringRef SectionPattern;
 };
 
-struct OutSection {
-  StringRef Name;
-  std::vector<uint8_t> Filler;
-};
-
 // This is a runner of the linker script.
 class LinkerScript {
   friend class ScriptParser;
@@ -66,9 +61,11 @@ private:
   // SECTIONS commands.
   std::vector<SectionRule> Sections;
 
-  // Output sections information.
-  // They are sorted by the order of the container.
-  std::vector<OutSection> OutSections;
+  // Output sections are sorted by this order.
+  std::vector<StringRef> SectionOrder;
+
+  // Section fill attribute for each section.
+  llvm::StringMap<std::vector<uint8_t>> Filler;
 
   llvm::BumpPtrAllocator Alloc;
 };

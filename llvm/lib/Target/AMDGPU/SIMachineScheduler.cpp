@@ -1224,7 +1224,7 @@ void SIScheduleBlockCreator::scheduleInsideBlocks() {
         // is the most cpu intensive operation of the scheduler.
         // It would gain a lot if there was a way to recompute the
         // LiveIntervals for the entire scheduling region.
-        DAG->getLIS()->handleMove(MI, /*UpdateFlags=*/true);
+        DAG->getLIS()->handleMove(*MI, /*UpdateFlags=*/true);
         PosNew.push_back(CurrentTopFastSched);
       }
     }
@@ -1250,7 +1250,7 @@ void SIScheduleBlockCreator::scheduleInsideBlocks() {
       DAG->getBB()->splice(POld, DAG->getBB(), PNew);
 
       // Update LiveIntervals.
-      DAG->getLIS()->handleMove(POld, /*UpdateFlags=*/true);
+      DAG->getLIS()->handleMove(*POld, /*UpdateFlags=*/true);
     }
   }
 

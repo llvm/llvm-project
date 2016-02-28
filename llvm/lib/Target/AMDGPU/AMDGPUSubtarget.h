@@ -93,7 +93,6 @@ private:
   bool FeatureDisable;
   int LDSBankCount;
   unsigned IsaVersion;
-  bool EnableHugeScratchBuffer;
   bool EnableSIScheduler;
 
   std::unique_ptr<AMDGPUFrameLowering> FrameLowering;
@@ -291,10 +290,6 @@ public:
   // Helper functions to simplify if statements
   bool isTargetELF() const {
     return false;
-  }
-
-  bool enableHugeScratchBuffer() const {
-    return EnableHugeScratchBuffer;
   }
 
   bool enableSIScheduler() const {

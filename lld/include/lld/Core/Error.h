@@ -30,23 +30,6 @@ inline std::error_code make_error_code(YamlReaderError e) {
   return std::error_code(static_cast<int>(e), YamlReaderCategory());
 }
 
-const std::error_category &LinkerScriptReaderCategory();
-
-enum class LinkerScriptReaderError {
-  success = 0,
-  parse_error,
-  unknown_symbol_in_expr,
-  unrecognized_function_in_expr,
-  unknown_phdr_ids,
-  extra_program_phdr,
-  misplaced_program_phdr,
-  program_phdr_wrong_phdrs,
-};
-
-inline std::error_code make_error_code(LinkerScriptReaderError e) {
-  return std::error_code(static_cast<int>(e), LinkerScriptReaderCategory());
-}
-
 /// Creates an error_code object that has associated with it an arbitrary
 /// error messsage.  The value() of the error_code will always be non-zero
 /// but its value is meaningless. The messsage() will be (a copy of) the
@@ -61,8 +44,6 @@ std::error_code make_dynamic_error_code(const Twine &msg);
 
 namespace std {
 template <> struct is_error_code_enum<lld::YamlReaderError> : std::true_type {};
-template <>
-struct is_error_code_enum<lld::LinkerScriptReaderError> : std::true_type {};
 }
 
 #endif

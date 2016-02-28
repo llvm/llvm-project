@@ -271,10 +271,10 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
 //===----------------------------------------------------------------------===//
 
 /// HashMachineInstr - Compute a hash value for MI and its operands.
-static unsigned HashMachineInstr(const MachineInstr *MI) {
-  unsigned Hash = MI->getOpcode();
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &Op = MI->getOperand(i);
+static unsigned HashMachineInstr(const MachineInstr &MI) {
+  unsigned Hash = MI.getOpcode();
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    const MachineOperand &Op = MI.getOperand(i);
 
     // Merge in bits from the operand if easy. We can't use MachineOperand's
     // hash_code here because it's not deterministic and we sort by hash value
@@ -311,12 +311,12 @@ static unsigned HashMachineInstr(const MachineInstr *MI) {
 }
 
 /// HashEndOfMBB - Hash the last instruction in the MBB.
-static unsigned HashEndOfMBB(const MachineBasicBlock *MBB) {
-  MachineBasicBlock::const_iterator I = MBB->getLastNonDebugInstr();
-  if (I == MBB->end())
+static unsigned HashEndOfMBB(const MachineBasicBlock &MBB) {
+  MachineBasicBlock::const_iterator I = MBB.getLastNonDebugInstr();
+  if (I == MBB.end())
     return 0;
 
-  return HashMachineInstr(I);
+  return HashMachineInstr(*I);
 }
 
 /// ComputeCommonTailLength - Given two machine basic blocks, compute the number
@@ -357,7 +357,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
       --I2;
     }
     // I1, I2==first (untested) non-DBGs preceding known match
-    if (!I1->isIdenticalTo(I2) ||
+    if (!I1->isIdenticalTo(*I2) ||
         // FIXME: This check is dubious. It's used to get around a problem where
         // people incorrectly expect inline asm directives to remain in the same
         // relative order. This is untenable because normal compiler
@@ -777,7 +777,7 @@ removeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
 
     assert(MBBICommon != MBBIECommon &&
            "Reached BB end within common tail length!");
-    assert(MBBICommon->isIdenticalTo(&*MBBI) && "Expected matching MIIs!");
+    assert(MBBICommon->isIdenticalTo(*MBBI) && "Expected matching MIIs!");
 
     if (MBBICommon->mayLoad() || MBBICommon->mayStore())
       MBBICommon->setMemRefs(MBBICommon->mergeMemRefsWith(*MBBI));
@@ -925,7 +925,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
     if (MergePotentials.size() == TailMergeThreshold)
       break;
     if (!TriedMerging.count(&MBB) && MBB.succ_empty())
-      MergePotentials.push_back(MergePotentialsElt(HashEndOfMBB(&MBB), &MBB));
+      MergePotentials.push_back(MergePotentialsElt(HashEndOfMBB(MBB), &MBB));
   }
 
   // If this is a large problem, avoid visiting the same basic blocks
@@ -1033,7 +1033,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
                               NewCond, dl);
         }
 
-        MergePotentials.push_back(MergePotentialsElt(HashEndOfMBB(PBB), PBB));
+        MergePotentials.push_back(MergePotentialsElt(HashEndOfMBB(*PBB), PBB));
       }
     }
 
@@ -1275,11 +1275,11 @@ ReoptimizeBlock:
         // DBG_VALUE at the beginning of MBB.
         while (PrevBBIter != PrevBB.begin() && MBBIter != MBB->end()
                && PrevBBIter->isDebugValue() && MBBIter->isDebugValue()) {
-          if (!MBBIter->isIdenticalTo(PrevBBIter))
+          if (!MBBIter->isIdenticalTo(*PrevBBIter))
             break;
-          MachineInstr *DuplicateDbg = MBBIter;
+          MachineInstr &DuplicateDbg = *MBBIter;
           ++MBBIter; -- PrevBBIter;
-          DuplicateDbg->eraseFromParent();
+          DuplicateDbg.eraseFromParent();
         }
       }
       PrevBB.splice(PrevBB.end(), MBB, MBB->begin(), MBB->end());
@@ -1762,7 +1762,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       if (FIB == FIE)
         break;
     }
-    if (!TIB->isIdenticalTo(FIB, MachineInstr::CheckKillDead))
+    if (!TIB->isIdenticalTo(*FIB, MachineInstr::CheckKillDead))
       break;
 
     if (TII->isPredicated(*TIB))

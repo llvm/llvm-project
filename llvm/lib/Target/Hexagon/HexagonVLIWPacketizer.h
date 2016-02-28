@@ -50,12 +50,12 @@ public:
   void initPacketizerState() override;
 
   // ignorePseudoInstruction - Ignore bundling of pseudo instructions.
-  bool ignorePseudoInstruction(const MachineInstr *MI,
+  bool ignorePseudoInstruction(const MachineInstr &MI,
                                const MachineBasicBlock *MBB) override;
 
   // isSoloInstruction - return true if instruction MI can not be packetized
   // with any other instruction, which means that MI itself is a packet.
-  bool isSoloInstruction(const MachineInstr *MI) override;
+  bool isSoloInstruction(const MachineInstr &MI) override;
 
   // isLegalToPacketizeTogether - Is it legal to packetize SUI and SUJ
   // together.
@@ -65,9 +65,10 @@ public:
   // and SUJ.
   bool isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) override;
 
-  MachineBasicBlock::iterator addToPacket(MachineInstr *MI) override;
-  void endPacket(MachineBasicBlock *MBB, MachineInstr *MI) override;
-  bool shouldAddToPacket(const MachineInstr *MI) override;
+  MachineBasicBlock::iterator addToPacket(MachineInstr &MI) override;
+  void endPacket(MachineBasicBlock *MBB,
+                 MachineBasicBlock::iterator MI) override;
+  bool shouldAddToPacket(const MachineInstr &MI) override;
 
   void unpacketizeSoloInstrs(MachineFunction &MF);
 

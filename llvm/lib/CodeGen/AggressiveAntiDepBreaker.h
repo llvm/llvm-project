@@ -144,7 +144,7 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
     /// Update liveness information to account for the current
     /// instruction, which will not be scheduled.
     ///
-    void Observe(MachineInstr *MI, unsigned Count,
+    void Observe(MachineInstr &MI, unsigned Count,
                  unsigned InsertPosIndex) override;
 
     /// Finish anti-dep breaking for a basic block.
@@ -156,19 +156,19 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
 
     /// Return true if MO represents a register
     /// that is both implicitly used and defined in MI
-    bool IsImplicitDefUse(MachineInstr *MI, MachineOperand& MO);
+    bool IsImplicitDefUse(MachineInstr &MI, MachineOperand &MO);
 
     /// If MI implicitly def/uses a register, then
     /// return that register and all subregisters.
-    void GetPassthruRegs(MachineInstr *MI, std::set<unsigned>& PassthruRegs);
+    void GetPassthruRegs(MachineInstr &MI, std::set<unsigned> &PassthruRegs);
 
     void HandleLastUse(unsigned Reg, unsigned KillIdx, const char *tag,
                        const char *header = nullptr,
                        const char *footer = nullptr);
 
-    void PrescanInstruction(MachineInstr *MI, unsigned Count,
-                            std::set<unsigned>& PassthruRegs);
-    void ScanInstruction(MachineInstr *MI, unsigned Count);
+    void PrescanInstruction(MachineInstr &MI, unsigned Count,
+                            std::set<unsigned> &PassthruRegs);
+    void ScanInstruction(MachineInstr &MI, unsigned Count);
     BitVector GetRenameRegisters(unsigned Reg);
     bool FindSuitableFreeRegisters(unsigned AntiDepGroupIndex,
                                    RenameOrderType& RenameOrder,

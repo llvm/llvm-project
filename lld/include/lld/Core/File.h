@@ -14,7 +14,6 @@
 #include "lld/Core/DefinedAtom.h"
 #include "lld/Core/SharedLibraryAtom.h"
 #include "lld/Core/UndefinedAtom.h"
-#include "lld/Core/range.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -48,7 +47,6 @@ public:
     kindErrorObject,          ///< a error object file (.o)
     kindNormalizedObject,     ///< a normalized file (.o)
     kindMachObject,           ///< a MachO object file (.o)
-    kindELFObject,            ///< a ELF object file (.o)
     kindCEntryObject,         ///< a file for CEntries
     kindHeaderObject,         ///< a file for file headers
     kindEntryObject,          ///< a file for the entry

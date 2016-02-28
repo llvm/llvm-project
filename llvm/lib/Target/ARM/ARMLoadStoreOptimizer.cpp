@@ -1818,7 +1818,7 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
               Opcode == ARM::LDMIA_UPD) && "Unsupported multiple load-return!");
       PrevMI->setDesc(TII->get(NewOpc));
       MO.setReg(ARM::PC);
-      PrevMI->copyImplicitOps(*MBB.getParent(), &*MBBI);
+      PrevMI->copyImplicitOps(*MBB.getParent(), *MBBI);
       MBB.erase(MBBI);
       return true;
     }
@@ -1840,8 +1840,8 @@ bool ARMLoadStoreOpt::CombineMovBx(MachineBasicBlock &MBB) {
   for (auto Use : Prev->uses())
     if (Use.isKill()) {
       AddDefaultPred(BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(ARM::tBX))
-          .addReg(Use.getReg(), RegState::Kill))
-          .copyImplicitOps(&*MBBI);
+                         .addReg(Use.getReg(), RegState::Kill))
+          .copyImplicitOps(*MBBI);
       MBB.erase(MBBI);
       MBB.erase(Prev);
       return true;

@@ -383,7 +383,7 @@ bool
 TargetInstrInfo::produceSameValue(const MachineInstr *MI0,
                                   const MachineInstr *MI1,
                                   const MachineRegisterInfo *MRI) const {
-  return MI0->isIdenticalTo(MI1, MachineInstr::IgnoreVRegDefs);
+  return MI0->isIdenticalTo(*MI1, MachineInstr::IgnoreVRegDefs);
 }
 
 MachineInstr *TargetInstrInfo::duplicate(MachineInstr *Orig,

@@ -229,7 +229,6 @@ public:
 enum FileKinds {
   fileKindObjectAtoms, // atom based object file encoded in yaml
   fileKindArchive,     // static archive library encoded in yaml
-  fileKindObjectELF,   // ELF object files encoded in yaml
   fileKindObjectMachO  // mach-o object files encoded in yaml
 };
 
@@ -518,7 +517,6 @@ template <> struct ScalarEnumerationTraits<FileKinds> {
   static void enumeration(IO &io, FileKinds &value) {
     io.enumCase(value, "object",        fileKindObjectAtoms);
     io.enumCase(value, "archive",       fileKindArchive);
-    io.enumCase(value, "object-elf",    fileKindObjectELF);
     io.enumCase(value, "object-mach-o", fileKindObjectMachO);
   }
 };

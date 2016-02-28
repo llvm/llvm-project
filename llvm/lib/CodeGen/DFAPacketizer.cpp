@@ -135,16 +135,16 @@ void DFAPacketizer::reserveResources(const llvm::MCInstrDesc *MID) {
 
 // Check if the resources occupied by a machine instruction are available
 // in the current state.
-bool DFAPacketizer::canReserveResources(llvm::MachineInstr *MI) {
-  const llvm::MCInstrDesc &MID = MI->getDesc();
+bool DFAPacketizer::canReserveResources(llvm::MachineInstr &MI) {
+  const llvm::MCInstrDesc &MID = MI.getDesc();
   return canReserveResources(&MID);
 }
 
 
 // Reserve the resources occupied by a machine instruction and change the
 // current state to reflect that change.
-void DFAPacketizer::reserveResources(llvm::MachineInstr *MI) {
-  const llvm::MCInstrDesc &MID = MI->getDesc();
+void DFAPacketizer::reserveResources(llvm::MachineInstr &MI) {
+  const llvm::MCInstrDesc &MID = MI.getDesc();
   reserveResources(&MID);
 }
 
@@ -195,10 +195,11 @@ VLIWPacketizerList::~VLIWPacketizerList() {
 
 
 // End the current packet, bundle packet instructions and reset DFA state.
-void VLIWPacketizerList::endPacket(MachineBasicBlock *MBB, MachineInstr *MI) {
+void VLIWPacketizerList::endPacket(MachineBasicBlock *MBB,
+                                   MachineBasicBlock::iterator MI) {
   if (CurrentPacketMIs.size() > 1) {
-    MachineInstr *MIFirst = CurrentPacketMIs.front();
-    finalizeBundle(*MBB, MIFirst->getIterator(), MI->getIterator());
+    MachineInstr &MIFirst = *CurrentPacketMIs.front();
+    finalizeBundle(*MBB, MIFirst.getIterator(), MI.getInstrIterator());
   }
   CurrentPacketMIs.clear();
   ResourceTracker->clearResources();
@@ -222,7 +223,7 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
 
   // The main packetizer loop.
   for (; BeginItr != EndItr; ++BeginItr) {
-    MachineInstr *MI = BeginItr;
+    MachineInstr &MI = *BeginItr;
     initPacketizerState();
 
     // End the current packet if needed.
@@ -235,7 +236,7 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
     if (ignorePseudoInstruction(MI, MBB))
       continue;
 
-    SUnit *SUI = MIToSUnit[MI];
+    SUnit *SUI = MIToSUnit[&MI];
     assert(SUI && "Missing SUnit Info!");
 
     // Ask DFA if machine resource is available for MI.

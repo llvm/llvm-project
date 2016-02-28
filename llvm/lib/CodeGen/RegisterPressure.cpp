@@ -438,7 +438,7 @@ class RegisterOperandsCollector {
       TrackLaneMasks(TrackLaneMasks), IgnoreDead(IgnoreDead) {}
 
   void collectInstr(const MachineInstr &MI) const {
-    for (ConstMIBundleOperands OperI(&MI); OperI.isValid(); ++OperI)
+    for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
       collectOperand(*OperI);
 
     // Remove redundant physreg dead defs.

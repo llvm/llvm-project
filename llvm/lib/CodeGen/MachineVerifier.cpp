@@ -1588,7 +1588,7 @@ void MachineVerifier::verifyLiveRangeValue(const LiveRange &LR,
   if (Reg != 0) {
     bool hasDef = false;
     bool isEarlyClobber = false;
-    for (ConstMIBundleOperands MOI(MI); MOI.isValid(); ++MOI) {
+    for (ConstMIBundleOperands MOI(*MI); MOI.isValid(); ++MOI) {
       if (!MOI->isReg() || !MOI->isDef())
         continue;
       if (TargetRegisterInfo::isVirtualRegister(Reg)) {
@@ -1727,7 +1727,7 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
     // use, or a dead flag on a def.
     bool hasRead = false;
     bool hasSubRegDef = false;
-    for (ConstMIBundleOperands MOI(MI); MOI.isValid(); ++MOI) {
+    for (ConstMIBundleOperands MOI(*MI); MOI.isValid(); ++MOI) {
       if (!MOI->isReg() || MOI->getReg() != Reg)
         continue;
       if (LaneMask != 0 &&

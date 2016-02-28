@@ -286,8 +286,38 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
   return F->hasAddressTaken();
 }
 
-static inline Comdat *getOrCreateProfileComdat(Module &M,
+static inline bool needsComdatForCounter(Function &F, Module &M) {
+
+  if (F.hasComdat())
+    return true;
+
+  Triple TT(M.getTargetTriple());
+  if (!TT.isOSBinFormatELF())
+    return false;
+
+  // See createPGOFuncNameVar for more details. To avoid link errors, profile
+  // counters for function with available_externally linkage needs to be changed
+  // to linkonce linkage. On ELF based systems, this leads to weak symbols to be
+  // created. Without using comdat, duplicate entries won't be removed by the
+  // linker leading to increased data segement size and raw profile size. Even
+  // worse, since the referenced counter from profile per-function data object
+  // will be resolved to the common strong definition, the profile counts for
+  // available_externally functions will end up being duplicated in raw profile
+  // data. This can result in distorted profile as the counts of those dups
+  // will be accumulated by the profile merger.
+  GlobalValue::LinkageTypes Linkage = F.getLinkage();
+  if (Linkage != GlobalValue::ExternalWeakLinkage &&
+      Linkage != GlobalValue::AvailableExternallyLinkage)
+    return false;
+
+  return true;
+}
+
+static inline Comdat *getOrCreateProfileComdat(Module &M, Function &F,
                                                InstrProfIncrementInst *Inc) {
+  if (!needsComdatForCounter(F, M))
+    return nullptr;
+
   // COFF format requires a COMDAT section to have a key symbol with the same
   // name. The linker targeting COFF also requires that the COMDAT
   // a section is associated to must precede the associating section. For this
@@ -315,8 +345,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // linking.
   Function *Fn = Inc->getParent()->getParent();
   Comdat *ProfileVarsComdat = nullptr;
-  if (Fn->hasComdat())
-    ProfileVarsComdat = getOrCreateProfileComdat(*M, Inc);
+  ProfileVarsComdat = getOrCreateProfileComdat(*M, *Fn, Inc);
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
   LLVMContext &Ctx = M->getContext();

@@ -341,7 +341,6 @@ bool Resolver::resolveUndefines() {
     case File::kindErrorObject:
     case File::kindNormalizedObject:
     case File::kindMachObject:
-    case File::kindELFObject:
     case File::kindCEntryObject:
     case File::kindHeaderObject:
     case File::kindEntryObject:

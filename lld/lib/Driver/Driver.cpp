@@ -103,7 +103,6 @@ bool Driver::link(LinkingContext &ctx, raw_ostream &diagnostics) {
 
   // Give target a chance to postprocess input files.
   // Mach-O uses this chance to move all object files before library files.
-  // ELF adds specific undefined symbols resolver.
   ctx.finalizeInputFiles();
 
   // Do core linking.

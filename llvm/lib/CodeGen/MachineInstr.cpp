@@ -948,23 +948,23 @@ bool MachineInstr::hasPropertyInBundle(unsigned Mask, QueryType Type) const {
   }
 }
 
-bool MachineInstr::isIdenticalTo(const MachineInstr *Other,
+bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
                                  MICheckType Check) const {
   // If opcodes or number of operands are not the same then the two
   // instructions are obviously not identical.
-  if (Other->getOpcode() != getOpcode() ||
-      Other->getNumOperands() != getNumOperands())
+  if (Other.getOpcode() != getOpcode() ||
+      Other.getNumOperands() != getNumOperands())
     return false;
 
   if (isBundle()) {
     // Both instructions are bundles, compare MIs inside the bundle.
     MachineBasicBlock::const_instr_iterator I1 = getIterator();
     MachineBasicBlock::const_instr_iterator E1 = getParent()->instr_end();
-    MachineBasicBlock::const_instr_iterator I2 = Other->getIterator();
-    MachineBasicBlock::const_instr_iterator E2= Other->getParent()->instr_end();
+    MachineBasicBlock::const_instr_iterator I2 = Other.getIterator();
+    MachineBasicBlock::const_instr_iterator E2 = Other.getParent()->instr_end();
     while (++I1 != E1 && I1->isInsideBundle()) {
       ++I2;
-      if (I2 == E2 || !I2->isInsideBundle() || !I1->isIdenticalTo(&*I2, Check))
+      if (I2 == E2 || !I2->isInsideBundle() || !I1->isIdenticalTo(*I2, Check))
         return false;
     }
   }
@@ -972,7 +972,7 @@ bool MachineInstr::isIdenticalTo(const MachineInstr *Other,
   // Check operands to make sure they match.
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = getOperand(i);
-    const MachineOperand &OMO = Other->getOperand(i);
+    const MachineOperand &OMO = Other.getOperand(i);
     if (!MO.isReg()) {
       if (!MO.isIdenticalTo(OMO))
         return false;
@@ -1005,8 +1005,8 @@ bool MachineInstr::isIdenticalTo(const MachineInstr *Other,
   }
   // If DebugLoc does not match then two dbg.values are not identical.
   if (isDebugValue())
-    if (getDebugLoc() && Other->getDebugLoc() &&
-        getDebugLoc() != Other->getDebugLoc())
+    if (getDebugLoc() && Other.getDebugLoc() &&
+        getDebugLoc() != Other.getDebugLoc())
       return false;
   return true;
 }
@@ -1188,7 +1188,7 @@ const TargetRegisterClass *MachineInstr::getRegClassConstraintEffectForVReg(
   // Check every operands inside the bundle if we have
   // been asked to.
   if (ExploreBundle)
-    for (ConstMIBundleOperands OpndIt(this); OpndIt.isValid() && CurRC;
+    for (ConstMIBundleOperands OpndIt(*this); OpndIt.isValid() && CurRC;
          ++OpndIt)
       CurRC = OpndIt->getParent()->getRegClassConstraintEffectForVRegImpl(
           OpndIt.getOperandNo(), Reg, CurRC, TII, TRI);
@@ -1615,10 +1615,10 @@ bool MachineInstr::allDefsAreDead() const {
 /// copyImplicitOps - Copy implicit register operands from specified
 /// instruction to this instruction.
 void MachineInstr::copyImplicitOps(MachineFunction &MF,
-                                   const MachineInstr *MI) {
-  for (unsigned i = MI->getDesc().getNumOperands(), e = MI->getNumOperands();
+                                   const MachineInstr &MI) {
+  for (unsigned i = MI.getDesc().getNumOperands(), e = MI.getNumOperands();
        i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+    const MachineOperand &MO = MI.getOperand(i);
     if ((MO.isReg() && MO.isImplicit()) || MO.isRegMask())
       addOperand(MF, MO);
   }

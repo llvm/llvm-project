@@ -51,3 +51,6 @@
 
         ! CHECK: st %fsr, [%g2+%i5]    ! encoding: [0xc1,0x28,0x80,0x1d]
         st %fsr,[%g2 + %i5]
+
+        ! CHECK: std %fq, [%g6+%i2]    ! encoding: [0xc1,0x31,0x80,0x1a]
+        std %fq, [%g6 + %i2]

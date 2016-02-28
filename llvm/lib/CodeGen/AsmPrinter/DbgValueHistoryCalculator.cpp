@@ -40,7 +40,7 @@ void DbgValueHistoryMap::startInstrRange(InlinedVariable Var,
   assert(MI.isDebugValue() && "not a DBG_VALUE");
   auto &Ranges = VarInstrRanges[Var];
   if (!Ranges.empty() && Ranges.back().second == nullptr &&
-      Ranges.back().first->isIdenticalTo(&MI)) {
+      Ranges.back().first->isIdenticalTo(MI)) {
     DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
                  << "\t" << Ranges.back().first << "\t" << MI << "\n");
     return;

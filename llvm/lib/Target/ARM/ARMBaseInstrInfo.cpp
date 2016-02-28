@@ -1531,7 +1531,7 @@ bool ARMBaseInstrInfo::produceSameValue(const MachineInstr *MI0,
     return true;
   }
 
-  return MI0->isIdenticalTo(MI1, MachineInstr::IgnoreVRegDefs);
+  return MI0->isIdenticalTo(*MI1, MachineInstr::IgnoreVRegDefs);
 }
 
 /// areLoadsFromSameBasePtr - This is used by the pre-regalloc scheduler to

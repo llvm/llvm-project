@@ -57,6 +57,9 @@ def fini : Separate<["-"], "fini">, MetaVarName<"<symbol>">,
 def hash_style : Separate<["--", "-"], "hash-style">,
   HelpText<"Specify hash style (sysv, gnu or both)">;
 
+def help : Flag<["--", "-"], "help">,
+  HelpText<"Print option help">;
+
 def icf : Flag<["--"], "icf=all">,
   HelpText<"Enable Identical Code Folding.">;
 
@@ -118,6 +121,9 @@ def undefined : Joined<["--"], "undefined=">,
   HelpText<"Force undefined symbol during linking">;
 
 def verbose : Flag<["--"], "verbose">;
+
+def version : Flag<["--", "-"], "version">,
+  HelpText<"Display the version number">;
 
 def whole_archive : Flag<["--", "-"], "whole-archive">,
   HelpText<"Force load of all members in a static library">;

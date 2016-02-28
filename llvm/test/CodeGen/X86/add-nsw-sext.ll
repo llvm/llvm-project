@@ -25,7 +25,7 @@ define i64 @add_nsw_sext_add(i32 %i, i64 %x) {
 ; CHECK-LABEL: add_nsw_sext_add:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    leaq 5(%rax,%rsi), %rax
+; CHECK-NEXT:    leaq 5(%rsi,%rax), %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, 5
@@ -72,7 +72,7 @@ define i8* @gep8(i32 %i, i8* %x) {
 ; CHECK-LABEL: gep8:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    leaq 5(%rax,%rsi), %rax
+; CHECK-NEXT:    leaq 5(%rsi,%rax), %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, 5
@@ -127,7 +127,7 @@ define i128* @gep128(i32 %i, i128* %x) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movslq %edi, %rax
 ; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    leaq 80(%rax,%rsi), %rax
+; CHECK-NEXT:    leaq 80(%rsi,%rax), %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, 5

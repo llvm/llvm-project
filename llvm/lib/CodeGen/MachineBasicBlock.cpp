@@ -1199,7 +1199,7 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
       --I;
 
       MachineOperandIteratorBase::PhysRegInfo Info =
-        ConstMIOperands(I).analyzePhysReg(Reg, TRI);
+          ConstMIOperands(*I).analyzePhysReg(Reg, TRI);
 
       // Defs happen after uses so they take precedence if both are present.
 
@@ -1237,7 +1237,7 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
   if (I != end()) {
     for (++I; I != end() && N > 0; ++I, --N) {
       MachineOperandIteratorBase::PhysRegInfo Info =
-        ConstMIOperands(I).analyzePhysReg(Reg, TRI);
+          ConstMIOperands(*I).analyzePhysReg(Reg, TRI);
 
       // Register is live when we read it here.
       if (Info.Read)
