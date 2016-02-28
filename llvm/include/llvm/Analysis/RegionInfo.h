@@ -929,6 +929,8 @@ struct RegionInfoAnalysis : AnalysisBase<RegionInfoAnalysis> {
   RegionInfo run(Function &F, AnalysisManager<Function> *AM);
 };
 
+extern template class AnalysisBase<RegionInfoAnalysis>;
+
 /// \brief Printer pass for the \c RegionInfo.
 class RegionInfoPrinterPass : public PassBase<RegionInfoPrinterPass> {
   raw_ostream &OS;

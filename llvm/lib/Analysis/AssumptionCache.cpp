@@ -74,6 +74,8 @@ void AssumptionCache::registerAssumption(CallInst *CI) {
 #endif
 }
 
+template class llvm::AnalysisBase<AssumptionAnalysis>;
+
 PreservedAnalyses AssumptionPrinterPass::run(Function &F,
                                              AnalysisManager<Function> *AM) {
   AssumptionCache &AC = AM->getResult<AssumptionAnalysis>(F);

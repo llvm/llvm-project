@@ -1421,6 +1421,8 @@ namespace llvm {
     ScalarEvolution run(Function &F, AnalysisManager<Function> *AM);
   };
 
+  extern template class AnalysisBase<ScalarEvolutionAnalysis>;
+
   /// \brief Printer pass for the \c ScalarEvolutionAnalysis results.
   class ScalarEvolutionPrinterPass
       : public PassBase<ScalarEvolutionPrinterPass> {

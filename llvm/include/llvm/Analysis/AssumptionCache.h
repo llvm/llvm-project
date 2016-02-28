@@ -105,6 +105,8 @@ struct AssumptionAnalysis : AnalysisBase<AssumptionAnalysis> {
   AssumptionCache run(Function &F) { return AssumptionCache(F); }
 };
 
+extern template class AnalysisBase<AssumptionAnalysis>;
+
 /// \brief Printer pass for the \c AssumptionAnalysis results.
 class AssumptionPrinterPass : public PassBase<AssumptionPrinterPass> {
   raw_ostream &OS;

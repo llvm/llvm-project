@@ -641,6 +641,8 @@ void LoopInfo::markAsRemoved(Loop *Unloop) {
   }
 }
 
+template class llvm::AnalysisBase<LoopAnalysis>;
+
 LoopInfo LoopAnalysis::run(Function &F, AnalysisManager<Function> *AM) {
   // FIXME: Currently we create a LoopInfo from scratch for every function.
   // This may prove to be too wasteful due to deallocating and re-allocating

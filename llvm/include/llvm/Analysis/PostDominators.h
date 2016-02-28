@@ -46,6 +46,8 @@ struct PostDominatorTreeAnalysis : AnalysisBase<PostDominatorTreeAnalysis> {
   PostDominatorTree run(Function &F);
 };
 
+extern template class AnalysisBase<PostDominatorTreeAnalysis>;
+
 /// \brief Printer pass for the \c PostDominatorTree.
 class PostDominatorTreePrinterPass
     : public PassBase<PostDominatorTreePrinterPass> {

@@ -48,11 +48,15 @@ extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 typedef InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>
     CGSCCAnalysisManagerModuleProxy;
 
+extern template class AnalysisBase<CGSCCAnalysisManagerModuleProxy>;
+
 extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
                                                 LazyCallGraph::SCC>;
 /// A proxy from a \c ModuleAnalysisManager to an \c SCC.
 typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC>
     ModuleAnalysisManagerCGSCCProxy;
+
+extern template class AnalysisBase<ModuleAnalysisManagerCGSCCProxy>;
 
 /// \brief The core module pass which does a post-order walk of the SCCs and
 /// runs a CGSCC pass over each one.
@@ -143,6 +147,8 @@ extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
 /// A proxy from a \c FunctionAnalysisManager to an \c SCC.
 typedef InnerAnalysisManagerProxy<FunctionAnalysisManager, LazyCallGraph::SCC>
     FunctionAnalysisManagerCGSCCProxy;
+
+extern template class AnalysisBase<FunctionAnalysisManagerCGSCCProxy>;
 
 extern template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 /// A proxy from a \c CGSCCAnalysisManager to a \c Function.

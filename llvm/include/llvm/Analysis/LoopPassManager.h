@@ -43,6 +43,8 @@ extern template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
 typedef InnerAnalysisManagerProxy<LoopAnalysisManager, Function>
     LoopAnalysisManagerFunctionProxy;
 
+extern template class AnalysisBase<LoopAnalysisManagerFunctionProxy>;
+
 extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>;
 /// A proxy from a \c FunctionAnalysisManager to a \c Loop.
 typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>
