@@ -24,6 +24,7 @@ class TestSwiftReturns(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.skipIfLinux  # bugs.swift.org/SR-841
     def test_swift_returns(self):
         """Test getting return values"""
         self.build()
