@@ -136,6 +136,7 @@ std::unique_ptr<Module> llvm::CloneModule(
         VMap[&*J] = &*DestI++;
       }
 
+      CloneDebugInfoMetadata(F, &*I, VMap);
       SmallVector<ReturnInst*, 8> Returns;  // Ignore returns cloned.
       CloneFunctionInto(F, &*I, VMap, /*ModuleLevelChanges=*/true, Returns);
     }

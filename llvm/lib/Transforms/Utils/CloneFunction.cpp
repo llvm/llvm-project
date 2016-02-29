@@ -187,8 +187,8 @@ static void AddOperand(DICompileUnit *CU, DISubprogramArray SPs,
 
 // Clone the module-level debug info associated with OldFunc. The cloned data
 // will point to NewFunc instead.
-static void CloneDebugInfoMetadata(Function *NewFunc, const Function *OldFunc,
-                            ValueToValueMapTy &VMap) {
+void llvm::CloneDebugInfoMetadata(Function *NewFunc, const Function *OldFunc,
+                                  ValueToValueMapTy &VMap) {
   DebugInfoFinder Finder;
   Finder.processModule(*OldFunc->getParent());
 
