@@ -26,8 +26,8 @@ int sockfd;
 
 static void *client_thread_udp(void *data) {
   const char buf[kBufSize] = {0, };
-  socklen_t addrlen;
   struct sockaddr_in serveraddr;
+  socklen_t addrlen = sizeof(serveraddr);
 
   int succeeded = getsockname(sockfd, (struct sockaddr *)&serveraddr, &addrlen);
   CHECK_ERROR(succeeded < 0, "in getsockname");
