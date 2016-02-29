@@ -214,7 +214,7 @@ void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
   bool VisitedOnce = false;
   applyForEachSymbolRole(Roles, [&](SymbolRole Role) {
     if (VisitedOnce)
-      OS << '/';
+      OS << ',';
     else
       VisitedOnce = true;
     switch (Role) {
