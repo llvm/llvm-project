@@ -88,8 +88,9 @@ enum class SymbolRole : uint16_t {
   RelationBaseOf      = 1 << 10,
   RelationOverrideOf  = 1 << 11,
   RelationReceivedBy  = 1 << 12,
+  RelationCalledBy    = 1 << 13,
 };
-static const unsigned SymbolRoleBitNum = 13;
+static const unsigned SymbolRoleBitNum = 14;
 typedef unsigned SymbolRoleSet;
 
 /// Represents a relation to another symbol for a symbol occurrence.
