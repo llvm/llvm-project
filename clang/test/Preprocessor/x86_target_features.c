@@ -178,6 +178,36 @@
 // AVX512F2: #define __SSE__ 1
 // AVX512F2: #define __SSSE3__ 1
 
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512ifma -x c -E -dM -o - %s | FileCheck --check-prefix=AVX512IFMA %s
+
+// AVX512IFMA: #define __AVX2__ 1
+// AVX512IFMA: #define __AVX512F__ 1
+// AVX512IFMA: #define __AVX512IFMA__ 1
+// AVX512IFMA: #define __AVX__ 1
+// AVX512IFMA: #define __SSE2_MATH__ 1
+// AVX512IFMA: #define __SSE2__ 1
+// AVX512IFMA: #define __SSE3__ 1
+// AVX512IFMA: #define __SSE4_1__ 1
+// AVX512IFMA: #define __SSE4_2__ 1
+// AVX512IFMA: #define __SSE_MATH__ 1
+// AVX512IFMA: #define __SSE__ 1
+// AVX512IFMA: #define __SSSE3__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512vbmi -x c -E -dM -o - %s | FileCheck --check-prefix=AVX512VBMI %s
+
+// AVX512VBMI: #define __AVX2__ 1
+// AVX512VBMI: #define __AVX512F__ 1
+// AVX512VBMI: #define __AVX512VBMI__ 1
+// AVX512VBMI: #define __AVX__ 1
+// AVX512VBMI: #define __SSE2_MATH__ 1
+// AVX512VBMI: #define __SSE2__ 1
+// AVX512VBMI: #define __SSE3__ 1
+// AVX512VBMI: #define __SSE4_1__ 1
+// AVX512VBMI: #define __SSE4_2__ 1
+// AVX512VBMI: #define __SSE_MATH__ 1
+// AVX512VBMI: #define __SSE__ 1
+// AVX512VBMI: #define __SSSE3__ 1
+
 // RUN: %clang -target i386-unknown-unknown -march=atom -msse4.2 -x c -E -dM -o - %s | FileCheck --check-prefix=SSE42POPCNT %s
 
 // SSE42POPCNT: #define __POPCNT__ 1

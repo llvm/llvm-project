@@ -666,14 +666,7 @@ void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {
   OS << getOpenMPSimpleClauseTypeName(OMPC_schedule, Node->getScheduleKind());
   if (auto *E = Node->getChunkSize()) {
     OS << ", ";
-    if (Node->getPreInitStmt()) {
-      cast<OMPCapturedExprDecl>(
-          cast<DeclRefExpr>(E->IgnoreImpCasts())->getDecl())
-          ->getInit()
-          ->IgnoreImpCasts()
-          ->printPretty(OS, nullptr, Policy);
-    } else
-      E->printPretty(OS, nullptr, Policy);
+    E->printPretty(OS, nullptr, Policy);
   }
   OS << ")";
 }
@@ -775,8 +768,8 @@ void OMPClausePrinter::VisitOMPClauseList(T *Node, char StartSym) {
     assert(*I && "Expected non-null Stmt");
     OS << (I == Node->varlist_begin() ? StartSym : ',');
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(*I)) {
-      if (auto *CED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl()))
-        CED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy, 0);
+      if (isa<OMPCapturedExprDecl>(DRE->getDecl()))
+        DRE->printPretty(OS, nullptr, Policy, 0);
       else
         DRE->getDecl()->printQualifiedName(OS);
     } else
@@ -924,14 +917,7 @@ void OMPClausePrinter::VisitOMPDistScheduleClause(OMPDistScheduleClause *Node) {
                            OMPC_dist_schedule, Node->getDistScheduleKind());
   if (auto *E = Node->getChunkSize()) {
     OS << ", ";
-    if (Node->getPreInitStmt()) {
-      cast<OMPCapturedExprDecl>(
-          cast<DeclRefExpr>(E->IgnoreImpCasts())->getDecl())
-          ->getInit()
-          ->IgnoreImpCasts()
-          ->printPretty(OS, nullptr, Policy);
-    } else
-      E->printPretty(OS, nullptr, Policy);
+    E->printPretty(OS, nullptr, Policy);
   }
   OS << ")";
 }
@@ -1150,6 +1136,10 @@ void StmtPrinter::VisitOMPDistributeDirective(OMPDistributeDirective *Node) {
 //===----------------------------------------------------------------------===//
 
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
+  if (auto *OCED = dyn_cast<OMPCapturedExprDecl>(Node->getDecl())) {
+    OCED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy);
+    return;
+  }
   if (NestedNameSpecifier *Qualifier = Node->getQualifier())
     Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
