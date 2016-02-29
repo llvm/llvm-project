@@ -92,12 +92,13 @@ namespace {
 class ObjCDeallocChecker
     : public Checker<check::ASTDecl<ObjCImplementationDecl>,
                      check::PreObjCMessage, check::PostObjCMessage,
+                     check::PreCall,
                      check::BeginFunction, check::EndFunction,
                      eval::Assume,
                      check::PointerEscape,
                      check::PreStmt<ReturnStmt>> {
 
-  mutable IdentifierInfo *NSObjectII, *SenTestCaseII;
+  mutable IdentifierInfo *NSObjectII, *SenTestCaseII, *Block_releaseII;
   mutable Selector DeallocSel, ReleaseSel;
 
   std::unique_ptr<BugType> MissingReleaseBugType;
@@ -110,6 +111,7 @@ public:
                     BugReporter &BR) const;
   void checkBeginFunction(CheckerContext &Ctx) const;
   void checkPreObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
 
   ProgramStateRef evalAssume(ProgramStateRef State, SVal Cond,
@@ -152,6 +154,7 @@ private:
   const ObjCPropertyDecl *
   findShadowedPropertyDecl(const ObjCPropertyImplDecl *PropImpl) const;
 
+  void transitionToReleaseValue(CheckerContext &C, SymbolRef Value) const;
   ProgramStateRef removeValueRequiringRelease(ProgramStateRef State,
                                               SymbolRef InstanceSym,
                                               SymbolRef ValueSym) const;
@@ -341,19 +344,26 @@ void ObjCDeallocChecker::checkPreObjCMessage(
   if (!ReleasedValue)
     return;
 
-  SymbolRef InstanceSym = getInstanceSymbolFromIvarSymbol(ReleasedValue);
-  if (!InstanceSym)
-    return;
-  ProgramStateRef InitialState = C.getState();
-
-  ProgramStateRef ReleasedState =
-      removeValueRequiringRelease(InitialState, InstanceSym, ReleasedValue);
-
-  if (ReleasedState != InitialState) {
-    C.addTransition(ReleasedState);
-  }
+  transitionToReleaseValue(C, ReleasedValue);
 }
 
+/// If we are in -dealloc or -dealloc is on the stack, handle the call if it is
+/// call to Block_release().
+void ObjCDeallocChecker::checkPreCall(const CallEvent &Call,
+                                      CheckerContext &C) const {
+  const IdentifierInfo *II = Call.getCalleeIdentifier();
+  if (II != Block_releaseII)
+    return;
+
+  if (Call.getNumArgs() != 1)
+    return;
+
+  SymbolRef ReleasedValue = Call.getArgSVal(0).getAsSymbol();
+  if (!ReleasedValue)
+    return;
+
+  transitionToReleaseValue(C, ReleasedValue);
+}
 /// If the message was a call to '[super dealloc]', diagnose any missing
 /// releases.
 void ObjCDeallocChecker::checkPostObjCMessage(
@@ -684,6 +694,7 @@ void ObjCDeallocChecker::initIdentifierInfoAndSelectors(
 
   NSObjectII = &Ctx.Idents.get("NSObject");
   SenTestCaseII = &Ctx.Idents.get("SenTestCase");
+  Block_releaseII = &Ctx.Idents.get("_Block_release");
 
   IdentifierInfo *DeallocII = &Ctx.Idents.get("dealloc");
   IdentifierInfo *ReleaseII = &Ctx.Idents.get("release");
@@ -737,6 +748,23 @@ const ObjCPropertyDecl *ObjCDeallocChecker::findShadowedPropertyDecl(
   }
 
   return nullptr;
+}
+
+/// Add a transition noting the release of the given value.
+void ObjCDeallocChecker::transitionToReleaseValue(CheckerContext &C,
+                                                  SymbolRef Value) const {
+  assert(Value);
+  SymbolRef InstanceSym = getInstanceSymbolFromIvarSymbol(Value);
+  if (!InstanceSym)
+    return;
+  ProgramStateRef InitialState = C.getState();
+
+  ProgramStateRef ReleasedState =
+      removeValueRequiringRelease(InitialState, InstanceSym, Value);
+
+  if (ReleasedState != InitialState) {
+    C.addTransition(ReleasedState);
+  }
 }
 
 /// Remove the Value requiring a release from the tracked set for

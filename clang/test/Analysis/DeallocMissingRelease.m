@@ -125,6 +125,9 @@
   void (^_blockPropertyIvar)(void);
 }
 @property (copy) void (^blockProperty)(void);
+@property (copy) void (^blockProperty2)(void);
+@property (copy) void (^blockProperty3)(void);
+
 @end
 
 @implementation MyPropertyClass4
@@ -132,6 +135,9 @@
 - (void)dealloc
 {
 #if NON_ARC
+  [_blockProperty2 release];
+  Block_release(_blockProperty3);
+
   [super dealloc]; // expected-warning {{The '_blockPropertyIvar' ivar in 'MyPropertyClass4' was copied by a synthesized property but not released before '[super dealloc]'}}
 #endif
 }
