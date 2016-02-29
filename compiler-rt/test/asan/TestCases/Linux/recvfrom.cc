@@ -2,7 +2,6 @@
 //
 // RUN: %clangxx_asan %s -o %t && not %run %t 2>&1 | FileCheck %s
 //
-// REQUIRES: broken
 // UNSUPPORTED: android
 
 #include <stdio.h>
@@ -14,66 +13,57 @@
 #include <sys/socket.h>
 #include <pthread.h>
 
-const int kPortNum = 1234;
+#define CHECK_ERROR(p, m)                                                      \
+  do {                                                                         \
+    if (p) {                                                                   \
+      fprintf(stderr, "ERROR " m "\n");                                        \
+      exit(1);                                                                 \
+    }                                                                          \
+  } while (0)
+
 const int kBufSize = 10;
+int sockfd;
 
-static void *server_thread_udp(void *data) {
-  char buf[kBufSize / 2];
-  struct sockaddr_in serveraddr; // server's addr
-  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (sockfd < 0)
-    fprintf(stderr, "ERROR opening socket\n");
+static void *client_thread_udp(void *data) {
+  const char buf[kBufSize] = {0, };
+  socklen_t addrlen;
+  struct sockaddr_in serveraddr;
 
-  memset((char *) &serveraddr, 0, sizeof(serveraddr));
-  serveraddr.sin_family = AF_INET;
-  serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  serveraddr.sin_port = htons(kPortNum);
+  int succeeded = getsockname(sockfd, (struct sockaddr *)&serveraddr, &addrlen);
+  CHECK_ERROR(succeeded < 0, "in getsockname");
 
-  if (bind(sockfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0)
-    fprintf(stderr, "ERROR on binding\n");
-
-  recvfrom(sockfd, buf, kBufSize, 0, NULL, NULL); // BOOM
-  // CHECK: {{WRITE of size 9 at 0x.* thread T1}}
-  // CHECK: {{    #1 0x.* in server_thread_udp.*recvfrom.cc:}}[[@LINE-2]]
-  // CHECK: {{Address 0x.* is located in stack of thread T1 at offset}}
-  // CHECK-NEXT: in{{.*}}server_thread_udp{{.*}}recvfrom.cc
+  succeeded = sendto(sockfd, buf, kBufSize, 0,
+                     (struct sockaddr *)&serveraddr, sizeof(serveraddr));
+  CHECK_ERROR(succeeded < 0, "in sending message");
   return NULL;
 }
 
 int main() {
-  char buf[kBufSize] = "123456789";
-  struct sockaddr_in serveraddr; // server's addr
+  char buf[kBufSize / 2];
+  pthread_t client_thread;
+  struct sockaddr_in serveraddr;
 
-  pthread_t server_thread;
-  if (pthread_create(&server_thread, NULL, server_thread_udp, NULL)) {
-    fprintf(stderr, "Error creating thread\n");
-    exit(1);
-  }
+  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  CHECK_ERROR(sockfd < 0, "opening socket");
 
-  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  struct hostent *server;
-  char hostname[] = "localhost";
-  if (sockfd < 0)
-    fprintf(stderr, "ERROR opening socket\n");
-
-  server = gethostbyname(hostname);
-  if (!server) {
-    fprintf(stderr,"ERROR, no such host as %s\n", hostname);
-    exit(1);
-  }
-
-  memset((char *) &serveraddr, 0, sizeof(serveraddr));
+  memset(&serveraddr, 0, sizeof(serveraddr));
   serveraddr.sin_family = AF_INET;
-  memcpy((char *)&serveraddr.sin_addr.s_addr, (char *)server->h_addr,
-          server->h_length);
-  serveraddr.sin_port = htons(kPortNum);
-  sendto(sockfd, buf, strlen(buf), 0, (struct sockaddr *) &serveraddr,
-         sizeof(serveraddr));
+  serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  serveraddr.sin_port = 0;
 
-  if (pthread_join(server_thread, NULL)) {
-    fprintf(stderr, "Error joining thread\n");
-    exit(1);
-  }
+  int bound = bind(sockfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
+  CHECK_ERROR(bound < 0, "on binding");
 
+  int succeeded =
+      pthread_create(&client_thread, NULL, client_thread_udp, &serveraddr);
+  CHECK_ERROR(succeeded, "creating thread");
+
+  recvfrom(sockfd, buf, kBufSize, 0, NULL, NULL); // BOOM
+  // CHECK: {{WRITE of size 10 at 0x.* thread T0}}
+  // CHECK: {{    #1 0x.* in main.*recvfrom.cc:}}[[@LINE-2]]
+  // CHECK: {{Address 0x.* is located in stack of thread T0 at offset}}
+  // CHECK-NEXT: in{{.*}}main{{.*}}recvfrom.cc
+  succeeded = pthread_join(client_thread, NULL);
+  CHECK_ERROR(succeeded, "joining thread");
   return 0;
 }
