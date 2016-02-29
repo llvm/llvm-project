@@ -88,7 +88,7 @@ public:
 
     } else if (auto CE = dyn_cast<CallExpr>(Parent)) {
       if (CE->getCallee()->IgnoreParenCasts() == E) {
-        Roles |= (unsigned)SymbolRole::Call;
+        addCallRole(Roles, Relations);
         if (auto *ME = dyn_cast<MemberExpr>(E)) {
           if (auto *CXXMD = dyn_cast_or_null<CXXMethodDecl>(ME->getMemberDecl()))
             if (CXXMD->isVirtual() && !ME->hasQualifier()) {
@@ -118,6 +118,15 @@ public:
     }
 
     return Roles;
+  }
+
+  void addCallRole(SymbolRoleSet &Roles,
+                   SmallVectorImpl<SymbolRelation> &Relations) {
+    Roles |= (unsigned)SymbolRole::Call;
+    if (auto *FD = dyn_cast<FunctionDecl>(ParentDC))
+      Relations.emplace_back((unsigned)SymbolRole::RelationCalledBy, FD);
+    else if (auto *MD = dyn_cast<ObjCMethodDecl>(ParentDC))
+      Relations.emplace_back((unsigned)SymbolRole::RelationCalledBy, MD);
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *E) {
@@ -169,11 +178,12 @@ public:
     };
 
     if (ObjCMethodDecl *MD = E->getMethodDecl()) {
-      SymbolRoleSet Roles = (unsigned)SymbolRole::Call;
+      SymbolRoleSet Roles{};
+      SmallVector<SymbolRelation, 2> Relations;
+      addCallRole(Roles, Relations);
       if (E->isImplicit())
         Roles |= (unsigned)SymbolRole::Implicit;
 
-      SmallVector<SymbolRelation, 2> Relations;
       if (isDynamic(E)) {
         Roles |= (unsigned)SymbolRole::Dynamic;
         if (auto *RecD = E->getReceiverInterface())
@@ -206,39 +216,42 @@ public:
                                     Parent, ParentDC, SymbolRoleSet(), {}, E);
   }
 
+  bool passObjCLiteralMethodCall(const ObjCMethodDecl *MD, const Expr *E) {
+    SymbolRoleSet Roles{};
+    SmallVector<SymbolRelation, 2> Relations;
+    addCallRole(Roles, Relations);
+    Roles |= (unsigned)SymbolRole::Implicit;
+    return IndexCtx.handleReference(MD, E->getLocStart(),
+                                    Parent, ParentDC, Roles, Relations, E);
+  }
+
   bool VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
     if (ObjCMethodDecl *MD = E->getBoxingMethod()) {
-      SymbolRoleSet Roles = (unsigned)SymbolRole::Call;
-      Roles |= (unsigned)SymbolRole::Implicit;
-      return IndexCtx.handleReference(MD, E->getLocStart(),
-                                      Parent, ParentDC, Roles, {}, E);
+      return passObjCLiteralMethodCall(MD, E);
     }
     return true;
   }
   
   bool VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
     if (ObjCMethodDecl *MD = E->getDictWithObjectsMethod()) {
-      SymbolRoleSet Roles = (unsigned)SymbolRole::Call;
-      Roles |= (unsigned)SymbolRole::Implicit;
-      return IndexCtx.handleReference(MD, E->getLocStart(),
-                                      Parent, ParentDC, Roles, {}, E);
+      return passObjCLiteralMethodCall(MD, E);
     }
     return true;
   }
 
   bool VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
     if (ObjCMethodDecl *MD = E->getArrayWithObjectsMethod()) {
-      SymbolRoleSet Roles = (unsigned)SymbolRole::Call;
-      Roles |= (unsigned)SymbolRole::Implicit;
-      return IndexCtx.handleReference(MD, E->getLocStart(),
-                                      Parent, ParentDC, Roles, {}, E);
+      return passObjCLiteralMethodCall(MD, E);
     }
     return true;
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    SymbolRoleSet Roles{};
+    SmallVector<SymbolRelation, 2> Relations;
+    addCallRole(Roles, Relations);
     return IndexCtx.handleReference(E->getConstructor(), E->getLocation(),
-                                    Parent, ParentDC, (unsigned)SymbolRole::Call, {}, E);
+                                    Parent, ParentDC, Roles, Relations, E);
   }
 
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *E,

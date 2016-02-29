@@ -206,6 +206,7 @@ void index::applyForEachSymbolRole(SymbolRoleSet Roles,
   APPLY_FOR_ROLE(RelationBaseOf);
   APPLY_FOR_ROLE(RelationOverrideOf);
   APPLY_FOR_ROLE(RelationReceivedBy);
+  APPLY_FOR_ROLE(RelationCalledBy);
 
 #undef APPLY_FOR_ROLE
 }
@@ -231,6 +232,7 @@ void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
     case SymbolRole::RelationBaseOf: OS << "RelBase"; break;
     case SymbolRole::RelationOverrideOf: OS << "RelOver"; break;
     case SymbolRole::RelationReceivedBy: OS << "RelRec"; break;
+    case SymbolRole::RelationCalledBy: OS << "RelCall"; break;
     }
   });
 }

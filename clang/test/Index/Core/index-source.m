@@ -10,9 +10,11 @@
 void foo();
 // CHECK: [[@LINE+1]]:6 | function/C | goo | c:@F@goo | _goo | Def | rel: 0
 void goo(Base *b) {
-  // CHECK: [[@LINE+1]]:3 | function/C | foo | c:@F@foo | _foo | Ref,Call | rel: 0
+  // CHECK: [[@LINE+2]]:3 | function/C | foo | c:@F@foo | _foo | Ref,Call,RelCall | rel: 1
+  // CHECK-NEXT: RelCall | goo | c:@F@goo
   foo();
-  // CHECK: [[@LINE+2]]:6 | objc-instance-method/ObjC | meth | c:objc(cs)Base(im)meth | -[Base meth] | Ref,Call,Dyn,RelRec | rel: 1
+  // CHECK: [[@LINE+3]]:6 | objc-instance-method/ObjC | meth | c:objc(cs)Base(im)meth | -[Base meth] | Ref,Call,Dyn,RelRec,RelCall | rel: 2
+  // CHECK-NEXT: RelCall | goo | c:@F@goo
   // CHECK-NEXT: RelRec | Base | c:objc(cs)Base
   [b meth];
 }
