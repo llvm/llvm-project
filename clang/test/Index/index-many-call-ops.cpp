@@ -4,8 +4,8 @@
 // Check that we don't get stack overflow trying to index a huge number of
 // call operators.
 
-// UBSan increses stack usage.
-// REQUIRES: not_ubsan
+// ASan and UBSan increase stack usage.
+// REQUIRES: not_asan, not_ubsan
 
 struct S {
   S &operator()();
