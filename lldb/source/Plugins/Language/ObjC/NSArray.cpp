@@ -788,7 +788,7 @@ SyntheticChildrenFrontEnd* lldb_private::formatters::NSArraySyntheticFrontEndCre
     {
         return (new NSArrayISyntheticFrontEnd(valobj_sp));
     }
-    else if (class_name == g_NSArrayM)
+    else if (class_name == g_NSArray0)
     {
         return (new NSArray0SyntheticFrontEnd(valobj_sp));
     }
