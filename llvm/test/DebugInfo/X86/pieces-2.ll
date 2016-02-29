@@ -17,9 +17,14 @@
 ;
 ;
 ; CHECK: DW_TAG_variable [4]
-;                                                  rax, piece 0x00000004
-; CHECK-NEXT: DW_AT_location [DW_FORM_block1]{{.*}}50 93 04
+; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        ([[LOC:.*]])
 ; CHECK-NEXT:  DW_AT_name {{.*}}"i1"
+;
+; CHECK: .debug_loc
+; CHECK: [[LOC]]: Beginning address offset: 0x0000000000000004
+; CHECK-NEXT:        Ending address offset: 0x0000000000000005
+;                                           rax, piece 0x00000004
+; CHECK-NEXT:         Location description: 50 93 04
 ;
 ; ModuleID = '/Volumes/Data/llvm/test/DebugInfo/X86/sroasplit-1.ll'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
