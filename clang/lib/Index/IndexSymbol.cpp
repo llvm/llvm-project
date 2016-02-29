@@ -53,6 +53,9 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   } else {
     switch (D->getKind()) {
+    case Decl::Import:
+      Info.Kind = SymbolKind::Module;
+      break;
     case Decl::Typedef:
       Info.Kind = SymbolKind::Typedef; break;
     case Decl::Function:
@@ -206,6 +209,7 @@ void index::applyForEachSymbolRole(SymbolRoleSet Roles,
   APPLY_FOR_ROLE(RelationBaseOf);
   APPLY_FOR_ROLE(RelationOverrideOf);
   APPLY_FOR_ROLE(RelationReceivedBy);
+  APPLY_FOR_ROLE(RelationCalledBy);
 
 #undef APPLY_FOR_ROLE
 }
@@ -214,7 +218,7 @@ void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
   bool VisitedOnce = false;
   applyForEachSymbolRole(Roles, [&](SymbolRole Role) {
     if (VisitedOnce)
-      OS << '/';
+      OS << ',';
     else
       VisitedOnce = true;
     switch (Role) {
@@ -231,6 +235,7 @@ void index::printSymbolRoles(SymbolRoleSet Roles, raw_ostream &OS) {
     case SymbolRole::RelationBaseOf: OS << "RelBase"; break;
     case SymbolRole::RelationOverrideOf: OS << "RelOver"; break;
     case SymbolRole::RelationReceivedBy: OS << "RelRec"; break;
+    case SymbolRole::RelationCalledBy: OS << "RelCall"; break;
     }
   });
 }
