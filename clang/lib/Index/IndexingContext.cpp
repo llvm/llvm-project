@@ -58,7 +58,12 @@ bool IndexingContext::handleReference(const NamedDecl *D, SourceLocation Loc,
 }
 
 bool IndexingContext::importedModule(const ImportDecl *ImportD) {
-  SourceLocation Loc = ImportD->getLocation();
+  SourceLocation Loc;
+  auto IdLocs = ImportD->getIdentifierLocs();
+  if (!IdLocs.empty())
+    Loc = IdLocs.front();
+  else
+    Loc = ImportD->getLocation();
   SourceManager &SM = Ctx->getSourceManager();
   Loc = SM.getFileLoc(Loc);
   if (Loc.isInvalid())
@@ -85,7 +90,7 @@ bool IndexingContext::importedModule(const ImportDecl *ImportD) {
     }
   }
 
-  SymbolRoleSet Roles{};
+  SymbolRoleSet Roles = (unsigned)SymbolRole::Reference;
   if (ImportD->isImplicit())
     Roles |= (unsigned)SymbolRole::Implicit;
 

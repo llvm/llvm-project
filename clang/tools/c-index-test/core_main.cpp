@@ -107,6 +107,26 @@ public:
 
     return true;
   }
+
+  bool handleModuleOccurence(const ImportDecl *ImportD, SymbolRoleSet Roles,
+                             FileID FID, unsigned Offset) override {
+    ASTContext &Ctx = ImportD->getASTContext();
+    SourceManager &SM = Ctx.getSourceManager();
+
+    unsigned Line = SM.getLineNumber(FID, Offset);
+    unsigned Col = SM.getColumnNumber(FID, Offset);
+    OS << Line << ':' << Col << " | ";
+
+    printSymbolInfo(getSymbolInfo(ImportD), OS);
+    OS << " | ";
+
+    OS << ImportD->getImportedModule()->getFullModuleName() << " | ";
+
+    printSymbolRoles(Roles, OS);
+    OS << " |\n";
+
+    return true;
+  }
 };
 
 } // anonymous namespace

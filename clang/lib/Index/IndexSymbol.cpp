@@ -53,6 +53,9 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   } else {
     switch (D->getKind()) {
+    case Decl::Import:
+      Info.Kind = SymbolKind::Module;
+      break;
     case Decl::Typedef:
       Info.Kind = SymbolKind::Typedef; break;
     case Decl::Function:
