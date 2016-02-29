@@ -211,13 +211,13 @@
 // RUN: %clang_cl /FI asdf.h -### -- %s 2>&1 | FileCheck -check-prefix=FI_ %s
 // FI_: "-include" "asdf.h"
 
-// RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=NO-GX %s
+// RUN: %clang_cl /TP /c -### -- %s 2>&1 | FileCheck -check-prefix=NO-GX %s
 // NO-GX-NOT: "-fcxx-exceptions" "-fexceptions"
 
-// RUN: %clang_cl /c /GX -### -- %s 2>&1 | FileCheck -check-prefix=GX %s
+// RUN: %clang_cl /TP /c /GX -### -- %s 2>&1 | FileCheck -check-prefix=GX %s
 // GX: "-fcxx-exceptions" "-fexceptions"
 
-// RUN: %clang_cl /c /GX /GX- -### -- %s 2>&1 | FileCheck -check-prefix=GX_ %s
+// RUN: %clang_cl /TP /c /GX /GX- -### -- %s 2>&1 | FileCheck -check-prefix=GX_ %s
 // GX_-NOT: "-fcxx-exceptions" "-fexceptions"
 
 // We forward any unrecognized -W diagnostic options to cc1.

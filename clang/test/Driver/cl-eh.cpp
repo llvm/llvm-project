@@ -21,6 +21,11 @@
 // EHs_EHa: "-fcxx-exceptions"
 // EHs_EHa: "-fexceptions"
 
+// RUN: %clang_cl /c /EHa /EHc -### -- %s 2>&1 | FileCheck -check-prefix=EHa_EHc %s
+// EHa_EHc: "-fcxx-exceptions"
+// EHa_EHc: "-fexceptions"
+// EHa_EHc-NOT: "-fexternc-nounwind"
+
 // RUN: %clang_cl /c /EHinvalid -### -- %s 2>&1 | FileCheck -check-prefix=EHinvalid %s
 // EHinvalid: error: invalid value 'invalid' in '/EH'
 // EHinvalid-NOT: error:

@@ -4119,8 +4119,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool EmitCodeView = false;
 
   // Add clang-cl arguments.
+  types::ID InputType = Input.getType();
   if (getToolChain().getDriver().IsCLMode())
-    AddClangCLArgs(Args, CmdArgs, &DebugInfoKind, &EmitCodeView);
+    AddClangCLArgs(Args, InputType, CmdArgs, &DebugInfoKind, &EmitCodeView);
 
   // Pass the linker version in use.
   if (Arg *A = Args.getLastArg(options::OPT_mlinker_version_EQ)) {
@@ -4133,7 +4134,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Explicitly error on some things we know we don't support and can't just
   // ignore.
-  types::ID InputType = Input.getType();
   if (!Args.hasArg(options::OPT_fallow_unsupported)) {
     Arg *Unsupported;
     if (types::isCXX(InputType) && getToolChain().getTriple().isOSDarwin() &&
@@ -5858,12 +5858,16 @@ static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args) {
       switch (EHVal[I]) {
       case 'a':
         EH.Asynch = maybeConsumeDash(EHVal, I);
+        if (EH.Asynch)
+          EH.Synch = false;
         continue;
       case 'c':
         EH.NoUnwindC = maybeConsumeDash(EHVal, I);
         continue;
       case 's':
         EH.Synch = maybeConsumeDash(EHVal, I);
+        if (EH.Synch)
+          EH.Asynch = false;
         continue;
       default:
         break;
@@ -5884,7 +5888,8 @@ static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args) {
   return EH;
 }
 
-void Clang::AddClangCLArgs(const ArgList &Args, ArgStringList &CmdArgs,
+void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
+                           ArgStringList &CmdArgs,
                            codegenoptions::DebugInfoKind *DebugInfoKind,
                            bool *EmitCodeView) const {
   unsigned RTOptionID = options::OPT__SLASH_MT;
@@ -5959,11 +5964,12 @@ void Clang::AddClangCLArgs(const ArgList &Args, ArgStringList &CmdArgs,
   const Driver &D = getToolChain().getDriver();
   EHFlags EH = parseClangCLEHFlags(D, Args);
   if (EH.Synch || EH.Asynch) {
-    CmdArgs.push_back("-fcxx-exceptions");
+    if (types::isCXX(InputType))
+      CmdArgs.push_back("-fcxx-exceptions");
     CmdArgs.push_back("-fexceptions");
-    if (EH.NoUnwindC)
-      CmdArgs.push_back("-fexternc-nounwind");
   }
+  if (types::isCXX(InputType) && EH.Synch && EH.NoUnwindC)
+    CmdArgs.push_back("-fexternc-nounwind");
 
   // /EP should expand to -E -P.
   if (Args.hasArg(options::OPT__SLASH_EP)) {

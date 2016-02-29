@@ -11642,8 +11642,11 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
   // throw, add an implicit nothrow attribute to any extern "C" function we come
   // across.
   if (getLangOpts().CXXExceptions && getLangOpts().ExternCNoUnwind &&
-      FD->isExternC() && !FD->hasAttr<NoThrowAttr>())
-    FD->addAttr(NoThrowAttr::CreateImplicit(Context, FD->getLocation()));
+      FD->isExternC() && !FD->hasAttr<NoThrowAttr>()) {
+    const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+    if (!FPT || FPT->getExceptionSpecType() == EST_None)
+      FD->addAttr(NoThrowAttr::CreateImplicit(Context, FD->getLocation()));
+  }
 
   IdentifierInfo *Name = FD->getIdentifier();
   if (!Name)
