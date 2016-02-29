@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks -verify %s
 // RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks -triple x86_64-apple-darwin10 -fobjc-arc -fobjc-runtime-has-weak -verify %s
 
-#define nil ((id)0)
+#include "Inputs/system-header-simulator-for-objc-dealloc.h"
 
 #define NON_ARC !__has_feature(objc_arc)
 
@@ -15,22 +15,6 @@
 #if !NON_ARC
   // expected-no-diagnostics
 #endif
-
-typedef signed char BOOL;
-@protocol NSObject
-- (BOOL)isEqual:(id)object;
-- (Class)class;
-@end
-
-@interface NSObject <NSObject> {}
-+ (instancetype)alloc;
-- (void)dealloc;
-- (id)init;
-- (id)retain;
-- (oneway void)release;
-@end
-
-typedef struct objc_selector *SEL;
 
 // Do not warn about missing release in -dealloc for ivars.
 
@@ -443,6 +427,50 @@ void NilOutPropertyHelper(ClassWithDeallocHelpers *o) {
   self.otherIvar = nil;
 #if NON_ARC
   [super dealloc];  // expected-warning {{The '_ivar' ivar in 'ClassWhereSelfEscapesViaSynthesizedPropertyAccess' was retained by a synthesized property but not released before '[super dealloc]'}}
+#endif
+}
+@end
+
+
+// Don't treat calls to system headers as escapes
+
+@interface ClassWhereSelfEscapesViaCallToSystem : NSObject
+@property (retain) NSObject *ivar1;
+@property (retain) NSObject *ivar2;
+@property (retain) NSObject *ivar3;
+@property (retain) NSObject *ivar4;
+@property (retain) NSObject *ivar5;
+@property (retain) NSObject *ivar6;
+@end
+
+@implementation ClassWhereSelfEscapesViaCallToSystem
+- (void)dealloc; {
+#if NON_ARC
+  [_ivar2 release];
+  if (_ivar3) {
+    [_ivar3 release];
+  }
+#endif
+
+  [[NSRunLoop currentRunLoop] cancelPerformSelectorsWithTarget:self];
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+
+#if NON_ARC
+  [_ivar4 release];
+
+  if (_ivar5) {
+    [_ivar5 release];
+  }
+#endif
+
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+
+#if NON_ARC
+  if (_ivar6) {
+    [_ivar6 release];
+  }
+
+  [super dealloc];  // expected-warning {{The '_ivar1' ivar in 'ClassWhereSelfEscapesViaCallToSystem' was retained by a synthesized property but not released before '[super dealloc]'}}
 #endif
 }
 @end
