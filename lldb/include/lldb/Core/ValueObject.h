@@ -699,7 +699,10 @@ public:
     GetSyntheticExpressionPathChild(const char* expression, bool can_create);
     
     virtual lldb::ValueObjectSP
-    GetSyntheticChildAtOffset(uint32_t offset, const CompilerType& type, bool can_create);
+    GetSyntheticChildAtOffset(uint32_t offset,
+                              const CompilerType& type,
+                              bool can_create,
+                              ConstString name_const_str = ConstString());
     
     virtual lldb::ValueObjectSP
     GetSyntheticBase (uint32_t offset, const CompilerType& type, bool can_create);

@@ -117,12 +117,18 @@ ValueObjectConstResultImpl::CreateChildAtIndex (size_t idx, bool synthetic_array
 }
 
 lldb::ValueObjectSP
-ValueObjectConstResultImpl::GetSyntheticChildAtOffset (uint32_t offset, const CompilerType& type, bool can_create)
+ValueObjectConstResultImpl::GetSyntheticChildAtOffset (uint32_t offset,
+                                                       const CompilerType& type,
+                                                       bool can_create,
+                                                       ConstString name_const_str)
 {
     if (m_impl_backend == NULL)
         return lldb::ValueObjectSP();
 
-    return m_impl_backend->ValueObject::GetSyntheticChildAtOffset(offset, type, can_create);
+    return m_impl_backend->ValueObject::GetSyntheticChildAtOffset(offset,
+                                                                  type,
+                                                                  can_create,
+                                                                  name_const_str);
 }
 
 lldb::ValueObjectSP

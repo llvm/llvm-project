@@ -39,7 +39,10 @@ public:
     CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_t synthetic_index);
     
     lldb::ValueObjectSP
-    GetSyntheticChildAtOffset (uint32_t offset, const CompilerType& type, bool can_create);
+    GetSyntheticChildAtOffset (uint32_t offset,
+                               const CompilerType& type,
+                               bool can_create,
+                               ConstString name_const_str = ConstString());
     
     lldb::ValueObjectSP
     AddressOf (Error &error);
