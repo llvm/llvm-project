@@ -1,8 +1,9 @@
-; RUN: llc -mtriple=x86_64-apple-macosx10.9.0 -filetype=obj -O0 < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-macosx10.9.0 -filetype=obj -O0 < %s | llvm-dwarfdump -debug-dump=all - | FileCheck %s
 ; ModuleID = 'aggregate-indirect-arg.cpp'
 ; extracted from debuginfo-tests/aggregate-indirect-arg.cpp
 
 ; v should be a pointer.
+; CHECK:  .debug_info contents:
 ; CHECK:   DW_TAG_subprogram
 ; CHECK:     DW_AT_specification {{.*}} "_ZN1A3fooE4SVal"
 ; CHECK-NOT: DW_TAG_subprogram
@@ -10,9 +11,11 @@
 ; CHECK:       DW_AT_name {{.*}} "this"
 ; CHECK-NOT:   DW_TAG_subprogram
 ; CHECK:     DW_TAG_formal_parameter
-;                                                    rsi+0
-; CHECK-NEXT:  DW_AT_location [DW_FORM_block1]      (<0x02> 74 00{{ *}})
+; CHECK-NEXT:  DW_AT_location [DW_FORM_data4]	(0x00000000)
 ; CHECK-NEXT:  DW_AT_name {{.*}} "v"
+; CHECK: .debug_loc contents:
+;                                rsi+0
+; CHECK:   Location description: 74 00
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"

@@ -963,6 +963,18 @@ DbgVariable *DwarfDebug::createConcreteVariable(LexicalScope &Scope,
   return ConcreteVariables.back().get();
 }
 
+// Determine whether this DBG_VALUE is valid at the beginning of the function.
+static bool validAtEntry(const MachineInstr *MInsn) {
+  auto MBB = MInsn->getParent();
+  // Is it in the entry basic block?
+  if (!MBB->pred_empty())
+    return false;
+  for (MachineBasicBlock::const_reverse_iterator I(MInsn); I != MBB->rend(); ++I)
+    if (!(I->isDebugValue() || I->getFlag(MachineInstr::FrameSetup)))
+      return false;
+  return true;
+}
+
 // Find variables for each lexical scope.
 void DwarfDebug::collectVariableInfo(DwarfCompileUnit &TheCU,
                                      const DISubprogram *SP,
@@ -995,8 +1007,11 @@ void DwarfDebug::collectVariableInfo(DwarfCompileUnit &TheCU,
     const MachineInstr *MInsn = Ranges.front().first;
     assert(MInsn->isDebugValue() && "History must begin with debug value");
 
-    // Check if the first DBG_VALUE is valid for the rest of the function.
-    if (Ranges.size() == 1 && Ranges.front().second == nullptr) {
+    // Check if there is a single DBG_VALUE, valid throughout the function.
+    // A single constant is also considered valid for the entire function.
+    if (Ranges.size() == 1 &&
+        (MInsn->getOperand(0).isImm() ||
+         (validAtEntry(MInsn) && Ranges.front().second == nullptr))) {
       RegVar->initializeDbgValue(MInsn);
       continue;
     }

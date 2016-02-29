@@ -16,19 +16,22 @@
 ;    }
 ;
 ; CHECK: DW_TAG_formal_parameter [3]
-; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        ([[LOC:.*]])
+; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        ([[LOC1:.*]])
 ; CHECK-NEXT:   DW_AT_name {{.*}}"outer"
 ; CHECK: DW_TAG_variable
-;                                                 rsi, piece 0x00000004
-; CHECK-NEXT:   DW_AT_location [DW_FORM_block1]       {{.*}} 54 93 04
+; CHECK-NEXT:   DW_AT_location [DW_FORM_data4]        ([[LOC2:.*]])
 ; CHECK-NEXT:   "i1"
 ;
 ; CHECK: .debug_loc
-; CHECK: [[LOC]]:
-; CHECK: Beginning address offset: 0x0000000000000000
-; CHECK:    Ending address offset: 0x0000000000000008
-; rdi, piece 0x00000008, piece 0x00000004, rsi, piece 0x00000004
-; CHECK: Location description: 55 93 08 93 04 54 93 04 
+; CHECK: [[LOC1]]: Beginning address offset: 0x0000000000000000
+; CHECK:              Ending address offset: 0x0000000000000008
+;             rdi, piece 0x00000008, piece 0x00000004, rsi, piece 0x00000004
+; CHECK-NEXT: Location description: 55 93 08 93 04 54 93 04
+; CHECK: [[LOC2]]: Beginning address offset: 0x0000000000000004
+; CHECK-NEXT:         Ending address offset: 0x0000000000000008
+;                                     rsi, piece 0x00000004
+; CHECK-NEXT:   Location description: 54 93 04
+
 ;
 ; ModuleID = '/Volumes/Data/llvm/test/DebugInfo/X86/sroasplit-2.ll'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
