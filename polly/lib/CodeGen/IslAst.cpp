@@ -336,8 +336,15 @@ IslAst::buildRunCondition(Scop *S, __isl_keep isl_ast_build *Build) {
   // The conditions that need to be checked at run-time for this scop are
   // available as an isl_set in the runtime check context from which we can
   // directly derive a run-time condition.
-  RunCondition =
-      isl_ast_build_expr_from_set(Build, S->getRuntimeCheckContext());
+  auto *PosCond = isl_ast_build_expr_from_set(Build, S->getAssumedContext());
+  if (S->hasTrivialInvalidContext()) {
+    RunCondition = PosCond;
+  } else {
+    auto *ZeroV = isl_val_zero(isl_ast_build_get_ctx(Build));
+    auto *NegCond = isl_ast_build_expr_from_set(Build, S->getInvalidContext());
+    auto *NotNegCond = isl_ast_expr_eq(isl_ast_expr_from_val(ZeroV), NegCond);
+    RunCondition = isl_ast_expr_and(PosCond, NotNegCond);
+  }
 
   // Create the alias checks from the minimal/maximal accesses in each alias
   // group which consists of read only and non read only (read write) accesses.

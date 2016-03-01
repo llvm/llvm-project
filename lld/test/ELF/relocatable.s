@@ -15,15 +15,6 @@
 # RUN: ld.lld -e main %t -o %texec
 # RUN: llvm-readobj -file-headers %texec | FileCheck -check-prefix=CHECKEXE %s
 
-## Attempt to link DSO with -r
-# RUN: ld.lld -shared %t1.o -o %t.so
-# RUN: not ld.lld -r %t.so %t2.o -o %tfail 2>&1 | FileCheck -check-prefix=ERR %s
-# ERR: Attempted static link of dynamic object
-
-## Attempt to use -r and shared together
-# RUN: not ld.lld -r -shared %t2.o -o %tfail 2>&1 | FileCheck -check-prefix=ERR2 %s
-# ERR2: -r and -shared may not be used together
-
 # CHECK:       ElfHeader {
 # CHECK-NEXT:  Ident {
 # CHECK-NEXT:    Magic: (7F 45 4C 46)

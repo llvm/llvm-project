@@ -16,8 +16,8 @@
 ; CHECK-NEXT:    [tmp14, p_1] -> {  : -9223372036854775808 <= tmp14 <= 9223372036854775807 and -9223372036854775808 <= p_1 <= 9223372036854775807 }
 ; CHECK-NEXT:    Assumed Context:
 ; CHECK-NEXT:    [tmp14, p_1] -> {  :  }
-; CHECK-NEXT:    Boundary Context:
-; CHECK-NEXT:    [tmp14, p_1] -> {  : tmp14 <= 1152921504606846976 and (tmp14 <= 0 or (tmp14 > 0 and -1152921504606846976 <= p_1 <= 1152921504606846976 - tmp14)) }
+; CHECK-NEXT:    Invalid Context:
+; CHECK-NEXT:    [tmp14, p_1] -> {  : tmp14 > 0 and (tmp14 >= 1152921504606846977 or p_1 <= -1152921504606846977 or p_1 >= 1152921504606846977 - tmp14) 
 ; CHECK-NEXT:    p0: %tmp14
 ; CHECK-NEXT:    p1: {0,+,(0 smax %tmp)}<%bb12>
 ; CHECK-NEXT:    Arrays {
@@ -69,8 +69,8 @@
 ; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  : -9223372036854775808 <= tmp9 <= 9223372036854775807 and -9223372036854775808 <= tmp14 <= 9223372036854775807 }
 ; NONAFFINE-NEXT:    Assumed Context:
 ; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  :  }
-; NONAFFINE-NEXT:    Boundary Context:
-; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  :  }
+; NONAFFINE-NEXT:    Invalid Context:
+; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  : 1 = 0 }
 ; NONAFFINE-NEXT:    p0: %tmp9
 ; NONAFFINE-NEXT:    p1: %tmp14
 ; NONAFFINE-NEXT:    Arrays {

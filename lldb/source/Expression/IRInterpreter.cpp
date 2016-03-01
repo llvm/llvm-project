@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
@@ -15,6 +16,7 @@
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/Endian.h"
@@ -101,7 +103,7 @@ public:
 
     ValueMap                                m_values;
     DataLayout                             &m_target_data;
-    lldb_private::IRMemoryMap              &m_memory_map;
+    lldb_private::IRExecutionUnit          &m_execution_unit;
     const BasicBlock                       *m_bb;
     BasicBlock::const_iterator              m_ii;
     BasicBlock::const_iterator              m_ie;
@@ -114,11 +116,11 @@ public:
     size_t                                  m_addr_byte_size;
 
     InterpreterStackFrame (DataLayout &target_data,
-                           lldb_private::IRMemoryMap &memory_map,
+                           lldb_private::IRExecutionUnit &execution_unit,
                            lldb::addr_t stack_frame_bottom,
                            lldb::addr_t stack_frame_top) :
         m_target_data (target_data),
-        m_memory_map (memory_map)
+        m_execution_unit (execution_unit)
     {
         m_byte_order = (target_data.isLittleEndian() ? lldb::eByteOrderLittle : lldb::eByteOrderBig);
         m_addr_byte_size = (target_data.getPointerSize(0));
@@ -203,7 +205,7 @@ public:
             lldb_private::DataExtractor value_extractor;
             lldb_private::Error extract_error;
 
-            m_memory_map.GetMemoryData(value_extractor, process_address, value_size, extract_error);
+            m_execution_unit.GetMemoryData(value_extractor, process_address, value_size, extract_error);
 
             if (!extract_error.Success())
                 return false;
@@ -242,7 +244,7 @@ public:
 
         lldb_private::Error write_error;
 
-        m_memory_map.WriteMemory(process_address, buf.GetBytes(), buf.GetByteSize(), write_error);
+        m_execution_unit.WriteMemory(process_address, buf.GetBytes(), buf.GetByteSize(), write_error);
 
         return write_error.Success();
     }
@@ -252,6 +254,17 @@ public:
         switch (constant->getValueID())
         {
         default:
+            break;
+        case Value::FunctionVal:
+            if (const Function *constant_func = dyn_cast<Function>(constant))
+            {
+                lldb_private::ConstString name(constant_func->getName());
+                lldb::addr_t addr = m_execution_unit.FindSymbol(name);
+                if (addr == LLDB_INVALID_ADDRESS)
+                    return false;
+                value = APInt(m_target_data.getPointerSizeInBits(), addr);
+                return true;
+            }
             break;
         case Value::ConstantIntVal:
             if (const ConstantInt *constant_int = dyn_cast<ConstantInt>(constant))
@@ -329,12 +342,12 @@ public:
 
         lldb_private::Error write_error;
 
-        m_memory_map.WritePointerToMemory(data_address, address, write_error);
+        m_execution_unit.WritePointerToMemory(data_address, address, write_error);
 
         if (!write_error.Success())
         {
             lldb_private::Error free_error;
-            m_memory_map.Free(data_address, free_error);
+            m_execution_unit.Free(data_address, free_error);
             return false;
         }
 
@@ -360,8 +373,8 @@ public:
             return false;
 
         lldb_private::StreamString buffer (lldb_private::Stream::eBinary,
-                                           m_memory_map.GetAddressByteSize(),
-                                           m_memory_map.GetByteOrder());
+                                           m_execution_unit.GetAddressByteSize(),
+                                           m_execution_unit.GetByteOrder());
 
         size_t constant_size = m_target_data.getTypeStoreSize(constant->getType());
 
@@ -371,7 +384,7 @@ public:
 
         lldb_private::Error write_error;
 
-        m_memory_map.WriteMemory(process_address, (const uint8_t*)buffer.GetData(), constant_size, write_error);
+        m_execution_unit.WriteMemory(process_address, (const uint8_t*)buffer.GetData(), constant_size, write_error);
 
         return write_error.Success();
     }
@@ -410,7 +423,7 @@ public:
 
         lldb_private::Error read_error;
 
-        m_memory_map.ReadMemory(buf.GetBytes(), addr, length, read_error);
+        m_execution_unit.ReadMemory(buf.GetBytes(), addr, length, read_error);
 
         if (!read_error.Success())
             return std::string("<couldn't read data>");
@@ -444,7 +457,7 @@ public:
             if (!ResolveConstant (data_address, constant))
             {
                 lldb_private::Error free_error;
-                m_memory_map.Free(data_address, free_error);
+                m_execution_unit.Free(data_address, free_error);
                 return LLDB_INVALID_ADDRESS;
             }
         }
@@ -474,6 +487,7 @@ CanResolveConstant (llvm::Constant *constant)
         return false;
     case Value::ConstantIntVal:
     case Value::ConstantFPVal:
+    case Value::FunctionVal:
         return true;
     case Value::ConstantExprVal:
         if (const ConstantExpr *constant_expr = dyn_cast<ConstantExpr>(constant))
@@ -672,7 +686,7 @@ bool
 IRInterpreter::Interpret (llvm::Module &module,
                           llvm::Function &function,
                           llvm::ArrayRef<lldb::addr_t> args,
-                          lldb_private::IRMemoryMap &memory_map,
+                          lldb_private::IRExecutionUnit &execution_unit,
                           lldb_private::Error &error,
                           lldb::addr_t stack_frame_bottom,
                           lldb::addr_t stack_frame_top,
@@ -694,7 +708,7 @@ IRInterpreter::Interpret (llvm::Module &module,
 
     DataLayout data_layout(&module);
 
-    InterpreterStackFrame frame(data_layout, memory_map, stack_frame_bottom, stack_frame_top);
+    InterpreterStackFrame frame(data_layout, execution_unit, stack_frame_bottom, stack_frame_top);
 
     if (frame.m_frame_process_address == LLDB_INVALID_ADDRESS)
     {
@@ -900,7 +914,7 @@ IRInterpreter::Interpret (llvm::Module &module,
 
                 lldb_private::Error write_error;
 
-                memory_map.WritePointerToMemory(P, R, write_error);
+                execution_unit.WritePointerToMemory(P, R, write_error);
 
                 if (!write_error.Success())
                 {
@@ -909,8 +923,8 @@ IRInterpreter::Interpret (llvm::Module &module,
                     error.SetErrorToGenericError();
                     error.SetErrorString(memory_write_error);
                     lldb_private::Error free_error;
-                    memory_map.Free(P, free_error);
-                    memory_map.Free(R, free_error);
+                    execution_unit.Free(P, free_error);
+                    execution_unit.Free(R, free_error);
                     return false;
                 }
 
@@ -1374,7 +1388,7 @@ IRInterpreter::Interpret (llvm::Module &module,
 
                 lldb::addr_t R;
                 lldb_private::Error read_error;
-                memory_map.ReadPointerFromMemory(&R, P, read_error);
+                execution_unit.ReadPointerFromMemory(&R, P, read_error);
 
                 if (!read_error.Success())
                 {
@@ -1389,7 +1403,7 @@ IRInterpreter::Interpret (llvm::Module &module,
                 lldb_private::DataBufferHeap buffer(target_size, 0);
 
                 read_error.Clear();
-                memory_map.ReadMemory(buffer.GetBytes(), R, buffer.GetByteSize(), read_error);
+                execution_unit.ReadMemory(buffer.GetBytes(), R, buffer.GetByteSize(), read_error);
                 if (!read_error.Success())
                 {
                     if (log)
@@ -1400,7 +1414,7 @@ IRInterpreter::Interpret (llvm::Module &module,
                 }
 
                 lldb_private::Error write_error;
-                memory_map.WriteMemory(D, buffer.GetBytes(), buffer.GetByteSize(), write_error);
+                execution_unit.WriteMemory(D, buffer.GetBytes(), buffer.GetByteSize(), write_error);
                 if (!write_error.Success())
                 {
                     if (log)
@@ -1474,7 +1488,7 @@ IRInterpreter::Interpret (llvm::Module &module,
 
                 lldb::addr_t R;
                 lldb_private::Error read_error;
-                memory_map.ReadPointerFromMemory(&R, P, read_error);
+                execution_unit.ReadPointerFromMemory(&R, P, read_error);
 
                 if (!read_error.Success())
                 {
@@ -1489,7 +1503,7 @@ IRInterpreter::Interpret (llvm::Module &module,
                 lldb_private::DataBufferHeap buffer(target_size, 0);
 
                 read_error.Clear();
-                memory_map.ReadMemory(buffer.GetBytes(), D, buffer.GetByteSize(), read_error);
+                execution_unit.ReadMemory(buffer.GetBytes(), D, buffer.GetByteSize(), read_error);
                 if (!read_error.Success())
                 {
                     if (log)
@@ -1500,7 +1514,7 @@ IRInterpreter::Interpret (llvm::Module &module,
                 }
 
                 lldb_private::Error write_error;
-                memory_map.WriteMemory(R, buffer.GetBytes(), buffer.GetByteSize(), write_error);
+                execution_unit.WriteMemory(R, buffer.GetBytes(), buffer.GetByteSize(), write_error);
                 if (!write_error.Success())
                 {
                     if (log)
@@ -1649,14 +1663,14 @@ IRInterpreter::Interpret (llvm::Module &module,
                         lldb::addr_t addr = tmp_op.ULongLong();
                         size_t dataSize = 0;
 
-                        if (memory_map.GetAllocSize(addr, dataSize))
+                        if (execution_unit.GetAllocSize(addr, dataSize))
                         {
                             // Create the required buffer
                             rawArgs[i].size = dataSize;
                             rawArgs[i].data_ap.reset(new uint8_t[dataSize + 1]);
 
                             // Read string from host memory
-                            memory_map.ReadMemory(rawArgs[i].data_ap.get(), addr, dataSize, error);
+                            execution_unit.ReadMemory(rawArgs[i].data_ap.get(), addr, dataSize, error);
                             if (error.Fail())
                             {
                                 assert(!"we have failed to read the string from memory");

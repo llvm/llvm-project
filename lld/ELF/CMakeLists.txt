@@ -18,10 +18,15 @@ add_lld_library(lldELF
   Writer.cpp
 
   LINK_COMPONENTS
+  ${LLVM_TARGETS_TO_BUILD}
+  BitReader
+  Core
+  Linker
   Object
   Option
   MC
   Support
+  Target
 
   LINK_LIBS
   lldConfig

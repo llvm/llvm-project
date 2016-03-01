@@ -255,7 +255,7 @@ lldb_private::formatters::NSDictionarySummaryProvider (ValueObject& valobj, Stre
     static const ConstString g_Dictionary1("__NSSingleEntryDictionaryI");
     
     if (class_name.IsEmpty())
-        return nullptr;
+        return false;
 
     if (class_name == g_DictionaryI)
     {

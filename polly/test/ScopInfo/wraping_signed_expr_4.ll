@@ -10,8 +10,8 @@
 ; CHECK:      Context:
 ; CHECK-NEXT: [N, p] -> {  : -128 <= N <= 127 and -128 <= p <= 127 }
 ;
-; CHECK:      Boundary Context:
-; CHECK-NEXT: [N, p] -> {  : p >= -127 }
+; CHECK:      Invalid Context:
+; CHECK-NEXT: [N, p] -> {  : p = -128 and N > 0 }
 
 target datalayout = "e-m:e-i8:64-f80:128-n8:16:32:64-S128"
 

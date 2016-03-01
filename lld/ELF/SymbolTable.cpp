@@ -186,9 +186,9 @@ SymbolBody *SymbolTable<ELFT>::addAbsolute(StringRef Name, Elf_Sym &ESym) {
 
 template <class ELFT>
 SymbolBody *SymbolTable<ELFT>::addSynthetic(StringRef Name,
-                                            OutputSectionBase<ELFT> &Section,
-                                            uintX_t Value) {
-  auto *Sym = new (Alloc) DefinedSynthetic<ELFT>(Name, Value, Section);
+                                            OutputSectionBase<ELFT> &Sec,
+                                            uintX_t Val, uint8_t Visibility) {
+  auto *Sym = new (Alloc) DefinedSynthetic<ELFT>(Name, Val, Sec, Visibility);
   resolve(Sym);
   return Sym;
 }

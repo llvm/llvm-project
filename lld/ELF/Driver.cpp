@@ -141,8 +141,15 @@ static void checkOptions(opt::InputArgList &Args) {
   if (Config->EMachine == EM_AMDGPU && !Config->Entry.empty())
     error("-e option is not valid for AMDGPU.");
 
-  if (Config->Relocatable && Config->Shared)
+  if (!Config->Relocatable)
+    return;
+
+  if (Config->Shared)
     error("-r and -shared may not be used together");
+  if (Config->GcSections)
+    error("-r and --gc-sections may not be used together");
+  if (Config->ICF)
+    error("-r and --icf may not be used together");
 }
 
 static StringRef

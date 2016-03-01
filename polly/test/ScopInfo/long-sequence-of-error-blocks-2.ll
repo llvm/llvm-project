@@ -6,11 +6,13 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.hoge = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [8 x [2 x i32]], [8 x [2 x i32]], [4 x [4 x i32]], i32, i32, i32, i32, [256 x i8], [256 x i8], [256 x i8], [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, [500 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [1024 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, double, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], [256 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [256 x i8], i32, i32, i32*, i32*, i8*, i32*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, double, double, double, [5 x double], i32, [8 x i32], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [6 x double], [6 x double], [256 x i8], i32, i32, i32, i32, [2 x [5 x i32]], [2 x [5 x i32]], i32, i32, i32, i32, i32, i32, i32, i32, i32, [3 x i32], i32 }
 
 ; The assumed context of this test case has at some point become very complex.
-; This test case verifies that we bail out and generate an infeasible
-; assumed context. It should be updated after having made the assumed context
-; construction more efficient.
-
-; CHECK-NOT: Assumed Context:
+; However, since we keep both the assumed as well as invalid context that
+; problem is solved.
+;
+; CHECK:      Assumed Context:
+; CHECK-NEXT:   [tmp17, tmp21, tmp27, tmp31, tmp37, tmp41, tmp46, tmp52, tmp56, tmp62] -> {  :  }
+; CHECK:      Invalid Context:
+; CHECK-NEXT:   [tmp17, tmp21, tmp27, tmp31, tmp37, tmp41, tmp46, tmp52, tmp56, tmp62] -> { : (tmp17 < 0 and tmp21 < 0) or (tmp17 < 0 and tmp21 > 0) or (tmp17 > 0 and tmp21 < 0) or (tmp17 > 0 and tmp21 > 0) or (tmp37 < 0 and tmp41 < 0 and tmp46 > 0) or (tmp37 < 0 and tmp41 > 0 and tmp46 > 0) or (tmp37 > 0 and tmp41 < 0 and tmp46 > 0) or (tmp37 > 0 and tmp41 > 0 and tmp46 > 0) or (tmp27 = 3 and tmp31 <= 143) or (tmp56 = 0 and tmp52 < 0) or (tmp56 = 0 and tmp52 > 0) }
 
 
 @global = external global [300 x i8], align 16

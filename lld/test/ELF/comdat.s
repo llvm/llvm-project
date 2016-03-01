@@ -61,6 +61,15 @@ foo:
 // READ-NEXT:     Section: .text
 // READ-NEXT:   }
 // READ-NEXT:   Symbol {
+// READ-NEXT:     Name: _DYNAMIC
+// READ-NEXT:     Value: 0x2000
+// READ-NEXT:     Size: 0
+// READ-NEXT:     Binding: Local
+// READ-NEXT:     Type: None
+// READ-NEXT:     Other: 2
+// READ-NEXT:     Section: .dynamic
+// READ-NEXT:   }
+// READ-NEXT:   Symbol {
 // READ-NEXT:     Name: abc
 // READ-NEXT:     Value: 0x0
 // READ-NEXT:     Size: 0

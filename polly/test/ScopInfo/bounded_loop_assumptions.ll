@@ -7,7 +7,9 @@
 ; finally, if N == 2 we would have an unbounded inner loop.
 ;
 ; CHECK:      Assumed Context:
-; CHECK-NEXT:   [N] -> {  : N >= 3 or N <= 1 }
+; CHECK-NEXT:   [N] -> {  :  }
+; CHECK:      Invalid Context:
+; CHECK-NEXT:   [N] -> {  : N = 2 }
 ;
 ;    int jd(int *restrict A, int x, int N) {
 ;      for (int i = 1; i < N; i++)

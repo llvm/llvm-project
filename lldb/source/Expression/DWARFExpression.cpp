@@ -1944,7 +1944,7 @@ DWARFExpression::Evaluate
             {
                 tmp = stack.back();
                 stack.pop_back();
-                stack.back().ResolveValue(exe_ctx) = stack.back().ResolveValue(exe_ctx) + tmp.ResolveValue(exe_ctx);
+                stack.back().GetScalar() += tmp.GetScalar();
             }
             break;
 
@@ -1965,8 +1965,8 @@ DWARFExpression::Evaluate
             {
                 const uint64_t uconst_value = opcodes.GetULEB128(&offset);
                 // Implicit conversion from a UINT to a Scalar...
-                stack.back().ResolveValue(exe_ctx) += uconst_value;
-                if (!stack.back().ResolveValue(exe_ctx).IsValid())
+                stack.back().GetScalar() += uconst_value;
+                if (!stack.back().GetScalar().IsValid())
                 {
                     if (error_ptr)
                         error_ptr->SetErrorString("DW_OP_plus_uconst failed.");
