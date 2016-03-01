@@ -11,21 +11,21 @@
 // -----------------------------------------------------------------------------
 import AppKit
 
-struct Options : OptionSetType {
+struct Options : OptionSet {
   let rawValue: Int
 }
 
 func main() {
   var user_option = Options(rawValue: 123456)
-  var sdk_option_exhaustive: NSBinarySearchingOptions = [.FirstEqual, .InsertionIndex]
+  var sdk_option_exhaustive: NSBinarySearchingOptions = [.firstEqual, .insertionIndex]
   var sdk_option_nonexhaustive = NSBinarySearchingOptions(rawValue: 257)
   var sdk_option_nonevalid = NSBinarySearchingOptions(rawValue: 12)
   print("break here and do test") //%self.expect('frame variable user_option', substrs=['rawValue = 123456'])
   //%self.expect('expression user_option', substrs=['rawValue = 123456'])
-  //%self.expect('frame variable sdk_option_exhaustive', substrs=['[.FirstEqual, .InsertionIndex]'])
-  //%self.expect('expression sdk_option_exhaustive', substrs=['[.FirstEqual, .InsertionIndex]'])
-  //%self.expect('frame variable sdk_option_nonexhaustive', substrs=['[.FirstEqual, 0x1]'])
-  //%self.expect('expression sdk_option_nonexhaustive', substrs=['[.FirstEqual, 0x1]'])
+  //%self.expect('frame variable sdk_option_exhaustive', substrs=['[.firstEqual, .insertionIndex]'])
+  //%self.expect('expression sdk_option_exhaustive', substrs=['[.firstEqual, .insertionIndex]'])
+  //%self.expect('frame variable sdk_option_nonexhaustive', substrs=['[.firstEqual, 0x1]'])
+  //%self.expect('expression sdk_option_nonexhaustive', substrs=['[.firstEqual, 0x1]'])
   //%self.expect('frame variable sdk_option_nonevalid', substrs=['rawValue = 12'])
   //%self.expect('expression sdk_option_nonevalid', substrs=['rawValue = 12'])
 }
