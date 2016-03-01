@@ -20,7 +20,7 @@ func getDict() -> Dictionary<Int, String>
 // Test bound generic structs
 func getOptionalString() -> Optional<String>
 {
-    var opt_str = Optional<String>.Some("Hello")
+    var opt_str = Optional<String>.some("Hello")
     return opt_str
 }
 
@@ -50,7 +50,7 @@ func printLocal <JustSomeType : Creatable> () -> JustSomeType {
 func main_function() {
     var d = getDict();
     var o_some = getOptionalString()
-    var o_none = Optional<String>.None
+    var o_none = Optional<String>.none
     var c : Int = printLocal()
     print("stop here \(c)") // Set breakpoint here, verify values of "c", "d", and "o"
 }
