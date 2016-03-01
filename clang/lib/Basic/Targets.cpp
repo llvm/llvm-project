@@ -1931,6 +1931,8 @@ public:
       .Case("tonga",    GK_VOLCANIC_ISLANDS)
       .Case("iceland",  GK_VOLCANIC_ISLANDS)
       .Case("carrizo",  GK_VOLCANIC_ISLANDS)
+      .Case("fiji",     GK_VOLCANIC_ISLANDS)
+      .Case("stoney",   GK_VOLCANIC_ISLANDS)
       .Default(GK_NONE);
 
     if (GPU == GK_NONE) {

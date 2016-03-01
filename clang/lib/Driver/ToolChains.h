@@ -542,6 +542,8 @@ public:
 
   bool UseSjLjExceptions(const llvm::opt::ArgList &Args) const override;
 
+  bool SupportsEmbeddedBitcode() const override;
+
   SanitizerMask getSupportedSanitizers() const override;
 };
 

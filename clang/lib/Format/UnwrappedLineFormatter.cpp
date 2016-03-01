@@ -863,7 +863,9 @@ UnwrappedLineFormatter::format(const SmallVectorImpl<AnnotatedLine *> &Lines,
       // If no token in the current line is affected, we still need to format
       // affected children.
       if (TheLine.ChildrenAffected)
-        format(TheLine.Children, DryRun);
+        for (const FormatToken *Tok = TheLine.First; Tok; Tok = Tok->Next)
+          if (!Tok->Children.empty())
+            format(Tok->Children, DryRun);
 
       // Adapt following lines on the current indent level to the same level
       // unless the current \c AnnotatedLine is not at the beginning of a line.

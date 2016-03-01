@@ -80,9 +80,10 @@ public:
   };
 
   enum ProfileInstrKind {
-    ProfileNoInstr,    // No instrumentation.
-    ProfileClangInstr  // Clang instrumentation to generate execution counts
+    ProfileNone,       // Profile instrumentation is turned off.
+    ProfileClangInstr, // Clang instrumentation to generate execution counts
                        // to use with PGO.
+    ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
   };
 
   /// The code model to use (-mcmodel).
@@ -225,6 +226,11 @@ public:
   /// \brief Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
     return getProfileInstr() == ProfileClangInstr;
+  }
+
+  /// \brief Check if IR level profile instrumentation is on.
+  bool hasProfileIRInstr() const {
+    return getProfileInstr() == ProfileIRInstr;
   }
 };
 

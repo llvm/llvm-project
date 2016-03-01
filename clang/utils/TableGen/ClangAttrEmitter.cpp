@@ -1718,8 +1718,6 @@ void EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
       OS << "    return cast<" << R.getName() << "Attr>(this)->" << Method
          << ";\n";
     }
-    OS << "  case attr::NUM_ATTRS:\n";
-    OS << "    break;\n";
     OS << "  }\n";
     OS << "  llvm_unreachable(\"Unexpected attribute kind!\");\n";
     OS << "}\n\n";
@@ -1738,20 +1736,10 @@ void EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
 } // end namespace clang
 
-static void EmitAttrList(raw_ostream &OS, StringRef Class,
+static void emitAttrList(raw_ostream &OS, StringRef Class,
                          const std::vector<Record*> &AttrList) {
-  auto i = AttrList.cbegin(), e = AttrList.cend();
-
-  if (i != e) {
-    // Move the end iterator back to emit the last attribute.
-    for(--e; i != e; ++i) {
-      if (!(*i)->getValueAsBit("ASTNode"))
-        continue;
-      
-      OS << Class << "(" << (*i)->getName() << ")\n";
-    }
-    
-    OS << "LAST_" << Class << "(" << (*i)->getName() << ")\n\n";
+  for (auto Cur : AttrList) {
+    OS << Class << "(" << Cur->getName() << ")\n";
   }
 }
 
@@ -1764,71 +1752,216 @@ static bool AttrHasPragmaSpelling(const Record *R) {
          }) != Spellings.end();
 }
 
+namespace {
+  struct AttrClassDescriptor {
+    const char * const MacroName;
+    const char * const TableGenName;
+  };
+}
+
+static const AttrClassDescriptor AttrClassDescriptors[] = {
+  { "ATTR", "Attr" },
+  { "INHERITABLE_ATTR", "InheritableAttr" },
+  { "INHERITABLE_PARAM_ATTR", "InheritableParamAttr" }
+};
+
+static void emitDefaultDefine(raw_ostream &OS, StringRef name,
+                              const char *superName) {
+  OS << "#ifndef " << name << "\n";
+  OS << "#define " << name << "(NAME) ";
+  if (superName) OS << superName << "(NAME)";
+  OS << "\n#endif\n\n";
+}
+
+namespace {
+  /// A class of attributes.
+  struct AttrClass {
+    const AttrClassDescriptor &Descriptor;
+    Record *TheRecord;
+    AttrClass *SuperClass = nullptr;
+    std::vector<AttrClass*> SubClasses;
+    std::vector<Record*> Attrs;
+
+    AttrClass(const AttrClassDescriptor &Descriptor, Record *R)
+      : Descriptor(Descriptor), TheRecord(R) {}
+
+    void emitDefaultDefines(raw_ostream &OS) const {
+      // Default the macro unless this is a root class (i.e. Attr).
+      if (SuperClass) {
+        emitDefaultDefine(OS, Descriptor.MacroName,
+                          SuperClass->Descriptor.MacroName);
+      }
+    }
+
+    void emitUndefs(raw_ostream &OS) const {
+      OS << "#undef " << Descriptor.MacroName << "\n";
+    }
+
+    void emitAttrList(raw_ostream &OS) const {
+      for (auto SubClass : SubClasses) {
+        SubClass->emitAttrList(OS);
+      }
+
+      ::emitAttrList(OS, Descriptor.MacroName, Attrs);
+    }
+
+    void classifyAttrOnRoot(Record *Attr) {
+      bool result = classifyAttr(Attr);
+      assert(result && "failed to classify on root"); (void) result;
+    }
+
+    void emitAttrRange(raw_ostream &OS) const {
+      OS << "ATTR_RANGE(" << Descriptor.TableGenName
+         << ", " << getFirstAttr()->getName()
+         << ", " << getLastAttr()->getName() << ")\n";
+    }
+
+  private:
+    bool classifyAttr(Record *Attr) {
+      // Check all the subclasses.
+      for (auto SubClass : SubClasses) {
+        if (SubClass->classifyAttr(Attr))
+          return true;
+      }
+
+      // It's not more specific than this class, but it might still belong here.
+      if (Attr->isSubClassOf(TheRecord)) {
+        Attrs.push_back(Attr);
+        return true;
+      }
+
+      return false;
+    }
+
+    Record *getFirstAttr() const {
+      if (!SubClasses.empty())
+        return SubClasses.front()->getFirstAttr();
+      return Attrs.front();
+    }
+
+    Record *getLastAttr() const {
+      if (!Attrs.empty())
+        return Attrs.back();
+      return SubClasses.back()->getLastAttr();
+    }
+  };
+
+  /// The entire hierarchy of attribute classes.
+  class AttrClassHierarchy {
+    std::vector<std::unique_ptr<AttrClass>> Classes;
+  public:
+    AttrClassHierarchy(RecordKeeper &Records) {
+      // Find records for all the classes.
+      for (auto &Descriptor : AttrClassDescriptors) {
+        Record *ClassRecord = Records.getClass(Descriptor.TableGenName);
+        AttrClass *Class = new AttrClass(Descriptor, ClassRecord);
+        Classes.emplace_back(Class);
+      }
+
+      // Link up the hierarchy.
+      for (auto &Class : Classes) {
+        if (AttrClass *SuperClass = findSuperClass(Class->TheRecord)) {
+          Class->SuperClass = SuperClass;
+          SuperClass->SubClasses.push_back(Class.get());
+        }
+      }
+
+#ifndef NDEBUG
+      for (auto i = Classes.begin(), e = Classes.end(); i != e; ++i) {
+        assert((i == Classes.begin()) == ((*i)->SuperClass == nullptr) &&
+               "only the first class should be a root class!");
+      }
+#endif
+    }
+
+    void emitDefaultDefines(raw_ostream &OS) const {
+      for (auto &Class : Classes) {
+        Class->emitDefaultDefines(OS);
+      }
+    }
+
+    void emitUndefs(raw_ostream &OS) const {
+      for (auto &Class : Classes) {
+        Class->emitUndefs(OS);
+      }
+    }
+
+    void emitAttrLists(raw_ostream &OS) const {
+      // Just start from the root class.
+      Classes[0]->emitAttrList(OS);
+    }
+
+    void emitAttrRanges(raw_ostream &OS) const {
+      for (auto &Class : Classes)
+        Class->emitAttrRange(OS);
+    }
+
+    void classifyAttr(Record *Attr) {
+      // Add the attribute to the root class.
+      Classes[0]->classifyAttrOnRoot(Attr);
+    }
+
+  private:
+    AttrClass *findClassByRecord(Record *R) const {
+      for (auto &Class : Classes) {
+        if (Class->TheRecord == R)
+          return Class.get();
+      }
+      return nullptr;
+    }
+
+    AttrClass *findSuperClass(Record *R) const {
+      // TableGen flattens the superclass list, so we just need to walk it
+      // in reverse.
+      auto SuperClasses = R->getSuperClasses();
+      for (signed i = 0, e = SuperClasses.size(); i != e; ++i) {
+        auto SuperClass = findClassByRecord(SuperClasses[e - i - 1].first);
+        if (SuperClass) return SuperClass;
+      }
+      return nullptr;
+    }
+  };
+}
+
 namespace clang {
 // Emits the enumeration list for attributes.
 void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("List of all attributes that Clang recognizes", OS);
 
-  OS << "#ifndef LAST_ATTR\n";
-  OS << "#define LAST_ATTR(NAME) ATTR(NAME)\n";
-  OS << "#endif\n\n";
+  AttrClassHierarchy Hierarchy(Records);
 
-  OS << "#ifndef INHERITABLE_ATTR\n";
-  OS << "#define INHERITABLE_ATTR(NAME) ATTR(NAME)\n";
-  OS << "#endif\n\n";
+  // Add defaulting macro definitions.
+  Hierarchy.emitDefaultDefines(OS);
+  emitDefaultDefine(OS, "PRAGMA_SPELLING_ATTR", nullptr);
 
-  OS << "#ifndef LAST_INHERITABLE_ATTR\n";
-  OS << "#define LAST_INHERITABLE_ATTR(NAME) INHERITABLE_ATTR(NAME)\n";
-  OS << "#endif\n\n";
-
-  OS << "#ifndef INHERITABLE_PARAM_ATTR\n";
-  OS << "#define INHERITABLE_PARAM_ATTR(NAME) ATTR(NAME)\n";
-  OS << "#endif\n\n";
-
-  OS << "#ifndef LAST_INHERITABLE_PARAM_ATTR\n";
-  OS << "#define LAST_INHERITABLE_PARAM_ATTR(NAME)"
-        " INHERITABLE_PARAM_ATTR(NAME)\n";
-  OS << "#endif\n\n";
-
-  OS << "#ifndef PRAGMA_SPELLING_ATTR\n";
-  OS << "#define PRAGMA_SPELLING_ATTR(NAME)\n";
-  OS << "#endif\n\n";
-
-  OS << "#ifndef LAST_PRAGMA_SPELLING_ATTR\n";
-  OS << "#define LAST_PRAGMA_SPELLING_ATTR(NAME) PRAGMA_SPELLING_ATTR(NAME)\n";
-  OS << "#endif\n\n";
-
-  Record *InhClass = Records.getClass("InheritableAttr");
-  Record *InhParamClass = Records.getClass("InheritableParamAttr");
-  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr"),
-                        NonInhAttrs, InhAttrs, InhParamAttrs, PragmaAttrs;
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
+  std::vector<Record *> PragmaAttrs;
   for (auto *Attr : Attrs) {
     if (!Attr->getValueAsBit("ASTNode"))
       continue;
 
+    // Add the attribute to the ad-hoc groups.
     if (AttrHasPragmaSpelling(Attr))
       PragmaAttrs.push_back(Attr);
 
-    if (Attr->isSubClassOf(InhParamClass))
-      InhParamAttrs.push_back(Attr);
-    else if (Attr->isSubClassOf(InhClass))
-      InhAttrs.push_back(Attr);
-    else
-      NonInhAttrs.push_back(Attr);
+    // Place it in the hierarchy.
+    Hierarchy.classifyAttr(Attr);
   }
 
-  EmitAttrList(OS, "PRAGMA_SPELLING_ATTR", PragmaAttrs);
-  EmitAttrList(OS, "INHERITABLE_PARAM_ATTR", InhParamAttrs);
-  EmitAttrList(OS, "INHERITABLE_ATTR", InhAttrs);
-  EmitAttrList(OS, "ATTR", NonInhAttrs);
+  // Emit the main attribute list.
+  Hierarchy.emitAttrLists(OS);
 
-  OS << "#undef LAST_ATTR\n";
-  OS << "#undef INHERITABLE_ATTR\n";
-  OS << "#undef LAST_INHERITABLE_ATTR\n";
-  OS << "#undef LAST_INHERITABLE_PARAM_ATTR\n";
-  OS << "#undef LAST_PRAGMA_ATTR\n";
+  // Emit the ad hoc groups.
+  emitAttrList(OS, "PRAGMA_SPELLING_ATTR", PragmaAttrs);
+
+  // Emit the attribute ranges.
+  OS << "#ifdef ATTR_RANGE\n";
+  Hierarchy.emitAttrRanges(OS);
+  OS << "#undef ATTR_RANGE\n";
+  OS << "#endif\n";
+
+  Hierarchy.emitUndefs(OS);
   OS << "#undef PRAGMA_SPELLING_ATTR\n";
-  OS << "#undef ATTR\n";
 }
 
 // Emits the code to read an attribute from a precompiled header.
@@ -1841,8 +1974,6 @@ void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS) {
   std::vector<std::unique_ptr<Argument>> Args;
 
   OS << "  switch (Kind) {\n";
-  OS << "  default:\n";
-  OS << "    llvm_unreachable(\"Unknown attribute!\");\n";
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;
     if (!R.getValueAsBit("ASTNode"))
@@ -1882,9 +2013,6 @@ void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS) {
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr"), Args;
 
   OS << "  switch (A->getKind()) {\n";
-  OS << "  default:\n";
-  OS << "    llvm_unreachable(\"Unknown attribute kind!\");\n";
-  OS << "    break;\n";
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;
     if (!R.getValueAsBit("ASTNode"))
@@ -2075,11 +2203,7 @@ void EmitClangAttrSpellingListIndex(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Code to translate different attribute spellings "
                        "into internal identifiers", OS);
 
-  OS <<
-    "  switch (AttrKind) {\n"
-    "  default:\n"
-    "    llvm_unreachable(\"Unknown attribute kind!\");\n"
-    "    break;\n";
+  OS << "  switch (AttrKind) {\n";
 
   ParsedAttrMap Attrs = getParsedAttrList(Records);
   for (const auto &I : Attrs) {
@@ -2159,9 +2283,7 @@ void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
      << "  if (!A)\n"
      << "    return true;\n"
      << "\n"
-     << "  switch (A->getKind()) {\n"
-     << "    default:\n"
-     << "      return true;\n";
+     << "  switch (A->getKind()) {\n";
 
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;
@@ -2172,7 +2294,8 @@ void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
        << "      return getDerived().Traverse" << R.getName() << "Attr("
        << "cast<" << R.getName() << "Attr>(A));\n";
   }
-  OS << "  }\n";  // end case
+  OS << "  }\n";  // end switch
+  OS << "  llvm_unreachable(\"bad attribute kind\");\n";
   OS << "}\n";  // end function
   OS << "#endif  // ATTR_VISITOR_DECLS_ONLY\n";
 }
@@ -2188,9 +2311,7 @@ void EmitClangAttrTemplateInstantiate(RecordKeeper &Records, raw_ostream &OS) {
      << "Attr *instantiateTemplateAttribute(const Attr *At, ASTContext &C, "
      << "Sema &S,\n"
      << "        const MultiLevelTemplateArgumentList &TemplateArgs) {\n"
-     << "  switch (At->getKind()) {\n"
-     << "    default:\n"
-     << "      break;\n";
+     << "  switch (At->getKind()) {\n";
 
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;
@@ -2788,11 +2909,7 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
 void EmitClangAttrDump(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute dumper", OS);
 
-  OS <<
-    "  switch (A->getKind()) {\n"
-    "  default:\n"
-    "    llvm_unreachable(\"Unknown attribute kind!\");\n"
-    "    break;\n";
+  OS << "  switch (A->getKind()) {\n";
   std::vector<Record*> Attrs = Records.getAllDerivedDefinitions("Attr"), Args;
   for (const auto *Attr : Attrs) {
     const Record &R = *Attr;

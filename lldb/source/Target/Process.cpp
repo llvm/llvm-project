@@ -4139,7 +4139,7 @@ Process::ControlPrivateStateThread (uint32_t signal)
                     log->Printf ("The control event killed the private state thread without having to cancel.");
             }
 
-            thread_result_t result = nullptr;
+            thread_result_t result = NULL;
             private_state_thread.Join(&result);
             m_private_state_thread.Reset();
         }
