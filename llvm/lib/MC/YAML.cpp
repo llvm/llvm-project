@@ -56,10 +56,6 @@ void yaml::BinaryRef::writeAsHex(raw_ostream &OS) const {
     OS.write((const char *)Data.data(), Data.size());
     return;
   }
-  for (ArrayRef<uint8_t>::iterator I = Data.begin(), E = Data.end(); I != E;
-       ++I) {
-    uint8_t Byte = *I;
-    OS << hexdigit(Byte >> 4);
-    OS << hexdigit(Byte & 0xf);
-  }
+  for (uint8_t Byte : Data)
+    OS << hexdigit(Byte >> 4) << hexdigit(Byte & 0xf);
 }

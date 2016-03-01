@@ -463,7 +463,7 @@ def DSOffset01MatchClass : AsmOperandClass {
 
 class GDSBaseMatchClass <string parser> : AsmOperandClass {
   let Name = "GDS"#parser;
-  let PredicateMethod = "isImm";
+  let PredicateMethod = "isGDS";
   let ParserMethod = parser;
   let RenderMethod = "addImmOperands";
   let IsOptional = 1;
@@ -474,7 +474,7 @@ def GDS01MatchClass : GDSBaseMatchClass <"parseDSOff01OptionalOps">;
 
 class GLCBaseMatchClass <string parser> : AsmOperandClass {
   let Name = "GLC"#parser;
-  let PredicateMethod = "isImm";
+  let PredicateMethod = "isGLC";
   let ParserMethod = parser;
   let RenderMethod = "addImmOperands";
   let IsOptional = 1;
@@ -485,7 +485,7 @@ def GLCFlatMatchClass : GLCBaseMatchClass <"parseFlatOptionalOps">;
 
 class SLCBaseMatchClass <string parser> : AsmOperandClass {
   let Name = "SLC"#parser;
-  let PredicateMethod = "isImm";
+  let PredicateMethod = "isSLC";
   let ParserMethod = parser;
   let RenderMethod = "addImmOperands";
   let IsOptional = 1;
@@ -497,7 +497,7 @@ def SLCFlatAtomicMatchClass : SLCBaseMatchClass <"parseFlatAtomicOptionalOps">;
 
 class TFEBaseMatchClass <string parser> : AsmOperandClass {
   let Name = "TFE"#parser;
-  let PredicateMethod = "isImm";
+  let PredicateMethod = "isTFE";
   let ParserMethod = parser;
   let RenderMethod = "addImmOperands";
   let IsOptional = 1;
@@ -509,7 +509,7 @@ def TFEFlatAtomicMatchClass : TFEBaseMatchClass <"parseFlatAtomicOptionalOps">;
 
 def OModMatchClass : AsmOperandClass {
   let Name = "OMod";
-  let PredicateMethod = "isImm";
+  let PredicateMethod = "isOMod";
   let ParserMethod = "parseVOP3OptionalOps";
   let RenderMethod = "addImmOperands";
   let IsOptional = 1;
@@ -517,7 +517,7 @@ def OModMatchClass : AsmOperandClass {
 
 def ClampMatchClass : AsmOperandClass {
   let Name = "Clamp";
-  let PredicateMethod = "isImm";
+  let PredicateMethod = "isClamp";
   let ParserMethod = "parseVOP3OptionalOps";
   let RenderMethod = "addImmOperands";
   let IsOptional = 1;

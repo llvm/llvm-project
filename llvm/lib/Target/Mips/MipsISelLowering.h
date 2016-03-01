@@ -444,6 +444,8 @@ namespace llvm {
                                  bool IsSRA) const;
     SDValue lowerADD(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerATOMIC_CMP_SWAP_WITH_SUCCESS(SDValue Op,
+                                              SelectionDAG &DAG) const;
 
     /// isEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization.
@@ -577,6 +579,10 @@ namespace llvm {
     MachineBasicBlock *emitAtomicCmpSwapPartword(MachineInstr *MI,
                                   MachineBasicBlock *BB, unsigned Size) const;
     MachineBasicBlock *emitSEL_D(MachineInstr *MI, MachineBasicBlock *BB) const;
+
+    MachineBasicBlock *emitSEL64_S(MachineInstr *MI,
+                                   MachineBasicBlock *BB) const;
+
     MachineBasicBlock *emitPseudoSELECT(MachineInstr *MI,
                                         MachineBasicBlock *BB, bool isFPCmp,
                                         unsigned Opc) const;

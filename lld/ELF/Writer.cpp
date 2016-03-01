@@ -1389,15 +1389,15 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
       H.p_offset = PHdr.First->getFileOff();
       H.p_vaddr = PHdr.First->getVA();
     }
-    if (PHdr.H.p_type == PT_LOAD)
+    if (H.p_type == PT_LOAD)
       H.p_align = Target->PageSize;
-    else if (PHdr.H.p_type == PT_GNU_RELRO)
+    else if (H.p_type == PT_GNU_RELRO)
       H.p_align = 1;
     H.p_paddr = H.p_vaddr;
 
     // The TLS pointer goes after PT_TLS. At least glibc will align it,
     // so round up the size to make sure the offsets are correct.
-    if (PHdr.H.p_type == PT_TLS) {
+    if (H.p_type == PT_TLS) {
       Out<ELFT>::TlsPhdr = &H;
       H.p_memsz = alignTo(H.p_memsz, H.p_align);
     }

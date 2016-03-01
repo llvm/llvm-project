@@ -51,7 +51,7 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK: "?dtor$2@?0?passes_two@4HA":
 ; CHECK: pushl %ebp
 ; CHECK: subl $8, %esp
-; CHECK: addl $16, %ebp
+; CHECK: addl $12, %ebp
 ; CHECK: {{movl|leal}} -{{[0-9]+}}(%ebp), %ecx
 ; CHECK: calll "??1A@@QAE@XZ"
 ; CHECK: addl $8, %esp

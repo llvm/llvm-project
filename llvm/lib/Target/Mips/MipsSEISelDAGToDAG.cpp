@@ -251,28 +251,14 @@ SDNode *MipsSEDAGToDAGISel::selectAddESubE(unsigned MOp, SDValue InFlag,
   SDValue LHS = Node->getOperand(0), RHS = Node->getOperand(1);
   EVT VT = LHS.getValueType();
 
-  SDNode *Carry = CurDAG->getMachineNode(SLTuOp, DL, VT, Ops);
-
-  if (Subtarget->isGP64bit()) {
-    // On 64-bit targets, sltu produces an i64 but our backend currently says
-    // that SLTu64 produces an i32. We need to fix this in the long run but for
-    // now, just make the DAG type-correct by asserting the upper bits are zero.
-    Carry = CurDAG->getMachineNode(Mips::SUBREG_TO_REG, DL, VT,
-                                   CurDAG->getTargetConstant(0, DL, VT),
-                                   SDValue(Carry, 0),
-                                   CurDAG->getTargetConstant(Mips::sub_32, DL,
-                                                             VT));
-  }
-
   // Generate a second addition only if we know that RHS is not a
   // constant-zero node.
-  SDNode *AddCarry = Carry;
+  SDNode *Carry = CurDAG->getMachineNode(SLTuOp, DL, VT, Ops);
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS);
   if (!C || C->getZExtValue())
-    AddCarry = CurDAG->getMachineNode(ADDuOp, DL, VT, SDValue(Carry, 0), RHS);
+    Carry = CurDAG->getMachineNode(ADDuOp, DL, VT, SDValue(Carry, 0), RHS);
 
-  return CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS,
-                              SDValue(AddCarry, 0));
+  return CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS, SDValue(Carry, 0));
 }
 
 /// Match frameindex

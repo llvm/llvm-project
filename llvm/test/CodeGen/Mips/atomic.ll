@@ -344,7 +344,11 @@ entry:
 ; HAS-SEB-SEH:   seb     $[[R19:[0-9]+]], $[[R17]]
 
 ; ALL:           xor     $[[R20:[0-9]+]], $[[R19]], $5
-; ALL:           sltiu   $2, $[[R20]], 1
+
+; MIPS32-ANY:    sltiu   $2, $[[R20]], 1
+
+; MIPS64-ANY:    sltiu   $[[R21:[0-9]+]], $[[R20]], 1
+; MIPS64-ANY:    sll     $2, $[[R21]], 0
 }
 
 ; Check one i16 so that we cover the seh sign extend
