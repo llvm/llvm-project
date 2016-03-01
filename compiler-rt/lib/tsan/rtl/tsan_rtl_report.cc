@@ -342,12 +342,12 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
     rep_->locs.PushBack(loc);
     AddThread(tctx);
   }
+#endif
   if (ReportLocation *loc = SymbolizeData(addr)) {
     loc->suppressable = true;
     rep_->locs.PushBack(loc);
     return;
   }
-#endif
 }
 
 #ifndef SANITIZER_GO

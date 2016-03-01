@@ -5354,6 +5354,7 @@ INTERCEPTOR(SSIZE_T, recvfrom, int fd, void *buf, SIZE_T len, int flags,
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
   SIZE_T srcaddr_sz;
   if (srcaddr) srcaddr_sz = *addrlen;
+  (void)srcaddr_sz;  // prevent "set but not used" warning
   SSIZE_T res = REAL(recvfrom)(fd, buf, len, flags, srcaddr, addrlen);
   if (res > 0) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, res);
