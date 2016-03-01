@@ -3040,6 +3040,25 @@ public:
 /// type.
 class FunctionProtoType : public FunctionType, public llvm::FoldingSetNode {
 public:
+  /// Interesting information about a specific parameter that can't simply
+  /// be reflected in parameter's type.
+  ///
+  /// It makes sense to model language features this way when there's some
+  /// sort of parameter-specific override (such as an attribute) that
+  /// affects how the function is called.  For example, the ARC ns_consumed
+  /// attribute changes whether a parameter is passed at +0 (the default)
+  /// or +1 (ns_consumed).  This must be reflected in the function type,
+  /// but isn't really a change to the parameter type.
+  ///
+  /// One serious disadvantage of modelling language features this way is
+  /// that they generally do not work with language features that attempt
+  /// to destructure types.  For example, template argument deduction will
+  /// not be able to match a parameter declared as
+  ///   T (*)(U)
+  /// against an argument of type
+  ///   void (*)(__attribute__((ns_consumed)) id)
+  /// because the substitution of T=void, U=id into the former will
+  /// not produce the latter.
   class ExtParameterInfo {
     enum {
       IsConsumed      = 0x01,
@@ -3349,12 +3368,17 @@ public:
     return exception_begin() + NumExceptions;
   }
 
+  /// Is there any interesting extra information for any of the parameters
+  /// of this function type?
   bool hasExtParameterInfos() const { return HasExtParameterInfos; }
   ArrayRef<ExtParameterInfo> getExtParameterInfos() const {
     assert(hasExtParameterInfos());
     return ArrayRef<ExtParameterInfo>(getExtParameterInfosBuffer(),
                                       getNumParams());
   }
+  /// Return a pointer to the beginning of the array of extra parameter
+  /// information, if present, or else null if none of the parameters
+  /// carry it.  This is equivalent to getExtProtoInfo().ExtParameterInfos.
   const ExtParameterInfo *getExtParameterInfosOrNull() const {
     if (!hasExtParameterInfos())
       return nullptr;

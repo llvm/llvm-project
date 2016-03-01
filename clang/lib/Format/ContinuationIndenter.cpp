@@ -847,7 +847,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     // there is a line-break right after the operator.
     // Exclude relational operators, as there, it is always more desirable to
     // have the LHS 'left' of the RHS.
-    if (Previous && Previous->getPrecedence() > prec::Assignment &&
+    if (Previous && Previous->getPrecedence() != prec::Assignment &&
         Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) &&
         Previous->getPrecedence() != prec::Relational) {
       bool BreakBeforeOperator =

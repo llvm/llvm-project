@@ -6994,11 +6994,14 @@ public:
     SavedPendingLocalImplicitInstantiations;
   };
 
+  /// A helper class for building up ExtParameterInfos.
   class ExtParameterInfoBuilder {
-    SmallVector<FunctionProtoType::ExtParameterInfo, 4> Infos;
+    SmallVector<FunctionProtoType::ExtParameterInfo, 16> Infos;
     bool HasInteresting = false;
 
   public:
+    /// Set the ExtParameterInfo for the parameter at the given index,
+    /// 
     void set(unsigned index, FunctionProtoType::ExtParameterInfo info) {
       assert(Infos.size() <= index);
       Infos.resize(index);
@@ -7008,9 +7011,13 @@ public:
         HasInteresting = (info != FunctionProtoType::ExtParameterInfo());
     }
 
+    /// Return a pointer (suitable for setting in an ExtProtoInfo) to the
+    /// ExtParameterInfo array we've built up.
     const FunctionProtoType::ExtParameterInfo *
     getPointerOrNull(unsigned numParams) {
-      return (HasInteresting ? Infos.data() : nullptr);
+      if (!HasInteresting) return nullptr;
+      Infos.resize(numParams);
+      return Infos.data();
     }
   };
 

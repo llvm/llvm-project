@@ -409,7 +409,8 @@ private:
                 (!Contexts.back().ColonIsDictLiteral ||
                  Style.Language != FormatStyle::LK_Cpp)) ||
                Style.Language == FormatStyle::LK_Proto) &&
-              Previous->Tok.getIdentifierInfo())
+              (Previous->Tok.getIdentifierInfo() ||
+               Previous->is(tok::char_constant)))
             Previous->Type = TT_SelectorName;
           if (CurrentToken->is(tok::colon) ||
               Style.Language == FormatStyle::LK_JavaScript)
@@ -1752,7 +1753,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     if (Style.Language == FormatStyle::LK_Proto)
       return 1;
     if (Left.is(tok::r_square))
-      return 25;
+      return 200;
     // Slightly prefer formatting local lambda definitions like functions.
     if (Right.is(TT_LambdaLSquare) && Left.is(tok::equal))
       return 35;
