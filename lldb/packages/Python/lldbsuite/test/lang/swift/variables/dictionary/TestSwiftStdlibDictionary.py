@@ -122,7 +122,7 @@ class TestSwiftStdlibDictionary(TestBase):
         for i in range(0,100):
             self.find_dictionary_entry(self.get_variable("d"), key_value = str(i), value_summary = '"%s"' % (i * 2 + 1))
         
-        self.runCmd('expression d.removeValueForKey(34)')
+        self.runCmd('expression d.removeValue(forKey: 34)')
         self.find_dictionary_entry(self.get_variable("d"), key_value = 34, value_summary = '"43"', fail_on_missing=False)
 
 if __name__ == '__main__':
