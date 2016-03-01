@@ -27,3 +27,6 @@ typedef signed char BOOL;
 @end
 
 typedef struct objc_selector *SEL;
+
+void _Block_release(const void *aBlock);
+#define Block_release(...) _Block_release((const void *)(__VA_ARGS__))
