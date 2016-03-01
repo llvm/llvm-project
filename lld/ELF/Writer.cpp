@@ -1247,6 +1247,7 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
 
   Phdr TlsHdr(PT_TLS, PF_R);
   Phdr RelRo(PT_GNU_RELRO, PF_R);
+  Phdr Note(PT_NOTE, PF_R);
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     if (!(Sec->getFlags() & SHF_ALLOC))
       break;
@@ -1273,6 +1274,8 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
 
     if (isRelroSection(Sec))
       AddSec(RelRo, Sec);
+    if (Sec->getType() == SHT_NOTE)
+      AddSec(Note, Sec);
   }
 
   // Add the TLS segment unless it's empty.
@@ -1301,6 +1304,9 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
   // pages for the stack non-executable.
   if (!Config->ZExecStack)
     AddHdr(PT_GNU_STACK, PF_R | PF_W);
+
+  if (Note.First)
+    Phdrs.push_back(std::move(Note));
 }
 
 // Used for relocatable output (-r). In this case we create only ELF file

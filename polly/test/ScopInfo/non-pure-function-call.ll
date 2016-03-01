@@ -1,7 +1,9 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
 ; CHECK:      Assumed Context:
-; CHECK-NEXT:   [N] -> {  : N <= 101 }
+; CHECK-NEXT:   [N] -> {  :  }
+; CHECK:      Invalid Context:
+; CHECK-NEXT:   [N] -> {  : N >= 102 }
 ;
 ;    void g(void);
 ;    void f(int *A, int N) {

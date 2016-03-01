@@ -173,7 +173,7 @@ class SocketPacketPump(object):
                     # Likely a closed socket.  Done with the pump thread.
                     if self._logger:
                         self._logger.debug(
-                            "socket read failed, stopping pump read thread")
+                            "socket read failed, stopping pump read thread\n" + traceback.format_exc(3))
                     break
                 self._process_new_bytes(new_bytes)
 

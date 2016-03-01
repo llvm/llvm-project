@@ -28,10 +28,6 @@ bool IsExpectedReport(uptr addr, uptr size) {
   return false;
 }
 
-ReportLocation *SymbolizeData(uptr addr) {
-  return 0;
-}
-
 void *internal_alloc(MBlockType typ, uptr sz) {
   return InternalAlloc(sz);
 }
@@ -40,7 +36,15 @@ void internal_free(void *p) {
   InternalFree(p);
 }
 
-struct SymbolizeContext {
+// Callback into Go.
+static void (*go_runtime_cb)(uptr cmd, void *ctx);
+
+enum {
+  CallbackSymbolizeCode = 0,
+  CallbackSymbolizeData = 1,
+};
+
+struct SymbolizeCodeContext {
   uptr pc;
   char *func;
   char *file;
@@ -49,24 +53,60 @@ struct SymbolizeContext {
   uptr res;
 };
 
-// Callback into Go.
-static void (*symbolize_cb)(SymbolizeContext *ctx);
-
 SymbolizedStack *SymbolizeCode(uptr addr) {
   SymbolizedStack *s = SymbolizedStack::New(addr);
-  SymbolizeContext ctx;
-  internal_memset(&ctx, 0, sizeof(ctx));
-  ctx.pc = addr;
-  symbolize_cb(&ctx);
-  if (ctx.res) {
+  SymbolizeCodeContext cbctx;
+  internal_memset(&cbctx, 0, sizeof(cbctx));
+  cbctx.pc = addr;
+  go_runtime_cb(CallbackSymbolizeCode, &cbctx);
+  if (cbctx.res) {
     AddressInfo &info = s->info;
-    info.module_offset = ctx.off;
-    info.function = internal_strdup(ctx.func ? ctx.func : "??");
-    info.file = internal_strdup(ctx.file ? ctx.file : "-");
-    info.line = ctx.line;
+    info.module_offset = cbctx.off;
+    info.function = internal_strdup(cbctx.func ? cbctx.func : "??");
+    info.file = internal_strdup(cbctx.file ? cbctx.file : "-");
+    info.line = cbctx.line;
     info.column = 0;
   }
   return s;
+}
+
+struct SymbolizeDataContext {
+  uptr addr;
+  uptr heap;
+  uptr start;
+  uptr size;
+  char *name;
+  char *file;
+  uptr line;
+  uptr res;
+};
+
+ReportLocation *SymbolizeData(uptr addr) {
+  SymbolizeDataContext cbctx;
+  internal_memset(&cbctx, 0, sizeof(cbctx));
+  cbctx.addr = addr;
+  go_runtime_cb(CallbackSymbolizeData, &cbctx);
+  if (!cbctx.res)
+    return 0;
+  if (cbctx.heap) {
+    MBlock *b = ctx->metamap.GetBlock(cbctx.start);
+    if (!b)
+      return 0;
+    ReportLocation *loc = ReportLocation::New(ReportLocationHeap);
+    loc->heap_chunk_start = cbctx.start;
+    loc->heap_chunk_size = b->siz;
+    loc->tid = b->tid;
+    loc->stack = SymbolizeStackId(b->stk);
+    return loc;
+  } else {
+    ReportLocation *loc = ReportLocation::New(ReportLocationGlobal);
+    loc->global.name = internal_strdup(cbctx.name ? cbctx.name : "??");
+    loc->global.file = internal_strdup(cbctx.file ? cbctx.file : "??");
+    loc->global.line = cbctx.line;
+    loc->global.start = cbctx.start;
+    loc->global.size = cbctx.size;
+    return loc;
+  }
 }
 
 extern "C" {
@@ -81,8 +121,8 @@ static ThreadState *AllocGoroutine() {
   return thr;
 }
 
-void __tsan_init(ThreadState **thrp, void (*cb)(SymbolizeContext *cb)) {
-  symbolize_cb = cb;
+void __tsan_init(ThreadState **thrp, void (*cb)(uptr cmd, void *cb)) {
+  go_runtime_cb = cb;
   ThreadState *thr = AllocGoroutine();
   main_thr = *thrp = thr;
   Initialize(thr);
@@ -140,10 +180,16 @@ void __tsan_func_exit(ThreadState *thr) {
   FuncExit(thr);
 }
 
-void __tsan_malloc(void *p, uptr sz) {
-  if (!inited)
-    return;
+void __tsan_malloc(ThreadState *thr, uptr pc, uptr p, uptr sz) {
+  CHECK(inited);
+  if (thr && pc)
+    ctx->metamap.AllocBlock(thr, pc, p, sz);
   MemoryResetRange(0, 0, (uptr)p, sz);
+}
+
+void __tsan_free(ThreadState *thr, uptr p, uptr sz) {
+  if (thr)
+    ctx->metamap.FreeRange(thr, 0, p, sz);
 }
 
 void __tsan_go_start(ThreadState *parent, ThreadState **pthr, void *pc) {

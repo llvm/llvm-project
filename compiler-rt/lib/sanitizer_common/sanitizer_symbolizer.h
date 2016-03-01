@@ -65,6 +65,8 @@ struct DataInfo {
   // (de)allocated using sanitizer internal allocator.
   char *module;
   uptr module_offset;
+  char *file;
+  uptr line;
   char *name;
   uptr start;
   uptr size;

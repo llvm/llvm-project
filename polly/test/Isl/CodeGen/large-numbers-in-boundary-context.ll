@@ -4,7 +4,7 @@
 ; we will check that we use an appropriaty typed constant, here with 65 bits.
 ; An alternative would be to bail out early but that would not be as easy.
 ;
-; CHECK: {{.*}} = icmp sge i65 {{.*}}, -9223372036854775809
+; CHECK: {{.*}} = icmp sle i65 {{.*}}, -9223372036854775810
 ;
 ; CHECK: polly.start
 ;

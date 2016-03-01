@@ -60,6 +60,7 @@ DataInfo::DataInfo() {
 
 void DataInfo::Clear() {
   InternalFree(module);
+  InternalFree(file);
   InternalFree(name);
   internal_memset(this, 0, sizeof(DataInfo));
 }

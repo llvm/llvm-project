@@ -7,6 +7,7 @@
 ;
 ; CHECK:  sext i32 %c to i64
 ; CHECK:  sext i32 %c to i64
+; CHECK:  %[[Ctx:[._a-zA-Z0-9]*]] = and i1 true
 ; CHECK:  %[[M0:[._a-zA-Z0-9]*]] = sext i32 %c to i64
 ; CHECK:  %[[M1:[._a-zA-Z0-9]*]] = icmp sle i64 %[[M0]], 15
 ; CHECK:  %[[M2:[._a-zA-Z0-9]*]] = sext i32 %c to i64
@@ -24,7 +25,7 @@
 ; CHECK:  %[[BMin:[._a-zA-Z0-9]*]] = getelementptr i32, i32* %B, i64 %[[m4]]
 ; CHECK:  %[[AltB:[._a-zA-Z0-9]*]] = icmp ule i32* %[[AMax]], %[[BMin]]
 ; CHECK:  %[[NoAlias:[._a-zA-Z0-9]*]] = or i1 %[[BltA]], %[[AltB]]
-; CHECK:  %[[RTC:[._a-zA-Z0-9]*]] = and i1 %3, %[[NoAlias]]
+; CHECK:  %[[RTC:[._a-zA-Z0-9]*]] = and i1 %[[Ctx]], %[[NoAlias]]
 ; CHECK:  br i1 %[[RTC]], label %polly.start, label %for.cond
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

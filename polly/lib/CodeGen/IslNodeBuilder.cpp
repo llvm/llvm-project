@@ -48,6 +48,12 @@
 using namespace polly;
 using namespace llvm;
 
+// The maximal number of basic sets we allow during invariant load construction.
+// More complex access ranges will result in very high compile time and are also
+// unlikely to result in good code. This value is very high and should only
+// trigger for corner cases (e.g., the "dct_luma" function in h264, SPEC2006).
+static int const MaxConjunctsInAccessRange = 80;
+
 __isl_give isl_ast_expr *
 IslNodeBuilder::getUpperBound(__isl_keep isl_ast_node *For,
                               ICmpInst::Predicate &Predicate) {
@@ -915,6 +921,11 @@ bool IslNodeBuilder::materializeParameters(isl_set *Set, bool All) {
 Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
                                               isl_ast_build *Build,
                                               Instruction *AccInst) {
+  if (isl_set_n_basic_set(AccessRange) > MaxConjunctsInAccessRange) {
+    isl_set_free(AccessRange);
+    return nullptr;
+  }
+
   isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
   PWAccRel = isl_pw_multi_aff_gist_params(PWAccRel, S.getContext());
   isl_ast_expr *Access =
@@ -1005,9 +1016,15 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Builder.SetInsertPoint(MergeBB->getTerminator());
   auto *MergePHI = Builder.CreatePHI(
       AccInstTy, 2, "polly.preload." + AccInst->getName() + ".merge");
+  PreloadVal = MergePHI;
+
+  if (!PreAccInst) {
+    PreloadVal = nullptr;
+    PreAccInst = UndefValue::get(AccInstTy);
+  }
+
   MergePHI->addIncoming(PreAccInst, ExecBB);
   MergePHI->addIncoming(Constant::getNullValue(AccInstTy), CondBB);
-  PreloadVal = MergePHI;
 
   isl_ast_build_free(Build);
   return PreloadVal;
