@@ -635,7 +635,7 @@ bool ObjCDeallocChecker::isSuperDeallocMessage(
   return M.getSelector() == DeallocSel;
 }
 
-/// Returns the ObjCImplDecl containing the method declaration in \param LCtx.
+/// Returns the ObjCImplDecl containing the method declaration in LCtx.
 const ObjCImplDecl *
 ObjCDeallocChecker::getContainingObjCImpl(const LocationContext *LCtx) const {
   auto *MD = cast<ObjCMethodDecl>(LCtx->getDecl());
