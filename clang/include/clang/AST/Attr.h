@@ -129,7 +129,8 @@ public:
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Attr *A) {
-    return A->getKind() <= attr::LAST_INHERITABLE;
+    return A->getKind() >= attr::FirstInheritableAttr &&
+           A->getKind() <= attr::LastInheritableAttr;
   }
 };
 
@@ -143,9 +144,8 @@ protected:
 public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Attr *A) {
-    // Relies on relative order of enum emission with respect to MS inheritance
-    // attrs.
-    return A->getKind() <= attr::LAST_INHERITABLE_PARAM;
+    return A->getKind() >= attr::FirstInheritableParamAttr &&
+           A->getKind() <= attr::LastInheritableParamAttr;
   }
 };
 
