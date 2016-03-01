@@ -3091,6 +3091,7 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
     }
 
     // The edge may exit from zero or more nested pads.
+    SmallSet<Value *, 8> Seen;
     for (;; FromPad = getParentPad(FromPad)) {
       Assert(FromPad != ToPad,
              "EH pad cannot handle exceptions raised within it", FromPad, TI);
@@ -3100,6 +3101,8 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
       }
       Assert(!isa<ConstantTokenNone>(FromPad),
              "A single unwind edge may only enter one EH pad", TI);
+      Assert(Seen.insert(FromPad).second,
+             "EH pad jumps through a cycle of pads", FromPad);
     }
   }
 }
@@ -3146,8 +3149,6 @@ void Verifier::visitLandingPadInst(LandingPadInst &LPI) {
 }
 
 void Verifier::visitCatchPadInst(CatchPadInst &CPI) {
-  visitEHPadPredecessors(CPI);
-
   BasicBlock *BB = CPI.getParent();
 
   Function *F = BB->getParent();
@@ -3163,6 +3164,7 @@ void Verifier::visitCatchPadInst(CatchPadInst &CPI) {
   Assert(BB->getFirstNonPHI() == &CPI,
          "CatchPadInst not the first non-PHI instruction in the block.", &CPI);
 
+  visitEHPadPredecessors(CPI);
   visitFuncletPadInst(CPI);
 }
 
@@ -3175,8 +3177,6 @@ void Verifier::visitCatchReturnInst(CatchReturnInst &CatchReturn) {
 }
 
 void Verifier::visitCleanupPadInst(CleanupPadInst &CPI) {
-  visitEHPadPredecessors(CPI);
-
   BasicBlock *BB = CPI.getParent();
 
   Function *F = BB->getParent();
@@ -3193,6 +3193,7 @@ void Verifier::visitCleanupPadInst(CleanupPadInst &CPI) {
   Assert(isa<ConstantTokenNone>(ParentPad) || isa<FuncletPadInst>(ParentPad),
          "CleanupPadInst has an invalid parent.", &CPI);
 
+  visitEHPadPredecessors(CPI);
   visitFuncletPadInst(CPI);
 }
 
@@ -3200,8 +3201,12 @@ void Verifier::visitFuncletPadInst(FuncletPadInst &FPI) {
   User *FirstUser = nullptr;
   Value *FirstUnwindPad = nullptr;
   SmallVector<FuncletPadInst *, 8> Worklist({&FPI});
+  SmallSet<FuncletPadInst *, 8> Seen;
+
   while (!Worklist.empty()) {
     FuncletPadInst *CurrentPad = Worklist.pop_back_val();
+    Assert(Seen.insert(CurrentPad).second,
+           "FuncletPadInst must not be nested within itself", CurrentPad);
     Value *UnresolvedAncestorPad = nullptr;
     for (User *U : CurrentPad->users()) {
       BasicBlock *UnwindDest;
@@ -3237,6 +3242,8 @@ void Verifier::visitFuncletPadInst(FuncletPadInst &FPI) {
       bool ExitsFPI;
       if (UnwindDest) {
         UnwindPad = UnwindDest->getFirstNonPHI();
+        if (!cast<Instruction>(UnwindPad)->isEHPad())
+          continue;
         Value *UnwindParent = getParentPad(UnwindPad);
         // Ignore unwind edges that don't exit CurrentPad.
         if (UnwindParent == CurrentPad)
@@ -3350,8 +3357,6 @@ void Verifier::visitFuncletPadInst(FuncletPadInst &FPI) {
 }
 
 void Verifier::visitCatchSwitchInst(CatchSwitchInst &CatchSwitch) {
-  visitEHPadPredecessors(CatchSwitch);
-
   BasicBlock *BB = CatchSwitch.getParent();
 
   Function *F = BB->getParent();
@@ -3389,6 +3394,7 @@ void Verifier::visitCatchSwitchInst(CatchSwitchInst &CatchSwitch) {
            "CatchSwitchInst handlers must be catchpads", &CatchSwitch, Handler);
   }
 
+  visitEHPadPredecessors(CatchSwitch);
   visitTerminatorInst(CatchSwitch);
 }
 
@@ -3500,8 +3506,8 @@ void Verifier::visitInstruction(Instruction &I) {
               F->getIntrinsicID() == Intrinsic::experimental_patchpoint_void ||
               F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||
               F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint,
-          "Cannot invoke an intrinsinc other than"
-          " donothing or patchpoint",
+          "Cannot invoke an intrinsic other than donothing, patchpoint or "
+          "statepoint",
           &I);
       Assert(F->getParent() == M, "Referencing function in another module!",
              &I, M, F, F->getParent());

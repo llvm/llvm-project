@@ -422,8 +422,10 @@ class UImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = []>
   let DiagnosticType = "UImm" # Bits;
 }
 
+def ConstantUImm20AsmOperandClass
+    : ConstantUImmAsmOperandClass<20, []>;
 def UImm16RelaxedAsmOperandClass
-    : UImmAsmOperandClass<16, []> {
+    : UImmAsmOperandClass<16, [ConstantUImm20AsmOperandClass]> {
   let Name = "UImm16_Relaxed";
   let PredicateMethod = "isAnyImm<16>";
   let DiagnosticType = "UImm16_Relaxed";
@@ -541,70 +543,67 @@ def simm18_lsl3 : Operand<i32> {
 def simm20      : Operand<i32>;
 def simm32      : Operand<i32>;
 
-def uimm20      : Operand<i32> {
-}
-
 def simm16_64   : Operand<i64> {
   let DecoderMethod = "DecodeSimm16";
 }
 
 // Zero
 def uimmz       : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<0>";
   let ParserMatchClass = ConstantImmzAsmOperandClass;
 }
 
 // size operand of ins instruction
 def uimm_range_2_64 : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<6, 2>";
   let EncoderMethod = "getSizeInsEncoding";
   let DecoderMethod = "DecodeInsSize";
   let ParserMatchClass = ConstantUImm5_Range2_64AsmOperandClass;
 }
 
 // Unsigned Operands
-foreach I = {1, 2, 3, 4, 5, 6, 7, 8, 10} in
+foreach I = {1, 2, 3, 4, 5, 6, 7, 8, 10, 20} in
   def uimm # I : Operand<i32> {
-    let PrintMethod = "printUnsignedImm";
+    let PrintMethod = "printUImm<" # I # ">";
     let ParserMatchClass =
         !cast<AsmOperandClass>("ConstantUImm" # I # "AsmOperandClass");
   }
 
 def uimm2_plus1 : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<2, 1>";
   let EncoderMethod = "getUImmWithOffsetEncoding<2, 1>";
   let DecoderMethod = "DecodeUImmWithOffset<2, 1>";
   let ParserMatchClass = ConstantUImm2Plus1AsmOperandClass;
 }
 
 def uimm5_plus1 : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<5, 1>";
   let EncoderMethod = "getUImmWithOffsetEncoding<5, 1>";
   let DecoderMethod = "DecodeUImmWithOffset<5, 1>";
   let ParserMatchClass = ConstantUImm5Plus1AsmOperandClass;
 }
 
 def uimm5_plus32 : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<5, 32>";
   let ParserMatchClass = ConstantUImm5Plus32AsmOperandClass;
 }
 
 def uimm5_plus33 : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<5, 33>";
   let EncoderMethod = "getUImmWithOffsetEncoding<5, 1>";
   let DecoderMethod = "DecodeUImmWithOffset<5, 1>";
   let ParserMatchClass = ConstantUImm5Plus33AsmOperandClass;
 }
 
 def uimm5_inssize_plus1 : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<6>";
   let ParserMatchClass = ConstantUImm5Plus1AsmOperandClass;
   let EncoderMethod = "getSizeInsEncoding";
   let DecoderMethod = "DecodeInsSize";
 }
 
 def uimm5_plus32_normalize : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<5>";
   let ParserMatchClass = ConstantUImm5Plus32NormalizeAsmOperandClass;
 }
 
@@ -615,48 +614,55 @@ def uimm5_lsl2 : Operand<OtherVT> {
 }
 
 def uimm5_plus32_normalize_64 : Operand<i64> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<5>";
   let ParserMatchClass = ConstantUImm5Plus32NormalizeAsmOperandClass;
 }
 
 foreach I = {16} in
   def uimm # I : Operand<i32> {
-    let PrintMethod = "printUnsignedImm";
+    let PrintMethod = "printUImm<16>";
     let ParserMatchClass =
         !cast<AsmOperandClass>("UImm" # I # "AsmOperandClass");
   }
 
 // Like uimm16_64 but coerces simm16 to uimm16.
 def uimm16_relaxed : Operand<i32> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<16>";
   let ParserMatchClass =
       !cast<AsmOperandClass>("UImm16RelaxedAsmOperandClass");
 }
 
 foreach I = {5} in
   def uimm # I # _64 : Operand<i64> {
-    let PrintMethod = "printUnsignedImm";
+    let PrintMethod = "printUImm<5>";
     let ParserMatchClass =
         !cast<AsmOperandClass>("ConstantUImm" # I # "AsmOperandClass");
   }
 
 def uimm16_64 : Operand<i64> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<16>";
   let ParserMatchClass =
       !cast<AsmOperandClass>("UImm16AsmOperandClass");
 }
 
 // Like uimm16_64 but coerces simm16 to uimm16.
 def uimm16_64_relaxed : Operand<i64> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<16>";
   let ParserMatchClass =
       !cast<AsmOperandClass>("UImm16RelaxedAsmOperandClass");
+}
+
+// Like uimm5 but reports a less confusing error for 32-63 when
+// an instruction alias permits that.
+def uimm5_report_uimm6 : Operand<i32> {
+  let PrintMethod = "printUImm<5>";
+  let ParserMatchClass = ConstantUImm5ReportUImm6AsmOperandClass;
 }
 
 // Like uimm5_64 but reports a less confusing error for 32-63 when
 // an instruction alias permits that.
 def uimm5_64_report_uimm6 : Operand<i64> {
-  let PrintMethod = "printUnsignedImm";
+  let PrintMethod = "printUImm<5>";
   let ParserMatchClass = ConstantUImm5ReportUImm6AsmOperandClass;
 }
 
@@ -824,6 +830,16 @@ def immLow16Zero : PatLeaf<(imm), [{
 
 // shamt field must fit in 5 bits.
 def immZExt5 : ImmLeaf<i32, [{return Imm == (Imm & 0x1f);}]>;
+
+def immZExt5Plus1 : PatLeaf<(imm), [{
+  return isUInt<5>(N->getZExtValue() - 1);
+}]>;
+def immZExt5Plus32 : PatLeaf<(imm), [{
+  return isUInt<5>(N->getZExtValue() - 32);
+}]>;
+def immZExt5Plus33 : PatLeaf<(imm), [{
+  return isUInt<5>(N->getZExtValue() - 33);
+}]>;
 
 // True if (N + 1) fits in 16-bit field.
 def immSExt16Plus1 : PatLeaf<(imm), [{
@@ -1118,8 +1134,8 @@ class BAL_BR_Pseudo<Instruction RealInst> :
 }
 
 // Syscall
-class SYS_FT<string opstr> :
-  InstSE<(outs), (ins uimm20:$code_),
+class SYS_FT<string opstr, Operand ImmOp> :
+  InstSE<(outs), (ins ImmOp:$code_),
          !strconcat(opstr, "\t$code_"), [], NoItinerary, FrmI, opstr>;
 // Break
 class BRK_FT<string opstr> :
@@ -1273,10 +1289,11 @@ class ReadHardware<RegisterOperand CPURegOperand, RegisterOperand RO> :
 
 // Ext and Ins
 class ExtBase<string opstr, RegisterOperand RO, Operand PosOpnd,
-              Operand SizeOpnd, SDPatternOperator Op = null_frag> :
+              Operand SizeOpnd, PatFrag PosImm, PatFrag SizeImm,
+              SDPatternOperator Op = null_frag> :
   InstSE<(outs RO:$rt), (ins RO:$rs, PosOpnd:$pos, SizeOpnd:$size),
          !strconcat(opstr, " $rt, $rs, $pos, $size"),
-         [(set RO:$rt, (Op RO:$rs, imm:$pos, imm:$size))], II_EXT,
+         [(set RO:$rt, (Op RO:$rs, PosImm:$pos, SizeImm:$size))], II_EXT,
          FrmR, opstr>, ISA_MIPS32R2;
 
 class InsBase<string opstr, RegisterOperand RO, Operand PosOpnd,
@@ -1314,11 +1331,11 @@ class SCBase<string opstr, RegisterOperand RO> :
 }
 
 class MFC3OP<string asmstr, RegisterOperand RO, RegisterOperand RD> :
-  InstSE<(outs RO:$rt), (ins RD:$rd, uimm16:$sel),
+  InstSE<(outs RO:$rt), (ins RD:$rd, uimm3:$sel),
          !strconcat(asmstr, "\t$rt, $rd, $sel"), [], NoItinerary, FrmFR>;
 
 class MTC3OP<string asmstr, RegisterOperand RO, RegisterOperand RD> :
-  InstSE<(outs RO:$rd), (ins RD:$rt, uimm16:$sel),
+  InstSE<(outs RO:$rd), (ins RD:$rt, uimm3:$sel),
          !strconcat(asmstr, "\t$rt, $rd, $sel"), [], NoItinerary, FrmFR>;
 
 class TrapBase<Instruction RealInst>
@@ -1553,10 +1570,12 @@ def TNEI : MMRel, TEQI_FT<"tnei", GPR32Opnd>, TEQI_FM<0xe>,
 
 let AdditionalPredicates = [NotInMicroMips] in {
 def BREAK : MMRel, StdMMR6Rel, BRK_FT<"break">, BRK_FM<0xd>;
+def SYSCALL : MMRel, SYS_FT<"syscall", uimm20>, SYS_FM<0xc>;
 }
-def SYSCALL : MMRel, SYS_FT<"syscall">, SYS_FM<0xc>;
 def TRAP : TrapBase<BREAK>;
-def SDBBP : MMRel, SYS_FT<"sdbbp">, SDBBP_FM, ISA_MIPS32_NOT_32R6_64R6;
+let AdditionalPredicates = [NotInMicroMips] in {
+def SDBBP : MMRel, SYS_FT<"sdbbp", uimm20>, SDBBP_FM, ISA_MIPS32_NOT_32R6_64R6;
+}
 
 let AdditionalPredicates = [NotInMicroMips] in {
   def ERET : MMRel, ER_FT<"eret">, ER_FM<0x18, 0x0>, INSN_MIPS3_32;
@@ -1763,8 +1782,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
 def RDHWR : MMRel, ReadHardware<GPR32Opnd, HWRegsOpnd>, RDHWR_FM;
 }
 // TODO: Add '0 < pos+size <= 32' constraint check to ext instruction
-def EXT : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1, MipsExt>,
-          EXT_FM<0>;
+def EXT : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1, immZExt5,
+                         immZExt5Plus1, MipsExt>, EXT_FM<0>;
 def INS : MMRel, InsBase<"ins", GPR32Opnd, uimm5, uimm5_inssize_plus1, MipsIns>,
           EXT_FM<4>;
 

@@ -213,9 +213,7 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
     // If it's wrong, we'll materialize the constant and still get to the
     // object; it's just suboptimal. Negative offsets use the unscaled
     // load/store instructions, which have a 9-bit signed immediate.
-    if (MFI->getLocalFrameSize() < 256)
-      return false;
-    return true;
+    return MFI->getLocalFrameSize() >= 256;
   }
 
   return false;

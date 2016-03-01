@@ -1,12 +1,32 @@
 ; RUN: opt < %s -instsimplify -S | FileCheck %s
 
-; fsub 0, (fsub 0, X) ==> X
-; CHECK-LABEL: @fsub_0_0_x(
-define float @fsub_0_0_x(float %a) {
+; fsub -0.0, (fsub -0.0, X) ==> X
+; CHECK-LABEL: @fsub_-0_-0_x(
+define float @fsub_-0_-0_x(float %a) {
   %t1 = fsub float -0.0, %a
   %ret = fsub float -0.0, %t1
 
 ; CHECK: ret float %a
+  ret float %ret
+}
+
+; fsub 0.0, (fsub -0.0, X) != X
+; CHECK-LABEL: @fsub_0_-0_x(
+define float @fsub_0_-0_x(float %a) {
+  %t1 = fsub float 0.0, %a
+  %ret = fsub float -0.0, %t1
+
+; CHECK-NOT: ret float %a
+  ret float %ret
+}
+
+; fsub -0.0, (fsub 0.0, X) != X
+; CHECK-LABEL: @fsub_-0_0_x(
+define float @fsub_-0_0_x(float %a) {
+  %t1 = fsub float -0.0, %a
+  %ret = fsub float 0.0, %t1
+
+; CHECK-NOT: ret float %a
   ret float %ret
 }
 

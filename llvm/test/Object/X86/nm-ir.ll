@@ -6,6 +6,7 @@
 ; CHECK-NEXT: t f2
 ; CHECK-NEXT: W f3
 ; CHECK-NEXT: U f4
+; CHECK-NEXT: w f5
 ; CHECK-NEXT: D g1
 ; CHECK-NEXT: d g2
 ; CHECK-NEXT: C g3
@@ -31,6 +32,7 @@ module asm ".long undef_asm_sym"
 @a2 = internal alias i32, i32* @g1
 
 define void @f1() {
+  call void @f5()
   ret void
 }
 
@@ -43,3 +45,5 @@ define linkonce_odr void @f3() {
 }
 
 declare void @f4()
+
+declare extern_weak void @f5()

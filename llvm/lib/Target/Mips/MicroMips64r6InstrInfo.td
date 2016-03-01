@@ -71,7 +71,7 @@ class EXTBITS_DESC_BASE<string instr_asm, RegisterOperand RO, Operand PosOpnd,
 // TODO: Add 'pos + size' constraint check to dext* instructions
 //       DEXT: 0 < pos + size <= 63
 //       DEXTM, DEXTU: 32 < pos + size <= 64
-class DEXT_MMR6_DESC : EXTBITS_DESC_BASE<"dext", GPR64Opnd, uimm5,
+class DEXT_MMR6_DESC : EXTBITS_DESC_BASE<"dext", GPR64Opnd, uimm5_report_uimm6,
                                          uimm5_plus1, MipsExt>;
 class DEXTM_MMR6_DESC : EXTBITS_DESC_BASE<"dextm", GPR64Opnd, uimm5,
                                           uimm5_plus33, MipsExt>;

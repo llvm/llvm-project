@@ -84,6 +84,17 @@
 # CHECK: beq  $2, $1, 1332          # encoding: [0x4d,0x01,0x41,0x10]
 # CHECK: nop                        # encoding: [0x00,0x00,0x00,0x00]
 
+# Test one with a symbol in the third operand.
+sym:
+  bne $2, 0x100010001, sym
+# CHECK: addiu $1, $zero, 1         # encoding: [0x01,0x00,0x01,0x24]
+# CHECK: dsll $1, $1, 16            # encoding: [0x38,0x0c,0x01,0x00]
+# CHECK: ori  $1, $1, 1             # encoding: [0x01,0x00,0x21,0x34]
+# CHECK: dsll $1, $1, 16            # encoding: [0x38,0x0c,0x01,0x00]
+# CHECK: ori  $1, $1, 1             # encoding: [0x01,0x00,0x21,0x34]
+# CHECK: bne  $2, $1, sym           # encoding: [A,A,0x41,0x14]
+# CHECK: nop                        # encoding: [0x00,0x00,0x00,0x00]
+
 # Test ulhu with 64-bit immediate addresses.
   ulhu $8, 0x100010001
 # CHECK: addiu $1, $zero, 1    # encoding: [0x01,0x00,0x01,0x24]

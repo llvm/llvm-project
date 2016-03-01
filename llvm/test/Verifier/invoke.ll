@@ -46,7 +46,7 @@ contb:
 
 define i8 @f2() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
-; CHECK: Cannot invoke an intrinsinc other than donothing or patchpoint
+; CHECK: Cannot invoke an intrinsic other than donothing, patchpoint or statepoint
   invoke void @llvm.trap()
   to label %cont unwind label %lpad
 

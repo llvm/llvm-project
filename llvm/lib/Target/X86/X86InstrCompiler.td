@@ -568,7 +568,7 @@ def Int_MemBarrier : I<0, Pseudo, (outs), (ins),
 // ImmOpc8 corresponds to the mi8 version of the instruction
 // ImmMod corresponds to the instruction format of the mi and mi8 versions
 multiclass LOCK_ArithBinOp<bits<8> RegOpc, bits<8> ImmOpc, bits<8> ImmOpc8,
-                           Format ImmMod, string mnemonic> {
+                           Format ImmMod, SDPatternOperator Op, string mnemonic> {
 let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
     SchedRW = [WriteALULd, WriteRMW] in {
 
@@ -577,106 +577,124 @@ def NAME#8mr : I<{RegOpc{7}, RegOpc{6}, RegOpc{5}, RegOpc{4},
                   MRMDestMem, (outs), (ins i8mem:$dst, GR8:$src2),
                   !strconcat(mnemonic, "{b}\t",
                              "{$src2, $dst|$dst, $src2}"),
-                  [], IIC_ALU_NONMEM>, LOCK;
+                  [(set EFLAGS, (Op addr:$dst, GR8:$src2))],
+                  IIC_ALU_NONMEM>, LOCK;
+
 def NAME#16mr : I<{RegOpc{7}, RegOpc{6}, RegOpc{5}, RegOpc{4},
                    RegOpc{3}, RegOpc{2}, RegOpc{1}, 1 },
                    MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src2),
                    !strconcat(mnemonic, "{w}\t",
                               "{$src2, $dst|$dst, $src2}"),
-                   [], IIC_ALU_NONMEM>, OpSize16, LOCK;
+                   [(set EFLAGS, (Op addr:$dst, GR16:$src2))],
+                   IIC_ALU_NONMEM>, OpSize16, LOCK;
+
 def NAME#32mr : I<{RegOpc{7}, RegOpc{6}, RegOpc{5}, RegOpc{4},
                    RegOpc{3}, RegOpc{2}, RegOpc{1}, 1 },
                    MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src2),
                    !strconcat(mnemonic, "{l}\t",
                               "{$src2, $dst|$dst, $src2}"),
-                   [], IIC_ALU_NONMEM>, OpSize32, LOCK;
+                   [(set EFLAGS, (Op addr:$dst, GR32:$src2))],
+                   IIC_ALU_NONMEM>, OpSize32, LOCK;
+
 def NAME#64mr : RI<{RegOpc{7}, RegOpc{6}, RegOpc{5}, RegOpc{4},
                     RegOpc{3}, RegOpc{2}, RegOpc{1}, 1 },
                     MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src2),
                     !strconcat(mnemonic, "{q}\t",
                                "{$src2, $dst|$dst, $src2}"),
-                    [], IIC_ALU_NONMEM>, LOCK;
+                    [(set EFLAGS, (Op addr:$dst, GR64:$src2))],
+                    IIC_ALU_NONMEM>, LOCK;
 
 def NAME#8mi : Ii8<{ImmOpc{7}, ImmOpc{6}, ImmOpc{5}, ImmOpc{4},
                     ImmOpc{3}, ImmOpc{2}, ImmOpc{1}, 0 },
                     ImmMod, (outs), (ins i8mem :$dst, i8imm :$src2),
                     !strconcat(mnemonic, "{b}\t",
                                "{$src2, $dst|$dst, $src2}"),
-                    [], IIC_ALU_MEM>, LOCK;
+                    [(set EFLAGS, (Op addr:$dst, (i8 imm:$src2)))],
+                    IIC_ALU_MEM>, LOCK;
 
 def NAME#16mi : Ii16<{ImmOpc{7}, ImmOpc{6}, ImmOpc{5}, ImmOpc{4},
                       ImmOpc{3}, ImmOpc{2}, ImmOpc{1}, 1 },
                       ImmMod, (outs), (ins i16mem :$dst, i16imm :$src2),
                       !strconcat(mnemonic, "{w}\t",
                                  "{$src2, $dst|$dst, $src2}"),
-                      [], IIC_ALU_MEM>, OpSize16, LOCK;
+                      [(set EFLAGS, (Op addr:$dst, (i16 imm:$src2)))],
+                      IIC_ALU_MEM>, OpSize16, LOCK;
 
 def NAME#32mi : Ii32<{ImmOpc{7}, ImmOpc{6}, ImmOpc{5}, ImmOpc{4},
                       ImmOpc{3}, ImmOpc{2}, ImmOpc{1}, 1 },
                       ImmMod, (outs), (ins i32mem :$dst, i32imm :$src2),
                       !strconcat(mnemonic, "{l}\t",
                                  "{$src2, $dst|$dst, $src2}"),
-                      [], IIC_ALU_MEM>, OpSize32, LOCK;
+                      [(set EFLAGS, (Op addr:$dst, (i32 imm:$src2)))],
+                      IIC_ALU_MEM>, OpSize32, LOCK;
 
 def NAME#64mi32 : RIi32S<{ImmOpc{7}, ImmOpc{6}, ImmOpc{5}, ImmOpc{4},
                           ImmOpc{3}, ImmOpc{2}, ImmOpc{1}, 1 },
                           ImmMod, (outs), (ins i64mem :$dst, i64i32imm :$src2),
                           !strconcat(mnemonic, "{q}\t",
                                      "{$src2, $dst|$dst, $src2}"),
-                          [], IIC_ALU_MEM>, LOCK;
+                          [(set EFLAGS, (Op addr:$dst, i64immSExt32:$src2))],
+                          IIC_ALU_MEM>, LOCK;
 
 def NAME#16mi8 : Ii8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
                       ImmOpc8{3}, ImmOpc8{2}, ImmOpc8{1}, 1 },
                       ImmMod, (outs), (ins i16mem :$dst, i16i8imm :$src2),
                       !strconcat(mnemonic, "{w}\t",
                                  "{$src2, $dst|$dst, $src2}"),
-                      [], IIC_ALU_MEM>, OpSize16, LOCK;
+                      [(set EFLAGS, (Op addr:$dst, i16immSExt8:$src2))],
+                      IIC_ALU_MEM>, OpSize16, LOCK;
+
 def NAME#32mi8 : Ii8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
                       ImmOpc8{3}, ImmOpc8{2}, ImmOpc8{1}, 1 },
                       ImmMod, (outs), (ins i32mem :$dst, i32i8imm :$src2),
                       !strconcat(mnemonic, "{l}\t",
                                  "{$src2, $dst|$dst, $src2}"),
-                      [], IIC_ALU_MEM>, OpSize32, LOCK;
+                      [(set EFLAGS, (Op addr:$dst, i32immSExt8:$src2))],
+                      IIC_ALU_MEM>, OpSize32, LOCK;
+
 def NAME#64mi8 : RIi8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
                        ImmOpc8{3}, ImmOpc8{2}, ImmOpc8{1}, 1 },
                        ImmMod, (outs), (ins i64mem :$dst, i64i8imm :$src2),
                        !strconcat(mnemonic, "{q}\t",
                                   "{$src2, $dst|$dst, $src2}"),
-                       [], IIC_ALU_MEM>, LOCK;
+                       [(set EFLAGS, (Op addr:$dst, i64immSExt32:$src2))],
+                       IIC_ALU_MEM>, LOCK;
 
 }
 
 }
 
-defm LOCK_ADD : LOCK_ArithBinOp<0x00, 0x80, 0x83, MRM0m, "add">;
-defm LOCK_SUB : LOCK_ArithBinOp<0x28, 0x80, 0x83, MRM5m, "sub">;
-defm LOCK_OR  : LOCK_ArithBinOp<0x08, 0x80, 0x83, MRM1m, "or">;
-defm LOCK_AND : LOCK_ArithBinOp<0x20, 0x80, 0x83, MRM4m, "and">;
-defm LOCK_XOR : LOCK_ArithBinOp<0x30, 0x80, 0x83, MRM6m, "xor">;
+defm LOCK_ADD : LOCK_ArithBinOp<0x00, 0x80, 0x83, MRM0m, X86lock_add, "add">;
+defm LOCK_SUB : LOCK_ArithBinOp<0x28, 0x80, 0x83, MRM5m, X86lock_sub, "sub">;
+defm LOCK_OR  : LOCK_ArithBinOp<0x08, 0x80, 0x83, MRM1m, X86lock_or , "or">;
+defm LOCK_AND : LOCK_ArithBinOp<0x20, 0x80, 0x83, MRM4m, X86lock_and, "and">;
+defm LOCK_XOR : LOCK_ArithBinOp<0x30, 0x80, 0x83, MRM6m, X86lock_xor, "xor">;
 
-// Optimized codegen when the non-memory output is not used.
 multiclass LOCK_ArithUnOp<bits<8> Opc8, bits<8> Opc, Format Form,
-                          string mnemonic> {
+                          int Increment, string mnemonic> {
 let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
-    SchedRW = [WriteALULd, WriteRMW] in {
-
+    SchedRW = [WriteALULd, WriteRMW], Predicates = [NotSlowIncDec] in {
 def NAME#8m  : I<Opc8, Form, (outs), (ins i8mem :$dst),
                  !strconcat(mnemonic, "{b}\t$dst"),
-                 [], IIC_UNARY_MEM>, LOCK;
+                 [(set EFLAGS, (X86lock_add addr:$dst, (i8 Increment)))],
+                  IIC_UNARY_MEM>, LOCK;
 def NAME#16m : I<Opc, Form, (outs), (ins i16mem:$dst),
                  !strconcat(mnemonic, "{w}\t$dst"),
-                 [], IIC_UNARY_MEM>, OpSize16, LOCK;
+                 [(set EFLAGS, (X86lock_add addr:$dst, (i16 Increment)))],
+                 IIC_UNARY_MEM>, OpSize16, LOCK;
 def NAME#32m : I<Opc, Form, (outs), (ins i32mem:$dst),
                  !strconcat(mnemonic, "{l}\t$dst"),
-                 [], IIC_UNARY_MEM>, OpSize32, LOCK;
+                 [(set EFLAGS, (X86lock_add addr:$dst, (i32 Increment)))],
+                 IIC_UNARY_MEM>, OpSize32, LOCK;
 def NAME#64m : RI<Opc, Form, (outs), (ins i64mem:$dst),
                   !strconcat(mnemonic, "{q}\t$dst"),
-                  [], IIC_UNARY_MEM>, LOCK;
+                  [(set EFLAGS, (X86lock_add addr:$dst, (i64 Increment)))],
+                  IIC_UNARY_MEM>, LOCK;
 }
 }
 
-defm LOCK_INC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM0m, "inc">;
-defm LOCK_DEC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM1m, "dec">;
+defm LOCK_INC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM0m,  1, "inc">;
+defm LOCK_DEC    : LOCK_ArithUnOp<0xFE, 0xFF, MRM1m, -1, "dec">;
 
 // Atomic compare and swap.
 multiclass LCMPXCHG_UnOp<bits<8> Opc, Format Form, string mnemonic,

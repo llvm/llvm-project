@@ -131,6 +131,12 @@
 # CHECK-LE: beq   $2, $1, 1332      # encoding: [0x4d,0x01,0x41,0x10]
 # CHECK-LE: nop                     # encoding: [0x00,0x00,0x00,0x00]
 
+  beq $2, 65538, foo
+# CHECK-LE: lui   $1, 1             # encoding: [0x01,0x00,0x01,0x3c]
+# CHECK-LE: ori   $1, $1, 2         # encoding: [0x02,0x00,0x21,0x34]
+# CHECK-LE: beq   $2, $1, foo       # encoding: [A,A,0x41,0x10]
+# CHECK-LE: nop                     # encoding: [0x00,0x00,0x00,0x00]
+
 # Test ULH with immediate operand.
 ulh_imm: # CHECK-LABEL: ulh_imm:
   ulh $8, 0

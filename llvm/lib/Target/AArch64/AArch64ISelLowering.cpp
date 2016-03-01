@@ -2812,9 +2812,7 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
       return false;
 
   if (getTargetMachine().Options.GuaranteedTailCallOpt) {
-    if (IsTailCallConvention(CalleeCC) && CCMatch)
-      return true;
-    return false;
+    return IsTailCallConvention(CalleeCC) && CCMatch;
   }
 
   // Externally-defined functions with weak linkage should not be
@@ -6974,12 +6972,10 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
   const DataLayout &DL = I->getModule()->getDataLayout();
   EVT VT = getValueType(DL, User->getOperand(0)->getType());
 
-  if (isFMAFasterThanFMulAndFAdd(VT) &&
-      isOperationLegalOrCustom(ISD::FMA, VT) &&
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath))
-    return false;
-
-  return true;
+  return !(isFMAFasterThanFMulAndFAdd(VT) &&
+           isOperationLegalOrCustom(ISD::FMA, VT) &&
+           (Options.AllowFPOpFusion == FPOpFusion::Fast ||
+            Options.UnsafeFPMath));
 }
 
 // All 32-bit GPR operations implicitly zero the high-half of the corresponding
@@ -7280,16 +7276,14 @@ EVT AArch64TargetLowering::getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
 
 // 12-bit optionally shifted immediates are legal for adds.
 bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
-  if ((Immed >> 12) == 0 || ((Immed & 0xfff) == 0 && Immed >> 24 == 0))
-    return true;
-  return false;
+  // Same encoding for add/sub, just flip the sign.
+  Immed = std::abs(Immed);
+  return ((Immed >> 12) == 0 || ((Immed & 0xfff) == 0 && Immed >> 24 == 0));
 }
 
 // Integer comparisons are implemented with ADDS/SUBS, so the range of valid
 // immediates is the same as for an add or a sub.
 bool AArch64TargetLowering::isLegalICmpImmediate(int64_t Immed) const {
-  if (Immed < 0)
-    Immed *= -1;
   return isLegalAddImmediate(Immed);
 }
 
@@ -7341,10 +7335,8 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   // Check reg1 + SIZE_IN_BYTES * reg2 and reg1 + reg2
 
-  if (!AM.Scale || AM.Scale == 1 ||
-      (AM.Scale > 0 && (uint64_t)AM.Scale == NumBytes))
-    return true;
-  return false;
+  return !AM.Scale || AM.Scale == 1 ||
+         (AM.Scale > 0 && (uint64_t)AM.Scale == NumBytes);
 }
 
 int AArch64TargetLowering::getScalingFactorCost(const DataLayout &DL,
@@ -9309,10 +9301,8 @@ bool checkValueWidth(SDValue V, unsigned width, ISD::LoadExtType &ExtType) {
   }
   case ISD::Constant:
   case ISD::TargetConstant: {
-    if (std::abs(cast<ConstantSDNode>(V.getNode())->getSExtValue()) <
-        1LL << (width - 1))
-      return true;
-    return false;
+    return std::abs(cast<ConstantSDNode>(V.getNode())->getSExtValue()) <
+           1LL << (width - 1);
   }
   }
 
@@ -9922,10 +9912,7 @@ bool AArch64TargetLowering::isUsedByReturnOnly(SDNode *N,
 // return instructions to help enable tail call optimizations for this
 // instruction.
 bool AArch64TargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
-  if (!CI->isTailCall())
-    return false;
-
-  return true;
+  return CI->isTailCall();
 }
 
 bool AArch64TargetLowering::getIndexedAddressParts(SDNode *Op, SDValue &Base,

@@ -24,12 +24,16 @@
         ori $2, $3, 65536    # CHECK: :[[@LINE]]:21: error: expected 16-bit unsigned immediate
         pref -1, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
         pref 32, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
+        sdbbp -1             # CHECK: :[[@LINE]]:15: error: expected 20-bit unsigned immediate
+        sdbbp 1048576        # CHECK: :[[@LINE]]:15: error: expected 20-bit unsigned immediate
         sll $2, $3, -1       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         sll $2, $3, 32       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         srl $2, $3, -1       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         srl $2, $3, 32       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         sra $2, $3, -1       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         sra $2, $3, 32       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
+        syscall -1           # CHECK: :[[@LINE]]:17: error: expected 20-bit unsigned immediate
+        syscall 1048576      # CHECK: :[[@LINE]]:17: error: expected 20-bit unsigned immediate
         rotr $2, $3, -1      # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
         rotr $2, $3, 32      # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
         xori $2, $3, -1      # CHECK: :[[@LINE]]:22: error: expected 16-bit unsigned immediate

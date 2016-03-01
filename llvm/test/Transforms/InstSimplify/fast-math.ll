@@ -91,6 +91,16 @@ define float @fsub_x_x(float %a) {
   ret float %ret
 }
 
+; fsub nsz 0.0, (fsub 0.0, X) ==> X
+; CHECK-LABEL: @fsub_0_0_x(
+define float @fsub_0_0_x(float %a) {
+  %t1 = fsub float 0.0, %a
+  %ret = fsub nsz float 0.0, %t1
+
+; CHECK: ret float %a
+  ret float %ret
+}
+
 ; fadd nsz X, 0 ==> X
 ; CHECK-LABEL: @nofold_fadd_x_0(
 define float @nofold_fadd_x_0(float %a) {

@@ -207,9 +207,7 @@ bool AArch64AddressTypePromotion::shouldGetThrough(const Instruction *Inst) {
 }
 
 static bool shouldSExtOperand(const Instruction *Inst, int OpIdx) {
-  if (isa<SelectInst>(Inst) && OpIdx == 0)
-    return false;
-  return true;
+  return !(isa<SelectInst>(Inst) && OpIdx == 0);
 }
 
 bool

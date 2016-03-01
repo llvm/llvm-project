@@ -22,13 +22,15 @@ declare void @llvm.lifetime.end(i64, i8* nocapture)
 
 declare void @foo(i32*)
 
-; F0: DW_AT_location [DW_FORM_sec_offset]   (0x00000014)
-; F0: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
+; F0: DW_AT_name {{.*}}"e"
+; F0: DW_TAG_variable
+; F0-NEXT: DW_AT_location [DW_FORM_sec_offset]   ([[LOC:.*]])
+; F0-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 ;
 ; x -> DW_OP_reg1(51)
-; F0: 0x00000014: Beginning address offset: 0x0000000000000028
-; F0:                Ending address offset: 0x0000000000000030
-; F0:                 Location description: 51
+; F0: [[LOC]]: Beginning address offset: 0x0000000000000028
+; F0:             Ending address offset: 0x0000000000000030
+; F0:              Location description: 51
 
 define i32 @f0(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !4 {
 entry:
@@ -55,13 +57,16 @@ entry:
 }
 
 
-; F1: DW_AT_location [DW_FORM_sec_offset]   (0x00000033)
-; F1: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
+; F1: DW_AT_name {{.*}}"x"
+; F1: DW_AT_name {{.*}}"e"
+; F1: DW_TAG_variable
+; F1-NEXT: DW_AT_location [DW_FORM_sec_offset]   ([[LOC:.*]])
+; F1-NEXT: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x0000006b] = "x")
 
 ; x -> DW_OP_reg1(51)
-; F1: 0x00000033: Beginning address offset: 0x0000000000000080
-; F1:                Ending address offset: 0x0000000000000088
-; F1:                 Location description: 51
+; F1: [[LOC]]: Beginning address offset: 0x0000000000000080
+; F1:             Ending address offset: 0x0000000000000088
+; F1:              Location description: 51
 
 define i32 @f1(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d, i32 signext %e) !dbg !15 {
 entry:

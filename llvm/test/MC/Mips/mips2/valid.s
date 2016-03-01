@@ -146,6 +146,8 @@ a:
         swl       $15,13694($s3)
         swr       $s1,-26590($14)
         sync                           # CHECK: sync                   # encoding: [0x00,0x00,0x00,0x0f]
+        syscall                        # CHECK: syscall                # encoding: [0x00,0x00,0x00,0x0c]
+        syscall   256                  # CHECK: syscall 256            # encoding: [0x00,0x00,0x40,0x0c]
         teq       $0,$3                # CHECK: teq $zero, $3          # encoding: [0x00,0x03,0x00,0x34]
         teq       $5,$7,620            # CHECK: teq $5, $7, 620        # encoding: [0x00,0xa7,0x9b,0x34]
         teqi      $s5,-17504

@@ -130,9 +130,7 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
   // Note: currently hasFP() is always true for hasCalls(), but that's an
   // implementation detail of the current code, not a strict requirement,
   // so stay safe here and check both.
-  if (MFI->hasCalls() || hasFP(MF) || NumBytes > 128)
-    return false;
-  return true;
+  return !(MFI->hasCalls() || hasFP(MF) || NumBytes > 128);
 }
 
 /// hasFP - Return true if the specified function should have a dedicated frame

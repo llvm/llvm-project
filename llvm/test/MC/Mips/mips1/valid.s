@@ -117,6 +117,8 @@ a:
         swc3      $10,-32265($k0)
         swl       $15,13694($s3)
         swr       $s1,-26590($14)
+        syscall                        # CHECK: syscall                # encoding: [0x00,0x00,0x00,0x0c]
+        syscall   256                  # CHECK: syscall 256            # encoding: [0x00,0x00,0x40,0x0c]
         tlbp                           # CHECK: tlbp                   # encoding: [0x42,0x00,0x00,0x08]
         tlbr                           # CHECK: tlbr                   # encoding: [0x42,0x00,0x00,0x01]
         tlbwi                          # CHECK: tlbwi                  # encoding: [0x42,0x00,0x00,0x02]

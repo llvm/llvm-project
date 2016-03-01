@@ -231,7 +231,8 @@ uint32_t IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
     Res |= BasicSymbolRef::SF_Global;
   if (GV->hasCommonLinkage())
     Res |= BasicSymbolRef::SF_Common;
-  if (GV->hasLinkOnceLinkage() || GV->hasWeakLinkage())
+  if (GV->hasLinkOnceLinkage() || GV->hasWeakLinkage() ||
+      GV->hasExternalWeakLinkage())
     Res |= BasicSymbolRef::SF_Weak;
 
   if (GV->getName().startswith("llvm."))
@@ -265,10 +266,7 @@ basic_symbol_iterator IRObjectFile::symbol_end_impl() const {
 
 ErrorOr<MemoryBufferRef> IRObjectFile::findBitcodeInObject(const ObjectFile &Obj) {
   for (const SectionRef &Sec : Obj.sections()) {
-    StringRef SecName;
-    if (std::error_code EC = Sec.getName(SecName))
-      return EC;
-    if (SecName == ".llvmbc") {
+    if (Sec.isBitcode()) {
       StringRef SecContents;
       if (std::error_code EC = Sec.getContents(SecContents))
         return EC;

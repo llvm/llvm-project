@@ -62,8 +62,17 @@ bool HexagonMCExpr::classof(MCExpr const *E) {
 }
 
 HexagonMCExpr::HexagonMCExpr(MCExpr const *Expr)
-    : Expr(Expr), MustNotExtend(false), MustExtend(false), S23_2_reloc(false) {}
+    : Expr(Expr), MustNotExtend(false), MustExtend(false), S23_2_reloc(false),
+      SignMismatch(false) {}
 
 void HexagonMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Expr->print(OS, MAI);
+}
+
+void HexagonMCExpr::setSignMismatch(bool Val) {
+  SignMismatch = Val;
+}
+
+bool HexagonMCExpr::signMismatch() const {
+  return SignMismatch;
 }
