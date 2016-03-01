@@ -1208,7 +1208,18 @@ enum CXTranslationUnit_Flags {
    * trades runtime on the first parse (serializing the preamble takes time) for
    * reduced runtime on the second parse (can now reuse the preamble).
    */
-  CXTranslationUnit_CreatePreambleOnFirstParse = 0x100
+  CXTranslationUnit_CreatePreambleOnFirstParse = 0x100,
+
+  /**
+   * \brief Do not stop processing when fatal errors are encountered.
+   *
+   * When fatal errors are encountered while parsing a translation unit,
+   * semantic analysis is typically stopped early when compiling code. A common
+   * source for fatal errors are unresolvable include files. For the
+   * purposes of an IDE, this is undesirable behavior and as much information
+   * as possible should be reported. Use this flag to enable this behavior.
+   */
+  CXTranslationUnit_KeepGoing = 0x200
 };
 
 /**
