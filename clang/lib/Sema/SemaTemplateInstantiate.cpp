@@ -1710,9 +1710,11 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
 /// from such a substitution.
 bool Sema::SubstParmTypes(SourceLocation Loc, 
                           ParmVarDecl **Params, unsigned NumParams,
+                    const FunctionProtoType::ExtParameterInfo *ExtParamInfos,
                           const MultiLevelTemplateArgumentList &TemplateArgs,
                           SmallVectorImpl<QualType> &ParamTypes,
-                          SmallVectorImpl<ParmVarDecl *> *OutParams) {
+                          SmallVectorImpl<ParmVarDecl *> *OutParams,
+                          ExtParameterInfoBuilder &ParamInfos) {
   assert(!ActiveTemplateInstantiations.empty() &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
@@ -1720,8 +1722,9 @@ bool Sema::SubstParmTypes(SourceLocation Loc,
   TemplateInstantiator Instantiator(*this, TemplateArgs, Loc, 
                                     DeclarationName());
   return Instantiator.TransformFunctionTypeParams(Loc, Params, NumParams,
-                                                  nullptr, ParamTypes,
-                                                  OutParams);
+                                                  nullptr, ExtParamInfos,
+                                                  ParamTypes, OutParams,
+                                                  ParamInfos);
 }
 
 /// \brief Perform substitution on the base class specifiers of the

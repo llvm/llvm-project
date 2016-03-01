@@ -22,6 +22,5 @@
 // RUN: env "PATH=%T;%PATH%;" %clang -target x86_64-scei-ps4  %s -shared \
 // RUN:     -fuse-ld=ps4 -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-LINKER %s
 
-// FIXME: "Output\\" is hardcoded part of %T.
-// CHECK-PS4-GOLD: Output\\ps4-ld.gold.exe"
-// CHECK-PS4-LINKER: Output\\ps4-ld.exe"
+// CHECK-PS4-GOLD: \\ps4-ld.gold
+// CHECK-PS4-LINKER: \\ps4-ld

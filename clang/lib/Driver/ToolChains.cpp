@@ -1103,6 +1103,13 @@ bool Darwin::UseSjLjExceptions(const ArgList &Args) const {
   return !Triple.isWatchABI();
 }
 
+bool Darwin::SupportsEmbeddedBitcode() const {
+  assert(TargetInitialized && "Target not initialized!");
+  if (isTargetIPhoneOS() && isIPhoneOSVersionLT(6, 0))
+    return false;
+  return true;
+}
+
 bool MachO::isPICDefault() const { return true; }
 
 bool MachO::isPIEDefault() const { return false; }

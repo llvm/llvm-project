@@ -2671,7 +2671,7 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
       NumParams(params.size()),
       NumExceptions(epi.ExceptionSpec.Exceptions.size()),
       ExceptionSpecType(epi.ExceptionSpec.Type),
-      HasAnyConsumedParams(epi.ConsumedParameters != nullptr),
+      HasExtParameterInfos(epi.ExtParameterInfos != nullptr),
       Variadic(epi.Variadic), HasTrailingReturn(epi.HasTrailingReturn) {
   assert(NumParams == params.size() && "function has too many parameters");
 
@@ -2737,10 +2737,11 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     slot[0] = epi.ExceptionSpec.SourceDecl;
   }
 
-  if (epi.ConsumedParameters) {
-    bool *consumedParams = const_cast<bool *>(getConsumedParamsBuffer());
+  if (epi.ExtParameterInfos) {
+    ExtParameterInfo *extParamInfos =
+      const_cast<ExtParameterInfo *>(getExtParameterInfosBuffer());
     for (unsigned i = 0; i != NumParams; ++i)
-      consumedParams[i] = epi.ConsumedParameters[i];
+      extParamInfos[i] = epi.ExtParameterInfos[i];
   }
 }
 
@@ -2860,9 +2861,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
   }
-  if (epi.ConsumedParameters) {
+  if (epi.ExtParameterInfos) {
     for (unsigned i = 0; i != NumParams; ++i)
-      ID.AddBoolean(epi.ConsumedParameters[i]);
+      ID.AddInteger(epi.ExtParameterInfos[i].getOpaqueValue());
   }
   epi.ExtInfo.Profile(ID);
   ID.AddBoolean(epi.HasTrailingReturn);

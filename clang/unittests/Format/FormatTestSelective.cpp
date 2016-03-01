@@ -278,6 +278,23 @@ TEST_F(FormatTestSelective, IndividualStatementsOfNestedBlocks) {
                    "  };\n"
                    "});",
                    0, 0));
+  EXPECT_EQ("SomeFunction(\n"
+            "    [] {\n"
+            "      int i;\n"
+            "      return i;\n" // Format this line.
+            "    },\n"
+            "    [] {\n"
+            "       return 2;\n" // Don't fix this.
+            "    });",
+            format("SomeFunction(\n"
+                   "    [] {\n"
+                   "      int i;\n"
+                   "       return i;\n" // Format this line.
+                   "    },\n"
+                   "    [] {\n"
+                   "       return 2;\n" // Don't fix this.
+                   "    });",
+                   40, 0));
 }
 
 TEST_F(FormatTestSelective, WrongIndent) {

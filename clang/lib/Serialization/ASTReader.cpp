@@ -5387,6 +5387,17 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     for (unsigned I = 0; I != NumParams; ++I)
       ParamTypes.push_back(readType(*Loc.F, Record, Idx));
 
+    SmallVector<FunctionProtoType::ExtParameterInfo, 4> ExtParameterInfos;
+    if (Idx != Record.size()) {
+      for (unsigned I = 0; I != NumParams; ++I)
+        ExtParameterInfos.push_back(
+          FunctionProtoType::ExtParameterInfo
+                           ::getFromOpaqueValue(Record[Idx++]));
+      EPI.ExtParameterInfos = ExtParameterInfos.data();
+    }
+
+    assert(Idx == Record.size());
+
     return Context.getFunctionType(ResultType, ParamTypes, EPI);
   }
 
