@@ -36,6 +36,7 @@ class TestSwiftDifferentClangFlags(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
+    @decorators.expectedFailureDarwin("rdar://24911305")
     def test_swift_different_clang_flags(self):
         """Test that we use the right compiler flags when debugging"""
         self.buildAll()
