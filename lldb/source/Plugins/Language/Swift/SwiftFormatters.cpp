@@ -248,7 +248,7 @@ bool
 lldb_private::formatters::swift::StaticString_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& summary_options, StringPrinter::ReadStringAndDumpToStreamOptions read_options)
 {
     static ConstString g__startPtrOrData("_startPtrOrData");
-    static ConstString g__byteSize("_byteSize");
+    static ConstString g__byteSize("_utf8CodeUnitCount");
     static ConstString g__flags("_flags");
 
     ValueObjectSP flags_sp(valobj.GetChildMemberWithName(g__flags, true));
