@@ -10,3 +10,6 @@ typedef OpaqueType __attribute__((address_space(100))) * OpaqueTypePtr;
 
 // CHECK-LABEL: define {{.*}}void @_Z2f0PU5AS10010OpaqueType
 void f0(OpaqueTypePtr) { }
+
+// CHECK-LABEL: define {{.*}}void @_Z2f1PU3AS1Kc
+void f1(char __attribute__((address_space(1))) const *p) {}
