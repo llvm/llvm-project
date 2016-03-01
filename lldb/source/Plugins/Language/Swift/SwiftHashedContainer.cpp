@@ -294,7 +294,7 @@ SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner (Val
                                                                              NativeCreatorFunction Native)
 {
 #if 0
-    static ConstString g_Native("Native");
+    static ConstString g_Native("native");
     static ConstString g_nativeStorage("nativeStorage");
     static ConstString g_buffer("buffer");
     
@@ -348,13 +348,13 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler (ValueObject& valobj,
                                                         ConstString demangled)
 {
     static ConstString g__variantStorage("_variantStorage");
-    static ConstString g_Native("Native");
-    static ConstString g_Cocoa("Cocoa");
+    static ConstString g_Native("native");
+    static ConstString g_Cocoa("cocoa");
     static ConstString g_nativeStorage("nativeStorage");
     static ConstString g_buffer("buffer");
     static ConstString g_storage("storage");
     static ConstString g__storage("_storage");
-    static ConstString g_Some("Some");
+    static ConstString g_Some("some");
     
     Error error;
     
