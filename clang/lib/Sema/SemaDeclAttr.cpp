@@ -4444,6 +4444,19 @@ static bool validateSwiftFunctionName(StringRef Name,
                                       unsigned &ParamCount,
                                       bool &IsSingleParamInit) {
   ParamCount = 0;
+
+  // Check whether this will be mapped to a getter or setter of a
+  // property.
+  bool isGetter = false;
+  bool isSetter = false;
+  if (Name.startswith("getter:")) {
+    isGetter = true;
+    Name = Name.substr(7);
+  } else if (Name.startswith("setter:")) {
+    isSetter = true;
+    Name = Name.substr(7);
+  }
+
   if (Name.back() != ')')
     return false;
 
@@ -4470,8 +4483,13 @@ static bool validateSwiftFunctionName(StringRef Name,
   if (Parameters.empty())
     return false;
   Parameters = Parameters.drop_back(); // ')'
-  if (Parameters.empty())
+
+  if (Parameters.empty()) {
+    // Setters must have at least one parameter.
+    if (isSetter) return false;
+
     return true;
+  }
 
   if (Parameters.back() != ':')
     return false;
@@ -4499,6 +4517,17 @@ static bool validateSwiftFunctionName(StringRef Name,
   IsSingleParamInit =
       (ParamCount == 1 && BaseName == "init" && NextParam != "_");
 
+  // Check the number of parameters for a getter/setter.
+  if (isGetter || isSetter) {
+    // Setters have one parameter for the new value.
+    unsigned NumExpectedParams = isSetter ? 1 : 0;
+
+    // Instance methods have one parameter for "self".
+    if (SelfLocation) ++NumExpectedParams;
+
+    if (ParamCount != NumExpectedParams) return true;
+  }
+  
   return true;
 }
 
