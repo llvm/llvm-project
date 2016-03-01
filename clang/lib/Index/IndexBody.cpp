@@ -258,7 +258,7 @@ public:
                                    DataRecursionQueue *Q = nullptr) {
     if (E->getOperatorLoc().isInvalid())
       return true; // implicit.
-    return base::TraverseCXXOperatorCallExpr(E);
+    return base::TraverseCXXOperatorCallExpr(E, Q);
   }
 
   bool VisitDeclStmt(DeclStmt *S) {
@@ -325,7 +325,7 @@ public:
 
     auto visitForm = [&](InitListExpr *Form) {
       for (Stmt *SubStmt : Form->children()) {
-        if (!TraverseStmt(SubStmt))
+        if (!TraverseStmt(SubStmt, Q))
           return false;
       }
       return true;
