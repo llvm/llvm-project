@@ -4797,7 +4797,7 @@ SwiftASTContext::GetErrorProtocolType ()
         // Getting the error type requires the Stdlib module be loaded, but doesn't cause it to be loaded.
         // Do that here:
         swift_ctx->getStdlibModule(true);
-        swift::NominalTypeDecl *error_type_decl = GetASTContext()->getExceptionTypeDecl();
+        swift::NominalTypeDecl *error_type_decl = GetASTContext()->getErrorProtocolDecl();
         if (error_type_decl)
         {
             auto error_type = error_type_decl->getType().getPointer();
@@ -5104,7 +5104,7 @@ m_is_zero_size(false)
     SwiftASTContext *swift_ast = SwiftASTContext::GetSwiftASTContext(&ast_ctx);
     if (swift_ast)
     {
-        swift::ProtocolDecl *option_set = ast_ctx.getProtocol(swift::KnownProtocolKind::OptionSetType);
+        swift::ProtocolDecl *option_set = ast_ctx.getProtocol(swift::KnownProtocolKind::OptionSet);
         if (option_set)
         {
             if (auto nominal_decl = swift_can_type.getNominalOrBoundGenericNominal())
@@ -5890,7 +5890,7 @@ SwiftASTContext::GetProtocolTypeInfo (const CompilerType& type,
                 protocol_info.m_num_payload_words = 3;
                 protocol_info.m_is_objc = t->getDecl()->isObjC();
                 protocol_info.m_is_anyobject = (t->getDecl() == ast->GetASTContext()->getProtocol(swift::KnownProtocolKind::AnyObject));
-                protocol_info.m_is_errortype = (t->getDecl() == ast->GetASTContext()->getExceptionTypeDecl());
+                protocol_info.m_is_errortype = (t->getDecl() == ast->GetASTContext()->getErrorProtocolDecl());
                 protocol_info.m_num_payload_words = (protocol_info.m_is_errortype ? 0 : 3);
                 if (protocol_info.IsOneWordStorage()) // @objc protocols only wrap an ISA/metadata pointer
                     protocol_info.m_num_storage_words = 1;
