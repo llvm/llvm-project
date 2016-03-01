@@ -2003,7 +2003,7 @@ m_is_error_type(false)
         m_is_swift = ((flags & 0b001) == 1);
         m_class_only = ((flags & 0b010) == 0);
         m_uses_witness_table = ((flags & 0b100) == 1);
-        m_is_error_type = ((flags & SpecialProtocolMask) >> SpecialProtocolShift) == (int)swift::SpecialProtocol::ErrorType;
+        m_is_error_type = ((flags & SpecialProtocolMask) >> SpecialProtocolShift) == (int)swift::SpecialProtocol::ErrorProtocol;
         lldbassert(m_size >= 40 && "invalid or unknown protocol metadatasize");
     }
     else
@@ -2016,7 +2016,7 @@ m_is_error_type(false)
         m_is_swift = ((flags & 0b001) == 1);
         m_class_only = ((flags & 0b010) == 0);
         m_uses_witness_table = ((flags & 0b100) == 1);
-        m_is_error_type = ((flags & SpecialProtocolMask) >> SpecialProtocolShift) == (int)swift::SpecialProtocol::ErrorType;
+        m_is_error_type = ((flags & SpecialProtocolMask) >> SpecialProtocolShift) == (int)swift::SpecialProtocol::ErrorProtocol;
         lldbassert(m_size >= 72 && "invalid or unknown protocol metadatasize");
     }
 }
