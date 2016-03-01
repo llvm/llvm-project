@@ -1,5 +1,12 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks %s 2>&1 | FileCheck -check-prefix=CHECK %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks -triple x86_64-apple-darwin10 -fobjc-arc %s 2>&1 | FileCheck -check-prefix=CHECK-ARC -allow-empty '--implicit-check-not=error:' '--implicit-check-not=warning:' %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.osx.cocoa.Dealloc -fblocks -verify -triple x86_64-apple-darwin10 -fobjc-arc %s
+
+#define NON_ARC !__has_feature(objc_arc)
+
+// No diagnostics expected under ARC.
+#if !NON_ARC
+  // expected-no-diagnostics
+#endif
 
 typedef signed char BOOL;
 @protocol NSObject
@@ -51,7 +58,9 @@ typedef struct objc_selector *SEL;
 @property (copy) NSObject *ivar;
 @end
 
-// CHECK: MissingDealloc.m:[[@LINE+1]]:1: warning: Objective-C class 'MissingDeallocWithCopyProperty' lacks a 'dealloc' instance method
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithCopyProperty' lacks a 'dealloc' instance method but must release '_ivar'}}
+#endif
 @implementation MissingDeallocWithCopyProperty
 @end
 
@@ -59,8 +68,21 @@ typedef struct objc_selector *SEL;
 @property (retain) NSObject *ivar;
 @end
 
-// CHECK: MissingDealloc.m:[[@LINE+1]]:1: warning: Objective-C class 'MissingDeallocWithRetainProperty' lacks a 'dealloc' instance method
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithRetainProperty' lacks a 'dealloc' instance method but must release '_ivar'}}
+#endif
 @implementation MissingDeallocWithRetainProperty
+@end
+
+@interface MissingDeallocWithMultipleProperties : NSObject
+@property (retain) NSObject *ivar1;
+@property (retain) NSObject *ivar2;
+@end
+
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithMultipleProperties' lacks a 'dealloc' instance method but must release '_ivar1' and others}}
+#endif
+@implementation MissingDeallocWithMultipleProperties
 @end
 
 @interface MissingDeallocWithIVarAndRetainProperty : NSObject {
@@ -69,7 +91,9 @@ typedef struct objc_selector *SEL;
 @property (retain) NSObject *ivar1;
 @end
 
-// CHECK: MissingDealloc.m:[[@LINE+1]]:1: warning: Objective-C class 'MissingDeallocWithIVarAndRetainProperty' lacks a 'dealloc' instance method
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithIVarAndRetainProperty' lacks a 'dealloc' instance method but must release '_ivar1'}}
+#endif
 @implementation MissingDeallocWithIVarAndRetainProperty
 @end
 
@@ -77,7 +101,9 @@ typedef struct objc_selector *SEL;
 @property (readonly,retain) NSObject *ivar;
 @end
 
-// CHECK: MissingDealloc.m:[[@LINE+1]]:1: warning: Objective-C class 'MissingDeallocWithReadOnlyRetainedProperty' lacks a 'dealloc' instance method
+#if NON_ARC
+// expected-warning@+2{{'MissingDeallocWithReadOnlyRetainedProperty' lacks a 'dealloc' instance method but must release '_ivar'}}
+#endif
 @implementation MissingDeallocWithReadOnlyRetainedProperty
 @end
 
