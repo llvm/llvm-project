@@ -13,7 +13,7 @@ import Foundation
 
 func main() {
   var nsarr: NSArray = NSArray(array: [123456,234567,345678])
-  var swarr = unsafeBitCast(unsafeBitCast(nsarr, Int.self), NSArray.self) as! [AnyObject]
+  var swarr = unsafeBitCast(unsafeBitCast(nsarr, to: Int.self), to: NSArray.self) as! [AnyObject]
   print("break here")
 }
 
