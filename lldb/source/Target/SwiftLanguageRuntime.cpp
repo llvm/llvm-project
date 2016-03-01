@@ -1604,32 +1604,14 @@ m_params()
     if (gpv_offset == 0)
         return;
     m_num_primary_params = struct_reader.GetField<size_t>(g_GpdNumPrimaryParams);
-    // the witness table pointers are stored inline in some well-defined order
-    // after all the metadata pointers, so we need a global counter
-    lldb::addr_t witness_ptr = m_num_primary_params;
     if (m_num_primary_params == 0)
         return;
-    lldb::addr_t witnesses_base_addr = nom_type_desc_addr + runtime.GetNominalTypeDescriptorType().GetByteSize(nullptr);
     for (size_t idx = 0;
          idx < m_num_primary_params;
          idx++)
     {
         lldb::addr_t arg_metadata_ptr = ReadPointerAtOffset(gpv_offset + idx);
-        size_t num_witnesses_for_arg = ReadIntegerAtOffset(4, witnesses_base_addr, 4*idx);
-        if (num_witnesses_for_arg == 0)
-            m_params.push_back(GenericParameter(runtime.GetMetadataForLocation(arg_metadata_ptr)));
-        else
-        {
-            std::vector<lldb::addr_t> witnesses;
-            for (size_t jdx = 0;
-                 jdx < num_witnesses_for_arg;
-                 jdx++)
-            {
-                witnesses.push_back(ReadPointerAtOffset(gpv_offset+witness_ptr));
-                witness_ptr++;
-            }
-            m_params.push_back(GenericParameter(runtime.GetMetadataForLocation(arg_metadata_ptr),witnesses));
-        }
+        m_params.push_back(GenericParameter(runtime.GetMetadataForLocation(arg_metadata_ptr)));
     }
 }
 

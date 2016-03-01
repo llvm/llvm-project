@@ -520,22 +520,14 @@ public:
         {
         private:
             MetadataSP m_metadata_sp;
-            std::vector<lldb::addr_t> m_witnesses; // FIXME: read value witness tables?
             
         public:
-            GenericParameter (MetadataSP metadata, std::vector<lldb::addr_t> witnesses) :
-            m_metadata_sp(metadata),
-            m_witnesses(witnesses)
-            { }
-            
             GenericParameter (MetadataSP metadata) :
-            m_metadata_sp (metadata),
-            m_witnesses ()
+            m_metadata_sp(metadata)
             { }
             
             GenericParameter () :
-            m_metadata_sp (),
-            m_witnesses ()
+            m_metadata_sp ()
             { }
             
             bool
@@ -545,20 +537,6 @@ public:
             GetMetadata ()
             {
                 return m_metadata_sp;
-            }
-            
-            size_t
-            GetNumWitnesses ()
-            {
-                return m_witnesses.size();
-            }
-            
-            lldb::addr_t
-            GetWitnessAtIndex (size_t idx)
-            {
-                if (idx >= m_witnesses.size())
-                    return LLDB_INVALID_ADDRESS;
-                return m_witnesses[idx];
             }
         };
         
