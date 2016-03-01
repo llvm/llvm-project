@@ -9,11 +9,6 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-extension String
-{
-    var count : Int { return Int(self.startIndex.distanceTo(self.endIndex)) }
-}
-
 class A
 {
     var in_class_a : Int
@@ -62,7 +57,7 @@ class A
     {
         get
         {
-            return input.count  // In string subscript getter
+            return input.characters.count  // In string subscript getter
         }
 
         set (new_value)
@@ -80,7 +75,7 @@ class A
 
     init (_ input: String)
     {
-        in_class_a = input.count
+        in_class_a = input.characters.count
         also_in_a = in_class_a + 1
         print ("In string init.")
     }
