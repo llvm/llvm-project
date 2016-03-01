@@ -131,4 +131,8 @@ uint64_t __llvm_profile_get_magic(void);
 /*! \brief Get the version of the file format. */
 uint64_t __llvm_profile_get_version(void);
 
+/*! \brief Get the number of entries in the profile data section. */
+uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
+                                      const __llvm_profile_data *End);
+
 #endif /* PROFILE_INSTRPROFILING_H_ */

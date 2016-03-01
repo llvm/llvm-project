@@ -144,7 +144,7 @@ COMPILER_RT_VISIBILITY int llvmWriteProfDataImpl(
     const char *NamesBegin, const char *NamesEnd) {
 
   /* Calculate size of sections. */
-  const uint64_t DataSize = DataEnd - DataBegin;
+  const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   const uint64_t CountersSize = CountersEnd - CountersBegin;
   const uint64_t NamesSize = NamesEnd - NamesBegin;
   const uint64_t Padding = __llvm_profile_get_num_padding_bytes(NamesSize);
