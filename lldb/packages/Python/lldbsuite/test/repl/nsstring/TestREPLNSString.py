@@ -24,10 +24,11 @@ class REPLNSStringTestCase (REPLTest):
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
     @decorators.no_debug_info_test
+    @decorators.expectedFailureDarwin("rdar://24910383")
     def testREPL(self):
         REPLTest.testREPL(self)
 
     def doTest(self):
         self.command('import Foundation', timeout=20)
         self.command('"hello world" as NSString', patterns=['\\$R0: NSString = "hello world"'], timeout=20)
-        self.command('$R0.substringToIndex(5)', patterns=['\\$R1: String = "hello"'], timeout=20)
+        self.command('$R0.substring(to: 5)', patterns=['\\$R1: String = "hello"'], timeout=20)

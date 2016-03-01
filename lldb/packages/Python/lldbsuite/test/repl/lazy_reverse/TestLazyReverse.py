@@ -20,7 +20,7 @@ class REPLLazyReverseTestCase(lldbrepl.REPLTest):
 
     def doTest(self):
         self.command(
-            'var a = ["a","b","c"]; Array(a.lazy.reverse())',
+            'var a = ["a","b","c"]; Array(a.lazy.reversed())',
             patterns=[
                 r'\$R0: \[String] = 3 values {',
                 r'\[0] = "c"',
