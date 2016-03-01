@@ -45,8 +45,8 @@ ExtractSomeIfAny (ValueObject *optional,
     if (!optional)
         return nullptr;
     
-    static ConstString g_Some("Some");
-    static ConstString g_None("None");
+    static ConstString g_Some("some");
+    static ConstString g_None("none");
     
     ValueObjectSP non_synth_valobj = optional->GetNonSyntheticValue();
     if (!non_synth_valobj)
@@ -79,8 +79,8 @@ SwiftOptional_SummaryProvider_Impl (ValueObject& valobj,
                                     Stream& stream,
                                     const TypeSummaryOptions& options)
 {
-    static ConstString g_Some("Some");
-    static ConstString g_None("None");
+    static ConstString g_Some("some");
+    static ConstString g_None("none");
     
     ValueObjectSP non_synth_valobj = valobj.GetNonSyntheticValue();
     if (!non_synth_valobj)
@@ -235,7 +235,7 @@ lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::MightHaveChildr
 size_t
 lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::GetIndexOfChildWithName (const ConstString &name)
 {
-    static ConstString g_Some("Some");
+    static ConstString g_Some("some");
     
     if (IsEmpty())
         return UINT32_MAX;
