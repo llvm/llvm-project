@@ -12327,8 +12327,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
             } else if (TUK == TUK_Reference &&
                        (PrevTagDecl->getFriendObjectKind() ==
                             Decl::FOK_Undeclared ||
-                        PP.getModuleContainingLocation(
-                            PrevDecl->getLocation()) !=
+                        getOwningModule(PrevDecl) !=
                             PP.getModuleContainingLocation(KWLoc)) &&
                        SS.isEmpty()) {
               // This declaration is a reference to an existing entity, but
@@ -12338,7 +12337,8 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
               // the declaration would have meant the same thing if no prior
               // declaration were found, that is, if it was found in the same
               // scope where we would have injected a declaration.
-              if (!getTagInjectionContext(CurContext)->getRedeclContext()
+              if (!getTagInjectionContext(CurContext)
+                       ->getRedeclContext()
                        ->Equals(PrevDecl->getDeclContext()->getRedeclContext()))
                 return PrevTagDecl;
               // This is in the injected scope, create a new declaration in
@@ -12645,7 +12645,7 @@ CreateNewDecl:
             << Name;
         Invalid = true;
       }
-    } else if (!PrevDecl) {
+    } else {
       Diag(Loc, diag::warn_decl_in_param_list) << Context.getTagDeclType(New);
     }
     DeclsInPrototypeScope.push_back(New);
