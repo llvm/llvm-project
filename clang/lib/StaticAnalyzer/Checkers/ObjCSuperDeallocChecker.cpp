@@ -173,8 +173,8 @@ void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
   reportUseAfterDealloc(BaseSym, Desc, S, C);
 }
 
-/// Report a use-after-dealloc on \param Sym. If not empty,
-/// \param Desc will be used to describe the error; otherwise,
+/// Report a use-after-dealloc on Sym. If not empty,
+/// Desc will be used to describe the error; otherwise,
 /// a default warning will be used.
 void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
                                                     StringRef Desc,
@@ -199,7 +199,7 @@ void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
   C.emitReport(std::move(BR));
 }
 
-/// Diagnose if any of the arguments to \param CE have already been
+/// Diagnose if any of the arguments to CE have already been
 /// dealloc'd.
 void ObjCSuperDeallocChecker::diagnoseCallArguments(const CallEvent &CE,
                                                     CheckerContext &C) const {
