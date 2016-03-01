@@ -46,8 +46,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
+#ifndef LLDB_DISABLE_PYTHON
 using lldb_private::formatters::AddCXXSummary;
 using lldb_private::formatters::AddCXXSynthetic;
+#endif
 using lldb_private::formatters::AddFormat;
 using lldb_private::formatters::AddStringSummary;
 using lldb_private::formatters::AddSummary;
