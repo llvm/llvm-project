@@ -3355,6 +3355,11 @@ public:
     return ArrayRef<ExtParameterInfo>(getExtParameterInfosBuffer(),
                                       getNumParams());
   }
+  const ExtParameterInfo *getExtParameterInfosOrNull() const {
+    if (!hasExtParameterInfos())
+      return nullptr;
+    return getExtParameterInfosBuffer();
+  }
 
   ExtParameterInfo getExtParameterInfo(unsigned I) const {
     assert(I < getNumParams() && "parameter index out of range");
