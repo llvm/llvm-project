@@ -4449,6 +4449,21 @@ static bool validateSwiftFunctionName(StringRef Name,
 
   StringRef BaseName, Parameters;
   std::tie(BaseName, Parameters) = Name.split('(');
+
+  // Split at the first '.', if it exists, which separates the context
+  // name from the base name.
+  StringRef ContextName;
+  bool IsMember = false;
+  std::tie(ContextName, BaseName) = BaseName.split('.');
+  if (BaseName.empty()) {
+    BaseName = ContextName;
+    ContextName = StringRef();
+  } else if (ContextName.empty() || !isValidIdentifier(ContextName)) {
+    return false;
+  } else {
+    IsMember = true;
+  }
+
   if (!isValidIdentifier(BaseName) || BaseName == "_")
     return false;
 
@@ -4461,12 +4476,23 @@ static bool validateSwiftFunctionName(StringRef Name,
   if (Parameters.back() != ':')
     return false;
 
+  Optional<unsigned> SelfLocation;
   StringRef NextParam;
   do {
     std::tie(NextParam, Parameters) = Parameters.split(':');
 
     if (!isValidIdentifier(NextParam))
       return false;
+
+    // "self" indicates the "self" argument for a member.
+    if (IsMember && NextParam == "self") {
+      // More than one "self"?
+      if (SelfLocation) return false;
+
+      // The "self" location is the current parameter.
+      SelfLocation = ParamCount;
+    }
+
     ++ParamCount;
   } while (!Parameters.empty());
 
@@ -4533,7 +4559,17 @@ static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
              isa<ObjCInterfaceDecl>(D) || isa<ObjCPropertyDecl>(D) ||
              isa<VarDecl>(D) || isa<TypedefNameDecl>(D) || isa<TagDecl>(D) ||
              isa<IndirectFieldDecl>(D) || isa<FieldDecl>(D)) {
-    if (!isValidIdentifier(Name)) {
+    StringRef ContextName, BaseName;
+    std::tie(ContextName, BaseName) = Name.split('.');
+    if (BaseName.empty()) {
+      BaseName = ContextName;
+      ContextName = StringRef();
+    } else if (!isValidIdentifier(ContextName)) {
+      S.Diag(ArgLoc, diag::err_attr_swift_name_identifier) << Attr.getName();
+      return;      
+    }
+
+    if (!isValidIdentifier(BaseName)) {
       S.Diag(ArgLoc, diag::err_attr_swift_name_identifier) << Attr.getName();
       return;
     }
