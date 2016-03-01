@@ -1,4 +1,4 @@
-//===-- CPlusPlusLanguage.cpp --------------------------------------*- C++ -*-===//
+//===-- CPlusPlusLanguage.cpp -----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,9 +9,17 @@
 
 #include "CPlusPlusLanguage.h"
 
+// C Includes
+// C++ Includes
+#include <cstring>
+#include <cctype>
+#include <functional>
+#include <mutex>
 
+// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
+// Project includes
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegularExpression.h"
@@ -25,11 +33,6 @@
 #include "LibCxx.h"
 #include "LibCxxAtomic.h"
 #include "LibStdcpp.h"
-
-#include <cstring>
-#include <cctype>
-#include <functional>
-#include <mutex>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -56,10 +59,10 @@ CPlusPlusLanguage::GetPluginNameStatic()
     return g_name;
 }
 
-
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------
+
 lldb_private::ConstString
 CPlusPlusLanguage::GetPluginName()
 {
@@ -75,6 +78,7 @@ CPlusPlusLanguage::GetPluginVersion()
 //------------------------------------------------------------------
 // Static Functions
 //------------------------------------------------------------------
+
 Language *
 CPlusPlusLanguage::CreateInstance (lldb::LanguageType language)
 {
@@ -320,10 +324,7 @@ CPlusPlusLanguage::IsCPPMangledName (const char *name)
     // this is a C++ mangled name, but we can put that off till there is actually more than one
     // we care about.
     
-    if (name && name[0] == '_' && name[1] == 'Z')
-        return true;
-    else
-        return false;
+    return (name != nullptr && name[0] == '_' && name[1] == 'Z');
 }
 
 bool
@@ -345,7 +346,6 @@ class CPPRuntimeEquivalents
 public:
     CPPRuntimeEquivalents ()
     {
-        
         m_impl.Append(ConstString("std::basic_string<char, std::char_traits<char>, std::allocator<char> >").AsCString(), ConstString("basic_string<char>"));
 
         // these two (with a prefixed std::) occur when c++stdlib string class occurs as a template argument in some STL container
@@ -365,11 +365,10 @@ public:
     FindExactMatches (ConstString& type_name,
                       std::vector<ConstString>& equivalents)
     {
-        
         uint32_t count = 0;
 
         for (ImplData match = m_impl.FindFirstValueForName(type_name.AsCString());
-             match != NULL;
+             match != nullptr;
              match = m_impl.FindNextValueForName(match))
         {
             equivalents.push_back(match->value);
@@ -388,7 +387,6 @@ public:
     FindPartialMatches (ConstString& type_name,
                         std::vector<ConstString>& equivalents)
     {
-        
         uint32_t count = 0;
         
         const char* type_name_cstr = type_name.AsCString();
@@ -407,11 +405,9 @@ public:
         }
         
         return count;
-        
     }
     
 private:
-    
     std::string& replace (std::string& target,
                           std::string& pattern,
                           std::string& with)
@@ -430,14 +426,13 @@ private:
                         const char *matching_key,
                         std::vector<ConstString>& equivalents)
     {
-        
         std::string matching_key_str(matching_key);
         ConstString original_const(original);
         
         uint32_t count = 0;
         
         for (ImplData match = m_impl.FindFirstValueForName(matching_key);
-             match != NULL;
+             match != nullptr;
              match = m_impl.FindNextValueForName(match))
         {
             std::string target(original);
@@ -471,7 +466,6 @@ GetEquivalentsMap ()
     return g_equivalents_map;
 }
 
-
 uint32_t
 CPlusPlusLanguage::FindEquivalentNames(ConstString type_name, std::vector<ConstString>& equivalents)
 {
@@ -479,8 +473,8 @@ CPlusPlusLanguage::FindEquivalentNames(ConstString type_name, std::vector<ConstS
 
     bool might_have_partials= 
         ( count == 0 )  // if we have a full name match just use it
-        && (strchr(type_name.AsCString(), '<') != NULL  // we should only have partial matches when templates are involved, check that we have
-            && strchr(type_name.AsCString(), '>') != NULL); // angle brackets in the type_name before trying to scan for partial matches
+        && (strchr(type_name.AsCString(), '<') != nullptr  // we should only have partial matches when templates are involved, check that we have
+            && strchr(type_name.AsCString(), '>') != nullptr); // angle brackets in the type_name before trying to scan for partial matches
     
     if ( might_have_partials )
         count = GetEquivalentsMap().FindPartialMatches(type_name, equivalents);
@@ -806,4 +800,3 @@ CPlusPlusLanguage::GetHardcodedSynthetics ()
     
     return g_formatters;
 }
-

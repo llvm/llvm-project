@@ -62,12 +62,12 @@ namespace lldb_private {
 } // namespace lldb_private
 
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::LibcxxStdUnorderedMapSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_tree(NULL),
-m_num_elements(0),
-m_next_element(nullptr),
-m_children(),
-m_elements_cache()
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_tree(nullptr),
+    m_num_elements(0),
+    m_next_element(nullptr),
+    m_children(),
+    m_elements_cache()
 {
     if (valobj_sp)
         Update();
@@ -86,7 +86,7 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::GetChildAtInde
 {
     if (idx >= CalculateNumChildren())
         return lldb::ValueObjectSP();
-    if (m_tree == NULL)
+    if (m_tree == nullptr)
         return lldb::ValueObjectSP();
     
     auto cached = m_children.find(idx);
@@ -166,7 +166,5 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::GetIndexOfChil
 SyntheticChildrenFrontEnd*
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
 {
-    if (!valobj_sp)
-        return NULL;
-    return (new LibcxxStdUnorderedMapSyntheticFrontEnd(valobj_sp));
+    return (valobj_sp ? new LibcxxStdUnorderedMapSyntheticFrontEnd(valobj_sp) : nullptr);
 }

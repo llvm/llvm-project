@@ -56,7 +56,7 @@ public:
     IsNilReference(ValueObject &valobj) override;
 
     lldb::TypeCategoryImplSP
-    GetFormatters();
+    GetFormatters() override;
 };
 
 } // namespace lldb_private

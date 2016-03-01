@@ -634,10 +634,10 @@ void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
     std::string Fixup = fixupWithStyle(Name, Style);
     if (StringRef(Fixup).equals(Name)) {
       if (!IgnoreFailedSplit) {
-        DEBUG(llvm::dbgs() << Decl->getLocStart().printToString(
-                                  *Result.SourceManager)
-                           << format(": unable to split words for %s '%s'\n",
-                                     KindName.c_str(), Name));
+        DEBUG(llvm::dbgs()
+              << Decl->getLocStart().printToString(*Result.SourceManager)
+              << llvm::format(": unable to split words for %s '%s'\n",
+                              KindName.c_str(), Name));
       }
     } else {
       NamingCheckFailure &Failure = NamingCheckFailures[Decl];

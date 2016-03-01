@@ -43,44 +43,75 @@
 
 using namespace lldb_private;
 
-namespace
-{
-
-// Getting a string out of a mini dump is a chore.  You're usually given a
-// relative virtual address (RVA), which points to a counted string that's in
-// Windows Unicode (UTF-16).  This wrapper handles all the redirection and
-// returns a UTF-8 copy of the string.
-std::string
-GetMiniDumpString(const void *base_addr, const RVA rva)
-{
-    std::string result;
-    if (!base_addr)
-    {
-        return result;
-    }
-    auto md_string = reinterpret_cast<const MINIDUMP_STRING *>(static_cast<const char *>(base_addr) + rva);
-    auto source_start = reinterpret_cast<const UTF16 *>(md_string->Buffer);
-    const auto source_length = ::wcslen(md_string->Buffer);
-    const auto source_end = source_start + source_length;
-    result.resize(4*source_length);  // worst case length
-    auto result_start = reinterpret_cast<UTF8 *>(&result[0]);
-    const auto result_end = result_start + result.size();
-    ConvertUTF16toUTF8(&source_start, source_end, &result_start, result_end, strictConversion);
-    const auto result_size = std::distance(reinterpret_cast<UTF8 *>(&result[0]), result_start);
-    result.resize(result_size);  // shrink to actual length
-    return result;
-}
-
-}  // anonymous namespace
-
-// Encapsulates the private data for ProcessWinMiniDump.
-// TODO(amccarth):  Determine if we need a mutex for access.
-class ProcessWinMiniDump::Data
+// Implementation class for ProcessWinMiniDump encapsulates the Windows-specific
+// code, keeping non-portable types out of the header files.
+// TODO(amccarth):  Determine if we need a mutex for access.  Given that this is
+// postmortem debugging, I don't think so.
+class ProcessWinMiniDump::Impl
 {
 public:
-    Data();
-    ~Data();
+    Impl(const FileSpec &core_file, ProcessWinMiniDump *self);
+    ~Impl();
 
+    Error
+    DoLoadCore();
+
+    bool
+    UpdateThreadList(ThreadList &old_thread_list, ThreadList &new_thread_list);
+
+    void
+    RefreshStateAfterStop();
+
+    size_t
+    DoReadMemory(lldb::addr_t addr, void *buf, size_t size, Error &error);
+
+    Error
+    GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &info);
+
+private:
+    // Describes a range of memory captured in the mini dump.
+    struct Range
+    {
+        lldb::addr_t start; // virtual address of the beginning of the range
+        size_t size;        // size of the range in bytes
+        const uint8_t *ptr; // absolute pointer to the first byte of the range
+    };
+
+    // If the mini dump has a memory range that contains the desired address, it
+    // returns true with the details of the range in *range_out.  Otherwise, it
+    // returns false.
+    bool
+    FindMemoryRange(lldb::addr_t addr, Range *range_out) const;
+
+    lldb_private::Error
+    MapMiniDumpIntoMemory();
+
+    lldb_private::ArchSpec
+    DetermineArchitecture();
+
+    void
+    ReadExceptionRecord();
+
+    void
+    ReadMiscInfo();
+
+    void
+    ReadModuleList();
+
+    // A thin wrapper around WinAPI's MiniDumpReadDumpStream to avoid redundant
+    // checks.  If there's a failure (e.g., if the requested stream doesn't exist),
+    // the function returns nullptr and sets *size_out to 0.
+    void *
+    FindDumpStream(unsigned stream_number, size_t *size_out) const;
+
+    // Getting a string out of a mini dump is a chore.  You're usually given a
+    // relative virtual address (RVA), which points to a counted string that's in
+    // Windows Unicode (UTF-16).  This wrapper handles all the redirection and
+    // returns a UTF-8 copy of the string.
+    std::string
+    GetMiniDumpString(RVA rva) const;
+
+    ProcessWinMiniDump *m_self; // non-owning back pointer
     FileSpec m_core_file;
     HANDLE m_dump_file;  // handle to the open minidump file
     HANDLE m_mapping;  // handle to the file mapping for the minidump file
@@ -89,87 +120,46 @@ public:
     bool m_is_wow64; // minidump is of a 32-bit process captured with a 64-bit debugger
 };
 
-ConstString
-ProcessWinMiniDump::GetPluginNameStatic()
+ProcessWinMiniDump::Impl::Impl(const FileSpec &core_file, ProcessWinMiniDump *self)
+    : m_self(self),
+      m_core_file(core_file),
+      m_dump_file(INVALID_HANDLE_VALUE),
+      m_mapping(NULL),
+      m_base_addr(nullptr),
+      m_exception_sp(),
+      m_is_wow64(false)
 {
-    static ConstString g_name("win-minidump");
-    return g_name;
 }
 
-const char *
-ProcessWinMiniDump::GetPluginDescriptionStatic()
+ProcessWinMiniDump::Impl::~Impl()
 {
-    return "Windows minidump plug-in.";
-}
-
-void
-ProcessWinMiniDump::Terminate()
-{
-    PluginManager::UnregisterPlugin(ProcessWinMiniDump::CreateInstance);
-}
-
-
-lldb::ProcessSP
-ProcessWinMiniDump::CreateInstance(lldb::TargetSP target_sp, Listener &listener, const FileSpec *crash_file)
-{
-    lldb::ProcessSP process_sp;
-    if (crash_file)
+    if (m_base_addr)
     {
-       process_sp.reset(new ProcessWinMiniDump(target_sp, listener, *crash_file));
+        ::UnmapViewOfFile(m_base_addr);
+        m_base_addr = nullptr;
     }
-    return process_sp;
+    if (m_mapping)
+    {
+        ::CloseHandle(m_mapping);
+        m_mapping = NULL;
+    }
+    if (m_dump_file != INVALID_HANDLE_VALUE)
+    {
+        ::CloseHandle(m_dump_file);
+        m_dump_file = INVALID_HANDLE_VALUE;
+    }
 }
-
-bool
-ProcessWinMiniDump::CanDebug(lldb::TargetSP target_sp, bool plugin_specified_by_name)
-{
-    // TODO(amccarth):  Eventually, this needs some actual logic.
-    return true;
-}
-
-ProcessWinMiniDump::ProcessWinMiniDump(lldb::TargetSP target_sp, Listener &listener,
-                                       const FileSpec &core_file) :
-    ProcessWindows(target_sp, listener),
-    m_data_up(new Data)
-{
-    m_data_up->m_core_file = core_file;
-}
-
-ProcessWinMiniDump::~ProcessWinMiniDump()
-{
-    Clear();
-    // We need to call finalize on the process before destroying ourselves
-    // to make sure all of the broadcaster cleanup goes as planned. If we
-    // destruct this class, then Process::~Process() might have problems
-    // trying to fully destroy the broadcaster.
-    Finalize();
-}
-
-ConstString
-ProcessWinMiniDump::GetPluginName()
-{
-    return GetPluginNameStatic();
-}
-
-uint32_t
-ProcessWinMiniDump::GetPluginVersion()
-{
-    return 1;
-}
-
 
 Error
-ProcessWinMiniDump::DoLoadCore()
+ProcessWinMiniDump::Impl::DoLoadCore()
 {
-    Error error;
-
-    error = MapMiniDumpIntoMemory(m_data_up->m_core_file.GetCString());
+    Error error = MapMiniDumpIntoMemory();
     if (error.Fail())
     {
         return error;
     }
 
-    GetTarget().SetArchitecture(DetermineArchitecture());
+    m_self->GetTarget().SetArchitecture(DetermineArchitecture());
     ReadMiscInfo();  // notably for process ID
     ReadModuleList();
     ReadExceptionRecord();
@@ -178,16 +168,8 @@ ProcessWinMiniDump::DoLoadCore()
 
 }
 
-DynamicLoader *
-ProcessWinMiniDump::GetDynamicLoader()
-{
-    if (m_dyld_ap.get() == NULL)
-        m_dyld_ap.reset (DynamicLoader::FindPlugin(this, DynamicLoaderWindowsDYLD::GetPluginNameStatic().GetCString()));
-    return m_dyld_ap.get();
-}
-
 bool
-ProcessWinMiniDump::UpdateThreadList(ThreadList &old_thread_list, ThreadList &new_thread_list)
+ProcessWinMiniDump::Impl::UpdateThreadList(ThreadList &old_thread_list, ThreadList &new_thread_list)
 {
     size_t size = 0;
     auto thread_list_ptr = static_cast<const MINIDUMP_THREAD_LIST *>(FindDumpStream(ThreadListStream, &size));
@@ -196,13 +178,13 @@ ProcessWinMiniDump::UpdateThreadList(ThreadList &old_thread_list, ThreadList &ne
         const ULONG32 thread_count = thread_list_ptr->NumberOfThreads;
         for (ULONG32 i = 0; i < thread_count; ++i) {
             const auto &mini_dump_thread = thread_list_ptr->Threads[i];
-            auto thread_sp = std::make_shared<ThreadWinMiniDump>(*this, mini_dump_thread.ThreadId);
+            auto thread_sp = std::make_shared<ThreadWinMiniDump>(*m_self, mini_dump_thread.ThreadId);
             if (mini_dump_thread.ThreadContext.DataSize >= sizeof(CONTEXT))
             {
-                const CONTEXT *context = reinterpret_cast<const CONTEXT *>(
-                    static_cast<const char *>(m_data_up->m_base_addr) + mini_dump_thread.ThreadContext.Rva);
+                const CONTEXT *context = reinterpret_cast<const CONTEXT *>(static_cast<const char *>(m_base_addr) +
+                                                                           mini_dump_thread.ThreadContext.Rva);
 
-                if (m_data_up->m_is_wow64)
+                if (m_is_wow64)
                 {
                     // On Windows, a 32-bit process can run on a 64-bit machine under WOW64.
                     // If the minidump was captured with a 64-bit debugger, then the CONTEXT
@@ -212,7 +194,7 @@ ProcessWinMiniDump::UpdateThreadList(ThreadList &old_thread_list, ThreadList &ne
                     // Environment Block) of the 64-bit process.
                     Error error;
                     TEB64 wow64teb = {0};
-                    ReadMemory(mini_dump_thread.Teb, &wow64teb, sizeof(wow64teb), error);
+                    m_self->ReadMemory(mini_dump_thread.Teb, &wow64teb, sizeof(wow64teb), error);
                     if (error.Success())
                     {
                         // Slot 1 of the thread-local storage in the 64-bit TEB points to a structure
@@ -250,54 +232,24 @@ ProcessWinMiniDump::UpdateThreadList(ThreadList &old_thread_list, ThreadList &ne
 }
 
 void
-ProcessWinMiniDump::RefreshStateAfterStop()
+ProcessWinMiniDump::Impl::RefreshStateAfterStop()
 {
-    if (!m_data_up) return;
-    if (!m_data_up->m_exception_sp) return;
+    if (!m_exception_sp)
+        return;
 
-    auto active_exception = m_data_up->m_exception_sp;
+    auto active_exception = m_exception_sp;
     std::string desc;
     llvm::raw_string_ostream desc_stream(desc);
-    desc_stream << "Exception "
-                << llvm::format_hex(active_exception->GetExceptionCode(), 8)
-                << " encountered at address "
-                << llvm::format_hex(active_exception->GetExceptionAddress(), 8);
-    m_thread_list.SetSelectedThreadByID(active_exception->GetThreadID());
-    auto stop_thread = m_thread_list.GetSelectedThread();
+    desc_stream << "Exception " << llvm::format_hex(active_exception->GetExceptionCode(), 8)
+                << " encountered at address " << llvm::format_hex(active_exception->GetExceptionAddress(), 8);
+    m_self->m_thread_list.SetSelectedThreadByID(active_exception->GetThreadID());
+    auto stop_thread = m_self->m_thread_list.GetSelectedThread();
     auto stop_info = StopInfo::CreateStopReasonWithException(*stop_thread, desc_stream.str().c_str());
     stop_thread->SetStopInfo(stop_info);
 }
 
-Error
-ProcessWinMiniDump::DoDestroy()
-{
-    return Error();
-}
-
-bool
-ProcessWinMiniDump::IsAlive()
-{
-    return true;
-}
-
-bool
-ProcessWinMiniDump::WarnBeforeDetach () const
-{
-    // Since this is post-mortem debugging, there's no need to warn the user
-    // that quitting the debugger will terminate the process.
-    return false;
-}
-
 size_t
-ProcessWinMiniDump::ReadMemory(lldb::addr_t addr, void *buf, size_t size, Error &error)
-{
-    // Don't allow the caching that lldb_private::Process::ReadMemory does
-    // since we have it all cached our our dump file anyway.
-    return DoReadMemory(addr, buf, size, error);
-}
-
-size_t
-ProcessWinMiniDump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size, Error &error)
+ProcessWinMiniDump::Impl::DoReadMemory(lldb::addr_t addr, void *buf, size_t size, Error &error)
 {
     // I don't have a sense of how frequently this is called or how many memory
     // ranges a mini dump typically has, so I'm not sure if searching for the
@@ -321,7 +273,7 @@ ProcessWinMiniDump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size, Erro
 }
 
 Error
-ProcessWinMiniDump::GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &info)
+ProcessWinMiniDump::Impl::GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &info)
 {
     Error error;
     size_t size;
@@ -365,58 +317,8 @@ ProcessWinMiniDump::GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::Me
     return error;
 }
 
-void
-ProcessWinMiniDump::Clear()
-{
-    m_thread_list.Clear();
-}
-
-void
-ProcessWinMiniDump::Initialize()
-{
-    static std::once_flag g_once_flag;
-
-    std::call_once(g_once_flag, []()
-    {
-        PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                      GetPluginDescriptionStatic(),
-                                      CreateInstance);
-    });
-}
-
-ArchSpec
-ProcessWinMiniDump::GetArchitecture()
-{
-    // TODO
-    return ArchSpec();
-}
-
-ProcessWinMiniDump::Data::Data()
-    : m_dump_file(INVALID_HANDLE_VALUE), m_mapping(NULL), m_base_addr(nullptr), m_is_wow64(false)
-{
-}
-
-ProcessWinMiniDump::Data::~Data()
-{
-    if (m_base_addr)
-    {
-        ::UnmapViewOfFile(m_base_addr);
-        m_base_addr = nullptr;
-    }
-    if (m_mapping)
-    {
-        ::CloseHandle(m_mapping);
-        m_mapping = NULL;
-    }
-    if (m_dump_file != INVALID_HANDLE_VALUE)
-    {
-        ::CloseHandle(m_dump_file);
-        m_dump_file = INVALID_HANDLE_VALUE;
-    }
-}
-
 bool
-ProcessWinMiniDump::FindMemoryRange(lldb::addr_t addr, Range *range_out) const
+ProcessWinMiniDump::Impl::FindMemoryRange(lldb::addr_t addr, Range *range_out) const
 {
     size_t stream_size = 0;
     auto mem_list_stream = static_cast<const MINIDUMP_MEMORY_LIST *>(FindDumpStream(MemoryListStream, &stream_size));
@@ -432,7 +334,7 @@ ProcessWinMiniDump::FindMemoryRange(lldb::addr_t addr, Range *range_out) const
             {
                 range_out->start = range_start;
                 range_out->size = range_size;
-                range_out->ptr = reinterpret_cast<const uint8_t *>(m_data_up->m_base_addr) + loc_desc.Rva;
+                range_out->ptr = reinterpret_cast<const uint8_t *>(m_base_addr) + loc_desc.Rva;
                 return true;
             }
         }
@@ -453,7 +355,7 @@ ProcessWinMiniDump::FindMemoryRange(lldb::addr_t addr, Range *range_out) const
             {
                 range_out->start = range_start;
                 range_out->size = range_size;
-                range_out->ptr = reinterpret_cast<const uint8_t *>(m_data_up->m_base_addr) + base_rva;
+                range_out->ptr = reinterpret_cast<const uint8_t *>(m_base_addr) + base_rva;
                 return true;
             }
             base_rva += range_size;
@@ -463,31 +365,27 @@ ProcessWinMiniDump::FindMemoryRange(lldb::addr_t addr, Range *range_out) const
     return false;
 }
 
-
 Error
-ProcessWinMiniDump::MapMiniDumpIntoMemory(const char *file)
+ProcessWinMiniDump::Impl::MapMiniDumpIntoMemory()
 {
     Error error;
-
-    m_data_up->m_dump_file = ::CreateFile(file, GENERIC_READ, FILE_SHARE_READ,
-                                          NULL, OPEN_EXISTING,
-                                          FILE_ATTRIBUTE_NORMAL, NULL);
-    if (m_data_up->m_dump_file == INVALID_HANDLE_VALUE)
+    const char *file = m_core_file.GetCString();
+    m_dump_file = ::CreateFile(file, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (m_dump_file == INVALID_HANDLE_VALUE)
     {
         error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
         return error;
     }
 
-    m_data_up->m_mapping = ::CreateFileMapping(m_data_up->m_dump_file, NULL,
-                                               PAGE_READONLY, 0, 0, NULL);
-    if (m_data_up->m_mapping == NULL)
+    m_mapping = ::CreateFileMapping(m_dump_file, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (m_mapping == NULL)
     {
         error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
         return error;
     }
 
-    m_data_up->m_base_addr = ::MapViewOfFile(m_data_up->m_mapping, FILE_MAP_READ, 0, 0, 0);
-    if (m_data_up->m_base_addr == NULL)
+    m_base_addr = ::MapViewOfFile(m_mapping, FILE_MAP_READ, 0, 0, 0);
+    if (m_base_addr == nullptr)
     {
         error.SetError(::GetLastError(), lldb::eErrorTypeWin32);
         return error;
@@ -496,9 +394,8 @@ ProcessWinMiniDump::MapMiniDumpIntoMemory(const char *file)
     return error;
 }
 
-
 ArchSpec
-ProcessWinMiniDump::DetermineArchitecture()
+ProcessWinMiniDump::Impl::DetermineArchitecture()
 {
     size_t size = 0;
     auto system_info_ptr = static_cast<const MINIDUMP_SYSTEM_INFO *>(FindDumpStream(SystemInfoStream, &size));
@@ -519,13 +416,14 @@ ProcessWinMiniDump::DetermineArchitecture()
 }
 
 void
-ProcessWinMiniDump::ReadExceptionRecord()
+ProcessWinMiniDump::Impl::ReadExceptionRecord()
 {
     size_t size = 0;
     auto exception_stream_ptr = static_cast<MINIDUMP_EXCEPTION_STREAM*>(FindDumpStream(ExceptionStream, &size));
     if (exception_stream_ptr)
     {
-        m_data_up->m_exception_sp.reset(new ExceptionRecord(exception_stream_ptr->ExceptionRecord, exception_stream_ptr->ThreadId));
+        m_exception_sp.reset(
+            new ExceptionRecord(exception_stream_ptr->ExceptionRecord, exception_stream_ptr->ThreadId));
     }
     else
     {
@@ -535,7 +433,7 @@ ProcessWinMiniDump::ReadExceptionRecord()
 }
 
 void
-ProcessWinMiniDump::ReadMiscInfo()
+ProcessWinMiniDump::Impl::ReadMiscInfo()
 {
     size_t size = 0;
     const auto misc_info_ptr = static_cast<MINIDUMP_MISC_INFO*>(FindDumpStream(MiscInfoStream, &size));
@@ -545,12 +443,12 @@ ProcessWinMiniDump::ReadMiscInfo()
 
     if ((misc_info_ptr->Flags1 & MINIDUMP_MISC1_PROCESS_ID) != 0) {
         // This misc info record has the process ID.
-        SetID(misc_info_ptr->ProcessId);
+        m_self->SetID(misc_info_ptr->ProcessId);
     }
 }
 
 void
-ProcessWinMiniDump::ReadModuleList()
+ProcessWinMiniDump::Impl::ReadModuleList()
 {
     size_t size = 0;
     auto module_list_ptr = static_cast<MINIDUMP_MODULE_LIST*>(FindDumpStream(ModuleListStream, &size));
@@ -562,42 +460,215 @@ ProcessWinMiniDump::ReadModuleList()
     for (ULONG32 i = 0; i < module_list_ptr->NumberOfModules; ++i)
     {
         const auto &module = module_list_ptr->Modules[i];
-        const auto file_name = GetMiniDumpString(m_data_up->m_base_addr, module.ModuleNameRva);
+        const auto file_name = GetMiniDumpString(module.ModuleNameRva);
         const auto file_spec = FileSpec(file_name, true);
         if (FileSpec::Compare(file_spec, FileSpec("wow64.dll", false), false) == 0)
         {
             WINLOG_IFALL(WINDOWS_LOG_PROCESS, "Minidump is for a WOW64 process.");
-            m_data_up->m_is_wow64 = true;
+            m_is_wow64 = true;
         }
         ModuleSpec module_spec = file_spec;
 
-        lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec);
+        lldb::ModuleSP module_sp = m_self->GetTarget().GetSharedModule(module_spec);
         if (!module_sp)
         {
             continue;
         }
         bool load_addr_changed = false;
-        module_sp->SetLoadAddress(GetTarget(), module.BaseOfImage, false, load_addr_changed);
+        module_sp->SetLoadAddress(m_self->GetTarget(), module.BaseOfImage, false, load_addr_changed);
     }
 }
 
 void *
-ProcessWinMiniDump::FindDumpStream(unsigned stream_number, size_t *size_out) const
+ProcessWinMiniDump::Impl::FindDumpStream(unsigned stream_number, size_t *size_out) const
 {
     void *stream = nullptr;
     *size_out = 0;
 
-    assert(m_data_up != nullptr);
-    assert(m_data_up->m_base_addr != 0);
-
     MINIDUMP_DIRECTORY *dir = nullptr;
-    if (::MiniDumpReadDumpStream(m_data_up->m_base_addr, stream_number, &dir, nullptr, nullptr) &&
-        dir != nullptr && dir->Location.DataSize > 0)
+    if (::MiniDumpReadDumpStream(m_base_addr, stream_number, &dir, nullptr, nullptr) && dir != nullptr &&
+        dir->Location.DataSize > 0)
     {
         assert(dir->StreamType == stream_number);
         *size_out = dir->Location.DataSize;
-        stream = static_cast<void*>(static_cast<char*>(m_data_up->m_base_addr) + dir->Location.Rva);
+        stream = static_cast<void *>(static_cast<char *>(m_base_addr) + dir->Location.Rva);
     }
 
     return stream;
+}
+
+std::string
+ProcessWinMiniDump::Impl::GetMiniDumpString(RVA rva) const
+{
+    std::string result;
+    if (!m_base_addr)
+    {
+        return result;
+    }
+    auto md_string = reinterpret_cast<const MINIDUMP_STRING *>(static_cast<const char *>(m_base_addr) + rva);
+    auto source_start = reinterpret_cast<const UTF16 *>(md_string->Buffer);
+    const auto source_length = ::wcslen(md_string->Buffer);
+    const auto source_end = source_start + source_length;
+    result.resize(4 * source_length); // worst case length
+    auto result_start = reinterpret_cast<UTF8 *>(&result[0]);
+    const auto result_end = result_start + result.size();
+    ConvertUTF16toUTF8(&source_start, source_end, &result_start, result_end, strictConversion);
+    const auto result_size = std::distance(reinterpret_cast<UTF8 *>(&result[0]), result_start);
+    result.resize(result_size); // shrink to actual length
+    return result;
+}
+
+ConstString
+ProcessWinMiniDump::GetPluginNameStatic()
+{
+    static ConstString g_name("win-minidump");
+    return g_name;
+}
+
+const char *
+ProcessWinMiniDump::GetPluginDescriptionStatic()
+{
+    return "Windows minidump plug-in.";
+}
+
+void
+ProcessWinMiniDump::Terminate()
+{
+    PluginManager::UnregisterPlugin(ProcessWinMiniDump::CreateInstance);
+}
+
+lldb::ProcessSP
+ProcessWinMiniDump::CreateInstance(lldb::TargetSP target_sp, Listener &listener, const FileSpec *crash_file)
+{
+    lldb::ProcessSP process_sp;
+    if (crash_file)
+    {
+        process_sp.reset(new ProcessWinMiniDump(target_sp, listener, *crash_file));
+    }
+    return process_sp;
+}
+
+bool
+ProcessWinMiniDump::CanDebug(lldb::TargetSP target_sp, bool plugin_specified_by_name)
+{
+    // TODO(amccarth):  Eventually, this needs some actual logic.
+    return true;
+}
+
+ProcessWinMiniDump::ProcessWinMiniDump(lldb::TargetSP target_sp, Listener &listener, const FileSpec &core_file)
+    : ProcessWindows(target_sp, listener), m_impl_up(new Impl(core_file, this))
+{
+}
+
+ProcessWinMiniDump::~ProcessWinMiniDump()
+{
+    Clear();
+    // We need to call finalize on the process before destroying ourselves
+    // to make sure all of the broadcaster cleanup goes as planned. If we
+    // destruct this class, then Process::~Process() might have problems
+    // trying to fully destroy the broadcaster.
+    Finalize();
+}
+
+ConstString
+ProcessWinMiniDump::GetPluginName()
+{
+    return GetPluginNameStatic();
+}
+
+uint32_t
+ProcessWinMiniDump::GetPluginVersion()
+{
+    return 1;
+}
+
+Error
+ProcessWinMiniDump::DoLoadCore()
+{
+    return m_impl_up->DoLoadCore();
+}
+
+DynamicLoader *
+ProcessWinMiniDump::GetDynamicLoader()
+{
+    if (m_dyld_ap.get() == NULL)
+        m_dyld_ap.reset(DynamicLoader::FindPlugin(this, DynamicLoaderWindowsDYLD::GetPluginNameStatic().GetCString()));
+    return m_dyld_ap.get();
+}
+
+bool
+ProcessWinMiniDump::UpdateThreadList(ThreadList &old_thread_list, ThreadList &new_thread_list)
+{
+    return m_impl_up->UpdateThreadList(old_thread_list, new_thread_list);
+}
+
+void
+ProcessWinMiniDump::RefreshStateAfterStop()
+{
+    if (!m_impl_up)
+        return;
+    return m_impl_up->RefreshStateAfterStop();
+}
+
+Error
+ProcessWinMiniDump::DoDestroy()
+{
+    return Error();
+}
+
+bool
+ProcessWinMiniDump::IsAlive()
+{
+    return true;
+}
+
+bool
+ProcessWinMiniDump::WarnBeforeDetach() const
+{
+    // Since this is post-mortem debugging, there's no need to warn the user
+    // that quitting the debugger will terminate the process.
+    return false;
+}
+
+size_t
+ProcessWinMiniDump::ReadMemory(lldb::addr_t addr, void *buf, size_t size, Error &error)
+{
+    // Don't allow the caching that lldb_private::Process::ReadMemory does
+    // since we have it all cached our our dump file anyway.
+    return DoReadMemory(addr, buf, size, error);
+}
+
+size_t
+ProcessWinMiniDump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size, Error &error)
+{
+    return m_impl_up->DoReadMemory(addr, buf, size, error);
+}
+
+Error
+ProcessWinMiniDump::GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &info)
+{
+    return m_impl_up->GetMemoryRegionInfo(load_addr, info);
+}
+
+void
+ProcessWinMiniDump::Clear()
+{
+    m_thread_list.Clear();
+}
+
+void
+ProcessWinMiniDump::Initialize()
+{
+    static std::once_flag g_once_flag;
+
+    std::call_once(g_once_flag, []() {
+        PluginManager::RegisterPlugin(GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance);
+    });
+}
+
+ArchSpec
+ProcessWinMiniDump::GetArchitecture()
+{
+    // TODO
+    return ArchSpec();
 }

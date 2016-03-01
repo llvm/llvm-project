@@ -1150,10 +1150,9 @@ void ScopDetection::findScops(Region &R) {
   DetectionContext &Context = It.first->second;
 
   bool RegionIsValid = false;
-  if (!PollyProcessUnprofitable && regionWithoutLoops(R, LI)) {
-    removeCachedResults(R);
+  if (!PollyProcessUnprofitable && regionWithoutLoops(R, LI))
     invalid<ReportUnprofitable>(Context, /*Assert=*/true, &R);
-  } else
+  else
     RegionIsValid = isValidRegion(Context);
 
   bool HasErrors = !RegionIsValid || Context.Log.size() > 0;

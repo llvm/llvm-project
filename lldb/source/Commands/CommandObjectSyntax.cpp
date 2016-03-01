@@ -12,6 +12,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "CommandObjectSyntax.h"
+#include "CommandObjectHelp.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -97,8 +98,17 @@ CommandObjectSyntax::DoExecute (Args& command, CommandReturnObject &result)
         {
             std::string cmd_string;
             command.GetCommandString (cmd_string);
-            result.AppendErrorWithFormat ("'%s' is not a known command.\n", cmd_string.c_str());
-            result.AppendError ("Try 'help' to see a current list of commands.");
+
+            StreamString error_msg_stream;
+            const bool generate_apropos = true;
+            const bool generate_type_lookup = false;
+            CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(&error_msg_stream,
+                                                                    cmd_string.c_str(),
+                                                                    nullptr,
+                                                                    nullptr,
+                                                                    generate_apropos,
+                                                                    generate_type_lookup);
+            result.AppendErrorWithFormat ("%s", error_msg_stream.GetData());
             result.SetStatus (eReturnStatusFailed);
         }
     }

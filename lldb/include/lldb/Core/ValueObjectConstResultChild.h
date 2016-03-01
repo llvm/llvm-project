@@ -53,7 +53,10 @@ public:
     }
     
     lldb::ValueObjectSP
-    GetSyntheticChildAtOffset(uint32_t offset, const CompilerType& type, bool can_create) override;
+    GetSyntheticChildAtOffset(uint32_t offset,
+                              const CompilerType& type,
+                              bool can_create,
+                              ConstString name_const_str = ConstString()) override;
     
     lldb::ValueObjectSP
     AddressOf (Error &error) override;

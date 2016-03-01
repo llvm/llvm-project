@@ -155,7 +155,6 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   Obj->parse(ComdatGroups);
   for (SymbolBody *Body : Obj->getSymbols()) {
     Symbol *Sym = insert(Body);
-    assert(isa<DefinedBitcode>(Sym->Body));
     Sym->Body = Body;
   }
 }

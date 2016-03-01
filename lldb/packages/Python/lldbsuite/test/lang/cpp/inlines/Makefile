@@ -1,5 +1,5 @@
 LEVEL = ../../../make
 
-C_SOURCES := inlines.c
+CXX_SOURCES := inlines.cpp
 
 include $(LEVEL)/Makefile.rules

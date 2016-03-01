@@ -454,11 +454,11 @@ void BitcodeFile::parse() {
     StringRef NameRef = Saver.save(StringRef(Name));
     SymbolBody *Body;
     uint32_t Flags = Sym.getFlags();
+    bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
     if (Flags & BasicSymbolRef::SF_Undefined)
-      Body = new (Alloc) Undefined(NameRef, false, STV_DEFAULT, false);
+      Body = new (Alloc) Undefined(NameRef, IsWeak, STV_DEFAULT, false);
     else
-      Body =
-          new (Alloc) DefinedBitcode(NameRef, Flags & BasicSymbolRef::SF_Weak);
+      Body = new (Alloc) DefinedBitcode(NameRef, IsWeak);
     SymbolBodies.push_back(Body);
   }
 }
