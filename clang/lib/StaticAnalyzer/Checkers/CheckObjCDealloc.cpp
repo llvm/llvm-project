@@ -190,23 +190,27 @@ void ObjCDeallocChecker::checkASTDecl(const ObjCImplementationDecl *D,
   initIdentifierInfoAndSelectors(Mgr.getASTContext());
 
   const ObjCInterfaceDecl *ID = D->getClassInterface();
-
-  // Does the class contain any synthesized properties that are retainable?
-  // If not, skip the check entirely.
-  bool containsRetainedSynthesizedProperty = false;
-  for (const auto *I : D->property_impls()) {
-    if (getDeallocReleaseRequirement(I) == ReleaseRequirement::MustRelease) {
-      containsRetainedSynthesizedProperty = true;
-      break;
-    }
-  }
-
-  if (!containsRetainedSynthesizedProperty)
-    return;
-
   // If the class is known to have a lifecycle with a separate teardown method
   // then it may not require a -dealloc method.
   if (classHasSeparateTeardown(ID))
+    return;
+
+  // Does the class contain any synthesized properties that are retainable?
+  // If not, skip the check entirely.
+  const ObjCPropertyImplDecl *PropImplRequiringRelease = nullptr;
+  bool HasOthers = false;
+  for (const auto *I : D->property_impls()) {
+    if (getDeallocReleaseRequirement(I) == ReleaseRequirement::MustRelease) {
+      if (!PropImplRequiringRelease)
+        PropImplRequiringRelease = I;
+      else {
+        HasOthers = true;
+        break;
+      }
+    }
+  }
+
+  if (!PropImplRequiringRelease)
     return;
 
   const ObjCMethodDecl *MD = nullptr;
@@ -224,8 +228,12 @@ void ObjCDeallocChecker::checkASTDecl(const ObjCImplementationDecl *D,
 
     std::string Buf;
     llvm::raw_string_ostream OS(Buf);
-    OS << "Objective-C class '" << *D << "' lacks a 'dealloc' instance method";
+    OS << "'" << *D << "' lacks a 'dealloc' instance method but "
+       << "must release '" << *PropImplRequiringRelease->getPropertyIvarDecl()
+       << "'";
 
+    if (HasOthers)
+      OS << " and others";
     PathDiagnosticLocation DLoc =
         PathDiagnosticLocation::createBegin(D, BR.getSourceManager());
 
