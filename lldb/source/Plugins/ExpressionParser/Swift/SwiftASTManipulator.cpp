@@ -223,13 +223,13 @@ $builtin_logger_initialize()
                                       func_decorator,
                                       current_counter);
                 DumpGenericNames(wrapped_stream, generic_info.function_bindings);
-                wrapped_stream.Printf("($__lldb_arg : COpaquePointer");
+                wrapped_stream.Printf("($__lldb_arg : UnsafeMutablePointer<Any>");
                 DumpPlaceholderArguments(wrapped_stream, generic_info.function_bindings);
                 wrapped_stream.Printf(                                                     ") {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
                                       "  }                                                    \n"
                                       "}                                                      \n"
-                                      "func $__lldb_expr($__lldb_arg : COpaquePointer) {      \n"
+                                      "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                       "  if (1==1) {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                        ",
@@ -247,11 +247,11 @@ $builtin_logger_initialize()
             {
                 wrapped_stream.Printf("extension $__lldb_context {                            \n"
                                       "  @LLDBDebuggerFunction                                \n"
-                                      "  %s func $__lldb_wrapped_expr_%u($__lldb_arg : COpaquePointer) {\n"
+                                      "  %s func $__lldb_wrapped_expr_%u($__lldb_arg : UnsafeMutablePointer<Any>) {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
                                       "  }                                                    \n"
                                       "}                                                      \n"
-                                      "func $__lldb_expr($__lldb_arg : COpaquePointer) {      \n"
+                                      "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                       "  if (1==1) {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                      \n"
@@ -276,13 +276,13 @@ $builtin_logger_initialize()
                                       func_decorator,
                                       current_counter);
                 DumpGenericNames(wrapped_stream, generic_info.function_bindings);
-                wrapped_stream.Printf(                         "($__lldb_arg : COpaquePointer");
+                wrapped_stream.Printf(                         "($__lldb_arg : UnsafeMutablePointer<Any>");
                 DumpPlaceholderArguments(wrapped_stream, generic_info.function_bindings);
                 wrapped_stream.Printf(                                                     ") {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
                                       "  }                                                    \n"
                                       "}                                                      \n"
-                                      "func $__lldb_expr($__lldb_arg : COpaquePointer) {      \n"
+                                      "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                       "  if (1==1) {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                        ",
@@ -301,11 +301,11 @@ $builtin_logger_initialize()
             {
                 wrapped_stream.Printf("extension $__lldb_context {                            \n"
                                       "@LLDBDebuggerFunction                                  \n"
-                                      "  %s func $__lldb_wrapped_expr_%u($__lldb_arg : COpaquePointer) {\n"
+                                      "  %s func $__lldb_wrapped_expr_%u($__lldb_arg : UnsafeMutablePointer<Any>) {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
                                       "  }                                                    \n"
                                       "}                                                      \n"
-                                      "func $__lldb_expr($__lldb_arg : COpaquePointer) {      \n"
+                                      "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                       "  if (1==1) {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                      \n"
@@ -329,12 +329,12 @@ $builtin_logger_initialize()
                                   "func $__lldb_wrapped_expr_%u",
                                   current_counter);
             DumpGenericNames(wrapped_stream, generic_info.function_bindings);
-            wrapped_stream.Printf(                       "($__lldb_arg : COpaquePointer");
+            wrapped_stream.Printf(                       "($__lldb_arg : UnsafeMutablePointer<Any>");
             DumpPlaceholderArguments(wrapped_stream, generic_info.function_bindings);
             wrapped_stream.Printf(                                                   ") { \n"
                                   "%s" // This is the expression text.  It has all the newlines it needs.
                                   "}                                                      \n"
-                                  "func $__lldb_expr($__lldb_arg : COpaquePointer) {      \n"
+                                  "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                   "  if (1==1) {                                          \n"
                                   "    $__lldb_wrapped_expr_%u(                           \n"
                                   "      $__lldb_arg",
@@ -350,7 +350,7 @@ $builtin_logger_initialize()
         else
         {
             wrapped_stream.Printf("@LLDBDebuggerFunction                                  \n"
-                                  "func $__lldb_expr($__lldb_arg : COpaquePointer) {      \n"
+                                  "func $__lldb_expr($__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
                                   "%s" // This is the expression text.  It has all the newlines it needs.
                                   "}                                                      \n",
                                   wrapped_expr_text.GetData());
