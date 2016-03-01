@@ -1,7 +1,0 @@
-# This tests that we are able to properly set the sectionChoice for DefinedAtoms
-RUN: lld -flavor old-gnu -target x86_64-linux %p/Inputs/zerosizedsection.o  \
-RUN: --noinhibit-exec -o %t --output-filetype=yaml
-RUN: FileCheck %s < %t
-
-CHECK-NOT: section-choice: sectionCustomRequired
-

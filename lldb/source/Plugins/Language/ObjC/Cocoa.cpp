@@ -50,7 +50,7 @@ lldb_private::formatters::NSBundleSummaryProvider (ValueObject& valobj, Stream& 
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -71,7 +71,7 @@ lldb_private::formatters::NSBundleSummaryProvider (ValueObject& valobj, Stream& 
         ValueObjectSP text(valobj.GetSyntheticChildAtOffset(offset, valobj.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeObjCID), true));
         
         StreamString summary_stream;
-        bool was_nsstring_ok = NSStringSummaryProvider(*text.get(), summary_stream, options);
+        bool was_nsstring_ok = NSStringSummaryProvider(*text, summary_stream, options);
         if (was_nsstring_ok && summary_stream.GetSize() > 0)
         {
             stream.Printf("%s",summary_stream.GetData());
@@ -97,7 +97,7 @@ lldb_private::formatters::NSTimeZoneSummaryProvider (ValueObject& valobj, Stream
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -117,7 +117,7 @@ lldb_private::formatters::NSTimeZoneSummaryProvider (ValueObject& valobj, Stream
         uint64_t offset = ptr_size;
         ValueObjectSP text(valobj.GetSyntheticChildAtOffset(offset, valobj.GetCompilerType(), true));
         StreamString summary_stream;
-        bool was_nsstring_ok = NSStringSummaryProvider(*text.get(), summary_stream, options);
+        bool was_nsstring_ok = NSStringSummaryProvider(*text, summary_stream, options);
         if (was_nsstring_ok && summary_stream.GetSize() > 0)
         {
             stream.Printf("%s",summary_stream.GetData());
@@ -141,7 +141,7 @@ lldb_private::formatters::NSNotificationSummaryProvider (ValueObject& valobj, St
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -161,7 +161,7 @@ lldb_private::formatters::NSNotificationSummaryProvider (ValueObject& valobj, St
         uint64_t offset = ptr_size;
         ValueObjectSP text(valobj.GetSyntheticChildAtOffset(offset, valobj.GetCompilerType(), true));
         StreamString summary_stream;
-        bool was_nsstring_ok = NSStringSummaryProvider(*text.get(), summary_stream, options);
+        bool was_nsstring_ok = NSStringSummaryProvider(*text, summary_stream, options);
         if (was_nsstring_ok && summary_stream.GetSize() > 0)
         {
             stream.Printf("%s",summary_stream.GetData());
@@ -187,7 +187,7 @@ lldb_private::formatters::NSMachPortSummaryProvider (ValueObject& valobj, Stream
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -236,7 +236,7 @@ lldb_private::formatters::NSIndexSetSummaryProvider (ValueObject& valobj, Stream
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -458,7 +458,7 @@ lldb_private::formatters::NSNumberSummaryProvider (ValueObject& valobj, Stream& 
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -582,7 +582,7 @@ lldb_private::formatters::NSURLSummaryProvider (ValueObject& valobj, Stream& str
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -647,7 +647,7 @@ lldb_private::formatters::NSDateSummaryProvider (ValueObject& valobj, Stream& st
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
@@ -694,7 +694,7 @@ lldb_private::formatters::NSDateSummaryProvider (ValueObject& valobj, Stream& st
     }
     else
     {
-        if (ExtractValueFromObjCExpression(valobj, "NSTimeInterval", "ExtractValueFromObjCExpression", date_value_bits) == false)
+        if (!ExtractValueFromObjCExpression(valobj, "NSTimeInterval", "ExtractValueFromObjCExpression", date_value_bits))
             return false;
         date_value = *((double*)&date_value_bits);
     }
@@ -732,7 +732,7 @@ lldb_private::formatters::ObjCClassSummaryProvider (ValueObject& valobj, Stream&
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptorFromISA(valobj.GetValueAsUnsigned(0)));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     ConstString class_name = descriptor->GetClassName();
@@ -751,7 +751,7 @@ class ObjCClassSyntheticChildrenFrontEnd : public SyntheticChildrenFrontEnd
 {
 public:
     ObjCClassSyntheticChildrenFrontEnd (lldb::ValueObjectSP valobj_sp) :
-    SyntheticChildrenFrontEnd(*valobj_sp.get())
+        SyntheticChildrenFrontEnd(*valobj_sp)
     {
     }
     
@@ -809,7 +809,7 @@ lldb_private::formatters::NSDataSummaryProvider (ValueObject& valobj, Stream& st
     
     ObjCLanguageRuntime::ClassDescriptorSP descriptor(runtime->GetClassDescriptor(valobj));
     
-    if (!descriptor.get() || !descriptor->IsValid())
+    if (!descriptor || !descriptor->IsValid())
         return false;
     
     bool is_64bit = (process_sp->GetAddressByteSize() == 8);
@@ -936,7 +936,7 @@ lldb_private::formatters::GetOSXEpoch ()
         tm_epoch.tm_year = 2001-1900; // for some reason, we need to subtract 1900 from this field. not sure why.
         tm_epoch.tm_isdst = -1;
         tm_epoch.tm_gmtoff = 0;
-        tm_epoch.tm_zone = NULL;
+        tm_epoch.tm_zone = nullptr;
         epoch = timegm(&tm_epoch);
 #endif
     }

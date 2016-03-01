@@ -16,7 +16,6 @@
 #include "SymbolTable.h"
 #include "Target.h"
 #include "Writer.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -27,12 +26,12 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
-Configuration *elf2::Config;
-LinkerDriver *elf2::Driver;
+Configuration *elf::Config;
+LinkerDriver *elf::Driver;
 
-bool elf2::link(ArrayRef<const char *> Args, raw_ostream &Error) {
+bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   HasError = false;
   ErrorOS = &Error;
   Configuration C;
@@ -41,7 +40,7 @@ bool elf2::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   Config = &C;
   Driver = &D;
   Script = &LS;
-  Driver->main(Args.slice(1));
+  Driver->main(Args);
   return !HasError;
 }
 
@@ -163,7 +162,16 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   initSymbols();
 
-  opt::InputArgList Args = parseArgs(&Alloc, ArgsArr);
+  opt::InputArgList Args = parseArgs(&Alloc, ArgsArr.slice(1));
+  if (Args.hasArg(OPT_help)) {
+    printHelp(ArgsArr[0]);
+    return;
+  }
+  if (Args.hasArg(OPT_version)) {
+    printVersion();
+    return;
+  }
+
   readConfigs(Args);
   createFiles(Args);
   checkOptions(Args);

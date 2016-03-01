@@ -26,9 +26,9 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
-LinkerScript *elf2::Script;
+LinkerScript *elf::Script;
 
 template <class ELFT>
 SectionRule *LinkerScript::find(InputSectionBase<ELFT> *S) {
@@ -55,21 +55,19 @@ template <class ELFT> bool LinkerScript::shouldKeep(InputSectionBase<ELFT> *S) {
 }
 
 ArrayRef<uint8_t> LinkerScript::getFiller(StringRef Name) {
-  for (OutSection &C : OutSections)
-    if (C.Name == Name)
-      return C.Filler;
-  return {};
+  auto I = Filler.find(Name);
+  if (I == Filler.end())
+    return {};
+  return I->second;
 }
 
 // A compartor to sort output sections. Returns -1 or 1 if both
 // A and B are mentioned in linker scripts. Otherwise, returns 0
 // to use the default rule which is implemented in Writer.cpp.
 int LinkerScript::compareSections(StringRef A, StringRef B) {
-  auto E = OutSections.end();
-  auto I = std::find_if(OutSections.begin(), E,
-                        [&](OutSection &C) { return C.Name == A; });
-  auto J = std::find_if(OutSections.begin(), E,
-                        [&](OutSection &C) { return C.Name == B; });
+  auto E = SectionOrder.end();
+  auto I = std::find(SectionOrder.begin(), E, A);
+  auto J = std::find(SectionOrder.begin(), E, B);
   if (I == E || J == E)
     return 0;
   return I < J ? -1 : 1;
@@ -103,7 +101,7 @@ template <class ELFT> bool SectionRule::match(InputSectionBase<ELFT> *S) {
   return matchStr(SectionPattern, S->getSectionName());
 }
 
-class elf2::ScriptParser {
+class elf::ScriptParser {
   typedef void (ScriptParser::*Handler)();
 
 public:
@@ -149,7 +147,7 @@ private:
   bool Error = false;
 };
 
-const StringMap<elf2::ScriptParser::Handler> elf2::ScriptParser::Cmd = {
+const StringMap<elf::ScriptParser::Handler> elf::ScriptParser::Cmd = {
     {"ENTRY", &ScriptParser::readEntry},
     {"EXTERN", &ScriptParser::readExtern},
     {"GROUP", &ScriptParser::readGroup},
@@ -430,18 +428,18 @@ std::vector<uint8_t> ScriptParser::parseHex(StringRef S) {
 }
 
 void ScriptParser::readOutputSectionDescription() {
-  OutSection OutSec;
-  OutSec.Name = next();
+  StringRef OutSec = next();
+  Script->SectionOrder.push_back(OutSec);
   expect(":");
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();
     if (Tok == "*") {
-      readSectionPatterns(OutSec.Name, false);
+      readSectionPatterns(OutSec, false);
     } else if (Tok == "KEEP") {
       expect("(");
       next(); // Skip *
-      readSectionPatterns(OutSec.Name, true);
+      readSectionPatterns(OutSec, true);
       expect(")");
     } else {
       setError("Unknown command " + Tok);
@@ -453,11 +451,10 @@ void ScriptParser::readOutputSectionDescription() {
       setError("Filler should be a HEX value");
       return;
     }
-    Tok = Tok.substr(3); // Skip '=0x'
-    OutSec.Filler = parseHex(Tok);
+    Tok = Tok.substr(3);
+    Script->Filler[OutSec] = parseHex(Tok);
     next();
   }
-  Script->OutSections.push_back(OutSec);
 }
 
 static bool isUnderSysroot(StringRef Path) {

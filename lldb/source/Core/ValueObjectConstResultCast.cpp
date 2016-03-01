@@ -40,9 +40,10 @@ ValueObjectConstResultCast::Dereference (Error &error)
 lldb::ValueObjectSP
 ValueObjectConstResultCast::GetSyntheticChildAtOffset(uint32_t offset,
                                                       const CompilerType& type,
-                                                      bool can_create)
+                                                      bool can_create,
+                                                      ConstString name_const_str)
 {
-    return m_impl.GetSyntheticChildAtOffset(offset, type, can_create);
+    return m_impl.GetSyntheticChildAtOffset(offset, type, can_create, name_const_str);
 }
 
 lldb::ValueObjectSP

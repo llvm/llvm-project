@@ -14,7 +14,6 @@
 #include "lld/Core/DefinedAtom.h"
 #include "lld/Core/SharedLibraryAtom.h"
 #include "lld/Core/UndefinedAtom.h"
-#include "lld/Core/range.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -48,7 +47,6 @@ public:
     kindErrorObject,          ///< a error object file (.o)
     kindNormalizedObject,     ///< a normalized file (.o)
     kindMachObject,           ///< a MachO object file (.o)
-    kindELFObject,            ///< a ELF object file (.o)
     kindCEntryObject,         ///< a file for CEntries
     kindHeaderObject,         ///< a file for file headers
     kindEntryObject,          ///< a file for the entry
@@ -147,14 +145,6 @@ public:
   void setLastError(std::error_code err) { _lastError = err; }
 
   std::error_code parse();
-
-  // This function is called just before the core linker tries to use
-  // a file. Currently the PECOFF reader uses this to trigger the
-  // driver to parse .drectve section (which contains command line options).
-  // If you want to do something having side effects, don't do that in
-  // doParse() because a file could be pre-loaded speculatively.
-  // Use this hook instead.
-  virtual void beforeLink() {}
 
   // Usually each file owns a std::unique_ptr<MemoryBuffer>.
   // However, there's one special case. If a file is an archive file,

@@ -1,9 +1,0 @@
-RUN: lld -flavor old-gnu -target hexagon %p/Inputs/dynobj.o \
-RUN:   -o %t --noinhibit-exec -shared
-RUN: llvm-objdump -s %t > %t1
-RUN: FileCheck -check-prefix=CHECKHASH %s < %t1
-
-CHECKHASH: Contents of section .hash:
-CHECKHASH: 0094 03000000 07000000 06000000 01000000
-CHECKHASH: 00a4 04000000 00000000 00000000 00000000
-CHECKHASH: 00b4 00000000 03000000 02000000 05000000

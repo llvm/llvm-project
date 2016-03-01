@@ -33,7 +33,7 @@ class LinkingContext;
 class Resolver {
 public:
   Resolver(LinkingContext &ctx)
-      : _ctx(ctx), _symbolTable(ctx), _result(new MergedFile()),
+      : _ctx(ctx), _symbolTable(), _result(new MergedFile()),
         _fileIndex(0) {}
 
   // InputFiles::Handler methods
@@ -63,11 +63,7 @@ private:
   bool undefinesAdded(int begin, int end);
   File *getFile(int &index);
 
-  /// \brief Add section group/.gnu.linkonce if it does not exist previously.
-  void maybeAddSectionGroupOrGnuLinkOnce(const DefinedAtom &atom);
-
   /// \brief The main function that iterates over the files to resolve
-  void updatePreloadArchiveMap();
   bool resolveUndefines();
   void updateReferences();
   void deadStripOptimize();
@@ -79,7 +75,6 @@ private:
 
   void markLive(const Atom *atom);
   void addAtoms(const std::vector<const DefinedAtom *>&);
-  void maybePreloadArchiveMember(StringRef sym);
 
   class MergedFile : public SimpleFile {
   public:
@@ -100,10 +95,6 @@ private:
   std::vector<File *> _files;
   std::map<File *, bool> _newUndefinesAdded;
   size_t _fileIndex;
-
-  // Preloading
-  llvm::StringMap<ArchiveLibraryFile *> _archiveMap;
-  llvm::DenseSet<ArchiveLibraryFile *> _archiveSeen;
 
   // List of undefined symbols.
   std::vector<StringRef> _undefines;

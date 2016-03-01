@@ -71,8 +71,8 @@ public:
     return _absolute;
   }
 
-  typedef range<std::vector<const DefinedAtom *>::iterator> DefinedAtomRange;
-  DefinedAtomRange definedAtoms() { return make_range(_defined); }
+  typedef llvm::MutableArrayRef<const DefinedAtom *> DefinedAtomRange;
+  DefinedAtomRange definedAtoms() { return _defined; }
 
 private:
   AtomVector<DefinedAtom> _defined;

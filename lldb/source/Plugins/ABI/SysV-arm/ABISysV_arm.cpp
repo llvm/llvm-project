@@ -452,12 +452,16 @@ ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
     bool is_signed;
     bool is_complex;
     uint32_t float_count;
+    bool is_vfp_candidate = false;
+    uint8_t vfp_count = 0;
+    uint8_t vfp_byte_size = 0;
     
     // Get the pointer to the first stack argument so we have a place to start 
     // when reading data
     
     const RegisterInfo *r0_reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
     size_t bit_width = compiler_type.GetBitSize(&thread);
+    size_t byte_size = compiler_type.GetByteSize(&thread);
 
     if (compiler_type.IsIntegerType (is_signed))
     {       
@@ -504,8 +508,13 @@ ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
     }
     else if (compiler_type.IsVectorType(nullptr, nullptr))
     {
-        size_t byte_size = compiler_type.GetByteSize(&thread);
-        if (byte_size <= 16)
+        if (IsArmHardFloat(thread) && (byte_size == 8 || byte_size == 16))
+        {
+            is_vfp_candidate = true;
+            vfp_byte_size = 8;
+            vfp_count = (byte_size == 8?1:2);
+        }
+        else if (byte_size <= 16)
         {
             DataBufferHeap buffer(16, 0);
             uint32_t* buffer_ptr = (uint32_t*)buffer.GetBytes();
@@ -574,15 +583,23 @@ ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
                 }
             }
         }
-        else
+        else if (is_complex && float_count == 2)
         {
+            if (IsArmHardFloat(thread))
+            {
+                is_vfp_candidate = true;
+                vfp_byte_size = byte_size / 2;
+                vfp_count = 2;
+            }
+            else if (!GetReturnValuePassedInMemory(thread, reg_ctx, bit_width / 8, value))
+                return return_valobj_sp;
+        }
+        else
             // not handled yet
             return return_valobj_sp;
-        }
     }
     else if (compiler_type.IsAggregateType())
     {
-        size_t byte_size = compiler_type.GetByteSize(&thread);
         if (IsArmHardFloat(thread))
         {
             CompilerType base_type;
@@ -590,70 +607,59 @@ ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
 
             if (homogeneous_count > 0 && homogeneous_count <= 4)
             {
-                if (base_type.IsFloatingPointType(float_count, is_complex))
+                if (base_type.IsVectorType(nullptr, nullptr))
+                {
+                    uint64_t base_byte_size = base_type.GetByteSize(nullptr);
+                    if (base_byte_size == 8 || base_byte_size == 16)
+                    {
+                        is_vfp_candidate = true;
+                        vfp_byte_size = 8;
+                        vfp_count = (base_type.GetByteSize(nullptr) == 8 ? homogeneous_count : homogeneous_count * 2);
+                    }
+                }
+                else if (base_type.IsFloatingPointType(float_count, is_complex))
                 {
                     if (float_count == 1 && !is_complex)
                     {
-                        ProcessSP process_sp (thread.GetProcess());
-                        ByteOrder byte_order = process_sp->GetByteOrder();
+                        is_vfp_candidate = true;
+                        vfp_byte_size = base_type.GetByteSize(nullptr);
+                        vfp_count = homogeneous_count;
+                    }
+                }
+            }
+            else if (homogeneous_count == 0)
+            {
+                const uint32_t num_children = compiler_type.GetNumFields ();
 
-                        DataBufferSP data_sp (new DataBufferHeap(byte_size, 0));
-                        const size_t base_byte_size = base_type.GetByteSize(nullptr);
-                        uint32_t data_offset = 0;
+                if (num_children > 0 && num_children <=2)
+                {
+                    uint32_t index = 0;
+                    for (index = 0; index < num_children; index++)
+                    {
+                        std::string name;
+                        base_type = compiler_type.GetFieldAtIndex (index, name, NULL, NULL, NULL);
 
-                        for (uint32_t reg_index = 0; reg_index < homogeneous_count; reg_index++)
+                        if (base_type.IsFloatingPointType(float_count, is_complex))
                         {
-                            uint32_t regnum = 0;
-
-                            if (base_byte_size == 4)
-                                regnum = dwarf_s0 + reg_index;
-                            else if (base_byte_size == 8)
-                                regnum = dwarf_d0 + reg_index;
+                            if (float_count == 2 && is_complex)
+                            {
+                                if (index != 0 && vfp_byte_size != base_type.GetByteSize(nullptr))
+                                    break;
+                                else
+                                    vfp_byte_size = base_type.GetByteSize(nullptr);
+                            }
                             else
                                 break;
-
-                            const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo (eRegisterKindDWARF, regnum);
-                            if (reg_info == nullptr)
-                                break;
-
-                            RegisterValue reg_value;
-                            if (!reg_ctx->ReadRegister(reg_info, reg_value))
-                                break;
-
-                            // Make sure we have enough room in "data_sp"
-                            if ((data_offset + base_byte_size) <= data_sp->GetByteSize())
-                            {
-                                Error error;
-                                const size_t bytes_copied = reg_value.GetAsMemoryData (reg_info,
-                                                                                       data_sp->GetBytes() + data_offset,
-                                                                                       base_byte_size,
-                                                                                       byte_order,
-                                                                                       error);
-                                if (bytes_copied != base_byte_size)
-                                    break;
-
-                                data_offset += bytes_copied;
-                            }
-                        }
-
-                        if (data_offset == byte_size)
-                        {
-                            DataExtractor data;
-                            data.SetByteOrder(byte_order);
-                            data.SetAddressByteSize(process_sp->GetAddressByteSize());
-                            data.SetData(data_sp);
-
-                            return ValueObjectConstResult::Create (&thread, compiler_type, ConstString(""), data);
                         }
                         else
-                        {   // Some error occurred while getting values from registers
-                            return return_valobj_sp;
-                        }
-
+                            break;
                     }
-                    else
-                    {   // TODO: Add code to handle complex and vector types.
-                        return return_valobj_sp;
+
+                    if (index == num_children)
+                    {
+                        is_vfp_candidate = true;
+                        vfp_byte_size = (vfp_byte_size >> 1);
+                        vfp_count = (num_children << 1);
                     }
                 }
             }
@@ -665,7 +671,7 @@ ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
             uint32_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r0_reg_info, 0) & UINT32_MAX;
             value.SetBytes(&raw_value, byte_size);
         }
-        else
+        else if (!is_vfp_candidate)
         {
             if (!GetReturnValuePassedInMemory(thread, reg_ctx, byte_size, value))
                 return return_valobj_sp;
@@ -677,6 +683,64 @@ ABISysV_arm::GetReturnValueObjectImpl (Thread &thread,
         return return_valobj_sp;
     }
     
+    if (is_vfp_candidate)
+    {
+        ProcessSP process_sp (thread.GetProcess());
+        ByteOrder byte_order = process_sp->GetByteOrder();
+
+        DataBufferSP data_sp (new DataBufferHeap(byte_size, 0));
+        uint32_t data_offset = 0;
+
+        for (uint32_t reg_index = 0; reg_index < vfp_count; reg_index++)
+        {
+            uint32_t regnum = 0;
+
+            if (vfp_byte_size == 4)
+                regnum = dwarf_s0 + reg_index;
+            else if (vfp_byte_size == 8)
+                regnum = dwarf_d0 + reg_index;
+            else
+                break;
+
+            const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo (eRegisterKindDWARF, regnum);
+            if (reg_info == NULL)
+                break;
+
+            RegisterValue reg_value;
+            if (!reg_ctx->ReadRegister(reg_info, reg_value))
+                break;
+
+            // Make sure we have enough room in "data_sp"
+            if ((data_offset + vfp_byte_size) <= data_sp->GetByteSize())
+            {
+                Error error;
+                const size_t bytes_copied = reg_value.GetAsMemoryData (reg_info,
+                                                                       data_sp->GetBytes() + data_offset,
+                                                                       vfp_byte_size,
+                                                                       byte_order,
+                                                                       error);
+                if (bytes_copied != vfp_byte_size)
+                    break;
+
+                data_offset += bytes_copied;
+            }
+        }
+
+        if (data_offset == byte_size)
+        {
+            DataExtractor data;
+            data.SetByteOrder(byte_order);
+            data.SetAddressByteSize(process_sp->GetAddressByteSize());
+            data.SetData(data_sp);
+
+            return ValueObjectConstResult::Create (&thread, compiler_type, ConstString(""), data);
+        }
+        else
+        {   // Some error occurred while getting values from registers
+            return return_valobj_sp;
+        }
+    }
+
     // If we get here, we have a valid Value, so make our ValueObject out of it:
     
     return_valobj_sp = ValueObjectConstResult::Create(thread.GetStackFrameAtIndex(0).get(),

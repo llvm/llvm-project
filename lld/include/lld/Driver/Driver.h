@@ -29,8 +29,6 @@ namespace lld {
 class LinkingContext;
 class CoreLinkingContext;
 class MachOLinkingContext;
-class PECOFFLinkingContext;
-class ELFLinkingContext;
 
 typedef std::vector<std::unique_ptr<File>> FileVector;
 
@@ -53,54 +51,6 @@ private:
   Driver() = delete;
 };
 
-/// Driver for "universal" lld tool which can mimic any linker command line
-/// parsing once it figures out which command line flavor to use.
-class UniversalDriver : public Driver {
-public:
-  /// Determine flavor and pass control to Driver for that flavor.
-  static bool link(llvm::MutableArrayRef<const char *> args,
-                   raw_ostream &diag = llvm::errs());
-
-private:
-  UniversalDriver() = delete;
-};
-
-/// Driver for gnu/binutil 'ld' command line options.
-class GnuLdDriver : public Driver {
-public:
-  /// Parses command line arguments same as gnu/binutils ld and performs link.
-  /// Returns true iff an error occurred.
-  static bool linkELF(llvm::ArrayRef<const char *> args,
-                      raw_ostream &diag = llvm::errs());
-
-  /// Uses gnu/binutils style ld command line options to fill in options struct.
-  /// Returns true iff there was an error.
-  static bool parse(llvm::ArrayRef<const char *> args,
-                    std::unique_ptr<ELFLinkingContext> &context,
-                    raw_ostream &diag = llvm::errs());
-
-  /// Parses a given memory buffer as a linker script and evaluate that.
-  /// Public function for testing.
-  static std::error_code evalLinkerScript(ELFLinkingContext &ctx,
-                                          std::unique_ptr<MemoryBuffer> mb,
-                                          raw_ostream &diag, bool nostdlib);
-
-  /// A factory method to create an instance of ELFLinkingContext.
-  static std::unique_ptr<ELFLinkingContext>
-  createELFLinkingContext(llvm::Triple triple);
-
-private:
-  static llvm::Triple getDefaultTarget(const char *progName);
-  static bool applyEmulation(llvm::Triple &triple,
-                             llvm::opt::InputArgList &args,
-                             raw_ostream &diag);
-  static void addPlatformSearchDirs(ELFLinkingContext &ctx,
-                                    llvm::Triple &triple,
-                                    llvm::Triple &baseTriple);
-
-  GnuLdDriver() = delete;
-};
-
 /// Driver for darwin/ld64 'ld' command line options.
 class DarwinLdDriver : public Driver {
 public:
@@ -121,10 +71,10 @@ private:
 
 /// Driver for Windows 'link.exe' command line options
 namespace coff {
-void link(llvm::ArrayRef<const char *> args);
+bool link(llvm::ArrayRef<const char *> args);
 }
 
-namespace elf2 {
+namespace elf {
 bool link(llvm::ArrayRef<const char *> args, raw_ostream &diag = llvm::errs());
 }
 

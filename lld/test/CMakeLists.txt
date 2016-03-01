@@ -22,7 +22,7 @@ configure_lit_site_cfg(
 set(LLD_TEST_DEPS
   FileCheck not llvm-ar llvm-as llvm-nm llc
   lld llvm-config llvm-objdump llvm-readobj yaml2obj obj2yaml
-  linker-script-test llvm-mc llvm-nm llvm-lib
+  llvm-mc llvm-nm llvm-lib
   )
 if (LLVM_INCLUDE_TESTS)
   set(LLD_TEST_DEPS ${LLD_TEST_DEPS} LLDUnitTests)

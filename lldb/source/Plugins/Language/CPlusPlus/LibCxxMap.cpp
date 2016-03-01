@@ -32,7 +32,7 @@ class MapEntry
 public:
     MapEntry() = default;
     explicit MapEntry (ValueObjectSP entry_sp) : m_entry_sp(entry_sp) {}
-    MapEntry (const MapEntry& rhs) : m_entry_sp(rhs.m_entry_sp) {}
+    MapEntry(const MapEntry& rhs) = default;
     explicit MapEntry (ValueObject* entry) : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
     
     ValueObjectSP
@@ -124,7 +124,7 @@ public:
     ValueObjectSP
     advance (size_t count)
     {
-        ValueObjectSP fail(nullptr);
+        ValueObjectSP fail;
         if (m_error)
             return fail;
         size_t steps = 0;
@@ -147,7 +147,7 @@ protected:
         if (m_entry.null())
             return;
         MapEntry right(m_entry.right());
-        if (right.null() == false)
+        if (!right.null())
         {
             m_entry = tree_min(std::move(right));
             return;
@@ -179,7 +179,7 @@ private:
             return MapEntry();
         MapEntry left(x.left());
         size_t steps = 0;
-        while (left.null() == false)
+        while (!left.null())
         {
             if (left.error())
             {
@@ -253,14 +253,14 @@ namespace lldb_private {
 } // namespace lldb_private
 
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::LibcxxStdMapSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_tree(NULL),
-m_root_node(NULL),
-m_element_type(),
-m_skip_size(UINT32_MAX),
-m_count(UINT32_MAX),
-m_children(),
-m_iterators()
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_tree(nullptr),
+    m_root_node(nullptr),
+    m_element_type(),
+    m_skip_size(UINT32_MAX),
+    m_count(UINT32_MAX),
+    m_children(),
+    m_iterators()
 {
     if (valobj_sp)
         Update();
@@ -274,7 +274,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::CalculateNumChildren ()
 
     if (m_count != UINT32_MAX)
         return m_count;
-    if (m_tree == NULL)
+    if (m_tree == nullptr)
         return 0;
     ValueObjectSP m_item(m_tree->GetChildMemberWithName(g___pair3_, true));
     if (!m_item)
@@ -315,7 +315,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset (const l
         return;
     CompilerType node_type(node->GetCompilerType());
     uint64_t bit_offset;
-    if (node_type.GetIndexOfFieldWithName("__value_", NULL, &bit_offset) == UINT32_MAX)
+    if (node_type.GetIndexOfFieldWithName("__value_", nullptr, &bit_offset) == UINT32_MAX)
         return;
     m_skip_size = bit_offset / 8u;
 }
@@ -327,10 +327,9 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex (size_t
     static ConstString g___nc("__nc");
     static ConstString g___value_("__value_");
 
-    
     if (idx >= CalculateNumChildren())
         return lldb::ValueObjectSP();
-    if (m_tree == NULL || m_root_node == NULL)
+    if (m_tree == nullptr || m_root_node == nullptr)
         return lldb::ValueObjectSP();
     
     auto cached = m_children.find(idx);
@@ -352,10 +351,10 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex (size_t
     }
     
     ValueObjectSP iterated_sp(iterator.advance(actual_advancde));
-    if (iterated_sp.get() == NULL)
+    if (!iterated_sp)
     {
         // this tree is garbage - stop
-        m_tree = NULL; // this will stop all future searches until an Update() happens
+        m_tree = nullptr; // this will stop all future searches until an Update() happens
         return iterated_sp;
     }
     if (GetDataType())
@@ -366,14 +365,14 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex (size_t
             iterated_sp = iterated_sp->Dereference(error);
             if (!iterated_sp || error.Fail())
             {
-                m_tree = NULL;
+                m_tree = nullptr;
                 return lldb::ValueObjectSP();
             }
             GetValueOffset(iterated_sp);
             iterated_sp = iterated_sp->GetChildMemberWithName(g___value_, true);
             if (!iterated_sp)
             {
-                m_tree = NULL;
+                m_tree = nullptr;
                 return lldb::ValueObjectSP();
             }
         }
@@ -385,20 +384,20 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex (size_t
                 GetChildAtIndex(0);
             if (m_skip_size == UINT32_MAX)
             {
-                m_tree = NULL;
+                m_tree = nullptr;
                 return lldb::ValueObjectSP();
             }
             iterated_sp = iterated_sp->GetSyntheticChildAtOffset(m_skip_size, m_element_type, true);
             if (!iterated_sp)
             {
-                m_tree = NULL;
+                m_tree = nullptr;
                 return lldb::ValueObjectSP();
             }
         }
     }
     else
     {
-        m_tree = NULL;
+        m_tree = nullptr;
         return lldb::ValueObjectSP();
     }
     // at this point we have a valid 
@@ -408,7 +407,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex (size_t
     iterated_sp->GetData(data, error);
     if (error.Fail())
     {
-        m_tree = NULL;
+        m_tree = nullptr;
         return lldb::ValueObjectSP();
     }
     StreamString name;
@@ -447,7 +446,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update()
     static ConstString g___tree_("__tree_");
     static ConstString g___begin_node_("__begin_node_");
     m_count = UINT32_MAX;
-    m_tree = m_root_node = NULL;
+    m_tree = m_root_node = nullptr;
     m_children.clear();
     m_iterators.clear();
     m_tree = m_backend.GetChildMemberWithName(g___tree_, true).get();
@@ -472,7 +471,5 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetIndexOfChildWithName
 SyntheticChildrenFrontEnd*
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
 {
-    if (!valobj_sp)
-        return NULL;
-    return (new LibcxxStdMapSyntheticFrontEnd(valobj_sp));
+    return (valobj_sp ? new LibcxxStdMapSyntheticFrontEnd(valobj_sp) : nullptr);
 }

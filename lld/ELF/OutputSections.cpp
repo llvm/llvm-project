@@ -23,7 +23,7 @@ using namespace llvm::support::endian;
 using namespace llvm::ELF;
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
 static bool isAlpha(char C) {
   return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z') || C == '_';
@@ -32,7 +32,7 @@ static bool isAlpha(char C) {
 static bool isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
 
 // Returns true if S is valid as a C language identifier.
-bool elf2::isValidCIdentifier(StringRef S) {
+bool elf::isValidCIdentifier(StringRef S) {
   return !S.empty() && isAlpha(S[0]) &&
          std::all_of(S.begin() + 1, S.end(), isAlnum);
 }
@@ -886,9 +886,9 @@ template <class ELFT> void OutputSection<ELFT>::sortCtorsDtors() {
 // For non-local symbols, use SymbolBody::getVA instead.
 template <class ELFT, bool IsRela>
 typename ELFFile<ELFT>::uintX_t
-elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
-                        const Elf_Rel_Impl<ELFT, IsRela> &RI,
-                        typename ELFFile<ELFT>::uintX_t Addend) {
+elf::getLocalRelTarget(const ObjectFile<ELFT> &File,
+                       const Elf_Rel_Impl<ELFT, IsRela> &RI,
+                       typename ELFFile<ELFT>::uintX_t Addend) {
   typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
   typedef typename ELFFile<ELFT>::uintX_t uintX_t;
 
@@ -926,7 +926,7 @@ elf2::getLocalRelTarget(const ObjectFile<ELFT> &File,
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
-bool elf2::canBePreempted(const SymbolBody *Body) {
+bool elf::canBePreempted(const SymbolBody *Body) {
   if (!Body)
     return false;  // Body is a local symbol.
   if (Body->isShared())
@@ -1586,7 +1586,7 @@ void MipsReginfoOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 }
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 template class OutputSectionBase<ELF32LE>;
 template class OutputSectionBase<ELF32BE>;
 template class OutputSectionBase<ELF64LE>;

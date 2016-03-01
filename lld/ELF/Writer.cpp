@@ -26,7 +26,7 @@ using namespace llvm::ELF;
 using namespace llvm::object;
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
 namespace {
 // The writer writes a SymbolTable result to a file.
@@ -123,7 +123,7 @@ private:
 
 template <class ELFT> static bool shouldUseRela() { return ELFT::Is64Bits; }
 
-template <class ELFT> void elf2::writeResult(SymbolTable<ELFT> *Symtab) {
+template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   typedef typename ELFFile<ELFT>::uintX_t uintX_t;
 
   // Create singleton output sections.
@@ -1535,7 +1535,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
       Sec->writeTo(Buf + Sec->getFileOff());
 }
 
-template void elf2::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);
-template void elf2::writeResult<ELF32BE>(SymbolTable<ELF32BE> *Symtab);
-template void elf2::writeResult<ELF64LE>(SymbolTable<ELF64LE> *Symtab);
-template void elf2::writeResult<ELF64BE>(SymbolTable<ELF64BE> *Symtab);
+template void elf::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);
+template void elf::writeResult<ELF32BE>(SymbolTable<ELF32BE> *Symtab);
+template void elf::writeResult<ELF64LE>(SymbolTable<ELF64LE> *Symtab);
+template void elf::writeResult<ELF64BE>(SymbolTable<ELF64BE> *Symtab);

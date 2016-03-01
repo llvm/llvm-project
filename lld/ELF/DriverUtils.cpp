@@ -15,6 +15,7 @@
 
 #include "Driver.h"
 #include "Error.h"
+#include "lld/Config/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -24,7 +25,7 @@
 using namespace llvm;
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
 // Create OptTable
 
@@ -51,8 +52,8 @@ public:
 };
 
 // Parses a given list of options.
-opt::InputArgList elf2::parseArgs(llvm::BumpPtrAllocator *A,
-                                  ArrayRef<const char *> Argv) {
+opt::InputArgList elf::parseArgs(llvm::BumpPtrAllocator *A,
+                                 ArrayRef<const char *> Argv) {
   // Make InputArgList from string vectors.
   ELFOptTable Table;
   unsigned MissingIndex;
@@ -78,7 +79,19 @@ opt::InputArgList elf2::parseArgs(llvm::BumpPtrAllocator *A,
   return Args;
 }
 
-std::string elf2::findFromSearchPaths(StringRef Path) {
+void elf::printHelp(const char *Argv0) {
+  ELFOptTable Table;
+  Table.PrintHelp(outs(), Argv0, "lld", false);
+}
+
+void elf::printVersion() {
+  outs() << "LLD " << getLLDVersion();
+  std::string S = getLLDRepositoryVersion();
+  if (!S.empty())
+    outs() << " " << S << "\n";
+}
+
+std::string elf::findFromSearchPaths(StringRef Path) {
   for (StringRef Dir : Config->SearchPaths) {
     std::string FullPath = buildSysrootedPath(Dir, Path);
     if (sys::fs::exists(FullPath))
@@ -89,7 +102,7 @@ std::string elf2::findFromSearchPaths(StringRef Path) {
 
 // Searches a given library from input search paths, which are filled
 // from -L command line switches. Returns a path to an existent library file.
-std::string elf2::searchLibrary(StringRef Path) {
+std::string elf::searchLibrary(StringRef Path) {
   std::vector<std::string> Names;
   if (Path[0] == ':') {
     Names.push_back(Path.drop_front());
@@ -109,7 +122,7 @@ std::string elf2::searchLibrary(StringRef Path) {
 // Makes a path by concatenating Dir and File.
 // If Dir starts with '=' the result will be preceded by Sysroot,
 // which can be set with --sysroot command line switch.
-std::string elf2::buildSysrootedPath(StringRef Dir, StringRef File) {
+std::string elf::buildSysrootedPath(StringRef Dir, StringRef File) {
   SmallString<128> Path;
   if (Dir.startswith("="))
     sys::path::append(Path, Config->Sysroot, Dir.substr(1), File);

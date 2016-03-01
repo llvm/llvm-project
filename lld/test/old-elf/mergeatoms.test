@@ -1,6 +1,0 @@
-# Tests that atoms are merged by testing it with --merge-strings option
-RUN: lld -flavor old-gnu -target x86_64-linux --merge-strings -o %t1 \
-RUN:    %p/Inputs/foo.o.x86-64 %p/Inputs/bar.o.x86-64 -e bar1
-RUN: llvm-objdump -s %t1 |  FileCheck -check-prefix=mergeAtoms %s
-
-mergeAtoms:   62617200 666f6f00 bar.foo.

@@ -18,7 +18,7 @@ class Module;
 }
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 class Lazy;
 template <class ELFT> class OutputSectionBase;
 struct Symbol;
@@ -103,7 +103,7 @@ private:
   llvm::DenseSet<StringRef> SoNames;
 };
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

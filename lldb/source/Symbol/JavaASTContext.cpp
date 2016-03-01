@@ -366,8 +366,7 @@ public:
     JavaArrayType(CompilerType element_type, const DWARFExpression &length_expression, const lldb::addr_t data_offset)
         : JavaType(JavaType::eKindArray),
           m_element_type(element_type),
-          m_length_expression(length_expression),
-          m_data_offset(data_offset)
+          m_length_expression(length_expression)
     {
     }
 
@@ -422,7 +421,6 @@ public:
 private:
     CompilerType m_element_type;
     DWARFExpression m_length_expression;
-    lldb::addr_t m_data_offset;
 };
 
 } // end of anonymous namespace

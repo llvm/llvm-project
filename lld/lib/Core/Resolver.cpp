@@ -36,10 +36,8 @@ ErrorOr<bool> Resolver::handleFile(File &file) {
   for (const DefinedAtom *atom : file.defined())
     doDefinedAtom(*atom);
   for (const UndefinedAtom *atom : file.undefined()) {
-    if (doUndefinedAtom(*atom)) {
+    if (doUndefinedAtom(*atom))
       undefAdded = true;
-      maybePreloadArchiveMember(atom->name());
-    }
   }
   for (const SharedLibraryAtom *atom : file.sharedLibrary())
     doSharedLibraryAtom(*atom);
@@ -98,8 +96,6 @@ ErrorOr<bool> Resolver::handleArchiveFile(File &file) {
                               bool dataSymbolOnly)->ErrorOr<bool> {
     if (File *member = archiveFile->find(undefName, dataSymbolOnly)) {
       member->setOrdinal(_ctx.getNextOrdinalAndIncrement());
-      member->beforeLink();
-      updatePreloadArchiveMap();
       return handleFile(*member);
     }
     return false;
@@ -142,49 +138,7 @@ bool Resolver::doUndefinedAtom(const UndefinedAtom &atom) {
   if (newUndefAdded)
     _undefines.push_back(atom.name());
 
-  // If the undefined symbol has an alternative name, try to resolve the
-  // symbol with the name to give it a second chance. This feature is used
-  // for COFF "weak external" symbol.
-  if (newUndefAdded || !_symbolTable.isDefined(atom.name())) {
-    if (const UndefinedAtom *fallbackAtom = atom.fallback()) {
-      doUndefinedAtom(*fallbackAtom);
-      _symbolTable.addReplacement(&atom, fallbackAtom);
-    }
-  }
   return newUndefAdded;
-}
-
-/// \brief Add the section group and the group-child reference members.
-void Resolver::maybeAddSectionGroupOrGnuLinkOnce(const DefinedAtom &atom) {
-  // First time adding a group?
-  bool isFirstTime = _symbolTable.addGroup(atom);
-
-  if (!isFirstTime) {
-    // If duplicate symbols are allowed, select the first group.
-    if (_ctx.getAllowDuplicates())
-      return;
-    auto *prevGroup = dyn_cast<DefinedAtom>(_symbolTable.findGroup(atom.name()));
-    assert(prevGroup &&
-           "Internal Error: The group atom could only be a defined atom");
-    // The atoms should be of the same content type, reject invalid group
-    // resolution behaviors.
-    if (atom.contentType() == prevGroup->contentType())
-      return;
-    llvm::errs() << "SymbolTable: error while merging " << atom.name()
-                 << "\n";
-    llvm::report_fatal_error("duplicate symbol error");
-  }
-
-  for (const Reference *r : atom) {
-    if (r->kindNamespace() == lld::Reference::KindNamespace::all &&
-        r->kindValue() == lld::Reference::kindGroupChild) {
-      const DefinedAtom *target = dyn_cast<DefinedAtom>(r->target());
-      assert(target && "Internal Error: kindGroupChild references need to "
-                       "be associated with Defined Atoms only");
-      _atoms.push_back(target);
-      _symbolTable.add(*target);
-    }
-  }
 }
 
 // Called on each atom when a file is added. Returns true if a given
@@ -205,12 +159,7 @@ void Resolver::doDefinedAtom(const DefinedAtom &atom) {
 
   // add to list of known atoms
   _atoms.push_back(&atom);
-
-  if (atom.isGroupParent()) {
-    maybeAddSectionGroupOrGnuLinkOnce(atom);
-  } else {
-    _symbolTable.add(atom);
-  }
+  _symbolTable.add(atom);
 
   // An atom that should never be dead-stripped is a dead-strip root.
   if (_ctx.deadStrip() && atom.deadStrip() == DefinedAtom::deadStripNever) {
@@ -255,17 +204,6 @@ void Resolver::addAtoms(const std::vector<const DefinedAtom *> &newAtoms) {
     doDefinedAtom(*newAtom);
 }
 
-// Instantiate an archive file member if there's a file containing a
-// defined symbol for a given symbol name. Instantiation is done in a
-// different worker thread and has no visible side effect.
-void Resolver::maybePreloadArchiveMember(StringRef sym) {
-  auto it = _archiveMap.find(sym);
-  if (it == _archiveMap.end())
-    return;
-  ArchiveLibraryFile *archive = it->second;
-  archive->preload(_ctx.getTaskGroup(), sym);
-}
-
 // Returns true if at least one of N previous files has created an
 // undefined symbol.
 bool Resolver::undefinesAdded(int begin, int end) {
@@ -296,23 +234,6 @@ File *Resolver::getFile(int &index) {
   return cast<FileNode>(inputs[index++].get())->getFile();
 }
 
-// Update a map of Symbol -> ArchiveFile. The map is used for speculative
-// file loading.
-void Resolver::updatePreloadArchiveMap() {
-  std::vector<std::unique_ptr<Node>> &nodes = _ctx.getNodes();
-  for (int i = nodes.size() - 1; i >= 0; --i) {
-    auto *fnode = dyn_cast<FileNode>(nodes[i].get());
-    if (!fnode)
-      continue;
-    auto *archive = dyn_cast<ArchiveLibraryFile>(fnode->getFile());
-    if (!archive || _archiveSeen.count(archive))
-      continue;
-    _archiveSeen.insert(archive);
-    for (StringRef sym : archive->getDefinedSymbols())
-      _archiveMap[sym] = archive;
-  }
-}
-
 // Keep adding atoms until _ctx.getNextFile() returns an error. This
 // function is where undefined atoms are resolved.
 bool Resolver::resolveUndefines() {
@@ -335,13 +256,10 @@ bool Resolver::resolveUndefines() {
     }
     DEBUG_WITH_TYPE("resolver",
                     llvm::dbgs() << "Loaded file: " << file->path() << "\n");
-    file->beforeLink();
-    updatePreloadArchiveMap();
     switch (file->kind()) {
     case File::kindErrorObject:
     case File::kindNormalizedObject:
     case File::kindMachObject:
-    case File::kindELFObject:
     case File::kindCEntryObject:
     case File::kindHeaderObject:
     case File::kindEntryObject:
@@ -440,8 +358,7 @@ void Resolver::markLive(const Atom *atom) {
 static bool isBackref(const Reference *ref) {
   if (ref->kindNamespace() != lld::Reference::KindNamespace::all)
     return false;
-  return (ref->kindValue() == lld::Reference::kindLayoutAfter ||
-          ref->kindValue() == lld::Reference::kindGroupChild);
+  return (ref->kindValue() == lld::Reference::kindLayoutAfter);
 }
 
 // remove all atoms not actually used
@@ -554,7 +471,6 @@ void Resolver::removeCoalescedAwayAtoms() {
 bool Resolver::resolve() {
   DEBUG_WITH_TYPE("resolver",
                   llvm::dbgs() << "******** Resolving atom references:\n");
-  updatePreloadArchiveMap();
   if (!resolveUndefines())
     return false;
   updateReferences();

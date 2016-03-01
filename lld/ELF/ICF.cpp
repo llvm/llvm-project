@@ -66,13 +66,13 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 template <class ELFT> class ICF {
   typedef typename ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
   typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
@@ -361,11 +361,11 @@ template <class ELFT> void ICF<ELFT>::run(SymbolTable<ELFT> *Symtab) {
 }
 
 // ICF entry point function.
-template <class ELFT> void elf2::doIcf(SymbolTable<ELFT> *Symtab) {
+template <class ELFT> void elf::doIcf(SymbolTable<ELFT> *Symtab) {
   ICF<ELFT>().run(Symtab);
 }
 
-template void elf2::doIcf(SymbolTable<ELF32LE> *);
-template void elf2::doIcf(SymbolTable<ELF32BE> *);
-template void elf2::doIcf(SymbolTable<ELF64LE> *);
-template void elf2::doIcf(SymbolTable<ELF64BE> *);
+template void elf::doIcf(SymbolTable<ELF32LE> *);
+template void elf::doIcf(SymbolTable<ELF32BE> *);
+template void elf::doIcf(SymbolTable<ELF64LE> *);
+template void elf::doIcf(SymbolTable<ELF64BE> *);

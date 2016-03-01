@@ -109,7 +109,7 @@
 // DISASM2-NEXT:  11040:  ff 25 da 1f 00 00   jmpq *8154(%rip)
 // DISASM2-NEXT:  11046:  68 01 00 00 00      pushq $1
 // DISASM2-NEXT:  1104b:  e9 d0 ff ff ff      jmp -48 <.plt>
-// DISASM2-NEXT-NOT: 110C0
+// DISASM2-NOT:   110C0
 
 .global _start
 _start:

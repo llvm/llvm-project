@@ -26,7 +26,7 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
 template <class ELFT>
 typename ELFFile<ELFT>::uintX_t SymbolBody::getVA() const {
@@ -223,7 +223,7 @@ template <class ELFT> static void doInitSymbols() {
   ElfSym<ELFT>::Ignored.setVisibility(STV_HIDDEN);
 }
 
-void elf2::initSymbols() {
+void elf::initSymbols() {
   doInitSymbols<ELF32LE>();
   doInitSymbols<ELF32BE>();
   doInitSymbols<ELF64LE>();
@@ -231,7 +231,7 @@ void elf2::initSymbols() {
 }
 
 // Returns the demangled C++ symbol name for Name.
-std::string elf2::demangle(StringRef Name) {
+std::string elf::demangle(StringRef Name) {
 #if !defined(HAVE_CXXABI_H)
   return Name;
 #else
@@ -286,12 +286,12 @@ template int SymbolBody::compare<ELF32BE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF64LE>(SymbolBody *Other);
 template int SymbolBody::compare<ELF64BE>(SymbolBody *Other);
 
-template class elf2::UndefinedElf<ELF32LE>;
-template class elf2::UndefinedElf<ELF32BE>;
-template class elf2::UndefinedElf<ELF64LE>;
-template class elf2::UndefinedElf<ELF64BE>;
+template class elf::UndefinedElf<ELF32LE>;
+template class elf::UndefinedElf<ELF32BE>;
+template class elf::UndefinedElf<ELF64LE>;
+template class elf::UndefinedElf<ELF64BE>;
 
-template class elf2::DefinedSynthetic<ELF32LE>;
-template class elf2::DefinedSynthetic<ELF32BE>;
-template class elf2::DefinedSynthetic<ELF64LE>;
-template class elf2::DefinedSynthetic<ELF64BE>;
+template class elf::DefinedSynthetic<ELF32LE>;
+template class elf::DefinedSynthetic<ELF32BE>;
+template class elf::DefinedSynthetic<ELF64LE>;
+template class elf::DefinedSynthetic<ELF64BE>;

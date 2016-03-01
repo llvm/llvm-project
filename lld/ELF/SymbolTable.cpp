@@ -30,7 +30,7 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 
 using namespace lld;
-using namespace lld::elf2;
+using namespace lld::elf;
 
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
@@ -155,7 +155,6 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   Obj->parse(ComdatGroups);
   for (SymbolBody *Body : Obj->getSymbols()) {
     Symbol *Sym = insert(Body);
-    assert(isa<DefinedBitcode>(Sym->Body));
     Sym->Body = Body;
   }
 }
@@ -356,7 +355,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanShlibUndefined() {
           Sym->MustBeInDynSym = true;
 }
 
-template class elf2::SymbolTable<ELF32LE>;
-template class elf2::SymbolTable<ELF32BE>;
-template class elf2::SymbolTable<ELF64LE>;
-template class elf2::SymbolTable<ELF64BE>;
+template class elf::SymbolTable<ELF32LE>;
+template class elf::SymbolTable<ELF32BE>;
+template class elf::SymbolTable<ELF64LE>;
+template class elf::SymbolTable<ELF64BE>;

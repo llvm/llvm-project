@@ -27,17 +27,14 @@ class IO;
 }
 
 namespace lld {
-class ELFLinkingContext;
 class File;
 class LinkingContext;
-class PECOFFLinkingContext;
 class MachOLinkingContext;
 
 /// \brief An abstract class for reading object files, library files, and
 /// executable files.
 ///
-/// Each file format (e.g. ELF, mach-o, PECOFF, etc) have a concrete
-/// subclass of Reader.
+/// Each file format (e.g. mach-o, etc) has a concrete subclass of Reader.
 class Reader {
 public:
   virtual ~Reader() {}
@@ -114,11 +111,7 @@ public:
   // as parameters to the addSupport*() method.
   void addSupportArchives(bool logLoading);
   void addSupportYamlFiles();
-  void addSupportCOFFObjects(PECOFFLinkingContext &);
-  void addSupportCOFFImportLibraries(PECOFFLinkingContext &);
   void addSupportMachOObjects(MachOLinkingContext &);
-  void addSupportELFObjects(ELFLinkingContext &);
-  void addSupportELFDynamicSharedObjects(ELFLinkingContext &);
 
   /// To convert between kind values and names, the registry walks the list
   /// of registered kind tables. Each table is a zero terminated array of

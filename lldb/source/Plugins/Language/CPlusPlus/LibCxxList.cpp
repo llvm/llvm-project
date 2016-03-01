@@ -34,7 +34,7 @@ namespace {
     public:
         ListEntry() = default;
         ListEntry (ValueObjectSP entry_sp) : m_entry_sp(entry_sp) {}
-        ListEntry (const ListEntry& rhs) : m_entry_sp(rhs.m_entry_sp) {}
+        ListEntry(const ListEntry& rhs) = default;
         ListEntry (ValueObject* entry) : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
 
         ListEntry
@@ -69,7 +69,7 @@ namespace {
 
         explicit operator bool ()
         {
-            return GetEntry().get() != nullptr && null() == false;
+            return GetEntry() && !null();
         }
 
         ValueObjectSP
@@ -106,7 +106,7 @@ namespace {
         ListIterator() = default;
         ListIterator (ListEntry entry) : m_entry(entry) {}
         ListIterator (ValueObjectSP entry) : m_entry(entry) {}
-        ListIterator (const ListIterator& rhs) : m_entry(rhs.m_entry) {}
+        ListIterator(const ListIterator& rhs) = default;
         ListIterator (ValueObject* entry) : m_entry(entry) {}
         
         ValueObjectSP
@@ -207,16 +207,16 @@ namespace lldb_private {
 } // namespace lldb_private
 
 lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::LibcxxStdListSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
-SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_list_capping_size(0),
-m_loop_detected(0),
-m_node_address(),
-m_head(NULL),
-m_tail(NULL),
-m_element_type(),
-m_count(UINT32_MAX),
-m_children(),
-m_iterators()
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_list_capping_size(0),
+    m_loop_detected(0),
+    m_node_address(),
+    m_head(nullptr),
+    m_tail(nullptr),
+    m_element_type(),
+    m_count(UINT32_MAX),
+    m_children(),
+    m_iterators()
 {
     if (valobj_sp)
         Update();
@@ -225,7 +225,7 @@ m_iterators()
 bool
 lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::HasLoop(size_t count)
 {
-    if (g_use_loop_detect == false)
+    if (!g_use_loop_detect)
         return false;
     // don't bother checking for a loop if we won't actually need to jump nodes
     if (m_count < 2)
@@ -358,7 +358,7 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::Update()
 {
     m_children.clear();
     m_iterators.clear();
-    m_head = m_tail = NULL;
+    m_head = m_tail = nullptr;
     m_node_address = 0;
     m_count = UINT32_MAX;
     m_loop_detected = 0;
@@ -372,7 +372,7 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::Update()
         m_list_capping_size = m_backend.GetTargetSP()->GetMaximumNumberOfChildrenToDisplay();
     if (m_list_capping_size == 0)
         m_list_capping_size = 255;
-    if (err.Fail() || backend_addr.get() == NULL)
+    if (err.Fail() || !backend_addr)
         return false;
     m_node_address = backend_addr->GetValueAsUnsigned(0);
     if (!m_node_address || m_node_address == LLDB_INVALID_ADDRESS)
@@ -408,7 +408,5 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::GetIndexOfChildWithNam
 SyntheticChildrenFrontEnd*
 lldb_private::formatters::LibcxxStdListSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
 {
-    if (!valobj_sp)
-        return NULL;
-    return (new LibcxxStdListSyntheticFrontEnd(valobj_sp));
+    return (valobj_sp ? new LibcxxStdListSyntheticFrontEnd(valobj_sp) : nullptr);
 }

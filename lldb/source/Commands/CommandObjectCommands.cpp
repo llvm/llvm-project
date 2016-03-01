@@ -14,6 +14,7 @@
 
 // Project includes
 #include "CommandObjectCommands.h"
+#include "CommandObjectHelp.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/StringList.h"
@@ -920,8 +921,16 @@ protected:
             }
             else
             {
-                result.AppendErrorWithFormat ("'%s' is not a known command.\nTry 'help' to see a current list of commands.\n",
-                                              command_name);
+                StreamString error_msg_stream;
+                const bool generate_apropos = true;
+                const bool generate_type_lookup = false;
+                CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(&error_msg_stream,
+                                                                        command_name,
+                                                                        nullptr,
+                                                                        nullptr,
+                                                                        generate_apropos,
+                                                                        generate_type_lookup);
+                result.AppendErrorWithFormat ("%s", error_msg_stream.GetData());
                 result.SetStatus (eReturnStatusFailed);
             }
         }

@@ -17,7 +17,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 class ScriptParser;
 template <class ELFT> class InputSectionBase;
@@ -38,11 +38,6 @@ public:
 
 private:
   StringRef SectionPattern;
-};
-
-struct OutSection {
-  StringRef Name;
-  std::vector<uint8_t> Filler;
 };
 
 // This is a runner of the linker script.
@@ -66,16 +61,18 @@ private:
   // SECTIONS commands.
   std::vector<SectionRule> Sections;
 
-  // Output sections information.
-  // They are sorted by the order of the container.
-  std::vector<OutSection> OutSections;
+  // Output sections are sorted by this order.
+  std::vector<StringRef> SectionOrder;
+
+  // Section fill attribute for each section.
+  llvm::StringMap<std::vector<uint8_t>> Filler;
 
   llvm::BumpPtrAllocator Alloc;
 };
 
 extern LinkerScript *Script;
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

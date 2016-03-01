@@ -16,7 +16,7 @@
 #include <memory>
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 class SymbolBody;
 
 class TargetInfo {

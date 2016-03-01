@@ -2829,6 +2829,7 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, ScopDetection &SD,
   buildAliasChecks(AA);
 
   hoistInvariantLoads(SD);
+  verifyInvariantLoads(SD);
   simplifySCoP(false, DT, LI);
 }
 
@@ -3104,30 +3105,29 @@ void Scop::verifyInvariantLoads(ScopDetection &SD) {
 }
 
 void Scop::hoistInvariantLoads(ScopDetection &SD) {
-  if (PollyInvariantLoadHoisting) {
-    isl_union_map *Writes = getWrites();
-    for (ScopStmt &Stmt : *this) {
-      MemoryAccessList InvariantAccesses;
+  if (!PollyInvariantLoadHoisting)
+    return;
 
-      for (MemoryAccess *Access : Stmt)
-        if (isHoistableAccess(Access, Writes))
-          InvariantAccesses.push_front(Access);
+  isl_union_map *Writes = getWrites();
+  for (ScopStmt &Stmt : *this) {
+    MemoryAccessList InvariantAccesses;
 
-      // We inserted invariant accesses always in the front but need them to be
-      // sorted in a "natural order". The statements are already sorted in
-      // reverse post order and that suffices for the accesses too. The reason
-      // we require an order in the first place is the dependences between
-      // invariant loads that can be caused by indirect loads.
-      InvariantAccesses.reverse();
+    for (MemoryAccess *Access : Stmt)
+      if (isHoistableAccess(Access, Writes))
+        InvariantAccesses.push_front(Access);
 
-      // Transfer the memory access from the statement to the SCoP.
-      Stmt.removeMemoryAccesses(InvariantAccesses);
-      addInvariantLoads(Stmt, InvariantAccesses);
-    }
-    isl_union_map_free(Writes);
+    // We inserted invariant accesses always in the front but need them to be
+    // sorted in a "natural order". The statements are already sorted in
+    // reverse post order and that suffices for the accesses too. The reason
+    // we require an order in the first place is the dependences between
+    // invariant loads that can be caused by indirect loads.
+    InvariantAccesses.reverse();
+
+    // Transfer the memory access from the statement to the SCoP.
+    Stmt.removeMemoryAccesses(InvariantAccesses);
+    addInvariantLoads(Stmt, InvariantAccesses);
   }
-
-  verifyInvariantLoads(SD);
+  isl_union_map_free(Writes);
 }
 
 const ScopArrayInfo *

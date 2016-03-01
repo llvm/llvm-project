@@ -30,7 +30,7 @@
 #include "llvm/Object/ELF.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 class ArchiveFile;
 class InputFile;
@@ -373,7 +373,7 @@ template <class ELFT>
 typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::RelaIpltStart;
 template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::RelaIpltEnd;
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

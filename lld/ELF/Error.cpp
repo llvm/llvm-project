@@ -14,7 +14,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 bool HasError;
 llvm::raw_ostream *ErrorOS;
@@ -60,5 +60,5 @@ void fatal(std::error_code EC) {
     fatal(EC.message());
 }
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld

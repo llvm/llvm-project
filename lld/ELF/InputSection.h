@@ -16,7 +16,7 @@
 #include "llvm/Object/ELF.h"
 
 namespace lld {
-namespace elf2 {
+namespace elf {
 
 template <class ELFT> class ICF;
 template <class ELFT> class ObjectFile;
@@ -202,7 +202,7 @@ public:
   const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo;
 };
 
-} // namespace elf2
+} // namespace elf
 } // namespace lld
 
 #endif

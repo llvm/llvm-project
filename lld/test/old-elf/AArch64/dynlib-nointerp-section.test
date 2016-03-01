@@ -1,5 +1,0 @@
-RUN: lld -flavor old-gnu -target aarch64--linux-gnu %p/Inputs/no-interp-section.o \
-RUN:  -o %t -shared
-RUN: llvm-objdump -section-headers %t | FileCheck %s
-
-CHECK-NOT: .interp
