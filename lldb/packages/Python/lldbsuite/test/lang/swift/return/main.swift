@@ -19,7 +19,7 @@ class Foo {
     }
 }
 
-enum MyError : ErrorType
+enum MyError : ErrorProtocol
 {
     case TrivialError
     case WorrisomeError
@@ -51,7 +51,7 @@ func getDict() -> Dictionary<Int, String>
 }
 func getOptionalString() -> String?
 {
-    let opt_str = Optional<String>.Some("Hello")
+    let opt_str = Optional<String>.some("Hello")
     return opt_str // Set breakpoint here
 }
 
