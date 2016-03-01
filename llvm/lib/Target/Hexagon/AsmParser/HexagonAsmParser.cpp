@@ -108,7 +108,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
   void canonicalizeImmediates(MCInst &MCI);
   bool matchOneInstruction(MCInst &MCB, SMLoc IDLoc,
                            OperandVector &InstOperands, uint64_t &ErrorInfo,
-                           bool MatchingInlineAsm, bool &MustExtend);
+                           bool MatchingInlineAsm);
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -117,7 +117,7 @@ class HexagonAsmParser : public MCTargetAsmParser {
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op, unsigned Kind) override;
   void OutOfRange(SMLoc IDLoc, long long Val, long long Max);
   int processInstruction(MCInst &Inst, OperandVector const &Operands,
-                         SMLoc IDLoc, bool &MustExtend);
+                         SMLoc IDLoc);
 
   // Check if we have an assembler and, if so, set the ELF e_header flags.
   void chksetELFHeaderEFlags(unsigned flags) {
@@ -186,7 +186,6 @@ struct HexagonOperand : public MCParsedAsmOperand {
 
   struct ImmTy {
     const MCExpr *Val;
-    bool MustExtend;
   };
 
   struct InstTy {
@@ -244,7 +243,7 @@ public:
                      bool isRelocatable, bool Extendable) const {
     if (Kind == Immediate) {
       const MCExpr *myMCExpr = &HexagonMCInstrInfo::getExpr(*getImm());
-      if (Imm.MustExtend && !Extendable)
+      if (HexagonMCInstrInfo::mustExtend(*Imm.Val) && !Extendable)
         return false;
       int64_t Res;
       if (myMCExpr->evaluateAsAbsolute(Res)) {
@@ -348,7 +347,7 @@ public:
   bool isu6_1Ext() const { return CheckImmRange(6 + 26, 1, false, true, true); }
   bool isu6_2Ext() const { return CheckImmRange(6 + 26, 2, false, true, true); }
   bool isu6_3Ext() const { return CheckImmRange(6 + 26, 3, false, true, true); }
-  bool isu32MustExt() const { return isImm() && Imm.MustExtend; }
+  bool isu32MustExt() const { return isImm(); }
 
   void addRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
@@ -362,20 +361,17 @@ public:
 
   void addSignedImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    MCExpr const *Expr = getImm();
+    HexagonMCExpr *Expr =
+        const_cast<HexagonMCExpr *>(cast<HexagonMCExpr>(getImm()));
     int64_t Value;
     if (!Expr->evaluateAsAbsolute(Value)) {
       Inst.addOperand(MCOperand::createExpr(Expr));
       return;
     }
-    int64_t Extended = SignExtend64 (Value, 32);
-    if ((Extended < 0) == (Value < 0)) {
-      Inst.addOperand(MCOperand::createExpr(Expr));
-      return;
-    }
-    // Flip bit 33 to signal signed unsigned mismatch
-    Extended ^= 0x100000000;
-    Inst.addOperand(MCOperand::createImm(Extended));
+    int64_t Extended = SignExtend64(Value, 32);
+    if ((Extended < 0) != (Value < 0))
+      Expr->setSignMismatch();
+    Inst.addOperand(MCOperand::createExpr(Expr));
   }
 
   void addf32ExtOperands(MCInst &Inst, unsigned N) const {
@@ -598,7 +594,6 @@ public:
                                                    SMLoc E) {
     HexagonOperand *Op = new HexagonOperand(Immediate);
     Op->Imm.Val = Val;
-    Op->Imm.MustExtend = false;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return std::unique_ptr<HexagonOperand>(Op);
@@ -765,33 +760,29 @@ void HexagonAsmParser::canonicalizeImmediates(MCInst &MCI) {
   for (MCOperand &I : MCI)
     if (I.isImm()) {
       int64_t Value (I.getImm());
-      if ((Value & 0x100000000) != (Value & 0x80000000)) {
-        // Detect flipped bit 33 wrt bit 32 and signal warning
-        Value ^= 0x100000000;
-        if (WarnSignedMismatch)
-          Warning (MCI.getLoc(), "Signed/Unsigned mismatch");
-      }
       NewInst.addOperand(MCOperand::createExpr(HexagonMCExpr::create(
           MCConstantExpr::create(Value, getContext()), getContext())));
     }
-    else
+    else {
+      if (I.isExpr() && cast<HexagonMCExpr>(I.getExpr())->signMismatch() &&
+          WarnSignedMismatch)
+        Warning (MCI.getLoc(), "Signed/Unsigned mismatch");
       NewInst.addOperand(I);
+    }
   MCI = NewInst;
 }
 
 bool HexagonAsmParser::matchOneInstruction(MCInst &MCI, SMLoc IDLoc,
                                            OperandVector &InstOperands,
                                            uint64_t &ErrorInfo,
-                                           bool MatchingInlineAsm,
-                                           bool &MustExtend) {
+                                           bool MatchingInlineAsm) {
   // Perform matching with tablegen asmmatcher generated function
   int result =
       MatchInstructionImpl(InstOperands, MCI, ErrorInfo, MatchingInlineAsm);
   if (result == Match_Success) {
     MCI.setLoc(IDLoc);
-    MustExtend = mustExtend(InstOperands);
     canonicalizeImmediates(MCI);
-    result = processInstruction(MCI, InstOperands, IDLoc, MustExtend);
+    result = processInstruction(MCI, InstOperands, IDLoc);
 
     DEBUG(dbgs() << "Insn:");
     DEBUG(MCI.dump_pretty(dbgs()));
@@ -833,7 +824,8 @@ bool HexagonAsmParser::mustExtend(OperandVector &Operands) {
   unsigned Count = 0;
   for (std::unique_ptr<MCParsedAsmOperand> &i : Operands)
     if (i->isImm())
-      if (static_cast<HexagonOperand *>(i.get())->Imm.MustExtend)
+      if (HexagonMCInstrInfo::mustExtend(
+              *static_cast<HexagonOperand *>(i.get())->Imm.Val))
         ++Count;
   // Multiple extenders should have been filtered by iss9Ext et. al.
   assert(Count < 2 && "Multiple extenders");
@@ -871,13 +863,11 @@ bool HexagonAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return finishBundle(IDLoc, Out);
   }
   MCInst *SubInst = new (getParser().getContext()) MCInst;
-  bool MustExtend = false;
   if (matchOneInstruction(*SubInst, IDLoc, Operands, ErrorInfo,
-                          MatchingInlineAsm, MustExtend))
+                          MatchingInlineAsm))
     return true;
   HexagonMCInstrInfo::extendIfNeeded(
-      getParser().getContext(), MCII, MCB, *SubInst,
-      HexagonMCInstrInfo::isExtended(MCII, *SubInst) || MustExtend);
+      getParser().getContext(), MCII, MCB, *SubInst);
   MCB.addOperand(MCOperand::createInst(SubInst));
   if (!InBrackets)
     return finishBundle(IDLoc, Out);
@@ -1446,9 +1436,9 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
       }
       Expr = HexagonMCExpr::create(Expr, Context);
       HexagonMCInstrInfo::setMustNotExtend(*Expr, MustNotExtend);
+      HexagonMCInstrInfo::setMustExtend(*Expr, MustExtend);
       std::unique_ptr<HexagonOperand> Operand =
           HexagonOperand::CreateImm(Expr, ExprLoc, ExprLoc);
-      Operand->Imm.MustExtend = MustExtend;
       Operands.push_back(std::move(Operand));
       continue;
     }
@@ -1535,7 +1525,7 @@ void HexagonAsmParser::OutOfRange(SMLoc IDLoc, long long Val, long long Max) {
 
 int HexagonAsmParser::processInstruction(MCInst &Inst,
                                          OperandVector const &Operands,
-                                         SMLoc IDLoc, bool &MustExtend) {
+                                         SMLoc IDLoc) {
   MCContext &Context = getParser().getContext();
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
   std::string r = "r";
@@ -1789,9 +1779,11 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
         OutOfRange(IDLoc, s8, -128);
       MCOperand imm(MCOperand::createExpr(HexagonMCExpr::create(
           MCConstantExpr::create(s8, Context), Context))); // upper 32
-      MCOperand imm2(MCOperand::createExpr(HexagonMCExpr::create(
-          MCConstantExpr::create(u64 & 0xFFFFFFFF, Context),
-          Context))); // lower 32
+      auto Expr = HexagonMCExpr::create(
+                  MCConstantExpr::create(u64 & 0xFFFFFFFF, Context),
+                  Context);
+      HexagonMCInstrInfo::setMustExtend(*Expr, HexagonMCInstrInfo::mustExtend(*MO.getExpr()));
+      MCOperand imm2(MCOperand::createExpr(Expr)); // lower 32
       Inst = makeCombineInst(Hexagon::A4_combineii, Rdd, imm, imm2);
     } else {
       MCOperand imm(MCOperand::createExpr(HexagonMCExpr::create(
@@ -1903,10 +1895,11 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &Rs = Inst.getOperand(1);
     MCOperand &Imm = Inst.getOperand(2);
     int64_t Value;
-    bool Absolute = Imm.getExpr()->evaluateAsAbsolute(Value);
+    MCExpr const &Expr = *Imm.getExpr();
+    bool Absolute = Expr.evaluateAsAbsolute(Value);
     assert(Absolute);
     (void)Absolute;
-    if (!MustExtend) {
+    if (!HexagonMCInstrInfo::mustExtend(Expr)) {
       if (Value < 0 && Value > -256) {
         Imm.setExpr(HexagonMCExpr::create(
             MCConstantExpr::create(Value * -1, Context), Context));

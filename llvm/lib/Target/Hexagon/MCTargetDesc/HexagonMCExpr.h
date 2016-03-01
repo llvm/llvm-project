@@ -31,6 +31,8 @@ public:
   bool mustNotExtend() const;
   void setS23_2_reloc(bool Val = true);
   bool s23_2_reloc() const;
+  void setSignMismatch(bool Val = true);
+  bool signMismatch() const;
 
 private:
   HexagonMCExpr(MCExpr const *Expr);
@@ -38,6 +40,7 @@ private:
   bool MustNotExtend;
   bool MustExtend;
   bool S23_2_reloc;
+  bool SignMismatch;
 };
 } // end namespace llvm
 

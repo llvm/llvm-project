@@ -480,6 +480,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   for (auto VT : { MVT::i8, MVT::i16, MVT::i32, MVT::i64 }) {
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Custom);
     setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_ADD, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_OR, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_XOR, VT, Custom);
+    setOperationAction(ISD::ATOMIC_LOAD_AND, VT, Custom);
     setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
   }
 
@@ -20333,19 +20337,68 @@ static SDValue LowerCTPOP(SDValue Op, const X86Subtarget &Subtarget,
   return LowerVectorCTPOP(Op, Subtarget, DAG);
 }
 
-static SDValue LowerLOAD_SUB(SDValue Op, SelectionDAG &DAG) {
-  SDNode *Node = Op.getNode();
-  SDLoc dl(Node);
-  EVT T = Node->getValueType(0);
-  SDValue negOp = DAG.getNode(ISD::SUB, dl, T,
-                              DAG.getConstant(0, dl, T), Node->getOperand(2));
-  return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, dl,
-                       cast<AtomicSDNode>(Node)->getMemoryVT(),
-                       Node->getOperand(0),
-                       Node->getOperand(1), negOp,
-                       cast<AtomicSDNode>(Node)->getMemOperand(),
-                       cast<AtomicSDNode>(Node)->getOrdering(),
-                       cast<AtomicSDNode>(Node)->getSynchScope());
+static SDValue lowerAtomicArithWithLOCK(SDValue N, SelectionDAG &DAG) {
+  unsigned NewOpc = 0;
+  switch (N->getOpcode()) {
+  case ISD::ATOMIC_LOAD_ADD:
+    NewOpc = X86ISD::LADD;
+    break;
+  case ISD::ATOMIC_LOAD_SUB:
+    NewOpc = X86ISD::LSUB;
+    break;
+  case ISD::ATOMIC_LOAD_OR:
+    NewOpc = X86ISD::LOR;
+    break;
+  case ISD::ATOMIC_LOAD_XOR:
+    NewOpc = X86ISD::LXOR;
+    break;
+  case ISD::ATOMIC_LOAD_AND:
+    NewOpc = X86ISD::LAND;
+    break;
+  default:
+    llvm_unreachable("Unknown ATOMIC_LOAD_ opcode");
+  }
+
+  MachineMemOperand *MMO = cast<MemSDNode>(N)->getMemOperand();
+  return DAG.getMemIntrinsicNode(
+      NewOpc, SDLoc(N), DAG.getVTList(MVT::i32, MVT::Other),
+      {N->getOperand(0), N->getOperand(1), N->getOperand(2)},
+      /*MemVT=*/N->getSimpleValueType(0), MMO);
+}
+
+/// Lower atomic_load_ops into LOCK-prefixed operations.
+static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
+                                const X86Subtarget &Subtarget) {
+  SDValue Chain = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  unsigned Opc = N->getOpcode();
+  MVT VT = N->getSimpleValueType(0);
+  SDLoc DL(N);
+
+  // We can lower atomic_load_add into LXADD. However, any other atomicrmw op
+  // can only be lowered when the result is unused.  They should have already
+  // been transformed into a cmpxchg loop in AtomicExpand.
+  if (N->hasAnyUseOfValue(0)) {
+    // Handle (atomic_load_sub p, v) as (atomic_load_add p, -v), to be able to
+    // select LXADD if LOCK_SUB can't be selected.
+    if (Opc == ISD::ATOMIC_LOAD_SUB) {
+      AtomicSDNode *AN = cast<AtomicSDNode>(N.getNode());
+      RHS = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
+      return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, VT, Chain, LHS,
+                           RHS, AN->getMemOperand(), AN->getOrdering(),
+                           AN->getSynchScope());
+    }
+    assert(Opc == ISD::ATOMIC_LOAD_ADD &&
+           "Used AtomicRMW ops other than Add should have been expanded!");
+    return N;
+  }
+
+  SDValue LockOp = lowerAtomicArithWithLOCK(N, DAG);
+  // RAUW the chain, but don't worry about the result, as it's unused.
+  assert(!N->hasAnyUseOfValue(0));
+  DAG.ReplaceAllUsesOfValueWith(N.getValue(1), LockOp.getValue(1));
+  return SDValue();
 }
 
 static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) {
@@ -20767,7 +20820,11 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     return LowerCMP_SWAP(Op, Subtarget, DAG);
   case ISD::CTPOP:              return LowerCTPOP(Op, Subtarget, DAG);
-  case ISD::ATOMIC_LOAD_SUB:    return LowerLOAD_SUB(Op,DAG);
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_LOAD_AND:    return lowerAtomicArith(Op, DAG, Subtarget);
   case ISD::ATOMIC_STORE:       return LowerATOMIC_STORE(Op,DAG);
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);
@@ -21221,6 +21278,11 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::LCMPXCHG_DAG:       return "X86ISD::LCMPXCHG_DAG";
   case X86ISD::LCMPXCHG8_DAG:      return "X86ISD::LCMPXCHG8_DAG";
   case X86ISD::LCMPXCHG16_DAG:     return "X86ISD::LCMPXCHG16_DAG";
+  case X86ISD::LADD:               return "X86ISD::LADD";
+  case X86ISD::LSUB:               return "X86ISD::LSUB";
+  case X86ISD::LOR:                return "X86ISD::LOR";
+  case X86ISD::LXOR:               return "X86ISD::LXOR";
+  case X86ISD::LAND:               return "X86ISD::LAND";
   case X86ISD::VZEXT_MOVL:         return "X86ISD::VZEXT_MOVL";
   case X86ISD::VZEXT_LOAD:         return "X86ISD::VZEXT_LOAD";
   case X86ISD::VZEXT:              return "X86ISD::VZEXT";
@@ -28861,6 +28923,26 @@ static SDValue performVZEXTCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Canonicalize (LSUB p, 1) -> (LADD p, -1).
+static SDValue performLSUBCombine(SDNode *N, SelectionDAG &DAG,
+                                  const X86Subtarget &Subtarget) {
+  SDValue Chain = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  MVT VT = RHS.getSimpleValueType();
+  SDLoc DL(N);
+
+  auto *C = dyn_cast<ConstantSDNode>(RHS);
+  if (!C || C->getZExtValue() != 1)
+    return SDValue();
+
+  RHS = DAG.getConstant(-1, DL, VT);
+  MachineMemOperand *MMO = cast<MemSDNode>(N)->getMemOperand();
+  return DAG.getMemIntrinsicNode(X86ISD::LADD, DL,
+                                 DAG.getVTList(MVT::i32, MVT::Other),
+                                 {Chain, LHS, RHS}, VT, MMO);
+}
+
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -28937,6 +29019,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMA:            return PerformFMACombine(N, DAG, Subtarget);
   case ISD::MGATHER:
   case ISD::MSCATTER:       return PerformGatherScatterCombine(N, DAG);
+  case X86ISD::LSUB:        return performLSUBCombine(N, DAG, Subtarget);
   }
 
   return SDValue();

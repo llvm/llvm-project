@@ -94,6 +94,7 @@ public:
   bool isData() const;
   bool isBSS() const;
   bool isVirtual() const;
+  bool isBitcode() const;
 
   bool containsSymbol(SymbolRef S) const;
 
@@ -219,6 +220,7 @@ protected:
   virtual bool isSectionBSS(DataRefImpl Sec) const = 0;
   // A section is 'virtual' if its contents aren't present in the object image.
   virtual bool isSectionVirtual(DataRefImpl Sec) const = 0;
+  virtual bool isSectionBitcode(DataRefImpl Sec) const;
   virtual relocation_iterator section_rel_begin(DataRefImpl Sec) const = 0;
   virtual relocation_iterator section_rel_end(DataRefImpl Sec) const = 0;
   virtual section_iterator getRelocatedSection(DataRefImpl Sec) const;
@@ -296,6 +298,7 @@ public:
 
   static ErrorOr<std::unique_ptr<MachOObjectFile>>
   createMachOObjectFile(MemoryBufferRef Object);
+
 };
 
 // Inline function definitions.
@@ -392,6 +395,10 @@ inline bool SectionRef::isBSS() const {
 
 inline bool SectionRef::isVirtual() const {
   return OwningObject->isSectionVirtual(SectionPimpl);
+}
+
+inline bool SectionRef::isBitcode() const {
+  return OwningObject->isSectionBitcode(SectionPimpl);
 }
 
 inline relocation_iterator SectionRef::relocation_begin() const {

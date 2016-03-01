@@ -73,6 +73,14 @@ private:
 
   Function *generateLSDAInEAXThunk(Function *ParentFunc);
 
+  bool isStateStoreNeeded(EHPersonality Personality, CallSite CS);
+  void rewriteSetJmpCallSite(IRBuilder<> &Builder, Function &F, CallSite CS,
+                             Value *State);
+  int getBaseStateForBB(DenseMap<BasicBlock *, ColorVector> &BlockColors,
+                        WinEHFuncInfo &FuncInfo, BasicBlock *BB);
+  int getStateForCallSite(DenseMap<BasicBlock *, ColorVector> &BlockColors,
+                          WinEHFuncInfo &FuncInfo, CallSite CS);
+
   // Module-level type getters.
   Type *getEHLinkRegistrationType();
   Type *getSEHRegistrationType();
@@ -83,15 +91,16 @@ private:
   StructType *EHLinkRegistrationTy = nullptr;
   StructType *CXXEHRegistrationTy = nullptr;
   StructType *SEHRegistrationTy = nullptr;
-  Function *FrameRecover = nullptr;
-  Function *FrameAddress = nullptr;
-  Function *FrameEscape = nullptr;
+  Constant *SetJmp3 = nullptr;
+  Constant *CxxLongjmpUnwind = nullptr;
 
   // Per-function state
   EHPersonality Personality = EHPersonality::Unknown;
   Function *PersonalityFn = nullptr;
   bool UseStackGuard = false;
   int ParentBaseState;
+  Constant *SehLongjmpUnwind = nullptr;
+  Constant *Cookie = nullptr;
 
   /// The stack allocation containing all EH data, including the link in the
   /// fs:00 chain and the current state.
@@ -123,9 +132,10 @@ bool WinEHStatePass::doFinalization(Module &M) {
   EHLinkRegistrationTy = nullptr;
   CXXEHRegistrationTy = nullptr;
   SEHRegistrationTy = nullptr;
-  FrameEscape = nullptr;
-  FrameRecover = nullptr;
-  FrameAddress = nullptr;
+  SetJmp3 = nullptr;
+  CxxLongjmpUnwind = nullptr;
+  SehLongjmpUnwind = nullptr;
+  Cookie = nullptr;
   return false;
 }
 
@@ -159,9 +169,12 @@ bool WinEHStatePass::runOnFunction(Function &F) {
   if (!HasPads)
     return false;
 
-  FrameEscape = Intrinsic::getDeclaration(TheModule, Intrinsic::localescape);
-  FrameRecover = Intrinsic::getDeclaration(TheModule, Intrinsic::localrecover);
-  FrameAddress = Intrinsic::getDeclaration(TheModule, Intrinsic::frameaddress);
+  Type *Int8PtrType = Type::getInt8PtrTy(TheModule->getContext());
+  SetJmp3 = TheModule->getOrInsertFunction(
+      "_setjmp3", FunctionType::get(
+                      Type::getInt32Ty(TheModule->getContext()),
+                      {Int8PtrType, Type::getInt32Ty(TheModule->getContext())},
+                      /*isVarArg=*/true));
 
   // Disable frame pointer elimination in this function.
   // FIXME: Do the nested handlers need to keep the parent ebp in ebp, or can we
@@ -276,6 +289,13 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     Function *Trampoline = generateLSDAInEAXThunk(F);
     Link = Builder.CreateStructGEP(RegNodeTy, RegNode, 1);
     linkExceptionRegistration(Builder, Trampoline);
+
+    CxxLongjmpUnwind = TheModule->getOrInsertFunction(
+        "__CxxLongjmpUnwind",
+        FunctionType::get(Type::getVoidTy(TheModule->getContext()), Int8PtrType,
+                          /*isVarArg=*/false));
+    cast<Function>(CxxLongjmpUnwind->stripPointerCasts())
+        ->setCallingConv(CallingConv::X86_StdCall);
   } else if (Personality == EHPersonality::MSVC_X86SEH) {
     // If _except_handler4 is in use, some additional guard checks and prologue
     // stuff is required.
@@ -292,22 +312,26 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     ParentBaseState = UseStackGuard ? -2 : -1;
     insertStateNumberStore(&*Builder.GetInsertPoint(), ParentBaseState);
     // ScopeTable = llvm.x86.seh.lsda(F)
-    Value *FI8 = Builder.CreateBitCast(F, Int8PtrType);
-    Value *LSDA = Builder.CreateCall(
-        Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_lsda), FI8);
+    Value *LSDA = emitEHLSDA(Builder, F);
     Type *Int32Ty = Type::getInt32Ty(TheModule->getContext());
     LSDA = Builder.CreatePtrToInt(LSDA, Int32Ty);
     // If using _except_handler4, xor the address of the table with
     // __security_cookie.
     if (UseStackGuard) {
-      Value *Cookie =
-          TheModule->getOrInsertGlobal("__security_cookie", Int32Ty);
+      Cookie = TheModule->getOrInsertGlobal("__security_cookie", Int32Ty);
       Value *Val = Builder.CreateLoad(Int32Ty, Cookie);
       LSDA = Builder.CreateXor(LSDA, Val);
     }
     Builder.CreateStore(LSDA, Builder.CreateStructGEP(RegNodeTy, RegNode, 3));
     Link = Builder.CreateStructGEP(RegNodeTy, RegNode, 2);
     linkExceptionRegistration(Builder, PersonalityFn);
+
+    SehLongjmpUnwind = TheModule->getOrInsertFunction(
+        UseStackGuard ? "_seh_longjmp_unwind4" : "_seh_longjmp_unwind",
+        FunctionType::get(Type::getVoidTy(TheModule->getContext()), Int8PtrType,
+                          /*isVarArg=*/false));
+    cast<Function>(SehLongjmpUnwind->stripPointerCasts())
+        ->setCallingConv(CallingConv::X86_StdCall);
   } else {
     llvm_unreachable("unexpected personality function");
   }
@@ -402,10 +426,67 @@ void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
   Builder.CreateStore(Next, FSZero);
 }
 
+// Calls to setjmp(p) are lowered to _setjmp3(p, 0) by the frontend.
+// The idea behind _setjmp3 is that it takes an optional number of personality
+// specific parameters to indicate how to restore the personality-specific frame
+// state when longjmp is initiated.  Typically, the current TryLevel is saved.
+void WinEHStatePass::rewriteSetJmpCallSite(IRBuilder<> &Builder, Function &F,
+                                           CallSite CS, Value *State) {
+  // Don't rewrite calls with a weird number of arguments.
+  if (CS.getNumArgOperands() != 2)
+    return;
+
+  Instruction *Inst = CS.getInstruction();
+
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  CS.getOperandBundlesAsDefs(OpBundles);
+
+  SmallVector<Value *, 3> OptionalArgs;
+  if (Personality == EHPersonality::MSVC_CXX) {
+    OptionalArgs.push_back(CxxLongjmpUnwind);
+    OptionalArgs.push_back(State);
+    OptionalArgs.push_back(emitEHLSDA(Builder, &F));
+  } else if (Personality == EHPersonality::MSVC_X86SEH) {
+    OptionalArgs.push_back(SehLongjmpUnwind);
+    OptionalArgs.push_back(State);
+    if (UseStackGuard)
+      OptionalArgs.push_back(Cookie);
+  } else {
+    llvm_unreachable("unhandled personality!");
+  }
+
+  SmallVector<Value *, 5> Args;
+  Args.push_back(
+      Builder.CreateBitCast(CS.getArgOperand(0), Builder.getInt8PtrTy()));
+  Args.push_back(Builder.getInt32(OptionalArgs.size()));
+  Args.append(OptionalArgs.begin(), OptionalArgs.end());
+
+  CallSite NewCS;
+  if (CS.isCall()) {
+    auto *CI = cast<CallInst>(Inst);
+    CallInst *NewCI = Builder.CreateCall(SetJmp3, Args, OpBundles);
+    NewCI->setTailCallKind(CI->getTailCallKind());
+    NewCS = NewCI;
+  } else {
+    auto *II = cast<InvokeInst>(Inst);
+    NewCS = Builder.CreateInvoke(
+        SetJmp3, II->getNormalDest(), II->getUnwindDest(), Args, OpBundles);
+  }
+  NewCS.setCallingConv(CS.getCallingConv());
+  NewCS.setAttributes(CS.getAttributes());
+  NewCS->setDebugLoc(CS->getDebugLoc());
+
+  Instruction *NewInst = NewCS.getInstruction();
+  NewInst->takeName(Inst);
+  Inst->replaceAllUsesWith(NewInst);
+  Inst->eraseFromParent();
+}
+
 // Figure out what state we should assign calls in this block.
-static int getBaseStateForBB(DenseMap<BasicBlock *, ColorVector> &BlockColors,
-                             WinEHFuncInfo &FuncInfo, BasicBlock *BB) {
-  int BaseState = -1;
+int WinEHStatePass::getBaseStateForBB(
+    DenseMap<BasicBlock *, ColorVector> &BlockColors, WinEHFuncInfo &FuncInfo,
+    BasicBlock *BB) {
+  int BaseState = ParentBaseState;
   auto &BBColors = BlockColors[BB];
 
   assert(BBColors.size() == 1 && "multi-color BB not removed by preparation");
@@ -421,8 +502,9 @@ static int getBaseStateForBB(DenseMap<BasicBlock *, ColorVector> &BlockColors,
 }
 
 // Calculate the state a call-site is in.
-static int getStateForCallSite(DenseMap<BasicBlock *, ColorVector> &BlockColors,
-                               WinEHFuncInfo &FuncInfo, CallSite CS) {
+int WinEHStatePass::getStateForCallSite(
+    DenseMap<BasicBlock *, ColorVector> &BlockColors, WinEHFuncInfo &FuncInfo,
+    CallSite CS) {
   if (auto *II = dyn_cast<InvokeInst>(CS.getInstruction())) {
     // Look up the state number of the EH pad this unwinds to.
     assert(FuncInfo.InvokeStateMap.count(II) && "invoke has no state!");
@@ -510,13 +592,16 @@ static int getSuccState(DenseMap<BasicBlock *, int> &InitialStates, Function &F,
   return CommonState;
 }
 
-static bool isStateStoreNeeded(EHPersonality Personality, CallSite CS) {
+bool WinEHStatePass::isStateStoreNeeded(EHPersonality Personality,
+                                        CallSite CS) {
   if (!CS)
     return false;
 
+  // If the function touches memory, it needs a state store.
   if (isAsynchronousEHPersonality(Personality))
     return !CS.doesNotAccessMemory();
 
+  // If the function throws, it needs a state store.
   return !CS.doesNotThrow();
 }
 
@@ -635,6 +720,37 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     if (EndState != FinalStates.end())
       if (EndState->second != PrevState)
         insertStateNumberStore(BB->getTerminator(), EndState->second);
+  }
+
+  SmallVector<CallSite, 1> SetJmp3CallSites;
+  for (BasicBlock *BB : RPOT) {
+    for (Instruction &I : *BB) {
+      CallSite CS(&I);
+      if (!CS)
+        continue;
+      if (CS.getCalledValue()->stripPointerCasts() !=
+          SetJmp3->stripPointerCasts())
+        continue;
+
+      SetJmp3CallSites.push_back(CS);
+    }
+  }
+
+  for (CallSite CS : SetJmp3CallSites) {
+    auto &BBColors = BlockColors[CS->getParent()];
+    BasicBlock *FuncletEntryBB = BBColors.front();
+    bool InCleanup = isa<CleanupPadInst>(FuncletEntryBB->getFirstNonPHI());
+
+    IRBuilder<> Builder(CS.getInstruction());
+    Value *State;
+    if (InCleanup) {
+      Value *StateField =
+          Builder.CreateStructGEP(nullptr, RegNode, StateFieldIndex);
+      State = Builder.CreateLoad(StateField);
+    } else {
+      State = Builder.getInt32(getStateForCallSite(BlockColors, FuncInfo, CS));
+    }
+    rewriteSetJmpCallSite(Builder, F, CS, State);
   }
 }
 

@@ -203,22 +203,19 @@ void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   printExpr(Op.getExpr(), &MAI, O);
 }
 
-void MipsInstPrinter::printUnsignedImm(const MCInst *MI, int opNum,
-                                       raw_ostream &O) {
+template <unsigned Bits, unsigned Offset>
+void MipsInstPrinter::printUImm(const MCInst *MI, int opNum, raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(opNum);
-  if (MO.isImm())
-    O << (unsigned short int)MO.getImm();
-  else
-    printOperand(MI, opNum, O);
-}
+  if (MO.isImm()) {
+    uint64_t Imm = MO.getImm();
+    Imm -= Offset;
+    Imm &= (1 << Bits) - 1;
+    Imm += Offset;
+    O << Imm;
+    return;
+  }
 
-void MipsInstPrinter::printUnsignedImm8(const MCInst *MI, int opNum,
-                                        raw_ostream &O) {
-  const MCOperand &MO = MI->getOperand(opNum);
-  if (MO.isImm())
-    O << (unsigned short int)(unsigned char)MO.getImm();
-  else
-    printOperand(MI, opNum, O);
+  printOperand(MI, opNum, O);
 }
 
 void MipsInstPrinter::
@@ -343,7 +340,7 @@ void MipsInstPrinter::printSaveRestore(const MCInst *MI, raw_ostream &O) {
     if (MI->getOperand(i).isReg())
       printRegName(O, MI->getOperand(i).getReg());
     else
-      printUnsignedImm(MI, i, O);
+      printUImm<16>(MI, i, O);
   }
 }
 

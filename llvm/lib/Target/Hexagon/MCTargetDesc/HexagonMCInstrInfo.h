@@ -75,7 +75,7 @@ MCInst createBundle();
 // Return the extender for instruction at Index or nullptr if none
 MCInst const *extenderForIndex(MCInst const &MCB, size_t Index);
 void extendIfNeeded(MCContext &Context, MCInstrInfo const &MCII, MCInst &MCB,
-                    MCInst const &MCI, bool MustExtend);
+                    MCInst const &MCI);
 
 // Create a duplex instruction given the two subinsts
 MCInst *deriveDuplex(MCContext &Context, unsigned iClass, MCInst const &inst0,
@@ -279,7 +279,7 @@ bool s23_2_reloc(MCExpr const &Expr);
 void setInnerLoop(MCInst &MCI);
 void setMemReorderDisabled(MCInst &MCI);
 void setMemStoreReorderEnabled(MCInst &MCI);
-void setMustExtend(MCExpr &Expr, bool Val = true);
+void setMustExtend(MCExpr const &Expr, bool Val = true);
 void setMustNotExtend(MCExpr const &Expr, bool Val = true);
 void setS23_2_reloc(MCExpr const &Expr, bool Val = true);
 

@@ -219,9 +219,9 @@ public:
         if (OtherCand == nullptr)
           continue;
 
-        // Handle the very basic of case when the two stores are in the same
-        // block so deciding which one forwards is easy.  The later one forwards
-        // as long as they both have a dependence distance of one to the load.
+        // Handle the very basic case when the two stores are in the same block
+        // so deciding which one forwards is easy.  The later one forwards as
+        // long as they both have a dependence distance of one to the load.
         if (Cand.Store->getParent() == OtherCand->Store->getParent() &&
             Cand.isDependenceDistanceOfOne(PSE) &&
             OtherCand->isDependenceDistanceOfOne(PSE)) {
@@ -429,6 +429,11 @@ public:
     unsigned NumForwarding = 0;
     for (const StoreToLoadForwardingCandidate Cand : StoreToLoadDependences) {
       DEBUG(dbgs() << "Candidate " << Cand);
+      // Only progagate value if they are of the same type.
+      if (Cand.Store->getPointerOperand()->getType() !=
+          Cand.Load->getPointerOperand()->getType())
+        continue;
+
       // Make sure that the stored values is available everywhere in the loop in
       // the next iteration.
       if (!doesStoreDominatesAllLatches(Cand.Store->getParent(), L, DT))

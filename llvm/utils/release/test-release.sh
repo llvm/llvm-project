@@ -36,6 +36,7 @@ do_libs="yes"
 do_libunwind="yes"
 do_test_suite="yes"
 do_openmp="yes"
+do_lldb="no"
 BuildDir="`pwd`"
 use_autoconf="no"
 ExtraConfigureFlags=""
@@ -64,6 +65,8 @@ function usage() {
     echo " -no-libunwind        Disable check-out & build libunwind"
     echo " -no-test-suite       Disable check-out & build test-suite"
     echo " -no-openmp           Disable check-out & build libomp"
+    echo " -lldb                Enable check-out & build lldb"
+    echo " -no-lldb             Disable check-out & build lldb (default)"
 }
 
 while [ $# -gt 0 ]; do
@@ -142,6 +145,12 @@ while [ $# -gt 0 ]; do
         -no-openmp )
             do_openmp="no"
             ;;
+        -lldb )
+            do_lldb="yes"
+            ;;
+        -no-lldb )
+            do_lldb="no"
+            ;;
         -help | --help | -h | --h | -\? )
             usage
             exit 0
@@ -214,6 +223,9 @@ esac
 if [ $do_openmp = "yes" ]; then
   projects="$projects openmp"
 fi
+if [ $do_lldb = "yes" ]; then
+  projects="$projects lldb"
+fi
 
 # Go to the build directory (may be different from CWD)
 BuildDir=$BuildDir/$RC
@@ -279,6 +291,9 @@ function export_sources() {
             ;;
         cfe)
             projsrc=llvm.src/tools/clang
+            ;;
+        lldb)
+            projsrc=llvm.src/tools/$proj
             ;;
         clang-tools-extra)
             projsrc=llvm.src/tools/clang/tools/extra

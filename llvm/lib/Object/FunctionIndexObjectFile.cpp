@@ -35,10 +35,7 @@ std::unique_ptr<FunctionInfoIndex> FunctionIndexObjectFile::takeIndex() {
 ErrorOr<MemoryBufferRef>
 FunctionIndexObjectFile::findBitcodeInObject(const ObjectFile &Obj) {
   for (const SectionRef &Sec : Obj.sections()) {
-    StringRef SecName;
-    if (std::error_code EC = Sec.getName(SecName))
-      return EC;
-    if (SecName == ".llvmbc") {
+    if (Sec.isBitcode()) {
       StringRef SecContents;
       if (std::error_code EC = Sec.getContents(SecContents))
         return EC;

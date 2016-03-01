@@ -1192,15 +1192,6 @@ public:
   /// instructions that are on different basic blocks.
   inline unsigned getDiscriminator() const;
 
-  /// \brief Compute new discriminator in the given context.
-  ///
-  /// This modifies the \a LLVMContext that \c this is in to increment the next
-  /// discriminator for \c this's line/filename combination.
-  ///
-  /// FIXME: Delete this.  See comments in implementation and at the only call
-  /// site in \a AddDiscriminators::runOnFunction().
-  unsigned computeNewDiscriminator() const;
-
   Metadata *getRawScope() const { return getOperand(0); }
   Metadata *getRawInlinedAt() const {
     if (getNumOperands() == 2)

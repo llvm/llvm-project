@@ -9,8 +9,8 @@
         cache -1, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         cache 32, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         # FIXME: Check various 'pos + size' constraints on dext*
-        dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
-        dext $2, $3, 32, 1   # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
+        dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+        dext $2, $3, 64, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
         dext $2, $3, 1, 0    # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 32
         dext $2, $3, 1, 33   # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 32
         dextm $2, $3, -1, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate

@@ -71,41 +71,41 @@ def immZExt6Ptr : ImmLeaf<iPTR, [{return isUInt<6>(Imm);}]>;
 // Operands
 
 def uimm4_ptr : Operand<iPTR> {
-  let PrintMethod = "printUnsignedImm8";
+  let PrintMethod = "printUImm<8>";
 }
 
 def uimm6_ptr : Operand<iPTR> {
-  let PrintMethod = "printUnsignedImm8";
+  let PrintMethod = "printUImm<8>";
 }
 
 def simm5 : Operand<i32>;
 
 def vsplat_uimm1 : Operand<vAny> {
-  let PrintMethod = "printUnsignedImm8";
+  let PrintMethod = "printUImm<8>";
 }
 
 def vsplat_uimm2 : Operand<vAny> {
-  let PrintMethod = "printUnsignedImm8";
+  let PrintMethod = "printUImm<8>";
 }
 
 def vsplat_uimm3 : Operand<vAny> {
-  let PrintMethod = "printUnsignedImm8";
+  let PrintMethod = "printUImm<8>";
 }
 
 def vsplat_uimm4 : Operand<vAny> {
-  let PrintMethod = "printUnsignedImm8";
+  let PrintMethod = "printUImm<8>";
 }
 
 def vsplat_uimm5 : Operand<vAny> {
-  let PrintMethod = "printUnsignedImm8";
+  let PrintMethod = "printUImm<8>";
 }
 
 def vsplat_uimm6 : Operand<vAny> {
-  let PrintMethod = "printUnsignedImm8";
+  let PrintMethod = "printUImm<8>";
 }
 
 def vsplat_uimm8 : Operand<vAny> {
-  let PrintMethod = "printUnsignedImm8";
+  let PrintMethod = "printUImm<8>";
 }
 
 def vsplat_simm5 : Operand<vAny>;

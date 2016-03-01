@@ -173,8 +173,10 @@ bool AddDiscriminators::runOnFunction(Function &F) {
   typedef std::pair<StringRef, unsigned> Location;
   typedef DenseMap<const BasicBlock *, Metadata *> BBScopeMap;
   typedef DenseMap<Location, BBScopeMap> LocationBBMap;
+  typedef DenseMap<Location, unsigned> LocationDiscriminatorMap;
 
   LocationBBMap LBM;
+  LocationDiscriminatorMap LDM;
 
   // Traverse all instructions in the function. If the source line location
   // of the instruction appears in other basic block, assign a new
@@ -199,8 +201,7 @@ bool AddDiscriminators::runOnFunction(Function &F) {
         auto *Scope = DIL->getScope();
         auto *File =
             Builder.createFile(DIL->getFilename(), Scope->getDirectory());
-        NewScope = Builder.createLexicalBlockFile(
-            Scope, File, DIL->computeNewDiscriminator());
+        NewScope = Builder.createLexicalBlockFile(Scope, File, ++LDM[L]);
       }
       I.setDebugLoc(DILocation::get(Ctx, DIL->getLine(), DIL->getColumn(),
                                     NewScope, DIL->getInlinedAt()));
@@ -230,8 +231,10 @@ bool AddDiscriminators::runOnFunction(Function &F) {
           auto *Scope = FirstDIL->getScope();
           auto *File = Builder.createFile(FirstDIL->getFilename(),
                                           Scope->getDirectory());
-          auto *NewScope = Builder.createLexicalBlockFile(
-              Scope, File, FirstDIL->computeNewDiscriminator());
+          Location L =
+              std::make_pair(FirstDIL->getFilename(), FirstDIL->getLine());
+          auto *NewScope =
+              Builder.createLexicalBlockFile(Scope, File, ++LDM[L]);
           Current->setDebugLoc(DILocation::get(
               Ctx, CurrentDIL->getLine(), CurrentDIL->getColumn(), NewScope,
               CurrentDIL->getInlinedAt()));

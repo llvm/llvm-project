@@ -99,10 +99,9 @@ static cl::opt<std::string>
 
 // Command line options to disable value profiling. The default is false:
 // i.e. value profiling is enabled by default. This is for debug purpose.
-static cl::opt<bool>
-DisableValueProfiling("disable-vp", cl::init(false),
-                                    cl::Hidden,
-                                    cl::desc("Disable Value Profiling"));
+static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
+                                           cl::Hidden,
+                                           cl::desc("Disable Value Profiling"));
 
 namespace {
 class PGOInstrumentationGen : public ModulePass {
@@ -404,7 +403,8 @@ struct PGOUseEdge : public PGOEdge {
   const std::string infoString() const {
     if (!CountValid)
       return PGOEdge::infoString();
-    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(CountValue)).str();
+    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(CountValue))
+        .str();
   }
 };
 
@@ -731,12 +731,12 @@ void PGOUseFunc::annotateIndirectCallSites() {
   unsigned IndirectCallSiteIndex = 0;
   PGOIndirectCallSiteVisitor ICV;
   ICV.visit(F);
-  unsigned NumValueSites=
+  unsigned NumValueSites =
       ProfileRecord.getNumValueSites(IPVK_IndirectCallTarget);
   if (NumValueSites != ICV.IndirectCallInsts.size()) {
     std::string Msg =
         std::string("Inconsistent number of indirect call sites: ") +
-            F.getName().str();
+        F.getName().str();
     auto &Ctx = M->getContext();
     Ctx.diagnose(
         DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
@@ -745,8 +745,8 @@ void PGOUseFunc::annotateIndirectCallSites() {
 
   for (auto &I : ICV.IndirectCallInsts) {
     DEBUG(dbgs() << "Read one indirect call instrumentation: Index="
-                 << IndirectCallSiteIndex << " out of "
-                 << NumValueSites<< "\n");
+                 << IndirectCallSiteIndex << " out of " << NumValueSites
+                 << "\n");
     annotateValueSite(*M, *I, ProfileRecord, IPVK_IndirectCallTarget,
                       IndirectCallSiteIndex);
     IndirectCallSiteIndex++;
@@ -759,17 +759,17 @@ void PGOUseFunc::annotateIndirectCallSites() {
 static void createIRLevelProfileFlagVariable(Module &M) {
   Type *IntTy64 = Type::getInt64Ty(M.getContext());
   uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
-  auto IRLevelVersionVariable =
-      new GlobalVariable(M, IntTy64, true, GlobalVariable::ExternalLinkage,
-                         Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)),
-                         INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR));
+  auto IRLevelVersionVariable = new GlobalVariable(
+      M, IntTy64, true, GlobalVariable::ExternalLinkage,
+      Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)),
+      INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR));
   IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
   Triple TT(M.getTargetTriple());
   if (TT.isOSBinFormatMachO())
     IRLevelVersionVariable->setLinkage(GlobalValue::LinkOnceODRLinkage);
   else
-    IRLevelVersionVariable->setComdat(
-        M.getOrInsertComdat(StringRef(INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR))));
+    IRLevelVersionVariable->setComdat(M.getOrInsertComdat(
+        StringRef(INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR))));
 }
 
 bool PGOInstrumentationGen::runOnModule(Module &M) {
@@ -818,7 +818,6 @@ bool PGOInstrumentationUse::runOnModule(Module &M) {
         ProfileFileName.data(), "Not an IR level instrumentation profile"));
     return false;
   }
-
 
   for (auto &F : M) {
     if (F.isDeclaration())

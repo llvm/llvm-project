@@ -104,8 +104,8 @@ static cl::opt<bool> EnableNonLTOGlobalsModRef(
         "Enable the GlobalsModRef AliasAnalysis outside of the LTO pipeline."));
 
 static cl::opt<bool> EnableLoopLoadElim(
-    "enable-loop-load-elim", cl::init(false), cl::Hidden,
-    cl::desc("Enable the new, experimental LoopLoadElimination Pass"));
+    "enable-loop-load-elim", cl::init(true), cl::Hidden,
+    cl::desc("Enable the LoopLoadElimination Pass"));
 
 static cl::opt<std::string> RunPGOInstrGen(
     "profile-generate", cl::init(""), cl::Hidden,

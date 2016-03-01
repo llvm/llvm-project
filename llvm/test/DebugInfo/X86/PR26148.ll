@@ -19,7 +19,7 @@
 ; AS in 26163, we expect two ranges (as opposed to one), the first one being zero sized
 ;
 ;
-; CHECK: 0x00000000: Beginning address offset: 0x0000000000000004
+; CHECK: 0x00000025: Beginning address offset: 0x0000000000000004
 ; CHECK:                Ending address offset: 0x0000000000000004
 ; CHECK:                 Location description: 10 03 55 93 04
 ; CHECK:             Beginning address offset: 0x0000000000000004

@@ -630,6 +630,14 @@ bool MachOObjectFile::isSectionVirtual(DataRefImpl Sec) const {
   return false;
 }
 
+bool MachOObjectFile::isSectionBitcode(DataRefImpl Sec) const {
+  StringRef SegmentName = getSectionFinalSegmentName(Sec);
+  StringRef SectName;
+  if (!getSectionName(Sec, SectName))
+    return (SegmentName == "__LLVM" && SectName == "__bitcode");
+  return false;
+}
+
 relocation_iterator MachOObjectFile::section_rel_begin(DataRefImpl Sec) const {
   DataRefImpl Ret;
   Ret.d.a = Sec.d.a;

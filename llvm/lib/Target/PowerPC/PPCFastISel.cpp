@@ -1068,10 +1068,10 @@ unsigned PPCFastISel::PPCMoveToIntReg(const Instruction *I, MVT VT,
   if (!PPCEmitStore(MVT::f64, SrcReg, Addr))
     return 0;
 
-  // Reload it into a GPR.  If we want an i32, modify the address
-  // to have a 4-byte offset so we load from the right place.
+  // Reload it into a GPR.  If we want an i32 on big endian, modify the
+  // address to have a 4-byte offset so we load from the right place.
   if (VT == MVT::i32)
-    Addr.Offset = 4;
+    Addr.Offset = (PPCSubTarget->isLittleEndian()) ? 0 : 4;
 
   // Look at the currently assigned register for this instruction
   // to determine the required register class.
