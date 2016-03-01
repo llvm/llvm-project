@@ -97,6 +97,12 @@ void foo4(int i, int *error) __attribute__((swift_name("fooWithA(_:)"))); // oka
 
 typedef int some_int_type __attribute__((swift_name("SomeInt")));
 
+struct Point3D createPoint3D(float x, float y, float z) __attribute__((swift_name("Point3D.init(x:y:z:)")));
+struct Point3D rotatePoint3D(Point3D point, float radians) __attribute__((swift_name("Point3D.rotate(self:radius:)")));
+struct Point3D badRotatePoint3D(Point3D point, float radians) __attribute__((swift_name("Point3D.rotate(radius:)"))); // expected-warning {{too few parameters in 'swift_name' attribute (expected 2; got 1)}}
+
+extern struct Point3D identityPoint __attribute__((swift_name("Point3D.identity")));
+
 // --- swift_error ---
 
 @class NSError;
