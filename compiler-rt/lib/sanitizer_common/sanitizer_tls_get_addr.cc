@@ -78,7 +78,7 @@ void DTLS_Destroy() {
   DTLS_Deallocate(dtls.dtv, s);
 }
 
-#if defined(__powerpc64__)
+#if defined(__powerpc64__) || defined(__mips__)
 // This is glibc's TLS_DTV_OFFSET:
 // "Dynamic thread vector pointers point 0x8000 past the start of each
 //  TLS block."
