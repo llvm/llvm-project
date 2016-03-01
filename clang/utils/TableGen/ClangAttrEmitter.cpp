@@ -2281,7 +2281,8 @@ void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS) {
        << "      return getDerived().Traverse" << R.getName() << "Attr("
        << "cast<" << R.getName() << "Attr>(A));\n";
   }
-  OS << "  }\n";  // end case
+  OS << "  }\n";  // end switch
+  OS << "  llvm_unreachable(\"bad attribute kind\");\n";
   OS << "}\n";  // end function
   OS << "#endif  // ATTR_VISITOR_DECLS_ONLY\n";
 }
