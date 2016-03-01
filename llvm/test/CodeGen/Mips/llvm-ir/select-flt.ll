@@ -29,7 +29,7 @@
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=SEL -check-prefix=SEL-64
 
-define float @tst_select_i1_float(i1 signext %s, float %x, float %y) {
+define float @tst_select_i1_float(i1 %s, float %x, float %y) {
 entry:
   ; ALL-LABEL: tst_select_i1_float:
 
@@ -51,21 +51,24 @@ entry:
 
   ; SEL-32:     mtc1    $5, $[[F0:f[0-9]+]]
   ; SEL-32:     mtc1    $6, $[[F1:f[0-9]+]]
-  ; SEL-32:     mtc1    $4, $f0
+  ; SEL-32:     sll     $[[T0:[0-9]+]], $4, 31
+  ; SEL-32:     sra     $[[T1:[0-9]+]], $[[T0]], 31
+  ; SEL-32:     mtc1    $[[T1]], $f0
   ; SEL-32:     sel.s   $f0, $[[F1]], $[[F0]]
 
   ; CMOV-64:    andi    $[[T0:[0-9]+]], $4, 1
   ; CMOV-64:    movn.s  $f14, $f13, $[[T0]]
   ; CMOV-64:    mov.s   $f0, $f14
 
-  ; SEL-64:     mtc1    $4, $f0
+  ; SEL-64:     dsll    $[[T0:[0-9]+]], $4, 63
+  ; SEL-64:     dsra    $[[T1:[0-9]+]], $[[T0]], 63
+  ; SEL-64:     dmtc1   $[[T1]], $f0
   ; SEL-64:     sel.s   $f0, $f14, $f13
   %r = select i1 %s, float %x, float %y
   ret float %r
 }
 
-define float @tst_select_i1_float_reordered(float %x, float %y,
-                                            i1 signext %s) {
+define float @tst_select_i1_float_reordered(float %x, float %y, i1 %s) {
 entry:
   ; ALL-LABEL: tst_select_i1_float_reordered:
 
@@ -82,14 +85,18 @@ entry:
   ; CMOV-32:    movn.s  $f14, $f12, $[[T0]]
   ; CMOV-32:    mov.s   $f0, $f14
 
-  ; SEL-32:     mtc1    $6, $f0
+  ; SEL-32:     sll     $[[T0:[0-9]+]], $6, 31
+  ; SEL-32:     sra     $[[T1:[0-9]+]], $[[T0]], 31
+  ; SEL-32:     mtc1    $[[T1]], $f0
   ; SEL-32:     sel.s   $f0, $f14, $f12
 
   ; CMOV-64:    andi    $[[T0:[0-9]+]], $6, 1
   ; CMOV-64:    movn.s  $f13, $f12, $[[T0]]
   ; CMOV-64:    mov.s   $f0, $f13
 
-  ; SEL-64:     mtc1    $6, $f0
+  ; SEL-64:     dsll    $[[T0:[0-9]+]], $6, 63
+  ; SEL-64:     dsra    $[[T1:[0-9]+]], $[[T0]], 63
+  ; SEL-64:     dmtc1   $[[T1]], $f0
   ; SEL-64:     sel.s   $f0, $f13, $f12
   %r = select i1 %s, float %x, float %y
   ret float %r

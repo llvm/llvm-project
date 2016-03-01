@@ -4,7 +4,7 @@
 ; RUN: llc -march=mips64el -mcpu=mips4    < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS4 %s
 ; RUN: llc -march=mips64el -mcpu=mips64   < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64-GT-R1 %s
 ; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64-GT-R1 %s
-; R!N: llc -march=mips64el -mcpu=mips64r6 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64-GT-R1 %s
+; RUN: llc -march=mips64el -mcpu=mips64r6 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64-GT-R1 %s
 
 ; Prefixes:
 ;   ALL      - All

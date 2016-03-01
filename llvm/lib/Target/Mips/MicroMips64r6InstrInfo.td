@@ -99,6 +99,12 @@ class DINSM_MM64R6_DESC : InsBase<"dinsm", GPR64Opnd, uimm5, uimm_range_2_64>;
 class DINS_MM64R6_DESC : InsBase<"dins", GPR64Opnd, uimm5, uimm5_inssize_plus1,
                                  MipsIns>;
 
+class SEL_S_MM64R6_DESC : COP1_SEL_DESC_BASE<"sel.s", FGRCC64Opnd, FGR32Opnd> {
+  // We must copy FGRCC64Opnd's subreg into FGR32.
+  bit usesCustomInserter = 1;
+}
+class SEL_D_MM64R6_DESC : COP1_SEL_DESC_BASE<"sel.d", FGRCC64Opnd, FGR64Opnd>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -131,4 +137,11 @@ let DecoderNamespace = "MicroMipsR6" in {
                     ISA_MICROMIPS64R6;
   def DINS_MM64R6: R6MMR6Rel, DINS_MM64R6_DESC, DINS_MM64R6_ENC,
                    ISA_MICROMIPS64R6;
+}
+
+let DecoderNamespace = "MicroMipsR6_GP64" in {
+def SEL_S_MM64R6 : StdMMR6Rel, SEL_S_MMR6_ENC, SEL_S_MM64R6_DESC,
+                   ISA_MICROMIPS64R6, HARDFLOAT;
+def SEL_D_MM64R6 : StdMMR6Rel, SEL_D_MMR6_ENC, SEL_D_MM64R6_DESC,
+                   ISA_MICROMIPS64R6, HARDFLOAT;
 }

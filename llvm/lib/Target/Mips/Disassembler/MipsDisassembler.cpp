@@ -124,9 +124,13 @@ static DecodeStatus DecodeFCCRegisterClass(MCInst &Inst,
                                            uint64_t Address,
                                            const void *Decoder);
 
-static DecodeStatus DecodeFGRCCRegisterClass(MCInst &Inst, unsigned RegNo,
-                                             uint64_t Address,
-                                             const void *Decoder);
+static DecodeStatus DecodeFGRCC32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder);
+
+static DecodeStatus DecodeFGRCC64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder);
 
 static DecodeStatus DecodeHWRegsRegisterClass(MCInst &Inst,
                                               unsigned Insn,
@@ -898,6 +902,17 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     if (Result == MCDisassembler::Fail)
       return MCDisassembler::Fail;
 
+    if (hasMips32r6() && isGP64()) {
+      DEBUG(dbgs() << "Trying MicroMipsR6_GP64 table (32-bit instructions):\n");
+      // Calling the auto-generated decoder function.
+      Result = decodeInstruction(DecoderTableMicroMipsR6_GP6432, Instr, Insn,
+                                 Address, this, STI);
+      if (Result != MCDisassembler::Fail) {
+        Size = 4;
+        return Result;
+      }
+    }
+
     if (hasMips32r6()) {
       DEBUG(dbgs() << "Trying MicroMips32r632 table (32-bit instructions):\n");
       // Calling the auto-generated decoder function.
@@ -940,9 +955,9 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   }
 
   if (hasMips32r6() && isGP64()) {
-    DEBUG(dbgs() << "Trying Mips32r6_64r6 (GPR64) table (32-bit opcodes):\n");
-    Result = decodeInstruction(DecoderTableMips32r6_64r6_GP6432, Instr, Insn,
-                               Address, this, STI);
+    DEBUG(dbgs() << "Trying Mips64r6 (GPR64) table (32-bit opcodes):\n");
+    Result = decodeInstruction(DecoderTableMips64r632, Instr, Insn, Address,
+                               this, STI);
     if (Result != MCDisassembler::Fail) {
       Size = 4;
       return Result;
@@ -1121,13 +1136,24 @@ static DecodeStatus DecodeFCCRegisterClass(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeFGRCCRegisterClass(MCInst &Inst, unsigned RegNo,
-                                             uint64_t Address,
-                                             const void *Decoder) {
+static DecodeStatus DecodeFGRCC32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
   if (RegNo > 31)
     return MCDisassembler::Fail;
 
-  unsigned Reg = getReg(Decoder, Mips::FGRCCRegClassID, RegNo);
+  unsigned Reg = getReg(Decoder, Mips::FGRCC32RegClassID, RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeFGRCC64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+
+  unsigned Reg = getReg(Decoder, Mips::FGRCC64RegClassID, RegNo);
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }

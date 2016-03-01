@@ -32,10 +32,8 @@ entry:
 ; OCTEON: jr     $ra
 ; OCTEON: seq    $2, $4, $5
 ; MIPS64: xor    $[[T0:[0-9]+]], $4, $5
-; MIPS64: sltiu  $[[T1:[0-9]+]], $[[T0]], 1
-; MIPS64: dsll   $[[T2:[0-9]+]], $[[T1]], 32
 ; MIPS64: jr     $ra
-; MIPS64: dsrl   $2, $[[T2]], 32
+; MIPS64: sltiu  $2, $[[T0]], 1
   %res = icmp eq i64 %a, %b
   %res2 = zext i1 %res to i64
   ret i64 %res2
@@ -48,10 +46,8 @@ entry:
 ; OCTEON: seqi   $2, $4, 42
 ; MIPS64: daddiu $[[T0:[0-9]+]], $zero, 42
 ; MIPS64: xor    $[[T1:[0-9]+]], $4, $[[T0]]
-; MIPS64: sltiu  $[[T2:[0-9]+]], $[[T1]], 1
-; MIPS64: dsll   $[[T3:[0-9]+]], $[[T2]], 32
 ; MIPS64: jr     $ra
-; MIPS64: dsrl   $2, $[[T3]], 32
+; MIPS64: sltiu  $2, $[[T1]], 1
   %res = icmp eq i64 %a, 42
   %res2 = zext i1 %res to i64
   ret i64 %res2
@@ -63,10 +59,8 @@ entry:
 ; OCTEON: jr     $ra
 ; OCTEON: sne    $2, $4, $5
 ; MIPS64: xor    $[[T0:[0-9]+]], $4, $5
-; MIPS64: sltu   $[[T1:[0-9]+]], $zero, $[[T0]]
-; MIPS64: dsll   $[[T2:[0-9]+]], $[[T1]], 32
 ; MIPS64: jr     $ra
-; MIPS64: dsrl   $2, $[[T2]], 32
+; MIPS64: sltu   $2, $zero, $[[T0]]
   %res = icmp ne i64 %a, %b
   %res2 = zext i1 %res to i64
   ret i64 %res2
@@ -79,10 +73,8 @@ entry:
 ; OCTEON: snei   $2, $4, 42
 ; MIPS64: daddiu $[[T0:[0-9]+]], $zero, 42
 ; MIPS64: xor    $[[T1:[0-9]+]], $4, $[[T0]]
-; MIPS64: sltu   $[[T2:[0-9]+]], $zero, $[[T1]]
-; MIPS64: dsll   $[[T3:[0-9]+]], $[[T2]], 32
 ; MIPS64: jr     $ra
-; MIPS64: dsrl   $2, $[[T3]], 32
+; MIPS64: sltu   $2, $zero, $[[T1]]
   %res = icmp ne i64 %a, 42
   %res2 = zext i1 %res to i64
   ret i64 %res2

@@ -29,8 +29,7 @@
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=SEL -check-prefix=SEL-64
 
-define signext i1 @tst_select_i1_i1(i1 signext %s,
-                                    i1 signext %x, i1 signext %y) {
+define signext i1 @tst_select_i1_i1(i1 %s, i1 signext %x, i1 signext %y) {
 entry:
   ; ALL-LABEL: tst_select_i1_i1:
 
@@ -54,8 +53,7 @@ entry:
   ret i1 %r
 }
 
-define signext i8 @tst_select_i1_i8(i1 signext %s,
-                                    i8 signext %x, i8 signext %y) {
+define signext i8 @tst_select_i1_i8(i1 %s, i8 signext %x, i8 signext %y) {
 entry:
   ; ALL-LABEL: tst_select_i1_i8:
 
@@ -79,8 +77,7 @@ entry:
   ret i8 %r
 }
 
-define signext i32 @tst_select_i1_i32(i1 signext %s,
-                                      i32 signext %x, i32 signext %y) {
+define signext i32 @tst_select_i1_i32(i1 %s, i32 signext %x, i32 signext %y) {
 entry:
   ; ALL-LABEL: tst_select_i1_i32:
 
@@ -104,8 +101,7 @@ entry:
   ret i32 %r
 }
 
-define signext i64 @tst_select_i1_i64(i1 signext %s,
-                                      i64 signext %x, i64 signext %y) {
+define signext i64 @tst_select_i1_i64(i1 %s, i64 signext %x, i64 signext %y) {
 entry:
   ; ALL-LABEL: tst_select_i1_i64:
 
@@ -152,8 +148,6 @@ entry:
   ; CMOV-64:    move    $2, $6
 
   ; SEL-64:     andi    $[[T0:[0-9]+]], $4, 1
-  ; FIXME: This shift is redundant
-  ; SEL-64:     sll     $[[T0]], $[[T0]], 0
   ; SEL-64:     seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
   ; SEL-64:     selnez  $[[T0]], $5, $[[T0]]
   ; SEL-64:     or      $2, $[[T0]], $[[T1]]

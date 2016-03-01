@@ -391,8 +391,9 @@ def FCC : RegisterClass<"Mips", [i32], 32, (sequence "FCC%u", 0, 7)>,
           Unallocatable;
 
 // MIPS32r6/MIPS64r6 store FPU condition codes in normal FGR registers.
-// This class allows us to represent this in codegen patterns.
-def FGRCC : RegisterClass<"Mips", [i32], 32, (sequence "F%u", 0, 31)>;
+// These classes allow us to represent this in codegen patterns.
+def FGRCC32 : RegisterClass<"Mips", [i32], 32, (sequence "F%u", 0, 31)>;
+def FGRCC64 : RegisterClass<"Mips", [i64], 64, (sequence "D%u_64", 0, 31)>;
 
 def MSA128B: RegisterClass<"Mips", [v16i8], 128,
                            (sequence "W%u", 0, 31)>;
@@ -595,7 +596,13 @@ def FGR32Opnd : RegisterOperand<FGR32> {
   let ParserMatchClass = FGR32AsmOperand;
 }
 
-def FGRCCOpnd : RegisterOperand<FGRCC> {
+def FGRCC32Opnd : RegisterOperand<FGRCC32> {
+  // The assembler doesn't use register classes so we can re-use
+  // FGR32AsmOperand.
+  let ParserMatchClass = FGR32AsmOperand;
+}
+
+def FGRCC64Opnd : RegisterOperand<FGRCC64> {
   // The assembler doesn't use register classes so we can re-use
   // FGR32AsmOperand.
   let ParserMatchClass = FGR32AsmOperand;

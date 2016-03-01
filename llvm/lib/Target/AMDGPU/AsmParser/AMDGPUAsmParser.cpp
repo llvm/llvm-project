@@ -228,6 +228,11 @@ public:
     return isClamp() || isOMod();
   }
 
+  bool isGDS() const { return isImmTy(ImmTyGDS); }
+  bool isGLC() const { return isImmTy(ImmTyGLC); }
+  bool isSLC() const { return isImmTy(ImmTySLC); }
+  bool isTFE() const { return isImmTy(ImmTyTFE); }
+
   void setModifiers(unsigned Mods) {
     assert(isReg() || (isImm() && Imm.Modifiers == 0));
     if (isReg())
@@ -1732,7 +1737,7 @@ AMDGPUAsmParser::parseTFE(OperandVector &Operands) {
 }
 
 bool AMDGPUOperand::isMubufOffset() const {
-  return isImm() && isUInt<12>(getImm());
+  return isImmTy(ImmTyOffset) && isUInt<12>(getImm());
 }
 
 void AMDGPUAsmParser::cvtMubuf(MCInst &Inst,
@@ -1933,38 +1938,26 @@ void AMDGPUAsmParser::cvtVOP3_only(MCInst &Inst, const OperandVector &Operands) 
 }
 
 void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands) {
+  OptionalImmIndexMap OptionalIdx;
   unsigned I = 1;
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
   for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  unsigned ClampIdx = 0, OModIdx = 0;
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     if (Op.isRegOrImmWithInputMods()) {
       Op.addRegOrImmWithInputModsOperands(Inst, 2);
-    } else if (Op.isClamp()) {
-      ClampIdx = I;
-    } else if (Op.isOMod()) {
-      OModIdx = I;
+    } else if (Op.isImm()) {
+      OptionalIdx[Op.getImmTy()] = I;
     } else {
       assert(false);
     }
   }
 
-  if (ClampIdx) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[ClampIdx]);
-    Op.addImmOperands(Inst, 1);
-  } else {
-    Inst.addOperand(MCOperand::createImm(0));
-  }
-  if (OModIdx) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[OModIdx]);
-    Op.addImmOperands(Inst, 1);
-  } else {
-    Inst.addOperand(MCOperand::createImm(0));
-  }
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClamp);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOMod);
 }
 
 void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands) {

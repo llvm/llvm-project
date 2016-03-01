@@ -3108,37 +3108,44 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   // Emit check that the subclasses match.
   OS << "    bool OperandsValid = true;\n";
-  OS << "    for (unsigned i = " << (HasMnemonicFirst ? "0" : "SIndex")
-     << "; i != " << MaxNumOperands << "; ++i) {\n";
-  OS << "      auto Formal = static_cast<MatchClassKind>(it->Classes[i]);\n";
-  OS << "      if (i" << (HasMnemonicFirst ? "+1" : "")
-     << " >= Operands.size()) {\n";
+  OS << "    for (unsigned FormalIdx = " << (HasMnemonicFirst ? "0" : "SIndex")
+     << ", ActualIdx = " << (HasMnemonicFirst ? "1" : "SIndex")
+     << "; FormalIdx != " << MaxNumOperands << "; ++FormalIdx) {\n";
+  OS << "      auto Formal = "
+     << "static_cast<MatchClassKind>(it->Classes[FormalIdx]);\n";
+  OS << "      if (ActualIdx >= Operands.size()) {\n";
   OS << "        OperandsValid = (Formal == " <<"InvalidMatchClass) || "
                                  "isSubclass(Formal, OptionalMatchClass);\n";
-  OS << "        if (!OperandsValid) ErrorInfo = i"
-     << (HasMnemonicFirst ? "+1" : "") << ";\n";
+  OS << "        if (!OperandsValid) ErrorInfo = ActualIdx;\n";
   OS << "        break;\n";
   OS << "      }\n";
-  OS << "      MCParsedAsmOperand &Actual = *Operands[i"
-     << (HasMnemonicFirst ? "+1" : "") << "];\n";
+  OS << "      MCParsedAsmOperand &Actual = *Operands[ActualIdx];\n";
   OS << "      unsigned Diag = validateOperandClass(Actual, Formal);\n";
-  OS << "      if (Diag == Match_Success)\n";
+  OS << "      if (Diag == Match_Success) {\n";
+  OS << "        ++ActualIdx;\n";
   OS << "        continue;\n";
+  OS << "      }\n";
   OS << "      // If the generic handler indicates an invalid operand\n";
   OS << "      // failure, check for a special case.\n";
   OS << "      if (Diag == Match_InvalidOperand) {\n";
   OS << "        Diag = validateTargetOperandClass(Actual, Formal);\n";
-  OS << "        if (Diag == Match_Success)\n";
+  OS << "        if (Diag == Match_Success) {\n";
+  OS << "          ++ActualIdx;\n";
   OS << "          continue;\n";
+  OS << "        }\n";
   OS << "      }\n";
+  OS << "      // If current formal operand wasn't matched and it is optional\n"
+     << "      // then try to match next formal operand\n";
+  OS << "      if (Diag == Match_InvalidOperand "
+     << "&& isSubclass(Formal, OptionalMatchClass))\n";
+  OS << "        continue;\n";
   OS << "      // If this operand is broken for all of the instances of this\n";
   OS << "      // mnemonic, keep track of it so we can report loc info.\n";
   OS << "      // If we already had a match that only failed due to a\n";
   OS << "      // target predicate, that diagnostic is preferred.\n";
   OS << "      if (!HadMatchOtherThanPredicate &&\n";
-  OS << "          (it == MnemonicRange.first || ErrorInfo <= i"
-     << (HasMnemonicFirst ? "+1" : "") << ")) {\n";
-  OS << "        ErrorInfo = i" << (HasMnemonicFirst ? "+1" : "") << ";\n";
+  OS << "          (it == MnemonicRange.first || ErrorInfo <= ActualIdx)) {\n";
+  OS << "        ErrorInfo = ActualIdx;\n";
   OS << "        // InvalidOperand is the default. Prefer specificity.\n";
   OS << "        if (Diag != Match_InvalidOperand)\n";
   OS << "          RetCode = Diag;\n";

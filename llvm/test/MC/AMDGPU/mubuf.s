@@ -28,13 +28,10 @@ buffer_load_dword v1, s[4:7], s1 offset:4 slc
 buffer_load_dword v1, s[4:7], s1 offset:4 tfe
 // SICI: buffer_load_dword v1, s[4:7], s1 offset:4 tfe ; encoding: [0x04,0x00,0x30,0xe0,0x00,0x01,0x81,0x01]
 
-buffer_load_dword v1, s[4:7], s1 tfe glc
+buffer_load_dword v1, s[4:7], s1 glc tfe
 // SICI: buffer_load_dword v1, s[4:7], s1 glc tfe ; encoding: [0x00,0x40,0x30,0xe0,0x00,0x01,0x81,0x01]
 
-buffer_load_dword v1, s[4:7], s1 offset:4 glc tfe slc
-// SICI: buffer_load_dword v1, s[4:7], s1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x30,0xe0,0x00,0x01,0xc1,0x01]
-
-buffer_load_dword v1, s[4:7], s1 glc tfe slc offset:4
+buffer_load_dword v1, s[4:7], s1 offset:4 glc slc tfe
 // SICI: buffer_load_dword v1, s[4:7], s1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x30,0xe0,0x00,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
@@ -56,13 +53,10 @@ buffer_load_dword v1, v2, s[4:7], s1 offen offset:4 slc
 buffer_load_dword v1, v2, s[4:7], s1 offen offset:4 tfe
 // SICI: buffer_load_dword v1, v2, s[4:7], s1 offen offset:4 tfe ; encoding: [0x04,0x10,0x30,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_load_dword v1, v2, s[4:7], s1 offen tfe glc
+buffer_load_dword v1, v2, s[4:7], s1 offen glc tfe
 // SICI: buffer_load_dword v1, v2, s[4:7], s1 offen glc tfe ; encoding: [0x00,0x50,0x30,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_load_dword v1, v2, s[4:7], s1 offen offset:4 glc tfe slc
-// SICI: buffer_load_dword v1, v2, s[4:7], s1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x30,0xe0,0x02,0x01,0xc1,0x01]
-
-buffer_load_dword v1, v2, s[4:7], s1 offen glc tfe slc offset:4
+buffer_load_dword v1, v2, s[4:7], s1 offen offset:4 glc slc tfe
 // SICI: buffer_load_dword v1, v2, s[4:7], s1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x30,0xe0,0x02,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
@@ -84,13 +78,10 @@ buffer_load_dword v1, v2, s[4:7], s1 idxen offset:4 slc
 buffer_load_dword v1, v2, s[4:7], s1 idxen offset:4 tfe
 // SICI: buffer_load_dword v1, v2, s[4:7], s1 idxen offset:4 tfe ; encoding: [0x04,0x20,0x30,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_load_dword v1, v2, s[4:7], s1 idxen tfe glc
+buffer_load_dword v1, v2, s[4:7], s1 idxen glc tfe
 // SICI: buffer_load_dword v1, v2, s[4:7], s1 idxen glc tfe ; encoding: [0x00,0x60,0x30,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_load_dword v1, v2, s[4:7], s1 idxen offset:4 glc tfe slc
-// SICI: buffer_load_dword v1, v2, s[4:7], s1 idxen offset:4 glc slc tfe ; encoding: [0x04,0x60,0x30,0xe0,0x02,0x01,0xc1,0x01]
-
-buffer_load_dword v1, v2, s[4:7], s1 idxen glc tfe slc offset:4
+buffer_load_dword v1, v2, s[4:7], s1 idxen offset:4 glc slc tfe
 // SICI: buffer_load_dword v1, v2, s[4:7], s1 idxen offset:4 glc slc tfe ; encoding: [0x04,0x60,0x30,0xe0,0x02,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
@@ -112,13 +103,10 @@ buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 slc
 buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 tfe
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 tfe ; encoding: [0x04,0x30,0x30,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen tfe glc
+buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen glc tfe
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen glc tfe ; encoding: [0x00,0x70,0x30,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 glc tfe slc
-// SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 glc slc tfe ; encoding: [0x04,0x70,0x30,0xe0,0x02,0x01,0xc1,0x01]
-
-buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen glc tfe slc offset:4
+buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 glc slc tfe
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 glc slc tfe ; encoding: [0x04,0x70,0x30,0xe0,0x02,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
@@ -140,13 +128,10 @@ buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 slc
 buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 tfe
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 tfe ; encoding: [0x04,0x80,0x30,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 tfe glc
+buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 glc tfe
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 glc tfe ; encoding: [0x00,0xc0,0x30,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc tfe slc
-// SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe ; encoding: [0x04,0xc0,0x30,0xe0,0x02,0x01,0xc1,0x01]
-
-buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 glc tfe slc offset:4
+buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe
 // SICI: buffer_load_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe ; encoding: [0x04,0xc0,0x30,0xe0,0x02,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
@@ -168,13 +153,10 @@ buffer_store_dword v1, s[4:7], s1 offset:4 slc
 buffer_store_dword v1, s[4:7], s1 offset:4 tfe
 // SICI: buffer_store_dword v1, s[4:7], s1 offset:4 tfe ; encoding: [0x04,0x00,0x70,0xe0,0x00,0x01,0x81,0x01]
 
-buffer_store_dword v1, s[4:7], s1 tfe glc
+buffer_store_dword v1, s[4:7], s1 glc tfe
 // SICI: buffer_store_dword v1, s[4:7], s1 glc tfe ; encoding: [0x00,0x40,0x70,0xe0,0x00,0x01,0x81,0x01]
 
-buffer_store_dword v1, s[4:7], s1 offset:4 glc tfe slc
-// SICI: buffer_store_dword v1, s[4:7], s1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x70,0xe0,0x00,0x01,0xc1,0x01]
-
-buffer_store_dword v1, s[4:7], s1 glc tfe slc offset:4
+buffer_store_dword v1, s[4:7], s1 offset:4 glc slc tfe
 // SICI: buffer_store_dword v1, s[4:7], s1 offset:4 glc slc tfe ; encoding: [0x04,0x40,0x70,0xe0,0x00,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
@@ -196,13 +178,10 @@ buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 slc
 buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 tfe
 // SICI: buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 tfe ; encoding: [0x04,0x10,0x70,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_store_dword v1, v2, s[4:7], s1 offen tfe glc
+buffer_store_dword v1, v2, s[4:7], s1 offen glc tfe
 // SICI: buffer_store_dword v1, v2, s[4:7], s1 offen glc tfe ; encoding: [0x00,0x50,0x70,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 glc tfe slc
-// SICI: buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x70,0xe0,0x02,0x01,0xc1,0x01]
-
-buffer_store_dword v1, v2, s[4:7], s1 offen glc tfe slc offset:4
+buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 glc slc tfe
 // SICI: buffer_store_dword v1, v2, s[4:7], s1 offen offset:4 glc slc tfe ; encoding: [0x04,0x50,0x70,0xe0,0x02,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
@@ -224,13 +203,10 @@ buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 slc
 buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 tfe
 // SICI: buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 tfe ; encoding: [0x04,0x20,0x70,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_store_dword v1, v2, s[4:7], s1 idxen tfe glc
+buffer_store_dword v1, v2, s[4:7], s1 idxen glc tfe
 // SICI: buffer_store_dword v1, v2, s[4:7], s1 idxen glc tfe ; encoding: [0x00,0x60,0x70,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 glc tfe slc
-// SICI: buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 glc slc tfe ; encoding: [0x04,0x60,0x70,0xe0,0x02,0x01,0xc1,0x01]
-
-buffer_store_dword v1, v2, s[4:7], s1 idxen glc tfe slc offset:4
+buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 glc slc tfe
 // SICI: buffer_store_dword v1, v2, s[4:7], s1 idxen offset:4 glc slc tfe ; encoding: [0x04,0x60,0x70,0xe0,0x02,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
@@ -252,13 +228,10 @@ buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 slc
 buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 tfe
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 tfe ; encoding: [0x04,0x30,0x70,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen tfe glc
+buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen glc tfe
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen glc tfe ; encoding: [0x00,0x70,0x70,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 glc tfe slc
-// SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 glc slc tfe ; encoding: [0x04,0x70,0x70,0xe0,0x02,0x01,0xc1,0x01]
-
-buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen glc tfe slc offset:4
+buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 glc slc tfe
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 idxen offen offset:4 glc slc tfe ; encoding: [0x04,0x70,0x70,0xe0,0x02,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
@@ -280,13 +253,10 @@ buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 slc
 buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 tfe
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 tfe ; encoding: [0x04,0x80,0x70,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 tfe glc
+buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 glc tfe
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 glc tfe ; encoding: [0x00,0xc0,0x70,0xe0,0x02,0x01,0x81,0x01]
 
-buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc tfe slc
-// SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe ; encoding: [0x04,0xc0,0x70,0xe0,0x02,0x01,0xc1,0x01]
-
-buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 glc tfe slc offset:4
+buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe
 // SICI: buffer_store_dword v1, v[2:3], s[4:7], s1 addr64 offset:4 glc slc tfe ; encoding: [0x04,0xc0,0x70,0xe0,0x02,0x01,0xc1,0x01]
 
 //===----------------------------------------------------------------------===//
