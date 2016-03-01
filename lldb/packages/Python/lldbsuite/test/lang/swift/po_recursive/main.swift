@@ -12,8 +12,10 @@
 class A : CustomReflectable {
   var a: A?
   
-  func customMirror() -> Mirror {
-    return Mirror(self, children: ["a" : a], displayStyle: .Class)
+  var customMirror: Mirror {
+    get {
+      return Mirror(self, children: ["a" : a], displayStyle: .`class`)
+    }
   }
 }
 
@@ -26,7 +28,7 @@ func main() {
   s.a = A()
   s.a?.a = A()
   s.a?.a?.a = s.a
-  print("a") //%self.expect('po s', substrs=['▿ a : Optional', 'Some', '0x', '{ ... }'])
+  print("a") //%self.expect('po s', substrs=['▿ a : Optional', 'some', '0x', '{ ... }'])
 }
 
 main()

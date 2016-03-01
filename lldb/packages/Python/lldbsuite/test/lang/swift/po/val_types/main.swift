@@ -18,8 +18,8 @@ struct CustomMirror : CustomReflectable {
   var a = 12
   var b = 24
   
-  func customMirror() -> Mirror {
-    return Mirror(self, children: ["c" : a + b])
+  public var customMirror: Mirror {
+    get { return Mirror(self, children: ["c" : a + b]) }
   }
 }
 

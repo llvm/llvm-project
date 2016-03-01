@@ -18,8 +18,8 @@ class CustomMirror : CustomReflectable {
   var a = 12
   var b = 24
   
-  func customMirror() -> Mirror {
-    return Mirror(self, children: ["c" : "t\(a + b)"])
+  public var customMirror: Mirror {
+    get { return Mirror(self, children: ["c" : "t\(a + b)"]) }
   }
 }
 
@@ -35,8 +35,8 @@ class TheBase : CustomReflectable {
   var a = "y12"
   var b = "q24"
   
-  func customMirror() -> Mirror {
-    return Mirror(self, children: ["a" : a, b : "b"], displayStyle: .Class)
+  public var customMirror: Mirror {
+    get { return Mirror(self, children: ["a" : a, b : "b"], displayStyle: .`class`) }
   }
 }
 
@@ -47,8 +47,8 @@ class TheDescendant : TheBase {
 class TheReflectiveDescendant: TheBase {
   var d = "w48"
   
-  override func customMirror() -> Mirror {
-    return Mirror(self, children: ["d" : d], displayStyle: .Class)
+  public override var customMirror: Mirror {
+    get { return Mirror(self, children: ["d" : d], displayStyle: .`class`) }
   }
 }
 

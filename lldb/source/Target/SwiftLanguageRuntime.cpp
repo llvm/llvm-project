@@ -298,7 +298,7 @@ GetObjectDescription_ObjectCopy (Process *process,
     }
     
     StreamString expr_string;
-    expr_string.Printf("$__lldb__DumpForDebugger(Swift.UnsafePointer<%s>(bitPattern: 0x%" PRIx64 ").memory)",static_type.GetTypeName().GetCString(),copy_location);
+    expr_string.Printf("$__lldb__DumpForDebugger(Swift.UnsafePointer<%s>(bitPattern: 0x%" PRIx64 ").pointee)",static_type.GetTypeName().GetCString(),copy_location);
     
     if (log)
         log->Printf("[GetObjectDescription_ObjectCopy] expression: %s", expr_string.GetData());
