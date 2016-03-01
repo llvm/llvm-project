@@ -180,7 +180,7 @@ Several additional features/bugfixes have been added to the previous standards:
 - Improved diagnostics for function pointers.
 
 OpenMP Support in Clang
----------------------
+-----------------------
 
 OpenMP 3.1 is fully supported and is enabled by default with -fopenmp 
 which now uses the clang OpenMP library instead of the GCC OpenMP library.
