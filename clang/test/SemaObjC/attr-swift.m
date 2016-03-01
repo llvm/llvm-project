@@ -103,6 +103,30 @@ struct Point3D badRotatePoint3D(Point3D point, float radians) __attribute__((swi
 
 extern struct Point3D identityPoint __attribute__((swift_name("Point3D.identity")));
 
+// Getters and setters.
+float Point3DGetMagnitude(Point3D point) __attribute__((swift_name("getter:Point3D.magnitude(self:)")));
+
+float Point3DGetRadius(Point3D point) __attribute__((swift_name("getter:Point3D.radius(self:)")));
+void Point3DSetRadius(Point3D point, float radius) __attribute__((swift_name("setter:Point3D.radius(self:_:)")));
+
+Point3D getCurrentPoint3D(void) __attribute__((swift_name("getter:currentPoint3D()")));
+
+void setCurrentPoint3D(Point3D point) __attribute__((swift_name("setter:currentPoint3D(_:)")));
+
+Point3D getLastPoint3D(void) __attribute__((swift_name("getter:lastPoint3D()")));
+
+void setLastPoint3D(Point3D point) __attribute__((swift_name("setter:lastPoint3D(_:)")));
+
+Point3D getZeroPoint() __attribute__((swift_name("getter:Point3D()")));
+void setZeroPoint(Point3D point) __attribute__((swift_name("setter:Point3D(_:)")));
+
+Point3D badGetter1(int x) __attribute__((swift_name("getter:bad1(_:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
+void badSetter1() __attribute__((swift_name("getter:bad1())"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
+
+Point3D badGetter2(Point3D point) __attribute__((swift_name("getter:bad2(_:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
+
+void badSetter2(Point3D point) __attribute__((swift_name("setter:bad2(self:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
+
 // --- swift_error ---
 
 @class NSError;
