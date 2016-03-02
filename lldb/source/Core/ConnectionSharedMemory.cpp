@@ -1,4 +1,4 @@
-//===-- ConnectionSharedMemory.cpp ----------------------------*- C++ -*-===//
+//===-- ConnectionSharedMemory.cpp ------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,13 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef __ANDROID_NDK__
 
 #include "lldb/Core/ConnectionSharedMemory.h"
 
 // C Includes
-#include <errno.h>
-#include <stdlib.h>
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
 #else
@@ -23,9 +22,13 @@
 #endif
 
 // C++ Includes
+#include <cerrno>
+#include <cstdlib>
+
 // Other libraries and framework includes
-// Project includes
 #include "llvm/Support/MathExtras.h"
+
+// Project includes
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Log.h"
 
@@ -42,7 +45,7 @@ ConnectionSharedMemory::ConnectionSharedMemory () :
 
 ConnectionSharedMemory::~ConnectionSharedMemory ()
 {
-    Disconnect (NULL);
+    Disconnect(nullptr);
 }
 
 bool
@@ -136,7 +139,7 @@ ConnectionSharedMemory::Open (bool create, const char *name, size_t size, Error 
     if (create) {
         handle = CreateFileMapping(
             INVALID_HANDLE_VALUE,
-            NULL,
+            nullptr,
             PAGE_READWRITE,
             llvm::Hi_32(size),
             llvm::Lo_32(size),
@@ -159,7 +162,7 @@ ConnectionSharedMemory::Open (bool create, const char *name, size_t size, Error 
     if (m_mmap.MemoryMapFromFileDescriptor(m_fd, 0, size, true, false) == size)
         return eConnectionStatusSuccess;
 
-    Disconnect(NULL);
+    Disconnect(nullptr);
     return eConnectionStatusError;
 }
 

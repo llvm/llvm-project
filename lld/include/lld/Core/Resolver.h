@@ -32,9 +32,7 @@ class LinkingContext;
 /// and producing a merged graph.
 class Resolver {
 public:
-  Resolver(LinkingContext &ctx)
-      : _ctx(ctx), _symbolTable(), _result(new MergedFile()),
-        _fileIndex(0) {}
+  Resolver(LinkingContext &ctx) : _ctx(ctx), _result(new MergedFile()) {}
 
   // InputFiles::Handler methods
   void doDefinedAtom(const DefinedAtom&);
@@ -69,7 +67,6 @@ private:
   void deadStripOptimize();
   bool checkUndefines();
   void removeCoalescedAwayAtoms();
-  void checkDylibSymbolCollisions();
   ErrorOr<bool> forEachUndefines(File &file, bool searchForOverrides,
                                  UndefCallback callback);
 
@@ -94,7 +91,6 @@ private:
   // --start-group and --end-group
   std::vector<File *> _files;
   std::map<File *, bool> _newUndefinesAdded;
-  size_t _fileIndex;
 
   // List of undefined symbols.
   std::vector<StringRef> _undefines;

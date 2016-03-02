@@ -25,17 +25,9 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/MachO.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 using namespace lld;
 
@@ -71,6 +63,25 @@ class DarwinLdOptTable : public llvm::opt::OptTable {
 public:
   DarwinLdOptTable() : OptTable(infoTable) {}
 };
+
+static std::vector<std::unique_ptr<File>>
+makeErrorFile(StringRef path, std::error_code ec) {
+  std::vector<std::unique_ptr<File>> result;
+  result.push_back(llvm::make_unique<ErrorFile>(path, ec));
+  return result;
+}
+
+static std::vector<std::unique_ptr<File>>
+parseMemberFiles(std::unique_ptr<File> file) {
+  std::vector<std::unique_ptr<File>> members;
+  if (auto *archive = dyn_cast<ArchiveLibraryFile>(file.get())) {
+    if (std::error_code ec = archive->parseAllMembers(members))
+      return makeErrorFile(file->path(), ec);
+  } else {
+    members.push_back(std::move(file));
+  }
+  return members;
+}
 
 std::vector<std::unique_ptr<File>>
 loadFile(MachOLinkingContext &ctx, StringRef path,

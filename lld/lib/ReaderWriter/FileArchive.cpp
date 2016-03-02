@@ -19,7 +19,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
-#include <mutex>
 #include <set>
 #include <unordered_map>
 
@@ -218,8 +217,7 @@ private:
   InstantiatedSet _membersInstantiated;
   bool _logLoading;
   std::vector<std::unique_ptr<MemoryBuffer>> _memberBuffers;
-  std::mutex _mutex;
-  FileVector _filesReturned;
+  std::vector<std::unique_ptr<File>> _filesReturned;
 };
 
 class ArchiveReader : public Reader {

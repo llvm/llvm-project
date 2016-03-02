@@ -9,6 +9,9 @@
 
 #include "lldb/Core/AddressResolverName.h"
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
@@ -20,16 +23,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
-AddressResolverName::AddressResolverName
-(
-    const char *func_name,
-    AddressResolver::MatchType type
-) :
-    AddressResolver (),
-    m_func_name (func_name),
-    m_class_name (NULL),
-    m_regex (),
-    m_match_type (type)
+AddressResolverName::AddressResolverName(const char *func_name,
+                                         AddressResolver::MatchType type) :
+    AddressResolver(),
+    m_func_name(func_name),
+    m_class_name(nullptr),
+    m_regex(),
+    m_match_type(type)
 {
     if (m_match_type == AddressResolver::Regexp)
     {
@@ -43,50 +43,37 @@ AddressResolverName::AddressResolverName
     }
 }
 
-AddressResolverName::AddressResolverName
-(
-    RegularExpression &func_regex
-) :
-    AddressResolver (),
-    m_func_name (NULL),
-    m_class_name (NULL),
-    m_regex (func_regex),
-    m_match_type (AddressResolver::Regexp)
+AddressResolverName::AddressResolverName(RegularExpression &func_regex) :
+    AddressResolver(),
+    m_func_name(nullptr),
+    m_class_name(nullptr),
+    m_regex(func_regex),
+    m_match_type(AddressResolver::Regexp)
 {
-
 }
 
-AddressResolverName::AddressResolverName
-(
-    const char *class_name,
-    const char *method,
-    AddressResolver::MatchType type
-) :
+AddressResolverName::AddressResolverName(const char *class_name,
+                                         const char *method,
+                                         AddressResolver::MatchType type) :
     AddressResolver (),
     m_func_name (method),
     m_class_name (class_name),
     m_regex (),
     m_match_type (type)
 {
-
 }
 
-AddressResolverName::~AddressResolverName ()
-{
-}
+AddressResolverName::~AddressResolverName() = default;
 
 // FIXME: Right now we look at the module level, and call the module's "FindFunctions".
 // Greg says he will add function tables, maybe at the CompileUnit level to accelerate function
 // lookup.  At that point, we should switch the depth to CompileUnit, and look in these tables.
 
 Searcher::CallbackReturn
-AddressResolverName::SearchCallback
-(
-    SearchFilter &filter,
-    SymbolContext &context,
-    Address *addr,
-    bool containing
-)
+AddressResolverName::SearchCallback(SearchFilter &filter,
+                                    SymbolContext &context,
+                                    Address *addr,
+                                    bool containing)
 {
     SymbolContextList func_list;
     SymbolContextList sym_list;
@@ -116,13 +103,13 @@ AddressResolverName::SearchCallback
             context.module_sp->FindSymbolsWithNameAndType (m_func_name,
                                                            eSymbolTypeCode, 
                                                            sym_list);
-            context.module_sp->FindFunctions (m_func_name,
-                                              NULL,
-                                              eFunctionNameTypeAuto,
-                                              include_symbols,
-                                              include_inlines,
-                                              append, 
-                                              func_list);
+            context.module_sp->FindFunctions(m_func_name,
+                                             nullptr,
+                                             eFunctionNameTypeAuto,
+                                             include_symbols,
+                                             include_inlines,
+                                             append,
+                                             func_list);
         }
         break;
 
@@ -151,10 +138,10 @@ AddressResolverName::SearchCallback
     {
         for (i = 0; i < func_list.GetSize(); i++)
         {
-            if (func_list.GetContextAtIndex(i, sc) == false)
+            if (!func_list.GetContextAtIndex(i, sc))
                 continue;
 
-            if (sc.function == NULL)
+            if (sc.function == nullptr)
                 continue;
             uint32_t j = 0;
             while (j < sym_list.GetSize())
@@ -250,4 +237,3 @@ AddressResolverName::GetDescription (Stream *s)
     else
         s->Printf("'%s'", m_func_name.AsCString());
 }
-

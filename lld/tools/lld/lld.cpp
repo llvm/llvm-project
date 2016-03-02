@@ -10,9 +10,9 @@
 // This is the entry point to the lld driver. This is a thin wrapper which
 // dispatches to the given platform specific driver.
 //
-// If there is -flavor option or -core option, it is dispatched according
-// to the arguments. If the flavor parameter is not present, then it is
-// dispatched according to argv[0].
+// If there is -flavor option, it is dispatched according to the arguments.
+// If the flavor parameter is not present, then it is dispatched according
+// to argv[0].
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,7 +36,6 @@ enum Flavor {
   Gnu,     // -flavor gnu
   WinLink, // -flavor link
   Darwin,  // -flavor darwin
-  Core     // -flavor core or -core
 };
 
 LLVM_ATTRIBUTE_NORETURN static void die(const Twine &S) {
@@ -51,7 +50,6 @@ static Flavor getFlavor(StringRef S) {
       .Case("gnu", Gnu)
       .Case("link", WinLink)
       .Case("darwin", Darwin)
-      .Case("core", Core)
       .Default(Invalid);
 }
 
@@ -78,12 +76,6 @@ static Flavor parseProgname(StringRef Progname) {
 }
 
 static Flavor parseFlavor(std::vector<const char *> &V) {
-  // If the first argument is -core, then core driver.
-  if (V.size() > 1 && V[1] == StringRef("-core")) {
-    V.erase(V.begin() + 1);
-    return Core;
-  }
-
   // Parse -flavor option.
   if (V.size() > 1 && V[1] == StringRef("-flavor")) {
     if (V.size() <= 2)
@@ -118,8 +110,6 @@ int main(int Argc, const char **Argv) {
     return !coff::link(Args);
   case Darwin:
     return !DarwinLdDriver::linkMachO(Args);
-  case Core:
-    return !CoreDriver::link(Args);
   default:
     die("-flavor option is missing. Available flavors are "
         "gnu, darwin or link.");

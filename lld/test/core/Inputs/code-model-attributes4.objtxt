@@ -1,4 +1,0 @@
----
-defined-atoms:
-    - name:         _mips_micro_pic
-      code-model:   mips-micro-pic

@@ -6,7 +6,6 @@ if (MSVC)
 endif()
 
 add_lld_library(lldReaderWriter
-  CoreLinkingContext.cpp
   FileArchive.cpp
 
   ADDITIONAL_HEADER_DIRS

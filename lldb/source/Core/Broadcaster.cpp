@@ -47,7 +47,7 @@ Broadcaster::~Broadcaster()
 void
 Broadcaster::CheckInWithManager ()
 {
-    if (m_manager != NULL)
+    if (m_manager != nullptr)
     {
         m_manager->SignUpListenersForBroadcaster(*this);
     }
@@ -68,6 +68,7 @@ Broadcaster::Clear()
     
     m_listeners.clear();
 }
+
 const ConstString &
 Broadcaster::GetBroadcasterName ()
 {
@@ -108,13 +109,12 @@ Broadcaster::GetEventNames (Stream &s, uint32_t event_mask, bool prefix_with_bro
 void
 Broadcaster::AddInitialEventsToListener (Listener *listener, uint32_t requested_events)
 {
-
 }
 
 uint32_t
 Broadcaster::AddListener (Listener* listener, uint32_t event_mask)
 {
-    if (listener == NULL)
+    if (listener == nullptr)
         return 0;
 
     Mutex::Locker locker(m_listeners_mutex);
@@ -165,7 +165,7 @@ Broadcaster::EventTypeHasListeners (uint32_t event_type)
 {
     Mutex::Locker locker (m_listeners_mutex);
     
-    if (m_hijacking_listeners.size() > 0 && event_type & m_hijacking_masks.back())
+    if (!m_hijacking_listeners.empty() && event_type & m_hijacking_masks.back())
         return true;
         
     if (m_listeners.empty())
@@ -216,8 +216,8 @@ Broadcaster::BroadcastEventIfUnique (EventSP &event_sp)
 void
 Broadcaster::PrivateBroadcastEvent (EventSP &event_sp, bool unique)
 {
-    // Can't add a NULL event...
-    if (event_sp.get() == NULL)
+    // Can't add a nullptr event...
+    if (!event_sp)
         return;
 
     // Update the broadcaster on this event
@@ -227,13 +227,13 @@ Broadcaster::PrivateBroadcastEvent (EventSP &event_sp, bool unique)
 
     Mutex::Locker event_types_locker(m_listeners_mutex);
 
-    Listener *hijacking_listener = NULL;
+    Listener *hijacking_listener = nullptr;
     if (!m_hijacking_listeners.empty())
     {
         assert (!m_hijacking_masks.empty());
         hijacking_listener = m_hijacking_listeners.back();
         if ((event_type & m_hijacking_masks.back()) == 0)
-            hijacking_listener = NULL;
+            hijacking_listener = nullptr;
     }
 
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_EVENTS));
@@ -256,7 +256,6 @@ Broadcaster::PrivateBroadcastEvent (EventSP &event_sp, bool unique)
     else
     {
         collection::iterator pos, end = m_listeners.end();
-
 
         // Iterate through all listener/mask pairs
         for (pos = m_listeners.begin(); pos != end; ++pos)
@@ -341,11 +340,7 @@ Broadcaster::GetBroadcasterClass() const
     return class_name;
 }
 
-BroadcastEventSpec::BroadcastEventSpec (const BroadcastEventSpec &rhs) :
-    m_broadcaster_class (rhs.m_broadcaster_class), 
-    m_event_bits (rhs.m_event_bits)
-{
-}
+BroadcastEventSpec::BroadcastEventSpec(const BroadcastEventSpec &rhs) = default;
 
 bool 
 BroadcastEventSpec::operator< (const BroadcastEventSpec &rhs) const
@@ -360,18 +355,12 @@ BroadcastEventSpec::operator< (const BroadcastEventSpec &rhs) const
     }
 }
 
-const BroadcastEventSpec &
-BroadcastEventSpec::operator= (const BroadcastEventSpec &rhs)
-{
-    m_broadcaster_class = rhs.m_broadcaster_class;
-    m_event_bits = rhs.m_event_bits;
-    return *this;
-}
+BroadcastEventSpec &
+BroadcastEventSpec::operator=(const BroadcastEventSpec &rhs) = default;
 
 BroadcasterManager::BroadcasterManager() :
     m_manager_mutex(Mutex::eMutexTypeRecursive)
 {
-    
 }
 
 uint32_t
@@ -412,7 +401,7 @@ BroadcasterManager::UnregisterListenerForEvents (Listener &listener, BroadcastEv
     uint32_t event_bits_to_remove = event_spec.GetEventBits();
     
     // Go through the map and delete the exact matches, and build a list of matches that weren't exact to re-add:
-    while (1)
+    while (true)
     {
         collection::iterator iter, end_iter = m_event_map.end();
         iter = find_if (m_event_map.begin(), end_iter, predicate);
@@ -453,7 +442,7 @@ BroadcasterManager::GetListenerForEventSpec (BroadcastEventSpec event_spec) cons
     if (iter != end_iter)
         return (*iter).second;
     else
-        return NULL;
+        return nullptr;
 }
 
 void
@@ -462,11 +451,10 @@ BroadcasterManager::RemoveListener (Listener &listener)
     Mutex::Locker locker(m_manager_mutex);
     ListenerMatches predicate (listener);
 
-
     if (m_listeners.erase (&listener) == 0)
         return;
         
-    while (1)
+    while (true)
     {
         collection::iterator iter, end_iter = m_event_map.end();
         iter = find_if (m_event_map.begin(), end_iter, predicate);
@@ -502,5 +490,4 @@ BroadcasterManager::Clear ()
         (*iter)->BroadcasterManagerWillDestruct(this);
     m_listeners.clear();
     m_event_map.clear();
-    
 }

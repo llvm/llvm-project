@@ -9,16 +9,19 @@
 
 #include "lldb/Core/ArchSpec.h"
 
-#include <stdio.h>
-#include <errno.h>
-
+// C Includes
+// C++ Includes
+#include <cstdio>
+#include <cerrno>
 #include <string>
 
+// Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Host.h"
 
+// Project includes
 #include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Host/Endian.h"
@@ -35,9 +38,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#define ARCH_SPEC_SEPARATOR_CHAR '-'
-
-
 static bool cores_match (const ArchSpec::Core core1, const ArchSpec::Core core2, bool try_inverse, bool enforce_exact_match);
 
 namespace lldb_private {
@@ -53,7 +53,7 @@ namespace lldb_private {
         const char * const name;
     };
 
-}
+} // namespace lldb_private
 
 // This core information can be looked using the ArchSpec::Core as the index
 static const CoreDefinition g_core_definitions[] =
@@ -156,7 +156,6 @@ static const CoreDefinition g_core_definitions[] =
 // you will need to comment out the corresponding ArchSpec::Core enumeration.
 static_assert(sizeof(g_core_definitions) / sizeof(CoreDefinition) == ArchSpec::kNumCores, "make sure we have one core definition for each core");
 
-
 struct ArchDefinitionEntry
 {
     ArchSpec::Core core;
@@ -174,14 +173,12 @@ struct ArchDefinition
     const char *name;
 };
 
-
 size_t
 ArchSpec::AutoComplete (const char *name, StringList &matches)
 {
-    uint32_t i;
     if (name && name[0])
     {
-        for (i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
+        for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
         {
             if (NameMatches(g_core_definitions[i].name, eNameMatchStartsWith, name))
                 matches.AppendString (g_core_definitions[i].name);
@@ -189,13 +186,11 @@ ArchSpec::AutoComplete (const char *name, StringList &matches)
     }
     else
     {
-        for (i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
+        for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
             matches.AppendString (g_core_definitions[i].name);
     }
     return matches.GetSize();
 }
-
-
 
 #define CPU_ANY (UINT32_MAX)
 
@@ -205,6 +200,7 @@ ArchSpec::AutoComplete (const char *name, StringList &matches)
 // architecture names to cpu types and subtypes. The ordering is important and
 // allows the precedence to be set when the table is built.
 #define SUBTYPE_MASK 0x00FFFFFFu
+
 static const ArchDefinitionEntry g_macho_arch_entries[] =
 {
     { ArchSpec::eCore_arm_generic     , llvm::MachO::CPU_TYPE_ARM       , CPU_ANY, UINT32_MAX , UINT32_MAX  },
@@ -267,6 +263,7 @@ static const ArchDefinitionEntry g_macho_arch_entries[] =
     { ArchSpec::eCore_uknownMach32    , 0                               , 0      , 0xFF000000u, 0x00000000u },
     { ArchSpec::eCore_uknownMach64    , llvm::MachO::CPU_ARCH_ABI64     , 0      , 0xFF000000u, 0x00000000u }
 };
+
 static const ArchDefinition g_macho_arch_def = {
     eArchTypeMachO,
     llvm::array_lengthof(g_macho_arch_entries),
@@ -346,7 +343,6 @@ static const size_t k_num_arch_definitions = llvm::array_lengthof(g_arch_definit
 //===----------------------------------------------------------------------===//
 // Static helper functions.
 
-
 // Get the architecture definition for a given object type.
 static const ArchDefinition *
 FindArchDefinition (ArchitectureType arch_type)
@@ -357,7 +353,7 @@ FindArchDefinition (ArchitectureType arch_type)
         if (def->type == arch_type)
             return def;
     }
-    return NULL;
+    return nullptr;
 }
 
 // Get an architecture definition by name.
@@ -369,7 +365,7 @@ FindCoreDefinition (llvm::StringRef name)
         if (name.equals_lower(g_core_definitions[i].name))
             return &g_core_definitions[i];
     }
-    return NULL;
+    return nullptr;
 }
 
 static inline const CoreDefinition *
@@ -377,15 +373,15 @@ FindCoreDefinition (ArchSpec::Core core)
 {
     if (core >= 0 && core < llvm::array_lengthof(g_core_definitions))
         return &g_core_definitions[core];
-    return NULL;
+    return nullptr;
 }
 
 // Get a definition entry by cpu type and subtype.
 static const ArchDefinitionEntry *
 FindArchDefinitionEntry (const ArchDefinition *def, uint32_t cpu, uint32_t sub)
 {
-    if (def == NULL)
-        return NULL;
+    if (def == nullptr)
+        return nullptr;
 
     const ArchDefinitionEntry *entries = def->entries;
     for (size_t i = 0; i < def->num_entries; ++i)
@@ -394,14 +390,14 @@ FindArchDefinitionEntry (const ArchDefinition *def, uint32_t cpu, uint32_t sub)
             if (entries[i].sub == (sub & entries[i].sub_mask))
                 return &entries[i];
     }
-    return NULL;
+    return nullptr;
 }
 
 static const ArchDefinitionEntry *
 FindArchDefinitionEntry (const ArchDefinition *def, ArchSpec::Core core)
 {
-    if (def == NULL)
-        return NULL;
+    if (def == nullptr)
+        return nullptr;
     
     const ArchDefinitionEntry *entries = def->entries;
     for (size_t i = 0; i < def->num_entries; ++i)
@@ -409,7 +405,7 @@ FindArchDefinitionEntry (const ArchDefinition *def, ArchSpec::Core core)
         if (entries[i].core == core)
             return &entries[i];
     }
-    return NULL;
+    return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -467,9 +463,7 @@ ArchSpec::ArchSpec (ArchitectureType arch_type, uint32_t cpu, uint32_t subtype) 
     SetArchitecture (arch_type, cpu, subtype);
 }
 
-ArchSpec::~ArchSpec()
-{
-}
+ArchSpec::~ArchSpec() = default;
 
 //===----------------------------------------------------------------------===//
 // Assignment and initialization.
@@ -500,7 +494,6 @@ ArchSpec::Clear()
 
 //===----------------------------------------------------------------------===//
 // Predicates.
-
 
 const char *
 ArchSpec::GetArchitectureName () const
@@ -730,7 +723,6 @@ ArchSpec::SetTriple (const llvm::Triple &triple)
         Clear();
     }
 
-    
     return IsValid();
 }
 
@@ -740,7 +732,7 @@ ParseMachCPUDashSubtypeTriple (const char *triple_cstr, ArchSpec &arch)
     // Accept "12-10" or "12.10" as cpu type/subtype
     if (isdigit(triple_cstr[0]))
     {
-        char *end = NULL;
+        char *end = nullptr;
         errno = 0;
         uint32_t cpu = (uint32_t)::strtoul (triple_cstr, &end, 0);
         if (errno == 0 && cpu != 0 && end && ((*end == '-') || (*end == '.')))
@@ -779,6 +771,7 @@ ParseMachCPUDashSubtypeTriple (const char *triple_cstr, ArchSpec &arch)
     }
     return false;
 }
+
 bool
 ArchSpec::SetTriple (const char *triple_cstr)
 {
@@ -1446,7 +1439,7 @@ StopInfoOverrideCallbackTypeARM(lldb_private::Thread &thread)
                 if (opcode <= UINT32_MAX)
                 {
                     const uint32_t condition = Bits32((uint32_t)opcode, 31, 28);
-                    if (ARMConditionPassed(condition, cpsr) == false)
+                    if (!ARMConditionPassed(condition, cpsr))
                     {
                         // We ARE stopped on an ARM instruction whose condition doesn't
                         // pass so this instruction won't get executed.
@@ -1463,7 +1456,7 @@ StopInfoOverrideCallbackTypeARM(lldb_private::Thread &thread)
                 if (ITSTATE != 0)
                 {
                     const uint32_t condition = Bits32(ITSTATE, 7, 4);
-                    if (ARMConditionPassed(condition, cpsr) == false)
+                    if (!ARMConditionPassed(condition, cpsr))
                     {
                         // We ARE stopped in a Thumb IT instruction on an instruction whose
                         // condition doesn't pass so this instruction won't get executed.
@@ -1482,7 +1475,7 @@ ArchSpec::GetStopInfoOverrideCallback () const
     const llvm::Triple::ArchType machine = GetMachine();
     if (machine == llvm::Triple::arm)
         return StopInfoOverrideCallbackTypeARM;
-    return NULL;
+    return nullptr;
 }
 
 bool

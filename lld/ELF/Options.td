@@ -61,7 +61,7 @@ def help : Flag<["--", "-"], "help">,
   HelpText<"Print option help">;
 
 def icf : Flag<["--"], "icf=all">,
-  HelpText<"Enable Identical Code Folding.">;
+  HelpText<"Enable identical code folding">;
 
 def gc_sections : Flag<["--"], "gc-sections">,
   HelpText<"Enable garbage collection of unused sections">;
@@ -80,7 +80,7 @@ def no_allow_shlib_undefined : Flag<["--"], "no-allow-shlib-undefined">;
 def no_as_needed : Flag<["--"], "no-as-needed">;
 
 def no_demangle: Flag<["--"], "no-demangle">,
-  HelpText<"Demangle symbol names">;
+  HelpText<"Do not demangle symbol names">;
 
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
   HelpText<"Restores the default behavior of loading archive members">;

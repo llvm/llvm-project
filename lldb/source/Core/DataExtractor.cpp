@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <assert.h>
-#include <stddef.h>
-
+// C Includes
+// C++ Includes
 #include <bitset>
+#include <cassert>
+#include <cstddef>
+#include <cmath>
 #include <limits>
 #include <sstream>
 #include <string>
-#include <math.h>
 
-#include "clang/AST/ASTContext.h"
-
+// Other libraries and framework includes
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -25,6 +25,9 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MD5.h"
 
+#include "clang/AST/ASTContext.h"
+
+// Project includes
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/DataBuffer.h"
@@ -125,15 +128,13 @@ ReadSwapInt64(const void* ptr)
 }
 
 #define NON_PRINTABLE_CHAR '.'
-//----------------------------------------------------------------------
-// Default constructor.
-//----------------------------------------------------------------------
+
 DataExtractor::DataExtractor () :
-    m_start     (NULL),
-    m_end       (NULL),
+    m_start(nullptr),
+    m_end(nullptr),
     m_byte_order(endian::InlHostByteOrder()),
-    m_addr_size (sizeof(void *)),
-    m_data_sp   (),
+    m_addr_size(sizeof(void *)),
+    m_data_sp(),
     m_target_byte_size(1)
 {
 }
@@ -163,11 +164,11 @@ DataExtractor::DataExtractor (const void* data, offset_t length, ByteOrder endia
 // this data.
 //----------------------------------------------------------------------
 DataExtractor::DataExtractor (const DataBufferSP& data_sp, ByteOrder endian, uint32_t addr_size, uint32_t target_byte_size/*=1*/) :
-    m_start     (NULL),
-    m_end       (NULL),
+    m_start(nullptr),
+    m_end(nullptr),
     m_byte_order(endian),
-    m_addr_size (addr_size),
-    m_data_sp   (),
+    m_addr_size(addr_size),
+    m_data_sp(),
     m_target_byte_size(target_byte_size)
 {
 #ifdef LLDB_CONFIGURATION_DEBUG
@@ -184,8 +185,8 @@ DataExtractor::DataExtractor (const DataBufferSP& data_sp, ByteOrder endian, uin
 // swap and address size settings are copied from "data".
 //----------------------------------------------------------------------
 DataExtractor::DataExtractor (const DataExtractor& data, offset_t offset, offset_t length, uint32_t target_byte_size/*=1*/) :
-    m_start(NULL),
-    m_end(NULL),
+    m_start(nullptr),
+    m_end(nullptr),
     m_byte_order(data.m_byte_order),
     m_addr_size(data.m_addr_size),
     m_data_sp(),
@@ -233,12 +234,7 @@ DataExtractor::operator= (const DataExtractor& rhs)
     return *this;
 }
 
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-DataExtractor::~DataExtractor ()
-{
-}
+DataExtractor::~DataExtractor() = default;
 
 //------------------------------------------------------------------
 // Clears the object contents back to a default invalid state, and
@@ -248,8 +244,8 @@ DataExtractor::~DataExtractor ()
 void
 DataExtractor::Clear ()
 {
-    m_start = NULL;
-    m_end = NULL;
+    m_start = nullptr;
+    m_end = nullptr;
     m_byte_order = endian::InlHostByteOrder();
     m_addr_size = sizeof(void *);
     m_data_sp.reset();
@@ -262,13 +258,13 @@ DataExtractor::Clear ()
 size_t
 DataExtractor::GetSharedDataOffset () const
 {
-    if (m_start != NULL)
+    if (m_start != nullptr)
     {
         const DataBuffer * data = m_data_sp.get();
-        if (data != NULL)
+        if (data != nullptr)
         {
             const uint8_t * data_bytes = data->GetBytes();
-            if (data_bytes != NULL)
+            if (data_bytes != nullptr)
             {
                 assert(m_start >= data_bytes);
                 return m_start - data_bytes;
@@ -293,10 +289,10 @@ DataExtractor::SetData (const void *bytes, offset_t length, ByteOrder endian)
 {
     m_byte_order = endian;
     m_data_sp.reset();
-    if (bytes == NULL || length == 0)
+    if (bytes == nullptr || length == 0)
     {
-        m_start = NULL;
-        m_end = NULL;
+        m_start = nullptr;
+        m_end = nullptr;
     }
     else
     {
@@ -328,7 +324,7 @@ DataExtractor::SetData (const DataExtractor& data, offset_t data_offset, offset_
     assert (m_addr_size == 4 || m_addr_size == 8);
 #endif
     // If "data" contains shared pointer to data, then we can use that
-    if (data.m_data_sp.get())
+    if (data.m_data_sp)
     {
         m_byte_order = data.m_byte_order;
         return SetData(data.m_data_sp, data.GetSharedDataOffset() + data_offset, data_length);
@@ -361,12 +357,12 @@ DataExtractor::SetData (const DataExtractor& data, offset_t data_offset, offset_
 lldb::offset_t
 DataExtractor::SetData (const DataBufferSP& data_sp, offset_t data_offset, offset_t data_length)
 {
-    m_start = m_end = NULL;
+    m_start = m_end = nullptr;
 
     if (data_length > 0)
     {
         m_data_sp = data_sp;
-        if (data_sp.get())
+        if (data_sp)
         {
             const size_t data_size = data_sp->GetByteSize();
             if (data_offset < data_size)
@@ -412,8 +408,8 @@ DataExtractor::GetU8 (offset_t *offset_ptr) const
 // offset pointed to by "offset_ptr". The extracted data is copied into
 // "dst".
 //
-// RETURNS the non-NULL buffer pointer upon successful extraction of
-// all the requested bytes, or NULL when the data is not available in
+// RETURNS the non-nullptr buffer pointer upon successful extraction of
+// all the requested bytes, or nullptr when the data is not available in
 // the buffer due to being out of bounds, or insufficient data.
 //----------------------------------------------------------------------
 void *
@@ -424,10 +420,10 @@ DataExtractor::GetU8 (offset_t *offset_ptr, void *dst, uint32_t count) const
     {
         // Copy the data into the buffer
         memcpy (dst, data, count);
-        // Return a non-NULL pointer to the converted data as an indicator of success
+        // Return a non-nullptr pointer to the converted data as an indicator of success
         return dst;
     }
-    return NULL;
+    return nullptr;
 }
 
 //----------------------------------------------------------------------
@@ -487,14 +483,13 @@ DataExtractor::GetU64_unchecked (offset_t *offset_ptr) const
     return val;
 }
 
-
 //----------------------------------------------------------------------
 // Extract "count" uint16_t values from the binary data and update
 // the offset pointed to by "offset_ptr". The extracted data is
 // copied into "dst".
 //
-// RETURNS the non-NULL buffer pointer upon successful extraction of
-// all the requested bytes, or NULL when the data is not available
+// RETURNS the non-nullptr buffer pointer upon successful extraction of
+// all the requested bytes, or nullptr when the data is not available
 // in the buffer due to being out of bounds, or insufficient data.
 //----------------------------------------------------------------------
 void *
@@ -520,10 +515,10 @@ DataExtractor::GetU16 (offset_t *offset_ptr, void *void_dst, uint32_t count) con
         {
             memcpy (void_dst, src, src_size);
         }
-        // Return a non-NULL pointer to the converted data as an indicator of success
+        // Return a non-nullptr pointer to the converted data as an indicator of success
         return void_dst;
     }
-    return NULL;
+    return nullptr;
 }
 
 //----------------------------------------------------------------------
@@ -556,8 +551,8 @@ DataExtractor::GetU32 (offset_t *offset_ptr) const
 // the offset pointed to by "offset_ptr". The extracted data is
 // copied into "dst".
 //
-// RETURNS the non-NULL buffer pointer upon successful extraction of
-// all the requested bytes, or NULL when the data is not available
+// RETURNS the non-nullptr buffer pointer upon successful extraction of
+// all the requested bytes, or nullptr when the data is not available
 // in the buffer due to being out of bounds, or insufficient data.
 //----------------------------------------------------------------------
 void *
@@ -583,10 +578,10 @@ DataExtractor::GetU32 (offset_t *offset_ptr, void *void_dst, uint32_t count) con
         {
             memcpy (void_dst, src, src_size);
         }
-        // Return a non-NULL pointer to the converted data as an indicator of success
+        // Return a non-nullptr pointer to the converted data as an indicator of success
         return void_dst;
     }
-    return NULL;
+    return nullptr;
 }
 
 //----------------------------------------------------------------------
@@ -644,10 +639,10 @@ DataExtractor::GetU64 (offset_t *offset_ptr, void *void_dst, uint32_t count) con
         {
             memcpy (void_dst, src, src_size);
         }
-        // Return a non-NULL pointer to the converted data as an indicator of success
+        // Return a non-nullptr pointer to the converted data as an indicator of success
         return void_dst;
     }
-    return NULL;
+    return nullptr;
 }
 
 //----------------------------------------------------------------------
@@ -780,7 +775,7 @@ DataExtractor::GetFloat (offset_t *offset_ptr) const
         {
             const uint8_t *src_data = (const uint8_t *)src;
             uint8_t *dst_data = (uint8_t *)&val;
-            for (size_t i=0; i<sizeof(float_type); ++i)
+            for (size_t i = 0; i < sizeof(float_type); ++i)
                 dst_data[sizeof(float_type) - 1 - i] = src_data[i];
         }
         else
@@ -804,7 +799,7 @@ DataExtractor::GetDouble (offset_t *offset_ptr) const
         {
             const uint8_t *src_data = (const uint8_t *)src;
             uint8_t *dst_data = (uint8_t *)&val;
-            for (size_t i=0; i<sizeof(float_type); ++i)
+            for (size_t i = 0; i < sizeof(float_type); ++i)
                 dst_data[sizeof(float_type) - 1 - i] = src_data[i];
         }
         else
@@ -827,7 +822,6 @@ DataExtractor::GetLongDouble (offset_t *offset_ptr) const
 #endif
     return val;
 }
-
 
 //------------------------------------------------------------------
 // Extract a single address from the data and update the offset
@@ -941,7 +935,7 @@ DataExtractor::GetGNUEHPointer (offset_t *offset_ptr, uint32_t eh_ptr_enc, lldb:
         break;
 
     default:
-    break;
+        break;
     }
 
     // Decode the value part
@@ -963,9 +957,9 @@ DataExtractor::GetGNUEHPointer (offset_t *offset_ptr, uint32_t eh_ptr_enc, lldb:
     case DW_EH_PE_sdata4    : addressValue = (int32_t)GetU32(offset_ptr);   break;
     case DW_EH_PE_sdata8    : addressValue = (int64_t)GetU64(offset_ptr);   break;
     default:
-    // Unhandled encoding type
-    assert(eh_ptr_enc);
-    break;
+        // Unhandled encoding type
+        assert(eh_ptr_enc);
+        break;
     }
 
     // Since we promote everything to 64 bit, we may need to sign extend
@@ -993,7 +987,7 @@ DataExtractor::ExtractBytes (offset_t offset, offset_t length, ByteOrder dst_byt
             assert (length == 1 || length == 2 || length == 4 || length == 8 ||
                     length == 10 || length == 16 || length == 32);
 
-            for (uint32_t i=0; i<length; ++i)
+            for (uint32_t i = 0; i < length; ++i)
                 ((uint8_t*)dst)[i] = src[length - i - 1];
         }
         else
@@ -1033,7 +1027,7 @@ DataExtractor::CopyByteOrderedData (offset_t src_offset,
     assert (m_byte_order == eByteOrderBig || m_byte_order == eByteOrderLittle);
 
     // Validate the destination info
-    assert (dst_void_ptr != NULL);
+    assert(dst_void_ptr != nullptr);
     assert (dst_len > 0);
     assert (dst_byte_order == eByteOrderBig || dst_byte_order == eByteOrderLittle);
 
@@ -1047,7 +1041,6 @@ DataExtractor::CopyByteOrderedData (offset_t src_offset,
         !(m_byte_order == eByteOrderBig || m_byte_order == eByteOrderLittle))
         return 0;
 
-    uint32_t i;
     uint8_t* dst = (uint8_t*)dst_void_ptr;
     const uint8_t* src = (const uint8_t *)PeekData (src_offset, src_len);
     if (src)
@@ -1070,7 +1063,7 @@ DataExtractor::CopyByteOrderedData (offset_t src_offset,
                 }
                 else
                 {
-                    for (i=0; i<src_len; ++i)
+                    for (uint32_t i = 0; i < src_len; ++i)
                         dst[i+num_zeroes] = src[src_len - 1 - i];
                 }
             }
@@ -1079,7 +1072,7 @@ DataExtractor::CopyByteOrderedData (offset_t src_offset,
                 // Little endian destination, so we lead the value bytes
                 if (m_byte_order == eByteOrderBig)
                 {
-                    for (i=0; i<src_len; ++i)
+                    for (uint32_t i = 0; i < src_len; ++i)
                         dst[i] = src[src_len - 1 - i];
                 }
                 else
@@ -1107,7 +1100,7 @@ DataExtractor::CopyByteOrderedData (offset_t src_offset,
                 else
                 {
                     // Big endian dst, with little endian src
-                    for (i=0; i<dst_len; ++i)
+                    for (uint32_t i = 0; i < dst_len; ++i)
                         dst[i] = src[dst_len - 1 - i];
                 }
             }
@@ -1117,7 +1110,7 @@ DataExtractor::CopyByteOrderedData (offset_t src_offset,
                 if (m_byte_order == eByteOrderBig)
                 {
                     // Little endian dst, with big endian src
-                    for (i=0; i<dst_len; ++i)
+                    for (uint32_t i = 0; i < dst_len; ++i)
                         dst[i] = src[src_len - 1 - i];
                 }
                 else
@@ -1128,11 +1121,9 @@ DataExtractor::CopyByteOrderedData (offset_t src_offset,
             }
             return dst_len;
         }            
-
     }
     return 0;
 }
-
 
 //----------------------------------------------------------------------
 // Extracts a variable length NULL terminated C string from
@@ -1142,7 +1133,7 @@ DataExtractor::CopyByteOrderedData (offset_t src_offset,
 //
 // If the offset pointed to by "offset_ptr" is out of bounds, or if
 // "length" is non-zero and there aren't enough available
-// bytes, NULL will be returned and "offset_ptr" will not be
+// bytes, nullptr will be returned and "offset_ptr" will not be
 // updated.
 //----------------------------------------------------------------------
 const char*
@@ -1166,11 +1157,11 @@ DataExtractor::GetCStr (offset_t *offset_ptr) const
         }
         
         // We reached the end of the data without finding a NULL C string
-        // terminator. Fall through and return NULL otherwise anyone that
+        // terminator. Fall through and return nullptr otherwise anyone that
         // would have used the result as a C string can wander into
         // unknown memory...
     }
-    return NULL;
+    return nullptr;
 }
 
 //----------------------------------------------------------------------
@@ -1181,23 +1172,23 @@ DataExtractor::GetCStr (offset_t *offset_ptr) const
 //
 // If the offset pointed to by "offset_ptr" is out of bounds, or if
 // the offset plus the length of the field is out of bounds, or if the
-// field does not contain a NULL terminator byte, NULL will be returned
+// field does not contain a NULL terminator byte, nullptr will be returned
 // and "offset_ptr" will not be updated.
 //----------------------------------------------------------------------
 const char*
 DataExtractor::GetCStr (offset_t *offset_ptr, offset_t len) const
 {
     const char *cstr = (const char *)PeekData (*offset_ptr, len);
-    if (cstr)
+    if (cstr != nullptr)
     {
-        if (memchr (cstr, '\0', len) == NULL)
+        if (memchr(cstr, '\0', len) == nullptr)
         {
-            return NULL;
+            return nullptr;
         }
         *offset_ptr += len;
         return cstr;
     }
-    return NULL;
+    return nullptr;
 }
 
 //------------------------------------------------------------------
@@ -1206,7 +1197,7 @@ DataExtractor::GetCStr (offset_t *offset_ptr, offset_t len) const
 // object's data, only "offset" is verified to be a valid offset.
 //
 // Returns a valid C string pointer if "offset" is a valid offset in
-// this object's data, else NULL is returned.
+// this object's data, else nullptr is returned.
 //------------------------------------------------------------------
 const char *
 DataExtractor::PeekCStr (offset_t offset) const
@@ -1226,7 +1217,7 @@ uint64_t
 DataExtractor::GetULEB128 (offset_t *offset_ptr) const
 {
     const uint8_t *src = (const uint8_t *)PeekData (*offset_ptr, 1);
-    if (src == NULL)
+    if (src == nullptr)
         return 0;
     
     const uint8_t *end = m_end;
@@ -1266,7 +1257,7 @@ int64_t
 DataExtractor::GetSLEB128 (offset_t *offset_ptr) const
 {
     const uint8_t *src = (const uint8_t *)PeekData (*offset_ptr, 1);
-    if (src == NULL)
+    if (src == nullptr)
         return 0;
     
     const uint8_t *end = m_end;
@@ -1313,7 +1304,7 @@ DataExtractor::Skip_LEB128 (offset_t *offset_ptr) const
 {
     uint32_t bytes_consumed = 0;
     const uint8_t *src = (const uint8_t *)PeekData (*offset_ptr, 1);
-    if (src == NULL)
+    if (src == nullptr)
         return 0;
         
     const uint8_t *end = m_end;
@@ -1435,7 +1426,7 @@ DataExtractor::Dump (Stream *s,
                      uint32_t item_bit_offset,    // If "item_bit_size" is non-zero, this is the shift amount to apply to a bitfield
                      ExecutionContextScope *exe_scope) const
 {
-    if (s == NULL)
+    if (s == nullptr)
         return start_offset;
 
     if (item_format == eFormatPointer)
@@ -1453,7 +1444,7 @@ DataExtractor::Dump (Stream *s,
             target_sp = exe_scope->CalculateTarget();
         if (target_sp)
         {
-            DisassemblerSP disassembler_sp (Disassembler::FindPlugin(target_sp->GetArchitecture(), NULL,  NULL));
+            DisassemblerSP disassembler_sp(Disassembler::FindPlugin(target_sp->GetArchitecture(), nullptr, nullptr));
             if (disassembler_sp)
             {
                 lldb::addr_t addr = base_addr + start_offset;
@@ -1515,16 +1506,14 @@ DataExtractor::Dump (Stream *s,
 
             line_start_offset = offset;
         }
-        else
-        if (item_format != eFormatChar &&
-            item_format != eFormatCharPrintable &&
-            item_format != eFormatCharArray &&
-            count > 0)
+        else if (item_format != eFormatChar &&
+                 item_format != eFormatCharPrintable &&
+                 item_format != eFormatCharArray &&
+                 count > 0)
         {
             s->PutChar(' ');
         }
 
-        uint32_t i;
         switch (item_format)
         {
         case eFormatBoolean:
@@ -1545,7 +1534,7 @@ DataExtractor::Dump (Stream *s,
                 // earlier C++ libraries
                 std::string binary_value(64, '0');
                 std::bitset<64> bits(uval64);
-                for (i = 0; i < 64; ++i)
+                for (uint32_t i = 0; i < 64; ++i)
                     if (bits[i])
                         binary_value[64 - 1 - i] = '1';
                 if (item_bit_size > 0)
@@ -1563,7 +1552,7 @@ DataExtractor::Dump (Stream *s,
 
         case eFormatBytes:
         case eFormatBytesWithASCII:
-            for (i=0; i<item_byte_size; ++i)
+            for (uint32_t i = 0; i < item_byte_size; ++i)
             {
                 s->Printf ("%2.2x", GetU8(&offset));
             }
@@ -1656,7 +1645,7 @@ DataExtractor::Dump (Stream *s,
             {
                 uint64_t uval64 = GetMaxU64Bitfield(&offset, item_byte_size, item_bit_size, item_bit_offset);
                 s->PutChar('\'');
-                for (i=0; i<item_byte_size; ++i)
+                for (uint32_t i = 0; i < item_byte_size; ++i)
                 {
                     uint8_t ch = (uint8_t)(uval64 >> ((item_byte_size - i - 1) * 8));
                     if (isprint(ch))
@@ -2079,23 +2068,20 @@ DataExtractor::Dump (Stream *s,
 // output information. "num_per_line" objects of type "type" will
 // be dumped with the option to override the format for each object
 // with "type_format". "type_format" is a printf style formatting
-// string. If "type_format" is NULL, then an appropriate format
+// string. If "type_format" is nullptr, then an appropriate format
 // string will be used for the supplied "type". If the stream "s"
-// is NULL, then the output will be send to Log().
+// is nullptr, then the output will be send to Log().
 //----------------------------------------------------------------------
 lldb::offset_t
-DataExtractor::PutToLog
-(
-    Log *log,
-    offset_t start_offset,
-    offset_t length,
-    uint64_t base_addr,
-    uint32_t num_per_line,
-    DataExtractor::Type type,
-    const char *format
-) const
+DataExtractor::PutToLog(Log *log,
+                        offset_t start_offset,
+                        offset_t length,
+                        uint64_t base_addr,
+                        uint32_t num_per_line,
+                        DataExtractor::Type type,
+                        const char *format) const
 {
-    if (log == NULL)
+    if (log == nullptr)
         return start_offset;
 
     offset_t offset;
@@ -2185,7 +2171,7 @@ DataExtractor::DumpHexBytes (Stream *s,
 size_t
 DataExtractor::Copy (DataExtractor &dest_data) const
 {
-    if (m_data_sp.get())
+    if (m_data_sp)
     {
         // we can pass along the SP to the data
         dest_data.SetData(m_data_sp);
@@ -2213,10 +2199,10 @@ DataExtractor::Append(DataExtractor& rhs)
     
     size_t bytes = GetByteSize() + rhs.GetByteSize();
 
-    DataBufferHeap *buffer_heap_ptr = NULL;
+    DataBufferHeap *buffer_heap_ptr = nullptr;
     DataBufferSP buffer_sp(buffer_heap_ptr = new DataBufferHeap(bytes, 0));
     
-    if (buffer_sp.get() == NULL || buffer_heap_ptr == NULL)
+    if (!buffer_sp || buffer_heap_ptr == nullptr)
         return false;
     
     uint8_t* bytes_ptr = buffer_heap_ptr->GetBytes();
@@ -2232,7 +2218,7 @@ DataExtractor::Append(DataExtractor& rhs)
 bool
 DataExtractor::Append(void* buf, offset_t length)
 {
-    if (buf == NULL)
+    if (buf == nullptr)
         return false;
     
     if (length == 0)
@@ -2240,10 +2226,10 @@ DataExtractor::Append(void* buf, offset_t length)
     
     size_t bytes = GetByteSize() + length;
     
-    DataBufferHeap *buffer_heap_ptr = NULL;
+    DataBufferHeap *buffer_heap_ptr = nullptr;
     DataBufferSP buffer_sp(buffer_heap_ptr = new DataBufferHeap(bytes, 0));
     
-    if (buffer_sp.get() == NULL || buffer_heap_ptr == NULL)
+    if (!buffer_sp || buffer_heap_ptr == nullptr)
         return false;
     
     uint8_t* bytes_ptr = buffer_heap_ptr->GetBytes();
@@ -2280,4 +2266,3 @@ DataExtractor::Checksum (llvm::SmallVectorImpl<uint8_t> &dest,
               result+16,
               dest.begin());
 }
-
