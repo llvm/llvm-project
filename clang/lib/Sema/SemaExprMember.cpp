@@ -1794,7 +1794,7 @@ BuildFieldReferenceExpr(Sema &S, Expr *BaseExpr, bool IsArrow,
   if (S.getLangOpts().OpenMP && IsArrow &&
       isa<CXXThisExpr>(Base.get()->IgnoreParenImpCasts())) {
     if (auto *PrivateCopy = S.IsOpenMPCapturedDecl(Field))
-      return S.getOpenMPCapturedExpr(PrivateCopy, VK, OK);
+      return S.getOpenMPCapturedExpr(PrivateCopy, VK, OK, OpLoc);
   }
   return ME;
 }

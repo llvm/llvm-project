@@ -148,7 +148,7 @@ int main() {
 
     // LAMBDA: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
     // LAMBDA: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 0
-    // LAMBDA: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
+    // LAMBDA-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
     // LAMBDA: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 2
     // LAMBDA: call void @__kmpc_for_static_init_4(
     // LAMBDA-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]*
@@ -326,7 +326,7 @@ int main() {
 
 // BLOCKS: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
 // BLOCKS: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 0
-// BLOCKS: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
+// BLOCKS-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
 // BLOCKS: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 2
 // BLOCKS: call void @__kmpc_for_static_init_4(
 // BLOCKS-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]*

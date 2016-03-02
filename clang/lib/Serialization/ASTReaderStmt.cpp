@@ -2063,6 +2063,8 @@ void OMPClauseReader::VisitOMPSharedClause(OMPSharedClause *C) {
 }
 
 void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  VisitOMPClauseWithPostUpdate(C);
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
   C->setColonLoc(Reader->ReadSourceLocation(Record, Idx));
   NestedNameSpecifierLoc NNSL =

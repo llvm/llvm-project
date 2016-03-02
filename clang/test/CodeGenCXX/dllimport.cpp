@@ -27,6 +27,7 @@ struct ExplicitSpec_NotImported {};
 #define USEVAR(var) USEVARTYPE(int, var)
 #define USE(func) void UNIQ(use)() { func(); }
 #define USEMEMFUNC(class, func) void (class::*UNIQ(use)())() { return &class::func; }
+#define USESTATICMEMFUNC(class, func) void (*UNIQ(use)())() { return &class::func; }
 #define USECLASS(class) void UNIQ(USE)() { class x; }
 #define USECOPYASSIGN(class) class& (class::*UNIQ(use)())(class&) { return &class::operator=; }
 #define USEMOVEASSIGN(class) class& (class::*UNIQ(use)())(class&&) { return &class::operator=; }
@@ -590,6 +591,10 @@ struct __declspec(dllimport) T {
   void a() {}
   // MO1-DAG: define available_externally dllimport x86_thiscallcc void @"\01?a@T@@QAEXXZ"
 
+  static void StaticMethod();
+  // MSC-DAG: declare dllimport void @"\01?StaticMethod@T@@SAXXZ"()
+  // GNU-DAG: declare dllimport void @_ZN1T12StaticMethodEv()
+
   static int b;
   // MO1-DAG: @"\01?b@T@@2HA" = external dllimport global i32
 
@@ -602,6 +607,7 @@ struct __declspec(dllimport) T {
   // M19-DAG: define available_externally dllimport x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.T* @"\01??4T@@QAEAAU0@$$QAU0@@Z"
 };
 USEMEMFUNC(T, a)
+USESTATICMEMFUNC(T, StaticMethod)
 USEVAR(T::b)
 USECOPYASSIGN(T)
 USEMOVEASSIGN(T)

@@ -7852,7 +7852,7 @@ public:
   /// constructs.
   VarDecl *IsOpenMPCapturedDecl(ValueDecl *D);
   ExprResult getOpenMPCapturedExpr(VarDecl *Capture, ExprValueKind VK,
-                                   ExprObjectKind OK);
+                                   ExprObjectKind OK, SourceLocation Loc);
 
   /// \brief Check if the specified variable is used in 'private' clause.
   /// \param Level Relative level of nested OpenMP construct for that the check

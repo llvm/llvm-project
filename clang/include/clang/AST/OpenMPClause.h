@@ -1665,6 +1665,8 @@ public:
 ///
 class OMPReductionClause final
     : public OMPVarListClause<OMPReductionClause>,
+      public OMPClauseWithPreInit,
+      public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPReductionClause, Expr *> {
   friend TrailingObjects;
   friend OMPVarListClause;
@@ -1692,6 +1694,7 @@ class OMPReductionClause final
                      const DeclarationNameInfo &NameInfo)
       : OMPVarListClause<OMPReductionClause>(OMPC_reduction, StartLoc,
                                              LParenLoc, EndLoc, N),
+        OMPClauseWithPreInit(this), OMPClauseWithPostUpdate(this),
         ColonLoc(ColonLoc), QualifierLoc(QualifierLoc), NameInfo(NameInfo) {}
 
   /// \brief Build an empty clause.
@@ -1702,7 +1705,8 @@ class OMPReductionClause final
       : OMPVarListClause<OMPReductionClause>(OMPC_reduction, SourceLocation(),
                                              SourceLocation(), SourceLocation(),
                                              N),
-        ColonLoc(), QualifierLoc(), NameInfo() {}
+        OMPClauseWithPreInit(this), OMPClauseWithPostUpdate(this), ColonLoc(),
+        QualifierLoc(), NameInfo() {}
 
   /// \brief Sets location of ':' symbol in clause.
   void setColonLoc(SourceLocation CL) { ColonLoc = CL; }
@@ -1795,6 +1799,10 @@ public:
   /// \endcode
   /// Required for proper codegen of final reduction operation performed by the
   /// reduction clause.
+  /// \param PreInit Statement that must be executed before entering the OpenMP
+  /// region with this clause.
+  /// \param PostUpdate Expression that must be executed after exit from the
+  /// OpenMP region with this clause.
   ///
   static OMPReductionClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
@@ -1802,7 +1810,7 @@ public:
          NestedNameSpecifierLoc QualifierLoc,
          const DeclarationNameInfo &NameInfo, ArrayRef<Expr *> Privates,
          ArrayRef<Expr *> LHSExprs, ArrayRef<Expr *> RHSExprs,
-         ArrayRef<Expr *> ReductionOps);
+         ArrayRef<Expr *> ReductionOps, Stmt *PreInit, Expr *PostUpdate);
   /// \brief Creates an empty clause with the place for \a N variables.
   ///
   /// \param C AST context.

@@ -570,6 +570,30 @@ struct __declspec(dllexport) T {
 USEVAR(T::b)
 int T::c;
 
+// Export template class with static member variable
+// MSC-DAG: @"\01?StaticClassVarExpTmplClass@?$TmplClass@H@@2HA" = weak_odr dllexport global i32 0, comdat, align 4
+// GNU-DAG: @_ZN9TmplClassIiE26StaticClassVarExpTmplClassE = weak_odr dllexport global i32 0, comdat, align 4
+template<typename T>
+struct __declspec(dllexport) TmplClass
+{
+  static T StaticClassVarExpTmplClass;
+};
+
+template<typename T>
+T TmplClass<T>::StaticClassVarExpTmplClass;
+
+// Export a definition of a template function.
+// MSC-DAG: define weak_odr dllexport i32 @"\01??$TypeFunTmpl@H@@YAHH@Z"
+// GNU-DAG: define weak_odr dllexport i32 @_Z11TypeFunTmplIiET_S0_
+template<typename T>
+T __declspec(dllexport) TypeFunTmpl(T t) { return t + t; }
+
+// Instantiate the exported template class and the exported template function.
+int useExportedTmplStaticAndFun()
+{
+  return TmplClass<int>::StaticClassVarExpTmplClass + TypeFunTmpl<int>(10);
+}
+
 template <typename T> struct __declspec(dllexport) U { void foo() {} };
 struct __declspec(dllexport) V : public U<int> { };
 // U<int>'s assignment operator is emitted.

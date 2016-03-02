@@ -399,6 +399,8 @@ void OMPClauseProfiler::VisitOMPReductionClause(
       C->getQualifierLoc().getNestedNameSpecifier());
   Profiler->VisitName(C->getNameInfo().getName());
   VisitOMPClauseList(C);
+  VistOMPClauseWithPreInit(C);
+  VistOMPClauseWithPostUpdate(C);
   for (auto *E : C->privates()) {
     Profiler->VisitStmt(E);
   }

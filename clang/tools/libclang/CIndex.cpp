@@ -2178,6 +2178,8 @@ void OMPClauseEnqueue::VisitOMPSharedClause(const OMPSharedClause *C) {
 }
 void OMPClauseEnqueue::VisitOMPReductionClause(const OMPReductionClause *C) {
   VisitOMPClauseList(C);
+  VisitOMPClauseWithPreInit(C);
+  VisitOMPClauseWithPostUpdate(C);
   for (auto *E : C->privates()) {
     Visitor->AddStmt(E);
   }

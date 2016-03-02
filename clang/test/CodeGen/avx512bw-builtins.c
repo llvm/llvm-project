@@ -1185,4 +1185,22 @@ __m512i test_mm512_maskz_srlv_epi16(__mmask32 __U, __m512i __A, __m512i __B) {
   return _mm512_maskz_srlv_epi16(__U, __A, __B); 
 }
 
+__m512i test_mm512_srav_epi16(__m512i __A, __m512i __B) {
+  // CHECK-LABEL: @test_mm512_srav_epi16
+  // CHECK: @llvm.x86.avx512.mask.psrav
+  return _mm512_srav_epi16(__A, __B); 
+}
+
+__m512i test_mm512_mask_srav_epi16(__m512i __W, __mmask32 __U, __m512i __A, __m512i __B) {
+  // CHECK-LABEL: @test_mm512_mask_srav_epi16
+  // CHECK: @llvm.x86.avx512.mask.psrav
+  return _mm512_mask_srav_epi16(__W, __U, __A, __B); 
+}
+
+__m512i test_mm512_maskz_srav_epi16(__mmask32 __U, __m512i __A, __m512i __B) {
+  // CHECK-LABEL: @test_mm512_maskz_srav_epi16
+  // CHECK: @llvm.x86.avx512.mask.psrav
+  return _mm512_maskz_srav_epi16(__U, __A, __B); 
+}
+
 
