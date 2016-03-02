@@ -71,6 +71,9 @@ debugger. Clang supports tuning for three debuggers, as follows.
 
 Specifying ``-g`` without a tuning option will use a target-dependent default.
 
+The new ``-fstrict-vtable-pointers`` flag enables better devirtualization
+support (experimental).
+
 
 New Pragmas in Clang
 -----------------------
