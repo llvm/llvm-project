@@ -44,6 +44,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPFirstprivateClause *>(C);
   case OMPC_lastprivate:
     return static_cast<const OMPLastprivateClause *>(C);
+  case OMPC_reduction:
+    return static_cast<const OMPReductionClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_if:
@@ -54,7 +56,6 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_shared:
-  case OMPC_reduction:
   case OMPC_linear:
   case OMPC_aligned:
   case OMPC_copyin:
@@ -99,6 +100,8 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   switch (C->getClauseKind()) {
   case OMPC_lastprivate:
     return static_cast<const OMPLastprivateClause *>(C);
+  case OMPC_reduction:
+    return static_cast<const OMPReductionClause *>(C);
   case OMPC_schedule:
   case OMPC_dist_schedule:
   case OMPC_firstprivate:
@@ -112,7 +115,6 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_shared:
-  case OMPC_reduction:
   case OMPC_linear:
   case OMPC_aligned:
   case OMPC_copyin:
@@ -463,7 +465,8 @@ OMPReductionClause *OMPReductionClause::Create(
     SourceLocation EndLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VL,
     NestedNameSpecifierLoc QualifierLoc, const DeclarationNameInfo &NameInfo,
     ArrayRef<Expr *> Privates, ArrayRef<Expr *> LHSExprs,
-    ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps) {
+    ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps, Stmt *PreInit,
+    Expr *PostUpdate) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * VL.size()));
   OMPReductionClause *Clause = new (Mem) OMPReductionClause(
       StartLoc, LParenLoc, EndLoc, ColonLoc, VL.size(), QualifierLoc, NameInfo);
@@ -472,6 +475,8 @@ OMPReductionClause *OMPReductionClause::Create(
   Clause->setLHSExprs(LHSExprs);
   Clause->setRHSExprs(RHSExprs);
   Clause->setReductionOps(ReductionOps);
+  Clause->setPreInitStmt(PreInit);
+  Clause->setPostUpdateExpr(PostUpdate);
   return Clause;
 }
 

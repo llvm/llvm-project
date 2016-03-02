@@ -1705,7 +1705,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
 }
 
 static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
-                                             Expr *CaptureExpr) {
+                                             Expr *CaptureExpr, bool WithInit) {
   ASTContext &C = S.getASTContext();
   Expr *Init = CaptureExpr->IgnoreImpCasts();
   QualType Ty = Init->getType();
@@ -1720,27 +1720,33 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
         return nullptr;
       Init = Res.get();
     }
+    WithInit = true;
   }
   auto *CED = OMPCapturedExprDecl::Create(C, S.CurContext, Id, Ty);
   S.CurContext->addHiddenDecl(CED);
-  S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false,
-                         /*TypeMayContainAuto=*/true);
+  if (WithInit)
+    S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false,
+                           /*TypeMayContainAuto=*/true);
+  else
+    S.ActOnUninitializedDecl(CED, /*TypeMayContainAuto=*/true);
   return CED;
 }
 
-static DeclRefExpr *buildCapture(Sema &S, ValueDecl *D, Expr *CaptureExpr) {
+static DeclRefExpr *buildCapture(Sema &S, ValueDecl *D, Expr *CaptureExpr,
+                                 bool WithInit) {
   OMPCapturedExprDecl *CD;
   if (auto *VD = S.IsOpenMPCapturedDecl(D))
     CD = cast<OMPCapturedExprDecl>(VD);
   else
-    CD = buildCaptureDecl(S, D->getIdentifier(), CaptureExpr);
+    CD = buildCaptureDecl(S, D->getIdentifier(), CaptureExpr, WithInit);
   return buildDeclRefExpr(S, CD, CD->getType().getNonReferenceType(),
                           SourceLocation());
 }
 
 static DeclRefExpr *buildCapture(Sema &S, Expr *CaptureExpr) {
-  auto *CD = buildCaptureDecl(
-      S, &S.getASTContext().Idents.get(".capture_expr."), CaptureExpr);
+  auto *CD =
+      buildCaptureDecl(S, &S.getASTContext().Idents.get(".capture_expr."),
+                       CaptureExpr, /*WithInit=*/true);
   return buildDeclRefExpr(S, CD, CD->getType().getNonReferenceType(),
                           SourceLocation());
 }
@@ -7077,8 +7083,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
 }
 
 ExprResult Sema::getOpenMPCapturedExpr(VarDecl *Capture, ExprValueKind VK,
-                                       ExprObjectKind OK) {
-  SourceLocation Loc = Capture->getInit()->getExprLoc();
+                                       ExprObjectKind OK, SourceLocation Loc) {
   ExprResult Res = BuildDeclRefExpr(
       Capture, Capture->getType().getNonReferenceType(), VK_LValue, Loc);
   if (!Res.isUsable())
@@ -7236,7 +7241,7 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
 
     DeclRefExpr *Ref = nullptr;
     if (!VD)
-      Ref = buildCapture(*this, D, SimpleRefExpr);
+      Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/false);
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_private, Ref);
     Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
     PrivateCopies.push_back(VDPrivateRefExpr);
@@ -7520,7 +7525,7 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       if (TopDVar.CKind == OMPC_lastprivate)
         Ref = TopDVar.PrivateCopy;
       else {
-        Ref = buildCapture(*this, D, SimpleRefExpr);
+        Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
         if (!IsOpenMPCapturedDecl(D))
           ExprCaptures.push_back(Ref->getDecl());
       }
@@ -7665,13 +7670,13 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
       if (TopDVar.CKind == OMPC_firstprivate)
         Ref = TopDVar.PrivateCopy;
       else {
-        Ref = buildCapture(*this, D, SimpleRefExpr);
+        Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/false);
         if (!IsOpenMPCapturedDecl(D))
           ExprCaptures.push_back(Ref->getDecl());
       }
       if (TopDVar.CKind == OMPC_firstprivate ||
           (!IsOpenMPCapturedDecl(D) &&
-           !Ref->getDecl()->getType()->isReferenceType())) {
+           !cast<OMPCapturedExprDecl>(Ref->getDecl())->getInit())) {
         ExprResult RefRes = DefaultLvalueConversion(Ref);
         if (!RefRes.isUsable())
           continue;
@@ -7754,7 +7759,7 @@ OMPClause *Sema::ActOnOpenMPSharedClause(ArrayRef<Expr *> VarList,
 
     DeclRefExpr *Ref = nullptr;
     if (!VD)
-      Ref = buildCapture(*this, D, SimpleRefExpr);
+      Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_shared, Ref);
     Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
   }
@@ -7811,7 +7816,7 @@ public:
   ExprResult TransformMemberExpr(MemberExpr *E) {
     if (isa<CXXThisExpr>(E->getBase()->IgnoreParenImpCasts()) &&
         E->getMemberDecl() == Field) {
-      CapturedExpr = buildCapture(SemaRef, Field, E);
+      CapturedExpr = buildCapture(SemaRef, Field, E, /*WithInit=*/false);
       return CapturedExpr;
     }
     return BaseTransform::TransformMemberExpr(E);
@@ -7929,6 +7934,8 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
   SmallVector<Expr *, 8> LHSs;
   SmallVector<Expr *, 8> RHSs;
   SmallVector<Expr *, 8> ReductionOps;
+  SmallVector<Decl *, 4> ExprCaptures;
+  SmallVector<Expr *, 4> ExprPostUpdates;
   for (auto RefExpr : VarList) {
     assert(RefExpr && "nullptr expr in OpenMP reduction clause.");
     // OpenMP [2.1, C/C++]
@@ -8265,8 +8272,24 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
         VarsExpr =
             RebuildToCapture.TransformExpr(RefExpr->IgnoreParens()).get();
         Ref = RebuildToCapture.getCapturedExpr();
-      } else
-        VarsExpr = Ref = buildCapture(*this, D, SimpleRefExpr);
+      } else {
+        VarsExpr = Ref =
+            buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/false);
+        if (!IsOpenMPCapturedDecl(D)) {
+          ExprCaptures.push_back(Ref->getDecl());
+          if (!cast<OMPCapturedExprDecl>(Ref->getDecl())->getInit()) {
+            ExprResult RefRes = DefaultLvalueConversion(Ref);
+            if (!RefRes.isUsable())
+              continue;
+            ExprResult PostUpdateRes =
+                BuildBinOp(DSAStack->getCurScope(), ELoc, BO_Assign,
+                           SimpleRefExpr, RefRes.get());
+            if (!PostUpdateRes.isUsable())
+              continue;
+            ExprPostUpdates.push_back(PostUpdateRes.get());
+          }
+        }
+      }
     }
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_reduction, Ref);
     Vars.push_back(VarsExpr);
@@ -8278,11 +8301,29 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
 
   if (Vars.empty())
     return nullptr;
+  Stmt *PreInit = nullptr;
+  if (!ExprCaptures.empty()) {
+    PreInit = new (Context)
+        DeclStmt(DeclGroupRef::Create(Context, ExprCaptures.begin(),
+                                      ExprCaptures.size()),
+                 SourceLocation(), SourceLocation());
+  }
+  Expr *PostUpdate = nullptr;
+  if (!ExprPostUpdates.empty()) {
+    for (auto *E : ExprPostUpdates) {
+      ExprResult PostUpdateRes =
+          PostUpdate
+              ? CreateBuiltinBinOp(SourceLocation(), BO_Comma, PostUpdate, E)
+              : E;
+      PostUpdate = PostUpdateRes.get();
+    }
+  }
+
 
   return OMPReductionClause::Create(
       Context, StartLoc, LParenLoc, ColonLoc, EndLoc, Vars,
       ReductionIdScopeSpec.getWithLocInContext(Context), ReductionId, Privates,
-      LHSs, RHSs, ReductionOps);
+      LHSs, RHSs, ReductionOps, PreInit, PostUpdate);
 }
 
 OMPClause *Sema::ActOnOpenMPLinearClause(

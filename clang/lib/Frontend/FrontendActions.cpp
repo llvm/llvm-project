@@ -152,10 +152,10 @@ operator+=(SmallVectorImpl<char> &Includes, StringRef RHS) {
   return Includes;
 }
 
-static std::error_code addHeaderInclude(StringRef HeaderName,
-                                        SmallVectorImpl<char> &Includes,
-                                        const LangOptions &LangOpts,
-                                        bool IsExternC) {
+static void addHeaderInclude(StringRef HeaderName,
+                             SmallVectorImpl<char> &Includes,
+                             const LangOptions &LangOpts,
+                             bool IsExternC) {
   if (IsExternC && LangOpts.CPlusPlus)
     Includes += "extern \"C\" {\n";
   if (LangOpts.ObjC1)
@@ -168,7 +168,6 @@ static std::error_code addHeaderInclude(StringRef HeaderName,
   Includes += "\"\n";
   if (IsExternC && LangOpts.CPlusPlus)
     Includes += "}\n";
-  return std::error_code();
 }
 
 /// \brief Collect the set of header includes needed to construct the given 
@@ -194,22 +193,17 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
       // file relative to the module build directory (the directory containing
       // the module map file) so this will find the same file that we found
       // while parsing the module map.
-      if (std::error_code Err = addHeaderInclude(H.NameAsWritten, Includes,
-                                                 LangOpts, Module->IsExternC))
-        return Err;
+      addHeaderInclude(H.NameAsWritten, Includes, LangOpts, Module->IsExternC);
     }
   }
   // Note that Module->PrivateHeaders will not be a TopHeader.
 
   if (Module::Header UmbrellaHeader = Module->getUmbrellaHeader()) {
     Module->addTopHeader(UmbrellaHeader.Entry);
-    if (Module->Parent) {
+    if (Module->Parent)
       // Include the umbrella header for submodules.
-      if (std::error_code Err = addHeaderInclude(UmbrellaHeader.NameAsWritten,
-                                                 Includes, LangOpts,
-                                                 Module->IsExternC))
-        return Err;
-    }
+      addHeaderInclude(UmbrellaHeader.NameAsWritten, Includes, LangOpts,
+                       Module->IsExternC);
   } else if (Module::DirectoryName UmbrellaDir = Module->getUmbrellaDir()) {
     // Add all of the headers we find in this subdirectory.
     std::error_code EC;
@@ -248,9 +242,7 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
 
       // Include this header as part of the umbrella directory.
       Module->addTopHeader(Header);
-      if (std::error_code Err = addHeaderInclude(RelativeHeader, Includes,
-                                                 LangOpts, Module->IsExternC))
-        return Err;
+      addHeaderInclude(RelativeHeader, Includes, LangOpts, Module->IsExternC);
     }
 
     if (EC)
@@ -361,10 +353,9 @@ bool GenerateModuleAction::BeginSourceFileAction(CompilerInstance &CI,
   SmallString<256> HeaderContents;
   std::error_code Err = std::error_code();
   if (Module::Header UmbrellaHeader = Module->getUmbrellaHeader())
-    Err = addHeaderInclude(UmbrellaHeader.NameAsWritten, HeaderContents,
-                           CI.getLangOpts(), Module->IsExternC);
-  if (!Err)
-    Err = collectModuleHeaderIncludes(
+    addHeaderInclude(UmbrellaHeader.NameAsWritten, HeaderContents,
+                     CI.getLangOpts(), Module->IsExternC);
+  Err = collectModuleHeaderIncludes(
         CI.getLangOpts(), FileMgr,
         CI.getPreprocessor().getHeaderSearchInfo().getModuleMap(), Module,
         HeaderContents);
