@@ -2,8 +2,12 @@
 // RUN: %clang_cc1 -faltivec -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -faltivec -target-feature +vsx -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-LE
 
+vector signed char vsc = { -8,  9, -10, 11, -12, 13, -14, 15,
+                           -0,  1,  -2,  3,  -4,  5,  -6,  7};
 vector unsigned char vuc = { 8,  9, 10, 11, 12, 13, 14, 15,
                              0,  1,  2,  3,  4,  5,  6,  7};
+vector bool char vbc = { 0, 1, 0, 1, 0, 1, 0, 1,
+                         0, 1, 0, 1, 0, 1, 0, 1 };
 vector float vf = { -1.5, 2.5, -3.5, 4.5 };
 vector double vd = { 3.5, -7.5 };
 vector signed int vsi = { -1, 2, -3, 4 };
@@ -11,7 +15,13 @@ vector unsigned int vui = { 0, 1, 2, 3 };
 vector bool long long vbll = { 1, 0 };
 vector signed long long vsll = { 255LL, -937LL };
 vector unsigned long long vull = { 1447LL, 2894LL };
+vector signed short vss = { -1, 2, -3, 4, -5, 6, -7, 8 };
+vector unsigned short vus = { 0, 1, 2, 3, 4, 5, 6, 7 };
 double d = 23.4;
+signed char sc = -128;
+unsigned char uc = 1;
+signed short ss = -32768;
+unsigned short us = 1;
 
 vector float res_vf;
 vector double res_vd;
@@ -21,7 +31,19 @@ vector bool int res_vbi;
 vector bool long long res_vbll;
 vector signed long long res_vsll;
 vector unsigned long long res_vull;
+vector signed short res_vss;
+vector unsigned short res_vus;
+vector bool char res_vbc;
+vector signed char res_vsc;
+vector unsigned char res_vuc;
+
 double res_d;
+signed int res_si;
+unsigned int res_ui;
+signed char res_sc;
+unsigned char res_uc;
+signed short res_ss;
+unsigned short res_us;
 
 void dummy() { }
 
@@ -316,13 +338,65 @@ void test1() {
 // CHECK: @llvm.ppc.vsx.lxvd2x
 // CHECK-LE: @llvm.ppc.vsx.lxvd2x
 
+  res_vull = vec_vsx_ld(0, &vull);
+// CHECK: @llvm.ppc.vsx.lxvd2x
+// CHECK-LE: @llvm.ppc.vsx.lxvd2x
+
+  res_vd = vec_vsx_ld(0, &vd);
+// CHECK: @llvm.ppc.vsx.lxvd2x
+// CHECK-LE: @llvm.ppc.vsx.lxvd2x
+
+  res_vss = vec_vsx_ld(0, &vss);
+// CHECK: @llvm.ppc.vsx.lxvw4x
+// CHECK-LE: @llvm.ppc.vsx.lxvw4x
+
+  res_vss = vec_vsx_ld(0, &ss);
+// CHECK: @llvm.ppc.vsx.lxvw4x
+// CHECK-LE: @llvm.ppc.vsx.lxvw4x
+
+  res_vus = vec_vsx_ld(0, &vus);
+// CHECK: @llvm.ppc.vsx.lxvw4x
+// CHECK-LE: @llvm.ppc.vsx.lxvw4x
+
+  res_vus = vec_vsx_ld(0, &us);
+// CHECK: @llvm.ppc.vsx.lxvw4x
+// CHECK-LE: @llvm.ppc.vsx.lxvw4x
+
+  res_vbc = vec_vsx_ld(0, &vbc);
+// CHECK: @llvm.ppc.vsx.lxvw4x
+// CHECK-LE: @llvm.ppc.vsx.lxvw4x
+
+  res_vsc = vec_vsx_ld(0, &vsc);
+// CHECK: @llvm.ppc.vsx.lxvw4x
+// CHECK-LE: @llvm.ppc.vsx.lxvw4x
+
+  res_vuc = vec_vsx_ld(0, &vuc);
+// CHECK: @llvm.ppc.vsx.lxvw4x
+// CHECK-LE: @llvm.ppc.vsx.lxvw4x
+
+  res_vsc = vec_vsx_ld(0, &sc);
+// CHECK: @llvm.ppc.vsx.lxvw4x
+// CHECK-LE: @llvm.ppc.vsx.lxvw4x
+
+  res_vuc = vec_vsx_ld(0, &uc);
+// CHECK: @llvm.ppc.vsx.lxvw4x
+// CHECK-LE: @llvm.ppc.vsx.lxvw4x
+
   /* vec_vsx_st */
 
   vec_vsx_st(vsi, 0, &res_vsi);
 // CHECK: @llvm.ppc.vsx.stxvw4x
 // CHECK-LE: @llvm.ppc.vsx.stxvw4x
 
+  vec_vsx_st(vsi, 0, &res_si);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
   vec_vsx_st(vui, 0, &res_vui);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vui, 0, &res_ui);
 // CHECK: @llvm.ppc.vsx.stxvw4x
 // CHECK-LE: @llvm.ppc.vsx.stxvw4x
 
@@ -341,6 +415,50 @@ void test1() {
   vec_vsx_st(vd, 0, &res_vd);
 // CHECK: @llvm.ppc.vsx.stxvd2x
 // CHECK-LE: @llvm.ppc.vsx.stxvd2x
+
+  vec_vsx_st(vss, 0, &res_vss);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vss, 0, &res_ss);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vus, 0, &res_vus);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vus, 0, &res_us);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vsc, 0, &res_vsc);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vsc, 0, &res_sc);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vuc, 0, &res_vuc);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vuc, 0, &res_uc);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vbc, 0, &res_vbc);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vbc, 0, &res_sc);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
+
+  vec_vsx_st(vbc, 0, &res_uc);
+// CHECK: @llvm.ppc.vsx.stxvw4x
+// CHECK-LE: @llvm.ppc.vsx.stxvw4x
 
   /* vec_and */
   res_vsll = vec_and(vsll, vsll);

@@ -230,3 +230,28 @@ int nested___finally___finally_with_eh_edge() {
 
 // CHECK-LABEL: define internal void @"\01?fin$1@0@nested___finally___finally_with_eh_edge@@"({{.*}})
 // CHECK: unreachable
+
+void finally_within_finally() {
+  __try {
+    might_crash();
+  } __finally {
+    __try {
+      might_crash();
+    } __finally {
+    }
+  }
+}
+
+// CHECK-LABEL: define void @finally_within_finally(
+// CHECK: invoke void @might_crash(
+
+// CHECK: call void @"\01?fin$0@0@finally_within_finally@@"(
+// CHECK: call void @"\01?fin$0@0@finally_within_finally@@"({{.*}}) [ "funclet"(
+
+// CHECK-LABEL: define internal void @"\01?fin$0@0@finally_within_finally@@"(
+// CHECK: invoke void @might_crash(
+
+// CHECK: call void @"\01?fin$1@0@finally_within_finally@@"(
+// CHECK: call void @"\01?fin$1@0@finally_within_finally@@"({{.*}}) [ "funclet"(
+
+// CHECK-LABEL: define internal void @"\01?fin$1@0@finally_within_finally@@"(

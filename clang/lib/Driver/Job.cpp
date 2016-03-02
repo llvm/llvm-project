@@ -298,6 +298,29 @@ int FallbackCommand::Execute(const StringRef **Redirects, std::string *ErrMsg,
   return SecondaryStatus;
 }
 
+ForceSuccessCommand::ForceSuccessCommand(const Action &Source_,
+                                         const Tool &Creator_,
+                                         const char *Executable_,
+                                         const ArgStringList &Arguments_,
+                                         ArrayRef<InputInfo> Inputs)
+    : Command(Source_, Creator_, Executable_, Arguments_, Inputs) {}
+
+void ForceSuccessCommand::Print(raw_ostream &OS, const char *Terminator,
+                            bool Quote, CrashReportInfo *CrashInfo) const {
+  Command::Print(OS, "", Quote, CrashInfo);
+  OS << " || (exit 0)" << Terminator;
+}
+
+int ForceSuccessCommand::Execute(const StringRef **Redirects,
+                                 std::string *ErrMsg,
+                                 bool *ExecutionFailed) const {
+  int Status = Command::Execute(Redirects, ErrMsg, ExecutionFailed);
+  (void)Status;
+  if (ExecutionFailed)
+    *ExecutionFailed = false;
+  return 0;
+}
+
 void JobList::Print(raw_ostream &OS, const char *Terminator, bool Quote,
                     CrashReportInfo *CrashInfo) const {
   for (const auto &Job : *this)

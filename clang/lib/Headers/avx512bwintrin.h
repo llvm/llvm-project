@@ -1718,6 +1718,37 @@ __builtin_ia32_psllwi512_mask ((__v32hi)( __A),( __B),\
               (__mmask32)( __U));\
 })
 
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_srlv_epi16 (__m512i __A, __m512i __B)
+{
+  return (__m512i) __builtin_ia32_psrlv32hi_mask ((__v32hi) __A,
+              (__v32hi) __B,
+              (__v32hi)
+              _mm512_setzero_hi (),
+              (__mmask32) -1);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_srlv_epi16 (__m512i __W, __mmask32 __U, __m512i __A,
+      __m512i __B)
+{
+  return (__m512i) __builtin_ia32_psrlv32hi_mask ((__v32hi) __A,
+              (__v32hi) __B,
+              (__v32hi) __W,
+              (__mmask32) __U);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_srlv_epi16 (__mmask32 __U, __m512i __A, __m512i __B)
+{
+  return (__m512i) __builtin_ia32_psrlv32hi_mask ((__v32hi) __A,
+              (__v32hi) __B,
+              (__v32hi)
+              _mm512_setzero_hi (),
+              (__mmask32) __U);
+}
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif

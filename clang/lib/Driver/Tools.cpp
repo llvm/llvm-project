@@ -386,9 +386,71 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // wonky, but we include looking for .gch so we can support seamless
   // replacement into a build system already set up to be generating
   // .gch files.
+  int YcIndex = -1, YuIndex = -1;
+  {
+    int AI = -1;
+    const Arg *YcArg = Args.getLastArg(options::OPT__SLASH_Yc);
+    const Arg *YuArg = Args.getLastArg(options::OPT__SLASH_Yu);
+    for (const Arg *A : Args.filtered(options::OPT_clang_i_Group)) {
+      // Walk the whole i_Group and skip non "-include" flags so that the index
+      // here matches the index in the next loop below.
+      ++AI;
+      if (!A->getOption().matches(options::OPT_include))
+        continue;
+      if (YcArg && strcmp(A->getValue(), YcArg->getValue()) == 0)
+        YcIndex = AI;
+      if (YuArg && strcmp(A->getValue(), YuArg->getValue()) == 0)
+        YuIndex = AI;
+    }
+  }
+  if (isa<PrecompileJobAction>(JA) && YcIndex != -1) {
+    Driver::InputList Inputs;
+    D.BuildInputs(getToolChain(), C.getArgs(), Inputs);
+    assert(Inputs.size() == 1 && "Need one input when building pch");
+    CmdArgs.push_back(Args.MakeArgString(Twine("-find-pch-source=") +
+                                         Inputs[0].second->getValue()));
+  }
+
   bool RenderedImplicitInclude = false;
+  int AI = -1;
   for (const Arg *A : Args.filtered(options::OPT_clang_i_Group)) {
-    if (A->getOption().matches(options::OPT_include)) {
+    ++AI;
+
+    if (getToolChain().getDriver().IsCLMode()) {
+      // In clang-cl mode, /Ycfoo.h means that all code up to a foo.h 
+      // include is compiled into foo.h, and everything after goes into
+      // the .obj file. /Yufoo.h means that all includes prior to and including
+      // foo.h are completely skipped and replaced with a use of the pch file
+      // for foo.h.  (Each flag can have at most one value, multiple /Yc flags
+      // just mean that the last one wins.)  If /Yc and /Yu are both present
+      // and refer to the same file, /Yc wins.
+      // Note that OPT__SLASH_FI gets mapped to OPT_include.
+      // FIXME: The code here assumes that /Yc and /Yu refer to the same file.
+      // cl.exe seems to support both flags with different values, but that
+      // seems strange (which flag does /Fp now refer to?), so don't implement
+      // that until someone needs that.
+      int PchIndex = YcIndex != -1 ? YcIndex : YuIndex;
+      if (PchIndex != -1) {
+        if (isa<PrecompileJobAction>(JA)) {
+          // When building the pch, skip all includes after the pch.
+          assert(YcIndex != -1 && PchIndex == YcIndex);
+          if (AI >= YcIndex)
+            continue;
+        } else {
+          // When using the pch, skip all includes prior to the pch.
+          if (AI < PchIndex)
+            continue;
+          if (AI == PchIndex) {
+            A->claim();
+            CmdArgs.push_back("-include-pch");
+            CmdArgs.push_back(
+                Args.MakeArgString(D.GetClPchPath(C, A->getValue())));
+            continue;
+          }
+        }
+      }
+    } else if (A->getOption().matches(options::OPT_include)) {
+      // Handling of gcc-style gch precompiled headers.
       bool IsFirstImplicitInclude = !RenderedImplicitInclude;
       RenderedImplicitInclude = true;
 
@@ -5683,6 +5745,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         getCLFallback()->GetCommand(C, JA, Output, Inputs, Args, LinkingOutput);
     C.addCommand(llvm::make_unique<FallbackCommand>(
         JA, *this, Exec, CmdArgs, Inputs, std::move(CLCommand)));
+  } else if (Args.hasArg(options::OPT__SLASH_fallback) &&
+             isa<PrecompileJobAction>(JA)) {
+    // In /fallback builds, run the main compilation even if the pch generation
+    // fails, so that the main compilation's fallback to cl.exe runs.
+    C.addCommand(llvm::make_unique<ForceSuccessCommand>(JA, *this, Exec,
+                                                        CmdArgs, Inputs));
   } else {
     C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
   }

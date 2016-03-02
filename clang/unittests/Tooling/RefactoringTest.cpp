@@ -418,6 +418,25 @@ TEST(Range, contains) {
   EXPECT_FALSE(Range(0, 10).contains(Range(0, 11)));
 }
 
+TEST(Range, CalculateRangesOfReplacements) {
+  // Before: aaaabbbbbbz
+  // After : bbbbbbzzzzzzoooooooooooooooo
+  Replacements Replaces;
+  Replaces.insert(Replacement("foo", 0, 4, ""));
+  Replaces.insert(Replacement("foo", 10, 1, "zzzzzz"));
+  Replaces.insert(Replacement("foo", 11, 0, "oooooooooooooooo"));
+
+  std::vector<Range> Ranges = calculateChangedRangesInFile(Replaces);
+
+  EXPECT_EQ(3ul, Ranges.size());
+  EXPECT_TRUE(Ranges[0].getOffset() == 0);
+  EXPECT_TRUE(Ranges[0].getLength() == 0);
+  EXPECT_TRUE(Ranges[1].getOffset() == 6);
+  EXPECT_TRUE(Ranges[1].getLength() == 6);
+  EXPECT_TRUE(Ranges[2].getOffset() == 12);
+  EXPECT_TRUE(Ranges[2].getLength() == 16);
+}
+
 TEST(DeduplicateTest, removesDuplicates) {
   std::vector<Replacement> Input;
   Input.push_back(Replacement("fileA", 50, 0, " foo "));

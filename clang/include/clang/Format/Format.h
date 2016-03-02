@@ -731,6 +731,28 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    StringRef FileName,
                                    unsigned *Cursor = nullptr);
 
+/// \brief Returns the replacements corresponding to applying and formatting
+/// \p Replaces.
+tooling::Replacements formatReplacements(StringRef Code,
+                                         const tooling::Replacements &Replaces,
+                                         const FormatStyle &Style);
+
+/// \brief In addition to applying all replacements in \p Replaces to \p Code,
+/// this function also reformats the changed code after applying replacements.
+///
+/// \pre Replacements must be for the same file and conflict-free.
+///
+/// Replacement applications happen independently of the success of
+/// other applications.
+///
+/// \returns the changed code with all replacements applied and formatted, if
+/// successful. An empty string otherwise.
+///
+/// See also "include/clang/Tooling/Core/Replacements.h".
+std::string applyAllReplacementsAndFormat(StringRef Code,
+                                          const tooling::Replacements &Replaces,
+                                          const FormatStyle &Style);
+
 /// \brief Reformats the given \p Ranges in the file \p ID.
 ///
 /// Each range is extended on either end to its next bigger logic unit, i.e.

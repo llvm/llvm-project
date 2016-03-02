@@ -423,6 +423,9 @@ public:
   /// GCC goes to extra lengths here to be a bit more robust.
   std::string GetTemporaryPath(StringRef Prefix, const char *Suffix) const;
 
+  /// Return the pathname of the pch file in clang-cl mode.
+  std::string GetClPchPath(Compilation &C, StringRef BaseName) const;
+
   /// ShouldUseClangCompiler - Should the clang compiler be used to
   /// handle this action.
   bool ShouldUseClangCompiler(const JobAction &JA) const;

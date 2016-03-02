@@ -80,6 +80,8 @@ static unsigned getDefaultParsingOptions() {
     options |= CXTranslationUnit_IncludeBriefCommentsInCodeCompletion;
   if (getenv("CINDEXTEST_CREATE_PREAMBLE_ON_FIRST_PARSE"))
     options |= CXTranslationUnit_CreatePreambleOnFirstParse;
+  if (getenv("CINDEXTEST_KEEP_GOING"))
+    options |= CXTranslationUnit_KeepGoing;
 
   return options;
 }

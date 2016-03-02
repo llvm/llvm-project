@@ -220,6 +220,13 @@ bool applyAllReplacements(const std::vector<Replacement> &Replaces,
 /// replacements cannot be applied, this returns an empty \c string.
 std::string applyAllReplacements(StringRef Code, const Replacements &Replaces);
 
+/// \brief Calculate the ranges in a single file that are affected by the
+/// Replacements.
+///
+/// \pre Replacements must be for the same file.
+std::vector<tooling::Range>
+calculateChangedRangesInFile(const tooling::Replacements &Replaces);
+
 /// \brief Merges two sets of replacements with the second set referring to the
 /// code after applying the first set. Within both 'First' and 'Second',
 /// replacements must not overlap.
