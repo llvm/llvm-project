@@ -23255,7 +23255,12 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
         MI->getOpcode() == X86::RDFLAGS32 ? X86::PUSHF32 : X86::PUSHF64;
     unsigned Pop =
         MI->getOpcode() == X86::RDFLAGS32 ? X86::POP32r : X86::POP64r;
-    BuildMI(*BB, MI, DL, TII->get(PushF));
+    MachineInstr *Push = BuildMI(*BB, MI, DL, TII->get(PushF));
+    // Permit reads of the FLAGS register without it being defined.
+    // This intrinsic exists to read external processor state in flags, such as
+    // the trap flag, interrupt flag, and direction flag, none of which are
+    // modeled by the backend.
+    Push->getOperand(2).setIsUndef();
     BuildMI(*BB, MI, DL, TII->get(Pop), MI->getOperand(0).getReg());
 
     MI->eraseFromParent(); // The pseudo is gone now.

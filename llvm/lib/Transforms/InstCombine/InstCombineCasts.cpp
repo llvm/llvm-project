@@ -976,28 +976,16 @@ Instruction *InstCombiner::transformSExtICmp(ICmpInst *ICI, Instruction &CI) {
     // (x <s  0) ? -1 : 0 -> ashr x, 31        -> all ones if negative
     // (x >s -1) ? -1 : 0 -> not (ashr x, 31)  -> all ones if positive
     if ((Pred == ICmpInst::ICMP_SLT && Op1C->isNullValue()) ||
-        (Pred == ICmpInst::ICMP_SGT && Op1C->isAllOnesValue()) ||
+        (Pred == ICmpInst::ICMP_SGT && Op1C->isAllOnesValue())) {
 
-        // The following patterns should only be present for vectors.
-        // For scalar integers, the comparison should be canonicalized to one of
-        // the above forms. We don't do that for vectors because vector ISAs may
-        // not have a full range of comparison operators. This transform,
-        // however, will simplify the IR, so we always do it.
-        //
-        // (x <=s -1) ? -1 : 0 -> ashr x, 31        -> all ones if negative
-        // (x >=s  0) ? -1 : 0 -> not (ashr x, 31)  -> all ones if positive
-        (Pred == ICmpInst::ICMP_SLE && Op1C->isAllOnesValue()) ||
-        (Pred == ICmpInst::ICMP_SGE && Op1C->isNullValue())) {
       Value *Sh = ConstantInt::get(Op0->getType(),
-                                   Op0->getType()->getScalarSizeInBits() - 1);
-      Value *In = Builder->CreateAShr(Op0, Sh, Op0->getName() + ".lobit");
+                                   Op0->getType()->getScalarSizeInBits()-1);
+      Value *In = Builder->CreateAShr(Op0, Sh, Op0->getName()+".lobit");
       if (In->getType() != CI.getType())
         In = Builder->CreateIntCast(In, CI.getType(), true/*SExt*/);
 
-      // Invert the sign bit if the comparison was checking for 'is positive'.
-      if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE)
-        In = Builder->CreateNot(In, In->getName() + ".not");
-
+      if (Pred == ICmpInst::ICMP_SGT)
+        In = Builder->CreateNot(In, In->getName()+".not");
       return replaceInstUsesWith(CI, In);
     }
   }

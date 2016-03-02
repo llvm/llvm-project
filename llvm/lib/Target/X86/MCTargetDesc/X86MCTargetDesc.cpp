@@ -74,7 +74,7 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
   }
 
   // These CodeView registers are numbered sequentially starting at value 1.
-  unsigned LowCVRegs[] = {
+  static const MCPhysReg LowCVRegs[] = {
       X86::AL,  X86::CL,  X86::DL,  X86::BL,  X86::AH,  X86::CH,
       X86::DH,  X86::BH,  X86::AX,  X86::CX,  X86::DX,  X86::BX,
       X86::SP,  X86::BP,  X86::SI,  X86::DI,  X86::EAX, X86::ECX,
@@ -103,7 +103,7 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
 
   // AMD64 registers start at 324 and count up.
   unsigned CVX64RegStart = 324;
-  unsigned CVX64Regs[] = {
+  static const MCPhysReg CVX64Regs[] = {
       X86::SIL,   X86::DIL,   X86::BPL,   X86::SPL,   X86::RAX,   X86::RBX,
       X86::RCX,   X86::RDX,   X86::RSI,   X86::RDI,   X86::RBP,   X86::RSP,
       X86::R8,    X86::R9,    X86::R10,   X86::R11,   X86::R12,   X86::R13,

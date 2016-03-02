@@ -26,7 +26,7 @@ class X86SelectionDAGInfo : public SelectionDAGTargetInfo {
   /// Returns true if it is possible for the base register to conflict with the
   /// given set of clobbers for a memory intrinsic.
   bool isBaseRegConflictPossible(SelectionDAG &DAG,
-                                 ArrayRef<unsigned> ClobberSet) const;
+                                 ArrayRef<MCPhysReg> ClobberSet) const;
 
 public:
   explicit X86SelectionDAGInfo() = default;

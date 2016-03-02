@@ -319,7 +319,7 @@ void TraceState::DFSanCmpCallback(uintptr_t PC, size_t CmpSize, size_t CmpType,
     AddMutation(Pos, CmpSize, Data - 1);
   }
 
-  if (CmpSize > LR.End - LR.Beg)
+  if (CmpSize > (size_t)(LR.End - LR.Beg))
     AddMutation(LR.Beg, (unsigned)(LR.End - LR.Beg), Data);
 
 
