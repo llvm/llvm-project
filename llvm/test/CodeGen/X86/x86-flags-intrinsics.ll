@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 target triple = "i686-pc-win32"
 
 declare i32 @llvm.x86.flags.read.u32()

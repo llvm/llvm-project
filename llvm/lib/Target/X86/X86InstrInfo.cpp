@@ -3450,7 +3450,7 @@ unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(MachineInstr *MI,
 
   // Define the array that holds FMA opcodes in groups
   // of 3 opcodes(132, 213, 231) in each group.
-  static const unsigned RegularOpcodeGroups[][3] = {
+  static const uint16_t RegularOpcodeGroups[][3] = {
     { X86::VFMADDSSr132r,   X86::VFMADDSSr213r,   X86::VFMADDSSr231r  },
     { X86::VFMADDSDr132r,   X86::VFMADDSDr213r,   X86::VFMADDSDr231r  },
     { X86::VFMADDPSr132r,   X86::VFMADDPSr213r,   X86::VFMADDPSr231r  },
@@ -3524,7 +3524,7 @@ unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(MachineInstr *MI,
 
   // Define the array that holds FMA*_Int opcodes in groups
   // of 3 opcodes(132, 213, 231) in each group.
-  static const unsigned IntrinOpcodeGroups[][3] = {
+  static const uint16_t IntrinOpcodeGroups[][3] = {
     { X86::VFMADDSSr132r_Int,  X86::VFMADDSSr213r_Int,  X86::VFMADDSSr231r_Int },
     { X86::VFMADDSDr132r_Int,  X86::VFMADDSDr213r_Int,  X86::VFMADDSDr231r_Int },
     { X86::VFMADDSSr132m_Int,  X86::VFMADDSSr213m_Int,  X86::VFMADDSSr231m_Int },
@@ -3555,7 +3555,7 @@ unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(MachineInstr *MI,
   isFMA3(Opc, &IsIntrinOpcode);
 
   size_t GroupsNum;
-  const unsigned (*OpcodeGroups)[3];
+  const uint16_t (*OpcodeGroups)[3];
   if (IsIntrinOpcode) {
     GroupsNum = array_lengthof(IntrinOpcodeGroups);
     OpcodeGroups = IntrinOpcodeGroups;
@@ -3564,7 +3564,7 @@ unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(MachineInstr *MI,
     OpcodeGroups = RegularOpcodeGroups;
   }
 
-  const unsigned *FoundOpcodesGroup = nullptr;
+  const uint16_t *FoundOpcodesGroup = nullptr;
   size_t FormIndex;
 
   // Look for the input opcode in the corresponding opcodes table.

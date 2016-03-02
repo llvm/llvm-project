@@ -1122,12 +1122,12 @@ def PUSH32rmm: I<0xFF, MRM6m, (outs), (ins i32mem:$src), "push{l}\t$src",[],
 
 let mayLoad = 1, mayStore = 1, usesCustomInserter = 1,
     SchedRW = [WriteRMW], Defs = [ESP] in {
-  let Uses = [ESP, EFLAGS] in
+  let Uses = [ESP] in
   def RDFLAGS32 : PseudoI<(outs GR32:$dst), (ins),
                    [(set GR32:$dst, (int_x86_flags_read_u32))]>,
                 Requires<[Not64BitMode]>;
 
-  let Uses = [RSP, EFLAGS] in
+  let Uses = [RSP] in
   def RDFLAGS64 : PseudoI<(outs GR64:$dst), (ins),
                    [(set GR64:$dst, (int_x86_flags_read_u64))]>,
                 Requires<[In64BitMode]>;

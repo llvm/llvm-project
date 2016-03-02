@@ -25,7 +25,7 @@ using namespace llvm;
 #define DEBUG_TYPE "x86-selectiondag-info"
 
 bool X86SelectionDAGInfo::isBaseRegConflictPossible(
-    SelectionDAG &DAG, ArrayRef<unsigned> ClobberSet) const {
+    SelectionDAG &DAG, ArrayRef<MCPhysReg> ClobberSet) const {
   // We cannot use TRI->hasBasePointer() until *after* we select all basic
   // blocks.  Legalization may introduce new stack temporaries with large
   // alignment requirements.  Fall back to generic code if there are any
@@ -54,8 +54,8 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
 
 #ifndef NDEBUG
   // If the base register might conflict with our physical registers, bail out.
-  const unsigned ClobberSet[] = {X86::RCX, X86::RAX, X86::RDI,
-                                 X86::ECX, X86::EAX, X86::EDI};
+  const MCPhysReg ClobberSet[] = {X86::RCX, X86::RAX, X86::RDI,
+                                  X86::ECX, X86::EAX, X86::EDI};
   assert(!isBaseRegConflictPossible(DAG, ClobberSet));
 #endif
 
@@ -222,8 +222,8 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
     return SDValue();
 
   // If the base register might conflict with our physical registers, bail out.
-  const unsigned ClobberSet[] = {X86::RCX, X86::RSI, X86::RDI,
-                                 X86::ECX, X86::ESI, X86::EDI};
+  const MCPhysReg ClobberSet[] = {X86::RCX, X86::RSI, X86::RDI,
+                                  X86::ECX, X86::ESI, X86::EDI};
   if (isBaseRegConflictPossible(DAG, ClobberSet))
     return SDValue();
 

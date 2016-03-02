@@ -1474,3 +1474,7 @@ vmovq %xmm0, %rax
 // CHECK: 	mwaitx
 // CHECK:  encoding: [0x0f,0x01,0xfb]
         	mwaitx %rax, %rcx, %rbx
+
+// CHECK: 	movl %r15d, (%r15,%r15)
+// CHECK:  encoding: [0x47,0x89,0x3c,0x3f]
+movl %r15d, (%r15,%r15)

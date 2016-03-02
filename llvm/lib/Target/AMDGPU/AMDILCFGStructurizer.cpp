@@ -923,7 +923,7 @@ bool AMDGPUCFGStructurizer::run() {
 
   if (!Finish) {
     DEBUG(FuncRep->viewCFG());
-    llvm_unreachable("IRREDUCIBLE_CFG");
+    report_fatal_error("IRREDUCIBLE_CFG");
   }
 
   return true;
@@ -1413,10 +1413,10 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
   MachineBasicBlock::iterator I = insertInstrBefore(LandBlk, AMDGPU::ENDIF);
 
   if (LandBlkHasOtherPred) {
-    llvm_unreachable("Extra register needed to handle CFG");
+    report_fatal_error("Extra register needed to handle CFG");
     unsigned CmpResReg =
       HeadMBB->getParent()->getRegInfo().createVirtualRegister(I32RC);
-    llvm_unreachable("Extra compare instruction needed to handle CFG");
+    report_fatal_error("Extra compare instruction needed to handle CFG");
     insertCondBranchBefore(LandBlk, I, AMDGPU::IF_PREDICATE_SET,
         CmpResReg, DebugLoc());
   }
@@ -1433,7 +1433,7 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
     // need to uncondionally insert the assignment to ensure a path from its
     // predecessor rather than headBlk has valid value in initReg if
     // (initVal != 1).
-    llvm_unreachable("Extra register needed to handle CFG");
+    report_fatal_error("Extra register needed to handle CFG");
   }
   insertInstrBefore(I, AMDGPU::ELSE);
 
@@ -1442,7 +1442,7 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
     // need to uncondionally insert the assignment to ensure a path from its
     // predecessor rather than headBlk has valid value in initReg if
     // (initVal != 0)
-    llvm_unreachable("Extra register needed to handle CFG");
+    report_fatal_error("Extra register needed to handle CFG");
   }
 
   if (LandBlkHasOtherPred) {
@@ -1454,7 +1454,7 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
          PE = LandBlk->pred_end(); PI != PE; ++PI) {
       MachineBasicBlock *MBB = *PI;
       if (MBB != TrueMBB && MBB != FalseMBB)
-        llvm_unreachable("Extra register needed to handle CFG");
+        report_fatal_error("Extra register needed to handle CFG");
     }
   }
   DEBUG(

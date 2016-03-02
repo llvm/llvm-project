@@ -463,11 +463,11 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   }
   ValueToMemoryAccess.erase(MemoryInst);
 
-  auto &Accesses = PerBlockAccesses.find(MA->getBlock())->second;
+  auto AccessIt = PerBlockAccesses.find(MA->getBlock());
+  std::unique_ptr<AccessListType> &Accesses = AccessIt->second;
   Accesses->erase(MA);
-  if (Accesses->empty()) {
-    PerBlockAccesses.erase(MA->getBlock());
-  }
+  if (Accesses->empty())
+    PerBlockAccesses.erase(AccessIt);
 }
 
 void MemorySSA::removeMemoryAccess(MemoryAccess *MA) {

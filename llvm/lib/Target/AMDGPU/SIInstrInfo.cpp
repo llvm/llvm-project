@@ -1051,12 +1051,10 @@ bool SIInstrInfo::FoldImmediate(MachineInstr *UseMI, MachineInstr *DefMI,
     // Multiplied part is the constant: Use v_madmk_f32
     // We should only expect these to be on src0 due to canonicalizations.
     if (Src0->isReg() && Src0->getReg() == Reg) {
-      if (!Src1->isReg() ||
-          (Src1->isReg() && RI.isSGPRClass(MRI->getRegClass(Src1->getReg()))))
+      if (!Src1->isReg() || RI.isSGPRClass(MRI->getRegClass(Src1->getReg())))
         return false;
 
-      if (!Src2->isReg() ||
-          (Src2->isReg() && RI.isSGPRClass(MRI->getRegClass(Src2->getReg()))))
+      if (!Src2->isReg() || RI.isSGPRClass(MRI->getRegClass(Src2->getReg())))
         return false;
 
       // We need to do some weird looking operand shuffling since the madmk
@@ -1116,8 +1114,7 @@ bool SIInstrInfo::FoldImmediate(MachineInstr *UseMI, MachineInstr *DefMI,
           (Src0->isReg() && RI.isSGPRClass(MRI->getRegClass(Src0->getReg()))))
         return false;
 
-      if (!Src1->isReg() ||
-          (Src1->isReg() && RI.isSGPRClass(MRI->getRegClass(Src1->getReg()))))
+      if (!Src1->isReg() || RI.isSGPRClass(MRI->getRegClass(Src1->getReg())))
         return false;
 
       const int64_t Imm = DefMI->getOperand(1).getImm();

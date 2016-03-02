@@ -164,7 +164,7 @@ const Counters SIInsertWaits::WaitCounts = { { 15, 7, 15 } };
 const Counters SIInsertWaits::ZeroCounts = { { 0, 0, 0 } };
 
 static bool readsVCCZ(unsigned Opcode) {
-  return Opcode == AMDGPU::S_CBRANCH_VCCNZ || Opcode == AMDGPU::S_CBRANCH_VCCNZ;
+  return Opcode == AMDGPU::S_CBRANCH_VCCNZ || Opcode == AMDGPU::S_CBRANCH_VCCZ;
 }
 
 bool SIInsertWaits::hasOutstandingLGKM() const {
