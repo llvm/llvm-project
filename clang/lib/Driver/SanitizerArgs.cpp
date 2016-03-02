@@ -446,9 +446,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           LegacySanitizeCoverage >= 0 && LegacySanitizeCoverage <= 4) {
         switch (LegacySanitizeCoverage) {
         case 0:
-          D.Diag(diag::warn_drv_deprecated_arg) << Arg->getAsString(Args)
-                                                << "-fsanitize-coverage=";
           CoverageFeatures = 0;
+          Arg->claim();
           break;
         case 1:
           D.Diag(diag::warn_drv_deprecated_arg) << Arg->getAsString(Args)

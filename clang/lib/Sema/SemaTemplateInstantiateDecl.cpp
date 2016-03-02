@@ -334,6 +334,16 @@ TemplateDeclInstantiator::VisitTranslationUnitDecl(TranslationUnitDecl *D) {
 }
 
 Decl *
+TemplateDeclInstantiator::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
+  llvm_unreachable("pragma comment cannot be instantiated");
+}
+
+Decl *TemplateDeclInstantiator::VisitPragmaDetectMismatchDecl(
+    PragmaDetectMismatchDecl *D) {
+  llvm_unreachable("pragma comment cannot be instantiated");
+}
+
+Decl *
 TemplateDeclInstantiator::VisitExternCContextDecl(ExternCContextDecl *D) {
   llvm_unreachable("extern \"C\" context cannot be instantiated");
 }

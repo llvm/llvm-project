@@ -33,6 +33,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -375,6 +376,45 @@ static void parseSanitizerKinds(StringRef FlagName,
   }
 }
 
+// Set the profile kind for fprofile-instrument.
+static void setPGOInstrumentor(CodeGenOptions &Opts, ArgList &Args,
+                               DiagnosticsEngine &Diags) {
+  Arg *A = Args.getLastArg(OPT_fprofile_instrument_EQ);
+  if (A == nullptr)
+    return;
+  StringRef S = A->getValue();
+  unsigned I = llvm::StringSwitch<unsigned>(S)
+                   .Case("none", CodeGenOptions::ProfileNone)
+                   .Case("clang", CodeGenOptions::ProfileClangInstr)
+                   .Case("llvm", CodeGenOptions::ProfileIRInstr)
+                   .Default(~0U);
+  if (I == ~0U) {
+    Diags.Report(diag::err_drv_invalid_pgo_instrumentor) << A->getAsString(Args)
+                                                         << S;
+    return;
+  }
+  CodeGenOptions::ProfileInstrKind Instrumentor =
+      static_cast<CodeGenOptions::ProfileInstrKind>(I);
+  Opts.setProfileInstr(Instrumentor);
+}
+
+// Set the profile kind using fprofile-instrument-use-path.
+static void setPGOUseInstrumentor(CodeGenOptions &Opts,
+                                  const std::string ProfileName) {
+  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName);
+  // In error, return silently and let Clang PGOUse report the error message.
+  if (ReaderOrErr.getError()) {
+    Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
+    return;
+  }
+  std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
+    std::move(ReaderOrErr.get());
+  if (PGOReader->isIRLevelProfile())
+    Opts.setProfileUse(CodeGenOptions::ProfileIRInstr);
+  else
+    Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
+}
+
 static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                              DiagnosticsEngine &Diags,
                              const TargetOptions &TargetOpts) {
@@ -481,33 +521,14 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.Autolink = !Args.hasArg(OPT_fno_autolink);
   Opts.SampleProfileFile = Args.getLastArgValue(OPT_fprofile_sample_use_EQ);
 
-  enum PGOInstrumentor { Unknown, None, Clang, LLVM };
-  if (Arg *A = Args.getLastArg(OPT_fprofile_instrument_EQ)) {
-    StringRef Value = A->getValue();
-    PGOInstrumentor Method = llvm::StringSwitch<PGOInstrumentor>(Value)
-                                 .Case("none", None)
-                                 .Case("clang", Clang)
-                                 .Case("llvm", LLVM)
-                                 .Default(Unknown);
-    switch (Method) {
-    case LLVM:
-      Opts.setProfileInstr(CodeGenOptions::ProfileIRInstr);
-      break;
-    case Clang:
-      Opts.setProfileInstr(CodeGenOptions::ProfileClangInstr);
-      break;
-    case None:
-      // Null operation -- The default is ProfileNone.
-      break;
-    case Unknown:
-      Diags.Report(diag::err_drv_invalid_pgo_instrumentor)
-          << A->getAsString(Args) << Value;
-      break;
-    }
-  }
+  setPGOInstrumentor(Opts, Args, Diags);
+  Opts.InstrProfileOutput =
+      Args.getLastArgValue(OPT_fprofile_instrument_path_EQ);
+  Opts.ProfileInstrumentUsePath =
+      Args.getLastArgValue(OPT_fprofile_instrument_use_path_EQ);
+  if (!Opts.ProfileInstrumentUsePath.empty())
+    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
 
-  Opts.InstrProfileOutput = Args.getLastArgValue(OPT_fprofile_instrument_path_EQ);
-  Opts.InstrProfileInput = Args.getLastArgValue(OPT_fprofile_instr_use_EQ);
   Opts.CoverageMapping =
       Args.hasFlag(OPT_fcoverage_mapping, OPT_fno_coverage_mapping, false);
   Opts.DumpCoverageMapping = Args.hasArg(OPT_dump_coverage_mapping);

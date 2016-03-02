@@ -594,6 +594,20 @@ struct FormatStyle {
   /// \brief The way to use tab characters in the resulting file.
   UseTabStyle UseTab;
 
+  /// \brief Quotation styles for JavaScript strings. Does not affect template
+  /// strings.
+  enum JavaScriptQuoteStyle {
+    /// Leave string quotes as they are.
+    JSQS_Leave,
+    /// Always use single quotes.
+    JSQS_Single,
+    /// Always use double quotes.
+    JSQS_Double
+  };
+
+  /// \brief The JavaScriptQuoteStyle to use for JavaScript strings.
+  JavaScriptQuoteStyle JavaScriptQuotes;
+
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
@@ -670,7 +684,8 @@ struct FormatStyle {
            SpacesInParentheses == R.SpacesInParentheses &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard && TabWidth == R.TabWidth &&
-           UseTab == R.UseTab;
+           UseTab == R.UseTab &&
+           JavaScriptQuotes == R.JavaScriptQuotes;
   }
 };
 

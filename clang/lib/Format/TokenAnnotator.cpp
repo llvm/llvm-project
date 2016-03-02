@@ -410,7 +410,7 @@ private:
                  Style.Language != FormatStyle::LK_Cpp)) ||
                Style.Language == FormatStyle::LK_Proto) &&
               (Previous->Tok.getIdentifierInfo() ||
-               Previous->is(tok::char_constant)))
+               Previous->is(tok::string_literal)))
             Previous->Type = TT_SelectorName;
           if (CurrentToken->is(tok::colon) ||
               Style.Language == FormatStyle::LK_JavaScript)
@@ -2170,8 +2170,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
 
   if (Style.Language == FormatStyle::LK_JavaScript) {
     // FIXME: This might apply to other languages and token kinds.
-    if (Right.is(tok::char_constant) && Left.is(tok::plus) && Left.Previous &&
-        Left.Previous->is(tok::char_constant))
+    if (Right.is(tok::string_literal) && Left.is(tok::plus) && Left.Previous &&
+        Left.Previous->is(tok::string_literal))
       return true;
     if (Left.is(TT_DictLiteral) && Left.is(tok::l_brace) && Line.Level == 0 &&
         Left.Previous && Left.Previous->is(tok::equal) &&

@@ -68,6 +68,10 @@ namespace clang {
       return Reader.ReadDeclID(F, R, I);
     }
 
+    std::string ReadString(const RecordData &R, unsigned &I) {
+      return Reader.ReadString(R, I);
+    }
+
     void ReadDeclIDList(SmallVectorImpl<DeclID> &IDs) {
       for (unsigned I = 0, Size = Record[Idx++]; I != Size; ++I)
         IDs.push_back(ReadDeclID(Record, Idx));
@@ -238,6 +242,8 @@ namespace clang {
     }
 
     void VisitDecl(Decl *D);
+    void VisitPragmaCommentDecl(PragmaCommentDecl *D);
+    void VisitPragmaDetectMismatchDecl(PragmaDetectMismatchDecl *D);
     void VisitTranslationUnitDecl(TranslationUnitDecl *TU);
     void VisitNamedDecl(NamedDecl *ND);
     void VisitLabelDecl(LabelDecl *LD);
@@ -536,6 +542,29 @@ void ASTDeclReader::VisitDecl(Decl *D) {
       }
     }
   }
+}
+
+void ASTDeclReader::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
+  VisitDecl(D);
+  D->setLocation(ReadSourceLocation(Record, Idx));
+  D->CommentKind = (PragmaMSCommentKind)Record[Idx++];
+  std::string Arg = ReadString(Record, Idx);
+  memcpy(D->getTrailingObjects<char>(), Arg.data(), Arg.size());
+  D->getTrailingObjects<char>()[Arg.size()] = '\0';
+}
+
+void ASTDeclReader::VisitPragmaDetectMismatchDecl(PragmaDetectMismatchDecl *D) {
+  VisitDecl(D);
+  D->setLocation(ReadSourceLocation(Record, Idx));
+  std::string Name = ReadString(Record, Idx);
+  memcpy(D->getTrailingObjects<char>(), Name.data(), Name.size());
+  D->getTrailingObjects<char>()[Name.size()] = '\0';
+
+  D->ValueStart = Name.size() + 1;
+  std::string Value = ReadString(Record, Idx);
+  memcpy(D->getTrailingObjects<char>() + D->ValueStart, Value.data(),
+         Value.size());
+  D->getTrailingObjects<char>()[D->ValueStart + Value.size()] = '\0';
 }
 
 void ASTDeclReader::VisitTranslationUnitDecl(TranslationUnitDecl *TU) {
@@ -2418,6 +2447,8 @@ static bool isConsumerInterestedIn(Decl *D, bool HasBody) {
       isa<ObjCProtocolDecl>(D) || 
       isa<ObjCImplDecl>(D) ||
       isa<ImportDecl>(D) ||
+      isa<PragmaCommentDecl>(D) ||
+      isa<PragmaDetectMismatchDecl>(D) ||
       isa<OMPThreadPrivateDecl>(D))
     return true;
   if (VarDecl *Var = dyn_cast<VarDecl>(D))
@@ -3334,6 +3365,13 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_OMP_CAPTUREDEXPR:
     D = OMPCapturedExprDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_PRAGMA_COMMENT:
+    D = PragmaCommentDecl::CreateDeserialized(Context, ID, Record[Idx++]);
+    break;
+  case DECL_PRAGMA_DETECT_MISMATCH:
+    D = PragmaDetectMismatchDecl::CreateDeserialized(Context, ID,
+                                                     Record[Idx++]);
     break;
   case DECL_EMPTY:
     D = EmptyDecl::CreateDeserialized(Context, ID);

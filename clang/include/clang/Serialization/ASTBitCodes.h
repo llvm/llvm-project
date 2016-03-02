@@ -575,7 +575,10 @@ namespace clang {
       CXX_CTOR_INITIALIZERS_OFFSETS = 53,
 
       /// \brief Delete expressions that will be analyzed later.
-      DELETE_EXPRS_TO_ANALYZE = 54
+      DELETE_EXPRS_TO_ANALYZE = 54,
+
+      /// \brief Record code for \#pragma ms_struct options.
+      MSSTRUCT_PRAGMA_OPTIONS = 55
     };
 
     /// \brief Record types used within a source manager block.
@@ -1164,7 +1167,11 @@ namespace clang {
       /// \brief An ObjCTypeParamDecl record.
       DECL_OBJC_TYPE_PARAM,
       /// \brief An OMPCapturedExprDecl record.
-      DECL_OMP_CAPTUREDEXPR
+      DECL_OMP_CAPTUREDEXPR,
+      /// \brief A PragmaCommentDecl record.
+      DECL_PRAGMA_COMMENT,
+      /// \brief A PragmaDetectMismatchDecl record.
+      DECL_PRAGMA_DETECT_MISMATCH
     };
 
     /// \brief Record codes for each kind of statement or expression.

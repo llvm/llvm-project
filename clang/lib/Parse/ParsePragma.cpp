@@ -13,6 +13,7 @@
 
 #include "RAIIObjectsForParser.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseDiagnostic.h"
@@ -361,9 +362,8 @@ void Parser::HandlePragmaPack() {
 
 void Parser::HandlePragmaMSStruct() {
   assert(Tok.is(tok::annot_pragma_msstruct));
-  Sema::PragmaMSStructKind Kind =
-    static_cast<Sema::PragmaMSStructKind>(
-    reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
+  PragmaMSStructKind Kind = static_cast<PragmaMSStructKind>(
+      reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
   Actions.ActOnPragmaMSStruct(Kind);
   ConsumeToken(); // The annotation token.
 }
@@ -1062,8 +1062,8 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
 void PragmaMSStructHandler::HandlePragma(Preprocessor &PP, 
                                          PragmaIntroducerKind Introducer,
                                          Token &MSStructTok) {
-  Sema::PragmaMSStructKind Kind = Sema::PMSST_OFF;
-  
+  PragmaMSStructKind Kind = PMSST_OFF;
+
   Token Tok;
   PP.Lex(Tok);
   if (Tok.isNot(tok::identifier)) {
@@ -1073,7 +1073,7 @@ void PragmaMSStructHandler::HandlePragma(Preprocessor &PP,
   SourceLocation EndLoc = Tok.getLocation();
   const IdentifierInfo *II = Tok.getIdentifierInfo();
   if (II->isStr("on")) {
-    Kind = Sema::PMSST_ON;
+    Kind = PMSST_ON;
     PP.Lex(Tok);
   }
   else if (II->isStr("off") || II->isStr("reset"))
@@ -1721,10 +1721,10 @@ void PragmaMSPragma::HandlePragma(Preprocessor &PP,
 void PragmaDetectMismatchHandler::HandlePragma(Preprocessor &PP,
                                                PragmaIntroducerKind Introducer,
                                                Token &Tok) {
-  SourceLocation CommentLoc = Tok.getLocation();
+  SourceLocation DetectMismatchLoc = Tok.getLocation();
   PP.Lex(Tok);
   if (Tok.isNot(tok::l_paren)) {
-    PP.Diag(CommentLoc, diag::err_expected) << tok::l_paren;
+    PP.Diag(DetectMismatchLoc, diag::err_expected) << tok::l_paren;
     return;
   }
 
@@ -1759,10 +1759,10 @@ void PragmaDetectMismatchHandler::HandlePragma(Preprocessor &PP,
 
   // If the pragma is lexically sound, notify any interested PPCallbacks.
   if (PP.getPPCallbacks())
-    PP.getPPCallbacks()->PragmaDetectMismatch(CommentLoc, NameString,
+    PP.getPPCallbacks()->PragmaDetectMismatch(DetectMismatchLoc, NameString,
                                               ValueString);
 
-  Actions.ActOnPragmaDetectMismatch(NameString, ValueString);
+  Actions.ActOnPragmaDetectMismatch(DetectMismatchLoc, NameString, ValueString);
 }
 
 /// \brief Handle the microsoft \#pragma comment extension.
@@ -1793,22 +1793,22 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
 
   // Verify that this is one of the 5 whitelisted options.
   IdentifierInfo *II = Tok.getIdentifierInfo();
-  Sema::PragmaMSCommentKind Kind =
-    llvm::StringSwitch<Sema::PragmaMSCommentKind>(II->getName())
-    .Case("linker",   Sema::PCK_Linker)
-    .Case("lib",      Sema::PCK_Lib)
-    .Case("compiler", Sema::PCK_Compiler)
-    .Case("exestr",   Sema::PCK_ExeStr)
-    .Case("user",     Sema::PCK_User)
-    .Default(Sema::PCK_Unknown);
-  if (Kind == Sema::PCK_Unknown) {
+  PragmaMSCommentKind Kind =
+    llvm::StringSwitch<PragmaMSCommentKind>(II->getName())
+    .Case("linker",   PCK_Linker)
+    .Case("lib",      PCK_Lib)
+    .Case("compiler", PCK_Compiler)
+    .Case("exestr",   PCK_ExeStr)
+    .Case("user",     PCK_User)
+    .Default(PCK_Unknown);
+  if (Kind == PCK_Unknown) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_comment_unknown_kind);
     return;
   }
 
   // On PS4, issue a warning about any pragma comments other than
   // #pragma comment lib.
-  if (PP.getTargetInfo().getTriple().isPS4() && Kind != Sema::PCK_Lib) {
+  if (PP.getTargetInfo().getTriple().isPS4() && Kind != PCK_Lib) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
       << II->getName();
     return;
@@ -1844,7 +1844,7 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
   if (PP.getPPCallbacks())
     PP.getPPCallbacks()->PragmaComment(CommentLoc, II, ArgumentString);
 
-  Actions.ActOnPragmaMSComment(Kind, ArgumentString);
+  Actions.ActOnPragmaMSComment(CommentLoc, Kind, ArgumentString);
 }
 
 // #pragma clang optimize off
