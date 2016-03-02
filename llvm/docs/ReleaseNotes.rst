@@ -31,6 +31,11 @@ Non-comprehensive list of changes in this release
   in the 3.9 release. Please migrate to using CMake. For more information see:
   `Building LLVM with CMake <CMake.html>`_
 
+* We have documented our C API stability guarantees for both development and
+  release branches, as well as documented how to extend the C API. Please see
+  the `developer documentation <DeveloperPolicy.html#c-api-changes>`_ for more
+  information.
+
 * The C API function LLVMLinkModules is deprecated. It will be removed in the
   3.9 release. Please migrate to LLVMLinkModules2. Unlike the old function the
   new one
