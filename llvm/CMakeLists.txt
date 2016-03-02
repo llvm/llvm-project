@@ -718,6 +718,7 @@ if( LLVM_INCLUDE_TESTS )
     DEPENDS ${LLVM_LIT_DEPENDS}
     ARGS ${LLVM_LIT_EXTRA_ARGS}
     )
+  add_custom_target(test-depends DEPENDS ${LLVM_LIT_DEPENDS})
 endif()
 
 if (LLVM_INCLUDE_DOCS)
