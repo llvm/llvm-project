@@ -3078,26 +3078,6 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   return PA;
 }
 
-namespace {
-/// \brief The legacy pass manager's instcombine pass.
-///
-/// This is a basic whole-function wrapper around the instcombine utility. It
-/// will try to combine all instructions in the function.
-class InstructionCombiningPass : public FunctionPass {
-  InstCombineWorklist Worklist;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-
-  InstructionCombiningPass() : FunctionPass(ID) {
-    initializeInstructionCombiningPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnFunction(Function &F) override;
-};
-}
-
 void InstructionCombiningPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<AAResultsWrapperPass>();

@@ -750,9 +750,8 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
 }
 
 void DAGTypeLegalizer::SetPromotedInteger(SDValue Op, SDValue Result) {
-  assert(((Result.getValueType() ==
-           TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType())) ||
-          (Result.getValueType() == getSetCCResultType(Op.getValueType()))) &&
+  assert(Result.getValueType() ==
+         TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType()) &&
          "Invalid type for promoted integer");
   AnalyzeNewValue(Result);
 

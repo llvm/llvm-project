@@ -516,6 +516,14 @@ public:
     return It == PerBlockAccesses.end() ? nullptr : It->second.get();
   }
 
+  /// \brief Remove a MemoryAccess from MemorySSA, including updating all
+  /// definitions and uses.
+  /// This should be called when a memory instruction that has a MemoryAccess
+  /// associated with it is erased from the program.  For example, if a store or
+  /// load is simply erased (not replaced), removeMemoryAccess should be called
+  /// on the MemoryAccess for that store/load.
+  void removeMemoryAccess(MemoryAccess *);
+
   enum InsertionPlace { Beginning, End };
 
   /// \brief Given two memory accesses in the same basic block, determine
@@ -545,6 +553,7 @@ private:
   bool dominatesUse(const MemoryAccess *, const MemoryAccess *) const;
   MemoryAccess *createNewAccess(Instruction *, bool ignoreNonMemory = false);
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
+  void removeFromLookups(MemoryAccess *);
 
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *);
   void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,
@@ -663,6 +672,12 @@ public:
   /// starting from the use side of  the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                                   MemoryLocation &) = 0;
+  /// \brief Given a memory access, invalidate anything this walker knows about
+  /// that access.
+  /// This API is used by walkers that store information to perform basic cache
+  /// invalidation.  This will be called by MemorySSA at appropriate times for
+  /// the walker it uses or returns.
+  virtual void invalidateInfo(MemoryAccess *) {}
 
 protected:
   MemorySSA *MSSA;
@@ -720,6 +735,7 @@ public:
   MemoryAccess *getClobberingMemoryAccess(const Instruction *) override;
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                           MemoryLocation &) override;
+  void invalidateInfo(MemoryAccess *) override;
 
 protected:
   struct UpwardsMemoryQuery;

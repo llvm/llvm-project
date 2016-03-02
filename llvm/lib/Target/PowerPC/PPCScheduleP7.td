@@ -391,6 +391,8 @@ def P7Model : SchedMachineModel {
   // Try to make sure we have at least 10 dispatch groups in a loop.
   let LoopMicroOpBufferSize = 40;
 
+  let CompleteModel = 0;
+
   let Itineraries = P7Itineraries;
 }
 

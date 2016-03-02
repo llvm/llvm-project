@@ -80,6 +80,7 @@ namespace {
     BlockStateMap BlockStates;
     DirtySuccessorsWorkList DirtySuccessors;
     bool EverMadeChange;
+    bool IsX86INTR;
     const TargetInstrInfo *TII;
 
     static char ID;
@@ -181,10 +182,13 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
 
   for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
     MachineInstr *MI = I;
-    bool isControlFlow = MI->isCall() || MI->isReturn();
+    // No need for vzeroupper before iret in interrupt handler function,
+    // epilogue will restore YMM registers if needed.
+    bool IsReturnFromX86INTR = IsX86INTR && MI->isReturn();
+    bool IsControlFlow = MI->isCall() || MI->isReturn();
 
     // Shortcut: don't need to check regular instructions in dirty state.
-    if (!isControlFlow && CurState == EXITS_DIRTY)
+    if ((!IsControlFlow || IsReturnFromX86INTR) && CurState == EXITS_DIRTY)
       continue;
 
     if (hasYmmReg(MI)) {
@@ -196,7 +200,7 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
 
     // Check for control-flow out of the current function (which might
     // indirectly execute SSE instructions).
-    if (!isControlFlow)
+    if (!IsControlFlow || IsReturnFromX86INTR)
       continue;
 
     // If the call won't clobber any YMM register, skip it as well. It usually
@@ -253,6 +257,7 @@ bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   EverMadeChange = false;
+  IsX86INTR = MF.getFunction()->getCallingConv() == CallingConv::X86_INTR;
 
   bool FnHasLiveInYmm = checkFnHasLiveInYmm(MRI);
 

@@ -192,8 +192,9 @@ UndefinedElf<ELFT>::UndefinedElf(StringRef N, const Elf_Sym &Sym)
 
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
-                                         OutputSectionBase<ELFT> &Section)
-    : Defined(SymbolBody::DefinedSyntheticKind, N, false, STV_DEFAULT,
+                                         OutputSectionBase<ELFT> &Section,
+                                         uint8_t Visibility)
+    : Defined(SymbolBody::DefinedSyntheticKind, N, false, Visibility,
               /*IsTls*/ false, /*IsFunction*/ false),
       Value(Value), Section(Section) {}
 

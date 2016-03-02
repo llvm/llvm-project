@@ -10,13 +10,14 @@ declare void @Foo_ctor(%Foo* %this)
 
 define void @g() {
 entry:
+; CHECK: movl    %esp, %ebp
   %args = alloca inalloca %frame
   %c = getelementptr %frame, %frame* %args, i32 0, i32 2
-; CHECK: movl    $20, %eax
-; CHECK: calll   __chkstk
-; CHECK: movl %esp,
+; CHECK: movl    %esp, %[[tmp_sp1:.*]]
+; CHECK: leal    -20(%[[tmp_sp1]]), %[[tmp_sp2:.*]]
+; CHECK: movl    %[[tmp_sp2]], %esp
   call void @Foo_ctor(%Foo* %c)
-; CHECK: leal 12(%{{.*}}),
+; CHECK: leal -8(%[[tmp_sp1]]),
 ; CHECK-NEXT: pushl
 ; CHECK-NEXT: calll _Foo_ctor
 ; CHECK: addl $4, %esp

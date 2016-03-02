@@ -50,7 +50,7 @@ public:
     Interpret (llvm::Module &module,
                llvm::Function &function,
                llvm::ArrayRef<lldb::addr_t> args,
-               lldb_private::IRMemoryMap &memory_map,
+               lldb_private::IRExecutionUnit &execution_unit,
                lldb_private::Error &error,
                lldb::addr_t stack_frame_bottom,
                lldb::addr_t stack_frame_top,

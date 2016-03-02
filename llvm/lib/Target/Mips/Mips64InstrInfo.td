@@ -98,14 +98,10 @@ def DADDiu  : ArithLogicI<"daddiu", simm16_64, GPR64Opnd, II_DADDIU,
               ADDI_FM<0x19>, IsAsCheapAsAMove, ISA_MIPS3;
 
 let isCodeGenOnly = 1 in {
-def SLTi64 : SetCC_I<"slti", setlt, simm16_64, immSExt16, GPR64Opnd,
-                     GPR64Opnd>, SLTI_FM<0xa>;
-def SLTiu64 : SetCC_I<"sltiu", setult, simm16_64, immSExt16, GPR64Opnd,
-                      GPR64Opnd>, SLTI_FM<0xb>;
-def SLTi64_32 : SetCC_I<"slti", setlt, simm16, immSExt16, GPR64Opnd,
-                        GPR32Opnd>, SLTI_FM<0xa>;
-def SLTiu64_32 : SetCC_I<"sltiu", setult, simm16, immSExt16, GPR64Opnd,
-                         GPR32Opnd>, SLTI_FM<0xb>;
+def SLTi64  : SetCC_I<"slti", setlt, simm16_64, immSExt16, GPR64Opnd>,
+              SLTI_FM<0xa>;
+def SLTiu64 : SetCC_I<"sltiu", setult, simm16_64, immSExt16, GPR64Opnd>,
+              SLTI_FM<0xb>;
 def ANDi64 : ArithLogicI<"andi", uimm16_64, GPR64Opnd, II_AND, immZExt16, and>,
              ADDI_FM<0xc>;
 def ORi64   : ArithLogicI<"ori", uimm16_64, GPR64Opnd, II_OR, immZExt16, or>,
@@ -126,10 +122,8 @@ def DSUB   : ArithLogicR<"dsub", GPR64Opnd, 0, II_DSUB>, ADD_FM<0, 0x2e>,
              ISA_MIPS3;
 
 let isCodeGenOnly = 1 in {
-def SLT64 : SetCC_R<"slt", setlt, GPR64Opnd, GPR64Opnd>, ADD_FM<0, 0x2a>;
-def SLTu64 : SetCC_R<"sltu", setult, GPR64Opnd, GPR64Opnd>, ADD_FM<0, 0x2b>;
-def SLT64_32 : SetCC_R<"slt", setlt, GPR64Opnd, GPR32Opnd>, ADD_FM<0, 0x2a>;
-def SLTu64_32 : SetCC_R<"sltu", setult, GPR64Opnd, GPR32Opnd>, ADD_FM<0, 0x2b>;
+def SLT64  : SetCC_R<"slt", setlt, GPR64Opnd>, ADD_FM<0, 0x2a>;
+def SLTu64 : SetCC_R<"sltu", setult, GPR64Opnd>, ADD_FM<0, 0x2b>;
 def AND64  : ArithLogicR<"and", GPR64Opnd, 1, II_AND, and>, ADD_FM<0, 0x24>;
 def OR64   : ArithLogicR<"or", GPR64Opnd, 1, II_OR, or>, ADD_FM<0, 0x25>;
 def XOR64  : ArithLogicR<"xor", GPR64Opnd, 1, II_XOR, xor>, ADD_FM<0, 0x26>;
@@ -331,7 +325,8 @@ class ExtsCins<string opstr, SDPatternOperator Op = null_frag>:
 class SetCC64_R<string opstr, PatFrag cond_op> :
   InstSE<(outs GPR64Opnd:$rd), (ins GPR64Opnd:$rs, GPR64Opnd:$rt),
          !strconcat(opstr, "\t$rd, $rs, $rt"),
-         [(set GPR64Opnd:$rd, (cond_op GPR64Opnd:$rs, GPR64Opnd:$rt))],
+         [(set GPR64Opnd:$rd, (zext (cond_op GPR64Opnd:$rs,
+                                             GPR64Opnd:$rt)))],
          II_SEQ_SNE, FrmR, opstr> {
   let TwoOperandAliasConstraint = "$rd = $rs";
 }
@@ -339,7 +334,8 @@ class SetCC64_R<string opstr, PatFrag cond_op> :
 class SetCC64_I<string opstr, PatFrag cond_op>:
   InstSE<(outs GPR64Opnd:$rt), (ins GPR64Opnd:$rs, simm10_64:$imm10),
          !strconcat(opstr, "\t$rt, $rs, $imm10"),
-         [(set GPR64Opnd:$rt, (cond_op GPR64Opnd:$rs, immSExt10_64:$imm10))],
+         [(set GPR64Opnd:$rt, (zext (cond_op GPR64Opnd:$rs,
+                                             immSExt10_64:$imm10)))],
          II_SEQI_SNEI, FrmI, opstr> {
   let TwoOperandAliasConstraint = "$rt = $rs";
 }
@@ -348,7 +344,7 @@ class CBranchBitNum<string opstr, DAGOperand opnd, PatFrag cond_op,
                     RegisterOperand RO, Operand ImmOp, bits<64> shift = 1> :
   InstSE<(outs), (ins RO:$rs, ImmOp:$p, opnd:$offset),
          !strconcat(opstr, "\t$rs, $p, $offset"),
-         [(brcond (i64 (cond_op (and RO:$rs, (shl shift, immZExt5_64:$p)), 0)),
+         [(brcond (i32 (cond_op (and RO:$rs, (shl shift, immZExt5_64:$p)), 0)),
                   bb:$offset)], II_BBIT, FrmI, opstr> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -484,30 +480,20 @@ def : WrapperPat<tblockaddress, DADDiu, GPR64>;
 def : WrapperPat<tjumptable, DADDiu, GPR64>;
 def : WrapperPat<tglobaltlsaddr, DADDiu, GPR64>;
 
-defm : BrcondPats1<GPR64, BEQ64, BNE64, ZERO_64, i64>;
-defm : BrcondPats1<GPR32, BEQ, BNE, ZERO, i64>;
+defm : BrcondPats<GPR64, BEQ64, BNE64, SLT64, SLTu64, SLTi64, SLTiu64,
+                  ZERO_64>;
 
-def : MipsPat<(brcond (i64 (setlt i64:$lhs, 1)), bb:$dst),
+def : MipsPat<(brcond (i32 (setlt i64:$lhs, 1)), bb:$dst),
               (BLEZ64 i64:$lhs, bb:$dst)>;
-def : MipsPat<(brcond (i64 (setgt i64:$lhs, -1)), bb:$dst),
+def : MipsPat<(brcond (i32 (setgt i64:$lhs, -1)), bb:$dst),
               (BGEZ64 i64:$lhs, bb:$dst)>;
-def : MipsPat<(brcond (i64 (setlt i32:$lhs, 1)), bb:$dst),
-              (BLEZ64 (SUBREG_TO_REG (i32 0), i32:$lhs, sub_32), bb:$dst)>;
-def : MipsPat<(brcond (i64 (setgt i32:$lhs, -1)), bb:$dst),
-              (BGEZ64 (SUBREG_TO_REG (i32 0), i32:$lhs, sub_32), bb:$dst)>;
 
 // setcc patterns
 defm : SeteqPats<GPR64, SLTiu64, XOR64, SLTu64, ZERO_64>;
-defm : SetlePats<GPR64, SLT64, SLTu64, XORi64>;
+defm : SetlePats<GPR64, SLT64, SLTu64>;
 defm : SetgtPats<GPR64, SLT64, SLTu64>;
-defm : SetgePats<GPR64, SLT64, SLTu64, XORi64>;
-defm : SetgeImmPats<GPR64, SLTi64, SLTiu64, XORi64>;
-
-defm : SeteqPats<GPR32, SLTiu64_32, XOR, SLTu64_32, ZERO>;
-defm : SetlePats<GPR32, SLT64_32, SLTu64_32, XORi64>;
-defm : SetgtPats<GPR32, SLT64_32, SLTu64_32>;
-defm : SetgePats<GPR32, SLT64_32, SLTu64_32, XORi64>;
-defm : SetgeImmPats<GPR32, SLTi64_32, SLTiu64_32, XORi64>;
+defm : SetgePats<GPR64, SLT64, SLTu64>;
+defm : SetgeImmPats<GPR64, SLTi64, SLTiu64>;
 
 // truncate
 def : MipsPat<(trunc (assertsext GPR64:$src)),
@@ -552,13 +538,13 @@ let AdditionalPredicates = [NotDSP] in {
 
 // Octeon bbit0/bbit1 MipsPattern
 let Predicates = [HasMips64, HasCnMips] in {
-def : MipsPat<(brcond (i64 (seteq (and i64:$lhs, PowerOf2LO:$mask), 0)), bb:$dst),
+def : MipsPat<(brcond (i32 (seteq (and i64:$lhs, PowerOf2LO:$mask), 0)), bb:$dst),
               (BBIT0 i64:$lhs, (Log2LO PowerOf2LO:$mask), bb:$dst)>;
-def : MipsPat<(brcond (i64 (seteq (and i64:$lhs, PowerOf2HI:$mask), 0)), bb:$dst),
+def : MipsPat<(brcond (i32 (seteq (and i64:$lhs, PowerOf2HI:$mask), 0)), bb:$dst),
               (BBIT032 i64:$lhs, (Log2HI PowerOf2HI:$mask), bb:$dst)>;
-def : MipsPat<(brcond (i64 (setne (and i64:$lhs, PowerOf2LO:$mask), 0)), bb:$dst),
+def : MipsPat<(brcond (i32 (setne (and i64:$lhs, PowerOf2LO:$mask), 0)), bb:$dst),
               (BBIT1 i64:$lhs, (Log2LO PowerOf2LO:$mask), bb:$dst)>;
-def : MipsPat<(brcond (i64 (setne (and i64:$lhs, PowerOf2HI:$mask), 0)), bb:$dst),
+def : MipsPat<(brcond (i32 (setne (and i64:$lhs, PowerOf2HI:$mask), 0)), bb:$dst),
               (BBIT132 i64:$lhs, (Log2HI PowerOf2HI:$mask), bb:$dst)>;
 }
 

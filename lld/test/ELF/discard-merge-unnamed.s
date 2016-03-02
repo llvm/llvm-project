@@ -13,4 +13,13 @@
 // CHECK-NEXT:     Other: 0
 // CHECK-NEXT:     Section: Undefined
 // CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: _DYNAMIC
+// CHECK-NEXT:     Value: 0x2000
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Local
+// CHECK-NEXT:     Type: None
+// CHECK-NEXT:     Other: 2
+// CHECK-NEXT:     Section: .dynamic
+// CHECK-NEXT:   }
 // CHECK-NEXT: ]

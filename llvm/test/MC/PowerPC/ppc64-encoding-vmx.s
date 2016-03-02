@@ -742,3 +742,91 @@
 # CHECK-LE: mfvscr 2                        # encoding: [0x04,0x06,0x40,0x10]
             mfvscr 2
 
+# Power9 instructions
+
+# Vector Compare Not Equal (Zero)
+# CHECK-BE: vcmpneb 2, 3, 4                 # encoding: [0x10,0x43,0x20,0x07]
+# CHECK-LE: vcmpneb 2, 3, 4                 # encoding: [0x07,0x20,0x43,0x10]
+            vcmpneb 2, 3, 4
+# CHECK-BE: vcmpneb. 2, 3, 4                # encoding: [0x10,0x43,0x24,0x07]
+# CHECK-LE: vcmpneb. 2, 3, 4                # encoding: [0x07,0x24,0x43,0x10]
+            vcmpneb. 2, 3, 4
+# CHECK-BE: vcmpnezb 2, 3, 4                # encoding: [0x10,0x43,0x21,0x07]
+# CHECK-LE: vcmpnezb 2, 3, 4                # encoding: [0x07,0x21,0x43,0x10]
+            vcmpnezb 2, 3, 4
+# CHECK-BE: vcmpnezb. 2, 3, 4               # encoding: [0x10,0x43,0x25,0x07]
+# CHECK-LE: vcmpnezb. 2, 3, 4               # encoding: [0x07,0x25,0x43,0x10]
+            vcmpnezb. 2, 3, 4
+# CHECK-BE: vcmpneh 2, 3, 4                 # encoding: [0x10,0x43,0x20,0x47]
+# CHECK-LE: vcmpneh 2, 3, 4                 # encoding: [0x47,0x20,0x43,0x10]
+            vcmpneh 2, 3, 4
+# CHECK-BE: vcmpneh. 2, 3, 4                # encoding: [0x10,0x43,0x24,0x47]
+# CHECK-LE: vcmpneh. 2, 3, 4                # encoding: [0x47,0x24,0x43,0x10]
+            vcmpneh. 2, 3, 4
+# CHECK-BE: vcmpnezh 2, 3, 4                # encoding: [0x10,0x43,0x21,0x47]
+# CHECK-LE: vcmpnezh 2, 3, 4                # encoding: [0x47,0x21,0x43,0x10]
+            vcmpnezh 2, 3, 4
+# CHECK-BE: vcmpnezh. 2, 3, 4               # encoding: [0x10,0x43,0x25,0x47]
+# CHECK-LE: vcmpnezh. 2, 3, 4               # encoding: [0x47,0x25,0x43,0x10]
+            vcmpnezh. 2, 3, 4
+# CHECK-BE: vcmpnew 2, 3, 4                 # encoding: [0x10,0x43,0x20,0x87]
+# CHECK-LE: vcmpnew 2, 3, 4                 # encoding: [0x87,0x20,0x43,0x10]
+            vcmpnew 2, 3, 4
+# CHECK-BE: vcmpnew. 2, 3, 4                # encoding: [0x10,0x43,0x24,0x87]
+# CHECK-LE: vcmpnew. 2, 3, 4                # encoding: [0x87,0x24,0x43,0x10]
+            vcmpnew. 2, 3, 4
+# CHECK-BE: vcmpnezw 2, 3, 4                # encoding: [0x10,0x43,0x21,0x87]
+# CHECK-LE: vcmpnezw 2, 3, 4                # encoding: [0x87,0x21,0x43,0x10]
+            vcmpnezw 2, 3, 4
+# CHECK-BE: vcmpnezw. 2, 3, 4               # encoding: [0x10,0x43,0x25,0x87]
+# CHECK-LE: vcmpnezw. 2, 3, 4               # encoding: [0x87,0x25,0x43,0x10]
+            vcmpnezw. 2, 3, 4
+
+# Vector Extract Unsigned
+# CHECK-BE: vextractub 2, 3, 15             # encoding: [0x10,0x4f,0x1a,0x0d]
+# CHECK-LE: vextractub 2, 3, 15             # encoding: [0x0d,0x1a,0x4f,0x10]
+            vextractub 2, 3, 15
+# CHECK-BE: vextractuh 2, 3, 14             # encoding: [0x10,0x4e,0x1a,0x4d]
+# CHECK-LE: vextractuh 2, 3, 14             # encoding: [0x4d,0x1a,0x4e,0x10]
+            vextractuh 2, 3, 14
+# CHECK-BE: vextractuw 2, 3, 12             # encoding: [0x10,0x4c,0x1a,0x8d]
+# CHECK-LE: vextractuw 2, 3, 12             # encoding: [0x8d,0x1a,0x4c,0x10]
+            vextractuw 2, 3, 12
+# CHECK-BE: vextractd 2, 3, 8               # encoding: [0x10,0x48,0x1a,0xcd]
+# CHECK-LE: vextractd 2, 3, 8               # encoding: [0xcd,0x1a,0x48,0x10]
+            vextractd 2, 3, 8
+
+# Vector Extract Unsigned Left/Right-Indexed
+# CHECK-BE: vextublx 2, 3, 4                # encoding: [0x10,0x43,0x26,0x0d]
+# CHECK-LE: vextublx 2, 3, 4                # encoding: [0x0d,0x26,0x43,0x10]
+            vextublx 2, 3, 4
+# CHECK-BE: vextubrx 2, 3, 4                # encoding: [0x10,0x43,0x27,0x0d]
+# CHECK-LE: vextubrx 2, 3, 4                # encoding: [0x0d,0x27,0x43,0x10]
+            vextubrx 2, 3, 4
+# CHECK-BE: vextuhlx 2, 3, 4                # encoding: [0x10,0x43,0x26,0x4d]
+# CHECK-LE: vextuhlx 2, 3, 4                # encoding: [0x4d,0x26,0x43,0x10]
+            vextuhlx 2, 3, 4
+# CHECK-BE: vextuhrx 2, 3, 4                # encoding: [0x10,0x43,0x27,0x4d]
+# CHECK-LE: vextuhrx 2, 3, 4                # encoding: [0x4d,0x27,0x43,0x10]
+            vextuhrx 2, 3, 4
+# CHECK-BE: vextuwlx 2, 3, 4                # encoding: [0x10,0x43,0x26,0x8d]
+# CHECK-LE: vextuwlx 2, 3, 4                # encoding: [0x8d,0x26,0x43,0x10]
+            vextuwlx 2, 3, 4
+# CHECK-BE: vextuwrx 2, 3, 4                # encoding: [0x10,0x43,0x27,0x8d]
+# CHECK-LE: vextuwrx 2, 3, 4                # encoding: [0x8d,0x27,0x43,0x10]
+            vextuwrx 2, 3, 4
+
+# Vector Insert Element
+# CHECK-BE: vinsertb 2, 3, 15               # encoding: [0x10,0x4f,0x1b,0x0d]
+# CHECK-LE: vinsertb 2, 3, 15               # encoding: [0x0d,0x1b,0x4f,0x10]
+            vinsertb 2, 3, 15
+# CHECK-BE: vinserth 2, 3, 14               # encoding: [0x10,0x4e,0x1b,0x4d]
+# CHECK-LE: vinserth 2, 3, 14               # encoding: [0x4d,0x1b,0x4e,0x10]
+            vinserth 2, 3, 14
+# CHECK-BE: vinsertw 2, 3, 12               # encoding: [0x10,0x4c,0x1b,0x8d]
+# CHECK-LE: vinsertw 2, 3, 12               # encoding: [0x8d,0x1b,0x4c,0x10]
+            vinsertw 2, 3, 12
+# CHECK-BE: vinsertd 2, 3, 8                # encoding: [0x10,0x48,0x1b,0xcd]
+# CHECK-LE: vinsertd 2, 3, 8                # encoding: [0xcd,0x1b,0x48,0x10]
+            vinsertd 2, 3, 8
+

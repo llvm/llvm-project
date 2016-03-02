@@ -35,6 +35,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
@@ -1433,6 +1434,21 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
           Expr = MCBinaryExpr::createAnd(Expr,
               MCConstantExpr::create(0xffff, Context),
                                     Context);
+      } else {
+        MCValue Value;
+        if (Expr->evaluateAsRelocatable(Value, nullptr, nullptr)) {
+          if (!Value.isAbsolute()) {
+            switch(Value.getAccessVariant()) {
+            case MCSymbolRefExpr::VariantKind::VK_TPREL:
+            case MCSymbolRefExpr::VariantKind::VK_DTPREL:
+              // Don't lazy extend these expression variants
+              MustNotExtend = !MustExtend;
+              break;
+            default:
+              break;
+            }
+          }
+        }
       }
       Expr = HexagonMCExpr::create(Expr, Context);
       HexagonMCInstrInfo::setMustNotExtend(*Expr, MustNotExtend);

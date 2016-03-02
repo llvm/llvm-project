@@ -58,7 +58,7 @@ public:
   SymbolBody *addUndefinedOpt(StringRef Name);
   SymbolBody *addAbsolute(StringRef Name, Elf_Sym &ESym);
   SymbolBody *addSynthetic(StringRef Name, OutputSectionBase<ELFT> &Section,
-                           uintX_t Value);
+                           uintX_t Value, uint8_t Visibility);
   SymbolBody *addIgnored(StringRef Name);
 
   void scanShlibUndefined();

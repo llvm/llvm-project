@@ -28,7 +28,7 @@
 // CHECK-NEXT:   Version: 1
 // CHECK-NEXT:   Entry: 0x0
 // CHECK-NEXT:   ProgramHeaderOffset: 0x34
-// CHECK-NEXT:   SectionHeaderOffset: 0x2084
+// CHECK-NEXT:   SectionHeaderOffset: 0x209C
 // CHECK-NEXT:   Flags [ (0x0)
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   HeaderSize: 52
@@ -157,13 +157,14 @@
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
 // CHECK-NEXT:     Offset: 0x2030
-// CHECK-NEXT:     Size: 16
+// CHECK-NEXT:     Size: 32
 // CHECK-NEXT:     Link: 8
 // CHECK-NEXT:     Info: 1
 // CHECK-NEXT:     AddressAlignment: 4
 // CHECK-NEXT:     EntrySize: 16
 // CHECK-NEXT:     SectionData (
 // CHECK-NEXT:       0000: 00000000 00000000 00000000 00000000  |................|
+// CHECK-NEXT:       0010: 00000001 00002000 00000000 00020005  |...... .........|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
@@ -173,7 +174,7 @@
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x2040
+// CHECK-NEXT:     Offset: 0x2050
 // CHECK-NEXT:     Size: 64
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
@@ -193,14 +194,14 @@
 // CHECK-NEXT:     Flags [ (0x0)
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
-// CHECK-NEXT:     Offset: 0x2080
+// CHECK-NEXT:     Offset: 0x2090
 // CHECK-NEXT:     Size: 1
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
 // CHECK-NEXT:     AddressAlignment: 1
 // CHECK-NEXT:     EntrySize: 0
 // CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 00                                   |.|
+// CHECK-NEXT:       0000: 005F4459 4E414D49 4300               |._DYNAMIC.|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

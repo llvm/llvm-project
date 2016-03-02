@@ -1,6 +1,0 @@
----
-defined-atoms:
-    - name:              _inlineFunc
-      scope:             global
-      type:              code
-      merge:             as-weak

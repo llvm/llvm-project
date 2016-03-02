@@ -233,7 +233,7 @@ namespace opts {
   cl::alias SectionGroupsShort("g", cl::desc("Alias for -elf-sections-groups"),
                                cl::aliasopt(SectionGroups));
 
-  cl::opt<OutpytStyleTy>
+  cl::opt<OutputStyleTy>
       Output("elf-output-style", cl::desc("Specify ELF dump style"),
              cl::values(clEnumVal(LLVM, "LLVM default style"),
                         clEnumVal(GNU, "GNU readelf style"), clEnumValEnd),

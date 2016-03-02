@@ -671,10 +671,10 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
                  ADDI_FM_MM<0xc>;
   def ADDi_MM  : MMRel, ArithLogicI<"addi", simm16, GPR32Opnd>,
                  ADDI_FM_MM<0x4>;
-  def SLTi_MM  : MMRel, SetCC_I<"slti", setlt, simm16, immSExt16, GPR32Opnd,
-                                GPR32Opnd>, SLTI_FM_MM<0x24>;
-  def SLTiu_MM : MMRel, SetCC_I<"sltiu", setult, simm16, immSExt16, GPR32Opnd,
-                                GPR32Opnd>, SLTI_FM_MM<0x2c>;
+  def SLTi_MM  : MMRel, SetCC_I<"slti", setlt, simm16, immSExt16, GPR32Opnd>,
+                 SLTI_FM_MM<0x24>;
+  def SLTiu_MM : MMRel, SetCC_I<"sltiu", setult, simm16, immSExt16, GPR32Opnd>,
+                 SLTI_FM_MM<0x2c>;
   def ANDi_MM  : MMRel, ArithLogicI<"andi", uimm16, GPR32Opnd>,
                  ADDI_FM_MM<0x34>;
   def ORi_MM   : MMRel, ArithLogicI<"ori", uimm16, GPR32Opnd>,
@@ -694,9 +694,8 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   def MUL_MM   : MMRel, ArithLogicR<"mul", GPR32Opnd>, ADD_FM_MM<0, 0x210>;
   def ADD_MM   : MMRel, ArithLogicR<"add", GPR32Opnd>, ADD_FM_MM<0, 0x110>;
   def SUB_MM   : MMRel, ArithLogicR<"sub", GPR32Opnd>, ADD_FM_MM<0, 0x190>;
-  def SLT_MM   : MMRel, SetCC_R<"slt", setlt, GPR32Opnd, GPR32Opnd>,
-                 ADD_FM_MM<0, 0x350>;
-  def SLTu_MM  : MMRel, SetCC_R<"sltu", setult, GPR32Opnd, GPR32Opnd>,
+  def SLT_MM   : MMRel, SetCC_R<"slt", setlt, GPR32Opnd>, ADD_FM_MM<0, 0x350>;
+  def SLTu_MM  : MMRel, SetCC_R<"sltu", setult, GPR32Opnd>,
                  ADD_FM_MM<0, 0x390>;
   def AND_MM   : MMRel, ArithLogicR<"and", GPR32Opnd, 1, II_AND, and>,
                  ADD_FM_MM<0, 0x250>;

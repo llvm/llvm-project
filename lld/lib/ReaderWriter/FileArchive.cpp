@@ -219,7 +219,7 @@ private:
   bool _logLoading;
   std::vector<std::unique_ptr<MemoryBuffer>> _memberBuffers;
   std::mutex _mutex;
-  FileVector _filesReturned;
+  std::vector<std::unique_ptr<File>> _filesReturned;
 };
 
 class ArchiveReader : public Reader {

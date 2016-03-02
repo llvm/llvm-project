@@ -257,6 +257,7 @@ namespace llvm {
     bool isExtractSubreg : 1;
     bool isInsertSubreg : 1;
     bool isConvergent : 1;
+    bool hasNoSchedulingInfo : 1;
 
     std::string DeprecatedReason;
     bool HasComplexDeprecationPredicate;

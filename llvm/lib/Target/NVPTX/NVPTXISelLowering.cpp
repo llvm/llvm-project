@@ -314,8 +314,12 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "NVPTXISD::DeclareRetParam";
   case NVPTXISD::PrintCall:
     return "NVPTXISD::PrintCall";
+  case NVPTXISD::PrintConvergentCall:
+    return "NVPTXISD::PrintConvergentCall";
   case NVPTXISD::PrintCallUni:
     return "NVPTXISD::PrintCallUni";
+  case NVPTXISD::PrintConvergentCallUni:
+    return "NVPTXISD::PrintConvergentCallUni";
   case NVPTXISD::LoadParam:
     return "NVPTXISD::LoadParam";
   case NVPTXISD::LoadParamV2:
@@ -1439,8 +1443,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SDValue PrintCallOps[] = {
     Chain, DAG.getConstant((Ins.size() == 0) ? 0 : 1, dl, MVT::i32), InFlag
   };
-  Chain = DAG.getNode(Func ? (NVPTXISD::PrintCallUni) : (NVPTXISD::PrintCall),
-                      dl, PrintCallVTs, PrintCallOps);
+  // We model convergent calls as separate opcodes.
+  unsigned Opcode = Func ? NVPTXISD::PrintCallUni : NVPTXISD::PrintCall;
+  if (CLI.IsConvergent)
+    Opcode = Opcode == NVPTXISD::PrintCallUni ? NVPTXISD::PrintConvergentCallUni
+                                              : NVPTXISD::PrintConvergentCall;
+  Chain = DAG.getNode(Opcode, dl, PrintCallVTs, PrintCallOps);
   InFlag = Chain.getValue(1);
 
   // Ops to print out the function name

@@ -191,14 +191,15 @@ struct SubtreeReferences {
 static int findReferencesInBlock(struct SubtreeReferences &References,
                                  const ScopStmt *Stmt, const BasicBlock *BB) {
   for (const Instruction &Inst : *BB)
-    for (Value *SrcVal : Inst.operands())
-      if (canSynthesize(SrcVal, &References.LI, &References.SE,
-                        &References.R)) {
-        References.SCEVs.insert(
-            References.SE.getSCEVAtScope(SrcVal, References.LI.getLoopFor(BB)));
+    for (Value *SrcVal : Inst.operands()) {
+      auto *Scope = References.LI.getLoopFor(BB);
+      if (canSynthesize(SrcVal, &References.LI, &References.SE, &References.R,
+                        Scope)) {
+        References.SCEVs.insert(References.SE.getSCEVAtScope(SrcVal, Scope));
         continue;
       } else if (Value *NewVal = References.GlobalMap.lookup(SrcVal))
         References.Values.insert(NewVal);
+    }
   return 0;
 }
 

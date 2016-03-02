@@ -72,6 +72,25 @@ public:
   DarwinLdOptTable() : OptTable(infoTable) {}
 };
 
+static std::vector<std::unique_ptr<File>>
+makeErrorFile(StringRef path, std::error_code ec) {
+  std::vector<std::unique_ptr<File>> result;
+  result.push_back(llvm::make_unique<ErrorFile>(path, ec));
+  return result;
+}
+
+static std::vector<std::unique_ptr<File>>
+parseMemberFiles(std::unique_ptr<File> file) {
+  std::vector<std::unique_ptr<File>> members;
+  if (auto *archive = dyn_cast<ArchiveLibraryFile>(file.get())) {
+    if (std::error_code ec = archive->parseAllMembers(members))
+      return makeErrorFile(file->path(), ec);
+  } else {
+    members.push_back(std::move(file));
+  }
+  return members;
+}
+
 std::vector<std::unique_ptr<File>>
 loadFile(MachOLinkingContext &ctx, StringRef path,
          raw_ostream &diag, bool wholeArchive, bool upwardDylib) {

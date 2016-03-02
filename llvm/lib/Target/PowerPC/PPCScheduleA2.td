@@ -166,6 +166,8 @@ def PPCA2Model : SchedMachineModel {
                        // Itineraries are queried instead.
   let MispredictPenalty = 13;
 
+  let CompleteModel = 0;
+
   let Itineraries = PPCA2Itineraries;
 }
 

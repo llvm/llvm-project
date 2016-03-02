@@ -3650,8 +3650,7 @@ PushDefUseChildren(Instruction *I,
 /// instructions that depend on the given instruction and removes them from
 /// the ValueExprMapType map if they reference SymName. This is used during PHI
 /// resolution.
-void
-ScalarEvolution::ForgetSymbolicName(Instruction *PN, const SCEV *SymName) {
+void ScalarEvolution::forgetSymbolicName(Instruction *PN, const SCEV *SymName) {
   SmallVector<Instruction *, 16> Worklist;
   PushDefUseChildren(PN, Worklist);
 
@@ -3864,7 +3863,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
           // Okay, for the entire analysis of this edge we assumed the PHI
           // to be symbolic.  We now need to go back and purge all of the
           // entries for the scalars that use the symbolic expression.
-          ForgetSymbolicName(PN, SymbolicName);
+          forgetSymbolicName(PN, SymbolicName);
           ValueExprMap[SCEVCallbackVH(PN, this)] = PHISCEV;
           return PHISCEV;
         }
@@ -3888,7 +3887,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
           // Okay, for the entire analysis of this edge we assumed the PHI
           // to be symbolic.  We now need to go back and purge all of the
           // entries for the scalars that use the symbolic expression.
-          ForgetSymbolicName(PN, SymbolicName);
+          forgetSymbolicName(PN, SymbolicName);
           ValueExprMap[SCEVCallbackVH(PN, this)] = Shifted;
           return Shifted;
         }

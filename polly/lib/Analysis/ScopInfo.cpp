@@ -3741,7 +3741,8 @@ void ScopInfo::buildPHIAccesses(PHINode *PHI, Region &R,
   // If we can synthesize a PHI we can skip it, however only if it is in
   // the region. If it is not it can only be in the exit block of the region.
   // In this case we model the operands but not the PHI itself.
-  if (!IsExitBlock && canSynthesize(PHI, LI, SE, &R))
+  auto *Scope = LI->getLoopFor(PHI->getParent());
+  if (!IsExitBlock && canSynthesize(PHI, LI, SE, &R, Scope))
     return;
 
   // PHI nodes are modeled as if they had been demoted prior to the SCoP
@@ -4219,7 +4220,8 @@ void ScopInfo::ensureValueRead(Value *V, BasicBlock *UserBB) {
   // If the instruction can be synthesized and the user is in the region we do
   // not need to add a value dependences.
   Region &ScopRegion = scop->getRegion();
-  if (canSynthesize(V, LI, SE, &ScopRegion))
+  auto *Scope = LI->getLoopFor(UserBB);
+  if (canSynthesize(V, LI, SE, &ScopRegion, Scope))
     return;
 
   // Do not build scalar dependences for required invariant loads as we will

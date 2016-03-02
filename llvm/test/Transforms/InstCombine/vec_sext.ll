@@ -43,3 +43,31 @@ entry:
 ; CHECK:   and <4 x i32> %b.lobit.not, %sub
 ; CHECK:   or <4 x i32> %0, %1
 }
+
+;;; PR26701: https://llvm.org/bugs/show_bug.cgi?id=26701
+
+; Signed-less-than-or-equal to -1 is the same operation as above: smear the sign bit.
+
+define <2 x i32> @is_negative(<2 x i32> %a) {
+  %cmp = icmp sle <2 x i32> %a, <i32 -1, i32 -1>
+  %sext = sext <2 x i1> %cmp to <2 x i32>
+  ret <2 x i32> %sext
+
+; CHECK-LABEL: @is_negative(
+; CHECK-NEXT:  ashr <2 x i32> %a, <i32 31, i32 31>
+; CHECK-NEXT:  ret <2 x i32> 
+}
+
+; Signed-greater-than-or-equal to 0 is 'not' of the same operation as above.
+
+define <2 x i32> @is_positive(<2 x i32> %a) {
+  %cmp = icmp sge <2 x i32> %a, zeroinitializer
+  %sext = sext <2 x i1> %cmp to <2 x i32>
+  ret <2 x i32> %sext
+
+; CHECK-LABEL: @is_positive(
+; CHECK-NEXT:  [[SHIFT:%[a-zA-Z0-9.]+]] = ashr <2 x i32> %a, <i32 31, i32 31>
+; CHECK-NEXT:  xor <2 x i32> [[SHIFT]], <i32 -1, i32 -1>
+; CHECK-NEXT:  ret <2 x i32>
+}
+

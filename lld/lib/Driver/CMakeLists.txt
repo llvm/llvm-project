@@ -1,11 +1,8 @@
-set(LLVM_TARGET_DEFINITIONS CoreOptions.td)
-tablegen(LLVM CoreOptions.inc -gen-opt-parser-defs)
 set(LLVM_TARGET_DEFINITIONS DarwinLdOptions.td)
 tablegen(LLVM DarwinLdOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(DriverOptionsTableGen)
 
 add_lld_library(lldDriver
-  CoreDriver.cpp
   DarwinLdDriver.cpp
   Driver.cpp
 

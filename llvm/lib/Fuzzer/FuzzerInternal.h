@@ -83,6 +83,12 @@ void PrintASCII(const Unit &U, const char *PrintAfter = "");
 void PrintASCII(const Word &W, const char *PrintAfter = "");
 std::string Hash(const Unit &U);
 void SetTimer(int Seconds);
+void SetSigSegvHandler();
+void SetSigBusHandler();
+void SetSigAbrtHandler();
+void SetSigIllHandler();
+void SetSigFpeHandler();
+void SetSigIntHandler();
 std::string Base64(const Unit &U);
 int ExecuteCommand(const std::string &Command);
 size_t GetPeakRSSMb();
@@ -270,12 +276,11 @@ public:
     int Verbosity = 1;
     int MaxLen = 0;
     int UnitTimeoutSec = 300;
-    bool AbortOnTimeout = false;
     int TimeoutExitCode = 77;
+    int ErrorExitCode = 77;
     int MaxTotalTimeSec = 0;
     bool DoCrossOver = true;
     int MutateDepth = 5;
-    bool ExitOnFirst = false;
     bool UseCounters = false;
     bool UseIndirCalls = true;
     bool UseTraces = false;
@@ -331,6 +336,8 @@ public:
   size_t getTotalNumberOfRuns() { return TotalNumberOfRuns; }
 
   static void StaticAlarmCallback();
+  static void StaticCrashSignalCallback();
+  static void StaticInterruptCallback();
 
   void ExecuteCallback(const uint8_t *Data, size_t Size);
 
@@ -341,6 +348,8 @@ public:
 
 private:
   void AlarmCallback();
+  void CrashCallback();
+  void InterruptCallback();
   void MutateAndTestOne();
   void ReportNewCoverage(const Unit &U);
   bool RunOne(const uint8_t *Data, size_t Size);
@@ -372,6 +381,7 @@ private:
 
   void SetDeathCallback();
   static void StaticDeathCallback();
+  void DumpCurrentUnit(const char *Prefix);
   void DeathCallback();
 
   uint8_t *CurrentUnitData;

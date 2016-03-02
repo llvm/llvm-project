@@ -991,6 +991,14 @@ class Relocs_Elf_Hexagon(Enum):
   R_HEX_TPREL_16_X        =  84
   R_HEX_TPREL_11_X        =  85
 
+class Relocs_Elf_Lanai(Enum):
+  R_LANAI_NONE = 0
+  R_LANAI_21   = 1
+  R_LANAI_21_F = 2
+  R_LANAI_25   = 3
+  R_LANAI_32   = 4
+  R_LANAI_HI16 = 5
+  R_LANAI_LO16 = 6
 
 class Relocs_Coff_i386(Enum):
   IMAGE_REL_I386_ABSOLUTE = 0x0000
@@ -1103,6 +1111,7 @@ craftElf("relocs.obj.elf-arm",      "arm-unknown-unknown",         Relocs_Elf_AR
 craftElf("relocs.obj.elf-mips",     "mips-unknown-linux",          Relocs_Elf_Mips.entries(), "lui $2, %hi(sym)")
 craftElf("relocs.obj.elf-mips64el", "mips64el-unknown-linux",        Relocs_Elf_Mips.entries(), "lui $2, %hi(sym)")
 #craftElf("relocs.obj.elf-hexagon",  "hexagon-unknown-unknown",     Relocs_Elf_Hexagon.entries(), ...)
+#craftElf("relocs.obj.elf-lanai",   "lanai-unknown-unknown",   Relocs_Elf_Lanai.entries(), "mov hi(x), %r4")
 
 craftCoff("relocs.obj.coff-i386",   "i386-pc-win32",   Relocs_Coff_i386.entries(),   "mov foo@imgrel(%ebx, %ecx, 4), %eax")
 craftCoff("relocs.obj.coff-x86_64", "x86_64-pc-win32", Relocs_Coff_X86_64.entries(), "mov foo@imgrel(%ebx, %ecx, 4), %eax")

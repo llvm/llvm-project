@@ -1001,9 +1001,13 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   // The linker needs to define SECNAME_start, SECNAME_end and SECNAME_stop
   // symbols for sections, so that the runtime can get the start and end
   // addresses of each section by section name. Add such symbols.
-  addStartEndSymbols();
-  for (OutputSectionBase<ELFT> *Sec : RegularSections)
-    addStartStopSymbols(Sec);
+  if (!Config->Relocatable) {
+    addStartEndSymbols();
+    for (OutputSectionBase<ELFT> *Sec : RegularSections)
+      addStartStopSymbols(Sec);
+  }
+  if (isOutputDynamic())
+    Symtab.addSynthetic("_DYNAMIC", *Out<ELFT>::Dynamic, 0, STV_HIDDEN);
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
@@ -1146,8 +1150,8 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   auto Define = [&](StringRef Start, StringRef End,
                     OutputSectionBase<ELFT> *OS) {
     if (OS) {
-      Symtab.addSynthetic(Start, *OS, 0);
-      Symtab.addSynthetic(End, *OS, OS->getSize());
+      Symtab.addSynthetic(Start, *OS, 0, STV_DEFAULT);
+      Symtab.addSynthetic(End, *OS, OS->getSize(), STV_DEFAULT);
     } else {
       Symtab.addIgnored(Start);
       Symtab.addIgnored(End);
@@ -1177,10 +1181,10 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
   StringRef Stop = Saver.save("__stop_" + S);
   if (SymbolBody *B = Symtab.find(Start))
     if (B->isUndefined())
-      Symtab.addSynthetic(Start, *Sec, 0);
+      Symtab.addSynthetic(Start, *Sec, 0, STV_DEFAULT);
   if (SymbolBody *B = Symtab.find(Stop))
     if (B->isUndefined())
-      Symtab.addSynthetic(Stop, *Sec, Sec->getSize());
+      Symtab.addSynthetic(Stop, *Sec, Sec->getSize(), STV_DEFAULT);
 }
 
 template <class ELFT> static bool needsPtLoad(OutputSectionBase<ELFT> *Sec) {
@@ -1463,15 +1467,16 @@ template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
   if (Config->EMachine == EM_MIPS)
     ElfSym<ELFT>::MipsGp.st_value = getMipsGpAddr<ELFT>();
 
-  // _etext points to location after the last read-only loadable segment.
-  // _edata points to the end of the last non SHT_NOBITS section.
-  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    if (!(Sec->getFlags() & SHF_ALLOC))
+  // _etext is the first location after the last read-only loadable segment.
+  // _edata is the first location after the last read-write loadable segment.
+  for (Phdr &PHdr : Phdrs) {
+    if (PHdr.H.p_type != PT_LOAD)
       continue;
-    if (!(Sec->getFlags() & SHF_WRITE))
-      ElfSym<ELFT>::Etext.st_value = Sec->getVA() + Sec->getSize();
-    if (Sec->getType() != SHT_NOBITS)
-      ElfSym<ELFT>::Edata.st_value = Sec->getVA() + Sec->getSize();
+    uintX_t Val = PHdr.H.p_vaddr + PHdr.H.p_filesz;
+    if (PHdr.H.p_flags & PF_W)
+      ElfSym<ELFT>::Edata.st_value = Val;
+    else
+      ElfSym<ELFT>::Etext.st_value = Val;
   }
 }
 

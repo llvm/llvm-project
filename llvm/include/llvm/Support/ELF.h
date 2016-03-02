@@ -315,6 +315,11 @@ enum {
   // such numbers for an official value for WebAssembly. As soon as one is
   // allocated, this enum will be updated to use it.
   EM_WEBASSEMBLY   = 0x4157, // WebAssembly architecture
+
+  // A request has been made to the maintainer of the official registry for
+  // an official value for Lanai. As soon as one is allocated, this enum will be
+  // updated to use it.
+  EM_LANAI         = 0x8123, // Lanai 32-bit processor
 };
 
 // Object file classes.
@@ -587,6 +592,11 @@ enum {
 // ELF Relocation types for Hexagon
 enum {
 #include "ELFRelocs/Hexagon.def"
+};
+
+// ELF Relocation type for Lanai.
+enum {
+#include "ELFRelocs/Lanai.def"
 };
 
 // ELF Relocation types for S390/zSeries

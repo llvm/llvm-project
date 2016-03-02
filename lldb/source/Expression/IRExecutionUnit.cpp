@@ -802,7 +802,10 @@ IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &s
                 load_address = candidate_sc.symbol->ResolveCallableAddress(*target);
 
                 if (load_address == LLDB_INVALID_ADDRESS)
-                    load_address = candidate_sc.symbol->GetAddress().GetLoadAddress(target);
+                    if (target->GetProcessSP())
+                        load_address = candidate_sc.symbol->GetAddress().GetLoadAddress(target);
+                    else
+                        load_address = candidate_sc.symbol->GetAddress().GetFileAddress();
 
                 if (load_address != LLDB_INVALID_ADDRESS)
                 {

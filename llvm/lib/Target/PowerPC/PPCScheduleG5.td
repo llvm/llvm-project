@@ -124,6 +124,8 @@ def G5Model : SchedMachineModel {
                        // Itineraries are queried instead.
   let MispredictPenalty = 16;
 
+  let CompleteModel = 0;
+
   let Itineraries = G5Itineraries;
 }
 

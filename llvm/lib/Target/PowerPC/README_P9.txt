@@ -3,6 +3,37 @@
 TODO: Instructions Need Implement Instrinstics or Map to LLVM IR
 
 Altivec:
+- Vector Compare Not Equal (Zero):
+  vcmpneb(.) vcmpneh(.) vcmpnew(.)
+  vcmpnezb(.) vcmpnezh(.) vcmpnezw(.)
+  . Same as other VCMP*, use VCMP/VCMPo form (support intrinsic)
+
+- Vector Extract Unsigned: vextractub vextractuh vextractuw vextractd
+  . Don't use llvm extractelement because they have different semantics
+  . Use instrinstics:
+    (set v2i64:$vD, (int_ppc_altivec_vextractub v16i8:$vA, imm:$UIMM))
+    (set v2i64:$vD, (int_ppc_altivec_vextractuh v8i16:$vA, imm:$UIMM))
+    (set v2i64:$vD, (int_ppc_altivec_vextractuw v4i32:$vA, imm:$UIMM))
+    (set v2i64:$vD, (int_ppc_altivec_vextractd  v2i64:$vA, imm:$UIMM))
+
+- Vector Extract Unsigned Byte Left/Right-Indexed:
+  vextublx vextubrx vextuhlx vextuhrx vextuwlx vextuwrx
+  . Use instrinstics:
+    // Left-Indexed
+    (set i64:$rD, (int_ppc_altivec_vextublx i64:$rA, v16i8:$vB))
+    (set i64:$rD, (int_ppc_altivec_vextuhlx i64:$rA, v8i16:$vB))
+    (set i64:$rD, (int_ppc_altivec_vextuwlx i64:$rA, v4i32:$vB))
+
+    // Right-Indexed
+    (set i64:$rD, (int_ppc_altivec_vextubrx i64:$rA, v16i8:$vB))
+    (set i64:$rD, (int_ppc_altivec_vextuhrx i64:$rA, v8i16:$vB))
+    (set i64:$rD, (int_ppc_altivec_vextuwrx i64:$rA, v4i32:$vB))
+
+- Vector Insert Element Instructions: vinsertb vinsertd vinserth vinsertw
+    (set v16i8:$vD, (int_ppc_altivec_vinsertb v16i8:$vA, imm:$UIMM))
+    (set v8i16:$vD, (int_ppc_altivec_vinsertd v8i16:$vA, imm:$UIMM))
+    (set v4i32:$vD, (int_ppc_altivec_vinserth v4i32:$vA, imm:$UIMM))
+    (set v2i64:$vD, (int_ppc_altivec_vinsertw v2i64:$vA, imm:$UIMM))
 
 VSX:
 

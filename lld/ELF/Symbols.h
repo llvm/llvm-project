@@ -250,8 +250,8 @@ template <class ELFT> class DefinedSynthetic : public Defined {
 public:
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
-  DefinedSynthetic(StringRef N, uintX_t Value,
-                   OutputSectionBase<ELFT> &Section);
+  DefinedSynthetic(StringRef N, uintX_t Value, OutputSectionBase<ELFT> &Section,
+                   uint8_t Visibility);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedSyntheticKind;

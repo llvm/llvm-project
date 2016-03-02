@@ -1,5 +1,0 @@
----
-absolute-atoms:
-    - name:         absatom
-      value:        0
-      scope:        global

@@ -3,10 +3,8 @@ add_llvm_library(LLVMObject
   ArchiveWriter.cpp
   Binary.cpp
   COFFObjectFile.cpp
-  COFFYAML.cpp
   ELF.cpp
   ELFObjectFile.cpp
-  ELFYAML.cpp
   Error.cpp
   IRObjectFile.cpp
   MachOObjectFile.cpp

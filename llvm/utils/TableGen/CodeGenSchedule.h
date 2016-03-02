@@ -401,6 +401,8 @@ private:
 
   void inferSchedClasses();
 
+  void checkCompleteness();
+
   void inferFromRW(ArrayRef<unsigned> OperWrites, ArrayRef<unsigned> OperReads,
                    unsigned FromClassIdx, ArrayRef<unsigned> ProcIndices);
   void inferFromItinClass(Record *ItinClassDef, unsigned FromClassIdx);

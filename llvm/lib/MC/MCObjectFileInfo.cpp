@@ -356,6 +356,11 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
       TTypeEncoding = dwarf::DW_EH_PE_absptr;
     }
     break;
+  case Triple::lanai:
+    LSDAEncoding = dwarf::DW_EH_PE_absptr;
+    PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+    TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    break;
   case Triple::mips:
   case Triple::mipsel:
   case Triple::mips64:

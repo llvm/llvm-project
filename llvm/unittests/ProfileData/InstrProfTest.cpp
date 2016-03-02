@@ -154,27 +154,39 @@ TEST_F(InstrProfTest, get_profile_summary) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  InstrProfSummary &PS = Reader->getSummary();
-  ASSERT_EQ(2305843009213693952U, PS.getMaxFunctionCount());
-  ASSERT_EQ(2305843009213693952U, PS.getMaxBlockCount());
-  ASSERT_EQ(10U, PS.getNumBlocks());
-  ASSERT_EQ(4539628424389557499U, PS.getTotalCount());
-  std::vector<ProfileSummaryEntry> &Details = PS.getDetailedSummary();
-  uint32_t Cutoff = 800000;
-  auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
-    return PE.Cutoff == Cutoff;
+  auto VerifySummary = [](InstrProfSummary &IPS, bool dummy) mutable {
+    ASSERT_EQ(2305843009213693952U, IPS.getMaxFunctionCount());
+    ASSERT_EQ(2305843009213693952U, IPS.getMaxBlockCount());
+    ASSERT_EQ(10U, IPS.getNumBlocks());
+    ASSERT_EQ(4539628424389557499U, IPS.getTotalCount());
+    std::vector<ProfileSummaryEntry> &Details = IPS.getDetailedSummary();
+    uint32_t Cutoff = 800000;
+    auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
+      return PE.Cutoff == Cutoff;
+    };
+    auto EightyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
+    Cutoff = 900000;
+    auto NinetyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
+    Cutoff = 950000;
+    auto NinetyFivePerc =
+        std::find_if(Details.begin(), Details.end(), Predicate);
+    Cutoff = 990000;
+    auto NinetyNinePerc =
+        std::find_if(Details.begin(), Details.end(), Predicate);
+    ASSERT_EQ(576460752303423488U, EightyPerc->MinCount);
+    ASSERT_EQ(288230376151711744U, NinetyPerc->MinCount);
+    ASSERT_EQ(288230376151711744U, NinetyFivePerc->MinCount);
+    ASSERT_EQ(72057594037927936U, NinetyNinePerc->MinCount);
   };
-  auto EightyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
-  Cutoff = 900000;
-  auto NinetyPerc = std::find_if(Details.begin(), Details.end(), Predicate);
-  Cutoff = 950000;
-  auto NinetyFivePerc = std::find_if(Details.begin(), Details.end(), Predicate);
-  Cutoff = 990000;
-  auto NinetyNinePerc = std::find_if(Details.begin(), Details.end(), Predicate);
-  ASSERT_EQ(576460752303423488U, EightyPerc->MinCount);
-  ASSERT_EQ(288230376151711744U, NinetyPerc->MinCount);
-  ASSERT_EQ(288230376151711744U, NinetyFivePerc->MinCount);
-  ASSERT_EQ(72057594037927936U, NinetyNinePerc->MinCount);
+  InstrProfSummary &PS = Reader->getSummary();
+  VerifySummary(PS, true);
+  Metadata *MD = PS.getMD(getGlobalContext());
+  ASSERT_TRUE(MD);
+  ProfileSummary *PSFromMD = ProfileSummary::getFromMD(MD);
+  ASSERT_TRUE(PSFromMD);
+  ASSERT_TRUE(isa<InstrProfSummary>(PSFromMD));
+  InstrProfSummary *IPS = cast<InstrProfSummary>(PSFromMD);
+  VerifySummary(*IPS, false);
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {

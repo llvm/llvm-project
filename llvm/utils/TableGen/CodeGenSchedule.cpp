@@ -126,6 +126,8 @@ CodeGenSchedModels::CodeGenSchedModels(RecordKeeper &RK,
   // Populate each CodeGenProcModel's WriteResDefs, ReadAdvanceDefs, and
   // ProcResourceDefs.
   collectProcResources();
+
+  checkCompleteness();
 }
 
 /// Gather all processor models.
@@ -527,7 +529,8 @@ void CodeGenSchedModels::collectSchedClasses() {
     std::string InstName = Inst->TheDef->getName();
     unsigned SCIdx = InstrClassMap.lookup(Inst->TheDef);
     if (!SCIdx) {
-      dbgs() << "No machine model for " << Inst->TheDef->getName() << '\n';
+      if (!Inst->hasNoSchedulingInfo)
+        dbgs() << "No machine model for " << Inst->TheDef->getName() << '\n';
       continue;
     }
     CodeGenSchedClass &SC = getSchedClass(SCIdx);
@@ -1519,6 +1522,55 @@ void CodeGenSchedModels::collectProcResources() {
       }
       dbgs() << '\n');
     verifyProcResourceGroups(PM);
+  }
+}
+
+void CodeGenSchedModels::checkCompleteness() {
+  bool Complete = true;
+  bool HadCompleteModel = false;
+  for (const CodeGenProcModel &ProcModel : procModels()) {
+    // Note that long-term we should check "CompleteModel", but for now most
+    // models that claim to be complete are actually not so we use a separate
+    // "CheckCompleteness" bit.
+    if (!ProcModel.ModelDef->getValueAsBit("CompleteModel"))
+      continue;
+    for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+      if (Inst->hasNoSchedulingInfo)
+        continue;
+      unsigned SCIdx = getSchedClassIdx(*Inst);
+      if (!SCIdx) {
+        if (Inst->TheDef->isValueUnset("SchedRW") && !HadCompleteModel) {
+          PrintError("No schedule information for instruction '"
+                     + Inst->TheDef->getName() + "'");
+          Complete = false;
+        }
+        continue;
+      }
+
+      const CodeGenSchedClass &SC = getSchedClass(SCIdx);
+      if (!SC.Writes.empty())
+        continue;
+
+      const RecVec &InstRWs = SC.InstRWs;
+      auto I = std::find_if(InstRWs.begin(), InstRWs.end(),
+                            [&ProcModel] (const Record *R) {
+                              return R->getValueAsDef("SchedModel") == ProcModel.ModelDef;
+                            });
+      if (I == InstRWs.end()) {
+        PrintError("'" + ProcModel.ModelName + "' lacks information for '" +
+                   Inst->TheDef->getName() + "'");
+        Complete = false;
+      }
+    }
+    HadCompleteModel = true;
+  }
+  if (!Complete) {
+    errs() << "\n\nIncomplete schedule models found.\n"
+      << "- Consider setting 'CompleteModel = 0' while developing new models.\n"
+      << "- Pseudo instructions can be marked with 'hasNoSchedulingInfo = 1'.\n"
+      << "- Instructions should usually have Sched<[...]> as a superclass, "
+         "you may temporarily use an empty list.\n\n";
+    PrintFatalError("Incomplete schedule model");
   }
 }
 

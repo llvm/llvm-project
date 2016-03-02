@@ -48,6 +48,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
 #include <cctype>
 
 using namespace llvm;
@@ -121,7 +122,7 @@ public:
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
+    AU.addRequired<InstructionCombiningPass>();
   }
 
 protected:
@@ -1215,6 +1216,7 @@ char SampleProfileLoader::ID = 0;
 INITIALIZE_PASS_BEGIN(SampleProfileLoader, "sample-profile",
                       "Sample Profile loader", false, false)
 INITIALIZE_PASS_DEPENDENCY(AddDiscriminators)
+INITIALIZE_PASS_DEPENDENCY(InstructionCombiningPass)
 INITIALIZE_PASS_END(SampleProfileLoader, "sample-profile",
                     "Sample Profile loader", false, false)
 
@@ -1258,6 +1260,7 @@ bool SampleProfileLoader::runOnModule(Module &M) {
 
 bool SampleProfileLoader::runOnFunction(Function &F) {
   F.setEntryCount(0);
+  getAnalysis<InstructionCombiningPass>(F);
   Samples = Reader->getSamplesFor(F);
   if (!Samples->empty())
     return emitAnnotations(F);

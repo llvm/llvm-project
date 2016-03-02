@@ -39,8 +39,12 @@ def Write64Bit : SchedWrite;
 // instructions and have VALU rates, but write to the SALU (i.e. VOPC
 // instructions)
 
-def SIFullSpeedModel : SchedMachineModel;
-def SIQuarterSpeedModel : SchedMachineModel;
+def SIFullSpeedModel : SchedMachineModel {
+  let CompleteModel = 0;
+}
+def SIQuarterSpeedModel : SchedMachineModel {
+  let CompleteModel = 0;
+}
 
 // BufferSize = 0 means the processors are in-order.
 let BufferSize = 0 in {

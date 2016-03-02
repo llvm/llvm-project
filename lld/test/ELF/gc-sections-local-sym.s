@@ -21,7 +21,7 @@ zed:
 // CHECK-NEXT: AddressAlignment:
 // CHECK-NEXT: EntrySize:
 // CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: 00666F6F 00                          |.foo.|
+// CHECK-NEXT:   0000: 00666F6F 005F4459 4E414D49 4300      |.foo._DYNAMIC.|
 // CHECK-NEXT: )
 
 // CHECK:      Symbols [
@@ -33,6 +33,15 @@ zed:
 // CHECK-NEXT:     Type: None
 // CHECK-NEXT:     Other: 0
 // CHECK-NEXT:     Section: Undefined
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: _DYNAMIC
+// CHECK-NEXT:     Value: 0x1000
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Local
+// CHECK-NEXT:     Type: None
+// CHECK-NEXT:     Other: 2
+// CHECK-NEXT:     Section: .dynamic
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: foo

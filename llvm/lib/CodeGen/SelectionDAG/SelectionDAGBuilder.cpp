@@ -3789,9 +3789,6 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
 }
 
 void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  LLVMContext &Ctx = *DAG.getContext();
-
   SDLoc dl = getCurSDLoc();
   AtomicOrdering SuccessOrder = I.getSuccessOrdering();
   AtomicOrdering FailureOrder = I.getFailureOrdering();
@@ -3800,14 +3797,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   SDValue InChain = getRoot();
 
   MVT MemVT = getValue(I.getCompareOperand()).getSimpleValueType();
-  EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, MVT::i1);
-
-  // Only use the result of getSetCCResultType if it is legal,
-  // otherwise just use the promoted result type (NVT).
-  if (!TLI.isTypeLegal(CCVT))
-    CCVT = TLI.getTypeToTransformTo(Ctx, MVT::i1);
-
-  SDVTList VTs = DAG.getVTList(MemVT, CCVT, MVT::Other);
+  SDVTList VTs = DAG.getVTList(MemVT, MVT::i1, MVT::Other);
   SDValue L = DAG.getAtomicCmpSwap(
       ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, dl, MemVT, VTs, InChain,
       getValue(I.getPointerOperand()), getValue(I.getCompareOperand()),
@@ -5706,9 +5696,11 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
     isTailCall = false;
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(getCurSDLoc()).setChain(getRoot())
-    .setCallee(RetTy, FTy, Callee, std::move(Args), CS)
-    .setTailCall(isTailCall);
+  CLI.setDebugLoc(getCurSDLoc())
+      .setChain(getRoot())
+      .setCallee(RetTy, FTy, Callee, std::move(Args), CS)
+      .setTailCall(isTailCall)
+      .setConvergent(CS.isConvergent());
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   if (Result.first.getNode()) {

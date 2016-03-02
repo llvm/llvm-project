@@ -400,6 +400,8 @@ def P8Model : SchedMachineModel {
   // Try to make sure we have at least 10 dispatch groups in a loop.
   let LoopMicroOpBufferSize = 60;
 
+  let CompleteModel = 0;
+
   let Itineraries = P8Itineraries;
 }
 
