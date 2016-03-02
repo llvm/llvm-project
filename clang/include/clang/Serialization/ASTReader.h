@@ -785,6 +785,9 @@ private:
   /// \brief The pragma clang optimize location (if the pragma state is "off").
   SourceLocation OptimizeOffPragmaLocation;
 
+  /// \brief The PragmaMSStructKind pragma ms_struct state if set, or -1.
+  int PragmaMSStructState;
+
   /// \brief The OpenCL extension settings.
   SmallVector<uint64_t, 1> OpenCLExtensions;
 

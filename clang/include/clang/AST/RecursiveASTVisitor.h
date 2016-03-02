@@ -1359,6 +1359,10 @@ DEF_TRAVERSE_DECL(
      // D->getAnonymousNamespace().
     })
 
+DEF_TRAVERSE_DECL(PragmaCommentDecl, {})
+
+DEF_TRAVERSE_DECL(PragmaDetectMismatchDecl, {})
+
 DEF_TRAVERSE_DECL(ExternCContextDecl, {})
 
 DEF_TRAVERSE_DECL(NamespaceAliasDecl, {

@@ -104,9 +104,9 @@ namespace {
                                                *M, Diags, CoverageInfo));
 
       for (auto &&Lib : CodeGenOpts.DependentLibraries)
-        HandleDependentLibrary(Lib);
+        Builder->AddDependentLib(Lib);
       for (auto &&Opt : CodeGenOpts.LinkerOptions)
-        HandleLinkerOption(Opt);
+        Builder->AppendLinkerOptions(Opt);
     }
 
     void HandleCXXStaticMemberVarInstantiation(VarDecl *VD) override {
@@ -232,19 +232,6 @@ namespace {
         return;
 
       Builder->EmitVTable(RD);
-    }
-
-    void HandleLinkerOption(llvm::StringRef Opts) override {
-      Builder->AppendLinkerOptions(Opts);
-    }
-
-    void HandleDetectMismatch(llvm::StringRef Name,
-                              llvm::StringRef Value) override {
-      Builder->AddDetectMismatch(Name, Value);
-    }
-
-    void HandleDependentLibrary(llvm::StringRef Lib) override {
-      Builder->AddDependentLib(Lib);
     }
   };
 }

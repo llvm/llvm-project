@@ -269,28 +269,20 @@ void Sema::ActOnPragmaMSStruct(PragmaMSStructKind Kind) {
   MSStructPragmaOn = (Kind == PMSST_ON);
 }
 
-void Sema::ActOnPragmaMSComment(PragmaMSCommentKind Kind, StringRef Arg) {
-  // FIXME: Serialize this.
-  switch (Kind) {
-  case PCK_Unknown:
-    llvm_unreachable("unexpected pragma comment kind");
-  case PCK_Linker:
-    Consumer.HandleLinkerOption(Arg);
-    return;
-  case PCK_Lib:
-    Consumer.HandleDependentLibrary(Arg);
-    return;
-  case PCK_Compiler:
-  case PCK_ExeStr:
-  case PCK_User:
-    return;  // We ignore all of these.
-  }
-  llvm_unreachable("invalid pragma comment kind");
+void Sema::ActOnPragmaMSComment(SourceLocation CommentLoc,
+                                PragmaMSCommentKind Kind, StringRef Arg) {
+  auto *PCD = PragmaCommentDecl::Create(
+      Context, Context.getTranslationUnitDecl(), CommentLoc, Kind, Arg);
+  Context.getTranslationUnitDecl()->addDecl(PCD);
+  Consumer.HandleTopLevelDecl(DeclGroupRef(PCD));
 }
 
-void Sema::ActOnPragmaDetectMismatch(StringRef Name, StringRef Value) {
-  // FIXME: Serialize this.
-  Consumer.HandleDetectMismatch(Name, Value);
+void Sema::ActOnPragmaDetectMismatch(SourceLocation Loc, StringRef Name,
+                                     StringRef Value) {
+  auto *PDMD = PragmaDetectMismatchDecl::Create(
+      Context, Context.getTranslationUnitDecl(), Loc, Name, Value);
+  Context.getTranslationUnitDecl()->addDecl(PDMD);
+  Consumer.HandleTopLevelDecl(DeclGroupRef(PDMD));
 }
 
 void Sema::ActOnPragmaMSPointersToMembers(

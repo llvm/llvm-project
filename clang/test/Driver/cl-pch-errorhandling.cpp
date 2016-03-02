@@ -6,7 +6,7 @@
 // code generation, which makes this test require an x86 backend.
 // REQUIRES: x86-registered-target
 
-// RUN: not %clang_cl -internal-enable-pch -Werror /Yc%S/Inputs/pchfile.h /FI%S/Inputs/pchfile.h /c -DERR_HEADER -- %s 2>&1 \
+// RUN: not %clang_cl -internal-enable-pch -Werror /Yc%S/Inputs/pchfile.h /FI%S/Inputs/pchfile.h /Fp%t.pch /c -DERR_HEADER -- %s 2>&1 \
 // RUN:   | FileCheck %s
 
 // CHECK: nope1

@@ -15,6 +15,7 @@ set( LLDB_USED_LIBS
   # Plugins
   lldbPluginDisassemblerLLVM
   lldbPluginSymbolFileDWARF
+  lldbPluginSymbolFilePDB
   lldbPluginSymbolFileSymtab
   lldbPluginDynamicLoaderStatic
   lldbPluginDynamicLoaderPosixDYLD
@@ -174,7 +175,7 @@ if (LLVM_BUILD_STATIC)
   endif()
 endif()
 
-set( LLVM_LINK_COMPONENTS
+set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   interpreter
   asmparser

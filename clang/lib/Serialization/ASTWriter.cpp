@@ -960,6 +960,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(UNDEFINED_BUT_USED);
   RECORD(LATE_PARSED_TEMPLATE);
   RECORD(OPTIMIZE_PRAGMA_OPTIONS);
+  RECORD(MSSTRUCT_PRAGMA_OPTIONS);
   RECORD(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES);
   RECORD(CXX_CTOR_INITIALIZERS_OFFSETS);
   RECORD(DELETE_EXPRS_TO_ANALYZE);
@@ -3928,6 +3929,13 @@ void ASTWriter::WriteOptimizePragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(OPTIMIZE_PRAGMA_OPTIONS, Record);
 }
 
+/// \brief Write the state of 'pragma ms_struct' at the end of the module.
+void ASTWriter::WriteMSStructPragmaOptions(Sema &SemaRef) {
+  RecordData Record;
+  Record.push_back(SemaRef.MSStructPragmaOn ? PMSST_ON : PMSST_OFF);
+  Stream.EmitRecord(MSSTRUCT_PRAGMA_OPTIONS, Record);
+}
+
 void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
                                          ModuleFileExtensionWriter &Writer) {
   // Enter the extension block.
@@ -4605,8 +4613,10 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   WriteDeclReplacementsBlock();
   WriteObjCCategories();
-  if(!WritingModule)
+  if(!WritingModule) {
     WriteOptimizePragmaOptions(SemaRef);
+    WriteMSStructPragmaOptions(SemaRef);
+  }
 
   // Some simple statistics
   RecordData::value_type Record[] = {

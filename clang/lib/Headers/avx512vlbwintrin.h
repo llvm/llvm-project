@@ -2715,6 +2715,72 @@ _mm_maskz_srav_epi16 (__mmask8 __U, __m128i __A, __m128i __B)
              (__mmask8) __U);
 }
 
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_sra_epi16 (__m128i __W, __mmask8 __U, __m128i __A,
+        __m128i __B)
+{
+  return (__m128i) __builtin_ia32_psraw128_mask ((__v8hi) __A,
+             (__v8hi) __B,
+             (__v8hi) __W,
+             (__mmask8) __U);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_sra_epi16 (__mmask8 __U, __m128i __A, __m128i __B)
+{
+  return (__m128i) __builtin_ia32_psraw128_mask ((__v8hi) __A,
+             (__v8hi) __B,
+             (__v8hi)
+             _mm_setzero_si128 (),
+             (__mmask8) __U);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_mask_sra_epi16 (__m256i __W, __mmask16 __U, __m256i __A,
+           __m128i __B)
+{
+  return (__m256i) __builtin_ia32_psraw256_mask ((__v16hi) __A,
+             (__v8hi) __B,
+             (__v16hi) __W,
+             (__mmask16) __U);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_maskz_sra_epi16 (__mmask16 __U, __m256i __A, __m128i __B)
+{
+  return (__m256i) __builtin_ia32_psraw256_mask ((__v16hi) __A,
+             (__v8hi) __B,
+             (__v16hi)
+             _mm256_setzero_si256 (),
+             (__mmask16) __U);
+}
+
+#define _mm_mask_srai_epi16( __W, __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_psrawi128_mask ((__v8hi)( __A),( __imm),\
+              (__v8hi)( __W),\
+              (__mmask8)( __U));\
+})
+
+#define _mm_maskz_srai_epi16( __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_psrawi128_mask ((__v8hi)( __A),( __imm),\
+              (__v8hi)\
+              _mm_setzero_si128 (),\
+              (__mmask8)( __U));\
+})
+
+#define _mm256_mask_srai_epi16( __W, __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_psrawi256_mask ((__v16hi)( __A),( __imm),\
+              (__v16hi)( __W),\
+              (__mmask16)( __U));\
+})
+
+#define _mm256_maskz_srai_epi16( __U, __A, __imm) __extension__ ({ \
+__builtin_ia32_psrawi256_mask ((__v16hi)( __A),( __imm),\
+              (__v16hi)\
+              _mm256_setzero_si256 (),\
+              (__mmask16)( __U));\
+})
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif /* __AVX512VLBWINTRIN_H */

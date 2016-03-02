@@ -257,7 +257,7 @@ TEST_F(FormatTestJS, SpacesInContainerLiterals) {
   verifyFormat("f({'a': [{}]});");
 }
 
-TEST_F(FormatTestJS, SingleQuoteStrings) {
+TEST_F(FormatTestJS, SingleQuotedStrings) {
   verifyFormat("this.function('', true);");
 }
 
@@ -883,7 +883,7 @@ TEST_F(FormatTestJS, Modules) {
   verifyFormat("import {\n"
                "  X,\n"
                "  Y,\n"
-               "} from 'some/long/module.js';",
+               "} from\n    'some/long/module.js';",
                getGoogleJSStyleWithColumns(20));
   verifyFormat("import {X as myLocalX, Y as myLocalY} from 'some/module.js';");
   verifyFormat("import * as lib from 'some/module.js';");
@@ -1092,6 +1092,37 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
                    " * @export {this.is.a.long.path.to.a.Type}\n"
                    " */",
                    getGoogleJSStyleWithColumns(20)));
+}
+
+TEST_F(FormatTestJS, RequoteStringsSingle) {
+  EXPECT_EQ("var x = 'foo';", format("var x = \"foo\";"));
+  EXPECT_EQ("var x = 'fo\\'o\\'';", format("var x = \"fo'o'\";"));
+  EXPECT_EQ("var x = 'fo\\'o\\'';", format("var x = \"fo\\'o'\";"));
+  EXPECT_EQ("var x =\n"
+            "    'foo\\'';",
+            // Code below is 15 chars wide, doesn't fit into the line with the
+            // \ escape added.
+            format("var x = \"foo'\";", getGoogleJSStyleWithColumns(15)));
+  // Removes no-longer needed \ escape from ".
+  EXPECT_EQ("var x = 'fo\"o';", format("var x = \"fo\\\"o\";"));
+  // Code below fits into 15 chars *after* removing the \ escape.
+  EXPECT_EQ("var x = 'fo\"o';",
+            format("var x = \"fo\\\"o\";", getGoogleJSStyleWithColumns(15)));
+}
+
+TEST_F(FormatTestJS, RequoteStringsDouble) {
+  FormatStyle DoubleQuotes = getGoogleStyle(FormatStyle::LK_JavaScript);
+  DoubleQuotes.JavaScriptQuotes = FormatStyle::JSQS_Double;
+  verifyFormat("var x = \"foo\";", DoubleQuotes);
+  EXPECT_EQ("var x = \"foo\";", format("var x = 'foo';", DoubleQuotes));
+  EXPECT_EQ("var x = \"fo'o\";", format("var x = 'fo\\'o';", DoubleQuotes));
+}
+
+TEST_F(FormatTestJS, RequoteStringsLeave) {
+  FormatStyle LeaveQuotes = getGoogleStyle(FormatStyle::LK_JavaScript);
+  LeaveQuotes.JavaScriptQuotes = FormatStyle::JSQS_Leave;
+  verifyFormat("var x = \"foo\";", LeaveQuotes);
+  verifyFormat("var x = 'foo';", LeaveQuotes);
 }
 
 } // end namespace tooling

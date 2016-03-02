@@ -279,6 +279,9 @@ def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
 def fprofile_instrument_path_EQ : Joined<["-"], "fprofile-instrument-path=">,
     HelpText<"Generate instrumented code to collect execution counts into "
              "<file> (overridden by LLVM_PROFILE_FILE env var)">;
+def fprofile_instrument_use_path_EQ :
+    Joined<["-"], "fprofile-instrument-use-path=">,
+    HelpText<"Specify the profile path in PGO use compilation">;
 
 //===----------------------------------------------------------------------===//
 // Dependency Output Options

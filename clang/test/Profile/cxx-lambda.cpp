@@ -5,7 +5,7 @@
 // RUN: FileCheck --input-file=%tgen -check-prefix=LMBGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-lambda.proftext -o %t.profdata
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-lambda.cpp -std=c++11 -o - -emit-llvm -fprofile-instr-use=%t.profdata > %tuse
+// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-lambda.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata > %tuse
 // RUN: FileCheck --input-file=%tuse -check-prefix=PGOUSE %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=LMBUSE %s
 

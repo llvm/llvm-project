@@ -205,19 +205,6 @@ namespace clang {
       Gen->HandleVTable(RD);
     }
 
-    void HandleLinkerOption(llvm::StringRef Opts) override {
-      Gen->HandleLinkerOption(Opts);
-    }
-
-    void HandleDetectMismatch(llvm::StringRef Name,
-                                      llvm::StringRef Value) override {
-      Gen->HandleDetectMismatch(Name, Value);
-    }
-
-    void HandleDependentLibrary(llvm::StringRef Opts) override {
-      Gen->HandleDependentLibrary(Opts);
-    }
-
     static void InlineAsmDiagHandler(const llvm::SMDiagnostic &SM,void *Context,
                                      unsigned LocCookie) {
       SourceLocation Loc = SourceLocation::getFromRawEncoding(LocCookie);

@@ -111,9 +111,9 @@
 // RUN: mkdir -p %t.d/some/dir
 // RUN: %clang -### -S -fprofile-use=%t.d/some/dir %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-DIR %s
 // RUN: %clang -### -S -fprofile-instr-use=/tmp/somefile.prof %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-FILE %s
-// CHECK-PROFILE-USE: "-fprofile-instr-use=default.profdata"
-// CHECK-PROFILE-USE-DIR: "-fprofile-instr-use={{.*}}.d/some/dir{{/|\\\\}}default.profdata"
-// CHECK-PROFILE-USE-FILE: "-fprofile-instr-use=/tmp/somefile.prof"
+// CHECK-PROFILE-USE: "-fprofile-instrument-use-path=default.profdata"
+// CHECK-PROFILE-USE-DIR: "-fprofile-instrument-use-path={{.*}}.d/some/dir{{/|\\\\}}default.profdata"
+// CHECK-PROFILE-USE-FILE: "-fprofile-instrument-use-path=/tmp/somefile.prof"
 
 // RUN: %clang -### -S -fvectorize %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s
 // RUN: %clang -### -S -fno-vectorize -fvectorize %s 2>&1 | FileCheck -check-prefix=CHECK-VECTORIZE %s

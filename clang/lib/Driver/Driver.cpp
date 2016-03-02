@@ -2246,7 +2246,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   }
 
   // As an annoying special case, PCH generation doesn't strip the pathname.
-  if (JA.getType() == types::TY_PCH) {
+  if (JA.getType() == types::TY_PCH && !IsCLMode()) {
     llvm::sys::path::remove_filename(BasePath);
     if (BasePath.empty())
       BasePath = NamedOutput;

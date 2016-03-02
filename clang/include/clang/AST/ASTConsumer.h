@@ -94,22 +94,6 @@ public:
   /// The default implementation passes it to HandleTopLevelDecl.
   virtual void HandleImplicitImportDecl(ImportDecl *D);
 
-  /// \brief Handle a pragma or command line flag that appends to Linker
-  /// Options.  This exists to support Microsoft's
-  /// #pragma comment(linker, "/foo") and the frontend flag --linker-option=.
-  virtual void HandleLinkerOption(llvm::StringRef Opts) {}
-
-  /// \brief Handle a pragma that emits a mismatch identifier and value to the
-  /// object file for the linker to work with.  Currently, this only exists to
-  /// support Microsoft's #pragma detect_mismatch.
-  virtual void HandleDetectMismatch(llvm::StringRef Name,
-                                    llvm::StringRef Value) {}
-
-  /// \brief Handle a dependent library created by a pragma in the source.
-  /// Currently this only exists to support Microsoft's
-  /// #pragma comment(lib, "/foo").
-  virtual void HandleDependentLibrary(llvm::StringRef Lib) {}
-
   /// CompleteTentativeDefinition - Callback invoked at the end of a translation
   /// unit to notify the consumer that the given tentative definition should be
   /// completed.

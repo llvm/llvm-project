@@ -6652,7 +6652,7 @@ TEST_F(FormatTest, FormatsBracedListsInColumnLayout) {
                "                   bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb};");
 
   verifyNoCrash("a<,");
-  
+
   // No braced initializer here.
   verifyFormat("void f() {\n"
                "  struct Dummy {};\n"
