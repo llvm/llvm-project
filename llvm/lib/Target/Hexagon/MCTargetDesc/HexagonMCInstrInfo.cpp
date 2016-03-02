@@ -21,7 +21,6 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCValue.h"
 
 namespace llvm {
 void HexagonMCInstrInfo::addConstant(MCInst &MI, uint64_t Value,
@@ -432,19 +431,8 @@ bool HexagonMCInstrInfo::isConstExtended(MCInstrInfo const &MCII,
       HexagonMCInstrInfo::mustNotExtend(*MO.getExpr()))
     return false;
   int64_t Value;
-  if (!MO.getExpr()->evaluateAsAbsolute(Value)) {
-    MCValue Value;
-    if (!MO.getExpr()->evaluateAsRelocatable(Value, nullptr, nullptr))
-      return true;
-    switch(Value.getAccessVariant()) {
-    case MCSymbolRefExpr::VariantKind::VK_TPREL:
-    case MCSymbolRefExpr::VariantKind::VK_DTPREL:
-      // Don't lazy extend these expression variants
-      return false;
-    default:
-      return true;
-    }
-  }
+  if (!MO.getExpr()->evaluateAsAbsolute(Value))
+    return true;
   int MinValue = HexagonMCInstrInfo::getMinValue(MCII, MCI);
   int MaxValue = HexagonMCInstrInfo::getMaxValue(MCII, MCI);
   return (MinValue > Value || Value > MaxValue);

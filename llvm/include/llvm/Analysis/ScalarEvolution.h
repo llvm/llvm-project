@@ -657,8 +657,7 @@ namespace llvm {
       DenseMap<const SCEV *, ConstantRange> &Cache =
           Hint == HINT_RANGE_UNSIGNED ? UnsignedRanges : SignedRanges;
 
-      std::pair<DenseMap<const SCEV *, ConstantRange>::iterator, bool> Pair =
-          Cache.insert(std::make_pair(S, CR));
+      auto Pair = Cache.insert({S, CR});
       if (!Pair.second)
         Pair.first->second = CR;
       return Pair.first->second;
@@ -698,7 +697,7 @@ namespace llvm {
     /// This looks up computed SCEV values for all instructions that depend on
     /// the given instruction and removes them from the ValueExprMap map if they
     /// reference SymName. This is used during PHI resolution.
-    void ForgetSymbolicName(Instruction *I, const SCEV *SymName);
+    void forgetSymbolicName(Instruction *I, const SCEV *SymName);
 
     /// Return the BackedgeTakenInfo for the given loop, lazily computing new
     /// values if the loop hasn't been analyzed yet.

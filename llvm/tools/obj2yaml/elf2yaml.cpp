@@ -11,7 +11,7 @@
 #include "obj2yaml.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ELFYAML.h"
+#include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
 

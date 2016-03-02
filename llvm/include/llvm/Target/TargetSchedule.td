@@ -104,6 +104,7 @@ class SchedMachineModel {
 
 def NoSchedModel : SchedMachineModel {
   let NoModel = 1;
+  let CompleteModel = 0;
 }
 
 // Define a kind of processor resource that may be common across

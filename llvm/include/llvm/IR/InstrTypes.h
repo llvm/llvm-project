@@ -386,6 +386,15 @@ public:
   }
 #include "llvm/IR/Instruction.def"
 
+  static BinaryOperator *CreateWithCopiedFlags(BinaryOps Opc,
+                                               Value *V1, Value *V2,
+                                               BinaryOperator *CopyBO,
+                                               const Twine &Name = "") {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name);
+    BO->copyIRFlags(CopyBO);
+    return BO;
+  }
+
   static BinaryOperator *CreateNSW(BinaryOps Opc, Value *V1, Value *V2,
                                    const Twine &Name = "") {
     BinaryOperator *BO = Create(Opc, V1, V2, Name);

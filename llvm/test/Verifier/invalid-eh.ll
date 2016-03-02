@@ -23,6 +23,7 @@
 ; RUN: sed -e s/.T23:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK23 %s
 ; RUN: sed -e s/.T24:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK24 %s
 ; RUN: sed -e s/.T25:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK25 %s
+; RUN: sed -e s/.T26:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK26 %s
 
 declare void @g()
 
@@ -439,3 +440,17 @@ declare void @g()
 ;T25:   %cp3 = cleanuppad within none []
 ;T25:   cleanupret from %cp3 unwind to caller
 ;T25: }
+
+;T26: define void @f() personality void ()* @g {
+;T26: entry:
+;T26:   ret void
+;T26:
+;T26: ehcleanup:
+;T26:   cleanuppad within none []
+;T26:   cleanupret from none unwind label %ehcleanup
+;T26:   ; CHECK26: A cleanupret must exit its cleanup
+;T26:   ; CHECK26:   cleanupret from none unwind label %ehcleanup
+;T26:   ; CHECK26: CleanupReturnInst needs to be provided a CleanupPad
+;T26:   ; CHECK26:   cleanupret from none unwind label %ehcleanup
+;T26:   ; CHECK26: token none
+;T26: }

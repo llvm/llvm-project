@@ -9,7 +9,7 @@
 
 #include "obj2yaml.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/COFFYAML.h"
+#include "llvm/ObjectYAML/COFFYAML.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
 

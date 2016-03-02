@@ -26,6 +26,7 @@ def CortexA53Model : SchedMachineModel {
   let MispredictPenalty = 9; // Based on "Cortex-A53 Software Optimisation
                              // Specification - Instruction Timings"
                              // v 1.0 Spreadsheet
+  let CompleteModel = 1;
 }
 
 
@@ -108,6 +109,8 @@ def A53WriteVST2 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 5;
                                                   let ResourceCycles = [2]; }
 def A53WriteVST3 : SchedWriteRes<[A53UnitLdSt]> { let Latency = 6;
                                                   let ResourceCycles = [3]; }
+
+def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
 // Branch
 def : WriteRes<WriteBr, [A53UnitB]>;

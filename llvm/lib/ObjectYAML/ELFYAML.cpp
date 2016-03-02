@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Object/ELFYAML.h"
+#include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MipsABIFlags.h"
 

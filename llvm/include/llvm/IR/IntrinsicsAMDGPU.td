@@ -258,4 +258,13 @@ def int_amdgcn_s_dcache_wb_vol :
 def int_amdgcn_s_memrealtime :
   GCCBuiltin<"__builtin_amdgcn_s_memrealtime">,
   Intrinsic<[llvm_i64_ty], [], []>;
+
+// llvm.amdgcn.ds.permute <index> <src>
+def int_amdgcn_ds_permute :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
+
+// llvm.amdgcn.ds.bpermute <index> <src>
+def int_amdgcn_ds_bpermute :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
+
 }

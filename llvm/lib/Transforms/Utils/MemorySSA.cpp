@@ -427,6 +427,76 @@ bool MemorySSA::dominatesUse(const MemoryAccess *Replacer,
   return true;
 }
 
+/// \brief If all arguments of a MemoryPHI are defined by the same incoming
+/// argument, return that argument.
+static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
+  MemoryAccess *MA = nullptr;
+
+  for (auto &Arg : MP->operands()) {
+    if (!MA)
+      MA = cast<MemoryAccess>(Arg);
+    else if (MA != Arg)
+      return nullptr;
+  }
+  return MA;
+}
+
+/// \brief Properly remove \p MA from all of MemorySSA's lookup tables.
+///
+/// Because of the way the intrusive list and use lists work, it is important to
+/// do removal in the right order.
+void MemorySSA::removeFromLookups(MemoryAccess *MA) {
+  assert(MA->use_empty() &&
+         "Trying to remove memory access that still has uses");
+  if (MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(MA))
+    MUD->setDefiningAccess(nullptr);
+  // Invalidate our walker's cache if necessary
+  if (!isa<MemoryUse>(MA))
+    Walker->invalidateInfo(MA);
+  // The call below to erase will destroy MA, so we can't change the order we
+  // are doing things here
+  Value *MemoryInst;
+  if (MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(MA)) {
+    MemoryInst = MUD->getMemoryInst();
+  } else {
+    MemoryInst = MA->getBlock();
+  }
+  ValueToMemoryAccess.erase(MemoryInst);
+
+  auto &Accesses = PerBlockAccesses.find(MA->getBlock())->second;
+  Accesses->erase(MA);
+  if (Accesses->empty()) {
+    PerBlockAccesses.erase(MA->getBlock());
+  }
+}
+
+void MemorySSA::removeMemoryAccess(MemoryAccess *MA) {
+  assert(!isLiveOnEntryDef(MA) && "Trying to remove the live on entry def");
+  // We can only delete phi nodes if they have no uses, or we can replace all
+  // uses with a single definition.
+  MemoryAccess *NewDefTarget = nullptr;
+  if (MemoryPhi *MP = dyn_cast<MemoryPhi>(MA)) {
+    // Note that it is sufficient to know that all edges of the phi node have
+    // the same argument.  If they do, by the definition of dominance frontiers
+    // (which we used to place this phi), that argument must dominate this phi,
+    // and thus, must dominate the phi's uses, and so we will not hit the assert
+    // below.
+    NewDefTarget = onlySingleValue(MP);
+    assert((NewDefTarget || MP->use_empty()) &&
+           "We can't delete this memory phi");
+  } else {
+    NewDefTarget = cast<MemoryUseOrDef>(MA)->getDefiningAccess();
+  }
+
+  // Re-point the uses at our defining access
+  if (!MA->use_empty())
+    MA->replaceAllUsesWith(NewDefTarget);
+
+  // The call below to erase will destroy MA, so we can't change the order we
+  // are doing things here
+  removeFromLookups(MA);
+}
+
 void MemorySSA::print(raw_ostream &OS) const {
   MemorySSAAnnotatedWriter Writer(this);
   F.print(OS, &Writer);
@@ -711,6 +781,43 @@ struct CachingMemorySSAWalker::UpwardsMemoryQuery {
       : SawBackedgePhi(false), IsCall(false), Inst(nullptr),
         OriginalAccess(nullptr), DL(nullptr) {}
 };
+
+void CachingMemorySSAWalker::invalidateInfo(MemoryAccess *MA) {
+
+  // TODO: We can do much better cache invalidation with differently stored
+  // caches.  For now, for MemoryUses, we simply remove them
+  // from the cache, and kill the entire call/non-call cache for everything
+  // else.  The problem is for phis or defs, currently we'd need to follow use
+  // chains down and invalidate anything below us in the chain that currently
+  // terminates at this access.
+
+  // See if this is a MemoryUse, if so, just remove the cached info. MemoryUse
+  // is by definition never a barrier, so nothing in the cache could point to
+  // this use. In that case, we only need invalidate the info for the use
+  // itself.
+
+  if (MemoryUse *MU = dyn_cast<MemoryUse>(MA)) {
+    UpwardsMemoryQuery Q;
+    Instruction *I = MU->getMemoryInst();
+    Q.IsCall = bool(ImmutableCallSite(I));
+    Q.Inst = I;
+    if (!Q.IsCall)
+      Q.StartingLoc = MemoryLocation::get(I);
+    doCacheRemove(MA, Q, Q.StartingLoc);
+    return;
+  }
+  // If it is not a use, the best we can do right now is destroy the cache.
+  bool IsCall = false;
+
+  if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA)) {
+    Instruction *I = MUD->getMemoryInst();
+    IsCall = bool(ImmutableCallSite(I));
+  }
+  if (IsCall)
+    CachedUpwardsClobberingCall.clear();
+  else
+    CachedUpwardsClobberingAccess.clear();
+}
 
 void CachingMemorySSAWalker::doCacheRemove(const MemoryAccess *M,
                                            const UpwardsMemoryQuery &Q,

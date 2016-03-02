@@ -1213,3 +1213,68 @@ def VNCIPHERLAST : VX1_Int_Ty<1353, "vncipherlast",
                               int_ppc_altivec_crypto_vncipherlast, v2i64>;
 def VSBOX : VXBX_Int_Ty<1480, "vsbox", int_ppc_altivec_crypto_vsbox, v2i64>;
 } // HasP8Crypto
+
+// The following altivec instructions were introduced in Power ISA 3.0
+def HasP9Altivec : Predicate<"PPCSubTarget->hasP9Altivec()">;
+let Predicates = [HasP9Altivec] in {
+
+// Vector Compare Not Equal (Zero)
+class P9VCMP<bits<10> xo, string asmstr, ValueType Ty>
+  : VXRForm_1<xo, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB), asmstr,
+              IIC_VecFPCompare, []>;
+class P9VCMPo<bits<10> xo, string asmstr, ValueType Ty>
+  : VXRForm_1<xo, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB), asmstr,
+              IIC_VecFPCompare, []> {
+  let Defs = [CR6];
+  let RC = 1;
+}
+
+// i8 element comparisons.
+def VCMPNEB   : P9VCMP <  7, "vcmpneb $vD, $vA, $vB"  , v16i8>;
+def VCMPNEBo  : P9VCMPo<  7, "vcmpneb. $vD, $vA, $vB" , v16i8>;
+def VCMPNEZB  : P9VCMP <263, "vcmpnezb $vD, $vA, $vB" , v16i8>;
+def VCMPNEZBo : P9VCMPo<263, "vcmpnezb. $vD, $vA, $vB", v16i8>;
+
+// i16 element comparisons.
+def VCMPNEH   : P9VCMP < 71, "vcmpneh $vD, $vA, $vB"  , v8i16>;
+def VCMPNEHo  : P9VCMPo< 71, "vcmpneh. $vD, $vA, $vB" , v8i16>;
+def VCMPNEZH  : P9VCMP <327, "vcmpnezh $vD, $vA, $vB" , v8i16>;
+def VCMPNEZHo : P9VCMPo<327, "vcmpnezh. $vD, $vA, $vB", v8i16>;
+
+// i32 element comparisons.
+def VCMPNEW   : P9VCMP <135, "vcmpnew $vD, $vA, $vB"  , v4i32>;
+def VCMPNEWo  : P9VCMPo<135, "vcmpnew. $vD, $vA, $vB" , v4i32>;
+def VCMPNEZW  : P9VCMP <391, "vcmpnezw $vD, $vA, $vB" , v4i32>;
+def VCMPNEZWo : P9VCMPo<391, "vcmpnezw. $vD, $vA, $vB", v4i32>;
+
+// VX-Form: [PO VRT / UIM VRB XO].
+// We use VXForm_1 to implement it, that is, we use "VRA" (5 bit) to represent
+// "/ UIM" (1 + 4 bit)
+class VX1_VT5_UIM5_VB5<bits<11> xo, string opc, list<dag> pattern>
+  : VXForm_1<xo, (outs vrrc:$vD), (ins u4imm:$UIMM, vrrc:$vB),
+             !strconcat(opc, " $vD, $vB, $UIMM"), IIC_VecGeneral, pattern>;
+
+class VX1_RT5_RA5_VB5<bits<11> xo, string opc, list<dag> pattern>
+  : VXForm_1<xo, (outs g8rc:$rD), (ins g8rc:$rA, vrrc:$vB),
+             !strconcat(opc, " $rD, $rA, $vB"), IIC_VecGeneral, pattern>;
+
+// Vector Extract Unsigned
+def VEXTRACTUB : VX1_VT5_UIM5_VB5<525, "vextractub", []>;
+def VEXTRACTUH : VX1_VT5_UIM5_VB5<589, "vextractuh", []>;
+def VEXTRACTUW : VX1_VT5_UIM5_VB5<653, "vextractuw", []>;
+def VEXTRACTD  : VX1_VT5_UIM5_VB5<717, "vextractd" , []>;
+
+// Vector Extract Unsigned Byte/Halfword/Word Left/Right-Indexed
+def VEXTUBLX : VX1_RT5_RA5_VB5<1549, "vextublx", []>;
+def VEXTUBRX : VX1_RT5_RA5_VB5<1805, "vextubrx", []>;
+def VEXTUHLX : VX1_RT5_RA5_VB5<1613, "vextuhlx", []>;
+def VEXTUHRX : VX1_RT5_RA5_VB5<1869, "vextuhrx", []>;
+def VEXTUWLX : VX1_RT5_RA5_VB5<1677, "vextuwlx", []>;
+def VEXTUWRX : VX1_RT5_RA5_VB5<1933, "vextuwrx", []>;
+
+// Vector Insert Element Instructions
+def VINSERTB : VX1_VT5_UIM5_VB5<781, "vinsertb", []>;
+def VINSERTH : VX1_VT5_UIM5_VB5<845, "vinserth", []>;
+def VINSERTW : VX1_VT5_UIM5_VB5<909, "vinsertw", []>;
+def VINSERTD : VX1_VT5_UIM5_VB5<973, "vinsertd", []>;
+} // end HasP9Altivec

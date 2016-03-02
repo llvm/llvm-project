@@ -113,6 +113,8 @@ if(LLVM_BUILD_EXAMPLES)
     )
 endif()
 
+add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS})
+
 add_lit_testsuite(check-llvm "Running the LLVM regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   PARAMS llvm_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg

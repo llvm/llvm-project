@@ -8,7 +8,7 @@
 # CHECK:   Code alignment factor: 1
 # CHECK:   Data alignment factor: -8
 # CHECK:   Return address column: 30
-# CHECK:   Augmentation data:
+# CHECK:   Augmentation data:     10
 
 # CHECK:   DW_CFA_def_cfa: reg31 +0
 

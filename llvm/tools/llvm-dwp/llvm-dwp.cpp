@@ -1,3 +1,16 @@
+//===-- llvm-dwp.cpp - Split DWARF merging tool for llvm ------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// A utility for merging DWARF 5 Split DWARF .dwo files into .dwp (DWARF
+// package files).
+//
+//===----------------------------------------------------------------------===//
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"

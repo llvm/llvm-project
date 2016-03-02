@@ -48,8 +48,8 @@ namespace opts {
   extern llvm::cl::opt<bool> CodeViewSubsectionBytes;
   extern llvm::cl::opt<bool> ARMAttributes;
   extern llvm::cl::opt<bool> MipsPLTGOT;
-  enum OutpytStyleTy { LLVM, GNU };
-  extern llvm::cl::opt<OutpytStyleTy> Output;
+  enum OutputStyleTy { LLVM, GNU };
+  extern llvm::cl::opt<OutputStyleTy> Output;
 } // namespace opts
 
 #define LLVM_READOBJ_ENUM_ENT(ns, enum) \

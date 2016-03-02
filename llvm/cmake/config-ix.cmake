@@ -107,6 +107,10 @@ if( NOT PURE_WINDOWS )
   check_library_exists(rt clock_gettime "" HAVE_LIBRT)
 endif()
 
+if(HAVE_LIBPTHREAD)
+  set(PTHREAD_LIB pthread)
+endif()
+
 # Don't look for these libraries on Windows. Also don't look for them if we're
 # using MSan, since uninstrmented third party code may call MSan interceptors
 # like strlen, leading to false positives.

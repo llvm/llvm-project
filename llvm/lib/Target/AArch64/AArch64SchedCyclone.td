@@ -17,6 +17,7 @@ def CycloneModel : SchedMachineModel {
   let MicroOpBufferSize = 192; // Based on the reorder buffer.
   let LoadLatency = 4; // Optimistic load latency.
   let MispredictPenalty = 16; // 14-19 cycles are typical.
+  let CompleteModel = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -726,7 +727,7 @@ def : InstRW<[WriteVLDShuffle, WriteAdr, WriteV, WriteV],
 def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteV],
              (instrs LD3Rv1d,LD3Rv2d)>;
 def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteV],
-             (instrs LD3Rv2d_POST,LD3Rv2d_POST)>;
+             (instrs LD3Rv1d_POST,LD3Rv2d_POST)>;
 
 def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteV, WriteV],
              (instregex "LD4Fourv(8b|4h|2s)$")>;
@@ -850,6 +851,9 @@ def : InstRW<[WriteAdr, WriteVSTPairShuffle], (instregex "ST4i(8|16|32)_POST")>;
 
 def : InstRW<[WriteVSTShuffle, WriteVSTShuffle],          (instrs ST4i64)>;
 def : InstRW<[WriteAdr, WriteVSTShuffle, WriteVSTShuffle],(instrs ST4i64_POST)>;
+
+// Atomic operations are not supported.
+def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
 //---
 // Unused SchedRead types

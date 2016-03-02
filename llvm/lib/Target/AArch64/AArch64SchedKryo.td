@@ -26,6 +26,7 @@ def KryoModel : SchedMachineModel {
   // Enable partial & runtime unrolling. The magic number is chosen based on
   // experiments and benchmarking data.
   let LoopMicroOpBufferSize = 16;
+  let CompleteModel = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -98,6 +99,8 @@ def : WriteRes<WriteBarrier, []> { let Latency = 1; }
 def : WriteRes<WriteHint,    []> { let Latency = 1; }
 
 def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
+
+def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
 // No forwarding logic is modelled yet.
 def : ReadAdvance<ReadI,       0>;

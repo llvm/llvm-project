@@ -23,19 +23,17 @@ FUZZER_FLAG_INT(
     prefer_small_during_initial_shuffle, -1,
     "If 1, always prefer smaller inputs during the initial corpus shuffle."
     " If 0, never do that. If -1, do it sometimes.")
-FUZZER_FLAG_INT(exit_on_first, 0,
-            "If 1, exit after the first new interesting input is found.")
 FUZZER_FLAG_INT(
     timeout, 1200,
     "Timeout in seconds (if positive). "
     "If one unit runs more than this number of seconds the process will abort.")
-FUZZER_FLAG_INT(abort_on_timeout, 0, "If positive, call abort on timeout.")
 FUZZER_FLAG_INT(timeout_exitcode, 77,
                 "Unless abort_on_timeout is set, use this exitcode on timeout.")
+FUZZER_FLAG_INT(error_exit_code, 77, "When libFuzzer's signal handlers are in "
+  "use exit with this exitcode after catching a deadly signal.")
 FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
                                    "time in seconds to run the fuzzer.")
 FUZZER_FLAG_INT(help, 0, "Print help.")
-FUZZER_FLAG_INT(save_minimized_corpus, 0, "Deprecated. Use -merge=1")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken.")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
@@ -76,3 +74,11 @@ FUZZER_FLAG_INT(output_csv, 0, "Enable pulse output in CSV format.")
 FUZZER_FLAG_INT(print_new_cov_pcs, 0, "If 1, print out new covered pcs.")
 FUZZER_FLAG_INT(print_final_stats, 0, "If 1, print statistics at exit.")
 
+FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
+FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGSEGV.")
+FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")
+FUZZER_FLAG_INT(handle_ill, 1, "If 1, try to intercept SIGILL.")
+FUZZER_FLAG_INT(handle_fpe, 1, "If 1, try to intercept SIGFPE.")
+FUZZER_FLAG_INT(handle_int, 1, "If 1, try to intercept SIGINT.")
+FUZZER_DEPRECATED_FLAG(exit_on_first)
+FUZZER_DEPRECATED_FLAG(save_minimized_corpus)

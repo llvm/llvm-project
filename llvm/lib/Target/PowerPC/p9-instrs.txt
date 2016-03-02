@@ -1,0 +1,442 @@
+Content:
+========
+. Remaining Instructions (Total 56 Instructions, include 2 unknow instructions) 
+. Done (Total 155 Instructions: 101 VSX, 54 Altivec)
+
+//------------------------------------------------------------------------------
+//. Remaining Instructions
+//------------------------------------------------------------------------------
+GCC reference: https://sourceware.org/ml/binutils/2015-11/msg00071.html
+
+// Add PC Immediate Shifted  DX-form p69
+[PO RT d1 d0 XO d2]         addpcis     RT,D
+                            subpcis Rx,value = addpcis Rx,-value
+
+// 6.17.2 Decimal Integer Format Conversion Instructions
+
+// Decimal Convert From National VX-form p352
+[PO VRT EO VRB 1 PS XO]     bcdcfn.     VRT,VRB,PS
+
+// Decimal Convert From Zoned VX-form p353
+[PO VRT EO VRB 1 PS XO]     bcdcfz.     VRT,VRB,PS
+
+// Decimal Convert To National VX-form p354
+[PO VRT EO VRB 1 / XO]      bcdctn.     VRT,VRB
+
+// Decimal Convert To Zoned VX-form p355
+[PO VRT EO VRB 1 PS XO]     bcdctz.     VRT,VRB,PS
+
+// Decimal Convert From Signed Quadword VX-form p356
+[PO VRT EO VRB 1 PS XO]     bcdcfsq.    VRT,VRB,PS
+
+// Decimal Convert To Signed Quadword VX-form p356
+[PO VRT EO VRB 1 / XO]      bcdctsq.    VRT,VRB
+
+// 6.17.3 Decimal Integer Sign Manipulation Instructions
+
+// Decimal Copy Sign VX-form p358
+[PO VRT VRA VRB XO]         bcdcpsgn.   VRT,VRA,VRB
+
+// Decimal Set Sign VX-form p358
+[PO VRT EO VRB 1 PS XO]     bcdsetsgn.  VRT,VRB,PS
+
+// Decimal Shift VX-form p359
+[PO VRT VRA VRB 1 PS XO]    bcds.       VRT,VRA,VRB,PS
+
+// Decimal Unsigned Shift VX-form p360
+[PO VRT VRA VRB 1 / XO]     bcdus.      VRT,VRA,VRB
+
+// Decimal Shift and Round VX-form p361
+[PO VRT VRA VRB 1 PS XO]    bcdsr.      VRT,VRA,VRB,PS
+
+// 6.17.5 Decimal Integer Truncate Instructions
+
+// Decimal Truncate VX-form p362
+[PO VRT VRA VRB 1 PS XO]    bcdtrunc.   VRT,VRA,VRB,PS
+
+// Decimal Unsigned Truncate VX-form p363
+[PO VRT VRA VRB 1 / XO]     bcdutrunc.  VRT,VRA,VRB
+
+// 3.3.10.1 Character-Type Compare Instructions
+
+// Compare Ranged Byte X-form p87
+[PO BF / L RA RB XO /]      cmprb       BF,L,RA,RB
+
+// Compare Equal Byte X-form p88
+[PO BF // RA RB XO /]       cmpeqb      BF,RA,RB
+
+// 3.3.13 Fixed-Point Logical Instructions
+
+// Count Trailing Zeros Word X-form p95
+[PO RS RA /// XO Rc]        cnttzw(.)   RA,RS
+
+// 3.3.13.1 64-bit Fixed-Point Logical Instructions
+
+// Count Trailing Zeros Doubleword  X-form p98
+[PO RS RA /// XO Rc]        cnttzd(.)   RA,RS
+
+// 4.4 Copy-Paste Facility
+
+// Copy X-form p858
+[PO /// L RA RB XO /]       copy        RA,RB,L
+                            copy_first = copy RA, RB, 1
+// CP_Abort p860
+[PO /// /// /// XO /]       cp_abort
+
+// Paste p859
+[PO /// L RA RB XO Rc]      paste(.)    RA,RB,L
+                            paste_last = paste RA,RB,1
+
+// 3.3.9 Fixed-Point Arithmetic Instructions
+
+// Deliver A Random Number X-form p79
+[PO RT /// L /// XO /]      darn        RT,L
+
+// Multiply-Add High Doubleword VA-form p81
+[PO RT RA RB RC XO]         maddhd      RT,RA.RB,RC
+
+// Multiply-Add High Doubleword Unsigned VA-form  p81
+[PO RT RA RB RC XO]         maddhdu     RT,RA.RB,RC
+
+// Multiply-Add Low Doubleword VA-form p81
+[PO RT RA RB RC XO]         maddld      RT,RA.RB,RC
+
+// Modulo Signed Word X-form p76
+[PO RT RA RB XO /]          modsw       RT,RA,RB
+
+// Modulo Unsigned Word X-form p76
+[PO RT RA RB XO /]          moduw       RT,RA,RB 
+
+// Modulo Signed Doubleword X-form p84
+[PO RT RA RB XO /]          modsd       RT,RA,RB
+
+// Modulo Unsigned Doubleword X-form p84
+[PO RT RA RB XO /]          modud       RT,RA,RB
+
+
+// DFP Test Significance Immediate [Quad] X-form p204
+[PO BF / UIM FRB XO /]      dtstsfi     BF,UIM,FRB
+[PO BF / UIM FRBp XO /]     dtstsfiq    BF,UIM,FRBp
+
+// 3.3.14.2.1 64-bit Fixed-Point Shift Instructions
+
+// Extend-Sign Word and Shift Left Immediate XS-form p109
+[PO RS RA sh XO sh Rc]      extswsli(.) RA,RS,SH
+
+// 4.5.1 Load Atomic
+
+// Load Word Atomic   X-form p864
+[PO RT RA FC XO /]          lwat        RT,RA,FC
+
+// Load Doubleword Atomic X-form p864
+[PO RT RA FC XO /]          ldat        RT,RA,FC
+
+// 4.5.2 Store Atomic
+
+// Store Word Atomic   X-form p866
+[PO RS RA FC XO /]          stwat       RS,RA,FC
+
+// Store Doubleword Atomic   X-form p866
+[PO RS RA FC XO /]          stdat       RS,RA,FC
+
+// 3.3.2.1 64-bit Fixed-Point Load Instructions 
+
+// Load Doubleword Monitored Indexed X-form p54
+[PO RT RA RB XO /]          ldmx        RT,RA,RB
+
+// 3.3.16 Move To/From Vector-Scalar Register Instructions
+
+// Move From VSR Lower Doubleword XX1-form p111
+[PO S RA /// XO SX]         mfvsrld     RA,XS
+
+// Move To VSR Double Doubleword XX1-form p114
+[PO T RA RB XO TX]          mtvsrdd     XT,RA,RB
+
+// Move To VSR Word & Splat XX1-form p115
+[PO T RA /// XO TX]         mtvsrws     XT,RA
+
+// Move to CR from XER Extended X-form p119
+[PO BF // /// /// XO /]     mcrxrx      BF
+
+// Set Boolean X-form p121
+[PO RT BFA // /// XO /]     setb        RT,BFA
+
+// Message Synchronize X-form p1126
+[PO /// /// /// XO /]       msgsync
+
+// SLB Invalidate Entry Global  X-form p1026
+[PO RS /// RB XO /]         slbieg      RS,RB 
+
+// SLB Synchronize  X-form p1031
+[PO /// /// /// XO /]       slbsync
+
+// 3.3.2.1 Power-Saving Mode Instruction
+
+// stop    XL-form p957
+[PO /// /// /// XO /]       stop
+
+// 4.6.4 Wait Instruction
+// Wait X-form p880
+[PO /// WC /// /// XO /]    wait
+
+// Unknow Instructions:
+urfid
+- gcc's implementation:
+    {"urfid",	XL(19,306),	0xffffffff,  POWER9,	PPCNONE,	{0}},
+    (4c 00 02 64|64 02 00 4c) 	urfid
+
+rmieg
+- gcc's implementation: 
+    {"rmieg",	X(31,882),	XRTRA_MASK,  POWER9,	PPCNONE,	{RB}},
+    (7c 00 f6 e4|e4 f6 00 7c) 	rmieg   r30
+
+//------------------------------------------------------------------------------
+//. Done:
+//------------------------------------------------------------------------------
+
+//======================================
+"vsx instructions"
+
+//--------------------------------------
+"7.6.1.2.1 VSX Scalar Move Instructions"
+// VSX Scalar Quad-Precision Move Instructions
+
+// VSX Scalar Copy Sign Quad-Precision X-form p.553
+[PO VRT VRA VRB XO /] xscpsgnqp
+
+// VSX Scalar Absolute Quad-Precision X-form 531
+// VSX Scalar Negate Quad-Precision X-form 627
+// VSX Scalar Negative Absolute Quad-Precision X-form 626
+[PO VRT XO VRB XO /] xsabsqp xsnegqp xsnabsqp
+
+//--------------------------------------
+"7.6.1.3 VSX Floating-Point Arithmetic Instructions"
+
+// VSX Scalar Quad-Precision Elementary Arithmetic
+
+// VSX Scalar Add Quad-Precision [using round to Odd] X-form 539
+// VSX Scalar Divide Quad-Precision [using round to Odd] X-form 584
+// VSX Scalar Multiply Quad-Precision [using round to Odd] X-form 622
+[PO VRT VRA VRB XO RO] xsaddqp xsaddqpo xsdivqp xsdivqpo xsmulqp xsmulqpo
+
+// VSX Scalar Square Root Quad-Precision [using round to Odd] X-form 662
+// VSX Scalar Subtract Quad-Precision [using round to Odd] X-form 667
+                       xssubqp xssubqpo
+
+[PO VRT XO VRB XO RO] xssqrtqp xssqrtqpo
+
+// VSX Scalar Quad-Precision Multiply-Add Arithmetic Instructions
+
+// VSX Scalar Multiply-Add Quad-Precision [using round to Odd] X-form 596
+// VSX Scalar Multiply-Subtract Quad-Precision [using round to Odd] X-form 617
+// VSX Scalar Negative Multiply-Add Quad-Precision [using round to Odd] X-form 636
+// VSX Scalar Negative Multiply-Subtract Quad-Precision [using round to Odd]
+// X-form 645
+[PO VRT VRA VRB XO RO] xsmaddqp xsmaddqpo xsmsubqp xsmsubqpo 
+                       xsnmaddqp xsnmaddqpo xsnmsubqp xsnmsubqpo
+
+22
+//--------------------------------------
+"7.6.1.4 VSX Floating-Point Compare Instructions"
+
+// VSX Scalar Quad-Precision Compare Instructions
+
+// VSX Scalar Compare Ordered Quad-Precision X-form 549
+// VSX Scalar Compare Unordered Quad-Precision X-form 552
+[PO BF // VRA VRB XO /] xscmpoqp xscmpuqp 
+
+"7.6.1.8 VSX Scalar Floating-Point Support Instructions"
+// VSX Scalar Compare Exponents Quad-Precision X-form p. 541 542
+[PO BF // A B XO AX BX /] xscmpexpdp 
+[PO BF // VRA VRB XO /] xscmpexpqp
+
+// VSX Scalar Compare DP, XX3-form, p.543 544 545
+// VSX Scalar Compare Equal Double-Precision, 
+[PO T A B XO AX BX TX]  xscmpeqdp xscmpgedp xscmpgtdp xscmpnedp
+
+// VSX Vector Compare Not Equal Double-Precision XX3-form 691
+[PO T A B Rc XO AX BX TX] xvcmpnedp xvcmpnedp. xvcmpnesp xvcmpnesp.
+
+//--------------------------------------
+"7.6.1.5 VSX FP-FP Conversion Instructions"
+// VSX Scalar Quad-Precision Floating-Point Conversion Instructions
+
+// VSX Scalar round & Convert Quad-Precision format to Double-Precision format
+// [using round to Odd] X-form 567
+[PO VRT XO VRB XO /] xscvqpdp xscvqpdpo (actually [PO VRT XO VRB XO RO])
+[PO VRT XO VRB XO /] xscvdpqp
+
+// VSX Scalar Quad-Precision Convert to Integer Instructions
+
+// VSX Scalar truncate & Convert Quad-Precision format to Signed Doubleword format
+// 568 570 572 574
+[PO VRT XO VRB XO /] xscvqpsdz xscvqpswz xscvqpudz xscvqpuwz
+576 = 580            xscvsdqp xscvudqp
+
+"7.6.1.7 VSX Round to Floating-Point Integer Instructions"
+// VSX Scalar round & Convert Double-Precision format to Half-Precision format
+// XX2-form 554 566
+[PO T XO B XO BX TX] xscvdphp xscvhpdp
+
+// VSX Vector Convert Half-Precision format to Single-Precision format
+// XX2-form 703 705
+[PO T XO B XO BX TX] xvcvhpsp xvcvsphp
+
+// VSX Scalar Round to Quad-Precision Integer [with Inexact] Z23-form 654
+[PO VRT /// R VRB RMC XO EX] xsrqpi xsrqpix
+
+// VSX Scalar Round Quad-Precision to Double-Extended Precision Z23-form 656
+[PO VRT /// R VRB RMC XO /] xsrqpxp 
+def XSRQPXP : Z23Form_1<63, 37,
+                        (outs vrrc:$vT), (ins u5imm:$R, vrrc:$vB, u2imm:$RMC),
+                        "xsrqpxp $vT, $R, $vB, $RMC"), IIC_VecFP, []>;
+
+27~28
+//--------------------------------------
+// VSX Scalar Insert Exponent Double-Precision X-form 588
+// VSX Scalar Insert Exponent Quad-Precision X-form 589
+[PO VT rA rB XO /]  xsiexpdp 
+[PO VRT VRA VRB XO /]  xsiexpqp
+
+// VSX Vector Insert Exponent Double-Precision XX3-form 722
+[PO T A B XO AX BX TX] xviexpdp xviexpsp
+
+// VSX Vector Extract Unsigned Word XX2-form 788
+// VSX Vector Insert Word XX2-form
+[PO T / UIM B XO BX TX] xxextractuw xxinsertw
+
+// VSX Scalar Extract Exponent Double-Precision XX2-form 676
+[PO BF DCMX B XO BX /]  
+[PO T XO B XO BX /] xsxexpdp xsxsigdp
+// X-form
+[PO VRT XO VRB XO /] xsxexpqp xsxsigqp
+
+// VSX Vector Extract Exponent Double-Precision XX2-form 784
+[PO T XO B XO BX TX] xvxexpdp xvxexpsp
+
+// VSX Vector Extract Significand Double-Precision XX2-form 785
+[PO T XO B XO BX TX] xvxsigdp xvxsigsp
+
+//--------------------------------------
+// VSX Scalar Test Data Class Double-Precision XX2-form p673
+// VSX Scalar Test Data Class Quad-Precision X-form 674
+// VSX Scalar Test Data Class Single-Precision XX2-form 675
+[PO BF DCMX B XO BX /]  xststdcdp xststdcsp
+[PO BF DCMX VRB XO /]   xststdcqp 
+
+// VSX Vector Test Data Class Double-Precision XX2-form 782 783
+[PO T dx B XO dc XO dm BX TX] xvtstdcdp xvtstdcsp 
+
+//--------------------------------------
+// VSX Scalar Maximum Type-C Double-Precision XX3-form 601 ~ 609
+[PO T A B XO AX BX TX] xsmaxcdp xsmaxjdp xsmincdp xsminjdp
+
+//--------------------------------------
+// VSX Vector Byte-Reverse Doubleword XX2-form 786 787
+[PO T XO B XO BX TX] xxbrd xxbrh xxbrq xxbrw
+
+// VSX Vector Permute XX3-form 794
+[PO T A B XO AX BX TX] xxperm xxpermr
+
+// VSX Vector Splat Immediate Byte 796 x-form
+[PO T EO IMM8 XO TX] xxspltib   <= sign or unsigned?
+
+30
+//--------------------------------------
+// Load VSX Vector DQ-form 511
+[PO T RA DQ TX XO] lxv 
+
+// Store VSX Vector DQ-form 526
+[PO S RA DQ SX XO] stxv
+
+// Load VSX Scalar Doubleword DS-form 499
+// Load VSX Scalar Single DS-form 504
+[PO VRT RA DS XO] lxsd lxssp 
+
+// Store VSX Scalar Doubleword DS-form 517
+// Store VSX Scalar Single DS-form 520
+[PO VRT RA DS XO] stxsd stxssp
+
+
+// Load VSX Vector Indexed X-form 511
+// Load VSX Scalar as Integer Byte & Zero Indexed X-form 501
+// Load VSX Vector Byte*16 Indexed X-form 506
+// Load VSX Vector with Length X-form 508
+// Load VSX Vector Left-justified with Length X-form 510
+// Load VSX Vector Halfword*8 Indexed X-form 514
+// Load VSX Vector Word & Splat Indexed X-form 516
+[PO T RA RB XO TX] lxvx lxsibzx lxsihzx lxvb16x lxvl lxvll lxvh8x lxvwsx
+
+// Store VSX Scalar as Integer Byte Indexed X-form 518
+// Store VSX Scalar as Integer Halfword Indexed X-form 518
+// Store VSX Vector Byte*16 Indexed X-form 522
+// Store VSX Vector Halfword*8 Indexed X-form 524
+// Store VSX Vector with Length X-form 526
+// Store VSX Vector Left-justified with Length X-form 528
+// Store VSX Vector Indexed X-form 529
+[PO S RA RB XO SX] stxsibx stxsihx stxvb16x stxvh8x stxvl stxvll stxvx
+
+21
+
+//--------------------------------------
+". vector instructions"
+
+[1] PowerISA-v3.0 p.933 - Table 1, and Chapter 6. Vector Facility (altivec)
+[2] https://sourceware.org/ml/binutils/2015-11/msg00071.html
+
+//--------------------------------------
+New patch:
+// vector bit, p.367, 6.16 Vector Bit Permute Instruction
+[PO VRT VRA VRB XO] vbpermd, (existing: vbpermq)
+
+// vector permute, p.280
+[PO VRT VRA VRB VRC XO] vpermr
+
+// vector rotate left, p.341
+[PO VRT VRA VRB XO] vrlwnm vrlwmi vrldnm vrldmi
+
+// vector shift, p.285
+[PO VRT VRA VRB XO] vslv vsrv
+
+// vector multiply-by-10, p.375
+[PO VRT VRA /// XO] vmul10cuq vmul10uq
+[PO VRT VRA VRB XO] vmul10ecuq vmul10euq 
+
+12
+//--------------------------------------
+http://reviews.llvm.org/D15887 + ext + neg + prty - vbpermd
+// vector count leading/trailing zero
+. new vx-form: p.31, 1.6.14 VX-FORM
+[PO RT EO VRB XO] vclzlsbb vctzlsbb (p.363)
+
+// Vector Count Trailing Zeros Instructions, 362
+[PO VRT EO VRB XO] vctzb vctzh vctzw vctzd (v16i8 v8i16 v4i32 v2i64)
+
+// vector extend sign (p.314)
+[PO VRT EO VRB XO] vextsb2w vextsh2w vextsb2d vextsh2d vextsw2d
+
+// vector negate, p.313
+[PO VRT EO VRB XO] vnegd vnegw
+
+// vector parity, p.335
+[PO VRT EO VRB XO] vprtybd vprtybq vprtybw
+
+16
+//--------------------------------------
+// vector compare, p.330
+[PO VRT VRA VRB RC XO] vcmpneb vcmpneb. vcmpneh vcmpneh. vcmpnew vcmpnew.
+                       vcmpnezb vcmpnezb. vcmpnezh vcmpnezh. vcmpnezw vcmpnezw.
+12
+//--------------------------------------
+http://reviews.llvm.org/D15917 + insert
+// vector extract (p.287) ref: vspltb (v2.07, p.227)
+// vector insert, p.288
+[PO VRT / UIM VRB XO] vinsertb vinsertd vinserth vinsertw
+
+// Vector Extract Unsigned
+[PO VRT / UIM VRB XO] vextractub vextractuh vextractuw vextractd
+
+// p.364: Vector Extract Unsigned Left/Right-Indexed
+[PO RT RA VRB XO] vextublx vextubrx vextuhlx vextuhrx vextuwlx vextuwrx 
+
+14

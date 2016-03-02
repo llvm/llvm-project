@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OBJECT_COFFYAML_H
-#define LLVM_OBJECT_COFFYAML_H
+#ifndef LLVM_OBJECTYAML_COFFYAML_H
+#define LLVM_OBJECTYAML_COFFYAML_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/MC/YAML.h"
+#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/COFF.h"
 
 namespace llvm {

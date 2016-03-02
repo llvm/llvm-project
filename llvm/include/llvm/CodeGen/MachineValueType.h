@@ -210,6 +210,13 @@ class MVT {
                SimpleTy <= MVT::LAST_INTEGER_VECTOR_VALUETYPE));
     }
 
+    /// isScalarInteger - Return true if this is an integer, not including
+    /// vectors.
+    bool isScalarInteger() const {
+      return (SimpleTy >= MVT::FIRST_INTEGER_VALUETYPE &&
+              SimpleTy <= MVT::LAST_INTEGER_VALUETYPE);
+    }
+
     /// isVector - Return true if this is a vector value type.
     bool isVector() const {
       return (SimpleTy >= MVT::FIRST_VECTOR_VALUETYPE &&

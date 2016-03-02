@@ -48,7 +48,6 @@ add_llvm_library(LLVMMC
   SubtargetFeature.cpp
   WinCOFFObjectWriter.cpp
   WinCOFFStreamer.cpp
-  YAML.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/MC

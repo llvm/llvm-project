@@ -248,8 +248,14 @@ lto_module_t lto_module_create_in_local_context(const void *mem, size_t length,
                                                 const char *path) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+
+  // Create a local context. Ownership will be transfered to LTOModule.
+  std::unique_ptr<LLVMContext> Context = llvm::make_unique<LLVMContext>();
+  Context->setDiagnosticHandler(diagnosticHandler, nullptr, true);
+
   ErrorOr<std::unique_ptr<LTOModule>> M =
-      LTOModule::createInLocalContext(mem, length, Options, path);
+      LTOModule::createInLocalContext(std::move(Context), mem, length, Options,
+                                      path);
   if (!M)
     return nullptr;
   return wrap(M->release());
@@ -261,8 +267,8 @@ lto_module_t lto_module_create_in_codegen_context(const void *mem,
                                                   lto_code_gen_t cg) {
   lto_initialize();
   llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createInContext(
-      mem, length, Options, path, &unwrap(cg)->getContext());
+  ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromBuffer(
+      unwrap(cg)->getContext(), mem, length, Options, path);
   return wrap(M->release());
 }
 

@@ -312,10 +312,13 @@ include "AArch64InstrFormats.td"
 //===----------------------------------------------------------------------===//
 
 let Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1 in {
+// We set Sched to empty list because we expect these instructions to simply get
+// removed in most cases.
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt),
-                              [(AArch64callseq_start timm:$amt)]>;
+                              [(AArch64callseq_start timm:$amt)]>, Sched<[]>;
 def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-                            [(AArch64callseq_end timm:$amt1, timm:$amt2)]>;
+                            [(AArch64callseq_end timm:$amt1, timm:$amt2)]>,
+                            Sched<[]>;
 } // Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1
 
 let isReMaterializable = 1, isCodeGenOnly = 1 in {
@@ -1206,7 +1209,8 @@ def BR  : BranchReg<0b0000, "br", [(brind GPR64:$Rn)]>;
 // Create a separate pseudo-instruction for codegen to use so that we don't
 // flag lr as used in every function. It'll be restored before the RET by the
 // epilogue if it's legitimately used.
-def RET_ReallyLR : Pseudo<(outs), (ins), [(AArch64retflag)]> {
+def RET_ReallyLR : Pseudo<(outs), (ins), [(AArch64retflag)]>,
+                   Sched<[WriteBrReg]> {
   let isTerminator = 1;
   let isBarrier = 1;
   let isReturn = 1;
@@ -1216,7 +1220,7 @@ def RET_ReallyLR : Pseudo<(outs), (ins), [(AArch64retflag)]> {
 // R_AARCH64_TLSDESC_CALL relocation at the offset of the following instruction
 // (which in the usual case is a BLR).
 let hasSideEffects = 1 in
-def TLSDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []> {
+def TLSDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
   let AsmString = ".tlsdesccall $sym";
 }
 
@@ -1226,7 +1230,8 @@ let isCall = 1, Defs = [LR, X0, X1], hasSideEffects = 1,
     isCodeGenOnly = 1 in
 def TLSDESC_CALLSEQ
     : Pseudo<(outs), (ins i64imm:$sym),
-             [(AArch64tlsdesc_callseq tglobaltlsaddr:$sym)]>;
+             [(AArch64tlsdesc_callseq tglobaltlsaddr:$sym)]>,
+      Sched<[WriteI, WriteLD, WriteI, WriteBrReg]>;
 def : Pat<(AArch64tlsdesc_callseq texternalsym:$sym),
           (TLSDESC_CALLSEQ texternalsym:$sym)>;
 
@@ -2536,9 +2541,11 @@ defm FMOV : UnscaledConversion<"fmov">;
 let isReMaterializable = 1, isCodeGenOnly = 1 in {
 def FMOVS0 : Pseudo<(outs FPR32:$Rd), (ins), [(set f32:$Rd, (fpimm0))]>,
     PseudoInstExpansion<(FMOVWSr FPR32:$Rd, WZR)>,
+    Sched<[WriteF]>,
     Requires<[NoZCZ]>;
 def FMOVD0 : Pseudo<(outs FPR64:$Rd), (ins), [(set f64:$Rd, (fpimm0))]>,
     PseudoInstExpansion<(FMOVXDr FPR64:$Rd, XZR)>,
+    Sched<[WriteF]>,
     Requires<[NoZCZ]>;
 }
 
@@ -2665,6 +2672,7 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
                                        (i32 imm:$cond), NZCV))]> {
   let Uses = [NZCV];
   let usesCustomInserter = 1;
+  let hasNoSchedulingInfo = 1;
 }
 
 
@@ -6038,8 +6046,10 @@ def : Pat<(nontemporalstore GPR64:$Rt,
 // Tail call return handling. These are all compiler pseudo-instructions,
 // so no encoding information or anything like that.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
-  def TCRETURNdi : Pseudo<(outs), (ins i64imm:$dst, i32imm:$FPDiff),[]>;
-  def TCRETURNri : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff), []>;
+  def TCRETURNdi : Pseudo<(outs), (ins i64imm:$dst, i32imm:$FPDiff), []>,
+                   Sched<[WriteBrReg]>;
+  def TCRETURNri : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff), []>,
+                   Sched<[WriteBrReg]>;
 }
 
 def : Pat<(AArch64tcret tcGPR64:$dst, (i32 timm:$FPDiff)),

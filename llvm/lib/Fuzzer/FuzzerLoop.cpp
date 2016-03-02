@@ -83,21 +83,54 @@ void Fuzzer::StaticDeathCallback() {
   F->DeathCallback();
 }
 
-void Fuzzer::DeathCallback() {
-  if (!CurrentUnitSize) return;
-  Printf("DEATH:\n");
+void Fuzzer::DumpCurrentUnit(const char *Prefix) {
   if (CurrentUnitSize <= kMaxUnitSizeToPrint) {
     PrintHexArray(CurrentUnitData, CurrentUnitSize, "\n");
     PrintASCII(CurrentUnitData, CurrentUnitSize, "\n");
   }
   WriteUnitToFileWithPrefix(
-      {CurrentUnitData, CurrentUnitData + CurrentUnitSize}, "crash-");
+      {CurrentUnitData, CurrentUnitData + CurrentUnitSize}, Prefix);
+}
+
+void Fuzzer::DeathCallback() {
+  if (!CurrentUnitSize) return;
+  Printf("DEATH:\n");
+  DumpCurrentUnit("crash-");
   PrintFinalStats();
 }
 
 void Fuzzer::StaticAlarmCallback() {
   assert(F);
   F->AlarmCallback();
+}
+
+void Fuzzer::StaticCrashSignalCallback() {
+  assert(F);
+  F->CrashCallback();
+}
+
+void Fuzzer::StaticInterruptCallback() {
+  assert(F);
+  F->InterruptCallback();
+}
+
+void Fuzzer::CrashCallback() {
+  Printf("==%d== ERROR: libFuzzer: deadly signal\n", GetPid());
+  if (__sanitizer_print_stack_trace)
+    __sanitizer_print_stack_trace();
+  Printf("NOTE: libFuzzer has rudimentary signal handlers.\n"
+         "      Combine libFuzzer with AddressSanitizer or similar for better "
+         "crash reports.\n");
+  Printf("SUMMARY: libFuzzer: deadly signal\n");
+  DumpCurrentUnit("crash-");
+  PrintFinalStats();
+  exit(Options.ErrorExitCode);
+}
+
+void Fuzzer::InterruptCallback() {
+  Printf("==%d== libFuzzer: run interrupted; exiting\n", GetPid());
+  PrintFinalStats();
+  exit(0);
 }
 
 void Fuzzer::AlarmCallback() {
@@ -114,20 +147,13 @@ void Fuzzer::AlarmCallback() {
     Printf("ALARM: working on the last Unit for %zd seconds\n", Seconds);
     Printf("       and the timeout value is %d (use -timeout=N to change)\n",
            Options.UnitTimeoutSec);
-    if (CurrentUnitSize <= kMaxUnitSizeToPrint) {
-      PrintHexArray(CurrentUnitData, CurrentUnitSize, "\n");
-      PrintASCII(CurrentUnitData, CurrentUnitSize, "\n");
-    }
-    WriteUnitToFileWithPrefix(
-        {CurrentUnitData, CurrentUnitData + CurrentUnitSize}, "timeout-");
+    DumpCurrentUnit("timeout-");
     Printf("==%d== ERROR: libFuzzer: timeout after %d seconds\n", GetPid(),
            Seconds);
     if (__sanitizer_print_stack_trace)
       __sanitizer_print_stack_trace();
     Printf("SUMMARY: libFuzzer: timeout\n");
     PrintFinalStats();
-    if (Options.AbortOnTimeout)
-      abort();
     exit(Options.TimeoutExitCode);
   }
 }
@@ -393,8 +419,6 @@ void Fuzzer::ReportNewCoverage(const Unit &U) {
   PrintStatusForNewUnit(U);
   WriteToOutputCorpus(U);
   NumberOfNewUnitsAdded++;
-  if (Options.ExitOnFirst)
-    exit(0);
 }
 
 void Fuzzer::Merge(const std::vector<std::string> &Corpora) {

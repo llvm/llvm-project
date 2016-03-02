@@ -106,7 +106,8 @@ Instruction *InstCombiner::scalarizePHI(ExtractElementInst &EI, PHINode *PN) {
                                      B0->getOperand(opId)->getName() + ".Elt"),
           *B0);
       Value *newPHIUser = InsertNewInstWith(
-          BinaryOperator::Create(B0->getOpcode(), scalarPHI, Op), *B0);
+          BinaryOperator::CreateWithCopiedFlags(B0->getOpcode(),
+                                                scalarPHI, Op, B0), *B0);
       scalarPHI->addIncoming(newPHIUser, inBB);
     } else {
       // Scalarize PHI input:
@@ -193,7 +194,8 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
         Value *newEI1 =
           Builder->CreateExtractElement(BO->getOperand(1), EI.getOperand(1),
                                         EI.getName()+".rhs");
-        return BinaryOperator::Create(BO->getOpcode(), newEI0, newEI1);
+        return BinaryOperator::CreateWithCopiedFlags(BO->getOpcode(),
+                                                     newEI0, newEI1, BO);
       }
     } else if (InsertElementInst *IE = dyn_cast<InsertElementInst>(I)) {
       // Extracting the inserted element?

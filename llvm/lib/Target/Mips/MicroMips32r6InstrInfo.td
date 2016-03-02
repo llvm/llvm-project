@@ -634,71 +634,71 @@ class CVT_S_L_MMR6_DESC : CVT_MMR6_DESC_BASE<"cvt.s.l", FGR64Opnd, FGR32Opnd,
                                              II_CVT>, FGR_64;
 
 multiclass CMP_CC_MMR6<bits<6> format, string Typestr,
-                       RegisterOperand FGRCCOpnd, RegisterOperand FGROpnd> {
+                       RegisterOperand FGROpnd> {
   def CMP_AF_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.af.", Typestr), format, FIELD_CMP_COND_AF>,
-      CMP_CONDN_DESC_BASE<"af", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"af", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_UN_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.un.", Typestr), format, FIELD_CMP_COND_UN>,
-      CMP_CONDN_DESC_BASE<"un", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"un", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_EQ_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.eq.", Typestr), format, FIELD_CMP_COND_EQ>,
-      CMP_CONDN_DESC_BASE<"eq", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"eq", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_UEQ_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.ueq.", Typestr), format, FIELD_CMP_COND_UEQ>,
-      CMP_CONDN_DESC_BASE<"ueq", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"ueq", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_LT_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.lt.", Typestr), format, FIELD_CMP_COND_LT>,
-      CMP_CONDN_DESC_BASE<"lt", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"lt", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_ULT_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.ult.", Typestr), format, FIELD_CMP_COND_ULT>,
-      CMP_CONDN_DESC_BASE<"ult", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"ult", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_LE_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.le.", Typestr), format, FIELD_CMP_COND_LE>,
-      CMP_CONDN_DESC_BASE<"le", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"le", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_ULE_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.ule.", Typestr), format, FIELD_CMP_COND_ULE>,
-      CMP_CONDN_DESC_BASE<"ule", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"ule", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_SAF_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.saf.", Typestr), format, FIELD_CMP_COND_SAF>,
-      CMP_CONDN_DESC_BASE<"saf", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"saf", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_SUN_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.sun.", Typestr), format, FIELD_CMP_COND_SUN>,
-      CMP_CONDN_DESC_BASE<"sun", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"sun", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_SEQ_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.seq.", Typestr), format, FIELD_CMP_COND_SEQ>,
-      CMP_CONDN_DESC_BASE<"seq", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"seq", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_SUEQ_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.sueq.", Typestr), format, FIELD_CMP_COND_SUEQ>,
-      CMP_CONDN_DESC_BASE<"sueq", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"sueq", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_SLT_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.slt.", Typestr), format, FIELD_CMP_COND_SLT>,
-      CMP_CONDN_DESC_BASE<"slt", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"slt", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_SULT_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.sult.", Typestr), format, FIELD_CMP_COND_SULT>,
-      CMP_CONDN_DESC_BASE<"sult", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"sult", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_SLE_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.sle.", Typestr), format, FIELD_CMP_COND_SLE>,
-      CMP_CONDN_DESC_BASE<"sle", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"sle", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
   def CMP_SULE_#NAME : POOL32F_CMP_FM<
       !strconcat("cmp.sule.", Typestr), format, FIELD_CMP_COND_SULE>,
-      CMP_CONDN_DESC_BASE<"sule", Typestr, FGRCCOpnd, FGROpnd>,
-      HARDFLOAT, R6MMR6Rel, ISA_MICROMIPS32R6;
+      CMP_CONDN_DESC_BASE<"sule", Typestr, FGROpnd>, HARDFLOAT, R6MMR6Rel,
+      ISA_MICROMIPS32R6;
 }
 
 class ABSS_FT_MMR6_DESC_BASE<string instr_asm, RegisterOperand DstRC,
@@ -763,8 +763,8 @@ class ROUND_W_S_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"round.w.s", FGR32Opnd,
 class ROUND_W_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"round.w.d", FGR64Opnd,
                                                    FGR64Opnd, II_ROUND>;
 
-class SEL_S_MMR6_DESC : COP1_SEL_DESC_BASE<"sel.s", FGRCC32Opnd, FGR32Opnd>;
-class SEL_D_MMR6_DESC : COP1_SEL_DESC_BASE<"sel.d", FGRCC32Opnd, FGR64Opnd> {
+class SEL_S_MMR6_DESC : COP1_SEL_DESC_BASE<"sel.s", FGR32Opnd>;
+class SEL_D_MMR6_DESC : COP1_SEL_DESC_BASE<"sel.d", FGR64Opnd> {
   // We must insert a SUBREG_TO_REG around $fd_in
   bit usesCustomInserter = 1;
 }
@@ -1115,8 +1115,8 @@ def CVT_S_W_MMR6 : StdMMR6Rel, CVT_S_W_MMR6_ENC, CVT_S_W_MMR6_DESC,
                    ISA_MICROMIPS32R6;
 def CVT_S_L_MMR6 : StdMMR6Rel, CVT_S_L_MMR6_ENC, CVT_S_L_MMR6_DESC,
                    ISA_MICROMIPS32R6;
-defm S_MMR6 : CMP_CC_MMR6<0b000101, "s", FGRCC32Opnd, FGR32Opnd>;
-defm D_MMR6 : CMP_CC_MMR6<0b010101, "d", FGRCC32Opnd, FGR64Opnd>;
+defm S_MMR6 : CMP_CC_MMR6<0b000101, "s", FGR32Opnd>;
+defm D_MMR6 : CMP_CC_MMR6<0b010101, "d", FGR64Opnd>;
 def ABS_S_MMR6 : StdMMR6Rel, ABS_S_MMR6_ENC, ABS_S_MMR6_DESC, ISA_MICROMIPS32R6;
 def ABS_D_MMR6 : StdMMR6Rel, ABS_D_MMR6_ENC, ABS_D_MMR6_DESC, ISA_MICROMIPS32R6;
 def FLOOR_L_S_MMR6 : StdMMR6Rel, FLOOR_L_S_MMR6_ENC, FLOOR_L_S_MMR6_DESC,
@@ -1200,10 +1200,8 @@ def ROUND_W_S_MMR6 : StdMMR6Rel, ROUND_W_S_MMR6_ENC, ROUND_W_S_MMR6_DESC,
                      ISA_MICROMIPS32R6;
 def ROUND_W_D_MMR6 : StdMMR6Rel, ROUND_W_D_MMR6_ENC, ROUND_W_D_MMR6_DESC,
                      ISA_MICROMIPS32R6;
-def SEL_S_MMR6 : StdMMR6Rel, SEL_S_MMR6_ENC, SEL_S_MMR6_DESC, ISA_MICROMIPS32R6,
-                 HARDFLOAT;
-def SEL_D_MMR6 : StdMMR6Rel, SEL_D_MMR6_ENC, SEL_D_MMR6_DESC, ISA_MICROMIPS32R6,
-                 HARDFLOAT;
+def SEL_S_MMR6 : StdMMR6Rel, SEL_S_MMR6_ENC, SEL_S_MMR6_DESC, ISA_MICROMIPS32R6;
+def SEL_D_MMR6 : StdMMR6Rel, SEL_D_MMR6_ENC, SEL_D_MMR6_DESC, ISA_MICROMIPS32R6;
 def SELEQZ_S_MMR6 : StdMMR6Rel, SELEQZ_S_MMR6_ENC, SELEQZ_S_MMR6_DESC,
                     ISA_MICROMIPS32R6;
 def SELEQZ_D_MMR6 : StdMMR6Rel, SELEQZ_D_MMR6_ENC, SELEQZ_D_MMR6_DESC,

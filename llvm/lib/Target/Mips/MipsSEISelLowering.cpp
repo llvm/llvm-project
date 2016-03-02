@@ -1292,6 +1292,7 @@ SDValue MipsSETargetLowering::lowerMulDiv(SDValue Op, unsigned NewOpc,
   return DAG.getMergeValues(Vals, DL);
 }
 
+
 static SDValue initAccumulator(SDValue In, SDLoc DL, SelectionDAG &DAG) {
   SDValue InLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, In,
                              DAG.getConstant(0, DL, MVT::i32));

@@ -1070,6 +1070,7 @@ def CortexA8Model : SchedMachineModel {
                        // This is overriden by OperandCycles if the
                        // Itineraries are queried instead.
   let MispredictPenalty = 13; // Based on estimate of pipeline depth.
+  let CompleteModel = 0;
 
   let Itineraries = CortexA8Itineraries;
 }

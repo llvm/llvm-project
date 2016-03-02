@@ -356,4 +356,7 @@ def : InstRW<[M1WriteNCRYPT5], (instregex "^SHA256(H|SU1)")>;
 // CRC instructions.
 def : InstRW<[M1WriteC2], (instregex "^CRC32")>;
 
+// atomic memory operations.
+def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
+
 } // SchedModel = ExynosM1Model

@@ -63,8 +63,8 @@ while.body:                                       ; preds = %while.cond
 ; both branches out of while.body had the same weight. In reality,
 ; the edge while.body->if.then is taken most of the time.
 ;
-; CHECK: edge while.body -> if.then probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK: edge while.body -> if.else probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK: edge while.body -> if.then probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 
 if.then:                                          ; preds = %while.body

@@ -158,8 +158,8 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
     exit(1);
 }
 
-static void diagnosticHandlerWithContenxt(const DiagnosticInfo &DI,
-                                          void *Context) {
+static void diagnosticHandlerWithContext(const DiagnosticInfo &DI,
+                                         void *Context) {
   diagnosticHandler(DI);
 }
 
@@ -186,8 +186,11 @@ getLocalLTOModule(StringRef Path, std::unique_ptr<MemoryBuffer> &Buffer,
   error(BufferOrErr, "error loading file '" + Path + "'");
   Buffer = std::move(BufferOrErr.get());
   CurrentActivity = ("loading file '" + Path + "'").str();
+  std::unique_ptr<LLVMContext> Context = llvm::make_unique<LLVMContext>();
+  Context->setDiagnosticHandler(diagnosticHandlerWithContext, nullptr, true);
   ErrorOr<std::unique_ptr<LTOModule>> Ret = LTOModule::createInLocalContext(
-      Buffer->getBufferStart(), Buffer->getBufferSize(), Options, Path);
+      std::move(Context), Buffer->getBufferStart(), Buffer->getBufferSize(),
+      Options, Path);
   CurrentActivity = "";
   return std::move(*Ret);
 }
@@ -271,7 +274,7 @@ int main(int argc, char **argv) {
   unsigned BaseArg = 0;
 
   LLVMContext Context;
-  Context.setDiagnosticHandler(diagnosticHandlerWithContenxt, nullptr, true);
+  Context.setDiagnosticHandler(diagnosticHandlerWithContext, nullptr, true);
 
   LTOCodeGenerator CodeGen(Context);
 

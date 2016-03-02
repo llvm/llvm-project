@@ -22,17 +22,17 @@ namespace llvm {
 
   class MCContext;
   class MCInst;
+  class MCOperand;
   class MCSubtargetInfo;
+  class Twine;
 
   class AMDGPUDisassembler : public MCDisassembler {
   private:
-    /// true if 32-bit literal constant is placed after instruction
-    mutable bool HasLiteral;
     mutable ArrayRef<uint8_t> Bytes;
 
   public:
     AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx) :
-      MCDisassembler(STI, Ctx), HasLiteral(false) {}
+      MCDisassembler(STI, Ctx) {}
 
     ~AMDGPUDisassembler() {}
 
@@ -40,41 +40,44 @@ namespace llvm {
                                 ArrayRef<uint8_t> Bytes, uint64_t Address,
                                 raw_ostream &WS, raw_ostream &CS) const override;
 
-    /// Decode inline float value in SRC field
-    DecodeStatus DecodeImmedFloat(unsigned Imm, uint32_t &F) const;
-    /// Decode inline double value in SRC field
-    DecodeStatus DecodeImmedDouble(unsigned Imm, uint64_t &D) const;
-    /// Decode inline integer value in SRC field
-    DecodeStatus DecodeImmedInteger(unsigned Imm, int64_t &I) const;
-    /// Decode VGPR register
-    DecodeStatus DecodeVgprRegister(unsigned Val, unsigned &RegID,
-                                    unsigned Size = 32) const;
-    /// Decode SGPR register
-    DecodeStatus DecodeSgprRegister(unsigned Val, unsigned &RegID,
-                                    unsigned Size = 32) const;
-    /// Decode 32-bit register in SRC field
-    DecodeStatus DecodeSrc32Register(unsigned Val, unsigned &RegID) const;
-    /// Decode 64-bit register in SRC field
-    DecodeStatus DecodeSrc64Register(unsigned Val, unsigned &RegID) const;
+    const char* getRegClassName(unsigned RegClassID) const;
 
-    /// Decode literal constant after instruction
-    DecodeStatus DecodeLiteralConstant(MCInst &Inst, uint64_t &Literal) const;
+    MCOperand createRegOperand(unsigned int RegId) const;
+    MCOperand createRegOperand(unsigned RegClassID, unsigned Val) const;
+    MCOperand createSRegOperand(unsigned SRegClassID, unsigned Val) const;
 
-    DecodeStatus DecodeVGPR_32RegisterClass(MCInst &Inst, unsigned Imm,
-                                            uint64_t Addr) const;
+    MCOperand errOperand(unsigned V, const llvm::Twine& ErrMsg) const;
 
-    DecodeStatus DecodeVSRegisterClass(MCInst &Inst, unsigned Imm,
-                                       uint64_t Addr, bool Is32) const;
+    DecodeStatus tryDecodeInst(const uint8_t* Table,
+                               MCInst &MI,
+                               uint64_t Inst,
+                               uint64_t Address) const;
 
-    DecodeStatus DecodeVS_32RegisterClass(MCInst &Inst, unsigned Imm,
-                                          uint64_t Addr) const;
+    MCOperand decodeOperand_VGPR_32(unsigned Val) const;
+    MCOperand decodeOperand_VS_32(unsigned Val) const;
+    MCOperand decodeOperand_VS_64(unsigned Val) const;
 
-    DecodeStatus DecodeVS_64RegisterClass(MCInst &Inst, unsigned Imm,
-                                          uint64_t Addr) const;
+    MCOperand decodeOperand_VReg_64(unsigned Val) const;
+    MCOperand decodeOperand_VReg_96(unsigned Val) const;
+    MCOperand decodeOperand_VReg_128(unsigned Val) const;
 
-    DecodeStatus DecodeVReg_64RegisterClass(MCInst &Inst, unsigned Imm,
-                                            uint64_t Addr) const;
+    MCOperand decodeOperand_SGPR_32(unsigned Val) const;
+    MCOperand decodeOperand_SReg_32(unsigned Val) const;
+    MCOperand decodeOperand_SReg_64(unsigned Val) const;
+    MCOperand decodeOperand_SReg_128(unsigned Val) const;
+    MCOperand decodeOperand_SReg_256(unsigned Val) const;
+    MCOperand decodeOperand_SReg_512(unsigned Val) const;
+
+    enum { OP32 = true, OP64 = false };
+
+    static MCOperand decodeIntImmed(unsigned Imm);
+    static MCOperand decodeFPImmed(bool Is32, unsigned Imm);
+    MCOperand decodeLiteralConstant() const;
+
+    MCOperand decodeSrcOp(bool Is32, unsigned Val) const;
+    MCOperand decodeSpecialReg32(unsigned Val) const;
+    MCOperand decodeSpecialReg64(unsigned Val) const;
   };
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
+#endif //LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H

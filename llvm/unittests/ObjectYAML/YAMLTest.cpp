@@ -1,4 +1,4 @@
-//===- llvm/unittest/Object/YAMLTest.cpp - Tests for Object YAML ----------===//
+//===- YAMLTest.cpp - Tests for Object YAML -------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/YAML.h"
+#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "gtest/gtest.h"
 

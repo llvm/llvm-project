@@ -224,6 +224,10 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
     // will use this for some partially aligned loads.
     const MachineOperand *Offset0Imm = getNamedOperand(*LdSt,
                                                        AMDGPU::OpName::offset0);
+    // DS_PERMUTE does not have Offset0Imm (and Offset1Imm).
+    if (!Offset0Imm)
+      return false;
+
     const MachineOperand *Offset1Imm = getNamedOperand(*LdSt,
                                                        AMDGPU::OpName::offset1);
 

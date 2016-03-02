@@ -265,8 +265,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   // Without this, every float setcc comes with a AND/OR with the result,
   // we don't want this, since the fpcmp result goes to a flag register,
   // which is used implicitly by brcond and select operations.
-  AddPromotedToType(ISD::SETCC, MVT::i1,
-                    ABI.AreGprs64bit() ? MVT::i64 : MVT::i32);
+  AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
 
   // Mips Custom Operations
   setOperationAction(ISD::BR_JT,              MVT::Other, Custom);
@@ -463,10 +462,9 @@ MipsTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
 
 EVT MipsTargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
                                            EVT VT) const {
-  if (VT.isVector())
-    return VT.changeVectorElementTypeToInteger();
-
-  return ABI.AreGprs64bit() ? MVT::i64 : MVT::i32;
+  if (!VT.isVector())
+    return MVT::i32;
+  return VT.changeVectorElementTypeToInteger();
 }
 
 static SDValue performDivRemCombine(SDNode *N, SelectionDAG &DAG,
@@ -629,19 +627,19 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   if (!TrueC || !True.getValueType().isInteger())
     return SDValue();
 
+  // We'll also ignore MVT::i64 operands as this optimizations proves
+  // to be ineffective because of the required sign extensions as the result
+  // of a SETCC operator is always MVT::i32 for non-vector types.
+  if (True.getValueType() == MVT::i64)
+    return SDValue();
+
   int64_t Diff = TrueC->getSExtValue() - FalseC->getSExtValue();
 
   // 1)  (a < x) ? y : y-1
   //  slti $reg1, a, x
   //  addiu $reg2, $reg1, y-1
-  if (Diff == 1) {
-    if (SetCC.getValueType().getSizeInBits() >
-        False.getValueType().getSizeInBits())
-      SetCC = DAG.getNode(ISD::TRUNCATE, DL, False.getValueType(), SetCC);
-
-    SDValue Ret = DAG.getNode(ISD::ADD, DL, False.getValueType(), SetCC, False);
-    return Ret;
-  }
+  if (Diff == 1)
+    return DAG.getNode(ISD::ADD, DL, SetCC.getValueType(), SetCC, False);
 
   // 2)  (a < x) ? y-1 : y
   //  slti $reg1, a, x
@@ -651,11 +649,6 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
     ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
     SetCC = DAG.getSetCC(DL, SetCC.getValueType(), SetCC.getOperand(0),
                          SetCC.getOperand(1), ISD::getSetCCInverse(CC, true));
-
-    if (SetCC.getValueType().getSizeInBits() >
-        True.getValueType().getSizeInBits())
-      SetCC = DAG.getNode(ISD::TRUNCATE, DL, True.getValueType(), SetCC);
-
     return DAG.getNode(ISD::ADD, DL, SetCC.getValueType(), SetCC, True);
   }
 
@@ -1034,30 +1027,19 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
     return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true);
   case Mips::SEL_D:
     return emitSEL_D(MI, BB);
-  case Mips::SEL64_S:
-    return emitSEL64_S(MI, BB);
 
   case Mips::PseudoSELECT_I:
   case Mips::PseudoSELECT_I64:
   case Mips::PseudoSELECT_S:
   case Mips::PseudoSELECT_D32:
   case Mips::PseudoSELECT_D64:
-  // 64-bit version
-  case Mips::PseudoSELECT64_I:
-  case Mips::PseudoSELECT64_I64:
-  case Mips::PseudoSELECT64_S:
-  case Mips::PseudoSELECT64_D32:
-  case Mips::PseudoSELECT64_D64:
-    return emitPseudoSELECT(MI, BB, false,
-                            Subtarget.isGP32bit() ? Mips::BNE : Mips::BNE64);
-
+    return emitPseudoSELECT(MI, BB, false, Mips::BNE);
   case Mips::PseudoSELECTFP_F_I:
   case Mips::PseudoSELECTFP_F_I64:
   case Mips::PseudoSELECTFP_F_S:
   case Mips::PseudoSELECTFP_F_D32:
   case Mips::PseudoSELECTFP_F_D64:
     return emitPseudoSELECT(MI, BB, true, Mips::BC1F);
-
   case Mips::PseudoSELECTFP_T_I:
   case Mips::PseudoSELECTFP_T_I64:
   case Mips::PseudoSELECTFP_T_S:
@@ -1592,30 +1574,6 @@ MachineBasicBlock *MipsTargetLowering::emitSEL_D(MachineInstr *MI,
   return BB;
 }
 
-MachineBasicBlock *
-MipsTargetLowering::emitSEL64_S(MachineInstr *MI, MachineBasicBlock *BB) const {
-  MachineFunction *MF = BB->getParent();
-  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  MachineRegisterInfo &RegInfo = MF->getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
-  MachineBasicBlock::iterator II(MI);
-
-  unsigned Fc64 = MI->getOperand(1).getReg();
-
-  const auto &FGR32RegClass = TRI->getRegClass(Mips::FGR32RegClassID);
-  unsigned Fc32 = RegInfo.createVirtualRegister(FGR32RegClass);
-
-  BuildMI(*BB, II, DL, TII->get(Mips::COPY), Fc32)
-      .addReg(Fc64, 0, Mips::sub_lo);
-
-  // We don't erase the original instruction, we just replace the condition
-  // register with the 32-bit sub-register.
-  MI->getOperand(1).setReg(Fc32);
-
-  return BB;
-}
-
 //===----------------------------------------------------------------------===//
 //  Misc Lower Operation implementation
 //===----------------------------------------------------------------------===//
@@ -1697,10 +1655,8 @@ SDValue MipsTargetLowering::lowerSETCC(SDValue Op, SelectionDAG &DAG) const {
          "Floating point operand expected.");
 
   SDLoc DL(Op);
-  EVT VT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                              Op.getValueType());
-  SDValue True = DAG.getConstant(1, DL, VT);
-  SDValue False = DAG.getConstant(0, DL, VT);
+  SDValue True  = DAG.getConstant(1, DL, MVT::i32);
+  SDValue False = DAG.getConstant(0, DL, MVT::i32);
 
   return createCMovFP(DAG, Cond, True, False, DL);
 }
@@ -3954,9 +3910,9 @@ MipsTargetLowering::emitPseudoSELECT(MachineInstr *MI, MachineBasicBlock *BB,
   } else {
     // bne rs, $0, sinkMBB
     BuildMI(BB, DL, TII->get(Opc))
-        .addReg(MI->getOperand(1).getReg())
-        .addReg(ABI.GetZeroReg())
-        .addMBB(sinkMBB);
+      .addReg(MI->getOperand(1).getReg())
+      .addReg(Mips::ZERO)
+      .addMBB(sinkMBB);
   }
 
   //  copy0MBB:

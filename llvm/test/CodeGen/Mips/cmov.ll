@@ -1,17 +1,10 @@
-; RUN: llc -march=mips -mcpu=mips32 < %s | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=32-CMOV
-; RUN: llc -march=mips -mcpu=mips32 -regalloc=basic < %s | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=32-CMOV
-; RUN: llc -march=mips -mcpu=mips32r2 < %s | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=32-CMOV
-; RUN: llc -march=mips -mcpu=mips32r6 < %s | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=32-CMP
-; RUN: llc -march=mips64el -mcpu=mips4 < %s | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=64-CMOV -check-prefix=64
-; RUN: llc -march=mips64el -mcpu=mips64 < %s | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=64-CMOV -check-prefix=64
-; RUN: llc -march=mips64el -mcpu=mips64r6 < %s | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=64-CMP -check-prefix=64
+; RUN: llc -march=mips     -mcpu=mips32                 < %s | FileCheck %s -check-prefix=ALL -check-prefix=32-CMOV
+; RUN: llc -march=mips     -mcpu=mips32 -regalloc=basic < %s | FileCheck %s -check-prefix=ALL -check-prefix=32-CMOV
+; RUN: llc -march=mips     -mcpu=mips32r2               < %s | FileCheck %s -check-prefix=ALL -check-prefix=32-CMOV
+; RUN: llc -march=mips     -mcpu=mips32r6               < %s | FileCheck %s -check-prefix=ALL -check-prefix=32-CMP
+; RUN: llc -march=mips64el -mcpu=mips4                  < %s | FileCheck %s -check-prefix=ALL -check-prefix=64-CMOV
+; RUN: llc -march=mips64el -mcpu=mips64                 < %s | FileCheck %s -check-prefix=ALL -check-prefix=64-CMOV
+; RUN: llc -march=mips64el -mcpu=mips64r6               < %s | FileCheck %s -check-prefix=ALL -check-prefix=64-CMP
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
 @i3 = common global i32* null, align 4
@@ -420,9 +413,20 @@ entry:
 ; 32-CMP-DAG:   or $3, $[[T1]], $[[T0]]
 ; 32-CMP-DAG:   addiu $2, $zero, 0
 
-; 64-DAG:  daddiu  $[[T0:[0-9]+]], $zero, 32766
-; 64-DAG:  slt     $[[T1:[0-9]+]], $[[T0]], $4
-; 64-DAG:  ori     $2, $[[T1]], 4
+; 64-CMOV-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMOV-DAG:  addiu $[[I4:2]], $zero, 4
+; 64-CMOV-DAG:  slti $[[R0:[0-9]+]], $4, 32767
+; 64-CMOV-DAG:  movz $[[I4]], $[[I5]], $[[R0]]
+
+; 64-CMP-DAG:  addiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMP-DAG:  addiu $[[I4:[0-9]+]], $zero, 4
+; 64-CMP-DAG:  slti $[[R0:[0-9]+]], $4, 32767
+; FIXME: We can do better than this by adding/subtracting the result of slti
+;        to/from one of the constants.
+; 64-CMP-DAG:  seleqz $[[T0:[0-9]+]], $[[I5]], $[[R0]]
+; 64-CMP-DAG:  selnez $[[T1:[0-9]+]], $[[I4]], $[[R0]]
+; 64-CMP-DAG:  or $2, $[[T0]], $[[T1]]
+
 define i64 @slti64_0(i64 %a) {
 entry:
   %cmp = icmp sgt i64 %a, 32766
@@ -454,9 +458,21 @@ entry:
 ; 32-CMP-DAG:   or $3, $[[T1]], $[[T0]]
 ; 32-CMP-DAG:   addiu $2, $zero, 0
 
-; 64-DAG:  daddiu $[[T0:[0-9]+]], $zero, 32767
-; 64-DAG:  slt $[[T1:[0-9]+]], $[[T0]], $4
-; 64-DAG:  ori $2, $[[T1]], 4
+; 64-CMOV-DAG: daddiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMOV-DAG: daddiu $[[I4:2]], $zero, 4
+; 64-CMOV-DAG: daddiu $[[R1:[0-9]+]], $zero, 32767
+; 64-CMOV-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV-DAG: movn $[[I4]], $[[I5]], $[[R0]]
+
+; 64-CMP-DAG:  daddiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMP-DAG:  daddiu $[[I4:2]], $zero, 4
+; 64-CMP-DAG:  daddiu $[[R1:[0-9]+]], $zero, 32767
+; 64-CMP-DAG:  slt $[[R0:[0-9]+]], $[[R1]], $4
+; FIXME: We can do better than this by using selccz to choose between -0 and -2
+; 64-CMP-DAG:  selnez $[[T0:[0-9]+]], $[[I5]], $[[R0]]
+; 64-CMP-DAG:  seleqz $[[T1:[0-9]+]], $[[I4]], $[[R0]]
+; 64-CMP-DAG:  or $2, $[[T0]], $[[T1]]
+
 define i64 @slti64_1(i64 %a) {
 entry:
   %cmp = icmp sgt i64 %a, 32767
@@ -464,23 +480,27 @@ entry:
   ret i64 %conv
 }
 
-; ALL-LABEL: slti32_2:
-
-; FIXME: Remove unecessary sign-extension.
-; 64-DAG:  slti    $[[T0:[0-9]+]], $4, -32768
-; 64-DAG:  sll     $[[T1:[0-9]+]], $[[T0]], 0
-; 64-DAG:  addiu   $2, $[[T1]], 3
-define i32 @slti32_2(i32 signext %a) {
-entry:
-  %cmp = icmp sgt i32 %a, -32769
-  %conv = select i1 %cmp, i32 3, i32 4
-  ret i32 %conv
-}
-
 ; ALL-LABEL: slti64_2:
 
-; 64-DAG:  slti    $[[T0:[0-9]+]], $4, -32768
-; 64-DAG:  daddiu  $2, $[[T0]], 3
+; FIXME: The 32-bit versions of this test are too complicated to reasonably
+;        match at the moment. They do show some missing optimizations though
+;        such as:
+;           (movz $a, $b, (neg $c)) -> (movn $a, $b, $c)
+
+; 64-CMOV-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMOV-DAG:  addiu $[[I4:2]], $zero, 4
+; 64-CMOV-DAG:  slti $[[R0:[0-9]+]], $4, -32768
+; 64-CMOV-DAG:  movz $[[I4]], $[[I3]], $[[R0]]
+
+; 64-CMP-DAG:  addiu $[[I3:[0-9]+]], $zero, 3
+; 64-CMP-DAG:  addiu $[[I4:[0-9]+]], $zero, 4
+; 64-CMP-DAG:  slti $[[R0:[0-9]+]], $4, -32768
+; FIXME: We can do better than this by adding/subtracting the result of slti
+;        to/from one of the constants.
+; 64-CMP-DAG:  seleqz $[[T0:[0-9]+]], $[[I3]], $[[R0]]
+; 64-CMP-DAG:  selnez $[[T1:[0-9]+]], $[[I4]], $[[R0]]
+; 64-CMP-DAG:  or $2, $[[T0]], $[[T1]]
+
 define i64 @slti64_2(i64 %a) {
 entry:
   %cmp = icmp sgt i64 %a, -32769
@@ -488,24 +508,28 @@ entry:
   ret i64 %conv
 }
 
-; ALL-LABEL: slti32_3:
-
-; FIXME: Remove unecessary sign-extension.
-; 64-DAG: slt     $[[R0:[0-9]+]], ${{[0-9]+}}, $4
-; 64-DAG: sll     $[[R1:[0-9]+]], $[[R0]], 0
-; 64-DAG: ori     $2, $[[R1]], 4
-define i32 @slti32_3(i32 signext %a) {
-entry:
-  %cmp = icmp sgt i32 %a, -32770
-  %conv = select i1 %cmp, i32 5, i32 4
-  ret i32 %conv
-}
-
 ; ALL-LABEL: slti64_3:
 
-; 64-DAG: daddiu $[[R0:[0-9]+]], ${{[0-9]+}}, 32766
-; 64-DAG: slt $[[R1:[0-9]+]], $[[R0]], $4
-; 64-DAG: ori $2, $[[R1]], 4
+; FIXME: The 32-bit versions of this test are too complicated to reasonably
+;        match at the moment. They do show some missing optimizations though
+;        such as:
+;           (movz $a, $b, (neg $c)) -> (movn $a, $b, $c)
+
+; 64-CMOV-DAG: daddiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMOV-DAG: daddiu $[[I4:2]], $zero, 4
+; 64-CMOV-DAG: daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, 32766
+; 64-CMOV-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
+; 64-CMOV-DAG: movn $[[I4]], $[[I5]], $[[R0]]
+
+; 64-CMP-DAG:  daddiu $[[I5:[0-9]+]], $zero, 5
+; 64-CMP-DAG:  daddiu $[[I4:2]], $zero, 4
+; 64-CMP-DAG:  daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, 32766
+; 64-CMP-DAG:  slt $[[R0:[0-9]+]], $[[R1]], $4
+; FIXME: We can do better than this by using selccz to choose between -0 and -2
+; 64-CMP-DAG:  selnez $[[T0:[0-9]+]], $[[I5]], $[[R0]]
+; 64-CMP-DAG:  seleqz $[[T1:[0-9]+]], $[[I4]], $[[R0]]
+; 64-CMP-DAG:  or $2, $[[T0]], $[[T1]]
+
 define i64 @slti64_3(i64 %a) {
 entry:
   %cmp = icmp sgt i64 %a, -32770

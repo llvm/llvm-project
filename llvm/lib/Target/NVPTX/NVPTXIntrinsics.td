@@ -1381,7 +1381,11 @@ def INT_PTX_SREG_WARPSIZE : F_SREG<"mov.u32 \t$dst, WARP_SZ;", Int32Regs,
 // Support for ldu on sm_20 or later
 //-----------------------------------
 
+// Don't annotate ldu instructions as mayLoad, as they load from memory that is
+// read-only in a kernel.
+
 // Scalar
+
 multiclass LDU_G<string TyStr, NVPTXRegClass regclass> {
   def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),
                !strconcat("ldu.global.", TyStr),
@@ -1476,6 +1480,10 @@ defm INT_PTX_LDU_G_v4f32_ELE
 //-----------------------------------
 // Support for ldg on sm_35 or later 
 //-----------------------------------
+
+// Don't annotate ld.global.nc as mayLoad, because these loads go through the
+// non-coherent texture cache, and therefore the values read must be read-only
+// during the lifetime of the kernel.
 
 multiclass LDG_G<string TyStr, NVPTXRegClass regclass> {
   def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),

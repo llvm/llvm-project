@@ -13,7 +13,7 @@ def MipsP5600Model : SchedMachineModel {
   int LoadLatency = 4;
   int MispredictPenalty = 8; // TODO: Estimated
 
-  let CompleteModel = 1;
+  let CompleteModel = 0;
 }
 
 let SchedModel = MipsP5600Model in {

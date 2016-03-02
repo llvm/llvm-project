@@ -30,6 +30,7 @@ def CortexA57Model : SchedMachineModel {
   // Enable partial & runtime unrolling. The magic number is chosen based on
   // experiments and benchmarking data.
   let LoopMicroOpBufferSize = 16;
+  let CompleteModel = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -95,6 +96,8 @@ def : SchedAlias<WriteFDiv,  A57Write_18cyc_1X>;
 def : SchedAlias<WriteV,     A57Write_3cyc_1V>;
 def : SchedAlias<WriteVLD,   A57Write_5cyc_1L>;
 def : SchedAlias<WriteVST,   A57Write_1cyc_1S>;
+
+def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }
 
 def : WriteRes<WriteSys,     []> { let Latency = 1; }
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }

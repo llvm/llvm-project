@@ -176,7 +176,7 @@ class SDBBP_R6_ENC : SPECIAL_SDBBP_FM;
 //===----------------------------------------------------------------------===//
 
 class CMP_CONDN_DESC_BASE<string CondStr, string Typestr,
-                          RegisterOperand FGRCCOpnd, RegisterOperand FGROpnd,
+                          RegisterOperand FGROpnd,
                           SDPatternOperator Op = null_frag> {
   dag OutOperandList = (outs FGRCCOpnd:$fd);
   dag InOperandList = (ins FGROpnd:$fs, FGROpnd:$ft);
@@ -184,58 +184,58 @@ class CMP_CONDN_DESC_BASE<string CondStr, string Typestr,
   list<dag> Pattern = [(set FGRCCOpnd:$fd, (Op FGROpnd:$fs, FGROpnd:$ft))];
 }
 
-multiclass CMP_CC_M<FIELD_CMP_FORMAT Format, string Typestr,
-                    RegisterOperand FGRCCOpnd, RegisterOperand FGROpnd>{
-let AdditionalPredicates = [NotInMicroMips] in {
-def CMP_F_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_AF>,
-                  CMP_CONDN_DESC_BASE<"af", Typestr, FGRCCOpnd, FGROpnd>,
-                  ISA_MIPS32R6, HARDFLOAT;
-def CMP_UN_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_UN>,
-                   CMP_CONDN_DESC_BASE<"un", Typestr, FGRCCOpnd, FGROpnd,
-                                       setuo>, ISA_MIPS32R6, HARDFLOAT;
-def CMP_EQ_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_EQ>,
-                   CMP_CONDN_DESC_BASE<"eq", Typestr, FGRCCOpnd, FGROpnd,
-                                       setoeq>, ISA_MIPS32R6, HARDFLOAT;
-def CMP_UEQ_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_UEQ>,
-                    CMP_CONDN_DESC_BASE<"ueq", Typestr, FGRCCOpnd, FGROpnd,
-                                        setueq>, ISA_MIPS32R6, HARDFLOAT;
-def CMP_LT_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_LT>,
-                   CMP_CONDN_DESC_BASE<"lt", Typestr, FGRCCOpnd, FGROpnd,
-                                       setolt>, ISA_MIPS32R6, HARDFLOAT;
-def CMP_ULT_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_ULT>,
-                    CMP_CONDN_DESC_BASE<"ult", Typestr, FGRCCOpnd, FGROpnd,
-                                        setult>, ISA_MIPS32R6, HARDFLOAT;
-def CMP_LE_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_LE>,
-                   CMP_CONDN_DESC_BASE<"le", Typestr, FGRCCOpnd, FGROpnd,
-                                       setole>, ISA_MIPS32R6, HARDFLOAT;
-def CMP_ULE_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_ULE>,
-                    CMP_CONDN_DESC_BASE<"ule", Typestr, FGRCCOpnd, FGROpnd,
-                                        setule>, ISA_MIPS32R6, HARDFLOAT;
-def CMP_SAF_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SAF>,
-                    CMP_CONDN_DESC_BASE<"saf", Typestr, FGRCCOpnd, FGROpnd>,
-                    ISA_MIPS32R6, HARDFLOAT;
-def CMP_SUN_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SUN>,
-                    CMP_CONDN_DESC_BASE<"sun", Typestr, FGRCCOpnd, FGROpnd>,
-                    ISA_MIPS32R6, HARDFLOAT;
-def CMP_SEQ_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SEQ>,
-                    CMP_CONDN_DESC_BASE<"seq", Typestr, FGRCCOpnd, FGROpnd>,
-                    ISA_MIPS32R6, HARDFLOAT;
-def CMP_SUEQ_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SUEQ>,
-                     CMP_CONDN_DESC_BASE<"sueq", Typestr, FGRCCOpnd, FGROpnd>,
-                     ISA_MIPS32R6, HARDFLOAT;
-def CMP_SLT_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SLT>,
-                    CMP_CONDN_DESC_BASE<"slt", Typestr, FGRCCOpnd, FGROpnd>,
-                    ISA_MIPS32R6, HARDFLOAT;
-def CMP_SULT_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SULT>,
-                     CMP_CONDN_DESC_BASE<"sult", Typestr, FGRCCOpnd, FGROpnd>,
-                     ISA_MIPS32R6, HARDFLOAT;
-def CMP_SLE_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SLE>,
-                    CMP_CONDN_DESC_BASE<"sle", Typestr, FGRCCOpnd, FGROpnd>,
-                    ISA_MIPS32R6, HARDFLOAT;
-def CMP_SULE_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SULE>,
-                     CMP_CONDN_DESC_BASE<"sule", Typestr, FGRCCOpnd, FGROpnd>,
-                     ISA_MIPS32R6, HARDFLOAT;
-}
+multiclass CMP_CC_M <FIELD_CMP_FORMAT Format, string Typestr,
+                     RegisterOperand FGROpnd>{
+  let AdditionalPredicates = [NotInMicroMips] in {
+    def CMP_F_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_AF>,
+                      CMP_CONDN_DESC_BASE<"af", Typestr, FGROpnd>,
+                      ISA_MIPS32R6, HARDFLOAT;
+    def CMP_UN_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_UN>,
+                       CMP_CONDN_DESC_BASE<"un", Typestr, FGROpnd, setuo>,
+                       ISA_MIPS32R6, HARDFLOAT;
+    def CMP_EQ_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_EQ>,
+                       CMP_CONDN_DESC_BASE<"eq", Typestr, FGROpnd, setoeq>,
+                       ISA_MIPS32R6, HARDFLOAT;
+    def CMP_UEQ_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_UEQ>,
+                        CMP_CONDN_DESC_BASE<"ueq", Typestr, FGROpnd, setueq>,
+                        ISA_MIPS32R6, HARDFLOAT;
+    def CMP_LT_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_LT>,
+                       CMP_CONDN_DESC_BASE<"lt", Typestr, FGROpnd, setolt>,
+                       ISA_MIPS32R6, HARDFLOAT;
+    def CMP_ULT_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_ULT>,
+                        CMP_CONDN_DESC_BASE<"ult", Typestr, FGROpnd, setult>,
+                        ISA_MIPS32R6, HARDFLOAT;
+    def CMP_LE_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_LE>,
+                       CMP_CONDN_DESC_BASE<"le", Typestr, FGROpnd, setole>,
+                       ISA_MIPS32R6, HARDFLOAT;
+    def CMP_ULE_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_ULE>,
+                        CMP_CONDN_DESC_BASE<"ule", Typestr, FGROpnd, setule>,
+                        ISA_MIPS32R6, HARDFLOAT;
+    def CMP_SAF_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SAF>,
+                        CMP_CONDN_DESC_BASE<"saf", Typestr, FGROpnd>,
+                        ISA_MIPS32R6, HARDFLOAT;
+    def CMP_SUN_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SUN>,
+                        CMP_CONDN_DESC_BASE<"sun", Typestr, FGROpnd>,
+                        ISA_MIPS32R6, HARDFLOAT;
+    def CMP_SEQ_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SEQ>,
+                        CMP_CONDN_DESC_BASE<"seq", Typestr, FGROpnd>,
+                        ISA_MIPS32R6, HARDFLOAT;
+    def CMP_SUEQ_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SUEQ>,
+                         CMP_CONDN_DESC_BASE<"sueq", Typestr, FGROpnd>,
+                         ISA_MIPS32R6, HARDFLOAT;
+    def CMP_SLT_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SLT>,
+                        CMP_CONDN_DESC_BASE<"slt", Typestr, FGROpnd>,
+                        ISA_MIPS32R6, HARDFLOAT;
+    def CMP_SULT_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SULT>,
+                         CMP_CONDN_DESC_BASE<"sult", Typestr, FGROpnd>,
+                         ISA_MIPS32R6, HARDFLOAT;
+    def CMP_SLE_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SLE>,
+                        CMP_CONDN_DESC_BASE<"sle", Typestr, FGROpnd>,
+                        ISA_MIPS32R6, HARDFLOAT;
+    def CMP_SULE_#NAME : COP1_CMP_CONDN_FM<Format, FIELD_CMP_COND_SULE>,
+                         CMP_CONDN_DESC_BASE<"sule", Typestr, FGROpnd>,
+                         ISA_MIPS32R6, HARDFLOAT;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -472,8 +472,7 @@ class MUHU_DESC   : MUL_R6_DESC_BASE<"muhu", GPR32Opnd, mulhu>;
 class MUL_R6_DESC : MUL_R6_DESC_BASE<"mul", GPR32Opnd, mul>;
 class MULU_DESC   : MUL_R6_DESC_BASE<"mulu", GPR32Opnd>;
 
-class COP1_SEL_DESC_BASE<string instr_asm, RegisterOperand FGRCCOpnd,
-                         RegisterOperand FGROpnd> {
+class COP1_SEL_DESC_BASE<string instr_asm, RegisterOperand FGROpnd> {
   dag OutOperandList = (outs FGROpnd:$fd);
   dag InOperandList = (ins FGRCCOpnd:$fd_in, FGROpnd:$fs, FGROpnd:$ft);
   string AsmString = !strconcat(instr_asm, "\t$fd, $fs, $ft");
@@ -483,12 +482,11 @@ class COP1_SEL_DESC_BASE<string instr_asm, RegisterOperand FGRCCOpnd,
   string Constraints = "$fd_in = $fd";
 }
 
-class SEL_D_DESC : COP1_SEL_DESC_BASE<"sel.d", FGRCC32Opnd, FGR64Opnd> {
+class SEL_D_DESC : COP1_SEL_DESC_BASE<"sel.d", FGR64Opnd> {
   // We must insert a SUBREG_TO_REG around $fd_in
   bit usesCustomInserter = 1;
 }
-
-class SEL_S_DESC : COP1_SEL_DESC_BASE<"sel.s", FGRCC32Opnd, FGR32Opnd>;
+class SEL_S_DESC : COP1_SEL_DESC_BASE<"sel.s", FGR32Opnd>;
 
 class SELEQNE_Z_DESC_BASE<string instr_asm, RegisterOperand GPROpnd>
     : MipsR6Arch<instr_asm> {
@@ -695,8 +693,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
 }
 def CLO_R6 : R6MMR6Rel, CLO_R6_ENC, CLO_R6_DESC, ISA_MIPS32R6;
 def CLZ_R6 : R6MMR6Rel, CLZ_R6_ENC, CLZ_R6_DESC, ISA_MIPS32R6;
-defm S : CMP_CC_M<FIELD_CMP_FORMAT_S, "s", FGRCC32Opnd, FGR32Opnd>;
-defm D : CMP_CC_M<FIELD_CMP_FORMAT_D, "d", FGRCC32Opnd, FGR64Opnd>;
+defm S : CMP_CC_M<FIELD_CMP_FORMAT_S, "s", FGR32Opnd>;
+defm D : CMP_CC_M<FIELD_CMP_FORMAT_D, "d", FGR64Opnd>;
 def DIV : R6MMR6Rel, DIV_ENC, DIV_DESC, ISA_MIPS32R6;
 def DIVU : R6MMR6Rel, DIVU_ENC, DIVU_DESC, ISA_MIPS32R6;
 def JIALC : R6MMR6Rel, JIALC_ENC, JIALC_DESC, ISA_MIPS32R6;

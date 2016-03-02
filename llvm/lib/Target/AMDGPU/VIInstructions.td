@@ -136,4 +136,15 @@ def : Pat <
   (S_MEMREALTIME)
 >;
 
+//===----------------------------------------------------------------------===//
+// DS_PERMUTE/DS_BPERMUTE Instructions.
+//===----------------------------------------------------------------------===//
+
+let Uses = [EXEC] in {
+defm DS_PERMUTE_B32 : DS_1A1D_PERMUTE <0x3e, "ds_permute_b32", VGPR_32,
+                                       int_amdgcn_ds_permute>;
+defm DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <0x3f, "ds_bpermute_b32", VGPR_32,
+                                       int_amdgcn_ds_bpermute>;
+}
+
 } // End Predicates = [isVI]

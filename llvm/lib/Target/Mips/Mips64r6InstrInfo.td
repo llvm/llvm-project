@@ -74,11 +74,6 @@ class LLD_R6_DESC   : LL_R6_DESC_BASE<"lld", GPR64Opnd>;
 class SCD_R6_DESC   : SC_R6_DESC_BASE<"scd", GPR64Opnd>;
 class SELEQZ64_DESC : SELEQNE_Z_DESC_BASE<"seleqz", GPR64Opnd>;
 class SELNEZ64_DESC : SELEQNE_Z_DESC_BASE<"selnez", GPR64Opnd>;
-class SEL64_S_DESC : COP1_SEL_DESC_BASE<"sel.s", FGRCC64Opnd, FGR32Opnd> {
-  // We must copy FGRCC64Opnd's subreg into FGR32.
-  bit usesCustomInserter = 1;
-}
-class SEL64_D_DESC : COP1_SEL_DESC_BASE<"sel.d", FGRCC64Opnd, FGR64Opnd>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -105,18 +100,11 @@ def DMUHU: DMUHU_ENC, DMUHU_DESC, ISA_MIPS64R6;
 def DMUL_R6: DMUL_R6_ENC, DMUL_R6_DESC, ISA_MIPS64R6;
 def DMULU: DMULU_ENC, DMULU_DESC, ISA_MIPS64R6;
 def LDPC: LDPC_ENC, LDPC_DESC, ISA_MIPS64R6;
-def LLD_R6 : LLD_R6_ENC, LLD_R6_DESC, ISA_MIPS64R6;
-def SCD_R6 : SCD_R6_ENC, SCD_R6_DESC, ISA_MIPS64R6;
-let AdditionalPredicates = [NotInMicroMips],
-    DecoderNamespace = "Mips64r6" in {
-  def SELEQZ64 : SELEQZ_ENC, SELEQZ64_DESC, ISA_MIPS64R6;
-  def SELNEZ64 : SELNEZ_ENC, SELNEZ64_DESC, ISA_MIPS64R6;
-  def SEL64_S : SEL_S_ENC, SEL64_S_DESC, ISA_MIPS64R6, HARDFLOAT;
-  def SEL64_D : SEL_D_ENC, SEL64_D_DESC, ISA_MIPS64R6, HARDFLOAT;
-  defm S64: CMP_CC_M<FIELD_CMP_FORMAT_S, "s", FGRCC64Opnd, FGR32Opnd>,
-            ISA_MIPS64R6;
-  defm D64: CMP_CC_M<FIELD_CMP_FORMAT_D, "d", FGRCC64Opnd, FGR64Opnd>,
-            ISA_MIPS64R6;
+def LLD_R6 : LLD_R6_ENC, LLD_R6_DESC, ISA_MIPS32R6;
+def SCD_R6 : SCD_R6_ENC, SCD_R6_DESC, ISA_MIPS32R6;
+let DecoderNamespace = "Mips32r6_64r6_GP64" in {
+  def SELEQZ64 : SELEQZ_ENC, SELEQZ64_DESC, ISA_MIPS32R6, GPR_64;
+  def SELNEZ64 : SELNEZ_ENC, SELNEZ64_DESC, ISA_MIPS32R6, GPR_64;
 }
 
 //===----------------------------------------------------------------------===//
@@ -133,71 +121,99 @@ def : MipsInstAlias<"jr $rs", (JALR64 ZERO_64, GPR64Opnd:$rs), 1>, ISA_MIPS64R6;
 //
 //===----------------------------------------------------------------------===//
 
-// comparisons supported via another comparison
-defm S64: Cmp_Pats<f32, NOR64, ZERO_64>, ISA_MIPS64R6;
-defm D64: Cmp_Pats<f64, NOR64, ZERO_64>, ISA_MIPS64R6;
-
-// i32 selects
-defm : SelectInt_Pats<i32, OR, XORi, SLTi, SLTiu, SELEQZ, SELNEZ,
-                      immZExt16, i64>, ISA_MIPS64R6;
-
-def : MipsPat<(select i64:$cond, i32:$t, i32:$f),
-              (OR (SELNEZ i32:$t, (EXTRACT_SUBREG i64:$cond, sub_32)),
-                  (SELEQZ i32:$f, (EXTRACT_SUBREG i64:$cond, sub_32)))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select i64:$cond, i32:$t, immz),
-              (SELNEZ i32:$t, (EXTRACT_SUBREG i64:$cond, sub_32))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select i64:$cond, immz, i32:$f),
-              (SELEQZ i32:$f, (EXTRACT_SUBREG i64:$cond, sub_32))>,
-      ISA_MIPS64R6;
-
 // i64 selects
-defm : SelectInt_Pats<i64, OR64, XORi64, SLTi64, SLTiu64, SELEQZ64, SELNEZ64,
-                      immZExt16_64, i64>, ISA_MIPS64R6;
-
 def : MipsPat<(select i64:$cond, i64:$t, i64:$f),
               (OR64 (SELNEZ64 i64:$t, i64:$cond),
                     (SELEQZ64 i64:$f, i64:$cond))>,
-      ISA_MIPS64R6;
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (seteq i64:$cond, immz)), i64:$t, i64:$f),
+              (OR64 (SELEQZ64 i64:$t, i64:$cond),
+                    (SELNEZ64 i64:$f, i64:$cond))>,
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (setne i64:$cond, immz)), i64:$t, i64:$f),
+              (OR64 (SELNEZ64 i64:$t, i64:$cond),
+                    (SELEQZ64 i64:$f, i64:$cond))>,
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (seteq i64:$cond, immZExt16_64:$imm)), i64:$t, i64:$f),
+              (OR64 (SELEQZ64 i64:$t, (XORi64 i64:$cond, immZExt16_64:$imm)),
+                    (SELNEZ64 i64:$f, (XORi64 i64:$cond, immZExt16_64:$imm)))>,
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (setne i64:$cond, immZExt16_64:$imm)), i64:$t, i64:$f),
+              (OR64 (SELNEZ64 i64:$t, (XORi64 i64:$cond, immZExt16_64:$imm)),
+                    (SELEQZ64 i64:$f, (XORi64 i64:$cond, immZExt16_64:$imm)))>,
+              ISA_MIPS64R6;
+def : MipsPat<
+  (select (i32 (setgt i64:$cond, immSExt16Plus1:$imm)), i64:$t, i64:$f),
+  (OR64 (SELEQZ64 i64:$t,
+                  (SUBREG_TO_REG (i64 0), (SLTi64 i64:$cond, (Plus1 imm:$imm)),
+                                 sub_32)),
+        (SELNEZ64 i64:$f,
+                  (SUBREG_TO_REG (i64 0), (SLTi64 i64:$cond, (Plus1 imm:$imm)),
+                                 sub_32)))>,
+  ISA_MIPS64R6;
+def : MipsPat<
+  (select (i32 (setugt i64:$cond, immSExt16Plus1:$imm)), i64:$t, i64:$f),
+  (OR64 (SELEQZ64 i64:$t,
+                  (SUBREG_TO_REG (i64 0), (SLTiu64 i64:$cond, (Plus1 imm:$imm)),
+                                 sub_32)),
+        (SELNEZ64 i64:$f,
+                  (SUBREG_TO_REG (i64 0), (SLTiu64 i64:$cond, (Plus1 imm:$imm)),
+                                 sub_32)))>,
+  ISA_MIPS64R6;
+
+def : MipsPat<(select (i32 (setne i64:$cond, immz)), i64:$t, immz),
+              (SELNEZ64 i64:$t, i64:$cond)>, ISA_MIPS64R6;
+def : MipsPat<(select (i32 (seteq i64:$cond, immz)), i64:$t, immz),
+              (SELEQZ64 i64:$t, i64:$cond)>, ISA_MIPS64R6;
+def : MipsPat<(select (i32 (setne i64:$cond, immz)), immz, i64:$f),
+              (SELEQZ64 i64:$f, i64:$cond)>, ISA_MIPS64R6;
+def : MipsPat<(select (i32 (seteq i64:$cond, immz)), immz, i64:$f),
+              (SELNEZ64 i64:$f, i64:$cond)>, ISA_MIPS64R6;
 
 // i64 selects from an i32 comparison
+// One complicating factor here is that bits 32-63 of an i32 are undefined.
+// FIXME: Ideally, setcc would always produce an i64 on MIPS64 targets.
+//        This would allow us to remove the sign-extensions here.
 def : MipsPat<(select i32:$cond, i64:$t, i64:$f),
-      (OR64 (SELNEZ64 i64:$t, (SLL64_32 i32:$cond)),
-            (SELEQZ64 i64:$f, (SLL64_32 i32:$cond)))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select (i64 (seteq i32:$cond, immz)), i64:$t, i64:$f),
-      (OR64 (SELEQZ64 i64:$t, (SLL64_32 i32:$cond)),
-            (SELNEZ64 i64:$f, (SLL64_32 i32:$cond)))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select (i64 (setne i32:$cond, immz)), i64:$t, i64:$f),
-      (OR64 (SELNEZ64 i64:$t, (SLL64_32 i32:$cond)),
-            (SELEQZ64 i64:$f, (SLL64_32 i32:$cond)))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select (i64 (seteq i32:$cond, immZExt16:$imm)), i64:$t, i64:$f),
-      (OR64 (SELEQZ64 i64:$t, (SLL64_32 (XORi i32:$cond, immZExt16:$imm))),
-            (SELNEZ64 i64:$f, (SLL64_32 (XORi i32:$cond, immZExt16:$imm))))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select (i64 (setne i32:$cond, immZExt16:$imm)), i64:$t, i64:$f),
-      (OR64 (SELNEZ64 i64:$t, (SLL64_32 (XORi i32:$cond, immZExt16:$imm))),
-            (SELEQZ64 i64:$f, (SLL64_32 (XORi i32:$cond, immZExt16:$imm))))>,
-      ISA_MIPS64R6;
+              (OR64 (SELNEZ64 i64:$t, (SLL64_32 i32:$cond)),
+                    (SELEQZ64 i64:$f, (SLL64_32 i32:$cond)))>,
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (seteq i32:$cond, immz)), i64:$t, i64:$f),
+              (OR64 (SELEQZ64 i64:$t, (SLL64_32 i32:$cond)),
+                    (SELNEZ64 i64:$f, (SLL64_32 i32:$cond)))>,
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (setne i32:$cond, immz)), i64:$t, i64:$f),
+              (OR64 (SELNEZ64 i64:$t, (SLL64_32 i32:$cond)),
+                    (SELEQZ64 i64:$f, (SLL64_32 i32:$cond)))>,
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (seteq i32:$cond, immZExt16:$imm)), i64:$t, i64:$f),
+              (OR64 (SELEQZ64 i64:$t, (SLL64_32 (XORi i32:$cond,
+                                                      immZExt16:$imm))),
+                    (SELNEZ64 i64:$f, (SLL64_32 (XORi i32:$cond,
+                                                      immZExt16:$imm))))>,
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (setne i32:$cond, immZExt16:$imm)), i64:$t, i64:$f),
+              (OR64 (SELNEZ64 i64:$t, (SLL64_32 (XORi i32:$cond,
+                                                      immZExt16:$imm))),
+                    (SELEQZ64 i64:$f, (SLL64_32 (XORi i32:$cond,
+                                                      immZExt16:$imm))))>,
+              ISA_MIPS64R6;
 
 def : MipsPat<(select i32:$cond, i64:$t, immz),
               (SELNEZ64 i64:$t, (SLL64_32 i32:$cond))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select (i64 (setne i32:$cond, immz)), i64:$t, immz),
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (setne i32:$cond, immz)), i64:$t, immz),
               (SELNEZ64 i64:$t, (SLL64_32 i32:$cond))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select (i64 (seteq i32:$cond, immz)), i64:$t, immz),
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (seteq i32:$cond, immz)), i64:$t, immz),
               (SELEQZ64 i64:$t, (SLL64_32 i32:$cond))>,
-      ISA_MIPS64R6;
+              ISA_MIPS64R6;
 def : MipsPat<(select i32:$cond, immz, i64:$f),
               (SELEQZ64 i64:$f, (SLL64_32 i32:$cond))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select (i64 (setne i32:$cond, immz)), immz, i64:$f),
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (setne i32:$cond, immz)), immz, i64:$f),
               (SELEQZ64 i64:$f, (SLL64_32 i32:$cond))>,
-      ISA_MIPS64R6;
-def : MipsPat<(select (i64 (seteq i32:$cond, immz)), immz, i64:$f),
+              ISA_MIPS64R6;
+def : MipsPat<(select (i32 (seteq i32:$cond, immz)), immz, i64:$f),
               (SELNEZ64 i64:$f, (SLL64_32 i32:$cond))>,
-      ISA_MIPS64R6;
+              ISA_MIPS64R6;
