@@ -68,7 +68,7 @@ macro(add_lldb_library name)
         target_link_libraries(${name} ${cmake_2_8_12_PUBLIC} ${CLANG_USED_LIBS})
       endif()
     endif()
-    llvm_config(${name} ${LLVM_LINK_COMPONENTS})
+    llvm_config(${name} ${LLVM_LINK_COMPONENTS} ${LLVM_PRIVATE_LINK_COMPONENTS})
 
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "liblldb")
       if (PARAM_SHARED)

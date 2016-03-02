@@ -34,9 +34,6 @@ using llvm::COFF::WindowsSubsystem;
 using llvm::Optional;
 class InputFile;
 
-// Entry point of the COFF linker.
-bool link(llvm::ArrayRef<const char *> Args);
-
 // Implemented in MarkLive.cpp.
 void markLive(const std::vector<Chunk *> &Chunks);
 

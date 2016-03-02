@@ -26,14 +26,26 @@ class HostInfoWindows : public HostInfoBase
     ~HostInfoWindows();
 
   public:
-    static size_t GetPageSize();
+      static void
+      Initialize();
+      static void
+      Terminate();
 
-    static bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
-    static bool GetOSBuildString(std::string &s);
-    static bool GetOSKernelDescription(std::string &s);
-    static bool GetHostname(std::string &s);
-    static FileSpec GetProgramFileSpec();
-    static FileSpec GetDefaultShell();
+      static size_t
+      GetPageSize();
+
+      static bool
+      GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
+      static bool
+      GetOSBuildString(std::string &s);
+      static bool
+      GetOSKernelDescription(std::string &s);
+      static bool
+      GetHostname(std::string &s);
+      static FileSpec
+      GetProgramFileSpec();
+      static FileSpec
+      GetDefaultShell();
 
   protected:
     static bool ComputePythonDirectory(FileSpec &file_spec);

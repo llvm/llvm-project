@@ -65,7 +65,7 @@ class Git:
     def diff (self):
         return run_in_directory(["git", "diff"], self.spec['root'])
     def check_out (self):
-        run_in_directory(["git", "clone", self.spec['url'], self.spec['root']], lldb_source_path())
+        run_in_directory(["git", "clone", "--depth=1", self.spec['url'], self.spec['root']], lldb_source_path())
         run_in_directory(["git", "fetch", "--all"], self.spec['root'])
         run_in_directory(["git", "checkout", self.spec['ref']], self.spec['root'])
 

@@ -9,6 +9,8 @@
 
 #include "lldb/Host/windows/windows.h"
 
+#include <objbase.h>
+
 #include <mutex> // std::once
 
 #include "lldb/Host/windows/HostInfoWindows.h"
@@ -20,6 +22,20 @@
 using namespace lldb_private;
 
 FileSpec HostInfoWindows::m_program_filespec;
+
+void
+HostInfoWindows::Initialize()
+{
+    ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    HostInfoBase::Initialize();
+}
+
+void
+HostInfoWindows::Terminate()
+{
+    HostInfoBase::Terminate();
+    ::CoUninitialize();
+}
 
 size_t
 HostInfoWindows::GetPageSize()

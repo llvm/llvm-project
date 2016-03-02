@@ -13,6 +13,7 @@
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -441,13 +442,27 @@ bool BitcodeFile::classof(const InputFile *F) {
   return F->kind() == BitcodeKind;
 }
 
-void BitcodeFile::parse() {
+void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
   LLVMContext Context;
   ErrorOr<std::unique_ptr<IRObjectFile>> ObjOrErr =
       IRObjectFile::create(MB, Context);
   fatal(ObjOrErr);
   IRObjectFile &Obj = **ObjOrErr;
+  const Module &M = Obj.getModule();
+
+  DenseSet<const Comdat *> KeptComdats;
+  for (const auto &P : M.getComdatSymbolTable()) {
+    StringRef N = Saver.save(P.first());
+    if (ComdatGroups.insert(N).second)
+      KeptComdats.insert(&P.second);
+  }
+
   for (const BasicSymbolRef &Sym : Obj.symbols()) {
+    if (const GlobalValue *GV = Obj.getSymbolGV(Sym.getRawDataRefImpl()))
+      if (const Comdat *C = GV->getComdat())
+        if (!KeptComdats.count(C))
+          continue;
+
     SmallString<64> Name;
     raw_svector_ostream OS(Name);
     Sym.printName(OS);

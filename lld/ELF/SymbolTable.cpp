@@ -82,7 +82,7 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   // LLVM bitcode file.
   if (auto *F = dyn_cast<BitcodeFile>(FileP)) {
     BitcodeFiles.emplace_back(cast<BitcodeFile>(File.release()));
-    F->parse();
+    F->parse(ComdatGroups);
     for (SymbolBody *B : F->getSymbols())
       resolve(B);
     return;
@@ -112,8 +112,9 @@ std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
     fatal("Target not found: " + ErrMsg);
 
   TargetOptions Options;
+  Reloc::Model R = Config->Shared ? Reloc::PIC_ : Reloc::Static;
   std::unique_ptr<TargetMachine> TM(
-      TheTarget->createTargetMachine(TripleStr, "", "", Options));
+      TheTarget->createTargetMachine(TripleStr, "", "", Options, R));
 
   raw_svector_ostream OS(OwningLTOData);
   legacy::PassManager CodeGenPasses;
@@ -151,10 +152,12 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   if (BitcodeFiles.empty())
     return;
   ObjectFile<ELFT> *Obj = createCombinedLtoObject();
-  // FIXME: We probably have to ignore comdats here.
-  Obj->parse(ComdatGroups);
+  llvm::DenseSet<StringRef> DummyGroups;
+  Obj->parse(DummyGroups);
   for (SymbolBody *Body : Obj->getSymbols()) {
     Symbol *Sym = insert(Body);
+    if (!Sym->Body->isUndefined() && Body->isUndefined())
+      continue;
     Sym->Body = Body;
   }
 }

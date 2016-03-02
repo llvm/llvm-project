@@ -390,19 +390,29 @@ FileSpec::operator!() const
     return !m_directory && !m_filename;
 }
 
+bool
+FileSpec::DirectoryEquals(const FileSpec &rhs) const
+{
+    const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
+    return ConstString::Equals(m_directory, rhs.m_directory, case_sensitive);
+}
+
+bool
+FileSpec::FileEquals(const FileSpec &rhs) const
+{
+    const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
+    return ConstString::Equals(m_filename, rhs.m_filename, case_sensitive);
+}
+
 //------------------------------------------------------------------
 // Equal to operator
 //------------------------------------------------------------------
 bool
 FileSpec::operator== (const FileSpec& rhs) const
 {
-    // case sensitivity of equality test
-    const bool case_sensitive = IsCaseSensitive() || rhs.IsCaseSensitive();
-
-    if (!ConstString::Equals(m_filename, rhs.m_filename, case_sensitive))
+    if (!FileEquals(rhs))
         return false;
-
-    if (ConstString::Equals(m_directory, rhs.m_directory, case_sensitive))
+    if (DirectoryEquals(rhs))
         return true;
 
     // TODO: determine if we want to keep this code in here.
@@ -451,7 +461,7 @@ FileSpec::operator== (const FileSpec& rhs) const
     // If we reach this point in the code we were able to resolve both paths
     // and since we only resolve the paths if the basenames are equal, then
     // we can just check if both directories are equal...
-    return ConstString::Equals(m_directory, rhs.m_directory, case_sensitive);
+    return DirectoryEquals(rhs);
 }
 
 //------------------------------------------------------------------

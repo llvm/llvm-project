@@ -3046,8 +3046,12 @@ __kmp_allocate_team_arrays(kmp_team_t *team, int max_nth)
     team->t.t_max_nproc = max_nth;
 
     /* setup dispatch buffers */
-    for(i = 0 ; i < num_disp_buff; ++i)
+    for(i = 0 ; i < num_disp_buff; ++i) {
         team->t.t_disp_buffer[i].buffer_index = i;
+#if OMP_41_ENABLED
+        team->t.t_disp_buffer[i].doacross_buf_idx = i;
+#endif
+    }
 }
 
 static void
@@ -4121,7 +4125,9 @@ __kmp_initialize_info( kmp_info_t *this_thr, kmp_team_t *team, int tid, int gtid
         KMP_DEBUG_ASSERT( dispatch == &team->t.t_dispatch[ tid ] );
 
         dispatch->th_disp_index = 0;
-
+#if OMP_41_ENABLED
+        dispatch->th_doacross_buf_idx = 0;
+#endif
         if( ! dispatch->th_disp_buffer )  {
             dispatch->th_disp_buffer = (dispatch_private_info_t *) __kmp_allocate( disp_size );
 
@@ -6813,7 +6819,9 @@ __kmp_run_before_invoked_task( int gtid, int tid, kmp_info_t *this_thr,
     //KMP_DEBUG_ASSERT( this_thr->th.th_dispatch == &team->t.t_dispatch[ this_thr->th.th_info.ds.ds_tid ] );
 
     dispatch->th_disp_index = 0;    /* reset the dispatch buffer counter */
-
+#if OMP_41_ENABLED
+    dispatch->th_doacross_buf_idx = 0; /* reset the doacross dispatch buffer counter */
+#endif
     if( __kmp_env_consistency_check )
         __kmp_push_parallel( gtid, team->t.t_ident );
 
@@ -7050,10 +7058,17 @@ __kmp_internal_fork( ident_t *id, int gtid, kmp_team_t *team )
     KMP_DEBUG_ASSERT( team->t.t_disp_buffer );
     if ( team->t.t_max_nproc > 1 ) {
         int i;
-        for (i = 0; i <  KMP_MAX_DISP_BUF; ++i)
+        for (i = 0; i <  KMP_MAX_DISP_BUF; ++i) {
             team->t.t_disp_buffer[ i ].buffer_index = i;
+#if OMP_41_ENABLED
+            team->t.t_disp_buffer[i].doacross_buf_idx = i;
+#endif
+        }
     } else {
         team->t.t_disp_buffer[ 0 ].buffer_index = 0;
+#if OMP_41_ENABLED
+        team->t.t_disp_buffer[0].doacross_buf_idx = 0;
+#endif
     }
 
     KMP_MB();       /* Flush all pending memory write invalidates.  */

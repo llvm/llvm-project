@@ -668,25 +668,31 @@ template <class ELFT>
 typename EhFrameHeader<ELFT>::uintX_t
 EhFrameHeader<ELFT>::getFdePc(uintX_t EhVA, const FdeData &F) {
   const endianness E = ELFT::TargetEndianness;
-  assert((F.Enc & 0xF0) != DW_EH_PE_datarel);
-
-  uintX_t FdeOff = EhVA + F.Off + 8;
-  switch (F.Enc & 0xF) {
+  uint8_t Size = F.Enc & 0x7;
+  if (Size == DW_EH_PE_absptr)
+    Size = sizeof(uintX_t) == 8 ? DW_EH_PE_udata8 : DW_EH_PE_udata4;
+  uint64_t PC;
+  switch (Size) {
   case DW_EH_PE_udata2:
-  case DW_EH_PE_sdata2:
-    return FdeOff + read16<E>(F.PCRel);
+    PC = read16<E>(F.PCRel);
+    break;
   case DW_EH_PE_udata4:
-  case DW_EH_PE_sdata4:
-    return FdeOff + read32<E>(F.PCRel);
+    PC = read32<E>(F.PCRel);
+    break;
   case DW_EH_PE_udata8:
-  case DW_EH_PE_sdata8:
-    return FdeOff + read64<E>(F.PCRel);
-  case DW_EH_PE_absptr:
-    if (sizeof(uintX_t) == 8)
-      return FdeOff + read64<E>(F.PCRel);
-    return FdeOff + read32<E>(F.PCRel);
+    PC = read64<E>(F.PCRel);
+    break;
+  default:
+    fatal("unknown FDE size encoding");
   }
-  fatal("unknown FDE size encoding");
+  switch (F.Enc & 0x70) {
+  case DW_EH_PE_absptr:
+    return PC;
+  case DW_EH_PE_pcrel:
+    return PC + EhVA + F.Off + 8;
+  default:
+    fatal("unknown FDE size relative encoding");
+  }
 }
 
 template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
@@ -1084,8 +1090,10 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
       skipAugP<ELFT>(D);
       continue;
     }
-    if (C == 'L')
+    if (C == 'L') {
+      readByte(D);
       continue;
+    }
     fatal("unknown .eh_frame augmentation string: " + Aug);
   }
   return DW_EH_PE_absptr;

@@ -117,6 +117,12 @@ public:
     //------------------------------------------------------------------
     ~FileSpec ();
 
+    bool
+    DirectoryEquals(const FileSpec &other) const;
+
+    bool
+    FileEquals(const FileSpec &other) const;
+
     //------------------------------------------------------------------
     /// Assignment operator.
     ///

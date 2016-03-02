@@ -14,6 +14,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
+#include "lld/Driver/Driver.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/LibDriver/LibDriver.h"
 #include "llvm/Option/Arg.h"

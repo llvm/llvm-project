@@ -21,9 +21,6 @@ namespace elf {
 
 extern class LinkerDriver *Driver;
 
-// Entry point of the ELF linker. Returns true on success.
-bool link(ArrayRef<const char *> Args, llvm::raw_ostream &Error = llvm::errs());
-
 class LinkerDriver {
 public:
   void main(ArrayRef<const char *> Args);

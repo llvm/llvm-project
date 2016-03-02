@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncludeInserter.h"
+#include "clang/Lex/Token.h"
 
 namespace clang {
 namespace tidy {
@@ -19,14 +20,14 @@ public:
   // Implements PPCallbacks::InclusionDerective(). Records the names and source
   // locations of the inclusions in the main source file being processed.
   void InclusionDirective(SourceLocation HashLocation,
-                          const Token & /*include_token*/,
+                          const Token & IncludeToken,
                           StringRef FileNameRef, bool IsAngled,
                           CharSourceRange FileNameRange,
                           const FileEntry * /*IncludedFile*/,
                           StringRef /*SearchPath*/, StringRef /*RelativePath*/,
                           const Module * /*ImportedModule*/) override {
     Inserter->AddInclude(FileNameRef, IsAngled, HashLocation,
-                         FileNameRange.getEnd());
+                         IncludeToken.getEndLoc());
   }
 
 private:
