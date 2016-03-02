@@ -509,13 +509,13 @@ def ObjCDeallocChecker : Checker<"Dealloc">,
   HelpText<"Warn about Objective-C classes that lack a correct implementation of -dealloc">,
   DescFile<"CheckObjCDealloc.cpp">;
 
-} // end "osx.cocoa"
-
-let ParentPackage = CocoaAlpha in {
-
 def ObjCSuperDeallocChecker : Checker<"SuperDealloc">,
   HelpText<"Warn about improper use of '[super dealloc]' in Objective-C">,
   DescFile<"ObjCSuperDeallocChecker.cpp">;
+
+} // end "osx.cocoa"
+
+let ParentPackage = CocoaAlpha in {
 
 def InstanceVariableInvalidation : Checker<"InstanceVariableInvalidation">,
   HelpText<"Check that the invalidatable instance variables are invalidated in the methods annotated with objc_instance_variable_invalidator">,
