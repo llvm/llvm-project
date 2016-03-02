@@ -165,7 +165,7 @@ void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
   std::string Buf;
   llvm::raw_string_ostream OS(Buf);
   if (IvarRegion) {
-    OS << "use of instance variable '" << *IvarRegion->getDecl() <<
+    OS << "Use of instance variable '" << *IvarRegion->getDecl() <<
           "' after 'self' has been deallocated";
     Desc = OS.str();
   }

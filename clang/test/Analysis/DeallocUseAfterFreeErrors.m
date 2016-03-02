@@ -36,8 +36,8 @@ typedef struct objc_selector *SEL;
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  [_ivar release]; // expected-warning {{use of instance variable '_ivar' after 'self' has been deallocated}}
-  // expected-note@-1 {{use of instance variable '_ivar' after 'self' has been deallocated}}
+  [_ivar release]; // expected-warning {{Use of instance variable '_ivar' after 'self' has been deallocated}}
+  // expected-note@-1 {{Use of instance variable '_ivar' after 'self' has been deallocated}}
 }
 @end
 
@@ -56,8 +56,8 @@ typedef struct objc_selector *SEL;
 }
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  _delegate = nil; // expected-warning {{use of instance variable '_delegate' after 'self' has been deallocated}}
-      // expected-note@-1 {{use of instance variable '_delegate' after 'self' has been deallocated}}
+  _delegate = nil; // expected-warning {{Use of instance variable '_delegate' after 'self' has been deallocated}}
+      // expected-note@-1 {{Use of instance variable '_delegate' after 'self' has been deallocated}}
 }
 @end
 
@@ -74,8 +74,8 @@ struct SomeStruct {
 @implementation SuperDeallocThenAssignIvarField
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  _s.f = 7; // expected-warning {{use of instance variable '_s' after 'self' has been deallocated}}
-      // expected-note@-1 {{use of instance variable '_s' after 'self' has been deallocated}}
+  _s.f = 7; // expected-warning {{Use of instance variable '_s' after 'self' has been deallocated}}
+      // expected-note@-1 {{Use of instance variable '_s' after 'self' has been deallocated}}
 }
 @end
 
@@ -93,8 +93,8 @@ struct SomeStruct {
 @implementation SuperDeallocThenAssignIvarIvar
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  _ivar->_otherIvar = 7; // expected-warning {{use of instance variable '_ivar' after 'self' has been deallocated}}
-      // expected-note@-1 {{use of instance variable '_ivar' after 'self' has been deallocated}}
+  _ivar->_otherIvar = 7; // expected-warning {{Use of instance variable '_ivar' after 'self' has been deallocated}}
+      // expected-note@-1 {{Use of instance variable '_ivar' after 'self' has been deallocated}}
 }
 @end
 
@@ -106,8 +106,8 @@ struct SomeStruct {
 @implementation SuperDeallocThenAssignSelfIvar
 - (void)dealloc {
   [super dealloc]; // expected-note {{[super dealloc] called here}}
-  self->_ivar = nil; // expected-warning {{use of instance variable '_ivar' after 'self' has been deallocated}}
-      // expected-note@-1 {{use of instance variable '_ivar' after 'self' has been deallocated}}
+  self->_ivar = nil; // expected-warning {{Use of instance variable '_ivar' after 'self' has been deallocated}}
+      // expected-note@-1 {{Use of instance variable '_ivar' after 'self' has been deallocated}}
 }
 @end
 
