@@ -67,3 +67,13 @@ unsigned long long monotonic_clock_ns() {
   return (unsigned long long)t.tv_sec * 1000000000ull + t.tv_nsec;
 }
 #endif
+
+//The const kPCInc must be in sync with StackTrace::GetPreviousInstructionPc
+#if defined(__powerpc64__)
+// PCs are always 4 byte aligned.
+const int kPCInc = 4;
+#elif defined(__sparc__) || defined(__mips__)
+const int kPCInc = 8;
+#else
+const int kPCInc = 1;
+#endif

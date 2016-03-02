@@ -29,7 +29,7 @@ int main(int argc, const char *argv[]) {
   if (Size > MaxSize)
     return 1;
   int Write = __llvm_profile_write_buffer(Buffer);
-  if (__llvm_profile_write_buffer(Buffer))
+  if (Write)
     return Write;
 
 #ifdef CHECK_SYMBOLS
