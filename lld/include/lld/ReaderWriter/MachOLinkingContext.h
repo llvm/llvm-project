@@ -437,32 +437,32 @@ private:
   StringRefVector _searchDirs;
   StringRefVector _syslibRoots;
   StringRefVector _frameworkDirs;
-  HeaderFileType _outputMachOType;   // e.g MH_EXECUTE
-  bool _outputMachOTypeStatic; // Disambiguate static vs dynamic prog
-  bool _doNothing;            // for -help and -v which just print info
-  bool _pie;
-  Arch _arch;
-  OS _os;
-  uint32_t _osMinVersion;
+  HeaderFileType _outputMachOType = llvm::MachO::MH_EXECUTE;
+  bool _outputMachOTypeStatic = false; // Disambiguate static vs dynamic prog
+  bool _doNothing = false;             // for -help and -v which just print info
+  bool _pie = false;
+  Arch _arch = arch_unknown;
+  OS _os = OS::macOSX;
+  uint32_t _osMinVersion = 0;
   uint32_t _sdkVersion = 0;
   uint64_t _sourceVersion = 0;
-  uint64_t _pageZeroSize;
-  uint64_t _pageSize;
-  uint64_t _baseAddress;
-  uint64_t _stackSize;
-  uint32_t _compatibilityVersion;
-  uint32_t _currentVersion;
-  ObjCConstraint _objcConstraint;
-  uint32_t _swiftVersion;
+  uint64_t _pageZeroSize = 0;
+  uint64_t _pageSize = 4096;
+  uint64_t _baseAddress = 0;
+  uint64_t _stackSize = 0;
+  uint32_t _compatibilityVersion = 0;
+  uint32_t _currentVersion = 0;
+  ObjCConstraint _objcConstraint = objc_unknown;
+  uint32_t _swiftVersion = 0;
   StringRef _installName;
   StringRefVector _rpaths;
-  bool _flatNamespace;
-  UndefinedMode _undefinedMode;
-  bool _deadStrippableDylib;
-  bool _printAtoms;
-  bool _testingFileUsage;
-  bool _keepPrivateExterns;
-  bool _demangle;
+  bool _flatNamespace = false;
+  UndefinedMode _undefinedMode = UndefinedMode::error;
+  bool _deadStrippableDylib = false;
+  bool _printAtoms = false;
+  bool _testingFileUsage = false;
+  bool _keepPrivateExterns = false;
+  bool _demangle = false;
   bool _mergeObjCCategories = true;
   bool _generateVersionLoadCommand = false;
   bool _generateFunctionStartsLoadCommand = false;
@@ -476,13 +476,13 @@ private:
   mutable std::set<mach_o::MachODylibFile*> _upwardDylibs;
   mutable std::vector<std::unique_ptr<File>> _indirectDylibs;
   mutable std::mutex _dylibsMutex;
-  ExportMode _exportMode;
+  ExportMode _exportMode = ExportMode::globals;
   llvm::StringSet<> _exportedSymbols;
-  DebugInfoMode _debugInfoMode;
+  DebugInfoMode _debugInfoMode = DebugInfoMode::addDebugMap;
   std::unique_ptr<llvm::raw_fd_ostream> _dependencyInfo;
   llvm::StringMap<std::vector<OrderFileNode>> _orderFiles;
-  unsigned _orderFileEntries;
-  File *_flatNamespaceFile;
+  unsigned _orderFileEntries = 0;
+  File *_flatNamespaceFile = nullptr;
   mach_o::SectCreateFile *_sectCreateFile = nullptr;
 };
 

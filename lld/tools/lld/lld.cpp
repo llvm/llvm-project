@@ -109,7 +109,7 @@ int main(int Argc, const char **Argv) {
   case WinLink:
     return !coff::link(Args);
   case Darwin:
-    return !DarwinLdDriver::linkMachO(Args);
+    return !mach_o::link(Args);
   default:
     die("-flavor option is missing. Available flavors are "
         "gnu, darwin or link.");

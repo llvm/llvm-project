@@ -21,6 +21,13 @@
 using namespace llvm;
 using namespace lld;
 
+namespace lld {
+namespace mach_o {
+bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx,
+           raw_ostream &diagnostics);
+}
+}
+
 namespace {
 class DarwinLdParserTest : public testing::Test {
 protected:
@@ -37,7 +44,7 @@ protected:
     args.insert(args.begin(), "ld");
     std::string errorMessage;
     raw_string_ostream os(errorMessage);
-    return DarwinLdDriver::parse(args, _ctx, os);
+    return mach_o::parse(args, _ctx, os);
   }
 
   MachOLinkingContext _ctx;

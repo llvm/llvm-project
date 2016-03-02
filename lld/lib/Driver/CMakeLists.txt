@@ -4,7 +4,6 @@ add_public_tablegen_target(DriverOptionsTableGen)
 
 add_lld_library(lldDriver
   DarwinLdDriver.cpp
-  Driver.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLD_INCLUDE_DIR}/lld/Driver

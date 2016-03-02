@@ -13,8 +13,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "lld/Core/File.h"
 #include "lld/Core/ArchiveLibraryFile.h"
+#include "lld/Core/File.h"
+#include "lld/Core/Instrumentation.h"
+#include "lld/Core/PassManager.h"
+#include "lld/Core/Resolver.h"
 #include "lld/Core/SharedLibraryFile.h"
 #include "lld/Driver/Driver.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
@@ -276,20 +279,24 @@ static bool parseNumberBase16(StringRef numStr, uint64_t &baseAddress) {
   return numStr.getAsInteger(16, baseAddress);
 }
 
-namespace lld {
-
-bool DarwinLdDriver::linkMachO(llvm::ArrayRef<const char *> args,
-                               raw_ostream &diagnostics) {
-  MachOLinkingContext ctx;
-  if (!parse(args, ctx, diagnostics))
-    return false;
-  if (ctx.doNothing())
-    return true;
-  return link(ctx, diagnostics);
+static void parseLLVMOptions(const LinkingContext &ctx) {
+  // Honor -mllvm
+  if (!ctx.llvmOptions().empty()) {
+    unsigned numArgs = ctx.llvmOptions().size();
+    auto **args = new const char *[numArgs + 2];
+    args[0] = "lld (LLVM option parsing)";
+    for (unsigned i = 0; i != numArgs; ++i)
+      args[i + 1] = ctx.llvmOptions()[i];
+    args[numArgs + 1] = nullptr;
+    llvm::cl::ParseCommandLineOptions(numArgs + 1, args);
+  }
 }
 
-bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
-                           MachOLinkingContext &ctx, raw_ostream &diagnostics) {
+namespace lld {
+namespace mach_o {
+
+bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx,
+           raw_ostream &diagnostics) {
   // Parse command line options using DarwinLdOptions.td
   DarwinLdOptTable table;
   unsigned missingIndex;
@@ -1124,5 +1131,68 @@ bool DarwinLdDriver::parse(llvm::ArrayRef<const char *> args,
   return ctx.validate(diagnostics);
 }
 
+/// This is where the link is actually performed.
+bool link(llvm::ArrayRef<const char *> args, raw_ostream &diagnostics) {
+  MachOLinkingContext ctx;
+  if (!parse(args, ctx, diagnostics))
+    return false;
+  if (ctx.doNothing())
+    return true;
+  if (ctx.getNodes().empty())
+    return false;
 
+  for (std::unique_ptr<Node> &ie : ctx.getNodes())
+    if (FileNode *node = dyn_cast<FileNode>(ie.get()))
+      node->getFile()->parse();
+
+  std::vector<std::unique_ptr<File>> internalFiles;
+  ctx.createInternalFiles(internalFiles);
+  for (auto i = internalFiles.rbegin(), e = internalFiles.rend(); i != e; ++i) {
+    auto &members = ctx.getNodes();
+    members.insert(members.begin(), llvm::make_unique<FileNode>(std::move(*i)));
+  }
+
+  // Give target a chance to add files.
+  std::vector<std::unique_ptr<File>> implicitFiles;
+  ctx.createImplicitFiles(implicitFiles);
+  for (auto i = implicitFiles.rbegin(), e = implicitFiles.rend(); i != e; ++i) {
+    auto &members = ctx.getNodes();
+    members.insert(members.begin(), llvm::make_unique<FileNode>(std::move(*i)));
+  }
+
+  // Give target a chance to postprocess input files.
+  // Mach-O uses this chance to move all object files before library files.
+  ctx.finalizeInputFiles();
+
+  // Do core linking.
+  ScopedTask resolveTask(getDefaultDomain(), "Resolve");
+  Resolver resolver(ctx);
+  if (!resolver.resolve())
+    return false;
+  std::unique_ptr<SimpleFile> merged = resolver.resultFile();
+  resolveTask.end();
+
+  // Run passes on linked atoms.
+  ScopedTask passTask(getDefaultDomain(), "Passes");
+  PassManager pm;
+  ctx.addPasses(pm);
+  if (std::error_code ec = pm.runOnFile(*merged)) {
+    diagnostics << "Failed to write file '" << ctx.outputPath()
+                << "': " << ec.message() << "\n";
+    return false;
+  }
+
+  passTask.end();
+
+  // Give linked atoms to Writer to generate output file.
+  ScopedTask writeTask(getDefaultDomain(), "Write");
+  if (std::error_code ec = ctx.writeFile(*merged)) {
+    diagnostics << "Failed to write file '" << ctx.outputPath()
+                << "': " << ec.message() << "\n";
+    return false;
+  }
+
+  return true;
+}
+} // namespace mach_o
 } // namespace lld

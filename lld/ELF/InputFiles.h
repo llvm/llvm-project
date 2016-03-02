@@ -183,7 +183,7 @@ class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef M);
   static bool classof(const InputFile *F);
-  void parse();
+  void parse(llvm::DenseSet<StringRef> &ComdatGroups);
   ArrayRef<SymbolBody *> getSymbols() { return SymbolBodies; }
 
 private:
