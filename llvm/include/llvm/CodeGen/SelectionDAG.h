@@ -268,6 +268,12 @@ private:
                               DenseSet<SDNode *> &visited,
                               int level, bool &printed);
 
+  template <typename SDNodeT, typename... ArgTypes>
+  SDNodeT *newSDNode(ArgTypes &&... Args) {
+    return new (NodeAllocator.template Allocate<SDNodeT>())
+        SDNodeT(std::forward<ArgTypes>(Args)...);
+  }
+
   void operator=(const SelectionDAG&) = delete;
   SelectionDAG(const SelectionDAG&) = delete;
 
