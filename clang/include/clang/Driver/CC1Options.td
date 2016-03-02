@@ -495,6 +495,10 @@ def fixit_to_temp : Flag<["-"], "fixit-to-temporary">,
 
 def foverride_record_layout_EQ : Joined<["-"], "foverride-record-layout=">,
   HelpText<"Override record layouts with those in the given file">;
+def find_pch_source_EQ : Joined<["-"], "find-pch-source=">,
+  HelpText<"When building a pch, try to find the input file in include "
+           "directories, as if it had been included by the argument passed "
+           "to this flag.">;
   
 //===----------------------------------------------------------------------===//
 // Language Options

@@ -98,6 +98,20 @@ def err_drv_unknown_argument : Error<"unknown argument: '%0'">;
 def warn_drv_unknown_argument_clang_cl : Warning<
   "unknown argument ignored in clang-cl: '%0'">,
   InGroup<UnknownArgument>;
+
+def warn_drv_ycyu_no_arg_clang_cl : Warning<
+  "support for '%0' without a filename not implemented yet; flag ignored">,
+  InGroup<ClangClPch>;
+def warn_drv_ycyu_different_arg_clang_cl : Warning<
+  "support for '/Yc' and '/Yu' with different filenames not implemented yet; flags ignored">,
+  InGroup<ClangClPch>;
+def warn_drv_ycyu_no_fi_arg_clang_cl : Warning<
+  "support for '%0' without a corresponding /FI flag not implemented yet; flag ignored">,
+  InGroup<ClangClPch>;
+def warn_drv_yc_multiple_inputs_clang_cl : Warning<
+  "support for '/Yc' with more than one source file not implemented yet; flag ignored">,
+  InGroup<ClangClPch>;
+
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
 def err_drv_invalid_remap_file : Error<

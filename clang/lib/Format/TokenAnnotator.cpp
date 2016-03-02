@@ -505,7 +505,7 @@ private:
         Tok->Type = TT_BitFieldColon;
       } else if (Contexts.size() == 1 &&
                  !Line.First->isOneOf(tok::kw_enum, tok::kw_case)) {
-        if (Tok->Previous->is(tok::r_paren))
+        if (Tok->Previous->isOneOf(tok::r_paren, tok::kw_noexcept))
           Tok->Type = TT_CtorInitializerColon;
         else
           Tok->Type = TT_InheritanceColon;

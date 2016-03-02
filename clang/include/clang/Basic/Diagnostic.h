@@ -173,6 +173,7 @@ private:
   bool WarningsAsErrors;         // Treat warnings like errors.
   bool EnableAllWarnings;        // Enable all warnings.
   bool ErrorsAsFatal;            // Treat errors like fatal errors.
+  bool FatalsAsError;             // Treat fatal errors like errors.
   bool SuppressSystemWarnings;   // Suppress warnings in system headers.
   bool SuppressAllDiagnostics;   // Suppress all diagnostics.
   bool ElideType;                // Elide common types of templates.
@@ -454,6 +455,12 @@ public:
   /// \brief When set to true, any error reported is made a fatal error.
   void setErrorsAsFatal(bool Val) { ErrorsAsFatal = Val; }
   bool getErrorsAsFatal() const { return ErrorsAsFatal; }
+
+  /// \brief When set to true, any fatal error reported is made an error.
+  ///
+  /// This setting takes precedence over the setErrorsAsFatal setting above.
+  void setFatalsAsError(bool Val) { FatalsAsError = Val; }
+  bool getFatalsAsError() const { return FatalsAsError; }
 
   /// \brief When set to true mask warnings that come from system headers.
   void setSuppressSystemWarnings(bool Val) { SuppressSystemWarnings = Val; }

@@ -276,6 +276,8 @@ public:
   /// potentially set the return value.
   bool SawAsmBlock;
 
+  const FunctionDecl *CurSEHParent = nullptr;
+
   /// True if the current function is an outlined SEH helper. This can be a
   /// finally block or filter expression.
   bool IsOutlinedSEHHelper;
@@ -1150,10 +1152,7 @@ public:
     return getInvokeDestImpl();
   }
 
-  bool currentFunctionUsesSEHTry() const {
-    const auto *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
-    return FD && FD->usesSEHTry();
-  }
+  bool currentFunctionUsesSEHTry() const { return CurSEHParent != nullptr; }
 
   const TargetInfo &getTarget() const { return Target; }
   llvm::LLVMContext &getLLVMContext() { return CGM.getLLVMContext(); }

@@ -71,6 +71,8 @@ if( NOT CLANG_BUILT_STANDALONE )
     )
 endif()
 
+add_custom_target(clang-test-depends DEPENDS ${CLANG_TEST_DEPS})
+
 add_lit_testsuite(check-clang "Running the Clang regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   #LIT ${LLVM_LIT}

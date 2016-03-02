@@ -1452,6 +1452,66 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
+  // Diagnose unsupported forms of /Yc /Yu. Ignore /Yc/Yu for now if:
+  // * no filename after it
+  // * both /Yc and /Yu passed but with different filenames
+  // * corresponding file not also passed as /FI
+  Arg *YcArg = Args.getLastArg(options::OPT__SLASH_Yc);
+  Arg *YuArg = Args.getLastArg(options::OPT__SLASH_Yu);
+  if (YcArg && YcArg->getValue()[0] == '\0') {
+    Diag(clang::diag::warn_drv_ycyu_no_arg_clang_cl) << YcArg->getSpelling();
+    Args.eraseArg(options::OPT__SLASH_Yc);
+    YcArg = nullptr;
+  }
+  if (YuArg && YuArg->getValue()[0] == '\0') {
+    Diag(clang::diag::warn_drv_ycyu_no_arg_clang_cl) << YuArg->getSpelling();
+    Args.eraseArg(options::OPT__SLASH_Yu);
+    YuArg = nullptr;
+  }
+  if (YcArg && YuArg && strcmp(YcArg->getValue(), YuArg->getValue()) != 0) {
+    Diag(clang::diag::warn_drv_ycyu_different_arg_clang_cl);
+    Args.eraseArg(options::OPT__SLASH_Yc);
+    Args.eraseArg(options::OPT__SLASH_Yu);
+    YcArg = YuArg = nullptr;
+  }
+  if (YcArg || YuArg) {
+    StringRef Val = YcArg ? YcArg->getValue() : YuArg->getValue();
+    bool FoundMatchingInclude = false;
+    for (const Arg *Inc : Args.filtered(options::OPT_include)) {
+      // FIXME: Do case-insensitive matching and consider / and \ as equal.
+      if (Inc->getValue() == Val)
+        FoundMatchingInclude = true;
+    }
+    if (!FoundMatchingInclude) {
+      Diag(clang::diag::warn_drv_ycyu_no_fi_arg_clang_cl)
+          << (YcArg ? YcArg : YuArg)->getSpelling();
+      Args.eraseArg(options::OPT__SLASH_Yc);
+      Args.eraseArg(options::OPT__SLASH_Yu);
+      YcArg = YuArg = nullptr;
+    }
+  }
+  if (YcArg && Inputs.size() > 1) {
+    Diag(clang::diag::warn_drv_yc_multiple_inputs_clang_cl);
+    Args.eraseArg(options::OPT__SLASH_Yc);
+    YcArg = nullptr;
+  }
+  if (Args.hasArg(options::OPT__SLASH_Y_)) {
+    // /Y- disables all pch handling.  Rather than check for it everywhere,
+    // just remove clang-cl pch-related flags here.
+    Args.eraseArg(options::OPT__SLASH_Fp);
+    Args.eraseArg(options::OPT__SLASH_Yc);
+    Args.eraseArg(options::OPT__SLASH_Yu);
+    YcArg = YuArg = nullptr;
+  }
+  // FIXME: For now, only enable pch support if an internal flag is passed too.
+  // Remove this once pch support has stabilitzed.
+  if (!Args.hasArg(options::OPT__SLASH_internal_enable_pch)) {
+    Args.eraseArg(options::OPT__SLASH_Fp);
+    Args.eraseArg(options::OPT__SLASH_Yc);
+    Args.eraseArg(options::OPT__SLASH_Yu);
+    YcArg = YuArg = nullptr;
+  }
+
   // Construct the actions to perform.
   ActionList LinkerInputs;
 
@@ -1462,6 +1522,25 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
     PL.clear();
     types::getCompilationPhases(InputType, PL);
+
+    if (YcArg) {
+      // Add a separate precompile phase for the compile phase.
+      if (FinalPhase >= phases::Compile) {
+        llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PCHPL;
+        types::getCompilationPhases(types::TY_CXXHeader, PCHPL);
+        Arg *PchInputArg = MakeInputArg(Args, Opts, YcArg->getValue());
+
+        // Build the pipeline for the pch file.
+        Action *ClangClPch = C.MakeAction<InputAction>(*PchInputArg, InputType);
+        for (phases::ID Phase : PCHPL)
+          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
+        assert(ClangClPch);
+        Actions.push_back(ClangClPch);
+        // The driver currently exits after the first failed command.  This
+        // relies on that behavior, to make sure if the pch generation fails,
+        // the main compilation won't run.
+      }
+    }
 
     // If the first step comes after the final phase we are doing as part of
     // this compilation, warn the user about it.
@@ -2109,8 +2188,11 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       Output += "-";
       Output.append(BoundArch);
       NamedOutput = C.getArgs().MakeArgString(Output.c_str());
-    } else
+    } else {
       NamedOutput = getDefaultImageName();
+    }
+  } else if (JA.getType() == types::TY_PCH && IsCLMode()) {
+    NamedOutput = C.getArgs().MakeArgString(GetClPchPath(C, BaseName).c_str());
   } else {
     const char *Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode());
     assert(Suffix && "All types used for output should have a suffix.");
@@ -2274,6 +2356,25 @@ std::string Driver::GetTemporaryPath(StringRef Prefix,
   }
 
   return Path.str();
+}
+
+std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
+  SmallString<128> Output;
+  if (Arg *FpArg = C.getArgs().getLastArg(options::OPT__SLASH_Fp)) {
+    // FIXME: If anybody needs it, implement this obscure rule:
+    // "If you specify a directory without a file name, the default file name
+    // is VCx0.pch., where x is the major version of Visual C++ in use."
+    Output = FpArg->getValue();
+
+    // "If you do not specify an extension as part of the path name, an
+    // extension of .pch is assumed. "
+    if (!llvm::sys::path::has_extension(Output))
+      Output += ".pch";
+  } else {
+    Output = BaseName;
+    llvm::sys::path::replace_extension(Output, ".pch");
+  }
+  return Output.str();
 }
 
 const ToolChain &Driver::getToolChain(const ArgList &Args,

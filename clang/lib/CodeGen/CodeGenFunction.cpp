@@ -669,6 +669,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
 
   DidCallStackSave = false;
   CurCodeDecl = D;
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
+    if (FD->usesSEHTry())
+      CurSEHParent = FD;
   CurFuncDecl = (D ? D->getNonClosureContext() : nullptr);
   FnRetTy = RetTy;
   CurFn = Fn;

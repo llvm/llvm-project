@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/Core/Replacement.h"
+
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -18,7 +20,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -281,6 +282,18 @@ std::string applyAllReplacements(StringRef Code, const Replacements &Replaces) {
   return Result;
 }
 
+std::vector<Range> calculateChangedRangesInFile(const Replacements &Replaces) {
+  std::vector<Range> ChangedRanges;
+  int Shift = 0;
+  for (const Replacement &R : Replaces) {
+    unsigned Offset = R.getOffset() + Shift;
+    unsigned Length = R.getReplacementText().size();
+    Shift += Length - R.getLength();
+    ChangedRanges.push_back(Range(Offset, Length));
+  }
+  return ChangedRanges;
+}
+
 namespace {
 // Represents a merged replacement, i.e. a replacement consisting of multiple
 // overlapping replacements from 'First' and 'Second' in mergeReplacements.
@@ -314,7 +327,7 @@ public:
 
   // Merges the next element 'R' into this merged element. As we always merge
   // from 'First' into 'Second' or vice versa, the MergedReplacement knows what
-  // set the next element is coming from. 
+  // set the next element is coming from.
   void merge(const Replacement &R) {
     if (MergeSecond) {
       unsigned REnd = R.getOffset() + Delta + R.getLength();
