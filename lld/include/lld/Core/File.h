@@ -51,7 +51,6 @@ public:
     kindHeaderObject,         ///< a file for file headers
     kindEntryObject,          ///< a file for the entry
     kindUndefinedSymsObject,  ///< a file for undefined symbols
-    kindAliasSymsObject,      ///< a file for alias symbols
     kindStubHelperObject,     ///< a file for stub helpers
     kindResolverMergedObject, ///< the resolver merged file.
     kindSectCreateObject,     ///< a sect create object file (.o)

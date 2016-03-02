@@ -264,7 +264,6 @@ bool Resolver::resolveUndefines() {
     case File::kindHeaderObject:
     case File::kindEntryObject:
     case File::kindUndefinedSymsObject:
-    case File::kindAliasSymsObject:
     case File::kindStubHelperObject:
     case File::kindResolverMergedObject:
     case File::kindSectCreateObject: {

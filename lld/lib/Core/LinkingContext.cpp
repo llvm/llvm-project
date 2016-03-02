@@ -15,13 +15,7 @@
 
 namespace lld {
 
-LinkingContext::LinkingContext()
-    : _deadStrip(false), _globalsAreDeadStripRoots(false),
-      _searchArchivesToOverrideTentativeDefinitions(false),
-      _searchSharedLibrariesToOverrideTentativeDefinitions(false),
-      _printRemainingUndefines(true), _allowRemainingUndefines(false),
-      _logInputFiles(false), _allowShlibUndefines(true),
-      _outputFileType(OutputFileType::Default), _nextOrdinal(0) {}
+LinkingContext::LinkingContext() {}
 
 LinkingContext::~LinkingContext() {}
 
@@ -31,11 +25,6 @@ bool LinkingContext::validate(raw_ostream &diagnostics) {
 
 std::error_code LinkingContext::writeFile(const File &linkedFile) const {
   return this->writer().writeFile(linkedFile, _outputPath);
-}
-
-void LinkingContext::createImplicitFiles(
-    std::vector<std::unique_ptr<File>> &result) {
-  this->writer().createImplicitFiles(result);
 }
 
 std::unique_ptr<File> LinkingContext::createEntrySymbolFile() const {
@@ -76,7 +65,5 @@ void LinkingContext::createInternalFiles(
   if (std::unique_ptr<File> file = createUndefinedSymbolFile())
     result.push_back(std::move(file));
 }
-
-void LinkingContext::addPasses(PassManager &pm) {}
 
 } // end namespace lld

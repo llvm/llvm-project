@@ -75,7 +75,7 @@ public:
     }
     
     bool operator< (const BroadcastEventSpec &rhs) const;
-    const BroadcastEventSpec &operator= (const BroadcastEventSpec &rhs);
+    BroadcastEventSpec &operator=(const BroadcastEventSpec &rhs);
     
 private:
     ConstString m_broadcaster_class;
@@ -194,15 +194,11 @@ private:
         
         bool operator () (const event_listener_key input) const
         {
-            if (input.second == m_listener)
-                return true;
-            else
-                return false;
+            return (input.second == m_listener);
         }
         
     private:
         const Listener *m_listener;
-    
     };
 };
 
@@ -463,4 +459,4 @@ private:
 
 } // namespace lldb_private
 
-#endif  // liblldb_Broadcaster_h_
+#endif // liblldb_Broadcaster_h_

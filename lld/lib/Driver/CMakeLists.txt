@@ -12,8 +12,6 @@ add_lld_library(lldDriver
   LINK_LIBS
     lldConfig
     lldMachO
-    lldCOFF
-    lldELF
     lldCore
     lldReaderWriter
     lldYAML
@@ -23,4 +21,3 @@ add_lld_library(lldDriver
   )
 
 add_dependencies(lldDriver DriverOptionsTableGen)
-

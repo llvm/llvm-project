@@ -34,12 +34,6 @@ class SharedLibraryFile;
 /// Writers.
 class LinkingContext {
 public:
-  /// \brief The types of output file that the linker creates.
-  enum class OutputFileType : uint8_t {
-    Default, // The default output type for this target
-    YAML,    // The output type is set to YAML
-  };
-
   virtual ~LinkingContext();
 
   /// \name Methods needed by core linking
@@ -200,9 +194,7 @@ public:
   bool validate(raw_ostream &diagnostics);
 
   /// Formats symbol name for use in error messages.
-  virtual std::string demangle(StringRef symbolName) const {
-    return symbolName;
-  }
+  virtual std::string demangle(StringRef symbolName) const = 0;
 
   /// @}
   /// \name Methods used by Driver::link()
@@ -214,19 +206,6 @@ public:
   /// the linker to write to an in-memory buffer.
   StringRef outputPath() const { return _outputPath; }
 
-  /// Set the various output file types that the linker would
-  /// create
-  bool setOutputFileType(StringRef outputFileType) {
-    if (outputFileType.equals_lower("yaml")) {
-      _outputFileType = OutputFileType::YAML;
-      return true;
-    }
-    return false;
-  }
-
-  /// Returns the output file type that that the linker needs to create.
-  OutputFileType outputFileType() const { return _outputFileType; }
-
   /// Accessor for Register object embedded in LinkingContext.
   const Registry &registry() const { return _registry; }
   Registry &registry() { return _registry; }
@@ -234,11 +213,11 @@ public:
   /// This method is called by core linking to give the Writer a chance
   /// to add file format specific "files" to set of files to be linked. This is
   /// how file format specific atoms can be added to the link.
-  virtual void createImplicitFiles(std::vector<std::unique_ptr<File>> &);
+  virtual void createImplicitFiles(std::vector<std::unique_ptr<File>> &) = 0;
 
   /// This method is called by core linking to build the list of Passes to be
   /// run on the merged/linked graph of all input files.
-  virtual void addPasses(PassManager &pm);
+  virtual void addPasses(PassManager &pm) = 0;
 
   /// Calls through to the writeFile() method on the specified Writer.
   ///
@@ -250,16 +229,14 @@ public:
 
   // This function is called just before the Resolver kicks in.
   // Derived classes may use it to change the list of input files.
-  virtual void finalizeInputFiles() {}
+  virtual void finalizeInputFiles() = 0;
 
   /// Callback invoked for each file the Resolver decides we are going to load.
   /// This can be used to update context state based on the file, and emit
   /// errors for any differences between the context state and a loaded file.
   /// For example, we can error if we try to load a file which is a different
   /// arch from that being linked.
-  virtual std::error_code handleLoadedFile(File &file) {
-    return std::error_code();
-  }
+  virtual std::error_code handleLoadedFile(File &file) = 0;
 
   /// @}
 protected:
@@ -278,21 +255,20 @@ protected:
 
   StringRef _outputPath;
   StringRef _entrySymbolName;
-  bool _deadStrip;
-  bool _globalsAreDeadStripRoots;
-  bool _searchArchivesToOverrideTentativeDefinitions;
-  bool _searchSharedLibrariesToOverrideTentativeDefinitions;
-  bool _printRemainingUndefines;
-  bool _allowRemainingUndefines;
-  bool _logInputFiles;
-  bool _allowShlibUndefines;
-  OutputFileType _outputFileType;
+  bool _deadStrip = false;
+  bool _globalsAreDeadStripRoots = false;
+  bool _searchArchivesToOverrideTentativeDefinitions = false;
+  bool _searchSharedLibrariesToOverrideTentativeDefinitions = false;
+  bool _printRemainingUndefines = true;
+  bool _allowRemainingUndefines = false;
+  bool _logInputFiles = false;
+  bool _allowShlibUndefines = true;
   std::vector<StringRef> _deadStripRoots;
   std::vector<const char *> _llvmOptions;
   StringRefVector _initialUndefinedSymbols;
   std::vector<std::unique_ptr<Node>> _nodes;
   mutable llvm::BumpPtrAllocator _allocator;
-  mutable uint64_t _nextOrdinal;
+  mutable uint64_t _nextOrdinal = 0;
   Registry _registry;
 
 private:

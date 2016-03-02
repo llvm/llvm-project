@@ -4,7 +4,4 @@ add_lld_unittest(DriverTests
 
 target_link_libraries(DriverTests
   lldDriver
-  lldCOFF
-  lldCore
-  lldMachO
   )

@@ -8,6 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Address.h"
+
+// C Includes
+// C++ Includes
+#include "llvm/ADT/Triple.h"
+
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Block.h"
@@ -20,15 +27,13 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Symbol/SymbolVendor.h"
 
-#include "llvm/ADT/Triple.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
 static size_t
 ReadBytes (ExecutionContextScope *exe_scope, const Address &address, void *dst, size_t dst_len)
 {
-    if (exe_scope == NULL)
+    if (exe_scope == nullptr)
         return 0;
 
     TargetSP target_sp (exe_scope->CalculateTarget());
@@ -46,7 +51,7 @@ GetByteOrderAndAddressSize (ExecutionContextScope *exe_scope, const Address &add
 {
     byte_order = eByteOrderInvalid;
     addr_size = 0;
-    if (exe_scope == NULL)
+    if (exe_scope == nullptr)
         return false;
 
     TargetSP target_sp (exe_scope->CalculateTarget());
@@ -72,7 +77,7 @@ static uint64_t
 ReadUIntMax64 (ExecutionContextScope *exe_scope, const Address &address, uint32_t byte_size, bool &success)
 {
     uint64_t uval64 = 0;
-    if (exe_scope == NULL || byte_size > sizeof(uint64_t))
+    if (exe_scope == nullptr || byte_size > sizeof(uint64_t))
     {
         success = false;
         return 0;
@@ -99,9 +104,8 @@ ReadUIntMax64 (ExecutionContextScope *exe_scope, const Address &address, uint32_
 static bool
 ReadAddress (ExecutionContextScope *exe_scope, const Address &address, uint32_t pointer_size, Address &deref_so_addr)
 {
-    if (exe_scope == NULL)
+    if (exe_scope == nullptr)
         return false;
-
 
     bool success = false;
     addr_t deref_addr = ReadUIntMax64 (exe_scope, address, pointer_size, success);
@@ -140,7 +144,7 @@ ReadAddress (ExecutionContextScope *exe_scope, const Address &address, uint32_t 
 static bool
 DumpUInt (ExecutionContextScope *exe_scope, const Address &address, uint32_t byte_size, Stream* strm)
 {
-    if (exe_scope == NULL || byte_size == 0)
+    if (exe_scope == nullptr || byte_size == 0)
         return 0;
     std::vector<uint8_t> buf(byte_size, 0);
 
@@ -168,11 +172,10 @@ DumpUInt (ExecutionContextScope *exe_scope, const Address &address, uint32_t byt
     return false;
 }
 
-
 static size_t
 ReadCStringFromMemory (ExecutionContextScope *exe_scope, const Address &address, Stream *strm)
 {
-    if (exe_scope == NULL)
+    if (exe_scope == nullptr)
         return 0;
     const size_t k_buf_len = 256;
     char buf[k_buf_len+1];
@@ -334,7 +337,7 @@ Address::GetCallableLoadAddress (Target *target, bool is_indirect) const
     {
         ProcessSP processSP = target->GetProcessSP();
         Error error;
-        if (processSP.get())
+        if (processSP)
         {
             code_addr = processSP->ResolveIndirectFunction(this, error);
             if (!error.Success())
@@ -398,7 +401,7 @@ Address::SetOpcodeLoadAddress (lldb::addr_t load_addr, Target *target, AddressCl
 bool
 Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, DumpStyle fallback_style, uint32_t addr_size) const
 {
-    // If the section was NULL, only load address is going to work unless we are
+    // If the section was nullptr, only load address is going to work unless we are
     // trying to deref a pointer
     SectionSP section_sp (GetSection());
     if (!section_sp && style != DumpStyleResolvedPointerDescription)
@@ -545,59 +548,55 @@ Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, Dum
                     break;
 
                 case eSectionTypeDataCStringPointers:
+                    if (ReadAddress(exe_scope, *this, pointer_size, so_addr))
                     {
-                        if (ReadAddress (exe_scope, *this, pointer_size, so_addr))
-                        {
 #if VERBOSE_OUTPUT
-                            s->PutCString("(char *)");
-                            so_addr.Dump(s, exe_scope, DumpStyleLoadAddress, DumpStyleFileAddress);
-                            s->PutCString(": ");
+                        s->PutCString("(char *)");
+                        so_addr.Dump(s, exe_scope, DumpStyleLoadAddress, DumpStyleFileAddress);
+                        s->PutCString(": ");
 #endif
-                            showed_info = true;
-                            ReadCStringFromMemory (exe_scope, so_addr, s);
-                        }
+                        showed_info = true;
+                        ReadCStringFromMemory(exe_scope, so_addr, s);
                     }
                     break;
 
                 case eSectionTypeDataObjCMessageRefs:
+                    if (ReadAddress(exe_scope, *this, pointer_size, so_addr))
                     {
-                        if (ReadAddress (exe_scope, *this, pointer_size, so_addr))
+                        if (target && so_addr.IsSectionOffset())
                         {
-                            if (target && so_addr.IsSectionOffset())
+                            SymbolContext func_sc;
+                            target->GetImages().ResolveSymbolContextForAddress(so_addr,
+                                                                               eSymbolContextEverything,
+                                                                               func_sc);
+                            if (func_sc.function != nullptr || func_sc.symbol != nullptr)
                             {
-                                SymbolContext func_sc;
-                                target->GetImages().ResolveSymbolContextForAddress (so_addr,
-                                                                                             eSymbolContextEverything,
-                                                                                             func_sc);
-                                if (func_sc.function || func_sc.symbol)
+                                showed_info = true;
+#if VERBOSE_OUTPUT
+                                s->PutCString ("(objc_msgref *) -> { (func*)");
+                                so_addr.Dump(s, exe_scope, DumpStyleLoadAddress, DumpStyleFileAddress);
+#else
+                                s->PutCString ("{ ");
+#endif
+                                Address cstr_addr(*this);
+                                cstr_addr.SetOffset(cstr_addr.GetOffset() + pointer_size);
+                                func_sc.DumpStopContext(s, exe_scope, so_addr, true, true, false, true, true);
+                                if (ReadAddress(exe_scope, cstr_addr, pointer_size, so_addr))
                                 {
-                                    showed_info = true;
 #if VERBOSE_OUTPUT
-                                    s->PutCString ("(objc_msgref *) -> { (func*)");
+                                    s->PutCString("), (char *)");
                                     so_addr.Dump(s, exe_scope, DumpStyleLoadAddress, DumpStyleFileAddress);
+                                    s->PutCString(" (");
 #else
-                                    s->PutCString ("{ ");
+                                    s->PutCString(", ");
 #endif
-                                    Address cstr_addr(*this);
-                                    cstr_addr.SetOffset(cstr_addr.GetOffset() + pointer_size);
-                                    func_sc.DumpStopContext(s, exe_scope, so_addr, true, true, false, true, true);
-                                    if (ReadAddress (exe_scope, cstr_addr, pointer_size, so_addr))
-                                    {
-#if VERBOSE_OUTPUT
-                                        s->PutCString("), (char *)");
-                                        so_addr.Dump(s, exe_scope, DumpStyleLoadAddress, DumpStyleFileAddress);
-                                        s->PutCString(" (");
-#else
-                                        s->PutCString(", ");
-#endif
-                                        ReadCStringFromMemory (exe_scope, so_addr, s);
-                                    }
-#if VERBOSE_OUTPUT
-                                    s->PutCString(") }");
-#else
-                                    s->PutCString(" }");
-#endif
+                                    ReadCStringFromMemory (exe_scope, so_addr, s);
                                 }
+#if VERBOSE_OUTPUT
+                                s->PutCString(") }");
+#else
+                                s->PutCString(" }");
+#endif
                             }
                         }
                     }
@@ -645,26 +644,24 @@ Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, Dum
 
                 case eSectionTypeDataPointers:
                     // Read the pointer data and display it
+                    if (ReadAddress(exe_scope, *this, pointer_size, so_addr))
                     {
-                        if (ReadAddress (exe_scope, *this, pointer_size, so_addr))
-                        {
-                            s->PutCString ("(void *)");
-                            so_addr.Dump(s, exe_scope, DumpStyleLoadAddress, DumpStyleFileAddress);
+                        s->PutCString ("(void *)");
+                        so_addr.Dump(s, exe_scope, DumpStyleLoadAddress, DumpStyleFileAddress);
 
-                            showed_info = true;
-                            if (so_addr.IsSectionOffset())
+                        showed_info = true;
+                        if (so_addr.IsSectionOffset())
+                        {
+                            SymbolContext pointer_sc;
+                            if (target)
                             {
-                                SymbolContext pointer_sc;
-                                if (target)
+                                target->GetImages().ResolveSymbolContextForAddress(so_addr,
+                                                                                   eSymbolContextEverything,
+                                                                                   pointer_sc);
+                                if (pointer_sc.function != nullptr || pointer_sc.symbol != nullptr)
                                 {
-                                    target->GetImages().ResolveSymbolContextForAddress (so_addr,
-                                                                                                 eSymbolContextEverything,
-                                                                                                 pointer_sc);
-                                    if (pointer_sc.function || pointer_sc.symbol)
-                                    {
-                                        s->PutCString(": ");
-                                        pointer_sc.DumpStopContext(s, exe_scope, so_addr, true, false, false, true, true);
-                                    }
+                                    s->PutCString(": ");
+                                    pointer_sc.DumpStopContext(s, exe_scope, so_addr, true, false, false, true, true);
                                 }
                             }
                         }
@@ -690,7 +687,7 @@ Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, Dum
                         const bool show_inlined_frames = true;
                         const bool show_function_arguments = (style != DumpStyleResolvedDescriptionNoFunctionArguments);
                         const bool show_function_name = (style != DumpStyleNoFunctionName);
-                        if (sc.function == NULL && sc.symbol != NULL)
+                        if (sc.function == nullptr && sc.symbol != nullptr)
                         {
                             // If we have just a symbol make sure it is in the right section
                             if (sc.symbol->ValueIsAddress())
@@ -749,7 +746,7 @@ Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, Dum
                     // the last symbol that came before the address that we are 
                     // looking up that has nothing to do with our address lookup.
                     if (sc.symbol->ValueIsAddress() && sc.symbol->GetAddressRef().GetSection() != GetSection())
-                        sc.symbol = NULL;
+                        sc.symbol = nullptr;
                 }
                 sc.GetDescription(s, eDescriptionLevelBrief, target);
                 
@@ -797,6 +794,7 @@ Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, Dum
             return false;
         }
         break;
+
     case DumpStyleResolvedPointerDescription:
         {
             Process *process = exe_ctx.GetProcessPtr();
@@ -897,7 +895,7 @@ Address::CalculateSymbolContextCompileUnit () const
             return sc.comp_unit;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 Function *
@@ -914,7 +912,7 @@ Address::CalculateSymbolContextFunction () const
             return sc.function;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 Block *
@@ -931,7 +929,7 @@ Address::CalculateSymbolContextBlock () const
             return sc.block;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 Symbol *
@@ -948,7 +946,7 @@ Address::CalculateSymbolContextSymbol () const
             return sc.symbol;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 bool
@@ -985,11 +983,10 @@ Address::CompareFileAddress (const Address& a, const Address& b)
     return 0;
 }
 
-
 int
 Address::CompareLoadAddress (const Address& a, const Address& b, Target *target)
 {
-    assert (target != NULL);
+    assert(target != nullptr);
     addr_t a_load_addr = a.GetLoadAddress (target);
     addr_t b_load_addr = b.GetLoadAddress (target);
     if (a_load_addr < b_load_addr)
@@ -1021,7 +1018,6 @@ Address::CompareModulePointerAndOffset (const Address& a, const Address& b)
     return 0;
 }
 
-
 size_t
 Address::MemorySize () const
 {
@@ -1029,7 +1025,6 @@ Address::MemorySize () const
     // it is just the size of itself.
     return sizeof(Address);
 }
-
 
 //----------------------------------------------------------------------
 // NOTE: Be careful using this operator. It can correctly compare two 
@@ -1086,7 +1081,6 @@ lldb_private::operator> (const Address& lhs, const Address& rhs)
     }
 }
 
-
 // The operator == checks for exact equality only (same section, same offset)
 bool
 lldb_private::operator== (const Address& a, const Address& rhs)
@@ -1094,6 +1088,7 @@ lldb_private::operator== (const Address& a, const Address& rhs)
     return  a.GetOffset()  == rhs.GetOffset() &&
             a.GetSection() == rhs.GetSection();
 }
+
 // The operator != checks for exact inequality only (differing section, or
 // different offset)
 bool
@@ -1129,4 +1124,3 @@ Address::SetLoadAddress (lldb::addr_t load_addr, Target *target)
     m_offset = load_addr;
     return false;
 }
-
