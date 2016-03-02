@@ -36,25 +36,25 @@ Non-comprehensive list of changes in this release
   the `developer documentation <DeveloperPolicy.html#c-api-changes>`_ for more
   information.
 
-* The C API function LLVMLinkModules is deprecated. It will be removed in the
-  3.9 release. Please migrate to LLVMLinkModules2. Unlike the old function the
+* The C API function ``LLVMLinkModules`` is deprecated. It will be removed in the
+  3.9 release. Please migrate to ``LLVMLinkModules2``. Unlike the old function the
   new one
 
    * Doesn't take an unused parameter.
    * Destroys the source instead of only damaging it.
    * Does not record a message. Use the diagnostic handler instead.
 
-* The C API functions LLVMParseBitcode, LLVMParseBitcodeInContext,
-  LLVMGetBitcodeModuleInContext and LLVMGetBitcodeModule have been deprecated.
+* The C API functions ``LLVMParseBitcode``, ``LLVMParseBitcodeInContext``,
+  ``LLVMGetBitcodeModuleInContext`` and ``LLVMGetBitcodeModule`` have been deprecated.
   They will be removed in 3.9. Please migrate to the versions with a 2 suffix.
   Unlike the old ones the new ones do not record a diagnostic message. Use
   the diagnostic handler instead.
 
-* The deprecated C APIs LLVMGetBitcodeModuleProviderInContext and
-  LLVMGetBitcodeModuleProvider have been removed.
+* The deprecated C APIs ``LLVMGetBitcodeModuleProviderInContext`` and
+  ``LLVMGetBitcodeModuleProvider`` have been removed.
 
-* The deprecated C APIs LLVMCreateExecutionEngine, LLVMCreateInterpreter,
-  LLVMCreateJITCompiler, LLVMAddModuleProvider and LLVMRemoveModuleProvider
+* The deprecated C APIs ``LLVMCreateExecutionEngine``, ``LLVMCreateInterpreter``,
+  ``LLVMCreateJITCompiler``, ``LLVMAddModuleProvider`` and ``LLVMRemoveModuleProvider``
   have been removed.
 
 * With this release, the C API headers have been reorganized to improve build
@@ -63,21 +63,21 @@ Non-comprehensive list of changes in this release
   Core.h so nothing should change for projects directly including the headers,
   but transitive dependencies may be affected.
 
-* llvm-ar now suports thin archives.
+* llvm-ar now supports thin archives.
 
-* llvm doesn't produce .data.rel.ro.local or .data.rel sections anymore.
+* llvm doesn't produce ``.data.rel.ro.local`` or ``.data.rel`` sections anymore.
 
-* aliases to available_externally globals are now rejected by the verifier.
+* Aliases to ``available_externally`` globals are now rejected by the verifier.
 
-* the IR Linker has been split into IRMover that moves bits from one module to
+* The IR Linker has been split into ``IRMover`` that moves bits from one module to
   another and Linker proper that decides what to link.
 
 * Support for dematerializing has been dropped.
 
-* RegisterScheduler::setDefault was removed. Targets that used to call into the
-  command line parser to set the DAGScheduler, and that don't have enough
-  control with setSchedulingPreference, should look into overriding the
-  SubTargetHook "getDAGScheduler()".
+* ``RegisterScheduler::setDefault`` was removed. Targets that used to call into the
+  command line parser to set the ``DAGScheduler``, and that don't have enough
+  control with ``setSchedulingPreference``, should look into overriding the
+  ``SubTargetHook`` "``getDAGScheduler()``".
 
 * ``ilist_iterator<T>`` no longer has implicit conversions to and from ``T*``,
   since ``ilist_iterator<T>`` may be pointing at the sentinel (which is usually
@@ -89,7 +89,7 @@ Non-comprehensive list of changes in this release
 * ``ilist_node<T>::getNextNode()`` and ``ilist_node<T>::getPrevNode()`` now
   fail at compile time when the node cannot access its parent list.
   Previously, when the sentinel was was an ``ilist_half_node<T>``, this API
-  could return the sentinal instead of ``nullptr``.  Frustrated callers should
+  could return the sentinel instead of ``nullptr``.  Frustrated callers should
   be updated to use ``iplist<T>::getNextNode(T*)`` instead.  Alternatively, if
   the node ``N`` is guaranteed not to be the last in the list, it is safe to
   call ``&*++N->getIterator()`` directly.
@@ -111,31 +111,12 @@ Non-comprehensive list of changes in this release
   variables are converted to calls to ``__emutls_get_address`` in the runtime
   library.
 
-* MSVC compatible exception handling has been completely overhauled. New
+* MSVC-compatible exception handling has been completely overhauled. New
   instructions have been introduced to facilitate this:
   `New exception handling instructions <ExceptionHandling.html#new-exception-handling-instructions>`_. 
   While we have done our best to test this feature thoroughly, it would
   not be completely surprising if there were a few lingering issues that
   early adopters might bump into.
-
-.. NOTE
-   For small 1-3 sentence descriptions, just add an entry at the end of
-   this list. If your description won't fit comfortably in one bullet
-   point (e.g. maybe you would like to give an example of the
-   functionality, or simply have a lot to talk about), see the `NOTE` below
-   for adding a new subsection.
-
-* ... next change ...
-
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
 
 
 Changes to the ARM Backends
@@ -165,7 +146,7 @@ During this release the ARM target has:
 * Gained some additional code size improvements, though there's still a long road
   ahead, especially for older cores.
 * Added some EABI floating point comparison functions to Compiler-RT
-* Added support for Windows+GNU triple, +features in -mcpu/-march options.
+* Added support for Windows+GNU triple, ``+features`` in ``-mcpu``/``-march`` options.
 
 
 Changes to the MIPS Target
@@ -182,10 +163,10 @@ During this release the MIPS target has:
 * Added support for the ``ERETNC`` instruction found in MIPS32R5 and later.
 * Added support for OpenCL. See http://portablecl.org/.
 
-  * Address spaces 1 to 255 are now reserved for software use and conversions
-    between them are no-op casts.
+* Address spaces 1 to 255 are now reserved for software use and conversions
+  between them are no-op casts.
 
-* Removed the ``mips16`` value for the -mcpu option since it is an :abbr:`ASE
+* Removed the ``mips16`` value for the ``-mcpu`` option since it is an :abbr:`ASE
   (Application Specific Extension)` and not a processor. If you were using this,
   please specify another CPU and use ``-mips16`` to enable MIPS16.
 * Removed ``copy_u.w`` from 32-bit MSA and ``copy_u.d`` from 64-bit MSA since
@@ -217,8 +198,6 @@ fixes:
 * Added support for atomic load and atomic store.
 * Corrected debug info when dynamically re-aligning the stack.
 
-Integrated Assembler
-^^^^^^^^^^^^^^^^^^^^
 We have made a large number of improvements to the integrated assembler for
 MIPS. In this release, the integrated assembler isn't quite production-ready
 since there are a few known issues related to bare-metal support, checking
@@ -240,10 +219,10 @@ There are numerous improvements to the PowerPC target in this release:
 
 * Thread Sanitizer (TSAN) is now supported for PowerPC
 
-* New MI peephole pass to clean up redundand XXPERMDI instructions  
+* New MI peephole pass to clean up redundant XXPERMDI instructions  
 
 * Add branch hints to highly biased branch instructions (code reaching
-  unreachable terminators and exceptional control flow consructs)
+  unreachable terminators and exceptional control flow constructs)
 
 * Promote boolean return values to integer to prevent excessive usage of
   condition registers
@@ -256,8 +235,6 @@ There are numerous improvements to the PowerPC target in this release:
 
 Changes to the X86 Target
 -----------------------------
-
- During this release ...
 
 * TLS is enabled for Cygwin as emutls.
 
@@ -285,8 +262,6 @@ road to being completely merged and workable.
 
 Changes to the OCaml bindings
 -----------------------------
-
- During this release ...
 
 * The ocaml function link_modules has been replaced with link_modules' which
   uses LLVMLinkModules2.
@@ -326,4 +301,3 @@ going into the ``llvm/docs/`` directory in the LLVM tree.
 
 If you have any questions or comments about LLVM, please feel free to contact
 us via the `mailing lists <http://llvm.org/docs/#maillist>`_.
-
