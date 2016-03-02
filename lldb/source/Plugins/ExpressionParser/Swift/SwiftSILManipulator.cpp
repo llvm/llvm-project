@@ -58,16 +58,16 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(swift::VarDecl *var,
     if (!struct_argument)
         return swift::SILValue();
         
-    assert (struct_argument->getType().getAsString().find("$COpaquePointer") != std::string::npos);
+    assert (struct_argument->getType().getAsString().find("UnsafeMutablePointer") != std::string::npos);
     
-    swift::CanType c_opaque_pointer_can_type = struct_argument->getType().getSwiftType();
+    swift::CanType unsafe_mutable_pointer_can_type = struct_argument->getType().getSwiftType();
     
-    swift::StructType *c_opaque_pointer_struct_type = llvm::cast<swift::StructType>(c_opaque_pointer_can_type.getPointer());
-    swift::StructDecl *c_opaque_pointer_struct_decl = c_opaque_pointer_struct_type->getDecl();
+    swift::BoundGenericStructType *unsafe_mutable_pointer_struct_type = llvm::cast<swift::BoundGenericStructType>(unsafe_mutable_pointer_can_type.getPointer());
+    swift::StructDecl *unsafe_mutable_pointer_struct_decl = unsafe_mutable_pointer_struct_type->getDecl();
     
     swift::VarDecl *value_member_decl = nullptr;
     
-    for (swift::Decl *member : c_opaque_pointer_struct_decl->getMembers())
+    for (swift::Decl *member : unsafe_mutable_pointer_struct_decl->getMembers())
     {
         if (swift::VarDecl *member_var = llvm::dyn_cast<swift::VarDecl>(member))
         {
