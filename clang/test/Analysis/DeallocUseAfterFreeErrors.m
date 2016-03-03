@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,alpha.osx.cocoa.SuperDealloc,debug.ExprInspection -analyzer-output=text -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=core,osx.cocoa.SuperDealloc,debug.ExprInspection -analyzer-output=text -verify %s
 
 void clang_analyzer_warnIfReached();
 
