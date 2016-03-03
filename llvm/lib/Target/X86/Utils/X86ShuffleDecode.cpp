@@ -314,9 +314,9 @@ void DecodePSHUFBMask(ArrayRef<uint64_t> RawMask,
       ShuffleMask.push_back(M);
       continue;
     }
-    // For AVX vectors with 32 bytes the base of the shuffle is the half of
-    // the vector we're inside.
-    int Base = i < 16 ? 0 : 16;
+    // For 256/512-bit vectors the base of the shuffle is the 128-bit
+    // subvector we're inside.
+    int Base = (i / 16) * 16;
     // If the high bit (7) of the byte is set, the element is zeroed.
     if (M & (1 << 7))
       ShuffleMask.push_back(SM_SentinelZero);

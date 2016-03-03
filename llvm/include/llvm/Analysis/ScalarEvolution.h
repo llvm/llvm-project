@@ -900,6 +900,9 @@ namespace llvm {
     bool proveNoWrapByVaryingStart(const SCEV *Start, const SCEV *Step,
                                    const Loop *L);
 
+    /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
+    SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
+
     bool isMonotonicPredicateImpl(const SCEVAddRecExpr *LHS,
                                   ICmpInst::Predicate Pred, bool &Increasing);
 

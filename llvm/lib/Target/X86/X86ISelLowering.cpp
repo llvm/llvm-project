@@ -3976,6 +3976,7 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERM2X128:
   case X86ISD::VPERMI:
   case X86ISD::VPERMV:
@@ -4936,14 +4937,20 @@ static const Constant *getTargetShuffleMaskConstant(SDValue MaskNode) {
 }
 
 /// Calculates the shuffle mask corresponding to the target-specific opcode.
-/// Returns true if the Mask could be calculated. Sets IsUnary to true if only
-/// uses one source. Note that this will set IsUnary for shuffles which use a
-/// single input multiple times, and in those cases it will
-/// adjust the mask to only have indices within that single input.
+/// If the mask could be calculated, returns it in \p Mask, returns the shuffle
+/// operands in \p Ops, and returns true.
+/// Sets \p IsUnary to true if only one source is used. Note that this will set
+/// IsUnary for shuffles which use a single input multiple times, and in those
+/// cases it will adjust the mask to only have indices within that single input.
+/// It is an error to call this with non-empty Mask/Ops vectors.
 static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
+                                 SmallVectorImpl<SDValue> &Ops,
                                  SmallVectorImpl<int> &Mask, bool &IsUnary) {
   unsigned NumElems = VT.getVectorNumElements();
   SDValue ImmN;
+
+  assert(Mask.empty() && "getTargetShuffleMask expects an empty Mask vector");
+  assert(Ops.empty() && "getTargetShuffleMask expects an empty Ops vector");
 
   IsUnary = false;
   bool IsFakeUnary = false;
@@ -5002,6 +5009,16 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     DecodeZeroMoveLowMask(VT, Mask);
     IsUnary = true;
     break;
+  case X86ISD::VPERMILPV: {
+    IsUnary = true;
+    SDValue MaskNode = N->getOperand(1);
+    if (auto *C = getTargetShuffleMaskConstant(MaskNode)) {
+      unsigned MaskEltSize = VT.getScalarSizeInBits();
+      DecodeVPERMILPMask(C, MaskEltSize, Mask);
+      break;
+    }
+    return false;
+  }
   case X86ISD::PSHUFB: {
     IsUnary = true;
     SDValue MaskNode = N->getOperand(1);
@@ -5049,6 +5066,8 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
   case X86ISD::VPERMV: {
     IsUnary = true;
+    // Unlike most shuffle nodes, VPERMV's mask operand is operand 0.
+    Ops.push_back(N->getOperand(1));
     SDValue MaskNode = N->getOperand(0);
     SmallVector<uint64_t, 32> RawMask;
     unsigned MaskLoBits = Log2_64(VT.getVectorNumElements());
@@ -5063,8 +5082,10 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     return false;
   }
   case X86ISD::VPERMV3: {
+    // Unlike most shuffle nodes, VPERMV3's mask operand is the middle one.
+    Ops.push_back(N->getOperand(0));
+    Ops.push_back(N->getOperand(2));
     SDValue MaskNode = N->getOperand(1);
-
     SmallVector<uint64_t, 32> RawMask;
     unsigned MaskLoBits = Log2_64(VT.getVectorNumElements() * 2);
     if (getTargetShuffleMaskIndices(MaskNode, MaskLoBits, RawMask)) {
@@ -5098,6 +5119,14 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
       if (M >= (int)Mask.size())
         M -= Mask.size();
 
+  // If we didn't already add operands in the opcode-specific code, default to
+  // adding 1 or 2 operands starting at 0.
+  if (Ops.empty()) {
+    Ops.push_back(N->getOperand(0));
+    if (!IsUnary || IsFakeUnary)
+      Ops.push_back(N->getOperand(1));
+  }
+
   return true;
 }
 
@@ -5106,16 +5135,17 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
 /// (not just zeroable) from their inputs.
 /// Returns true if the target shuffle mask was decoded.
 static bool setTargetShuffleZeroElements(SDValue N,
-                                         SmallVectorImpl<int> &Mask) {
+                                         SmallVectorImpl<int> &Mask,
+                                         SmallVectorImpl<SDValue> &Ops) {
   bool IsUnary;
   if (!isTargetShuffle(N.getOpcode()))
     return false;
-  if (!getTargetShuffleMask(N.getNode(), N.getSimpleValueType(), true, Mask,
-                            IsUnary))
+  if (!getTargetShuffleMask(N.getNode(), N.getSimpleValueType(), true, Ops,
+                            Mask, IsUnary))
     return false;
 
-  SDValue V1 = N.getOperand(0);
-  SDValue V2 = IsUnary ? V1 : N.getOperand(1);
+  SDValue V1 = Ops[0];
+  SDValue V2 = IsUnary ? V1 : Ops[1];
 
   while (V1.getOpcode() == ISD::BITCAST)
     V1 = V1->getOperand(0);
@@ -5186,7 +5216,8 @@ static bool setTargetShuffleZeroElements(SDValue N,
 static bool resolveTargetShuffleInputs(SDValue Op, bool &IsUnary, SDValue &Op0,
                                        SDValue &Op1,
                                        SmallVectorImpl<int> &Mask) {
-  if (!setTargetShuffleZeroElements(Op, Mask))
+  SmallVector<SDValue, 2> Ops;
+  if (!setTargetShuffleZeroElements(Op, Mask, Ops))
     return false;
 
   int NumElts = Mask.size();
@@ -5196,8 +5227,8 @@ static bool resolveTargetShuffleInputs(SDValue Op, bool &IsUnary, SDValue &Op0,
   bool Op1InUse = std::any_of(Mask.begin(), Mask.end(),
                               [NumElts](int Idx) { return NumElts <= Idx; });
 
-  Op0 = Op0InUse ? Op.getOperand(0) : SDValue();
-  Op1 = Op1InUse ? Op.getOperand(1) : SDValue();
+  Op0 = Op0InUse ? Ops[0] : SDValue();
+  Op1 = Op1InUse ? Ops[1] : SDValue();
   IsUnary = !(Op0InUse && Op1InUse);
 
   if (!IsUnary)
@@ -5245,9 +5276,10 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
     MVT ShufSVT = ShufVT.getVectorElementType();
     int NumElems = (int)ShufVT.getVectorNumElements();
     SmallVector<int, 16> ShuffleMask;
+    SmallVector<SDValue, 16> ShuffleOps;
     bool IsUnary;
 
-    if (!getTargetShuffleMask(N, ShufVT, true, ShuffleMask, IsUnary))
+    if (!getTargetShuffleMask(N, ShufVT, true, ShuffleOps, ShuffleMask, IsUnary))
       return SDValue();
 
     int Elt = ShuffleMask[Index];
@@ -5258,7 +5290,7 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
       return DAG.getUNDEF(ShufSVT);
 
     assert(0 <= Elt && Elt < (2*NumElems) && "Shuffle index out of range");
-    SDValue NewV = (Elt < NumElems) ? N->getOperand(0) : N->getOperand(1);
+    SDValue NewV = (Elt < NumElems) ? ShuffleOps[0] : ShuffleOps[1];
     return getShuffleScalarElt(NewV.getNode(), Elt % NumElems, DAG,
                                Depth+1);
   }
@@ -19335,6 +19367,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(Op);
   SDValue R = Op.getOperand(0);
   SDValue Amt = Op.getOperand(1);
+  bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
 
   assert(VT.isVector() && "Custom lowering only for vector shifts!");
   assert(Subtarget.hasSSE2() && "Only custom lower when we have SSE2!");
@@ -19390,10 +19423,9 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   // If possible, lower this packed shift into a vector multiply instead of
   // expanding it into a sequence of scalar shifts.
   // Do this only if the vector shift count is a constant build_vector.
-  if (Op.getOpcode() == ISD::SHL &&
+  if (ConstantAmt && Op.getOpcode() == ISD::SHL &&
       (VT == MVT::v8i16 || VT == MVT::v4i32 ||
-       (Subtarget.hasInt256() && VT == MVT::v16i16)) &&
-      ISD::isBuildVectorOfConstantSDNodes(Amt.getNode())) {
+       (Subtarget.hasInt256() && VT == MVT::v16i16))) {
     SmallVector<SDValue, 8> Elts;
     MVT SVT = VT.getVectorElementType();
     unsigned SVTBits = SVT.getSizeInBits();
@@ -19443,15 +19475,13 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   // lowered as X86ISD::VSRLI nodes. This would be cheaper than scalarizing
   // the vector shift into four scalar shifts plus four pairs of vector
   // insert/extract.
-  if ((VT == MVT::v8i16 || VT == MVT::v4i32) &&
-      ISD::isBuildVectorOfConstantSDNodes(Amt.getNode())) {
+  if (ConstantAmt && (VT == MVT::v8i16 || VT == MVT::v4i32)) {
     unsigned TargetOpcode = X86ISD::MOVSS;
     bool CanBeSimplified;
     // The splat value for the first packed shift (the 'X' from the example).
     SDValue Amt1 = Amt->getOperand(0);
     // The splat value for the second packed shift (the 'Y' from the example).
-    SDValue Amt2 = (VT == MVT::v4i32) ? Amt->getOperand(1) :
-                                        Amt->getOperand(2);
+    SDValue Amt2 = (VT == MVT::v4i32) ? Amt->getOperand(1) : Amt->getOperand(2);
 
     // See if it is possible to replace this node with a sequence of
     // two shifts followed by a MOVSS/MOVSD
@@ -19512,7 +19542,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   if (VT == MVT::v4i32) {
     unsigned Opc = Op.getOpcode();
     SDValue Amt0, Amt1, Amt2, Amt3;
-    if (ISD::isBuildVectorOfConstantSDNodes(Amt.getNode())) {
+    if (ConstantAmt) {
       Amt0 = DAG.getVectorShuffle(VT, dl, Amt, DAG.getUNDEF(VT), {0, 0, 0, 0});
       Amt1 = DAG.getVectorShuffle(VT, dl, Amt, DAG.getUNDEF(VT), {1, 1, 1, 1});
       Amt2 = DAG.getVectorShuffle(VT, dl, Amt, DAG.getUNDEF(VT), {2, 2, 2, 2});
@@ -19762,20 +19792,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     SDValue V2 = Extract128BitVector(R, NumElems/2, DAG, dl);
 
     // Recreate the shift amount vectors
-    SDValue Amt1, Amt2;
-    if (Amt.getOpcode() == ISD::BUILD_VECTOR) {
-      // Constant shift amount
-      SmallVector<SDValue, 8> Ops(Amt->op_begin(), Amt->op_begin() + NumElems);
-      ArrayRef<SDValue> Amt1Csts = makeArrayRef(Ops).slice(0, NumElems / 2);
-      ArrayRef<SDValue> Amt2Csts = makeArrayRef(Ops).slice(NumElems / 2);
-
-      Amt1 = DAG.getNode(ISD::BUILD_VECTOR, dl, NewVT, Amt1Csts);
-      Amt2 = DAG.getNode(ISD::BUILD_VECTOR, dl, NewVT, Amt2Csts);
-    } else {
-      // Variable shift amount
-      Amt1 = Extract128BitVector(Amt, 0, DAG, dl);
-      Amt2 = Extract128BitVector(Amt, NumElems/2, DAG, dl);
-    }
+    SDValue Amt1 = Extract128BitVector(Amt, 0, DAG, dl);
+    SDValue Amt2 = Extract128BitVector(Amt, NumElems/2, DAG, dl);
 
     // Issue new vector shifts for the smaller types
     V1 = DAG.getNode(Op.getOpcode(), dl, NewVT, V1, Amt1);
@@ -24044,8 +24062,10 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
 static SmallVector<int, 4> getPSHUFShuffleMask(SDValue N) {
   MVT VT = N.getSimpleValueType();
   SmallVector<int, 4> Mask;
+  SmallVector<SDValue, 2> Ops;
   bool IsUnary;
-  bool HaveMask = getTargetShuffleMask(N.getNode(), VT, false, Mask, IsUnary);
+  bool HaveMask =
+      getTargetShuffleMask(N.getNode(), VT, false, Ops, Mask, IsUnary);
   (void)HaveMask;
   assert(HaveMask);
 
@@ -24360,7 +24380,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
 
       // Determine which elements are known to be zero.
       SmallVector<int, 8> TargetMask;
-      if (!setTargetShuffleZeroElements(N, TargetMask))
+      SmallVector<SDValue, 2> BlendOps;
+      if (!setTargetShuffleZeroElements(N, TargetMask, BlendOps))
         return SDValue();
 
       // Helper function to take inner insertps node and attempt to
@@ -24414,7 +24435,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
 
     // Attempt to merge insertps Op1 with an inner target shuffle node.
     SmallVector<int, 8> TargetMask1;
-    if (setTargetShuffleZeroElements(Op1, TargetMask1)) {
+    SmallVector<SDValue, 2> Ops1;
+    if (setTargetShuffleZeroElements(Op1, TargetMask1, Ops1)) {
       int M = TargetMask1[SrcIdx];
       if (isUndefOrZero(M)) {
         // Zero/UNDEF insertion - zero out element and remove dependency.
@@ -24425,14 +24447,15 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       // Update insertps mask srcidx and reference the source input directly.
       assert(0 <= M && M < 8 && "Shuffle index out of range");
       InsertPSMask = (InsertPSMask & 0x3f) | ((M & 0x3) << 6);
-      Op1 = Op1.getOperand(M < 4 ? 0 : 1);
+      Op1 = Ops1[M < 4 ? 0 : 1];
       return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, Op1,
                          DAG.getConstant(InsertPSMask, DL, MVT::i8));
     }
 
     // Attempt to merge insertps Op0 with an inner target shuffle node.
     SmallVector<int, 8> TargetMask0;
-    if (!setTargetShuffleZeroElements(Op0, TargetMask0))
+    SmallVector<SDValue, 2> Ops0;
+    if (!setTargetShuffleZeroElements(Op0, TargetMask0, Ops0))
       return SDValue();
 
     bool Updated = false;
@@ -24463,10 +24486,10 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     // referenced input directly.
     if (UseInput00 && !UseInput01) {
       Updated = true;
-      Op0 = Op0.getOperand(0);
+      Op0 = Ops0[0];
     } else if (!UseInput00 && UseInput01) {
       Updated = true;
-      Op0 = Op0.getOperand(1);
+      Op0 = Ops0[1];
     }
 
     if (Updated)
@@ -24767,9 +24790,10 @@ static SDValue XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SmallVector<int, 16> ShuffleMask;
+  SmallVector<SDValue, 2> ShuffleOps;
   bool UnaryShuffle;
   if (!getTargetShuffleMask(InVec.getNode(), CurrentVT.getSimpleVT(), true,
-                            ShuffleMask, UnaryShuffle))
+                            ShuffleOps, ShuffleMask, UnaryShuffle))
     return SDValue();
 
   // Select the input vector, guarding against out of range extract vector.
@@ -24784,12 +24808,12 @@ static SDValue XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
     return DAG.getUNDEF(EltVT);
 
   assert(0 <= Idx && Idx < (int)(2 * NumElems) && "Shuffle index out of range");
-  SDValue LdNode = (Idx < (int)NumElems) ? InVec.getOperand(0)
-                                         : InVec.getOperand(1);
+  SDValue LdNode = (Idx < (int)NumElems) ? ShuffleOps[0]
+                                         : ShuffleOps[1];
 
   // If inputs to shuffle are the same for both ops, then allow 2 uses
-  unsigned AllowedUses = InVec.getNumOperands() > 1 &&
-                         InVec.getOperand(0) == InVec.getOperand(1) ? 2 : 1;
+  unsigned AllowedUses =
+      (ShuffleOps.size() > 1 && ShuffleOps[0] == ShuffleOps[1]) ? 2 : 1;
 
   if (LdNode.getOpcode() == ISD::BITCAST) {
     // Don't duplicate a load with other uses.
@@ -24823,10 +24847,9 @@ static SDValue XFormVExtractWithShuffleIntoLoad(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
 
   // Create shuffle node taking into account the case that its a unary shuffle
-  SDValue Shuffle = (UnaryShuffle) ? DAG.getUNDEF(CurrentVT)
-                                   : InVec.getOperand(1);
+  SDValue Shuffle = (UnaryShuffle) ? DAG.getUNDEF(CurrentVT) : ShuffleOps[1];
   Shuffle = DAG.getVectorShuffle(CurrentVT, dl,
-                                 InVec.getOperand(0), Shuffle,
+                                 ShuffleOps[0], Shuffle,
                                  &ShuffleMask[0]);
   Shuffle = DAG.getBitcast(OriginalVT, Shuffle);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, N->getValueType(0), Shuffle,
@@ -29013,6 +29036,21 @@ static SDValue combineLockSub(SDNode *N, SelectionDAG &DAG,
                                  {Chain, LHS, RHS}, VT, MMO);
 }
 
+// TEST (AND a, b) ,(AND a, b) -> TEST a, b
+static SDValue PerformTESTM(SDNode *N, SelectionDAG &DAG) {
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  if (Op0 != Op1 || Op1->getOpcode() != ISD::AND)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  return DAG.getNode(X86ISD::TESTM, DL, VT,
+                     Op0->getOperand(0), Op0->getOperand(1));
+}
+
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -29080,12 +29118,14 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::MOVSS:
   case X86ISD::MOVSD:
   case X86ISD::VPERMILPI:
+  case X86ISD::VPERMILPV:
   case X86ISD::VPERM2X128:
   case ISD::VECTOR_SHUFFLE: return combineShuffle(N, DAG, DCI,Subtarget);
   case ISD::FMA:            return combineFMA(N, DAG, Subtarget);
   case ISD::MGATHER:
   case ISD::MSCATTER:       return combineGatherScatter(N, DAG);
   case X86ISD::LSUB:        return combineLockSub(N, DAG, Subtarget);
+  case X86ISD::TESTM:       return PerformTESTM(N, DAG);
   }
 
   return SDValue();

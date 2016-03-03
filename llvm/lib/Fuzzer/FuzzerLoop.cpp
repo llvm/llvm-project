@@ -130,7 +130,7 @@ void Fuzzer::CrashCallback() {
 void Fuzzer::InterruptCallback() {
   Printf("==%d== libFuzzer: run interrupted; exiting\n", GetPid());
   PrintFinalStats();
-  exit(0);
+  _Exit(0);  // Stop right now, don't perform any at-exit actions.
 }
 
 void Fuzzer::AlarmCallback() {

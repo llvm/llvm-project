@@ -262,18 +262,15 @@ RTDyldMemoryManager::getSymbolAddressInProcess(const std::string &Name) {
   // is called before ExecutionEngine::runFunctionAsMain() is called.
   if (Name == "__main") return (uint64_t)&jit_noop;
 
-  // Try to demangle Name before looking it up in the process, otherwise symbol
-  // '_<Name>' (if present) will shadow '<Name>', and there will be no way to
-  // refer to the latter.
-
   const char *NameStr = Name.c_str();
 
+  // DynamicLibrary::SearchForAddresOfSymbol expects an unmangled 'C' symbol
+  // name so ff we're on Darwin, strip the leading '_' off.
+#ifdef __APPLE__
   if (NameStr[0] == '_')
-    if (void *Ptr = sys::DynamicLibrary::SearchForAddressOfSymbol(NameStr + 1))
-      return (uint64_t)Ptr;
+    ++NameStr;
+#endif
 
-  // If we Name did not require demangling, or we failed to find the demangled
-  // name, try again without demangling.
   return (uint64_t)sys::DynamicLibrary::SearchForAddressOfSymbol(NameStr);
 }
 
@@ -284,6 +281,7 @@ void *RTDyldMemoryManager::getPointerToNamedFunction(const std::string &Name,
   if (!Addr && AbortOnFailure)
     report_fatal_error("Program used external function '" + Name +
                        "' which could not be resolved!");
+
   return (void*)Addr;
 }
 

@@ -47,8 +47,8 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include <cctype>
 
 using namespace llvm;
@@ -285,7 +285,6 @@ bool callsiteIsHot(const FunctionSamples *CallerFS,
       (double)CallsiteTotalSamples / (double)ParentTotalSamples * 100.0;
   return PercentSamples >= SampleProfileHotThreshold;
 }
-
 }
 
 /// Mark as used the sample record for the given function samples at
@@ -549,19 +548,12 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallInst &Inst) const {
   if (!SP)
     return nullptr;
 
-  Function *CalleeFunc = Inst.getCalledFunction();
-  if (!CalleeFunc) {
-    return nullptr;
-  }
-
-  StringRef CalleeName = CalleeFunc->getName();
   const FunctionSamples *FS = findFunctionSamples(Inst);
   if (FS == nullptr)
     return nullptr;
 
-  return FS->findFunctionSamplesAt(
-      CallsiteLocation(getOffset(DIL->getLine(), SP->getLine()),
-                       DIL->getDiscriminator(), CalleeName));
+  return FS->findFunctionSamplesAt(LineLocation(
+      getOffset(DIL->getLine(), SP->getLine()), DIL->getDiscriminator()));
 }
 
 /// \brief Get the FunctionSamples for an instruction.
@@ -575,7 +567,7 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallInst &Inst) const {
 /// \returns the FunctionSamples pointer to the inlined instance.
 const FunctionSamples *
 SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
-  SmallVector<CallsiteLocation, 10> S;
+  SmallVector<LineLocation, 10> S;
   const DILocation *DIL = Inst.getDebugLoc();
   if (!DIL) {
     return Samples;
@@ -587,8 +579,8 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
     if (!SP)
       return nullptr;
     if (!CalleeName.empty()) {
-      S.push_back(CallsiteLocation(getOffset(DIL->getLine(), SP->getLine()),
-                                   DIL->getDiscriminator(), CalleeName));
+      S.push_back(LineLocation(getOffset(DIL->getLine(), SP->getLine()),
+                               DIL->getDiscriminator()));
     }
     CalleeName = SP->getLinkageName();
   }

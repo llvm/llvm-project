@@ -45,33 +45,10 @@ using namespace llvm::PatternMatch;
 
 const unsigned MaxDepth = 6;
 
-/// Enable an experimental feature to leverage information about dominating
-/// conditions to compute known bits.  The individual options below control how
-/// hard we search.  The defaults are chosen to be fairly aggressive.  If you
-/// run into compile time problems when testing, scale them back and report
-/// your findings.
-static cl::opt<bool> EnableDomConditions("value-tracking-dom-conditions",
-                                         cl::Hidden, cl::init(false));
-
-// This is expensive, so we only do it for the top level query value.
-// (TODO: evaluate cost vs profit, consider higher thresholds)
-static cl::opt<unsigned> DomConditionsMaxDepth("dom-conditions-max-depth",
-                                               cl::Hidden, cl::init(1));
-
-/// How many dominating blocks should be scanned looking for dominating
-/// conditions?
-static cl::opt<unsigned> DomConditionsMaxDomBlocks("dom-conditions-dom-blocks",
-                                                   cl::Hidden,
-                                                   cl::init(20));
-
 // Controls the number of uses of the value searched for possible
 // dominating comparisons.
 static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
                                               cl::Hidden, cl::init(20));
-
-// If true, don't consider only compares whose only use is a branch.
-static cl::opt<bool> DomConditionsSingleCmpUse("dom-conditions-single-cmp-use",
-                                               cl::Hidden, cl::init(false));
 
 /// Returns the bitwidth of the given scalar or pointer type (if unknown returns
 /// 0). For vector types, returns the element type's bitwidth.
@@ -544,187 +521,6 @@ inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Xor>,
                         BinaryOp_match<RHS, LHS, Instruction::Xor>>
 m_c_Xor(const LHS &L, const RHS &R) {
   return m_CombineOr(m_Xor(L, R), m_Xor(R, L));
-}
-
-/// Compute known bits in 'V' under the assumption that the condition 'Cmp' is
-/// true (at the context instruction.)  This is mostly a utility function for
-/// the prototype dominating conditions reasoning below.
-static void computeKnownBitsFromTrueCondition(Value *V, ICmpInst *Cmp,
-                                              APInt &KnownZero,
-                                              APInt &KnownOne,
-                                              unsigned Depth, const Query &Q) {
-  Value *LHS = Cmp->getOperand(0);
-  Value *RHS = Cmp->getOperand(1);
-  // TODO: We could potentially be more aggressive here.  This would be worth
-  // evaluating.  If we can, explore commoning this code with the assume
-  // handling logic.
-  if (LHS != V && RHS != V)
-    return;
-
-  const unsigned BitWidth = KnownZero.getBitWidth();
-
-  switch (Cmp->getPredicate()) {
-  default:
-    // We know nothing from this condition
-    break;
-  // TODO: implement unsigned bound from below (known one bits)
-  // TODO: common condition check implementations with assumes
-  // TODO: implement other patterns from assume (e.g. V & B == A)
-  case ICmpInst::ICMP_SGT:
-    if (LHS == V) {
-      APInt KnownZeroTemp(BitWidth, 0), KnownOneTemp(BitWidth, 0);
-      computeKnownBits(RHS, KnownZeroTemp, KnownOneTemp, Depth + 1, Q);
-      if (KnownOneTemp.isAllOnesValue() || KnownZeroTemp.isNegative()) {
-        // We know that the sign bit is zero.
-        KnownZero |= APInt::getSignBit(BitWidth);
-      }
-    }
-    break;
-  case ICmpInst::ICMP_EQ:
-    {
-      APInt KnownZeroTemp(BitWidth, 0), KnownOneTemp(BitWidth, 0);
-      if (LHS == V)
-        computeKnownBits(RHS, KnownZeroTemp, KnownOneTemp, Depth + 1, Q);
-      else if (RHS == V)
-        computeKnownBits(LHS, KnownZeroTemp, KnownOneTemp, Depth + 1, Q);
-      else
-        llvm_unreachable("missing use?");
-      KnownZero |= KnownZeroTemp;
-      KnownOne |= KnownOneTemp;
-    }
-    break;
-  case ICmpInst::ICMP_ULE:
-    if (LHS == V) {
-      APInt KnownZeroTemp(BitWidth, 0), KnownOneTemp(BitWidth, 0);
-      computeKnownBits(RHS, KnownZeroTemp, KnownOneTemp, Depth + 1, Q);
-      // The known zero bits carry over
-      unsigned SignBits = KnownZeroTemp.countLeadingOnes();
-      KnownZero |= APInt::getHighBitsSet(BitWidth, SignBits);
-    }
-    break;
-  case ICmpInst::ICMP_ULT:
-    if (LHS == V) {
-      APInt KnownZeroTemp(BitWidth, 0), KnownOneTemp(BitWidth, 0);
-      computeKnownBits(RHS, KnownZeroTemp, KnownOneTemp, Depth + 1, Q);
-      // Whatever high bits in rhs are zero are known to be zero (if rhs is a
-      // power of 2, then one more).
-      unsigned SignBits = KnownZeroTemp.countLeadingOnes();
-      if (isKnownToBeAPowerOfTwo(RHS, false, Depth + 1, Query(Q, Cmp)))
-        SignBits++;
-      KnownZero |= APInt::getHighBitsSet(BitWidth, SignBits);
-    }
-    break;
-  };
-}
-
-/// Compute known bits in 'V' from conditions which are known to be true along
-/// all paths leading to the context instruction.  In particular, look for
-/// cases where one branch of an interesting condition dominates the context
-/// instruction.  This does not do general dataflow.
-/// NOTE: This code is EXPERIMENTAL and currently off by default.
-static void computeKnownBitsFromDominatingCondition(Value *V, APInt &KnownZero,
-                                                    APInt &KnownOne,
-                                                    unsigned Depth,
-                                                    const Query &Q) {
-  // Need both the dominator tree and the query location to do anything useful
-  if (!Q.DT || !Q.CxtI)
-    return;
-  Instruction *Cxt = const_cast<Instruction *>(Q.CxtI);
-  // The context instruction might be in a statically unreachable block.  If
-  // so, asking dominator queries may yield suprising results.  (e.g. the block
-  // may not have a dom tree node)
-  if (!Q.DT->isReachableFromEntry(Cxt->getParent()))
-    return;
-
-  // Avoid useless work
-  if (auto VI = dyn_cast<Instruction>(V))
-    if (VI->getParent() == Cxt->getParent())
-      return;
-
-  // Note: We currently implement two options.  It's not clear which of these
-  // will survive long term, we need data for that.
-  // Option 1 - Try walking the dominator tree looking for conditions which
-  // might apply.  This works well for local conditions (loop guards, etc..),
-  // but not as well for things far from the context instruction (presuming a
-  // low max blocks explored).  If we can set an high enough limit, this would
-  // be all we need.
-  // Option 2 - We restrict out search to those conditions which are uses of
-  // the value we're interested in.  This is independent of dom structure,
-  // but is slightly less powerful without looking through lots of use chains.
-  // It does handle conditions far from the context instruction (e.g. early
-  // function exits on entry) really well though.
-
-  // Option 1 - Search the dom tree
-  unsigned NumBlocksExplored = 0;
-  BasicBlock *Current = Cxt->getParent();
-  while (true) {
-    // Stop searching if we've gone too far up the chain
-    if (NumBlocksExplored >= DomConditionsMaxDomBlocks)
-      break;
-    NumBlocksExplored++;
-
-    if (!Q.DT->getNode(Current)->getIDom())
-      break;
-    Current = Q.DT->getNode(Current)->getIDom()->getBlock();
-    if (!Current)
-      // found function entry
-      break;
-
-    BranchInst *BI = dyn_cast<BranchInst>(Current->getTerminator());
-    if (!BI || BI->isUnconditional())
-      continue;
-    ICmpInst *Cmp = dyn_cast<ICmpInst>(BI->getCondition());
-    if (!Cmp)
-      continue;
-
-    // We're looking for conditions that are guaranteed to hold at the context
-    // instruction.  Finding a condition where one path dominates the context
-    // isn't enough because both the true and false cases could merge before
-    // the context instruction we're actually interested in.  Instead, we need
-    // to ensure that the taken *edge* dominates the context instruction.  We
-    // know that the edge must be reachable since we started from a reachable
-    // block.
-    BasicBlock *BB0 = BI->getSuccessor(0);
-    BasicBlockEdge Edge(BI->getParent(), BB0);
-    if (!Edge.isSingleEdge() || !Q.DT->dominates(Edge, Q.CxtI->getParent()))
-      continue;
-
-    computeKnownBitsFromTrueCondition(V, Cmp, KnownZero, KnownOne, Depth, Q);
-  }
-
-  // Option 2 - Search the other uses of V
-  unsigned NumUsesExplored = 0;
-  for (auto U : V->users()) {
-    // Avoid massive lists
-    if (NumUsesExplored >= DomConditionsMaxUses)
-      break;
-    NumUsesExplored++;
-    // Consider only compare instructions uniquely controlling a branch
-    ICmpInst *Cmp = dyn_cast<ICmpInst>(U);
-    if (!Cmp)
-      continue;
-
-    if (DomConditionsSingleCmpUse && !Cmp->hasOneUse())
-      continue;
-
-    for (auto *CmpU : Cmp->users()) {
-      BranchInst *BI = dyn_cast<BranchInst>(CmpU);
-      if (!BI || BI->isUnconditional())
-        continue;
-      // We're looking for conditions that are guaranteed to hold at the
-      // context instruction.  Finding a condition where one path dominates
-      // the context isn't enough because both the true and false cases could
-      // merge before the context instruction we're actually interested in.
-      // Instead, we need to ensure that the taken *edge* dominates the context
-      // instruction. 
-      BasicBlock *BB0 = BI->getSuccessor(0);
-      BasicBlockEdge Edge(BI->getParent(), BB0);
-      if (!Edge.isSingleEdge() || !Q.DT->dominates(Edge, Q.CxtI->getParent()))
-        continue;
-
-      computeKnownBitsFromTrueCondition(V, Cmp, KnownZero, KnownOne, Depth, Q);
-    }
-  }
 }
 
 static void computeKnownBitsFromAssume(Value *V, APInt &KnownZero,
@@ -1657,17 +1453,11 @@ void computeKnownBits(Value *V, APInt &KnownZero, APInt &KnownOne,
       KnownZero |= APInt::getLowBitsSet(BitWidth, countTrailingZeros(Align));
   }
 
-  // computeKnownBitsFromAssume and computeKnownBitsFromDominatingCondition
-  // strictly refines KnownZero and KnownOne. Therefore, we run them after
-  // computeKnownBitsFromOperator.
+  // computeKnownBitsFromAssume strictly refines KnownZero and
+  // KnownOne. Therefore, we run them after computeKnownBitsFromOperator.
 
   // Check whether a nearby assume intrinsic can determine some known bits.
   computeKnownBitsFromAssume(V, KnownZero, KnownOne, Depth, Q);
-
-  // Check whether there's a dominating condition which implies something about
-  // this value at the given context.
-  if (EnableDomConditions && Depth <= DomConditionsMaxDepth)
-    computeKnownBitsFromDominatingCondition(V, KnownZero, KnownOne, Depth, Q);
 
   assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
 }
@@ -3277,9 +3067,6 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     // Consider only compare instructions uniquely controlling a branch
     const ICmpInst *Cmp = dyn_cast<ICmpInst>(U);
     if (!Cmp)
-      continue;
-
-    if (DomConditionsSingleCmpUse && !Cmp->hasOneUse())
       continue;
 
     for (auto *CmpU : Cmp->users()) {

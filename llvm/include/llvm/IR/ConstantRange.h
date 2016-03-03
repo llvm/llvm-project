@@ -82,24 +82,26 @@ public:
   static ConstantRange makeSatisfyingICmpRegion(CmpInst::Predicate Pred,
                                                 const ConstantRange &Other);
 
-  /// Return the largest range containing all X such that "X BinOpC C" is
-  /// guaranteed not to wrap (overflow).
+  /// Return the largest range containing all X such that "X BinOpC Y" is
+  /// guaranteed not to wrap (overflow) for all Y in Other.
   ///
   /// NB! The returned set does *not* contain **all** possible values of X for
-  /// which "X BinOpC C" does not wrap -- some viable values of X may be
+  /// which "X BinOpC Y" does not wrap -- some viable values of X may be
   /// missing, so you cannot use this to contrain X's range.  E.g. in the last
   /// example, "(-2) + 1" is both nsw and nuw (so the "X" could be -2), but (-2)
   /// is not in the set returned.
   ///
-  /// Example:
+  /// Examples:
   ///  typedef OverflowingBinaryOperator OBO;
-  ///  makeNoWrapRegion(Add, i8 1, OBO::NoSignedWrap) == [-128, 127)
-  ///  makeNoWrapRegion(Add, i8 1, OBO::NoUnsignedWrap) == [0, -1)
-  ///  makeNoWrapRegion(Add, i8 0, OBO::NoUnsignedWrap) == Full Set
-  ///  makeNoWrapRegion(Add, i8 1, OBO::NoUnsignedWrap | OBO::NoSignedWrap) ==
-  ///    [0,INT_MAX)
+  ///  #define MGNR makeGuaranteedNoWrapRegion
+  ///  MGNR(Add, [i8 1, 2), OBO::NoSignedWrap) == [-128, 127)
+  ///  MGNR(Add, [i8 1, 2), OBO::NoUnsignedWrap) == [0, -1)
+  ///  MGNR(Add, [i8 0, 1), OBO::NoUnsignedWrap) == Full Set
+  ///  MGNR(Add, [i8 1, 2), OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+  ///    == [0,INT_MAX)
+  ///  MGNR(Add, [i8 -1, 6), OBO::NoSignedWrap) == [INT_MIN+1, INT_MAX-4)
   static ConstantRange makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
-                                                  const APInt &C,
+                                                  const ConstantRange &Other,
                                                   unsigned NoWrapKind);
 
   /// Return the lower value for this range.

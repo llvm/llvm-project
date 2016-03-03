@@ -32,10 +32,10 @@ class SampleProfileWriter {
 public:
   virtual ~SampleProfileWriter() {}
 
-  /// Write sample profiles in \p S for function \p FName.
+  /// Write sample profiles in \p S.
   ///
   /// \returns status code of the file update operation.
-  virtual std::error_code write(StringRef FName, const FunctionSamples &S) = 0;
+  virtual std::error_code write(const FunctionSamples &S) = 0;
 
   /// Write all the sample profiles in the given map of samples.
   ///
@@ -44,9 +44,8 @@ public:
     if (std::error_code EC = writeHeader(ProfileMap))
       return EC;
     for (const auto &I : ProfileMap) {
-      StringRef FName = I.first();
       const FunctionSamples &Profile = I.second;
-      if (std::error_code EC = write(FName, Profile))
+      if (std::error_code EC = write(Profile))
         return EC;
     }
     return sampleprof_error::success;
@@ -86,7 +85,7 @@ protected:
 /// \brief Sample-based profile writer (text format).
 class SampleProfileWriterText : public SampleProfileWriter {
 public:
-  std::error_code write(StringRef FName, const FunctionSamples &S) override;
+  std::error_code write(const FunctionSamples &S) override;
 
 protected:
   SampleProfileWriterText(std::unique_ptr<raw_ostream> &OS)
@@ -111,7 +110,7 @@ private:
 /// \brief Sample-based profile writer (binary format).
 class SampleProfileWriterBinary : public SampleProfileWriter {
 public:
-  std::error_code write(StringRef F, const FunctionSamples &S) override;
+  std::error_code write(const FunctionSamples &S) override;
 
 protected:
   SampleProfileWriterBinary(std::unique_ptr<raw_ostream> &OS)
@@ -121,7 +120,7 @@ protected:
   writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
   std::error_code writeSummary();
   std::error_code writeNameIdx(StringRef FName);
-  std::error_code writeBody(StringRef FName, const FunctionSamples &S);
+  std::error_code writeBody(const FunctionSamples &S);
 
 private:
   void addName(StringRef FName);
