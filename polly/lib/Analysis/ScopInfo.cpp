@@ -2969,11 +2969,29 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
       if (PointerSCEV != std::get<0>(IAClass) || Ty != std::get<3>(IAClass))
         continue;
 
-      Consolidated = true;
+      // If the pointer and the type is equal check if the access function wrt.
+      // to the domain is equal too. It can happen that the domain fixes
+      // parameter values and these can be different for distinct part of the
+      // SCoP. If this happens we cannot consolidate the loads but need to
+      // create a new invariant load equivalence class.
+      auto &MAs = std::get<1>(IAClass);
+      if (!MAs.empty()) {
+        auto *LastMA = MAs.front();
+
+        auto *AR = isl_map_range(MA->getAccessRelation());
+        auto *LastAR = isl_map_range(LastMA->getAccessRelation());
+        bool SameAR = isl_set_is_equal(AR, LastAR);
+        isl_set_free(AR);
+        isl_set_free(LastAR);
+
+        if (!SameAR)
+          continue;
+      }
 
       // Add MA to the list of accesses that are in this class.
-      auto &MAs = std::get<1>(IAClass);
       MAs.push_front(MA);
+
+      Consolidated = true;
 
       // Unify the execution context of the class and this statement.
       isl_set *&IAClassDomainCtx = std::get<2>(IAClass);
