@@ -321,18 +321,7 @@ static std::string getBlockName(MachineBasicBlock *BB) {
   std::string Result;
   raw_string_ostream OS(Result);
   OS << "BB#" << BB->getNumber();
-  OS << " (derived from LLVM BB '" << BB->getName() << "')";
-  OS.flush();
-  return Result;
-}
-
-/// \brief Helper to print the number of a MBB.
-///
-/// Only used by debug logging.
-static std::string getBlockNum(MachineBasicBlock *BB) {
-  std::string Result;
-  raw_string_ostream OS(Result);
-  OS << "BB#" << BB->getNumber();
+  OS << " ('" << BB->getName() << "')";
   OS.flush();
   return Result;
 }
@@ -414,8 +403,6 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
     } else {
       BlockChain *SuccChain = BlockToChain[Succ];
       if (SuccChain == &Chain) {
-        DEBUG(dbgs() << "    " << getBlockName(Succ)
-                     << " -> Already merged!\n");
         SkipSucc = true;
       } else if (Succ != *SuccChain->begin()) {
         DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> Mid chain!\n");
@@ -479,7 +466,8 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
           MBFI->getBlockFreq(BB) * RealSuccProb * HotProb.getCompl();
       bool BadCFGConflict = false;
       for (MachineBasicBlock *Pred : Succ->predecessors()) {
-        if (Pred == Succ || (BlockFilter && !BlockFilter->count(Pred)) ||
+        if (Pred == Succ || BlockToChain[Pred] == &SuccChain ||
+            (BlockFilter && !BlockFilter->count(Pred)) ||
             BlockToChain[Pred] == &Chain)
           continue;
         BlockFrequency PredEdgeFreq =
@@ -535,10 +523,9 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
   BlockFrequency BestFreq;
   for (MachineBasicBlock *MBB : WorkList) {
     BlockChain &SuccChain = *BlockToChain[MBB];
-    if (&SuccChain == &Chain) {
-      DEBUG(dbgs() << "    " << getBlockName(MBB) << " -> Already merged!\n");
+    if (&SuccChain == &Chain)
       continue;
-    }
+    
     assert(SuccChain.LoopPredecessors == 0 && "Found CFG-violating block");
 
     BlockFrequency CandidateFreq = MBFI->getBlockFreq(MBB);
@@ -620,15 +607,15 @@ void MachineBlockPlacement::buildChain(
     // Zero out LoopPredecessors for the successor we're about to merge in case
     // we selected a successor that didn't fit naturally into the CFG.
     SuccChain.LoopPredecessors = 0;
-    DEBUG(dbgs() << "Merging from " << getBlockNum(BB) << " to "
-                 << getBlockNum(BestSucc) << "\n");
+    DEBUG(dbgs() << "Merging from " << getBlockName(BB) << " to "
+                 << getBlockName(BestSucc) << "\n");
     markChainSuccessors(SuccChain, LoopHeaderBB, BlockWorkList, BlockFilter);
     Chain.merge(BestSucc, &SuccChain);
     BB = *std::prev(Chain.end());
   }
 
   DEBUG(dbgs() << "Finished forming chain for header block "
-               << getBlockNum(*Chain.begin()) << "\n");
+               << getBlockName(*Chain.begin()) << "\n");
 }
 
 /// \brief Find the best loop top block for layout.
@@ -675,8 +662,10 @@ MachineBlockPlacement::findBestLoopTop(MachineLoop &L,
   }
 
   // If no direct predecessor is fine, just use the loop header.
-  if (!BestPred)
+  if (!BestPred) {
+    DEBUG(dbgs() << "    final top unchanged\n");
     return L.getHeader();
+  }
 
   // Walk backwards through any straight line of predecessors.
   while (BestPred->pred_size() == 1 &&
@@ -975,7 +964,7 @@ void MachineBlockPlacement::rotateLoopWithProfile(
       }
     }
 
-    DEBUG(dbgs() << "The cost of loop rotation by making " << getBlockNum(*Iter)
+    DEBUG(dbgs() << "The cost of loop rotation by making " << getBlockName(*Iter)
                  << " to the top: " << Cost.getFrequency() << "\n");
 
     if (Cost < SmallestRotationCost) {
@@ -985,7 +974,7 @@ void MachineBlockPlacement::rotateLoopWithProfile(
   }
 
   if (RotationPos != LoopChain.end()) {
-    DEBUG(dbgs() << "Rotate loop by making " << getBlockNum(*RotationPos)
+    DEBUG(dbgs() << "Rotate loop by making " << getBlockName(*RotationPos)
                  << " to the top\n");
     std::rotate(LoopChain.begin(), RotationPos, LoopChain.end());
   }

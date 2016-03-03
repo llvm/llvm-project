@@ -122,19 +122,19 @@ try.cont:
 ; X64: Lfunc_begin0:
 ; X64: pushq %rbp
 ; X64: .seh_pushreg 5
-; X64: subq $48, %rsp
-; X64: .seh_stackalloc 48
-; X64: leaq 48(%rsp), %rbp
-; X64: .seh_setframe 5, 48
+; X64: subq $[[STCK_ALLOC:.*]], %rsp
+; X64: .seh_stackalloc [[STCK_ALLOC]]
+; X64: leaq [[STCK_ALLOC]](%rsp), %rbp
+; X64: .seh_setframe 5, [[STCK_ALLOC]]
 ; X64: .seh_endprologue
-; X64: movq $-2, -8(%rbp)
+; X64: movq $-2, -16(%rbp)
 ; X64: .Ltmp0
 ; X64-DAG: leaq -[[local_offs:[0-9]+]](%rbp), %rdx
 ; X64-DAG: movl $1, %ecx
 ; X64: callq f
 ; X64: [[contbb:\.LBB0_[0-9]+]]: # Block address taken
 ; X64-NEXT:                      # %try.cont
-; X64: addq $48, %rsp
+; X64: addq $[[STCK_ALLOC]], %rsp
 ; X64: popq %rbp
 ; X64: retq
 
@@ -145,10 +145,10 @@ try.cont:
 ; X64: .seh_pushreg 5
 ; X64: subq $32, %rsp
 ; X64: .seh_stackalloc 32
-; X64: leaq 48(%rdx), %rbp
+; X64: leaq [[STCK_ALLOC]](%rdx), %rbp
 ; X64: .seh_endprologue
 ; X64-DAG: leaq -[[local_offs]](%rbp), %rdx
-; X64-DAG: movl -12(%rbp), %ecx
+; X64-DAG: movl -4(%rbp), %ecx
 ; X64: callq f
 ; X64: leaq [[contbb]](%rip), %rax
 ; X64-NEXT: addq $32, %rsp
@@ -162,7 +162,7 @@ try.cont:
 ; X64: .seh_pushreg 5
 ; X64: subq $32, %rsp
 ; X64: .seh_stackalloc 32
-; X64: leaq 48(%rdx), %rbp
+; X64: leaq [[STCK_ALLOC]](%rdx), %rbp
 ; X64: .seh_endprologue
 ; X64-DAG: leaq -[[local_offs]](%rbp), %rdx
 ; X64-DAG: movl $3, %ecx
@@ -180,7 +180,7 @@ try.cont:
 ; X64-NEXT: .long   ($tryMap$try_catch_catch)@IMGREL
 ; X64-NEXT: .long   5
 ; X64-NEXT: .long   ($ip2state$try_catch_catch)@IMGREL
-; X64-NEXT: .long   40
+; X64-NEXT: .long   48
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   1
 
@@ -194,7 +194,7 @@ try.cont:
 ; X64: $handlerMap$0$try_catch_catch:
 ; X64-NEXT:   .long   0
 ; X64-NEXT:   .long   "??_R0H@8"@IMGREL
-; X64-NEXT:   .long   36
+; X64-NEXT:   .long   60
 ; X64-NEXT:   .long   "?catch$[[catch1bb]]@?0?try_catch_catch@4HA"@IMGREL
 ; X64-NEXT:   .long   56
 ; X64-NEXT:   .long   64

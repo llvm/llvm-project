@@ -629,16 +629,13 @@ bool AMDGPUDAGToDAGISel::isPrivateLoad(const LoadSDNode *N) const {
   }
 
   const Value *MemVal = N->getMemOperand()->getValue();
-  if (!checkType(MemVal, AMDGPUAS::LOCAL_ADDRESS) &&
-      !checkType(MemVal, AMDGPUAS::GLOBAL_ADDRESS) &&
-      !checkType(MemVal, AMDGPUAS::FLAT_ADDRESS) &&
-      !checkType(MemVal, AMDGPUAS::REGION_ADDRESS) &&
-      !checkType(MemVal, AMDGPUAS::CONSTANT_ADDRESS) &&
-      !checkType(MemVal, AMDGPUAS::PARAM_D_ADDRESS) &&
-      !checkType(MemVal, AMDGPUAS::PARAM_I_ADDRESS)) {
-    return true;
-  }
-  return false;
+  return !checkType(MemVal, AMDGPUAS::LOCAL_ADDRESS) &&
+    !checkType(MemVal, AMDGPUAS::GLOBAL_ADDRESS) &&
+    !checkType(MemVal, AMDGPUAS::FLAT_ADDRESS) &&
+    !checkType(MemVal, AMDGPUAS::REGION_ADDRESS) &&
+    !checkType(MemVal, AMDGPUAS::CONSTANT_ADDRESS) &&
+    !checkType(MemVal, AMDGPUAS::PARAM_D_ADDRESS) &&
+    !checkType(MemVal, AMDGPUAS::PARAM_I_ADDRESS);
 }
 
 bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {

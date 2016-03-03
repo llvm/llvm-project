@@ -21,6 +21,7 @@ using namespace llvm;
 
 TEST(MemorySSA, RemoveMemoryAccess) {
   LLVMContext &C(getGlobalContext());
+  std::unique_ptr<Module> M(new Module("Remove memory access", C));
   IRBuilder<> B(C);
   DataLayout DL("e-i64:64-f80:128-n8:16:32:64-S128");
   TargetLibraryInfoImpl TLII;
@@ -29,13 +30,13 @@ TEST(MemorySSA, RemoveMemoryAccess) {
   // We create a diamond where there is a store on one side, and then a load
   // after the merge point.  This enables us to test a bunch of different
   // removal cases.
-  std::unique_ptr<Function> F(Function::Create(
+  Function *F = Function::Create(
       FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
-      GlobalValue::ExternalLinkage, "F"));
-  BasicBlock *Entry(BasicBlock::Create(C, "", F.get()));
-  BasicBlock *Left(BasicBlock::Create(C, "", F.get()));
-  BasicBlock *Right(BasicBlock::Create(C, "", F.get()));
-  BasicBlock *Merge(BasicBlock::Create(C, "", F.get()));
+      GlobalValue::ExternalLinkage, "F", M.get());
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
@@ -49,10 +50,10 @@ TEST(MemorySSA, RemoveMemoryAccess) {
   std::unique_ptr<MemorySSA> MSSA(new MemorySSA(*F));
   std::unique_ptr<DominatorTree> DT(new DominatorTree(*F));
   std::unique_ptr<AssumptionCache> AC(new AssumptionCache(*F));
-  AAResults *AA = new AAResults();
-  BasicAAResult *BAA = new BasicAAResult(DL, TLI, *AC, &*DT);
-  AA->addAAResult(*BAA);
-  MemorySSAWalker *Walker = MSSA->buildMemorySSA(AA, &*DT);
+  AAResults AA(TLI);
+  BasicAAResult BAA(DL, TLI, *AC, &*DT);
+  AA.addAAResult(BAA);
+  std::unique_ptr<MemorySSAWalker> Walker(MSSA->buildMemorySSA(&AA, &*DT));
   // Before, the load will be a use of a phi<store, liveonentry>. It should be
   // the same after.
   MemoryUse *LoadAccess = cast<MemoryUse>(MSSA->getMemoryAccess(LoadInst));

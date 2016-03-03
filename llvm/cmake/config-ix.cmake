@@ -11,6 +11,7 @@ include(CheckFunctionExists)
 include(CheckCXXSourceCompiles)
 include(TestBigEndian)
 
+include(CheckCompilerVersion)
 include(HandleLLVMStdlib)
 
 if( UNIX AND NOT (BEOS OR HAIKU) )

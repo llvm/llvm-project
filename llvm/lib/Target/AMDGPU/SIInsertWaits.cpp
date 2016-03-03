@@ -247,10 +247,7 @@ bool SIInsertWaits::isOpRelevant(MachineOperand &Op) {
       return true;
 
     MachineOperand *Data1 = TII->getNamedOperand(MI, AMDGPU::OpName::data1);
-    if (Data1 && Op.isIdenticalTo(*Data1))
-      return true;
-
-    return false;
+    return Data1 && Op.isIdenticalTo(*Data1);
   }
 
   // NOTE: This assumes that the value operand is before the

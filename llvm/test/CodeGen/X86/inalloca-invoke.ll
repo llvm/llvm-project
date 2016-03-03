@@ -12,7 +12,6 @@ declare void @plus(%Iter* sret, %Iter*, i32)
 declare void @reverse(%frame.reverse* inalloca align 4)
 
 define i32 @main() personality i32 (...)* @pers {
-; CHECK: movl    %esp, %ebp
   %temp.lvalue = alloca %Iter
   br label %blah
 
@@ -22,10 +21,9 @@ blah:
   %beg = getelementptr %frame.reverse, %frame.reverse* %rev_args, i32 0, i32 0
   %end = getelementptr %frame.reverse, %frame.reverse* %rev_args, i32 0, i32 1
 
-; CHECK:  movl %esp, %[[end:.*]]
-; CHECK:  leal -24(%[[end]]), %[[beg:.*]]
-; CHECK:  movl %[[beg]], %esp
-; CHECK:  addl $-12, %[[end]]
+; CHECK:  calll   __chkstk
+; CHECK:  movl %esp, %[[beg:[^ ]*]]
+; CHECK:  leal 12(%[[beg]]), %[[end:[^ ]*]]
 
   call void @begin(%Iter* sret %temp.lvalue)
 ; CHECK:  calll _begin

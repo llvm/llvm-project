@@ -706,12 +706,12 @@
 		4CF3D80C15AF4DC800845BF3 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EDB919B414F6F10D008FF64B /* Security.framework */; };
 		4CF52AF51428291E0051E832 /* SBFileSpecList.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CF52AF41428291E0051E832 /* SBFileSpecList.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4CF52AF8142829390051E832 /* SBFileSpecList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CF52AF7142829390051E832 /* SBFileSpecList.cpp */; };
-		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; settings = {ASSET_TAGS = (); }; };
-		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; settings = {ASSET_TAGS = (); }; };
-		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; settings = {ASSET_TAGS = (); }; };
-		6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = 6D0F614B1C80AB0400A4ECEE /* JavaLanguageRuntime.h */; settings = {ASSET_TAGS = (); }; };
-		6D0F61591C80AB3500A4ECEE /* JavaFormatterFunctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61511C80AB3000A4ECEE /* JavaFormatterFunctions.cpp */; settings = {ASSET_TAGS = (); }; };
-		6D0F615A1C80AB3900A4ECEE /* JavaLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61531C80AB3000A4ECEE /* JavaLanguage.cpp */; settings = {ASSET_TAGS = (); }; };
+		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; };
+		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; };
+		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; };
+		6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = 6D0F614B1C80AB0400A4ECEE /* JavaLanguageRuntime.h */; };
+		6D0F61591C80AB3500A4ECEE /* JavaFormatterFunctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61511C80AB3000A4ECEE /* JavaFormatterFunctions.cpp */; };
+		6D0F615A1C80AB3900A4ECEE /* JavaLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61531C80AB3000A4ECEE /* JavaLanguage.cpp */; };
 		6D55B2901A8A806200A70529 /* GDBRemoteCommunicationServerCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D55B28D1A8A806200A70529 /* GDBRemoteCommunicationServerCommon.cpp */; };
 		6D55B2911A8A806200A70529 /* GDBRemoteCommunicationServerLLGS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D55B28E1A8A806200A70529 /* GDBRemoteCommunicationServerLLGS.cpp */; };
 		6D55B2921A8A806200A70529 /* GDBRemoteCommunicationServerPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D55B28F1A8A806200A70529 /* GDBRemoteCommunicationServerPlatform.cpp */; };
@@ -879,6 +879,8 @@
 		AF37E10A17C861F20061E18E /* ProcessRunLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF37E10917C861F20061E18E /* ProcessRunLock.cpp */; };
 		AF45E1FE1BF57C8D000563EB /* PythonTestSuite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45E1FC1BF57C8D000563EB /* PythonTestSuite.cpp */; };
 		AF45FDE518A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */; };
+		AF6335E21C87B21E00F7D554 /* SymbolFilePDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */; };
+		AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */ = {isa = PBXBuildFile; fileRef = AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */; };
 		AF77E08F1A033C700096C0EA /* ABISysV_ppc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E08D1A033C700096C0EA /* ABISysV_ppc.cpp */; };
 		AF77E0931A033C7F0096C0EA /* ABISysV_ppc64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E0911A033C7F0096C0EA /* ABISysV_ppc64.cpp */; };
 		AF77E0A11A033D360096C0EA /* RegisterContextFreeBSD_powerpc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF77E09A1A033D360096C0EA /* RegisterContextFreeBSD_powerpc.cpp */; };
@@ -2788,6 +2790,8 @@
 		AF45E1FD1BF57C8D000563EB /* PythonTestSuite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PythonTestSuite.h; sourceTree = "<group>"; };
 		AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleGetThreadItemInfoHandler.cpp; sourceTree = "<group>"; };
 		AF45FDE418A1F3AC0007051C /* AppleGetThreadItemInfoHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleGetThreadItemInfoHandler.h; sourceTree = "<group>"; };
+		AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFilePDB.cpp; path = PDB/SymbolFilePDB.cpp; sourceTree = "<group>"; };
+		AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SymbolFilePDB.h; path = PDB/SymbolFilePDB.h; sourceTree = "<group>"; };
 		AF68D2541255416E002FF25B /* RegisterContextLLDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextLLDB.cpp; path = Utility/RegisterContextLLDB.cpp; sourceTree = "<group>"; };
 		AF68D2551255416E002FF25B /* RegisterContextLLDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextLLDB.h; path = Utility/RegisterContextLLDB.h; sourceTree = "<group>"; };
 		AF68D32F1255A110002FF25B /* UnwindLLDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UnwindLLDB.cpp; path = Utility/UnwindLLDB.cpp; sourceTree = "<group>"; };
@@ -3307,6 +3311,7 @@
 		260C89B110F57C5600BB2B04 /* SymbolFile */ = {
 			isa = PBXGroup;
 			children = (
+				AF6335DF1C87B20A00F7D554 /* PDB */,
 				260C89B210F57C5600BB2B04 /* DWARF */,
 				260C89DD10F57C5600BB2B04 /* Symtab */,
 			);
@@ -5822,6 +5827,15 @@
 			path = GDB;
 			sourceTree = "<group>";
 		};
+		AF6335DF1C87B20A00F7D554 /* PDB */ = {
+			isa = PBXGroup;
+			children = (
+				AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */,
+				AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */,
+			);
+			name = PDB;
+			sourceTree = "<group>";
+		};
 		AF77E08B1A033C3E0096C0EA /* SysV-ppc */ = {
 			isa = PBXGroup;
 			children = (
@@ -5947,6 +5961,7 @@
 				AF8AD6381BEC28C400150209 /* PlatformRemoteAppleTV.h in Headers */,
 				26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */,
 				AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */,
+				AF6335E31C87B21E00F7D554 /* SymbolFilePDB.h in Headers */,
 				4984BA181B979C08008658D4 /* ExpressionVariable.h in Headers */,
 				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
 				AF8AD62F1BEC28A400150209 /* PlatformAppleTVSimulator.h in Headers */,
@@ -7052,6 +7067,7 @@
 				94CB257116B0A4270059775D /* TypeSummary.cpp in Sources */,
 				94CB257216B0A4270059775D /* TypeSynthetic.cpp in Sources */,
 				94CB257416B1D3880059775D /* FormatCache.cpp in Sources */,
+				AF6335E21C87B21E00F7D554 /* SymbolFilePDB.cpp in Sources */,
 				A36FF33C17D8E94600244D40 /* OptionParser.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

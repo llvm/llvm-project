@@ -249,11 +249,13 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
           MI.getOpcode() != TargetOpcode::LIFETIME_END)
         continue;
 
-      Markers.push_back(&MI);
-
       bool IsStart = MI.getOpcode() == TargetOpcode::LIFETIME_START;
       const MachineOperand &MO = MI.getOperand(0);
-      unsigned Slot = MO.getIndex();
+      int Slot = MO.getIndex();
+      if (Slot < 0)
+        continue;
+
+      Markers.push_back(&MI);
 
       MarkersFound++;
 
@@ -393,7 +395,8 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
       bool IsStart = MI->getOpcode() == TargetOpcode::LIFETIME_START;
       const MachineOperand &Mo = MI->getOperand(0);
       int Slot = Mo.getIndex();
-      assert(Slot >= 0 && "Invalid slot");
+      if (Slot < 0)
+        continue;
 
       SlotIndex ThisIndex = Indexes->getInstructionIndex(*MI);
 

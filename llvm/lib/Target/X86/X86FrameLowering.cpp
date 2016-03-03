@@ -2840,14 +2840,30 @@ void X86FrameLowering::processFunctionBeforeFrameFinalized(
   // were no fixed objects, use offset -SlotSize, which is immediately after the
   // return address. Fixed objects have negative frame indices.
   MachineFrameInfo *MFI = MF.getFrameInfo();
+  WinEHFuncInfo &EHInfo = *MF.getWinEHFuncInfo();
   int64_t MinFixedObjOffset = -SlotSize;
   for (int I = MFI->getObjectIndexBegin(); I < 0; ++I)
     MinFixedObjOffset = std::min(MinFixedObjOffset, MFI->getObjectOffset(I));
 
+  for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
+    for (WinEHHandlerType &H : TBME.HandlerArray) {
+      int FrameIndex = H.CatchObj.FrameIndex;
+      if (FrameIndex != INT_MAX) {
+        // Ensure alignment.
+        unsigned Align = MFI->getObjectAlignment(FrameIndex);
+        MinFixedObjOffset -= std::abs(MinFixedObjOffset) % Align;
+        MinFixedObjOffset -= MFI->getObjectSize(FrameIndex);
+        MFI->setObjectOffset(FrameIndex, MinFixedObjOffset);
+      }
+    }
+  }
+
+  // Ensure alignment.
+  MinFixedObjOffset -= std::abs(MinFixedObjOffset) % 8;
   int64_t UnwindHelpOffset = MinFixedObjOffset - SlotSize;
   int UnwindHelpFI =
       MFI->CreateFixedObject(SlotSize, UnwindHelpOffset, /*Immutable=*/false);
-  MF.getWinEHFuncInfo()->UnwindHelpFrameIdx = UnwindHelpFI;
+  EHInfo.UnwindHelpFrameIdx = UnwindHelpFI;
 
   // Store -2 into UnwindHelp on function entry. We have to scan forwards past
   // other frame setup instructions.

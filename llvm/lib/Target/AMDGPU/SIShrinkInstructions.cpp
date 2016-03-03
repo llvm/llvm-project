@@ -125,10 +125,7 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
   if (TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
     return false;
 
-  if (TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
-    return false;
-
-  return true;
+  return !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp);
 }
 
 /// \brief This function checks \p MI for operands defined by a move immediate

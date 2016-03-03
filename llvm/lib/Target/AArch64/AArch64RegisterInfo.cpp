@@ -252,9 +252,7 @@ bool AArch64RegisterInfo::requiresFrameIndexScavenging(
 bool
 AArch64RegisterInfo::cannotEliminateFrame(const MachineFunction &MF) const {
   const MachineFrameInfo *MFI = MF.getFrameInfo();
-  // Only consider eliminating leaf frames.
-  if (MFI->hasCalls() || (MF.getTarget().Options.DisableFramePointerElim(MF) &&
-                          MFI->adjustsStack()))
+  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI->adjustsStack())
     return true;
   return MFI->hasVarSizedObjects() || MFI->isFrameAddressTaken();
 }

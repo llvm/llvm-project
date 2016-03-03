@@ -178,9 +178,7 @@ public:
       return true;
     // XXX: This can be removed once the packetizer properly handles all the
     // LDS instruction group restrictions.
-    if (TII->isLDSInstr(MI.getOpcode()))
-      return true;
-    return false;
+    return TII->isLDSInstr(MI.getOpcode());
   }
 
   // isLegalToPacketizeTogether - Is it legal to packetize SUI and SUJ
@@ -214,10 +212,8 @@ public:
                  TII->definesAddressRegister(MIJ);
     bool ARUse = TII->usesAddressRegister(MII) ||
                  TII->usesAddressRegister(MIJ);
-    if (ARDef && ARUse)
-      return false;
 
-    return true;
+    return !ARDef || !ARUse;
   }
 
   // isLegalToPruneDependencies - Is it legal to prune dependece between SUI

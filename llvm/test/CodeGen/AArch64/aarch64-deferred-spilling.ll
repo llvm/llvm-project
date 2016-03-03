@@ -1,5 +1,5 @@
-;RUN: llc < %s -mtriple=aarch64--linux-android -regalloc=greedy -enable-deferred-spilling=true -mcpu=cortex-a57 | FileCheck %s --check-prefix=CHECK --check-prefix=DEFERRED
-;RUN: llc < %s -mtriple=aarch64--linux-android -regalloc=greedy -enable-deferred-spilling=false -mcpu=cortex-a57 | FileCheck %s --check-prefix=CHECK --check-prefix=REGULAR
+;RUN: llc < %s -mtriple=aarch64--linux-android -regalloc=greedy -enable-deferred-spilling=true -mcpu=cortex-a57 -disable-fp-elim | FileCheck %s --check-prefix=CHECK --check-prefix=DEFERRED
+;RUN: llc < %s -mtriple=aarch64--linux-android -regalloc=greedy -enable-deferred-spilling=false -mcpu=cortex-a57 -disable-fp-elim | FileCheck %s --check-prefix=CHECK --check-prefix=REGULAR
 
 ; Check that we do not end up with useless spill code.
 ;

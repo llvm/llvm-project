@@ -27,8 +27,7 @@ class TypeBasedAAResult : public AAResultBase<TypeBasedAAResult> {
   friend AAResultBase<TypeBasedAAResult>;
 
 public:
-  explicit TypeBasedAAResult(const TargetLibraryInfo &TLI)
-      : AAResultBase(TLI) {}
+  explicit TypeBasedAAResult() {}
   TypeBasedAAResult(TypeBasedAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
 
   /// Handle invalidation events from the new pass manager.

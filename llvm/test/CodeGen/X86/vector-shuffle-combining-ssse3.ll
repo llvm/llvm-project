@@ -59,3 +59,20 @@ define <4 x float> @combine_pshufb_movsldup(<4 x float> %a0) {
   %4 = shufflevector <4 x float> %3, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   ret <4 x float> %4
 }
+
+define <16 x i8> @combine_unpckl_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
+; SSE-LABEL: combine_unpckl_pshufb:
+; SSE:       # BB#0:
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_unpckl_pshufb:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero
+; AVX-NEXT:    retq
+  %1 = shufflevector <16 x i8> %a0, <16 x i8> %a1, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
+  %2 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %1, <16 x i8> <i8 0, i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1>)
+  ret <16 x i8> %2
+}

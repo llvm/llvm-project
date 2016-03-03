@@ -2153,8 +2153,9 @@ SDValue DAGCombiner::useDivRem(SDNode *Node) {
   if (Node->use_empty())
     return SDValue(); // This is a dead node, leave it alone.
 
+  // DivMod lib calls can still work on non-legal types if using lib-calls.
   EVT VT = Node->getValueType(0);
-  if (!TLI.isTypeLegal(VT))
+  if (VT.isVector() || !VT.isInteger())
     return SDValue();
 
   unsigned Opcode = Node->getOpcode();

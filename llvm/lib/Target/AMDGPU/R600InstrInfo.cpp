@@ -905,9 +905,7 @@ bool R600InstrInfo::isPredicable(MachineInstr &MI) const {
     if (MI.getParent()->begin() != MachineBasicBlock::iterator(MI))
       return false;
     // TODO: We don't support KC merging atm
-    if (MI.getOperand(3).getImm() != 0 || MI.getOperand(4).getImm() != 0)
-      return false;
-    return true;
+    return MI.getOperand(3).getImm() == 0 && MI.getOperand(4).getImm() == 0;
   } else if (isVector(MI)) {
     return false;
   } else {

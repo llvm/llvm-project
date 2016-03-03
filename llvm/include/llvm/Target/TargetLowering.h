@@ -960,6 +960,10 @@ public:
     return 0;
   }
 
+  virtual bool needsFixedCatchObjects() const {
+    report_fatal_error("Funclet EH is not implemented for this target");
+  }
+
   /// Returns the target's jmp_buf size in bytes (if never set, the default is
   /// 200)
   unsigned getJumpBufSize() const {

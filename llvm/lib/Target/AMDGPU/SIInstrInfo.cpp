@@ -305,11 +305,8 @@ bool SIInstrInfo::shouldClusterLoads(MachineInstr *FirstLdSt,
   if (isSMRD(*FirstLdSt) && isSMRD(*SecondLdSt))
     return true;
 
-  if ((isMUBUF(*FirstLdSt) || isMTBUF(*FirstLdSt)) &&
-      (isMUBUF(*SecondLdSt) || isMTBUF(*SecondLdSt)))
-    return true;
-
-  return false;
+  return (isMUBUF(*FirstLdSt) || isMTBUF(*FirstLdSt)) &&
+    (isMUBUF(*SecondLdSt) || isMTBUF(*SecondLdSt));
 }
 
 void
@@ -1400,14 +1397,10 @@ bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
     return true;
 
   // SGPRs use the constant bus
-  if (MO.getReg() == AMDGPU::M0 || MO.getReg() == AMDGPU::VCC ||
-      (!MO.isImplicit() &&
-      (AMDGPU::SGPR_32RegClass.contains(MO.getReg()) ||
-       AMDGPU::SGPR_64RegClass.contains(MO.getReg())))) {
-    return true;
-  }
-
-  return false;
+  return (MO.getReg() == AMDGPU::VCC || MO.getReg() == AMDGPU::M0 ||
+          (!MO.isImplicit() &&
+           (AMDGPU::SGPR_32RegClass.contains(MO.getReg()) ||
+            AMDGPU::SGPR_64RegClass.contains(MO.getReg()))));
 }
 
 static unsigned findImplicitSGPRRead(const MachineInstr &MI) {

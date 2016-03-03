@@ -34,7 +34,6 @@
 
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -175,15 +174,12 @@ bool ScopedNoAliasAAResult::mayAliasInScopes(const MDNode *Scopes,
 
 ScopedNoAliasAAResult ScopedNoAliasAA::run(Function &F,
                                            AnalysisManager<Function> *AM) {
-  return ScopedNoAliasAAResult(AM->getResult<TargetLibraryAnalysis>(F));
+  return ScopedNoAliasAAResult();
 }
 
 char ScopedNoAliasAAWrapperPass::ID = 0;
-INITIALIZE_PASS_BEGIN(ScopedNoAliasAAWrapperPass, "scoped-noalias",
-                      "Scoped NoAlias Alias Analysis", false, true)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(ScopedNoAliasAAWrapperPass, "scoped-noalias",
-                    "Scoped NoAlias Alias Analysis", false, true)
+INITIALIZE_PASS(ScopedNoAliasAAWrapperPass, "scoped-noalias",
+                "Scoped NoAlias Alias Analysis", false, true)
 
 ImmutablePass *llvm::createScopedNoAliasAAWrapperPass() {
   return new ScopedNoAliasAAWrapperPass();
@@ -194,8 +190,7 @@ ScopedNoAliasAAWrapperPass::ScopedNoAliasAAWrapperPass() : ImmutablePass(ID) {
 }
 
 bool ScopedNoAliasAAWrapperPass::doInitialization(Module &M) {
-  Result.reset(new ScopedNoAliasAAResult(
-      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI()));
+  Result.reset(new ScopedNoAliasAAResult());
   return false;
 }
 
@@ -206,5 +201,4 @@ bool ScopedNoAliasAAWrapperPass::doFinalization(Module &M) {
 
 void ScopedNoAliasAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }

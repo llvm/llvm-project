@@ -122,7 +122,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
@@ -585,15 +584,12 @@ bool TypeBasedAAResult::PathAliases(const MDNode *A, const MDNode *B) const {
 }
 
 TypeBasedAAResult TypeBasedAA::run(Function &F, AnalysisManager<Function> *AM) {
-  return TypeBasedAAResult(AM->getResult<TargetLibraryAnalysis>(F));
+  return TypeBasedAAResult();
 }
 
 char TypeBasedAAWrapperPass::ID = 0;
-INITIALIZE_PASS_BEGIN(TypeBasedAAWrapperPass, "tbaa",
-                      "Type-Based Alias Analysis", false, true)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(TypeBasedAAWrapperPass, "tbaa", "Type-Based Alias Analysis",
-                    false, true)
+INITIALIZE_PASS(TypeBasedAAWrapperPass, "tbaa", "Type-Based Alias Analysis",
+                false, true)
 
 ImmutablePass *llvm::createTypeBasedAAWrapperPass() {
   return new TypeBasedAAWrapperPass();
@@ -604,8 +600,7 @@ TypeBasedAAWrapperPass::TypeBasedAAWrapperPass() : ImmutablePass(ID) {
 }
 
 bool TypeBasedAAWrapperPass::doInitialization(Module &M) {
-  Result.reset(new TypeBasedAAResult(
-      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI()));
+  Result.reset(new TypeBasedAAResult());
   return false;
 }
 
@@ -616,5 +611,4 @@ bool TypeBasedAAWrapperPass::doFinalization(Module &M) {
 
 void TypeBasedAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
