@@ -108,68 +108,87 @@ class TestSwiftReturns(TestBase):
         self.thread = threads[0]
 
         # Get "Swift.UInt64" return struct value
+        line_before_fin = self.thread.frame[1].line_entry.line
         self.step_out_until_no_breakpoint(breakpoint, False)
         return_value = self.thread.GetStopReturnValue ()
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "u")
 
         # Get "Swift.Int64" return struct value
+        line_before_fin = self.thread.frame[0].line_entry.line
         self.step_out_until_no_breakpoint(breakpoint, True)
         return_value = self.thread.GetStopReturnValue ()
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "i")
 
         # Get "main.Foo" return class value
+        line_before_fin = self.thread.frame[0].line_entry.line
         self.step_out_until_no_breakpoint(breakpoint, True)
         return_value = self.thread.GetStopReturnValue ()
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "c")
 
         # Get "Swift.String" return class value
+        line_before_fin = self.thread.frame[0].line_entry.line
         self.step_out_until_no_breakpoint(breakpoint, True)
         return_value = self.thread.GetStopReturnValue ()
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "s")
 
         # Get "Swift.Dictionary<Swift.Int, Swift.String>" return class value
+        line_before_fin = self.thread.frame[0].line_entry.line
         self.step_out_until_no_breakpoint(breakpoint, True)
         return_value = self.thread.GetStopReturnValue ()
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "dict")
 
         # Get "Swift.String?" return class value
+        line_before_fin = self.thread.frame[0].line_entry.line
         self.step_out_until_no_breakpoint(breakpoint, True)
         return_value = self.thread.GetStopReturnValue ()
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "opt_str")
 
         # Get "Swift.Float" return class value
+        line_before_fin = self.thread.frame[0].line_entry.line
         self.step_out_until_no_breakpoint(breakpoint, True)
         return_value = self.thread.GetStopReturnValue ()
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "f")
 
         # Get "Swift.Double" return class value
+        line_before_fin = self.thread.frame[0].line_entry.line
         self.step_out_until_no_breakpoint(breakpoint, True)
         return_value = self.thread.GetStopReturnValue ()
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "d")
 
         # Call a function that could throw but doesn't and see that it actually gets the result:
+        line_before_fin = self.thread.frame[0].line_entry.line
         self.step_out_until_no_breakpoint (breakpoint, True)
         return_value = self.thread.GetStopReturnValue ()
 
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(return_value, "not_err")
 
         # Call it again, but this time it will throw:
         # The return will be empty, but the error will not be:
+        line_before_fin = self.thread.frame[0].line_entry.line
         self.step_out_until_no_breakpoint (breakpoint, True)
         return_value = self.thread.GetStopReturnValue()
         self.assertTrue(not return_value.IsValid())
         error_value = self.thread.GetStopErrorValue ()
-
-        self.thread.StepOver()
+        if line_before_fin == self.thread.frame[0].line_entry.line:
+          self.thread.StepOver()
         self.verify_return_value_against_local_variable(error_value, "err")
 
 if __name__ == '__main__':
