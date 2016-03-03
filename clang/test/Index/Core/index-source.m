@@ -18,3 +18,23 @@ void goo(Base *b) {
   // CHECK-NEXT: RelRec | Base | c:objc(cs)Base
   [b meth];
 }
+
+// CHECK: [[@LINE+1]]:11 | objc-protocol/ObjC | Prot1 | c:objc(pl)Prot1 | <no-cgname> | Decl | rel: 0
+@protocol Prot1
+@end
+
+// CHECK: [[@LINE+3]]:11 | objc-protocol/ObjC | Prot2 | c:objc(pl)Prot2 | <no-cgname> | Decl | rel: 0
+// CHECK: [[@LINE+2]]:17 | objc-protocol/ObjC | Prot1 | c:objc(pl)Prot1 | <no-cgname> | Ref,RelBase | rel: 1
+// CHECK-NEXT: RelBase | Prot2 | c:objc(pl)Prot2
+@protocol Prot2<Prot1>
+@end
+
+// CHECK: [[@LINE+7]]:12 | objc-class/ObjC | Sub | c:objc(cs)Sub | _OBJC_CLASS_$_Sub | Decl | rel: 0
+// CHECK: [[@LINE+6]]:18 | objc-class/ObjC | Base | c:objc(cs)Base | _OBJC_CLASS_$_Base | Ref,RelBase | rel: 1
+// CHECK-NEXT: RelBase | Sub | c:objc(cs)Sub
+// CHECK: [[@LINE+4]]:23 | objc-protocol/ObjC | Prot2 | c:objc(pl)Prot2 | <no-cgname> | Ref,RelBase | rel: 1
+// CHECK-NEXT: RelBase | Sub | c:objc(cs)Sub
+// CHECK: [[@LINE+2]]:30 | objc-protocol/ObjC | Prot1 | c:objc(pl)Prot1 | <no-cgname> | Ref,RelBase | rel: 1
+// CHECK-NEXT: RelBase | Sub | c:objc(cs)Sub
+@interface Sub : Base<Prot2, Prot1>
+@end
