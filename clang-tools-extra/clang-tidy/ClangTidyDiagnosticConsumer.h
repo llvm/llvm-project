@@ -221,6 +221,7 @@ public:
 private:
   // Calls setDiagnosticsEngine() and storeError().
   friend class ClangTidyDiagnosticConsumer;
+  friend class ClangTidyPluginAction;
 
   /// \brief Sets the \c DiagnosticsEngine so that Diagnostics can be generated
   /// correctly.

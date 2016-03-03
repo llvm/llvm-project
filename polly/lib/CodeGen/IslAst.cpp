@@ -466,7 +466,8 @@ bool IslAstInfo::runOnScop(Scop &Scop) {
 
   S = &Scop;
 
-  const Dependences &D = getAnalysis<DependenceInfo>().getDependences();
+  const Dependences &D =
+      getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
 
   Ast = IslAst::create(&Scop, D);
 

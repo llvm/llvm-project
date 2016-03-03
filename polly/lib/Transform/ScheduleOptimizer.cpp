@@ -462,7 +462,8 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
     return false;
   }
 
-  const Dependences &D = getAnalysis<DependenceInfo>().getDependences();
+  const Dependences &D =
+      getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
 
   if (!D.hasValidDependences())
     return false;

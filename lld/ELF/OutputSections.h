@@ -241,6 +241,9 @@ public:
   unsigned NumLocals = 0;
   StringTableSection<ELFT> &StrTabSec;
 
+  // Local symbol -> ID, filled only when producing relocatable output.
+  llvm::DenseMap<const Elf_Sym *, uint32_t> Locals;
+
 private:
   void writeLocalSymbols(uint8_t *&Buf);
   void writeGlobalSymbols(uint8_t *Buf);

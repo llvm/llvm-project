@@ -201,7 +201,8 @@ typedef Dependences::StatementToIslMapTy StatementToIslMapTy;
 
 bool JSONImporter::runOnScop(Scop &S) {
   Region &R = S.getRegion();
-  const Dependences &D = getAnalysis<DependenceInfo>().getDependences();
+  const Dependences &D =
+      getAnalysis<DependenceInfo>().getDependences(Dependences::AL_Statement);
   const DataLayout &DL =
       S.getRegion().getEntry()->getParent()->getParent()->getDataLayout();
 

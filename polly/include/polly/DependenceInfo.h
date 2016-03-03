@@ -47,6 +47,16 @@ class MemoryAccess;
 /// compute for one SCoP. It also offers an interface that allows users to
 /// query only specific parts.
 struct Dependences {
+  // Granularities of the current dependence analysis
+  enum AnalyisLevel {
+    AL_Statement = 0,
+    // Distinguish accessed memory references in the same statement
+    AL_Reference,
+    // Distinguish memory access instances in the same statement
+    AL_Access,
+
+    NumAnalysisLevels
+  };
 
   /// @brief Map type for reduction dependences.
   using ReductionDependencesMapTy = DenseMap<MemoryAccess *, isl_map *>;
@@ -141,10 +151,11 @@ struct Dependences {
   ~Dependences() { releaseMemory(); }
 
 private:
-  /// @brief Create an empty Dependences struct.
-  explicit Dependences(const std::shared_ptr<isl_ctx> &IslCtx)
+  /// @brief Create an empty dependences struct.
+  explicit Dependences(const std::shared_ptr<isl_ctx> &IslCtx,
+                       AnalyisLevel Level)
       : RAW(nullptr), WAR(nullptr), WAW(nullptr), RED(nullptr), TC_RED(nullptr),
-        IslCtx(IslCtx) {}
+        IslCtx(IslCtx), Level(Level) {}
 
   /// @brief Calculate and add at the privatization dependences.
   void addPrivatizationDependences();
@@ -176,6 +187,9 @@ private:
 
   /// @brief Isl context from the SCoP.
   std::shared_ptr<isl_ctx> IslCtx;
+
+  /// @brief Granularity of this dependence analysis
+  const AnalyisLevel Level;
 };
 
 class DependenceInfo : public ScopPass {
@@ -186,19 +200,27 @@ public:
   DependenceInfo() : ScopPass(ID) {}
 
   /// @brief Return the dependence information for the current SCoP.
-  const Dependences &getDependences() { return *D; }
+  ///
+  /// @param Level The granularity of dependence analysis result.
+  ///
+  /// @return The dependence analysis result
+  ///
+  const Dependences &getDependences(Dependences::AnalyisLevel Level);
 
   /// @brief Recompute dependences from schedule and memory accesses.
-  void recomputeDependences();
+  const Dependences &recomputeDependences(Dependences::AnalyisLevel Level);
 
   /// @brief Compute the dependence information for the SCoP @p S.
   bool runOnScop(Scop &S) override;
 
   /// @brief Print the dependences for the given SCoP to @p OS.
-  void printScop(raw_ostream &OS, Scop &) const override { D->print(OS); }
+  void printScop(raw_ostream &OS, Scop &) const override;
 
   /// @brief Release the internal memory.
-  void releaseMemory() override { D.reset(); }
+  void releaseMemory() override {
+    for (auto &d : D)
+      d.reset();
+  }
 
   /// @brief Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -207,7 +229,7 @@ private:
   Scop *S;
 
   /// @brief Dependences struct for the current SCoP.
-  std::unique_ptr<Dependences> D;
+  std::unique_ptr<Dependences> D[Dependences::NumAnalysisLevels];
 };
 
 } // End polly namespace.

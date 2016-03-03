@@ -35,22 +35,15 @@ StringRef getLLDRevision() {
 }
 
 std::string getLLDRepositoryVersion() {
-  std::string buf;
-  llvm::raw_string_ostream OS(buf);
-  std::string Path = getLLDRepositoryPath();
-  std::string Revision = getLLDRevision();
-  if (!Path.empty() || !Revision.empty()) {
-    OS << '(';
-    if (!Path.empty())
-      OS << Path;
-    if (!Revision.empty()) {
-      if (!Path.empty())
-        OS << ' ';
-      OS << Revision;
-    }
-    OS << ')';
-  }
-  return OS.str();
+  std::string S = getLLDRepositoryPath();
+  std::string T = getLLDRevision();
+  if (S.empty() && T.empty())
+    return "";
+  if (!S.empty() && !T.empty())
+    return "(" + S + " " + T + ")";
+  if (!S.empty())
+    return "(" + S + ")";
+  return "(" + T + ")";
 }
 
 StringRef getLLDVersion() {

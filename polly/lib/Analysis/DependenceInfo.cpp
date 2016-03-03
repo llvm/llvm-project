@@ -70,24 +70,19 @@ static cl::opt<enum AnalysisType> OptAnalysisType(
     cl::Hidden, cl::init(VALUE_BASED_ANALYSIS), cl::ZeroOrMore,
     cl::cat(PollyCategory));
 
-enum AnalyisLevel {
-  STATEMENT_LEVEL_ANALYSIS = 0,
-  REFERENCE_LEVEL_ANALYSIS,
-  ACCESS_LEVEL_ANALYSIS
-};
-static cl::opt<enum AnalyisLevel> OptAnalysisLevel(
+static cl::opt<Dependences::AnalyisLevel> OptAnalysisLevel(
     "polly-dependences-analysis-level",
     cl::desc("The level of dependence analysis"),
-    cl::values(clEnumValN(STATEMENT_LEVEL_ANALYSIS, "statement-level",
+    cl::values(clEnumValN(Dependences::AL_Statement, "statement-level",
                           "Statement-level analysis"),
-               clEnumValN(REFERENCE_LEVEL_ANALYSIS, "reference-level",
+               clEnumValN(Dependences::AL_Reference, "reference-level",
                           "Memory reference level analysis that distinguish"
                           " accessed references in the same statement"),
-               clEnumValN(ACCESS_LEVEL_ANALYSIS, "access-level",
+               clEnumValN(Dependences::AL_Access, "access-level",
                           "Memory reference level analysis that distinguish"
                           " access instructions in the same statement"),
                clEnumValEnd),
-    cl::Hidden, cl::init(STATEMENT_LEVEL_ANALYSIS), cl::ZeroOrMore,
+    cl::Hidden, cl::init(Dependences::AL_Statement), cl::ZeroOrMore,
     cl::cat(PollyCategory));
 
 //===----------------------------------------------------------------------===//
@@ -106,11 +101,11 @@ static __isl_give isl_map *tag(__isl_take isl_map *Relation,
 /// @brief Tag the @p Relation domain with either MA->getArrayId() or
 ///        MA->getId() based on @p TagLevel
 static __isl_give isl_map *tag(__isl_take isl_map *Relation, MemoryAccess *MA,
-                               AnalyisLevel TagLevel) {
-  if (TagLevel == REFERENCE_LEVEL_ANALYSIS)
+                               Dependences::AnalyisLevel TagLevel) {
+  if (TagLevel == Dependences::AL_Reference)
     return tag(Relation, MA->getArrayId());
 
-  if (TagLevel == ACCESS_LEVEL_ANALYSIS)
+  if (TagLevel == Dependences::AL_Access)
     return tag(Relation, MA->getId());
 
   // No need to tag at the statement level.
@@ -121,7 +116,8 @@ static __isl_give isl_map *tag(__isl_take isl_map *Relation, MemoryAccess *MA,
 static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
                         isl_union_map **MayWrite,
                         isl_union_map **AccessSchedule,
-                        isl_union_map **StmtSchedule) {
+                        isl_union_map **StmtSchedule,
+                        Dependences::AnalyisLevel Level) {
   isl_space *Space = S.getParamSpace();
   *Read = isl_union_map_empty(isl_space_copy(Space));
   *Write = isl_union_map_empty(isl_space_copy(Space));
@@ -164,9 +160,9 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
 
         *AccessSchedule = isl_union_map_add_map(*AccessSchedule, Schedule);
       } else {
-        accdom = tag(accdom, MA, OptAnalysisLevel);
-        if (OptAnalysisLevel > STATEMENT_LEVEL_ANALYSIS) {
-          isl_map *Schedule = tag(Stmt.getSchedule(), MA, OptAnalysisLevel);
+        accdom = tag(accdom, MA, Level);
+        if (Level > Dependences::AL_Statement) {
+          isl_map *Schedule = tag(Stmt.getSchedule(), MA, Level);
           *StmtSchedule = isl_union_map_add_map(*StmtSchedule, Schedule);
         }
       }
@@ -177,7 +173,7 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
         *Write = isl_union_map_add_map(*Write, accdom);
     }
 
-    if (OptAnalysisLevel == STATEMENT_LEVEL_ANALYSIS)
+    if (Level == Dependences::AL_Statement)
       *StmtSchedule = isl_union_map_add_map(*StmtSchedule, Stmt.getSchedule());
   }
 
@@ -336,7 +332,8 @@ void Dependences::calculateDependences(Scop &S) {
 
   DEBUG(dbgs() << "Scop: \n" << S << "\n");
 
-  collectInfo(S, &Read, &Write, &MayWrite, &AccessSchedule, &StmtSchedule);
+  collectInfo(S, &Read, &Write, &MayWrite, &AccessSchedule, &StmtSchedule,
+              Level);
 
   DEBUG(dbgs() << "Read: " << Read << '\n';
         dbgs() << "Write: " << Write << '\n';
@@ -348,7 +345,7 @@ void Dependences::calculateDependences(Scop &S) {
     isl_union_map_free(AccessSchedule);
     Schedule = S.getScheduleTree();
     // Tag the schedule tree if we want fine-grain dependence info
-    if (OptAnalysisLevel > STATEMENT_LEVEL_ANALYSIS) {
+    if (Level > AL_Statement) {
       auto TaggedDom = isl_union_map_domain((isl_union_map_copy(StmtSchedule)));
       auto TaggedMap = isl_union_set_unwrap(TaggedDom);
       auto Tags = isl_union_map_domain_map_union_pw_multi_aff(TaggedMap);
@@ -758,19 +755,43 @@ void Dependences::setReductionDependences(MemoryAccess *MA, isl_map *D) {
   ReductionDependences[MA] = D;
 }
 
-void DependenceInfo::recomputeDependences() {
-  D.reset(new Dependences(S->getSharedIslCtx()));
-  D->calculateDependences(*S);
+const Dependences &
+DependenceInfo::getDependences(Dependences::AnalyisLevel Level) {
+  if (Dependences *d = D[Level].get())
+    return *d;
+
+  return recomputeDependences(Level);
+}
+
+const Dependences &
+DependenceInfo::recomputeDependences(Dependences::AnalyisLevel Level) {
+  D[Level].reset(new Dependences(S->getSharedIslCtx(), Level));
+  D[Level]->calculateDependences(*S);
+  return *D[Level];
 }
 
 bool DependenceInfo::runOnScop(Scop &ScopVar) {
   S = &ScopVar;
-  recomputeDependences();
   return false;
 }
 
+/// @brief Print the dependences for the given SCoP to @p OS.
+
+void polly::DependenceInfo::printScop(raw_ostream &OS, Scop &S) const {
+  if (auto d = D[OptAnalysisLevel].get()) {
+    d->print(OS);
+    return;
+  }
+
+  // Otherwise create the dependences on-the-fly and print it
+  Dependences D(S.getSharedIslCtx(), OptAnalysisLevel);
+  D.calculateDependences(S);
+  D.print(OS);
+}
+
 void DependenceInfo::getAnalysisUsage(AnalysisUsage &AU) const {
-  ScopPass::getAnalysisUsage(AU);
+  AU.addRequiredTransitive<ScopInfo>();
+  AU.setPreservesAll();
 }
 
 char DependenceInfo::ID = 0;
