@@ -1529,9 +1529,6 @@ void CodeGenSchedModels::checkCompleteness() {
   bool Complete = true;
   bool HadCompleteModel = false;
   for (const CodeGenProcModel &ProcModel : procModels()) {
-    // Note that long-term we should check "CompleteModel", but for now most
-    // models that claim to be complete are actually not so we use a separate
-    // "CheckCompleteness" bit.
     if (!ProcModel.ModelDef->getValueAsBit("CompleteModel"))
       continue;
     for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
@@ -1550,11 +1547,14 @@ void CodeGenSchedModels::checkCompleteness() {
       const CodeGenSchedClass &SC = getSchedClass(SCIdx);
       if (!SC.Writes.empty())
         continue;
+      if (SC.ItinClassDef != nullptr)
+        continue;
 
       const RecVec &InstRWs = SC.InstRWs;
       auto I = std::find_if(InstRWs.begin(), InstRWs.end(),
                             [&ProcModel] (const Record *R) {
-                              return R->getValueAsDef("SchedModel") == ProcModel.ModelDef;
+                              return R->getValueAsDef("SchedModel") ==
+                                     ProcModel.ModelDef;
                             });
       if (I == InstRWs.end()) {
         PrintError("'" + ProcModel.ModelName + "' lacks information for '" +

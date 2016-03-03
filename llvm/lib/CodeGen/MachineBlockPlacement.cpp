@@ -151,7 +151,7 @@ public:
   /// function. It also registers itself as the chain that block participates
   /// in with the BlockToChain mapping.
   BlockChain(BlockToChainMapType &BlockToChain, MachineBasicBlock *BB)
-      : Blocks(1, BB), BlockToChain(BlockToChain), LoopPredecessors(0) {
+      : Blocks(1, BB), BlockToChain(BlockToChain), UnscheduledPredecessors(0) {
     assert(BB && "Cannot create a chain with a null basic block");
     BlockToChain[BB] = this;
   }
@@ -203,11 +203,16 @@ public:
   }
 #endif // NDEBUG
 
-  /// \brief Count of predecessors within the loop currently being processed.
+  /// \brief Count of predecessors of any block within the chain which have not
+  /// yet been scheduled.  In general, we will delay scheduling this chain
+  /// until those predecessors are scheduled (or we find a sufficiently good
+  /// reason to override this heuristic.)  Note that when forming loop chains,
+  /// blocks outside the loop are ignored and treated as if they were already
+  /// scheduled.
   ///
-  /// This count is updated at each loop we process to represent the number of
-  /// in-loop predecessors of this chain.
-  unsigned LoopPredecessors;
+  /// Note: This field is reinitialized multiple times - once for each loop,
+  /// and then once for the function as a whole.
+  unsigned UnscheduledPredecessors;
 };
 }
 
@@ -354,7 +359,7 @@ void MachineBlockPlacement::markChainSuccessors(
 
       // This is a cross-chain edge that is within the loop, so decrement the
       // loop predecessor count of the destination chain.
-      if (SuccChain.LoopPredecessors > 0 && --SuccChain.LoopPredecessors == 0)
+      if (SuccChain.UnscheduledPredecessors > 0 && --SuccChain.UnscheduledPredecessors == 0)
         BlockWorkList.push_back(*SuccChain.begin());
     }
   }
@@ -452,7 +457,7 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
     // Only consider successors which are either "hot", or wouldn't violate
     // any CFG constraints.
     BlockChain &SuccChain = *BlockToChain[Succ];
-    if (SuccChain.LoopPredecessors != 0) {
+    if (SuccChain.UnscheduledPredecessors != 0) {
       if (SuccProb < HotProb) {
         DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> " << SuccProb
                      << " (prob) (CFG conflict)\n");
@@ -486,7 +491,7 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
 
     DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> " << SuccProb
                  << " (prob)"
-                 << (SuccChain.LoopPredecessors != 0 ? " (CFG break)" : "")
+                 << (SuccChain.UnscheduledPredecessors != 0 ? " (CFG break)" : "")
                  << "\n");
     if (BestSucc && BestProb >= SuccProb)
       continue;
@@ -526,7 +531,7 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
     if (&SuccChain == &Chain)
       continue;
     
-    assert(SuccChain.LoopPredecessors == 0 && "Found CFG-violating block");
+    assert(SuccChain.UnscheduledPredecessors == 0 && "Found CFG-violating block");
 
     BlockFrequency CandidateFreq = MBFI->getBlockFreq(MBB);
     DEBUG(dbgs() << "    " << getBlockName(MBB) << " -> ";
@@ -604,9 +609,9 @@ void MachineBlockPlacement::buildChain(
 
     // Place this block, updating the datastructures to reflect its placement.
     BlockChain &SuccChain = *BlockToChain[BestSucc];
-    // Zero out LoopPredecessors for the successor we're about to merge in case
+    // Zero out UnscheduledPredecessors for the successor we're about to merge in case
     // we selected a successor that didn't fit naturally into the CFG.
-    SuccChain.LoopPredecessors = 0;
+    SuccChain.UnscheduledPredecessors = 0;
     DEBUG(dbgs() << "Merging from " << getBlockName(BB) << " to "
                  << getBlockName(BestSucc) << "\n");
     markChainSuccessors(SuccChain, LoopHeaderBB, BlockWorkList, BlockFilter);
@@ -1059,7 +1064,7 @@ void MachineBlockPlacement::buildLoopChains(MachineFunction &F,
   // walk the blocks, and use a set to prevent visiting a particular chain
   // twice.
   SmallPtrSet<BlockChain *, 4> UpdatedPreds;
-  assert(LoopChain.LoopPredecessors == 0);
+  assert(LoopChain.UnscheduledPredecessors == 0);
   UpdatedPreds.insert(&LoopChain);
 
   for (MachineBasicBlock *LoopBB : LoopBlockSet) {
@@ -1067,17 +1072,17 @@ void MachineBlockPlacement::buildLoopChains(MachineFunction &F,
     if (!UpdatedPreds.insert(&Chain).second)
       continue;
 
-    assert(Chain.LoopPredecessors == 0);
+    assert(Chain.UnscheduledPredecessors == 0);
     for (MachineBasicBlock *ChainBB : Chain) {
       assert(BlockToChain[ChainBB] == &Chain);
       for (MachineBasicBlock *Pred : ChainBB->predecessors()) {
         if (BlockToChain[Pred] == &Chain || !LoopBlockSet.count(Pred))
           continue;
-        ++Chain.LoopPredecessors;
+        ++Chain.UnscheduledPredecessors;
       }
     }
 
-    if (Chain.LoopPredecessors == 0)
+    if (Chain.UnscheduledPredecessors == 0)
       BlockWorkList.push_back(*Chain.begin());
   }
 
@@ -1091,7 +1096,7 @@ void MachineBlockPlacement::buildLoopChains(MachineFunction &F,
   DEBUG({
     // Crash at the end so we get all of the debugging output first.
     bool BadLoop = false;
-    if (LoopChain.LoopPredecessors) {
+    if (LoopChain.UnscheduledPredecessors) {
       BadLoop = true;
       dbgs() << "Loop chain contains a block without its preds placed!\n"
              << "  Loop header:  " << getBlockName(*L.block_begin()) << "\n"
@@ -1185,17 +1190,17 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
     if (!UpdatedPreds.insert(&Chain).second)
       continue;
 
-    assert(Chain.LoopPredecessors == 0);
+    assert(Chain.UnscheduledPredecessors == 0);
     for (MachineBasicBlock *ChainBB : Chain) {
       assert(BlockToChain[ChainBB] == &Chain);
       for (MachineBasicBlock *Pred : ChainBB->predecessors()) {
         if (BlockToChain[Pred] == &Chain)
           continue;
-        ++Chain.LoopPredecessors;
+        ++Chain.UnscheduledPredecessors;
       }
     }
 
-    if (Chain.LoopPredecessors == 0)
+    if (Chain.UnscheduledPredecessors == 0)
       BlockWorkList.push_back(*Chain.begin());
   }
 

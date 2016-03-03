@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=ppc32 -fp-contract=fast -mattr=-vsx | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mattr=+vsx -mcpu=pwr7 | FileCheck -check-prefix=CHECK-VSX %s
+; RUN: llc < %s -march=ppc32 -fp-contract=fast -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX %s
 
 define double @test_FMADD_ASSOC1(double %A, double %B, double %C,
                                  double %D, double %E) {

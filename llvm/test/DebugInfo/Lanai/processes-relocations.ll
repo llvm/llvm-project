@@ -1,4 +1,4 @@
-; RUN: llvm-dwarfdump %p/Inputs/lanai-processes-relocations.elf 2>&1 | FileCheck %s
+; RUN: llvm-dwarfdump %p/../Inputs/lanai-processes-relocations.elf 2>&1 | FileCheck %s
 
 ; FIXME: Use llc with this file as input instead of binary file.
 ; NOTE: this test is currently not using llc, but using a binary input as the

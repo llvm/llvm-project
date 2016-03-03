@@ -2897,9 +2897,9 @@ define <32 x i16>@test_int_x86_avx512_mask_psrl_w_512(<32 x i16> %x0, <8 x i16> 
   ret <32 x i16> %res4
 }
 
-declare <32 x i16> @llvm.x86.avx512.mask.psrl.wi.512(<32 x i16>, i8, <32 x i16>, i32)
+declare <32 x i16> @llvm.x86.avx512.mask.psrl.wi.512(<32 x i16>, i32, <32 x i16>, i32)
 
-define <32 x i16>@test_int_x86_avx512_mask_psrl_wi_512(<32 x i16> %x0, i8 %x1, <32 x i16> %x2, i32 %x3) {
+define <32 x i16>@test_int_x86_avx512_mask_psrl_wi_512(<32 x i16> %x0, i32 %x1, <32 x i16> %x2, i32 %x3) {
 ; AVX512BW-LABEL: test_int_x86_avx512_mask_psrl_wi_512:
 ; AVX512BW:       ## BB#0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
@@ -2919,9 +2919,9 @@ define <32 x i16>@test_int_x86_avx512_mask_psrl_wi_512(<32 x i16> %x0, i8 %x1, <
 ; AVX512F-32-NEXT:    vpaddw %zmm0, %zmm1, %zmm0
 ; AVX512F-32-NEXT:    vpaddw %zmm2, %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %res = call <32 x i16> @llvm.x86.avx512.mask.psrl.wi.512(<32 x i16> %x0, i8 3, <32 x i16> %x2, i32 %x3)
-  %res1 = call <32 x i16> @llvm.x86.avx512.mask.psrl.wi.512(<32 x i16> %x0, i8 3, <32 x i16> %x2, i32 -1)
-  %res2 = call <32 x i16> @llvm.x86.avx512.mask.psrl.wi.512(<32 x i16> %x0, i8 3, <32 x i16> zeroinitializer, i32 %x3)
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psrl.wi.512(<32 x i16> %x0, i32 3, <32 x i16> %x2, i32 %x3)
+  %res1 = call <32 x i16> @llvm.x86.avx512.mask.psrl.wi.512(<32 x i16> %x0, i32 3, <32 x i16> %x2, i32 -1)
+  %res2 = call <32 x i16> @llvm.x86.avx512.mask.psrl.wi.512(<32 x i16> %x0, i32 3, <32 x i16> zeroinitializer, i32 %x3)
   %res3 = add <32 x i16> %res, %res1
   %res4 = add <32 x i16> %res3, %res2
   ret <32 x i16> %res4

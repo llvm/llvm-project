@@ -3645,6 +3645,26 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
                          MachineFrameInfo *MFI, const MachineRegisterInfo *MRI,
                          const X86InstrInfo *TII, const CCValAssign &VA) {
   unsigned Bytes = Arg.getValueType().getSizeInBits() / 8;
+
+  for (;;) {
+    // Look through nodes that don't alter the bits of the incoming value.
+    unsigned Op = Arg.getOpcode();
+    if (Op == ISD::ZERO_EXTEND || Op == ISD::ANY_EXTEND || Op == ISD::BITCAST) {
+      Arg = Arg.getOperand(0);
+      continue;
+    }
+    if (Op == ISD::TRUNCATE) {
+      const SDValue &TruncInput = Arg.getOperand(0);
+      if (TruncInput.getOpcode() == ISD::AssertZext &&
+          cast<VTSDNode>(TruncInput.getOperand(1))->getVT() ==
+              Arg.getValueType()) {
+        Arg = TruncInput.getOperand(0);
+        continue;
+      }
+    }
+    break;
+  }
+
   int FI = INT_MAX;
   if (Arg.getOpcode() == ISD::CopyFromReg) {
     unsigned VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
@@ -28312,13 +28332,15 @@ static SDValue getDivRem8(SDNode *N, SelectionDAG &DAG) {
   return R.getValue(1);
 }
 
-/// Convert a SEXT of a vector to a SIGN_EXTEND_VECTOR_INREG, this requires
-/// the splitting (or concatenating with UNDEFs) of the input to vectors of the
-/// same size as the target type which then extends the lowest elements.
+/// Convert a SEXT or ZEXT of a vector to a SIGN_EXTEND_VECTOR_INREG or
+/// ZERO_EXTEND_VECTOR_INREG, this requires the splitting (or concatenating
+/// with UNDEFs) of the input to vectors of the same size as the target type
+/// which then extends the lowest elements.
 static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const X86Subtarget &Subtarget) {
-  if (N->getOpcode() != ISD::SIGN_EXTEND)
+  unsigned Opcode = N->getOpcode();
+  if (Opcode != ISD::SIGN_EXTEND && Opcode != ISD::ZERO_EXTEND)
     return SDValue();
   if (!DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -28337,6 +28359,12 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
   if (SVT != MVT::i64 && SVT != MVT::i32 && SVT != MVT::i16)
     return SDValue();
   if (InSVT != MVT::i32 && InSVT != MVT::i16 && InSVT != MVT::i8)
+    return SDValue();
+
+  // On AVX2+ targets, if the input/output types are both legal then we will be
+  // able to use SIGN_EXTEND/ZERO_EXTEND directly.
+  if (Subtarget.hasInt256() && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+      DAG.getTargetLoweringInfo().isTypeLegal(InVT))
     return SDValue();
 
   SDLoc DL(N);
@@ -28358,20 +28386,22 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
     EVT ExVT =
         EVT::getVectorVT(*DAG.getContext(), SVT, 128 / SVT.getSizeInBits());
     SDValue Ex = ExtendVecSize(DL, N0, Scale * InVT.getSizeInBits());
-    SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, ExVT, Ex);
+    SDValue SExt = DAG.getNode(Opcode, DL, ExVT, Ex);
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SExt,
                        DAG.getIntPtrConstant(0, DL));
   }
 
   // If target-size is 128-bits (or 256-bits on AVX2 target), then convert to
-  // ISD::SIGN_EXTEND_VECTOR_INREG which ensures lowering to X86ISD::VSEXT.
+  // ISD::*_EXTEND_VECTOR_INREG which ensures lowering to X86ISD::V*EXT.
   if (VT.is128BitVector() || (VT.is256BitVector() && Subtarget.hasInt256())) {
     SDValue ExOp = ExtendVecSize(DL, N0, VT.getSizeInBits());
-    return DAG.getSignExtendVectorInReg(ExOp, DL, VT);
+    return Opcode == ISD::SIGN_EXTEND
+               ? DAG.getSignExtendVectorInReg(ExOp, DL, VT)
+               : DAG.getZeroExtendVectorInReg(ExOp, DL, VT);
   }
 
   // On pre-AVX2 targets, split into 128-bit nodes of
-  // ISD::SIGN_EXTEND_VECTOR_INREG.
+  // ISD::*_EXTEND_VECTOR_INREG.
   if (!Subtarget.hasInt256() && !(VT.getSizeInBits() % 128)) {
     unsigned NumVecs = VT.getSizeInBits() / 128;
     unsigned NumSubElts = 128 / SVT.getSizeInBits();
@@ -28383,7 +28413,9 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
       SDValue SrcVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InSubVT, N0,
                                    DAG.getIntPtrConstant(Offset, DL));
       SrcVec = ExtendVecSize(DL, SrcVec, 128);
-      SrcVec = DAG.getSignExtendVectorInReg(SrcVec, DL, SubVT);
+      SrcVec = Opcode == ISD::SIGN_EXTEND
+                   ? DAG.getSignExtendVectorInReg(SrcVec, DL, SubVT)
+                   : DAG.getZeroExtendVectorInReg(SrcVec, DL, SubVT);
       Opnds.push_back(SrcVec);
     }
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Opnds);
@@ -28501,6 +28533,9 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
                          DAG.getConstant(1, dl, VT));
     }
   }
+
+  if (SDValue V = combineToExtendVectorInReg(N, DAG, DCI, Subtarget))
+    return V;
 
   if (VT.is256BitVector())
     if (SDValue R = WidenMaskArithmetic(N, DAG, DCI, Subtarget))
