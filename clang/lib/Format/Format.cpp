@@ -1844,10 +1844,11 @@ static void sortIncludes(const FormatStyle &Style,
   SmallVector<unsigned, 16> Indices;
   for (unsigned i = 0, e = Includes.size(); i != e; ++i)
     Indices.push_back(i);
-  std::sort(Indices.begin(), Indices.end(), [&](unsigned LHSI, unsigned RHSI) {
-    return std::tie(Includes[LHSI].Category, Includes[LHSI].Filename) <
-           std::tie(Includes[RHSI].Category, Includes[RHSI].Filename);
-  });
+  std::stable_sort(
+      Indices.begin(), Indices.end(), [&](unsigned LHSI, unsigned RHSI) {
+        return std::tie(Includes[LHSI].Category, Includes[LHSI].Filename) <
+               std::tie(Includes[RHSI].Category, Includes[RHSI].Filename);
+      });
 
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire block. Otherwise, no replacement is generated.

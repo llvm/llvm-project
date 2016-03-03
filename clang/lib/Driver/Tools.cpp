@@ -963,6 +963,10 @@ static void getARMTargetFeatures(const ToolChain &TC,
       // No v6M core supports unaligned memory access (v6M ARM ARM A3.2).
       if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         D.Diag(diag::err_target_unsupported_unaligned) << "v6m";
+      // v8M Baseline follows on from v6M, so doesn't support unaligned memory
+      // access either.
+      else if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v8m_baseline)
+        D.Diag(diag::err_target_unsupported_unaligned) << "v8m.base";
     } else
       Features.push_back("+strict-align");
   } else {

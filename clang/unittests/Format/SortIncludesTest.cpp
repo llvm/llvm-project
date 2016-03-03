@@ -20,8 +20,12 @@ namespace {
 
 class SortIncludesTest : public ::testing::Test {
 protected:
-  std::string sort(llvm::StringRef Code, StringRef FileName = "input.cpp") {
-    std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
+  std::vector<tooling::Range> GetCodeRange(StringRef Code) {
+    return std::vector<tooling::Range>(1, tooling::Range(0, Code.size()));
+  }
+
+  std::string sort(StringRef Code, StringRef FileName = "input.cpp") {
+    auto Ranges = GetCodeRange(Code);
     std::string Sorted =
         applyAllReplacements(Code, sortIncludes(Style, Code, Ranges, FileName));
     return applyAllReplacements(Sorted,
@@ -29,8 +33,7 @@ protected:
   }
 
   unsigned newCursor(llvm::StringRef Code, unsigned Cursor) {
-    std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
-    sortIncludes(Style, Code, Ranges, "input.cpp", &Cursor);
+    sortIncludes(Style, Code, GetCodeRange(Code), "input.cpp", &Cursor);
     return Cursor;
   }
 
@@ -45,6 +48,17 @@ TEST_F(SortIncludesTest, BasicSorting) {
             sort("#include \"a.h\"\n"
                  "#include \"c.h\"\n"
                  "#include \"b.h\"\n"));
+}
+
+TEST_F(SortIncludesTest, NoReplacementsForValidIncludes) {
+  // Identical #includes have led to a failure with an unstable sort.
+  std::string Code = "#include <a>\n"
+                     "#include <b>\n"
+                     "#include <b>\n"
+                     "#include <b>\n"
+                     "#include <b>\n"
+                     "#include <c>\n";
+  EXPECT_TRUE(sortIncludes(Style, Code, GetCodeRange(Code), "a.cc").empty());
 }
 
 TEST_F(SortIncludesTest, SupportClangFormatOff) {
