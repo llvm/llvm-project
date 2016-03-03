@@ -63,6 +63,15 @@ uint64_t *__llvm_profile_end_counters(void);
 void __llvm_profile_reset_counters(void);
 
 /*!
+ * \brief Read profile data form buffer and merge with
+ * in-process profile counters. The client is expected to
+ * have checked or already knows the profile data in the
+ * buffer matches the in-process counter structure before
+ * calling it.
+ */
+void __llvm_profile_merge_from_buffer(const char *Profile, uint64_t Size);
+
+/*!
  * \brief Counts the number of times a target value is seen.
  *
  * Records the target value for the CounterIndex if not seen before. Otherwise,
