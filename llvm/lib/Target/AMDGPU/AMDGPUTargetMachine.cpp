@@ -30,6 +30,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Transforms/IPO.h"
@@ -54,6 +55,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAnnotateUniformValuesPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
+  initializeSIInsertNopsPass(*PR);
   initializeSIInsertWaitsPass(*PR);
   initializeSILowerControlFlowPass(*PR);
 }
@@ -145,6 +147,12 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+cl::opt<bool> InsertNops(
+  "amdgpu-insert-nops",
+  cl::desc("Insert two nop instructions for each high level source statement"),
+  cl::init(false));
+
 class AMDGPUPassConfig : public TargetPassConfig {
 public:
   AMDGPUPassConfig(TargetMachine *TM, PassManagerBase &PM)
@@ -364,6 +372,9 @@ void GCNPassConfig::addPreSched2() {
 void GCNPassConfig::addPreEmitPass() {
   addPass(createSIInsertWaitsPass(), false);
   addPass(createSILowerControlFlowPass(), false);
+  if (InsertNops) {
+    addPass(createSIInsertNopsPass(), false);
+  }
 }
 
 TargetPassConfig *GCNTargetMachine::createPassConfig(PassManagerBase &PM) {

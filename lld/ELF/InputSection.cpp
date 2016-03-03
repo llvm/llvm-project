@@ -132,11 +132,15 @@ void InputSection<ELFT>::copyRelocations(uint8_t *Buf,
     RelType *P = reinterpret_cast<RelType *>(Buf);
     Buf += sizeof(RelType);
 
-    // Relocation for local symbol here means that it is probably
-    // rel[a].eh_frame section which has references to
-    // sections in r_info field. Also needs fix for addend.
-    if (SymIndex < SymTab->sh_info)
-      fatal("Relocation against local symbols is not supported yet");
+    // Relocation against local symbol here means that it is probably
+    // rel[a].eh_frame section which has references to sections in r_info field.
+    if (SymIndex < SymTab->sh_info) {
+      const Elf_Sym *Sym = this->File->getLocalSymbol(SymIndex);
+      uint32_t Idx = Out<ELFT>::SymTab->Locals[Sym];
+      P->r_offset = RelocatedSection->getOffset(Rel.r_offset);
+      P->setSymbolAndType(Idx, Type, Config->Mips64EL);
+      continue;
+    }
 
     SymbolBody *Body = this->File->getSymbolBody(SymIndex)->repl();
     P->r_offset = RelocatedSection->getOffset(Rel.r_offset);

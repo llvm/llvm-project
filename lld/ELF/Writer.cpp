@@ -528,8 +528,12 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
 template <class ELFT>
 static bool shouldKeepInSymtab(const ObjectFile<ELFT> &File, StringRef SymName,
                                const typename ELFFile<ELFT>::Elf_Sym &Sym) {
-  if (Sym.getType() == STT_SECTION || Sym.getType() == STT_FILE)
+  if (Sym.getType() == STT_FILE)
     return false;
+
+  // We keep sections in symtab for relocatable output.
+  if (Sym.getType() == STT_SECTION)
+    return Config->Relocatable;
 
   InputSectionBase<ELFT> *Sec = File.getSection(Sym);
   // If sym references a section in a discarded group, don't keep it.
@@ -569,8 +573,13 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
         InputSectionBase<ELFT> *Section = F->getSection(Sym);
         if (!Section->Live)
           continue;
+        // That can happen if creating relocatable output.
+        if (Sym.getType() == STT_SECTION)
+          SymName = Section->getSectionName();
       }
       ++Out<ELFT>::SymTab->NumLocals;
+      if (Config->Relocatable)
+        Out<ELFT>::SymTab->Locals[&Sym] = Out<ELFT>::SymTab->NumLocals;
       F->KeptLocalSyms.push_back(std::make_pair(
           &Sym, Out<ELFT>::SymTab->StrTabSec.addString(SymName)));
     }

@@ -745,11 +745,9 @@ bool BranchFolder::CreateCommonTailOnlyBlock(MachineBasicBlock *&PredBB,
 }
 
 static void
-removeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
-                               MachineBasicBlock &MBBCommon) {
-  // Remove MMOs from memory operations in the common block
-  // when they do not match the ones from the block being tail-merged.
-  // This ensures later passes conservatively compute dependencies.
+mergeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
+                              MachineBasicBlock &MBBCommon) {
+  // Merge MMOs from memory operations in the common block.
   MachineBasicBlock *MBB = MBBIStartPos->getParent();
   // Note CommonTailLen does not necessarily matches the size of
   // the common BB nor all its instructions because of debug
@@ -900,8 +898,8 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
         continue;
       DEBUG(dbgs() << "BB#" << SameTails[i].getBlock()->getNumber()
                    << (i == e-1 ? "" : ", "));
-      // Remove MMOs from memory operations as needed.
-      removeMMOsFromMemoryOperations(SameTails[i].getTailStartPos(), *MBB);
+      // Merge MMOs from memory operations as needed.
+      mergeMMOsFromMemoryOperations(SameTails[i].getTailStartPos(), *MBB);
       // Hack the end off BB i, making it jump to BB commonTailIndex instead.
       ReplaceTailWithBranchTo(SameTails[i].getTailStartPos(), MBB);
       // BB i is no longer a predecessor of SuccBB; remove it from the worklist.

@@ -809,8 +809,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::SDIVREM, MVT::i32, Custom);
     setOperationAction(ISD::UDIVREM, MVT::i32, Custom);
-    setOperationAction(ISD::SDIVREM, MVT::i64, Custom);
-    setOperationAction(ISD::UDIVREM, MVT::i64, Custom);
   } else {
     setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
     setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
@@ -7057,13 +7055,6 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::UREM:
     Res = LowerREM(N, DAG);
     break;
-  case ISD::SDIVREM:
-  case ISD::UDIVREM:
-    Res = LowerDivRem(SDValue(N, 0), DAG);
-    assert(Res.getNumOperands() == 2 && "DivRem needs two values");
-    Results.push_back(Res.getValue(0));
-    Results.push_back(Res.getValue(1));
-    return;
   case ISD::READCYCLECOUNTER:
     ReplaceREADCYCLECOUNTER(N, Results, DAG, Subtarget);
     return;

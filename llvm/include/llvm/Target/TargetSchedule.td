@@ -393,6 +393,8 @@ class InstRW<list<SchedReadWrite> rw, dag instrlist> {
   list<SchedReadWrite> OperandReadWrites = rw;
   dag Instrs = instrlist;
   SchedMachineModel SchedModel = ?;
+  // Allow a subtarget to mark some instructions as unsupported.
+  bit Unsupported = 0;
 }
 
 // Map a set of itinerary classes to SchedReadWrite resources. This is

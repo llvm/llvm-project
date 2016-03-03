@@ -25,19 +25,17 @@ using namespace llvm::sys::fs;
 using namespace lld;
 using namespace lld::elf;
 
-namespace {
-class ECRAII {
+template <class ELFT>
+static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
   std::error_code EC;
-
-public:
-  std::error_code &getEC() { return EC; }
-  ~ECRAII() { fatal(EC); }
-};
+  ELFFile<ELFT> F(MB.getBuffer(), EC);
+  fatal(EC);
+  return F;
 }
 
 template <class ELFT>
-ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef M)
-    : InputFile(K, M), ELFObj(MB.getBuffer(), ECRAII().getEC()) {}
+ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB)
+    : InputFile(K, MB), ELFObj(createELFObj<ELFT>(MB)) {}
 
 template <class ELFT>
 ELFKind ELFFileBase<ELFT>::getELFKind() {
@@ -268,7 +266,9 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     return MipsReginfo;
   }
 
-  if (Name == ".eh_frame")
+  // We dont need special handling of .eh_frame sections if relocatable
+  // output was choosen. Proccess them as usual input sections.
+  if (!Config->Relocatable && Name == ".eh_frame")
     return new (EHAlloc.Allocate()) EHInputSection<ELFT>(this, &Sec);
   if (shouldMerge<ELFT>(Sec))
     return new (MAlloc.Allocate()) MergeInputSection<ELFT>(this, &Sec);

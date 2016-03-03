@@ -37,6 +37,9 @@ set(CLANG_TOOLS_TEST_DEPS
   # clang-tidy tests require it.
   clang-headers
 
+  # For the clang-tidy libclang integration test.
+  c-index-test
+
   # Individual tools we test.
   clang-apply-replacements
   clang-rename
