@@ -30,6 +30,8 @@ set(PROFILE_SOURCES
   InstrProfilingValue.c
   InstrProfilingBuffer.c
   InstrProfilingFile.c
+  InstrProfilingMerge.c
+  InstrProfilingMergeFile.c
   InstrProfilingWriter.c
   InstrProfilingPlatformDarwin.c
   InstrProfilingPlatformLinux.c

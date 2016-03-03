@@ -221,7 +221,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   writeSections();
   if (HasError)
     return;
-  fatal(Buffer->commit());
+  check(Buffer->commit());
 }
 
 namespace {
@@ -564,7 +564,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
     return;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
     for (const Elf_Sym &Sym : F->getLocalSymbols()) {
-      StringRef SymName = fatal(Sym.getName(F->getStringTable()));
+      StringRef SymName = check(Sym.getName(F->getStringTable()));
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
       if (Sym.st_shndx != SHN_ABS) {

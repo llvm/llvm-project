@@ -109,10 +109,15 @@ int llvmWriteProfDataImpl(WriterCallback Writer, void *WriterCtx,
                           struct ValueProfData **ValueDataBeginArray,
                           const uint64_t ValueDataSize, const char *NamesBegin,
                           const char *NamesEnd);
+/* Merge value profile data pointed to by SrcValueProfData into
+ * in-memory profile counters pointed by to DstData.  */
+void mergeValueProfData(struct ValueProfData *SrcValueProfData,
+                        __llvm_profile_data *DstData);
 
 extern char *(*GetEnvHook)(const char *);
 extern void (*FreeHook)(void *);
-extern void* (*CallocHook)(size_t, size_t);
+extern void *(*CallocHook)(size_t, size_t);
+extern void (*VPMergeHook)(struct ValueProfData *, __llvm_profile_data *);
 extern uint32_t VPBufferSize;
 
 #endif

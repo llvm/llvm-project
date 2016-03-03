@@ -35,15 +35,15 @@ template <typename T> bool error(const ErrorOr<T> &V) {
 
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg, const Twine &Prefix);
-void fatal(std::error_code EC);
+void check(std::error_code EC);
 
-template <class T> T fatal(ErrorOr<T> EO) {
+template <class T> T check(ErrorOr<T> EO) {
   if (EO)
     return std::move(*EO);
   fatal(EO.getError().message());
 }
 
-template <class T> T fatal(ErrorOr<T> EO, const Twine &Prefix) {
+template <class T> T check(ErrorOr<T> EO, const Twine &Prefix) {
   if (EO)
     return std::move(*EO);
   fatal(EO.getError().message(), Prefix);

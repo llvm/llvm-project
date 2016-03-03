@@ -1318,8 +1318,10 @@ void ScopStmt::deriveAssumptionsFromGEP(GetElementPtrInst *GEP,
     auto *Expr = Subscripts[i + IndexOffset];
     auto Size = Sizes[i];
 
+    auto *Scope = SD.getLI()->getLoopFor(getEntryBlock());
     InvariantLoadsSetTy AccessILS;
-    if (!isAffineExpr(&Parent.getRegion(), Expr, SE, nullptr, &AccessILS))
+    if (!isAffineExpr(&Parent.getRegion(), Scope, Expr, SE, nullptr,
+                      &AccessILS))
       continue;
 
     bool NonAffine = false;
@@ -1783,9 +1785,10 @@ void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
     if (!DT.dominates(CI->getParent(), R->getEntry()))
       continue;
 
+    auto *L = LI.getLoopFor(CI->getParent());
     auto *Val = CI->getArgOperand(0);
     std::vector<const SCEV *> Params;
-    if (!isAffineParamConstraint(Val, R, *SE, Params)) {
+    if (!isAffineParamConstraint(Val, R, L, *SE, Params)) {
       emitOptimizationRemarkAnalysis(F.getContext(), DEBUG_TYPE, F,
                                      CI->getDebugLoc(),
                                      "Non-affine user assumption ignored.");
@@ -1794,7 +1797,6 @@ void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
 
     addParams(Params);
 
-    auto *L = LI.getLoopFor(CI->getParent());
     SmallVector<isl_set *, 2> ConditionSets;
     buildConditionSets(*this, Val, nullptr, L, Context, ConditionSets);
     assert(ConditionSets.size() == 2);
@@ -2765,11 +2767,12 @@ static unsigned getMaxLoopDepthInRegion(const Region &R, LoopInfo &LI,
   return MaxLD - MinLD + 1;
 }
 
-Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, unsigned MaxLoopDepth)
+Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
+           unsigned MaxLoopDepth)
     : SE(&ScalarEvolution), R(R), IsOptimized(false),
       HasSingleExitEdge(R.getExitingBlock()), HasErrorBlock(false),
       MaxLoopDepth(MaxLoopDepth), IslCtx(isl_ctx_alloc(), isl_ctx_free),
-      Context(nullptr), Affinator(this), AssumedContext(nullptr),
+      Context(nullptr), Affinator(this, LI), AssumedContext(nullptr),
       InvalidContext(nullptr), Schedule(nullptr) {
   isl_options_set_on_error(getIslCtx(), ISL_ON_ERROR_ABORT);
   buildContext();
@@ -3855,7 +3858,7 @@ bool ScopInfo::buildAccessMultiDimFixed(
 
   for (auto *Subscript : Subscripts) {
     InvariantLoadsSetTy AccessILS;
-    if (!isAffineExpr(R, Subscript, *SE, nullptr, &AccessILS))
+    if (!isAffineExpr(R, L, Subscript, *SE, nullptr, &AccessILS))
       return false;
 
     for (LoadInst *LInst : AccessILS)
@@ -3934,7 +3937,7 @@ bool ScopInfo::buildAccessMemIntrinsic(
 
   // Check if the length val is actually affine or if we overapproximate it
   InvariantLoadsSetTy AccessILS;
-  bool LengthIsAffine = isAffineExpr(R, LengthVal, *SE, nullptr, &AccessILS);
+  bool LengthIsAffine = isAffineExpr(R, L, LengthVal, *SE, nullptr, &AccessILS);
   for (LoadInst *LInst : AccessILS)
     if (!ScopRIL.count(LInst))
       LengthIsAffine = false;
@@ -4044,9 +4047,9 @@ void ScopInfo::buildAccessSingleDim(
   }
 
   InvariantLoadsSetTy AccessILS;
-  bool IsAffine =
-      !isVariantInNonAffineLoop &&
-      isAffineExpr(R, AccessFunction, *SE, BasePointer->getValue(), &AccessILS);
+  bool IsAffine = !isVariantInNonAffineLoop &&
+                  isAffineExpr(R, L, AccessFunction, *SE,
+                               BasePointer->getValue(), &AccessILS);
 
   for (LoadInst *LInst : AccessILS)
     if (!ScopRIL.count(LInst))
@@ -4317,7 +4320,7 @@ void ScopInfo::addPHIReadAccess(PHINode *PHI) {
 
 void ScopInfo::buildScop(Region &R, AssumptionCache &AC) {
   unsigned MaxLoopDepth = getMaxLoopDepthInRegion(R, *LI, *SD);
-  scop.reset(new Scop(R, *SE, MaxLoopDepth));
+  scop.reset(new Scop(R, *SE, *LI, MaxLoopDepth));
 
   buildStmts(R, R);
   buildAccessFunctions(R, R, *SD->getInsnToMemAccMap(&R));

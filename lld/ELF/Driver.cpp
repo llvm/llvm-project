@@ -71,14 +71,14 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
 // Each slice consists of a member file in the archive.
 static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
-      fatal(Archive::create(MB), "Failed to parse archive");
+      check(Archive::create(MB), "Failed to parse archive");
 
   std::vector<MemoryBufferRef> V;
   for (const ErrorOr<Archive::Child> &COrErr : File->children()) {
-    Archive::Child C = fatal(COrErr, "Could not get the child of the archive " +
+    Archive::Child C = check(COrErr, "Could not get the child of the archive " +
                                          File->getFileName());
     MemoryBufferRef Mb =
-        fatal(C.getMemoryBufferRef(),
+        check(C.getMemoryBufferRef(),
               "Could not get the buffer for a child of the archive " +
                   File->getFileName());
     V.push_back(Mb);

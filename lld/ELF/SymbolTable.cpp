@@ -137,7 +137,7 @@ ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
     std::unique_ptr<MemoryBuffer> Buffer =
         MemoryBuffer::getMemBuffer(F->MB, false);
     std::unique_ptr<Module> M =
-        fatal(getLazyBitcodeModule(std::move(Buffer), Context,
+        check(getLazyBitcodeModule(std::move(Buffer), Context,
                                    /*ShouldLazyLoadMetadata*/ true));
     L.linkInModule(std::move(M));
   }

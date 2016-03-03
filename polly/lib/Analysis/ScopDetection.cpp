@@ -322,11 +322,12 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
   return true;
 }
 
-bool ScopDetection::isAffine(const SCEV *S, DetectionContext &Context,
+bool ScopDetection::isAffine(const SCEV *S, Loop *Scope,
+                             DetectionContext &Context,
                              Value *BaseAddress) const {
 
   InvariantLoadsSetTy AccessILS;
-  if (!isAffineExpr(&Context.CurRegion, S, *SE, BaseAddress, &AccessILS))
+  if (!isAffineExpr(&Context.CurRegion, Scope, S, *SE, BaseAddress, &AccessILS))
     return false;
 
   if (!onlyValidRequiredInvariantLoads(AccessILS, Context))
@@ -341,7 +342,7 @@ bool ScopDetection::isValidSwitch(BasicBlock &BB, SwitchInst *SI,
   Loop *L = LI->getLoopFor(&BB);
   const SCEV *ConditionSCEV = SE->getSCEVAtScope(Condition, L);
 
-  if (isAffine(ConditionSCEV, Context))
+  if (isAffine(ConditionSCEV, L, Context))
     return true;
 
   if (!IsLoopBranch && AllowNonAffineSubRegions &&
@@ -401,7 +402,7 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
   const SCEV *LHS = SE->getSCEVAtScope(ICmp->getOperand(0), L);
   const SCEV *RHS = SE->getSCEVAtScope(ICmp->getOperand(1), L);
 
-  if (isAffine(LHS, Context) && isAffine(RHS, Context))
+  if (isAffine(LHS, L, Context) && isAffine(RHS, L, Context))
     return true;
 
   if (!IsLoopBranch && AllowNonAffineSubRegions &&
@@ -537,7 +538,7 @@ bool ScopDetection::isValidIntrinsicInst(IntrinsicInst &II,
       return false;
 
     // Bail if the length is not affine.
-    if (!isAffine(SE->getSCEVAtScope(cast<MemIntrinsic>(II).getLength(), L),
+    if (!isAffine(SE->getSCEVAtScope(cast<MemIntrinsic>(II).getLength(), L), L,
                   Context))
       return false;
 
@@ -721,7 +722,7 @@ bool ScopDetection::hasValidArraySizes(DetectionContext &Context,
   Value *BaseValue = BasePointer->getValue();
   Region &CurRegion = Context.CurRegion;
   for (const SCEV *DelinearizedSize : Sizes) {
-    if (!isAffine(DelinearizedSize, Context, nullptr)) {
+    if (!isAffine(DelinearizedSize, Scope, Context, nullptr)) {
       Sizes.clear();
       break;
     }
@@ -749,7 +750,7 @@ bool ScopDetection::hasValidArraySizes(DetectionContext &Context,
       const Instruction *Insn = Pair.first;
       const SCEV *AF = Pair.second;
 
-      if (!isAffine(AF, Context, BaseValue)) {
+      if (!isAffine(AF, Scope, Context, BaseValue)) {
         invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, AF, Insn,
                                        BaseValue);
         if (!KeepGoing)
@@ -780,9 +781,10 @@ bool ScopDetection::computeAccessFunctions(
     bool IsNonAffine = false;
     TempMemoryAccesses.insert(std::make_pair(Insn, MemAcc(Insn, Shape)));
     MemAcc *Acc = &TempMemoryAccesses.find(Insn)->second;
+    auto *Scope = LI->getLoopFor(Insn->getParent());
 
     if (!AF) {
-      if (isAffine(Pair.second, Context, BaseValue))
+      if (isAffine(Pair.second, Scope, Context, BaseValue))
         Acc->DelinearizedSubscripts.push_back(Pair.second);
       else
         IsNonAffine = true;
@@ -792,7 +794,7 @@ bool ScopDetection::computeAccessFunctions(
       if (Acc->DelinearizedSubscripts.size() == 0)
         IsNonAffine = true;
       for (const SCEV *S : Acc->DelinearizedSubscripts)
-        if (!isAffine(S, Context, BaseValue))
+        if (!isAffine(S, Scope, Context, BaseValue))
           IsNonAffine = true;
     }
 
@@ -898,7 +900,8 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
     if (Context.BoxedLoopsSet.count(L))
       IsVariantInNonAffineLoop = true;
 
-  bool IsAffine = !IsVariantInNonAffineLoop && isAffine(AF, Context, BV);
+  auto *Scope = LI->getLoopFor(Inst->getParent());
+  bool IsAffine = !IsVariantInNonAffineLoop && isAffine(AF, Scope, Context, BV);
   // Do not try to delinearize memory intrinsics and force them to be affine.
   if (isa<MemIntrinsic>(Inst) && !IsAffine) {
     return invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, AF, Inst,
