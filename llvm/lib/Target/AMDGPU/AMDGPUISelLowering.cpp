@@ -780,10 +780,7 @@ static bool hasDefinedInitializer(const GlobalValue *GV) {
   if (!GVar || !GVar->hasInitializer())
     return false;
 
-  if (isa<UndefValue>(GVar->getInitializer()))
-    return false;
-
-  return true;
+  return !isa<UndefValue>(GVar->getInitializer());
 }
 
 SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,

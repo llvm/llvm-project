@@ -935,14 +935,14 @@ BinarySDNode *SelectionDAG::GetBinarySDNode(unsigned Opcode, SDLoc DL,
     if (Flags == nullptr)
       Flags = &F;
 
-    BinaryWithFlagsSDNode *FN = new (NodeAllocator) BinaryWithFlagsSDNode(
+    auto *FN = newSDNode<BinaryWithFlagsSDNode>(
         Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs, N1, N2, *Flags);
 
     return FN;
   }
 
-  BinarySDNode *N = new (NodeAllocator)
-      BinarySDNode(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs, N1, N2);
+  auto *N = newSDNode<BinarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(),
+                                    VTs, N1, N2);
   return N;
 }
 
@@ -1187,8 +1187,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, SDLoc DL, EVT VT,
       return SDValue(N, 0);
 
   if (!N) {
-    N = new (NodeAllocator) ConstantSDNode(isT, isO, Elt, DL.getDebugLoc(),
-                                           EltVT);
+    N = newSDNode<ConstantSDNode>(isT, isO, Elt, DL.getDebugLoc(), EltVT);
     CSEMap.InsertNode(N, IP);
     InsertNode(N);
   }
@@ -1231,8 +1230,7 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP& V, SDLoc DL, EVT VT,
       return SDValue(N, 0);
 
   if (!N) {
-    N = new (NodeAllocator) ConstantFPSDNode(isTarget, &V, DL.getDebugLoc(),
-                                             EltVT);
+    N = newSDNode<ConstantFPSDNode>(isTarget, &V, DL.getDebugLoc(), EltVT);
     CSEMap.InsertNode(N, IP);
     InsertNode(N);
   }
@@ -1292,9 +1290,8 @@ SDValue SelectionDAG::getGlobalAddress(const GlobalValue *GV, SDLoc DL,
   if (SDNode *E = FindNodeOrInsertPos(ID, DL.getDebugLoc(), IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) GlobalAddressSDNode(Opc, DL.getIROrder(),
-                                                      DL.getDebugLoc(), GV, VT,
-                                                      Offset, TargetFlags);
+  auto *N = newSDNode<GlobalAddressSDNode>(
+      Opc, DL.getIROrder(), DL.getDebugLoc(), GV, VT, Offset, TargetFlags);
   CSEMap.InsertNode(N, IP);
     InsertNode(N);
   return SDValue(N, 0);
@@ -1309,7 +1306,7 @@ SDValue SelectionDAG::getFrameIndex(int FI, EVT VT, bool isTarget) {
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) FrameIndexSDNode(FI, VT, isTarget);
+  auto *N = newSDNode<FrameIndexSDNode>(FI, VT, isTarget);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1328,8 +1325,7 @@ SDValue SelectionDAG::getJumpTable(int JTI, EVT VT, bool isTarget,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) JumpTableSDNode(JTI, VT, isTarget,
-                                                  TargetFlags);
+  auto *N = newSDNode<JumpTableSDNode>(JTI, VT, isTarget, TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1354,8 +1350,8 @@ SDValue SelectionDAG::getConstantPool(const Constant *C, EVT VT,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) ConstantPoolSDNode(isTarget, C, VT, Offset,
-                                                     Alignment, TargetFlags);
+  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VT, Offset, Alignment,
+                                          TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1381,8 +1377,8 @@ SDValue SelectionDAG::getConstantPool(MachineConstantPoolValue *C, EVT VT,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) ConstantPoolSDNode(isTarget, C, VT, Offset,
-                                                     Alignment, TargetFlags);
+  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VT, Offset, Alignment,
+                                          TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1399,8 +1395,7 @@ SDValue SelectionDAG::getTargetIndex(int Index, EVT VT, int64_t Offset,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N =
-      new (NodeAllocator) TargetIndexSDNode(Index, VT, Offset, TargetFlags);
+  auto *N = newSDNode<TargetIndexSDNode>(Index, VT, Offset, TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1414,7 +1409,7 @@ SDValue SelectionDAG::getBasicBlock(MachineBasicBlock *MBB) {
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) BasicBlockSDNode(MBB);
+  auto *N = newSDNode<BasicBlockSDNode>(MBB);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1429,7 +1424,7 @@ SDValue SelectionDAG::getValueType(EVT VT) {
     ExtendedValueTypeNodes[VT] : ValueTypeNodes[VT.getSimpleVT().SimpleTy];
 
   if (N) return SDValue(N, 0);
-  N = new (NodeAllocator) VTSDNode(VT);
+  N = newSDNode<VTSDNode>(VT);
   InsertNode(N);
   return SDValue(N, 0);
 }
@@ -1437,7 +1432,7 @@ SDValue SelectionDAG::getValueType(EVT VT) {
 SDValue SelectionDAG::getExternalSymbol(const char *Sym, EVT VT) {
   SDNode *&N = ExternalSymbols[Sym];
   if (N) return SDValue(N, 0);
-  N = new (NodeAllocator) ExternalSymbolSDNode(false, Sym, 0, VT);
+  N = newSDNode<ExternalSymbolSDNode>(false, Sym, 0, VT);
   InsertNode(N);
   return SDValue(N, 0);
 }
@@ -1446,7 +1441,7 @@ SDValue SelectionDAG::getMCSymbol(MCSymbol *Sym, EVT VT) {
   SDNode *&N = MCSymbols[Sym];
   if (N)
     return SDValue(N, 0);
-  N = new (NodeAllocator) MCSymbolSDNode(Sym, VT);
+  N = newSDNode<MCSymbolSDNode>(Sym, VT);
   InsertNode(N);
   return SDValue(N, 0);
 }
@@ -1457,7 +1452,7 @@ SDValue SelectionDAG::getTargetExternalSymbol(const char *Sym, EVT VT,
     TargetExternalSymbols[std::pair<std::string,unsigned char>(Sym,
                                                                TargetFlags)];
   if (N) return SDValue(N, 0);
-  N = new (NodeAllocator) ExternalSymbolSDNode(true, Sym, TargetFlags, VT);
+  N = newSDNode<ExternalSymbolSDNode>(true, Sym, TargetFlags, VT);
   InsertNode(N);
   return SDValue(N, 0);
 }
@@ -1467,7 +1462,7 @@ SDValue SelectionDAG::getCondCode(ISD::CondCode Cond) {
     CondCodeNodes.resize(Cond+1);
 
   if (!CondCodeNodes[Cond]) {
-    CondCodeSDNode *N = new (NodeAllocator) CondCodeSDNode(Cond);
+    auto *N = newSDNode<CondCodeSDNode>(Cond);
     CondCodeNodes[Cond] = N;
     InsertNode(N);
   }
@@ -1642,10 +1637,8 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, SDLoc dl, SDValue N1,
   int *MaskAlloc = OperandAllocator.Allocate<int>(NElts);
   memcpy(MaskAlloc, &MaskVec[0], NElts * sizeof(int));
 
-  ShuffleVectorSDNode *N =
-    new (NodeAllocator) ShuffleVectorSDNode(VT, dl.getIROrder(),
-                                            dl.getDebugLoc(), N1, N2,
-                                            MaskAlloc);
+  auto *N = newSDNode<ShuffleVectorSDNode>(VT, dl.getIROrder(),
+                                           dl.getDebugLoc(), N1, N2, MaskAlloc);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1678,9 +1671,8 @@ SDValue SelectionDAG::getConvertRndSat(EVT VT, SDLoc dl,
   if (SDNode *E = FindNodeOrInsertPos(ID, dl.getDebugLoc(), IP))
     return SDValue(E, 0);
 
-  CvtRndSatSDNode *N = new (NodeAllocator) CvtRndSatSDNode(VT, dl.getIROrder(),
-                                                           dl.getDebugLoc(),
-                                                           Ops, Code);
+  auto *N = newSDNode<CvtRndSatSDNode>(VT, dl.getIROrder(), dl.getDebugLoc(),
+                                       Ops, Code);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1694,7 +1686,7 @@ SDValue SelectionDAG::getRegister(unsigned RegNo, EVT VT) {
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) RegisterSDNode(RegNo, VT);
+  auto *N = newSDNode<RegisterSDNode>(RegNo, VT);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1708,7 +1700,7 @@ SDValue SelectionDAG::getRegisterMask(const uint32_t *RegMask) {
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) RegisterMaskSDNode(RegMask);
+  auto *N = newSDNode<RegisterMaskSDNode>(RegMask);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1723,8 +1715,8 @@ SDValue SelectionDAG::getEHLabel(SDLoc dl, SDValue Root, MCSymbol *Label) {
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) EHLabelSDNode(dl.getIROrder(),
-                                                dl.getDebugLoc(), Root, Label);
+  auto *N =
+      newSDNode<EHLabelSDNode>(dl.getIROrder(), dl.getDebugLoc(), Root, Label);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1746,8 +1738,7 @@ SDValue SelectionDAG::getBlockAddress(const BlockAddress *BA, EVT VT,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) BlockAddressSDNode(Opc, VT, BA, Offset,
-                                                     TargetFlags);
+  auto *N = newSDNode<BlockAddressSDNode>(Opc, VT, BA, Offset, TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1765,7 +1756,7 @@ SDValue SelectionDAG::getSrcValue(const Value *V) {
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) SrcValueSDNode(V);
+  auto *N = newSDNode<SrcValueSDNode>(V);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1781,7 +1772,7 @@ SDValue SelectionDAG::getMDNode(const MDNode *MD) {
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) MDNodeSDNode(MD);
+  auto *N = newSDNode<MDNodeSDNode>(MD);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1807,9 +1798,8 @@ SDValue SelectionDAG::getAddrSpaceCast(SDLoc dl, EVT VT, SDValue Ptr,
   if (SDNode *E = FindNodeOrInsertPos(ID, dl.getDebugLoc(), IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) AddrSpaceCastSDNode(dl.getIROrder(),
-                                                      dl.getDebugLoc(),
-                                                      VT, Ptr, SrcAS, DestAS);
+  auto *N = newSDNode<AddrSpaceCastSDNode>(dl.getIROrder(), dl.getDebugLoc(),
+                                           VT, Ptr, SrcAS, DestAS);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -2881,8 +2871,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT) {
   if (SDNode *E = FindNodeOrInsertPos(ID, DL.getDebugLoc(), IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) SDNode(Opcode, DL.getIROrder(),
-                                         DL.getDebugLoc(), getVTList(VT));
+  auto *N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(),
+                              getVTList(VT));
   CSEMap.InsertNode(N, IP);
 
   InsertNode(N);
@@ -3201,12 +3191,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL,
     if (SDNode *E = FindNodeOrInsertPos(ID, DL.getDebugLoc(), IP))
       return SDValue(E, 0);
 
-    N = new (NodeAllocator) UnarySDNode(Opcode, DL.getIROrder(),
-                                        DL.getDebugLoc(), VTs, Operand);
+    N = newSDNode<UnarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs,
+                               Operand);
     CSEMap.InsertNode(N, IP);
   } else {
-    N = new (NodeAllocator) UnarySDNode(Opcode, DL.getIROrder(),
-                                        DL.getDebugLoc(), VTs, Operand);
+    N = newSDNode<UnarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs,
+                               Operand);
   }
 
   InsertNode(N);
@@ -4018,12 +4008,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT,
     if (SDNode *E = FindNodeOrInsertPos(ID, DL.getDebugLoc(), IP))
       return SDValue(E, 0);
 
-    N = new (NodeAllocator) TernarySDNode(Opcode, DL.getIROrder(),
-                                          DL.getDebugLoc(), VTs, N1, N2, N3);
+    N = newSDNode<TernarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs,
+                                 N1, N2, N3);
     CSEMap.InsertNode(N, IP);
   } else {
-    N = new (NodeAllocator) TernarySDNode(Opcode, DL.getIROrder(),
-                                          DL.getDebugLoc(), VTs, N1, N2, N3);
+    N = newSDNode<TernarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs,
+                                 N1, N2, N3);
   }
 
   InsertNode(N);
@@ -4824,11 +4814,9 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, SDLoc dl, EVT MemVT,
   SDUse *DynOps = NumOps > 4 ? OperandAllocator.Allocate<SDUse>(NumOps)
                              : nullptr;
 
-  SDNode *N = new (NodeAllocator) AtomicSDNode(Opcode, dl.getIROrder(),
-                                               dl.getDebugLoc(), VTList, MemVT,
-                                               Ops.data(), DynOps, NumOps, MMO,
-                                               SuccessOrdering, FailureOrdering,
-                                               SynchScope);
+  auto *N = newSDNode<AtomicSDNode>(
+      Opcode, dl.getIROrder(), dl.getDebugLoc(), VTList, MemVT, Ops.data(),
+      DynOps, NumOps, MMO, SuccessOrdering, FailureOrdering, SynchScope);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5020,14 +5008,12 @@ SelectionDAG::getMemIntrinsicNode(unsigned Opcode, SDLoc dl, SDVTList VTList,
       return SDValue(E, 0);
     }
 
-    N = new (NodeAllocator) MemIntrinsicSDNode(Opcode, dl.getIROrder(),
-                                               dl.getDebugLoc(), VTList, Ops,
-                                               MemVT, MMO);
+    N = newSDNode<MemIntrinsicSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(),
+                                      VTList, Ops, MemVT, MMO);
     CSEMap.InsertNode(N, IP);
   } else {
-    N = new (NodeAllocator) MemIntrinsicSDNode(Opcode, dl.getIROrder(),
-                                               dl.getDebugLoc(), VTList, Ops,
-                                               MemVT, MMO);
+    N = newSDNode<MemIntrinsicSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(),
+                                      VTList, Ops, MemVT, MMO);
   }
   InsertNode(N);
   return SDValue(N, 0);
@@ -5145,9 +5131,8 @@ SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
     cast<LoadSDNode>(E)->refineAlignment(MMO);
     return SDValue(E, 0);
   }
-  SDNode *N = new (NodeAllocator) LoadSDNode(Ops, dl.getIROrder(),
-                                             dl.getDebugLoc(), VTs, AM, ExtType,
-                                             MemVT, MMO);
+  auto *N = newSDNode<LoadSDNode>(Ops, dl.getIROrder(), dl.getDebugLoc(), VTs,
+                                  AM, ExtType, MemVT, MMO);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5253,9 +5238,8 @@ SDValue SelectionDAG::getStore(SDValue Chain, SDLoc dl, SDValue Val,
     cast<StoreSDNode>(E)->refineAlignment(MMO);
     return SDValue(E, 0);
   }
-  SDNode *N = new (NodeAllocator) StoreSDNode(Ops, dl.getIROrder(),
-                                              dl.getDebugLoc(), VTs,
-                                              ISD::UNINDEXED, false, VT, MMO);
+  auto *N = newSDNode<StoreSDNode>(Ops, dl.getIROrder(), dl.getDebugLoc(), VTs,
+                                   ISD::UNINDEXED, false, VT, MMO);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5322,9 +5306,8 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, SDLoc dl, SDValue Val,
     cast<StoreSDNode>(E)->refineAlignment(MMO);
     return SDValue(E, 0);
   }
-  SDNode *N = new (NodeAllocator) StoreSDNode(Ops, dl.getIROrder(),
-                                              dl.getDebugLoc(), VTs,
-                                              ISD::UNINDEXED, true, SVT, MMO);
+  auto *N = newSDNode<StoreSDNode>(Ops, dl.getIROrder(), dl.getDebugLoc(), VTs,
+                                   ISD::UNINDEXED, true, SVT, MMO);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5347,11 +5330,9 @@ SelectionDAG::getIndexedStore(SDValue OrigStore, SDLoc dl, SDValue Base,
   if (SDNode *E = FindNodeOrInsertPos(ID, dl.getDebugLoc(), IP))
     return SDValue(E, 0);
 
-  SDNode *N = new (NodeAllocator) StoreSDNode(Ops, dl.getIROrder(),
-                                              dl.getDebugLoc(), VTs, AM,
-                                              ST->isTruncatingStore(),
-                                              ST->getMemoryVT(),
-                                              ST->getMemOperand());
+  auto *N = newSDNode<StoreSDNode>(Ops, dl.getIROrder(), dl.getDebugLoc(), VTs,
+                                   AM, ST->isTruncatingStore(),
+                                   ST->getMemoryVT(), ST->getMemOperand());
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5377,9 +5358,8 @@ SelectionDAG::getMaskedLoad(EVT VT, SDLoc dl, SDValue Chain,
     cast<MaskedLoadSDNode>(E)->refineAlignment(MMO);
     return SDValue(E, 0);
   }
-  SDNode *N = new (NodeAllocator) MaskedLoadSDNode(dl.getIROrder(),
-                                             dl.getDebugLoc(), Ops, 4, VTs,
-                                             ExtTy, MemVT, MMO);
+  auto *N = newSDNode<MaskedLoadSDNode>(dl.getIROrder(), dl.getDebugLoc(), Ops,
+                                        4, VTs, ExtTy, MemVT, MMO);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5404,9 +5384,8 @@ SDValue SelectionDAG::getMaskedStore(SDValue Chain, SDLoc dl, SDValue Val,
     cast<MaskedStoreSDNode>(E)->refineAlignment(MMO);
     return SDValue(E, 0);
   }
-  SDNode *N = new (NodeAllocator) MaskedStoreSDNode(dl.getIROrder(),
-                                                    dl.getDebugLoc(), Ops, 4,
-                                                    VTs, isTrunc, MemVT, MMO);
+  auto *N = newSDNode<MaskedStoreSDNode>(dl.getIROrder(), dl.getDebugLoc(), Ops,
+                                         4, VTs, isTrunc, MemVT, MMO);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5430,9 +5409,8 @@ SelectionDAG::getMaskedGather(SDVTList VTs, EVT VT, SDLoc dl,
     cast<MaskedGatherSDNode>(E)->refineAlignment(MMO);
     return SDValue(E, 0);
   }
-  MaskedGatherSDNode *N =
-    new (NodeAllocator) MaskedGatherSDNode(dl.getIROrder(), dl.getDebugLoc(),
-                                           Ops, VTs, VT, MMO);
+  auto *N = newSDNode<MaskedGatherSDNode>(dl.getIROrder(), dl.getDebugLoc(),
+                                          Ops, VTs, VT, MMO);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5453,9 +5431,8 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT VT, SDLoc dl,
     cast<MaskedScatterSDNode>(E)->refineAlignment(MMO);
     return SDValue(E, 0);
   }
-  SDNode *N =
-    new (NodeAllocator) MaskedScatterSDNode(dl.getIROrder(), dl.getDebugLoc(),
-                                            Ops, VTs, VT, MMO);
+  auto *N = newSDNode<MaskedScatterSDNode>(dl.getIROrder(), dl.getDebugLoc(),
+                                           Ops, VTs, VT, MMO);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -5534,12 +5511,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT,
     if (SDNode *E = FindNodeOrInsertPos(ID, DL.getDebugLoc(), IP))
       return SDValue(E, 0);
 
-    N = new (NodeAllocator) SDNode(Opcode, DL.getIROrder(), DL.getDebugLoc(),
-                                   VTs, Ops);
+    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs, Ops);
     CSEMap.InsertNode(N, IP);
   } else {
-    N = new (NodeAllocator) SDNode(Opcode, DL.getIROrder(), DL.getDebugLoc(),
-                                   VTs, Ops);
+    N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs, Ops);
   }
 
   InsertNode(N);
@@ -5590,36 +5565,32 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, SDVTList VTList,
       return SDValue(E, 0);
 
     if (NumOps == 1) {
-      N = new (NodeAllocator) UnarySDNode(Opcode, DL.getIROrder(),
-                                          DL.getDebugLoc(), VTList, Ops[0]);
+      N = newSDNode<UnarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(),
+                                 VTList, Ops[0]);
     } else if (NumOps == 2) {
-      N = new (NodeAllocator) BinarySDNode(Opcode, DL.getIROrder(),
-                                           DL.getDebugLoc(), VTList, Ops[0],
-                                           Ops[1]);
+      N = newSDNode<BinarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(),
+                                  VTList, Ops[0], Ops[1]);
     } else if (NumOps == 3) {
-      N = new (NodeAllocator) TernarySDNode(Opcode, DL.getIROrder(),
-                                            DL.getDebugLoc(), VTList, Ops[0],
-                                            Ops[1], Ops[2]);
+      N = newSDNode<TernarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(),
+                                   VTList, Ops[0], Ops[1], Ops[2]);
     } else {
-      N = new (NodeAllocator) SDNode(Opcode, DL.getIROrder(), DL.getDebugLoc(),
-                                     VTList, Ops);
+      N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTList,
+                            Ops);
     }
     CSEMap.InsertNode(N, IP);
   } else {
     if (NumOps == 1) {
-      N = new (NodeAllocator) UnarySDNode(Opcode, DL.getIROrder(),
-                                          DL.getDebugLoc(), VTList, Ops[0]);
+      N = newSDNode<UnarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(),
+                                 VTList, Ops[0]);
     } else if (NumOps == 2) {
-      N = new (NodeAllocator) BinarySDNode(Opcode, DL.getIROrder(),
-                                           DL.getDebugLoc(), VTList, Ops[0],
-                                           Ops[1]);
+      N = newSDNode<BinarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(),
+                                  VTList, Ops[0], Ops[1]);
     } else if (NumOps == 3) {
-      N = new (NodeAllocator) TernarySDNode(Opcode, DL.getIROrder(),
-                                            DL.getDebugLoc(), VTList, Ops[0],
-                                            Ops[1], Ops[2]);
+      N = newSDNode<TernarySDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(),
+                                   VTList, Ops[0], Ops[1], Ops[2]);
     } else {
-      N = new (NodeAllocator) SDNode(Opcode, DL.getIROrder(), DL.getDebugLoc(),
-                                     VTList, Ops);
+      N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTList,
+                            Ops);
     }
   }
   InsertNode(N);
@@ -6224,8 +6195,7 @@ SelectionDAG::getMachineNode(unsigned Opcode, SDLoc DL, SDVTList VTs,
   }
 
   // Allocate a new MachineSDNode.
-  N = new (NodeAllocator) MachineSDNode(~Opcode, DL.getIROrder(),
-                                        DL.getDebugLoc(), VTs);
+  N = newSDNode<MachineSDNode>(~Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
 
   // Initialize the operands list.
   if (NumOps > array_lengthof(N->LocalOperands))

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=cortex-a57 -enable-unsafe-fp-math < %s | FileCheck %s 
+; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=cortex-a57 -enable-unsafe-fp-math -disable-post-ra < %s | FileCheck %s
 
 ; Verify that the first two adds are independent regardless of how the inputs are
 ; commuted. The destination registers are used as source registers for the third add.

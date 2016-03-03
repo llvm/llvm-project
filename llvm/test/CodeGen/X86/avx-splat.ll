@@ -135,8 +135,7 @@ entry:
 define <2 x double> @splat_load_2f64_11(<2 x double>* %ptr) {
 ; CHECK-LABEL: splat_load_2f64_11:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovaps (%rdi), %xmm0
-; CHECK-NEXT:    vmovhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; CHECK-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %ptr
   %x1 = shufflevector <2 x double> %x, <2 x double> undef, <2 x i32> <i32 1, i32 1>

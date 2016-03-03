@@ -60,6 +60,15 @@ STATISTIC(NumSTRD2STM,  "Number of strd instructions turned back into stm");
 STATISTIC(NumLDRD2LDR,  "Number of ldrd instructions turned back into ldr's");
 STATISTIC(NumSTRD2STR,  "Number of strd instructions turned back into str's");
 
+/// This switch disables formation of double/multi instructions that could
+/// potentially lead to (new) alignment traps even with CCR.UNALIGN_TRP
+/// disabled. This can be used to create libraries that are robust even when
+/// users provoke undefined behaviour by supplying misaligned pointers.
+/// \see mayCombineMisaligned()
+static cl::opt<bool>
+AssumeMisalignedLoadStores("arm-assume-misaligned-load-store", cl::Hidden,
+    cl::init(false), cl::desc("Be more conservative in ARM load/store opt"));
+
 namespace llvm {
 void initializeARMLoadStoreOptPass(PassRegistry &);
 }
@@ -916,6 +925,24 @@ static bool isValidLSDoubleOffset(int Offset) {
   return (Value % 4) == 0 && Value < 1024;
 }
 
+/// Return true for loads/stores that can be combined to a double/multi
+/// operation without increasing the requirements for alignment.
+static bool mayCombineMisaligned(const TargetSubtargetInfo &STI,
+                                 const MachineInstr &MI) {
+  // vldr/vstr trap on misaligned pointers anyway, forming vldm makes no
+  // difference.
+  unsigned Opcode = MI.getOpcode();
+  if (!isi32Load(Opcode) && !isi32Store(Opcode))
+    return true;
+
+  // Stack pointer alignment is out of the programmers control so we can trust
+  // SP-relative loads/stores.
+  if (getLoadStoreBaseOp(MI).getReg() == ARM::SP &&
+      STI.getFrameLowering()->getTransientStackAlignment() >= 4)
+    return true;
+  return false;
+}
+
 /// Find candidates for load/store multiple merge in list of MemOpQueueEntries.
 void ARMLoadStoreOpt::FormCandidates(const MemOpQueue &MemOps) {
   const MachineInstr *FirstMI = MemOps[0].MI;
@@ -952,6 +979,10 @@ void ARMLoadStoreOpt::FormCandidates(const MemOpQueue &MemOps) {
     // LDRD/STRD do not allow SP/PC. LDM/STM do not support it or have it
     // deprecated; LDM to PC is fine but cannot happen here.
     if (PReg == ARM::SP || PReg == ARM::PC)
+      CanMergeToLSMulti = CanMergeToLSDouble = false;
+
+    // Should we be conservative?
+    if (AssumeMisalignedLoadStores && !mayCombineMisaligned(*STI, *MI))
       CanMergeToLSMulti = CanMergeToLSDouble = false;
 
     // Merge following instructions where possible.
@@ -1926,6 +1957,9 @@ INITIALIZE_PASS(ARMPreAllocLoadStoreOpt, "arm-prera-load-store-opt",
                 ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)
 
 bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
+  if (AssumeMisalignedLoadStores)
+    return false;
+
   TD = &Fn.getDataLayout();
   STI = &static_cast<const ARMSubtarget &>(Fn.getSubtarget());
   TII = STI->getInstrInfo();

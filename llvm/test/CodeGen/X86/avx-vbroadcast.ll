@@ -315,14 +315,12 @@ define <2 x double> @load_splat_2f64_2f64_1111(<2 x double>* %ptr) nounwind uwta
 ; X32-LABEL: load_splat_2f64_2f64_1111:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovaps (%eax), %xmm0
-; X32-NEXT:    vmovhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_2f64_2f64_1111:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vmovaps (%rdi), %xmm0
-; X64-NEXT:    vmovhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %ld = load <2 x double>, <2 x double>* %ptr

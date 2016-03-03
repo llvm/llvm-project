@@ -20,8 +20,7 @@ define float @t2(<4 x float>* %P1) nounwind {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movapd (%eax), %xmm0
-; CHECK-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    popl %eax

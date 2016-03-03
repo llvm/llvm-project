@@ -32,7 +32,7 @@ class CFLAAResult : public AAResultBase<CFLAAResult> {
   struct FunctionInfo;
 
 public:
-  explicit CFLAAResult(const TargetLibraryInfo &TLI);
+  explicit CFLAAResult();
   CFLAAResult(CFLAAResult &&Arg);
   ~CFLAAResult();
 

@@ -35,6 +35,7 @@ class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
   class FunctionInfo;
 
   const DataLayout &DL;
+  const TargetLibraryInfo &TLI;
 
   /// The globals that do not have their addresses taken.
   SmallPtrSet<const GlobalValue *, 8> NonAddressTakenGlobals;

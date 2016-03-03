@@ -15,8 +15,5 @@ define void @bar() {
   ret void
 }
 ; CHECK-LABEL: _bar:
-; CHECK: movl %esp, %ebp
-; CHECK: movl %esp, %[[sp_tmp:.*]]
-; CHECK: addl $-4, %[[sp_tmp]]
-; CHECK: movl %[[sp_tmp]], %esp
+; CHECK: calll __chkstk
 ; CHECK: retl

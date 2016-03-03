@@ -63,13 +63,13 @@ define void @t3() {
 ;
 ; X64-SSSE3-LABEL: t3:
 ; X64-SSSE3:       # BB#0: # %bb
-; X64-SSSE3-NEXT:    movupd (%rax), %xmm0
-; X64-SSSE3-NEXT:    movhpd %xmm0, (%rax)
+; X64-SSSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; X64-SSSE3-NEXT:    movlpd %xmm0, (%rax)
 ;
 ; X64-AVX-LABEL: t3:
 ; X64-AVX:       # BB#0: # %bb
-; X64-AVX-NEXT:    vmovupd (%rax), %xmm0
-; X64-AVX-NEXT:    vmovhpd %xmm0, (%rax)
+; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-AVX-NEXT:    vmovlpd %xmm0, (%rax)
 bb:
   %tmp13 = load <2 x double>, <2 x double>* undef, align 1
   %.sroa.3.24.vec.extract = extractelement <2 x double> %tmp13, i32 1
