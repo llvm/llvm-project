@@ -7797,6 +7797,9 @@ public:
   void AddLaunchBoundsAttr(SourceRange AttrRange, Decl *D, Expr *MaxThreads,
                            Expr *MinBlocks, unsigned SpellingListIndex);
 
+  void AddParameterABIAttr(SourceRange AttrRange, Decl *D,
+                           ParameterABI ABI, unsigned SpellingListIndex);
+
   void AddNSConsumedAttr(SourceRange AttrRange, Decl *D,
                          unsigned SpellingListIndex, bool isNSConsumed,
                          bool isTemplateInstantiation);

@@ -1749,7 +1749,8 @@ namespace {
 static const AttrClassDescriptor AttrClassDescriptors[] = {
   { "ATTR", "Attr" },
   { "INHERITABLE_ATTR", "InheritableAttr" },
-  { "INHERITABLE_PARAM_ATTR", "InheritableParamAttr" }
+  { "INHERITABLE_PARAM_ATTR", "InheritableParamAttr" },
+  { "PARAMETER_ABI_ATTR", "ParameterABIAttr" }
 };
 
 static void emitDefaultDefine(raw_ostream &OS, StringRef name,

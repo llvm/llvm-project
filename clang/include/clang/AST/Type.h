@@ -3061,11 +3061,22 @@ public:
   /// not produce the latter.
   class ExtParameterInfo {
     enum {
-      IsConsumed      = 0x01,
+      ABIMask         = 0x0F,
+      IsConsumed      = 0x10
     };
     unsigned char Data;
   public:
     ExtParameterInfo() : Data(0) {}
+
+    /// Return the ABI treatment of this parameter.
+    ParameterABI getABI() const {
+      return ParameterABI(Data & ABIMask);
+    }
+    ExtParameterInfo withABI(ParameterABI kind) const {
+      ExtParameterInfo copy = *this;
+      copy.Data = (copy.Data & ~ABIMask) | unsigned(kind);
+      return copy;
+    }
 
     /// Is this parameter considered "consumed" by Objective-C ARC?
     /// Consumed parameters must have retainable object type.
@@ -3390,6 +3401,13 @@ public:
     if (hasExtParameterInfos())
       return getExtParameterInfosBuffer()[I];
     return ExtParameterInfo();
+  }
+
+  ParameterABI getParameterABI(unsigned I) const {
+    assert(I < getNumParams() && "parameter index out of range");
+    if (hasExtParameterInfos())
+      return getExtParameterInfosBuffer()[I].getABI();
+    return ParameterABI::Ordinary;
   }
 
   bool isParamConsumed(unsigned I) const {
@@ -3717,6 +3735,7 @@ public:
     attr_stdcall,
     attr_thiscall,
     attr_pascal,
+    attr_swiftcall,
     attr_vectorcall,
     attr_inteloclbicc,
     attr_ms_abi,
