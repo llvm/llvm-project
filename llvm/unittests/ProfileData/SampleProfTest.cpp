@@ -53,6 +53,7 @@ struct SampleProfTest : ::testing::Test {
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
+    FooSamples.setName(FooName);
     FooSamples.addTotalSamples(7711);
     FooSamples.addHeadSamples(610);
     FooSamples.addBodySamples(1, 0, 610);
@@ -63,6 +64,7 @@ struct SampleProfTest : ::testing::Test {
 
     StringRef BarName("_Z3bari");
     FunctionSamples BarSamples;
+    BarSamples.setName(BarName);
     BarSamples.addTotalSamples(20301);
     BarSamples.addHeadSamples(1437);
     BarSamples.addBodySamples(1, 0, 1437);

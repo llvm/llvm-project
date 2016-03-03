@@ -69,11 +69,8 @@ static bool ParseHead(const StringRef &Input, StringRef &FName,
   return true;
 }
 
-
 /// \brief Returns true if line offset \p L is legal (only has 16 bits).
-static bool isOffsetLegal(unsigned L) {
-  return (L & 0xffff) == L;
-}
+static bool isOffsetLegal(unsigned L) { return (L & 0xffff) == L; }
 
 /// \brief Parse \p Input as line sample.
 ///
@@ -181,6 +178,7 @@ std::error_code SampleProfileReaderText::read() {
       }
       Profiles[FName] = FunctionSamples();
       FunctionSamples &FProfile = Profiles[FName];
+      FProfile.setName(FName);
       MergeResult(Result, FProfile.addTotalSamples(NumSamples));
       MergeResult(Result, FProfile.addHeadSamples(NumHeadSamples));
       InlineStack.clear();
@@ -203,7 +201,8 @@ std::error_code SampleProfileReaderText::read() {
           InlineStack.pop_back();
         }
         FunctionSamples &FSamples = InlineStack.back()->functionSamplesAt(
-            CallsiteLocation(LineOffset, Discriminator, FName));
+            LineLocation(LineOffset, Discriminator));
+        FSamples.setName(FName);
         MergeResult(Result, FSamples.addTotalSamples(NumSamples));
         InlineStack.push_back(&FSamples);
       } else {
@@ -354,8 +353,9 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     if (std::error_code EC = FName.getError())
       return EC;
 
-    FunctionSamples &CalleeProfile = FProfile.functionSamplesAt(
-        CallsiteLocation(*LineOffset, *Discriminator, *FName));
+    FunctionSamples &CalleeProfile =
+        FProfile.functionSamplesAt(LineLocation(*LineOffset, *Discriminator));
+    CalleeProfile.setName(*FName);
     if (std::error_code EC = readProfile(CalleeProfile))
       return EC;
   }
@@ -375,6 +375,7 @@ std::error_code SampleProfileReaderBinary::read() {
 
     Profiles[*FName] = FunctionSamples();
     FunctionSamples &FProfile = Profiles[*FName];
+    FProfile.setName(*FName);
 
     FProfile.addHeadSamples(*NumHeadSamples);
 
@@ -625,8 +626,9 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
     uint32_t LineOffset = Offset >> 16;
     uint32_t Discriminator = Offset & 0xffff;
     FProfile = &CallerProfile->functionSamplesAt(
-        CallsiteLocation(LineOffset, Discriminator, Name));
+        LineLocation(LineOffset, Discriminator));
   }
+  FProfile->setName(Name);
 
   for (uint32_t I = 0; I < NumPosCounts; ++I) {
     uint32_t Offset;

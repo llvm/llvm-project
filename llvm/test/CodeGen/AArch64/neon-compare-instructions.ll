@@ -801,12 +801,10 @@ define <2 x i64> @cmgez2xi64(<2 x i64> %A) {
 	ret <2 x i64> %tmp4
 }
 
-; FIXME: The following 7 tests could be optimized to cmgez to save an instruction.
 
 define <8 x i8> @cmgez8xi8_alt(<8 x i8> %A) {
 ; CHECK-LABEL: cmgez8xi8_alt:
-; CHECK:       sshr {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, #7
-; CHECK-NEXT:  {{mvn|not}} {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
+; CHECK: cmge {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, #{{0x0|0}}
   %sign = ashr <8 x i8> %A, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   %not = xor <8 x i8> %sign, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   ret <8 x i8> %not
@@ -814,8 +812,7 @@ define <8 x i8> @cmgez8xi8_alt(<8 x i8> %A) {
 
 define <16 x i8> @cmgez16xi8_alt(<16 x i8> %A) {
 ; CHECK-LABEL: cmgez16xi8_alt:
-; CHECK:       sshr {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, #7
-; CHECK-NEXT:  {{mvn|not}} {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
+; CHECK: cmge {{v[0-9]+}}.16b, {{v[0-9]+}}.16b, #{{0x0|0}}
   %sign = ashr <16 x i8> %A, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
   %not = xor <16 x i8> %sign, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   ret <16 x i8> %not
@@ -823,8 +820,7 @@ define <16 x i8> @cmgez16xi8_alt(<16 x i8> %A) {
 
 define <4 x i16> @cmgez4xi16_alt(<4 x i16> %A) {
 ; CHECK-LABEL: cmgez4xi16_alt:
-; CHECK:       sshr {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, #15
-; CHECK-NEXT:  {{mvn|not}} {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
+; CHECK: cmge {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, #{{0x0|0}}
   %sign = ashr <4 x i16> %A, <i16 15, i16 15, i16 15, i16 15>
   %not = xor <4 x i16> %sign, <i16 -1, i16 -1, i16 -1, i16 -1>
   ret <4 x i16> %not
@@ -832,8 +828,7 @@ define <4 x i16> @cmgez4xi16_alt(<4 x i16> %A) {
 
 define <8 x i16> @cmgez8xi16_alt(<8 x i16> %A) {
 ; CHECK-LABEL: cmgez8xi16_alt:
-; CHECK:       sshr {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, #15
-; CHECK-NEXT:  {{mvn|not}} {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
+; CHECK: cmge {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, #{{0x0|0}}
   %sign = ashr <8 x i16> %A, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %not = xor <8 x i16> %sign, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   ret <8 x i16> %not
@@ -841,8 +836,7 @@ define <8 x i16> @cmgez8xi16_alt(<8 x i16> %A) {
 
 define <2 x i32> @cmgez2xi32_alt(<2 x i32> %A) {
 ; CHECK-LABEL: cmgez2xi32_alt:
-; CHECK:       sshr {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, #31
-; CHECK-NEXT:  {{mvn|not}} {{v[0-9]+}}.8b, {{v[0-9]+}}.8b
+; CHECK: cmge {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, #{{0x0|0}}
   %sign = ashr <2 x i32> %A, <i32 31, i32 31>
   %not = xor <2 x i32> %sign, <i32 -1, i32 -1>
   ret <2 x i32> %not
@@ -850,8 +844,7 @@ define <2 x i32> @cmgez2xi32_alt(<2 x i32> %A) {
 
 define <4 x i32> @cmgez4xi32_alt(<4 x i32> %A) {
 ; CHECK-LABEL: cmgez4xi32_alt:
-; CHECK:       sshr {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, #31
-; CHECK-NEXT:  {{mvn|not}} {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
+; CHECK: cmge {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, #{{0x0|0}}
   %sign = ashr <4 x i32> %A, <i32 31, i32 31, i32 31, i32 31>
   %not = xor <4 x i32> %sign, <i32 -1, i32 -1, i32 -1, i32 -1>
   ret <4 x i32> %not
@@ -859,8 +852,7 @@ define <4 x i32> @cmgez4xi32_alt(<4 x i32> %A) {
 
 define <2 x i64> @cmgez2xi64_alt(<2 x i64> %A) {
 ; CHECK-LABEL: cmgez2xi64_alt:
-; CHECK:       sshr {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, #63
-; CHECK-NEXT:  {{mvn|not}} {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
+; CHECK: cmge {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, #{{0x0|0}}
   %sign = ashr <2 x i64> %A, <i64 63, i64 63>
   %not = xor <2 x i64> %sign, <i64 -1, i64 -1>
   ret <2 x i64> %not

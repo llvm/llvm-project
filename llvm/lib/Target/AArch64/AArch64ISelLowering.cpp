@@ -7423,6 +7423,33 @@ bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return Shift < 3;
 }
 
+/// Turn vector tests of the signbit in the form of:
+///   xor (sra X, elt_size(X)-1), -1
+/// into:
+///   cmge X, X, #0
+static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
+                                         const AArch64Subtarget *Subtarget) {
+  EVT VT = N->getValueType(0);
+  if (!Subtarget->hasNEON() || !VT.isVector())
+    return SDValue();
+
+  // There must be a shift right algebraic before the xor, and the xor must be a
+  // 'not' operation.
+  SDValue Shift = N->getOperand(0);
+  SDValue Ones = N->getOperand(1);
+  if (Shift.getOpcode() != AArch64ISD::VASHR || !Shift.hasOneUse() ||
+      !ISD::isBuildVectorAllOnes(Ones.getNode()))
+    return SDValue();
+
+  // The shift should be smearing the sign bit across each vector element.
+  auto *ShiftAmt = dyn_cast<ConstantSDNode>(Shift.getOperand(1));
+  EVT ShiftEltTy = Shift.getValueType().getVectorElementType();
+  if (!ShiftAmt || ShiftAmt->getZExtValue() != ShiftEltTy.getSizeInBits() - 1)
+    return SDValue();
+
+  return DAG.getNode(AArch64ISD::CMGEz, SDLoc(N), VT, Shift.getOperand(0));
+}
+
 // Generate SUBS and CSEL for integer abs.
 static SDValue performIntegerAbsCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
@@ -7451,12 +7478,14 @@ static SDValue performIntegerAbsCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-// performXorCombine - Attempts to handle integer ABS.
 static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
+
+  if (SDValue Cmp = foldVectorXorShiftIntoCmp(N, DAG, Subtarget))
+    return Cmp;
 
   return performIntegerAbsCombine(N, DAG);
 }

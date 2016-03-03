@@ -18,13 +18,18 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/InstVisitor.h"
@@ -85,6 +90,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   // easily cacheable. Instead, use the cover function paramHasAttr.
   CallSite CandidateCS;
 
+  BlockFrequencyAnalysis *BFA;
   int Threshold;
   int Cost;
 
@@ -153,6 +159,8 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   /// passed to support analyzing indirect calls whose target is inferred by
   /// analysis.
   void updateThreshold(CallSite CS, Function &Callee);
+  /// Adjust Threshold based on CallSiteCount and return the adjusted threshold.
+  int getAdjustedThreshold(int Threshold, Optional<uint64_t> CallSiteCount);
 
   // Custom analysis routines.
   bool analyzeBlock(BasicBlock *BB, SmallPtrSetImpl<const Value *> &EphValues);
@@ -194,17 +202,19 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 
 public:
   CallAnalyzer(const TargetTransformInfo &TTI, AssumptionCacheTracker *ACT,
-               Function &Callee, int Threshold, CallSite CSArg)
-    : TTI(TTI), ACT(ACT), F(Callee), CandidateCS(CSArg), Threshold(Threshold),
-        Cost(0), IsCallerRecursive(false), IsRecursiveCall(false),
-        ExposesReturnsTwice(false), HasDynamicAlloca(false),
-        ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
-        HasFrameEscape(false), AllocatedSize(0), NumInstructions(0),
-        NumVectorInstructions(0), FiftyPercentVectorBonus(0),
-        TenPercentVectorBonus(0), VectorBonus(0), NumConstantArgs(0),
-        NumConstantOffsetPtrArgs(0), NumAllocaArgs(0), NumConstantPtrCmps(0),
-        NumConstantPtrDiffs(0), NumInstructionsSimplified(0),
-        SROACostSavings(0), SROACostSavingsLost(0) {}
+               Function &Callee, int Threshold, CallSite CSArg,
+               BlockFrequencyAnalysis *BFA)
+      : TTI(TTI), ACT(ACT), F(Callee), CandidateCS(CSArg), BFA(BFA),
+        Threshold(Threshold), Cost(0), IsCallerRecursive(false),
+        IsRecursiveCall(false), ExposesReturnsTwice(false),
+        HasDynamicAlloca(false), ContainsNoDuplicateCall(false),
+        HasReturn(false), HasIndirectBr(false), HasFrameEscape(false),
+        AllocatedSize(0), NumInstructions(0), NumVectorInstructions(0),
+        FiftyPercentVectorBonus(0), TenPercentVectorBonus(0), VectorBonus(0),
+        NumConstantArgs(0), NumConstantOffsetPtrArgs(0), NumAllocaArgs(0),
+        NumConstantPtrCmps(0), NumConstantPtrDiffs(0),
+        NumInstructionsSimplified(0), SROACostSavings(0),
+        SROACostSavingsLost(0) {}
 
   bool analyzeCall(CallSite CS);
 
@@ -572,6 +582,15 @@ bool CallAnalyzer::isKnownNonNullInCallee(Value *V) {
   return false;
 }
 
+// Adjust the threshold based on callsite hotness. Currently this is a nop.
+int CallAnalyzer::getAdjustedThreshold(int Threshold,
+                                       Optional<uint64_t> CallSiteCount
+                                       LLVM_ATTRIBUTE_UNUSED) {
+  // FIXME: The new threshold should be computed from the given Threshold and
+  // the callsite hotness.
+  return Threshold;
+}
+
 void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   // If -inline-threshold is not given, listen to the optsize and minsize
   // attributes when they would decrease the threshold.
@@ -596,6 +615,9 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
     FunctionCount = Callee.getEntryCount().getValue();
     MaxFunctionCount = Callee.getParent()->getMaximumFunctionCount().getValue();
   }
+  Optional<uint64_t> CallSiteCount =
+      llvm::getBlockCount(CS.getInstruction()->getParent(), BFA);
+  Threshold = getAdjustedThreshold(Threshold, CallSiteCount);
 
   // Listen to the inlinehint attribute or profile based hotness information
   // when it would increase the threshold and the caller does not need to
@@ -912,7 +934,8 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
   // during devirtualization and so we want to give it a hefty bonus for
   // inlining, but cap that bonus in the event that inlining wouldn't pan
   // out. Pretend to inline the function, with a custom threshold.
-  CallAnalyzer CA(TTI, ACT, *F, InlineConstants::IndirectCallThreshold, CS);
+  CallAnalyzer CA(TTI, ACT, *F, InlineConstants::IndirectCallThreshold, CS,
+                  BFA);
   if (CA.analyzeCall(CS)) {
     // We were able to inline the indirect call! Subtract the cost from the
     // threshold to get the bonus we want to apply, but don't go below zero.
@@ -1433,9 +1456,10 @@ static bool functionsHaveCompatibleAttributes(Function *Caller,
 
 InlineCost llvm::getInlineCost(CallSite CS, int DefaultThreshold,
                                TargetTransformInfo &CalleeTTI,
-                               AssumptionCacheTracker *ACT) {
+                               AssumptionCacheTracker *ACT,
+                               BlockFrequencyAnalysis *BFA) {
   return getInlineCost(CS, CS.getCalledFunction(), DefaultThreshold, CalleeTTI,
-                       ACT);
+                       ACT, BFA);
 }
 
 int llvm::computeThresholdFromOptLevels(unsigned OptLevel,
@@ -1454,7 +1478,8 @@ int llvm::getDefaultInlineThreshold() { return DefaultInlineThreshold; }
 InlineCost llvm::getInlineCost(CallSite CS, Function *Callee,
                                int DefaultThreshold,
                                TargetTransformInfo &CalleeTTI,
-                               AssumptionCacheTracker *ACT) {
+                               AssumptionCacheTracker *ACT,
+                               BlockFrequencyAnalysis *BFA) {
 
   // Cannot inline indirect calls.
   if (!Callee)
@@ -1487,7 +1512,7 @@ InlineCost llvm::getInlineCost(CallSite CS, Function *Callee,
   DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
         << "...\n");
 
-  CallAnalyzer CA(CalleeTTI, ACT, *Callee, DefaultThreshold, CS);
+  CallAnalyzer CA(CalleeTTI, ACT, *Callee, DefaultThreshold, CS, BFA);
   bool ShouldInline = CA.analyzeCall(CS);
 
   DEBUG(CA.dump());
@@ -1534,4 +1559,46 @@ bool llvm::isInlineViable(Function &F) {
   }
 
   return true;
+}
+
+/// \brief Get estimated execution count for \p BB.
+Optional<uint64_t> llvm::getBlockCount(BasicBlock *BB,
+                                       BlockFrequencyAnalysis *BFA) {
+  if (!BFA)
+    return None;
+  Function *F = BB->getParent();
+  Optional<uint64_t> EntryCount = F->getEntryCount();
+  if (!EntryCount)
+    return None;
+  BlockFrequencyInfo *BFI = BFA->getBlockFrequencyInfo(F);
+  uint64_t BBFreq = BFI->getBlockFreq(BB).getFrequency();
+  uint64_t FunctionEntryFreq = BFI->getEntryFreq();
+  uint64_t BBCount = EntryCount.getValue() * BBFreq / FunctionEntryFreq;
+  return BBCount;
+}
+
+BlockFrequencyAnalysis::~BlockFrequencyAnalysis() {
+  for (auto &Entry : BFM) {
+    delete Entry.second;
+  }
+}
+
+/// \brief Get BlockFrequencyInfo for a function.
+BlockFrequencyInfo *BlockFrequencyAnalysis::getBlockFrequencyInfo(Function *F) {
+  auto Iter = BFM.find(F);
+  if (Iter != BFM.end())
+    return Iter->second;
+  // We need to create a BlockFrequencyInfo object for F and store it.
+  DominatorTree DT;
+  DT.recalculate(*F);
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*F, LI);
+  BlockFrequencyInfo *BFI = new BlockFrequencyInfo(*F, BPI, LI);
+  BFM[F] = BFI;
+  return BFI;
+}
+
+/// \brief Invalidate BlockFrequencyInfo for a function.
+void BlockFrequencyAnalysis::invalidateBlockFrequencyInfo(Function *F) {
+  BFM.erase(F);
 }

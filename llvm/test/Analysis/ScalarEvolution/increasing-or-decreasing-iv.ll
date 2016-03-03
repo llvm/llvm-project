@@ -86,3 +86,54 @@ loop:
 leave:
   ret void
 }
+
+define void @f2(i1 %c) {
+; CHECK-LABEL: Classifying expressions for: @f2
+entry:
+  %start = select i1 %c, i32 127, i32 0
+  %step  = select i1 %c, i32 -1,  i32 1
+  br label %loop
+
+loop:
+  %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.sext = sext i32 %iv to i64
+  %iv.next = add i32 %iv, %step
+; CHECK:  %iv.sext = sext i32 %iv to i64
+; CHECK-NEXT:  -->  {(sext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop>
+  %loop.iv.inc = add i32 %loop.iv, 1
+  %be.cond = icmp ne i32 %loop.iv.inc, 128
+  br i1 %be.cond, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+define void @f3(i1 %c) {
+; CHECK-LABEL: Classifying expressions for: @f3
+entry:
+
+; NB! the i16 type (as opposed to i32), the choice of the constant 509
+; and the trip count are all related and not arbitrary.  We want an
+; add recurrence that will look like it can unsign-overflow *unless*
+; SCEV is able to see the correlation between the two selects feeding
+; into the initial value and the step increment.
+
+  %start = select i1 %c, i16 1000, i16 0
+  %step  = select i1 %c, i16 1,  i16 509
+  br label %loop
+
+loop:
+  %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
+  %iv = phi i16 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.zext = zext i16 %iv to i64
+; CHECK:  %iv.zext = zext i16 %iv to i64
+; CHECK-NEXT:  -->  {(zext i16 %start to i64),+,(zext i16 %step to i64)}<nuw><%loop>
+  %iv.next = add i16 %iv, %step
+  %loop.iv.inc = add i16 %loop.iv, 1
+  %be.cond = icmp ne i16 %loop.iv.inc, 128
+  br i1 %be.cond, label %loop, label %leave
+
+leave:
+  ret void
+}

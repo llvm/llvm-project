@@ -1319,7 +1319,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
   // If IFI has any state in it, zap it before we fill it in.
   IFI.reset();
-  
+
   const Function *CalledFunc = CS.getCalledFunction();
   if (!CalledFunc ||              // Can't inline external function or indirect
       CalledFunc->isDeclaration() || // call, or call to a vararg function!
@@ -1486,7 +1486,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     // happy with whatever the cloner can do.
     CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
                               /*ModuleLevelChanges=*/false, Returns, ".i",
-                              &InlinedFunctionInfo, TheCall);
+                              &InlinedFunctionInfo, TheCall, IFI.Ftor);
 
     // Remember the first block that is newly cloned over.
     FirstNewBlock = LastBlock; ++FirstNewBlock;

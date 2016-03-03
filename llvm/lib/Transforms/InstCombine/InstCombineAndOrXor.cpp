@@ -1251,21 +1251,42 @@ Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   CastInst *Cast0 = dyn_cast<CastInst>(Op0);
-  CastInst *Cast1 = dyn_cast<CastInst>(Op1);
-  if (!Cast0 || !Cast1)
+  if (!Cast0)
     return nullptr;
 
-  // The casts must be of the same type, and this must be a cast from an integer
-  // or integer vector source type.
-  auto CastOpcode = Cast0->getOpcode();
+  // This must be a cast from an integer or integer vector source type to allow
+  // transformation of the logic operation to the source type.
+  Type *DestTy = I.getType();
   Type *SrcTy = Cast0->getSrcTy();
-  if ((CastOpcode != Cast1->getOpcode()) || (SrcTy != Cast1->getSrcTy()) ||
-      !SrcTy->isIntOrIntVectorTy())
+  if (!SrcTy->isIntOrIntVectorTy())
+    return nullptr;
+
+  // If one operand is a bitcast and the other is a constant, move the logic
+  // operation ahead of the bitcast. That is, do the logic operation in the
+  // original type. This can eliminate useless bitcasts and allow normal
+  // combines that would otherwise be impeded by the bitcast. Canonicalization
+  // ensures that if there is a constant operand, it will be the second operand.
+  Value *BC = nullptr;
+  Constant *C = nullptr;
+  if ((match(Op0, m_BitCast(m_Value(BC))) && match(Op1, m_Constant(C)))) {
+    // A bitcast of a constant will be removed.
+    Value *NewConstant = Builder->CreateBitCast(C, SrcTy);
+    Value *NewOp = Builder->CreateBinOp(LogicOpc, BC, NewConstant, I.getName());
+    return CastInst::CreateBitOrPointerCast(NewOp, DestTy);
+  }
+
+  CastInst *Cast1 = dyn_cast<CastInst>(Op1);
+  if (!Cast1)
+    return nullptr;
+
+  // Both operands of the logic operation are casts. The casts must be of the
+  // same type for reduction.
+  auto CastOpcode = Cast0->getOpcode();
+  if (CastOpcode != Cast1->getOpcode() || SrcTy != Cast1->getSrcTy())
     return nullptr;
 
   Value *Cast0Src = Cast0->getOperand(0);
   Value *Cast1Src = Cast1->getOperand(0);
-  Type *DestTy = I.getType();
 
   // fold (logic (cast A), (cast B)) -> (cast (logic A, B))
 

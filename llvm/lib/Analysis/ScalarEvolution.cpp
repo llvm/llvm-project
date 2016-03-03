@@ -1454,6 +1454,11 @@ const SCEV *ScalarEvolution::getZeroExtendExpr(const SCEV *Op,
       unsigned BitWidth = getTypeSizeInBits(AR->getType());
       const Loop *L = AR->getLoop();
 
+      if (!AR->hasNoUnsignedWrap()) {
+        auto NewFlags = proveNoWrapViaConstantRanges(AR);
+        const_cast<SCEVAddRecExpr *>(AR)->setNoWrapFlags(NewFlags);
+      }
+
       // If we have special knowledge that this addrec won't overflow,
       // we don't need to do any further analysis.
       if (AR->hasNoUnsignedWrap())
@@ -1612,10 +1617,6 @@ const SCEV *ScalarEvolution::getSignExtendExpr(const SCEV *Op,
   void *IP = nullptr;
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP)) return S;
 
-  // If the input value is provably positive, build a zext instead.
-  if (isKnownNonNegative(Op))
-    return getZeroExtendExpr(Op, Ty);
-
   // sext(trunc(x)) --> sext(x) or x or trunc(x)
   if (const SCEVTruncateExpr *ST = dyn_cast<SCEVTruncateExpr>(Op)) {
     // It's possible the bits taken off by the truncate were all sign bits. If
@@ -1666,6 +1667,11 @@ const SCEV *ScalarEvolution::getSignExtendExpr(const SCEV *Op,
       const SCEV *Step = AR->getStepRecurrence(*this);
       unsigned BitWidth = getTypeSizeInBits(AR->getType());
       const Loop *L = AR->getLoop();
+
+      if (!AR->hasNoSignedWrap()) {
+        auto NewFlags = proveNoWrapViaConstantRanges(AR);
+        const_cast<SCEVAddRecExpr *>(AR)->setNoWrapFlags(NewFlags);
+      }
 
       // If we have special knowledge that this addrec won't overflow,
       // we don't need to do any further analysis.
@@ -1780,6 +1786,11 @@ const SCEV *ScalarEvolution::getSignExtendExpr(const SCEV *Op,
             getSignExtendExpr(Step, Ty), L, AR->getNoWrapFlags());
       }
     }
+
+  // If the input value is provably positive and we could not simplify
+  // away the sext build a zext instead.
+  if (isKnownNonNegative(Op))
+    return getZeroExtendExpr(Op, Ty);
 
   // The cast wasn't folded; create an explicit cast node.
   // Recompute the insert position, as it may have been invalidated.
@@ -3755,6 +3766,37 @@ private:
   bool Valid;
 };
 } // end anonymous namespace
+
+SCEV::NoWrapFlags
+ScalarEvolution::proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
+  if (!AR->isAffine())
+    return SCEV::FlagAnyWrap;
+
+  typedef OverflowingBinaryOperator OBO;
+  SCEV::NoWrapFlags Result = SCEV::FlagAnyWrap;
+
+  if (!AR->hasNoSignedWrap()) {
+    ConstantRange AddRecRange = getSignedRange(AR);
+    ConstantRange IncRange = getSignedRange(AR->getStepRecurrence(*this));
+
+    auto NSWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Add, IncRange, OBO::NoSignedWrap);
+    if (NSWRegion.contains(AddRecRange))
+      Result = ScalarEvolution::setFlags(Result, SCEV::FlagNSW);
+  }
+
+  if (!AR->hasNoUnsignedWrap()) {
+    ConstantRange AddRecRange = getUnsignedRange(AR);
+    ConstantRange IncRange = getUnsignedRange(AR->getStepRecurrence(*this));
+
+    auto NUWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Add, IncRange, OBO::NoUnsignedWrap);
+    if (NUWRegion.contains(AddRecRange))
+      Result = ScalarEvolution::setFlags(Result, SCEV::FlagNUW);
+  }
+
+  return Result;
+}
 
 const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   const Loop *L = LI.getLoopFor(PN->getParent());
