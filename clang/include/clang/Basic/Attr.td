@@ -2245,6 +2245,13 @@ def OMPThreadPrivateDecl : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def OMPCaptureNoInit : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [Undocumented];
+}
+
 def InternalLinkage : InheritableAttr {
   let Spellings = [GNU<"internal_linkage">, CXX11<"clang", "internal_linkage">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;

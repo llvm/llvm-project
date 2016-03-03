@@ -92,6 +92,7 @@ namespace {
     void VisitUsingDecl(UsingDecl *D);
     void VisitUsingShadowDecl(UsingShadowDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
+    void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
     void PrintTemplateParameters(const TemplateParameterList *Params,
@@ -334,7 +335,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
 
     // FIXME: Need to be able to tell the DeclPrinter when
     const char *Terminator = nullptr;
-    if (isa<OMPThreadPrivateDecl>(*D))
+    if (isa<OMPThreadPrivateDecl>(*D) || isa<OMPDeclareReductionDecl>(*D))
       Terminator = nullptr;
     else if (isa<FunctionDecl>(*D) &&
              cast<FunctionDecl>(*D)->isThisDeclarationADefinition())
@@ -1364,6 +1365,37 @@ void DeclPrinter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
       ND->printQualifiedName(Out);
     }
     Out << ")";
+  }
+}
+
+void DeclPrinter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
+  if (!D->isInvalidDecl()) {
+    Out << "#pragma omp declare reduction (";
+    if (D->getDeclName().getNameKind() == DeclarationName::CXXOperatorName) {
+      static const char *const OperatorNames[NUM_OVERLOADED_OPERATORS] = {
+          nullptr,
+#define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)  \
+          Spelling,
+#include "clang/Basic/OperatorKinds.def"
+      };
+      const char *OpName =
+          OperatorNames[D->getDeclName().getCXXOverloadedOperator()];
+      assert(OpName && "not an overloaded operator");
+      Out << OpName;
+    } else {
+      assert(D->getDeclName().isIdentifier());
+      D->printName(Out);
+    }
+    Out << " : ";
+    D->getType().print(Out, Policy);
+    Out << " : ";
+    D->getCombiner()->printPretty(Out, nullptr, Policy, 0);
+    Out << ")";
+    if (auto *Init = D->getInitializer()) {
+      Out << " initializer(";
+      Init->printPretty(Out, nullptr, Policy, 0);
+      Out << ")";
+    }
   }
 }
 

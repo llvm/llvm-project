@@ -104,6 +104,9 @@ public:
   /// \brief Whether a statement was dropped because it was invalid.
   bool HasDroppedStmt : 1;
 
+  /// \brief True if current scope is for OpenMP declare reduction combiner.
+  bool HasOMPDeclareReductionCombiner;
+
   /// A flag that is set when parsing a method that must call super's
   /// implementation, such as \c -dealloc, \c -finalize, or any method marked
   /// with \c __attribute__((objc_requires_super)).
@@ -341,6 +344,10 @@ public:
     HasDroppedStmt = true;
   }
 
+  void setHasOMPDeclareReductionCombiner() {
+    HasOMPDeclareReductionCombiner = true;
+  }
+
   void setHasCXXTry(SourceLocation TryLoc) {
     setHasBranchProtectedScope();
     FirstCXXTryLoc = TryLoc;
@@ -363,6 +370,7 @@ public:
       HasBranchIntoScope(false),
       HasIndirectGoto(false),
       HasDroppedStmt(false),
+      HasOMPDeclareReductionCombiner(false),
       ObjCShouldCallSuper(false),
       ObjCIsDesignatedInit(false),
       ObjCWarnForNoDesignatedInitChain(false),

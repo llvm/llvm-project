@@ -75,6 +75,7 @@ def Named : Decl<1>;
       def ObjCImplementation : DDecl<ObjCImpl>;
   def ObjCProperty : DDecl<Named>;
   def ObjCCompatibleAlias : DDecl<Named>;
+  def OMPDeclareReduction : DDecl<Named>, DeclContext;
 def LinkageSpec : Decl, DeclContext;
 def ObjCPropertyImpl : Decl;
 def FileScopeAsm : Decl;

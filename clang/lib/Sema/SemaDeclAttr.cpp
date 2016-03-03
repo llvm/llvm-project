@@ -3822,6 +3822,11 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
   if (attr.isInvalid())
     return true;
 
+  if (attr.hasProcessingCache()) {
+    CC = (CallingConv) attr.getProcessingCache();
+    return false;
+  }
+
   unsigned ReqArgs = attr.getKind() == AttributeList::AT_Pcs ? 1 : 0;
   if (!checkAttributeNumArgs(*this, attr, ReqArgs)) {
     attr.setInvalid();
@@ -3881,6 +3886,7 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
     CC = TI.getDefaultCallingConv(MT);
   }
 
+  attr.setProcessingCache((unsigned) CC);
   return false;
 }
 
@@ -4075,31 +4081,45 @@ static bool isValidSubjectOfCFAttribute(Sema &S, QualType type) {
 }
 
 static void handleNSConsumedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
-  ParmVarDecl *param = cast<ParmVarDecl>(D);
-  bool typeOK, cf;
+  S.AddNSConsumedAttr(Attr.getRange(), D, Attr.getAttributeSpellingListIndex(),
+                      Attr.getKind() == AttributeList::AT_NSConsumed,
+                      /*template instantiation*/ false);
+}
 
-  if (Attr.getKind() == AttributeList::AT_NSConsumed) {
-    typeOK = isValidSubjectOfNSAttribute(S, param->getType());
-    cf = false;
+void Sema::AddNSConsumedAttr(SourceRange attrRange, Decl *D,
+                             unsigned spellingIndex, bool isNSConsumed,
+                             bool isTemplateInstantiation) {
+  ParmVarDecl *param = cast<ParmVarDecl>(D);
+  bool typeOK;
+
+  if (isNSConsumed) {
+    typeOK = isValidSubjectOfNSAttribute(*this, param->getType());
   } else {
-    typeOK = isValidSubjectOfCFAttribute(S, param->getType());
-    cf = true;
+    typeOK = isValidSubjectOfCFAttribute(*this, param->getType());
   }
 
   if (!typeOK) {
-    S.Diag(D->getLocStart(), diag::warn_ns_attribute_wrong_parameter_type)
-      << Attr.getRange() << Attr.getName() << cf;
+    // These attributes are normally just advisory, but in ARC, ns_consumed
+    // is significant.  Allow non-dependent code to contain inappropriate
+    // attributes even in ARC, but require template instantiations to be
+    // set up correctly.
+    Diag(D->getLocStart(),
+         (isTemplateInstantiation && isNSConsumed &&
+            getLangOpts().ObjCAutoRefCount
+          ? diag::err_ns_attribute_wrong_parameter_type
+          : diag::warn_ns_attribute_wrong_parameter_type))
+      << attrRange
+      << (isNSConsumed ? "ns_consumed" : "cf_consumed")
+      << (isNSConsumed ? /*objc pointers*/ 0 : /*cf pointers*/ 1);
     return;
   }
 
-  if (cf)
-    param->addAttr(::new (S.Context)
-                   CFConsumedAttr(Attr.getRange(), S.Context,
-                                  Attr.getAttributeSpellingListIndex()));
+  if (isNSConsumed)
+    param->addAttr(::new (Context)
+                   NSConsumedAttr(attrRange, Context, spellingIndex));
   else
-    param->addAttr(::new (S.Context)
-                   NSConsumedAttr(Attr.getRange(), S.Context,
-                                  Attr.getAttributeSpellingListIndex()));
+    param->addAttr(::new (Context)
+                   CFConsumedAttr(attrRange, Context, spellingIndex));
 }
 
 static void handleNSReturnsRetainedAttr(Sema &S, Decl *D,

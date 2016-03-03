@@ -167,7 +167,10 @@ public:
     /// has been declared outside any function. These act mostly like
     /// invisible friend declarations, but are also visible to unqualified
     /// lookup within the scope of the declaring function.
-    IDNS_LocalExtern         = 0x0800
+    IDNS_LocalExtern         = 0x0800,
+
+    /// This declaration is an OpenMP user defined reduction construction.
+    IDNS_OMPReduction        = 0x1000
   };
 
   /// ObjCDeclQualifier - 'Qualifiers' written next to the return and
@@ -257,7 +260,7 @@ private:
   SourceLocation Loc;
 
   /// DeclKind - This indicates which class this is.
-  unsigned DeclKind : 8;
+  unsigned DeclKind : 7;
 
   /// InvalidDecl - This indicates a semantic error occurred.
   unsigned InvalidDecl :  1;
@@ -297,7 +300,7 @@ protected:
   unsigned Hidden : 1;
   
   /// IdentifierNamespace - This specifies what IDNS_* namespace this lives in.
-  unsigned IdentifierNamespace : 12;
+  unsigned IdentifierNamespace : 13;
 
   /// \brief If 0, we have not computed the linkage of this declaration.
   /// Otherwise, it is the linkage + 1.
@@ -1122,6 +1125,7 @@ public:
 ///   ObjCContainerDecl
 ///   LinkageSpecDecl
 ///   BlockDecl
+///   OMPDeclareReductionDecl
 ///
 class DeclContext {
   /// DeclKind - This indicates which class this is.

@@ -21,6 +21,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/ABI.h"
@@ -1109,6 +1110,9 @@ public:
   /// \brief Emit a code for threadprivate directive.
   /// \param D Threadprivate declaration.
   void EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D);
+
+  /// \brief Emit a code for declare reduction construct.
+  void EmitOMPDeclareReduction(const OMPDeclareReductionDecl *D);
 
   /// Returns whether we need bit sets attached to vtables.
   bool NeedVTableBitSets();

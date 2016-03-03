@@ -578,7 +578,10 @@ namespace clang {
       DELETE_EXPRS_TO_ANALYZE = 54,
 
       /// \brief Record code for \#pragma ms_struct options.
-      MSSTRUCT_PRAGMA_OPTIONS = 55
+      MSSTRUCT_PRAGMA_OPTIONS = 55,
+
+      /// \brief Record code for \#pragma ms_struct options.
+      POINTERS_TO_MEMBERS_PRAGMA_OPTIONS = 56
     };
 
     /// \brief Record types used within a source manager block.
@@ -1171,7 +1174,9 @@ namespace clang {
       /// \brief A PragmaCommentDecl record.
       DECL_PRAGMA_COMMENT,
       /// \brief A PragmaDetectMismatchDecl record.
-      DECL_PRAGMA_DETECT_MISMATCH
+      DECL_PRAGMA_DETECT_MISMATCH,
+      /// \brief An OMPDeclareReductionDecl record.
+      DECL_OMP_DECLARE_REDUCTION,
     };
 
     /// \brief Record codes for each kind of statement or expression.

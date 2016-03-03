@@ -442,3 +442,11 @@ namespace produced_nested {
     take_no(produces<4>::fn); // expected-error {{no matching function}}
   }
 }
+
+namespace instantiate_consumed {
+  template <class T> void take(CONSUMED T t) {} // expected-note {{candidate template ignored: substitution failure [with T = int]: ns_consumed attribute only applies to Objective-C object parameters}}
+  void test() {
+    take((id) 0);
+    take((int) 0); // expected-error {{no matching function for call to 'take'}}
+  }
+}

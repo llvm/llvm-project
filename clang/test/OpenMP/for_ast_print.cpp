@@ -19,14 +19,20 @@ template <typename T>
 class S7 : public T {
 protected:
   T a;
-  S7() : a(0) {}
+  T &b;
+  typename T::type c:12;
+  typename T::type &d;
+  S7() : a(0), b(a), c(0), d(a.a) {}
 
 public:
-  S7(typename T::type v) : a(v) {
+  S7(typename T::type v) : a(v), b(a), c(v), d(a.a) {
 #pragma omp for private(a) private(this->a) private(T::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
 #pragma omp for lastprivate(a) lastprivate(this->a) lastprivate(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+#pragma omp for linear(val(c))
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
@@ -37,16 +43,22 @@ public:
 #pragma omp for lastprivate(a) lastprivate(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
+#pragma omp for linear(uval(this->b))
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
     return *this;
   }
 };
 
 // CHECK: #pragma omp for private(this->a) private(this->a) private(this->S::a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(this->S::a)
+// CHECK: #pragma omp for linear(val(this->c))
 // CHECK: #pragma omp for private(this->a) private(this->a) private(T::a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(T::a)
+// CHECK: #pragma omp for linear(val(this->c))
 // CHECK: #pragma omp for private(this->a) private(this->a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a)
+// CHECK: #pragma omp for linear(uval(this->b))
 
 class S8 : public S7<S> {
   S8() {}
@@ -59,6 +71,9 @@ public:
 #pragma omp for lastprivate(a) lastprivate(this->a) lastprivate(S7<S>::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
+#pragma omp for linear(ref(S7<S>::d))
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
   }
   S8 &operator=(S8 &s) {
 #pragma omp for private(a) private(this->a)
@@ -67,14 +82,19 @@ public:
 #pragma omp for lastprivate(a) lastprivate(this->a)
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
+#pragma omp for linear(this->c)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
     return *this;
   }
 };
 
 // CHECK: #pragma omp for private(this->a) private(this->a) private(this->S7<S>::a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a) lastprivate(this->S7<S>::a)
+// CHECK: #pragma omp for linear(ref(this->S7<S>::d))
 // CHECK: #pragma omp for private(this->a) private(this->a)
 // CHECK: #pragma omp for lastprivate(this->a) lastprivate(this->a)
+// CHECK: #pragma omp for linear(this->c)
 
 template <class T, int N>
 T tmain(T argc) {

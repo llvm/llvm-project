@@ -5584,6 +5584,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::ClassScopeFunctionSpecialization:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPDeclareReduction:
   case Decl::ObjCTypeParam:
   case Decl::BuiltinTemplate:
   case Decl::PragmaComment:

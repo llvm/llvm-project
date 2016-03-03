@@ -3225,6 +3225,15 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       PragmaMSStructState = Record[0];
       break;
 
+    case POINTERS_TO_MEMBERS_PRAGMA_OPTIONS:
+      if (Record.size() != 2) {
+        Error("invalid pragma ms_struct record");
+        return Failure;
+      }
+      PragmaMSPointersToMembersState = Record[0];
+      PointersToMembersPragmaLocation = ReadSourceLocation(F, Record[1]);
+      break;
+
     case UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES:
       for (unsigned I = 0, N = Record.size(); I != N; ++I)
         UnusedLocalTypedefNameCandidates.push_back(
@@ -7012,6 +7021,12 @@ void ASTReader::UpdateSema() {
     SemaObj->ActOnPragmaOptimize(/* IsOn = */ false, OptimizeOffPragmaLocation);
   if (PragmaMSStructState != -1)
     SemaObj->ActOnPragmaMSStruct((PragmaMSStructKind)PragmaMSStructState);
+  if (PointersToMembersPragmaLocation.isValid()) {
+    SemaObj->ActOnPragmaMSPointersToMembers(
+        (LangOptions::PragmaMSPointersToMembersKind)
+            PragmaMSPointersToMembersState,
+        PointersToMembersPragmaLocation);
+  }
 }
 
 IdentifierInfo *ASTReader::get(StringRef Name) {
@@ -8707,6 +8722,7 @@ ASTReader::ASTReader(
       Consumer(nullptr), ModuleMgr(PP.getFileManager(), PCHContainerRdr),
       ReadTimer(std::move(ReadTimer)),
       PragmaMSStructState(-1),
+      PragmaMSPointersToMembersState(-1),
       isysroot(isysroot), DisableValidation(DisableValidation),
       AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),
       AllowConfigurationMismatch(AllowConfigurationMismatch),

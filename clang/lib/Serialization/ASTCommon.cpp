@@ -332,6 +332,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Import:
   case Decl::OMPThreadPrivate:
   case Decl::OMPCapturedExpr:
+  case Decl::OMPDeclareReduction:
   case Decl::BuiltinTemplate:
     return false;
 

@@ -18,6 +18,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/DeclOpenMP.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -30,8 +31,15 @@ class OMPLexicalScope {
     for (const auto *C : S.clauses()) {
       if (auto *CPI = OMPClauseWithPreInit::get(C)) {
         if (auto *PreInit = cast_or_null<DeclStmt>(CPI->getPreInitStmt())) {
-          for (const auto *I : PreInit->decls())
-            CGF.EmitVarDecl(cast<VarDecl>(*I));
+          for (const auto *I : PreInit->decls()) {
+            if (!I->hasAttr<OMPCaptureNoInitAttr>())
+              CGF.EmitVarDecl(cast<VarDecl>(*I));
+            else {
+              CodeGenFunction::AutoVarEmission Emission =
+                  CGF.EmitAutoVarAlloca(cast<VarDecl>(*I));
+              CGF.EmitAutoVarCleanups(Emission);
+            }
+          }
         }
       }
     }

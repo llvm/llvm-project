@@ -405,6 +405,21 @@ bool CXXRecordDecl::FindOrdinaryMember(const CXXBaseSpecifier *Specifier,
   return false;
 }
 
+bool CXXRecordDecl::FindOMPReductionMember(const CXXBaseSpecifier *Specifier,
+                                           CXXBasePath &Path,
+                                           DeclarationName Name) {
+  RecordDecl *BaseRecord =
+      Specifier->getType()->castAs<RecordType>()->getDecl();
+
+  for (Path.Decls = BaseRecord->lookup(Name); !Path.Decls.empty();
+       Path.Decls = Path.Decls.slice(1)) {
+    if (Path.Decls.front()->isInIdentifierNamespace(IDNS_OMPReduction))
+      return true;
+  }
+
+  return false;
+}
+
 bool CXXRecordDecl::
 FindNestedNameSpecifierMember(const CXXBaseSpecifier *Specifier, 
                               CXXBasePath &Path,

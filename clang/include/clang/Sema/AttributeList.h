@@ -94,9 +94,11 @@ private:
   SourceLocation ScopeLoc;
   SourceLocation EllipsisLoc;
 
+  unsigned AttrKind : 16;
+
   /// The number of expression arguments this attribute has.
   /// The expressions themselves are stored after the object.
-  unsigned NumArgs : 15;
+  unsigned NumArgs : 16;
 
   /// Corresponds to the Syntax enum.
   unsigned SyntaxUsed : 3;
@@ -122,7 +124,11 @@ private:
   /// True if this has a ParsedType
   unsigned HasParsedType : 1;
 
-  unsigned AttrKind : 8;
+  /// True if the processing cache is valid.
+  mutable unsigned HasProcessingCache : 1;
+
+  /// A cached value.
+  mutable unsigned ProcessingCache : 8;
 
   /// \brief The location of the 'unavailable' keyword in an
   /// availability attribute.
@@ -231,7 +237,8 @@ private:
       ScopeLoc(scopeLoc), EllipsisLoc(ellipsisLoc), NumArgs(numArgs),
       SyntaxUsed(syntaxUsed), Invalid(false), UsedAsTypeAttr(false),
       IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
-      HasParsedType(false), NextInPosition(nullptr), NextInPool(nullptr) {
+      HasParsedType(false), HasProcessingCache(false),
+      NextInPosition(nullptr), NextInPool(nullptr) {
     if (numArgs) memcpy(getArgsBuffer(), args, numArgs * sizeof(ArgsUnion));
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
@@ -249,8 +256,8 @@ private:
       ScopeLoc(scopeLoc), EllipsisLoc(), NumArgs(1), SyntaxUsed(syntaxUsed),
       Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
       IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
-      UnavailableLoc(unavailable), MessageExpr(messageExpr),
-      NextInPosition(nullptr), NextInPool(nullptr) {
+      HasProcessingCache(false), UnavailableLoc(unavailable),
+      MessageExpr(messageExpr), NextInPosition(nullptr), NextInPool(nullptr) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
     new (&getAvailabilitySlot(IntroducedSlot)) AvailabilityChange(introduced);
@@ -271,7 +278,7 @@ private:
     ScopeLoc(scopeLoc), EllipsisLoc(), NumArgs(3), SyntaxUsed(syntaxUsed),
     Invalid(false), UsedAsTypeAttr(false), IsAvailability(false),
     IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
-    NextInPosition(nullptr), NextInPool(nullptr) {
+    HasProcessingCache(false), NextInPosition(nullptr), NextInPool(nullptr) {
     ArgsVector Args;
     Args.push_back(Parm1);
     Args.push_back(Parm2);
@@ -289,7 +296,7 @@ private:
       ScopeLoc(scopeLoc), EllipsisLoc(), NumArgs(1), SyntaxUsed(syntaxUsed),
       Invalid(false), UsedAsTypeAttr(false), IsAvailability(false),
       IsTypeTagForDatatype(true), IsProperty(false), HasParsedType(false),
-      NextInPosition(nullptr), NextInPool(nullptr) {
+      HasProcessingCache(false), NextInPosition(nullptr), NextInPool(nullptr) {
     ArgsUnion PVal(ArgKind);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
     TypeTagForDatatypeData &ExtraData = getTypeTagForDatatypeDataSlot();
@@ -307,7 +314,7 @@ private:
         ScopeLoc(scopeLoc), EllipsisLoc(), NumArgs(0), SyntaxUsed(syntaxUsed),
         Invalid(false), UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(true),
-        NextInPosition(nullptr), NextInPool(nullptr) {
+        HasProcessingCache(false), NextInPosition(nullptr), NextInPool(nullptr){
     new (&getTypeBuffer()) ParsedType(typeArg);
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
@@ -321,7 +328,7 @@ private:
       ScopeLoc(scopeLoc), EllipsisLoc(), NumArgs(0), SyntaxUsed(syntaxUsed),
       Invalid(false), UsedAsTypeAttr(false), IsAvailability(false),
       IsTypeTagForDatatype(false), IsProperty(true), HasParsedType(false),
-      NextInPosition(nullptr), NextInPool(nullptr) {
+      HasProcessingCache(false), NextInPosition(nullptr), NextInPool(nullptr) {
     new (&getPropertyDataBuffer()) PropertyData(getterId, setterId);
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
@@ -372,6 +379,16 @@ public:
 
   bool isInvalid() const { return Invalid; }
   void setInvalid(bool b = true) const { Invalid = b; }
+
+  bool hasProcessingCache() const { return HasProcessingCache; }
+  unsigned getProcessingCache() const {
+    assert(hasProcessingCache());
+    return ProcessingCache;
+  }
+  void setProcessingCache(unsigned value) const {
+    ProcessingCache = value;
+    HasProcessingCache = true;
+  }
 
   bool isUsedAsTypeAttr() const { return UsedAsTypeAttr; }
   void setUsedAsTypeAttr() { UsedAsTypeAttr = true; }

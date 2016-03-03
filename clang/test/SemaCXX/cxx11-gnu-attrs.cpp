@@ -19,6 +19,7 @@ int *[[gnu::unused]] attr_on_ptr;
 [[gnu::fastcall]] void pr17424_4() [[gnu::stdcall]];
 // expected-warning@-1 {{calling convention 'fastcall' ignored for this target}}
 // expected-warning@-2 {{attribute 'stdcall' ignored, because it cannot be applied to a type}}
+// expected-warning@-3 {{calling convention 'stdcall' ignored for this target}}
 void pr17424_5 [[gnu::fastcall]]();
 // expected-warning@-1 {{calling convention 'fastcall' ignored for this target}}
 

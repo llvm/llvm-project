@@ -552,6 +552,7 @@ private:
   void WriteLateParsedTemplates(Sema &SemaRef);
   void WriteOptimizePragmaOptions(Sema &SemaRef);
   void WriteMSStructPragmaOptions(Sema &SemaRef);
+  void WriteMSPointersToMembersPragmaOptions(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
 

@@ -939,6 +939,8 @@ def err_omp_immediate_directive : Error<
   "'#pragma omp %0' %select{|with '%2' clause }1cannot be an immediate substatement">;
 def err_omp_expected_identifier_for_critical : Error<
   "expected identifier specifying the name of the 'omp critical' directive">;
+def err_omp_expected_reduction_identifier : Error<
+  "expected identifier or one of the following operators: '+', '-', '*', '&', '|', '^', '&&', or '||'">;
 def err_omp_unknown_map_type : Error<
   "incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'">;
 def err_omp_unknown_map_type_modifier : Error<

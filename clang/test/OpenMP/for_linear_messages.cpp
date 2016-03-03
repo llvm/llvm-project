@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
   #pragma omp for linear(i) ordered(1) // expected-error {{'linear' clause cannot be specified along with 'ordered' clause with a parameter}}
   for (int k = 0; k < argc; ++k) ++k;
 
-  foomain<int,char>(argc,argv);
+  foomain<int,char>(argc,argv); // expected-note {{n instantiation of function template specialization 'foomain<int, char>' requested here}}
   return 0;
 }
 
