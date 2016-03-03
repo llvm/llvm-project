@@ -18,7 +18,6 @@
 
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -68,7 +67,7 @@ static Flavor parseProgname(StringRef Progname) {
 
   // Progname may be something like "lld-gnu". Parse it.
   SmallVector<StringRef, 3> V;
-  SplitString(Progname, V, "-");
+  Progname.split(V, "-");
   for (StringRef S : V)
     if (Flavor F = getFlavor(S))
       return F;

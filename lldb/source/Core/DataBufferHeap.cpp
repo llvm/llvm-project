@@ -9,6 +9,11 @@
 
 #include "lldb/Core/DataBufferHeap.h"
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
+
 using namespace lldb_private;
 
 //----------------------------------------------------------------------
@@ -44,32 +49,26 @@ DataBufferHeap::DataBufferHeap (const void *src, lldb::offset_t src_len) :
 // Virtual destructor since this class inherits from a pure virtual
 // base class.
 //----------------------------------------------------------------------
-DataBufferHeap::~DataBufferHeap ()
-{
-}
+DataBufferHeap::~DataBufferHeap() = default;
 
 //----------------------------------------------------------------------
-// Return a pointer to the bytes owned by this object, or NULL if
+// Return a pointer to the bytes owned by this object, or nullptr if
 // the object contains no bytes.
 //----------------------------------------------------------------------
 uint8_t *
 DataBufferHeap::GetBytes ()
 {
-    if (m_data.empty())
-        return NULL;
-    return &m_data[0];
+    return (m_data.empty() ? nullptr : m_data.data());
 }
 
 //----------------------------------------------------------------------
-// Return a const pointer to the bytes owned by this object, or NULL
+// Return a const pointer to the bytes owned by this object, or nullptr
 // if the object contains no bytes.
 //----------------------------------------------------------------------
 const uint8_t *
 DataBufferHeap::GetBytes () const
 {
-    if (m_data.empty())
-        return NULL;
-    return &m_data[0];
+    return (m_data.empty() ? nullptr : m_data.data());
 }
 
 //----------------------------------------------------------------------
@@ -80,7 +79,6 @@ DataBufferHeap::GetByteSize () const
 {
     return m_data.size();
 }
-
 
 //----------------------------------------------------------------------
 // Sets the number of bytes that this object should be able to

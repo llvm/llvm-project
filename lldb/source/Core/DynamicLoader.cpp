@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+// Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
@@ -22,7 +26,7 @@ using namespace lldb_private;
 DynamicLoader*
 DynamicLoader::FindPlugin (Process *process, const char *plugin_name)
 {
-    DynamicLoaderCreateInstance create_callback = NULL;
+    DynamicLoaderCreateInstance create_callback = nullptr;
     if (plugin_name)
     {
         ConstString const_plugin_name(plugin_name);
@@ -30,42 +34,34 @@ DynamicLoader::FindPlugin (Process *process, const char *plugin_name)
         if (create_callback)
         {
             std::unique_ptr<DynamicLoader> instance_ap(create_callback(process, true));
-            if (instance_ap.get())
+            if (instance_ap)
                 return instance_ap.release();
         }
     }
     else
     {
-        for (uint32_t idx = 0; (create_callback = PluginManager::GetDynamicLoaderCreateCallbackAtIndex(idx)) != NULL; ++idx)
+        for (uint32_t idx = 0; (create_callback = PluginManager::GetDynamicLoaderCreateCallbackAtIndex(idx)) != nullptr; ++idx)
         {
             std::unique_ptr<DynamicLoader> instance_ap(create_callback(process, false));
-            if (instance_ap.get())
+            if (instance_ap)
                 return instance_ap.release();
         }
     }
-    return NULL;
+    return nullptr;
 }
 
-
-//----------------------------------------------------------------------
-// DynamicLoader constructor
-//----------------------------------------------------------------------
 DynamicLoader::DynamicLoader(Process *process) :
     m_process (process)
 {
 }
 
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-DynamicLoader::~DynamicLoader()
-{
-}
+DynamicLoader::~DynamicLoader() = default;
 
 //----------------------------------------------------------------------
 // Accessosors to the global setting as to whether to stop at image
 // (shared library) loading/unloading.
 //----------------------------------------------------------------------
+
 bool
 DynamicLoader::GetStopWhenImagesChange () const
 {
@@ -84,7 +80,7 @@ DynamicLoader::GetTargetExecutable()
     Target &target = m_process->GetTarget();
     ModuleSP executable = target.GetExecutableModule();
 
-    if (executable.get())
+    if (executable)
     {
         if (executable->GetFileSpec().Exists())
         {
@@ -92,7 +88,7 @@ DynamicLoader::GetTargetExecutable()
             ModuleSP module_sp (new Module (module_spec));
 
             // Check if the executable has changed and set it to the target executable if they differ.
-            if (module_sp.get() && module_sp->GetUUID().IsValid() && executable->GetUUID().IsValid())
+            if (module_sp && module_sp->GetUUID().IsValid() && executable->GetUUID().IsValid())
             {
                 if (module_sp->GetUUID() != executable->GetUUID())
                     executable.reset();
@@ -102,7 +98,7 @@ DynamicLoader::GetTargetExecutable()
                 executable.reset();
             }
 
-            if (!executable.get())
+            if (!executable)
             {
                 executable = target.GetSharedModule(module_spec);
                 if (executable.get() != target.GetExecutableModulePointer())
@@ -158,15 +154,14 @@ DynamicLoader::UnloadSectionsCommon(const ModuleSP module)
     }
 }
 
-
 const SectionList *
 DynamicLoader::GetSectionListFromModule(const ModuleSP module) const
 {
     SectionList *sections = nullptr;
-    if (module.get())
+    if (module)
     {
         ObjectFile *obj_file = module->GetObjectFile();
-        if (obj_file)
+        if (obj_file != nullptr)
         {
             sections = obj_file->GetSectionList();
         }
@@ -220,7 +215,6 @@ int64_t
 DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr, int size_in_bytes)
 {
     Error error;
-
     uint64_t value = m_process->ReadUnsignedIntegerFromMemory(addr, size_in_bytes, 0, error);
     if (error.Fail())
         return -1;

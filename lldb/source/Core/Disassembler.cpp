@@ -11,6 +11,10 @@
 
 // C Includes
 // C++ Includes
+#include <cstdio>
+#include <cstring>
+#include <limits>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
@@ -41,7 +45,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-
 DisassemblerSP
 Disassembler::FindPlugin (const ArchSpec &arch, const char *flavor, const char *plugin_name)
 {
@@ -50,7 +53,7 @@ Disassembler::FindPlugin (const ArchSpec &arch, const char *flavor, const char *
                         arch.GetArchitectureName(),
                         plugin_name);
 
-    DisassemblerCreateInstance create_callback = NULL;
+    DisassemblerCreateInstance create_callback = nullptr;
     
     if (plugin_name)
     {
@@ -60,17 +63,17 @@ Disassembler::FindPlugin (const ArchSpec &arch, const char *flavor, const char *
         {
             DisassemblerSP disassembler_sp(create_callback(arch, flavor));
             
-            if (disassembler_sp.get())
+            if (disassembler_sp)
                 return disassembler_sp;
         }
     }
     else
     {
-        for (uint32_t idx = 0; (create_callback = PluginManager::GetDisassemblerCreateCallbackAtIndex(idx)) != NULL; ++idx)
+        for (uint32_t idx = 0; (create_callback = PluginManager::GetDisassemblerCreateCallbackAtIndex(idx)) != nullptr; ++idx)
         {
             DisassemblerSP disassembler_sp(create_callback(arch, flavor));
 
-            if (disassembler_sp.get())
+            if (disassembler_sp)
                 return disassembler_sp;
         }
     }
@@ -80,7 +83,7 @@ Disassembler::FindPlugin (const ArchSpec &arch, const char *flavor, const char *
 DisassemblerSP
 Disassembler::FindPluginForTarget(const TargetSP target_sp, const ArchSpec &arch, const char *flavor, const char *plugin_name)
 {
-    if (target_sp && flavor == NULL)
+    if (target_sp && flavor == nullptr)
     {
         // FIXME - we don't have the mechanism in place to do per-architecture settings.  But since we know that for now
         // we only support flavors on x86 & x86_64,
@@ -90,7 +93,6 @@ Disassembler::FindPluginForTarget(const TargetSP target_sp, const ArchSpec &arch
     }
     return FindPlugin(arch, flavor, plugin_name);
 }
-
 
 static void
 ResolveAddress (const ExecutionContext &exe_ctx,
@@ -122,19 +124,16 @@ ResolveAddress (const ExecutionContext &exe_ctx,
 }
 
 size_t
-Disassembler::Disassemble
-(
-    Debugger &debugger,
-    const ArchSpec &arch,
-    const char *plugin_name,
-    const char *flavor,
-    const ExecutionContext &exe_ctx,
-    SymbolContextList &sc_list,
-    uint32_t num_instructions,
-    uint32_t num_mixed_context_lines,
-    uint32_t options,
-    Stream &strm
-)
+Disassembler::Disassemble(Debugger &debugger,
+                          const ArchSpec &arch,
+                          const char *plugin_name,
+                          const char *flavor,
+                          const ExecutionContext &exe_ctx,
+                          SymbolContextList &sc_list,
+                          uint32_t num_instructions,
+                          uint32_t num_mixed_context_lines,
+                          uint32_t options,
+                          Stream &strm)
 {
     size_t success_count = 0;
     const size_t count = sc_list.GetSize();
@@ -142,9 +141,9 @@ Disassembler::Disassemble
     AddressRange range;
     const uint32_t scope = eSymbolContextBlock | eSymbolContextFunction | eSymbolContextSymbol;
     const bool use_inline_block_range = true;
-    for (size_t i=0; i<count; ++i)
+    for (size_t i = 0; i < count; ++i)
     {
-        if (sc_list.GetContextAtIndex(i, sc) == false)
+        if (!sc_list.GetContextAtIndex(i, sc))
             break;
         for (uint32_t range_idx = 0; sc.GetAddressRange(scope, range_idx, use_inline_block_range, range); ++range_idx)
         {
@@ -168,20 +167,17 @@ Disassembler::Disassemble
 }
 
 bool
-Disassembler::Disassemble
-(
-    Debugger &debugger,
-    const ArchSpec &arch,
-    const char *plugin_name,
-    const char *flavor,
-    const ExecutionContext &exe_ctx,
-    const ConstString &name,
-    Module *module,
-    uint32_t num_instructions,
-    uint32_t num_mixed_context_lines,
-    uint32_t options,
-    Stream &strm
-)
+Disassembler::Disassemble(Debugger &debugger,
+                          const ArchSpec &arch,
+                          const char *plugin_name,
+                          const char *flavor,
+                          const ExecutionContext &exe_ctx,
+                          const ConstString &name,
+                          Module *module,
+                          uint32_t num_instructions,
+                          uint32_t num_mixed_context_lines,
+                          uint32_t options,
+                          Stream &strm)
 {
     SymbolContextList sc_list;
     if (name)
@@ -190,13 +186,13 @@ Disassembler::Disassemble
         const bool include_inlines = true;
         if (module)
         {
-            module->FindFunctions (name,
-                                   NULL,
-                                   eFunctionNameTypeAuto, 
-                                   include_symbols,
-                                   include_inlines,
-                                   true,
-                                   sc_list);
+            module->FindFunctions(name,
+                                  nullptr,
+                                  eFunctionNameTypeAuto,
+                                  include_symbols,
+                                  include_inlines,
+                                  true,
+                                  sc_list);
         }
         else if (exe_ctx.GetTargetPtr())
         {
@@ -225,17 +221,13 @@ Disassembler::Disassemble
     return false;
 }
 
-
 lldb::DisassemblerSP
-Disassembler::DisassembleRange
-(
-    const ArchSpec &arch,
-    const char *plugin_name,
-    const char *flavor,
-    const ExecutionContext &exe_ctx,
-    const AddressRange &range,
-    bool prefer_file_cache
-)
+Disassembler::DisassembleRange(const ArchSpec &arch,
+                               const char *plugin_name,
+                               const char *flavor,
+                               const ExecutionContext &exe_ctx,
+                               const AddressRange &range,
+                               bool prefer_file_cache)
 {
     lldb::DisassemblerSP disasm_sp;
     if (range.GetByteSize() > 0 && range.GetBaseAddress().IsValid())
@@ -244,7 +236,7 @@ Disassembler::DisassembleRange
 
         if (disasm_sp)
         {
-            size_t bytes_disassembled = disasm_sp->ParseInstructions (&exe_ctx, range, NULL, prefer_file_cache);
+            size_t bytes_disassembled = disasm_sp->ParseInstructions(&exe_ctx, range, nullptr, prefer_file_cache);
             if (bytes_disassembled == 0)
                 disasm_sp.reset();
         }
@@ -284,27 +276,23 @@ Disassembler::DisassembleBytes (const ArchSpec &arch,
     return disasm_sp;
 }
 
-
 bool
-Disassembler::Disassemble
-(
-    Debugger &debugger,
-    const ArchSpec &arch,
-    const char *plugin_name,
-    const char *flavor,
-    const ExecutionContext &exe_ctx,
-    const AddressRange &disasm_range,
-    uint32_t num_instructions,
-    uint32_t num_mixed_context_lines,
-    uint32_t options,
-    Stream &strm
-)
+Disassembler::Disassemble(Debugger &debugger,
+                          const ArchSpec &arch,
+                          const char *plugin_name,
+                          const char *flavor,
+                          const ExecutionContext &exe_ctx,
+                          const AddressRange &disasm_range,
+                          uint32_t num_instructions,
+                          uint32_t num_mixed_context_lines,
+                          uint32_t options,
+                          Stream &strm)
 {
     if (disasm_range.GetByteSize())
     {
         lldb::DisassemblerSP disasm_sp (Disassembler::FindPluginForTarget(exe_ctx.GetTargetSP(), arch, flavor, plugin_name));
 
-        if (disasm_sp.get())
+        if (disasm_sp)
         {
             AddressRange range;
             ResolveAddress (exe_ctx, disasm_range.GetBaseAddress(), range.GetBaseAddress());
@@ -333,19 +321,16 @@ Disassembler::Disassemble
 }
             
 bool
-Disassembler::Disassemble
-(
-    Debugger &debugger,
-    const ArchSpec &arch,
-    const char *plugin_name,
-    const char *flavor,
-    const ExecutionContext &exe_ctx,
-    const Address &start_address,
-    uint32_t num_instructions,
-    uint32_t num_mixed_context_lines,
-    uint32_t options,
-    Stream &strm
-)
+Disassembler::Disassemble(Debugger &debugger,
+                          const ArchSpec &arch,
+                          const char *plugin_name,
+                          const char *flavor,
+                          const ExecutionContext &exe_ctx,
+                          const Address &start_address,
+                          uint32_t num_instructions,
+                          uint32_t num_mixed_context_lines,
+                          uint32_t options,
+                          Stream &strm)
 {
     if (num_instructions > 0)
     {
@@ -353,7 +338,7 @@ Disassembler::Disassemble
                                                                           arch,
                                                                           flavor,
                                                                           plugin_name));
-        if (disasm_sp.get())
+        if (disasm_sp)
         {
             Address addr;
             ResolveAddress (exe_ctx, start_address, addr);
@@ -383,17 +368,14 @@ Disassembler::Disassemble
 }
             
 bool 
-Disassembler::PrintInstructions
-(
-    Disassembler *disasm_ptr,
-    Debugger &debugger,
-    const ArchSpec &arch,
-    const ExecutionContext &exe_ctx,
-    uint32_t num_instructions,
-    uint32_t num_mixed_context_lines,
-    uint32_t options,
-    Stream &strm
-)
+Disassembler::PrintInstructions(Disassembler *disasm_ptr,
+                                Debugger &debugger,
+                                const ArchSpec &arch,
+                                const ExecutionContext &exe_ctx,
+                                uint32_t num_instructions,
+                                uint32_t num_mixed_context_lines,
+                                uint32_t options,
+                                Stream &strm)
 {
     // We got some things disassembled...
     size_t num_instructions_found = disasm_ptr->GetInstructionList().GetSize();
@@ -406,7 +388,7 @@ Disassembler::PrintInstructions
     SymbolContext sc;
     SymbolContext prev_sc;
     AddressRange sc_range;
-    const Address *pc_addr_ptr = NULL;
+    const Address *pc_addr_ptr = nullptr;
     StackFrame *frame = exe_ctx.GetFramePtr();
 
     TargetSP target_sp (exe_ctx.GetTargetSP());
@@ -419,7 +401,7 @@ Disassembler::PrintInstructions
     const uint32_t scope = eSymbolContextLineEntry | eSymbolContextFunction | eSymbolContextSymbol;
     const bool use_inline_block_range = false;
 
-    const FormatEntity::Entry *disassembly_format = NULL;
+    const FormatEntity::Entry *disassembly_format = nullptr;
     FormatEntity::Entry format;
     if (exe_ctx.HasTargetScope())
     {
@@ -449,7 +431,7 @@ Disassembler::PrintInstructions
                 if (resolved_mask)
                 {
                     StreamString strmstr;
-                    Debugger::FormatDisassemblerAddress (disassembly_format, &sc, NULL, &exe_ctx, &addr, strmstr);
+                    Debugger::FormatDisassemblerAddress(disassembly_format, &sc, nullptr, &exe_ctx, &addr, strmstr);
                     size_t cur_line = strmstr.GetSizeOfLastLine();
                     if (cur_line > address_text_size)
                         address_text_size = cur_line;
@@ -509,7 +491,7 @@ Disassembler::PrintInstructions
             }
 
             const bool show_bytes = (options & eOptionShowBytes) != 0;
-            inst->Dump (&strm, max_opcode_byte_size, true, show_bytes, &exe_ctx, &sc, &prev_sc, NULL, address_text_size);
+            inst->Dump(&strm, max_opcode_byte_size, true, show_bytes, &exe_ctx, &sc, &prev_sc, nullptr, address_text_size);
             strm.EOL();            
         }
         else
@@ -521,20 +503,16 @@ Disassembler::PrintInstructions
     return true;
 }
 
-
 bool
-Disassembler::Disassemble
-(
-    Debugger &debugger,
-    const ArchSpec &arch,
-    const char *plugin_name,
-    const char *flavor,
-    const ExecutionContext &exe_ctx,
-    uint32_t num_instructions,
-    uint32_t num_mixed_context_lines,
-    uint32_t options,
-    Stream &strm
-)
+Disassembler::Disassemble(Debugger &debugger,
+                          const ArchSpec &arch,
+                          const char *plugin_name,
+                          const char *flavor,
+                          const ExecutionContext &exe_ctx,
+                          uint32_t num_instructions,
+                          uint32_t num_mixed_context_lines,
+                          uint32_t options,
+                          Stream &strm)
 {
     AddressRange range;
     StackFrame *frame = exe_ctx.GetFramePtr();
@@ -579,9 +557,7 @@ Instruction::Instruction(const Address &address, AddressClass addr_class) :
 {
 }
 
-Instruction::~Instruction()
-{
-}
+Instruction::~Instruction() = default;
 
 AddressClass
 Instruction::GetAddressClass ()
@@ -664,12 +640,12 @@ Instruction::Dump (lldb_private::Stream *s,
 bool
 Instruction::DumpEmulation (const ArchSpec &arch)
 {
-	std::unique_ptr<EmulateInstruction> insn_emulator_ap (EmulateInstruction::FindPlugin (arch, eInstructionTypeAny, NULL));
-	if (insn_emulator_ap.get())
-	{
-        insn_emulator_ap->SetInstruction (GetOpcode(), GetAddress(), NULL);
+    std::unique_ptr<EmulateInstruction> insn_emulator_ap(EmulateInstruction::FindPlugin(arch, eInstructionTypeAny, nullptr));
+    if (insn_emulator_ap)
+    {	
+        insn_emulator_ap->SetInstruction(GetOpcode(), GetAddress(), nullptr);
         return insn_emulator_ap->EvaluateInstruction (0);
-	}
+    }
 
     return false;
 }
@@ -714,7 +690,7 @@ Instruction::ReadArray (FILE *in_file, Stream *out_stream, OptionValue::Type dat
             line.clear();
         }
 
-        if (line.size() > 0)
+        if (!line.empty())
         {
             std::string value;
             static RegularExpression g_reg_exp ("^[ \t]*([^ \t]+)[ \t]*$");
@@ -784,7 +760,7 @@ Instruction::ReadDictionary (FILE *in_file, Stream *out_stream)
         }
         
         // Try to find a key-value pair in the current line and add it to the dictionary.
-        if (line.size() > 0)
+        if (!line.empty())
         {
             static RegularExpression g_reg_exp ("^[ \t]*([a-zA-Z_][a-zA-Z0-9_]*)[ \t]*=[ \t]*(.*)[ \t]*$");
             RegularExpression::Match regex_match(2);
@@ -816,7 +792,7 @@ Instruction::ReadDictionary (FILE *in_file, Stream *out_stream)
                 assert (value.size() == 1);
                 // value is a dictionary
                 value_sp = ReadDictionary (in_file, out_stream);
-                if (value_sp.get() == NULL)
+                if (!value_sp)
                 {
                     option_value_sp.reset ();
                     return option_value_sp;
@@ -827,7 +803,7 @@ Instruction::ReadDictionary (FILE *in_file, Stream *out_stream)
                 assert (value.size() == 1);
                 // value is an array
                 value_sp = ReadArray (in_file, out_stream, data_type);
-                if (value_sp.get() == NULL)
+                if (!value_sp)
                 {
                     option_value_sp.reset ();
                     return option_value_sp;
@@ -847,8 +823,6 @@ Instruction::ReadDictionary (FILE *in_file, Stream *out_stream)
                     value = value.substr (1, len-2);
                 value_sp.reset (new OptionValueString (value.c_str(), ""));
             }
-
-         
 
             if (const_key == encoding_key)
             {
@@ -902,7 +876,7 @@ Instruction::TestEmulation (Stream *out_stream, const char *file_name)
     // Read all the test information from the test file into an OptionValueDictionary.
 
     OptionValueSP data_dictionary_sp (ReadDictionary (test_file, out_stream));
-    if (data_dictionary_sp.get() == NULL)
+    if (!data_dictionary_sp)
     {
         out_stream->Printf ("Instruction::TestEmulation:  Error reading Dictionary Object.\n");
         fclose (test_file);
@@ -917,17 +891,16 @@ Instruction::TestEmulation (Stream *out_stream, const char *file_name)
 
     OptionValueSP value_sp = data_dictionary->GetValueForKey (description_key);
     
-    if (value_sp.get() == NULL)
+    if (!value_sp)
     {
         out_stream->Printf ("Instruction::TestEmulation:  Test file does not contain description string.\n");
         return false;
     }
 
     SetDescription (value_sp->GetStringValue());
-            
-            
+
     value_sp = data_dictionary->GetValueForKey (triple_key);
-    if (value_sp.get() == NULL)
+    if (!value_sp)
     {
         out_stream->Printf ("Instruction::TestEmulation: Test file does not contain triple.\n");
         return false;
@@ -937,8 +910,8 @@ Instruction::TestEmulation (Stream *out_stream, const char *file_name)
     arch.SetTriple (llvm::Triple (value_sp->GetStringValue()));
 
     bool success = false;
-    std::unique_ptr<EmulateInstruction> insn_emulator_ap (EmulateInstruction::FindPlugin (arch, eInstructionTypeAny, NULL));
-    if (insn_emulator_ap.get())
+    std::unique_ptr<EmulateInstruction> insn_emulator_ap(EmulateInstruction::FindPlugin(arch, eInstructionTypeAny, nullptr));
+    if (insn_emulator_ap)
         success = insn_emulator_ap->TestEmulation (out_stream, arch, data_dictionary);
 
     if (success)
@@ -958,18 +931,17 @@ Instruction::Emulate (const ArchSpec &arch,
                       EmulateInstruction::ReadRegisterCallback read_reg_callback,
                       EmulateInstruction::WriteRegisterCallback write_reg_callback)
 {
-	std::unique_ptr<EmulateInstruction> insn_emulator_ap (EmulateInstruction::FindPlugin (arch, eInstructionTypeAny, NULL));
-	if (insn_emulator_ap.get())
-	{
-		insn_emulator_ap->SetBaton (baton);
-		insn_emulator_ap->SetCallbacks (read_mem_callback, write_mem_callback, read_reg_callback, write_reg_callback);
-        insn_emulator_ap->SetInstruction (GetOpcode(), GetAddress(), NULL);
-        return insn_emulator_ap->EvaluateInstruction (evaluate_options);
-	}
+    std::unique_ptr<EmulateInstruction> insn_emulator_ap(EmulateInstruction::FindPlugin(arch, eInstructionTypeAny, nullptr));
+    if (insn_emulator_ap)
+    {
+        insn_emulator_ap->SetBaton(baton);
+        insn_emulator_ap->SetCallbacks(read_mem_callback, write_mem_callback, read_reg_callback, write_reg_callback);
+        insn_emulator_ap->SetInstruction(GetOpcode(), GetAddress(), nullptr);
+        return insn_emulator_ap->EvaluateInstruction(evaluate_options);
+    }
 
     return false;
 }
-
 
 uint32_t
 Instruction::GetData (DataExtractor &data)
@@ -982,9 +954,7 @@ InstructionList::InstructionList() :
 {
 }
 
-InstructionList::~InstructionList()
-{
-}
+InstructionList::~InstructionList() = default;
 
 size_t
 InstructionList::GetSize() const
@@ -1008,8 +978,6 @@ InstructionList::GetMaxOpcocdeByteSize () const
     return max_inst_size;
 }
 
-
-
 InstructionSP
 InstructionList::GetInstructionAtIndex (size_t idx) const
 {
@@ -1028,7 +996,7 @@ InstructionList::Dump (Stream *s,
     const uint32_t max_opcode_byte_size = GetMaxOpcocdeByteSize();
     collection::const_iterator pos, begin, end;
 
-    const FormatEntity::Entry *disassembly_format = NULL;
+    const FormatEntity::Entry *disassembly_format = nullptr;
     FormatEntity::Entry format;
     if (exe_ctx && exe_ctx->HasTargetScope())
     {
@@ -1046,15 +1014,14 @@ InstructionList::Dump (Stream *s,
     {
         if (pos != begin)
             s->EOL();
-        (*pos)->Dump(s, max_opcode_byte_size, show_address, show_bytes, exe_ctx, NULL, NULL, disassembly_format, 0);
+        (*pos)->Dump(s, max_opcode_byte_size, show_address, show_bytes, exe_ctx, nullptr, nullptr, disassembly_format, 0);
     }
 }
-
 
 void
 InstructionList::Clear()
 {
-  m_instructions.clear();
+    m_instructions.clear();
 }
 
 void
@@ -1069,7 +1036,7 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start, Target &target)
 {
     size_t num_instructions = m_instructions.size();
     
-    uint32_t next_branch = UINT32_MAX;
+    uint32_t next_branch = std::numeric_limits<uint32_t>::max();
     size_t i;
     for (i = start; i < num_instructions; i++)
     {
@@ -1086,7 +1053,7 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start, Target &target)
     if (target.GetArchitecture().GetTriple().getArch() == llvm::Triple::hexagon)
     {
         // If we didn't find a branch, find the last packet start.
-        if (next_branch == UINT32_MAX)
+        if (next_branch == std::numeric_limits<uint32_t>::max())
         {
             i = num_instructions - 1;
         }
@@ -1119,7 +1086,7 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start, Target &target)
             }
         }
 
-        if (next_branch == UINT32_MAX)
+        if (next_branch == std::numeric_limits<uint32_t>::max())
         {
             // We couldn't find the previous packet, so return start
             next_branch = start;
@@ -1132,7 +1099,7 @@ uint32_t
 InstructionList::GetIndexOfInstructionAtAddress (const Address &address)
 {
     size_t num_instructions = m_instructions.size();
-    uint32_t index = UINT32_MAX;
+    uint32_t index = std::numeric_limits<uint32_t>::max();
     for (size_t i = 0; i < num_instructions; i++)
     {
         if (m_instructions[i]->GetAddress() == address)
@@ -1143,7 +1110,6 @@ InstructionList::GetIndexOfInstructionAtAddress (const Address &address)
     }
     return index;
 }
-
 
 uint32_t
 InstructionList::GetIndexOfInstructionAtLoadAddress (lldb::addr_t load_addr, Target &target)
@@ -1163,7 +1129,7 @@ Disassembler::ParseInstructions (const ExecutionContext *exe_ctx,
     {
         Target *target = exe_ctx->GetTargetPtr();
         const addr_t byte_size = range.GetByteSize();
-        if (target == NULL || byte_size == 0 || !range.GetBaseAddress().IsValid())
+        if (target == nullptr || byte_size == 0 || !range.GetBaseAddress().IsValid())
             return 0;
 
         DataBufferHeap *heap_buffer = new DataBufferHeap (byte_size, '\0');
@@ -1186,7 +1152,8 @@ Disassembler::ParseInstructions (const ExecutionContext *exe_ctx,
                                 m_arch.GetByteOrder(),
                                 m_arch.GetAddressByteSize());
             const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
-            return DecodeInstructions (range.GetBaseAddress(), data, 0, UINT32_MAX, false, data_from_file);
+            return DecodeInstructions(range.GetBaseAddress(), data, 0, std::numeric_limits<uint32_t>::max(), false,
+                                      data_from_file);
         }
         else if (error_strm_ptr)
         {
@@ -1212,14 +1179,14 @@ Disassembler::ParseInstructions (const ExecutionContext *exe_ctx,
 {
     m_instruction_list.Clear();
 
-    if (exe_ctx == NULL || num_instructions == 0 || !start.IsValid())
+    if (exe_ctx == nullptr || num_instructions == 0 || !start.IsValid())
         return 0;
         
     Target *target = exe_ctx->GetTargetPtr();
     // Calculate the max buffer size we will need in order to disassemble
     const addr_t byte_size = num_instructions * m_arch.GetMaximumOpcodeByteSize();
     
-    if (target == NULL || byte_size == 0)
+    if (target == nullptr || byte_size == 0)
         return 0;
 
     DataBufferHeap *heap_buffer = new DataBufferHeap (byte_size, '\0');
@@ -1262,7 +1229,7 @@ Disassembler::Disassembler(const ArchSpec& arch, const char *flavor) :
     m_base_addr(LLDB_INVALID_ADDRESS),
     m_flavor ()
 {
-    if (flavor == NULL)
+    if (flavor == nullptr)
         m_flavor.assign("default");
     else
         m_flavor.assign(flavor);
@@ -1286,12 +1253,7 @@ Disassembler::Disassembler(const ArchSpec& arch, const char *flavor) :
     }
 }
 
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-Disassembler::~Disassembler()
-{
-}
+Disassembler::~Disassembler() = default;
 
 InstructionList &
 Disassembler::GetInstructionList ()
@@ -1308,15 +1270,14 @@ Disassembler::GetInstructionList () const
 //----------------------------------------------------------------------
 // Class PseudoInstruction
 //----------------------------------------------------------------------
+
 PseudoInstruction::PseudoInstruction () :
     Instruction (Address(), eAddressClassUnknown),
     m_description ()
 {
 }
 
-PseudoInstruction::~PseudoInstruction ()
-{
-}
+PseudoInstruction::~PseudoInstruction() = default;
      
 bool
 PseudoInstruction::DoesBranch ()
@@ -1339,7 +1300,6 @@ PseudoInstruction::Decode (const lldb_private::Disassembler &disassembler,
 {
     return m_opcode.GetByteSize();
 }
-
 
 void
 PseudoInstruction::SetOpcode (size_t opcode_size, void *opcode_data)

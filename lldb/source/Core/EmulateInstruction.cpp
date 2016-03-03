@@ -9,6 +9,12 @@
 
 #include "lldb/Core/EmulateInstruction.h"
 
+// C Includes
+// C++ Includes
+#include <cstring>
+
+// Other libraries and framework includes
+// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Error.h"
@@ -29,7 +35,7 @@ using namespace lldb_private;
 EmulateInstruction*
 EmulateInstruction::FindPlugin (const ArchSpec &arch, InstructionType supported_inst_type, const char *plugin_name)
 {
-    EmulateInstructionCreateInstance create_callback = NULL;
+    EmulateInstructionCreateInstance create_callback = nullptr;
     if (plugin_name)
     {
         ConstString const_plugin_name (plugin_name);
@@ -43,33 +49,32 @@ EmulateInstruction::FindPlugin (const ArchSpec &arch, InstructionType supported_
     }
     else
     {
-        for (uint32_t idx = 0; (create_callback = PluginManager::GetEmulateInstructionCreateCallbackAtIndex(idx)) != NULL; ++idx)
+        for (uint32_t idx = 0; (create_callback = PluginManager::GetEmulateInstructionCreateCallbackAtIndex(idx)) != nullptr; ++idx)
         {
             EmulateInstruction *emulate_insn_ptr = create_callback(arch, supported_inst_type);
             if (emulate_insn_ptr)
                 return emulate_insn_ptr;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 EmulateInstruction::EmulateInstruction (const ArchSpec &arch) :
-    m_arch (arch),
-    m_baton (NULL),
-    m_read_mem_callback (&ReadMemoryDefault),
-    m_write_mem_callback (&WriteMemoryDefault),
-    m_read_reg_callback (&ReadRegisterDefault),
-    m_write_reg_callback (&WriteRegisterDefault),
-    m_addr (LLDB_INVALID_ADDRESS)
+    m_arch(arch),
+    m_baton(nullptr),
+    m_read_mem_callback(&ReadMemoryDefault),
+    m_write_mem_callback(&WriteMemoryDefault),
+    m_read_reg_callback(&ReadRegisterDefault),
+    m_write_reg_callback(&WriteRegisterDefault),
+    m_addr(LLDB_INVALID_ADDRESS)
 {
     ::memset (&m_opcode, 0, sizeof (m_opcode));
 }
 
-
 bool
 EmulateInstruction::ReadRegister (const RegisterInfo *reg_info, RegisterValue& reg_value)
 {
-    if (m_read_reg_callback)
+    if (m_read_reg_callback != nullptr)
         return m_read_reg_callback (this, m_baton, reg_info, reg_value);
     return false;
 }
@@ -115,7 +120,7 @@ EmulateInstruction::WriteRegister (const Context &context,
                                    const RegisterInfo *reg_info, 
                                    const RegisterValue& reg_value)
 {
-    if (m_write_reg_callback)
+    if (m_write_reg_callback != nullptr)
         return m_write_reg_callback (this, m_baton, context, reg_info, reg_value);
     return false;
 }
@@ -132,14 +137,12 @@ EmulateInstruction::WriteRegister (const Context &context,
     return false;
 }
 
-
 bool
 EmulateInstruction::WriteRegisterUnsigned (const Context &context,
                                            lldb::RegisterKind reg_kind,
                                            uint32_t reg_num,
                                            uint64_t uint_value)
 {
-    
     RegisterInfo reg_info;
     if (GetRegisterInfo(reg_kind, reg_num, reg_info))
     {
@@ -155,8 +158,7 @@ EmulateInstruction::WriteRegisterUnsigned (const Context &context,
                                            const RegisterInfo *reg_info,
                                            uint64_t uint_value)
 {
-    
-    if (reg_info)
+    if (reg_info != nullptr)
     {
         RegisterValue reg_value;
         if (reg_value.SetUInt(uint_value, reg_info->byte_size))
@@ -171,7 +173,7 @@ EmulateInstruction::ReadMemory (const Context &context,
                                 void *dst,
                                 size_t dst_len)
 {
-    if (m_read_mem_callback)
+    if (m_read_mem_callback != nullptr)
         return m_read_mem_callback (this, m_baton, context, addr, dst, dst_len) == dst_len;
     return false;
 }
@@ -202,7 +204,6 @@ EmulateInstruction::ReadMemoryUnsigned (const Context &context, lldb::addr_t add
     return uval64;
 }
 
-
 bool
 EmulateInstruction::WriteMemoryUnsigned (const Context &context, 
                                          lldb::addr_t addr, 
@@ -213,9 +214,7 @@ EmulateInstruction::WriteMemoryUnsigned (const Context &context,
     strm.PutMaxHex64 (uval, uval_byte_size);
     
     size_t bytes_written = m_write_mem_callback (this, m_baton, context, addr, strm.GetData(), uval_byte_size);
-    if (bytes_written == uval_byte_size)
-        return true;
-    return false;
+    return (bytes_written == uval_byte_size);
 }
 
 bool
@@ -224,11 +223,10 @@ EmulateInstruction::WriteMemory (const Context &context,
                                  const void *src,
                                  size_t src_len)
 {
-    if (m_write_mem_callback)
+    if (m_write_mem_callback != nullptr)
         return m_write_mem_callback (this, m_baton, context, addr, src, src_len) == src_len;
     return false;
 }
-
 
 void
 EmulateInstruction::SetBaton (void *baton)
@@ -254,29 +252,24 @@ EmulateInstruction::SetReadMemCallback (ReadMemoryCallback read_mem_callback)
     m_read_mem_callback = read_mem_callback;
 }
 
-                                  
 void
 EmulateInstruction::SetWriteMemCallback (WriteMemoryCallback write_mem_callback)
 {
     m_write_mem_callback = write_mem_callback;
 }
 
-                                  
 void
 EmulateInstruction::SetReadRegCallback (ReadRegisterCallback read_reg_callback)
 {
     m_read_reg_callback = read_reg_callback;
 }
 
-                                  
 void
 EmulateInstruction::SetWriteRegCallback (WriteRegisterCallback write_reg_callback)
 {
     m_write_reg_callback = write_reg_callback;
 }
 
-                                  
-                            
 //
 //  Read & Write Memory and Registers callback functions.
 //
@@ -289,7 +282,7 @@ EmulateInstruction::ReadMemoryFrame (EmulateInstruction *instruction,
                                      void *dst,
                                      size_t dst_len)
 {
-    if (!baton || dst == NULL || dst_len == 0)
+    if (baton == nullptr || dst == nullptr || dst_len == 0)
         return 0;
 
     StackFrame *frame = (StackFrame *) baton;
@@ -311,7 +304,7 @@ EmulateInstruction::WriteMemoryFrame (EmulateInstruction *instruction,
                                       const void *src,
                                       size_t src_len)
 {
-    if (!baton || src == NULL || src_len == 0)
+    if (baton == nullptr || src == nullptr || src_len == 0)
         return 0;
     
     StackFrame *frame = (StackFrame *) baton;
@@ -332,7 +325,7 @@ EmulateInstruction::ReadRegisterFrame  (EmulateInstruction *instruction,
                                         const RegisterInfo *reg_info,
                                         RegisterValue &reg_value)
 {
-    if (!baton)
+    if (baton == nullptr)
         return false;
         
     StackFrame *frame = (StackFrame *) baton;
@@ -346,7 +339,7 @@ EmulateInstruction::WriteRegisterFrame (EmulateInstruction *instruction,
                                         const RegisterInfo *reg_info,
                                         const RegisterValue &reg_value)
 {
-    if (!baton)
+    if (baton == nullptr)
         return false;
         
     StackFrame *frame = (StackFrame *) baton;
@@ -504,45 +497,35 @@ EmulateInstruction::Context::Dump (Stream &strm,
     switch (info_type)
     {
     case eInfoTypeRegisterPlusOffset:
-        {
-            strm.Printf (" (reg_plus_offset = %s%+" PRId64 ")",
-                         info.RegisterPlusOffset.reg.name,
-                         info.RegisterPlusOffset.signed_offset);
-        }
+        strm.Printf(" (reg_plus_offset = %s%+" PRId64 ")",
+                    info.RegisterPlusOffset.reg.name,
+                    info.RegisterPlusOffset.signed_offset);
         break;
 
     case eInfoTypeRegisterPlusIndirectOffset:
-        {
-            strm.Printf (" (reg_plus_reg = %s + %s)",
-                         info.RegisterPlusIndirectOffset.base_reg.name,
-                         info.RegisterPlusIndirectOffset.offset_reg.name);
-        }
+        strm.Printf(" (reg_plus_reg = %s + %s)",
+                    info.RegisterPlusIndirectOffset.base_reg.name,
+                    info.RegisterPlusIndirectOffset.offset_reg.name);
         break;
 
     case eInfoTypeRegisterToRegisterPlusOffset:
-        {
-            strm.Printf (" (base_and_imm_offset = %s%+" PRId64 ", data_reg = %s)",
-                         info.RegisterToRegisterPlusOffset.base_reg.name, 
-                         info.RegisterToRegisterPlusOffset.offset,
-                         info.RegisterToRegisterPlusOffset.data_reg.name);
-        }
+        strm.Printf(" (base_and_imm_offset = %s%+" PRId64 ", data_reg = %s)",
+                    info.RegisterToRegisterPlusOffset.base_reg.name,
+                    info.RegisterToRegisterPlusOffset.offset,
+                    info.RegisterToRegisterPlusOffset.data_reg.name);
         break;
 
     case eInfoTypeRegisterToRegisterPlusIndirectOffset:
-        {
-            strm.Printf (" (base_and_reg_offset = %s + %s, data_reg = %s)",
-                         info.RegisterToRegisterPlusIndirectOffset.base_reg.name, 
-                         info.RegisterToRegisterPlusIndirectOffset.offset_reg.name, 
-                         info.RegisterToRegisterPlusIndirectOffset.data_reg.name);
-        }
+        strm.Printf(" (base_and_reg_offset = %s + %s, data_reg = %s)",
+                    info.RegisterToRegisterPlusIndirectOffset.base_reg.name,
+                    info.RegisterToRegisterPlusIndirectOffset.offset_reg.name,
+                    info.RegisterToRegisterPlusIndirectOffset.data_reg.name);
         break;
     
     case eInfoTypeRegisterRegisterOperands:
-        {
-            strm.Printf (" (register to register binary op: %s and %s)", 
-                         info.RegisterRegisterOperands.operand1.name,
-                         info.RegisterRegisterOperands.operand2.name);
-        }
+        strm.Printf(" (register to register binary op: %s and %s)",
+                    info.RegisterRegisterOperands.operand1.name,
+                    info.RegisterRegisterOperands.operand2.name);
         break;
 
     case eInfoTypeOffset:
@@ -599,7 +582,7 @@ EmulateInstruction::SetInstruction (const Opcode &opcode, const Address &inst_ad
     m_addr = LLDB_INVALID_ADDRESS;
     if (inst_addr.IsValid())
     {
-        if (target)
+        if (target != nullptr)
             m_addr = inst_addr.GetLoadAddress (target);
         if (m_addr == LLDB_INVALID_ADDRESS)
             m_addr = inst_addr.GetFileAddress ();
@@ -661,12 +644,9 @@ EmulateInstruction::GetInternalRegisterNumber (RegisterContext *reg_ctx, const R
     return LLDB_INVALID_REGNUM;
 }
 
-
 bool
 EmulateInstruction::CreateFunctionEntryUnwind (UnwindPlan &unwind_plan)
 {
     unwind_plan.Clear();
     return false;
 }
-
-

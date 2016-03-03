@@ -6,35 +6,29 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "lldb/Core/FileSpecList.h"
-#include "lldb/Core/Stream.h"
+
+// C Includes
+// C++ Includes
 #include <algorithm>
+#include <limits>
+
+// Other libraries and framework includes
+// Project includes
+#include "lldb/Core/Stream.h"
 
 using namespace lldb_private;
 using namespace std;
 
-//------------------------------------------------------------------
-// Default constructor
-//------------------------------------------------------------------
 FileSpecList::FileSpecList() :
     m_files()
 {
 }
 
-//------------------------------------------------------------------
-// Copy constructor
-//------------------------------------------------------------------
-FileSpecList::FileSpecList(const FileSpecList& rhs) :
-    m_files(rhs.m_files)
-{
-}
+FileSpecList::FileSpecList(const FileSpecList& rhs) = default;
 
-//------------------------------------------------------------------
-// Destructor
-//------------------------------------------------------------------
-FileSpecList::~FileSpecList()
-{
-}
+FileSpecList::~FileSpecList() = default;
 
 //------------------------------------------------------------------
 // Assignment operator
@@ -104,7 +98,7 @@ FileSpecList::Dump(Stream *s, const char *separator_cstr) const
 // "file_spec" starting "start_idx" entries into the file spec list.
 //
 // Returns the valid index of the file that matches "file_spec" if
-// it is found, else UINT32_MAX is returned.
+// it is found, else std::numeric_limits<uint32_t>::max() is returned.
 //------------------------------------------------------------------
 size_t
 FileSpecList::FindFileIndex (size_t start_idx, const FileSpec &file_spec, bool full, bool remove_dots) const
@@ -131,7 +125,7 @@ FileSpecList::FindFileIndex (size_t start_idx, const FileSpec &file_spec, bool f
     }
 
     // We didn't find the file, return an invalid index
-    return UINT32_MAX;
+    return std::numeric_limits<uint32_t>::max();
 }
 
 //------------------------------------------------------------------
@@ -141,7 +135,6 @@ FileSpecList::FindFileIndex (size_t start_idx, const FileSpec &file_spec, bool f
 const FileSpec &
 FileSpecList::GetFileSpecAtIndex(size_t idx) const
 {
-
     if (idx < m_files.size())
         return m_files[idx];
     static FileSpec g_empty_file_spec;
@@ -153,7 +146,7 @@ FileSpecList::GetFileSpecPointerAtIndex(size_t idx) const
 {
     if (idx < m_files.size())
         return &m_files[idx];
-    return NULL;
+    return nullptr;
 }
 
 //------------------------------------------------------------------
@@ -208,26 +201,23 @@ FileSpecList::GetFilesMatchingPartialPath (const char *path, bool dir_okay, File
         else if (type == FileSpec::eFileTypeDirectory)
         {
             // Fill the match list with all the files in the directory:
-
         }
         else
         {
             return 0;
         }
-
     }
     else
     {
         ConstString dir_name = path_spec.GetDirectory();
-        Constring file_name = GetFilename();
-        if (dir_name == NULL)
+        ConstString file_name = GetFilename();
+        if (dir_name == nullptr)
         {
             // Match files in the CWD.
         }
         else
         {
             // Match files in the given directory:
-
         }
     }
 #endif

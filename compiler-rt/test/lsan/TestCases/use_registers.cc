@@ -27,6 +27,11 @@ void *registers_thread_func(void *arg) {
       :
       : "r" (p)
       );
+#elif defined(__mips__)
+  asm ( "move $16, %0"
+      :
+      : "r" (p)
+      );
 #else
 #error "Test is not supported on this architecture."
 #endif
