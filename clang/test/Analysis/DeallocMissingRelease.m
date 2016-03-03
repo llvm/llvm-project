@@ -664,6 +664,25 @@ void ReleaseMe(id arg);
 @end
 #endif
 
+struct SomeStruct {
+  int f;
+};
+@interface ZeroOutStructWithSetter : NSObject
+  @property(assign) struct SomeStruct s;
+@end
+
+@implementation ZeroOutStructWithSetter
+- (void)dealloc {
+  struct SomeStruct zeroedS;
+  zeroedS.f = 0;
+
+  self.s = zeroedS;
+#if NON_ARC
+  [super dealloc];
+#endif
+}
+@end
+
 #if NON_ARC
 @interface ReleaseIvarInArray : NSObject {
   NSObject *_array[3];
