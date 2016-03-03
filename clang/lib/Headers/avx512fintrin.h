@@ -3602,6 +3602,72 @@ __builtin_ia32_psrlqi512_mask ((__v8di)( __A),( __B),\
               (__mmask8)( __U));\
 })
 
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_load_epi32 (__m512i __W, __mmask16 __U, void const *__P)
+{
+  return (__m512i) __builtin_ia32_movdqa32load512_mask ((const __v16si *) __P,
+              (__v16si) __W,
+              (__mmask16) __U);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_load_epi32 (__mmask16 __U, void const *__P)
+{
+  return (__m512i) __builtin_ia32_movdqa32load512_mask ((const __v16si *) __P,
+              (__v16si)
+              _mm512_setzero_si512 (),
+              (__mmask16) __U);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm512_mask_store_epi32 (void *__P, __mmask16 __U, __m512i __A)
+{
+  __builtin_ia32_movdqa32store512_mask ((__v16si *) __P, (__v16si) __A,
+          (__mmask16) __U);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_mov_epi64 (__m512i __W, __mmask8 __U, __m512i __A)
+{
+  return (__m512i) __builtin_ia32_movdqa64_512_mask ((__v8di) __A,
+                 (__v8di) __W,
+                 (__mmask8) __U);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_mov_epi64 (__mmask8 __U, __m512i __A)
+{
+  return (__m512i) __builtin_ia32_movdqa64_512_mask ((__v8di) __A,
+                 (__v8di)
+                 _mm512_setzero_si512 (),
+                 (__mmask8) __U);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_load_epi64 (__m512i __W, __mmask8 __U, void const *__P)
+{
+  return (__m512i) __builtin_ia32_movdqa64load512_mask ((const __v8di *) __P,
+              (__v8di) __W,
+              (__mmask8) __U);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_load_epi64 (__mmask8 __U, void const *__P)
+{
+  return (__m512i) __builtin_ia32_movdqa64load512_mask ((const __v8di *) __P,
+              (__v8di)
+              _mm512_setzero_si512 (),
+              (__mmask8) __U);
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm512_mask_store_epi64 (void *__P, __mmask8 __U, __m512i __A)
+{
+  __builtin_ia32_movdqa64store512_mask ((__v8di *) __P, (__v8di) __A,
+          (__mmask8) __U);
+}
+
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif // __AVX512FINTRIN_H

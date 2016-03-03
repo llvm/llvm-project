@@ -48,6 +48,7 @@ class GdbRemoteTestCaseBase(TestBase):
     _verbose_log_handler = None
     _log_formatter = logging.Formatter(fmt='%(asctime)-15s %(levelname)-8s %(message)s')
     _remote_server_log_file = None
+    debug_monitor_extra_args = []
 
     def setUpBaseLogging(self):
         self.logger = logging.getLogger(__name__)

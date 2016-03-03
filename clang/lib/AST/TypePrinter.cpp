@@ -629,6 +629,20 @@ void TypePrinter::printFunctionProtoBefore(const FunctionProtoType *T,
   }
 }
 
+llvm::StringRef clang::getParameterABISpelling(ParameterABI ABI) {
+  switch (ABI) {
+  case ParameterABI::Ordinary:
+    llvm_unreachable("asking for spelling of ordinary parameter ABI");
+  case ParameterABI::SwiftContext:
+    return "swift_context";
+  case ParameterABI::SwiftErrorResult:
+    return "swift_error_result";
+  case ParameterABI::SwiftIndirectResult:
+    return "swift_indirect_result";
+  }
+  llvm_unreachable("bad parameter ABI kind");
+}
+
 void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T, 
                                           raw_ostream &OS) { 
   // If needed for precedence reasons, wrap the inner part in grouping parens.
@@ -644,6 +658,9 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
       auto EPI = T->getExtParameterInfo(i);
       if (EPI.isConsumed()) OS << "__attribute__((ns_consumed)) ";
+      auto ABI = EPI.getABI();
+      if (ABI != ParameterABI::Ordinary)
+        OS << "__attribute__((" << getParameterABISpelling(ABI) << ")) ";
 
       print(T->getParamType(i), OS, StringRef());
     }
@@ -707,6 +724,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     case CC_SpirKernel:
       // Do nothing. These CCs are not available as attributes.
       break;
+    case CC_Swift:
+      OS << " __attribute__((swiftcall))";
     }
   }
 
@@ -1309,6 +1328,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case AttributedType::attr_fastcall: OS << "fastcall"; break;
   case AttributedType::attr_stdcall: OS << "stdcall"; break;
   case AttributedType::attr_thiscall: OS << "thiscall"; break;
+  case AttributedType::attr_swiftcall: OS << "swiftcall"; break;
   case AttributedType::attr_vectorcall: OS << "vectorcall"; break;
   case AttributedType::attr_pascal: OS << "pascal"; break;
   case AttributedType::attr_ms_abi: OS << "ms_abi"; break;

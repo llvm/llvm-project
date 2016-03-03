@@ -7807,6 +7807,9 @@ public:
   void AddModeAttr(SourceRange AttrRange, Decl *D, IdentifierInfo *Name,
                    unsigned SpellingListIndex, bool InInstantiation = false);
 
+  void AddParameterABIAttr(SourceRange AttrRange, Decl *D,
+                           ParameterABI ABI, unsigned SpellingListIndex);
+
   void AddNSConsumedAttr(SourceRange AttrRange, Decl *D,
                          unsigned SpellingListIndex, bool isNSConsumed,
                          bool isTemplateInstantiation);
