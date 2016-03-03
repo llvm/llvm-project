@@ -2278,6 +2278,20 @@ def warn_objc_collection_literal_element : Warning<
   "object of type %0 is not compatible with "
   "%select{array element type|dictionary key type|dictionary value type}1 %2">,
   InGroup<ObjCLiteralConversion>;
+def err_swift_param_attr_not_swiftcall : Error<
+  "'%0' parameter can only be used with swiftcall calling convention">;
+def err_swift_indirect_result_not_first : Error<
+  "'swift_indirect_result' parameters must be first parameters of function">;
+def err_swift_context_not_before_swift_error_result : Error<
+  "'swift_context' parameter can only be followed by 'swift_error_result' "
+  "parameter">;
+def err_swift_error_result_not_last : Error<
+  "'swift_error_result' parameter must be last parameter of function">;
+def err_swift_error_result_not_after_swift_context : Error<
+  "'swift_error_result' parameter must follow 'swift_context' parameter">;
+def err_swift_abi_parameter_wrong_type : Error<
+  "'%0' parameter must have pointer%select{| to unqualified pointer}1 type; "
+  "type here is %2">;
 
 def err_attribute_argument_is_zero : Error<
   "%0 attribute must be greater than 0">;

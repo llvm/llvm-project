@@ -3773,6 +3773,11 @@ static void handleCallConvAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                PascalAttr(Attr.getRange(), S.Context,
                           Attr.getAttributeSpellingListIndex()));
     return;
+  case AttributeList::AT_SwiftCall:
+    D->addAttr(::new (S.Context)
+               SwiftCallAttr(Attr.getRange(), S.Context,
+                             Attr.getAttributeSpellingListIndex()));
+    return;
   case AttributeList::AT_VectorCall:
     D->addAttr(::new (S.Context)
                VectorCallAttr(Attr.getRange(), S.Context,
@@ -3840,6 +3845,7 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
   case AttributeList::AT_StdCall: CC = CC_X86StdCall; break;
   case AttributeList::AT_ThisCall: CC = CC_X86ThisCall; break;
   case AttributeList::AT_Pascal: CC = CC_X86Pascal; break;
+  case AttributeList::AT_SwiftCall: CC = CC_Swift; break;
   case AttributeList::AT_VectorCall: CC = CC_X86VectorCall; break;
   case AttributeList::AT_MSABI:
     CC = Context.getTargetInfo().getTriple().isOSWindows() ? CC_C :
@@ -3888,6 +3894,96 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
 
   attr.setProcessingCache((unsigned) CC);
   return false;
+}
+
+/// Pointer-like types in the default address space.
+static bool isValidSwiftContextType(QualType type) {
+  if (!type->hasPointerRepresentation())
+    return type->isDependentType();
+  return type->getPointeeType().getAddressSpace() == 0;
+}
+
+/// Pointers and references in the default address space.
+static bool isValidSwiftIndirectResultType(QualType type) {
+  if (auto ptrType = type->getAs<PointerType>()) {
+    type = ptrType->getPointeeType();
+  } else if (auto refType = type->getAs<ReferenceType>()) {
+    type = refType->getPointeeType();
+  } else {
+    return type->isDependentType();
+  }
+  return type.getAddressSpace() == 0;
+}
+
+/// Pointers and references to pointers in the default address space.
+static bool isValidSwiftErrorResultType(QualType type) {
+  if (auto ptrType = type->getAs<PointerType>()) {
+    type = ptrType->getPointeeType();
+  } else if (auto refType = type->getAs<ReferenceType>()) {
+    type = refType->getPointeeType();
+  } else {
+    return type->isDependentType();
+  }
+  if (!type.getQualifiers().empty())
+    return false;
+  return isValidSwiftContextType(type);
+}
+
+static void handleParameterABIAttr(Sema &S, Decl *D, const AttributeList &attr,
+                                   ParameterABI abi) {
+  S.AddParameterABIAttr(attr.getRange(), D, abi,
+                        attr.getAttributeSpellingListIndex());
+}
+
+void Sema::AddParameterABIAttr(SourceRange range, Decl *D, ParameterABI abi,
+                               unsigned spellingIndex) {
+
+  QualType type = cast<ParmVarDecl>(D)->getType();
+
+  if (auto existingAttr = D->getAttr<ParameterABIAttr>()) {
+    if (existingAttr->getABI() != abi) {
+      Diag(range.getBegin(), diag::err_attributes_are_not_compatible)
+        << getParameterABISpelling(abi) << existingAttr;
+      Diag(existingAttr->getLocation(), diag::note_conflicting_attribute);
+      return;
+    }
+  }
+
+  switch (abi) {
+  case ParameterABI::Ordinary:
+    llvm_unreachable("explicit attribute for ordinary parameter ABI?");
+
+  case ParameterABI::SwiftContext:
+    if (!isValidSwiftContextType(type)) {
+      Diag(range.getBegin(), diag::err_swift_abi_parameter_wrong_type)
+        << getParameterABISpelling(abi)
+        << /*pointer to pointer */ 0 << type;
+    }
+    D->addAttr(::new (Context)
+               SwiftContextAttr(range, Context, spellingIndex));
+    return;
+
+  case ParameterABI::SwiftErrorResult:
+    if (!isValidSwiftErrorResultType(type)) {
+      Diag(range.getBegin(), diag::err_swift_abi_parameter_wrong_type)
+        << getParameterABISpelling(abi)
+        << /*pointer to pointer */ 1 << type;
+    }
+    D->addAttr(::new (Context)
+               SwiftErrorResultAttr(range, Context, spellingIndex));
+    return;
+
+  case ParameterABI::SwiftIndirectResult:
+    if (!isValidSwiftIndirectResultType(type)) {
+      Diag(range.getBegin(), diag::err_swift_abi_parameter_wrong_type)
+        << getParameterABISpelling(abi)
+        << /*pointer*/ 0 << type;
+    }
+    D->addAttr(::new (Context)
+               SwiftIndirectResultAttr(range, Context, spellingIndex));
+    return;
+  }
+  llvm_unreachable("bad parameter ABI attribute");
 }
 
 /// Checks a regparm attribute, returning true if it is ill-formed and
@@ -5853,6 +5949,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_FastCall:
   case AttributeList::AT_ThisCall:
   case AttributeList::AT_Pascal:
+  case AttributeList::AT_SwiftCall:
   case AttributeList::AT_VectorCall:
   case AttributeList::AT_MSABI:
   case AttributeList::AT_SysVABI:
@@ -5865,6 +5962,15 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_OpenCLAccess:
     handleOpenCLAccessAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_SwiftContext:
+    handleParameterABIAttr(S, D, Attr, ParameterABI::SwiftContext);
+    break;
+  case AttributeList::AT_SwiftErrorResult:
+    handleParameterABIAttr(S, D, Attr, ParameterABI::SwiftErrorResult);
+    break;
+  case AttributeList::AT_SwiftIndirectResult:
+    handleParameterABIAttr(S, D, Attr, ParameterABI::SwiftIndirectResult);
     break;
   case AttributeList::AT_InternalLinkage:
     handleInternalLinkageAttr(S, D, Attr);

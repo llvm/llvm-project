@@ -238,7 +238,8 @@ namespace clang {
     CC_AAPCS_VFP,   // __attribute__((pcs("aapcs-vfp")))
     CC_IntelOclBicc, // __attribute__((intel_ocl_bicc))
     CC_SpirFunction, // default for OpenCL functions on SPIR target
-    CC_SpirKernel    // inferred for OpenCL kernels on SPIR target
+    CC_SpirKernel,   // inferred for OpenCL kernels on SPIR target
+    CC_Swift         // __attribute__((swiftcall))
   };
 
   /// \brief Checks whether the given calling convention supports variadic
@@ -252,6 +253,7 @@ namespace clang {
     case CC_X86VectorCall:
     case CC_SpirFunction:
     case CC_SpirKernel:
+    case CC_Swift:
       return false;
     default:
       return true;
@@ -283,6 +285,28 @@ namespace clang {
   /// Retrieve the spelling of the given nullability kind.
   llvm::StringRef getNullabilitySpelling(NullabilityKind kind,
                                          bool isContextSensitive = false);
+
+  /// \brief Kinds of parameter ABI.
+  enum class ParameterABI {
+    /// This parameter uses ordinary ABI rules for its type.
+    Ordinary,
+
+    /// This parameter (which must have pointer type) is a Swift
+    /// indirect result parameter.
+    SwiftIndirectResult,
+
+    /// This parameter (which must have pointer-to-pointer type) uses
+    /// the special Swift error-result ABI treatment.  There can be at
+    /// most one parameter on a given function that uses this treatment.
+    SwiftErrorResult,
+
+    /// This parameter (which must have pointer type) uses the special
+    /// Swift context-pointer ABI treatment.  There can be at
+    /// most one parameter on a given function that uses this treatment.
+    SwiftContext
+  };
+
+  llvm::StringRef getParameterABISpelling(ParameterABI kind);
 } // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_SPECIFIERS_H

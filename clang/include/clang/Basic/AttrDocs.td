@@ -1992,3 +1992,147 @@ hardware design, touch the red zone.
   The system will crash if the wrong handler is used.
   }];
 }
+
+def SwiftCallDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``swiftcall`` attribute indicates that a function should be called
+using the Swift calling convention for a function or function pointer.
+
+The lowering for the Swift calling convention, as described by the Swift
+ABI documentation, occurs in multiple phases.  The first, "high-level"
+phase breaks down the formal parameters and results into innately direct
+and indirect components, adds implicit paraameters for the generic
+signature, and assigns the context and error ABI treatments to parameters
+where applicable.  The second phase breaks down the direct parameters
+and results from the first phase and assigns them to registers or the
+stack.  The ``swiftcall`` convention only handles this second phase of
+lowering; the C function type must accurately reflect the results
+of the first phase, as follows:
+
+- Results classified as indirect by high-level lowering should be
+  represented as parameters with the ``swift_indirect_result`` attribute.
+
+- Results classified as direct by high-level lowering should be represented
+  as follows:
+
+  - First, remove any empty direct results.
+
+  - If there are no direct results, the C result type should be ``void``.
+
+  - If there is one direct result, the C result type should be a type with
+    the exact layout of that result type.
+
+  - If there are a multiple direct results, the C result type should be
+    a struct type with the exact layout of a tuple of those results.
+
+- Parameters classified as indirect by high-level lowering should be
+  represented as parameters of pointer type.
+
+- Parameters classified as direct by high-level lowering should be
+  omitted if they are empty types; otherwise, they should be represented
+  as a parameter type with a layout exactly matching the layout of the
+  Swift parameter type.
+
+- The context parameter, if present, should be represented as a trailing
+  parameter with the ``swift_context`` attribute.
+
+- The error result parameter, if present, should be represented as a
+  trailing parameter (always following a context parameter) with the
+  ``swift_error_result`` attribute.
+
+``swiftcall`` does not support variadic arguments or unprototyped functions.
+
+The parameter ABI treatment attributes are aspects of the function type.
+A function type which which applies an ABI treatment attribute to a
+parameter is a different type from an otherwise-identical function type
+that does not.  A single parameter may not have multiple ABI treatment
+attributes.
+
+Support for this feature is target-dependent, although it should be
+supported on every target that Swift supports.  Query for this support
+with ``__has_attribute(swiftcall)``.  This implies support for the
+``swift_context``, ``swift_error_result``, and ``swift_indirect_result``
+attributes.
+  }];
+}
+
+def SwiftContextDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``swift_context`` attribute marks a parameter of a ``swiftcall``
+function as having the special context-parameter ABI treatment.
+
+This treatment generally passes the context value in a special register
+which is normally callee-preserved.
+
+A ``swift_context`` parameter must either be the last parameter or must be
+followed by a ``swift_error_result`` parameter (which itself must always be
+the last parameter).
+
+A context parameter must have pointer or reference type.
+  }];
+}
+
+def SwiftErrorResultDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``swift_error_result`` attribute marks a parameter of a ``swiftcall``
+function as having the special error-result ABI treatment.
+
+This treatment generally passes the underlying error value in and out of
+the function through a special register which is normally callee-preserved.
+This is modeled in C by pretending that the register is addressable memory:
+
+- The caller appears to pass the address of a variable of pointer type.
+  The current value of this variable is copied into the register before
+  the call; if the call returns normally, the value is copied back into the
+  variable.
+
+- The callee appears to receive the address of a variable.  This address
+  is actually a hidden location in its own stack, initialized with the
+  value of the register upon entry.  When the function returns normally,
+  the value in that hidden location is written back to the register.
+
+A ``swift_error_result`` parameter must be the last parameter, and it must be
+preceded by a ``swift_context`` parameter.
+
+A ``swift_error_result`` parameter must have type ``T**`` or ``T*&`` for some
+type T.  Note that no qualifiers are permitted on the intermediate level.
+
+It is undefined behavior if the caller does not pass a pointer or
+reference to a valid object.
+
+The standard convention is that the error value itself (that is, the
+value stored in the apparent argument) will be null upon function entry,
+but this is not enforced by the ABI.
+  }];
+}
+
+def SwiftIndirectResultDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``swift_indirect_result`` attribute marks a parameter of a ``swiftcall``
+function as having the special indirect-result ABI treatmenet.
+
+This treatment gives the parameter the target's normal indirect-result
+ABI treatment, which may involve passing it differently from an ordinary
+parameter.  However, only the first indirect result will receive this
+treatment.  Furthermore, low-level lowering may decide that a direct result
+must be returned indirectly; if so, this will take priority over the
+``swift_indirect_result`` parameters.
+
+A ``swift_indirect_result`` parameter must either be the first parameter or
+follow another ``swift_indirect_result`` parameter.
+
+A ``swift_indirect_result`` parameter must have type ``T*`` or ``T&`` for
+some object type ``T``.  If ``T`` is a complete type at the point of
+definition of a function, it is undefined behavior if the argument
+value does not point to storage of adequate size and alignment for a
+value of type ``T``.
+
+Making indirect results explicit in the signature allows C functions to
+directly construct objects into them without relying on language
+optimizations like C++'s named return value optimization (NRVO).
+  }];
+}

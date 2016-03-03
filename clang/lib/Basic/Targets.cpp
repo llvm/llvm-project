@@ -2561,14 +2561,20 @@ public:
   bool setFPMath(StringRef Name) override;
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    // We accept all non-ARM calling conventions
-    return (CC == CC_X86ThisCall ||
-            CC == CC_X86FastCall ||
-            CC == CC_X86StdCall ||
-            CC == CC_X86VectorCall ||
-            CC == CC_C ||
-            CC == CC_X86Pascal ||
-            CC == CC_IntelOclBicc) ? CCCR_OK : CCCR_Warning;
+    // Most of the non-ARM calling conventions are i386 conventions.
+    switch (CC) {
+    case CC_X86ThisCall:
+    case CC_X86FastCall:
+    case CC_X86StdCall:
+    case CC_X86VectorCall:
+    case CC_C:
+    case CC_Swift:
+    case CC_X86Pascal:
+    case CC_IntelOclBicc:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   CallingConv getDefaultCallingConv(CallingConvMethodType MT) const override {
@@ -4111,10 +4117,16 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_C ||
-            CC == CC_X86VectorCall ||
-            CC == CC_IntelOclBicc ||
-            CC == CC_X86_64Win64) ? CCCR_OK : CCCR_Warning;
+    switch (CC) {
+    case CC_C:
+    case CC_Swift:
+    case CC_X86VectorCall:
+    case CC_IntelOclBicc:
+    case CC_X86_64Win64:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   CallingConv getDefaultCallingConv(CallingConvMethodType MT) const override {
@@ -5095,7 +5107,14 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_AAPCS || CC == CC_AAPCS_VFP) ? CCCR_OK : CCCR_Warning;
+    switch (CC) {
+    case CC_AAPCS:
+    case CC_AAPCS_VFP:
+    case CC_Swift:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
@@ -5545,6 +5564,16 @@ public:
     setDataLayoutString();
 
     return true;
+  }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_C:
+    case CC_Swift:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   bool isCLZForZeroUndef() const override { return false; }
