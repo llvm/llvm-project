@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../utils/LexerUtils.h"
 #include "SuspiciousSemicolonCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -30,6 +30,9 @@ void SuspiciousSemicolonCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
+  if (Result.Context->getDiagnostics().hasErrorOccurred())
+    return;
+
   const auto *Semicolon = Result.Nodes.getNodeAs<NullStmt>("semi");
   SourceLocation LocStart = Semicolon->getLocStart();
 

@@ -328,7 +328,8 @@ TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
   // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
   // R_386_JMP_SLOT, etc).
   if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(&S))
-    if (SS->Sym.getType() == STT_FUNC && !refersToGotEntry(Type))
+    if (!Config->Shared && SS->Sym.getType() == STT_FUNC &&
+        !refersToGotEntry(Type))
       return Plt_Implicit;
 
   return Plt_No;

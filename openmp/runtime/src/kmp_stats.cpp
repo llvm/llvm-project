@@ -129,14 +129,25 @@ void statistic::scale(double factor)
 std::string statistic::format(char unit, bool total) const
 {
     std::string result = formatSI(sampleCount,9,' ');
-
-    result = result + std::string(", ") + formatSI(minVal,  9, unit);
-    result = result + std::string(", ") + formatSI(meanVal, 9, unit);
-    result = result + std::string(", ") + formatSI(maxVal,  9, unit);
-    if (total)
-        result = result + std::string(", ") + formatSI(meanVal*sampleCount, 9, unit);
-    result = result + std::string(", ") + formatSI(getSD(), 9, unit);
-
+    
+    if (sampleCount == 0)
+    {
+        result = result + std::string(", ") + formatSI(0.0, 9, unit);
+        result = result + std::string(", ") + formatSI(0.0, 9, unit);
+        result = result + std::string(", ") + formatSI(0.0, 9, unit);
+        if (total)
+            result = result + std::string(", ") + formatSI(0.0, 9, unit);
+        result = result + std::string(", ") + formatSI(0.0, 9, unit);
+    }
+    else
+    {
+        result = result + std::string(", ") + formatSI(minVal,  9, unit);
+        result = result + std::string(", ") + formatSI(meanVal, 9, unit);
+        result = result + std::string(", ") + formatSI(maxVal,  9, unit);
+        if (total)
+            result = result + std::string(", ") + formatSI(meanVal*sampleCount, 9, unit);
+        result = result + std::string(", ") + formatSI(getSD(), 9, unit);
+    }
     return result;
 }
 

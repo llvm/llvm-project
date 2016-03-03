@@ -12,10 +12,6 @@
 
 #include "lld/Core/LLVM.h"
 
-namespace llvm {
-class raw_ostream;
-}
-
 namespace lld {
 namespace elf {
 
@@ -38,14 +34,20 @@ template <typename T> bool error(const ErrorOr<T> &V) {
 }
 
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
-void fatal(std::error_code EC, const Twine &Prefix);
+LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg, const Twine &Prefix);
 void fatal(std::error_code EC);
 
-template <typename T> void fatal(const ErrorOr<T> &V, const Twine &Prefix) {
-  fatal(V.getError(), Prefix);
+template <class T> T fatal(ErrorOr<T> EO) {
+  if (EO)
+    return std::move(*EO);
+  fatal(EO.getError().message());
 }
 
-template <typename T> void fatal(const ErrorOr<T> &V) { fatal(V.getError()); }
+template <class T> T fatal(ErrorOr<T> EO, const Twine &Prefix) {
+  if (EO)
+    return std::move(*EO);
+  fatal(EO.getError().message(), Prefix);
+}
 
 } // namespace elf
 } // namespace lld

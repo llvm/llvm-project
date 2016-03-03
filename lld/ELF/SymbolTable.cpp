@@ -136,11 +136,9 @@ ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
   for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles) {
     std::unique_ptr<MemoryBuffer> Buffer =
         MemoryBuffer::getMemBuffer(F->MB, false);
-    ErrorOr<std::unique_ptr<Module>> MOrErr =
-        getLazyBitcodeModule(std::move(Buffer), Context,
-                             /*ShouldLazyLoadMetadata*/ true);
-    fatal(MOrErr);
-    std::unique_ptr<Module> &M = *MOrErr;
+    std::unique_ptr<Module> M =
+        fatal(getLazyBitcodeModule(std::move(Buffer), Context,
+                                   /*ShouldLazyLoadMetadata*/ true));
     L.linkInModule(std::move(M));
   }
   std::unique_ptr<InputFile> F = codegen(Combined);

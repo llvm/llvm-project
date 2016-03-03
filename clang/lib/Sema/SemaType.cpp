@@ -3925,7 +3925,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (T->isHalfType()) {
         if (S.getLangOpts().OpenCL) {
           if (!S.getOpenCLOptions().cl_khr_fp16) {
-            S.Diag(D.getIdentifierLoc(), diag::err_opencl_half_return) << T;
+            S.Diag(D.getIdentifierLoc(), diag::err_opencl_invalid_return)
+                << T << 0 /*pointer hint*/;
             D.setInvalidType(true);
           } 
         } else if (!S.getLangOpts().HalfArgsAndReturns) {
@@ -3933,6 +3934,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             diag::err_parameters_retval_cannot_have_fp16_type) << 1;
           D.setInvalidType(true);
         }
+      }
+
+        // OpenCL v2.0 s6.12.5 - A block cannot be the return value of a
+        // function.
+      if (LangOpts.OpenCL && T->isBlockPointerType()) {
+        S.Diag(D.getIdentifierLoc(), diag::err_opencl_invalid_return)
+            << T << 1 /*hint off*/;
+        D.setInvalidType(true);
       }
 
       // Methods cannot return interface types. All ObjC objects are

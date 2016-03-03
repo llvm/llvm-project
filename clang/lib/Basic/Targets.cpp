@@ -4536,7 +4536,8 @@ class ARMTargetInfo : public TargetInfo {
   }
 
   bool supportsThumb2() const {
-    return CPUAttr.equals("6T2") || ArchVersion >= 7;
+    return CPUAttr.equals("6T2") ||
+           (ArchVersion >= 7 && !CPUAttr.equals("8M_BASE"));
   }
 
   StringRef getCPUAttr() const {
@@ -4563,6 +4564,10 @@ class ARMTargetInfo : public TargetInfo {
       return "8_1A";
     case llvm::ARM::AK_ARMV8_2A:
       return "8_2A";
+    case llvm::ARM::AK_ARMV8MBaseline:
+      return "8M_BASE";
+    case llvm::ARM::AK_ARMV8MMainline:
+      return "8M_MAIN";
     }
   }
 
@@ -4852,13 +4857,14 @@ public:
 
     // __ARM_ARCH_ISA_ARM is defined to 1 if the core supports the ARM ISA.  It
     // is not defined for the M-profile.
-    // NOTE that the deffault profile is assumed to be 'A'
-    if (CPUProfile.empty() || CPUProfile != "M")
+    // NOTE that the default profile is assumed to be 'A'
+    if (CPUProfile.empty() || ArchProfile != llvm::ARM::PK_M)
       Builder.defineMacro("__ARM_ARCH_ISA_ARM", "1");
 
-    // __ARM_ARCH_ISA_THUMB is defined to 1 if the core supporst the original
-    // Thumb ISA (including v6-M).  It is set to 2 if the core supports the
-    // Thumb-2 ISA as found in the v6T2 architecture and all v7 architecture.
+    // __ARM_ARCH_ISA_THUMB is defined to 1 if the core supports the original
+    // Thumb ISA (including v6-M and v8-M Baseline).  It is set to 2 if the
+    // core supports the Thumb-2 ISA as found in the v6T2 architecture and all
+    // v7 and v8 architectures excluding v8-M Baseline.
     if (supportsThumb2())
       Builder.defineMacro("__ARM_ARCH_ISA_THUMB", "2");
     else if (supportsThumb())
@@ -4978,7 +4984,7 @@ public:
     Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM",
                         Opts.ShortEnums ? "1" : "4");
 
-    if (ArchVersion >= 6 && CPUAttr != "6M") {
+    if (ArchVersion >= 6 && CPUAttr != "6M" && CPUAttr != "8M_BASE") {
       Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
       Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
       Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");

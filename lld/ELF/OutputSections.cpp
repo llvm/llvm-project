@@ -1499,7 +1499,7 @@ void SymbolTableSection<ELFT>::writeGlobalSymbols(uint8_t *Buf) {
     SymbolBody *Body = P.first;
     size_t StrOff = P.second;
 
-    unsigned char Type = STT_NOTYPE;
+    uint8_t Type = STT_NOTYPE;
     uintX_t Size = 0;
     if (const Elf_Sym *InputSym = getElfSym<ELFT>(*Body)) {
       Type = InputSym->getType();

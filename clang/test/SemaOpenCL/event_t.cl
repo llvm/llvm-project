@@ -3,7 +3,7 @@
 event_t glb_evt; // expected-error {{the event_t type cannot be used to declare a program scope variable}}
 
 constant struct evt_s {
-  event_t evt;  // expected-error {{the event_t type cannot be used to declare a structure or union field}}
+  event_t evt; // expected-error {{the 'event_t' type cannot be used to declare a structure or union field}}
 } evt_str = {0};
 
 void foo(event_t evt); // expected-note {{passing argument to parameter 'evt' here}}

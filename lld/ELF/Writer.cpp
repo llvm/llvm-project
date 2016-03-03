@@ -564,9 +564,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
     return;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
     for (const Elf_Sym &Sym : F->getLocalSymbols()) {
-      ErrorOr<StringRef> SymNameOrErr = Sym.getName(F->getStringTable());
-      fatal(SymNameOrErr);
-      StringRef SymName = *SymNameOrErr;
+      StringRef SymName = fatal(Sym.getName(F->getStringTable()));
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
       if (Sym.st_shndx != SHN_ABS) {
@@ -1329,9 +1327,11 @@ template <class ELFT> void Writer<ELFT>::assignAddressesRelocatable() {
   Out<ELFT>::ElfHeader->setSize(sizeof(Elf_Ehdr));
   uintX_t FileOff = 0;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    FileOff = alignTo(FileOff, Sec->getAlign());
+    if (Sec->getType() != SHT_NOBITS)
+      FileOff = alignTo(FileOff, Sec->getAlign());
     Sec->setFileOffset(FileOff);
-    FileOff += Sec->getSize();
+    if (Sec->getType() != SHT_NOBITS)
+      FileOff += Sec->getSize();
   }
   SectionHeaderOff = alignTo(FileOff, sizeof(uintX_t));
   FileSize = SectionHeaderOff + getNumSections() * sizeof(Elf_Shdr);

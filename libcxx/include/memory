@@ -1726,7 +1726,15 @@ public:
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
         {return _VSTD::addressof(__x);}
     _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
-        {return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));}
+        {
+        if (__n > max_size())
+#ifndef _LIBCPP_NO_EXCEPTIONS
+            throw bad_alloc();
+#else
+            assert(!"allocator<T>::allocate::bad_alloc");
+#endif
+        return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
+        }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
         {_VSTD::__deallocate((void*)__p);}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT
@@ -1817,7 +1825,15 @@ public:
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
         {return _VSTD::addressof(__x);}
     _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
-        {return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));}
+    {
+        if (__n > max_size())
+#ifndef _LIBCPP_NO_EXCEPTIONS
+            throw bad_alloc();
+#else
+            assert(!"allocator<const T>::allocate::bad_alloc");
+#endif
+        return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
+        }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
         {_VSTD::__deallocate((void*)__p);}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT

@@ -319,6 +319,9 @@ public:
   /// @brief Return the isl id for the base pointer.
   __isl_give isl_id *getBasePtrId() const;
 
+  /// @brief Is this array info modeling an llvm::Value?
+  bool isValueKind() const { return Kind == MK_Value; };
+
   /// @brief Is this array info modeling special PHI node memory?
   ///
   /// During code generation of PHI nodes, there is a need for two kinds of
@@ -330,6 +333,9 @@ public:
   /// attribute to distinguish the PHI node specific array modeling from the
   /// normal scalar array modeling.
   bool isPHIKind() const { return Kind == MK_PHI; };
+
+  /// @brief Is this array info modeling an MK_ExitPHI?
+  bool isExitPHIKind() const { return Kind == MK_ExitPHI; };
 
   /// @brief Is this array info modeling an array?
   bool isArrayKind() const { return Kind == MK_Array; };

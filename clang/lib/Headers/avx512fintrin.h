@@ -3668,6 +3668,34 @@ _mm512_mask_store_epi64 (void *__P, __mmask8 __U, __m512i __A)
 }
 
 
+
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_movedup_pd (__m512d __A)
+{
+  return (__m512d) __builtin_ia32_movddup512_mask ((__v8df) __A,
+               (__v8df)
+               _mm512_undefined_pd (),
+               (__mmask8) -1);
+}
+
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_mask_movedup_pd (__m512d __W, __mmask8 __U, __m512d __A)
+{
+  return (__m512d) __builtin_ia32_movddup512_mask ((__v8df) __A,
+               (__v8df) __W,
+               (__mmask8) __U);
+}
+
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_maskz_movedup_pd (__mmask8 __U, __m512d __A)
+{
+  return (__m512d) __builtin_ia32_movddup512_mask ((__v8df) __A,
+               (__v8df)
+               _mm512_setzero_pd (),
+               (__mmask8) __U);
+}
+
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif // __AVX512FINTRIN_H

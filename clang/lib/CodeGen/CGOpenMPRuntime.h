@@ -372,7 +372,7 @@ public:
   /// \param InnermostKind Kind of innermost directive (for simple directives it
   /// is a directive itself, for combined - its innermost directive).
   /// \param CodeGen Code generation sequence for the \a D directive.
-  virtual llvm::Value *emitParallelOutlinedFunction(
+  virtual llvm::Value *emitParallelOrTeamsOutlinedFunction(
       const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
       OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen);
 
@@ -782,6 +782,28 @@ public:
   /// was emitted in the current module and return the function that registers
   /// it.
   virtual llvm::Function *emitRegistrationFunction();
+
+  /// \brief Emits code for teams call of the \a OutlinedFn with
+  /// variables captured in a record which address is stored in \a
+  /// CapturedStruct.
+  /// \param OutlinedFn Outlined function to be run by team masters. Type of
+  /// this function is void(*)(kmp_int32 *, kmp_int32, struct context_vars*).
+  /// \param CapturedVars A pointer to the record with the references to
+  /// variables used in \a OutlinedFn function.
+  ///
+  virtual void emitTeamsCall(CodeGenFunction &CGF,
+                             const OMPExecutableDirective &D,
+                             SourceLocation Loc, llvm::Value *OutlinedFn,
+                             ArrayRef<llvm::Value *> CapturedVars);
+
+  /// \brief Emits call to void __kmpc_push_num_teams(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 num_teams, kmp_int32 thread_limit) to generate code
+  /// for num_teams clause.
+  /// \param NumTeams An integer value of teams.
+  /// \param ThreadsLimit An integer value of threads.
+  virtual void emitNumTeamsClause(CodeGenFunction &CGF, llvm::Value *NumTeams,
+                                  llvm::Value *ThreadLimit, SourceLocation Loc);
+
 };
 
 } // namespace CodeGen

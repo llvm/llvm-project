@@ -2,7 +2,11 @@
 
 constant sampler_t glb_smp = 5;
 
-void foo(sampler_t); 
+void foo(sampler_t);
+
+constant struct sampler_s {
+  sampler_t smp; // expected-error {{the 'sampler_t' type cannot be used to declare a structure or union field}}
+} sampler_str = {0};
 
 void kernel ker(sampler_t argsmp) {
   local sampler_t smp; // expected-error {{sampler type cannot be used with the __local and __global address space qualifiers}}

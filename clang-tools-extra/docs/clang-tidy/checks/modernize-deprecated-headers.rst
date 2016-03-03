@@ -1,7 +1,7 @@
 .. title:: clang-tidy - modernize-deprecated-headers
 
 modernize-deprecated-headers
-==========================
+============================
 
 Some headers from C library were deprecated in C++ and are no longer welcome in
 C++ codebases. For more details refer to the C++ 14 Standard [depr.c.headers]

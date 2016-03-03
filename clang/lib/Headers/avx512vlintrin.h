@@ -5978,6 +5978,39 @@ _mm256_mask_store_epi64 (void *__P, __mmask8 __U, __m256i __A)
           (__mmask8) __U);
 }
 
+static __inline__ __m128d __DEFAULT_FN_ATTRS
+_mm_mask_movedup_pd (__m128d __W, __mmask8 __U, __m128d __A)
+{
+  return (__m128d) __builtin_ia32_movddup128_mask ((__v2df) __A,
+               (__v2df) __W,
+               (__mmask8) __U);
+}
+
+static __inline__ __m128d __DEFAULT_FN_ATTRS
+_mm_maskz_movedup_pd (__mmask8 __U, __m128d __A)
+{
+  return (__m128d) __builtin_ia32_movddup128_mask ((__v2df) __A,
+               (__v2df)
+               _mm_setzero_pd (),
+               (__mmask8) __U);
+}
+
+static __inline__ __m256d __DEFAULT_FN_ATTRS
+_mm256_mask_movedup_pd (__m256d __W, __mmask8 __U, __m256d __A)
+{
+  return (__m256d) __builtin_ia32_movddup256_mask ((__v4df) __A,
+               (__v4df) __W,
+               (__mmask8) __U);
+}
+
+static __inline__ __m256d __DEFAULT_FN_ATTRS
+_mm256_maskz_movedup_pd (__mmask8 __U, __m256d __A)
+{
+  return (__m256d) __builtin_ia32_movddup256_mask ((__v4df) __A,
+               (__v4df)
+              _mm256_setzero_pd (),
+               (__mmask8) __U);
+}
 
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_BOTH

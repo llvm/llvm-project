@@ -39,17 +39,12 @@ InputSectionBase<ELFT>::InputSectionBase(ObjectFile<ELFT> *File,
 }
 
 template <class ELFT> StringRef InputSectionBase<ELFT>::getSectionName() const {
-  ErrorOr<StringRef> Name = File->getObj().getSectionName(this->Header);
-  fatal(Name);
-  return *Name;
+  return fatal(File->getObj().getSectionName(this->Header));
 }
 
 template <class ELFT>
 ArrayRef<uint8_t> InputSectionBase<ELFT>::getSectionData() const {
-  ErrorOr<ArrayRef<uint8_t>> Ret =
-      this->File->getObj().getSectionContents(this->Header);
-  fatal(Ret);
-  return *Ret;
+  return fatal(this->File->getObj().getSectionContents(this->Header));
 }
 
 template <class ELFT>

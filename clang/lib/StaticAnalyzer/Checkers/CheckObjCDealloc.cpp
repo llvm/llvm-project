@@ -860,9 +860,13 @@ ObjCDeallocChecker::getValueReleasedByNillingOut(const ObjCMethodCall &M,
   if (!ReceiverVal.isValid())
     return nullptr;
 
-  // Is the first argument nil?
   if (M.getNumArgs() == 0)
     return nullptr;
+
+  if (!M.getArgExpr(0)->getType()->isObjCRetainableType())
+    return nullptr;
+
+  // Is the first argument nil?
   SVal Arg = M.getArgSVal(0);
   ProgramStateRef notNilState, nilState;
   std::tie(notNilState, nilState) =

@@ -48,7 +48,7 @@ if (CLANG_ENABLE_ARCMT)
   list(APPEND LIBS clangARCMigrate)
 endif ()
 
-if (CLANG_TOOL_EXTRA_BUILD)
+if (TARGET clangTidyPlugin)
   add_definitions(-DCLANG_TOOL_EXTRA_BUILD)
   list(APPEND LIBS clangTidyPlugin)
 endif ()

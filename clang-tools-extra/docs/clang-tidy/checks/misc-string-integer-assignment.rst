@@ -11,7 +11,7 @@ following assignment operator of ``std::basic_string<CharT>``:
 
   basic_string& operator=( CharT ch );
 
-Numeric types can be implicity casted to character types.
+Numeric types can be implicitly casted to character types.
 
 .. code:: c++
 

@@ -623,8 +623,8 @@ def err_opencl_half_declaration : Error<
   "declaring variable of type %0 is not allowed">;
 def err_opencl_half_param : Error<
   "declaring function parameter of type %0 is not allowed; did you forget * ?">;
-def err_opencl_half_return : Error<
-  "declaring function return value of type %0 is not allowed; did you forget * ?">;
+def err_opencl_invalid_return : Error<
+  "declaring function return value of type %0 is not allowed %select{; did you forget * ?|}1">;
 def warn_enum_value_overflow : Warning<"overflow in enumeration value">;
 def warn_pragma_options_align_reset_failed : Warning<
   "#pragma options align=reset failed: %0">,
@@ -7716,8 +7716,8 @@ def err_opencl_ptrptr_kernel_param : Error<
   "kernel parameter cannot be declared as a pointer to a pointer">;
 def err_opencl_private_ptr_kernel_param : Error<
   "kernel parameter cannot be declared as a pointer to the __private address space">;
-def err_opencl_non_kernel_variable : Error<
-  "non-kernel function variable cannot be declared in %0 address space">;
+def err_opencl_function_variable : Error<
+  "%select{non-kernel function|function scope}0 variable cannot be declared in %1 address space">;
 def err_static_function_scope : Error<
   "variables in function scope cannot be declared static">;
 def err_opencl_bitfields : Error<
@@ -7734,8 +7734,8 @@ def note_illegal_field_declared_here : Note<
   "field of illegal %select{type|pointer type}0 %1 declared here">;
 def err_event_t_global_var : Error<
   "the event_t type cannot be used to declare a program scope variable">;
-def err_event_t_struct_field : Error<
-  "the event_t type cannot be used to declare a structure or union field">;
+def err_opencl_type_struct_or_union_field : Error<
+  "the %0 type cannot be used to declare a structure or union field">;
 def err_event_t_addr_space_qual : Error<
   "the event_t type can only be used with __private address space qualifier">;
 def err_expected_kernel_void_return_type : Error<
@@ -7745,7 +7745,7 @@ def err_sampler_argument_required : Error<
 def err_wrong_sampler_addressspace: Error<
   "sampler type cannot be used with the __local and __global address space qualifiers">;
 def err_opencl_global_invalid_addr_space : Error<
-  "program scope variable must reside in %0 address space">;
+  "%select{program scope|static local|extern}0 variable must reside in %1 address space">;
 def err_missing_actual_pipe_type : Error<
   "missing actual type specifier for pipe">;
 def err_reference_pipe_type : Error <
@@ -7796,6 +7796,14 @@ def err_opencl_multiple_access_qualifiers : Error<
 // OpenCL Section 6.8.g
 def err_opencl_unknown_type_specifier : Error<
   "OpenCL does not support the '%0' %select{type qualifier|storage class specifier}1">;
+
+// OpenCL v2.0 s6.12.5 Blocks restrictions
+def err_opencl_block_storage_type : Error<
+  "the __block storage type is not permitted">;
+def err_opencl_invalid_block_declaration : Error<
+  "invalid block variable declaration - must be %select{const qualified|initialized}0">;
+def err_opencl_extern_block_declaration : Error<
+  "invalid block variable declaration - using 'extern' storage class is disallowed">;
 
 } // end of sema category
 

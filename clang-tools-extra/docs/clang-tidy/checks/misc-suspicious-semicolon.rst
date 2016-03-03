@@ -11,7 +11,7 @@ intentional.
 
   .. code-block:: c++
 
-    if(x < y);
+    if (x < y);
     {
       x++;
     }
@@ -22,7 +22,7 @@ the first line, and `x` will be incremented regardless of the condition.
 
   .. code-block:: c++
 
-    while((line = readLine(file)) != NULL);
+    while ((line = readLine(file)) != NULL);
       processLine(line);
 
 As a result of this code, `processLine()` will only be called once, when the
@@ -32,7 +32,7 @@ the code indicates the intention of the programmer.
 
   .. code-block:: c++
 
-    if(x >= y);
+    if (x >= y);
     x -= y;
 
 While the indentation does not imply any nesting, there is simply no valid
@@ -45,7 +45,7 @@ line. For example:
 
   .. code-block:: c++
 
-    while(readWhitespace());
+    while (readWhitespace());
       Token t = readNextToken();
 
 Here the second line is indented in a way that suggests that it is meant to be
@@ -56,14 +56,14 @@ Either remove the indentation from the second line:
 
   .. code-block:: c++
 
-    while(readWhitespace());
+    while (readWhitespace());
     Token t = readNextToken();
 
 ... or move the semicolon from the end of the first line to a new line:
 
   .. code-block:: c++
 
-    while(readWhitespace())
+    while (readWhitespace())
       ;
 
       Token t = readNextToken();
