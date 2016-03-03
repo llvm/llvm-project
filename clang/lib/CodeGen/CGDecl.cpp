@@ -21,6 +21,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -117,6 +118,9 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
            "Should not see file-scope variables inside a function!");
     return EmitVarDecl(VD);
   }
+
+  case Decl::OMPDeclareReduction:
+    return CGM.EmitOMPDeclareReduction(cast<OMPDeclareReductionDecl>(&D));
 
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
@@ -1862,3 +1866,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   if (D.hasAttr<AnnotateAttr>())
     EmitVarAnnotations(&D, DeclPtr.getPointer());
 }
+
+void CodeGenModule::EmitOMPDeclareReduction(
+    const OMPDeclareReductionDecl * /*D*/) {}
+

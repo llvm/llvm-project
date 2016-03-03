@@ -54,6 +54,36 @@ void OMPThreadPrivateDecl::setVars(ArrayRef<Expr *> VL) {
 }
 
 //===----------------------------------------------------------------------===//
+// OMPDeclareReductionDecl Implementation.
+//===----------------------------------------------------------------------===//
+
+void OMPDeclareReductionDecl::anchor() {}
+
+OMPDeclareReductionDecl *OMPDeclareReductionDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation L, DeclarationName Name,
+    QualType T, OMPDeclareReductionDecl *PrevDeclInScope) {
+  return new (C, DC) OMPDeclareReductionDecl(OMPDeclareReduction, DC, L, Name,
+                                             T, PrevDeclInScope);
+}
+
+OMPDeclareReductionDecl *
+OMPDeclareReductionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  return new (C, ID) OMPDeclareReductionDecl(
+      OMPDeclareReduction, /*DC=*/nullptr, SourceLocation(), DeclarationName(),
+      QualType(), /*PrevDeclInScope=*/nullptr);
+}
+
+OMPDeclareReductionDecl *OMPDeclareReductionDecl::getPrevDeclInScope() {
+  return cast_or_null<OMPDeclareReductionDecl>(
+      PrevDeclInScope.get(getASTContext().getExternalSource()));
+}
+const OMPDeclareReductionDecl *
+OMPDeclareReductionDecl::getPrevDeclInScope() const {
+  return cast_or_null<OMPDeclareReductionDecl>(
+      PrevDeclInScope.get(getASTContext().getExternalSource()));
+}
+
+//===----------------------------------------------------------------------===//
 // OMPCapturedExprDecl Implementation.
 //===----------------------------------------------------------------------===//
 

@@ -30,9 +30,11 @@ namespace {
 enum OpenMPDirectiveKindEx {
   OMPD_cancellation = OMPD_unknown + 1,
   OMPD_data,
+  OMPD_declare,
   OMPD_enter,
   OMPD_exit,
   OMPD_point,
+  OMPD_reduction,
   OMPD_target_enter,
   OMPD_target_exit
 };
@@ -48,9 +50,11 @@ static unsigned getOpenMPDirectiveKindEx(StringRef S) {
   return llvm::StringSwitch<unsigned>(S)
       .Case("cancellation", OMPD_cancellation)
       .Case("data", OMPD_data)
+      .Case("declare", OMPD_declare)
       .Case("enter", OMPD_enter)
       .Case("exit", OMPD_exit)
       .Case("point", OMPD_point)
+      .Case("reduction", OMPD_reduction)
       .Default(OMPD_unknown);
 }
 
@@ -60,6 +64,7 @@ static OpenMPDirectiveKind ParseOpenMPDirectiveKind(Parser &P) {
   // TODO: add other combined directives in topological order.
   static const unsigned F[][3] = {
     { OMPD_cancellation, OMPD_point, OMPD_cancellation_point },
+    { OMPD_declare, OMPD_reduction, OMPD_declare_reduction },
     { OMPD_target, OMPD_data, OMPD_target_data },
     { OMPD_target, OMPD_enter, OMPD_target_enter },
     { OMPD_target, OMPD_exit, OMPD_target_exit },
@@ -73,6 +78,7 @@ static OpenMPDirectiveKind ParseOpenMPDirectiveKind(Parser &P) {
     { OMPD_target, OMPD_parallel, OMPD_target_parallel },
     { OMPD_target_parallel, OMPD_for, OMPD_target_parallel_for }
   };
+  enum { CancellationPoint = 0, DeclareReduction = 1, TargetData = 2 };
   auto Tok = P.getCurToken();
   unsigned DKind =
       Tok.isAnnotation()
@@ -98,16 +104,226 @@ static OpenMPDirectiveKind ParseOpenMPDirectiveKind(Parser &P) {
       DKind = F[i][2];
     }
   }
-  return DKind <= OMPD_unknown ? static_cast<OpenMPDirectiveKind>(DKind)
-                               : OMPD_unknown;
+  return DKind < OMPD_unknown ? static_cast<OpenMPDirectiveKind>(DKind)
+                              : OMPD_unknown;
+}
+
+static DeclarationName parseOpenMPReductionId(Parser &P) {
+  const Token Tok = P.getCurToken();
+  Sema &Actions = P.getActions();
+  OverloadedOperatorKind OOK = OO_None;
+  switch (Tok.getKind()) {
+  case tok::plus: // '+'
+    OOK = OO_Plus;
+    break;
+  case tok::minus: // '-'
+    OOK = OO_Minus;
+    break;
+  case tok::star: // '*'
+    OOK = OO_Star;
+    break;
+  case tok::amp: // '&'
+    OOK = OO_Amp;
+    break;
+  case tok::pipe: // '|'
+    OOK = OO_Pipe;
+    break;
+  case tok::caret: // '^'
+    OOK = OO_Caret;
+    break;
+  case tok::ampamp: // '&&'
+    OOK = OO_AmpAmp;
+    break;
+  case tok::pipepipe: // '||'
+    OOK = OO_PipePipe;
+    break;
+  case tok::identifier: // identifier
+    break;
+  default:
+    P.Diag(Tok.getLocation(), diag::err_omp_expected_reduction_identifier);
+    P.SkipUntil(tok::colon, tok::r_paren, tok::annot_pragma_openmp_end,
+                Parser::StopBeforeMatch);
+    return DeclarationName();
+  }
+  P.ConsumeToken();
+  auto &DeclNames = Actions.getASTContext().DeclarationNames;
+  return OOK == OO_None ? DeclNames.getIdentifier(Tok.getIdentifierInfo())
+                        : DeclNames.getCXXOperatorName(OOK);
+}
+
+/// \brief Parse 'omp declare reduction' construct.
+///
+///       declare-reduction-directive:
+///        annot_pragma_openmp 'declare' 'reduction'
+///        '(' <reduction_id> ':' <type> {',' <type>} ':' <expression> ')'
+///        ['initializer' '(' ('omp_priv' '=' <expression>)|<function_call> ')']
+///        annot_pragma_openmp_end
+/// <reduction_id> is either a base language identifier or one of the following
+/// operators: '+', '-', '*', '&', '|', '^', '&&' and '||'.
+///
+Parser::DeclGroupPtrTy
+Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
+  // Parse '('.
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.expectAndConsume(diag::err_expected_lparen_after,
+                         getOpenMPDirectiveName(OMPD_declare_reduction))) {
+    SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
+    return DeclGroupPtrTy();
+  }
+
+  DeclarationName Name = parseOpenMPReductionId(*this);
+  if (Name.isEmpty() && Tok.is(tok::annot_pragma_openmp_end))
+    return DeclGroupPtrTy();
+
+  // Consume ':'.
+  bool IsCorrect = !ExpectAndConsume(tok::colon);
+
+  if (!IsCorrect && Tok.is(tok::annot_pragma_openmp_end))
+    return DeclGroupPtrTy();
+
+  if (Tok.is(tok::colon) || Tok.is(tok::annot_pragma_openmp_end)) {
+    Diag(Tok.getLocation(), diag::err_expected_type);
+    IsCorrect = false;
+  }
+
+  if (!IsCorrect && Tok.is(tok::annot_pragma_openmp_end))
+    return DeclGroupPtrTy();
+
+  SmallVector<std::pair<QualType, SourceLocation>, 8> ReductionTypes;
+  // Parse list of types until ':' token.
+  do {
+    ColonProtectionRAIIObject ColonRAII(*this);
+    SourceRange Range;
+    TypeResult TR = ParseTypeName(&Range, Declarator::PrototypeContext, AS);
+    if (TR.isUsable()) {
+      auto ReductionType =
+          Actions.ActOnOpenMPDeclareReductionType(Range.getBegin(), TR);
+      if (!ReductionType.isNull()) {
+        ReductionTypes.push_back(
+            std::make_pair(ReductionType, Range.getBegin()));
+      }
+    } else {
+      SkipUntil(tok::comma, tok::colon, tok::annot_pragma_openmp_end,
+                StopBeforeMatch);
+    }
+
+    if (Tok.is(tok::colon) || Tok.is(tok::annot_pragma_openmp_end))
+      break;
+
+    // Consume ','.
+    if (ExpectAndConsume(tok::comma)) {
+      IsCorrect = false;
+      if (Tok.is(tok::annot_pragma_openmp_end)) {
+        Diag(Tok.getLocation(), diag::err_expected_type);
+        return DeclGroupPtrTy();
+      }
+    }
+  } while (Tok.isNot(tok::annot_pragma_openmp_end));
+
+  if (ReductionTypes.empty()) {
+    SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
+    return DeclGroupPtrTy();
+  }
+
+  if (!IsCorrect && Tok.is(tok::annot_pragma_openmp_end))
+    return DeclGroupPtrTy();
+
+  // Consume ':'.
+  if (ExpectAndConsume(tok::colon))
+    IsCorrect = false;
+
+  if (Tok.is(tok::annot_pragma_openmp_end)) {
+    Diag(Tok.getLocation(), diag::err_expected_expression);
+    return DeclGroupPtrTy();
+  }
+
+  DeclGroupPtrTy DRD = Actions.ActOnOpenMPDeclareReductionDirectiveStart(
+      getCurScope(), Actions.getCurLexicalContext(), Name, ReductionTypes, AS);
+
+  // Parse <combiner> expression and then parse initializer if any for each
+  // correct type.
+  unsigned I = 0, E = ReductionTypes.size();
+  for (auto *D : DRD.get()) {
+    TentativeParsingAction TPA(*this);
+    ParseScope OMPDRScope(this, Scope::FnScope | Scope::DeclScope |
+                                    Scope::OpenMPDirectiveScope);
+    // Parse <combiner> expression.
+    Actions.ActOnOpenMPDeclareReductionCombinerStart(getCurScope(), D);
+    ExprResult CombinerResult =
+        Actions.ActOnFinishFullExpr(ParseAssignmentExpression().get(),
+                                    D->getLocation(), /*DiscardedValue=*/true);
+    Actions.ActOnOpenMPDeclareReductionCombinerEnd(D, CombinerResult.get());
+
+    if (CombinerResult.isInvalid() && Tok.isNot(tok::r_paren) &&
+        Tok.isNot(tok::annot_pragma_openmp_end)) {
+      TPA.Commit();
+      IsCorrect = false;
+      break;
+    }
+    IsCorrect = !T.consumeClose() && IsCorrect && CombinerResult.isUsable();
+    ExprResult InitializerResult;
+    if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+      // Parse <initializer> expression.
+      if (Tok.is(tok::identifier) &&
+          Tok.getIdentifierInfo()->isStr("initializer"))
+        ConsumeToken();
+      else {
+        Diag(Tok.getLocation(), diag::err_expected) << "'initializer'";
+        TPA.Commit();
+        IsCorrect = false;
+        break;
+      }
+      // Parse '('.
+      BalancedDelimiterTracker T(*this, tok::l_paren,
+                                 tok::annot_pragma_openmp_end);
+      IsCorrect =
+          !T.expectAndConsume(diag::err_expected_lparen_after, "initializer") &&
+          IsCorrect;
+      if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+        ParseScope OMPDRScope(this, Scope::FnScope | Scope::DeclScope |
+                                        Scope::OpenMPDirectiveScope);
+        // Parse expression.
+        Actions.ActOnOpenMPDeclareReductionInitializerStart(getCurScope(), D);
+        InitializerResult = Actions.ActOnFinishFullExpr(
+            ParseAssignmentExpression().get(), D->getLocation(),
+            /*DiscardedValue=*/true);
+        Actions.ActOnOpenMPDeclareReductionInitializerEnd(
+            D, InitializerResult.get());
+        if (InitializerResult.isInvalid() && Tok.isNot(tok::r_paren) &&
+            Tok.isNot(tok::annot_pragma_openmp_end)) {
+          TPA.Commit();
+          IsCorrect = false;
+          break;
+        }
+        IsCorrect =
+            !T.consumeClose() && IsCorrect && !InitializerResult.isInvalid();
+      }
+    }
+
+    ++I;
+    // Revert parsing if not the last type, otherwise accept it, we're done with
+    // parsing.
+    if (I != E)
+      TPA.Revert();
+    else
+      TPA.Commit();
+  }
+  return Actions.ActOnOpenMPDeclareReductionDirectiveEnd(getCurScope(), DRD,
+                                                         IsCorrect);
 }
 
 /// \brief Parsing of declarative OpenMP directives.
 ///
 ///       threadprivate-directive:
 ///         annot_pragma_openmp 'threadprivate' simple-variable-list
+///         annot_pragma_openmp_end
 ///
-Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
+///       declare-reduction-directive:
+///        annot_pragma_openmp 'declare' 'reduction' [...]
+///        annot_pragma_openmp_end
+///
+Parser::DeclGroupPtrTy
+Parser::ParseOpenMPDeclarativeDirective(AccessSpecifier AS) {
   assert(Tok.is(tok::annot_pragma_openmp) && "Not an OpenMP directive!");
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -129,6 +345,22 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
       // Skip the last annot_pragma_openmp_end.
       ConsumeToken();
       return Actions.ActOnOpenMPThreadprivateDirective(Loc, Identifiers);
+    }
+    break;
+  case OMPD_declare_reduction:
+    ConsumeToken();
+    if (auto Res = ParseOpenMPDeclareReductionDirective(AS)) {
+      // The last seen token is annot_pragma_openmp_end - need to check for
+      // extra tokens.
+      if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+        Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
+            << getOpenMPDirectiveName(OMPD_declare_reduction);
+        while (Tok.isNot(tok::annot_pragma_openmp_end))
+          ConsumeAnyToken();
+      }
+      // Skip the last annot_pragma_openmp_end.
+      ConsumeToken();
+      return Res;
     }
     break;
   case OMPD_unknown:
@@ -170,7 +402,9 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
         << getOpenMPDirectiveName(DKind);
     break;
   }
-  SkipUntil(tok::annot_pragma_openmp_end);
+  while (Tok.isNot(tok::annot_pragma_openmp_end))
+    ConsumeAnyToken();
+  ConsumeAnyToken();
   return nullptr;
 }
 
@@ -178,6 +412,12 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirective() {
 ///
 ///       threadprivate-directive:
 ///         annot_pragma_openmp 'threadprivate' simple-variable-list
+///         annot_pragma_openmp_end
+///
+///       declare-reduction-directive:
+///         annot_pragma_openmp 'declare' 'reduction' '(' <reduction_id> ':'
+///         <type> {',' <type>} ':' <expression> ')' ['initializer' '('
+///         ('omp_priv' '=' <expression>|<function_call>) ')']
 ///         annot_pragma_openmp_end
 ///
 ///       executable-directive:
@@ -230,6 +470,22 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       Directive = Actions.ActOnDeclStmt(Res, Loc, Tok.getLocation());
     }
     SkipUntil(tok::annot_pragma_openmp_end);
+    break;
+  case OMPD_declare_reduction:
+    ConsumeToken();
+    if (auto Res = ParseOpenMPDeclareReductionDirective(/*AS=*/AS_none)) {
+      // The last seen token is annot_pragma_openmp_end - need to check for
+      // extra tokens.
+      if (Tok.isNot(tok::annot_pragma_openmp_end)) {
+        Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
+            << getOpenMPDirectiveName(OMPD_declare_reduction);
+        while (Tok.isNot(tok::annot_pragma_openmp_end))
+          ConsumeAnyToken();
+      }
+      ConsumeAnyToken();
+      Directive = Actions.ActOnDeclStmt(Res, Loc, Tok.getLocation());
+    } else
+      SkipUntil(tok::annot_pragma_openmp_end);
     break;
   case OMPD_flush:
     if (PP.LookAhead(0).is(tok::l_paren)) {

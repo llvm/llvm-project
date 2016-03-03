@@ -100,9 +100,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const AttributeList &attr,
     case AttributeList::AT_ObjCGC: \
     case AttributeList::AT_ObjCOwnership
 
-// Function type attributes.
-#define FUNCTION_TYPE_ATTRS_CASELIST \
-    case AttributeList::AT_NoReturn: \
+// Calling convention attributes.
+#define CALLING_CONV_ATTRS_CASELIST \
     case AttributeList::AT_CDecl: \
     case AttributeList::AT_FastCall: \
     case AttributeList::AT_StdCall: \
@@ -111,9 +110,14 @@ static void diagnoseBadTypeAttribute(Sema &S, const AttributeList &attr,
     case AttributeList::AT_VectorCall: \
     case AttributeList::AT_MSABI: \
     case AttributeList::AT_SysVABI: \
-    case AttributeList::AT_Regparm: \
     case AttributeList::AT_Pcs: \
     case AttributeList::AT_IntelOclBicc
+
+// Function type attributes.
+#define FUNCTION_TYPE_ATTRS_CASELIST \
+    case AttributeList::AT_NoReturn: \
+    case AttributeList::AT_Regparm: \
+    CALLING_CONV_ATTRS_CASELIST
 
 // Microsoft-specific type qualifiers.
 #define MS_TYPE_ATTRS_CASELIST  \
@@ -2956,6 +2960,26 @@ getCCForDeclaratorChunk(Sema &S, Declarator &D,
                         const DeclaratorChunk::FunctionTypeInfo &FTI,
                         unsigned ChunkIndex) {
   assert(D.getTypeObject(ChunkIndex).Kind == DeclaratorChunk::Function);
+
+  // Check for an explicit CC attribute.
+  for (auto Attr = FTI.AttrList; Attr; Attr = Attr->getNext()) {
+    switch (Attr->getKind()) {
+    CALLING_CONV_ATTRS_CASELIST: {
+      // Ignore attributes that don't validate or can't apply to the
+      // function type.  We'll diagnose the failure to apply them in
+      // handleFunctionTypeAttr.
+      CallingConv CC;
+      if (!S.CheckCallingConvAttr(*Attr, CC) &&
+          (!FTI.isVariadic || supportsVariadicCall(CC))) {
+        return CC;
+      }
+      break;
+    }
+
+    default:
+      break;
+    }
+  }
 
   bool IsCXXInstanceMethod = false;
 
@@ -5998,9 +6022,14 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state,
   // Modify the CC from the wrapped function type, wrap it all back, and then
   // wrap the whole thing in an AttributedType as written.  The modified type
   // might have a different CC if we ignored the attribute.
-  FunctionType::ExtInfo EI = unwrapped.get()->getExtInfo().withCallingConv(CC);
-  QualType Equivalent =
+  QualType Equivalent;
+  if (CCOld == CC) {
+    Equivalent = type;
+  } else {
+    auto EI = unwrapped.get()->getExtInfo().withCallingConv(CC);
+    Equivalent =
       unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+  }
   type = S.Context.getAttributedType(CCAttrKind, type, Equivalent);
   return true;
 }

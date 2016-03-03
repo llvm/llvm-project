@@ -641,6 +641,10 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     ParamPolicyRAII ParamPolicy(Policy);
     for (unsigned i = 0, e = T->getNumParams(); i != e; ++i) {
       if (i) OS << ", ";
+
+      auto EPI = T->getExtParameterInfo(i);
+      if (EPI.isConsumed()) OS << "__attribute__((ns_consumed)) ";
+
       print(T->getParamType(i), OS, StringRef());
     }
   }

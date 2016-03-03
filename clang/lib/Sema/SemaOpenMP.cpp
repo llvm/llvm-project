@@ -21,6 +21,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -1698,6 +1699,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_flush:
   case OMPD_target_enter_data:
   case OMPD_target_exit_data:
+  case OMPD_declare_reduction:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");
@@ -1706,6 +1708,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
 
 static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
                                              Expr *CaptureExpr, bool WithInit) {
+  assert(CaptureExpr);
   ASTContext &C = S.getASTContext();
   Expr *Init = CaptureExpr->IgnoreImpCasts();
   QualType Ty = Init->getType();
@@ -1723,12 +1726,11 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
     WithInit = true;
   }
   auto *CED = OMPCapturedExprDecl::Create(C, S.CurContext, Id, Ty);
+  if (!WithInit)
+    CED->addAttr(OMPCaptureNoInitAttr::CreateImplicit(C, SourceRange()));
   S.CurContext->addHiddenDecl(CED);
-  if (WithInit)
-    S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false,
-                           /*TypeMayContainAuto=*/true);
-  else
-    S.ActOnUninitializedDecl(CED, /*TypeMayContainAuto=*/true);
+  S.AddInitializerToDecl(CED, Init, /*DirectInit=*/false,
+                         /*TypeMayContainAuto=*/true);
   return CED;
 }
 
@@ -3139,6 +3141,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
                                          EndLoc, VarsWithInheritedDSA);
     break;
   case OMPD_threadprivate:
+  case OMPD_declare_reduction:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");
@@ -7676,7 +7679,7 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
       }
       if (TopDVar.CKind == OMPC_firstprivate ||
           (!IsOpenMPCapturedDecl(D) &&
-           !cast<OMPCapturedExprDecl>(Ref->getDecl())->getInit())) {
+           Ref->getDecl()->hasAttr<OMPCaptureNoInitAttr>())) {
         ExprResult RefRes = DefaultLvalueConversion(Ref);
         if (!RefRes.isUsable())
           continue;
@@ -8277,7 +8280,7 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
             buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/false);
         if (!IsOpenMPCapturedDecl(D)) {
           ExprCaptures.push_back(Ref->getDecl());
-          if (!cast<OMPCapturedExprDecl>(Ref->getDecl())->getInit()) {
+          if (Ref->getDecl()->hasAttr<OMPCaptureNoInitAttr>()) {
             ExprResult RefRes = DefaultLvalueConversion(Ref);
             if (!RefRes.isUsable())
               continue;
@@ -8340,115 +8343,96 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
   }
   for (auto &RefExpr : VarList) {
     assert(RefExpr && "NULL expr in OpenMP linear clause.");
-    if (isa<DependentScopeDeclRefExpr>(RefExpr)) {
+    SourceLocation ELoc;
+    SourceRange ERange;
+    Expr *SimpleRefExpr = RefExpr;
+    auto Res = getPrivateItem(*this, SimpleRefExpr, ELoc, ERange,
+                              /*AllowArraySection=*/false);
+    if (Res.second) {
       // It will be analyzed later.
       Vars.push_back(RefExpr);
       Privates.push_back(nullptr);
       Inits.push_back(nullptr);
-      continue;
     }
-
-    // OpenMP [2.14.3.7, linear clause]
-    // A list item that appears in a linear clause is subject to the private
-    // clause semantics described in Section 2.14.3.3 on page 159 except as
-    // noted. In addition, the value of the new list item on each iteration
-    // of the associated loop(s) corresponds to the value of the original
-    // list item before entering the construct plus the logical number of
-    // the iteration times linear-step.
-
-    SourceLocation ELoc = RefExpr->getExprLoc();
-    // OpenMP [2.1, C/C++]
-    //  A list item is a variable name.
-    // OpenMP  [2.14.3.3, Restrictions, p.1]
-    //  A variable that is part of another variable (as an array or
-    //  structure element) cannot appear in a private clause.
-    DeclRefExpr *DE = dyn_cast<DeclRefExpr>(RefExpr);
-    if (!DE || !isa<VarDecl>(DE->getDecl())) {
-      Diag(ELoc, diag::err_omp_expected_var_name_member_expr)
-          << 0 << RefExpr->getSourceRange();
+    ValueDecl *D = Res.first;
+    if (!D)
       continue;
-    }
 
-    VarDecl *VD = cast<VarDecl>(DE->getDecl());
+    QualType Type = D->getType();
+    auto *VD = dyn_cast<VarDecl>(D);
 
     // OpenMP [2.14.3.7, linear clause]
     //  A list-item cannot appear in more than one linear clause.
     //  A list-item that appears in a linear clause cannot appear in any
     //  other data-sharing attribute clause.
-    DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(VD, false);
+    DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, false);
     if (DVar.RefExpr) {
       Diag(ELoc, diag::err_omp_wrong_dsa) << getOpenMPClauseName(DVar.CKind)
                                           << getOpenMPClauseName(OMPC_linear);
-      ReportOriginalDSA(*this, DSAStack, VD, DVar);
-      continue;
-    }
-
-    QualType QType = VD->getType();
-    if (QType->isDependentType() || QType->isInstantiationDependentType()) {
-      // It will be analyzed later.
-      Vars.push_back(DE);
-      Privates.push_back(nullptr);
-      Inits.push_back(nullptr);
+      ReportOriginalDSA(*this, DSAStack, D, DVar);
       continue;
     }
 
     // A variable must not have an incomplete type or a reference type.
-    if (RequireCompleteType(ELoc, QType,
-                            diag::err_omp_linear_incomplete_type)) {
+    if (RequireCompleteType(ELoc, Type,
+                            diag::err_omp_linear_incomplete_type))
       continue;
-    }
     if ((LinKind == OMPC_LINEAR_uval || LinKind == OMPC_LINEAR_ref) &&
-        !QType->isReferenceType()) {
+        !Type->isReferenceType()) {
       Diag(ELoc, diag::err_omp_wrong_linear_modifier_non_reference)
-          << QType << getOpenMPSimpleClauseTypeName(OMPC_linear, LinKind);
+          << Type << getOpenMPSimpleClauseTypeName(OMPC_linear, LinKind);
       continue;
     }
-    QType = QType.getNonReferenceType();
+    Type = Type.getNonReferenceType();
 
     // A list item must not be const-qualified.
-    if (QType.isConstant(Context)) {
+    if (Type.isConstant(Context)) {
       Diag(ELoc, diag::err_omp_const_variable)
           << getOpenMPClauseName(OMPC_linear);
       bool IsDecl =
+          !VD ||
           VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
-      Diag(VD->getLocation(),
+      Diag(D->getLocation(),
            IsDecl ? diag::note_previous_decl : diag::note_defined_here)
-          << VD;
+          << D;
       continue;
     }
 
     // A list item must be of integral or pointer type.
-    QType = QType.getUnqualifiedType().getCanonicalType();
-    const Type *Ty = QType.getTypePtrOrNull();
+    Type = Type.getUnqualifiedType().getCanonicalType();
+    const auto *Ty = Type.getTypePtrOrNull();
     if (!Ty || (!Ty->isDependentType() && !Ty->isIntegralType(Context) &&
                 !Ty->isPointerType())) {
-      Diag(ELoc, diag::err_omp_linear_expected_int_or_ptr) << QType;
+      Diag(ELoc, diag::err_omp_linear_expected_int_or_ptr) << Type;
       bool IsDecl =
+          !VD ||
           VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
-      Diag(VD->getLocation(),
+      Diag(D->getLocation(),
            IsDecl ? diag::note_previous_decl : diag::note_defined_here)
-          << VD;
+          << D;
       continue;
     }
 
     // Build private copy of original var.
-    auto *Private = buildVarDecl(*this, ELoc, QType, VD->getName(),
-                                 VD->hasAttrs() ? &VD->getAttrs() : nullptr);
-    auto *PrivateRef = buildDeclRefExpr(
-        *this, Private, DE->getType().getUnqualifiedType(), DE->getExprLoc());
+    auto *Private = buildVarDecl(*this, ELoc, Type, D->getName(),
+                                 D->hasAttrs() ? &D->getAttrs() : nullptr);
+    auto *PrivateRef = buildDeclRefExpr(*this, Private, Type, ELoc);
     // Build var to save initial value.
-    VarDecl *Init = buildVarDecl(*this, ELoc, QType, ".linear.start");
+    VarDecl *Init = buildVarDecl(*this, ELoc, Type, ".linear.start");
     Expr *InitExpr;
+    DeclRefExpr *Ref = nullptr;
+    if (!VD)
+      Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
     if (LinKind == OMPC_LINEAR_uval)
-      InitExpr = VD->getInit();
+      InitExpr = VD ? VD->getInit() : SimpleRefExpr;
     else
-      InitExpr = DE;
+      InitExpr = VD ? SimpleRefExpr : Ref;
     AddInitializerToDecl(Init, DefaultLvalueConversion(InitExpr).get(),
-                         /*DirectInit*/ false, /*TypeMayContainAuto*/ false);
-    auto InitRef = buildDeclRefExpr(
-        *this, Init, DE->getType().getUnqualifiedType(), DE->getExprLoc());
-    DSAStack->addDSA(VD, DE, OMPC_linear);
-    Vars.push_back(DE);
+                         /*DirectInit=*/false, /*TypeMayContainAuto=*/false);
+    auto InitRef = buildDeclRefExpr(*this, Init, Type, ELoc);
+
+    DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_linear, Ref);
+    Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
     Privates.push_back(PrivateRef);
     Inits.push_back(InitRef);
   }
@@ -9601,6 +9585,235 @@ Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
   return OMPMapClause::Create(Context, StartLoc, LParenLoc, EndLoc, Vars,
                               MapTypeModifier, MapType, IsMapTypeImplicit,
                               MapLoc);
+}
+
+QualType Sema::ActOnOpenMPDeclareReductionType(SourceLocation TyLoc,
+                                               TypeResult ParsedType) {
+  assert(ParsedType.isUsable());
+
+  QualType ReductionType = GetTypeFromParser(ParsedType.get());
+  if (ReductionType.isNull())
+    return QualType();
+
+  // [OpenMP 4.0], 2.15 declare reduction Directive, Restrictions, C\C++
+  // A type name in a declare reduction directive cannot be a function type, an
+  // array type, a reference type, or a type qualified with const, volatile or
+  // restrict.
+  if (ReductionType.hasQualifiers()) {
+    Diag(TyLoc, diag::err_omp_reduction_wrong_type) << 0;
+    return QualType();
+  }
+
+  if (ReductionType->isFunctionType()) {
+    Diag(TyLoc, diag::err_omp_reduction_wrong_type) << 1;
+    return QualType();
+  }
+  if (ReductionType->isReferenceType()) {
+    Diag(TyLoc, diag::err_omp_reduction_wrong_type) << 2;
+    return QualType();
+  }
+  if (ReductionType->isArrayType()) {
+    Diag(TyLoc, diag::err_omp_reduction_wrong_type) << 3;
+    return QualType();
+  }
+  return ReductionType;
+}
+
+Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareReductionDirectiveStart(
+    Scope *S, DeclContext *DC, DeclarationName Name,
+    ArrayRef<std::pair<QualType, SourceLocation>> ReductionTypes,
+    AccessSpecifier AS, Decl *PrevDeclInScope) {
+  SmallVector<Decl *, 8> Decls;
+  Decls.reserve(ReductionTypes.size());
+
+  LookupResult Lookup(*this, Name, SourceLocation(), LookupOMPReductionName,
+                      ForRedeclaration);
+  // [OpenMP 4.0], 2.15 declare reduction Directive, Restrictions
+  // A reduction-identifier may not be re-declared in the current scope for the
+  // same type or for a type that is compatible according to the base language
+  // rules.
+  llvm::DenseMap<QualType, SourceLocation> PreviousRedeclTypes;
+  OMPDeclareReductionDecl *PrevDRD = nullptr;
+  bool InCompoundScope = true;
+  if (S != nullptr) {
+    // Find previous declaration with the same name not referenced in other
+    // declarations.
+    FunctionScopeInfo *ParentFn = getEnclosingFunction();
+    InCompoundScope =
+        (ParentFn != nullptr) && !ParentFn->CompoundScopes.empty();
+    LookupName(Lookup, S);
+    FilterLookupForScope(Lookup, DC, S, /*ConsiderLinkage=*/false,
+                         /*AllowInlineNamespace=*/false);
+    llvm::DenseMap<OMPDeclareReductionDecl *, bool> UsedAsPrevious;
+    auto Filter = Lookup.makeFilter();
+    while (Filter.hasNext()) {
+      auto *PrevDecl = cast<OMPDeclareReductionDecl>(Filter.next());
+      if (InCompoundScope) {
+        auto I = UsedAsPrevious.find(PrevDecl);
+        if (I == UsedAsPrevious.end())
+          UsedAsPrevious[PrevDecl] = false;
+        if (auto *D = PrevDecl->getPrevDeclInScope())
+          UsedAsPrevious[D] = true;
+      }
+      PreviousRedeclTypes[PrevDecl->getType().getCanonicalType()] =
+          PrevDecl->getLocation();
+    }
+    Filter.done();
+    if (InCompoundScope) {
+      for (auto &PrevData : UsedAsPrevious) {
+        if (!PrevData.second) {
+          PrevDRD = PrevData.first;
+          break;
+        }
+      }
+    }
+  } else if (PrevDeclInScope != nullptr) {
+    auto *PrevDRDInScope = PrevDRD =
+        cast<OMPDeclareReductionDecl>(PrevDeclInScope);
+    do {
+      PreviousRedeclTypes[PrevDRDInScope->getType().getCanonicalType()] =
+          PrevDRDInScope->getLocation();
+      PrevDRDInScope = PrevDRDInScope->getPrevDeclInScope();
+    } while (PrevDRDInScope != nullptr);
+  }
+  for (auto &TyData : ReductionTypes) {
+    auto I = PreviousRedeclTypes.find(TyData.first.getCanonicalType());
+    bool Invalid = false;
+    if (I != PreviousRedeclTypes.end()) {
+      Diag(TyData.second, diag::err_omp_declare_reduction_redefinition)
+          << TyData.first;
+      Diag(I->second, diag::note_previous_definition);
+      Invalid = true;
+    }
+    PreviousRedeclTypes[TyData.first.getCanonicalType()] = TyData.second;
+    auto *DRD = OMPDeclareReductionDecl::Create(Context, DC, TyData.second,
+                                                Name, TyData.first, PrevDRD);
+    DC->addDecl(DRD);
+    DRD->setAccess(AS);
+    Decls.push_back(DRD);
+    if (Invalid)
+      DRD->setInvalidDecl();
+    else
+      PrevDRD = DRD;
+  }
+
+  return DeclGroupPtrTy::make(
+      DeclGroupRef::Create(Context, Decls.begin(), Decls.size()));
+}
+
+void Sema::ActOnOpenMPDeclareReductionCombinerStart(Scope *S, Decl *D) {
+  auto *DRD = cast<OMPDeclareReductionDecl>(D);
+
+  // Enter new function scope.
+  PushFunctionScope();
+  getCurFunction()->setHasBranchProtectedScope();
+  getCurFunction()->setHasOMPDeclareReductionCombiner();
+
+  if (S != nullptr)
+    PushDeclContext(S, DRD);
+  else
+    CurContext = DRD;
+
+  PushExpressionEvaluationContext(PotentiallyEvaluated);
+
+  QualType ReductionType = DRD->getType();
+  // Create 'T omp_in;' implicit param.
+  auto *OmpInParm =
+      ImplicitParamDecl::Create(Context, DRD, D->getLocation(),
+                                &Context.Idents.get("omp_in"), ReductionType);
+  // Create 'T* omp_parm;T omp_out;'. All references to 'omp_out' will
+  // be replaced by '*omp_parm' during codegen. This required because 'omp_out'
+  // uses semantics of argument handles by value, but it should be passed by
+  // reference. C lang does not support references, so pass all parameters as
+  // pointers.
+  // Create 'T omp_out;' variable.
+  auto *OmpOutParm =
+      buildVarDecl(*this, D->getLocation(), ReductionType, "omp_out");
+  if (S != nullptr) {
+    PushOnScopeChains(OmpInParm, S);
+    PushOnScopeChains(OmpOutParm, S);
+  } else {
+    DRD->addDecl(OmpInParm);
+    DRD->addDecl(OmpOutParm);
+  }
+}
+
+void Sema::ActOnOpenMPDeclareReductionCombinerEnd(Decl *D, Expr *Combiner) {
+  auto *DRD = cast<OMPDeclareReductionDecl>(D);
+  DiscardCleanupsInEvaluationContext();
+  PopExpressionEvaluationContext();
+
+  PopDeclContext();
+  PopFunctionScopeInfo();
+
+  if (Combiner != nullptr)
+    DRD->setCombiner(Combiner);
+  else
+    DRD->setInvalidDecl();
+}
+
+void Sema::ActOnOpenMPDeclareReductionInitializerStart(Scope *S, Decl *D) {
+  auto *DRD = cast<OMPDeclareReductionDecl>(D);
+
+  // Enter new function scope.
+  PushFunctionScope();
+  getCurFunction()->setHasBranchProtectedScope();
+
+  if (S != nullptr)
+    PushDeclContext(S, DRD);
+  else
+    CurContext = DRD;
+
+  PushExpressionEvaluationContext(PotentiallyEvaluated);
+
+  QualType ReductionType = DRD->getType();
+  // Create 'T omp_orig;' implicit param.
+  auto *OmpOrigParm =
+      ImplicitParamDecl::Create(Context, DRD, D->getLocation(),
+                                &Context.Idents.get("omp_orig"), ReductionType);
+  // Create 'T* omp_parm;T omp_priv;'. All references to 'omp_priv' will
+  // be replaced by '*omp_parm' during codegen. This required because 'omp_priv'
+  // uses semantics of argument handles by value, but it should be passed by
+  // reference. C lang does not support references, so pass all parameters as
+  // pointers.
+  // Create 'T omp_priv;' variable.
+  auto *OmpPrivParm =
+      buildVarDecl(*this, D->getLocation(), ReductionType, "omp_priv");
+  if (S != nullptr) {
+    PushOnScopeChains(OmpPrivParm, S);
+    PushOnScopeChains(OmpOrigParm, S);
+  } else {
+    DRD->addDecl(OmpPrivParm);
+    DRD->addDecl(OmpOrigParm);
+  }
+}
+
+void Sema::ActOnOpenMPDeclareReductionInitializerEnd(Decl *D,
+                                                     Expr *Initializer) {
+  auto *DRD = cast<OMPDeclareReductionDecl>(D);
+  DiscardCleanupsInEvaluationContext();
+  PopExpressionEvaluationContext();
+
+  PopDeclContext();
+  PopFunctionScopeInfo();
+
+  if (Initializer != nullptr)
+    DRD->setInitializer(Initializer);
+  else
+    DRD->setInvalidDecl();
+}
+
+Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareReductionDirectiveEnd(
+    Scope *S, DeclGroupPtrTy DeclReductions, bool IsValid) {
+  for (auto *D : DeclReductions.get()) {
+    if (IsValid) {
+      auto *DRD = cast<OMPDeclareReductionDecl>(D);
+      if (S != nullptr)
+        PushOnScopeChains(DRD, S, /*AddToContext=*/false);
+    } else
+      D->setInvalidDecl();
+  }
+  return DeclReductions;
 }
 
 OMPClause *Sema::ActOnOpenMPNumTeamsClause(Expr *NumTeams, 

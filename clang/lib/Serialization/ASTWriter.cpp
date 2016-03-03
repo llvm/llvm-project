@@ -961,6 +961,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(LATE_PARSED_TEMPLATE);
   RECORD(OPTIMIZE_PRAGMA_OPTIONS);
   RECORD(MSSTRUCT_PRAGMA_OPTIONS);
+  RECORD(POINTERS_TO_MEMBERS_PRAGMA_OPTIONS);
   RECORD(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES);
   RECORD(CXX_CTOR_INITIALIZERS_OFFSETS);
   RECORD(DELETE_EXPRS_TO_ANALYZE);
@@ -3936,6 +3937,15 @@ void ASTWriter::WriteMSStructPragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(MSSTRUCT_PRAGMA_OPTIONS, Record);
 }
 
+/// \brief Write the state of 'pragma pointers_to_members' at the end of the
+//module.
+void ASTWriter::WriteMSPointersToMembersPragmaOptions(Sema &SemaRef) {
+  RecordData Record;
+  Record.push_back(SemaRef.MSPointerToMemberRepresentationMethod);
+  AddSourceLocation(SemaRef.ImplicitMSInheritanceAttrLoc, Record);
+  Stream.EmitRecord(POINTERS_TO_MEMBERS_PRAGMA_OPTIONS, Record);
+}
+
 void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
                                          ModuleFileExtensionWriter &Writer) {
   // Enter the extension block.
@@ -4616,6 +4626,7 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   if(!WritingModule) {
     WriteOptimizePragmaOptions(SemaRef);
     WriteMSStructPragmaOptions(SemaRef);
+    WriteMSPointersToMembersPragmaOptions(SemaRef);
   }
 
   // Some simple statistics

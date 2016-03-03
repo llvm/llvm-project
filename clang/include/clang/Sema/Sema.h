@@ -146,6 +146,7 @@ namespace clang {
   class ObjCPropertyDecl;
   class ObjCProtocolDecl;
   class OMPThreadPrivateDecl;
+  class OMPDeclareReductionDecl;
   class OMPClause;
   struct OverloadCandidate;
   class OverloadCandidateSet;
@@ -2676,6 +2677,8 @@ public:
     LookupObjCProtocolName,
     /// Look up implicit 'self' parameter of an objective-c method.
     LookupObjCImplicitSelfParam,
+    /// \brief Look up the name of an OpenMP user-defined reduction operation.
+    LookupOMPReductionName,
     /// \brief Look up any declaration with any name.
     LookupAnyName
   };
@@ -7804,6 +7807,10 @@ public:
   void AddModeAttr(SourceRange AttrRange, Decl *D, IdentifierInfo *Name,
                    unsigned SpellingListIndex, bool InInstantiation = false);
 
+  void AddNSConsumedAttr(SourceRange AttrRange, Decl *D,
+                         unsigned SpellingListIndex, bool isNSConsumed,
+                         bool isTemplateInstantiation);
+
   //===--------------------------------------------------------------------===//
   // C++ Coroutines TS
   //
@@ -7886,6 +7893,26 @@ public:
   OMPThreadPrivateDecl *CheckOMPThreadPrivateDecl(
                                      SourceLocation Loc,
                                      ArrayRef<Expr *> VarList);
+  /// \brief Check if the specified type is allowed to be used in 'omp declare
+  /// reduction' construct.
+  QualType ActOnOpenMPDeclareReductionType(SourceLocation TyLoc,
+                                           TypeResult ParsedType);
+  /// \brief Called on start of '#pragma omp declare reduction'.
+  DeclGroupPtrTy ActOnOpenMPDeclareReductionDirectiveStart(
+      Scope *S, DeclContext *DC, DeclarationName Name,
+      ArrayRef<std::pair<QualType, SourceLocation>> ReductionTypes,
+      AccessSpecifier AS, Decl *PrevDeclInScope = nullptr);
+  /// \brief Initialize declare reduction construct initializer.
+  void ActOnOpenMPDeclareReductionCombinerStart(Scope *S, Decl *D);
+  /// \brief Finish current declare reduction construct initializer.
+  void ActOnOpenMPDeclareReductionCombinerEnd(Decl *D, Expr *Combiner);
+  /// \brief Initialize declare reduction construct initializer.
+  void ActOnOpenMPDeclareReductionInitializerStart(Scope *S, Decl *D);
+  /// \brief Finish current declare reduction construct initializer.
+  void ActOnOpenMPDeclareReductionInitializerEnd(Decl *D, Expr *Initializer);
+  /// \brief Called at the end of '#pragma omp declare reduction'.
+  DeclGroupPtrTy ActOnOpenMPDeclareReductionDirectiveEnd(
+      Scope *S, DeclGroupPtrTy DeclReductions, bool IsValid);
 
   /// \brief Initialization of captured region for OpenMP region.
   void ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope);

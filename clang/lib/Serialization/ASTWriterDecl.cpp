@@ -133,6 +133,7 @@ namespace clang {
     void VisitObjCPropertyDecl(ObjCPropertyDecl *D);
     void VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
+    void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
     /// Add an Objective-C type parameter list to the given record.
@@ -1651,6 +1652,16 @@ void ASTDeclWriter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
   for (auto *I : D->varlists())
     Writer.AddStmt(I);
   Code = serialization::DECL_OMP_THREADPRIVATE;
+}
+
+void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
+  VisitNamedDecl(D);
+  Writer.AddSourceLocation(D->getLocStart(), Record);
+  Writer.AddStmt(D->getCombiner());
+  Writer.AddStmt(D->getInitializer());
+  Writer.AddDeclRef(D->getPrevDeclInScope(), Record);
+  Writer.AddTypeRef(D->getType(), Record);
+  Code = serialization::DECL_OMP_DECLARE_REDUCTION;
 }
 
 void ASTDeclWriter::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {

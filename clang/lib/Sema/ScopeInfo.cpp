@@ -28,6 +28,7 @@ void FunctionScopeInfo::Clear() {
   HasBranchIntoScope = false;
   HasIndirectGoto = false;
   HasDroppedStmt = false;
+  HasOMPDeclareReductionCombiner = false;
   ObjCShouldCallSuper = false;
   ObjCIsDesignatedInit = false;
   ObjCWarnForNoDesignatedInitChain = false;

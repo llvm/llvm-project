@@ -2454,7 +2454,9 @@ private:
   //===--------------------------------------------------------------------===//
   // OpenMP: Directives and clauses.
   /// \brief Parses declarative OpenMP directives.
-  DeclGroupPtrTy ParseOpenMPDeclarativeDirective();
+  DeclGroupPtrTy ParseOpenMPDeclarativeDirective(AccessSpecifier AS);
+  /// \brief Parse 'omp declare reduction' construct.
+  DeclGroupPtrTy ParseOpenMPDeclareReductionDirective(AccessSpecifier AS);
   /// \brief Parses simple list of variables.
   ///
   /// \param Kind Kind of the directive.

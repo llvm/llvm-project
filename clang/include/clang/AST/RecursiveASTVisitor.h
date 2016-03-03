@@ -1467,6 +1467,14 @@ DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   }
 })
 
+DEF_TRAVERSE_DECL(OMPDeclareReductionDecl, {
+  TRY_TO(TraverseStmt(D->getCombiner()));
+  if (auto *Initializer = D->getInitializer())
+    TRY_TO(TraverseStmt(Initializer));
+  TRY_TO(TraverseType(D->getType()));
+  return true;
+})
+
 DEF_TRAVERSE_DECL(OMPCapturedExprDecl, { TRY_TO(TraverseVarHelper(D)); })
 
 // A helper method for TemplateDecl's children.

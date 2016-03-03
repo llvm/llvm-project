@@ -554,6 +554,7 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
   case OMPD_taskwait:
   case OMPD_taskgroup:
   case OMPD_cancellation_point:
+  case OMPD_declare_reduction:
     break;
   }
   return false;

@@ -788,6 +788,10 @@ private:
   /// \brief The PragmaMSStructKind pragma ms_struct state if set, or -1.
   int PragmaMSStructState;
 
+  /// \brief The PragmaMSPointersToMembersKind pragma pointers_to_members state.
+  int PragmaMSPointersToMembersState;
+  SourceLocation PointersToMembersPragmaLocation;
+
   /// \brief The OpenCL extension settings.
   SmallVector<uint64_t, 1> OpenCLExtensions;
 

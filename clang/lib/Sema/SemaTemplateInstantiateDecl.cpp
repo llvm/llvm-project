@@ -286,6 +286,14 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       }
     }
 
+    if (isa<NSConsumedAttr>(TmplAttr) || isa<CFConsumedAttr>(TmplAttr)) {
+      AddNSConsumedAttr(TmplAttr->getRange(), New,
+                        TmplAttr->getSpellingListIndex(),
+                        isa<NSConsumedAttr>(TmplAttr),
+                        /*template instantiation*/ true);
+      continue;
+    }
+
     assert(!TmplAttr->isPackExpansion());
     if (TmplAttr->isLateParsed() && LateAttrs) {
       // Late parsed attributes must be instantiated and attached after the
@@ -2493,6 +2501,81 @@ Decl *TemplateDeclInstantiator::VisitOMPThreadPrivateDecl(
   Owner->addDecl(TD);
 
   return TD;
+}
+
+Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
+    OMPDeclareReductionDecl *D) {
+  // Instantiate type and check if it is allowed.
+  QualType SubstReductionType = SemaRef.ActOnOpenMPDeclareReductionType(
+      D->getLocation(),
+      ParsedType::make(SemaRef.SubstType(D->getType(), TemplateArgs,
+                                         D->getLocation(), DeclarationName())));
+  if (SubstReductionType.isNull())
+    return nullptr;
+  bool IsCorrect = !SubstReductionType.isNull();
+  // Create instantiated copy.
+  std::pair<QualType, SourceLocation> ReductionTypes[] = {
+      std::make_pair(SubstReductionType, D->getLocation())};
+  auto *PrevDeclInScope = D->getPrevDeclInScope();
+  if (PrevDeclInScope && !PrevDeclInScope->isInvalidDecl()) {
+    PrevDeclInScope = cast<OMPDeclareReductionDecl>(
+        SemaRef.CurrentInstantiationScope->findInstantiationOf(PrevDeclInScope)
+            ->get<Decl *>());
+  }
+  auto DRD = SemaRef.ActOnOpenMPDeclareReductionDirectiveStart(
+      /*S=*/nullptr, Owner, D->getDeclName(), ReductionTypes, D->getAccess(),
+      PrevDeclInScope);
+  auto *NewDRD = cast<OMPDeclareReductionDecl>(DRD.get().getSingleDecl());
+  if (isDeclWithinFunction(NewDRD))
+    SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, NewDRD);
+  Expr *SubstCombiner = nullptr;
+  Expr *SubstInitializer = nullptr;
+  // Combiners instantiation sequence.
+  if (D->getCombiner()) {
+    SemaRef.ActOnOpenMPDeclareReductionCombinerStart(
+        /*S=*/nullptr, NewDRD);
+    const char *Names[] = {"omp_in", "omp_out"};
+    for (auto &Name : Names) {
+      DeclarationName DN(&SemaRef.Context.Idents.get(Name));
+      auto OldLookup = D->lookup(DN);
+      auto Lookup = NewDRD->lookup(DN);
+      if (!OldLookup.empty() && !Lookup.empty()) {
+        assert(Lookup.size() == 1 && OldLookup.size() == 1);
+        SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldLookup.front(),
+                                                             Lookup.front());
+      }
+    }
+    SubstCombiner = SemaRef.SubstExpr(D->getCombiner(), TemplateArgs).get();
+    SemaRef.ActOnOpenMPDeclareReductionCombinerEnd(NewDRD, SubstCombiner);
+    // Initializers instantiation sequence.
+    if (D->getInitializer()) {
+      SemaRef.ActOnOpenMPDeclareReductionInitializerStart(
+          /*S=*/nullptr, NewDRD);
+      const char *Names[] = {"omp_orig", "omp_priv"};
+      for (auto &Name : Names) {
+        DeclarationName DN(&SemaRef.Context.Idents.get(Name));
+        auto OldLookup = D->lookup(DN);
+        auto Lookup = NewDRD->lookup(DN);
+        if (!OldLookup.empty() && !Lookup.empty()) {
+          assert(Lookup.size() == 1 && OldLookup.size() == 1);
+          SemaRef.CurrentInstantiationScope->InstantiatedLocal(
+              OldLookup.front(), Lookup.front());
+        }
+      }
+      SubstInitializer =
+          SemaRef.SubstExpr(D->getInitializer(), TemplateArgs).get();
+      SemaRef.ActOnOpenMPDeclareReductionInitializerEnd(NewDRD,
+                                                        SubstInitializer);
+    }
+    IsCorrect = IsCorrect && SubstCombiner &&
+                (!D->getInitializer() || SubstInitializer);
+  } else
+    IsCorrect = false;
+
+  (void)SemaRef.ActOnOpenMPDeclareReductionDirectiveEnd(/*S=*/nullptr, DRD,
+                                                        IsCorrect);
+
+  return NewDRD;
 }
 
 Decl *TemplateDeclInstantiator::VisitOMPCapturedExprDecl(

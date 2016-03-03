@@ -356,6 +356,7 @@ namespace clang {
     void VisitObjCPropertyDecl(ObjCPropertyDecl *D);
     void VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
+    void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
     /// We've merged the definition \p MergedDef into the existing definition
@@ -2394,6 +2395,15 @@ void ASTDeclReader::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
   D->setVars(Vars);
 }
 
+void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
+  VisitNamedDecl(D);
+  D->setLocation(Reader.ReadSourceLocation(F, Record, Idx));
+  D->setCombiner(Reader.ReadExpr(F));
+  D->setInitializer(Reader.ReadExpr(F));
+  D->PrevDeclInScope = Reader.ReadDeclID(F, Record, Idx);
+  D->setType(Reader.readType(F, Record, Idx));
+}
+
 void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
   VisitVarDecl(D);
 }
@@ -2449,7 +2459,8 @@ static bool isConsumerInterestedIn(Decl *D, bool HasBody) {
       isa<ImportDecl>(D) ||
       isa<PragmaCommentDecl>(D) ||
       isa<PragmaDetectMismatchDecl>(D) ||
-      isa<OMPThreadPrivateDecl>(D))
+      isa<OMPThreadPrivateDecl>(D) ||
+      isa<OMPDeclareReductionDecl>(D))
     return true;
   if (VarDecl *Var = dyn_cast<VarDecl>(D))
     return Var->isFileVarDecl() &&
@@ -3362,6 +3373,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_OMP_THREADPRIVATE:
     D = OMPThreadPrivateDecl::CreateDeserialized(Context, ID, Record[Idx++]);
+    break;
+  case DECL_OMP_DECLARE_REDUCTION:
+    D = OMPDeclareReductionDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_OMP_CAPTUREDEXPR:
     D = OMPCapturedExprDecl::CreateDeserialized(Context, ID);

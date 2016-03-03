@@ -2912,7 +2912,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
   }
 
   if (Tok.is(tok::annot_pragma_openmp))
-    return ParseOpenMPDeclarativeDirective();
+    return ParseOpenMPDeclarativeDirective(AS);
 
   // Parse all the comma separated declarators.
   return ParseCXXClassMemberDeclaration(AS, AccessAttrs.getList());

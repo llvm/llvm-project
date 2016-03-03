@@ -1571,6 +1571,14 @@ public:
                                  CXXBasePath &Path, DeclarationName Name);
 
   /// \brief Base-class lookup callback that determines whether there exists
+  /// an OpenMP declare reduction member with the given name.
+  ///
+  /// This callback can be used with \c lookupInBases() to find members
+  /// of the given name within a C++ class hierarchy.
+  static bool FindOMPReductionMember(const CXXBaseSpecifier *Specifier,
+                                     CXXBasePath &Path, DeclarationName Name);
+
+  /// \brief Base-class lookup callback that determines whether there exists
   /// a member with the given name that can be used in a nested-name-specifier.
   ///
   /// This callback can be used with \c lookupInBases() to find members of

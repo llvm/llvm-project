@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
   #pragma omp parallel for simd linear(i)
   for (int k = 0; k < argc; ++k) ++k;
 
-  foomain<int,char>(argc,argv);
+  foomain<int,char>(argc,argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}
   return 0;
 }
 
