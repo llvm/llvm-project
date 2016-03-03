@@ -5606,32 +5606,25 @@ SwiftASTContext::IsReferenceType (void* type, CompilerType *pointee_type, bool* 
 bool
 SwiftASTContext::IsInoutType (const CompilerType& compiler_type, CompilerType *original_type)
 {
-    bool return_value = false;
-    
     if (compiler_type.IsValid())
     {
         if (auto ast = llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem()))
         {
             swift::CanType swift_can_type (GetCanonicalSwiftType (compiler_type));
             const swift::TypeKind type_kind = swift_can_type->getKind();
-            switch (type_kind)
+            if (type_kind == swift::TypeKind::LValue)
             {
-                case swift::TypeKind::LValue:
+                swift::LValueType *lvalue = swift_can_type->getAs<swift::LValueType>();
+                if (lvalue)
                 {
-                    swift::LValueType *lvalue = swift_can_type->getAs<swift::LValueType>();
-                    if (lvalue)
-                    {
-                        if (original_type)
-                            *original_type = CompilerType(ast, lvalue->getObjectType().getPointer());
-                        return_value = true;
-                    }
+                    if (original_type)
+                        *original_type = CompilerType(ast, lvalue->getObjectType().getPointer());
+                    return true;
                 }
-                    break;
             }
         }
     }
-    
-    return return_value;
+    return false;
 }
 
 bool
