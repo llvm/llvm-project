@@ -659,6 +659,11 @@ void USRGenerator::VisitType(QualType T) {
       T = PT->getPointeeType();
       continue;
     }
+    if (const ObjCObjectPointerType *OPT = T->getAs<ObjCObjectPointerType>()) {
+      Out << '*';
+      T = OPT->getPointeeType();
+      continue;
+    }
     if (const RValueReferenceType *RT = T->getAs<RValueReferenceType>()) {
       Out << "&&";
       T = RT->getPointeeType();
@@ -691,6 +696,18 @@ void USRGenerator::VisitType(QualType T) {
     if (const TagType *TT = T->getAs<TagType>()) {
       Out << '$';
       VisitTagDecl(TT->getDecl());
+      return;
+    }
+    if (const ObjCInterfaceType *OIT = T->getAs<ObjCInterfaceType>()) {
+      Out << '$';
+      VisitObjCInterfaceDecl(OIT->getDecl());
+      return;
+    }
+    if (const ObjCObjectType *OIT = T->getAs<ObjCObjectType>()) {
+      Out << 'Q';
+      VisitType(OIT->getBaseType());
+      for (auto *Prot : OIT->getProtocols())
+        VisitObjCProtocolDecl(Prot);
       return;
     }
     if (const TemplateTypeParmType *TTP = T->getAs<TemplateTypeParmType>()) {
