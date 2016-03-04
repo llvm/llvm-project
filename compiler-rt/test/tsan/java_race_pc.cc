@@ -5,7 +5,6 @@
 // XFAIL: powerpc64-unknown-linux-gnu
 #include "java.h"
 
-
 void foobar() {
 }
 

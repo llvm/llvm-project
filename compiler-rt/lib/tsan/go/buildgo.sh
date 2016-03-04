@@ -123,7 +123,7 @@ if [ "$SILENT" != "1" ]; then
 fi
 $CC $DIR/gotsan.cc -c -o $DIR/race_$SUFFIX.syso $FLAGS $CFLAGS
 
-$CC test.c $DIR/race_$SUFFIX.syso -m64 -o $DIR/test $OSLDFLAGS
+$CC $OSCFLAGS test.c $DIR/race_$SUFFIX.syso -m64 -o $DIR/test $OSLDFLAGS
 
 export GORACE="exitcode=0 atexit_sleep_ms=0"
 if [ "$SILENT" != "1" ]; then
