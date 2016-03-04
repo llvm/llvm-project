@@ -38,3 +38,8 @@ void goo(Base *b) {
 // CHECK-NEXT: RelBase | Sub | c:objc(cs)Sub
 @interface Sub : Base<Prot2, Prot1>
 @end
+
+@interface NSArray<ObjectType> : Base
+// CHECK-NOT: ObjectType
+-(ObjectType)getit;
+@end
