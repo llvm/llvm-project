@@ -39,17 +39,12 @@ InputSectionBase<ELFT>::InputSectionBase(ObjectFile<ELFT> *File,
 }
 
 template <class ELFT> StringRef InputSectionBase<ELFT>::getSectionName() const {
-  ErrorOr<StringRef> Name = File->getObj().getSectionName(this->Header);
-  fatal(Name);
-  return *Name;
+  return check(File->getObj().getSectionName(this->Header));
 }
 
 template <class ELFT>
 ArrayRef<uint8_t> InputSectionBase<ELFT>::getSectionData() const {
-  ErrorOr<ArrayRef<uint8_t>> Ret =
-      this->File->getObj().getSectionContents(this->Header);
-  fatal(Ret);
-  return *Ret;
+  return check(this->File->getObj().getSectionContents(this->Header));
 }
 
 template <class ELFT>
@@ -287,7 +282,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
         SymVA = Out<ELFT>::Got->getMipsLocalFullAddr(*Body);
       else
         SymVA = Body->getGotVA<ELFT>();
-      if (Body->IsTls)
+      if (Body->isTls())
         Type = Target->getTlsGotRel(Type);
     } else if (!Target->needsCopyRel<ELFT>(Type, *Body) &&
                isa<SharedSymbol<ELFT>>(*Body)) {

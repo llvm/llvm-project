@@ -3,7 +3,7 @@
 ; Check that we do not consolidate the invariant loads to smp[order - 1] and
 ; smp[order - 2] in the blocks %0 and %16. While they have the same pointer
 ; operand (SCEV) they do not have the same access relation due to the
-; instanciation of "order" from their domain.
+; instantiation of "order" from their domain.
 ;
 ; CHECK:         Invariant Accesses: {
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]

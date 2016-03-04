@@ -601,6 +601,13 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
     auto &SAI = Pair.second;
     auto *Val = SAI->getBasePtr();
 
+    // Only Value-like scalars need a merge PHI. Exit block PHIs receive either
+    // the original PHI's value or the reloaded incoming values from the
+    // generated code. An llvm::Value is merged between the original code's
+    // value or the generated one.
+    if (!SAI->isValueKind() && !SAI->isExitPHIKind())
+      continue;
+
     PHINode *PHI = dyn_cast<PHINode>(Val);
     if (!PHI)
       continue;
@@ -613,6 +620,9 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
     Value *Reload = Builder.CreateLoad(ScalarAddr, Name + ".ph.final_reload");
     Reload = Builder.CreateBitOrPointerCast(Reload, PHI->getType());
     Value *OriginalValue = PHI->getIncomingValueForBlock(MergeBB);
+    assert((!isa<Instruction>(OriginalValue) ||
+            cast<Instruction>(OriginalValue)->getParent() != MergeBB) &&
+           "Original value must no be one we just generated.");
     auto *MergePHI = PHINode::Create(PHI->getType(), 2, Name + ".ph.merge");
     MergePHI->insertBefore(&*MergeBB->getFirstInsertionPt());
     MergePHI->addIncoming(Reload, OptExitBB);

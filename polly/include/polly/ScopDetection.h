@@ -438,9 +438,10 @@ private:
   /// non-affine.
   ///
   /// @param S           The expression to be checked.
+  /// @param Scope       The loop nest in which @p S is used.
   /// @param Context     The context of scop detection.
   /// @param BaseAddress The base address of the expression @p S (if any).
-  bool isAffine(const SCEV *S, DetectionContext &Context,
+  bool isAffine(const SCEV *S, Loop *Scope, DetectionContext &Context,
                 Value *BaseAddress = nullptr) const;
 
   /// @brief Check if the control flow in a basic block is valid.
@@ -515,6 +516,9 @@ public:
   ///
   /// This was added to give the DOT printer easy access to this information.
   RegionInfo *getRI() const { return RI; }
+
+  /// @brief Get the LoopInfo stored in this pass.
+  LoopInfo *getLI() const { return LI; }
 
   /// @brief Is the region is the maximum region of a Scop?
   ///

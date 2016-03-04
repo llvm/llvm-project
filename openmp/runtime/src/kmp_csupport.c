@@ -732,7 +732,6 @@ __kmpc_barrier(ident_t *loc, kmp_int32 global_tid)
 kmp_int32
 __kmpc_master(ident_t *loc, kmp_int32 global_tid)
 {
-    KMP_COUNT_BLOCK(OMP_MASTER);
     int status = 0;
 
     KC_TRACE( 10, ("__kmpc_master: called T#%d\n", global_tid ) );
@@ -741,6 +740,7 @@ __kmpc_master(ident_t *loc, kmp_int32 global_tid)
         __kmp_parallel_initialize();
 
     if( KMP_MASTER_GTID( global_tid )) {
+        KMP_COUNT_BLOCK(OMP_MASTER);
         KMP_START_EXPLICIT_TIMER(OMP_master);
         status = 1;
     }
@@ -1476,9 +1476,11 @@ introduce an explicit barrier if it is required.
 kmp_int32
 __kmpc_single(ident_t *loc, kmp_int32 global_tid)
 {
-    KMP_COUNT_BLOCK(OMP_SINGLE);
     kmp_int32 rc = __kmp_enter_single( global_tid, loc, TRUE );
-    if(rc == TRUE) {
+
+    if (rc) {
+        // We are going to execute the single statement, so we should count it.
+        KMP_COUNT_BLOCK(OMP_SINGLE);
         KMP_START_EXPLICIT_TIMER(OMP_single);
     }
 

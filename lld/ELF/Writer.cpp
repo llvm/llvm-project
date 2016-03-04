@@ -221,7 +221,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   writeSections();
   if (HasError)
     return;
-  fatal(Buffer->commit());
+  check(Buffer->commit());
 }
 
 namespace {
@@ -268,7 +268,7 @@ static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
     return true;
   }
 
-  if (!Body || !Body->IsTls)
+  if (!Body || !Body->isTls())
     return false;
 
   if (Target->isTlsGlobalDynamicRel(Type)) {
@@ -424,7 +424,7 @@ void Writer<ELFT>::scanRelocs(
       if (CBP || Dynrel) {
         uint32_t DynType;
         if (CBP)
-          DynType = Body->IsTls ? Target->TlsGotRel : Target->GotRel;
+          DynType = Body->isTls() ? Target->TlsGotRel : Target->GotRel;
         else
           DynType = Target->RelativeRel;
         Out<ELFT>::RelaDyn->addReloc(
@@ -564,9 +564,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
     return;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
     for (const Elf_Sym &Sym : F->getLocalSymbols()) {
-      ErrorOr<StringRef> SymNameOrErr = Sym.getName(F->getStringTable());
-      fatal(SymNameOrErr);
-      StringRef SymName = *SymNameOrErr;
+      StringRef SymName = check(Sym.getName(F->getStringTable()));
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
       if (Sym.st_shndx != SHN_ABS) {
@@ -1015,6 +1013,11 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
     for (OutputSectionBase<ELFT> *Sec : RegularSections)
       addStartStopSymbols(Sec);
   }
+
+  // Add _DYNAMIC symbol. Unlike GNU gold, our _DYNAMIC symbol has no type.
+  // It should be okay as no one seems to care about the type.
+  // Even the author of gold doesn't remember why gold behaves that way.
+  // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (isOutputDynamic())
     Symtab.addSynthetic("_DYNAMIC", *Out<ELFT>::Dynamic, 0, STV_HIDDEN);
 
@@ -1329,9 +1332,11 @@ template <class ELFT> void Writer<ELFT>::assignAddressesRelocatable() {
   Out<ELFT>::ElfHeader->setSize(sizeof(Elf_Ehdr));
   uintX_t FileOff = 0;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    FileOff = alignTo(FileOff, Sec->getAlign());
+    if (Sec->getType() != SHT_NOBITS)
+      FileOff = alignTo(FileOff, Sec->getAlign());
     Sec->setFileOffset(FileOff);
-    FileOff += Sec->getSize();
+    if (Sec->getType() != SHT_NOBITS)
+      FileOff += Sec->getSize();
   }
   SectionHeaderOff = alignTo(FileOff, sizeof(uintX_t));
   FileSize = SectionHeaderOff + getNumSections() * sizeof(Elf_Shdr);

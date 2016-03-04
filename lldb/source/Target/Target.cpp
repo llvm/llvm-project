@@ -348,6 +348,13 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
                           bool hardware,
                           LazyBool move_to_nearest_code)
 {
+    FileSpec remapped_file;
+    ConstString remapped_path;
+    if (GetSourcePathMap().ReverseRemapPath(ConstString(file.GetPath().c_str()), remapped_path))
+        remapped_file.SetFile(remapped_path.AsCString(), true);
+    else
+        remapped_file = file;
+
     if (check_inlines == eLazyBoolCalculate)
     {
         const InlineStrategy inline_strategy = GetInlineStrategy();
@@ -358,7 +365,7 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
                 break;
                 
             case eInlineBreakpointsHeaders:
-                if (file.IsSourceImplementationFile())
+                if (remapped_file.IsSourceImplementationFile())
                     check_inlines = eLazyBoolNo;
                 else
                     check_inlines = eLazyBoolYes;
@@ -374,7 +381,7 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
     {
         // Not checking for inlines, we are looking only for matching compile units
         FileSpecList compile_unit_list;
-        compile_unit_list.Append (file);
+        compile_unit_list.Append (remapped_file);
         filter_sp = GetSearchFilterForModuleAndCUList (containingModules, &compile_unit_list);
     }
     else
@@ -387,7 +394,7 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
         move_to_nearest_code = GetMoveToNearestCode() ? eLazyBoolYes : eLazyBoolNo;
 
     BreakpointResolverSP resolver_sp(new BreakpointResolverFileLine(nullptr,
-                                                                    file,
+                                                                    remapped_file,
                                                                     line_no,
                                                                     check_inlines,
                                                                     skip_prologue,

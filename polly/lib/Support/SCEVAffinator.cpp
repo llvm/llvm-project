@@ -24,8 +24,8 @@
 using namespace llvm;
 using namespace polly;
 
-SCEVAffinator::SCEVAffinator(Scop *S)
-    : S(S), Ctx(S->getIslCtx()), R(S->getRegion()), SE(*S->getSE()),
+SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
+    : S(S), Ctx(S->getIslCtx()), R(S->getRegion()), SE(*S->getSE()), LI(LI),
       TD(R.getEntry()->getParent()->getParent()->getDataLayout()) {}
 
 SCEVAffinator::~SCEVAffinator() {
@@ -44,7 +44,8 @@ __isl_give isl_pw_aff *SCEVAffinator::getPwAff(const SCEV *Expr,
   } else
     NumIterators = 0;
 
-  S->addParams(getParamsInAffineExpr(&R, Expr, SE));
+  auto *Scope = LI.getLoopFor(BB);
+  S->addParams(getParamsInAffineExpr(&R, Scope, Expr, SE));
 
   return visit(Expr);
 }

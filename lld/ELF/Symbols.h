@@ -84,7 +84,8 @@ public:
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
-  bool isFunc() const { return IsFunc; }
+  bool isFunc() const { return Type == llvm::ELF::STT_FUNC; }
+  bool isTls() const { return Type == llvm::ELF::STT_TLS; }
 
   // Returns the symbol name.
   StringRef getName() const { return Name; }
@@ -128,10 +129,10 @@ public:
 
 protected:
   SymbolBody(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
-             bool IsTls, bool IsFunc)
+             uint8_t Type)
       : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility),
-        MustBeInDynSym(false), NeedsCopyOrPltAddr(false), IsTls(IsTls),
-        IsFunc(IsFunc), Name(Name) {
+        MustBeInDynSym(false), NeedsCopyOrPltAddr(false),
+        Type(Type), Name(Name) {
     IsUsedInRegularObj = K != SharedKind && K != LazyKind;
   }
 
@@ -153,10 +154,8 @@ public:
   // symbol or if the symbol should point to its plt entry.
   unsigned NeedsCopyOrPltAddr : 1;
 
-  unsigned IsTls : 1;
-
 protected:
-  unsigned IsFunc : 1;
+  uint8_t Type;
 
   StringRef Name;
   Symbol *Backref = nullptr;
@@ -165,8 +164,8 @@ protected:
 // The base class for any defined symbols.
 class Defined : public SymbolBody {
 public:
-  Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility, bool IsTls,
-          bool IsFunction);
+  Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
+          uint8_t Type);
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
 
@@ -178,8 +177,7 @@ protected:
 public:
   DefinedElf(Kind K, StringRef N, const Elf_Sym &Sym)
       : Defined(K, N, Sym.getBinding() == llvm::ELF::STB_WEAK,
-                Sym.getVisibility(), Sym.getType() == llvm::ELF::STT_TLS,
-                Sym.getType() == llvm::ELF::STT_FUNC),
+                Sym.getVisibility(), Sym.getType()),
         Sym(Sym) {}
 
   const Elf_Sym &Sym;
@@ -267,7 +265,7 @@ class Undefined : public SymbolBody {
   bool CanKeepUndefined;
 
 protected:
-  Undefined(Kind K, StringRef N, bool IsWeak, uint8_t Visibility, bool IsTls);
+  Undefined(Kind K, StringRef N, bool IsWeak, uint8_t Visibility, uint8_t Type);
 
 public:
   Undefined(StringRef N, bool IsWeak, uint8_t Visibility,
@@ -307,7 +305,7 @@ public:
   // OffsetInBss is significant only when needsCopy() is true.
   uintX_t OffsetInBss = 0;
 
-  bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->IsFunc; }
+  bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->isFunc(); }
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -319,7 +317,7 @@ class Lazy : public SymbolBody {
 public:
   Lazy(ArchiveFile *F, const llvm::object::Archive::Symbol S)
       : SymbolBody(LazyKind, S.getName(), false, llvm::ELF::STV_DEFAULT,
-                   /*IsTls*/ false, /*IsFunction*/ false),
+                   /* Type */ 0),
         File(F), Sym(S) {}
 
   static bool classof(const SymbolBody *S) { return S->kind() == LazyKind; }
@@ -328,6 +326,7 @@ public:
   // was already returned.
   std::unique_ptr<InputFile> getMember();
 
+  void setTls() { this->Type = llvm::ELF::STT_TLS; }
   void setWeak() { IsWeak = true; }
   void setUsedInRegularObj() { IsUsedInRegularObj = true; }
 

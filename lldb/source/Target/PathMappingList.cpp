@@ -215,6 +215,27 @@ PathMappingList::RemapPath (const char *path, std::string &new_path) const
 }
 
 bool
+PathMappingList::ReverseRemapPath (const ConstString &path, ConstString &new_path) const
+{
+    const char *path_cstr = path.GetCString();
+    if (!path_cstr)
+        return false;
+
+    for (const auto& it : m_pairs)
+    {
+        const size_t prefixLen = it.second.GetLength();
+        if (::strncmp (it.second.GetCString(), path_cstr, prefixLen) == 0)
+        {
+            std::string new_path_str (it.first.GetCString());
+            new_path_str.append(path.GetCString() + prefixLen);
+            new_path.SetCString(new_path_str.c_str());
+            return true;
+        }
+    }
+    return false;
+}
+
+bool
 PathMappingList::FindFile (const FileSpec &orig_spec, FileSpec &new_spec) const
 {
     if (!m_pairs.empty())

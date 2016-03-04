@@ -10,7 +10,7 @@ pp-trace User's Manual
 :program:`pp-trace` is a standalone tool that traces preprocessor
 activity.  It's also used as a test of Clang's PPCallbacks interface.
 It runs a given source file through the Clang preprocessor, displaying
-selected information from callback functions overidden in a
+selected information from callback functions overridden in a
 `PPCallbacks <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html>`_
 derivation.  The output is in a high-level YAML format, described in
 :ref:`OutputFormat`.

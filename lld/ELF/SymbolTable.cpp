@@ -136,11 +136,9 @@ ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
   for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles) {
     std::unique_ptr<MemoryBuffer> Buffer =
         MemoryBuffer::getMemBuffer(F->MB, false);
-    ErrorOr<std::unique_ptr<Module>> MOrErr =
-        getLazyBitcodeModule(std::move(Buffer), Context,
-                             /*ShouldLazyLoadMetadata*/ true);
-    fatal(MOrErr);
-    std::unique_ptr<Module> &M = *MOrErr;
+    std::unique_ptr<Module> M =
+        check(getLazyBitcodeModule(std::move(Buffer), Context,
+                                   /*ShouldLazyLoadMetadata*/ true));
     L.linkInModule(std::move(M));
   }
   std::unique_ptr<InputFile> F = codegen(Combined);
@@ -272,7 +270,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     return;
   }
 
-  if (New->IsTls != Existing->IsTls) {
+  if (New->isTls() != Existing->isTls()) {
     error("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
     return;
   }
@@ -333,7 +331,8 @@ void SymbolTable<ELFT>::addMemberFile(Undefined *Undef, Lazy *L) {
     L->setWeak();
 
     // FIXME: Do we need to copy more?
-    L->IsTls = Undef->IsTls;
+    if (Undef->isTls())
+      L->setTls();
     return;
   }
 

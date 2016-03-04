@@ -252,7 +252,7 @@ public:
     }
     replaceWithNullptr(Check, SM, StartLoc, EndLoc);
 
-    return skipSubTree();
+    return true;
   }
 
 private:

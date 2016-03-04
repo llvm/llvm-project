@@ -73,6 +73,8 @@ class GdbRemoteTestCaseBase(TestBase):
         TestBase.setUp(self)
 
         self.setUpBaseLogging()
+        self._remote_server_log_file = None
+        self.debug_monitor_extra_args = []
 
         if self.isVerboseLoggingRequested():
             # If requested, full logs go to a log file
@@ -104,9 +106,34 @@ class GdbRemoteTestCaseBase(TestBase):
             self.stub_hostname = "localhost"
 
     def tearDown(self):
+        if self._remote_server_log_file is not None:
+            lldb.remote_platform.Get(lldb.SBFileSpec(self._remote_server_log_file),
+                    lldb.SBFileSpec(self.getLocalServerLogFile()))
+            lldb.remote_platform.Run(lldb.SBPlatformShellCommand("rm " + self._remote_server_log_file))
+            self._remote_server_log_file = None
+
         self.logger.removeHandler(self._verbose_log_handler)
         self._verbose_log_handler = None
         TestBase.tearDown(self)
+
+    def getLocalServerLogFile(self):
+        return self.log_basename + "-server.log"
+
+    def setUpServerLogging(self, is_llgs):
+        if len(lldbtest_config.channels) == 0:
+            return # No logging requested
+
+        if lldb.remote_platform:
+            log_file = lldbutil.join_remote_paths(lldb.remote_platform.GetWorkingDirectory(), "server.log")
+            self._remote_server_log_file = log_file
+        else:
+            log_file = self.getLocalServerLogFile()
+
+        if is_llgs:
+            self.debug_monitor_extra_args.append("--log-file=" + log_file)
+            self.debug_monitor_extra_args.append("--log-channels={}".format(":".join(lldbtest_config.channels)))
+        else:
+            self.debug_monitor_extra_args = ["--log-file=" + self.log_file, "--log-flags=0x800000"]
 
     def get_next_port(self):
         return 12000 + random.randint(0,3999)
@@ -214,10 +241,7 @@ class GdbRemoteTestCaseBase(TestBase):
                 self.skipTest("lldb-server exe not found")
 
         self.debug_monitor_extra_args = ["gdbserver"]
-
-        if len(lldbtest_config.channels) > 0:
-            self.debug_monitor_extra_args.append("--log-file={}-server.log".format(self.log_basename))
-            self.debug_monitor_extra_args.append("--log-channels={}".format(":".join(lldbtest_config.channels)))
+        self.setUpServerLogging(is_llgs=True)
 
         if use_named_pipe:
             (self.named_pipe_path, self.named_pipe, self.named_pipe_fd) = self.create_named_pipe()
@@ -226,7 +250,7 @@ class GdbRemoteTestCaseBase(TestBase):
         self.debug_monitor_exe = get_debugserver_exe()
         if not self.debug_monitor_exe:
             self.skipTest("debugserver exe not found")
-        self.debug_monitor_extra_args = ["--log-file={}-server.log".format(self.log_basename), "--log-flags=0x800000"]
+        self.setUpServerLogging(is_llgs=False)
         if use_named_pipe:
             (self.named_pipe_path, self.named_pipe, self.named_pipe_fd) = self.create_named_pipe()
         # The debugserver stub has a race on handling the 'k' command, so it sends an X09 right away, then sends the real X notification
@@ -249,6 +273,7 @@ class GdbRemoteTestCaseBase(TestBase):
         if re.match(".*-.*-.*-android", triple):
             self.forward_adb_port(self.port, self.port, "forward", self.stub_device)
 
+        logger.info("Connecting to debug monitor on %s:%d", self.stub_hostname, self.port)
         connect_info = (self.stub_hostname, self.port)
         sock.connect(connect_info)
 
