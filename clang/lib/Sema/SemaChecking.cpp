@@ -259,16 +259,9 @@ static bool SemaBuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
   return false;
 }
 
-/// Returns readable name for a call.
-static StringRef getFunctionName(CallExpr *Call) {
-  return cast<FunctionDecl>(Call->getCalleeDecl())->getName();
-}
-
 /// Returns OpenCL access qual.
 static OpenCLAccessAttr *getOpenCLArgAccess(const Decl *D) {
-  if (D->hasAttr<OpenCLAccessAttr>())
     return D->getAttr<OpenCLAccessAttr>();
-  return nullptr;
 }
 
 /// Returns true if pipe element type is different from the pointer.
@@ -277,7 +270,7 @@ static bool checkOpenCLPipeArg(Sema &S, CallExpr *Call) {
   // First argument type should always be pipe.
   if (!Arg0->getType()->isPipeType()) {
     S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_first_arg)
-        << getFunctionName(Call) << Arg0->getSourceRange();
+        << Call->getDirectCallee() << Arg0->getSourceRange();
     return true;
   }
   OpenCLAccessAttr *AccessQual =
@@ -286,20 +279,38 @@ static bool checkOpenCLPipeArg(Sema &S, CallExpr *Call) {
   // OpenCL v2.0 s6.13.16 - The access qualifiers for pipe should only be
   // read_only and write_only, and assumed to be read_only if no qualifier is
   // specified.
-  bool isValid = true;
-  bool ReadOnly = getFunctionName(Call).find("read") != StringRef::npos;
-  if (ReadOnly)
-    isValid = AccessQual == nullptr || AccessQual->isReadOnly();
-  else
-    isValid = AccessQual != nullptr && AccessQual->isWriteOnly();
-  if (!isValid) {
-    const char *AM = ReadOnly ? "read_only" : "write_only";
-    S.Diag(Arg0->getLocStart(),
-           diag::err_opencl_builtin_pipe_invalid_access_modifier)
-        << AM << Arg0->getSourceRange();
-    return true;
+  switch (Call->getDirectCallee()->getBuiltinID()) {
+  case Builtin::BIread_pipe:
+  case Builtin::BIreserve_read_pipe:
+  case Builtin::BIcommit_read_pipe:
+  case Builtin::BIwork_group_reserve_read_pipe:
+  case Builtin::BIsub_group_reserve_read_pipe:
+  case Builtin::BIwork_group_commit_read_pipe:
+  case Builtin::BIsub_group_commit_read_pipe:
+    if (!(!AccessQual || AccessQual->isReadOnly())) {
+      S.Diag(Arg0->getLocStart(),
+             diag::err_opencl_builtin_pipe_invalid_access_modifier)
+          << "read_only" << Arg0->getSourceRange();
+      return true;
+    }
+    break;
+  case Builtin::BIwrite_pipe:
+  case Builtin::BIreserve_write_pipe:
+  case Builtin::BIcommit_write_pipe:
+  case Builtin::BIwork_group_reserve_write_pipe:
+  case Builtin::BIsub_group_reserve_write_pipe:
+  case Builtin::BIwork_group_commit_write_pipe:
+  case Builtin::BIsub_group_commit_write_pipe:
+    if (!(AccessQual && AccessQual->isWriteOnly())) {
+      S.Diag(Arg0->getLocStart(),
+             diag::err_opencl_builtin_pipe_invalid_access_modifier)
+          << "write_only" << Arg0->getSourceRange();
+      return true;
+    }
+    break;
+  default:
+    break;
   }
-
   return false;
 }
 
@@ -308,15 +319,13 @@ static bool checkOpenCLPipePacketType(Sema &S, CallExpr *Call, unsigned Idx) {
   const Expr *Arg0 = Call->getArg(0);
   const Expr *ArgIdx = Call->getArg(Idx);
   const PipeType *PipeTy = cast<PipeType>(Arg0->getType());
-  const Type *EltTy = PipeTy->getElementType().getTypePtr();
-  const PointerType *ArgTy =
-      dyn_cast<PointerType>(ArgIdx->getType().getTypePtr());
+  const QualType EltTy = PipeTy->getElementType();
+  const PointerType *ArgTy = ArgIdx->getType()->getAs<PointerType>();
   // The Idx argument should be a pointer and the type of the pointer and
   // the type of pipe element should also be the same.
-  if (!ArgTy || EltTy != ArgTy->getPointeeType().getTypePtr()) {
+  if (!ArgTy || S.Context.hasSameType(EltTy, ArgTy->getPointeeType())) {
     S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
-        << getFunctionName(Call)
-        << S.Context.getPointerType(PipeTy->getElementType())
+        << Call->getDirectCallee() << S.Context.getPointerType(EltTy)
         << ArgIdx->getSourceRange();
     return true;
   }
@@ -328,16 +337,15 @@ static bool checkOpenCLPipePacketType(Sema &S, CallExpr *Call, unsigned Idx) {
 // \param Call A pointer to the builtin call.
 // \return True if a semantic error has been found, false otherwise.
 static bool SemaBuiltinRWPipe(Sema &S, CallExpr *Call) {
-  // Two kinds of read/write pipe
-  // From OpenCL C Specification 6.13.16.2 the built-in read/write
-  // functions have following forms.
+  // OpenCL v2.0 s6.13.16.2 - The built-in read/write
+  // functions have two forms.
   switch (Call->getNumArgs()) {
   case 2: {
     if (checkOpenCLPipeArg(S, Call))
       return true;
     // The call with 2 arguments should be
-    // read/write_pipe(pipe T, T*)
-    // check packet type T
+    // read/write_pipe(pipe T, T*).
+    // Check packet type T.
     if (checkOpenCLPipePacketType(S, Call, 1))
       return true;
   } break;
@@ -346,32 +354,32 @@ static bool SemaBuiltinRWPipe(Sema &S, CallExpr *Call) {
     if (checkOpenCLPipeArg(S, Call))
       return true;
     // The call with 4 arguments should be
-    // read/write_pipe(pipe T, reserve_id_t, uint, T*)
-    // check reserve_id_t
+    // read/write_pipe(pipe T, reserve_id_t, uint, T*).
+    // Check reserve_id_t.
     if (!Call->getArg(1)->getType()->isReserveIDT()) {
       S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
-          << getFunctionName(Call) << S.Context.OCLReserveIDTy
+          << Call->getDirectCallee() << S.Context.OCLReserveIDTy
           << Call->getArg(1)->getSourceRange();
       return true;
     }
 
-    // check the index
+    // Check the index.
     const Expr *Arg2 = Call->getArg(2);
     if (!Arg2->getType()->isIntegerType() &&
         !Arg2->getType()->isUnsignedIntegerType()) {
       S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
-          << getFunctionName(Call) << S.Context.UnsignedIntTy
+          << Call->getDirectCallee() << S.Context.UnsignedIntTy
           << Arg2->getSourceRange();
       return true;
     }
 
-    // check packet type T
+    // Check packet type T.
     if (checkOpenCLPipePacketType(S, Call, 3))
       return true;
   } break;
   default:
     S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_arg_num)
-        << getFunctionName(Call) << Call->getSourceRange();
+        << Call->getDirectCallee() << Call->getSourceRange();
     return true;
   }
 
@@ -390,11 +398,11 @@ static bool SemaBuiltinReserveRWPipe(Sema &S, CallExpr *Call) {
   if (checkOpenCLPipeArg(S, Call))
     return true;
 
-  // check the reserve size
+  // Check the reserve size.
   if (!Call->getArg(1)->getType()->isIntegerType() &&
       !Call->getArg(1)->getType()->isUnsignedIntegerType()) {
     S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
-        << getFunctionName(Call) << S.Context.UnsignedIntTy
+        << Call->getDirectCallee() << S.Context.UnsignedIntTy
         << Call->getArg(1)->getSourceRange();
     return true;
   }
@@ -414,10 +422,10 @@ static bool SemaBuiltinCommitRWPipe(Sema &S, CallExpr *Call) {
   if (checkOpenCLPipeArg(S, Call))
     return true;
 
-  // check reserve_id_t
+  // Check reserve_id_t.
   if (!Call->getArg(1)->getType()->isReserveIDT()) {
     S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_invalid_arg)
-        << getFunctionName(Call) << S.Context.OCLReserveIDTy
+        << Call->getDirectCallee() << S.Context.OCLReserveIDTy
         << Call->getArg(1)->getSourceRange();
     return true;
   }
@@ -436,7 +444,7 @@ static bool SemaBuiltinPipePackets(Sema &S, CallExpr *Call) {
 
   if (!Call->getArg(0)->getType()->isPipeType()) {
     S.Diag(Call->getLocStart(), diag::err_opencl_builtin_pipe_first_arg)
-        << getFunctionName(Call) << Call->getArg(0)->getSourceRange();
+        << Call->getDirectCallee() << Call->getArg(0)->getSourceRange();
     return true;
   }
 

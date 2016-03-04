@@ -218,7 +218,8 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
   D->getDeclName().print(Out, Policy);
 
   ASTContext &Ctx = *Context;
-  if (!Ctx.getLangOpts().CPlusPlus || D->isExternC())
+  if ((!Ctx.getLangOpts().CPlusPlus || D->isExternC()) &&
+      !D->hasAttr<OverloadableAttr>())
     return;
 
   if (const TemplateArgumentList *
@@ -425,7 +426,8 @@ void USRGenerator::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
 void USRGenerator::VisitTagDecl(const TagDecl *D) {
   // Add the location of the tag decl to handle resolution across
   // translation units.
-  if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
+  if (!isa<EnumDecl>(D) &&
+      ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
     return;
 
   D = D->getCanonicalDecl();
@@ -481,8 +483,16 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
   else {
     if (D->isEmbeddedInDeclarator() && !D->isFreeStanding()) {
       printLoc(Out, D->getLocation(), Context->getSourceManager(), true);
-    } else
+    } else {
       Buf[off] = 'a';
+      if (auto *ED = dyn_cast<EnumDecl>(D)) {
+        // Distinguish USRs of anonymous enums by using their first enumerator.
+        auto enum_range = ED->enumerators();
+        if (enum_range.begin() != enum_range.end()) {
+          Out << '@' << **enum_range.begin();
+        }
+      }
+    }
   }
   }
   
@@ -663,6 +673,11 @@ void USRGenerator::VisitType(QualType T) {
       T = PT->getPointeeType();
       continue;
     }
+    if (const ObjCObjectPointerType *OPT = T->getAs<ObjCObjectPointerType>()) {
+      Out << '*';
+      T = OPT->getPointeeType();
+      continue;
+    }
     if (const RValueReferenceType *RT = T->getAs<RValueReferenceType>()) {
       Out << "&&";
       T = RT->getPointeeType();
@@ -695,6 +710,18 @@ void USRGenerator::VisitType(QualType T) {
     if (const TagType *TT = T->getAs<TagType>()) {
       Out << '$';
       VisitTagDecl(TT->getDecl());
+      return;
+    }
+    if (const ObjCInterfaceType *OIT = T->getAs<ObjCInterfaceType>()) {
+      Out << '$';
+      VisitObjCInterfaceDecl(OIT->getDecl());
+      return;
+    }
+    if (const ObjCObjectType *OIT = T->getAs<ObjCObjectType>()) {
+      Out << 'Q';
+      VisitType(OIT->getBaseType());
+      for (auto *Prot : OIT->getProtocols())
+        VisitObjCProtocolDecl(Prot);
       return;
     }
     if (const TemplateTypeParmType *TTP = T->getAs<TemplateTypeParmType>()) {

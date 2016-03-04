@@ -7779,7 +7779,7 @@ def err_opencl_type_can_only_be_used_as_function_parameter : Error <
 def err_opencl_builtin_pipe_first_arg : Error<
   "first argument to %0 must be a pipe type">;
 def err_opencl_builtin_pipe_arg_num : Error<
-    "invalid number of arguments to function: %0">;
+  "invalid number of arguments to function: %0">;
 def err_opencl_builtin_pipe_invalid_arg : Error<
   "invalid argument type to function %0 (expecting %1)">;
 def err_opencl_builtin_pipe_invalid_access_modifier : Error<
