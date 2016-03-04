@@ -19,7 +19,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/thread.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
@@ -58,40 +58,48 @@ llvm::splitCodeGen(std::unique_ptr<Module> M,
     return M;
   }
 
-  std::vector<thread> Threads;
-  SplitModule(std::move(M), OSs.size(), [&](std::unique_ptr<Module> MPart) {
-    // We want to clone the module in a new context to multi-thread the codegen.
-    // We do it by serializing partition modules to bitcode (while still on the
-    // main thread, in order to avoid data races) and spinning up new threads
-    // which deserialize the partitions into separate contexts.
-    // FIXME: Provide a more direct way to do this in LLVM.
-    SmallVector<char, 0> BC;
-    raw_svector_ostream BCOS(BC);
-    WriteBitcodeToFile(MPart.get(), BCOS);
+  // Create ThreadPool in nested scope so that threads will be joined
+  // on destruction.
+  {
+    ThreadPool CodegenThreadPool(OSs.size());
+    int ThreadCount = 0;
 
-    llvm::raw_pwrite_stream *ThreadOS = OSs[Threads.size()];
-    Threads.emplace_back(
-        [TheTarget, CPU, Features, Options, RM, CM, OL, FileType,
-         ThreadOS](const SmallVector<char, 0> &BC) {
-          LLVMContext Ctx;
-          ErrorOr<std::unique_ptr<Module>> MOrErr =
-              parseBitcodeFile(MemoryBufferRef(StringRef(BC.data(), BC.size()),
-                                               "<split-module>"),
-                               Ctx);
-          if (!MOrErr)
-            report_fatal_error("Failed to read bitcode");
-          std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());
+    SplitModule(
+        std::move(M), OSs.size(),
+        [&](std::unique_ptr<Module> MPart) {
+          // We want to clone the module in a new context to multi-thread the
+          // codegen. We do it by serializing partition modules to bitcode
+          // (while still on the main thread, in order to avoid data races) and
+          // spinning up new threads which deserialize the partitions into
+          // separate contexts.
+          // FIXME: Provide a more direct way to do this in LLVM.
+          SmallVector<char, 0> BC;
+          raw_svector_ostream BCOS(BC);
+          WriteBitcodeToFile(MPart.get(), BCOS);
 
-          codegen(MPartInCtx.get(), *ThreadOS, TheTarget, CPU, Features,
-                  Options, RM, CM, OL, FileType);
+          llvm::raw_pwrite_stream *ThreadOS = OSs[ThreadCount++];
+          // Enqueue the task
+          CodegenThreadPool.async(
+              [TheTarget, CPU, Features, Options, RM, CM, OL, FileType,
+               ThreadOS](const SmallVector<char, 0> &BC) {
+                LLVMContext Ctx;
+                ErrorOr<std::unique_ptr<Module>> MOrErr = parseBitcodeFile(
+                    MemoryBufferRef(StringRef(BC.data(), BC.size()),
+                                    "<split-module>"),
+                    Ctx);
+                if (!MOrErr)
+                  report_fatal_error("Failed to read bitcode");
+                std::unique_ptr<Module> MPartInCtx = std::move(MOrErr.get());
+
+                codegen(MPartInCtx.get(), *ThreadOS, TheTarget, CPU, Features,
+                        Options, RM, CM, OL, FileType);
+              },
+              // Pass BC using std::move to ensure that it get moved rather than
+              // copied into the thread's context.
+              std::move(BC));
         },
-        // Pass BC using std::move to ensure that it get moved rather than
-        // copied into the thread's context.
-        std::move(BC));
-  }, PreserveLocals);
-
-  for (thread &T : Threads)
-    T.join();
+        PreserveLocals);
+  }
 
   return {};
 }
