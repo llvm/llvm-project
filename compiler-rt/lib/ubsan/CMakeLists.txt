@@ -31,6 +31,9 @@ append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_STANDALONE_
 
 set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
+# Make sure we end with -frtti on type_hash
+set_property(SOURCE ubsan_type_hash_itanium.cc APPEND_STRING PROPERTY
+  COMPILE_FLAGS " -frtti")
 
 add_custom_target(ubsan)
 

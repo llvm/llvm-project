@@ -20,6 +20,49 @@
 COMPILER_RT_WEAK void (*VPMergeHook)(ValueProfData *,
                                      __llvm_profile_data *) = NULL;
 
+/* Returns 1 if profile is not structurally compatible.  */
+COMPILER_RT_VISIBILITY
+int __llvm_profile_check_compatibility(const char *ProfileData,
+                                       uint64_t ProfileSize) {
+  /* Check profile header only for now  */
+  __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
+  __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
+  SrcDataStart =
+      (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header));
+  SrcDataEnd = SrcDataStart + Header->DataSize;
+
+  /* Check the header first.  */
+  if (Header->Magic != __llvm_profile_get_magic() ||
+      Header->Version != __llvm_profile_get_version() ||
+      Header->DataSize !=
+          (uint64_t)(__llvm_profile_end_data() - __llvm_profile_begin_data()) ||
+      Header->CountersSize != (uint64_t)(__llvm_profile_end_counters() -
+                                         __llvm_profile_begin_counters()) ||
+      Header->NamesSize != (uint64_t)(__llvm_profile_end_names() -
+                                      __llvm_profile_begin_names()) ||
+      Header->ValueKindLast != IPVK_Last)
+    return 1;
+
+  if (ProfileSize < sizeof(__llvm_profile_header) +
+                        Header->DataSize * sizeof(__llvm_profile_data) +
+                        Header->NamesSize + Header->CountersSize +
+                        Header->ValueDataSize)
+    return 1;
+
+  for (SrcData = SrcDataStart,
+       DstData = (__llvm_profile_data *)__llvm_profile_begin_data();
+       SrcData < SrcDataEnd; ++SrcData, ++DstData) {
+    if (SrcData->NameRef != DstData->NameRef ||
+        SrcData->FuncHash != DstData->FuncHash ||
+        SrcData->NumCounters != DstData->NumCounters)
+      return 1;
+  }
+
+  /* Matched! */
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY
 void __llvm_profile_merge_from_buffer(const char *ProfileData,
                                       uint64_t ProfileSize) {
   __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
