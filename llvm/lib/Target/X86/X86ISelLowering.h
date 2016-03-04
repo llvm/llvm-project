@@ -390,11 +390,21 @@ namespace llvm {
       UNPCKH,
       VPERMILPV,
       VPERMILPI,
-      VPERMV,
-      VPERMV3,
-      VPERMIV3,
       VPERMI,
       VPERM2X128,
+
+      // Variable Permute (VPERM)
+      // Res = VPERMV MaskV, V0
+      VPERMV,
+
+      // 3-op Variable Permute (VPERMT2)
+      // Res = VPERMV3 V0, MaskV, V1
+      VPERMV3,
+
+      // 3-op Variable Permute overwriting the index (VPERMI2)
+      // Res = VPERMIV3 V0, MaskV, V1
+      VPERMIV3,
+
       // Bitwise ternary logic
       VPTERNLOG,
       // Fix Up Special Packed Float32/64 values
