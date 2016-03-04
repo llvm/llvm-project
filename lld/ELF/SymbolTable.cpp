@@ -270,7 +270,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     return;
   }
 
-  if (New->IsTls != Existing->IsTls) {
+  if (New->isTls() != Existing->isTls()) {
     error("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
     return;
   }
@@ -331,7 +331,8 @@ void SymbolTable<ELFT>::addMemberFile(Undefined *Undef, Lazy *L) {
     L->setWeak();
 
     // FIXME: Do we need to copy more?
-    L->IsTls = Undef->IsTls;
+    if (Undef->isTls())
+      L->setTls();
     return;
   }
 

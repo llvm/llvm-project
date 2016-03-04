@@ -400,10 +400,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
   SymbolBodies.reserve(NumSymbols);
   for (const Elf_Sym &Sym : Syms) {
-    ErrorOr<StringRef> NameOrErr = Sym.getName(this->StringTable);
-    check(NameOrErr.getError());
-    StringRef Name = *NameOrErr;
-
+    StringRef Name = check(Sym.getName(this->StringTable));
     if (Sym.isUndefined())
       Undefs.push_back(Name);
     else
