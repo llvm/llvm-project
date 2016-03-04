@@ -57,6 +57,7 @@ struct thread {
   thread(const thread &) = delete;
 
   void join() {}
+  static unsigned hardware_concurrency() { return 1; };
 };
 
 }
