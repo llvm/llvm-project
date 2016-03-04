@@ -23243,15 +23243,15 @@ static SDValue PerformShuffleCombine256(SDNode *N, SelectionDAG &DAG,
 /// into either a single instruction if there is a special purpose instruction
 /// for this operation, or into a PSHUFB instruction which is a fully general
 /// instruction but should only be used to replace chains over a certain depth.
-static bool combineX86ShuffleChain(SDValue Op, SDValue Root, ArrayRef<int> Mask,
-                                   int Depth, bool HasPSHUFB, SelectionDAG &DAG,
+static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
+                                   ArrayRef<int> Mask, int Depth,
+                                   bool HasPSHUFB, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const X86Subtarget *Subtarget) {
   assert(!Mask.empty() && "Cannot combine an empty shuffle mask!");
 
   // Find the operand that enters the chain. Note that multiple uses are OK
   // here, we're not going to remove the operand we find.
-  SDValue Input = Op.getOperand(0);
   while (Input.getOpcode() == ISD::BITCAST)
     Input = Input.getOperand(0);
 
@@ -23551,7 +23551,6 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
                                     DAG, DCI, Subtarget))
     return true;
 
-
   // Minor canonicalization of the accumulated shuffle mask to make it easier
   // to match below. All this does is detect masks with squential pairs of
   // elements, and shrink them to the half-width mask. It does this in a loop
@@ -23563,7 +23562,7 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
     WidenedMask.clear();
   }
 
-  return combineX86ShuffleChain(Op, Root, Mask, Depth, HasPSHUFB, DAG, DCI,
+  return combineX86ShuffleChain(Input0, Root, Mask, Depth, HasPSHUFB, DAG, DCI,
                                 Subtarget);
 }
 
