@@ -19,6 +19,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Config/llvm-config.h"
 #include <atomic>
@@ -158,21 +159,10 @@ RealFile::getBuffer(const Twine &Name, int64_t FileSize,
                                    IsVolatile);
 }
 
-// FIXME: This is terrible, we need this for ::close.
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#include <sys/uio.h>
-#else
-#include <io.h>
-#ifndef S_ISFIFO
-#define S_ISFIFO(x) (0)
-#endif
-#endif
 std::error_code RealFile::close() {
-  if (::close(FD))
-    return std::error_code(errno, std::generic_category());
+  std::error_code EC = sys::Process::SafelyCloseFileDescriptor(FD);
   FD = -1;
-  return std::error_code();
+  return EC;
 }
 
 namespace {

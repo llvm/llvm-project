@@ -6689,6 +6689,8 @@ public:
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
+    if (CPU.empty())
+      CPU = getCPU();
     if (CPU == "octeon")
       Features["mips64r2"] = Features["cnmips"] = true;
     else
