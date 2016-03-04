@@ -103,6 +103,9 @@ bool IndexingContext::isFunctionLocalDecl(const Decl *D) {
   if (isa<TemplateTemplateParmDecl>(D))
     return true;
 
+  if (isa<ObjCTypeParamDecl>(D))
+    return true;
+
   if (!D->getParentFunctionOrMethod())
     return false;
 
