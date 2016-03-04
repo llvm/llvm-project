@@ -43,3 +43,8 @@ void goo(Base *b) {
 // CHECK-NOT: ObjectType
 -(ObjectType)getit;
 @end
+
+// CHECK: [[@LINE+1]]:6 | function/C | over_func | c:@F@over_func#I# | __Z9over_funci | Decl | rel: 0
+void over_func(int x) __attribute__((overloadable));
+// CHECK: [[@LINE+1]]:6 | function/C | over_func | c:@F@over_func#f# | __Z9over_funcf | Decl | rel: 0
+void over_func(float x) __attribute__((overloadable));
