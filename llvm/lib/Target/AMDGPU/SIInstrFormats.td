@@ -700,8 +700,8 @@ class FLAT <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
   let SchedRW = [WriteVMEM];
 }
 
-class MIMG <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI <outs, ins, asm, pattern>, MIMGe <op> {
+class MIMG <dag outs, dag ins, string asm, list<dag> pattern> :
+    InstSI <outs, ins, asm, pattern> {
 
   let VM_CNT = 1;
   let EXP_CNT = 1;

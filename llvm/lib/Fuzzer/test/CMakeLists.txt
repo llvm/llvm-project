@@ -27,6 +27,7 @@ set(Tests
   RepeatedMemcmp
   SimpleCmpTest
   SimpleDictionaryTest
+  SimpleFnAdapterTest
   SimpleHashTest
   SimpleTest
   StrcmpTest
@@ -90,6 +91,7 @@ include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)
 
 add_executable(LLVMFuzzer-Unittest
   FuzzerUnittest.cpp
+  FuzzerFnAdapterUnittest.cpp
   $<TARGET_OBJECTS:LLVMFuzzerNoMainObjects>
   )
 

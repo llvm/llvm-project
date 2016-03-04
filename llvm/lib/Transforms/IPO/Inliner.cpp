@@ -580,11 +580,13 @@ bool Inliner::runOnSCC(CallGraphSCC &SCC) {
           continue;
         }
         updateEntryCount(CallSiteBlock, Callee);
-        // The instruction following the call is part of a new basic block
-        // created during the inlining process. This does not have an entry in
-        // the BFI. We create an entry by copying the frequency of the original
-        // block containing the call.
-        copyBlockFrequency(CallSiteBlock, CallSuccessor->getParent());
+        if (!InlineInfo.CallSuccessorBlockDeleted) {
+          // The instruction following the call is part of a new basic block
+          // created during the inlining process. This does not have an entry in
+          // the BFI. We create an entry by copying the frequency of the
+          // original block containing the call.
+          copyBlockFrequency(CallSiteBlock, CallSuccessor->getParent());
+        }
 
         ++NumInlined;
 

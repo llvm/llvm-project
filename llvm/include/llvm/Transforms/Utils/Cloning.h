@@ -189,7 +189,7 @@ public:
   explicit InlineFunctionInfo(CallGraph *cg = nullptr,
                               AssumptionCacheTracker *ACT = nullptr,
                               BlockCloningFunctor Ftor = nullptr)
-      : CG(cg), ACT(ACT), Ftor(Ftor) {}
+      : CG(cg), ACT(ACT), Ftor(Ftor), CallSuccessorBlockDeleted(false) {}
 
   /// CG - If non-null, InlineFunction will update the callgraph to reflect the
   /// changes it makes.
@@ -197,6 +197,10 @@ public:
   AssumptionCacheTracker *ACT;
   // Functor that is invoked when a block is cloned into the new function.
   BlockCloningFunctor Ftor;
+
+  /// CallSuccessorBlockDeleted - whether the block immediately following the
+  /// call has been deleted during inlining
+  bool CallSuccessorBlockDeleted;
 
   /// StaticAllocas - InlineFunction fills this in with all static allocas that
   /// get copied into the caller.

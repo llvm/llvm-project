@@ -1994,8 +1994,11 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
   // If we inlined any musttail calls and the original return is now
   // unreachable, delete it.  It can only contain a bitcast and ret.
-  if (InlinedMustTailCalls && pred_begin(AfterCallBB) == pred_end(AfterCallBB))
+  if (InlinedMustTailCalls &&
+      pred_begin(AfterCallBB) == pred_end(AfterCallBB)) {
+    IFI.CallSuccessorBlockDeleted = true;
     AfterCallBB->eraseFromParent();
+  }
 
   // We should always be able to fold the entry block of the function into the
   // single predecessor of the block...
