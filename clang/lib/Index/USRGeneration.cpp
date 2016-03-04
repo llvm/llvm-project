@@ -211,7 +211,8 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
   D->getDeclName().print(Out, Policy);
 
   ASTContext &Ctx = *Context;
-  if (!Ctx.getLangOpts().CPlusPlus || D->isExternC())
+  if ((!Ctx.getLangOpts().CPlusPlus || D->isExternC()) &&
+      !D->hasAttr<OverloadableAttr>())
     return;
 
   if (const TemplateArgumentList *
