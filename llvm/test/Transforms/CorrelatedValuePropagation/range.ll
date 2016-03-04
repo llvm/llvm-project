@@ -189,3 +189,17 @@ define i1 @test10(i64* %p) {
   %res = icmp eq i64 %a, 0
   ret i1 %res
 }
+
+@g = external global i32
+
+define i1 @test11() {
+; CHECK: @test11
+; CHECK: ret i1 true
+  %positive = load i32, i32* @g, !range !{i32 1, i32 2048}
+  %add = add i32 %positive, 1
+  %test = icmp sgt i32 %add, 0
+  br label %next
+
+next:
+  ret i1 %test
+}

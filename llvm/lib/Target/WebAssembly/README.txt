@@ -106,3 +106,9 @@ WebAssemblyRegColoring and/or WebAssemblyRegRenumbering should sort registers
 according to their usage frequency to maximize the usage of smaller encodings.
 
 //===---------------------------------------------------------------------===//
+
+When the last statement in a function body computes the return value, it can
+just let that value be the exit value of the outermost block, rather than
+needing an explicit return operation.
+
+//===---------------------------------------------------------------------===//

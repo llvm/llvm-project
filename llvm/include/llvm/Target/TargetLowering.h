@@ -571,6 +571,13 @@ public:
        getOperationAction(Op, VT) == Promote);
   }
 
+  /// Return true if the specified operation is ilegal but has a custom lowering
+  /// on that type. This is used to help guide high-level lowering
+  /// decisions.
+  bool isOperationCustom(unsigned Op, EVT VT) const {
+    return (!isTypeLegal(VT) && getOperationAction(Op, VT) == Custom);
+  }
+
   /// Return true if the specified operation is illegal on this target or
   /// unlikely to be made legal with custom lowering. This is used to help guide
   /// high-level lowering decisions.

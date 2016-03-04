@@ -113,8 +113,9 @@ public:
     unsigned VGPR;
     int Lane;
     SpilledReg(unsigned R, int L) : VGPR (R), Lane (L) { }
-    SpilledReg() : VGPR(0), Lane(-1) { }
+    SpilledReg() : VGPR(AMDGPU::NoRegister), Lane(-1) { }
     bool hasLane() { return Lane != -1;}
+    bool hasReg() { return VGPR != AMDGPU::NoRegister;}
   };
 
   // SIMachineFunctionInfo definition

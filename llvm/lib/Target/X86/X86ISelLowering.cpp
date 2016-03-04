@@ -2211,7 +2211,7 @@ X86TargetLowering::LowerReturn(SDValue Chain,
   RetOps.push_back(Chain); // Operand #0 = Chain (updated below)
   // Operand #1 = Bytes To Pop
   RetOps.push_back(DAG.getTargetConstant(FuncInfo->getBytesToPopOnReturn(), dl,
-                   MVT::i16));
+                   MVT::i32));
 
   // Copy the result values into the output registers.
   for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
@@ -21162,6 +21162,15 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                    Results);
   }
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS: {
+    // If the current function needs the base pointer, RBX,
+    // we shouldn't use cmpxchg.
+    // Indeed the lowering of that instruction will clobber
+    // that register and since RBX will be a reserved register
+    // the register allocator will not make sure its value will
+    // be properly saved and restored around this live-range.
+    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+    if (TRI->hasBasePointer(DAG.getMachineFunction()))
+      return;
     EVT T = N->getValueType(0);
     assert((T == MVT::i64 || T == MVT::i128) && "can only expand cmpxchg pair");
     bool Regs64bit = T == MVT::i128;

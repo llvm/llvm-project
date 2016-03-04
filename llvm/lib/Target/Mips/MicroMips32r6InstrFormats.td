@@ -751,7 +751,7 @@ class POOL16C_NOT16_FM_MMR6 : MicroMipsR6Inst16 {
   let Inst{3-0}   = 0b0000;
 }
 
-class POOL16C_OR16_XOR16_FM_MMR6<bits<4> op> {
+class POOL16C_OR16_XOR16_FM_MMR6<bits<4> op> : MicroMipsR6Inst16 {
   bits<3> rt;
   bits<3> rs;
 

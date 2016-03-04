@@ -159,6 +159,7 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
   unsigned Opc = MBBI->getOpcode();
   switch (Opc) {
   default: return 0;
+  case X86::RET:
   case X86::RETL:
   case X86::RETQ:
   case X86::RETIL:

@@ -669,36 +669,24 @@ bool LazyValueInfoCache::solveBlockValue(Value *Val, BasicBlock *BB) {
     return true;
   }
 
-  // If this is an instruction which supports range metadata, intersect the
-  // implied range.
-  Res = intersect(Res, getFromRangeMetadata(BBI));
-
-  // We can only analyze the definitions of certain classes of instructions
-  // (integral binops and casts at the moment), so bail if this isn't one.
-  LVILatticeVal Result;
-  if ((!isa<BinaryOperator>(BBI) && !isa<CastInst>(BBI)) ||
-     !BBI->getType()->isIntegerTy()) {
-    DEBUG(dbgs() << " compute BB '" << BB->getName()
-                 << "' - overdefined because inst def found.\n");
-    Res.markOverdefined();
+  if (isa<CastInst>(BBI) && BBI->getType()->isIntegerTy()) {
+    if (!solveBlockValueConstantRange(Res, BBI, BB))
+      return false;
     insertResult(Val, BB, Res);
     return true;
   }
 
-  // FIXME: We're currently limited to binops with a constant RHS.  This should
-  // be improved.
   BinaryOperator *BO = dyn_cast<BinaryOperator>(BBI);
-  if (BO && !isa<ConstantInt>(BO->getOperand(1))) { 
-    DEBUG(dbgs() << " compute BB '" << BB->getName()
-                 << "' - overdefined because inst def found.\n");
-
-    Res.markOverdefined();
+  if (BO && isa<ConstantInt>(BO->getOperand(1))) { 
+    if (!solveBlockValueConstantRange(Res, BBI, BB))
+      return false;
     insertResult(Val, BB, Res);
     return true;
   }
 
-  if (!solveBlockValueConstantRange(Res, BBI, BB))
-    return false;
+  DEBUG(dbgs() << " compute BB '" << BB->getName()
+                 << "' - unknown inst def found.\n");
+  Res = getFromRangeMetadata(BBI);
   insertResult(Val, BB, Res);
   return true;
 }
@@ -1007,7 +995,7 @@ bool LazyValueInfoCache::solveBlockValueSelect(LVILatticeVal &BBLV,
 
 bool LazyValueInfoCache::solveBlockValueConstantRange(LVILatticeVal &BBLV,
                                                       Instruction *BBI,
-                                                      BasicBlock *BB) {
+                                                      BasicBlock *BB) {  
   // Figure out the range of the LHS.  If that fails, bail.
   if (!hasBlockValue(BBI->getOperand(0), BB)) {
     if (pushBlockValue(std::make_pair(BB, BBI->getOperand(0))))
