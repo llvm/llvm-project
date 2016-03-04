@@ -1088,23 +1088,23 @@ defm IMAGE_STORE_MIP : MIMG_Store <0x00000009, "image_store_mip">;
 //def IMAGE_STORE_PCK : MIMG_NoPattern_ <"image_store_pck", 0x0000000a>;
 //def IMAGE_STORE_MIP_PCK : MIMG_NoPattern_ <"image_store_mip_pck", 0x0000000b>;
 defm IMAGE_GET_RESINFO : MIMG_NoSampler <0x0000000e, "image_get_resinfo">;
-//def IMAGE_ATOMIC_SWAP : MIMG_NoPattern_ <"image_atomic_swap", 0x0000000f>;
-//def IMAGE_ATOMIC_CMPSWAP : MIMG_NoPattern_ <"image_atomic_cmpswap", 0x00000010>;
-//def IMAGE_ATOMIC_ADD : MIMG_NoPattern_ <"image_atomic_add", 0x00000011>;
-//def IMAGE_ATOMIC_SUB : MIMG_NoPattern_ <"image_atomic_sub", 0x00000012>;
-//def IMAGE_ATOMIC_RSUB : MIMG_NoPattern_ <"image_atomic_rsub", 0x00000013>;
-//def IMAGE_ATOMIC_SMIN : MIMG_NoPattern_ <"image_atomic_smin", 0x00000014>;
-//def IMAGE_ATOMIC_UMIN : MIMG_NoPattern_ <"image_atomic_umin", 0x00000015>;
-//def IMAGE_ATOMIC_SMAX : MIMG_NoPattern_ <"image_atomic_smax", 0x00000016>;
-//def IMAGE_ATOMIC_UMAX : MIMG_NoPattern_ <"image_atomic_umax", 0x00000017>;
-//def IMAGE_ATOMIC_AND : MIMG_NoPattern_ <"image_atomic_and", 0x00000018>;
-//def IMAGE_ATOMIC_OR : MIMG_NoPattern_ <"image_atomic_or", 0x00000019>;
-//def IMAGE_ATOMIC_XOR : MIMG_NoPattern_ <"image_atomic_xor", 0x0000001a>;
-//def IMAGE_ATOMIC_INC : MIMG_NoPattern_ <"image_atomic_inc", 0x0000001b>;
-//def IMAGE_ATOMIC_DEC : MIMG_NoPattern_ <"image_atomic_dec", 0x0000001c>;
-//def IMAGE_ATOMIC_FCMPSWAP : MIMG_NoPattern_ <"image_atomic_fcmpswap", 0x0000001d>;
-//def IMAGE_ATOMIC_FMIN : MIMG_NoPattern_ <"image_atomic_fmin", 0x0000001e>;
-//def IMAGE_ATOMIC_FMAX : MIMG_NoPattern_ <"image_atomic_fmax", 0x0000001f>;
+defm IMAGE_ATOMIC_SWAP : MIMG_Atomic <mimg<0x0f, 0x10>, "image_atomic_swap">;
+defm IMAGE_ATOMIC_CMPSWAP : MIMG_Atomic <mimg<0x10, 0x11>, "image_atomic_cmpswap", VReg_64>;
+defm IMAGE_ATOMIC_ADD : MIMG_Atomic <mimg<0x11, 0x12>, "image_atomic_add">;
+defm IMAGE_ATOMIC_SUB : MIMG_Atomic <mimg<0x12, 0x13>, "image_atomic_sub">;
+//def IMAGE_ATOMIC_RSUB : MIMG_NoPattern_ <"image_atomic_rsub", 0x00000013>; -- not on VI
+defm IMAGE_ATOMIC_SMIN : MIMG_Atomic <mimg<0x14>, "image_atomic_smin">;
+defm IMAGE_ATOMIC_UMIN : MIMG_Atomic <mimg<0x15>, "image_atomic_umin">;
+defm IMAGE_ATOMIC_SMAX : MIMG_Atomic <mimg<0x16>, "image_atomic_smax">;
+defm IMAGE_ATOMIC_UMAX : MIMG_Atomic <mimg<0x17>, "image_atomic_umax">;
+defm IMAGE_ATOMIC_AND : MIMG_Atomic <mimg<0x18>, "image_atomic_and">;
+defm IMAGE_ATOMIC_OR : MIMG_Atomic <mimg<0x19>, "image_atomic_or">;
+defm IMAGE_ATOMIC_XOR : MIMG_Atomic <mimg<0x1a>, "image_atomic_xor">;
+defm IMAGE_ATOMIC_INC : MIMG_Atomic <mimg<0x1b>, "image_atomic_inc">;
+defm IMAGE_ATOMIC_DEC : MIMG_Atomic <mimg<0x1c>, "image_atomic_dec">;
+//def IMAGE_ATOMIC_FCMPSWAP : MIMG_NoPattern_ <"image_atomic_fcmpswap", 0x0000001d>; -- not on VI
+//def IMAGE_ATOMIC_FMIN : MIMG_NoPattern_ <"image_atomic_fmin", 0x0000001e>; -- not on VI
+//def IMAGE_ATOMIC_FMAX : MIMG_NoPattern_ <"image_atomic_fmax", 0x0000001f>; -- not on VI
 defm IMAGE_SAMPLE           : MIMG_Sampler_WQM <0x00000020, "image_sample">;
 defm IMAGE_SAMPLE_CL        : MIMG_Sampler_WQM <0x00000021, "image_sample_cl">;
 defm IMAGE_SAMPLE_D         : MIMG_Sampler <0x00000022, "image_sample_d">;
@@ -2291,6 +2291,26 @@ multiclass ImageStorePatterns<SDPatternOperator name, string opcode> {
   def : ImageStorePattern<name, !cast<MIMG>(opcode # _V4_V4), v4i32>;
 }
 
+class ImageAtomicPattern<SDPatternOperator name, MIMG opcode, ValueType vt> : Pat <
+  (name i32:$vdata, vt:$addr, v8i32:$rsrc, imm:$r128, imm:$da, imm:$slc),
+  (opcode $vdata, $addr, $rsrc, 1, 1, 1, (as_i1imm $slc), (as_i1imm $r128), 0, 0, (as_i1imm $da))
+>;
+
+multiclass ImageAtomicPatterns<SDPatternOperator name, string opcode> {
+  def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V1), i32>;
+  def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V2), v2i32>;
+  def : ImageAtomicPattern<name, !cast<MIMG>(opcode # _V4), v4i32>;
+}
+
+class ImageAtomicCmpSwapPattern<MIMG opcode, ValueType vt> : Pat <
+  (int_amdgcn_image_atomic_cmpswap i32:$vsrc, i32:$vcmp, vt:$addr, v8i32:$rsrc,
+                                   imm:$r128, imm:$da, imm:$slc),
+  (EXTRACT_SUBREG
+    (opcode (REG_SEQUENCE VReg_64, $vsrc, sub0, $vcmp, sub1),
+            $addr, $rsrc, 3, 1, 1, (as_i1imm $slc), (as_i1imm $r128), 0, 0, (as_i1imm $da)),
+    sub0)
+>;
+
 // Basic sample
 defm : SampleRawPatterns<int_SI_image_sample,           "IMAGE_SAMPLE">;
 defm : SampleRawPatterns<int_SI_image_sample_cl,        "IMAGE_SAMPLE_CL">;
@@ -2391,6 +2411,21 @@ defm : ImageLoadPatterns<int_amdgcn_image_load, "IMAGE_LOAD">;
 defm : ImageLoadPatterns<int_amdgcn_image_load_mip, "IMAGE_LOAD_MIP">;
 defm : ImageStorePatterns<int_amdgcn_image_store, "IMAGE_STORE">;
 defm : ImageStorePatterns<int_amdgcn_image_store_mip, "IMAGE_STORE_MIP">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_swap, "IMAGE_ATOMIC_SWAP">;
+def : ImageAtomicCmpSwapPattern<IMAGE_ATOMIC_CMPSWAP_V1, i32>;
+def : ImageAtomicCmpSwapPattern<IMAGE_ATOMIC_CMPSWAP_V2, v2i32>;
+def : ImageAtomicCmpSwapPattern<IMAGE_ATOMIC_CMPSWAP_V4, v4i32>;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_add, "IMAGE_ATOMIC_ADD">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_sub, "IMAGE_ATOMIC_SUB">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_smin, "IMAGE_ATOMIC_SMIN">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_umin, "IMAGE_ATOMIC_UMIN">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_smax, "IMAGE_ATOMIC_SMAX">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_umax, "IMAGE_ATOMIC_UMAX">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_and, "IMAGE_ATOMIC_AND">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_or, "IMAGE_ATOMIC_OR">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_xor, "IMAGE_ATOMIC_XOR">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_inc, "IMAGE_ATOMIC_INC">;
+defm : ImageAtomicPatterns<int_amdgcn_image_atomic_dec, "IMAGE_ATOMIC_DEC">;
 
 /* SIsample for simple 1D texture lookup */
 def : Pat <

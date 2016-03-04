@@ -49,11 +49,11 @@
 #include <system_error>
 #include <vector>
 
-#ifndef LDPO_PIE
 // FIXME: remove this declaration when we stop maintaining Ubuntu Quantal and
 // Precise and Debian Wheezy (binutils 2.23 is required)
-# define LDPO_PIE 3
-#endif
+#define LDPO_PIE 3
+
+#define LDPT_GET_SYMBOLS_V3 28
 
 using namespace llvm;
 
@@ -212,79 +212,87 @@ ld_plugin_status onload(ld_plugin_tv *tv) {
   bool RegisteredAllSymbolsRead = false;
 
   for (; tv->tv_tag != LDPT_NULL; ++tv) {
-    switch (tv->tv_tag) {
-      case LDPT_OUTPUT_NAME:
-        output_name = tv->tv_u.tv_string;
+    // Cast tv_tag to int to allow values not in "enum ld_plugin_tag", like, for
+    // example, LDPT_GET_SYMBOLS_V3 when building against an older plugin-api.h
+    // header.
+    switch (static_cast<int>(tv->tv_tag)) {
+    case LDPT_OUTPUT_NAME:
+      output_name = tv->tv_u.tv_string;
+      break;
+    case LDPT_LINKER_OUTPUT:
+      switch (tv->tv_u.tv_val) {
+      case LDPO_REL: // .o
+      case LDPO_DYN: // .so
+      case LDPO_PIE: // position independent executable
+        RelocationModel = Reloc::PIC_;
         break;
-      case LDPT_LINKER_OUTPUT:
-        switch (tv->tv_u.tv_val) {
-          case LDPO_REL:  // .o
-          case LDPO_DYN:  // .so
-          case LDPO_PIE:  // position independent executable
-            RelocationModel = Reloc::PIC_;
-            break;
-          case LDPO_EXEC:  // .exe
-            RelocationModel = Reloc::Static;
-            break;
-          default:
-            message(LDPL_ERROR, "Unknown output file type %d", tv->tv_u.tv_val);
-            return LDPS_ERR;
-        }
-        break;
-      case LDPT_OPTION:
-        options::process_plugin_option(tv->tv_u.tv_string);
-        break;
-      case LDPT_REGISTER_CLAIM_FILE_HOOK: {
-        ld_plugin_register_claim_file callback;
-        callback = tv->tv_u.tv_register_claim_file;
-
-        if (callback(claim_file_hook) != LDPS_OK)
-          return LDPS_ERR;
-
-        registeredClaimFile = true;
-      } break;
-      case LDPT_REGISTER_ALL_SYMBOLS_READ_HOOK: {
-        ld_plugin_register_all_symbols_read callback;
-        callback = tv->tv_u.tv_register_all_symbols_read;
-
-        if (callback(all_symbols_read_hook) != LDPS_OK)
-          return LDPS_ERR;
-
-        RegisteredAllSymbolsRead = true;
-      } break;
-      case LDPT_REGISTER_CLEANUP_HOOK: {
-        ld_plugin_register_cleanup callback;
-        callback = tv->tv_u.tv_register_cleanup;
-
-        if (callback(cleanup_hook) != LDPS_OK)
-          return LDPS_ERR;
-      } break;
-      case LDPT_GET_INPUT_FILE:
-        get_input_file = tv->tv_u.tv_get_input_file;
-        break;
-      case LDPT_RELEASE_INPUT_FILE:
-        release_input_file = tv->tv_u.tv_release_input_file;
-        break;
-      case LDPT_ADD_SYMBOLS:
-        add_symbols = tv->tv_u.tv_add_symbols;
-        break;
-      case LDPT_GET_SYMBOLS_V2:
-        get_symbols = tv->tv_u.tv_get_symbols;
-        break;
-      case LDPT_ADD_INPUT_FILE:
-        add_input_file = tv->tv_u.tv_add_input_file;
-        break;
-      case LDPT_SET_EXTRA_LIBRARY_PATH:
-        set_extra_library_path = tv->tv_u.tv_set_extra_library_path;
-        break;
-      case LDPT_GET_VIEW:
-        get_view = tv->tv_u.tv_get_view;
-        break;
-      case LDPT_MESSAGE:
-        message = tv->tv_u.tv_message;
+      case LDPO_EXEC: // .exe
+        RelocationModel = Reloc::Static;
         break;
       default:
-        break;
+        message(LDPL_ERROR, "Unknown output file type %d", tv->tv_u.tv_val);
+        return LDPS_ERR;
+      }
+      break;
+    case LDPT_OPTION:
+      options::process_plugin_option(tv->tv_u.tv_string);
+      break;
+    case LDPT_REGISTER_CLAIM_FILE_HOOK: {
+      ld_plugin_register_claim_file callback;
+      callback = tv->tv_u.tv_register_claim_file;
+
+      if (callback(claim_file_hook) != LDPS_OK)
+        return LDPS_ERR;
+
+      registeredClaimFile = true;
+    } break;
+    case LDPT_REGISTER_ALL_SYMBOLS_READ_HOOK: {
+      ld_plugin_register_all_symbols_read callback;
+      callback = tv->tv_u.tv_register_all_symbols_read;
+
+      if (callback(all_symbols_read_hook) != LDPS_OK)
+        return LDPS_ERR;
+
+      RegisteredAllSymbolsRead = true;
+    } break;
+    case LDPT_REGISTER_CLEANUP_HOOK: {
+      ld_plugin_register_cleanup callback;
+      callback = tv->tv_u.tv_register_cleanup;
+
+      if (callback(cleanup_hook) != LDPS_OK)
+        return LDPS_ERR;
+    } break;
+    case LDPT_GET_INPUT_FILE:
+      get_input_file = tv->tv_u.tv_get_input_file;
+      break;
+    case LDPT_RELEASE_INPUT_FILE:
+      release_input_file = tv->tv_u.tv_release_input_file;
+      break;
+    case LDPT_ADD_SYMBOLS:
+      add_symbols = tv->tv_u.tv_add_symbols;
+      break;
+    case LDPT_GET_SYMBOLS_V2:
+      // Do not override get_symbols_v3 with get_symbols_v2.
+      if (!get_symbols)
+        get_symbols = tv->tv_u.tv_get_symbols;
+      break;
+    case LDPT_GET_SYMBOLS_V3:
+      get_symbols = tv->tv_u.tv_get_symbols;
+      break;
+    case LDPT_ADD_INPUT_FILE:
+      add_input_file = tv->tv_u.tv_add_input_file;
+      break;
+    case LDPT_SET_EXTRA_LIBRARY_PATH:
+      set_extra_library_path = tv->tv_u.tv_set_extra_library_path;
+      break;
+    case LDPT_GET_VIEW:
+      get_view = tv->tv_u.tv_get_view;
+      break;
+    case LDPT_MESSAGE:
+      message = tv->tv_u.tv_message;
+      break;
+    default:
+      break;
     }
   }
 
@@ -562,8 +570,11 @@ static void freeSymName(ld_plugin_symbol &Sym) {
 
 static std::unique_ptr<FunctionInfoIndex>
 getFunctionIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
+  ld_plugin_status status = get_symbols(F.handle, F.syms.size(), &F.syms[0]);
+  if (status == LDPS_NO_SYMS)
+    return nullptr;
 
-  if (get_symbols(F.handle, F.syms.size(), &F.syms[0]) != LDPS_OK)
+  if (status != LDPS_OK)
     message(LDPL_FATAL, "Failed to get symbol information");
 
   const void *View;
@@ -597,7 +608,11 @@ getModuleForFile(LLVMContext &Context, claimed_file &F,
                  StringSet<> &Internalize, StringSet<> &Maybe,
                  std::vector<GlobalValue *> &Keep) {
 
-  if (get_symbols(F.handle, F.syms.size(), F.syms.data()) != LDPS_OK)
+  ld_plugin_status status = get_symbols(F.handle, F.syms.size(), F.syms.data());
+  if (status == LDPS_NO_SYMS)
+    return nullptr;
+
+  if (status != LDPS_OK)
     message(LDPL_FATAL, "Failed to get symbol information");
 
   const void *View;
@@ -901,6 +916,8 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
     std::vector<GlobalValue *> Keep;
     std::unique_ptr<Module> M = getModuleForFile(
         Context, F, InputFile.file(), ApiFile, Internalize, Maybe, Keep);
+    if (!M.get())
+      continue;
     if (!options::triple.empty())
       M->setTargetTriple(options::triple.c_str());
     else if (M->getTargetTriple().empty())

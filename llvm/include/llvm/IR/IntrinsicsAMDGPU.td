@@ -172,6 +172,40 @@ class AMDGPUImageStore : Intrinsic <
 def int_amdgcn_image_store : AMDGPUImageStore;
 def int_amdgcn_image_store_mip : AMDGPUImageStore;
 
+class AMDGPUImageAtomic : Intrinsic <
+  [llvm_i32_ty],
+  [llvm_i32_ty,       // vdata(VGPR)
+   llvm_anyint_ty,    // vaddr(VGPR)
+   llvm_v8i32_ty,     // rsrc(SGPR)
+   llvm_i1_ty,        // r128(imm)
+   llvm_i1_ty,        // da(imm)
+   llvm_i1_ty],       // slc(imm)
+  []>;
+
+def int_amdgcn_image_atomic_swap : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_add : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_sub : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_smin : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_umin : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_smax : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_umax : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_and : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_or : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_xor : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_inc : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_dec : AMDGPUImageAtomic;
+def int_amdgcn_image_atomic_cmpswap : Intrinsic <
+  [llvm_i32_ty],
+  [llvm_i32_ty,       // src(VGPR)
+   llvm_i32_ty,       // cmp(VGPR)
+   llvm_anyint_ty,    // vaddr(VGPR)
+   llvm_v8i32_ty,     // rsrc(SGPR)
+   llvm_i1_ty,        // r128(imm)
+   llvm_i1_ty,        // da(imm)
+   llvm_i1_ty],       // slc(imm)
+  []>;
+
+
 def int_amdgcn_read_workdim : AMDGPUReadPreloadRegisterIntrinsic <
   "__builtin_amdgcn_read_workdim">;
 

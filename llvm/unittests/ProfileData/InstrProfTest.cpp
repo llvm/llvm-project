@@ -187,6 +187,7 @@ TEST_F(InstrProfTest, get_profile_summary) {
   ASSERT_TRUE(isa<InstrProfSummary>(PSFromMD));
   InstrProfSummary *IPS = cast<InstrProfSummary>(PSFromMD);
   VerifySummary(*IPS, false);
+  delete IPS;
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {

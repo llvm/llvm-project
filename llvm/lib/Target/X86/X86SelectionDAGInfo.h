@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_X86_X86SELECTIONDAGINFO_H
 
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 
 namespace llvm {
 

@@ -133,6 +133,7 @@ struct SampleProfTest : ::testing::Test {
     ASSERT_TRUE(isa<SampleProfileSummary>(PS));
     SampleProfileSummary *SPS = cast<SampleProfileSummary>(PS);
     VerifySummary(*SPS);
+    delete SPS;
   }
 };
 

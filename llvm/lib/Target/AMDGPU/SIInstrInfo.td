@@ -3000,8 +3000,13 @@ class MIMG_Mask <string op, int channels> {
   int Channels = channels;
 }
 
-class MIMG_Helper <bits<7> op, dag outs, dag ins, string asm,
-                   string dns=""> : MIMG<op, outs, ins, asm,[]> {
+class mimg <bits<7> si, bits<7> vi = si> {
+  field bits<7> SI = si;
+  field bits<7> VI = vi;
+}
+
+class MIMG_Helper <dag outs, dag ins, string asm,
+                   string dns=""> : MIMG<outs, ins, asm,[]> {
   let mayLoad = 1;
   let mayStore = 0;
   let hasPostISelHook = 1;
@@ -3014,13 +3019,12 @@ class MIMG_NoSampler_Helper <bits<7> op, string asm,
                              RegisterClass dst_rc,
                              RegisterClass addr_rc,
                              string dns=""> : MIMG_Helper <
-  op,
   (outs dst_rc:$vdata),
   (ins addr_rc:$vaddr, SReg_256:$srsrc,
        dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
   asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da",
-  dns> {
+  dns>, MIMGe<op> {
   let ssamp = 0;
 }
 
@@ -3046,13 +3050,12 @@ multiclass MIMG_NoSampler <bits<7> op, string asm> {
 class MIMG_Store_Helper <bits<7> op, string asm,
                          RegisterClass data_rc,
                          RegisterClass addr_rc> : MIMG_Helper <
-  op,
   (outs),
   (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
        dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
   asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
-     > {
+     >, MIMGe<op> {
   let ssamp = 0;
   let mayLoad = 1; // TableGen requires this for matching with the intrinsics
   let mayStore = 1;
@@ -3078,18 +3081,74 @@ multiclass MIMG_Store <bits<7> op, string asm> {
   defm _V4 : MIMG_Store_Addr_Helper <op, asm, VReg_128, 4>;
 }
 
+class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
+                          RegisterClass addr_rc> : MIMG_Helper <
+    (outs data_rc:$vdst),
+    (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
+         dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
+         r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
+    asm#" $vdst, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
+  > {
+  let mayStore = 1;
+  let hasSideEffects = 1;
+  let hasPostISelHook = 0;
+  let Constraints = "$vdst = $vdata";
+  let AsmMatchConverter = "cvtMIMGAtomic";
+}
+
+class MIMG_Atomic_Real_si<mimg op, string name, string asm,
+  RegisterClass data_rc, RegisterClass addr_rc> :
+  MIMG_Atomic_Helper<asm, data_rc, addr_rc>,
+  SIMCInstr<name, SISubtarget.SI>,
+  MIMGe<op.SI> {
+  let isCodeGenOnly = 0;
+  let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
+}
+
+class MIMG_Atomic_Real_vi<mimg op, string name, string asm,
+  RegisterClass data_rc, RegisterClass addr_rc> :
+  MIMG_Atomic_Helper<asm, data_rc, addr_rc>,
+  SIMCInstr<name, SISubtarget.VI>,
+  MIMGe<op.VI> {
+  let isCodeGenOnly = 0;
+  let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
+}
+
+multiclass MIMG_Atomic_Helper_m <mimg op, string name, string asm,
+                                 RegisterClass data_rc, RegisterClass addr_rc> {
+  let isPseudo = 1, isCodeGenOnly = 1 in {
+    def "" : MIMG_Atomic_Helper<asm, data_rc, addr_rc>,
+             SIMCInstr<name, SISubtarget.NONE>;
+  }
+
+  let ssamp = 0 in {
+    def _si : MIMG_Atomic_Real_si<op, name, asm, data_rc, addr_rc>;
+
+    def _vi : MIMG_Atomic_Real_vi<op, name, asm, data_rc, addr_rc>;
+  }
+}
+
+multiclass MIMG_Atomic <mimg op, string asm, RegisterClass data_rc = VGPR_32> {
+  defm _V1 : MIMG_Atomic_Helper_m <op, asm # "_V1", asm, data_rc, VGPR_32>;
+  defm _V2 : MIMG_Atomic_Helper_m <op, asm # "_V2", asm, data_rc, VReg_64>;
+  defm _V4 : MIMG_Atomic_Helper_m <op, asm # "_V3", asm, data_rc, VReg_128>;
+}
+
 class MIMG_Sampler_Helper <bits<7> op, string asm,
                            RegisterClass dst_rc,
                            RegisterClass src_rc,
                            int wqm,
                            string dns=""> : MIMG_Helper <
-  op,
   (outs dst_rc:$vdata),
   (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
        dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
   asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da",
-  dns> {
+  dns>, MIMGe<op> {
   let WQM = wqm;
 }
 
@@ -3121,13 +3180,12 @@ multiclass MIMG_Sampler_WQM <bits<7> op, string asm> : MIMG_Sampler<op, asm, 1>;
 class MIMG_Gather_Helper <bits<7> op, string asm,
                           RegisterClass dst_rc,
                           RegisterClass src_rc, int wqm> : MIMG <
-  op,
   (outs dst_rc:$vdata),
   (ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
        dmask:$dmask, unorm:$unorm, glc:$glc, slc:$slc,
        r128:$r128, tfe:$tfe, lwe:$lwe, da:$da),
   asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da",
-  []> {
+  []>, MIMGe<op> {
   let mayLoad = 1;
   let mayStore = 0;
 

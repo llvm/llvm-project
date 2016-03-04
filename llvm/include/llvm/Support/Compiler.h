@@ -415,6 +415,14 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 # define TsanIgnoreWritesEnd()
 #endif
 
+/// \macro LLVM_NO_SANITIZE
+/// \brief Disable a particular sanitizer for a function.
+#if __has_attribute(no_sanitize)
+#define LLVM_NO_SANITIZE(KIND) __attribute__((no_sanitize(KIND)))
+#else
+#define LLVM_NO_SANITIZE(KIND)
+#endif
+
 /// \brief Mark debug helper function definitions like dump() that should not be
 /// stripped from debug builds.
 // FIXME: Move this to a private config.h as it's not usable in public headers.

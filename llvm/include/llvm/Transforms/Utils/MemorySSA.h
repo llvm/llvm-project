@@ -86,6 +86,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class BasicBlock;
@@ -153,7 +154,8 @@ private:
 template <>
 struct ilist_traits<MemoryAccess> : public ilist_default_traits<MemoryAccess> {
   /// See details of the instruction class for why this trick works
-  /// FIXME: The downcast is UB.
+  // FIXME: This downcast is UB. See llvm.org/PR26753.
+  LLVM_NO_SANITIZE("object-size")
   MemoryAccess *createSentinel() const {
     return static_cast<MemoryAccess *>(&Sentinel);
   }

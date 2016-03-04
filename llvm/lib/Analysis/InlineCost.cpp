@@ -1600,5 +1600,8 @@ BlockFrequencyInfo *BlockFrequencyAnalysis::getBlockFrequencyInfo(Function *F) {
 
 /// \brief Invalidate BlockFrequencyInfo for a function.
 void BlockFrequencyAnalysis::invalidateBlockFrequencyInfo(Function *F) {
-  BFM.erase(F);
+  if (BFM.count(F)) {
+    delete BFM[F];
+    BFM.erase(F);
+  }
 }
