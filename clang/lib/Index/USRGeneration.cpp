@@ -421,7 +421,8 @@ void USRGenerator::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
 void USRGenerator::VisitTagDecl(const TagDecl *D) {
   // Add the location of the tag decl to handle resolution across
   // translation units.
-  if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
+  if (!isa<EnumDecl>(D) &&
+      ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
     return;
 
   D = D->getCanonicalDecl();
@@ -477,8 +478,16 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
   else {
     if (D->isEmbeddedInDeclarator() && !D->isFreeStanding()) {
       printLoc(Out, D->getLocation(), Context->getSourceManager(), true);
-    } else
+    } else {
       Buf[off] = 'a';
+      if (auto *ED = dyn_cast<EnumDecl>(D)) {
+        // Distinguish USRs of anonymous enums by using their first enumerator.
+        auto enum_range = ED->enumerators();
+        if (enum_range.begin() != enum_range.end()) {
+          Out << '@' << **enum_range.begin();
+        }
+      }
+    }
   }
   }
   
