@@ -593,8 +593,7 @@ LValue CGOpenMPTaskOutlinedRegionInfo::getThreadIDVariableLValue(
 }
 
 CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
-    : CGM(CGM), DefaultOpenMPPSource(nullptr), KmpRoutineEntryPtrTy(nullptr),
-      OffloadEntriesInfoManager(CGM) {
+    : CGM(CGM), OffloadEntriesInfoManager(CGM) {
   IdentTy = llvm::StructType::create(
       "ident_t", CGM.Int32Ty /* reserved_1 */, CGM.Int32Ty /* flags */,
       CGM.Int32Ty /* reserved_2 */, CGM.Int32Ty /* reserved_3 */,
@@ -610,6 +609,82 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
 
 void CGOpenMPRuntime::clear() {
   InternalVars.clear();
+}
+
+static llvm::Function *
+emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
+                          const Expr *CombinerInitializer, const VarDecl *In,
+                          const VarDecl *Out, bool IsCombiner) {
+  // void .omp_combiner.(Ty *in, Ty *out);
+  auto &C = CGM.getContext();
+  QualType PtrTy = C.getPointerType(Ty).withRestrict();
+  FunctionArgList Args;
+  ImplicitParamDecl OmpInParm(C, /*DC=*/nullptr, In->getLocation(),
+                              /*Id=*/nullptr, PtrTy);
+  ImplicitParamDecl OmpOutParm(C, /*DC=*/nullptr, Out->getLocation(),
+                               /*Id=*/nullptr, PtrTy);
+  Args.push_back(&OmpInParm);
+  Args.push_back(&OmpOutParm);
+  FunctionType::ExtInfo Info;
+  auto &FnInfo =
+      CGM.getTypes().arrangeFreeFunctionDeclaration(C.VoidTy, Args, Info,
+                                                    /*isVariadic=*/false);
+  auto *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
+  auto *Fn = llvm::Function::Create(
+      FnTy, llvm::GlobalValue::InternalLinkage,
+      IsCombiner ? ".omp_combiner." : ".omp_initializer.", &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(/*D=*/nullptr, Fn, FnInfo);
+  CodeGenFunction CGF(CGM);
+  // Map "T omp_in;" variable to "*omp_in_parm" value in all expressions.
+  // Map "T omp_out;" variable to "*omp_out_parm" value in all expressions.
+  CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args);
+  CodeGenFunction::OMPPrivateScope Scope(CGF);
+  Address AddrIn = CGF.GetAddrOfLocalVar(&OmpInParm);
+  Scope.addPrivate(In, [&CGF, AddrIn, PtrTy]() -> Address {
+    return CGF.EmitLoadOfPointerLValue(AddrIn, PtrTy->castAs<PointerType>())
+        .getAddress();
+  });
+  Address AddrOut = CGF.GetAddrOfLocalVar(&OmpOutParm);
+  Scope.addPrivate(Out, [&CGF, AddrOut, PtrTy]() -> Address {
+    return CGF.EmitLoadOfPointerLValue(AddrOut, PtrTy->castAs<PointerType>())
+        .getAddress();
+  });
+  (void)Scope.Privatize();
+  CGF.EmitIgnoredExpr(CombinerInitializer);
+  Scope.ForceCleanup();
+  CGF.FinishFunction();
+  return Fn;
+}
+
+void CGOpenMPRuntime::emitUserDefinedReduction(
+    CodeGenFunction *CGF, const OMPDeclareReductionDecl *D) {
+  if (UDRMap.count(D) > 0)
+    return;
+  auto &C = CGM.getContext();
+  if (!In || !Out) {
+    In = &C.Idents.get("omp_in");
+    Out = &C.Idents.get("omp_out");
+  }
+  llvm::Function *Combiner = emitCombinerOrInitializer(
+      CGM, D->getType(), D->getCombiner(), cast<VarDecl>(D->lookup(In).front()),
+      cast<VarDecl>(D->lookup(Out).front()),
+      /*IsCombiner=*/true);
+  llvm::Function *Initializer = nullptr;
+  if (auto *Init = D->getInitializer()) {
+    if (!Priv || !Orig) {
+      Priv = &C.Idents.get("omp_priv");
+      Orig = &C.Idents.get("omp_orig");
+    }
+    Initializer = emitCombinerOrInitializer(
+        CGM, D->getType(), Init, cast<VarDecl>(D->lookup(Orig).front()),
+        cast<VarDecl>(D->lookup(Priv).front()),
+        /*IsCombiner=*/false);
+  }
+  UDRMap.insert(std::make_pair(D, std::make_pair(Combiner, Initializer)));
+  if (CGF) {
+    auto &Decls = FunctionUDRMap.FindAndConstruct(CGF->CurFn);
+    Decls.second.push_back(D);
+  }
 }
 
 // Layout information for ident_t.
@@ -801,6 +876,12 @@ void CGOpenMPRuntime::functionFinished(CodeGenFunction &CGF) {
   assert(CGF.CurFn && "No function in current CodeGenFunction.");
   if (OpenMPLocThreadIDMap.count(CGF.CurFn))
     OpenMPLocThreadIDMap.erase(CGF.CurFn);
+  if (FunctionUDRMap.count(CGF.CurFn) > 0) {
+    for(auto *D : FunctionUDRMap[CGF.CurFn]) {
+      UDRMap.erase(D);
+    }
+    FunctionUDRMap.erase(CGF.CurFn);
+  }
 }
 
 llvm::Type *CGOpenMPRuntime::getIdentTyPointerTy() {

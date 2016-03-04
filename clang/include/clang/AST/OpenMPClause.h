@@ -80,7 +80,7 @@ protected:
   /// Set pre-initialization statement for the clause.
   void setPreInitStmt(Stmt *S) { PreInit = S; }
   OMPClauseWithPreInit(const OMPClause *This) : PreInit(nullptr) {
-    assert(get(This) && "get is not tuned.");
+    assert(get(This) && "get is not tuned for pre-init.");
   }
 
 public:
@@ -94,15 +94,16 @@ public:
 
 /// Class that handles post-update expression for some clauses, like
 /// 'lastprivate', 'reduction' etc.
-class OMPClauseWithPostUpdate {
+class OMPClauseWithPostUpdate : public OMPClauseWithPreInit {
   friend class OMPClauseReader;
   /// Post-update expression for the clause.
   Expr *PostUpdate;
 protected:
   /// Set pre-initialization statement for the clause.
   void setPostUpdateExpr(Expr *S) { PostUpdate = S; }
-  OMPClauseWithPostUpdate(const OMPClause *This) : PostUpdate(nullptr) {
-    assert(get(This) && "get is not tuned.");
+  OMPClauseWithPostUpdate(const OMPClause *This)
+      : OMPClauseWithPreInit(This), PostUpdate(nullptr) {
+    assert(get(This) && "get is not tuned for post-update.");
   }
 
 public:
@@ -1404,7 +1405,6 @@ public:
 /// with the variables 'a' and 'b'.
 class OMPLastprivateClause final
     : public OMPVarListClause<OMPLastprivateClause>,
-      public OMPClauseWithPreInit,
       public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPLastprivateClause, Expr *> {
   // There are 4 additional tail-allocated arrays at the end of the class:
@@ -1439,7 +1439,7 @@ class OMPLastprivateClause final
                        SourceLocation EndLoc, unsigned N)
       : OMPVarListClause<OMPLastprivateClause>(OMPC_lastprivate, StartLoc,
                                                LParenLoc, EndLoc, N),
-        OMPClauseWithPreInit(this), OMPClauseWithPostUpdate(this) {}
+        OMPClauseWithPostUpdate(this) {}
 
   /// \brief Build an empty clause.
   ///
@@ -1449,7 +1449,7 @@ class OMPLastprivateClause final
       : OMPVarListClause<OMPLastprivateClause>(
             OMPC_lastprivate, SourceLocation(), SourceLocation(),
             SourceLocation(), N),
-        OMPClauseWithPreInit(this), OMPClauseWithPostUpdate(this) {}
+        OMPClauseWithPostUpdate(this) {}
 
   /// \brief Get the list of helper expressions for initialization of private
   /// copies for lastprivate variables.
@@ -1665,7 +1665,6 @@ public:
 ///
 class OMPReductionClause final
     : public OMPVarListClause<OMPReductionClause>,
-      public OMPClauseWithPreInit,
       public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPReductionClause, Expr *> {
   friend TrailingObjects;
@@ -1694,8 +1693,8 @@ class OMPReductionClause final
                      const DeclarationNameInfo &NameInfo)
       : OMPVarListClause<OMPReductionClause>(OMPC_reduction, StartLoc,
                                              LParenLoc, EndLoc, N),
-        OMPClauseWithPreInit(this), OMPClauseWithPostUpdate(this),
-        ColonLoc(ColonLoc), QualifierLoc(QualifierLoc), NameInfo(NameInfo) {}
+        OMPClauseWithPostUpdate(this), ColonLoc(ColonLoc),
+        QualifierLoc(QualifierLoc), NameInfo(NameInfo) {}
 
   /// \brief Build an empty clause.
   ///
@@ -1705,8 +1704,7 @@ class OMPReductionClause final
       : OMPVarListClause<OMPReductionClause>(OMPC_reduction, SourceLocation(),
                                              SourceLocation(), SourceLocation(),
                                              N),
-        OMPClauseWithPreInit(this), OMPClauseWithPostUpdate(this), ColonLoc(),
-        QualifierLoc(), NameInfo() {}
+        OMPClauseWithPostUpdate(this), ColonLoc(), QualifierLoc(), NameInfo() {}
 
   /// \brief Sets location of ':' symbol in clause.
   void setColonLoc(SourceLocation CL) { ColonLoc = CL; }

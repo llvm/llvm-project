@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGOpenMPRuntimeNVPTX.h"
+#include "clang/AST/DeclOpenMP.h"
 
 using namespace clang;
 using namespace CodeGen;
