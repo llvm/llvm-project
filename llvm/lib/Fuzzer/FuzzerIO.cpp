@@ -93,12 +93,14 @@ void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V,
                             long *Epoch, size_t MaxSize) {
   long E = Epoch ? *Epoch : 0;
   auto Files = ListFilesInDir(Path, Epoch);
+  size_t NumLoaded = 0;
   for (size_t i = 0; i < Files.size(); i++) {
     auto &X = Files[i];
     auto FilePath = DirPlusFile(Path, X);
     if (Epoch && GetEpoch(FilePath) < E) continue;
-    if ((i & (i - 1)) == 0 && i >= 1024)
-      Printf("Loaded %zd/%zd files from %s\n", i, Files.size(), Path);
+    NumLoaded++;
+    if ((NumLoaded & (NumLoaded - 1)) == 0 && NumLoaded >= 1024)
+      Printf("Loaded %zd/%zd files from %s\n", NumLoaded, Files.size(), Path);
     V->push_back(FileToVector(FilePath, MaxSize));
   }
 }

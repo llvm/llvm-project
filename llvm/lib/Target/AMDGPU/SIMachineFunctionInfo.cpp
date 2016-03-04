@@ -162,7 +162,7 @@ SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg(
                                                        MachineFunction *MF,
                                                        unsigned FrameIndex,
                                                        unsigned SubIdx) {
-  const MachineFrameInfo *FrameInfo = MF->getFrameInfo();
+  MachineFrameInfo *FrameInfo = MF->getFrameInfo();
   const SIRegisterInfo *TRI = static_cast<const SIRegisterInfo *>(
       MF->getSubtarget<AMDGPUSubtarget>().getRegisterInfo());
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -173,19 +173,15 @@ SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg(
   unsigned Lane = (Offset / 4) % 64;
 
   struct SpilledReg Spill;
+  Spill.Lane = Lane;
 
   if (!LaneVGPRs.count(LaneVGPRIdx)) {
     unsigned LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass);
 
-    if (LaneVGPR == AMDGPU::NoRegister) {
-      LLVMContext &Ctx = MF->getFunction()->getContext();
-      Ctx.emitError("Ran out of VGPRs for spilling SGPR");
+    if (LaneVGPR == AMDGPU::NoRegister)
+      // We have no VGPRs left for spilling SGPRs.
+      return Spill;
 
-      // When compiling from inside Mesa, the compilation continues.
-      // Select an arbitrary register to avoid triggering assertions
-      // during subsequent passes.
-      LaneVGPR = AMDGPU::VGPR0;
-    }
 
     LaneVGPRs[LaneVGPRIdx] = LaneVGPR;
 
@@ -198,7 +194,6 @@ SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg(
   }
 
   Spill.VGPR = LaneVGPRs[LaneVGPRIdx];
-  Spill.Lane = Lane;
   return Spill;
 }
 

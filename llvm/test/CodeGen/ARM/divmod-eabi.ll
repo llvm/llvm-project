@@ -79,7 +79,6 @@ entry:
   ret i32 %add2
 }
 
-; FIXME: AEABI is not lowering long u/srem into u/ldivmod
 define i64 @longf(i64 %a, i64 %b) {
 ; EABI-LABEL: longf:
 ; DARWIN-LABEL: longf:
@@ -87,6 +86,9 @@ entry:
   %div = sdiv i64 %a, %b
   %rem = srem i64 %a, %b
 ; EABI: __aeabi_ldivmod
+; EABI-NEXT: adds r0
+; EABI-NEXT: adc r1
+; EABI-NOT: __aeabi_ldivmod
 ; DARWIN: ___divdi3
 ; DARWIN: mov [[div1:r[0-9]+]], r0
 ; DARWIN: mov [[div2:r[0-9]+]], r1
@@ -95,6 +97,21 @@ entry:
 ; DARWIN: adds r0{{.*}}[[div1]]
 ; DARWIN: adc r1{{.*}}[[div2]]
   ret i64 %add
+}
+
+define i16 @shortf(i16 %a, i16 %b) {
+; EABI-LABEL: shortf:
+; DARWIN-LABEL: shortf:
+entry:
+  %div = sdiv i16 %a, %b
+  %rem = srem i16 %a, %b
+; EABI: __aeabi_idivmod
+; DARWIN: ___divsi3
+; DARWIN: mov [[div1:r[0-9]+]], r0
+; DARWIN: __modsi3
+  %add = add nsw i16 %rem, %div
+; DARWIN: add r0{{.*}}[[div1]]
+  ret i16 %add
 }
 
 define i32 @g1(i32 %a, i32 %b) {

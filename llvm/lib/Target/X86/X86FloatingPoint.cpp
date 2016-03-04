@@ -1509,6 +1509,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     return;
   }
 
+  case X86::RET:
   case X86::RETQ:
   case X86::RETL:
   case X86::RETIL:

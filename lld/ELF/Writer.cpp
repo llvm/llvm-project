@@ -258,7 +258,7 @@ template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
 template <class ELFT, class RelT>
 static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
                                 InputSectionBase<ELFT> &C, RelT &RI) {
-  if (Target->isTlsLocalDynamicRel(Type)) {
+  if (Target->pointsToLocalDynamicGotEntry(Type)) {
     if (Target->canRelaxTls(Type, nullptr))
       return true;
     if (Out<ELFT>::Got->addTlsIndex())

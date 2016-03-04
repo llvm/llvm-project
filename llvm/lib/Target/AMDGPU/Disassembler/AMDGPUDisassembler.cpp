@@ -119,7 +119,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   DecodeStatus Res = MCDisassembler::Fail;
   do {
-    // ToDo: better to switch enc len using some bit predicate
+    // ToDo: better to switch encoding length using some bit predicate
     // but it is unknown yet, so try all we can
     if (Bytes.size() < 4) break;
     const uint32_t DW = eatB32(Bytes);

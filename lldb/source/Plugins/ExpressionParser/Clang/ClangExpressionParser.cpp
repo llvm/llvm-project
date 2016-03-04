@@ -254,7 +254,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     if (log)
     {
         log->Printf("Using SIMD alignment: %d", target_info->getSimdDefaultAlign());
-        log->Printf("Target datalayout string: '%s'", target_info->getDataLayoutString());
+        log->Printf("Target datalayout string: '%s'", target_info->getDataLayout().getStringRepresentation().c_str());
         log->Printf("Target ABI: '%s'", target_info->getABI().str().c_str());
         log->Printf("Target vector alignment: %d", target_info->getMaxVectorAlign());
     }

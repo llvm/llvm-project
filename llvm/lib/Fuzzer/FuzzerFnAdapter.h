@@ -92,6 +92,17 @@ size_t UnpackSingle<std::vector<uint8_t>>(const uint8_t *Data, size_t Size,
   return Size - Len - 1;
 }
 
+template <>
+size_t UnpackSingle<std::string>(const uint8_t *Data, size_t Size,
+    std::string *Value) {
+  if (Size < 1)
+    return Size;
+  size_t Len = std::min(static_cast<size_t>(*Data), Size - 1);
+  std::string S(Data + 1, Data + 1 + Len);
+  Value->swap(S);
+  return Size - Len - 1;
+}
+
 // Unpacking into arbitrary tuple.
 
 // Recursion guard.

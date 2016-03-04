@@ -70,6 +70,15 @@ TEST(Unpack, Vector) {
   EXPECT_EQ(8, V[1]);
 }
 
+TEST(Unpack, String) {
+  std::tuple<std::string> T;
+  const auto &S = std::get<0>(T);
+
+  EXPECT_TRUE(Unpack(&T, {2, 3}));
+  EXPECT_EQ(1ul, S.size());
+  EXPECT_EQ(3, S[0]);
+}
+
 template <typename Fn>
 bool UnpackAndApply(Fn F, std::initializer_list<uint8_t> Data) {
   std::vector<uint8_t> V(Data);

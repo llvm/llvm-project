@@ -22,6 +22,8 @@ class SymbolBody;
 class TargetInfo {
 public:
   uint64_t getVAStart() const;
+  virtual bool isTlsInitialExecRel(unsigned Type) const;
+  virtual bool pointsToLocalDynamicGotEntry(unsigned Type) const;
   virtual bool isTlsLocalDynamicRel(unsigned Type) const;
   virtual bool isTlsGlobalDynamicRel(unsigned Type) const;
   virtual unsigned getDynRel(unsigned Type) const { return Type; }
@@ -99,7 +101,6 @@ public:
 private:
   virtual bool needsCopyRelImpl(uint32_t Type) const;
   virtual bool needsPltImpl(uint32_t Type) const;
-  virtual bool canRelaxTlsImpl(unsigned Type, const SymbolBody *S) const;
 };
 
 uint64_t getPPC64TocBase();

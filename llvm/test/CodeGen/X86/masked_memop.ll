@@ -935,31 +935,208 @@ define <4 x float> @test19(<4 x i32> %trigger, <4 x float>* %addr) {
   ret <4 x float> %res
 }
 
-define <4 x float> @test20(<4 x i32> %trigger, <4 x float>* %addr, <4 x float> %src0) {
-; AVX-LABEL: test20:
+;;; Loads with Constant Masks - these should be optimized to use something other than a variable blend.
+
+; 128-bit FP vectors are supported with AVX.
+
+define <4 x float> @mload_constmask_v4f32(<4 x float>* %addr, <4 x float> %dst) {
+; AVX-LABEL: mload_constmask_v4f32:
 ; AVX:       ## BB#0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,0,4294967295,4294967295]
-; AVX-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2
-; AVX-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [4294967295,0,4294967295,4294967295]
+; AVX-NEXT:    vmaskmovps (%rdi), %xmm1, %xmm2
+; AVX-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: test20:
+; AVX512F-LABEL: mload_constmask_v4f32:
 ; AVX512F:       ## BB#0:
-; AVX512F-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,0,4294967295,4294967295]
-; AVX512F-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm2
-; AVX512F-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    vmovaps {{.*#+}} xmm1 = [4294967295,0,4294967295,4294967295]
+; AVX512F-NEXT:    vmaskmovps (%rdi), %xmm1, %xmm2
+; AVX512F-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
-; SKX-LABEL: test20:
+; SKX-LABEL: mload_constmask_v4f32:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    movb $13, %al
 ; SKX-NEXT:    kmovw %eax, %k1
-; SKX-NEXT:    vmovaps (%rdi), %xmm1 {%k1}
-; SKX-NEXT:    vmovaps %zmm1, %zmm0
+; SKX-NEXT:    vmovups (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    retq
-  %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %addr, i32 16, <4 x i1><i1 true, i1 false, i1 true, i1 true>, <4 x float> %src0)
+  %res = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %addr, i32 4, <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x float> %dst)
   ret <4 x float> %res
+}
+
+; 128-bit integer vectors are supported with AVX2.
+
+define <4 x i32> @mload_constmask_v4i32(<4 x i32>* %addr, <4 x i32> %dst) {
+; AVX1-LABEL: mload_constmask_v4i32:
+; AVX1:       ## BB#0:
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
+; AVX1-NEXT:    vmaskmovps (%rdi), %xmm1, %xmm2
+; AVX1-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: mload_constmask_v4i32:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
+; AVX2-NEXT:    vpmaskmovd (%rdi), %xmm1, %xmm2
+; AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: mload_constmask_v4i32:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
+; AVX512F-NEXT:    vpmaskmovd (%rdi), %xmm1, %xmm2
+; AVX512F-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: mload_constmask_v4i32:
+; SKX:       ## BB#0:
+; SKX-NEXT:    movb $14, %al
+; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    vmovdqu32 (%rdi), %xmm0 {%k1}
+; SKX-NEXT:    retq
+  %res = call <4 x i32> @llvm.masked.load.v4i32(<4 x i32>* %addr, i32 4, <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i32> %dst)
+  ret <4 x i32> %res
+}
+
+; 256-bit FP vectors are supported with AVX.
+
+define <8 x float> @mload_constmask_v8f32(<8 x float>* %addr, <8 x float> %dst) {
+; AVX-LABEL: mload_constmask_v8f32:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,0,0,0,0,0]
+; AVX-NEXT:    vmaskmovps (%rdi), %ymm1, %ymm2
+; AVX-NEXT:    vblendvps %ymm1, %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX512F-LABEL: mload_constmask_v8f32:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    movw $7, %ax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: mload_constmask_v8f32:
+; SKX:       ## BB#0:
+; SKX-NEXT:    movb $7, %al
+; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    vmovups (%rdi), %ymm0 {%k1}
+; SKX-NEXT:    retq
+  %res = call <8 x float> @llvm.masked.load.v8f32(<8 x float>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x float> %dst)
+  ret <8 x float> %res
+}
+
+define <4 x double> @mload_constmask_v4f64(<4 x double>* %addr, <4 x double> %dst) {
+; AVX-LABEL: mload_constmask_v4f64:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vmovapd {{.*#+}} ymm1 = [18446744073709551615,18446744073709551615,18446744073709551615,0]
+; AVX-NEXT:    vmaskmovpd (%rdi), %ymm1, %ymm2
+; AVX-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX512F-LABEL: mload_constmask_v4f64:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vmovapd {{.*#+}} ymm1 = [18446744073709551615,18446744073709551615,18446744073709551615,0]
+; AVX512F-NEXT:    vmaskmovpd (%rdi), %ymm1, %ymm2
+; AVX512F-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: mload_constmask_v4f64:
+; SKX:       ## BB#0:
+; SKX-NEXT:    movb $7, %al
+; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    vmovupd (%rdi), %ymm0 {%k1}
+; SKX-NEXT:    retq
+  %res = call <4 x double> @llvm.masked.load.v4f64(<4 x double>* %addr, i32 4, <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x double> %dst)
+  ret <4 x double> %res
+}
+
+; 256-bit integer vectors are supported with AVX2.
+
+define <8 x i32> @mload_constmask_v8i32(<8 x i32>* %addr, <8 x i32> %dst) {
+; AVX1-LABEL: mload_constmask_v8i32:
+; AVX1:       ## BB#0:
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,0,0,0,0,4294967295]
+; AVX1-NEXT:    vmaskmovps (%rdi), %ymm1, %ymm2
+; AVX1-NEXT:    vblendvps %ymm1, %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: mload_constmask_v8i32:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [4294967295,4294967295,4294967295,0,0,0,0,4294967295]
+; AVX2-NEXT:    vpmaskmovd (%rdi), %ymm1, %ymm2
+; AVX2-NEXT:    vblendvps %ymm1, %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: mload_constmask_v8i32:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    movw $135, %ax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1}
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: mload_constmask_v8i32:
+; SKX:       ## BB#0:
+; SKX-NEXT:    movb $-121, %al
+; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    vmovdqu32 (%rdi), %ymm0 {%k1}
+; SKX-NEXT:    retq
+  %res = call <8 x i32> @llvm.masked.load.v8i32(<8 x i32>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x i32> %dst)
+  ret <8 x i32> %res
+}
+
+define <4 x i64> @mload_constmask_v4i64(<4 x i64>* %addr, <4 x i64> %dst) {
+; AVX1-LABEL: mload_constmask_v4i64:
+; AVX1:       ## BB#0:
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm1 = [18446744073709551615,0,0,18446744073709551615]
+; AVX1-NEXT:    vmaskmovpd (%rdi), %ymm1, %ymm2
+; AVX1-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: mload_constmask_v4i64:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [18446744073709551615,0,0,18446744073709551615]
+; AVX2-NEXT:    vpmaskmovq (%rdi), %ymm1, %ymm2
+; AVX2-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: mload_constmask_v4i64:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm1 = [18446744073709551615,0,0,18446744073709551615]
+; AVX512F-NEXT:    vpmaskmovq (%rdi), %ymm1, %ymm2
+; AVX512F-NEXT:    vblendvpd %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: mload_constmask_v4i64:
+; SKX:       ## BB#0:
+; SKX-NEXT:    movb $9, %al
+; SKX-NEXT:    kmovw %eax, %k1
+; SKX-NEXT:    vmovdqu64 (%rdi), %ymm0 {%k1}
+; SKX-NEXT:    retq
+  %res = call <4 x i64> @llvm.masked.load.v4i64(<4 x i64>* %addr, i32 4, <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x i64> %dst)
+  ret <4 x i64> %res
+}
+
+; 512-bit FP vectors are supported with AVX512.
+
+define <8 x double> @mload_constmask_v8f64(<8 x double>* %addr, <8 x double> %dst) {
+; AVX-LABEL: mload_constmask_v8f64:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vmovapd {{.*#+}} ymm2 = [18446744073709551615,18446744073709551615,18446744073709551615,0]
+; AVX-NEXT:    vmaskmovpd (%rdi), %ymm2, %ymm3
+; AVX-NEXT:    vblendvpd %ymm2, %ymm3, %ymm0, %ymm0
+; AVX-NEXT:    vmovapd {{.*#+}} ymm2 = [0,0,0,18446744073709551615]
+; AVX-NEXT:    vmaskmovpd 32(%rdi), %ymm2, %ymm3
+; AVX-NEXT:    vblendvpd %ymm2, %ymm3, %ymm1, %ymm1
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: mload_constmask_v8f64:
+; AVX512:       ## BB#0:
+; AVX512-NEXT:    movb $-121, %al
+; AVX512-NEXT:    kmovw %eax, %k1
+; AVX512-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
+; AVX512-NEXT:    retq
+  %res = call <8 x double> @llvm.masked.load.v8f64(<8 x double>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x double> %dst)
+  ret <8 x double> %res
 }
 
 define void @test21(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %val) {

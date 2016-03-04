@@ -201,7 +201,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     uintX_t AddrLoc = OutSec->getVA() + Offset;
     auto NextRelocs = llvm::make_range(&RI, Rels.end());
 
-    if (Target->isTlsLocalDynamicRel(Type) &&
+    if (Target->pointsToLocalDynamicGotEntry(Type) &&
         !Target->canRelaxTls(Type, nullptr)) {
       Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc,
                           Out<ELFT>::Got->getTlsIndexVA() +

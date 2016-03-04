@@ -1,4 +1,4 @@
-//===-- AMDGPUAsmParser.cpp - Parse SI asm to MCInst instructions ----------===//
+//===-- AMDGPUAsmParser.cpp - Parse SI asm to MCInst instructions ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

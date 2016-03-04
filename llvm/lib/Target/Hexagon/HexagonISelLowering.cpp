@@ -389,9 +389,12 @@ static bool RetCC_Hexagon(unsigned ValNo, MVT ValVT,
   bool UseHVX = HST.useHVXOps();
   bool UseHVXDbl = HST.useHVXDblOps();
 
-  if (LocVT == MVT::i1 ||
-      LocVT == MVT::i8 ||
-      LocVT == MVT::i16) {
+  if (LocVT == MVT::i1) {
+    // Return values of type MVT::i1 still need to be assigned to R0, but
+    // the value type needs to remain i1. LowerCallResult will deal with it,
+    // but it needs to recognize i1 as the value type.
+    LocVT = MVT::i32;
+  } else if (LocVT == MVT::i8 || LocVT == MVT::i16) {
     LocVT = MVT::i32;
     ValVT = MVT::i32;
     if (ArgFlags.isSExt())
@@ -443,7 +446,6 @@ static bool RetCC_Hexagon(unsigned ValNo, MVT ValVT,
 static bool RetCC_Hexagon32(unsigned ValNo, MVT ValVT,
                             MVT LocVT, CCValAssign::LocInfo LocInfo,
                             ISD::ArgFlagsTy ArgFlags, CCState &State) {
-
   if (LocVT == MVT::i32 || LocVT == MVT::f32) {
     if (unsigned Reg = State.AllocateReg(Hexagon::R0)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
@@ -617,7 +619,6 @@ HexagonTargetLowering::LowerCallResult(SDValue Chain, SDValue InFlag,
                                        SmallVectorImpl<SDValue> &InVals,
                                        const SmallVectorImpl<SDValue> &OutVals,
                                        SDValue Callee) const {
-
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
 
@@ -628,11 +629,30 @@ HexagonTargetLowering::LowerCallResult(SDValue Chain, SDValue InFlag,
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
-    Chain = DAG.getCopyFromReg(Chain, dl,
-                               RVLocs[i].getLocReg(),
-                               RVLocs[i].getValVT(), InFlag).getValue(1);
-    InFlag = Chain.getValue(2);
-    InVals.push_back(Chain.getValue(0));
+    SDValue RetVal;
+    if (RVLocs[i].getValVT() == MVT::i1) {
+      // Return values of type MVT::i1 require special handling. The reason
+      // is that MVT::i1 is associated with the PredRegs register class, but
+      // values of that type are still returned in R0. Generate an explicit
+      // copy into a predicate register from R0, and treat the value of the
+      // predicate register as the call result.
+      auto &MRI = DAG.getMachineFunction().getRegInfo();
+      SDValue FR0 = DAG.getCopyFromReg(Chain, dl, RVLocs[i].getLocReg(),
+                                       MVT::i32, InFlag);
+      // FR0 = (Value, Chain, Glue)
+      unsigned PredR = MRI.createVirtualRegister(&Hexagon::PredRegsRegClass);
+      SDValue TPR = DAG.getCopyToReg(FR0.getValue(1), dl, PredR,
+                                     FR0.getValue(0), FR0.getValue(2));
+      // TPR = (Chain, Glue)
+      RetVal = DAG.getCopyFromReg(TPR.getValue(0), dl, PredR, MVT::i1,
+                                  TPR.getValue(1));
+    } else {
+      RetVal = DAG.getCopyFromReg(Chain, dl, RVLocs[i].getLocReg(),
+                                  RVLocs[i].getValVT(), InFlag);
+    }
+    InVals.push_back(RetVal.getValue(0));
+    Chain = RetVal.getValue(1);
+    InFlag = RetVal.getValue(2);
   }
 
   return Chain;
