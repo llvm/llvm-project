@@ -1013,6 +1013,11 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
     for (OutputSectionBase<ELFT> *Sec : RegularSections)
       addStartStopSymbols(Sec);
   }
+
+  // Add _DYNAMIC symbol. Unlike GNU gold, our _DYNAMIC symbol has no type.
+  // It should be okay as no one seems to care about the type.
+  // Even the author of gold doesn't remember why gold behaves that way.
+  // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (isOutputDynamic())
     Symtab.addSynthetic("_DYNAMIC", *Out<ELFT>::Dynamic, 0, STV_HIDDEN);
 

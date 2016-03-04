@@ -65,7 +65,7 @@ public:
                            uint64_t P, uint64_t SA, uint64_t ZA = 0,
                            uint8_t *PairedLoc = nullptr) const = 0;
   virtual bool isGotRelative(uint32_t Type) const;
-  virtual bool canRelaxTls(unsigned Type, const SymbolBody *S) const;
+  bool canRelaxTls(unsigned Type, const SymbolBody *S) const;
   template <class ELFT>
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const;
   virtual unsigned relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
@@ -99,6 +99,7 @@ public:
 private:
   virtual bool needsCopyRelImpl(uint32_t Type) const;
   virtual bool needsPltImpl(uint32_t Type) const;
+  virtual bool canRelaxTlsImpl(unsigned Type, const SymbolBody *S) const;
 };
 
 uint64_t getPPC64TocBase();
