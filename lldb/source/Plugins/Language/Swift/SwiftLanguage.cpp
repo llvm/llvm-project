@@ -309,6 +309,8 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     
     AddStringSummary(swift_category_sp, "nil", ConstString("Swift._Nil"), nil_summary_flags);
     
+    AddStringSummary(swift_category_sp, "${var.native}", ConstString("CoreGraphics.CGFloat"), summary_flags);
+    
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Metadata_SummaryProvider, "Swift Metadata summary", ConstString("$swift.type"), TypeSummaryImpl::Flags().SetCascades(false)
                   .SetSkipPointers(true)
                   .SetSkipReferences(true)
