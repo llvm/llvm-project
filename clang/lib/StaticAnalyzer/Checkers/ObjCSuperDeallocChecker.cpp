@@ -61,6 +61,7 @@ private:
 // SymbolRef for the receiver.
 REGISTER_SET_WITH_PROGRAMSTATE(CalledSuperDealloc, SymbolRef)
 
+namespace {
 class SuperDeallocBRVisitor final
     : public BugReporterVisitorImpl<SuperDeallocBRVisitor> {
 
@@ -81,6 +82,7 @@ public:
     ID.Add(ReceiverSymbol);
   }
 };
+} // End anonymous namespace.
 
 void ObjCSuperDeallocChecker::checkPreObjCMessage(const ObjCMethodCall &M,
                                                   CheckerContext &C) const {
