@@ -206,10 +206,6 @@ static const Decl *adjustParent(const Decl *Parent) {
     if (auto NS = dyn_cast<NamespaceDecl>(Parent)) {
       if (NS->isAnonymousNamespace())
         continue;
-    } else if (auto EnumD = dyn_cast<EnumDecl>(Parent)) {
-      // Move enumerators under anonymous enum to the enclosing parent.
-      if (EnumD->getDeclName().isEmpty())
-        continue;
     } else if (auto RD = dyn_cast<RecordDecl>(Parent)) {
       if (RD->isAnonymousStructOrUnion())
         continue;
