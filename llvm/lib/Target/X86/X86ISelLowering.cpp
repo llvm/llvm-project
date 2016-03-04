@@ -20758,6 +20758,15 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                    Results);
   }
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS: {
+    // If the current function needs the base pointer, RBX,
+    // we shouldn't use cmpxchg.
+    // Indeed the lowering of that instruction will clobber
+    // that register and since RBX will be a reserved register
+    // the register allocator will not make sure its value will
+    // be properly saved and restored around this live-range.
+    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+    if (TRI->hasBasePointer(DAG.getMachineFunction()))
+      return;
     EVT T = N->getValueType(0);
     assert((T == MVT::i64 || T == MVT::i128) && "can only expand cmpxchg pair");
     bool Regs64bit = T == MVT::i128;
