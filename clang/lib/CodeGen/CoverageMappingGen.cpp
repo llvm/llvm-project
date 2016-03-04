@@ -776,7 +776,7 @@ struct CounterCoverageMappingBuilder
           BreakContinueStack.back().ContinueCount, BC.ContinueCount);
 
     Counter ExitCount = getRegionCounter(S);
-    pushRegion(ExitCount);
+    pushRegion(ExitCount, getStart(S), getEnd(S));
   }
 
   void VisitSwitchCase(const SwitchCase *S) {
