@@ -16,6 +16,7 @@
 #include "CGCleanup.h"
 #include "CGDebugInfo.h"
 #include "CGOpenCLRuntime.h"
+#include "CGOpenMPRuntime.h"
 #include "CodeGenModule.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
@@ -120,7 +121,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   }
 
   case Decl::OMPDeclareReduction:
-    return CGM.EmitOMPDeclareReduction(cast<OMPDeclareReductionDecl>(&D));
+    return CGM.EmitOMPDeclareReduction(cast<OMPDeclareReductionDecl>(&D), this);
 
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
@@ -1867,6 +1868,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     EmitVarAnnotations(&D, DeclPtr.getPointer());
 }
 
-void CodeGenModule::EmitOMPDeclareReduction(
-    const OMPDeclareReductionDecl * /*D*/) {}
+void CodeGenModule::EmitOMPDeclareReduction(const OMPDeclareReductionDecl *D,
+                                            CodeGenFunction *CGF) {
+  if (!LangOpts.OpenMP || (!LangOpts.EmitAllDecls && !D->isUsed()))
+    return;
+  getOpenMPRuntime().emitUserDefinedReduction(CGF, D);
+}
 

@@ -1543,10 +1543,17 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     }
   }
 
-  // If this is OpenMP device, check if it is legal to emit this global
-  // normally.
-  if (OpenMPRuntime && OpenMPRuntime->emitTargetGlobal(GD))
-    return;
+  if (LangOpts.OpenMP) {
+    // If this is OpenMP device, check if it is legal to emit this global
+    // normally.
+    if (OpenMPRuntime && OpenMPRuntime->emitTargetGlobal(GD))
+      return;
+    if (auto *DRD = dyn_cast<OMPDeclareReductionDecl>(Global)) {
+      if (MustBeEmitted(Global))
+        EmitOMPDeclareReduction(DRD);
+      return;
+    }
+  }
 
   // Ignore declarations, they will be emitted on their first use.
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {

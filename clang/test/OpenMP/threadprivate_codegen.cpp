@@ -948,5 +948,5 @@ int foobar() {
 // CHECK-TLS:      call void [[ST_S4_ST_CXX_INIT]]
 // CHECK-TLS:      [[DONE_LABEL]]
 
-// CHECK-TLS:      declare {{.*}} void [[GS3_TLS_INIT]]
-// CHECK-TLS:      declare {{.*}} void [[STATIC_S_TLS_INIT]]
+// CHECK-TLS-DAG:      declare {{.*}} void [[GS3_TLS_INIT]]
+// CHECK-TLS-DAG:      declare {{.*}} void [[STATIC_S_TLS_INIT]]

@@ -327,6 +327,21 @@ void test_const_pointers() {
   // CHECK-FIXES: const int *const_p6 = static_cast<int*>(t ? t : static_cast<int*>(nullptr));
 }
 
+void test_nested_implicit_cast_expr() {
+  int func0(void*, void*);
+  int func1(int, void*, void*);
+
+  (double)func1(0, 0, 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use nullptr
+  // CHECK-MESSAGES: :[[@LINE-2]]:23: warning: use nullptr
+  // CHECK-FIXES: (double)func1(0, nullptr, nullptr);
+  (double)func1(func0(0, 0), 0, 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use nullptr
+  // CHECK-MESSAGES: :[[@LINE-2]]:26: warning: use nullptr
+  // CHECK-MESSAGES: :[[@LINE-3]]:30: warning: use nullptr
+  // CHECK-MESSAGES: :[[@LINE-4]]:33: warning: use nullptr
+  // CHECK-FIXES: (double)func1(func0(nullptr, nullptr), nullptr, nullptr);
+}
 
 // FIXME: currently, the check doesn't work as it should with templates.
 template<typename T>

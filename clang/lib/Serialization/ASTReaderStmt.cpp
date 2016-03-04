@@ -1898,6 +1898,7 @@ void OMPClauseReader::VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C) {
 }
 
 void OMPClauseReader::VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C) {
+  VisitOMPClauseWithPreInit(C);
   C->setPostUpdateExpr(Reader->Reader.ReadSubExpr());
 }
 
@@ -2025,7 +2026,6 @@ void OMPClauseReader::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
 }
 
 void OMPClauseReader::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
-  VisitOMPClauseWithPreInit(C);
   VisitOMPClauseWithPostUpdate(C);
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
   unsigned NumVars = C->varlist_size();
@@ -2063,7 +2063,6 @@ void OMPClauseReader::VisitOMPSharedClause(OMPSharedClause *C) {
 }
 
 void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
-  VisitOMPClauseWithPreInit(C);
   VisitOMPClauseWithPostUpdate(C);
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
   C->setColonLoc(Reader->ReadSourceLocation(Record, Idx));

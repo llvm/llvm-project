@@ -187,6 +187,15 @@ namespace {
           }
         }
       }
+      // For OpenMP emit declare reduction functions, if required.
+      if (Ctx->getLangOpts().OpenMP) {
+        for (Decl *Member : D->decls()) {
+          if (auto *DRD = dyn_cast<OMPDeclareReductionDecl>(Member)) {
+            if (Ctx->DeclMustBeEmitted(DRD))
+              Builder->EmitGlobal(DRD);
+          }
+        }
+      }
     }
 
     void HandleTagDeclRequiredDefinition(const TagDecl *D) override {

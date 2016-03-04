@@ -1655,12 +1655,11 @@ void ASTDeclWriter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
 }
 
 void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
-  VisitNamedDecl(D);
+  VisitValueDecl(D);
   Writer.AddSourceLocation(D->getLocStart(), Record);
   Writer.AddStmt(D->getCombiner());
   Writer.AddStmt(D->getInitializer());
   Writer.AddDeclRef(D->getPrevDeclInScope(), Record);
-  Writer.AddTypeRef(D->getType(), Record);
   Code = serialization::DECL_OMP_DECLARE_REDUCTION;
 }
 

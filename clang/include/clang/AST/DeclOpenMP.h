@@ -99,7 +99,7 @@ public:
 /// \endcode
 ///
 /// Here 'omp_out += omp_in' is a combiner and 'omp_priv = 0' is an initializer.
-class OMPDeclareReductionDecl final : public NamedDecl, public DeclContext {
+class OMPDeclareReductionDecl final : public ValueDecl, public DeclContext {
 private:
   friend class ASTDeclReader;
   /// \brief Combiner for declare reduction construct.
@@ -110,21 +110,18 @@ private:
   /// scope with the same name. Required for proper templates instantiation if
   /// the declare reduction construct is declared inside compound statement.
   LazyDeclPtr PrevDeclInScope;
-  /// \brief Type of declare reduction construct.
-  QualType Ty;
 
   virtual void anchor();
 
   OMPDeclareReductionDecl(Kind DK, DeclContext *DC, SourceLocation L,
                           DeclarationName Name, QualType Ty,
                           OMPDeclareReductionDecl *PrevDeclInScope)
-      : NamedDecl(DK, DC, L, Name), DeclContext(DK), Combiner(nullptr),
-        Initializer(nullptr), PrevDeclInScope(PrevDeclInScope), Ty(Ty) {}
+      : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK), Combiner(nullptr),
+        Initializer(nullptr), PrevDeclInScope(PrevDeclInScope) {}
 
   void setPrevDeclInScope(OMPDeclareReductionDecl *Prev) {
     PrevDeclInScope = Prev;
   }
-  void setType(QualType T) { Ty = T; }
 
 public:
   /// \brief Create declare reduction node.
@@ -152,8 +149,6 @@ public:
   /// scope with the same name.
   OMPDeclareReductionDecl *getPrevDeclInScope();
   const OMPDeclareReductionDecl *getPrevDeclInScope() const;
-
-  QualType getType() const { return Ty; }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == OMPDeclareReduction; }

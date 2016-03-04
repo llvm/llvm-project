@@ -1771,6 +1771,7 @@ void OMPClauseWriter::VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C) {
 }
 
 void OMPClauseWriter::VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C) {
+  VisitOMPClauseWithPreInit(C);
   Writer->Writer.AddStmt(C->getPostUpdateExpr());
 }
 
@@ -1887,7 +1888,6 @@ void OMPClauseWriter::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
 
 void OMPClauseWriter::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
   Record.push_back(C->varlist_size());
-  VisitOMPClauseWithPreInit(C);
   VisitOMPClauseWithPostUpdate(C);
   Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
   for (auto *VE : C->varlists())
@@ -1911,7 +1911,6 @@ void OMPClauseWriter::VisitOMPSharedClause(OMPSharedClause *C) {
 
 void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
   Record.push_back(C->varlist_size());
-  VisitOMPClauseWithPreInit(C);
   VisitOMPClauseWithPostUpdate(C);
   Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
   Writer->Writer.AddSourceLocation(C->getColonLoc(), Record);

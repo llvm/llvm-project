@@ -2396,12 +2396,11 @@ void ASTDeclReader::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
 }
 
 void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
-  VisitNamedDecl(D);
+  VisitValueDecl(D);
   D->setLocation(Reader.ReadSourceLocation(F, Record, Idx));
   D->setCombiner(Reader.ReadExpr(F));
   D->setInitializer(Reader.ReadExpr(F));
   D->PrevDeclInScope = Reader.ReadDeclID(F, Record, Idx);
-  D->setType(Reader.readType(F, Record, Idx));
 }
 
 void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
@@ -2458,10 +2457,10 @@ static bool isConsumerInterestedIn(Decl *D, bool HasBody) {
       isa<ObjCImplDecl>(D) ||
       isa<ImportDecl>(D) ||
       isa<PragmaCommentDecl>(D) ||
-      isa<PragmaDetectMismatchDecl>(D) ||
-      isa<OMPThreadPrivateDecl>(D) ||
-      isa<OMPDeclareReductionDecl>(D))
+      isa<PragmaDetectMismatchDecl>(D))
     return true;
+  if (isa<OMPThreadPrivateDecl>(D) || isa<OMPDeclareReductionDecl>(D))
+    return !D->getDeclContext()->isFunctionOrMethod();
   if (VarDecl *Var = dyn_cast<VarDecl>(D))
     return Var->isFileVarDecl() &&
            Var->isThisDeclarationADefinition() == VarDecl::Definition;

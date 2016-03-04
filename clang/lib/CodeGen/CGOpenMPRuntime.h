@@ -38,6 +38,8 @@ class Expr;
 class GlobalDecl;
 class OMPExecutableDirective;
 class VarDecl;
+class OMPDeclareReductionDecl;
+class IdentifierInfo;
 
 namespace CodeGen {
 class Address;
@@ -50,7 +52,7 @@ class CGOpenMPRuntime {
   CodeGenModule &CGM;
   /// \brief Default const ident_t object used for initialization of all other
   /// ident_t objects.
-  llvm::Constant *DefaultOpenMPPSource;
+  llvm::Constant *DefaultOpenMPPSource = nullptr;
   /// \brief Map of flags and corresponding default locations.
   typedef llvm::DenseMap<unsigned, llvm::Value *> OpenMPDefaultLocMapTy;
   OpenMPDefaultLocMapTy OpenMPDefaultLocMap;
@@ -73,6 +75,20 @@ class CGOpenMPRuntime {
   typedef llvm::DenseMap<llvm::Function *, DebugLocThreadIdTy>
       OpenMPLocThreadIDMapTy;
   OpenMPLocThreadIDMapTy OpenMPLocThreadIDMap;
+  /// Map of UDRs and corresponding combiner/initializer.
+  typedef llvm::DenseMap<const OMPDeclareReductionDecl *,
+                         std::pair<llvm::Function *, llvm::Function *>>
+      UDRMapTy;
+  UDRMapTy UDRMap;
+  /// Map of functions and locally defined UDRs.
+  typedef llvm::DenseMap<llvm::Function *,
+                         SmallVector<const OMPDeclareReductionDecl *, 4>>
+      FunctionUDRMapTy;
+  FunctionUDRMapTy FunctionUDRMap;
+  IdentifierInfo *In = nullptr;
+  IdentifierInfo *Out = nullptr;
+  IdentifierInfo *Priv = nullptr;
+  IdentifierInfo *Orig = nullptr;
   /// \brief Type kmp_critical_name, originally defined as typedef kmp_int32
   /// kmp_critical_name[8];
   llvm::ArrayType *KmpCriticalNameTy;
@@ -84,7 +100,7 @@ class CGOpenMPRuntime {
   llvm::StringMap<llvm::AssertingVH<llvm::Constant>, llvm::BumpPtrAllocator>
       InternalVars;
   /// \brief Type typedef kmp_int32 (* kmp_routine_entry_t)(kmp_int32, void *);
-  llvm::Type *KmpRoutineEntryPtrTy;
+  llvm::Type *KmpRoutineEntryPtrTy = nullptr;
   QualType KmpRoutineEntryPtrQTy;
   /// \brief Type typedef struct kmp_task {
   ///    void *              shareds; /**< pointer to block of pointers to
@@ -364,6 +380,9 @@ public:
   virtual ~CGOpenMPRuntime() {}
   virtual void clear();
 
+  /// Emit code for the specified user defined reduction construct.
+  virtual void emitUserDefinedReduction(CodeGenFunction *CGF,
+                                        const OMPDeclareReductionDecl *D);
   /// \brief Emits outlined function for the specified OpenMP parallel directive
   /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
   /// kmp_int32 BoundID, struct context_vars*).

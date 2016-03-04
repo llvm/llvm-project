@@ -1112,7 +1112,8 @@ public:
   void EmitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D);
 
   /// \brief Emit a code for declare reduction construct.
-  void EmitOMPDeclareReduction(const OMPDeclareReductionDecl *D);
+  void EmitOMPDeclareReduction(const OMPDeclareReductionDecl *D,
+                               CodeGenFunction *CGF = nullptr);
 
   /// Returns whether we need bit sets attached to vtables.
   bool NeedVTableBitSets();
