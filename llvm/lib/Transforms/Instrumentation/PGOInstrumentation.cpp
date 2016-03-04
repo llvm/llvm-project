@@ -97,11 +97,19 @@ static cl::opt<std::string>
                        cl::desc("Specify the path of profile data file. This is"
                                 "mainly for test purpose."));
 
-// Command line options to disable value profiling. The default is false:
+// Command line option to disable value profiling. The default is false:
 // i.e. value profiling is enabled by default. This is for debug purpose.
 static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
                                            cl::Hidden,
                                            cl::desc("Disable Value Profiling"));
+
+// Command line option to set the maximum number of VP annotations to write to
+// the metada for a single indirect call callsite.
+static cl::opt<unsigned>
+    MaxNumAnnotations("icp-max-annotations", cl::init(3), cl::Hidden,
+                     cl::ZeroOrMore,
+                     cl::desc("Max number of annotations for a single indirect "
+                              "call callsite"));
 
 namespace {
 class PGOInstrumentationGen : public ModulePass {
@@ -748,7 +756,7 @@ void PGOUseFunc::annotateIndirectCallSites() {
                  << IndirectCallSiteIndex << " out of " << NumValueSites
                  << "\n");
     annotateValueSite(*M, *I, ProfileRecord, IPVK_IndirectCallTarget,
-                      IndirectCallSiteIndex);
+                      IndirectCallSiteIndex, MaxNumAnnotations);
     IndirectCallSiteIndex++;
   }
 }
