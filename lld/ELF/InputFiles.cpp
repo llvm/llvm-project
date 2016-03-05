@@ -427,10 +427,23 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
   }
 
   for (const BasicSymbolRef &Sym : Obj->symbols()) {
-    if (const GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl()))
+    uint8_t Visibility = STV_DEFAULT;
+    if (const GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl())) {
       if (const Comdat *C = GV->getComdat())
         if (!KeptComdats.count(C))
           continue;
+      switch (GV->getVisibility()) {
+      case GlobalValue::DefaultVisibility:
+        Visibility = STV_DEFAULT;
+        break;
+      case GlobalValue::HiddenVisibility:
+        Visibility = STV_HIDDEN;
+        break;
+      case GlobalValue::ProtectedVisibility:
+        Visibility = STV_PROTECTED;
+        break;
+      }
+    }
 
     SmallString<64> Name;
     raw_svector_ostream OS(Name);
@@ -440,7 +453,7 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
     uint32_t Flags = Sym.getFlags();
     bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
     if (Flags & BasicSymbolRef::SF_Undefined)
-      Body = new (Alloc) Undefined(NameRef, IsWeak, STV_DEFAULT, false);
+      Body = new (Alloc) Undefined(NameRef, IsWeak, Visibility, false);
     else
       Body = new (Alloc) DefinedBitcode(NameRef, IsWeak);
     SymbolBodies.push_back(Body);

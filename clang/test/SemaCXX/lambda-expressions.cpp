@@ -487,3 +487,15 @@ void foo() {
   };
 }
 }
+
+namespace nested_lambda {
+template <int N>
+class S {};
+
+void foo() {
+  const int num = 18;  // expected-note {{'num' declared here}}
+  auto outer = []() {
+    auto inner = [](S<num> &X) {};  // expected-error {{variable 'num' cannot be implicitly captured in a lambda with no capture-default specified}}
+  };
+}
+}

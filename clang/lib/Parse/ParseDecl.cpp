@@ -1416,8 +1416,8 @@ void Parser::handleDeclspecAlignBeforeClassKey(ParsedAttributesWithRange &Attrs,
   while (AL) {
     AttributeList *Next = AL->getNext();
 
-    // We only consider attributes using the appropriate '__declspec' spelling,
-    // this behavior doesn't extend to any other spellings.
+    // We only consider attributes using the appropriate '__declspec' spelling.
+    // This behavior doesn't extend to any other spellings.
     if (AL->getKind() == AttributeList::AT_Aligned &&
         AL->isDeclspecAttribute()) {
       // Stitch the attribute into the tag's attribute list.
