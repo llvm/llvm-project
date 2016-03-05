@@ -100,6 +100,14 @@ class NullabilityChecker
   mutable std::unique_ptr<BugType> BT;
 
 public:
+  // If true, the checker will not diagnose nullabilility issues for calls
+  // to system headers. This option is motivated by the observation that large
+  // projects may have many nullability warnings. These projects may
+  // find warnings about nullability annotations that they have explicitly
+  // added themselves higher priority to fix than warnings on calls to system
+  // libraries.
+  DefaultBool NoDiagnoseCallsToSystemHeaders;
+
   void checkBind(SVal L, SVal V, const Stmt *S, CheckerContext &C) const;
   void checkPostStmt(const ExplicitCastExpr *CE, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
@@ -191,6 +199,15 @@ private:
   /// to the wrapped region. Otherwise it will return a nullptr.
   const SymbolicRegion *getTrackRegion(SVal Val,
                                        bool CheckSuperRegion = false) const;
+
+  /// Returns true if the call is diagnosable in the currrent analyzer
+  /// configuration.
+  bool isDiagnosableCall(const CallEvent &Call) const {
+    if (NoDiagnoseCallsToSystemHeaders && Call.isInSystemHeader())
+      return false;
+
+    return true;
+  }
 };
 
 class NullabilityState {
@@ -620,7 +637,8 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
 
     if (Filter.CheckNullPassedToNonnull && Nullness == NullConstraint::IsNull &&
         ArgExprTypeLevelNullability != Nullability::Nonnull &&
-        RequiredNullability == Nullability::Nonnull) {
+        RequiredNullability == Nullability::Nonnull &&
+        isDiagnosableCall(Call)) {
       ExplodedNode *N = C.generateErrorNode(State);
       if (!N)
         return;
@@ -647,7 +665,8 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
         continue;
 
       if (Filter.CheckNullablePassedToNonnull &&
-          RequiredNullability == Nullability::Nonnull) {
+          RequiredNullability == Nullability::Nonnull &&
+          isDiagnosableCall(Call)) {
         ExplodedNode *N = C.addTransition(State);
         SmallString<256> SBuf;
         llvm::raw_svector_ostream OS(SBuf);
@@ -1106,6 +1125,10 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
     checker->Filter.Check##name = true;                                        \
     checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
     checker->NeedTracking = checker->NeedTracking || trackingRequired;         \
+    checker->NoDiagnoseCallsToSystemHeaders =                                  \
+        checker->NoDiagnoseCallsToSystemHeaders ||                             \
+        mgr.getAnalyzerOptions().getBooleanOption(                             \
+                      "NoDiagnoseCallsToSystemHeaders", false, checker, true); \
   }
 
 // The checks are likely to be turned on by default and it is possible to do
