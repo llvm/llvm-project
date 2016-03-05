@@ -3,4 +3,4 @@
 
 // REQUIRES: x86-registered-target
 // Check that pchfile.h next to to pchfile.cc is found correctly.
-// RUN: %clang_cl -internal-enable-pch -Werror /Ycpchfile.h /FIpchfile.h /c /Fo%t.obj /Fp%t.pch -- %S/Inputs/pchfile.cpp 
+// RUN: %clang_cl -Werror /Ycpchfile.h /FIpchfile.h /c /Fo%t.obj /Fp%t.pch -- %S/Inputs/pchfile.cpp 

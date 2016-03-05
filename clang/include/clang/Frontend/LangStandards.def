@@ -125,11 +125,11 @@ LANGSTANDARD(gnucxx14, "gnu++14",
 LANGSTANDARD(cxx1z, "c++1z",
              "Working draft for ISO C++ 2017",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
-             Digraphs)
+             Digraphs | HexFloat)
 LANGSTANDARD(gnucxx1z, "gnu++1z",
              "Working draft for ISO C++ 2017 with GNU extensions",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
-             Digraphs | GNUMode)
+             Digraphs | HexFloat | GNUMode)
 
 // OpenCL
 LANGSTANDARD(opencl, "cl",

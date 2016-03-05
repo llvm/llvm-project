@@ -25,10 +25,6 @@ constexpr bool check() {
 static_assert(check());
 
 template<int ...N> void empty() {
-  static_assert((N + ...) == 0);
-  static_assert((N * ...) == 1);
-  static_assert((N | ...) == 0);
-  static_assert((N & ...) == -1);
   static_assert((N || ...) == false);
   static_assert((N && ...) == true);
   (N, ...);
@@ -36,14 +32,19 @@ template<int ...N> void empty() {
 template void empty<>();
 
 // An empty fold-expression isn't a null pointer just because it's an integer
-// with value 0.
+// with value 0. (This is no longer an issue since empty pack expansions don't
+// produce integers any more.)
 template<int ...N> void null_ptr() {
-  void *p = (N + ...); // expected-error {{rvalue of type 'int'}}
-  void *q = (N | ...); // expected-error {{rvalue of type 'int'}}
+  void *p = (N || ...); // expected-error {{rvalue of type 'bool'}}
+  void *q = (N , ...); // expected-error {{rvalue of type 'void'}}
 }
 template void null_ptr<>(); // expected-note {{in instantiation of}}
 
 template<int ...N> void bad_empty() {
+  (N + ...); // expected-error {{empty expansion for operator '+' with no fallback}}
+  (N * ...); // expected-error {{empty expansion for operator '*' with no fallback}}
+  (N | ...); // expected-error {{empty expansion for operator '|' with no fallback}}
+  (N & ...); // expected-error {{empty expansion for operator '&' with no fallback}}
   (N - ...); // expected-error {{empty expansion for operator '-' with no fallback}}
   (N / ...); // expected-error {{empty expansion for operator '/' with no fallback}}
   (N % ...); // expected-error {{empty expansion for operator '%' with no fallback}}

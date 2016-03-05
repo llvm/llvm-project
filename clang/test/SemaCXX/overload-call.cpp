@@ -375,16 +375,24 @@ namespace test2 {
 }
 
 // PR 6117
-namespace test3 {
-  struct Base {};
+namespace IncompleteConversion {
+  struct Complete {};
   struct Incomplete;
 
-  void foo(Base *); // expected-note 2 {{cannot convert argument of incomplete type}}
-  void foo(Base &); // expected-note 2 {{cannot convert argument of incomplete type}}
-
-  void test(Incomplete *P) {
-    foo(P); // expected-error {{no matching function for call to 'foo'}}
-    foo(*P); // expected-error {{no matching function for call to 'foo'}}
+  void completeFunction(Complete *); // expected-note 2 {{cannot convert argument of incomplete type}}
+  void completeFunction(Complete &); // expected-note 2 {{cannot convert argument of incomplete type}}
+  
+  void testTypeConversion(Incomplete *P) {
+    completeFunction(P); // expected-error {{no matching function for call to 'completeFunction'}}
+    completeFunction(*P); // expected-error {{no matching function for call to 'completeFunction'}}
+  }
+  
+  void incompletePointerFunction(Incomplete *); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'IncompleteConversion::Incomplete' to 'IncompleteConversion::Incomplete *' for 1st argument; take the address of the argument with &}}
+  void incompleteReferenceFunction(Incomplete &); // expected-note {{candidate function not viable: cannot convert argument of incomplete type 'IncompleteConversion::Incomplete *' to 'IncompleteConversion::Incomplete &' for 1st argument; dereference the argument with *}}
+  
+  void testPointerReferenceConversion(Incomplete &reference, Incomplete *pointer) {
+    incompletePointerFunction(reference); // expected-error {{no matching function for call to 'incompletePointerFunction'}}
+    incompleteReferenceFunction(pointer); // expected-error {{no matching function for call to 'incompleteReferenceFunction'}}
   }
 }
 

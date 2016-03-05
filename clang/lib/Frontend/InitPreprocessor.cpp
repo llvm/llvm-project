@@ -793,8 +793,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineFastIntType(64, true, TI, Builder);
   DefineFastIntType(64, false, TI, Builder);
 
-  if (const char *Prefix = TI.getUserLabelPrefix())
-    Builder.defineMacro("__USER_LABEL_PREFIX__", Prefix);
+  char UserLabelPrefix[2] = {TI.getDataLayout().getGlobalPrefix(), 0};
+  Builder.defineMacro("__USER_LABEL_PREFIX__", UserLabelPrefix);
 
   if (LangOpts.FastMath || LangOpts.FiniteMathOnly)
     Builder.defineMacro("__FINITE_MATH_ONLY__", "1");

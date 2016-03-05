@@ -797,7 +797,8 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
 
     if (!HasSignificandDigits) {
       PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, s - ThisTokBegin),
-        diag::err_hexconstant_requires) << 1;
+              diag::err_hex_constant_requires)
+          << PP.getLangOpts().CPlusPlus << 1;
       hadError = true;
       return;
     }
@@ -821,10 +822,15 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
       s = first_non_digit;
 
       if (!PP.getLangOpts().HexFloats)
-        PP.Diag(TokLoc, diag::ext_hexconstant_invalid);
+        PP.Diag(TokLoc, PP.getLangOpts().CPlusPlus
+                            ? diag::ext_hex_literal_invalid
+                            : diag::ext_hex_constant_invalid);
+      else if (PP.getLangOpts().CPlusPlus1z)
+        PP.Diag(TokLoc, diag::warn_cxx1z_hex_literal);
     } else if (saw_period) {
-      PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, s-ThisTokBegin),
-              diag::err_hexconstant_requires) << 0;
+      PP.Diag(PP.AdvanceToTokenCharacter(TokLoc, s - ThisTokBegin),
+              diag::err_hex_constant_requires)
+          << PP.getLangOpts().CPlusPlus << 0;
       hadError = true;
     }
     return;
