@@ -32,7 +32,7 @@ set(ASAN_PREINIT_SOURCES
 include_directories(..)
 
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(ASAN_CFLAGS)
+append_rtti_flag(OFF ASAN_CFLAGS)
 
 set(ASAN_COMMON_DEFINITIONS
   ASAN_HAS_EXCEPTIONS=1)

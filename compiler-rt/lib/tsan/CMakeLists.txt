@@ -6,7 +6,7 @@ set(TSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 # SANITIZER_COMMON_CFLAGS contains -fPIC, but it's performance-critical for
 # TSan runtime to be built with -fPIE to reduce the number of register spills.
 append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE TSAN_CFLAGS)
-append_no_rtti_flag(TSAN_CFLAGS)
+append_rtti_flag(OFF TSAN_CFLAGS)
 
 if(COMPILER_RT_TSAN_DEBUG_OUTPUT)
   # Add extra debug information to TSan runtime. This configuration is rarely

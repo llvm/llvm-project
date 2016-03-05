@@ -17,7 +17,7 @@ set(MSAN_RTL_CXX_SOURCES
 
 
 set(MSAN_RTL_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(MSAN_RTL_CFLAGS)
+append_rtti_flag(OFF MSAN_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE MSAN_RTL_CFLAGS)
 # Prevent clang from generating libc calls.
 append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding MSAN_RTL_CFLAGS)
