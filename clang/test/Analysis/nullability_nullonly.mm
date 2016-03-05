@@ -1,20 +1,7 @@
-// RUN: %clang_cc1 -analyze -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -verify %s
+// RUN: %clang_cc1 -analyze -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -DNOSYSTEMHEADERS=0 -verify %s
+// RUN: %clang_cc1 -analyze -fobjc-arc -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true -DNOSYSTEMHEADERS=1 -verify %s
 
-#define nil 0
-#define BOOL int
-
-@protocol NSObject
-+ (id)alloc;
-- (id)init;
-@end
-
-@protocol NSCopying
-@end
-
-__attribute__((objc_root_class))
-@interface
-NSObject<NSObject>
-@end
+#include "Inputs/system-header-simulator-for-nullability.h"
 
 int getRandom();
 
@@ -159,3 +146,25 @@ TestObject * _Nonnull returnsNilObjCInstanceDirectlyWithSuppressingCast() {
     return p; // no-warning
 }
 @end
+
+
+void callFunctionInSystemHeader() {
+  NSString *s;
+  s = nil;
+
+  NSSystemFunctionTakingNonnull(s);
+  #if !NOSYSTEMHEADERS
+  // expected-warning@-2{{Null passed to a callee that requires a non-null 1st parameter}}
+  #endif
+}
+
+void callMethodInSystemHeader() {
+  NSString *s;
+  s = nil;
+
+  NSSystemClass *sc = [[NSSystemClass alloc] init];
+  [sc takesNonnull:s];
+  #if !NOSYSTEMHEADERS
+  // expected-warning@-2{{Null passed to a callee that requires a non-null 1st parameter}}
+  #endif
+}
