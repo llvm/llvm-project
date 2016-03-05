@@ -6,15 +6,20 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements a simple N^2 alias analysis accuracy evaluator.
-// Basically, for each function in the program, it simply queries to see how the
-// alias analysis implementation answers alias queries between each pair of
-// pointers in the function.
-//
-// This is inspired and adapted from code by: Naveen Neelakantam, Francesco
-// Spadini, and Wojciech Stryjewski.
-//
+/// \file
+///
+/// This file implements a simple N^2 alias analysis accuracy evaluator. The
+/// analysis result is a set of statistics of how many times the AA
+/// infrastructure provides each kind of alias result and mod/ref result when
+/// queried with all pairs of pointers in the function.
+///
+/// It can be used to evaluate a change in an alias analysis implementation,
+/// algorithm, or the AA pipeline infrastructure itself. It acts like a stable
+/// and easily tested consumer of all AA information exposed.
+///
+/// This is inspired and adapted from code by: Naveen Neelakantam, Francesco
+/// Spadini, and Wojciech Stryjewski.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_ALIASANALYSISEVALUATOR_H
