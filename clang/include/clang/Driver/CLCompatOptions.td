@@ -20,9 +20,6 @@ def cl_compile_Group : OptionGroup<"<clang-cl compile-only options>">,
 def cl_ignored_Group : OptionGroup<"<clang-cl ignored options>">,
   Group<cl_Group>;
 
-def cl_internal_Group : OptionGroup<"<clang-cl internal options>">,
-  Group<cl_Group>;
-
 class CLFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
   Group<cl_Group>, Flags<[CLOption, DriverOption]>;
 
@@ -31,9 +28,6 @@ class CLCompileFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
 
 class CLIgnoredFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
   Group<cl_ignored_Group>, Flags<[CLOption, DriverOption, HelpHidden]>;
-
-class CLInternalFlag<string name> : Option<["-"], name, KIND_FLAG>,
-  Group<cl_internal_Group>, Flags<[CLOption, DriverOption, HelpHidden]>;
 
 class CLJoined<string name> : Option<["/", "-"], name, KIND_JOINED>,
   Group<cl_Group>, Flags<[CLOption, DriverOption]>;
@@ -269,11 +263,6 @@ def _SLASH_Y_ : CLFlag<"Y-">,
   HelpText<"Disable precompiled headers, overrides /Yc and /Yu">;
 def _SLASH_Fp : CLJoined<"Fp">,
   HelpText<"Set pch filename (with /Yc and /Yu)">, MetaVarName<"<filename>">;
-
-// Internal:
-// FIXME: Once /Yc support is stable enough, turn it on by default (when /Yc
-// is passed) and remove this flag.
-def _SLASH_internal_enable_pch : CLInternalFlag<"internal-enable-pch">;
 
 // Ignored:
 

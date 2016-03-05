@@ -5,7 +5,7 @@
 // a few things for .c inputs.
 
 // /Yc with a .c file should build a c pch file.
-// RUN: %clang_cl -internal-enable-pch -Werror /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN: %clang_cl -Werror /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YC %s
 // CHECK-YC: cc1
 // CHECK-YC: -emit-pch
@@ -15,7 +15,7 @@
 // CHECK-YC: "c"
 
 // But not if /TP changes the input language to C++.
-// RUN: %clang_cl /TP -internal-enable-pch -Werror /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN: %clang_cl /TP -Werror /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YCTP %s
 // CHECK-YCTP: cc1
 // CHECK-YCTP: -emit-pch
@@ -25,7 +25,7 @@
 // CHECK-YCTP: "c++"
 
 // Except if a later /TC changes it back.
-// RUN: %clang_cl -internal-enable-pch -Werror /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN: %clang_cl -Werror /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YCTPTC %s
 // CHECK-YCTPTC: cc1
 // CHECK-YCTPTC: -emit-pch
@@ -35,7 +35,7 @@
 // CHECK-YCTPTC: "c"
 
 // Also check lower-case /Tp flag.
-// RUN: %clang_cl -internal-enable-pch -Werror /Tp%s /Ycpchfile.h /FIpchfile.h /c -### 2>&1 \
+// RUN: %clang_cl -Werror /Tp%s /Ycpchfile.h /FIpchfile.h /c -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YCTp %s
 // CHECK-YCTp: cc1
 // CHECK-YCTp: -emit-pch

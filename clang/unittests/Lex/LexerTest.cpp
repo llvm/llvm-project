@@ -22,7 +22,6 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 using namespace clang;
 
 namespace {
@@ -61,7 +60,8 @@ protected:
 
   std::vector<Token> CheckLex(StringRef Source,
                               ArrayRef<tok::TokenKind> ExpectedTokens) {
-    std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Source);
+    std::unique_ptr<llvm::MemoryBuffer> Buf =
+        llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
     VoidModuleLoader ModLoader;

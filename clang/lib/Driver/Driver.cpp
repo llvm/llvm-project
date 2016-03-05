@@ -1503,14 +1503,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     Args.eraseArg(options::OPT__SLASH_Yu);
     YcArg = YuArg = nullptr;
   }
-  // FIXME: For now, only enable pch support if an internal flag is passed too.
-  // Remove this once pch support has stabilitzed.
-  if (!Args.hasArg(options::OPT__SLASH_internal_enable_pch)) {
-    Args.eraseArg(options::OPT__SLASH_Fp);
-    Args.eraseArg(options::OPT__SLASH_Yc);
-    Args.eraseArg(options::OPT__SLASH_Yu);
-    YcArg = YuArg = nullptr;
-  }
 
   // Construct the actions to perform.
   ActionList LinkerInputs;

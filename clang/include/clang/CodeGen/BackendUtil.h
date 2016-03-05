@@ -35,8 +35,8 @@ namespace clang {
 
   void EmitBackendOutput(DiagnosticsEngine &Diags, const CodeGenOptions &CGOpts,
                          const TargetOptions &TOpts, const LangOptions &LOpts,
-                         StringRef TDesc, llvm::Module *M, BackendAction Action,
-                         raw_pwrite_stream *OS);
+                         const llvm::DataLayout &TDesc, llvm::Module *M,
+                         BackendAction Action, raw_pwrite_stream *OS);
 }
 
 #endif

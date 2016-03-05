@@ -423,7 +423,7 @@
 // AARCH64:#define __UINT_LEAST64_TYPE__ long unsigned int
 // AARCH64:#define __UINT_LEAST8_MAX__ 255
 // AARCH64:#define __UINT_LEAST8_TYPE__ unsigned char
-// AARCH64:#define __USER_LABEL_PREFIX__ _
+// AARCH64:#define __USER_LABEL_PREFIX__
 // AARCH64:#define __WCHAR_MAX__ 4294967295U
 // AARCH64:#define __WCHAR_TYPE__ unsigned int
 // AARCH64:#define __WCHAR_UNSIGNED__ 1
@@ -614,7 +614,7 @@
 // AARCH64-BE:#define __UINT_LEAST64_TYPE__ long unsigned int
 // AARCH64-BE:#define __UINT_LEAST8_MAX__ 255
 // AARCH64-BE:#define __UINT_LEAST8_TYPE__ unsigned char
-// AARCH64-BE:#define __USER_LABEL_PREFIX__ _
+// AARCH64-BE:#define __USER_LABEL_PREFIX__
 // AARCH64-BE:#define __WCHAR_MAX__ 4294967295U
 // AARCH64-BE:#define __WCHAR_TYPE__ unsigned int
 // AARCH64-BE:#define __WCHAR_UNSIGNED__ 1
@@ -1381,7 +1381,7 @@
 // ARM:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // ARM:#define __UINT_LEAST8_MAX__ 255
 // ARM:#define __UINT_LEAST8_TYPE__ unsigned char
-// ARM:#define __USER_LABEL_PREFIX__ _
+// ARM:#define __USER_LABEL_PREFIX__
 // ARM:#define __WCHAR_MAX__ 4294967295U
 // ARM:#define __WCHAR_TYPE__ unsigned int
 // ARM:#define __WCHAR_WIDTH__ 32
@@ -1571,7 +1571,7 @@
 // ARM-BE:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // ARM-BE:#define __UINT_LEAST8_MAX__ 255
 // ARM-BE:#define __UINT_LEAST8_TYPE__ unsigned char
-// ARM-BE:#define __USER_LABEL_PREFIX__ _
+// ARM-BE:#define __USER_LABEL_PREFIX__
 // ARM-BE:#define __WCHAR_MAX__ 4294967295U
 // ARM-BE:#define __WCHAR_TYPE__ unsigned int
 // ARM-BE:#define __WCHAR_WIDTH__ 32
@@ -2407,7 +2407,7 @@
 // I386:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // I386:#define __UINT_LEAST8_MAX__ 255
 // I386:#define __UINT_LEAST8_TYPE__ unsigned char
-// I386:#define __USER_LABEL_PREFIX__ _
+// I386:#define __USER_LABEL_PREFIX__
 // I386:#define __WCHAR_MAX__ 2147483647
 // I386:#define __WCHAR_TYPE__ int
 // I386:#define __WCHAR_WIDTH__ 32
@@ -2998,7 +2998,7 @@
 // MIPS32BE:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // MIPS32BE:#define __UINT_LEAST8_MAX__ 255
 // MIPS32BE:#define __UINT_LEAST8_TYPE__ unsigned char
-// MIPS32BE:#define __USER_LABEL_PREFIX__ _
+// MIPS32BE:#define __USER_LABEL_PREFIX__
 // MIPS32BE:#define __WCHAR_MAX__ 2147483647
 // MIPS32BE:#define __WCHAR_TYPE__ int
 // MIPS32BE:#define __WCHAR_WIDTH__ 32
@@ -3204,7 +3204,7 @@
 // MIPS32EL:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // MIPS32EL:#define __UINT_LEAST8_MAX__ 255
 // MIPS32EL:#define __UINT_LEAST8_TYPE__ unsigned char
-// MIPS32EL:#define __USER_LABEL_PREFIX__ _
+// MIPS32EL:#define __USER_LABEL_PREFIX__
 // MIPS32EL:#define __WCHAR_MAX__ 2147483647
 // MIPS32EL:#define __WCHAR_TYPE__ int
 // MIPS32EL:#define __WCHAR_WIDTH__ 32
@@ -3507,7 +3507,7 @@
 // MIPSN32BE: #define __UINT_LEAST8_FMTx__ "hhx"
 // MIPSN32BE: #define __UINT_LEAST8_MAX__ 255
 // MIPSN32BE: #define __UINT_LEAST8_TYPE__ unsigned char
-// MIPSN32BE: #define __USER_LABEL_PREFIX__ _
+// MIPSN32BE: #define __USER_LABEL_PREFIX__
 // MIPSN32BE: #define __WCHAR_MAX__ 2147483647
 // MIPSN32BE: #define __WCHAR_TYPE__ int
 // MIPSN32BE: #define __WCHAR_WIDTH__ 32
@@ -3813,7 +3813,7 @@
 // MIPSN32EL: #define __UINT_LEAST8_FMTx__ "hhx"
 // MIPSN32EL: #define __UINT_LEAST8_MAX__ 255
 // MIPSN32EL: #define __UINT_LEAST8_TYPE__ unsigned char
-// MIPSN32EL: #define __USER_LABEL_PREFIX__ _
+// MIPSN32EL: #define __USER_LABEL_PREFIX__
 // MIPSN32EL: #define __WCHAR_MAX__ 2147483647
 // MIPSN32EL: #define __WCHAR_TYPE__ int
 // MIPSN32EL: #define __WCHAR_WIDTH__ 32
@@ -4023,7 +4023,7 @@
 // MIPS64BE:#define __UINT_LEAST64_TYPE__ long unsigned int
 // MIPS64BE:#define __UINT_LEAST8_MAX__ 255
 // MIPS64BE:#define __UINT_LEAST8_TYPE__ unsigned char
-// MIPS64BE:#define __USER_LABEL_PREFIX__ _
+// MIPS64BE:#define __USER_LABEL_PREFIX__
 // MIPS64BE:#define __WCHAR_MAX__ 2147483647
 // MIPS64BE:#define __WCHAR_TYPE__ int
 // MIPS64BE:#define __WCHAR_WIDTH__ 32
@@ -4232,7 +4232,7 @@
 // MIPS64EL:#define __UINT_LEAST64_TYPE__ long unsigned int
 // MIPS64EL:#define __UINT_LEAST8_MAX__ 255
 // MIPS64EL:#define __UINT_LEAST8_TYPE__ unsigned char
-// MIPS64EL:#define __USER_LABEL_PREFIX__ _
+// MIPS64EL:#define __USER_LABEL_PREFIX__
 // MIPS64EL:#define __WCHAR_MAX__ 2147483647
 // MIPS64EL:#define __WCHAR_TYPE__ int
 // MIPS64EL:#define __WCHAR_WIDTH__ 32
@@ -4652,7 +4652,7 @@
 // MSP430:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // MSP430:#define __UINT_LEAST8_MAX__ 255
 // MSP430:#define __UINT_LEAST8_TYPE__ unsigned char
-// MSP430:#define __USER_LABEL_PREFIX__ _
+// MSP430:#define __USER_LABEL_PREFIX__
 // MSP430:#define __WCHAR_MAX__ 32767
 // MSP430:#define __WCHAR_TYPE__ int
 // MSP430:#define __WCHAR_WIDTH__ 16
@@ -4840,7 +4840,7 @@
 // NVPTX32:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // NVPTX32:#define __UINT_LEAST8_MAX__ 255
 // NVPTX32:#define __UINT_LEAST8_TYPE__ unsigned char
-// NVPTX32:#define __USER_LABEL_PREFIX__ _
+// NVPTX32:#define __USER_LABEL_PREFIX__
 // NVPTX32:#define __WCHAR_MAX__ 2147483647
 // NVPTX32:#define __WCHAR_TYPE__ int
 // NVPTX32:#define __WCHAR_WIDTH__ 32
@@ -5027,7 +5027,7 @@
 // NVPTX64:#define __UINT_LEAST64_TYPE__ long unsigned int
 // NVPTX64:#define __UINT_LEAST8_MAX__ 255
 // NVPTX64:#define __UINT_LEAST8_TYPE__ unsigned char
-// NVPTX64:#define __USER_LABEL_PREFIX__ _
+// NVPTX64:#define __USER_LABEL_PREFIX__
 // NVPTX64:#define __WCHAR_MAX__ 2147483647
 // NVPTX64:#define __WCHAR_TYPE__ int
 // NVPTX64:#define __WCHAR_WIDTH__ 32
@@ -5219,7 +5219,7 @@
 // PPC603E:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // PPC603E:#define __UINT_LEAST8_MAX__ 255
 // PPC603E:#define __UINT_LEAST8_TYPE__ unsigned char
-// PPC603E:#define __USER_LABEL_PREFIX__ _
+// PPC603E:#define __USER_LABEL_PREFIX__
 // PPC603E:#define __WCHAR_MAX__ 2147483647
 // PPC603E:#define __WCHAR_TYPE__ int
 // PPC603E:#define __WCHAR_WIDTH__ 32
@@ -5419,7 +5419,7 @@
 // PPC64:#define __UINT_LEAST64_TYPE__ long unsigned int
 // PPC64:#define __UINT_LEAST8_MAX__ 255
 // PPC64:#define __UINT_LEAST8_TYPE__ unsigned char
-// PPC64:#define __USER_LABEL_PREFIX__ _
+// PPC64:#define __USER_LABEL_PREFIX__
 // PPC64:#define __WCHAR_MAX__ 2147483647
 // PPC64:#define __WCHAR_TYPE__ int
 // PPC64:#define __WCHAR_WIDTH__ 32
@@ -5622,7 +5622,7 @@
 // PPC64LE:#define __UINT_LEAST64_TYPE__ long unsigned int
 // PPC64LE:#define __UINT_LEAST8_MAX__ 255
 // PPC64LE:#define __UINT_LEAST8_TYPE__ unsigned char
-// PPC64LE:#define __USER_LABEL_PREFIX__ _
+// PPC64LE:#define __USER_LABEL_PREFIX__
 // PPC64LE:#define __WCHAR_MAX__ 2147483647
 // PPC64LE:#define __WCHAR_TYPE__ int
 // PPC64LE:#define __WCHAR_WIDTH__ 32
@@ -6209,7 +6209,7 @@
 // PPC:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // PPC:#define __UINT_LEAST8_MAX__ 255
 // PPC:#define __UINT_LEAST8_TYPE__ unsigned char
-// PPC:#define __USER_LABEL_PREFIX__ _
+// PPC:#define __USER_LABEL_PREFIX__
 // PPC:#define __WCHAR_MAX__ 2147483647
 // PPC:#define __WCHAR_TYPE__ int
 // PPC:#define __WCHAR_WIDTH__ 32
@@ -6788,7 +6788,7 @@
 // S390X:#define __UINT_LEAST64_TYPE__ long unsigned int
 // S390X:#define __UINT_LEAST8_MAX__ 255
 // S390X:#define __UINT_LEAST8_TYPE__ unsigned char
-// S390X:#define __USER_LABEL_PREFIX__ _
+// S390X:#define __USER_LABEL_PREFIX__
 // S390X:#define __WCHAR_MAX__ 2147483647
 // S390X:#define __WCHAR_TYPE__ int
 // S390X:#define __WCHAR_WIDTH__ 32
@@ -6797,7 +6797,10 @@
 // S390X:#define __s390__ 1
 // S390X:#define __s390x__ 1
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-rtems-elf < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-none-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-none-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD %s
 //
 // SPARC-NOT:#define _LP64
 // SPARC:#define __BIGGEST_ALIGNMENT__ 8
@@ -6861,10 +6864,14 @@
 // SPARC:#define __INTMAX_MAX__ 9223372036854775807LL
 // SPARC:#define __INTMAX_TYPE__ long long int
 // SPARC:#define __INTMAX_WIDTH__ 64
-// SPARC:#define __INTPTR_FMTd__ "d"
-// SPARC:#define __INTPTR_FMTi__ "i"
-// SPARC:#define __INTPTR_MAX__ 2147483647
-// SPARC:#define __INTPTR_TYPE__ int
+// SPARC-DEFAULT:#define __INTPTR_FMTd__ "d"
+// SPARC-DEFAULT:#define __INTPTR_FMTi__ "i"
+// SPARC-DEFAULT:#define __INTPTR_MAX__ 2147483647
+// SPARC-DEFAULT:#define __INTPTR_TYPE__ int
+// SPARC-NETOPENBSD:#define __INTPTR_FMTd__ "ld"
+// SPARC-NETOPENBSD:#define __INTPTR_FMTi__ "li"
+// SPARC-NETOPENBSD:#define __INTPTR_MAX__ 2147483647L
+// SPARC-NETOPENBSD:#define __INTPTR_TYPE__ long int
 // SPARC:#define __INTPTR_WIDTH__ 32
 // SPARC:#define __INT_FAST16_FMTd__ "hd"
 // SPARC:#define __INT_FAST16_FMTi__ "hi"
@@ -6916,7 +6923,8 @@
 // SPARC:#define __LONG_MAX__ 2147483647L
 // SPARC-NOT:#define __LP64__
 // SPARC:#define __POINTER_WIDTH__ 32
-// SPARC:#define __PTRDIFF_TYPE__ int
+// SPARC-DEFAULT:#define __PTRDIFF_TYPE__ int
+// SPARC-NETOPENBSD:#define __PTRDIFF_TYPE__ long int
 // SPARC:#define __PTRDIFF_WIDTH__ 32
 // SPARC:#define __REGISTER_PREFIX__
 // SPARC:#define __SCHAR_MAX__ 127
@@ -6935,8 +6943,10 @@
 // SPARC:#define __SIZEOF_SIZE_T__ 4
 // SPARC:#define __SIZEOF_WCHAR_T__ 4
 // SPARC:#define __SIZEOF_WINT_T__ 4
-// SPARC:#define __SIZE_MAX__ 4294967295U
-// SPARC:#define __SIZE_TYPE__ unsigned int
+// SPARC-DEFAULT:#define __SIZE_MAX__ 4294967295U
+// SPARC-DEFAULT:#define __SIZE_TYPE__ unsigned int
+// SPARC-NETOPENBSD:#define __SIZE_MAX__ 4294967295UL
+// SPARC-NETOPENBSD:#define __SIZE_TYPE__ long unsigned int
 // SPARC:#define __SIZE_WIDTH__ 32
 // SPARC:#define __UINT16_C_SUFFIX__
 // SPARC:#define __UINT16_MAX__ 65535
@@ -6954,8 +6964,10 @@
 // SPARC:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // SPARC:#define __UINTMAX_TYPE__ long long unsigned int
 // SPARC:#define __UINTMAX_WIDTH__ 64
-// SPARC:#define __UINTPTR_MAX__ 4294967295U
-// SPARC:#define __UINTPTR_TYPE__ unsigned int
+// SPARC-DEFAULT:#define __UINTPTR_MAX__ 4294967295U
+// SPARC-DEFAULT:#define __UINTPTR_TYPE__ unsigned int
+// SPARC-NETOPENBSD:#define __UINTPTR_MAX__ 4294967295UL
+// SPARC-NETOPENBSD:#define __UINTPTR_TYPE__ long unsigned int
 // SPARC:#define __UINTPTR_WIDTH__ 32
 // SPARC:#define __UINT_FAST16_MAX__ 65535
 // SPARC:#define __UINT_FAST16_TYPE__ unsigned short
@@ -6973,7 +6985,7 @@
 // SPARC:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // SPARC:#define __UINT_LEAST8_MAX__ 255
 // SPARC:#define __UINT_LEAST8_TYPE__ unsigned char
-// SPARC:#define __USER_LABEL_PREFIX__ _
+// SPARC:#define __USER_LABEL_PREFIX__
 // SPARC:#define __VERSION__ "4.2.1 Compatible{{.*}}
 // SPARC:#define __WCHAR_MAX__ 2147483647
 // SPARC:#define __WCHAR_TYPE__ int
@@ -6984,16 +6996,6 @@
 // SPARC:#define __sparc__ 1
 // SPARC:#define __sparcv8 1
 // SPARC:#define sparc 1
-// 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-none-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC-NETOPENBSD %s
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc-none-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC-NETOPENBSD %s
-// SPARC-NETOPENBSD:#define __INTPTR_FMTd__ "ld"
-// SPARC-NETOPENBSD:#define __INTPTR_FMTi__ "li"
-// SPARC-NETOPENBSD:#define __INTPTR_MAX__ 2147483647L
-// SPARC-NETOPENBSD:#define __INTPTR_TYPE__ long int
-// SPARC-NETOPENBSD:#define __PTRDIFF_TYPE__ long int
-// SPARC-NETOPENBSD:#define __SIZE_TYPE__ long unsigned int
-// SPARC-NETOPENBSD:#define __UINTPTR_TYPE__ long unsigned int
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=tce-none-none < /dev/null | FileCheck -match-full-lines -check-prefix TCE %s
 //
@@ -7152,7 +7154,7 @@
 // TCE:#define __UINT_LEAST32_TYPE__ unsigned int
 // TCE:#define __UINT_LEAST8_MAX__ 255
 // TCE:#define __UINT_LEAST8_TYPE__ unsigned char
-// TCE:#define __USER_LABEL_PREFIX__ _
+// TCE:#define __USER_LABEL_PREFIX__
 // TCE:#define __WCHAR_MAX__ 2147483647
 // TCE:#define __WCHAR_TYPE__ int
 // TCE:#define __WCHAR_WIDTH__ 32
@@ -7346,7 +7348,7 @@
 // X86_64:#define __UINT_LEAST64_TYPE__ long unsigned int
 // X86_64:#define __UINT_LEAST8_MAX__ 255
 // X86_64:#define __UINT_LEAST8_TYPE__ unsigned char
-// X86_64:#define __USER_LABEL_PREFIX__ _
+// X86_64:#define __USER_LABEL_PREFIX__
 // X86_64:#define __WCHAR_MAX__ 2147483647
 // X86_64:#define __WCHAR_TYPE__ int
 // X86_64:#define __WCHAR_WIDTH__ 32
@@ -7548,7 +7550,7 @@
 // X32:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // X32:#define __UINT_LEAST8_MAX__ 255
 // X32:#define __UINT_LEAST8_TYPE__ unsigned char
-// X32:#define __USER_LABEL_PREFIX__ _
+// X32:#define __USER_LABEL_PREFIX__
 // X32:#define __WCHAR_MAX__ 2147483647
 // X32:#define __WCHAR_TYPE__ int
 // X32:#define __WCHAR_WIDTH__ 32
