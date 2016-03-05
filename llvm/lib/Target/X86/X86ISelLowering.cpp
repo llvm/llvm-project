@@ -17959,6 +17959,16 @@ SDValue X86TargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
 SDValue X86TargetLowering::lowerEH_SJLJ_SETJMP(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
+  // If the subtarget is not 64bit, we may need the global base reg
+  // after isel expand pseudo, i.e., after CGBR pass ran.
+  // Therefore, ask for the GlobalBaseReg now, so that the pass
+  // inserts the code for us in case we need it.
+  // Otherwise, we will end up in a situation where we will
+  // reference a virtual register that is not defined!
+  if (!Subtarget.is64Bit()) {
+    const X86InstrInfo *TII = Subtarget.getInstrInfo();
+    (void)TII->getGlobalBaseReg(&DAG.getMachineFunction());
+  }
   return DAG.getNode(X86ISD::EH_SJLJ_SETJMP, DL,
                      DAG.getVTList(MVT::i32, MVT::Other),
                      Op.getOperand(0), Op.getOperand(1));
