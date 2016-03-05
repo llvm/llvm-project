@@ -326,8 +326,8 @@ void RegPressureTracker::initLiveThru(const RegPressureTracker &RPTracker) {
   }
 }
 
-static unsigned getRegLanes(ArrayRef<RegisterMaskPair> RegUnits,
-                            unsigned RegUnit) {
+static LaneBitmask getRegLanes(ArrayRef<RegisterMaskPair> RegUnits,
+                               unsigned RegUnit) {
   auto I = std::find_if(RegUnits.begin(), RegUnits.end(),
                         [RegUnit](const RegisterMaskPair Other) {
                         return Other.RegUnit == RegUnit;
@@ -528,11 +528,6 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
   for (auto I = Defs.begin(); I != Defs.end(); ) {
     LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, true, I->RegUnit,
                                            Pos.getDeadSlot());
-#if 0
-    unsigned DeadDef = I->LaneMask & ~LiveAfter;
-    if (DeadDef != 0)
-      addRegLanes(DeadDefs, RegisterMaskPair(I->RegUnit, DeadDef));
-#endif
     // If the the def is all that is live after the instruction, then in case
     // of a subregister def we need a read-undef flag.
     unsigned RegUnit = I->RegUnit;
@@ -540,7 +535,7 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
         AddFlagsMI != nullptr && (LiveAfter & ~I->LaneMask) == 0)
       AddFlagsMI->setRegisterDefReadUndef(RegUnit);
 
-    unsigned LaneMask = I->LaneMask & LiveAfter;
+    LaneBitmask LaneMask = I->LaneMask & LiveAfter;
     if (LaneMask == 0) {
       I = Defs.erase(I);
       // Make sure the operand is properly marked as Dead.
@@ -554,7 +549,7 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
   for (auto I = Uses.begin(); I != Uses.end(); ) {
     LaneBitmask LiveBefore = getLiveLanesAt(LIS, MRI, true, I->RegUnit,
                                             Pos.getBaseIndex());
-    unsigned LaneMask = I->LaneMask & LiveBefore;
+    LaneBitmask LaneMask = I->LaneMask & LiveBefore;
     if (LaneMask == 0) {
       I = Uses.erase(I);
     } else {
@@ -636,8 +631,8 @@ void PressureDiff::addPressureChange(unsigned RegUnit, bool IsDec,
 /// Force liveness of registers.
 void RegPressureTracker::addLiveRegs(ArrayRef<RegisterMaskPair> Regs) {
   for (const RegisterMaskPair &P : Regs) {
-    unsigned PrevMask = LiveRegs.insert(P);
-    unsigned NewMask = PrevMask | P.LaneMask;
+    LaneBitmask PrevMask = LiveRegs.insert(P);
+    LaneBitmask NewMask = PrevMask | P.LaneMask;
     increaseRegPressure(P.RegUnit, PrevMask, NewMask);
   }
 }
