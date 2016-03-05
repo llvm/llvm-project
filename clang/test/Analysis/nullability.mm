@@ -1,38 +1,7 @@
-// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,nullability -verify %s
+// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,nullability -DNOSYSTEMHEADERS=0 -verify %s
+// RUN: %clang_cc1 -fblocks -analyze -analyzer-checker=core,nullability -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true -DNOSYSTEMHEADERS=1 -verify %s
 
-#define nil 0
-#define BOOL int
-
-#define NS_ASSUME_NONNULL_BEGIN _Pragma("clang assume_nonnull begin")
-#define NS_ASSUME_NONNULL_END   _Pragma("clang assume_nonnull end")
-
-typedef struct _NSZone NSZone;
-
-@protocol NSObject
-+ (id)alloc;
-- (id)init;
-@end
-
-NS_ASSUME_NONNULL_BEGIN
-@protocol NSCopying
-- (id)copyWithZone:(nullable NSZone *)zone;
-
-@end
-
-@protocol NSMutableCopying
-- (id)mutableCopyWithZone:(nullable NSZone *)zone;
-@end
-NS_ASSUME_NONNULL_END
-
-__attribute__((objc_root_class))
-@interface
-NSObject<NSObject>
-@end
-
-@interface NSString : NSObject<NSCopying>
-- (BOOL)isEqualToString : (NSString *_Nonnull)aString;
-- (NSString *)stringByAppendingString:(NSString *_Nonnull)aString;
-@end
+#include "Inputs/system-header-simulator-for-nullability.h"
 
 @interface TestObject : NSObject
 - (int *_Nonnull)returnsNonnull;
@@ -419,3 +388,24 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
   return newInstance;
 }
 @end
+
+NSString * _Nullable returnsNullableString();
+
+void callFunctionInSystemHeader() {
+  NSString *s = returnsNullableString();
+
+  NSSystemFunctionTakingNonnull(s);
+  #if !NOSYSTEMHEADERS
+  // expected-warning@-2{{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+  #endif
+}
+
+void callMethodInSystemHeader() {
+  NSString *s = returnsNullableString();
+
+  NSSystemClass *sc = [[NSSystemClass alloc] init];
+  [sc takesNonnull:s];
+  #if !NOSYSTEMHEADERS
+  // expected-warning@-2{{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+  #endif
+}
