@@ -486,8 +486,8 @@ void llvm_gcda_end_file() {
       unmap_file();
     }
 
-    fclose(output_file);
     flock(fd, LOCK_UN);
+    fclose(output_file);
     output_file = NULL;
     write_buffer = NULL;
   }
