@@ -22,18 +22,16 @@ set(UBSAN_CXX_SOURCES
 include_directories(..)
 
 set(UBSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(UBSAN_CFLAGS)
+append_rtti_flag(OFF UBSAN_CFLAGS)
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CFLAGS)
 
 set(UBSAN_STANDALONE_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(UBSAN_STANDALONE_CFLAGS)
+append_rtti_flag(OFF UBSAN_STANDALONE_CFLAGS)
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_STANDALONE_CFLAGS)
 
 set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
+append_rtti_flag(ON UBSAN_STANDALONE_CXXFLAGS)
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
-# Make sure we end with -frtti on type_hash
-set_property(SOURCE ubsan_type_hash_itanium.cc APPEND_STRING PROPERTY
-  COMPILE_FLAGS " -frtti")
 
 add_custom_target(ubsan)
 
