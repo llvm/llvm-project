@@ -98,8 +98,8 @@ void foo4(int i, int *error) __attribute__((swift_name("fooWithA(_:)"))); // oka
 typedef int some_int_type __attribute__((swift_name("SomeInt")));
 
 struct Point3D createPoint3D(float x, float y, float z) __attribute__((swift_name("Point3D.init(x:y:z:)")));
-struct Point3D rotatePoint3D(Point3D point, float radians) __attribute__((swift_name("Point3D.rotate(self:radius:)")));
-struct Point3D badRotatePoint3D(Point3D point, float radians) __attribute__((swift_name("Point3D.rotate(radius:)"))); // expected-warning {{too few parameters in 'swift_name' attribute (expected 2; got 1)}}
+struct Point3D rotatePoint3D(Point3D point, float radians) __attribute__((swift_name("Point3D.rotate(self:radians:)")));
+struct Point3D badRotatePoint3D(Point3D point, float radians) __attribute__((swift_name("Point3D.rotate(radians:)"))); // expected-warning {{too few parameters in 'swift_name' attribute (expected 2; got 1)}}
 
 extern struct Point3D identityPoint __attribute__((swift_name("Point3D.identity")));
 
@@ -117,8 +117,8 @@ Point3D getLastPoint3D(void) __attribute__((swift_name("getter:lastPoint3D()")))
 
 void setLastPoint3D(Point3D point) __attribute__((swift_name("setter:lastPoint3D(_:)")));
 
-Point3D getZeroPoint() __attribute__((swift_name("getter:Point3D()")));
-void setZeroPoint(Point3D point) __attribute__((swift_name("setter:Point3D(_:)")));
+Point3D getZeroPoint() __attribute__((swift_name("getter:Point3D.zero()")));
+void setZeroPoint(Point3D point) __attribute__((swift_name("setter:Point3D.zero(_:)")));
 
 Point3D badGetter1(int x) __attribute__((swift_name("getter:bad1(_:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
 void badSetter1() __attribute__((swift_name("getter:bad1())"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
