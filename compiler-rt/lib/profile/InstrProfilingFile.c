@@ -14,21 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef COMPILER_RT_HAS_UNAME
-#include <sys/utsname.h>
-#endif
 
 #define UNCONST(ptr) ((void *)(uintptr_t)(ptr))
-
-#ifdef COMPILER_RT_HAS_UNAME
-int GetHostName(char *Name, int Len) {
-    struct utsname N;
-    int R;
-    if (!(R = uname(&N)))
-      strncpy(Name, N.nodename, Len);
-    return R;
-}
-#endif
 
 /* Return 1 if there is an error, otherwise return  0.  */
 static uint32_t fileWriter(ProfDataIOVec *IOVecs, uint32_t NumIOVecs,
@@ -44,10 +31,10 @@ static uint32_t fileWriter(ProfDataIOVec *IOVecs, uint32_t NumIOVecs,
 }
 
 COMPILER_RT_VISIBILITY ProfBufferIO *
-llvmCreateBufferIOInternal(void *File, uint32_t BufferSz) {
+lprofCreateBufferIOInternal(void *File, uint32_t BufferSz) {
   CallocHook = calloc;
   FreeHook = free;
-  return llvmCreateBufferIO(fileWriter, File, BufferSz);
+  return lprofCreateBufferIO(fileWriter, File, BufferSz);
 }
 
 static int writeFile(FILE *File) {
@@ -60,7 +47,7 @@ static int writeFile(FILE *File) {
   BufferSzStr = getenv("LLVM_VP_BUFFER_SIZE");
   if (BufferSzStr && BufferSzStr[0])
     VPBufferSize = atoi(BufferSzStr);
-  return llvmWriteProfData(fileWriter, File, ValueDataArray, ValueDataSize);
+  return lprofWriteData(fileWriter, File, ValueDataArray, ValueDataSize);
 }
 
 static int writeFileWithName(const char *OutputName) {

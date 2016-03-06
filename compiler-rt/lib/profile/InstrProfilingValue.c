@@ -25,18 +25,6 @@
     return NULL;                                                               \
   }
 
-#if COMPILER_RT_HAS_ATOMICS != 1
-COMPILER_RT_VISIBILITY
-uint32_t BoolCmpXchg(void **Ptr, void *OldV, void *NewV) {
-  void *R = *Ptr;
-  if (R == OldV) {
-    *Ptr = NewV;
-    return 1;
-  }
-  return 0;
-}
-#endif
-
 /* This method is only used in value profiler mock testing.  */
 COMPILER_RT_VISIBILITY void
 __llvm_profile_set_num_value_sites(__llvm_profile_data *Data,

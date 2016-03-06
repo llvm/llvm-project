@@ -18,12 +18,12 @@
 #include "InstrProfData.inc"
 
 void (*VPMergeHook)(ValueProfData *,
-                    __llvm_profile_data *) = &mergeValueProfData;
+                    __llvm_profile_data *) = &lprofMergeValueProfData;
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */
-void mergeValueProfData(ValueProfData *SrcValueProfData,
-                        __llvm_profile_data *DstData) {
+void lprofMergeValueProfData(ValueProfData *SrcValueProfData,
+                             __llvm_profile_data *DstData) {
   unsigned I, S, V, C;
   InstrProfValueData *VData;
   ValueProfRecord *VR = getFirstValueProfRecord(SrcValueProfData);

@@ -16,9 +16,9 @@ void __llvm_profile_merge_from_buffer(const char *, uint64_t);
 void __llvm_profile_set_filename(const char *);
 struct __llvm_profile_data;
 struct ValueProfData;
-void mergeValueProfData(struct ValueProfData *, struct __llvm_profile_data *);
+void lprofMergeValueProfData(struct ValueProfData *, struct __llvm_profile_data *);
 /* Force the vp merger module to be linked in.  */
-void *Dummy = &mergeValueProfData;
+void *Dummy = &lprofMergeValueProfData;
 
 void callee1() {}
 void callee2() {}

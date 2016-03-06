@@ -68,51 +68,51 @@ typedef struct ProfBufferIO {
 } ProfBufferIO;
 
 /* The creator interface used by testing.  */
-ProfBufferIO *llvmCreateBufferIOInternal(void *File, uint32_t DefaultBufferSz);
+ProfBufferIO *lprofCreateBufferIOInternal(void *File, uint32_t DefaultBufferSz);
 /*!
  * This is the interface to create a handle for buffered IO.
  */
-ProfBufferIO *llvmCreateBufferIO(WriterCallback FileWriter, void *File,
-                                 uint32_t DefaultBufferSz);
+ProfBufferIO *lprofCreateBufferIO(WriterCallback FileWriter, void *File,
+                                  uint32_t DefaultBufferSz);
 /*!
  * The interface to destroy the bufferIO handle and reclaim
  * the memory.
  */
-void llvmDeleteBufferIO(ProfBufferIO *BufferIO);
+void lprofDeleteBufferIO(ProfBufferIO *BufferIO);
 
 /*!
  * This is the interface to write \c Data of \c Size bytes through
  * \c BufferIO. Returns 0 if successful, otherwise return -1.
  */
-int llvmBufferIOWrite(ProfBufferIO *BufferIO, const uint8_t *Data,
-                      uint32_t Size);
+int lprofBufferIOWrite(ProfBufferIO *BufferIO, const uint8_t *Data,
+                       uint32_t Size);
 /*!
  * The interface to flush the remaining data in the buffer.
  * through the low level writer callback.
  */
-int llvmBufferIOFlush(ProfBufferIO *BufferIO);
+int lprofBufferIOFlush(ProfBufferIO *BufferIO);
 
 /* The low level interface to write data into a buffer. It is used as the
  * callback by other high level writer methods such as buffered IO writer
  * and profile data writer.  */
-uint32_t llvmBufferWriter(ProfDataIOVec *IOVecs, uint32_t NumIOVecs,
-                          void **WriterCtx);
+uint32_t lprofBufferWriter(ProfDataIOVec *IOVecs, uint32_t NumIOVecs,
+                           void **WriterCtx);
 
-int llvmWriteProfData(WriterCallback Writer, void *WriterCtx,
-                      struct ValueProfData **ValueDataArray,
-                      const uint64_t ValueDataSize);
-int llvmWriteProfDataImpl(WriterCallback Writer, void *WriterCtx,
-                          const __llvm_profile_data *DataBegin,
-                          const __llvm_profile_data *DataEnd,
-                          const uint64_t *CountersBegin,
-                          const uint64_t *CountersEnd,
-                          struct ValueProfData **ValueDataBeginArray,
-                          const uint64_t ValueDataSize, const char *NamesBegin,
-                          const char *NamesEnd);
+int lprofWriteData(WriterCallback Writer, void *WriterCtx,
+                   struct ValueProfData **ValueDataArray,
+                   const uint64_t ValueDataSize);
+int lprofWriteDataImpl(WriterCallback Writer, void *WriterCtx,
+                       const __llvm_profile_data *DataBegin,
+                       const __llvm_profile_data *DataEnd,
+                       const uint64_t *CountersBegin,
+                       const uint64_t *CountersEnd,
+                       struct ValueProfData **ValueDataBeginArray,
+                       const uint64_t ValueDataSize, const char *NamesBegin,
+                       const char *NamesEnd);
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */
-void mergeValueProfData(struct ValueProfData *SrcValueProfData,
-                        __llvm_profile_data *DstData);
+void lprofMergeValueProfData(struct ValueProfData *SrcValueProfData,
+                             __llvm_profile_data *DstData);
 
 extern char *(*GetEnvHook)(const char *);
 extern void (*FreeHook)(void *);
