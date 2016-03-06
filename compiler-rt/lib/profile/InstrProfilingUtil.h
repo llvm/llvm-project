@@ -20,4 +20,8 @@ void __llvm_profile_recursive_mkdir(char *Pathname);
 static inline char *getenv(const char *name) { return NULL; }
 #endif /* #if __PS4__ */
 
+int lprofGetHostName(char *Name, int Len);
+
+unsigned BoolCmpXchg(void **Ptr, void *OldV, void *NewV);
+
 #endif  /* PROFILE_INSTRPROFILINGUTIL_H */

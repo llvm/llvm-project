@@ -20,9 +20,9 @@ uint32_t VPBufferSize = 0;
 /* The buffer writer is reponsponsible in keeping writer state
  * across the call.
  */
-COMPILER_RT_VISIBILITY uint32_t llvmBufferWriter(ProfDataIOVec *IOVecs,
-                                                 uint32_t NumIOVecs,
-                                                 void **WriterCtx) {
+COMPILER_RT_VISIBILITY uint32_t lprofBufferWriter(ProfDataIOVec *IOVecs,
+                                                  uint32_t NumIOVecs,
+                                                  void **WriterCtx) {
   uint32_t I;
   char **Buffer = (char **)WriterCtx;
   for (I = 0; I < NumIOVecs; I++) {
@@ -43,7 +43,7 @@ static void llvmInitBufferIO(ProfBufferIO *BufferIO, WriterCallback FileWriter,
 }
 
 COMPILER_RT_VISIBILITY ProfBufferIO *
-llvmCreateBufferIO(WriterCallback FileWriter, void *File, uint32_t BufferSz) {
+lprofCreateBufferIO(WriterCallback FileWriter, void *File, uint32_t BufferSz) {
   ProfBufferIO *BufferIO = (ProfBufferIO *)CallocHook(1, sizeof(ProfBufferIO));
   uint8_t *Buffer = (uint8_t *)CallocHook(1, BufferSz);
   if (!Buffer) {
@@ -54,17 +54,17 @@ llvmCreateBufferIO(WriterCallback FileWriter, void *File, uint32_t BufferSz) {
   return BufferIO;
 }
 
-COMPILER_RT_VISIBILITY void llvmDeleteBufferIO(ProfBufferIO *BufferIO) {
+COMPILER_RT_VISIBILITY void lprofDeleteBufferIO(ProfBufferIO *BufferIO) {
   FreeHook(BufferIO->BufferStart);
   FreeHook(BufferIO);
 }
 
 COMPILER_RT_VISIBILITY int
-llvmBufferIOWrite(ProfBufferIO *BufferIO, const uint8_t *Data, uint32_t Size) {
+lprofBufferIOWrite(ProfBufferIO *BufferIO, const uint8_t *Data, uint32_t Size) {
   /* Buffer is not large enough, it is time to flush.  */
   if (Size + BufferIO->CurOffset > BufferIO->BufferSz) {
-     if (llvmBufferIOFlush(BufferIO) != 0)
-       return -1;
+    if (lprofBufferIOFlush(BufferIO) != 0)
+      return -1;
   }
   /* Special case, bypass the buffer completely. */
   ProfDataIOVec IO[] = {{Data, sizeof(uint8_t), Size}};
@@ -74,13 +74,13 @@ llvmBufferIOWrite(ProfBufferIO *BufferIO, const uint8_t *Data, uint32_t Size) {
   } else {
     /* Write the data to buffer */
     uint8_t *Buffer = BufferIO->BufferStart + BufferIO->CurOffset;
-    llvmBufferWriter(IO, 1, (void **)&Buffer);
+    lprofBufferWriter(IO, 1, (void **)&Buffer);
     BufferIO->CurOffset = Buffer - BufferIO->BufferStart;
   }
   return 0;
 }
 
-COMPILER_RT_VISIBILITY int llvmBufferIOFlush(ProfBufferIO *BufferIO) {
+COMPILER_RT_VISIBILITY int lprofBufferIOFlush(ProfBufferIO *BufferIO) {
   if (BufferIO->CurOffset) {
     ProfDataIOVec IO[] = {
         {BufferIO->BufferStart, sizeof(uint8_t), BufferIO->CurOffset}};
@@ -91,10 +91,10 @@ COMPILER_RT_VISIBILITY int llvmBufferIOFlush(ProfBufferIO *BufferIO) {
   return 0;
 }
 
-COMPILER_RT_VISIBILITY int llvmWriteProfData(WriterCallback Writer,
-                                             void *WriterCtx,
-                                             ValueProfData **ValueDataArray,
-                                             const uint64_t ValueDataSize) {
+COMPILER_RT_VISIBILITY int lprofWriteData(WriterCallback Writer,
+                                          void *WriterCtx,
+                                          ValueProfData **ValueDataArray,
+                                          const uint64_t ValueDataSize) {
   /* Match logic in __llvm_profile_write_buffer(). */
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
@@ -102,9 +102,9 @@ COMPILER_RT_VISIBILITY int llvmWriteProfData(WriterCallback Writer,
   const uint64_t *CountersEnd = __llvm_profile_end_counters();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
-  return llvmWriteProfDataImpl(Writer, WriterCtx, DataBegin, DataEnd,
-                               CountersBegin, CountersEnd, ValueDataArray,
-                               ValueDataSize, NamesBegin, NamesEnd);
+  return lprofWriteDataImpl(Writer, WriterCtx, DataBegin, DataEnd,
+                            CountersBegin, CountersEnd, ValueDataArray,
+                            ValueDataSize, NamesBegin, NamesEnd);
 }
 
 #define VP_BUFFER_SIZE 8 * 1024
@@ -118,30 +118,31 @@ static int writeValueProfData(WriterCallback Writer, void *WriterCtx,
     return 0;
 
   BufferSz = VPBufferSize ? VPBufferSize : VP_BUFFER_SIZE;
-  BufferIO = llvmCreateBufferIO(Writer, WriterCtx, BufferSz);
+  BufferIO = lprofCreateBufferIO(Writer, WriterCtx, BufferSz);
 
   for (I = 0; I < NumVData; I++) {
     ValueProfData *CurVData = ValueDataBegin[I];
     if (!CurVData)
       continue;
-    if (llvmBufferIOWrite(BufferIO, (const uint8_t *)CurVData,
-                          CurVData->TotalSize) != 0)
+    if (lprofBufferIOWrite(BufferIO, (const uint8_t *)CurVData,
+                           CurVData->TotalSize) != 0)
       return -1;
   }
 
-  if (llvmBufferIOFlush(BufferIO) != 0)
+  if (lprofBufferIOFlush(BufferIO) != 0)
     return -1;
-  llvmDeleteBufferIO(BufferIO);
+  lprofDeleteBufferIO(BufferIO);
 
   return 0;
 }
 
-COMPILER_RT_VISIBILITY int llvmWriteProfDataImpl(
-    WriterCallback Writer, void *WriterCtx,
-    const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
-    const uint64_t *CountersBegin, const uint64_t *CountersEnd,
-    ValueProfData **ValueDataBegin, const uint64_t ValueDataSize,
-    const char *NamesBegin, const char *NamesEnd) {
+COMPILER_RT_VISIBILITY int
+lprofWriteDataImpl(WriterCallback Writer, void *WriterCtx,
+                   const __llvm_profile_data *DataBegin,
+                   const __llvm_profile_data *DataEnd,
+                   const uint64_t *CountersBegin, const uint64_t *CountersEnd,
+                   ValueProfData **ValueDataBegin, const uint64_t ValueDataSize,
+                   const char *NamesBegin, const char *NamesEnd) {
 
   /* Calculate size of sections. */
   const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
