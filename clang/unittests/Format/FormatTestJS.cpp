@@ -606,6 +606,10 @@ TEST_F(FormatTestJS, ForLoops) {
                "}");
   verifyFormat("for (var i of [2, 3]) {\n"
                "}");
+  verifyFormat("for (let {a, b} of x) {\n"
+               "}");
+  verifyFormat("for (let {a, b} in x) {\n"
+               "}");
 }
 
 TEST_F(FormatTestJS, AutomaticSemicolonInsertion) {

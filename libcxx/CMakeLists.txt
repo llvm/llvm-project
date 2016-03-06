@@ -251,7 +251,7 @@ string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 # Setup Compiler Flags
 #===============================================================================
 
-include(HandleLibCXXABI) # Steup the ABI library flags
+include(HandleLibCXXABI) # Setup the ABI library flags
 
 # Include macros for adding and removing libc++ flags.
 include(HandleLibcxxFlags)

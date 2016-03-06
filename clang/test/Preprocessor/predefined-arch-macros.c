@@ -1477,7 +1477,6 @@
 // CHECK_BTVER1_M32: #define __SSE_MATH__ 1
 // CHECK_BTVER1_M32: #define __SSE__ 1
 // CHECK_BTVER1_M32: #define __SSSE3__ 1
-// CHECK_BTVER1_M32: #define __XSAVE__ 1
 // CHECK_BTVER1_M32: #define __btver1 1
 // CHECK_BTVER1_M32: #define __btver1__ 1
 // CHECK_BTVER1_M32: #define __i386 1
@@ -1499,7 +1498,6 @@
 // CHECK_BTVER1_M64: #define __SSE_MATH__ 1
 // CHECK_BTVER1_M64: #define __SSE__ 1
 // CHECK_BTVER1_M64: #define __SSSE3__ 1
-// CHECK_BTVER1_M64: #define __XSAVE__ 1
 // CHECK_BTVER1_M64: #define __amd64 1
 // CHECK_BTVER1_M64: #define __amd64__ 1
 // CHECK_BTVER1_M64: #define __btver1 1

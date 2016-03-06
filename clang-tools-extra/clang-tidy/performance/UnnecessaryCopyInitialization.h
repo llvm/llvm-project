@@ -16,10 +16,10 @@ namespace clang {
 namespace tidy {
 namespace performance {
 
-// A check that detects const local variable declarations that are copy
-// initialized with the const reference of a function call or the const
-// reference of a method call whose object is guaranteed to outlive the
-// variable's scope and suggests to use a const reference.
+// The check detects local variable declarations that are copy initialized with
+// the const reference of a function call or the const reference of a method
+// call whose object is guaranteed to outlive the variable's scope and suggests
+// to use a const reference.
 //
 // The check currently only understands a subset of variables that are
 // guaranteed to outlive the const reference returned, namely: const variables,

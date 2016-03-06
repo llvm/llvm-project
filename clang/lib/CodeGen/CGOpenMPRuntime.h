@@ -819,7 +819,7 @@ public:
   /// global_tid, kmp_int32 num_teams, kmp_int32 thread_limit) to generate code
   /// for num_teams clause.
   /// \param NumTeams An integer value of teams.
-  /// \param ThreadsLimit An integer value of threads.
+  /// \param ThreadLimit An integer value of threads.
   virtual void emitNumTeamsClause(CodeGenFunction &CGF, llvm::Value *NumTeams,
                                   llvm::Value *ThreadLimit, SourceLocation Loc);
 
