@@ -16,8 +16,10 @@
 
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
+#include <vector>
 
 namespace llvm {
 
@@ -163,6 +165,12 @@ public:
   // are on the critical path.
   virtual void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
     return CriticalPathRCs.clear();
+  }
+
+  // \brief Provide an ordered list of schedule DAG mutations for the post-RA
+  // scheduler.
+  virtual void getPostRAMutations(
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   }
 
   // For use with PostRAScheduling: get the minimum optimization level needed

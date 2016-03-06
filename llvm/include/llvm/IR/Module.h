@@ -262,8 +262,7 @@ public:
   /// A trailing newline is added if the input doesn't have one.
   void setModuleInlineAsm(StringRef Asm) {
     GlobalScopeAsm = Asm;
-    if (!GlobalScopeAsm.empty() &&
-        GlobalScopeAsm[GlobalScopeAsm.size()-1] != '\n')
+    if (!GlobalScopeAsm.empty() && GlobalScopeAsm.back() != '\n')
       GlobalScopeAsm += '\n';
   }
 
@@ -271,8 +270,7 @@ public:
   /// A trailing newline is added if the input doesn't have one.
   void appendModuleInlineAsm(StringRef Asm) {
     GlobalScopeAsm += Asm;
-    if (!GlobalScopeAsm.empty() &&
-        GlobalScopeAsm[GlobalScopeAsm.size()-1] != '\n')
+    if (!GlobalScopeAsm.empty() && GlobalScopeAsm.back() != '\n')
       GlobalScopeAsm += '\n';
   }
 

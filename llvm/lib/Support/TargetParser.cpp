@@ -305,13 +305,13 @@ StringRef llvm::ARM::getArchName(unsigned ArchKind) {
 }
 
 StringRef llvm::ARM::getCPUAttr(unsigned ArchKind) {
-  if (ArchKind >= ARM::AK_LAST)
+  if (ArchKind == ARM::AK_INVALID || ArchKind >= ARM::AK_LAST)
     return StringRef();
   return ARCHNames[ArchKind].getCPUAttr();
 }
 
 StringRef llvm::ARM::getSubArch(unsigned ArchKind) {
-  if (ArchKind >= ARM::AK_LAST)
+  if (ArchKind == ARM::AK_INVALID || ArchKind >= ARM::AK_LAST)
     return StringRef();
   return ARCHNames[ArchKind].getSubArch();
 }

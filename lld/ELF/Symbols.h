@@ -84,8 +84,6 @@ public:
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
-  bool isFunc() const { return Type == llvm::ELF::STT_FUNC; }
-  bool isTls() const { return Type == llvm::ELF::STT_TLS; }
 
   // Returns the symbol name.
   StringRef getName() const { return Name; }
@@ -131,8 +129,9 @@ protected:
   SymbolBody(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
              uint8_t Type)
       : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility),
-        MustBeInDynSym(false), NeedsCopyOrPltAddr(false),
-        Type(Type), Name(Name) {
+        MustBeInDynSym(false), NeedsCopyOrPltAddr(false), Name(Name) {
+    IsFunc = Type == llvm::ELF::STT_FUNC;
+    IsTls = Type == llvm::ELF::STT_TLS;
     IsUsedInRegularObj = K != SharedKind && K != LazyKind;
   }
 
@@ -154,9 +153,10 @@ public:
   // symbol or if the symbol should point to its plt entry.
   unsigned NeedsCopyOrPltAddr : 1;
 
-protected:
-  uint8_t Type;
+  unsigned IsTls : 1;
+  unsigned IsFunc : 1;
 
+protected:
   StringRef Name;
   Symbol *Backref = nullptr;
 };
@@ -305,7 +305,7 @@ public:
   // OffsetInBss is significant only when needsCopy() is true.
   uintX_t OffsetInBss = 0;
 
-  bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->isFunc(); }
+  bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->IsFunc; }
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -326,7 +326,6 @@ public:
   // was already returned.
   std::unique_ptr<InputFile> getMember();
 
-  void setTls() { this->Type = llvm::ELF::STT_TLS; }
   void setWeak() { IsWeak = true; }
   void setUsedInRegularObj() { IsUsedInRegularObj = true; }
 

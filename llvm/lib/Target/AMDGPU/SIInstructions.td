@@ -119,11 +119,11 @@ let isMoveImm = 1 in {
 
 let Defs = [SCC] in {
   defm S_NOT_B32 : SOP1_32 <sop1<0x07, 0x04>, "s_not_b32",
-    [(set i32:$dst, (not i32:$src0))]
+    [(set i32:$sdst, (not i32:$src0))]
   >;
 
   defm S_NOT_B64 : SOP1_64 <sop1<0x08, 0x05>, "s_not_b64",
-    [(set i64:$dst, (not i64:$src0))]
+    [(set i64:$sdst, (not i64:$src0))]
   >;
   defm S_WQM_B32 : SOP1_32 <sop1<0x09, 0x06>, "s_wqm_b32", []>;
   defm S_WQM_B64 : SOP1_64 <sop1<0x0a, 0x07>, "s_wqm_b64", []>;
@@ -131,7 +131,7 @@ let Defs = [SCC] in {
 
 
 defm S_BREV_B32 : SOP1_32 <sop1<0x0b, 0x08>, "s_brev_b32",
-  [(set i32:$dst, (bitreverse i32:$src0))]
+  [(set i32:$sdst, (bitreverse i32:$src0))]
 >;
 defm S_BREV_B64 : SOP1_64 <sop1<0x0c, 0x09>, "s_brev_b64", []>;
 
@@ -139,7 +139,7 @@ let Defs = [SCC] in {
   defm S_BCNT0_I32_B32 : SOP1_32 <sop1<0x0d, 0x0a>, "s_bcnt0_i32_b32", []>;
   defm S_BCNT0_I32_B64 : SOP1_32_64 <sop1<0x0e, 0x0b>, "s_bcnt0_i32_b64", []>;
   defm S_BCNT1_I32_B32 : SOP1_32 <sop1<0x0f, 0x0c>, "s_bcnt1_i32_b32",
-    [(set i32:$dst, (ctpop i32:$src0))]
+    [(set i32:$sdst, (ctpop i32:$src0))]
   >;
   defm S_BCNT1_I32_B64 : SOP1_32_64 <sop1<0x10, 0x0d>, "s_bcnt1_i32_b64", []>;
 } // End Defs = [SCC]
@@ -147,24 +147,24 @@ let Defs = [SCC] in {
 defm S_FF0_I32_B32 : SOP1_32 <sop1<0x11, 0x0e>, "s_ff0_i32_b32", []>;
 defm S_FF0_I32_B64 : SOP1_32_64 <sop1<0x12, 0x0f>, "s_ff0_i32_b64", []>;
 defm S_FF1_I32_B32 : SOP1_32 <sop1<0x13, 0x10>, "s_ff1_i32_b32",
-  [(set i32:$dst, (cttz_zero_undef i32:$src0))]
+  [(set i32:$sdst, (cttz_zero_undef i32:$src0))]
 >;
 defm S_FF1_I32_B64 : SOP1_32_64 <sop1<0x14, 0x11>, "s_ff1_i32_b64", []>;
 
 defm S_FLBIT_I32_B32 : SOP1_32 <sop1<0x15, 0x12>, "s_flbit_i32_b32",
-  [(set i32:$dst, (AMDGPUffbh_u32 i32:$src0))]
+  [(set i32:$sdst, (AMDGPUffbh_u32 i32:$src0))]
 >;
 
 defm S_FLBIT_I32_B64 : SOP1_32_64 <sop1<0x16, 0x13>, "s_flbit_i32_b64", []>;
 defm S_FLBIT_I32 : SOP1_32 <sop1<0x17, 0x14>, "s_flbit_i32",
-  [(set i32:$dst, (int_AMDGPU_flbit_i32 i32:$src0))]
+  [(set i32:$sdst, (int_AMDGPU_flbit_i32 i32:$src0))]
 >;
 defm S_FLBIT_I32_I64 : SOP1_32_64 <sop1<0x18, 0x15>, "s_flbit_i32_i64", []>;
 defm S_SEXT_I32_I8 : SOP1_32 <sop1<0x19, 0x16>, "s_sext_i32_i8",
-  [(set i32:$dst, (sext_inreg i32:$src0, i8))]
+  [(set i32:$sdst, (sext_inreg i32:$src0, i8))]
 >;
 defm S_SEXT_I32_I16 : SOP1_32 <sop1<0x1a, 0x17>, "s_sext_i32_i16",
-  [(set i32:$dst, (sext_inreg i32:$src0, i16))]
+  [(set i32:$sdst, (sext_inreg i32:$src0, i16))]
 >;
 
 defm S_BITSET0_B32 : SOP1_32 <sop1<0x1b, 0x18>, "s_bitset0_b32", []>;
@@ -214,36 +214,36 @@ let Defs = [SCC] in { // Carry out goes to SCC
 let isCommutable = 1 in {
 defm S_ADD_U32 : SOP2_32 <sop2<0x00>, "s_add_u32", []>;
 defm S_ADD_I32 : SOP2_32 <sop2<0x02>, "s_add_i32",
-  [(set i32:$dst, (add SSrc_32:$src0, SSrc_32:$src1))]
+  [(set i32:$sdst, (add SSrc_32:$src0, SSrc_32:$src1))]
 >;
 } // End isCommutable = 1
 
 defm S_SUB_U32 : SOP2_32 <sop2<0x01>, "s_sub_u32", []>;
 defm S_SUB_I32 : SOP2_32 <sop2<0x03>, "s_sub_i32",
-  [(set i32:$dst, (sub SSrc_32:$src0, SSrc_32:$src1))]
+  [(set i32:$sdst, (sub SSrc_32:$src0, SSrc_32:$src1))]
 >;
 
 let Uses = [SCC] in { // Carry in comes from SCC
 let isCommutable = 1 in {
 defm S_ADDC_U32 : SOP2_32 <sop2<0x04>, "s_addc_u32",
-  [(set i32:$dst, (adde (i32 SSrc_32:$src0), (i32 SSrc_32:$src1)))]>;
+  [(set i32:$sdst, (adde (i32 SSrc_32:$src0), (i32 SSrc_32:$src1)))]>;
 } // End isCommutable = 1
 
 defm S_SUBB_U32 : SOP2_32 <sop2<0x05>, "s_subb_u32",
-  [(set i32:$dst, (sube (i32 SSrc_32:$src0), (i32 SSrc_32:$src1)))]>;
+  [(set i32:$sdst, (sube (i32 SSrc_32:$src0), (i32 SSrc_32:$src1)))]>;
 } // End Uses = [SCC]
 
 defm S_MIN_I32 : SOP2_32 <sop2<0x06>, "s_min_i32",
-  [(set i32:$dst, (smin i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (smin i32:$src0, i32:$src1))]
 >;
 defm S_MIN_U32 : SOP2_32 <sop2<0x07>, "s_min_u32",
-  [(set i32:$dst, (umin i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (umin i32:$src0, i32:$src1))]
 >;
 defm S_MAX_I32 : SOP2_32 <sop2<0x08>, "s_max_i32",
-  [(set i32:$dst, (smax i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (smax i32:$src0, i32:$src1))]
 >;
 defm S_MAX_U32 : SOP2_32 <sop2<0x09>, "s_max_u32",
-  [(set i32:$dst, (umax i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (umax i32:$src0, i32:$src1))]
 >;
 } // End Defs = [SCC]
 
@@ -255,27 +255,27 @@ let Uses = [SCC] in {
 
 let Defs = [SCC] in {
 defm S_AND_B32 : SOP2_32 <sop2<0x0e, 0x0c>, "s_and_b32",
-  [(set i32:$dst, (and i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (and i32:$src0, i32:$src1))]
 >;
 
 defm S_AND_B64 : SOP2_64 <sop2<0x0f, 0x0d>, "s_and_b64",
-  [(set i64:$dst, (and i64:$src0, i64:$src1))]
+  [(set i64:$sdst, (and i64:$src0, i64:$src1))]
 >;
 
 defm S_OR_B32 : SOP2_32 <sop2<0x10, 0x0e>, "s_or_b32",
-  [(set i32:$dst, (or i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (or i32:$src0, i32:$src1))]
 >;
 
 defm S_OR_B64 : SOP2_64 <sop2<0x11, 0x0f>, "s_or_b64",
-  [(set i64:$dst, (or i64:$src0, i64:$src1))]
+  [(set i64:$sdst, (or i64:$src0, i64:$src1))]
 >;
 
 defm S_XOR_B32 : SOP2_32 <sop2<0x12, 0x10>, "s_xor_b32",
-  [(set i32:$dst, (xor i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (xor i32:$src0, i32:$src1))]
 >;
 
 defm S_XOR_B64 : SOP2_64 <sop2<0x13, 0x11>, "s_xor_b64",
-  [(set i64:$dst, (xor i64:$src0, i64:$src1))]
+  [(set i64:$sdst, (xor i64:$src0, i64:$src1))]
 >;
 defm S_ANDN2_B32 : SOP2_32 <sop2<0x14, 0x12>, "s_andn2_b32", []>;
 defm S_ANDN2_B64 : SOP2_64 <sop2<0x15, 0x13>, "s_andn2_b64", []>;
@@ -294,30 +294,30 @@ let AddedComplexity = 1 in {
 let Defs = [SCC] in {
 
 defm S_LSHL_B32 : SOP2_32 <sop2<0x1e, 0x1c>, "s_lshl_b32",
-  [(set i32:$dst, (shl i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (shl i32:$src0, i32:$src1))]
 >;
 defm S_LSHL_B64 : SOP2_64_32 <sop2<0x1f, 0x1d>, "s_lshl_b64",
-  [(set i64:$dst, (shl i64:$src0, i32:$src1))]
+  [(set i64:$sdst, (shl i64:$src0, i32:$src1))]
 >;
 defm S_LSHR_B32 : SOP2_32 <sop2<0x20, 0x1e>, "s_lshr_b32",
-  [(set i32:$dst, (srl i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (srl i32:$src0, i32:$src1))]
 >;
 defm S_LSHR_B64 : SOP2_64_32 <sop2<0x21, 0x1f>, "s_lshr_b64",
-  [(set i64:$dst, (srl i64:$src0, i32:$src1))]
+  [(set i64:$sdst, (srl i64:$src0, i32:$src1))]
 >;
 defm S_ASHR_I32 : SOP2_32 <sop2<0x22, 0x20>, "s_ashr_i32",
-  [(set i32:$dst, (sra i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (sra i32:$src0, i32:$src1))]
 >;
 defm S_ASHR_I64 : SOP2_64_32 <sop2<0x23, 0x21>, "s_ashr_i64",
-  [(set i64:$dst, (sra i64:$src0, i32:$src1))]
+  [(set i64:$sdst, (sra i64:$src0, i32:$src1))]
 >;
 } // End Defs = [SCC]
 
 defm S_BFM_B32 : SOP2_32 <sop2<0x24, 0x22>, "s_bfm_b32",
-  [(set i32:$dst, (AMDGPUbfm i32:$src0, i32:$src1))]>;
+  [(set i32:$sdst, (AMDGPUbfm i32:$src0, i32:$src1))]>;
 defm S_BFM_B64 : SOP2_64_32_32 <sop2<0x25, 0x23>, "s_bfm_b64", []>;
 defm S_MUL_I32 : SOP2_32 <sop2<0x26, 0x24>, "s_mul_i32",
-  [(set i32:$dst, (mul i32:$src0, i32:$src1))]
+  [(set i32:$sdst, (mul i32:$src0, i32:$src1))]
 >;
 
 } // End AddedComplexity = 1
@@ -513,7 +513,7 @@ def S_SLEEP : SOPP <0x0000000e, (ins i32imm:$simm16),
   let mayStore = 1;
 }
 
-def S_SETPRIO : SOPP <0x0000000f, (ins i16imm:$sim16), "s_setprio $sim16">;
+def S_SETPRIO : SOPP <0x0000000f, (ins i16imm:$simm16), "s_setprio $simm16">;
 
 let Uses = [EXEC, M0] in {
   // FIXME: Should this be mayLoad+mayStore?

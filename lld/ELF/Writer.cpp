@@ -256,7 +256,7 @@ template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
 }
 
 template <class ELFT, class RelT>
-static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
+static bool handleTlsRelocation(uint32_t Type, SymbolBody *Body,
                                 InputSectionBase<ELFT> &C, RelT &RI) {
   if (Target->pointsToLocalDynamicGotEntry(Type)) {
     if (Target->canRelaxTls(Type, nullptr))
@@ -268,7 +268,7 @@ static bool handleTlsRelocation(unsigned Type, SymbolBody *Body,
     return true;
   }
 
-  if (!Body || !Body->isTls())
+  if (!Body || !Body->IsTls)
     return false;
 
   if (Target->isTlsGlobalDynamicRel(Type)) {
@@ -424,7 +424,7 @@ void Writer<ELFT>::scanRelocs(
       if (CBP || Dynrel) {
         uint32_t DynType;
         if (CBP)
-          DynType = Body->isTls() ? Target->TlsGotRel : Target->GotRel;
+          DynType = Body->IsTls ? Target->TlsGotRel : Target->GotRel;
         else
           DynType = Target->RelativeRel;
         Out<ELFT>::RelaDyn->addReloc(

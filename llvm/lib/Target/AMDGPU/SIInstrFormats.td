@@ -163,9 +163,9 @@ class VOP3Common <dag outs, dag ins, string asm, list<dag> pattern, bit HasMods 
 
 class SOP1e <bits<8> op> : Enc32 {
   bits<7> sdst;
-  bits<8> ssrc0;
+  bits<8> src0;
 
-  let Inst{7-0} = ssrc0;
+  let Inst{7-0} = src0;
   let Inst{15-8} = op;
   let Inst{22-16} = sdst;
   let Inst{31-23} = 0x17d; //encoding;
@@ -173,22 +173,22 @@ class SOP1e <bits<8> op> : Enc32 {
 
 class SOP2e <bits<7> op> : Enc32 {
   bits<7> sdst;
-  bits<8> ssrc0;
-  bits<8> ssrc1;
+  bits<8> src0;
+  bits<8> src1;
 
-  let Inst{7-0} = ssrc0;
-  let Inst{15-8} = ssrc1;
+  let Inst{7-0} = src0;
+  let Inst{15-8} = src1;
   let Inst{22-16} = sdst;
   let Inst{29-23} = op;
   let Inst{31-30} = 0x2; // encoding
 }
 
 class SOPCe <bits<7> op> : Enc32 {
-  bits<8> ssrc0;
-  bits<8> ssrc1;
+  bits<8> src0;
+  bits<8> src1;
 
-  let Inst{7-0} = ssrc0;
-  let Inst{15-8} = ssrc1;
+  let Inst{7-0} = src0;
+  let Inst{15-8} = src1;
   let Inst{22-16} = op;
   let Inst{31-23} = 0x17e;
 }

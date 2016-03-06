@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include <memory>
 
 namespace llvm {
@@ -218,15 +219,6 @@ public:
   /// When all successor dependencies have been resolved, free this node for
   /// bottom-up scheduling.
   virtual void releaseBottomNode(SUnit *SU) = 0;
-};
-
-/// Mutate the DAG as a postpass after normal DAG building.
-class ScheduleDAGMutation {
-  virtual void anchor();
-public:
-  virtual ~ScheduleDAGMutation() {}
-
-  virtual void apply(ScheduleDAGMI *DAG) = 0;
 };
 
 /// ScheduleDAGMI is an implementation of ScheduleDAGInstrs that simply

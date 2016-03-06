@@ -40,10 +40,6 @@ define <8 x float> @combine_vpermilvar_8f32(<8 x float> %a0) {
 define <2 x double> @combine_vpermilvar_2f64(<2 x double> %a0) {
 ; ALL-LABEL: combine_vpermilvar_2f64:
 ; ALL:       # BB#0:
-; ALL-NEXT:    movl $2, %eax
-; ALL-NEXT:    vmovq %rax, %xmm1
-; ALL-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
-; ALL-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    retq
   %1 = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a0, <2 x i64> <i64 2, i64 0>)
   %2 = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double>  %1, <2 x i64> <i64 2, i64 0>)

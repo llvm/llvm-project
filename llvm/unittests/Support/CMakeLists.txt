@@ -38,6 +38,7 @@ add_llvm_unittest(SupportTests
   StreamingMemoryObject.cpp
   StringPool.cpp
   SwapByteOrderTest.cpp
+  TargetParserTest.cpp
   ThreadLocalTest.cpp
   ThreadPool.cpp
   TimerTest.cpp
