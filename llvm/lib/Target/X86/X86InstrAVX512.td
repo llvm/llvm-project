@@ -2445,7 +2445,6 @@ multiclass avx512_mask_shiftop_w<bits<8> opc1, bits<8> opc2, string OpcodeStr,
   let Predicates = [HasBWI] in {
   defm Q : avx512_mask_shiftop<opc2, !strconcat(OpcodeStr, "q"), VK64, OpNode>,
                                VEX, TAPD, VEX_W;
-  let Predicates = [HasDQI] in
   defm D : avx512_mask_shiftop<opc2, !strconcat(OpcodeStr, "d"), VK32, OpNode>,
                                VEX, TAPD;
   }
@@ -2482,88 +2481,53 @@ let Predicates = [HasAVX512] in {
   def : Pat<(i1 1), (COPY_TO_REGCLASS (KSHIFTRWri (KSET1W), (i8 15)), VK1)>;
   def : Pat<(i1 -1), (COPY_TO_REGCLASS (KSHIFTRWri (KSET1W), (i8 15)), VK1)>;
 }
-def : Pat<(v8i1 (extract_subvector (v16i1 VK16:$src), (iPTR 0))),
-          (v8i1 (COPY_TO_REGCLASS VK16:$src, VK8))>;
-def : Pat<(v8i1 (extract_subvector (v32i1 VK32:$src), (iPTR 0))),
-          (v8i1 (COPY_TO_REGCLASS VK32:$src, VK8))>;
-def : Pat<(v8i1 (extract_subvector (v64i1 VK64:$src), (iPTR 0))),
-          (v8i1 (COPY_TO_REGCLASS VK64:$src, VK8))>;
+
+// Patterns for kmask insert_subvector/extract_subvector to/from index=0
+multiclass operation_subvector_mask_lowering<RegisterClass subRC, ValueType subVT,
+                                             RegisterClass RC, ValueType VT> {
+  def : Pat<(subVT (extract_subvector (VT RC:$src), (iPTR 0))),
+            (subVT (COPY_TO_REGCLASS RC:$src, subRC))>;
+  
+  def : Pat<(VT (insert_subvector undef, subRC:$src, (iPTR 0))),
+            (VT (COPY_TO_REGCLASS subRC:$src, RC))>;  
+}
+
+defm : operation_subvector_mask_lowering<VK2,  v2i1,  VK4,  v4i1>;
+defm : operation_subvector_mask_lowering<VK2,  v2i1,  VK8,  v8i1>;
+defm : operation_subvector_mask_lowering<VK2,  v2i1,  VK16, v16i1>;
+defm : operation_subvector_mask_lowering<VK2,  v2i1,  VK32, v32i1>;
+defm : operation_subvector_mask_lowering<VK2,  v2i1,  VK64, v64i1>;
+
+defm : operation_subvector_mask_lowering<VK4,  v4i1,  VK8,  v8i1>;
+defm : operation_subvector_mask_lowering<VK4,  v4i1,  VK16, v16i1>;
+defm : operation_subvector_mask_lowering<VK4,  v4i1,  VK32, v32i1>;
+defm : operation_subvector_mask_lowering<VK4,  v4i1,  VK64, v64i1>;
+
+defm : operation_subvector_mask_lowering<VK8,  v8i1,  VK16, v16i1>;
+defm : operation_subvector_mask_lowering<VK8,  v8i1,  VK32, v32i1>;
+defm : operation_subvector_mask_lowering<VK8,  v8i1,  VK64, v64i1>;
+
+defm : operation_subvector_mask_lowering<VK16, v16i1, VK32, v32i1>;
+defm : operation_subvector_mask_lowering<VK16, v16i1, VK64, v64i1>;
+
+defm : operation_subvector_mask_lowering<VK32, v32i1, VK64, v64i1>;
 
 def : Pat<(v8i1 (extract_subvector (v16i1 VK16:$src), (iPTR 8))),
           (v8i1 (COPY_TO_REGCLASS (KSHIFTRWri VK16:$src, (i8 8)), VK8))>;
-
-def : Pat<(v16i1 (extract_subvector (v32i1 VK32:$src), (iPTR 0))),
-          (v16i1 (COPY_TO_REGCLASS VK32:$src, VK16))>;
-def : Pat<(v16i1 (extract_subvector (v64i1 VK64:$src), (iPTR 0))),
-          (v16i1 (COPY_TO_REGCLASS VK64:$src, VK16))>;
-
 def : Pat<(v16i1 (extract_subvector (v32i1 VK32:$src), (iPTR 16))),
           (v16i1 (COPY_TO_REGCLASS (KSHIFTRDri VK32:$src, (i8 16)), VK16))>;
-
-def : Pat<(v32i1 (extract_subvector (v64i1 VK64:$src), (iPTR 0))),
-          (v32i1 (COPY_TO_REGCLASS VK64:$src, VK32))>;
-
 def : Pat<(v32i1 (extract_subvector (v64i1 VK64:$src), (iPTR 32))),
           (v32i1 (COPY_TO_REGCLASS (KSHIFTRQri VK64:$src, (i8 32)), VK32))>;
-
-def : Pat<(v4i1 (extract_subvector (v8i1 VK8:$src), (iPTR 0))),
-          (v4i1 (COPY_TO_REGCLASS VK8:$src, VK4))>;
-
-def : Pat<(v2i1 (extract_subvector (v8i1 VK8:$src), (iPTR 0))),
-          (v2i1 (COPY_TO_REGCLASS VK8:$src, VK2))>;
-
-def : Pat<(v4i1 (insert_subvector undef, (v2i1 VK2:$src), (iPTR 0))),
-          (v4i1 (COPY_TO_REGCLASS VK2:$src, VK4))>;
-
-def : Pat<(v8i1 (insert_subvector undef, (v4i1 VK4:$src), (iPTR 0))),
-          (v8i1 (COPY_TO_REGCLASS VK4:$src, VK8))>;
-def : Pat<(v8i1 (insert_subvector undef, (v2i1 VK2:$src), (iPTR 0))),
-          (v8i1 (COPY_TO_REGCLASS VK2:$src, VK8))>;
-
-def : Pat<(v16i1 (insert_subvector undef, (v8i1 VK8:$src), (iPTR 0))),
-          (v16i1 (COPY_TO_REGCLASS VK8:$src, VK16))>;
-
-def : Pat<(v32i1 (insert_subvector undef, VK2:$src, (iPTR 0))),
-          (v32i1 (COPY_TO_REGCLASS VK2:$src, VK32))>;
-def : Pat<(v32i1 (insert_subvector undef, VK4:$src, (iPTR 0))),
-          (v32i1 (COPY_TO_REGCLASS VK4:$src, VK32))>;
-def : Pat<(v32i1 (insert_subvector undef, VK8:$src, (iPTR 0))),
-          (v32i1 (COPY_TO_REGCLASS VK8:$src, VK32))>;
-def : Pat<(v32i1 (insert_subvector undef, VK16:$src, (iPTR 0))),
-          (v32i1 (COPY_TO_REGCLASS VK16:$src, VK32))>;
-
-def : Pat<(v64i1 (insert_subvector undef, VK2:$src, (iPTR 0))),
-          (v64i1 (COPY_TO_REGCLASS VK2:$src, VK64))>;
-def : Pat<(v64i1 (insert_subvector undef, VK4:$src, (iPTR 0))),
-          (v64i1 (COPY_TO_REGCLASS VK4:$src, VK64))>;
-def : Pat<(v64i1 (insert_subvector undef, VK8:$src, (iPTR 0))),
-          (v64i1 (COPY_TO_REGCLASS VK8:$src, VK64))>;
-def : Pat<(v64i1 (insert_subvector undef, VK16:$src, (iPTR 0))),
-          (v64i1 (COPY_TO_REGCLASS VK16:$src, VK64))>;
-def : Pat<(v64i1 (insert_subvector undef, VK32:$src, (iPTR 0))),
-          (v64i1 (COPY_TO_REGCLASS VK32:$src, VK64))>;
-
 
 def : Pat<(v8i1 (X86vshli VK8:$src, (i8 imm:$imm))),
           (v8i1 (COPY_TO_REGCLASS
                  (KSHIFTLWri (COPY_TO_REGCLASS VK8:$src, VK16),
                   (I8Imm $imm)), VK8))>, Requires<[HasAVX512, NoDQI]>;
 
-def : Pat<(v8i1 (X86vsrli VK8:$src, (i8 imm:$imm))),
-          (v8i1 (COPY_TO_REGCLASS
-                 (KSHIFTRWri (COPY_TO_REGCLASS VK8:$src, VK16),
-                  (I8Imm $imm)), VK8))>, Requires<[HasAVX512, NoDQI]>;
-
 def : Pat<(v4i1 (X86vshli VK4:$src, (i8 imm:$imm))),
           (v4i1 (COPY_TO_REGCLASS
                  (KSHIFTLWri (COPY_TO_REGCLASS VK4:$src, VK16),
                   (I8Imm $imm)), VK4))>, Requires<[HasAVX512]>;
-
-def : Pat<(v4i1 (X86vsrli VK4:$src, (i8 imm:$imm))),
-          (v4i1 (COPY_TO_REGCLASS
-                 (KSHIFTRWri (COPY_TO_REGCLASS VK4:$src, VK16),
-                  (I8Imm $imm)), VK4))>, Requires<[HasAVX512]>;
-
 //===----------------------------------------------------------------------===//
 // AVX-512 - Aligned and unaligned load and store
 //

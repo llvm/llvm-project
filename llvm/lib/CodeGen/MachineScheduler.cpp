@@ -1377,7 +1377,7 @@ public:
                       const TargetRegisterInfo *tri)
     : TII(tii), TRI(tri) {}
 
-  void apply(ScheduleDAGMI *DAG) override;
+  void apply(ScheduleDAGInstrs *DAGInstrs) override;
 protected:
   void clusterNeighboringLoads(ArrayRef<SUnit*> Loads, ScheduleDAGMI *DAG);
 };
@@ -1429,7 +1429,9 @@ void LoadClusterMutation::clusterNeighboringLoads(ArrayRef<SUnit*> Loads,
 }
 
 /// \brief Callback from DAG postProcessing to create cluster edges for loads.
-void LoadClusterMutation::apply(ScheduleDAGMI *DAG) {
+void LoadClusterMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
+  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
+
   // Map DAG NodeNum to store chain ID.
   DenseMap<unsigned, unsigned> StoreChainIDs;
   // Map each store chain to a set of dependent loads.
@@ -1474,7 +1476,7 @@ public:
   MacroFusion(const TargetInstrInfo &TII, const TargetRegisterInfo &TRI)
     : TII(TII), TRI(TRI) {}
 
-  void apply(ScheduleDAGMI *DAG) override;
+  void apply(ScheduleDAGInstrs *DAGInstrs) override;
 };
 } // anonymous
 
@@ -1494,7 +1496,9 @@ static bool HasDataDep(const TargetRegisterInfo &TRI, const MachineInstr &MI,
 
 /// \brief Callback from DAG postProcessing to create cluster edges to encourage
 /// fused operations.
-void MacroFusion::apply(ScheduleDAGMI *DAG) {
+void MacroFusion::apply(ScheduleDAGInstrs *DAGInstrs) {
+  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
+
   // For now, assume targets can only fuse with the branch.
   SUnit &ExitSU = DAG->ExitSU;
   MachineInstr *Branch = ExitSU.getInstr();
@@ -1545,7 +1549,7 @@ class CopyConstrain : public ScheduleDAGMutation {
 public:
   CopyConstrain(const TargetInstrInfo *, const TargetRegisterInfo *) {}
 
-  void apply(ScheduleDAGMI *DAG) override;
+  void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
 protected:
   void constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG);
@@ -1698,7 +1702,8 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
 
 /// \brief Callback from DAG postProcessing to create weak edges to encourage
 /// copy elimination.
-void CopyConstrain::apply(ScheduleDAGMI *DAG) {
+void CopyConstrain::apply(ScheduleDAGInstrs *DAGInstrs) {
+  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
   assert(DAG->hasVRegLiveness() && "Expect VRegs with LiveIntervals");
 
   MachineBasicBlock::iterator FirstPos = nextIfDebug(DAG->begin(), DAG->end());

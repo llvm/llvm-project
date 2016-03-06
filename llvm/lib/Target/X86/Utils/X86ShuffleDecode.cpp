@@ -454,6 +454,24 @@ void DecodeINSERTQIMask(int Len, int Idx,
     ShuffleMask.push_back(SM_SentinelUndef);
 }
 
+void DecodeVPERMILPMask(MVT VT, ArrayRef<uint64_t> RawMask,
+                        SmallVectorImpl<int> &ShuffleMask) {
+  unsigned VecSize = VT.getSizeInBits();
+  unsigned EltSize = VT.getScalarSizeInBits();
+  unsigned NumLanes = VecSize / 128;
+  unsigned NumEltsPerLane = VT.getVectorNumElements() / NumLanes;
+  assert((VecSize == 128 || VecSize == 256 || VecSize == 512) &&
+         "Unexpected vector size");
+  assert((EltSize == 32 || EltSize == 64) && "Unexpected element size");
+
+  for (unsigned i = 0, e = RawMask.size(); i < e; ++i) {
+    uint64_t M = RawMask[i];
+    M = (EltSize == 64 ? ((M >> 1) & 0x1) : (M & 0x3));
+    unsigned LaneOffset = i & ~(NumEltsPerLane - 1);
+    ShuffleMask.push_back((int)(LaneOffset + M));
+  }
+}
+
 void DecodeVPERMVMask(ArrayRef<uint64_t> RawMask,
                       SmallVectorImpl<int> &ShuffleMask) {
   for (int i = 0, e = RawMask.size(); i < e; ++i) {

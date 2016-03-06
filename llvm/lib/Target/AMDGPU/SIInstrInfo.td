@@ -820,27 +820,27 @@ multiclass SOP1_m <sop1 op, string opName, dag outs, dag ins, string asm,
 }
 
 multiclass SOP1_32 <sop1 op, string opName, list<dag> pattern> : SOP1_m <
-    op, opName, (outs SReg_32:$dst), (ins SSrc_32:$src0),
-    opName#" $dst, $src0", pattern
+    op, opName, (outs SReg_32:$sdst), (ins SSrc_32:$src0),
+    opName#" $sdst, $src0", pattern
 >;
 
 multiclass SOP1_64 <sop1 op, string opName, list<dag> pattern> : SOP1_m <
-    op, opName, (outs SReg_64:$dst), (ins SSrc_64:$src0),
-    opName#" $dst, $src0", pattern
+    op, opName, (outs SReg_64:$sdst), (ins SSrc_64:$src0),
+    opName#" $sdst, $src0", pattern
 >;
 
 // no input, 64-bit output.
 multiclass SOP1_64_0 <sop1 op, string opName, list<dag> pattern> {
-  def "" : SOP1_Pseudo <opName, (outs SReg_64:$dst), (ins), pattern>;
+  def "" : SOP1_Pseudo <opName, (outs SReg_64:$sdst), (ins), pattern>;
 
-  def _si : SOP1_Real_si <op, opName, (outs SReg_64:$dst), (ins),
-    opName#" $dst"> {
-    let ssrc0 = 0;
+  def _si : SOP1_Real_si <op, opName, (outs SReg_64:$sdst), (ins),
+    opName#" $sdst"> {
+    let src0 = 0;
   }
 
-  def _vi : SOP1_Real_vi <op, opName, (outs SReg_64:$dst), (ins),
-    opName#" $dst"> {
-    let ssrc0 = 0;
+  def _vi : SOP1_Real_vi <op, opName, (outs SReg_64:$sdst), (ins),
+    opName#" $sdst"> {
+    let src0 = 0;
   }
 }
 
@@ -861,8 +861,8 @@ multiclass SOP1_1 <sop1 op, string opName, list<dag> pattern> {
 
 // 64-bit input, 32-bit output.
 multiclass SOP1_32_64 <sop1 op, string opName, list<dag> pattern> : SOP1_m <
-    op, opName, (outs SReg_32:$dst), (ins SSrc_64:$src0),
-    opName#" $dst, $src0", pattern
+    op, opName, (outs SReg_32:$sdst), (ins SSrc_64:$src0),
+    opName#" $sdst, $src0", pattern
 >;
 
 class SOP2_Pseudo<string opName, dag outs, dag ins, list<dag> pattern> :
@@ -909,23 +909,23 @@ multiclass SOP2_m <sop2 op, string opName, dag outs, dag ins, string asm,
 }
 
 multiclass SOP2_32 <sop2 op, string opName, list<dag> pattern> : SOP2_m <
-    op, opName, (outs SReg_32:$dst), (ins SSrc_32:$src0, SSrc_32:$src1),
-    opName#" $dst, $src0, $src1", pattern
+    op, opName, (outs SReg_32:$sdst), (ins SSrc_32:$src0, SSrc_32:$src1),
+    opName#" $sdst, $src0, $src1", pattern
 >;
 
 multiclass SOP2_64 <sop2 op, string opName, list<dag> pattern> : SOP2_m <
-    op, opName, (outs SReg_64:$dst), (ins SSrc_64:$src0, SSrc_64:$src1),
-    opName#" $dst, $src0, $src1", pattern
+    op, opName, (outs SReg_64:$sdst), (ins SSrc_64:$src0, SSrc_64:$src1),
+    opName#" $sdst, $src0, $src1", pattern
 >;
 
 multiclass SOP2_64_32 <sop2 op, string opName, list<dag> pattern> : SOP2_m <
-    op, opName, (outs SReg_64:$dst), (ins SSrc_64:$src0, SSrc_32:$src1),
-    opName#" $dst, $src0, $src1", pattern
+    op, opName, (outs SReg_64:$sdst), (ins SSrc_64:$src0, SSrc_32:$src1),
+    opName#" $sdst, $src0, $src1", pattern
 >;
 
 multiclass SOP2_64_32_32 <sop2 op, string opName, list<dag> pattern> : SOP2_m <
-    op, opName, (outs SReg_64:$dst), (ins SSrc_32:$src0, SSrc_32:$src1),
-    opName#" $dst, $src0, $src1", pattern
+    op, opName, (outs SReg_64:$sdst), (ins SSrc_32:$src0, SSrc_32:$src1),
+    opName#" $sdst, $src0, $src1", pattern
 >;
 
 class SOPC_Helper <bits<7> op, RegisterOperand rc, ValueType vt,
@@ -980,14 +980,14 @@ multiclass SOPK_m <sopk op, string opName, dag outs, dag ins, string opAsm,
 }
 
 multiclass SOPK_32 <sopk op, string opName, list<dag> pattern> {
-  def "" : SOPK_Pseudo <opName, (outs SReg_32:$dst), (ins u16imm:$src0),
+  def "" : SOPK_Pseudo <opName, (outs SReg_32:$sdst), (ins u16imm:$simm16),
     pattern>;
 
-  def _si : SOPK_Real_si <op, opName, (outs SReg_32:$dst), (ins u16imm:$src0),
-    opName#" $dst, $src0">;
+  def _si : SOPK_Real_si <op, opName, (outs SReg_32:$sdst), (ins u16imm:$simm16),
+    opName#" $sdst, $simm16">;
 
-  def _vi : SOPK_Real_vi <op, opName, (outs SReg_32:$dst), (ins u16imm:$src0),
-    opName#" $dst, $src0">;
+  def _vi : SOPK_Real_vi <op, opName, (outs SReg_32:$sdst), (ins u16imm:$simm16),
+    opName#" $sdst, $simm16">;
 }
 
 multiclass SOPK_SCC <sopk op, string opName, list<dag> pattern> {
