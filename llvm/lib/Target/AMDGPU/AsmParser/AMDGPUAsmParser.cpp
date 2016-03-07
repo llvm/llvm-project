@@ -12,6 +12,7 @@
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -812,164 +813,12 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
 
 bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
                                                amd_kernel_code_t &Header) {
-
-  if (getLexer().isNot(AsmToken::Equal))
-    return TokError("expected '='");
+  SmallString<40> ErrStr;
+  raw_svector_ostream Err(ErrStr);
+  if (!parseAmdKernelCodeField(ID, getLexer(), Header, Err)) {
+    return TokError(Err.str());
+  }
   Lex();
-
-  if (getLexer().isNot(AsmToken::Integer))
-    return TokError("amd_kernel_code_t values must be integers");
-
-  uint64_t Value = getLexer().getTok().getIntVal();
-  Lex();
-
-  if (ID == "kernel_code_version_major")
-    Header.amd_kernel_code_version_major = Value;
-  else if (ID == "kernel_code_version_minor")
-    Header.amd_kernel_code_version_minor = Value;
-  else if (ID == "machine_kind")
-    Header.amd_machine_kind = Value;
-  else if (ID == "machine_version_major")
-    Header.amd_machine_version_major = Value;
-  else if (ID == "machine_version_minor")
-    Header.amd_machine_version_minor = Value;
-  else if (ID == "machine_version_stepping")
-    Header.amd_machine_version_stepping = Value;
-  else if (ID == "kernel_code_entry_byte_offset")
-    Header.kernel_code_entry_byte_offset = Value;
-  else if (ID == "kernel_code_prefetch_byte_size")
-    Header.kernel_code_prefetch_byte_size = Value;
-  else if (ID == "max_scratch_backing_memory_byte_size")
-    Header.max_scratch_backing_memory_byte_size = Value;
-  else if (ID == "compute_pgm_rsrc1_vgprs")
-    Header.compute_pgm_resource_registers |= S_00B848_VGPRS(Value);
-  else if (ID == "compute_pgm_rsrc1_sgprs")
-    Header.compute_pgm_resource_registers |= S_00B848_SGPRS(Value);
-  else if (ID == "compute_pgm_rsrc1_priority")
-    Header.compute_pgm_resource_registers |= S_00B848_PRIORITY(Value);
-  else if (ID == "compute_pgm_rsrc1_float_mode")
-    Header.compute_pgm_resource_registers |= S_00B848_FLOAT_MODE(Value);
-  else if (ID == "compute_pgm_rsrc1_priv")
-    Header.compute_pgm_resource_registers |= S_00B848_PRIV(Value);
-  else if (ID == "compute_pgm_rsrc1_dx10_clamp")
-    Header.compute_pgm_resource_registers |= S_00B848_DX10_CLAMP(Value);
-  else if (ID == "compute_pgm_rsrc1_debug_mode")
-    Header.compute_pgm_resource_registers |= S_00B848_DEBUG_MODE(Value);
-  else if (ID == "compute_pgm_rsrc1_ieee_mode")
-    Header.compute_pgm_resource_registers |= S_00B848_IEEE_MODE(Value);
-  else if (ID == "compute_pgm_rsrc2_scratch_en")
-    Header.compute_pgm_resource_registers |= (S_00B84C_SCRATCH_EN(Value) << 32);
-  else if (ID == "compute_pgm_rsrc2_user_sgpr")
-    Header.compute_pgm_resource_registers |= (S_00B84C_USER_SGPR(Value) << 32);
-  else if (ID == "compute_pgm_rsrc2_tgid_x_en")
-    Header.compute_pgm_resource_registers |= (S_00B84C_TGID_X_EN(Value) << 32);
-  else if (ID == "compute_pgm_rsrc2_tgid_y_en")
-    Header.compute_pgm_resource_registers |= (S_00B84C_TGID_Y_EN(Value) << 32);
-  else if (ID == "compute_pgm_rsrc2_tgid_z_en")
-    Header.compute_pgm_resource_registers |= (S_00B84C_TGID_Z_EN(Value) << 32);
-  else if (ID == "compute_pgm_rsrc2_tg_size_en")
-    Header.compute_pgm_resource_registers |= (S_00B84C_TG_SIZE_EN(Value) << 32);
-  else if (ID == "compute_pgm_rsrc2_tidig_comp_cnt")
-    Header.compute_pgm_resource_registers |=
-        (S_00B84C_TIDIG_COMP_CNT(Value) << 32);
-  else if (ID == "compute_pgm_rsrc2_excp_en_msb")
-    Header.compute_pgm_resource_registers |=
-        (S_00B84C_EXCP_EN_MSB(Value) << 32);
-  else if (ID == "compute_pgm_rsrc2_lds_size")
-    Header.compute_pgm_resource_registers |= (S_00B84C_LDS_SIZE(Value) << 32);
-  else if (ID == "compute_pgm_rsrc2_excp_en")
-    Header.compute_pgm_resource_registers |= (S_00B84C_EXCP_EN(Value) << 32);
-  else if (ID == "compute_pgm_resource_registers")
-    Header.compute_pgm_resource_registers = Value;
-  else if (ID == "enable_sgpr_private_segment_buffer")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER_SHIFT);
-  else if (ID == "enable_sgpr_dispatch_ptr")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR_SHIFT);
-  else if (ID == "enable_sgpr_queue_ptr")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR_SHIFT);
-  else if (ID == "enable_sgpr_kernarg_segment_ptr")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR_SHIFT);
-  else if (ID == "enable_sgpr_dispatch_id")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID_SHIFT);
-  else if (ID == "enable_sgpr_flat_scratch_init")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT_SHIFT);
-  else if (ID == "enable_sgpr_private_segment_size")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE_SHIFT);
-  else if (ID == "enable_sgpr_grid_workgroup_count_x")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X_SHIFT);
-  else if (ID == "enable_sgpr_grid_workgroup_count_y")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y_SHIFT);
-  else if (ID == "enable_sgpr_grid_workgroup_count_z")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z_SHIFT);
-  else if (ID == "enable_ordered_append_gds")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_ENABLE_ORDERED_APPEND_GDS_SHIFT);
-  else if (ID == "private_element_size")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE_SHIFT);
-  else if (ID == "is_ptr64")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_IS_PTR64_SHIFT);
-  else if (ID == "is_dynamic_callstack")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_SHIFT);
-  else if (ID == "is_debug_enabled")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED_SHIFT);
-  else if (ID == "is_xnack_enabled")
-    Header.code_properties |=
-        (Value << AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED_SHIFT);
-  else if (ID == "workitem_private_segment_byte_size")
-    Header.workitem_private_segment_byte_size = Value;
-  else if (ID == "workgroup_group_segment_byte_size")
-    Header.workgroup_group_segment_byte_size = Value;
-  else if (ID == "gds_segment_byte_size")
-    Header.gds_segment_byte_size = Value;
-  else if (ID == "kernarg_segment_byte_size")
-    Header.kernarg_segment_byte_size = Value;
-  else if (ID == "workgroup_fbarrier_count")
-    Header.workgroup_fbarrier_count = Value;
-  else if (ID == "wavefront_sgpr_count")
-    Header.wavefront_sgpr_count = Value;
-  else if (ID == "workitem_vgpr_count")
-    Header.workitem_vgpr_count = Value;
-  else if (ID == "reserved_vgpr_first")
-    Header.reserved_vgpr_first = Value;
-  else if (ID == "reserved_vgpr_count")
-    Header.reserved_vgpr_count = Value;
-  else if (ID == "reserved_sgpr_first")
-    Header.reserved_sgpr_first = Value;
-  else if (ID == "reserved_sgpr_count")
-    Header.reserved_sgpr_count = Value;
-  else if (ID == "debug_wavefront_private_segment_offset_sgpr")
-    Header.debug_wavefront_private_segment_offset_sgpr = Value;
-  else if (ID == "debug_private_segment_buffer_sgpr")
-    Header.debug_private_segment_buffer_sgpr = Value;
-  else if (ID == "kernarg_segment_alignment")
-    Header.kernarg_segment_alignment = Value;
-  else if (ID == "group_segment_alignment")
-    Header.group_segment_alignment = Value;
-  else if (ID == "private_segment_alignment")
-    Header.private_segment_alignment = Value;
-  else if (ID == "wavefront_size")
-    Header.wavefront_size = Value;
-  else if (ID == "call_convention")
-    Header.call_convention = Value;
-  else if (ID == "runtime_loader_kernel_symbol")
-    Header.runtime_loader_kernel_symbol = Value;
-  else
-    return TokError("amd_kernel_code_t value not recognized.");
-
   return false;
 }
 

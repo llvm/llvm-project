@@ -451,21 +451,6 @@ else()
   set(HAVE_DIA_SDK 0)
 endif( MSVC )
 
-if( PURE_WINDOWS )
-  CHECK_CXX_SOURCE_COMPILES("
-    #include <windows.h>
-    #include <imagehlp.h>
-    extern \"C\" void foo(PENUMLOADED_MODULES_CALLBACK);
-    extern \"C\" void foo(BOOL(CALLBACK*)(PCSTR,ULONG_PTR,ULONG,PVOID));
-    int main(){return 0;}"
-    HAVE_ELMCB_PCSTR)
-  if( HAVE_ELMCB_PCSTR )
-    set(WIN32_ELMCB_PCSTR "PCSTR")
-  else()
-    set(WIN32_ELMCB_PCSTR "PSTR")
-  endif()
-endif( PURE_WINDOWS )
-
 # FIXME: Signal handler return type, currently hardcoded to 'void'
 set(RETSIGTYPE void)
 

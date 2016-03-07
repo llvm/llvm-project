@@ -1400,7 +1400,7 @@ some with solutions, some without.
 
 * Restarting the program breaks breakpoints.  After following the information
   above, you have succeeded in getting some breakpoints planted in your pass.
-  Nex thing you know, you restart the program (i.e., you type "``run``" again),
+  Next thing you know, you restart the program (i.e., you type "``run``" again),
   and you start getting errors about breakpoints being unsettable.  The only
   way I have found to "fix" this problem is to delete the breakpoints that are
   already set in your pass, run the program, and re-set the breakpoints once

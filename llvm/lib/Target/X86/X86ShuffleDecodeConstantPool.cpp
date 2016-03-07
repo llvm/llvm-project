@@ -191,6 +191,7 @@ void DecodeVPERMV3Mask(const Constant *C, MVT VT,
   Type *MaskTy = C->getType();
   unsigned NumElements = MaskTy->getVectorNumElements();
   if (NumElements == VT.getVectorNumElements()) {
+    unsigned EltMaskSize = Log2_64(NumElements * 2);
     for (unsigned i = 0; i < NumElements; ++i) {
       Constant *COp = C->getAggregateElement(i);
       if (!COp) {
@@ -200,9 +201,9 @@ void DecodeVPERMV3Mask(const Constant *C, MVT VT,
       if (isa<UndefValue>(COp))
         ShuffleMask.push_back(SM_SentinelUndef);
       else {
-        uint64_t Element = cast<ConstantInt>(COp)->getZExtValue();
-        Element &= (1 << NumElements*2) - 1;
-        ShuffleMask.push_back(Element);
+        APInt Element = cast<ConstantInt>(COp)->getValue();
+        Element = Element.getLoBits(EltMaskSize);
+        ShuffleMask.push_back(Element.getZExtValue());
       }
     }
   }

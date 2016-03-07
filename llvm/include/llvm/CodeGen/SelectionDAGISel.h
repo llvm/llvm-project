@@ -140,6 +140,7 @@ public:
     OPC_EmitMergeInputChains,
     OPC_EmitMergeInputChains1_0,
     OPC_EmitMergeInputChains1_1,
+    OPC_EmitMergeInputChains1_2,
     OPC_EmitCopyToReg,
     OPC_EmitNodeXForm,
     OPC_EmitNode,
