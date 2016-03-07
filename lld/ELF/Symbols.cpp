@@ -61,7 +61,7 @@ typename ELFFile<ELFT>::uintX_t SymbolBody::getVA() const {
     auto *SS = cast<SharedSymbol<ELFT>>(this);
     if (!SS->NeedsCopyOrPltAddr)
       return 0;
-    if (SS->isFunc())
+    if (SS->IsFunc)
       return getPltVA<ELFT>();
     else
       return Out<ELFT>::Bss->getVA() + SS->OffsetInBss;

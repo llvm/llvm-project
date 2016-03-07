@@ -20,7 +20,7 @@
 #include "Symbols.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Linker/Linker.h"
+#include "llvm/Linker/IRMover.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
@@ -126,21 +126,36 @@ std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
   return createObjectFile(*LtoBuffer);
 }
 
+static void addBitcodeFile(IRMover &Mover, BitcodeFile &F,
+                           LLVMContext &Context) {
+  std::unique_ptr<MemoryBuffer> Buffer =
+      MemoryBuffer::getMemBuffer(F.MB, false);
+  std::unique_ptr<Module> M =
+      check(getLazyBitcodeModule(std::move(Buffer), Context,
+                                 /*ShouldLazyLoadMetadata*/ true));
+  std::vector<GlobalValue *> Keep;
+  for (SymbolBody *B : F.getSymbols()) {
+    if (B->repl() != B)
+      continue;
+    auto *DB = dyn_cast<DefinedBitcode>(B);
+    if (!DB)
+      continue;
+    GlobalValue *GV = M->getNamedValue(B->getName());
+    assert(GV);
+    Keep.push_back(GV);
+  }
+  Mover.move(std::move(M), Keep, [](GlobalValue &, IRMover::ValueAdder) {});
+}
+
 // Merge all the bitcode files we have seen, codegen the result and return
 // the resulting ObjectFile.
 template <class ELFT>
 ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
   LLVMContext Context;
   Module Combined("ld-temp.o", Context);
-  Linker L(Combined);
-  for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles) {
-    std::unique_ptr<MemoryBuffer> Buffer =
-        MemoryBuffer::getMemBuffer(F->MB, false);
-    std::unique_ptr<Module> M =
-        check(getLazyBitcodeModule(std::move(Buffer), Context,
-                                   /*ShouldLazyLoadMetadata*/ true));
-    L.linkInModule(std::move(M));
-  }
+  IRMover Mover(Combined);
+  for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles)
+    addBitcodeFile(Mover, *F, Context);
   std::unique_ptr<InputFile> F = codegen(Combined);
   ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(F.release()));
   return &*ObjectFiles.back();
@@ -270,7 +285,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
     return;
   }
 
-  if (New->isTls() != Existing->isTls()) {
+  if (New->IsTls != Existing->IsTls) {
     error("TLS attribute mismatch for symbol: " + conflictMsg(Existing, New));
     return;
   }
@@ -331,8 +346,7 @@ void SymbolTable<ELFT>::addMemberFile(Undefined *Undef, Lazy *L) {
     L->setWeak();
 
     // FIXME: Do we need to copy more?
-    if (Undef->isTls())
-      L->setTls();
+    L->IsTls |= Undef->IsTls;
     return;
   }
 

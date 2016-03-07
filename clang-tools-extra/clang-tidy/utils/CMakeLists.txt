@@ -1,6 +1,8 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyUtils
+  DeclRefExprUtils.cpp
+  FixItHintUtils.cpp
   HeaderGuard.cpp
   HeaderFileExtensionsUtils.cpp
   IncludeInserter.cpp

@@ -955,7 +955,7 @@ bool elf::canBePreempted(const SymbolBody *Body) {
     return false;
   if (Body->getVisibility() != STV_DEFAULT)
     return false;
-  if (Config->Bsymbolic || (Config->BsymbolicFunctions && Body->isFunc()))
+  if (Config->Bsymbolic || (Config->BsymbolicFunctions && Body->IsFunc))
     return false;
   return true;
 }
