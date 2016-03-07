@@ -22,6 +22,6 @@ static inline char *getenv(const char *name) { return NULL; }
 
 int lprofGetHostName(char *Name, int Len);
 
-unsigned BoolCmpXchg(void **Ptr, void *OldV, void *NewV);
+unsigned lprofBoolCmpXchg(void **Ptr, void *OldV, void *NewV);
 
 #endif  /* PROFILE_INSTRPROFILINGUTIL_H */
