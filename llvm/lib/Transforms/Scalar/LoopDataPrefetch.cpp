@@ -99,9 +99,12 @@ bool LoopDataPrefetch::runOnFunction(Function &F) {
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
+  // If PrefetchDistance is not set, don't run the pass.  This gives an
+  // opportunity for targets to run this pass for selected subtargets only
+  // (whose TTI sets PrefetchDistance).
+  if (TTI->getPrefetchDistance() == 0)
+    return false;
   assert(TTI->getCacheLineSize() && "Cache line size is not set for target");
-  assert(TTI->getPrefetchDistance() &&
-         "Prefetch distance is not set for target");
 
   bool MadeChange = false;
 
