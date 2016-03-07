@@ -1299,4 +1299,16 @@ __m512i test_mm512_maskz_mov_epi8(__mmask64 __U, __m512i __A) {
   return _mm512_maskz_mov_epi8(__U, __A); 
 }
 
+__m512i test_mm512_mask_set1_epi8(__m512i __O, __mmask64 __M, char __A) {
+  // CHECK-LABEL: @test_mm512_mask_set1_epi8
+  // CHECK: @llvm.x86.avx512.mask.pbroadcast.b.gpr.512
+  return _mm512_mask_set1_epi8(__O, __M, __A); 
+}
+
+__m512i test_mm512_maskz_set1_epi8(__mmask64 __M, char __A) {
+  // CHECK-LABEL: @test_mm512_maskz_set1_epi8
+  // CHECK: @llvm.x86.avx512.mask.pbroadcast.b.gpr.512
+  return _mm512_maskz_set1_epi8(__M, __A); 
+}
+
 

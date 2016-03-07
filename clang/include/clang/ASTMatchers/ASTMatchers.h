@@ -3688,15 +3688,22 @@ AST_MATCHER(QualType, isAnyCharacter) {
     return Node->isAnyCharacterType();
 }
 
-//// \brief Matches QualType nodes that are of any pointer type.
+/// \brief Matches QualType nodes that are of any pointer type; this includes
+/// the Objective-C object pointer type, which is different despite being
+/// syntactically similar.
 ///
 /// Given
 /// \code
 ///   int *i = nullptr;
+///
+///   @interface Foo
+///   @end
+///   Foo *f;
+///
 ///   int j;
 /// \endcode
 /// varDecl(hasType(isAnyPointer()))
-///   matches "int *i", but not "int j".
+///   matches "int *i" and "Foo *f", but not "int j".
 AST_MATCHER(QualType, isAnyPointer) {
   return Node->isAnyPointerType();
 }
