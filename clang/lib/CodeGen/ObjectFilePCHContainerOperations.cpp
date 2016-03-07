@@ -201,6 +201,15 @@ public:
     if (D->getName().empty())
       return;
 
+    // Defer tag decls until their declcontext is complete.
+    auto *DeclCtx = D->getDeclContext();
+    while (DeclCtx) {
+      if (auto *D = dyn_cast<TagDecl>(DeclCtx))
+        if (!D->isCompleteDefinition())
+          return;
+      DeclCtx = DeclCtx->getParent();
+    }
+
     DebugTypeVisitor DTV(*Builder->getModuleDebugInfo(), *Ctx);
     DTV.TraverseDecl(D);
     Builder->UpdateCompletedType(D);
