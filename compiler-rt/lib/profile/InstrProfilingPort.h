@@ -52,6 +52,7 @@
   __sync_bool_compare_and_swap(Ptr, OldV, NewV)
 #endif
 #else /* COMPILER_RT_HAS_ATOMICS != 1 */
+#include "InstrProfilingUtil.h"
 #define COMPILER_RT_BOOL_CMPXCHG(Ptr, OldV, NewV)                              \
   lprofBoolCmpXchg((void **)Ptr, OldV, NewV)
 #endif
