@@ -1,4 +1,10 @@
 // RUN: %clang_tsan -O1 %s -o %t && %env_tsan_opts=flush_memory_ms=1:memory_limit_mb=1 %run %t 2>&1 | FileCheck %s
+//
+// setuid(0) hangs on powerpc64 big endian.  When this is fixed remove
+// the unsupported flag.
+// https://llvm.org/bugs/show_bug.cgi?id=25799
+//
+// UNSUPPORTED: powerpc64-unknown-linux-gnu
 #include "test.h"
 #include <sys/types.h>
 #include <unistd.h>

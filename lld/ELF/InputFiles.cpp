@@ -414,6 +414,17 @@ bool BitcodeFile::classof(const InputFile *F) {
   return F->kind() == BitcodeKind;
 }
 
+static uint8_t getGvVisibility(const GlobalValue *GV) {
+  switch (GV->getVisibility()) {
+  case GlobalValue::HiddenVisibility:
+    return STV_HIDDEN;
+  case GlobalValue::ProtectedVisibility:
+    return STV_PROTECTED;
+  default:
+    return STV_DEFAULT;
+  }
+}
+
 void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
   LLVMContext Context;
   std::unique_ptr<IRObjectFile> Obj = check(IRObjectFile::create(MB, Context));
@@ -432,23 +443,14 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
       if (const Comdat *C = GV->getComdat())
         if (!KeptComdats.count(C))
           continue;
-      switch (GV->getVisibility()) {
-      case GlobalValue::DefaultVisibility:
-        Visibility = STV_DEFAULT;
-        break;
-      case GlobalValue::HiddenVisibility:
-        Visibility = STV_HIDDEN;
-        break;
-      case GlobalValue::ProtectedVisibility:
-        Visibility = STV_PROTECTED;
-        break;
-      }
+      Visibility = getGvVisibility(GV);
     }
 
     SmallString<64> Name;
     raw_svector_ostream OS(Name);
     Sym.printName(OS);
     StringRef NameRef = Saver.save(StringRef(Name));
+
     SymbolBody *Body;
     uint32_t Flags = Sym.getFlags();
     bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
