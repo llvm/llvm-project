@@ -1917,6 +1917,23 @@ _mm512_maskz_mov_epi8 (__mmask64 __U, __m512i __A)
 }
 
 
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_set1_epi8 (__m512i __O, __mmask64 __M, char __A)
+{
+  return (__m512i) __builtin_ia32_pbroadcastb512_gpr_mask (__A,
+                 (__v64qi) __O,
+                 __M);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_set1_epi8 (__mmask64 __M, char __A)
+{
+  return (__m512i) __builtin_ia32_pbroadcastb512_gpr_mask (__A,
+                 (__v64qi)
+                 _mm512_setzero_qi(),
+                 __M);
+}
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif

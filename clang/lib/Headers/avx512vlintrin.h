@@ -6012,6 +6012,62 @@ _mm256_maskz_movedup_pd (__mmask8 __U, __m256d __A)
                (__mmask8) __U);
 }
 
+
+#define _mm_mask_set1_epi32( __O, __M, __A) __extension__ ({ \
+__builtin_ia32_pbroadcastd128_gpr_mask (__A, (__v4si)( __O),\
+                ( __M));\
+})
+
+#define _mm_maskz_set1_epi32( __M, __A) __extension__ ({ \
+__builtin_ia32_pbroadcastd128_gpr_mask (__A,\
+                 (__v4si)\
+                 _mm_setzero_si128 (),\
+                ( __M));\
+})
+
+#define _mm256_mask_set1_epi32( __O, __M, __A) __extension__ ({ \
+__builtin_ia32_pbroadcastd256_gpr_mask (__A, (__v8si)( __O),\
+                ( __M));\
+})
+
+#define _mm256_maskz_set1_epi32( __M, __A) __extension__ ({ \
+__builtin_ia32_pbroadcastd256_gpr_mask (__A,\
+                 (__v8si)\
+                 _mm256_setzero_si256 (),\
+                ( __M));\
+})
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_set1_epi64 (__m128i __O, __mmask8 __M, long long __A)
+{
+  return (__m128i) __builtin_ia32_pbroadcastq128_gpr_mask (__A, (__v2di) __O,
+                 __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_set1_epi64 (__mmask8 __M, long long __A)
+{
+  return (__m128i) __builtin_ia32_pbroadcastq128_gpr_mask (__A,
+                 (__v2di)
+                 _mm_setzero_si128 (),
+                 __M);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_mask_set1_epi64 (__m256i __O, __mmask8 __M, long long __A)
+{
+  return (__m256i) __builtin_ia32_pbroadcastq256_gpr_mask (__A, (__v4di) __O,
+                 __M);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_maskz_set1_epi64 (__mmask8 __M, long long __A)
+{
+  return (__m256i) __builtin_ia32_pbroadcastq256_gpr_mask (__A,
+                 (__v4di)
+                 _mm256_setzero_si256 (),
+                 __M);
+}
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_BOTH
 

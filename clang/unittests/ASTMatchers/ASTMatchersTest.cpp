@@ -1483,6 +1483,11 @@ TEST(IsAnyPointer, MatchesPointers) {
   EXPECT_TRUE(matches("int* i = nullptr;", varDecl(hasType(isAnyPointer()))));
 }
 
+TEST(IsAnyPointer, MatchesObjcPointer) {
+  EXPECT_TRUE(matchesObjC("@interface Foo @end Foo *f;",
+                          varDecl(hasType(isAnyPointer()))));
+}
+
 TEST(IsAnyPointer, ReportsNoFalsePositives) {
   EXPECT_TRUE(notMatches("int i = 0;", varDecl(hasType(isAnyPointer()))));
 }

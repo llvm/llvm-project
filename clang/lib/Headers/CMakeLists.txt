@@ -74,6 +74,8 @@ set(files
   xsavecintrin.h
   xsavesintrin.h
   xtestintrin.h
+  avx512ifmaintrin.h
+  avx512ifmavlintrin.h
   )
 
 set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)
