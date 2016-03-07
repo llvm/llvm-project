@@ -131,8 +131,25 @@ void BitstreamCursor::skipRecord(unsigned AbbrevID) {
       const BitCodeAbbrevOp &EltEnc = Abbv->getOperandInfo(++i);
 
       // Read all the elements.
-      for (; NumElts; --NumElts)
-        skipAbbreviatedField(*this, EltEnc);
+      // Decode the value as we are commanded.
+      switch (EltEnc.getEncoding()) {
+      default:
+        report_fatal_error("Array element type can't be an Array or a Blob");
+      case BitCodeAbbrevOp::Fixed:
+        assert((unsigned)Op.getEncodingData() <= MaxChunkSize);
+        for (; NumElts; --NumElts)
+          Read((unsigned)EltEnc.getEncodingData());
+        break;
+      case BitCodeAbbrevOp::VBR:
+        assert((unsigned)Op.getEncodingData() <= MaxChunkSize);
+        for (; NumElts; --NumElts)
+          ReadVBR64((unsigned)EltEnc.getEncodingData());
+        break;
+      case BitCodeAbbrevOp::Char6:
+        for (; NumElts; --NumElts)
+          Read(6);
+        break;
+      }
       continue;
     }
 
@@ -206,13 +223,23 @@ unsigned BitstreamCursor::readRecord(unsigned AbbrevID,
       if (!EltEnc.isEncoding())
         report_fatal_error(
             "Array element type has to be an encoding of a type");
-      if (EltEnc.getEncoding() == BitCodeAbbrevOp::Array ||
-          EltEnc.getEncoding() == BitCodeAbbrevOp::Blob)
-        report_fatal_error("Array element type can't be an Array or a Blob");
 
       // Read all the elements.
-      for (; NumElts; --NumElts)
-        Vals.push_back(readAbbreviatedField(*this, EltEnc));
+      switch (EltEnc.getEncoding()) {
+      default:
+        report_fatal_error("Array element type can't be an Array or a Blob");
+      case BitCodeAbbrevOp::Fixed:
+        for (; NumElts; --NumElts)
+          Vals.push_back(Read((unsigned)EltEnc.getEncodingData()));
+        break;
+      case BitCodeAbbrevOp::VBR:
+        for (; NumElts; --NumElts)
+          Vals.push_back(ReadVBR64((unsigned)EltEnc.getEncodingData()));
+        break;
+      case BitCodeAbbrevOp::Char6:
+        for (; NumElts; --NumElts)
+          Vals.push_back(BitCodeAbbrevOp::DecodeChar6(Read(6)));
+      }
       continue;
     }
 
