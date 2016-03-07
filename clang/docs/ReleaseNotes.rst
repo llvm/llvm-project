@@ -68,6 +68,87 @@ The new ``-fstrict-vtable-pointers`` flag enables better devirtualization
 support (experimental).
 
 
+Alignment
+---------
+Clang has gotten better at passing down strict type alignment information to LLVM,
+and several targets have gotten better at taking advantage of that information.
+
+Dereferencing a pointer that is not adequately aligned for its type is undefined
+behavior.  It may crash on target architectures that strictly enforce alignment, but
+even on architectures that do not, frequent use of unaligned pointers may hurt
+the performance of the generated code.
+
+If you find yourself fixing a bug involving an inadequately aligned pointer, you
+have several options.
+
+The best option, when practical, is to increase the alignment of the memory.
+For example, this array is not guaranteed to be sufficiently aligned to store
+a pointer value:
+
+.. code-block:: c
+
+  char buffer[sizeof(const char*)];
+
+Writing a pointer directly into it violates C's alignment rules:
+
+.. code-block:: c
+
+  ((const char**) buffer)[0] = "Hello, world!\n";
+
+But you can use alignment attributes to increase the required alignment:
+
+.. code-block:: c
+
+  __attribute__((aligned(__alignof__(const char*))))
+  char buffer[sizeof(const char*)];
+
+When that's not practical, you can instead reduce the alignment requirements
+of the pointer.  If the pointer is to a struct that represents that layout of a
+serialized structure, consider making that struct packed; this will remove any
+implicit internal padding that the compiler might add to the struct and
+reduce its alignment requirement to 1.
+
+.. code-block:: c
+
+  struct file_header {
+    uint16_t magic_number;
+    uint16_t format_version;
+    uint16_t num_entries;
+  } __attribute__((packed));
+
+You may also override the default alignment assumptions of a pointer by
+using a typedef with explicit alignment:
+
+.. code-block:: c
+
+  typedef const char *unaligned_char_ptr __attribute__((aligned(1)));
+  ((unaligned_char_ptr*) buffer)[0] = "Hello, world!\n";
+
+The final option is to copy the memory into something that is properly
+aligned.  Be aware, however, that Clang will assume that pointers are
+properly aligned for their type when you pass them to a library function
+like memcpy.  For example, this code will assume that the source and
+destination pointers are both properly aligned for an int:
+
+.. code-block:: c
+
+  void copy_int_array(int *dest, const int *src, size_t num) {
+    memcpy(dest, src, num * sizeof(int));
+  }
+
+You may explicitly disable this assumption by casting the argument to a
+less-aligned pointer type:
+
+.. code-block:: c
+
+  void copy_unaligned_int_array(int *dest, const int *src, size_t num) {
+    memcpy((char*) dest, (const char*) src, num * sizeof(int));
+  }
+
+Clang promises not to look through the explicit cast when inferring the
+alignment of this memcpy.
+
+
 C Language Changes in Clang
 ---------------------------
 
