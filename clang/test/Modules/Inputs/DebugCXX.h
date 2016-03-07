@@ -72,3 +72,14 @@ namespace {
     struct InAnonymousNamespace { int i; };
   }
 }
+
+class Base;
+class A {
+  virtual Base *getParent() const;
+};
+class Base {};
+class Derived : Base {
+  class B : A {
+    Derived *getParent() const override;
+  };
+};
