@@ -1564,7 +1564,7 @@ SwiftASTManipulator::MakeGlobalTypealias(swift::Identifier name, CompilerType &t
     swift::TypeAliasDecl *type_alias_decl = new (ast_context) swift::TypeAliasDecl(source_loc,
                                                                                    name,
                                                                                    source_loc,
-                                                                                   swift::TypeLoc::withoutLoc(GetSwiftType(type)),
+                                                                                   swift::TypeLoc::withoutLoc(GetSwiftType(type)), nullptr,
                                                                                    &m_source_file);
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
