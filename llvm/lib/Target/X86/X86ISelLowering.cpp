@@ -20764,7 +20764,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // that register and since RBX will be a reserved register
     // the register allocator will not make sure its value will
     // be properly saved and restored around this live-range.
-    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+    const X86RegisterInfo *TRI = Subtarget->getRegisterInfo();
     if (TRI->hasBasePointer(DAG.getMachineFunction()))
       return;
     EVT T = N->getValueType(0);
