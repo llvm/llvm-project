@@ -4859,7 +4859,7 @@ SwiftASTContext::BindGenericType (CompilerType type,
         {
             case swift::TypeKind::UnboundGeneric:
             {
-                auto nominal_type_decl = cast<swift::NominalTypeDecl>(swift_can_type->getAs<swift::UnboundGenericType>()->getDecl());
+                auto nominal_type_decl = llvm::cast<swift::NominalTypeDecl>(swift_can_type->getAs<swift::UnboundGenericType>()->getDecl());
                 swift::DeclContext * parent_decl = nominal_type_decl->getParent();
                 swift::Type parent_type;
                 if (parent_decl->isTypeContext())
@@ -9129,7 +9129,7 @@ SwiftASTContext::DumpTypeDescription (void* type,
                 swift::UnboundGenericType *unbound_generic_type = swift_can_type->getAs<swift::UnboundGenericType>();
                 if (unbound_generic_type)
                 {
-                    auto nominal_type_decl = dyn_cast<swift::NominalTypeDecl>(unbound_generic_type->getDecl());
+                    auto nominal_type_decl = llvm::dyn_cast<swift::NominalTypeDecl>(unbound_generic_type->getDecl());
                     if (nominal_type_decl)
                     {
                         PrintSwiftNominalType(nominal_type_decl,
