@@ -1917,4 +1917,77 @@ let Predicates = [HasP9Vector] in {
 
   // Round Quad-Precision to Double-Extended Precision (fp80)
   def XSRQPXP  : Z23_VT5_R1_VB5_RMC2_EX1<63, 37, 0, "xsrqpxp", []>;
+
+  //===--------------------------------------------------------------------===//
+  // Vector/Scalar Load/Store Instructions
+
+  let mayLoad = 1 in {
+  // Load Vector
+  def LXV : DQ_RD6_RS5_DQ12<61, 1, (outs vsrc:$XT), (ins memrix16:$src),
+                            "lxv $XT, $src", IIC_LdStLFD, []>;
+  // Load DWord
+  def LXSD  : DSForm_1<57, 2, (outs vrrc:$vD), (ins memrix:$src),
+                       "lxsd $vD, $src", IIC_LdStLFD, []>;
+  // Load SP from src, convert it to DP, and place in dword[0]
+  def LXSSP : DSForm_1<57, 3, (outs vrrc:$vD), (ins memrix:$src),
+                       "lxssp $vD, $src", IIC_LdStLFD, []>;
+
+  // [PO T RA RB XO TX] almost equal to [PO S RA RB XO SX], but has different
+  // "out" and "in" dag
+  class X_XT6_RA5_RB5<bits<6> opcode, bits<10> xo, string opc,
+                      RegisterOperand vtype, list<dag> pattern>
+    : XX1Form<opcode, xo, (outs vtype:$XT), (ins memrr:$src),
+              !strconcat(opc, " $XT, $src"), IIC_LdStLFD, pattern>;
+
+  // Load as Integer Byte/Halfword & Zero Indexed
+  def LXSIBZX : X_XT6_RA5_RB5<31, 781, "lxsibzx", vsfrc, []>;
+  def LXSIHZX : X_XT6_RA5_RB5<31, 813, "lxsihzx", vsfrc, []>;
+
+  // Load Vector Halfword*8/Byte*16 Indexed
+  def LXVH8X  : X_XT6_RA5_RB5<31, 812, "lxvh8x" , vsrc, []>;
+  def LXVB16X : X_XT6_RA5_RB5<31, 876, "lxvb16x", vsrc, []>;
+
+  // Load Vector Indexed
+  def LXVX    : X_XT6_RA5_RB5<31, 268, "lxvx"   , vsrc, []>;
+
+  // Load Vector (Left-justified) with Length
+  def LXVL    : X_XT6_RA5_RB5<31, 269, "lxvl"   , vsrc, []>;
+  def LXVLL   : X_XT6_RA5_RB5<31, 301, "lxvll"  , vsrc, []>;
+
+  // Load Vector Word & Splat Indexed
+  def LXVWSX  : X_XT6_RA5_RB5<31, 364, "lxvwsx" , vsrc, []>;
+  } // end mayLoad
+
+  let mayStore = 1 in {
+  // Store Vector
+  def STXV : DQ_RD6_RS5_DQ12<61, 5, (outs), (ins vsrc:$XT, memrix16:$dst),
+                             "stxv $XT, $dst", IIC_LdStSTFD, []>;
+  // Store DWord
+  def STXSD  : DSForm_1<61, 2, (outs), (ins vrrc:$vS, memrix:$dst),
+                        "stxsd $vS, $dst", IIC_LdStSTFD, []>;
+  // Convert DP of dword[0] to SP, and Store to dst
+  def STXSSP : DSForm_1<61, 3, (outs), (ins vrrc:$vS, memrix:$dst),
+                        "stxssp $vS, $dst", IIC_LdStSTFD, []>;
+
+  // [PO S RA RB XO SX]
+  class X_XS6_RA5_RB5<bits<6> opcode, bits<10> xo, string opc,
+                      RegisterOperand vtype, list<dag> pattern>
+    : XX1Form<opcode, xo, (outs), (ins vtype:$XT, memrr:$dst),
+              !strconcat(opc, " $XT, $dst"), IIC_LdStSTFD, pattern>;
+
+  // Store as Integer Byte/Halfword Indexed
+  def STXSIBX  : X_XS6_RA5_RB5<31,  909, "stxsibx" , vsfrc, []>;
+  def STXSIHX  : X_XS6_RA5_RB5<31,  941, "stxsihx" , vsfrc, []>;
+
+  // Store Vector Halfword*8/Byte*16 Indexed
+  def STXVH8X  : X_XS6_RA5_RB5<31,  940, "stxvh8x" , vsrc, []>;
+  def STXVB16X : X_XS6_RA5_RB5<31, 1004, "stxvb16x", vsrc, []>;
+
+  // Store Vector Indexed
+  def STXVX    : X_XS6_RA5_RB5<31,  396, "stxvx"   , vsrc, []>;
+
+  // Store Vector (Left-justified) with Length
+  def STXVL    : X_XS6_RA5_RB5<31,  397, "stxvl"   , vsrc, []>;
+  def STXVLL   : X_XS6_RA5_RB5<31,  429, "stxvll"  , vsrc, []>;
+  } // end mayStore
 } // end HasP9Vector

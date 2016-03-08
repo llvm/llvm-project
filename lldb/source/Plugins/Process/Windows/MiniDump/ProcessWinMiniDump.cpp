@@ -538,7 +538,7 @@ ProcessWinMiniDump::Terminate()
 }
 
 lldb::ProcessSP
-ProcessWinMiniDump::CreateInstance(lldb::TargetSP target_sp, Listener &listener, const FileSpec *crash_file)
+ProcessWinMiniDump::CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, const FileSpec *crash_file)
 {
     lldb::ProcessSP process_sp;
     if (crash_file)
@@ -555,8 +555,8 @@ ProcessWinMiniDump::CanDebug(lldb::TargetSP target_sp, bool plugin_specified_by_
     return true;
 }
 
-ProcessWinMiniDump::ProcessWinMiniDump(lldb::TargetSP target_sp, Listener &listener, const FileSpec &core_file)
-    : ProcessWindows(target_sp, listener), m_impl_up(new Impl(core_file, this))
+ProcessWinMiniDump::ProcessWinMiniDump(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, const FileSpec &core_file)
+    : ProcessWindows(target_sp, listener_sp), m_impl_up(new Impl(core_file, this))
 {
 }
 

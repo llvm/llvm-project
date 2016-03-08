@@ -65,7 +65,6 @@ access only memory accessible through pointer arguments. See also the function
 attributes ``readonly`` and ``argmemonly`` for more information.
 
 
-
 Update of the isl math library
 ------------------------------
 

@@ -66,7 +66,6 @@ static const unsigned int NumResultsLimit = 100;
 
 char MemoryDependenceAnalysis::ID = 0;
 
-// Register this pass...
 INITIALIZE_PASS_BEGIN(MemoryDependenceAnalysis, "memdep",
                       "Memory Dependence Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
@@ -91,8 +90,6 @@ void MemoryDependenceAnalysis::releaseMemory() {
   PredCache.clear();
 }
 
-/// getAnalysisUsage - Does not modify anything.  It uses Alias Analysis.
-///
 void MemoryDependenceAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<AssumptionCacheTracker>();
@@ -110,8 +107,9 @@ bool MemoryDependenceAnalysis::runOnFunction(Function &F) {
   return false;
 }
 
-/// RemoveFromReverseMap - This is a helper function that removes Val from
-/// 'Inst's set in ReverseMap.  If the set becomes empty, remove Inst's entry.
+/// This is a helper function that removes Val from 'Inst's set in ReverseMap.
+///
+/// If the set becomes empty, remove Inst's entry.
 template <typename KeyTy>
 static void
 RemoveFromReverseMap(DenseMap<Instruction *, SmallPtrSet<KeyTy, 4>> &ReverseMap,
@@ -126,9 +124,10 @@ RemoveFromReverseMap(DenseMap<Instruction *, SmallPtrSet<KeyTy, 4>> &ReverseMap,
     ReverseMap.erase(InstIt);
 }
 
-/// GetLocation - If the given instruction references a specific memory
-/// location, fill in Loc with the details, otherwise set Loc.Ptr to null.
-/// Return a ModRefInfo value describing the general behavior of the
+/// If the given instruction references a specific memory location, fill in Loc
+/// with the details, otherwise set Loc.Ptr to null.
+///
+/// Returns a ModRefInfo value describing the general behavior of the
 /// instruction.
 static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
                               const TargetLibraryInfo &TLI) {
@@ -204,8 +203,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
   return MRI_NoModRef;
 }
 
-/// getCallSiteDependencyFrom - Private helper for finding the local
-/// dependencies of a call site.
+/// Private helper for finding the local dependencies of a call site.
 MemDepResult MemoryDependenceAnalysis::getCallSiteDependencyFrom(
     CallSite CS, bool isReadOnlyCall, BasicBlock::iterator ScanIt,
     BasicBlock *BB) {
@@ -265,8 +263,8 @@ MemDepResult MemoryDependenceAnalysis::getCallSiteDependencyFrom(
   return MemDepResult::getNonFuncLocal();
 }
 
-/// isLoadLoadClobberIfExtendedToFullWidth - Return true if LI is a load that
-/// would fully overlap MemLoc if done as a wider legal integer load.
+/// Return true if LI is a load that would fully overlap MemLoc if done as
+/// a wider legal integer load.
 ///
 /// MemLocBase, MemLocOffset are lazily computed here the first time the
 /// base/offs of memloc is needed.
@@ -285,13 +283,6 @@ static bool isLoadLoadClobberIfExtendedToFullWidth(const MemoryLocation &MemLoc,
   return Size != 0;
 }
 
-/// getLoadLoadClobberFullWidthSize - This is a little bit of analysis that
-/// looks at a memory location for a load (specified by MemLocBase, Offs,
-/// and Size) and compares it against a load.  If the specified load could
-/// be safely widened to a larger integer load that is 1) still efficient,
-/// 2) safe for the target, and 3) would provide the specified memory
-/// location value, then this function returns the size in bytes of the
-/// load width to use.  If not, this returns zero.
 unsigned MemoryDependenceAnalysis::getLoadLoadClobberFullWidthSize(
     const Value *MemLocBase, int64_t MemLocOffs, unsigned MemLocSize,
     const LoadInst *LI) {
@@ -377,12 +368,6 @@ static bool isVolatile(Instruction *Inst) {
   return false;
 }
 
-/// getPointerDependencyFrom - Return the instruction on which a memory
-/// location depends.  If isLoad is true, this routine ignores may-aliases with
-/// read-only operations.  If isLoad is false, this routine ignores may-aliases
-/// with reads from read-only locations.  If possible, pass the query
-/// instruction as well; this function may take advantage of the metadata
-/// annotated to the query instruction to refine the result.
 MemDepResult MemoryDependenceAnalysis::getPointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst) {
@@ -738,8 +723,6 @@ MemDepResult MemoryDependenceAnalysis::getSimplePointerDependencyFrom(
   return MemDepResult::getNonFuncLocal();
 }
 
-/// getDependency - Return the instruction on which a memory operation
-/// depends.
 MemDepResult MemoryDependenceAnalysis::getDependency(Instruction *QueryInst) {
   Instruction *ScanPos = QueryInst;
 
@@ -798,8 +781,8 @@ MemDepResult MemoryDependenceAnalysis::getDependency(Instruction *QueryInst) {
 }
 
 #ifndef NDEBUG
-/// AssertSorted - This method is used when -debug is specified to verify that
-/// cache arrays are properly kept sorted.
+/// This method is used when -debug is specified to verify that cache arrays
+/// are properly kept sorted.
 static void AssertSorted(MemoryDependenceAnalysis::NonLocalDepInfo &Cache,
                          int Count = -1) {
   if (Count == -1)
@@ -809,18 +792,6 @@ static void AssertSorted(MemoryDependenceAnalysis::NonLocalDepInfo &Cache,
 }
 #endif
 
-/// getNonLocalCallDependency - Perform a full dependency query for the
-/// specified call, returning the set of blocks that the value is
-/// potentially live across.  The returned set of results will include a
-/// "NonLocal" result for all blocks where the value is live across.
-///
-/// This method assumes the instruction returns a "NonLocal" dependency
-/// within its own block.
-///
-/// This returns a reference to an internal data structure that may be
-/// invalidated on the next non-local query or when an instruction is
-/// removed.  Clients must copy this data if they want it around longer than
-/// that.
 const MemoryDependenceAnalysis::NonLocalDepInfo &
 MemoryDependenceAnalysis::getNonLocalCallDependency(CallSite QueryCS) {
   assert(getDependency(QueryCS.getInstruction()).isNonLocal() &&
@@ -829,10 +800,9 @@ MemoryDependenceAnalysis::getNonLocalCallDependency(CallSite QueryCS) {
   PerInstNLInfo &CacheP = NonLocalDeps[QueryCS.getInstruction()];
   NonLocalDepInfo &Cache = CacheP.first;
 
-  /// DirtyBlocks - This is the set of blocks that need to be recomputed.  In
-  /// the cached case, this can happen due to instructions being deleted etc. In
-  /// the uncached case, this starts out as the set of predecessors we care
-  /// about.
+  // This is the set of blocks that need to be recomputed.  In the cached case,
+  // this can happen due to instructions being deleted etc. In the uncached
+  // case, this starts out as the set of predecessors we care about.
   SmallVector<BasicBlock *, 32> DirtyBlocks;
 
   if (!Cache.empty()) {
@@ -845,10 +815,9 @@ MemoryDependenceAnalysis::getNonLocalCallDependency(CallSite QueryCS) {
 
     // If we already have a partially computed set of results, scan them to
     // determine what is dirty, seeding our initial DirtyBlocks worklist.
-    for (NonLocalDepInfo::iterator I = Cache.begin(), E = Cache.end(); I != E;
-         ++I)
-      if (I->getResult().isDirty())
-        DirtyBlocks.push_back(I->getBB());
+    for (auto &Entry : Cache)
+      if (Entry.getResult().isDirty())
+        DirtyBlocks.push_back(Entry.getBB());
 
     // Sort the cache so that we can do fast binary search lookups below.
     std::sort(Cache.begin(), Cache.end());
@@ -954,13 +923,6 @@ MemoryDependenceAnalysis::getNonLocalCallDependency(CallSite QueryCS) {
   return Cache;
 }
 
-/// getNonLocalPointerDependency - Perform a full dependency query for an
-/// access to the specified (non-volatile) memory location, returning the
-/// set of instructions that either define or clobber the value.
-///
-/// This method assumes the pointer has a "NonLocal" dependency within its
-/// own block.
-///
 void MemoryDependenceAnalysis::getNonLocalPointerDependency(
     Instruction *QueryInst, SmallVectorImpl<NonLocalDepResult> &Result) {
   const MemoryLocation Loc = MemoryLocation::get(QueryInst);
@@ -1001,7 +963,7 @@ void MemoryDependenceAnalysis::getNonLocalPointerDependency(
   // a block with multiple different pointers.  This can happen during PHI
   // translation.
   DenseMap<BasicBlock *, Value *> Visited;
-  if (!getNonLocalPointerDepFromBB(QueryInst, Address, Loc, isLoad, FromBB,
+  if (getNonLocalPointerDepFromBB(QueryInst, Address, Loc, isLoad, FromBB,
                                    Result, Visited, true))
     return;
   Result.clear();
@@ -1009,10 +971,11 @@ void MemoryDependenceAnalysis::getNonLocalPointerDependency(
                                      const_cast<Value *>(Loc.Ptr)));
 }
 
-/// GetNonLocalInfoForBlock - Compute the memdep value for BB with
-/// Pointer/PointeeSize using either cached information in Cache or by doing a
-/// lookup (which may use dirty cache info if available).  If we do a lookup,
-/// add the result to the cache.
+/// Compute the memdep value for BB with Pointer/PointeeSize using either
+/// cached information in Cache or by doing a lookup (which may use dirty cache
+/// info if available).
+///
+/// If we do a lookup, add the result to the cache.
 MemDepResult MemoryDependenceAnalysis::GetNonLocalInfoForBlock(
     Instruction *QueryInst, const MemoryLocation &Loc, bool isLoad,
     BasicBlock *BB, NonLocalDepInfo *Cache, unsigned NumSortedEntries) {
@@ -1078,9 +1041,10 @@ MemDepResult MemoryDependenceAnalysis::GetNonLocalInfoForBlock(
   return Dep;
 }
 
-/// SortNonLocalDepInfoCache - Sort the NonLocalDepInfo cache, given a certain
-/// number of elements in the array that are already properly ordered.  This is
-/// optimized for the case when only a few entries are added.
+/// Sort the NonLocalDepInfo cache, given a certain number of elements in the
+/// array that are already properly ordered.
+///
+/// This is optimized for the case when only a few entries are added.
 static void
 SortNonLocalDepInfoCache(MemoryDependenceAnalysis::NonLocalDepInfo &Cache,
                          unsigned NumSortedEntries) {
@@ -1114,16 +1078,17 @@ SortNonLocalDepInfoCache(MemoryDependenceAnalysis::NonLocalDepInfo &Cache,
   }
 }
 
-/// getNonLocalPointerDepFromBB - Perform a dependency query based on
-/// pointer/pointeesize starting at the end of StartBB.  Add any clobber/def
-/// results to the results vector and keep track of which blocks are visited in
-/// 'Visited'.
+/// Perform a dependency query based on pointer/pointeesize starting at the end
+/// of StartBB.
+///
+/// Add any clobber/def results to the results vector and keep track of which
+/// blocks are visited in 'Visited'.
 ///
 /// This has special behavior for the first block queries (when SkipFirstBlock
 /// is true).  In this special case, it ignores the contents of the specified
 /// block and starts returning dependence info for its predecessors.
 ///
-/// This function returns false on success, or true to indicate that it could
+/// This function returns true on success, or false to indicate that it could
 /// not compute dependence information for some reason.  This should be treated
 /// as a clobber dependence on the first instruction in the predecessor block.
 bool MemoryDependenceAnalysis::getNonLocalPointerDepFromBB(
@@ -1156,10 +1121,8 @@ bool MemoryDependenceAnalysis::getNonLocalPointerDepFromBB(
       // cached data and proceed with the query at the greater size.
       CacheInfo->Pair = BBSkipFirstBlockPair();
       CacheInfo->Size = Loc.Size;
-      for (NonLocalDepInfo::iterator DI = CacheInfo->NonLocalDeps.begin(),
-                                     DE = CacheInfo->NonLocalDeps.end();
-           DI != DE; ++DI)
-        if (Instruction *Inst = DI->getResult().getInst())
+      for (auto &Entry : CacheInfo->NonLocalDeps)
+        if (Instruction *Inst = Entry.getResult().getInst())
           RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
       CacheInfo->NonLocalDeps.clear();
     } else if (CacheInfo->Size > Loc.Size) {
@@ -1177,10 +1140,8 @@ bool MemoryDependenceAnalysis::getNonLocalPointerDepFromBB(
       if (CacheInfo->AATags) {
         CacheInfo->Pair = BBSkipFirstBlockPair();
         CacheInfo->AATags = AAMDNodes();
-        for (NonLocalDepInfo::iterator DI = CacheInfo->NonLocalDeps.begin(),
-                                       DE = CacheInfo->NonLocalDeps.end();
-             DI != DE; ++DI)
-          if (Instruction *Inst = DI->getResult().getInst())
+        for (auto &Entry : CacheInfo->NonLocalDeps)
+          if (Instruction *Inst = Entry.getResult().getInst())
             RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
         CacheInfo->NonLocalDeps.clear();
       }
@@ -1202,36 +1163,36 @@ bool MemoryDependenceAnalysis::getNonLocalPointerDepFromBB(
     // to ensure that if a block in the results set is in the visited set that
     // it was for the same pointer query.
     if (!Visited.empty()) {
-      for (NonLocalDepInfo::iterator I = Cache->begin(), E = Cache->end();
-           I != E; ++I) {
-        DenseMap<BasicBlock *, Value *>::iterator VI = Visited.find(I->getBB());
+      for (auto &Entry : *Cache) {
+        DenseMap<BasicBlock *, Value *>::iterator VI =
+            Visited.find(Entry.getBB());
         if (VI == Visited.end() || VI->second == Pointer.getAddr())
           continue;
 
-        // We have a pointer mismatch in a block.  Just return clobber, saying
+        // We have a pointer mismatch in a block.  Just return false, saying
         // that something was clobbered in this result.  We could also do a
         // non-fully cached query, but there is little point in doing this.
-        return true;
+        return false;
       }
     }
 
     Value *Addr = Pointer.getAddr();
-    for (NonLocalDepInfo::iterator I = Cache->begin(), E = Cache->end(); I != E;
-         ++I) {
-      Visited.insert(std::make_pair(I->getBB(), Addr));
-      if (I->getResult().isNonLocal()) {
+    for (auto &Entry : *Cache) {
+      Visited.insert(std::make_pair(Entry.getBB(), Addr));
+      if (Entry.getResult().isNonLocal()) {
         continue;
       }
 
       if (!DT) {
         Result.push_back(
-            NonLocalDepResult(I->getBB(), MemDepResult::getUnknown(), Addr));
-      } else if (DT->isReachableFromEntry(I->getBB())) {
-        Result.push_back(NonLocalDepResult(I->getBB(), I->getResult(), Addr));
+            NonLocalDepResult(Entry.getBB(), MemDepResult::getUnknown(), Addr));
+      } else if (DT->isReachableFromEntry(Entry.getBB())) {
+        Result.push_back(
+            NonLocalDepResult(Entry.getBB(), Entry.getResult(), Addr));
       }
     }
     ++NumCacheCompleteNonLocalPtr;
-    return false;
+    return true;
   }
 
   // Otherwise, either this is a new block, a block with an invalid cache
@@ -1277,7 +1238,7 @@ bool MemoryDependenceAnalysis::getNonLocalPointerDepFromBB(
       // specific block queries) but we can't do the fastpath "return all
       // results from the set".  Clear out the indicator for this.
       CacheInfo->Pair = BBSkipFirstBlockPair();
-      return true;
+      return false;
     }
 
     // Skip the first block if we have it.
@@ -1429,7 +1390,7 @@ bool MemoryDependenceAnalysis::getNonLocalPointerDepFromBB(
       // result conflicted with the Visited list; we have to conservatively
       // assume it is unknown, but this also does not block PRE of the load.
       if (!CanTranslate ||
-          getNonLocalPointerDepFromBB(QueryInst, PredPointer,
+          !getNonLocalPointerDepFromBB(QueryInst, PredPointer,
                                       Loc.getWithNewPtr(PredPtrVal), isLoad,
                                       Pred, Result, Visited)) {
         // Add the entry to the Result list.
@@ -1484,7 +1445,7 @@ bool MemoryDependenceAnalysis::getNonLocalPointerDepFromBB(
     // incoming value.  Since we can't phi translate to one of the predecessors,
     // we have to bail out.
     if (SkipFirstBlock)
-      return true;
+      return false;
 
     bool foundBlock = false;
     for (NonLocalDepEntry &I : llvm::reverse(*Cache)) {
@@ -1507,11 +1468,10 @@ bool MemoryDependenceAnalysis::getNonLocalPointerDepFromBB(
   // Okay, we're done now.  If we added new values to the cache, re-sort it.
   SortNonLocalDepInfoCache(*Cache, NumSortedEntries);
   DEBUG(AssertSorted(*Cache));
-  return false;
+  return true;
 }
 
-/// RemoveCachedNonLocalPointerDependencies - If P exists in
-/// CachedNonLocalPointerInfo, remove it.
+/// If P exists in CachedNonLocalPointerInfo, remove it.
 void MemoryDependenceAnalysis::RemoveCachedNonLocalPointerDependencies(
     ValueIsLoadPair P) {
   CachedNonLocalPointerInfo::iterator It = NonLocalPointerDeps.find(P);
@@ -1536,12 +1496,6 @@ void MemoryDependenceAnalysis::RemoveCachedNonLocalPointerDependencies(
   NonLocalPointerDeps.erase(It);
 }
 
-/// invalidateCachedPointerInfo - This method is used to invalidate cached
-/// information about the specified pointer, because it may be too
-/// conservative in memdep.  This is an optional call that can be used when
-/// the client detects an equivalence between the pointer and some other
-/// value and replaces the other value with ptr. This can make Ptr available
-/// in more places that cached info does not necessarily keep.
 void MemoryDependenceAnalysis::invalidateCachedPointerInfo(Value *Ptr) {
   // If Ptr isn't really a pointer, just ignore it.
   if (!Ptr->getType()->isPointerTy())
@@ -1552,25 +1506,18 @@ void MemoryDependenceAnalysis::invalidateCachedPointerInfo(Value *Ptr) {
   RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair(Ptr, true));
 }
 
-/// invalidateCachedPredecessors - Clear the PredIteratorCache info.
-/// This needs to be done when the CFG changes, e.g., due to splitting
-/// critical edges.
 void MemoryDependenceAnalysis::invalidateCachedPredecessors() {
   PredCache.clear();
 }
 
-/// removeInstruction - Remove an instruction from the dependence analysis,
-/// updating the dependence of instructions that previously depended on it.
-/// This method attempts to keep the cache coherent using the reverse map.
 void MemoryDependenceAnalysis::removeInstruction(Instruction *RemInst) {
   // Walk through the Non-local dependencies, removing this one as the value
   // for any cached queries.
   NonLocalDepMapType::iterator NLDI = NonLocalDeps.find(RemInst);
   if (NLDI != NonLocalDeps.end()) {
     NonLocalDepInfo &BlockMap = NLDI->second.first;
-    for (NonLocalDepInfo::iterator DI = BlockMap.begin(), DE = BlockMap.end();
-         DI != DE; ++DI)
-      if (Instruction *Inst = DI->getResult().getInst())
+    for (auto &Entry : BlockMap)
+      if (Instruction *Inst = Entry.getResult().getInst())
         RemoveFromReverseMap(ReverseNonLocalDeps, Inst, RemInst);
     NonLocalDeps.erase(NLDI);
   }
@@ -1652,14 +1599,12 @@ void MemoryDependenceAnalysis::removeInstruction(Instruction *RemInst) {
       // The information is now dirty!
       INLD.second = true;
 
-      for (NonLocalDepInfo::iterator DI = INLD.first.begin(),
-                                     DE = INLD.first.end();
-           DI != DE; ++DI) {
-        if (DI->getResult().getInst() != RemInst)
+      for (auto &Entry : INLD.first) {
+        if (Entry.getResult().getInst() != RemInst)
           continue;
 
         // Convert to a dirty entry for the subsequent instruction.
-        DI->setResult(NewDirtyVal);
+        Entry.setResult(NewDirtyVal);
 
         if (Instruction *NextI = NewDirtyVal.getInst())
           ReverseDepsToAdd.push_back(std::make_pair(NextI, I));
@@ -1694,13 +1639,12 @@ void MemoryDependenceAnalysis::removeInstruction(Instruction *RemInst) {
       NonLocalPointerDeps[P].Pair = BBSkipFirstBlockPair();
 
       // Update any entries for RemInst to use the instruction after it.
-      for (NonLocalDepInfo::iterator DI = NLPDI.begin(), DE = NLPDI.end();
-           DI != DE; ++DI) {
-        if (DI->getResult().getInst() != RemInst)
+      for (auto &Entry : NLPDI) {
+        if (Entry.getResult().getInst() != RemInst)
           continue;
 
         // Convert to a dirty entry for the subsequent instruction.
-        DI->setResult(NewDirtyVal);
+        Entry.setResult(NewDirtyVal);
 
         if (Instruction *NewDirtyInst = NewDirtyVal.getInst())
           ReversePtrDepsToAdd.push_back(std::make_pair(NewDirtyInst, P));
@@ -1723,64 +1667,48 @@ void MemoryDependenceAnalysis::removeInstruction(Instruction *RemInst) {
   assert(!NonLocalDeps.count(RemInst) && "RemInst got reinserted?");
   DEBUG(verifyRemoved(RemInst));
 }
-/// verifyRemoved - Verify that the specified instruction does not occur
-/// in our internal data structures. This function verifies by asserting in
-/// debug builds.
+
+/// Verify that the specified instruction does not occur in our internal data
+/// structures.
+///
+/// This function verifies by asserting in debug builds.
 void MemoryDependenceAnalysis::verifyRemoved(Instruction *D) const {
 #ifndef NDEBUG
-  for (LocalDepMapType::const_iterator I = LocalDeps.begin(),
-                                       E = LocalDeps.end();
-       I != E; ++I) {
-    assert(I->first != D && "Inst occurs in data structures");
-    assert(I->second.getInst() != D && "Inst occurs in data structures");
+  for (const auto &DepKV : LocalDeps) {
+    assert(DepKV.first != D && "Inst occurs in data structures");
+    assert(DepKV.second.getInst() != D && "Inst occurs in data structures");
   }
 
-  for (CachedNonLocalPointerInfo::const_iterator
-           I = NonLocalPointerDeps.begin(),
-           E = NonLocalPointerDeps.end();
-       I != E; ++I) {
-    assert(I->first.getPointer() != D && "Inst occurs in NLPD map key");
-    const NonLocalDepInfo &Val = I->second.NonLocalDeps;
-    for (NonLocalDepInfo::const_iterator II = Val.begin(), E = Val.end();
-         II != E; ++II)
-      assert(II->getResult().getInst() != D && "Inst occurs as NLPD value");
+  for (const auto &DepKV : NonLocalPointerDeps) {
+    assert(DepKV.first.getPointer() != D && "Inst occurs in NLPD map key");
+    for (const auto &Entry : DepKV.second.NonLocalDeps)
+      assert(Entry.getResult().getInst() != D && "Inst occurs as NLPD value");
   }
 
-  for (NonLocalDepMapType::const_iterator I = NonLocalDeps.begin(),
-                                          E = NonLocalDeps.end();
-       I != E; ++I) {
-    assert(I->first != D && "Inst occurs in data structures");
-    const PerInstNLInfo &INLD = I->second;
-    for (NonLocalDepInfo::const_iterator II = INLD.first.begin(),
-                                         EE = INLD.first.end();
-         II != EE; ++II)
-      assert(II->getResult().getInst() != D &&
+  for (const auto &DepKV : NonLocalDeps) {
+    assert(DepKV.first != D && "Inst occurs in data structures");
+    const PerInstNLInfo &INLD = DepKV.second;
+    for (const auto &Entry : INLD.first)
+      assert(Entry.getResult().getInst() != D &&
              "Inst occurs in data structures");
   }
 
-  for (ReverseDepMapType::const_iterator I = ReverseLocalDeps.begin(),
-                                         E = ReverseLocalDeps.end();
-       I != E; ++I) {
-    assert(I->first != D && "Inst occurs in data structures");
-    for (Instruction *Inst : I->second)
+  for (const auto &DepKV : ReverseLocalDeps) {
+    assert(DepKV.first != D && "Inst occurs in data structures");
+    for (Instruction *Inst : DepKV.second)
       assert(Inst != D && "Inst occurs in data structures");
   }
 
-  for (ReverseDepMapType::const_iterator I = ReverseNonLocalDeps.begin(),
-                                         E = ReverseNonLocalDeps.end();
-       I != E; ++I) {
-    assert(I->first != D && "Inst occurs in data structures");
-    for (Instruction *Inst : I->second)
+  for (const auto &DepKV : ReverseNonLocalDeps) {
+    assert(DepKV.first != D && "Inst occurs in data structures");
+    for (Instruction *Inst : DepKV.second)
       assert(Inst != D && "Inst occurs in data structures");
   }
 
-  for (ReverseNonLocalPtrDepTy::const_iterator
-           I = ReverseNonLocalPtrDeps.begin(),
-           E = ReverseNonLocalPtrDeps.end();
-       I != E; ++I) {
-    assert(I->first != D && "Inst occurs in rev NLPD map");
+  for (const auto &DepKV : ReverseNonLocalPtrDeps) {
+    assert(DepKV.first != D && "Inst occurs in rev NLPD map");
 
-    for (ValueIsLoadPair P : I->second)
+    for (ValueIsLoadPair P : DepKV.second)
       assert(P != ValueIsLoadPair(D, false) && P != ValueIsLoadPair(D, true) &&
              "Inst occurs in ReverseNonLocalPtrDeps map");
   }

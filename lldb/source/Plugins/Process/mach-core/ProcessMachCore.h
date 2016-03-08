@@ -30,14 +30,14 @@ public:
     // Constructors and Destructors
     //------------------------------------------------------------------
     ProcessMachCore(lldb::TargetSP target_sp, 
-                    lldb_private::Listener &listener,
+                    lldb::ListenerSP listener,
                     const lldb_private::FileSpec &core_file);
     
     ~ProcessMachCore() override;
     
     static lldb::ProcessSP
     CreateInstance (lldb::TargetSP target_sp, 
-                    lldb_private::Listener &listener, 
+                    lldb::ListenerSP listener,
                     const lldb_private::FileSpec *crash_file_path);
     
     static void

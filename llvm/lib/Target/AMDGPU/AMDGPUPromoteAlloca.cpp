@@ -433,7 +433,6 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
       continue;
     }
 
-    // FIXME: Correctly handle ptrtoint instructions.
     Instruction *UseInst = dyn_cast<Instruction>(User);
     if (UseInst && UseInst->getOpcode() == Instruction::PtrToInt)
       return false;

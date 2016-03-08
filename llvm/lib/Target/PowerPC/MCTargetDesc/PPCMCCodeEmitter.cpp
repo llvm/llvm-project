@@ -69,6 +69,9 @@ public:
   unsigned getMemRIXEncoding(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+  unsigned getMemRIX16Encoding(const MCInst &MI, unsigned OpNo,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
   unsigned getSPE8DisEncoding(const MCInst &MI, unsigned OpNo,
                               SmallVectorImpl<MCFixup> &Fixups,
                               const MCSubtargetInfo &STI) const;
@@ -249,6 +252,19 @@ unsigned PPCMCCodeEmitter::getMemRIXEncoding(const MCInst &MI, unsigned OpNo,
   return RegBits;
 }
 
+unsigned PPCMCCodeEmitter::getMemRIX16Encoding(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  // Encode (imm, reg) as a memrix16, which has the low 12-bits as the
+  // displacement and the next 5 bits as the register #.
+  assert(MI.getOperand(OpNo+1).isReg());
+  unsigned RegBits = getMachineOpValue(MI, MI.getOperand(OpNo+1), Fixups, STI) << 12;
+
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm());
+
+  return ((getMachineOpValue(MI, MO, Fixups, STI) >> 4) & 0xFFF) | RegBits;
+}
 
 unsigned PPCMCCodeEmitter::getSPE8DisEncoding(const MCInst &MI, unsigned OpNo,
                                               SmallVectorImpl<MCFixup> &Fixups,

@@ -714,9 +714,9 @@ PlatformRemoteGDBServer::Attach (ProcessAttachInfo &attach_info,
                         error = process_sp->ConnectRemote(nullptr, connect_url.c_str());
                         if (error.Success())
                         {
-                            auto listener = attach_info.GetHijackListener();
-                            if (listener != nullptr)
-                                process_sp->HijackProcessEvents(listener.get());
+                            ListenerSP listener_sp = attach_info.GetHijackListener();
+                            if (listener_sp)
+                                process_sp->HijackProcessEvents(listener_sp);
                             error = process_sp->Attach(attach_info);
                         }
 

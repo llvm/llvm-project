@@ -106,8 +106,6 @@ protected:
     friend class SBLaunchInfo;
     friend class SBTarget;
 
-    SBListener (lldb_private::Listener &listener);
-
     SBListener (const lldb::ListenerSP &listener_sp);
 
     lldb::ListenerSP
@@ -124,20 +122,11 @@ private:
     lldb_private::Listener *
     get() const;
 
-    lldb_private::Listener &
-    ref() const;
-        
-    lldb_private::Listener &
-    operator *();
-
-    const lldb_private::Listener &
-    operator *() const;
-
     void
-    reset(lldb_private::Listener *listener, bool transfer_ownership);
+    reset(lldb::ListenerSP listener_sp);
 
     lldb::ListenerSP m_opaque_sp;
-    lldb_private::Listener *m_opaque_ptr;
+    lldb_private::Listener *m_unused_ptr;
 };
 
 } // namespace lldb

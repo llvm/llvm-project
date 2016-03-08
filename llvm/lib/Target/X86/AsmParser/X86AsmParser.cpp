@@ -2304,6 +2304,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     Name == "repne" || Name == "repnz" ||
     Name == "rex64" || Name == "data16";
 
+  bool CurlyAsEndOfStatement = false;
   // This does the actual operand parsing.  Don't parse any more if we have a
   // prefix juxtaposed with an operation like "lock incl 4(%rax)", because we
   // just want to parse the "lock" as the first instruction and the "incl" as
@@ -2331,7 +2332,12 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         break;
      }
 
-    if (getLexer().isNot(AsmToken::EndOfStatement))
+    // In MS inline asm curly braces mark the begining/end of a block, therefore
+    // they should be interepreted as end of statement
+    CurlyAsEndOfStatement =
+        isParsingIntelSyntax() && isParsingInlineAsm() &&
+        (getLexer().is(AsmToken::LCurly) || getLexer().is(AsmToken::RCurly));
+    if (getLexer().isNot(AsmToken::EndOfStatement) && !CurlyAsEndOfStatement)
       return ErrorAndEatStatement(getLexer().getLoc(),
                                   "unexpected token in argument list");
    }
@@ -2340,6 +2346,10 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   if (getLexer().is(AsmToken::EndOfStatement) ||
       (isPrefix && getLexer().is(AsmToken::Slash)))
     Parser.Lex();
+  else if (CurlyAsEndOfStatement)
+    // Add an actual EndOfStatement before the curly brace
+    Info.AsmRewrites->emplace_back(AOK_EndOfStatement,
+                                   getLexer().getTok().getLoc(), 0);
 
   // This is for gas compatibility and cannot be done in td.
   // Adding "p" for some floating point with no argument.

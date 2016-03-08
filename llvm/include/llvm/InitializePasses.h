@@ -56,6 +56,9 @@ void initializeAnalysis(PassRegistry&);
 /// initializeCodeGen - Initialize all passes linked into the CodeGen library.
 void initializeCodeGen(PassRegistry&);
 
+/// Initialize all passes linked into the GlobalISel library.
+void initializeGlobalISel(PassRegistry &Registry);
+
 /// initializeCodeGen - Initialize all passes linked into the CodeGen library.
 void initializeTarget(PassRegistry&);
 
@@ -151,6 +154,7 @@ void initializeInstCountPass(PassRegistry&);
 void initializeInstNamerPass(PassRegistry&);
 void initializeInternalizePassPass(PassRegistry&);
 void initializeIntervalPartitionPass(PassRegistry&);
+void initializeIRTranslatorPass(PassRegistry &);
 void initializeJumpThreadingPass(PassRegistry&);
 void initializeLCSSAPass(PassRegistry&);
 void initializeLICMPass(PassRegistry&);

@@ -91,6 +91,9 @@ def noinhibit_exec : Flag<["--"], "noinhibit-exec">,
 def no_undefined : Flag<["--"], "no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 
+def nostdlib: Flag<["-", "--"], "nostdlib">,
+  HelpText<"Only search directories specified on the command line">;
+
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 

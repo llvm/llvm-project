@@ -186,16 +186,10 @@ public:
     Flags &= ~((uint8_t)Flag);
   }
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
   /// Set the type of the instruction.
   /// \pre getOpcode() is in the range of the generic opcodes.
-  void setType(Type *Ty) {
-    assert((!Ty || isPreISelGenericOpcode(getOpcode())) &&
-           "Non generic instructions are not supposed to be typed");
-    this->Ty = Ty;
-  }
-  Type *getType() const { return Ty; }
-#endif
+  void setType(Type *Ty);
+  Type *getType() const;
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
   ///

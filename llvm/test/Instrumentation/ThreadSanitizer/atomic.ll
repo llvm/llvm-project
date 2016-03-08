@@ -1186,6 +1186,16 @@ entry:
 ; CHECK-LABEL: atomic64_load_seq_cst
 ; CHECK: call i64 @__tsan_atomic64_load(i64* %a, i32 5), !dbg
 
+define i8* @atomic64_load_seq_cst_ptr_ty(i8** %a) nounwind uwtable {
+entry:
+  %0 = load atomic i8*, i8** %a seq_cst, align 8, !dbg !7
+  ret i8* %0, !dbg !7
+}
+; CHECK-LABEL: atomic64_load_seq_cst
+; CHECK: bitcast i8** %{{.+}} to i64*
+; CHECK-NEXT: call i64 @__tsan_atomic64_load(i64* %{{.+}}, i32 5), !dbg
+; CHECK-NEXT: inttoptr i64 %{{.+}} to i8*
+
 define void @atomic64_store_unordered(i64* %a) nounwind uwtable {
 entry:
   store atomic i64 0, i64* %a unordered, align 8, !dbg !7
@@ -1217,6 +1227,16 @@ entry:
 }
 ; CHECK-LABEL: atomic64_store_seq_cst
 ; CHECK: call void @__tsan_atomic64_store(i64* %a, i64 0, i32 5), !dbg
+
+define void @atomic64_store_seq_cst_ptr_ty(i8** %a, i8* %v) nounwind uwtable {
+entry:
+  store atomic i8* %v, i8** %a seq_cst, align 8, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic64_store_seq_cst
+; CHECK: %{{.*}} = bitcast i8** %{{.*}} to i64*
+; CHECK-NEXT: %{{.*}} = ptrtoint i8* %{{.*}} to i64
+; CHECK-NEXT: call void @__tsan_atomic64_store(i64* %{{.*}}, i64 %{{.*}}, i32 5), !dbg
 
 define void @atomic64_xchg_monotonic(i64* %a) nounwind uwtable {
 entry:
@@ -1537,6 +1557,21 @@ entry:
 }
 ; CHECK-LABEL: atomic64_cas_seq_cst
 ; CHECK: call i64 @__tsan_atomic64_compare_exchange_val(i64* %a, i64 0, i64 1, i32 5, i32 5), !dbg
+
+define void @atomic64_cas_seq_cst_ptr_ty(i8** %a, i8* %v1, i8* %v2) nounwind uwtable {
+entry:
+  cmpxchg i8** %a, i8* %v1, i8* %v2 seq_cst seq_cst, !dbg !7
+  ret void
+}
+; CHECK-LABEL: atomic64_cas_seq_cst
+; CHECK: {{.*}} = ptrtoint i8* %v1 to i64
+; CHECK-NEXT: {{.*}} = ptrtoint i8* %v2 to i64
+; CHECK-NEXT: {{.*}} = bitcast i8** %a to i64*
+; CHECK-NEXT: {{.*}} = call i64 @__tsan_atomic64_compare_exchange_val(i64* {{.*}}, i64 {{.*}}, i64 {{.*}}, i32 5, i32 5), !dbg
+; CHECK-NEXT: {{.*}} = icmp eq i64
+; CHECK-NEXT: {{.*}} = inttoptr i64 {{.*}} to i8*
+; CHECK-NEXT: {{.*}} = insertvalue { i8*, i1 } undef, i8* {{.*}}, 0
+; CHECK-NEXT: {{.*}} = insertvalue { i8*, i1 } {{.*}}, i1 {{.*}}, 1
 
 define i128 @atomic128_load_unordered(i128* %a) nounwind uwtable {
 entry:

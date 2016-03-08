@@ -416,12 +416,12 @@ bool BitcodeFile::classof(const InputFile *F) {
 
 static uint8_t getGvVisibility(const GlobalValue *GV) {
   switch (GV->getVisibility()) {
+  case GlobalValue::DefaultVisibility:
+    return STV_DEFAULT;
   case GlobalValue::HiddenVisibility:
     return STV_HIDDEN;
   case GlobalValue::ProtectedVisibility:
     return STV_PROTECTED;
-  default:
-    return STV_DEFAULT;
   }
 }
 
@@ -439,7 +439,8 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
 
   for (const BasicSymbolRef &Sym : Obj->symbols()) {
     uint8_t Visibility = STV_DEFAULT;
-    if (const GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl())) {
+    const GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl());
+    if (GV) {
       if (const Comdat *C = GV->getComdat())
         if (!KeptComdats.count(C))
           continue;
@@ -454,10 +455,16 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
     SymbolBody *Body;
     uint32_t Flags = Sym.getFlags();
     bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
-    if (Flags & BasicSymbolRef::SF_Undefined)
+    if (Flags & BasicSymbolRef::SF_Undefined) {
       Body = new (Alloc) Undefined(NameRef, IsWeak, Visibility, false);
-    else
-      Body = new (Alloc) DefinedBitcode(NameRef, IsWeak);
+    } else if (Flags & BasicSymbolRef::SF_Common) {
+      const DataLayout &DL = M.getDataLayout();
+      uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+      Body = new (Alloc)
+          DefinedCommon(NameRef, Size, GV->getAlignment(), IsWeak, Visibility);
+    } else {
+      Body = new (Alloc) DefinedBitcode(NameRef, IsWeak, Visibility);
+    }
     SymbolBodies.push_back(Body);
   }
 }

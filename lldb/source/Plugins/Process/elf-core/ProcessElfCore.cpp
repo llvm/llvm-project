@@ -57,7 +57,7 @@ ProcessElfCore::Terminate()
 
 
 lldb::ProcessSP
-ProcessElfCore::CreateInstance (lldb::TargetSP target_sp, Listener &listener, const FileSpec *crash_file)
+ProcessElfCore::CreateInstance (lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, const FileSpec *crash_file)
 {
     lldb::ProcessSP process_sp;
     if (crash_file)
@@ -75,7 +75,7 @@ ProcessElfCore::CreateInstance (lldb::TargetSP target_sp, Listener &listener, co
             if (elf_header.Parse(data, &data_offset))
             {
                 if (elf_header.e_type == llvm::ELF::ET_CORE)
-                    process_sp.reset(new ProcessElfCore (target_sp, listener, *crash_file));
+                    process_sp.reset(new ProcessElfCore (target_sp, listener_sp, *crash_file));
             }
         }
     }
@@ -104,9 +104,9 @@ ProcessElfCore::CanDebug(lldb::TargetSP target_sp, bool plugin_specified_by_name
 //----------------------------------------------------------------------
 // ProcessElfCore constructor
 //----------------------------------------------------------------------
-ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp, Listener &listener,
+ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                                const FileSpec &core_file) :
-    Process (target_sp, listener),
+    Process (target_sp, listener_sp),
     m_core_module_sp (),
     m_core_file (core_file),
     m_dyld_plugin_name (),

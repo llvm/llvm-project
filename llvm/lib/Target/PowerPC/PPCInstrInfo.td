@@ -635,6 +635,13 @@ def PPCDispRIXOperand : AsmOperandClass {
 def dispRIX : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIXOperand;
 }
+def PPCDispRIX16Operand : AsmOperandClass {
+ let Name = "DispRIX16"; let PredicateMethod = "isS16ImmX16";
+ let RenderMethod = "addImmOperands";
+}
+def dispRIX16 : Operand<iPTR> {
+  let ParserMatchClass = PPCDispRIX16Operand;
+}
 def PPCDispSPE8Operand : AsmOperandClass {
  let Name = "DispSPE8"; let PredicateMethod = "isU8ImmX8";
  let RenderMethod = "addImmOperands";
@@ -672,6 +679,12 @@ def memrix : Operand<iPTR> {   // memri where the imm is 4-aligned.
   let MIOperandInfo = (ops dispRIX:$imm, ptr_rc_nor0:$reg);
   let EncoderMethod = "getMemRIXEncoding";
   let DecoderMethod = "decodeMemRIXOperands";
+}
+def memrix16 : Operand<iPTR> { // memri, imm is 16-aligned, 12-bit, Inst{16:27}
+  let PrintMethod = "printMemRegImm";
+  let MIOperandInfo = (ops dispRIX16:$imm, ptr_rc_nor0:$reg);
+  let EncoderMethod = "getMemRIX16Encoding";
+  let DecoderMethod = "decodeMemRIX16Operands";
 }
 def spe8dis : Operand<iPTR> {   // SPE displacement where the imm is 8-aligned.
   let PrintMethod = "printMemRegImm";

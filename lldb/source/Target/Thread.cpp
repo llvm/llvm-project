@@ -274,7 +274,7 @@ Thread::GetStaticBroadcasterClass ()
 Thread::Thread (Process &process, lldb::tid_t tid, bool use_invalid_index_id) :
     ThreadProperties (false),
     UserID (tid),
-    Broadcaster(&process.GetTarget().GetDebugger(), Thread::GetStaticBroadcasterClass().AsCString()),
+    Broadcaster(process.GetTarget().GetDebugger().GetBroadcasterManager(), Thread::GetStaticBroadcasterClass().AsCString()),
     m_process_wp (process.shared_from_this()),
     m_stop_info_sp (),
     m_stop_info_stop_id (0),

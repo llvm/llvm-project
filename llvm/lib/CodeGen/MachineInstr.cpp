@@ -705,6 +705,25 @@ MachineRegisterInfo *MachineInstr::getRegInfo() {
   return nullptr;
 }
 
+// Implement dummy setter and getter for type when
+// global-isel is not built.
+// The proper implementation is WIP and is tracked here:
+// PR26576.
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+void MachineInstr::setType(Type *Ty) {}
+
+Type *MachineInstr::getType() const { return nullptr; }
+
+#else
+void MachineInstr::setType(Type *Ty) {
+  assert((!Ty || isPreISelGenericOpcode(getOpcode())) &&
+         "Non generic instructions are not supposed to be typed");
+  this->Ty = Ty;
+}
+
+Type *MachineInstr::getType() const { return Ty; }
+#endif // LLVM_BUILD_GLOBAL_ISEL
+
 /// RemoveRegOperandsFromUseLists - Unlink all of the register operands in
 /// this instruction from their respective use lists.  This requires that the
 /// operands already be on their use lists.
@@ -1688,11 +1707,11 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   else
     OS << "UNKNOWN";
 
-
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-  if (Ty)
-    OS << ' ' << *Ty << ' ';
-#endif
+  if (getType()) {
+    OS << ' ';
+    getType()->print(OS, /*IsForDebug*/ false, /*NoDetails*/ true);
+    OS << ' ';
+  }
 
   if (SkipOpers)
     return;

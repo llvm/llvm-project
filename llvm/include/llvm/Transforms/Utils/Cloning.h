@@ -48,9 +48,6 @@ class AllocaInst;
 class AssumptionCacheTracker;
 class DominatorTree;
 
-typedef std::function<void(const BasicBlock *, const BasicBlock *)>
-    BlockCloningFunctor;
-
 /// Return an exact copy of the specified module
 ///
 std::unique_ptr<Module> CloneModule(const Module *M);
@@ -160,8 +157,7 @@ void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
                                SmallVectorImpl<ReturnInst *> &Returns,
                                const char *NameSuffix = "",
-                               ClonedCodeInfo *CodeInfo = nullptr,
-                               BlockCloningFunctor Ftor = nullptr);
+                               ClonedCodeInfo *CodeInfo = nullptr);
 
 /// CloneAndPruneFunctionInto - This works exactly like CloneFunctionInto,
 /// except that it does some simple constant prop and DCE on the fly.  The
@@ -176,31 +172,23 @@ void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 ///
 void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
                                ValueToValueMapTy &VMap, bool ModuleLevelChanges,
-                               SmallVectorImpl<ReturnInst *> &Returns,
+                               SmallVectorImpl<ReturnInst*> &Returns,
                                const char *NameSuffix = "",
                                ClonedCodeInfo *CodeInfo = nullptr,
-                               Instruction *TheCall = nullptr,
-                               BlockCloningFunctor Ftor = nullptr);
+                               Instruction *TheCall = nullptr);
 
 /// InlineFunctionInfo - This class captures the data input to the
 /// InlineFunction call, and records the auxiliary results produced by it.
 class InlineFunctionInfo {
 public:
   explicit InlineFunctionInfo(CallGraph *cg = nullptr,
-                              AssumptionCacheTracker *ACT = nullptr,
-                              BlockCloningFunctor Ftor = nullptr)
-      : CG(cg), ACT(ACT), Ftor(Ftor), CallSuccessorBlockDeleted(false) {}
+                              AssumptionCacheTracker *ACT = nullptr)
+      : CG(cg), ACT(ACT) {}
 
   /// CG - If non-null, InlineFunction will update the callgraph to reflect the
   /// changes it makes.
   CallGraph *CG;
   AssumptionCacheTracker *ACT;
-  // Functor that is invoked when a block is cloned into the new function.
-  BlockCloningFunctor Ftor;
-
-  /// CallSuccessorBlockDeleted - whether the block immediately following the
-  /// call has been deleted during inlining
-  bool CallSuccessorBlockDeleted;
 
   /// StaticAllocas - InlineFunction fills this in with all static allocas that
   /// get copied into the caller.

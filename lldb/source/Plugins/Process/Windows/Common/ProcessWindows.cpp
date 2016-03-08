@@ -29,8 +29,8 @@ namespace lldb_private
 //------------------------------------------------------------------------------
 // Constructors and destructors.
 
-ProcessWindows::ProcessWindows(lldb::TargetSP target_sp, Listener &listener)
-    : lldb_private::Process(target_sp, listener)
+ProcessWindows::ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+    : lldb_private::Process(target_sp, listener_sp)
 {
 }
 

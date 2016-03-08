@@ -223,11 +223,11 @@ ProcessGDBRemote::Terminate()
 
 
 lldb::ProcessSP
-ProcessGDBRemote::CreateInstance (lldb::TargetSP target_sp, Listener &listener, const FileSpec *crash_file_path)
+ProcessGDBRemote::CreateInstance (lldb::TargetSP target_sp, ListenerSP listener_sp, const FileSpec *crash_file_path)
 {
     lldb::ProcessSP process_sp;
     if (crash_file_path == NULL)
-        process_sp.reset (new ProcessGDBRemote (target_sp, listener));
+        process_sp.reset (new ProcessGDBRemote (target_sp, listener_sp));
     return process_sp;
 }
 
@@ -267,15 +267,15 @@ ProcessGDBRemote::CanDebug (lldb::TargetSP target_sp, bool plugin_specified_by_n
 //----------------------------------------------------------------------
 // ProcessGDBRemote constructor
 //----------------------------------------------------------------------
-ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, Listener &listener) :
-    Process (target_sp, listener),
+ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, ListenerSP listener_sp) :
+    Process (target_sp, listener_sp),
     m_flags (0),
     m_gdb_comm (),
     m_debugserver_pid (LLDB_INVALID_PROCESS_ID),
     m_last_stop_packet_mutex (Mutex::eMutexTypeRecursive),
     m_register_info (),
     m_async_broadcaster (NULL, "lldb.process.gdb-remote.async-broadcaster"),
-    m_async_listener("lldb.process.gdb-remote.async-listener"),
+    m_async_listener_sp(Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
     m_async_thread_state_mutex(Mutex::eMutexTypeRecursive),
     m_thread_ids (),
     m_thread_pcs (),
@@ -303,7 +303,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, Listener &listener)
 
     const uint32_t async_event_mask = eBroadcastBitAsyncContinue | eBroadcastBitAsyncThreadShouldExit;
 
-    if (m_async_listener.StartListeningForEvents(&m_async_broadcaster, async_event_mask) != async_event_mask)
+    if (m_async_listener_sp->StartListeningForEvents(&m_async_broadcaster, async_event_mask) != async_event_mask)
     {
         if (log)
             log->Printf("ProcessGDBRemote::%s failed to listen for m_async_broadcaster events", __FUNCTION__);
@@ -311,7 +311,7 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, Listener &listener)
 
     const uint32_t gdb_event_mask = Communication::eBroadcastBitReadThreadDidExit |
                                     GDBRemoteCommunication::eBroadcastBitGdbReadThreadGotNotify;
-    if (m_async_listener.StartListeningForEvents(&m_gdb_comm, gdb_event_mask) != gdb_event_mask)
+    if (m_async_listener_sp->StartListeningForEvents(&m_gdb_comm, gdb_event_mask) != gdb_event_mask)
     {
         if (log)
             log->Printf("ProcessGDBRemote::%s failed to listen for m_gdb_comm events", __FUNCTION__);
@@ -1368,10 +1368,10 @@ ProcessGDBRemote::DoResume ()
     if (log)
         log->Printf ("ProcessGDBRemote::Resume()");
 
-    Listener listener ("gdb-remote.resume-packet-sent");
-    if (listener.StartListeningForEvents (&m_gdb_comm, GDBRemoteCommunication::eBroadcastBitRunPacketSent))
+    ListenerSP listener_sp (Listener::MakeListener("gdb-remote.resume-packet-sent"));
+    if (listener_sp->StartListeningForEvents (&m_gdb_comm, GDBRemoteCommunication::eBroadcastBitRunPacketSent))
     {
-        listener.StartListeningForEvents (&m_async_broadcaster, ProcessGDBRemote::eBroadcastBitAsyncThreadDidExit);
+        listener_sp->StartListeningForEvents (&m_async_broadcaster, ProcessGDBRemote::eBroadcastBitAsyncThreadDidExit);
 
         const size_t num_threads = GetThreadList().GetSize();
 
@@ -1603,7 +1603,7 @@ ProcessGDBRemote::DoResume ()
 
             m_async_broadcaster.BroadcastEvent (eBroadcastBitAsyncContinue, new EventDataBytes (continue_packet.GetData(), continue_packet.GetSize()));
 
-            if (listener.WaitForEvent (&timeout, event_sp) == false)
+            if (listener_sp->WaitForEvent (&timeout, event_sp) == false)
             {
                 error.SetErrorString("Resume timed out.");
                 if (log)
@@ -3855,7 +3855,7 @@ ProcessGDBRemote::AsyncThread (void *arg)
     {
         if (log)
             log->Printf ("ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64 ") listener.WaitForEvent (NULL, event_sp)...", __FUNCTION__, arg, process->GetID());
-        if (process->m_async_listener.WaitForEvent (NULL, event_sp))
+        if (process->m_async_listener_sp->WaitForEvent (NULL, event_sp))
         {
             const uint32_t event_type = event_sp->GetType();
             if (event_sp->BroadcasterIs (&process->m_async_broadcaster))

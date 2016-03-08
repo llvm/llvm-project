@@ -26,7 +26,7 @@ class ProcessWinMiniDump : public lldb_private::ProcessWindows
   public:
     static lldb::ProcessSP
     CreateInstance (lldb::TargetSP target_sp,
-                    lldb_private::Listener &listener,
+                    lldb::ListenerSP listener_sp,
                     const lldb_private::FileSpec *crash_file_path);
 
     static void
@@ -42,7 +42,7 @@ class ProcessWinMiniDump : public lldb_private::ProcessWindows
     GetPluginDescriptionStatic();
 
     ProcessWinMiniDump(lldb::TargetSP target_sp,
-                       lldb_private::Listener &listener,
+                       lldb::ListenerSP listener_sp,
                        const lldb_private::FileSpec &core_file);
 
     virtual

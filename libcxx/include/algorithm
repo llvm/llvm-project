@@ -543,6 +543,12 @@ template<class T, class Compare>
     T
     min(initializer_list<T> t, Compare comp);  // constexpr in C++14
 
+template<class T>
+    constexpr const T& clamp( const T& v, const T& lo, const T& hi );               // C++17
+
+template<class T, class Compare>
+    constexpr const T& clamp( const T& v, const T& lo, const T& hi, Compare comp ); // C++17
+
 template <class ForwardIterator>
     ForwardIterator
     max_element(ForwardIterator first, ForwardIterator last);  // constexpr in C++14
@@ -2656,6 +2662,27 @@ max(initializer_list<_Tp> __t)
 }
 
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
+
+#if _LIBCPP_STD_VER > 14
+// clamp
+template<class _Tp, class _Compare>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+const _Tp&
+clamp(const _Tp& __v, const _Tp& __lo, const _Tp& __hi, _Compare __comp)
+{
+    _LIBCPP_ASSERT(!__comp(__hi, __lo), "Bad bounds passed to std::clamp");
+    return __comp(__v, __lo) ? __lo : __comp(__hi, __v) ? __hi : __v;
+
+}
+
+template<class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+const _Tp&
+clamp(const _Tp& __v, const _Tp& __lo, const _Tp& __hi)
+{
+    return _VSTD::clamp(__v, __lo, __hi, __less<_Tp>());
+}
+#endif
 
 // minmax_element
 

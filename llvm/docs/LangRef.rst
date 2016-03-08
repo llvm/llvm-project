@@ -10508,8 +10508,8 @@ Overview:
 """""""""
 
 The '``llvm.bitreverse``' family of intrinsics is used to reverse the
-bitpattern of an integer value; for example ``0b1234567`` becomes
-``0b7654321``.
+bitpattern of an integer value; for example ``0b10110110`` becomes
+``0b01101101``.
 
 Semantics:
 """"""""""

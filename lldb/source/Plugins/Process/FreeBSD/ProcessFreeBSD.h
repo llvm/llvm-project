@@ -35,7 +35,7 @@ public:
     //------------------------------------------------------------------
     static lldb::ProcessSP
     CreateInstance(lldb::TargetSP target_sp,
-                   lldb_private::Listener &listener,
+                   lldb::ListenerSP listener_sp,
                    const lldb_private::FileSpec *crash_file_path);
 
     static void
@@ -54,7 +54,7 @@ public:
     // Constructors and destructors
     //------------------------------------------------------------------
     ProcessFreeBSD(lldb::TargetSP target_sp,
-                   lldb_private::Listener &listener,
+                   lldb::ListenerSP listener_sp,
                    lldb::UnixSignalsSP &unix_signals_sp);
 
     ~ProcessFreeBSD();

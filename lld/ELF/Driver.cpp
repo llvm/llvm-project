@@ -207,9 +207,6 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
-  for (auto *Arg : Args.filtered(OPT_L))
-    Config->SearchPaths.push_back(Arg->getValue());
-
   std::vector<StringRef> RPaths;
   for (auto *Arg : Args.filtered(OPT_rpath))
     RPaths.push_back(Arg->getValue());
@@ -235,8 +232,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
   Config->GcSections = Args.hasArg(OPT_gc_sections);
   Config->ICF = Args.hasArg(OPT_icf);
-  Config->NoInhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->NoUndefined = Args.hasArg(OPT_no_undefined);
+  Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
+  Config->Nostdlib = Args.hasArg(OPT_nostdlib);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->Shared = Args.hasArg(OPT_shared);
@@ -279,6 +277,14 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());
+
+  if (!Config->Nostdlib) {
+    Config->SearchPaths.push_back("=/lib");
+    Config->SearchPaths.push_back("=/usr/lib");
+  }
+
+  for (auto *Arg : Args.filtered(OPT_L))
+    Config->SearchPaths.push_back(Arg->getValue());
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {

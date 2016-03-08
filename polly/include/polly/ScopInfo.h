@@ -887,7 +887,6 @@ using InvariantEquivClassTy =
 /// @brief Type for invariant accesses equivalence classes.
 using InvariantEquivClassesTy = SmallVector<InvariantEquivClassTy, 8>;
 
-///===----------------------------------------------------------------------===//
 /// @brief Statement of the Scop
 ///
 /// A Scop statement represents an instruction in the Scop.
@@ -1232,7 +1231,6 @@ static inline raw_ostream &operator<<(raw_ostream &O, const ScopStmt &S) {
   return O;
 }
 
-///===----------------------------------------------------------------------===//
 /// @brief Static Control Part
 ///
 /// A Scop is the polyhedral representation of a control flow region detected
@@ -1678,14 +1676,14 @@ private:
   __isl_give isl_union_map *
   getAccessesOfType(std::function<bool(MemoryAccess &)> Predicate);
 
-  /// @name Helper function for printing the Scop.
+  /// @name Helper functions for printing the Scop.
   ///
-  ///{
+  //@{
   void printContext(raw_ostream &OS) const;
   void printArrayInfo(raw_ostream &OS) const;
   void printStatements(raw_ostream &OS) const;
   void printAliasAssumptions(raw_ostream &OS) const;
-  ///}
+  //@}
 
   friend class ScopInfo;
 
@@ -1702,7 +1700,6 @@ public:
     AccFuncMapType::iterator at = AccFuncMap.find(BB);
     return at != AccFuncMap.end() ? &(at->second) : 0;
   }
-  //@}
 
   ScalarEvolution *getSE() const;
 
@@ -2047,9 +2044,7 @@ static inline raw_ostream &operator<<(raw_ostream &O, const Scop &scop) {
   return O;
 }
 
-///===---------------------------------------------------------------------===//
 /// @brief Build the Polly IR (Scop and ScopStmt) on a Region.
-///
 class ScopInfo : public RegionPass {
   //===-------------------------------------------------------------------===//
   ScopInfo(const ScopInfo &) = delete;

@@ -211,6 +211,7 @@ Options:\n\
   --assertion-mode  Print assertion mode of LLVM tree (ON or OFF).\n\
   --build-system    Print the build system used to build LLVM (autoconf or cmake).\n\
   --has-rtti        Print whether or not LLVM was built with rtti (YES or NO).\n\
+  --has-global-isel Print whether or not LLVM was built with global-isel support (YES or NO).\n\
   --shared-mode     Print how the provided components can be collectively linked (`shared` or `static`).\n\
   --link-shared     Link the components as shared libraries.\n\
   --link-static     Link the component libraries statically.\n\
@@ -559,6 +560,8 @@ int main(int argc, char **argv) {
         OS << LLVM_BUILD_SYSTEM << '\n';
       } else if (Arg == "--has-rtti") {
         OS << LLVM_HAS_RTTI << '\n';
+      } else if (Arg == "--has-global-isel") {
+        OS << LLVM_HAS_GLOBAL_ISEL << '\n';
       } else if (Arg == "--shared-mode") {
         PrintSharedMode = true;
       } else if (Arg == "--obj-root") {

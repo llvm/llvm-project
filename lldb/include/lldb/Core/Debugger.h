@@ -53,8 +53,7 @@ namespace lldb_private {
 class Debugger :
     public std::enable_shared_from_this<Debugger>,
     public UserID,
-    public Properties,
-    public BroadcasterManager
+    public Properties
 {
 friend class SourceManager;  // For GetSourceFileCache.
 
@@ -159,10 +158,10 @@ public:
         return *m_command_interpreter_ap;
     }
 
-    Listener &
+    lldb::ListenerSP
     GetListener ()
     {
-        return m_listener;
+        return m_listener_sp;
     }
 
     // This returns the Debugger's scratch source manager.  It won't be able to look up files in debug
@@ -392,6 +391,12 @@ public:
     Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
     Target *GetDummyTarget();
 
+    lldb::BroadcasterManagerSP
+    GetBroadcasterManager()
+    {
+        return m_broadcaster_manager_sp;
+    }
+
 protected:
     friend class CommandInterpreter;
     friend class REPL;
@@ -446,15 +451,20 @@ protected:
 
     void
     InstanceInitialize ();
-
+    
     lldb::StreamFileSP m_input_file_sp;
     lldb::StreamFileSP m_output_file_sp;
     lldb::StreamFileSP m_error_file_sp;
+
+    lldb::BroadcasterManagerSP m_broadcaster_manager_sp;  // The debugger acts as a broadcaster manager of last resort.
+                                                          // It needs to get constructed before the target_list or any other
+                                                          // member that might want to broadcast through the debugger.
+
     TerminalState m_terminal_state;
     TargetList m_target_list;
 
     PlatformList m_platform_list;
-    Listener m_listener;
+    lldb::ListenerSP m_listener_sp;
     std::unique_ptr<SourceManager> m_source_manager_ap;    // This is a scratch source manager that we return if we have no targets.
     SourceManager::SourceFileCache m_source_file_cache; // All the source managers for targets created in this debugger used this shared
                                                         // source file cache.

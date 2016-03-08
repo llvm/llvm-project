@@ -121,9 +121,9 @@ class ProcessWindowsData
 // Static functions.
 
 ProcessSP
-ProcessWindowsLive::CreateInstance(lldb::TargetSP target_sp, Listener &listener, const FileSpec *)
+ProcessWindowsLive::CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp, const FileSpec *)
 {
-    return ProcessSP(new ProcessWindowsLive(target_sp, listener));
+    return ProcessSP(new ProcessWindowsLive(target_sp, listener_sp));
 }
 
 void
@@ -142,8 +142,8 @@ ProcessWindowsLive::Initialize()
 //------------------------------------------------------------------------------
 // Constructors and destructors.
 
-ProcessWindowsLive::ProcessWindowsLive(lldb::TargetSP target_sp, Listener &listener)
-    : lldb_private::ProcessWindows(target_sp, listener)
+ProcessWindowsLive::ProcessWindowsLive(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+    : lldb_private::ProcessWindows(target_sp, listener_sp)
 {
 }
 

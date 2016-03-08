@@ -70,7 +70,7 @@ Target::GetStaticBroadcasterClass ()
 
 Target::Target(Debugger &debugger, const ArchSpec &target_arch, const lldb::PlatformSP &platform_sp, bool is_dummy_target) :
     TargetProperties (this),
-    Broadcaster (&debugger, Target::GetStaticBroadcasterClass().AsCString()),
+    Broadcaster (debugger.GetBroadcasterManager(), Target::GetStaticBroadcasterClass().AsCString()),
     ExecutionContextScope (),
     m_debugger (debugger),
     m_platform_sp (platform_sp),
@@ -194,10 +194,10 @@ Target::DeleteCurrentProcess ()
 }
 
 const lldb::ProcessSP &
-Target::CreateProcess (Listener &listener, const char *plugin_name, const FileSpec *crash_file)
+Target::CreateProcess (ListenerSP listener_sp, const char *plugin_name, const FileSpec *crash_file)
 {
     DeleteCurrentProcess ();
-    m_process_sp = Process::FindPlugin(shared_from_this(), plugin_name, listener, crash_file);
+    m_process_sp = Process::FindPlugin(shared_from_this(), plugin_name, listener_sp, crash_file);
     return m_process_sp;
 }
 
@@ -3072,12 +3072,12 @@ Target::Launch (ProcessLaunchInfo &launch_info, Stream *stream)
             ListenerSP hijack_listener_sp (launch_info.GetHijackListener());
             if (!hijack_listener_sp)
             {
-                hijack_listener_sp.reset(new Listener("lldb.Target.Launch.hijack"));
+                hijack_listener_sp = Listener::MakeListener("lldb.Target.Launch.hijack");
                 launch_info.SetHijackListener(hijack_listener_sp);
-                m_process_sp->HijackProcessEvents(hijack_listener_sp.get());
+                m_process_sp->HijackProcessEvents(hijack_listener_sp);
             }
 
-            StateType state = m_process_sp->WaitForProcessToStop(nullptr, nullptr, false, hijack_listener_sp.get(), nullptr);
+            StateType state = m_process_sp->WaitForProcessToStop(nullptr, nullptr, false, hijack_listener_sp, nullptr);
             
             if (state == eStateStopped)
             {
@@ -3088,7 +3088,7 @@ Target::Launch (ProcessLaunchInfo &launch_info, Stream *stream)
                         error = m_process_sp->PrivateResume();
                         if (error.Success())
                         {
-                            state = m_process_sp->WaitForProcessToStop(nullptr, nullptr, true, hijack_listener_sp.get(), stream);
+                            state = m_process_sp->WaitForProcessToStop(nullptr, nullptr, true, hijack_listener_sp, stream);
                             const bool must_be_alive = false; // eStateExited is ok, so this must be false
                             if (!StateIsStoppedState(state, must_be_alive))
                             {
@@ -3182,7 +3182,7 @@ Target::Attach (ProcessAttachInfo &attach_info, Stream *stream)
     const bool async = attach_info.GetAsync();
     if (!async)
     {
-        hijack_listener_sp.reset (new Listener ("lldb.Target.Attach.attach.hijack"));
+        hijack_listener_sp = Listener::MakeListener("lldb.Target.Attach.attach.hijack");
         attach_info.SetHijackListener (hijack_listener_sp);
     }
 
@@ -3205,7 +3205,7 @@ Target::Attach (ProcessAttachInfo &attach_info, Stream *stream)
             }
         }
         if (hijack_listener_sp)
-            process_sp->HijackProcessEvents (hijack_listener_sp.get ());
+            process_sp->HijackProcessEvents (hijack_listener_sp);
         error = process_sp->Attach (attach_info);
     }
 
@@ -3217,7 +3217,7 @@ Target::Attach (ProcessAttachInfo &attach_info, Stream *stream)
         }
         else
         {
-            state = process_sp->WaitForProcessToStop (nullptr, nullptr, false, attach_info.GetHijackListener ().get (), stream);
+            state = process_sp->WaitForProcessToStop (nullptr, nullptr, false, attach_info.GetHijackListener(), stream);
             process_sp->RestoreProcessEvents ();
 
             if (state != eStateStopped)

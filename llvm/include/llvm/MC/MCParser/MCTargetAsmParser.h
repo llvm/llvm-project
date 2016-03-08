@@ -40,6 +40,7 @@ enum AsmRewriteKind {
   AOK_Output,         // Rewrite in terms of $N.
   AOK_SizeDirective,  // Add a sizing directive (e.g., dword ptr).
   AOK_Label,          // Rewrite local labels.
+  AOK_EndOfStatement, // Add EndOfStatement (e.g., "\n\t").
   AOK_Skip            // Skip emission (e.g., offset/type operators).
 };
 
@@ -55,6 +56,7 @@ const char AsmRewritePrecedence [] = {
   3, // AOK_Output
   5, // AOK_SizeDirective
   1, // AOK_Label
+  5, // AOK_EndOfStatement
   2  // AOK_Skip
 };
 
