@@ -3695,6 +3695,14 @@ _mm512_maskz_movedup_pd (__mmask8 __U, __m512d __A)
                (__mmask8) __U);
 }
 
+#define _mm_comi_round_sd(__A, __B, __P, __R) __extension__ ({\
+__builtin_ia32_vcomisd ((__v2df) (__A), (__v2df) (__B), ( __P), (  __R));\
+})
+
+#define _mm_comi_round_ss( __A,  __B, __P, __R) __extension__ ({\
+__builtin_ia32_vcomiss ((__v4sf) (__A), (__v4sf) (__B), ( __P), ( __R));\
+})
+
 
 #undef __DEFAULT_FN_ATTRS
 

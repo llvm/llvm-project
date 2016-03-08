@@ -435,7 +435,7 @@ checkAvailability(ASTContext &Context, const AvailabilityAttr *A,
           << VTI << HintMessage;
     }
 
-    return AR_NotYetIntroduced;
+    return A->getStrict() ? AR_Unavailable : AR_NotYetIntroduced;
   }
 
   // Make sure that this declaration hasn't been obsoleted.

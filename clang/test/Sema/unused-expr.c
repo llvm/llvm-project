@@ -76,7 +76,7 @@ void t4(int a) {
 // rdar://7186119
 int t5f(void) __attribute__((warn_unused_result));
 void t5() {
-  t5f();   // expected-warning {{ignoring return value of function declared with warn_unused_result}}
+  t5f();   // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
 }
 
 
@@ -88,11 +88,11 @@ int t6() {
   if (fn1() < 0 || fn2(2,1) < 0 || fn3(2) < 0)  // no warnings
     return -1;
 
-  fn1();  // expected-warning {{ignoring return value of function declared with warn_unused_result attribute}}
+  fn1();  // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
   fn2(92, 21);  // expected-warning {{ignoring return value of function declared with pure attribute}}
   fn3(42);  // expected-warning {{ignoring return value of function declared with const attribute}}
   __builtin_abs(0); // expected-warning {{ignoring return value of function declared with const attribute}}
-  (void)0, fn1();  // expected-warning {{ignoring return value of function declared with warn_unused_result attribute}}
+  (void)0, fn1();  // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
   return 0;
 }
 
@@ -101,7 +101,7 @@ int t7 __attribute__ ((warn_unused_result)); // expected-warning {{'warn_unused_
 // PR4010
 int (*fn4)(void) __attribute__ ((warn_unused_result));
 void t8() {
-  fn4(); // expected-warning {{ignoring return value of function declared with warn_unused_result attribute}}
+  fn4(); // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
 }
 
 void t9() __attribute__((warn_unused_result)); // expected-warning {{attribute 'warn_unused_result' cannot be applied to functions without return value}}

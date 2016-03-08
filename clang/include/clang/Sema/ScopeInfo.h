@@ -107,6 +107,9 @@ public:
   /// \brief True if current scope is for OpenMP declare reduction combiner.
   bool HasOMPDeclareReductionCombiner;
 
+  /// \brief Whether there is a fallthrough statement in this function.
+  bool HasFallthroughStmt : 1;
+
   /// A flag that is set when parsing a method that must call super's
   /// implementation, such as \c -dealloc, \c -finalize, or any method marked
   /// with \c __attribute__((objc_requires_super)).
@@ -348,6 +351,10 @@ public:
     HasOMPDeclareReductionCombiner = true;
   }
 
+  void setHasFallthroughStmt() {
+    HasFallthroughStmt = true;
+  }
+
   void setHasCXXTry(SourceLocation TryLoc) {
     setHasBranchProtectedScope();
     FirstCXXTryLoc = TryLoc;
@@ -371,6 +378,7 @@ public:
       HasIndirectGoto(false),
       HasDroppedStmt(false),
       HasOMPDeclareReductionCombiner(false),
+      HasFallthroughStmt(false),
       ObjCShouldCallSuper(false),
       ObjCIsDesignatedInit(false),
       ObjCWarnForNoDesignatedInitChain(false),

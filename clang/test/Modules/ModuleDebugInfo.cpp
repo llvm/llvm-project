@@ -71,6 +71,13 @@
 // CHECK-NOT:              name:
 // CHECK-SAME:             identifier: "_ZTS13TypedefStruct")
 
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Derived",
+// CHECK-SAME:             identifier: "_ZTS7Derived")
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "B", scope: !"_ZTS7Derived",
+// CHECK-SAME:             elements: ![[B_MBRS:.*]], vtableHolder: !"_ZTS1A"
+// CHECK: ![[B_MBRS]] = !{{{.*}}, ![[GET_PARENT:.*]]}
+// CHECK: ![[GET_PARENT]] = !DISubprogram(name: "getParent"
+
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "FloatInstatiation"
 // no mangled name here yet.
 

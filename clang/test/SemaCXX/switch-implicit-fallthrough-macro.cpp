@@ -1,4 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wimplicit-fallthrough -DCOMMAND_LINE_FALLTHROUGH=[[clang::fallthrough]] %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wimplicit-fallthrough -DCLANG_PREFIX -DCOMMAND_LINE_FALLTHROUGH=[[clang::fallthrough]] -DUNCHOSEN=[[fallthrough]] %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wimplicit-fallthrough -DCOMMAND_LINE_FALLTHROUGH=[[fallthrough]] %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z -Wimplicit-fallthrough -DCLANG_PREFIX -DCOMMAND_LINE_FALLTHROUGH=[[clang::fallthrough]] %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z -Wimplicit-fallthrough -DCOMMAND_LINE_FALLTHROUGH=[[clang::fallthrough]] %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z -Wimplicit-fallthrough -DCOMMAND_LINE_FALLTHROUGH=[[fallthrough]] -DUNCHOSEN=[[clang::fallthrough]] %s
 
 int fallthrough_compatibility_macro_from_command_line(int n) {
   switch (n) {
@@ -10,15 +14,12 @@ int fallthrough_compatibility_macro_from_command_line(int n) {
   return n;
 }
 
-#ifdef __clang__
-#if __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
+#ifdef CLANG_PREFIX
 #define COMPATIBILITY_FALLTHROUGH   [ [ /* test */  clang /* test */ \
     ::  fallthrough  ]  ]    // testing whitespace and comments in macro definition
-#endif
-#endif
-
-#ifndef COMPATIBILITY_FALLTHROUGH
-#define COMPATIBILITY_FALLTHROUGH do { } while (0)
+#else
+#define COMPATIBILITY_FALLTHROUGH   [ [ /* test */  /* test */ \
+    fallthrough  ]  ]    // testing whitespace and comments in macro definition
 #endif
 
 int fallthrough_compatibility_macro_from_source(int n) {
@@ -32,7 +33,11 @@ int fallthrough_compatibility_macro_from_source(int n) {
 }
 
 // Deeper macro substitution
+#ifdef CLANG_PREFIX
 #define M1 [[clang::fallthrough]]
+#else
+#define M1 [[fallthrough]]
+#endif
 #ifdef __clang__
 #define M2 M1
 #else
@@ -59,12 +64,17 @@ int fallthrough_compatibility_macro_in_macro(int n) {
 #undef M2
 #undef COMPATIBILITY_FALLTHROUGH
 #undef COMMAND_LINE_FALLTHROUGH
+#undef UNCHOSEN
 
 int fallthrough_compatibility_macro_undefined(int n) {
   switch (n) {
     case 0:
       n = n * 20;
+#if __cplusplus <= 201402L
     case 1: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+#else
+    case 1: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+#endif
       ;
   }
 #define TOO_LATE [[clang::fallthrough]]
@@ -83,7 +93,11 @@ int fallthrough_compatibility_macro_history(int n) {
     case 0:
       n = n * 20;
 #undef MACRO_WITH_HISTORY
+#if __cplusplus <= 201402L
     case 1: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+#else
+    case 1: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+#endif
       ;
 #define MACRO_WITH_HISTORY [[clang::fallthrough]]
   }

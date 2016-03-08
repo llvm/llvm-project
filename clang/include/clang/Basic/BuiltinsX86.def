@@ -1738,6 +1738,17 @@ TARGET_BUILTIN(__builtin_ia32_vpmadd52luq128_mask, "V2LLiV2LLiV2LLiV2LLiUc","","
 TARGET_BUILTIN(__builtin_ia32_vpmadd52luq128_maskz, "V2LLiV2LLiV2LLiV2LLiUc","","avx512ifma,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_vpmadd52luq256_mask, "V4LLiV4LLiV4LLiV4LLiUc","","avx512ifma,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_vpmadd52luq256_maskz, "V4LLiV4LLiV4LLiV4LLiUc","","avx512ifma,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpermi2varqi512_mask, "V64cV64cV64cV64cULLi","","avx512vbmi")
+TARGET_BUILTIN(__builtin_ia32_vpermt2varqi512_mask, "V64cV64cV64cV64cULLi","","avx512vbmi")
+TARGET_BUILTIN(__builtin_ia32_vpermt2varqi512_maskz, "V64cV64cV64cV64cULLi","","avx512vbmi")
+TARGET_BUILTIN(__builtin_ia32_vpermi2varqi128_mask, "V16cV16cV16cV16cUs","","avx512vbmi,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpermi2varqi256_mask, "V32cV32cV32cV32cUi","","avx512vbmi,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpermt2varqi128_mask, "V16cV16cV16cV16cUs","","avx512vbmi,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpermt2varqi128_maskz, "V16cV16cV16cV16cUs","","avx512vbmi,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpermt2varqi256_mask, "V32cV32cV32cV32cUi","","avx512vbmi,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vpermt2varqi256_maskz, "V32cV32cV32cV32cUi","","avx512vbmi,avx512vl")
+TARGET_BUILTIN(__builtin_ia32_vcomisd, "iV2dV2dIiIi","","avx512f")
+TARGET_BUILTIN(__builtin_ia32_vcomiss, "iV4fV4fIiIi","","avx512f")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

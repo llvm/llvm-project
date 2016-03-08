@@ -25,9 +25,11 @@ using namespace sema;
 
 static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const AttributeList &A,
                                    SourceRange Range) {
+  FallThroughAttr Attr(A.getRange(), S.Context,
+                       A.getAttributeSpellingListIndex());
   if (!isa<NullStmt>(St)) {
     S.Diag(A.getRange().getBegin(), diag::err_fallthrough_attr_wrong_target)
-        << St->getLocStart();
+        << Attr.getSpelling() << St->getLocStart();
     if (isa<SwitchCase>(St)) {
       SourceLocation L = S.getLocForEndOfToken(Range.getEnd());
       S.Diag(L, diag::note_fallthrough_insert_semi_fixit)
@@ -35,12 +37,20 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const AttributeList &A,
     }
     return nullptr;
   }
-  if (S.getCurFunction()->SwitchStack.empty()) {
+  auto *FnScope = S.getCurFunction();
+  if (FnScope->SwitchStack.empty()) {
     S.Diag(A.getRange().getBegin(), diag::err_fallthrough_attr_outside_switch);
     return nullptr;
   }
-  return ::new (S.Context) FallThroughAttr(A.getRange(), S.Context,
-                                           A.getAttributeSpellingListIndex());
+
+  // If this is spelled as the standard C++1z attribute, but not in C++1z, warn
+  // about using it as an extension.
+  if (!S.getLangOpts().CPlusPlus1z && A.isCXX11Attribute() &&
+      !A.getScopeName())
+    S.Diag(A.getLoc(), diag::ext_cxx1z_attr) << A.getName();
+
+  FnScope->setHasFallthroughStmt();
+  return ::new (S.Context) auto(Attr);
 }
 
 static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const AttributeList &A,
@@ -266,7 +276,7 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const AttributeList &A,
   default:
     // if we're here, then we parsed a known attribute, but didn't recognize
     // it as a statement attribute => it is declaration attribute
-    S.Diag(A.getRange().getBegin(), diag::err_attribute_invalid_on_stmt)
+    S.Diag(A.getRange().getBegin(), diag::err_decl_attribute_invalid_on_stmt)
         << A.getName() << St->getLocStart();
     return nullptr;
   }

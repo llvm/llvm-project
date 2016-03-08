@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -fms-extensions -Wno-deprecated %s
+// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -fms-extensions -Wno-deprecated -Wc++14-extensions %s
 
 // NOTE: use -Wno-deprecated to avoid cluttering the output with deprecated
 // warnings

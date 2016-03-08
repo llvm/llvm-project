@@ -9,8 +9,8 @@
 
 void foo(INTF *a) {
   [a garf];
-  [a fee]; // expected-warning {{ignoring return value of function declared with warn_unused_result attribute}}
-  [INTF c]; // expected-warning {{ignoring return value of function declared with warn_unused_result attribute}}
+  [a fee]; // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
+  [INTF c]; // expected-warning {{ignoring return value of function declared with 'warn_unused_result' attribute}}
 }
 
 

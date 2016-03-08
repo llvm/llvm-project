@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat -Wc++14-extensions -Wc++1z-extensions %s
 
 // Need std::initializer_list
 namespace std {
@@ -345,6 +345,18 @@ namespace {
 #pragma pack(pop)
 deprecated
 ]] void bad();
+}
+
+int fallthru(int n) {
+  switch (n) {
+  case 0:
+    n += 5;
+    [[fallthrough]]; // expected-warning {{use of the 'fallthrough' attribute is a C++1z extension}}
+  case 1:
+    n *= 2;
+    break;
+  }
+  return n;
 }
 
 #define attr_name bitand

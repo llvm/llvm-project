@@ -53,6 +53,10 @@ void t11() {
 void t12() {
   __asm jmp label // expected-error {{use of undeclared label 'label'}}
 }
+void t13() {
+  __asm m{o}v eax, ebx // expected-error {{expected identifier}} expected-error {{use of undeclared label '{o}v eax, ebx'}}
+}
+
 int t_fail() { // expected-note {{to match this}}
   __asm 
   __asm { // expected-error 3 {{expected}} expected-note {{to match this}}

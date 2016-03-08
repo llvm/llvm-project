@@ -118,6 +118,19 @@ public:
   bool duplicatesAllowed() const { return DuplicatesAllowed; }
 };
 
+class StmtAttr : public Attr {
+protected:
+  StmtAttr(attr::Kind AK, SourceRange R, unsigned SpellingListIndex,
+                  bool IsLateParsed, bool DuplicatesAllowed)
+      : Attr(AK, R, SpellingListIndex, IsLateParsed, DuplicatesAllowed) {}
+
+public:
+  static bool classof(const Attr *A) {
+    return A->getKind() >= attr::FirstStmtAttr &&
+           A->getKind() <= attr::LastStmtAttr;
+  }
+};
+
 class InheritableAttr : public Attr {
 protected:
   InheritableAttr(attr::Kind AK, SourceRange R, unsigned SpellingListIndex,
