@@ -29,6 +29,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/FunctionIndexObjectFile.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/raw_sha1_ostream.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -117,18 +118,14 @@ static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
   WriteBitcodeToFile(&TheModule, OS, true, false);
 }
 
-
-
-static StringMap<MemoryBufferRef>
-generateModuleMap(const std::vector<MemoryBufferRef> &Modules) {
-  StringMap<MemoryBufferRef> ModuleMap;
+static void generateModuleMap(const std::vector<MemoryBufferRef> &Modules,
+                              StringMap<MemoryBufferRef> &ModuleMap) {
   for (auto &ModuleBuffer : Modules) {
     assert(ModuleMap.find(ModuleBuffer.getBufferIdentifier()) ==
                ModuleMap.end() &&
            "Expect unique Buffer Identifier");
     ModuleMap[ModuleBuffer.getBufferIdentifier()] = ModuleBuffer;
   }
-  return ModuleMap;
 }
 
 /// Provide a "loader" for the FunctionImporter to access function from other
@@ -397,7 +394,8 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
  */
 void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
                                              FunctionInfoIndex &Index) {
-  auto ModuleMap = generateModuleMap(Modules);
+  StringMap<MemoryBufferRef> ModuleMap;
+  generateModuleMap(Modules, ModuleMap);
   crossImportIntoModule(TheModule, Index, ModuleMap);
 }
 
@@ -417,30 +415,47 @@ std::unique_ptr<MemoryBuffer> ThinLTOCodeGenerator::codegen(Module &TheModule) {
 
 // Main entry point for the ThinLTO processing
 void ThinLTOCodeGenerator::run() {
-  // Sequential linking phase
-  auto Index = linkCombinedIndex();
+  std::unique_ptr<FunctionInfoIndex> Index;
+  StringMap<MemoryBufferRef> ModuleMap;
 
-  // Save temps: index.
-  if (!SaveTempsDir.empty()) {
-    auto SaveTempPath = SaveTempsDir + "index.bc";
-    std::error_code EC;
-    raw_fd_ostream OS(SaveTempPath, EC, sys::fs::F_None);
-    if (EC)
-      report_fatal_error(Twine("Failed to open ") + SaveTempPath +
-                         " to save optimized bitcode\n");
-    WriteFunctionSummaryToFile(*Index, OS);
-  }
-
-  // Prepare the resulting object vector
-  assert(ProducedBinaries.empty() && "The generator should not be reused");
-  ProducedBinaries.resize(Modules.size());
-
-  // Prepare the module map.
-  auto ModuleMap = generateModuleMap(Modules);
-
-  // Parallel optimizer + codegen
   {
     ThreadPool Pool(getNumCores());
+    // Launch Cache Pruning in parallel with the Thin-Link phase
+    Pool.async([&] {
+      CachePruning(CacheOptions.Path)
+          .setPruningInterval(CacheOptions.PruningInterval)
+          .setEntryExpiration(CacheOptions.Expiration)
+          .setMaxSize(CacheOptions.MaxPercentageOfFreeSpace)
+          .prune();
+    });
+
+    Pool.async([&] {
+      // Sequential linking phase
+      Index = linkCombinedIndex();
+
+      // Save temps: index.
+      if (!SaveTempsDir.empty()) {
+        auto SaveTempPath = SaveTempsDir + "index.bc";
+        std::error_code EC;
+        raw_fd_ostream OS(SaveTempPath, EC, sys::fs::F_None);
+        if (EC)
+          report_fatal_error(Twine("Failed to open ") + SaveTempPath +
+                             " to save optimized bitcode\n");
+        WriteFunctionSummaryToFile(*Index, OS);
+      }
+
+      // Prepare the resulting object vector
+      assert(ProducedBinaries.empty() && "The generator should not be reused");
+      ProducedBinaries.resize(Modules.size());
+
+      // Prepare the module map.
+      generateModuleMap(Modules, ModuleMap);
+    });
+
+    // Wait for the previous tasks to complete before starting the process
+    Pool.wait();
+
+    // Parallel optimizer + codegen
     int count = 0;
     for (auto &ModuleBuffer : Modules) {
       Pool.async([&](int count) {
