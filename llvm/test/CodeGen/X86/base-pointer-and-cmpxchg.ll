@@ -1,5 +1,6 @@
 ; RUN: llc -mattr=+cx16 -x86-use-base-pointer=true -stackrealign -stack-alignment=32  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE %s
 ; RUN: llc -mattr=+cx16 -x86-use-base-pointer=false -stackrealign -stack-alignment=32  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=DONT_USE_BASE %s
+target triple = "x86_64-apple-macosx"
 
 ; This function uses dynamic allocated stack to force the use
 ; of a frame pointer.
