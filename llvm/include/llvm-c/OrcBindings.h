@@ -23,7 +23,6 @@
 #define LLVM_C_ORCBINDINGS_H
 
 #include "llvm-c/Object.h"
-#include "llvm-c/Support.h"
 #include "llvm-c/TargetMachine.h"
 
 #ifdef __cplusplus

@@ -1,0 +1,48 @@
+# RUN: llc -march=x86-64 -start-after machine-sink -stop-after machine-sink -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel
+# This test ensures that the MIR parser parses generic virtual
+# register definitions correctly.
+
+--- |
+  ; ModuleID = 'generic-virtual-registers-type-error.mir'
+  target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+  %type_alias = type <2 x i32>
+  %structure_alias = type { i32, i16 }
+  define void @bar() {
+  entry:
+    ret void
+  }
+
+...
+
+---
+name:            bar
+isSSA:           true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: _ }
+# CHECK-NEXT:   - { id: 1, class: _ }
+# CHECK-NEXT:   - { id: 2, class: _ }
+# CHECK-NEXT:   - { id: 3, class: _ }
+# CHECK-NEXT:   - { id: 4, class: _ }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+body: |
+  bb.0.entry:
+    liveins: %edi
+    ; CHECK:      %0(32) = G_ADD i32 %edi
+    %0(32) = G_ADD i32 %edi, %edi
+    ; CHECK:      %1(64) = G_ADD <2 x i32> %edi
+    %1(64) = G_ADD <2 x i32> %edi, %edi
+    ; CHECK:      %2(64) = G_ADD <2 x i32> %edi
+    %2(64) = G_ADD %type_alias %edi, %edi
+    ; G_ADD is actually not a valid operand for structure type,
+    ; but that is the only one we have for now for testing.
+    ; CHECK:      %3(64) = G_ADD { i32, i32 } %edi
+    %3(64) = G_ADD {i32, i32} %edi, %edi
+    ; CHECK:      %4(48) = G_ADD %structure_alias %edi
+    %4(48) = G_ADD %structure_alias %edi, %edi
+...

@@ -20,7 +20,6 @@
 
 namespace llvm {
 class AssumptionCacheTracker;
-class BlockFrequencyInfo;
 class CallSite;
 class DataLayout;
 class Function;
@@ -38,21 +37,6 @@ namespace InlineConstants {
   /// when the caller is recursive.
   const unsigned TotalAllocaSizeRecursiveCaller = 1024;
 }
-
-/// \brief Block frequency analysis for multiple functions.
-/// This class mimics block frequency analysis on CGSCC level. Block frequency
-/// info is computed on demand and cached unless they are invalidated.
-class BlockFrequencyAnalysis {
-private:
-  DenseMap<Function *, BlockFrequencyInfo *> BFM;
-
-public:
-  ~BlockFrequencyAnalysis();
-  /// \brief Returns BlockFrequencyInfo for a function.
-  BlockFrequencyInfo *getBlockFrequencyInfo(Function *);
-  /// \brief Invalidates block frequency info for a function.
-  void invalidateBlockFrequencyInfo(Function *);
-};
 
 /// \brief Represents the cost of inlining a function.
 ///
@@ -127,8 +111,7 @@ public:
 /// inlining the callsite. It is an expensive, heavyweight call.
 InlineCost getInlineCost(CallSite CS, int DefaultThreshold,
                          TargetTransformInfo &CalleeTTI,
-                         AssumptionCacheTracker *ACT,
-                         BlockFrequencyAnalysis *BFA);
+                         AssumptionCacheTracker *ACT);
 
 /// \brief Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
@@ -137,8 +120,7 @@ InlineCost getInlineCost(CallSite CS, int DefaultThreshold,
 //
 InlineCost getInlineCost(CallSite CS, Function *Callee, int DefaultThreshold,
                          TargetTransformInfo &CalleeTTI,
-                         AssumptionCacheTracker *ACT,
-                         BlockFrequencyAnalysis *BFA);
+                         AssumptionCacheTracker *ACT);
 
 int computeThresholdFromOptLevels(unsigned OptLevel, unsigned SizeOptLevel);
 
@@ -147,9 +129,6 @@ int getDefaultInlineThreshold();
 
 /// \brief Minimal filter to detect invalid constructs for inlining.
 bool isInlineViable(Function &Callee);
-
-/// \brief Return estimated count of the block \p BB.
-Optional<uint64_t> getBlockCount(BasicBlock *BB, BlockFrequencyAnalysis *BFA);
 }
 
 #endif

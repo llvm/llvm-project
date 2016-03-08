@@ -27,8 +27,11 @@
 using namespace llvm;
 
 char IRTranslator::ID = 0;
+INITIALIZE_PASS(IRTranslator, "irtranslator", "IRTranslator LLVM IR -> MI",
+                false, false);
 
 IRTranslator::IRTranslator() : MachineFunctionPass(ID), MRI(nullptr) {
+  initializeIRTranslatorPass(*PassRegistry::getPassRegistry());
 }
 
 unsigned IRTranslator::getOrCreateVReg(const Value *Val) {

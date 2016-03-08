@@ -459,7 +459,7 @@ bool DevirtModule::tryUniqueRetValOpt(
   auto tryUniqueRetValOptFor = [&](bool IsOne) {
     const BitSetInfo *UniqueBitSet = 0;
     for (const VirtualCallTarget &Target : TargetsForSlot) {
-      if (Target.RetVal == IsOne ? 1 : 0) {
+      if (Target.RetVal == (IsOne ? 1 : 0)) {
         if (UniqueBitSet)
           return false;
         UniqueBitSet = Target.BS;

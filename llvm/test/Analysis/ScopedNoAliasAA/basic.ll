@@ -6,9 +6,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo1(float* nocapture %a, float* nocapture readonly %c) #0 {
 entry:
 ; CHECK-LABEL: Function: foo1
-  %0 = load float, float* %c, align 4, !alias.scope !1
+  %0 = load float, float* %c, align 4, !alias.scope !2
   %arrayidx.i = getelementptr inbounds float, float* %a, i64 5
-  store float %0, float* %arrayidx.i, align 4, !noalias !1
+  store float %0, float* %arrayidx.i, align 4, !noalias !2
   %1 = load float, float* %c, align 4
   %arrayidx = getelementptr inbounds float, float* %a, i64 7
   store float %1, float* %arrayidx, align 4
@@ -25,4 +25,4 @@ attributes #0 = { nounwind uwtable }
 
 !0 = !{!0, !"some domain"}
 !1 = !{!1, !0, !"some scope"}
-
+!2 = !{!1}

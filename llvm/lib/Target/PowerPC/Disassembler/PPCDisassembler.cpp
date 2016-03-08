@@ -368,6 +368,21 @@ static DecodeStatus decodeMemRIXOperands(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeMemRIX16Operands(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address, const void *Decoder) {
+  // Decode the memrix16 field (imm, reg), which has the low 12-bits as the
+  // displacement with 16-byte aligned, and the next 5 bits as the register #.
+
+  uint64_t Base = Imm >> 12;
+  uint64_t Disp = Imm & 0xFFF;
+
+  assert(Base < 32 && "Invalid base register");
+
+  Inst.addOperand(MCOperand::createImm(SignExtend64<16>(Disp << 4)));
+  Inst.addOperand(MCOperand::createReg(GP0Regs[Base]));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeCRBitMOperand(MCInst &Inst, uint64_t Imm,
                                         int64_t Address, const void *Decoder) {
   // The cr bit encoding is 0x80 >> cr_reg_num.

@@ -32,7 +32,7 @@ Interesting work that remains to be done:
 
 //===---------------------------------------------------------------------===//
 
-Br, br_if, and tableswitch instructions can support having a value on the
+Br, br_if, and br_table instructions can support having a value on the
 expression stack across the jump (sometimes). We should (a) model this, and
 (b) extend the stackifier to utilize it.
 

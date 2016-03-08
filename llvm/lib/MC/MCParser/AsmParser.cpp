@@ -251,6 +251,7 @@ private:
 
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI);
+  bool parseCurlyBlockScope(SmallVectorImpl<AsmRewrite>& AsmStrRewrites);
   void eatToEndOfLine();
   bool parseCppHashLineFilenameComment(SMLoc L);
 
@@ -1820,6 +1821,24 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   // Don't skip the rest of the line, the instruction parser is responsible for
   // that.
   return false;
+}
+
+// Parse and erase curly braces marking block start/end
+bool 
+AsmParser::parseCurlyBlockScope(SmallVectorImpl<AsmRewrite> &AsmStrRewrites) {
+  // Identify curly brace marking block start/end
+  if (Lexer.isNot(AsmToken::LCurly) && Lexer.isNot(AsmToken::RCurly))
+    return false;
+
+  SMLoc StartLoc = Lexer.getLoc();
+  Lex(); // Eat the brace
+  if (Lexer.is(AsmToken::EndOfStatement))
+    Lex(); // Eat EndOfStatement following the brace
+
+  // Erase the block start/end brace from the output asm string
+  AsmStrRewrites.emplace_back(AOK_Skip, StartLoc, Lexer.getLoc().getPointer() -
+                                                  StartLoc.getPointer());
+  return true;
 }
 
 /// eatToEndOfLine uses the Lexer to eat the characters to the end of the line
@@ -4986,6 +5005,10 @@ bool AsmParser::parseMSInlineAsm(
   unsigned InputIdx = 0;
   unsigned OutputIdx = 0;
   while (getLexer().isNot(AsmToken::Eof)) {
+    // Parse curly braces marking block start/end
+    if (parseCurlyBlockScope(AsmStrRewrites))
+      continue;
+
     ParseStatementInfo Info(&AsmStrRewrites);
     if (parseStatement(Info, &SI))
       return true;
@@ -5161,6 +5184,9 @@ bool AsmParser::parseMSInlineAsm(
       if (AsmStringIR.back() != '.')
         OS << '.';
       OS << AR.Val;
+      break;
+    case AOK_EndOfStatement:
+      OS << "\n\t";
       break;
     }
 

@@ -19,7 +19,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -48,13 +47,10 @@ STATISTIC(NumMergedAllocas, "Number of allocas merged together");
 // if those would be more profitable and blocked inline steps.
 STATISTIC(NumCallerCallersAnalyzed, "Number of caller-callers analyzed");
 
-Inliner::Inliner(char &ID)
-    : CallGraphSCCPass(ID), InsertLifetime(true),
-      BFA(new BlockFrequencyAnalysis()) {}
+Inliner::Inliner(char &ID) : CallGraphSCCPass(ID), InsertLifetime(true) {}
 
 Inliner::Inliner(char &ID, bool InsertLifetime)
-    : CallGraphSCCPass(ID), InsertLifetime(InsertLifetime),
-      BFA(new BlockFrequencyAnalysis()) {}
+    : CallGraphSCCPass(ID), InsertLifetime(InsertLifetime) {}
 
 /// For this class, we declare that we require and preserve the call graph.
 /// If the derived class implements this method, it should
@@ -263,7 +259,7 @@ bool Inliner::shouldInline(CallSite CS) {
                          Twine(IC.getCostDelta() + IC.getCost()) + ")");
     return false;
   }
-
+  
   // Try to detect the case where the current inlining candidate caller (call
   // it B) is a static or linkonce-ODR function and is an inlining candidate
   // elsewhere, and the current candidate callee (call it C) is large enough
@@ -360,90 +356,8 @@ static bool InlineHistoryIncludes(Function *F, int InlineHistoryID,
   return false;
 }
 
-/// \brief Update the frequency of a block that is cloned into the caller.
-/// This is invoked when \p OrigBB from the callee is cloned into \p NewBB in
-/// the caller.
-void Inliner::updateBlockFreq(CallSite &CS, const BasicBlock *OrigBB,
-                              const BasicBlock *NewBB) {
-  if (!HasProfileData)
-    return;
-  Instruction *Call = CS.getInstruction();
-  BasicBlock *CallBB = Call->getParent();
-  BlockFrequencyInfo *CalleeBFI =
-      BFA->getBlockFrequencyInfo(CS.getCalledFunction());
-  BlockFrequencyInfo *CallerBFI =
-      BFA->getBlockFrequencyInfo(CallBB->getParent());
-  // Find the number of times OrigBB is executed per invocation of the callee
-  // and multiply by the number of times callee is executed in the caller.
-  // Freq(NewBB) = Freq(OrigBB) * CallSiteFreq / CalleeEntryFreq.
-  uint64_t CallSiteFreq = CallerBFI->getBlockFreq(CallBB).getFrequency();
-  uint64_t CalleeEntryFreq = CalleeBFI->getEntryFreq();
-  // Frequency of OrigBB in the callee.
-  BlockFrequency OrigBBFreq = CalleeBFI->getBlockFreq(OrigBB);
-  CallerBFI->setBlockFreq(NewBB, (double)(OrigBBFreq.getFrequency()) /
-                                     CalleeEntryFreq * CallSiteFreq);
-}
-
-/// \brief Update entry count of \p Callee after it got inlined at a callsite
-/// in block \p CallBB.
-void Inliner::updateEntryCount(BasicBlock *CallBB, Function *Callee) {
-  if (!HasProfileData)
-    return;
-  // If the callee has a original count of N, and the estimated count of
-  // callsite is M, the new callee count is set to N - M. M is estimated from
-  // the caller's entry count, its entry block frequency and the block frequency
-  // of the callsite.
-  Optional<uint64_t> CalleeCount = Callee->getEntryCount();
-  if (!CalleeCount)
-    return;
-  Optional<uint64_t> CallSiteCount = llvm::getBlockCount(CallBB, BFA.get());
-  if (!CallSiteCount)
-    return;
-  // Since CallSiteCount is an estimate, it could exceed the original callee
-  // count and has to be set to 0.
-  if (CallSiteCount.getValue() > CalleeCount.getValue()) {
-    Callee->setEntryCount(0);
-    DEBUG(llvm::dbgs() << "Estimated count of block " << CallBB->getName()
-                       << " is " << CallSiteCount.getValue()
-                       << " which exceeds the entry count "
-                       << CalleeCount.getValue() << " of the callee "
-                       << Callee->getName() << "\n");
-  } else
-    Callee->setEntryCount(CalleeCount.getValue() - CallSiteCount.getValue());
-}
-
-void Inliner::invalidateBFI(Function *F) {
-  if (!HasProfileData)
-    return;
-  if (F)
-    BFA->invalidateBlockFrequencyInfo(F);
-}
-void Inliner::invalidateBFI(CallGraphSCC &SCC) {
-  if (!HasProfileData)
-    return;
-  for (CallGraphNode *Node : SCC) {
-    Function *F = Node->getFunction();
-    invalidateBFI(F);
-  }
-}
-void Inliner::copyBlockFrequency(BasicBlock *Src, BasicBlock *Dst) {
-  if (!HasProfileData)
-    return;
-  Function *F = Src->getParent();
-  BlockFrequencyInfo *BFI = BFA->getBlockFrequencyInfo(F);
-  BFI->setBlockFreq(Dst, BFI->getBlockFreq(Src).getFrequency());
-}
-
-static bool hasProfileData(Module &M) {
-  // We check for the presence of MaxFunctionCount in the module.
-  // FIXME: This now only works for frontend based instrumentation.
-  return M.getMaximumFunctionCount().hasValue();
-}
-
 bool Inliner::runOnSCC(CallGraphSCC &SCC) {
-  using namespace std::placeholders;
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
-  HasProfileData = hasProfileData(CG.getModule());
   ACT = &getAnalysis<AssumptionCacheTracker>();
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
@@ -505,6 +419,7 @@ bool Inliner::runOnSCC(CallGraphSCC &SCC) {
 
   
   InlinedArrayAllocasTy InlinedArrayAllocas;
+  InlineFunctionInfo InlineInfo(&CG, ACT);
 
   // Now that we have all of the call sites, loop over them and inline them if
   // it looks profitable to do so.
@@ -533,10 +448,6 @@ bool Inliner::runOnSCC(CallGraphSCC &SCC) {
         CS.getInstruction()->eraseFromParent();
         ++NumCallsDeleted;
       } else {
-        Instruction *TheCall = CS.getInstruction();
-        BasicBlock *CallSiteBlock = TheCall->getParent();
-        Instruction *CallSuccessor = &*(++BasicBlock::iterator(TheCall));
-
         // We can only inline direct calls to non-declarations.
         if (!Callee || Callee->isDeclaration()) continue;
       
@@ -565,11 +476,6 @@ bool Inliner::runOnSCC(CallGraphSCC &SCC) {
           continue;
         }
 
-        BlockCloningFunctor BCF = nullptr;
-        if (HasProfileData)
-          BCF = std::bind(&Inliner::updateBlockFreq, this, CS, _1, _2);
-        InlineFunctionInfo InlineInfo(&CG, ACT, BCF);
-
         // Attempt to inline the function.
         if (!InlineCallIfPossible(*this, CS, InlineInfo, InlinedArrayAllocas,
                                   InlineHistoryID, InsertLifetime)) {
@@ -579,15 +485,6 @@ bool Inliner::runOnSCC(CallGraphSCC &SCC) {
                                              Caller->getName()));
           continue;
         }
-        updateEntryCount(CallSiteBlock, Callee);
-        if (!InlineInfo.CallSuccessorBlockDeleted) {
-          // The instruction following the call is part of a new basic block
-          // created during the inlining process. This does not have an entry in
-          // the BFI. We create an entry by copying the frequency of the
-          // original block containing the call.
-          copyBlockFrequency(CallSiteBlock, CallSuccessor->getParent());
-        }
-
         ++NumInlined;
 
         // Report the inline decision.
@@ -626,9 +523,7 @@ bool Inliner::runOnSCC(CallGraphSCC &SCC) {
         CalleeNode->removeAllCalledFunctions();
         
         // Removing the node for callee from the call graph and delete it.
-        Function *F = CG.removeFunctionFromModule(CalleeNode);
-        invalidateBFI(F);
-        delete F;
+        delete CG.removeFunctionFromModule(CalleeNode);
         ++NumDeleted;
       }
 
@@ -649,7 +544,6 @@ bool Inliner::runOnSCC(CallGraphSCC &SCC) {
     }
   } while (LocalChange);
 
-  invalidateBFI(SCC);
   return Changed;
 }
 
@@ -757,9 +651,7 @@ bool Inliner::removeDeadFunctions(CallGraph &CG, bool AlwaysInlineOnly) {
                                       FunctionsToRemove.end()),
                           FunctionsToRemove.end());
   for (CallGraphNode *CGN : FunctionsToRemove) {
-    Function *F = CG.removeFunctionFromModule(CGN);
-    invalidateBFI(F);
-    delete F;
+    delete CG.removeFunctionFromModule(CGN);
     ++NumDeleted;
   }
   return true;

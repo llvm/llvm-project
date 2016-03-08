@@ -120,7 +120,7 @@ char *LLVMGetDiagInfoDescription(LLVMDiagnosticInfoRef DI) {
   return LLVMCreateMessage(MsgStorage.c_str());
 }
 
-LLVMDiagnosticSeverity LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI){
+LLVMDiagnosticSeverity LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI) {
     LLVMDiagnosticSeverity severity;
 
     switch(unwrap(DI)->getSeverity()) {
@@ -140,8 +140,6 @@ LLVMDiagnosticSeverity LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI){
 
     return severity;
 }
-
-
 
 
 /*===-- Operations on modules ---------------------------------------------===*/

@@ -59,8 +59,7 @@ public:
   InlineCost getInlineCost(CallSite CS) override {
     Function *Callee = CS.getCalledFunction();
     TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
-    return llvm::getInlineCost(CS, DefaultThreshold, TTI, ACT,
-                               HasProfileData ? BFA.get() : nullptr);
+    return llvm::getInlineCost(CS, DefaultThreshold, TTI, ACT);
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;

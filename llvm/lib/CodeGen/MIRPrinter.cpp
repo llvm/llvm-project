@@ -118,7 +118,8 @@ public:
   void printOffset(int64_t Offset);
   void printTargetFlags(const MachineOperand &Op);
   void print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
-             unsigned I, bool ShouldPrintRegisterTies, bool IsDef = false);
+             unsigned I, bool ShouldPrintRegisterTies,
+             const MachineRegisterInfo *MRI = nullptr, bool IsDef = false);
   void print(const MachineMemOperand &Op);
 
   void print(const MCCFIInstruction &CFI, const TargetRegisterInfo *TRI);
@@ -206,8 +207,13 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
     yaml::VirtualRegisterDefinition VReg;
     VReg.ID = I;
-    VReg.Class =
-        StringRef(TRI->getRegClassName(RegInfo.getRegClass(Reg))).lower();
+    if (RegInfo.getRegClass(Reg))
+      VReg.Class =
+          StringRef(TRI->getRegClassName(RegInfo.getRegClass(Reg))).lower();
+    else {
+      VReg.Class = std::string("_");
+      assert(RegInfo.getSize(Reg) && "Generic registers must have a size");
+    }
     unsigned PreferredReg = RegInfo.getSimpleHint(Reg);
     if (PreferredReg)
       printReg(PreferredReg, VReg.PreferredRegister, TRI);
@@ -525,7 +531,9 @@ static bool hasComplexRegisterTies(const MachineInstr &MI) {
 }
 
 void MIPrinter::print(const MachineInstr &MI) {
-  const auto &SubTarget = MI.getParent()->getParent()->getSubtarget();
+  const auto *MF = MI.getParent()->getParent();
+  const auto &MRI = MF->getRegInfo();
+  const auto &SubTarget = MF->getSubtarget();
   const auto *TRI = SubTarget.getRegisterInfo();
   assert(TRI && "Expected target register info");
   const auto *TII = SubTarget.getInstrInfo();
@@ -540,7 +548,8 @@ void MIPrinter::print(const MachineInstr &MI) {
        ++I) {
     if (I)
       OS << ", ";
-    print(MI.getOperand(I), TRI, I, ShouldPrintRegisterTies, /*IsDef=*/true);
+    print(MI.getOperand(I), TRI, I, ShouldPrintRegisterTies, &MRI,
+          /*IsDef=*/true);
   }
 
   if (I)
@@ -548,6 +557,11 @@ void MIPrinter::print(const MachineInstr &MI) {
   if (MI.getFlag(MachineInstr::FrameSetup))
     OS << "frame-setup ";
   OS << TII->getName(MI.getOpcode());
+  if (isPreISelGenericOpcode(MI.getOpcode())) {
+    assert(MI.getType() && "Generic instructions must have a type");
+    OS << ' ';
+    MI.getType()->print(OS, /*IsForDebug*/ false, /*NoDetails*/ true);
+  }
   if (I < E)
     OS << ' ';
 
@@ -727,7 +741,8 @@ static const char *getTargetIndexName(const MachineFunction &MF, int Index) {
 }
 
 void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
-                      unsigned I, bool ShouldPrintRegisterTies, bool IsDef) {
+                      unsigned I, bool ShouldPrintRegisterTies,
+                      const MachineRegisterInfo *MRI, bool IsDef) {
   printTargetFlags(Op);
   switch (Op.getType()) {
   case MachineOperand::MO_Register:
@@ -754,6 +769,9 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
       OS << ':' << TRI->getSubRegIndexName(Op.getSubReg());
     if (ShouldPrintRegisterTies && Op.isTied() && !Op.isDef())
       OS << "(tied-def " << Op.getParent()->findTiedOperandIdx(I) << ")";
+    assert((!IsDef || MRI) && "for IsDef, MRI must be provided");
+    if (IsDef && MRI->getSize(Op.getReg()))
+      OS << '(' << MRI->getSize(Op.getReg()) << ')';
     break;
   case MachineOperand::MO_Immediate:
     OS << Op.getImm();

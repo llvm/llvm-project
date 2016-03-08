@@ -154,6 +154,17 @@ def COND_NULL : PatLeaf <
   [{(void)N; return false;}]
 >;
 
+
+//===----------------------------------------------------------------------===//
+// Misc. PatFrags
+//===----------------------------------------------------------------------===//
+
+class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
+  (ops node:$src0, node:$src1),
+  (op $src0, $src1),
+  [{ return N->hasOneUse(); }]
+>;
+
 //===----------------------------------------------------------------------===//
 // Load/Store Pattern Fragments
 //===----------------------------------------------------------------------===//
@@ -577,6 +588,25 @@ class ROTRPattern <Instruction BIT_ALIGN> : Pat <
   (rotr i32:$src0, i32:$src1),
   (BIT_ALIGN $src0, $src0, $src1)
 >;
+
+// This matches 16 permutations of
+// max(min(x, y), min(max(x, y), z))
+class IntMed3Pat<Instruction med3Inst,
+                 SDPatternOperator max,
+                 SDPatternOperator max_oneuse,
+                 SDPatternOperator min_oneuse> : Pat<
+  (max (min_oneuse i32:$src0, i32:$src1),
+       (min_oneuse (max_oneuse i32:$src0, i32:$src1), i32:$src2)),
+  (med3Inst $src0, $src1, $src2)
+>;
+
+let Properties = [SDNPCommutative, SDNPAssociative] in {
+def smax_oneuse : HasOneUseBinOp<smax>;
+def smin_oneuse : HasOneUseBinOp<smin>;
+def umax_oneuse : HasOneUseBinOp<umax>;
+def umin_oneuse : HasOneUseBinOp<umin>;
+} // Properties = [SDNPCommutative, SDNPAssociative]
+
 
 // 24-bit arithmetic patterns
 def umul24 : PatFrag <(ops node:$x, node:$y), (mul node:$x, node:$y)>;

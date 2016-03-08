@@ -3268,6 +3268,9 @@ def : Pat <
 
 def : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64>;
 
+def : IntMed3Pat<V_MED3_I32, smax, smax_oneuse, smin_oneuse>;
+def : IntMed3Pat<V_MED3_U32, umax, umax_oneuse, umin_oneuse>;
+
 //============================================================================//
 // Assembler aliases
 //============================================================================//

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
@@ -105,6 +106,7 @@ extern "C" void LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> X(TheAArch64leTarget);
   RegisterTargetMachine<AArch64beTargetMachine> Y(TheAArch64beTarget);
   RegisterTargetMachine<AArch64leTargetMachine> Z(TheARM64Target);
+  initializeGlobalISel(*PassRegistry::getPassRegistry());
 }
 
 //===----------------------------------------------------------------------===//

@@ -44,7 +44,7 @@ class GlobalValue;
 class MachineBasicBlock;
 class MachineConstantPoolValue;
 class SDNode;
-class BinaryWithFlagsSDNode;
+class HandleSDNode;
 class Value;
 class MCSymbol;
 template <typename T> struct DenseMapInfo;
@@ -280,6 +280,8 @@ public:
 private:
   friend class SelectionDAG;
   friend class SDNode;
+  // TODO: unfriend HandleSDNode once we fix its operand handling.
+  friend class HandleSDNode;
 
   void setUser(SDNode *p) { User = p; }
 
@@ -394,10 +396,6 @@ private:
   /// The operation that this node performs.
   int16_t NodeType;
 
-  /// This is true if OperandList was new[]'d.  If true,
-  /// then they will be delete[]'d when the node is destroyed.
-  uint16_t OperandsNeedDelete : 1;
-
   /// This tracks whether this node has one or more dbg_value
   /// nodes corresponding to it.
   uint16_t HasDebugValue : 1;
@@ -406,7 +404,7 @@ protected:
   /// This member is defined by this class, but is not used for
   /// anything.  Subclasses can use it to hold whatever state they find useful.
   /// This field is initialized to zero by the ctor.
-  uint16_t SubclassData : 14;
+  uint16_t SubclassData : 15;
 
 private:
   /// Unique id per SDNode in the DAG.
@@ -440,6 +438,8 @@ private:
 
   friend class SelectionDAG;
   friend struct ilist_traits<SDNode>;
+  // TODO: unfriend HandleSDNode once we fix its operand handling.
+  friend class HandleSDNode;
 
 public:
   /// Unique and persistent id per SDNode in the DAG.
@@ -792,99 +792,18 @@ protected:
     return Ret;
   }
 
-  SDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
-         ArrayRef<SDValue> Ops)
-      : NodeType(Opc), OperandsNeedDelete(true), HasDebugValue(false),
-        SubclassData(0), NodeId(-1),
-        OperandList(Ops.size() ? new SDUse[Ops.size()] : nullptr),
-        ValueList(VTs.VTs), UseList(nullptr), NumOperands(Ops.size()),
-        NumValues(VTs.NumVTs), IROrder(Order), debugLoc(std::move(dl)) {
-    assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
-    assert(NumOperands == Ops.size() &&
-           "NumOperands wasn't wide enough for its operands!");
-    assert(NumValues == VTs.NumVTs &&
-           "NumValues wasn't wide enough for its operands!");
-    for (unsigned i = 0; i != Ops.size(); ++i) {
-      assert(OperandList && "no operands available");
-      OperandList[i].setUser(this);
-      OperandList[i].setInitial(Ops[i]);
-    }
-    checkForCycles(this);
-  }
-
-  /// This constructor adds no operands itself; operands can be
-  /// set later with InitOperands.
+  /// Create an SDNode.
+  ///
+  /// SDNodes are created without any operands, and never own the operand
+  /// storage. To add operands, see SelectionDAG::createOperands.
   SDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs)
-      : NodeType(Opc), OperandsNeedDelete(false), HasDebugValue(false),
-        SubclassData(0), NodeId(-1), OperandList(nullptr), ValueList(VTs.VTs),
-        UseList(nullptr), NumOperands(0), NumValues(VTs.NumVTs),
-        IROrder(Order), debugLoc(std::move(dl)) {
+      : NodeType(Opc), HasDebugValue(false), SubclassData(0), NodeId(-1),
+        OperandList(nullptr), ValueList(VTs.VTs), UseList(nullptr),
+        NumOperands(0), NumValues(VTs.NumVTs), IROrder(Order),
+        debugLoc(std::move(dl)) {
     assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
     assert(NumValues == VTs.NumVTs &&
            "NumValues wasn't wide enough for its operands!");
-  }
-
-  /// Initialize the operands list of this with 1 operand.
-  void InitOperands(SDUse *Ops, const SDValue &Op0) {
-    Ops[0].setUser(this);
-    Ops[0].setInitial(Op0);
-    NumOperands = 1;
-    OperandList = Ops;
-    checkForCycles(this);
-  }
-
-  /// Initialize the operands list of this with 2 operands.
-  void InitOperands(SDUse *Ops, const SDValue &Op0, const SDValue &Op1) {
-    Ops[0].setUser(this);
-    Ops[0].setInitial(Op0);
-    Ops[1].setUser(this);
-    Ops[1].setInitial(Op1);
-    NumOperands = 2;
-    OperandList = Ops;
-    checkForCycles(this);
-  }
-
-  /// Initialize the operands list of this with 3 operands.
-  void InitOperands(SDUse *Ops, const SDValue &Op0, const SDValue &Op1,
-                    const SDValue &Op2) {
-    Ops[0].setUser(this);
-    Ops[0].setInitial(Op0);
-    Ops[1].setUser(this);
-    Ops[1].setInitial(Op1);
-    Ops[2].setUser(this);
-    Ops[2].setInitial(Op2);
-    NumOperands = 3;
-    OperandList = Ops;
-    checkForCycles(this);
-  }
-
-  /// Initialize the operands list of this with 4 operands.
-  void InitOperands(SDUse *Ops, const SDValue &Op0, const SDValue &Op1,
-                    const SDValue &Op2, const SDValue &Op3) {
-    Ops[0].setUser(this);
-    Ops[0].setInitial(Op0);
-    Ops[1].setUser(this);
-    Ops[1].setInitial(Op1);
-    Ops[2].setUser(this);
-    Ops[2].setInitial(Op2);
-    Ops[3].setUser(this);
-    Ops[3].setInitial(Op3);
-    NumOperands = 4;
-    OperandList = Ops;
-    checkForCycles(this);
-  }
-
-  /// Initialize the operands list of this with N operands.
-  void InitOperands(SDUse *Ops, const SDValue *Vals, unsigned N) {
-    for (unsigned i = 0; i != N; ++i) {
-      Ops[i].setUser(this);
-      Ops[i].setInitial(Vals[i]);
-    }
-    NumOperands = N;
-    assert(NumOperands == N &&
-           "NumOperands wasn't wide enough for its operands!");
-    OperandList = Ops;
-    checkForCycles(this);
   }
 
   /// Release the operands and set this node to have zero operands.
@@ -1012,30 +931,6 @@ inline void SDUse::setNode(SDNode *N) {
   if (N) N->addUse(*this);
 }
 
-/// This class is used for single-operand SDNodes.  This is solely
-/// to allow co-allocation of node operands with the node itself.
-class UnarySDNode : public SDNode {
-  SDUse Op;
-public:
-  UnarySDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
-              SDValue X)
-    : SDNode(Opc, Order, dl, VTs) {
-    InitOperands(&Op, X);
-  }
-};
-
-/// This class is used for two-operand SDNodes.  This is solely
-/// to allow co-allocation of node operands with the node itself.
-class BinarySDNode : public SDNode {
-  SDUse Ops[2];
-public:
-  BinarySDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
-               SDValue X, SDValue Y)
-    : SDNode(Opc, Order, dl, VTs) {
-    InitOperands(Ops, X, Y);
-  }
-};
-
 /// Returns true if the opcode is a binary operation with flags.
 static bool isBinOpWithFlags(unsigned Opcode) {
   switch (Opcode) {
@@ -1060,29 +955,16 @@ static bool isBinOpWithFlags(unsigned Opcode) {
 
 /// This class is an extension of BinarySDNode
 /// used from those opcodes that have associated extra flags.
-class BinaryWithFlagsSDNode : public BinarySDNode {
+class BinaryWithFlagsSDNode : public SDNode {
 public:
   SDNodeFlags Flags;
   BinaryWithFlagsSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
-                        SDValue X, SDValue Y, const SDNodeFlags &NodeFlags)
-      : BinarySDNode(Opc, Order, dl, VTs, X, Y), Flags(NodeFlags) {}
+                        const SDNodeFlags &NodeFlags)
+      : SDNode(Opc, Order, dl, VTs), Flags(NodeFlags) {}
   static bool classof(const SDNode *N) {
     return isBinOpWithFlags(N->getOpcode());
   }
 };
-
-/// This class is used for three-operand SDNodes. This is solely
-/// to allow co-allocation of node operands with the node itself.
-class TernarySDNode : public SDNode {
-  SDUse Ops[3];
-public:
-  TernarySDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
-                SDValue X, SDValue Y, SDValue Z)
-    : SDNode(Opc, Order, dl, VTs) {
-    InitOperands(Ops, X, Y, Z);
-  }
-};
-
 
 /// This class is used to form a handle around another node that
 /// is persistent and is updated across invocations of replaceAllUsesWith on its
@@ -1096,20 +978,28 @@ public:
     // HandleSDNodes are never inserted into the DAG, so they won't be
     // auto-numbered. Use ID 65535 as a sentinel.
     PersistentId = 0xffff;
-    InitOperands(&Op, X);
+
+    // Manually set up the operand list. This node type is special in that it's
+    // always stack allocated and SelectionDAG does not manage its operands.
+    // TODO: This should either (a) not be in the SDNode hierarchy, or (b) not
+    // be so special.
+    Op.setUser(this);
+    Op.setInitial(X);
+    NumOperands = 1;
+    OperandList = &Op;
   }
   ~HandleSDNode();
   const SDValue &getValue() const { return Op; }
 };
 
-class AddrSpaceCastSDNode : public UnarySDNode {
+class AddrSpaceCastSDNode : public SDNode {
 private:
   unsigned SrcAddrSpace;
   unsigned DestAddrSpace;
 
 public:
-  AddrSpaceCastSDNode(unsigned Order, DebugLoc dl, EVT VT, SDValue X,
-                      unsigned SrcAS, unsigned DestAS);
+  AddrSpaceCastSDNode(unsigned Order, DebugLoc dl, EVT VT, unsigned SrcAS,
+                      unsigned DestAS);
 
   unsigned getSrcAddressSpace() const { return SrcAddrSpace; }
   unsigned getDestAddressSpace() const { return DestAddrSpace; }
@@ -1132,9 +1022,6 @@ protected:
 public:
   MemSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
             EVT MemoryVT, MachineMemOperand *MMO);
-
-  MemSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
-            ArrayRef<SDValue> Ops, EVT MemoryVT, MachineMemOperand *MMO);
 
   bool readMem() const { return MMO->isLoad(); }
   bool writeMem() const { return MMO->isStore(); }
@@ -1238,8 +1125,6 @@ public:
 
 /// This is an SDNode representing atomic operations.
 class AtomicSDNode : public MemSDNode {
-  SDUse Ops[4];
-
   /// For cmpxchg instructions, the ordering requirements when a store does not
   /// occur.
   AtomicOrdering FailureOrdering;
@@ -1265,50 +1150,12 @@ class AtomicSDNode : public MemSDNode {
   }
 
 public:
-  // Opc:   opcode for atomic
-  // VTL:    value type list
-  // Chain:  memory chain for operaand
-  // Ptr:    address to update as a SDValue
-  // Cmp:    compare value
-  // Swp:    swap value
-  // SrcVal: address to update as a Value (used for MemOperand)
-  // Align:  alignment of memory
   AtomicSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTL,
-               EVT MemVT, SDValue Chain, SDValue Ptr, SDValue Cmp, SDValue Swp,
-               MachineMemOperand *MMO, AtomicOrdering Ordering,
-               SynchronizationScope SynchScope)
-      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
-    InitAtomic(Ordering, Ordering, SynchScope);
-    InitOperands(Ops, Chain, Ptr, Cmp, Swp);
-  }
-  AtomicSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTL,
-               EVT MemVT,
-               SDValue Chain, SDValue Ptr,
-               SDValue Val, MachineMemOperand *MMO,
-               AtomicOrdering Ordering, SynchronizationScope SynchScope)
-    : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
-    InitAtomic(Ordering, Ordering, SynchScope);
-    InitOperands(Ops, Chain, Ptr, Val);
-  }
-  AtomicSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTL,
-               EVT MemVT,
-               SDValue Chain, SDValue Ptr,
-               MachineMemOperand *MMO,
-               AtomicOrdering Ordering, SynchronizationScope SynchScope)
-    : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
-    InitAtomic(Ordering, Ordering, SynchScope);
-    InitOperands(Ops, Chain, Ptr);
-  }
-  AtomicSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTL, EVT MemVT,
-               const SDValue* AllOps, SDUse *DynOps, unsigned NumOps,
-               MachineMemOperand *MMO,
+               EVT MemVT, MachineMemOperand *MMO,
                AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
                SynchronizationScope SynchScope)
-    : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
+      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
     InitAtomic(SuccessOrdering, FailureOrdering, SynchScope);
-    assert((DynOps || NumOps <= array_lengthof(Ops)) &&
-           "Too many ops for internal storage!");
-    InitOperands(DynOps ? DynOps : Ops, AllOps, NumOps);
   }
 
   const SDValue &getBasePtr() const { return getOperand(1); }
@@ -1356,9 +1203,8 @@ public:
 class MemIntrinsicSDNode : public MemSDNode {
 public:
   MemIntrinsicSDNode(unsigned Opc, unsigned Order, DebugLoc dl, SDVTList VTs,
-                     ArrayRef<SDValue> Ops, EVT MemoryVT,
-                     MachineMemOperand *MMO)
-    : MemSDNode(Opc, Order, dl, VTs, Ops, MemoryVT, MMO) {
+                     EVT MemoryVT, MachineMemOperand *MMO)
+      : MemSDNode(Opc, Order, dl, VTs, MemoryVT, MMO) {
     SubclassData |= 1u << 13;
   }
 
@@ -1381,20 +1227,15 @@ public:
 /// An index of -1 is treated as undef, such that the code generator may put
 /// any value in the corresponding element of the result.
 class ShuffleVectorSDNode : public SDNode {
-  SDUse Ops[2];
-
   // The memory for Mask is owned by the SelectionDAG's OperandAllocator, and
   // is freed when the SelectionDAG object is destroyed.
   const int *Mask;
 protected:
   friend class SelectionDAG;
-  ShuffleVectorSDNode(EVT VT, unsigned Order, DebugLoc dl, SDValue N1,
-                      SDValue N2, const int *M)
-    : SDNode(ISD::VECTOR_SHUFFLE, Order, dl, getSDVTList(VT)), Mask(M) {
-    InitOperands(Ops, N1, N2);
-  }
-public:
+  ShuffleVectorSDNode(EVT VT, unsigned Order, DebugLoc dl, const int *M)
+      : SDNode(ISD::VECTOR_SHUFFLE, Order, dl, getSDVTList(VT)), Mask(M) {}
 
+public:
   ArrayRef<int> getMask() const {
     EVT VT = getValueType(0);
     return makeArrayRef(Mask, VT.getVectorNumElements());
@@ -1825,13 +1666,11 @@ public:
 };
 
 class EHLabelSDNode : public SDNode {
-  SDUse Chain;
   MCSymbol *Label;
   friend class SelectionDAG;
-  EHLabelSDNode(unsigned Order, DebugLoc dl, SDValue ch, MCSymbol *L)
-    : SDNode(ISD::EH_LABEL, Order, dl, getSDVTList(MVT::Other)), Label(L) {
-    InitOperands(&Chain, ch);
-  }
+  EHLabelSDNode(unsigned Order, DebugLoc dl, MCSymbol *L)
+      : SDNode(ISD::EH_LABEL, Order, dl, getSDVTList(MVT::Other)), Label(L) {}
+
 public:
   MCSymbol *getLabel() const { return Label; }
 
@@ -1897,11 +1736,10 @@ class CvtRndSatSDNode : public SDNode {
   ISD::CvtCode CvtCode;
   friend class SelectionDAG;
   explicit CvtRndSatSDNode(EVT VT, unsigned Order, DebugLoc dl,
-                           ArrayRef<SDValue> Ops, ISD::CvtCode Code)
-    : SDNode(ISD::CONVERT_RNDSAT, Order, dl, getSDVTList(VT), Ops),
-      CvtCode(Code) {
-    assert(Ops.size() == 5 && "wrong number of operations");
+                           ISD::CvtCode Code)
+      : SDNode(ISD::CONVERT_RNDSAT, Order, dl, getSDVTList(VT)), CvtCode(Code) {
   }
+
 public:
   ISD::CvtCode getCvtCode() const { return CvtCode; }
 
@@ -1930,24 +1768,13 @@ public:
 
 /// Base class for LoadSDNode and StoreSDNode
 class LSBaseSDNode : public MemSDNode {
-  //! Operand array for load and store
-  /*!
-    \note Moving this array to the base class captures more
-    common functionality shared between LoadSDNode and
-    StoreSDNode
-   */
-  SDUse Ops[4];
 public:
   LSBaseSDNode(ISD::NodeType NodeTy, unsigned Order, DebugLoc dl,
-               SDValue *Operands, unsigned numOperands,
                SDVTList VTs, ISD::MemIndexedMode AM, EVT MemVT,
                MachineMemOperand *MMO)
     : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {
     SubclassData |= AM << 2;
     assert(getAddressingMode() == AM && "MemIndexedMode encoding error!");
-    InitOperands(Ops, Operands, numOperands);
-    assert((getOffset().getOpcode() == ISD::UNDEF || isIndexed()) &&
-           "Only indexed loads and stores have a non-undef offset operand");
   }
 
   const SDValue &getOffset() const {
@@ -1975,10 +1802,9 @@ public:
 /// This class is used to represent ISD::LOAD nodes.
 class LoadSDNode : public LSBaseSDNode {
   friend class SelectionDAG;
-  LoadSDNode(SDValue *ChainPtrOff, unsigned Order, DebugLoc dl, SDVTList VTs,
-             ISD::MemIndexedMode AM, ISD::LoadExtType ETy, EVT MemVT,
-             MachineMemOperand *MMO)
-    : LSBaseSDNode(ISD::LOAD, Order, dl, ChainPtrOff, 3, VTs, AM, MemVT, MMO) {
+  LoadSDNode(unsigned Order, DebugLoc dl, SDVTList VTs, ISD::MemIndexedMode AM,
+             ISD::LoadExtType ETy, EVT MemVT, MachineMemOperand *MMO)
+      : LSBaseSDNode(ISD::LOAD, Order, dl, VTs, AM, MemVT, MMO) {
     SubclassData |= (unsigned short)ETy;
     assert(getExtensionType() == ETy && "LoadExtType encoding error!");
     assert(readMem() && "Load MachineMemOperand is not a load!");
@@ -2003,11 +1829,9 @@ public:
 /// This class is used to represent ISD::STORE nodes.
 class StoreSDNode : public LSBaseSDNode {
   friend class SelectionDAG;
-  StoreSDNode(SDValue *ChainValuePtrOff, unsigned Order, DebugLoc dl,
-              SDVTList VTs, ISD::MemIndexedMode AM, bool isTrunc, EVT MemVT,
-              MachineMemOperand *MMO)
-    : LSBaseSDNode(ISD::STORE, Order, dl, ChainValuePtrOff, 4,
-                   VTs, AM, MemVT, MMO) {
+  StoreSDNode(unsigned Order, DebugLoc dl, SDVTList VTs, ISD::MemIndexedMode AM,
+              bool isTrunc, EVT MemVT, MachineMemOperand *MMO)
+      : LSBaseSDNode(ISD::STORE, Order, dl, VTs, AM, MemVT, MMO) {
     SubclassData |= (unsigned short)isTrunc;
     assert(isTruncatingStore() == isTrunc && "isTrunc encoding error!");
     assert(!readMem() && "Store MachineMemOperand is a load!");
@@ -2031,16 +1855,11 @@ public:
 
 /// This base class is used to represent MLOAD and MSTORE nodes
 class MaskedLoadStoreSDNode : public MemSDNode {
-  // Operands
-  SDUse Ops[4];
 public:
   friend class SelectionDAG;
   MaskedLoadStoreSDNode(ISD::NodeType NodeTy, unsigned Order, DebugLoc dl,
-                        SDValue *Operands, unsigned numOperands, SDVTList VTs,
-                        EVT MemVT, MachineMemOperand *MMO)
-      : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {
-    InitOperands(Ops, Operands, numOperands);
-  }
+                        SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
+      : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {}
 
   // In the both nodes address is Op1, mask is Op2:
   // MaskedLoadSDNode (Chain, ptr, mask, src0), src0 is a passthru value
@@ -2059,11 +1878,9 @@ public:
 class MaskedLoadSDNode : public MaskedLoadStoreSDNode {
 public:
   friend class SelectionDAG;
-  MaskedLoadSDNode(unsigned Order, DebugLoc dl, SDValue *Operands,
-                   unsigned numOperands, SDVTList VTs, ISD::LoadExtType ETy,
-                   EVT MemVT, MachineMemOperand *MMO)
-    : MaskedLoadStoreSDNode(ISD::MLOAD, Order, dl, Operands, numOperands,
-                            VTs, MemVT, MMO) {
+  MaskedLoadSDNode(unsigned Order, DebugLoc dl, SDVTList VTs,
+                   ISD::LoadExtType ETy, EVT MemVT, MachineMemOperand *MMO)
+      : MaskedLoadStoreSDNode(ISD::MLOAD, Order, dl, VTs, MemVT, MMO) {
     SubclassData |= (unsigned short)ETy;
   }
 
@@ -2081,12 +1898,10 @@ class MaskedStoreSDNode : public MaskedLoadStoreSDNode {
 
 public:
   friend class SelectionDAG;
-  MaskedStoreSDNode(unsigned Order, DebugLoc dl, SDValue *Operands,
-                    unsigned numOperands, SDVTList VTs, bool isTrunc, EVT MemVT,
-                    MachineMemOperand *MMO)
-    : MaskedLoadStoreSDNode(ISD::MSTORE, Order, dl, Operands, numOperands,
-                            VTs, MemVT, MMO) {
-      SubclassData |= (unsigned short)isTrunc;
+  MaskedStoreSDNode(unsigned Order, DebugLoc dl, SDVTList VTs, bool isTrunc,
+                    EVT MemVT, MachineMemOperand *MMO)
+      : MaskedLoadStoreSDNode(ISD::MSTORE, Order, dl, VTs, MemVT, MMO) {
+    SubclassData |= (unsigned short)isTrunc;
   }
   /// Return true if the op does a truncation before store.
   /// For integers this is the same as doing a TRUNCATE and storing the result.
@@ -2104,17 +1919,11 @@ public:
 /// MGATHER and MSCATTER nodes
 ///
 class MaskedGatherScatterSDNode : public MemSDNode {
-  // Operands
-  SDUse Ops[5];
 public:
   friend class SelectionDAG;
   MaskedGatherScatterSDNode(ISD::NodeType NodeTy, unsigned Order, DebugLoc dl,
-                            ArrayRef<SDValue> Operands, SDVTList VTs, EVT MemVT,
-                            MachineMemOperand *MMO)
-    : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {
-    assert(Operands.size() == 5 && "Incompatible number of operands");
-    InitOperands(Ops, Operands.data(), Operands.size());
-  }
+                            SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
+      : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {}
 
   // In the both nodes address is Op1, mask is Op2:
   // MaskedGatherSDNode  (Chain, src0, mask, base, index), src0 is a passthru value
@@ -2136,19 +1945,9 @@ public:
 class MaskedGatherSDNode : public MaskedGatherScatterSDNode {
 public:
   friend class SelectionDAG;
-  MaskedGatherSDNode(unsigned Order, DebugLoc dl, ArrayRef<SDValue> Operands,
-                     SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
-    : MaskedGatherScatterSDNode(ISD::MGATHER, Order, dl, Operands, VTs, MemVT,
-                                MMO) {
-    assert(getValue().getValueType() == getValueType(0) &&
-           "Incompatible type of the PassThru value in MaskedGatherSDNode");
-    assert(getMask().getValueType().getVectorNumElements() ==
-           getValueType(0).getVectorNumElements() &&
-           "Vector width mismatch between mask and data");
-    assert(getIndex().getValueType().getVectorNumElements() ==
-           getValueType(0).getVectorNumElements() &&
-           "Vector width mismatch between index and data");
-  }
+  MaskedGatherSDNode(unsigned Order, DebugLoc dl, SDVTList VTs, EVT MemVT,
+                     MachineMemOperand *MMO)
+      : MaskedGatherScatterSDNode(ISD::MGATHER, Order, dl, VTs, MemVT, MMO) {}
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MGATHER;
@@ -2161,17 +1960,9 @@ class MaskedScatterSDNode : public MaskedGatherScatterSDNode {
 
 public:
   friend class SelectionDAG;
-  MaskedScatterSDNode(unsigned Order, DebugLoc dl,ArrayRef<SDValue> Operands,
-                      SDVTList VTs, EVT MemVT, MachineMemOperand *MMO)
-    : MaskedGatherScatterSDNode(ISD::MSCATTER, Order, dl, Operands, VTs, MemVT,
-                                MMO) {
-    assert(getMask().getValueType().getVectorNumElements() ==
-           getValue().getValueType().getVectorNumElements() &&
-           "Vector width mismatch between mask and data");
-    assert(getIndex().getValueType().getVectorNumElements() ==
-           getValue().getValueType().getVectorNumElements() &&
-           "Vector width mismatch between index and data");
-  }
+  MaskedScatterSDNode(unsigned Order, DebugLoc dl, SDVTList VTs, EVT MemVT,
+                      MachineMemOperand *MMO)
+      : MaskedGatherScatterSDNode(ISD::MSCATTER, Order, dl, VTs, MemVT, MMO) {}
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MSCATTER;
@@ -2189,10 +1980,6 @@ private:
   friend class SelectionDAG;
   MachineSDNode(unsigned Opc, unsigned Order, const DebugLoc DL, SDVTList VTs)
     : SDNode(Opc, Order, DL, VTs), MemRefs(nullptr), MemRefsEnd(nullptr) {}
-
-  /// Operands for this instruction, if they fit here. If
-  /// they don't, this field is unused.
-  SDUse LocalOperands[4];
 
   /// Memory reference descriptions for this instruction.
   mmo_iterator MemRefs;
@@ -2268,8 +2055,13 @@ template <> struct GraphTraits<SDNode*> {
   }
 };
 
-/// The largest SDNode class.
-typedef MaskedGatherScatterSDNode LargestSDNode;
+/// A representation of the largest SDNode, for use in sizeof().
+///
+/// This needs to be a union because the largest node differs on 32 bit systems
+/// with 4 and 8 byte pointer alignment, respectively.
+typedef AlignedCharArrayUnion<AtomicSDNode, TargetIndexSDNode,
+                              BlockAddressSDNode, GlobalAddressSDNode>
+    LargestSDNode;
 
 /// The SDNode class with the greatest alignment requirement.
 typedef GlobalAddressSDNode MostAlignedSDNode;

@@ -24,17 +24,7 @@ class AssumptionCacheTracker;
 class CallSite;
 class DataLayout;
 class InlineCost;
-class BlockFrequencyAnalysis;
 template <class PtrType, unsigned SmallSize> class SmallPtrSet;
-
-// Functor invoked when a block is cloned during inlining.
-typedef std::function<void(const BasicBlock *, const BasicBlock *)>
-    BlockCloningFunctor;
-// Functor invoked when a function is inlined inside the basic block
-// containing the call.
-typedef std::function<void(BasicBlock *, Function *)> FunctionCloningFunctor;
-// Functor invoked when a function gets deleted during inlining.
-typedef std::function<void(Function *)> FunctionDeletedFunctor;
 
 /// Inliner - This class contains all of the helper code which is used to
 /// perform the inlining operations that do not depend on the policy.
@@ -79,28 +69,9 @@ private:
   /// shouldInline - Return true if the inliner should attempt to
   /// inline at the given CallSite.
   bool shouldInline(CallSite CS);
-  /// Set the BFI of \p Dst to be the same as \p Src.
-  void copyBlockFrequency(BasicBlock *Src, BasicBlock *Dst);
-  /// Invalidates BFI for function \p F.
-  void invalidateBFI(Function *F);
-  /// Invalidates BFI for all functions in  \p SCC.
-  void invalidateBFI(CallGraphSCC &SCC);
-  /// Update function entry count for \p Callee which has been inlined into
-  /// \p CallBB.
-  void updateEntryCount(BasicBlock *CallBB, Function *Callee);
-  /// \brief Update block frequency of an inlined block.
-  /// This method updates the block frequency of \p NewBB which is a clone of
-  /// \p OrigBB when the callsite \p CS gets inlined. The frequency of \p NewBB
-  /// is computed as follows:
-  /// Freq(NewBB) = Freq(OrigBB) * CallSiteFreq / CalleeEntryFreq.
-  void updateBlockFreq(CallSite &CS, const BasicBlock *OrigBB,
-                       const BasicBlock *NewBB);
 
 protected:
   AssumptionCacheTracker *ACT;
-  std::unique_ptr<BlockFrequencyAnalysis> BFA;
-  /// Are we using profile guided optimization?
-  bool HasProfileData;
 };
 
 } // End llvm namespace

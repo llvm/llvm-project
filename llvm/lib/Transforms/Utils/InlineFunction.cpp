@@ -1319,7 +1319,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
   // If IFI has any state in it, zap it before we fill it in.
   IFI.reset();
-
+  
   const Function *CalledFunc = CS.getCalledFunction();
   if (!CalledFunc ||              // Can't inline external function or indirect
       CalledFunc->isDeclaration() || // call, or call to a vararg function!
@@ -1486,7 +1486,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     // happy with whatever the cloner can do.
     CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
                               /*ModuleLevelChanges=*/false, Returns, ".i",
-                              &InlinedFunctionInfo, TheCall, IFI.Ftor);
+                              &InlinedFunctionInfo, TheCall);
 
     // Remember the first block that is newly cloned over.
     FirstNewBlock = LastBlock; ++FirstNewBlock;
@@ -1994,11 +1994,8 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
   // If we inlined any musttail calls and the original return is now
   // unreachable, delete it.  It can only contain a bitcast and ret.
-  if (InlinedMustTailCalls &&
-      pred_begin(AfterCallBB) == pred_end(AfterCallBB)) {
-    IFI.CallSuccessorBlockDeleted = true;
+  if (InlinedMustTailCalls && pred_begin(AfterCallBB) == pred_end(AfterCallBB))
     AfterCallBB->eraseFromParent();
-  }
 
   // We should always be able to fold the entry block of the function into the
   // single predecessor of the block...

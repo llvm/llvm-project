@@ -105,10 +105,17 @@ private:
   /// started.
   BitVector ReservedRegs;
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
+  typedef DenseMap<unsigned, unsigned> VRegToSizeMap;
   /// Map generic virtual registers to their actual size.
-  DenseMap<unsigned, unsigned> VRegToSize;
-#endif
+  mutable std::unique_ptr<VRegToSizeMap> VRegToSize;
+
+  /// Accessor for VRegToSize. This accessor should only be used
+  /// by global-isel related work.
+  VRegToSizeMap &getVRegToSize() const {
+    if (!VRegToSize)
+      VRegToSize.reset(new VRegToSizeMap);
+    return *VRegToSize.get();
+  }
 
   /// Keep track of the physical registers that are live in to the function.
   /// Live in values are typically arguments in registers.  LiveIn values are
@@ -592,15 +599,18 @@ public:
   ///
   unsigned createVirtualRegister(const TargetRegisterClass *RegClass);
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
   /// Get the size of \p VReg or 0 if VReg is not a generic
   /// (target independent) virtual register.
   unsigned getSize(unsigned VReg) const;
 
+  /// Set the size of \p VReg to \p Size.
+  /// Although the size should be set at build time, mir infrastructure
+  /// is not yet able to do it.
+  void setSize(unsigned VReg, unsigned Size);
+
   /// Create and return a new generic virtual register with a size of \p Size.
   /// \pre Size > 0.
   unsigned createGenericVirtualRegister(unsigned Size);
-#endif
 
   /// getNumVirtRegs - Return the number of virtual registers created.
   ///

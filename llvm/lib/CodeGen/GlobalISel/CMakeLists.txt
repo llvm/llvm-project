@@ -18,7 +18,7 @@ endif()
 # not ask for it. 
 add_llvm_library(LLVMGlobalISel
         ${GLOBAL_ISEL_BUILD_FILES}
-        EmptyFile.cpp
+        GlobalISel.cpp
   )
 
 add_dependencies(LLVMGlobalISel intrinsics_gen)

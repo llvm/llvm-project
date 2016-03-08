@@ -631,7 +631,7 @@ SDValue WebAssemblyTargetLowering::LowerExternalSymbol(
 SDValue WebAssemblyTargetLowering::LowerJumpTable(SDValue Op,
                                                   SelectionDAG &DAG) const {
   // There's no need for a Wrapper node because we always incorporate a jump
-  // table operand into a TABLESWITCH instruction, rather than ever
+  // table operand into a BR_TABLE instruction, rather than ever
   // materializing it in a register.
   const JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
   return DAG.getTargetJumpTable(JT->getIndex(), Op.getValueType(),
@@ -653,15 +653,15 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
   MachineJumpTableInfo *MJTI = DAG.getMachineFunction().getJumpTableInfo();
   const auto &MBBs = MJTI->getJumpTables()[JT->getIndex()].MBBs;
 
+  // Add an operand for each case.
+  for (auto MBB : MBBs) Ops.push_back(DAG.getBasicBlock(MBB));
+
   // TODO: For now, we just pick something arbitrary for a default case for now.
   // We really want to sniff out the guard and put in the real default case (and
   // delete the guard).
   Ops.push_back(DAG.getBasicBlock(MBBs[0]));
 
-  // Add an operand for each case.
-  for (auto MBB : MBBs) Ops.push_back(DAG.getBasicBlock(MBB));
-
-  return DAG.getNode(WebAssemblyISD::TABLESWITCH, DL, MVT::Other, Ops);
+  return DAG.getNode(WebAssemblyISD::BR_TABLE, DL, MVT::Other, Ops);
 }
 
 SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,

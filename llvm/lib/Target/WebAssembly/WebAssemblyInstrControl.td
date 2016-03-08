@@ -39,20 +39,20 @@ def : Pat<(brcond (i32 (seteq I32:$cond, 0)), bb:$dst),
 let Defs = [ARGUMENTS] in {
 
 // TODO: SelectionDAG's lowering insists on using a pointer as the index for
-// jump tables, so in practice we don't ever use TABLESWITCH_I64 in wasm32 mode
+// jump tables, so in practice we don't ever use BR_TABLE_I64 in wasm32 mode
 // currently.
 // Set TSFlags{0} to 1 to indicate that the variable_ops are immediates.
 // Set TSFlags{1} to 1 to indicate that the immediates represent labels.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
-def TABLESWITCH_I32 : I<(outs), (ins I32:$index, bb_op:$default, variable_ops),
-                        [(WebAssemblytableswitch I32:$index, bb:$default)],
-                        "tableswitch\t$index, $default"> {
+def BR_TABLE_I32 : I<(outs), (ins I32:$index, variable_ops),
+                     [(WebAssemblybr_table I32:$index)],
+                     "br_table \t$index"> {
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
-def TABLESWITCH_I64 : I<(outs), (ins I64:$index, bb_op:$default, variable_ops),
-                        [(WebAssemblytableswitch I64:$index, bb:$default)],
-                        "tableswitch\t$index, $default"> {
+def BR_TABLE_I64 : I<(outs), (ins I64:$index, variable_ops),
+                     [(WebAssemblybr_table I64:$index)],
+                     "br_table \t$index"> {
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }

@@ -378,6 +378,10 @@ public:
     }
   }
 
+  // Disable use of sized deallocation due to overallocation of PPCOperand
+  // objects in CreateTokenWithStringCopy.
+  void operator delete(void *p) { ::operator delete(p); }
+
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
 
@@ -488,6 +492,9 @@ public:
   bool isS16ImmX4() const { return Kind == Expression ||
                                    (Kind == Immediate && isInt<16>(getImm()) &&
                                     (getImm() & 3) == 0); }
+  bool isS16ImmX16() const { return Kind == Expression ||
+                                    (Kind == Immediate && isInt<16>(getImm()) &&
+                                     (getImm() & 15) == 0); }
   bool isS17Imm() const {
     switch (Kind) {
       case Expression:

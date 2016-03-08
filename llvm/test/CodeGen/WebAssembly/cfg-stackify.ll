@@ -895,7 +895,7 @@ end:
 ; CHECK-NOT:   block
 ; CHECK:       br_if    5, {{[^,]+}}{{$}}
 ; CHECK-NOT:   block
-; CHECK:       tableswitch  {{[^,]+}}, 0, 0, 1, 5, 2, 4{{$}}
+; CHECK:       br_table  {{[^,]+}}, 0, 1, 5, 2, 4, 0{{$}}
 ; CHECK-NEXT:  .LBB19_5:
 ; CHECK-NEXT:  end_loop{{$}}
 ; CHECK-NEXT:  end_loop{{$}}
@@ -919,7 +919,7 @@ end:
 ; OPT-NOT:   block
 ; OPT:       br_if    5, {{[^,]+}}{{$}}
 ; OPT-NOT:   block
-; OPT:       tableswitch  {{[^,]+}}, 0, 0, 1, 5, 2, 4{{$}}
+; OPT:       br_table  {{[^,]+}}, 0, 1, 5, 2, 4, 0{{$}}
 ; OPT-NEXT:  .LBB19_5:
 ; OPT-NEXT:  end_loop{{$}}
 ; OPT-NEXT:  end_loop{{$}}

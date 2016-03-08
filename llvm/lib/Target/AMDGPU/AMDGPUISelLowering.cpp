@@ -647,7 +647,6 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::SIGN_EXTEND_INREG: return LowerSIGN_EXTEND_INREG(Op, DAG);
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR: return LowerEXTRACT_SUBVECTOR(Op, DAG);
-  case ISD::FrameIndex: return LowerFrameIndex(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::UDIVREM: return LowerUDIVREM(Op, DAG);
   case ISD::SDIVREM: return LowerSDIVREM(Op, DAG);
@@ -888,22 +887,6 @@ SDValue AMDGPUTargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
                             VT.getVectorNumElements());
 
   return DAG.getNode(ISD::BUILD_VECTOR, SDLoc(Op), Op.getValueType(), Args);
-}
-
-SDValue AMDGPUTargetLowering::LowerFrameIndex(SDValue Op,
-                                              SelectionDAG &DAG) const {
-
-  MachineFunction &MF = DAG.getMachineFunction();
-  const AMDGPUFrameLowering *TFL = Subtarget->getFrameLowering();
-
-  FrameIndexSDNode *FIN = cast<FrameIndexSDNode>(Op);
-
-  unsigned FrameIndex = FIN->getIndex();
-  unsigned IgnoredFrameReg;
-  unsigned Offset =
-      TFL->getFrameIndexReference(MF, FrameIndex, IgnoredFrameReg);
-  return DAG.getConstant(Offset * 4 * TFL->getStackWidth(MF), SDLoc(Op),
-                         Op.getValueType());
 }
 
 SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,

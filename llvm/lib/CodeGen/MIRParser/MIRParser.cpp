@@ -347,12 +347,19 @@ bool MIRParserImpl::initializeRegisterInfo(MachineFunction &MF,
   SMDiagnostic Error;
   // Parse the virtual register information.
   for (const auto &VReg : YamlMF.VirtualRegisters) {
-    const auto *RC = getRegClass(MF, VReg.Class.Value);
-    if (!RC)
-      return error(VReg.Class.SourceRange.Start,
-                   Twine("use of undefined register class '") +
-                       VReg.Class.Value + "'");
-    unsigned Reg = RegInfo.createVirtualRegister(RC);
+    unsigned Reg;
+    if (StringRef(VReg.Class.Value).equals("_")) {
+      // This is a generic virtual register.
+      // The size will be set appropriately when we reach the definition.
+      Reg = RegInfo.createGenericVirtualRegister(/*Size*/ 1);
+    } else {
+      const auto *RC = getRegClass(MF, VReg.Class.Value);
+      if (!RC)
+        return error(VReg.Class.SourceRange.Start,
+                     Twine("use of undefined register class '") +
+                         VReg.Class.Value + "'");
+      Reg = RegInfo.createVirtualRegister(RC);
+    }
     if (!PFS.VirtualRegisterSlots.insert(std::make_pair(VReg.ID.Value, Reg))
              .second)
       return error(VReg.ID.SourceRange.Start,

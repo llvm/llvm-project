@@ -3272,9 +3272,12 @@ void Comdat::print(raw_ostream &ROS, bool /*IsForDebug*/) const {
   ROS << '\n';
 }
 
-void Type::print(raw_ostream &OS, bool /*IsForDebug*/) const {
+void Type::print(raw_ostream &OS, bool /*IsForDebug*/, bool NoDetails) const {
   TypePrinting TP;
   TP.print(const_cast<Type*>(this), OS);
+
+  if (NoDetails)
+    return;
 
   // If the type is a named struct type, print the body as well.
   if (StructType *STy = dyn_cast<StructType>(const_cast<Type*>(this)))
