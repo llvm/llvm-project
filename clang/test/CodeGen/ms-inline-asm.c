@@ -86,7 +86,7 @@ void t9() {
     __asm { pop ebx }
   }
 // CHECK: t9
-// CHECK: call void asm sideeffect inteldialect "push ebx\0A\09mov ebx, $$0x07\0A\09pop ebx", "~{ebx},~{esp},~{dirflag},~{fpsr},~{flags}"()
+// CHECK: call void asm sideeffect inteldialect "push ebx\0A\09mov ebx, $$0x07\0A\09pop ebx\0A\09", "~{ebx},~{esp},~{dirflag},~{fpsr},~{flags}"()
 }
 
 unsigned t10(void) {

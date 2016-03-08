@@ -1451,6 +1451,7 @@ void CodeGenModule::ConstructAttributeList(
 
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl();
 
+  bool HasAnyX86InterruptAttr = false;
   // FIXME: handle sseregparm someday...
   if (TargetDecl) {
     if (TargetDecl->hasAttr<ReturnsTwiceAttr>())
@@ -1488,6 +1489,7 @@ void CodeGenModule::ConstructAttributeList(
     if (TargetDecl->hasAttr<ReturnsNonNullAttr>())
       RetAttrs.addAttribute(llvm::Attribute::NonNull);
 
+    HasAnyX86InterruptAttr = TargetDecl->hasAttr<AnyX86InterruptAttr>();
     HasOptnone = TargetDecl->hasAttr<OptimizeNoneAttr>();
   }
 
@@ -1527,10 +1529,11 @@ void CodeGenModule::ConstructAttributeList(
     }
 
     bool DisableTailCalls =
-        CodeGenOpts.DisableTailCalls ||
+        CodeGenOpts.DisableTailCalls || HasAnyX86InterruptAttr ||
         (TargetDecl && TargetDecl->hasAttr<DisableTailCallsAttr>());
-    FuncAttrs.addAttribute("disable-tail-calls",
-                           llvm::toStringRef(DisableTailCalls));
+    FuncAttrs.addAttribute(
+        "disable-tail-calls",
+        llvm::toStringRef(DisableTailCalls));
 
     FuncAttrs.addAttribute("less-precise-fpmad",
                            llvm::toStringRef(CodeGenOpts.LessPreciseFPMAD));

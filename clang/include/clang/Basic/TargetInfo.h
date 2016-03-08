@@ -873,6 +873,8 @@ public:
 
   /// \brief Return the register number that __builtin_eh_return_regno would
   /// return with the specified argument.
+  /// This corresponds with TargetLowering's getExceptionPointerRegister
+  /// and getExceptionSelectorRegister in the backend.
   virtual int getEHDataRegisterNumber(unsigned RegNo) const {
     return -1;
   }

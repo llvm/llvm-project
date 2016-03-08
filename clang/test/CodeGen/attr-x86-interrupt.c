@@ -15,12 +15,20 @@ __attribute__((interrupt)) void foo8(int *a) {}
 // X86_64_LINUX: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32*, i64)* @foo7 to i8*), i8* bitcast (void (i32*)* @foo8 to i8*)], section "llvm.metadata"
 // X86_64_LINUX: define x86_intrcc void @foo7(i32* %{{.+}}, i64 %{{.+}})
 // X86_64_LINUX: define x86_intrcc void @foo8(i32* %{{.+}})
+// X86_64_LINUX: "disable-tail-calls"="true"
+// X86_64_LINUX-NOT: "disable-tail-calls"="false"
 // X86_LINUX: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32*, i32)* @foo7 to i8*), i8* bitcast (void (i32*)* @foo8 to i8*)], section "llvm.metadata"
 // X86_LINUX: define x86_intrcc void @foo7(i32* %{{.+}}, i32 %{{.+}})
 // X86_LINUX: define x86_intrcc void @foo8(i32* %{{.+}})
+// X86_LINUX: "disable-tail-calls"="true"
+// X86_LINUX-NOT: "disable-tail-calls"="false"
 // X86_64_WIN: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32*, i64)* @foo7 to i8*), i8* bitcast (void (i32*)* @foo8 to i8*)], section "llvm.metadata"
 // X86_64_WIN: define x86_intrcc void @foo7(i32* %{{.+}}, i64 %{{.+}})
 // X86_64_WIN: define x86_intrcc void @foo8(i32* %{{.+}})
+// X86_64_Win: "disable-tail-calls"="true"
+// X86_64_Win-NOT: "disable-tail-calls"="false"
 // X86_WIN: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32*, i32)* @foo7 to i8*), i8* bitcast (void (i32*)* @foo8 to i8*)], section "llvm.metadata"
 // X86_WIN: define x86_intrcc void @foo7(i32* %{{.+}}, i32 %{{.+}})
 // X86_WIN: define x86_intrcc void @foo8(i32* %{{.+}})
+// X86_Win: "disable-tail-calls"="true"
+// X86_Win-NOT: "disable-tail-calls"="false"

@@ -2364,6 +2364,7 @@ public:
   void EmitOMPTaskLoopDirective(const OMPTaskLoopDirective &S);
   void EmitOMPTaskLoopSimdDirective(const OMPTaskLoopSimdDirective &S);
   void EmitOMPDistributeDirective(const OMPDistributeDirective &S);
+  void EmitOMPDistributeLoop(const OMPDistributeDirective &S);
 
   /// \brief Emit inner loop of the worksharing/simd construct.
   ///
@@ -2393,11 +2394,18 @@ private:
   /// \return true, if this construct has any lastprivate clause, false -
   /// otherwise.
   bool EmitOMPWorksharingLoop(const OMPLoopDirective &S);
+  void EmitOMPOuterLoop(bool IsMonotonic, bool DynamicOrOrdered,
+      const OMPLoopDirective &S, OMPPrivateScope &LoopScope, bool Ordered,
+      Address LB, Address UB, Address ST, Address IL, llvm::Value *Chunk);
   void EmitOMPForOuterLoop(OpenMPScheduleClauseKind ScheduleKind,
                            bool IsMonotonic, const OMPLoopDirective &S,
                            OMPPrivateScope &LoopScope, bool Ordered, Address LB,
                            Address UB, Address ST, Address IL,
                            llvm::Value *Chunk);
+  void EmitOMPDistributeOuterLoop(
+      OpenMPDistScheduleClauseKind ScheduleKind,
+      const OMPDistributeDirective &S, OMPPrivateScope &LoopScope,
+      Address LB, Address UB, Address ST, Address IL, llvm::Value *Chunk);
   /// \brief Emit code for sections directive.
   void EmitSections(const OMPExecutableDirective &S);
 

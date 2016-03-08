@@ -2491,6 +2491,12 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const AttributeList &Attr) 
       return;
     }
   
+  // If this is spelled as the standard C++1z attribute, but not in C++1z, warn
+  // about using it as an extension.
+  if (!S.getLangOpts().CPlusPlus1z && Attr.isCXX11Attribute() &&
+      !Attr.getScopeName())
+    S.Diag(Attr.getLoc(), diag::ext_cxx1z_attr) << Attr.getName();
+
   D->addAttr(::new (S.Context) 
              WarnUnusedResultAttr(Attr.getRange(), S.Context,
                                   Attr.getAttributeSpellingListIndex()));
@@ -5423,7 +5429,7 @@ static void handleDeprecatedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   if (!S.getLangOpts().CPlusPlus14)
     if (Attr.isCXX11Attribute() &&
         !(Attr.hasScope() && Attr.getScopeName()->isStr("gnu")))
-      S.Diag(Attr.getLoc(), diag::ext_deprecated_attr_is_a_cxx14_extension);
+      S.Diag(Attr.getLoc(), diag::ext_cxx14_attr) << Attr.getName();
 
   handleAttrWithMessage<DeprecatedAttr>(S, D, Attr);
 }
@@ -5585,8 +5591,13 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
   switch (Attr.getKind()) {
   default:
-    // Type attributes are handled elsewhere; silently move on.
-    assert(Attr.isTypeAttr() && "Non-type attribute not handled");
+    if (!Attr.isStmtAttr()) {
+      // Type attributes are handled elsewhere; silently move on.
+      assert(Attr.isTypeAttr() && "Non-type attribute not handled");
+      break;
+    }
+    S.Diag(Attr.getLoc(), diag::err_stmt_attribute_invalid_on_decl)
+        << Attr.getName() << D->getLocation();
     break;
   case AttributeList::AT_Interrupt:
     handleInterruptAttr(S, D, Attr);

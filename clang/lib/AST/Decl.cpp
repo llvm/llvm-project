@@ -2935,16 +2935,22 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
   return RTRange;
 }
 
-bool FunctionDecl::hasUnusedResultAttr() const {
+const Attr *FunctionDecl::getUnusedResultAttr() const {
   QualType RetType = getReturnType();
   if (RetType->isRecordType()) {
     const CXXRecordDecl *Ret = RetType->getAsCXXRecordDecl();
     const auto *MD = dyn_cast<CXXMethodDecl>(this);
-    if (Ret && Ret->hasAttr<WarnUnusedResultAttr>() &&
-        !(MD && MD->getCorrespondingMethodInClass(Ret, true)))
-      return true;
+    if (Ret && !(MD && MD->getCorrespondingMethodInClass(Ret, true))) {
+      if (const auto *R = Ret->getAttr<WarnUnusedResultAttr>())
+        return R;
+    }
+  } else if (const auto *ET = RetType->getAs<EnumType>()) {
+    if (const EnumDecl *ED = ET->getDecl()) {
+      if (const auto *R = ED->getAttr<WarnUnusedResultAttr>())
+        return R;
+    }
   }
-  return hasAttr<WarnUnusedResultAttr>();
+  return getAttr<WarnUnusedResultAttr>();
 }
 
 /// \brief For an inline function definition in C, or for a gnu_inline function

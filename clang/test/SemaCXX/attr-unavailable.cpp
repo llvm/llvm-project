@@ -116,3 +116,26 @@ void calls_unavail_templated() {
 void unavail_calls_unavail_templated() __attribute__((unavailable)) {
   unavail_templated(5);
 }
+
+void unavailable() __attribute((unavailable)); // \
+       expected-note 4{{candidate function has been explicitly made unavailable}}
+struct AvailableStruct {
+  void calls_unavailable() { unavailable(); } // \
+  expected-error{{call to unavailable function 'unavailable'}}
+  template <class U> void calls_unavailable() { unavailable(); } // \
+  expected-error{{call to unavailable function 'unavailable'}}
+};
+template <class T> struct AvailableStructTemplated {
+  void calls_unavailable() { unavailable(); } // \
+  expected-error{{call to unavailable function 'unavailable'}}
+  template <class U> void calls_unavailable() { unavailable(); } // \
+  expected-error{{call to unavailable function 'unavailable'}}
+};
+struct __attribute__((unavailable)) UnavailableStruct {
+  void calls_unavailable() { unavailable(); }
+  template <class U> void calls_unavailable() { unavailable(); }
+};
+template <class T> struct __attribute__((unavailable)) UnavailableStructTemplated {
+  void calls_unavailable() { unavailable(); }
+  template <class U> void calls_unavailable() { unavailable(); }
+};

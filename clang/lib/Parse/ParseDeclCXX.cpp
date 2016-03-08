@@ -3637,7 +3637,8 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   case AttributeList::AT_FallThrough:
   case AttributeList::AT_CXX11NoReturn:
     return true;
-
+  case AttributeList::AT_WarnUnusedResult:
+    return !ScopeName && AttrName->getName().equals("nodiscard");
   default:
     return false;
   }

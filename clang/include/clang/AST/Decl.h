@@ -2025,12 +2025,16 @@ public:
     return getType()->getAs<FunctionType>()->getCallResultType(getASTContext());
   }
 
+  /// \brief Returns the WarnUnusedResultAttr that is either declared on this
+  /// function, or its return type declaration.
+  const Attr *getUnusedResultAttr() const;
+
   /// \brief Returns true if this function or its return type has the
   /// warn_unused_result attribute. If the return type has the attribute and
   /// this function is a method of the return type's class, then false will be
   /// returned to avoid spurious warnings on member methods such as assignment
   /// operators.
-  bool hasUnusedResultAttr() const;
+  bool hasUnusedResultAttr() const { return getUnusedResultAttr() != nullptr; }
 
   /// \brief Returns the storage class as written in the source. For the
   /// computed linkage of symbol, see getLinkage.

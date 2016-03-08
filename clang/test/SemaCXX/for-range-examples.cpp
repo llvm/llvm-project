@@ -226,7 +226,7 @@ namespace test7 {
     // we check the alignment attribute before we perform the auto
     // deduction.
     for (d alignas(1) : arr) {} // expected-error {{requires type for loop variable}}
-    for (e [[deprecated]] : arr) { e = 0; } // expected-warning{{use of the 'deprecated' attribute is a C++14 extension}} expected-warning {{deprecated}} expected-note {{here}} expected-error {{requires type for loop variable}}
+    for (e [[deprecated]] : arr) { e = 0; } // expected-warning {{deprecated}} expected-note {{here}} expected-error {{requires type for loop variable}}
   }
 }
 

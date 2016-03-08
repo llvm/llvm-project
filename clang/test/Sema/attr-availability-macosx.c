@@ -22,6 +22,16 @@ void test() {
   f6(0); // expected-error{{'f6' is unavailable: introduced in OS X 10.6}}
 }
 
+struct __attribute__((availability(macosx,strict,introduced=10.6)))
+  not_yet_introduced_struct; // \
+    expected-note{{'not_yet_introduced_struct' has been explicitly marked unavailable here}}
+
+void uses_not_introduced_struct(struct not_yet_introduced_struct *); // \
+    expected-error{{'not_yet_introduced_struct' is unavailable: introduced in OS X 10.6}}
+
+__attribute__((availability(macosx,strict,introduced=10.6)))
+void uses_not_introduced_struct_same_availability(struct not_yet_introduced_struct *);
+
 // rdar://10535640
 
 enum {

@@ -2364,4 +2364,14 @@ __m512d test_mm512_maskz_movedup_pd(__mmask8 __U, __m512d __A) {
   return _mm512_maskz_movedup_pd(__U, __A); 
 }
 
+int test_mm_comi_round_sd(__m128d __A, __m128d __B) {
+  // CHECK-LABEL: @test_mm_comi_round_sd
+  // CHECK: @llvm.x86.avx512.vcomi.sd
+  return _mm_comi_round_sd(__A, __B, 5, 3); 
+}
 
+int test_mm_comi_round_ss(__m128 __A, __m128 __B) {
+  // CHECK-LABEL: @test_mm_comi_round_ss
+  // CHECK: @llvm.x86.avx512.vcomi.ss
+  return _mm_comi_round_ss(__A, __B, 5, 3); 
+}
