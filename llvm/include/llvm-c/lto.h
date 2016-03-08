@@ -40,8 +40,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 17
-
+#define LTO_API_VERSION 18
 /**
  * \since prior to LTO_API_VERSION=3
  */
@@ -90,6 +89,9 @@ typedef struct LLVMOpaqueLTOModule *lto_module_t;
 
 /** opaque reference to a code generator */
 typedef struct LLVMOpaqueLTOCodeGenerator *lto_code_gen_t;
+
+/** opaque reference to a thin code generator */
+typedef struct LLVMOpaqueThinLTOCodeGenerator *thinlto_code_gen_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -547,6 +549,193 @@ lto_codegen_set_should_internalize(lto_code_gen_t cg,
 extern void
 lto_codegen_set_should_embed_uselists(lto_code_gen_t cg,
                                       lto_bool_t ShouldEmbedUselists);
+
+/**
+ * @}
+ * @defgroup LLVMCLTO ThinLTO
+ * @ingroup LLVMC
+ *
+ * @{
+ */
+
+/**
+ * Type to wrap a single object returned by ThinLTO.
+ *
+ * \since LTO_API_VERSION=18
+ */
+typedef struct {
+  void *Buffer;
+  size_t Size;
+} LTOObjectBuffer;
+
+/**
+ * Instantiates a ThinLTO code generator.
+ * Returns NULL on error (check lto_get_error_message() for details).
+ *
+ *
+ * The ThinLTOCodeGenerator is not intended to be reuse for multiple
+ * compilation: the model is that the client adds modules to the generator and
+ * ask to perform the ThinLTO optimizations / codegen, and finally destroys the
+ * codegenerator.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern thinlto_code_gen_t thinlto_create_codegen();
+
+/**
+ * Frees the generator and all memory it internally allocated.
+ * Upon return the thinlto_code_gen_t is no longer valid.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_dispose(thinlto_code_gen_t cg);
+
+/**
+ * Add a module to a ThinLTO code generator. Identifier has to be unique among
+ * all the modules in a code generator. The data buffer stays owned by the
+ * client, and is expected to be available for the entire lifetime of the
+ * thinlto_code_gen_t it is added to.
+ *
+ * On failure, returns NULL (check lto_get_error_message() for details).
+ *
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_add_module(thinlto_code_gen_t cg,
+                                       const char *identifier, const char *data,
+                                       int length);
+
+/**
+ * Optimize and codegen all the modules added to the codegenerator using
+ * ThinLTO. Resulting objects are accessible using thinlto_module_get_object().
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_process(thinlto_code_gen_t cg);
+
+/**
+ * Returns the number of object files produced by the ThinLTO CodeGenerator.
+ *
+ * It usually matches the number of input files, but this is not a guarantee of
+ * the API and may change in future implementation, so the client should not
+ * assume it.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern unsigned int thinlto_module_get_num_objects(thinlto_code_gen_t cg);
+
+/**
+ * Returns a reference to the ith object file produced by the ThinLTO
+ * CodeGenerator.
+ *
+ * Client should use \p thinlto_module_get_num_objects() to get the number of
+ * available objects.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern LTOObjectBuffer thinlto_module_get_object(thinlto_code_gen_t cg,
+                                                 unsigned int index);
+
+/**
+ * Sets which PIC code model to generate.
+ * Returns true on error (check lto_get_error_message() for details).
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
+                                                lto_codegen_model);
+
+/**
+ * Sets the path to a directory to use as a cache storage for incremental build.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
+                                          const char *cache_dir);
+
+/**
+ * Sets the cache pruning interval (in seconds). A negative value disable the
+ * pruning (default).
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
+                                                       int interval);
+
+/**
+ * Sets the maximum cache size, in term of percentage of the free space on the
+ * the disk. Set to 100 to indicate no limit, 50 to indicate that the cache size
+ * will not increase over the free space. A value over 100 will be reduced to 
+ * 100.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void
+thinlto_codegen_set_max_cache_size_relative_to_free_space(thinlto_code_gen_t cg,
+                                                          unsigned percentage);
+
+/**
+ * Sets the expiration (in seconds) for an entry in the cache.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_set_cache_entry_expiration(thinlto_code_gen_t cg,
+                                                       unsigned expiration);
+
+/**
+ * Sets the path to a directory to use as a storage for temporary bitcode files.
+ * The intention is to make the bitcode files available for debugging at various
+ * stage of the pipeline.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
+                                              const char *save_temps_dir);
+
+/**
+ * Sets the cpu to generate code for.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_set_cpu(thinlto_code_gen_t cg, const char *cpu);
+
+/**
+ * Parse -mllvm style debug options.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_debug_options(const char *const *options, int number);
+
+/**
+ * Test if a module has support for ThinLTO linking.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern bool lto_module_is_thinlto(lto_module_t mod);
+
+/**
+ * Adds a symbol to the list of global symbols that must exist in the final
+ * generated code. If a function is not listed there, it might be inlined into
+ * every usage and optimized away. For every single module, the functions
+ * referenced from code outside of the ThinLTO modules need to be added here.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_add_must_preserve_symbol(thinlto_code_gen_t cg,
+                                                     const char *name,
+                                                     int length);
+
+/**
+ * Adds a symbol to the list of global symbols that are cross-referenced between
+ * ThinLTO files. If the ThinLTO CodeGenerator can ensure that every
+ * references from a ThinLTO module to this symbol is optimized away, then
+ * the symbol can be discarded.
+ *
+ * \since LTO_API_VERSION=18
+ */
+extern void thinlto_codegen_add_cross_referenced_symbol(thinlto_code_gen_t cg,
+                                                        const char *name,
+                                                        int length);
 
 #ifdef __cplusplus
 }
