@@ -17965,8 +17965,8 @@ SDValue X86TargetLowering::lowerEH_SJLJ_SETJMP(SDValue Op,
   // inserts the code for us in case we need it.
   // Otherwise, we will end up in a situation where we will
   // reference a virtual register that is not defined!
-  if (!Subtarget.is64Bit()) {
-    const X86InstrInfo *TII = Subtarget.getInstrInfo();
+  if (!Subtarget->is64Bit()) {
+    const X86InstrInfo *TII = Subtarget->getInstrInfo();
     (void)TII->getGlobalBaseReg(&DAG.getMachineFunction());
   }
   return DAG.getNode(X86ISD::EH_SJLJ_SETJMP, DL,
