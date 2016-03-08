@@ -159,19 +159,11 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
       break;
 
     case AR_NotYetIntroduced: {
-      // With strict, the compiler will emit unavailable error.
-      AvailabilityAttr *AA = D->getAttr<AvailabilityAttr>();
-      if (AA && AA->getStrict() &&
-          S.getCurContextAvailability() != AR_NotYetIntroduced)
-        S.EmitAvailabilityWarning(Sema::AD_Unavailable,
-                                  D, Message, Loc, UnknownObjCClass, ObjCPDecl,
-                                  ObjCPropertyAccess);
-
       // Don't do this for enums, they can't be redeclared.
       if (isa<EnumConstantDecl>(D) || isa<EnumDecl>(D))
         break;
  
-      bool Warn = !AA->isInherited();
+      bool Warn = !D->getAttr<AvailabilityAttr>()->isInherited();
       // Objective-C method declarations in categories are not modelled as
       // redeclarations, so manually look for a redeclaration in a category
       // if necessary.
