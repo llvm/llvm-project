@@ -17,7 +17,9 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOCodeGenerator.h"
+#include "llvm/LTO/ThinLTOCodeGenerator.h"
 #include "llvm/LTO/LTOModule.h"
 #include "llvm/Object/FunctionIndexObjectFile.h"
 #include "llvm/Support/CommandLine.h"
@@ -25,6 +27,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
@@ -63,6 +66,28 @@ UseDiagnosticHandler("use-diagnostic-handler", cl::init(false),
 static cl::opt<bool>
     ThinLTO("thinlto", cl::init(false),
             cl::desc("Only write combined global index for ThinLTO backends"));
+
+enum ThinLTOModes { THINLINK, THINPROMOTE, THINIMPORT, THINOPT, THINCODEGEN };
+
+cl::opt<ThinLTOModes> ThinLTOMode(
+    "thinlto-action", cl::desc("Perform a single ThinLTO stage:"),
+    cl::values(
+        clEnumValN(
+            THINLINK, "thinlink",
+            "ThinLink: produces the index by linking only the summaries."),
+        clEnumValN(THINPROMOTE, "promote",
+                   "Perform pre-import promotion (requires -thinlto-index)."),
+        clEnumValN(THINIMPORT, "import", "Perform both promotion and "
+                                         "cross-module importing (requires "
+                                         "-thinlto-index)."),
+        clEnumValN(THINOPT, "optimize", "Perform ThinLTO optimizations."),
+        clEnumValN(THINCODEGEN, "codegen", "CodeGen (expected to match llc)"),
+        clEnumValEnd));
+
+static cl::opt<std::string>
+    ThinLTOIndex("functionindex",
+                 cl::desc("Provide the index produced by a ThinLink, required "
+                          "to perform the promotion and/or importing."));
 
 static cl::opt<bool>
 SaveModuleFile("save-merged-module", cl::init(false),
@@ -238,6 +263,196 @@ static void createCombinedFunctionIndex() {
   OS.close();
 }
 
+namespace thinlto {
+
+std::vector<std::unique_ptr<MemoryBuffer>>
+loadAllFilesForIndex(const FunctionInfoIndex &Index) {
+  std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
+
+  for (auto &ModPath : Index.modPathStringEntries()) {
+    const auto &Filename = ModPath.first();
+    auto CurrentActivity = "loading file '" + Filename + "'";
+    errs() << CurrentActivity << "\n";
+    auto InputOrErr = MemoryBuffer::getFile(Filename);
+    error(InputOrErr, "error " + CurrentActivity);
+    InputBuffers.push_back(std::move(*InputOrErr));
+  }
+  return InputBuffers;
+}
+
+std::unique_ptr<FunctionInfoIndex> loadCombinedIndex() {
+  if (ThinLTOIndex.empty())
+    report_fatal_error("Missing -thinlto-index for ThinLTO promotion stage");
+  auto CurrentActivity = "loading file '" + ThinLTOIndex + "'";
+  ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
+      llvm::getFunctionIndexForFile(ThinLTOIndex, diagnosticHandler);
+  error(IndexOrErr, "error " + CurrentActivity);
+  return std::move(IndexOrErr.get());
+}
+
+static std::unique_ptr<Module> loadModule(StringRef Filename,
+                                          LLVMContext &Ctx) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseIRFile(Filename, Err, Ctx));
+  if (!M) {
+    Err.print("llvm-lto", errs());
+    report_fatal_error("Can't load module for file " + Filename);
+  }
+  return M;
+}
+
+class ThinLTOProcessing {
+public:
+  ThinLTOCodeGenerator ThinGenerator;
+
+  ThinLTOProcessing(const TargetOptions &Options) {
+    ThinGenerator.setCodePICModel(RelocModel);
+    ThinGenerator.setTargetOptions(Options);
+  }
+
+  void run() {
+    switch (ThinLTOMode) {
+    case THINLINK:
+      return thinLink();
+    case THINPROMOTE:
+      return promote();
+    case THINIMPORT:
+      return import();
+    case THINOPT:
+      return optimize();
+    case THINCODEGEN:
+      return codegen();
+    }
+  }
+
+private:
+  /// Load the input files, create the combined index, and write it out.
+  void thinLink() {
+    // Perform "ThinLink": just produce the index
+    if (OutputFilename.empty())
+      report_fatal_error(
+          "OutputFilename is necessary to store the combined index.\n");
+
+    LLVMContext Ctx;
+    std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
+    for (unsigned i = 0; i < InputFilenames.size(); ++i) {
+      auto &Filename = InputFilenames[i];
+      StringRef CurrentActivity = "loading file '" + Filename + "'";
+      auto InputOrErr = MemoryBuffer::getFile(Filename);
+      error(InputOrErr, "error " + CurrentActivity);
+      InputBuffers.push_back(std::move(*InputOrErr));
+      ThinGenerator.addModule(Filename, InputBuffers.back()->getBuffer());
+    }
+
+    auto CombinedIndex = ThinGenerator.linkCombinedIndex();
+    std::error_code EC;
+    raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
+    error(EC, "error opening the file '" + OutputFilename + "'");
+    WriteFunctionSummaryToFile(*CombinedIndex, OS);
+    OS.close();
+    return;
+  }
+
+  /// Load the combined index from disk, then load every file referenced by
+  /// the index and add them to the generator, finally perform the promotion
+  /// on the files mentionned on the command line (these must match the index
+  /// content).
+  void promote() {
+    if (InputFilenames.size() != 1 && !OutputFilename.empty())
+      report_fatal_error("Can't handle a single output filename and multiple "
+                         "input files, do not provide an output filename and "
+                         "the output files will be suffixed from the input "
+                         "ones.");
+
+    auto Index = loadCombinedIndex();
+    auto InputBuffers = loadAllFilesForIndex(*Index);
+    for (auto &MemBuffer : InputBuffers)
+      ThinGenerator.addModule(MemBuffer->getBufferIdentifier(),
+                              MemBuffer->getBuffer());
+
+    for (auto &Filename : InputFilenames) {
+      LLVMContext Ctx;
+      auto TheModule = loadModule(Filename, Ctx);
+
+      ThinGenerator.promote(*TheModule, *Index);
+
+      std::string OutputName = OutputFilename;
+      if (OutputName.empty()) {
+        OutputName = Filename + ".thinlto.promoted.bc";
+      }
+      std::error_code EC;
+      raw_fd_ostream OS(OutputName.c_str(), EC, sys::fs::F_None);
+      error(EC, "Failed to open " + OutputName + " to save bitcode\n");
+      WriteBitcodeToFile(TheModule.get(), OS, true, false);
+    }
+  }
+
+  /// Load the combined index from disk, then load every file referenced by
+  /// the index and add them to the generator, then performs the promotion and
+  /// cross module importing on the files mentionned on the command line
+  /// (these must match the index content).
+  void import() {
+    if (InputFilenames.size() != 1 && !OutputFilename.empty())
+      report_fatal_error("Can't handle a single output filename and multiple "
+                         "input files, do not provide an output filename and "
+                         "the output files will be suffixed from the input "
+                         "ones.");
+
+    auto Index = loadCombinedIndex();
+    auto InputBuffers = loadAllFilesForIndex(*Index);
+    for (auto &MemBuffer : InputBuffers)
+      ThinGenerator.addModule(MemBuffer->getBufferIdentifier(),
+                              MemBuffer->getBuffer());
+
+    for (auto &Filename : InputFilenames) {
+      LLVMContext Ctx;
+      auto TheModule = loadModule(Filename, Ctx);
+
+      ThinGenerator.promote(*TheModule, *Index);
+      ThinGenerator.crossModuleImport(*TheModule, *Index);
+
+      std::string OutputName = OutputFilename;
+      if (OutputName.empty()) {
+        OutputName = Filename + ".thinlto.imported.bc";
+      }
+      std::error_code EC;
+      raw_fd_ostream OS(OutputName.c_str(), EC, sys::fs::F_None);
+      error(EC, "Failed to open " + OutputName + " to save bitcode\n");
+      WriteBitcodeToFile(TheModule.get(), OS, true, false);
+    }
+  }
+
+  void optimize() {
+    if (InputFilenames.size() != 1 && !OutputFilename.empty())
+      report_fatal_error("Can't handle a single output filename and multiple "
+                         "input files, do not provide an output filename and "
+                         "the output files will be suffixed from the input "
+                         "ones.");
+    if (!ThinLTOIndex.empty())
+      errs() << "Warning: -thinlto-index ignored for optimize stage";
+
+    for (auto &Filename : InputFilenames) {
+      LLVMContext Ctx;
+      auto TheModule = loadModule(Filename, Ctx);
+
+      ThinGenerator.optimize(*TheModule);
+
+      std::string OutputName = OutputFilename;
+      if (OutputName.empty()) {
+        OutputName = Filename + ".thinlto.imported.bc";
+      }
+      std::error_code EC;
+      raw_fd_ostream OS(OutputName.c_str(), EC, sys::fs::F_None);
+      error(EC, "Failed to open " + OutputName + " to save bitcode\n");
+      WriteBitcodeToFile(TheModule.get(), OS, true, false);
+    }
+  }
+
+  void codegen() { report_fatal_error("codegen unimplemented yet"); }
+};
+
+} // namespace thinlto
+
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal();
@@ -260,6 +475,12 @@ int main(int argc, char **argv) {
 
   if (ListSymbolsOnly) {
     listSymbols(Options);
+    return 0;
+  }
+
+  if (ThinLTOMode.getNumOccurrences()) {
+    thinlto::ThinLTOProcessing ThinLTOProcessor(Options);
+    ThinLTOProcessor.run();
     return 0;
   }
 
