@@ -719,7 +719,7 @@ public:
     Dump (Stream *s, lldb::DescriptionLevel description_level);
 
     const lldb::ProcessSP &
-    CreateProcess (Listener &listener, 
+    CreateProcess (lldb::ListenerSP listener,
                    const char *plugin_name,
                    const FileSpec *crash_file);
 

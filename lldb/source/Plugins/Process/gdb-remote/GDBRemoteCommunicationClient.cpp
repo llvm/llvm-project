@@ -786,8 +786,8 @@ GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
 
     // In order to stop async notifications from being processed in the middle of the
     // send/receive sequence Hijack the broadcast. Then rebroadcast any events when we are done.
-    static Listener hijack_listener("lldb.NotifyHijacker");
-    HijackBroadcaster(&hijack_listener, eBroadcastBitGdbReadThreadGotNotify);    
+    static ListenerSP hijack_listener_sp(Listener::MakeListener("lldb.NotifyHijacker"));
+    HijackBroadcaster(hijack_listener_sp, eBroadcastBitGdbReadThreadGotNotify);
 
     if (GetSequenceMutex (locker))
     {
@@ -886,7 +886,7 @@ GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
 
     // If a notification event occurred, rebroadcast since it can now be processed safely.
     EventSP event_sp;
-    if (hijack_listener.GetNextEvent(event_sp))
+    if (hijack_listener_sp->GetNextEvent(event_sp))
         BroadcastEvent(event_sp);
 
     return packet_result;

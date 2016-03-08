@@ -56,7 +56,7 @@ CommandObjectMultiword::GetSubcommandSP (const char *sub_cmd, StringList *matche
             StringList local_matches;
             if (matches == nullptr)
                 matches = &local_matches;
-            int num_matches = CommandObject::AddNamesMatchingPartialString (m_subcommand_dict, sub_cmd, *matches);
+            int num_matches = AddNamesMatchingPartialString (m_subcommand_dict, sub_cmd, *matches);
 
             if (num_matches == 1)
             {
@@ -181,7 +181,7 @@ CommandObjectMultiword::GenerateHelpText (Stream &output_stream)
     output_stream.PutCString ("The following subcommands are supported:\n\n");
 
     CommandMap::iterator pos;
-    uint32_t max_len = m_interpreter.FindLongestCommandWord (m_subcommand_dict);
+    uint32_t max_len = FindLongestCommandWord (m_subcommand_dict);
 
     if (max_len)
         max_len += 4; // Indent the output by 4 spaces.
@@ -227,9 +227,9 @@ CommandObjectMultiword::HandleCompletion(Args &input,
     const char *arg0 = input.GetArgumentAtIndex(0);
     if (cursor_index == 0)
     {
-        CommandObject::AddNamesMatchingPartialString (m_subcommand_dict, 
-                                                      arg0,
-                                                      matches);
+        AddNamesMatchingPartialString (m_subcommand_dict,
+                                       arg0,
+                                       matches);
 
         if (matches.GetSize() == 1
             && matches.GetStringAtIndex(0) != nullptr

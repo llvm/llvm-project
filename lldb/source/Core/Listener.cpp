@@ -23,6 +23,24 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace
+{
+    class BroadcasterManagerWPMatcher
+    {
+    public:
+        BroadcasterManagerWPMatcher (BroadcasterManagerSP manager_sp) : m_manager_sp(manager_sp) {}
+        bool operator() (const BroadcasterManagerWP input_wp) const
+        {
+            BroadcasterManagerSP input_sp = input_wp.lock();
+            if (input_sp && input_sp == m_manager_sp)
+                return true;
+            else
+                return false;
+        }
+        BroadcasterManagerSP m_manager_sp;
+    };
+}
+
 Listener::Listener(const char *name) :
     m_name (name),
     m_broadcasters(),
@@ -39,32 +57,40 @@ Listener::Listener(const char *name) :
 
 Listener::~Listener()
 {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
     Mutex::Locker locker (m_broadcasters_mutex);
 
-    size_t num_managers = m_broadcaster_managers.size();
-
-    for (size_t i = 0; i < num_managers; i++)
-        m_broadcaster_managers[i]->RemoveListener(*this);
-
-    if (log)
-        log->Printf ("%p Listener::~Listener('%s')",
-                     static_cast<void*>(this), m_name.c_str());
     Clear();
 }
 
 void
 Listener::Clear()
 {
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
     Mutex::Locker locker(m_broadcasters_mutex);
     broadcaster_collection::iterator pos, end = m_broadcasters.end();
     for (pos = m_broadcasters.begin(); pos != end; ++pos)
-        pos->first->RemoveListener (this, pos->second.event_mask);
+    {
+        Broadcaster::BroadcasterImplSP broadcaster_sp(pos->first.lock());
+        if (broadcaster_sp)
+            broadcaster_sp->RemoveListener (this->shared_from_this(), pos->second.event_mask);
+    }
     m_broadcasters.clear();
     m_cond_wait.SetValue (false, eBroadcastNever);
     m_broadcasters.clear();
     Mutex::Locker event_locker(m_events_mutex);
     m_events.clear();
+    size_t num_managers = m_broadcaster_managers.size();
+
+    for (size_t i = 0; i < num_managers; i++)
+    {
+        BroadcasterManagerSP manager_sp(m_broadcaster_managers[i].lock());
+        if (manager_sp)
+            manager_sp->RemoveListener(this);
+    }
+
+    if (log)
+        log->Printf ("%p Listener::~Listener('%s')",
+                     static_cast<void*>(this), m_name.c_str());
 }
 
 uint32_t
@@ -76,10 +102,11 @@ Listener::StartListeningForEvents (Broadcaster* broadcaster, uint32_t event_mask
         // Tell the broadcaster to add this object as a listener
         {
             Mutex::Locker locker(m_broadcasters_mutex);
-            m_broadcasters.insert(std::make_pair(broadcaster, BroadcasterInfo(event_mask)));
+            Broadcaster::BroadcasterImplWP impl_wp(broadcaster->GetBroadcasterImpl());
+            m_broadcasters.insert(std::make_pair(impl_wp, BroadcasterInfo(event_mask)));
         }
 
-        uint32_t acquired_mask = broadcaster->AddListener (this, event_mask);
+        uint32_t acquired_mask = broadcaster->AddListener (this->shared_from_this(), event_mask);
 
         if (event_mask != acquired_mask)
         {
@@ -107,10 +134,12 @@ Listener::StartListeningForEvents (Broadcaster* broadcaster, uint32_t event_mask
         // Tell the broadcaster to add this object as a listener
         {
             Mutex::Locker locker(m_broadcasters_mutex);
-            m_broadcasters.insert(std::make_pair(broadcaster, BroadcasterInfo(event_mask, callback, callback_user_data)));
+            Broadcaster::BroadcasterImplWP impl_wp(broadcaster->GetBroadcasterImpl());
+            m_broadcasters.insert(std::make_pair(impl_wp,
+                                                 BroadcasterInfo(event_mask, callback, callback_user_data)));
         }
 
-        uint32_t acquired_mask = broadcaster->AddListener (this, event_mask);
+        uint32_t acquired_mask = broadcaster->AddListener (this->shared_from_this(), event_mask);
 
         Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS));
         if (log)
@@ -136,10 +165,10 @@ Listener::StopListeningForEvents (Broadcaster* broadcaster, uint32_t event_mask)
         // Scope for "locker"
         {
             Mutex::Locker locker(m_broadcasters_mutex);
-            m_broadcasters.erase (broadcaster);
+            m_broadcasters.erase (broadcaster->GetBroadcasterImpl());
         }
         // Remove the broadcaster from our set of broadcasters
-        return broadcaster->RemoveListener (this, event_mask);
+        return broadcaster->RemoveListener (this->shared_from_this(), event_mask);
     }
 
     return false;
@@ -153,7 +182,7 @@ Listener::BroadcasterWillDestruct (Broadcaster *broadcaster)
     // Scope for "broadcasters_locker"
     {
         Mutex::Locker broadcasters_locker(m_broadcasters_mutex);
-        m_broadcasters.erase (broadcaster);
+        m_broadcasters.erase (broadcaster->GetBroadcasterImpl());
     }
 
     // Scope for "event_locker"
@@ -176,11 +205,14 @@ Listener::BroadcasterWillDestruct (Broadcaster *broadcaster)
 }
 
 void
-Listener::BroadcasterManagerWillDestruct (BroadcasterManager *manager)
+Listener::BroadcasterManagerWillDestruct (BroadcasterManagerSP manager_sp)
 {
     // Just need to remove this broadcast manager from the list of managers:
     broadcaster_manager_collection::iterator iter, end_iter = m_broadcaster_managers.end();
-    iter = find(m_broadcaster_managers.begin(), end_iter, manager);
+    BroadcasterManagerWP manager_wp;
+
+    BroadcasterManagerWPMatcher matcher(manager_sp);
+    iter = std::find_if<broadcaster_manager_collection::iterator, BroadcasterManagerWPMatcher>(m_broadcaster_managers.begin(), end_iter, matcher);
     if (iter != end_iter)
         m_broadcaster_managers.erase (iter);
 }
@@ -206,7 +238,8 @@ class EventBroadcasterMatches
 {
 public:
     EventBroadcasterMatches (Broadcaster *broadcaster) :
-        m_broadcaster (broadcaster)    {
+        m_broadcaster (broadcaster)
+    {
     }
 
     bool operator() (const EventSP &event_sp) const
@@ -486,39 +519,19 @@ Listener::WaitForEvent (const TimeValue *timeout, EventSP &event_sp)
     return WaitForEventsInternal (timeout, NULL, NULL, 0, 0, event_sp);
 }
 
-//Listener::broadcaster_collection::iterator
-//Listener::FindBroadcasterWithMask (Broadcaster *broadcaster, uint32_t event_mask, bool exact)
-//{
-//    broadcaster_collection::iterator pos;
-//    broadcaster_collection::iterator end = m_broadcasters.end();
-//    for (pos = m_broadcasters.find (broadcaster);
-//        pos != end && pos->first == broadcaster;
-//        ++pos)
-//    {
-//        if (exact)
-//        {
-//            if ((event_mask & pos->second.event_mask) == event_mask)
-//                return pos;
-//        }
-//        else
-//        {
-//            if (event_mask & pos->second.event_mask)
-//                return pos;
-//        }
-//    }
-//    return end;
-//}
-
 size_t
 Listener::HandleBroadcastEvent (EventSP &event_sp)
 {
     size_t num_handled = 0;
     Mutex::Locker locker(m_broadcasters_mutex);
     Broadcaster *broadcaster = event_sp->GetBroadcaster();
+    if (!broadcaster)
+        return 0;
     broadcaster_collection::iterator pos;
     broadcaster_collection::iterator end = m_broadcasters.end();
-    for (pos = m_broadcasters.find (broadcaster);
-        pos != end && pos->first == broadcaster;
+    Broadcaster::BroadcasterImplSP broadcaster_impl_sp(broadcaster->GetBroadcasterImpl());
+    for (pos = m_broadcasters.find (broadcaster_impl_sp);
+        pos != end && pos->first.lock() == broadcaster_impl_sp;
         ++pos)
     {
         BroadcasterInfo info = pos->second;
@@ -535,28 +548,45 @@ Listener::HandleBroadcastEvent (EventSP &event_sp)
 }
 
 uint32_t
-Listener::StartListeningForEventSpec (BroadcasterManager &manager, 
+Listener::StartListeningForEventSpec (BroadcasterManagerSP manager_sp,
                              const BroadcastEventSpec &event_spec)
 {
+    if (!manager_sp)
+        return 0;
+    
     // The BroadcasterManager mutex must be locked before m_broadcasters_mutex 
     // to avoid violating the lock hierarchy (manager before broadcasters).
-    Mutex::Locker manager_locker(manager.m_manager_mutex);
+    Mutex::Locker manager_locker(manager_sp->m_manager_mutex);
     Mutex::Locker locker(m_broadcasters_mutex);
 
-    uint32_t bits_acquired = manager.RegisterListenerForEvents(*this, event_spec);
+    uint32_t bits_acquired = manager_sp->RegisterListenerForEvents(this->shared_from_this(), event_spec);
     if (bits_acquired)
-        m_broadcaster_managers.push_back(&manager);
-        
+    {
+        broadcaster_manager_collection::iterator iter, end_iter = m_broadcaster_managers.end();
+        BroadcasterManagerWP manager_wp(manager_sp);
+        BroadcasterManagerWPMatcher matcher(manager_sp);
+        iter = std::find_if<broadcaster_manager_collection::iterator, BroadcasterManagerWPMatcher>(m_broadcaster_managers.begin(), end_iter, matcher);
+        if (iter == end_iter)
+            m_broadcaster_managers.push_back(manager_wp);
+    }
+    
     return bits_acquired;
 }
     
 bool
-Listener::StopListeningForEventSpec (BroadcasterManager &manager, 
+Listener::StopListeningForEventSpec (BroadcasterManagerSP manager_sp,
                              const BroadcastEventSpec &event_spec)
 {
+    if (!manager_sp)
+        return false;
+    
     Mutex::Locker locker(m_broadcasters_mutex);
-    return manager.UnregisterListenerForEvents (*this, event_spec);
+    return manager_sp->UnregisterListenerForEvents (this->shared_from_this(), event_spec);
 
 }
     
-
+ListenerSP
+Listener::MakeListener(const char *name)
+{
+    return ListenerSP(new Listener(name));
+}

@@ -20,6 +20,7 @@
 #include "lldb/lldb-private.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Host/Predicate.h"
+#include "lldb/Core/Broadcaster.h"
 
 namespace lldb_private {
 
@@ -118,9 +119,9 @@ private:
 //----------------------------------------------------------------------
 class Event
 {
-    friend class Broadcaster;
     friend class Listener;
     friend class EventData;
+    friend class Broadcaster::BroadcasterImpl;
 
 public:
     Event(Broadcaster *broadcaster, uint32_t event_type, EventData *data = nullptr);
@@ -165,13 +166,21 @@ public:
     Broadcaster *
     GetBroadcaster () const
     {
-        return m_broadcaster;
+        Broadcaster::BroadcasterImplSP broadcaster_impl_sp = m_broadcaster_wp.lock();
+        if (broadcaster_impl_sp)
+            return broadcaster_impl_sp->GetBroadcaster();
+        else
+            return nullptr;
     }
     
     bool
     BroadcasterIs (Broadcaster *broadcaster)
     {
-        return broadcaster == m_broadcaster;
+        Broadcaster::BroadcasterImplSP broadcaster_impl_sp = m_broadcaster_wp.lock();
+        if (broadcaster_impl_sp)
+            return broadcaster_impl_sp->GetBroadcaster() == broadcaster;
+        else
+            return false;
     }
 
     void
@@ -194,10 +203,10 @@ private:
     void
     SetBroadcaster (Broadcaster *broadcaster)
     {
-        m_broadcaster = broadcaster;
+        m_broadcaster_wp = broadcaster->GetBroadcasterImpl();
     }
 
-    Broadcaster *   m_broadcaster;  // The broadcaster that sent this event
+    Broadcaster::BroadcasterImplWP   m_broadcaster_wp;  // The broadcaster that sent this event
     uint32_t        m_type;         // The bit describing this event
     std::unique_ptr<EventData> m_data_ap;         // User specific data for this event
 

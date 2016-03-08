@@ -13,6 +13,9 @@
 // CHECK-NEXT: Address: 0x11000
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 22
+// CHECK-NEXT: Link: 0
+// CHECK-NEXT: Info: 0
+// CHECK-NEXT: AddressAlignment: 16
 
 // CHECK:      Name: sym1
 // CHECK-NEXT: Value: 0x11004

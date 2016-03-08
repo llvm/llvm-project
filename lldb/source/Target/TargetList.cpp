@@ -43,7 +43,7 @@ TargetList::GetStaticBroadcasterClass ()
 // TargetList constructor
 //----------------------------------------------------------------------
 TargetList::TargetList(Debugger &debugger) :
-    Broadcaster(&debugger, TargetList::GetStaticBroadcasterClass().AsCString()),
+    Broadcaster(debugger.GetBroadcasterManager(), TargetList::GetStaticBroadcasterClass().AsCString()),
     m_target_list(),
     m_target_list_mutex (Mutex::eMutexTypeRecursive),
     m_selected_target_idx (0)

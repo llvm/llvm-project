@@ -565,7 +565,7 @@ PlatformWindows::Attach(ProcessAttachInfo &attach_info,
     const char *plugin_name = attach_info.GetProcessPluginName();
     process_sp = target->CreateProcess(attach_info.GetListenerForProcess(debugger), plugin_name, nullptr);
 
-    process_sp->HijackProcessEvents(attach_info.GetHijackListener().get());
+    process_sp->HijackProcessEvents(attach_info.GetHijackListener());
     if (process_sp)
         error = process_sp->Attach (attach_info);
 

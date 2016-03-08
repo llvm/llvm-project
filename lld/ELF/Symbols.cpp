@@ -164,8 +164,8 @@ Defined::Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
                  uint8_t Type)
     : SymbolBody(K, Name, IsWeak, Visibility, Type) {}
 
-DefinedBitcode::DefinedBitcode(StringRef Name, bool IsWeak)
-    : Defined(DefinedBitcodeKind, Name, IsWeak, STV_DEFAULT, 0 /* Type */) {}
+DefinedBitcode::DefinedBitcode(StringRef Name, bool IsWeak, uint8_t Visibility)
+    : Defined(DefinedBitcodeKind, Name, IsWeak, Visibility, 0 /* Type */) {}
 
 bool DefinedBitcode::classof(const SymbolBody *S) {
   return S->kind() == DefinedBitcodeKind;

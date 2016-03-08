@@ -132,12 +132,12 @@ ProcessKDP::Terminate()
 
 lldb::ProcessSP
 ProcessKDP::CreateInstance (TargetSP target_sp,
-                            Listener &listener,
+                            ListenerSP listener_sp,
                             const FileSpec *crash_file_path)
 {
     lldb::ProcessSP process_sp;
     if (crash_file_path == NULL)
-        process_sp.reset(new ProcessKDP (target_sp, listener));
+        process_sp.reset(new ProcessKDP (target_sp, listener_sp));
     return process_sp;
 }
 
@@ -178,8 +178,8 @@ ProcessKDP::CanDebug(TargetSP target_sp, bool plugin_specified_by_name)
 //----------------------------------------------------------------------
 // ProcessKDP constructor
 //----------------------------------------------------------------------
-ProcessKDP::ProcessKDP(TargetSP target_sp, Listener &listener) :
-    Process (target_sp, listener),
+ProcessKDP::ProcessKDP(TargetSP target_sp, ListenerSP listener_sp) :
+    Process (target_sp, listener_sp),
     m_comm("lldb.process.kdp-remote.communication"),
     m_async_broadcaster (NULL, "lldb.process.kdp-remote.async-broadcaster"),
     m_dyld_plugin_name (),
@@ -927,13 +927,13 @@ ProcessKDP::AsyncThread (void *arg)
     if (log)
         log->Printf ("ProcessKDP::AsyncThread (arg = %p, pid = %" PRIu64 ") thread starting...", arg, pid);
     
-    Listener listener ("ProcessKDP::AsyncThread");
+    ListenerSP listener_sp (Listener::MakeListener("ProcessKDP::AsyncThread"));
     EventSP event_sp;
     const uint32_t desired_event_mask = eBroadcastBitAsyncContinue |
                                         eBroadcastBitAsyncThreadShouldExit;
     
     
-    if (listener.StartListeningForEvents (&process->m_async_broadcaster, desired_event_mask) == desired_event_mask)
+    if (listener_sp->StartListeningForEvents (&process->m_async_broadcaster, desired_event_mask) == desired_event_mask)
     {
         bool done = false;
         while (!done)
@@ -941,7 +941,7 @@ ProcessKDP::AsyncThread (void *arg)
             if (log)
                 log->Printf ("ProcessKDP::AsyncThread (pid = %" PRIu64 ") listener.WaitForEvent (NULL, event_sp)...",
                              pid);
-            if (listener.WaitForEvent (NULL, event_sp))
+            if (listener_sp->WaitForEvent (NULL, event_sp))
             {
                 uint32_t event_type = event_sp->GetType();
                 if (log)
@@ -981,7 +981,7 @@ ProcessKDP::AsyncThread (void *arg)
                                 // Check to see if we are supposed to exit. There is no way to
                                 // interrupt a running kernel, so all we can do is wait for an
                                 // exception or detach...
-                                if (listener.GetNextEvent(event_sp))
+                                if (listener_sp->GetNextEvent(event_sp))
                                 {
                                     // We got an event, go through the loop again
                                     event_type = event_sp->GetType();

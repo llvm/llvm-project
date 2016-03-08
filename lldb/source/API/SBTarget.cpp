@@ -623,7 +623,7 @@ SBTarget::ConnectRemote
     {
         Mutex::Locker api_locker (target_sp->GetAPIMutex());
         if (listener.IsValid())
-            process_sp = target_sp->CreateProcess (listener.ref(), plugin_name, NULL);
+            process_sp = target_sp->CreateProcess (listener.m_opaque_sp, plugin_name, NULL);
         else
             process_sp = target_sp->CreateProcess (target_sp->GetDebugger().GetListener(), plugin_name, NULL);
 

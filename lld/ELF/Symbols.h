@@ -188,7 +188,7 @@ public:
 
 class DefinedBitcode : public Defined {
 public:
-  DefinedBitcode(StringRef Name, bool IsWeak);
+  DefinedBitcode(StringRef Name, bool IsWeak, uint8_t Visibility);
   static bool classof(const SymbolBody *S);
 };
 

@@ -15,6 +15,7 @@
 // Project includes
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Connection.h"
+#include "lldb/Core/Listener.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/Event.h"
@@ -64,7 +65,7 @@ Communication::~Communication()
 {
     lldb_private::LogIfAnyCategoriesSet (LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_COMMUNICATION,
                                  "%p Communication::~Communication (name = %s)",
-                                 this, m_broadcaster_name.AsCString(""));
+                                 this, GetBroadcasterName().AsCString());
     Clear();
 }
 
@@ -164,10 +165,10 @@ Communication::Read (void *dst, size_t dst_len, uint32_t timeout_usec, Connectio
             timeout_time.OffsetWithMicroSeconds (timeout_usec);
         }
 
-        Listener listener ("Communication::Read");
-        listener.StartListeningForEvents (this, eBroadcastBitReadThreadGotBytes | eBroadcastBitReadThreadDidExit);
+        ListenerSP listener_sp(Listener::MakeListener("Communication::Read"));
+        listener_sp->StartListeningForEvents (this, eBroadcastBitReadThreadGotBytes | eBroadcastBitReadThreadDidExit);
         EventSP event_sp;
-        while (listener.WaitForEvent((timeout_time.IsValid() ? &timeout_time : nullptr), event_sp))
+        while (listener_sp->WaitForEvent (timeout_time.IsValid() ? &timeout_time : nullptr, event_sp))
         {
             const uint32_t event_type = event_sp->GetType();
             if (event_type & eBroadcastBitReadThreadGotBytes)
@@ -234,7 +235,7 @@ Communication::StartReadThread (Error *error_ptr)
                                  "%p Communication::StartReadThread ()", this);
 
     char thread_name[1024];
-    snprintf(thread_name, sizeof(thread_name), "<lldb.comm.%s>", m_broadcaster_name.AsCString());
+    snprintf(thread_name, sizeof(thread_name), "<lldb.comm.%s>", GetBroadcasterName().AsCString());
 
     m_read_thread_enabled = true;
     m_read_thread_did_exit = false;
@@ -427,8 +428,8 @@ Communication::SynchronizeWithReadThread ()
     Mutex::Locker locker(m_synchronize_mutex);
 
     // First start listening for the synchronization event.
-    Listener listener("Communication::SyncronizeWithReadThread");
-    listener.StartListeningForEvents(this, eBroadcastBitNoMorePendingInput);
+    ListenerSP listener_sp(Listener::MakeListener("Communication::SyncronizeWithReadThread"));
+    listener_sp->StartListeningForEvents(this, eBroadcastBitNoMorePendingInput);
 
     // If the thread is not running, there is no point in synchronizing.
     if (!m_read_thread_enabled || m_read_thread_did_exit)
@@ -439,7 +440,7 @@ Communication::SynchronizeWithReadThread ()
 
     // Wait for the synchronization event.
     EventSP event_sp;
-    listener.WaitForEvent(nullptr, event_sp);
+    listener_sp->WaitForEvent(nullptr, event_sp);
 }
 
 void

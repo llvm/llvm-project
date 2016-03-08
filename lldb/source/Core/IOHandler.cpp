@@ -2369,7 +2369,7 @@ type summary add -s "${var.origin%S} ${var.size%S}" curses::Rect
             
             halfdelay(delay_in_tenths_of_a_second); // Poll using some number of tenths of seconds seconds when calling Window::GetChar()
 
-            ListenerSP listener_sp (new Listener ("lldb.IOHandler.curses.Application"));
+            ListenerSP listener_sp (Listener::MakeListener("lldb.IOHandler.curses.Application"));
             ConstString broadcaster_class_target(Target::GetStaticBroadcasterClass());
             ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
             ConstString broadcaster_class_thread(Thread::GetStaticBroadcasterClass());

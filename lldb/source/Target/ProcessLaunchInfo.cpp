@@ -517,11 +517,11 @@ ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell (Error &error,
     return false;
 }
 
-Listener &
+ListenerSP
 ProcessLaunchInfo::GetListenerForProcess (Debugger &debugger)
 {
     if (m_listener_sp)
-        return *m_listener_sp;
+        return m_listener_sp;
     else
         return debugger.GetListener();
 }

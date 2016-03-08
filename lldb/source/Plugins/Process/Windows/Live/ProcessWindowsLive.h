@@ -43,7 +43,7 @@ public:
     //------------------------------------------------------------------
     static lldb::ProcessSP
     CreateInstance(lldb::TargetSP target_sp,
-                   lldb_private::Listener &listener,
+                   lldb::ListenerSP listener_sp,
                    const lldb_private::FileSpec *);
 
     static void
@@ -62,7 +62,7 @@ public:
     // Constructors and destructors
     //------------------------------------------------------------------
     ProcessWindowsLive(lldb::TargetSP target_sp,
-                       lldb_private::Listener &listener);
+                       lldb::ListenerSP listener_sp);
 
     ~ProcessWindowsLive();
 

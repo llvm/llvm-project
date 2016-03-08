@@ -28,14 +28,13 @@ using namespace lldb_private;
 // Event constructor
 //----------------------------------------------------------------------
 Event::Event (Broadcaster *broadcaster, uint32_t event_type, EventData *data) :
-    m_broadcaster (broadcaster),
+    m_broadcaster_wp (broadcaster->GetBroadcasterImpl()),
     m_type (event_type),
     m_data_ap (data)
 {
 }
 
 Event::Event(uint32_t event_type, EventData *data) :
-    m_broadcaster (NULL),   // Set by the broadcaster when this event gets broadcast
     m_type (event_type),
     m_data_ap (data)
 {
@@ -52,20 +51,27 @@ Event::~Event ()
 void
 Event::Dump (Stream *s) const
 {
-    if (m_broadcaster)
+    Broadcaster *broadcaster;
+    Broadcaster::BroadcasterImplSP broadcaster_impl_sp(m_broadcaster_wp.lock());
+    if (broadcaster_impl_sp)
+        broadcaster = broadcaster_impl_sp->GetBroadcaster();
+    else
+        broadcaster = nullptr;
+    
+    if (broadcaster)
     {
         StreamString event_name;
-        if (m_broadcaster->GetEventNames (event_name, m_type, false))
+        if (broadcaster->GetEventNames (event_name, m_type, false))
             s->Printf("%p Event: broadcaster = %p (%s), type = 0x%8.8x (%s), data = ",
                       static_cast<const void*>(this),
-                      static_cast<void*>(m_broadcaster),
-                      m_broadcaster->GetBroadcasterName().GetCString(),
+                      static_cast<void*>(broadcaster),
+                      broadcaster->GetBroadcasterName().GetCString(),
                       m_type, event_name.GetString().c_str());
         else
             s->Printf("%p Event: broadcaster = %p (%s), type = 0x%8.8x, data = ",
                       static_cast<const void*>(this),
-                      static_cast<void*>(m_broadcaster),
-                      m_broadcaster->GetBroadcasterName().GetCString(), m_type);
+                      static_cast<void*>(broadcaster),
+                      broadcaster->GetBroadcasterName().GetCString(), m_type);
     }
     else
         s->Printf("%p Event: broadcaster = NULL, type = 0x%8.8x, data = ",

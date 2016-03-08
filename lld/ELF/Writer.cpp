@@ -519,7 +519,7 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   std::string Msg = "undefined symbol: " + Sym->getName().str();
   if (InputFile *File = Symtab.findFile(Sym))
     Msg += " in " + File->getName().str();
-  if (Config->NoInhibitExec)
+  if (Config->NoinhibitExec)
     warning(Msg);
   else
     error(Msg);
@@ -722,6 +722,7 @@ void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
   uintX_t Off = getBss()->getSize();
   for (DefinedCommon *C : Syms) {
     Off = alignTo(Off, C->MaxAlignment);
+    Out<ELFT>::Bss->updateAlign(C->MaxAlignment);
     C->OffsetInBss = Off;
     Off += C->Size;
   }

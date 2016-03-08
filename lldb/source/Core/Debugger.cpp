@@ -702,10 +702,11 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton) :
     m_input_file_sp(new StreamFile(stdin, false)),
     m_output_file_sp(new StreamFile(stdout, false)),
     m_error_file_sp(new StreamFile(stderr, false)),
+    m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
     m_terminal_state(),
     m_target_list(*this),
     m_platform_list(),
-    m_listener("lldb.Debugger"),
+    m_listener_sp(Listener::MakeListener("lldb.Debugger")),
     m_source_manager_ap(),
     m_source_file_cache(),
     m_command_interpreter_ap(new CommandInterpreter(*this, eScriptLanguageDefault, false)),
@@ -764,7 +765,7 @@ Debugger::Clear()
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();
-    m_listener.Clear();
+    m_listener_sp->Clear();
     int num_targets = m_target_list.GetNumTargets();
     for (int i = 0; i < num_targets; i++)
     {
@@ -777,7 +778,7 @@ Debugger::Clear()
             target_sp->Destroy();
         }
     }
-    BroadcasterManager::Clear ();
+    m_broadcaster_manager_sp->Clear ();
     
     // Close the input file _before_ we close the input read communications class
     // as it does NOT own the input file, our m_input_file does.
@@ -1580,7 +1581,7 @@ Debugger::CancelForwardEvents (const ListenerSP &listener_sp)
 void
 Debugger::DefaultEventHandler()
 {
-    Listener& listener(GetListener());
+    ListenerSP listener_sp(GetListener());
     ConstString broadcaster_class_target(Target::GetStaticBroadcasterClass());
     ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
     ConstString broadcaster_class_thread(Thread::GetStaticBroadcasterClass());
@@ -1596,10 +1597,10 @@ Debugger::DefaultEventHandler()
                                           Thread::eBroadcastBitStackChanged     |
                                           Thread::eBroadcastBitThreadSelected   );
     
-    listener.StartListeningForEventSpec (*this, target_event_spec);
-    listener.StartListeningForEventSpec (*this, process_event_spec);
-    listener.StartListeningForEventSpec (*this, thread_event_spec);
-    listener.StartListeningForEvents (m_command_interpreter_ap.get(),
+    listener_sp->StartListeningForEventSpec (m_broadcaster_manager_sp, target_event_spec);
+    listener_sp->StartListeningForEventSpec (m_broadcaster_manager_sp, process_event_spec);
+    listener_sp->StartListeningForEventSpec (m_broadcaster_manager_sp, thread_event_spec);
+    listener_sp->StartListeningForEvents (m_command_interpreter_ap.get(),
                                       CommandInterpreter::eBroadcastBitQuitCommandReceived      |
                                       CommandInterpreter::eBroadcastBitAsynchronousOutputData   |
                                       CommandInterpreter::eBroadcastBitAsynchronousErrorData    );
@@ -1612,7 +1613,7 @@ Debugger::DefaultEventHandler()
     while (!done)
     {
         EventSP event_sp;
-        if (listener.WaitForEvent(nullptr, event_sp))
+        if (listener_sp->WaitForEvent(nullptr, event_sp))
         {
             if (event_sp)
             {
@@ -1694,8 +1695,8 @@ Debugger::StartEventHandlerThread()
         // it is up and running and listening to events before we return from
         // this function. We do this by listening to events for the
         // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
-        Listener listener("lldb.debugger.event-handler");
-        listener.StartListeningForEvents(&m_sync_broadcaster, eBroadcastBitEventThreadIsListening);
+        ListenerSP listener_sp(Listener::MakeListener("lldb.debugger.event-handler"));
+        listener_sp->StartListeningForEvents(&m_sync_broadcaster, eBroadcastBitEventThreadIsListening);
 
         // Use larger 8MB stack for this thread
         m_event_handler_thread = ThreadLauncher::LaunchThread("lldb.debugger.event-handler",
@@ -1709,7 +1710,7 @@ Debugger::StartEventHandlerThread()
         // eBroadcastBitEventThreadIsListening so we don't need to check the event, we just need
         // to wait an infinite amount of time for it (nullptr timeout as the first parameter)
         lldb::EventSP event_sp;
-        listener.WaitForEvent(nullptr, event_sp);
+        listener_sp->WaitForEvent(nullptr, event_sp);
     }
     return m_event_handler_thread.IsJoinable();
 }
