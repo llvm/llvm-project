@@ -60,7 +60,7 @@ void CachePruning::prune() {
   writeTimestampFile(TimestampFile);
 
   bool ShouldComputeSize = false;
-  if (PercentageOfFreeSpace > 0 && PercentageOfFreeSpace < 100)
+  if (PercentageOfAvailableSpace > 0 && PercentageOfAvailableSpace < 100)
     ShouldComputeSize = true;
 
   // Keep track of space
@@ -105,15 +105,14 @@ void CachePruning::prune() {
   if (ShouldComputeSize) {
     struct statfs statf;
     statfs(".", &statf);
-    auto FreeSpace = ((uint64_t)statf.f_bfree) * statf.f_bsize;
+    auto AvailableSpace = TotalSize + ((uint64_t)statf.f_bfree) * statf.f_bsize;
     auto FileAndSize = FileSizes.rbegin();
-    while (((100 * TotalSize) / FreeSpace) > PercentageOfFreeSpace &&
+    while (((100 * TotalSize) / AvailableSpace) > PercentageOfAvailableSpace &&
            FileAndSize != FileSizes.rend()) {
       // Remove the file.
       llvm::sys::fs::remove(FileAndSize->second);
       // Update size
       TotalSize -= FileAndSize->first;
-      FreeSpace += FileAndSize->first;
       ++FileAndSize;
     }
   }

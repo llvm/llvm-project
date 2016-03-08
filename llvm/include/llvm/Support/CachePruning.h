@@ -31,7 +31,9 @@ public:
     return *this;
   }
   CachePruning &setMaxSize(unsigned Percentage) {
-    PercentageOfFreeSpace = Percentage;
+    PercentageOfAvailableSpace = Percentage;
+    if (PercentageOfAvailableSpace > 100)
+      PercentageOfAvailableSpace = 100;
     return *this;
   }
 
@@ -41,7 +43,7 @@ private:
   std::string Path;
   int Expiration;
   int Interval;
-  unsigned PercentageOfFreeSpace;
+  unsigned PercentageOfAvailableSpace;
 };
 
 } // namespace llvm
