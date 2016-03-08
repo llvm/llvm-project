@@ -4859,7 +4859,7 @@ SwiftASTContext::BindGenericType (CompilerType type,
         {
             case swift::TypeKind::UnboundGeneric:
             {
-                swift::NominalTypeDecl *nominal_type_decl = swift_can_type->getAs<swift::UnboundGenericType>()->getDecl();
+                auto nominal_type_decl = cast<swift::NominalTypeDecl>(swift_can_type->getAs<swift::UnboundGenericType>()->getDecl());
                 swift::DeclContext * parent_decl = nominal_type_decl->getParent();
                 swift::Type parent_type;
                 if (parent_decl->isTypeContext())
@@ -8370,7 +8370,7 @@ SwiftASTContext::GetNumTemplateArguments (void* type)
             swift::UnboundGenericType *unbound_generic_type = swift_can_type->getAs<swift::UnboundGenericType>();
             if (!unbound_generic_type)
                 break;
-            swift::NominalTypeDecl *nominal_type_decl = unbound_generic_type->getDecl();
+            auto *nominal_type_decl = unbound_generic_type->getDecl();
             if (!nominal_type_decl)
                 break;
             swift::GenericParamList *generic_param_list = nominal_type_decl->getGenericParams();
@@ -8523,7 +8523,7 @@ SwiftASTContext::GetTemplateArgument (void* type,
                 swift::UnboundGenericType *unbound_generic_type = swift_can_type->getAs<swift::UnboundGenericType>();
                 if (!unbound_generic_type)
                     break;
-                swift::NominalTypeDecl *nominal_type_decl = unbound_generic_type->getDecl();
+                auto *nominal_type_decl = unbound_generic_type->getDecl();
                 if (!nominal_type_decl)
                     break;
                 swift::GenericParamList *generic_param_list = nominal_type_decl->getGenericParams();
@@ -9129,11 +9129,14 @@ SwiftASTContext::DumpTypeDescription (void* type,
                 swift::UnboundGenericType *unbound_generic_type = swift_can_type->getAs<swift::UnboundGenericType>();
                 if (unbound_generic_type)
                 {
-                    swift::NominalTypeDecl* nominal_type_decl = unbound_generic_type->getDecl();
-                    PrintSwiftNominalType(nominal_type_decl,
-                                          s,
-                                          print_help_if_available,
-                                          print_extensions_if_available);
+                    auto nominal_type_decl = dyn_cast<swift::NominalTypeDecl>(unbound_generic_type->getDecl());
+                    if (nominal_type_decl)
+                    {
+                        PrintSwiftNominalType(nominal_type_decl,
+                                              s,
+                                              print_help_if_available,
+                                              print_extensions_if_available);
+                    }
                 }
             }
                 break;
