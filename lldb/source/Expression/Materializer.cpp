@@ -541,8 +541,8 @@ public:
                     err.SetErrorStringWithFormat("trying to create a temporary region for %s but one exists", m_variable_sp->GetName().AsCString());
                     return;
                 }
-                
-                if (data.GetByteSize() != m_variable_sp->GetType()->GetByteSize())
+
+                if (data.GetByteSize() < m_variable_sp->GetType()->GetByteSize())
                 {
                     if (data.GetByteSize() == 0 && m_variable_sp->LocationExpression().IsValid() == false)
                     {
@@ -550,7 +550,7 @@ public:
                     }
                     else
                     {
-                        err.SetErrorStringWithFormat("size of variable %s (%" PRIu64 ") disagrees with the ValueObject's size (%" PRIu64 ")",
+                        err.SetErrorStringWithFormat("size of variable %s (%" PRIu64 ") is larger than the ValueObject's size (%" PRIu64 ")",
                                                      m_variable_sp->GetName().AsCString(),
                                                      m_variable_sp->GetType()->GetByteSize(),
                                                      data.GetByteSize());

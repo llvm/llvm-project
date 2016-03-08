@@ -169,9 +169,8 @@ public:
         m_context = p;
         if (m_context_type == eContextTypeRegisterInfo) {
             RegisterInfo *reg_info = GetRegisterInfo();
-            if (reg_info->encoding == lldb::eEncodingVector)
-                SetValueType(eValueTypeVector);
-            else
+            if (reg_info->encoding == lldb::eEncodingVector &&
+                m_vector.byte_order != lldb::eByteOrderInvalid)
                 SetValueType(eValueTypeScalar);
         }
     }

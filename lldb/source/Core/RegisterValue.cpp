@@ -243,10 +243,13 @@ RegisterValue::GetScalarValue (Scalar &scalar) const
             switch (buffer.length)
             {
             default:    break;
-            case 1:     scalar = *(const uint8_t *)buffer.bytes; return true;
-            case 2:     scalar = *(const uint16_t *)buffer.bytes; return true;
-            case 4:     scalar = *(const uint32_t *)buffer.bytes; return true;
-            case 8:     scalar = *(const uint64_t *)buffer.bytes; return true;
+            case  1:     scalar = *(const uint8_t *)buffer.bytes; return true;
+            case  2:     scalar = *(const uint16_t *)buffer.bytes; return true;
+            case  4:     scalar = *(const uint32_t *)buffer.bytes; return true;
+            case  8:     scalar = *(const uint64_t *)buffer.bytes; return true;
+            case 16:
+              scalar = llvm::APInt(128, llvm::ArrayRef<uint64_t>((const uint64_t *)buffer.bytes, 2));
+              return true;
             }
         }
         case eTypeUInt8:
@@ -373,6 +376,7 @@ RegisterValue::SetValueFromData (const RegisterInfo *reg_info, DataExtractor &sr
         case eTypeLongDouble:   SetFloat (src.GetLongDouble (&src_offset)); break;
         case eTypeBytes:
         {
+            m_type = eTypeBytes;
             buffer.length = reg_info->byte_size;
             buffer.byte_order = src.GetByteOrder();
             assert (buffer.length <= kMaxRegisterByteSize);

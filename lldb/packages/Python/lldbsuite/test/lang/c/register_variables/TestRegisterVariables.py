@@ -24,7 +24,7 @@ class RegisterVariableTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the main.
-        lldbutil.run_break_set_by_source_regexp(self, "break", num_expected_locations=2)
+        lldbutil.run_break_set_by_source_regexp(self, "break", num_expected_locations=3)
 
         ####################
         # First breakpoint
@@ -67,5 +67,23 @@ class RegisterVariableTestCase(TestBase):
 
         self.expect("expr c", VARIABLES_DISPLAYED_CORRECTLY,
             substrs = ['(int) $3 = 5'])
+
+        #####################
+        # Third breakpoint
+
+        self.runCmd("continue")
+
+        # The stop reason of the thread should be breakpoint.
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'stop reason = breakpoint'])
+
+        # The breakpoint should have a hit count of 1.
+        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
+            substrs = [' resolved, hit count = 1'])
+
+        # Try some variables that should be visible
+        self.expect("expr f", VARIABLES_DISPLAYED_CORRECTLY,
+            substrs = ['(float) $4 = 3.1'])
 
         self.runCmd("kill")
