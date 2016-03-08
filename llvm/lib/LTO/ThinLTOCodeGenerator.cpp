@@ -46,6 +46,33 @@ namespace {
 static cl::opt<int> ThreadCount("threads",
                                 cl::init(std::thread::hardware_concurrency()));
 
+// APPLE INTERNAL
+#include <sys/param.h>
+#include <sys/sysctl.h>
+
+// Gets the number of *physical cores* on the machine.
+static int getNumCores() {
+  if (ThreadCount.getNumOccurrences())
+    return ThreadCount;
+
+  uint32_t count;
+  size_t len = sizeof(count);
+
+  sysctlbyname("hw.physicalcpu", &count, &len, NULL, 0);
+  if (count < 1) {
+    int nm[2];
+    nm[0] = CTL_HW;
+    nm[1] = HW_AVAILCPU;
+    sysctl(nm, 2, &count, &len, NULL, 0);
+    if (count < 1) {
+      count = std::thread::hardware_concurrency();
+    }
+  }
+  return count;
+}
+
+// END APPLE INTERNAL
+
 static void diagnosticHandler(const DiagnosticInfo &DI) {
   DiagnosticPrinterRawOStream DP(errs());
   DI.print(DP);
@@ -347,7 +374,7 @@ void ThinLTOCodeGenerator::run() {
 
   // Parallel optimizer + codegen
   {
-    ThreadPool Pool(ThreadCount);
+    ThreadPool Pool(getNumCores());
     int count = 0;
     for (auto &ModuleBuffer : Modules) {
       Pool.async([&](int count) {
