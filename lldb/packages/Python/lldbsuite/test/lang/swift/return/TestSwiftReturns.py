@@ -18,13 +18,13 @@ import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
-
 class TestSwiftReturns(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
     @decorators.skipIfLinux  # bugs.swift.org/SR-841
+    @decorators.expectedFailureDarwin("rdar://problem/25068213")
     def test_swift_returns(self):
         """Test getting return values"""
         self.build()
