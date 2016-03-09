@@ -171,6 +171,14 @@ bool CXIndexDataConsumer::handleDeclOccurence(const Decl *D,
         return true;
       }
     }
+    if (auto *ObjCPD = dyn_cast_or_null<ObjCProtocolDecl>(ASTNode.OrigD)) {
+      if (!ObjCPD->isThisDeclarationADefinition() &&
+          ObjCPD->getLocation() == Loc) {
+        // The libclang API treats this as ObjCProtocolRef declaration.
+        IndexingDeclVisitor(*this, Loc, nullptr).Visit(ObjCPD);
+        return true;
+      }
+    }
 
     CXIdxEntityRefKind Kind = CXIdxEntityRef_Direct;
     if (Roles & (unsigned)SymbolRole::Implicit) {
