@@ -43,14 +43,6 @@ struct TargetMachineBuilder {
   std::unique_ptr<TargetMachine> create() const;
 };
 
-/// Cache behavior controls.
-struct CachingOptions {
-  std::string Path;
-  int PruningInterval = -1;       // seconds, -1 to disable pruning
-  unsigned int Expiration;        // seconds.
-  unsigned MaxPercentageOfFreeSpace; // percentage.
-};
-
 /// This class define an interface similar to the LTOCodeGenerator, but adapted
 /// for ThinLTO processing.
 /// The ThinLTOCodeGenerator is not intended to be reuse for multiple
@@ -101,6 +93,13 @@ public:
    * @{
    */
 
+  struct CachingOptions {
+    std::string Path;
+    int PruningInterval = -1;               // seconds, -1 to disable pruning
+    unsigned int Expiration;                // seconds.
+    unsigned MaxPercentageOfAvailableSpace; // percentage.
+  };
+
   /// Provide a path to a directory where to store the cached files for
   /// incremental build
   void setCacheDir(std::string Path) { CacheOptions.Path = std::move(Path); }
@@ -116,11 +115,19 @@ public:
     CacheOptions.Expiration = Expiration;
   }
 
-  /// Cache policy: maximum disk space usage, 100 indicates no limit, 50
-  /// indicates that the cache size will not increase over the free space.
-  /// A value over 100 will be reduced to 100.
-  void setMaxCacheSizeRelativeToFreeSpace(unsigned Percentage) {
-    CacheOptions.MaxPercentageOfFreeSpace = Percentage;
+  /**
+   * Sets the maximum cache size that can be persistent across build, in terms
+   * of percentage of the available space on the the disk. Set to 100 to
+   * indicate no limit, 50 to indicate that the cache size will not be left over
+   * half the available space. A value over 100 will be reduced to 100.
+   *
+   * The formula looks like:
+   *  AvailableSpace = FreeSpace + ExistingCacheSize
+   *  NewCacheSize = AvailableSpace * P/100
+   *
+   */
+  void setMaxCacheSizeRelativeToAvailableSpace(unsigned Percentage) {
+    CacheOptions.MaxPercentageOfAvailableSpace = Percentage;
   }
 
   /**@}*/

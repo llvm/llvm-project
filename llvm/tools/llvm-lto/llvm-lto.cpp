@@ -67,7 +67,14 @@ static cl::opt<bool>
     ThinLTO("thinlto", cl::init(false),
             cl::desc("Only write combined global index for ThinLTO backends"));
 
-enum ThinLTOModes { THINLINK, THINPROMOTE, THINIMPORT, THINOPT, THINCODEGEN };
+enum ThinLTOModes {
+  THINLINK,
+  THINPROMOTE,
+  THINIMPORT,
+  THINOPT,
+  THINCODEGEN,
+  THINALL
+};
 
 cl::opt<ThinLTOModes> ThinLTOMode(
     "thinlto-action", cl::desc("Perform a single ThinLTO stage:"),
@@ -82,10 +89,11 @@ cl::opt<ThinLTOModes> ThinLTOMode(
                                          "-thinlto-index)."),
         clEnumValN(THINOPT, "optimize", "Perform ThinLTO optimizations."),
         clEnumValN(THINCODEGEN, "codegen", "CodeGen (expected to match llc)"),
+        clEnumValN(THINALL, "run", "Perform ThinLTO end-to-end"),
         clEnumValEnd));
 
 static cl::opt<std::string>
-    ThinLTOIndex("functionindex",
+    ThinLTOIndex("thinlto-index",
                  cl::desc("Provide the index produced by a ThinLink, required "
                           "to perform the promotion and/or importing."));
 
@@ -272,7 +280,6 @@ loadAllFilesForIndex(const FunctionInfoIndex &Index) {
   for (auto &ModPath : Index.modPathStringEntries()) {
     const auto &Filename = ModPath.first();
     auto CurrentActivity = "loading file '" + Filename + "'";
-    errs() << CurrentActivity << "\n";
     auto InputOrErr = MemoryBuffer::getFile(Filename);
     error(InputOrErr, "error " + CurrentActivity);
     InputBuffers.push_back(std::move(*InputOrErr));
@@ -301,6 +308,13 @@ static std::unique_ptr<Module> loadModule(StringRef Filename,
   return M;
 }
 
+static void writeModuleToFile(Module &TheModule, StringRef Filename) {
+  std::error_code EC;
+  raw_fd_ostream OS(Filename, EC, sys::fs::OpenFlags::F_None);
+  error(EC, "error opening the file '" + Filename + "'");
+  WriteBitcodeToFile(&TheModule, OS, true, false);
+}
+
 class ThinLTOProcessing {
 public:
   ThinLTOCodeGenerator ThinGenerator;
@@ -322,6 +336,8 @@ public:
       return optimize();
     case THINCODEGEN:
       return codegen();
+    case THINALL:
+      return runAll();
     }
   }
 
@@ -349,7 +365,6 @@ private:
     raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
     error(EC, "error opening the file '" + OutputFilename + "'");
     WriteFunctionSummaryToFile(*CombinedIndex, OS);
-    OS.close();
     return;
   }
 
@@ -365,11 +380,6 @@ private:
                          "ones.");
 
     auto Index = loadCombinedIndex();
-    auto InputBuffers = loadAllFilesForIndex(*Index);
-    for (auto &MemBuffer : InputBuffers)
-      ThinGenerator.addModule(MemBuffer->getBufferIdentifier(),
-                              MemBuffer->getBuffer());
-
     for (auto &Filename : InputFilenames) {
       LLVMContext Ctx;
       auto TheModule = loadModule(Filename, Ctx);
@@ -380,10 +390,7 @@ private:
       if (OutputName.empty()) {
         OutputName = Filename + ".thinlto.promoted.bc";
       }
-      std::error_code EC;
-      raw_fd_ostream OS(OutputName.c_str(), EC, sys::fs::F_None);
-      error(EC, "Failed to open " + OutputName + " to save bitcode\n");
-      WriteBitcodeToFile(TheModule.get(), OS, true, false);
+      writeModuleToFile(*TheModule, OutputName);
     }
   }
 
@@ -408,17 +415,13 @@ private:
       LLVMContext Ctx;
       auto TheModule = loadModule(Filename, Ctx);
 
-      ThinGenerator.promote(*TheModule, *Index);
       ThinGenerator.crossModuleImport(*TheModule, *Index);
 
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
         OutputName = Filename + ".thinlto.imported.bc";
       }
-      std::error_code EC;
-      raw_fd_ostream OS(OutputName.c_str(), EC, sys::fs::F_None);
-      error(EC, "Failed to open " + OutputName + " to save bitcode\n");
-      WriteBitcodeToFile(TheModule.get(), OS, true, false);
+      writeModuleToFile(*TheModule, OutputName);
     }
   }
 
@@ -441,14 +444,78 @@ private:
       if (OutputName.empty()) {
         OutputName = Filename + ".thinlto.imported.bc";
       }
-      std::error_code EC;
-      raw_fd_ostream OS(OutputName.c_str(), EC, sys::fs::F_None);
-      error(EC, "Failed to open " + OutputName + " to save bitcode\n");
-      WriteBitcodeToFile(TheModule.get(), OS, true, false);
+      writeModuleToFile(*TheModule, OutputName);
     }
   }
 
-  void codegen() { report_fatal_error("codegen unimplemented yet"); }
+  void codegen() {
+    if (InputFilenames.size() != 1 && !OutputFilename.empty())
+      report_fatal_error("Can't handle a single output filename and multiple "
+                         "input files, do not provide an output filename and "
+                         "the output files will be suffixed from the input "
+                         "ones.");
+    if (!ThinLTOIndex.empty())
+      errs() << "Warning: -thinlto-index ignored for codegen stage";
+
+    for (auto &Filename : InputFilenames) {
+      LLVMContext Ctx;
+      auto TheModule = loadModule(Filename, Ctx);
+
+      auto Buffer = ThinGenerator.codegen(*TheModule);
+      std::string OutputName = OutputFilename;
+      if (OutputName.empty()) {
+        OutputName = Filename + ".thinlto.o";
+      }
+      if (OutputName == "-") {
+        outs() << Buffer->getBuffer();
+        return;
+      }
+
+      std::error_code EC;
+      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::F_None);
+      error(EC, "error opening the file '" + OutputName + "'");
+      OS << Buffer->getBuffer();
+    }
+  }
+
+  /// Full ThinLTO process
+  void runAll() {
+    if (!OutputFilename.empty())
+      report_fatal_error("Do not provide an output filename for ThinLTO "
+                         " processing, the output files will be suffixed from "
+                         "the input ones.");
+
+    if (!ThinLTOIndex.empty())
+      errs() << "Warning: -thinlto-index ignored for full ThinLTO process";
+
+    LLVMContext Ctx;
+    std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
+    for (unsigned i = 0; i < InputFilenames.size(); ++i) {
+      auto &Filename = InputFilenames[i];
+      StringRef CurrentActivity = "loading file '" + Filename + "'";
+      auto InputOrErr = MemoryBuffer::getFile(Filename);
+      error(InputOrErr, "error " + CurrentActivity);
+      InputBuffers.push_back(std::move(*InputOrErr));
+      ThinGenerator.addModule(Filename, InputBuffers.back()->getBuffer());
+    }
+
+    ThinGenerator.run();
+
+    auto &Binaries = ThinGenerator.getProducedBinaries();
+    if (Binaries.size() != InputFilenames.size())
+      report_fatal_error("Number of output objects does not match the number "
+                         "of inputs");
+
+    for (unsigned BufID = 0; BufID < Binaries.size(); ++BufID) {
+      auto OutputName = InputFilenames[BufID] + ".thinlto.o";
+      std::error_code EC;
+      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::F_None);
+      error(EC, "error opening the file '" + OutputName + "'");
+      OS << Binaries[BufID]->getBuffer();
+    }
+  }
+
+  /// Load the combined index from disk, then load every file referenced by
 };
 
 } // namespace thinlto
@@ -479,6 +546,8 @@ int main(int argc, char **argv) {
   }
 
   if (ThinLTOMode.getNumOccurrences()) {
+    if (ThinLTOMode.getNumOccurrences() > 1)
+      report_fatal_error("You can't specify more than one -thinlto-action");
     thinlto::ThinLTOProcessing ThinLTOProcessor(Options);
     ThinLTOProcessor.run();
     return 0;

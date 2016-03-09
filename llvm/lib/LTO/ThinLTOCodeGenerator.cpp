@@ -48,7 +48,8 @@ namespace {
 static cl::opt<int> ThreadCount("threads",
                                 cl::init(std::thread::hardware_concurrency()));
 
-// APPLE INTERNAL
+// APPLE SPECIFIC
+#if defined(__APPLE__)
 #include <sys/param.h>
 #include <sys/sysctl.h>
 
@@ -72,8 +73,10 @@ static int getNumCores() {
   }
   return count;
 }
-
-// END APPLE INTERNAL
+#else
+static int getNumCores() { return ThreadCount; }
+#endif
+// END APPLE SPECIFIC
 
 static void diagnosticHandler(const DiagnosticInfo &DI) {
   DiagnosticPrinterRawOStream DP(errs());
@@ -90,7 +93,7 @@ loadModuleFromBuffer(const MemoryBufferRef &Buffer, LLVMContext &Context,
   if (Lazy) {
     ModuleOrErr =
         getLazyBitcodeModule(MemoryBuffer::getMemBuffer(Buffer, false), Context,
-                             /* ShouldLazyLoadMetadata */ false);
+                             /* ShouldLazyLoadMetadata */ Lazy);
   } else {
     ModuleOrErr = parseBitcodeFile(Buffer, Context);
   }
@@ -133,6 +136,9 @@ static void generateModuleMap(const std::vector<MemoryBufferRef> &Modules,
 class ModuleLoader {
   /// The context that will be used for importing.
   LLVMContext &Context;
+
+  /// Map from Module identifier to MemoryBuffer. Used by clients like the
+  /// FunctionImported to request loading a Module.
   StringMap<MemoryBufferRef> &ModuleMap;
 
 public:
@@ -218,8 +224,8 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
 static std::unique_ptr<MemoryBuffer>
 ProcessThinLTOModule(Module &TheModule, const FunctionInfoIndex &Index,
                      StringMap<MemoryBufferRef> &ModuleMap, TargetMachine &TM,
-                     CachingOptions CacheOptions, StringRef SaveTempsDir,
-                     unsigned count) {
+                     ThinLTOCodeGenerator::CachingOptions CacheOptions,
+                     StringRef SaveTempsDir, unsigned count) {
 
   // Save temps: after IPO.
   saveTempBitcode(TheModule, SaveTempsDir, count, ".1.IPO.bc");
@@ -291,8 +297,23 @@ ProcessThinLTOModule(Module &TheModule, const FunctionInfoIndex &Index,
     // Rename to final destination (hopefully race condition won't matter here)
     sys::fs::rename(TempFilename, CachedFilename);
   }
-
   return OutputBuffer;
+}
+
+// Initialize the TargetMachine builder for a given Triple
+static void initTMBuilder(TargetMachineBuilder &TMBuilder,
+                          const Triple &TheTriple) {
+  // Set a default CPU for Darwin triples (copied from LTOCodeGenerator).
+  // FIXME this looks pretty terrible...
+  if (TMBuilder.MCpu.empty() && TheTriple.isOSDarwin()) {
+    if (TheTriple.getArch() == llvm::Triple::x86_64)
+      TMBuilder.MCpu = "core2";
+    else if (TheTriple.getArch() == llvm::Triple::x86)
+      TMBuilder.MCpu = "yonah";
+    else if (TheTriple.getArch() == llvm::Triple::aarch64)
+      TMBuilder.MCpu = "cyclone";
+  }
+  TMBuilder.TheTriple = std::move(TheTriple);
 }
 
 } // end anonymous namespace
@@ -303,19 +324,7 @@ void ThinLTOCodeGenerator::addModule(StringRef Identifier, StringRef Data) {
     // First module added, so initialize the triple and some options
     LLVMContext Context;
     Triple TheTriple(getBitcodeTargetTriple(Buffer, Context));
-
-    // Set a default CPU for Darwin triples (copied from LTOCodeGenerator).
-    // FIXME this looks pretty terrible...
-    if (TMBuilder.MCpu.empty() && TheTriple.isOSDarwin()) {
-      if (TheTriple.getArch() == llvm::Triple::x86_64)
-        TMBuilder.MCpu = "core2";
-      else if (TheTriple.getArch() == llvm::Triple::x86)
-        TMBuilder.MCpu = "yonah";
-      else if (TheTriple.getArch() == llvm::Triple::aarch64)
-        TMBuilder.MCpu = "cyclone";
-    }
-
-    TMBuilder.TheTriple = std::move(TheTriple);
+    initTMBuilder(TMBuilder, Triple(TheTriple));
   }
 #ifndef NDEBUG
   else {
@@ -342,7 +351,7 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
   const Target *TheTarget =
       TargetRegistry::lookupTarget(TheTriple.str(), ErrMsg);
   if (!TheTarget) {
-    report_fatal_error("Can't load target for this Triple");
+    report_fatal_error("Can't load target for this Triple: " + ErrMsg);
   }
 
   // Use MAttr as the default set of features.
@@ -403,6 +412,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
  * Perform post-importing ThinLTO optimizations.
  */
 void ThinLTOCodeGenerator::optimize(Module &TheModule) {
+  initTMBuilder(TMBuilder, Triple(TheModule.getTargetTriple()));
   optimizeModule(TheModule, *TMBuilder.create());
 }
 
@@ -410,6 +420,7 @@ void ThinLTOCodeGenerator::optimize(Module &TheModule) {
  * Perform ThinLTO CodeGen.
  */
 std::unique_ptr<MemoryBuffer> ThinLTOCodeGenerator::codegen(Module &TheModule) {
+  initTMBuilder(TMBuilder, Triple(TheModule.getTargetTriple()));
   return codegenModule(TheModule, *TMBuilder.create());
 }
 
@@ -425,7 +436,7 @@ void ThinLTOCodeGenerator::run() {
       CachePruning(CacheOptions.Path)
           .setPruningInterval(CacheOptions.PruningInterval)
           .setEntryExpiration(CacheOptions.Expiration)
-          .setMaxSize(CacheOptions.MaxPercentageOfFreeSpace)
+          .setMaxSize(CacheOptions.MaxPercentageOfAvailableSpace)
           .prune();
     });
 
@@ -461,16 +472,13 @@ void ThinLTOCodeGenerator::run() {
       Pool.async([&](int count) {
         LLVMContext Context;
 
+        // Parse module now
+        auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false);
+
         // Save temps: original file.
         if (!SaveTempsDir.empty()) {
-          auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false);
           saveTempBitcode(*TheModule, SaveTempsDir, count, ".0.original.bc");
         }
-
-        // Parse module now
-        auto TheModule =
-            loadModuleFromBuffer(ModuleMap[ModuleBuffer.getBufferIdentifier()],
-                                 Context, /*Lazy*/ false);
 
         ProducedBinaries[count] = ProcessThinLTOModule(
             *TheModule, *Index, ModuleMap, *TMBuilder.create(), CacheOptions,
