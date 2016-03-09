@@ -307,8 +307,8 @@ public:
     }
 
     if (!TLI->isOperationExpand(ISD, LT.second)) {
-      // If the operation is custom lowered then assume
-      // thare the code is twice as expensive.
+      // If the operation is custom lowered, then assume that the code is twice
+      // as expensive.
       return LT.first * 2 * OpCost;
     }
 

@@ -405,6 +405,8 @@ void SchedulePostRATDList::schedule() {
     }
   }
 
+  postprocessDAG();
+
   DEBUG(dbgs() << "********** List Scheduling **********\n");
   DEBUG(
     for (const SUnit &SU : SUnits) {

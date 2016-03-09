@@ -284,7 +284,7 @@ static bool handleTlsRelocation(uint32_t Type, SymbolBody *Body,
     if (!canBePreempted(Body))
       return true;
   }
-  return !Target->isTlsDynRel(Type, *Body);
+  return false;
 }
 
 // The reason we have to do this early scan is as follows

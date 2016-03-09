@@ -509,7 +509,7 @@ bool ModuleLinker::run() {
       return true;
 
   if (ImportIndex) {
-    FunctionImportGlobalProcessing ThinLTOProcessing(*SrcM, ImportIndex,
+    FunctionImportGlobalProcessing ThinLTOProcessing(*SrcM, *ImportIndex,
                                                      FunctionsToImport);
     if (ThinLTOProcessing.run())
       return true;

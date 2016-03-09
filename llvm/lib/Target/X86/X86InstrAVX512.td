@@ -2512,6 +2512,14 @@ defm : operation_subvector_mask_lowering<VK16, v16i1, VK64, v64i1>;
 
 defm : operation_subvector_mask_lowering<VK32, v32i1, VK64, v64i1>;
 
+def : Pat<(v2i1 (extract_subvector (v4i1 VK4:$src), (iPTR 2))),
+          (v2i1 (COPY_TO_REGCLASS 
+                  (KSHIFTRWri (COPY_TO_REGCLASS VK4:$src, VK16), (i8 2)),
+                   VK2))>;
+def : Pat<(v4i1 (extract_subvector (v8i1 VK8:$src), (iPTR 4))),
+          (v4i1 (COPY_TO_REGCLASS 
+                  (KSHIFTRWri (COPY_TO_REGCLASS VK8:$src, VK16), (i8 4)),
+                   VK4))>;
 def : Pat<(v8i1 (extract_subvector (v16i1 VK16:$src), (iPTR 8))),
           (v8i1 (COPY_TO_REGCLASS (KSHIFTRWri VK16:$src, (i8 8)), VK8))>;
 def : Pat<(v16i1 (extract_subvector (v32i1 VK32:$src), (iPTR 16))),

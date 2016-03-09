@@ -43,6 +43,8 @@ static cl::opt<bool>
 PrefetchWrites("loop-prefetch-writes", cl::Hidden, cl::init(false),
                cl::desc("Prefetch write addresses"));
 
+STATISTIC(NumPrefetches, "Number of prefetches inserted");
+
 namespace llvm {
   void initializeLoopDataPrefetchPass(PassRegistry&);
 }
@@ -149,6 +151,10 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (!ItersAhead)
     ItersAhead = 1;
 
+  DEBUG(dbgs() << "Prefetching " << ItersAhead
+               << " iterations ahead (loop size: " << LoopSize << ") in "
+               << L->getHeader()->getParent()->getName() << ": " << *L);
+
   SmallVector<std::pair<Instruction *, const SCEVAddRecExpr *>, 16> PrefLoads;
   for (Loop::block_iterator I = L->block_begin(), IE = L->block_end();
        I != IE; ++I) {
@@ -219,6 +225,9 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
           {PrefPtrValue,
            ConstantInt::get(I32, MemI->mayReadFromMemory() ? 0 : 1),
            ConstantInt::get(I32, 3), ConstantInt::get(I32, 1)});
+      ++NumPrefetches;
+      DEBUG(dbgs() << "  Access: " << *PtrValue << ", SCEV: " << *LSCEV
+                   << "\n");
 
       MadeChange = true;
     }

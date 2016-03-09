@@ -119,9 +119,12 @@ public:
 
     template <typename _ForwardIterator2>
     _LIBCPP_INLINE_VISIBILITY
-    _ForwardIterator2 operator () (_ForwardIterator2 __f, _ForwardIterator2 __l) const
+    pair<_ForwardIterator2, _ForwardIterator2>
+    operator () (_ForwardIterator2 __f, _ForwardIterator2 __l) const
     {
-        return _VSTD::search(__f, __l, __first_, __last_, __pred_);
+        return _VSTD::__search(__f, __l, __first_, __last_, __pred_,
+            typename _VSTD::iterator_traits<_ForwardIterator>::iterator_category(),
+            typename _VSTD::iterator_traits<_ForwardIterator2>::iterator_category());
     }
 
 private:
@@ -233,7 +236,7 @@ public:
         }
         
     template <typename _RandomAccessIterator2>
-    _RandomAccessIterator2 
+    pair<_RandomAccessIterator2, _RandomAccessIterator2>
     operator ()(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const
     {
         static_assert ( std::is_same<
@@ -242,12 +245,12 @@ public:
                     >::value,
                 "Corpus and Pattern iterators must point to the same type" );
 
-        if (__f      == __l )    return __l; // empty corpus
-        if (__first_ == __last_) return __f; // empty pattern
+        if (__f      == __l )    return make_pair(__l, __l); // empty corpus
+        if (__first_ == __last_) return make_pair(__f, __f); // empty pattern
 
     //  If the pattern is larger than the corpus, we can't find it!
         if ( __pattern_length_ > _VSTD::distance (__f, __l)) 
-            return __l;
+            return make_pair(__l, __l);
 
     //  Do the search 
         return this->__search(__f, __l);
@@ -262,7 +265,8 @@ public: // TODO private:
     shared_ptr<vector<difference_type>>  __suffix_;
 
     template <typename _RandomAccessIterator2>
-    _RandomAccessIterator2 __search(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const
+    pair<_RandomAccessIterator2, _RandomAccessIterator2>
+    __search(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const
     {
         _RandomAccessIterator2 __cur = __f;
         const _RandomAccessIterator2 __last = __l - __pattern_length_;
@@ -278,7 +282,7 @@ public: // TODO private:
                 __j--;
             //  We matched - we're done!
                 if ( __j == 0 )
-                    return __cur;
+                    return make_pair(__cur, __cur + __pattern_length_);
                 }
             
         //  Since we didn't match, figure out how far to skip forward
@@ -290,7 +294,7 @@ public: // TODO private:
                 __cur += __suffix[ __j ];
         }
     
-        return __l;     // We didn't find anything
+        return make_pair(__l, __l);     // We didn't find anything
     }
 
 
@@ -384,8 +388,8 @@ public:
             }
         }
             
-     template <typename _RandomAccessIterator2>
-    _RandomAccessIterator2 
+    template <typename _RandomAccessIterator2>
+    pair<_RandomAccessIterator2, _RandomAccessIterator2>
     operator ()(_RandomAccessIterator2 __f, _RandomAccessIterator2 __l) const
     {
         static_assert ( std::is_same<
@@ -394,12 +398,12 @@ public:
                     >::value,
                 "Corpus and Pattern iterators must point to the same type" );
 
-        if (__f      == __l )    return __l; // empty corpus
-        if (__first_ == __last_) return __f; // empty pattern
+        if (__f      == __l )    return make_pair(__l, __l); // empty corpus
+        if (__first_ == __last_) return make_pair(__f, __f); // empty pattern
 
     //  If the pattern is larger than the corpus, we can't find it!
         if ( __pattern_length_ > _VSTD::distance (__f, __l)) 
-            return __l;
+            return make_pair(__l, __l);
 
     //  Do the search 
         return this->__search(__f, __l);
@@ -413,7 +417,8 @@ private:
     shared_ptr<skip_table_type> __skip_;
 
     template <typename _RandomAccessIterator2>
-    _RandomAccessIterator2 __search ( _RandomAccessIterator2 __f, _RandomAccessIterator2 __l ) const {
+    pair<_RandomAccessIterator2, _RandomAccessIterator2>
+    __search ( _RandomAccessIterator2 __f, _RandomAccessIterator2 __l ) const {
         _RandomAccessIterator2 __cur = __f;
         const _RandomAccessIterator2 __last = __l - __pattern_length_;
         const skip_table_type & __skip = *__skip_.get();
@@ -427,12 +432,12 @@ private:
                 __j--;
             //  We matched - we're done!
                 if ( __j == 0 )
-                    return __cur;
+                    return make_pair(__cur, __cur + __pattern_length_);
             }
             __cur += __skip[__cur[__pattern_length_-1]];
         }
         
-        return __l;
+        return make_pair(__l, __l);
     }
 };
 

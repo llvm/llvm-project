@@ -22,14 +22,6 @@ turn red if not. Once most of these pass, further testing will use LLVM's own
 test suite. The tests can be run locally using:
   https://github.com/WebAssembly/waterfall/blob/master/src/compile_torture_tests.py
 
-Interesting work that remains to be done:
-* Write a pass to restructurize irreducible control flow. This needs to be done
-  before register allocation to be efficient, because it may duplicate basic
-  blocks and WebAssembly performs register allocation at a whole-function
-  level. Note that LLVM's GPU code has such a pass, but it linearizes control
-  flow (e.g. both sides of branches execute and are masked) which is undesirable
-  for WebAssembly.
-
 //===---------------------------------------------------------------------===//
 
 Br, br_if, and br_table instructions can support having a value on the
@@ -110,5 +102,14 @@ according to their usage frequency to maximize the usage of smaller encodings.
 When the last statement in a function body computes the return value, it can
 just let that value be the exit value of the outermost block, rather than
 needing an explicit return operation.
+
+//===---------------------------------------------------------------------===//
+
+Many cases of irreducible control flow could be transformed more optimally
+than via the transform in WebAssemblyFixIrreducibleControlFlow.cpp.
+
+It may also be worthwhile to do transforms before register coloring,
+particularly when duplicating code, to allow register coloring to be aware of
+the duplication.
 
 //===---------------------------------------------------------------------===//

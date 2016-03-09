@@ -225,6 +225,7 @@ public:
 
     const value_type* c_str() const noexcept;
     const value_type* data() const noexcept;
+          value_type* data()       noexcept;   // C++17
 
     allocator_type get_allocator() const noexcept;
 
@@ -982,7 +983,7 @@ __str_find(const _CharT *__p, _SizeT __sz,
     const _CharT* __r = 
         _VSTD::__search(__p + __pos, __p + __sz,
                         __s, __s + __n, _Traits::eq,
-                        random_access_iterator_tag(), random_access_iterator_tag());
+                        random_access_iterator_tag(), random_access_iterator_tag()).first;
     if (__r == __p + __sz)
         return __npos;
     return static_cast<_SizeT>(__r - __p);
@@ -1659,6 +1660,10 @@ public:
     const value_type* c_str() const _NOEXCEPT {return data();}
     _LIBCPP_INLINE_VISIBILITY
     const value_type* data() const _NOEXCEPT  {return _VSTD::__to_raw_pointer(__get_pointer());}
+#if _LIBCPP_STD_VER > 14
+    _LIBCPP_INLINE_VISIBILITY
+    value_type* data()             _NOEXCEPT  {return _VSTD::__to_raw_pointer(__get_pointer());}
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     allocator_type get_allocator() const _NOEXCEPT {return __alloc();}

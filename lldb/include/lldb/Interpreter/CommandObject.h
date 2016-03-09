@@ -37,38 +37,23 @@ template <typename ValueType>
 int
 AddNamesMatchingPartialString (std::map<std::string,ValueType> &in_map, const char *cmd_str, StringList &matches)
 {
-    class CommandDictCommandPartialMatch
-    {
-    public:
-        CommandDictCommandPartialMatch (const char *match_str)
-        {
-            m_match_str = match_str;
-        }
-        bool operator() (const std::pair<std::string, ValueType> map_element) const
-        {
-            // A NULL or empty string matches everything.
-            if (m_match_str == nullptr || *m_match_str == '\0')
-                return true;
-            
-            return map_element.first.find (m_match_str, 0) == 0;
-        }
-        
-    private:
-        const char *m_match_str;
-    };
-
     int number_added = 0;
-    CommandDictCommandPartialMatch matcher(cmd_str);
     
-    auto matching_cmds = std::find_if (in_map.begin(), in_map.end(), matcher);
+    const bool add_all = ((cmd_str == nullptr) || (cmd_str[0] == 0));
     
-    while (matching_cmds != in_map.end())
+    for (auto iter = in_map.begin(), end = in_map.end();
+         iter != end;
+         iter++)
     {
-        ++number_added;
-        matches.AppendString((*matching_cmds).first.c_str());
-        matching_cmds = std::find_if (++matching_cmds, in_map.end(), matcher);;
+        if (add_all ||
+            (iter->first.find(cmd_str,0) == 0))
+        {
+            ++number_added;
+            matches.AppendString(iter->first.c_str());
+        }
     }
-    return number_added;    
+    
+    return number_added;
 }
 
 template <typename ValueType>

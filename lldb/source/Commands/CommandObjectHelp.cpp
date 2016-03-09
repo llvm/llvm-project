@@ -189,7 +189,7 @@ CommandObjectHelp::DoExecute (Args& command, CommandReturnObject &result)
             if (is_alias_command)
             {
                 StreamString sstr;
-                m_interpreter.GetAlias(alias_name.c_str()).GetAliasHelp(sstr);
+                m_interpreter.GetAlias(alias_name.c_str())->GetAliasExpansion(sstr);
                 result.GetOutputStream().Printf ("\n'%s' is an abbreviation for %s\n", alias_name.c_str(), sstr.GetData());
             }
         }

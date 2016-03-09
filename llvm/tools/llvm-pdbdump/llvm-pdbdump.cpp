@@ -76,6 +76,7 @@ cl::opt<bool> Globals("globals", cl::desc("Dump global symbols"),
 cl::opt<bool> Externals("externals", cl::desc("Dump external symbols"),
                         cl::cat(TypeCategory));
 cl::opt<bool> Types("types", cl::desc("Display types"), cl::cat(TypeCategory));
+cl::opt<bool> Lines("lines", cl::desc("Line tables"), cl::cat(TypeCategory));
 cl::opt<bool>
     All("all", cl::desc("Implies all other options in 'Symbol Types' category"),
         cl::cat(TypeCategory));
@@ -684,8 +685,11 @@ static void dumpInput(StringRef Path) {
     Printer.Indent();
     auto Compilands = GlobalScope->findAllChildren<PDBSymbolCompiland>();
     CompilandDumper Dumper(Printer);
+    CompilandDumpFlags options = CompilandDumper::Flags::None;
+    if (opts::Lines)
+      options = options | CompilandDumper::Flags::Lines;
     while (auto Compiland = Compilands->getNext())
-      Dumper.start(*Compiland, false);
+      Dumper.start(*Compiland, options);
     Printer.Unindent();
   }
 
@@ -742,6 +746,9 @@ static void dumpInput(StringRef Path) {
     ExternalSymbolDumper Dumper(Printer);
     Dumper.start(*GlobalScope);
   }
+  if (opts::Lines) {
+    Printer.NewLine();
+  }
   outs().flush();
 }
 
@@ -762,20 +769,32 @@ int main(int argc_, const char *argv_[]) {
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   cl::ParseCommandLineOptions(argv.size(), argv.data(), "LLVM PDB Dumper\n");
+  if (opts::Lines)
+    opts::Compilands = true;
+
   if (opts::All) {
     opts::Compilands = true;
     opts::Symbols = true;
     opts::Globals = true;
     opts::Types = true;
     opts::Externals = true;
+    opts::Lines = true;
   }
+
+  // When adding filters for excluded compilands and types, we need to remember
+  // that these are regexes.  So special characters such as * and \ need to be
+  // escaped in the regex.  In the case of a literal \, this means it needs to
+  // be escaped again in the C++.  So matching a single \ in the input requires
+  // 4 \es in the C++.
   if (opts::ExcludeCompilerGenerated) {
     opts::ExcludeTypes.push_back("__vc_attributes");
-    opts::ExcludeCompilands.push_back("* Linker *");
+    opts::ExcludeCompilands.push_back("\\* Linker \\*");
   }
   if (opts::ExcludeSystemLibraries) {
     opts::ExcludeCompilands.push_back(
-        "f:\\binaries\\Intermediate\\vctools\\crt_bld");
+        "f:\\\\binaries\\\\Intermediate\\\\vctools\\\\crt_bld");
+    opts::ExcludeCompilands.push_back("f:\\\\dd\\\\vctools\\\\crt");
+    opts::ExcludeCompilands.push_back("d:\\\\th.obj.x86fre\\\\minkernel");
   }
 
 #if defined(HAVE_DIA_SDK)

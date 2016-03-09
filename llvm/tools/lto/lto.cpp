@@ -20,6 +20,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTOCodeGenerator.h"
 #include "llvm/LTO/LTOModule.h"
+#include "llvm/LTO/ThinLTOCodeGenerator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -134,6 +135,7 @@ struct LibLTOCodeGenerator : LTOCodeGenerator {
 }
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LibLTOCodeGenerator, lto_code_gen_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThinLTOCodeGenerator, thinlto_code_gen_t)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LTOModule, lto_module_t)
 
 // Convert the subtarget features into a string to pass to LTOCodeGenerator.
@@ -439,4 +441,107 @@ void lto_codegen_set_should_internalize(lto_code_gen_t cg,
 void lto_codegen_set_should_embed_uselists(lto_code_gen_t cg,
                                            lto_bool_t ShouldEmbedUselists) {
   unwrap(cg)->setShouldEmbedUselists(ShouldEmbedUselists);
+}
+
+// ThinLTO API below
+
+thinlto_code_gen_t thinlto_create_codegen(void) {
+  lto_initialize();
+  ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator();
+  CodeGen->setTargetOptions(InitTargetOptionsFromCodeGenFlags());
+
+  return wrap(CodeGen);
+}
+
+void thinlto_codegen_dispose(thinlto_code_gen_t cg) { delete unwrap(cg); }
+
+void thinlto_codegen_add_module(thinlto_code_gen_t cg, const char *Identifier,
+                                const char *Data, int Length) {
+  unwrap(cg)->addModule(Identifier, StringRef(Data, Length));
+}
+
+void thinlto_codegen_process(thinlto_code_gen_t cg) { unwrap(cg)->run(); }
+
+unsigned int thinlto_module_get_num_objects(thinlto_code_gen_t cg) {
+  return unwrap(cg)->getProducedBinaries().size();
+}
+LTOObjectBuffer thinlto_module_get_object(thinlto_code_gen_t cg,
+                                          unsigned int index) {
+  assert(index < unwrap(cg)->getProducedBinaries().size() && "Index overflow");
+  auto &MemBuffer = unwrap(cg)->getProducedBinaries()[index];
+  return LTOObjectBuffer{(void *)MemBuffer->getBufferStart(),
+                         MemBuffer->getBufferSize()};
+}
+
+void thinlto_debug_options(const char *const *options, int number) {
+  // if options were requested, set them
+  if (number && options) {
+    std::vector<const char *> CodegenArgv(1, "libLTO");
+    for (auto Arg : ArrayRef<const char *>(options, number))
+      CodegenArgv.push_back(Arg);
+    cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
+  }
+}
+
+bool lto_module_is_thinlto(lto_module_t mod) {
+  return unwrap(mod)->isThinLTO();
+}
+
+void thinlto_codegen_add_must_preserve_symbol(thinlto_code_gen_t cg,
+                                              const char *Name, int Length) {
+  unwrap(cg)->preserveSymbol(StringRef(Name, Length));
+}
+
+void thinlto_codegen_add_cross_referenced_symbol(thinlto_code_gen_t cg,
+                                                 const char *Name, int Length) {
+  unwrap(cg)->crossReferenceSymbol(StringRef(Name, Length));
+}
+
+void thinlto_codegen_set_cpu(thinlto_code_gen_t cg, const char *cpu) {
+  return unwrap(cg)->setCpu(cpu);
+}
+
+void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
+                                   const char *cache_dir) {
+  return unwrap(cg)->setCacheDir(cache_dir);
+}
+
+void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
+                                                int interval) {
+  return unwrap(cg)->setCachePruningInterval(interval);
+}
+
+void thinlto_codegen_set_cache_entry_expiration(thinlto_code_gen_t cg,
+                                                unsigned expiration) {
+  return unwrap(cg)->setCacheEntryExpiration(expiration);
+}
+
+void thinlto_codegen_set_final_cache_size_relative_to_available_space(
+    thinlto_code_gen_t cg, unsigned Percentage) {
+  return unwrap(cg)->setMaxCacheSizeRelativeToAvailableSpace(Percentage);
+}
+
+void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
+                                       const char *save_temps_dir) {
+  return unwrap(cg)->setSaveTempsDir(save_temps_dir);
+}
+
+lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
+                                         lto_codegen_model model) {
+  switch (model) {
+  case LTO_CODEGEN_PIC_MODEL_STATIC:
+    unwrap(cg)->setCodePICModel(Reloc::Static);
+    return false;
+  case LTO_CODEGEN_PIC_MODEL_DYNAMIC:
+    unwrap(cg)->setCodePICModel(Reloc::PIC_);
+    return false;
+  case LTO_CODEGEN_PIC_MODEL_DYNAMIC_NO_PIC:
+    unwrap(cg)->setCodePICModel(Reloc::DynamicNoPIC);
+    return false;
+  case LTO_CODEGEN_PIC_MODEL_DEFAULT:
+    unwrap(cg)->setCodePICModel(Reloc::Default);
+    return false;
+  }
+  sLastErrorString = "Unknown PIC model";
+  return true;
 }

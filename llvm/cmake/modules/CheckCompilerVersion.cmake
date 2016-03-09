@@ -1,6 +1,8 @@
 # Check if the host compiler is new enough. LLVM requires at least GCC 4.7,
 # MSVC 2013, or Clang 3.1.
 
+include(CheckCXXSourceCompiles)
+
 if(NOT DEFINED LLVM_COMPILER_CHECKED)
   set(LLVM_COMPILER_CHECKED ON)
 

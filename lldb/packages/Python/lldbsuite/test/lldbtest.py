@@ -191,10 +191,11 @@ def COMPLETION_MSG(str_before, str_after):
     '''A generic message generator for the completion mechanism.'''
     return "'%s' successfully completes to '%s'" % (str_before, str_after)
 
-def EXP_MSG(str, exe):
+def EXP_MSG(str, actual, exe):
     '''A generic "'%s' returns expected result" message generator if exe.
     Otherwise, it generates "'%s' matches expected result" message.'''
-    return "'%s' %s expected result" % (str, 'returns' if exe else 'matches')
+    
+    return "'%s' %s expected result, got '%s'" % (str, 'returns' if exe else 'matches', actual.strip())
 
 def SETTING_MSG(setting):
     '''A generic "Value of setting '%s' is correct" message generator.'''
@@ -1808,7 +1809,7 @@ class TestBase(Base):
                 break
 
         self.assertTrue(matched if matching else not matched,
-                        msg if msg else EXP_MSG(str, exe))
+                        msg if msg else EXP_MSG(str, output, exe))
 
         return match_object        
 
@@ -1882,10 +1883,10 @@ class TestBase(Base):
         # Look for sub strings, if specified.
         keepgoing = matched if matching else not matched
         if substrs and keepgoing:
-            for str in substrs:
-                matched = output.find(str) != -1
+            for substr in substrs:
+                matched = output.find(substr) != -1
                 with recording(self, trace) as sbuf:
-                    print("%s sub string: %s" % (heading, str), file=sbuf)
+                    print("%s sub string: %s" % (heading, substr), file=sbuf)
                     print("Matched" if matched else "Not matched", file=sbuf)
                 keepgoing = matched if matching else not matched
                 if not keepgoing:
@@ -1905,7 +1906,7 @@ class TestBase(Base):
                     break
 
         self.assertTrue(matched if matching else not matched,
-                        msg if msg else EXP_MSG(str, exe))
+                        msg if msg else EXP_MSG(str, output, exe))
 
     def invoke(self, obj, name, trace=False):
         """Use reflection to call a method dynamically with no argument."""

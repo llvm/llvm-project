@@ -27,7 +27,6 @@ public:
   virtual bool isTlsLocalDynamicRel(uint32_t Type) const;
   virtual bool isTlsGlobalDynamicRel(uint32_t Type) const;
   virtual uint32_t getDynRel(uint32_t Type) const { return Type; }
-  virtual bool isTlsDynRel(uint32_t Type, const SymbolBody &S) const;
   virtual uint32_t getTlsGotRel(uint32_t Type) const { return TlsGotRel; }
   virtual void writeGotHeader(uint8_t *Buf) const {}
   virtual void writeGotPltHeader(uint8_t *Buf) const {}

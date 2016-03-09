@@ -114,7 +114,7 @@ class InductiveRangeCheck {
     RANGE_CHECK_UNKNOWN = (unsigned)-1
   };
 
-  static const char *rangeCheckKindToStr(RangeCheckKind);
+  static StringRef rangeCheckKindToStr(RangeCheckKind);
 
   const SCEV *Offset;
   const SCEV *Scale;
@@ -228,7 +228,7 @@ INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_END(InductiveRangeCheckElimination, "irce",
                     "Inductive range check elimination", false, false)
 
-const char *InductiveRangeCheck::rangeCheckKindToStr(
+StringRef InductiveRangeCheck::rangeCheckKindToStr(
     InductiveRangeCheck::RangeCheckKind RCK) {
   switch (RCK) {
   case InductiveRangeCheck::RANGE_CHECK_UNKNOWN:
@@ -247,11 +247,9 @@ const char *InductiveRangeCheck::rangeCheckKindToStr(
   llvm_unreachable("unknown range check type!");
 }
 
-/// Parse a single ICmp instruction, `ICI`, into a range check.  If `ICI`
-/// cannot
+/// Parse a single ICmp instruction, `ICI`, into a range check.  If `ICI` cannot
 /// be interpreted as a range check, return `RANGE_CHECK_UNKNOWN` and set
-/// `Index` and `Length` to `nullptr`.  Otherwise set `Index` to the value
-/// being
+/// `Index` and `Length` to `nullptr`.  Otherwise set `Index` to the value being
 /// range checked, and set `Length` to the upper limit `Index` is being range
 /// checked with if (and only if) the range check type is stronger or equal to
 /// RANGE_CHECK_UPPER.

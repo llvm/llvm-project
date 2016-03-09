@@ -21,7 +21,7 @@
 //                        Hash hf = Hash(), BinaryPredicate pred = BinaryPredicate());
 // 
 //   template<class RandomAccessIterator2>
-//   RandomAccessIterator2
+//   pair<RandomAccessIterator2, RandomAccessIterator2>
 //   operator()(RandomAccessIterator2 first, RandomAccessIterator2 last) const;
 // 
 // private:
