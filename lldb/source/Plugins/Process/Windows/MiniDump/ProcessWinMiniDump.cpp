@@ -543,7 +543,7 @@ ProcessWinMiniDump::CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP li
     lldb::ProcessSP process_sp;
     if (crash_file)
     {
-        process_sp.reset(new ProcessWinMiniDump(target_sp, listener, *crash_file));
+        process_sp.reset(new ProcessWinMiniDump(target_sp, listener_sp, *crash_file));
     }
     return process_sp;
 }

@@ -18,10 +18,18 @@ void f2(struct bar *b)
   printf("%d\n", c); // set breakpoint here
 }
 
+float f3() __attribute__ ((noinline));
+float f3() {
+  return 3.14f;
+}
+
 int main()
 {
   struct bar myBar = { 3, 4 };
   f1(2, &myBar);
   f2(&myBar);
+
+  float f = f3();
+  printf("%f\n", f); // set breakpoint here
   return 0;
 }

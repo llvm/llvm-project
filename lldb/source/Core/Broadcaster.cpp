@@ -25,8 +25,11 @@ Broadcaster::Broadcaster(BroadcasterManagerSP manager_sp, const char *name) :
     m_broadcaster_sp(new BroadcasterImpl(*this)),
     m_manager_sp(manager_sp),
     m_broadcaster_name(name)
-
 {
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
+    if (log)
+        log->Printf ("%p Broadcaster::Broadcaster(\"%s\")",
+                     static_cast<void*>(this), GetBroadcasterName().AsCString());
 }
 
 Broadcaster::BroadcasterImpl::BroadcasterImpl (Broadcaster &broadcaster) :
@@ -36,10 +39,6 @@ Broadcaster::BroadcasterImpl::BroadcasterImpl (Broadcaster &broadcaster) :
     m_hijacking_listeners(),
     m_hijacking_masks()
 {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
-    if (log)
-        log->Printf ("%p Broadcaster::Broadcaster(\"%s\")",
-                     static_cast<void*>(this), m_broadcaster.GetBroadcasterName().AsCString());
 }
 
 Broadcaster::~Broadcaster()

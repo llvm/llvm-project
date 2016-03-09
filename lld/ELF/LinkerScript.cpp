@@ -396,9 +396,7 @@ void ScriptParser::readOutputFormat() {
 
 void ScriptParser::readSearchDir() {
   expect("(");
-  StringRef Path = next();
-  if (!Config->Nostdlib)
-    Config->SearchPaths.push_back(Path);
+  Config->SearchPaths.push_back(next());
   expect(")");
 }
 

@@ -284,11 +284,6 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
         SymVA = Body->getGotVA<ELFT>();
       if (Body->IsTls)
         Type = Target->getTlsGotRel(Type);
-    } else if (!Target->needsCopyRel<ELFT>(Type, *Body) &&
-               isa<SharedSymbol<ELFT>>(*Body)) {
-      continue;
-    } else if (Target->isTlsDynRel(Type, *Body)) {
-      continue;
     } else if (Target->isSizeRel(Type) && CBP) {
       // A SIZE relocation is supposed to set a symbol size, but if a symbol
       // can be preempted, the size at runtime may be different than link time.
@@ -302,6 +297,8 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
         SymVA = getMipsGpAddr<ELFT>() - AddrLoc + 4;
       else if (Body == Config->MipsLocalGp)
         SymVA = getMipsGpAddr<ELFT>();
+    } else if (!Target->needsCopyRel<ELFT>(Type, *Body) && CBP) {
+      continue;
     }
     uintX_t Size = Body->getSize<ELFT>();
     Target->relocateOne(BufLoc, BufEnd, Type, AddrLoc, SymVA + A, Size + A,

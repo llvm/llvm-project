@@ -20,6 +20,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Log.h"
+#include "lldb/Interpreter/CommandAlias.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -200,35 +201,7 @@ class CommandInterpreter :
     public IOHandlerDelegate
 {
 public:
-    struct CommandAlias
-    {
-        lldb::CommandObjectSP m_underlying_command_sp = nullptr;
-        OptionArgVectorSP m_option_args_sp = nullptr;
-        
-        CommandAlias (lldb::CommandObjectSP cmd_sp = nullptr,
-                      OptionArgVectorSP args_sp = nullptr);
-        
-        void
-        GetAliasHelp (StreamString &help_string);
-        
-        static bool
-        ProcessAliasOptionsArgs (lldb::CommandObjectSP &cmd_obj_sp,
-                                 const char *options_args,
-                                 OptionArgVectorSP &option_arg_vector_sp);
-        
-        bool
-        IsValid ()
-        {
-            return m_underlying_command_sp && m_option_args_sp;
-        }
-        
-        explicit operator bool ()
-        {
-            return IsValid();
-        }
-    };
-    
-    typedef std::map<std::string, CommandAlias> CommandAliasMap;
+    typedef std::map<std::string, CommandAlias::UniquePointer> CommandAliasMap;
     
     enum
     {
@@ -329,7 +302,7 @@ public:
         m_user_dict.clear();
     }
 
-    CommandAlias
+    CommandAlias*
     GetAlias (const char *alias_name);
 
     CommandObject *
