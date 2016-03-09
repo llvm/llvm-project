@@ -96,6 +96,15 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
     resolve(B);
 }
 
+// This is for use when debugging LTO.
+static void saveLtoObjectFile(StringRef Buffer) {
+  std::error_code EC;
+  raw_fd_ostream OS(Config->OutputFile.str() + ".lto.o", EC,
+                    sys::fs::OpenFlags::F_None);
+  check(EC);
+  OS << Buffer;
+}
+
 // Codegen the module M and returns the resulting InputFile.
 template <class ELFT>
 std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
@@ -123,6 +132,8 @@ std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
     fatal("Failed to setup codegen");
   CodeGenPasses.run(M);
   LtoBuffer = MemoryBuffer::getMemBuffer(OwningLTOData, "", false);
+  if (Config->SaveTemps)
+    saveLtoObjectFile(LtoBuffer->getBuffer());
   return createObjectFile(*LtoBuffer);
 }
 
@@ -132,7 +143,7 @@ static void addBitcodeFile(IRMover &Mover, BitcodeFile &F,
       MemoryBuffer::getMemBuffer(F.MB, false);
   std::unique_ptr<Module> M =
       check(getLazyBitcodeModule(std::move(Buffer), Context,
-                                 /*ShouldLazyLoadMetadata*/ true));
+                                 /*ShouldLazyLoadMetadata*/ false));
   std::vector<GlobalValue *> Keep;
   for (SymbolBody *B : F.getSymbols()) {
     if (B->repl() != B)
@@ -147,6 +158,15 @@ static void addBitcodeFile(IRMover &Mover, BitcodeFile &F,
   Mover.move(std::move(M), Keep, [](GlobalValue &, IRMover::ValueAdder) {});
 }
 
+// This is for use when debugging LTO.
+static void saveBCFile(Module &M) {
+  std::error_code EC;
+  raw_fd_ostream OS(Config->OutputFile.str() + ".lto.bc", EC,
+                    sys::fs::OpenFlags::F_None);
+  check(EC);
+  WriteBitcodeToFile(&M, OS, /* ShouldPreserveUseListOrder */ true);
+}
+
 // Merge all the bitcode files we have seen, codegen the result and return
 // the resulting ObjectFile.
 template <class ELFT>
@@ -156,6 +176,8 @@ ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
   IRMover Mover(Combined);
   for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles)
     addBitcodeFile(Mover, *F, Context);
+  if (Config->SaveTemps)
+    saveBCFile(Combined);
   std::unique_ptr<InputFile> F = codegen(Combined);
   ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(F.release()));
   return &*ObjectFiles.back();

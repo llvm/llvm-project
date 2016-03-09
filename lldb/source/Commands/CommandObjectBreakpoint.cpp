@@ -277,6 +277,16 @@ public:
                         m_breakpoint_names.push_back (option_arg);
                     break;
 
+                case 'R':
+                    {
+                        ExecutionContext exe_ctx (m_interpreter.GetExecutionContext());
+                        lldb::addr_t tmp_offset_addr;
+                        tmp_offset_addr = Args::StringToAddress(&exe_ctx, option_arg, 0, &error);
+                        if (error.Success())
+                            m_offset_addr = tmp_offset_addr;
+                    }
+                    break;
+
                 case 'o':
                     m_one_shot = true;
                     break;
@@ -353,6 +363,7 @@ public:
             m_source_text_regexp.clear();
             m_modules.Clear();
             m_load_addr = LLDB_INVALID_ADDRESS;
+            m_offset_addr = 0;
             m_ignore_count = 0;
             m_thread_id = LLDB_INVALID_THREAD_ID;
             m_thread_index = UINT32_MAX;
@@ -395,6 +406,7 @@ public:
         std::string m_source_text_regexp;
         FileSpecList m_modules;
         lldb::addr_t m_load_addr;
+        lldb::addr_t m_offset_addr;
         uint32_t m_ignore_count;
         lldb::tid_t m_thread_id;
         uint32_t m_thread_index;
@@ -453,6 +465,10 @@ protected:
         Breakpoint *bp = nullptr;
         FileSpec module_spec;
         const bool internal = false;
+        
+        // If the user didn't specify skip-prologue, having an offset should turn that off.
+        if (m_options.m_offset_addr != 0 && m_options.m_skip_prologue == eLazyBoolCalculate)
+            m_options.m_skip_prologue = eLazyBoolNo;
 
         switch (break_type)
         {
@@ -484,6 +500,7 @@ protected:
                     bp = target->CreateBreakpoint (&(m_options.m_modules),
                                                    file,
                                                    m_options.m_line_num,
+                                                   m_options.m_offset_addr,
                                                    check_inlines,
                                                    m_options.m_skip_prologue,
                                                    internal,
@@ -531,6 +548,7 @@ protected:
                                                    m_options.m_func_names,
                                                    name_type_mask,
                                                    m_options.m_language,
+                                                   m_options.m_offset_addr,
                                                    m_options.m_skip_prologue,
                                                    internal,
                                                    m_options.m_hardware).get();
@@ -725,6 +743,7 @@ private:
 #define LLDB_OPT_FILE ( LLDB_OPT_SET_FROM_TO(1, 9) & ~LLDB_OPT_SET_2 )
 #define LLDB_OPT_NOT_10 ( LLDB_OPT_SET_FROM_TO(1, 10) & ~LLDB_OPT_SET_10 )
 #define LLDB_OPT_SKIP_PROLOGUE ( LLDB_OPT_SET_1 | LLDB_OPT_SET_FROM_TO(3,8) )
+#define LLDB_OPT_OFFSET_APPLIES (LLDB_OPT_SET_1 | LLDB_OPT_SET_FROM_TO(3,8) )
 #define LLDB_OPT_MOVE_TO_NEAREST_CODE ( LLDB_OPT_SET_1 | LLDB_OPT_SET_9 )
 #define LLDB_OPT_EXPR_LANGUAGE ( LLDB_OPT_SET_FROM_TO(3, 8) )
 
@@ -837,6 +856,10 @@ CommandObjectBreakpointSet::CommandOptions::g_option_table[] =
 
     { LLDB_OPT_SET_ALL, false, "breakpoint-name", 'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointName,
         "Adds this to the list of names for this breakopint."},
+
+    { LLDB_OPT_OFFSET_APPLIES, false, "address-slide", 'R', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddress,
+        "Add the specified offset to whatever address(es) the breakpoint resolves to.  "
+        "At present this applies the offset directly as given, and doesn't try to align it to instruction boundaries."},
 
     { LLDB_OPT_MOVE_TO_NEAREST_CODE, false, "move-to-nearest-code", 'm', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
         "Move breakpoints to nearest code. If not set the target.move-to-nearest-code setting is used." },

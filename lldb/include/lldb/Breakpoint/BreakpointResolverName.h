@@ -37,6 +37,7 @@ public:
                             uint32_t name_type_mask,
                             lldb::LanguageType language,
                             Breakpoint::MatchType type,
+                            lldb::addr_t offset,
                             bool skip_prologue);
 
     // This one takes an array of names.  It is always MatchType = Exact.
@@ -45,6 +46,7 @@ public:
                             size_t num_names,
                             uint32_t name_type_mask,
                             lldb::LanguageType language,
+                            lldb::addr_t offset,
                             bool skip_prologue);
 
     // This one takes a C++ array of names.  It is always MatchType = Exact.
@@ -52,18 +54,21 @@ public:
                             std::vector<std::string> names,
                             uint32_t name_type_mask,
                             lldb::LanguageType language,
+                            lldb::addr_t offset,
                             bool skip_prologue);
 
     // Creates a function breakpoint by regular expression.  Takes over control of the lifespan of func_regex.
     BreakpointResolverName (Breakpoint *bkpt,
                             RegularExpression &func_regex,
                             lldb::LanguageType language,
+                            lldb::addr_t offset,
                             bool skip_prologue);
 
     BreakpointResolverName (Breakpoint *bkpt,
                             const char *class_name,
                             const char *method,
                             Breakpoint::MatchType type,
+                            lldb::addr_t offset,
                             bool skip_prologue);
 
     ~BreakpointResolverName() override;

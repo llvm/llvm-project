@@ -65,7 +65,7 @@ uint32_t ELFFileBase<ELFT>::getSectionIndex(const Elf_Sym &Sym) const {
   uint32_t I = Sym.st_shndx;
   if (I == ELF::SHN_XINDEX)
     return ELFObj.getExtendedSymbolTableIndex(&Sym, Symtab, SymtabSHNDX);
-  if (I >= ELF::SHN_LORESERVE || I == ELF::SHN_ABS)
+  if (I >= ELF::SHN_LORESERVE)
     return 0;
   return I;
 }
@@ -245,6 +245,9 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   if (Name == ".note.GNU-stack")
     return InputSection<ELFT>::Discarded;
 
+  if (Name == ".note.GNU-split-stack")
+    error("Objects using splitstacks are not supported");
+
   // A MIPS object file has a special section that contains register
   // usage info, which needs to be handled by the linker specially.
   if (Config->EMachine == EM_MIPS && Name == ".reginfo") {
@@ -423,6 +426,7 @@ static uint8_t getGvVisibility(const GlobalValue *GV) {
   case GlobalValue::ProtectedVisibility:
     return STV_PROTECTED;
   }
+  llvm_unreachable("Unknown visibility");
 }
 
 void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {

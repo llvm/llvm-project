@@ -121,8 +121,8 @@ BreakpointResolverAddress::SearchCallback
                 }
             }
             
-            BreakpointLocationSP bp_loc_sp(m_breakpoint->AddLocation(m_addr));
             m_resolved_addr = m_addr.GetLoadAddress(&m_breakpoint->GetTarget());
+            BreakpointLocationSP bp_loc_sp(AddLocation(m_addr));
             if (bp_loc_sp && !m_breakpoint->IsInternal())
             {
                     StreamString s;

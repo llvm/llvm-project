@@ -35,7 +35,8 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
   if (Header->Magic != __llvm_profile_get_magic() ||
       Header->Version != __llvm_profile_get_version() ||
       Header->DataSize !=
-          (uint64_t)(__llvm_profile_end_data() - __llvm_profile_begin_data()) ||
+          __llvm_profile_get_data_size(__llvm_profile_begin_data(),
+                                       __llvm_profile_end_data()) ||
       Header->CountersSize != (uint64_t)(__llvm_profile_end_counters() -
                                          __llvm_profile_begin_counters()) ||
       Header->NamesSize != (uint64_t)(__llvm_profile_end_names() -

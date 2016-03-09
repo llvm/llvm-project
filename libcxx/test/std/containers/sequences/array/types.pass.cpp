@@ -44,6 +44,13 @@ int main()
         static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
         static_assert((std::is_same<C::reverse_iterator, std::reverse_iterator<C::iterator> >::value), "");
         static_assert((std::is_same<C::const_reverse_iterator, std::reverse_iterator<C::const_iterator> >::value), "");
+
+        static_assert((std::is_signed<typename C::difference_type>::value), "");
+        static_assert((std::is_unsigned<typename C::size_type>::value), "");
+        static_assert((std::is_same<typename C::difference_type, 
+            typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+        static_assert((std::is_same<typename C::difference_type, 
+            typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
     }
     {
         typedef int* T;
@@ -58,5 +65,12 @@ int main()
         static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
         static_assert((std::is_same<C::reverse_iterator, std::reverse_iterator<C::iterator> >::value), "");
         static_assert((std::is_same<C::const_reverse_iterator, std::reverse_iterator<C::const_iterator> >::value), "");
+
+        static_assert((std::is_signed<typename C::difference_type>::value), "");
+        static_assert((std::is_unsigned<typename C::size_type>::value), "");
+        static_assert((std::is_same<typename C::difference_type, 
+            typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
+        static_assert((std::is_same<typename C::difference_type, 
+            typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
     }
 }

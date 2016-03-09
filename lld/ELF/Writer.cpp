@@ -1221,18 +1221,6 @@ static uint32_t toPhdrFlags(uint64_t Flags) {
   return Ret;
 }
 
-/// For AMDGPU we need to use custom segment kinds in order to specify which
-/// address space data should be loaded into.
-template <class ELFT>
-static uint32_t getAmdgpuPhdr(OutputSectionBase<ELFT> *Sec) {
-  uint32_t Flags = Sec->getFlags();
-  if (Flags & SHF_AMDGPU_HSA_CODE)
-    return PT_AMDGPU_HSA_LOAD_CODE_AGENT;
-  if ((Flags & SHF_AMDGPU_HSA_GLOBAL) && !(Flags & SHF_AMDGPU_HSA_AGENT))
-    return PT_AMDGPU_HSA_LOAD_GLOBAL_PROGRAM;
-  return PT_LOAD;
-}
-
 // Decide which program headers to create and which sections to include in each
 // one.
 template <class ELFT> void Writer<ELFT>::createPhdrs() {
@@ -1281,9 +1269,7 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     // If flags changed then we want new load segment.
     uintX_t NewFlags = toPhdrFlags(Sec->getFlags());
     if (Flags != NewFlags) {
-      uint32_t LoadType = (Config->EMachine == EM_AMDGPU) ? getAmdgpuPhdr(Sec)
-                                                          : (uint32_t)PT_LOAD;
-      Load = AddHdr(LoadType, NewFlags);
+      Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
     }
 

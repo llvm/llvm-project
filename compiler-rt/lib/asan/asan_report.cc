@@ -471,7 +471,7 @@ bool DescribeAddressIfStack(uptr addr, uptr access_size) {
   // previously. That's unfortunate, but I have no better solution,
   // especially given that the alloca may be from entirely different place
   // (e.g. use-after-scope, or different thread's stack).
-#if defined(__powerpc64__) && defined(__BIG_ENDIAN__)
+#if defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   // On PowerPC64 ELFv1, the address of a function actually points to a
   // three-doubleword data structure with the first field containing
   // the address of the function's code.

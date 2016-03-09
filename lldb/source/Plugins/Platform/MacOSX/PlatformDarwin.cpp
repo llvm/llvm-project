@@ -1157,6 +1157,7 @@ PlatformDarwin::SetThreadCreationBreakpoint (Target &target)
                                      llvm::array_lengthof(g_bp_names),
                                      eFunctionNameTypeFull,
                                      eLanguageTypeUnknown,
+                                     0,
                                      skip_prologue,
                                      internal,
                                      hardware);

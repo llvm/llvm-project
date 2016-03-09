@@ -31,11 +31,12 @@ BreakpointResolverFileLine::BreakpointResolverFileLine
     Breakpoint *bkpt,
     const FileSpec &file_spec,
     uint32_t line_no,
+    lldb::addr_t offset,
     bool check_inlines,
     bool skip_prologue,
     bool exact_match
 ) :
-    BreakpointResolver (bkpt, BreakpointResolver::FileLineResolver),
+    BreakpointResolver (bkpt, BreakpointResolver::FileLineResolver, offset),
     m_file_spec (file_spec),
     m_line_number (line_no),
     m_inlines (check_inlines),
@@ -117,6 +118,7 @@ BreakpointResolverFileLine::CopyForBreakpoint (Breakpoint &breakpoint)
     lldb::BreakpointResolverSP ret_sp(new BreakpointResolverFileLine(&breakpoint,
                                                                      m_file_spec,
                                                                      m_line_number,
+                                                                     m_offset,
                                                                      m_inlines,
                                                                      m_skip_prologue,
                                                                      m_exact_match));

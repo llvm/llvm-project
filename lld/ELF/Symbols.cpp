@@ -44,12 +44,6 @@ typename ELFFile<ELFT>::uintX_t SymbolBody::getVA() const {
       return D->Sym.st_value;
     assert(SC->Live);
 
-    // Symbol offsets for AMDGPU are the offsets in bytes of the symbols
-    // from the beginning of the section. Note that this part of AMDGPU's
-    // ELF spec is odd and not in line with the standard ELF.
-    if (Config->EMachine == EM_AMDGPU)
-      return SC->getOffset(D->Sym);
-
     if (D->Sym.getType() == STT_TLS)
       return SC->OutSec->getVA() + SC->getOffset(D->Sym) -
              Out<ELFT>::TlsPhdr->p_vaddr;

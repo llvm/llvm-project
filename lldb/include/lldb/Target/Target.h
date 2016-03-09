@@ -767,6 +767,7 @@ public:
     CreateBreakpoint (const FileSpecList *containingModules,
                       const FileSpec &file,
                       uint32_t line_no,
+                      lldb::addr_t offset,
                       LazyBool check_inlines,
                       LazyBool skip_prologue,
                       bool internal,
@@ -823,6 +824,7 @@ public:
                       const char *func_name,
                       uint32_t func_name_type_mask, 
                       lldb::LanguageType language,
+                      lldb::addr_t offset,
                       LazyBool skip_prologue,
                       bool internal,
                       bool request_hardware);
@@ -844,8 +846,9 @@ public:
                       const FileSpecList *containingSourceFiles,
                       const char *func_names[],
                       size_t num_names, 
-                      uint32_t func_name_type_mask, 
+                      uint32_t func_name_type_mask,
                       lldb::LanguageType language,
+                      lldb::addr_t offset,
                       LazyBool skip_prologue,
                       bool internal,
                       bool request_hardware);
@@ -856,6 +859,7 @@ public:
                       const std::vector<std::string> &func_names,
                       uint32_t func_name_type_mask,
                       lldb::LanguageType language,
+                      lldb::addr_t m_offset,
                       LazyBool skip_prologue,
                       bool internal,
                       bool request_hardware);

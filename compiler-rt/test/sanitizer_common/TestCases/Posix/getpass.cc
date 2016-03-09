@@ -4,7 +4,11 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#if __linux__
 #include <pty.h>
+#else
+#include <util.h>
+#endif
 
 int
 main (int argc, char** argv)

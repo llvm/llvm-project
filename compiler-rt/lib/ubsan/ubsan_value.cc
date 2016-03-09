@@ -83,7 +83,7 @@ FloatMax Value::getFloatValue() const {
 #endif
       case 32: {
         float Value;
-#if defined(__BIG_ENDIAN__)
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
        // For big endian the float value is in the last 4 bytes.
        // On some targets we may only have 4 bytes so we count backwards from
        // the end of Val to account for both the 32-bit and 64-bit cases.
