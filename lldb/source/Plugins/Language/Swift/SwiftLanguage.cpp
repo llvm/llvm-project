@@ -194,12 +194,12 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator, "Swift.CDouble", ConstString("Swift.CDouble"), basic_synth_flags);
     
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator, "Darwin.size_t", ConstString("Darwin.size_t"), basic_synth_flags);
-    AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator, "Swift.COpaquePointer", ConstString("Swift.COpaquePointer"), basic_synth_flags);
+    AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator, "Swift.OpaquePointer", ConstString("Swift.OpaquePointer"), basic_synth_flags);
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator, "Swift.UWord", ConstString("Swift.UWord"), basic_synth_flags);
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator, "Swift.UnsafePointer", ConstString("^Swift.UnsafePointer<.+>$"), basic_synth_flags, true);
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator, "Swift.UnsafeMutablePointer", ConstString("^Swift.UnsafeMutablePointer<.+>$"), basic_synth_flags, true);
     
-    AddFormat(swift_category_sp, lldb::eFormatPointer,  ConstString("Swift.COpaquePointer"), format_flags, false);
+    AddFormat(swift_category_sp, lldb::eFormatPointer,  ConstString("Swift.OpaquePointer"), format_flags, false);
     AddFormat(swift_category_sp, lldb::eFormatPointer,  ConstString("^Swift.UnsafePointer<.+>$"), format_flags, true);
     AddFormat(swift_category_sp, lldb::eFormatPointer,  ConstString("^Swift.UnsafeMutablePointer<.+>$"), format_flags, true);
     AddFormat(swift_category_sp, lldb::eFormatUnsigned, ConstString("Swift.UWord"), format_flags, false);
