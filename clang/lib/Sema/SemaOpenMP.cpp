@@ -7688,7 +7688,8 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
                        RefRes.get());
         if (!PostUpdateRes.isUsable())
           continue;
-        ExprPostUpdates.push_back(PostUpdateRes.get());
+        ExprPostUpdates.push_back(
+            IgnoredValueConversions(PostUpdateRes.get()).get());
       }
     }
     if (TopDVar.CKind != OMPC_firstprivate)
@@ -8289,7 +8290,8 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
                            SimpleRefExpr, RefRes.get());
             if (!PostUpdateRes.isUsable())
               continue;
-            ExprPostUpdates.push_back(PostUpdateRes.get());
+            ExprPostUpdates.push_back(
+                IgnoredValueConversions(PostUpdateRes.get()).get());
           }
         }
       }
@@ -8322,7 +8324,6 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
     }
   }
 
-
   return OMPReductionClause::Create(
       Context, StartLoc, LParenLoc, ColonLoc, EndLoc, Vars,
       ReductionIdScopeSpec.getWithLocInContext(Context), ReductionId, Privates,
@@ -8336,6 +8337,8 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
   SmallVector<Expr *, 8> Vars;
   SmallVector<Expr *, 8> Privates;
   SmallVector<Expr *, 8> Inits;
+  SmallVector<Decl *, 4> ExprCaptures;
+  SmallVector<Expr *, 4> ExprPostUpdates;
   if ((!LangOpts.CPlusPlus && LinKind != OMPC_LINEAR_val) ||
       LinKind == OMPC_LINEAR_unknown) {
     Diag(LinLoc, diag::err_omp_wrong_linear_modifier) << LangOpts.CPlusPlus;
@@ -8421,8 +8424,24 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
     VarDecl *Init = buildVarDecl(*this, ELoc, Type, ".linear.start");
     Expr *InitExpr;
     DeclRefExpr *Ref = nullptr;
-    if (!VD)
-      Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
+    if (!VD) {
+      Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/false);
+      if (!IsOpenMPCapturedDecl(D)) {
+        ExprCaptures.push_back(Ref->getDecl());
+        if (Ref->getDecl()->hasAttr<OMPCaptureNoInitAttr>()) {
+          ExprResult RefRes = DefaultLvalueConversion(Ref);
+          if (!RefRes.isUsable())
+            continue;
+          ExprResult PostUpdateRes =
+              BuildBinOp(DSAStack->getCurScope(), ELoc, BO_Assign,
+                         SimpleRefExpr, RefRes.get());
+          if (!PostUpdateRes.isUsable())
+            continue;
+          ExprPostUpdates.push_back(
+              IgnoredValueConversions(PostUpdateRes.get()).get());
+        }
+      }
+    }
     if (LinKind == OMPC_LINEAR_uval)
       InitExpr = VD ? VD->getInit() : SimpleRefExpr;
     else
@@ -8474,9 +8493,27 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
     }
   }
 
+  Stmt *PreInit = nullptr;
+  if (!ExprCaptures.empty()) {
+    PreInit = new (Context)
+        DeclStmt(DeclGroupRef::Create(Context, ExprCaptures.begin(),
+                                      ExprCaptures.size()),
+                 SourceLocation(), SourceLocation());
+  }
+  Expr *PostUpdate = nullptr;
+  if (!ExprPostUpdates.empty()) {
+    for (auto *E : ExprPostUpdates) {
+      ExprResult PostUpdateRes =
+          PostUpdate
+              ? CreateBuiltinBinOp(SourceLocation(), BO_Comma, PostUpdate, E)
+              : E;
+      PostUpdate = PostUpdateRes.get();
+    }
+  }
+
   return OMPLinearClause::Create(Context, StartLoc, LParenLoc, LinKind, LinLoc,
                                  ColonLoc, EndLoc, Vars, Privates, Inits,
-                                 StepExpr, CalcStepExpr);
+                                 StepExpr, CalcStepExpr, PreInit, PostUpdate);
 }
 
 static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,

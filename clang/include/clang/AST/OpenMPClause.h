@@ -1877,6 +1877,7 @@ public:
 ///
 class OMPLinearClause final
     : public OMPVarListClause<OMPLinearClause>,
+      public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPLinearClause, Expr *> {
   friend TrailingObjects;
   friend OMPVarListClause;
@@ -1908,7 +1909,8 @@ class OMPLinearClause final
                   unsigned NumVars)
       : OMPVarListClause<OMPLinearClause>(OMPC_linear, StartLoc, LParenLoc,
                                           EndLoc, NumVars),
-        Modifier(Modifier), ModifierLoc(ModifierLoc), ColonLoc(ColonLoc) {}
+        OMPClauseWithPostUpdate(this), Modifier(Modifier),
+        ModifierLoc(ModifierLoc), ColonLoc(ColonLoc) {}
 
   /// \brief Build an empty clause.
   ///
@@ -1918,7 +1920,8 @@ class OMPLinearClause final
       : OMPVarListClause<OMPLinearClause>(OMPC_linear, SourceLocation(),
                                           SourceLocation(), SourceLocation(),
                                           NumVars),
-        Modifier(OMPC_LINEAR_val), ModifierLoc(), ColonLoc() {}
+        OMPClauseWithPostUpdate(this), Modifier(OMPC_LINEAR_val), ModifierLoc(),
+        ColonLoc() {}
 
   /// \brief Gets the list of initial values for linear variables.
   ///
@@ -1987,11 +1990,16 @@ public:
   /// \param IL List of initial values for the variables.
   /// \param Step Linear step.
   /// \param CalcStep Calculation of the linear step.
+  /// \param PreInit Statement that must be executed before entering the OpenMP
+  /// region with this clause.
+  /// \param PostUpdate Expression that must be executed after exit from the
+  /// OpenMP region with this clause.
   static OMPLinearClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          OpenMPLinearClauseKind Modifier, SourceLocation ModifierLoc,
          SourceLocation ColonLoc, SourceLocation EndLoc, ArrayRef<Expr *> VL,
-         ArrayRef<Expr *> PL, ArrayRef<Expr *> IL, Expr *Step, Expr *CalcStep);
+         ArrayRef<Expr *> PL, ArrayRef<Expr *> IL, Expr *Step, Expr *CalcStep,
+         Stmt *PreInit, Expr *PostUpdate);
 
   /// \brief Creates an empty clause with the place for \a NumVars variables.
   ///

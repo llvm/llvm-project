@@ -1670,8 +1670,12 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   // Initializing a base sub-object is an instance method call on an
   // object of the derived class.  Otherwise, we have an instance method
   // call on an object of the constructed type.
+  //
+  // FIXME: If we have a parent, we're initializing the base class subobject
+  // in aggregate initialization. It's not clear whether the object class
+  // should be the base class or the derived class in that case.
   CXXRecordDecl *ObjectClass;
-  if (Entity.getKind() == InitializedEntity::EK_Base) {
+  if (Entity.getKind() == InitializedEntity::EK_Base && !Entity.getParent()) {
     ObjectClass = cast<CXXConstructorDecl>(CurContext)->getParent();
   } else {
     ObjectClass = NamingClass;
