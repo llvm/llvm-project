@@ -93,6 +93,21 @@
 # define SANITIZER_X32 0
 #endif
 
+#if defined(__mips__)
+# define SANITIZER_MIPS 1
+# if defined(__mips64)
+#  define SANITIZER_MIPS32 0
+#  define SANITIZER_MIPS64 1
+# else
+#  define SANITIZER_MIPS32 1
+#  define SANITIZER_MIPS64 0
+# endif
+#else
+# define SANITIZER_MIPS 0
+# define SANITIZER_MIPS32 0
+# define SANITIZER_MIPS64 0
+#endif
+
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
 // But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
 // does not work well and we need to fallback to SizeClassAllocator32.

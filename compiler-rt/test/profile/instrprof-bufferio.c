@@ -11,7 +11,7 @@
 #include <string.h>
 
 typedef struct ProfBufferIO ProfBufferIO;
-ProfBufferIO *llvmCreateBufferIOInternal(FILE *File, uint32_t DefaultBufferSz);
+ProfBufferIO *lprofCreateBufferIOInternal(FILE *File, uint32_t DefaultBufferSz);
 void lprofDeleteBufferIO(ProfBufferIO *BufferIO);
 
 int lprofBufferIOWrite(ProfBufferIO *BufferIO, const char *Data, uint32_t Size);
