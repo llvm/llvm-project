@@ -436,7 +436,7 @@ public:
 
     // First we need to promote to global scope and rename any local values that
     // are potentially exported to other modules.
-    if (renameModuleForThinLTO(M, Index)) {
+    if (renameModuleForThinLTO(M, *Index)) {
       errs() << "Error renaming module\n";
       return false;
     }

@@ -90,7 +90,7 @@ std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV) {
       (doPromoteLocalToGlobal(SGV) || isPerformingImport()))
     return FunctionInfoIndex::getGlobalNameForLocal(
         SGV->getName(),
-        ImportIndex->getModuleId(SGV->getParent()->getModuleIdentifier()));
+        ImportIndex.getModuleId(SGV->getParent()->getModuleIdentifier()));
   return SGV->getName();
 }
 
@@ -231,7 +231,7 @@ bool FunctionImportGlobalProcessing::run() {
   return false;
 }
 
-bool llvm::renameModuleForThinLTO(Module &M, const FunctionInfoIndex *Index) {
+bool llvm::renameModuleForThinLTO(Module &M, const FunctionInfoIndex &Index) {
   FunctionImportGlobalProcessing ThinLTOProcessing(M, Index);
   return ThinLTOProcessing.run();
 }
