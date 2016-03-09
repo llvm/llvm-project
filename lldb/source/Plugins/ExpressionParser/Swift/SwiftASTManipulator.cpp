@@ -80,7 +80,7 @@ static void DumpPlaceholdersIntoCall (lldb_private::Stream &wrapped_stream, llvm
     for (const Expression::SwiftGenericInfo::Binding &binding : generic_bindings)
     {
         wrapped_stream.Printf(",\n"
-                              "      UnsafePointer<$__lldb_typeof_generic_%s>()", binding.name);
+                              "      UnsafePointer<$__lldb_typeof_generic_%s>(nil)", binding.name);
     }
 }
 
