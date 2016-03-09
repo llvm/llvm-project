@@ -21,7 +21,7 @@ uint64_t libEntry(char *Buffer, uint64_t MaxSize) {
 
   uint64_t Size = __llvm_profile_get_size_for_buffer();
   if (Size > MaxSize)
-    return 1;
+    return 0;
 
   __llvm_profile_reset_counters();
 

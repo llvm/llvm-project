@@ -209,9 +209,9 @@ class LLVMSymbolizerProcess : public SymbolizerProcess {
     const char* const kSymbolizerArch = "--default-arch=arm64";
 #elif defined(__arm__)
     const char* const kSymbolizerArch = "--default-arch=arm";
-#elif defined(__powerpc64__) && defined(__BIG_ENDIAN__)
+#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64";
-#elif defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)
+#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64le";
 #else
     const char* const kSymbolizerArch = "--default-arch=unknown";
