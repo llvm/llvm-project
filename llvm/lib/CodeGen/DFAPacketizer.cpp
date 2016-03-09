@@ -155,11 +155,20 @@ namespace llvm {
 class DefaultVLIWScheduler : public ScheduleDAGInstrs {
 private:
   AliasAnalysis *AA;
+  /// Ordered list of DAG postprocessing steps.
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
 public:
   DefaultVLIWScheduler(MachineFunction &MF, MachineLoopInfo &MLI,
                        AliasAnalysis *AA);
   // Actual scheduling work.
   void schedule() override;
+
+  /// DefaultVLIWScheduler takes ownership of the Mutation object.
+  void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation) {
+    Mutations.push_back(std::move(Mutation));
+  }
+protected:
+  void postprocessDAG();
 };
 }
 
@@ -172,9 +181,17 @@ DefaultVLIWScheduler::DefaultVLIWScheduler(MachineFunction &MF,
 }
 
 
+/// Apply each ScheduleDAGMutation step in order.
+void DefaultVLIWScheduler::postprocessDAG() {
+  for (auto &M : Mutations)
+    M->apply(this);
+}
+
+
 void DefaultVLIWScheduler::schedule() {
   // Build the scheduling graph.
   buildSchedGraph(AA);
+  postprocessDAG();
 }
 
 
@@ -271,4 +288,11 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
   endPacket(MBB, EndItr);
   VLIWScheduler->exitRegion();
   VLIWScheduler->finishBlock();
+}
+
+
+// Add a DAG mutation object to the ordered list.
+void VLIWPacketizerList::addMutation(
+      std::unique_ptr<ScheduleDAGMutation> Mutation) {
+  VLIWScheduler->addMutation(std::move(Mutation));
 }

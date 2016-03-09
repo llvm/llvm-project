@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include <map>
 
 namespace llvm {
@@ -199,6 +200,9 @@ public:
   virtual bool isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) {
     return false;
   }
+
+  // Add a DAG mutation to be done before the packetization begins.
+  void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation);
 };
 
 } // namespace llvm

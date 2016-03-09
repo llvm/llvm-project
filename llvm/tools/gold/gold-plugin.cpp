@@ -620,7 +620,7 @@ static void freeSymName(ld_plugin_symbol &Sym) {
 
 /// Helper to get a file's symbols and a view into it via gold callbacks.
 static const void *getSymbolsAndView(claimed_file &F) {
-  ld_plugin_status status = get_symbols(F.handle, F.syms.size(), &F.syms[0]);
+  ld_plugin_status status = get_symbols(F.handle, F.syms.size(), F.syms.data());
   if (status == LDPS_NO_SYMS)
     return nullptr;
 
@@ -1090,7 +1090,7 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
   StringSet<> Dummy;
   if (linkInModule(Context, L, F, View, File, ApiFile, Dummy, Dummy))
     message(LDPL_FATAL, "Failed to rename module for ThinLTO");
-  if (renameModuleForThinLTO(*NewModule, &CombinedIndex))
+  if (renameModuleForThinLTO(*NewModule, CombinedIndex))
     message(LDPL_FATAL, "Failed to rename module for ThinLTO");
 
   CodeGen codeGen(std::move(NewModule), OS, TaskID, &CombinedIndex, File.name);

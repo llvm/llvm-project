@@ -65,6 +65,9 @@ public:
   static bool isBitcodeFile(const void *mem, size_t length);
   static bool isBitcodeFile(const char *path);
 
+  /// Returns 'true' if the Module is produced for ThinLTO.
+  bool isThinLTO();
+
   /// Returns 'true' if the memory buffer is LLVM bitcode for the specified
   /// triple.
   static bool isBitcodeForTarget(MemoryBuffer *memBuffer,

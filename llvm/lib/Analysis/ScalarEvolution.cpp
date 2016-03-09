@@ -4557,53 +4557,86 @@ ConstantRange ScalarEvolution::getRangeViaFactoring(const SCEV *Start,
                                                     const SCEV *Step,
                                                     const SCEV *MaxBECount,
                                                     unsigned BitWidth) {
-  APInt Offset(BitWidth, 0);
-
-  if (auto *SA = dyn_cast<SCEVAddExpr>(Start)) {
-    // Peel off a constant offset, if possible.  In the future we could consider
-    // being smarter here and handle {Start+Step,+,Step} too.
-    if (SA->getNumOperands() != 2 || !isa<SCEVConstant>(SA->getOperand(0)))
-      return ConstantRange(BitWidth, /* isFullSet = */ true);
-    Offset = cast<SCEVConstant>(SA->getOperand(0))->getAPInt();
-    Start = SA->getOperand(1);
-  }
-
-  if (!isa<SCEVUnknown>(Start) || !isa<SCEVUnknown>(Step))
-    // We don't have anything new to contribute in this case.
-    return ConstantRange(BitWidth, /* isFullSet = */ true);
-
   //    RangeOf({C?A:B,+,C?P:Q}) == RangeOf(C?{A,+,P}:{B,+,Q})
   // == RangeOf({A,+,P}) union RangeOf({B,+,Q})
 
   struct SelectPattern {
     Value *Condition = nullptr;
-    const APInt *TrueValue = nullptr;
-    const APInt *FalseValue = nullptr;
+    APInt TrueValue;
+    APInt FalseValue;
 
-    explicit SelectPattern(const SCEVUnknown *SU) {
+    explicit SelectPattern(ScalarEvolution &SE, unsigned BitWidth,
+                           const SCEV *S) {
+      Optional<unsigned> CastOp;
+      APInt Offset(BitWidth, 0);
+
+      assert(SE.getTypeSizeInBits(S->getType()) == BitWidth &&
+             "Should be!");
+
+      // Peel off a constant offset:
+      if (auto *SA = dyn_cast<SCEVAddExpr>(S)) {
+        // In the future we could consider being smarter here and handle
+        // {Start+Step,+,Step} too.
+        if (SA->getNumOperands() != 2 || !isa<SCEVConstant>(SA->getOperand(0)))
+          return;
+
+        Offset = cast<SCEVConstant>(SA->getOperand(0))->getAPInt();
+        S = SA->getOperand(1);
+      }
+
+      // Peel off a cast operation
+      if (auto *SCast = dyn_cast<SCEVCastExpr>(S)) {
+        CastOp = SCast->getSCEVType();
+        S = SCast->getOperand();
+      }
+
       using namespace llvm::PatternMatch;
 
-      if (!match(SU->getValue(),
-                 m_Select(m_Value(Condition), m_APInt(TrueValue),
-                          m_APInt(FalseValue)))) {
+      auto *SU = dyn_cast<SCEVUnknown>(S);
+      const APInt *TrueVal, *FalseVal;
+      if (!SU ||
+          !match(SU->getValue(), m_Select(m_Value(Condition), m_APInt(TrueVal),
+                                          m_APInt(FalseVal)))) {
         Condition = nullptr;
-        TrueValue = FalseValue = nullptr;
+        return;
       }
+
+      TrueValue = *TrueVal;
+      FalseValue = *FalseVal;
+
+      // Re-apply the cast we peeled off earlier
+      if (CastOp.hasValue())
+        switch (*CastOp) {
+        default:
+          llvm_unreachable("Unknown SCEV cast type!");
+
+        case scTruncate:
+          TrueValue = TrueValue.trunc(BitWidth);
+          FalseValue = FalseValue.trunc(BitWidth);
+          break;
+        case scZeroExtend:
+          TrueValue = TrueValue.zext(BitWidth);
+          FalseValue = FalseValue.zext(BitWidth);
+          break;
+        case scSignExtend:
+          TrueValue = TrueValue.sext(BitWidth);
+          FalseValue = FalseValue.sext(BitWidth);
+          break;
+        }
+
+      // Re-apply the constant offset we peeled off earlier
+      TrueValue += Offset;
+      FalseValue += Offset;
     }
 
-    bool isRecognized() {
-      assert(((Condition && TrueValue && FalseValue) ||
-              (!Condition && !TrueValue && !FalseValue)) &&
-             "Invariant: either all three are non-null or all three are null");
-      return TrueValue != nullptr;
-    }
+    bool isRecognized() { return Condition != nullptr; }
   };
 
-  SelectPattern StartPattern(cast<SCEVUnknown>(Start));
+  SelectPattern StartPattern(*this, BitWidth, Start);
   if (!StartPattern.isRecognized())
     return ConstantRange(BitWidth, /* isFullSet = */ true);
 
-  SelectPattern StepPattern(cast<SCEVUnknown>(Step));
+  SelectPattern StepPattern(*this, BitWidth, Step);
   if (!StepPattern.isRecognized())
     return ConstantRange(BitWidth, /* isFullSet = */ true);
 
@@ -4622,10 +4655,10 @@ ConstantRange ScalarEvolution::getRangeViaFactoring(const SCEV *Start,
   // FIXME: without the explicit `this` receiver below, MSVC errors out with
   // C2352 and C2512 (otherwise it isn't needed).
 
-  const SCEV *TrueStart = this->getConstant(*StartPattern.TrueValue + Offset);
-  const SCEV *TrueStep = this->getConstant(*StepPattern.TrueValue);
-  const SCEV *FalseStart = this->getConstant(*StartPattern.FalseValue + Offset);
-  const SCEV *FalseStep = this->getConstant(*StepPattern.FalseValue);
+  const SCEV *TrueStart = this->getConstant(StartPattern.TrueValue);
+  const SCEV *TrueStep = this->getConstant(StepPattern.TrueValue);
+  const SCEV *FalseStart = this->getConstant(StartPattern.FalseValue);
+  const SCEV *FalseStep = this->getConstant(StepPattern.FalseValue);
 
   ConstantRange TrueRange =
       this->getRangeForAffineAR(TrueStart, TrueStep, MaxBECount, BitWidth);

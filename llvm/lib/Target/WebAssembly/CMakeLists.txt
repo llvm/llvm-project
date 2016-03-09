@@ -14,6 +14,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyAsmPrinter.cpp
   WebAssemblyCFGStackify.cpp
   WebAssemblyFastISel.cpp
+  WebAssemblyFixIrreducibleControlFlow.cpp
   WebAssemblyFrameLowering.cpp
   WebAssemblyISelDAGToDAG.cpp
   WebAssemblyISelLowering.cpp

@@ -16,11 +16,14 @@ namespace llvm {
 
 class LinePrinter;
 
+typedef int CompilandDumpFlags;
 class CompilandDumper : public PDBSymDumper {
 public:
+  enum Flags { None = 0x0, Children = 0x1, Symbols = 0x2, Lines = 0x4 };
+
   CompilandDumper(LinePrinter &P);
 
-  void start(const PDBSymbolCompiland &Symbol, bool Children);
+  void start(const PDBSymbolCompiland &Symbol, CompilandDumpFlags flags);
 
   void dump(const PDBSymbolCompilandDetails &Symbol) override;
   void dump(const PDBSymbolCompilandEnv &Symbol) override;

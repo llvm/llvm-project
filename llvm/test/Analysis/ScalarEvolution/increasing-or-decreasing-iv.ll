@@ -100,7 +100,7 @@ loop:
   %iv.sext = sext i32 %iv to i64
   %iv.next = add i32 %iv, %step
 ; CHECK:  %iv.sext = sext i32 %iv to i64
-; CHECK-NEXT:  -->  {(sext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop>
+; CHECK-NEXT:   -->  {(sext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop> U: [0,128) S: [0,128)
   %loop.iv.inc = add i32 %loop.iv, 1
   %be.cond = icmp ne i32 %loop.iv.inc, 128
   br i1 %be.cond, label %loop, label %leave
@@ -128,8 +128,116 @@ loop:
   %iv = phi i16 [ %start, %entry ], [ %iv.next, %loop ]
   %iv.zext = zext i16 %iv to i64
 ; CHECK:  %iv.zext = zext i16 %iv to i64
-; CHECK-NEXT:  -->  {(zext i16 %start to i64),+,(zext i16 %step to i64)}<nuw><%loop>
+; CHECK-NEXT:  -->  {(zext i16 %start to i64),+,(zext i16 %step to i64)}<nuw><%loop> U: [0,64644) S: [0,64644)
   %iv.next = add i16 %iv, %step
+  %loop.iv.inc = add i16 %loop.iv, 1
+  %be.cond = icmp ne i16 %loop.iv.inc, 128
+  br i1 %be.cond, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+define void @f4(i1 %c) {
+; CHECK-LABEL: Classifying expressions for: @f4
+
+; @f4() demonstrates a case where SCEV is not able to compute a
+; precise range for %iv.trunc, though it should be able to, in theory.
+; This is because SCEV looks into affine add recurrences only when the
+; backedge taken count of the loop has the same bitwidth as the
+; induction variable.
+entry:
+  %start = select i1 %c, i32 127, i32 0
+  %step  = select i1 %c, i32 -1,  i32 1
+  br label %loop
+
+loop:
+  %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.inc, %loop ]
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.trunc = trunc i32 %iv to i16
+; CHECK:  %iv.trunc = trunc i32 %iv to i16
+; CHECK-NEXT:   -->  {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: full-set S: full-set
+  %iv.next = add i32 %iv, %step
+  %loop.iv.inc = add i32 %loop.iv, 1
+  %be.cond = icmp ne i32 %loop.iv.inc, 128
+  br i1 %be.cond, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+define void @f5(i1 %c) {
+; CHECK-LABEL: Classifying expressions for: @f5
+entry:
+  %start = select i1 %c, i32 127, i32 0
+  %step  = select i1 %c, i32 -1,  i32 1
+  br label %loop
+
+loop:
+  %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.trunc = trunc i32 %iv to i16
+; CHECK:  %iv.trunc = trunc i32 %iv to i16
+; CHECK-NEXT:  -->  {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: [0,128) S: [0,128)
+  %iv.next = add i32 %iv, %step
+
+  %loop.iv.inc = add i16 %loop.iv, 1
+  %be.cond = icmp ne i16 %loop.iv.inc, 128
+  br i1 %be.cond, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+define void @f6(i1 %c) {
+; CHECK-LABEL: Classifying expressions for: @f6
+entry:
+  %start = select i1 %c, i32 127, i32 0
+  %step  = select i1 %c, i32 -2,  i32 0
+  br label %loop
+
+loop:
+  %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK:   %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:  -->  {%start,+,(1 + %step)<nuw><nsw>}<%loop> U: [0,128) S: [0,128)
+
+  %step.plus.one = add i32 %step, 1
+  %iv.next = add i32 %iv, %step.plus.one
+  %iv.sext = sext i32 %iv to i64
+; CHECK:   %iv.sext = sext i32 %iv to i64
+; CHECK-NEXT:  -->  {(sext i32 %start to i64),+,(1 + (sext i32 %step to i64))<nsw>}<nsw><%loop> U: [0,128) S: [0,128)
+  %loop.iv.inc = add i16 %loop.iv, 1
+  %be.cond = icmp ne i16 %loop.iv.inc, 128
+  br i1 %be.cond, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+define void @f7(i1 %c) {
+; CHECK-LABEL: Classifying expressions for: @f7
+entry:
+  %start = select i1 %c, i32 127, i32 0
+  %step  = select i1 %c, i32 -1,  i32 1
+  br label %loop
+
+loop:
+  %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.trunc = trunc i32 %iv to i16
+; CHECK:  %iv.trunc = trunc i32 %iv to i16
+; CHECK-NEXT:  -->  {(trunc i32 %start to i16),+,(trunc i32 %step to i16)}<%loop> U: [0,128) S: [0,128)
+  %iv.next = add i32 %iv, %step
+
+  %iv.trunc.plus.one = add i16 %iv.trunc, 1
+; CHECK:  %iv.trunc.plus.one = add i16 %iv.trunc, 1
+; CHECK-NEXT:  -->  {(1 + (trunc i32 %start to i16))<nuw><nsw>,+,(trunc i32 %step to i16)}<%loop> U: [1,129) S: [1,129)
+
+  %iv.trunc.plus.two = add i16 %iv.trunc, 2
+; CHECK:  %iv.trunc.plus.two = add i16 %iv.trunc, 2
+; CHECK-NEXT:  -->  {(2 + (trunc i32 %start to i16))<nuw><nsw>,+,(trunc i32 %step to i16)}<%loop> U: [2,130) S: [2,130)
+
   %loop.iv.inc = add i16 %loop.iv, 1
   %be.cond = icmp ne i16 %loop.iv.inc, 128
   br i1 %be.cond, label %loop, label %leave

@@ -149,10 +149,10 @@ class MachineFunction {
   /// the attribute itself.
   /// This is used to limit optimizations which cannot reason
   /// about the control flow of such functions.
-  bool ExposesReturnsTwice;
+  bool ExposesReturnsTwice = false;
 
   /// True if the function includes any inline assembly.
-  bool HasInlineAsm;
+  bool HasInlineAsm = false;
 
   // Allocation management for pseudo source values.
   std::unique_ptr<PseudoSourceValueManager> PSVManager;

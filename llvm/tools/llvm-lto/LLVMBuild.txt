@@ -19,4 +19,4 @@
 type = Tool
 name = llvm-lto
 parent = Tools
-required_libraries = BitWriter Core LTO Object Support all-targets
+required_libraries = BitWriter Core IRReader LTO Object Support all-targets

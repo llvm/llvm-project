@@ -28,7 +28,7 @@ class FunctionImportGlobalProcessing {
   Module &M;
 
   /// Function index passed in for function importing/exporting handling.
-  const FunctionInfoIndex *ImportIndex;
+  const FunctionInfoIndex &ImportIndex;
 
   /// Functions to import from this module, all other functions will be
   /// imported as declarations instead of definitions.
@@ -76,7 +76,7 @@ class FunctionImportGlobalProcessing {
 
 public:
   FunctionImportGlobalProcessing(
-      Module &M, const FunctionInfoIndex *Index,
+      Module &M, const FunctionInfoIndex &Index,
       DenseSet<const GlobalValue *> *FunctionsToImport = nullptr)
       : M(M), ImportIndex(Index), FunctionsToImport(FunctionsToImport) {
     // If we have a FunctionInfoIndex but no function to import,
@@ -84,7 +84,7 @@ public:
     // backend compilation, and we need to see if it has functions that
     // may be exported to another backend compilation.
     if (!FunctionsToImport)
-      HasExportedFunctions = ImportIndex->hasExportedFunctions(M);
+      HasExportedFunctions = ImportIndex.hasExportedFunctions(M);
   }
 
   bool run();
@@ -99,7 +99,7 @@ public:
 
 /// Perform in-place global value handling on the given Module for
 /// exported local functions renamed and promoted for ThinLTO.
-bool renameModuleForThinLTO(Module &M, const FunctionInfoIndex *Index);
+bool renameModuleForThinLTO(Module &M, const FunctionInfoIndex &Index);
 
 } // End llvm namespace
 

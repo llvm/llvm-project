@@ -888,9 +888,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
             .addOperand(getLdStRegOp(RtMI))
             .addOperand(getLdStRegOp(Rt2MI))
             .addOperand(BaseRegOp)
-            .addImm(OffsetImm);
-  // FIXME: Copy the mem operands from the source instructions. The MI scheduler
-  // needs these to reason about loads/stores.
+            .addImm(OffsetImm)
+            .setMemRefs(I->mergeMemRefsWith(*Paired));
 
   (void)MIB;
 

@@ -41,6 +41,10 @@ N: Greg Clayton
 E: gclayton@apple.com
 D: LLDB
 
+N: Hans Wennborg
+E: hans@chromium.org
+D: Release management (x.y.0 releases)
+
 N: Marshall Clow
 E: mclow.lists@gmail.com
 D: libc++

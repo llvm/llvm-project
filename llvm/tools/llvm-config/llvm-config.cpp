@@ -209,7 +209,7 @@ Options:\n\
   --host-target     Target triple used to configure LLVM.\n\
   --build-mode      Print build mode of LLVM tree (e.g. Debug or Release).\n\
   --assertion-mode  Print assertion mode of LLVM tree (ON or OFF).\n\
-  --build-system    Print the build system used to build LLVM (autoconf or cmake).\n\
+  --build-system    Print the build system used to build LLVM (always cmake).\n\
   --has-rtti        Print whether or not LLVM was built with rtti (YES or NO).\n\
   --has-global-isel Print whether or not LLVM was built with global-isel support (YES or NO).\n\
   --shared-mode     Print how the provided components can be collectively linked (`shared` or `static`).\n\
@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
   // that we can report the correct information when run from a development
   // tree.
   bool IsInDevelopmentTree;
-  enum { MakefileStyle, CMakeStyle, CMakeBuildModeStyle } DevelopmentTreeLayout;
+  enum { CMakeStyle, CMakeBuildModeStyle } DevelopmentTreeLayout;
   llvm::SmallString<256> CurrentPath(GetExecutablePath(argv[0]));
   std::string CurrentExecPrefix;
   std::string ActiveObjRoot;
@@ -285,20 +285,7 @@ int main(int argc, char **argv) {
 
   // Check to see if we are inside a development tree by comparing to possible
   // locations (prefix style or CMake style).
-  if (sys::fs::equivalent(CurrentExecPrefix,
-                          Twine(LLVM_OBJ_ROOT) + "/" + build_mode)) {
-    IsInDevelopmentTree = true;
-    DevelopmentTreeLayout = MakefileStyle;
-
-    // If we are in a development tree, then check if we are in a BuildTools
-    // directory. This indicates we are built for the build triple, but we
-    // always want to provide information for the host triple.
-    if (sys::path::filename(LLVM_OBJ_ROOT) == "BuildTools") {
-      ActiveObjRoot = sys::path::parent_path(LLVM_OBJ_ROOT);
-    } else {
-      ActiveObjRoot = LLVM_OBJ_ROOT;
-    }
-  } else if (sys::fs::equivalent(CurrentExecPrefix, LLVM_OBJ_ROOT)) {
+  if (sys::fs::equivalent(CurrentExecPrefix, LLVM_OBJ_ROOT)) {
     IsInDevelopmentTree = true;
     DevelopmentTreeLayout = CMakeStyle;
     ActiveObjRoot = LLVM_OBJ_ROOT;
@@ -309,7 +296,7 @@ int main(int argc, char **argv) {
     ActiveObjRoot = LLVM_OBJ_ROOT;
   } else {
     IsInDevelopmentTree = false;
-    DevelopmentTreeLayout = MakefileStyle; // Initialized to avoid warnings.
+    DevelopmentTreeLayout = CMakeStyle; // Initialized to avoid warnings.
   }
 
   // Compute various directory locations based on the derived location
@@ -323,12 +310,6 @@ int main(int argc, char **argv) {
     // CMake organizes the products differently than a normal prefix style
     // layout.
     switch (DevelopmentTreeLayout) {
-    case MakefileStyle:
-      ActivePrefix = ActiveObjRoot;
-      ActiveBinDir = ActiveObjRoot + "/" + build_mode + "/bin";
-      ActiveLibDir =
-          ActiveObjRoot + "/" + build_mode + "/lib" + LLVM_LIBDIR_SUFFIX;
-      break;
     case CMakeStyle:
       ActiveBinDir = ActiveObjRoot + "/bin";
       ActiveLibDir = ActiveObjRoot + "/lib" + LLVM_LIBDIR_SUFFIX;
@@ -397,16 +378,8 @@ int main(int argc, char **argv) {
 
   const bool BuiltDyLib = (std::strcmp(LLVM_ENABLE_DYLIB, "ON") == 0);
 
-  enum { CMake, AutoConf } ConfigTool;
-  if (std::strcmp(LLVM_BUILD_SYSTEM, "cmake") == 0) {
-    ConfigTool = CMake;
-  } else {
-    ConfigTool = AutoConf;
-  }
-
   /// CMake style shared libs, ie each component is in a shared library.
-  const bool BuiltSharedLibs =
-      (ConfigTool == CMake && std::strcmp(LLVM_ENABLE_SHARED, "ON") == 0);
+  const bool BuiltSharedLibs = std::strcmp(LLVM_ENABLE_SHARED, "ON") == 0;
 
   bool DyLibExists = false;
   const std::string DyLibName =

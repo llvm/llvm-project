@@ -682,19 +682,19 @@ multiclass thumb_st_rr_ri_enc<bits<3> reg_opc, bits<4> imm_opc,
 defm tLDR  : thumb_ld_rr_ri_enc<0b100, 0b0110, t_addrmode_rr,
                                 t_addrmode_is4, AddrModeT1_4,
                                 IIC_iLoad_r, IIC_iLoad_i, "ldr",
-                                UnOpFrag<(load node:$Src)>>;
+                                load>;
 
 // A8.6.64 & A8.6.61
 defm tLDRB : thumb_ld_rr_ri_enc<0b110, 0b0111, t_addrmode_rr,
                                 t_addrmode_is1, AddrModeT1_1,
                                 IIC_iLoad_bh_r, IIC_iLoad_bh_i, "ldrb",
-                                UnOpFrag<(zextloadi8 node:$Src)>>;
+                                zextloadi8>;
 
 // A8.6.76 & A8.6.73
 defm tLDRH : thumb_ld_rr_ri_enc<0b101, 0b1000, t_addrmode_rr,
                                 t_addrmode_is2, AddrModeT1_2,
                                 IIC_iLoad_bh_r, IIC_iLoad_bh_i, "ldrh",
-                                UnOpFrag<(zextloadi16 node:$Src)>>;
+                                zextloadi16>;
 
 let AddedComplexity = 10 in
 def tLDRSB :                    // A8.6.80
@@ -725,19 +725,19 @@ def tSTRspi : T1pIs<(outs), (ins tGPR:$Rt, t_addrmode_sp:$addr), IIC_iStore_i,
 defm tSTR  : thumb_st_rr_ri_enc<0b000, 0b0110, t_addrmode_rr,
                                 t_addrmode_is4, AddrModeT1_4,
                                 IIC_iStore_r, IIC_iStore_i, "str",
-                                BinOpFrag<(store node:$LHS, node:$RHS)>>;
+                                store>;
 
 // A8.6.197 & A8.6.195
 defm tSTRB : thumb_st_rr_ri_enc<0b010, 0b0111, t_addrmode_rr,
                                 t_addrmode_is1, AddrModeT1_1,
                                 IIC_iStore_bh_r, IIC_iStore_bh_i, "strb",
-                                BinOpFrag<(truncstorei8 node:$LHS, node:$RHS)>>;
+                                truncstorei8>;
 
 // A8.6.207 & A8.6.205
 defm tSTRH : thumb_st_rr_ri_enc<0b001, 0b1000, t_addrmode_rr,
                                t_addrmode_is2, AddrModeT1_2,
                                IIC_iStore_bh_r, IIC_iStore_bh_i, "strh",
-                               BinOpFrag<(truncstorei16 node:$LHS, node:$RHS)>>;
+                               truncstorei16>;
 
 
 //===----------------------------------------------------------------------===//

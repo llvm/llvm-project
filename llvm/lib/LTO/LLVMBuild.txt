@@ -34,3 +34,4 @@ required_libraries =
  Scalar
  Support
  Target
+ TransformUtils

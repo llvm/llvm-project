@@ -28,7 +28,6 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/ADT/PriorityQueue.h"
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -68,37 +67,6 @@ public:
 char WebAssemblyCFGStackify::ID = 0;
 FunctionPass *llvm::createWebAssemblyCFGStackify() {
   return new WebAssemblyCFGStackify();
-}
-
-static void EliminateMultipleEntryLoops(MachineFunction &MF,
-                                        const MachineLoopInfo &MLI) {
-  SmallPtrSet<MachineBasicBlock *, 8> InSet;
-  for (scc_iterator<MachineFunction *> I = scc_begin(&MF), E = scc_end(&MF);
-       I != E; ++I) {
-    const std::vector<MachineBasicBlock *> &CurrentSCC = *I;
-
-    // Skip trivial SCCs.
-    if (CurrentSCC.size() == 1)
-      continue;
-
-    InSet.insert(CurrentSCC.begin(), CurrentSCC.end());
-    MachineBasicBlock *Header = nullptr;
-    for (MachineBasicBlock *MBB : CurrentSCC) {
-      for (MachineBasicBlock *Pred : MBB->predecessors()) {
-        if (InSet.count(Pred))
-          continue;
-        if (!Header) {
-          Header = MBB;
-          break;
-        }
-        // TODO: Implement multiple-entry loops.
-        report_fatal_error("multiple-entry loops are not supported yet");
-      }
-    }
-    assert(MLI.isLoopHeader(Header));
-
-    InSet.clear();
-  }
 }
 
 /// Return the "bottom" block of a loop. This differs from
@@ -556,9 +524,6 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   MF.getRegInfo().invalidateLiveness();
-
-  // Sorting needs all loops to be single-entry.
-  EliminateMultipleEntryLoops(MF, MLI);
 
   // Sort the blocks, with contiguous loops.
   SortBlocks(MF, MLI, MDT);
