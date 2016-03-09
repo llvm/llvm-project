@@ -61,7 +61,8 @@ struct StoreToLoadForwardingCandidate {
 
   /// \brief Return true if the dependence from the store to the load has a
   /// distance of one.  E.g. A[i+1] = A[i]
-  bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE) const {
+  bool isDependenceDistanceOfOne(PredicatedScalarEvolution &PSE,
+                                 Loop *L) const {
     Value *LoadPtr = Load->getPointerOperand();
     Value *StorePtr = Store->getPointerOperand();
     Type *LoadPtrType = LoadPtr->getType();
@@ -71,6 +72,13 @@ struct StoreToLoadForwardingCandidate {
                StorePtr->getType()->getPointerAddressSpace() &&
            LoadType == StorePtr->getType()->getPointerElementType() &&
            "Should be a known dependence");
+
+    // Currently we only support accesses with unit stride.  FIXME: we should be
+    // able to handle non unit stirde as well as long as the stride is equal to
+    // the dependence distance.
+    if (isStridedPtr(PSE, LoadPtr, L) != 1 ||
+        isStridedPtr(PSE, LoadPtr, L) != 1)
+      return false;
 
     auto &DL = Load->getParent()->getModule()->getDataLayout();
     unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
@@ -83,7 +91,7 @@ struct StoreToLoadForwardingCandidate {
     auto *Dist = cast<SCEVConstant>(
         PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
     const APInt &Val = Dist->getAPInt();
-    return Val.abs() == TypeByteSize;
+    return Val == TypeByteSize;
   }
 
   Value *getLoadPtr() const { return Load->getPointerOperand(); }
@@ -223,8 +231,8 @@ public:
         // so deciding which one forwards is easy.  The later one forwards as
         // long as they both have a dependence distance of one to the load.
         if (Cand.Store->getParent() == OtherCand->Store->getParent() &&
-            Cand.isDependenceDistanceOfOne(PSE) &&
-            OtherCand->isDependenceDistanceOfOne(PSE)) {
+            Cand.isDependenceDistanceOfOne(PSE, L) &&
+            OtherCand->isDependenceDistanceOfOne(PSE, L)) {
           // They are in the same block, the later one will forward to the load.
           if (getInstrIndex(OtherCand->Store) < getInstrIndex(Cand.Store))
             OtherCand = &Cand;
@@ -441,7 +449,7 @@ public:
 
       // Check whether the SCEV difference is the same as the induction step,
       // thus we load the value in the next iteration.
-      if (!Cand.isDependenceDistanceOfOne(PSE))
+      if (!Cand.isDependenceDistanceOfOne(PSE, L))
         continue;
 
       ++NumForwarding;
