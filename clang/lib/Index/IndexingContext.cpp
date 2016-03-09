@@ -298,6 +298,7 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
   if (Parent)
     Parent = getCanonicalDecl(Parent);
   assert(!Parent || !Parent->isImplicit() ||
+         isa<FunctionDecl>(Parent) ||
          isa<ObjCInterfaceDecl>(Parent) || isa<ObjCMethodDecl>(Parent));
 
   SmallVector<SymbolRelation, 6> FinalRelations;

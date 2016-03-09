@@ -65,3 +65,8 @@ enum {
   // CHECK-NEXT: RelChild | <no-name> | c:@Ea@One
   Two,
 };
+
+// CHECK: [[@LINE+1]]:13 | typedef/C | jmp_buf | c:index-source.m@T@jmp_buf | <no-cgname> | Def | rel: 0
+typedef int jmp_buf[(18)];
+// CHECK: [[@LINE+1]]:19 | typedef/C | jmp_buf | c:index-source.m@T@jmp_buf | <no-cgname> | Ref | rel: 0
+extern int setjmp(jmp_buf);
