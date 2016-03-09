@@ -1930,6 +1930,7 @@ void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
 
 void OMPClauseWriter::VisitOMPLinearClause(OMPLinearClause *C) {
   Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPostUpdate(C);
   Writer->Writer.AddSourceLocation(C->getLParenLoc(), Record);
   Writer->Writer.AddSourceLocation(C->getColonLoc(), Record);
   Record.push_back(C->getModifier());

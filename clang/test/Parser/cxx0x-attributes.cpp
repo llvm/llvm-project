@@ -336,7 +336,6 @@ namespace {
   // expected-warning@-1 {{use of the 'deprecated' attribute is a C++14 extension}}
   [[deprecated()]] void foo();
   // expected-error@-1 {{parentheses must be omitted if 'deprecated' attribute's argument list is empty}}
-  // expected-warning@-2 {{use of the 'deprecated' attribute is a C++14 extension}}
   [[gnu::deprecated()]] void quux();
 }
 

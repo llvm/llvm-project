@@ -415,6 +415,7 @@ void OMPClauseProfiler::VisitOMPReductionClause(
 }
 void OMPClauseProfiler::VisitOMPLinearClause(const OMPLinearClause *C) {
   VisitOMPClauseList(C);
+  VistOMPClauseWithPostUpdate(C);
   for (auto *E : C->privates()) {
     Profiler->VisitStmt(E);
   }

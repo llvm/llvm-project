@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s 
 
 // Verify that using an initializer list for a non-aggregate looks for
 // constructors..
@@ -11,7 +13,7 @@ struct NonAggr1 { // expected-note 2 {{candidate constructor}}
 };
 
 struct Base { };
-struct NonAggr2 : public Base { // expected-note 3 {{candidate constructor}}
+struct NonAggr2 : public Base { // expected-note 0-3 {{candidate constructor}}
   int m;
 };
 
@@ -25,9 +27,15 @@ struct NonAggr4 { // expected-note 3 {{candidate constructor}}
 };
 
 NonAggr1 na1 = { 17 }; // expected-error{{no matching constructor for initialization of 'NonAggr1'}}
-NonAggr2 na2 = { 17 }; // expected-error{{no matching constructor for initialization of 'NonAggr2'}}
+NonAggr2 na2 = { 17 };
 NonAggr3 na3 = { 17 }; // expected-error{{no matching constructor for initialization of 'NonAggr3'}}
 NonAggr4 na4 = { 17 }; // expected-error{{no matching constructor for initialization of 'NonAggr4'}}
+#if __cplusplus <= 201402L
+// expected-error@-4{{no matching constructor for initialization of 'NonAggr2'}}
+#else
+// expected-error@-6{{requires explicit braces}}
+NonAggr2 na2b = { {}, 17 }; // ok
+#endif
 
 // PR5817
 typedef int type[][2];
@@ -82,3 +90,59 @@ public:
 };
 
 AggAgg aggagg = { 1, 2, 3, 4 };
+
+namespace diff_cpp14_dcl_init_aggr_example {
+  struct derived;
+  struct base {
+    friend struct derived;
+  private:
+    base();
+  };
+  struct derived : base {};
+
+  derived d1{};
+#if __cplusplus > 201402L
+  // expected-error@-2 {{private}}
+  // expected-note@-7 {{here}}
+#endif
+  derived d2;
+}
+
+namespace ProtectedBaseCtor {
+  // FIXME: It's unclear whether f() and g() should be valid in C++1z. What is
+  // the object expression in a constructor call -- the base class subobject or
+  // the complete object?
+  struct A {
+  protected:
+    A();
+  };
+
+  struct B : public A {
+    friend B f();
+    friend B g();
+    friend B h();
+  };
+
+  B f() { return {}; }
+#if __cplusplus > 201402L
+  // expected-error@-2 {{protected default constructor}}
+  // expected-note@-12 {{here}}
+#endif
+
+  B g() { return {{}}; }
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{no matching constructor}}
+  // expected-note@-15 3{{candidate}}
+#else
+  // expected-error@-5 {{protected default constructor}}
+  // expected-note@-21 {{here}}
+#endif
+
+  B h() { return {A{}}; }
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{no matching constructor}}
+  // expected-note@-24 3{{candidate}}
+#endif
+  // expected-error@-5 {{protected constructor}}
+  // expected-note@-30 {{here}}
+}

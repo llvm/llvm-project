@@ -227,8 +227,8 @@ public:
       TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D));
       TRY_TO(IndexCtx.indexDeclContext(D));
     } else {
-      return IndexCtx.handleReference(D, D->getLocation(), nullptr, nullptr,
-                                      SymbolRoleSet());
+      return IndexCtx.handleReference(D, D->getLocation(), nullptr,
+                                      D->getDeclContext(), SymbolRoleSet());
     }
     return true;
   }
@@ -239,8 +239,8 @@ public:
       TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D));
       TRY_TO(IndexCtx.indexDeclContext(D));
     } else {
-      return IndexCtx.handleReference(D, D->getLocation(), nullptr, nullptr,
-                                      SymbolRoleSet());
+      return IndexCtx.handleReference(D, D->getLocation(), nullptr,
+                                      D->getDeclContext(), SymbolRoleSet());
     }
     return true;
   }

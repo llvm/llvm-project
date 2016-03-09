@@ -1171,6 +1171,38 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
   unsigned NumInitElements = E->getNumInits();
   RecordDecl *record = E->getType()->castAs<RecordType>()->getDecl();
 
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception.
+  SmallVector<EHScopeStack::stable_iterator, 16> cleanups;
+  llvm::Instruction *cleanupDominator = nullptr;
+
+  unsigned curInitIndex = 0;
+
+  // Emit initialization of base classes.
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(record)) {
+    assert(E->getNumInits() >= CXXRD->getNumBases() &&
+           "missing initializer for base class");
+    for (auto &Base : CXXRD->bases()) {
+      assert(!Base.isVirtual() && "should not see vbases here");
+      auto *BaseRD = Base.getType()->getAsCXXRecordDecl();
+      Address V = CGF.GetAddressOfDirectBaseInCompleteClass(
+          Dest.getAddress(), CXXRD, BaseRD,
+          /*isBaseVirtual*/ false);
+      AggValueSlot AggSlot =
+        AggValueSlot::forAddr(V, Qualifiers(),
+                              AggValueSlot::IsDestructed,
+                              AggValueSlot::DoesNotNeedGCBarriers,
+                              AggValueSlot::IsNotAliased);
+      CGF.EmitAggExpr(E->getInit(curInitIndex++), AggSlot);
+
+      if (QualType::DestructionKind dtorKind =
+              Base.getType().isDestructedType()) {
+        CGF.pushDestroy(dtorKind, V, Base.getType());
+        cleanups.push_back(CGF.EHStack.stable_begin());
+      }
+    }
+  }
+
   // Prepare a 'this' for CXXDefaultInitExprs.
   CodeGenFunction::FieldConstructionScope FCS(CGF, Dest.getAddress());
 
@@ -1204,14 +1236,8 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
     return;
   }
 
-  // We'll need to enter cleanup scopes in case any of the member
-  // initializers throw an exception.
-  SmallVector<EHScopeStack::stable_iterator, 16> cleanups;
-  llvm::Instruction *cleanupDominator = nullptr;
-
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
-  unsigned curInitIndex = 0;
   for (const auto *field : record->fields()) {
     // We're done once we hit the flexible array member.
     if (field->getType()->isIncompleteArrayType())
@@ -1317,6 +1343,10 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
       CharUnits NumNonZeroBytes = CharUnits::Zero();
       
       unsigned ILEElement = 0;
+      if (auto *CXXRD = dyn_cast<CXXRecordDecl>(SD))
+        while (ILEElement != CXXRD->getNumBases())
+          NumNonZeroBytes +=
+              GetNumNonZeroBytesInInit(ILE->getInit(ILEElement++), CGF);
       for (const auto *Field : SD->fields()) {
         // We're done once we hit the flexible array member or run out of
         // InitListExpr elements.

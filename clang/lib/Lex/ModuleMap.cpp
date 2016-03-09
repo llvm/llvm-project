@@ -94,11 +94,8 @@ ModuleMap::ModuleMap(SourceManager &SourceMgr, DiagnosticsEngine &Diags,
 }
 
 ModuleMap::~ModuleMap() {
-  for (llvm::StringMap<Module *>::iterator I = Modules.begin(), 
-                                        IEnd = Modules.end();
-       I != IEnd; ++I) {
-    delete I->getValue();
-  }
+  for (auto &M : Modules)
+    delete M.getValue();
 }
 
 void ModuleMap::setTarget(const TargetInfo &Target) {

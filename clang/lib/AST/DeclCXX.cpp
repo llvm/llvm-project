@@ -141,9 +141,11 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     C.Deallocate(data().getBases());
 
   if (NumBases) {
-    // C++ [dcl.init.aggr]p1:
-    //   An aggregate is [...] a class with [...] no base classes [...].
-    data().Aggregate = false;
+    if (!C.getLangOpts().CPlusPlus1z) {
+      // C++ [dcl.init.aggr]p1:
+      //   An aggregate is [...] a class with [...] no base classes [...].
+      data().Aggregate = false;
+    }
 
     // C++ [class]p4:
     //   A POD-struct is an aggregate class...
@@ -188,6 +190,11 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       data().HasNoNonEmptyBases = false;
     }
     
+    // C++1z [dcl.init.agg]p1:
+    //   An aggregate is a class with [...] no private or protected base classes
+    if (Base->getAccessSpecifier() != AS_public)
+      data().Aggregate = false;
+
     // C++ [class.virtual]p1:
     //   A class that declares or inherits a virtual function is called a 
     //   polymorphic class.
@@ -218,6 +225,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
         if (CXXRecordDecl *VBaseDecl = VBase.getType()->getAsCXXRecordDecl())
           if (!VBaseDecl->hasCopyConstructorWithConstParam())
             data().ImplicitCopyConstructorHasConstParam = false;
+
+        // C++1z [dcl.init.agg]p1:
+        //   An aggregate is a class with [...] no virtual base classes
+        data().Aggregate = false;
       }
     }
 
@@ -226,10 +237,14 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       if (SeenVBaseTypes.insert(C.getCanonicalType(BaseType)).second)
         VBases.push_back(Base);
 
-      // C++0x [meta.unary.prop] is_empty:
+      // C++11 [meta.unary.prop] is_empty:
       //    T is a class type, but not a union type, with ... no virtual base
       //    classes
       data().Empty = false;
+
+      // C++1z [dcl.init.agg]p1:
+      //   An aggregate is a class with [...] no virtual base classes
+      data().Aggregate = false;
 
       // C++11 [class.ctor]p5, C++11 [class.copy]p12, C++11 [class.copy]p25:
       //   A [default constructor, copy/move constructor, or copy/move assignment
@@ -732,7 +747,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   An aggregate is a [...] class with [...] no
       //   brace-or-equal-initializers for non-static data members.
       //
-      // This rule was removed in C++1y.
+      // This rule was removed in C++14.
       if (!getASTContext().getLangOpts().CPlusPlus14)
         data().Aggregate = false;
 

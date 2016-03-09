@@ -1,18 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-Visual Studio 2012 Native Debugging Visualizers for LLVM
+Visual Studio Native Debugging Visualizers for LLVM
 
-Put this file into "%USERPROFILE%\Documents\Visual Studio 2012\Visualizers"
+Put this file into "%USERPROFILE%\Documents\Visual Studio 20xx\Visualizers"
 or create a symbolic link so it updates automatically.
 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
   <Type Name="clang::Type">
-    <DisplayString Condition="(clang::Type::TypeClass)TypeBits.TC == clang::Type::Builtin">Builtin Type={(clang::BuiltinType::Kind)BuiltinTypeBits.Kind}</DisplayString>
-    <DisplayString Condition="(clang::Type::TypeClass)TypeBits.TC == clang::Type::Attributed">Modified Type={((clang::AttributedType*)this)->ModifiedType} Attribute={(clang::AttributedType::Kind)AttributedTypeBits.AttrKind}</DisplayString>
-    <DisplayString>Type Class={(clang::Type::TypeClass)TypeBits.TC}</DisplayString>
+    <DisplayString IncludeView="BaseOnly">{(clang::Type::TypeClass)TypeBits.TC, en}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Builtin">Builtin Type={*(clang::BuiltinType *)this}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::Attributed">Modified Type={((clang::AttributedType*)this)->ModifiedType} Attribute={(clang::AttributedType::Kind)AttributedTypeBits.AttrKind}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::SubstTemplateTypeParm">{*(clang::SubstTemplateTypeParmType *)this}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Record">{*(clang::RecordType *)this}</DisplayString>
+    <DisplayString>{(clang::Type::TypeClass)TypeBits.TC, en}</DisplayString>
+    <Expand>
+      <Item Name="TypeClass" IncludeView="BaseOnly">(clang::Type::TypeClass)TypeBits.TC</Item>
+      <Item Name="Flags" IncludeView="BaseOnly">TypeBits</Item>
+      <Item Name="Canonical" IncludeView="BaseOnly">CanonicalType</Item>
+      <ExpandedItem ExcludeView="BaseOnly" Condition="TypeBits.TC==clang::Type::TypeClass::Builtin">*(clang::BuiltinType *)this</ExpandedItem>
+      <ExpandedItem ExcludeView="BaseOnly" Condition="TypeBits.TC==clang::Type::TypeClass::SubstTemplateTypeParm">(clang::SubstTemplateTypeParmType *)this</ExpandedItem>
+      <ExpandedItem ExcludeView="BaseOnly" Condition="TypeBits.TC==clang::Type::TypeClass::Record">(clang::RecordType *)this</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::TagType">
+    <DisplayString>{*decl}</DisplayString>
+    <Expand>
+      <Item Name="decl">decl</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::RecordType">
+    <DisplayString>{*(clang::Type *)this, view(BaseOnly)}, {*(clang::TagType *)this}</DisplayString>
+    <Expand>
+      <Item Name="TagType">*(clang::TagType *)this</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::SubstTemplateTypeParmType">
+    <DisplayString>{*(clang::Type *)this, view(BaseOnly)}: {*Replaced} =&gt; {CanonicalType}</DisplayString>
+    <Expand>
+      <ExpandedItem>*(clang::Type *)this, view(BaseOnly)</ExpandedItem>
+      <Item Name="Replaced">*Replaced</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::TemplateTypeParmType">
+    <DisplayString>{*TTPDecl}</DisplayString>
   </Type>
   <Type Name="clang::QualType">
-    <DisplayString>{((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; clang::TypeAlignmentInBits) - 1)))-&gt;BaseType}</DisplayString>
+    <!-- TODO: Qualifiers. Also, when VS2013 support is deprecated, change 4 to clang::TypeAlignmentInBits (not properly recognized by VS2013) -->
+    <DisplayString>{*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType}</DisplayString>
+    <Expand>
+      <Item Name="BaseType">*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::TemplateArgumentLoc">
+    <DisplayString>{Argument}</DisplayString>
+    <Expand>
+      <ExpandedItem>Argument</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::TemplateArgument">
+    <DisplayString>{(clang::TemplateArgument::ArgKind)TypeOrValue.Kind,en} template parameter: {*(clang::QualType *)&amp;TypeOrValue.V}</DisplayString>
+    <Expand>
+      <Item Name="QualType" Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Type">*(clang::QualType *)&amp;TypeOrValue.V</Item>
+      <!-- TODO: Other kinds-->
+    </Expand>
+  </Type>
+  <Type Name="clang::BuiltinType">
+    <DisplayString>{(clang::BuiltinType::Kind)BuiltinTypeBits.Kind, en}</DisplayString>
+    <Expand>
+      <Item Name="Kind">(clang::BuiltinType::Kind)BuiltinTypeBits.Kind</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::NamedDecl">
+    <DisplayString>{Name}</DisplayString>
+  </Type>
+  <Type Name="clang::TemplateSpecializationType">
+    <DisplayString Condition="(Template.Storage.Val.Val.Value &amp; 3) != 3 &amp;&amp; (Template.Storage.Val.Val.Value &amp; 2) != 2 &amp;&amp; (Template.Storage.Val.Val.Value &amp; 1) != 1">{(clang::TemplateDecl *)((Template.Storage.Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString>{Template.Storage}</DisplayString>
   </Type>
   <Type Name="clang::IdentifierInfo">
     <DisplayString Condition="Entry != 0">({((llvm::StringMapEntry&lt;clang::IdentifierInfo *&gt;*)Entry)+1,s})</DisplayString>
@@ -35,7 +98,7 @@ or create a symbolic link so it updates automatically.
     </Expand>
   </Type>
   <Type Name="clang::Token">
-    <DisplayString Condition="Kind != clang::tok::identifier">{(clang::tok::TokenKind)Kind}</DisplayString>
+    <DisplayString Condition="Kind != clang::tok::identifier">{(clang::tok::TokenKind)Kind,en}</DisplayString>
     <DisplayString Condition="Kind == clang::tok::identifier">{{Identifier ({*(clang::IdentifierInfo *)(PtrData)})}}</DisplayString>
   </Type>
   <Type Name="clang::DeclSpec">
@@ -63,6 +126,12 @@ or create a symbolic link so it updates automatically.
       <ExpandedItem>*(DeclaratorDecl*)this,nd</ExpandedItem>
       <Item Name="VarDeclBits">VarDeclBits</Item>
       <Item Name="ParmVarDeclBits">ParmVarDeclBits</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::OpaquePtr&lt;*&gt;">
+    <DisplayString>{($T1 *)Ptr</DisplayString>
+    <Expand>
+      <ExpandedItem>($T1 *)Ptr</ExpandedItem>
     </Expand>
   </Type>
 </AutoVisualizer>

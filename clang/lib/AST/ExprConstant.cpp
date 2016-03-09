@@ -5428,12 +5428,33 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
     return EvaluateInPlace(Result.getUnionValue(), Info, Subobject, InitExpr);
   }
 
-  assert((!isa<CXXRecordDecl>(RD) || !cast<CXXRecordDecl>(RD)->getNumBases()) &&
-         "initializer list for class with base classes");
-  Result = APValue(APValue::UninitStruct(), 0,
+  auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+  Result = APValue(APValue::UninitStruct(), CXXRD ? CXXRD->getNumBases() : 0,
                    std::distance(RD->field_begin(), RD->field_end()));
   unsigned ElementNo = 0;
   bool Success = true;
+
+  // Initialize base classes.
+  if (CXXRD) {
+    for (const auto &Base : CXXRD->bases()) {
+      assert(ElementNo < E->getNumInits() && "missing init for base class");
+      const Expr *Init = E->getInit(ElementNo);
+
+      LValue Subobject = This;
+      if (!HandleLValueBase(Info, Init, Subobject, CXXRD, &Base))
+        return false;
+
+      APValue &FieldVal = Result.getStructBase(ElementNo);
+      if (!EvaluateInPlace(FieldVal, Info, Subobject, Init)) {
+        if (!Info.keepEvaluatingAfterFailure())
+          return false;
+        Success = false;
+      }
+      ++ElementNo;
+    }
+  }
+
+  // Initialize members.
   for (const auto *Field : RD->fields()) {
     // Anonymous bit-fields are not considered members of the class for
     // purposes of aggregate initialization.

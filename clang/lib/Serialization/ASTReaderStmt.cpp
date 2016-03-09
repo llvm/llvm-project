@@ -2098,6 +2098,7 @@ void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
 }
 
 void OMPClauseReader::VisitOMPLinearClause(OMPLinearClause *C) {
+  VisitOMPClauseWithPostUpdate(C);
   C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
   C->setColonLoc(Reader->ReadSourceLocation(Record, Idx));
   C->setModifier(static_cast<OpenMPLinearClauseKind>(Record[Idx++]));

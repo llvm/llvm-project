@@ -1011,15 +1011,18 @@ void CodeGenFunction::EmitNewArrayInitializer(
   if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
     if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
       if (RType->getDecl()->isStruct()) {
-        unsigned NumFields = 0;
+        unsigned NumElements = 0;
+        if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RType->getDecl()))
+          NumElements = CXXRD->getNumBases();
         for (auto *Field : RType->getDecl()->fields())
           if (!Field->isUnnamedBitfield())
-            ++NumFields;
-        if (ILE->getNumInits() == NumFields)
+            ++NumElements;
+        // FIXME: Recurse into nested InitListExprs.
+        if (ILE->getNumInits() == NumElements)
           for (unsigned i = 0, e = ILE->getNumInits(); i != e; ++i)
             if (!isa<ImplicitValueInitExpr>(ILE->getInit(i)))
-              --NumFields;
-        if (ILE->getNumInits() == NumFields && TryMemsetInitialization())
+              --NumElements;
+        if (ILE->getNumInits() == NumElements && TryMemsetInitialization())
           return;
       }
     }
