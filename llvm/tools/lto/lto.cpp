@@ -511,9 +511,9 @@ void thinlto_codegen_set_cache_entry_expiration(thinlto_code_gen_t cg,
   return unwrap(cg)->setCacheEntryExpiration(expiration);
 }
 
-void thinlto_codegen_set_max_cache_size_relative_to_free_space(
+void thinlto_codegen_set_final_cache_size_relative_to_available_space(
     thinlto_code_gen_t cg, unsigned Percentage) {
-  return unwrap(cg)->setMaxCacheSizeRelativeToFreeSpace(Percentage);
+  return unwrap(cg)->setMaxCacheSizeRelativeToAvailableSpace(Percentage);
 }
 
 void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,

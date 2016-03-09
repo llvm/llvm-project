@@ -5,7 +5,7 @@
 
 ; Ensure statics are promoted/renamed correctly from this file (all but
 ; constant variable need promotion).
-; RUN: llvm-lto -thinlto-action=promote %t.bc -functionindex=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTSTATIC
+; RUN: llvm-lto -thinlto-action=promote %t.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=EXPORTSTATIC
 ; EXPORTSTATIC-DAG: @staticvar.llvm.0 = hidden global
 ; EXPORTSTATIC-DAG: @staticconstvar = internal unnamed_addr constant
 ; EXPORTSTATIC-DAG: @P.llvm.0 = hidden global void ()* null
@@ -17,13 +17,31 @@
 ; Also ensures that alias to a linkonce function is turned into a declaration
 ; and that the associated linkonce function is not in the output, as it is
 ; lazily linked and never referenced/materialized.
-; RUN: llvm-lto -thinlto-action=import %t2.bc -functionindex=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORTGLOB1
+; RUN: llvm-lto -thinlto-action=import %t2.bc -thinlto-index=%t3.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORTGLOB1
 ; IMPORTGLOB1-DAG: define available_externally void @globalfunc1
 ; IMPORTGLOB1-DAG: declare void @weakalias
 ; IMPORTGLOB1-DAG: declare void @analias
 ; IMPORTGLOB1-NOT: @linkoncealias
 ; IMPORTGLOB1-NOT: @linkoncefunc
 ; IMPORTGLOB1-NOT: declare void @globalfunc2
+
+; Verify that the optimizer run
+; RUN: llvm-lto -thinlto-action=optimize %t2.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=OPTIMIZED
+; OPTIMIZED: define i32 @main()
+
+; Verify that the codegen run
+; RUN: llvm-lto -thinlto-action=codegen %t2.bc -o - | llvm-nm -o - | FileCheck %s --check-prefix=CODEGEN
+; CODEGEN: T _main
+
+; Verify that all run together
+; RUN: llvm-lto -thinlto-action=run %t2.bc  %t.bc
+; RUN: llvm-nm -o - < %t.bc.thinlto.o | FileCheck %s --check-prefix=ALL
+; RUN: llvm-nm -o - < %t2.bc.thinlto.o | FileCheck %s --check-prefix=ALL2
+; ALL: T _callfuncptr
+; ALL2: T _main
+
+target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-apple-macosx10.11.0"
 
 @globalvar_in_section = global i32 1, align 4
 @globalvar = global i32 1, align 4

@@ -580,7 +580,7 @@ typedef struct {
  *
  * \since LTO_API_VERSION=18
  */
-extern thinlto_code_gen_t thinlto_create_codegen();
+extern thinlto_code_gen_t thinlto_create_codegen(void);
 
 /**
  * Frees the generator and all memory it internally allocated.
@@ -646,6 +646,27 @@ extern lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
                                                 lto_codegen_model);
 
 /**
+ * @}
+ * @defgroup LLVMCTLTO_CACHING ThinLTO Cache Control
+ * @ingroup LLVMCTLTO
+ *
+ * These entry points control the ThinLTO cache. The cache is intended to
+ * support incremental build, and thus needs to be persistent accross build.
+ * The client enabled the cache by supplying a path to an existing directory.
+ * The code generator will use this to store objects files that may be reused
+ * during a subsequent build.
+ * To avoid filling the disk space, a few knobs are provided:
+ *  - The pruning interval limit the frequency at which the garbage collector
+ *    will try to scan the cache directory to prune it from expired entries.
+ *    Setting to -1 disable the pruning (default).
+ *  - The pruning expiration time indicates to the garbage collector how old an
+ *    entry needs to be to be removed.
+ *  - Finally, the garbage collector can be instructed to prune the cache till
+ *    the occupied space goes below a threshold.
+ * @{
+ */
+
+/**
  * Sets the path to a directory to use as a cache storage for incremental build.
  *
  * \since LTO_API_VERSION=18
@@ -670,9 +691,8 @@ extern void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
  *
  * \since LTO_API_VERSION=18
  */
-extern void
-thinlto_codegen_set_max_cache_size_relative_to_free_space(thinlto_code_gen_t cg,
-                                                          unsigned percentage);
+extern void thinlto_codegen_set_final_cache_size_relative_to_available_space(
+    thinlto_code_gen_t cg, unsigned percentage);
 
 /**
  * Sets the expiration (in seconds) for an entry in the cache.
@@ -681,6 +701,10 @@ thinlto_codegen_set_max_cache_size_relative_to_free_space(thinlto_code_gen_t cg,
  */
 extern void thinlto_codegen_set_cache_entry_expiration(thinlto_code_gen_t cg,
                                                        unsigned expiration);
+
+/**
+ * @}
+ */
 
 /**
  * Sets the path to a directory to use as a storage for temporary bitcode files.
@@ -711,7 +735,7 @@ extern void thinlto_debug_options(const char *const *options, int number);
  *
  * \since LTO_API_VERSION=18
  */
-extern bool lto_module_is_thinlto(lto_module_t mod);
+extern lto_bool_t lto_module_is_thinlto(lto_module_t mod);
 
 /**
  * Adds a symbol to the list of global symbols that must exist in the final
