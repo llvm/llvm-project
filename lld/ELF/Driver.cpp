@@ -321,6 +321,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
 
   SymbolTable<ELFT> Symtab;
   std::unique_ptr<TargetInfo> TI(createTarget());

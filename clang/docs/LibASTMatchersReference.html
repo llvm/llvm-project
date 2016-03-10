@@ -271,6 +271,17 @@ Example matches f
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('labelDecl0')"><a name="labelDecl0Anchor">labelDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelDecl.html">LabelDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="labelDecl0"><pre>Matches a declaration of label.
+
+Given
+  goto FOO;
+  FOO: bar();
+labelDecl()
+  matches 'FOO:'
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('linkageSpecDecl0')"><a name="linkageSpecDecl0Anchor">linkageSpecDecl</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LinkageSpecDecl.html">LinkageSpecDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="linkageSpecDecl0"><pre>Matches a declaration of a linkage specification.
 
@@ -497,6 +508,18 @@ nestedNameSpecifier()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('addrLabelExpr0')"><a name="addrLabelExpr0Anchor">addrLabelExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="addrLabelExpr0"><pre>Matches address of label statements (GNU extension).
+
+Given
+  FOO: bar();
+  void *ptr = &amp;&amp;FOO;
+  goto *bar;
+addrLabelExpr()
+  matches '&amp;&amp;FOO'
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('arraySubscriptExpr0')"><a name="arraySubscriptExpr0Anchor">arraySubscriptExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="arraySubscriptExpr0"><pre>Matches array subscript expressions.
 
@@ -514,6 +537,21 @@ arraySubscriptExpr()
   __asm("mov al, 2");
 asmStmt()
   matches '__asm("mov al, 2")'
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('atomicExpr0')"><a name="atomicExpr0Anchor">atomicExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AtomicExpr.html">AtomicExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="atomicExpr0"><pre>Matches atomic builtins.
+Example matches __atomic_load_n(ptr, 1)
+  void foo() { int *ptr; __atomic_load_n(ptr, 1); }
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('binaryConditionalOperator0')"><a name="binaryConditionalOperator0Anchor">binaryConditionalOperator</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1BinaryConditionalOperator.html">BinaryConditionalOperator</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="binaryConditionalOperator0"><pre>Matches binary conditional operator expressions (GNU extension).
+
+Example matches a ?: b
+  (a ?: b) + 42;
 </pre></td></tr>
 
 
@@ -876,6 +914,14 @@ defaultStmt()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('designatedInitExpr0')"><a name="designatedInitExpr0Anchor">designatedInitExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DesignatedInitExpr.html">DesignatedInitExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="designatedInitExpr0"><pre>Matches C99 designated initializer expressions [C99 6.7.8].
+
+Example: Matches { [2].y = 1.0, [0].x = 1.0 }
+  point ptarray[10] = { [2].y = 1.0, [0].x = 1.0 };
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('doStmt0')"><a name="doStmt0Anchor">doStmt</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DoStmt.html">DoStmt</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="doStmt0"><pre>Matches do statements.
 
@@ -974,6 +1020,16 @@ eliding, as well as any type conversions.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('implicitValueInitExpr0')"><a name="implicitValueInitExpr0Anchor">implicitValueInitExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ImplicitValueInitExpr.html">ImplicitValueInitExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="implicitValueInitExpr0"><pre>Matches implicit initializers of init list expressions.
+
+Given
+  point ptarray[10] = { [2].y = 1.0, [2].x = 2.0, [0].x = 1.0 };
+implicitValueInitExpr()
+  matches "[0].y" (implicitly)
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('initListExpr0')"><a name="initListExpr0Anchor">initListExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InitListExpr.html">InitListExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="initListExpr0"><pre>Matches init list expressions.
 
@@ -1062,12 +1118,47 @@ NSString's "alloc". This matcher should match both message sends.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('opaqueValueExpr0')"><a name="opaqueValueExpr0Anchor">opaqueValueExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1OpaqueValueExpr.html">OpaqueValueExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="opaqueValueExpr0"><pre>Matches opaque value expressions. They are used as helpers
+to reference another expressions and can be met
+in BinaryConditionalOperators, for example.
+
+Example matches 'a'
+  (a ?: c) + 42;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('parenExpr0')"><a name="parenExpr0Anchor">parenExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParenExpr.html">ParenExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="parenExpr0"><pre>Matches parentheses used in expressions.
 
 Example matches (foo() + 1)
   int foo() { return 1; }
   int a = (foo() + 1);
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('parenListExpr0')"><a name="parenListExpr0Anchor">parenListExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParenListExpr.html">ParenListExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="parenListExpr0"><pre>Matches paren list expressions.
+ParenListExprs don't have a predefined type and are used for late parsing.
+In the final AST, they can be met in template declarations.
+
+Given
+  template&lt;typename T&gt; class X {
+    void f() {
+      X x(*this);
+      int a = 0, b = 1; int i = (a, b);
+    }
+  };
+parenListExpr() matches "*this" but NOT matches (a, b) because (a, b)
+has a predefined type and is a ParenExpr, not a ParenListExpr.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('predefinedExpr0')"><a name="predefinedExpr0Anchor">predefinedExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1PredefinedExpr.html">PredefinedExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="predefinedExpr0"><pre>Matches predefined identifier expressions [C99 6.4.2.2].
+
+Example: Matches __func__
+  printf("%s", __func__);
 </pre></td></tr>
 
 
@@ -1088,6 +1179,14 @@ Given
   { ++a; }
 stmt()
   matches both the compound statement '{ ++a; }' and '++a'.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('stmtExpr0')"><a name="stmtExpr0Anchor">stmtExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1StmtExpr.html">StmtExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="stmtExpr0"><pre>Matches statement expression (GNU extension).
+
+Example match: ({ int X = 4; X; })
+  int C = ({ int X = 4; X; });
 </pre></td></tr>
 
 
@@ -1660,6 +1759,20 @@ Example matches f(0, 0) (matcher = callExpr(argumentCountIs(2)))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('requiresZeroInitialization0')"><a name="requiresZeroInitialization0Anchor">requiresZeroInitialization</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="requiresZeroInitialization0"><pre>Matches a constructor call expression which requires
+zero initialization.
+
+Given
+void foo() {
+  struct point { double x; double y; };
+  point pt[2] = { { 1.0, 2.0 } };
+}
+initListExpr(has(cxxConstructExpr(requiresZeroInitialization()))
+will match the implicit array filler for pt[1].
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructorDecl.html">CXXConstructorDecl</a>&gt;</td><td class="name" onclick="toggle('isCopyConstructor0')"><a name="isCopyConstructor0Anchor">isCopyConstructor</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isCopyConstructor0"><pre>Matches constructor declarations that are copy constructors.
 
@@ -2173,6 +2286,19 @@ Given
   };
 fieldDecl(isPublic())
   matches 'int a;' 
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DesignatedInitExpr.html">DesignatedInitExpr</a>&gt;</td><td class="name" onclick="toggle('designatorCountIs0')"><a name="designatorCountIs0Anchor">designatorCountIs</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="designatorCountIs0"><pre>Matches designated initializer expressions that contain
+a specific number of designators.
+
+Example: Given
+  point ptarray[10] = { [2].y = 1.0, [0].x = 1.0 };
+  point ptarray2[10] = { [2].y = 1.0, [2].x = 0.0, [0].x = 1.0 };
+designatorCountIs(2)
+  matches '{ [2].y = 1.0, [0].x = 1.0 }',
+  but not '{ [2].y = 1.0, [2].x = 0.0, [0].x = 1.0 }'.
 </pre></td></tr>
 
 
@@ -3266,6 +3392,58 @@ Usable as: Any Matcher
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AbstractConditionalOperator.html">AbstractConditionalOperator</a>&gt;</td><td class="name" onclick="toggle('hasCondition4')"><a name="hasCondition4Anchor">hasCondition</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasCondition4"><pre>Matches the condition expression of an if statement, for loop,
+or conditional operator.
+
+Example matches true (matcher = hasCondition(cxxBoolLiteral(equals(true))))
+  if (true) {}
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AbstractConditionalOperator.html">AbstractConditionalOperator</a>&gt;</td><td class="name" onclick="toggle('hasFalseExpression0')"><a name="hasFalseExpression0Anchor">hasFalseExpression</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasFalseExpression0"><pre>Matches the false branch expression of a conditional operator
+(binary or ternary).
+
+Example matches b
+  condition ? a : b
+  condition ?: b
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AbstractConditionalOperator.html">AbstractConditionalOperator</a>&gt;</td><td class="name" onclick="toggle('hasTrueExpression0')"><a name="hasTrueExpression0Anchor">hasTrueExpression</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasTrueExpression0"><pre>Matches the true branch expression of a conditional operator.
+
+Example 1 (conditional ternary operator): matches a
+  condition ? a : b
+
+Example 2 (conditional binary operator): matches opaqueValueExpr(condition)
+  condition ?: b
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration8')"><a name="hasDeclaration8Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasDeclaration8"><pre>Matches a node if the declaration associated with that node
+matches the given matcher.
+
+The associated declaration is:
+- for type nodes, the declaration of the underlying type
+- for CallExpr, the declaration of the callee
+- for MemberExpr, the declaration of the referenced member
+- for CXXConstructExpr, the declaration of the constructor
+
+Also usable as Matcher&lt;T&gt; for any T supporting the getDecl() member
+function. e.g. various subtypes of clang::Type and various expressions.
+
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;</td><td class="name" onclick="toggle('hasBase0')"><a name="hasBase0Anchor">hasBase</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasBase0"><pre>Matches the base expression of an array subscript expression.
 
@@ -3476,8 +3654,8 @@ Example matches y in x(y)
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration12')"><a name="hasDeclaration12Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasDeclaration12"><pre>Matches a node if the declaration associated with that node
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration13')"><a name="hasDeclaration13Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasDeclaration13"><pre>Matches a node if the declaration associated with that node
 matches the given matcher.
 
 The associated declaration is:
@@ -3491,8 +3669,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -3747,8 +3925,8 @@ Example matches y in x(y)
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration13')"><a name="hasDeclaration13Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasDeclaration13"><pre>Matches a node if the declaration associated with that node
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration14')"><a name="hasDeclaration14Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasDeclaration14"><pre>Matches a node if the declaration associated with that node
 matches the given matcher.
 
 The associated declaration is:
@@ -3762,8 +3940,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -3781,13 +3959,7 @@ caseStmt(hasCaseConstant(integerLiteral()))
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CastExpr.html">CastExpr</a>&gt;</td><td class="name" onclick="toggle('hasSourceExpression0')"><a name="hasSourceExpression0Anchor">hasSourceExpression</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasSourceExpression0"><pre>Matches if the cast's source expression matches the given matcher.
-
-Example: matches "a string" (matcher =
-                                 hasSourceExpression(cxxConstructExpr()))
-class URL { URL(string); };
-URL url = "a string";
-</pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasSourceExpression0"><pre></pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument0')"><a name="hasAnyTemplateArgument0Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
@@ -3850,7 +4022,7 @@ Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Array
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CompoundStmt.html">CompoundStmt</a>&gt;</td><td class="name" onclick="toggle('hasAnySubstatement0')"><a name="hasAnySubstatement0Anchor">hasAnySubstatement</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnySubstatement0"><pre>Matches compound statements where at least one substatement matches
-a given matcher.
+a given matcher. Also matches StmtExprs that have CompoundStmt as children.
 
 Given
   { {}; 1+2; }
@@ -3861,38 +4033,13 @@ with compoundStmt()
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ConditionalOperator.html">ConditionalOperator</a>&gt;</td><td class="name" onclick="toggle('hasCondition4')"><a name="hasCondition4Anchor">hasCondition</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasCondition4"><pre>Matches the condition expression of an if statement, for loop,
-or conditional operator.
-
-Example matches true (matcher = hasCondition(cxxBoolLiteral(equals(true))))
-  if (true) {}
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ConditionalOperator.html">ConditionalOperator</a>&gt;</td><td class="name" onclick="toggle('hasFalseExpression0')"><a name="hasFalseExpression0Anchor">hasFalseExpression</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasFalseExpression0"><pre>Matches the false branch expression of a conditional operator.
-
-Example matches b
-  condition ? a : b
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ConditionalOperator.html">ConditionalOperator</a>&gt;</td><td class="name" onclick="toggle('hasTrueExpression0')"><a name="hasTrueExpression0Anchor">hasTrueExpression</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasTrueExpression0"><pre>Matches the true branch expression of a conditional operator.
-
-Example matches a
-  condition ? a : b
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DecayedType.html">DecayedType</a>&gt;</td><td class="name" onclick="toggle('hasDecayedType0')"><a name="hasDecayedType0Anchor">hasDecayedType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerType</td></tr>
 <tr><td colspan="4" class="doc" id="hasDecayedType0"><pre>Matches the decayed type, whos decayed type matches InnerMatcher
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration11')"><a name="hasDeclaration11Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasDeclaration11"><pre>Matches a node if the declaration associated with that node
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration12')"><a name="hasDeclaration12Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasDeclaration12"><pre>Matches a node if the declaration associated with that node
 matches the given matcher.
 
 The associated declaration is:
@@ -3906,8 +4053,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4053,8 +4200,8 @@ declaration of d.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration10')"><a name="hasDeclaration10Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasDeclaration10"><pre>Matches a node if the declaration associated with that node
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration11')"><a name="hasDeclaration11Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasDeclaration11"><pre>Matches a node if the declaration associated with that node
 matches the given matcher.
 
 The associated declaration is:
@@ -4068,8 +4215,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4316,7 +4463,35 @@ FIXME: Unit test this matcher
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration9')"><a name="hasDeclaration9Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InitListExpr.html">InitListExpr</a>&gt;</td><td class="name" onclick="toggle('hasSyntacticForm0')"><a name="hasSyntacticForm0Anchor">hasSyntacticForm</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasSyntacticForm0"><pre>Matches the syntactic form of init list expressions
+(if expression have it).
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration10')"><a name="hasDeclaration10Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasDeclaration10"><pre>Matches a node if the declaration associated with that node
+matches the given matcher.
+
+The associated declaration is:
+- for type nodes, the declaration of the underlying type
+- for CallExpr, the declaration of the callee
+- for MemberExpr, the declaration of the referenced member
+- for CXXConstructExpr, the declaration of the constructor
+
+Also usable as Matcher&lt;T&gt; for any T supporting the getDecl() member
+function. e.g. various subtypes of clang::Type and various expressions.
+
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration9')"><a name="hasDeclaration9Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasDeclaration9"><pre>Matches a node if the declaration associated with that node
 matches the given matcher.
 
@@ -4331,30 +4506,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;</td><td class="name" onclick="toggle('hasDeclaration8')"><a name="hasDeclaration8Anchor">hasDeclaration</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;  InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasDeclaration8"><pre>Matches a node if the declaration associated with that node
-matches the given matcher.
-
-The associated declaration is:
-- for type nodes, the declaration of the underlying type
-- for CallExpr, the declaration of the callee
-- for MemberExpr, the declaration of the referenced member
-- for CXXConstructExpr, the declaration of the constructor
-
-Also usable as Matcher&lt;T&gt; for any T supporting the getDecl() member
-function. e.g. various subtypes of clang::Type and various expressions.
-
-Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4375,8 +4528,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4525,6 +4678,10 @@ matches the [webView ...] message invocation.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1OpaqueValueExpr.html">OpaqueValueExpr</a>&gt;</td><td class="name" onclick="toggle('hasSourceExpression1')"><a name="hasSourceExpression1Anchor">hasSourceExpression</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasSourceExpression1"><pre></pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParenType.html">ParenType</a>&gt;</td><td class="name" onclick="toggle('innerType0')"><a name="innerType0Anchor">innerType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>
 <tr><td colspan="4" class="doc" id="innerType0"><pre>Matches ParenType nodes where the inner type is a specific type.
 
@@ -4599,8 +4756,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4658,8 +4815,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4694,6 +4851,19 @@ pointerType(pointee(isConstQualified(), isInteger()))
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1BlockPointerType.html">BlockPointerType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberPointerType.html">MemberPointerType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1PointerType.html">PointerType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ReferenceType.html">ReferenceType</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1StmtExpr.html">StmtExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnySubstatement1')"><a name="hasAnySubstatement1Anchor">hasAnySubstatement</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnySubstatement1"><pre>Matches compound statements where at least one substatement matches
+a given matcher. Also matches StmtExprs that have CompoundStmt as children.
+
+Given
+  { {}; 1+2; }
+hasAnySubstatement(compoundStmt())
+  matches '{ {}; 1+2; }'
+with compoundStmt()
+  matching '{}'
 </pre></td></tr>
 
 
@@ -4737,8 +4907,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4827,8 +4997,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4863,8 +5033,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4914,8 +5084,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>
@@ -4955,8 +5125,8 @@ function. e.g. various subtypes of clang::Type and various expressions.
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DeclRefExpr.html">DeclRefExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1EnumType.html">EnumType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1InjectedClassNameType.html">InjectedClassNameType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;,
-  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1LabelStmt.html">LabelStmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1AddrLabelExpr.html">AddrLabelExpr</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1MemberExpr.html">MemberExpr</a>&gt;,
+  Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1RecordType.html">RecordType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;,
   Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
 </pre></td></tr>

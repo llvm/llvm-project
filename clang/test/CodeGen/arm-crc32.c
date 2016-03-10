@@ -1,6 +1,5 @@
-// REQUIRES: arm-registered-target
 // RUN: %clang_cc1 -triple armv8-none-linux-gnueabi \
-// RUN:   -O3 -S -emit-llvm -o - %s | FileCheck %s
+// RUN:   -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
 int crc32b(int a, char b)
 {
@@ -48,7 +47,7 @@ int crc32d(int a, long long b)
 // CHECK: [[T0:%[0-9]+]] = trunc i64 %b to i32
 // CHECK: [[T1:%[0-9]+]] = lshr i64 %b, 32
 // CHECK: [[T2:%[0-9]+]] = trunc i64 [[T1]] to i32
-// CHECK: [[T3:%[0-9]+]] = tail call i32 @llvm.arm.crc32w(i32 %a, i32 [[T0]])
+// CHECK: [[T3:%[0-9]+]] = call i32 @llvm.arm.crc32w(i32 %a, i32 [[T0]])
 // CHECK: call i32 @llvm.arm.crc32w(i32 [[T3]], i32 [[T2]])
 }
 
@@ -58,6 +57,6 @@ int crc32cd(int a, long long b)
 // CHECK: [[T0:%[0-9]+]] = trunc i64 %b to i32
 // CHECK: [[T1:%[0-9]+]] = lshr i64 %b, 32
 // CHECK: [[T2:%[0-9]+]] = trunc i64 [[T1]] to i32
-// CHECK: [[T3:%[0-9]+]] = tail call i32 @llvm.arm.crc32cw(i32 %a, i32 [[T0]])
+// CHECK: [[T3:%[0-9]+]] = call i32 @llvm.arm.crc32cw(i32 %a, i32 [[T0]])
 // CHECK: call i32 @llvm.arm.crc32cw(i32 [[T3]], i32 [[T2]])
 }

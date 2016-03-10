@@ -2404,6 +2404,24 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     }
   }
 
+  // Re-declaration cannot add abi_tag's.
+  if (const auto *NewAbiTagAttr = New->getAttr<AbiTagAttr>()) {
+    if (const auto *OldAbiTagAttr = Old->getAttr<AbiTagAttr>()) {
+      for (const auto &NewTag : NewAbiTagAttr->tags()) {
+        if (std::find(OldAbiTagAttr->tags_begin(), OldAbiTagAttr->tags_end(),
+                      NewTag) == OldAbiTagAttr->tags_end()) {
+          Diag(NewAbiTagAttr->getLocation(),
+               diag::err_new_abi_tag_on_redeclaration)
+              << NewTag;
+          Diag(OldAbiTagAttr->getLocation(), diag::note_previous_declaration);
+        }
+      }
+    } else {
+      Diag(NewAbiTagAttr->getLocation(), diag::err_abi_tag_on_redeclaration);
+      Diag(Old->getLocation(), diag::note_previous_declaration);
+    }
+  }
+
   if (!Old->hasAttrs())
     return;
 

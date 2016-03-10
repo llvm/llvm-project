@@ -1,4 +1,4 @@
-/*===------------- avx512vbmivlintrin.h - IFMA intrinsics ------------------===
+/*===------------- avx512vbmivlintrin.h - VBMI intrinsics ------------------===
  *
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

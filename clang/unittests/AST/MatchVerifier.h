@@ -62,6 +62,9 @@ public:
                                  std::vector<std::string>& Args,
                                  Language L);
 
+  template <typename MatcherType>
+  testing::AssertionResult match(const Decl *D, const MatcherType &AMatcher);
+
 protected:
   void run(const MatchFinder::MatchResult &Result) override;
   virtual void verify(const MatchFinder::MatchResult &Result,
@@ -122,6 +125,22 @@ testing::AssertionResult MatchVerifier<NodeType>::match(
   setFailure("Could not find match");
   if (!tooling::runToolOnCodeWithArgs(Factory->create(), Code, Args, FileName))
     return testing::AssertionFailure() << "Parsing error";
+  if (!Verified)
+    return testing::AssertionFailure() << VerifyResult;
+  return testing::AssertionSuccess();
+}
+
+/// \brief Runs a matcher over some AST, and returns the result of the
+/// verifier for the matched node.
+template <typename NodeType> template <typename MatcherType>
+testing::AssertionResult MatchVerifier<NodeType>::match(
+    const Decl *D, const MatcherType &AMatcher) {
+  MatchFinder Finder;
+  Finder.addMatcher(AMatcher.bind(""), this);
+
+  setFailure("Could not find match");
+  Finder.match(*D, D->getASTContext());
+
   if (!Verified)
     return testing::AssertionFailure() << VerifyResult;
   return testing::AssertionSuccess();

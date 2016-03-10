@@ -124,16 +124,18 @@ vec_abs(vector signed long long __a) {
 #endif
 
 static vector float __ATTRS_o_ai vec_abs(vector float __a) {
+#ifdef __VSX__
+  return __builtin_vsx_xvabssp(__a);
+#else
   vector unsigned int __res =
       (vector unsigned int)__a & (vector unsigned int)(0x7FFFFFFF);
   return (vector float)__res;
+#endif
 }
 
 #if defined(__POWER8_VECTOR__) && defined(__powerpc64__)
 static vector double __ATTRS_o_ai vec_abs(vector double __a) {
-  vector unsigned long long __res = { 0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF };
-  __res &= (vector unsigned int)__a;
-  return (vector double)__res;
+  return __builtin_vsx_xvabsdp(__a);
 }
 #endif
 

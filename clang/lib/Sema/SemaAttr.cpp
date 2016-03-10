@@ -459,7 +459,8 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
   if (VD->isUsed())
     Diag(PragmaLoc, diag::warn_used_but_marked_unused) << Name;
 
-  VD->addAttr(UnusedAttr::CreateImplicit(Context, IdTok.getLocation()));
+  VD->addAttr(UnusedAttr::CreateImplicit(Context, UnusedAttr::GNU_unused,
+                                         IdTok.getLocation()));
 }
 
 void Sema::AddCFAuditedAttribute(Decl *D) {

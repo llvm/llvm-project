@@ -51,6 +51,14 @@ void test1() {
 // CHECK-LABEL: define void @test1
 // CHECK-LE-LABEL: define void @test1
 
+  res_vf = vec_abs(vf);
+// CHECK: call <4 x float> @llvm.fabs.v4f32(<4 x float> %{{[0-9]*}})
+// CHECK-LE: call <4 x float> @llvm.fabs.v4f32(<4 x float> %{{[0-9]*}})
+
+  dummy();
+// CHECK: call void @dummy()
+// CHECK-LE: call void @dummy()
+
   res_vd = vec_add(vd, vd);
 // CHECK: fadd <2 x double>
 // CHECK-LE: fadd <2 x double>
