@@ -303,7 +303,19 @@ public:
   /// \brief Compute the \c CallGraph for the module \c M.
   ///
   /// The real work here is done in the \c CallGraph constructor.
-  CallGraph run(Module *M) { return CallGraph(*M); }
+  CallGraph run(Module &M) { return CallGraph(M); }
+};
+
+/// Instantiated in CallGraph.cpp
+extern template class llvm::AnalysisBase<CallGraphAnalysis>;
+
+/// \brief Printer pass for the \c CallGraphAnalysis results.
+class CallGraphPrinterPass : public PassBase<CallGraphPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit CallGraphPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Module &M, AnalysisManager<Module> *AM);
 };
 
 /// \brief The \c ModulePass which wraps up a \c CallGraph and the logic to

@@ -205,6 +205,28 @@ def int_amdgcn_image_atomic_cmpswap : Intrinsic <
    llvm_i1_ty],       // slc(imm)
   []>;
 
+def int_amdgcn_buffer_load_format : Intrinsic <
+  [llvm_v4f32_ty],
+  [llvm_v4i32_ty,     // rsrc(SGPR)
+   llvm_i32_ty,       // soffset(SGPR)
+   llvm_i32_ty,       // offset(imm)
+   llvm_i32_ty,       // vindex(VGPR)
+   llvm_i32_ty,       // voffset(VGPR)
+   llvm_i1_ty,        // glc(imm)
+   llvm_i1_ty],       // slc(imm)
+  [IntrReadMem]>;
+
+def int_amdgcn_buffer_store_format : Intrinsic <
+  [],
+  [llvm_anyfloat_ty,  // vdata(VGPR) -- can currently only select v4f32
+   llvm_v4i32_ty,     // rsrc(SGPR)
+   llvm_i32_ty,       // soffset(SGPR)
+   llvm_i32_ty,       // offset(imm)
+   llvm_i32_ty,       // vindex(VGPR)
+   llvm_i32_ty,       // voffset(VGPR)
+   llvm_i1_ty,        // glc(imm)
+   llvm_i1_ty],       // slc(imm)
+  []>;
 
 def int_amdgcn_read_workdim : AMDGPUReadPreloadRegisterIntrinsic <
   "__builtin_amdgcn_read_workdim">;
@@ -230,6 +252,10 @@ def int_amdgcn_s_sleep :
   GCCBuiltin<"__builtin_amdgcn_s_sleep">,
   Intrinsic<[], [llvm_i32_ty], []> {
 }
+
+def int_amdgcn_s_getreg :
+  GCCBuiltin<"__builtin_amdgcn_s_getreg">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrReadMem]>;
 
 def int_amdgcn_dispatch_ptr :
   GCCBuiltin<"__builtin_amdgcn_dispatch_ptr">,

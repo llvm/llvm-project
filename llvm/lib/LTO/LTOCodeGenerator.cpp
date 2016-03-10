@@ -67,8 +67,8 @@ const char* LTOCodeGenerator::getVersionString() {
 
 namespace llvm {
 cl::opt<bool> LTODiscardValueNames(
-    "discard-value-names",
-    cl::desc("Strip names from Value (other than GlobalValue)."),
+    "lto-discard-value-names",
+    cl::desc("Strip names from Value during LTO (other than GlobalValue)."),
 #ifdef NDEBUG
     cl::init(true),
 #else

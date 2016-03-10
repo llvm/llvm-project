@@ -96,7 +96,7 @@ static cl::opt<bool>
 OutputAssembly("S", cl::desc("Write output as LLVM assembly"));
 
 static cl::opt<bool>
-NoVerify("disable-verify", cl::desc("Do not verify result module"), cl::Hidden);
+NoVerify("disable-verify", cl::desc("Do not run the verifier"), cl::Hidden);
 
 static cl::opt<bool>
 VerifyEach("verify-each", cl::desc("Verify after each transform"));

@@ -274,6 +274,23 @@
 # define LLVM_BUILTIN_TRAP *(volatile int*)0x11 = 0
 #endif
 
+/// LLVM_BUILTIN_DEBUGTRAP - On compilers which support it, expands to
+/// an expression which causes the program to break while running
+/// under a debugger.
+#if __has_builtin(__builtin_debugtrap)
+# define LLVM_BUILTIN_DEBUGTRAP __builtin_debugtrap()
+#elif defined(_MSC_VER)
+// The __debugbreak intrinsic is supported by MSVC and breaks while
+// running under the debugger, and also supports invoking a debugger
+// when the OS is configured appropriately.
+# define LLVM_BUILTIN_DEBUGTRAP __debugbreak()
+#else
+// Just continue execution when built with compilers that have no
+// support. This is a debugging aid and not intended to force the
+// program to abort if encountered.
+# define LLVM_BUILTIN_DEBUGTRAP
+#endif
+
 /// \macro LLVM_ASSUME_ALIGNED
 /// \brief Returns a pointer with an assumed alignment.
 #if __has_builtin(__builtin_assume_aligned) || LLVM_GNUC_PREREQ(4, 7, 0)

@@ -23,6 +23,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFLAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"

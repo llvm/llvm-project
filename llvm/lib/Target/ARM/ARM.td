@@ -627,6 +627,18 @@ def : ProcessorModel<"cortex-r7",   CortexA8Model,      [ARMv7r, ProcR7,
                                                          FeatureAvoidPartialCPSR,
                                                          FeatureT2XtPk]>;
 
+def : ProcessorModel<"cortex-r8",   CortexA8Model,      [ARMv7r,
+                                                         FeatureHasRAS,
+                                                         FeatureVFP3,
+                                                         FeatureD16,
+                                                         FeatureFP16,
+                                                         FeatureMP,
+                                                         FeatureSlowFPBrcc,
+                                                         FeatureHWDivARM,
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureAvoidPartialCPSR,
+                                                         FeatureT2XtPk]>;
+
 def : ProcNoItin<"cortex-m3",                           [ARMv7m]>;
 def : ProcNoItin<"sc300",                               [ARMv7m]>;
 

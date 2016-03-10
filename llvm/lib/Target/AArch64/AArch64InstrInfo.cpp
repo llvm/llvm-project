@@ -2977,6 +2977,15 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
 /// to
 ///   b.<condition code>
 ///
+/// \brief Replace compare and branch sequence by TBZ/TBNZ instruction when
+/// the compare's constant operand is power of 2.
+///
+/// Examples:
+///   and  w8, w8, #0x400
+///   cbnz w8, L1
+/// to
+///   tbnz w8, #10, L1
+///
 /// \param  MI Conditional Branch
 /// \return True when the simple conditional branch is generated
 ///
@@ -3027,34 +3036,82 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr *MI) const {
 
   MachineInstr *DefMI = MRI->getVRegDef(VReg);
 
+  // Look through COPY instructions to find definition.
+  while (DefMI->isCopy()) {
+    unsigned CopyVReg = DefMI->getOperand(1).getReg();
+    if (!MRI->hasOneNonDBGUse(CopyVReg))
+      return false;
+    if (!MRI->hasOneDef(CopyVReg))
+      return false;
+    DefMI = MRI->getVRegDef(CopyVReg);
+  }
+
+  switch (DefMI->getOpcode()) {
+  default:
+    return false;
+  // Fold AND into a TBZ/TBNZ if constant operand is power of 2.
+  case AArch64::ANDWri:
+  case AArch64::ANDXri: {
+    if (IsTestAndBranch)
+      return false;
+    if (DefMI->getParent() != MBB)
+      return false;
+    if (!MRI->hasOneNonDBGUse(VReg))
+      return false;
+
+    uint64_t Mask = AArch64_AM::decodeLogicalImmediate(
+        DefMI->getOperand(2).getImm(),
+        (DefMI->getOpcode() == AArch64::ANDWri) ? 32 : 64);
+    if (!isPowerOf2_64(Mask))
+      return false;
+
+    MachineOperand &MO = DefMI->getOperand(1);
+    unsigned NewReg = MO.getReg();
+    if (!TargetRegisterInfo::isVirtualRegister(NewReg))
+      return false;
+
+    assert(!MRI->def_empty(NewReg) && "Register must be defined.");
+
+    MachineBasicBlock &RefToMBB = *MBB;
+    MachineBasicBlock *TBB = MI->getOperand(1).getMBB();
+    DebugLoc DL = MI->getDebugLoc();
+    unsigned Imm = Log2_64(Mask);
+    unsigned Opc = (Imm < 32)
+                       ? (IsNegativeBranch ? AArch64::TBNZW : AArch64::TBZW)
+                       : (IsNegativeBranch ? AArch64::TBNZX : AArch64::TBZX);
+    BuildMI(RefToMBB, MI, DL, get(Opc)).addReg(NewReg).addImm(Imm).addMBB(TBB);
+    MI->eraseFromParent();
+    return true;
+  }
   // Look for CSINC
-  if (!(DefMI->getOpcode() == AArch64::CSINCWr &&
-        DefMI->getOperand(1).getReg() == AArch64::WZR &&
-        DefMI->getOperand(2).getReg() == AArch64::WZR) &&
-      !(DefMI->getOpcode() == AArch64::CSINCXr &&
-        DefMI->getOperand(1).getReg() == AArch64::XZR &&
-        DefMI->getOperand(2).getReg() == AArch64::XZR))
-    return false;
+  case AArch64::CSINCWr:
+  case AArch64::CSINCXr: {
+    if (!(DefMI->getOperand(1).getReg() == AArch64::WZR &&
+          DefMI->getOperand(2).getReg() == AArch64::WZR) &&
+        !(DefMI->getOperand(1).getReg() == AArch64::XZR &&
+          DefMI->getOperand(2).getReg() == AArch64::XZR))
+      return false;
 
-  if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) != -1)
-    return false;
+    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) != -1)
+      return false;
 
-  AArch64CC::CondCode CC =
-      (AArch64CC::CondCode)DefMI->getOperand(3).getImm();
-  bool CheckOnlyCCWrites = true;
-  // Convert only when the condition code is not modified between
-  // the CSINC and the branch. The CC may be used by other
-  // instructions in between.
-  if (modifiesConditionCode(DefMI, MI, CheckOnlyCCWrites, &getRegisterInfo()))
-    return false;
-  MachineBasicBlock &RefToMBB = *MBB;
-  MachineBasicBlock *TBB = MI->getOperand(TargetBBInMI).getMBB();
-  DebugLoc DL = MI->getDebugLoc();
-  if (IsNegativeBranch)
-    CC = AArch64CC::getInvertedCondCode(CC);
-  BuildMI(RefToMBB, MI, DL, get(AArch64::Bcc)).addImm(CC).addMBB(TBB);
-  MI->eraseFromParent();
-  return true;
+    AArch64CC::CondCode CC = (AArch64CC::CondCode)DefMI->getOperand(3).getImm();
+    bool CheckOnlyCCWrites = true;
+    // Convert only when the condition code is not modified between
+    // the CSINC and the branch. The CC may be used by other
+    // instructions in between.
+    if (modifiesConditionCode(DefMI, MI, CheckOnlyCCWrites, &getRegisterInfo()))
+      return false;
+    MachineBasicBlock &RefToMBB = *MBB;
+    MachineBasicBlock *TBB = MI->getOperand(TargetBBInMI).getMBB();
+    DebugLoc DL = MI->getDebugLoc();
+    if (IsNegativeBranch)
+      CC = AArch64CC::getInvertedCondCode(CC);
+    BuildMI(RefToMBB, MI, DL, get(AArch64::Bcc)).addImm(CC).addMBB(TBB);
+    MI->eraseFromParent();
+    return true;
+  }
+  }
 }
 
 std::pair<unsigned, unsigned>

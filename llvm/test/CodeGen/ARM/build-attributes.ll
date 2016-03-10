@@ -105,6 +105,9 @@
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r7 | FileCheck %s --check-prefix=CORTEX-R7
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r7  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-R7-FAST
 ; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r7 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
+; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r8 | FileCheck %s --check-prefix=CORTEX-R8
+; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r8  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-R8-FAST
+; RUN: llc < %s -mtriple=armv7r-linux-gnueabi -mcpu=cortex-r8 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a35 | FileCheck %s --check-prefix=CORTEX-A35
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a35  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A35-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a35 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
@@ -1214,6 +1217,34 @@
 ; CORTEX-R7-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-R7-FAST-NOT:  .eabi_attribute 22
 ; CORTEX-R7-FAST:  .eabi_attribute 23, 1
+
+; CORTEX-R8:  .cpu cortex-r8
+; CORTEX-R8:  .eabi_attribute 6, 10
+; CORTEX-R8:  .eabi_attribute 7, 82
+; CORTEX-R8:  .eabi_attribute 8, 1
+; CORTEX-R8:  .eabi_attribute 9, 2
+; CORTEX-R8:  .fpu vfpv3-d16-fp16
+; CORTEX-R8-NOT:   .eabi_attribute 19
+;; We default to IEEE 754 compliance
+; CORTEX-R8:  .eabi_attribute 20, 1
+; CORTEX-R8:  .eabi_attribute 21, 1
+; CORTEX-R8-NOT:  .eabi_attribute 22
+; CORTEX-R8:  .eabi_attribute 23, 3
+; CORTEX-R8:  .eabi_attribute 24, 1
+; CORTEX-R8:  .eabi_attribute 25, 1
+; CORTEX-R8-NOT:  .eabi_attribute 28
+; CORTEX-R8:  .eabi_attribute 36, 1
+; CORTEX-R8:  .eabi_attribute 38, 1
+; CORTEX-R8:  .eabi_attribute 42, 1
+; CORTEX-R8:  .eabi_attribute 44, 2
+; CORTEX-R8-NOT:  .eabi_attribute 68
+
+; CORTEX-R8-FAST-NOT:   .eabi_attribute 19
+;; The R8 has the VFPv3 FP unit, which always flushes preserving sign.
+; CORTEX-R8-FAST:  .eabi_attribute 20, 2
+; CORTEX-R8-FAST-NOT:  .eabi_attribute 21
+; CORTEX-R8-FAST-NOT:  .eabi_attribute 22
+; CORTEX-R8-FAST:  .eabi_attribute 23, 1
 
 ; CORTEX-A35:  .cpu cortex-a35
 ; CORTEX-A35:  .eabi_attribute 6, 14

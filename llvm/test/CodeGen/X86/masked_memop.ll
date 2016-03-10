@@ -912,20 +912,20 @@ define <2 x float> @test18(<2 x i32> %trigger, <2 x float>* %addr) {
   ret <2 x float> %res
 }
 
-define <4 x float> @test19(<4 x i32> %trigger, <4 x float>* %addr) {
-; AVX-LABEL: test19:
+define <4 x float> @load_all(<4 x i32> %trigger, <4 x float>* %addr) {
+; AVX-LABEL: load_all:
 ; AVX:       ## BB#0:
 ; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: test19:
+; AVX512F-LABEL: load_all:
 ; AVX512F:       ## BB#0:
 ; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
-; SKX-LABEL: test19:
+; SKX-LABEL: load_all:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
 ; SKX-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}

@@ -731,10 +731,14 @@ static void computeCalleeSaveRegisterPairs(
 
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   MachineFrameInfo *MFI = MF.getFrameInfo();
+  CallingConv::ID CC = MF.getFunction()->getCallingConv();
   unsigned Count = CSI.size();
+  (void)CC;
   // MachO's compact unwind format relies on all registers being stored in
   // pairs.
-  assert((!produceCompactUnwindFrame(MF) || (Count & 1) == 0) &&
+  assert((!produceCompactUnwindFrame(MF) ||
+          CC == CallingConv::PreserveMost ||
+          (Count & 1) == 0) &&
          "Odd number of callee-saved regs to spill!");
   unsigned Offset = AFI->getCalleeSavedStackSize();
 
@@ -767,6 +771,7 @@ static void computeCalleeSaveRegisterPairs(
     // MachO's compact unwind format relies on all registers being stored in
     // adjacent register pairs.
     assert((!produceCompactUnwindFrame(MF) ||
+            CC == CallingConv::PreserveMost ||
             (RPI.isPaired() &&
              ((RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP) ||
               RPI.Reg1 + 1 == RPI.Reg2))) &&
