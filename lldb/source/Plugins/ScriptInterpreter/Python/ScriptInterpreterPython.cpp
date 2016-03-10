@@ -547,6 +547,27 @@ ScriptInterpreterPython::LeaveSession ()
 }
 
 bool
+ScriptInterpreterPython::SetStdHandle(File &file, const char *py_name, PythonFile &save_file, const char *mode)
+{
+    if (file.IsValid())
+    {
+        // Flush the file before giving it to python to avoid interleaved output.
+        file.Flush();
+
+        PythonDictionary &sys_module_dict = GetSysModuleDictionary();
+
+        save_file = sys_module_dict.GetItemForKey(PythonString(py_name)).AsType<PythonFile>();
+
+        PythonFile new_file(file, mode);
+        sys_module_dict.SetItemForKey(PythonString(py_name), new_file);
+        return true;
+    }
+    else
+        save_file.Reset();
+    return false;
+}
+
+bool
 ScriptInterpreterPython::EnterSession (uint16_t on_entry_flags,
                                        FILE *in,
                                        FILE *out,
@@ -604,54 +625,31 @@ ScriptInterpreterPython::EnterSession (uint16_t on_entry_flags,
         if (!in_file.IsValid() || !out_file.IsValid() || !err_file.IsValid())
             m_interpreter.GetDebugger().AdoptTopIOHandlerFilesIfInvalid (in_sp, out_sp, err_sp);
 
-        m_saved_stdin.Reset();
 
-        if ((on_entry_flags & Locker::NoSTDIN) == 0)
+        if (on_entry_flags & Locker::NoSTDIN)
         {
-            // STDIN is enabled
-            if (!in_file.IsValid() && in_sp)
-                in_file = in_sp->GetFile();
-            if (in_file.IsValid())
+            m_saved_stdin.Reset();
+        }
+        else
+        {
+            if (!SetStdHandle(in_file, "stdin", m_saved_stdin, "r"))
             {
-                // Flush the file before giving it to python to avoid interleaved output.
-                in_file.Flush();
-
-                m_saved_stdin = sys_module_dict.GetItemForKey(PythonString("stdin")).AsType<PythonFile>();
-                // This call can deadlock your process if the file is locked
-                PythonFile new_file(in_file, "r");
-                sys_module_dict.SetItemForKey (PythonString("stdin"), new_file);
+                if (in_sp)
+                    SetStdHandle(in_sp->GetFile(), "stdin", m_saved_stdin, "r");
             }
         }
 
-        if (!out_file.IsValid() && out_sp)
-            out_file = out_sp->GetFile();
-        if (out_file.IsValid())
+        if (!SetStdHandle(out_file, "stdout", m_saved_stdout, "w"))
         {
-            // Flush the file before giving it to python to avoid interleaved output.
-            out_file.Flush();
-
-            m_saved_stdout = sys_module_dict.GetItemForKey(PythonString("stdout")).AsType<PythonFile>();
-
-            PythonFile new_file(out_file, "w");
-            sys_module_dict.SetItemForKey (PythonString("stdout"), new_file);
+            if (out_sp)
+                SetStdHandle(out_sp->GetFile(), "stdout", m_saved_stdout, "w");
         }
-        else
-            m_saved_stdout.Reset();
 
-        if (!err_file.IsValid() && err_sp)
-            err_file = err_sp->GetFile();
-        if (err_file.IsValid())
+        if (!SetStdHandle(err_file, "stderr", m_saved_stderr, "w"))
         {
-            // Flush the file before giving it to python to avoid interleaved output.
-            err_file.Flush();
-
-            m_saved_stderr = sys_module_dict.GetItemForKey(PythonString("stderr")).AsType<PythonFile>();
-
-            PythonFile new_file(err_file, "w");
-            sys_module_dict.SetItemForKey (PythonString("stderr"), new_file);
+            if (err_sp)
+                SetStdHandle(err_sp->GetFile(), "stderr", m_saved_stderr, "w");
         }
-        else
-            m_saved_stderr.Reset();
     }
 
     if (PyErr_Occurred())
