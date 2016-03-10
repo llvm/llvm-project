@@ -152,3 +152,11 @@ define <2 x i32> @test14(<2 x float> %f) {
   %vcvt.i = fptosi <2 x float> %mul.i to <2 x i32>
   ret <2 x i32> %vcvt.i
 }
+
+; CHECK-LABEL: test_illegal_fp_to_int:
+; CHECK: fcvtzs.4s v0, v0, #2
+define <3 x i32> @test_illegal_fp_to_int(<3 x float> %in) {
+  %scale = fmul <3 x float> %in, <float 4.0, float 4.0, float 4.0>
+  %val = fptosi <3 x float> %scale to <3 x i32>
+  ret <3 x i32> %val
+}
