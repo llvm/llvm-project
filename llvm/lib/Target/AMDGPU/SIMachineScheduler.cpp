@@ -1879,7 +1879,8 @@ void SIScheduleDAGMI::schedule()
 
   for (unsigned i = 0, e = (unsigned)SUnits.size(); i != e; ++i) {
     SUnit *SU = &SUnits[i];
-    unsigned BaseLatReg, OffLatReg;
+    unsigned BaseLatReg;
+    int64_t OffLatReg;
     if (SITII->isLowLatencyInstruction(SU->getInstr())) {
       IsLowLatencySU[i] = 1;
       if (SITII->getMemOpBaseRegImmOfs(SU->getInstr(), BaseLatReg,

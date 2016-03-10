@@ -78,79 +78,78 @@ MaxRecurseDepth("max-recurse-depth", cl::Hidden, cl::init(1000), cl::ZeroOrMore,
 //                         ValueTable Class
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+struct Expression {
+  uint32_t opcode;
+  Type *type;
+  SmallVector<uint32_t, 4> varargs;
+
+  Expression(uint32_t o = ~2U) : opcode(o) {}
+
+  bool operator==(const Expression &other) const {
+    if (opcode != other.opcode)
+      return false;
+    if (opcode == ~0U || opcode == ~1U)
+      return true;
+    if (type != other.type)
+      return false;
+    if (varargs != other.varargs)
+      return false;
+    return true;
+  }
+
+  friend hash_code hash_value(const Expression &Value) {
+    return hash_combine(
+        Value.opcode, Value.type,
+        hash_combine_range(Value.varargs.begin(), Value.varargs.end()));
+  }
+};
+
 /// This class holds the mapping between values and value numbers.  It is used
 /// as an efficient mechanism to determine the expression-wise equivalence of
 /// two values.
-namespace {
-  struct Expression {
-    uint32_t opcode;
-    Type *type;
-    SmallVector<uint32_t, 4> varargs;
+class ValueTable {
+  DenseMap<Value *, uint32_t> valueNumbering;
+  DenseMap<Expression, uint32_t> expressionNumbering;
+  AliasAnalysis *AA;
+  MemoryDependenceResults *MD;
+  DominatorTree *DT;
 
-    Expression(uint32_t o = ~2U) : opcode(o) { }
+  uint32_t nextValueNumber;
 
-    bool operator==(const Expression &other) const {
-      if (opcode != other.opcode)
-        return false;
-      if (opcode == ~0U || opcode == ~1U)
-        return true;
-      if (type != other.type)
-        return false;
-      if (varargs != other.varargs)
-        return false;
-      return true;
-    }
+  Expression create_expression(Instruction *I);
+  Expression create_cmp_expression(unsigned Opcode,
+                                   CmpInst::Predicate Predicate, Value *LHS,
+                                   Value *RHS);
+  Expression create_extractvalue_expression(ExtractValueInst *EI);
+  uint32_t lookup_or_add_call(CallInst *C);
 
-    friend hash_code hash_value(const Expression &Value) {
-      return hash_combine(Value.opcode, Value.type,
-                          hash_combine_range(Value.varargs.begin(),
-                                             Value.varargs.end()));
-    }
-  };
+public:
+  ValueTable() : nextValueNumber(1) {}
+  uint32_t lookup_or_add(Value *V);
+  uint32_t lookup(Value *V) const;
+  uint32_t lookup_or_add_cmp(unsigned Opcode, CmpInst::Predicate Pred,
+                             Value *LHS, Value *RHS);
+  bool exists(Value *V) const;
+  void add(Value *V, uint32_t num);
+  void clear();
+  void erase(Value *v);
+  void setAliasAnalysis(AliasAnalysis *A) { AA = A; }
+  AliasAnalysis *getAliasAnalysis() const { return AA; }
+  void setMemDep(MemoryDependenceResults *M) { MD = M; }
+  void setDomTree(DominatorTree *D) { DT = D; }
+  uint32_t getNextUnusedValueNumber() { return nextValueNumber; }
+  void verifyRemoved(const Value *) const;
+};
 
-  class ValueTable {
-    DenseMap<Value*, uint32_t> valueNumbering;
-    DenseMap<Expression, uint32_t> expressionNumbering;
-    AliasAnalysis *AA;
-    MemoryDependenceAnalysis *MD;
-    DominatorTree *DT;
-
-    uint32_t nextValueNumber;
-
-    Expression create_expression(Instruction* I);
-    Expression create_cmp_expression(unsigned Opcode,
-                                     CmpInst::Predicate Predicate,
-                                     Value *LHS, Value *RHS);
-    Expression create_extractvalue_expression(ExtractValueInst* EI);
-    uint32_t lookup_or_add_call(CallInst* C);
-  public:
-    ValueTable() : nextValueNumber(1) { }
-    uint32_t lookup_or_add(Value *V);
-    uint32_t lookup(Value *V) const;
-    uint32_t lookup_or_add_cmp(unsigned Opcode, CmpInst::Predicate Pred,
-                               Value *LHS, Value *RHS);
-    bool exists(Value *V) const;
-    void add(Value *V, uint32_t num);
-    void clear();
-    void erase(Value *v);
-    void setAliasAnalysis(AliasAnalysis* A) { AA = A; }
-    AliasAnalysis *getAliasAnalysis() const { return AA; }
-    void setMemDep(MemoryDependenceAnalysis* M) { MD = M; }
-    void setDomTree(DominatorTree* D) { DT = D; }
-    uint32_t getNextUnusedValueNumber() { return nextValueNumber; }
-    void verifyRemoved(const Value *) const;
-  };
-}
+} // End anonymous namespace.
 
 namespace llvm {
 template <> struct DenseMapInfo<Expression> {
-  static inline Expression getEmptyKey() {
-    return ~0U;
-  }
+  static inline Expression getEmptyKey() { return ~0U; }
 
-  static inline Expression getTombstoneKey() {
-    return ~1U;
-  }
+  static inline Expression getTombstoneKey() { return ~1U; }
 
   static unsigned getHashValue(const Expression e) {
     using llvm::hash_value;
@@ -160,8 +159,7 @@ template <> struct DenseMapInfo<Expression> {
     return LHS == RHS;
   }
 };
-
-}
+} // End llvm namespace.
 
 //===----------------------------------------------------------------------===//
 //                     ValueTable Internal Functions
@@ -332,7 +330,7 @@ uint32_t ValueTable::lookup_or_add_call(CallInst *C) {
     }
 
     // Non-local case.
-    const MemoryDependenceAnalysis::NonLocalDepInfo &deps =
+    const MemoryDependenceResults::NonLocalDepInfo &deps =
       MD->getNonLocalCallDependency(CallSite(C));
     // FIXME: Move the checking logic to MemDep!
     CallInst* cdep = nullptr;
@@ -511,272 +509,271 @@ void ValueTable::verifyRemoved(const Value *V) const {
 //===----------------------------------------------------------------------===//
 
 namespace {
-  class GVN;
-  /// Represents a particular available value that we know how to materialize.
-  /// Materialization of an AvailableValue never fails.  An AvailableValue is
-  /// implicitly associated with a rematerialization point which is the
-  /// location of the instruction from which it was formed. 
-  struct AvailableValue {
-    enum ValType {
-      SimpleVal,  // A simple offsetted value that is accessed.
-      LoadVal,    // A value produced by a load.
-      MemIntrin,  // A memory intrinsic which is loaded from.
-      UndefVal    // A UndefValue representing a value from dead block (which
-                  // is not yet physically removed from the CFG). 
-    };
-  
-    /// V - The value that is live out of the block.
-    PointerIntPair<Value *, 2, ValType> Val;
-  
-    /// Offset - The byte offset in Val that is interesting for the load query.
-    unsigned Offset;
-  
-    static AvailableValue get(Value *V,
-                              unsigned Offset = 0) {
-      AvailableValue Res;
-      Res.Val.setPointer(V);
-      Res.Val.setInt(SimpleVal);
-      Res.Offset = Offset;
-      return Res;
-    }
-  
-    static AvailableValue getMI(MemIntrinsic *MI,
-                                unsigned Offset = 0) {
-      AvailableValue Res;
-      Res.Val.setPointer(MI);
-      Res.Val.setInt(MemIntrin);
-      Res.Offset = Offset;
-      return Res;
-    }
-  
-    static AvailableValue getLoad(LoadInst *LI,
-                                  unsigned Offset = 0) {
-      AvailableValue Res;
-      Res.Val.setPointer(LI);
-      Res.Val.setInt(LoadVal);
-      Res.Offset = Offset;
-      return Res;
-    }
+class GVN;
 
-    static AvailableValue getUndef() {
-      AvailableValue Res;
-      Res.Val.setPointer(nullptr);
-      Res.Val.setInt(UndefVal);
-      Res.Offset = 0;
-      return Res;
-    }
-
-    bool isSimpleValue() const { return Val.getInt() == SimpleVal; }
-    bool isCoercedLoadValue() const { return Val.getInt() == LoadVal; }
-    bool isMemIntrinValue() const { return Val.getInt() == MemIntrin; }
-    bool isUndefValue() const { return Val.getInt() == UndefVal; }
-  
-    Value *getSimpleValue() const {
-      assert(isSimpleValue() && "Wrong accessor");
-      return Val.getPointer();
-    }
-  
-    LoadInst *getCoercedLoadValue() const {
-      assert(isCoercedLoadValue() && "Wrong accessor");
-      return cast<LoadInst>(Val.getPointer());
-    }
-  
-    MemIntrinsic *getMemIntrinValue() const {
-      assert(isMemIntrinValue() && "Wrong accessor");
-      return cast<MemIntrinsic>(Val.getPointer());
-    }
-
-    /// Emit code at the specified insertion point to adjust the value defined
-    /// here to the specified type. This handles various coercion cases.
-    Value *MaterializeAdjustedValue(LoadInst *LI, Instruction *InsertPt,
-                                    GVN &gvn) const;
+/// Represents a particular available value that we know how to materialize.
+/// Materialization of an AvailableValue never fails.  An AvailableValue is
+/// implicitly associated with a rematerialization point which is the
+/// location of the instruction from which it was formed.
+struct AvailableValue {
+  enum ValType {
+    SimpleVal, // A simple offsetted value that is accessed.
+    LoadVal,   // A value produced by a load.
+    MemIntrin, // A memory intrinsic which is loaded from.
+    UndefVal   // A UndefValue representing a value from dead block (which
+               // is not yet physically removed from the CFG).
   };
 
-  /// Represents an AvailableValue which can be rematerialized at the end of
-  /// the associated BasicBlock.
-  struct AvailableValueInBlock {
-    /// BB - The basic block in question.
-    BasicBlock *BB;
+  /// V - The value that is live out of the block.
+  PointerIntPair<Value *, 2, ValType> Val;
 
-    /// AV - The actual available value
-    AvailableValue AV;
+  /// Offset - The byte offset in Val that is interesting for the load query.
+  unsigned Offset;
 
-    static AvailableValueInBlock get(BasicBlock *BB, AvailableValue &&AV) {
-      AvailableValueInBlock Res;
-      Res.BB = BB;
-      Res.AV = std::move(AV);
-      return Res;
-    }
+  static AvailableValue get(Value *V, unsigned Offset = 0) {
+    AvailableValue Res;
+    Res.Val.setPointer(V);
+    Res.Val.setInt(SimpleVal);
+    Res.Offset = Offset;
+    return Res;
+  }
 
-    static AvailableValueInBlock get(BasicBlock *BB, Value *V,
-                                     unsigned Offset = 0) {
-      return get(BB, AvailableValue::get(V, Offset));
-    }
-    static AvailableValueInBlock getUndef(BasicBlock *BB) {
-      return get(BB, AvailableValue::getUndef());
-    }
-  
-    /// Emit code at the end of this block to adjust the value defined here to
-    /// the specified type. This handles various coercion cases.
-    Value *MaterializeAdjustedValue(LoadInst *LI, GVN &gvn) const {
-      return AV.MaterializeAdjustedValue(LI, BB->getTerminator(), gvn);
-    }
+  static AvailableValue getMI(MemIntrinsic *MI, unsigned Offset = 0) {
+    AvailableValue Res;
+    Res.Val.setPointer(MI);
+    Res.Val.setInt(MemIntrin);
+    Res.Offset = Offset;
+    return Res;
+  }
+
+  static AvailableValue getLoad(LoadInst *LI, unsigned Offset = 0) {
+    AvailableValue Res;
+    Res.Val.setPointer(LI);
+    Res.Val.setInt(LoadVal);
+    Res.Offset = Offset;
+    return Res;
+  }
+
+  static AvailableValue getUndef() {
+    AvailableValue Res;
+    Res.Val.setPointer(nullptr);
+    Res.Val.setInt(UndefVal);
+    Res.Offset = 0;
+    return Res;
+  }
+
+  bool isSimpleValue() const { return Val.getInt() == SimpleVal; }
+  bool isCoercedLoadValue() const { return Val.getInt() == LoadVal; }
+  bool isMemIntrinValue() const { return Val.getInt() == MemIntrin; }
+  bool isUndefValue() const { return Val.getInt() == UndefVal; }
+
+  Value *getSimpleValue() const {
+    assert(isSimpleValue() && "Wrong accessor");
+    return Val.getPointer();
+  }
+
+  LoadInst *getCoercedLoadValue() const {
+    assert(isCoercedLoadValue() && "Wrong accessor");
+    return cast<LoadInst>(Val.getPointer());
+  }
+
+  MemIntrinsic *getMemIntrinValue() const {
+    assert(isMemIntrinValue() && "Wrong accessor");
+    return cast<MemIntrinsic>(Val.getPointer());
+  }
+
+  /// Emit code at the specified insertion point to adjust the value defined
+  /// here to the specified type. This handles various coercion cases.
+  Value *MaterializeAdjustedValue(LoadInst *LI, Instruction *InsertPt,
+                                  GVN &gvn) const;
+};
+
+/// Represents an AvailableValue which can be rematerialized at the end of
+/// the associated BasicBlock.
+struct AvailableValueInBlock {
+  /// BB - The basic block in question.
+  BasicBlock *BB;
+
+  /// AV - The actual available value
+  AvailableValue AV;
+
+  static AvailableValueInBlock get(BasicBlock *BB, AvailableValue &&AV) {
+    AvailableValueInBlock Res;
+    Res.BB = BB;
+    Res.AV = std::move(AV);
+    return Res;
+  }
+
+  static AvailableValueInBlock get(BasicBlock *BB, Value *V,
+                                   unsigned Offset = 0) {
+    return get(BB, AvailableValue::get(V, Offset));
+  }
+  static AvailableValueInBlock getUndef(BasicBlock *BB) {
+    return get(BB, AvailableValue::getUndef());
+  }
+
+  /// Emit code at the end of this block to adjust the value defined here to
+  /// the specified type. This handles various coercion cases.
+  Value *MaterializeAdjustedValue(LoadInst *LI, GVN &gvn) const {
+    return AV.MaterializeAdjustedValue(LI, BB->getTerminator(), gvn);
+  }
+};
+
+class GVN : public FunctionPass {
+  bool NoLoads;
+  MemoryDependenceResults *MD;
+  DominatorTree *DT;
+  const TargetLibraryInfo *TLI;
+  AssumptionCache *AC;
+  SetVector<BasicBlock *> DeadBlocks;
+
+  ValueTable VN;
+
+  /// A mapping from value numbers to lists of Value*'s that
+  /// have that value number.  Use findLeader to query it.
+  struct LeaderTableEntry {
+    Value *Val;
+    const BasicBlock *BB;
+    LeaderTableEntry *Next;
   };
+  DenseMap<uint32_t, LeaderTableEntry> LeaderTable;
+  BumpPtrAllocator TableAllocator;
 
-  class GVN : public FunctionPass {
-    bool NoLoads;
-    MemoryDependenceAnalysis *MD;
-    DominatorTree *DT;
-    const TargetLibraryInfo *TLI;
-    AssumptionCache *AC;
-    SetVector<BasicBlock *> DeadBlocks;
+  // Block-local map of equivalent values to their leader, does not
+  // propagate to any successors. Entries added mid-block are applied
+  // to the remaining instructions in the block.
+  SmallMapVector<llvm::Value *, llvm::Constant *, 4> ReplaceWithConstMap;
+  SmallVector<Instruction *, 8> InstrsToErase;
 
-    ValueTable VN;
+  typedef SmallVector<NonLocalDepResult, 64> LoadDepVect;
+  typedef SmallVector<AvailableValueInBlock, 64> AvailValInBlkVect;
+  typedef SmallVector<BasicBlock *, 64> UnavailBlkVect;
 
-    /// A mapping from value numbers to lists of Value*'s that
-    /// have that value number.  Use findLeader to query it.
-    struct LeaderTableEntry {
-      Value *Val;
-      const BasicBlock *BB;
-      LeaderTableEntry *Next;
-    };
-    DenseMap<uint32_t, LeaderTableEntry> LeaderTable;
-    BumpPtrAllocator TableAllocator;
+public:
+  static char ID; // Pass identification, replacement for typeid
+  explicit GVN(bool noloads = false)
+      : FunctionPass(ID), NoLoads(noloads), MD(nullptr) {
+    initializeGVNPass(*PassRegistry::getPassRegistry());
+  }
 
-    // Block-local map of equivalent values to their leader, does not
-    // propagate to any successors. Entries added mid-block are applied
-    // to the remaining instructions in the block.
-    SmallMapVector<llvm::Value *, llvm::Constant *, 4> ReplaceWithConstMap;
-    SmallVector<Instruction*, 8> InstrsToErase;
+  bool runOnFunction(Function &F) override;
 
-    typedef SmallVector<NonLocalDepResult, 64> LoadDepVect;
-    typedef SmallVector<AvailableValueInBlock, 64> AvailValInBlkVect;
-    typedef SmallVector<BasicBlock*, 64> UnavailBlkVect;
+  /// This removes the specified instruction from
+  /// our various maps and marks it for deletion.
+  void markInstructionForDeletion(Instruction *I) {
+    VN.erase(I);
+    InstrsToErase.push_back(I);
+  }
 
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    explicit GVN(bool noloads = false)
-        : FunctionPass(ID), NoLoads(noloads), MD(nullptr) {
-      initializeGVNPass(*PassRegistry::getPassRegistry());
+  DominatorTree &getDominatorTree() const { return *DT; }
+  AliasAnalysis *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
+  MemoryDependenceResults &getMemDep() const { return *MD; }
+
+private:
+  /// Push a new Value to the LeaderTable onto the list for its value number.
+  void addToLeaderTable(uint32_t N, Value *V, const BasicBlock *BB) {
+    LeaderTableEntry &Curr = LeaderTable[N];
+    if (!Curr.Val) {
+      Curr.Val = V;
+      Curr.BB = BB;
+      return;
     }
 
-    bool runOnFunction(Function &F) override;
+    LeaderTableEntry *Node = TableAllocator.Allocate<LeaderTableEntry>();
+    Node->Val = V;
+    Node->BB = BB;
+    Node->Next = Curr.Next;
+    Curr.Next = Node;
+  }
 
-    /// This removes the specified instruction from
-    /// our various maps and marks it for deletion.
-    void markInstructionForDeletion(Instruction *I) {
-      VN.erase(I);
-      InstrsToErase.push_back(I);
+  /// Scan the list of values corresponding to a given
+  /// value number, and remove the given instruction if encountered.
+  void removeFromLeaderTable(uint32_t N, Instruction *I, BasicBlock *BB) {
+    LeaderTableEntry *Prev = nullptr;
+    LeaderTableEntry *Curr = &LeaderTable[N];
+
+    while (Curr && (Curr->Val != I || Curr->BB != BB)) {
+      Prev = Curr;
+      Curr = Curr->Next;
     }
 
-    DominatorTree &getDominatorTree() const { return *DT; }
-    AliasAnalysis *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
-    MemoryDependenceAnalysis &getMemDep() const { return *MD; }
-  private:
-    /// Push a new Value to the LeaderTable onto the list for its value number.
-    void addToLeaderTable(uint32_t N, Value *V, const BasicBlock *BB) {
-      LeaderTableEntry &Curr = LeaderTable[N];
-      if (!Curr.Val) {
-        Curr.Val = V;
-        Curr.BB = BB;
-        return;
-      }
+    if (!Curr)
+      return;
 
-      LeaderTableEntry *Node = TableAllocator.Allocate<LeaderTableEntry>();
-      Node->Val = V;
-      Node->BB = BB;
-      Node->Next = Curr.Next;
-      Curr.Next = Node;
-    }
-
-    /// Scan the list of values corresponding to a given
-    /// value number, and remove the given instruction if encountered.
-    void removeFromLeaderTable(uint32_t N, Instruction *I, BasicBlock *BB) {
-      LeaderTableEntry* Prev = nullptr;
-      LeaderTableEntry* Curr = &LeaderTable[N];
-
-      while (Curr && (Curr->Val != I || Curr->BB != BB)) {
-        Prev = Curr;
-        Curr = Curr->Next;
-      }
-
-      if (!Curr)
-        return;
-
-      if (Prev) {
-        Prev->Next = Curr->Next;
+    if (Prev) {
+      Prev->Next = Curr->Next;
+    } else {
+      if (!Curr->Next) {
+        Curr->Val = nullptr;
+        Curr->BB = nullptr;
       } else {
-        if (!Curr->Next) {
-          Curr->Val = nullptr;
-          Curr->BB = nullptr;
-        } else {
-          LeaderTableEntry* Next = Curr->Next;
-          Curr->Val = Next->Val;
-          Curr->BB = Next->BB;
-          Curr->Next = Next->Next;
-        }
+        LeaderTableEntry *Next = Curr->Next;
+        Curr->Val = Next->Val;
+        Curr->BB = Next->BB;
+        Curr->Next = Next->Next;
       }
     }
+  }
 
-    // List of critical edges to be split between iterations.
-    SmallVector<std::pair<TerminatorInst*, unsigned>, 4> toSplit;
+  // List of critical edges to be split between iterations.
+  SmallVector<std::pair<TerminatorInst *, unsigned>, 4> toSplit;
 
-    // This transformation requires dominator postdominator info
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<AssumptionCacheTracker>();
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addRequired<TargetLibraryInfoWrapperPass>();
-      if (!NoLoads)
-        AU.addRequired<MemoryDependenceAnalysis>();
-      AU.addRequired<AAResultsWrapperPass>();
+  // This transformation requires dominator postdominator info
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    if (!NoLoads)
+      AU.addRequired<MemoryDependenceWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
 
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-    }
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+  }
 
+  // Helper functions of redundant load elimination
+  bool processLoad(LoadInst *L);
+  bool processNonLocalLoad(LoadInst *L);
+  bool processAssumeIntrinsic(IntrinsicInst *II);
+  /// Given a local dependency (Def or Clobber) determine if a value is
+  /// available for the load.  Returns true if an value is known to be
+  /// available and populates Res.  Returns false otherwise.
+  bool AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
+                               Value *Address, AvailableValue &Res);
+  /// Given a list of non-local dependencies, determine if a value is
+  /// available for the load in each specified block.  If it is, add it to
+  /// ValuesPerBlock.  If not, add it to UnavailableBlocks.
+  void AnalyzeLoadAvailability(LoadInst *LI, LoadDepVect &Deps,
+                               AvailValInBlkVect &ValuesPerBlock,
+                               UnavailBlkVect &UnavailableBlocks);
+  bool PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
+                      UnavailBlkVect &UnavailableBlocks);
 
-    // Helper functions of redundant load elimination
-    bool processLoad(LoadInst *L);
-    bool processNonLocalLoad(LoadInst *L);
-    bool processAssumeIntrinsic(IntrinsicInst *II);
-    /// Given a local dependency (Def or Clobber) determine if a value is
-    /// available for the load.  Returns true if an value is known to be
-    /// available and populates Res.  Returns false otherwise.
-    bool AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
-                                 Value *Address, AvailableValue &Res);
-    /// Given a list of non-local dependencies, determine if a value is
-    /// available for the load in each specified block.  If it is, add it to
-    /// ValuesPerBlock.  If not, add it to UnavailableBlocks.
-    void AnalyzeLoadAvailability(LoadInst *LI, LoadDepVect &Deps, 
-                                 AvailValInBlkVect &ValuesPerBlock,
-                                 UnavailBlkVect &UnavailableBlocks);
-    bool PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock, 
-                        UnavailBlkVect &UnavailableBlocks);
+  // Other helper routines
+  bool processInstruction(Instruction *I);
+  bool processBlock(BasicBlock *BB);
+  void dump(DenseMap<uint32_t, Value *> &d);
+  bool iterateOnFunction(Function &F);
+  bool performPRE(Function &F);
+  bool performScalarPRE(Instruction *I);
+  bool performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
+                                 unsigned int ValNo);
+  Value *findLeader(const BasicBlock *BB, uint32_t num);
+  void cleanupGlobalSets();
+  void verifyRemoved(const Instruction *I) const;
+  bool splitCriticalEdges();
+  BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);
+  bool replaceOperandsWithConsts(Instruction *I) const;
+  bool propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
+                         bool DominatesByEdge);
+  bool processFoldableCondBr(BranchInst *BI);
+  void addDeadBlock(BasicBlock *BB);
+  void assignValNumForDeadCode();
+};
 
-    // Other helper routines
-    bool processInstruction(Instruction *I);
-    bool processBlock(BasicBlock *BB);
-    void dump(DenseMap<uint32_t, Value*> &d);
-    bool iterateOnFunction(Function &F);
-    bool performPRE(Function &F);
-    bool performScalarPRE(Instruction *I);
-    bool performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
-                                   unsigned int ValNo);
-    Value *findLeader(const BasicBlock *BB, uint32_t num);
-    void cleanupGlobalSets();
-    void verifyRemoved(const Instruction *I) const;
-    bool splitCriticalEdges();
-    BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);
-    bool replaceOperandsWithConsts(Instruction *I) const;
-    bool propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
-                           bool DominatesByEdge);
-    bool processFoldableCondBr(BranchInst *BI);
-    void addDeadBlock(BasicBlock *BB);
-    void assignValNumForDeadCode();
-  };
+char GVN::ID = 0;
 
-  char GVN::ID = 0;
-}
+} // End anonymous namespace.
 
 // The public interface to this file...
 FunctionPass *llvm::createGVNPass(bool NoLoads) {
@@ -785,7 +782,7 @@ FunctionPass *llvm::createGVNPass(bool NoLoads) {
 
 INITIALIZE_PASS_BEGIN(GVN, "gvn", "Global Value Numbering", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
@@ -1105,7 +1102,7 @@ static int AnalyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr,
       GetPointerBaseWithConstantOffset(LoadPtr, LoadOffs, DL);
   unsigned LoadSize = DL.getTypeStoreSize(LoadTy);
 
-  unsigned Size = MemoryDependenceAnalysis::getLoadLoadClobberFullWidthSize(
+  unsigned Size = MemoryDependenceResults::getLoadLoadClobberFullWidthSize(
       LoadBase, LoadOffs, LoadSize, DepLI);
   if (Size == 0) return -1;
 
@@ -2358,7 +2355,7 @@ bool GVN::runOnFunction(Function& F) {
     return false;
 
   if (!NoLoads)
-    MD = &getAnalysis<MemoryDependenceAnalysis>();
+    MD = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();

@@ -973,7 +973,7 @@ public:
   /// Get the base register and byte offset of an instruction that reads/writes
   /// memory.
   virtual bool getMemOpBaseRegImmOfs(MachineInstr *MemOp, unsigned &BaseReg,
-                                     unsigned &Offset,
+                                     int64_t &Offset,
                                      const TargetRegisterInfo *TRI) const {
     return false;
   }

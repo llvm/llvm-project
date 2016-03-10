@@ -142,12 +142,13 @@ def : WriteRes<WriteVST, [M1UnitS, M1UnitFST]> { let Latency = 1; }
 def : WriteRes<WriteV, [M1UnitFADD]> { let Latency = 3; }
 
 // Other miscellaneous instructions.
-def : WriteRes<WriteSys,     []> { let Latency = 1; }
+def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }
 def : WriteRes<WriteHint,    []> { let Latency = 1; }
+def : WriteRes<WriteSys,     []> { let Latency = 1; }
 
 //===----------------------------------------------------------------------===//
-// Fast forwarding.
+// Generic fast forwarding.
 
 // TODO: Add FP register forwarding rules.
 
@@ -337,9 +338,9 @@ def : InstRW<[WriteSequence<[M1WriteNAL12], 4>],
                               (instregex "^TB[LX]v16i8Four")>;
 def : InstRW<[M1WriteNEOND],  (instregex "^[SU]MOVv")>;
 def : InstRW<[M1WriteNALU1],  (instregex "^INSv.+lane")>;
-def : InstRW<[M1WriteNALU1],  (instregex "^(TRN|UZP)(1|2)(v8i8|v4i16|v2i32)")>;
-def : InstRW<[M1WriteNALU2],  (instregex "^(TRN|UZP)(1|2)(v16i8|v8i16|v4i32|v2i64)")>;
-def : InstRW<[M1WriteNALU1],  (instregex "^ZIP(1|2)v")>;
+def : InstRW<[M1WriteNALU1],  (instregex "^(TRN|UZP)[12](v8i8|v4i16|v2i32)")>;
+def : InstRW<[M1WriteNALU2],  (instregex "^(TRN|UZP)[12](v16i8|v8i16|v4i32|v2i64)")>;
+def : InstRW<[M1WriteNALU1],  (instregex "^ZIP[12]v")>;
 
 // ASIMD load instructions.
 
@@ -355,8 +356,5 @@ def : InstRW<[M1WriteNCRYPT5], (instregex "^SHA256(H|SU1)")>;
 
 // CRC instructions.
 def : InstRW<[M1WriteC2], (instregex "^CRC32")>;
-
-// atomic memory operations.
-def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
 } // SchedModel = ExynosM1Model

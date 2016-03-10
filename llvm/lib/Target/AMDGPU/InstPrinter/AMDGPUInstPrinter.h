@@ -33,8 +33,10 @@ public:
                               const MCRegisterInfo &MRI);
 
 private:
+  void printU4ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU8ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU16ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printU4ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU8ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
@@ -61,6 +63,10 @@ private:
   void printImmediate64(uint64_t I, raw_ostream &O);
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printOperandAndMods(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printDPPCtrlOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printRowMaskOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printBankMaskOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printBoundCtrlOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   static void printInterpSlot(const MCInst *MI, unsigned OpNum, raw_ostream &O);
   void printMemOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,

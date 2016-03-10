@@ -3173,6 +3173,19 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
         return Res;
     }
 
+    // (icmp sgt smin(PosA, B) 0) -> (icmp sgt B 0)
+    if (CI->isZero() && I.getPredicate() == ICmpInst::ICMP_SGT)
+      if (auto *SI = dyn_cast<SelectInst>(Op0)) {
+        SelectPatternResult SPR = matchSelectPattern(SI, A, B);
+        if (SPR.Flavor == SPF_SMIN) {
+          if (isKnownPositive(A, DL))
+            return new ICmpInst(I.getPredicate(), B, CI);
+          if (isKnownPositive(B, DL))
+            return new ICmpInst(I.getPredicate(), A, CI);
+        }
+      }
+    
+
     // The following transforms are only 'worth it' if the only user of the
     // subtraction is the icmp.
     if (Op0->hasOneUse()) {

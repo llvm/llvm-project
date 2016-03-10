@@ -91,7 +91,7 @@ public:
                                int64_t &Offset2) const override;
 
   bool getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
-                             unsigned &Offset,
+                             int64_t &Offset,
                              const TargetRegisterInfo *TRI) const final;
 
   bool shouldClusterLoads(MachineInstr *FirstLdSt,

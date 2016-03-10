@@ -141,7 +141,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
       if (!isNarrowFPStore(MI))
         continue;
       unsigned BaseReg;
-      unsigned Offset;
+      int64_t Offset;
       if (TII->getMemOpBaseRegImmOfs(&MI, BaseReg, Offset, TRI)) {
         if (PrevBaseReg == BaseReg) {
           // If this block can take STPs, skip ahead to the next block.

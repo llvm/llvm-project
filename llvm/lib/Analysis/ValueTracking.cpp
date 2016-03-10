@@ -182,6 +182,18 @@ bool llvm::isKnownNonNegative(Value *V, const DataLayout &DL, unsigned Depth,
   return NonNegative;
 }
 
+bool llvm::isKnownPositive(Value *V, const DataLayout &DL, unsigned Depth,
+                           AssumptionCache *AC, const Instruction *CxtI,
+                           const DominatorTree *DT) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->getValue().isStrictlyPositive();
+  
+  // TODO: We'd doing two recursive queries here.  We should factor this such
+  // that only a single query is needed.
+  return isKnownNonNegative(V, DL, Depth, AC, CxtI, DT) &&
+    isKnownNonZero(V, DL, Depth, AC, CxtI, DT);
+}
+
 static bool isKnownNonEqual(Value *V1, Value *V2, const Query &Q);
 
 bool llvm::isKnownNonEqual(Value *V1, Value *V2, const DataLayout &DL,

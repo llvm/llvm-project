@@ -15,6 +15,8 @@
 
 RUN: llvm-readobj -g %p/Inputs/elf-groups.x86_64 \
 RUN:   | FileCheck %s
+RUN: llvm-readobj -g -elf-output-style=GNU %p/Inputs/elf-groups.x86_64 \
+RUN:   | FileCheck --check-prefix="GNU" %s
 CHECK:         Groups {
 CHECK-NEXT:      Group {
 CHECK-NEXT:        Name: .group (92)
@@ -37,3 +39,14 @@ CHECK-NEXT:          .rela.text._Z3fooIiEvT_ (13)
 CHECK-NEXT:        ]
 CHECK-NEXT:      }
 
+GNU:COMDAT group section [    1] `.group' [_Z3fooIcEvT_] contains 2 sections:
+GNU-NEXT:   [Index]    Name
+GNU-NEXT:   [   10]   .text._Z3fooIcEvT_
+GNU-NEXT:   [   11]   .rela.text._Z3fooIcEvT_
+GNU:COMDAT group section [    2] `.group' [_Z3fooIiEvT_] contains 2 sections:
+GNU-NEXT:   [Index]    Name
+GNU-NEXT:   [   12]   .text._Z3fooIiEvT_
+GNU-NEXT:   [   13]   .rela.text._Z3fooIiEvT_
+GNU:COMDAT group section [    3] `.group' [_ZNKSt9type_info4nameEv] contains 1 sections:
+GNU-NEXT:   [Index]    Name
+GNU-NEXT:   [   14]   .text._ZNKSt9type_info4nameEv

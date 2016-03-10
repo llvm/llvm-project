@@ -891,6 +891,17 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot = 1,
 
 
 // Section B.27 - Trap on Integer Condition Codes Instruction
+// conditional branch class:
+let DecoderNamespace = "SparcV8", DecoderMethod = "DecodeTRAP", hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
+{
+  def TRAPrr : TRAPSPrr<0b111010, (outs), (ins IntRegs:$rs1, IntRegs:$rs2,
+                                           CCOp:$cond),
+                        "t$cond $rs1 + $rs2", []>;
+  def TRAPri : TRAPSPri<0b111010, (outs), (ins IntRegs:$rs1, i32imm:$imm,
+                                           CCOp:$cond),
+                        "t$cond $rs1 + $imm", []>;
+}
+
 multiclass TRAP<string regStr> {
   def rr : TRAPSPrr<0b111010, (outs), (ins IntRegs:$rs1, IntRegs:$rs2,
                                        CCOp:$cond),
@@ -900,8 +911,9 @@ multiclass TRAP<string regStr> {
               !strconcat(!strconcat("t$cond ", regStr), ", $rs1 + $imm"), []>;
 }
 
-let hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
+let DecoderNamespace = "SparcV9", DecoderMethod = "DecodeTRAP", Predicates = [HasV9], hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
   defm TICC : TRAP<"%icc">;
+
 
 let isBarrier = 1, isTerminator = 1, rd = 0b01000, rs1 = 0, simm13 = 5 in
   def TA5 : F3_2<0b10, 0b111010, (outs), (ins), "ta 5", [(trap)]>;

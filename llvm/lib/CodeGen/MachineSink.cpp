@@ -702,7 +702,8 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr *MI,
       !PredBB->getTerminator()->getMetadata(LLVMContext::MD_make_implicit))
     return false;
 
-  unsigned BaseReg, Offset;
+  unsigned BaseReg;
+  int64_t Offset;
   if (!TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI))
     return false;
 

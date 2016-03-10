@@ -28,6 +28,11 @@ void AMDGPUInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   printAnnotation(OS, Annot);
 }
 
+void AMDGPUInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
+                                           raw_ostream &O) {
+  O << formatHex(MI->getOperand(OpNo).getImm() & 0xf);
+}
+
 void AMDGPUInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &O) {
   O << formatHex(MI->getOperand(OpNo).getImm() & 0xff);
@@ -41,6 +46,11 @@ void AMDGPUInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &O) {
   O << formatHex(MI->getOperand(OpNo).getImm() & 0xffffffff);
+}
+
+void AMDGPUInstPrinter::printU4ImmDecOperand(const MCInst *MI, unsigned OpNo,
+                                             raw_ostream &O) {
+  O << formatDec(MI->getOperand(OpNo).getImm() & 0xf);
 }
 
 void AMDGPUInstPrinter::printU8ImmDecOperand(const MCInst *MI, unsigned OpNo,
@@ -251,6 +261,8 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::VOP3)
     O << "_e64 ";
+  else if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::DPP)
+    O << "_dpp ";
   else
     O << "_e32 ";
 
@@ -386,6 +398,63 @@ void AMDGPUInstPrinter::printOperandAndMods(const MCInst *MI, unsigned OpNo,
   printOperand(MI, OpNo + 1, O);
   if (InputModifiers & SISrcMods::ABS)
     O << '|';
+}
+
+
+void AMDGPUInstPrinter::printDPPCtrlOperand(const MCInst *MI, unsigned OpNo,
+                                             raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  if (Imm <= 0x0ff) {
+    O << " quad_perm:";
+    printU8ImmDecOperand(MI, OpNo, O);
+  } else if ((Imm >= 0x101) && (Imm <= 0x10f)) {
+    O << " row_shl:";
+    printU4ImmDecOperand(MI, OpNo, O);
+  } else if ((Imm >= 0x111) && (Imm <= 0x11f)) {
+    O << " row_shr:";
+    printU4ImmDecOperand(MI, OpNo, O);
+  } else if ((Imm >= 0x121) && (Imm <= 0x12f)) {
+    O << " row_ror:";
+    printU4ImmDecOperand(MI, OpNo, O);
+  } else if (Imm == 0x130) {
+    O << " wave_shl:1";
+  } else if (Imm == 0x134) {
+    O << " wave_rol:1";
+  } else if (Imm == 0x138) {
+    O << " wave_shr:1";
+  } else if (Imm == 0x13c) {
+    O << " wave_ror:1";
+  } else if (Imm == 0x140) {
+    O << " row_mirror:1";
+  } else if (Imm == 0x141) {
+    O << " row_half_mirror:1";
+  } else if (Imm == 0x142) {
+    O << " row_bcast:15";
+  } else if (Imm == 0x143) {
+    O << " row_bcast:31";
+  } else {
+    llvm_unreachable("Invalid dpp_ctrl value");
+  }
+}
+
+void AMDGPUInstPrinter::printRowMaskOperand(const MCInst *MI, unsigned OpNo,
+                                            raw_ostream &O) {
+  O << " row_mask:";
+  printU4ImmOperand(MI, OpNo, O);
+}
+
+void AMDGPUInstPrinter::printBankMaskOperand(const MCInst *MI, unsigned OpNo,
+                                             raw_ostream &O) {
+  O << " bank_mask:";
+  printU4ImmOperand(MI, OpNo, O);
+}
+
+void AMDGPUInstPrinter::printBoundCtrlOperand(const MCInst *MI, unsigned OpNo,
+                                              raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  if (Imm) {
+    O << " bound_ctrl:0"; // XXX - this syntax is used in sp3
+  }
 }
 
 void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,

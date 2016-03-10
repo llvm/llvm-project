@@ -983,10 +983,10 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
   // Each load/store unit costs 1.
   int Cost = LT.first * 1;
 
-  // On Sandybridge 256bit load/stores are double pumped
-  // (but not on Haswell).
-  if (LT.second.getSizeInBits() > 128 && !ST->hasAVX2())
-    Cost*=2;
+  // This isn't exactly right. We're using slow unaligned 32-byte accesses as a
+  // proxy for a double-pumped AVX memory interface such as on Sandybridge.
+  if (LT.second.getStoreSize() == 32 && ST->isUnalignedMem32Slow())
+    Cost *= 2;
 
   return Cost;
 }

@@ -87,15 +87,21 @@ public:
   /// unprofitable.
   bool isLdStPairSuppressed(const MachineInstr *MI) const;
 
+  /// Return true if this is an unscaled load/store.
+  bool isUnscaledLdSt(unsigned Opc) const;
+
+  /// Return true if this is an unscaled load/store.
+  bool isUnscaledLdSt(MachineInstr *MI) const;
+
   /// Hint that pairing the given load or store is unprofitable.
   void suppressLdStPair(MachineInstr *MI) const;
 
   bool getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
-                             unsigned &Offset,
+                             int64_t &Offset,
                              const TargetRegisterInfo *TRI) const override;
 
   bool getMemOpBaseRegImmOfsWidth(MachineInstr *LdSt, unsigned &BaseReg,
-                                  int &Offset, int &Width,
+                                  int64_t &Offset, unsigned &Width,
                                   const TargetRegisterInfo *TRI) const;
 
   bool enableClusterLoads() const override { return true; }

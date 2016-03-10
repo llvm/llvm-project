@@ -387,8 +387,8 @@ public:
   /// specified register (it may be live-in).
   bool def_empty(unsigned RegNo) const { return def_begin(RegNo) == def_end(); }
 
-  /// hasOneDef - Return true if there is exactly one instruction defining the
-  /// specified register.
+  /// Return true if there is exactly one operand defining the specified
+  /// register.
   bool hasOneDef(unsigned RegNo) const {
     def_iterator DI = def_begin(RegNo);
     if (DI == def_end())

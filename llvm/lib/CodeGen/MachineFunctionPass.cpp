@@ -59,7 +59,7 @@ void MachineFunctionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GlobalsAAWrapperPass>();
   AU.addPreserved<IVUsers>();
   AU.addPreserved<LoopInfoWrapperPass>();
-  AU.addPreserved<MemoryDependenceAnalysis>();
+  AU.addPreserved<MemoryDependenceWrapperPass>();
   AU.addPreserved<ScalarEvolutionWrapperPass>();
   AU.addPreserved<SCEVAAWrapperPass>();
   AU.addPreserved<StackProtector>();

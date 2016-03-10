@@ -35,10 +35,13 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -223,7 +226,7 @@ bool LICM::runOnLoop(Loop *L, LPPassManager &LPM) {
     // Loop over all of the alias sets in the tracker object.
     for (AliasSet &AS : *CurAST)
       Changed |= promoteLoopAccessesToScalars(AS, ExitBlocks, InsertPts,
-                                              PIC, LI, DT, CurLoop, 
+                                              PIC, LI, DT, TLI, CurLoop,
                                               CurAST, &SafetyInfo);
 
     // Once we have promoted values across the loop body we have to recursively
@@ -846,7 +849,9 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
                                         SmallVectorImpl<BasicBlock*>&ExitBlocks,
                                         SmallVectorImpl<Instruction*>&InsertPts,
                                         PredIteratorCache &PIC, LoopInfo *LI, 
-                                        DominatorTree *DT, Loop *CurLoop, 
+                                        DominatorTree *DT,
+                                        const TargetLibraryInfo *TLI,
+                                        Loop *CurLoop,
                                         AliasSetTracker *CurAST, 
                                         LICMSafetyInfo * SafetyInfo) { 
   // Verify inputs.
@@ -879,9 +884,24 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
   //
   // is not safe, because *P may only be valid to access if 'c' is true.
   //
+  // The safety property divides into two parts:
+  // 1) The memory may not be dereferenceable on entry to the loop.  In this
+  //    case, we can't insert the required load in the preheader.
+  // 2) The memory model does not allow us to insert a store along any dynamic
+  //    path which did not originally have one.
+  //
   // It is safe to promote P if all uses are direct load/stores and if at
   // least one is guaranteed to be executed.
   bool GuaranteedToExecute = false;
+
+  // It is also safe to promote P if we can prove that speculating a load into
+  // the preheader is safe (i.e. proving dereferenceability on all
+  // paths through the loop), and that the memory can be proven thread local
+  // (so that the memory model requirement doesn't apply.)  We first establish
+  // the former, and then run a capture analysis below to establish the later.
+  // We can use any access within the alias set to prove dereferenceability
+  // since they're all must alias.
+  bool CanSpeculateLoad = false;
 
   SmallVector<Instruction*, 64> LoopUses;
   SmallPtrSet<Value*, 4> PointerMustAliases;
@@ -891,6 +911,16 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
   unsigned Alignment = 1;
   AAMDNodes AATags;
   bool HasDedicatedExits = CurLoop->hasDedicatedExits();
+
+  // Don't sink stores from loops without dedicated block exits. Exits
+  // containing indirect branches are not transformed by loop simplify,
+  // make sure we catch that. An additional load may be generated in the
+  // preheader for SSA updater, so also avoid sinking when no preheader
+  // is available.
+  if (!HasDedicatedExits || !Preheader)
+    return false;
+  
+  const DataLayout &MDL = Preheader->getModule()->getDataLayout();
 
   // Check that all of the pointers in the alias set have the same type.  We
   // cannot (yet) promote a memory location that is loaded and stored in
@@ -918,6 +948,12 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
         assert(!Load->isVolatile() && "AST broken");
         if (!Load->isSimple())
           return Changed;
+
+        if (!GuaranteedToExecute && !CanSpeculateLoad)
+          CanSpeculateLoad =
+            isSafeToExecuteUnconditionally(*Load, DT, TLI, CurLoop,
+                                           SafetyInfo,
+                                           Preheader->getTerminator());
       } else if (const StoreInst *Store = dyn_cast<StoreInst>(UI)) {
         // Stores *of* the pointer are not interesting, only stores *to* the
         // pointer.
@@ -925,13 +961,6 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
           continue;
         assert(!Store->isVolatile() && "AST broken");
         if (!Store->isSimple())
-          return Changed;
-        // Don't sink stores from loops without dedicated block exits. Exits
-        // containing indirect branches are not transformed by loop simplify,
-        // make sure we catch that. An additional load may be generated in the
-        // preheader for SSA updater, so also avoid sinking when no preheader
-        // is available.
-        if (!HasDedicatedExits || !Preheader)
           return Changed;
 
         // Note that we only check GuaranteedToExecute inside the store case
@@ -953,6 +982,14 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
           GuaranteedToExecute = isGuaranteedToExecute(*UI, DT, 
                                                       CurLoop, SafetyInfo);
 
+
+        if (!GuaranteedToExecute && !CanSpeculateLoad) {
+          CanSpeculateLoad =
+            isDereferenceableAndAlignedPointer(Store->getPointerOperand(),
+                                               Store->getAlignment(), MDL,
+                                               Preheader->getTerminator(),
+                                               DT, TLI);
+        }
       } else
         return Changed; // Not a load or store.
 
@@ -968,8 +1005,17 @@ bool llvm::promoteLoopAccessesToScalars(AliasSet &AS,
     }
   }
 
-  // If there isn't a guaranteed-to-execute instruction, we can't promote.
-  if (!GuaranteedToExecute)
+  // Check legality per comment above. Otherwise, we can't promote.
+  bool PromotionIsLegal = GuaranteedToExecute;
+  if (!PromotionIsLegal && CanSpeculateLoad) {
+    // If this is a thread local location, then we can insert stores along
+    // paths which originally didn't have them without violating the memory
+    // model. 
+    Value *Object = GetUnderlyingObject(SomePtr, MDL);
+    PromotionIsLegal = isAllocLikeFn(Object, TLI) &&
+      !PointerMayBeCaptured(Object, true, true);
+  }
+  if (!PromotionIsLegal)
     return Changed;
 
   // Figure out the loop exits and their insertion points, if this is the

@@ -534,6 +534,22 @@ def SMRDLiteralOffsetMatchClass : SMRDOffsetBaseMatchClass <
   "isSMRDLiteralOffset"
 >;
 
+def DPPCtrlMatchClass : AsmOperandClass {
+  let Name = "DPPCtrl";
+  let PredicateMethod = "isDPPCtrl";
+  let ParserMethod = "parseDPPCtrlOps";
+  let RenderMethod = "addImmOperands";
+  let IsOptional = 0;
+}
+
+class DPPOptionalMatchClass <string OpName>: AsmOperandClass {
+  let Name = "DPPOptional"#OpName;
+  let PredicateMethod = "is"#OpName;
+  let ParserMethod = "parseDPPOptionalOps";
+  let RenderMethod = "addImmOperands";
+  let IsOptional = 1;
+}
+
 class OptionalImmAsmOperand <string OpName> : AsmOperandClass {
   let Name = "Imm"#OpName;
   let PredicateMethod = "isImm";
@@ -666,6 +682,26 @@ def r128 : NamedBitOperand<"R128"> {
 
 def lwe : NamedBitOperand<"LWE"> {
   let ParserMatchClass = NamedBitMatchClass<"LWE">;
+}
+
+def dpp_ctrl : Operand <i32> {
+  let PrintMethod = "printDPPCtrlOperand";
+  let ParserMatchClass = DPPCtrlMatchClass;
+}
+
+def row_mask : Operand <i32> {
+  let PrintMethod = "printRowMaskOperand";
+  let ParserMatchClass = DPPOptionalMatchClass<"RowMask">;
+}
+
+def bank_mask : Operand <i32> {
+  let PrintMethod = "printBankMaskOperand";
+  let ParserMatchClass = DPPOptionalMatchClass<"BankMask">;
+}
+
+def bound_ctrl : Operand <i1> {
+  let PrintMethod = "printBoundCtrlOperand";
+  let ParserMatchClass = DPPOptionalMatchClass<"BoundCtrl">;
 }
 
 } // End OperandType = "OPERAND_IMMEDIATE"
@@ -1280,24 +1316,25 @@ class getInsDPP <RegisterClass Src0RC, RegisterClass Src1RC, int NumSrcArgs,
               !if (!eq(HasModifiers, 1),
                 // VOP1_DPP with modifiers
                 (ins InputModsNoDefault:$src0_modifiers, Src0RC:$src0,
-                     i32imm:$dpp_ctrl, i1imm:$bound_ctrl,
-                     i32imm:$bank_mask, i32imm:$row_mask)
+                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, 
+                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
               /* else */,
                 // VOP1_DPP without modifiers
-                (ins Src0RC:$src0, i32imm:$dpp_ctrl, i1imm:$bound_ctrl,
-                     i32imm:$bank_mask, i32imm:$row_mask)
+                (ins Src0RC:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, 
+                bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
               /* endif */)
-            /* NumSrcArgs == 2 */,
+              /* NumSrcArgs == 2 */,
               !if (!eq(HasModifiers, 1),
                 // VOP2_DPP with modifiers
                 (ins InputModsNoDefault:$src0_modifiers, Src0RC:$src0,
-                     InputModsNoDefault:$src1_modifiers, Src1RC:$src1,
-                     i32imm:$dpp_ctrl, i1imm:$bound_ctrl,
-                     i32imm:$bank_mask, i32imm:$row_mask)
+                      InputModsNoDefault:$src1_modifiers, Src1RC:$src1,
+                      dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, 
+                      bank_mask:$bank_mask, bound_ctrl:$bound_ctrl)
               /* else */,
                 // VOP2_DPP without modifiers
-                (ins Src0RC:$src0, Src1RC:$src1, i32imm:$dpp_ctrl, i1imm:$bound_ctrl,
-                     i32imm:$bank_mask, i32imm:$row_mask)
+                (ins Src0RC:$src0, Src1RC:$src1, dpp_ctrl:$dpp_ctrl, 
+                row_mask:$row_mask, bank_mask:$bank_mask, 
+                bound_ctrl:$bound_ctrl)
              /* endif */));
 }
 
@@ -1338,8 +1375,8 @@ class getAsmDPP <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT =
                                            " $src1_modifiers,"));
   string args = !if(!eq(HasModifiers, 0),
                      getAsm32<0, NumSrcArgs, DstVT>.ret,
-                     src0#src1);
-  string ret = " "#dst#args#", $dpp_ctrl, "#"$bound_ctrl, "#"$bank_mask, "#"$row_mask";
+                     ", "#src0#src1);
+  string ret = dst#args#" $dpp_ctrl $row_mask $bank_mask $bound_ctrl";
 }
 
 class VOPProfile <list<ValueType> _ArgVT> {
@@ -1351,7 +1388,7 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field ValueType Src1VT = ArgVT[2];
   field ValueType Src2VT = ArgVT[3];
   field RegisterOperand DstRC = getVALUDstForVT<DstVT>.ret;
-  field RegisterClass DstRCDPP = !if(!eq(DstVT.Size, 64), VReg_64, VGPR_32);
+  field RegisterOperand DstRCDPP = getVALUDstForVT<DstVT>.ret;
   field RegisterOperand Src0RC32 = getVOPSrc0ForVT<Src0VT>.ret;
   field RegisterClass Src1RC32 = getVOPSrc1ForVT<Src1VT>.ret;
   field RegisterOperand Src0RC64 = getVOP3SrcForVT<Src0VT>.ret;
@@ -1497,8 +1534,14 @@ def VOP_MAC : VOPProfile <[f32, f32, f32, f32]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, VGPR_32:$src2);
   let Ins64 = getIns64<Src0RC64, Src1RC64, RegisterOperand<VGPR_32>, 3,
                              HasModifiers>.ret;
+  let InsDPP = (ins InputModsNoDefault:$src0_modifiers, Src0RC32:$src0,
+                    InputModsNoDefault:$src1_modifiers, Src1RC32:$src1, 
+                    VGPR_32:$src2, // stub argument
+                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask, 
+                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let Asm32 = getAsm32<1, 2, f32>.ret;
   let Asm64 = getAsm64<1, 2, HasModifiers, f32>.ret;
+  let AsmDPP = getAsmDPP<1, 2, HasModifiers, f32>.ret;
 }
 def VOP_F64_F64_F64_F64 : VOPProfile <[f64, f64, f64, f64]>;
 def VOP_I32_I32_I32_I32 : VOPProfile <[i32, i32, i32, i32]>;
@@ -1607,9 +1650,9 @@ multiclass VOP1_m <vop1 op, string opName, VOPProfile p, list<dag> pattern,
 
 class VOP1_DPP <vop1 op, string opName, VOPProfile p> :
   VOP1_DPPe <op.VI>,
-  VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, []> {
+  VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
   let AssemblerPredicates = [isVI];
-  let src0_modifiers =  !if(p.HasModifiers, ?, 0);
+  let src0_modifiers = !if(p.HasModifiers, ?, 0);
   let src1_modifiers = 0;
 }
 
@@ -1665,6 +1708,14 @@ multiclass VOP2_m <vop2 op, string opName, VOPProfile p, list <dag> pattern,
 
   def _vi : VOP2_Real_vi <opName, op, p.Outs32, p.Ins32, p.Asm32>;
 
+}
+
+class VOP2_DPP <vop2 op, string opName, VOPProfile p> :
+  VOP2_DPPe <op.VI>,
+  VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
+  let AssemblerPredicates = [isVI];
+  let src0_modifiers = !if(p.HasModifiers, ?, 0);
+  let src1_modifiers = !if(p.HasModifiers, ?, 0);
 }
 
 class VOP3DisableFields <bit HasSrc1, bit HasSrc2, bit HasModifiers> {
@@ -1929,6 +1980,8 @@ multiclass VOP2_Helper <vop2 op, string opName, VOPProfile p, list<dag> pat32,
 
   defm _e64 : VOP3_2_m <op, p.Outs, p.Ins64, opName#p.Asm64, pat64, opName,
                         revOp, p.HasModifiers>;
+
+  def _dpp : VOP2_DPP <op, opName, p>;
 }
 
 multiclass VOP2Inst <vop2 op, string opName, VOPProfile P,

@@ -46,10 +46,9 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> PageSize("imp-null-check-page-size",
-                                  cl::desc("The page size of the target in "
-                                           "bytes"),
-                                  cl::init(4096));
+static cl::opt<int> PageSize("imp-null-check-page-size",
+                             cl::desc("The page size of the target in bytes"),
+                             cl::init(4096));
 
 #define DEBUG_TYPE "implicit-null-checks"
 
@@ -324,7 +323,8 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   for (auto MII = NotNullSucc->begin(), MIE = NotNullSucc->end(); MII != MIE;
        ++MII) {
     MachineInstr *MI = &*MII;
-    unsigned BaseReg, Offset;
+    unsigned BaseReg;
+    int64_t Offset;
     if (TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI))
       if (MI->mayLoad() && !MI->isPredicable() && BaseReg == PointerReg &&
           Offset < PageSize && MI->getDesc().getNumDefs() <= 1 &&

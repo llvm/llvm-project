@@ -846,6 +846,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "ELF32-sparc";
     case ELF::EM_WEBASSEMBLY:
       return "ELF32-wasm";
+    case ELF::EM_AMDGPU:
+      return "ELF32-amdgpu";
     default:
       return "ELF32-unknown";
     }
@@ -867,6 +869,10 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "ELF64-mips";
     case ELF::EM_WEBASSEMBLY:
       return "ELF64-wasm";
+    case ELF::EM_AMDGPU:
+      return (EF.getHeader()->e_ident[ELF::EI_OSABI] == ELF::ELFOSABI_AMDGPU_HSA
+              && IsLittleEndian) ?
+             "ELF64-amdgpu-hsacobj" : "ELF64-amdgpu";
     default:
       return "ELF64-unknown";
     }
@@ -922,6 +928,12 @@ unsigned ELFObjectFile<ELFT>::getArch() const {
     case ELF::ELFCLASS64: return Triple::wasm64;
     default: return Triple::UnknownArch;
     }
+
+  case ELF::EM_AMDGPU:
+    return (EF.getHeader()->e_ident[ELF::EI_CLASS] == ELF::ELFCLASS64
+         && EF.getHeader()->e_ident[ELF::EI_OSABI] == ELF::ELFOSABI_AMDGPU_HSA
+         && IsLittleEndian) ?
+      Triple::amdgcn : Triple::UnknownArch;
 
   default:
     return Triple::UnknownArch;

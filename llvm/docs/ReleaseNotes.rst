@@ -7,7 +7,7 @@ LLVM 3.9 Release Notes
 
 .. warning::
    These are in-progress notes for the upcoming LLVM 3.9 release.  You may
-   prefer the `LLVM 3.7 Release Notes <http://llvm.org/releases/3.7.0/docs
+   prefer the `LLVM 3.8 Release Notes <http://llvm.org/releases/3.8.0/docs
    /ReleaseNotes.html>`_.
 
 
@@ -33,6 +33,11 @@ page <http://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
+* The LLVMContext gains a new runtime check (see
+  LLVMContext::discardValueNames()) that can be set to discard Value names
+  (other than GlobalValue). This is intended to be used in release builds by
+  clients that are interested in saving CPU/memory as much as possible.
+
 * .. note about autoconf build having been removed.
 
 * .. note about C API functions LLVMParseBitcode,

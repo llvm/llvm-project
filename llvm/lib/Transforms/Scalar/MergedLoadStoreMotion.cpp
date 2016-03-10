@@ -104,7 +104,7 @@ using namespace llvm;
 namespace {
 class MergedLoadStoreMotion : public FunctionPass {
   AliasAnalysis *AA;
-  MemoryDependenceAnalysis *MD;
+  MemoryDependenceResults *MD;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -122,7 +122,7 @@ private:
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<MemoryDependenceAnalysis>();
+    AU.addPreserved<MemoryDependenceWrapperPass>();
   }
 
   // Helper routines
@@ -170,7 +170,7 @@ FunctionPass *llvm::createMergedLoadStoreMotionPass() {
 
 INITIALIZE_PASS_BEGIN(MergedLoadStoreMotion, "mldst-motion",
                       "MergedLoadStoreMotion", false, false)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
@@ -565,7 +565,8 @@ bool MergedLoadStoreMotion::mergeStores(BasicBlock *T) {
 /// \brief Run the transformation for each function
 ///
 bool MergedLoadStoreMotion::runOnFunction(Function &F) {
-  MD = getAnalysisIfAvailable<MemoryDependenceAnalysis>();
+  auto *MDWP = getAnalysisIfAvailable<MemoryDependenceWrapperPass>();
+  MD = MDWP ? &MDWP->getMemDep() : nullptr;
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   bool Changed = false;

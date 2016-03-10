@@ -4612,7 +4612,7 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
 }
 
 bool X86InstrInfo::getMemOpBaseRegImmOfs(MachineInstr *MemOp, unsigned &BaseReg,
-                                         unsigned &Offset,
+                                         int64_t &Offset,
                                          const TargetRegisterInfo *TRI) const {
   const MCInstrDesc &Desc = MemOp->getDesc();
   int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags, MemOp->getOpcode());
