@@ -106,10 +106,16 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   return std::min(VA, VB);
 }
 
+static int compareCommons(DefinedCommon *A, DefinedCommon *B) {
+  A->Alignment = B->Alignment = std::max(A->Alignment, B->Alignment);
+  if (A->Size < B->Size)
+    return -1;
+  return 1;
+}
+
 // Returns 1, 0 or -1 if this symbol should take precedence
 // over the Other, tie or lose, respectively.
 template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
   assert(!isLazy() && !Other->isLazy());
   std::tuple<bool, bool, bool> L(isDefined(), !isShared(), !isWeak());
   std::tuple<bool, bool, bool> R(Other->isDefined(), !Other->isShared(),
@@ -134,24 +140,14 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
 
   if (L != R)
     return -1;
-  if (!std::get<0>(L) || !std::get<1>(L) || !std::get<2>(L))
+  if (!isDefined() || isShared() || isWeak())
     return 1;
-  if (isCommon()) {
-    if (!Other->isCommon())
-      return -1;
-    auto *ThisC = cast<DefinedCommon>(this);
-    auto *OtherC = cast<DefinedCommon>(Other);
-    uintX_t Align = std::max(ThisC->MaxAlignment, OtherC->MaxAlignment);
-    if (ThisC->Size >= OtherC->Size) {
-      ThisC->MaxAlignment = Align;
-      return 1;
-    }
-    OtherC->MaxAlignment = Align;
-    return -1;
-  }
-  if (Other->isCommon())
-    return 1;
-  return 0;
+  if (!isCommon() && !Other->isCommon())
+    return 0;
+  if (isCommon() && Other->isCommon())
+    return compareCommons(cast<DefinedCommon>(this),
+                          cast<DefinedCommon>(Other));
+  return isCommon() ? -1 : 1;
 }
 
 Defined::Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
@@ -194,10 +190,8 @@ DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
 DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
                              bool IsWeak, uint8_t Visibility)
     : Defined(SymbolBody::DefinedCommonKind, N, IsWeak, Visibility,
-              0 /* Type */) {
-  MaxAlignment = Alignment;
-  this->Size = Size;
-}
+              0 /* Type */),
+      Alignment(Alignment), Size(Size) {}
 
 std::unique_ptr<InputFile> Lazy::getMember() {
   MemoryBufferRef MBRef = File->getMember(&Sym);
@@ -209,19 +203,12 @@ std::unique_ptr<InputFile> Lazy::getMember() {
   return createObjectFile(MBRef, File->getName());
 }
 
-template <class ELFT> static void doInitSymbols() {
+template <class ELFT> void elf::initSymbols() {
   ElfSym<ELFT>::Etext.setBinding(STB_GLOBAL);
   ElfSym<ELFT>::Edata.setBinding(STB_GLOBAL);
   ElfSym<ELFT>::End.setBinding(STB_GLOBAL);
   ElfSym<ELFT>::Ignored.setBinding(STB_WEAK);
   ElfSym<ELFT>::Ignored.setVisibility(STV_HIDDEN);
-}
-
-void elf::initSymbols() {
-  doInitSymbols<ELF32LE>();
-  doInitSymbols<ELF32BE>();
-  doInitSymbols<ELF64LE>();
-  doInitSymbols<ELF64BE>();
 }
 
 // Returns the demangled C++ symbol name for Name.
@@ -289,3 +276,8 @@ template class elf::DefinedSynthetic<ELF32LE>;
 template class elf::DefinedSynthetic<ELF32BE>;
 template class elf::DefinedSynthetic<ELF64LE>;
 template class elf::DefinedSynthetic<ELF64BE>;
+
+template void elf::initSymbols<ELF32LE>();
+template void elf::initSymbols<ELF32BE>();
+template void elf::initSymbols<ELF64LE>();
+template void elf::initSymbols<ELF64BE>();

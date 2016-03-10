@@ -92,7 +92,7 @@ void LinkerDriver::addFile(StringRef Path) {
   using namespace llvm::sys::fs;
   log(Path);
   auto MBOrErr = MemoryBuffer::getFile(Path);
-  if (error(MBOrErr, "cannot open " + Path))
+  if (error(MBOrErr, "Cannot open " + Path))
     return;
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
@@ -168,8 +168,6 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
 }
 
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
-  initSymbols();
-
   opt::InputArgList Args = parseArgs(&Alloc, ArgsArr.slice(1));
   if (Args.hasArg(OPT_help)) {
     printHelp(ArgsArr[0]);
@@ -313,10 +311,11 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
   }
 
   if (Files.empty() && !HasError)
-    error("no input files.");
+    error("No input files");
 }
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
+  initSymbols<ELFT>();
   // For LTO
   InitializeAllTargets();
   InitializeAllTargetMCs();

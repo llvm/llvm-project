@@ -58,7 +58,7 @@
 # RUN: not ld.lld -o %t2 %t.script %t > %t.log 2>&1
 # RUN: FileCheck -check-prefix=ERR-ENTRY %s < %t.log
 
-# ERR-ENTRY: undefined symbol: _wrong_label
+# ERR-ENTRY: Undefined symbol: _wrong_label
 
 # -e has precedence over linker script's ENTRY.
 # RUN: echo "ENTRY(_label)" > %t.script
@@ -104,7 +104,7 @@
 # RUN: not ld.lld -o foo %t.script > %t.log 2>&1
 # RUN: FileCheck -check-prefix=ERR1 %s < %t.log
 
-# ERR1: unknown directive: FOO
+# ERR1: Unknown directive: FOO
 
 .globl _start, _label;
 _start:
