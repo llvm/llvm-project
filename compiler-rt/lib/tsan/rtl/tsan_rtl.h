@@ -404,6 +404,8 @@ struct ThreadState {
   // If set, malloc must not be called.
   int nomalloc;
 
+  const ReportDesc *current_report;
+
   explicit ThreadState(Context *ctx, int tid, int unique_id, u64 epoch,
                        unsigned reuse_count,
                        uptr stk_addr, uptr stk_size,
