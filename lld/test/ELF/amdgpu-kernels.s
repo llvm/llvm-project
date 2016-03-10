@@ -41,7 +41,7 @@ kernel1:
 
 # CHECK: Symbol {
 # CHECK: Name: kernel0
-# CHECK: Value: 0x0
+# CHECK: Value:
 # CHECK: Size: 4
 # CHECK: Binding: Global
 # CHECK: Type: AMDGPU_HSA_KERNEL
@@ -50,7 +50,7 @@ kernel1:
 
 # CHECK: Symbol {
 # CHECK: Name: kernel1
-# CHECK: Value: 0x100
+# CHECK: Value:
 # CHECK: Size: 8
 # CHECK: Binding: Global
 # CHECK: Type: AMDGPU_HSA_KERNEL
@@ -58,6 +58,6 @@ kernel1:
 # CHECK: }
 
 # CHECK: ProgramHeader {
-# CHECK: Type: PT_AMDGPU_HSA_LOAD_CODE_AGENT
-# CHECK: VirtualAddress: [[HSATEXT_ADDR]]
+# CHECK: Type: PT_LOAD
+# CHECK: VirtualAddress:
 # CHECK: }

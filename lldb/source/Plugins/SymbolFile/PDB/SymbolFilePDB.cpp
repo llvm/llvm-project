@@ -43,6 +43,12 @@ namespace
             return lldb::LanguageType::eLanguageTypeUnknown;
         }
     }
+
+    bool
+    ShouldAddLine(uint32_t requested_line, uint32_t actual_line, uint32_t addr_length)
+    {
+        return ((requested_line == 0 || actual_line == requested_line) && addr_length > 0);
+    }
 }
 
 void
@@ -480,49 +486,67 @@ SymbolFilePDB::ParseCompileUnitLineTable(const lldb_private::SymbolContext &sc, 
         auto lines = m_session_up->findLineNumbers(*cu, *file);
         int entry_count = lines->getChildCount();
 
+        uint64_t prev_addr;
+        uint32_t prev_length;
+        uint32_t prev_line;
+        uint32_t prev_source_idx;
+
         for (int i = 0; i < entry_count; ++i)
         {
             auto line = lines->getChildAtIndex(i);
-            uint32_t lno = line->getLineNumber();
 
-            // If `match_line` == 0 we add any line no matter what.  Otherwise, we only add
-            // lines that match the requested line number.
-            if (match_line != 0 && lno != match_line)
-                continue;
-
-            uint64_t va = line->getVirtualAddress();
-            uint32_t cno = line->getColumnNumber();
+            uint64_t lno = line->getLineNumber();
+            uint64_t addr = line->getVirtualAddress();
+            uint32_t length = line->getLength();
             uint32_t source_id = line->getSourceFileId();
+            uint32_t col = line->getColumnNumber();
             uint32_t source_idx = index_map[source_id];
 
-            bool is_basic_block = false; // PDB doesn't even have this concept, but LLDB doesn't use it anyway.
-            bool is_prologue = false;
-            bool is_epilogue = false;
-            bool is_statement = line->isStatement();
-            auto func = m_session_up->findSymbolByAddress(va, llvm::PDB_SymType::Function);
-            if (func)
+            // There was a gap between the current entry and the previous entry if the addresses don't perfectly line
+            // up.
+            bool is_gap = (i > 0) && (prev_addr + prev_length < addr);
+
+            // Before inserting the current entry, insert a terminal entry at the end of the previous entry's address
+            // range if the current entry resulted in a gap from the previous entry.
+            if (is_gap && ShouldAddLine(match_line, prev_line, prev_length))
             {
-                auto prologue = func->findOneChild<llvm::PDBSymbolFuncDebugStart>();
-                is_prologue = (va == prologue->getVirtualAddress());
-
-                auto epilogue = func->findOneChild<llvm::PDBSymbolFuncDebugEnd>();
-                is_epilogue = (va == epilogue->getVirtualAddress());
-
-                if (is_epilogue)
-                {
-                    // Once per function, add a termination entry after the last byte of the function.
-                    // TODO: This makes the assumption that all functions are laid out contiguously in
-                    // memory and have no gaps.  This is a wrong assumption in the general case, but is
-                    // good enough to allow simple scenarios to work.  This needs to be revisited.
-                    auto concrete_func = llvm::dyn_cast<llvm::PDBSymbolFunc>(func.get());
-                    lldb::addr_t end_addr = concrete_func->getVirtualAddress() + concrete_func->getLength();
-                    line_table->InsertLineEntry(end_addr, lno, 0, source_idx, false, false, false, false, true);
-                }
+                line_table->AppendLineEntryToSequence(sequence.get(), prev_addr + prev_length, prev_line, 0,
+                                                      prev_source_idx, false, false, false, false, true);
             }
 
-            line_table->InsertLineEntry(va, lno, cno, source_idx, is_statement, is_basic_block, is_prologue,
-                                        is_epilogue, false);
+            if (ShouldAddLine(match_line, lno, length))
+            {
+                bool is_statement = line->isStatement();
+                bool is_prologue = false;
+                bool is_epilogue = false;
+                auto func = m_session_up->findSymbolByAddress(addr, llvm::PDB_SymType::Function);
+                if (func)
+                {
+                    auto prologue = func->findOneChild<llvm::PDBSymbolFuncDebugStart>();
+                    is_prologue = (addr == prologue->getVirtualAddress());
+
+                    auto epilogue = func->findOneChild<llvm::PDBSymbolFuncDebugEnd>();
+                    is_epilogue = (addr == epilogue->getVirtualAddress());
+                }
+
+                line_table->AppendLineEntryToSequence(sequence.get(), addr, lno, col, source_idx, is_statement, false,
+                                                      is_prologue, is_epilogue, false);
+            }
+
+            prev_addr = addr;
+            prev_length = length;
+            prev_line = lno;
+            prev_source_idx = source_idx;
         }
+
+        if (entry_count > 0 && ShouldAddLine(match_line, prev_line, prev_length))
+        {
+            // The end is always a terminal entry, so insert it regardless.
+            line_table->AppendLineEntryToSequence(sequence.get(), prev_addr + prev_length, prev_line, 0,
+                                                  prev_source_idx, false, false, false, false, true);
+        }
+
+        line_table->InsertSequence(sequence.release());
     }
 
     sc.comp_unit->SetLineTable(line_table.release());

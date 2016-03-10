@@ -342,6 +342,7 @@ BreakpointSP
 Target::CreateBreakpoint (const FileSpecList *containingModules,
                           const FileSpec &file,
                           uint32_t line_no,
+                          lldb::addr_t offset,
                           LazyBool check_inlines,
                           LazyBool skip_prologue,
                           bool internal,
@@ -393,12 +394,13 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
     if (move_to_nearest_code == eLazyBoolCalculate)
         move_to_nearest_code = GetMoveToNearestCode() ? eLazyBoolYes : eLazyBoolNo;
 
-    BreakpointResolverSP resolver_sp(new BreakpointResolverFileLine(nullptr,
-                                                                    remapped_file,
-                                                                    line_no,
-                                                                    check_inlines,
-                                                                    skip_prologue,
-                                                                    !static_cast<bool>(move_to_nearest_code)));
+    BreakpointResolverSP resolver_sp(new BreakpointResolverFileLine (nullptr,
+                                                                     remapped_file,
+                                                                     line_no,
+                                                                     offset,
+                                                                     check_inlines,
+                                                                     skip_prologue,
+                                                                     !static_cast<bool>(move_to_nearest_code)));
     return CreateBreakpoint (filter_sp, resolver_sp, internal, hardware, true);
 }
 
@@ -447,8 +449,9 @@ BreakpointSP
 Target::CreateBreakpoint (const FileSpecList *containingModules,
                           const FileSpecList *containingSourceFiles,
                           const char *func_name, 
-                          uint32_t func_name_type_mask, 
+                          uint32_t func_name_type_mask,
                           LanguageType language,
+                          lldb::addr_t offset,
                           LazyBool skip_prologue,
                           bool internal,
                           bool hardware)
@@ -463,12 +466,13 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
         if (language == lldb::eLanguageTypeUnknown)
             language = GetLanguage();
 
-        BreakpointResolverSP resolver_sp(new BreakpointResolverName(nullptr, 
-                                                                    func_name, 
-                                                                    func_name_type_mask, 
-                                                                    language,
-                                                                    Breakpoint::Exact, 
-                                                                    skip_prologue));
+        BreakpointResolverSP resolver_sp (new BreakpointResolverName (nullptr, 
+                                                                      func_name, 
+                                                                      func_name_type_mask, 
+                                                                      language,
+                                                                      Breakpoint::Exact, 
+                                                                      offset,
+                                                                      skip_prologue));
         bp_sp = CreateBreakpoint (filter_sp, resolver_sp, internal, hardware, true);
     }
     return bp_sp;
@@ -480,6 +484,7 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
                           const std::vector<std::string> &func_names,
                           uint32_t func_name_type_mask,
                           LanguageType language,
+                          lldb::addr_t offset,
                           LazyBool skip_prologue,
                           bool internal,
                           bool hardware)
@@ -495,11 +500,13 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
         if (language == lldb::eLanguageTypeUnknown)
             language = GetLanguage();
 
-        BreakpointResolverSP resolver_sp(new BreakpointResolverName(nullptr,
-                                                                    func_names,
-                                                                    func_name_type_mask,
-                                                                    language,
-                                                                    skip_prologue));
+
+        BreakpointResolverSP resolver_sp (new BreakpointResolverName (nullptr,
+                                                                      func_names,
+                                                                      func_name_type_mask,
+                                                                      language,
+                                                                      offset,
+                                                                      skip_prologue));
         bp_sp = CreateBreakpoint (filter_sp, resolver_sp, internal, hardware, true);
     }
     return bp_sp;
@@ -510,8 +517,9 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
                           const FileSpecList *containingSourceFiles,
                           const char *func_names[],
                           size_t num_names, 
-                          uint32_t func_name_type_mask, 
+                          uint32_t func_name_type_mask,
                           LanguageType language,
+                          lldb::addr_t offset,
                           LazyBool skip_prologue,
                           bool internal,
                           bool hardware)
@@ -522,16 +530,23 @@ Target::CreateBreakpoint (const FileSpecList *containingModules,
         SearchFilterSP filter_sp(GetSearchFilterForModuleAndCUList (containingModules, containingSourceFiles));
         
         if (skip_prologue == eLazyBoolCalculate)
-            skip_prologue = GetSkipPrologue() ? eLazyBoolYes : eLazyBoolNo;
+        {
+            if (offset == 0)
+                skip_prologue = GetSkipPrologue() ? eLazyBoolYes : eLazyBoolNo;
+            else
+                skip_prologue = eLazyBoolNo;
+        }
         if (language == lldb::eLanguageTypeUnknown)
             language = GetLanguage();
 
-        BreakpointResolverSP resolver_sp(new BreakpointResolverName(nullptr,
-                                                                    func_names,
-                                                                    num_names, 
-                                                                    func_name_type_mask,
-                                                                    language,
-                                                                    skip_prologue));
+        BreakpointResolverSP resolver_sp (new BreakpointResolverName (nullptr,
+                                                                      func_names,
+                                                                      num_names, 
+                                                                      func_name_type_mask,
+                                                                      language,
+                                                                      offset,
+                                                                      skip_prologue));
+        resolver_sp->SetOffset(offset);
         bp_sp = CreateBreakpoint (filter_sp, resolver_sp, internal, hardware, true);
     }
     return bp_sp;
@@ -610,10 +625,11 @@ Target::CreateFuncRegexBreakpoint (const FileSpecList *containingModules,
     bool skip =
       (skip_prologue == eLazyBoolCalculate) ? GetSkipPrologue()
                                             : static_cast<bool>(skip_prologue);
-    BreakpointResolverSP resolver_sp(new BreakpointResolverName(nullptr, 
-                                                                func_regex,
-                                                                requested_language,
-                                                                skip));
+    BreakpointResolverSP resolver_sp(new BreakpointResolverName (nullptr, 
+                                                                 func_regex,
+                                                                 requested_language,
+                                                                 0,
+                                                                 skip));
 
     return CreateBreakpoint (filter_sp, resolver_sp, internal, hardware, true);
 }

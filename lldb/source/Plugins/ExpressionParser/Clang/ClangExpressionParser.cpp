@@ -157,7 +157,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
 
     // 1. Create a new compiler instance.
     m_compiler.reset(new CompilerInstance());
-    lldb::LanguageType frame_lang = expr.Language(); // defaults to lldb::eLanguageTypeUnknown
+    m_language = expr.Language(); // defaults to lldb::eLanguageTypeUnknown
     bool overridden_target_opts = false;
     lldb_private::LanguageRuntime *lang_rt = nullptr;
     lldb::TargetSP target_sp;
@@ -176,14 +176,14 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
 
     // Make sure the user hasn't provided a preferred execution language
     // with `expression --language X -- ...`
-    if (frame && frame_lang == lldb::eLanguageTypeUnknown)
-        frame_lang = frame->GetLanguage();
+    if (frame && m_language == lldb::eLanguageTypeUnknown)
+        m_language = frame->GetLanguage();
 
-    if (frame_lang != lldb::eLanguageTypeUnknown)
+    if (m_language != lldb::eLanguageTypeUnknown)
     {
-        lang_rt = exe_scope->CalculateProcess()->GetLanguageRuntime(frame_lang);
+        lang_rt = exe_scope->CalculateProcess()->GetLanguageRuntime(m_language);
         if (log)
-            log->Printf("Frame has language of type %s", Language::GetNameForLanguageType(frame_lang));
+            log->Printf("Frame has language of type %s", Language::GetNameForLanguageType(m_language));
     }
 
     // 2. Configure the compiler with a set of default options that are appropriate
@@ -263,9 +263,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     assert (m_compiler->hasTarget());
 
     // 5. Set language options.
-    lldb::LanguageType language = expr.Language();
-
-    switch (language)
+    switch (m_language)
     {
     case lldb::eLanguageTypeC:
     case lldb::eLanguageTypeC89:

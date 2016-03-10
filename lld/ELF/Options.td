@@ -182,3 +182,6 @@ def G : Separate<["-"], "G">;
 
 // Aliases for ignored options
 def alias_version_script_version_script : Joined<["--"], "version-script=">, Alias<version_script>;
+
+// Debugging options
+def save_temps : Flag<["-"], "save-temps">;

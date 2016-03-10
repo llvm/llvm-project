@@ -129,6 +129,8 @@ private:
     class LLDBPreprocessorCallbacks;
     LLDBPreprocessorCallbacks               *m_pp_callbacks;         ///< Called when the preprocessor encounters module imports
     std::unique_ptr<ClangASTContext>         m_ast_context;
+    lldb::LanguageType                       m_language;            ///< The the source language of the expression
+                                                                    /// which may be explicitly set or inferred.
 };
     
 }

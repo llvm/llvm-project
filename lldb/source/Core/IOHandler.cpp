@@ -5278,6 +5278,7 @@ public:
                         BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint (NULL,                      // Don't limit the breakpoint to certain modules
                                                                                       m_file_sp->GetFileSpec(),  // Source file
                                                                                       m_selected_line + 1,       // Source line number (m_selected_line is zero based)
+                                                                                      0,                         // No offset
                                                                                       eLazyBoolCalculate,        // Check inlines using global setting
                                                                                       eLazyBoolCalculate,        // Skip prologue using global setting,
                                                                                       false,                     // internal
@@ -5314,6 +5315,7 @@ public:
                         BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint (NULL,                      // Don't limit the breakpoint to certain modules
                                                                                       m_file_sp->GetFileSpec(),  // Source file
                                                                                       m_selected_line + 1,       // Source line number (m_selected_line is zero based)
+                                                                                      0,                         // No offset
                                                                                       eLazyBoolCalculate,        // Check inlines using global setting
                                                                                       eLazyBoolCalculate,        // Skip prologue using global setting,
                                                                                       false,                     // internal

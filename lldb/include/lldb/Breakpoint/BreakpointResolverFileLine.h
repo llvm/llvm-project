@@ -31,6 +31,7 @@ public:
     BreakpointResolverFileLine (Breakpoint *bkpt,
                                 const FileSpec &resolver,
                                 uint32_t line_no,
+                                lldb::addr_t m_offset,
                                 bool check_inlines,
                                 bool skip_prologue,
                                 bool exact_match);

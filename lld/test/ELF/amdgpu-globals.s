@@ -77,7 +77,7 @@ program_global_readonly:
 
 # CHECK: Symbol {
 # CHECK: Name: module_global_agent
-# CHECK: Value: 0x0
+# CHECK: Value:
 # CHECK: Size: 4
 # CHECK: Binding: Local
 # CHECK: Section: .hsadata_global_agent
@@ -85,7 +85,7 @@ program_global_readonly:
 
 # CHECK: Symbol {
 # CHECK: Name: module_global_program
-# CHECK: Value: 0x0
+# CHECK: Value:
 # CHECK: Size: 4
 # CHECK: Binding: Local
 # CHECK: Section: .hsadata_global_program
@@ -93,7 +93,7 @@ program_global_readonly:
 
 # CHECK: Symbol {
 # CHECK: Name: module_global_readonly
-# CHECK: Value: 0x0
+# CHECK: Value:
 # CHECK: Size: 4
 # CHECK: Binding: Local
 # CHECK: Type: Object
@@ -102,7 +102,7 @@ program_global_readonly:
 
 # CHECK: Symbol {
 # CHECK: Name: program_global_agent
-# CHECK: Value: 0x4
+# CHECK: Value:
 # CHECK: Size: 4
 # CHECK: Binding: Global
 # CHECK: Type: Object
@@ -111,7 +111,7 @@ program_global_readonly:
 
 # CHECK: Symbol {
 # CHECK: Name: program_global_program
-# CHECK: Value: 0x4
+# CHECK: Value:
 # CHECK: Size: 4
 # CHECK: Binding: Global
 # CHECK: Type: Object
@@ -120,7 +120,7 @@ program_global_readonly:
 
 # CHECK: Symbol {
 # CHECK: Name: program_global_readonly
-# CHECK: Value: 0x4
+# CHECK: Value:
 # CHECK: Size: 4
 # CHECK: Binding: Global
 # CHECK: Type: Object
@@ -128,11 +128,11 @@ program_global_readonly:
 # CHECK: }
 
 # CHECK: ProgramHeader {
-# CHECK: Type: PT_AMDGPU_HSA_LOAD_GLOBAL_PROGRAM
-# CHECK: VirtualAddress: [[HSADATA_GLOBAL_PROGRAM_ADDR]]
+# CHECK: Type: PT_LOAD
+# CHECK: VirtualAddress:
 # CHECK: }
 
 # CHECK: ProgramHeader {
-# CHECK: Type: PT_AMDGPU_HSA_LOAD_CODE_AGENT
-# CHECK: VirtualAddress: [[HSATEXT_ADDR]]
+# CHECK: Type: PT_LOAD
+# CHECK: VirtualAddress:
 # CHECK: }

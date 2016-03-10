@@ -2673,7 +2673,7 @@ DWARFASTParserClang::ParseChildMembers (const SymbolContext& sc,
                     bool is_artificial = false;
                     DWARFFormValue encoding_form;
                     AccessType accessibility = eAccessNone;
-                    uint32_t member_byte_offset = UINT32_MAX;
+                    uint32_t member_byte_offset = (parent_die.Tag() == DW_TAG_union_type) ? 0 : UINT32_MAX;
                     size_t byte_size = 0;
                     size_t bit_offset = 0;
                     size_t bit_size = 0;

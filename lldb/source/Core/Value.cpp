@@ -428,17 +428,16 @@ Value::GetValueAsData (ExecutionContext *exe_ctx,
 
             uint32_t limit_byte_size = UINT32_MAX;
             
-            if (ast_type.IsValid() && ast_type.IsScalarType())
+            if (ast_type.IsValid())
             {
-                uint64_t type_encoding_count = 0;
-                lldb::Encoding type_encoding = ast_type.GetEncoding(type_encoding_count);
-                
-                if (type_encoding == eEncodingUint || type_encoding == eEncodingSint)
-                    limit_byte_size = ast_type.GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
+                limit_byte_size = ast_type.GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
             }
             
-            if (m_value.GetData (data, limit_byte_size))
-                return error;   // Success;
+            if (limit_byte_size <= m_value.GetByteSize())
+            {
+                if (m_value.GetData (data, limit_byte_size))
+                    return error;   // Success;
+            }
             
             error.SetErrorStringWithFormat("extracting data from value failed");
             break;

@@ -69,6 +69,7 @@ struct Configuration {
   bool NoinhibitExec;
   bool PrintGcSections;
   bool Relocatable;
+  bool SaveTemps;
   bool Shared;
   bool Static = false;
   bool StripAll;

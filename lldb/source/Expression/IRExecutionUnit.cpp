@@ -798,15 +798,25 @@ IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &s
 
                 const bool is_external = (candidate_sc.function) ||
                                          (candidate_sc.symbol && candidate_sc.symbol->IsExternal());
-
-                load_address = candidate_sc.symbol->ResolveCallableAddress(*target);
-
-                if (load_address == LLDB_INVALID_ADDRESS)
+                if (candidate_sc.symbol)
                 {
-                    if (target->GetProcessSP())
-                        load_address = candidate_sc.symbol->GetAddress().GetLoadAddress(target);
-                    else
-                        load_address = candidate_sc.symbol->GetAddress().GetFileAddress();
+                    load_address = candidate_sc.symbol->ResolveCallableAddress(*target);
+
+                    if (load_address == LLDB_INVALID_ADDRESS)
+                    {
+                        if (target->GetProcessSP())
+                            load_address = candidate_sc.symbol->GetAddress().GetLoadAddress(target);
+                        else
+                            load_address = candidate_sc.symbol->GetAddress().GetFileAddress();
+                    }
+                }
+
+                if (load_address == LLDB_INVALID_ADDRESS && candidate_sc.function)
+                {
+                        if (target->GetProcessSP())
+                            load_address = candidate_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(target);
+                        else
+                            load_address = candidate_sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
                 }
 
                 if (load_address != LLDB_INVALID_ADDRESS)
