@@ -103,6 +103,7 @@ namespace lldb_private
     };
 
     typedef struct type128 { uint64_t x[2]; } type128;
+    typedef struct type256 { uint64_t x[4]; } type256;
 
 } // namespace lldb_private
 

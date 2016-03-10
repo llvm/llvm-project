@@ -160,6 +160,8 @@ Scalar::GetData (DataExtractor &data, size_t limit_byte_size) const
                 case e_ulonglong:
                 case e_sint128:
                 case e_uint128:
+                case e_sint256:
+                case e_uint256:
                     data.SetData((const uint8_t *)m_integer.getRawData(), limit_byte_size, endian::InlHostByteOrder());
                     return true;
                 case e_float:
@@ -193,6 +195,8 @@ Scalar::GetData (DataExtractor &data, size_t limit_byte_size) const
                 case e_ulonglong:
                 case e_sint128:
                 case e_uint128:
+                case e_sint256:
+                case e_uint256:
                     data.SetData((const uint8_t *)m_integer.getRawData() + byte_size - limit_byte_size, limit_byte_size, endian::InlHostByteOrder());
                     return true;
                 case e_float:
@@ -225,6 +229,8 @@ Scalar::GetData (DataExtractor &data, size_t limit_byte_size) const
             case e_ulonglong:
             case e_sint128:
             case e_uint128:
+            case e_sint256:
+            case e_uint256:
                 data.SetData((const uint8_t *)m_integer.getRawData(), byte_size, endian::InlHostByteOrder());
                 return true;
             case e_float:
@@ -264,6 +270,8 @@ Scalar::GetBytes() const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return const_cast<void *>(reinterpret_cast<const void *>(m_integer.getRawData()));
     case e_float:
         flt_val = m_float.convertToFloat();
@@ -292,7 +300,10 @@ Scalar::GetByteSize() const
     case e_slonglong:
     case e_ulonglong:
     case e_sint128:
-    case e_uint128:      return (m_integer.getBitWidth() / 8);
+    case e_uint128:
+    case e_sint256:
+    case e_uint256:
+        return (m_integer.getBitWidth() / 8);
     case e_float:       return sizeof(float_t);
     case e_double:      return sizeof(double_t);
     case e_long_double: return sizeof(long_double_t);
@@ -316,6 +327,8 @@ Scalar::IsZero() const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return llvm::APInt::isSameValue(zero_int, m_integer);
     case e_float:
     case e_double:
@@ -343,12 +356,15 @@ Scalar::GetValue (Stream *s, bool show_type) const
     case e_slonglong:   s->Printf("%lli", *(const slonglong_t *) m_integer.getRawData());                  break;
     case e_ulonglong:   s->Printf("0x%16.16llx", *(const ulonglong_t *) m_integer.getRawData()); break;
     case e_sint128:
-        src = m_integer.getRawData();
-        s->Printf("%lli%lli", *(const slonglong_t *)src, *(const slonglong_t *)(src + 1));
+    case e_sint256:
+        s->Printf("%s",m_integer.toString(10,true).c_str());
         break;
     case e_uint128:
         src = m_integer.getRawData();
         s->Printf("0x%16.16llx%16.16llx", *(const ulonglong_t *)src, *(const ulonglong_t *)(src + 1));
+        break;
+    case e_uint256:
+        s->Printf("%s",m_integer.toString(16,false).c_str());
         break;
     case e_float:       s->Printf("%f", m_float.convertToFloat());                break;
     case e_double:      s->Printf("%g", m_float.convertToDouble());                break;
@@ -373,6 +389,8 @@ Scalar::GetTypeAsCString() const
     case e_ulonglong:   return "unsigned long long";
     case e_sint128:     return "int128_t";
     case e_uint128:     return "unsigned int128_t";
+    case e_sint256:     return "int256_t";
+    case e_uint256:     return "unsigned int256_t";
     case e_float:       return "float";
     case e_double:      return "double";
     case e_long_double: return "long double";
@@ -499,6 +517,12 @@ Scalar::operator= (llvm::APInt rhs)
             else
                 m_type = e_uint128;
             break;
+        case 256:
+            if(m_integer.isSignedIntN(BITWIDTH_INT256))
+                m_type = e_sint256;
+            else
+                m_type = e_uint256;
+            break;
     }
     return *this;
 }
@@ -558,6 +582,13 @@ Scalar::Promote(Scalar::Type type)
             case e_uint128:
             {
                 m_integer = llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((const type128 *)m_integer.getRawData()));
+                success = true;
+                break;
+            }
+            case e_sint256:
+            case e_uint256:
+            {
+                m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData()));
                 success = true;
                 break;
             }
@@ -622,7 +653,14 @@ Scalar::Promote(Scalar::Type type)
                  success = true;
                  break;
              }
-             case e_float:
+            case e_sint256:
+            case e_uint256:
+            {
+                m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData()));
+                success = true;
+                break;
+            }
+            case e_float:
              {
                  m_float = llvm::APFloat(m_integer.bitsToFloat());
                  success = true;
@@ -678,6 +716,13 @@ Scalar::Promote(Scalar::Type type)
                  success = true;
                  break;
              }
+             case e_sint256:
+             case e_uint256:
+             {
+                 m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData()));
+                 success = true;
+                 break;
+             }
              case e_float:
              {
                  m_float = llvm::APFloat(m_integer.bitsToFloat());
@@ -729,6 +774,13 @@ Scalar::Promote(Scalar::Type type)
                  success = true;
                  break;
              }
+             case e_sint256:
+             case e_uint256:
+             {
+                 m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData()));
+                 success = true;
+                 break;
+             }
              case e_float:
              {
                  m_float = llvm::APFloat(m_integer.bitsToFloat());
@@ -775,6 +827,13 @@ Scalar::Promote(Scalar::Type type)
                  success = true;
                  break;
              }
+             case e_sint256:
+             case e_uint256:
+             {
+                 m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData()));
+                 success = true;
+                 break;
+             }
              case e_float:
              {
                  m_float = llvm::APFloat(m_integer.bitsToFloat());
@@ -813,6 +872,13 @@ Scalar::Promote(Scalar::Type type)
              case e_uint128:
              {
                  m_integer = llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((const type128 *)m_integer.getRawData()));
+                 success = true;
+                 break;
+             }
+             case e_sint256:
+             case e_uint256:
+             {
+                 m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData()));
                  success = true;
                  break;
              }
@@ -857,6 +923,13 @@ Scalar::Promote(Scalar::Type type)
                  success = true;
                  break;
              }
+             case e_sint256:
+             case e_uint256:
+             {
+                 m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData()));
+                 success = true;
+                 break;
+             }
              case e_float:
              {
                  m_float = llvm::APFloat(m_integer.bitsToFloat());
@@ -893,6 +966,13 @@ Scalar::Promote(Scalar::Type type)
              case e_ulonglong:
              case e_sint128:    break;
              case e_uint128:    success = true; break;
+             case e_sint256:
+             case e_uint256:
+             {
+                 m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData()));
+                 success = true;
+                 break;
+             }
              case e_float:
              {
                  m_float = llvm::APFloat(m_integer.bitsToFloat());
@@ -917,6 +997,87 @@ Scalar::Promote(Scalar::Type type)
         }
         break;
 
+    case e_sint256:
+        switch (type)
+        {
+            case e_void:
+            case e_sint:
+            case e_uint:
+            case e_slong:
+            case e_ulong:
+            case e_slonglong:
+            case e_ulonglong:
+            case e_sint128:
+            case e_uint128: break;
+            case e_sint256: success = true; break;
+            case e_uint256:
+            {
+                m_integer = llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((const type128 *)m_integer.getRawData()));
+                success = true;
+                break;
+            }
+            case e_float:
+            {
+                m_float = llvm::APFloat(m_integer.bitsToFloat());
+                success = true;
+                break;
+            }
+            case e_double:
+            {
+                m_float = llvm::APFloat(m_integer.bitsToDouble());
+                success = true;
+                break;
+            }
+            case e_long_double:
+            {
+                if(m_ieee_quad)
+                    m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+                else
+                    m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+                success = true;
+                break;
+            }
+        }
+        break;
+            
+    case e_uint256:
+        switch (type)
+        {
+            case e_void:
+            case e_sint:
+            case e_uint:
+            case e_slong:
+            case e_ulong:
+            case e_slonglong:
+            case e_ulonglong:
+            case e_sint128:
+            case e_uint128:
+            case e_sint256: break;
+            case e_uint256: success = true; break;
+            case e_float:
+            {
+                m_float = llvm::APFloat(m_integer.bitsToFloat());
+                success = true;
+                break;
+            }
+            case e_double:
+            {
+                m_float = llvm::APFloat(m_integer.bitsToDouble());
+                success = true;
+                break;
+            }
+            case e_long_double:
+            {
+                if(m_ieee_quad)
+                    m_float = llvm::APFloat(llvm::APFloat::IEEEquad, m_integer);
+                else
+                    m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended, m_integer);
+                success = true;
+                break;
+            }
+        }
+        break;
+            
     case e_float:
         switch (type)
         {
@@ -928,7 +1089,9 @@ Scalar::Promote(Scalar::Type type)
              case e_slonglong:
              case e_ulonglong:
              case e_sint128:
-             case e_uint128:    break;
+             case e_uint128:
+             case e_sint256:
+             case e_uint256:    break;
              case e_float:      success = true; break;
              case e_double:
              {
@@ -960,6 +1123,8 @@ Scalar::Promote(Scalar::Type type)
              case e_ulonglong:
              case e_sint128:
              case e_uint128:
+             case e_sint256:
+             case e_uint256:
              case e_float:      break;
              case e_double:     success = true; break;
              case e_long_double:
@@ -986,6 +1151,8 @@ Scalar::Promote(Scalar::Type type)
         case e_ulonglong:
         case e_sint128:
         case e_uint128:
+        case e_sint256:
+        case e_uint256:
         case e_float:
         case e_double:      break;
         case e_long_double: success = true; break;
@@ -1015,6 +1182,8 @@ Scalar::GetValueTypeAsCString (Scalar::Type type)
     case e_long_double: return "long double";
     case e_sint128:     return "int128_t";
     case e_uint128:     return "uint128_t";
+    case e_sint256:     return "int256_t";
+    case e_uint256:     return "uint256_t";
     }
     return "???";
 }
@@ -1073,6 +1242,8 @@ Scalar::Cast(Scalar::Type type)
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         switch (type)
         {
              case e_void:        break;
@@ -1124,6 +1295,18 @@ Scalar::Cast(Scalar::Type type)
                  success = true;
                  break;
              }
+             case e_sint256:
+             {
+                 m_integer = m_integer.sextOrTrunc(BITWIDTH_INT256);
+                 success = true;
+                 break;
+             }
+             case e_uint256:
+             {
+                 m_integer = m_integer.zextOrTrunc(BITWIDTH_INT256);
+                 success = true;
+                 break;
+             }
              case e_float:
              {
                  m_float = llvm::APFloat(m_integer.bitsToFloat());
@@ -1159,7 +1342,9 @@ Scalar::Cast(Scalar::Type type)
         case e_slonglong:
         case e_ulonglong:
         case e_sint128:
-        case e_uint128:     m_integer = m_float.bitcastToAPInt();         success = true; break;
+        case e_uint128:
+        case e_sint256:
+        case e_uint256:     m_integer = m_float.bitcastToAPInt();         success = true; break;
         case e_float:       m_float = llvm::APFloat(m_float.convertToFloat());         success = true; break;
         case e_double:      m_float = llvm::APFloat(m_float.convertToFloat());         success = true; break;
         case e_long_double:
@@ -1183,7 +1368,9 @@ Scalar::Cast(Scalar::Type type)
         case e_slonglong:
         case e_ulonglong:
         case e_sint128:
-        case e_uint128:     m_integer = m_float.bitcastToAPInt();                      success = true; break;
+        case e_uint128:
+        case e_sint256:
+        case e_uint256:     m_integer = m_float.bitcastToAPInt();                      success = true; break;
         case e_float:       m_float = llvm::APFloat(m_float.convertToDouble());        success = true; break;
         case e_double:      m_float = llvm::APFloat(m_float.convertToDouble());        success = true; break;
         case e_long_double:
@@ -1256,6 +1443,20 @@ Scalar::Cast(Scalar::Type type)
             success = true;
             break;
         }
+        case e_sint256:
+        {
+            m_integer = m_float.bitcastToAPInt();
+            m_integer = m_integer.sextOrTrunc(BITWIDTH_INT256);
+            success = true;
+            break;
+        }
+        case e_uint256:
+        {
+            m_integer = m_float.bitcastToAPInt();
+            m_integer = m_integer.zextOrTrunc(BITWIDTH_INT256);
+            success = true;
+            break;
+        }
         case e_float:       m_float = llvm::APFloat(m_float.convertToFloat());     success = true; break;
         case e_double:      m_float = llvm::APFloat(m_float.convertToFloat());    success = true; break;
         case e_long_double: success = true; break;
@@ -1284,6 +1485,8 @@ Scalar::MakeSigned ()
     case e_ulonglong:   m_type = e_slonglong;   success = true; break;
     case e_sint128:                             success = true; break;
     case e_uint128:     m_type = e_sint;        success = true; break;
+    case e_sint256:                             success = true; break;
+    case e_uint256:     m_type = e_sint;        success = true; break;
     case e_float:                               success = true; break;
     case e_double:                              success = true; break;
     case e_long_double:                         success = true; break;
@@ -1306,6 +1509,8 @@ Scalar::SChar(char fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const schar_t *)(m_integer.sextOrTrunc(sizeof(schar_t) * 8)).getRawData();
     case e_float:
         return (schar_t)m_float.convertToFloat();
@@ -1332,6 +1537,8 @@ Scalar::UChar(unsigned char fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const uchar_t *)m_integer.getRawData();
     case e_float:
         return (uchar_t)m_float.convertToFloat();
@@ -1358,6 +1565,8 @@ Scalar::SShort(short fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const sshort_t *)(m_integer.sextOrTrunc(sizeof(sshort_t) * 8)).getRawData();
     case e_float:
         return (sshort_t)m_float.convertToFloat();
@@ -1384,6 +1593,8 @@ Scalar::UShort(unsigned short fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const ushort_t *)m_integer.getRawData();
     case e_float:
         return (ushort_t)m_float.convertToFloat();
@@ -1410,6 +1621,8 @@ Scalar::SInt(int fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const sint_t *)(m_integer.sextOrTrunc(sizeof(sint_t) * 8)).getRawData();
     case e_float:
         return (sint_t)m_float.convertToFloat();
@@ -1436,6 +1649,8 @@ Scalar::UInt(unsigned int fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const uint_t *)m_integer.getRawData();
     case e_float:
         return (uint_t)m_float.convertToFloat();
@@ -1463,6 +1678,8 @@ Scalar::SLong(long fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const slong_t *)(m_integer.sextOrTrunc(sizeof(slong_t) * 8)).getRawData();
     case e_float:
         return (slong_t)m_float.convertToFloat();
@@ -1491,6 +1708,8 @@ Scalar::ULong(unsigned long fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const ulong_t *)m_integer.getRawData();
     case e_float:
         return (ulong_t)m_float.convertToFloat();
@@ -1519,6 +1738,8 @@ Scalar::GetRawBits64(uint64_t fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *m_integer.getRawData();
     case e_float:
         return (uint64_t)m_float.convertToFloat();
@@ -1547,6 +1768,8 @@ Scalar::SLongLong(long long fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const slonglong_t *)(m_integer.sextOrTrunc(sizeof(slonglong_t) * 8)).getRawData();
     case e_float:
         return (slonglong_t)m_float.convertToFloat();
@@ -1574,6 +1797,8 @@ Scalar::ULongLong(unsigned long long fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return *(const ulonglong_t *)m_integer.getRawData();
     case e_float:
         return (ulonglong_t)m_float.convertToFloat();
@@ -1582,6 +1807,31 @@ Scalar::ULongLong(unsigned long long fail_value) const
     case e_long_double:
         llvm::APInt ldbl_val = m_float.bitcastToAPInt();
         return *(const ulonglong_t *)ldbl_val.getRawData();
+    }
+    return fail_value;
+}
+
+llvm::APInt
+Scalar::SInt128(llvm::APInt& fail_value) const
+{
+    switch (m_type)
+    {
+        case e_void:        break;
+        case e_sint:
+        case e_uint:
+        case e_slong:
+        case e_ulong:
+        case e_slonglong:
+        case e_ulonglong:
+        case e_sint128:
+        case e_uint128:
+        case e_sint256:
+        case e_uint256:
+            return m_integer;
+        case e_float:
+        case e_double:
+        case e_long_double:
+            return m_float.bitcastToAPInt();
     }
     return fail_value;
 }
@@ -1600,6 +1850,8 @@ Scalar::UInt128(const llvm::APInt& fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return m_integer;
     case e_float:
     case e_double:
@@ -1610,7 +1862,7 @@ Scalar::UInt128(const llvm::APInt& fail_value) const
 }
 
 llvm::APInt
-Scalar::SInt128(llvm::APInt& fail_value) const
+Scalar::SInt256(llvm::APInt& fail_value) const
 {
     switch (m_type)
     {
@@ -1623,11 +1875,38 @@ Scalar::SInt128(llvm::APInt& fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return m_integer;
     case e_float:
     case e_double:
     case e_long_double:
         return m_float.bitcastToAPInt();
+    }
+    return fail_value;
+}
+
+llvm::APInt
+Scalar::UInt256(const llvm::APInt& fail_value) const
+{
+    switch (m_type)
+    {
+        case e_void:        break;
+        case e_sint:
+        case e_uint:
+        case e_slong:
+        case e_ulong:
+        case e_slonglong:
+        case e_ulonglong:
+        case e_sint128:
+        case e_uint128:
+        case e_sint256:
+        case e_uint256:
+            return m_integer;
+        case e_float:
+        case e_double:
+        case e_long_double:
+            return m_float.bitcastToAPInt();
     }
     return fail_value;
 }
@@ -1646,6 +1925,8 @@ Scalar::Float(float fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return m_integer.bitsToFloat();
     case e_float:
         return m_float.convertToFloat();
@@ -1673,6 +1954,8 @@ Scalar::Double(double fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return m_integer.bitsToDouble();
     case e_float:
         return (double_t)m_float.convertToFloat();
@@ -1700,6 +1983,8 @@ Scalar::LongDouble(long double fail_value) const
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         return (long_double_t)m_integer.bitsToDouble();
     case e_float:
         return (long_double_t)m_float.convertToFloat();
@@ -1732,6 +2017,8 @@ Scalar::operator+= (const Scalar& rhs)
              case e_ulonglong:
              case e_sint128:
              case e_uint128:
+             case e_sint256:
+             case e_uint256:
              {
                  m_integer = a->m_integer + b->m_integer;
                  break;
@@ -1768,6 +2055,8 @@ Scalar::operator<<= (const Scalar& rhs)
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         switch (rhs.m_type)
         {
              case e_void:
@@ -1784,6 +2073,8 @@ Scalar::operator<<= (const Scalar& rhs)
              case e_ulonglong:
              case e_sint128:
              case e_uint128:
+             case e_sint256:
+             case e_uint256:
              {
                  m_integer <<= *rhs.m_integer.getRawData();
                  break;
@@ -1814,6 +2105,8 @@ Scalar::ShiftRightLogical(const Scalar& rhs)
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         switch (rhs.m_type)
         {
         case e_void:
@@ -1830,6 +2123,8 @@ Scalar::ShiftRightLogical(const Scalar& rhs)
         case e_ulonglong:
         case e_sint128:
         case e_uint128:
+        case e_sint256:
+        case e_uint256:
             m_integer = m_integer.lshr(*(const uint_t *) rhs.m_integer.getRawData());   break;
         }
         break;
@@ -1858,6 +2153,8 @@ Scalar::operator>>= (const Scalar& rhs)
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         switch (rhs.m_type)
         {
         case e_void:
@@ -1872,8 +2169,10 @@ Scalar::operator>>= (const Scalar& rhs)
         case e_ulong:
         case e_slonglong:
         case e_ulonglong:
-             case e_sint128:
-             case e_uint128:
+        case e_sint128:
+        case e_uint128:
+        case e_sint256:
+        case e_uint256:
              {
                  m_integer = m_integer.ashr(*(const uint_t *)rhs.m_integer.getRawData());
                  break;
@@ -1905,6 +2204,8 @@ Scalar::operator&= (const Scalar& rhs)
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         switch (rhs.m_type)
         {
         case e_void:
@@ -1919,8 +2220,10 @@ Scalar::operator&= (const Scalar& rhs)
         case e_ulong:
         case e_slonglong:
         case e_ulonglong:
-             case e_sint128:
-             case e_uint128:
+        case e_sint128:
+        case e_uint128:
+        case e_sint256:
+        case e_uint256:
              {
                  m_integer &= rhs.m_integer;
                  break;
@@ -1945,6 +2248,7 @@ Scalar::AbsoluteValue()
     case e_slong:
     case e_slonglong:
     case e_sint128:
+    case e_sint256:
         if (m_integer.isNegative())
             m_integer = -m_integer;
         return true;
@@ -1953,6 +2257,7 @@ Scalar::AbsoluteValue()
     case e_ulong:
     case e_ulonglong:   return true;
     case e_uint128:
+    case e_uint256:
     case e_float:
     case e_double:
     case e_long_double:
@@ -1977,6 +2282,8 @@ Scalar::UnaryNegate()
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         m_integer = -m_integer; return true;
     case e_float:
     case e_double:
@@ -1999,6 +2306,8 @@ Scalar::OnesComplement()
     case e_ulonglong:
     case e_sint128:
     case e_uint128:
+    case e_sint256:
+    case e_uint256:
         m_integer = ~m_integer; return true;
 
     case e_void:
@@ -2031,6 +2340,8 @@ lldb_private::operator+ (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_ulonglong:
         case Scalar::e_sint128:
         case Scalar::e_uint128:
+        case Scalar::e_sint256:
+        case Scalar::e_uint256:
             result.m_integer = a->m_integer + b->m_integer;  break;
         case Scalar::e_float:
         case Scalar::e_double:
@@ -2062,6 +2373,8 @@ lldb_private::operator- (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_ulonglong:
         case Scalar::e_sint128:
         case Scalar::e_uint128:
+        case Scalar::e_sint256:
+        case Scalar::e_uint256:
             result.m_integer = a->m_integer - b->m_integer;  break;
         case Scalar::e_float:
         case Scalar::e_double:
@@ -2092,6 +2405,8 @@ lldb_private::operator/ (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_ulonglong:
         case Scalar::e_sint128:
         case Scalar::e_uint128:
+        case Scalar::e_sint256:
+        case Scalar::e_uint256:
         {
             if (b->m_integer != 0)
             {
@@ -2137,6 +2452,8 @@ lldb_private::operator* (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_ulonglong:
         case Scalar::e_sint128:
         case Scalar::e_uint128:
+        case Scalar::e_sint256:
+        case Scalar::e_uint256:
             result.m_integer = a->m_integer * b->m_integer;  break;
         case Scalar::e_float:
         case Scalar::e_double:
@@ -2166,6 +2483,8 @@ lldb_private::operator& (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_ulonglong:
         case Scalar::e_sint128:
         case Scalar::e_uint128:
+        case Scalar::e_sint256:
+        case Scalar::e_uint256:
             result.m_integer = a->m_integer & b->m_integer;  break;
         case Scalar::e_void:
         case Scalar::e_float:
@@ -2198,6 +2517,8 @@ lldb_private::operator| (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_ulonglong:
         case Scalar::e_sint128:
         case Scalar::e_uint128:
+        case Scalar::e_sint256:
+        case Scalar::e_uint256:
             result.m_integer = a->m_integer | b->m_integer;  break;
 
         case Scalar::e_void:
@@ -2233,6 +2554,8 @@ lldb_private::operator% (const Scalar& lhs, const Scalar& rhs)
              case Scalar::e_ulonglong:
              case Scalar::e_sint128:
              case Scalar::e_uint128:
+             case Scalar::e_sint256:
+             case Scalar::e_uint256:
              {
                  if (b->m_integer != 0)
                  {
@@ -2266,6 +2589,8 @@ lldb_private::operator^ (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_ulonglong:
         case Scalar::e_sint128:
         case Scalar::e_uint128:
+        case Scalar::e_sint256:
+        case Scalar::e_uint256:
             result.m_integer = a->m_integer ^ b->m_integer;  break;
 
         case Scalar::e_void:
@@ -2449,6 +2774,7 @@ Scalar::SetValueFromData (DataExtractor &data, lldb::Encoding encoding, size_t b
     Error error;
     
     type128 int128;
+    type256 int256;
     switch (encoding)
     {
     case lldb::eEncodingInvalid:
@@ -2482,6 +2808,25 @@ Scalar::SetValueFromData (DataExtractor &data, lldb::Encoding encoding, size_t b
                 operator=(llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, int128.x));
                 break;
             }
+            case 32:
+            {
+                if (data.GetByteOrder() == eByteOrderBig)
+                {
+                    int256.x[3] = (uint64_t)data.GetU64 (&offset);
+                    int256.x[2] = (uint64_t)data.GetU64 (&offset + 1);
+                    int256.x[1] = (uint64_t)data.GetU64 (&offset + 1);
+                    int256.x[0] = (uint64_t)data.GetU64 (&offset + 1);
+                }
+                else
+                {
+                    int256.x[0] = (uint64_t)data.GetU64 (&offset);
+                    int256.x[1] = (uint64_t)data.GetU64 (&offset + 1);
+                    int256.x[2] = (uint64_t)data.GetU64 (&offset + 1);
+                    int256.x[3] = (uint64_t)data.GetU64 (&offset + 1);
+                }
+                operator=(llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, int256.x));
+                break;
+            }
             default:
                 error.SetErrorStringWithFormat("unsupported unsigned integer byte size: %" PRIu64 "", (uint64_t)byte_size);
                 break;
@@ -2511,6 +2856,25 @@ Scalar::SetValueFromData (DataExtractor &data, lldb::Encoding encoding, size_t b
                     int128.x[1] = (uint64_t)data.GetU64 (&offset + 1);
                 }
                 operator=(llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, int128.x));
+                break;
+            }
+            case 32:
+            {
+                if (data.GetByteOrder() == eByteOrderBig)
+                {
+                    int256.x[3] = (uint64_t)data.GetU64 (&offset);
+                    int256.x[2] = (uint64_t)data.GetU64 (&offset + 1);
+                    int256.x[1] = (uint64_t)data.GetU64 (&offset + 1);
+                    int256.x[0] = (uint64_t)data.GetU64 (&offset + 1);
+                }
+                else
+                {
+                    int256.x[0] = (uint64_t)data.GetU64 (&offset);
+                    int256.x[1] = (uint64_t)data.GetU64 (&offset + 1);
+                    int256.x[2] = (uint64_t)data.GetU64 (&offset + 1);
+                    int256.x[3] = (uint64_t)data.GetU64 (&offset + 1);
+                }
+                operator=(llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, int256.x));
                 break;
             }
             default:
@@ -2561,6 +2925,8 @@ Scalar::SignExtend (uint32_t sign_bit_pos)
         case Scalar::e_ulonglong:
         case Scalar::e_sint128:
         case Scalar::e_uint128:
+        case Scalar::e_sint256:
+        case Scalar::e_uint256:
             if (max_bit_pos == sign_bit_pos)
                 return true;
             else if (sign_bit_pos < (max_bit_pos-1))
@@ -2643,6 +3009,7 @@ Scalar::ExtractBitfield (uint32_t bit_size,
         case Scalar::e_slong:
         case Scalar::e_slonglong:
         case Scalar::e_sint128:
+        case Scalar::e_sint256:
             m_integer = SignedBits (*m_integer.getRawData(), msbit, lsbit);
             return true;
 
@@ -2650,15 +3017,12 @@ Scalar::ExtractBitfield (uint32_t bit_size,
         case Scalar::e_ulong:
         case Scalar::e_ulonglong:
         case Scalar::e_uint128:
+        case Scalar::e_uint256:
             m_integer = UnsignedBits (*m_integer.getRawData(), msbit, lsbit);
             return true;
     }
     return false;
 }
-
-
-
-
 
 bool
 lldb_private::operator== (const Scalar& lhs, const Scalar& rhs)
@@ -2682,6 +3046,8 @@ lldb_private::operator== (const Scalar& lhs, const Scalar& rhs)
     case Scalar::e_ulonglong:
     case Scalar::e_sint128:
     case Scalar::e_uint128:
+    case Scalar::e_sint256:
+    case Scalar::e_uint256:
         return a->m_integer == b->m_integer;
     case Scalar::e_float:
     case Scalar::e_double:
@@ -2715,6 +3081,8 @@ lldb_private::operator!= (const Scalar& lhs, const Scalar& rhs)
     case Scalar::e_ulonglong:
     case Scalar::e_sint128:
     case Scalar::e_uint128:
+    case Scalar::e_sint256:
+    case Scalar::e_uint256:
         return a->m_integer != b->m_integer;
     case Scalar::e_float:
     case Scalar::e_double:
@@ -2743,11 +3111,13 @@ lldb_private::operator< (const Scalar& lhs, const Scalar& rhs)
     case Scalar::e_slong:
     case Scalar::e_slonglong:
     case Scalar::e_sint128:
+    case Scalar::e_sint256:
         return a->m_integer.slt(b->m_integer);
     case Scalar::e_uint:
     case Scalar::e_ulong:
     case Scalar::e_ulonglong:
     case Scalar::e_uint128:
+    case Scalar::e_uint256:
         return a->m_integer.ult(b->m_integer);
     case Scalar::e_float:
     case Scalar::e_double:
@@ -2776,11 +3146,13 @@ lldb_private::operator<= (const Scalar& lhs, const Scalar& rhs)
     case Scalar::e_slong:
     case Scalar::e_slonglong:
     case Scalar::e_sint128:
+    case Scalar::e_sint256:
         return a->m_integer.sle(b->m_integer);
     case Scalar::e_uint:
     case Scalar::e_ulong:
     case Scalar::e_ulonglong:
     case Scalar::e_uint128:
+    case Scalar::e_uint256:
         return a->m_integer.ule(b->m_integer);
     case Scalar::e_float:
     case Scalar::e_double:
@@ -2810,11 +3182,13 @@ lldb_private::operator> (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_slong:
         case Scalar::e_slonglong:
         case Scalar::e_sint128:
+        case Scalar::e_sint256:
             return a->m_integer.sgt(b->m_integer);
         case Scalar::e_uint:
         case Scalar::e_ulong:
         case Scalar::e_ulonglong:
         case Scalar::e_uint128:
+        case Scalar::e_uint256:
             return a->m_integer.ugt(b->m_integer);
         case Scalar::e_float:
         case Scalar::e_double:
@@ -2843,11 +3217,13 @@ lldb_private::operator>= (const Scalar& lhs, const Scalar& rhs)
         case Scalar::e_slong:
         case Scalar::e_slonglong:
         case Scalar::e_sint128:
+        case Scalar::e_sint256:
             return a->m_integer.sge(b->m_integer);
         case Scalar::e_uint:
         case Scalar::e_ulong:
         case Scalar::e_ulonglong:
         case Scalar::e_uint128:
+        case Scalar::e_uint256:
             return a->m_integer.uge(b->m_integer);
         case Scalar::e_float:
         case Scalar::e_double:
@@ -2873,7 +3249,9 @@ Scalar::ClearBit (uint32_t bit)
     case e_slonglong:
     case e_ulonglong:
     case e_sint128:
-    case e_uint128: m_integer.clearBit(bit); return true;
+    case e_uint128:
+    case e_sint256:
+    case e_uint256: m_integer.clearBit(bit); return true;
     case e_float:
     case e_double:
     case e_long_double: break;
@@ -2895,7 +3273,9 @@ Scalar::SetBit (uint32_t bit)
     case e_slonglong:
     case e_ulonglong:
     case e_sint128:
-    case e_uint128: m_integer.setBit(bit); return true;
+    case e_uint128:
+    case e_sint256:
+    case e_uint256: m_integer.setBit(bit); return true;
     case e_float:
     case e_double:
     case e_long_double: break;
@@ -2927,6 +3307,11 @@ Scalar::SetType (const RegisterInfo *reg_info)
                 m_integer = llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((const type128 *)m_integer.getRawData())->x);
                 m_type = e_uint128;
             }
+            if (byte_size == 32)
+            {
+                m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData())->x);
+                m_type = e_uint256;
+            }
             break;
         case eEncodingSint:
             if (byte_size == 1 || byte_size == 2 || byte_size == 4)
@@ -2943,6 +3328,11 @@ Scalar::SetType (const RegisterInfo *reg_info)
             {
                 m_integer = llvm::APInt(BITWIDTH_INT128, NUM_OF_WORDS_INT128, ((const type128 *)m_integer.getRawData())->x);
                 m_type = e_sint128;
+            }
+            if (byte_size == 32)
+            {
+                m_integer = llvm::APInt(BITWIDTH_INT256, NUM_OF_WORDS_INT256, ((const type256 *)m_integer.getRawData())->x);
+                m_type = e_sint256;
             }
             break;
         case eEncodingIEEE754:

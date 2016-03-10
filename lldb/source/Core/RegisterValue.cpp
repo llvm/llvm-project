@@ -242,14 +242,24 @@ RegisterValue::GetScalarValue (Scalar &scalar) const
         {
             switch (buffer.length)
             {
-            default:    break;
-            case  1:     scalar = *(const uint8_t *)buffer.bytes; return true;
-            case  2:     scalar = *(const uint16_t *)buffer.bytes; return true;
-            case  4:     scalar = *(const uint32_t *)buffer.bytes; return true;
-            case  8:     scalar = *(const uint64_t *)buffer.bytes; return true;
-            case 16:
-              scalar = llvm::APInt(128, llvm::ArrayRef<uint64_t>((const uint64_t *)buffer.bytes, 2));
-              return true;
+                switch (buffer.length)
+                {
+                default:    break;
+                case 1:     scalar = *(const uint8_t *)buffer.bytes; return true;
+                case 2:     scalar = *(const uint16_t *)buffer.bytes; return true;
+                case 4:     scalar = *(const uint32_t *)buffer.bytes; return true;
+                case 8:     scalar = *(const uint64_t *)buffer.bytes; return true;
+                case 16:
+                case 32:
+                            if (buffer.length % sizeof(uint64_t) == 0)
+                            {
+                                const auto length_in_bits = buffer.length * 8;
+                                const auto length_in_uint64 = buffer.length / sizeof(uint64_t);
+                                scalar = llvm::APInt(length_in_bits, llvm::ArrayRef<uint64_t>((const uint64_t *)buffer.bytes, length_in_uint64));
+                                return true;
+                            }
+                            break;
+                }
             }
         }
         case eTypeUInt8:
