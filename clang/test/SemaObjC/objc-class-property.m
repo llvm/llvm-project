@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
+#if !__has_feature(objc_class_property)
+#error does not support class property
+#endif
+
 @interface Root
 -(id) alloc;
 -(id) init;
