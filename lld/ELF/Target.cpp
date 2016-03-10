@@ -535,7 +535,7 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write32le(Loc, Out<ELF32LE>::TlsPhdr->p_memsz - SA);
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal("Unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -895,6 +895,9 @@ size_t X86_64TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   case R_X86_64_DTPOFF32:
     relocateOne(Loc, BufEnd, R_X86_64_TPOFF32, P, SA);
     return 0;
+  case R_X86_64_DTPOFF64:
+    write64le(Loc, SA - Out<ELF64LE>::TlsPhdr->p_memsz);
+    return 0;
   case R_X86_64_GOTTPOFF:
     relocateTlsIeToLe(Loc, BufEnd, P, SA);
     return 0;
@@ -953,7 +956,7 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     break;
   }
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal("Unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -983,7 +986,7 @@ void PPCTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write16be(Loc, applyPPCLo(SA));
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal("Unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1191,7 +1194,7 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     write64be(Loc, SA);
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal("Unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1454,7 +1457,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     break;
   }
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal("Unrecognized reloc " + Twine(Type));
   }
 }
 
@@ -1553,7 +1556,7 @@ void AArch64TargetInfo::relocateTlsIeToLe(uint32_t Type, uint8_t *Loc,
 void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                                    uint64_t P, uint64_t SA, uint64_t ZA,
                                    uint8_t *PairedLoc) const {
-  llvm_unreachable("not implemented");
+  llvm_unreachable("Not implemented");
 }
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
@@ -1770,7 +1773,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     writeMipsLo16<E>(Loc, S + readSignedLo16<E>(Loc) - P);
     break;
   default:
-    fatal("unrecognized reloc " + Twine(Type));
+    fatal("Unrecognized reloc " + Twine(Type));
   }
 }
 

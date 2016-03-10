@@ -141,6 +141,8 @@ GetArgsX86(const GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
 {
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
 
+    Error error;
+
     // get the current stack pointer
     uint64_t sp = ctx.reg_ctx->GetSP();
 
@@ -183,6 +185,8 @@ GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         8, // eLong,
         4, // eBool,
     }};
+
+    Error error;
 
     // get the current stack pointer
     uint64_t sp = ctx.reg_ctx->GetSP();
@@ -227,7 +231,6 @@ GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
             // read the argument from memory
             arg.value = 0;
             // note: due to little endian layout reading 4 or 8 bytes will give the correct value.
-            Error error;
             size_t read = ctx.process->ReadMemory(sp, &arg.value, size, error);
             success = (error.Success() && read==size);
             // advance past this argument
@@ -237,7 +240,8 @@ GetArgsX86_64(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         if (!success)
         {
             if (log)
-                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+                log->Printf("%s - error reading argument: %" PRIu64", reason: %s",
+                            __FUNCTION__, uint64_t(i), error.AsCString("n/a"));
             return false;
         }
     }
@@ -251,6 +255,8 @@ GetArgsArm(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
     static const uint32_t c_args_in_reg = 4;
 
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    Error error;
 
     // get the current stack pointer
     uint64_t sp = ctx.reg_ctx->GetSP();
@@ -275,7 +281,6 @@ GetArgsArm(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
             // clear all 64bits
             arg.value = 0;
             // read this argument from memory
-            Error error;
             size_t bytes_read = ctx.process->ReadMemory(sp, &arg.value, arg_size, error);
             success = (error.Success() && bytes_read == arg_size);
             // advance the stack pointer
@@ -285,7 +290,8 @@ GetArgsArm(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         if (!success)
         {
             if (log)
-                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+                log->Printf("%s - error reading argument: %" PRIu64", reason: %s",
+                            __FUNCTION__, uint64_t(i), error.AsCString("n/a"));
             return false;
         }
     }
@@ -340,6 +346,11 @@ GetArgsMipsel(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
 
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
 
+    Error error;
+
+    // find offset to arguments on the stack (+16 to skip over a0-a3 shadow space)
+    uint64_t sp = ctx.reg_ctx->GetSP() + 16;
+
     for (size_t i = 0; i < num_args; ++i)
     {
         bool success = false;
@@ -355,14 +366,19 @@ GetArgsMipsel(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         // arguments passed on the stack
         else
         {
-            if (log)
-                log->Printf("%s - reading arguments spilled to stack not implemented.", __FUNCTION__);
+            const size_t arg_size = sizeof(uint32_t);
+            arg.value = 0;
+            size_t bytes_read = ctx.process->ReadMemory(sp, &arg.value, arg_size, error);
+            success = (error.Success() && bytes_read == arg_size);
+            // advance the stack pointer
+            sp += arg_size;
         }
         // fail if we couldn't read this argument
         if (!success)
         {
             if (log)
-                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+                log->Printf("%s - error reading argument: %" PRIu64", reason: %s",
+                            __FUNCTION__, uint64_t(i), error.AsCString("n/a"));
             return false;
         }
     }
@@ -378,6 +394,8 @@ GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
     static const uint32_t c_reg_offset = 4;
 
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    Error error;
 
     // get the current stack pointer
     uint64_t sp = ctx.reg_ctx->GetSP();
@@ -402,7 +420,6 @@ GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
             // clear all 64bits
             arg.value = 0;
             // read this argument from memory
-            Error error;
             size_t bytes_read = ctx.process->ReadMemory(sp, &arg.value, arg_size, error);
             success = (error.Success() && bytes_read == arg_size);
             // advance the stack pointer
@@ -412,7 +429,8 @@ GetArgsMips64el(GetArgsCtx &ctx, ArgItem *arg_list, size_t num_args)
         if (!success)
         {
             if (log)
-                log->Printf("%s - error reading argument: %" PRIu64, __FUNCTION__, uint64_t(i));
+                log->Printf("%s - error reading argument: %" PRIu64", reason: %s",
+                            __FUNCTION__, uint64_t(i), error.AsCString("n/a"));
             return false;
         }
     }
@@ -1457,8 +1475,10 @@ RenderScriptRuntime::EvalRSExpression(const char *expression, StackFrame *frame_
         log->Printf("%s(%s)", __FUNCTION__, expression);
 
     ValueObjectSP expr_result;
+    EvaluateExpressionOptions options;
+    options.SetLanguage(lldb::eLanguageTypeC_plus_plus);
     // Perform the actual expression evaluation
-    GetProcess()->GetTarget().EvaluateExpression(expression, frame_ptr, expr_result);
+    GetProcess()->GetTarget().EvaluateExpression(expression, frame_ptr, expr_result, options);
 
     if (!expr_result)
     {

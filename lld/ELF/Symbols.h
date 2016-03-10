@@ -41,8 +41,7 @@ template <class ELFT> class OutputSectionBase;
 template <class ELFT> class SharedFile;
 
 // Initializes global objects defined in this file.
-// Called at the beginning of main().
-void initSymbols();
+template <class ELFT> void initSymbols();
 
 // Returns a demangled C++ symbol name. If Name is not a mangled
 // name or the system does not provide __cxa_demangle function,
@@ -206,7 +205,7 @@ public:
   uint64_t OffsetInBss;
 
   // The maximum alignment we have seen for this symbol.
-  uint64_t MaxAlignment;
+  uint64_t Alignment;
 
   uint64_t Size;
 };

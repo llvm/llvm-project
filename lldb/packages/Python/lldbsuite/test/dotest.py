@@ -987,12 +987,6 @@ def run_suite():
         except OSError as exception:
             if exception.errno != errno.EEXIST:
                 raise
-    where_to_save_session = os.getcwd()
-    fname = os.path.join(configuration.sdir_name, "TestStarted-%d" % os.getpid())
-    with open(fname, "w") as f:
-        print("Test started at: %s\n" % timestamp_started, file=f)
-        print(configuration.svn_info, file=f)
-        print("Command invoked: %s\n" % getMyCommandLine(), file=f)
 
     #
     # Invoke the default TextTestRunner to run the test suite, possibly iterating
@@ -1108,11 +1102,6 @@ def run_suite():
         sys.stderr.write("Failures per category:\n")
         for category in configuration.failuresPerCategory:
             sys.stderr.write("%s - %d\n" % (category, configuration.failuresPerCategory[category]))
-
-    os.chdir(where_to_save_session)
-    fname = os.path.join(configuration.sdir_name, "TestFinished-%d" % os.getpid())
-    with open(fname, "w") as f:
-        print("Test finished at: %s\n" % datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S"), file=f)
 
     # Terminate the test suite if ${LLDB_TESTSUITE_FORCE_FINISH} is defined.
     # This should not be necessary now.

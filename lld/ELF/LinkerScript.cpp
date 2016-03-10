@@ -166,7 +166,7 @@ void ScriptParser::run() {
     if (Handler Fn = Cmd.lookup(Tok))
       (this->*Fn)();
     else
-      setError("unknown directive: " + Tok);
+      setError("Unknown directive: " + Tok);
   }
 }
 
@@ -190,7 +190,7 @@ std::vector<StringRef> ScriptParser::tokenize(StringRef S) {
     if (S.startswith("\"")) {
       size_t E = S.find("\"", 1);
       if (E == StringRef::npos) {
-        error("unclosed quote");
+        error("Unclosed quote");
         return {};
       }
       Ret.push_back(S.substr(1, E - 1));
@@ -217,7 +217,7 @@ StringRef ScriptParser::skipSpace(StringRef S) {
     if (S.startswith("/*")) {
       size_t E = S.find("*/", 2);
       if (E == StringRef::npos) {
-        error("unclosed comment in a linker script");
+        error("Unclosed comment in a linker script");
         return "";
       }
       S = S.substr(E + 2);
@@ -237,7 +237,7 @@ StringRef ScriptParser::next() {
   if (Error)
     return "";
   if (atEOF()) {
-    setError("unexpected EOF");
+    setError("Unexpected EOF");
     return "";
   }
   return Tokens[Pos++];
@@ -255,7 +255,7 @@ bool ScriptParser::skip(StringRef Tok) {
   if (Error)
     return false;
   if (atEOF()) {
-    setError("unexpected EOF");
+    setError("Unexpected EOF");
     return false;
   }
   if (Tok != Tokens[Pos])
@@ -352,7 +352,7 @@ void ScriptParser::readInclude() {
   StringRef Tok = next();
   auto MBOrErr = MemoryBuffer::getFile(Tok);
   if (!MBOrErr) {
-    setError("cannot open " + Tok);
+    setError("Cannot open " + Tok);
     return;
   }
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
@@ -385,7 +385,7 @@ void ScriptParser::readOutputFormat() {
   if (Tok == ")")
    return;
   if (Tok != ",") {
-    setError("unexpected token: " + Tok);
+    setError("Unexpected token: " + Tok);
     return;
   }
   next();

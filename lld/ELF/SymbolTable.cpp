@@ -316,7 +316,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
   // equivalent (conflicting), or more preferable, respectively.
   int Comp = Existing->compare<ELFT>(New);
   if (Comp == 0) {
-    std::string S = "duplicate symbol: " + conflictMsg(Existing, New);
+    std::string S = "Duplicate symbol: " + conflictMsg(Existing, New);
     if (Config->AllowMultipleDefinition)
       warning(S);
     else

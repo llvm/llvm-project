@@ -2194,6 +2194,7 @@ optimizations like C++'s named return value optimization (NRVO).
 }
 
 def AbiTagsDocs : Documentation {
+  let Category = DocCatFunction;
   let Content = [{
 The ``abi_tag`` attribute can be applied to a function, variable, class or
 inline namespace declaration to modify the mangled name of the entity. It gives

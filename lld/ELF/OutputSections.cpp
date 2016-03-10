@@ -683,7 +683,7 @@ EhFrameHeader<ELFT>::getFdePc(uintX_t EhVA, const FdeData &F) {
     PC = read64<E>(F.PCRel);
     break;
   default:
-    fatal("unknown FDE size encoding");
+    fatal("Unknown FDE size encoding");
   }
   switch (F.Enc & 0x70) {
   case DW_EH_PE_absptr:
@@ -691,7 +691,7 @@ EhFrameHeader<ELFT>::getFdePc(uintX_t EhVA, const FdeData &F) {
   case DW_EH_PE_pcrel:
     return PC + EhVA + F.Off + 8;
   default:
-    fatal("unknown FDE size relative encoding");
+    fatal("Unknown FDE size relative encoding");
   }
 }
 
@@ -888,48 +888,6 @@ template <class ELFT> void OutputSection<ELFT>::sortCtorsDtors() {
   reassignOffsets();
 }
 
-// Returns a VA which a relocatin RI refers to. Used only for local symbols.
-// For non-local symbols, use SymbolBody::getVA instead.
-template <class ELFT, bool IsRela>
-typename ELFFile<ELFT>::uintX_t
-elf::getLocalRelTarget(const ObjectFile<ELFT> &File,
-                       const Elf_Rel_Impl<ELFT, IsRela> &RI,
-                       typename ELFFile<ELFT>::uintX_t Addend) {
-  typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
-
-  // PPC64 has a special relocation representing the TOC base pointer
-  // that does not have a corresponding symbol.
-  if (Config->EMachine == EM_PPC64 && RI.getType(false) == R_PPC64_TOC)
-    return getPPC64TocBase() + Addend;
-
-  const Elf_Sym *Sym =
-      File.getObj().getRelocationSymbol(&RI, File.getSymbolTable());
-
-  if (!Sym)
-    fatal("Unsupported relocation without symbol");
-
-  InputSectionBase<ELFT> *Section = File.getSection(*Sym);
-
-  if (Sym->getType() == STT_TLS)
-    return (Section->OutSec->getVA() + Section->getOffset(*Sym) + Addend) -
-           Out<ELFT>::TlsPhdr->p_vaddr;
-
-  // According to the ELF spec reference to a local symbol from outside
-  // the group are not allowed. Unfortunately .eh_frame breaks that rule
-  // and must be treated specially. For now we just replace the symbol with
-  // 0.
-  if (Section == InputSection<ELFT>::Discarded || !Section->Live)
-    return Addend;
-
-  uintX_t Offset = Sym->st_value;
-  if (Sym->getType() == STT_SECTION) {
-    Offset += Addend;
-    Addend = 0;
-  }
-  return Section->OutSec->getVA() + Section->getOffset(Offset) + Addend;
-}
-
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
 bool elf::canBePreempted(const SymbolBody *Body) {
@@ -1002,7 +960,7 @@ Cie<ELFT>::Cie(EHInputSection<ELFT> *S, unsigned Index)
 // Read a byte and advance D by one byte.
 static uint8_t readByte(ArrayRef<uint8_t> &D) {
   if (D.empty())
-    fatal("corrupted or unsupported CIE information");
+    fatal("Corrupted or unsupported CIE information");
   uint8_t B = D.front();
   D = D.slice(1);
   return B;
@@ -1015,7 +973,7 @@ static void skipLeb128(ArrayRef<uint8_t> &D) {
     if ((Val & 0x80) == 0)
       return;
   }
-  fatal("corrupted or unsupported CIE information");
+  fatal("Corrupted or unsupported CIE information");
 }
 
 template <class ELFT> static size_t getAugPSize(unsigned Enc) {
@@ -1033,7 +991,7 @@ template <class ELFT> static size_t getAugPSize(unsigned Enc) {
   case DW_EH_PE_sdata8:
     return 8;
   }
-  fatal("unknown FDE encoding");
+  fatal("Unknown FDE encoding");
 }
 
 template <class ELFT> static void skipAugP(ArrayRef<uint8_t> &D) {
@@ -1042,7 +1000,7 @@ template <class ELFT> static void skipAugP(ArrayRef<uint8_t> &D) {
     fatal("DW_EH_PE_aligned encoding is not supported");
   size_t Size = getAugPSize<ELFT>(Enc);
   if (Size >= D.size())
-    fatal("corrupted CIE");
+    fatal("Corrupted CIE");
   D = D.slice(Size);
 }
 
@@ -1058,7 +1016,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
 
   const unsigned char *AugEnd = std::find(D.begin() + 1, D.end(), '\0');
   if (AugEnd == D.end())
-    fatal("corrupted CIE");
+    fatal("Corrupted CIE");
   StringRef Aug(reinterpret_cast<const char *>(D.begin()), AugEnd - D.begin());
   D = D.slice(Aug.size() + 1);
 
@@ -1094,7 +1052,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
       readByte(D);
       continue;
     }
-    fatal("unknown .eh_frame augmentation string: " + Aug);
+    fatal("Unknown .eh_frame augmentation string: " + Aug);
   }
   return DW_EH_PE_absptr;
 }
@@ -1668,30 +1626,5 @@ template class SymbolTableSection<ELF32LE>;
 template class SymbolTableSection<ELF32BE>;
 template class SymbolTableSection<ELF64LE>;
 template class SymbolTableSection<ELF64BE>;
-
-template uint32_t getLocalRelTarget(const ObjectFile<ELF32LE> &,
-                                    const ELFFile<ELF32LE>::Elf_Rel &,
-                                    uint32_t);
-template uint32_t getLocalRelTarget(const ObjectFile<ELF32BE> &,
-                                    const ELFFile<ELF32BE>::Elf_Rel &,
-                                    uint32_t);
-template uint64_t getLocalRelTarget(const ObjectFile<ELF64LE> &,
-                                    const ELFFile<ELF64LE>::Elf_Rel &,
-                                    uint64_t);
-template uint64_t getLocalRelTarget(const ObjectFile<ELF64BE> &,
-                                    const ELFFile<ELF64BE>::Elf_Rel &,
-                                    uint64_t);
-template uint32_t getLocalRelTarget(const ObjectFile<ELF32LE> &,
-                                    const ELFFile<ELF32LE>::Elf_Rela &,
-                                    uint32_t);
-template uint32_t getLocalRelTarget(const ObjectFile<ELF32BE> &,
-                                    const ELFFile<ELF32BE>::Elf_Rela &,
-                                    uint32_t);
-template uint64_t getLocalRelTarget(const ObjectFile<ELF64LE> &,
-                                    const ELFFile<ELF64LE>::Elf_Rela &,
-                                    uint64_t);
-template uint64_t getLocalRelTarget(const ObjectFile<ELF64BE> &,
-                                    const ELFFile<ELF64BE>::Elf_Rela &,
-                                    uint64_t);
 }
 }

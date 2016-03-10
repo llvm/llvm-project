@@ -3,16 +3,16 @@
 # RUN: not ld.lld --unknown1 --unknown2 -m foo /no/such/file -lnosuchlib \
 # RUN:   2>&1 | FileCheck -check-prefix=UNKNOWN %s
 
-# UNKNOWN: warning: unknown argument: --unknown1
-# UNKNOWN: warning: unknown argument: --unknown2
-# UNKNOWN: unknown argument(s) found
+# UNKNOWN: Warning: unknown argument: --unknown1
+# UNKNOWN: Warning: unknown argument: --unknown2
+# UNKNOWN: Unknown argument(s) found
 # UNKNOWN: Unknown emulation: foo
-# UNKNOWN: cannot open /no/such/file
+# UNKNOWN: Cannot open /no/such/file
 # UNKNOWN: Unable to find library -lnosuchlib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: not ld.lld %t -o /no/such/file 2>&1 | FileCheck -check-prefix=MISSING %s
-# MISSING: failed to open /no/such/file
+# MISSING: Failed to open /no/such/file
 
 # RUN: ld.lld --help 2>&1 | FileCheck -check-prefix=HELP %s
 # HELP: USAGE:

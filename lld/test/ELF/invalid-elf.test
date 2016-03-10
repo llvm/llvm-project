@@ -14,7 +14,7 @@
 
 # RUN: not ld.lld %p/Inputs/invalid-binding.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-BINDING %s
-# INVALID-BINDING: unexpected binding
+# INVALID-BINDING: Unexpected binding
 
 # RUN: not ld.lld %p/Inputs/invalid-section-index.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-SECTION-INDEX %s

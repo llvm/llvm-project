@@ -5,6 +5,8 @@
 
 #include <x86intrin.h>
 
+// NOTE: This should match the tests in llvm/test/CodeGen/X86/sse4a-intrinsics-fast-isel.ll
+
 __m128i test_mm_extracti_si64(__m128i x) {
   // CHECK-LABEL: test_mm_extracti_si64
   // CHECK: call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %{{[^,]+}}, i8 3, i8 2)

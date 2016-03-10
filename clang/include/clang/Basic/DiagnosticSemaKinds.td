@@ -7352,7 +7352,7 @@ def err_fallthrough_attr_invalid_placement : Error<
   "fallthrough annotation does not directly precede switch label">;
 def warn_fallthrough_attr_unreachable : Warning<
   "fallthrough annotation in unreachable code">,
-  InGroup<ImplicitFallthrough>;
+  InGroup<ImplicitFallthrough>, DefaultIgnore;
 
 def warn_unreachable_default : Warning<
   "default label in switch which covers all enumeration values">,

@@ -47,12 +47,6 @@ getAddend(const typename llvm::object::ELFFile<ELFT>::Elf_Rela &Rel) {
   return Rel.r_addend;
 }
 
-template <class ELFT, bool IsRela>
-typename llvm::object::ELFFile<ELFT>::uintX_t
-getLocalRelTarget(const ObjectFile<ELFT> &File,
-                  const llvm::object::Elf_Rel_Impl<ELFT, IsRela> &Rel,
-                  typename llvm::object::ELFFile<ELFT>::uintX_t Addend);
-
 bool canBePreempted(const SymbolBody *Body);
 
 bool isValidCIdentifier(StringRef S);

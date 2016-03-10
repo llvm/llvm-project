@@ -516,7 +516,7 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if ((Config->Relocatable || Config->Shared) && !Config->NoUndefined)
     return;
 
-  std::string Msg = "undefined symbol: " + Sym->getName().str();
+  std::string Msg = "Undefined symbol: " + Sym->getName().str();
   if (InputFile *File = Symtab.findFile(Sym))
     Msg += " in " + File->getName().str();
   if (Config->NoinhibitExec)
@@ -716,13 +716,13 @@ void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
   // Sort the common symbols by alignment as an heuristic to pack them better.
   std::stable_sort(Syms.begin(), Syms.end(),
                    [](const DefinedCommon *A, const DefinedCommon *B) {
-                     return A->MaxAlignment > B->MaxAlignment;
+                     return A->Alignment > B->Alignment;
                    });
 
   uintX_t Off = getBss()->getSize();
   for (DefinedCommon *C : Syms) {
-    Off = alignTo(Off, C->MaxAlignment);
-    Out<ELFT>::Bss->updateAlign(C->MaxAlignment);
+    Off = alignTo(Off, C->Alignment);
+    Out<ELFT>::Bss->updateAlign(C->Alignment);
     C->OffsetInBss = Off;
     Off += C->Size;
   }
@@ -1525,7 +1525,7 @@ template <class ELFT> bool Writer<ELFT>::openFile() {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
                                FileOutputBuffer::F_executable);
-  if (error(BufferOrErr, "failed to open " + Config->OutputFile))
+  if (error(BufferOrErr, "Failed to open " + Config->OutputFile))
     return false;
   Buffer = std::move(*BufferOrErr);
   return true;
