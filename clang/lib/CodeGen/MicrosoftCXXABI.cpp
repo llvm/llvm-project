@@ -1494,10 +1494,10 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
                                                     This, false);
   }
 
-  CGF.EmitCXXStructorCall(DD, Callee, ReturnValueSlot(), This.getPointer(),
-                          /*ImplicitParam=*/nullptr,
-                          /*ImplicitParamTy=*/QualType(), nullptr,
-                          getFromDtorType(Type));
+  CGF.EmitCXXDestructorCall(DD, Callee, This.getPointer(),
+                            /*ImplicitParam=*/nullptr,
+                            /*ImplicitParamTy=*/QualType(), nullptr,
+                            getFromDtorType(Type));
 }
 
 void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
@@ -1849,10 +1849,9 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
       DtorType == Dtor_Deleting);
 
   This = adjustThisArgumentForVirtualFunctionCall(CGF, GD, This, true);
-  RValue RV = CGF.EmitCXXStructorCall(Dtor, Callee, ReturnValueSlot(),
-                                      This.getPointer(),
-                                      ImplicitParam, Context.IntTy, CE,
-                                      StructorType::Deleting);
+  RValue RV =
+      CGF.EmitCXXDestructorCall(Dtor, Callee, This.getPointer(), ImplicitParam,
+                                Context.IntTy, CE, StructorType::Deleting);
   return RV.getScalarVal();
 }
 

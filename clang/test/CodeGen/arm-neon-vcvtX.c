@@ -1,99 +1,147 @@
-// RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a57 -ffreestanding -O1 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv8-linux-gnueabihf -target-cpu cortex-a57 -ffreestanding -emit-llvm %s -o - | opt -S -mem2reg | FileCheck %s
 
 #include <arm_neon.h>
 
+// CHECK-LABEL: define <2 x i32> @test_vcvta_s32_f32(<2 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
+// CHECK:   [[VCVTA_S32_V_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
+// CHECK:   [[VCVTA_S32_V1_I:%.*]] = call <2 x i32> @llvm.arm.neon.vcvtas.v2i32.v2f32(<2 x float> [[VCVTA_S32_V_I]]) #2
+// CHECK:   ret <2 x i32> [[VCVTA_S32_V1_I]]
 int32x2_t test_vcvta_s32_f32(float32x2_t a) {
-  // CHECK-LABEL: test_vcvta_s32_f32
-  // CHECK-LABEL: call <2 x i32> @llvm.arm.neon.vcvtas.v2i32.v2f32(<2 x float> %a)
   return vcvta_s32_f32(a);
 }
 
+// CHECK-LABEL: define <2 x i32> @test_vcvta_u32_f32(<2 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
+// CHECK:   [[VCVTA_U32_V_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
+// CHECK:   [[VCVTA_U32_V1_I:%.*]] = call <2 x i32> @llvm.arm.neon.vcvtau.v2i32.v2f32(<2 x float> [[VCVTA_U32_V_I]]) #2
+// CHECK:   ret <2 x i32> [[VCVTA_U32_V1_I]]
 uint32x2_t test_vcvta_u32_f32(float32x2_t a) {
-  // CHECK-LABEL: test_vcvta_u32_f32
-  // CHECK-LABEL: call <2 x i32> @llvm.arm.neon.vcvtau.v2i32.v2f32(<2 x float> %a)
   return vcvta_u32_f32(a);
 }
 
+// CHECK-LABEL: define <4 x i32> @test_vcvtaq_s32_f32(<4 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
+// CHECK:   [[VCVTAQ_S32_V_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
+// CHECK:   [[VCVTAQ_S32_V1_I:%.*]] = call <4 x i32> @llvm.arm.neon.vcvtas.v4i32.v4f32(<4 x float> [[VCVTAQ_S32_V_I]]) #2
+// CHECK:   ret <4 x i32> [[VCVTAQ_S32_V1_I]]
 int32x4_t test_vcvtaq_s32_f32(float32x4_t a) {
-  // CHECK-LABEL: test_vcvtaq_s32_f32
-  // CHECK-LABEL: call <4 x i32> @llvm.arm.neon.vcvtas.v4i32.v4f32(<4 x float> %a)
   return vcvtaq_s32_f32(a);
 }
 
+// CHECK-LABEL: define <4 x i32> @test_vcvtaq_u32_f32(<4 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
+// CHECK:   [[VCVTAQ_U32_V_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
+// CHECK:   [[VCVTAQ_U32_V1_I:%.*]] = call <4 x i32> @llvm.arm.neon.vcvtau.v4i32.v4f32(<4 x float> [[VCVTAQ_U32_V_I]]) #2
+// CHECK:   ret <4 x i32> [[VCVTAQ_U32_V1_I]]
 uint32x4_t test_vcvtaq_u32_f32(float32x4_t a) {
-  // CHECK-LABEL: test_vcvtaq_u32_f32
-  // CHECK-LABEL: call <4 x i32> @llvm.arm.neon.vcvtau.v4i32.v4f32(<4 x float> %a)
   return vcvtaq_u32_f32(a);
 }
 
+// CHECK-LABEL: define <2 x i32> @test_vcvtn_s32_f32(<2 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
+// CHECK:   [[VCVTN_S32_V_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
+// CHECK:   [[VCVTN_S32_V1_I:%.*]] = call <2 x i32> @llvm.arm.neon.vcvtns.v2i32.v2f32(<2 x float> [[VCVTN_S32_V_I]]) #2
+// CHECK:   ret <2 x i32> [[VCVTN_S32_V1_I]]
 int32x2_t test_vcvtn_s32_f32(float32x2_t a) {
-  // CHECK-LABEL: test_vcvtn_s32_f32
-  // CHECK-LABEL: call <2 x i32> @llvm.arm.neon.vcvtns.v2i32.v2f32(<2 x float> %a)
   return vcvtn_s32_f32(a);
 }
 
+// CHECK-LABEL: define <2 x i32> @test_vcvtn_u32_f32(<2 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
+// CHECK:   [[VCVTN_U32_V_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
+// CHECK:   [[VCVTN_U32_V1_I:%.*]] = call <2 x i32> @llvm.arm.neon.vcvtnu.v2i32.v2f32(<2 x float> [[VCVTN_U32_V_I]]) #2
+// CHECK:   ret <2 x i32> [[VCVTN_U32_V1_I]]
 uint32x2_t test_vcvtn_u32_f32(float32x2_t a) {
-  // CHECK-LABEL: test_vcvtn_u32_f32
-  // CHECK-LABEL: call <2 x i32> @llvm.arm.neon.vcvtnu.v2i32.v2f32(<2 x float> %a)
   return vcvtn_u32_f32(a);
 }
 
+// CHECK-LABEL: define <4 x i32> @test_vcvtnq_s32_f32(<4 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
+// CHECK:   [[VCVTNQ_S32_V_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
+// CHECK:   [[VCVTNQ_S32_V1_I:%.*]] = call <4 x i32> @llvm.arm.neon.vcvtns.v4i32.v4f32(<4 x float> [[VCVTNQ_S32_V_I]]) #2
+// CHECK:   ret <4 x i32> [[VCVTNQ_S32_V1_I]]
 int32x4_t test_vcvtnq_s32_f32(float32x4_t a) {
-  // CHECK-LABEL: test_vcvtnq_s32_f32
-  // CHECK-LABEL: call <4 x i32> @llvm.arm.neon.vcvtns.v4i32.v4f32(<4 x float> %a)
   return vcvtnq_s32_f32(a);
 }
 
+// CHECK-LABEL: define <4 x i32> @test_vcvtnq_u32_f32(<4 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
+// CHECK:   [[VCVTNQ_U32_V_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
+// CHECK:   [[VCVTNQ_U32_V1_I:%.*]] = call <4 x i32> @llvm.arm.neon.vcvtnu.v4i32.v4f32(<4 x float> [[VCVTNQ_U32_V_I]]) #2
+// CHECK:   ret <4 x i32> [[VCVTNQ_U32_V1_I]]
 uint32x4_t test_vcvtnq_u32_f32(float32x4_t a) {
-  // CHECK-LABEL: test_vcvtnq_u32_f32
-  // CHECK-LABEL: call <4 x i32> @llvm.arm.neon.vcvtnu.v4i32.v4f32(<4 x float> %a)
   return vcvtnq_u32_f32(a);
 }
 
+// CHECK-LABEL: define <2 x i32> @test_vcvtp_s32_f32(<2 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
+// CHECK:   [[VCVTP_S32_V_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
+// CHECK:   [[VCVTP_S32_V1_I:%.*]] = call <2 x i32> @llvm.arm.neon.vcvtps.v2i32.v2f32(<2 x float> [[VCVTP_S32_V_I]]) #2
+// CHECK:   ret <2 x i32> [[VCVTP_S32_V1_I]]
 int32x2_t test_vcvtp_s32_f32(float32x2_t a) {
-  // CHECK-LABEL: test_vcvtp_s32_f32
-  // CHECK-LABEL: call <2 x i32> @llvm.arm.neon.vcvtps.v2i32.v2f32(<2 x float> %a)
   return vcvtp_s32_f32(a);
 }
 
+// CHECK-LABEL: define <2 x i32> @test_vcvtp_u32_f32(<2 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
+// CHECK:   [[VCVTP_U32_V_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
+// CHECK:   [[VCVTP_U32_V1_I:%.*]] = call <2 x i32> @llvm.arm.neon.vcvtpu.v2i32.v2f32(<2 x float> [[VCVTP_U32_V_I]]) #2
+// CHECK:   ret <2 x i32> [[VCVTP_U32_V1_I]]
 uint32x2_t test_vcvtp_u32_f32(float32x2_t a) {
-  // CHECK-LABEL: test_vcvtp_u32_f32
-  // CHECK-LABEL: call <2 x i32> @llvm.arm.neon.vcvtpu.v2i32.v2f32(<2 x float> %a)
   return vcvtp_u32_f32(a);
 }
 
+// CHECK-LABEL: define <4 x i32> @test_vcvtpq_s32_f32(<4 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
+// CHECK:   [[VCVTPQ_S32_V_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
+// CHECK:   [[VCVTPQ_S32_V1_I:%.*]] = call <4 x i32> @llvm.arm.neon.vcvtps.v4i32.v4f32(<4 x float> [[VCVTPQ_S32_V_I]]) #2
+// CHECK:   ret <4 x i32> [[VCVTPQ_S32_V1_I]]
 int32x4_t test_vcvtpq_s32_f32(float32x4_t a) {
-  // CHECK-LABEL: test_vcvtpq_s32_f32
-  // CHECK-LABEL: call <4 x i32> @llvm.arm.neon.vcvtps.v4i32.v4f32(<4 x float> %a)
   return vcvtpq_s32_f32(a);
 }
 
+// CHECK-LABEL: define <4 x i32> @test_vcvtpq_u32_f32(<4 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
+// CHECK:   [[VCVTPQ_U32_V_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
+// CHECK:   [[VCVTPQ_U32_V1_I:%.*]] = call <4 x i32> @llvm.arm.neon.vcvtpu.v4i32.v4f32(<4 x float> [[VCVTPQ_U32_V_I]]) #2
+// CHECK:   ret <4 x i32> [[VCVTPQ_U32_V1_I]]
 uint32x4_t test_vcvtpq_u32_f32(float32x4_t a) {
-  // CHECK-LABEL: test_vcvtpq_u32_f32
-  // CHECK-LABEL: call <4 x i32> @llvm.arm.neon.vcvtpu.v4i32.v4f32(<4 x float> %a)
   return vcvtpq_u32_f32(a);
 }
 
+// CHECK-LABEL: define <2 x i32> @test_vcvtm_s32_f32(<2 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
+// CHECK:   [[VCVTM_S32_V_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
+// CHECK:   [[VCVTM_S32_V1_I:%.*]] = call <2 x i32> @llvm.arm.neon.vcvtms.v2i32.v2f32(<2 x float> [[VCVTM_S32_V_I]]) #2
+// CHECK:   ret <2 x i32> [[VCVTM_S32_V1_I]]
 int32x2_t test_vcvtm_s32_f32(float32x2_t a) {
-  // CHECK-LABEL: test_vcvtm_s32_f32
-  // CHECK-LABEL: call <2 x i32> @llvm.arm.neon.vcvtms.v2i32.v2f32(<2 x float> %a)
   return vcvtm_s32_f32(a);
 }
 
+// CHECK-LABEL: define <2 x i32> @test_vcvtm_u32_f32(<2 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %a to <8 x i8>
+// CHECK:   [[VCVTM_U32_V_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
+// CHECK:   [[VCVTM_U32_V1_I:%.*]] = call <2 x i32> @llvm.arm.neon.vcvtmu.v2i32.v2f32(<2 x float> [[VCVTM_U32_V_I]]) #2
+// CHECK:   ret <2 x i32> [[VCVTM_U32_V1_I]]
 uint32x2_t test_vcvtm_u32_f32(float32x2_t a) {
-  // CHECK-LABEL: test_vcvtm_u32_f32
-  // CHECK-LABEL: call <2 x i32> @llvm.arm.neon.vcvtmu.v2i32.v2f32(<2 x float> %a)
   return vcvtm_u32_f32(a);
 }
 
+// CHECK-LABEL: define <4 x i32> @test_vcvtmq_s32_f32(<4 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
+// CHECK:   [[VCVTMQ_S32_V_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
+// CHECK:   [[VCVTMQ_S32_V1_I:%.*]] = call <4 x i32> @llvm.arm.neon.vcvtms.v4i32.v4f32(<4 x float> [[VCVTMQ_S32_V_I]]) #2
+// CHECK:   ret <4 x i32> [[VCVTMQ_S32_V1_I]]
 int32x4_t test_vcvtmq_s32_f32(float32x4_t a) {
-  // CHECK-LABEL: test_vcvtmq_s32_f32
-  // CHECK-LABEL: call <4 x i32> @llvm.arm.neon.vcvtms.v4i32.v4f32(<4 x float> %a)
   return vcvtmq_s32_f32(a);
 }
 
+// CHECK-LABEL: define <4 x i32> @test_vcvtmq_u32_f32(<4 x float> %a) #0 {
+// CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %a to <16 x i8>
+// CHECK:   [[VCVTMQ_U32_V_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
+// CHECK:   [[VCVTMQ_U32_V1_I:%.*]] = call <4 x i32> @llvm.arm.neon.vcvtmu.v4i32.v4f32(<4 x float> [[VCVTMQ_U32_V_I]]) #2
+// CHECK:   ret <4 x i32> [[VCVTMQ_U32_V1_I]]
 uint32x4_t test_vcvtmq_u32_f32(float32x4_t a) {
-  // CHECK-LABEL: test_vcvtmq_u32_f32
-  // CHECK-LABEL: call <4 x i32> @llvm.arm.neon.vcvtmu.v4i32.v4f32(<4 x float> %a)
   return vcvtmq_u32_f32(a);
 }

@@ -76,6 +76,7 @@ Design Documents
    DriverInternals
    PTHInternals
    PCHInternals
+   ItaniumMangleAbiTags
 
 
 Indices and tables

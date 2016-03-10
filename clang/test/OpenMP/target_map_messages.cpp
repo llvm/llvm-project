@@ -1,4 +1,21 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 200 %s
+// RUN: %clang_cc1 -DCCODE -verify -fopenmp -ferror-limit 200 -x c %s
+#ifdef CCODE
+void foo(int arg) {
+  const int n = 0;
+
+  double marr[10][10][10];
+
+  #pragma omp target map(marr[2][0:2][0:2]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[:][0:][:])
+  {}
+  #pragma omp target map(marr[:][1:][:]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[:][n:][:])
+  {}
+}
+#else
 template <typename T, int I>
 struct SA {
   static int ss;
@@ -82,6 +99,13 @@ union SD {
 void SAclient(int arg) {
   SA<int,123> s;
   s.func(arg); // expected-note {{in instantiation of member function}}
+  double marr[10][10][10];
+  double marr2[5][10][1];
+  double mvla[5][arg][10];
+  double ***mptr;
+  const int n = 0;
+  const int m = 1;
+  double mvla2[5][arg][m+n+10];
 
   SB *p;
 
@@ -89,9 +113,105 @@ void SAclient(int arg) {
   SC r(p),t(p);
   #pragma omp target map(r)
   {}
+  #pragma omp target map(marr[2][0:2][0:2]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[:][0:2][0:2]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[2][3][0:2])
+  {}
+  #pragma omp target map(marr[:][:][:])
+  {}
+  #pragma omp target map(marr[:2][:][:])
+  {}
+  #pragma omp target map(marr[arg:][:][:])
+  {}
+  #pragma omp target map(marr[arg:])
+  {}
+  #pragma omp target map(marr[arg:][:arg][:]) // correct if arg is the size of dimension 2
+  {}
+  #pragma omp target map(marr[:arg][:])
+  {}
+  #pragma omp target map(marr[:arg][n:])
+  {}
+  #pragma omp target map(marr[:][:arg][n:]) // correct if arg is the size of  dimension 2
+  {}
+  #pragma omp target map(marr[:][:m][n:]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[n:m][:arg][n:])
+  {}
+  #pragma omp target map(marr[:2][:1][:]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[:2][1:][:]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[:2][:][:1]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[:2][:][1:]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[:1][:2][:])
+  {}
+  #pragma omp target map(marr[:1][0][:])
+  {}
+  #pragma omp target map(marr[:arg][:2][:]) // correct if arg is 1
+  {}
+  #pragma omp target map(marr[:1][3:1][:2])
+  {}
+  #pragma omp target map(marr[:1][3:arg][:2]) // correct if arg is 1
+  {}
+  #pragma omp target map(marr[:1][3:2][:2]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr[:2][:10][:])
+  {}
+  #pragma omp target map(marr[:2][:][:5+5])
+  {}
+  #pragma omp target map(marr[:2][2+2-4:][0:5+5])
+  {}
+
+  #pragma omp target map(marr[:1][:2][0]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(marr2[:1][:2][0])
+  {}
+
+  #pragma omp target map(mvla[:1][:][0]) // correct if the size of dimension 2 is 1.
+  {}
+  #pragma omp target map(mvla[:2][:arg][:]) // correct if arg is the size of dimension 2.
+  {}
+  #pragma omp target map(mvla[:1][:2][0]) // expected-error {{array section does not specify contiguous storage}}
+   {}
+  #pragma omp target map(mvla[1][2:arg][:])
+  {}
+  #pragma omp target map(mvla[:1][:][:])
+  {}
+  #pragma omp target map(mvla2[:1][:2][:11])
+  {}
+  #pragma omp target map(mvla2[:1][:2][:10]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+
+  #pragma omp target map(mptr[:2][2+2-4:1][0:5+5]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(mptr[:1][:2-1][2:4-3])
+  {}
+  #pragma omp target map(mptr[:1][:arg][2:4-3]) // correct if arg is 1.
+  {}
+  #pragma omp target map(mptr[:1][:2-1][0:2])
+  {}
+  #pragma omp target map(mptr[:1][:2][0:2]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+  #pragma omp target map(mptr[:1][:][0:2]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+  {}
+  #pragma omp target map(mptr[:2][:1][0:2]) // expected-error {{array section does not specify contiguous storage}}
+  {}
+
   #pragma omp target map(r.ArrS[0].B)
   {}
+  #pragma omp target map(r.ArrS[:1].B) // expected-error {{OpenMP array section is not allowed here}}
+  {}
+  #pragma omp target map(r.ArrS[:arg].B) // expected-error {{OpenMP array section is not allowed here}}
+  {}
   #pragma omp target map(r.ArrS[0].Arr[1:23])
+  {}
+  #pragma omp target map(r.ArrS[0].Arr[1:arg])
+  {}
+  #pragma omp target map(r.ArrS[0].Arr[arg:23])
   {}
   #pragma omp target map(r.ArrS[0].Error) // expected-error {{no member named 'Error' in 'SB'}}
   {}
@@ -382,4 +502,4 @@ int main(int argc, char **argv) {
   foo();
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
 }
-
+#endif

@@ -39,6 +39,21 @@ typedef float __m128 __attribute__((__vector_size__(16)));
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse")))
 
+/// \brief Adds the 32-bit float values in the low-order bits of the operands.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VADDSS / ADDSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+///    The lower 32 bits of this operand are used in the calculation.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+///    The lower 32 bits of this operand are used in the calculation.
+/// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the sum
+///    of the lower 32 bits of both operands. The upper 96 bits are copied from
+///    the upper 96 bits of the first source operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_add_ss(__m128 __a, __m128 __b)
 {
@@ -46,12 +61,41 @@ _mm_add_ss(__m128 __a, __m128 __b)
   return __a;
 }
 
+/// \brief Adds two 128-bit vectors of [4 x float], and returns the results of
+///    the addition.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VADDPS / ADDPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+/// \returns A 128-bit vector of [4 x float] containing the sums of both
+///    operands.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_add_ps(__m128 __a, __m128 __b)
 {
   return __a + __b;
 }
 
+/// \brief Subtracts the 32-bit float value in the low-order bits of the second
+///    operand from the corresponding value in the first operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VSUBSS / SUBSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing the minuend. The lower 32 bits
+///    of this operand are used in the calculation.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing the subtrahend. The lower 32
+///    bits of this operand are used in the calculation.
+/// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
+///    difference of the lower 32 bits of both operands. The upper 96 bits are
+///    copied from the upper 96 bits of the first source operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_sub_ss(__m128 __a, __m128 __b)
 {
@@ -59,12 +103,42 @@ _mm_sub_ss(__m128 __a, __m128 __b)
   return __a;
 }
 
+/// \brief Subtracts each of the values of the second operand from the first
+///    operand, both of which are 128-bit vectors of [4 x float] and returns
+///    the results of the subtraction.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VSUBPS / SUBPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing the minuend.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing the subtrahend.
+/// \returns A 128-bit vector of [4 x float] containing the differences between
+///    both operands.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_sub_ps(__m128 __a, __m128 __b)
 {
   return __a - __b;
 }
 
+/// \brief Multiplies two 32-bit float values in the low-order bits of the
+///    operands.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMULSS / MULSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+///    The lower 32 bits of this operand are used in the calculation.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+///    The lower 32 bits of this operand are used in the calculation.
+/// \returns A 128-bit vector of [4 x float] containing the product of the lower
+///    32 bits of both operands. The upper 96 bits are copied from the upper 96
+///    bits of the first source operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mul_ss(__m128 __a, __m128 __b)
 {
@@ -72,12 +146,41 @@ _mm_mul_ss(__m128 __a, __m128 __b)
   return __a;
 }
 
+/// \brief Multiplies two 128-bit vectors of [4 x float] and returns the
+///    results of the multiplication.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMULPS / MULPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+/// \returns A 128-bit vector of [4 x float] containing the products of both
+///    operands.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_mul_ps(__m128 __a, __m128 __b)
 {
   return __a * __b;
 }
 
+/// \brief Divides the value in the low-order 32 bits of the first operand by
+///    the corresponding value in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VDIVSS / DIVSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing the dividend. The lower 32
+///    bits of this operand are used in the calculation.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing the divisor. The lower 32 bits
+///    of this operand are used in the calculation.
+/// \returns A 128-bit vector of [4 x float] containing the quotients of the
+///    lower 32 bits of both operands. The upper 96 bits are copied from the
+///    upper 96 bits of the first source operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_div_ss(__m128 __a, __m128 __b)
 {
@@ -85,12 +188,36 @@ _mm_div_ss(__m128 __a, __m128 __b)
   return __a;
 }
 
+/// \brief Divides two 128-bit vectors of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VDIVPS / DIVPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing the dividend.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing the divisor.
+/// \returns A 128-bit vector of [4 x float] containing the quotients of both
+///    operands.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_div_ps(__m128 __a, __m128 __b)
 {
   return __a / __b;
 }
 
+/// \brief Calculates the square root of the value stored in the low-order bits
+///    of a 128-bit vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VSQRTSS / SQRTSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the calculation.
+/// \returns A 128-bit vector of [4 x float] containing the square root of the
+///    value in the low-order bits of the operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_sqrt_ss(__m128 __a)
 {
@@ -98,12 +225,35 @@ _mm_sqrt_ss(__m128 __a)
   return (__m128) { __c[0], __a[1], __a[2], __a[3] };
 }
 
+/// \brief Calculates the square roots of the values stored in a 128-bit vector
+///    of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VSQRTPS / SQRTPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the square roots of the
+///    values in the operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_sqrt_ps(__m128 __a)
 {
   return __builtin_ia32_sqrtps(__a);
 }
 
+/// \brief Calculates the approximate reciprocal of the value stored in the
+///    low-order bits of a 128-bit vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VRCPSS / RCPSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the calculation.
+/// \returns A 128-bit vector of [4 x float] containing the approximate
+///    reciprocal of the value in the low-order bits of the operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_rcp_ss(__m128 __a)
 {
@@ -111,12 +261,36 @@ _mm_rcp_ss(__m128 __a)
   return (__m128) { __c[0], __a[1], __a[2], __a[3] };
 }
 
+/// \brief Calculates the approximate reciprocals of the values stored in a
+///    128-bit vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VRCPPS / RCPPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the approximate
+///    reciprocals of the values in the operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_rcp_ps(__m128 __a)
 {
   return __builtin_ia32_rcpps(__a);
 }
 
+/// \brief Calculates the approximate reciprocal of the square root of the value
+///    stored in the low-order bits of a 128-bit vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VRSQRTSS / RSQRTSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the calculation.
+/// \returns A 128-bit vector of [4 x float] containing the approximate
+///    reciprocal of the square root of the value in the low-order bits of the
+///    operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_rsqrt_ss(__m128 __a)
 {
@@ -124,96 +298,326 @@ _mm_rsqrt_ss(__m128 __a)
   return (__m128) { __c[0], __a[1], __a[2], __a[3] };
 }
 
+/// \brief Calculates the approximate reciprocals of the square roots of the
+///    values stored in a 128-bit vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VRSQRTPS / RSQRTPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the approximate
+///    reciprocals of the square roots of the values in the operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_rsqrt_ps(__m128 __a)
 {
   return __builtin_ia32_rsqrtps(__a);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands and returns the lesser value in the low-order bits of the
+///    vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMINSS / MINSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
+///    minimum value between both operands. The upper 96 bits are copied from
+///    the upper 96 bits of the first source operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_min_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_minss(__a, __b);
 }
 
+/// \brief Compares two 128-bit vectors of [4 x float] and returns the
+///    lesser of each pair of values.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMINPS / MINPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands.
+/// \returns A 128-bit vector of [4 x float] containing the minimum values
+///    between both operands.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_min_ps(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_minps(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands and returns the greater value in the low-order bits of
+///    a vector [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMAXSS / MAXSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] whose lower 32 bits contain the
+///    maximum value between both operands. The upper 96 bits are copied from
+///    the upper 96 bits of the first source operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_max_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_maxss(__a, __b);
 }
 
+/// \brief Compares two 128-bit vectors of [4 x float] and returns the greater
+///    of each pair of values.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VMAXPS / MAXPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands.
+/// \returns A 128-bit vector of [4 x float] containing the maximum values
+///    between both operands.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_max_ps(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_maxps(__a, __b);
 }
 
+/// \brief Performs a bitwise AND of two 128-bit vectors of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VANDPS / ANDPS instructions.
+///
+/// \param __a
+///    A 128-bit vector containing one of the source operands.
+/// \param __b
+///    A 128-bit vector containing one of the source operands.
+/// \returns A 128-bit vector of [4 x float] containing the bitwise AND of the
+///    values between both operands.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_and_ps(__m128 __a, __m128 __b)
 {
   return (__m128)((__v4si)__a & (__v4si)__b);
 }
 
+/// \brief Performs a bitwise AND of two 128-bit vectors of [4 x float], using
+///    the one's complement of the values contained in the first source
+///    operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VANDNPS / ANDNPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing the first source operand. The
+///    one's complement of this value is used in the bitwise AND.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing the second source operand.
+/// \returns A 128-bit vector of [4 x float] containing the bitwise AND of the
+///    one's complement of the first operand and the values in the second
+///    operand.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_andnot_ps(__m128 __a, __m128 __b)
 {
   return (__m128)(~(__v4si)__a & (__v4si)__b);
 }
 
+/// \brief Performs a bitwise OR of two 128-bit vectors of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VORPS / ORPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+/// \returns A 128-bit vector of [4 x float] containing the bitwise OR of the
+///    values between both operands.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_or_ps(__m128 __a, __m128 __b)
 {
   return (__m128)((__v4si)__a | (__v4si)__b);
 }
 
+/// \brief Performs a bitwise exclusive OR of two 128-bit vectors of
+///    [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VXORPS / XORPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the source operands.
+/// \returns A 128-bit vector of [4 x float] containing the bitwise exclusive OR
+///    of the values between both operands.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_xor_ps(__m128 __a, __m128 __b)
 {
   return (__m128)((__v4si)__a ^ (__v4si)__b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands for equality and returns the result of the comparison in the
+///    low-order bits of a vector [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPEQSS / CMPEQSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpeq_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpeqss(__a, __b);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] for equality.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPEQPS / CMPEQPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpeq_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpeqps(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is less than the
+///    corresponding value in the second operand and returns the result of the
+///    comparison in the low-order bits of a vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLTSS / CMPLTSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmplt_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpltss(__a, __b);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are less than those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLTPS / CMPLTPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmplt_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpltps(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is less than or
+///    equal to the corresponding value in the second operand and returns the
+///    result of the comparison in the low-order bits of a vector of
+///    [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLESS / CMPLESS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmple_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpless(__a, __b);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are less than or equal to those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLEPS / CMPLEPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmple_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpleps(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is greater than
+///    the corresponding value in the second operand and returns the result of
+///    the comparison in the low-order bits of a vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLTSS / CMPLTSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpgt_ss(__m128 __a, __m128 __b)
 {
@@ -222,12 +626,43 @@ _mm_cmpgt_ss(__m128 __a, __m128 __b)
                                          4, 1, 2, 3);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are greater than those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLTPS / CMPLTPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpgt_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpltps(__b, __a);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is greater than
+///    or equal to the corresponding value in the second operand and returns
+///    the result of the comparison in the low-order bits of a vector of
+///    [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLESS / CMPLESS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpge_ss(__m128 __a, __m128 __b)
 {
@@ -236,48 +671,168 @@ _mm_cmpge_ss(__m128 __a, __m128 __b)
                                          4, 1, 2, 3);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are greater than or equal to those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPLEPS / CMPLEPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpge_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpleps(__b, __a);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands for inequality and returns the result of the comparison in the
+///    low-order bits of a vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNEQSS / CMPNEQSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpneq_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpneqss(__a, __b);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] for inequality.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNEQPS / CMPNEQPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpneq_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpneqps(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is not less than
+///    the corresponding value in the second operand and returns the result of
+///    the comparison in the low-order bits of a vector of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLTSS / CMPNLTSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpnlt_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpnltss(__a, __b);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are not less than those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLTPS / CMPNLTPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpnlt_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpnltps(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is not less than
+///    or equal to the corresponding value in the second operand and returns
+///    the result of the comparison in the low-order bits of a vector of
+///    [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLESS / CMPNLESS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpnle_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpnless(__a, __b);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are not less than or equal to those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLEPS / CMPNLEPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpnle_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpnleps(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is not greater
+///    than the corresponding value in the second operand and returns the
+///    result of the comparison in the low-order bits of a vector of
+///    [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLTSS / CMPNLTSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpngt_ss(__m128 __a, __m128 __b)
 {
@@ -286,12 +841,43 @@ _mm_cmpngt_ss(__m128 __a, __m128 __b)
                                          4, 1, 2, 3);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are not greater than those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLTPS / CMPNLTPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpngt_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpnltps(__b, __a);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is not greater
+///    than or equal to the corresponding value in the second operand and
+///    returns the result of the comparison in the low-order bits of a vector
+///    of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLESS / CMPNLESS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpnge_ss(__m128 __a, __m128 __b)
 {
@@ -300,114 +886,393 @@ _mm_cmpnge_ss(__m128 __a, __m128 __b)
                                          4, 1, 2, 3);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are not greater than or equal to those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPNLEPS / CMPNLEPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpnge_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpnleps(__b, __a);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is ordered with
+///    respect to the corresponding value in the second operand and returns the
+///    result of the comparison in the low-order bits of a vector of
+///    [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPORDSS / CMPORDSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpord_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpordss(__a, __b);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are ordered with respect to those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPORDPS / CMPORDPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpord_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpordps(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the value in the first operand is unordered
+///    with respect to the corresponding value in the second operand and
+///    returns the result of the comparison in the low-order bits of a vector
+///    of [4 x float].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPUNORDSS / CMPUNORDSS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float] containing one of the operands. The lower
+///    32 bits of this operand are used in the comparison.
+/// \returns A 128-bit vector of [4 x float] containing the comparison results
+///    in the low-order bits.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpunord_ss(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpunordss(__a, __b);
 }
 
+/// \brief Compares each of the corresponding 32-bit float values of the
+///    128-bit vectors of [4 x float] to determine if the values in the first
+///    operand are unordered with respect to those in the second operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCMPUNORDPS / CMPUNORDPS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \param __b
+///    A 128-bit vector of [4 x float].
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cmpunord_ps(__m128 __a, __m128 __b)
 {
   return (__m128)__builtin_ia32_cmpunordps(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands for equality and returns the result of the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISS / COMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comieq_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_comieq(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the first operand is less than the second
+///    operand and returns the result of the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISS / COMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comilt_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_comilt(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the first operand is less than or equal to the
+///    second operand and returns the result of the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISS / COMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comile_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_comile(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the first operand is greater than the second
+///    operand and returns the result of the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISS / COMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comigt_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_comigt(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the first operand is greater than or equal to
+///    the second operand and returns the result of the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISS / COMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comige_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_comige(__a, __b);
 }
 
+/// \brief Compares two 32-bit float values in the low-order bits of both
+///    operands to determine if the first operand is not equal to the second
+///    operand and returns the result of the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCOMISS / COMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comineq_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_comineq(__a, __b);
 }
 
+/// \brief Performs an unordered comparison of two 32-bit float values using
+///    the low-order bits of both operands to determine equality and returns
+///    the result of the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISS / UCOMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomieq_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_ucomieq(__a, __b);
 }
 
+/// \brief Performs an unordered comparison of two 32-bit float values using
+///    the low-order bits of both operands to determine if the first operand is
+///    less than the second operand and returns the result of the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISS / UCOMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomilt_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_ucomilt(__a, __b);
 }
 
+/// \brief Performs an unordered comparison of two 32-bit float values using
+///    the low-order bits of both operands to determine if the first operand
+///    is less than or equal to the second operand and returns the result of
+///    the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISS / UCOMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomile_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_ucomile(__a, __b);
 }
 
+/// \brief Performs an unordered comparison of two 32-bit float values using
+///    the low-order bits of both operands to determine if the first operand
+///    is greater than the second operand and returns the result of the
+///    comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISS / UCOMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomigt_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_ucomigt(__a, __b);
 }
 
+/// \brief Performs an unordered comparison of two 32-bit float values using
+///    the low-order bits of both operands to determine if the first operand is
+///    greater than or equal to the second operand and returns the result of
+///    the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISS / UCOMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomige_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_ucomige(__a, __b);
 }
 
+/// \brief Performs an unordered comparison of two 32-bit float values using
+///    the low-order bits of both operands to determine inequality and returns
+///    the result of the comparison.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VUCOMISS / UCOMISS instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \param __b
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the comparison.
+/// \returns An integer containing the comparison results.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomineq_ss(__m128 __a, __m128 __b)
 {
   return __builtin_ia32_ucomineq(__a, __b);
 }
 
+/// \brief Converts a float value contained in the lower 32 bits of a vector of
+///    [4 x float] into a 32-bit integer.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCVTSS2SI / CVTSS2SI instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the conversion.
+/// \returns A 32-bit integer containing the converted value.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_cvtss_si32(__m128 __a)
 {
   return __builtin_ia32_cvtss2si(__a);
 }
 
+/// \brief Converts a float value contained in the lower 32 bits of a vector of
+///    [4 x float] into a 32-bit integer.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCVTSS2SI / CVTSS2SI instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the conversion.
+/// \returns A 32-bit integer containing the converted value.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_cvt_ss2si(__m128 __a)
 {
@@ -416,6 +1281,17 @@ _mm_cvt_ss2si(__m128 __a)
 
 #ifdef __x86_64__
 
+/// \brief Converts a float value contained in the lower 32 bits of a vector of
+///    [4 x float] into a 64-bit integer.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCVTSS2SI / CVTSS2SI instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the conversion.
+/// \returns A 64-bit integer containing the converted value.
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm_cvtss_si64(__m128 __a)
 {
@@ -424,36 +1300,103 @@ _mm_cvtss_si64(__m128 __a)
 
 #endif
 
+/// \brief Converts two low-order float values in a 128-bit vector of
+///    [4 x float] into a 64-bit vector of [2 x i32].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c CVTPS2PI instruction.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \returns A 64-bit integer vector containing the converted values.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_cvtps_pi32(__m128 __a)
 {
   return (__m64)__builtin_ia32_cvtps2pi(__a);
 }
 
+/// \brief Converts two low-order float values in a 128-bit vector of
+///    [4 x float] into a 64-bit vector of [2 x i32].
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c CVTPS2PI instruction.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \returns A 64-bit integer vector containing the converted values.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_cvt_ps2pi(__m128 __a)
 {
   return _mm_cvtps_pi32(__a);
 }
 
+/// \brief Converts a float value contained in the lower 32 bits of a vector of
+///    [4 x float] into a 32-bit integer, truncating the result when it is
+///    inexact.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCVTTSS2SI / CVTTSS2SI instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the conversion.
+/// \returns A 32-bit integer containing the converted value.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_cvttss_si32(__m128 __a)
 {
   return __a[0];
 }
 
+/// \brief Converts a float value contained in the lower 32 bits of a vector of
+///    [4 x float] into a 32-bit integer, truncating the result when it is
+///    inexact.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCVTTSS2SI / CVTTSS2SI instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the conversion.
+/// \returns A 32-bit integer containing the converted value.
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_cvtt_ss2si(__m128 __a)
 {
   return _mm_cvttss_si32(__a);
 }
 
+/// \brief Converts a float value contained in the lower 32 bits of a vector of
+///    [4 x float] into a 64-bit integer, truncating the result when it is
+///    inexact.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c VCVTTSS2SI / CVTTSS2SI instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float]. The lower 32 bits of this operand are
+///    used in the conversion.
+/// \returns A 64-bit integer containing the converted value.
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm_cvttss_si64(__m128 __a)
 {
   return __a[0];
 }
 
+/// \brief Converts two low-order float values in a 128-bit vector of
+///    [4 x float] into a 64-bit vector of [2 x i32], truncating the result
+///    when it is inexact.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c CVTTPS2PI / VTTPS2PI instructions.
+///
+/// \param __a
+///    A 128-bit vector of [4 x float].
+/// \returns A 64-bit integer vector containing the converted values.
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_cvttps_pi32(__m128 __a)
 {

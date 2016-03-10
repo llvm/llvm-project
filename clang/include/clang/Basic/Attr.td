@@ -361,6 +361,14 @@ class IgnoredAttr : Attr {
 // Attributes begin here
 //
 
+def AbiTag : Attr {
+  let Spellings = [GCC<"abi_tag">];
+  let Args = [VariadicStringArgument<"Tags">];
+  let Subjects = SubjectList<[Struct, Var, Function, Namespace], ErrorDiag,
+      "ExpectedStructClassVariableFunctionOrInlineNamespace">;
+  let Documentation = [AbiTagsDocs];
+}
+
 def AddressSpace : TypeAttr {
   let Spellings = [GNU<"address_space">];
   let Args = [IntArgument<"AddressSpace">];
@@ -1536,11 +1544,11 @@ def ObjCRequiresPropertyDefs : InheritableAttr {
 }
 
 def Unused : InheritableAttr {
-  let Spellings = [GCC<"unused">];
-  let Subjects = SubjectList<[Var, ObjCIvar, Type, Label, Field, ObjCMethod,
-                              FunctionLike], WarnDiag,
-                             "ExpectedVariableFunctionOrLabel">;
-  let Documentation = [Undocumented];
+  let Spellings = [CXX11<"", "maybe_unused", 201603>, GCC<"unused">];
+  let Subjects = SubjectList<[Var, ObjCIvar, Type, Enum, EnumConstant, Label,
+                              Field, ObjCMethod, FunctionLike], WarnDiag,
+                             "ExpectedForMaybeUnused">;
+  let Documentation = [WarnMaybeUnusedDocs];
 }
 
 def Used : InheritableAttr {

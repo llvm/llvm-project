@@ -749,6 +749,14 @@ private:
     return matchesDecl(Node.getMemberDecl(), Finder, Builder);
   }
 
+  /// \brief Extracts the \c LabelDecl a \c AddrLabelExpr refers to and returns
+  /// whether the inner matcher matches on it.
+  bool matchesSpecialized(const AddrLabelExpr &Node,
+                          ASTMatchFinder *Finder,
+                          BoundNodesTreeBuilder *Builder) const {
+    return matchesDecl(Node.getLabel(), Finder, Builder);
+  }
+
   /// \brief Returns whether the inner matcher \c Node. Returns false if \c Node
   /// is \c NULL.
   bool matchesDecl(const Decl *Node, ASTMatchFinder *Finder,
@@ -954,8 +962,8 @@ typedef TypeList<Decl, Stmt, NestedNameSpecifier, NestedNameSpecifierLoc,
 
 /// \brief All types that are supported by HasDeclarationMatcher above.
 typedef TypeList<CallExpr, CXXConstructExpr, DeclRefExpr, EnumType,
-                 InjectedClassNameType, LabelStmt, MemberExpr, QualType,
-                 RecordType, TagType, TemplateSpecializationType,
+                 InjectedClassNameType, LabelStmt, AddrLabelExpr, MemberExpr,
+                 QualType, RecordType, TagType, TemplateSpecializationType,
                  TemplateTypeParmType, TypedefType,
                  UnresolvedUsingType> HasDeclarationSupportedTypes;
 
@@ -1607,6 +1615,33 @@ template <>
 inline const Stmt *GetBodyMatcher<FunctionDecl>::get(const FunctionDecl &Node) {
   return Node.doesThisDeclarationHaveABody() ? Node.getBody() : nullptr;
 }
+
+template <typename Ty>
+struct GetSourceExpressionMatcher {
+  static const Expr *get(const Ty &Node) {
+    return Node.getSubExpr();
+  }
+};
+
+template <>
+inline const Expr *GetSourceExpressionMatcher<OpaqueValueExpr>::get(
+    const OpaqueValueExpr &Node) {
+  return Node.getSourceExpr();
+}
+
+template <typename Ty>
+struct CompoundStmtMatcher {
+  static const CompoundStmt *get(const Ty &Node) {
+    return &Node;
+  }
+};
+
+template <>
+inline const CompoundStmt *
+CompoundStmtMatcher<StmtExpr>::get(const StmtExpr &Node) {
+  return Node.getSubStmt();
+}
+
 
 } // end namespace internal
 } // end namespace ast_matchers

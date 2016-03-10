@@ -423,12 +423,8 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
     OS.indent(Indent + 2);
     OS << "export ";
     printModuleId(OS, UnresolvedExports[I].Id);
-    if (UnresolvedExports[I].Wildcard) {
-      if (UnresolvedExports[I].Id.empty())
-        OS << "*";
-      else
-        OS << ".*";
-    }
+    if (UnresolvedExports[I].Wildcard)
+      OS << (UnresolvedExports[I].Id.empty() ? "*" : ".*");
     OS << "\n";
   }
 

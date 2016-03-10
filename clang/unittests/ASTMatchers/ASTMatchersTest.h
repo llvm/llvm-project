@@ -126,6 +126,13 @@ testing::AssertionResult matchesC(const std::string &Code, const T &AMatcher) {
 }
 
 template <typename T>
+testing::AssertionResult matchesC99(const std::string &Code,
+                                    const T &AMatcher) {
+  return matchesConditionally(Code, AMatcher, true, "-std=c99",
+                              FileContentMappings(), "input.c");
+}
+
+template <typename T>
 testing::AssertionResult notMatchesC(const std::string &Code,
                                      const T &AMatcher) {
   return matchesConditionally(Code, AMatcher, false, "", FileContentMappings(),

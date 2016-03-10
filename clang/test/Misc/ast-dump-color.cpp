@@ -34,7 +34,7 @@ struct Invalid {
 //CHECK: {{^}}[[Blue]]|-[[RESET]][[GREEN]]TypedefDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]<invalid sloc>[[RESET]]> [[Yellow]]<invalid sloc>[[RESET]] implicit[[CYAN]] __uint128_t[[RESET]] [[Green]]'unsigned __int128'[[RESET]]{{$}}
 //CHECK: {{^}}[[Blue]]|-[[RESET]][[GREEN]]TypedefDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]<invalid sloc>[[RESET]]> [[Yellow]]<invalid sloc>[[RESET]] implicit[[CYAN]] __builtin_va_list[[RESET]] [[Green]]'struct __va_list_tag [1]'[[RESET]]{{$}}
 //CHECK: {{^}}[[Blue]]|-[[RESET]][[GREEN]]VarDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]{{.*}}ast-dump-color.cpp:6:1[[RESET]], [[Yellow]]col:5[[RESET]]> [[Yellow]]col:5[[RESET]][[CYAN]] Test[[RESET]] [[Green]]'int'[[RESET]]
-//CHECK: {{^}}[[Blue]]| |-[[RESET]][[BLUE:.\[0;1;34m]]UnusedAttr[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:25[[RESET]]>{{$}}
+//CHECK: {{^}}[[Blue]]| |-[[RESET]][[BLUE:.\[0;1;34m]]UnusedAttr[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:25[[RESET]]> unused{{$}}
 //CHECK: {{^}}[[Blue]]| `-[[RESET]][[Blue]]FullComment[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:4:4[[RESET]], [[Yellow]]line:5:8[[RESET]]>{{$}}
 //CHECK: {{^}}[[Blue]]|   `-[[RESET]][[Blue]]ParagraphComment[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:4:4[[RESET]], [[Yellow]]line:5:8[[RESET]]>{{$}}
 //CHECK: {{^}}[[Blue]]|     |-[[RESET]][[Blue]]TextComment[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:4:4[[RESET]]> Text=" "{{$}}

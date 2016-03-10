@@ -1827,6 +1827,28 @@ static void handleUsedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                       Attr.getAttributeSpellingListIndex()));
 }
 
+static void handleUnusedAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  bool IsCXX1zAttr = Attr.isCXX11Attribute() && !Attr.getScopeName();
+
+  if (IsCXX1zAttr && isa<VarDecl>(D)) {
+    // The C++1z spelling of this attribute cannot be applied to a static data
+    // member per [dcl.attr.unused]p2.
+    if (cast<VarDecl>(D)->isStaticDataMember()) {
+      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << Attr.getName() << ExpectedForMaybeUnused;
+      return;
+    }
+  }
+
+  // If this is spelled as the standard C++1z attribute, but not in C++1z, warn
+  // about using it as an extension.
+  if (!S.getLangOpts().CPlusPlus1z && IsCXX1zAttr)
+    S.Diag(Attr.getLoc(), diag::ext_cxx1z_attr) << Attr.getName();
+
+  D->addAttr(::new (S.Context) UnusedAttr(
+      Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+}
+
 static void handleConstructorAttr(Sema &S, Decl *D, const AttributeList &Attr) {
   uint32_t priority = ConstructorAttr::DefaultPriority;
   if (Attr.getNumArgs() &&
@@ -4972,6 +4994,42 @@ static void handleDeclspecThreadAttr(Sema &S, Decl *D,
       Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
 }
 
+static void handleAbiTagAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  SmallVector<StringRef, 4> Tags;
+  for (unsigned I = 0, E = Attr.getNumArgs(); I != E; ++I) {
+    StringRef Tag;
+    if (!S.checkStringLiteralArgumentAttr(Attr, I, Tag))
+      return;
+    Tags.push_back(Tag);
+  }
+
+  if (const auto *NS = dyn_cast<NamespaceDecl>(D)) {
+    if (!NS->isInline()) {
+      S.Diag(Attr.getLoc(), diag::warn_attr_abi_tag_namespace) << 0;
+      return;
+    }
+    if (NS->isAnonymousNamespace()) {
+      S.Diag(Attr.getLoc(), diag::warn_attr_abi_tag_namespace) << 1;
+      return;
+    }
+    if (Attr.getNumArgs() == 0)
+      Tags.push_back(NS->getName());
+  } else if (!checkAttributeAtLeastNumArgs(S, Attr, 1))
+    return;
+
+  // Store tags sorted and without duplicates.
+  std::sort(Tags.begin(), Tags.end());
+  Tags.erase(std::unique(Tags.begin(), Tags.end()), Tags.end());
+
+  D->addAttr(::new (S.Context)
+             AbiTagAttr(Attr.getRange(), S.Context, Tags.data(), Tags.size(),
+                        Attr.getAttributeSpellingListIndex()));
+
+  // FIXME: remove this warning as soon as mangled part is ready.
+  S.Diag(Attr.getRange().getBegin(), diag::warn_attribute_ignored)
+        << Attr.getName();
+}
+
 static void handleARMInterruptAttr(Sema &S, Decl *D,
                                    const AttributeList &Attr) {
   // Check the attribute arguments.
@@ -5878,7 +5936,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSimpleAttribute<ObjCRequiresPropertyDefsAttr>(S, D, Attr);
     break;
   case AttributeList::AT_Unused:
-    handleSimpleAttribute<UnusedAttr>(S, D, Attr);
+    handleUnusedAttr(S, D, Attr);
     break;
   case AttributeList::AT_ReturnsTwice:
     handleSimpleAttribute<ReturnsTwiceAttr>(S, D, Attr);
@@ -6005,6 +6063,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_Thread:
     handleDeclspecThreadAttr(S, D, Attr);
+    break;
+  case AttributeList::AT_AbiTag:
+    handleAbiTagAttr(S, D, Attr);
     break;
 
   // Thread safety attributes:

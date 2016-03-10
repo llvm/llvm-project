@@ -24,10 +24,11 @@
 using namespace clang;
 using namespace CodeGen;
 
-static RequiredArgs commonEmitCXXMemberOrOperatorCall(
-    CodeGenFunction &CGF, const CXXMethodDecl *MD, llvm::Value *Callee,
-    ReturnValueSlot ReturnValue, llvm::Value *This, llvm::Value *ImplicitParam,
-    QualType ImplicitParamTy, const CallExpr *CE, CallArgList &Args) {
+static RequiredArgs
+commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
+                                  llvm::Value *This, llvm::Value *ImplicitParam,
+                                  QualType ImplicitParamTy, const CallExpr *CE,
+                                  CallArgList &Args) {
   assert(CE == nullptr || isa<CXXMemberCallExpr>(CE) ||
          isa<CXXOperatorCallExpr>(CE));
   assert(MD->isInstance() &&
@@ -76,21 +77,20 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
   CallArgList Args;
   RequiredArgs required = commonEmitCXXMemberOrOperatorCall(
-      *this, MD, Callee, ReturnValue, This, ImplicitParam, ImplicitParamTy, CE,
-      Args);
+      *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args);
   return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required),
                   Callee, ReturnValue, Args, MD);
 }
 
-RValue CodeGenFunction::EmitCXXStructorCall(
-    const CXXMethodDecl *MD, llvm::Value *Callee, ReturnValueSlot ReturnValue,
-    llvm::Value *This, llvm::Value *ImplicitParam, QualType ImplicitParamTy,
-    const CallExpr *CE, StructorType Type) {
+RValue CodeGenFunction::EmitCXXDestructorCall(
+    const CXXDestructorDecl *DD, llvm::Value *Callee, llvm::Value *This,
+    llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *CE,
+    StructorType Type) {
   CallArgList Args;
-  commonEmitCXXMemberOrOperatorCall(*this, MD, Callee, ReturnValue, This,
-                                    ImplicitParam, ImplicitParamTy, CE, Args);
-  return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(MD, Type),
-                  Callee, ReturnValue, Args, MD);
+  commonEmitCXXMemberOrOperatorCall(*this, DD, This, ImplicitParam,
+                                    ImplicitParamTy, CE, Args);
+  return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(DD, Type),
+                  Callee, ReturnValueSlot(), Args, DD);
 }
 
 static CXXRecordDecl *getCXXRecord(const Expr *E) {
