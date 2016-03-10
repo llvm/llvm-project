@@ -291,7 +291,6 @@ const internal::VariadicDynCastAllOfMatcher<Decl, NamedDecl> namedDecl;
 /// \endcode
 /// labelDecl()
 ///   matches 'FOO:'
-/// \endcode
 const internal::VariadicDynCastAllOfMatcher<Decl, LabelDecl> labelDecl;
 
 /// \brief Matches a declaration of a namespace.
