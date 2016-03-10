@@ -3,7 +3,7 @@
 
 %struct.interrupt_frame = type { i32, i32, i32, i32, i32 }
 
-@llvm.used = appending global [3 x i8*] [i8* bitcast (void (%struct.interrupt_frame*)* @test_isr_no_ecode to i8*), i8* bitcast (void (%struct.interrupt_frame*, i32)* @test_isr_ecode to i8*), i8* bitcast (void (%struct.interrupt_frame*, i32)* @test_isr_clobbers to i8*)], section "llvm.metadata"
+@llvm.used = appending global [4 x i8*] [i8* bitcast (void (%struct.interrupt_frame*)* @test_isr_no_ecode to i8*), i8* bitcast (void (%struct.interrupt_frame*, i32)* @test_isr_ecode to i8*), i8* bitcast (void (%struct.interrupt_frame*, i32)* @test_isr_clobbers to i8*), i8* bitcast (void (%struct.interrupt_frame*)* @test_isr_x87 to i8*)], section "llvm.metadata"
 
 ; Spills eax, putting original esp at +4.
 ; No stack adjustment if declared with no error code
@@ -77,3 +77,19 @@ define x86_intrcc void @test_isr_clobbers(%struct.interrupt_frame* %frame, i32 %
   ret void
 }
 
+@f80 = common global x86_fp80 0xK00000000000000000000, align 4
+
+; Test that the presence of x87 does not crash the FP stackifier
+define x86_intrcc void @test_isr_x87(%struct.interrupt_frame* %frame) {
+  ; CHECK-LABEL: test_isr_x87
+  ; CHECK-DAG: fldt f80
+  ; CHECK-DAG: fld1
+  ; CHECK: faddp
+  ; CHECK-NEXT: fstpt f80
+  ; CHECK-NEXT: iretl
+entry:
+  %ld = load x86_fp80, x86_fp80* @f80, align 4
+  %add = fadd x86_fp80 %ld, 0xK3FFF8000000000000000
+  store x86_fp80 %add, x86_fp80* @f80, align 4
+  ret void
+}

@@ -236,7 +236,7 @@ void SIRegisterInfo::buildScratchLoadStore(MachineBasicBlock::iterator MI,
       static_cast<const SIInstrInfo *>(MF->getSubtarget().getInstrInfo());
   LLVMContext &Ctx = MF->getFunction()->getContext();
   DebugLoc DL = MI->getDebugLoc();
-  bool IsLoad = TII->get(LoadStoreOp).mayLoad();
+  bool IsStore = TII->get(LoadStoreOp).mayStore();
 
   bool RanOutOfSGPRs = false;
   bool Scavenged = false;
@@ -272,14 +272,14 @@ void SIRegisterInfo::buildScratchLoadStore(MachineBasicBlock::iterator MI,
       SOffsetRegState |= RegState::Kill;
 
     BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
-      .addReg(SubReg, getDefRegState(IsLoad))
+      .addReg(SubReg, getDefRegState(!IsStore))
       .addReg(ScratchRsrcReg)
       .addReg(SOffset, SOffsetRegState)
       .addImm(Offset)
       .addImm(0) // glc
       .addImm(0) // slc
       .addImm(0) // tfe
-      .addReg(Value, RegState::Implicit | getDefRegState(IsLoad))
+      .addReg(Value, RegState::Implicit | getDefRegState(!IsStore))
       .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
   }
 }

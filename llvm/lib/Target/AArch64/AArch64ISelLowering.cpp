@@ -2455,6 +2455,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
     return CC_AArch64_GHC;
   case CallingConv::C:
   case CallingConv::Fast:
+  case CallingConv::PreserveMost:
     if (!Subtarget->isTargetDarwin())
       return CC_AArch64_AAPCS;
     return IsVarArg ? CC_AArch64_DarwinPCS_VarArg : CC_AArch64_DarwinPCS;
@@ -2942,7 +2943,8 @@ bool AArch64TargetLowering::DoesCalleeRestoreStack(CallingConv::ID CallCC,
 }
 
 bool AArch64TargetLowering::IsTailCallConvention(CallingConv::ID CallCC) const {
-  return CallCC == CallingConv::Fast;
+  return CallCC == CallingConv::Fast ||
+         CallCC == CallingConv::PreserveMost;
 }
 
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,

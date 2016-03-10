@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -passes=print-cg %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -passes=print-lcg %s 2>&1 | FileCheck %s
 ;
 ; Basic validation of the call graph analysis used in the new pass manager.
 

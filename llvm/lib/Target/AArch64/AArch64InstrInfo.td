@@ -688,10 +688,11 @@ def : InstAlias<"negs $dst, $src$shift",
 // Unsigned/Signed divide
 defm UDIV : Div<0, "udiv", udiv>;
 defm SDIV : Div<1, "sdiv", sdiv>;
-let isCodeGenOnly = 1 in {
-defm UDIV_Int : Div<0, "udiv", int_aarch64_udiv>;
-defm SDIV_Int : Div<1, "sdiv", int_aarch64_sdiv>;
-}
+
+def : Pat<(int_aarch64_udiv GPR32:$Rn, GPR32:$Rm), (UDIVWr $Rn, $Rm)>;
+def : Pat<(int_aarch64_udiv GPR64:$Rn, GPR64:$Rm), (UDIVXr $Rn, $Rm)>;
+def : Pat<(int_aarch64_sdiv GPR32:$Rn, GPR32:$Rm), (SDIVWr $Rn, $Rm)>;
+def : Pat<(int_aarch64_sdiv GPR64:$Rn, GPR64:$Rm), (SDIVXr $Rn, $Rm)>;
 
 // Variable shift
 defm ASRV : Shift<0b10, "asr", sra>;
@@ -2497,12 +2498,31 @@ defm FCVTZS : FPToIntegerUnscaled<0b11, 0b000, "fcvtzs", fp_to_sint>;
 defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", fp_to_uint>;
 defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", fp_to_sint>;
 defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", fp_to_uint>;
-let isCodeGenOnly = 1 in {
-defm FCVTZS_Int : FPToIntegerUnscaled<0b11, 0b000, "fcvtzs", int_aarch64_neon_fcvtzs>;
-defm FCVTZU_Int : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", int_aarch64_neon_fcvtzu>;
-defm FCVTZS_Int : FPToIntegerScaled<0b11, 0b000, "fcvtzs", int_aarch64_neon_fcvtzs>;
-defm FCVTZU_Int : FPToIntegerScaled<0b11, 0b001, "fcvtzu", int_aarch64_neon_fcvtzu>;
+
+multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
+  def : Pat<(i32 (round f16:$Rn)), (!cast<Instruction>(INST # UWHr) $Rn)>;
+  def : Pat<(i64 (round f16:$Rn)), (!cast<Instruction>(INST # UXHr) $Rn)>;
+  def : Pat<(i32 (round f32:$Rn)), (!cast<Instruction>(INST # UWSr) $Rn)>;
+  def : Pat<(i64 (round f32:$Rn)), (!cast<Instruction>(INST # UXSr) $Rn)>;
+  def : Pat<(i32 (round f64:$Rn)), (!cast<Instruction>(INST # UWDr) $Rn)>;
+  def : Pat<(i64 (round f64:$Rn)), (!cast<Instruction>(INST # UXDr) $Rn)>;
+
+  def : Pat<(i32 (round (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
+            (!cast<Instruction>(INST # SWHri) $Rn, $scale)>;
+  def : Pat<(i64 (round (fmul f16:$Rn, fixedpoint_f16_i64:$scale))),
+            (!cast<Instruction>(INST # SXHri) $Rn, $scale)>;
+  def : Pat<(i32 (round (fmul f32:$Rn, fixedpoint_f32_i32:$scale))),
+            (!cast<Instruction>(INST # SWSri) $Rn, $scale)>;
+  def : Pat<(i64 (round (fmul f32:$Rn, fixedpoint_f32_i64:$scale))),
+            (!cast<Instruction>(INST # SXSri) $Rn, $scale)>;
+  def : Pat<(i32 (round (fmul f64:$Rn, fixedpoint_f64_i32:$scale))),
+            (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
+  def : Pat<(i64 (round (fmul f64:$Rn, fixedpoint_f64_i64:$scale))),
+            (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
 }
+
+defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzs, "FCVTZS">;
+defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
 
 multiclass FPToIntegerPats<SDNode to_int, SDNode round, string INST> {
   def : Pat<(i32 (to_int (round f32:$Rn))),
@@ -2798,12 +2818,19 @@ defm FCVTXN : SIMDFPInexactCvtTwoVector<1, 0, 0b10110, "fcvtxn",
                                         int_aarch64_neon_fcvtxn>;
 defm FCVTZS : SIMDTwoVectorFPToInt<0, 1, 0b11011, "fcvtzs", fp_to_sint>;
 defm FCVTZU : SIMDTwoVectorFPToInt<1, 1, 0b11011, "fcvtzu", fp_to_uint>;
-let isCodeGenOnly = 1 in {
-defm FCVTZS_Int : SIMDTwoVectorFPToInt<0, 1, 0b11011, "fcvtzs",
-                                       int_aarch64_neon_fcvtzs>;
-defm FCVTZU_Int : SIMDTwoVectorFPToInt<1, 1, 0b11011, "fcvtzu",
-                                       int_aarch64_neon_fcvtzu>;
-}
+
+def : Pat<(v4i16 (int_aarch64_neon_fcvtzs v4f16:$Rn)), (FCVTZSv4f16 $Rn)>;
+def : Pat<(v8i16 (int_aarch64_neon_fcvtzs v8f16:$Rn)), (FCVTZSv8f16 $Rn)>;
+def : Pat<(v2i32 (int_aarch64_neon_fcvtzs v2f32:$Rn)), (FCVTZSv2f32 $Rn)>;
+def : Pat<(v4i32 (int_aarch64_neon_fcvtzs v4f32:$Rn)), (FCVTZSv4f32 $Rn)>;
+def : Pat<(v2i64 (int_aarch64_neon_fcvtzs v2f64:$Rn)), (FCVTZSv2f64 $Rn)>;
+
+def : Pat<(v4i16 (int_aarch64_neon_fcvtzu v4f16:$Rn)), (FCVTZUv4f16 $Rn)>;
+def : Pat<(v8i16 (int_aarch64_neon_fcvtzu v8f16:$Rn)), (FCVTZUv8f16 $Rn)>;
+def : Pat<(v2i32 (int_aarch64_neon_fcvtzu v2f32:$Rn)), (FCVTZUv2f32 $Rn)>;
+def : Pat<(v4i32 (int_aarch64_neon_fcvtzu v4f32:$Rn)), (FCVTZUv4f32 $Rn)>;
+def : Pat<(v2i64 (int_aarch64_neon_fcvtzu v2f64:$Rn)), (FCVTZUv2f64 $Rn)>;
+
 defm FNEG   : SIMDTwoVectorFP<1, 1, 0b01111, "fneg", fneg>;
 defm FRECPE : SIMDTwoVectorFP<0, 1, 0b11101, "frecpe", int_aarch64_neon_frecpe>;
 defm FRINTA : SIMDTwoVectorFP<1, 0, 0b11000, "frinta", frnd>;

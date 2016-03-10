@@ -1,4 +1,4 @@
-; RUN: opt -S -disable-output -passes=print-cg < %s 2>&1 | FileCheck %s
+; RUN: opt -S -disable-output -passes=print-lcg < %s 2>&1 | FileCheck %s
 
 declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)

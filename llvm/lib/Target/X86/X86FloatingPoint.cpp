@@ -257,6 +257,7 @@ namespace {
     bool processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB);
 
     void handleCall(MachineBasicBlock::iterator &I);
+    void handleReturn(MachineBasicBlock::iterator &I);
     void handleZeroArgFP(MachineBasicBlock::iterator &I);
     void handleOneArgFP(MachineBasicBlock::iterator &I);
     void handleOneArgFPRW(MachineBasicBlock::iterator &I);
@@ -943,6 +944,93 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
     pushReg(N - I - 1);
 }
 
+/// If RET has an FP register use operand, pass the first one in ST(0) and
+/// the second one in ST(1).
+void FPS::handleReturn(MachineBasicBlock::iterator &I) {
+  MachineInstr *MI = I;
+
+  // Find the register operands.
+  unsigned FirstFPRegOp = ~0U, SecondFPRegOp = ~0U;
+  unsigned LiveMask = 0;
+
+  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
+    MachineOperand &Op = MI->getOperand(i);
+    if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
+      continue;
+    // FP Register uses must be kills unless there are two uses of the same
+    // register, in which case only one will be a kill.
+    assert(Op.isUse() &&
+           (Op.isKill() ||                        // Marked kill.
+            getFPReg(Op) == FirstFPRegOp ||       // Second instance.
+            MI->killsRegister(Op.getReg())) &&    // Later use is marked kill.
+           "Ret only defs operands, and values aren't live beyond it");
+
+    if (FirstFPRegOp == ~0U)
+      FirstFPRegOp = getFPReg(Op);
+    else {
+      assert(SecondFPRegOp == ~0U && "More than two fp operands!");
+      SecondFPRegOp = getFPReg(Op);
+    }
+    LiveMask |= (1 << getFPReg(Op));
+
+    // Remove the operand so that later passes don't see it.
+    MI->RemoveOperand(i);
+    --i;
+    --e;
+  }
+
+  // We may have been carrying spurious live-ins, so make sure only the
+  // returned registers are left live.
+  adjustLiveRegs(LiveMask, MI);
+  if (!LiveMask) return;  // Quick check to see if any are possible.
+
+  // There are only four possibilities here:
+  // 1) we are returning a single FP value.  In this case, it has to be in
+  //    ST(0) already, so just declare success by removing the value from the
+  //    FP Stack.
+  if (SecondFPRegOp == ~0U) {
+    // Assert that the top of stack contains the right FP register.
+    assert(StackTop == 1 && FirstFPRegOp == getStackEntry(0) &&
+           "Top of stack not the right register for RET!");
+
+    // Ok, everything is good, mark the value as not being on the stack
+    // anymore so that our assertion about the stack being empty at end of
+    // block doesn't fire.
+    StackTop = 0;
+    return;
+  }
+
+  // Otherwise, we are returning two values:
+  // 2) If returning the same value for both, we only have one thing in the FP
+  //    stack.  Consider:  RET FP1, FP1
+  if (StackTop == 1) {
+    assert(FirstFPRegOp == SecondFPRegOp && FirstFPRegOp == getStackEntry(0)&&
+           "Stack misconfiguration for RET!");
+
+    // Duplicate the TOS so that we return it twice.  Just pick some other FPx
+    // register to hold it.
+    unsigned NewReg = ScratchFPReg;
+    duplicateToTop(FirstFPRegOp, NewReg, MI);
+    FirstFPRegOp = NewReg;
+  }
+
+  /// Okay we know we have two different FPx operands now:
+  assert(StackTop == 2 && "Must have two values live!");
+
+  /// 3) If SecondFPRegOp is currently in ST(0) and FirstFPRegOp is currently
+  ///    in ST(1).  In this case, emit an fxch.
+  if (getStackEntry(0) == SecondFPRegOp) {
+    assert(getStackEntry(1) == FirstFPRegOp && "Unknown regs live");
+    moveToTop(FirstFPRegOp, MI);
+  }
+
+  /// 4) Finally, FirstFPRegOp must be in ST(0) and SecondFPRegOp must be in
+  /// ST(1).  Just remove both from our understanding of the stack and return.
+  assert(getStackEntry(0) == FirstFPRegOp && "Unknown regs live");
+  assert(getStackEntry(1) == SecondFPRegOp && "Unknown regs live");
+  StackTop = 0;
+}
+
 /// handleZeroArgFP - ST(0) = fld0    ST(0) = flds <mem>
 ///
 void FPS::handleZeroArgFP(MachineBasicBlock::iterator &I) {
@@ -1294,6 +1382,11 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     return;
   }
 
+  if (MI->isReturn()) {
+    handleReturn(Inst);
+    return;
+  }
+
   switch (MI->getOpcode()) {
   default: llvm_unreachable("Unknown SpecialFP instruction!");
   case TargetOpcode::COPY: {
@@ -1508,96 +1601,6 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     // Don't delete the inline asm!
     return;
   }
-
-  case X86::RET:
-  case X86::RETQ:
-  case X86::RETL:
-  case X86::RETIL:
-  case X86::RETIQ:
-    // If RET has an FP register use operand, pass the first one in ST(0) and
-    // the second one in ST(1).
-
-    // Find the register operands.
-    unsigned FirstFPRegOp = ~0U, SecondFPRegOp = ~0U;
-    unsigned LiveMask = 0;
-
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &Op = MI->getOperand(i);
-      if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
-        continue;
-      // FP Register uses must be kills unless there are two uses of the same
-      // register, in which case only one will be a kill.
-      assert(Op.isUse() &&
-             (Op.isKill() ||                        // Marked kill.
-              getFPReg(Op) == FirstFPRegOp ||       // Second instance.
-              MI->killsRegister(Op.getReg())) &&    // Later use is marked kill.
-             "Ret only defs operands, and values aren't live beyond it");
-
-      if (FirstFPRegOp == ~0U)
-        FirstFPRegOp = getFPReg(Op);
-      else {
-        assert(SecondFPRegOp == ~0U && "More than two fp operands!");
-        SecondFPRegOp = getFPReg(Op);
-      }
-      LiveMask |= (1 << getFPReg(Op));
-
-      // Remove the operand so that later passes don't see it.
-      MI->RemoveOperand(i);
-      --i;
-      --e;
-    }
-
-    // We may have been carrying spurious live-ins, so make sure only the
-    // returned registers are left live.
-    adjustLiveRegs(LiveMask, MI);
-    if (!LiveMask) return;  // Quick check to see if any are possible.
-
-    // There are only four possibilities here:
-    // 1) we are returning a single FP value.  In this case, it has to be in
-    //    ST(0) already, so just declare success by removing the value from the
-    //    FP Stack.
-    if (SecondFPRegOp == ~0U) {
-      // Assert that the top of stack contains the right FP register.
-      assert(StackTop == 1 && FirstFPRegOp == getStackEntry(0) &&
-             "Top of stack not the right register for RET!");
-
-      // Ok, everything is good, mark the value as not being on the stack
-      // anymore so that our assertion about the stack being empty at end of
-      // block doesn't fire.
-      StackTop = 0;
-      return;
-    }
-
-    // Otherwise, we are returning two values:
-    // 2) If returning the same value for both, we only have one thing in the FP
-    //    stack.  Consider:  RET FP1, FP1
-    if (StackTop == 1) {
-      assert(FirstFPRegOp == SecondFPRegOp && FirstFPRegOp == getStackEntry(0)&&
-             "Stack misconfiguration for RET!");
-
-      // Duplicate the TOS so that we return it twice.  Just pick some other FPx
-      // register to hold it.
-      unsigned NewReg = ScratchFPReg;
-      duplicateToTop(FirstFPRegOp, NewReg, MI);
-      FirstFPRegOp = NewReg;
-    }
-
-    /// Okay we know we have two different FPx operands now:
-    assert(StackTop == 2 && "Must have two values live!");
-
-    /// 3) If SecondFPRegOp is currently in ST(0) and FirstFPRegOp is currently
-    ///    in ST(1).  In this case, emit an fxch.
-    if (getStackEntry(0) == SecondFPRegOp) {
-      assert(getStackEntry(1) == FirstFPRegOp && "Unknown regs live");
-      moveToTop(FirstFPRegOp, MI);
-    }
-
-    /// 4) Finally, FirstFPRegOp must be in ST(0) and SecondFPRegOp must be in
-    /// ST(1).  Just remove both from our understanding of the stack and return.
-    assert(getStackEntry(0) == FirstFPRegOp && "Unknown regs live");
-    assert(getStackEntry(1) == SecondFPRegOp && "Unknown regs live");
-    StackTop = 0;
-    return;
   }
 
   Inst = MBB->erase(Inst);  // Remove the pseudo instruction

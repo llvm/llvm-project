@@ -209,6 +209,8 @@ ARM_CPU_NAME("cortex-r5", AK_ARMV7R, FK_VFPV3_D16, false,
              (AEK_MP | AEK_HWDIVARM))
 ARM_CPU_NAME("cortex-r7", AK_ARMV7R, FK_VFPV3_D16_FP16, false,
              (AEK_MP | AEK_HWDIVARM))
+ARM_CPU_NAME("cortex-r8", AK_ARMV7R, FK_VFPV3_D16_FP16, false,
+             (AEK_MP | AEK_HWDIVARM))
 ARM_CPU_NAME("sc300", AK_ARMV7M, FK_NONE, false, AEK_NONE)
 ARM_CPU_NAME("cortex-m3", AK_ARMV7M, FK_NONE, true, AEK_NONE)
 ARM_CPU_NAME("cortex-m4", AK_ARMV7EM, FK_FPV4_SP_D16, true, AEK_NONE)

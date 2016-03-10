@@ -1651,6 +1651,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::INSERT_SUBVECTOR,   MVT::v64i8, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v32i16, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v64i8, Custom);
+    setOperationAction(ISD::SCALAR_TO_VECTOR,   MVT::v32i16, Custom);
+    setOperationAction(ISD::SCALAR_TO_VECTOR,   MVT::v64i8, Custom);
     setOperationAction(ISD::SELECT,             MVT::v32i1, Custom);
     setOperationAction(ISD::SELECT,             MVT::v64i1, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v32i8, Custom);
@@ -5264,8 +5266,7 @@ static bool setTargetShuffleZeroElements(SDValue N,
 /// remaining input indices in case we now have a unary shuffle and adjust the
 /// Op0/Op1 inputs accordingly.
 /// Returns true if the target shuffle mask was decoded.
-static bool resolveTargetShuffleInputs(SDValue Op, bool &IsUnary, SDValue &Op0,
-                                       SDValue &Op1,
+static bool resolveTargetShuffleInputs(SDValue Op, SDValue &Op0, SDValue &Op1,
                                        SmallVectorImpl<int> &Mask) {
   SmallVector<SDValue, 2> Ops;
   if (!setTargetShuffleZeroElements(Op, Mask, Ops))
@@ -5280,10 +5281,6 @@ static bool resolveTargetShuffleInputs(SDValue Op, bool &IsUnary, SDValue &Op0,
 
   Op0 = Op0InUse ? Ops[0] : SDValue();
   Op1 = Op1InUse ? Ops[1] : SDValue();
-  IsUnary = !(Op0InUse && Op1InUse);
-
-  if (!IsUnary)
-    return true;
 
   // We're only using Op1 - commute the mask and inputs.
   if (!Op0InUse && Op1InUse) {
@@ -13951,16 +13948,21 @@ static  SDValue LowerZERO_EXTEND_AVX512(SDValue Op,
     return DAG.getNode(X86ISD::VZEXT, DL, VT, In);
 
   assert(InVT.getVectorElementType() == MVT::i1);
-  MVT ExtVT = NumElts == 8 ? MVT::v8i64 : MVT::v16i32;
+
+  // Extend VT if the target is 256 or 128bit vector and VLX is not supported.
+  MVT ExtVT = VT;
+  if (!VT.is512BitVector() && !Subtarget.hasVLX())
+    ExtVT = MVT::getVectorVT(MVT::getIntegerVT(512/NumElts), NumElts);
+
   SDValue One =
    DAG.getConstant(APInt(ExtVT.getScalarSizeInBits(), 1), DL, ExtVT);
   SDValue Zero =
    DAG.getConstant(APInt::getNullValue(ExtVT.getScalarSizeInBits()), DL, ExtVT);
 
-  SDValue V = DAG.getNode(ISD::VSELECT, DL, ExtVT, In, One, Zero);
-  if (VT.is512BitVector())
-    return V;
-  return DAG.getNode(X86ISD::VTRUNC, DL, VT, V);
+  SDValue SelectedVal = DAG.getNode(ISD::VSELECT, DL, ExtVT, In, One, Zero);
+  if (VT == ExtVT)
+    return SelectedVal;
+  return DAG.getNode(X86ISD::VTRUNC, DL, VT, SelectedVal);
 }
 
 static SDValue LowerANY_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
@@ -15050,16 +15052,15 @@ static SDValue LowerBoolVSETCC_AVX512(SDValue Op, SelectionDAG &DAG) {
   }
 }
 
-static SDValue LowerIntVSETCC_AVX512(SDValue Op, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget) {
+static SDValue LowerIntVSETCC_AVX512(SDValue Op, SelectionDAG &DAG) {
+
   SDValue Op0 = Op.getOperand(0);
   SDValue Op1 = Op.getOperand(1);
   SDValue CC = Op.getOperand(2);
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
 
-  assert(Op0.getSimpleValueType().getVectorElementType().getSizeInBits() >= 8 &&
-         Op.getSimpleValueType().getVectorElementType() == MVT::i1 &&
+  assert(VT.getVectorElementType() == MVT::i1 &&
          "Cannot set masked compare for this operation");
 
   ISD::CondCode SetCCOpcode = cast<CondCodeSDNode>(CC)->get();
@@ -15197,26 +15198,26 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && !Subtarget.hasInt256())
     return Lower256IntVSETCC(Op, DAG);
 
+  // Operands are boolean (vectors of i1)
   MVT OpVT = Op1.getSimpleValueType();
   if (OpVT.getVectorElementType() == MVT::i1)
     return LowerBoolVSETCC_AVX512(Op, DAG);
 
-  bool MaskResult = (VT.getVectorElementType() == MVT::i1);
-  if (Subtarget.hasAVX512()) {
-    if (Op1.getSimpleValueType().is512BitVector() ||
-        (Subtarget.hasBWI() && Subtarget.hasVLX()) ||
-        (MaskResult && OpVT.getVectorElementType().getSizeInBits() >= 32))
-      return LowerIntVSETCC_AVX512(Op, DAG, Subtarget);
-
+  // The result is boolean, but operands are int/float
+  if (VT.getVectorElementType() == MVT::i1) {
     // In AVX-512 architecture setcc returns mask with i1 elements,
     // But there is no compare instruction for i8 and i16 elements in KNL.
-    // We are not talking about 512-bit operands in this case, these
-    // types are illegal.
-    if (MaskResult &&
-        (OpVT.getVectorElementType().getSizeInBits() < 32 &&
-         OpVT.getVectorElementType().getSizeInBits() >= 8))
-      return DAG.getNode(ISD::TRUNCATE, dl, VT,
-                         DAG.getNode(ISD::SETCC, dl, OpVT, Op0, Op1, CC));
+    // In this case use SSE compare
+    bool UseAVX512Inst =
+      (OpVT.is512BitVector() ||
+       OpVT.getVectorElementType().getSizeInBits() >= 32 ||
+       (Subtarget.hasBWI() && Subtarget.hasVLX()));
+
+    if (UseAVX512Inst)
+      return LowerIntVSETCC_AVX512(Op, DAG);
+
+    return DAG.getNode(ISD::TRUNCATE, dl, VT,
+                        DAG.getNode(ISD::SETCC, dl, OpVT, Op0, Op1, CC));
   }
 
   // Lower using XOP integer comparisons.
@@ -23919,7 +23920,8 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
         if (Mask[i / MaskRatio] < 0)
           BlendMask |= 1u << i;
 
-      if (Root.getOpcode() != X86ISD::BLENDI ||
+      if (Depth != 1 || RootVT != ShuffleVT ||
+          Root.getOpcode() != X86ISD::BLENDI ||
           Root->getConstantOperandVal(2) != BlendMask) {
         SDValue Zero = getZeroVector(ShuffleVT, Subtarget, DAG, DL);
         Res = DAG.getBitcast(ShuffleVT, Input);
@@ -24034,14 +24036,9 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
          "Can only combine shuffles of the same vector register size.");
 
   // Extract target shuffle mask and resolve sentinels and inputs.
-  bool IsUnary;
   SDValue Input0, Input1;
   SmallVector<int, 16> OpMask;
-  if (!resolveTargetShuffleInputs(Op, IsUnary, Input0, Input1, OpMask))
-    return false;
-
-  // At the moment we can only combine target shuffle unary cases.
-  if (!IsUnary)
+  if (!resolveTargetShuffleInputs(Op, Input0, Input1, OpMask))
     return false;
 
   assert(VT.getVectorNumElements() == OpMask.size() &&
@@ -24101,8 +24098,24 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
                                                 Subtarget, DAG, SDLoc(Root)));
     return true;
   }
+
+  int MaskSize = Mask.size();
+  bool UseInput0 = std::any_of(Mask.begin(), Mask.end(),
+                  [MaskSize](int Idx) { return 0 <= Idx && Idx < MaskSize; });
+  bool UseInput1 = std::any_of(Mask.begin(), Mask.end(),
+                  [MaskSize](int Idx) { return MaskSize <= Idx; });
+
+  // At the moment we can only combine unary shuffle mask cases.
+  if (UseInput0 && UseInput1)
+    return false;
+  else if (UseInput1) {
+    std::swap(Input0, Input1);
+    ShuffleVectorSDNode::commuteMask(Mask);
+  }
+
   assert(Input0 && "Shuffle with no inputs detected");
 
+  // TODO - generalize this to support any variable mask shuffle.
   HasPSHUFB |= (Op.getOpcode() == X86ISD::PSHUFB);
 
   // See if we can recurse into Input0 (if it's a target shuffle).

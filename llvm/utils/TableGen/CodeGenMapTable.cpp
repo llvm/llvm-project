@@ -337,10 +337,20 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
     }
 
     if (MatchFound) {
-      if (MatchInstr) // Already had a match
+      if (MatchInstr) {
+        // Already had a match
         // Error if multiple matches are found for a column.
+        std::string KeyValueStr;
+        for (Init *Value : KeyValue) {
+          if (!KeyValueStr.empty())
+            KeyValueStr += ", ";
+          KeyValueStr += Value->getAsString();
+        }
+
         PrintFatalError("Multiple matches found for `" + KeyInstr->getName() +
-              "', for the relation `" + InstrMapDesc.getName());
+              "', for the relation `" + InstrMapDesc.getName() + "', row fields [" +
+              KeyValueStr + "], column `" + CurValueCol->getAsString() + "'");
+      }
       MatchInstr = CurInstr;
     }
   }

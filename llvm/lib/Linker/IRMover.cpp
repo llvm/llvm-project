@@ -1492,6 +1492,11 @@ static std::string mergeTriples(const Triple &SrcTriple,
 }
 
 bool IRLinker::run() {
+  // Ensure metadata materialized before value mapping.
+  if (shouldLinkMetadata() && SrcM->getMaterializer())
+    if (SrcM->getMaterializer()->materializeMetadata())
+      return true;
+
   // Inherit the target data from the source module if the destination module
   // doesn't have one already.
   if (DstM.getDataLayout().isDefault())
@@ -1559,13 +1564,9 @@ bool IRLinker::run() {
     // Even if just linking metadata we should link decls above in case
     // any are referenced by metadata. IRLinker::shouldLink ensures that
     // we don't actually link anything from source.
-    if (IsMetadataLinkingPostpass) {
-      // Ensure metadata materialized
-      if (SrcM->getMaterializer()->materializeMetadata())
-        return true;
+    if (IsMetadataLinkingPostpass)
       SrcM->getMaterializer()->saveMetadataList(MetadataToIDs,
                                                 /* OnlyTempMD = */ false);
-    }
 
     linkNamedMDNodes();
 
