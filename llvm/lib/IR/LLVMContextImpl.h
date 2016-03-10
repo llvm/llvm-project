@@ -1034,6 +1034,10 @@ public:
   /// clients which do use GC.
   DenseMap<const Function*, std::string> GCNames;
 
+  /// Flag to indicate if Value (other than GlobalValue) retains their name or
+  /// not.
+  bool DiscardValueNames = false;
+
   LLVMContextImpl(LLVMContext &C);
   ~LLVMContextImpl();
 

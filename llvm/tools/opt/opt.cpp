@@ -196,6 +196,11 @@ static cl::opt<bool>
              cl::desc("Run all passes twice, re-using the same pass manager."),
              cl::init(false), cl::Hidden);
 
+static cl::opt<bool> DiscardValueNames(
+    "discard-value-names",
+    cl::desc("Discard names from Value (other than GlobalValue)."),
+    cl::init(false), cl::Hidden);
+
 static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
   // Add the pass to the pass manager...
   PM.add(P);
@@ -344,6 +349,8 @@ int main(int argc, char **argv) {
   }
 
   SMDiagnostic Err;
+
+  Context.setDiscardValueNames(DiscardValueNames);
 
   // Load the input module...
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
