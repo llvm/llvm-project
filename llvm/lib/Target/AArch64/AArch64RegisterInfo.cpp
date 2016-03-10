@@ -54,6 +54,8 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction()->getAttributes().hasAttrSomewhere(
       Attribute::SwiftError))
     return CSR_AArch64_AAPCS_SwiftError_SaveList;
+  if (MF->getFunction()->getCallingConv() == CallingConv::PreserveMost)
+    return CSR_AArch64_RT_MostRegs_SaveList;
   else
     return CSR_AArch64_AAPCS_SaveList;
 }
@@ -72,6 +74,8 @@ AArch64RegisterInfo::getCalleeSavedRegsForLayout(
     return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR() ?
            CSR_AArch64_CXX_TLS_Darwin_PE_SaveList :
            CSR_AArch64_CXX_TLS_Darwin_SaveList;
+  if (MF->getFunction()->getCallingConv() == CallingConv::PreserveMost)
+    return CSR_AArch64_RT_MostRegs_SaveList;
   else
     return CSR_AArch64_AAPCS_SaveList;
 }
@@ -97,6 +101,8 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_AArch64_CXX_TLS_Darwin_RegMask;
   if (MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_AArch64_AAPCS_SwiftError_RegMask;
+  if (CC == CallingConv::PreserveMost)
+    return CSR_AArch64_RT_MostRegs_RegMask;
   else
     return CSR_AArch64_AAPCS_RegMask;
 }
