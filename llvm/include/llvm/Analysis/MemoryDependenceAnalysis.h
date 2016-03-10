@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
@@ -30,7 +31,7 @@ class FunctionPass;
 class Instruction;
 class CallSite;
 class AssumptionCache;
-class MemoryDependenceAnalysis;
+class MemoryDependenceResults;
 class PredIteratorCache;
 class DominatorTree;
 class PHITransAddr;
@@ -184,7 +185,7 @@ public:
   bool operator>(const MemDepResult &M) const { return Value > M.Value; }
 
 private:
-  friend class MemoryDependenceAnalysis;
+  friend class MemoryDependenceResults;
 
   /// Tests if this is a MemDepResult in its dirty/invalid. state.
   bool isDirty() const { return Value.is<Invalid>(); }
@@ -251,11 +252,8 @@ public:
   Value *getAddress() const { return Address; }
 };
 
-/// Determines, for a given memory operation, what preceding memory operations
-/// it depends on.
-///
-/// It builds on alias analysis information, and tries to provide a lazy,
-/// caching interface to a common kind of alias information query.
+/// Provides a lazy, caching interface for making common memory aliasing
+/// information queries, backed by LLVM's alias analysis passes.
 ///
 /// The dependency information returned is somewhat unusual, but is pragmatic.
 /// If queried about a store or call that might modify memory, the analysis
@@ -266,7 +264,7 @@ public:
 /// b) they load from *must-aliased* pointers.  Returning a dependence on
 /// must-alias'd pointers instead of all pointers interacts well with the
 /// internal caching mechanism.
-class MemoryDependenceAnalysis : public FunctionPass {
+class MemoryDependenceResults {
   // A map from instructions to their dependency.
   typedef DenseMap<Instruction *, MemDepResult> LocalDepMapType;
   LocalDepMapType LocalDeps;
@@ -340,25 +338,17 @@ private:
   ReverseDepMapType ReverseNonLocalDeps;
 
   /// Current AA implementation, just a cache.
-  AliasAnalysis *AA;
+  AliasAnalysis &AA;
+  AssumptionCache &AC;
+  const TargetLibraryInfo &TLI;
   DominatorTree *DT;
-  AssumptionCache *AC;
-  const TargetLibraryInfo *TLI;
   PredIteratorCache PredCache;
 
 public:
-  MemoryDependenceAnalysis();
-  ~MemoryDependenceAnalysis() override;
-  static char ID;
-
-  /// Pass Implementation stuff.  This doesn't do any analysis eagerly.
-  bool runOnFunction(Function &) override;
-
-  /// Clean up memory in between runs
-  void releaseMemory() override;
-
-  /// Does not modify anything.  It uses Value Numbering and Alias Analysis.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  MemoryDependenceResults(AliasAnalysis &AA, AssumptionCache &AC,
+                          const TargetLibraryInfo &TLI,
+                          DominatorTree *DT = nullptr)
+      : AA(AA), AC(AC), TLI(TLI), DT(DT) {}
 
   /// Returns the instruction on which a memory operation depends.
   ///
@@ -453,6 +443,9 @@ public:
                                                   unsigned MemLocSize,
                                                   const LoadInst *LI);
 
+  /// Release memory in caches.
+  void releaseMemory();
+
 private:
   MemDepResult getCallSiteDependencyFrom(CallSite C, bool isReadOnlyCall,
                                          BasicBlock::iterator ScanIt,
@@ -472,6 +465,37 @@ private:
   void RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair P);
 
   void verifyRemoved(Instruction *Inst) const;
+};
+
+/// An analysis that produces \c MemoryDependenceResults for a function.
+///
+/// This is essentially a no-op because the results are computed entirely
+/// lazily.
+struct MemoryDependenceAnalysis : AnalysisBase<MemoryDependenceAnalysis> {
+  typedef MemoryDependenceResults Result;
+
+  MemoryDependenceResults run(Function &F, AnalysisManager<Function> *AM);
+};
+
+/// A wrapper analysis pass for the legacy pass manager that exposes a \c
+/// MemoryDepnedenceResults instance.
+class MemoryDependenceWrapperPass : public FunctionPass {
+  Optional<MemoryDependenceResults> MemDep;
+public:
+  MemoryDependenceWrapperPass();
+  ~MemoryDependenceWrapperPass() override;
+  static char ID;
+
+  /// Pass Implementation stuff.  This doesn't do any analysis eagerly.
+  bool runOnFunction(Function &) override;
+
+  /// Clean up memory in between runs
+  void releaseMemory() override;
+
+  /// Does not modify anything.  It uses Value Numbering and Alias Analysis.
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  MemoryDependenceResults &getMemDep() { return *MemDep; }
 };
 
 } // End llvm namespace

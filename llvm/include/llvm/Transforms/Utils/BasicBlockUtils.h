@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-class MemoryDependenceAnalysis;
+class MemoryDependenceResults;
 class DominatorTree;
 class LoopInfo;
 class Instruction;
@@ -40,7 +40,7 @@ void DeleteDeadBlock(BasicBlock *BB);
 /// when all entries to the PHI nodes in a block are guaranteed equal, such as
 /// when the block has exactly one predecessor.
 void FoldSingleEntryPHINodes(BasicBlock *BB,
-                             MemoryDependenceAnalysis *MemDep = nullptr);
+                             MemoryDependenceResults *MemDep = nullptr);
 
 /// DeleteDeadPHIs - Examine each PHI in the given block and delete it if it
 /// is dead. Also recursively delete any operands that become dead as
@@ -53,7 +53,7 @@ bool DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI = nullptr);
 /// if possible.  The return value indicates success or failure.
 bool MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT = nullptr,
                                LoopInfo *LI = nullptr,
-                               MemoryDependenceAnalysis *MemDep = nullptr);
+                               MemoryDependenceResults *MemDep = nullptr);
 
 // ReplaceInstWithValue - Replace all uses of an instruction (specified by BI)
 // with a value, then remove and delete the original instruction.

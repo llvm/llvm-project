@@ -119,6 +119,28 @@ static SPCC::CondCodes GetOppositeBranchCondition(SPCC::CondCodes CC)
   case SPCC::FCC_UE:   return SPCC::FCC_LG;
   case SPCC::FCC_NE:   return SPCC::FCC_E;
   case SPCC::FCC_E:    return SPCC::FCC_NE;
+  
+  case SPCC::CPCC_A:   return SPCC::CPCC_N;
+  case SPCC::CPCC_N:   return SPCC::CPCC_A;
+  case SPCC::CPCC_3:   // Fall through
+  case SPCC::CPCC_2:   // Fall through
+  case SPCC::CPCC_23:  // Fall through
+  case SPCC::CPCC_1:   // Fall through
+  case SPCC::CPCC_13:  // Fall through
+  case SPCC::CPCC_12:  // Fall through
+  case SPCC::CPCC_123: // Fall through
+  case SPCC::CPCC_0:   // Fall through
+  case SPCC::CPCC_03:  // Fall through
+  case SPCC::CPCC_02:  // Fall through
+  case SPCC::CPCC_023: // Fall through
+  case SPCC::CPCC_01:  // Fall through
+  case SPCC::CPCC_013: // Fall through
+  case SPCC::CPCC_012:
+      // "Opposite" code is not meaningful, as we don't know
+      // what the CoProc condition means here. The cond-code will
+      // only be used in inline assembler, so this code should
+      // not be reached in a normal compilation pass.
+      llvm_unreachable("Meaningless inversion of co-processor cond code");
   }
   llvm_unreachable("Invalid cond code");
 }

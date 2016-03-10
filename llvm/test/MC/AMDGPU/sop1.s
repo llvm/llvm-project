@@ -133,8 +133,8 @@ s_bitset1_b64 s[2:3], s[4:5]
 s_getpc_b64 s[2:3]
 // CHECK: s_getpc_b64 s[2:3] ; encoding: [0x00,0x1f,0x82,0xbe]
 
-s_setpc_b64 s[2:3], s[4:5]
-// CHECK: s_setpc_b64 s[2:3], s[4:5] ; encoding: [0x04,0x20,0x82,0xbe]
+s_setpc_b64 s[4:5]
+// CHECK: s_setpc_b64 s[4:5] ; encoding: [0x04,0x20,0x80,0xbe]
 
 s_swappc_b64 s[2:3], s[4:5]
 // CHECK: s_swappc_b64 s[2:3], s[4:5] ; encoding: [0x04,0x21,0x82,0xbe]

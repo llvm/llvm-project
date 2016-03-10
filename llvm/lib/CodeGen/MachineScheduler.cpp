@@ -1361,7 +1361,7 @@ class LoadClusterMutation : public ScheduleDAGMutation {
   struct LoadInfo {
     SUnit *SU;
     unsigned BaseReg;
-    unsigned Offset;
+    int64_t Offset;
     LoadInfo(SUnit *su, unsigned reg, unsigned ofs)
       : SU(su), BaseReg(reg), Offset(ofs) {}
 
@@ -1389,7 +1389,7 @@ void LoadClusterMutation::clusterNeighboringLoads(ArrayRef<SUnit*> Loads,
   for (unsigned Idx = 0, End = Loads.size(); Idx != End; ++Idx) {
     SUnit *SU = Loads[Idx];
     unsigned BaseReg;
-    unsigned Offset;
+    int64_t Offset;
     if (TII->getMemOpBaseRegImmOfs(SU->getInstr(), BaseReg, Offset, TRI))
       LoadRecords.push_back(LoadInfo(SU, BaseReg, Offset));
   }

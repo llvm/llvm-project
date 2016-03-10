@@ -311,6 +311,8 @@ static DecodeStatus DecodeReturn(MCInst &MI, unsigned insn, uint64_t Address,
                                  const void *Decoder);
 static DecodeStatus DecodeSWAP(MCInst &Inst, unsigned insn, uint64_t Address,
                                const void *Decoder);
+static DecodeStatus DecodeTRAP(MCInst &Inst, unsigned insn, uint64_t Address,
+                               const void *Decoder);
 
 #include "SparcGenDisassemblerTables.inc"
 
@@ -346,6 +348,18 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     return MCDisassembler::Fail;
 
   // Calling the auto-generated decoder function.
+  
+  if (STI.getFeatureBits()[Sparc::FeatureV9])
+  {
+    Result = decodeInstruction(DecoderTableSparcV932, Instr, Insn, Address, this, STI);
+  }
+  else
+  {
+    Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address, this, STI);      
+  }
+  if (Result != MCDisassembler::Fail)
+    return Result;
+  
   Result =
       decodeInstruction(DecoderTableSparc32, Instr, Insn, Address, this, STI);
 
@@ -616,6 +630,39 @@ static DecodeStatus DecodeSWAP(MCInst &MI, unsigned insn, uint64_t Address,
 
   if (hasAsi)
     MI.addOperand(MCOperand::createImm(asi));
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeTRAP(MCInst &MI, unsigned insn, uint64_t Address,
+                               const void *Decoder) {
+
+  unsigned rs1 = fieldFromInstruction(insn, 14, 5);
+  unsigned isImm = fieldFromInstruction(insn, 13, 1);
+  unsigned cc =fieldFromInstruction(insn, 25, 4);
+  unsigned rs2 = 0;
+  unsigned imm7 = 0;
+  if (isImm)
+    imm7 = fieldFromInstruction(insn, 0, 7);
+  else
+    rs2 = fieldFromInstruction(insn, 0, 5);
+
+  // Decode RS1.
+  DecodeStatus status = DecodeIntRegsRegisterClass(MI, rs1, Address, Decoder);
+  if (status != MCDisassembler::Success)
+    return status;
+
+  // Decode RS1 | IMM7.
+  if (isImm)
+    MI.addOperand(MCOperand::createImm(imm7));
+  else {
+    status = DecodeIntRegsRegisterClass(MI, rs2, Address, Decoder);
+    if (status != MCDisassembler::Success)
+      return status;
+  }
+  
+  // Decode CC
+  MI.addOperand(MCOperand::createImm(cc));
 
   return MCDisassembler::Success;
 }

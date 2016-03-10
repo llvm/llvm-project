@@ -202,7 +202,7 @@ static bool isStride64(unsigned Opc) {
 }
 
 bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
-                                        unsigned &Offset,
+                                        int64_t &Offset,
                                         const TargetRegisterInfo *TRI) const {
   unsigned Opc = LdSt->getOpcode();
 
@@ -1160,8 +1160,8 @@ static bool offsetsDoNotOverlap(int WidthA, int OffsetA,
 
 bool SIInstrInfo::checkInstOffsetsDoNotOverlap(MachineInstr *MIa,
                                                MachineInstr *MIb) const {
-  unsigned BaseReg0, Offset0;
-  unsigned BaseReg1, Offset1;
+  unsigned BaseReg0, BaseReg1;
+  int64_t Offset0, Offset1;
 
   if (getMemOpBaseRegImmOfs(MIa, BaseReg0, Offset0, &RI) &&
       getMemOpBaseRegImmOfs(MIb, BaseReg1, Offset1, &RI)) {

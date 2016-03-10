@@ -44,6 +44,21 @@ using namespace ELF;
 #define ENUM_ENT_1(enum) \
   { #enum, #enum, ELF::enum }
 
+#define TYPEDEF_ELF_TYPES(ELFT)                                                \
+  typedef ELFFile<ELFT> ELFO;                                                  \
+  typedef typename ELFO::Elf_Shdr Elf_Shdr;                                    \
+  typedef typename ELFO::Elf_Sym Elf_Sym;                                      \
+  typedef typename ELFO::Elf_Dyn Elf_Dyn;                                      \
+  typedef typename ELFO::Elf_Dyn_Range Elf_Dyn_Range;                          \
+  typedef typename ELFO::Elf_Rel Elf_Rel;                                      \
+  typedef typename ELFO::Elf_Rela Elf_Rela;                                    \
+  typedef typename ELFO::Elf_Rela_Range Elf_Rela_Range;                        \
+  typedef typename ELFO::Elf_Phdr Elf_Phdr;                                    \
+  typedef typename ELFO::Elf_Half Elf_Half;                                    \
+  typedef typename ELFO::Elf_Ehdr Elf_Ehdr;                                    \
+  typedef typename ELFO::Elf_Word Elf_Word;                                    \
+  typedef typename ELFO::uintX_t uintX_t;
+
 namespace {
 
 template <class ELFT> class DumpStyle;
@@ -222,15 +237,17 @@ template <typename ELFT> class DumpStyle {
 public:
   virtual void printFileHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual ~DumpStyle() { }
+  virtual void printGroupSections(const ELFFile<ELFT> *Obj) = 0;
 };
 
 template <typename ELFT> class GNUStyle : public DumpStyle<ELFT> {
   formatted_raw_ostream OS;
 
 public:
-  typedef typename ELFFile<ELFT>::Elf_Ehdr Elf_Ehdr;
+  TYPEDEF_ELF_TYPES(ELFT)
   GNUStyle(StreamWriter &W) : OS(W.getOStream()) {}
   void printFileHeaders(const ELFFile<ELFT> *Obj) override;
+  void printGroupSections(const ELFFile<ELFT> *Obj) override;
 
 private:
   template <typename T, typename TEnum>
@@ -244,10 +261,10 @@ private:
 
 template <typename ELFT> class LLVMStyle : public DumpStyle<ELFT> {
 public:
-  typedef typename ELFFile<ELFT>::Elf_Ehdr Elf_Ehdr;
+  TYPEDEF_ELF_TYPES(ELFT)
   LLVMStyle(StreamWriter &W) : W(W) {}
-
   void printFileHeaders(const ELFFile<ELFT> *Obj) override;
+  void printGroupSections(const ELFFile<ELFT> *Obj) override;
 
 private:
   StreamWriter &W;
@@ -2251,37 +2268,7 @@ template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printGroupSections() {
-  DictScope Lists(W, "Groups");
-  uint32_t SectionIndex = 0;
-  bool HasGroups = false;
-  for (const Elf_Shdr &Sec : Obj->sections()) {
-    if (Sec.sh_type == ELF::SHT_GROUP) {
-      HasGroups = true;
-      const Elf_Shdr *Symtab = unwrapOrError(Obj->getSection(Sec.sh_link));
-      StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*Symtab));
-      const Elf_Sym *Sym = Obj->template getEntry<Elf_Sym>(Symtab, Sec.sh_info);
-      auto Data = unwrapOrError(
-          Obj->template getSectionContentsAsArray<Elf_Word>(&Sec));
-      DictScope D(W, "Group");
-      StringRef Name = unwrapOrError(Obj->getSectionName(&Sec));
-      W.printNumber("Name", Name, Sec.sh_name);
-      W.printNumber("Index", SectionIndex);
-      W.printHex("Type", getGroupType(Data[0]), Data[0]);
-      W.startLine() << "Signature: " << StrTable.data() + Sym->st_name << "\n";
-      {
-        ListScope L(W, "Section(s) in group");
-        size_t Member = 1;
-        while (Member < Data.size()) {
-          auto Sec = unwrapOrError(Obj->getSection(Data[Member]));
-          const StringRef Name = unwrapOrError(Obj->getSectionName(Sec));
-          W.startLine() << Name << " (" << Data[Member++] << ")\n";
-        }
-      }
-    }
-    ++SectionIndex;
-  }
-  if (!HasGroups)
-    W.startLine() << "There are no group sections in the file.\n";
+  ELFDumperStyle->printGroupSections(Obj);
 }
 
 static inline void printFields(formatted_raw_ostream &OS, StringRef Str1,
@@ -2346,6 +2333,37 @@ void GNUStyle<ELFT>::printFileHeaders(const ELFFile<ELFT> *Obj) {
   printFields(OS, "Section header string table index:", Str);
 }
 
+template <class ELFT> void GNUStyle<ELFT>::printGroupSections(const ELFO *Obj) {
+  uint32_t SectionIndex = 0;
+  bool HasGroups = false;
+  for (const Elf_Shdr &Sec : Obj->sections()) {
+    if (Sec.sh_type == ELF::SHT_GROUP) {
+      HasGroups = true;
+      const Elf_Shdr *Symtab = unwrapOrError(Obj->getSection(Sec.sh_link));
+      StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*Symtab));
+      const Elf_Sym *Signature =
+          Obj->template getEntry<Elf_Sym>(Symtab, Sec.sh_info);
+      ArrayRef<Elf_Word> Data = unwrapOrError(
+          Obj->template getSectionContentsAsArray<Elf_Word>(&Sec));
+      StringRef Name = unwrapOrError(Obj->getSectionName(&Sec));
+      OS << "\n" << getGroupType(Data[0]) << " group section ["
+         << format_decimal(SectionIndex, 5) << "] `" << Name << "' ["
+         << StrTable.data() + Signature->st_name << "] contains "
+         << (Data.size() - 1) << " sections:\n"
+         << "   [Index]    Name\n";
+      for (auto &Ndx : Data.slice(1)) {
+        auto Sec = unwrapOrError(Obj->getSection(Ndx));
+        const StringRef Name = unwrapOrError(Obj->getSectionName(Sec));
+        OS << "   [" << format_decimal(Ndx, 5) << "]   " << Name
+           << "\n";
+      }
+    }
+    ++SectionIndex;
+  }
+  if (!HasGroups)
+    OS << "There are no section groups in this file.\n";
+}
+
 template <class ELFT>
 void LLVMStyle<ELFT>::printFileHeaders(const ELFFile<ELFT> *Obj) {
   const Elf_Ehdr *e = Obj->getHeader();
@@ -2389,4 +2407,39 @@ void LLVMStyle<ELFT>::printFileHeaders(const ELFFile<ELFT> *Obj) {
     W.printNumber("SectionHeaderCount", e->e_shnum);
     W.printNumber("StringTableSectionIndex", e->e_shstrndx);
   }
+}
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printGroupSections(const ELFO *Obj) {
+  DictScope Lists(W, "Groups");
+  uint32_t SectionIndex = 0;
+  bool HasGroups = false;
+  for (const Elf_Shdr &Sec : Obj->sections()) {
+    if (Sec.sh_type == ELF::SHT_GROUP) {
+      HasGroups = true;
+      const Elf_Shdr *Symtab = unwrapOrError(Obj->getSection(Sec.sh_link));
+      StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*Symtab));
+      const Elf_Sym *Sym = Obj->template getEntry<Elf_Sym>(Symtab, Sec.sh_info);
+      auto Data = unwrapOrError(
+          Obj->template getSectionContentsAsArray<Elf_Word>(&Sec));
+      DictScope D(W, "Group");
+      StringRef Name = unwrapOrError(Obj->getSectionName(&Sec));
+      W.printNumber("Name", Name, Sec.sh_name);
+      W.printNumber("Index", SectionIndex);
+      W.printHex("Type", getGroupType(Data[0]), Data[0]);
+      W.startLine() << "Signature: " << StrTable.data() + Sym->st_name << "\n";
+      {
+        ListScope L(W, "Section(s) in group");
+        size_t Member = 1;
+        while (Member < Data.size()) {
+          auto Sec = unwrapOrError(Obj->getSection(Data[Member]));
+          const StringRef Name = unwrapOrError(Obj->getSectionName(Sec));
+          W.startLine() << Name << " (" << Data[Member++] << ")\n";
+        }
+      }
+    }
+    ++SectionIndex;
+  }
+  if (!HasGroups)
+    W.startLine() << "There are no group sections in the file.\n";
 }

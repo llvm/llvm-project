@@ -1,8 +1,5 @@
 # Tests which are known to fail from the GCC torture test suite.
 
-# multiple-entry loops are not supported yet.
-pr38051.c
-
 # Computed gotos are not supported (Cannot select BlockAddress/BRIND)
 20040302-1.c
 20071210-1.c

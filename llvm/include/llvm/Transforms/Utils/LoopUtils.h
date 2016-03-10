@@ -373,8 +373,8 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 bool promoteLoopAccessesToScalars(AliasSet &, SmallVectorImpl<BasicBlock*> &,
                                   SmallVectorImpl<Instruction*> &,
                                   PredIteratorCache &, LoopInfo *,
-                                  DominatorTree *, Loop *, AliasSetTracker *,
-                                  LICMSafetyInfo *);
+                                  DominatorTree *, const TargetLibraryInfo *,
+                                  Loop *, AliasSetTracker *, LICMSafetyInfo *);
 
 /// \brief Computes safety information for a loop
 /// checks loop body & header for the possibility of may throw

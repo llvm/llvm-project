@@ -104,6 +104,15 @@ public:
   /// Remove the GC for a function
   void deleteGC(const Function &Fn);
 
+  /// Return true if the Context runtime configuration is set to discard all
+  /// value names. When true, only GlobalValue names will be available in the
+  /// IR.
+  bool discardValueNames();
+
+  /// Set the Context runtime configuration to discard all value name (but
+  /// GlobalValue). Clients can use this flag to save memory and runtime,
+  /// especially in release mode.
+  void setDiscardValueNames(bool Discard);
 
   typedef void (*InlineAsmDiagHandlerTy)(const SMDiagnostic&, void *Context,
                                          unsigned LocCookie);

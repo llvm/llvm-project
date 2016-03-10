@@ -169,9 +169,12 @@ class VOP3be_vi <bits<10> op> : Enc64 {
   let Inst{63} = src2_modifiers{0};
 }
 
-class VOP_DPP <dag outs, dag ins, string asm, list<dag> pattern> :
+class VOP_DPP <dag outs, dag ins, string asm, list<dag> pattern, bit HasMods = 0> :
     VOPAnyCommon <outs, ins, asm, pattern> {
+  let DPP = 1;
   let Size = 8;
+
+  let AsmMatchConverter = !if(!eq(HasMods,1), "cvtDPP_mod", "cvtDPP_nomod");
 }
 
 class VOP_DPPe : Enc64 {
@@ -203,7 +206,7 @@ class VOP1_DPPe <bits<8> op> : VOP_DPPe {
   let Inst{31-25} = 0x3f; //encoding
 }
 
-class VOP2_DPPe <bits<6> op> : Enc32 {
+class VOP2_DPPe <bits<6> op> : VOP_DPPe {
   bits<8> vdst;
   bits<8> src1;
 

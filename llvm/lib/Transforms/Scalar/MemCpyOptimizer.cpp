@@ -306,7 +306,7 @@ void MemsetRanges::addRange(int64_t Start, int64_t Size, Value *Ptr,
 
 namespace {
   class MemCpyOpt : public FunctionPass {
-    MemoryDependenceAnalysis *MD;
+    MemoryDependenceResults *MD;
     TargetLibraryInfo *TLI;
   public:
     static char ID; // Pass identification, replacement for typeid
@@ -324,11 +324,11 @@ namespace {
       AU.setPreservesCFG();
       AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addRequired<MemoryDependenceAnalysis>();
+      AU.addRequired<MemoryDependenceWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
       AU.addPreserved<GlobalsAAWrapperPass>();
-      AU.addPreserved<MemoryDependenceAnalysis>();
+      AU.addPreserved<MemoryDependenceWrapperPass>();
     }
 
     // Helper functions
@@ -358,7 +358,7 @@ INITIALIZE_PASS_BEGIN(MemCpyOpt, "memcpyopt", "MemCpy Optimization",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
@@ -1284,7 +1284,7 @@ bool MemCpyOpt::runOnFunction(Function &F) {
     return false;
 
   bool MadeChange = false;
-  MD = &getAnalysis<MemoryDependenceAnalysis>();
+  MD = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
   // If we don't have at least memset and memcpy, there is little point of doing

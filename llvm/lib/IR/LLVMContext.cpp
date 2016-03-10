@@ -325,3 +325,9 @@ const std::string &LLVMContext::getGC(const Function &Fn) {
 void LLVMContext::deleteGC(const Function &Fn) {
   pImpl->GCNames.erase(&Fn);
 }
+
+bool LLVMContext::discardValueNames() { return pImpl->DiscardValueNames; }
+
+void LLVMContext::setDiscardValueNames(bool Discard) {
+  pImpl->DiscardValueNames = Discard;
+}

@@ -211,7 +211,7 @@ void initializeMachineVerifierPassPass(PassRegistry&);
 void initializeMemCpyOptPass(PassRegistry&);
 void initializeMemDepPrinterPass(PassRegistry&);
 void initializeMemDerefPrinterPass(PassRegistry&);
-void initializeMemoryDependenceAnalysisPass(PassRegistry&);
+void initializeMemoryDependenceWrapperPassPass(PassRegistry&);
 void initializeMemorySSALazyPass(PassRegistry&);
 void initializeMemorySSAPrinterPassPass(PassRegistry&);
 void initializeMergedLoadStoreMotionPass(PassRegistry &);

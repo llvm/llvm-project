@@ -92,6 +92,13 @@ namespace llvm {
                           const Instruction *CxtI = nullptr,
                           const DominatorTree *DT = nullptr);
 
+  /// Returns true if the given value is known be positive (i.e. non-negative
+  /// and non-zero).
+  bool isKnownPositive(Value *V, const DataLayout &DL, unsigned Depth = 0,
+                       AssumptionCache *AC = nullptr,
+                       const Instruction *CxtI = nullptr,
+                       const DominatorTree *DT = nullptr);
+
   /// isKnownNonEqual - Return true if the given values are known to be
   /// non-equal when defined. Supports scalar integer types only.
   bool isKnownNonEqual(Value *V1, Value *V2, const DataLayout &DL,

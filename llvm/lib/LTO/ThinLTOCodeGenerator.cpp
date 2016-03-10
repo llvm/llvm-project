@@ -41,6 +41,11 @@
 
 using namespace llvm;
 
+namespace llvm {
+// Flags -discard-value-names, defined in LTOCodeGenerator.cpp
+extern cl::opt<bool> LTODiscardValueNames;
+}
+
 namespace {
 
 static cl::opt<int> ThreadCount("threads",
@@ -361,6 +366,7 @@ void ThinLTOCodeGenerator::run() {
     for (auto &ModuleBuffer : Modules) {
       Pool.async([&](int count) {
         LLVMContext Context;
+        Context.setDiscardValueNames(LTODiscardValueNames);
 
         // Parse module now
         auto TheModule = loadModuleFromBuffer(ModuleBuffer, Context, false);

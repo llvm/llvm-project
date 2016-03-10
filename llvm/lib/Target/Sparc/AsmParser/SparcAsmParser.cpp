@@ -636,8 +636,12 @@ bool SparcAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       return Error(Loc, "unexpected token");
     }
 
-    while (getLexer().is(AsmToken::Comma)) {
-      Parser.Lex(); // Eat the comma.
+    while (getLexer().is(AsmToken::Comma) || getLexer().is(AsmToken::Plus)) {
+      if (getLexer().is(AsmToken::Plus)) {
+      // Plus tokens are significant in software_traps (p83, sparcv8.pdf). We must capture them.
+        Operands.push_back(SparcOperand::CreateToken("+", Parser.getTok().getLoc()));
+      }
+      Parser.Lex(); // Eat the comma or plus.
       // Parse and remember the operand.
       if (parseOperand(Operands, Name) != MatchOperand_Success) {
         SMLoc Loc = getLexer().getLoc();

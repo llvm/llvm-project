@@ -29,16 +29,17 @@ enum {
   VOP2 = 1 << 11,
   VOP3 = 1 << 12,
   VOPC = 1 << 13,
+  DPP = 1 << 14,
 
-  MUBUF = 1 << 14,
-  MTBUF = 1 << 15,
-  SMRD = 1 << 16,
-  DS = 1 << 17,
-  MIMG = 1 << 18,
-  FLAT = 1 << 19,
-  WQM = 1 << 20,
-  VGPRSpill = 1 << 21,
-  VOPAsmPrefer32Bit = 1 << 22
+  MUBUF = 1 << 15,
+  MTBUF = 1 << 16,
+  SMRD = 1 << 17,
+  DS = 1 << 18,
+  MIMG = 1 << 19,
+  FLAT = 1 << 20,
+  WQM = 1 << 21,
+  VGPRSpill = 1 << 22,
+  VOPAsmPrefer32Bit = 1 << 23
 };
 }
 

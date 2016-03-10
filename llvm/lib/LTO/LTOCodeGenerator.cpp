@@ -65,9 +65,22 @@ const char* LTOCodeGenerator::getVersionString() {
 #endif
 }
 
+namespace llvm {
+cl::opt<bool> LTODiscardValueNames(
+    "discard-value-names",
+    cl::desc("Strip names from Value (other than GlobalValue)."),
+#ifdef NDEBUG
+    cl::init(true),
+#else
+    cl::init(false),
+#endif
+    cl::Hidden);
+}
+
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
     : Context(Context), MergedModule(new Module("ld-temp.o", Context)),
       TheLinker(new Linker(*MergedModule)) {
+  Context.setDiscardValueNames(LTODiscardValueNames);
   initializeLTOPasses();
 }
 

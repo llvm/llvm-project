@@ -1392,7 +1392,7 @@ namespace llvm {
     getWrapPredicate(const SCEVAddRecExpr *AR,
                      SCEVWrapPredicate::IncrementWrapFlags AddedFlags);
 
-    /// Re-writes the SCEV according to the Predicates in \p Preds.
+    /// Re-writes the SCEV according to the Predicates in \p A.
     const SCEV *rewriteUsingPredicate(const SCEV *S, const Loop *L,
                                       SCEVUnionPredicate &A);
     /// Tries to convert the \p S expression to an AddRec expression,
