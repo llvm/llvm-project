@@ -60,7 +60,10 @@
 #include <unistd.h>
 
 #if SANITIZER_FREEBSD
+#include <sys/exec.h>
 #include <sys/sysctl.h>
+#include <vm/vm_param.h>
+#include <vm/pmap.h>
 #include <machine/atomic.h>
 extern "C" {
 // <sys/umtx.h> must be included after <errno.h> and <sys/types.h> on
@@ -395,11 +398,13 @@ const char *GetEnv(const char *name) {
 #endif
 }
 
+#if !SANITIZER_FREEBSD
 extern "C" {
   SANITIZER_WEAK_ATTRIBUTE extern void *__libc_stack_end;
 }
+#endif
 
-#if !SANITIZER_GO
+#if !SANITIZER_GO && !SANITIZER_FREEBSD
 static void ReadNullSepFileToArray(const char *path, char ***arr,
                                    int arr_size) {
   char *buff;
@@ -425,6 +430,7 @@ static void ReadNullSepFileToArray(const char *path, char ***arr,
 #endif
 
 static void GetArgsAndEnv(char ***argv, char ***envp) {
+#if !SANITIZER_FREEBSD
 #if !SANITIZER_GO
   if (&__libc_stack_end) {
 #endif
@@ -438,6 +444,18 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
     ReadNullSepFileToArray("/proc/self/cmdline", argv, kMaxArgv);
     ReadNullSepFileToArray("/proc/self/environ", envp, kMaxEnvp);
   }
+#endif
+#else
+  // On FreeBSD, retrieving the argument and environment arrays is done via the
+  // kern.ps_strings sysctl, which returns a pointer to a structure containing
+  // this information.  If the sysctl is not available, a "hardcoded" address,
+  // PS_STRINGS, must be used instead.  See also <sys/exec.h>.
+  ps_strings *pss;
+  size_t sz = sizeof(pss);
+  if (sysctlbyname("kern.ps_strings", &pss, &sz, NULL, 0) == -1)
+    pss = (ps_strings*)PS_STRINGS;
+  *argv = pss->ps_argvstr;
+  *envp = pss->ps_envstr;
 #endif
 }
 

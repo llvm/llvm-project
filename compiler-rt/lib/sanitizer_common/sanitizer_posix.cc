@@ -139,6 +139,26 @@ void UnmapOrDie(void *addr, uptr size) {
   DecreaseTotalMmap(size);
 }
 
+// We want to map a chunk of address space aligned to 'alignment'.
+// We do it by maping a bit more and then unmaping redundant pieces.
+// We probably can do it with fewer syscalls in some OS-dependent way.
+void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
+  CHECK(IsPowerOfTwo(size));
+  CHECK(IsPowerOfTwo(alignment));
+  uptr map_size = size + alignment;
+  uptr map_res = (uptr)MmapOrDie(map_size, mem_type);
+  uptr map_end = map_res + map_size;
+  uptr res = map_res;
+  if (res & (alignment - 1))  // Not aligned.
+    res = (map_res + alignment) & ~(alignment - 1);
+  uptr end = res + size;
+  if (res != map_res)
+    UnmapOrDie((void*)map_res, res - map_res);
+  if (end != map_end)
+    UnmapOrDie((void*)end, map_end - end);
+  return (void*)res;
+}
+
 void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
   uptr PageSize = GetPageSizeCached();
   uptr p = internal_mmap(nullptr,

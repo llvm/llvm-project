@@ -97,12 +97,77 @@ void UnmapOrDie(void *addr, uptr size) {
   if (!size || !addr)
     return;
 
-  if (VirtualFree(addr, size, MEM_DECOMMIT) == 0) {
+  // Make sure that this API is only used to unmap an entire previous mapping.
+  // Windows cannot unmap part of a previous mapping. Unfortunately,
+  // we can't check that size matches the original size because mbi.RegionSize
+  // doesn't describe the size of the full allocation if some of the pages were
+  // protected.
+  MEMORY_BASIC_INFORMATION mbi;
+  CHECK(VirtualQuery(addr, &mbi, sizeof(mbi)));
+  CHECK(mbi.AllocationBase == addr &&
+        "Windows cannot unmap part of a previous mapping");
+
+  if (VirtualFree(addr, 0, MEM_RELEASE) == 0) {
     Report("ERROR: %s failed to "
            "deallocate 0x%zx (%zd) bytes at address %p (error code: %d)\n",
            SanitizerToolName, size, size, addr, GetLastError());
     CHECK("unable to unmap" && 0);
   }
+}
+
+// We want to map a chunk of address space aligned to 'alignment'.
+void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
+  CHECK(IsPowerOfTwo(size));
+  CHECK(IsPowerOfTwo(alignment));
+
+  // Windows will align our allocations to at least 64K.
+  alignment = Max(alignment, GetMmapGranularity());
+
+  uptr mapped_addr =
+      (uptr)VirtualAlloc(0, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  if (!mapped_addr)
+    ReportMmapFailureAndDie(size, mem_type, "allocate aligned", GetLastError());
+
+  // If we got it right on the first try, return. Otherwise, unmap it and go to
+  // the slow path.
+  if (IsAligned(mapped_addr, alignment))
+    return (void*)mapped_addr;
+  if (VirtualFree((void *)mapped_addr, 0, MEM_RELEASE) == 0)
+    ReportMmapFailureAndDie(size, mem_type, "deallocate", GetLastError());
+
+  // If we didn't get an aligned address, overallocate, find an aligned address,
+  // unmap, and try to allocate at that aligned address.
+  int retries = 0;
+  const int kMaxRetries = 10;
+  for (; retries < kMaxRetries &&
+         (mapped_addr == 0 || !IsAligned(mapped_addr, alignment));
+       retries++) {
+    // Overallocate size + alignment bytes.
+    mapped_addr =
+        (uptr)VirtualAlloc(0, size + alignment, MEM_RESERVE, PAGE_NOACCESS);
+    if (!mapped_addr)
+      ReportMmapFailureAndDie(size, mem_type, "allocate aligned",
+                              GetLastError());
+
+    // Find the aligned address.
+    uptr aligned_addr = RoundUpTo(mapped_addr, alignment);
+
+    // Free the overallocation.
+    if (VirtualFree((void *)mapped_addr, 0, MEM_RELEASE) == 0)
+      ReportMmapFailureAndDie(size, mem_type, "deallocate", GetLastError());
+
+    // Attempt to allocate exactly the number of bytes we need at the aligned
+    // address. This may fail for a number of reasons, in which case we continue
+    // the loop.
+    mapped_addr = (uptr)VirtualAlloc((void *)aligned_addr, size,
+                                     MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  }
+
+  // Fail if we can't make this work quickly.
+  if (retries == kMaxRetries && mapped_addr == 0)
+    ReportMmapFailureAndDie(size, mem_type, "allocate aligned", GetLastError());
+
+  return (void *)mapped_addr;
 }
 
 void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
@@ -119,7 +184,15 @@ void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
 }
 
 void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
-  return MmapFixedNoReserve(fixed_addr, size);
+  void *p = VirtualAlloc((LPVOID)fixed_addr, size,
+      MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  if (p == 0) {
+    char mem_type[30];
+    internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
+                      fixed_addr);
+    ReportMmapFailureAndDie(size, mem_type, "allocate", GetLastError());
+  }
+  return p;
 }
 
 void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
