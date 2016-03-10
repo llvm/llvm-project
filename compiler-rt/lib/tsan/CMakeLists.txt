@@ -24,6 +24,7 @@ append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
 
 set(TSAN_SOURCES
   rtl/tsan_clock.cc
+  rtl/tsan_debugging.cc
   rtl/tsan_flags.cc
   rtl/tsan_fd.cc
   rtl/tsan_ignoreset.cc
