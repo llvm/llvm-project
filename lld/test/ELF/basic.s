@@ -192,25 +192,25 @@ _start:
 
 # RUN: not ld.lld %t.foo -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=MISSING %s
-# MISSING: Cannot open {{.*}}.foo: {{[Nn]}}o such file or directory
+# MISSING: cannot open {{.*}}.foo: {{[Nn]}}o such file or directory
 
 # RUN: not ld.lld -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=NO_INPUT %s
-# NO_INPUT: No input files
+# NO_INPUT: no input files.
 
 # RUN: not ld.lld %t.no.such.file -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=CANNOT_OPEN %s
-# CANNOT_OPEN: Cannot open {{.*}}.no.such.file: {{[Nn]}}o such file or directory
+# CANNOT_OPEN: cannot open {{.*}}.no.such.file: {{[Nn]}}o such file or directory
 
 # RUN: not ld.lld %t -o 2>&1 | FileCheck --check-prefix=NO_O_VAL %s
-# NO_O_VAL: Missing arg value for "-o", expected 1 argument.
+# NO_O_VAL: missing arg value for "-o", expected 1 argument.
 
 # RUN: not ld.lld --foo 2>&1 | FileCheck --check-prefix=UNKNOWN %s
-# UNKNOWN: Warning: unknown argument: --foo
+# UNKNOWN: unknown argument: --foo
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: not ld.lld %t %t -o %t2 2>&1 | FileCheck --check-prefix=DUP %s
-# DUP: Duplicate symbol: _start in {{.*}} and {{.*}}
+# DUP: duplicate symbol: _start in {{.*}} and {{.*}}
 
 # RUN: not ld.lld %t -o %t -m wrong_emul 2>&1 | FileCheck --check-prefix=UNKNOWN_EMUL %s
 # UNKNOWN_EMUL: Unknown emulation: wrong_emul

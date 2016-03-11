@@ -195,6 +195,16 @@ void test_macro_args() {
   // CHECK-FIXES: assert2(p == nullptr);
 #undef assert2
 #undef assert1
+
+#define ASSERT_EQ(a, b) a == b
+#define ASSERT_NULL(x) ASSERT_EQ(static_cast<void *>(NULL), x)
+  int *pp;
+  ASSERT_NULL(pp);
+  ASSERT_NULL(NULL);
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use nullptr
+  // CHECK-FIXES: ASSERT_NULL(nullptr);
+#undef ASSERT_NULL
+#undef ASSERT_EQ
 }
 
 // One of the ancestor of the cast is a NestedNameSpecifierLoc.

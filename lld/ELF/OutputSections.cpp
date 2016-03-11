@@ -53,9 +53,9 @@ GotPltSection<ELFT>::GotPltSection()
   this->Header.sh_addralign = sizeof(uintX_t);
 }
 
-template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody *Sym) {
-  Sym->GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
-  Entries.push_back(Sym);
+template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody &Sym) {
+  Sym.GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
+  Entries.push_back(&Sym);
 }
 
 template <class ELFT> bool GotPltSection<ELFT>::empty() const {
@@ -84,21 +84,21 @@ GotSection<ELFT>::GotSection()
   this->Header.sh_addralign = sizeof(uintX_t);
 }
 
-template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody *Sym) {
-  Sym->GotIndex = Entries.size();
-  Entries.push_back(Sym);
+template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
+  Sym.GotIndex = Entries.size();
+  Entries.push_back(&Sym);
 }
 
 template <class ELFT> void GotSection<ELFT>::addMipsLocalEntry() {
   ++MipsLocalEntries;
 }
 
-template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody *Sym) {
-  if (Sym->hasGlobalDynIndex())
+template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
+  if (Sym.hasGlobalDynIndex())
     return false;
-  Sym->GlobalDynIndex = Target->GotHeaderEntriesNum + Entries.size();
+  Sym.GlobalDynIndex = Target->GotHeaderEntriesNum + Entries.size();
   // Global Dynamic TLS entries take two GOT slots.
-  Entries.push_back(Sym);
+  Entries.push_back(&Sym);
   Entries.push_back(nullptr);
   return true;
 }
@@ -177,7 +177,7 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
     // for detailed description:
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
     // As the first approach, we can just store addresses for all symbols.
-    if (Config->EMachine != EM_MIPS && canBePreempted(B))
+    if (Config->EMachine != EM_MIPS && canBePreempted(*B))
       continue; // The dynamic linker will take care of it.
     uintX_t VA = B->getVA<ELFT>();
     write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, VA);
@@ -209,12 +209,12 @@ template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 }
 
-template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody *Sym) {
-  Sym->PltIndex = Entries.size();
+template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
+  Sym.PltIndex = Entries.size();
   unsigned RelOff = Target->UseLazyBinding
                         ? Out<ELFT>::RelaPlt->getRelocOffset()
                         : Out<ELFT>::RelaDyn->getRelocOffset();
-  Entries.push_back(std::make_pair(Sym, RelOff));
+  Entries.push_back(std::make_pair(&Sym, RelOff));
 }
 
 template <class ELFT> void PltSection<ELFT>::finalize() {
@@ -266,13 +266,12 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     SymbolBody *Sym = Rel.Sym;
 
     if (IsRela) {
-      uintX_t VA = 0;
+      uintX_t VA;
       if (Rel.UseSymVA)
-        VA = Sym->getVA<ELFT>();
-      else if (Rel.TargetSec)
-        VA = Rel.TargetSec->getOffset(Rel.OffsetInTargetSec) +
-             Rel.TargetSec->OutSec->getVA();
-      reinterpret_cast<Elf_Rela *>(P)->r_addend = Rel.Addend + VA;
+        VA = Sym->getVA<ELFT>(Rel.Addend);
+      else
+        VA = Rel.Addend;
+      reinterpret_cast<Elf_Rela *>(P)->r_addend = VA;
     }
 
     P->r_offset = Rel.getOffset();
@@ -684,7 +683,7 @@ EhFrameHeader<ELFT>::getFdePc(uintX_t EhVA, const FdeData &F) {
     PC = read64<E>(F.PCRel);
     break;
   default:
-    fatal("Unknown FDE size encoding");
+    fatal("unknown FDE size encoding");
   }
   switch (F.Enc & 0x70) {
   case DW_EH_PE_absptr:
@@ -692,7 +691,7 @@ EhFrameHeader<ELFT>::getFdePc(uintX_t EhVA, const FdeData &F) {
   case DW_EH_PE_pcrel:
     return PC + EhVA + F.Off + 8;
   default:
-    fatal("Unknown FDE size relative encoding");
+    fatal("unknown FDE size relative encoding");
   }
 }
 
@@ -891,14 +890,15 @@ template <class ELFT> void OutputSection<ELFT>::sortCtorsDtors() {
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
-bool elf::canBePreempted(const SymbolBody *Body) {
-  if (!Body)
-    return false;  // Body is a local symbol.
-  if (Body->isShared())
+bool elf::canBePreempted(const SymbolBody &Body) {
+  if (Body.isLocal())
+    return false;
+
+  if (Body.isShared())
     return true;
 
-  if (Body->isUndefined()) {
-    if (!Body->isWeak())
+  if (Body.isUndefined()) {
+    if (!Body.isWeak())
       return true;
 
     // Ideally the static linker should see a definition for every symbol, but
@@ -912,9 +912,9 @@ bool elf::canBePreempted(const SymbolBody *Body) {
   }
   if (!Config->Shared)
     return false;
-  if (Body->getVisibility() != STV_DEFAULT)
+  if (Body.getVisibility() != STV_DEFAULT)
     return false;
-  if (Config->Bsymbolic || (Config->BsymbolicFunctions && Body->IsFunc))
+  if (Config->Bsymbolic || (Config->BsymbolicFunctions && Body.IsFunc))
     return false;
   return true;
 }
@@ -966,7 +966,7 @@ Cie<ELFT>::Cie(EHInputSection<ELFT> *S, unsigned Index)
 // Read a byte and advance D by one byte.
 static uint8_t readByte(ArrayRef<uint8_t> &D) {
   if (D.empty())
-    fatal("Corrupted or unsupported CIE information");
+    fatal("corrupted or unsupported CIE information");
   uint8_t B = D.front();
   D = D.slice(1);
   return B;
@@ -979,7 +979,7 @@ static void skipLeb128(ArrayRef<uint8_t> &D) {
     if ((Val & 0x80) == 0)
       return;
   }
-  fatal("Corrupted or unsupported CIE information");
+  fatal("corrupted or unsupported CIE information");
 }
 
 template <class ELFT> static size_t getAugPSize(unsigned Enc) {
@@ -997,7 +997,7 @@ template <class ELFT> static size_t getAugPSize(unsigned Enc) {
   case DW_EH_PE_sdata8:
     return 8;
   }
-  fatal("Unknown FDE encoding");
+  fatal("unknown FDE encoding");
 }
 
 template <class ELFT> static void skipAugP(ArrayRef<uint8_t> &D) {
@@ -1006,7 +1006,7 @@ template <class ELFT> static void skipAugP(ArrayRef<uint8_t> &D) {
     fatal("DW_EH_PE_aligned encoding is not supported");
   size_t Size = getAugPSize<ELFT>(Enc);
   if (Size >= D.size())
-    fatal("Corrupted CIE");
+    fatal("corrupted CIE");
   D = D.slice(Size);
 }
 
@@ -1022,7 +1022,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
 
   const unsigned char *AugEnd = std::find(D.begin() + 1, D.end(), '\0');
   if (AugEnd == D.end())
-    fatal("Corrupted CIE");
+    fatal("corrupted CIE");
   StringRef Aug(reinterpret_cast<const char *>(D.begin()), AugEnd - D.begin());
   D = D.slice(Aug.size() + 1);
 
@@ -1058,7 +1058,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
       readByte(D);
       continue;
     }
-    fatal("Unknown .eh_frame augmentation string: " + Aug);
+    fatal("unknown .eh_frame augmentation string: " + Aug);
   }
   return DW_EH_PE_absptr;
 }
@@ -1132,7 +1132,7 @@ void EHOutputSection<ELFT>::addSectionAux(
       SymbolBody *Personality = nullptr;
       if (HasReloc) {
         uint32_t SymIndex = RelI->getSymbol(Config->Mips64EL);
-        Personality = S->getFile()->getSymbolBody(SymIndex)->repl();
+        Personality = &S->getFile()->getSymbolBody(SymIndex).repl();
       }
 
       std::pair<StringRef, SymbolBody *> CieInfo(Entry, Personality);
@@ -1146,7 +1146,7 @@ void EHOutputSection<ELFT>::addSectionAux(
       if (!HasReloc)
         fatal("FDE doesn't reference another section");
       InputSectionBase<ELFT> *Target = S->getRelocTarget(*RelI);
-      if (Target != InputSection<ELFT>::Discarded && Target->Live) {
+      if (Target && Target->Live) {
         uint32_t CieOffset = Offset + 4 - ID;
         auto I = OffsetToIndex.find(CieOffset);
         if (I == OffsetToIndex.end())
@@ -1496,9 +1496,9 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::DefinedSyntheticKind:
     return &cast<DefinedSynthetic<ELFT>>(Sym)->Section;
   case SymbolBody::DefinedRegularKind: {
-    auto *D = cast<DefinedRegular<ELFT>>(Sym->repl());
-    if (D->Section)
-      return D->Section->OutSec;
+    auto &D = cast<DefinedRegular<ELFT>>(Sym->repl());
+    if (D.Section)
+      return D.Section->OutSec;
     break;
   }
   case SymbolBody::DefinedCommonKind:
@@ -1527,6 +1527,36 @@ uint8_t SymbolTableSection<ELFT>::getSymbolBinding(SymbolBody *Body) {
   if (isa<DefinedSynthetic<ELFT>>(Body))
     return STB_LOCAL;
   return Body->isWeak() ? STB_WEAK : STB_GLOBAL;
+}
+
+template <class ELFT>
+BuildIdSection<ELFT>::BuildIdSection()
+    : OutputSectionBase<ELFT>(".note.gnu.build-id", SHT_NOTE, SHF_ALLOC) {
+  // 16 bytes for the note section header and 8 bytes for FNV1 hash.
+  this->Header.sh_size = 24;
+}
+
+template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
+  const endianness E = ELFT::TargetEndianness;
+  write32<E>(Buf, 4);                   // Name size
+  write32<E>(Buf + 4, sizeof(Hash));    // Content size
+  write32<E>(Buf + 8, NT_GNU_BUILD_ID); // Type
+  memcpy(Buf + 12, "GNU", 4);           // Name string
+  HashBuf = Buf + 16;
+}
+
+template <class ELFT> void BuildIdSection<ELFT>::update(ArrayRef<uint8_t> Buf) {
+  // 64-bit FNV1 hash
+  const uint64_t Prime = 0x100000001b3;
+  for (uint8_t B : Buf) {
+    Hash *= Prime;
+    Hash ^= B;
+  }
+}
+
+template <class ELFT> void BuildIdSection<ELFT>::writeBuildId() {
+  const endianness E = ELFT::TargetEndianness;
+  write64<E>(HashBuf, Hash);
 }
 
 template <class ELFT>
@@ -1632,5 +1662,10 @@ template class SymbolTableSection<ELF32LE>;
 template class SymbolTableSection<ELF32BE>;
 template class SymbolTableSection<ELF64LE>;
 template class SymbolTableSection<ELF64BE>;
+
+template class BuildIdSection<ELF32LE>;
+template class BuildIdSection<ELF32BE>;
+template class BuildIdSection<ELF64LE>;
+template class BuildIdSection<ELF64BE>;
 }
 }

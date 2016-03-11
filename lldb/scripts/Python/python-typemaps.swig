@@ -536,14 +536,17 @@
    char mode[4] = {0};
 #ifdef __APPLE__
    int i = 0;
-   short flags = $1->_flags;
+   if ($1)
+   {
+       short flags = $1->_flags;
 
-   if (flags & __SRD)
-      mode[i++] = 'r';
-   else if (flags & __SWR)
-      mode[i++] = 'w';
-   else // if (flags & __SRW)
-      mode[i++] = 'a';
+       if (flags & __SRD)
+          mode[i++] = 'r';
+       else if (flags & __SWR)
+          mode[i++] = 'w';
+       else // if (flags & __SRW)
+          mode[i++] = 'a';
+    }
 #endif
    using namespace lldb_private;
    File file($1, false);

@@ -47,9 +47,8 @@ class stats_flags_e {
     public:
         const static int onlyInMaster = 1<<0; //!< statistic is valid only for master
         const static int noUnits      = 1<<1; //!< statistic doesn't need units printed next to it in output
-        const static int synthesized  = 1<<2; //!< statistic's value is created atexit time in the __kmp_output_stats function
-        const static int notInMaster  = 1<<3; //!< statistic is valid for non-master threads
-        const static int logEvent     = 1<<4; //!< statistic can be logged when KMP_STATS_EVENTS is on (valid only for timers)
+        const static int notInMaster  = 1<<2; //!< statistic is valid for non-master threads
+        const static int logEvent     = 1<<3; //!< statistic can be logged when KMP_STATS_EVENTS is on (valid only for timers)
 };
 
 /*!
@@ -108,34 +107,38 @@ class stats_flags_e {
  *
  * @ingroup STATS_GATHERING2
  */
-#define KMP_FOREACH_TIMER(macro, arg)                                   \
-    macro (OMP_start_end, stats_flags_e::onlyInMaster, arg)             \
-    macro (OMP_serial, stats_flags_e::onlyInMaster, arg)                \
-    macro (OMP_work, 0, arg)                                            \
-    macro (Total_work, stats_flags_e::synthesized, arg)                 \
-    macro (OMP_barrier, 0, arg)                                         \
-    macro (Total_barrier, stats_flags_e::synthesized, arg)              \
-    macro (FOR_static_iterations, stats_flags_e::noUnits, arg)          \
-    macro (FOR_static_scheduling, 0, arg)                               \
-    macro (FOR_dynamic_iterations, stats_flags_e::noUnits, arg)         \
-    macro (FOR_dynamic_scheduling, 0, arg)                              \
-    macro (TASK_execution, 0, arg)                                      \
-    macro (OMP_set_numthreads, stats_flags_e::noUnits, arg)             \
-    macro (OMP_PARALLEL_args,  stats_flags_e::noUnits, arg)             \
-    macro (OMP_single, 0, arg)                                          \
-    macro (OMP_master, 0, arg)                                          \
-    KMP_FOREACH_DEVELOPER_TIMER(macro, arg)                             \
+#define KMP_FOREACH_TIMER(macro, arg)                           \
+    macro (OMP_start_end, stats_flags_e::onlyInMaster, arg)     \
+    macro (OMP_serial, stats_flags_e::onlyInMaster, arg)        \
+    macro (OMP_work, 0, arg)                                    \
+    macro (OMP_barrier, 0, arg)                                 \
+    macro (FOR_static_scheduling, 0, arg)                       \
+    macro (FOR_dynamic_scheduling, 0, arg)                      \
+    macro (OMP_task,   0, arg)                                  \
+    macro (OMP_single, 0, arg)                                  \
+    macro (OMP_master, 0, arg)                                  \
+    macro (OMP_set_numthreads, stats_flags_e::noUnits, arg)     \
+    macro (OMP_PARALLEL_args,  stats_flags_e::noUnits, arg)     \
+    macro (FOR_static_iterations, stats_flags_e::noUnits, arg)  \
+    macro (FOR_dynamic_iterations, stats_flags_e::noUnits, arg) \
+    KMP_FOREACH_DEVELOPER_TIMER(macro, arg)                     \
     macro (LAST,0, arg)
 
 
 // OMP_start_end          -- time from when OpenMP is initialized until the stats are printed at exit
 // OMP_serial             -- thread zero time executing serial code
 // OMP_work               -- elapsed time in code dispatched by a fork (measured in the thread)
-// Total_work             -- a synthesized statistic summarizing how much parallel work each thread executed.
-// OMP_barrier            -- time at "real" barriers
-// Total_barrier          -- a synthesized statistic summarizing how much time at real barriers in each thread
+// OMP_barrier            -- time at "real" barriers (includes task time)
+// OMP_task               -- time spent executing tasks
+// FOR_static_iterations  -- Available parallelism in statically scheduled for loops
+// FOR_dynamic_iterations -- Available parallelism in dynamically scheduled for loops
 // FOR_static_scheduling  -- time spent doing scheduling for a static "for"
 // FOR_dynamic_scheduling -- time spent doing scheduling for a dynamic "for"
+// OMP_set_numthreads     -- Values passed to omp_set_num_threads
+// OMP_PARALLEL_args      -- Number of arguments passed to a parallel region
+// OMP_single
+
+
 
 #if (KMP_DEVELOPER_STATS)
 // Timers which are of interest tio runtime library developers, not end users.
@@ -276,7 +279,6 @@ class timeStat : public statistic
     static bool  masterOnly (timer_e e) { return timerInfo[e].flags & stats_flags_e::onlyInMaster; }
     static bool  workerOnly (timer_e e) { return timerInfo[e].flags & stats_flags_e::notInMaster;  }
     static bool  noUnits    (timer_e e) { return timerInfo[e].flags & stats_flags_e::noUnits;      }
-    static bool  synthesized(timer_e e) { return timerInfo[e].flags & stats_flags_e::synthesized;  }
     static bool  logEvent   (timer_e e) { return timerInfo[e].flags & stats_flags_e::logEvent;     }
     static void  clearEventFlags()      {
         int i;
@@ -573,7 +575,8 @@ class kmp_stats_output_module {
     void init();
     static void setupEventColors();
     static void printPloticusFile();
-    static void printStats(FILE *statsOut, statistic const * theStats, bool areTimers);
+    static void printTimerStats(FILE *statsOut, statistic const * theStats, statistic const * totalStats);
+    static void printCounterStats(FILE *statsOut, statistic const * theStats);
     static void printCounters(FILE * statsOut, counter const * theCounters);
     static void printEvents(FILE * eventsOut, kmp_stats_event_vector* theEvents, int gtid);
     static rgb_color getEventColor(timer_e e) { return timerColorInfo[e]; }

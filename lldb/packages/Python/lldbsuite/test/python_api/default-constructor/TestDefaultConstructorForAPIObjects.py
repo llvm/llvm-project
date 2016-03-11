@@ -114,7 +114,6 @@ class APIDefaultConstructorTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
-    @skipIfDarwin  # seg faulting, bugnumber="<rdar://problem/25105824>"
     def test_SBDebugger(self):
         obj = lldb.SBDebugger()
         if self.TraceOn():

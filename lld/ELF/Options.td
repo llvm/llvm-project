@@ -12,6 +12,9 @@ def Bdynamic: Flag<["-"], "Bdynamic">,
 def Bstatic: Flag<["-"], "Bstatic">,
   HelpText<"Do not link against shared libraries">;
 
+def build_id : Flag<["--", "-"], "build-id">,
+  HelpText<"Generate build ID note">;
+
 def L : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Directory to search for libraries">;
 
@@ -172,7 +175,6 @@ def start_group : Flag<["--"], "start-group">;
 def start_group_paren: Flag<["-"], "(">;
 
 // Options listed below are silently ignored for now for compatibility.
-def build_id : Flag<["--"], "build-id">;
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;
 def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;

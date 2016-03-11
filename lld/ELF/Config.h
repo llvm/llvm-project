@@ -54,6 +54,7 @@ struct Configuration {
   bool AsNeeded = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;
+  bool BuildId;
   bool Demangle = true;
   bool DiscardAll;
   bool DiscardLocals;

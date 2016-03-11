@@ -67,15 +67,15 @@ opt::InputArgList elf::parseArgs(llvm::BumpPtrAllocator *A,
   // Parse options and then do error checking.
   opt::InputArgList Args = Table.ParseArgs(Vec, MissingIndex, MissingCount);
   if (MissingCount)
-    error(Twine("Missing arg value for \"") + Args.getArgString(MissingIndex) +
+    error(Twine("missing arg value for \"") + Args.getArgString(MissingIndex) +
           "\", expected " + Twine(MissingCount) +
           (MissingCount == 1 ? " argument.\n" : " arguments"));
 
   iterator_range<opt::arg_iterator> Unknowns = Args.filtered(OPT_UNKNOWN);
   for (auto *Arg : Unknowns)
-    warning("Warning: unknown argument: " + Arg->getSpelling());
+    warning("warning: unknown argument: " + Arg->getSpelling());
   if (Unknowns.begin() != Unknowns.end())
-    error("Unknown argument(s) found");
+    error("unknown argument(s) found");
   return Args;
 }
 

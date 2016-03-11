@@ -7,9 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/Module.h"
+
+// C Includes
+// C++ Includes
+// Other libraries and framework includes
+#include "llvm/Support/raw_os_ostream.h"
+#include "llvm/Support/Signals.h"
+
+// Project includes
 #include "lldb/Core/AddressResolverFileLine.h"
 #include "lldb/Core/Error.h"
-#include "lldb/Core/Module.h"
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Log.h"
@@ -40,9 +48,6 @@
 
 #include "Plugins/ObjectFile/JIT/ObjectFileJIT.h"
 
-#include "llvm/Support/raw_os_ostream.h"
-#include "llvm/Support/Signals.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -60,8 +65,8 @@ GetModuleCollection()
     // is a big problem we can introduce a Finalize method that will tear everything down in
     // a predictable order.
     
-    static ModuleCollection *g_module_collection = NULL;
-    if (g_module_collection == NULL)
+    static ModuleCollection *g_module_collection = nullptr;
+    if (g_module_collection == nullptr)
         g_module_collection = new ModuleCollection();
         
     return *g_module_collection;
@@ -75,8 +80,8 @@ Module::GetAllocationModuleCollectionMutex()
     // if it will tear itself down before the "g_module_collection_mutex" below
     // will. So we leak a Mutex object below to safeguard against that
 
-    static Mutex *g_module_collection_mutex = NULL;
-    if (g_module_collection_mutex == NULL)
+    static Mutex *g_module_collection_mutex = nullptr;
+    if (g_module_collection_mutex == nullptr)
         g_module_collection_mutex = new Mutex (Mutex::eMutexTypeRecursive); // NOTE: known leak
     return g_module_collection_mutex;
 }
@@ -95,10 +100,10 @@ Module::GetAllocatedModuleAtIndex (size_t idx)
     ModuleCollection &modules = GetModuleCollection();
     if (idx < modules.size())
         return modules[idx];
-    return NULL;
+    return nullptr;
 }
-#if 0
 
+#if 0
 // These functions help us to determine if modules are still loaded, yet don't require that
 // you have a command interpreter and can easily be called from an external debugger.
 namespace lldb {
@@ -117,7 +122,7 @@ namespace lldb {
         ModuleCollection &modules = GetModuleCollection();
         const size_t count = modules.size();
         printf ("%s: %" PRIu64 " modules:\n", __PRETTY_FUNCTION__, (uint64_t)count);
-        for (size_t i=0; i<count; ++i)
+        for (size_t i = 0; i < count; ++i)
         {
             
             StreamString strm;
@@ -165,7 +170,7 @@ Module::Module (const ModuleSpec &module_spec) :
     }
 
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_OBJECT|LIBLLDB_LOG_MODULES));
-    if (log)
+    if (log != nullptr)
         log->Printf ("%p Module::Module((%s) '%s%s%s%s')",
                      static_cast<void*>(this),
                      module_spec.GetArchitecture().GetArchitectureName(),
@@ -274,7 +279,7 @@ Module::Module(const FileSpec& file_spec,
         m_object_mod_time = *object_mod_time_ptr;
 
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_OBJECT|LIBLLDB_LOG_MODULES));
-    if (log)
+    if (log != nullptr)
         log->Printf ("%p Module::Module((%s) '%s%s%s%s')",
                      static_cast<void*>(this), m_arch.GetArchitectureName(),
                      m_file.GetPath().c_str(),
@@ -325,7 +330,7 @@ Module::~Module()
         modules.erase(pos);
     }
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_OBJECT|LIBLLDB_LOG_MODULES));
-    if (log)
+    if (log != nullptr)
         log->Printf ("%p Module::~Module((%s) '%s%s%s%s')",
                      static_cast<void*>(this),
                      m_arch.GetArchitectureName(),
@@ -395,18 +400,17 @@ Module::GetMemoryObjectFile (const lldb::ProcessSP &process_sp, lldb::addr_t hea
     return m_objfile_sp.get();
 }
 
-
 const lldb_private::UUID&
 Module::GetUUID()
 {
-    if (m_did_parse_uuid.load() == false)
+    if (!m_did_parse_uuid.load())
     {
         Mutex::Locker locker (m_mutex);
-        if (m_did_parse_uuid.load() == false)
+        if (!m_did_parse_uuid.load())
         {
             ObjectFile * obj_file = GetObjectFile ();
 
-            if (obj_file != NULL)
+            if (obj_file != nullptr)
             {
                 obj_file->GetUUID(&m_uuid);
                 m_did_parse_uuid = true;
@@ -439,12 +443,12 @@ Module::ParseAllDebugSymbols()
         sc.comp_unit = symbols->GetCompileUnitAtIndex(cu_idx).get();
         if (sc.comp_unit)
         {
-            sc.function = NULL;
+            sc.function = nullptr;
             symbols->ParseVariablesForContext(sc);
 
             symbols->ParseCompileUnitFunctions(sc);
 
-            for (size_t func_idx = 0; (sc.function = sc.comp_unit->GetFunctionAtIndex(func_idx).get()) != NULL; ++func_idx)
+            for (size_t func_idx = 0; (sc.function = sc.comp_unit->GetFunctionAtIndex(func_idx).get()) != nullptr; ++func_idx)
             {
                 symbols->ParseFunctionBlocks(sc);
 
@@ -452,9 +456,8 @@ Module::ParseAllDebugSymbols()
                 symbols->ParseVariablesForContext(sc);
             }
 
-
             // Parse all types for this compile unit
-            sc.function = NULL;
+            sc.function = nullptr;
             symbols->ParseTypes(sc);
         }
     }
@@ -689,7 +692,6 @@ Module::ResolveSymbolContextsForFileSpec (const FileSpec &file_spec, uint32_t li
     return sc_list.GetSize() - initial_count;
 }
 
-
 size_t
 Module::FindGlobalVariables (const ConstString &name,
                              const CompilerDeclContext *parent_decl_ctx,
@@ -728,7 +730,7 @@ Module::FindCompileUnits (const FileSpec &path,
     SymbolContext sc;
     sc.module_sp = shared_from_this();
     const bool compare_directory = (bool)path.GetDirectory();
-    for (size_t i=0; i<num_compile_units; ++i)
+    for (size_t i = 0; i < num_compile_units; ++i)
     {
         sc.comp_unit = GetCompileUnitAtIndex(i).get();
         if (sc.comp_unit)
@@ -791,12 +793,12 @@ Module::FindFunctions (const ConstString &name,
         {
             SymbolContext sc;
             size_t i = old_size;
-            while (i<sc_list.GetSize())
+            while (i < sc_list.GetSize())
             {
                 if (sc_list.GetContextAtIndex(i, sc))
                 {
                     const char *func_name = sc.GetFunctionName().GetCString();
-                    if (func_name && strstr (func_name, name.GetCString()) == NULL)
+                    if (func_name && strstr(func_name, name.GetCString()) == nullptr)
                     {
                         // Remove the current context
                         sc_list.RemoveContextAtIndex(i);
@@ -861,7 +863,7 @@ Module::FindFunctions (const RegularExpression& regex,
                     if (num_functions_added_to_sc_list == 0)
                     {
                         // No functions were added, just symbols, so we can just append them
-                        for (size_t i=0; i<num_matches; ++i)
+                        for (size_t i = 0; i < num_matches; ++i)
                         {
                             sc.symbol = symtab->SymbolAtIndex(symbol_indexes[i]);
                             SymbolType sym_type = sc.symbol->GetType();
@@ -874,7 +876,7 @@ Module::FindFunctions (const RegularExpression& regex,
                     {
                         typedef std::map<lldb::addr_t, uint32_t> FileAddrToIndexMap;
                         FileAddrToIndexMap file_addr_to_index;
-                        for (size_t i=start_size; i<end_functions_added_index; ++i)
+                        for (size_t i = start_size; i < end_functions_added_index; ++i)
                         {
                             const SymbolContext &sc = sc_list[i];
                             if (sc.block)
@@ -885,7 +887,7 @@ Module::FindFunctions (const RegularExpression& regex,
                         FileAddrToIndexMap::const_iterator end = file_addr_to_index.end();
                         // Functions were added so we need to merge symbols into any
                         // existing function symbol contexts
-                        for (size_t i=start_size; i<num_matches; ++i)
+                        for (size_t i = start_size; i < num_matches; ++i)
                         {
                             sc.symbol = symtab->SymbolAtIndex(symbol_indexes[i]);
                             SymbolType sym_type = sc.symbol->GetType();
@@ -916,7 +918,7 @@ Module::FindAddressesForLine (const lldb::TargetSP target_sp,
     AddressResolverFileLine resolver(file, line, true);
     resolver.ResolveAddress (filter);
 
-    for (size_t n=0;n<resolver.GetNumberOfAddresses();n++)
+    for (size_t n = 0; n < resolver.GetNumberOfAddresses(); n++)
     {
         Address addr = resolver.GetAddressRangeAtIndex(n).GetBaseAddress();
         Function *f = addr.CalculateSymbolContextFunction();
@@ -937,7 +939,7 @@ Module::FindTypes_Impl (const SymbolContext& sc,
                         TypeMap& types)
 {
     Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
-    if (sc.module_sp.get() == NULL || sc.module_sp.get() == this)
+    if (!sc.module_sp || sc.module_sp.get() == this)
     {
         SymbolVendor *symbols = GetSymbolVendor ();
         if (symbols)
@@ -975,7 +977,6 @@ Module::FindFirstType (const SymbolContext& sc,
     return TypeSP();
 }
 
-
 size_t
 Module::FindTypes (const SymbolContext& sc,
                    const ConstString &name,
@@ -1004,7 +1005,7 @@ Module::FindTypes (const SymbolContext& sc,
             exact_match = true;
         }
         ConstString type_basename_const_str (type_basename.c_str());
-        if (FindTypes_Impl(sc, type_basename_const_str, NULL, append, max_matches, searched_symbol_files, typesmap))
+        if (FindTypes_Impl(sc, type_basename_const_str, nullptr, append, max_matches, searched_symbol_files, typesmap))
         {
             typesmap.RemoveMismatchedTypes (type_scope, type_basename, type_class, exact_match);
             num_matches = typesmap.GetSize();
@@ -1017,13 +1018,13 @@ Module::FindTypes (const SymbolContext& sc,
         {
             // The "type_name_cstr" will have been modified if we have a valid type class
             // prefix (like "struct", "class", "union", "typedef" etc).
-            FindTypes_Impl(sc, ConstString(type_name_cstr), NULL, append, max_matches, searched_symbol_files, typesmap);
+            FindTypes_Impl(sc, ConstString(type_name_cstr), nullptr, append, max_matches, searched_symbol_files, typesmap);
             typesmap.RemoveMismatchedTypes (type_class);
             num_matches = typesmap.GetSize();
         }
         else
         {
-            num_matches = FindTypes_Impl(sc, name, NULL, append, max_matches, searched_symbol_files, typesmap);
+            num_matches = FindTypes_Impl(sc, name, nullptr, append, max_matches, searched_symbol_files, typesmap);
         }
     }
     if (num_matches > 0)
@@ -1034,13 +1035,13 @@ Module::FindTypes (const SymbolContext& sc,
 SymbolVendor*
 Module::GetSymbolVendor (bool can_create, lldb_private::Stream *feedback_strm)
 {
-    if (m_did_load_symbol_vendor.load() == false)
+    if (!m_did_load_symbol_vendor.load())
     {
         Mutex::Locker locker (m_mutex);
-        if (m_did_load_symbol_vendor.load() == false && can_create)
+        if (!m_did_load_symbol_vendor.load() && can_create)
         {
             ObjectFile *obj_file = GetObjectFile ();
-            if (obj_file != NULL)
+            if (obj_file != nullptr)
             {
                 Timer scoped_timer(__PRETTY_FUNCTION__, __PRETTY_FUNCTION__);
                 m_symfile_ap.reset(SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
@@ -1131,14 +1132,13 @@ Module::ReportError (const char *format, ...)
                 strm.EOL();
         }
         Host::SystemLog (Host::eSystemLogError, "%s", strm.GetString().c_str());
-
     }
 }
 
 bool
 Module::FileHasChanged () const
 {
-    if (m_file_has_changed == false)
+    if (!m_file_has_changed)
         m_file_has_changed = (m_file.GetModificationTime() != m_mod_time);
     return m_file_has_changed;
 }
@@ -1146,7 +1146,7 @@ Module::FileHasChanged () const
 void
 Module::ReportErrorIfModifyDetected (const char *format, ...)
 {
-    if (m_first_file_changed_log == false)
+    if (!m_first_file_changed_log)
     {
         if (FileHasChanged ())
         {
@@ -1206,7 +1206,7 @@ Module::ReportWarning (const char *format, ...)
 void
 Module::LogMessage (Log *log, const char *format, ...)
 {
-    if (log)
+    if (log != nullptr)
     {
         StreamString log_message;
         GetDescription(&log_message, lldb::eDescriptionLevelFull);
@@ -1222,7 +1222,7 @@ Module::LogMessage (Log *log, const char *format, ...)
 void
 Module::LogMessageVerboseBacktrace (Log *log, const char *format, ...)
 {
-    if (log)
+    if (log != nullptr)
     {
         StreamString log_message;
         GetDescription(&log_message, lldb::eDescriptionLevelFull);
@@ -1267,14 +1267,13 @@ Module::Dump(Stream *s)
     s->IndentLess();
 }
 
-
 TypeList*
 Module::GetTypeList ()
 {
     SymbolVendor *symbols = GetSymbolVendor ();
     if (symbols)
         return &symbols->GetTypeList();
-    return NULL;
+    return nullptr;
 }
 
 const ConstString &
@@ -1286,10 +1285,10 @@ Module::GetObjectName() const
 ObjectFile *
 Module::GetObjectFile()
 {
-    if (m_did_load_objfile.load() == false)
+    if (!m_did_load_objfile.load())
     {
         Mutex::Locker locker (m_mutex);
-        if (m_did_load_objfile.load() == false)
+        if (!m_did_load_objfile.load())
         {
             Timer scoped_timer(__PRETTY_FUNCTION__,
                                "Module::GetObjectFile () module = %s", GetFileSpec().GetFilename().AsCString(""));
@@ -1330,10 +1329,10 @@ SectionList *
 Module::GetSectionList()
 {
     // Populate m_unified_sections_ap with sections from objfile.
-    if (m_sections_ap.get() == NULL)
+    if (!m_sections_ap)
     {
         ObjectFile *obj_file = GetObjectFile();
-        if (obj_file)
+        if (obj_file != nullptr)
             obj_file->CreateSections(*GetUnifiedSectionList());
     }
     return m_sections_ap.get();
@@ -1346,7 +1345,7 @@ Module::SectionFileAddressesChanged ()
     if (obj_file)
         obj_file->SectionFileAddressesChanged ();
     SymbolVendor* sym_vendor = GetSymbolVendor();
-    if (sym_vendor)
+    if (sym_vendor != nullptr)
         sym_vendor->SectionFileAddressesChanged ();
 }
 
@@ -1354,7 +1353,7 @@ SectionList *
 Module::GetUnifiedSectionList()
 {
     // Populate m_unified_sections_ap with sections from objfile.
-    if (m_sections_ap.get() == NULL)
+    if (!m_sections_ap)
         m_sections_ap.reset(new SectionList());
     return m_sections_ap.get();
 }
@@ -1373,7 +1372,7 @@ Module::FindFirstSymbolWithNameAndType (const ConstString &name, SymbolType symb
         if (symtab)
             return symtab->FindFirstSymbolWithNameAndType (name, symbol_type, Symtab::eDebugAny, Symtab::eVisibilityAny);
     }
-    return NULL;
+    return nullptr;
 }
 void
 Module::SymbolIndicesToSymbolContextList (Symtab *symtab, std::vector<uint32_t> &symbol_indexes, SymbolContextList &sc_list)
@@ -1419,7 +1418,6 @@ Module::FindSymbolsWithNameAndType (const ConstString &name, SymbolType symbol_t
 {
     // No need to protect this call using m_mutex all other method calls are
     // already thread safe.
-
 
     Timer scoped_timer(__PRETTY_FUNCTION__,
                        "Module::FindSymbolsWithNameAndType (name = %s, type = %i)",
@@ -1534,7 +1532,7 @@ Module::SetSymbolFileFileSpec (const FileSpec &file)
 bool
 Module::IsExecutable ()
 {
-    if (GetObjectFile() == NULL)
+    if (GetObjectFile() == nullptr)
         return false;
     else
         return GetObjectFile()->IsExecutable();
@@ -1547,7 +1545,7 @@ Module::IsLoadedInTarget (Target *target)
     if (obj_file)
     {
         SectionList *sections = GetSectionList();
-        if (sections != NULL)
+        if (sections != nullptr)
         {
             size_t num_sections = sections->GetSize();
             for (size_t sect_idx = 0; sect_idx < num_sections; sect_idx++)
@@ -1593,15 +1591,14 @@ Module::LoadScriptingResourceInTarget (Target *target, Error& error, Stream* fee
         FileSpecList file_specs = platform_sp->LocateExecutableScriptingResources (target,
                                                                                    *this,
                                                                                    feedback_stream);
-        
-        
+
         const uint32_t num_specs = file_specs.GetSize();
         if (num_specs)
         {
             ScriptInterpreter *script_interpreter = debugger.GetCommandInterpreter().GetScriptInterpreter();
             if (script_interpreter)
             {
-                for (uint32_t i=0; i<num_specs; ++i)
+                for (uint32_t i = 0; i < num_specs; ++i)
                 {
                     FileSpec scripting_fspec (file_specs.GetFileSpecAtIndex(i));
                     if (scripting_fspec && scripting_fspec.Exists())
@@ -1655,7 +1652,7 @@ bool
 Module::SetLoadAddress (Target &target, lldb::addr_t value, bool value_is_offset, bool &changed)
 {
     ObjectFile *object_file = GetObjectFile();
-    if (object_file)
+    if (object_file != nullptr)
     {
         changed = object_file->SetLoadAddress(target, value, value_is_offset);
         return true;
@@ -1676,10 +1673,7 @@ Module::MatchesModuleSpec (const ModuleSpec &module_ref)
     if (uuid.IsValid())
     {
         // If the UUID matches, then nothing more needs to match...
-        if (uuid == GetUUID())
-            return true;
-        else
-            return false;
+        return (uuid == GetUUID());
     }
     
     const FileSpec &file_spec = module_ref.GetFileSpec();
@@ -1734,9 +1728,9 @@ Module::GetVersion (uint32_t *versions, uint32_t num_versions)
     if (obj_file)
         return obj_file->GetVersion (versions, num_versions);
         
-    if (versions && num_versions)
+    if (versions != nullptr && num_versions != 0)
     {
-        for (uint32_t i=0; i<num_versions; ++i)
+        for (uint32_t i = 0; i < num_versions; ++i)
             versions[i] = LLDB_INVALID_MODULE_VERSION;
     }
     return 0;

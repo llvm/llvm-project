@@ -31,6 +31,7 @@ add_lld_library(lldELF
 
   LINK_LIBS
   lldConfig
+  ${PTHREAD_LIB}
   )
 
 add_dependencies(lldELF ELFOptionsTableGen)
