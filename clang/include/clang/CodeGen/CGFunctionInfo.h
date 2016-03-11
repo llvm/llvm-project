@@ -19,13 +19,9 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/FoldingSet.h"
 #include <cassert>
-
-namespace llvm {
-  class Type;
-  class StructType;
-}
 
 namespace clang {
 class Decl;
@@ -63,6 +59,12 @@ public:
     /// are all scalar types or are themselves expandable types.
     Expand,
 
+    /// CoerceAndExpand - Only valid for aggregate argument types. The
+    /// structure should be expanded into consecutive arguments corresponding
+    /// to the non-array elements of the type stored in CoerceToType.
+    /// Array elements in the type are assumed to be padding and skipped.
+    CoerceAndExpand,
+
     /// InAlloca - Pass the argument directly using the LLVM inalloca attribute.
     /// This is similar to indirect with byval, except it only applies to
     /// arguments stored in memory and forbids any implicit copies.  When
@@ -74,8 +76,11 @@ public:
   };
 
 private:
-  llvm::Type *TypeData; // isDirect() || isExtend()
-  llvm::Type *PaddingType;
+  llvm::Type *TypeData; // canHaveCoerceToType()
+  union {
+    llvm::Type *PaddingType; // canHavePaddingType()
+    llvm::Type *UnpaddedCoerceAndExpandType; // isCoerceAndExpand()
+  };
   union {
     unsigned DirectOffset;     // isDirect() || isExtend()
     unsigned IndirectAlign;    // isIndirect()
@@ -90,8 +95,22 @@ private:
   bool InReg : 1;           // isDirect() || isExtend() || isIndirect()
   bool CanBeFlattened: 1;   // isDirect()
 
+  bool canHavePaddingType() const {
+    return isDirect() || isExtend() || isIndirect() || isExpand();
+  }
+  void setPaddingType(llvm::Type *T) {
+    assert(canHavePaddingType());
+    PaddingType = T;
+  }
+
+  void setUnpaddedCoerceToType(llvm::Type *T) {
+    assert(isCoerceAndExpand());
+    UnpaddedCoerceAndExpandType = T;
+  }
+
   ABIArgInfo(Kind K)
-      : PaddingType(nullptr), TheKind(K), PaddingInReg(false), InReg(false) {}
+      : TheKind(K), PaddingInReg(false), InReg(false) {
+  }
 
 public:
   ABIArgInfo()
@@ -103,8 +122,8 @@ public:
                               bool CanBeFlattened = true) {
     auto AI = ABIArgInfo(Direct);
     AI.setCoerceToType(T);
-    AI.setDirectOffset(Offset);
     AI.setPaddingType(Padding);
+    AI.setDirectOffset(Offset);
     AI.setCanBeFlattened(CanBeFlattened);
     return AI;
   }
@@ -116,6 +135,7 @@ public:
   static ABIArgInfo getExtend(llvm::Type *T = nullptr) {
     auto AI = ABIArgInfo(Extend);
     AI.setCoerceToType(T);
+    AI.setPaddingType(nullptr);
     AI.setDirectOffset(0);
     return AI;
   }
@@ -150,7 +170,9 @@ public:
     return AI;
   }
   static ABIArgInfo getExpand() {
-    return ABIArgInfo(Expand);
+    auto AI = ABIArgInfo(Expand);
+    AI.setPaddingType(nullptr);
+    return AI;
   }
   static ABIArgInfo getExpandWithPadding(bool PaddingInReg,
                                          llvm::Type *Padding) {
@@ -160,6 +182,54 @@ public:
     return AI;
   }
 
+  /// \param unpaddedCoerceToType The coerce-to type with padding elements
+  ///   removed, canonicalized to a single element if it would otherwise
+  ///   have exactly one element.
+  static ABIArgInfo getCoerceAndExpand(llvm::StructType *coerceToType,
+                                       llvm::Type *unpaddedCoerceToType) {
+#ifndef NDEBUG
+    // Sanity checks on unpaddedCoerceToType.
+
+    // Assert that we only have a struct type if there are multiple elements.
+    auto unpaddedStruct = dyn_cast<llvm::StructType>(unpaddedCoerceToType);
+    assert(!unpaddedStruct || unpaddedStruct->getNumElements() != 1);
+
+    // Assert that all the non-padding elements have a corresponding element
+    // in the unpadded type.
+    unsigned unpaddedIndex = 0;
+    for (auto eltType : coerceToType->elements()) {
+      if (isPaddingForCoerceAndExpand(eltType)) continue;
+      if (unpaddedStruct) {
+        assert(unpaddedStruct->getElementType(unpaddedIndex) == eltType);
+      } else {
+        assert(unpaddedIndex == 0 && unpaddedCoerceToType == eltType);
+      }
+      unpaddedIndex++;
+    }
+
+    // Assert that there aren't extra elements in the unpadded type.
+    if (unpaddedStruct) {
+      assert(unpaddedStruct->getNumElements() == unpaddedIndex);
+    } else {
+      assert(unpaddedIndex == 1);
+    }
+#endif
+
+    auto AI = ABIArgInfo(CoerceAndExpand);
+    AI.setCoerceToType(coerceToType);
+    AI.setUnpaddedCoerceToType(unpaddedCoerceToType);
+    return AI;
+  }
+
+  static bool isPaddingForCoerceAndExpand(llvm::Type *eltType) {
+    if (eltType->isArrayTy()) {
+      assert(eltType->getArrayElementType()->isIntegerTy(8));
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   Kind getKind() const { return TheKind; }
   bool isDirect() const { return TheKind == Direct; }
   bool isInAlloca() const { return TheKind == InAlloca; }
@@ -167,8 +237,11 @@ public:
   bool isIgnore() const { return TheKind == Ignore; }
   bool isIndirect() const { return TheKind == Indirect; }
   bool isExpand() const { return TheKind == Expand; }
+  bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
 
-  bool canHaveCoerceToType() const { return isDirect() || isExtend(); }
+  bool canHaveCoerceToType() const {
+    return isDirect() || isExtend() || isCoerceAndExpand();
+  }
 
   // Direct/Extend accessors
   unsigned getDirectOffset() const {
@@ -180,9 +253,9 @@ public:
     DirectOffset = Offset;
   }
 
-  llvm::Type *getPaddingType() const { return PaddingType; }
-
-  void setPaddingType(llvm::Type *T) { PaddingType = T; }
+  llvm::Type *getPaddingType() const {
+    return (canHavePaddingType() ? PaddingType : nullptr);
+  }
 
   bool getPaddingInReg() const {
     return PaddingInReg;
@@ -199,6 +272,26 @@ public:
   void setCoerceToType(llvm::Type *T) {
     assert(canHaveCoerceToType() && "Invalid kind!");
     TypeData = T;
+  }
+
+  llvm::StructType *getCoerceAndExpandType() const {
+    assert(isCoerceAndExpand());
+    return cast<llvm::StructType>(TypeData);
+  }
+
+  llvm::Type *getUnpaddedCoerceAndExpandType() const {
+    assert(isCoerceAndExpand());
+    return UnpaddedCoerceAndExpandType;
+  }
+
+  ArrayRef<llvm::Type *>getCoerceAndExpandTypeSequence() const {
+    assert(isCoerceAndExpand());
+    if (auto structTy =
+          dyn_cast<llvm::StructType>(UnpaddedCoerceAndExpandType)) {
+      return structTy->elements();
+    } else {
+      return llvm::makeArrayRef(&UnpaddedCoerceAndExpandType, 1);
+    }
   }
 
   bool getInReg() const {

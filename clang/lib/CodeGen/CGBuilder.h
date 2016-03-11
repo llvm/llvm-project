@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGBUILDER_H
 #define LLVM_CLANG_LIB_CODEGEN_CGBUILDER_H
 
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
 #include "Address.h"
 #include "CodeGenTypeCache.h"
@@ -184,6 +185,12 @@ public:
     return Address(CreateStructGEP(Addr.getElementType(),
                                    Addr.getPointer(), Index, Name),
                    Addr.getAlignment().alignmentAtOffset(Offset));
+  }
+  Address CreateStructGEP(Address Addr, unsigned Index,
+                          const llvm::StructLayout *Layout,
+                          const llvm::Twine &Name = "") {
+    auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
+    return CreateStructGEP(Addr, Index, Offset, Name);
   }
 
   /// Given
