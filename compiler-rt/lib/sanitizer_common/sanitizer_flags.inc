@@ -182,6 +182,9 @@ COMMON_FLAG(bool, intercept_strspn, true,
 COMMON_FLAG(bool, intercept_strpbrk, true,
             "If set, uses custom wrappers for strpbrk function "
             "to find more errors.")
+COMMON_FLAG(bool, intercept_strlen, true,
+            "If set, uses custom wrappers for strlen function "
+            "to find more errors.")
 COMMON_FLAG(bool, intercept_memcmp, true,
             "If set, uses custom wrappers for memcmp function "
             "to find more errors.")

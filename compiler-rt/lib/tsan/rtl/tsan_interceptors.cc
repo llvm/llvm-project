@@ -668,13 +668,6 @@ TSAN_INTERCEPTOR(uptr, malloc_usable_size, void *p) {
 }
 #endif
 
-TSAN_INTERCEPTOR(uptr, strlen, const char *s) {
-  SCOPED_TSAN_INTERCEPTOR(strlen, s);
-  uptr len = internal_strlen(s);
-  MemoryAccessRange(thr, pc, (uptr)s, len + 1, false);
-  return len;
-}
-
 TSAN_INTERCEPTOR(void*, memset, void *dst, int v, uptr size) {
   // On FreeBSD we get here from libthr internals on thread initialization.
   if (!COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {
@@ -2618,7 +2611,6 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_PVALLOC;
   TSAN_INTERCEPT(posix_memalign);
 
-  TSAN_INTERCEPT(strlen);
   TSAN_INTERCEPT(memset);
   TSAN_INTERCEPT(memcpy);
   TSAN_INTERCEPT(memmove);

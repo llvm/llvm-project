@@ -43,6 +43,8 @@ using __sanitizer::atomic_load;
 using __sanitizer::atomic_store;
 using __sanitizer::atomic_uintptr_t;
 
+DECLARE_REAL(SIZE_T, strlen, const char *s)
+
 #if SANITIZER_FREEBSD
 #define __errno_location __error
 #endif
@@ -279,15 +281,6 @@ INTERCEPTOR(void, malloc_stats, void) {
 #else
 #define MSAN_MAYBE_INTERCEPT_MALLOC_STATS
 #endif
-
-INTERCEPTOR(SIZE_T, strlen, const char *s) {
-  if (msan_init_is_running)
-    return REAL(strlen)(s);
-  ENSURE_MSAN_INITED();
-  SIZE_T res = REAL(strlen)(s);
-  CHECK_UNPOISONED(s, res + 1);
-  return res;
-}
 
 INTERCEPTOR(SIZE_T, strnlen, const char *s, SIZE_T n) {
   ENSURE_MSAN_INITED();
@@ -1562,7 +1555,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(strndup);
   MSAN_MAYBE_INTERCEPT___STRNDUP;
   INTERCEPT_FUNCTION(strncpy);  // NOLINT
-  INTERCEPT_FUNCTION(strlen);
   INTERCEPT_FUNCTION(strnlen);
   INTERCEPT_FUNCTION(gcvt);
   INTERCEPT_FUNCTION(strcat);  // NOLINT

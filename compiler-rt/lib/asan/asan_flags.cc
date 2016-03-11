@@ -159,6 +159,10 @@ void InitializeFlags() {
         (ASAN_LOW_MEMORY) ? 1UL << 6 : 1UL << 8;
     f->quarantine_size_mb = kDefaultQuarantineSizeMb;
   }
+  if (!f->replace_str && common_flags()->intercept_strlen) {
+    Report("WARNING: strlen interceptor is enabled even though replace_str=0. "
+           "Use intercept_strlen=0 to disable it.");
+  }
 }
 
 }  // namespace __asan

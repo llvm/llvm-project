@@ -580,23 +580,6 @@ INTERCEPTOR(char*, strdup, const char *s) {
 }
 #endif
 
-INTERCEPTOR(SIZE_T, strlen, const char *s) {
-  void *ctx;
-  ASAN_INTERCEPTOR_ENTER(ctx, strlen);
-  if (UNLIKELY(!asan_inited)) return internal_strlen(s);
-  // strlen is called from malloc_default_purgeable_zone()
-  // in __asan::ReplaceSystemAlloc() on Mac.
-  if (asan_init_is_running) {
-    return REAL(strlen)(s);
-  }
-  ENSURE_ASAN_INITED();
-  SIZE_T length = REAL(strlen)(s);
-  if (flags()->replace_str) {
-    ASAN_READ_RANGE(ctx, s, length + 1);
-  }
-  return length;
-}
-
 INTERCEPTOR(SIZE_T, wcslen, const wchar_t *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, wcslen);
@@ -763,7 +746,6 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(strcat);  // NOLINT
   ASAN_INTERCEPT_FUNC(strchr);
   ASAN_INTERCEPT_FUNC(strcpy);  // NOLINT
-  ASAN_INTERCEPT_FUNC(strlen);
   ASAN_INTERCEPT_FUNC(wcslen);
   ASAN_INTERCEPT_FUNC(strncat);
   ASAN_INTERCEPT_FUNC(strncpy);
