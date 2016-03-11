@@ -84,7 +84,8 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
     BitcodeFiles.emplace_back(cast<BitcodeFile>(File.release()));
     F->parse(ComdatGroups);
     for (SymbolBody *B : F->getSymbols())
-      resolve(B);
+      if (B)
+        resolve(B);
     return;
   }
 
@@ -92,7 +93,7 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   auto *F = cast<ObjectFile<ELFT>>(FileP);
   ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(File.release()));
   F->parse(ComdatGroups);
-  for (SymbolBody *B : F->getSymbols())
+  for (SymbolBody *B : F->getNonLocalSymbols())
     resolve(B);
 }
 
@@ -139,28 +140,33 @@ std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
 
 static void addBitcodeFile(IRMover &Mover, BitcodeFile &F,
                            LLVMContext &Context) {
-  std::unique_ptr<MemoryBuffer> Buffer =
-      MemoryBuffer::getMemBuffer(F.MB, false);
-  std::unique_ptr<Module> M =
-      check(getLazyBitcodeModule(std::move(Buffer), Context,
-                                 /*ShouldLazyLoadMetadata*/ false));
+
+  std::unique_ptr<IRObjectFile> Obj =
+      check(IRObjectFile::create(F.MB, Context));
   std::vector<GlobalValue *> Keep;
-  for (SymbolBody *B : F.getSymbols()) {
-    if (B->repl() != B)
+  unsigned BodyIndex = 0;
+  ArrayRef<SymbolBody *> Bodies = F.getSymbols();
+
+  for (const BasicSymbolRef &Sym : Obj->symbols()) {
+    GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl());
+    assert(GV);
+    if (GV->hasAppendingLinkage()) {
+      Keep.push_back(GV);
+      continue;
+    }
+    if (BitcodeFile::shouldSkip(Sym))
+      continue;
+    SymbolBody *B = Bodies[BodyIndex++];
+    if (!B || &B->repl() != B)
       continue;
     auto *DB = dyn_cast<DefinedBitcode>(B);
     if (!DB)
       continue;
-    GlobalValue *GV = M->getNamedValue(B->getName());
-    assert(GV);
     Keep.push_back(GV);
   }
-  for (StringRef S : F.getExtraKeeps()) {
-    GlobalValue *GV = M->getNamedValue(S);
-    assert(GV);
-    Keep.push_back(GV);
-  }
-  Mover.move(std::move(M), Keep, [](GlobalValue &, IRMover::ValueAdder) {});
+
+  Mover.move(Obj->takeModule(), Keep,
+             [](GlobalValue &, IRMover::ValueAdder) {});
 }
 
 // This is for use when debugging LTO.
@@ -175,7 +181,7 @@ static void saveBCFile(Module &M) {
 // Merge all the bitcode files we have seen, codegen the result and return
 // the resulting ObjectFile.
 template <class ELFT>
-ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
+elf::ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
   LLVMContext Context;
   Module Combined("ld-temp.o", Context);
   IRMover Mover(Combined);
@@ -194,7 +200,7 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   ObjectFile<ELFT> *Obj = createCombinedLtoObject();
   llvm::DenseSet<StringRef> DummyGroups;
   Obj->parse(DummyGroups);
-  for (SymbolBody *Body : Obj->getSymbols()) {
+  for (SymbolBody *Body : Obj->getNonLocalSymbols()) {
     Symbol *Sym = insert(Body);
     if (!Sym->Body->isUndefined() && Body->isUndefined())
       continue;
@@ -321,7 +327,7 @@ template <class ELFT> void SymbolTable<ELFT>::resolve(SymbolBody *New) {
   // equivalent (conflicting), or more preferable, respectively.
   int Comp = Existing->compare<ELFT>(New);
   if (Comp == 0) {
-    std::string S = "Duplicate symbol: " + conflictMsg(Existing, New);
+    std::string S = "duplicate symbol: " + conflictMsg(Existing, New);
     if (Config->AllowMultipleDefinition)
       warning(S);
     else

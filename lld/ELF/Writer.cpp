@@ -75,6 +75,7 @@ private:
   bool openFile();
   void writeHeader();
   void writeSections();
+  void writeBuildId();
   bool isDiscarded(InputSectionBase<ELFT> *IS) const;
   StringRef getOutputSectionName(InputSectionBase<ELFT> *S) const;
   bool needsInterpSection() const {
@@ -143,6 +144,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   ProgramHeaders.updateAlign(sizeof(uintX_t));
 
   // Instantiate optional output sections if they are needed.
+  std::unique_ptr<BuildIdSection<ELFT>> BuildId;
   std::unique_ptr<GnuHashTableSection<ELFT>> GnuHashTab;
   std::unique_ptr<GotPltSection<ELFT>> GotPlt;
   std::unique_ptr<HashTableSection<ELFT>> HashTab;
@@ -151,6 +153,8 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   std::unique_ptr<SymbolTableSection<ELFT>> SymTabSec;
   std::unique_ptr<OutputSection<ELFT>> MipsRldMap;
 
+  if (Config->BuildId)
+    BuildId.reset(new BuildIdSection<ELFT>);
   if (Config->GnuHash)
     GnuHashTab.reset(new GnuHashTableSection<ELFT>);
   if (Config->SysvHash)
@@ -175,6 +179,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
     MipsRldMap->updateAlign(sizeof(uintX_t));
   }
 
+  Out<ELFT>::BuildId = BuildId.get();
   Out<ELFT>::DynStrTab = &DynStrTab;
   Out<ELFT>::DynSymTab = &DynSymTab;
   Out<ELFT>::Dynamic = &Dynamic;
@@ -219,6 +224,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     return;
   writeHeader();
   writeSections();
+  writeBuildId();
   if (HasError)
     return;
   check(Buffer->commit());
@@ -256,7 +262,7 @@ template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
 }
 
 template <class ELFT, class RelT>
-static bool handleTlsRelocation(uint32_t Type, SymbolBody *Body,
+static bool handleTlsRelocation(uint32_t Type, SymbolBody &Body,
                                 InputSectionBase<ELFT> &C, RelT &RI) {
   if (Target->pointsToLocalDynamicGotEntry(Type)) {
     if (Target->canRelaxTls(Type, nullptr))
@@ -268,16 +274,17 @@ static bool handleTlsRelocation(uint32_t Type, SymbolBody *Body,
     return true;
   }
 
-  if (!Body || !Body->IsTls)
+  if (!Body.IsTls)
     return false;
 
   if (Target->isTlsGlobalDynamicRel(Type)) {
-    if (!Target->canRelaxTls(Type, Body)) {
+    if (!Target->canRelaxTls(Type, &Body)) {
       if (Out<ELFT>::Got->addDynTlsEntry(Body)) {
         Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel,
-                                      DynamicReloc<ELFT>::Off_GTlsIndex, Body});
+                                      DynamicReloc<ELFT>::Off_GTlsIndex,
+                                      &Body});
         Out<ELFT>::RelaDyn->addReloc(
-            {Target->TlsOffsetRel, DynamicReloc<ELFT>::Off_GTlsOffset, Body});
+            {Target->TlsOffsetRel, DynamicReloc<ELFT>::Off_GTlsOffset, &Body});
       }
       return true;
     }
@@ -306,10 +313,11 @@ void Writer<ELFT>::scanRelocs(
     InputSectionBase<ELFT> &C,
     iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels) {
   typedef Elf_Rel_Impl<ELFT, isRela> RelType;
-  const ObjectFile<ELFT> &File = *C.getFile();
+  const elf::ObjectFile<ELFT> &File = *C.getFile();
   for (const RelType &RI : Rels) {
     uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
-    SymbolBody *Body = File.getSymbolBody(SymIndex);
+    SymbolBody &OrigBody = File.getSymbolBody(SymIndex);
+    SymbolBody &Body = OrigBody.repl();
     uint32_t Type = RI.getType(Config->Mips64EL);
 
     // Ignore "hint" relocation because it is for optional code optimization.
@@ -320,12 +328,9 @@ void Writer<ELFT>::scanRelocs(
       HasGotOffRel = true;
 
     // Set "used" bit for --as-needed.
-    if (Body && Body->isUndefined() && !Body->isWeak())
-      if (auto *S = dyn_cast<SharedSymbol<ELFT>>(Body->repl()))
+    if (OrigBody.isUndefined() && !OrigBody.isWeak())
+      if (auto *S = dyn_cast<SharedSymbol<ELFT>>(&Body))
         S->File->IsUsed = true;
-
-    if (Body)
-      Body = Body->repl();
 
     bool CBP = canBePreempted(Body);
     if (handleTlsRelocation<ELFT>(Type, Body, C, RI))
@@ -333,7 +338,7 @@ void Writer<ELFT>::scanRelocs(
 
     if (Target->needsDynRelative(Type))
       Out<ELFT>::RelaDyn->addReloc({Target->RelativeRel, &C, RI.r_offset, true,
-                                    Body, getAddend<ELFT>(RI)});
+                                    &Body, getAddend<ELFT>(RI)});
 
     // MIPS has a special rule to create GOTs for local symbols.
     if (Config->EMachine == EM_MIPS && !CBP &&
@@ -345,7 +350,7 @@ void Writer<ELFT>::scanRelocs(
 
     // If a symbol in a DSO is referenced directly instead of through GOT,
     // we need to create a copy relocation for the symbol.
-    if (auto *B = dyn_cast_or_null<SharedSymbol<ELFT>>(Body)) {
+    if (auto *B = dyn_cast_or_null<SharedSymbol<ELFT>>(&Body)) {
       if (B->needsCopy())
         continue;
       if (Target->needsCopyRel<ELFT>(Type, *B)) {
@@ -359,53 +364,51 @@ void Writer<ELFT>::scanRelocs(
     // An STT_GNU_IFUNC symbol always uses a PLT entry, and all references
     // to the symbol go through the PLT. This is true even for a local
     // symbol, although local symbols normally do not require PLT entries.
-    if (Body && isGnuIFunc<ELFT>(*Body)) {
-      if (Body->isInPlt())
+    if (isGnuIFunc<ELFT>(Body)) {
+      if (Body.isInPlt())
         continue;
       Out<ELFT>::Plt->addEntry(Body);
       if (Target->UseLazyBinding) {
         Out<ELFT>::GotPlt->addEntry(Body);
         Out<ELFT>::RelaPlt->addReloc(
             {CBP ? Target->PltRel : Target->IRelativeRel,
-             DynamicReloc<ELFT>::Off_GotPlt, !CBP, Body});
+             DynamicReloc<ELFT>::Off_GotPlt, !CBP, &Body});
       } else {
         Out<ELFT>::Got->addEntry(Body);
         Out<ELFT>::RelaDyn->addReloc(
             {CBP ? Target->PltRel : Target->IRelativeRel,
-             DynamicReloc<ELFT>::Off_Got, !CBP, Body});
+             DynamicReloc<ELFT>::Off_Got, !CBP, &Body});
       }
       continue;
     }
 
     // If a relocation needs PLT, we create a PLT and a GOT slot
     // for the symbol.
-    TargetInfo::PltNeed NeedPlt = TargetInfo::Plt_No;
-    if (Body)
-      NeedPlt = Target->needsPlt<ELFT>(Type, *Body);
+    TargetInfo::PltNeed NeedPlt = Target->needsPlt<ELFT>(Type, Body);
     if (NeedPlt) {
       if (NeedPlt == TargetInfo::Plt_Implicit)
-        Body->NeedsCopyOrPltAddr = true;
-      if (Body->isInPlt())
+        Body.NeedsCopyOrPltAddr = true;
+      if (Body.isInPlt())
         continue;
       Out<ELFT>::Plt->addEntry(Body);
 
       if (Target->UseLazyBinding) {
         Out<ELFT>::GotPlt->addEntry(Body);
         Out<ELFT>::RelaPlt->addReloc(
-            {Target->PltRel, DynamicReloc<ELFT>::Off_GotPlt, Body});
+            {Target->PltRel, DynamicReloc<ELFT>::Off_GotPlt, &Body});
       } else {
-        if (Body->isInGot())
+        if (Body.isInGot())
           continue;
         Out<ELFT>::Got->addEntry(Body);
         Out<ELFT>::RelaDyn->addReloc(
-            {Target->GotRel, DynamicReloc<ELFT>::Off_Got, Body});
+            {Target->GotRel, DynamicReloc<ELFT>::Off_Got, &Body});
       }
       continue;
     }
 
     // If a relocation needs GOT, we create a GOT slot for the symbol.
-    if (Body && Target->needsGot(Type, *Body)) {
-      if (Body->isInGot())
+    if (Target->needsGot(Type, Body)) {
+      if (Body.isInGot())
         continue;
       Out<ELFT>::Got->addEntry(Body);
 
@@ -415,7 +418,7 @@ void Writer<ELFT>::scanRelocs(
         // See "Global Offset Table" in Chapter 5 in the following document
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-        Body->MustBeInDynSym = true;
+        Body.MustBeInDynSym = true;
         continue;
       }
 
@@ -423,12 +426,14 @@ void Writer<ELFT>::scanRelocs(
                     !Target->isSizeRel(Type);
       if (CBP || Dynrel) {
         uint32_t DynType;
-        if (CBP)
-          DynType = Body->IsTls ? Target->TlsGotRel : Target->GotRel;
+        if (Body.IsTls)
+          DynType = Target->TlsGotRel;
+        else if (CBP)
+          DynType = Target->GotRel;
         else
           DynType = Target->RelativeRel;
         Out<ELFT>::RelaDyn->addReloc(
-            {DynType, DynamicReloc<ELFT>::Off_Got, !CBP, Body});
+            {DynType, DynamicReloc<ELFT>::Off_Got, !CBP, &Body});
       }
       continue;
     }
@@ -443,7 +448,7 @@ void Writer<ELFT>::scanRelocs(
         // relocation too because that case is possible for executable file
         // linking only.
         continue;
-      if (Body == Config->MipsGpDisp || Body == Config->MipsLocalGp)
+      if (&Body == Config->MipsGpDisp || &Body == Config->MipsLocalGp)
         // MIPS _gp_disp designates offset between start of function and 'gp'
         // pointer into GOT. __gnu_local_gp is equal to the current value of
         // the 'gp'. Therefore any relocations against them do not require
@@ -455,7 +460,7 @@ void Writer<ELFT>::scanRelocs(
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       Out<ELFT>::RelaDyn->addReloc({Target->getDynRel(Type), &C, RI.r_offset,
-                                    false, Body, getAddend<ELFT>(RI)});
+                                    false, &Body, getAddend<ELFT>(RI)});
       continue;
     }
 
@@ -477,21 +482,8 @@ void Writer<ELFT>::scanRelocs(
                                     (uintX_t)getPPC64TocBase() + Addend});
       continue;
     }
-    if (Body) {
-      Out<ELFT>::RelaDyn->addReloc(
-          {Target->RelativeRel, &C, RI.r_offset, true, Body, Addend});
-      continue;
-    }
-    const Elf_Sym *Sym =
-        File.getObj().getRelocationSymbol(&RI, File.getSymbolTable());
-    InputSectionBase<ELFT> *Section = File.getSection(*Sym);
-    uintX_t Offset = Sym->st_value;
-    if (Sym->getType() == STT_SECTION) {
-      Offset += Addend;
-      Addend = 0;
-    }
     Out<ELFT>::RelaDyn->addReloc(
-        {Target->RelativeRel, &C, RI.r_offset, Section, Offset, Addend});
+        {Target->RelativeRel, &C, RI.r_offset, true, &Body, Addend});
   }
 }
 
@@ -516,7 +508,7 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if ((Config->Relocatable || Config->Shared) && !Config->NoUndefined)
     return;
 
-  std::string Msg = "Undefined symbol: " + Sym->getName().str();
+  std::string Msg = "undefined symbol: " + Sym->getName().str();
   if (InputFile *File = Symtab.findFile(Sym))
     Msg += " in " + File->getName().str();
   if (Config->NoinhibitExec)
@@ -526,7 +518,8 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
 }
 
 template <class ELFT>
-static bool shouldKeepInSymtab(const ObjectFile<ELFT> &File, StringRef SymName,
+static bool shouldKeepInSymtab(const elf::ObjectFile<ELFT> &File,
+                               StringRef SymName,
                                const typename ELFFile<ELFT>::Elf_Sym &Sym) {
   if (Sym.getType() == STT_FILE)
     return false;
@@ -562,8 +555,11 @@ static bool shouldKeepInSymtab(const ObjectFile<ELFT> &File, StringRef SymName,
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   if (!Out<ELFT>::SymTab)
     return;
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
-    for (const Elf_Sym &Sym : F->getLocalSymbols()) {
+  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
+       Symtab.getObjectFiles()) {
+    for (SymbolBody *B : F->getLocalSymbols()) {
+      auto *L = cast<DefinedRegular<ELFT>>(B);
+      const Elf_Sym &Sym = L->Sym;
       StringRef SymName = check(Sym.getName(F->getStringTable()));
       if (!shouldKeepInSymtab<ELFT>(*F, SymName, Sym))
         continue;
@@ -571,13 +567,10 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
         InputSectionBase<ELFT> *Section = F->getSection(Sym);
         if (!Section->Live)
           continue;
-        // That can happen if creating relocatable output.
-        if (Sym.getType() == STT_SECTION)
-          SymName = Section->getSectionName();
       }
       ++Out<ELFT>::SymTab->NumLocals;
       if (Config->Relocatable)
-        Out<ELFT>::SymTab->Locals[&Sym] = Out<ELFT>::SymTab->NumLocals;
+        L->DynsymIndex = Out<ELFT>::SymTab->NumLocals;
       F->KeptLocalSyms.push_back(std::make_pair(
           &Sym, Out<ELFT>::SymTab->StrTabSec.addString(SymName)));
     }
@@ -769,7 +762,7 @@ StringRef Writer<ELFT>::getOutputSectionName(InputSectionBase<ELFT> *S) const {
 
 template <class ELFT>
 void reportDiscarded(InputSectionBase<ELFT> *IS,
-                     const std::unique_ptr<ObjectFile<ELFT>> &File) {
+                     const std::unique_ptr<elf::ObjectFile<ELFT>> &File) {
   if (!Config->PrintGcSections || !IS || IS->Live)
     return;
   llvm::errs() << "removing unused section from '" << IS->getSectionName()
@@ -967,7 +960,8 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   // Create output sections for input object file sections.
   std::vector<OutputSectionBase<ELFT> *> RegularSections;
   OutputSectionFactory<ELFT> Factory;
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
+  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
+       Symtab.getObjectFiles()) {
     for (InputSectionBase<ELFT> *C : F->getSections()) {
       if (isDiscarded(C)) {
         reportDiscarded(C, F);
@@ -1027,7 +1021,8 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab.getObjectFiles()) {
+  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
+       Symtab.getObjectFiles()) {
     for (InputSectionBase<ELFT> *C : F->getSections()) {
       if (isDiscarded(C))
         continue;
@@ -1126,6 +1121,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   // This order is not the same as the final output order
   // because we sort the sections using their attributes below.
+  Add(Out<ELFT>::BuildId);
   Add(Out<ELFT>::SymTab);
   Add(Out<ELFT>::ShStrTab);
   Add(Out<ELFT>::StrTab);
@@ -1428,11 +1424,8 @@ static uint32_t getELFFlags() {
 
 template <class ELFT>
 static typename ELFFile<ELFT>::uintX_t getEntryAddr() {
-  if (Config->EntrySym) {
-    if (SymbolBody *B = Config->EntrySym->repl())
-      return B->getVA<ELFT>();
-    return 0;
-  }
+  if (SymbolBody *B = Config->EntrySym)
+    return B->repl().getVA<ELFT>();
   if (Config->EntryAddr != uint64_t(-1))
     return Config->EntryAddr;
   return 0;
@@ -1525,7 +1518,7 @@ template <class ELFT> bool Writer<ELFT>::openFile() {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
                                FileOutputBuffer::F_executable);
-  if (error(BufferOrErr, "Failed to open " + Config->OutputFile))
+  if (error(BufferOrErr, "failed to open " + Config->OutputFile))
     return false;
   Buffer = std::move(*BufferOrErr);
   return true;
@@ -1545,6 +1538,29 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
     if (Sec != Out<ELFT>::Opd)
       Sec->writeTo(Buf + Sec->getFileOff());
+}
+
+template <class ELFT> void Writer<ELFT>::writeBuildId() {
+  BuildIdSection<ELFT> *S = Out<ELFT>::BuildId;
+  if (!S)
+    return;
+
+  // Compute a hash of all sections except .debug_* sections.
+  // We skip debug sections because they tend to be very large
+  // and their contents are very likely to be the same as long as
+  // other sections are the same.
+  uint8_t *Start = Buffer->getBufferStart();
+  uint8_t *Last = Start;
+  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
+    uint8_t *End = Start + Sec->getFileOff();
+    if (!Sec->getName().startswith(".debug_"))
+      S->update({Last, End});
+    Last = End;
+  }
+  S->update({Last, Start + FileSize});
+
+  // Fill the hash value field in the .note.gnu.build-id section.
+  S->writeBuildId();
 }
 
 template void elf::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);

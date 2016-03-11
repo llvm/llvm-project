@@ -93,7 +93,7 @@ private:
   static uint64_t getHash(InputSection<ELFT> *S);
   static bool isEligible(InputSectionBase<ELFT> *Sec);
   static std::vector<InputSection<ELFT> *> getSections(SymbolTable<ELFT> *S);
-  static SymbolBody *getSymbol(const InputSection<ELFT> *Sec,
+  static SymbolBody &getSymbol(const InputSection<ELFT> *Sec,
                                const Elf_Rel *Rel);
 
   void segregate(InputSection<ELFT> **Begin, InputSection<ELFT> **End,
@@ -161,10 +161,10 @@ ICF<ELFT>::getSections(SymbolTable<ELFT> *Symtab) {
 }
 
 template <class ELFT>
-SymbolBody *ICF<ELFT>::getSymbol(const InputSection<ELFT> *Sec,
+SymbolBody &ICF<ELFT>::getSymbol(const InputSection<ELFT> *Sec,
                                  const Elf_Rel *Rel) {
   uint32_t SymIdx = Rel->getSymbol(Config->Mips64EL);
-  return Sec->File->getSymbolBody(SymIdx);
+  return Sec->File->getSymbolBody(SymIdx).repl();
 }
 
 // All sections between Begin and End must have the same group ID before
@@ -259,26 +259,15 @@ bool ICF<ELFT>::variableEq(const InputSection<ELFT> *A,
   const RelTy *EA = RelsA.end();
   const RelTy *IB = RelsB.begin();
   for (; IA != EA; ++IA, ++IB) {
-    // If both IA and IB are pointing to the same local symbol,
-    // this "if" condition must be true.
-    if (A->File == B->File &&
-        IA->getSymbol(Config->Mips64EL) == IB->getSymbol(Config->Mips64EL))
-      continue;
-
-    // Otherwise, IA and IB must be pointing to the global symbols.
-    SymbolBody *SA = getSymbol(A, (const Elf_Rel *)IA);
-    SymbolBody *SB = getSymbol(B, (const Elf_Rel *)IB);
-    if (!SA || !SB)
-      return false;
-
-    // The global symbols should be simply the same.
-    if (SA->repl() == SB->repl())
+    SymbolBody &SA = getSymbol(A, (const Elf_Rel *)IA);
+    SymbolBody &SB = getSymbol(B, (const Elf_Rel *)IB);
+    if (&SA == &SB)
       continue;
 
     // Or, the symbols should be pointing to the same section
     // in terms of the group ID.
-    auto *DA = dyn_cast<DefinedRegular<ELFT>>(SA->repl());
-    auto *DB = dyn_cast<DefinedRegular<ELFT>>(SB->repl());
+    auto *DA = dyn_cast<DefinedRegular<ELFT>>(&SA);
+    auto *DB = dyn_cast<DefinedRegular<ELFT>>(&SB);
     if (!DA || !DB)
       return false;
     if (DA->Sym.st_value != DB->Sym.st_value)

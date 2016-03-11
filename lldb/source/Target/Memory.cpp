@@ -78,7 +78,11 @@ MemoryCache::Flush (addr_t addr, size_t size)
     if (!m_L1_cache.empty())
     {
         AddrRange flush_range(addr, size);
-        BlockMap::iterator pos = m_L1_cache.lower_bound(addr);
+        BlockMap::iterator pos = m_L1_cache.upper_bound(addr);
+        if (pos != m_L1_cache.begin())
+        {
+            --pos;
+        }
         while (pos != m_L1_cache.end())
         {
             AddrRange chunk_range(pos->first, pos->second->GetByteSize());

@@ -92,7 +92,7 @@ void LinkerDriver::addFile(StringRef Path) {
   using namespace llvm::sys::fs;
   log(Path);
   auto MBOrErr = MemoryBuffer::getFile(Path);
-  if (error(MBOrErr, "Cannot open " + Path))
+  if (error(MBOrErr, "cannot open " + Path))
     return;
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
@@ -223,6 +223,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
+  Config->BuildId = Args.hasArg(OPT_build_id);
   Config->Demangle = !Args.hasArg(OPT_no_demangle);
   Config->DiscardAll = Args.hasArg(OPT_discard_all);
   Config->DiscardLocals = Args.hasArg(OPT_discard_locals);
@@ -312,7 +313,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
   }
 
   if (Files.empty() && !HasError)
-    error("No input files");
+    error("no input files.");
 }
 
 template <class ELFT> static void initSymbols() {

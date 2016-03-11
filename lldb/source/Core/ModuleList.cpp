@@ -10,10 +10,9 @@
 #include "lldb/Core/ModuleList.h"
 
 // C Includes
-#include <stdint.h>
-
 // C++ Includes
-#include <mutex> // std::once
+#include <cstdint>
+#include <mutex>
 
 // Other libraries and framework includes
 // Project includes
@@ -29,23 +28,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
-// ModuleList constructor
-//----------------------------------------------------------------------
 ModuleList::ModuleList() :
     m_modules(),
     m_modules_mutex (Mutex::eMutexTypeRecursive),
-    m_notifier(NULL)
+    m_notifier(nullptr)
 {
 }
 
-//----------------------------------------------------------------------
-// Copy constructor
-//----------------------------------------------------------------------
 ModuleList::ModuleList(const ModuleList& rhs) :
     m_modules(),
     m_modules_mutex (Mutex::eMutexTypeRecursive),
-    m_notifier(NULL)
+    m_notifier(nullptr)
 {
     Mutex::Locker lhs_locker(m_modules_mutex);
     Mutex::Locker rhs_locker(rhs.m_modules_mutex);
@@ -59,9 +52,6 @@ ModuleList::ModuleList (ModuleList::Notifier* notifier) :
 {
 }
 
-//----------------------------------------------------------------------
-// Assignment operator
-//----------------------------------------------------------------------
 const ModuleList&
 ModuleList::operator= (const ModuleList& rhs)
 {
@@ -93,12 +83,7 @@ ModuleList::operator= (const ModuleList& rhs)
     return *this;
 }
 
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-ModuleList::~ModuleList()
-{
-}
+ModuleList::~ModuleList() = default;
 
 void
 ModuleList::AppendImpl (const ModuleSP &module_sp, bool use_notifier)
@@ -334,7 +319,7 @@ ModuleList::GetModulePointerAtIndexUnlocked (size_t idx) const
 {
     if (idx < m_modules.size())
         return m_modules[idx].get();
-    return NULL;
+    return nullptr;
 }
 
 ModuleSP
@@ -381,25 +366,25 @@ ModuleList::FindFunctions (const ConstString &name,
         collection::const_iterator pos, end = m_modules.end();
         for (pos = m_modules.begin(); pos != end; ++pos)
         {
-            (*pos)->FindFunctions (lookup_name,
-                                   NULL,
-                                   lookup_name_type_mask,
-                                   include_symbols,
-                                   include_inlines,
-                                   true,
-                                   sc_list);
+            (*pos)->FindFunctions(lookup_name,
+                                  nullptr,
+                                  lookup_name_type_mask,
+                                  include_symbols,
+                                  include_inlines,
+                                  true,
+                                  sc_list);
         }
         
         if (match_name_after_lookup)
         {
             SymbolContext sc;
             size_t i = old_size;
-            while (i<sc_list.GetSize())
+            while (i < sc_list.GetSize())
             {
                 if (sc_list.GetContextAtIndex(i, sc))
                 {
                     const char *func_name = sc.GetFunctionName().GetCString();
-                    if (func_name && strstr (func_name, name.GetCString()) == NULL)
+                    if (func_name != nullptr && strstr(func_name, name.GetCString()) == nullptr)
                     {
                         // Remove the current context
                         sc_list.RemoveContextAtIndex(i);
@@ -410,7 +395,6 @@ ModuleList::FindFunctions (const ConstString &name,
                 ++i;
             }
         }
-
     }
     else
     {
@@ -418,7 +402,7 @@ ModuleList::FindFunctions (const ConstString &name,
         collection::const_iterator pos, end = m_modules.end();
         for (pos = m_modules.begin(); pos != end; ++pos)
         {
-            (*pos)->FindFunctions (name, NULL, name_type_mask, include_symbols, include_inlines, true, sc_list);
+            (*pos)->FindFunctions(name, nullptr, name_type_mask, include_symbols, include_inlines, true, sc_list);
         }
     }
     return sc_list.GetSize() - old_size;
@@ -455,12 +439,12 @@ ModuleList::FindFunctionSymbols (const ConstString &name,
         {
             SymbolContext sc;
             size_t i = old_size;
-            while (i<sc_list.GetSize())
+            while (i < sc_list.GetSize())
             {
                 if (sc_list.GetContextAtIndex(i, sc))
                 {
                     const char *func_name = sc.GetFunctionName().GetCString();
-                    if (func_name && strstr (func_name, name.GetCString()) == NULL)
+                    if (func_name != nullptr && strstr(func_name, name.GetCString()) == nullptr)
                     {
                         // Remove the current context
                         sc_list.RemoveContextAtIndex(i);
@@ -471,7 +455,6 @@ ModuleList::FindFunctionSymbols (const ConstString &name,
                 ++i;
             }
         }
-
     }
     else
     {
@@ -485,7 +468,6 @@ ModuleList::FindFunctionSymbols (const ConstString &name,
 
     return sc_list.GetSize() - old_size;
 }
-
 
 size_t
 ModuleList::FindFunctions(const RegularExpression &name,
@@ -535,11 +517,10 @@ ModuleList::FindGlobalVariables (const ConstString &name,
     collection::const_iterator pos, end = m_modules.end();
     for (pos = m_modules.begin(); pos != end; ++pos)
     {
-        (*pos)->FindGlobalVariables (name, NULL, append, max_matches, variable_list);
+        (*pos)->FindGlobalVariables(name, nullptr, append, max_matches, variable_list);
     }
     return variable_list.GetSize() - initial_size;
 }
-
 
 size_t
 ModuleList::FindGlobalVariables (const RegularExpression& regex, 
@@ -556,7 +537,6 @@ ModuleList::FindGlobalVariables (const RegularExpression& regex,
     }
     return variable_list.GetSize() - initial_size;
 }
-
 
 size_t
 ModuleList::FindSymbolsWithNameAndType (const ConstString &name, 
@@ -628,7 +608,6 @@ ModuleList::FindModule (const Module *module_ptr) const
         }
     }
     return module_sp;
-
 }
 
 ModuleSP
@@ -652,7 +631,6 @@ ModuleList::FindModule (const UUID &uuid) const
     }
     return module_sp;
 }
-
 
 size_t
 ModuleList::FindTypes (const SymbolContext& sc, const ConstString &name, bool name_is_fully_qualified, size_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeList& types) const
@@ -684,7 +662,7 @@ ModuleList::FindTypes (const SymbolContext& sc, const ConstString &name, bool na
         {
             // Search the module if the module is not equal to the one in the symbol
             // context "sc". If "sc" contains a empty module shared pointer, then
-            // the comparison will always be true (valid_module_ptr != NULL).
+            // the comparison will always be true (valid_module_ptr != nullptr).
             if (sc.module_sp.get() != (*pos).get())
                 total_matches += (*pos)->FindTypes (world_sc, name, name_is_fully_qualified, max_matches, searched_symbol_files, types);
             
@@ -750,7 +728,6 @@ ModuleList::GetSize() const
     return size;
 }
 
-
 void
 ModuleList::Dump(Stream *s) const
 {
@@ -769,7 +746,7 @@ ModuleList::Dump(Stream *s) const
 void
 ModuleList::LogUUIDAndPaths (Log *log, const char *prefix_cstr)
 {
-    if (log)
+    if (log != nullptr)
     {   
         Mutex::Locker locker(m_modules_mutex);
         collection::const_iterator pos, begin = m_modules.begin(), end = m_modules.end();
@@ -831,14 +808,11 @@ ModuleList::ResolveSymbolContextForAddress (const Address& so_addr, uint32_t res
 }
 
 uint32_t
-ModuleList::ResolveSymbolContextForFilePath 
-(
-    const char *file_path, 
-    uint32_t line, 
-    bool check_inlines, 
-    uint32_t resolve_scope, 
-    SymbolContextList& sc_list
-)  const
+ModuleList::ResolveSymbolContextForFilePath(const char *file_path,
+                                            uint32_t line,
+                                            bool check_inlines,
+                                            uint32_t resolve_scope,
+                                            SymbolContextList& sc_list) const
 {
     FileSpec file_spec(file_path, false);
     return ResolveSymbolContextsForFileSpec (file_spec, line, check_inlines, resolve_scope, sc_list);
@@ -878,13 +852,13 @@ ModuleList::GetIndexForModule (const Module *module) const
 static ModuleList &
 GetSharedModuleList ()
 {
-    static ModuleList *g_shared_module_list = NULL;
+    static ModuleList *g_shared_module_list = nullptr;
     static std::once_flag g_once_flag;
     std::call_once(g_once_flag, [](){
         // NOTE: Intentionally leak the module list so a program doesn't have to
         // cleanup all modules and object files as it exits. This just wastes time
         // doing a bunch of cleanup that isn't required.
-        if (g_shared_module_list == NULL)
+        if (g_shared_module_list == nullptr)
             g_shared_module_list = new ModuleList(); // <--- Intentional leak!!!
     });
     return *g_shared_module_list;
@@ -896,7 +870,7 @@ ModuleList::ModuleIsInCache (const Module *module_ptr)
     if (module_ptr)
     {
         ModuleList &shared_module_list = GetSharedModuleList ();
-        return shared_module_list.FindModule (module_ptr).get() != NULL;
+        return shared_module_list.FindModule(module_ptr).get() != nullptr;
     }
     return false;
 }
@@ -914,15 +888,12 @@ ModuleList::RemoveOrphanSharedModules (bool mandatory)
 }
 
 Error
-ModuleList::GetSharedModule
-(
-    const ModuleSpec &module_spec,
-    ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
-    ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr,
-    bool always_create
-)
+ModuleList::GetSharedModule(const ModuleSpec &module_spec,
+                            ModuleSP &module_sp,
+                            const FileSpecList *module_search_paths_ptr,
+                            ModuleSP *old_module_sp_ptr,
+                            bool *did_create_ptr,
+                            bool always_create)
 {
     ModuleList &shared_module_list = GetSharedModuleList ();
     Mutex::Locker locker(shared_module_list.m_modules_mutex);
@@ -944,7 +915,7 @@ ModuleList::GetSharedModule
     // Make sure no one else can try and get or create a module while this
     // function is actively working on it by doing an extra lock on the
     // global mutex list.
-    if (always_create == false)
+    if (!always_create)
     {
         ModuleList matching_module_list;
         const size_t num_matching_modules = shared_module_list.FindModules (module_spec, matching_module_list);
@@ -957,11 +928,11 @@ ModuleList::GetSharedModule
                 // Make sure the file for the module hasn't been modified
                 if (module_sp->FileHasChanged())
                 {
-                    if (old_module_sp_ptr && !old_module_sp_ptr->get())
+                    if (old_module_sp_ptr && !*old_module_sp_ptr)
                         *old_module_sp_ptr = module_sp;
 
                     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_MODULES));
-                    if (log)
+                    if (log != nullptr)
                         log->Printf("module changed: %p, removing from global module list",
                                     static_cast<void*>(module_sp.get()));
 
@@ -1105,7 +1076,6 @@ ModuleList::GetSharedModule
             return error;
         }
 
-
         // Make sure no one else can try and get or create a module while this
         // function is actively working on it by doing an extra lock on the
         // global mutex list.
@@ -1120,7 +1090,7 @@ ModuleList::GetSharedModule
 
             // If we didn't have a UUID in mind when looking for the object file,
             // then we should make sure the modification time hasn't changed!
-            if (platform_module_spec.GetUUIDPtr() == NULL)
+            if (platform_module_spec.GetUUIDPtr() == nullptr)
             {
                 TimeValue file_spec_mod_time(located_binary_modulespec.GetFileSpec().GetModificationTime());
                 if (file_spec_mod_time.IsValid())
@@ -1136,7 +1106,7 @@ ModuleList::GetSharedModule
             }
         }
 
-        if (module_sp.get() == NULL)
+        if (!module_sp)
         {
             module_sp.reset (new Module (platform_module_spec));
             // Make sure there are a module and an object file since we can specify
@@ -1226,7 +1196,7 @@ ModuleList::LoadScriptingResourcesInTarget (Target *target,
             }
         }
     }
-    return errors.size() == 0;
+    return errors.empty();
 }
 
 void

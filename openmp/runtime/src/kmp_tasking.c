@@ -1166,7 +1166,7 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
     //
     if (!discard) {
         KMP_COUNT_BLOCK(TASK_executed);
-        KMP_TIME_BLOCK (TASK_execution);
+        KMP_TIME_BLOCK (OMP_task);
 #endif // OMP_40_ENABLED
 
 #if OMPT_SUPPORT && OMPT_TRACE

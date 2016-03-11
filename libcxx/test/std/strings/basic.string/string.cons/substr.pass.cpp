@@ -11,21 +11,14 @@
 // <string>
 
 // basic_string(const basic_string<charT,traits,Allocator>& str,
-//              size_type pos, size_type n,
-//              const Allocator& a = Allocator());
-//
-// basic_string(const basic_string<charT,traits,Allocator>& str,
-//              size_type pos,
+//              size_type pos, size_type n = npos,
 //              const Allocator& a = Allocator());
 
 #include <string>
 #include <stdexcept>
 #include <algorithm>
-#include <vector>
-#include <scoped_allocator>
 #include <cassert>
 
-#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
@@ -98,20 +91,6 @@ test(S str, unsigned pos, unsigned n, const typename S::allocator_type& a)
     }
 }
 
-#if TEST_STD_VER >= 11
-void test2583()
-{   // LWG #2583
-    typedef std::basic_string<char, std::char_traits<char>, test_allocator<char> > StringA;
-    std::vector<StringA, std::scoped_allocator_adaptor<test_allocator<StringA>>> vs;
-    StringA s{"1234"};
-    vs.emplace_back(s, 2);
-
-    try { vs.emplace_back(s, 5); }
-    catch (const std::out_of_range&) { return; }
-    assert(false);
-}
-#endif
-
 int main()
 {
     {
@@ -152,7 +131,7 @@ int main()
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A(7)), 50, 10, A(8));
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A(7)), 50, 100, A(8));
     }
-#if TEST_STD_VER >= 11
+#if __cplusplus >= 201103L
     {
     typedef min_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;
@@ -191,7 +170,5 @@ int main()
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()), 50, 10, A());
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()), 50, 100, A());
     }
-
-    test2583();
 #endif
 }

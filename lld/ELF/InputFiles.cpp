@@ -46,7 +46,7 @@ ELFKind ELFFileBase<ELFT>::getELFKind() {
 
 template <class ELFT>
 typename ELFFileBase<ELFT>::Elf_Sym_Range
-ELFFileBase<ELFT>::getSymbolsHelper(bool Local) {
+ELFFileBase<ELFT>::getElfSymbols(bool OnlyGlobals) {
   if (!Symtab)
     return Elf_Sym_Range(nullptr, nullptr);
   Elf_Sym_Range Syms = ELFObj.symbols(Symtab);
@@ -54,10 +54,10 @@ ELFFileBase<ELFT>::getSymbolsHelper(bool Local) {
   uint32_t FirstNonLocal = Symtab->sh_info;
   if (FirstNonLocal > NumSymbols)
     fatal("Invalid sh_info in symbol table");
-  if (!Local)
+
+  if (OnlyGlobals)
     return make_range(Syms.begin() + FirstNonLocal, Syms.end());
-  // +1 to skip over dummy symbol.
-  return make_range(Syms.begin() + 1, Syms.begin() + FirstNonLocal);
+  return make_range(Syms.begin(), Syms.end());
 }
 
 template <class ELFT>
@@ -77,35 +77,36 @@ template <class ELFT> void ELFFileBase<ELFT>::initStringTable() {
 }
 
 template <class ELFT>
-typename ELFFileBase<ELFT>::Elf_Sym_Range
-ELFFileBase<ELFT>::getNonLocalSymbols() {
-  return getSymbolsHelper(false);
-}
-
-template <class ELFT>
 elf::ObjectFile<ELFT>::ObjectFile(MemoryBufferRef M)
     : ELFFileBase<ELFT>(Base::ObjectKind, M) {}
 
 template <class ELFT>
-typename elf::ObjectFile<ELFT>::Elf_Sym_Range
-elf::ObjectFile<ELFT>::getLocalSymbols() {
-  return this->getSymbolsHelper(true);
+ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getNonLocalSymbols() {
+  if (!this->Symtab)
+    return this->SymbolBodies;
+  uint32_t FirstNonLocal = this->Symtab->sh_info;
+  return makeArrayRef(this->SymbolBodies).slice(FirstNonLocal);
+}
+
+template <class ELFT>
+ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getLocalSymbols() {
+  if (!this->Symtab)
+    return this->SymbolBodies;
+  uint32_t FirstNonLocal = this->Symtab->sh_info;
+  return makeArrayRef(this->SymbolBodies).slice(1, FirstNonLocal - 1);
+}
+
+template <class ELFT>
+ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getSymbols() {
+  if (!this->Symtab)
+    return this->SymbolBodies;
+  return makeArrayRef(this->SymbolBodies).slice(1);
 }
 
 template <class ELFT> uint32_t elf::ObjectFile<ELFT>::getMipsGp0() const {
   if (MipsReginfo)
     return MipsReginfo->Reginfo->ri_gp_value;
   return 0;
-}
-
-template <class ELFT>
-const typename elf::ObjectFile<ELFT>::Elf_Sym *
-elf::ObjectFile<ELFT>::getLocalSymbol(uintX_t SymIndex) {
-  uint32_t FirstNonLocal = this->Symtab->sh_info;
-  if (SymIndex >= FirstNonLocal)
-    return nullptr;
-  Elf_Sym_Range Syms = this->ELFObj.symbols(this->Symtab);
-  return Syms.begin() + SymIndex;
 }
 
 template <class ELFT>
@@ -266,7 +267,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
   this->initStringTable();
-  Elf_Sym_Range Syms = this->getNonLocalSymbols();
+  Elf_Sym_Range Syms = this->getElfSymbols(false);
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
   SymbolBodies.reserve(NumSymbols);
   for (const Elf_Sym &Sym : Syms)
@@ -289,6 +290,14 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 
 template <class ELFT>
 SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
+  unsigned char Binding = Sym->getBinding();
+  InputSectionBase<ELFT> *Sec = getSection(*Sym);
+  if (Binding == STB_LOCAL) {
+    if (Sec == InputSection<ELFT>::Discarded)
+      Sec = nullptr;
+    return new (Alloc) DefinedRegular<ELFT>("", *Sym, Sec);
+  }
+
   StringRef Name = check(Sym->getName(this->StringTable));
 
   switch (Sym->st_shndx) {
@@ -300,17 +309,15 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
                                      Sym->getVisibility());
   }
 
-  switch (Sym->getBinding()) {
+  switch (Binding) {
   default:
-    fatal("Unexpected binding");
+    fatal("unexpected binding");
   case STB_GLOBAL:
   case STB_WEAK:
-  case STB_GNU_UNIQUE: {
-    InputSectionBase<ELFT> *Sec = getSection(*Sym);
+  case STB_GNU_UNIQUE:
     if (Sec == InputSection<ELFT>::Discarded)
       return new (Alloc) UndefinedElf<ELFT>(Name, *Sym);
     return new (Alloc) DefinedRegular<ELFT>(Name, *Sym, Sec);
-  }
   }
 }
 
@@ -399,7 +406,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
 
 // Fully parse the shared object file. This must be called after parseSoName().
 template <class ELFT> void SharedFile<ELFT>::parseRest() {
-  Elf_Sym_Range Syms = this->getNonLocalSymbols();
+  Elf_Sym_Range Syms = this->getElfSymbols(true);
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
   SymbolBodies.reserve(NumSymbols);
   for (const Elf_Sym &Sym : Syms) {
@@ -429,6 +436,50 @@ static uint8_t getGvVisibility(const GlobalValue *GV) {
   llvm_unreachable("Unknown visibility");
 }
 
+SymbolBody *
+BitcodeFile::createSymbolBody(const DenseSet<const Comdat *> &KeptComdats,
+                              const IRObjectFile &Obj,
+                              const BasicSymbolRef &Sym) {
+  const GlobalValue *GV = Obj.getSymbolGV(Sym.getRawDataRefImpl());
+  assert(GV);
+  if (const Comdat *C = GV->getComdat())
+    if (!KeptComdats.count(C))
+      return nullptr;
+
+  uint8_t Visibility = getGvVisibility(GV);
+
+  SmallString<64> Name;
+  raw_svector_ostream OS(Name);
+  Sym.printName(OS);
+  StringRef NameRef = Saver.save(StringRef(Name));
+
+  const Module &M = Obj.getModule();
+  SymbolBody *Body;
+  uint32_t Flags = Sym.getFlags();
+  bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
+  if (Flags & BasicSymbolRef::SF_Undefined) {
+    Body = new (Alloc) Undefined(NameRef, IsWeak, Visibility, false);
+  } else if (Flags & BasicSymbolRef::SF_Common) {
+    const DataLayout &DL = M.getDataLayout();
+    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    Body = new (Alloc)
+        DefinedCommon(NameRef, Size, GV->getAlignment(), IsWeak, Visibility);
+  } else {
+    Body = new (Alloc) DefinedBitcode(NameRef, IsWeak, Visibility);
+  }
+  Body->IsTls = GV->isThreadLocal();
+  return Body;
+}
+
+bool BitcodeFile::shouldSkip(const BasicSymbolRef &Sym) {
+  uint32_t Flags = Sym.getFlags();
+  if (!(Flags & BasicSymbolRef::SF_Global))
+    return true;
+  if (Flags & BasicSymbolRef::SF_FormatSpecific)
+    return true;
+  return false;
+}
+
 void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
   LLVMContext Context;
   std::unique_ptr<IRObjectFile> Obj = check(IRObjectFile::create(MB, Context));
@@ -441,43 +492,9 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
       KeptComdats.insert(&P.second);
   }
 
-  for (const BasicSymbolRef &Sym : Obj->symbols()) {
-    const GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl());
-    assert(GV);
-    uint32_t Flags = Sym.getFlags();
-    if (const Comdat *C = GV->getComdat())
-      if (!KeptComdats.count(C))
-        continue;
-    if (!(Flags & BasicSymbolRef::SF_Global))
-        continue;
-    if (GV->hasAppendingLinkage()) {
-      ExtraKeeps.push_back(GV->getName().copy(Alloc));
-      continue;
-    }
-    if (Flags & BasicSymbolRef::SF_FormatSpecific)
-      continue;
-    uint8_t Visibility = getGvVisibility(GV);
-
-    SmallString<64> Name;
-    raw_svector_ostream OS(Name);
-    Sym.printName(OS);
-    StringRef NameRef = Saver.save(StringRef(Name));
-
-    SymbolBody *Body;
-    bool IsWeak = Flags & BasicSymbolRef::SF_Weak;
-    if (Flags & BasicSymbolRef::SF_Undefined) {
-      Body = new (Alloc) Undefined(NameRef, IsWeak, Visibility, false);
-    } else if (Flags & BasicSymbolRef::SF_Common) {
-      const DataLayout &DL = M.getDataLayout();
-      uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
-      Body = new (Alloc)
-          DefinedCommon(NameRef, Size, GV->getAlignment(), IsWeak, Visibility);
-    } else {
-      Body = new (Alloc) DefinedBitcode(NameRef, IsWeak, Visibility);
-    }
-    Body->IsTls = GV->isThreadLocal();
-    SymbolBodies.push_back(Body);
-  }
+  for (const BasicSymbolRef &Sym : Obj->symbols())
+    if (!shouldSkip(Sym))
+      SymbolBodies.push_back(createSymbolBody(KeptComdats, *Obj, Sym));
 }
 
 template <typename T>

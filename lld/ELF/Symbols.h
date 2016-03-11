@@ -10,14 +10,6 @@
 // All symbols are handled as SymbolBodies regardless of their types.
 // This file defines various types of SymbolBodies.
 //
-// File-scope symbols in ELF objects are the only exception of SymbolBody
-// instantiation. We will never create SymbolBodies for them for performance
-// reason. They are often represented as nullptrs. This is fine for symbol
-// resolution because the symbol table naturally cares only about
-// externally-visible symbols. For relocations, you have to deal with both
-// local and non-local functions, and we have two different functions
-// where we need them.
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLD_ELF_SYMBOLS_H
@@ -79,6 +71,7 @@ public:
   bool isCommon() const { return SymbolKind == DefinedCommonKind; }
   bool isLazy() const { return SymbolKind == LazyKind; }
   bool isShared() const { return SymbolKind == SharedKind; }
+  bool isLocal() const { return IsLocal; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
 
   // Returns the symbol name.
@@ -96,7 +89,8 @@ public:
   bool isInPlt() const { return PltIndex != -1U; }
 
   template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getVA() const;
+  typename llvm::object::ELFFile<ELFT>::uintX_t
+  getVA(typename llvm::object::ELFFile<ELFT>::uintX_t Addend = 0) const;
   template <class ELFT>
   typename llvm::object::ELFFile<ELFT>::uintX_t getGotVA() const;
   template <class ELFT>
@@ -113,7 +107,7 @@ public:
   // has chosen the object among other objects having the same name,
   // you can access P->Backref->Body to get the resolver's result.
   void setBackref(Symbol *P) { Backref = P; }
-  SymbolBody *repl() { return Backref ? Backref->Body : this; }
+  SymbolBody &repl() { return Backref ? *Backref->Body : *this; }
   Symbol *getSymbol() { return Backref; }
 
   // Decides which symbol should "win" in the symbol table, this or
@@ -122,9 +116,9 @@ public:
   template <class ELFT> int compare(SymbolBody *Other);
 
 protected:
-  SymbolBody(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
-             uint8_t Type)
-      : SymbolKind(K), IsWeak(IsWeak), Visibility(Visibility),
+  SymbolBody(Kind K, StringRef Name, bool IsWeak, bool IsLocal,
+             uint8_t Visibility, uint8_t Type)
+      : SymbolKind(K), IsWeak(IsWeak), IsLocal(IsLocal), Visibility(Visibility),
         MustBeInDynSym(false), NeedsCopyOrPltAddr(false), Name(Name) {
     IsFunc = Type == llvm::ELF::STT_FUNC;
     IsTls = Type == llvm::ELF::STT_TLS;
@@ -133,6 +127,7 @@ protected:
 
   const unsigned SymbolKind : 8;
   unsigned IsWeak : 1;
+  unsigned IsLocal : 1;
   unsigned Visibility : 2;
 
   // True if the symbol was used for linking and thus need to be
@@ -160,7 +155,7 @@ protected:
 // The base class for any defined symbols.
 class Defined : public SymbolBody {
 public:
-  Defined(Kind K, StringRef Name, bool IsWeak, uint8_t Visibility,
+  Defined(Kind K, StringRef Name, bool IsWeak, bool IsLocal, uint8_t Visibility,
           uint8_t Type);
   static bool classof(const SymbolBody *S) { return S->isDefined(); }
 };
@@ -173,7 +168,8 @@ protected:
 public:
   DefinedElf(Kind K, StringRef N, const Elf_Sym &Sym)
       : Defined(K, N, Sym.getBinding() == llvm::ELF::STB_WEAK,
-                Sym.getVisibility(), Sym.getType()),
+                Sym.getBinding() == llvm::ELF::STB_LOCAL, Sym.getVisibility(),
+                Sym.getType()),
         Sym(Sym) {}
 
   const Elf_Sym &Sym;
@@ -312,7 +308,7 @@ public:
 class Lazy : public SymbolBody {
 public:
   Lazy(ArchiveFile *F, const llvm::object::Archive::Symbol S)
-      : SymbolBody(LazyKind, S.getName(), false, llvm::ELF::STV_DEFAULT,
+      : SymbolBody(LazyKind, S.getName(), false, false, llvm::ELF::STV_DEFAULT,
                    /* Type */ 0),
         File(F), Sym(S) {}
 

@@ -10,4 +10,4 @@
 _start:
   call __tls_get_addr
 
-// CHECK: Undefined symbol: __tls_get_addr
+// CHECK: undefined symbol: __tls_get_addr
