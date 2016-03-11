@@ -4715,6 +4715,24 @@ static void handleSwiftError(Sema &S, Decl *D, const AttributeList &attr) {
                             attr.getAttributeSpellingListIndex()));
 }
 
+static void handleSwiftBridgeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  // Make sure that there is a string literal as the annotation's single
+  // argument.
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Str))
+    return;
+
+  // Don't duplicate annotations that are already set.
+  if (D->hasAttr<SwiftBridgeAttr>()) {
+    S.Diag(Attr.getLoc(), diag::warn_duplicate_attribute) << Attr.getName();
+    return;
+  }
+
+  D->addAttr(::new (S.Context)
+             SwiftBridgeAttr(Attr.getRange(), S.Context, Str,
+                             Attr.getAttributeSpellingListIndex()));
+}
+
 //===----------------------------------------------------------------------===//
 // Microsoft specific attribute handlers.
 //===----------------------------------------------------------------------===//
@@ -5913,6 +5931,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_SwiftError:
     handleSwiftError(S, D, Attr);
+    break;
+  case AttributeList::AT_SwiftBridge:
+    handleSwiftBridgeAttr(S, D, Attr);
     break;
   }
 }

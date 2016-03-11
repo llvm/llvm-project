@@ -1309,6 +1309,14 @@ def Regparm : TypeAttr {
   let Documentation = [RegparmDocs];
 }
 
+def SwiftBridge : Attr {
+  let Spellings = [GNU<"swift_bridge">];
+  let Subjects = SubjectList<[Tag, TypedefName, ObjCProtocol], ErrorDiag,
+                             "ExpectedType">;
+  let Args = [StringArgument<"SwiftType">];
+  let Documentation = [SwiftBridgeDocs];
+}
+
 def SwiftError : InheritableAttr {
   let Spellings = [GCC<"swift_error">];
   let Args = [EnumArgument<"Convention", "ConventionKind",

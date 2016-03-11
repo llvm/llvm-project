@@ -302,7 +302,8 @@ namespace {
       uint32_t keyLength = sizeof(IdentifierID) + 1;
       uint32_t dataLength = sizeof(ContextID)
                           + getCommonEntityInfoSize(data.second)
-                          + dataBytes;
+                          + dataBytes
+                          + 2 + data.second.getSwiftBridge().size();
       endian::Writer<little> writer(out);
       writer.write<uint16_t>(keyLength);
       writer.write<uint16_t>(dataLength);
@@ -333,6 +334,10 @@ namespace {
       bytes[2] = data.second.hasDesignatedInits();
 
       out.write(reinterpret_cast<const char *>(bytes), dataBytes);
+
+      writer.write<uint16_t>(data.second.getSwiftBridge().size());
+      out.write(data.second.getSwiftBridge().data(),
+                data.second.getSwiftBridge().size());
     }
   };
 } // end anonymous namespace
