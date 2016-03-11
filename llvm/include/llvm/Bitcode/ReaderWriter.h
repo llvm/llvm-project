@@ -70,9 +70,9 @@ namespace llvm {
   ErrorOr<std::unique_ptr<Module>> parseBitcodeFile(MemoryBufferRef Buffer,
                                                     LLVMContext &Context);
 
-  /// Check if the given bitcode buffer contains a function summary block.
-  bool hasFunctionSummary(MemoryBufferRef Buffer,
-                          DiagnosticHandlerFunction DiagnosticHandler);
+  /// Check if the given bitcode buffer contains a summary block.
+  bool hasGlobalValueSummary(MemoryBufferRef Buffer,
+                             DiagnosticHandlerFunction DiagnosticHandler);
 
   /// Parse the specified bitcode buffer, returning the function info index.
   /// If IsLazy is true, parse the entire function summary into
@@ -103,17 +103,16 @@ namespace llvm {
   /// Value in \c M.  These will be reconstructed exactly when \a M is
   /// deserialized.
   ///
-  /// If \c EmitFunctionSummary, emit the function summary index (currently
+  /// If \c EmitSummaryIndex, emit the module's summary index (currently
   /// for use in ThinLTO optimization).
   void WriteBitcodeToFile(const Module *M, raw_ostream &Out,
                           bool ShouldPreserveUseListOrder = false,
-                          bool EmitFunctionSummary = false);
+                          bool EmitSummaryIndex = false);
 
-  /// Write the specified function summary index to the given raw output stream,
+  /// Write the specified module summary index to the given raw output stream,
   /// where it will be written in a new bitcode block. This is used when
   /// writing the combined index file for ThinLTO.
-  void WriteFunctionSummaryToFile(const FunctionInfoIndex &Index,
-                                  raw_ostream &Out);
+  void WriteIndexToFile(const FunctionInfoIndex &Index, raw_ostream &Out);
 
   /// isBitcodeWrapper - Return true if the given bytes are the magic bytes
   /// for an LLVM IR bitcode wrapper.
