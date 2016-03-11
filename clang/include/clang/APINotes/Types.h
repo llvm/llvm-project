@@ -127,6 +127,11 @@ class ObjCContextInfo : public CommonEntityInfo {
   /// Whether this class has designated initializers recorded.
   unsigned HasDesignatedInits : 1;
 
+  /// The Swift type to which a given Objective-C class is bridged.
+  ///
+  /// Reflects the swift_bridge attribute.
+  std::string SwiftBridge;
+
 public:
   ObjCContextInfo()
     : CommonEntityInfo(),
@@ -162,11 +167,15 @@ public:
     DefaultNullability = 0;
   }
 
+  const std::string &getSwiftBridge() const { return SwiftBridge; }
+  void setSwiftBridge(const std::string &swiftType) { SwiftBridge = swiftType; }
+
   friend bool operator==(const ObjCContextInfo &lhs, const ObjCContextInfo &rhs) {
     return static_cast<const CommonEntityInfo &>(lhs) == rhs &&
            lhs.HasDefaultNullability == rhs.HasDefaultNullability &&
            lhs.DefaultNullability == rhs.DefaultNullability &&
-           lhs.HasDesignatedInits == rhs.HasDesignatedInits;
+           lhs.HasDesignatedInits == rhs.HasDesignatedInits &&
+           lhs.SwiftBridge == rhs.SwiftBridge;
   }
 
   friend bool operator!=(const ObjCContextInfo &lhs, const ObjCContextInfo &rhs) {
@@ -186,6 +195,10 @@ public:
     }
 
     lhs.HasDesignatedInits |= rhs.HasDesignatedInits;
+
+    if (lhs.SwiftBridge.empty() && !rhs.SwiftBridge.empty())
+      lhs.SwiftBridge = rhs.SwiftBridge;
+
     return lhs;
   }
   

@@ -140,6 +140,14 @@ namespace {
       }
       ++data;
       result.second.setHasDesignatedInits(*data++);
+
+      // swift bridge.
+      unsigned swiftBridgeLength =
+        endian::readNext<uint16_t, little, unaligned>(data);
+      result.second.setSwiftBridge(
+        StringRef(reinterpret_cast<const char *>(data), swiftBridgeLength));
+      data += swiftBridgeLength;
+                                             
       return result;
     }
   };
