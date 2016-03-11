@@ -187,7 +187,7 @@ class BasicAA : public AnalysisInfoMixin<BasicAA> {
 public:
   typedef BasicAAResult Result;
 
-  BasicAAResult run(Function &F, AnalysisManager<Function> *AM);
+  BasicAAResult run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// Legacy wrapper pass to provide the BasicAAResult object.

@@ -205,7 +205,7 @@ GetImportList(Module &DestModule,
                  << "\n");
 
     // Try to get a summary for this function call.
-    auto InfoList = Index.findFunctionInfoList(CalledFunctionName);
+    auto InfoList = Index.findGlobalValueInfoList(CalledFunctionName);
     if (InfoList == Index.end()) {
       DEBUG(dbgs() << DestModule.getModuleIdentifier() << ": No summary for "
                    << CalledFunctionName << " Ignoring.\n");
@@ -217,7 +217,7 @@ GetImportList(Module &DestModule,
     auto &Info = InfoList->second[0];
     assert(Info && "Nullptr in list, error importing summaries?\n");
 
-    auto *Summary = Info->functionSummary();
+    auto *Summary = dyn_cast<FunctionSummary>(Info->summary());
     if (!Summary) {
       // FIXME: in case we are lazyloading summaries, we can do it now.
       DEBUG(dbgs() << DestModule.getModuleIdentifier()

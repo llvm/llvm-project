@@ -393,6 +393,13 @@ auto find_if(R &&Range, const T &Pred) -> decltype(Range.begin()) {
   return std::find_if(Range.begin(), Range.end(), Pred);
 }
 
+/// Provide wrappers to std::remove_if which take ranges instead of having to
+/// pass begin/end explicitly.
+template<typename R, class UnaryPredicate>
+auto remove_if(R &&Range, UnaryPredicate &&P) -> decltype(Range.begin()) {
+  return std::remove_if(Range.begin(), Range.end(), P);
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <memory>
 //===----------------------------------------------------------------------===//

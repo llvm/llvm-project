@@ -938,10 +938,10 @@ GlobalsAAResult::analyzeModule(Module &M, const TargetLibraryInfo &TLI,
 
 char GlobalsAA::PassID;
 
-GlobalsAAResult GlobalsAA::run(Module &M, AnalysisManager<Module> *AM) {
+GlobalsAAResult GlobalsAA::run(Module &M, AnalysisManager<Module> &AM) {
   return GlobalsAAResult::analyzeModule(M,
-                                        AM->getResult<TargetLibraryAnalysis>(M),
-                                        AM->getResult<CallGraphAnalysis>(M));
+                                        AM.getResult<TargetLibraryAnalysis>(M),
+                                        AM.getResult<CallGraphAnalysis>(M));
 }
 
 char GlobalsAAWrapperPass::ID = 0;

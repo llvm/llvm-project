@@ -109,7 +109,7 @@ public:
   bool operator!=(const MetaBlock &MBB) { return Block != MBB.Block; }
 };
 
-class SuccessorList : public MetaBlock {
+class SuccessorList final : public MetaBlock {
   size_t Index;
   size_t Num;
 

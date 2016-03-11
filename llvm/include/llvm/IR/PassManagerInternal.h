@@ -40,7 +40,7 @@ template <typename IRUnitT> struct PassConcept {
   /// Note that actual pass object can omit the analysis manager argument if
   /// desired. Also that the analysis manager may be null if there is no
   /// analysis manager in the pass pipeline.
-  virtual PreservedAnalyses run(IRUnitT &IR, AnalysisManager<IRUnitT> *AM) = 0;
+  virtual PreservedAnalyses run(IRUnitT &IR, AnalysisManager<IRUnitT> &AM) = 0;
 
   /// \brief Polymorphic method to access the name of a pass.
   virtual StringRef name() = 0;
@@ -55,7 +55,7 @@ class PassRunAcceptsAnalysisManager {
     char a, b;
   };
 
-  template <typename T, ResultT (T::*)(IRUnitT &, AnalysisManager<IRUnitT> *)>
+  template <typename T, ResultT (T::*)(IRUnitT &, AnalysisManager<IRUnitT> &)>
   struct Checker;
 
   template <typename T> static SmallType f(Checker<T, &T::run> *);
@@ -96,7 +96,7 @@ struct PassModel<IRUnitT, PassT, PreservedAnalysesT, true>
     return *this;
   }
 
-  PreservedAnalysesT run(IRUnitT &IR, AnalysisManager<IRUnitT> *AM) override {
+  PreservedAnalysesT run(IRUnitT &IR, AnalysisManager<IRUnitT> &AM) override {
     return Pass.run(IR, AM);
   }
   StringRef name() override { return PassT::name(); }
@@ -122,7 +122,7 @@ struct PassModel<IRUnitT, PassT, PreservedAnalysesT, false>
     return *this;
   }
 
-  PreservedAnalysesT run(IRUnitT &IR, AnalysisManager<IRUnitT> *AM) override {
+  PreservedAnalysesT run(IRUnitT &IR, AnalysisManager<IRUnitT> &) override {
     return Pass.run(IR);
   }
   StringRef name() override { return PassT::name(); }
@@ -252,7 +252,7 @@ template <typename IRUnitT> struct AnalysisPassConcept {
   /// \returns A unique_ptr to the analysis result object to be queried by
   /// users.
   virtual std::unique_ptr<AnalysisResultConcept<IRUnitT>>
-  run(IRUnitT &IR, AnalysisManager<IRUnitT> *AM) = 0;
+  run(IRUnitT &IR, AnalysisManager<IRUnitT> &AM) = 0;
 
   /// \brief Polymorphic method to access the name of a pass.
   virtual StringRef name() = 0;
@@ -294,7 +294,7 @@ struct AnalysisPassModel<IRUnitT, PassT, true> : AnalysisPassConcept<IRUnitT> {
   ///
   /// The return is wrapped in an \c AnalysisResultModel.
   std::unique_ptr<AnalysisResultConcept<IRUnitT>>
-  run(IRUnitT &IR, AnalysisManager<IRUnitT> *AM) override {
+  run(IRUnitT &IR, AnalysisManager<IRUnitT> &AM) override {
     return make_unique<ResultModelT>(Pass.run(IR, AM));
   }
 
@@ -332,7 +332,7 @@ struct AnalysisPassModel<IRUnitT, PassT, false> : AnalysisPassConcept<IRUnitT> {
   ///
   /// The return is wrapped in an \c AnalysisResultModel.
   std::unique_ptr<AnalysisResultConcept<IRUnitT>>
-  run(IRUnitT &IR, AnalysisManager<IRUnitT> *) override {
+  run(IRUnitT &IR, AnalysisManager<IRUnitT> &) override {
     return make_unique<ResultModelT>(Pass.run(IR));
   }
 

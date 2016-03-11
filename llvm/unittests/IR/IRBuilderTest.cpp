@@ -252,7 +252,7 @@ TEST_F(IRBuilderTest, FastMathFlags) {
 }
 
 TEST_F(IRBuilderTest, WrapFlags) {
-  IRBuilder<true, NoFolder> Builder(BB);
+  IRBuilder<NoFolder> Builder(BB);
 
   // Test instructions.
   GlobalVariable *G = new GlobalVariable(*M, Builder.getInt32Ty(), true,

@@ -658,4 +658,56 @@ define i32 @select_or_olt_ueq_ogt(double %v0, double %v1, double %v2, double %v3
   ret i32 %sel
 }
 
+; Verify that we correctly promote f16.
+
+; CHECK-LABEL: half_select_and_olt_oge:
+; CHECK-LABEL: ; BB#0:
+; CHECK-DAG:  fcvt [[S0:s[0-9]+]], h0
+; CHECK-DAG:  fcvt [[S1:s[0-9]+]], h1
+; CHECK-NEXT: fcmp [[S0]], [[S1]]
+; CHECK-DAG:  fcvt [[S2:s[0-9]+]], h2
+; CHECK-DAG:  fcvt [[S3:s[0-9]+]], h3
+; CHECK-NEXT: fccmp [[S2]], [[S3]], #8, mi
+; CHECK-NEXT: csel w0, w0, w1, ge
+; CHECK-NEXT: ret
+define i32 @half_select_and_olt_oge(half %v0, half %v1, half %v2, half %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp olt half %v0, %v1
+  %c1 = fcmp oge half %v2, %v3
+  %cr = and i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; CHECK-LABEL: half_select_and_olt_one:
+; CHECK-LABEL: ; BB#0:
+; CHECK-DAG:  fcvt [[S0:s[0-9]+]], h0
+; CHECK-DAG:  fcvt [[S1:s[0-9]+]], h1
+; CHECK-NEXT: fcmp [[S0]], [[S1]]
+; CHECK-DAG:  fcvt [[S2:s[0-9]+]], h2
+; CHECK-DAG:  fcvt [[S3:s[0-9]+]], h3
+; CHECK-NEXT: fccmp [[S2]], [[S3]], #4, mi
+; CHECK-NEXT: fccmp [[S2]], [[S3]], #1, ne
+; CHECK-NEXT: csel w0, w0, w1, vc
+; CHECK-NEXT: ret
+define i32 @half_select_and_olt_one(half %v0, half %v1, half %v2, half %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp olt half %v0, %v1
+  %c1 = fcmp one half %v2, %v3
+  %cr = and i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
+; Also verify that we don't try to generate f128 FCCMPs, using RT calls instead.
+
+; CHECK-LABEL: f128_select_and_olt_oge:
+; CHECK: bl ___lttf2
+; CHECK: bl ___getf2
+define i32 @f128_select_and_olt_oge(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32 %b) #0 {
+  %c0 = fcmp olt fp128 %v0, %v1
+  %c1 = fcmp oge fp128 %v2, %v3
+  %cr = and i1 %c1, %c0
+  %sel = select i1 %cr, i32 %a, i32 %b
+  ret i32 %sel
+}
+
 attributes #0 = { nounwind }

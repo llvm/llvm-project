@@ -1090,7 +1090,7 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
 
 char CFLAA::PassID;
 
-CFLAAResult CFLAA::run(Function &F, AnalysisManager<Function> *AM) {
+CFLAAResult CFLAA::run(Function &F, AnalysisManager<Function> &AM) {
   return CFLAAResult();
 }
 

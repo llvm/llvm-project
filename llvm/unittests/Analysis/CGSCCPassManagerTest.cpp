@@ -34,7 +34,7 @@ public:
 
   TestModuleAnalysis(int &Runs) : Runs(Runs) {}
 
-  Result run(Module &M, ModuleAnalysisManager *AM) {
+  Result run(Module &M, ModuleAnalysisManager &AM) {
     ++Runs;
     return Result(M.size());
   }
@@ -59,7 +59,7 @@ public:
 
   TestSCCAnalysis(int &Runs) : Runs(Runs) {}
 
-  Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager *AM) {
+  Result run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM) {
     ++Runs;
     return Result(C.size());
   }
@@ -84,7 +84,7 @@ public:
 
   TestFunctionAnalysis(int &Runs) : Runs(Runs) {}
 
-  Result run(Function &F, FunctionAnalysisManager *AM) {
+  Result run(Function &F, FunctionAnalysisManager &AM) {
     ++Runs;
     int Count = 0;
     for (Instruction &I : instructions(F)) {
@@ -113,7 +113,7 @@ public:
 
   TestImmutableFunctionAnalysis(int &Runs) : Runs(Runs) {}
 
-  Result run(Function &F, FunctionAnalysisManager *AM) {
+  Result run(Function &F, FunctionAnalysisManager &AM) {
     ++Runs;
     return Result();
   }
@@ -129,9 +129,9 @@ char TestImmutableFunctionAnalysis::PassID;
 struct TestModulePass {
   TestModulePass(int &RunCount) : RunCount(RunCount) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager *AM) {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
     ++RunCount;
-    (void)AM->getResult<TestModuleAnalysis>(M);
+    (void)AM.getResult<TestModuleAnalysis>(M);
     return PreservedAnalyses::all();
   }
 
@@ -150,13 +150,13 @@ struct TestSCCPass {
         AnalyzedModuleFunctionCount(AnalyzedModuleFunctionCount),
         OnlyUseCachedResults(OnlyUseCachedResults) {}
 
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager *AM) {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM) {
     ++RunCount;
 
     const ModuleAnalysisManager &MAM =
-        AM->getResult<ModuleAnalysisManagerCGSCCProxy>(C).getManager();
+        AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C).getManager();
     FunctionAnalysisManager &FAM =
-        AM->getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
     if (TestModuleAnalysis::Result *TMA =
             MAM.getCachedResult<TestModuleAnalysis>(
                 *C.begin()->getFunction().getParent()))
@@ -164,8 +164,7 @@ struct TestSCCPass {
 
     if (OnlyUseCachedResults) {
       // Hack to force the use of the cached interface.
-      if (TestSCCAnalysis::Result *AR =
-              AM->getCachedResult<TestSCCAnalysis>(C))
+      if (TestSCCAnalysis::Result *AR = AM.getCachedResult<TestSCCAnalysis>(C))
         AnalyzedSCCFunctionCount += AR->FunctionCount;
       for (LazyCallGraph::Node &N : C)
         if (TestFunctionAnalysis::Result *FAR =
@@ -173,7 +172,7 @@ struct TestSCCPass {
           AnalyzedInstrCount += FAR->InstructionCount;
     } else {
       // Typical path just runs the analysis as needed.
-      TestSCCAnalysis::Result &AR = AM->getResult<TestSCCAnalysis>(C);
+      TestSCCAnalysis::Result &AR = AM.getResult<TestSCCAnalysis>(C);
       AnalyzedSCCFunctionCount += AR.FunctionCount;
       for (LazyCallGraph::Node &N : C) {
         TestFunctionAnalysis::Result &FAR =
@@ -301,7 +300,7 @@ TEST_F(CGSCCPassManagerTest, Basic) {
   CGPM1.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
 
-  MPM.run(*M, &MAM);
+  MPM.run(*M, MAM);
 
   EXPECT_EQ(1, ModulePassRunCount1);
 

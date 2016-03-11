@@ -69,12 +69,12 @@ public:
   /// Setters for the insertion point.
   /// @{
   /// Set the MachineFunction where to build instructions.
-  void setFunction(MachineFunction &);
+  void setMF(MachineFunction &);
 
   /// Set the insertion point to the beginning (\p Beginning = true) or end
   /// (\p Beginning = false) of \p MBB.
   /// \pre \p MBB must be contained by getMF().
-  void setBasicBlock(MachineBasicBlock &MBB, bool Beginning = false);
+  void setMBB(MachineBasicBlock &MBB, bool Beginning = false);
 
   /// Set the insertion point to before (\p Before = true) or after
   /// (\p Before = false) \p MI.
@@ -85,12 +85,28 @@ public:
   /// Set the debug location to \p DL for all the next build instructions.
   void setDebugLoc(const DebugLoc &DL) { this->DL = DL; }
 
-  /// Build and insert \p Res<def> = \p Opcode [\p Ty] \p Op0, \p Op1.
+  /// Build and insert <empty> = \p Opcode [\p Ty] <empty>.
   /// \p Ty is the type of the instruction if \p Opcode describes
   /// a generic machine instruction. \p Ty must be nullptr if \p Opcode
   /// does not describe a generic instruction.
   /// The insertion point is the one set by the last call of either
   /// setBasicBlock or setMI.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre Ty == nullptr or isPreISelGenericOpcode(Opcode)
+  ///
+  /// \return The newly created instruction.
+  MachineInstr *buildInstr(unsigned Opcode, Type *Ty);
+
+  /// Build and insert <empty> = \p Opcode [\p Ty] \p BB.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre Ty == nullptr or isPreISelGenericOpcode(Opcode)
+  ///
+  /// \return The newly created instruction.
+  MachineInstr *buildInstr(unsigned Opcode, Type *Ty, MachineBasicBlock &BB);
+
+  /// Build and insert \p Res<def> = \p Opcode [\p Ty] \p Op0, \p Op1.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre Ty == nullptr or isPreISelGenericOpcode(Opcode)
@@ -117,7 +133,7 @@ public:
   /// \return The newly created instruction.
   MachineInstr *buildInstr(unsigned Opcode, unsigned Res, unsigned Op0);
 
-  /// Build and insert = \p Opcode.
+  /// Build and insert <empty> = \p Opcode <empty>.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre not isPreISelGenericOpcode(\p Opcode)

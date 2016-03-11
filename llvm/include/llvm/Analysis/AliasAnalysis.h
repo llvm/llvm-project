@@ -866,10 +866,10 @@ public:
     ResultGetters.push_back(&getModuleAAResultImpl<AnalysisT>);
   }
 
-  Result run(Function &F, AnalysisManager<Function> *AM) {
-    Result R(AM->getResult<TargetLibraryAnalysis>(F));
+  Result run(Function &F, AnalysisManager<Function> &AM) {
+    Result R(AM.getResult<TargetLibraryAnalysis>(F));
     for (auto &Getter : ResultGetters)
-      (*Getter)(F, *AM, R);
+      (*Getter)(F, AM, R);
     return R;
   }
 

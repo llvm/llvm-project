@@ -131,7 +131,7 @@ ModRefInfo ObjCARCAAResult::getModRefInfo(ImmutableCallSite CS,
   return AAResultBase::getModRefInfo(CS, Loc);
 }
 
-ObjCARCAAResult ObjCARCAA::run(Function &F, AnalysisManager<Function> *AM) {
+ObjCARCAAResult ObjCARCAA::run(Function &F, AnalysisManager<Function> &AM) {
   return ObjCARCAAResult(F.getParent()->getDataLayout());
 }
 

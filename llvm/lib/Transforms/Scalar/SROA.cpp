@@ -87,12 +87,13 @@ static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
                                         cl::Hidden);
 
 namespace {
-/// \brief A custom IRBuilder inserter which prefixes all names if they are
-/// preserved.
-template <bool preserveNames = true>
-class IRBuilderPrefixedInserter
-    : public IRBuilderDefaultInserter<preserveNames> {
+/// \brief A custom IRBuilder inserter which prefixes all names, but only in
+/// Assert builds.
+class IRBuilderPrefixedInserter : public IRBuilderDefaultInserter {
   std::string Prefix;
+  const Twine getNameWithPrefix(const Twine &Name) const {
+    return Name.isTriviallyEmpty() ? Name : Prefix + Name;
+  }
 
 public:
   void SetNamePrefix(const Twine &P) { Prefix = P.str(); }
@@ -100,27 +101,13 @@ public:
 protected:
   void InsertHelper(Instruction *I, const Twine &Name, BasicBlock *BB,
                     BasicBlock::iterator InsertPt) const {
-    IRBuilderDefaultInserter<preserveNames>::InsertHelper(
-        I, Name.isTriviallyEmpty() ? Name : Prefix + Name, BB, InsertPt);
+    IRBuilderDefaultInserter::InsertHelper(I, getNameWithPrefix(Name), BB,
+                                           InsertPt);
   }
 };
 
-// Specialization for not preserving the name is trivial.
-template <>
-class IRBuilderPrefixedInserter<false>
-    : public IRBuilderDefaultInserter<false> {
-public:
-  void SetNamePrefix(const Twine &P) {}
-};
-
 /// \brief Provide a typedef for IRBuilder that drops names in release builds.
-#ifndef NDEBUG
-typedef llvm::IRBuilder<true, ConstantFolder, IRBuilderPrefixedInserter<true>>
-    IRBuilderTy;
-#else
-typedef llvm::IRBuilder<false, ConstantFolder, IRBuilderPrefixedInserter<false>>
-    IRBuilderTy;
-#endif
+using IRBuilderTy = llvm::IRBuilder<ConstantFolder, IRBuilderPrefixedInserter>;
 }
 
 namespace {
@@ -4241,9 +4228,9 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
-PreservedAnalyses SROA::run(Function &F, AnalysisManager<Function> *AM) {
-  return runImpl(F, AM->getResult<DominatorTreeAnalysis>(F),
-                 AM->getResult<AssumptionAnalysis>(F));
+PreservedAnalyses SROA::run(Function &F, AnalysisManager<Function> &AM) {
+  return runImpl(F, AM.getResult<DominatorTreeAnalysis>(F),
+                 AM.getResult<AssumptionAnalysis>(F));
 }
 
 /// A legacy pass for the legacy pass manager that wraps the \c SROA pass.

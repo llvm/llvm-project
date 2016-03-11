@@ -201,12 +201,12 @@ class DominatorTreePrinterPass
 
 public:
   explicit DominatorTreePrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// \brief Verifier pass for the \c DominatorTree.
 struct DominatorTreeVerifierPass : PassInfoMixin<DominatorTreeVerifierPass> {
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// \brief Legacy analysis pass which computes a \c DominatorTree.

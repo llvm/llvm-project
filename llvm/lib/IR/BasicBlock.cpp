@@ -162,6 +162,21 @@ CallInst *BasicBlock::getTerminatingMustTailCall() {
   return nullptr;
 }
 
+CallInst *BasicBlock::getTerminatingDeoptimizeCall() {
+  if (InstList.empty())
+    return nullptr;
+  auto *RI = dyn_cast<ReturnInst>(&InstList.back());
+  if (!RI || RI == &InstList.front())
+    return nullptr;
+
+  if (auto *CI = dyn_cast_or_null<CallInst>(RI->getPrevNode()))
+    if (Function *F = CI->getCalledFunction())
+      if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize)
+        return CI;
+
+  return nullptr;
+}
+
 Instruction* BasicBlock::getFirstNonPHI() {
   for (Instruction &I : *this)
     if (!isa<PHINode>(I))

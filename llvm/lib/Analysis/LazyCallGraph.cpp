@@ -1531,8 +1531,8 @@ static void printRefSCC(raw_ostream &OS, LazyCallGraph::RefSCC &C) {
 }
 
 PreservedAnalyses LazyCallGraphPrinterPass::run(Module &M,
-                                                ModuleAnalysisManager *AM) {
-  LazyCallGraph &G = AM->getResult<LazyCallGraphAnalysis>(M);
+                                                ModuleAnalysisManager &AM) {
+  LazyCallGraph &G = AM.getResult<LazyCallGraphAnalysis>(M);
 
   OS << "Printing the call graph for module: " << M.getModuleIdentifier()
      << "\n\n";

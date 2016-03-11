@@ -138,7 +138,7 @@ IntrinsicIDToOverflowCheckFlavor(unsigned ID) {
 /// \brief An IRBuilder inserter that adds new instructions to the instcombine
 /// worklist.
 class LLVM_LIBRARY_VISIBILITY InstCombineIRInserter
-    : public IRBuilderDefaultInserter<true> {
+    : public IRBuilderDefaultInserter {
   InstCombineWorklist &Worklist;
   AssumptionCache *AC;
 
@@ -148,7 +148,7 @@ public:
 
   void InsertHelper(Instruction *I, const Twine &Name, BasicBlock *BB,
                     BasicBlock::iterator InsertPt) const {
-    IRBuilderDefaultInserter<true>::InsertHelper(I, Name, BB, InsertPt);
+    IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
     Worklist.Add(I);
 
     using namespace llvm::PatternMatch;
@@ -171,7 +171,7 @@ public:
 
   /// \brief An IRBuilder that automatically inserts new instructions into the
   /// worklist.
-  typedef IRBuilder<true, TargetFolder, InstCombineIRInserter> BuilderTy;
+  typedef IRBuilder<TargetFolder, InstCombineIRInserter> BuilderTy;
   BuilderTy *Builder;
 
 private:

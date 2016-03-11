@@ -945,8 +945,8 @@ static bool inferAllPrototypeAttributes(Module &M,
 }
 
 PreservedAnalyses InferFunctionAttrsPass::run(Module &M,
-                                              AnalysisManager<Module> *AM) {
-  auto &TLI = AM->getResult<TargetLibraryAnalysis>(M);
+                                              AnalysisManager<Module> &AM) {
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(M);
 
   if (!inferAllPrototypeAttributes(M, TLI))
     // If we didn't infer anything, preserve all analyses.

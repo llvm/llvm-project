@@ -385,14 +385,18 @@ include "MipsInstrFormats.td"
 // Mips Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
-class ConstantSImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = []>
-    : AsmOperandClass {
-  let Name = "ConstantSImm" # Bits;
-  let RenderMethod = "addImmOperands";
-  let PredicateMethod = "isConstantSImm<" # Bits # ">";
+class ConstantSImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
+                                  int Offset = 0> : AsmOperandClass {
+  let Name = "ConstantSImm" # Bits # "_" # Offset;
+  let RenderMethod = "addConstantSImmOperands<" # Bits # ", " # Offset # ">";
+  let PredicateMethod = "isConstantSImm<" # Bits # ", " # Offset # ">";
   let SuperClasses = Supers;
-  let DiagnosticType = "SImm" # Bits;
+  let DiagnosticType = "SImm" # Bits # "_" # Offset;
 }
+
+def ConstantSImm4AsmOperandClass
+    : ConstantSImmAsmOperandClass<
+          4, []>;
 
 class ConstantUImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
                                   int Offset = 0> : AsmOperandClass {
@@ -476,7 +480,8 @@ def ConstantUImm4AsmOperandClass
               ConstantUImm5Plus32AsmOperandClass,
               ConstantUImm5Plus32NormalizeAsmOperandClass]>;
 def ConstantUImm3AsmOperandClass
-    : ConstantUImmAsmOperandClass<3, [ConstantUImm4AsmOperandClass]>;
+    : ConstantUImmAsmOperandClass<3, [ConstantSImm4AsmOperandClass,
+                                      ConstantUImm4AsmOperandClass]>;
 def ConstantUImm2Plus1AsmOperandClass
     : ConstantUImmAsmOperandClass<2, [ConstantUImm3AsmOperandClass], 1>;
 def ConstantUImm2AsmOperandClass
@@ -665,6 +670,15 @@ def uimm5_64_report_uimm6 : Operand<i64> {
   let PrintMethod = "printUImm<5>";
   let ParserMatchClass = ConstantUImm5ReportUImm6AsmOperandClass;
 }
+
+// Signed operands
+foreach I = {4} in
+  def simm # I : Operand<i32> {
+    let DecoderMethod = "DecodeSImmWithOffset<" # I # ">";
+    let ParserMatchClass =
+        !cast<AsmOperandClass>("ConstantSImm" # I # "AsmOperandClass");
+  }
+
 
 def pcrel16      : Operand<i32> {
 }

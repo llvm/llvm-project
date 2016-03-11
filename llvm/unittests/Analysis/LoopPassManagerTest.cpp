@@ -42,7 +42,7 @@ public:
   TestLoopAnalysis(int &Runs) : Runs(Runs) {}
 
   /// \brief Run the analysis pass over the loop and return a result.
-  Result run(Loop &L, AnalysisManager<Loop> *AM) {
+  Result run(Loop &L, AnalysisManager<Loop> &AM) {
     ++Runs;
     int Count = 0;
 
@@ -65,16 +65,16 @@ public:
       : VisitedLoops(VisitedLoops), AnalyzedBlockCount(AnalyzedBlockCount),
         OnlyUseCachedResults(OnlyUseCachedResults) {}
 
-  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> *AM) {
+  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM) {
     VisitedLoops.push_back(L.getName());
 
     if (OnlyUseCachedResults) {
       // Hack to force the use of the cached interface.
-      if (auto *AR = AM->getCachedResult<TestLoopAnalysis>(L))
+      if (auto *AR = AM.getCachedResult<TestLoopAnalysis>(L))
         AnalyzedBlockCount += AR->BlockCount;
     } else {
       // Typical path just runs the analysis as needed.
-      auto &AR = AM->getResult<TestLoopAnalysis>(L);
+      auto &AR = AM.getResult<TestLoopAnalysis>(L);
       AnalyzedBlockCount += AR.BlockCount;
     }
 
@@ -91,7 +91,7 @@ class TestLoopInvalidatingPass {
 public:
   TestLoopInvalidatingPass(StringRef LoopName) : Name(LoopName) {}
 
-  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> *AM) {
+  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM) {
     return L.getName() == Name ? PreservedAnalyses::none()
                                : PreservedAnalyses::all();
   }
@@ -185,7 +185,7 @@ TEST_F(LoopPassManagerTest, Basic) {
   }
 
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  MPM.run(*M, &MAM);
+  MPM.run(*M, MAM);
 
   StringRef ExpectedLoops[] = {"loop.0.0", "loop.0.1", "loop.0", "loop.g.0"};
 

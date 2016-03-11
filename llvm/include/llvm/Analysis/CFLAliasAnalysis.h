@@ -116,7 +116,7 @@ class CFLAA : public AnalysisInfoMixin<CFLAA> {
 public:
   typedef CFLAAResult Result;
 
-  CFLAAResult run(Function &F, AnalysisManager<Function> *AM);
+  CFLAAResult run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// Legacy wrapper pass to provide the CFLAAResult object.

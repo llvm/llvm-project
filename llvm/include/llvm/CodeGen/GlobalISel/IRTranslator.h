@@ -89,6 +89,8 @@ private:
   // 3. Create the generic instruction.
   bool translateADD(const Instruction &Inst);
 
+  bool translateBr(const Instruction &Inst);
+
   bool translateReturn(const Instruction &Inst);
 
   // Builder for machine instruction a la IRBuilder.
@@ -111,10 +113,13 @@ private:
   // * Clear the different maps.
   void finalize();
 
-  /// Get the sequence of VRegs for that \p Val.
-  unsigned getOrCreateVReg(const Value *Val);
+  /// Get the VReg that represents \p Val.
+  /// If such VReg does not exist, it is created.
+  unsigned getOrCreateVReg(const Value &Val);
 
-  MachineBasicBlock &getOrCreateBB(const BasicBlock *BB);
+  /// Get the MachineBasicBlock that represents \p BB.
+  /// If such basic block does not exist, it is created.
+  MachineBasicBlock &getOrCreateBB(const BasicBlock &BB);
 
 public:
   // Ctor, nothing fancy.

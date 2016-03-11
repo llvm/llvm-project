@@ -59,7 +59,7 @@ namespace llvm {
 void initializeWasmPEIPass(PassRegistry&);
 }
 namespace {
-class WasmPEI : public MachineFunctionPass {
+class WasmPEI final : public MachineFunctionPass {
 public:
   static char ID;
   WasmPEI() : MachineFunctionPass(ID) {

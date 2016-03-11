@@ -1362,7 +1362,7 @@ class LoadClusterMutation : public ScheduleDAGMutation {
     SUnit *SU;
     unsigned BaseReg;
     int64_t Offset;
-    LoadInfo(SUnit *su, unsigned reg, unsigned ofs)
+    LoadInfo(SUnit *su, unsigned reg, int64_t ofs)
       : SU(su), BaseReg(reg), Offset(ofs) {}
 
     bool operator<(const LoadInfo &RHS) const {

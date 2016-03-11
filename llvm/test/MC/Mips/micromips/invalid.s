@@ -1,6 +1,8 @@
 # RUN: not llvm-mc %s -triple=mips -show-encoding -mattr=micromips 2>%t1
 # RUN: FileCheck %s < %t1
 
+  addius5 $2, -9      # CHECK: :[[@LINE]]:15: error: expected 4-bit signed immediate
+  addius5 $2, 8       # CHECK: :[[@LINE]]:15: error: expected 4-bit signed immediate
   break -1            # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
   break 1024          # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate
   break -1, 5         # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate

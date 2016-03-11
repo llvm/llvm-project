@@ -9,13 +9,15 @@
 //
 /// @file
 /// FunctionInfo.h This file contains the declarations the classes that hold
-///  the function info index and summary.
+///  the module index and summary for function importing.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_FUNCTIONINFO_H
 #define LLVM_IR_FUNCTIONINFO_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Function.h"
@@ -25,44 +27,69 @@
 
 namespace llvm {
 
-/// \brief Function summary information to aid decisions and implementation of
-/// importing.
+/// \brief Class to accumulate and hold information about a callee.
+struct CalleeInfo {
+  /// The static number of callsites calling corresponding function.
+  unsigned CallsiteCount;
+  /// The cumulative profile count of calls to corresponding function
+  /// (if using PGO, otherwise 0).
+  uint64_t ProfileCount;
+  CalleeInfo() : CallsiteCount(0), ProfileCount(0) {}
+  CalleeInfo(unsigned CallsiteCount, uint64_t ProfileCount)
+      : CallsiteCount(CallsiteCount), ProfileCount(ProfileCount) {}
+  CalleeInfo &operator+=(uint64_t RHSProfileCount) {
+    CallsiteCount++;
+    ProfileCount += RHSProfileCount;
+    return *this;
+  }
+};
+
+/// \brief Function and variable summary information to aid decisions and
+/// implementation of importing.
 ///
-/// This is a separate class from FunctionInfo to enable lazy reading of this
-/// function summary information from the combined index file during imporing.
-class FunctionSummary {
+/// This is a separate class from GlobalValueInfo to enable lazy reading of this
+/// summary information from the combined index file during imporing.
+class GlobalValueSummary {
+public:
+  /// \brief Sububclass discriminator (for dyn_cast<> et al.)
+  enum SummaryKind { FunctionKind, GlobalVarKind };
+
 private:
-  /// \brief Path of module containing function IR, used to locate module when
-  /// importing this function.
+  /// Kind of summary for use in dyn_cast<> et al.
+  SummaryKind Kind;
+
+  /// \brief Path of module IR containing value's definition, used to locate
+  /// module during importing.
   ///
-  /// This is only used during parsing of the combined function index, or when
+  /// This is only used during parsing of the combined index, or when
   /// parsing the per-module index for creation of the combined function index,
   /// not during writing of the per-module index which doesn't contain a
   /// module path string table.
   StringRef ModulePath;
 
-  /// \brief The linkage type of the associated function.
+  /// \brief The linkage type of the associated global value.
   ///
-  /// One use is to flag functions that have local linkage types and need to
+  /// One use is to flag values that have local linkage types and need to
   /// have module identifier appended before placing into the combined
-  /// index, to disambiguate from other functions with the same name.
+  /// index, to disambiguate from other values with the same name.
   /// In the future this will be used to update and optimize linkage
   /// types based on global summary-based analysis.
-  GlobalValue::LinkageTypes FunctionLinkage;
+  GlobalValue::LinkageTypes Linkage;
 
-  // The rest of the information is used to help decide whether importing
-  // is likely to be profitable.
-  // Other information will be added as the importing is tuned, such
-  // as hotness (when profile available), and other function characteristics.
+  /// List of GUIDs of values referenced by this global value's definition
+  /// (either by the initializer of a global variable, or referenced
+  /// from within a function). This does not include functions called, which
+  /// are listed in the derived FunctionSummary object.
+  std::vector<uint64_t> RefEdgeList;
 
-  /// Number of instructions (ignoring debug instructions, e.g.) computed
-  /// during the initial compile step when the function index is first built.
-  unsigned InstCount;
+protected:
+  /// GlobalValueSummary constructor.
+  GlobalValueSummary(SummaryKind K, GlobalValue::LinkageTypes Linkage)
+      : Kind(K), Linkage(Linkage) {}
 
 public:
-  /// Construct a summary object from summary data expected for all
-  /// summary records.
-  FunctionSummary(unsigned NumInsts) : InstCount(NumInsts) {}
+  /// Which kind of summary subclass this is.
+  SummaryKind getSummaryKind() const { return Kind; }
 
   /// Set the path to the module containing this function, for use in
   /// the combined index.
@@ -71,105 +98,164 @@ public:
   /// Get the path to the module containing this function.
   StringRef modulePath() const { return ModulePath; }
 
-  /// Record linkage type.
-  void setFunctionLinkage(GlobalValue::LinkageTypes Linkage) {
-    FunctionLinkage = Linkage;
+  /// Return linkage type recorded for this global value.
+  GlobalValue::LinkageTypes linkage() const { return Linkage; }
+
+  /// Record a reference from this global value to the global value identified
+  /// by \p RefGUID.
+  void addRefEdge(uint64_t RefGUID) { RefEdgeList.push_back(RefGUID); }
+
+  /// Record a reference from this global value to each global value identified
+  /// in \p RefEdges.
+  void addRefEdges(DenseSet<unsigned> &RefEdges) {
+    for (auto &RI : RefEdges)
+      addRefEdge(RI);
   }
 
-  /// Return linkage type recorded for this function.
-  GlobalValue::LinkageTypes getFunctionLinkage() const {
-    return FunctionLinkage;
+  /// Return the list of GUIDs referenced by this global value definition.
+  std::vector<uint64_t> &refs() { return RefEdgeList; }
+  const std::vector<uint64_t> &refs() const { return RefEdgeList; }
+};
+
+/// \brief Function summary information to aid decisions and implementation of
+/// importing.
+class FunctionSummary : public GlobalValueSummary {
+public:
+  /// <CalleeGUID, CalleeInfo> call edge pair.
+  typedef std::pair<uint64_t, CalleeInfo> EdgeTy;
+
+private:
+  /// Number of instructions (ignoring debug instructions, e.g.) computed
+  /// during the initial compile step when the function index is first built.
+  unsigned InstCount;
+
+  /// List of <CalleeGUID, CalleeInfo> call edge pairs from this function.
+  std::vector<EdgeTy> CallGraphEdgeList;
+
+public:
+  /// Summary constructors.
+  FunctionSummary(GlobalValue::LinkageTypes Linkage, unsigned NumInsts)
+      : GlobalValueSummary(FunctionKind, Linkage), InstCount(NumInsts) {}
+
+  /// Check if this is a function summary.
+  static bool classof(const GlobalValueSummary *GVS) {
+    return GVS->getSummaryKind() == FunctionKind;
   }
 
   /// Get the instruction count recorded for this function.
   unsigned instCount() const { return InstCount; }
+
+  /// Record a call graph edge from this function to the function identified
+  /// by \p CalleeGUID, with \p CalleeInfo including the cumulative profile
+  /// count (across all calls from this function) or 0 if no PGO.
+  void addCallGraphEdge(uint64_t CalleeGUID, CalleeInfo Info) {
+    CallGraphEdgeList.push_back(std::make_pair(CalleeGUID, Info));
+  }
+
+  /// Record a call graph edge from this function to each function recorded
+  /// in \p CallGraphEdges.
+  void addCallGraphEdges(DenseMap<unsigned, CalleeInfo> &CallGraphEdges) {
+    for (auto &EI : CallGraphEdges)
+      addCallGraphEdge(EI.first, EI.second);
+  }
+
+  /// Return the list of <CalleeGUID, ProfileCount> pairs.
+  std::vector<EdgeTy> &edges() { return CallGraphEdgeList; }
+  const std::vector<EdgeTy> &edges() const { return CallGraphEdgeList; }
 };
 
-/// \brief Class to hold pointer to function summary and information required
-/// for parsing it.
+/// \brief Global variable summary information to aid decisions and
+/// implementation of importing.
 ///
-/// For the per-module index, this holds the bitcode offset
-/// of the corresponding function block. For the combined index,
-/// after parsing of the \a ValueSymbolTable, this initially
-/// holds the offset of the corresponding function summary bitcode
-/// record. After parsing the associated summary information from the summary
-/// block the \a FunctionSummary is populated and stored here.
-class FunctionInfo {
-private:
-  /// Function summary information used to help make ThinLTO importing
-  /// decisions.
-  std::unique_ptr<FunctionSummary> Summary;
+/// Currently this doesn't add anything to the base \p GlobalValueSummary,
+/// but is a placeholder as additional info may be added to the summary
+/// for variables.
+class GlobalVarSummary : public GlobalValueSummary {
 
-  /// \brief The bitcode offset corresponding to either the associated
-  /// function's function body record, or its function summary record,
+public:
+  /// Summary constructors.
+  GlobalVarSummary(GlobalValue::LinkageTypes Linkage)
+      : GlobalValueSummary(GlobalVarKind, Linkage) {}
+
+  /// Check if this is a global variable summary.
+  static bool classof(const GlobalValueSummary *GVS) {
+    return GVS->getSummaryKind() == GlobalVarKind;
+  }
+};
+
+/// \brief Class to hold pointer to summary object and information required
+/// for parsing or writing it.
+class GlobalValueInfo {
+private:
+  /// Summary information used to help make ThinLTO importing decisions.
+  std::unique_ptr<GlobalValueSummary> Summary;
+
+  /// \brief The bitcode offset corresponding to either an associated
+  /// function's function body record, or to an associated summary record,
   /// depending on whether this is a per-module or combined index.
   ///
   /// This bitcode offset is written to or read from the associated
-  /// \a ValueSymbolTable entry for the function.
-  /// For the per-module index this holds the bitcode offset of the
-  /// function's body record  within bitcode module block in its module,
-  /// which is used during lazy function parsing or ThinLTO importing.
+  /// \a ValueSymbolTable entry for a function.
+  /// For the per-module index this holds the bitcode offset of a
+  /// function's body record within bitcode module block in its module,
+  /// although this field is currently only used when writing the VST
+  /// (it is set to 0 and also unused when this is a global variable).
   /// For the combined index this holds the offset of the corresponding
-  /// function summary record, to enable associating the combined index
+  /// summary record, to enable associating the combined index
   /// VST records with the summary records.
   uint64_t BitcodeIndex;
 
 public:
-  /// Constructor used during parsing of VST entries.
-  FunctionInfo(uint64_t FuncOffset)
-      : Summary(nullptr), BitcodeIndex(FuncOffset) {}
+  GlobalValueInfo(uint64_t Offset = 0,
+                  std::unique_ptr<GlobalValueSummary> Summary = nullptr)
+      : Summary(std::move(Summary)), BitcodeIndex(Offset) {}
 
-  /// Constructor used for per-module index bitcode writing.
-  FunctionInfo(uint64_t FuncOffset,
-               std::unique_ptr<FunctionSummary> FuncSummary)
-      : Summary(std::move(FuncSummary)), BitcodeIndex(FuncOffset) {}
-
-  /// Record the function summary information parsed out of the function
-  /// summary block during parsing or combined index creation.
-  void setFunctionSummary(std::unique_ptr<FunctionSummary> FuncSummary) {
-    Summary = std::move(FuncSummary);
+  /// Record the summary information parsed out of the summary block during
+  /// parsing or combined index creation.
+  void setSummary(std::unique_ptr<GlobalValueSummary> GVSummary) {
+    Summary = std::move(GVSummary);
   }
 
-  /// Get the function summary recorded for this function.
-  FunctionSummary *functionSummary() const { return Summary.get(); }
+  /// Get the summary recorded for this global value.
+  GlobalValueSummary *summary() const { return Summary.get(); }
 
-  /// Get the bitcode index recorded for this function, depending on
-  /// the index type.
+  /// Get the bitcode index recorded for this value symbol table entry.
   uint64_t bitcodeIndex() const { return BitcodeIndex; }
 
-  /// Record the bitcode index for this function, depending on
-  /// the index type.
-  void setBitcodeIndex(uint64_t FuncOffset) { BitcodeIndex = FuncOffset; }
+  /// Set the bitcode index recorded for this value symbol table entry.
+  void setBitcodeIndex(uint64_t Offset) { BitcodeIndex = Offset; }
 };
 
-/// List of function info structures for a particular function name held
-/// in the FunctionMap. Requires a vector in the case of multiple
-/// COMDAT functions of the same name.
-typedef std::vector<std::unique_ptr<FunctionInfo>> FunctionInfoList;
+/// List of global value info structures for a particular value held
+/// in the GlobalValueMap. Requires a vector in the case of multiple
+/// COMDAT values of the same name.
+typedef std::vector<std::unique_ptr<GlobalValueInfo>> GlobalValueInfoList;
 
-/// Map from function GUID to corresponding function info structures.
+/// Map from global value GUID to corresponding info structures.
 /// Use a std::map rather than a DenseMap since it will likely incur
 /// less overhead, as the value type is not very small and the size
 /// of the map is unknown, resulting in inefficiencies due to repeated
 /// insertions and resizing.
-typedef std::map<uint64_t, FunctionInfoList> FunctionInfoMapTy;
+typedef std::map<uint64_t, GlobalValueInfoList> GlobalValueInfoMapTy;
 
-/// Type used for iterating through the function info map.
-typedef FunctionInfoMapTy::const_iterator const_funcinfo_iterator;
-typedef FunctionInfoMapTy::iterator funcinfo_iterator;
+/// Type used for iterating through the global value info map.
+typedef GlobalValueInfoMapTy::const_iterator const_globalvalueinfo_iterator;
+typedef GlobalValueInfoMapTy::iterator globalvalueinfo_iterator;
 
 /// String table to hold/own module path strings, which additionally holds the
 /// module ID assigned to each module during the plugin step. The StringMap
 /// makes a copy of and owns inserted strings.
 typedef StringMap<uint64_t> ModulePathStringTableTy;
 
-/// Class to hold module path string table and function map,
+/// Class to hold module path string table and global value map,
 /// and encapsulate methods for operating on them.
+/// FIXME: Rename this and other uses of Function.*Index to something
+/// that reflects the now-expanded scope of the summary beyond just functions.
 class FunctionInfoIndex {
 private:
-  /// Map from function name to list of function information instances
-  /// for functions of that name (may be duplicates in the COMDAT case, e.g.).
-  FunctionInfoMapTy FunctionMap;
+  /// Map from value name to list of information instances for values of that
+  /// name (may be duplicates in the COMDAT case, e.g.).
+  GlobalValueInfoMapTy GlobalValueMap;
 
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
@@ -182,28 +268,40 @@ public:
   FunctionInfoIndex(const FunctionInfoIndex &) = delete;
   void operator=(const FunctionInfoIndex &) = delete;
 
-  funcinfo_iterator begin() { return FunctionMap.begin(); }
-  const_funcinfo_iterator begin() const { return FunctionMap.begin(); }
-  funcinfo_iterator end() { return FunctionMap.end(); }
-  const_funcinfo_iterator end() const { return FunctionMap.end(); }
+  globalvalueinfo_iterator begin() { return GlobalValueMap.begin(); }
+  const_globalvalueinfo_iterator begin() const {
+    return GlobalValueMap.begin();
+  }
+  globalvalueinfo_iterator end() { return GlobalValueMap.end(); }
+  const_globalvalueinfo_iterator end() const { return GlobalValueMap.end(); }
 
-  /// Get the list of function info objects for a given function.
-  const FunctionInfoList &getFunctionInfoList(StringRef FuncName) {
-    return FunctionMap[Function::getGUID(FuncName)];
+  /// Get the list of global value info objects for a given value name.
+  const GlobalValueInfoList &getGlobalValueInfoList(StringRef FuncName) {
+    return GlobalValueMap[Function::getGUID(FuncName)];
   }
 
-  /// Get the list of function info objects for a given function.
-  const const_funcinfo_iterator findFunctionInfoList(StringRef FuncName) const {
-    return FunctionMap.find(Function::getGUID(FuncName));
+  /// Get the list of global value info objects for a given value name.
+  const const_globalvalueinfo_iterator
+  findGlobalValueInfoList(StringRef ValueName) const {
+    return GlobalValueMap.find(Function::getGUID(ValueName));
   }
 
-  /// Add a function info for a function of the given name.
-  void addFunctionInfo(StringRef FuncName, std::unique_ptr<FunctionInfo> Info) {
-    FunctionMap[Function::getGUID(FuncName)].push_back(std::move(Info));
+  /// Get the list of global value info objects for a given value GUID.
+  const const_globalvalueinfo_iterator
+  findGlobalValueInfoList(uint64_t ValueGUID) const {
+    return GlobalValueMap.find(ValueGUID);
   }
 
-  void addFunctionInfo(uint64_t FuncGUID, std::unique_ptr<FunctionInfo> Info) {
-    FunctionMap[FuncGUID].push_back(std::move(Info));
+  /// Add a global value info for a value of the given name.
+  void addGlobalValueInfo(StringRef ValueName,
+                          std::unique_ptr<GlobalValueInfo> Info) {
+    GlobalValueMap[Function::getGUID(ValueName)].push_back(std::move(Info));
+  }
+
+  /// Add a global value info for a value of the given GUID.
+  void addGlobalValueInfo(uint64_t ValueGUID,
+                          std::unique_ptr<GlobalValueInfo> Info) {
+    GlobalValueMap[ValueGUID].push_back(std::move(Info));
   }
 
   /// Iterator to allow writer to walk through table during emission.
@@ -218,7 +316,7 @@ public:
     return ModulePathStringTable.lookup(ModPath);
   }
 
-  /// Add the given per-module index into this function index/summary,
+  /// Add the given per-module index into this module index/summary,
   /// assigning it the given module ID. Each module merged in should have
   /// a unique ID, necessary for consistent renaming of promoted
   /// static (local) variables.
@@ -247,6 +345,13 @@ public:
   bool hasExportedFunctions(const Module &M) const {
     return ModulePathStringTable.count(M.getModuleIdentifier());
   }
+
+  /// Remove entries in the GlobalValueMap that have empty summaries due to the
+  /// eager nature of map entry creation during VST parsing. These would
+  /// also be suppressed during combined index generation in mergeFrom(),
+  /// but if there was only one module or this was the first module we might
+  /// not invoke mergeFrom.
+  void removeEmptySummaryEntries();
 };
 
 } // End llvm namespace

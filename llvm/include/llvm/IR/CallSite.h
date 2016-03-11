@@ -453,6 +453,10 @@ public:
     CALLSITE_DELEGATE_GETTER(getOperandBundle(ID));
   }
 
+  unsigned countOperandBundlesOfType(uint32_t ID) const {
+    CALLSITE_DELEGATE_GETTER(countOperandBundlesOfType(ID));
+  }
+
   IterTy arg_begin() const {
     CALLSITE_DELEGATE_GETTER(arg_begin());
   }

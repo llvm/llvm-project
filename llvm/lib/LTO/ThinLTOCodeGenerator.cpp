@@ -349,7 +349,7 @@ void ThinLTOCodeGenerator::run() {
     if (EC)
       report_fatal_error(Twine("Failed to open ") + SaveTempPath +
                          " to save optimized bitcode\n");
-    WriteFunctionSummaryToFile(*Index, OS);
+    WriteIndexToFile(*Index, OS);
   }
 
   // Prepare the resulting object vector

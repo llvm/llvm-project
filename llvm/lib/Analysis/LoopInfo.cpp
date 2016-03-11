@@ -643,7 +643,7 @@ void LoopInfo::markAsRemoved(Loop *Unloop) {
 
 char LoopAnalysis::PassID;
 
-LoopInfo LoopAnalysis::run(Function &F, AnalysisManager<Function> *AM) {
+LoopInfo LoopAnalysis::run(Function &F, AnalysisManager<Function> &AM) {
   // FIXME: Currently we create a LoopInfo from scratch for every function.
   // This may prove to be too wasteful due to deallocating and re-allocating
   // memory each time for the underlying map and vector datastructures. At some
@@ -651,13 +651,13 @@ LoopInfo LoopAnalysis::run(Function &F, AnalysisManager<Function> *AM) {
   // objects. I don't want to add that kind of complexity until the scope of
   // the problem is better understood.
   LoopInfo LI;
-  LI.analyze(AM->getResult<DominatorTreeAnalysis>(F));
+  LI.analyze(AM.getResult<DominatorTreeAnalysis>(F));
   return LI;
 }
 
 PreservedAnalyses LoopPrinterPass::run(Function &F,
-                                       AnalysisManager<Function> *AM) {
-  AM->getResult<LoopAnalysis>(F).print(OS);
+                                       AnalysisManager<Function> &AM) {
+  AM.getResult<LoopAnalysis>(F).print(OS);
   return PreservedAnalyses::all();
 }
 

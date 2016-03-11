@@ -20,4 +20,15 @@ def G_ADD : Instruction {
   let hasSideEffects = 0;
   let isCommutable = 1;
 }
+
+// Generic unconditional branch.
+def G_BR : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$src1);
+  let AsmString = "";
+  let hasSideEffects = 0;
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
 // TODO: Add the other generic opcodes.

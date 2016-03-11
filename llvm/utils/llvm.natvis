@@ -54,8 +54,8 @@ or create a symbolic link so it updates automatically.
   </Type>
 
   <Type Name="llvm::PointerUnion&lt;*,*&gt;">
-    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) == 0">{"$T1", s8b} {(void*)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
-    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) != 0">{"$T2", s8b} {(void*)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
+    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) == 0">{"$T1", s8b}: {($T1)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
+    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) != 0">{"$T2", s8b}: {($T2)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
     <Expand>
       <ExpandedItem Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) == 0">($T1)(Val.Value &amp; Val.PointerBitMask)</ExpandedItem>
       <ExpandedItem Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) != 0">($T2)(Val.Value &amp; Val.PointerBitMask)</ExpandedItem>
@@ -63,9 +63,9 @@ or create a symbolic link so it updates automatically.
   </Type>
 
   <Type Name="llvm::PointerUnion3&lt;*,*,*&gt;">
-    <DisplayString Condition="(Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">{"$T1", s8b} {(void*)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 2) == 2">{"$T2", s8b} {(void*)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 1) == 1">{"$T3", s8b} {(void*)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">{"$T1", s8b}: {($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 2) == 2">{"$T2", s8b}: {($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 1) == 1">{"$T3", s8b}: {($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
     <Expand>
       <ExpandedItem Condition="(Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
       <ExpandedItem Condition="(Val.Val.Value &amp; 2) == 2">($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
@@ -74,10 +74,10 @@ or create a symbolic link so it updates automatically.
   </Type>
 
   <Type Name="llvm::PointerUnion4&lt;*,*,*,*&gt;">
-    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">{"$T1", s8b} {(void*)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) == 2">{"$T2", s8b} {(void*)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 1) == 1">{"$T3", s8b} {(void*)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 3) == 3">{"$T4", s8b} {(void*)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">{"$T1", s8b}: {($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) == 2">{"$T2", s8b}: {($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 1) == 1">{"$T3", s8b}: {($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 3) == 3">{"$T4", s8b}: {($T4)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
     <Expand>
       <ExpandedItem Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
       <ExpandedItem Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) == 2">($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>

@@ -1310,6 +1310,11 @@ enum {
   VER_NEED_CURRENT = 1
 };
 
+// SHT_NOTE section types
+enum {
+  NT_GNU_BUILD_ID = 3
+};
+
 } // end namespace ELF
 
 } // end namespace llvm

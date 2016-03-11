@@ -4,7 +4,6 @@
   addiur1sp $7, 260 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   addiur1sp $7, 241 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: misaligned immediate operand value
   addiur1sp $8, 240 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-  addius5 $7, 9 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   addiusp 1032   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   addu16  $6, $14, $4 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   subu16  $5, $16, $9 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction

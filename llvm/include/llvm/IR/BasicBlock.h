@@ -111,6 +111,14 @@ public:
   TerminatorInst *getTerminator();
   const TerminatorInst *getTerminator() const;
 
+  /// \brief Returns the call instruction calling @llvm.experimental.deoptimize
+  /// prior to the terminating return instruction of this basic block, if such a
+  /// call is present.  Otherwise, returns null.
+  CallInst *getTerminatingDeoptimizeCall();
+  const CallInst *getTerminatingDeoptimizeCall() const {
+    return const_cast<BasicBlock *>(this)->getTerminatingDeoptimizeCall();
+  }
+
   /// \brief Returns the call instruction marked 'musttail' prior to the
   /// terminating return instruction of this basic block, if such a call is
   /// present.  Otherwise, returns null.
