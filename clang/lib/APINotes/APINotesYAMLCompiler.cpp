@@ -189,6 +189,7 @@ namespace {
     bool AuditedForNullability = false;
     AvailabilityItem Availability;
     StringRef SwiftName;
+    StringRef SwiftBridge;
     MethodsSeq Methods;
     PropertiesSeq Properties;
   };
@@ -313,6 +314,7 @@ namespace llvm {
         io.mapOptional("Availability",          c.Availability.Mode);
         io.mapOptional("AvailabilityMsg",       c.Availability.Msg);
         io.mapOptional("SwiftName",             c.SwiftName);
+        io.mapOptional("SwiftBridge",           c.SwiftBridge);
         io.mapOptional("Methods",               c.Methods);
         io.mapOptional("Properties",            c.Properties);
       }
@@ -521,6 +523,9 @@ static bool compile(const Module &module,
       if (cl.AuditedForNullability)
         cInfo.setDefaultNullability(*DefaultNullability);
 
+      if (isClass)
+        cInfo.setSwiftBridge(cl.SwiftBridge);
+
       ContextID clID = isClass ? Writer->addObjCClass(cl.Name, cInfo) :
                                  Writer->addObjCProtocol(cl.Name, cInfo);
 
@@ -727,6 +732,8 @@ bool api_notes::decompileAPINotes(std::unique_ptr<llvm::MemoryBuffer> input,
       if (info.getDefaultNullability()) {
         record.AuditedForNullability = true;
       }
+
+      record.SwiftBridge = copyString(info.getSwiftBridge());
     }
 
     /// Map availability information, if present.
