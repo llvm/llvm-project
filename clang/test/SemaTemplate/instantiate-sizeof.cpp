@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify -std=c++11 %s
 
 // Make sure we handle contexts correctly with sizeof
 template<typename T> void f(T n) {
