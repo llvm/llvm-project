@@ -11,7 +11,7 @@
 // ThreadSanitizer, MemorySanitizer, etc.
 //
 // This file should be included into the tool's interceptor file,
-// which has to define it's own macros:
+// which has to define its own macros:
 //   COMMON_INTERCEPTOR_ENTER
 //   COMMON_INTERCEPTOR_ENTER_NOIGNORE
 //   COMMON_INTERCEPTOR_READ_RANGE
@@ -199,6 +199,20 @@ UNUSED static void DeleteInterceptorMetadata(void *addr) {
   CHECK(h.exists());
 }
 #endif  // SI_NOT_WINDOWS
+
+#if SANITIZER_INTERCEPT_STRLEN
+INTERCEPTOR(SIZE_T, strlen, const char *s) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, strlen, s);
+  SIZE_T result = REAL(strlen)(s);
+  if (common_flags()->intercept_strlen)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, result + 1);
+  return result;
+}
+#define INIT_STRLEN COMMON_INTERCEPT_FUNCTION(strlen)
+#else
+#define INIT_STRLEN
+#endif
 
 #if SANITIZER_INTERCEPT_TEXTDOMAIN
 INTERCEPTOR(char*, textdomain, const char *domainname) {
@@ -5376,6 +5390,7 @@ static void InitializeCommonInterceptors() {
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
 
   INIT_TEXTDOMAIN;
+  INIT_STRLEN;
   INIT_STRCMP;
   INIT_STRNCMP;
   INIT_STRCASECMP;
