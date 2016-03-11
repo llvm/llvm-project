@@ -74,6 +74,7 @@ struct Configuration {
   bool Static = false;
   bool StripAll;
   bool SysvHash = true;
+  bool Threads;
   bool Verbose;
   bool ZExecStack;
   bool ZNodelete;

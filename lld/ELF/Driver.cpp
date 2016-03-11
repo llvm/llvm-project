@@ -239,6 +239,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->StripAll = Args.hasArg(OPT_strip_all);
+  Config->Threads = Args.hasArg(OPT_threads);
   Config->Verbose = Args.hasArg(OPT_verbose);
 
   Config->DynamicLinker = getString(Args, OPT_dynamic_linker);

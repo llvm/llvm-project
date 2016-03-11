@@ -12,6 +12,7 @@
 #include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Target.h"
+#include "lld/Core/Parallel.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/MathExtras.h"
 #include <map>
@@ -929,8 +930,13 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
   ArrayRef<uint8_t> Filler = Script->getFiller(this->Name);
   if (!Filler.empty())
     fill(Buf, this->getSize(), Filler);
-  for (InputSection<ELFT> *C : Sections)
-    C->writeTo(Buf);
+  if (Config->Threads) {
+    parallel_for_each(Sections.begin(), Sections.end(),
+                      [=](InputSection<ELFT> *C) { C->writeTo(Buf); });
+  } else {
+    for (InputSection<ELFT> *C : Sections)
+      C->writeTo(Buf);
+  }
 }
 
 template <class ELFT>

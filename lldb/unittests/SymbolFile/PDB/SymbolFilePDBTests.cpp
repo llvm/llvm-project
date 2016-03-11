@@ -108,7 +108,7 @@ protected:
     bool
     ContainsCompileUnit(const SymbolContextList &sc_list, const FileSpec &spec) const
     {
-        for (int i = 0; i < sc_list.GetSize(); ++i)
+        for (size_t i = 0; i < sc_list.GetSize(); ++i)
         {
             const SymbolContext &sc = sc_list[i];
             if (FileSpecMatchesAsBaseOrFull(*sc.comp_unit, spec))
@@ -173,7 +173,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestResolveSymbolContextBasename))
     FileSpec header_spec("test-pdb.cpp", false);
     SymbolContextList sc_list;
     uint32_t result_count = symfile->ResolveSymbolContext(header_spec, 0, false, lldb::eSymbolContextCompUnit, sc_list);
-    EXPECT_EQ(1, result_count);
+    EXPECT_EQ(1u, result_count);
     EXPECT_TRUE(ContainsCompileUnit(sc_list, header_spec));
 }
 
@@ -192,7 +192,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestResolveSymbolContextFullPath))
     FileSpec header_spec(R"spec(D:\src\llvm\tools\lldb\unittests\SymbolFile\PDB\Inputs\test-pdb.cpp)spec", false);
     SymbolContextList sc_list;
     uint32_t result_count = symfile->ResolveSymbolContext(header_spec, 0, false, lldb::eSymbolContextCompUnit, sc_list);
-    EXPECT_GE(1, result_count);
+    EXPECT_GE(1u, result_count);
     EXPECT_TRUE(ContainsCompileUnit(sc_list, header_spec));
 }
 
@@ -216,7 +216,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLookupOfHeaderFileWithInlines))
     {
         SymbolContextList sc_list;
         uint32_t result_count = symfile->ResolveSymbolContext(hspec, 0, true, lldb::eSymbolContextCompUnit, sc_list);
-        EXPECT_EQ(2, result_count);
+        EXPECT_EQ(2u, result_count);
         EXPECT_TRUE(ContainsCompileUnit(sc_list, main_cpp_spec));
         EXPECT_TRUE(ContainsCompileUnit(sc_list, alt_cpp_spec));
     }
@@ -240,7 +240,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLookupOfHeaderFileWithNoInlines)
     {
         SymbolContextList sc_list;
         uint32_t result_count = symfile->ResolveSymbolContext(hspec, 0, false, lldb::eSymbolContextCompUnit, sc_list);
-        EXPECT_EQ(0, result_count);
+        EXPECT_EQ(0u, result_count);
     }
 }
 
@@ -259,13 +259,13 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLineTablesMatchAll))
     FileSpec header1("test-pdb.h", false);
     FileSpec header2("test-pdb-nested.h", false);
     uint32_t cus = symfile->GetNumCompileUnits();
-    EXPECT_EQ(2, cus);
+    EXPECT_EQ(2u, cus);
 
     SymbolContextList sc_list;
     uint32_t scope = lldb::eSymbolContextCompUnit | lldb::eSymbolContextLineEntry;
 
     uint32_t count = symfile->ResolveSymbolContext(source_file, 0, true, scope, sc_list);
-    EXPECT_EQ(1, count);
+    EXPECT_EQ(1u, count);
     SymbolContext sc;
     EXPECT_TRUE(sc_list.GetContextAtIndex(0, sc));
 
@@ -273,7 +273,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLineTablesMatchAll))
     EXPECT_NE(nullptr, lt);
     count = lt->GetSize();
     // We expect one extra entry for termination (per function)
-    EXPECT_EQ(16, count);
+    EXPECT_EQ(16u, count);
 
     VerifyLineEntry(module, sc, source_file, *lt, 7, 0x401040);
     VerifyLineEntry(module, sc, source_file, *lt, 8, 0x401043);
@@ -307,14 +307,14 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLineTablesMatchSpecific))
     FileSpec header1("test-pdb.h", false);
     FileSpec header2("test-pdb-nested.h", false);
     uint32_t cus = symfile->GetNumCompileUnits();
-    EXPECT_EQ(2, cus);
+    EXPECT_EQ(2u, cus);
 
     SymbolContextList sc_list;
     uint32_t scope = lldb::eSymbolContextCompUnit | lldb::eSymbolContextLineEntry;
 
     // First test with line 7, and verify that only line 7 entries are added.
     uint32_t count = symfile->ResolveSymbolContext(source_file, 7, true, scope, sc_list);
-    EXPECT_EQ(1, count);
+    EXPECT_EQ(1u, count);
     SymbolContext sc;
     EXPECT_TRUE(sc_list.GetContextAtIndex(0, sc));
 
@@ -322,7 +322,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLineTablesMatchSpecific))
     EXPECT_NE(nullptr, lt);
     count = lt->GetSize();
     // We expect one extra entry for termination
-    EXPECT_EQ(3, count);
+    EXPECT_EQ(3u, count);
 
     VerifyLineEntry(module, sc, source_file, *lt, 7, 0x401040);
     VerifyLineEntry(module, sc, header2, *lt, 7, 0x401089);
@@ -330,14 +330,14 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestLineTablesMatchSpecific))
     sc_list.Clear();
     // Then test with line 9, and verify that only line 9 entries are added.
     count = symfile->ResolveSymbolContext(source_file, 9, true, scope, sc_list);
-    EXPECT_EQ(1, count);
+    EXPECT_EQ(1u, count);
     EXPECT_TRUE(sc_list.GetContextAtIndex(0, sc));
 
     lt = sc.comp_unit->GetLineTable();
     EXPECT_NE(nullptr, lt);
     count = lt->GetSize();
     // We expect one extra entry for termination
-    EXPECT_EQ(3, count);
+    EXPECT_EQ(3u, count);
 
     VerifyLineEntry(module, sc, source_file, *lt, 9, 0x401045);
     VerifyLineEntry(module, sc, header1, *lt, 9, 0x401090);

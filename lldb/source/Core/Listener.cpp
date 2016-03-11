@@ -11,6 +11,8 @@
 
 // C Includes
 // C++ Includes
+#include <algorithm>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Broadcaster.h"
@@ -18,7 +20,6 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Host/TimeValue.h"
-#include <algorithm>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,14 +33,12 @@ namespace
         bool operator() (const BroadcasterManagerWP input_wp) const
         {
             BroadcasterManagerSP input_sp = input_wp.lock();
-            if (input_sp && input_sp == m_manager_sp)
-                return true;
-            else
-                return false;
+            return (input_sp && input_sp == m_manager_sp);
         }
+
         BroadcasterManagerSP m_manager_sp;
     };
-}
+} // anonymous namespace
 
 Listener::Listener(const char *name) :
     m_name (name),
@@ -50,7 +49,7 @@ Listener::Listener(const char *name) :
     m_cond_wait()
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
-    if (log)
+    if (log != nullptr)
         log->Printf ("%p Listener::Listener('%s')",
                      static_cast<void*>(this), m_name.c_str());
 }
@@ -88,7 +87,7 @@ Listener::Clear()
             manager_sp->RemoveListener(this);
     }
 
-    if (log)
+    if (log != nullptr)
         log->Printf ("%p Listener::~Listener('%s')",
                      static_cast<void*>(this), m_name.c_str());
 }
@@ -108,19 +107,14 @@ Listener::StartListeningForEvents (Broadcaster* broadcaster, uint32_t event_mask
 
         uint32_t acquired_mask = broadcaster->AddListener (this->shared_from_this(), event_mask);
 
-        if (event_mask != acquired_mask)
-        {
-
-        }
         Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS));
-        if (log)
+        if (log != nullptr)
             log->Printf ("%p Listener::StartListeningForEvents (broadcaster = %p, mask = 0x%8.8x) acquired_mask = 0x%8.8x for %s",
                          static_cast<void*>(this),
                          static_cast<void*>(broadcaster), event_mask,
                          acquired_mask, m_name.c_str());
 
         return acquired_mask;
-
     }
     return 0;
 }
@@ -142,7 +136,7 @@ Listener::StartListeningForEvents (Broadcaster* broadcaster, uint32_t event_mask
         uint32_t acquired_mask = broadcaster->AddListener (this->shared_from_this(), event_mask);
 
         Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS));
-        if (log)
+        if (log != nullptr)
         {
             void **pointer = reinterpret_cast<void**>(&callback);
             log->Printf ("%p Listener::StartListeningForEvents (broadcaster = %p, mask = 0x%8.8x, callback = %p, user_data = %p) acquired_mask = 0x%8.8x for %s",
@@ -200,7 +194,6 @@ Listener::BroadcasterWillDestruct (Broadcaster *broadcaster)
 
         if (m_events.empty())
             m_cond_wait.SetValue (false, eBroadcastNever);
-
     }
 }
 
@@ -221,7 +214,7 @@ void
 Listener::AddEvent (EventSP &event_sp)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS));
-    if (log)
+    if (log != nullptr)
         log->Printf ("%p Listener('%s')::AddEvent (event_sp = {%p})",
                      static_cast<void*>(this), m_name.c_str(),
                      static_cast<void*>(event_sp.get()));
@@ -244,15 +237,11 @@ public:
 
     bool operator() (const EventSP &event_sp) const
     {
-        if (event_sp->BroadcasterIs(m_broadcaster))
-            return true;
-        else
-            return false;
+        return event_sp->BroadcasterIs(m_broadcaster);
     }
 
 private:
     Broadcaster *m_broadcaster;
-
 };
 
 class EventMatcher
@@ -275,7 +264,7 @@ public:
         {
             bool found_source = false;
             const ConstString &event_broadcaster_name = event_sp->GetBroadcaster()->GetBroadcasterName();
-            for (uint32_t i=0; i<m_num_broadcaster_names; ++i)
+            for (uint32_t i = 0; i < m_num_broadcaster_names; ++i)
             {
                 if (m_broadcaster_names[i] == event_broadcaster_name)
                 {
@@ -299,12 +288,11 @@ private:
     const uint32_t m_event_type_mask;
 };
 
-
 bool
 Listener::FindNextEventInternal
 (
-    Broadcaster *broadcaster,   // NULL for any broadcaster
-    const ConstString *broadcaster_names, // NULL for any event
+    Broadcaster *broadcaster,   // nullptr for any broadcaster
+    const ConstString *broadcaster_names, // nullptr for any event
     uint32_t num_broadcaster_names,
     uint32_t event_type_mask,
     EventSP &event_sp,
@@ -317,10 +305,9 @@ Listener::FindNextEventInternal
     if (m_events.empty())
         return false;
 
-
     Listener::event_collection::iterator pos = m_events.end();
 
-    if (broadcaster == NULL && broadcaster_names == NULL && event_type_mask == 0)
+    if (broadcaster == nullptr && broadcaster_names == nullptr && event_type_mask == 0)
     {
         pos = m_events.begin();
     }
@@ -333,7 +320,7 @@ Listener::FindNextEventInternal
     {
         event_sp = *pos;
 
-        if (log)
+        if (log != nullptr)
             log->Printf ("%p '%s' Listener::FindNextEventInternal(broadcaster=%p, broadcaster_names=%p[%u], event_type_mask=0x%8.8x, remove=%i) event %p",
                          static_cast<void*>(this), GetName(),
                          static_cast<void*>(broadcaster),
@@ -369,39 +356,35 @@ Event *
 Listener::PeekAtNextEvent ()
 {
     EventSP event_sp;
-    if (FindNextEventInternal (NULL, NULL, 0, 0, event_sp, false))
+    if (FindNextEventInternal(nullptr, nullptr, 0, 0, event_sp, false))
         return event_sp.get();
-    return NULL;
+    return nullptr;
 }
 
 Event *
 Listener::PeekAtNextEventForBroadcaster (Broadcaster *broadcaster)
 {
     EventSP event_sp;
-    if (FindNextEventInternal (broadcaster, NULL, 0, 0, event_sp, false))
+    if (FindNextEventInternal(broadcaster, nullptr, 0, 0, event_sp, false))
         return event_sp.get();
-    return NULL;
+    return nullptr;
 }
 
 Event *
 Listener::PeekAtNextEventForBroadcasterWithType (Broadcaster *broadcaster, uint32_t event_type_mask)
 {
     EventSP event_sp;
-    if (FindNextEventInternal (broadcaster, NULL, 0, event_type_mask, event_sp, false))
+    if (FindNextEventInternal(broadcaster, nullptr, 0, event_type_mask, event_sp, false))
         return event_sp.get();
-    return NULL;
+    return nullptr;
 }
 
-
 bool
-Listener::GetNextEventInternal
-(
-    Broadcaster *broadcaster,   // NULL for any broadcaster
-    const ConstString *broadcaster_names, // NULL for any event
-    uint32_t num_broadcaster_names,
-    uint32_t event_type_mask,
-    EventSP &event_sp
-)
+Listener::GetNextEventInternal(Broadcaster *broadcaster,             // nullptr for any broadcaster
+                               const ConstString *broadcaster_names, // nullptr for any event
+                               uint32_t num_broadcaster_names,
+                               uint32_t event_type_mask,
+                               EventSP &event_sp)
 {
     return FindNextEventInternal (broadcaster, broadcaster_names, num_broadcaster_names, event_type_mask, event_sp, true);
 }
@@ -409,43 +392,38 @@ Listener::GetNextEventInternal
 bool
 Listener::GetNextEvent (EventSP &event_sp)
 {
-    return GetNextEventInternal (NULL, NULL, 0, 0, event_sp);
+    return GetNextEventInternal(nullptr, nullptr, 0, 0, event_sp);
 }
-
 
 bool
 Listener::GetNextEventForBroadcaster (Broadcaster *broadcaster, EventSP &event_sp)
 {
-    return GetNextEventInternal (broadcaster, NULL, 0, 0, event_sp);
+    return GetNextEventInternal(broadcaster, nullptr, 0, 0, event_sp);
 }
 
 bool
 Listener::GetNextEventForBroadcasterWithType (Broadcaster *broadcaster, uint32_t event_type_mask, EventSP &event_sp)
 {
-    return GetNextEventInternal (broadcaster, NULL, 0, event_type_mask, event_sp);
+    return GetNextEventInternal(broadcaster, nullptr, 0, event_type_mask, event_sp);
 }
 
-
 bool
-Listener::WaitForEventsInternal
-(
-    const TimeValue *timeout,
-    Broadcaster *broadcaster,   // NULL for any broadcaster
-    const ConstString *broadcaster_names, // NULL for any event
-    uint32_t num_broadcaster_names,
-    uint32_t event_type_mask,
-    EventSP &event_sp
-)
+Listener::WaitForEventsInternal(const TimeValue *timeout,
+                                Broadcaster *broadcaster,             // nullptr for any broadcaster
+                                const ConstString *broadcaster_names, // nullptr for any event
+                                uint32_t num_broadcaster_names,
+                                uint32_t event_type_mask,
+                                EventSP &event_sp)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS));
     bool timed_out = false;
 
-    if (log)
+    if (log != nullptr)
         log->Printf ("%p Listener::WaitForEventsInternal (timeout = { %p }) for %s",
                      static_cast<void*>(this), static_cast<const void*>(timeout),
                      m_name.c_str());
 
-    while (1)
+    while (true)
     {
         // Note, we don't want to lock the m_events_mutex in the call to GetNextEventInternal, since the DoOnRemoval
         // code might require that new events be serviced.  For instance, the Breakpoint Command's 
@@ -472,7 +450,7 @@ Listener::WaitForEventsInternal
         else if (timed_out)
         {
             log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS);
-            if (log)
+            if (log != nullptr)
                 log->Printf ("%p Listener::WaitForEventsInternal() timed out for %s",
                              static_cast<void*>(this), m_name.c_str());
             break;
@@ -480,7 +458,7 @@ Listener::WaitForEventsInternal
         else
         {
             log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS);
-            if (log)
+            if (log != nullptr)
                 log->Printf ("%p Listener::WaitForEventsInternal() unknown error for %s",
                              static_cast<void*>(this), m_name.c_str());
             break;
@@ -491,32 +469,26 @@ Listener::WaitForEventsInternal
 }
 
 bool
-Listener::WaitForEventForBroadcasterWithType
-(
-    const TimeValue *timeout,
-    Broadcaster *broadcaster,
-    uint32_t event_type_mask,
-    EventSP &event_sp
-)
+Listener::WaitForEventForBroadcasterWithType(const TimeValue *timeout,
+                                             Broadcaster *broadcaster,
+                                             uint32_t event_type_mask,
+                                             EventSP &event_sp)
 {
-    return WaitForEventsInternal (timeout, broadcaster, NULL, 0, event_type_mask, event_sp);
+    return WaitForEventsInternal(timeout, broadcaster, nullptr, 0, event_type_mask, event_sp);
 }
 
 bool
-Listener::WaitForEventForBroadcaster
-(
-    const TimeValue *timeout,
-    Broadcaster *broadcaster,
-    EventSP &event_sp
-)
+Listener::WaitForEventForBroadcaster(const TimeValue *timeout,
+                                     Broadcaster *broadcaster,
+                                     EventSP &event_sp)
 {
-    return WaitForEventsInternal (timeout, broadcaster, NULL, 0, 0, event_sp);
+    return WaitForEventsInternal(timeout, broadcaster, nullptr, 0, 0, event_sp);
 }
 
 bool
 Listener::WaitForEvent (const TimeValue *timeout, EventSP &event_sp)
 {
-    return WaitForEventsInternal (timeout, NULL, NULL, 0, 0, event_sp);
+    return WaitForEventsInternal(timeout, nullptr, nullptr, 0, 0, event_sp);
 }
 
 size_t
@@ -537,7 +509,7 @@ Listener::HandleBroadcastEvent (EventSP &event_sp)
         BroadcasterInfo info = pos->second;
         if (event_sp->GetType () & info.event_mask)
         {
-            if (info.callback != NULL)
+            if (info.callback != nullptr)
             {
                 info.callback (event_sp, info.callback_user_data);
                 ++num_handled;
@@ -582,7 +554,6 @@ Listener::StopListeningForEventSpec (BroadcasterManagerSP manager_sp,
     
     Mutex::Locker locker(m_broadcasters_mutex);
     return manager_sp->UnregisterListenerForEvents (this->shared_from_this(), event_spec);
-
 }
     
 ListenerSP

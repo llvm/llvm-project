@@ -6,14 +6,21 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "lldb/Core/ConstString.h"
-#include "lldb/Core/Stream.h"
+
+// C Includes
+// C++ Includes
+#include <array>
+#include <mutex>
+
+// Other libraries and framework includes
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/RWMutex.h"
 
-#include <array>
-#include <mutex>
+// Project includes
+#include "lldb/Core/Stream.h"
 
 using namespace lldb_private;
 
@@ -34,7 +41,7 @@ public:
     size_t
     GetConstCStringLength (const char *ccstr) const
     {
-        if (ccstr)
+        if (ccstr != nullptr)
         {
             const uint8_t h = hash (llvm::StringRef(ccstr));
             llvm::sys::SmartScopedReader<false> rlock(m_string_pools[h].m_mutex);
@@ -47,19 +54,19 @@ public:
     StringPoolValueType
     GetMangledCounterpart (const char *ccstr) const
     {
-        if (ccstr)
+        if (ccstr != nullptr)
         {
             const uint8_t h = hash (llvm::StringRef(ccstr));
             llvm::sys::SmartScopedReader<false> rlock(m_string_pools[h].m_mutex);
             return GetStringMapEntryFromKeyData (ccstr).getValue();
         }
-        return 0;
+        return nullptr;
     }
 
     bool
     SetMangledCounterparts (const char *key_ccstr, const char *value_ccstr)
     {
-        if (key_ccstr && value_ccstr)
+        if (key_ccstr != nullptr && value_ccstr != nullptr)
         {
             {
                 const uint8_t h = hash (llvm::StringRef(key_ccstr));
@@ -79,7 +86,7 @@ public:
     const char *
     GetConstCString (const char *cstr)
     {
-        if (cstr)
+        if (cstr != nullptr)
             return GetConstCStringWithLength (cstr, strlen (cstr));
         return nullptr;
     }
@@ -87,7 +94,7 @@ public:
     const char *
     GetConstCStringWithLength (const char *cstr, size_t cstr_len)
     {
-        if (cstr)
+        if (cstr != nullptr)
             return GetConstCStringWithStringRef(llvm::StringRef(cstr, cstr_len));
         return nullptr;
     }
@@ -116,7 +123,7 @@ public:
     const char *
     GetConstCStringAndSetMangledCounterPart (const char *demangled_cstr, const char *mangled_ccstr)
     {
-        if (demangled_cstr)
+        if (demangled_cstr != nullptr)
         {
             const char *demangled_ccstr = nullptr;
 
@@ -150,7 +157,7 @@ public:
     const char *
     GetConstTrimmedCStringWithLength (const char *cstr, size_t cstr_len)
     {
-        if (cstr)
+        if (cstr != nullptr)
         {
             const size_t trimmed_len = std::min<size_t> (strlen (cstr), cstr_len);
             return GetConstCStringWithLength (cstr, trimmed_len);
@@ -253,7 +260,7 @@ Stream&
 lldb_private::operator << (Stream& s, const ConstString& str)
 {
     const char *cstr = str.GetCString();
-    if (cstr)
+    if (cstr != nullptr)
         s << cstr;
 
     return s;
@@ -306,18 +313,18 @@ ConstString::Compare(const ConstString &lhs, const ConstString &rhs, const bool 
     }
 
     if (lhs_cstr)
-        return +1;  // LHS isn't NULL but RHS is
+        return +1;  // LHS isn't nullptr but RHS is
     else
-        return -1;  // LHS is NULL but RHS isn't
+        return -1;  // LHS is nullptr but RHS isn't
 }
 
 void
 ConstString::Dump(Stream *s, const char *fail_value) const
 {
-    if (s)
+    if (s != nullptr)
     {
         const char *cstr = AsCString (fail_value);
-        if (cstr)
+        if (cstr != nullptr)
             s->PutCString (cstr);
     }
 }
@@ -327,7 +334,7 @@ ConstString::DumpDebug(Stream *s) const
 {
     const char *cstr = GetCString ();
     size_t cstr_len = GetLength();
-    // Only print the parens if we have a non-NULL string
+    // Only print the parens if we have a non-nullptr string
     const char *parens = cstr ? "\"" : "";
     s->Printf("%*p: ConstString, string = %s%s%s, length = %" PRIu64,
               static_cast<int>(sizeof(void*) * 2),

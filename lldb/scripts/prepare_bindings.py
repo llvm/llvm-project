@@ -152,6 +152,11 @@ def process_args(args):
             "Specifies the build dir where the language binding "
             "should be placed"))
 
+    parser.add_argument(
+        "--target-platform",
+        help=(
+            "Specifies the platform we are building for."
+            "Should be the same as what platform.system() returns."))
     # Process args.
     options = parser.parse_args(args)
 

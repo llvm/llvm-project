@@ -6258,7 +6258,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/prepare_bindings.py --find-swig --framework --src-root $SRCROOT --target-dir $TARGET_BUILD_DIR --config-build-dir $CONFIGURATION_BUILD_DIR";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/prepare_bindings.py --find-swig --framework --src-root $SRCROOT --target-dir $TARGET_BUILD_DIR --config-build-dir $CONFIGURATION_BUILD_DIR --target-platform Darwin";
 		};
 		4959511A1A1ACE9500F6F8FC /* Install Clang compiler headers */ = {
 			isa = PBXShellScriptBuildPhase;
