@@ -226,6 +226,30 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
+      if (MI.getOpcode() == AMDGPU::V_MOV_B32_e32) {
+        // If this has a literal constant source that is the same as the
+        // reversed bits of an inline immediate, replace with a bitreverse of
+        // that constant. This saves 4 bytes in the common case of materializing
+        // sign bits.
+
+        // Test if we are after regalloc. We only want to do this after any
+        // optimizations happen because this will confuse them.
+        // XXX - not exactly a check for post-regalloc run.
+        MachineOperand &Src = MI.getOperand(1);
+        if (Src.isImm() &&
+            TargetRegisterInfo::isPhysicalRegister(MI.getOperand(0).getReg())) {
+          int64_t Imm = Src.getImm();
+          if (isInt<32>(Imm) && !TII->isInlineConstant(Src, 4)) {
+            int32_t ReverseImm = reverseBits<int32_t>(static_cast<int32_t>(Imm));
+            if (ReverseImm >= -16 && ReverseImm <= 64) {
+              MI.setDesc(TII->get(AMDGPU::V_BFREV_B32_e32));
+              Src.setImm(ReverseImm);
+              continue;
+            }
+          }
+        }
+      }
+
       if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
         continue;
 

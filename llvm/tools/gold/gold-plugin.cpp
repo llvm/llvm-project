@@ -101,14 +101,13 @@ struct PluginInputFile {
 };
 
 struct ResolutionInfo {
+  uint64_t CommonSize = 0;
+  unsigned CommonAlign = 0;
   bool IsLinkonceOdr = true;
   bool UnnamedAddr = true;
   GlobalValue::VisibilityTypes Visibility = GlobalValue::DefaultVisibility;
   bool CommonInternal = false;
   bool UseCommon = false;
-  unsigned CommonSize = 0;
-  unsigned CommonAlign = 0;
-  claimed_file *CommonFile = nullptr;
 };
 
 /// Class to own information used by a task or during its cleanup for a
@@ -515,15 +514,6 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
     if (GV) {
       Res.UnnamedAddr &= GV->hasUnnamedAddr();
       Res.IsLinkonceOdr &= GV->hasLinkOnceLinkage();
-      if (GV->hasCommonLinkage()) {
-        Res.CommonAlign = std::max(Res.CommonAlign, GV->getAlignment());
-        const DataLayout &DL = GV->getParent()->getDataLayout();
-        uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
-        if (Size >= Res.CommonSize) {
-          Res.CommonSize = Size;
-          Res.CommonFile = &cf;
-        }
-      }
       Res.Visibility = getMinVisibility(Res.Visibility, GV->getVisibility());
       switch (GV->getVisibility()) {
       case GlobalValue::DefaultVisibility:
@@ -637,6 +627,8 @@ static const void *getSymbolsAndView(claimed_file &F) {
 static std::unique_ptr<FunctionInfoIndex>
 getFunctionIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
   const void *View = getSymbolsAndView(F);
+  if (!View)
+    return nullptr;
 
   MemoryBufferRef BufferRef(StringRef((const char *)View, Info.filesize),
                             Info.name);
@@ -663,7 +655,8 @@ static std::unique_ptr<Module>
 getModuleForFile(LLVMContext &Context, claimed_file &F, const void *View,
                  ld_plugin_input_file &Info, raw_fd_ostream *ApiFile,
                  StringSet<> &Internalize, StringSet<> &Maybe,
-                 std::vector<GlobalValue *> &Keep) {
+                 std::vector<GlobalValue *> &Keep,
+                 StringMap<unsigned> &Realign) {
   MemoryBufferRef BufferRef(StringRef((const char *)View, Info.filesize),
                             Info.name);
   ErrorOr<std::unique_ptr<object::IRObjectFile>> ObjOrErr =
@@ -725,7 +718,6 @@ getModuleForFile(LLVMContext &Context, claimed_file &F, const void *View,
     // Override gold's resolution for common symbols. We want the largest
     // one to win.
     if (GV->hasCommonLinkage()) {
-      cast<GlobalVariable>(GV)->setAlignment(Res.CommonAlign);
       if (Resolution == LDPR_PREVAILING_DEF_IRONLY)
         Res.CommonInternal = true;
 
@@ -733,14 +725,29 @@ getModuleForFile(LLVMContext &Context, claimed_file &F, const void *View,
           Resolution == LDPR_PREVAILING_DEF)
         Res.UseCommon = true;
 
-      if (Res.CommonFile == &F && Res.UseCommon) {
+      const DataLayout &DL = GV->getParent()->getDataLayout();
+      uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
+      unsigned Align = GV->getAlignment();
+
+      if (Res.UseCommon && Size >= Res.CommonSize) {
+        // Take GV.
         if (Res.CommonInternal)
           Resolution = LDPR_PREVAILING_DEF_IRONLY;
         else
           Resolution = LDPR_PREVAILING_DEF;
+        cast<GlobalVariable>(GV)->setAlignment(
+            std::max(Res.CommonAlign, Align));
       } else {
+        // Do not take GV, it's smaller than what we already have in the
+        // combined module.
         Resolution = LDPR_PREEMPTED_IR;
+        if (Align > Res.CommonAlign)
+          // Need to raise the alignment though.
+          Realign[Sym.name] = Align;
       }
+
+      Res.CommonSize = std::max(Res.CommonSize, Size);
+      Res.CommonAlign = std::max(Res.CommonAlign, Align);
     }
 
     switch (Resolution) {
@@ -1058,8 +1065,9 @@ static bool linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
                          raw_fd_ostream *ApiFile, StringSet<> &Internalize,
                          StringSet<> &Maybe) {
   std::vector<GlobalValue *> Keep;
-  std::unique_ptr<Module> M = getModuleForFile(Context, F, View, File, ApiFile,
-                                               Internalize, Maybe, Keep);
+  StringMap<unsigned> Realign;
+  std::unique_ptr<Module> M = getModuleForFile(
+      Context, F, View, File, ApiFile, Internalize, Maybe, Keep, Realign);
   if (!M.get())
     return false;
   if (!options::triple.empty())
@@ -1068,9 +1076,17 @@ static bool linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
     M->setTargetTriple(DefaultTriple);
   }
 
-  if (L.move(std::move(M), Keep, [](GlobalValue &, IRMover::ValueAdder) {}))
-    return true;
-  return false;
+  if (!L.move(std::move(M), Keep, [](GlobalValue &, IRMover::ValueAdder) {}))
+    return false;
+
+  for (const auto &I : Realign) {
+    GlobalValue *Dst = L.getModule().getNamedValue(I.first());
+    if (!Dst)
+      continue;
+    cast<GlobalVariable>(Dst)->setAlignment(I.second);
+  }
+
+  return true;
 }
 
 /// Perform the ThinLTO backend on a single module, invoking the LTO and codegen
@@ -1116,6 +1132,8 @@ static void thinLTOBackends(raw_fd_ostream *ApiFile,
       // safe by default.
       PluginInputFile InputFile(F.handle);
       const void *View = getSymbolsAndView(F);
+      if (!View)
+        continue;
 
       SmallString<128> Filename;
       if (!options::obj_path.empty())
@@ -1211,6 +1229,8 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
   for (claimed_file &F : Modules) {
     PluginInputFile InputFile(F.handle);
     const void *View = getSymbolsAndView(F);
+    if (!View)
+      continue;
     if (linkInModule(Context, L, F, View, InputFile.file(), ApiFile,
                      Internalize, Maybe))
       message(LDPL_FATAL, "Failed to link module");

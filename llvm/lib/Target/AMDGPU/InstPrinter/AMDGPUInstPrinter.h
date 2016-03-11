@@ -10,8 +10,8 @@
 /// \file
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_INSTPRINTER_AMDGPUINSTPRINTER_H
-#define LLVM_LIB_TARGET_R600_INSTPRINTER_AMDGPUINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_INSTPRINTER_AMDGPUINSTPRINTER_H
+#define LLVM_LIB_TARGET_AMDGPU_INSTPRINTER_AMDGPUINSTPRINTER_H
 
 #include "llvm/MC/MCInstPrinter.h"
 

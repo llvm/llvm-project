@@ -1659,6 +1659,8 @@ void MemoryDependenceResults::verifyRemoved(Instruction *D) const {
 #endif
 }
 
+char MemoryDependenceAnalysis::PassID;
+
 MemoryDependenceResults
 MemoryDependenceAnalysis::run(Function &F, AnalysisManager<Function> *AM) {
   auto &AA = AM->getResult<AAManager>(F);

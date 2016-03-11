@@ -1,4 +1,4 @@
-//===-------- AMDGPUELFStreamer.h - ELF Object Output ---------------------===//
+//===-------- AMDGPUELFStreamer.h - ELF Object Output -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

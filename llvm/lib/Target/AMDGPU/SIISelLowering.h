@@ -12,15 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_SIISELLOWERING_H
-#define LLVM_LIB_TARGET_R600_SIISELLOWERING_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
+#define LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 
 #include "AMDGPUISelLowering.h"
 #include "SIInstrInfo.h"
 
 namespace llvm {
 
-class SITargetLowering : public AMDGPUTargetLowering {
+class SITargetLowering final : public AMDGPUTargetLowering {
   SDValue LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT, SDLoc DL,
                          SDValue Chain, unsigned Offset, bool Signed) const;
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,

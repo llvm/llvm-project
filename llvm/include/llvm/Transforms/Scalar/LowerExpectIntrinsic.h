@@ -21,7 +21,7 @@
 
 namespace llvm {
 
-struct LowerExpectIntrinsicPass : PassBase<LowerExpectIntrinsicPass> {
+struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
   /// \brief Run the pass over the function.
   ///
   /// This will lower all of th expect intrinsic calls in this function into

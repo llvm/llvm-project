@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCASMINFO_H
-#define LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCASMINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCASMINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCASMINFO_H
 
 #include "llvm/MC/MCAsmInfoELF.h"
 namespace llvm {

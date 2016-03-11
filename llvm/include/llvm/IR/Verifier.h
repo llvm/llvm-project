@@ -60,7 +60,7 @@ bool verifyModule(const Module &M, raw_ostream *OS = nullptr);
 /// nothing to do with \c VerifierPass.
 FunctionPass *createVerifierPass(bool FatalErrors = true);
 
-class VerifierPass : public PassBase<VerifierPass> {
+class VerifierPass : public PassInfoMixin<VerifierPass> {
   bool FatalErrors;
 
 public:

@@ -1606,6 +1606,8 @@ bool BasicAAResult::constantOffsetHeuristic(
 // BasicAliasAnalysis Pass
 //===----------------------------------------------------------------------===//
 
+char BasicAA::PassID;
+
 BasicAAResult BasicAA::run(Function &F, AnalysisManager<Function> *AM) {
   return BasicAAResult(F.getParent()->getDataLayout(),
                        AM->getResult<TargetLibraryAnalysis>(F),

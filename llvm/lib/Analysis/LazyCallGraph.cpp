@@ -1499,7 +1499,7 @@ LazyCallGraph::RefSCC *LazyCallGraph::getNextRefSCCInPostOrder() {
   }
 }
 
-template class llvm::AnalysisBase<LazyCallGraphAnalysis>;
+char LazyCallGraphAnalysis::PassID;
 
 LazyCallGraphPrinterPass::LazyCallGraphPrinterPass(raw_ostream &OS) : OS(OS) {}
 

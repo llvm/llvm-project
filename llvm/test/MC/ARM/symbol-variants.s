@@ -84,8 +84,14 @@ bl f05(plt)
 @ CHECK: 60 R_ARM_TLS_GOTDESC f24
 @ CHECK: 64 R_ARM_TLS_GOTDESC f25
 
+@ prel31 (relative)
+.word f26(PREL31)-.
+.word f27(prel31)-.
+@CHECK: 68 R_ARM_PREL31 f26
+@CHECK: 6c R_ARM_PREL31 f27
+
 @ got_prel
-.word	f26(GOT_PREL) + (. - .Lsym)
-	ldr r3, =f27(GOT_PREL)
-@ CHECK: 68 R_ARM_GOT_PREL f26
-@ CHECK: 70 R_ARM_GOT_PREL f27
+.word	f28(GOT_PREL) + (. - .Lsym)
+	ldr r3, =f29(GOT_PREL)
+@ CHECK: 70 R_ARM_GOT_PREL f28
+@ CHECK: 78 R_ARM_GOT_PREL f29

@@ -54,7 +54,7 @@ static Constant *BitCastConstantVector(Constant *CV, VectorType *DstTy) {
   unsigned NumElts = DstTy->getNumElements();
   if (NumElts != CV->getType()->getVectorNumElements())
     return nullptr;
-  
+
   Type *DstEltTy = DstTy->getElementType();
 
   SmallVector<Constant*, 16> Result;
@@ -69,7 +69,7 @@ static Constant *BitCastConstantVector(Constant *CV, VectorType *DstTy) {
   return ConstantVector::get(Result);
 }
 
-/// This function determines which opcode to use to fold two constant cast 
+/// This function determines which opcode to use to fold two constant cast
 /// expressions together. It uses CastInst::isEliminableCastPair to determine
 /// the opcode. Consequently its just a wrapper around that function.
 /// @brief Determine if it is valid to fold a cast of a cast
@@ -120,7 +120,7 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
             if (STy->getNumElements() == 0) break;
             ElTy = STy->getElementType(0);
             IdxList.push_back(Zero);
-          } else if (SequentialType *STy = 
+          } else if (SequentialType *STy =
                      dyn_cast<SequentialType>(ElTy)) {
             if (ElTy->isPointerTy()) break;  // Can't index into pointers!
             ElTy = STy->getElementType();
@@ -136,7 +136,7 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
                                                         V, IdxList);
       }
 
-  // Handle casts from one vector constant to another.  We know that the src 
+  // Handle casts from one vector constant to another.  We know that the src
   // and dest type have the same size (otherwise its an illegal cast).
   if (VectorType *DestPTy = dyn_cast<VectorType>(DestTy)) {
     if (VectorType *SrcTy = dyn_cast<VectorType>(V->getType())) {
@@ -207,7 +207,7 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
 /// This function analyzes the specified constant to see if the specified byte
 /// range can be returned as a simplified constant.  If so, the constant is
 /// returned, otherwise null is returned.
-/// 
+///
 static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
                                       unsigned ByteSize) {
   assert(C->getType()->isIntegerTy() &&
@@ -217,7 +217,7 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
   assert(ByteSize && "Must be accessing some piece");
   assert(ByteStart+ByteSize <= CSize && "Extracting invalid piece from input");
   assert(ByteSize != CSize && "Should not extract everything");
-  
+
   // Constant Integers are simple.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
     APInt V = CI->getValue();
@@ -226,7 +226,7 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     V = V.trunc(ByteSize*8);
     return ConstantInt::get(CI->getContext(), V);
   }
-  
+
   // In the input is a constant expr, we might be able to recursively simplify.
   // If not, we definitely can't do anything.
   ConstantExpr *CE = dyn_cast<ConstantExpr>(C);
@@ -238,12 +238,12 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     Constant *RHS = ExtractConstantBytes(CE->getOperand(1), ByteStart,ByteSize);
     if (!RHS)
       return nullptr;
-    
+
     // X | -1 -> -1.
     if (ConstantInt *RHSC = dyn_cast<ConstantInt>(RHS))
       if (RHSC->isAllOnesValue())
         return RHSC;
-    
+
     Constant *LHS = ExtractConstantBytes(CE->getOperand(0), ByteStart,ByteSize);
     if (!LHS)
       return nullptr;
@@ -253,11 +253,11 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     Constant *RHS = ExtractConstantBytes(CE->getOperand(1), ByteStart,ByteSize);
     if (!RHS)
       return nullptr;
-    
+
     // X & 0 -> 0.
     if (RHS->isNullValue())
       return RHS;
-    
+
     Constant *LHS = ExtractConstantBytes(CE->getOperand(0), ByteStart,ByteSize);
     if (!LHS)
       return nullptr;
@@ -272,7 +272,7 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     if ((ShAmt & 7) != 0)
       return nullptr;
     ShAmt >>= 3;
-    
+
     // If the extract is known to be all zeros, return zero.
     if (ByteStart >= CSize-ShAmt)
       return Constant::getNullValue(IntegerType::get(CE->getContext(),
@@ -280,11 +280,11 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     // If the extract is known to be fully in the input, extract it.
     if (ByteStart+ByteSize+ShAmt <= CSize)
       return ExtractConstantBytes(CE->getOperand(0), ByteStart+ShAmt, ByteSize);
-    
+
     // TODO: Handle the 'partially zero' case.
     return nullptr;
   }
-    
+
   case Instruction::Shl: {
     ConstantInt *Amt = dyn_cast<ConstantInt>(CE->getOperand(1));
     if (!Amt)
@@ -294,7 +294,7 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     if ((ShAmt & 7) != 0)
       return nullptr;
     ShAmt >>= 3;
-    
+
     // If the extract is known to be all zeros, return zero.
     if (ByteStart+ByteSize <= ShAmt)
       return Constant::getNullValue(IntegerType::get(CE->getContext(),
@@ -302,15 +302,15 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     // If the extract is known to be fully in the input, extract it.
     if (ByteStart >= ShAmt)
       return ExtractConstantBytes(CE->getOperand(0), ByteStart-ShAmt, ByteSize);
-    
+
     // TODO: Handle the 'partially zero' case.
     return nullptr;
   }
-      
+
   case Instruction::ZExt: {
     unsigned SrcBitSize =
       cast<IntegerType>(CE->getOperand(0)->getType())->getBitWidth();
-    
+
     // If extracting something that is completely zero, return 0.
     if (ByteStart*8 >= SrcBitSize)
       return Constant::getNullValue(IntegerType::get(CE->getContext(),
@@ -319,24 +319,24 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     // If exactly extracting the input, return it.
     if (ByteStart == 0 && ByteSize*8 == SrcBitSize)
       return CE->getOperand(0);
-    
+
     // If extracting something completely in the input, if if the input is a
     // multiple of 8 bits, recurse.
     if ((SrcBitSize&7) == 0 && (ByteStart+ByteSize)*8 <= SrcBitSize)
       return ExtractConstantBytes(CE->getOperand(0), ByteStart, ByteSize);
-      
+
     // Otherwise, if extracting a subset of the input, which is not multiple of
     // 8 bits, do a shift and trunc to get the bits.
     if ((ByteStart+ByteSize)*8 < SrcBitSize) {
       assert((SrcBitSize&7) && "Shouldn't get byte sized case here");
       Constant *Res = CE->getOperand(0);
       if (ByteStart)
-        Res = ConstantExpr::getLShr(Res, 
+        Res = ConstantExpr::getLShr(Res,
                                  ConstantInt::get(Res->getType(), ByteStart*8));
       return ConstantExpr::getTrunc(Res, IntegerType::get(C->getContext(),
                                                           ByteSize*8));
     }
-    
+
     // TODO: Handle the 'partially zero' case.
     return nullptr;
   }
@@ -600,12 +600,12 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       return ConstantFP::get(V->getContext(), Val);
     }
     return nullptr; // Can't fold.
-  case Instruction::FPToUI: 
+  case Instruction::FPToUI:
   case Instruction::FPToSI:
     if (ConstantFP *FPC = dyn_cast<ConstantFP>(V)) {
       const APFloat &V = FPC->getValueAPF();
       bool ignored;
-      uint64_t x[2]; 
+      uint64_t x[2];
       uint32_t DestBitWidth = cast<IntegerType>(DestTy)->getBitWidth();
       if (APFloat::opInvalidOp ==
           V.convertToInteger(x, DestBitWidth, opc==Instruction::FPToSI,
@@ -705,7 +705,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       return ConstantInt::get(V->getContext(),
                               CI->getValue().trunc(DestBitWidth));
     }
-    
+
     // The input must be a constantexpr.  See if we can simplify this based on
     // the bytes we are demanding.  Only do this if the source and dest are an
     // even multiple of a byte.
@@ -713,7 +713,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
         (cast<IntegerType>(V->getType())->getBitWidth() & 7) == 0)
       if (Constant *Res = ExtractConstantBytes(V, 0, DestBitWidth / 8))
         return Res;
-      
+
     return nullptr;
   }
   case Instruction::BitCast:
@@ -750,7 +750,7 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
       }
       Result.push_back(V);
     }
-    
+
     // If we were able to build the vector, return it.
     if (Result.size() == V1->getType()->getVectorNumElements())
       return ConstantVector::get(Result);
@@ -814,12 +814,12 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
   Result.reserve(NumElts);
   auto *Ty = Type::getInt32Ty(Val->getContext());
   uint64_t IdxVal = CIdx->getZExtValue();
-  for (unsigned i = 0; i != NumElts; ++i) {    
+  for (unsigned i = 0; i != NumElts; ++i) {
     if (i == IdxVal) {
       Result.push_back(Elt);
       continue;
     }
-    
+
     Constant *C = ConstantExpr::getExtractElement(Val, ConstantInt::get(Ty, i));
     Result.push_back(C);
   }
@@ -839,7 +839,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1,
 
   // Don't break the bitcode reader hack.
   if (isa<ConstantExpr>(Mask)) return nullptr;
-  
+
   unsigned SrcNumElts = V1->getType()->getVectorNumElements();
 
   // Loop over the shuffle mask, evaluating each element.
@@ -902,10 +902,10 @@ Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
 
     if (Idxs[0] == i)
       C = ConstantFoldInsertValueInstruction(C, Val, Idxs.slice(1));
-    
+
     Result.push_back(C);
   }
-  
+
   if (StructType *ST = dyn_cast<StructType>(Agg->getType()))
     return ConstantStruct::get(ST, Result);
   if (ArrayType *AT = dyn_cast<ArrayType>(Agg->getType()))
@@ -1046,7 +1046,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
         }
 
         // If and'ing the address of a global with a constant, fold it.
-        if (CE1->getOpcode() == Instruction::PtrToInt && 
+        if (CE1->getOpcode() == Instruction::PtrToInt &&
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 
@@ -1110,11 +1110,11 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
       switch (Opcode) {
       default:
         break;
-      case Instruction::Add:     
+      case Instruction::Add:
         return ConstantInt::get(CI1->getContext(), C1V + C2V);
-      case Instruction::Sub:     
+      case Instruction::Sub:
         return ConstantInt::get(CI1->getContext(), C1V - C2V);
-      case Instruction::Mul:     
+      case Instruction::Mul:
         return ConstantInt::get(CI1->getContext(), C1V * C2V);
       case Instruction::UDiv:
         assert(!CI2->isNullValue() && "Div by zero handled above");
@@ -1172,7 +1172,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
       const APFloat &C2V = CFP2->getValueAPF();
       APFloat C3V = C1V;  // copy for modification
       switch (Opcode) {
-      default:                   
+      default:
         break;
       case Instruction::FAdd:
         (void)C3V.add(C2V, APFloat::rmNearestTiesToEven);
@@ -1200,10 +1200,10 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
         ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, i));
       Constant *RHS =
         ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, i));
-      
+
       Result.push_back(ConstantExpr::get(Opcode, LHS, RHS));
     }
-    
+
     return ConstantVector::get(Result);
   }
 
@@ -1319,8 +1319,8 @@ static int IdxCompare(Constant *C1, Constant *C2, Type *ElTy) {
 /// evaluateFCmpRelation - This function determines if there is anything we can
 /// decide about the two constants provided.  This doesn't need to handle simple
 /// things like ConstantFP comparisons, but should instead handle ConstantExprs.
-/// If we can determine that the two constants have a particular relation to 
-/// each other, we should return the corresponding FCmpInst predicate, 
+/// If we can determine that the two constants have a particular relation to
+/// each other, we should return the corresponding FCmpInst predicate,
 /// otherwise return FCmpInst::BAD_FCMP_PREDICATE. This is used below in
 /// ConstantFoldCompareInstruction.
 ///
@@ -1340,15 +1340,15 @@ static FCmpInst::Predicate evaluateFCmpRelation(Constant *V1, Constant *V2) {
       ConstantInt *R = nullptr;
       R = dyn_cast<ConstantInt>(
                       ConstantExpr::getFCmp(FCmpInst::FCMP_OEQ, V1, V2));
-      if (R && !R->isZero()) 
+      if (R && !R->isZero())
         return FCmpInst::FCMP_OEQ;
       R = dyn_cast<ConstantInt>(
                       ConstantExpr::getFCmp(FCmpInst::FCMP_OLT, V1, V2));
-      if (R && !R->isZero()) 
+      if (R && !R->isZero())
         return FCmpInst::FCMP_OLT;
       R = dyn_cast<ConstantInt>(
                       ConstantExpr::getFCmp(FCmpInst::FCMP_OGT, V1, V2));
-      if (R && !R->isZero()) 
+      if (R && !R->isZero())
         return FCmpInst::FCMP_OGT;
 
       // Nothing more we can do
@@ -1430,7 +1430,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
       ConstantInt *R = nullptr;
       ICmpInst::Predicate pred = ICmpInst::ICMP_EQ;
       R = dyn_cast<ConstantInt>(ConstantExpr::getICmp(pred, V1, V2));
-      if (R && !R->isZero()) 
+      if (R && !R->isZero())
         return pred;
       pred = isSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
       R = dyn_cast<ConstantInt>(ConstantExpr::getICmp(pred, V1, V2));
@@ -1446,14 +1446,14 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
     }
 
     // If the first operand is simple, swap operands.
-    ICmpInst::Predicate SwappedRelation = 
+    ICmpInst::Predicate SwappedRelation =
       evaluateICmpRelation(V2, V1, isSigned);
     if (SwappedRelation != ICmpInst::BAD_ICMP_PREDICATE)
       return ICmpInst::getSwappedPredicate(SwappedRelation);
 
   } else if (const GlobalValue *GV = dyn_cast<GlobalValue>(V1)) {
     if (isa<ConstantExpr>(V2)) {  // Swap as necessary.
-      ICmpInst::Predicate SwappedRelation = 
+      ICmpInst::Predicate SwappedRelation =
         evaluateICmpRelation(V2, V1, isSigned);
       if (SwappedRelation != ICmpInst::BAD_ICMP_PREDICATE)
         return ICmpInst::getSwappedPredicate(SwappedRelation);
@@ -1476,13 +1476,13 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
     }
   } else if (const BlockAddress *BA = dyn_cast<BlockAddress>(V1)) {
     if (isa<ConstantExpr>(V2)) {  // Swap as necessary.
-      ICmpInst::Predicate SwappedRelation = 
+      ICmpInst::Predicate SwappedRelation =
         evaluateICmpRelation(V2, V1, isSigned);
       if (SwappedRelation != ICmpInst::BAD_ICMP_PREDICATE)
         return ICmpInst::getSwappedPredicate(SwappedRelation);
       return ICmpInst::BAD_ICMP_PREDICATE;
     }
-    
+
     // Now we know that the RHS is a GlobalValue, BlockAddress or simple
     // constant (which, since the types must match, means that it is a
     // ConstantPointerNull).
@@ -1524,7 +1524,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
         if (CE1->getOpcode() == Instruction::ZExt) isSigned = false;
         if (CE1->getOpcode() == Instruction::SExt) isSigned = true;
         return evaluateICmpRelation(CE1Op0,
-                                    Constant::getNullValue(CE1Op0->getType()), 
+                                    Constant::getNullValue(CE1Op0->getType()),
                                     isSigned);
       }
       break;
@@ -1541,7 +1541,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
             // Weak linkage GVals could be zero or not. We're comparing that
             // to null pointer so its greater-or-equal
             return isSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-          else 
+          else
             // If its not weak linkage, the GVal must have a non-zero address
             // so the result is greater-than
             return isSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
@@ -1656,7 +1656,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
   return ICmpInst::BAD_ICMP_PREDICATE;
 }
 
-Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred, 
+Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
                                                Constant *C1, Constant *C2) {
   Type *ResultTy;
   if (VectorType *VT = dyn_cast<VectorType>(C1->getType()))
@@ -1759,17 +1759,17 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
     case FCmpInst::FCMP_UEQ:
       return ConstantInt::get(ResultTy, R==APFloat::cmpUnordered ||
                                         R==APFloat::cmpEqual);
-    case FCmpInst::FCMP_OEQ:   
+    case FCmpInst::FCMP_OEQ:
       return ConstantInt::get(ResultTy, R==APFloat::cmpEqual);
     case FCmpInst::FCMP_UNE:
       return ConstantInt::get(ResultTy, R!=APFloat::cmpEqual);
-    case FCmpInst::FCMP_ONE:   
+    case FCmpInst::FCMP_ONE:
       return ConstantInt::get(ResultTy, R==APFloat::cmpLessThan ||
                                         R==APFloat::cmpGreaterThan);
-    case FCmpInst::FCMP_ULT: 
+    case FCmpInst::FCMP_ULT:
       return ConstantInt::get(ResultTy, R==APFloat::cmpUnordered ||
                                         R==APFloat::cmpLessThan);
-    case FCmpInst::FCMP_OLT:   
+    case FCmpInst::FCMP_OLT:
       return ConstantInt::get(ResultTy, R==APFloat::cmpLessThan);
     case FCmpInst::FCMP_UGT:
       return ConstantInt::get(ResultTy, R==APFloat::cmpUnordered ||
@@ -1778,12 +1778,12 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
       return ConstantInt::get(ResultTy, R==APFloat::cmpGreaterThan);
     case FCmpInst::FCMP_ULE:
       return ConstantInt::get(ResultTy, R!=APFloat::cmpGreaterThan);
-    case FCmpInst::FCMP_OLE: 
+    case FCmpInst::FCMP_OLE:
       return ConstantInt::get(ResultTy, R==APFloat::cmpLessThan ||
                                         R==APFloat::cmpEqual);
     case FCmpInst::FCMP_UGE:
       return ConstantInt::get(ResultTy, R!=APFloat::cmpLessThan);
-    case FCmpInst::FCMP_OGE: 
+    case FCmpInst::FCMP_OGE:
       return ConstantInt::get(ResultTy, R==APFloat::cmpGreaterThan ||
                                         R==APFloat::cmpEqual);
     }
@@ -1798,10 +1798,10 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
         ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, i));
       Constant *C2E =
         ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, i));
-      
+
       ResElts.push_back(ConstantExpr::getCompare(pred, C1E, C2E));
     }
-    
+
     return ConstantVector::get(ResElts);
   }
 
@@ -1841,23 +1841,23 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
       break;
     case FCmpInst::FCMP_OLE: // We know that C1 <= C2
       // We can only partially decide this relation.
-      if (pred == FCmpInst::FCMP_UGT || pred == FCmpInst::FCMP_OGT) 
+      if (pred == FCmpInst::FCMP_UGT || pred == FCmpInst::FCMP_OGT)
         Result = 0;
-      else if (pred == FCmpInst::FCMP_ULT || pred == FCmpInst::FCMP_OLT) 
+      else if (pred == FCmpInst::FCMP_ULT || pred == FCmpInst::FCMP_OLT)
         Result = 1;
       break;
     case FCmpInst::FCMP_OGE: // We known that C1 >= C2
       // We can only partially decide this relation.
-      if (pred == FCmpInst::FCMP_ULT || pred == FCmpInst::FCMP_OLT) 
+      if (pred == FCmpInst::FCMP_ULT || pred == FCmpInst::FCMP_OLT)
         Result = 0;
-      else if (pred == FCmpInst::FCMP_UGT || pred == FCmpInst::FCMP_OGT) 
+      else if (pred == FCmpInst::FCMP_UGT || pred == FCmpInst::FCMP_OGT)
         Result = 1;
       break;
     case FCmpInst::FCMP_ONE: // We know that C1 != C2
       // We can only partially decide this relation.
-      if (pred == FCmpInst::FCMP_OEQ || pred == FCmpInst::FCMP_UEQ) 
+      if (pred == FCmpInst::FCMP_OEQ || pred == FCmpInst::FCMP_UEQ)
         Result = 0;
-      else if (pred == FCmpInst::FCMP_ONE || pred == FCmpInst::FCMP_UNE) 
+      else if (pred == FCmpInst::FCMP_ONE || pred == FCmpInst::FCMP_UNE)
         Result = 1;
       break;
     }

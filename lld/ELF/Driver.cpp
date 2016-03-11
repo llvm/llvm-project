@@ -315,6 +315,14 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     error("No input files");
 }
 
+template <class ELFT> static void initSymbols() {
+  ElfSym<ELFT>::Etext.setBinding(STB_GLOBAL);
+  ElfSym<ELFT>::Edata.setBinding(STB_GLOBAL);
+  ElfSym<ELFT>::End.setBinding(STB_GLOBAL);
+  ElfSym<ELFT>::Ignored.setBinding(STB_WEAK);
+  ElfSym<ELFT>::Ignored.setVisibility(STV_HIDDEN);
+}
+
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   initSymbols<ELFT>();
   // For LTO

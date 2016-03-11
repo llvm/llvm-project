@@ -295,7 +295,10 @@ private:
 /// This class implements the concept of an analysis pass used by the \c
 /// ModuleAnalysisManager to run an analysis over a module and cache the
 /// resulting data.
-struct CallGraphAnalysis : AnalysisBase<CallGraphAnalysis> {
+class CallGraphAnalysis : public AnalysisInfoMixin<CallGraphAnalysis> {
+  friend AnalysisInfoMixin<CallGraphAnalysis>;
+  static char PassID;
+
 public:
   /// \brief A formulaic typedef to inform clients of the result type.
   typedef CallGraph Result;
@@ -306,11 +309,8 @@ public:
   CallGraph run(Module &M) { return CallGraph(M); }
 };
 
-/// Instantiated in CallGraph.cpp
-extern template class llvm::AnalysisBase<CallGraphAnalysis>;
-
 /// \brief Printer pass for the \c CallGraphAnalysis results.
-class CallGraphPrinterPass : public PassBase<CallGraphPrinterPass> {
+class CallGraphPrinterPass : public PassInfoMixin<CallGraphPrinterPass> {
   raw_ostream &OS;
 
 public:

@@ -1771,7 +1771,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
       unsigned AS = Arg->getType()->getPointerAddressSpace();
       return optimizeMemoryInst(CI, Arg, Arg->getType(), AS);
     }
-  
+
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (II) {
     switch (II->getIntrinsicID()) {
@@ -3478,7 +3478,7 @@ static bool FindAllMemoryUses(
       // the cold path.  See optimizeCallInst
       if (!OptSize && CI->hasFnAttr(Attribute::Cold))
         continue;
-      
+
       InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledValue());
       if (!IA) return true;
 
@@ -3573,7 +3573,7 @@ isProfitableToFoldIntoAddressingMode(Instruction *I, ExtAddrMode &AMBefore,
   // If all uses of this instruction can have the address mode sunk into them,
   // we can remove the addressing mode and effectively trade one live register
   // for another (at worst.)  In this context, folding an addressing mode into
-  // the use is just a particularly nice way of sinking it.  
+  // the use is just a particularly nice way of sinking it.
   SmallVector<std::pair<Instruction*,unsigned>, 16> MemoryUses;
   SmallPtrSet<Instruction*, 16> ConsideredInsts;
   if (FindAllMemoryUses(I, MemoryUses, ConsideredInsts, TM))

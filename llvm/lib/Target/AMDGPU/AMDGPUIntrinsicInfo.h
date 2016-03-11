@@ -11,8 +11,8 @@
 /// \brief Interface for the AMDGPU Implementation of the Intrinsic Info class.
 //
 //===-----------------------------------------------------------------------===//
-#ifndef LLVM_LIB_TARGET_R600_AMDGPUINTRINSICINFO_H
-#define LLVM_LIB_TARGET_R600_AMDGPUINTRINSICINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINTRINSICINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUINTRINSICINFO_H
 
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
@@ -31,7 +31,7 @@ enum ID {
 
 } // end namespace AMDGPUIntrinsic
 
-class AMDGPUIntrinsicInfo : public TargetIntrinsicInfo {
+class AMDGPUIntrinsicInfo final : public TargetIntrinsicInfo {
 public:
   AMDGPUIntrinsicInfo();
   std::string getName(unsigned IntrId, Type **Tys = nullptr,

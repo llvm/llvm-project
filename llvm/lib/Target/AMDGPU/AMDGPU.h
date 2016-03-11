@@ -8,8 +8,8 @@
 /// \file
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_AMDGPU_H
-#define LLVM_LIB_TARGET_R600_AMDGPU_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"

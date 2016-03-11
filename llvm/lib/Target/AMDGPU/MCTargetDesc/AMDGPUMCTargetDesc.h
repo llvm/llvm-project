@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 //
 
-#ifndef LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCTARGETDESC_H
-#define LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCTARGETDESC_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
+#define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 
 #include "llvm/Support/DataTypes.h"
 #include "llvm/ADT/StringRef.h"

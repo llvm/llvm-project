@@ -10,8 +10,8 @@
 /// \file
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_R600MACHINEFUNCTIONINFO_H
-#define LLVM_LIB_TARGET_R600_R600MACHINEFUNCTIONINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_R600MACHINEFUNCTIONINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_R600MACHINEFUNCTIONINFO_H
 
 #include "AMDGPUMachineFunction.h"
 #include "llvm/ADT/BitVector.h"
@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class R600MachineFunctionInfo : public AMDGPUMachineFunction {
+class R600MachineFunctionInfo final : public AMDGPUMachineFunction {
   void anchor() override;
 public:
   R600MachineFunctionInfo(const MachineFunction &MF);

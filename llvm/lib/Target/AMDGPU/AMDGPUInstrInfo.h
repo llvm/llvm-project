@@ -13,12 +13,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_AMDGPUINSTRINFO_H
-#define LLVM_LIB_TARGET_R600_AMDGPUINSTRINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRINFO_H
 
 #include "AMDGPURegisterInfo.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include <map>
 
 #define GET_INSTRINFO_HEADER
 #define GET_INSTRINFO_ENUM

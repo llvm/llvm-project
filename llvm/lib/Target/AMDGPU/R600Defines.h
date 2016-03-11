@@ -8,8 +8,8 @@
 /// \file
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_R600DEFINES_H
-#define LLVM_LIB_TARGET_R600_R600DEFINES_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_R600DEFINES_H
+#define LLVM_LIB_TARGET_AMDGPU_R600DEFINES_H
 
 #include "llvm/MC/MCRegisterInfo.h"
 

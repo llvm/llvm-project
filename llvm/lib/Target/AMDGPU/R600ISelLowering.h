@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_R600ISELLOWERING_H
-#define LLVM_LIB_TARGET_R600_R600ISELLOWERING_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_R600ISELLOWERING_H
+#define LLVM_LIB_TARGET_AMDGPU_R600ISELLOWERING_H
 
 #include "AMDGPUISelLowering.h"
 
@@ -21,7 +21,7 @@ namespace llvm {
 
 class R600InstrInfo;
 
-class R600TargetLowering : public AMDGPUTargetLowering {
+class R600TargetLowering final : public AMDGPUTargetLowering {
 public:
   R600TargetLowering(TargetMachine &TM, const AMDGPUSubtarget &STI);
   MachineBasicBlock * EmitInstrWithCustomInserter(MachineInstr *MI,
@@ -83,6 +83,9 @@ private:
   void getStackAddress(unsigned StackWidth, unsigned ElemIdx,
                        unsigned &Channel, unsigned &PtrIncr) const;
   bool isZero(SDValue Op) const;
+  bool isHWTrueValue(SDValue Op) const;
+  bool isHWFalseValue(SDValue Op) const;
+
   SDNode *PostISelFolding(MachineSDNode *N, SelectionDAG &DAG) const override;
 };
 

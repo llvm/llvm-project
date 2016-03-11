@@ -185,7 +185,7 @@ namespace llvm {
 // RegionInfoAnalysis implementation
 //
 
-template class llvm::AnalysisBase<RegionInfoAnalysis>;
+char RegionInfoAnalysis::PassID;
 
 RegionInfo RegionInfoAnalysis::run(Function &F, AnalysisManager<Function> *AM) {
   RegionInfo RI;

@@ -24,7 +24,7 @@
 
 namespace llvm {
 
-class InstCombinePass : public PassBase<InstCombinePass> {
+class InstCombinePass : public PassInfoMixin<InstCombinePass> {
   InstCombineWorklist Worklist;
   bool ExpensiveCombines;
 

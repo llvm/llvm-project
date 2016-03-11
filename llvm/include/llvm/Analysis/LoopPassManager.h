@@ -43,8 +43,6 @@ extern template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
 typedef InnerAnalysisManagerProxy<LoopAnalysisManager, Function>
     LoopAnalysisManagerFunctionProxy;
 
-extern template class AnalysisBase<LoopAnalysisManagerFunctionProxy>;
-
 extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>;
 /// A proxy from a \c FunctionAnalysisManager to a \c Loop.
 typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>
@@ -59,7 +57,7 @@ typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>
 /// LoopAnalysisManager to be used within this run safely.
 template <typename LoopPassT>
 class FunctionToLoopPassAdaptor
-    : public PassBase<FunctionToLoopPassAdaptor<LoopPassT>> {
+    : public PassInfoMixin<FunctionToLoopPassAdaptor<LoopPassT>> {
 public:
   explicit FunctionToLoopPassAdaptor(LoopPassT Pass)
       : Pass(std::move(Pass)) {}

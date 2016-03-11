@@ -917,6 +917,8 @@ GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
   }
 }
 
+GlobalsAAResult::~GlobalsAAResult() {}
+
 /*static*/ GlobalsAAResult
 GlobalsAAResult::analyzeModule(Module &M, const TargetLibraryInfo &TLI,
                                CallGraph &CG) {
@@ -933,6 +935,8 @@ GlobalsAAResult::analyzeModule(Module &M, const TargetLibraryInfo &TLI,
 
   return Result;
 }
+
+char GlobalsAA::PassID;
 
 GlobalsAAResult GlobalsAA::run(Module &M, AnalysisManager<Module> *AM) {
   return GlobalsAAResult::analyzeModule(M,

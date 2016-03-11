@@ -8,8 +8,8 @@
 /// \file
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_AMDGPUMCINSTLOWER_H
-#define LLVM_LIB_TARGET_R600_AMDGPUMCINSTLOWER_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMCINSTLOWER_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUMCINSTLOWER_H
 
 namespace llvm {
 

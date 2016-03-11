@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 
-#ifndef LLVM_LIB_TARGET_R600_SIREGISTERINFO_H
-#define LLVM_LIB_TARGET_R600_SIREGISTERINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
@@ -23,7 +23,7 @@
 
 namespace llvm {
 
-struct SIRegisterInfo : public AMDGPURegisterInfo {
+struct SIRegisterInfo final : public AMDGPURegisterInfo {
 private:
   unsigned SGPR32SetID;
   unsigned VGPR32SetID;
