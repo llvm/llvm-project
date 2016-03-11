@@ -1234,23 +1234,29 @@ ObjCMethodDecl::findPropertyDecl(bool CheckOverrides) const {
   if (NumArgs > 1)
     return nullptr;
 
-  if (!isInstanceMethod())
-    return nullptr;
-
   if (isPropertyAccessor()) {
     const ObjCContainerDecl *Container = cast<ObjCContainerDecl>(getParent());
     bool IsGetter = (NumArgs == 0);
+    bool IsInstance = isInstanceMethod();
 
     /// Local function that attempts to find a matching property within the
     /// given Objective-C container.
     auto findMatchingProperty =
       [&](const ObjCContainerDecl *Container) -> const ObjCPropertyDecl * {
-
-      for (const auto *I : Container->instance_properties()) {
-        Selector NextSel = IsGetter ? I->getGetterName()
-                                    : I->getSetterName();
-        if (NextSel == Sel)
-          return I;
+      if (IsInstance) {
+        for (const auto *I : Container->instance_properties()) {
+          Selector NextSel = IsGetter ? I->getGetterName()
+                                      : I->getSetterName();
+          if (NextSel == Sel)
+            return I;
+        }
+      } else {
+        for (const auto *I : Container->class_properties()) {
+          Selector NextSel = IsGetter ? I->getGetterName()
+                                      : I->getSetterName();
+          if (NextSel == Sel)
+            return I;
+        }
       }
 
       return nullptr;
