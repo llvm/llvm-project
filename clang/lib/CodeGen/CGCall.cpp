@@ -1363,10 +1363,12 @@ void ClangToLLVMArgMapping::construct(const ASTContext &Context,
       // ignore and inalloca doesn't have matching LLVM parameters.
       IRArgs.NumberOfArgs = 0;
       break;
-    case ABIArgInfo::Expand: {
+    case ABIArgInfo::CoerceAndExpand:
+      IRArgs.NumberOfArgs = AI.getCoerceAndExpandTypeSequence().size();
+      break;
+    case ABIArgInfo::Expand:
       IRArgs.NumberOfArgs = getExpansionSize(ArgType, Context);
       break;
-    }
     }
 
     if (IRArgs.NumberOfArgs > 0) {
@@ -1466,6 +1468,10 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
   case ABIArgInfo::Ignore:
     resultType = llvm::Type::getVoidTy(getLLVMContext());
     break;
+
+  case ABIArgInfo::CoerceAndExpand:
+    resultType = retAI.getUnpaddedCoerceAndExpandType();
+    break;
   }
 
   ClangToLLVMArgMapping IRFunctionArgs(getContext(), FI, true);
@@ -1530,6 +1536,15 @@ CodeGenTypes::GetFunctionType(const CGFunctionInfo &FI) {
         assert(NumIRArgs == 1);
         ArgTypes[FirstIRArg] = argType;
       }
+      break;
+    }
+
+    case ABIArgInfo::CoerceAndExpand: {
+      auto ArgTypesIter = ArgTypes.begin() + FirstIRArg;
+      for (auto EltTy : ArgInfo.getCoerceAndExpandTypeSequence()) {
+        *ArgTypesIter++ = EltTy;
+      }
+      assert(ArgTypesIter == ArgTypes.begin() + FirstIRArg + NumIRArgs);
       break;
     }
 
@@ -1763,6 +1778,9 @@ void CodeGenModule::ConstructAttributeList(
     break;
   }
 
+  case ABIArgInfo::CoerceAndExpand:
+    break;
+
   case ABIArgInfo::Expand:
     llvm_unreachable("Invalid ABI kind for return argument");
   }
@@ -1870,7 +1888,8 @@ void CodeGenModule::ConstructAttributeList(
     }
     case ABIArgInfo::Ignore:
     case ABIArgInfo::Expand:
-      continue;
+    case ABIArgInfo::CoerceAndExpand:
+      break;
 
     case ABIArgInfo::InAlloca:
       // inalloca disables readnone and readonly.
@@ -2240,6 +2259,29 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       } else {
         ArgVals.push_back(ParamValue::forIndirect(Alloca));
       }
+      break;
+    }
+
+    case ABIArgInfo::CoerceAndExpand: {
+      // Reconstruct into a temporary.
+      Address alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg));
+      ArgVals.push_back(ParamValue::forIndirect(alloca));
+
+      auto coercionType = ArgI.getCoerceAndExpandType();
+      alloca = Builder.CreateElementBitCast(alloca, coercionType);
+      auto layout = CGM.getDataLayout().getStructLayout(coercionType);
+
+      unsigned argIndex = FirstIRArg;
+      for (unsigned i = 0, e = coercionType->getNumElements(); i != e; ++i) {
+        llvm::Type *eltType = coercionType->getElementType(i);
+        if (ABIArgInfo::isPaddingForCoerceAndExpand(eltType))
+          continue;
+
+        auto eltAddr = Builder.CreateStructGEP(alloca, i, layout);
+        auto elt = FnArgs[argIndex++];
+        Builder.CreateStore(elt, eltAddr);
+      }
+      assert(argIndex == FirstIRArg + NumIRArgs);
       break;
     }
 
@@ -2615,6 +2657,40 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   case ABIArgInfo::Ignore:
     break;
+
+  case ABIArgInfo::CoerceAndExpand: {
+    auto coercionType = RetAI.getCoerceAndExpandType();
+    auto layout = CGM.getDataLayout().getStructLayout(coercionType);
+
+    // Load all of the coerced elements out into results.
+    llvm::SmallVector<llvm::Value*, 4> results;
+    Address addr = Builder.CreateElementBitCast(ReturnValue, coercionType);
+    for (unsigned i = 0, e = coercionType->getNumElements(); i != e; ++i) {
+      auto coercedEltType = coercionType->getElementType(i);
+      if (ABIArgInfo::isPaddingForCoerceAndExpand(coercedEltType))
+        continue;
+
+      auto eltAddr = Builder.CreateStructGEP(addr, i, layout);
+      auto elt = Builder.CreateLoad(eltAddr);
+      results.push_back(elt);
+    }
+
+    // If we have one result, it's the single direct result type.
+    if (results.size() == 1) {
+      RV = results[0];
+
+    // Otherwise, we need to make a first-class aggregate.
+    } else {
+      // Construct a return type that lacks padding elements.
+      llvm::Type *returnType = RetAI.getUnpaddedCoerceAndExpandType();
+
+      RV = llvm::UndefValue::get(returnType);
+      for (unsigned i = 0, e = results.size(); i != e; ++i) {
+        RV = Builder.CreateInsertValue(RV, results[i], i);
+      }
+    }
+    break;
+  }
 
   case ABIArgInfo::Expand:
     llvm_unreachable("Invalid ABI kind for return argument");
@@ -3349,7 +3425,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // alloca to hold the result, unless one is given to us.
   Address SRetPtr = Address::invalid();
   size_t UnusedReturnSize = 0;
-  if (RetAI.isIndirect() || RetAI.isInAlloca()) {
+  if (RetAI.isIndirect() || RetAI.isInAlloca() || RetAI.isCoerceAndExpand()) {
     if (!ReturnValue.isNull()) {
       SRetPtr = ReturnValue.getValue();
     } else {
@@ -3363,7 +3439,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     }
     if (IRFunctionArgs.hasSRetArg()) {
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] = SRetPtr.getPointer();
-    } else {
+    } else if (RetAI.isInAlloca()) {
       Address Addr = createInAllocaStructGEP(RetAI.getInAllocaFieldIndex());
       Builder.CreateStore(SRetPtr.getPointer(), Addr);
     }
@@ -3539,6 +3615,29 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         IRCallArgs[FirstIRArg] =
           CreateCoercedLoad(Src, ArgInfo.getCoerceToType(), *this);
       }
+
+      break;
+    }
+
+    case ABIArgInfo::CoerceAndExpand: {
+      assert(RV.isAggregate() &&
+             "CoerceAndExpand does not support non-aggregate types yet");
+
+      auto coercionType = ArgInfo.getCoerceAndExpandType();
+      auto layout = CGM.getDataLayout().getStructLayout(coercionType);
+
+      Address addr = RV.getAggregateAddress();
+      addr = Builder.CreateElementBitCast(addr, coercionType);
+
+      unsigned IRArgPos = FirstIRArg;
+      for (unsigned i = 0, e = coercionType->getNumElements(); i != e; ++i) {
+        llvm::Type *eltType = coercionType->getElementType(i);
+        if (ABIArgInfo::isPaddingForCoerceAndExpand(eltType)) continue;
+        Address eltAddr = Builder.CreateStructGEP(addr, i, layout);
+        llvm::Value *elt = Builder.CreateLoad(eltAddr);
+        IRCallArgs[IRArgPos++] = elt;
+      }
+      assert(IRArgPos == FirstIRArg + NumIRArgs);
 
       break;
     }
@@ -3735,6 +3834,24 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         EmitLifetimeEnd(llvm::ConstantInt::get(Int64Ty, UnusedReturnSize),
                         SRetPtr.getPointer());
       return ret;
+    }
+
+    case ABIArgInfo::CoerceAndExpand: {
+      auto coercionType = RetAI.getCoerceAndExpandType();
+      auto layout = CGM.getDataLayout().getStructLayout(coercionType);
+
+      Address addr = SRetPtr;
+      addr = Builder.CreateElementBitCast(addr, coercionType);
+
+      unsigned unpaddedIndex = 0;
+      for (unsigned i = 0, e = coercionType->getNumElements(); i != e; ++i) {
+        llvm::Type *eltType = coercionType->getElementType(i);
+        if (ABIArgInfo::isPaddingForCoerceAndExpand(eltType)) continue;
+        Address eltAddr = Builder.CreateStructGEP(addr, i, layout);
+        llvm::Value *elt = Builder.CreateExtractValue(CI, unpaddedIndex++);
+        Builder.CreateStore(elt, eltAddr);
+      }
+      break;
     }
 
     case ABIArgInfo::Ignore:
