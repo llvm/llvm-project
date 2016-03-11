@@ -1708,12 +1708,6 @@ CodeGenFunction::GenerateSEHFinallyFunction(CodeGenFunction &ParentCGF,
   const Stmt *FinallyBlock = Finally.getBlock();
   startOutlinedSEHHelper(ParentCGF, false, FinallyBlock);
 
-  // Mark finally block calls as nounwind and noinline to make LLVM's job a
-  // little easier.
-  // FIXME: Remove these restrictions in the future.
-  CurFn->addFnAttr(llvm::Attribute::NoUnwind);
-  CurFn->addFnAttr(llvm::Attribute::NoInline);
-
   // Emit the original filter expression, convert to i32, and return.
   EmitStmt(FinallyBlock);
 

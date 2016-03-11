@@ -3621,20 +3621,32 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
   // format is either NSString or CFString. This is a hack to prevent
   // diag when using the NSLocalizedString and CFCopyLocalizedString macros
   // which are usually used in place of NS and CF string literals.
-  if (Type == FST_NSString &&
-      SourceMgr.isInSystemMacro(Args[format_idx]->getLocStart()))
+  SourceLocation FormatLoc = Args[format_idx]->getLocStart();
+  if (Type == FST_NSString && SourceMgr.isInSystemMacro(FormatLoc))
     return false;
 
   // If there are no arguments specified, warn with -Wformat-security, otherwise
   // warn only with -Wformat-nonliteral.
-  if (Args.size() == firstDataArg)
-    Diag(Args[format_idx]->getLocStart(),
-         diag::warn_format_nonliteral_noargs)
+  if (Args.size() == firstDataArg) {
+    const SemaDiagnosticBuilder &D =
+      Diag(FormatLoc, diag::warn_format_nonliteral_noargs);
+    switch (Type) {
+    default:
+      D << OrigFormatExpr->getSourceRange();
+      break;
+    case FST_Kprintf:
+    case FST_FreeBSDKPrintf:
+    case FST_Printf:
+      D << FixItHint::CreateInsertion(FormatLoc, "\"%s\", ");
+      break;
+    case FST_NSString:
+      D << FixItHint::CreateInsertion(FormatLoc, "@\"%@\", ");
+      break;
+    }
+  } else {
+    Diag(FormatLoc, diag::warn_format_nonliteral)
       << OrigFormatExpr->getSourceRange();
-  else
-    Diag(Args[format_idx]->getLocStart(),
-         diag::warn_format_nonliteral)
-           << OrigFormatExpr->getSourceRange();
+  }
   return false;
 }
 
