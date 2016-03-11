@@ -1426,12 +1426,8 @@ struct PerformSEHFinally final : EHScopeStack::Cleanup {
     Args.add(RValue::get(FP), ArgTys[1]);
 
     // Arrange a two-arg function info and type.
-    FunctionProtoType::ExtProtoInfo EPI;
-    const auto *FPT = cast<FunctionProtoType>(
-        Context.getFunctionType(Context.VoidTy, ArgTys, EPI));
     const CGFunctionInfo &FnInfo =
-        CGM.getTypes().arrangeFreeFunctionCall(Args, FPT,
-                                               /*chainCall=*/false);
+        CGM.getTypes().arrangeBuiltinFunctionCall(Context.VoidTy, Args);
 
     CGF.EmitCall(FnInfo, OutlinedFinally, ReturnValueSlot(), Args);
   }
@@ -1659,8 +1655,8 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
   QualType RetTy = IsFilter ? getContext().LongTy : getContext().VoidTy;
 
   llvm::Function *ParentFn = ParentCGF.CurFn;
-  const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionDeclaration(
-      RetTy, Args, FunctionType::ExtInfo(), /*isVariadic=*/false);
+  const CGFunctionInfo &FnInfo =
+    CGM.getTypes().arrangeBuiltinFunctionDeclaration(RetTy, Args);
 
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
   llvm::Function *Fn = llvm::Function::Create(

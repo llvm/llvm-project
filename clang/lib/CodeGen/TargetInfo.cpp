@@ -160,6 +160,10 @@ LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
   case Expand:
     OS << "Expand";
     break;
+  case CoerceAndExpand:
+    OS << "CoerceAndExpand Type=";
+    getCoerceAndExpandType()->print(OS);
+    break;
   }
   OS << ")\n";
 }
@@ -1570,6 +1574,7 @@ static bool isArgInAlloca(const ABIArgInfo &Info) {
   case ABIArgInfo::Direct:
   case ABIArgInfo::Extend:
   case ABIArgInfo::Expand:
+  case ABIArgInfo::CoerceAndExpand:
     if (Info.getInReg())
       return false;
     return true;
@@ -6829,6 +6834,7 @@ Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits Stride;
   switch (AI.getKind()) {
   case ABIArgInfo::Expand:
+  case ABIArgInfo::CoerceAndExpand:
   case ABIArgInfo::InAlloca:
     llvm_unreachable("Unsupported ABI kind for va_arg");
 
@@ -7059,6 +7065,7 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits ArgSize = CharUnits::Zero();
   switch (AI.getKind()) {
   case ABIArgInfo::Expand:
+  case ABIArgInfo::CoerceAndExpand:
   case ABIArgInfo::InAlloca:
     llvm_unreachable("Unsupported ABI kind for va_arg");
   case ABIArgInfo::Ignore:

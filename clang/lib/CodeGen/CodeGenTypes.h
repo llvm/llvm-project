@@ -220,10 +220,6 @@ public:
   /// gets assigned to a class.
   void RefreshTypeCacheForClass(const CXXRecordDecl *RD);
 
-  /// getNullaryFunctionInfo - Get the function info for a void()
-  /// function with standard CC.
-  const CGFunctionInfo &arrangeNullaryFunction();
-
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue
   //     of a function declaration or definition,
@@ -245,16 +241,55 @@ public:
   //   this for compatibility reasons.
 
   const CGFunctionInfo &arrangeGlobalDeclaration(GlobalDecl GD);
-  const CGFunctionInfo &arrangeFunctionDeclaration(const FunctionDecl *FD);
-  const CGFunctionInfo &
-  arrangeFreeFunctionDeclaration(QualType ResTy, const FunctionArgList &Args,
-                                 const FunctionType::ExtInfo &Info,
-                                 bool isVariadic);
 
+  /// Given a function info for a declaration, return the function info
+  /// for a call with the given arguments.
+  ///
+  /// Often this will be able to simply return the declaration info.
+  const CGFunctionInfo &arrangeCall(const CGFunctionInfo &declFI,
+                                    const CallArgList &args);
+
+  /// Free functions are functions that are compatible with an ordinary
+  /// C function pointer type.
+  const CGFunctionInfo &arrangeFunctionDeclaration(const FunctionDecl *FD);
+  const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
+                                                const FunctionType *Ty,
+                                                bool ChainCall);
+  const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty,
+                                                const FunctionDecl *FD);
+  const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionNoProtoType> Ty);
+
+  /// A nullary function is a freestanding function of type 'void ()'.
+  /// This method works for both calls and declarations.
+  const CGFunctionInfo &arrangeNullaryFunction();
+
+  /// A builtin function is a freestanding function using the default
+  /// C conventions.
+  const CGFunctionInfo &
+  arrangeBuiltinFunctionDeclaration(QualType resultType,
+                                    const FunctionArgList &args);
+  const CGFunctionInfo &
+  arrangeBuiltinFunctionDeclaration(CanQualType resultType,
+                                    ArrayRef<CanQualType> argTypes);
+  const CGFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
+                                                   const CallArgList &args);
+
+  /// Objective-C methods are C functions with some implicit parameters.
   const CGFunctionInfo &arrangeObjCMethodDeclaration(const ObjCMethodDecl *MD);
   const CGFunctionInfo &arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
                                                         QualType receiverType);
+  const CGFunctionInfo &arrangeUnprototypedObjCMessageSend(
+                                                     QualType returnType,
+                                                     const CallArgList &args);
 
+  /// Block invocation functions are C functions with an implicit parameter.
+  const CGFunctionInfo &arrangeBlockFunctionDeclaration(
+                                                 const FunctionProtoType *type,
+                                                 const FunctionArgList &args);
+  const CGFunctionInfo &arrangeBlockFunctionCall(const CallArgList &args,
+                                                 const FunctionType *type);
+
+  /// C++ methods have some special rules and also have implicit parameters.
   const CGFunctionInfo &arrangeCXXMethodDeclaration(const CXXMethodDecl *MD);
   const CGFunctionInfo &arrangeCXXStructorDeclaration(const CXXMethodDecl *MD,
                                                       StructorType Type);
@@ -262,15 +297,6 @@ public:
                                                   const CXXConstructorDecl *D,
                                                   CXXCtorType CtorKind,
                                                   unsigned ExtraArgs);
-  const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
-                                                const FunctionType *Ty,
-                                                bool ChainCall);
-  const CGFunctionInfo &arrangeFreeFunctionCall(QualType ResTy,
-                                                const CallArgList &args,
-                                                FunctionType::ExtInfo info,
-                                                RequiredArgs required);
-  const CGFunctionInfo &arrangeBlockFunctionCall(const CallArgList &args,
-                                                 const FunctionType *type);
 
   const CGFunctionInfo &arrangeCXXMethodCall(const CallArgList &args,
                                              const FunctionProtoType *type,
@@ -278,9 +304,6 @@ public:
   const CGFunctionInfo &arrangeMSMemberPointerThunk(const CXXMethodDecl *MD);
   const CGFunctionInfo &arrangeMSCtorClosure(const CXXConstructorDecl *CD,
                                                  CXXCtorType CT);
-  const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty,
-                                                const FunctionDecl *FD);
-  const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionNoProtoType> Ty);
   const CGFunctionInfo &arrangeCXXMethodType(const CXXRecordDecl *RD,
                                              const FunctionProtoType *FTP,
                                              const CXXMethodDecl *MD);
@@ -296,6 +319,7 @@ public:
                                                 bool chainCall,
                                                 ArrayRef<CanQualType> argTypes,
                                                 FunctionType::ExtInfo info,
+                    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
                                                 RequiredArgs args);
 
   /// \brief Compute a new LLVM record layout object for the given record.
