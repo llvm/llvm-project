@@ -76,7 +76,7 @@ createLoweredInitializer(ArrayType *NewType, Constant *OriginalInitializer) {
 
 static Instruction *
 createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
-  IRBuilder<true,NoFolder> Builder(Instr);
+  IRBuilder<NoFolder> Builder(Instr);
   unsigned OpCode = CE->getOpcode();
   switch (OpCode) {
     case Instruction::GetElementPtr: {
