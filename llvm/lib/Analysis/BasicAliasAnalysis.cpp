@@ -1608,12 +1608,12 @@ bool BasicAAResult::constantOffsetHeuristic(
 
 char BasicAA::PassID;
 
-BasicAAResult BasicAA::run(Function &F, AnalysisManager<Function> *AM) {
+BasicAAResult BasicAA::run(Function &F, AnalysisManager<Function> &AM) {
   return BasicAAResult(F.getParent()->getDataLayout(),
-                       AM->getResult<TargetLibraryAnalysis>(F),
-                       AM->getResult<AssumptionAnalysis>(F),
-                       AM->getCachedResult<DominatorTreeAnalysis>(F),
-                       AM->getCachedResult<LoopAnalysis>(F));
+                       AM.getResult<TargetLibraryAnalysis>(F),
+                       AM.getResult<AssumptionAnalysis>(F),
+                       &AM.getResult<DominatorTreeAnalysis>(F),
+                       AM.getCachedResult<LoopAnalysis>(F));
 }
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
@@ -1626,6 +1626,7 @@ void BasicAAWrapperPass::anchor() {}
 INITIALIZE_PASS_BEGIN(BasicAAWrapperPass, "basicaa",
                       "Basic Alias Analysis (stateless AA impl)", true, true)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(BasicAAWrapperPass, "basicaa",
                     "Basic Alias Analysis (stateless AA impl)", true, true)
@@ -1637,12 +1638,11 @@ FunctionPass *llvm::createBasicAAWrapperPass() {
 bool BasicAAWrapperPass::runOnFunction(Function &F) {
   auto &ACT = getAnalysis<AssumptionCacheTracker>();
   auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
-  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+  auto &DTWP = getAnalysis<DominatorTreeWrapperPass>();
   auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
 
   Result.reset(new BasicAAResult(F.getParent()->getDataLayout(), TLIWP.getTLI(),
-                                 ACT.getAssumptionCache(F),
-                                 DTWP ? &DTWP->getDomTree() : nullptr,
+                                 ACT.getAssumptionCache(F), &DTWP.getDomTree(),
                                  LIWP ? &LIWP->getLoopInfo() : nullptr));
 
   return false;
@@ -1651,6 +1651,7 @@ bool BasicAAWrapperPass::runOnFunction(Function &F) {
 void BasicAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<AssumptionCacheTracker>();
+  AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 

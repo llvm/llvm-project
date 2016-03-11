@@ -66,15 +66,15 @@ FunctionIndexObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
   }
 }
 
-// Looks for function index in the given memory buffer.
+// Looks for module summary index in the given memory buffer.
 // returns true if found, else false.
-bool FunctionIndexObjectFile::hasFunctionSummaryInMemBuffer(
+bool FunctionIndexObjectFile::hasGlobalValueSummaryInMemBuffer(
     MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler) {
   ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
   if (!BCOrErr)
     return false;
 
-  return hasFunctionSummary(BCOrErr.get(), DiagnosticHandler);
+  return hasGlobalValueSummary(BCOrErr.get(), DiagnosticHandler);
 }
 
 // Parse function index in the given memory buffer.

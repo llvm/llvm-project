@@ -377,11 +377,6 @@ static DecodeStatus DecodePOOL16BEncodedField(MCInst &Inst,
                                               uint64_t Address,
                                               const void *Decoder);
 
-static DecodeStatus DecodeSimm4(MCInst &Inst,
-                                unsigned Value,
-                                uint64_t Address,
-                                const void *Decoder);
-
 static DecodeStatus DecodeSimm16(MCInst &Inst,
                                  unsigned Insn,
                                  uint64_t Address,
@@ -389,6 +384,10 @@ static DecodeStatus DecodeSimm16(MCInst &Inst,
 
 template <unsigned Bits, int Offset>
 static DecodeStatus DecodeUImmWithOffset(MCInst &Inst, unsigned Value,
+                                         uint64_t Address, const void *Decoder);
+
+template <unsigned Bits, int Offset = 0>
+static DecodeStatus DecodeSImmWithOffset(MCInst &Inst, unsigned Value,
                                          uint64_t Address, const void *Decoder);
 
 static DecodeStatus DecodeInsSize(MCInst &Inst,
@@ -1924,14 +1923,6 @@ static DecodeStatus DecodePOOL16BEncodedField(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeSimm4(MCInst &Inst,
-                                unsigned Value,
-                                uint64_t Address,
-                                const void *Decoder) {
-  Inst.addOperand(MCOperand::createImm(SignExtend32<4>(Value)));
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus DecodeSimm16(MCInst &Inst,
                                  unsigned Insn,
                                  uint64_t Address,
@@ -1946,6 +1937,15 @@ static DecodeStatus DecodeUImmWithOffset(MCInst &Inst, unsigned Value,
                                          const void *Decoder) {
   Value &= ((1 << Bits) - 1);
   Inst.addOperand(MCOperand::createImm(Value + Offset));
+  return MCDisassembler::Success;
+}
+
+template <unsigned Bits, int Offset>
+static DecodeStatus DecodeSImmWithOffset(MCInst &Inst, unsigned Value,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  int32_t Imm = SignExtend32<Bits>(Value);
+  Inst.addOperand(MCOperand::createImm(Imm + Offset));
   return MCDisassembler::Success;
 }
 

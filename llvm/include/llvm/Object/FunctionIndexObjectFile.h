@@ -77,11 +77,11 @@ public:
   static ErrorOr<MemoryBufferRef>
   findBitcodeInMemBuffer(MemoryBufferRef Object);
 
-  /// \brief Looks for function summary in the given memory buffer,
+  /// \brief Looks for summary sections in the given memory buffer,
   /// returns true if found, else false.
   static bool
-  hasFunctionSummaryInMemBuffer(MemoryBufferRef Object,
-                                DiagnosticHandlerFunction DiagnosticHandler);
+  hasGlobalValueSummaryInMemBuffer(MemoryBufferRef Object,
+                                   DiagnosticHandlerFunction DiagnosticHandler);
 
   /// \brief Parse function index in the given memory buffer.
   /// Return new FunctionIndexObjectFile instance containing parsed function

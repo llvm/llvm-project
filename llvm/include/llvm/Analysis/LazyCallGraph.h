@@ -920,7 +920,7 @@ class LazyCallGraphPrinterPass
 public:
   explicit LazyCallGraphPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager *AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 }

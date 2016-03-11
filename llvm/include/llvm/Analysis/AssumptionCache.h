@@ -115,7 +115,7 @@ class AssumptionPrinterPass : public PassInfoMixin<AssumptionPrinterPass> {
 
 public:
   explicit AssumptionPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 
   static StringRef name() { return "AssumptionPrinterPass"; }
 };

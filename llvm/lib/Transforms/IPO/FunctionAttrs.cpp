@@ -987,13 +987,13 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
   return setDoesNotRecurse(*F);
 }
 
-PreservedAnalyses
-PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C, CGSCCAnalysisManager *AM) {
+PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
+                                                  CGSCCAnalysisManager &AM) {
   Module &M = *C.begin()->getFunction().getParent();
   const ModuleAnalysisManager &MAM =
-      AM->getResult<ModuleAnalysisManagerCGSCCProxy>(C).getManager();
+      AM.getResult<ModuleAnalysisManagerCGSCCProxy>(C).getManager();
   FunctionAnalysisManager &FAM =
-      AM->getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
 
   // FIXME: Need some way to make it more reasonable to assume that this is
   // always cached.

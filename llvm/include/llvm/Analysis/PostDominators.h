@@ -58,7 +58,7 @@ class PostDominatorTreePrinterPass
 
 public:
   explicit PostDominatorTreePrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
 struct PostDominatorTreeWrapperPass : public FunctionPass {

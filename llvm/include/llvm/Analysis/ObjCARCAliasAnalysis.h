@@ -68,7 +68,7 @@ class ObjCARCAA : public AnalysisInfoMixin<ObjCARCAA> {
 public:
   typedef ObjCARCAAResult Result;
 
-  ObjCARCAAResult run(Function &F, AnalysisManager<Function> *AM);
+  ObjCARCAAResult run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// Legacy wrapper pass to provide the ObjCARCAAResult object.

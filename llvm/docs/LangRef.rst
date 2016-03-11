@@ -1545,6 +1545,8 @@ operand bundle to not miscompile programs containing it.
 
 More specific types of operand bundles are described below.
 
+.. _deopt_opbundles:
+
 Deoptimization Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -12112,6 +12114,74 @@ Semantics:
 
 This intrinsic does nothing, and it's removed by optimizers and ignored
 by codegen.
+
+'``llvm.experimental.deoptimize``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare type @llvm.experimental.deoptimize(...) [ "deopt"(...) ]
+
+Overview:
+"""""""""
+
+This intrinsic, together with :ref:`deoptimization operand bundles
+<deopt_opbundles>`, allow frontends to express transfer of control and
+frame-local state from the currently executing (typically more specialized,
+hence faster) version of a function into another (typically more generic, hence
+slower) version.
+
+In languages with a fully integrated managed runtime like Java and JavaScript
+this intrinsic can be used to implement "uncommon trap" or "side exit" like
+functionality.  In unmanaged languages like C and C++, this intrinsic can be
+used to represent the slow paths of specialized functions.
+
+
+Arguments:
+""""""""""
+
+The intrinsic takes an arbitrary number of arguments, whose meaning is
+decided by the :ref:`lowering strategy<deoptimize_lowering>`.
+
+Semantics:
+""""""""""
+
+The ``@llvm.experimental.deoptimize`` intrinsic executes an attached
+deoptimization continuation (denoted using a :ref:`deoptimization
+operand bundle <deopt_opbundles>`) and returns the value returned by
+the deoptimization continuation.  Defining the semantic properties of
+the continuation itself is out of scope of the language reference --
+as far as LLVM is concerned, the deoptimization continuation can
+invoke arbitrary side effects, including reading from and writing to
+the entire heap.
+
+Deoptimization continuations expressed using ``"deopt"`` operand bundles always
+continue execution to the end of the physical frame containing them, so all
+calls to ``@llvm.experimental.deoptimize`` must be in "tail position":
+
+   - ``@llvm.experimental.deoptimize`` cannot be invoked.
+   - The call must immediately precede a :ref:`ret <i_ret>` instruction.
+   - The ``ret`` instruction must return the value produced by the
+     ``@llvm.experimental.deoptimize`` call if there is one, or void.
+
+Note that the above restrictions imply that the return type for a call to
+``@llvm.experimental.deoptimize`` will match the return type of its immediate
+caller.
+
+The inliner composes the ``"deopt"`` continuations of the caller into the
+``"deopt"`` continuations present in the inlinee, and also updates calls to this
+intrinsic to return directly from the frame of the function it inlined into.
+
+.. _deoptimize_lowering:
+
+Lowering:
+"""""""""
+
+Lowering for ``@llvm.experimental.deoptimize`` is not yet implemented,
+and is a work in progress.
 
 Stack Map Intrinsics
 --------------------

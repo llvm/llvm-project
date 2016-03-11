@@ -235,7 +235,7 @@ public:
   }
 
   /// \brief Run all of the passes in this manager over the IR.
-  PreservedAnalyses run(IRUnitT &IR, AnalysisManager<IRUnitT> *AM = nullptr) {
+  PreservedAnalyses run(IRUnitT &IR, AnalysisManager<IRUnitT> &AM) {
     PreservedAnalyses PA = PreservedAnalyses::all();
 
     if (DebugLogging)
@@ -248,13 +248,11 @@ public:
 
       PreservedAnalyses PassPA = Passes[Idx]->run(IR, AM);
 
-      // If we have an active analysis manager at this level we want to ensure
-      // we update it as each pass runs and potentially invalidates analyses.
-      // We also update the preserved set of analyses based on what analyses we
-      // have already handled the invalidation for here and don't need to
-      // invalidate when finished.
-      if (AM)
-        PassPA = AM->invalidate(IR, std::move(PassPA));
+      // Update the analysis manager as each pass runs and potentially
+      // invalidates analyses. We also update the preserved set of analyses
+      // based on what analyses we have already handled the invalidation for
+      // here and don't need to invalidate when finished.
+      PassPA = AM.invalidate(IR, std::move(PassPA));
 
       // Finally, we intersect the final preserved analyses to compute the
       // aggregate preserved set for this pass manager.
@@ -533,7 +531,7 @@ private:
       if (DebugLogging)
         dbgs() << "Running analysis: " << P.name() << "\n";
       AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
-      ResultList.emplace_back(PassID, P.run(IR, this));
+      ResultList.emplace_back(PassID, P.run(IR, *this));
 
       // P.run may have inserted elements into AnalysisResults and invalidated
       // RI.
@@ -885,11 +883,10 @@ public:
   }
 
   /// \brief Runs the function pass across every function in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager *AM) {
-    FunctionAnalysisManager *FAM = nullptr;
-    if (AM)
-      // Setup the function analysis manager from its proxy.
-      FAM = &AM->getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
+    // Setup the function analysis manager from its proxy.
+    FunctionAnalysisManager &FAM =
+        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
     PreservedAnalyses PA = PreservedAnalyses::all();
     for (Function &F : M) {
@@ -903,8 +900,7 @@ public:
       // directly handle the function analysis manager's invalidation here and
       // update our preserved set to reflect that these have already been
       // handled.
-      if (FAM)
-        PassPA = FAM->invalidate(F, std::move(PassPA));
+      PassPA = FAM.invalidate(F, std::move(PassPA));
 
       // Then intersect the preserved set so that invalidation of module
       // analyses will eventually occur when the module pass completes.
@@ -944,9 +940,8 @@ struct RequireAnalysisPass : PassInfoMixin<RequireAnalysisPass<AnalysisT>> {
   /// created, these methods can be instantiated to satisfy whatever the
   /// context requires.
   template <typename IRUnitT>
-  PreservedAnalyses run(IRUnitT &Arg, AnalysisManager<IRUnitT> *AM) {
-    if (AM)
-      (void)AM->template getResult<AnalysisT>(Arg);
+  PreservedAnalyses run(IRUnitT &Arg, AnalysisManager<IRUnitT> &AM) {
+    (void)AM.template getResult<AnalysisT>(Arg);
 
     return PreservedAnalyses::all();
   }
@@ -967,11 +962,10 @@ struct InvalidateAnalysisPass
   /// created, these methods can be instantiated to satisfy whatever the
   /// context requires.
   template <typename IRUnitT>
-  PreservedAnalyses run(IRUnitT &Arg, AnalysisManager<IRUnitT> *AM) {
-    if (AM)
-      // We have to directly invalidate the analysis result as we can't
-      // enumerate all other analyses and use the preserved set to control it.
-      (void)AM->template invalidate<AnalysisT>(Arg);
+  PreservedAnalyses run(IRUnitT &Arg, AnalysisManager<IRUnitT> &AM) {
+    // We have to directly invalidate the analysis result as we can't
+    // enumerate all other analyses and use the preserved set to control it.
+    AM.template invalidate<AnalysisT>(Arg);
 
     return PreservedAnalyses::all();
   }

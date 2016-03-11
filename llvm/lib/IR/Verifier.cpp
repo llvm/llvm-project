@@ -4109,6 +4109,29 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            "masked_store: vector mask must be same length as data", CS);
     break;
   }
+
+  case Intrinsic::experimental_deoptimize: {
+    Assert(CS.isCall(), "experimental_deoptimize cannot be invoked", CS);
+    Assert(CS.countOperandBundlesOfType(LLVMContext::OB_deopt) == 1,
+           "experimental_deoptimize must have exactly one "
+           "\"deopt\" operand bundle");
+    Assert(CS.getType() == CS.getInstruction()->getFunction()->getReturnType(),
+           "experimental_deoptimize return type must match caller return type");
+
+    if (CS.isCall()) {
+      auto *DeoptCI = CS.getInstruction();
+      auto *RI = dyn_cast<ReturnInst>(DeoptCI->getNextNode());
+      Assert(RI,
+             "calls to experimental_deoptimize must be followed by a return");
+
+      if (!CS.getType()->isVoidTy() && RI)
+        Assert(RI->getReturnValue() == DeoptCI,
+               "calls to experimental_deoptimize must be followed by a return "
+               "of the value computed by experimental_deoptimize");
+    }
+
+    break;
+  }
   };
 }
 

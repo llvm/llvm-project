@@ -118,7 +118,7 @@ bool llvm::runPassPipeline(StringRef Arg0, LLVMContext &Context, Module &M,
   cl::PrintOptionValues();
 
   // Now that we have all of the passes ready, run them.
-  MPM.run(M, &MAM);
+  MPM.run(M, MAM);
 
   // Declare success.
   if (OK != OK_NoOutput)

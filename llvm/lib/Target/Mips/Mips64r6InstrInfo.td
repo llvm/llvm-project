@@ -46,32 +46,33 @@ class SCD_R6_ENC : SPECIAL3_LL_SC_FM<OPCODE6_SCD>;
 //
 //===----------------------------------------------------------------------===//
 
-class AHI_ATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd> {
+class AHI_ATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd, InstrItinClass itin> {
   dag OutOperandList = (outs GPROpnd:$rs);
   dag InOperandList = (ins GPROpnd:$rt, simm16:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rt, $imm");
   string Constraints = "$rs = $rt";
+  InstrItinClass Itinerary = itin;
 }
 
-class DALIGN_DESC  : ALIGN_DESC_BASE<"dalign", GPR64Opnd, uimm3>;
-class DAHI_DESC    : AHI_ATI_DESC_BASE<"dahi", GPR64Opnd>;
-class DATI_DESC    : AHI_ATI_DESC_BASE<"dati", GPR64Opnd>;
-class DAUI_DESC    : AUI_DESC_BASE<"daui", GPR64Opnd>;
-class DBITSWAP_DESC : BITSWAP_DESC_BASE<"dbitswap", GPR64Opnd>;
-class DCLO_R6_DESC : CLO_R6_DESC_BASE<"dclo", GPR64Opnd>;
-class DCLZ_R6_DESC : CLZ_R6_DESC_BASE<"dclz", GPR64Opnd>;
-class DDIV_DESC    : DIVMOD_DESC_BASE<"ddiv", GPR64Opnd, sdiv>;
-class DDIVU_DESC   : DIVMOD_DESC_BASE<"ddivu", GPR64Opnd, udiv>;
-class DLSA_R6_DESC : LSA_R6_DESC_BASE<"dlsa", GPR64Opnd, uimm2_plus1>;
-class DMOD_DESC    : DIVMOD_DESC_BASE<"dmod", GPR64Opnd, srem>;
-class DMODU_DESC   : DIVMOD_DESC_BASE<"dmodu", GPR64Opnd, urem>;
-class DMUH_DESC    : MUL_R6_DESC_BASE<"dmuh", GPR64Opnd, mulhs>;
-class DMUHU_DESC   : MUL_R6_DESC_BASE<"dmuhu", GPR64Opnd, mulhu>;
-class DMUL_R6_DESC : MUL_R6_DESC_BASE<"dmul", GPR64Opnd, mul>;
-class DMULU_DESC   : MUL_R6_DESC_BASE<"dmulu", GPR64Opnd>;
-class LDPC_DESC    : PCREL_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3>;
-class LLD_R6_DESC   : LL_R6_DESC_BASE<"lld", GPR64Opnd>;
-class SCD_R6_DESC   : SC_R6_DESC_BASE<"scd", GPR64Opnd>;
+class DALIGN_DESC  : ALIGN_DESC_BASE<"dalign", GPR64Opnd, uimm3, II_DALIGN>;
+class DAHI_DESC    : AHI_ATI_DESC_BASE<"dahi", GPR64Opnd, II_DAHI>;
+class DATI_DESC    : AHI_ATI_DESC_BASE<"dati", GPR64Opnd, II_DATI>;
+class DAUI_DESC    : AUI_DESC_BASE<"daui", GPR64Opnd, II_DAUI>;
+class DBITSWAP_DESC : BITSWAP_DESC_BASE<"dbitswap", GPR64Opnd, II_DBITSWAP>;
+class DCLO_R6_DESC : CLO_R6_DESC_BASE<"dclo", GPR64Opnd, II_DCLO>;
+class DCLZ_R6_DESC : CLZ_R6_DESC_BASE<"dclz", GPR64Opnd, II_DCLZ>;
+class DDIV_DESC    : DIVMOD_DESC_BASE<"ddiv", GPR64Opnd, II_DDIV, sdiv>;
+class DDIVU_DESC   : DIVMOD_DESC_BASE<"ddivu", GPR64Opnd, II_DDIVU, udiv>;
+class DLSA_R6_DESC : LSA_R6_DESC_BASE<"dlsa", GPR64Opnd, uimm2_plus1, II_DLSA>;
+class DMOD_DESC    : DIVMOD_DESC_BASE<"dmod", GPR64Opnd, II_DMOD, srem>;
+class DMODU_DESC   : DIVMOD_DESC_BASE<"dmodu", GPR64Opnd, II_DMODU, urem>;
+class DMUH_DESC    : MUL_R6_DESC_BASE<"dmuh", GPR64Opnd, II_DMUH, mulhs>;
+class DMUHU_DESC   : MUL_R6_DESC_BASE<"dmuhu", GPR64Opnd, II_DMUHU, mulhu>;
+class DMUL_R6_DESC : MUL_R6_DESC_BASE<"dmul", GPR64Opnd, II_DMUL, mul>;
+class DMULU_DESC   : MUL_R6_DESC_BASE<"dmulu", GPR64Opnd, II_DMUL>;
+class LDPC_DESC    : PCREL_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3, II_LDPC>;
+class LLD_R6_DESC   : LL_R6_DESC_BASE<"lld", GPR64Opnd, II_LLD>;
+class SCD_R6_DESC   : SC_R6_DESC_BASE<"scd", GPR64Opnd, II_SCD>;
 class SELEQZ64_DESC : SELEQNE_Z_DESC_BASE<"seleqz", GPR64Opnd>;
 class SELNEZ64_DESC : SELEQNE_Z_DESC_BASE<"selnez", GPR64Opnd>;
 

@@ -34,7 +34,6 @@ namespace llvm {
 namespace gvn LLVM_LIBRARY_VISIBILITY {
 struct AvailableValue;
 struct AvailableValueInBlock;
-struct Expression;
 class GVNLegacyPass;
 }
 
@@ -46,7 +45,7 @@ class GVN : public PassInfoMixin<GVN> {
 public:
 
   /// \brief Run the pass over the function.
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
@@ -62,23 +61,26 @@ public:
 private:
   friend class gvn::GVNLegacyPass;
 
+  struct Expression;
+  friend struct DenseMapInfo<Expression>;
+
   /// This class holds the mapping between values and value numbers.  It is used
   /// as an efficient mechanism to determine the expression-wise equivalence of
   /// two values.
   class ValueTable {
     DenseMap<Value *, uint32_t> valueNumbering;
-    DenseMap<gvn::Expression, uint32_t> expressionNumbering;
+    DenseMap<Expression, uint32_t> expressionNumbering;
     AliasAnalysis *AA;
     MemoryDependenceResults *MD;
     DominatorTree *DT;
 
     uint32_t nextValueNumber;
 
-    gvn::Expression create_expression(Instruction *I);
-    gvn::Expression create_cmp_expression(unsigned Opcode,
-                                          CmpInst::Predicate Predicate,
-                                          Value *LHS, Value *RHS);
-    gvn::Expression create_extractvalue_expression(ExtractValueInst *EI);
+    Expression create_expression(Instruction *I);
+    Expression create_cmp_expression(unsigned Opcode,
+                                     CmpInst::Predicate Predicate, Value *LHS,
+                                     Value *RHS);
+    Expression create_extractvalue_expression(ExtractValueInst *EI);
     uint32_t lookup_or_add_call(CallInst *C);
 
   public:

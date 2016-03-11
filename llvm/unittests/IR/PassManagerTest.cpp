@@ -29,7 +29,7 @@ public:
   TestFunctionAnalysis(int &Runs) : Runs(Runs) {}
 
   /// \brief Run the analysis pass over the function and return a result.
-  Result run(Function &F, FunctionAnalysisManager *AM) {
+  Result run(Function &F, FunctionAnalysisManager &AM) {
     ++Runs;
     int Count = 0;
     for (Function::iterator BBI = F.begin(), BBE = F.end(); BBI != BBE; ++BBI)
@@ -57,7 +57,7 @@ public:
 
   TestModuleAnalysis(int &Runs) : Runs(Runs) {}
 
-  Result run(Module &M, ModuleAnalysisManager *AM) {
+  Result run(Module &M, ModuleAnalysisManager &AM) {
     ++Runs;
     int Count = 0;
     for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
@@ -91,11 +91,11 @@ struct TestPreservingModulePass : PassInfoMixin<TestPreservingModulePass> {
 
 struct TestMinPreservingModulePass
     : PassInfoMixin<TestMinPreservingModulePass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager *AM) {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
     PreservedAnalyses PA;
 
     // Force running an analysis.
-    (void)AM->getResult<TestModuleAnalysis>(M);
+    (void)AM.getResult<TestModuleAnalysis>(M);
 
     PA.preserve<FunctionAnalysisManagerModuleProxy>();
     return PA;
@@ -110,11 +110,11 @@ struct TestFunctionPass : PassInfoMixin<TestFunctionPass> {
         AnalyzedFunctionCount(AnalyzedFunctionCount),
         OnlyUseCachedResults(OnlyUseCachedResults) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager *AM) {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
     ++RunCount;
 
     const ModuleAnalysisManager &MAM =
-        AM->getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+        AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
     if (TestModuleAnalysis::Result *TMA =
             MAM.getCachedResult<TestModuleAnalysis>(*F.getParent()))
       AnalyzedFunctionCount += TMA->FunctionCount;
@@ -122,11 +122,11 @@ struct TestFunctionPass : PassInfoMixin<TestFunctionPass> {
     if (OnlyUseCachedResults) {
       // Hack to force the use of the cached interface.
       if (TestFunctionAnalysis::Result *AR =
-              AM->getCachedResult<TestFunctionAnalysis>(F))
+              AM.getCachedResult<TestFunctionAnalysis>(F))
         AnalyzedInstrCount += AR->InstructionCount;
     } else {
       // Typical path just runs the analysis as needed.
-      TestFunctionAnalysis::Result &AR = AM->getResult<TestFunctionAnalysis>(F);
+      TestFunctionAnalysis::Result &AR = AM.getResult<TestFunctionAnalysis>(F);
       AnalyzedInstrCount += AR.InstructionCount;
     }
 
@@ -298,7 +298,7 @@ TEST_F(PassManagerTest, Basic) {
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
-  MPM.run(*M, &MAM);
+  MPM.run(*M, MAM);
 
   // Validate module pass counters.
   EXPECT_EQ(1, ModulePassRunCount);

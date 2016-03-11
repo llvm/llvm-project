@@ -270,7 +270,7 @@ static void createCombinedFunctionIndex() {
   raw_fd_ostream OS(OutputFilename + ".thinlto.bc", EC,
                     sys::fs::OpenFlags::F_None);
   error(EC, "error opening the file '" + OutputFilename + ".thinlto.bc'");
-  WriteFunctionSummaryToFile(CombinedIndex, OS);
+  WriteIndexToFile(CombinedIndex, OS);
   OS.close();
 }
 
@@ -367,7 +367,7 @@ private:
     std::error_code EC;
     raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
     error(EC, "error opening the file '" + OutputFilename + "'");
-    WriteFunctionSummaryToFile(*CombinedIndex, OS);
+    WriteIndexToFile(*CombinedIndex, OS);
     return;
   }
 

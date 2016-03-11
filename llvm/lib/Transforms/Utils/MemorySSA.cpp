@@ -257,17 +257,17 @@ MemorySSAWalker *MemorySSA::buildMemorySSA(AliasAnalysis *AA,
     bool InsertIntoDef = false;
     AccessListType *Accesses = nullptr;
     for (Instruction &I : B) {
-      MemoryAccess *MA = createNewAccess(&I, true);
-      if (!MA)
+      MemoryUseOrDef *MUD = createNewAccess(&I, true);
+      if (!MUD)
         continue;
-      if (isa<MemoryDef>(MA))
+      if (isa<MemoryDef>(MUD))
         InsertIntoDef = true;
-      else if (isa<MemoryUse>(MA))
+      else
         InsertIntoDefUse = true;
 
       if (!Accesses)
         Accesses = getOrCreateAccessList(&B);
-      Accesses->push_back(MA);
+      Accesses->push_back(MUD);
     }
     if (InsertIntoDef)
       DefiningBlocks.insert(&B);
@@ -358,7 +358,8 @@ MemorySSAWalker *MemorySSA::buildMemorySSA(AliasAnalysis *AA,
 }
 
 /// \brief Helper function to create new memory accesses
-MemoryAccess *MemorySSA::createNewAccess(Instruction *I, bool IgnoreNonMemory) {
+MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
+                                           bool IgnoreNonMemory) {
   // Find out what affect this instruction has on memory.
   ModRefInfo ModRef = AA->getModRefInfo(I);
   bool Def = bool(ModRef & MRI_Mod);
@@ -372,13 +373,13 @@ MemoryAccess *MemorySSA::createNewAccess(Instruction *I, bool IgnoreNonMemory) {
   assert((Def || Use) &&
          "Trying to create a memory access with a non-memory instruction");
 
-  MemoryUseOrDef *MA;
+  MemoryUseOrDef *MUD;
   if (Def)
-    MA = new MemoryDef(I->getContext(), nullptr, I, I->getParent(), NextID++);
+    MUD = new MemoryDef(I->getContext(), nullptr, I, I->getParent(), NextID++);
   else
-    MA = new MemoryUse(I->getContext(), nullptr, I, I->getParent());
-  ValueToMemoryAccess.insert(std::make_pair(I, MA));
-  return MA;
+    MUD = new MemoryUse(I->getContext(), nullptr, I, I->getParent());
+  ValueToMemoryAccess.insert(std::make_pair(I, MUD));
+  return MUD;
 }
 
 MemoryAccess *MemorySSA::findDominatingDef(BasicBlock *UseBlock,

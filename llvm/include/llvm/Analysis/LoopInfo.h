@@ -796,7 +796,7 @@ class LoopAnalysis : public AnalysisInfoMixin<LoopAnalysis> {
 public:
   typedef LoopInfo Result;
 
-  LoopInfo run(Function &F, AnalysisManager<Function> *AM);
+  LoopInfo run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// \brief Printer pass for the \c LoopAnalysis results.
@@ -805,7 +805,7 @@ class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
 
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// \brief The legacy pass manager's analysis pass to compute loop information.

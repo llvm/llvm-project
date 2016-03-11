@@ -1438,7 +1438,7 @@ namespace llvm {
   public:
     typedef ScalarEvolution Result;
 
-    ScalarEvolution run(Function &F, AnalysisManager<Function> *AM);
+    ScalarEvolution run(Function &F, AnalysisManager<Function> &AM);
   };
 
   /// \brief Printer pass for the \c ScalarEvolutionAnalysis results.
@@ -1448,7 +1448,7 @@ namespace llvm {
 
   public:
     explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
-    PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+    PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
   };
 
   class ScalarEvolutionWrapperPass : public FunctionPass {

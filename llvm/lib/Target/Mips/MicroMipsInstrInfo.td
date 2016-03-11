@@ -1,9 +1,6 @@
 def addrimm12 : ComplexPattern<iPTR, 2, "selectIntAddrMM", [frameindex]>;
 def addrimm4lsl2 : ComplexPattern<iPTR, 2, "selectIntAddrLSL2MM", [frameindex]>;
 
-def simm4 : Operand<i32> {
-  let DecoderMethod = "DecodeSimm4";
-}
 def simm7 : Operand<i32>;
 def li_simm7 : Operand<i32> {
   let DecoderMethod = "DecodeLiSimm7";

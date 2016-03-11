@@ -30,7 +30,7 @@ namespace llvm {
 /// attribute. It also discovers function arguments that are not captured by
 /// the function and marks them with the nocapture attribute.
 struct PostOrderFunctionAttrsPass : PassInfoMixin<PostOrderFunctionAttrsPass> {
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager *AM);
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM);
 };
 
 /// Create a legacy pass manager instance of a pass to compute function attrs

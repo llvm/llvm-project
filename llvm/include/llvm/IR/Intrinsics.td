@@ -593,6 +593,10 @@ def int_trap : Intrinsic<[], [], [IntrNoReturn]>,
 def int_debugtrap : Intrinsic<[]>,
                     GCCBuiltin<"__builtin_debugtrap">;
 
+// Support for dynamic deoptimization (or de-specialization)
+def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
+                                            [Throws]>;
+
 // NOP: calls/invokes to this intrinsic are removed by codegen
 def int_donothing : Intrinsic<[], [], [IntrNoMem]>;
 

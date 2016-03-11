@@ -956,6 +956,16 @@ public:
     addConstantUImmOperands<Bits, 0, 0>(Inst, N);
   }
 
+  template <unsigned Bits, int Offset = 0, int AdjustOffset = 0>
+  void addConstantSImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    int64_t Imm = getConstantImm() - Offset;
+    Imm = SignExtend64<Bits>(Imm);
+    Imm += Offset;
+    Imm += AdjustOffset;
+    Inst.addOperand(MCOperand::createImm(Imm));
+  }
+
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const MCExpr *Expr = getImm();
@@ -1029,8 +1039,8 @@ public:
                               isUInt<Bits>(getConstantImm()))
                            : isImm();
   }
-  template <unsigned Bits> bool isConstantSImm() const {
-    return isConstantImm() && isInt<Bits>(getConstantImm());
+  template <unsigned Bits, int Offset = 0> bool isConstantSImm() const {
+    return isConstantImm() && isInt<Bits>(getConstantImm() - Offset);
   }
   template <unsigned Bottom, unsigned Top> bool isConstantUImmRange() const {
     return isConstantImm() && getConstantImm() >= Bottom &&
@@ -1809,14 +1819,6 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
     switch (Inst.getOpcode()) {
       default:
-        break;
-      case Mips::ADDIUS5_MM:
-        Opnd = Inst.getOperand(2);
-        if (!Opnd.isImm())
-          return Error(IDLoc, "expected immediate operand kind");
-        Imm = Opnd.getImm();
-        if (Imm < -8 || Imm > 7)
-          return Error(IDLoc, "immediate operand value out of range");
         break;
       case Mips::ADDIUSP_MM:
         Opnd = Inst.getOperand(0);
@@ -3734,6 +3736,9 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm4_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 4-bit unsigned immediate");
+  case Match_SImm4_0:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected 4-bit signed immediate");
   case Match_UImm5_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 5-bit unsigned immediate");
@@ -3760,7 +3765,7 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_UImm6_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 6-bit unsigned immediate");
-  case Match_SImm6:
+  case Match_SImm6_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 6-bit signed immediate");
   case Match_UImm7_0:

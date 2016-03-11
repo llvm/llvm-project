@@ -125,7 +125,7 @@ class GlobalsAA : public AnalysisInfoMixin<GlobalsAA> {
 public:
   typedef GlobalsAAResult Result;
 
-  GlobalsAAResult run(Module &M, AnalysisManager<Module> *AM);
+  GlobalsAAResult run(Module &M, AnalysisManager<Module> &AM);
 };
 
 /// Legacy wrapper pass to provide the GlobalsAAResult object.

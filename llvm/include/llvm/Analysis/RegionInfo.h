@@ -930,7 +930,7 @@ class RegionInfoAnalysis : public AnalysisInfoMixin<RegionInfoAnalysis> {
 public:
   typedef RegionInfo Result;
 
-  RegionInfo run(Function &F, AnalysisManager<Function> *AM);
+  RegionInfo run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// \brief Printer pass for the \c RegionInfo.
@@ -939,12 +939,12 @@ class RegionInfoPrinterPass : public PassInfoMixin<RegionInfoPrinterPass> {
 
 public:
   explicit RegionInfoPrinterPass(raw_ostream &OS);
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// \brief Verifier pass for the \c RegionInfo.
 struct RegionInfoVerifierPass : PassInfoMixin<RegionInfoVerifierPass> {
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
 template <>

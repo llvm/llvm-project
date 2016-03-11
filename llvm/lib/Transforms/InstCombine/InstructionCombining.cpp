@@ -3054,7 +3054,7 @@ combineInstructionsOverFunction(Function &F, InstCombineWorklist &Worklist,
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.
-  IRBuilder<true, TargetFolder, InstCombineIRInserter> Builder(
+  IRBuilder<TargetFolder, InstCombineIRInserter> Builder(
       F.getContext(), TargetFolder(DL), InstCombineIRInserter(Worklist, &AC));
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
@@ -3082,12 +3082,12 @@ combineInstructionsOverFunction(Function &F, InstCombineWorklist &Worklist,
 }
 
 PreservedAnalyses InstCombinePass::run(Function &F,
-                                       AnalysisManager<Function> *AM) {
-  auto &AC = AM->getResult<AssumptionAnalysis>(F);
-  auto &DT = AM->getResult<DominatorTreeAnalysis>(F);
-  auto &TLI = AM->getResult<TargetLibraryAnalysis>(F);
+                                       AnalysisManager<Function> &AM) {
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
 
-  auto *LI = AM->getCachedResult<LoopAnalysis>(F);
+  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
 
   // FIXME: The AliasAnalysis is not yet supported in the new pass manager
   if (!combineInstructionsOverFunction(F, Worklist, nullptr, AC, TLI, DT,

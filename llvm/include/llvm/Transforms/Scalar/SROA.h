@@ -102,7 +102,7 @@ public:
   SROA() : C(nullptr), DT(nullptr), AC(nullptr) {}
 
   /// \brief Run the pass over the function.
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 
 private:
   friend class sroa::AllocaSliceRewriter;

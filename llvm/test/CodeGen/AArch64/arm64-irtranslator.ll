@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=irtranslator -global-isel %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O0 -stop-after=irtranslator -global-isel %s -o - 2>&1 | FileCheck %s
 ; REQUIRES: global-isel
 ; This file checks that the translation from llvm IR to generic MachineInstr
 ; is correct.
@@ -15,4 +15,26 @@ target triple = "aarch64-apple-ios"
 define i64 @addi64(i64 %arg1, i64 %arg2) {
   %res = add i64 %arg1, %arg2
   ret i64 %res
+}
+
+; Tests for br.
+; CHECK: name: uncondbr
+; CHECK: body:
+;
+; Entry basic block.
+; CHECK: {{[0-9a-zA-Z._-]+}}:
+;
+; Make sure we have one successor and only one.
+; CHECK-NEXT: successors: %[[END:[0-9a-zA-Z._-]+]]({{0x[a-f0-9]+ / 0x[a-f0-9]+}} = 100.00%)
+;
+; Check that we emit the correct branch.
+; CHECK: G_BR label %[[END]]
+;
+; Check that end contains the return instruction.
+; CHECK: [[END]]:
+; CHECK-NEXT: RET_ReallyLR
+define void @uncondbr() {
+  br label %end
+end:
+  ret void
 }

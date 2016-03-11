@@ -11863,7 +11863,7 @@ static SDValue lower512BitVectorShuffle(SDValue Op, SDValue V1, SDValue V2,
           lowerVectorShuffleAsBroadcast(DL, VT, V1, V2, Mask, Subtarget, DAG))
     return Broadcast;
 
-  // Dispatch to each element type for lowering. If we don't have supprot for
+  // Dispatch to each element type for lowering. If we don't have support for
   // specific element type shuffles at 512 bits, immediately split them and
   // lower them. Each lowering routine of a given type is allowed to assume that
   // the requisite ISA extensions for that element type are available.
@@ -23945,7 +23945,10 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
   // can replace them with a single PSHUFB instruction profitably. Intel's
   // manuals suggest only using PSHUFB if doing so replacing 5 instructions, but
   // in practice PSHUFB tends to be *very* fast so we're more aggressive.
-  if ((Depth >= 3 || HasPSHUFB) && Subtarget.hasSSSE3()) {
+  if ((Depth >= 3 || HasPSHUFB) &&
+      ((VT.is128BitVector() && Subtarget.hasSSSE3()) ||
+       (VT.is256BitVector() && Subtarget.hasAVX2()) ||
+       (VT.is512BitVector() && Subtarget.hasBWI()))) {
     SmallVector<SDValue, 16> PSHUFBMask;
     int NumBytes = VT.getSizeInBits() / 8;
     int Ratio = NumBytes / Mask.size();

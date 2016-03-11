@@ -78,7 +78,7 @@ bool LTOModule::isBitcodeFile(const char *Path) {
 bool LTOModule::isThinLTO() {
   // Right now the detection is only based on the summary presence. We may want
   // to add a dedicated flag at some point.
-  return hasFunctionSummary(IRFile->getMemoryBufferRef(),
+  return hasGlobalValueSummary(IRFile->getMemoryBufferRef(),
                             [](const DiagnosticInfo &DI) {
                               DiagnosticPrinterRawOStream DP(errs());
                               DI.print(DP);
