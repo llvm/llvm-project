@@ -16,6 +16,5 @@ namespace llvm {
 template class PassManager<Loop>;
 template class AnalysisManager<Loop>;
 template class InnerAnalysisManagerProxy<LoopAnalysisManager, Function>;
-template class AnalysisBase<LoopAnalysisManagerFunctionProxy>;
 template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>;
 }

@@ -23,7 +23,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}store_imm_neg_0.0_i64:
 ; CHECK-DAG: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], 0{{$}}
-; CHECK-DAG: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], 0x80000000
+; CHECK-DAG: v_bfrev_b32_e32 v[[HI_VREG:[0-9]+]], 1{{$}}
 ; CHECK: buffer_store_dwordx2 v{{\[}}[[LO_VREG]]:[[HI_VREG]]{{\]}}
 define void @store_imm_neg_0.0_i64(i64 addrspace(1) *%out) {
   store i64 -9223372036854775808, i64 addrspace(1) *%out
@@ -31,7 +31,7 @@ define void @store_imm_neg_0.0_i64(i64 addrspace(1) *%out) {
 }
 
 ; CHECK-LABEL: {{^}}store_inline_imm_neg_0.0_i32:
-; CHECK: v_mov_b32_e32 [[REG:v[0-9]+]], 0x80000000
+; CHECK: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
 ; CHECK: buffer_store_dword [[REG]]
 define void @store_inline_imm_neg_0.0_i32(i32 addrspace(1)* %out) {
   store i32 -2147483648, i32 addrspace(1)* %out
@@ -47,7 +47,7 @@ define void @store_inline_imm_0.0_f32(float addrspace(1)* %out) {
 }
 
 ; CHECK-LABEL: {{^}}store_imm_neg_0.0_f32:
-; CHECK: v_mov_b32_e32 [[REG:v[0-9]+]], 0x80000000
+; CHECK: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
 ; CHECK: buffer_store_dword [[REG]]
 define void @store_imm_neg_0.0_f32(float addrspace(1)* %out) {
   store float -0.0, float addrspace(1)* %out
@@ -520,7 +520,7 @@ define void @store_inline_imm_0.0_f64(double addrspace(1)* %out) {
 
 ; CHECK-LABEL: {{^}}store_literal_imm_neg_0.0_f64:
 ; CHECK-DAG: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], 0{{$}}
-; CHECK-DAG: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], 0x80000000
+; CHECK-DAG: v_bfrev_b32_e32 v[[HI_VREG:[0-9]+]], 1{{$}}
 ; CHECK: buffer_store_dwordx2 v{{\[}}[[LO_VREG]]:[[HI_VREG]]{{\]}}
 define void @store_literal_imm_neg_0.0_f64(double addrspace(1)* %out) {
   store double -0.0, double addrspace(1)* %out

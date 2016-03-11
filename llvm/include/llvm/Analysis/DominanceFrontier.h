@@ -168,7 +168,12 @@ extern template class DominanceFrontierBase<BasicBlock>;
 extern template class ForwardDominanceFrontierBase<BasicBlock>;
 
 /// \brief Analysis pass which computes a \c DominanceFrontier.
-struct DominanceFrontierAnalysis : AnalysisBase<DominanceFrontierAnalysis> {
+class DominanceFrontierAnalysis
+    : public AnalysisInfoMixin<DominanceFrontierAnalysis> {
+  friend AnalysisInfoMixin<DominanceFrontierAnalysis>;
+  static char PassID;
+
+public:
   /// \brief Provide the result typedef for this analysis pass.
   typedef DominanceFrontier Result;
 
@@ -176,11 +181,9 @@ struct DominanceFrontierAnalysis : AnalysisBase<DominanceFrontierAnalysis> {
   DominanceFrontier run(Function &F, AnalysisManager<Function> *AM);
 };
 
-extern template class AnalysisBase<DominanceFrontierAnalysis>;
-
 /// \brief Printer pass for the \c DominanceFrontier.
 class DominanceFrontierPrinterPass
-    : public PassBase<DominanceFrontierPrinterPass> {
+    : public PassInfoMixin<DominanceFrontierPrinterPass> {
   raw_ostream &OS;
 
 public:

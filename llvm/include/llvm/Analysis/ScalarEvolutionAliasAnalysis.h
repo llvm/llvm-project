@@ -38,7 +38,11 @@ private:
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
-struct SCEVAA : AnalysisBase<SCEVAA> {
+class SCEVAA : public AnalysisInfoMixin<SCEVAA> {
+  friend AnalysisInfoMixin<SCEVAA>;
+  static char PassID;
+
+public:
   typedef SCEVAAResult Result;
 
   SCEVAAResult run(Function &F, AnalysisManager<Function> *AM);

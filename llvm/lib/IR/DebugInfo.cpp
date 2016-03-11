@@ -38,23 +38,6 @@ DISubprogram *llvm::getDISubprogram(const MDNode *Scope) {
   return nullptr;
 }
 
-DISubprogram *llvm::getDISubprogram(const Function *F) {
-  // We look for the first instr that has a debug annotation leading back to F.
-  for (auto &BB : *F) {
-    auto Inst = std::find_if(BB.begin(), BB.end(), [](const Instruction &Inst) {
-      return Inst.getDebugLoc();
-    });
-    if (Inst == BB.end())
-      continue;
-    DebugLoc DLoc = Inst->getDebugLoc();
-    const MDNode *Scope = DLoc.getInlinedAtScope();
-    auto *Subprogram = getDISubprogram(Scope);
-    return Subprogram->describes(F) ? Subprogram : nullptr;
-  }
-
-  return nullptr;
-}
-
 DITypeIdentifierMap
 llvm::generateDITypeIdentifierMap(const NamedMDNode *CU_Nodes) {
   DITypeIdentifierMap Map;

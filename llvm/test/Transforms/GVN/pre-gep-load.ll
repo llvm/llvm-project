@@ -1,4 +1,6 @@
 ; RUN: opt < %s -basicaa -gvn -enable-load-pre -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=gvn -enable-load-pre -S | FileCheck %s
+
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_R600INSTRINFO_H
-#define LLVM_LIB_TARGET_R600_R600INSTRINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_R600INSTRINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_R600INSTRINFO_H
 
 #include "AMDGPUInstrInfo.h"
 #include "R600Defines.h"
@@ -21,15 +21,13 @@
 #include <map>
 
 namespace llvm {
-
   class AMDGPUTargetMachine;
   class DFAPacketizer;
-  class ScheduleDAG;
   class MachineFunction;
   class MachineInstr;
   class MachineInstrBuilder;
 
-  class R600InstrInfo : public AMDGPUInstrInfo {
+  class R600InstrInfo final : public AMDGPUInstrInfo {
   private:
   const R600RegisterInfo RI;
 

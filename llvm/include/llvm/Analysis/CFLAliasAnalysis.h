@@ -109,7 +109,11 @@ private:
 ///
 /// FIXME: We really should refactor CFL to use the analysis more heavily, and
 /// in particular to leverage invalidation to trigger re-computation of sets.
-struct CFLAA : AnalysisBase<CFLAA> {
+class CFLAA : public AnalysisInfoMixin<CFLAA> {
+  friend AnalysisInfoMixin<CFLAA>;
+  static char PassID;
+
+public:
   typedef CFLAAResult Result;
 
   CFLAAResult run(Function &F, AnalysisManager<Function> *AM);

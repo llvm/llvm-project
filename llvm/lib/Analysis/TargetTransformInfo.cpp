@@ -377,7 +377,7 @@ TargetIRAnalysis::Result TargetIRAnalysis::run(const Function &F) {
   return TTICallback(F);
 }
 
-template class llvm::AnalysisBase<TargetIRAnalysis>;
+char TargetIRAnalysis::PassID;
 
 TargetIRAnalysis::Result TargetIRAnalysis::getDefaultTTI(const Function &F) {
   return Result(F.getParent()->getDataLayout());

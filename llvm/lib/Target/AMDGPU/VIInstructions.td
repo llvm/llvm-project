@@ -54,9 +54,9 @@ defm V_SUBREV_F16 : VOP2Inst <vop2<0, 0x21>, "v_subrev_f16", VOP_F16_F16_F16,
 defm V_MUL_F16 : VOP2Inst <vop2<0, 0x22>, "v_mul_f16", VOP_F16_F16_F16>;
 defm V_MAC_F16 : VOP2Inst <vop2<0, 0x23>, "v_mac_f16", VOP_F16_F16_F16>;
 } // End isCommutable = 1
-defm V_MADMK_F16 : VOP2MADK <vop2<0,0x24>, "v_madmk_f16">;
+defm V_MADMK_F16 : VOP2MADK <vop2<0,0x24>, "v_madmk_f16", VOP_MADMK>;
 let isCommutable = 1 in {
-defm V_MADAK_F16 : VOP2MADK <vop2<0,0x25>, "v_madak_f16">;
+defm V_MADAK_F16 : VOP2MADK <vop2<0,0x25>, "v_madak_f16", VOP_MADAK>;
 defm V_ADD_U16 : VOP2Inst <vop2<0,0x26>, "v_add_u16", VOP_I16_I16_I16>;
 defm V_SUB_U16 : VOP2Inst <vop2<0,0x27>, "v_sub_u16" , VOP_I16_I16_I16>;
 defm V_SUBREV_U16 : VOP2Inst <vop2<0,0x28>, "v_subrev_u16", VOP_I16_I16_I16>;

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
-#define LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
+#define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCCODEEMITTER_H
 
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/Support/raw_ostream.h"

@@ -37,7 +37,12 @@ struct PostDominatorTree : public DominatorTreeBase<BasicBlock> {
 };
 
 /// \brief Analysis pass which computes a \c PostDominatorTree.
-struct PostDominatorTreeAnalysis : AnalysisBase<PostDominatorTreeAnalysis> {
+class PostDominatorTreeAnalysis
+    : public AnalysisInfoMixin<PostDominatorTreeAnalysis> {
+  friend AnalysisInfoMixin<PostDominatorTreeAnalysis>;
+  static char PassID;
+
+public:
   /// \brief Provide the result typedef for this analysis pass.
   typedef PostDominatorTree Result;
 
@@ -46,11 +51,9 @@ struct PostDominatorTreeAnalysis : AnalysisBase<PostDominatorTreeAnalysis> {
   PostDominatorTree run(Function &F);
 };
 
-extern template class AnalysisBase<PostDominatorTreeAnalysis>;
-
 /// \brief Printer pass for the \c PostDominatorTree.
 class PostDominatorTreePrinterPass
-    : public PassBase<PostDominatorTreePrinterPass> {
+    : public PassInfoMixin<PostDominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:

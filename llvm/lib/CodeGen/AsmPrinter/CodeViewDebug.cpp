@@ -412,7 +412,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   assert(Fn);
 
   StringRef FuncName;
-  if (auto *SP = getDISubprogram(GV))
+  if (auto *SP = GV->getSubprogram())
     FuncName = SP->getDisplayName();
 
   // If our DISubprogram name is empty, use the mangled name.
@@ -752,7 +752,7 @@ void CodeViewDebug::endFunction(const MachineFunction *MF) {
   assert(FnDebugInfo.count(GV));
   assert(CurFn == &FnDebugInfo[GV]);
 
-  collectVariableInfo(getDISubprogram(GV));
+  collectVariableInfo(GV->getSubprogram());
 
   DebugHandlerBase::endFunction(MF);
 

@@ -48,15 +48,11 @@ extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
 typedef InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>
     CGSCCAnalysisManagerModuleProxy;
 
-extern template class AnalysisBase<CGSCCAnalysisManagerModuleProxy>;
-
 extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
                                                 LazyCallGraph::SCC>;
 /// A proxy from a \c ModuleAnalysisManager to an \c SCC.
 typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC>
     ModuleAnalysisManagerCGSCCProxy;
-
-extern template class AnalysisBase<ModuleAnalysisManagerCGSCCProxy>;
 
 /// \brief The core module pass which does a post-order walk of the SCCs and
 /// runs a CGSCC pass over each one.
@@ -69,7 +65,7 @@ extern template class AnalysisBase<ModuleAnalysisManagerCGSCCProxy>;
 /// within this run safely.
 template <typename CGSCCPassT>
 class ModuleToPostOrderCGSCCPassAdaptor
-    : public PassBase<ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>> {
+    : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>> {
 public:
   explicit ModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass)
       : Pass(std::move(Pass)) {}
@@ -148,8 +144,6 @@ extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
 typedef InnerAnalysisManagerProxy<FunctionAnalysisManager, LazyCallGraph::SCC>
     FunctionAnalysisManagerCGSCCProxy;
 
-extern template class AnalysisBase<FunctionAnalysisManagerCGSCCProxy>;
-
 extern template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 /// A proxy from a \c CGSCCAnalysisManager to a \c Function.
 typedef OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>
@@ -165,7 +159,7 @@ typedef OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>
 /// within this run safely.
 template <typename FunctionPassT>
 class CGSCCToFunctionPassAdaptor
-    : public PassBase<CGSCCToFunctionPassAdaptor<FunctionPassT>> {
+    : public PassInfoMixin<CGSCCToFunctionPassAdaptor<FunctionPassT>> {
 public:
   explicit CGSCCToFunctionPassAdaptor(FunctionPassT Pass)
       : Pass(std::move(Pass)) {}

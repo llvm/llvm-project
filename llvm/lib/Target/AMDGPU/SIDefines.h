@@ -10,8 +10,8 @@
 
 #include "llvm/MC/MCInstrDesc.h"
 
-#ifndef LLVM_LIB_TARGET_R600_SIDEFINES_H
-#define LLVM_LIB_TARGET_R600_SIDEFINES_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
+#define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.

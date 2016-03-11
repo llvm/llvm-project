@@ -886,7 +886,7 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
     MachineBasicBlock *MBB = SameTails[commonTailIndex].getBlock();
 
-    // Recompute commont tail MBB's edge weights and block frequency.
+    // Recompute common tail MBB's edge weights and block frequency.
     setCommonTailEdgeWeights(*MBB);
 
     // MBB is common tail.  Adjust all other BB's to jump to this one.

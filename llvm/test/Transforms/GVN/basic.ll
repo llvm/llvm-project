@@ -1,4 +1,5 @@
 ; RUN: opt < %s -gvn -S | not grep "%z2 ="
+; RUN: opt < %s -passes=gvn -S | not grep "%z2 ="
 
 define i32 @main() {
 block1:

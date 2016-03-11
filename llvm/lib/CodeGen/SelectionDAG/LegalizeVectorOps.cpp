@@ -863,7 +863,7 @@ SDValue VectorLegalizer::ExpandZERO_EXTEND_VECTOR_INREG(SDValue Op) {
   int NumSrcElements = SrcVT.getVectorNumElements();
 
   // Build up a zero vector to blend into this one.
-  SDValue Zero = DAG.getTargetConstant(0, DL, SrcVT);
+  SDValue Zero = DAG.getConstant(0, DL, SrcVT);
 
   // Shuffle the incoming lanes into the correct position, and pull all other
   // lanes from the zero vector.

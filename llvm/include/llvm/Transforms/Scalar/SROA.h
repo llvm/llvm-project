@@ -51,7 +51,7 @@ class SROALegacyPass;
 ///    onto insert and extract operations on a vector value, and convert them to
 ///    this form. By doing so, it will enable promotion of vector aggregates to
 ///    SSA vector values.
-class SROA : public PassBase<SROA> {
+class SROA : public PassInfoMixin<SROA> {
   LLVMContext *C;
   DominatorTree *DT;
   AssumptionCache *AC;

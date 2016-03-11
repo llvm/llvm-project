@@ -53,7 +53,7 @@ define <4 x float> @mload_one_one(i8* %f) {
 
 ; CHECK-LABEL: @mload_one_one(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <4 x float>*
-; CHECK-NEXT:  %1 = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %castvec, i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> undef)
+; CHECK-NEXT:  %1 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %castvec, i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> undef)
 ; CHECK-NEXT:  ret <4 x float> %1
 }
 
@@ -65,7 +65,7 @@ define <2 x double> @mload_one_one_double(i8* %f) {
 
 ; CHECK-LABEL: @mload_one_one_double(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <2 x double>*
-; CHECK-NEXT:  %1 = call <2 x double> @llvm.masked.load.v2f64(<2 x double>* %castvec, i32 1, <2 x i1> <i1 true, i1 false>, <2 x double> undef)
+; CHECK-NEXT:  %1 = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %castvec, i32 1, <2 x i1> <i1 true, i1 false>, <2 x double> undef)
 ; CHECK-NEXT:  ret <2 x double> %1
 }
 
@@ -77,7 +77,7 @@ define <8 x float> @mload_v8f32(i8* %f) {
 
 ; CHECK-LABEL: @mload_v8f32(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <8 x float>*
-; CHECK-NEXT:  %1 = call <8 x float> @llvm.masked.load.v8f32(<8 x float>* %castvec, i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x float> undef)
+; CHECK-NEXT:  %1 = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* %castvec, i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x float> undef)
 ; CHECK-NEXT:  ret <8 x float> %1
 }
 
@@ -87,7 +87,7 @@ define <4 x double> @mload_v4f64(i8* %f) {
 
 ; CHECK-LABEL: @mload_v4f64(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <4 x double>*
-; CHECK-NEXT:  %1 = call <4 x double> @llvm.masked.load.v4f64(<4 x double>* %castvec, i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x double> undef)
+; CHECK-NEXT:  %1 = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %castvec, i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x double> undef)
 ; CHECK-NEXT:  ret <4 x double> %1
 }
 
@@ -99,7 +99,7 @@ define <4 x i32> @mload_v4i32(i8* %f) {
 
 ; CHECK-LABEL: @mload_v4i32(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <4 x i32>*
-; CHECK-NEXT:  %1 = call <4 x i32> @llvm.masked.load.v4i32(<4 x i32>* %castvec, i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:  %1 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %castvec, i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x i32> undef)
 ; CHECK-NEXT:  ret <4 x i32> %1
 }
 
@@ -109,7 +109,7 @@ define <2 x i64> @mload_v2i64(i8* %f) {
 
 ; CHECK-LABEL: @mload_v2i64(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <2 x i64>*
-; CHECK-NEXT:  %1 = call <2 x i64> @llvm.masked.load.v2i64(<2 x i64>* %castvec, i32 1, <2 x i1> <i1 true, i1 false>, <2 x i64> undef)
+; CHECK-NEXT:  %1 = call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* %castvec, i32 1, <2 x i1> <i1 true, i1 false>, <2 x i64> undef)
 ; CHECK-NEXT:  ret <2 x i64> %1
 }
 
@@ -119,7 +119,7 @@ define <8 x i32> @mload_v8i32(i8* %f) {
 
 ; CHECK-LABEL: @mload_v8i32(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <8 x i32>*
-; CHECK-NEXT:  %1 = call <8 x i32> @llvm.masked.load.v8i32(<8 x i32>* %castvec, i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> undef)
+; CHECK-NEXT:  %1 = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* %castvec, i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> undef)
 ; CHECK-NEXT:  ret <8 x i32> %1
 }
 
@@ -129,7 +129,7 @@ define <4 x i64> @mload_v4i64(i8* %f) {
 
 ; CHECK-LABEL: @mload_v4i64(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <4 x i64>*
-; CHECK-NEXT:  %1 = call <4 x i64> @llvm.masked.load.v4i64(<4 x i64>* %castvec, i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i64> undef)
+; CHECK-NEXT:  %1 = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %castvec, i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i64> undef)
 ; CHECK-NEXT:  ret <4 x i64> %1
 }
 
@@ -187,7 +187,7 @@ define void @mstore_one_one(i8* %f, <4 x float> %v) {
 
 ; CHECK-LABEL: @mstore_one_one(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <4 x float>*
-; CHECK-NEXT:  call void @llvm.masked.store.v4f32(<4 x float> %v, <4 x float>* %castvec, i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
+; CHECK-NEXT:  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %v, <4 x float>* %castvec, i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
 ; CHECK-NEXT:  ret void
 }
 
@@ -199,7 +199,7 @@ define void @mstore_one_one_double(i8* %f, <2 x double> %v) {
 
 ; CHECK-LABEL: @mstore_one_one_double(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <2 x double>*
-; CHECK-NEXT:  call void @llvm.masked.store.v2f64(<2 x double> %v, <2 x double>* %castvec, i32 1, <2 x i1> <i1 true, i1 false>)
+; CHECK-NEXT:  call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> %v, <2 x double>* %castvec, i32 1, <2 x i1> <i1 true, i1 false>)
 ; CHECK-NEXT:  ret void
 }
 
@@ -211,7 +211,7 @@ define void @mstore_v8f32(i8* %f, <8 x float> %v) {
 
 ; CHECK-LABEL: @mstore_v8f32(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <8 x float>*
-; CHECK-NEXT:  call void @llvm.masked.store.v8f32(<8 x float> %v, <8 x float>* %castvec, i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:  call void @llvm.masked.store.v8f32.p0v8f32(<8 x float> %v, <8 x float>* %castvec, i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:  ret void
 }
 
@@ -221,7 +221,7 @@ define void @mstore_v4f64(i8* %f, <4 x double> %v) {
 
 ; CHECK-LABEL: @mstore_v4f64(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <4 x double>*
-; CHECK-NEXT:  call void @llvm.masked.store.v4f64(<4 x double> %v, <4 x double>* %castvec, i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>)
+; CHECK-NEXT:  call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> %v, <4 x double>* %castvec, i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:  ret void
 }
 
@@ -233,7 +233,7 @@ define void @mstore_v4i32(i8* %f, <4 x i32> %v) {
 
 ; CHECK-LABEL: @mstore_v4i32(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <4 x i32>*
-; CHECK-NEXT:  call void @llvm.masked.store.v4i32(<4 x i32> %v, <4 x i32>* %castvec, i32 1, <4 x i1> <i1 false, i1 false, i1 true, i1 true>)
+; CHECK-NEXT:  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %v, <4 x i32>* %castvec, i32 1, <4 x i1> <i1 false, i1 false, i1 true, i1 true>)
 ; CHECK-NEXT:  ret void
 }
 
@@ -243,7 +243,7 @@ define void @mstore_v2i64(i8* %f, <2 x i64> %v) {
 
 ; CHECK-LABEL: @mstore_v2i64(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <2 x i64>*
-; CHECK-NEXT:  call void @llvm.masked.store.v2i64(<2 x i64> %v, <2 x i64>* %castvec, i32 1, <2 x i1> <i1 true, i1 false>)
+; CHECK-NEXT:  call void @llvm.masked.store.v2i64.p0v2i64(<2 x i64> %v, <2 x i64>* %castvec, i32 1, <2 x i1> <i1 true, i1 false>)
 ; CHECK-NEXT:  ret void
 }
 
@@ -253,7 +253,7 @@ define void @mstore_v8i32(i8* %f, <8 x i32> %v) {
 
 ; CHECK-LABEL: @mstore_v8i32(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <8 x i32>*
-; CHECK-NEXT:  call void @llvm.masked.store.v8i32(<8 x i32> %v, <8 x i32>* %castvec, i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:  call void @llvm.masked.store.v8i32.p0v8i32(<8 x i32> %v, <8 x i32>* %castvec, i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:  ret void
 }
 
@@ -263,7 +263,7 @@ define void @mstore_v4i64(i8* %f, <4 x i64> %v) {
 
 ; CHECK-LABEL: @mstore_v4i64(
 ; CHECK-NEXT:  %castvec = bitcast i8* %f to <4 x i64>*
-; CHECK-NEXT:  call void @llvm.masked.store.v4i64(<4 x i64> %v, <4 x i64>* %castvec, i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>)
+; CHECK-NEXT:  call void @llvm.masked.store.v4i64.p0v4i64(<4 x i64> %v, <4 x i64>* %castvec, i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:  ret void
 }
 

@@ -77,6 +77,7 @@ class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
 
 public:
   GlobalsAAResult(GlobalsAAResult &&Arg);
+  ~GlobalsAAResult();
 
   static GlobalsAAResult analyzeModule(Module &M, const TargetLibraryInfo &TLI,
                                        CallGraph &CG);
@@ -117,7 +118,11 @@ private:
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
-struct GlobalsAA : AnalysisBase<GlobalsAA> {
+class GlobalsAA : public AnalysisInfoMixin<GlobalsAA> {
+  friend AnalysisInfoMixin<GlobalsAA>;
+  static char PassID;
+
+public:
   typedef GlobalsAAResult Result;
 
   GlobalsAAResult run(Module &M, AnalysisManager<Module> *AM);

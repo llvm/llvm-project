@@ -1067,6 +1067,20 @@ bool R600TargetLowering::isZero(SDValue Op) const {
   }
 }
 
+bool R600TargetLowering::isHWTrueValue(SDValue Op) const {
+  if (ConstantFPSDNode * CFP = dyn_cast<ConstantFPSDNode>(Op)) {
+    return CFP->isExactlyValue(1.0);
+  }
+  return isAllOnesConstant(Op);
+}
+
+bool R600TargetLowering::isHWFalseValue(SDValue Op) const {
+  if (ConstantFPSDNode * CFP = dyn_cast<ConstantFPSDNode>(Op)) {
+    return CFP->getValueAPF().isZero();
+  }
+  return isNullConstant(Op);
+}
+
 SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();

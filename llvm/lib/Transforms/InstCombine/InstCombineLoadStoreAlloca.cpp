@@ -523,7 +523,7 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
   if (!T->isAggregateType())
     return nullptr;
 
-  auto Name = LI.getName();
+  StringRef Name = LI.getName();
   assert(LI.getAlignment() && "Alignment must be set at this point");
 
   if (auto *ST = dyn_cast<StructType>(T)) {
@@ -547,11 +547,6 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
     if (!Align)
       Align = DL.getABITypeAlignment(ST);
 
-    SmallString<16> LoadName = Name;
-    LoadName += ".unpack";
-    SmallString<16> EltName = Name;
-    EltName += ".elt";
-
     auto *Addr = LI.getPointerOperand();
     auto *IdxType = Type::getInt32Ty(T->getContext());
     auto *Zero = ConstantInt::get(IdxType, 0);
@@ -563,9 +558,9 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
         ConstantInt::get(IdxType, i),
       };
       auto *Ptr = IC.Builder->CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices),
-                                                EltName);
+                                                Name + ".elt");
       auto EltAlign = MinAlign(Align, SL->getElementOffset(i));
-      auto *L = IC.Builder->CreateAlignedLoad(Ptr, EltAlign, LoadName);
+      auto *L = IC.Builder->CreateAlignedLoad(Ptr, EltAlign, Name + ".unpack");
       V = IC.Builder->CreateInsertValue(V, L, i);
     }
 
@@ -588,11 +583,6 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
     if (!Align)
       Align = DL.getABITypeAlignment(T);
 
-    SmallString<16> LoadName = Name;
-    LoadName += ".unpack";
-    SmallString<16> EltName = Name;
-    EltName += ".elt";
-
     auto *Addr = LI.getPointerOperand();
     auto *IdxType = Type::getInt64Ty(T->getContext());
     auto *Zero = ConstantInt::get(IdxType, 0);
@@ -605,9 +595,9 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
         ConstantInt::get(IdxType, i),
       };
       auto *Ptr = IC.Builder->CreateInBoundsGEP(AT, Addr, makeArrayRef(Indices),
-                                                EltName);
+                                                Name + ".elt");
       auto *L = IC.Builder->CreateAlignedLoad(Ptr, MinAlign(Align, Offset),
-                                              LoadName);
+                                              Name + ".unpack");
       V = IC.Builder->CreateInsertValue(V, L, i);
       Offset += EltSize;
     }

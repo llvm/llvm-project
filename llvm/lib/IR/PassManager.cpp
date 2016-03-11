@@ -20,6 +20,5 @@ template class PassManager<Function>;
 template class AnalysisManager<Module>;
 template class AnalysisManager<Function>;
 template class InnerAnalysisManagerProxy<FunctionAnalysisManager, Module>;
-template class AnalysisBase<FunctionAnalysisManagerModuleProxy>;
 template class OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>;
 }

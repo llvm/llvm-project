@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_AMDGPUISELLOWERING_H
-#define LLVM_LIB_TARGET_R600_AMDGPUISELLOWERING_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUISELLOWERING_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUISELLOWERING_H
 
 #include "llvm/Target/TargetLowering.h"
 
@@ -106,9 +106,6 @@ protected:
   SDValue LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool sign) const;
   void LowerUDIVREM64(SDValue Op, SelectionDAG &DAG,
                                     SmallVectorImpl<SDValue> &Results) const;
-  bool isHWTrueValue(SDValue Op) const;
-  bool isHWFalseValue(SDValue Op) const;
-
   /// The SelectionDAGBuilder will automatically promote function arguments
   /// with illegal types.  However, this does not work for the AMDGPU targets
   /// since the function arguments are stored in memory as these illegal types.
@@ -193,9 +190,7 @@ public:
                            unsigned &RefinementSteps) const override;
 
   virtual SDNode *PostISelFolding(MachineSDNode *N,
-                                  SelectionDAG &DAG) const {
-    return N;
-  }
+                                  SelectionDAG &DAG) const = 0;
 
   /// \brief Determine which of the bits specified in \p Mask are known to be
   /// either zero or one and return them in the \p KnownZero and \p KnownOne

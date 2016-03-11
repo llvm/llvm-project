@@ -74,7 +74,7 @@ void AssumptionCache::registerAssumption(CallInst *CI) {
 #endif
 }
 
-template class llvm::AnalysisBase<AssumptionAnalysis>;
+char AssumptionAnalysis::PassID;
 
 PreservedAnalyses AssumptionPrinterPass::run(Function &F,
                                              AnalysisManager<Function> *AM) {

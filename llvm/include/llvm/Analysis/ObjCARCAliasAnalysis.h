@@ -61,7 +61,11 @@ public:
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
-struct ObjCARCAA : AnalysisBase<ObjCARCAA> {
+class ObjCARCAA : public AnalysisInfoMixin<ObjCARCAA> {
+  friend AnalysisInfoMixin<ObjCARCAA>;
+  static char PassID;
+
+public:
   typedef ObjCARCAAResult Result;
 
   ObjCARCAAResult run(Function &F, AnalysisManager<Function> *AM);
