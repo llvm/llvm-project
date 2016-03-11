@@ -9,6 +9,8 @@
 
 // C Includes
 // C++ Includes
+#include <algorithm>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Event.h"
@@ -19,14 +21,10 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Host/Endian.h"
 #include "lldb/Target/Process.h"
-#include <algorithm>
 
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
-// Event constructor
-//----------------------------------------------------------------------
 Event::Event (Broadcaster *broadcaster, uint32_t event_type, EventData *data) :
     m_broadcaster_wp (broadcaster->GetBroadcasterImpl()),
     m_type (event_type),
@@ -40,13 +38,7 @@ Event::Event(uint32_t event_type, EventData *data) :
 {
 }
 
-
-//----------------------------------------------------------------------
-// Event destructor
-//----------------------------------------------------------------------
-Event::~Event ()
-{
-}
+Event::~Event() = default;
 
 void
 Event::Dump (Stream *s) const
@@ -77,30 +69,26 @@ Event::Dump (Stream *s) const
         s->Printf("%p Event: broadcaster = NULL, type = 0x%8.8x, data = ",
                   static_cast<const void*>(this), m_type);
 
-    if (m_data_ap.get() == NULL)
-        s->Printf ("<NULL>");
-    else
+    if (m_data_ap)
     {
         s->PutChar('{');
         m_data_ap->Dump (s);
         s->PutChar('}');
     }
+    else
+        s->Printf ("<NULL>");
 }
 
 void
 Event::DoOnRemoval ()
 {
-    if (m_data_ap.get())
+    if (m_data_ap)
         m_data_ap->DoOnRemoval (this);
 }
 
-EventData::EventData()
-{
-}
+EventData::EventData() = default;
 
-EventData::~EventData()
-{
-}
+EventData::~EventData() = default;
 
 void
 EventData::Dump (Stream *s) const
@@ -125,9 +113,7 @@ EventDataBytes::EventDataBytes (const void *src, size_t src_len) :
     SetBytes (src, src_len);
 }
 
-EventDataBytes::~EventDataBytes()
-{
-}
+EventDataBytes::~EventDataBytes() = default;
 
 const ConstString &
 EventDataBytes::GetFlavorString ()
@@ -150,10 +136,10 @@ EventDataBytes::Dump (Stream *s) const
     {
         s->Printf("\"%s\"", m_bytes.c_str());
     }
-    else if (m_bytes.size() > 0)
+    else if (!m_bytes.empty())
     {
         DataExtractor data;
-        data.SetData(&m_bytes[0], m_bytes.size(), endian::InlHostByteOrder());
+        data.SetData(m_bytes.data(), m_bytes.size(), endian::InlHostByteOrder());
         data.Dump(s, 0, eFormatBytes, 1, m_bytes.size(), 32, LLDB_INVALID_ADDRESS, 0, 0);
     }
 }
@@ -161,9 +147,7 @@ EventDataBytes::Dump (Stream *s) const
 const void *
 EventDataBytes::GetBytes() const
 {
-    if (m_bytes.empty())
-        return NULL;
-    return &m_bytes[0];
+    return (m_bytes.empty() ? nullptr : m_bytes.data());
 }
 
 size_t
@@ -175,7 +159,7 @@ EventDataBytes::GetByteSize() const
 void
 EventDataBytes::SetBytes (const void *src, size_t src_len)
 {
-    if (src && src_len > 0)
+    if (src != nullptr && src_len > 0)
         m_bytes.assign ((const char *)src, src_len);
     else
         m_bytes.clear();
@@ -184,27 +168,26 @@ EventDataBytes::SetBytes (const void *src, size_t src_len)
 void
 EventDataBytes::SetBytesFromCString (const char *cstr)
 {
-    if (cstr && cstr[0])
+    if (cstr != nullptr && cstr[0])
         m_bytes.assign (cstr);
     else
         m_bytes.clear();
 }
 
-
 const void *
 EventDataBytes::GetBytesFromEvent (const Event *event_ptr)
 {
     const EventDataBytes *e = GetEventDataFromEvent (event_ptr);
-    if (e)
+    if (e != nullptr)
         return e->GetBytes();
-    return NULL;
+    return nullptr;
 }
 
 size_t
 EventDataBytes::GetByteSizeFromEvent (const Event *event_ptr)
 {
     const EventDataBytes *e = GetEventDataFromEvent (event_ptr);
-    if (e)
+    if (e != nullptr)
         return e->GetByteSize();
     return 0;
 }
@@ -212,13 +195,13 @@ EventDataBytes::GetByteSizeFromEvent (const Event *event_ptr)
 const EventDataBytes *
 EventDataBytes::GetEventDataFromEvent (const Event *event_ptr)
 {
-    if (event_ptr)
+    if (event_ptr != nullptr)
     {
         const EventData *event_data = event_ptr->GetData();
         if (event_data && event_data->GetFlavor() == EventDataBytes::GetFlavorString())
             return static_cast <const EventDataBytes *> (event_data);
     }
-    return NULL;
+    return nullptr;
 }
 
 void
@@ -226,5 +209,3 @@ EventDataBytes::SwapBytes (std::string &new_bytes)
 {
     m_bytes.swap (new_bytes);
 }
-
-

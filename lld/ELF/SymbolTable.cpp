@@ -155,6 +155,11 @@ static void addBitcodeFile(IRMover &Mover, BitcodeFile &F,
     assert(GV);
     Keep.push_back(GV);
   }
+  for (StringRef S : F.getExtraKeeps()) {
+    GlobalValue *GV = M->getNamedValue(S);
+    assert(GV);
+    Keep.push_back(GV);
+  }
   Mover.move(std::move(M), Keep, [](GlobalValue &, IRMover::ValueAdder) {});
 }
 

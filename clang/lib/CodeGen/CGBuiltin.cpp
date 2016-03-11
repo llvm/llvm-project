@@ -1330,9 +1330,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       Args.add(RValue::get(llvm::Constant::getNullValue(VoidPtrTy)),
                getContext().VoidPtrTy);
     const CGFunctionInfo &FuncInfo =
-        CGM.getTypes().arrangeFreeFunctionCall(E->getType(), Args,
-                                               FunctionType::ExtInfo(),
-                                               RequiredArgs::All);
+        CGM.getTypes().arrangeBuiltinFunctionCall(E->getType(), Args);
     llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FuncInfo);
     llvm::Constant *Func = CGM.CreateRuntimeFunction(FTy, LibCallName);
     return EmitCall(FuncInfo, Func, ReturnValueSlot(), Args);

@@ -185,9 +185,17 @@ public:
   static bool classof(const InputFile *F);
   void parse(llvm::DenseSet<StringRef> &ComdatGroups);
   ArrayRef<SymbolBody *> getSymbols() { return SymbolBodies; }
+  ArrayRef<StringRef> getExtraKeeps() { return ExtraKeeps; }
 
 private:
   std::vector<SymbolBody *> SymbolBodies;
+  // Some symbols like llvm.global_ctors are internal to the IR and so
+  // don't show up in SymbolBodies, but must be kept when creating the
+  // combined LTO module. We track them here.
+  // We currently use a different Module for creating SymbolBody's vs when
+  // we are creating the combined LTO module, and so we can't store IR
+  // pointers directly and must rely on the IR names.
+  std::vector<StringRef> ExtraKeeps;
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver{Alloc};
 };

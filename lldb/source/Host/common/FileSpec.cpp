@@ -918,7 +918,7 @@ void
 FileSpec::GetPath(llvm::SmallVectorImpl<char> &path, bool denormalize) const
 {
     path.append(m_directory.GetStringRef().begin(), m_directory.GetStringRef().end());
-    if (m_directory)
+    if (m_directory && !(m_directory.GetLength() == 1 && m_directory.GetCString()[0] == '/'))
         path.insert(path.end(), '/');
     path.append(m_filename.GetStringRef().begin(), m_filename.GetStringRef().end());
     Normalize(path, m_syntax);
@@ -1331,17 +1331,9 @@ FileSpec::EnumerateDirectory
 FileSpec
 FileSpec::CopyByAppendingPathComponent (const char *new_path)  const
 {
-    const bool resolve = false;
-    if (m_filename.IsEmpty() && m_directory.IsEmpty())
-        return FileSpec(new_path,resolve);
-    StreamString stream;
-    if (m_filename.IsEmpty())
-        stream.Printf("%s/%s",m_directory.GetCString(),new_path);
-    else if (m_directory.IsEmpty())
-        stream.Printf("%s/%s",m_filename.GetCString(),new_path);
-    else
-        stream.Printf("%s/%s/%s",m_directory.GetCString(), m_filename.GetCString(),new_path);
-    return FileSpec(stream.GetData(),resolve);
+    FileSpec ret = *this;
+    ret.AppendPathComponent(new_path);
+    return ret;
 }
 
 FileSpec
@@ -1442,20 +1434,26 @@ void
 FileSpec::AppendPathComponent(const char *new_path)
 {
     if (!new_path) return;
-    const bool resolve = false;
-    if (m_filename.IsEmpty() && m_directory.IsEmpty())
-    {
-        SetFile(new_path, resolve);
-        return;
-    }
+
     StreamString stream;
-    if (m_filename.IsEmpty() || (m_filename.GetLength() == 1 && m_filename.GetCString()[0] == '.'))
-        stream.Printf("%s/%s", m_directory.GetCString(), new_path);
-    else if (m_directory.IsEmpty())
-        stream.Printf("%s/%s", m_filename.GetCString(), new_path);
-    else
-        stream.Printf("%s/%s/%s", m_directory.GetCString(), m_filename.GetCString(), new_path);
-    SetFile(stream.GetData(), resolve);
+    if (!m_directory.IsEmpty())
+    {
+        stream.PutCString(m_directory.GetCString());
+        if (m_directory.GetLength() != 1 || m_directory.GetCString()[0] != '/')
+            stream.PutChar('/');
+    }
+
+    if (!m_filename.IsEmpty())
+    {
+        stream.PutCString(m_filename.GetCString());
+        if (m_filename.GetLength() != 1 || m_filename.GetCString()[0] != '/')
+            stream.PutChar('/');
+    }
+
+    stream.PutCString(new_path);
+
+    const bool resolve = false;
+    SetFile(stream.GetData(), resolve, m_syntax);
 }
 
 void

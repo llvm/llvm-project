@@ -118,6 +118,8 @@ def strip_all : Flag<["--"], "strip-all">,
 def sysroot : Joined<["--"], "sysroot=">,
   HelpText<"Set the system root">;
 
+def threads : Joined<["--"], "threads">;
+
 def undefined : Joined<["--"], "undefined=">,
   HelpText<"Force undefined symbol during linking">;
 

@@ -66,5 +66,5 @@ const CGFunctionInfo &CodeGenABITypes::arrangeFreeFunctionCall(
     FunctionType::ExtInfo info, RequiredArgs args) {
   return CGM->getTypes().arrangeLLVMFunctionInfo(
       returnType, /*IsInstanceMethod=*/false, /*IsChainCall=*/false, argTypes,
-      info, args);
+      info, {}, args);
 }

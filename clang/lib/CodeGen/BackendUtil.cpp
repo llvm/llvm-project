@@ -42,6 +42,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include <memory>
 using namespace clang;

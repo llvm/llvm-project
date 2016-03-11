@@ -13,13 +13,15 @@
 #endif
 
 // C++ Includes
+#include <cerrno>
+#include <cstdarg>
+
 // Other libraries and framework includes
+#include "llvm/ADT/SmallVector.h"
+
 // Project includes
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
-#include "llvm/ADT/SmallVector.h"
-#include <cerrno>
-#include <cstdarg>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -31,9 +33,6 @@ Error::Error ():
 {
 }
 
-//----------------------------------------------------------------------
-// Default constructor
-//----------------------------------------------------------------------
 Error::Error(ValueType err, ErrorType type) :
     m_code (err),
     m_type (type),
@@ -41,12 +40,7 @@ Error::Error(ValueType err, ErrorType type) :
 {
 }
 
-Error::Error (const Error &rhs) :
-    m_code (rhs.m_code),
-    m_type (rhs.m_type),
-    m_string (rhs.m_string)
-{
-}
+Error::Error(const Error &rhs) = default;
 
 Error::Error (const char* format, ...):
     m_code (0),
@@ -75,7 +69,6 @@ Error::operator = (const Error& rhs)
     return *this;
 }
 
-
 //----------------------------------------------------------------------
 // Assignment operator
 //----------------------------------------------------------------------
@@ -88,9 +81,7 @@ Error::operator = (uint32_t err)
     return *this;
 }
 
-Error::~Error()
-{
-}
+Error::~Error() = default;
 
 //----------------------------------------------------------------------
 // Get the error value as a NULL C string. The error string will be
@@ -101,11 +92,11 @@ const char *
 Error::AsCString(const char *default_error_str) const
 {
     if (Success())
-        return NULL;
+        return nullptr;
 
     if (m_string.empty())
     {
-        const char *s = NULL;
+        const char *s = nullptr;
         switch (m_type)
         {
         case eErrorTypeMachKernel:
@@ -121,7 +112,7 @@ Error::AsCString(const char *default_error_str) const
         default:
             break;
         }
-        if (s)
+        if (s != nullptr)
             m_string.assign(s);
     }
     if (m_string.empty())
@@ -129,11 +120,10 @@ Error::AsCString(const char *default_error_str) const
         if (default_error_str)
             m_string.assign(default_error_str);
         else
-            return NULL;    // User wanted a NULL string back...
+            return nullptr;    // User wanted a nullptr string back...
     }
     return m_string.c_str();
 }
-
 
 //----------------------------------------------------------------------
 // Clear the error and any cached error string that it might contain.
@@ -186,27 +176,27 @@ Error::Fail () const
 void
 Error::PutToLog (Log *log, const char *format, ...)
 {
-    char *arg_msg = NULL;
+    char *arg_msg = nullptr;
     va_list args;
     va_start (args, format);
     ::vasprintf (&arg_msg, format, args);
     va_end (args);
 
-    if (arg_msg != NULL)
+    if (arg_msg != nullptr)
     {
         if (Fail())
         {
             const char *err_str = AsCString();
-            if (err_str == NULL)
+            if (err_str == nullptr)
                 err_str = "???";
 
             SetErrorStringWithFormat("error: %s err = %s (0x%8.8x)", arg_msg, err_str, m_code);
-            if (log)
+            if (log != nullptr)
                 log->Error("%s", m_string.c_str());
         }
         else
         {
-            if (log)
+            if (log != nullptr)
                 log->Printf("%s err = 0x%8.8x", arg_msg, m_code);
         }
         ::free (arg_msg);
@@ -227,20 +217,20 @@ Error::LogIfError (Log *log, const char *format, ...)
 {
     if (Fail())
     {
-        char *arg_msg = NULL;
+        char *arg_msg = nullptr;
         va_list args;
         va_start (args, format);
         ::vasprintf (&arg_msg, format, args);
         va_end (args);
 
-        if (arg_msg != NULL)
+        if (arg_msg != nullptr)
         {
             const char *err_str = AsCString();
-            if (err_str == NULL)
+            if (err_str == nullptr)
                 err_str = "???";
 
             SetErrorStringWithFormat("%s err = %s (0x%8.8x)", arg_msg, err_str, m_code);
-            if (log)
+            if (log != nullptr)
                 log->Error("%s", m_string.c_str());
 
             ::free (arg_msg);
@@ -273,7 +263,7 @@ Error::SetExpressionErrorWithFormat (lldb::ExpressionResults result, const char 
 {
     int length = 0;
     
-    if (format && format[0])
+    if (format != nullptr && format[0])
     {
         va_list args;
         va_start (args, format);
@@ -333,7 +323,7 @@ Error::SetErrorToGenericError ()
 void
 Error::SetErrorString (const char *err_str)
 {
-    if (err_str && err_str[0])
+    if (err_str != nullptr && err_str[0])
     {
         // If we have an error string, we should always at least have
         // an error set to a generic value.
@@ -354,7 +344,7 @@ Error::SetErrorString (const char *err_str)
 int
 Error::SetErrorStringWithFormat (const char *format, ...)
 {
-    if (format && format[0])
+    if (format != nullptr && format[0])
     {
         va_list args;
         va_start (args, format);
@@ -372,7 +362,7 @@ Error::SetErrorStringWithFormat (const char *format, ...)
 int
 Error::SetErrorStringWithVarArg (const char *format, va_list args)
 {
-    if (format && format[0])
+    if (format != nullptr && format[0])
     {
         // If we have an error string, we should always at least have
         // an error set to a generic value.
@@ -407,7 +397,6 @@ Error::SetErrorStringWithVarArg (const char *format, va_list args)
     return 0;
 }
 
-
 //----------------------------------------------------------------------
 // Returns true if the error code in this object is considered a
 // successful return value.
@@ -421,9 +410,5 @@ Error::Success() const
 bool
 Error::WasInterrupted() const
 {
-    if (m_type == eErrorTypePOSIX && m_code == EINTR)
-        return true;
-    else
-        return false;
+    return (m_type == eErrorTypePOSIX && m_code == EINTR);
 }
-

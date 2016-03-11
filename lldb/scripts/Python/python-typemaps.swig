@@ -534,7 +534,7 @@
 
 %typemap(out) FILE * {
    char mode[4] = {0};
-#ifdef __MACOSX__
+#ifdef __APPLE__
    int i = 0;
    short flags = $1->_flags;
 

@@ -2536,7 +2536,7 @@ ValueObject::GetExpressionPath (Stream &s, bool qualify_cxx_base_classes, GetExp
         if (!is_deref_of_parent)
         {
             ValueObject *non_base_class_parent = GetNonBaseClassParent();
-            if (non_base_class_parent)
+            if (non_base_class_parent && !non_base_class_parent->GetName().IsEmpty())
             {
                 CompilerType non_base_class_parent_compiler_type = non_base_class_parent->GetCompilerType();
                 if (non_base_class_parent_compiler_type)

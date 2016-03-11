@@ -590,9 +590,7 @@ static void emitStructGetterCall(CodeGenFunction &CGF, ObjCIvarDecl *ivar,
   args.add(RValue::get(CGF.Builder.getInt1(hasStrong)), Context.BoolTy);
 
   llvm::Value *fn = CGF.CGM.getObjCRuntime().GetGetStructFunction();
-  CGF.EmitCall(CGF.getTypes().arrangeFreeFunctionCall(Context.VoidTy, args,
-                                                      FunctionType::ExtInfo(),
-                                                      RequiredArgs::All),
+  CGF.EmitCall(CGF.getTypes().arrangeBuiltinFunctionCall(Context.VoidTy, args),
                fn, ReturnValueSlot(), args);
 }
 
@@ -856,10 +854,8 @@ static void emitCPPObjectAtomicGetterCall(CodeGenFunction &CGF,
   
   llvm::Value *copyCppAtomicObjectFn = 
     CGF.CGM.getObjCRuntime().GetCppAtomicObjectGetFunction();
-  CGF.EmitCall(CGF.getTypes().arrangeFreeFunctionCall(CGF.getContext().VoidTy,
-                                                      args,
-                                                      FunctionType::ExtInfo(),
-                                                      RequiredArgs::All),
+  CGF.EmitCall(
+      CGF.getTypes().arrangeBuiltinFunctionCall(CGF.getContext().VoidTy, args),
                copyCppAtomicObjectFn, ReturnValueSlot(), args);
 }
 
@@ -950,8 +946,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     // runtime already should have computed it to build the function.
     llvm::Instruction *CallInstruction;
     RValue RV = EmitCall(
-        getTypes().arrangeFreeFunctionCall(
-            propType, args, FunctionType::ExtInfo(), RequiredArgs::All),
+        getTypes().arrangeBuiltinFunctionCall(propType, args),
         getPropertyFn, ReturnValueSlot(), args, CGCalleeInfo(),
         &CallInstruction);
     if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(CallInstruction))
@@ -1067,10 +1062,8 @@ static void emitStructSetterCall(CodeGenFunction &CGF, ObjCMethodDecl *OMD,
   args.add(RValue::get(CGF.Builder.getFalse()), CGF.getContext().BoolTy);
 
   llvm::Value *copyStructFn = CGF.CGM.getObjCRuntime().GetSetStructFunction();
-  CGF.EmitCall(CGF.getTypes().arrangeFreeFunctionCall(CGF.getContext().VoidTy,
-                                                      args,
-                                                      FunctionType::ExtInfo(),
-                                                      RequiredArgs::All),
+  CGF.EmitCall(
+      CGF.getTypes().arrangeBuiltinFunctionCall(CGF.getContext().VoidTy, args),
                copyStructFn, ReturnValueSlot(), args);
 }
 
@@ -1105,10 +1098,8 @@ static void emitCPPObjectAtomicSetterCall(CodeGenFunction &CGF,
   
   llvm::Value *copyCppAtomicObjectFn = 
     CGF.CGM.getObjCRuntime().GetCppAtomicObjectSetFunction();
-  CGF.EmitCall(CGF.getTypes().arrangeFreeFunctionCall(CGF.getContext().VoidTy,
-                                                      args,
-                                                      FunctionType::ExtInfo(),
-                                                      RequiredArgs::All),
+  CGF.EmitCall(
+      CGF.getTypes().arrangeBuiltinFunctionCall(CGF.getContext().VoidTy, args),
                copyCppAtomicObjectFn, ReturnValueSlot(), args);
 }
 
@@ -1238,9 +1229,7 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
     if (setOptimizedPropertyFn) {
       args.add(RValue::get(arg), getContext().getObjCIdType());
       args.add(RValue::get(ivarOffset), getContext().getPointerDiffType());
-      EmitCall(getTypes().arrangeFreeFunctionCall(getContext().VoidTy, args,
-                                                  FunctionType::ExtInfo(),
-                                                  RequiredArgs::All),
+      EmitCall(getTypes().arrangeBuiltinFunctionCall(getContext().VoidTy, args),
                setOptimizedPropertyFn, ReturnValueSlot(), args);
     } else {
       args.add(RValue::get(ivarOffset), getContext().getPointerDiffType());
@@ -1251,9 +1240,7 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
                getContext().BoolTy);
       // FIXME: We shouldn't need to get the function info here, the runtime
       // already should have computed it to build the function.
-      EmitCall(getTypes().arrangeFreeFunctionCall(getContext().VoidTy, args,
-                                                  FunctionType::ExtInfo(),
-                                                  RequiredArgs::All),
+      EmitCall(getTypes().arrangeBuiltinFunctionCall(getContext().VoidTy, args),
                setPropertyFn, ReturnValueSlot(), args);
     }
     
@@ -1610,9 +1597,8 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   Args2.add(RValue::get(V), getContext().getObjCIdType());
   // FIXME: We shouldn't need to get the function info here, the runtime already
   // should have computed it to build the function.
-  EmitCall(CGM.getTypes().arrangeFreeFunctionCall(getContext().VoidTy, Args2,
-                                                  FunctionType::ExtInfo(),
-                                                  RequiredArgs::All),
+  EmitCall(
+          CGM.getTypes().arrangeBuiltinFunctionCall(getContext().VoidTy, Args2),
            EnumerationMutationFn, ReturnValueSlot(), Args2);
 
   // Otherwise, or if the mutation function returns, just continue.
@@ -3210,8 +3196,8 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   ImplicitParamDecl srcDecl(getContext(), FD, SourceLocation(), nullptr, SrcTy);
   args.push_back(&srcDecl);
 
-  const CGFunctionInfo &FI = CGM.getTypes().arrangeFreeFunctionDeclaration(
-      C.VoidTy, args, FunctionType::ExtInfo(), RequiredArgs::All);
+  const CGFunctionInfo &FI =
+    CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
 
   llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
   
@@ -3291,8 +3277,8 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
   ImplicitParamDecl srcDecl(getContext(), FD, SourceLocation(), nullptr, SrcTy);
   args.push_back(&srcDecl);
 
-  const CGFunctionInfo &FI = CGM.getTypes().arrangeFreeFunctionDeclaration(
-      C.VoidTy, args, FunctionType::ExtInfo(), RequiredArgs::All);
+  const CGFunctionInfo &FI =
+    CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
 
   llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
   
