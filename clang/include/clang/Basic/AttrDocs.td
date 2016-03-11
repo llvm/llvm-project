@@ -1860,6 +1860,12 @@ arguments, with arbitrary offsets.
   }];
 }
 
+def SwiftDocs : DocumentationCategory<"Controlling Swift Import"> {
+  let Content = [{
+Clang supports additional attributes for controlling how APIs are imported into Swift.
+  }];
+}
+
 def NSErrorDomainDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -1867,9 +1873,11 @@ The ``ns_error_domain`` attribute indicates a global constant representing the e
   }];
 }
 
-def SwiftDocs : DocumentationCategory<"Controlling Swift Import"> {
+
+def SwiftBridgeDocs : Documentation {
+  let Category = SwiftDocs;
   let Content = [{
-Clang supports additional attributes for controlling how APIs are imported into Swift.
+The ``swift_bridge`` attribute indicates that the type to which the attribute appertains is bridged to the named Swift type. 
   }];
 }
 

@@ -239,6 +239,22 @@ static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info));
 }
 
+/// Process API notes for an Objective-C class.
+static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
+                            const api_notes::ObjCContextInfo &Info) {
+  // swift_bridge
+  if (!Info.getSwiftBridge().empty() &&
+      !D->getAttr<SwiftBridgeAttr>()) {
+    D->addAttr(
+      SwiftBridgeAttr::CreateImplicit(S.Context,
+                                      CopyString(S.Context,
+                                                 Info.getSwiftBridge())));
+  }
+
+  // Handle information common to Objective-C classes and protocols.
+  ProcessAPINotes(S, static_cast<clang::ObjCContainerDecl *>(D), Info);
+}
+
 /// Process API notes that are associated with this declaration, mapping them
 /// to attributes as appropriate.
 void Sema::ProcessAPINotes(Decl *D) {
