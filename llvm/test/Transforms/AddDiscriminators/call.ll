@@ -8,7 +8,7 @@
 ; #5 }
 
 ; Function Attrs: uwtable
-define void @_Z3foov() #0 {
+define void @_Z3foov() #0 !dbg !4 {
   call void @_Z3barv(), !dbg !10
 ; CHECK:  call void @_Z3barv(), !dbg ![[CALL0:[0-9]+]]
   call void @_Z3barv(), !dbg !11

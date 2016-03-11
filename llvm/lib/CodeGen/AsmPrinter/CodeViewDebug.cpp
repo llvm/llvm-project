@@ -193,7 +193,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV) {
   assert(FI.End && "Don't know where the function ends?");
 
   StringRef FuncName;
-  if (auto *SP = getDISubprogram(GV))
+  if (auto *SP = GV->getSubprogram())
     FuncName = SP->getDisplayName();
 
   // If our DISubprogram name is empty, use the mangled name.
