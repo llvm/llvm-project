@@ -656,13 +656,7 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
 
 CodeGenAction::CodeGenAction(unsigned _Act, LLVMContext *_VMContext)
     : Act(_Act), VMContext(_VMContext ? _VMContext : new LLVMContext),
-      OwnsVMContext(!_VMContext) {
-#ifdef NDEBUG
-  // FIXME: change this to be controlled by a cc1 flag that the driver passes,
-  // on the model of --disable-free
-  VMContext->setDiscardValueNames(true);
-#endif
-}
+      OwnsVMContext(!_VMContext) {}
 
 CodeGenAction::~CodeGenAction() {
   TheModule.reset();
