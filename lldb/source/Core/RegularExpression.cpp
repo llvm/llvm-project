@@ -7,11 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <string.h>
 #include "lldb/Core/RegularExpression.h"
-#include "llvm/ADT/StringRef.h"
-#include "lldb/Core/Error.h"
 
+// C Includes
+// C++ Includes
+#include <cstring>
+
+// Other libraries and framework includes
+#include "llvm/ADT/StringRef.h"
+
+// Project includes
+#include "lldb/Core/Error.h"
 
 //----------------------------------------------------------------------
 // Enable enhanced mode if it is available. This allows for things like
@@ -26,15 +32,12 @@
 
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
-// Default constructor
-//----------------------------------------------------------------------
 RegularExpression::RegularExpression() :
     m_re(),
     m_comp_err (1),
     m_preg()
 {
-    memset(&m_preg,0,sizeof(m_preg));
+    memset(&m_preg, 0, sizeof(m_preg));
 }
 
 //----------------------------------------------------------------------
@@ -63,6 +66,7 @@ RegularExpression::operator= (const RegularExpression &rhs)
         Compile (rhs.GetText());
     return *this;
 }
+
 //----------------------------------------------------------------------
 // Destructor
 //
@@ -117,7 +121,7 @@ bool
 RegularExpression::Execute (const char* s, Match *match) const
 {
     int err = 1;
-    if (s != NULL && m_comp_err == 0)
+    if (s != nullptr && m_comp_err == 0)
     {
         if (match)
         {
@@ -129,11 +133,11 @@ RegularExpression::Execute (const char* s, Match *match) const
         }
         else
         {
-            err = ::regexec (&m_preg,
-                             s,
-                             0,
-                             NULL,
-                             0);
+            err = ::regexec(&m_preg,
+                            s,
+                            0,
+                            nullptr,
+                            0);
         }
     }
     
@@ -202,7 +206,6 @@ RegularExpression::Match::GetMatchSpanningIndices (const char* s, uint32_t idx1,
     return false;
 }
 
-
 //----------------------------------------------------------------------
 // Returns true if the regular expression compiled and is ready
 // for execution.
@@ -220,9 +223,7 @@ RegularExpression::IsValid () const
 const char*
 RegularExpression::GetText () const
 {
-    if (m_re.empty())
-        return NULL;
-    return m_re.c_str();
+    return (m_re.empty() ? nullptr : m_re.c_str());
 }
 
 //----------------------------------------------------------------------

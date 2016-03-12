@@ -23,7 +23,9 @@ class CodeGenFunction;
 /// \brief This is an IRBuilder insertion helper that forwards to
 /// CodeGenFunction::InsertHelper, which adds necessary metadata to
 /// instructions.
-class CGBuilderInserter : protected llvm::IRBuilderDefaultInserter {
+template <bool PreserveNames>
+class CGBuilderInserter
+    : protected llvm::IRBuilderDefaultInserter<PreserveNames> {
 public:
   CGBuilderInserter() = default;
   explicit CGBuilderInserter(CodeGenFunction *CGF) : CGF(CGF) {}
@@ -37,10 +39,17 @@ private:
   CodeGenFunction *CGF = nullptr;
 };
 
-typedef CGBuilderInserter CGBuilderInserterTy;
+// Don't preserve names on values in an optimized build.
+#ifdef NDEBUG
+#define PreserveNames false
+#else
+#define PreserveNames true
+#endif
 
-typedef llvm::IRBuilder<llvm::ConstantFolder, CGBuilderInserterTy>
-    CGBuilderBaseTy;
+typedef CGBuilderInserter<PreserveNames> CGBuilderInserterTy;
+
+typedef llvm::IRBuilder<PreserveNames, llvm::ConstantFolder,
+                        CGBuilderInserterTy> CGBuilderBaseTy;
 
 class CGBuilderTy : public CGBuilderBaseTy {
   /// Storing a reference to the type cache here makes it a lot easier
@@ -295,6 +304,8 @@ public:
                         Dest.getAlignment().getQuantity(), IsVolatile);
   }
 };
+
+#undef PreserveNames
 
 }  // end namespace CodeGen
 }  // end namespace clang
