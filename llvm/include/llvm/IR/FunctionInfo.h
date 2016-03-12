@@ -88,6 +88,8 @@ protected:
       : Kind(K), Linkage(Linkage) {}
 
 public:
+  virtual ~GlobalValueSummary() = default;
+
   /// Which kind of summary subclass this is.
   SummaryKind getSummaryKind() const { return Kind; }
 

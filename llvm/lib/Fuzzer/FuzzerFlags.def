@@ -14,7 +14,9 @@ FUZZER_FLAG_INT(verbosity, 1, "Verbosity level.")
 FUZZER_FLAG_UNSIGNED(seed, 0, "Random seed. If 0, seed is generated.")
 FUZZER_FLAG_INT(runs, -1,
             "Number of individual test runs (-1 for infinite runs).")
-FUZZER_FLAG_INT(max_len, 64, "Maximum length of the test input.")
+FUZZER_FLAG_INT(max_len, 0, "Maximum length of the test input. "
+    "If 0, libFuzzer tries to guess a good value based on the corpus "
+    "and reports it. ")
 FUZZER_FLAG_INT(cross_over, 1, "If 1, cross over inputs.")
 FUZZER_FLAG_INT(mutate_depth, 5,
             "Apply this number of consecutive mutations to each input.")

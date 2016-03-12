@@ -131,7 +131,7 @@ static bool ParseOneFlag(const char *Param) {
     static bool PrintedWarning = false;
     if (!PrintedWarning) {
       PrintedWarning = true;
-      Printf("WARNING: libFuzzer ignores flags that start with '--'\n");
+      Printf("INFO: libFuzzer ignores flags that start with '--'\n");
     }
     return true;
   }
@@ -269,6 +269,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
   if (Flags.workers > 0 && Flags.jobs > 0)
     return RunInMultipleProcesses(Args, Flags.workers, Flags.jobs);
 
+  const size_t kMaxSaneLen = 1 << 20;
   Fuzzer::FuzzingOptions Options;
   Options.Verbosity = Flags.verbosity;
   Options.MaxLen = Flags.max_len;
@@ -315,7 +316,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
     Seed = (std::chrono::system_clock::now().time_since_epoch().count() << 10) +
            getpid();
   if (Flags.verbosity)
-    Printf("Seed: %u\n", Seed);
+    Printf("INFO: Seed: %u\n", Seed);
 
   Random Rand(Seed);
   MutationDispatcher MD(Rand);
@@ -355,16 +356,24 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
     exit(0);
   }
 
+
   if (Flags.merge) {
+    if (Options.MaxLen == 0)
+      F.SetMaxLen(kMaxSaneLen);
     F.Merge(*Inputs);
     exit(0);
   }
 
+  size_t TemporaryMaxLen = Options.MaxLen ? Options.MaxLen : kMaxSaneLen;
 
-  F.RereadOutputCorpus();
+  F.RereadOutputCorpus(TemporaryMaxLen);
   for (auto &inp : *Inputs)
     if (inp != Options.OutputCorpus)
-      F.ReadDir(inp, nullptr, Options.MaxLen);
+      F.ReadDir(inp, nullptr, TemporaryMaxLen);
+
+  if (Options.MaxLen == 0)
+    F.SetMaxLen(
+        std::min(std::max(64UL, 2 * F.MaxUnitSizeInCorpus()), kMaxSaneLen));
 
   if (F.CorpusSize() == 0)
     F.AddToCorpus(Unit());  // Can't fuzz empty corpus, so add an empty input.

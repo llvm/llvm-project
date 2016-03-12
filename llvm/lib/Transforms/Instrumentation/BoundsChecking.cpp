@@ -36,7 +36,7 @@ STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
-typedef IRBuilder<TargetFolder> BuilderTy;
+typedef IRBuilder<true, TargetFolder> BuilderTy;
 
 namespace {
   struct BoundsChecking : public FunctionPass {

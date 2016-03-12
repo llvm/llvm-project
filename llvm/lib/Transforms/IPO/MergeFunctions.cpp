@@ -1646,7 +1646,7 @@ void MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
 // Helper for writeThunk,
 // Selects proper bitcast operation,
 // but a bit simpler then CastInst::getCastOpcode.
-static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
+static Value *createCast(IRBuilder<false> &Builder, Value *V, Type *DestTy) {
   Type *SrcTy = V->getType();
   if (SrcTy->isStructTy()) {
     assert(DestTy->isStructTy());
@@ -1689,7 +1689,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   Function *NewG = Function::Create(G->getFunctionType(), G->getLinkage(), "",
                                     G->getParent());
   BasicBlock *BB = BasicBlock::Create(F->getContext(), "", NewG);
-  IRBuilder<> Builder(BB);
+  IRBuilder<false> Builder(BB);
 
   SmallVector<Value *, 16> Args;
   unsigned i = 0;

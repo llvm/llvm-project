@@ -3054,7 +3054,7 @@ combineInstructionsOverFunction(Function &F, InstCombineWorklist &Worklist,
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.
-  IRBuilder<TargetFolder, InstCombineIRInserter> Builder(
+  IRBuilder<true, TargetFolder, InstCombineIRInserter> Builder(
       F.getContext(), TargetFolder(DL), InstCombineIRInserter(Worklist, &AC));
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered

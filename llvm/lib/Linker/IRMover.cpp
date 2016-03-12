@@ -345,10 +345,10 @@ class IRLinker;
 /// speeds up linking for modules with many/ lazily linked functions of which
 /// few get used.
 class GlobalValueMaterializer final : public ValueMaterializer {
-  IRLinker *TheIRLinker;
+  IRLinker &TheIRLinker;
 
 public:
-  GlobalValueMaterializer(IRLinker *TheIRLinker) : TheIRLinker(TheIRLinker) {}
+  GlobalValueMaterializer(IRLinker &TheIRLinker) : TheIRLinker(TheIRLinker) {}
   Value *materializeDeclFor(Value *V) override;
   void materializeInitFor(GlobalValue *New, GlobalValue *Old) override;
   Metadata *mapTemporaryMetadata(Metadata *MD) override;
@@ -358,10 +358,10 @@ public:
 };
 
 class LocalValueMaterializer final : public ValueMaterializer {
-  IRLinker *TheIRLinker;
+  IRLinker &TheIRLinker;
 
 public:
-  LocalValueMaterializer(IRLinker *TheIRLinker) : TheIRLinker(TheIRLinker) {}
+  LocalValueMaterializer(IRLinker &TheIRLinker) : TheIRLinker(TheIRLinker) {}
   Value *materializeDeclFor(Value *V) override;
   void materializeInitFor(GlobalValue *New, GlobalValue *Old) override;
   Metadata *mapTemporaryMetadata(Metadata *MD) override;
@@ -376,6 +376,7 @@ class IRLinker {
   Module &DstM;
   std::unique_ptr<Module> SrcM;
 
+  /// See IRMover::move().
   std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor;
 
   TypeMapTy TypeMap;
@@ -477,6 +478,11 @@ class IRLinker {
   Constant *linkAppendingVarProto(GlobalVariable *DstGV,
                                   const GlobalVariable *SrcGV);
 
+  /// Given the GlobaValue \p SGV in the source module, and the matching
+  /// GlobalValue \p DGV (if any), return true if the linker will pull \p SGV
+  /// into the destination module.
+  ///
+  /// Note this code may call the client-provided \p AddLazyFor.
   bool shouldLink(GlobalValue *DGV, GlobalValue &SGV);
   Constant *linkGlobalValueProto(GlobalValue *GV, bool ForAlias);
 
@@ -518,7 +524,7 @@ public:
            DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr,
            bool IsMetadataLinkingPostpass = false)
       : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(AddLazyFor), TypeMap(Set),
-        GValMaterializer(this), LValMaterializer(this),
+        GValMaterializer(*this), LValMaterializer(*this),
         IsMetadataLinkingPostpass(IsMetadataLinkingPostpass),
         ValIDToTempMDMap(ValIDToTempMDMap) {
     for (GlobalValue *GV : ValuesToLink)
@@ -590,47 +596,47 @@ static void forceRenaming(GlobalValue *GV, StringRef Name) {
 }
 
 Value *GlobalValueMaterializer::materializeDeclFor(Value *V) {
-  return TheIRLinker->materializeDeclFor(V, false);
+  return TheIRLinker.materializeDeclFor(V, false);
 }
 
 void GlobalValueMaterializer::materializeInitFor(GlobalValue *New,
                                                  GlobalValue *Old) {
-  TheIRLinker->materializeInitFor(New, Old, false);
+  TheIRLinker.materializeInitFor(New, Old, false);
 }
 
 Metadata *GlobalValueMaterializer::mapTemporaryMetadata(Metadata *MD) {
-  return TheIRLinker->mapTemporaryMetadata(MD);
+  return TheIRLinker.mapTemporaryMetadata(MD);
 }
 
 void GlobalValueMaterializer::replaceTemporaryMetadata(const Metadata *OrigMD,
                                                        Metadata *NewMD) {
-  TheIRLinker->replaceTemporaryMetadata(OrigMD, NewMD);
+  TheIRLinker.replaceTemporaryMetadata(OrigMD, NewMD);
 }
 
 bool GlobalValueMaterializer::isMetadataNeeded(Metadata *MD) {
-  return TheIRLinker->isMetadataNeeded(MD);
+  return TheIRLinker.isMetadataNeeded(MD);
 }
 
 Value *LocalValueMaterializer::materializeDeclFor(Value *V) {
-  return TheIRLinker->materializeDeclFor(V, true);
+  return TheIRLinker.materializeDeclFor(V, true);
 }
 
 void LocalValueMaterializer::materializeInitFor(GlobalValue *New,
                                                 GlobalValue *Old) {
-  TheIRLinker->materializeInitFor(New, Old, true);
+  TheIRLinker.materializeInitFor(New, Old, true);
 }
 
 Metadata *LocalValueMaterializer::mapTemporaryMetadata(Metadata *MD) {
-  return TheIRLinker->mapTemporaryMetadata(MD);
+  return TheIRLinker.mapTemporaryMetadata(MD);
 }
 
 void LocalValueMaterializer::replaceTemporaryMetadata(const Metadata *OrigMD,
                                                       Metadata *NewMD) {
-  TheIRLinker->replaceTemporaryMetadata(OrigMD, NewMD);
+  TheIRLinker.replaceTemporaryMetadata(OrigMD, NewMD);
 }
 
 bool LocalValueMaterializer::isMetadataNeeded(Metadata *MD) {
-  return TheIRLinker->isMetadataNeeded(MD);
+  return TheIRLinker.isMetadataNeeded(MD);
 }
 
 Value *IRLinker::materializeDeclFor(Value *V, bool ForAlias) {
@@ -1034,8 +1040,15 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
   if (DoneLinkingBodies)
     return false;
 
-  AddLazyFor(SGV, [this](GlobalValue &GV) { maybeAdd(&GV); });
-  return ValuesToLink.count(&SGV);
+
+  // Callback to the client to give a chance to lazily add the Global to the
+  // list of value to link.
+  bool LazilyAdded = false;
+  AddLazyFor(SGV, [this, &LazilyAdded](GlobalValue &GV) {
+    maybeAdd(&GV);
+    LazilyAdded = true;
+  });
+  return LazilyAdded;
 }
 
 Constant *IRLinker::linkGlobalValueProto(GlobalValue *SGV, bool ForAlias) {
@@ -1054,9 +1067,8 @@ Constant *IRLinker::linkGlobalValueProto(GlobalValue *SGV, bool ForAlias) {
       return cast<Constant>(I->second);
   }
 
-  DGV = nullptr;
-  if (ShouldLink || !ForAlias)
-    DGV = getLinkedToGlobal(SGV);
+  if (!ShouldLink && ForAlias)
+    DGV = nullptr;
 
   // Handle the ultra special appending linkage case first.
   assert(!DGV || SGV->hasAppendingLinkage() == DGV->hasAppendingLinkage());

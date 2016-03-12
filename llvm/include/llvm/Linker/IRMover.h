@@ -58,7 +58,15 @@ public:
   IRMover(Module &M);
 
   typedef std::function<void(GlobalValue &)> ValueAdder;
-  /// Move in the provide values.
+
+  /// Move in the provide values in \p ValuesToLink from \p Src.
+  ///
+  /// - \p AddLazyFor is a call back that the IRMover will call when a global
+  ///   value is referenced by one of the ValuesToLink (transitively) but was
+  ///   not present in ValuesToLink. The GlobalValue and a ValueAdder callback
+  ///   are passed as an argument, and the callback is expected to be called
+  ///   if the GlobalValue needs to be added to the \p ValuesToLink and linked.
+  ///
   /// Returns true on error.
   bool move(std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
             std::function<void(GlobalValue &GV, ValueAdder Add)> AddLazyFor,

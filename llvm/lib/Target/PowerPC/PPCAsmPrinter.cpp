@@ -82,6 +82,12 @@ public:
 
     MCSymbol *lookUpOrCreateTOCEntry(MCSymbol *Sym);
 
+    virtual bool doInitialization(Module &M) override {
+      if (!TOC.empty())
+        TOC.clear();
+      return AsmPrinter::doInitialization(M);
+    }
+
     void EmitInstruction(const MachineInstr *MI) override;
 
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);

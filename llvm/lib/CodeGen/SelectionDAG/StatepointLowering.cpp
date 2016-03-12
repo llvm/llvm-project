@@ -245,15 +245,17 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
 /// is not required for correctness.  It's purpose is to reduce the size of
 /// StackMap section.  It has no effect on the number of spill slots required
 /// or the actual lowering.
-static void removeDuplicatesGCPtrs(SmallVectorImpl<const Value *> &Bases,
-                                   SmallVectorImpl<const Value *> &Ptrs,
-                                   SmallVectorImpl<const Value *> &Relocs,
-                                   SelectionDAGBuilder &Builder) {
+static void
+removeDuplicatesGCPtrs(SmallVectorImpl<const Value *> &Bases,
+                       SmallVectorImpl<const Value *> &Ptrs,
+                       SmallVectorImpl<const GCRelocateInst *> &Relocs,
+                       SelectionDAGBuilder &Builder) {
 
   // This is horribly inefficient, but I don't care right now
   SmallSet<SDValue, 32> Seen;
 
-  SmallVector<const Value *, 64> NewBases, NewPtrs, NewRelocs;
+  SmallVector<const Value *, 64> NewBases, NewPtrs;
+  SmallVector<const GCRelocateInst *, 64> NewRelocs;
   for (size_t i = 0, e = Ptrs.size(); i < e; i++) {
     SDValue SD = Builder.getValue(Ptrs[i]);
     // Only add non-duplicates
@@ -391,8 +393,8 @@ lowerCallFromStatepoint(ImmutableStatepoint ISP, const BasicBlock *EHPadBB,
 /// other i.e Bases[i], Ptrs[i] are from the same gcrelocate call
 static void getIncomingStatepointGCValues(
     SmallVectorImpl<const Value *> &Bases, SmallVectorImpl<const Value *> &Ptrs,
-    SmallVectorImpl<const Value *> &Relocs, ImmutableStatepoint StatepointSite,
-    SelectionDAGBuilder &Builder) {
+    SmallVectorImpl<const GCRelocateInst *> &Relocs,
+    ImmutableStatepoint StatepointSite, SelectionDAGBuilder &Builder) {
   for (const GCRelocateInst *Relocate : StatepointSite.getRelocates()) {
     Relocs.push_back(Relocate);
     Bases.push_back(Relocate->getBasePtr());
@@ -506,7 +508,8 @@ static void lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // Lower the deopt and gc arguments for this statepoint.  Layout will
   // be: deopt argument length, deopt arguments.., gc arguments...
 
-  SmallVector<const Value *, 64> Bases, Ptrs, Relocations;
+  SmallVector<const Value *, 64> Bases, Ptrs;
+  SmallVector<const GCRelocateInst *, 64> Relocations;
   getIncomingStatepointGCValues(Bases, Ptrs, Relocations, StatepointSite,
                                 Builder);
 
@@ -531,8 +534,8 @@ static void lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
              "non gc managed derived pointer found in statepoint");
     }
   }
-  for (const Value *V : Relocations) {
-    auto Opt = S.isGCManagedPointer(V->getType()->getScalarType());
+  for (const GCRelocateInst *GCR : Relocations) {
+    auto Opt = S.isGCManagedPointer(GCR->getType()->getScalarType());
     if (Opt.hasValue()) {
       assert(Opt.getValue() && "non gc managed pointer relocated");
     }

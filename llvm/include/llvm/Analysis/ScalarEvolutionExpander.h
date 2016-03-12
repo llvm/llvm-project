@@ -80,7 +80,7 @@ namespace llvm {
     /// already in "expanded" form.
     bool LSRMode;
 
-    typedef IRBuilder<TargetFolder> BuilderType;
+    typedef IRBuilder<true, TargetFolder> BuilderType;
     BuilderType Builder;
 
 #ifndef NDEBUG
