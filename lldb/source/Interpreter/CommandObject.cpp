@@ -1027,6 +1027,31 @@ CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy)
     return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
 }
 
+Thread *
+CommandObject::GetDefaultThread()
+{
+    Thread *thread_to_use = m_exe_ctx.GetThreadPtr();
+    if (thread_to_use)
+        return thread_to_use;
+    
+    Process *process = m_exe_ctx.GetProcessPtr();
+    if (!process)
+    {
+        Target *target = m_exe_ctx.GetTargetPtr();
+        if (!target)
+        {
+            target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+        }
+        if (target)
+            process = target->GetProcessSP().get();
+    }
+
+    if (process)
+        return process->GetThreadList().GetSelectedThread().get();
+    else
+        return nullptr;
+}
+
 bool
 CommandObjectParsed::Execute (const char *args_string, CommandReturnObject &result)
 {

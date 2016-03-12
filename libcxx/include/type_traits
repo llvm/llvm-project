@@ -399,7 +399,7 @@ template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp
 // addressof
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_NO_CFI _LIBCPP_INLINE_VISIBILITY
 _Tp*
 addressof(_Tp& __x) _NOEXCEPT
 {

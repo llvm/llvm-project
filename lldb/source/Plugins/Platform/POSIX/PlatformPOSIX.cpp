@@ -867,7 +867,7 @@ PlatformPOSIX::EvaluateLibdlExpression(lldb_private::Process* process,
             return error;
     }
 
-    ThreadSP thread_sp(process->GetThreadList().GetSelectedThread());
+    ThreadSP thread_sp(process->GetThreadList().GetExpressionExecutionThread());
     if (!thread_sp)
         return Error("Selected thread isn't valid");
 

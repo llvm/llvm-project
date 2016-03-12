@@ -148,7 +148,7 @@ MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address)
     ProcessSP process_sp = m_process_wp.lock();
     if (process_sp)
     {
-        ThreadSP thread_sp = process_sp->GetThreadList().GetSelectedThread();
+        ThreadSP thread_sp = process_sp->GetThreadList().GetExpressionExecutionThread();
 
         if (thread_sp)
         {

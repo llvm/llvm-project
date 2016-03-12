@@ -509,7 +509,8 @@ protected:
 
         if (command.GetArgumentCount() == 0)
         {
-            thread = process->GetThreadList().GetSelectedThread().get();
+            thread = GetDefaultThread();
+
             if (thread == nullptr)
             {
                 result.AppendError ("no selected thread in process");
@@ -919,7 +920,7 @@ public:
                 // lock before calling process->Resume below.
                 Mutex::Locker locker (process->GetThreadList().GetMutex());
                 const uint32_t num_threads = process->GetThreadList().GetSize();
-                Thread *current_thread = process->GetThreadList().GetSelectedThread().get();
+                Thread *current_thread = GetDefaultThread();
                 if (current_thread == nullptr)
                 {
                     result.AppendError ("the process doesn't have a current thread");
@@ -1170,7 +1171,7 @@ protected:
 
             if (m_options.m_thread_idx == LLDB_INVALID_THREAD_ID)
             {
-                thread = process->GetThreadList().GetSelectedThread().get();
+                thread = GetDefaultThread();
             }
             else
             {

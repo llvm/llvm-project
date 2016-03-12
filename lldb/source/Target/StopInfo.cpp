@@ -371,6 +371,10 @@ protected:
                     // running all the callbacks.
 
                     m_should_stop = false;
+                    
+                    // We don't select threads as we go through them testing breakpoint conditions and running commands.
+                    // So we need to set the thread for expression evaluation here:
+                    ThreadList::ExpressionExecutionThreadPusher thread_pusher(thread_sp);
 
                     ExecutionContext exe_ctx (thread_sp->GetStackFrameAtIndex(0));
                     Process *process  = exe_ctx.GetProcessPtr();

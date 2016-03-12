@@ -1229,7 +1229,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     
     ExecutionContext exe_ctx;
     
-    ThreadSP thread_sp = process->GetThreadList().GetSelectedThread();
+    ThreadSP thread_sp = process->GetThreadList().GetExpressionExecutionThread();
     
     if (!thread_sp)
         return false;
@@ -1473,7 +1473,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     
     ExecutionContext exe_ctx;
     
-    ThreadSP thread_sp = process->GetThreadList().GetSelectedThread();
+    ThreadSP thread_sp = process->GetThreadList().GetExpressionExecutionThread();
     
     if (!thread_sp)
         return DescriptorMapUpdateResult::Fail();
