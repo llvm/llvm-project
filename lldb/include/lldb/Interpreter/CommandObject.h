@@ -481,6 +481,12 @@ protected:
     // is present you want to prime the dummy target with entities that will be copied over to new targets.
     Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
     Target *GetDummyTarget();
+    
+    // If a command needs to use the "current" thread, use this call.
+    // Command objects will have an ExecutionContext to use, and that may or may not have a thread in it.  If it
+    // does, you should use that by default, if not, then use the ExecutionContext's target's selected thread, etc...
+    // This call insulates you from the details of this calculation.
+    Thread *GetDefaultThread();
 
     //------------------------------------------------------------------
     /// Check the command to make sure anything required by this

@@ -140,13 +140,18 @@ lldb_private::formatters::GetViableFrame (ExecutionContext exe_ctx)
     if (frame)
         return frame;
     
+    Thread *thread = exe_ctx.GetThreadPtr();
+    if (thread)
+        return thread->GetSelectedFrame().get();
+
     Process* process = exe_ctx.GetProcessPtr();
     if (!process)
         return nullptr;
     
-    ThreadSP thread_sp(process->GetThreadList().GetSelectedThread());
-    if (thread_sp)
-        return thread_sp->GetSelectedFrame().get();
+    thread = process->GetThreadList().GetSelectedThread().get();
+    if (thread)
+        return thread->GetSelectedFrame().get();
+    
     return nullptr;
 }
 

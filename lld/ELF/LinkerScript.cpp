@@ -296,7 +296,7 @@ void ScriptParser::addFile(StringRef S) {
   } else {
     std::string Path = findFromSearchPaths(S);
     if (Path.empty())
-      setError("Unable to find " + S);
+      setError("unable to find " + S);
     else
       Driver->addFile(Saver.save(Path));
   }
@@ -419,7 +419,7 @@ std::vector<uint8_t> ScriptParser::parseHex(StringRef S) {
     S = S.substr(2);
     uint8_t H;
     if (B.getAsInteger(16, H)) {
-      setError("Not a HEX value: " + B);
+      setError("not a HEX value: " + B);
       return {};
     }
     Hex.push_back(H);
@@ -442,13 +442,13 @@ void ScriptParser::readOutputSectionDescription() {
       readSectionPatterns(OutSec, true);
       expect(")");
     } else {
-      setError("Unknown command " + Tok);
+      setError("unknown command " + Tok);
     }
   }
   StringRef Tok = peek();
   if (Tok.startswith("=")) {
     if (!Tok.startswith("=0x")) {
-      setError("Filler should be a HEX value");
+      setError("filler should be a HEX value");
       return;
     }
     Tok = Tok.substr(3);

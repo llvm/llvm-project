@@ -253,6 +253,17 @@ class TraceState {
     AddMutation(Pos, Size, reinterpret_cast<uint8_t*>(&Data));
   }
 
+  void EnsureDfsanLabels(size_t Size) {
+    for (; LastDfsanLabel < Size; LastDfsanLabel++) {
+      dfsan_label L = dfsan_create_label("input", (void *)(LastDfsanLabel + 1));
+      // We assume that no one else has called dfsan_create_label before.
+      if (L != LastDfsanLabel + 1) {
+        Printf("DFSan labels are not starting from 1, exiting\n");
+        exit(1);
+      }
+    }
+  }
+
  private:
   bool IsTwoByteData(uint64_t Data) {
     int64_t Signed = static_cast<int64_t>(Data);
@@ -279,6 +290,7 @@ class TraceState {
   size_t NumMutations;
   TraceBasedMutation Mutations[kMaxMutations];
   LabelRange LabelRanges[1 << (sizeof(dfsan_label) * 8)];
+  size_t LastDfsanLabel = 0;
   MutationDispatcher &MD;
   const Fuzzer::FuzzingOptions &Options;
   uint8_t **CurrentUnitData;
@@ -480,6 +492,7 @@ void Fuzzer::StopTraceRecording() {
 void Fuzzer::AssignTaintLabels(uint8_t *Data, size_t Size) {
   if (!Options.UseTraces && !Options.UseMemcmp) return;
   if (!ReallyHaveDFSan()) return;
+  TS->EnsureDfsanLabels(Size);
   for (size_t i = 0; i < Size; i++)
     dfsan_set_label(i + 1, &Data[i], 1);
 }
@@ -487,16 +500,6 @@ void Fuzzer::AssignTaintLabels(uint8_t *Data, size_t Size) {
 void Fuzzer::InitializeTraceState() {
   if (!Options.UseTraces && !Options.UseMemcmp) return;
   TS = new TraceState(MD, Options, &CurrentUnitData, &CurrentUnitSize);
-  if (ReallyHaveDFSan()) {
-    for (size_t i = 0; i < static_cast<size_t>(Options.MaxLen); i++) {
-      dfsan_label L = dfsan_create_label("input", (void *)(i + 1));
-      // We assume that no one else has called dfsan_create_label before.
-      if (L != i + 1) {
-        Printf("DFSan labels are not starting from 1, exiting\n");
-        exit(1);
-      }
-    }
-  }
 }
 
 static size_t InternalStrnlen(const char *S, size_t MaxLen) {

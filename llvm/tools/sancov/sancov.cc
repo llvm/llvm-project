@@ -33,6 +33,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -98,10 +99,9 @@ static cl::opt<bool> ClUseDefaultBlacklist(
     "use_default_blacklist", cl::init(true), cl::Hidden,
     cl::desc("Controls if default blacklist should be used."));
 
-static const char *const DefaultBlacklistStr = 
-      "fun:__sanitizer_.*\n"
-      "src:/usr/include/.*\n"
-      "src:.*/libc\\+\\+/.*\n";
+static const char *const DefaultBlacklistStr = "fun:__sanitizer_.*\n"
+                                               "src:/usr/include/.*\n"
+                                               "src:.*/libc\\+\\+/.*\n";
 
 // --------- FORMAT SPECIFICATION ---------
 
@@ -488,11 +488,26 @@ static std::string escapeHtml(const std::string &S) {
   return Result;
 }
 
+static std::string anchorName(std::string Anchor) {
+  llvm::MD5 Hasher;
+  llvm::MD5::MD5Result Hash;
+  Hasher.update(Anchor);
+  Hasher.final(Hash);
+
+  SmallString<32> HexString;
+  llvm::MD5::stringifyResult(Hash, HexString);
+  return HexString.str().str();
+}
+
 static ErrorOr<bool> isCoverageFile(std::string FileName) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
       MemoryBuffer::getFile(FileName);
-  if (!BufOrErr)
+  if (!BufOrErr) {
+    errs() << "Warning: " << BufOrErr.getError().message() << "("
+           << BufOrErr.getError().value()
+           << "), filename: " << llvm::sys::path::filename(FileName) << "\n";
     return BufOrErr.getError();
+  }
   std::unique_ptr<MemoryBuffer> Buf = std::move(BufOrErr.get());
   if (Buf->getBufferSize() < 8) {
     return false;
@@ -823,7 +838,7 @@ public:
       }
       size_t CovPct = FC.second == 0 ? 100 : 100 * FC.first / FC.second;
 
-      OS << "<tr><td><a href=\"#" << escapeHtml(FileName) << "\">"
+      OS << "<tr><td><a href=\"#" << anchorName(FileName) << "\">"
          << stripPathPrefix(FileName) << "</a></td>"
          << "<td>" << CovPct << "%</td>"
          << "<td>" << FC.first << " (" << FC.second << ")"
@@ -852,7 +867,7 @@ public:
       std::pair<size_t, size_t> FC = FileFnCoverage[FileName];
       if (FC.first == 0)
         continue;
-      OS << "<a name=\"" << escapeHtml(FileName) << "\"></a>\n";
+      OS << "<a name=\"" << anchorName(FileName) << "\"></a>\n";
       OS << "<h2>" << stripPathPrefix(FileName) << "</h2>\n";
 
       auto NotCoveredFns = NotCoveredFnMap.find(FileName);
@@ -862,7 +877,7 @@ public:
         for (auto FileFn : NotCoveredFns->second) {
           OS << "<tr><td>";
           OS << "<a href=\"#"
-             << escapeHtml(FileName + "::" + FileFn.FunctionName) << "\">";
+             << anchorName(FileName + "::" + FileFn.FunctionName) << "\">";
           OS << escapeHtml(FileFn.FunctionName) << "</a>";
           OS << "</td></tr>\n";
         }
@@ -888,7 +903,7 @@ public:
           auto It = NotCoveredFnByLoc.find(Loc);
           if (It != NotCoveredFnByLoc.end()) {
             for (std::string Fn : It->second) {
-              OS << "<a name=\"" << escapeHtml(FileName + "::" + Fn)
+              OS << "<a name=\"" << anchorName(FileName + "::" + Fn)
                  << "\"></a>";
             };
           }
@@ -940,7 +955,8 @@ public:
     // Partition input values into coverage/object files.
     for (const auto &FileName : FileNames) {
       auto ErrorOrIsCoverage = isCoverageFile(FileName);
-      FailIfError(ErrorOrIsCoverage);
+      if (!ErrorOrIsCoverage)
+        continue;
       if (ErrorOrIsCoverage.get()) {
         CovFiles.insert(FileName);
       } else {
@@ -1036,7 +1052,7 @@ public:
     // Modules TOC.
     if (Coverage.size() > 1) {
       for (const auto &CovData : Coverage) {
-        OS << "<li><a href=\"#module_" << escapeHtml(CovData->object_file())
+        OS << "<li><a href=\"#module_" << anchorName(CovData->object_file())
            << "\">" << llvm::sys::path::filename(CovData->object_file())
            << "</a></li>\n";
       }
@@ -1047,7 +1063,7 @@ public:
         OS << "<h2>" << llvm::sys::path::filename(CovData->object_file())
            << "</h2>\n";
       }
-      OS << "<a name=\"module_" << escapeHtml(CovData->object_file())
+      OS << "<a name=\"module_" << anchorName(CovData->object_file())
          << "\"></a>\n";
       CovData->printReport(OS);
     }

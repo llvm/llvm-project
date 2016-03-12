@@ -6,9 +6,9 @@
 # UNKNOWN: warning: unknown argument: --unknown1
 # UNKNOWN: warning: unknown argument: --unknown2
 # UNKNOWN: unknown argument(s) found
-# UNKNOWN: Unknown emulation: foo
+# UNKNOWN: unknown emulation: foo
 # UNKNOWN: cannot open /no/such/file
-# UNKNOWN: Unable to find library -lnosuchlib
+# UNKNOWN: unable to find library -lnosuchlib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: not ld.lld %t -o /no/such/file 2>&1 | FileCheck -check-prefix=MISSING %s
@@ -23,7 +23,7 @@
 ## Attempt to link DSO with -r
 # RUN: ld.lld -shared %t -o %t.so
 # RUN: not ld.lld -r %t.so %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR %s
-# ERR: Attempted static link of dynamic object
+# ERR: attempted static link of dynamic object
 
 ## Attempt to use -r and -shared together
 # RUN: not ld.lld -r -shared %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR2 %s

@@ -256,7 +256,7 @@ typename ELFFile<ELFT>::uintX_t DynamicReloc<ELFT>::getOffset() const {
   case Off_GotPlt:
     return Sym->getGotPltVA<ELFT>();
   }
-  llvm_unreachable("Invalid offset kind");
+  llvm_unreachable("invalid offset kind");
 }
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -1150,7 +1150,7 @@ void EHOutputSection<ELFT>::addSectionAux(
         uint32_t CieOffset = Offset + 4 - ID;
         auto I = OffsetToIndex.find(CieOffset);
         if (I == OffsetToIndex.end())
-          fatal("Invalid CIE reference");
+          fatal("invalid CIE reference");
         Cies[I->second].Fdes.push_back(EHRegion<ELFT>(S, Index));
         Out<ELFT>::EhFrameHdr->reserveFde();
         this->Header.sh_size += alignTo(Length, sizeof(uintX_t));
@@ -1266,7 +1266,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
     while (!Data.empty()) {
       size_t End = findNull(Data, EntSize);
       if (End == StringRef::npos)
-        fatal("String is not null terminated");
+        fatal("string is not null terminated");
       StringRef Entry = Data.substr(0, End + EntSize);
       uintX_t OutputOffset = Builder.add(Entry);
       if (shouldTailMerge())
@@ -1512,7 +1512,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::LazyKind:
     break;
   case SymbolBody::DefinedBitcodeKind:
-    llvm_unreachable("Should have been replaced");
+    llvm_unreachable("should have been replaced");
   }
   return nullptr;
 }

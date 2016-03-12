@@ -62,7 +62,7 @@ InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
     // so it should never be copied to output.
     llvm_unreachable("MIPS .reginfo reached writeTo().");
   }
-  llvm_unreachable("Invalid section kind");
+  llvm_unreachable("invalid section kind");
 }
 
 template <class ELFT>
@@ -387,7 +387,7 @@ SplitInputSection<ELFT>::getRangeAndSize(uintX_t Offset) {
   StringRef Data((const char *)D.data(), D.size());
   uintX_t Size = Data.size();
   if (Offset >= Size)
-    fatal("Entry is past the end of the section");
+    fatal("entry is past the end of the section");
 
   // Find the element this offset points to.
   auto I = std::upper_bound(
@@ -431,7 +431,7 @@ MipsReginfoInputSection<ELFT>::MipsReginfoInputSection(elf::ObjectFile<ELFT> *F,
   // Initialize this->Reginfo.
   ArrayRef<uint8_t> D = this->getSectionData();
   if (D.size() != sizeof(Elf_Mips_RegInfo<ELFT>))
-    fatal("Invalid size of .reginfo section");
+    fatal("invalid size of .reginfo section");
   Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(D.data());
 }
 

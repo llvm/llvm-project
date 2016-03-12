@@ -1,6 +1,6 @@
-==============================
-LLVM test-suite Makefile Guide
-==============================
+=====================
+LLVM test-suite Guide
+=====================
 
 .. contents::
    :local:
@@ -9,10 +9,11 @@ Overview
 ========
 
 This document describes the features of the Makefile-based LLVM
-test-suite. This way of interacting with the test-suite is deprecated in
-favor of running the test-suite using LNT, but may continue to prove
-useful for some users. See the Testing Guide's :ref:`test-suite Quickstart
-<test-suite-quickstart>` section for more information.
+test-suite as well as the cmake based replacement. This way of interacting
+with the test-suite is deprecated in favor of running the test-suite using LNT,
+but may continue to prove useful for some users. See the Testing
+Guide's :ref:`test-suite Quickstart <test-suite-quickstart>` section for more
+information.
 
 Test suite Structure
 ====================
@@ -83,8 +84,77 @@ generated. If a test fails, a large <program> FAILED message will be
 displayed. This will help you separate benign warnings from actual test
 failures.
 
-Running the test suite
-======================
+Running the test suite via CMake
+================================
+
+To run the test suite, you need to use the following steps:
+
+#. The test suite uses the lit test runner to run the test-suite,
+   you need to have lit installed first.  Check out LLVM and install lit:
+   
+   .. code-block:: bash
+
+       % svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
+       % cd llvm/utils/lit
+       % sudo python setup.py install # Or without sudo, install in virtual-env.
+       running install
+       running bdist_egg
+       running egg_info
+       writing lit.egg-info/PKG-INFO
+       ...
+       % lit --version
+       lit 0.5.0dev
+
+#. Check out the ``test-suite`` module with:
+
+   .. code-block:: bash
+
+       % svn co http://llvm.org/svn/llvm-project/test-suite/trunk test-suite
+
+#. Use CMake to configure the test suite in a new directory. You cannot build
+   the test suite in the source tree.
+
+   .. code-block:: bash
+   
+       % mkdir test-suite-build
+       % cd test-suite-build
+       % cmake ../test-suite
+
+#. Build the benchmarks, using the makefiles CMake generated.
+
+.. code-block:: bash
+
+    % make
+    Scanning dependencies of target timeit-target
+    [  0%] Building C object tools/CMakeFiles/timeit-target.dir/timeit.c.o
+    [  0%] Linking C executable timeit-target
+    [  0%] Built target timeit-target
+    Scanning dependencies of target fpcmp-host
+    [  0%] [TEST_SUITE_HOST_CC] Building host executable fpcmp
+    [  0%] Built target fpcmp-host
+    Scanning dependencies of target timeit-host
+    [  0%] [TEST_SUITE_HOST_CC] Building host executable timeit
+    [  0%] Built target timeit-host
+
+    
+#. Run the tests with lit:
+
+.. code-block:: bash
+
+    % lit -v -j 1 . -o results.json
+    -- Testing: 474 tests, 1 threads --
+    PASS: test-suite :: MultiSource/Applications/ALAC/decode/alacconvert-decode.test (1 of 474)
+    ********** TEST 'test-suite :: MultiSource/Applications/ALAC/decode/alacconvert-decode.test' RESULTS **********
+    compile_time: 0.2192 
+    exec_time: 0.0462 
+    hash: "59620e187c6ac38b36382685ccd2b63b" 
+    size: 83348 
+    **********
+    PASS: test-suite :: MultiSource/Applications/ALAC/encode/alacconvert-encode.test (2 of 474)
+
+
+Running the test suite via Makefiles (deprecated)
+=================================================
 
 First, all tests are executed within the LLVM object directory tree.
 They *are not* executed inside of the LLVM source tree. This is because

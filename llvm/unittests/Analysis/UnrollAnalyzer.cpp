@@ -106,23 +106,23 @@ TEST(UnrollAnalyzerTest, BasicSimplifications) {
   // Check that "%inc = add nuw nsw i64 %iv, 1" is simplified to 1
   auto I1 = SimplifiedValuesVector[0].find(Y1);
   EXPECT_TRUE(I1 != SimplifiedValuesVector[0].end());
-  EXPECT_EQ(dyn_cast<ConstantInt>((*I1).second)->getZExtValue(), 1U);
+  EXPECT_EQ(cast<ConstantInt>((*I1).second)->getZExtValue(), 1U);
 
   // Check that "%cond = icmp sge i64 %inc, 10" is simplified to false
   auto I2 = SimplifiedValuesVector[0].find(Y2);
   EXPECT_TRUE(I2 != SimplifiedValuesVector[0].end());
-  EXPECT_FALSE(dyn_cast<ConstantInt>((*I2).second)->getZExtValue());
+  EXPECT_FALSE(cast<ConstantInt>((*I2).second)->getZExtValue());
 
   // Check simplification expected on the last iteration.
   // Check that "%inc = add nuw nsw i64 %iv, 1" is simplified to 8
   I1 = SimplifiedValuesVector[TripCount - 1].find(Y1);
   EXPECT_TRUE(I1 != SimplifiedValuesVector[TripCount - 1].end());
-  EXPECT_EQ(dyn_cast<ConstantInt>((*I1).second)->getZExtValue(), TripCount);
+  EXPECT_EQ(cast<ConstantInt>((*I1).second)->getZExtValue(), TripCount);
 
   // Check that "%cond = icmp sge i64 %inc, 10" is simplified to false
   I2 = SimplifiedValuesVector[TripCount - 1].find(Y2);
   EXPECT_TRUE(I2 != SimplifiedValuesVector[TripCount - 1].end());
-  EXPECT_TRUE(dyn_cast<ConstantInt>((*I2).second)->getZExtValue());
+  EXPECT_TRUE(cast<ConstantInt>((*I2).second)->getZExtValue());
 }
 
 TEST(UnrollAnalyzerTest, OuterLoopSimplification) {
@@ -171,6 +171,146 @@ TEST(UnrollAnalyzerTest, OuterLoopSimplification) {
   auto I2 = SimplifiedValuesVector[0].find(Y2);
   EXPECT_TRUE(I2 == SimplifiedValuesVector[0].end());
 }
+TEST(UnrollAnalyzerTest, CmpSimplifications) {
+  const char *ModuleStr =
+      "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
+      "define void @branch_iv_trunc() {\n"
+      "entry:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %indvars.iv = phi i64 [ 0, %entry ], [ %tmp3, %for.body ]\n"
+      "  %tmp2 = trunc i64 %indvars.iv to i32\n"
+      "  %cmp3 = icmp eq i32 %tmp2, 5\n"
+      "  %tmp3 = add nuw nsw i64 %indvars.iv, 1\n"
+      "  %exitcond = icmp eq i64 %tmp3, 10\n"
+      "  br i1 %exitcond, label %for.end, label %for.body\n"
+      "for.end:\n"
+      "  ret void\n"
+      "}\n";
+  UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
+  std::unique_ptr<Module> M = makeLLVMModule(P, ModuleStr);
+  legacy::PassManager Passes;
+  Passes.add(P);
+  Passes.run(*M);
+
+  // Perform checks
+  Module::iterator MI = M->begin();
+  Function *F = &*MI++;
+  Function::iterator FI = F->begin();
+  FI++; // First basic block is entry - skip it.
+  BasicBlock *Header = &*FI++;
+
+  BasicBlock::iterator BBI = Header->begin();
+  BBI++;
+  Instruction *Y1 = &*BBI++;
+  Instruction *Y2 = &*BBI++;
+  // Check simplification expected on the 5th iteration.
+  // Check that "%tmp2 = trunc i64 %indvars.iv to i32" is simplified to 5
+  // and "%cmp3 = icmp eq i32 %tmp2, 5" is simplified to 1 (i.e. true).
+  auto I1 = SimplifiedValuesVector[5].find(Y1);
+  EXPECT_TRUE(I1 != SimplifiedValuesVector[5].end());
+  EXPECT_EQ(cast<ConstantInt>((*I1).second)->getZExtValue(), 5U);
+  auto I2 = SimplifiedValuesVector[5].find(Y2);
+  EXPECT_TRUE(I2 != SimplifiedValuesVector[5].end());
+  EXPECT_EQ(cast<ConstantInt>((*I2).second)->getZExtValue(), 1U);
+}
+TEST(UnrollAnalyzerTest, PtrCmpSimplifications) {
+  const char *ModuleStr =
+      "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
+      "define void @ptr_cmp(i8 *%a) {\n"
+      "entry:\n"
+      "  %limit = getelementptr i8, i8* %a, i64 40\n"
+      "  %start.iv2 = getelementptr i8, i8* %a, i64 7\n"
+      "  br label %loop.body\n"
+      "loop.body:\n"
+      "  %iv.0 = phi i8* [ %a, %entry ], [ %iv.1, %loop.body ]\n"
+      "  %iv2.0 = phi i8* [ %start.iv2, %entry ], [ %iv2.1, %loop.body ]\n"
+      "  %cmp = icmp eq i8* %iv2.0, %iv.0\n"
+      "  %iv.1 = getelementptr inbounds i8, i8* %iv.0, i64 1\n"
+      "  %iv2.1 = getelementptr inbounds i8, i8* %iv2.0, i64 1\n"
+      "  %exitcond = icmp ne i8* %iv.1, %limit\n"
+      "  br i1 %exitcond, label %loop.body, label %loop.exit\n"
+      "loop.exit:\n"
+      "  ret void\n"
+      "}\n";
+  UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
+  std::unique_ptr<Module> M = makeLLVMModule(P, ModuleStr);
+  legacy::PassManager Passes;
+  Passes.add(P);
+  Passes.run(*M);
+
+  // Perform checks
+  Module::iterator MI = M->begin();
+  Function *F = &*MI++;
+  Function::iterator FI = F->begin();
+  FI++; // First basic block is entry - skip it.
+  BasicBlock *Header = &*FI;
+
+  BasicBlock::iterator BBI = Header->begin();
+  std::advance(BBI, 2);
+  Instruction *Y1 = &*BBI;
+  // Check simplification expected on the 5th iteration.
+  // Check that "%cmp = icmp eq i8* %iv2.0, %iv.0" is simplified to 0.
+  auto I1 = SimplifiedValuesVector[5].find(Y1);
+  EXPECT_TRUE(I1 != SimplifiedValuesVector[5].end());
+  EXPECT_EQ(cast<ConstantInt>((*I1).second)->getZExtValue(), 0U);
+}
+TEST(UnrollAnalyzerTest, CastSimplifications) {
+  const char *ModuleStr =
+      "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
+      "@known_constant = internal unnamed_addr constant [10 x i32] [i32 0, i32 1, i32 0, i32 1, i32 0, i32 259, i32 0, i32 1, i32 0, i32 1], align 16\n"
+      "define void @const_load_cast() {\n"
+      "entry:\n"
+      "  br label %loop\n"
+      "\n"
+      "loop:\n"
+      "  %iv = phi i64 [ 0, %entry ], [ %inc, %loop ]\n"
+      "  %array_const_idx = getelementptr inbounds [10 x i32], [10 x i32]* @known_constant, i64 0, i64 %iv\n"
+      "  %const_array_element = load i32, i32* %array_const_idx, align 4\n"
+      "  %se = sext i32 %const_array_element to i64\n"
+      "  %ze = zext i32 %const_array_element to i64\n"
+      "  %tr = trunc i32 %const_array_element to i8\n"
+      "  %inc = add nuw nsw i64 %iv, 1\n"
+      "  %exitcond86.i = icmp eq i64 %inc, 10\n"
+      "  br i1 %exitcond86.i, label %loop.end, label %loop\n"
+      "\n"
+      "loop.end:\n"
+      "  ret void\n"
+      "}\n";
+
+  UnrollAnalyzerTest *P = new UnrollAnalyzerTest();
+  std::unique_ptr<Module> M = makeLLVMModule(P, ModuleStr);
+  legacy::PassManager Passes;
+  Passes.add(P);
+  Passes.run(*M);
+
+  // Perform checks
+  Module::iterator MI = M->begin();
+  Function *F = &*MI++;
+  Function::iterator FI = F->begin();
+  FI++; // First basic block is entry - skip it.
+  BasicBlock *Header = &*FI++;
+
+  BasicBlock::iterator BBI = Header->begin();
+  std::advance(BBI, 3);
+  Instruction *Y1 = &*BBI++;
+  Instruction *Y2 = &*BBI++;
+  Instruction *Y3 = &*BBI++;
+  // Check simplification expected on the 5th iteration.
+  // "%se = sext i32 %const_array_element to i64" should be simplified to 259,
+  // "%ze = zext i32 %const_array_element to i64" should be simplified to 259,
+  // "%tr = trunc i32 %const_array_element to i8" should be simplified to 3.
+  auto I1 = SimplifiedValuesVector[5].find(Y1);
+  EXPECT_TRUE(I1 != SimplifiedValuesVector[5].end());
+  EXPECT_EQ(cast<ConstantInt>((*I1).second)->getZExtValue(), 259U);
+  auto I2 = SimplifiedValuesVector[5].find(Y2);
+  EXPECT_TRUE(I2 != SimplifiedValuesVector[5].end());
+  EXPECT_EQ(cast<ConstantInt>((*I2).second)->getZExtValue(), 259U);
+  auto I3 = SimplifiedValuesVector[5].find(Y3);
+  EXPECT_TRUE(I3 != SimplifiedValuesVector[5].end());
+  EXPECT_EQ(cast<ConstantInt>((*I3).second)->getZExtValue(), 3U);
+}
+
 } // end namespace llvm
 
 INITIALIZE_PASS_BEGIN(UnrollAnalyzerTest, "unrollanalyzertestpass",

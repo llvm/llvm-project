@@ -201,6 +201,7 @@ module LLVM_Utils {
     textual header "Support/ELFRelocs/AVR.def"
     textual header "Support/ELFRelocs/Hexagon.def"
     textual header "Support/ELFRelocs/i386.def"
+    textual header "Support/ELFRelocs/Lanai.def"
     textual header "Support/ELFRelocs/Mips.def"
     textual header "Support/ELFRelocs/PowerPC64.def"
     textual header "Support/ELFRelocs/PowerPC.def"

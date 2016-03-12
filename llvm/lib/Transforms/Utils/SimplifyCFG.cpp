@@ -1199,7 +1199,7 @@ HoistTerminator:
     NT->takeName(I1);
   }
 
-  IRBuilder<NoFolder> Builder(NT);
+  IRBuilder<true, NoFolder> Builder(NT);
   // Hoisting one of the terminators from our successor is a great thing.
   // Unfortunately, the successors of the if/else blocks may have PHI nodes in
   // them.  If they do, all PHI entries for BB1/BB2 must agree for all PHI
@@ -1640,7 +1640,7 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
 
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
-    IRBuilder<NoFolder> Builder(BI);
+    IRBuilder<true, NoFolder> Builder(BI);
     Value *TrueV = SpeculatedStore->getValueOperand();
     Value *FalseV = SpeculatedStoreValue;
     if (Invert)
@@ -1660,7 +1660,7 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
                            ThenBB->begin(), std::prev(ThenBB->end()));
 
   // Insert selects and rewrite the PHI operands.
-  IRBuilder<NoFolder> Builder(BI);
+  IRBuilder<true, NoFolder> Builder(BI);
   for (BasicBlock::iterator I = EndBB->begin();
        PHINode *PN = dyn_cast<PHINode>(I); ++I) {
     unsigned OrigI = PN->getBasicBlockIndex(BB);
@@ -1920,7 +1920,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // If we can still promote the PHI nodes after this gauntlet of tests,
   // do all of the PHI's now.
   Instruction *InsertPt = DomBlock->getTerminator();
-  IRBuilder<NoFolder> Builder(InsertPt);
+  IRBuilder<true, NoFolder> Builder(InsertPt);
 
   // Move all 'aggressive' instructions, which are defined in the
   // conditional parts of the if's up to the dominating block.
@@ -2831,7 +2831,7 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
   // Make sure we get to CommonDest on True&True directions.
   Value *PBICond = PBI->getCondition();
-  IRBuilder<NoFolder> Builder(PBI);
+  IRBuilder<true, NoFolder> Builder(PBI);
   if (PBIOp)
     PBICond = Builder.CreateNot(PBICond, PBICond->getName()+".not");
 

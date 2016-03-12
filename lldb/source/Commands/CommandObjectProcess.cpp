@@ -708,7 +708,7 @@ protected:
 
             if (m_options.m_ignore > 0)
             {
-                ThreadSP sel_thread_sp(process->GetThreadList().GetSelectedThread());
+                ThreadSP sel_thread_sp(GetDefaultThread()->shared_from_this());
                 if (sel_thread_sp)
                 {
                     StopInfoSP stop_info_sp = sel_thread_sp->GetStopInfo();

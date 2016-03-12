@@ -16,6 +16,7 @@
 #include "lldb/Core/UserID.h"
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Target/ThreadCollection.h"
+#include "lldb/Target/Thread.h"
 
 namespace lldb_private {
 
@@ -44,7 +45,43 @@ public:
     // selected at index 0.
     lldb::ThreadSP
     GetSelectedThread ();
+    
+    // Manage the thread to use for running expressions.  This is usually the Selected thread,
+    // but sometimes (e.g. when evaluating breakpoint conditions & stop hooks) it isn't.
+    class ExpressionExecutionThreadPusher
+    {
+        public:
+        ExpressionExecutionThreadPusher(ThreadList &thread_list, lldb::tid_t tid) :
+            m_thread_list(&thread_list),
+            m_tid(tid)
+        {
+            m_thread_list->PushExpressionExecutionThread(m_tid);
+        }
+        
+        ExpressionExecutionThreadPusher(lldb::ThreadSP thread_sp);
+        
+        ~ExpressionExecutionThreadPusher()
+        {
+            if (m_thread_list)
+                m_thread_list->PopExpressionExecutionThread(m_tid);
+        }
+        
+        private:
+            ThreadList *m_thread_list;
+            lldb::tid_t m_tid;
+    };
 
+    lldb::ThreadSP
+    GetExpressionExecutionThread();
+    
+protected:
+    void
+    PushExpressionExecutionThread(lldb::tid_t tid);
+    
+    void
+    PopExpressionExecutionThread(lldb::tid_t tid);
+
+public:
     bool
     SetSelectedThreadByID (lldb::tid_t tid, bool notify = false);
 
@@ -147,6 +184,7 @@ protected:
     Process *m_process; ///< The process that manages this thread list.
     uint32_t m_stop_id; ///< The process stop ID that this thread list is valid for.
     lldb::tid_t m_selected_tid;  ///< For targets that need the notion of a current thread.
+    std::vector<lldb::tid_t> m_expression_tid_stack;
 
 private:
 

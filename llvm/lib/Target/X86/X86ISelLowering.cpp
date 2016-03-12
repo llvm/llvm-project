@@ -21254,20 +21254,49 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                           DAG.getConstant(0, dl, HalfT));
     swapInH = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HalfT, N->getOperand(3),
                           DAG.getConstant(1, dl, HalfT));
-    swapInL = DAG.getCopyToReg(cpInH.getValue(0), dl,
-                               Regs64bit ? X86::RBX : X86::EBX,
-                               swapInL, cpInH.getValue(1));
-    swapInH = DAG.getCopyToReg(swapInL.getValue(0), dl,
-                               Regs64bit ? X86::RCX : X86::ECX,
-                               swapInH, swapInL.getValue(1));
-    SDValue Ops[] = { swapInH.getValue(0),
-                      N->getOperand(1),
-                      swapInH.getValue(1) };
+    swapInH =
+        DAG.getCopyToReg(cpInH.getValue(0), dl, Regs64bit ? X86::RCX : X86::ECX,
+                         swapInH, cpInH.getValue(1));
+    // If the current function needs the base pointer, RBX,
+    // we shouldn't use cmpxchg directly.
+    // Indeed the lowering of that instruction will clobber
+    // that register and since RBX will be a reserved register
+    // the register allocator will not make sure its value will
+    // be properly saved and restored around this live-range.
+    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+    SDValue Result;
     SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
+    unsigned BasePtr = TRI->getBaseRegister();
     MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
-    unsigned Opcode = Regs64bit ? X86ISD::LCMPXCHG16_DAG :
-                                  X86ISD::LCMPXCHG8_DAG;
-    SDValue Result = DAG.getMemIntrinsicNode(Opcode, dl, Tys, Ops, T, MMO);
+    if (TRI->hasBasePointer(DAG.getMachineFunction()) &&
+        (BasePtr == X86::RBX || BasePtr == X86::EBX)) {
+      // ISel prefers the LCMPXCHG64 variant.
+      // If that assert breaks, that means it is not the case anymore,
+      // and we need to teach LCMPXCHG8_SAVE_EBX_DAG how to save RBX,
+      // not just EBX. This is a matter of accepting i64 input for that
+      // pseudo, and restoring into the register of the right wide
+      // in expand pseudo. Everything else should just work.
+      assert(((Regs64bit == (BasePtr == X86::RBX)) || BasePtr == X86::EBX) &&
+             "Saving only half of the RBX");
+      unsigned Opcode = Regs64bit ? X86ISD::LCMPXCHG16_SAVE_RBX_DAG
+                                  : X86ISD::LCMPXCHG8_SAVE_EBX_DAG;
+      SDValue RBXSave = DAG.getCopyFromReg(swapInH.getValue(0), dl,
+                                           Regs64bit ? X86::RBX : X86::EBX,
+                                           HalfT, swapInH.getValue(1));
+      SDValue Ops[] = {/*Chain*/ RBXSave.getValue(1), N->getOperand(1), swapInL,
+                       RBXSave,
+                       /*Glue*/ RBXSave.getValue(2)};
+      Result = DAG.getMemIntrinsicNode(Opcode, dl, Tys, Ops, T, MMO);
+    } else {
+      unsigned Opcode =
+          Regs64bit ? X86ISD::LCMPXCHG16_DAG : X86ISD::LCMPXCHG8_DAG;
+      swapInL = DAG.getCopyToReg(swapInH.getValue(0), dl,
+                                 Regs64bit ? X86::RBX : X86::EBX, swapInL,
+                                 swapInH.getValue(1));
+      SDValue Ops[] = {swapInL.getValue(0), N->getOperand(1),
+                       swapInL.getValue(1)};
+      Result = DAG.getMemIntrinsicNode(Opcode, dl, Tys, Ops, T, MMO);
+    }
     SDValue cpOutL = DAG.getCopyFromReg(Result.getValue(0), dl,
                                         Regs64bit ? X86::RAX : X86::EAX,
                                         HalfT, Result.getValue(1));
@@ -21422,6 +21451,10 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::LCMPXCHG_DAG:       return "X86ISD::LCMPXCHG_DAG";
   case X86ISD::LCMPXCHG8_DAG:      return "X86ISD::LCMPXCHG8_DAG";
   case X86ISD::LCMPXCHG16_DAG:     return "X86ISD::LCMPXCHG16_DAG";
+  case X86ISD::LCMPXCHG8_SAVE_EBX_DAG:
+    return "X86ISD::LCMPXCHG8_SAVE_EBX_DAG";
+  case X86ISD::LCMPXCHG16_SAVE_RBX_DAG:
+    return "X86ISD::LCMPXCHG16_SAVE_RBX_DAG";
   case X86ISD::LADD:               return "X86ISD::LADD";
   case X86ISD::LSUB:               return "X86ISD::LSUB";
   case X86ISD::LOR:                return "X86ISD::LOR";
@@ -23569,6 +23602,14 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   case X86::VFMSUBADDPDr213rY:
   case X86::VFMSUBADDPSr213rY:
     return emitFMA3Instr(MI, BB);
+  case X86::LCMPXCHG8B_SAVE_EBX:
+  case X86::LCMPXCHG16B_SAVE_RBX: {
+    unsigned BasePtr =
+        MI->getOpcode() == X86::LCMPXCHG8B_SAVE_EBX ? X86::EBX : X86::RBX;
+    if (!BB->isLiveIn(BasePtr))
+      BB->addLiveIn(BasePtr);
+    return BB;
+  }
   }
 }
 
@@ -28534,7 +28575,9 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
 
   // If target-size is 128-bits (or 256-bits on AVX2 target), then convert to
   // ISD::*_EXTEND_VECTOR_INREG which ensures lowering to X86ISD::V*EXT.
-  if (VT.is128BitVector() || (VT.is256BitVector() && Subtarget.hasInt256())) {
+  // Also use this if we don't have SSE41 to allow the legalizer do its job.
+  if (!Subtarget.hasSSE41() || VT.is128BitVector() ||
+      (VT.is256BitVector() && Subtarget.hasInt256())) {
     SDValue ExOp = ExtendVecSize(DL, N0, VT.getSizeInBits());
     return Opcode == ISD::SIGN_EXTEND
                ? DAG.getSignExtendVectorInReg(ExOp, DL, VT)

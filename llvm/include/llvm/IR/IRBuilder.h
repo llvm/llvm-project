@@ -38,12 +38,14 @@ class MDNode;
 /// IRBuilder and needs to be inserted.
 ///
 /// By default, this inserts the instruction at the insertion point.
+template <bool preserveNames = true>
 class IRBuilderDefaultInserter {
 protected:
   void InsertHelper(Instruction *I, const Twine &Name,
                     BasicBlock *BB, BasicBlock::iterator InsertPt) const {
     if (BB) BB->getInstList().insert(InsertPt, I);
-    I->setName(Name);
+    if (preserveNames)
+      I->setName(Name);
   }
 };
 
@@ -535,12 +537,14 @@ private:
 /// created. Convenience state exists to specify fast-math flags and fp-math
 /// tags.
 ///
-/// The first template argument specifies a class to use for creating constants.
-/// This defaults to creating minimally folded constants.  The second template
-/// argument allows clients to specify custom insertion hooks that are called on
-/// every newly created insertion.
-template <typename T = ConstantFolder,
-          typename Inserter = IRBuilderDefaultInserter>
+/// The first template argument handles whether or not to preserve names in the
+/// final instruction output. This defaults to on.  The second template argument
+/// specifies a class to use for creating constants.  This defaults to creating
+/// minimally folded constants.  The third template argument allows clients to
+/// specify custom insertion hooks that are called on every newly created
+/// insertion.
+template<bool preserveNames = true, typename T = ConstantFolder,
+         typename Inserter = IRBuilderDefaultInserter<preserveNames> >
 class IRBuilder : public IRBuilderBase, public Inserter {
   T Folder;
 
@@ -589,6 +593,10 @@ public:
 
   /// \brief Get the constant folder being used.
   const T &getFolder() { return Folder; }
+
+  /// \brief Return true if this builder is configured to actually add the
+  /// requested names to IR created through it.
+  bool isNamePreserving() const { return preserveNames; }
 
   /// \brief Insert and return the specified instruction.
   template<typename InstTy>

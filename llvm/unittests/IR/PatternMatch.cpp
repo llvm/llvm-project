@@ -35,7 +35,7 @@ struct PatternMatchTest : ::testing::Test {
   std::unique_ptr<Module> M;
   Function *F;
   BasicBlock *BB;
-  IRBuilder<NoFolder> IRB;
+  IRBuilder<true, NoFolder> IRB;
 
   PatternMatchTest()
       : M(new Module("PatternMatchTestModule", Ctx)),

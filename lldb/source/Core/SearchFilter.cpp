@@ -266,7 +266,10 @@ SearchFilter::DoFunctionIteration (Function *function, const SymbolContext &cont
 bool
 SearchFilterForUnconstrainedSearches::ModulePasses (const FileSpec &module_spec)
 {
-    return (!m_target_sp->ModuleIsExcludedForUnconstrainedSearches(module_spec));
+    if (m_target_sp->ModuleIsExcludedForUnconstrainedSearches (module_spec))
+        return false;
+    else
+        return true;
 }
 
 bool
@@ -445,7 +448,7 @@ SearchFilterByModuleList::ModulePasses (const ModuleSP &module_sp)
         return true;
         
     if (module_sp &&
-        m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) != std::numeric_limits<uint32_t>::max())
+        m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) != UINT32_MAX)
         return true;
     else
         return false;
@@ -457,7 +460,7 @@ SearchFilterByModuleList::ModulePasses (const FileSpec &spec)
     if (m_module_spec_list.GetSize() == 0)
         return true;
         
-    if (m_module_spec_list.FindFileIndex(0, spec, true) != std::numeric_limits<uint32_t>::max())
+    if (m_module_spec_list.FindFileIndex(0, spec, true) != UINT32_MAX)
         return true;
     else
         return false;
@@ -506,7 +509,7 @@ SearchFilterByModuleList::Search (Searcher &searcher)
     for (size_t i = 0; i < num_modules; i++)
     {
         Module* module = target_modules.GetModulePointerAtIndexUnlocked(i);
-        if (m_module_spec_list.FindFileIndex(0, module->GetFileSpec(), false) != std::numeric_limits<uint32_t>::max())
+        if (m_module_spec_list.FindFileIndex(0, module->GetFileSpec(), false) != UINT32_MAX)
         {
             SymbolContext matchingContext(m_target_sp, module->shared_from_this());
             Searcher::CallbackReturn shouldContinue;
@@ -613,13 +616,13 @@ SearchFilterByModuleListAndCU::AddressPasses (Address &address)
 bool
 SearchFilterByModuleListAndCU::CompUnitPasses (FileSpec &fileSpec)
 {
-    return m_cu_spec_list.FindFileIndex(0, fileSpec, false) != std::numeric_limits<uint32_t>::max();
+    return m_cu_spec_list.FindFileIndex(0, fileSpec, false) != UINT32_MAX;
 }
 
 bool
 SearchFilterByModuleListAndCU::CompUnitPasses (CompileUnit &compUnit)
 {
-    bool in_cu_list = m_cu_spec_list.FindFileIndex(0, compUnit, false) != std::numeric_limits<uint32_t>::max();
+    bool in_cu_list = m_cu_spec_list.FindFileIndex(0, compUnit, false) != UINT32_MAX;
     if (in_cu_list)
     {
         ModuleSP module_sp(compUnit.GetModule());
@@ -662,7 +665,7 @@ SearchFilterByModuleListAndCU::Search (Searcher &searcher)
     {
         lldb::ModuleSP module_sp = target_images.GetModuleAtIndexUnlocked(i);
         if (no_modules_in_filter ||
-            m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) != std::numeric_limits<uint32_t>::max())
+            m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) != UINT32_MAX)
         {
             SymbolContext matchingContext(m_target_sp, module_sp);
             Searcher::CallbackReturn shouldContinue;
@@ -682,8 +685,7 @@ SearchFilterByModuleListAndCU::Search (Searcher &searcher)
                     matchingContext.comp_unit = cu_sp.get();
                     if (matchingContext.comp_unit)
                     {
-                        if (m_cu_spec_list.FindFileIndex(0, *matchingContext.comp_unit, false) !=
-                            std::numeric_limits<uint32_t>::max())
+                        if (m_cu_spec_list.FindFileIndex(0, *matchingContext.comp_unit, false) != UINT32_MAX)
                         {
                             shouldContinue = DoCUIteration(module_sp, matchingContext, searcher);
                             if (shouldContinue == Searcher::eCallbackReturnStop)

@@ -61,9 +61,9 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
   if (S == "aarch64linux")
     return {ELF64LEKind, EM_AARCH64};
   if (S == "i386pe" || S == "i386pep" || S == "thumb2pe")
-    error("Windows targets are not supported on the ELF frontend: " + S);
+    error("windows targets are not supported on the ELF frontend: " + S);
   else
-    error("Unknown emulation: " + S);
+    error("unknown emulation: " + S);
   return {ELFNoneKind, 0};
 }
 
@@ -112,7 +112,7 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   case file_magic::elf_shared_object:
     if (Config->Relocatable) {
-      error("Attempted static link of dynamic object " + Path);
+      error("attempted static link of dynamic object " + Path);
       return;
     }
     Files.push_back(createSharedFile(MBRef));
@@ -126,7 +126,7 @@ void LinkerDriver::addFile(StringRef Path) {
 void LinkerDriver::addLibrary(StringRef Name) {
   std::string Path = searchLibrary(Name);
   if (Path.empty())
-    error("Unable to find library -l" + Name);
+    error("unable to find library -l" + Name);
   else
     addFile(Path);
 }
@@ -137,7 +137,7 @@ static void checkOptions(opt::InputArgList &Args) {
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (Config->EMachine == EM_MIPS && Config->GnuHash)
-    error("The .gnu.hash section is not compatible with the MIPS target.");
+    error("the .gnu.hash section is not compatible with the MIPS target.");
 
   if (Config->EMachine == EM_AMDGPU && !Config->Entry.empty())
     error("-e option is not valid for AMDGPU.");
@@ -263,7 +263,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_O)) {
     StringRef Val = Arg->getValue();
     if (Val.getAsInteger(10, Config->Optimize))
-      error("Invalid optimization level");
+      error("invalid optimization level");
   }
 
   if (auto *Arg = Args.getLastArg(OPT_hash_style)) {
@@ -274,7 +274,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     } else if (S == "both") {
       Config->GnuHash = true;
     } else if (S != "sysv")
-      error("Unknown hash style: " + S);
+      error("unknown hash style: " + S);
   }
 
   for (auto *Arg : Args.filtered(OPT_undefined))

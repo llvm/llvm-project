@@ -1036,7 +1036,7 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start, Target &target)
 {
     size_t num_instructions = m_instructions.size();
     
-    uint32_t next_branch = std::numeric_limits<uint32_t>::max();
+    uint32_t next_branch = UINT32_MAX;
     size_t i;
     for (i = start; i < num_instructions; i++)
     {
@@ -1053,7 +1053,7 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start, Target &target)
     if (target.GetArchitecture().GetTriple().getArch() == llvm::Triple::hexagon)
     {
         // If we didn't find a branch, find the last packet start.
-        if (next_branch == std::numeric_limits<uint32_t>::max())
+        if (next_branch == UINT32_MAX)
         {
             i = num_instructions - 1;
         }
@@ -1086,7 +1086,7 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start, Target &target)
             }
         }
 
-        if (next_branch == std::numeric_limits<uint32_t>::max())
+        if (next_branch == UINT32_MAX)
         {
             // We couldn't find the previous packet, so return start
             next_branch = start;
@@ -1099,7 +1099,7 @@ uint32_t
 InstructionList::GetIndexOfInstructionAtAddress (const Address &address)
 {
     size_t num_instructions = m_instructions.size();
-    uint32_t index = std::numeric_limits<uint32_t>::max();
+    uint32_t index = UINT32_MAX;
     for (size_t i = 0; i < num_instructions; i++)
     {
         if (m_instructions[i]->GetAddress() == address)
@@ -1152,7 +1152,7 @@ Disassembler::ParseInstructions (const ExecutionContext *exe_ctx,
                                 m_arch.GetByteOrder(),
                                 m_arch.GetAddressByteSize());
             const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
-            return DecodeInstructions(range.GetBaseAddress(), data, 0, std::numeric_limits<uint32_t>::max(), false,
+            return DecodeInstructions(range.GetBaseAddress(), data, 0, UINT32_MAX, false,
                                       data_from_file);
         }
         else if (error_strm_ptr)

@@ -3423,8 +3423,16 @@ protected:
     bool
     DoExecute (const char *command, CommandReturnObject &result) override
     {
-        auto target_sp = m_interpreter.GetDebugger().GetSelectedTarget();
-        auto frame_sp = target_sp->GetProcessSP()->GetThreadList().GetSelectedThread()->GetSelectedFrame();
+        TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget();
+        Thread *thread = GetDefaultThread();
+        if (!thread)
+        {
+            result.AppendError("no default thread");
+            result.SetStatus(lldb::eReturnStatusFailed);
+            return false;
+        }
+        
+        StackFrameSP frame_sp = thread->GetSelectedFrame();
         ValueObjectSP result_valobj_sp;
         EvaluateExpressionOptions options;
         lldb::ExpressionResults expr_result = target_sp->EvaluateExpression(command, frame_sp.get(), result_valobj_sp, options);

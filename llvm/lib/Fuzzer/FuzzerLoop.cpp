@@ -199,12 +199,27 @@ void Fuzzer::PrintFinalStats() {
   Printf("stat::peak_rss_mb:              %zd\n", GetPeakRSSMb());
 }
 
-void Fuzzer::RereadOutputCorpus() {
+size_t Fuzzer::MaxUnitSizeInCorpus() const {
+  size_t Res = 0;
+  for (auto &X : Corpus)
+    Res = std::max(Res, X.size());
+  return Res;
+}
+
+void Fuzzer::SetMaxLen(size_t MaxLen) {
+  assert(Options.MaxLen == 0); // Can only reset MaxLen from 0 to non-0.
+  assert(MaxLen);
+  Options.MaxLen = MaxLen;
+  Printf("INFO: -max_len is not provided, using %zd\n", Options.MaxLen);
+}
+
+
+void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
   if (Options.OutputCorpus.empty())
     return;
   std::vector<Unit> AdditionalCorpus;
   ReadDirToVectorOfUnits(Options.OutputCorpus.c_str(), &AdditionalCorpus,
-                         &EpochOfLastReadOfOutputCorpus, Options.MaxLen);
+                         &EpochOfLastReadOfOutputCorpus, MaxSize);
   if (Corpus.empty()) {
     Corpus = AdditionalCorpus;
     return;
@@ -214,8 +229,8 @@ void Fuzzer::RereadOutputCorpus() {
   if (Options.Verbosity >= 2)
     Printf("Reload: read %zd new units.\n", AdditionalCorpus.size());
   for (auto &X : AdditionalCorpus) {
-    if (X.size() > (size_t)Options.MaxLen)
-      X.resize(Options.MaxLen);
+    if (X.size() > MaxSize)
+      X.resize(MaxSize);
     if (UnitHashesAddedToCorpus.insert(Hash(X)).second) {
       if (RunOne(X)) {
         Corpus.push_back(X);
@@ -231,7 +246,7 @@ void Fuzzer::ShuffleAndMinimize() {
                       (Options.PreferSmallDuringInitialShuffle == -1 &&
                        MD.GetRand().RandBool()));
   if (Options.Verbosity)
-    Printf("PreferSmall: %d\n", PreferSmall);
+    Printf("INFO: PreferSmall: %d\n", PreferSmall);
   PrintStats("READ  ");
   std::vector<Unit> NewCorpus;
   if (Options.ShuffleAtStartUp) {
@@ -427,6 +442,7 @@ void Fuzzer::Merge(const std::vector<std::string> &Corpora) {
     return;
   }
   auto InitialCorpusDir = Corpora[0];
+  assert(Options.MaxLen > 0);
   ReadDir(InitialCorpusDir, nullptr, Options.MaxLen);
   Printf("Merge: running the initial corpus '%s' of %d units\n",
          InitialCorpusDir.c_str(), Corpus.size());
@@ -469,7 +485,7 @@ void Fuzzer::MutateAndTestOne() {
     else
       NewSize = MD.Mutate(MutateInPlaceHere.data(), Size, Options.MaxLen);
     assert(NewSize > 0 && "Mutator returned empty unit");
-    assert(NewSize <= (size_t)Options.MaxLen &&
+    assert(NewSize <= Options.MaxLen &&
            "Mutator return overisized unit");
     Size = NewSize;
     if (i == 0)
@@ -546,7 +562,7 @@ void Fuzzer::Loop() {
     SyncCorpus();
     auto Now = system_clock::now();
     if (duration_cast<seconds>(Now - LastCorpusReload).count()) {
-      RereadOutputCorpus();
+      RereadOutputCorpus(Options.MaxLen);
       LastCorpusReload = Now;
     }
     if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)

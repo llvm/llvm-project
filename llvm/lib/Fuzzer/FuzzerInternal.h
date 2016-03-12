@@ -274,7 +274,7 @@ class Fuzzer {
 public:
   struct FuzzingOptions {
     int Verbosity = 1;
-    int MaxLen = 0;
+    size_t MaxLen = 0;
     int UnitTimeoutSec = 300;
     int TimeoutExitCode = 77;
     int ErrorExitCode = 77;
@@ -316,11 +316,12 @@ public:
   void InitializeTraceState();
   void AssignTaintLabels(uint8_t *Data, size_t Size);
   size_t CorpusSize() const { return Corpus.size(); }
+  size_t MaxUnitSizeInCorpus() const;
   void ReadDir(const std::string &Path, long *Epoch, size_t MaxSize) {
     Printf("Loading corpus: %s\n", Path.c_str());
     ReadDirToVectorOfUnits(Path.c_str(), &Corpus, Epoch, MaxSize);
   }
-  void RereadOutputCorpus();
+  void RereadOutputCorpus(size_t MaxSize);
   // Save the current corpus to OutputCorpus.
   void SaveCorpus();
 
@@ -345,6 +346,7 @@ public:
   void Merge(const std::vector<std::string> &Corpora);
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();
+  void SetMaxLen(size_t MaxLen);
 
 private:
   void AlarmCallback();

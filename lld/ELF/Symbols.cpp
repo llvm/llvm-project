@@ -73,12 +73,12 @@ getSymVA(const SymbolBody &Body, typename ELFFile<ELFT>::uintX_t &Addend) {
   case SymbolBody::UndefinedKind:
     return 0;
   case SymbolBody::LazyKind:
-    assert(Body.isUsedInRegularObj() && "Lazy symbol reached writer");
+    assert(Body.isUsedInRegularObj() && "lazy symbol reached writer");
     return 0;
   case SymbolBody::DefinedBitcodeKind:
-    llvm_unreachable("Should have been replaced");
+    llvm_unreachable("should have been replaced");
   }
-  llvm_unreachable("Invalid symbol kind");
+  llvm_unreachable("invalid symbol kind");
 }
 
 template <class ELFT>

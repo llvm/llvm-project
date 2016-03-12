@@ -367,7 +367,7 @@ def main(builtinParameters = {}):
     elif opts.incremental:
         sort_by_incremental_cache(run)
     else:
-        run.tests.sort(key = lambda result_test: result_test.getFullName())
+        run.tests.sort(key = lambda t: (not t.isEarlyTest(), t.getFullName()))
 
     # Finally limit the number of tests, if desired.
     if opts.maxTests is not None:

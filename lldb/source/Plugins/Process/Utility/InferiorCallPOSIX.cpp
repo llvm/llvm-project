@@ -43,7 +43,7 @@ lldb_private::InferiorCallMmap (Process *process,
                                 addr_t fd,
                                 addr_t offset)
 {
-    Thread *thread = process->GetThreadList().GetSelectedThread().get();
+    Thread *thread = process->GetThreadList().GetExpressionExecutionThread().get();
     if (thread == NULL)
         return false;
 
@@ -144,7 +144,7 @@ lldb_private::InferiorCallMunmap (Process *process,
                                   addr_t addr,
                                   addr_t length)
 {
-   Thread *thread = process->GetThreadList().GetSelectedThread().get();
+   Thread *thread = process->GetThreadList().GetExpressionExecutionThread().get();
    if (thread == NULL)
        return false;
    
@@ -219,7 +219,7 @@ lldb_private::InferiorCall (Process *process,
                             addr_t &returned_func,
                             bool trap_exceptions)
 {
-    Thread *thread = process->GetThreadList().GetSelectedThread().get();
+    Thread *thread = process->GetThreadList().GetExpressionExecutionThread().get();
     if (thread == NULL || address == NULL)
         return false;
 

@@ -53,7 +53,7 @@ ELFFileBase<ELFT>::getElfSymbols(bool OnlyGlobals) {
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
   uint32_t FirstNonLocal = Symtab->sh_info;
   if (FirstNonLocal > NumSymbols)
-    fatal("Invalid sh_info in symbol table");
+    fatal("invalid sh_info in symbol table");
 
   if (OnlyGlobals)
     return make_range(Syms.begin() + FirstNonLocal, Syms.end());
@@ -137,7 +137,7 @@ elf::ObjectFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
   ArrayRef<uint32_X> Entries =
       check(Obj.template getSectionContentsAsArray<uint32_X>(&Sec));
   if (Entries.empty() || Entries[0] != GRP_COMDAT)
-    fatal("Unsupported SHT_GROUP format");
+    fatal("unsupported SHT_GROUP format");
   return Entries.slice(1);
 }
 
@@ -148,7 +148,7 @@ static bool shouldMerge(const typename ELFFile<ELFT>::Elf_Shdr &Sec) {
   if (!(Flags & SHF_MERGE))
     return false;
   if (Flags & SHF_WRITE)
-    fatal("Writable SHF_MERGE sections are not supported");
+    fatal("writable SHF_MERGE sections are not supported");
   uintX_t EntSize = Sec.sh_entsize;
   if (!EntSize || Sec.sh_size % EntSize)
     fatal("SHF_MERGE section size must be a multiple of sh_entsize");
@@ -187,7 +187,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
-          fatal("Invalid section index in group");
+          fatal("invalid section index in group");
         Sections[SecIndex] = InputSection<ELFT>::Discarded;
       }
       break;
@@ -204,7 +204,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
     case SHT_REL: {
       uint32_t RelocatedSectionIndex = Sec.sh_info;
       if (RelocatedSectionIndex >= Size)
-        fatal("Invalid relocated section index");
+        fatal("invalid relocated section index");
       InputSectionBase<ELFT> *RelocatedSection =
           Sections[RelocatedSectionIndex];
       // Strictly speaking, a relocation section must be included in the
@@ -213,7 +213,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
       if (RelocatedSection == InputSection<ELFT>::Discarded)
         continue;
       if (!RelocatedSection)
-        fatal("Unsupported relocation reference");
+        fatal("unsupported relocation reference");
       if (Config->Relocatable) {
         // For -r, relocation sections are handled as regular input sections.
         Sections[I] = new (Alloc) InputSection<ELFT>(this, &Sec);
@@ -221,10 +221,10 @@ void elf::ObjectFile<ELFT>::initializeSections(
         S->RelocSections.push_back(&Sec);
       } else if (auto *S = dyn_cast<EHInputSection<ELFT>>(RelocatedSection)) {
         if (S->RelocSection)
-          fatal("Multiple relocation sections to .eh_frame are not supported");
+          fatal("multiple relocation sections to .eh_frame are not supported");
         S->RelocSection = &Sec;
       } else {
-        fatal("Relocations pointing to SHF_MERGE are not supported");
+        fatal("relocations pointing to SHF_MERGE are not supported");
       }
       break;
     }
@@ -247,7 +247,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     return InputSection<ELFT>::Discarded;
 
   if (Name == ".note.GNU-split-stack")
-    error("Objects using splitstacks are not supported");
+    error("objects using splitstacks are not supported");
 
   // A MIPS object file has a special section that contains register
   // usage info, which needs to be handled by the linker specially.
@@ -281,7 +281,7 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   if (Index == 0)
     return nullptr;
   if (Index >= Sections.size() || !Sections[Index])
-    fatal("Invalid section index");
+    fatal("invalid section index");
   InputSectionBase<ELFT> *S = Sections[Index];
   if (S == InputSectionBase<ELFT>::Discarded)
     return S;
@@ -397,7 +397,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
     if (Dyn.d_tag == DT_SONAME) {
       uintX_t Val = Dyn.getVal();
       if (Val >= this->StringTable.size())
-        fatal("Invalid DT_SONAME entry");
+        fatal("invalid DT_SONAME entry");
       SoName = StringRef(this->StringTable.data() + Val);
       return;
     }
@@ -433,7 +433,7 @@ static uint8_t getGvVisibility(const GlobalValue *GV) {
   case GlobalValue::ProtectedVisibility:
     return STV_PROTECTED;
   }
-  llvm_unreachable("Unknown visibility");
+  llvm_unreachable("unknown visibility");
 }
 
 SymbolBody *
@@ -516,7 +516,7 @@ template <template <class> class T>
 static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
   std::pair<unsigned char, unsigned char> Type = getElfArchType(MB.getBuffer());
   if (Type.second != ELF::ELFDATA2LSB && Type.second != ELF::ELFDATA2MSB)
-    fatal("Invalid data encoding: " + MB.getBufferIdentifier());
+    fatal("invalid data encoding: " + MB.getBufferIdentifier());
 
   if (Type.first == ELF::ELFCLASS32) {
     if (Type.second == ELF::ELFDATA2LSB)
@@ -528,7 +528,7 @@ static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
       return createELFFileAux<T<ELF64LE>>(MB);
     return createELFFileAux<T<ELF64BE>>(MB);
   }
-  fatal("Invalid file class: " + MB.getBufferIdentifier());
+  fatal("invalid file class: " + MB.getBufferIdentifier());
 }
 
 std::unique_ptr<InputFile> elf::createObjectFile(MemoryBufferRef MB,
