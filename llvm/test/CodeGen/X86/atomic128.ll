@@ -4,9 +4,14 @@
 
 define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK-LABEL: val_compare_and_swap:
+; Due to the scheduling right after isel for cmpxchg and given the
+; machine scheduler and copy coalescer do not mess up with physical
+; register live-ranges, we end up with a useless copy.
+;
+; CHECK: movq %rcx, [[TMP:%r[0-9a-z]+]]
 ; CHECK: movq %rsi, %rax
-; CHECK: movq %rcx, %rbx
 ; CHECK: movq %r8, %rcx
+; CHECK: movq [[TMP]], %rbx
 ; CHECK: lock
 ; CHECK: cmpxchg16b (%rdi)
 
@@ -216,8 +221,8 @@ define i128 @atomic_load_seq_cst(i128* %p) {
 ; CHECK-LABEL: atomic_load_seq_cst:
 ; CHECK: xorl %eax, %eax
 ; CHECK: xorl %edx, %edx
-; CHECK: xorl %ebx, %ebx
 ; CHECK: xorl %ecx, %ecx
+; CHECK: xorl %ebx, %ebx
 ; CHECK: lock
 ; CHECK: cmpxchg16b (%rdi)
 
@@ -229,8 +234,8 @@ define i128 @atomic_load_relaxed(i128* %p) {
 ; CHECK: atomic_load_relaxed:
 ; CHECK: xorl %eax, %eax
 ; CHECK: xorl %edx, %edx
-; CHECK: xorl %ebx, %ebx
 ; CHECK: xorl %ecx, %ecx
+; CHECK: xorl %ebx, %ebx
 ; CHECK: lock
 ; CHECK: cmpxchg16b (%rdi)
 
