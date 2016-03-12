@@ -18,9 +18,13 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <sys/stat.h>
 #include <sys/param.h>
+#include <sys/stat.h>
+#if defined(__APPLE__)
 #include <sys/mount.h>
+#else
+#include <sys/vfs.h>
+#endif
 
 #include <set>
 
