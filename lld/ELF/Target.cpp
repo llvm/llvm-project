@@ -70,12 +70,6 @@ template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
   error("improper alignment for relocation " + S);
 }
 
-template <class ELFT> bool isGnuIFunc(const SymbolBody &S) {
-  if (auto *SS = dyn_cast<DefinedElf<ELFT>>(&S))
-    return SS->Sym.getType() == STT_GNU_IFUNC;
-  return false;
-}
-
 namespace {
 class X86TargetInfo final : public TargetInfo {
 public:
@@ -315,7 +309,7 @@ bool TargetInfo::refersToGotEntry(uint32_t Type) const { return false; }
 template <class ELFT>
 TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
                                          const SymbolBody &S) const {
-  if (isGnuIFunc<ELFT>(S))
+  if (S.isGnuIfunc<ELFT>())
     return Plt_Explicit;
   if (canBePreempted(S) && needsPltImpl(Type))
     return Plt_Explicit;
@@ -1805,11 +1799,6 @@ template <class ELFT> typename ELFFile<ELFT>::uintX_t getMipsGpAddr() {
     return V + GPOffset;
   return 0;
 }
-
-template bool isGnuIFunc<ELF32LE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF32BE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF64LE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF64BE>(const SymbolBody &S);
 
 template uint32_t getMipsGpAddr<ELF32LE>();
 template uint32_t getMipsGpAddr<ELF32BE>();

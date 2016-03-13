@@ -75,17 +75,14 @@ public:
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Rel &Rel) const;
   InputSectionBase<ELFT> *getRelocTarget(const Elf_Rela &Rel) const;
 
-  template <bool isRela>
-  using RelIteratorRange =
-      llvm::iterator_range<const llvm::object::Elf_Rel_Impl<ELFT, isRela> *>;
-
-  template <bool isRela>
-  void relocate(uint8_t *Buf, uint8_t *BufEnd, RelIteratorRange<isRela> Rels);
+  template <class RelTy>
+  void relocate(uint8_t *Buf, uint8_t *BufEnd,
+                llvm::iterator_range<const RelTy *> Rels);
 
 private:
-  template <bool isRela>
-  uint8_t *findMipsPairedReloc(uint8_t *Buf, uint32_t SymIndex, uint32_t Type,
-                               RelIteratorRange<isRela> Rels);
+  template <class RelTy>
+  uint8_t *findMipsPairedReloc(uint8_t *Buf, const RelTy *Rel,
+                               const RelTy *End);
 };
 
 template <class ELFT>
@@ -171,12 +168,8 @@ public:
   InputSectionBase<ELFT> *getRelocatedSection();
 
 private:
-  template <bool isRela>
-  using RelIteratorRange =
-      llvm::iterator_range<const llvm::object::Elf_Rel_Impl<ELFT, isRela> *>;
-
-  template <bool isRela>
-  void copyRelocations(uint8_t *Buf, RelIteratorRange<isRela> Rels);
+  template <class RelTy>
+  void copyRelocations(uint8_t *Buf, llvm::iterator_range<const RelTy *> Rels);
 
   // Called by ICF to merge two input sections.
   void replace(InputSection<ELFT> *Other);

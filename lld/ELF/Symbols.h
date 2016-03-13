@@ -46,6 +46,8 @@ struct Symbol {
 
 // The base class for real symbol classes.
 class SymbolBody {
+  template <class ELFT> using ELFFile = llvm::object::ELFFile<ELFT>;
+
 public:
   enum Kind {
     DefinedFirst,
@@ -74,6 +76,8 @@ public:
   bool isLocal() const { return IsLocal; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
 
+  template <class ELFT> bool isGnuIfunc() const;
+
   // Returns the symbol name.
   StringRef getName() const { return Name; }
 
@@ -88,17 +92,13 @@ public:
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
 
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t
-  getVA(typename llvm::object::ELFFile<ELFT>::uintX_t Addend = 0) const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getGotVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getGotPltVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getPltVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getSize() const;
+  template <class ELFT> typename ELFFile<ELFT>::uintX_t
+  getVA(typename ELFFile<ELFT>::uintX_t Addend = 0) const;
+
+  template <class ELFT> typename ELFFile<ELFT>::uintX_t getGotVA() const;
+  template <class ELFT> typename ELFFile<ELFT>::uintX_t getGotPltVA() const;
+  template <class ELFT> typename ELFFile<ELFT>::uintX_t getPltVA() const;
+  template <class ELFT> typename ELFFile<ELFT>::uintX_t getSize() const;
 
   // A SymbolBody has a backreference to a Symbol. Originally they are
   // doubly-linked. A backreference will never change. But the pointer

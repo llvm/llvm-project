@@ -22,19 +22,15 @@ void log(const Twine &Msg);
 void warning(const Twine &Msg);
 
 void error(const Twine &Msg);
-bool error(std::error_code EC, const Twine &Prefix);
-bool error(std::error_code EC);
+void error(std::error_code EC, const Twine &Prefix);
 
-template <typename T> bool error(const ErrorOr<T> &V, const Twine &Prefix) {
-  return error(V.getError(), Prefix);
-}
-
-template <typename T> bool error(const ErrorOr<T> &V) {
-  return error(V.getError());
+template <typename T> void error(const ErrorOr<T> &V, const Twine &Prefix) {
+  error(V.getError(), Prefix);
 }
 
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg, const Twine &Prefix);
+
 void check(std::error_code EC);
 
 template <class T> T check(ErrorOr<T> EO) {

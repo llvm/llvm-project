@@ -62,9 +62,9 @@ private:
   void addPredefinedSections();
   bool needsGot();
 
-  template <bool isRela>
+  template <class RelTy>
   void scanRelocs(InputSectionBase<ELFT> &C,
-                  iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels);
+                  iterator_range<const RelTy *> Rels);
 
   void scanRelocs(InputSection<ELFT> &C);
   void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
@@ -85,9 +85,11 @@ private:
     return !Symtab.getSharedFiles().empty() || Config->Shared;
   }
 
-  OutputSection<ELFT> *getBss();
+  void ensureBss();
   void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
   void addCopyRelSymbols(std::vector<SharedSymbol<ELFT> *> &Syms);
+
+  static uint32_t getAlignment(SharedSymbol<ELFT> *SS);
 
   std::unique_ptr<llvm::FileOutputBuffer> Buffer;
 
@@ -308,13 +310,11 @@ static bool handleTlsRelocation(uint32_t Type, SymbolBody &Body,
 // complicates things for the dynamic linker and means we would have to reserve
 // space for the extra PT_LOAD even if we end up not using it.
 template <class ELFT>
-template <bool isRela>
-void Writer<ELFT>::scanRelocs(
-    InputSectionBase<ELFT> &C,
-    iterator_range<const Elf_Rel_Impl<ELFT, isRela> *> Rels) {
-  typedef Elf_Rel_Impl<ELFT, isRela> RelType;
+template <class RelTy>
+void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
+                              iterator_range<const RelTy *> Rels) {
   const elf::ObjectFile<ELFT> &File = *C.getFile();
-  for (const RelType &RI : Rels) {
+  for (const RelTy &RI : Rels) {
     uint32_t SymIndex = RI.getSymbol(Config->Mips64EL);
     SymbolBody &OrigBody = File.getSymbolBody(SymIndex);
     SymbolBody &Body = OrigBody.repl();
@@ -350,7 +350,7 @@ void Writer<ELFT>::scanRelocs(
 
     // If a symbol in a DSO is referenced directly instead of through GOT,
     // we need to create a copy relocation for the symbol.
-    if (auto *B = dyn_cast_or_null<SharedSymbol<ELFT>>(&Body)) {
+    if (auto *B = dyn_cast<SharedSymbol<ELFT>>(&Body)) {
       if (B->needsCopy())
         continue;
       if (Target->needsCopyRel<ELFT>(Type, *B)) {
@@ -364,7 +364,7 @@ void Writer<ELFT>::scanRelocs(
     // An STT_GNU_IFUNC symbol always uses a PLT entry, and all references
     // to the symbol go through the PLT. This is true even for a local
     // symbol, although local symbols normally do not require PLT entries.
-    if (isGnuIFunc<ELFT>(Body)) {
+    if (Body.isGnuIfunc<ELFT>()) {
       if (Body.isInPlt())
         continue;
       Out<ELFT>::Plt->addEntry(Body);
@@ -689,14 +689,15 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
   return false;
 }
 
-template <class ELFT> OutputSection<ELFT> *Writer<ELFT>::getBss() {
-  if (!Out<ELFT>::Bss) {
-    Out<ELFT>::Bss =
-        new OutputSection<ELFT>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
-    OwningSections.emplace_back(Out<ELFT>::Bss);
-    OutputSections.push_back(Out<ELFT>::Bss);
-  }
-  return Out<ELFT>::Bss;
+// The .bss section does not exist if no input file has a .bss section.
+// This function creates one if that's the case.
+template <class ELFT> void Writer<ELFT>::ensureBss() {
+  if (Out<ELFT>::Bss)
+    return;
+  Out<ELFT>::Bss =
+      new OutputSection<ELFT>(".bss", SHT_NOBITS, SHF_ALLOC | SHF_WRITE);
+  OwningSections.emplace_back(Out<ELFT>::Bss);
+  OutputSections.push_back(Out<ELFT>::Bss);
 }
 
 // Until this function is called, common symbols do not belong to any section.
@@ -712,7 +713,8 @@ void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
                      return A->Alignment > B->Alignment;
                    });
 
-  uintX_t Off = getBss()->getSize();
+  ensureBss();
+  uintX_t Off = Out<ELFT>::Bss->getSize();
   for (DefinedCommon *C : Syms) {
     Off = alignTo(Off, C->Alignment);
     Out<ELFT>::Bss->updateAlign(C->Alignment);
@@ -723,26 +725,33 @@ void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
   Out<ELFT>::Bss->setSize(Off);
 }
 
+template <class ELFT>
+uint32_t Writer<ELFT>::getAlignment(SharedSymbol<ELFT> *SS) {
+  const Elf_Sym &Sym = SS->Sym;
+  const Elf_Shdr *Sec = SS->File->getSection(Sym);
+  uintX_t SecAlign = Sec->sh_addralign;
+  int TrailingZeros = std::min(countTrailingZeros(SecAlign),
+                               countTrailingZeros((uintX_t)Sym.st_value));
+  return 1 << TrailingZeros;
+}
+
 // Reserve space in .bss for copy relocations.
 template <class ELFT>
 void Writer<ELFT>::addCopyRelSymbols(std::vector<SharedSymbol<ELFT> *> &Syms) {
   if (Syms.empty())
     return;
-  uintX_t Off = getBss()->getSize();
-  for (SharedSymbol<ELFT> *C : Syms) {
-    const Elf_Sym &Sym = C->Sym;
-    const Elf_Shdr *Sec = C->File->getSection(Sym);
-    uintX_t SecAlign = Sec->sh_addralign;
-    unsigned TrailingZeros =
-        std::min(countTrailingZeros(SecAlign),
-                 countTrailingZeros((uintX_t)Sym.st_value));
-    uintX_t Align = 1 << TrailingZeros;
-    Out<ELFT>::Bss->updateAlign(Align);
+  ensureBss();
+  uintX_t Off = Out<ELFT>::Bss->getSize();
+  uintX_t MaxAlign = Out<ELFT>::Bss->getAlign();
+  for (SharedSymbol<ELFT> *SS : Syms) {
+    uintX_t Align = getAlignment(SS);
     Off = alignTo(Off, Align);
-    C->OffsetInBss = Off;
-    Off += Sym.st_size;
+    SS->OffsetInBss = Off;
+    Off += SS->Sym.st_size;
+    MaxAlign = std::max(MaxAlign, Align);
   }
   Out<ELFT>::Bss->setSize(Off);
+  Out<ELFT>::Bss->updateAlign(MaxAlign);
 }
 
 template <class ELFT>
@@ -957,6 +966,12 @@ template <class ELFT> bool Writer<ELFT>::createSections() {
   if (needsInterpSection())
     OutputSections.push_back(Out<ELFT>::Interp);
 
+  // A core file does not usually contain unmodified segments except
+  // the first page of the executable. Add the build ID section now
+  // so that the section is included in the first page.
+  if (Out<ELFT>::BuildId)
+    OutputSections.push_back(Out<ELFT>::BuildId);
+
   // Create output sections for input object file sections.
   std::vector<OutputSectionBase<ELFT> *> RegularSections;
   OutputSectionFactory<ELFT> Factory;
@@ -1121,7 +1136,6 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   // This order is not the same as the final output order
   // because we sort the sections using their attributes below.
-  Add(Out<ELFT>::BuildId);
   Add(Out<ELFT>::SymTab);
   Add(Out<ELFT>::ShStrTab);
   Add(Out<ELFT>::StrTab);
@@ -1518,8 +1532,10 @@ template <class ELFT> bool Writer<ELFT>::openFile() {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
                                FileOutputBuffer::F_executable);
-  if (error(BufferOrErr, "failed to open " + Config->OutputFile))
+  if (!BufferOrErr) {
+    error(BufferOrErr, "failed to open " + Config->OutputFile);
     return false;
+  }
   Buffer = std::move(*BufferOrErr);
   return true;
 }

@@ -722,16 +722,14 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
   return InitializeSourceManager(
       Input, getDiagnostics(), getFileManager(), getSourceManager(),
       hasPreprocessor() ? &getPreprocessor().getHeaderSearchInfo() : nullptr,
-      getFrontendOpts());
+      getDependencyOutputOpts(), getFrontendOpts());
 }
 
 // static
-bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
-                                               DiagnosticsEngine &Diags,
-                                               FileManager &FileMgr,
-                                               SourceManager &SourceMgr,
-                                               HeaderSearch *HS,
-                                               const FrontendOptions &Opts) {
+bool CompilerInstance::InitializeSourceManager(
+    const FrontendInputFile &Input, DiagnosticsEngine &Diags,
+    FileManager &FileMgr, SourceManager &SourceMgr, HeaderSearch *HS,
+    DependencyOutputOptions &DepOpts, const FrontendOptions &Opts) {
   SrcMgr::CharacteristicKind
     Kind = Input.isSystem() ? SrcMgr::C_System : SrcMgr::C_User;
 
@@ -772,6 +770,9 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
                             /*RelativePath=*/nullptr,
                             /*RequestingModule=*/nullptr,
                             /*SuggestedModule=*/nullptr, /*SkipCache=*/true);
+      // Also add the header to /showIncludes output.
+      if (File)
+        DepOpts.ExtraDeps.push_back(File->getName());
     }
     if (!File) {
       Diags.Report(diag::err_fe_error_reading) << InputFile;

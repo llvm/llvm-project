@@ -324,11 +324,9 @@ public:
   EHOutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
   void writeTo(uint8_t *Buf) override;
 
-  template <bool IsRela>
-  void addSectionAux(
-      EHInputSection<ELFT> *S,
-      llvm::iterator_range<const llvm::object::Elf_Rel_Impl<ELFT, IsRela> *>
-          Rels);
+  template <class RelTy>
+  void addSectionAux(EHInputSection<ELFT> *S,
+                     llvm::iterator_range<const RelTy *> Rels);
 
   void addSection(InputSectionBase<ELFT> *S) override;
 

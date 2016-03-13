@@ -113,31 +113,31 @@ InputSectionBase<ELFT> *InputSection<ELFT>::getRelocatedSection() {
 // to update symbol table offset and section index for each relocation. So we
 // copy relocations one by one.
 template <class ELFT>
-template <bool isRela>
+template <class RelTy>
 void InputSection<ELFT>::copyRelocations(uint8_t *Buf,
-                                         RelIteratorRange<isRela> Rels) {
-  typedef Elf_Rel_Impl<ELFT, isRela> RelType;
+                                         iterator_range<const RelTy *> Rels) {
   InputSectionBase<ELFT> *RelocatedSection = getRelocatedSection();
 
-  for (const RelType &Rel : Rels) {
+  for (const RelTy &Rel : Rels) {
     uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
     uint32_t Type = Rel.getType(Config->Mips64EL);
     SymbolBody &Body = this->File->getSymbolBody(SymIndex).repl();
 
-    RelType *P = reinterpret_cast<RelType *>(Buf);
-    Buf += sizeof(RelType);
+    RelTy *P = reinterpret_cast<RelTy *>(Buf);
+    Buf += sizeof(RelTy);
 
     P->r_offset = RelocatedSection->getOffset(Rel.r_offset);
     P->setSymbolAndType(Body.DynsymIndex, Type, Config->Mips64EL);
   }
 }
 
-static uint32_t getMipsPairedRelocType(uint32_t Type) {
-  if (Config->EMachine != EM_MIPS)
-    return R_MIPS_NONE;
-  switch (Type) {
+template <class RelTy>
+static uint32_t getMipsPairType(const RelTy *Rel, const SymbolBody &Sym) {
+  switch (Rel->getType(Config->Mips64EL)) {
   case R_MIPS_HI16:
     return R_MIPS_LO16;
+  case R_MIPS_GOT16:
+    return Sym.isLocal() ? R_MIPS_LO16 : R_MIPS_NONE;
   case R_MIPS_PCHI16:
     return R_MIPS_PCLO16;
   case R_MICROMIPS_HI16:
@@ -148,23 +148,27 @@ static uint32_t getMipsPairedRelocType(uint32_t Type) {
 }
 
 template <class ELFT>
-template <bool isRela>
-uint8_t *
-InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t SymIndex,
-                                            uint32_t Type,
-                                            RelIteratorRange<isRela> Rels) {
+template <class RelTy>
+uint8_t *InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf,
+                                                     const RelTy *Rel,
+                                                     const RelTy *End) {
+  uint32_t SymIndex = Rel->getSymbol(Config->Mips64EL);
+  SymbolBody &Sym = File->getSymbolBody(SymIndex).repl();
+  uint32_t Type = getMipsPairType(Rel, Sym);
+
   // Some MIPS relocations use addend calculated from addend of the relocation
   // itself and addend of paired relocation. ABI requires to compute such
   // combined addend in case of REL relocation record format only.
   // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (isRela || Type == R_MIPS_NONE)
+  if (RelTy::IsRela || Type == R_MIPS_NONE)
     return nullptr;
-  for (const auto &RI : Rels) {
-    if (RI.getType(Config->Mips64EL) != Type)
+
+  for (const RelTy *RI = Rel; RI != End; ++RI) {
+    if (RI->getType(Config->Mips64EL) != Type)
       continue;
-    if (RI.getSymbol(Config->Mips64EL) != SymIndex)
+    if (RI->getSymbol(Config->Mips64EL) != SymIndex)
       continue;
-    uintX_t Offset = getOffset(RI.r_offset);
+    uintX_t Offset = getOffset(RI->r_offset);
     if (Offset == (uintX_t)-1)
       return nullptr;
     return Buf + Offset;
@@ -173,13 +177,12 @@ InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf, uint32_t SymIndex,
 }
 
 template <class ELFT>
-template <bool isRela>
+template <class RelTy>
 void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
-                                      RelIteratorRange<isRela> Rels) {
-  typedef Elf_Rel_Impl<ELFT, isRela> RelType;
+                                      iterator_range<const RelTy *> Rels) {
   size_t Num = Rels.end() - Rels.begin();
   for (size_t I = 0; I < Num; ++I) {
-    const RelType &RI = *(Rels.begin() + I);
+    const RelTy &RI = *(Rels.begin() + I);
     uintX_t Offset = getOffset(RI.r_offset);
     if (Offset == (uintX_t)-1)
       continue;
@@ -189,7 +192,6 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     uint32_t Type = RI.getType(Config->Mips64EL);
     uint8_t *BufLoc = Buf + Offset;
     uintX_t AddrLoc = OutSec->getVA() + Offset;
-    auto NextRelocs = llvm::make_range(&RI, Rels.end());
 
     if (Target->pointsToLocalDynamicGotEntry(Type) &&
         !Target->canRelaxTls(Type, nullptr)) {
@@ -231,6 +233,8 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     uintX_t SymVA = Body.getVA<ELFT>(A);
     bool CBP = canBePreempted(Body);
     uint8_t *PairedLoc = nullptr;
+    if (Config->EMachine == EM_MIPS)
+      PairedLoc = findMipsPairedReloc(Buf, &RI, Rels.end());
 
     if (Target->needsPlt<ELFT>(Type, Body)) {
       SymVA = Body.getPltVA<ELFT>() + A;
@@ -243,11 +247,9 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
           // is calculated using addends from R_MIPS_GOT16 and paired
           // R_MIPS_LO16 relocations.
           const endianness E = ELFT::TargetEndianness;
-          uint8_t *LowLoc =
-              findMipsPairedReloc(Buf, SymIndex, R_MIPS_LO16, NextRelocs);
           uint64_t AHL = read32<E>(BufLoc) << 16;
-          if (LowLoc)
-            AHL += SignExtend64<16>(read32<E>(LowLoc));
+          if (PairedLoc)
+            AHL += SignExtend64<16>(read32<E>(PairedLoc));
           SymVA = Out<ELFT>::Got->getMipsLocalPageAddr(SymVA + AHL);
         } else {
           // For non-local symbols GOT entries should contain their full
@@ -280,9 +282,6 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
         // relocations because they use the following expression to calculate
         // the relocation's result for local symbol: S + A + GP0 - G.
         SymVA += File->getMipsGp0();
-      } else {
-        PairedLoc = findMipsPairedReloc(
-            Buf, SymIndex, getMipsPairedRelocType(Type), NextRelocs);
       }
     } else if (!Target->needsCopyRel<ELFT>(Type, Body) && CBP) {
       continue;

@@ -23,13 +23,13 @@
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =99 }" > %t.script
 # RUN: not ld.lld -o %t.out --script %t.script %t 2>&1 \
 # RUN:   | FileCheck --check-prefix=ERR %s
-# ERR: filler should be a HEX value
+# ERR: filler should be a hexadecimal value
 
 ## Filler should be a hex value (2):
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99XX }" > %t.script
 # RUN: not ld.lld -o %t.out --script %t.script %t 2>&1 \
 # RUN:   | FileCheck --check-prefix=ERR2 %s
-# ERR2: not a HEX value: XX
+# ERR2: not a hexadecimal value: XX
 
 .section        .mysec.1,"a"
 .align  16

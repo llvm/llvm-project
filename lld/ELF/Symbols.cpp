@@ -81,6 +81,12 @@ getSymVA(const SymbolBody &Body, typename ELFFile<ELFT>::uintX_t &Addend) {
   llvm_unreachable("invalid symbol kind");
 }
 
+template <class ELFT> bool SymbolBody::isGnuIfunc() const {
+  if (auto *D = dyn_cast<DefinedElf<ELFT>>(this))
+    return D->Sym.getType() == STT_GNU_IFUNC;
+  return false;
+}
+
 template <class ELFT>
 typename ELFFile<ELFT>::uintX_t
 SymbolBody::getVA(typename ELFFile<ELFT>::uintX_t Addend) const {
@@ -244,6 +250,11 @@ std::string elf::demangle(StringRef Name) {
   return S;
 #endif
 }
+
+template bool SymbolBody::template isGnuIfunc<ELF32LE>() const;
+template bool SymbolBody::template isGnuIfunc<ELF32BE>() const;
+template bool SymbolBody::template isGnuIfunc<ELF64LE>() const;
+template bool SymbolBody::template isGnuIfunc<ELF64BE>() const;
 
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;
 template uint32_t SymbolBody::template getVA<ELF32BE>(uint32_t) const;

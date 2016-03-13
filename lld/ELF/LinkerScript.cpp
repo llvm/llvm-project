@@ -419,7 +419,7 @@ std::vector<uint8_t> ScriptParser::parseHex(StringRef S) {
     S = S.substr(2);
     uint8_t H;
     if (B.getAsInteger(16, H)) {
-      setError("not a HEX value: " + B);
+      setError("not a hexadecimal value: " + B);
       return {};
     }
     Hex.push_back(H);
@@ -448,7 +448,7 @@ void ScriptParser::readOutputSectionDescription() {
   StringRef Tok = peek();
   if (Tok.startswith("=")) {
     if (!Tok.startswith("=0x")) {
-      setError("filler should be a HEX value");
+      setError("filler should be a hexadecimal value");
       return;
     }
     Tok = Tok.substr(3);

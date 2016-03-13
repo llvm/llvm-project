@@ -1089,10 +1089,9 @@ static typename ELFFile<ELFT>::uintX_t readEntryLength(ArrayRef<uint8_t> D) {
 }
 
 template <class ELFT>
-template <bool IsRela>
-void EHOutputSection<ELFT>::addSectionAux(
-    EHInputSection<ELFT> *S,
-    iterator_range<const Elf_Rel_Impl<ELFT, IsRela> *> Rels) {
+template <class RelTy>
+void EHOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *S,
+                                          iterator_range<const RelTy *> Rels) {
   const endianness E = ELFT::TargetEndianness;
 
   S->OutSec = this;

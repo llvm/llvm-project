@@ -10,7 +10,11 @@
 _start:
   nop
 
+.section .note.test, "a", @note
+   .quad 42
+
 # BUILDID:      Contents of section .note.gnu.build-id:
 # BUILDID-NEXT: 04000000 08000000 03000000 474e5500  ............GNU.
+# BUILDID:      Contents of section .note.test:
 
 # NO-BUILDID-NOT: Contents of section .note.gnu.build-id:
