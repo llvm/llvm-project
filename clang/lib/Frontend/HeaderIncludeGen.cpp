@@ -19,21 +19,25 @@ namespace {
 class HeaderIncludesCallback : public PPCallbacks {
   SourceManager &SM;
   raw_ostream *OutputFile;
+  const std::vector<std::string> &ExtraHeaders;
   unsigned CurrentIncludeDepth;
   bool HasProcessedPredefines;
   bool OwnsOutputFile;
   bool ShowAllHeaders;
   bool ShowDepth;
   bool MSStyle;
+  bool PrintedExtraHeaders;
 
 public:
   HeaderIncludesCallback(const Preprocessor *PP, bool ShowAllHeaders_,
-                         raw_ostream *OutputFile_, bool OwnsOutputFile_,
-                         bool ShowDepth_, bool MSStyle_)
-    : SM(PP->getSourceManager()), OutputFile(OutputFile_),
-      CurrentIncludeDepth(0), HasProcessedPredefines(false),
-      OwnsOutputFile(OwnsOutputFile_), ShowAllHeaders(ShowAllHeaders_),
-      ShowDepth(ShowDepth_), MSStyle(MSStyle_) {}
+                         raw_ostream *OutputFile_,
+                         const std::vector<std::string> &ExtraHeaders,
+                         bool OwnsOutputFile_, bool ShowDepth_, bool MSStyle_)
+      : SM(PP->getSourceManager()), OutputFile(OutputFile_),
+        ExtraHeaders(ExtraHeaders), CurrentIncludeDepth(0),
+        HasProcessedPredefines(false), OwnsOutputFile(OwnsOutputFile_),
+        ShowAllHeaders(ShowAllHeaders_), ShowDepth(ShowDepth_),
+        MSStyle(MSStyle_), PrintedExtraHeaders(false) {}
 
   ~HeaderIncludesCallback() override {
     if (OwnsOutputFile)
@@ -97,26 +101,26 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
     }
   }
 
-  // Print header info for extra headers, pretending they were discovered
-  // by the regular preprocessor. The primary use case is to support
-  // proper generation of Make / Ninja file dependencies for implicit includes,
-  // such as sanitizer blacklists. It's only important for cl.exe
-  // compatibility, the GNU way to generate rules is -M / -MM / -MD / -MMD.
-  for (auto Header : ExtraHeaders) {
-    PrintHeaderInfo(OutputFile, Header.c_str(), ShowDepth, 2, MSStyle);
-  }
-  PP.addPPCallbacks(llvm::make_unique<HeaderIncludesCallback>(&PP,
-                                                              ShowAllHeaders,
-                                                              OutputFile,
-                                                              OwnsOutputFile,
-                                                              ShowDepth,
-                                                              MSStyle));
+  PP.addPPCallbacks(llvm::make_unique<HeaderIncludesCallback>(
+      &PP, ShowAllHeaders, OutputFile, ExtraHeaders, OwnsOutputFile, ShowDepth,
+      MSStyle));
 }
 
 void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
                                          FileChangeReason Reason,
                                        SrcMgr::CharacteristicKind NewFileType,
                                        FileID PrevFID) {
+  if (!PrintedExtraHeaders) {
+    // Print header info for extra headers, pretending they were discovered by
+    // the regular preprocessor. The primary use case is to support proper
+    // generation of Make / Ninja file dependencies for implicit includes, such
+    // as sanitizer blacklists. It's only important for cl.exe compatibility,
+    // the GNU way to generate rules is -M / -MM / -MD / -MMD.
+    for (auto Header : ExtraHeaders)
+      PrintHeaderInfo(OutputFile, Header.c_str(), ShowDepth, 2, MSStyle);
+    PrintedExtraHeaders = true;
+  }
+
   // Unless we are exiting a #include, make sure to skip ahead to the line the
   // #include directive was at.
   PresumedLoc UserLoc = SM.getPresumedLoc(Loc);
