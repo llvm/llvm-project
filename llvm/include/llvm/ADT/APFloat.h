@@ -511,16 +511,7 @@ public:
   ///   0   -> \c IEK_Zero
   ///   Inf -> \c IEK_Inf
   ///
-  friend int ilogb(const APFloat &Arg) {
-    if (Arg.isNaN())
-      return IEK_NaN;
-    if (Arg.isZero())
-      return IEK_Zero;
-    if (Arg.isInfinity())
-      return IEK_Inf;
-
-    return Arg.exponent;
-  }
+  friend int ilogb(const APFloat &Arg);
 
   /// \brief Returns: X * 2^Exp for integral exponents.
   friend APFloat scalbn(APFloat X, int Exp, roundingMode);

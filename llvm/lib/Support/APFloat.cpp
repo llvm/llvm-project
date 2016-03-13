@@ -3943,6 +3943,24 @@ APFloat::makeZero(bool Negative) {
   APInt::tcSet(significandParts(), 0, partCount());  
 }
 
+int llvm::ilogb(const APFloat &Arg) {
+  if (Arg.isNaN())
+    return APFloat::IEK_NaN;
+  if (Arg.isZero())
+    return APFloat::IEK_Zero;
+  if (Arg.isInfinity())
+    return APFloat::IEK_Inf;
+  if (!Arg.isDenormal())
+    return Arg.exponent;
+
+  APFloat Normalized(Arg);
+  int SignificandBits = Arg.getSemantics().precision - 1;
+
+  Normalized.exponent += SignificandBits;
+  Normalized.normalize(APFloat::rmNearestTiesToEven, lfExactlyZero);
+  return Normalized.exponent - SignificandBits;
+}
+
 APFloat llvm::scalbn(APFloat X, int Exp, APFloat::roundingMode RoundingMode) {
   auto MaxExp = X.getSemantics().maxExponent;
   auto MinExp = X.getSemantics().minExponent;
