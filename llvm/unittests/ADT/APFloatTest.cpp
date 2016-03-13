@@ -140,14 +140,14 @@ TEST(APFloatTest, next) {
   test = APFloat(APFloat::IEEEquad, "0x0.0000000000000000000000000001p-16382");
   expected = APFloat::getZero(APFloat::IEEEquad, false);
   EXPECT_EQ(test.next(true), APFloat::opOK);
-  EXPECT_TRUE(test.isZero() && !test.isNegative());
+  EXPECT_TRUE(test.isPosZero());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextUp(-getSmallest()) = -0.
   test = APFloat(APFloat::IEEEquad, "-0x0.0000000000000000000000000001p-16382");
   expected = APFloat::getZero(APFloat::IEEEquad, true);
   EXPECT_EQ(test.next(false), APFloat::opOK);
-  EXPECT_TRUE(test.isZero() && test.isNegative());
+  EXPECT_TRUE(test.isNegZero());
   EXPECT_TRUE(test.bitwiseIsEqual(expected));
 
   // nextDown(-getSmallest()) = -nextUp(getSmallest()) = -getSmallest() - inc.
@@ -2821,6 +2821,19 @@ TEST(APFloatTest, abs) {
 }
 
 TEST(APFloatTest, ilogb) {
+  EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble, false)));
+  EXPECT_EQ(-1074, ilogb(APFloat::getSmallest(APFloat::IEEEdouble, true)));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1024")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1023")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1023")));
+  EXPECT_EQ(-51, ilogb(APFloat(APFloat::IEEEdouble, "0x1p-51")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-1023")));
+  EXPECT_EQ(-2, ilogb(APFloat(APFloat::IEEEdouble, "0x0.ffffp-1")));
+  EXPECT_EQ(-1023, ilogb(APFloat(APFloat::IEEEdouble, "0x1.fffep-1023")));
+  EXPECT_EQ(1023, ilogb(APFloat::getLargest(APFloat::IEEEdouble, false)));
+  EXPECT_EQ(1023, ilogb(APFloat::getLargest(APFloat::IEEEdouble, true)));
+
+
   EXPECT_EQ(0, ilogb(APFloat(APFloat::IEEEsingle, "0x1p+0")));
   EXPECT_EQ(0, ilogb(APFloat(APFloat::IEEEsingle, "-0x1p+0")));
   EXPECT_EQ(42, ilogb(APFloat(APFloat::IEEEsingle, "0x1p+42")));
@@ -2841,8 +2854,9 @@ TEST(APFloatTest, ilogb) {
 
   EXPECT_EQ(127, ilogb(APFloat::getLargest(APFloat::IEEEsingle, false)));
   EXPECT_EQ(127, ilogb(APFloat::getLargest(APFloat::IEEEsingle, true)));
-  EXPECT_EQ(-126, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, false)));
-  EXPECT_EQ(-126, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, true)));
+
+  EXPECT_EQ(-149, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, false)));
+  EXPECT_EQ(-149, ilogb(APFloat::getSmallest(APFloat::IEEEsingle, true)));
   EXPECT_EQ(-126,
             ilogb(APFloat::getSmallestNormalized(APFloat::IEEEsingle, false)));
   EXPECT_EQ(-126,
@@ -2850,15 +2864,17 @@ TEST(APFloatTest, ilogb) {
 }
 
 TEST(APFloatTest, scalbn) {
+
+  const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
   EXPECT_TRUE(
       APFloat(APFloat::IEEEsingle, "0x1p+0")
-          .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 0)));
+      .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 0, RM)));
   EXPECT_TRUE(
       APFloat(APFloat::IEEEsingle, "0x1p+42")
-          .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 42)));
+      .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 42, RM)));
   EXPECT_TRUE(
       APFloat(APFloat::IEEEsingle, "0x1p-42")
-          .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), -42)));
+      .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), -42, RM)));
 
   APFloat PInf = APFloat::getInf(APFloat::IEEEsingle, false);
   APFloat MInf = APFloat::getInf(APFloat::IEEEsingle, true);
@@ -2868,27 +2884,138 @@ TEST(APFloatTest, scalbn) {
   APFloat QMNaN = APFloat::getNaN(APFloat::IEEEsingle, true);
   APFloat SNaN = APFloat::getSNaN(APFloat::IEEEsingle, false);
 
-  EXPECT_TRUE(PInf.bitwiseIsEqual(scalbn(PInf, 0)));
-  EXPECT_TRUE(MInf.bitwiseIsEqual(scalbn(MInf, 0)));
-  EXPECT_TRUE(PZero.bitwiseIsEqual(scalbn(PZero, 0)));
-  EXPECT_TRUE(MZero.bitwiseIsEqual(scalbn(MZero, 0)));
-  EXPECT_TRUE(QPNaN.bitwiseIsEqual(scalbn(QPNaN, 0)));
-  EXPECT_TRUE(QMNaN.bitwiseIsEqual(scalbn(QMNaN, 0)));
-  EXPECT_TRUE(SNaN.bitwiseIsEqual(scalbn(SNaN, 0)));
+  EXPECT_TRUE(PInf.bitwiseIsEqual(scalbn(PInf, 0, RM)));
+  EXPECT_TRUE(MInf.bitwiseIsEqual(scalbn(MInf, 0, RM)));
+  EXPECT_TRUE(PZero.bitwiseIsEqual(scalbn(PZero, 0, RM)));
+  EXPECT_TRUE(MZero.bitwiseIsEqual(scalbn(MZero, 0, RM)));
+  EXPECT_TRUE(QPNaN.bitwiseIsEqual(scalbn(QPNaN, 0, RM)));
+  EXPECT_TRUE(QMNaN.bitwiseIsEqual(scalbn(QMNaN, 0, RM)));
+  EXPECT_TRUE(SNaN.bitwiseIsEqual(scalbn(SNaN, 0, RM)));
+
+  EXPECT_TRUE(PInf.bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 128, RM)));
+  EXPECT_TRUE(MInf.bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEsingle, "-0x1p+0"), 128, RM)));
+  EXPECT_TRUE(PInf.bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEsingle, "0x1p+127"), 1, RM)));
+  EXPECT_TRUE(PZero.bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEsingle, "0x1p-127"), -127, RM)));
+  EXPECT_TRUE(MZero.bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEsingle, "-0x1p-127"), -127, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEsingle, "-0x1p-149").bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEsingle, "-0x1p-127"), -22, RM)));
+  EXPECT_TRUE(PZero.bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEsingle, "0x1p-126"), -24, RM)));
+
+
+  APFloat SmallestF64 = APFloat::getSmallest(APFloat::IEEEdouble, false);
+  APFloat NegSmallestF64 = APFloat::getSmallest(APFloat::IEEEdouble, true);
+
+  APFloat LargestF64 = APFloat::getLargest(APFloat::IEEEdouble, false);
+  APFloat NegLargestF64 = APFloat::getLargest(APFloat::IEEEdouble, true);
+
+  APFloat SmallestNormalizedF64
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble, false);
+  APFloat NegSmallestNormalizedF64
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble, true);
+
+  APFloat LargestDenormalF64(APFloat::IEEEdouble, "0x1.ffffffffffffep-1023");
+  APFloat NegLargestDenormalF64(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1023");
+
+
+  EXPECT_TRUE(SmallestF64.bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEdouble, "0x1p-1074"), 0, RM)));
+  EXPECT_TRUE(NegSmallestF64.bitwiseIsEqual(
+                scalbn(APFloat(APFloat::IEEEdouble, "-0x1p-1074"), 0, RM)));
+
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p+1023")
+              .bitwiseIsEqual(scalbn(SmallestF64, 2097, RM)));
+
+  EXPECT_TRUE(scalbn(SmallestF64, -2097, RM).isPosZero());
+  EXPECT_TRUE(scalbn(SmallestF64, -2098, RM).isPosZero());
+  EXPECT_TRUE(scalbn(SmallestF64, -2099, RM).isPosZero());
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p+1022")
+              .bitwiseIsEqual(scalbn(SmallestF64, 2096, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p+1023")
+              .bitwiseIsEqual(scalbn(SmallestF64, 2097, RM)));
+  EXPECT_TRUE(scalbn(SmallestF64, 2098, RM).isInfinity());
+  EXPECT_TRUE(scalbn(SmallestF64, 2099, RM).isInfinity());
+
+  // Test for integer overflows when adding to exponent.
+  EXPECT_TRUE(scalbn(SmallestF64, -INT_MAX, RM).isPosZero());
+  EXPECT_TRUE(scalbn(LargestF64, INT_MAX, RM).isInfinity());
+
+  EXPECT_TRUE(LargestDenormalF64
+              .bitwiseIsEqual(scalbn(LargestDenormalF64, 0, RM)));
+  EXPECT_TRUE(NegLargestDenormalF64
+              .bitwiseIsEqual(scalbn(NegLargestDenormalF64, 0, RM)));
+
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1022")
+              .bitwiseIsEqual(scalbn(LargestDenormalF64, 1, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1.ffffffffffffep-1021")
+              .bitwiseIsEqual(scalbn(NegLargestDenormalF64, 2, RM)));
+
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep+1")
+              .bitwiseIsEqual(scalbn(LargestDenormalF64, 1024, RM)));
+  EXPECT_TRUE(scalbn(LargestDenormalF64, -1023, RM).isPosZero());
+  EXPECT_TRUE(scalbn(LargestDenormalF64, -1024, RM).isPosZero());
+  EXPECT_TRUE(scalbn(LargestDenormalF64, -2048, RM).isPosZero());
+  EXPECT_TRUE(scalbn(LargestDenormalF64, 2047, RM).isInfinity());
+  EXPECT_TRUE(scalbn(LargestDenormalF64, 2098, RM).isInfinity());
+  EXPECT_TRUE(scalbn(LargestDenormalF64, 2099, RM).isInfinity());
+
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-2")
+              .bitwiseIsEqual(scalbn(LargestDenormalF64, 1021, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep-1")
+              .bitwiseIsEqual(scalbn(LargestDenormalF64, 1022, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep+0")
+              .bitwiseIsEqual(scalbn(LargestDenormalF64, 1023, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.ffffffffffffep+1023")
+              .bitwiseIsEqual(scalbn(LargestDenormalF64, 2046, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1p+974")
+              .bitwiseIsEqual(scalbn(SmallestF64, 2048, RM)));
+
+  APFloat RandomDenormalF64(APFloat::IEEEdouble, "0x1.c60f120d9f87cp+51");
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-972")
+              .bitwiseIsEqual(scalbn(RandomDenormalF64, -1023, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-1")
+              .bitwiseIsEqual(scalbn(RandomDenormalF64, -52, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp-2")
+              .bitwiseIsEqual(scalbn(RandomDenormalF64, -53, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "0x1.c60f120d9f87cp+0")
+              .bitwiseIsEqual(scalbn(RandomDenormalF64, -51, RM)));
+
+  EXPECT_TRUE(scalbn(RandomDenormalF64, -2097, RM).isPosZero());
+  EXPECT_TRUE(scalbn(RandomDenormalF64, -2090, RM).isPosZero());
+
 
   EXPECT_TRUE(
-      PInf.bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), 128)));
-  EXPECT_TRUE(MInf.bitwiseIsEqual(
-      scalbn(APFloat(APFloat::IEEEsingle, "-0x1p+0"), 128)));
+    APFloat(APFloat::IEEEdouble, "-0x1p-1073")
+    .bitwiseIsEqual(scalbn(NegLargestF64, -2097, RM)));
+
   EXPECT_TRUE(
-      PInf.bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEsingle, "0x1p+127"), 1)));
-  EXPECT_TRUE(PZero.bitwiseIsEqual(
-      scalbn(APFloat(APFloat::IEEEsingle, "0x1p+0"), -127)));
-  EXPECT_TRUE(MZero.bitwiseIsEqual(
-      scalbn(APFloat(APFloat::IEEEsingle, "-0x1p+0"), -127)));
-  EXPECT_TRUE(PZero.bitwiseIsEqual(
-      scalbn(APFloat(APFloat::IEEEsingle, "0x1p-126"), -1)));
-  EXPECT_TRUE(PZero.bitwiseIsEqual(
-      scalbn(APFloat(APFloat::IEEEsingle, "0x1p-126"), -1)));
+    APFloat(APFloat::IEEEdouble, "-0x1p-1024")
+    .bitwiseIsEqual(scalbn(NegLargestF64, -2048, RM)));
+
+  EXPECT_TRUE(
+    APFloat(APFloat::IEEEdouble, "0x1p-1073")
+    .bitwiseIsEqual(scalbn(LargestF64, -2097, RM)));
+
+  EXPECT_TRUE(
+    APFloat(APFloat::IEEEdouble, "0x1p-1074")
+    .bitwiseIsEqual(scalbn(LargestF64, -2098, RM)));
+  EXPECT_TRUE(APFloat(APFloat::IEEEdouble, "-0x1p-1074")
+              .bitwiseIsEqual(scalbn(NegLargestF64, -2098, RM)));
+  EXPECT_TRUE(scalbn(NegLargestF64, -2099, RM).isNegZero());
+  EXPECT_TRUE(scalbn(LargestF64, 1, RM).isInfinity());
+
+
+  EXPECT_TRUE(
+    APFloat(APFloat::IEEEdouble, "0x1p+0")
+    .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEdouble, "0x1p+52"), -52, RM)));
+
+  EXPECT_TRUE(
+    APFloat(APFloat::IEEEdouble, "0x1p-103")
+    .bitwiseIsEqual(scalbn(APFloat(APFloat::IEEEdouble, "0x1p-51"), -52, RM)));
 }
 }

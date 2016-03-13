@@ -259,6 +259,16 @@ LLVMValueRef clone_constant(LLVMValueRef Cst, LLVMModuleRef M) {
     return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
   }
 
+  // Try contant data array
+  if (LLVMIsAConstantDataArray(Cst)) {
+    LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
+    unsigned EltCount = LLVMGetArrayLength(Ty);
+    SmallVector<LLVMValueRef, 8> Elts;
+    for (unsigned i = 0; i < EltCount; i++)
+      Elts.push_back(clone_constant(LLVMGetElementAsConstant(Cst, i), M));
+    return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
+  }
+
   // Try constant struct
   if (LLVMIsAConstantStruct(Cst)) {
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);

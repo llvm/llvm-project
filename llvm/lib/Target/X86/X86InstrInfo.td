@@ -1446,30 +1446,30 @@ def MOV32ao16 : Ii16<0xA1, RawFrmMemOffs, (outs), (ins offset16_32:$src),
 }
 let mayStore = 1 in {
 let Uses = [AL] in
-def MOV8o32a : Ii32<0xA2, RawFrmMemOffs, (outs offset32_8:$dst), (ins),
+def MOV8o32a : Ii32<0xA2, RawFrmMemOffs, (outs), (ins offset32_8:$dst),
                     "mov{b}\t{%al, $dst|$dst, al}", [], IIC_MOV_MEM>, AdSize32;
 let Uses = [AX] in
-def MOV16o32a : Ii32<0xA3, RawFrmMemOffs, (outs offset32_16:$dst), (ins),
+def MOV16o32a : Ii32<0xA3, RawFrmMemOffs, (outs), (ins offset32_16:$dst),
                      "mov{w}\t{%ax, $dst|$dst, ax}", [], IIC_MOV_MEM>,
                      OpSize16, AdSize32;
 let Uses = [EAX] in
-def MOV32o32a : Ii32<0xA3, RawFrmMemOffs, (outs offset32_32:$dst), (ins),
+def MOV32o32a : Ii32<0xA3, RawFrmMemOffs, (outs), (ins offset32_32:$dst),
                      "mov{l}\t{%eax, $dst|$dst, eax}", [], IIC_MOV_MEM>,
                      OpSize32, AdSize32;
 let Uses = [RAX] in
-def MOV64o32a : RIi32<0xA3, RawFrmMemOffs, (outs offset32_64:$dst), (ins),
+def MOV64o32a : RIi32<0xA3, RawFrmMemOffs, (outs), (ins offset32_64:$dst),
                       "mov{q}\t{%rax, $dst|$dst, rax}", [], IIC_MOV_MEM>,
                       AdSize32;
 
 let Uses = [AL] in
-def MOV8o16a : Ii16<0xA2, RawFrmMemOffs, (outs offset16_8:$dst), (ins),
+def MOV8o16a : Ii16<0xA2, RawFrmMemOffs, (outs), (ins offset16_8:$dst),
                     "mov{b}\t{%al, $dst|$dst, al}", [], IIC_MOV_MEM>, AdSize16;
 let Uses = [AX] in
-def MOV16o16a : Ii16<0xA3, RawFrmMemOffs, (outs offset16_16:$dst), (ins),
+def MOV16o16a : Ii16<0xA3, RawFrmMemOffs, (outs), (ins offset16_16:$dst),
                      "mov{w}\t{%ax, $dst|$dst, ax}", [], IIC_MOV_MEM>,
                      OpSize16, AdSize16;
 let Uses = [EAX] in
-def MOV32o16a : Ii16<0xA3, RawFrmMemOffs, (outs offset16_32:$dst), (ins),
+def MOV32o16a : Ii16<0xA3, RawFrmMemOffs, (outs), (ins offset16_32:$dst),
                      "mov{l}\t{%eax, $dst|$dst, eax}", [], IIC_MOV_MEM>,
                      OpSize32, AdSize16;
 }
@@ -1995,11 +1995,11 @@ def OUTSL : I<0x6F, RawFrmSrc, (outs), (ins srcidx32:$src),
 
 // These uses the DF flag in the EFLAGS register to inc or dec EDI and ESI
 let Defs = [EDI], Uses = [DX,EDI,EFLAGS] in {
-def INSB : I<0x6C, RawFrmDst, (outs dstidx8:$dst), (ins),
+def INSB : I<0x6C, RawFrmDst, (outs), (ins dstidx8:$dst),
              "insb\t{%dx, $dst|$dst, dx}", [], IIC_INS>;
-def INSW : I<0x6D, RawFrmDst, (outs dstidx16:$dst), (ins),
+def INSW : I<0x6D, RawFrmDst, (outs), (ins dstidx16:$dst),
              "insw\t{%dx, $dst|$dst, dx}", [], IIC_INS>,  OpSize16;
-def INSL : I<0x6D, RawFrmDst, (outs dstidx32:$dst), (ins),
+def INSL : I<0x6D, RawFrmDst, (outs), (ins dstidx32:$dst),
              "ins{l|d}\t{%dx, $dst|$dst, dx}", [], IIC_INS>, OpSize32;
 }
 }

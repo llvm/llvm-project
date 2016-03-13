@@ -39,7 +39,7 @@ MetadataAsValue::~MetadataAsValue() {
   untrack();
 }
 
-/// \brief Canonicalize metadata arguments to intrinsics.
+/// Canonicalize metadata arguments to intrinsics.
 ///
 /// To support bitcode upgrades (and assembly semantic sugar) for \a
 /// MetadataAsValue, we need to canonicalize certain metadata.
@@ -809,7 +809,7 @@ void MDNode::setOperand(unsigned I, Metadata *New) {
   mutable_begin()[I].reset(New, isUniqued() ? this : nullptr);
 }
 
-/// \brief Get a node, or a self-reference that looks like it.
+/// Get a node or a self-reference that looks like it.
 ///
 /// Special handling for finding self-references, for use by \a
 /// MDNode::concatenate() and \a MDNode::intersect() to maintain behaviour from
@@ -1136,9 +1136,6 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   }
 }
 
-/// setMetadata - Set the metadata of the specified kind to the specified
-/// node.  This updates/replaces metadata if already present, or removes it if
-/// Node is null.
 void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
   if (!Node && !hasMetadata())
     return;
@@ -1227,8 +1224,6 @@ void Instruction::getAllMetadataOtherThanDebugLocImpl(
   Info.getAll(Result);
 }
 
-/// clearMetadataHashEntries - Clear all hashtable-based metadata from
-/// this instruction.
 void Instruction::clearMetadataHashEntries() {
   assert(hasMetadataHashEntry() && "Caller should check");
   getContext().pImpl->InstructionMetadata.erase(this);

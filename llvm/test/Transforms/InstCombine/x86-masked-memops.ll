@@ -267,6 +267,17 @@ define void @mstore_v4i64(i8* %f, <4 x i64> %v) {
 ; CHECK-NEXT:  ret void
 }
 
+; The original SSE2 masked store variant.
+
+define void @mstore_v16i8_sse2_zeros(<16 x i8> %d, i8* %p) {
+  tail call void @llvm.x86.sse2.maskmov.dqu(<16 x i8> %d, <16 x i8> zeroinitializer, i8* %p)
+  ret void
+
+; CHECK-LABEL: @mstore_v16i8_sse2_zeros(
+; CHECK-NEXT:  ret void
+}
+
+
 declare <4 x float> @llvm.x86.avx.maskload.ps(i8*, <4 x i32>)
 declare <2 x double> @llvm.x86.avx.maskload.pd(i8*, <2 x i64>)
 declare <8 x float> @llvm.x86.avx.maskload.ps.256(i8*, <8 x i32>)
@@ -286,4 +297,6 @@ declare void @llvm.x86.avx2.maskstore.d(i8*, <4 x i32>, <4 x i32>)
 declare void @llvm.x86.avx2.maskstore.q(i8*, <2 x i64>, <2 x i64>)
 declare void @llvm.x86.avx2.maskstore.d.256(i8*, <8 x i32>, <8 x i32>)
 declare void @llvm.x86.avx2.maskstore.q.256(i8*, <4 x i64>, <4 x i64>)
+
+declare void @llvm.x86.sse2.maskmov.dqu(<16 x i8>, <16 x i8>, i8*)
 

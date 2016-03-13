@@ -41,13 +41,13 @@ def VMLAUNCH : I<0x01, MRM_C2, (outs), (ins), "vmlaunch", []>, TB;
 def VMRESUME : I<0x01, MRM_C3, (outs), (ins), "vmresume", []>, TB;
 def VMPTRLDm : I<0xC7, MRM6m, (outs), (ins i64mem:$vmcs),
   "vmptrld\t$vmcs", []>, PS;
-def VMPTRSTm : I<0xC7, MRM7m, (outs i64mem:$vmcs), (ins),
+def VMPTRSTm : I<0xC7, MRM7m, (outs), (ins i64mem:$vmcs),
   "vmptrst\t$vmcs", []>, TB;
-def VMREAD64rm : I<0x78, MRMDestMem, (outs i64mem:$dst), (ins GR64:$src),
+def VMREAD64rm : I<0x78, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
   "vmread{q}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[In64BitMode]>;
 def VMREAD64rr : I<0x78, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
   "vmread{q}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[In64BitMode]>;
-def VMREAD32rm : I<0x78, MRMDestMem, (outs i32mem:$dst), (ins GR32:$src),
+def VMREAD32rm : I<0x78, MRMDestMem, (outs), (ins i32mem:$dst, GR32:$src),
   "vmread{l}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[Not64BitMode]>;
 def VMREAD32rr : I<0x78, MRMDestReg, (outs GR32:$dst), (ins GR32:$src),
   "vmread{l}\t{$src, $dst|$dst, $src}", []>, PS, Requires<[Not64BitMode]>;
