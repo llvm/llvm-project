@@ -326,6 +326,7 @@ template <class ELFT, bool isRela> struct Elf_Rel_Impl;
 template <endianness TargetEndianness>
 struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+  static const bool IsRela = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Word r_info;   // Symbol table index and type of relocation to apply
 
@@ -361,12 +362,14 @@ template <endianness TargetEndianness>
 struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, true>
     : public Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+  static const bool IsRela = true;
   Elf_Sword r_addend; // Compute value for relocatable field by adding this
 };
 
 template <endianness TargetEndianness>
 struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+  static const bool IsRela = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Xword r_info;  // Symbol table index and type of relocation to apply
 
@@ -411,6 +414,7 @@ template <endianness TargetEndianness>
 struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, true>
     : public Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+  static const bool IsRela = true;
   Elf_Sxword r_addend; // Compute value for relocatable field by adding this.
 };
 

@@ -55,10 +55,10 @@ def BNDMOVRM64rm : RI<0x1A, MRMSrcMem, (outs BNDR:$dst), (ins i128mem:$src),
 def BNDMOVMRrr   : I<0x1B, MRMDestReg, (outs BNDR:$dst), (ins BNDR:$src),
                     "bndmov\t{$src, $dst|$dst, $src}", []>, PD,
                     Requires<[HasMPX]>;
-def BNDMOVMR32mr : I<0x1B, MRMDestMem, (outs i64mem:$dst), (ins BNDR:$src),
+def BNDMOVMR32mr : I<0x1B, MRMDestMem, (outs), (ins i64mem:$dst, BNDR:$src),
                     "bndmov\t{$src, $dst|$dst, $src}", []>, PD,
                     Requires<[HasMPX, Not64BitMode]>;
-def BNDMOVMR64mr : RI<0x1B, MRMDestMem, (outs i128mem:$dst), (ins BNDR:$src),
+def BNDMOVMR64mr : RI<0x1B, MRMDestMem, (outs), (ins i128mem:$dst, BNDR:$src),
                     "bndmov\t{$src, $dst|$dst, $src}", []>, PD,
                     Requires<[HasMPX, In64BitMode]>;
 

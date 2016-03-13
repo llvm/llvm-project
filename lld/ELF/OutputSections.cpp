@@ -48,6 +48,11 @@ OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
 }
 
 template <class ELFT>
+void OutputSectionBase<ELFT>::writeHeaderTo(Elf_Shdr *Shdr) {
+  *Shdr = Header;
+}
+
+template <class ELFT>
 GotPltSection<ELFT>::GotPltSection()
     : OutputSectionBase<ELFT>(".got.plt", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE) {
   this->Header.sh_addralign = sizeof(uintX_t);
@@ -261,19 +266,12 @@ typename ELFFile<ELFT>::uintX_t DynamicReloc<ELFT>::getOffset() const {
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const DynamicReloc<ELFT> &Rel : Relocs) {
-    auto *P = reinterpret_cast<Elf_Rel *>(Buf);
+    auto *P = reinterpret_cast<Elf_Rela *>(Buf);
     Buf += IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
     SymbolBody *Sym = Rel.Sym;
 
-    if (IsRela) {
-      uintX_t VA;
-      if (Rel.UseSymVA)
-        VA = Sym->getVA<ELFT>(Rel.Addend);
-      else
-        VA = Rel.Addend;
-      reinterpret_cast<Elf_Rela *>(P)->r_addend = VA;
-    }
-
+    if (IsRela)
+      P->r_addend = Rel.UseSymVA ? Sym->getVA<ELFT>(Rel.Addend) : Rel.Addend;
     P->r_offset = Rel.getOffset();
     uint32_t SymIdx = (!Rel.UseSymVA && Sym) ? Sym->DynsymIndex : 0;
     P->setSymbolAndType(SymIdx, Rel.Type, Config->Mips64EL);
@@ -297,13 +295,9 @@ InterpSection<ELFT>::InterpSection()
   this->Header.sh_addralign = 1;
 }
 
-template <class ELFT>
-void OutputSectionBase<ELFT>::writeHeaderTo(Elf_Shdr *SHdr) {
-  *SHdr = Header;
-}
-
 template <class ELFT> void InterpSection<ELFT>::writeTo(uint8_t *Buf) {
-  memcpy(Buf, Config->DynamicLinker.data(), Config->DynamicLinker.size());
+  StringRef S = Config->DynamicLinker;
+  memcpy(Buf, S.data(), S.size());
 }
 
 template <class ELFT>

@@ -876,6 +876,11 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
     return true;
   }
 
+  // The SSE2 version is too weird (eg, unaligned but non-temporal) to do
+  // anything else at this level.
+  if (II.getIntrinsicID() == Intrinsic::x86_sse2_maskmov_dqu)
+    return false;
+
   auto *ConstMask = dyn_cast<ConstantDataVector>(Mask);
   if (!ConstMask)
     return false;
@@ -1674,6 +1679,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return I;
     break;
 
+  case Intrinsic::x86_sse2_maskmov_dqu:
   case Intrinsic::x86_avx_maskstore_ps:
   case Intrinsic::x86_avx_maskstore_pd:
   case Intrinsic::x86_avx_maskstore_ps_256:
