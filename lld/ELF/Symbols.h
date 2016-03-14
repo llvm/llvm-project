@@ -75,7 +75,7 @@ public:
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isLocal() const { return IsLocal; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
-
+  bool isPreemptible() const;
   template <class ELFT> bool isGnuIfunc() const;
 
   // Returns the symbol name.

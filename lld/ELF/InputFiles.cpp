@@ -131,11 +131,11 @@ StringRef elf::ObjectFile<ELFT>::getShtGroupSignature(const Elf_Shdr &Sec) {
 }
 
 template <class ELFT>
-ArrayRef<typename elf::ObjectFile<ELFT>::uint32_X>
+ArrayRef<typename elf::ObjectFile<ELFT>::Elf_Word>
 elf::ObjectFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->ELFObj;
-  ArrayRef<uint32_X> Entries =
-      check(Obj.template getSectionContentsAsArray<uint32_X>(&Sec));
+  ArrayRef<Elf_Word> Entries =
+      check(Obj.template getSectionContentsAsArray<Elf_Word>(&Sec));
   if (Entries.empty() || Entries[0] != GRP_COMDAT)
     fatal("unsupported SHT_GROUP format");
   return Entries.slice(1);
@@ -202,36 +202,54 @@ void elf::ObjectFile<ELFT>::initializeSections(
       break;
     case SHT_RELA:
     case SHT_REL: {
-      uint32_t RelocatedSectionIndex = Sec.sh_info;
-      if (RelocatedSectionIndex >= Size)
-        fatal("invalid relocated section index");
-      InputSectionBase<ELFT> *RelocatedSection =
-          Sections[RelocatedSectionIndex];
-      // Strictly speaking, a relocation section must be included in the
-      // group of the section it relocates. However, LLVM 3.3 and earlier
-      // would fail to do so, so we gracefully handle that case.
-      if (RelocatedSection == InputSection<ELFT>::Discarded)
-        continue;
-      if (!RelocatedSection)
-        fatal("unsupported relocation reference");
+      // This section contains relocation information.
+      // If -r is given, we do not interpret or apply relocation
+      // but just copy relocation sections to output.
       if (Config->Relocatable) {
-        // For -r, relocation sections are handled as regular input sections.
         Sections[I] = new (Alloc) InputSection<ELFT>(this, &Sec);
-      } else if (auto *S = dyn_cast<InputSection<ELFT>>(RelocatedSection)) {
+        break;
+      }
+
+      // Find the relocation target section and associate this
+      // section with it.
+      InputSectionBase<ELFT> *Target = getRelocTarget(Sec);
+      if (!Target)
+        break;
+      if (auto *S = dyn_cast<InputSection<ELFT>>(Target)) {
         S->RelocSections.push_back(&Sec);
-      } else if (auto *S = dyn_cast<EHInputSection<ELFT>>(RelocatedSection)) {
+        break;
+      }
+      if (auto *S = dyn_cast<EHInputSection<ELFT>>(Target)) {
         if (S->RelocSection)
           fatal("multiple relocation sections to .eh_frame are not supported");
         S->RelocSection = &Sec;
-      } else {
-        fatal("relocations pointing to SHF_MERGE are not supported");
+        break;
       }
-      break;
+      fatal("relocations pointing to SHF_MERGE are not supported");
     }
     default:
       Sections[I] = createInputSection(Sec);
     }
   }
+}
+
+template <class ELFT>
+InputSectionBase<ELFT> *
+elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
+  uint32_t Idx = Sec.sh_info;
+  if (Idx >= Sections.size())
+    fatal("invalid relocated section index");
+  InputSectionBase<ELFT> *Target = Sections[Idx];
+
+  // Strictly speaking, a relocation section must be included in the
+  // group of the section it relocates. However, LLVM 3.3 and earlier
+  // would fail to do so, so we gracefully handle that case.
+  if (Target == InputSection<ELFT>::Discarded)
+    return nullptr;
+
+  if (!Target)
+    fatal("unsupported relocation reference");
+  return Target;
 }
 
 template <class ELFT>

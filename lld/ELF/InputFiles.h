@@ -98,13 +98,8 @@ template <class ELFT> class ObjectFile : public ELFFileBase<ELFT> {
   typedef typename llvm::object::ELFFile<ELFT>::Elf_Word Elf_Word;
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
 
-  // uint32 in ELFT's byte order
-  typedef llvm::support::detail::packed_endian_specific_integral<
-      uint32_t, ELFT::TargetEndianness, 2>
-      uint32_X;
-
   StringRef getShtGroupSignature(const Elf_Shdr &Sec);
-  ArrayRef<uint32_X> getShtGroupEntries(const Elf_Shdr &Sec);
+  ArrayRef<Elf_Word> getShtGroupEntries(const Elf_Shdr &Sec);
 
 public:
   static bool classof(const InputFile *F) {
@@ -139,6 +134,7 @@ public:
 private:
   void initializeSections(llvm::DenseSet<StringRef> &ComdatGroups);
   void initializeSymbols();
+  InputSectionBase<ELFT> *getRelocTarget(const Elf_Shdr &Sec);
   InputSectionBase<ELFT> *createInputSection(const Elf_Shdr &Sec);
 
   SymbolBody *createSymbolBody(const Elf_Sym *Sym);

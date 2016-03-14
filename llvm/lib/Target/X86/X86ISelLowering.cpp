@@ -19785,10 +19785,15 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   if (VT == MVT::v8i16) {
     unsigned ShiftOpcode = Op->getOpcode();
 
+    // If we have a constant shift amount, the non-SSE41 path is best as
+    // avoiding bitcasts make it easier to constant fold and reduce to PBLENDW.
+    bool UseSSE41 = Subtarget.hasSSE41() &&
+                    !ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
+
     auto SignBitSelect = [&](SDValue Sel, SDValue V0, SDValue V1) {
       // On SSE41 targets we make use of the fact that VSELECT lowers
       // to PBLENDVB which selects bytes based just on the sign bit.
-      if (Subtarget.hasSSE41()) {
+      if (UseSSE41) {
         MVT ExtVT = MVT::getVectorVT(MVT::i8, VT.getVectorNumElements() * 2);
         V0 = DAG.getBitcast(ExtVT, V0);
         V1 = DAG.getBitcast(ExtVT, V1);
@@ -19805,7 +19810,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     };
 
     // Turn 'a' into a mask suitable for VSELECT: a = a << 12;
-    if (Subtarget.hasSSE41()) {
+    if (UseSSE41) {
       // On SSE41 targets we need to replicate the shift mask in both
       // bytes for PBLENDVB.
       Amt = DAG.getNode(

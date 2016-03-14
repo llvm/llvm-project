@@ -327,16 +327,19 @@ template <class ELFT> static void initSymbols() {
 }
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
-  initSymbols<ELFT>();
   // For LTO
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
 
+  initSymbols<ELFT>();
+
   SymbolTable<ELFT> Symtab;
   std::unique_ptr<TargetInfo> TI(createTarget());
   Target = TI.get();
+
+  Config->Rela = ELFT::Is64Bits;
 
   if (!Config->Shared && !Config->Relocatable) {
     // Add entry symbol.

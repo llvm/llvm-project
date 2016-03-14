@@ -66,8 +66,7 @@ getSymVA(const SymbolBody &Body, typename ELFFile<ELFT>::uintX_t &Addend) {
       return 0;
     if (SS.IsFunc)
       return Body.getPltVA<ELFT>();
-    else
-      return Out<ELFT>::Bss->getVA() + SS.OffsetInBss;
+    return Out<ELFT>::Bss->getVA() + SS.OffsetInBss;
   }
   case SymbolBody::UndefinedElfKind:
   case SymbolBody::UndefinedKind:
@@ -79,6 +78,38 @@ getSymVA(const SymbolBody &Body, typename ELFFile<ELFT>::uintX_t &Addend) {
     llvm_unreachable("should have been replaced");
   }
   llvm_unreachable("invalid symbol kind");
+}
+
+// Returns true if a symbol can be replaced at load-time by a symbol
+// with the same name defined in other ELF executable or DSO.
+bool SymbolBody::isPreemptible() const {
+  if (isLocal())
+    return false;
+
+  if (isShared())
+    return true;
+
+  if (isUndefined()) {
+    if (!isWeak())
+      return true;
+
+    // Ideally the static linker should see a definition for every symbol, but
+    // shared object are normally allowed to have undefined references that the
+    // static linker never sees a definition for.
+    if (Config->Shared)
+      return true;
+
+    // Otherwise, just resolve to 0.
+    return false;
+  }
+
+  if (!Config->Shared)
+    return false;
+  if (getVisibility() != STV_DEFAULT)
+    return false;
+  if (Config->Bsymbolic || (Config->BsymbolicFunctions && IsFunc))
+    return false;
+  return true;
 }
 
 template <class ELFT> bool SymbolBody::isGnuIfunc() const {

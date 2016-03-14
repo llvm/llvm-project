@@ -69,6 +69,7 @@ struct Configuration {
   bool NoUndefined;
   bool NoinhibitExec;
   bool PrintGcSections;
+  bool Rela;
   bool Relocatable;
   bool SaveTemps;
   bool Shared;

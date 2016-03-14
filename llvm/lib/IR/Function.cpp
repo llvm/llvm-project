@@ -89,8 +89,7 @@ bool Argument::hasNonNullAttr() const {
 /// in its containing function.
 bool Argument::hasByValAttr() const {
   if (!getType()->isPointerTy()) return false;
-  return getParent()->getAttributes().
-    hasAttribute(getArgNo()+1, Attribute::ByVal);
+  return hasAttribute(Attribute::ByVal);
 }
 
 bool Argument::hasSwiftSelfAttr() const {
@@ -107,8 +106,7 @@ bool Argument::hasSwiftErrorAttr() const {
 /// its containing function.
 bool Argument::hasInAllocaAttr() const {
   if (!getType()->isPointerTy()) return false;
-  return getParent()->getAttributes().
-    hasAttribute(getArgNo()+1, Attribute::InAlloca);
+  return hasAttribute(Attribute::InAlloca);
 }
 
 bool Argument::hasByValOrInAllocaAttr() const {
@@ -140,53 +138,46 @@ uint64_t Argument::getDereferenceableOrNullBytes() const {
 /// it in its containing function.
 bool Argument::hasNestAttr() const {
   if (!getType()->isPointerTy()) return false;
-  return getParent()->getAttributes().
-    hasAttribute(getArgNo()+1, Attribute::Nest);
+  return hasAttribute(Attribute::Nest);
 }
 
 /// hasNoAliasAttr - Return true if this argument has the noalias attribute on
 /// it in its containing function.
 bool Argument::hasNoAliasAttr() const {
   if (!getType()->isPointerTy()) return false;
-  return getParent()->getAttributes().
-    hasAttribute(getArgNo()+1, Attribute::NoAlias);
+  return hasAttribute(Attribute::NoAlias);
 }
 
 /// hasNoCaptureAttr - Return true if this argument has the nocapture attribute
 /// on it in its containing function.
 bool Argument::hasNoCaptureAttr() const {
   if (!getType()->isPointerTy()) return false;
-  return getParent()->getAttributes().
-    hasAttribute(getArgNo()+1, Attribute::NoCapture);
+  return hasAttribute(Attribute::NoCapture);
 }
 
 /// hasSRetAttr - Return true if this argument has the sret attribute on
 /// it in its containing function.
 bool Argument::hasStructRetAttr() const {
   if (!getType()->isPointerTy()) return false;
-  return getParent()->getAttributes().
-    hasAttribute(getArgNo()+1, Attribute::StructRet);
+  return hasAttribute(Attribute::StructRet);
 }
 
 /// hasReturnedAttr - Return true if this argument has the returned attribute on
 /// it in its containing function.
 bool Argument::hasReturnedAttr() const {
-  return getParent()->getAttributes().
-    hasAttribute(getArgNo()+1, Attribute::Returned);
+  return hasAttribute(Attribute::Returned);
 }
 
 /// hasZExtAttr - Return true if this argument has the zext attribute on it in
 /// its containing function.
 bool Argument::hasZExtAttr() const {
-  return getParent()->getAttributes().
-    hasAttribute(getArgNo()+1, Attribute::ZExt);
+  return hasAttribute(Attribute::ZExt);
 }
 
 /// hasSExtAttr Return true if this argument has the sext attribute on it in its
 /// containing function.
 bool Argument::hasSExtAttr() const {
-  return getParent()->getAttributes().
-    hasAttribute(getArgNo()+1, Attribute::SExt);
+  return hasAttribute(Attribute::SExt);
 }
 
 /// Return true if this argument has the readonly or readnone attribute on it
@@ -216,6 +207,11 @@ void Argument::removeAttr(AttributeSet AS) {
   getParent()->removeAttributes(getArgNo() + 1,
                                 AttributeSet::get(Parent->getContext(),
                                                   getArgNo() + 1, B));
+}
+
+/// hasAttribute - Checks if an argument has a given attribute.
+bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
+  return getParent()->hasAttribute(getArgNo() + 1, Kind);
 }
 
 //===----------------------------------------------------------------------===//
@@ -356,6 +352,12 @@ void Function::addAttribute(unsigned i, Attribute::AttrKind attr) {
 void Function::addAttributes(unsigned i, AttributeSet attrs) {
   AttributeSet PAL = getAttributes();
   PAL = PAL.addAttributes(getContext(), i, attrs);
+  setAttributes(PAL);
+}
+
+void Function::removeAttribute(unsigned i, Attribute::AttrKind attr) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, attr);
   setAttributes(PAL);
 }
 

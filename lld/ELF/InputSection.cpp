@@ -78,11 +78,9 @@ InputSectionBase<ELFT>::getRelocTarget(const Elf_Rel &Rel) const {
   // Global symbol
   uint32_t SymIndex = Rel.getSymbol(Config->Mips64EL);
   SymbolBody &B = File->getSymbolBody(SymIndex).repl();
-  InputSectionBase<ELFT> *S = nullptr;
   if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B))
-    S = D->Section;
-  if (S)
-    return S->Repl;
+    if (D->Section)
+      return D->Section->Repl;
   return nullptr;
 }
 
@@ -176,6 +174,49 @@ uint8_t *InputSectionBase<ELFT>::findMipsPairedReloc(uint8_t *Buf,
   return nullptr;
 }
 
+template <class ELFT, class uintX_t>
+static uintX_t adjustMipsSymVA(uint32_t Type, const elf::ObjectFile<ELFT> &File,
+                               const SymbolBody &Body, uintX_t AddrLoc,
+                               uintX_t SymVA) {
+  if (Type == R_MIPS_HI16 && &Body == Config->MipsGpDisp)
+    return getMipsGpAddr<ELFT>() - AddrLoc;
+  if (Type == R_MIPS_LO16 && &Body == Config->MipsGpDisp)
+    return getMipsGpAddr<ELFT>() - AddrLoc + 4;
+  if (&Body == Config->MipsLocalGp)
+    return getMipsGpAddr<ELFT>();
+  if (Body.isLocal() && (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
+    // We need to adjust SymVA value in case of R_MIPS_GPREL16/32
+    // relocations because they use the following expression to calculate
+    // the relocation's result for local symbol: S + A + GP0 - G.
+    return SymVA + File.getMipsGp0();
+  return SymVA;
+}
+
+template <class ELFT, class uintX_t>
+static uintX_t getMipsGotVA(const SymbolBody &Body, uintX_t SymVA,
+                            uint8_t *BufLoc, uint8_t *PairedLoc) {
+  if (Body.isLocal()) {
+    // If relocation against MIPS local symbol requires GOT entry, this entry
+    // should be initialized by 'page address'. This address is high 16-bits
+    // of sum the symbol's value and the addend. The addend in that case is
+    // calculated using addends from R_MIPS_GOT16 and paired R_MIPS_LO16
+    // relocations.
+    const endianness E = ELFT::TargetEndianness;
+    uint64_t AHL = read32<E>(BufLoc) << 16;
+    if (PairedLoc)
+      AHL += SignExtend64<16>(read32<E>(PairedLoc));
+    return Out<ELFT>::Got->getMipsLocalPageAddr(SymVA + AHL);
+  }
+  if (!Body.isPreemptible())
+    // For non-local symbols GOT entries should contain their full
+    // addresses. But if such symbol cannot be preempted, we do not
+    // have to put them into the "global" part of GOT and use dynamic
+    // linker to determine their actual addresses. That is why we
+    // create GOT entries for them in the "local" part of GOT.
+    return Out<ELFT>::Got->getMipsLocalFullAddr(Body);
+  return Body.getGotVA<ELFT>();
+}
+
 template <class ELFT>
 template <class RelTy>
 void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
@@ -231,7 +272,6 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     }
 
     uintX_t SymVA = Body.getVA<ELFT>(A);
-    bool CBP = canBePreempted(Body);
     uint8_t *PairedLoc = nullptr;
     if (Config->EMachine == EM_MIPS)
       PairedLoc = findMipsPairedReloc(Buf, &RI, Rels.end());
@@ -239,51 +279,22 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd,
     if (Target->needsPlt<ELFT>(Type, Body)) {
       SymVA = Body.getPltVA<ELFT>() + A;
     } else if (Target->needsGot(Type, Body)) {
-      if (Config->EMachine == EM_MIPS && !CBP) {
-        if (Body.isLocal()) {
-          // R_MIPS_GOT16 relocation against local symbol requires index of
-          // a local GOT entry which contains page address corresponds
-          // to sum of the symbol address and addend. The addend in that case
-          // is calculated using addends from R_MIPS_GOT16 and paired
-          // R_MIPS_LO16 relocations.
-          const endianness E = ELFT::TargetEndianness;
-          uint64_t AHL = read32<E>(BufLoc) << 16;
-          if (PairedLoc)
-            AHL += SignExtend64<16>(read32<E>(PairedLoc));
-          SymVA = Out<ELFT>::Got->getMipsLocalPageAddr(SymVA + AHL);
-        } else {
-          // For non-local symbols GOT entries should contain their full
-          // addresses. But if such symbol cannot be preempted, we do not
-          // have to put them into the "global" part of GOT and use dynamic
-          // linker to determine their actual addresses. That is why we
-          // create GOT entries for them in the "local" part of GOT.
-          SymVA = Out<ELFT>::Got->getMipsLocalFullAddr(Body) + A;
-        }
-      } else {
+      if (Config->EMachine == EM_MIPS)
+        SymVA = getMipsGotVA<ELFT>(Body, SymVA, BufLoc, PairedLoc) + A;
+      else
         SymVA = Body.getGotVA<ELFT>() + A;
-      }
       if (Body.IsTls)
         Type = Target->getTlsGotRel(Type);
-    } else if (Target->isSizeRel(Type) && CBP) {
+    } else if (Target->isSizeRel(Type) && Body.isPreemptible()) {
       // A SIZE relocation is supposed to set a symbol size, but if a symbol
       // can be preempted, the size at runtime may be different than link time.
       // If that's the case, we leave the field alone rather than filling it
       // with a possibly incorrect value.
       continue;
     } else if (Config->EMachine == EM_MIPS) {
-      if (Type == R_MIPS_HI16 && &Body == Config->MipsGpDisp) {
-        SymVA = getMipsGpAddr<ELFT>() - AddrLoc + A;
-      } else if (Type == R_MIPS_LO16 && &Body == Config->MipsGpDisp) {
-        SymVA = getMipsGpAddr<ELFT>() - AddrLoc + 4 + A;
-      } else if (&Body == Config->MipsLocalGp) {
-        SymVA = getMipsGpAddr<ELFT>() + A;
-      } else if (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32) {
-        // We need to adjust SymVA value in case of R_MIPS_GPREL16/32
-        // relocations because they use the following expression to calculate
-        // the relocation's result for local symbol: S + A + GP0 - G.
-        SymVA += File->getMipsGp0();
-      }
-    } else if (!Target->needsCopyRel<ELFT>(Type, Body) && CBP) {
+      SymVA = adjustMipsSymVA<ELFT>(Type, *File, Body, AddrLoc, SymVA) + A;
+    } else if (!Target->needsCopyRel<ELFT>(Type, Body) &&
+               Body.isPreemptible()) {
       continue;
     }
     uintX_t Size = Body.getSize<ELFT>();

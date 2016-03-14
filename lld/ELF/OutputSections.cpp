@@ -182,7 +182,7 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
     // for detailed description:
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
     // As the first approach, we can just store addresses for all symbols.
-    if (Config->EMachine != EM_MIPS && canBePreempted(*B))
+    if (Config->EMachine != EM_MIPS && B->isPreemptible())
       continue; // The dynamic linker will take care of it.
     uintX_t VA = B->getVA<ELFT>();
     write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, VA);
@@ -228,10 +228,10 @@ template <class ELFT> void PltSection<ELFT>::finalize() {
 }
 
 template <class ELFT>
-RelocationSection<ELFT>::RelocationSection(StringRef Name, bool IsRela)
-    : OutputSectionBase<ELFT>(Name, IsRela ? SHT_RELA : SHT_REL, SHF_ALLOC),
-      IsRela(IsRela) {
-  this->Header.sh_entsize = IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+RelocationSection<ELFT>::RelocationSection(StringRef Name)
+    : OutputSectionBase<ELFT>(Name, Config->Rela ? SHT_RELA : SHT_REL,
+                              SHF_ALLOC) {
+  this->Header.sh_entsize = Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
   this->Header.sh_addralign = sizeof(uintX_t);
 }
 
@@ -267,10 +267,10 @@ typename ELFFile<ELFT>::uintX_t DynamicReloc<ELFT>::getOffset() const {
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const DynamicReloc<ELFT> &Rel : Relocs) {
     auto *P = reinterpret_cast<Elf_Rela *>(Buf);
-    Buf += IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+    Buf += Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
     SymbolBody *Sym = Rel.Sym;
 
-    if (IsRela)
+    if (Config->Rela)
       P->r_addend = Rel.UseSymVA ? Sym->getVA<ELFT>(Rel.Addend) : Rel.Addend;
     P->r_offset = Rel.getOffset();
     uint32_t SymIdx = (!Rel.UseSymVA && Sym) ? Sym->DynsymIndex : 0;
@@ -541,7 +541,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   Out<ELFT>::DynStrTab->finalize();
 
   if (Out<ELFT>::RelaDyn->hasRelocs()) {
-    bool IsRela = Out<ELFT>::RelaDyn->isRela();
+    bool IsRela = Config->Rela;
     Add({IsRela ? DT_RELA : DT_REL, Out<ELFT>::RelaDyn});
     Add({IsRela ? DT_RELASZ : DT_RELSZ, Out<ELFT>::RelaDyn->getSize()});
     Add({IsRela ? DT_RELAENT : DT_RELENT,
@@ -552,7 +552,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     Add({DT_PLTRELSZ, Out<ELFT>::RelaPlt->getSize()});
     Add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
          Out<ELFT>::GotPlt});
-    Add({DT_PLTREL, uint64_t(Out<ELFT>::RelaPlt->isRela() ? DT_RELA : DT_REL)});
+    Add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
   }
 
   Add({DT_SYMTAB, Out<ELFT>::DynSymTab});
@@ -880,37 +880,6 @@ static bool compCtors(const InputSection<ELFT> *A,
 template <class ELFT> void OutputSection<ELFT>::sortCtorsDtors() {
   std::stable_sort(Sections.begin(), Sections.end(), compCtors<ELFT>);
   reassignOffsets();
-}
-
-// Returns true if a symbol can be replaced at load-time by a symbol
-// with the same name defined in other ELF executable or DSO.
-bool elf::canBePreempted(const SymbolBody &Body) {
-  if (Body.isLocal())
-    return false;
-
-  if (Body.isShared())
-    return true;
-
-  if (Body.isUndefined()) {
-    if (!Body.isWeak())
-      return true;
-
-    // Ideally the static linker should see a definition for every symbol, but
-    // shared object are normally allowed to have undefined references that the
-    // static linker never sees a definition for.
-    if (Config->Shared)
-      return true;
-
-    // Otherwise, just resolve to 0.
-    return false;
-  }
-  if (!Config->Shared)
-    return false;
-  if (Body.getVisibility() != STV_DEFAULT)
-    return false;
-  if (Config->Bsymbolic || (Config->BsymbolicFunctions && Body.IsFunc))
-    return false;
-  return true;
 }
 
 static void fill(uint8_t *Buf, size_t Size, ArrayRef<uint8_t> A) {

@@ -10,14 +10,11 @@
 #ifndef LLD_ELF_OUTPUT_SECTIONS_H
 #define LLD_ELF_OUTPUT_SECTIONS_H
 
-#include "lld/Core/LLVM.h"
-
-#include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Object/ELF.h"
-
 #include "Config.h"
 
-#include <type_traits>
+#include "lld/Core/LLVM.h"
+#include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Object/ELF.h"
 
 namespace lld {
 namespace elf {
@@ -46,8 +43,6 @@ static inline typename llvm::object::ELFFile<ELFT>::uintX_t
 getAddend(const typename llvm::object::ELFFile<ELFT>::Elf_Rela &Rel) {
   return Rel.r_addend;
 }
-
-bool canBePreempted(const SymbolBody &Body);
 
 bool isValidCIdentifier(StringRef S);
 
@@ -246,19 +241,17 @@ class RelocationSection final : public OutputSectionBase<ELFT> {
   typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
 
 public:
-  RelocationSection(StringRef Name, bool IsRela);
+  RelocationSection(StringRef Name);
   void addReloc(const DynamicReloc<ELFT> &Reloc);
   unsigned getRelocOffset();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   bool hasRelocs() const { return !Relocs.empty(); }
-  bool isRela() const { return IsRela; }
 
   bool Static = false;
 
 private:
   std::vector<DynamicReloc<ELFT>> Relocs;
-  const bool IsRela;
 };
 
 template <class ELFT>

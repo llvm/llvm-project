@@ -763,30 +763,19 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ; AVX1-LABEL: constant_shift_v16i16:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpsraw $8, %xmm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [32896,37008,41120,45232,49344,53456,57568,61680]
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsraw $8, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsraw $4, %xmm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [256,8480,16704,24928,33152,41376,49600,57824]
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
 ; AVX1-NEXT:    vpsraw $2, %xmm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [512,16960,33408,49856,768,17216,33664,50112]
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vpsraw $1, %xmm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1024,33920,1280,34176,1536,34432,1792,34688]
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpsraw $8, %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,4112,8224,12336,16448,20560,24672,28784]
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4],xmm2[5],xmm1[6],xmm2[7]
 ; AVX1-NEXT:    vpsraw $4, %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,8224,16448,24672,32896,41120,49344,57568]
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
 ; AVX1-NEXT:    vpsraw $2, %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,16448,32896,49344,256,16704,33152,49600]
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vpsraw $1, %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,32896,256,33152,512,33408,768,33664]
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

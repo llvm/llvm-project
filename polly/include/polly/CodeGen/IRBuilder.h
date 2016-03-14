@@ -108,33 +108,29 @@ private:
 ///
 /// This is used to add additional items such as e.g. the llvm.loop.parallel
 /// metadata.
-template <bool PreserveNames>
-class PollyBuilderInserter
-    : protected llvm::IRBuilderDefaultInserter<PreserveNames> {
+class IRInserter : protected llvm::IRBuilderDefaultInserter {
 public:
-  PollyBuilderInserter() : Annotator(0) {}
-  PollyBuilderInserter(class ScopAnnotator &A) : Annotator(&A) {}
+  IRInserter() = default;
+  IRInserter(class ScopAnnotator &A) : Annotator(&A) {}
 
 protected:
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
                     llvm::BasicBlock *BB,
                     llvm::BasicBlock::iterator InsertPt) const {
-    llvm::IRBuilderDefaultInserter<PreserveNames>::InsertHelper(I, Name, BB,
-                                                                InsertPt);
+    llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
     if (Annotator)
       Annotator->annotate(I);
   }
 
 private:
-  class ScopAnnotator *Annotator;
+  class ScopAnnotator *Annotator = nullptr;
 };
 
 // TODO: We should not name instructions in NDEBUG builds.
 //
 // We currently always name instructions, as the polly test suite currently
 // matches for certain names.
-typedef PollyBuilderInserter<true> IRInserter;
-typedef llvm::IRBuilder<true, llvm::ConstantFolder, IRInserter> PollyIRBuilder;
+typedef llvm::IRBuilder<llvm::ConstantFolder, IRInserter> PollyIRBuilder;
 
 /// @brief Return an IR builder pointed before the @p BB terminator.
 static inline PollyIRBuilder createPollyIRBuilder(llvm::BasicBlock *BB,

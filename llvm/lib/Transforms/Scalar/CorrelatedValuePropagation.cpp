@@ -35,6 +35,7 @@ STATISTIC(NumMemAccess, "Number of memory access targets propagated");
 STATISTIC(NumCmps,      "Number of comparisons propagated");
 STATISTIC(NumReturns,   "Number of return values propagated");
 STATISTIC(NumDeadCases, "Number of switch cases removed");
+STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
 
 namespace {
   class CorrelatedValuePropagation : public FunctionPass {
@@ -46,6 +47,7 @@ namespace {
     bool processCmp(CmpInst *C);
     bool processSwitch(SwitchInst *SI);
     bool processCallSite(CallSite CS);
+    bool processSDiv(BinaryOperator *SDI);
 
     /// Return a constant value for V usable at At and everything it
     /// dominates.  If no such Constant can be found, return nullptr.
@@ -337,6 +339,42 @@ bool CorrelatedValuePropagation::processCallSite(CallSite CS) {
   return true;
 }
 
+/// See if LazyValueInfo's ability to exploit edge conditions, or range
+/// information is sufficient to prove the both operands of this SDiv are
+/// nonnegative.  If this is the case, replace the SDiv with a UDiv. Even for
+/// local conditions, this can sometimes prove conditions instcombine can't by
+/// exploiting range information.
+bool CorrelatedValuePropagation::processSDiv(BinaryOperator *SDI) {
+  if (SDI->getType()->isVectorTy())
+    return false;
+
+  for (Value *O : SDI->operands()) {
+    // As a policy choice, we choose not to waste compile time on anything where
+    // the operands are local defs.  While LVI can sometimes reason about such
+    // cases, it's not its primary purpose.
+    auto *I = dyn_cast<Instruction>(O);
+    if (I && I->getParent() == SDI->getParent())
+      return false;
+  }
+
+  Constant *Zero = ConstantInt::get(SDI->getType(), 0);
+  for (Value *O : SDI->operands()) {
+    LazyValueInfo::Tristate Result =
+        LVI->getPredicateAt(ICmpInst::ICMP_SGE, O, Zero, SDI);
+    if (Result != LazyValueInfo::True)
+      return false;
+  }
+
+  ++NumSDivs;
+  auto *BO = BinaryOperator::CreateUDiv(SDI->getOperand(0), SDI->getOperand(1),
+                                        SDI->getName(), SDI);
+  BO->setIsExact(SDI->isExact());
+  SDI->replaceAllUsesWith(BO);
+  SDI->eraseFromParent();
+
+  return true;
+}
+
 Constant *CorrelatedValuePropagation::getConstantAt(Value *V, Instruction *At) {
   if (Constant *C = LVI->getConstant(V, At->getParent(), At))
     return C;
@@ -390,6 +428,9 @@ bool CorrelatedValuePropagation::runOnFunction(Function &F) {
       case Instruction::Call:
       case Instruction::Invoke:
         BBChanged |= processCallSite(CallSite(II));
+        break;
+      case Instruction::SDiv:
+        BBChanged |= processSDiv(cast<BinaryOperator>(II));
         break;
       }
     }
