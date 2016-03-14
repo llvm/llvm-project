@@ -126,8 +126,19 @@ public:
   /// \brief Add a Attribute to an argument.
   void addAttr(AttributeSet AS);
 
+  void addAttr(Attribute::AttrKind Kind) {
+    addAttr(AttributeSet::get(getContext(), getArgNo() + 1, Kind));
+  }
+
   /// \brief Remove a Attribute from an argument.
   void removeAttr(AttributeSet AS);
+
+  void removeAttr(Attribute::AttrKind Kind) {
+    removeAttr(AttributeSet::get(getContext(), getArgNo() + 1, Kind));
+  }
+
+  /// \brief Checks if an argument has a given attribute.
+  bool hasAttribute(Attribute::AttrKind Kind) const;
 
   /// \brief Method for support type inquiry through isa, cast, and
   /// dyn_cast.

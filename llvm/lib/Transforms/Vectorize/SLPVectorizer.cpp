@@ -3796,8 +3796,8 @@ bool SLPVectorizer::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Instruction *InsertAfter = cast<Instruction>(BuildVectorSlice.back());
         unsigned VecIdx = 0;
         for (auto &V : BuildVectorSlice) {
-          IRBuilder<true, NoFolder> Builder(
-              InsertAfter->getParent(), ++BasicBlock::iterator(InsertAfter));
+          IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
+                                      ++BasicBlock::iterator(InsertAfter));
           InsertElementInst *IE = cast<InsertElementInst>(V);
           Instruction *Extract = cast<Instruction>(Builder.CreateExtractElement(
               VectorizedRoot, Builder.getInt32(VecIdx++)));

@@ -277,11 +277,11 @@ public:
   }
 
   bool isSCSrc32() const {
-    return isInlinableImm() || (isReg() && isRegClass(AMDGPU::SReg_32RegClassID));
+    return isInlinableImm() || isRegClass(AMDGPU::SReg_32RegClassID);
   }
 
   bool isSCSrc64() const {
-    return isInlinableImm() || (isReg() && isRegClass(AMDGPU::SReg_64RegClassID));
+    return isInlinableImm() || isRegClass(AMDGPU::SReg_64RegClassID);
   }
 
   bool isSSrc32() const {
@@ -295,11 +295,11 @@ public:
   }
 
   bool isVCSrc32() const {
-    return isInlinableImm() || (isReg() && isRegClass(AMDGPU::VS_32RegClassID));
+    return isInlinableImm() || isRegClass(AMDGPU::VS_32RegClassID);
   }
 
   bool isVCSrc64() const {
-    return isInlinableImm() || (isReg() && isRegClass(AMDGPU::VS_64RegClassID));
+    return isInlinableImm() || isRegClass(AMDGPU::VS_64RegClassID);
   }
 
   bool isVSrc32() const {
@@ -493,6 +493,7 @@ public:
     return ForcedEncodingSize == 64;
   }
 
+  std::unique_ptr<AMDGPUOperand> parseRegister();
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -614,22 +615,35 @@ static unsigned getRegForName(StringRef RegName) {
 }
 
 bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) {
-  const AsmToken Tok = Parser.getTok();
-  StartLoc = Tok.getLoc();
-  EndLoc = Tok.getEndLoc();
+  auto R = parseRegister();
+  if (!R) return true;
+  assert(R->isReg());
+  RegNo = R->getReg();
+  StartLoc = R->getStartLoc();
+  EndLoc = R->getEndLoc();
+  return false;
+}
+
+std::unique_ptr<AMDGPUOperand> AMDGPUAsmParser::parseRegister() {
+  const AsmToken &Tok = Parser.getTok();
+  SMLoc StartLoc = Tok.getLoc();
+  SMLoc EndLoc = Tok.getEndLoc();
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
 
   StringRef RegName = Tok.getString();
-  RegNo = getRegForName(RegName);
+  unsigned RegNo = getRegForName(RegName);
 
   if (RegNo) {
     Parser.Lex();
-    return !subtargetHasRegister(*TRI, RegNo);
+    if (!subtargetHasRegister(*TRI, RegNo))
+      return nullptr;
+    return AMDGPUOperand::CreateReg(RegNo, StartLoc, EndLoc,
+                                    TRI, &getSTI(), false);
   }
 
   // Match vgprs and sgprs
   if (RegName[0] != 's' && RegName[0] != 'v')
-    return true;
+    return nullptr;
 
   bool IsVgpr = RegName[0] == 'v';
   unsigned RegWidth;
@@ -638,7 +652,7 @@ bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &End
     // We have a 32-bit register
     RegWidth = 1;
     if (RegName.substr(1).getAsInteger(10, RegIndexInClass))
-      return true;
+      return nullptr;
     Parser.Lex();
   } else {
     // We have a register greater than 32-bits.
@@ -646,21 +660,21 @@ bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &End
     int64_t RegLo, RegHi;
     Parser.Lex();
     if (getLexer().isNot(AsmToken::LBrac))
-      return true;
+      return nullptr;
 
     Parser.Lex();
     if (getParser().parseAbsoluteExpression(RegLo))
-      return true;
+      return nullptr;
 
     if (getLexer().isNot(AsmToken::Colon))
-      return true;
+      return nullptr;
 
     Parser.Lex();
     if (getParser().parseAbsoluteExpression(RegHi))
-      return true;
+      return nullptr;
 
     if (getLexer().isNot(AsmToken::RBrac))
-      return true;
+      return nullptr;
 
     Parser.Lex();
     RegWidth = (RegHi - RegLo) + 1;
@@ -671,7 +685,7 @@ bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &End
       // SGPR registers are aligned.  Max alignment is 4 dwords.
       unsigned Size = std::min(RegWidth, 4u);
       if (RegLo % Size != 0)
-        return true;
+        return nullptr;
 
       RegIndexInClass = RegLo / Size;
     }
@@ -679,14 +693,18 @@ bool AMDGPUAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &End
 
   int RCID = getRegClass(IsVgpr, RegWidth);
   if (RCID == -1)
-    return true;
+    return nullptr;
 
   const MCRegisterClass RC = TRI->getRegClass(RCID);
   if (RegIndexInClass >= RC.getNumRegs())
-    return true;
+    return nullptr;
 
   RegNo = RC.getRegister(RegIndexInClass);
-  return !subtargetHasRegister(*TRI, RegNo);
+  if (!subtargetHasRegister(*TRI, RegNo))
+    return nullptr;
+
+  return AMDGPUOperand::CreateReg(RegNo, StartLoc, EndLoc,
+                                  TRI, &getSTI(), false);
 }
 
 unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
@@ -1085,9 +1103,7 @@ AMDGPUAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return MatchOperand_Success;
     }
     case AsmToken::Identifier: {
-      SMLoc S, E;
-      unsigned RegNo;
-      if (!ParseRegister(RegNo, S, E)) {
+      if (auto R = parseRegister()) {
         unsigned Modifiers = 0;
 
         if (Negate)
@@ -1106,19 +1122,18 @@ AMDGPUAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
           Parser.Lex();
           Modifiers |= 0x2;
         }
-        Operands.push_back(AMDGPUOperand::CreateReg(
-            RegNo, S, E, getContext().getRegisterInfo(), &getSTI(),
-            isForcedVOP3()));
-
+        assert(R->isReg());
+        R->Reg.IsForcedVOP3 = isForcedVOP3();
         if (Modifiers) {
-          AMDGPUOperand &RegOp = ((AMDGPUOperand&)*Operands[Operands.size() - 1]);
-          RegOp.setModifiers(Modifiers);
+          R->setModifiers(Modifiers);
         }
+        Operands.push_back(std::move(R));
       } else {
         ResTy = parseVOP3OptionalOps(Operands);
         if (ResTy == MatchOperand_NoMatch) {
-          Operands.push_back(AMDGPUOperand::CreateToken(Parser.getTok().getString(),
-                                                        S));
+          const auto &Tok = Parser.getTok();
+          Operands.push_back(AMDGPUOperand::CreateToken(Tok.getString(),
+                                                        Tok.getLoc()));
           Parser.Lex();
         }
       }
@@ -1752,7 +1767,7 @@ static bool isVOP3(OperandVector &Operands) {
   if (Operands.size() >= 2) {
     AMDGPUOperand &DstOp = ((AMDGPUOperand&)*Operands[1]);
 
-    if (DstOp.isReg() && DstOp.isRegClass(AMDGPU::SGPR_64RegClassID))
+    if (DstOp.isRegClass(AMDGPU::SGPR_64RegClassID))
       return true;
   }
 
@@ -1761,8 +1776,8 @@ static bool isVOP3(OperandVector &Operands) {
 
   if (Operands.size() > 3) {
     AMDGPUOperand &Src1Op = ((AMDGPUOperand&)*Operands[3]);
-    if (Src1Op.isReg() && (Src1Op.isRegClass(AMDGPU::SReg_32RegClassID) ||
-                           Src1Op.isRegClass(AMDGPU::SReg_64RegClassID)))
+    if (Src1Op.isRegClass(AMDGPU::SReg_32RegClassID) ||
+        Src1Op.isRegClass(AMDGPU::SReg_64RegClassID))
       return true;
   }
   return false;

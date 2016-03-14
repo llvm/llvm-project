@@ -926,39 +926,24 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 ; SSE41-LABEL: constant_shift_v8i16:
 ; SSE41:       # BB#0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm2
-; SSE41-NEXT:    psrlw $8, %xmm2
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [0,4112,8224,12336,16448,20560,24672,28784]
-; SSE41-NEXT:    pblendvb %xmm2, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm2
-; SSE41-NEXT:    psrlw $4, %xmm2
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [0,8224,16448,24672,32896,41120,49344,57568]
-; SSE41-NEXT:    pblendvb %xmm2, %xmm1
+; SSE41-NEXT:    psrlw $4, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2
 ; SSE41-NEXT:    psrlw $2, %xmm2
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [0,16448,32896,49344,256,16704,33152,49600]
-; SSE41-NEXT:    pblendvb %xmm2, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm2
-; SSE41-NEXT:    psrlw $1, %xmm2
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [0,32896,256,33152,512,33408,768,33664]
-; SSE41-NEXT:    pblendvb %xmm2, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
+; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    psrlw $1, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2],xmm0[3],xmm2[4],xmm0[5],xmm2[6],xmm0[7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: constant_shift_v8i16:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,4112,8224,12336,16448,20560,24672,28784]
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,8224,16448,24672,32896,41120,49344,57568]
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-NEXT:    vpsrlw $2, %xmm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,16448,32896,49344,256,16704,33152,49600]
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
 ; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,32896,256,33152,512,33408,768,33664]
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: constant_shift_v8i16:

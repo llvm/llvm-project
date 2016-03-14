@@ -89,7 +89,7 @@ static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
 namespace {
 /// \brief A custom IRBuilder inserter which prefixes all names, but only in
 /// Assert builds.
-class IRBuilderPrefixedInserter : public IRBuilderDefaultInserter<true> {
+class IRBuilderPrefixedInserter : public IRBuilderDefaultInserter {
   std::string Prefix;
   const Twine getNameWithPrefix(const Twine &Name) const {
     return Name.isTriviallyEmpty() ? Name : Prefix + Name;
@@ -101,14 +101,13 @@ public:
 protected:
   void InsertHelper(Instruction *I, const Twine &Name, BasicBlock *BB,
                     BasicBlock::iterator InsertPt) const {
-    IRBuilderDefaultInserter<true>::InsertHelper(I, getNameWithPrefix(Name), BB,
-                                                 InsertPt);
+    IRBuilderDefaultInserter::InsertHelper(I, getNameWithPrefix(Name), BB,
+                                           InsertPt);
   }
 };
 
 /// \brief Provide a typedef for IRBuilder that drops names in release builds.
-using IRBuilderTy =
-    llvm::IRBuilder<true, ConstantFolder, IRBuilderPrefixedInserter>;
+using IRBuilderTy = llvm::IRBuilder<ConstantFolder, IRBuilderPrefixedInserter>;
 }
 
 namespace {
