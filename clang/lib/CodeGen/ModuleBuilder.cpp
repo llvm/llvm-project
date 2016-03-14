@@ -64,8 +64,9 @@ namespace {
                       CoverageSourceInfo *CoverageInfo = nullptr)
         : Diags(diags), Ctx(nullptr), HeaderSearchOpts(HSO),
           PreprocessorOpts(PPO), CodeGenOpts(CGO), HandlingTopLevelDecls(0),
-          CoverageInfo(CoverageInfo),
-          M(new llvm::Module(ModuleName, C)) {}
+          CoverageInfo(CoverageInfo), M(new llvm::Module(ModuleName, C)) {
+      C.setDiscardValueNames(CGO.DiscardValueNames);
+    }
 
     ~CodeGeneratorImpl() override {
       // There should normally not be any leftover inline method definitions.

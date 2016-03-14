@@ -83,9 +83,9 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// RUN: %clang -target x86_64-unknown_unknown -emit-llvm -g -S %s -o - | FileCheck %s
-// RUN: %clang -target i686-cygwin -emit-llvm -g -S %s -o - | FileCheck %s
-// RUN: %clang -target armv7l-unknown-linux-gnueabihf -emit-llvm -g -S %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited -fexceptions %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions %s -o - | FileCheck %s
 
 // CHECK: invoke {{.+}} @_ZN1BD1Ev(%class.B* %b)
 // CHECK-NEXT: unwind label %{{.+}}, !dbg ![[EXCEPTLOC:.*]]
