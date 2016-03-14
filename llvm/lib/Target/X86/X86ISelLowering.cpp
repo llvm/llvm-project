@@ -20797,7 +20797,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // that register and since RBX will be a reserved register
     // the register allocator will not make sure its value will
     // be properly saved and restored around this live-range.
-    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+    const X86RegisterInfo *TRI = Subtarget->getRegisterInfo();
     SDValue Result;
     SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
     unsigned BasePtr = TRI->getBaseRegister();
@@ -20989,11 +20989,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "X86ISD::LCMPXCHG8_SAVE_EBX_DAG";
   case X86ISD::LCMPXCHG16_SAVE_RBX_DAG:
     return "X86ISD::LCMPXCHG16_SAVE_RBX_DAG";
-  case X86ISD::LADD:               return "X86ISD::LADD";
-  case X86ISD::LSUB:               return "X86ISD::LSUB";
-  case X86ISD::LOR:                return "X86ISD::LOR";
-  case X86ISD::LXOR:               return "X86ISD::LXOR";
-  case X86ISD::LAND:               return "X86ISD::LAND";
   case X86ISD::VZEXT_MOVL:         return "X86ISD::VZEXT_MOVL";
   case X86ISD::VZEXT_LOAD:         return "X86ISD::VZEXT_LOAD";
   case X86ISD::VZEXT:              return "X86ISD::VZEXT";
