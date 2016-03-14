@@ -793,6 +793,12 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CudaGpuBinaryFileNames =
       Args.getAllArgValues(OPT_fcuda_include_gpubinary);
 
+  // DiscardValueNames is set here so that it can depend (perhaps temporarily)
+  // on other options.
+  // We check SanitizeMemoryTrackOrigins here because the backend pass depends
+  // on the name of the alloca in order to print out names.
+  Opts.DiscardValueNames =
+      Args.hasArg(OPT_discard_value_names) && !Opts.SanitizeMemoryTrackOrigins;
   return Success;
 }
 
