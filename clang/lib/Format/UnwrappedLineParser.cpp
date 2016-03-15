@@ -660,6 +660,72 @@ static bool tokenCanStartNewLine(const clang::Token &Tok) {
          Tok.isNot(tok::kw_noexcept);
 }
 
+static bool mustBeJSIdentOrValue(const AdditionalKeywords &Keywords,
+                                 const FormatToken *FormatTok) {
+  if (FormatTok->Tok.isLiteral())
+    return true;
+  // FIXME: This returns true for C/C++ keywords like 'struct'.
+  return FormatTok->is(tok::identifier) &&
+         (FormatTok->Tok.getIdentifierInfo() == nullptr ||
+          !FormatTok->isOneOf(Keywords.kw_in, Keywords.kw_of,
+                              Keywords.kw_finally, Keywords.kw_function,
+                              Keywords.kw_import, Keywords.kw_is,
+                              Keywords.kw_let, Keywords.kw_var,
+                              Keywords.kw_abstract, Keywords.kw_extends,
+                              Keywords.kw_implements, Keywords.kw_instanceof,
+                              Keywords.kw_interface, Keywords.kw_throws));
+}
+
+// isJSDeclOrStmt returns true if |FormatTok| starts a declaration or statement
+// when encountered after a value (see mustBeJSIdentOrValue).
+static bool isJSDeclOrStmt(const AdditionalKeywords &Keywords,
+                           const FormatToken *FormatTok) {
+  return FormatTok->isOneOf(
+      tok::kw_return,
+      // conditionals
+      tok::kw_if, tok::kw_else,
+      // loops
+      tok::kw_for, tok::kw_while, tok::kw_do, tok::kw_continue, tok::kw_break,
+      // switch/case
+      tok::kw_switch, tok::kw_case,
+      // exceptions
+      tok::kw_throw, tok::kw_try, tok::kw_catch, Keywords.kw_finally,
+      // declaration
+      tok::kw_const, tok::kw_class, Keywords.kw_var, Keywords.kw_let,
+      Keywords.kw_function);
+}
+
+// readTokenWithJavaScriptASI reads the next token and terminates the current
+// line if JavaScript Automatic Semicolon Insertion must
+// happen between the current token and the next token.
+//
+// This method is conservative - it cannot cover all edge cases of JavaScript,
+// but only aims to correctly handle certain well known cases. It *must not*
+// return true in speculative cases.
+void UnwrappedLineParser::readTokenWithJavaScriptASI() {
+  FormatToken *Previous = FormatTok;
+  readToken();
+  FormatToken *Next = FormatTok;
+
+  bool IsOnSameLine =
+      CommentsBeforeNextToken.empty()
+          ? Next->NewlinesBefore == 0
+          : CommentsBeforeNextToken.front()->NewlinesBefore == 0;
+  if (IsOnSameLine)
+    return;
+
+  bool PreviousMustBeValue = mustBeJSIdentOrValue(Keywords, Previous);
+  if (Next->is(tok::exclaim) && PreviousMustBeValue)
+    addUnwrappedLine();
+  bool NextMustBeValue = mustBeJSIdentOrValue(Keywords, Next);
+  if (NextMustBeValue && (PreviousMustBeValue ||
+                          Previous->isOneOf(tok::r_square, tok::r_paren,
+                                            tok::plusplus, tok::minusminus)))
+    addUnwrappedLine();
+  if (PreviousMustBeValue && isJSDeclOrStmt(Keywords, Next))
+    addUnwrappedLine();
+}
+
 void UnwrappedLineParser::parseStructuralElement() {
   assert(!FormatTok->is(tok::l_brace));
   if (Style.Language == FormatStyle::LK_TableGen &&
@@ -936,6 +1002,7 @@ void UnwrappedLineParser::parseStructuralElement() {
         return;
       }
 
+      // See if the following token should start a new unwrapped line.
       StringRef Text = FormatTok->TokenText;
       nextToken();
       if (Line->Tokens.size() == 1 &&
@@ -1898,7 +1965,10 @@ void UnwrappedLineParser::nextToken() {
     return;
   flushComments(isOnNewLine(*FormatTok));
   pushToken(FormatTok);
-  readToken();
+  if (Style.Language != FormatStyle::LK_JavaScript)
+    readToken();
+  else
+    readTokenWithJavaScriptASI();
 }
 
 const FormatToken *UnwrappedLineParser::getPreviousToken() {

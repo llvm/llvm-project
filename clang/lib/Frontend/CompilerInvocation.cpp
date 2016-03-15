@@ -541,6 +541,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DisableFPElim =
       (Args.hasArg(OPT_mdisable_fp_elim) || Args.hasArg(OPT_pg));
   Opts.DisableFree = Args.hasArg(OPT_disable_free);
+  Opts.DiscardValueNames = Args.hasArg(OPT_discard_value_names);
   Opts.DisableTailCalls = Args.hasArg(OPT_mdisable_tail_calls);
   Opts.FloatABI = Args.getLastArgValue(OPT_mfloat_abi);
   if (Arg *A = Args.getLastArg(OPT_meabi)) {
@@ -607,7 +608,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
   const Arg *A = Args.getLastArg(OPT_flto, OPT_flto_EQ);
-  Opts.EmitFunctionSummary = A && A->containsValue("thin");
+  Opts.EmitSummaryIndex = A && A->containsValue("thin");
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK != IK_LLVM_IR)
       Diags.Report(diag::err_drv_argument_only_allowed_with)
@@ -793,12 +794,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CudaGpuBinaryFileNames =
       Args.getAllArgValues(OPT_fcuda_include_gpubinary);
 
-  // DiscardValueNames is set here so that it can depend (perhaps temporarily)
-  // on other options.
-  // We check SanitizeMemoryTrackOrigins here because the backend pass depends
-  // on the name of the alloca in order to print out names.
-  Opts.DiscardValueNames =
-      Args.hasArg(OPT_discard_value_names) && !Opts.SanitizeMemoryTrackOrigins;
   return Success;
 }
 
@@ -1897,7 +1892,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   }
 
   // Get the OpenMP target triples if any.
-  if (Arg *A = Args.getLastArg(options::OPT_omptargets_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_fomptargets_EQ)) {
 
     for (unsigned i = 0; i < A->getNumValues(); ++i) {
       llvm::Triple TT(A->getValue(i));
@@ -1911,7 +1906,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   // Get OpenMP host file path if any and report if a non existent file is
   // found
-  if (Arg *A = Args.getLastArg(options::OPT_omp_host_ir_file_path)) {
+  if (Arg *A = Args.getLastArg(options::OPT_fomp_host_ir_file_path)) {
     Opts.OMPHostIRFile = A->getValue();
     if (!llvm::sys::fs::exists(Opts.OMPHostIRFile))
       Diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
@@ -2175,6 +2170,14 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
       Success = false;
     }
   }
+
+  // FIXME: Override value name discarding when asan or msan is used because the
+  // backend passes depend on the name of the alloca in order to print out
+  // names.
+  Res.getCodeGenOpts().DiscardValueNames &=
+      !Res.getLangOpts()->Sanitize.has(SanitizerKind::Address) &&
+      !Res.getLangOpts()->Sanitize.has(SanitizerKind::Memory);
+
   // FIXME: ParsePreprocessorArgs uses the FileManager to read the contents of
   // PCH file and find the original header name. Remove the need to do that in
   // ParsePreprocessorArgs and remove the FileManager

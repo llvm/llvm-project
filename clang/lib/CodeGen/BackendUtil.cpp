@@ -22,13 +22,13 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/FunctionInfo.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/SubtargetFeature.h"
-#include "llvm/Object/FunctionIndexObjectFile.h"
+#include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -98,7 +98,7 @@ private:
     return PerFunctionPasses;
   }
 
-  void CreatePasses(FunctionInfoIndex *FunctionIndex);
+  void CreatePasses(ModuleSummaryIndex *ModuleSummary);
 
   /// Generates the TargetMachine.
   /// Returns Null if it is unable to create the target machine.
@@ -279,7 +279,7 @@ static void addSymbolRewriterPass(const CodeGenOptions &Opts,
   MPM->add(createRewriteSymbolsPass(DL));
 }
 
-void EmitAssemblyHelper::CreatePasses(FunctionInfoIndex *FunctionIndex) {
+void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
   if (CodeGenOpts.DisableLLVMPasses)
     return;
 
@@ -326,16 +326,16 @@ void EmitAssemblyHelper::CreatePasses(FunctionInfoIndex *FunctionIndex) {
   PMBuilder.DisableUnitAtATime = !CodeGenOpts.UnitAtATime;
   PMBuilder.DisableUnrollLoops = !CodeGenOpts.UnrollLoops;
   PMBuilder.MergeFunctions = CodeGenOpts.MergeFunctions;
-  PMBuilder.PrepareForThinLTO = CodeGenOpts.EmitFunctionSummary;
+  PMBuilder.PrepareForThinLTO = CodeGenOpts.EmitSummaryIndex;
   PMBuilder.PrepareForLTO = CodeGenOpts.PrepareForLTO;
   PMBuilder.RerollLoops = CodeGenOpts.RerollLoops;
 
   legacy::PassManager *MPM = getPerModulePasses();
 
   // If we are performing a ThinLTO importing compile, invoke the LTO
-  // pipeline and pass down the in-memory function index.
-  if (FunctionIndex) {
-    PMBuilder.FunctionIndex = FunctionIndex;
+  // pipeline and pass down the in-memory module summary index.
+  if (ModuleSummary) {
+    PMBuilder.ModuleSummary = ModuleSummary;
     PMBuilder.populateThinLTOPassManager(*MPM);
     return;
   }
@@ -643,24 +643,24 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   // If we are performing a ThinLTO importing compile, load the function
   // index into memory and pass it into CreatePasses, which will add it
   // to the PassManagerBuilder and invoke LTO passes.
-  std::unique_ptr<FunctionInfoIndex> FunctionIndex;
+  std::unique_ptr<ModuleSummaryIndex> ModuleSummary;
   if (!CodeGenOpts.ThinLTOIndexFile.empty()) {
-    ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
-        llvm::getFunctionIndexForFile(CodeGenOpts.ThinLTOIndexFile,
-                                      [&](const DiagnosticInfo &DI) {
-                                        TheModule->getContext().diagnose(DI);
-                                      });
+    ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
+        llvm::getModuleSummaryIndexForFile(
+            CodeGenOpts.ThinLTOIndexFile, [&](const DiagnosticInfo &DI) {
+              TheModule->getContext().diagnose(DI);
+            });
     if (std::error_code EC = IndexOrErr.getError()) {
       std::string Error = EC.message();
       errs() << "Error loading index file '" << CodeGenOpts.ThinLTOIndexFile
              << "': " << Error << "\n";
       return;
     }
-    FunctionIndex = std::move(IndexOrErr.get());
-    assert(FunctionIndex && "Expected non-empty function index");
+    ModuleSummary = std::move(IndexOrErr.get());
+    assert(ModuleSummary && "Expected non-empty module summary index");
   }
 
-  CreatePasses(FunctionIndex.get());
+  CreatePasses(ModuleSummary.get());
 
   switch (Action) {
   case Backend_EmitNothing:
@@ -668,7 +668,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
   case Backend_EmitBC:
     getPerModulePasses()->add(createBitcodeWriterPass(
-        *OS, CodeGenOpts.EmitLLVMUseLists, CodeGenOpts.EmitFunctionSummary));
+        *OS, CodeGenOpts.EmitLLVMUseLists, CodeGenOpts.EmitSummaryIndex));
     break;
 
   case Backend_EmitLL:

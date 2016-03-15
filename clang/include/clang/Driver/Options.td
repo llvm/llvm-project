@@ -1690,7 +1690,7 @@ def nostdlib : Flag<["-"], "nostdlib">;
 def object : Flag<["-"], "object">;
 def o : JoinedOrSeparate<["-"], "o">, Flags<[DriverOption, RenderAsInput, CC1Option, CC1AsOption]>,
   HelpText<"Write output to <file>">, MetaVarName<"<file>">;
-def omptargets_EQ : CommaJoined<["-"], "omptargets=">, Flags<[DriverOption, CC1Option]>,
+def fomptargets_EQ : CommaJoined<["-"], "fomptargets=">, Flags<[DriverOption, CC1Option]>,
   HelpText<"Specify comma-separated list of triples OpenMP offloading targets to be supported">;
 def pagezero__size : JoinedOrSeparate<["-"], "pagezero_size">;
 def pass_exit_codes : Flag<["-", "--"], "pass-exit-codes">, Flags<[Unsupported]>;

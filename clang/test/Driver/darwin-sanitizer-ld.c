@@ -1,7 +1,7 @@
 // Test sanitizer link flags on Darwin.
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
-// RUN:   -stdlib=libstdc++ -fsanitize=address %s -o %t.o 2>&1 \
+// RUN:   -stdlib=platform -fsanitize=address %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN %s
 
 // CHECK-ASAN: "{{.*}}ld{{(.exe)?}}"
@@ -21,7 +21,7 @@
 // CHECK-DYN-ASAN: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
-// RUN:   -stdlib=libstdc++ -fsanitize=undefined %s -o %t.o 2>&1 \
+// RUN:   -stdlib=platform -fsanitize=undefined %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN %s
 
 // CHECK-UBSAN: "{{.*}}ld{{(.exe)?}}"
@@ -57,8 +57,8 @@
 // CHECK-DYN-BOUNDS-NOT: ubsan_osx
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
-// RUN:   -fsanitize=address -mios-simulator-version-min=7.0 %s -o %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ASAN-IOSSIM %s
+// RUN:   -stdlib=platform -fsanitize=address -mios-simulator-version-min=7.0 \
+// RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-IOSSIM %s
 
 // CHECK-ASAN-IOSSIM: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ASAN-IOSSIM: lc++
@@ -67,7 +67,8 @@
 // CHECK-ASAN-IOSSIM: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
-// RUN:   -fsanitize=address -mtvos-simulator-version-min=8.3.0 %s -o %t.o 2>&1 \
+// RUN:   -stdlib=platform -fsanitize=address \
+// RUN:   -mtvos-simulator-version-min=8.3.0 %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-TVOSSIM %s
 
 // CHECK-ASAN-TVOSSIM: "{{.*}}ld{{(.exe)?}}"
@@ -77,7 +78,8 @@
 // CHECK-ASAN-TVOSSIM: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target x86_64-darwin \
-// RUN:   -fsanitize=address -mwatchos-simulator-version-min=2.0.0 %s -o %t.o 2>&1 \
+// RUN:   -stdlib=platform -fsanitize=address \
+// RUN:   -mwatchos-simulator-version-min=2.0.0 %s -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-WATCHOSSIM %s
 
 // CHECK-ASAN-WATCHOSSIM: "{{.*}}ld{{(.exe)?}}"
@@ -87,8 +89,8 @@
 // CHECK-ASAN-WATCHOSSIM: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target armv7-apple-ios  \
-// RUN:   -fsanitize=address -miphoneos-version-min=7 %s -o %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ASAN-IOS %s
+// RUN:   -stdlib=platform -fsanitize=address -miphoneos-version-min=7 \
+// RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-IOS %s
 
 // CHECK-ASAN-IOS: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ASAN-IOS: lc++
@@ -97,8 +99,8 @@
 // CHECK-ASAN-IOS: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target arm64-apple-tvos \
-// RUN:   -fsanitize=address -mtvos-version-min=8.3 %s -o %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ASAN-TVOS %s
+// RUN:   -stdlib=platform -fsanitize=address -mtvos-version-min=8.3 \
+// RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-TVOS %s
 
 // CHECK-ASAN-TVOS: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ASAN-TVOS: lc++
@@ -107,8 +109,8 @@
 // CHECK-ASAN-TVOS: "-rpath" "{{.*}}lib{{.*}}darwin"
 
 // RUN: %clang -no-canonical-prefixes -### -target armv7k-apple-watchos \
-// RUN:   -fsanitize=address -mwatchos-version-min=2.0 %s -o %t.o 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ASAN-WATCHOS %s
+// RUN:   -stdlib=platform -fsanitize=address -mwatchos-version-min=2.0 \
+// RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-WATCHOS %s
 
 // CHECK-ASAN-WATCHOS: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ASAN-WATCHOS: lc++
