@@ -239,7 +239,8 @@ static const EnumEntry<unsigned> MachOSymbolFlags[] = {
   { "ReferencedDynamically", 0x10 },
   { "NoDeadStrip",           0x20 },
   { "WeakRef",               0x40 },
-  { "WeakDef",               0x80 }
+  { "WeakDef",               0x80 },
+  { "AltEntry",             0x200 },
 };
 
 static const EnumEntry<unsigned> MachOSymbolTypes[] = {

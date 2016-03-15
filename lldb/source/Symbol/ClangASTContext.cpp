@@ -4640,6 +4640,20 @@ ClangASTContext::CreateTypedef (lldb::opaque_compiler_type_t type, const char *t
                                                                &clang_ast->Idents.get(typedef_name),
                                                                clang_ast->getTrivialTypeSourceInfo(qual_type));
 
+        clang::TagDecl *tdecl = nullptr;
+        if (!qual_type.isNull())
+        {
+            if (const clang::RecordType *rt = qual_type->getAs<clang::RecordType>())
+                tdecl = rt->getDecl();
+            if (const clang::EnumType *et = qual_type->getAs<clang::EnumType>())
+                tdecl = et->getDecl();
+        }
+
+        // Check whether this declaration is an anonymous struct, union, or enum, hidden behind a typedef. If so, we
+        // try to check whether we have a typedef tag to attach to the original record declaration
+        if (tdecl && !tdecl->getIdentifier() && !tdecl->getTypedefNameForAnonDecl())
+            tdecl->setTypedefNameForAnonDecl(decl);
+
         decl->setAccess(clang::AS_public); // TODO respect proper access specifier
 
         // Get a uniqued clang::QualType for the typedef decl type

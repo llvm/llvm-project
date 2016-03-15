@@ -60,7 +60,13 @@ struct HexNumber {
 
 raw_ostream &operator<<(raw_ostream &OS, const HexNumber& Value);
 const std::string to_hexString(uint64_t Value, bool UpperCase = true);
-const std::string to_string(uint64_t Value);
+
+template <class T> const std::string to_string(const T &Value) {
+  std::string number;
+  llvm::raw_string_ostream stream(number);
+  stream << Value;
+  return stream.str();
+}
 
 class StreamWriter {
 public:

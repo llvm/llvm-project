@@ -3,8 +3,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2 --icf=all --verbose | FileCheck %s
 
-# CHECK: Selected .text.f1
-# CHECK:   Removed .text.f2
+# CHECK: selected .text.f1
+# CHECK:   removed .text.f2
 
 .globl _start, f1, f2
 _start:

@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSymbolMachO.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -70,6 +71,7 @@ public:
 
   void ChangeSection(MCSection *Sect, const MCExpr *Subsect) override;
   void EmitLabel(MCSymbol *Symbol) override;
+  void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void EmitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
   void EmitLinkerOptions(ArrayRef<std::string> Options) override;
@@ -196,6 +198,19 @@ void MCMachOStreamer::EmitLabel(MCSymbol *Symbol) {
   // FIXME: Cleanup this code, these bits should be emitted based on semantic
   // properties, not on the order of definition, etc.
   cast<MCSymbolMachO>(Symbol)->clearReferenceType();
+}
+
+void MCMachOStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
+  MCValue Res;
+
+  if (Value->evaluateAsRelocatable(Res, nullptr, nullptr)) {
+    if (const MCSymbolRefExpr *SymAExpr = Res.getSymA()) {
+      const MCSymbol &SymA = SymAExpr->getSymbol();
+      if (!Res.getSymB() && (SymA.getName() == "" || Res.getConstant() != 0))
+        cast<MCSymbolMachO>(Symbol)->setAltEntry();
+    }
+  }
+  MCObjectStreamer::EmitAssignment(Symbol, Value);
 }
 
 void MCMachOStreamer::EmitDataRegion(DataRegionData::KindTy Kind) {

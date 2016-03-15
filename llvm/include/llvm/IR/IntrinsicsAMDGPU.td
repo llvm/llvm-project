@@ -257,6 +257,10 @@ def int_amdgcn_s_getreg :
   GCCBuiltin<"__builtin_amdgcn_s_getreg">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrReadMem]>;
 
+def int_amdgcn_groupstaticsize :
+  GCCBuiltin<"__builtin_amdgcn_groupstaticsize">,
+  Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
 def int_amdgcn_dispatch_ptr :
   GCCBuiltin<"__builtin_amdgcn_dispatch_ptr">,
   Intrinsic<[LLVMQualPointerType<llvm_i8_ty, 2>], [], [IntrNoMem]>;

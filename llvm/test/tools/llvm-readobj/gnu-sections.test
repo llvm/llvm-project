@@ -1,0 +1,35 @@
+RUN: llvm-readobj -s %p/Inputs/relocs.obj.elf-i386 --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefix ELF32
+RUN: llvm-readobj -s %p/Inputs/relocs.obj.elf-x86_64 --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefix ELF64
+
+ELF32:    Section Headers:
+ELF32-NEXT:      [Nr] Name              Type            Address  Off    Size   ES Flg Lk Inf Al
+ELF32-NEXT:      [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+ELF32-NEXT:      [ 1] .text             PROGBITS        00000000 000034 0000f6 00  AX  0   0  4
+ELF32-NEXT:      [ 2] .rel.text         REL             00000000 000318 000148 08      6   1  4
+ELF32-NEXT:      [ 3] .data             PROGBITS        00000000 00012c 000000 00  WA  0   0  4
+ELF32-NEXT:      [ 4] .bss              NOBITS          00000000 00012c 000000 00  WA  0   0  4
+ELF32-NEXT:      [ 5] .shstrtab         STRTAB          00000000 00012c 000030 00      0   0  1
+ELF32-NEXT:      [ 6] .symtab           SYMTAB          00000000 00029c 000060 10      7   4  4
+ELF32-NEXT:      [ 7] .strtab           STRTAB          00000000 0002fc 00001b 00      0   0  1
+ELF32-NEXT:    Key to Flags:
+ELF32-NEXT:      W (write), A (alloc), X (execute), M (merge), S (strings), l (large)
+ELF32-NEXT:      I (info), L (link order), G (group), T (TLS), E (exclude), x (unknown)
+ELF32-NEXT:      O (extra OS processing required) o (OS specific), p (processor specific)
+
+ELF64:    There are 8 section headers, starting at offset 0x180:
+ELF64:    Section Headers:
+ELF64-NEXT:      [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+ELF64-NEXT:      [ 0]                   NULL            0000000000000000 000000 000000 00     0   0  0
+ELF64-NEXT:      [ 1] .text             PROGBITS        0000000000000000 000040 00010a 00  AX 0   0  4
+ELF64-NEXT:      [ 2] .rela.text        RELA            0000000000000000 000430 000390 18     6   1  8
+ELF64-NEXT:      [ 3] .data             PROGBITS        0000000000000000 00014c 000000 00  WA 0   0  4
+ELF64-NEXT:      [ 4] .bss              NOBITS          0000000000000000 00014c 000000 00  WA 0   0  4
+ELF64-NEXT:      [ 5] .shstrtab         STRTAB          0000000000000000 00014c 000031 00     0   0  1
+ELF64-NEXT:      [ 6] .symtab           SYMTAB          0000000000000000 000380 000090 18     7   4  8
+ELF64-NEXT:      [ 7] .strtab           STRTAB          0000000000000000 000410 00001b 00     0   0  1
+ELF64-NEXT:    Key to Flags:
+ELF64-NEXT:      W (write), A (alloc), X (execute), M (merge), S (strings), l (large)
+ELF64-NEXT:      I (info), L (link order), G (group), T (TLS), E (exclude), x (unknown)
+ELF64-NEXT:      O (extra OS processing required) o (OS specific), p (processor specific)

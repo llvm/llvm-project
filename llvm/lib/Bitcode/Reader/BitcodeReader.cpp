@@ -5529,10 +5529,10 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       auto VLI = ValueIdToLinkageMap.find(ValueID);
       assert(VLI != ValueIdToLinkageMap.end() &&
              "No linkage found for VST entry?");
-      std::string GlobalId =
-          Function::getGlobalIdentifier(ValueName, VLI->second, SourceFileName);
+      std::string GlobalId = GlobalValue::getGlobalIdentifier(
+          ValueName, VLI->second, SourceFileName);
       TheIndex->addGlobalValueInfo(GlobalId, std::move(GlobalValInfo));
-      ValueIdToCallGraphGUIDMap[ValueID] = Function::getGUID(GlobalId);
+      ValueIdToCallGraphGUIDMap[ValueID] = GlobalValue::getGUID(GlobalId);
       ValueName.clear();
       break;
     }
@@ -5549,10 +5549,11 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       auto VLI = ValueIdToLinkageMap.find(ValueID);
       assert(VLI != ValueIdToLinkageMap.end() &&
              "No linkage found for VST entry?");
-      std::string FunctionGlobalId =
-          Function::getGlobalIdentifier(ValueName, VLI->second, SourceFileName);
+      std::string FunctionGlobalId = GlobalValue::getGlobalIdentifier(
+          ValueName, VLI->second, SourceFileName);
       TheIndex->addGlobalValueInfo(FunctionGlobalId, std::move(FuncInfo));
-      ValueIdToCallGraphGUIDMap[ValueID] = Function::getGUID(FunctionGlobalId);
+      ValueIdToCallGraphGUIDMap[ValueID] =
+          GlobalValue::getGUID(FunctionGlobalId);
 
       ValueName.clear();
       break;

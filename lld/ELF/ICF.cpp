@@ -340,10 +340,10 @@ template <class ELFT> void ICF<ELFT>::run(SymbolTable<ELFT> *Symtab) {
     });
     if (I == Bound)
       continue;
-    log("Selected " + Head->getSectionName());
+    log("selected " + Head->getSectionName());
     while (I != Bound) {
       InputSection<ELFT> *S = *I++;
-      log("  Removed " + S->getSectionName());
+      log("  removed " + S->getSectionName());
       Head->replace(S);
     }
   }

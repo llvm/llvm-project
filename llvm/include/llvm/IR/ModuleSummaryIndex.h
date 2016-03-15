@@ -277,13 +277,13 @@ public:
 
   /// Get the list of global value info objects for a given value name.
   const GlobalValueInfoList &getGlobalValueInfoList(StringRef ValueName) {
-    return GlobalValueMap[Function::getGUID(ValueName)];
+    return GlobalValueMap[GlobalValue::getGUID(ValueName)];
   }
 
   /// Get the list of global value info objects for a given value name.
   const const_globalvalueinfo_iterator
   findGlobalValueInfoList(StringRef ValueName) const {
-    return GlobalValueMap.find(Function::getGUID(ValueName));
+    return GlobalValueMap.find(GlobalValue::getGUID(ValueName));
   }
 
   /// Get the list of global value info objects for a given value GUID.
@@ -295,7 +295,7 @@ public:
   /// Add a global value info for a value of the given name.
   void addGlobalValueInfo(StringRef ValueName,
                           std::unique_ptr<GlobalValueInfo> Info) {
-    GlobalValueMap[Function::getGUID(ValueName)].push_back(std::move(Info));
+    GlobalValueMap[GlobalValue::getGUID(ValueName)].push_back(std::move(Info));
   }
 
   /// Add a global value info for a value of the given GUID.

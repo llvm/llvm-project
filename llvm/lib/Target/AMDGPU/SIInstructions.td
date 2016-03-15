@@ -1896,6 +1896,11 @@ let hasSideEffects = 1, SALU = 1 in {
 def SGPR_USE : InstSI <(outs),(ins), "", []>;
 }
 
+let usesCustomInserter = 1, SALU = 1 in {
+def GET_GROUPSTATICSIZE : InstSI <(outs SReg_32:$sdst), (ins), "",
+  [(set SReg_32:$sdst, (int_amdgcn_groupstaticsize))]>;
+} // End let usesCustomInserter = 1, SALU = 1
+
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 

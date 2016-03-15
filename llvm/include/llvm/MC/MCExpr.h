@@ -178,6 +178,7 @@ public:
     VK_TPOFF,
     VK_DTPOFF,
     VK_TLSCALL,   // symbol(tlscall)
+    VK_TLSDESC,   // symbol(tlsdesc)
     VK_TLVP,      // Mach-O thread local variable relocations
     VK_TLVPPAGE,
     VK_TLVPPAGEOFF,
@@ -196,7 +197,6 @@ public:
     VK_ARM_PREL31,
     VK_ARM_SBREL,          // symbol(sbrel)
     VK_ARM_TLSLDO,         // symbol(tlsldo)
-    VK_ARM_TLSDESC,        // symbol(tlsdesc)
     VK_ARM_TLSDESCSEQ,
 
     VK_PPC_LO,             // symbol@l

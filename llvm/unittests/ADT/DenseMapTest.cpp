@@ -339,6 +339,19 @@ TYPED_TEST(DenseMapTest, ConstIteratorTest) {
   EXPECT_TRUE(cit == cit2);
 }
 
+// Make sure resize actually gives us enough buckets to insert N items
+// without increasing allocation size.
+TEST(DenseMapCustomTest, ResizeTest) {
+  for (unsigned Size = 16; Size < 32; ++Size) {
+    DenseMap<unsigned, unsigned> Map;
+    Map.resize(Size);
+    unsigned MemorySize = Map.getMemorySize();
+    for (unsigned i = 0; i < Size; ++i)
+      Map[i] = i;
+    EXPECT_TRUE(Map.getMemorySize() == MemorySize);
+  }
+}
+
 // Make sure DenseMap works with StringRef keys.
 TEST(DenseMapCustomTest, StringRefTest) {
   DenseMap<StringRef, int> M;
