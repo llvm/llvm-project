@@ -2918,20 +2918,20 @@ static void WriteModuleLevelReferences(const GlobalVariable &V,
                                        SmallVector<uint64_t, 64> &NameVals,
                                        unsigned FSModRefsAbbrev,
                                        BitstreamWriter &Stream) {
+  // Only interested in recording variable defs in the summary.
+  if (V.isDeclaration())
+    return;
   DenseSet<unsigned> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
   findRefEdges(&V, VE, RefEdges, Visited);
-  unsigned RefCount = RefEdges.size();
-  if (RefCount) {
-    NameVals.push_back(VE.getValueID(&V));
-    NameVals.push_back(getEncodedLinkage(V.getLinkage()));
-    for (auto RefId : RefEdges) {
-      NameVals.push_back(RefId);
-    }
-    Stream.EmitRecord(bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS, NameVals,
-                      FSModRefsAbbrev);
-    NameVals.clear();
+  NameVals.push_back(VE.getValueID(&V));
+  NameVals.push_back(getEncodedLinkage(V.getLinkage()));
+  for (auto RefId : RefEdges) {
+    NameVals.push_back(RefId);
   }
+  Stream.EmitRecord(bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS, NameVals,
+                    FSModRefsAbbrev);
+  NameVals.clear();
 }
 
 /// Emit the per-module summary section alongside the rest of
@@ -3072,7 +3072,6 @@ static void WriteCombinedGlobalValueSummary(
       assert(S);
 
       if (auto *VS = dyn_cast<GlobalVarSummary>(S)) {
-        assert(!VS->refs().empty() && "Expected at least one ref edge");
         NameVals.push_back(I.getModuleId(VS->modulePath()));
         NameVals.push_back(getEncodedLinkage(VS->linkage()));
         for (auto &RI : VS->refs()) {
