@@ -12,7 +12,7 @@
 
 
 protocol AProtocol {
-	typealias AType
+	associatedtype AType
 	func makeOne() -> AType
 }
 
