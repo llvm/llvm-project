@@ -154,7 +154,7 @@ TEST_F(InstrProfTest, get_profile_summary) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  auto VerifySummary = [](InstrProfSummary &IPS, bool dummy) mutable {
+  auto VerifySummary = [](InstrProfSummary &IPS) mutable {
     ASSERT_EQ(2305843009213693952U, IPS.getMaxFunctionCount());
     ASSERT_EQ(2305843009213693952U, IPS.getMaxBlockCount());
     ASSERT_EQ(10U, IPS.getNumBlocks());
@@ -179,14 +179,14 @@ TEST_F(InstrProfTest, get_profile_summary) {
     ASSERT_EQ(72057594037927936U, NinetyNinePerc->MinCount);
   };
   InstrProfSummary &PS = Reader->getSummary();
-  VerifySummary(PS, true);
+  VerifySummary(PS);
   Metadata *MD = PS.getMD(getGlobalContext());
   ASSERT_TRUE(MD);
   ProfileSummary *PSFromMD = ProfileSummary::getFromMD(MD);
   ASSERT_TRUE(PSFromMD);
   ASSERT_TRUE(isa<InstrProfSummary>(PSFromMD));
   InstrProfSummary *IPS = cast<InstrProfSummary>(PSFromMD);
-  VerifySummary(*IPS, false);
+  VerifySummary(*IPS);
   delete IPS;
 }
 

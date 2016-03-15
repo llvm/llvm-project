@@ -425,7 +425,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     NewMask = APInt::getAllOnesValue(BitWidth);
   } else if (DemandedMask == 0) {
     // Not demanding any bits from Op.
-    if (Op.getOpcode() != ISD::UNDEF)
+    if (!Op.isUndef())
       return TLO.CombineTo(Op, TLO.DAG.getUNDEF(Op.getValueType()));
     return false;
   } else if (Depth == 6) {        // Limit search depth.

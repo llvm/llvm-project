@@ -1064,6 +1064,8 @@ MipsTargetLowering::emitAtomicBinary(MachineInstr *MI, MachineBasicBlock *BB,
   DebugLoc DL = MI->getDebugLoc();
   unsigned LL, SC, AND, NOR, ZERO, BEQ;
 
+  // FIXME: The below code should check for the ISA to emit the correct 64bit
+  // operations when the size is 4.
   if (Size == 4) {
     if (isMicroMips) {
       LL = Mips::LL_MM;

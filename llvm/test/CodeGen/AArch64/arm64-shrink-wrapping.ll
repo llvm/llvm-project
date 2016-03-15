@@ -33,8 +33,8 @@ target triple = "arm64-apple-ios"
 ; Without shrink-wrapping, epilogue is in the exit block.
 ; DISABLE: [[EXIT_LABEL]]:
 ; Epilogue code.
-; CHECK-NEXT: mov sp, [[SAVE_SP]]
-; CHECK-NEXT: ldp [[SAVE_SP]], [[CSR]], [sp], #16
+; CHECK-NEXT: add sp, sp, #16
+; CHECK-NEXT: ldp x{{[0-9]+}}, [[CSR]], [sp], #16
 ;
 ; With shrink-wrapping, exit block is a simple return.
 ; ENABLE: [[EXIT_LABEL]]:
@@ -473,7 +473,7 @@ if.end:                                           ; preds = %for.body, %if.else
 ; DISABLE: [[IFEND_LABEL]]: ; %if.end
 ;
 ; Epilogue code.
-; CHECK: mov sp, [[NEW_SP]]
+; CHECK: add sp, sp, #48
 ; CHECK-NEXT: ldp [[CSR1]], [[CSR2]], [sp], #16
 ; CHECK-NEXT: ret
 ;

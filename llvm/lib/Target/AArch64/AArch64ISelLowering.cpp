@@ -4973,7 +4973,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
   SmallVector<ShuffleSourceInfo, 2> Sources;
   for (unsigned i = 0; i < NumElts; ++i) {
     SDValue V = Op.getOperand(i);
-    if (V.getOpcode() == ISD::UNDEF)
+    if (V.isUndef())
       continue;
     else if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
              !isa<ConstantSDNode>(V.getOperand(1))) {
@@ -5097,7 +5097,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
   int BitsPerShuffleLane = ShuffleVT.getVectorElementType().getSizeInBits();
   for (unsigned i = 0; i < VT.getVectorNumElements(); ++i) {
     SDValue Entry = Op.getOperand(i);
-    if (Entry.getOpcode() == ISD::UNDEF)
+    if (Entry.isUndef())
       continue;
 
     auto Src = std::find(Sources.begin(), Sources.end(), Entry.getOperand(0));
@@ -5545,7 +5545,7 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
   SDValue V2Cst = DAG.getNode(ISD::BITCAST, DL, IndexVT, V2);
 
   SDValue Shuffle;
-  if (V2.getNode()->getOpcode() == ISD::UNDEF) {
+  if (V2.getNode()->isUndef()) {
     if (IndexLen == 8)
       V1Cst = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, V1Cst, V1Cst);
     Shuffle = DAG.getNode(
@@ -5658,8 +5658,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     Imm *= getExtFactor(V1);
     return DAG.getNode(AArch64ISD::EXT, dl, V1.getValueType(), V1, V2,
                        DAG.getConstant(Imm, dl, MVT::i32));
-  } else if (V2->getOpcode() == ISD::UNDEF &&
-             isSingletonEXTMask(ShuffleMask, VT, Imm)) {
+  } else if (V2->isUndef() && isSingletonEXTMask(ShuffleMask, VT, Imm)) {
     Imm *= getExtFactor(V1);
     return DAG.getNode(AArch64ISD::EXT, dl, V1.getValueType(), V1, V1,
                        DAG.getConstant(Imm, dl, MVT::i32));
@@ -6327,7 +6326,7 @@ FailedModImm:
   SDValue ConstantValue;
   for (unsigned i = 0; i < NumElts; ++i) {
     SDValue V = Op.getOperand(i);
-    if (V.getOpcode() == ISD::UNDEF)
+    if (V.isUndef())
       continue;
     if (i > 0)
       isOnlyLowElement = false;
@@ -6438,7 +6437,7 @@ FailedModImm:
     //    value is already in an S or D register.
     // Do not do this for UNDEF/LOAD nodes because we have better patterns
     // for those avoiding the SCALAR_TO_VECTOR/BUILD_VECTOR.
-    if (Op0.getOpcode() != ISD::UNDEF && Op0.getOpcode() != ISD::LOAD &&
+    if (!Op0.isUndef() && Op0.getOpcode() != ISD::LOAD &&
         (ElemSize == 32 || ElemSize == 64)) {
       unsigned SubIdx = ElemSize == 32 ? AArch64::ssub : AArch64::dsub;
       MachineSDNode *N =
@@ -6449,7 +6448,7 @@ FailedModImm:
     }
     for (; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
-      if (V.getOpcode() == ISD::UNDEF)
+      if (V.isUndef())
         continue;
       SDValue LaneIdx = DAG.getConstant(i, dl, MVT::i64);
       Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, Vec, V, LaneIdx);

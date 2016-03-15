@@ -1,5 +1,5 @@
 ; First ensure that the ThinLTO handling in the gold plugin handles
-; bitcode without function summary sections gracefully.
+; bitcode without summary sections gracefully.
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/thinlto.ll -o %t2.o
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
@@ -12,9 +12,9 @@
 ; RUN:    -shared %t.o %t2.o -o %t4
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
 
-; Next generate function summary sections and test gold handling.
-; RUN: llvm-as -function-summary %s -o %t.o
-; RUN: llvm-as -function-summary %p/Inputs/thinlto.ll -o %t2.o
+; Next generate summary sections and test gold handling.
+; RUN: llvm-as -module-summary %s -o %t.o
+; RUN: llvm-as -module-summary %p/Inputs/thinlto.ll -o %t2.o
 
 ; Ensure gold generates an index and not a binary if requested.
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \

@@ -534,12 +534,6 @@ static void lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
              "non gc managed derived pointer found in statepoint");
     }
   }
-  for (const GCRelocateInst *GCR : Relocations) {
-    auto Opt = S.isGCManagedPointer(GCR->getType()->getScalarType());
-    if (Opt.hasValue()) {
-      assert(Opt.getValue() && "non gc managed pointer relocated");
-    }
-  }
 #endif
 
   // Before we actually start lowering (and allocating spill slots for values),
@@ -872,6 +866,10 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   // different basic blocks.
   if (Relocate.getStatepoint()->getParent() == Relocate.getParent())
     StatepointLowering.relocCallVisited(Relocate);
+
+  auto *Ty = Relocate.getType()->getScalarType();
+  if (auto IsManaged = GFI->getStrategy().isGCManagedPointer(Ty))
+    assert(*IsManaged && "Non gc managed pointer relocated!");
 #endif
 
   const Value *DerivedPtr = Relocate.getDerivedPtr();

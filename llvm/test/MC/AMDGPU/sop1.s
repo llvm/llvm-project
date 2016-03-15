@@ -121,14 +121,14 @@ s_sext_i32_i16 s1, s2
 s_bitset0_b32 s1, s2
 // CHECK: s_bitset0_b32 s1, s2 ; encoding: [0x02,0x1b,0x81,0xbe]
 
-s_bitset0_b64 s[2:3], s[4:5]
-// CHECK: s_bitset0_b64 s[2:3], s[4:5] ; encoding: [0x04,0x1c,0x82,0xbe]
+s_bitset0_b64 s[2:3], s4
+// CHECK: s_bitset0_b64 s[2:3], s4 ; encoding: [0x04,0x1c,0x82,0xbe]
 
 s_bitset1_b32 s1, s2
 // CHECK: s_bitset1_b32 s1, s2 ; encoding: [0x02,0x1d,0x81,0xbe]
 
-s_bitset1_b64 s[2:3], s[4:5]
-// CHECK: s_bitset1_b64 s[2:3], s[4:5] ; encoding: [0x04,0x1e,0x82,0xbe]
+s_bitset1_b64 s[2:3], s4
+// CHECK: s_bitset1_b64 s[2:3], s4 ; encoding: [0x04,0x1e,0x82,0xbe]
 
 s_getpc_b64 s[2:3]
 // CHECK: s_getpc_b64 s[2:3] ; encoding: [0x00,0x1f,0x82,0xbe]
@@ -139,8 +139,8 @@ s_setpc_b64 s[4:5]
 s_swappc_b64 s[2:3], s[4:5]
 // CHECK: s_swappc_b64 s[2:3], s[4:5] ; encoding: [0x04,0x21,0x82,0xbe]
 
-s_rfe_b64 s[2:3], s[4:5]
-// CHECK: s_rfe_b64 s[2:3], s[4:5] ; encoding: [0x04,0x22,0x82,0xbe]
+s_rfe_b64 s[4:5]
+// CHECK: s_rfe_b64 s[4:5] ; encoding: [0x04,0x22,0x80,0xbe]
 
 s_and_saveexec_b64 s[2:3], s[4:5]
 // CHECK: s_and_saveexec_b64 s[2:3], s[4:5] ; encoding: [0x04,0x24,0x82,0xbe]

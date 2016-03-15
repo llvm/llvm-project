@@ -572,7 +572,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (SystemZ::GR64BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::LGR;
   else if (SystemZ::FP32BitRegClass.contains(DestReg, SrcReg))
-    Opcode = SystemZ::LER;
+    // For z13 we prefer LDR over LER to avoid partial register dependencies.
+    Opcode = STI.hasVector() ? SystemZ::LDR32 : SystemZ::LER;
   else if (SystemZ::FP64BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::LDR;
   else if (SystemZ::FP128BitRegClass.contains(DestReg, SrcReg))

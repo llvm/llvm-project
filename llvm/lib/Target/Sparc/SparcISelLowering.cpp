@@ -2671,7 +2671,7 @@ static SDValue LowerF128Load(SDValue Op, SelectionDAG &DAG)
 {
   SDLoc dl(Op);
   LoadSDNode *LdNode = dyn_cast<LoadSDNode>(Op.getNode());
-  assert(LdNode && LdNode->getOffset().getOpcode() == ISD::UNDEF
+  assert(LdNode && LdNode->getOffset().isUndef()
          && "Unexpected node type");
 
   unsigned alignment = LdNode->getAlignment();
@@ -2732,7 +2732,7 @@ static SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG)
 static SDValue LowerF128Store(SDValue Op, SelectionDAG &DAG) {
   SDLoc dl(Op);
   StoreSDNode *StNode = dyn_cast<StoreSDNode>(Op.getNode());
-  assert(StNode && StNode->getOffset().getOpcode() == ISD::UNDEF
+  assert(StNode && StNode->getOffset().isUndef()
          && "Unexpected node type");
   SDValue SubRegEven = DAG.getTargetConstant(SP::sub_even64, dl, MVT::i32);
   SDValue SubRegOdd  = DAG.getTargetConstant(SP::sub_odd64, dl, MVT::i32);

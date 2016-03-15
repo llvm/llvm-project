@@ -2298,7 +2298,7 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) {
   SDLoc dl(Op);
   EVT VT = Op.getValueType();
 
-  if (V2.getOpcode() == ISD::UNDEF)
+  if (V2.isUndef())
     V2 = V1;
 
   if (SVN->isSplat()) {
@@ -2316,7 +2316,7 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) {
         !isa<ConstantSDNode>(V1.getOperand(0))) {
       bool IsScalarToVector = true;
       for (unsigned i = 1, e = V1.getNumOperands(); i != e; ++i)
-        if (V1.getOperand(i).getOpcode() != ISD::UNDEF) {
+        if (!V1.getOperand(i).isUndef()) {
           IsScalarToVector = false;
           break;
         }
@@ -2438,9 +2438,9 @@ HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     SDValue V0 = BVN->getOperand(0);
     SDValue V1 = BVN->getOperand(1);
 
-    if (V0.getOpcode() == ISD::UNDEF)
+    if (V0.isUndef())
       V0 = DAG.getConstant(0, dl, MVT::i32);
-    if (V1.getOpcode() == ISD::UNDEF)
+    if (V1.isUndef())
       V1 = DAG.getConstant(0, dl, MVT::i32);
 
     ConstantSDNode *C0 = dyn_cast<ConstantSDNode>(V0);
@@ -2460,7 +2460,7 @@ HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   // Try to generate a S2_packhl to build v2i16 vectors.
   if (VT.getSimpleVT() == MVT::v2i16) {
     for (unsigned i = 0, e = NElts; i != e; ++i) {
-      if (BVN->getOperand(i).getOpcode() == ISD::UNDEF)
+      if (BVN->getOperand(i).isUndef())
         continue;
       ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(BVN->getOperand(i));
       // If the element isn't a constant, it is in a register:
@@ -2488,7 +2488,7 @@ HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     // combine, const64, etc. are Big Endian.
     unsigned OpIdx = NElts - i - 1;
     SDValue Operand = BVN->getOperand(OpIdx);
-    if (Operand.getOpcode() == ISD::UNDEF)
+    if (Operand.isUndef())
       continue;
 
     int64_t Val = 0;

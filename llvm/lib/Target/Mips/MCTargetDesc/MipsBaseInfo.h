@@ -117,7 +117,12 @@ namespace MipsII {
     /// FrmOther - This form is for instructions that have no specific format.
     FrmOther = 6,
 
-    FormMask = 15
+    FormMask = 15,
+    /// IsCTI - Instruction is a Control Transfer Instruction.
+    IsCTI = 1 << 4,
+    /// HasForbiddenSlot - Instruction has a forbidden slot.
+    HasForbiddenSlot = 1 << 5
+
   };
 }
 }

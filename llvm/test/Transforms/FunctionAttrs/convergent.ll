@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -functionattrs -rpo-functionattrs -S | FileCheck %s
+; RUN: opt -functionattrs -S < %s | FileCheck %s
 
 ; CHECK: Function Attrs
 ; CHECK-NOT: convergent
@@ -24,16 +24,37 @@ declare i32 @k() convergent
 ; CHECK-SAME: convergent
 ; CHECK-NEXT: define i32 @extern()
 define i32 @extern() convergent {
+  %a = call i32 @k() convergent
+  ret i32 %a
+}
+
+; Convergent should not be removed on the function here.  Although the call is
+; not explicitly convergent, it picks up the convergent attr from the callee.
+;
+; CHECK: Function Attrs
+; CHECK-SAME: convergent
+; CHECK-NEXT: define i32 @extern_non_convergent_call()
+define i32 @extern_non_convergent_call() convergent {
   %a = call i32 @k()
   ret i32 %a
 }
 
 ; CHECK: Function Attrs
 ; CHECK-SAME: convergent
-; CHECK-NEXT: define i32 @call_extern()
-define i32 @call_extern() convergent {
-  %a = call i32 @extern()
-  ret i32 %a
+; CHECK-NEXT: define i32 @indirect_convergent_call(
+define i32 @indirect_convergent_call(i32 ()* %f) convergent {
+   %a = call i32 %f() convergent
+   ret i32 %a
+}
+; Give indirect_non_convergent_call the norecurse attribute so we get a
+; "Function Attrs" comment in the output.
+;
+; CHECK: Function Attrs
+; CHECK-NOT: convergent
+; CHECK-NEXT: define i32 @indirect_non_convergent_call(
+define i32 @indirect_non_convergent_call(i32 ()* %f) convergent norecurse {
+   %a = call i32 %f()
+   ret i32 %a
 }
 
 ; CHECK: Function Attrs
@@ -45,25 +66,16 @@ declare void @llvm.cuda.syncthreads() convergent
 ; CHECK-SAME: convergent
 ; CHECK-NEXT: define i32 @intrinsic()
 define i32 @intrinsic() convergent {
+  ; Implicitly convergent, because the intrinsic is convergent.
   call void @llvm.cuda.syncthreads()
   ret i32 0
-}
-
-@xyz = global i32 ()* null
-; CHECK: Function Attrs
-; CHECK-SAME: convergent
-; CHECK-NEXT: define i32 @functionptr()
-define i32 @functionptr() convergent {
-  %1 = load i32 ()*, i32 ()** @xyz
-  %2 = call i32 %1()
-  ret i32 %2
 }
 
 ; CHECK: Function Attrs
 ; CHECK-NOT: convergent
 ; CHECK-NEXT: define i32 @recursive1()
 define i32 @recursive1() convergent {
-  %a = call i32 @recursive2()
+  %a = call i32 @recursive2() convergent
   ret i32 %a
 }
 
@@ -71,7 +83,7 @@ define i32 @recursive1() convergent {
 ; CHECK-NOT: convergent
 ; CHECK-NEXT: define i32 @recursive2()
 define i32 @recursive2() convergent {
-  %a = call i32 @recursive1()
+  %a = call i32 @recursive1() convergent
   ret i32 %a
 }
 
@@ -79,7 +91,7 @@ define i32 @recursive2() convergent {
 ; CHECK-SAME: convergent
 ; CHECK-NEXT: define i32 @noopt()
 define i32 @noopt() convergent optnone noinline {
-  %a = call i32 @noopt_friend()
+  %a = call i32 @noopt_friend() convergent
   ret i32 0
 }
 

@@ -1,9 +1,9 @@
 # RUN: not llvm-mc %s -triple=mips -show-encoding -mcpu=mips64r6 -mattr=micromips 2>%t1
 # RUN: FileCheck %s < %t1
 
-  addiur1sp $7, 260        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
-  addiur1sp $7, 241        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: misaligned immediate operand value
-  addiur1sp $8, 240        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  addiur1sp $7, 260        # CHECK: :[[@LINE]]:17: error: expected both 8-bit unsigned immediate and multiple of 4
+  addiur1sp $7, 241        # CHECK: :[[@LINE]]:17: error: expected both 8-bit unsigned immediate and multiple of 4
+  addiur1sp $8, 240        # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
   addiur2 $9, $7, -1       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   addiur2 $6, $7, 10       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: immediate operand value out of range
   addius5 $2, -9           # CHECK: :[[@LINE]]:15: error: expected 4-bit signed immediate

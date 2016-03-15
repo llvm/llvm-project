@@ -27,7 +27,7 @@
 #include <string>
 
 namespace llvm {
-class FunctionInfoIndex;
+class ModuleSummaryIndex;
 class LLVMContext;
 class TargetMachine;
 
@@ -177,21 +177,21 @@ public:
    */
 
   /**
-   * Produce the combined function index from all the bitcode files:
+   * Produce the combined summary index from all the bitcode files:
    * "thin-link".
    */
-  std::unique_ptr<FunctionInfoIndex> linkCombinedIndex();
+  std::unique_ptr<ModuleSummaryIndex> linkCombinedIndex();
 
   /**
    * Perform promotion and renaming of exported internal functions.
    */
-  void promote(Module &Module, FunctionInfoIndex &Index);
+  void promote(Module &Module, ModuleSummaryIndex &Index);
 
   /**
    * Perform cross-module importing for the module identified by
    * ModuleIdentifier.
    */
-  void crossModuleImport(Module &Module, FunctionInfoIndex &Index);
+  void crossModuleImport(Module &Module, ModuleSummaryIndex &Index);
 
   /**
    * Perform post-importing ThinLTO optimizations.

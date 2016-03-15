@@ -387,11 +387,9 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
   bool Modified = false;
   LLVMContext &C = M->getContext();
   Type *MyVoid = Type::getVoidTy(C);
-  for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end();
-         I != E; ++I) {
-      Instruction &Inst = *I;
-      if (const ReturnInst *RI = dyn_cast<ReturnInst>(I)) {
+  for (auto &BB: F)
+    for (auto &I: BB) {
+      if (const ReturnInst *RI = dyn_cast<ReturnInst>(&I)) {
         Value *RVal = RI->getReturnValue();
         if (!RVal) continue;
         //
@@ -425,8 +423,8 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
         A = A.addAttribute(C, AttributeSet::FunctionIndex,
                            Attribute::NoInline);
         Value *F = (M->getOrInsertFunction(Name, A, MyVoid, T, nullptr));
-        CallInst::Create(F, Params, "", &Inst );
-      } else if (const CallInst *CI = dyn_cast<CallInst>(I)) {
+        CallInst::Create(F, Params, "", &I);
+      } else if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
         FunctionType *FT = CI->getFunctionType();
         Function *F_ =  CI->getCalledFunction();
         if (needsFPReturnHelper(*FT) &&

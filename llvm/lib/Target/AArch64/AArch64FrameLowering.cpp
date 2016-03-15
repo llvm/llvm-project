@@ -312,41 +312,41 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     // All of the stack allocation is for locals.
     AFI->setLocalStackSize(NumBytes);
 
-    // Label used to tie together the PROLOG_LABEL and the MachineMoves.
-    MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
-
+    if (!NumBytes)
+      return;
     // REDZONE: If the stack size is less than 128 bytes, we don't need
     // to actually allocate.
-    if (NumBytes && !canUseRedZone(MF)) {
+    if (canUseRedZone(MF))
+      ++NumRedZoneFunctions;
+    else {
       emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP, -NumBytes, TII,
                       MachineInstr::FrameSetup);
 
+      // Label used to tie together the PROLOG_LABEL and the MachineMoves.
+      MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
       // Encode the stack size of the leaf function.
       unsigned CFIIndex = MMI.addFrameInst(
           MCCFIInstruction::createDefCfaOffset(FrameLabel, -NumBytes));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
-    } else if (NumBytes) {
-      ++NumRedZoneFunctions;
     }
-
     return;
   }
 
-  // Only set up FP if we actually need to.
-  int FPOffset = 0;
-  if (HasFP)
-    // Frame pointer is fp = sp - 16.
-    FPOffset = AFI->getCalleeSavedStackSize() - 16;
+  NumBytes -= AFI->getCalleeSavedStackSize();
+  assert(NumBytes >= 0 && "Negative stack allocation size!?");
+  // All of the remaining stack allocations are for locals.
+  AFI->setLocalStackSize(NumBytes);
 
   // Move past the saves of the callee-saved registers.
   MachineBasicBlock::iterator End = MBB.end();
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup))
     ++MBBI;
-  NumBytes -= AFI->getCalleeSavedStackSize();
-  assert(NumBytes >= 0 && "Negative stack allocation size!?");
   if (HasFP) {
+    // Only set up FP if we actually need to. Frame pointer is fp = sp - 16.
+    int FPOffset = AFI->getCalleeSavedStackSize() - 16;
+
     // Issue    sub fp, sp, FPOffset or
     //          mov fp,sp          when FPOffset is zero.
     // Note: All stores of callee-saved registers are marked as "FrameSetup".
@@ -355,47 +355,46 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                     MachineInstr::FrameSetup);
   }
 
-  // All of the remaining stack allocations are for locals.
-  AFI->setLocalStackSize(NumBytes);
-
   // Allocate space for the rest of the frame.
+  if (NumBytes) {
+    const bool NeedsRealignment = RegInfo->needsStackRealignment(MF);
+    unsigned scratchSPReg = AArch64::SP;
 
-  const unsigned Alignment = MFI->getMaxAlignment();
-  const bool NeedsRealignment = RegInfo->needsStackRealignment(MF);
-  unsigned scratchSPReg = AArch64::SP;
-  if (NumBytes && NeedsRealignment) {
-    scratchSPReg = findScratchNonCalleeSaveRegister(&MBB);
-    assert(scratchSPReg != AArch64::NoRegister);
-  }
+    if (NeedsRealignment) {
+      scratchSPReg = findScratchNonCalleeSaveRegister(&MBB);
+      assert(scratchSPReg != AArch64::NoRegister);
+    }
 
-  // If we're a leaf function, try using the red zone.
-  if (NumBytes && !canUseRedZone(MF))
-    // FIXME: in the case of dynamic re-alignment, NumBytes doesn't have
-    // the correct value here, as NumBytes also includes padding bytes,
-    // which shouldn't be counted here.
-    emitFrameOffset(MBB, MBBI, DL, scratchSPReg, AArch64::SP, -NumBytes, TII,
-                    MachineInstr::FrameSetup);
+    // If we're a leaf function, try using the red zone.
+    if (!canUseRedZone(MF))
+      // FIXME: in the case of dynamic re-alignment, NumBytes doesn't have
+      // the correct value here, as NumBytes also includes padding bytes,
+      // which shouldn't be counted here.
+      emitFrameOffset(MBB, MBBI, DL, scratchSPReg, AArch64::SP, -NumBytes, TII,
+                      MachineInstr::FrameSetup);
 
-  if (NumBytes && NeedsRealignment) {
-    const unsigned NrBitsToZero = countTrailingZeros(Alignment);
-    assert(NrBitsToZero > 1);
-    assert(scratchSPReg != AArch64::SP);
+    if (NeedsRealignment) {
+      const unsigned Alignment = MFI->getMaxAlignment();
+      const unsigned NrBitsToZero = countTrailingZeros(Alignment);
+      assert(NrBitsToZero > 1);
+      assert(scratchSPReg != AArch64::SP);
 
-    // SUB X9, SP, NumBytes
-    //   -- X9 is temporary register, so shouldn't contain any live data here,
-    //   -- free to use. This is already produced by emitFrameOffset above.
-    // AND SP, X9, 0b11111...0000
-    // The logical immediates have a non-trivial encoding. The following
-    // formula computes the encoded immediate with all ones but
-    // NrBitsToZero zero bits as least significant bits.
-    uint32_t andMaskEncoded =
-        (1                   <<12) // = N
-      | ((64-NrBitsToZero)   << 6) // immr
-      | ((64-NrBitsToZero-1) << 0) // imms
-      ;
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ANDXri), AArch64::SP)
-      .addReg(scratchSPReg, RegState::Kill)
-      .addImm(andMaskEncoded);
+      // SUB X9, SP, NumBytes
+      //   -- X9 is temporary register, so shouldn't contain any live data here,
+      //   -- free to use. This is already produced by emitFrameOffset above.
+      // AND SP, X9, 0b11111...0000
+      // The logical immediates have a non-trivial encoding. The following
+      // formula computes the encoded immediate with all ones but
+      // NrBitsToZero zero bits as least significant bits.
+      uint32_t andMaskEncoded = (1 << 12)                         // = N
+                                | ((64 - NrBitsToZero) << 6)      // immr
+                                | ((64 - NrBitsToZero - 1) << 0); // imms
+
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ANDXri), AArch64::SP)
+          .addReg(scratchSPReg, RegState::Kill)
+          .addImm(andMaskEncoded);
+      AFI->setStackRealigned(true);
+    }
   }
 
   // If we need a base pointer, set it up here. It's whatever the value of the
@@ -607,9 +606,12 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // FIXME: Rather than doing the math here, we should instead just use
   // non-post-indexed loads for the restores if we aren't actually going to
   // be able to save any instructions.
-  if (NumBytes || MFI->hasVarSizedObjects())
+  if (MFI->hasVarSizedObjects() || AFI->isStackRealigned())
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::FP,
                     -AFI->getCalleeSavedStackSize() + 16, TII,
+                    MachineInstr::FrameDestroy);
+  else if (NumBytes)
+    emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP, NumBytes, TII,
                     MachineInstr::FrameDestroy);
 
   // This must be placed after the callee-save restore code because that code

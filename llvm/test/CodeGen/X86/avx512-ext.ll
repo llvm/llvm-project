@@ -1900,6 +1900,67 @@ define <64 x i8> @zext_64xi1_to_64xi8(<64 x i8> %x, <64 x i8> %y) #0 {
   ret <64 x i8> %1
 }
 
+define <32 x i16> @zext_32xi1_to_32xi16(<32 x i16> %x, <32 x i16> %y) #0 {
+; KNL-LABEL: zext_32xi1_to_32xi16:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
+; KNL-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; KNL-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; KNL-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: zext_32xi1_to_32xi16:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; SKX-NEXT:    vmovdqu16 {{.*}}(%rip), %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %mask = icmp eq <32 x i16> %x, %y
+  %1 = zext <32 x i1> %mask to <32 x i16>
+  ret <32 x i16> %1
+}
+
+define <16 x i16> @zext_16xi1_to_16xi16(<16 x i16> %x, <16 x i16> %y) #0 {
+; KNL-LABEL: zext_16xi1_to_16xi16:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; KNL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: zext_16xi1_to_16xi16:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpcmpeqw %ymm1, %ymm0, %k1
+; SKX-NEXT:    vmovdqu16 {{.*}}(%rip), %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %mask = icmp eq <16 x i16> %x, %y
+  %1 = zext <16 x i1> %mask to <16 x i16>
+  ret <16 x i16> %1
+}
+
+
+define <32 x i8> @zext_32xi1_to_32xi8(<32 x i16> %x, <32 x i16> %y) #0 {
+; KNL-LABEL: zext_32xi1_to_32xi8:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
+; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovdb %zmm0, %xmm0
+; KNL-NEXT:    vpcmpeqw %ymm3, %ymm1, %ymm1
+; KNL-NEXT:    vpmovsxwd %ymm1, %zmm1
+; KNL-NEXT:    vpmovdb %zmm1, %xmm1
+; KNL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; KNL-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: zext_32xi1_to_32xi8:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vpcmpeqw %zmm1, %zmm0, %k1
+; SKX-NEXT:    vmovdqu8 {{.*}}(%rip), %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %mask = icmp eq <32 x i16> %x, %y
+  %1 = zext <32 x i1> %mask to <32 x i8>
+  ret <32 x i8> %1
+}
+
 define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 ; KNL-LABEL: zext_4xi1_to_4x32:
 ; KNL:       ## BB#0:
@@ -1916,10 +1977,33 @@ define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 ; SKX-NEXT:    vmovdqa64 {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
 ; SKX-NEXT:    vpandq %xmm2, %xmm1, %xmm1
 ; SKX-NEXT:    vpandq %xmm2, %xmm0, %xmm0
-; SKX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; SKX-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; SKX-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
+; SKX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i8> %x, %y
   %1 = zext <4 x i1> %mask to <4 x i32>
   ret <4 x i32> %1
+}
+
+define <2 x i64> @zext_2xi1_to_2xi64(<2 x i8> %x, <2 x i8> %y) #0 {
+; KNL-LABEL: zext_2xi1_to_2xi64:
+; KNL:       ## BB#0:
+; KNL-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; KNL-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; KNL-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; KNL-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: zext_2xi1_to_2xi64:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vmovdqa64 {{.*#+}} xmm2 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; SKX-NEXT:    vpandq %xmm2, %xmm1, %xmm1
+; SKX-NEXT:    vpandq %xmm2, %xmm0, %xmm0
+; SKX-NEXT:    vpcmpeqq %xmm1, %xmm0, %k1
+; SKX-NEXT:    vmovdqa64 {{.*}}(%rip), %xmm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %mask = icmp eq <2 x i8> %x, %y
+  %1 = zext <2 x i1> %mask to <2 x i64>
+  ret <2 x i64> %1
 }

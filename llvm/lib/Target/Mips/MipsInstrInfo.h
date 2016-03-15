@@ -70,6 +70,15 @@ public:
                            bool AllowModify,
                            SmallVectorImpl<MachineInstr*> &BranchInstrs) const;
 
+  /// Determine the opcode of a non-delay slot form for a branch if one exists.
+  unsigned getEquivalentCompactForm(const MachineBasicBlock::iterator I) const;
+
+  /// Predicate to determine if an instruction can go in a forbidden slot.
+  bool SafeInForbiddenSlot(const MachineInstr &MI) const;
+
+  /// Predicate to determine if an instruction has a forbidden slot.
+  bool HasForbiddenSlot(const MachineInstr &MI) const;
+
   /// Insert nop instruction when hazard condition is found
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;

@@ -10,11 +10,6 @@ def simm12 : Operand<i32> {
   let DecoderMethod = "DecodeSimm12";
 }
 
-def uimm6_lsl2 : Operand<i32> {
-  let EncoderMethod = "getUImm6Lsl2Encoding";
-  let DecoderMethod = "DecodeUImm6Lsl2";
-}
-
 def simm9_addiusp : Operand<i32> {
   let EncoderMethod = "getSImm9AddiuspValue";
   let DecoderMethod = "DecodeSimm9SP";

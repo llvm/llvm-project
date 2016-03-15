@@ -1,4 +1,4 @@
-//===-- FunctionInfo.cpp - Function Info Index ----------------------------===//
+//===-- ModuleSummaryIndex.cpp - Module Summary Index ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,14 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/FunctionInfo.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/ADT/StringMap.h"
 using namespace llvm;
 
 // Create the combined module index/summary from multiple
 // per-module instances.
-void FunctionInfoIndex::mergeFrom(std::unique_ptr<FunctionInfoIndex> Other,
-                                  uint64_t NextModuleId) {
+void ModuleSummaryIndex::mergeFrom(std::unique_ptr<ModuleSummaryIndex> Other,
+                                   uint64_t NextModuleId) {
 
   StringRef ModPath;
   for (auto &OtherGlobalValInfoLists : *Other) {
@@ -55,7 +55,7 @@ void FunctionInfoIndex::mergeFrom(std::unique_ptr<FunctionInfoIndex> Other,
   }
 }
 
-void FunctionInfoIndex::removeEmptySummaryEntries() {
+void ModuleSummaryIndex::removeEmptySummaryEntries() {
   for (auto MI = begin(), MIE = end(); MI != MIE;) {
     // Only expect this to be called on a per-module index, which has a single
     // entry per value entry list.

@@ -645,17 +645,19 @@ int main(int argc, char **argv) {
         } else if (PrintLibFiles) {
           OS << GetComponentLibraryPath(Lib, Shared);
         } else if (PrintLibs) {
-          // If this is a typical library name, include it using -l.
-          StringRef LibName;
-          if (Lib.startswith("lib")) {
+          // On Windows, output full path to library without parameters.
+          // Elsewhere, if this is a typical library name, include it using -l.
+          if (HostTriple.isWindowsMSVCEnvironment()) {
+            OS << GetComponentLibraryPath(Lib, Shared);
+          } else {
+            StringRef LibName;
             if (GetComponentLibraryNameSlice(Lib, LibName)) {
+              // Extract library name (remove prefix and suffix).
               OS << "-l" << LibName;
             } else {
-              OS << "-l:" << GetComponentLibraryFileName(Lib, Shared);
+              // Lib is already a library name without prefix and suffix.
+              OS << "-l" << Lib;
             }
-          } else {
-            // Otherwise, print the full path.
-            OS << GetComponentLibraryPath(Lib, Shared);
           }
         }
       };

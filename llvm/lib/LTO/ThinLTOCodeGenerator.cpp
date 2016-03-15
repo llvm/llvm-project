@@ -14,21 +14,21 @@
 
 #include "llvm/LTO/ThinLTOCodeGenerator.h"
 
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/ExecutionEngine/ObjectMemoryBuffer.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/SubtargetFeature.h"
-#include "llvm/Object/FunctionIndexObjectFile.h"
+#include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
@@ -126,13 +126,13 @@ public:
   }
 };
 
-static void promoteModule(Module &TheModule, const FunctionInfoIndex &Index) {
+static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index) {
   if (renameModuleForThinLTO(TheModule, Index))
     report_fatal_error("renameModuleForThinLTO failed");
 }
 
 static void crossImportIntoModule(Module &TheModule,
-                                  const FunctionInfoIndex &Index,
+                                  const ModuleSummaryIndex &Index,
                                   StringMap<MemoryBufferRef> &ModuleMap) {
   ModuleLoader Loader(TheModule.getContext(), ModuleMap);
   FunctionImporter Importer(Index, Loader);
@@ -183,7 +183,7 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
 }
 
 static std::unique_ptr<MemoryBuffer>
-ProcessThinLTOModule(Module &TheModule, const FunctionInfoIndex &Index,
+ProcessThinLTOModule(Module &TheModule, const ModuleSummaryIndex &Index,
                      StringMap<MemoryBufferRef> &ModuleMap, TargetMachine &TM,
                      ThinLTOCodeGenerator::CachingOptions CacheOptions,
                      StringRef SaveTempsDir, unsigned count) {
@@ -277,19 +277,19 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
 }
 
 /**
- * Produce the combined function index from all the bitcode files:
+ * Produce the combined summary index from all the bitcode files:
  * "thin-link".
  */
-std::unique_ptr<FunctionInfoIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
-  std::unique_ptr<FunctionInfoIndex> CombinedIndex;
+std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
+  std::unique_ptr<ModuleSummaryIndex> CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &ModuleBuffer : Modules) {
-    ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
-        object::FunctionIndexObjectFile::create(ModuleBuffer, diagnosticHandler,
-                                                false);
+    ErrorOr<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
+        object::ModuleSummaryIndexObjectFile::create(ModuleBuffer,
+                                                     diagnosticHandler, false);
     if (std::error_code EC = ObjOrErr.getError()) {
       // FIXME diagnose
-      errs() << "error: can't create FunctionIndexObjectFile for buffer: "
+      errs() << "error: can't create ModuleSummaryIndexObjectFile for buffer: "
              << EC.message() << "\n";
       return nullptr;
     }
@@ -307,7 +307,7 @@ std::unique_ptr<FunctionInfoIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
  * Perform promotion and renaming of exported internal functions.
  */
 void ThinLTOCodeGenerator::promote(Module &TheModule,
-                                   FunctionInfoIndex &Index) {
+                                   ModuleSummaryIndex &Index) {
   promoteModule(TheModule, Index);
 }
 
@@ -315,7 +315,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
  * Perform cross-module importing for the module identified by ModuleIdentifier.
  */
 void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
-                                             FunctionInfoIndex &Index) {
+                                             ModuleSummaryIndex &Index) {
   auto ModuleMap = generateModuleMap(Modules);
   crossImportIntoModule(TheModule, Index, ModuleMap);
 }

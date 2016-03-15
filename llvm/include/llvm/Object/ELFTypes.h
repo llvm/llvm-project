@@ -21,9 +21,55 @@ namespace object {
 
 using support::endianness;
 
-template <endianness target_endianness, bool is64Bits> struct ELFType {
-  static const endianness TargetEndianness = target_endianness;
-  static const bool Is64Bits = is64Bits;
+template <class ELFT> struct Elf_Ehdr_Impl;
+template <class ELFT> struct Elf_Shdr_Impl;
+template <class ELFT> struct Elf_Sym_Impl;
+template <class ELFT> struct Elf_Dyn_Impl;
+template <class ELFT> struct Elf_Phdr_Impl;
+template <class ELFT, bool isRela> struct Elf_Rel_Impl;
+template <class ELFT> struct Elf_Verdef_Impl;
+template <class ELFT> struct Elf_Verdaux_Impl;
+template <class ELFT> struct Elf_Verneed_Impl;
+template <class ELFT> struct Elf_Vernaux_Impl;
+template <class ELFT> struct Elf_Versym_Impl;
+template <class ELFT> struct Elf_Hash_Impl;
+template <class ELFT> struct Elf_GnuHash_Impl;
+
+template <endianness E, bool Is64> struct ELFType {
+private:
+  template <typename Ty>
+  using packed = support::detail::packed_endian_specific_integral<Ty, E, 2>;
+
+public:
+  static const endianness TargetEndianness = E;
+  static const bool Is64Bits = Is64;
+
+  typedef typename std::conditional<Is64, uint64_t, uint32_t>::type uint;
+  typedef Elf_Ehdr_Impl<ELFType<E, Is64>> Ehdr;
+  typedef Elf_Shdr_Impl<ELFType<E, Is64>> Shdr;
+  typedef Elf_Sym_Impl<ELFType<E, Is64>> Sym;
+  typedef Elf_Dyn_Impl<ELFType<E, Is64>> Dyn;
+  typedef Elf_Phdr_Impl<ELFType<E, Is64>> Phdr;
+  typedef Elf_Rel_Impl<ELFType<E, Is64>, false> Rel;
+  typedef Elf_Rel_Impl<ELFType<E, Is64>, true> Rela;
+  typedef Elf_Verdef_Impl<ELFType<E, Is64>> Verdef;
+  typedef Elf_Verdaux_Impl<ELFType<E, Is64>> Verdaux;
+  typedef Elf_Verneed_Impl<ELFType<E, Is64>> Verneed;
+  typedef Elf_Vernaux_Impl<ELFType<E, Is64>> Vernaux;
+  typedef Elf_Versym_Impl<ELFType<E, Is64>> Versym;
+  typedef Elf_Hash_Impl<ELFType<E, Is64>> Hash;
+  typedef Elf_GnuHash_Impl<ELFType<E, Is64>> GnuHash;
+  typedef iterator_range<const Dyn *> DynRange;
+  typedef iterator_range<const Shdr *> ShdrRange;
+  typedef iterator_range<const Sym *> SymRange;
+
+  typedef packed<uint16_t> Half;
+  typedef packed<uint32_t> Word;
+  typedef packed<int32_t> Sword;
+  typedef packed<uint64_t> Xword;
+  typedef packed<int64_t> Sxword;
+  typedef packed<uint> Addr;
+  typedef packed<uint> Off;
 };
 
 typedef ELFType<support::little, false> ELF32LE;
@@ -319,9 +365,6 @@ struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
   uintX_t getVal() const { return d_un.d_val; }
   uintX_t getPtr() const { return d_un.d_ptr; }
 };
-
-// Elf_Rel: Elf Relocation
-template <class ELFT, bool isRela> struct Elf_Rel_Impl;
 
 template <endianness TargetEndianness>
 struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {

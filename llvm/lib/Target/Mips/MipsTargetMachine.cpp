@@ -250,7 +250,13 @@ TargetIRAnalysis MipsTargetMachine::getTargetIRAnalysis() {
 // print out the code after the passes.
 void MipsPassConfig::addPreEmitPass() {
   MipsTargetMachine &TM = getMipsTargetMachine();
+
+  // The delay slot filler pass can potientially create forbidden slot (FS)
+  // hazards for MIPSR6 which the hazard schedule pass (HSP) will fix. Any
+  // (new) pass that creates compact branches after the HSP must handle FS
+  // hazards itself or be pipelined before the HSP.
   addPass(createMipsDelaySlotFillerPass(TM));
+  addPass(createMipsHazardSchedule());
   addPass(createMipsLongBranchPass(TM));
   addPass(createMipsConstantIslandPass(TM));
 }

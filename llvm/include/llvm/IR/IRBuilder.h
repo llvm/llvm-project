@@ -1569,12 +1569,16 @@ public:
   }
 
   Value *CreateSelect(Value *C, Value *True, Value *False,
-                      const Twine &Name = "") {
+                      const Twine &Name = "", MDNode *ProfWeights = nullptr) {
     if (Constant *CC = dyn_cast<Constant>(C))
       if (Constant *TC = dyn_cast<Constant>(True))
         if (Constant *FC = dyn_cast<Constant>(False))
           return Insert(Folder.CreateSelect(CC, TC, FC), Name);
-    return Insert(SelectInst::Create(C, True, False), Name);
+
+    SelectInst *Sel = SelectInst::Create(C, True, False);
+    // TODO: "unpredictable" metadata can apply to a select too.
+    Sel->setMetadata(LLVMContext::MD_prof, ProfWeights);
+    return Insert(Sel, Name);
   }
 
   VAArgInst *CreateVAArg(Value *List, Type *Ty, const Twine &Name = "") {

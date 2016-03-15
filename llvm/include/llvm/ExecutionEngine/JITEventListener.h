@@ -81,7 +81,7 @@ public:
   // Get a pointe to the GDB debugger registration listener.
   static JITEventListener *createGDBRegistrationListener();
 
-#if LLVM_USE_INTEL_JITEVENTS
+#if defined(LLVM_USE_INTEL_JITEVENTS) && LLVM_USE_INTEL_JITEVENTS
   // Construct an IntelJITEventListener
   static JITEventListener *createIntelJITEventListener();
 
@@ -97,7 +97,7 @@ public:
   }
 #endif // USE_INTEL_JITEVENTS
 
-#if LLVM_USE_OPROFILE
+#if defined(LLVM_USE_OPROFILE) && LLVM_USE_OPROFILE
   // Construct an OProfileJITEventListener
   static JITEventListener *createOProfileJITEventListener();
 

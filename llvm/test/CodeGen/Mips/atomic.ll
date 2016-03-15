@@ -1,10 +1,10 @@
 ; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32   < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=NO-SEB-SEH  -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
 ; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r2 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
-; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
+; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=MIPSR6
 ; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips4    < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=NO-SEB-SEH  -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
 ; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64   < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=NO-SEB-SEH  -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
 ; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64r2 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
-; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=NOT-MICROMIPS
+; RUN: llc -march=mips64el --disable-machine-licm -mcpu=mips64r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=MIPSR6
 ; RUN: llc -march=mipsel --disable-machine-licm -mcpu=mips32r2 -mattr=micromips < %s | FileCheck %s -check-prefix=ALL -check-prefix=MIPS32-ANY -check-prefix=HAS-SEB-SEH -check-prefix=CHECK-EL -check-prefix=MICROMIPS
 
 ; Keep one big-endian check so that we don't reduce testing, but don't add more
@@ -29,6 +29,7 @@ entry:
 ; ALL:           sc      $[[R2]], 0($[[R0]])
 ; NOT-MICROMIPS: beqz    $[[R2]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R2]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R2]], $[[BB0]]
 }
 
 define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
@@ -48,6 +49,7 @@ entry:
 ; ALL:           sc      $[[R2]], 0($[[R0]])
 ; NOT-MICROMIPS: beqz    $[[R2]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R2]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R2]], $[[BB0]]
 }
 
 define i32 @AtomicSwap32(i32 signext %newval) nounwind {
@@ -68,6 +70,7 @@ entry:
 ; ALL:           sc      $[[R2:[0-9]+]], 0($[[R0]])
 ; NOT-MICROMIPS: beqz    $[[R2]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R2]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R2]], $[[BB0]]
 }
 
 define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
@@ -86,10 +89,13 @@ entry:
 
 ; ALL:       $[[BB0:[A-Z_0-9]+]]:
 ; ALL:           ll      $2, 0($[[R0]])
-; ALL:           bne     $2, $4, $[[BB1:[A-Z_0-9]+]]
+; NOT-MICROMIPS: bne     $2, $4, $[[BB1:[A-Z_0-9]+]]
+; MICROMIPS:     bne     $2, $4, $[[BB1:[A-Z_0-9]+]]
+; MIPSR6:        bnec    $2, $4, $[[BB1:[A-Z_0-9]+]]
 ; ALL:           sc      $[[R2:[0-9]+]], 0($[[R0]])
 ; NOT-MICROMIPS: beqz    $[[R2]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R2]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R2]], $[[BB0]]
 ; ALL:       $[[BB1]]:
 }
 
@@ -127,6 +133,7 @@ entry:
 ; ALL:           sc      $[[R14]], 0($[[R2]])
 ; NOT-MICROMIPS: beqz    $[[R14]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R14]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R14]], $[[BB0]]
 
 ; ALL:           and     $[[R15:[0-9]+]], $[[R10]], $[[R7]]
 ; ALL:           srlv    $[[R16:[0-9]+]], $[[R15]], $[[R5]]
@@ -167,6 +174,7 @@ entry:
 ; ALL:        sc      $[[R14]], 0($[[R2]])
 ; NOT-MICROMIPS: beqz    $[[R14]], $[[BB0]]
 ; MICROMIPS:  beqzc   $[[R14]], $[[BB0]]
+; MIPSR6:     beqzc   $[[R14]], $[[BB0]]
 
 ; ALL:        and     $[[R15:[0-9]+]], $[[R10]], $[[R7]]
 ; ALL:        srlv    $[[R16:[0-9]+]], $[[R15]], $[[R5]]
@@ -208,6 +216,7 @@ entry:
 ; ALL:           sc      $[[R14]], 0($[[R2]])
 ; NOT-MICROMIPS: beqz    $[[R14]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R14]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R14]], $[[BB0]]
 
 ; ALL:           and     $[[R15:[0-9]+]], $[[R10]], $[[R7]]
 ; ALL:           srlv    $[[R16:[0-9]+]], $[[R15]], $[[R5]]
@@ -247,6 +256,7 @@ entry:
 ; ALL:           sc      $[[R14]], 0($[[R2]])
 ; NOT-MICROMIPS: beqz    $[[R14]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R14]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R14]], $[[BB0]]
 
 ; ALL:           and     $[[R15:[0-9]+]], $[[R10]], $[[R7]]
 ; ALL:           srlv    $[[R16:[0-9]+]], $[[R15]], $[[R5]]
@@ -286,13 +296,16 @@ entry:
 ; ALL:       $[[BB0:[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R13:[0-9]+]], 0($[[R2]])
 ; ALL:           and     $[[R14:[0-9]+]], $[[R13]], $[[R7]]
-; ALL:           bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
+; NOT-MICROMIPS: bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
+; MICROMIPS:     bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
+; MIPSR6:        bnec    $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
 
 ; ALL:           and     $[[R15:[0-9]+]], $[[R13]], $[[R8]]
 ; ALL:           or      $[[R16:[0-9]+]], $[[R15]], $[[R12]]
 ; ALL:           sc      $[[R16]], 0($[[R2]])
 ; NOT-MICROMIPS: beqz    $[[R16]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R16]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R16]], $[[BB0]]
 
 ; ALL:       $[[BB1]]:
 ; ALL:           srlv    $[[R17:[0-9]+]], $[[R14]], $[[R5]]
@@ -327,13 +340,16 @@ entry:
 ; ALL:       $[[BB0:[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R13:[0-9]+]], 0($[[R2]])
 ; ALL:           and     $[[R14:[0-9]+]], $[[R13]], $[[R7]]
-; ALL:           bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
+; NOT-MICROMIPS: bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
+; MICROMIPS:     bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
+; MIPSR6:        bnec    $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
 
 ; ALL:           and     $[[R15:[0-9]+]], $[[R13]], $[[R8]]
 ; ALL:           or      $[[R16:[0-9]+]], $[[R15]], $[[R12]]
 ; ALL:           sc      $[[R16]], 0($[[R2]])
 ; NOT-MICROMIPS: beqz    $[[R16]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R16]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R16]], $[[BB0]]
 
 ; ALL:       $[[BB1]]:
 ; ALL:           srlv    $[[R17:[0-9]+]], $[[R14]], $[[R5]]
@@ -380,6 +396,7 @@ entry:
 ; ALL:           sc      $[[R14]], 0($[[R2]])
 ; NOT-MICROMIPS: beqz    $[[R14]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R14]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R14]], $[[BB0]]
 
 ; ALL:           and     $[[R15:[0-9]+]], $[[R10]], $[[R7]]
 ; ALL:           srlv    $[[R16:[0-9]+]], $[[R15]], $[[R5]]
@@ -444,4 +461,5 @@ entry:
 ; ALL:           sc      $[[R2]], 0($[[PTR]])
 ; NOT-MICROMIPS: beqz    $[[R2]], $[[BB0]]
 ; MICROMIPS:     beqzc   $[[R2]], $[[BB0]]
+; MIPSR6:        beqzc   $[[R2]], $[[BB0]]
 }

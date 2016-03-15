@@ -2179,7 +2179,15 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
   if (!isa<Function>(Callee) && transformConstExprCastCall(CS))
     return nullptr;
 
-  if (Function *CalleeF = dyn_cast<Function>(Callee))
+  if (Function *CalleeF = dyn_cast<Function>(Callee)) {
+    // Remove the convergent attr on calls when the callee is not convergent.
+    if (CS.isConvergent() && !CalleeF->isConvergent()) {
+      DEBUG(dbgs() << "Removing convergent attr from instr "
+                   << CS.getInstruction() << "\n");
+      CS.setNotConvergent();
+      return CS.getInstruction();
+    }
+
     // If the call and callee calling conventions don't match, this call must
     // be unreachable, as the call is undefined.
     if (CalleeF->getCallingConv() != CS.getCallingConv() &&
@@ -2204,6 +2212,7 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
                                     Constant::getNullValue(CalleeF->getType()));
       return nullptr;
     }
+  }
 
   if (isa<ConstantPointerNull>(Callee) || isa<UndefValue>(Callee)) {
     // If CS does not return void then replaceAllUsesWith undef.

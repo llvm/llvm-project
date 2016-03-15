@@ -16,7 +16,7 @@
 #define LLVM_TRANSFORMS_UTILS_FUNCTIONIMPORTUTILS_H
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/IR/FunctionInfo.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 
 namespace llvm {
 class Module;
@@ -27,14 +27,14 @@ class FunctionImportGlobalProcessing {
   /// The Module which we are exporting or importing functions from.
   Module &M;
 
-  /// Function index passed in for function importing/exporting handling.
-  const FunctionInfoIndex &ImportIndex;
+  /// Module summary index passed in for function importing/exporting handling.
+  const ModuleSummaryIndex &ImportIndex;
 
   /// Functions to import from this module, all other functions will be
   /// imported as declarations instead of definitions.
   DenseSet<const GlobalValue *> *FunctionsToImport;
 
-  /// Set to true if the given FunctionInfoIndex contains any functions
+  /// Set to true if the given ModuleSummaryIndex contains any functions
   /// from this source module, in which case we must conservatively assume
   /// that any of its functions may be imported into another module
   /// as part of a different backend compilation process.
@@ -76,10 +76,10 @@ class FunctionImportGlobalProcessing {
 
 public:
   FunctionImportGlobalProcessing(
-      Module &M, const FunctionInfoIndex &Index,
+      Module &M, const ModuleSummaryIndex &Index,
       DenseSet<const GlobalValue *> *FunctionsToImport = nullptr)
       : M(M), ImportIndex(Index), FunctionsToImport(FunctionsToImport) {
-    // If we have a FunctionInfoIndex but no function to import,
+    // If we have a ModuleSummaryIndex but no function to import,
     // then this is the primary module being compiled in a ThinLTO
     // backend compilation, and we need to see if it has functions that
     // may be exported to another backend compilation.
@@ -99,7 +99,7 @@ public:
 
 /// Perform in-place global value handling on the given Module for
 /// exported local functions renamed and promoted for ThinLTO.
-bool renameModuleForThinLTO(Module &M, const FunctionInfoIndex &Index);
+bool renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index);
 
 } // End llvm namespace
 

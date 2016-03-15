@@ -37,6 +37,10 @@ let hasSideEffects = 0 in {
   def LER : UnaryRR <"le", 0x38,   null_frag, FP32,  FP32>;
   def LDR : UnaryRR <"ld", 0x28,   null_frag, FP64,  FP64>;
   def LXR : UnaryRRE<"lx", 0xB365, null_frag, FP128, FP128>;
+
+  // For z13 we prefer LDR over LER to avoid partial register dependencies.
+  let isCodeGenOnly = 1 in
+    def LDR32 : UnaryRR<"ld", 0x28, null_frag, FP32, FP32>;
 }
 
 // Moves between two floating-point registers that also set the condition

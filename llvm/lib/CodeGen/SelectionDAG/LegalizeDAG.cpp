@@ -1597,7 +1597,7 @@ SDValue SelectionDAGLegalize::ExpandVectorBuildThroughStack(SDNode* Node) {
   // Store (in the right endianness) the elements to memory.
   for (unsigned i = 0, e = Node->getNumOperands(); i != e; ++i) {
     // Ignore undef elements.
-    if (Node->getOperand(i).getOpcode() == ISD::UNDEF) continue;
+    if (Node->getOperand(i).isUndef()) continue;
 
     unsigned Offset = TypeByteSize*i;
 
@@ -2029,7 +2029,7 @@ ExpandBVWithShuffles(SDNode *Node, SelectionDAG &DAG,
                                                                NewIntermedVals;
     for (unsigned i = 0; i < NumElems; ++i) {
       SDValue V = Node->getOperand(i);
-      if (V.getOpcode() == ISD::UNDEF)
+      if (V.isUndef())
         continue;
 
       SDValue Vec;
@@ -2121,7 +2121,7 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
   bool isConstant = true;
   for (unsigned i = 0; i < NumElems; ++i) {
     SDValue V = Node->getOperand(i);
-    if (V.getOpcode() == ISD::UNDEF)
+    if (V.isUndef())
       continue;
     if (i > 0)
       isOnlyLowElement = false;
@@ -2164,7 +2164,7 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
                                         CI->getZExtValue()));
         }
       } else {
-        assert(Node->getOperand(i).getOpcode() == ISD::UNDEF);
+        assert(Node->getOperand(i).isUndef());
         Type *OpNTy = EltVT.getTypeForEVT(*DAG.getContext());
         CV.push_back(UndefValue::get(OpNTy));
       }
@@ -2181,7 +2181,7 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
 
   SmallSet<SDValue, 16> DefinedValues;
   for (unsigned i = 0; i < NumElems; ++i) {
-    if (Node->getOperand(i).getOpcode() == ISD::UNDEF)
+    if (Node->getOperand(i).isUndef())
       continue;
     DefinedValues.insert(Node->getOperand(i));
   }
@@ -2191,7 +2191,7 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
       SmallVector<int, 8> ShuffleVec(NumElems, -1);
       for (unsigned i = 0; i < NumElems; ++i) {
         SDValue V = Node->getOperand(i);
-        if (V.getOpcode() == ISD::UNDEF)
+        if (V.isUndef())
           continue;
         ShuffleVec[i] = V == Value1 ? 0 : NumElems;
       }
@@ -3790,7 +3790,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                          Node->getOperand(2));
     } else {
       // We test only the i1 bit.  Skip the AND if UNDEF.
-      Tmp3 = (Tmp2.getOpcode() == ISD::UNDEF) ? Tmp2 :
+      Tmp3 = (Tmp2.isUndef()) ? Tmp2 :
         DAG.getNode(ISD::AND, dl, Tmp2.getValueType(), Tmp2,
                     DAG.getConstant(1, dl, Tmp2.getValueType()));
       Tmp1 = DAG.getNode(ISD::BR_CC, dl, MVT::Other, Tmp1,

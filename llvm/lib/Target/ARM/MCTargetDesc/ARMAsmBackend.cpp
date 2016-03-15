@@ -458,7 +458,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     // Offset by 8 just as above.
     if (const MCSymbolRefExpr *SRE =
             dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
-      if (SRE->getKind() == MCSymbolRefExpr::VK_ARM_TLSCALL)
+      if (SRE->getKind() == MCSymbolRefExpr::VK_TLSCALL)
         return 0;
     return 0xffffff & ((Value - 8) >> 2);
   case ARM::fixup_t2_uncondbranch: {
@@ -536,7 +536,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     uint32_t offset = (Value - 2) >> 2;
     if (const MCSymbolRefExpr *SRE =
             dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
-      if (SRE->getKind() == MCSymbolRefExpr::VK_ARM_TLSCALL)
+      if (SRE->getKind() == MCSymbolRefExpr::VK_TLSCALL)
         offset = 0;
     uint32_t signBit = (offset & 0x400000) >> 22;
     uint32_t I1Bit = (offset & 0x200000) >> 21;
