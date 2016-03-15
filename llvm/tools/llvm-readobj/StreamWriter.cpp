@@ -19,13 +19,6 @@ const std::string to_hexString(uint64_t Value, bool UpperCase) {
   return stream.str();
 }
 
-const std::string to_string(uint64_t Value) {
-  std::string number;
-  llvm::raw_string_ostream stream(number);
-  stream << format_decimal(Value, 1);
-  return stream.str();
-}
-
 void StreamWriter::printBinaryImpl(StringRef Label, StringRef Str,
                                    ArrayRef<uint8_t> Data, bool Block) {
   if (Data.size() > 16)

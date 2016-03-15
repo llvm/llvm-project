@@ -254,6 +254,13 @@ func (t Target) CreateTargetMachine(Triple string, CPU string, Features string,
 	return
 }
 
+// CreateTargetData returns a new TargetData describing the TargetMachine's
+// data layout. The returned TargetData is owned by the caller, who is
+// responsible for disposing of it by calling the TargetData.Dispose method.
+func (tm TargetMachine) CreateTargetData() TargetData {
+	return TargetData{C.LLVMCreateTargetDataLayout(tm.C)}
+}
+
 // Triple returns the triple describing the machine (arch-vendor-os).
 func (tm TargetMachine) Triple() string {
 	cstr := C.LLVMGetTargetMachineTriple(tm.C)

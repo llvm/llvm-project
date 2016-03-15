@@ -1054,10 +1054,22 @@ MachineBasicBlock * SITargetLowering::EmitInstrWithCustomInserter(
     MachineInstr * MI, MachineBasicBlock * BB) const {
 
   switch (MI->getOpcode()) {
-  default:
-    return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   case AMDGPU::BRANCH:
     return BB;
+  case AMDGPU::GET_GROUPSTATICSIZE: {
+    const SIInstrInfo *TII =
+      static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
+    MachineFunction *MF = BB->getParent();
+    SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+    DebugLoc DL = MI->getDebugLoc();
+    BuildMI (*BB, MI, DL, TII->get(AMDGPU::S_MOVK_I32))
+      .addOperand(MI->getOperand(0))
+      .addImm(MFI->LDSSize);
+    MI->eraseFromParent();
+    return BB;
+  }
+  default:
+    return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }
   return BB;
 }

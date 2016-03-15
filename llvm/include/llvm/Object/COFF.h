@@ -485,6 +485,23 @@ struct coff_import_directory_table_entry {
   support::ulittle32_t ImportAddressTableRVA;
 };
 
+template <typename IntTy>
+struct coff_tls_directory {
+  IntTy StartAddressOfRawData;
+  IntTy EndAddressOfRawData;
+  IntTy AddressOfIndex;
+  IntTy AddressOfCallBacks;
+  support::ulittle32_t SizeOfZeroFill;
+  support::ulittle32_t Characteristics;
+  uint32_t getAlignment() const {
+    uint32_t AlignBit = (Characteristics & 0x00F00000) >> 20;
+    return AlignBit ? 1 << (AlignBit - 1) : 0;
+  }
+};
+
+typedef coff_tls_directory<support::little32_t> coff_tls_directory32;
+typedef coff_tls_directory<support::little64_t> coff_tls_directory64;
+
 struct coff_load_configuration32 {
   support::ulittle32_t Characteristics;
   support::ulittle32_t TimeDateStamp;

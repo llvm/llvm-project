@@ -195,6 +195,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_TPOFF: return "TPOFF";
   case VK_TPREL: return "TPREL";
   case VK_TLSCALL: return "tlscall";
+  case VK_TLSDESC: return "tlsdesc";
   case VK_TLVP: return "TLVP";
   case VK_TLVPPAGE: return "TLVPPAGE";
   case VK_TLVPPAGEOFF: return "TLVPPAGEOFF";
@@ -212,7 +213,6 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_ARM_PREL31: return "prel31";
   case VK_ARM_SBREL: return "sbrel";
   case VK_ARM_TLSLDO: return "tlsldo";
-  case VK_ARM_TLSDESC: return "tlsdesc";
   case VK_ARM_TLSDESCSEQ: return "tlsdescseq";
   case VK_PPC_LO: return "l";
   case VK_PPC_HI: return "h";
@@ -321,6 +321,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("gotntpoff", VK_GOTNTPOFF)
     .Case("plt", VK_PLT)
     .Case("tlscall", VK_TLSCALL)
+    .Case("tlsdesc", VK_TLSDESC)
     .Case("tlsgd", VK_TLSGD)
     .Case("tlsld", VK_TLSLD)
     .Case("tlsldm", VK_TLSLDM)
@@ -398,7 +399,6 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("prel31", VK_ARM_PREL31)
     .Case("sbrel", VK_ARM_SBREL)
     .Case("tlsldo", VK_ARM_TLSLDO)
-    .Case("tlsdesc", VK_ARM_TLSDESC)
     .Default(VK_Invalid);
 }
 

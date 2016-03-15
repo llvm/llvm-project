@@ -43,6 +43,18 @@ EXPORT-NEXT:  Ordinal      RVA  Name
 EXPORT-NEXT:        5   0x2008
 EXPORT-NEXT:        6   0x2010  exportfn2
 
+// RUN: llvm-objdump -p %p/Inputs/tls.exe.coff-x86_64 | \
+// RUN:   FileCheck -check-prefix=TLS %s
+
+TLS:      TLS directory:
+TLS-NEXT:  StartAddressOfRawData: 0x00000000000000
+TLS-NEXT:  EndAddressOfRawData: 0x00000000000000
+TLS-NEXT:  AddressOfIndex: 0x00000000000000
+TLS-NEXT:  AddressOfCallBacks: 0x00000000000000
+TLS-NEXT:  SizeOfZeroFill: 0
+TLS-NEXT:  Characteristics: 0
+TLS-NEXT:  Alignment: 0
+
 // RUN: llvm-objdump -p %p/Inputs/nop.exe.coff-i386 | \
 // RUN:   FileCheck -check-prefix=LOADCFG %s
 
