@@ -116,6 +116,7 @@ NSString *test_literal_propagation(void) {
   NSLog(ns2); // expected-warning {{more '%' conversions than data arguments}}
   NSString * ns3 = ns1;
   NSLog(ns3); // expected-warning {{format string is not a string literal}}}
+  // expected-note@-1{{treat the string as an argument to avoid this}}
 
   NSString * const ns6 = @"split" " string " @"%s"; // expected-note {{format string is defined here}}
   NSLog(ns6); // expected-warning {{more '%' conversions than data arguments}}

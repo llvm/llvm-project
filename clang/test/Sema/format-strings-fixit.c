@@ -16,8 +16,6 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 typedef __WCHAR_TYPE__ wchar_t;
 
-extern const char *NonliteralString;
-
 void test() {
   // Basic types
   printf("%s", (int) 123);
@@ -96,9 +94,6 @@ void test() {
   printf("%G", (long double) 42);
   printf("%a", (long double) 42);
   printf("%A", (long double) 42);
-
-  // nonliteral format
-  printf(NonliteralString);
 }
 
 int scanf(char const *, ...);
@@ -223,7 +218,6 @@ void test2(int intSAParm[static 2]) {
 // CHECK: printf("%LG", (long double) 42);
 // CHECK: printf("%La", (long double) 42);
 // CHECK: printf("%LA", (long double) 42);
-// CHECK: printf("%s", NonliteralString);
 
 // CHECK: scanf("%99s", str);
 // CHECK: scanf("%s", vstr);
