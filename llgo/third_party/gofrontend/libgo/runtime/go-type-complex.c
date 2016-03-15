@@ -84,6 +84,9 @@ __go_type_hash_complex (const void *vkey, uintptr_t key_size)
     runtime_throw ("__go_type_hash_complex: invalid complex size");
 }
 
+const FuncVal __go_type_hash_complex_descriptor =
+  { (void *) __go_type_hash_complex };
+
 /* Equality function for complex types.  */
 
 _Bool
@@ -112,3 +115,6 @@ __go_type_equal_complex (const void *vk1, const void *vk2, uintptr_t key_size)
   else
     runtime_throw ("__go_type_equal_complex: invalid complex size");
 }
+
+const FuncVal __go_type_equal_complex_descriptor =
+  { (void *) __go_type_equal_complex };

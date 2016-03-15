@@ -278,7 +278,7 @@ public:
     bool
     UserCommandExists (const char *cmd);
 
-    bool
+    CommandAlias*
     AddAlias (const char *alias_name,
               lldb::CommandObjectSP& command_obj_sp,
               const char *args_string = nullptr);

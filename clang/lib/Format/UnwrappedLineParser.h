@@ -81,6 +81,7 @@ private:
   void parsePPElse();
   void parsePPEndIf();
   void parsePPUnknown();
+  void readTokenWithJavaScriptASI();
   void parseStructuralElement();
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false);

@@ -37,6 +37,8 @@ const (
 	f10
 	f11
 	f12
+	altB
+	altF
 	altY
 	shiftTab
 	wordLeft
@@ -88,6 +90,14 @@ const (
 )
 
 func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
+	if s.multiLineMode {
+		return s.refreshMultiLine(prompt, buf, pos)
+	} else {
+		return s.refreshSingleLine(prompt, buf, pos)
+	}
+}
+
+func (s *State) refreshSingleLine(prompt []rune, buf []rune, pos int) error {
 	s.cursorPos(0)
 	_, err := fmt.Print(string(prompt))
 	if err != nil {
@@ -143,6 +153,82 @@ func (s *State) refresh(prompt []rune, buf []rune, pos int) error {
 	return err
 }
 
+func (s *State) refreshMultiLine(prompt []rune, buf []rune, pos int) error {
+	promptColumns := countMultiLineGlyphs(prompt, s.columns, 0)
+	totalColumns := countMultiLineGlyphs(buf, s.columns, promptColumns)
+	totalRows := (totalColumns + s.columns - 1) / s.columns
+	maxRows := s.maxRows
+	if totalRows > s.maxRows {
+		s.maxRows = totalRows
+	}
+	cursorRows := s.cursorRows
+	if cursorRows == 0 {
+		cursorRows = 1
+	}
+
+	/* First step: clear all the lines used before. To do so start by
+	* going to the last row. */
+	if maxRows-cursorRows > 0 {
+		s.moveDown(maxRows - cursorRows)
+	}
+
+	/* Now for every row clear it, go up. */
+	for i := 0; i < maxRows-1; i++ {
+		s.cursorPos(0)
+		s.eraseLine()
+		s.moveUp(1)
+	}
+
+	/* Clean the top line. */
+	s.cursorPos(0)
+	s.eraseLine()
+
+	/* Write the prompt and the current buffer content */
+	if _, err := fmt.Print(string(prompt)); err != nil {
+		return err
+	}
+	if _, err := fmt.Print(string(buf)); err != nil {
+		return err
+	}
+
+	/* If we are at the very end of the screen with our prompt, we need to
+	 * emit a newline and move the prompt to the first column. */
+	cursorColumns := countMultiLineGlyphs(buf[:pos], s.columns, promptColumns)
+	if cursorColumns == totalColumns && totalColumns%s.columns == 0 {
+		s.emitNewLine()
+		s.cursorPos(0)
+		totalRows++
+		if totalRows > s.maxRows {
+			s.maxRows = totalRows
+		}
+	}
+
+	/* Move cursor to right position. */
+	cursorRows = (cursorColumns + s.columns) / s.columns
+	if s.cursorRows > 0 && totalRows-cursorRows > 0 {
+		s.moveUp(totalRows - cursorRows)
+	}
+	/* Set column. */
+	s.cursorPos(cursorColumns % s.columns)
+
+	s.cursorRows = cursorRows
+	return nil
+}
+
+func (s *State) resetMultiLine(prompt []rune, buf []rune, pos int) {
+	columns := countMultiLineGlyphs(prompt, s.columns, 0)
+	columns = countMultiLineGlyphs(buf[:pos], s.columns, columns)
+	columns += 2 // ^C
+	cursorRows := (columns + s.columns) / s.columns
+	if s.maxRows-cursorRows > 0 {
+		for i := 0; i < s.maxRows-cursorRows; i++ {
+			fmt.Println() // always moves the cursor down or scrolls the window up as needed
+		}
+	}
+	s.maxRows = 1
+	s.cursorRows = 0
+}
+
 func longestCommonPrefix(strs []string) string {
 	if len(strs) == 0 {
 		return ""
@@ -179,6 +265,29 @@ func (s *State) circularTabs(items []string) func(tabDirection) (string, error) 
 	}
 }
 
+func calculateColumns(screenWidth int, items []string) (numColumns, numRows, maxWidth int) {
+	for _, item := range items {
+		if len(item) >= screenWidth {
+			return 1, len(items), screenWidth - 1
+		}
+		if len(item) >= maxWidth {
+			maxWidth = len(item) + 1
+		}
+	}
+
+	numColumns = screenWidth / maxWidth
+	numRows = len(items) / numColumns
+	if len(items)%numColumns > 0 {
+		numRows++
+	}
+
+	if len(items) <= numColumns {
+		maxWidth = 0
+	}
+
+	return
+}
+
 func (s *State) printedTabs(items []string) func(tabDirection) (string, error) {
 	numTabs := 1
 	prefix := longestCommonPrefix(items)
@@ -206,27 +315,14 @@ func (s *State) printedTabs(items []string) func(tabDirection) (string, error) {
 				}
 			}
 			fmt.Println("")
-			maxWidth := 0
-			for _, item := range items {
-				if len(item) >= maxWidth {
-					maxWidth = len(item) + 1
-				}
-			}
 
-			numColumns := s.columns / maxWidth
-			numRows := len(items) / numColumns
-			if len(items)%numColumns > 0 {
-				numRows++
-			}
+			numColumns, numRows, maxWidth := calculateColumns(s.columns, items)
 
-			if len(items) <= numColumns {
-				maxWidth = 0
-			}
 			for i := 0; i < numRows; i++ {
 				for j := 0; j < numColumns*numRows; j += numRows {
 					if i+j < len(items) {
 						if maxWidth > 0 {
-							fmt.Printf("%-*s", maxWidth, items[i+j])
+							fmt.Printf("%-*.[1]*s", maxWidth, items[i+j])
 						} else {
 							fmt.Printf("%v ", items[i+j])
 						}
@@ -500,6 +596,9 @@ mainLoop:
 		case rune:
 			switch v {
 			case cr, lf:
+				if s.multiLineMode {
+					s.resetMultiLine(p, line, pos)
+				}
 				fmt.Println()
 				break mainLoop
 			case ctrlA: // Start of line
@@ -601,6 +700,9 @@ mainLoop:
 				s.refresh(p, line, pos)
 			case ctrlC: // reset
 				fmt.Println("^C")
+				if s.multiLineMode {
+					s.resetMultiLine(p, line, pos)
+				}
 				if s.ctrlCAborts {
 					return "", ErrPromptAborted
 				}
@@ -685,7 +787,7 @@ mainLoop:
 			case 0, 28, 29, 30, 31:
 				fmt.Print(beep)
 			default:
-				if pos == len(line) && len(p)+len(line) < s.columns-1 {
+				if pos == len(line) && !s.multiLineMode && countGlyphs(p)+countGlyphs(line) < s.columns-1 {
 					line = append(line, v)
 					fmt.Printf("%c", v)
 					pos++
@@ -710,11 +812,21 @@ mainLoop:
 				} else {
 					fmt.Print(beep)
 				}
-			case wordLeft:
+			case wordLeft, altB:
 				if pos > 0 {
+					var spaceHere, spaceLeft, leftKnown bool
 					for {
 						pos--
-						if pos == 0 || unicode.IsSpace(line[pos-1]) {
+						if pos == 0 {
+							break
+						}
+						if leftKnown {
+							spaceHere = spaceLeft
+						} else {
+							spaceHere = unicode.IsSpace(line[pos])
+						}
+						spaceLeft, leftKnown = unicode.IsSpace(line[pos-1]), true
+						if !spaceHere && spaceLeft {
 							break
 						}
 					}
@@ -727,11 +839,21 @@ mainLoop:
 				} else {
 					fmt.Print(beep)
 				}
-			case wordRight:
+			case wordRight, altF:
 				if pos < len(line) {
+					var spaceHere, spaceLeft, hereKnown bool
 					for {
 						pos++
-						if pos == len(line) || unicode.IsSpace(line[pos]) {
+						if pos == len(line) {
+							break
+						}
+						if hereKnown {
+							spaceLeft = spaceHere
+						} else {
+							spaceLeft = unicode.IsSpace(line[pos-1])
+						}
+						spaceHere, hereKnown = unicode.IsSpace(line[pos]), true
+						if spaceHere && !spaceLeft {
 							break
 						}
 					}
@@ -767,6 +889,19 @@ mainLoop:
 				pos = 0
 			case end: // End of line
 				pos = len(line)
+			case winch: // Window change
+				if s.multiLineMode {
+					if s.maxRows-s.cursorRows > 0 {
+						s.moveDown(s.maxRows - s.cursorRows)
+					}
+					for i := 0; i < s.maxRows-1; i++ {
+						s.cursorPos(0)
+						s.eraseLine()
+						s.moveUp(1)
+					}
+					s.maxRows = 1
+					s.cursorRows = 1
+				}
 			}
 			s.refresh(p, line, pos)
 		}
@@ -814,6 +949,9 @@ mainLoop:
 		case rune:
 			switch v {
 			case cr, lf:
+				if s.multiLineMode {
+					s.resetMultiLine(p, line, pos)
+				}
 				fmt.Println()
 				break mainLoop
 			case ctrlD: // del
@@ -838,6 +976,9 @@ mainLoop:
 				}
 			case ctrlC:
 				fmt.Println("^C")
+				if s.multiLineMode {
+					s.resetMultiLine(p, line, pos)
+				}
 				if s.ctrlCAborts {
 					return "", ErrPromptAborted
 				}

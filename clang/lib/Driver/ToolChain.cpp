@@ -555,16 +555,23 @@ static bool ParseCXXStdlibType(const StringRef& Name,
 ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   ToolChain::CXXStdlibType Type;
   bool HasValidType = false;
+  bool ForcePlatformDefault = false;
 
   const Arg *A = Args.getLastArg(options::OPT_stdlib_EQ);
   if (A) {
-    HasValidType = ParseCXXStdlibType(A->getValue(), Type);
-    if (!HasValidType)
+    StringRef Value = A->getValue();
+    HasValidType = ParseCXXStdlibType(Value, Type);
+
+    // Only use in tests to override CLANG_DEFAULT_CXX_STDLIB!
+    if (Value == "platform")
+      ForcePlatformDefault = true;
+    else if (!HasValidType)
       getDriver().Diag(diag::err_drv_invalid_stdlib_name)
         << A->getAsString(Args);
   }
 
-  if (!HasValidType && !ParseCXXStdlibType(CLANG_DEFAULT_CXX_STDLIB, Type))
+  if (!HasValidType && (ForcePlatformDefault ||
+      !ParseCXXStdlibType(CLANG_DEFAULT_CXX_STDLIB, Type)))
     Type = GetDefaultCXXStdlibType();
 
   return Type;

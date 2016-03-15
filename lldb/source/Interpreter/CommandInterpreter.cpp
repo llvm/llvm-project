@@ -217,7 +217,7 @@ CommandInterpreter::Initialize ()
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-break",false);
     if (cmd_obj_sp)
-        AddAlias ("b", cmd_obj_sp);
+        AddAlias ("b", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
     cmd_obj_sp = GetCommandSPExact ("_regexp-tbreak",false);
     if (cmd_obj_sp)
@@ -1049,7 +1049,7 @@ CommandInterpreter::UserCommandExists (const char *cmd)
     return m_user_dict.find(cmd) != m_user_dict.end();
 }
 
-bool
+CommandAlias*
 CommandInterpreter::AddAlias (const char *alias_name,
                               lldb::CommandObjectSP& command_obj_sp,
                               const char *args_string)
@@ -1064,11 +1064,11 @@ CommandInterpreter::AddAlias (const char *alias_name,
     
     if (command_alias_up && command_alias_up->IsValid())
     {
-        m_alias_dict[alias_name] = CommandObjectSP(command_alias_up.release());
-        return true;
+        m_alias_dict[alias_name] = CommandObjectSP(command_alias_up.get());
+        return command_alias_up.release();
     }
     
-    return false;
+    return nullptr;
 }
 
 bool

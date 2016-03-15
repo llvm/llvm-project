@@ -178,7 +178,7 @@ public:
     if (isStore())
       return asStore()->getPointerOperand();
     if (isMemIntrinsic())
-      return asMemIntrinsic()->getDest();
+      return asMemIntrinsic()->getRawDest();
     if (isCallInst())
       return nullptr;
     llvm_unreachable("Operation not supported on nullptr");

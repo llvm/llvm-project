@@ -596,7 +596,9 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   if (Symbol *Sym = Symtab->findUnderscore("_tls_used")) {
     if (Defined *B = dyn_cast<Defined>(Sym->Body)) {
       Dir[TLS_TABLE].RelativeVirtualAddress = B->getRVA();
-      Dir[TLS_TABLE].Size = 40;
+      Dir[TLS_TABLE].Size = Config->is64()
+                                ? sizeof(object::coff_tls_directory64)
+                                : sizeof(object::coff_tls_directory32);
     }
   }
   if (Symbol *Sym = Symtab->findUnderscore("_load_config_used")) {

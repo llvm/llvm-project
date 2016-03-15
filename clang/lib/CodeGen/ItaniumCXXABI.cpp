@@ -1529,8 +1529,8 @@ ItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
                               .getVTableLayout(VTableClass)
                               .getAddressPoint(Base);
   llvm::Value *Indices[] = {
-    llvm::ConstantInt::get(CGM.Int64Ty, 0),
-    llvm::ConstantInt::get(CGM.Int64Ty, AddressPoint)
+    llvm::ConstantInt::get(CGM.Int32Ty, 0),
+    llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint)
   };
 
   return llvm::ConstantExpr::getInBoundsGetElementPtr(VTable->getValueType(),

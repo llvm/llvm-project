@@ -391,7 +391,7 @@ func TestMapNanGrowIterator(t *testing.T) {
 	nan := math.NaN()
 	const nBuckets = 16
 	// To fill nBuckets buckets takes LOAD * nBuckets keys.
-	nKeys := int(nBuckets * *runtime.HashLoad)
+	nKeys := int(nBuckets * /* *runtime.HashLoad */ 6.5)
 
 	// Get map to full point with nan keys.
 	for i := 0; i < nKeys; i++ {
@@ -537,6 +537,61 @@ func TestMapStringBytesLookup(t *testing.T) {
 	}
 }
 
+func TestMapLargeKeyNoPointer(t *testing.T) {
+	const (
+		I = 1000
+		N = 64
+	)
+	type T [N]int
+	m := make(map[T]int)
+	for i := 0; i < I; i++ {
+		var v T
+		for j := 0; j < N; j++ {
+			v[j] = i + j
+		}
+		m[v] = i
+	}
+	runtime.GC()
+	for i := 0; i < I; i++ {
+		var v T
+		for j := 0; j < N; j++ {
+			v[j] = i + j
+		}
+		if m[v] != i {
+			t.Fatalf("corrupted map: want %+v, got %+v", i, m[v])
+		}
+	}
+}
+
+func TestMapLargeValNoPointer(t *testing.T) {
+	const (
+		I = 1000
+		N = 64
+	)
+	type T [N]int
+	m := make(map[int]T)
+	for i := 0; i < I; i++ {
+		var v T
+		for j := 0; j < N; j++ {
+			v[j] = i + j
+		}
+		m[i] = v
+	}
+	runtime.GC()
+	for i := 0; i < I; i++ {
+		var v T
+		for j := 0; j < N; j++ {
+			v[j] = i + j
+		}
+		v1 := m[i]
+		for j := 0; j < N; j++ {
+			if v1[j] != v[j] {
+				t.Fatalf("corrupted map: want %+v, got %+v", v, v1)
+			}
+		}
+	}
+}
+
 func benchmarkMapPop(b *testing.B, n int) {
 	m := map[int]int{}
 	for i := 0; i < b.N; i++ {
@@ -557,3 +612,14 @@ func benchmarkMapPop(b *testing.B, n int) {
 func BenchmarkMapPop100(b *testing.B)   { benchmarkMapPop(b, 100) }
 func BenchmarkMapPop1000(b *testing.B)  { benchmarkMapPop(b, 1000) }
 func BenchmarkMapPop10000(b *testing.B) { benchmarkMapPop(b, 10000) }
+
+func TestNonEscapingMap(t *testing.T) {
+	t.Skip("does not work on gccgo without better escape analysis")
+	n := testing.AllocsPerRun(1000, func() {
+		m := make(map[int]int)
+		m[0] = 0
+	})
+	if n != 0 {
+		t.Fatalf("want 0 allocs, got %v", n)
+	}
+}

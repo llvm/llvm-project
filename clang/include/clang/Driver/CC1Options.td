@@ -704,7 +704,7 @@ def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions
 
 def fopenmp_is_device : Flag<["-"], "fopenmp-is-device">,
   HelpText<"Generate code only for an OpenMP target device.">;
-def omp_host_ir_file_path : Separate<["-"], "omp-host-ir-file-path">,
+def fomp_host_ir_file_path : Separate<["-"], "fomp-host-ir-file-path">,
   HelpText<"Path to the IR file produced by the frontend for the host.">;
   
 } // let Flags = [CC1Option]

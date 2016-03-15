@@ -63,6 +63,7 @@ set(LLGO_GO_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/http.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/list.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/main.go
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/note.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/pkg.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/run.go
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gofrontend/libgo/go/cmd/go/signal.go
@@ -78,6 +79,7 @@ set(LLGO_GO_SOURCES
 
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/bin/llgo-go${CMAKE_EXECUTABLE_SUFFIX}
   COMMAND ${CMAKE_BINARY_DIR}/bin/llgo -static-libgo
+          -I ${CMAKE_CURRENT_BINARY_DIR}/libgo
           -o ${CMAKE_BINARY_DIR}/bin/llgo-go${CMAKE_EXECUTABLE_SUFFIX}
           ${LLGO_GO_SOURCES}
           ${CMAKE_CURRENT_BINARY_DIR}/libgo/zstdpkglist.go

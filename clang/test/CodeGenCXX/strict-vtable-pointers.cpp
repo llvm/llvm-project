@@ -166,13 +166,13 @@ struct DynamicDerivedMultiple;
 
 
 // CHECK-CTORS: %[[THIS10:.*]] = bitcast %struct.DynamicDerivedMultiple* %[[THIS0]] to i32 (...)***
-// CHECK-CTORS: store {{.*}} @_ZTV22DynamicDerivedMultiple, i64 0, i64 2) {{.*}} %[[THIS10]]
+// CHECK-CTORS: store {{.*}} @_ZTV22DynamicDerivedMultiple, i32 0, i32 2) {{.*}} %[[THIS10]]
 // CHECK-CTORS: %[[THIS11:.*]] = bitcast %struct.DynamicDerivedMultiple* %[[THIS0]] to i8*
 // CHECK-CTORS: %[[THIS_ADD:.*]] = getelementptr inbounds i8, i8* %[[THIS11]], i64 16
 // CHECK-CTORS: %[[THIS12:.*]]  = bitcast i8* %[[THIS_ADD]] to i32 (...)***
 
 
-// CHECK-CTORS: store {{.*}} @_ZTV22DynamicDerivedMultiple, i64 0, i64 6) {{.*}} %[[THIS12]]
+// CHECK-CTORS: store {{.*}} @_ZTV22DynamicDerivedMultiple, i32 0, i32 6) {{.*}} %[[THIS12]]
 // CHECK-CTORS-LABEL: }
 
 struct DynamicFromStatic;

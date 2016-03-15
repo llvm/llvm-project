@@ -3106,16 +3106,7 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
     getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
 }
 
-ToolChain::CXXStdlibType FreeBSD::GetCXXStdlibType(const ArgList &Args) const {
-  if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
-    StringRef Value = A->getValue();
-    if (Value == "libstdc++")
-      return ToolChain::CST_Libstdcxx;
-    if (Value == "libc++")
-      return ToolChain::CST_Libcxx;
-
-    getDriver().Diag(diag::err_drv_invalid_stdlib_name) << A->getAsString(Args);
-  }
+ToolChain::CXXStdlibType FreeBSD::GetDefaultCXXStdlibType() const {
   if (getTriple().getOSMajorVersion() >= 10)
     return ToolChain::CST_Libcxx;
   return ToolChain::CST_Libstdcxx;
@@ -3258,17 +3249,7 @@ Tool *NetBSD::buildAssembler() const {
 
 Tool *NetBSD::buildLinker() const { return new tools::netbsd::Linker(*this); }
 
-ToolChain::CXXStdlibType NetBSD::GetCXXStdlibType(const ArgList &Args) const {
-  if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
-    StringRef Value = A->getValue();
-    if (Value == "libstdc++")
-      return ToolChain::CST_Libstdcxx;
-    if (Value == "libc++")
-      return ToolChain::CST_Libcxx;
-
-    getDriver().Diag(diag::err_drv_invalid_stdlib_name) << A->getAsString(Args);
-  }
-
+ToolChain::CXXStdlibType NetBSD::GetDefaultCXXStdlibType() const {
   unsigned Major, Minor, Micro;
   getTriple().getOSVersion(Major, Minor, Micro);
   if (Major >= 7 || Major == 0) {

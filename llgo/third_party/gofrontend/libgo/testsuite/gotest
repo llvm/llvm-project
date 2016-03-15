@@ -26,14 +26,15 @@ NM=${NM:-nm}
 # gofiles are the test files.  pkgfiles are the source files.
 srcdir=.
 basedir=.
+goarch=""
 gofiles=""
+goos=""
 pkgfiles=""
 loop=true
 keep=false
 pkgpath=
 prefix=
 dejagnu=no
-GOARCH=""
 timeout=240
 testname=""
 bench=""
@@ -56,6 +57,24 @@ while $loop; do
 		;;
 	x--basedir=*)
 		basedir=`echo $1 | sed -e 's/^--basedir=//'`
+		shift
+		;;
+	x--goarch)
+		goarch=$2
+		shift
+		shift
+		;;
+	x--goarch=*)
+		goarch=`echo $1 | sed -e 's/^--goarch=//'`
+		shift
+		;;
+	x--goos)
+		goos=$2
+		shift
+		shift
+		;;
+	x--goos=*)
+		goos=`echo $1 | sed -e 's/^--goos=//'`
 		shift
 		;;
 	x--pkgpath)
@@ -96,15 +115,6 @@ while $loop; do
 		;;
 	x--dejagnu=*)
 		dejagnu=`echo $1 | sed -e 's/^--dejagnu=//'`
-		shift
-		;;
-	x--goarch)
-		GOARCH=$2
-		shift
-		shift
-		;;
-	x--goarch=*)
-		GOARCH=`echo $1 | sed -e 's/^--goarch=//'`
 		shift
 		;;
 	x--timeout)
@@ -268,7 +278,96 @@ mkdir _test
 
 case "x$gofiles" in
 x)
-	gofiles=`ls *_test.go 2>/dev/null`
+	for f in `ls *_test.go`; do
+	    tag1=`echo $f | sed -e 's/^.*_\([^_]*\)_test.go$/\1/'`
+	    tag2=`echo $f | sed -e 's/^.*_\([^_]*\)_[^_]*_test.go$/\1/'`
+	    if test x$tag1 = x$f; then
+		tag1=
+	    fi
+	    if test x$tag2 = x$f; then
+		tag2=
+	    fi
+
+	    case "$tag1" in
+	    "") ;;
+	    $goarch) ;;
+	    $goos) ;;
+	    android | darwin | dragonfly | freebsd | linux | nacl | netbsd | openbsd | plan9 | solaris | windows)
+		tag1=nonmatchingtag
+		;;
+	    386 | amd64 | amd64p32 | arm | armbe | arm64 | arm64be | alpha | m68k | ppc64 | ppc64le | mips | mipsle | mips64 | mips64le | mips64p32 | mips64p32le | mipso32 | mipsn32 | mipsn64 | mipso64 | ppc | s390 | s390x | sparc | sparc64)
+		tag1=nonmatchingtag
+		;;
+	    esac
+
+	    case "$tag2" in
+	    "") ;;
+	    $goarch) ;;
+	    $goos) ;;
+	    android | darwin | dragonfly | freebsd | linux | nacl | netbsd | openbsd | plan9 | solaris | windows)
+		tag2=nonmatchingtag
+		;;
+	    386 | amd64 | amd64p32 | arm | armbe | arm64 | arm64be | alpha | m68k | ppc64 | ppc64le | mips | mipsle | mips64 | mips64le | mips64p32 | mips64p32le | mipso32 | mipsn32 | mipsn64 | mipso64 | ppc | s390 | s390x | sparc | sparc64)
+		tag2=nonmatchingtag
+		;;
+	    esac
+
+	    if test x$tag1 != xnonmatchingtag -a x$tag2 != xnonmatchingtag; then
+		taglines=`sed '/^package /q' < $f | fgrep '// +build '`
+		if test "$taglines" = ""; then
+		    omatch=true
+		else
+		    omatch=false
+		fi
+		for tags in $taglines; do
+		    match=false
+		    for tag in $tags; do
+			reverse=false
+			case $tag in
+			"!"*)
+			    reverse=true
+			    tag=`echo $tag | sed -e 's/^!//'`
+			    ;;
+			esac
+
+			case $tag in
+			"//" | "+build")
+			    ;;
+			$goos | $goarch | cgo)
+			    match=true
+			    ;;
+			*,*)
+			    match=true
+			    for ctag in `echo $tag | sed -e 's/,/ /g'`; do
+				case $ctag in
+				$goos | $goarch | cgo)
+				    ;;
+				*)
+				    match=false
+				    ;;
+				esac
+			    done
+			    ;;
+			esac
+
+			if test "$reverse" = true; then
+			    if test "$match" = true; then
+				match=false
+			    else
+				match=true
+			    fi
+			fi
+		    done
+		    if test "$match" = "true"; then
+			omatch=true
+		    fi
+		done
+
+		if test "$omatch" = "true"; then
+		    gofiles="$gofiles $f"
+		fi
+	    fi
+	done
 	;;
 *)
 	xgofiles=$gofiles
@@ -387,7 +486,7 @@ localname() {
 
 {
 	text="T"
-	case "$GOARCH" in
+	case "$goarch" in
 	ppc64*) text="[TD]" ;;
 	esac
 
@@ -504,6 +603,7 @@ xno)
 	fi
 	${GL} *.o ${GOLIBS}
 
+	set +e
 	if test "$bench" = ""; then
 		if test "$trace" = "true"; then
 		    echo ./a.out -test.short -test.timeout=${timeout}s "$@"
@@ -518,7 +618,12 @@ xno)
 		wait $pid
 		status=$?
 		if ! test -f gotest-timeout; then
+		    sleeppid=`ps -o pid,ppid,cmd | grep " $alarmpid " | grep sleep | sed -e 's/ *\([0-9]*\) .*$/\1/'`
 		    kill $alarmpid
+		    wait $alarmpid
+		    if test "$sleeppid" != ""; then
+			kill $sleeppid
+		    fi
 		fi
 	else
 		if test "$trace" = "true"; then

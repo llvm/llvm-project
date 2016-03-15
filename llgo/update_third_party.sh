@@ -4,8 +4,8 @@ scriptpath=$(readlink -f "$0")
 llgosrcdir=$(dirname "$scriptpath")
 cd $llgosrcdir
 
-gofrontendrepo=https://code.google.com/p/gofrontend
-gofrontendrev=15a24202fa42
+gofrontendrepo=https://go.googlesource.com/gofrontend
+gofrontendrev=81eb6a3f425b2158c67ee32c0cc973a72ce9d6be
 
 gccrepo=svn://gcc.gnu.org/svn/gcc/trunk
 gccrev=219477
@@ -14,7 +14,7 @@ gotoolsrepo=https://go.googlesource.com/tools
 gotoolsrev=d4e70101500b43ffe705d4c45e50dd4f1c8e3b2e
 
 linerrepo=https://github.com/peterh/liner.git
-linerrev=1bb0d1c1a25ed393d8feb09bab039b2b1b1fbced
+linerrev=4d47685ab2fd2dbb46c66b831344d558bc4be5b9
 
 tempdir=$(mktemp -d /tmp/update_third_party.XXXXXX)
 gofrontenddir=$tempdir/gofrontend
@@ -24,9 +24,21 @@ linerdir=third_party/liner
 rm -rf third_party
 mkdir -p third_party/gofrontend third_party/gotools
 
+git_clone() {
+    repo=$1
+    dir=$2
+    rev=$3
+    git clone $repo $dir
+    (
+        cd $dir
+        git checkout $rev
+        rm -fr .git
+    )
+}
+
 # --------------------- gofrontend ---------------------
 
-hg clone -r $gofrontendrev $gofrontendrepo $gofrontenddir
+git_clone $gofrontendrepo $gofrontenddir $gofrontendrev
 
 cp -r $gofrontenddir/LICENSE $gofrontenddir/libgo third_party/gofrontend
 
@@ -60,8 +72,8 @@ cp include/filenames.h third_party/gofrontend/include/
 cp include/unwind-pe.h third_party/gofrontend/libgcc/
 
 # Note: this expects the llgo source tree to be located at llvm/tools/llgo.
-cp ../../autoconf/config.guess third_party/gofrontend/
-cp ../../autoconf/config.sub third_party/gofrontend/
+cp ../../cmake/config.guess third_party/gofrontend/
+cp autoconf/config.sub third_party/gofrontend/
 
 for d in libbacktrace libffi ; do
   svn export -r $gccrev $gccrepo/$d third_party/gofrontend/$d
@@ -88,8 +100,7 @@ touch \
 
 # --------------------- go.tools ---------------------
 
-git clone $gotoolsrepo $gotoolsdir
-(cd $gotoolsdir && git checkout $gotoolsrev)
+git_clone $gotoolsrepo $gotoolsdir $gotoolsrev
 
 cp -r $gotoolsdir/LICENSE $gotoolsdir/go third_party/gotools
 
@@ -99,8 +110,7 @@ find third_party/gotools -name '*.go' | xargs sed -i -e \
 
 # --------------------- peterh/liner -----------------
 
-git clone $linerrepo $linerdir
-(cd $linerdir && git checkout $linerrev && rm -rf .git)
+git_clone $linerrepo $linerdir $linerrev
 
 # --------------------- license check ---------------------
 

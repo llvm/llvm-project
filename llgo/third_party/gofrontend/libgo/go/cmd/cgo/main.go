@@ -6,7 +6,7 @@
 
 // TODO(rsc):
 //	Emit correct line number annotations.
-//	Make 6g understand the annotations.
+//	Make gc understand the annotations.
 
 package main
 
@@ -33,6 +33,7 @@ type Package struct {
 	PtrSize     int64
 	IntSize     int64
 	GccOptions  []string
+	GccIsClang  bool
 	CgoFlags    map[string][]string // #cgo flags (CFLAGS, LDFLAGS)
 	Written     map[string]bool
 	Name        map[string]*Name // accumulated Name from Files
@@ -87,7 +88,7 @@ type Name struct {
 	Const    string // constant definition
 }
 
-// IsVar returns true if Kind is either "var" or "fpvar"
+// IsVar reports whether Kind is either "var" or "fpvar"
 func (n *Name) IsVar() bool {
 	return n.Kind == "var" || n.Kind == "fpvar"
 }
@@ -98,6 +99,7 @@ func (n *Name) IsVar() bool {
 type ExpFunc struct {
 	Func    *ast.FuncDecl
 	ExpName string // name to use from C
+	Doc     string
 }
 
 // A TypeRepr contains the string representation of a type.
@@ -174,15 +176,18 @@ var cPrefix string
 var fset = token.NewFileSet()
 
 var dynobj = flag.String("dynimport", "", "if non-empty, print dynamic import data for that file")
-var dynout = flag.String("dynout", "", "write -dynobj output to this file")
-var dynlinker = flag.Bool("dynlinker", false, "record dynamic linker information in dynimport mode")
+var dynout = flag.String("dynout", "", "write -dynimport output to this file")
+var dynpackage = flag.String("dynpackage", "main", "set Go package for -dynimport output")
+var dynlinker = flag.Bool("dynlinker", false, "record dynamic linker information in -dynimport mode")
 
-// These flags are for bootstrapping a new Go implementation,
-// to generate Go and C headers that match the data layout and
+// This flag is for bootstrapping a new Go implementation,
+// to generate Go types that match the data layout and
 // constant values used in the host's C libraries and system calls.
 var godefs = flag.Bool("godefs", false, "for bootstrap: write Go definitions for C file to standard output")
-var cdefs = flag.Bool("cdefs", false, "for bootstrap: write C definitions for C file to standard output")
+
 var objDir = flag.String("objdir", "", "object directory")
+var importPath = flag.String("importpath", "", "import path of package being built (for comments in generated files)")
+var exportHeader = flag.String("exportheader", "", "where to write export header if any exported functions")
 
 var gccgo = flag.Bool("gccgo", false, "generate files for use with gccgo")
 var gccgoprefix = flag.String("gccgoprefix", "", "-fgo-prefix option used with gccgo")
@@ -208,12 +213,7 @@ func main() {
 		return
 	}
 
-	if *godefs && *cdefs {
-		fmt.Fprintf(os.Stderr, "cgo: cannot use -cdefs and -godefs together\n")
-		os.Exit(2)
-	}
-
-	if *godefs || *cdefs {
+	if *godefs {
 		// Generating definitions pulled from header files,
 		// to be checked into Go repositories.
 		// Line numbers are just noise.
@@ -305,14 +305,12 @@ func main() {
 		p.Record(f)
 		if *godefs {
 			os.Stdout.WriteString(p.godefs(f, input))
-		} else if *cdefs {
-			os.Stdout.WriteString(p.cdefs(f, input))
 		} else {
 			p.writeOutput(f, input)
 		}
 	}
 
-	if !*godefs && !*cdefs {
+	if !*godefs {
 		p.writeDefs()
 	}
 	if nerrors > 0 {

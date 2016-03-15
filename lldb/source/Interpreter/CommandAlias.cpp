@@ -226,7 +226,8 @@ CommandAlias::IsDashDashCommand ()
             for (const OptionArgPair& opt_arg : *GetOptionArguments())
             {
                 if (opt_arg.first == "<argument>" &&
-                    opt_arg.second.second == " --")
+                    !opt_arg.second.second.empty() &&
+                    llvm::StringRef(opt_arg.second.second).endswith("--"))
                 {
                     m_is_dashdash_alias = eLazyBoolYes;
                     break;

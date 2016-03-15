@@ -906,12 +906,6 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     F->removeFnAttr(llvm::Attribute::InlineHint);
   }
 
-  if (isa<CXXConstructorDecl>(D) || isa<CXXDestructorDecl>(D))
-    F->setUnnamedAddr(true);
-  else if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-    if (MD->isVirtual())
-      F->setUnnamedAddr(true);
-
   unsigned alignment = D->getMaxAlignment() / Context.getCharWidth();
   if (alignment)
     F->setAlignment(alignment);
@@ -1078,6 +1072,12 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   if (FD->isReplaceableGlobalAllocationFunction())
     F->addAttribute(llvm::AttributeSet::FunctionIndex,
                     llvm::Attribute::NoBuiltin);
+
+  if (isa<CXXConstructorDecl>(FD) || isa<CXXDestructorDecl>(FD))
+    F->setUnnamedAddr(true);
+  else if (const auto *MD = dyn_cast<CXXMethodDecl>(FD))
+    if (MD->isVirtual())
+      F->setUnnamedAddr(true);
 
   CreateFunctionBitSetEntry(FD, F);
 }
