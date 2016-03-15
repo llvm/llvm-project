@@ -19,9 +19,9 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOCodeGenerator.h"
-#include "llvm/LTO/ThinLTOCodeGenerator.h"
 #include "llvm/LTO/LTOModule.h"
-#include "llvm/Object/FunctionIndexObjectFile.h"
+#include "llvm/LTO/ThinLTOCodeGenerator.h"
+#include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -248,16 +248,16 @@ static void listSymbols(const TargetOptions &Options) {
 ///
 /// This is meant to enable testing of ThinLTO combined index generation,
 /// currently available via the gold plugin via -thinlto.
-static void createCombinedFunctionIndex() {
-  FunctionInfoIndex CombinedIndex;
+static void createCombinedModuleSummaryIndex() {
+  ModuleSummaryIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (auto &Filename : InputFilenames) {
     CurrentActivity = "loading file '" + Filename + "'";
-    ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
-        llvm::getFunctionIndexForFile(Filename, diagnosticHandler);
-    std::unique_ptr<FunctionInfoIndex> Index = std::move(IndexOrErr.get());
+    ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
+        llvm::getModuleSummaryIndexForFile(Filename, diagnosticHandler);
+    std::unique_ptr<ModuleSummaryIndex> Index = std::move(IndexOrErr.get());
     CurrentActivity = "";
-    // Skip files without a function summary.
+    // Skip files without a module summary.
     if (!Index)
       continue;
     CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
@@ -274,7 +274,7 @@ static void createCombinedFunctionIndex() {
 namespace thinlto {
 
 std::vector<std::unique_ptr<MemoryBuffer>>
-loadAllFilesForIndex(const FunctionInfoIndex &Index) {
+loadAllFilesForIndex(const ModuleSummaryIndex &Index) {
   std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
 
   for (auto &ModPath : Index.modPathStringEntries()) {
@@ -287,12 +287,12 @@ loadAllFilesForIndex(const FunctionInfoIndex &Index) {
   return InputBuffers;
 }
 
-std::unique_ptr<FunctionInfoIndex> loadCombinedIndex() {
+std::unique_ptr<ModuleSummaryIndex> loadCombinedIndex() {
   if (ThinLTOIndex.empty())
     report_fatal_error("Missing -thinlto-index for ThinLTO promotion stage");
   auto CurrentActivity = "loading file '" + ThinLTOIndex + "'";
-  ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
-      llvm::getFunctionIndexForFile(ThinLTOIndex, diagnosticHandler);
+  ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
+      llvm::getModuleSummaryIndexForFile(ThinLTOIndex, diagnosticHandler);
   error(IndexOrErr, "error " + CurrentActivity);
   return std::move(IndexOrErr.get());
 }
@@ -554,7 +554,7 @@ int main(int argc, char **argv) {
   }
 
   if (ThinLTO) {
-    createCombinedFunctionIndex();
+    createCombinedModuleSummaryIndex();
     return 0;
   }
 

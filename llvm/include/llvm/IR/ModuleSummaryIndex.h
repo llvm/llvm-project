@@ -1,4 +1,4 @@
-//===-- llvm/FunctionInfo.h - Function Info Index ---------------*- C++ -*-===//
+//===-- llvm/ModuleSummaryIndex.h - Module Summary Index --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,13 +8,13 @@
 //===----------------------------------------------------------------------===//
 //
 /// @file
-/// FunctionInfo.h This file contains the declarations the classes that hold
-///  the module index and summary for function importing.
+/// ModuleSummaryIndex.h This file contains the declarations the classes that
+///  hold the module index and summary for function importing.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_IR_FUNCTIONINFO_H
-#define LLVM_IR_FUNCTIONINFO_H
+#ifndef LLVM_IR_MODULESUMMARYINDEX_H
+#define LLVM_IR_MODULESUMMARYINDEX_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -62,7 +62,7 @@ private:
   /// module during importing.
   ///
   /// This is only used during parsing of the combined index, or when
-  /// parsing the per-module index for creation of the combined function index,
+  /// parsing the per-module index for creation of the combined summary index,
   /// not during writing of the per-module index which doesn't contain a
   /// module path string table.
   StringRef ModulePath;
@@ -128,7 +128,7 @@ public:
 
 private:
   /// Number of instructions (ignoring debug instructions, e.g.) computed
-  /// during the initial compile step when the function index is first built.
+  /// during the initial compile step when the summary index is first built.
   unsigned InstCount;
 
   /// List of <CalleeGUID, CalleeInfo> call edge pairs from this function.
@@ -251,9 +251,7 @@ typedef StringMap<uint64_t> ModulePathStringTableTy;
 
 /// Class to hold module path string table and global value map,
 /// and encapsulate methods for operating on them.
-/// FIXME: Rename this and other uses of Function.*Index to something
-/// that reflects the now-expanded scope of the summary beyond just functions.
-class FunctionInfoIndex {
+class ModuleSummaryIndex {
 private:
   /// Map from value name to list of information instances for values of that
   /// name (may be duplicates in the COMDAT case, e.g.).
@@ -263,12 +261,12 @@ private:
   ModulePathStringTableTy ModulePathStringTable;
 
 public:
-  FunctionInfoIndex() = default;
+  ModuleSummaryIndex() = default;
 
   // Disable the copy constructor and assignment operators, so
   // no unexpected copying/moving occurs.
-  FunctionInfoIndex(const FunctionInfoIndex &) = delete;
-  void operator=(const FunctionInfoIndex &) = delete;
+  ModuleSummaryIndex(const ModuleSummaryIndex &) = delete;
+  void operator=(const ModuleSummaryIndex &) = delete;
 
   globalvalueinfo_iterator begin() { return GlobalValueMap.begin(); }
   const_globalvalueinfo_iterator begin() const {
@@ -278,8 +276,8 @@ public:
   const_globalvalueinfo_iterator end() const { return GlobalValueMap.end(); }
 
   /// Get the list of global value info objects for a given value name.
-  const GlobalValueInfoList &getGlobalValueInfoList(StringRef FuncName) {
-    return GlobalValueMap[Function::getGUID(FuncName)];
+  const GlobalValueInfoList &getGlobalValueInfoList(StringRef ValueName) {
+    return GlobalValueMap[Function::getGUID(ValueName)];
   }
 
   /// Get the list of global value info objects for a given value name.
@@ -322,7 +320,7 @@ public:
   /// assigning it the given module ID. Each module merged in should have
   /// a unique ID, necessary for consistent renaming of promoted
   /// static (local) variables.
-  void mergeFrom(std::unique_ptr<FunctionInfoIndex> Other,
+  void mergeFrom(std::unique_ptr<ModuleSummaryIndex> Other,
                  uint64_t NextModuleId);
 
   /// Convenience method for creating a promoted global name
