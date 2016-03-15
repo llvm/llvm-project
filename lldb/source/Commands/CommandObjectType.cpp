@@ -14,6 +14,7 @@
 #include <ctype.h>
 
 // C++ Includes
+#include <algorithm>
 #include <functional>
 
 #include "llvm/ADT/StringRef.h"
@@ -3447,7 +3448,9 @@ public:
         
         std::vector<Language*> languages;
         
-        if (m_command_options.m_language == eLanguageTypeUnknown)
+        bool is_global_search = false;
+
+        if ( (is_global_search = (m_command_options.m_language == eLanguageTypeUnknown)) )
         {
             // FIXME: hardcoding languages is not good
             languages.push_back(Language::FindPlugin(eLanguageTypeObjC));
@@ -3457,6 +3460,27 @@ public:
         else
         {
             languages.push_back(Language::FindPlugin(m_command_options.m_language));
+        }
+        
+        // This is not the most efficient way to do this, but we support very few languages
+        // so the cost of the sort is going to be dwarfed by the actual lookup anyway
+        if (StackFrame* frame = m_exe_ctx.GetFramePtr())
+        {
+            LanguageType lang = frame->GuessLanguage();
+            if (lang != eLanguageTypeUnknown)
+            {
+                std::sort(languages.begin(),
+                          languages.end(),
+                          [lang] (Language* lang1,
+                                  Language* lang2) -> bool {
+                              if (!lang1 || !lang2) return false;
+                              LanguageType lt1 = lang1->GetLanguageType();
+                              LanguageType lt2 = lang2->GetLanguageType();
+                              if (lt1 == lang) return true; // make the selected frame's language come first
+                              if (lt2 == lang) return false; // make the selected frame's language come first
+                              return (lt1 < lt2); // normal comparison otherwise
+                          });
+            }
         }
         
         for (Language* language : languages)
@@ -3478,6 +3502,9 @@ public:
                         }
                     }
                 }
+                // this is "type lookup SomeName" and we did find a match, so get out
+                if (any_found && is_global_search)
+                    break;
             }
         }
         
