@@ -142,7 +142,7 @@ static void findExternalCalls(
           ImportedName = Renamed;
         }
         // Compute the global identifier used in the summary index.
-        auto CalledFunctionGlobalID = Function::getGlobalIdentifier(
+        auto CalledFunctionGlobalID = GlobalValue::getGlobalIdentifier(
             CalledFunction->getName(), CalledFunction->getLinkage(),
             CalledFunction->getParent()->getSourceFileName());
 

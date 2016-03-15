@@ -27,7 +27,6 @@
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/OperandTraits.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/MD5.h"
 
 namespace llvm {
 
@@ -633,20 +632,6 @@ public:
   /// Calls \a getMetadata() with \a LLVMContext::MD_dbg and casts the result
   /// to \a DISubprogram.
   DISubprogram *getSubprogram() const;
-
-  /// Return the modified name for a function suitable to be
-  /// used as the key for a global lookup (e.g. profile or ThinLTO).
-  /// The function's original name is \c FuncName and has linkage of type
-  /// \c Linkage. The function is defined in module \c FileName.
-  static std::string getGlobalIdentifier(StringRef FuncName,
-                                         GlobalValue::LinkageTypes Linkage,
-                                         StringRef FileName);
-
-  /// Return a 64-bit global unique ID constructed from global function name
-  /// (i.e. returned by getGlobalIdentifier).
-  static uint64_t getGUID(StringRef GlobalFuncName) {
-    return MD5Hash(GlobalFuncName);
-  }
 
 private:
   void allocHungoffUselist();
