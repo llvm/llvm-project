@@ -256,6 +256,71 @@ MipsInstrInfo::BranchType MipsInstrInfo::AnalyzeBranch(
   return BT_CondUncond;
 }
 
+/// Return the corresponding compact (no delay slot) form of a branch.
+unsigned MipsInstrInfo::getEquivalentCompactForm(
+    const MachineBasicBlock::iterator I) const {
+  unsigned Opcode = I->getOpcode();
+  bool canUseShortMMBranches =
+      Subtarget.inMicroMipsMode() &&
+      (Opcode == Mips::BNE || Opcode == Mips::BEQ) &&
+      I->getOperand(1).getReg() == Subtarget.getABI().GetZeroReg();
+
+  if (Subtarget.hasMips32r6() || canUseShortMMBranches) {
+    switch (Opcode) {
+    case Mips::B:
+      return Mips::BC;
+    case Mips::BAL:
+      return Mips::BALC;
+    case Mips::BEQ:
+      if (canUseShortMMBranches)
+        return Mips::BEQZC_MM;
+      else
+        return Mips::BEQC;
+    case Mips::BNE:
+      if (canUseShortMMBranches)
+        return Mips::BNEZC_MM;
+      else
+        return Mips::BNEC;
+    case Mips::BGE:
+      return Mips::BGEC;
+    case Mips::BGEU:
+      return Mips::BGEUC;
+    case Mips::BGEZ:
+      return Mips::BGEZC;
+    case Mips::BGTZ:
+      return Mips::BGTZC;
+    case Mips::BLEZ:
+      return Mips::BLEZC;
+    case Mips::BLT:
+      return Mips::BLTC;
+    case Mips::BLTU:
+      return Mips::BLTUC;
+    case Mips::BLTZ:
+      return Mips::BLTZC;
+    default:
+      return 0;
+    }
+  }
+
+  return 0;
+}
+
+/// Predicate for distingushing between control transfer instructions and all
+/// other instructions for handling forbidden slots. Consider inline assembly
+/// as unsafe as well.
+bool MipsInstrInfo::SafeInForbiddenSlot(const MachineInstr &MI) const {
+  if (MI.isInlineAsm())
+    return false;
+
+  return (MI.getDesc().TSFlags & MipsII::IsCTI) == 0;
+
+}
+
+/// Predicate for distingushing instructions that have forbidden slots.
+bool MipsInstrInfo::HasForbiddenSlot(const MachineInstr &MI) const {
+  return (MI.getDesc().TSFlags & MipsII::HasForbiddenSlot) != 0;
+}
+
 /// Return the number of bytes of code the specified instruction may be.
 unsigned MipsInstrInfo::GetInstSizeInBytes(const MachineInstr *MI) const {
   switch (MI->getOpcode()) {
@@ -277,10 +342,46 @@ MachineInstrBuilder
 MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
                                   MachineBasicBlock::iterator I) const {
   MachineInstrBuilder MIB;
+  bool BranchWithZeroOperand = false;
+
+  // Certain branches have two forms: e.g beq $1, $zero, dst vs beqz $1, dest
+  // Pick the zero form of the branch for readable assembly and for greater
+  // branch distance in non-microMIPS mode.
+  if (I->isBranch() && I->getOperand(1).isReg() &&
+      // FIXME: Certain atomic sequences on mips64 generate 32bit references to
+      // Mips::ZERO, which is incorrect. This test should be updated to use
+      // Subtarget.getABI().GetZeroReg() when those atomic sequences and others
+      // are fixed.
+      (I->getOperand(1).getReg() == Mips::ZERO ||
+       I->getOperand(1).getReg() == Mips::ZERO_64)) {
+    BranchWithZeroOperand = true;
+    switch (NewOpc) {
+    case Mips::BEQC:
+      NewOpc = Mips::BEQZC;
+      break;
+    case Mips::BNEC:
+      NewOpc = Mips::BNEZC;
+      break;
+    case Mips::BGEC:
+      NewOpc = Mips::BGEZC;
+      break;
+    case Mips::BLTC:
+      NewOpc = Mips::BLTZC;
+      break;
+    case Mips::BNEZC_MM:
+    case Mips::BEQZC_MM:
+      break;
+    default:
+      BranchWithZeroOperand = false;
+      break;
+    }
+  }
+
   MIB = BuildMI(*I->getParent(), I, I->getDebugLoc(), get(NewOpc));
 
   for (unsigned J = 0, E = I->getDesc().getNumOperands(); J < E; ++J)
-    MIB.addOperand(I->getOperand(J));
+    if (!(BranchWithZeroOperand && (J == 1)))
+      MIB.addOperand(I->getOperand(J));
 
   MIB.setMemRefs(I->memoperands_begin(), I->memoperands_end());
   return MIB;

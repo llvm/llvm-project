@@ -24,6 +24,9 @@ from lldbsuite.test.lldbtest import *
 from lldbgdbserverutils import *
 import logging
 
+class _ConnectionRefused(IOError):
+    pass
+
 class GdbRemoteTestCaseBase(TestBase):
 
     _TIMEOUT_SECONDS = 7
@@ -265,6 +268,22 @@ class GdbRemoteTestCaseBase(TestBase):
         subprocess.call(adb + [ "tcp:%d" % source, "tcp:%d" % target])
         self.addTearDownHook(remove_port_forward)
 
+    def _verify_socket(self, sock):
+        # Normally, when the remote stub is not ready, we will get ECONNREFUSED during the
+        # connect() attempt. However, due to the way how ADB forwarding works, on android targets
+        # the connect() will always be successful, but the connection will be immediately dropped
+        # if ADB could not connect on the remote side. This function tries to detect this
+        # situation, and report it as "connection refused" so that the upper layers attempt the
+        # connection again.
+        triple = self.dbg.GetSelectedPlatform().GetTriple()
+        if not re.match(".*-.*-.*-android", triple):
+            return # Not android.
+        can_read, _, _ = select.select([sock], [], [], 0.1)
+        if sock not in can_read:
+            return # Data is not available, but the connection is alive.
+        if len(sock.recv(1, socket.MSG_PEEK)) == 0:
+            raise _ConnectionRefused() # Got EOF, connection dropped.
+
     def create_socket(self):
         sock = socket.socket()
         logger = self.logger
@@ -275,7 +294,12 @@ class GdbRemoteTestCaseBase(TestBase):
 
         logger.info("Connecting to debug monitor on %s:%d", self.stub_hostname, self.port)
         connect_info = (self.stub_hostname, self.port)
-        sock.connect(connect_info)
+        try:
+            sock.connect(connect_info)
+        except socket.error as serr:
+            if serr.errno == errno.ECONNREFUSED:
+                raise _ConnectionRefused()
+            raise serr
 
         def shutdown_socket():
             if sock:
@@ -291,6 +315,8 @@ class GdbRemoteTestCaseBase(TestBase):
                     logger.warning("failed to close socket to debug monitor: {}; ignoring".format(sys.exc_info()[0]))
 
         self.addTearDownHook(shutdown_socket)
+
+        self._verify_socket(sock)
 
         return sock
 
@@ -379,12 +405,12 @@ class GdbRemoteTestCaseBase(TestBase):
             while connect_attemps < MAX_CONNECT_ATTEMPTS:
                 # Create a socket to talk to the server
                 try:
+                    logger.info("Connect attempt %d", connect_attemps+1)
                     self.sock = self.create_socket()
                     return server
-                except socket.error as serr:
-                    # We're only trying to handle connection refused.
-                    if serr.errno != errno.ECONNREFUSED:
-                        raise serr
+                except _ConnectionRefused as serr:
+                    # Ignore, and try again.
+                    pass
                 time.sleep(0.5)
                 connect_attemps += 1
 

@@ -26,11 +26,11 @@ template <class ELFT> class OutputSectionBase;
 // This corresponds to a section of an input file.
 template <class ELFT> class InputSectionBase {
 protected:
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
   const Elf_Shdr *Header;
 
   // The file this section is from.
@@ -94,8 +94,8 @@ InputSectionBase<ELFT> *
 // and each piece is copied to a different place in the output.
 // This class represents such special sections.
 template <class ELFT> class SplitInputSection : public InputSectionBase<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   SplitInputSection(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
@@ -111,9 +111,9 @@ public:
 
 // This corresponds to a SHF_MERGE section of an input file.
 template <class ELFT> class MergeInputSection : public SplitInputSection<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::Shdr Elf_Shdr;
 
 public:
   MergeInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
@@ -126,8 +126,8 @@ public:
 // This corresponds to a .eh_frame section of an input file.
 template <class ELFT> class EHInputSection : public SplitInputSection<ELFT> {
 public:
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::uint uintX_t;
   EHInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
   static bool classof(const InputSectionBase<ELFT> *S);
 
@@ -143,11 +143,11 @@ public:
 template <class ELFT> class InputSection : public InputSectionBase<ELFT> {
   friend ICF<ELFT>;
   typedef InputSectionBase<ELFT> Base;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Rela Elf_Rela;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   InputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
@@ -186,7 +186,7 @@ private:
 // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
 template <class ELFT>
 class MipsReginfoInputSection : public InputSectionBase<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
+  typedef typename ELFT::Shdr Elf_Shdr;
 
 public:
   MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);

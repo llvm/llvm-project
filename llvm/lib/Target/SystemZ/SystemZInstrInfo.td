@@ -114,7 +114,7 @@ defm AsmC : CompareBranches<imm32zx4, "", "$M3, ">;
 // Define AsmParser mnemonics for each general condition-code mask
 // (integer or floating-point)
 multiclass CondExtendedMnemonic<bits<4> ccmask, string name> {
-  let R1 = ccmask in {
+  let isBranch = 1, isTerminator = 1, R1 = ccmask in {
     def J : InstRI<0xA74, (outs), (ins brtarget16:$I2),
                    "j"##name##"\t$I2", []>;
     def JG : InstRIL<0xC04, (outs), (ins brtarget32:$I2),
@@ -151,7 +151,7 @@ defm AsmNO  : CondExtendedMnemonic<14, "no">;
 // We don't make one of the two names an alias of the other because
 // we need the custom parsing routines to select the correct register class.
 multiclass IntCondExtendedMnemonicA<bits<4> ccmask, string name> {
-  let M3 = ccmask in {
+  let isBranch = 1, isTerminator = 1, M3 = ccmask in {
     def CR  : InstRIEb<0xEC76, (outs), (ins GR32:$R1, GR32:$R2,
                                             brtarget16:$RI4),
                        "crj"##name##"\t$R1, $R2, $RI4", []>;
@@ -192,7 +192,7 @@ defm AsmJLE  : IntCondExtendedMnemonic<12, "le", "nh">;
 
 // Decrement a register and branch if it is nonzero.  These don't clobber CC,
 // but we might need to split long branches into sequences that do.
-let Defs = [CC] in {
+let isBranch = 1, isTerminator = 1, Defs = [CC] in {
   def BRCT  : BranchUnaryRI<"brct",  0xA76, GR32>;
   def BRCTG : BranchUnaryRI<"brctg", 0xA77, GR64>;
 }
@@ -261,12 +261,14 @@ let isCall = 1, Defs = [R14D, CC] in {
 // Define the general form of the call instructions for the asm parser.
 // These instructions don't hard-code %r14 as the return address register.
 // Allow an optional TLS marker symbol to generate TLS call relocations.
-def BRAS  : InstRI<0xA75, (outs), (ins GR64:$R1, brtarget16tls:$I2),
-                   "bras\t$R1, $I2", []>;
-def BRASL : InstRIL<0xC05, (outs), (ins GR64:$R1, brtarget32tls:$I2),
-                    "brasl\t$R1, $I2", []>;
-def BASR  : InstRR<0x0D, (outs), (ins GR64:$R1, ADDR64:$R2),
-                   "basr\t$R1, $R2", []>;
+let isCall = 1, Defs = [CC] in {
+  def BRAS  : InstRI<0xA75, (outs), (ins GR64:$R1, brtarget16tls:$I2),
+                     "bras\t$R1, $I2", []>;
+  def BRASL : InstRIL<0xC05, (outs), (ins GR64:$R1, brtarget32tls:$I2),
+                      "brasl\t$R1, $I2", []>;
+  def BASR  : InstRR<0x0D, (outs), (ins GR64:$R1, ADDR64:$R2),
+                     "basr\t$R1, $R2", []>;
+}
 
 //===----------------------------------------------------------------------===//
 // Move instructions

@@ -182,6 +182,7 @@ class CMP_CONDN_DESC_BASE<string CondStr, string Typestr,
   dag InOperandList = (ins FGROpnd:$fs, FGROpnd:$ft);
   string AsmString = !strconcat("cmp.", CondStr, ".", Typestr, "\t$fd, $fs, $ft");
   list<dag> Pattern = [(set FGRCCOpnd:$fd, (Op FGROpnd:$fs, FGROpnd:$ft))];
+  bit isCTI = 1;
 }
 
 multiclass CMP_CC_M <FIELD_CMP_FORMAT Format, string Typestr,
@@ -300,6 +301,7 @@ class BRANCH_DESC_BASE {
   bit isBranch = 1;
   bit isTerminator = 1;
   bit hasDelaySlot = 0;
+  bit isCTI = 1;
 }
 
 class BC_DESC_BASE<string instr_asm, DAGOperand opnd> : BRANCH_DESC_BASE,
@@ -309,6 +311,7 @@ class BC_DESC_BASE<string instr_asm, DAGOperand opnd> : BRANCH_DESC_BASE,
   string AsmString = !strconcat(instr_asm, "\t$offset");
   bit isBarrier = 1;
   InstrItinClass Itinerary = II_BC;
+  bit isCTI = 1;
 }
 
 class CMP_BC_DESC_BASE<string instr_asm, DAGOperand opnd,
@@ -318,6 +321,8 @@ class CMP_BC_DESC_BASE<string instr_asm, DAGOperand opnd,
   string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $offset");
   list<Register> Defs = [AT];
   InstrItinClass Itinerary = II_BCCC;
+  bit hasForbiddenSlot = 1;
+  bit isCTI = 1;
 }
 
 class CMP_CBR_EQNE_Z_DESC_BASE<string instr_asm, DAGOperand opnd,
@@ -327,6 +332,8 @@ class CMP_CBR_EQNE_Z_DESC_BASE<string instr_asm, DAGOperand opnd,
   string AsmString = !strconcat(instr_asm, "\t$rs, $offset");
   list<Register> Defs = [AT];
   InstrItinClass Itinerary = II_BCCZC;
+  bit hasForbiddenSlot = 1;
+  bit isCTI = 1;
 }
 
 class CMP_CBR_RT_Z_DESC_BASE<string instr_asm, DAGOperand opnd,
@@ -337,18 +344,22 @@ class CMP_CBR_RT_Z_DESC_BASE<string instr_asm, DAGOperand opnd,
   string AsmString = !strconcat(instr_asm, "\t$rt, $offset");
   list<Register> Defs = [AT];
   InstrItinClass Itinerary = II_BCCZC;
+  bit hasForbiddenSlot = 1;
+  bit isCTI = 1;
 }
 
 class BAL_DESC : BC_DESC_BASE<"bal", brtarget> {
   bit isCall = 1;
   bit hasDelaySlot = 1;
   list<Register> Defs = [RA];
+  bit isCTI = 1;
 }
 
 class BALC_DESC : BC_DESC_BASE<"balc", brtarget26> {
   bit isCall = 1;
   list<Register> Defs = [RA];
   InstrItinClass Itinerary = II_BALC;
+  bit isCTI = 1;
 }
 
 class BC_DESC : BC_DESC_BASE<"bc", brtarget26>;
@@ -385,6 +396,7 @@ class COP2_BCCZ_DESC_BASE<string instr_asm> : BRANCH_DESC_BASE {
   dag OutOperandList = (outs);
   string AsmString = instr_asm;
   bit hasDelaySlot = 1;
+  bit isCTI = 1;
 }
 
 class BC2EQZ_DESC : COP2_BCCZ_DESC_BASE<"bc2eqz $ct, $offset">;
@@ -403,6 +415,7 @@ class JMP_IDX_COMPACT_DESC_BASE<string opstr, DAGOperand opnd,
   bit isTerminator = 1;
   bit hasDelaySlot = 0;
   InstrItinClass Itinerary = itin;
+  bit isCTI = 1;
 }
 
 class JIALC_DESC : JMP_IDX_COMPACT_DESC_BASE<"jialc", calloffset16,
@@ -423,6 +436,7 @@ class JR_HB_R6_DESC : JR_HB_DESC_BASE<"jr.hb", GPR32Opnd> {
   bit hasDelaySlot = 1;
   bit isTerminator=1;
   bit isBarrier=1;
+  bit isCTI = 1;
 }
 
 class BITSWAP_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
@@ -681,6 +695,7 @@ class SDBBP_R6_DESC {
   dag InOperandList = (ins uimm20:$code_);
   string AsmString = "sdbbp\t$code_";
   list<dag> Pattern = [];
+  bit isCTI = 1;
 }
 
 //===----------------------------------------------------------------------===//

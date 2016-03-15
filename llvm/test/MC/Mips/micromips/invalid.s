@@ -1,6 +1,9 @@
 # RUN: not llvm-mc %s -triple=mips -show-encoding -mattr=micromips 2>%t1
 # RUN: FileCheck %s < %t1
 
+  addiur1sp $7, 260   # CHECK: :[[@LINE]]:17: error: expected both 8-bit unsigned immediate and multiple of 4
+  addiur1sp $7, 241   # CHECK: :[[@LINE]]:17: error: expected both 8-bit unsigned immediate and multiple of 4
+  addiur1sp $8, 240   # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
   addius5 $2, -9      # CHECK: :[[@LINE]]:15: error: expected 4-bit signed immediate
   addius5 $2, 8       # CHECK: :[[@LINE]]:15: error: expected 4-bit signed immediate
   break -1            # CHECK: :[[@LINE]]:9: error: expected 10-bit unsigned immediate

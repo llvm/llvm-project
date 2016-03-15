@@ -26,8 +26,8 @@ static bool isF128SoftLibCall(const char *CallSym) {
       "ceill",         "copysignl",    "cosl",          "exp2l",
       "expl",          "floorl",       "fmal",          "fmodl",
       "log10l",        "log2l",        "logl",          "nearbyintl",
-      "powl",          "rintl",        "sinl",          "sqrtl",
-      "truncl"};
+      "powl",          "rintl",        "roundl",        "sinl",
+      "sqrtl",         "truncl"};
 
   // Check that LibCalls is sorted alphabetically.
   auto Comp = [](const char *S1, const char *S2) { return strcmp(S1, S2) < 0; };

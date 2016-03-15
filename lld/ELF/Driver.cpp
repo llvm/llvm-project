@@ -71,15 +71,15 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
 // Each slice consists of a member file in the archive.
 static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
-      check(Archive::create(MB), "Failed to parse archive");
+      check(Archive::create(MB), "failed to parse archive");
 
   std::vector<MemoryBufferRef> V;
   for (const ErrorOr<Archive::Child> &COrErr : File->children()) {
-    Archive::Child C = check(COrErr, "Could not get the child of the archive " +
+    Archive::Child C = check(COrErr, "could not get the child of the archive " +
                                          File->getFileName());
     MemoryBufferRef Mb =
         check(C.getMemoryBufferRef(),
-              "Could not get the buffer for a child of the archive " +
+              "could not get the buffer for a child of the archive " +
                   File->getFileName());
     V.push_back(Mb);
   }
@@ -244,6 +244,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->Threads = Args.hasArg(OPT_threads);
   Config->Verbose = Args.hasArg(OPT_verbose);
+  Config->WarnCommon = Args.hasArg(OPT_warn_common);
 
   Config->DynamicLinker = getString(Args, OPT_dynamic_linker);
   Config->Entry = getString(Args, OPT_entry);

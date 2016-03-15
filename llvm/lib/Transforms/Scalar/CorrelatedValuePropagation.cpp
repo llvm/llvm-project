@@ -341,8 +341,8 @@ bool CorrelatedValuePropagation::processCallSite(CallSite CS) {
 
 /// See if LazyValueInfo's ability to exploit edge conditions, or range
 /// information is sufficient to prove the both operands of this SDiv are
-/// nonnegative.  If this is the case, replace the SDiv with a UDiv. Even for
-/// local conditions, this can sometimes prove conditions instcombine can't by
+/// positive.  If this is the case, replace the SDiv with a UDiv. Even for local
+/// conditions, this can sometimes prove conditions instcombine can't by
 /// exploiting range information.
 bool CorrelatedValuePropagation::processSDiv(BinaryOperator *SDI) {
   if (SDI->getType()->isVectorTy())

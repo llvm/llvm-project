@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -493,6 +494,92 @@ static unsigned findCommonAlignment(const DataLayout &DL, const StoreInst *SI,
   return std::min(StoreAlign, LoadAlign);
 }
 
+// This method try to lift a store instruction before position P.
+// It will lift the store and its argument + that anything that
+// lay alias with these.
+// The method returns true if it was successful.
+static bool moveUp(AliasAnalysis &AA, StoreInst *SI, Instruction *P) {
+  // If the store alias this position, early bail out.
+  MemoryLocation StoreLoc = MemoryLocation::get(SI);
+  if (AA.getModRefInfo(P, StoreLoc) != MRI_NoModRef)
+    return false;
+
+  // Keep track of the arguments of all instruction we plan to lift
+  // so we can make sure to lift them as well if apropriate.
+  DenseSet<Instruction*> Args;
+  if (auto *Ptr = dyn_cast<Instruction>(SI->getPointerOperand()))
+    if (Ptr->getParent() == SI->getParent())
+      Args.insert(Ptr);
+
+  // Instruction to lift before P.
+  SmallVector<Instruction*, 8> ToLift;
+
+  // Memory locations of lifted instructions.
+  SmallVector<MemoryLocation, 8> MemLocs;
+  MemLocs.push_back(StoreLoc);
+
+  // Lifted callsites.
+  SmallVector<ImmutableCallSite, 8> CallSites;
+
+  for (auto I = --SI->getIterator(), E = P->getIterator(); I != E; --I) {
+    auto *C = &*I;
+
+    bool MayAlias = AA.getModRefInfo(C) != MRI_NoModRef;
+
+    bool NeedLift = false;
+    if (Args.erase(C))
+      NeedLift = true;
+    else if (MayAlias) {
+      NeedLift = std::any_of(MemLocs.begin(), MemLocs.end(),
+        [C, &AA](const MemoryLocation &ML) {
+          return AA.getModRefInfo(C, ML);
+        });
+
+      if (!NeedLift)
+        NeedLift = std::any_of(CallSites.begin(), CallSites.end(),
+          [C, &AA](const ImmutableCallSite &CS) {
+            return AA.getModRefInfo(C, CS);
+          });
+    }
+
+    if (!NeedLift)
+      continue;
+
+    if (MayAlias) {
+      if (auto CS = ImmutableCallSite(C)) {
+        // If we can't lift this before P, it's game over.
+        if (AA.getModRefInfo(P, CS) != MRI_NoModRef)
+          return false;
+
+        CallSites.push_back(CS);
+      } else if (isa<LoadInst>(C) || isa<StoreInst>(C) || isa<VAArgInst>(C)) {
+        // If we can't lift this before P, it's game over.
+        auto ML = MemoryLocation::get(C);
+        if (AA.getModRefInfo(P, ML) != MRI_NoModRef)
+          return false;
+
+        MemLocs.push_back(ML);
+      } else
+        // We don't know how to lift this instruction.
+        return false;
+    }
+
+    ToLift.push_back(C);
+    for (unsigned k = 0, e = C->getNumOperands(); k != e; ++k)
+      if (auto *A = dyn_cast<Instruction>(C->getOperand(k)))
+        if (A->getParent() == SI->getParent())
+          Args.insert(A);
+  }
+
+  // We made it, we need to lift
+  for (auto *I : reverse(ToLift)) {
+    DEBUG(dbgs() << "Lifting " << *I << " before " << *P << "\n");
+    I->moveBefore(P);
+  }
+
+  return true;
+}
+
 bool MemCpyOpt::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   if (!SI->isSimple()) return false;
 
@@ -522,26 +609,20 @@ bool MemCpyOpt::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
         // such an instruction is found, we try to promote there instead
         // of at the store position.
         Instruction *P = SI;
-        for (BasicBlock::iterator I = ++LI->getIterator(), E = SI->getIterator();
-             I != E; ++I) {
-          if (!(AA.getModRefInfo(&*I, LoadLoc) & MRI_Mod))
-            continue;
-
-          // We found an instruction that may write to the loaded memory.
-          // We can try to promote at this position instead of the store
-          // position if nothing alias the store memory after this and the store
-          // destination is not in the range.
-          P = &*I;
-          for (; I != E; ++I) {
-            MemoryLocation StoreLoc = MemoryLocation::get(SI);
-            if (&*I == SI->getOperand(1) ||
-                AA.getModRefInfo(&*I, StoreLoc) != MRI_NoModRef) {
-              P = nullptr;
-              break;
-            }
+        for (auto &I : make_range(++LI->getIterator(), SI->getIterator())) {
+          if (AA.getModRefInfo(&I, LoadLoc) & MRI_Mod) {
+            P = &I;
+            break;
           }
+        }
 
-          break;
+        // We found an instruction that may write to the loaded memory.
+        // We can try to promote at this position instead of the store
+        // position if nothing alias the store memory after this and the store
+        // destination is not in the range.
+        if (P && P != SI) {
+          if (!moveUp(AA, SI, P))
+            P = nullptr;
         }
 
         // If a valid insertion position is found, then we can promote

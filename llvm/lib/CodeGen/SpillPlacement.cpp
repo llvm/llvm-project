@@ -173,6 +173,17 @@ struct SpillPlacement::Node {
       Value = 0;
     return Before != preferReg();
   }
+
+  void getDissentingNeighbors(SparseSet<unsigned> &List,
+                              const Node nodes[]) const {
+    for (const auto &Elt : Links) {
+      unsigned n = Elt.second;
+      // Neighbors that already have the same value are not going to
+      // change because of this node changing.
+      if (Value != nodes[n].Value)
+        List.insert(n);
+    }
+  }
 };
 
 bool SpillPlacement::runOnMachineFunction(MachineFunction &mf) {
@@ -182,6 +193,8 @@ bool SpillPlacement::runOnMachineFunction(MachineFunction &mf) {
 
   assert(!nodes && "Leaking node array");
   nodes = new Node[bundles->getNumBundles()];
+  TodoList.clear();
+  TodoList.setUniverse(bundles->getNumBundles());
 
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
@@ -199,10 +212,12 @@ bool SpillPlacement::runOnMachineFunction(MachineFunction &mf) {
 void SpillPlacement::releaseMemory() {
   delete[] nodes;
   nodes = nullptr;
+  TodoList.clear();
 }
 
 /// activate - mark node n as active if it wasn't already.
 void SpillPlacement::activate(unsigned n) {
+  TodoList.insert(n);
   if (ActiveNodes->test(n))
     return;
   ActiveNodes->set(n);
@@ -287,10 +302,6 @@ void SpillPlacement::addLinks(ArrayRef<unsigned> Links) {
       continue;
     activate(ib);
     activate(ob);
-    if (nodes[ib].Links.empty() && !nodes[ib].mustSpill())
-      Linked.push_back(ib);
-    if (nodes[ob].Links.empty() && !nodes[ob].mustSpill())
-      Linked.push_back(ob);
     BlockFrequency Freq = BlockFrequencies[Number];
     nodes[ib].addLink(ob, Freq);
     nodes[ob].addLink(ib, Freq);
@@ -298,76 +309,50 @@ void SpillPlacement::addLinks(ArrayRef<unsigned> Links) {
 }
 
 bool SpillPlacement::scanActiveBundles() {
-  Linked.clear();
   RecentPositive.clear();
   for (int n = ActiveNodes->find_first(); n>=0; n = ActiveNodes->find_next(n)) {
-    nodes[n].update(nodes, Threshold);
+    update(n);
     // A node that must spill, or a node without any links is not going to
     // change its value ever again, so exclude it from iterations.
     if (nodes[n].mustSpill())
       continue;
-    if (!nodes[n].Links.empty())
-      Linked.push_back(n);
     if (nodes[n].preferReg())
       RecentPositive.push_back(n);
   }
   return !RecentPositive.empty();
 }
 
+bool SpillPlacement::update(unsigned n) {
+  if (!nodes[n].update(nodes, Threshold))
+    return false;
+  nodes[n].getDissentingNeighbors(TodoList, nodes);
+  return true;
+}
+
 /// iterate - Repeatedly update the Hopfield nodes until stability or the
 /// maximum number of iterations is reached.
-/// @param Linked - Numbers of linked nodes that need updating.
 void SpillPlacement::iterate() {
-  // First update the recently positive nodes. They have likely received new
-  // negative bias that will turn them off.
-  while (!RecentPositive.empty())
-    nodes[RecentPositive.pop_back_val()].update(nodes, Threshold);
+  // We do not need to push those node in the todolist.
+  // They are already been proceeded as part of the previous iteration.
+  RecentPositive.clear();
 
-  if (Linked.empty())
-    return;
-
-  // Run up to 10 iterations. The edge bundle numbering is closely related to
-  // basic block numbering, so there is a strong tendency towards chains of
-  // linked nodes with sequential numbers. By scanning the linked nodes
-  // backwards and forwards, we make it very likely that a single node can
-  // affect the entire network in a single iteration. That means very fast
-  // convergence, usually in a single iteration.
-  for (unsigned iteration = 0; iteration != 10; ++iteration) {
-    // Scan backwards, skipping the last node when iteration is not zero. When
-    // iteration is not zero, the last node was just updated.
-    bool Changed = false;
-    for (SmallVectorImpl<unsigned>::const_reverse_iterator I =
-           iteration == 0 ? Linked.rbegin() : std::next(Linked.rbegin()),
-           E = Linked.rend(); I != E; ++I) {
-      unsigned n = *I;
-      if (nodes[n].update(nodes, Threshold)) {
-        Changed = true;
-        if (nodes[n].preferReg())
-          RecentPositive.push_back(n);
-      }
-    }
-    if (!Changed || !RecentPositive.empty())
-      return;
-
-    // Scan forwards, skipping the first node which was just updated.
-    Changed = false;
-    for (SmallVectorImpl<unsigned>::const_iterator I =
-           std::next(Linked.begin()), E = Linked.end(); I != E; ++I) {
-      unsigned n = *I;
-      if (nodes[n].update(nodes, Threshold)) {
-        Changed = true;
-        if (nodes[n].preferReg())
-          RecentPositive.push_back(n);
-      }
-    }
-    if (!Changed || !RecentPositive.empty())
-      return;
+  // Since the last iteration, the todolist have been augmented by calls
+  // to addConstraints, addLinks, and co.
+  // Update the network energy starting at this new frontier.
+  // The call to ::update will add the nodes that changed into the todolist.
+  unsigned Limit = bundles->getNumBundles() * 10;
+  while(Limit-- > 0 && !TodoList.empty()) {
+    unsigned n = TodoList.pop_back_val();
+    if (!update(n))
+      continue;
+    if (nodes[n].preferReg())
+      RecentPositive.push_back(n);
   }
 }
 
 void SpillPlacement::prepare(BitVector &RegBundles) {
-  Linked.clear();
   RecentPositive.clear();
+  TodoList.clear();
   // Reuse RegBundles as our ActiveNodes vector.
   ActiveNodes = &RegBundles;
   ActiveNodes->clear();

@@ -32,13 +32,13 @@ namespace {
 // The writer writes a SymbolTable result to a file.
 template <class ELFT> class Writer {
 public:
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
-  typedef typename ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename ELFFile<ELFT>::Elf_Ehdr Elf_Ehdr;
-  typedef typename ELFFile<ELFT>::Elf_Phdr Elf_Phdr;
-  typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename ELFFile<ELFT>::Elf_Sym_Range Elf_Sym_Range;
-  typedef typename ELFFile<ELFT>::Elf_Rela Elf_Rela;
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Ehdr Elf_Ehdr;
+  typedef typename ELFT::Phdr Elf_Phdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::SymRange Elf_Sym_Range;
+  typedef typename ELFT::Rela Elf_Rela;
   Writer(SymbolTable<ELFT> &S) : Symtab(S) {}
   void run();
 
@@ -89,8 +89,6 @@ private:
   void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
   void addCopyRelSymbols(std::vector<SharedSymbol<ELFT> *> &Syms);
 
-  static uint32_t getAlignment(SharedSymbol<ELFT> *SS);
-
   std::unique_ptr<llvm::FileOutputBuffer> Buffer;
 
   BumpPtrAllocator Alloc;
@@ -125,7 +123,7 @@ private:
 } // anonymous namespace
 
 template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
 
   // Create singleton output sections.
   DynamicSection<ELFT> Dynamic(*Symtab);
@@ -517,7 +515,7 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
 template <class ELFT>
 static bool shouldKeepInSymtab(const elf::ObjectFile<ELFT> &File,
                                StringRef SymName,
-                               const typename ELFFile<ELFT>::Elf_Sym &Sym) {
+                               const typename ELFT::Sym &Sym) {
   if (Sym.getType() == STT_FILE)
     return false;
 
@@ -612,7 +610,7 @@ template <class ELFT> static bool isRelroSection(OutputSectionBase<ELFT> *Sec) {
 template <class ELFT>
 static bool compareSections(OutputSectionBase<ELFT> *A,
                             OutputSectionBase<ELFT> *B) {
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
 
   int Comp = Script->compareSections(A->getName(), B->getName());
   if (Comp != 0)
@@ -719,13 +717,13 @@ void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
   Out<ELFT>::Bss->setSize(Off);
 }
 
-template <class ELFT>
-uint32_t Writer<ELFT>::getAlignment(SharedSymbol<ELFT> *SS) {
-  const Elf_Sym &Sym = SS->Sym;
-  const Elf_Shdr *Sec = SS->File->getSection(Sym);
-  uintX_t SecAlign = Sec->sh_addralign;
+template <class ELFT> static uint32_t getAlignment(SharedSymbol<ELFT> *SS) {
+  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+
+  uintX_t SecAlign = SS->File->getSection(SS->Sym)->sh_addralign;
+  uintX_t SymValue = SS->Sym.st_value;
   int TrailingZeros = std::min(countTrailingZeros(SecAlign),
-                               countTrailingZeros((uintX_t)Sym.st_value));
+                               countTrailingZeros(SymValue));
   return 1 << TrailingZeros;
 }
 
@@ -827,8 +825,8 @@ static bool includeInDynsym(const SymbolBody &B) {
 // linker scripts.
 namespace {
 template <class ELFT> class OutputSectionFactory {
-  typedef typename ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   std::pair<OutputSectionBase<ELFT> *, bool> create(InputSectionBase<ELFT> *C,
@@ -1426,8 +1424,7 @@ static uint32_t getMipsEFlags() {
   return V;
 }
 
-template <class ELFT>
-static typename ELFFile<ELFT>::uintX_t getEntryAddr() {
+template <class ELFT> static typename ELFT::uint getEntryAddr() {
   if (SymbolBody *B = Config->EntrySym)
     return B->repl().getVA<ELFT>();
   if (Config->EntryAddr != uint64_t(-1))

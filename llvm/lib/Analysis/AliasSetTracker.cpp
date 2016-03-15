@@ -355,7 +355,7 @@ bool AliasSetTracker::add(MemSetInst *MSI) {
     Len = MemoryLocation::UnknownSize;
 
   AliasSet &AS =
-      addPointer(MSI->getDest(), Len, AAInfo, AliasSet::ModAccess, NewPtr);
+      addPointer(MSI->getRawDest(), Len, AAInfo, AliasSet::ModAccess, NewPtr);
   if (MSI->isVolatile())
     AS.setVolatile();
   return NewPtr;
@@ -510,7 +510,7 @@ bool AliasSetTracker::remove(MemSetInst *MSI) {
   else
     Len = MemoryLocation::UnknownSize;
 
-  AliasSet *AS = findAliasSetForPointer(MSI->getDest(), Len, AAInfo);
+  AliasSet *AS = findAliasSetForPointer(MSI->getRawDest(), Len, AAInfo);
   if (!AS)
     return false;
   remove(*AS);

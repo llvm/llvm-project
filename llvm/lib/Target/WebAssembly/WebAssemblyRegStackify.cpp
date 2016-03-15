@@ -517,7 +517,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
       if (Insert != &*MII) {
         ImposeStackOrdering(&*MII);
         MII = std::prev(
-            make_reverse_iterator(MachineBasicBlock::iterator(Insert)));
+            llvm::make_reverse_iterator(MachineBasicBlock::iterator(Insert)));
         Changed = true;
       }
     }

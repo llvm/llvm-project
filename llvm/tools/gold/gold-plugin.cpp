@@ -31,7 +31,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/SubtargetFeature.h"
-#include "llvm/Object/FunctionIndexObjectFile.h"
+#include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -624,8 +624,8 @@ static const void *getSymbolsAndView(claimed_file &F) {
   return View;
 }
 
-static std::unique_ptr<FunctionInfoIndex>
-getFunctionIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
+static std::unique_ptr<ModuleSummaryIndex>
+getModuleSummaryIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
   const void *View = getSymbolsAndView(F);
   if (!View)
     return nullptr;
@@ -635,18 +635,20 @@ getFunctionIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
 
   // Don't bother trying to build an index if there is no summary information
   // in this bitcode file.
-  if (!object::FunctionIndexObjectFile::hasGlobalValueSummaryInMemBuffer(
+  if (!object::ModuleSummaryIndexObjectFile::hasGlobalValueSummaryInMemBuffer(
           BufferRef, diagnosticHandler))
-    return std::unique_ptr<FunctionInfoIndex>(nullptr);
+    return std::unique_ptr<ModuleSummaryIndex>(nullptr);
 
-  ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
-      object::FunctionIndexObjectFile::create(BufferRef, diagnosticHandler);
+  ErrorOr<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
+      object::ModuleSummaryIndexObjectFile::create(BufferRef,
+                                                   diagnosticHandler);
 
   if (std::error_code EC = ObjOrErr.getError())
-    message(LDPL_FATAL, "Could not read function index bitcode from file : %s",
+    message(LDPL_FATAL,
+            "Could not read module summary index bitcode from file : %s",
             EC.message().c_str());
 
-  object::FunctionIndexObjectFile &Obj = **ObjOrErr;
+  object::ModuleSummaryIndexObjectFile &Obj = **ObjOrErr;
 
   return Obj.takeIndex();
 }
@@ -844,8 +846,8 @@ class CodeGen {
   /// The task ID when this was invoked in a thread (ThinLTO).
   int TaskID;
 
-  /// The function index for ThinLTO tasks.
-  const FunctionInfoIndex *CombinedIndex;
+  /// The module summary index for ThinLTO tasks.
+  const ModuleSummaryIndex *CombinedIndex;
 
   /// The target machine for generating code for this module.
   std::unique_ptr<TargetMachine> TM;
@@ -862,11 +864,11 @@ public:
   }
   /// Constructor used by ThinLTO.
   CodeGen(std::unique_ptr<llvm::Module> M, raw_fd_ostream *OS, int TaskID,
-          const FunctionInfoIndex *CombinedIndex, std::string Filename)
+          const ModuleSummaryIndex *CombinedIndex, std::string Filename)
       : M(std::move(M)), OS(OS), TaskID(TaskID), CombinedIndex(CombinedIndex),
         SaveTempsFilename(Filename) {
     assert(options::thinlto == !!CombinedIndex &&
-           "Expected function index iff performing ThinLTO");
+           "Expected module summary index iff performing ThinLTO");
     initTargetMachine();
   }
 
@@ -951,7 +953,7 @@ void CodeGen::runLTOPasses() {
   PMB.LoopVectorize = true;
   PMB.SLPVectorize = true;
   PMB.OptLevel = options::OptLevel;
-  PMB.FunctionIndex = CombinedIndex;
+  PMB.ModuleSummary = CombinedIndex;
   PMB.populateLTOPassManager(passes);
   passes.run(*M);
 }
@@ -1094,7 +1096,7 @@ static bool linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
 static void thinLTOBackendTask(claimed_file &F, const void *View,
                                ld_plugin_input_file &File,
                                raw_fd_ostream *ApiFile,
-                               const FunctionInfoIndex &CombinedIndex,
+                               const ModuleSummaryIndex &CombinedIndex,
                                raw_fd_ostream *OS, unsigned TaskID) {
   // Need to use a separate context for each task
   LLVMContext Context;
@@ -1115,7 +1117,7 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
 
 /// Launch each module's backend pipeline in a separate task in a thread pool.
 static void thinLTOBackends(raw_fd_ostream *ApiFile,
-                            const FunctionInfoIndex &CombinedIndex) {
+                            const ModuleSummaryIndex &CombinedIndex) {
   unsigned TaskCount = 0;
   std::vector<ThinLTOTaskInfo> Tasks;
   Tasks.reserve(Modules.size());
@@ -1184,18 +1186,18 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
     cl::ParseCommandLineOptions(NumOpts, &options::extra[0]);
 
   // If we are doing ThinLTO compilation, simply build the combined
-  // function index/summary and emit it. We don't need to parse the modules
+  // module index/summary and emit it. We don't need to parse the modules
   // and link them in this case.
   if (options::thinlto) {
-    FunctionInfoIndex CombinedIndex;
+    ModuleSummaryIndex CombinedIndex;
     uint64_t NextModuleId = 0;
     for (claimed_file &F : Modules) {
       PluginInputFile InputFile(F.handle);
 
-      std::unique_ptr<FunctionInfoIndex> Index =
-          getFunctionIndexForFile(F, InputFile.file());
+      std::unique_ptr<ModuleSummaryIndex> Index =
+          getModuleSummaryIndexForFile(F, InputFile.file());
 
-      // Skip files without a function summary.
+      // Skip files without a module summary.
       if (Index)
         CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
     }

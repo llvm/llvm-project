@@ -20,7 +20,7 @@ configure_lit_site_cfg(
   )
 
 set(LLD_TEST_DEPS
-  FileCheck not llvm-ar llvm-as llvm-nm llc
+  FileCheck not llvm-ar llvm-as llvm-dis llvm-nm llc
   lld llvm-config llvm-objdump llvm-readobj yaml2obj obj2yaml
   llvm-mc llvm-nm llvm-lib
   )

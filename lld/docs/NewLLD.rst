@@ -19,11 +19,14 @@ to adopt LLD as the system linker.
 We are working on it in collaboration with the FreeBSD project.
 
 The linkers are notably small; as of March 2016,
-the COFF linker is under 7k LOC and the ELF linker is about 10k LOC.
+the COFF linker is under 7k lines and the ELF linker is about 10k lines.
 
 The linkers are designed to be as fast and simple as possible.
-Because it is simple, it is easy to extend it to support new features.
-There a few key design choices that we made to achieve these goals.
+Because it is simple, it is easy to extend to support new features.
+It already supports several advanced features such section garbage
+collection and identical code folding.
+
+There are a few key design choices that we made to achieve these goals.
 We will describe them in this document.
 
 The ELF Linker as a Library
@@ -66,7 +69,7 @@ between speed, simplicity and extensibility.
 
 * Speed by design
 
-  One of the most important thing in archiving high performance is to
+  One of the most important things in archiving high performance is to
   do less rather than do it efficiently.
   Therefore, the high-level design matters more than local optimizations.
   Since we are trying to create a high-performance linker,
@@ -83,7 +86,7 @@ between speed, simplicity and extensibility.
 * Efficient archive file handling
 
   LLD's handling of archive files (the files with ".a" file extension) is different
-  from the traditional Unix linkers and pretty similar to Windows linkers.
+  from the traditional Unix linkers and similar to Windows linkers.
   We'll describe how the traditional Unix linker handles archive files,
   what the problem is, and how LLD approached the problem.
 
@@ -109,7 +112,7 @@ between speed, simplicity and extensibility.
   Linking mutually-dependent archive files is tricky.
   You may specify the same archive file multiple times to
   let the linker visit it more than once.
-  Or, you may use the special command line options, `-(` and `-)`,
+  Or, you may use the special command line options, `--start-group` and `--end-group`,
   to let the linker loop over the files between the options until
   no new symbols are added to the set.
 
@@ -126,7 +129,37 @@ between speed, simplicity and extensibility.
   The semantics of LLD's archive handling is different from the traditional Unix's.
   You can observe it if you carefully craft archive files to exploit it.
   However, in reality, we don't know any program that cannot link
-  with our algorithm so far, so we are not too worried about the incompatibility.
+  with our algorithm so far, so it's not going to cause trouble.
+
+Numbers You Want to Know
+------------------------
+
+To give you intuition about what kinds of data the linker is mainly working on,
+I'll give you the list of objects and their numbers LLD has to read and process
+in order to link a very large executable. In order to link Chrome with debug info,
+which is roughly 2 GB in output size, LLD reads
+
+- 17,000 files,
+- 1,800,000 sections,
+- 6,300,000 symbols, and
+- 13,000,000 relocations.
+
+LLD produces the 2 GB executable in 15 seconds.
+
+These numbers vary depending on your program, but in general,
+you have a lot of relocations and symbols for each file.
+If your program is written in C++, symbol names are likely to be
+pretty long because of name mangling.
+
+It is important to not waste time on relocations and symbols.
+
+In the above case, the total amount of symbol strings is 450 MB,
+and inserting all of them to a hash table takes 1.5 seconds.
+Therefore, if you causally add a hash table lookup for each symbol,
+it would slow down the linker by 10%. So, don't do that.
+
+On the other hand, you don't have to pursue efficiency
+when handling files.
 
 Important Data Strcutures
 -------------------------
@@ -176,7 +209,7 @@ Once you understand their functions, the code of the linker should look obvious 
   SymbolTable is basically a hash table from strings to Symbols
   with a logic to resolve symbol conflicts. It resolves conflicts by symbol type.
 
-  - If we add Undefined and Defined symbols, the symbol table will keep the latter.
+  - If we add Defined and Undefined symbols, the symbol table will keep the former.
   - If we add Defined and Lazy symbols, it will keep the former.
   - If we add Lazy and Undefined, it will keep the former,
     but it will also trigger the Lazy symbol to load the archive member
@@ -227,7 +260,7 @@ There are mainly three actors in this linker.
 
 * Driver
 
-  The linking process is drived by the driver. The driver
+  The linking process is driven by the driver. The driver
 
   - processes command line options,
   - creates a symbol table,
@@ -244,8 +277,7 @@ The linker resolves symbols in bitcode files normally. If all symbols
 are successfully resolved, it then calls an LLVM libLTO function
 with all bitcode files to convert them to one big regular ELF/COFF file.
 Finally, the linker replaces bitcode symbols with ELF/COFF symbols,
-so that we link the input files as if they were in the native
-format from the beginning.
+so that they are linked as if they were in the native format from the beginning.
 
 The details are described in this document.
 http://llvm.org/docs/LinkTimeOptimization.html

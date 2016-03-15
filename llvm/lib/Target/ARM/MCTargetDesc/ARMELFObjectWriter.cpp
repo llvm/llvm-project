@@ -109,7 +109,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       case MCSymbolRefExpr::VK_PLT:
         Type = ELF::R_ARM_CALL;
         break;
-      case MCSymbolRefExpr::VK_ARM_TLSCALL:
+      case MCSymbolRefExpr::VK_TLSCALL:
         Type = ELF::R_ARM_TLS_CALL;
         break;
       default:
@@ -141,7 +141,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
     case ARM::fixup_arm_thumb_bl:
     case ARM::fixup_arm_thumb_blx:
       switch (Modifier) {
-      case MCSymbolRefExpr::VK_ARM_TLSCALL:
+      case MCSymbolRefExpr::VK_TLSCALL:
         Type = ELF::R_ARM_THM_TLS_CALL;
         break;
       default:
@@ -213,7 +213,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       case MCSymbolRefExpr::VK_ARM_TLSLDO:
         Type = ELF::R_ARM_TLS_LDO32;
         break;
-      case MCSymbolRefExpr::VK_ARM_TLSCALL:
+      case MCSymbolRefExpr::VK_TLSCALL:
         Type = ELF::R_ARM_TLS_CALL;
         break;
       case MCSymbolRefExpr::VK_ARM_TLSDESC:

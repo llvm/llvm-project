@@ -9,7 +9,7 @@
 ; CHECK:	adrp	x0, L_.str@PAGE
 ; CHECK:	add	x0, x0, L_.str@PAGEOFF
 ; CHECK-NEXT:	bl	_puts
-; CHECK-NEXT:	mov	sp, x29
+; CHECK-NEXT:	add	sp, sp, #16
 ; CHECK-NEXT:	ldp	x29, x30, [sp], #16
 ; CHECK-NEXT:	ret
 

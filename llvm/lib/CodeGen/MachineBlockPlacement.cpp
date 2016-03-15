@@ -274,6 +274,16 @@ class MachineBlockPlacement : public MachineFunctionPass {
   getFirstUnplacedBlock(MachineFunction &F, const BlockChain &PlacedChain,
                         MachineFunction::iterator &PrevUnplacedBlockIt,
                         const BlockFilterSet *BlockFilter);
+
+  /// \brief Add a basic block to the work list if it is apropriate.
+  ///
+  /// If the optional parameter BlockFilter is provided, only MBB
+  /// present in the set will be added to the worklist. If nullptr
+  /// is provided, no filtering occurs.
+  void fillWorkLists(MachineBasicBlock *MBB,
+                     SmallPtrSetImpl<BlockChain *> &UpdatedPreds,
+                     SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
+                     const BlockFilterSet *BlockFilter);
   void buildChain(MachineBasicBlock *BB, BlockChain &Chain,
                   SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
                   const BlockFilterSet *BlockFilter = nullptr);
@@ -568,6 +578,31 @@ MachineBasicBlock *MachineBlockPlacement::getFirstUnplacedBlock(
     }
   }
   return nullptr;
+}
+
+void MachineBlockPlacement::fillWorkLists(
+    MachineBasicBlock *MBB,
+    SmallPtrSetImpl<BlockChain *> &UpdatedPreds,
+    SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
+    const BlockFilterSet *BlockFilter = nullptr) {
+  BlockChain &Chain = *BlockToChain[MBB];
+  if (!UpdatedPreds.insert(&Chain).second)
+    return;
+
+  assert(Chain.UnscheduledPredecessors == 0);
+  for (MachineBasicBlock *ChainBB : Chain) {
+    assert(BlockToChain[ChainBB] == &Chain);
+    for (MachineBasicBlock *Pred : ChainBB->predecessors()) {
+      if (BlockFilter && !BlockFilter->count(Pred))
+        continue;
+      if (BlockToChain[Pred] == &Chain)
+        continue;
+      ++Chain.UnscheduledPredecessors;
+    }
+  }
+
+  if (Chain.UnscheduledPredecessors == 0)
+    BlockWorkList.push_back(*Chain.begin());
 }
 
 void MachineBlockPlacement::buildChain(
@@ -1067,24 +1102,8 @@ void MachineBlockPlacement::buildLoopChains(MachineFunction &F,
   assert(LoopChain.UnscheduledPredecessors == 0);
   UpdatedPreds.insert(&LoopChain);
 
-  for (MachineBasicBlock *LoopBB : LoopBlockSet) {
-    BlockChain &Chain = *BlockToChain[LoopBB];
-    if (!UpdatedPreds.insert(&Chain).second)
-      continue;
-
-    assert(Chain.UnscheduledPredecessors == 0);
-    for (MachineBasicBlock *ChainBB : Chain) {
-      assert(BlockToChain[ChainBB] == &Chain);
-      for (MachineBasicBlock *Pred : ChainBB->predecessors()) {
-        if (BlockToChain[Pred] == &Chain || !LoopBlockSet.count(Pred))
-          continue;
-        ++Chain.UnscheduledPredecessors;
-      }
-    }
-
-    if (Chain.UnscheduledPredecessors == 0)
-      BlockWorkList.push_back(*Chain.begin());
-  }
+  for (MachineBasicBlock *LoopBB : LoopBlockSet)
+    fillWorkLists(LoopBB, UpdatedPreds, BlockWorkList, &LoopBlockSet);
 
   buildChain(LoopTop, LoopChain, BlockWorkList, &LoopBlockSet);
 
@@ -1185,24 +1204,8 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
   SmallVector<MachineBasicBlock *, 16> BlockWorkList;
 
   SmallPtrSet<BlockChain *, 4> UpdatedPreds;
-  for (MachineBasicBlock &MBB : F) {
-    BlockChain &Chain = *BlockToChain[&MBB];
-    if (!UpdatedPreds.insert(&Chain).second)
-      continue;
-
-    assert(Chain.UnscheduledPredecessors == 0);
-    for (MachineBasicBlock *ChainBB : Chain) {
-      assert(BlockToChain[ChainBB] == &Chain);
-      for (MachineBasicBlock *Pred : ChainBB->predecessors()) {
-        if (BlockToChain[Pred] == &Chain)
-          continue;
-        ++Chain.UnscheduledPredecessors;
-      }
-    }
-
-    if (Chain.UnscheduledPredecessors == 0)
-      BlockWorkList.push_back(*Chain.begin());
-  }
+  for (MachineBasicBlock &MBB : F)
+    fillWorkLists(&MBB, UpdatedPreds, BlockWorkList);
 
   BlockChain &FunctionChain = *BlockToChain[&F.front()];
   buildChain(&F.front(), FunctionChain, BlockWorkList);

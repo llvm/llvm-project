@@ -88,12 +88,12 @@ CommandObject::GetSyntax ()
     {
         StreamString syntax_str;
         syntax_str.Printf ("%s", GetCommandName());
-        if (GetOptions() != nullptr)
+        if (!IsDashDashCommand() && GetOptions() != nullptr)
             syntax_str.Printf (" <cmd-options>");
         if (m_arguments.size() > 0)
         {
             syntax_str.Printf (" ");
-            if (WantsRawCommandString() && GetOptions() && GetOptions()->NumCommandOptions())
+            if (!IsDashDashCommand() && WantsRawCommandString() && GetOptions() && GetOptions()->NumCommandOptions())
                 syntax_str.Printf("-- ");
             GetFormattedCommandArguments (syntax_str);
         }

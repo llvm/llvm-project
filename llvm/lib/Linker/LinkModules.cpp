@@ -35,15 +35,15 @@ class ModuleLinker {
   /// For symbol clashes, prefer those from Src.
   unsigned Flags;
 
-  /// Function index passed into ModuleLinker for using in function
+  /// Module summary index passed into ModuleLinker for using in function
   /// importing/exporting handling.
-  const FunctionInfoIndex *ImportIndex;
+  const ModuleSummaryIndex *ImportIndex;
 
   /// Functions to import from source module, all other functions are
   /// imported as declarations instead of definitions.
   DenseSet<const GlobalValue *> *FunctionsToImport;
 
-  /// Set to true if the given FunctionInfoIndex contains any functions
+  /// Set to true if the given ModuleSummaryIndex contains any functions
   /// from this source module, in which case we must conservatively assume
   /// that any of its functions may be imported into another module
   /// as part of a different backend compilation process.
@@ -124,15 +124,15 @@ class ModuleLinker {
 
 public:
   ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags,
-               const FunctionInfoIndex *Index = nullptr,
+               const ModuleSummaryIndex *Index = nullptr,
                DenseSet<const GlobalValue *> *FunctionsToImport = nullptr,
                DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr)
       : Mover(Mover), SrcM(std::move(SrcM)), Flags(Flags), ImportIndex(Index),
         FunctionsToImport(FunctionsToImport),
         ValIDToTempMDMap(ValIDToTempMDMap) {
     assert((ImportIndex || !FunctionsToImport) &&
-           "Expect a FunctionInfoIndex when importing");
-    // If we have a FunctionInfoIndex but no function to import,
+           "Expect a ModuleSummaryIndex when importing");
+    // If we have a ModuleSummaryIndex but no function to import,
     // then this is the primary module being compiled in a ThinLTO
     // backend compilation, and we need to see if it has functions that
     // may be exported to another backend compilation.
@@ -549,7 +549,7 @@ bool ModuleLinker::run() {
 Linker::Linker(Module &M) : Mover(M) {}
 
 bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags,
-                          const FunctionInfoIndex *Index,
+                          const ModuleSummaryIndex *Index,
                           DenseSet<const GlobalValue *> *FunctionsToImport,
                           DenseMap<unsigned, MDNode *> *ValIDToTempMDMap) {
   ModuleLinker ModLinker(Mover, std::move(Src), Flags, Index, FunctionsToImport,

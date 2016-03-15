@@ -33,14 +33,12 @@ template <class ELFT> class ObjectFile;
 template <class ELFT> class DefinedRegular;
 
 template <class ELFT>
-static inline typename llvm::object::ELFFile<ELFT>::uintX_t
-getAddend(const typename llvm::object::ELFFile<ELFT>::Elf_Rel &Rel) {
+static inline typename ELFT::uint getAddend(const typename ELFT::Rel &Rel) {
   return 0;
 }
 
 template <class ELFT>
-static inline typename llvm::object::ELFFile<ELFT>::uintX_t
-getAddend(const typename llvm::object::ELFFile<ELFT>::Elf_Rela &Rel) {
+static inline typename ELFT::uint getAddend(const typename ELFT::Rela &Rel) {
   return Rel.r_addend;
 }
 
@@ -53,8 +51,8 @@ bool isValidCIdentifier(StringRef S);
 // non-overlapping file offsets and VAs.
 template <class ELFT> class OutputSectionBase {
 public:
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
 
   OutputSectionBase(StringRef Name, uint32_t Type, uintX_t Flags);
   void setVA(uintX_t VA) { Header.sh_addr = VA; }
@@ -95,7 +93,7 @@ protected:
 
 template <class ELFT> class GotSection final : public OutputSectionBase<ELFT> {
   typedef OutputSectionBase<ELFT> Base;
-  typedef typename Base::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   GotSection();
@@ -134,7 +132,7 @@ private:
 
 template <class ELFT>
 class GotPltSection final : public OutputSectionBase<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   GotPltSection();
@@ -149,7 +147,7 @@ private:
 
 template <class ELFT> class PltSection final : public OutputSectionBase<ELFT> {
   typedef OutputSectionBase<ELFT> Base;
-  typedef typename Base::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   PltSection();
@@ -163,7 +161,7 @@ private:
 };
 
 template <class ELFT> struct DynamicReloc {
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
   uint32_t Type;
 
   // Where the relocation is.
@@ -201,10 +199,10 @@ template <class ELFT> struct DynamicReloc {
 template <class ELFT>
 class SymbolTableSection final : public OutputSectionBase<ELFT> {
 public:
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym_Range Elf_Sym_Range;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::SymRange Elf_Sym_Range;
+  typedef typename ELFT::uint uintX_t;
   SymbolTableSection(SymbolTable<ELFT> &Table,
                      StringTableSection<ELFT> &StrTabSec);
 
@@ -236,9 +234,9 @@ private:
 
 template <class ELFT>
 class RelocationSection final : public OutputSectionBase<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   RelocationSection(StringRef Name);
@@ -257,11 +255,11 @@ private:
 template <class ELFT>
 class OutputSection final : public OutputSectionBase<ELFT> {
 public:
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
+  typedef typename ELFT::uint uintX_t;
   OutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
   void addSection(InputSectionBase<ELFT> *C) override;
   void sortInitFini();
@@ -276,7 +274,7 @@ private:
 
 template <class ELFT>
 class MergeOutputSection final : public OutputSectionBase<ELFT> {
-  typedef typename OutputSectionBase<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
 
   bool shouldTailMerge() const;
 
@@ -294,7 +292,7 @@ private:
 
 // FDE or CIE
 template <class ELFT> struct EHRegion {
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
   EHRegion(EHInputSection<ELFT> *S, unsigned Index);
   StringRef data() const;
   EHInputSection<ELFT> *S;
@@ -310,10 +308,10 @@ template <class ELFT> struct Cie : public EHRegion<ELFT> {
 template <class ELFT>
 class EHOutputSection final : public OutputSectionBase<ELFT> {
 public:
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
   EHOutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
   void writeTo(uint8_t *Buf) override;
 
@@ -343,7 +341,7 @@ public:
 template <class ELFT>
 class StringTableSection final : public OutputSectionBase<ELFT> {
 public:
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
   StringTableSection(StringRef Name, bool Dynamic);
   unsigned addString(StringRef S, bool HashIt = true);
   void writeTo(uint8_t *Buf) override;
@@ -360,7 +358,7 @@ private:
 
 template <class ELFT>
 class HashTableSection final : public OutputSectionBase<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Word Elf_Word;
+  typedef typename ELFT::Word Elf_Word;
 
 public:
   HashTableSection();
@@ -372,9 +370,9 @@ public:
 // https://blogs.oracle.com/ali/entry/gnu_hash_elf_sections
 template <class ELFT>
 class GnuHashTableSection final : public OutputSectionBase<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Off Elf_Off;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Word Elf_Word;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Off Elf_Off;
+  typedef typename ELFT::Word Elf_Word;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   GnuHashTableSection();
@@ -409,12 +407,12 @@ private:
 template <class ELFT>
 class DynamicSection final : public OutputSectionBase<ELFT> {
   typedef OutputSectionBase<ELFT> Base;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Dyn Elf_Dyn;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rel Elf_Rel;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Rela Elf_Rela;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Dyn Elf_Dyn;
+  typedef typename ELFT::Rel Elf_Rel;
+  typedef typename ELFT::Rela Elf_Rela;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
 
   // The .dynamic section contains information for the dynamic linker.
   // The section consists of fixed size entries, which consist of
@@ -477,7 +475,7 @@ private:
 // http://www.airs.com/blog/archives/462 (".eh_frame_hdr")
 template <class ELFT>
 class EhFrameHeader final : public OutputSectionBase<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   EhFrameHeader();
@@ -519,8 +517,8 @@ private:
 // globally accessible. Writer initializes them, so don't use them
 // until Writer is initialized.
 template <class ELFT> struct Out {
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Phdr Elf_Phdr;
+  typedef typename ELFT::uint uintX_t;
+  typedef typename ELFT::Phdr Elf_Phdr;
   static BuildIdSection<ELFT> *BuildId;
   static DynamicSection<ELFT> *Dynamic;
   static EhFrameHeader<ELFT> *EhFrameHdr;
@@ -566,7 +564,7 @@ template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::ShStrTab;
 template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
-template <class ELFT> typename Out<ELFT>::Elf_Phdr *Out<ELFT>::TlsPhdr;
+template <class ELFT> typename ELFT::Phdr *Out<ELFT>::TlsPhdr;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ElfHeader;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
 

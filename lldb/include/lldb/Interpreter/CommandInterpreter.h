@@ -201,7 +201,7 @@ class CommandInterpreter :
     public IOHandlerDelegate
 {
 public:
-    typedef std::map<std::string, CommandAlias::UniquePointer> CommandAliasMap;
+    typedef std::map<std::string, lldb::CommandObjectSP> CommandAliasMap;
     
     enum
     {

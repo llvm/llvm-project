@@ -1578,8 +1578,8 @@ uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
 
 template <class ELFT>
 void MipsTargetInfo<ELFT>::writeGotHeader(uint8_t *Buf) const {
-  typedef typename ELFFile<ELFT>::Elf_Off Elf_Off;
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Off Elf_Off;
+  typedef typename ELFT::uint uintX_t;
 
   // Set the MSB of the second GOT slot. This is not required by any
   // MIPS ABI documentation, though.
@@ -1793,7 +1793,7 @@ bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
 // _gp is a MIPS-specific ABI-defined symbol which points to
 // a location that is relative to GOT. This function returns
 // the value for the symbol.
-template <class ELFT> typename ELFFile<ELFT>::uintX_t getMipsGpAddr() {
+template <class ELFT> typename ELFT::uint getMipsGpAddr() {
   unsigned GPOffset = 0x7ff0;
   if (uint64_t V = Out<ELFT>::Got->getVA())
     return V + GPOffset;

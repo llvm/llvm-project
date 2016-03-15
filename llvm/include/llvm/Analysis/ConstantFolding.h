@@ -55,6 +55,19 @@ Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
                                    const DataLayout &DL,
                                    const TargetLibraryInfo *TLI = nullptr);
 
+/// ConstantFoldInstOperands - Attempt to constant fold an instruction with the
+/// specified operands.  If successful, the constant result is returned, if not,
+/// null is returned.  Note that this function can fail when attempting to
+/// fold instructions like loads and stores, which have no constant expression
+/// form.
+///
+/// This function doesn't work for compares (use ConstantFoldCompareInstOperands
+/// for this) and GEPs.
+Constant *ConstantFoldInstOperands(unsigned Opcode, Type *DestTy,
+                                   ArrayRef<Constant *> Ops,
+                                   const DataLayout &DL,
+                                   const TargetLibraryInfo *TLI = nullptr);
+
 /// ConstantFoldCompareInstOperands - Attempt to constant fold a compare
 /// instruction (icmp/fcmp) with the specified operands.  If it fails, it
 /// returns a constant expression of the specified operands.

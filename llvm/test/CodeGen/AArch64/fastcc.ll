@@ -42,12 +42,12 @@ define fastcc void @func_stack0() {
 ; CHECK-TAIL-NOT: sub sp, sp
 
   ret void
-; CHECK: mov sp, x29
+; CHECK: add sp, sp, #32
 ; CHECK-NEXT: ldp     x29, x30, [sp], #16
 ; CHECK-NEXT: ret
 
 
-; CHECK-TAIL: mov sp, x29
+; CHECK-TAIL: add sp, sp, #32
 ; CHECK-TAIL-NEXT: ldp     x29, x30, [sp], #16
 ; CHECK-TAIL-NEXT: ret
 }
@@ -91,12 +91,12 @@ define fastcc void @func_stack8([8 x i32], i32 %stacked) {
 ; CHECK-TAIL-NOT: sub sp, sp
 
   ret void
-; CHECK: mov sp, x29
+; CHECK: add sp, sp, #32
 ; CHECK-NEXT: ldp     x29, x30, [sp], #16
 ; CHECK-NEXT: ret
 
 
-; CHECK-TAIL: mov sp, x29
+; CHECK-TAIL: add sp, sp, #32
 ; CHECK-TAIL-NEXT: ldp     x29, x30, [sp], #16
 ; CHECK-TAIL-NEXT: add     sp, sp, #16
 ; CHECK-TAIL-NEXT: ret
@@ -136,11 +136,11 @@ define fastcc void @func_stack32([8 x i32], i128 %stacked0, i128 %stacked1) {
 ; CHECK-TAIL-NOT: sub sp, sp
 
   ret void
-; CHECK: mov sp, x29
+; CHECK: add sp, sp, #32
 ; CHECK-NEXT: ldp     x29, x30, [sp], #16
 ; CHECK-NEXT: ret
 
-; CHECK-TAIL: mov sp, x29
+; CHECK-TAIL: add sp, sp, #32
 ; CHECK-TAIL-NEXT: ldp     x29, x30, [sp], #16
 ; CHECK-TAIL-NEXT: add     sp, sp, #32
 ; CHECK-TAIL-NEXT: ret

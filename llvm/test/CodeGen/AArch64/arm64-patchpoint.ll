@@ -29,7 +29,7 @@ entry:
 ; CHECK:       mov x29, sp
 ; CHECK-NEXT:  sub sp, sp, #32
 ; CHECK:       Ltmp
-; CHECK:       mov sp, x29
+; CHECK:       add sp, sp, #32
 ; CHECK:       ret
 
 define void @caller_meta_leaf() {

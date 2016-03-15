@@ -750,7 +750,7 @@ entry:
 ; 32-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
 ; FIXME: This instruction is redundant.
 ; 32-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 32-CMP-DAG:    bnez     $[[T4]],
+; 32-CMP-DAG:    bnezc    $[[T4]],
 
 ; 64-C-DAG:      add.s    $[[T0:f[0-9]+]], $f13, $f12
 ; 64-C-DAG:      lwc1     $[[T1:f[0-9]+]], %got_ofst($CPI32_0)(
@@ -763,7 +763,7 @@ entry:
 ; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
 ; FIXME: This instruction is redundant.
 ; 64-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 64-CMP-DAG:    bnez     $[[T4]],
+; 64-CMP-DAG:    bnezc    $[[T4]],
 
   %add = fadd fast float %at, %angle
   %cmp = fcmp ogt float %add, 1.000000e+00
@@ -794,7 +794,7 @@ entry:
 ; 32-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
 ; FIXME: This instruction is redundant.
 ; 32-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 32-CMP-DAG:    bnez     $[[T4]],
+; 32-CMP-DAG:    bnezc    $[[T4]],
 
 ; 64-C-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
 ; 64-C-DAG:      ldc1     $[[T1:f[0-9]+]], %got_ofst($CPI33_0)(
@@ -807,7 +807,7 @@ entry:
 ; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
 ; FIXME: This instruction is redundant.
 ; 64-CMP-DAG:    andi     $[[T4:[0-9]+]], $[[T3]], 1
-; 64-CMP-DAG:    bnez     $[[T4]],
+; 64-CMP-DAG:    bnezc    $[[T4]],
 
   %add = fadd fast double %at, %angle
   %cmp = fcmp ogt double %add, 1.000000e+00

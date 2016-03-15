@@ -15,7 +15,7 @@
 #define LLVM_BITCODE_READERWRITER_H
 
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/FunctionInfo.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -74,25 +74,25 @@ namespace llvm {
   bool hasGlobalValueSummary(MemoryBufferRef Buffer,
                              DiagnosticHandlerFunction DiagnosticHandler);
 
-  /// Parse the specified bitcode buffer, returning the function info index.
-  /// If IsLazy is true, parse the entire function summary into
-  /// the index. Otherwise skip the function summary section, and only create
-  /// an index object with a map from function name to function summary offset.
-  /// The index is used to perform lazy function summary reading later.
-  ErrorOr<std::unique_ptr<FunctionInfoIndex>>
-  getFunctionInfoIndex(MemoryBufferRef Buffer,
-                       DiagnosticHandlerFunction DiagnosticHandler,
-                       bool IsLazy = false);
+  /// Parse the specified bitcode buffer, returning the module summary index.
+  /// If IsLazy is true, parse the entire module summary into
+  /// the index. Otherwise skip the module summary section, and only create
+  /// an index object with a map from value name to the value's summary offset.
+  /// The index is used to perform lazy summary reading later.
+  ErrorOr<std::unique_ptr<ModuleSummaryIndex>>
+  getModuleSummaryIndex(MemoryBufferRef Buffer,
+                        DiagnosticHandlerFunction DiagnosticHandler,
+                        bool IsLazy = false);
 
-  /// This method supports lazy reading of function summary data from the
+  /// This method supports lazy reading of summary data from the
   /// combined index during function importing. When reading the combined index
-  /// file, getFunctionInfoIndex is first invoked with IsLazy=true.
-  /// Then this method is called for each function considered for importing,
-  /// to parse the summary information for the given function name into
+  /// file, getModuleSummaryIndex is first invoked with IsLazy=true.
+  /// Then this method is called for each value considered for importing,
+  /// to parse the summary information for the given value name into
   /// the index.
-  std::error_code readFunctionSummary(
+  std::error_code readGlobalValueSummary(
       MemoryBufferRef Buffer, DiagnosticHandlerFunction DiagnosticHandler,
-      StringRef FunctionName, std::unique_ptr<FunctionInfoIndex> Index);
+      StringRef ValueName, std::unique_ptr<ModuleSummaryIndex> Index);
 
   /// \brief Write the specified module to the specified raw output stream.
   ///
@@ -112,7 +112,7 @@ namespace llvm {
   /// Write the specified module summary index to the given raw output stream,
   /// where it will be written in a new bitcode block. This is used when
   /// writing the combined index file for ThinLTO.
-  void WriteIndexToFile(const FunctionInfoIndex &Index, raw_ostream &Out);
+  void WriteIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out);
 
   /// isBitcodeWrapper - Return true if the given bytes are the magic bytes
   /// for an LLVM IR bitcode wrapper.

@@ -244,7 +244,7 @@ void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
 }
 
 template <class ELFT>
-typename ELFFile<ELFT>::uintX_t DynamicReloc<ELFT>::getOffset() const {
+typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
   switch (OKind) {
   case Off_GTlsIndex:
     return Out<ELFT>::Got->getGlobalDynAddr(*Sym);
@@ -1027,7 +1027,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
 }
 
 template <class ELFT>
-static typename ELFFile<ELFT>::uintX_t readEntryLength(ArrayRef<uint8_t> D) {
+static typename ELFT::uint readEntryLength(ArrayRef<uint8_t> D) {
   const endianness E = ELFT::TargetEndianness;
   if (D.size() < 4)
     fatal("CIE/FDE too small");
@@ -1140,9 +1140,8 @@ void EHOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 }
 
 template <class ELFT>
-static typename ELFFile<ELFT>::uintX_t writeAlignedCieOrFde(StringRef Data,
-                                                            uint8_t *Buf) {
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+static typename ELFT::uint writeAlignedCieOrFde(StringRef Data, uint8_t *Buf) {
+  typedef typename ELFT::uint uintX_t;
   const endianness E = ELFT::TargetEndianness;
   uint64_t Len = alignTo(Data.size(), sizeof(uintX_t));
   write32<E>(Buf, Len - 4);
@@ -1401,8 +1400,7 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
 }
 
 template <class ELFT>
-static const typename llvm::object::ELFFile<ELFT>::Elf_Sym *
-getElfSym(SymbolBody &Body) {
+static const typename ELFT::Sym *getElfSym(SymbolBody &Body) {
   if (auto *EBody = dyn_cast<DefinedElf<ELFT>>(&Body))
     return &EBody->Sym;
   if (auto *EBody = dyn_cast<UndefinedElf<ELFT>>(&Body))

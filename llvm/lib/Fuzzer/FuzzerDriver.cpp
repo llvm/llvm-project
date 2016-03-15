@@ -270,6 +270,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
     return RunInMultipleProcesses(Args, Flags.workers, Flags.jobs);
 
   const size_t kMaxSaneLen = 1 << 20;
+  const size_t kMinDefaultLen = 64;
   Fuzzer::FuzzingOptions Options;
   Options.Verbosity = Flags.verbosity;
   Options.MaxLen = Flags.max_len;
@@ -373,7 +374,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
 
   if (Options.MaxLen == 0)
     F.SetMaxLen(
-        std::min(std::max(64UL, 2 * F.MaxUnitSizeInCorpus()), kMaxSaneLen));
+        std::min(std::max(kMinDefaultLen, F.MaxUnitSizeInCorpus()), kMaxSaneLen));
 
   if (F.CorpusSize() == 0)
     F.AddToCorpus(Unit());  // Can't fuzz empty corpus, so add an empty input.

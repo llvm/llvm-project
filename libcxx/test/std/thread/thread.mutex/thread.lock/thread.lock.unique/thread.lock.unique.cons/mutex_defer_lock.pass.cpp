@@ -17,11 +17,22 @@
 
 #include <mutex>
 #include <cassert>
+#include "nasty_containers.hpp"
 
 int main()
 {
-    std::mutex m;
-    std::unique_lock<std::mutex> lk(m, std::defer_lock);
-    assert(lk.mutex() == &m);
+    {
+    typedef std::mutex M;
+    M m;
+    std::unique_lock<M> lk(m, std::defer_lock);
+    assert(lk.mutex() == std::addressof(m));
     assert(lk.owns_lock() == false);
+    }
+    {
+    typedef nasty_mutex M;
+    M m;
+    std::unique_lock<M> lk(m, std::defer_lock);
+    assert(lk.mutex() == std::addressof(m));
+    assert(lk.owns_lock() == false);
+    }
 }

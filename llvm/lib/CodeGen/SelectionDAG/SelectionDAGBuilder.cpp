@@ -2954,8 +2954,8 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
 
     // Pad both vectors with undefs to make them the same length as the mask.
     unsigned NumConcat = MaskNumElts / SrcNumElts;
-    bool Src1U = Src1.getOpcode() == ISD::UNDEF;
-    bool Src2U = Src2.getOpcode() == ISD::UNDEF;
+    bool Src1U = Src1.isUndef();
+    bool Src2U = Src2.isUndef();
     SDValue UndefVal = DAG.getUNDEF(SrcVT);
 
     SmallVector<SDValue, 8> MOps1(NumConcat, UndefVal);

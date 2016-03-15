@@ -48,8 +48,7 @@ ArrayRef<uint8_t> InputSectionBase<ELFT>::getSectionData() const {
 }
 
 template <class ELFT>
-typename ELFFile<ELFT>::uintX_t
-InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
+typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
   switch (SectionKind) {
   case Regular:
     return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
@@ -66,8 +65,7 @@ InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
 }
 
 template <class ELFT>
-typename ELFFile<ELFT>::uintX_t
-InputSectionBase<ELFT>::getOffset(const Elf_Sym &Sym) {
+typename ELFT::uint InputSectionBase<ELFT>::getOffset(const Elf_Sym &Sym) {
   return getOffset(Sym.st_value);
 }
 
@@ -362,8 +360,7 @@ bool EHInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT>
-typename EHInputSection<ELFT>::uintX_t
-EHInputSection<ELFT>::getOffset(uintX_t Offset) {
+typename ELFT::uint EHInputSection<ELFT>::getOffset(uintX_t Offset) {
   // The file crtbeginT.o has relocations pointing to the start of an empty
   // .eh_frame that is known to be the first in the link. It does that to
   // identify the start of the output .eh_frame. Handle this special case.
@@ -389,9 +386,8 @@ bool MergeInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT>
-std::pair<std::pair<typename ELFFile<ELFT>::uintX_t,
-                    typename ELFFile<ELFT>::uintX_t> *,
-          typename ELFFile<ELFT>::uintX_t>
+std::pair<std::pair<typename ELFT::uint, typename ELFT::uint> *,
+          typename ELFT::uint>
 SplitInputSection<ELFT>::getRangeAndSize(uintX_t Offset) {
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
@@ -411,8 +407,7 @@ SplitInputSection<ELFT>::getRangeAndSize(uintX_t Offset) {
 }
 
 template <class ELFT>
-typename MergeInputSection<ELFT>::uintX_t
-MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
+typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
   std::pair<std::pair<uintX_t, uintX_t> *, uintX_t> T =
       this->getRangeAndSize(Offset);
   std::pair<uintX_t, uintX_t> *I = T.first;

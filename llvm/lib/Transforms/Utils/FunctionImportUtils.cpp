@@ -68,7 +68,7 @@ bool FunctionImportGlobalProcessing::doPromoteLocalToGlobal(
   // For now we are conservative in determining which variables are not
   // address taken by checking the unnamed addr flag. To be more aggressive,
   // the address taken information must be checked earlier during parsing
-  // of the module and recorded in the function index for use when importing
+  // of the module and recorded in the summary index for use when importing
   // from that module.
   auto *GVar = dyn_cast<GlobalVariable>(SGV);
   if (GVar && GVar->isConstant() && GVar->hasUnnamedAddr())
@@ -76,7 +76,7 @@ bool FunctionImportGlobalProcessing::doPromoteLocalToGlobal(
 
   // Eventually we only need to promote functions in the exporting module that
   // are referenced by a potentially exported function (i.e. one that is in the
-  // function index).
+  // summary index).
   return true;
 }
 
@@ -88,7 +88,7 @@ std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV) {
   // avoid naming conflicts between locals imported from different modules.
   if (SGV->hasLocalLinkage() &&
       (doPromoteLocalToGlobal(SGV) || isPerformingImport()))
-    return FunctionInfoIndex::getGlobalNameForLocal(
+    return ModuleSummaryIndex::getGlobalNameForLocal(
         SGV->getName(),
         ImportIndex.getModuleId(SGV->getParent()->getModuleIdentifier()));
   return SGV->getName();
@@ -231,7 +231,7 @@ bool FunctionImportGlobalProcessing::run() {
   return false;
 }
 
-bool llvm::renameModuleForThinLTO(Module &M, const FunctionInfoIndex &Index) {
+bool llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index) {
   FunctionImportGlobalProcessing ThinLTOProcessing(M, Index);
   return ThinLTOProcessing.run();
 }

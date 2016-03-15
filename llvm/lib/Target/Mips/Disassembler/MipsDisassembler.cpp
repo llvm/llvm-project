@@ -362,11 +362,6 @@ static DecodeStatus DecodeAddiur2Simm7(MCInst &Inst,
                                        uint64_t Address,
                                        const void *Decoder);
 
-static DecodeStatus DecodeUImm6Lsl2(MCInst &Inst,
-                                    unsigned Value,
-                                    uint64_t Address,
-                                    const void *Decoder);
-
 static DecodeStatus DecodeLiSimm7(MCInst &Inst,
                                   unsigned Value,
                                   uint64_t Address,
@@ -382,9 +377,18 @@ static DecodeStatus DecodeSimm16(MCInst &Inst,
                                  uint64_t Address,
                                  const void *Decoder);
 
+template <unsigned Bits, int Offset, int Scale>
+static DecodeStatus DecodeUImmWithOffsetAndScale(MCInst &Inst, unsigned Value,
+                                                 uint64_t Address,
+                                                 const void *Decoder);
+
 template <unsigned Bits, int Offset>
 static DecodeStatus DecodeUImmWithOffset(MCInst &Inst, unsigned Value,
-                                         uint64_t Address, const void *Decoder);
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  return DecodeUImmWithOffsetAndScale<Bits, Offset, 1>(Inst, Value, Address,
+                                                       Decoder);
+}
 
 template <unsigned Bits, int Offset = 0>
 static DecodeStatus DecodeSImmWithOffset(MCInst &Inst, unsigned Value,
@@ -406,9 +410,6 @@ static DecodeStatus DecodeSimm9SP(MCInst &Inst, unsigned Insn,
 
 static DecodeStatus DecodeANDI16Imm(MCInst &Inst, unsigned Insn,
                                     uint64_t Address, const void *Decoder);
-
-static DecodeStatus DecodeUImm5lsl2(MCInst &Inst, unsigned Insn,
-                                   uint64_t Address, const void *Decoder);
 
 static DecodeStatus DecodeSimm23Lsl2(MCInst &Inst, unsigned Insn,
                                      uint64_t Address, const void *Decoder);
@@ -1896,14 +1897,6 @@ static DecodeStatus DecodeAddiur2Simm7(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeUImm6Lsl2(MCInst &Inst,
-                                    unsigned Value,
-                                    uint64_t Address,
-                                    const void *Decoder) {
-  Inst.addOperand(MCOperand::createImm(Value << 2));
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus DecodeLiSimm7(MCInst &Inst,
                                   unsigned Value,
                                   uint64_t Address,
@@ -1931,11 +1924,12 @@ static DecodeStatus DecodeSimm16(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-template <unsigned Bits, int Offset>
-static DecodeStatus DecodeUImmWithOffset(MCInst &Inst, unsigned Value,
-                                         uint64_t Address,
-                                         const void *Decoder) {
+template <unsigned Bits, int Offset, int Scale>
+static DecodeStatus DecodeUImmWithOffsetAndScale(MCInst &Inst, unsigned Value,
+                                                 uint64_t Address,
+                                                 const void *Decoder) {
   Value &= ((1 << Bits) - 1);
+  Value *= Scale;
   Inst.addOperand(MCOperand::createImm(Value + Offset));
   return MCDisassembler::Success;
 }
@@ -1993,12 +1987,6 @@ static DecodeStatus DecodeANDI16Imm(MCInst &Inst, unsigned Insn,
   int32_t DecodedValues[] = {128, 1, 2, 3, 4, 7, 8, 15, 16, 31, 32, 63, 64,
                              255, 32768, 65535};
   Inst.addOperand(MCOperand::createImm(DecodedValues[Insn]));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeUImm5lsl2(MCInst &Inst, unsigned Insn,
-                                    uint64_t Address, const void *Decoder) {
-  Inst.addOperand(MCOperand::createImm(Insn << 2));
   return MCDisassembler::Success;
 }
 

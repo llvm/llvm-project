@@ -263,6 +263,11 @@ public:
     return *insert(ValueT(Key)).first;
   }
 
+  ValueT pop_back_val() {
+    // Sparse does not need to be cleared, see find().
+    return Dense.pop_back_val();
+  }
+
   /// erase - Erases an existing element identified by a valid iterator.
   ///
   /// This invalidates all iterators, but erase() returns an iterator pointing

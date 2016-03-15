@@ -128,6 +128,8 @@ CommandObjectHelp::DoExecute (Args& command, CommandReturnObject &result)
             {
                 sub_command = command.GetArgumentAtIndex(i);
                 matches.Clear();
+                if (sub_cmd_obj->IsAlias())
+                    sub_cmd_obj = ((CommandAlias*)sub_cmd_obj)->GetUnderlyingCommand().get();
                 if (! sub_cmd_obj->IsMultiwordObject ())
                 {
                     all_okay = false;

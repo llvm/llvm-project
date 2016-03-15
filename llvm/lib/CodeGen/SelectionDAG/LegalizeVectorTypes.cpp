@@ -370,7 +370,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_UNDEF(SDNode *N) {
 SDValue DAGTypeLegalizer::ScalarizeVecRes_VECTOR_SHUFFLE(SDNode *N) {
   // Figure out if the scalar is the LHS or RHS and return it.
   SDValue Arg = N->getOperand(2).getOperand(0);
-  if (Arg.getOpcode() == ISD::UNDEF)
+  if (Arg.isUndef())
     return DAG.getUNDEF(N->getValueType(0).getVectorElementType());
   unsigned Op = !cast<ConstantSDNode>(Arg)->isNullValue();
   return GetScalarizedVector(N->getOperand(Op));
@@ -619,12 +619,6 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::VECTOR_SHUFFLE:
     SplitVecRes_VECTOR_SHUFFLE(cast<ShuffleVectorSDNode>(N), Lo, Hi);
-    break;
-
-  case ISD::ANY_EXTEND_VECTOR_INREG:
-  case ISD::SIGN_EXTEND_VECTOR_INREG:
-  case ISD::ZERO_EXTEND_VECTOR_INREG:
-    SplitVecRes_ExtVecInRegOp(N, Lo, Hi);
     break;
 
   case ISD::BITREVERSE:
@@ -921,39 +915,6 @@ void DAGTypeLegalizer::SplitVecRes_InregOp(SDNode *N, SDValue &Lo,
                    DAG.getValueType(LoVT));
   Hi = DAG.getNode(N->getOpcode(), dl, LHSHi.getValueType(), LHSHi,
                    DAG.getValueType(HiVT));
-}
-
-void DAGTypeLegalizer::SplitVecRes_ExtVecInRegOp(SDNode *N, SDValue &Lo,
-                                                 SDValue &Hi) {
-  unsigned Opcode = N->getOpcode();
-  SDValue N0 = N->getOperand(0);
-
-  SDLoc dl(N);
-  SDValue InLo, InHi;
-  GetSplitVector(N0, InLo, InHi);
-  EVT InLoVT = InLo.getValueType();
-  unsigned InNumElements = InLoVT.getVectorNumElements();
-
-  EVT OutLoVT, OutHiVT;
-  std::tie(OutLoVT, OutHiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
-  unsigned OutNumElements = OutLoVT.getVectorNumElements();
-  assert((2 * OutNumElements) <= InNumElements &&
-         "Illegal extend vector in reg split");
-
-  // *_EXTEND_VECTOR_INREG instructions extend the lowest elements of the
-  // input vector (i.e. we only use InLo):
-  // OutLo will extend the first OutNumElements from InLo.
-  // OutHi will extend the next OutNumElements from InLo.
-
-  // Shuffle the elements from InLo for OutHi into the bottom elements to
-  // create a 'fake' InHi.
-  SmallVector<int, 8> SplitHi(InNumElements, -1);
-  for (unsigned i = 0; i != OutNumElements; ++i)
-    SplitHi[i] = i + OutNumElements;
-  InHi = DAG.getVectorShuffle(InLoVT, dl, InLo, DAG.getUNDEF(InLoVT), SplitHi);
-
-  Lo = DAG.getNode(Opcode, dl, OutLoVT, InLo);
-  Hi = DAG.getNode(Opcode, dl, OutHiVT, InHi);
 }
 
 void DAGTypeLegalizer::SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo,
@@ -2585,7 +2546,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
       // The inputs and the result are widen to the same value.
       unsigned i;
       for (i=1; i < NumOperands; ++i)
-        if (N->getOperand(i).getOpcode() != ISD::UNDEF)
+        if (!N->getOperand(i).isUndef())
           break;
 
       if (i == NumOperands)

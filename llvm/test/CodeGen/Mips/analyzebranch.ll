@@ -19,7 +19,7 @@ entry:
 ; GPR:           cmp.lt.d  $[[FGRCC:f[0-9]+]], $[[Z]], $f12
 ; GPR:           mfc1      $[[GPRCC:[0-9]+]], $[[FGRCC]]
 ; GPR-NOT:       not       $[[GPRCC]], $[[GPRCC]]
-; GPR:           bnez      $[[GPRCC]], $BB
+; GPR:           bnezc     $[[GPRCC]], $BB
 
   %cmp = fcmp ogt double %a, 0.000000e+00
   br i1 %cmp, label %if.end6, label %if.else
@@ -50,7 +50,8 @@ entry:
 ; GPR:           cmp.eq.s $[[FGRCC:f[0-9]+]], $f12, $[[Z]]
 ; GPR:           mfc1     $[[GPRCC:[0-9]+]], $[[FGRCC]]
 ; GPR-NOT:       not      $[[GPRCC]], $[[GPRCC]]
-; GPR:           beqz     $[[GPRCC]], $BB
+; 64-GPR         beqzc    $[[GPRCC]], $BB
+; 32-GPR         beqz     $[[GPRCC]], $BB
 
   %cmp = fcmp une float %f, 0.000000e+00
   br i1 %cmp, label %if.then, label %if.end
