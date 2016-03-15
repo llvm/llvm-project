@@ -9,6 +9,8 @@
 
 #include "lldb/Interpreter/CommandAlias.h"
 
+#include "llvm/Support/ErrorHandling.h"
+
 #include "lldb/Core/StreamString.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -70,22 +72,113 @@ ProcessAliasOptionsArgs (lldb::CommandObjectSP &cmd_obj_sp,
     return success;
 }
 
-CommandAlias::UniquePointer
-CommandAlias::GetCommandAlias (lldb::CommandObjectSP cmd_sp,
-                               const char *options_args)
+CommandAlias::CommandAlias (CommandInterpreter &interpreter,
+                            lldb::CommandObjectSP cmd_sp,
+                            const char *options_args,
+                            const char *name,
+                            const char *help,
+                            const char *syntax,
+                            uint32_t flags) :
+    CommandObject(interpreter,
+                  name,
+                  help,
+                  syntax,
+                  flags),
+m_underlying_command_sp(),
+m_option_args_sp(new OptionArgVector),
+m_is_dashdash_alias(eLazyBoolCalculate)
 {
-    CommandAlias::UniquePointer ret_val(nullptr);
-    OptionArgVectorSP opt_args_sp(new OptionArgVector);
-    if (ProcessAliasOptionsArgs(cmd_sp, options_args, opt_args_sp))
-        ret_val.reset(new CommandAlias(cmd_sp, opt_args_sp));
-    return ret_val;
+    if (ProcessAliasOptionsArgs(cmd_sp, options_args, m_option_args_sp))
+    {
+        m_underlying_command_sp = cmd_sp;
+        for (int i = 0;
+             auto cmd_entry = m_underlying_command_sp->GetArgumentEntryAtIndex(i);
+             i++)
+        {
+            m_arguments.push_back(*cmd_entry);
+        }
+        if (!help || !help[0])
+        {
+            StreamString sstr;
+            StreamString translation_and_help;
+            GetAliasExpansion(sstr);
+            
+            translation_and_help.Printf ("(%s)  %s", sstr.GetData(), GetUnderlyingCommand()->GetHelp());
+            SetHelp(translation_and_help.GetData());
+        }
+    }
 }
 
-CommandAlias::CommandAlias (lldb::CommandObjectSP cmd_sp,
-                            OptionArgVectorSP args_sp) :
-m_underlying_command_sp(cmd_sp),
-m_option_args_sp(args_sp)
+bool
+CommandAlias::WantsRawCommandString()
 {
+    if (IsValid())
+        return m_underlying_command_sp->WantsRawCommandString();
+    return false;
+}
+
+bool
+CommandAlias::WantsCompletion()
+{
+    if (IsValid())
+        return m_underlying_command_sp->WantsCompletion();
+    return false;
+}
+
+int
+CommandAlias::HandleCompletion (Args &input,
+                  int &cursor_index,
+                  int &cursor_char_position,
+                  int match_start_point,
+                  int max_return_elements,
+                  bool &word_complete,
+                  StringList &matches)
+{
+    if (IsValid())
+        return m_underlying_command_sp->HandleCompletion(input,
+                                                         cursor_index,
+                                                         cursor_char_position,
+                                                         match_start_point,
+                                                         max_return_elements,
+                                                         word_complete,
+                                                         matches);
+    return -1;
+}
+
+int
+CommandAlias::HandleArgumentCompletion (Args &input,
+                          int &cursor_index,
+                          int &cursor_char_position,
+                          OptionElementVector &opt_element_vector,
+                          int match_start_point,
+                          int max_return_elements,
+                          bool &word_complete,
+                          StringList &matches)
+{
+    if (IsValid())
+        return m_underlying_command_sp->HandleArgumentCompletion(input,
+                                                                 cursor_index,
+                                                                 cursor_char_position,
+                                                                 opt_element_vector,
+                                                                 match_start_point,
+                                                                 max_return_elements,
+                                                                 word_complete,
+                                                                 matches);
+    return -1;
+}
+
+Options*
+CommandAlias::GetOptions()
+{
+    if (IsValid())
+        return m_underlying_command_sp->GetOptions();
+    return nullptr;
+}
+
+bool
+CommandAlias::Execute(const char *args_string, CommandReturnObject &result)
+{
+    llvm_unreachable("CommandAlias::Execute is not to be called");
 }
 
 void
@@ -120,4 +213,49 @@ CommandAlias::GetAliasExpansion (StreamString &help_string)
     }
     
     help_string.Printf ("'");
+}
+
+bool
+CommandAlias::IsDashDashCommand ()
+{
+    if (m_is_dashdash_alias == eLazyBoolCalculate)
+    {
+        m_is_dashdash_alias = eLazyBoolNo;
+        if (IsValid())
+        {
+            for (const OptionArgPair& opt_arg : *GetOptionArguments())
+            {
+                if (opt_arg.first == "<argument>" &&
+                    !opt_arg.second.second.empty() &&
+                    llvm::StringRef(opt_arg.second.second).endswith("--"))
+                {
+                    m_is_dashdash_alias = eLazyBoolYes;
+                    break;
+                }
+            }
+        }
+    }
+    return (m_is_dashdash_alias == eLazyBoolYes);
+}
+
+// allow CommandAlias objects to provide their own help, but fallback to the info
+// for the underlying command if no customization has been provided
+const char*
+CommandAlias::GetHelp ()
+{
+    if (!m_cmd_help_short.empty())
+        return m_cmd_help_short.c_str();
+    if (IsValid())
+        return m_underlying_command_sp->GetHelp();
+    return nullptr;
+}
+
+const char*
+CommandAlias::GetHelpLong ()
+{
+    if (!m_cmd_help_long.empty())
+        return m_cmd_help_long.c_str();
+    if (IsValid())
+        return m_underlying_command_sp->GetHelpLong();
+    return nullptr;
 }

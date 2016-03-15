@@ -46,34 +46,28 @@ template <unsigned N> static void checkInt(int64_t V, uint32_t Type) {
   if (isInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Relocation " + S + " out of range");
+  error("relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkUInt(uint64_t V, uint32_t Type) {
   if (isUInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Relocation " + S + " out of range");
+  error("relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkIntUInt(uint64_t V, uint32_t Type) {
   if (isInt<N>(V) || isUInt<N>(V))
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Relocation " + S + " out of range");
+  error("relocation " + S + " out of range");
 }
 
 template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
   if ((V & (N - 1)) == 0)
     return;
   StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("Improper alignment for relocation " + S);
-}
-
-template <class ELFT> bool isGnuIFunc(const SymbolBody &S) {
-  if (auto *SS = dyn_cast<DefinedElf<ELFT>>(&S))
-    return SS->Sym.getType() == STT_GNU_IFUNC;
-  return false;
+  error("improper alignment for relocation " + S);
 }
 
 namespace {
@@ -246,7 +240,7 @@ TargetInfo *createTarget() {
     case ELF32BEKind:
       return new MipsTargetInfo<ELF32BE>();
     default:
-      fatal("Unsupported MIPS target");
+      fatal("unsupported MIPS target");
     }
   case EM_PPC:
     return new PPCTargetInfo();
@@ -255,7 +249,7 @@ TargetInfo *createTarget() {
   case EM_X86_64:
     return new X86_64TargetInfo();
   }
-  fatal("Unknown target machine");
+  fatal("unknown target machine");
 }
 
 TargetInfo::~TargetInfo() {}
@@ -278,7 +272,7 @@ bool TargetInfo::canRelaxTls(uint32_t Type, const SymbolBody *S) const {
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
   // defined.
   if (isTlsInitialExecRel(Type))
-    return !canBePreempted(*S);
+    return !S->isPreemptible();
 
   return false;
 }
@@ -315,9 +309,9 @@ bool TargetInfo::refersToGotEntry(uint32_t Type) const { return false; }
 template <class ELFT>
 TargetInfo::PltNeed TargetInfo::needsPlt(uint32_t Type,
                                          const SymbolBody &S) const {
-  if (isGnuIFunc<ELFT>(S))
+  if (S.isGnuIfunc<ELFT>())
     return Plt_Explicit;
-  if (canBePreempted(S) && needsPltImpl(Type))
+  if (S.isPreemptible() && needsPltImpl(Type))
     return Plt_Explicit;
 
   // This handles a non PIC program call to function in a shared library.
@@ -470,7 +464,7 @@ bool X86TargetInfo::needsCopyRelImpl(uint32_t Type) const {
 
 bool X86TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   if (S.IsTls && Type == R_386_TLS_GD)
-    return Target->canRelaxTls(Type, &S) && canBePreempted(S);
+    return Target->canRelaxTls(Type, &S) && S.isPreemptible();
   if (Type == R_386_TLS_GOTIE || Type == R_386_TLS_IE)
     return !canRelaxTls(Type, &S);
   return Type == R_386_GOT32 || needsPlt<ELF32LE>(Type, S);
@@ -548,7 +542,7 @@ size_t X86TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
                                const SymbolBody &S) const {
   switch (Type) {
   case R_386_TLS_GD:
-    if (canBePreempted(S))
+    if (S.isPreemptible())
       relocateTlsGdToIe(Loc, BufEnd, P, SA);
     else
       relocateTlsGdToLe(Loc, BufEnd, P, SA);
@@ -566,7 +560,7 @@ size_t X86TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     relocateOne(Loc, BufEnd, R_386_TLS_LE, P, SA);
     return 0;
   }
-  llvm_unreachable("Unknown TLS optimization");
+  llvm_unreachable("unknown TLS optimization");
 }
 
 // "Ulrich Drepper, ELF Handling For Thread-Local Storage" (5.1
@@ -732,7 +726,7 @@ bool X86_64TargetInfo::refersToGotEntry(uint32_t Type) const {
 
 bool X86_64TargetInfo::needsGot(uint32_t Type, SymbolBody &S) const {
   if (Type == R_X86_64_TLSGD)
-    return Target->canRelaxTls(Type, &S) && canBePreempted(S);
+    return Target->canRelaxTls(Type, &S) && S.isPreemptible();
   if (Type == R_X86_64_GOTTPOFF)
     return !canRelaxTls(Type, &S);
   return refersToGotEntry(Type) || needsPlt<ELF64LE>(Type, S);
@@ -902,7 +896,7 @@ size_t X86_64TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     relocateTlsIeToLe(Loc, BufEnd, P, SA);
     return 0;
   case R_X86_64_TLSGD: {
-    if (canBePreempted(S))
+    if (S.isPreemptible())
       relocateTlsGdToIe(Loc, BufEnd, P, SA);
     else
       relocateTlsGdToLe(Loc, BufEnd, P, SA);
@@ -914,7 +908,7 @@ size_t X86_64TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     // The next relocation should be against __tls_get_addr, so skip it
     return 1;
   }
-  llvm_unreachable("Unknown TLS optimization");
+  llvm_unreachable("unknown TLS optimization");
 }
 
 void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
@@ -1469,8 +1463,8 @@ size_t AArch64TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
   case R_AARCH64_TLSDESC_LD64_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12_NC:
   case R_AARCH64_TLSDESC_CALL: {
-    if (canBePreempted(S))
-      fatal("Unsupported TLS optimization");
+    if (S.isPreemptible())
+      fatal("unsupported TLS optimization");
     uint64_t X = S.getVA<ELF64LE>();
     relocateTlsGdToLe(Type, Loc, BufEnd, P, X);
     return 0;
@@ -1480,7 +1474,7 @@ size_t AArch64TargetInfo::relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
     relocateTlsIeToLe(Type, Loc, BufEnd, P, S.getVA<ELF64LE>());
     return 0;
   }
-  llvm_unreachable("Unknown TLS optimization");
+  llvm_unreachable("unknown TLS optimization");
 }
 
 // Global-Dynamic relocations can be relaxed to Local-Exec if both binary is
@@ -1519,7 +1513,7 @@ void AArch64TargetInfo::relocateTlsGdToLe(uint32_t Type, uint8_t *Loc,
     NewInst = 0xf2800000 | ((X & 0xffff) << 5);
     break;
   default:
-    llvm_unreachable("Unsupported Relocation for TLS GD to LE relax");
+    llvm_unreachable("unsupported Relocation for TLS GD to LE relax");
   }
   write32le(Loc, NewInst);
 }
@@ -1544,7 +1538,7 @@ void AArch64TargetInfo::relocateTlsIeToLe(uint32_t Type, uint8_t *Loc,
     unsigned RegNo = (Inst & 0x1f);
     NewInst = (0xf2800000 | RegNo) | ((X & 0xffff) << 5);
   } else {
-    llvm_unreachable("Invalid Relocation for TLS IE to LE Relax");
+    llvm_unreachable("invalid Relocation for TLS IE to LE Relax");
   }
   write32le(Loc, NewInst);
 }
@@ -1584,8 +1578,8 @@ uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
 
 template <class ELFT>
 void MipsTargetInfo<ELFT>::writeGotHeader(uint8_t *Buf) const {
-  typedef typename ELFFile<ELFT>::Elf_Off Elf_Off;
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Off Elf_Off;
+  typedef typename ELFT::uint uintX_t;
 
   // Set the MSB of the second GOT slot. This is not required by any
   // MIPS ABI documentation, though.
@@ -1799,17 +1793,12 @@ bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
 // _gp is a MIPS-specific ABI-defined symbol which points to
 // a location that is relative to GOT. This function returns
 // the value for the symbol.
-template <class ELFT> typename ELFFile<ELFT>::uintX_t getMipsGpAddr() {
+template <class ELFT> typename ELFT::uint getMipsGpAddr() {
   unsigned GPOffset = 0x7ff0;
   if (uint64_t V = Out<ELFT>::Got->getVA())
     return V + GPOffset;
   return 0;
 }
-
-template bool isGnuIFunc<ELF32LE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF32BE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF64LE>(const SymbolBody &S);
-template bool isGnuIFunc<ELF64BE>(const SymbolBody &S);
 
 template uint32_t getMipsGpAddr<ELF32LE>();
 template uint32_t getMipsGpAddr<ELF32BE>();

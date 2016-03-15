@@ -27,14 +27,21 @@ type SysProcAttr struct {
 	Credential  *Credential    // Credential.
 	Ptrace      bool           // Enable tracing.
 	Setsid      bool           // Create session.
-	Setpgid     bool           // Set process group ID to new pid (SYSV setpgrp)
+	Setpgid     bool           // Set process group ID to Pgid, or, if Pgid == 0, to new pid.
 	Setctty     bool           // Set controlling terminal to fd Ctty (only meaningful if Setsid is set)
 	Noctty      bool           // Detach fd 0 from controlling terminal
-	Ctty        int            // Controlling TTY fd (Linux only)
+	Ctty        int            // Controlling TTY fd
+	Foreground  bool           // Place child's process group in foreground. (Implies Setpgid. Uses Ctty as fd of controlling TTY)
+	Pgid        int            // Child's process group ID if Setpgid.
 	Pdeathsig   Signal         // Signal that the process will get when its parent dies (Linux only)
 	Cloneflags  uintptr        // Flags for clone calls (Linux only)
 	UidMappings []SysProcIDMap // User ID mappings for user namespaces.
 	GidMappings []SysProcIDMap // Group ID mappings for user namespaces.
+	// GidMappingsEnableSetgroups enabling setgroups syscall.
+	// If false, then setgroups syscall will be disabled for the child process.
+	// This parameter is no-op if GidMappings == nil. Otherwise for unprivileged
+	// users this should be set to false for mappings work.
+	GidMappingsEnableSetgroups bool
 }
 
 // Implemented in runtime package.
@@ -61,6 +68,9 @@ func forkAndExecInChild(argv0 *byte, argv, envv []*byte, chroot, dir *byte, attr
 		i      int
 		p      [2]int
 	)
+
+	// Record parent PID so child can test if it has died.
+	ppid := raw_getpid()
 
 	// Guard against side effects of shuffling fds below.
 	// Make sure that nextfd is beyond any currently open files so
@@ -135,27 +145,6 @@ func forkAndExecInChild(argv0 *byte, argv, envv []*byte, chroot, dir *byte, attr
 		}
 	}
 
-	// Parent death signal
-	if sys.Pdeathsig != 0 {
-		_, err1 = raw_prctl(PR_SET_PDEATHSIG, int(sys.Pdeathsig), 0, 0, 0)
-		if err1 != 0 {
-			goto childerror
-		}
-
-		// Signal self if parent is already dead. This might cause a
-		// duplicate signal in rare cases, but it won't matter when
-		// using SIGKILL.
-		ppid := Getppid()
-		if ppid == 1 {
-			pid = Getpid()
-			err2 := Kill(pid, sys.Pdeathsig)
-			if err2 != nil {
-				err1 = err2.(Errno)
-				goto childerror
-			}
-		}
-	}
-
 	// Enable tracing if requested.
 	if sys.Ptrace {
 		err1 = raw_ptrace(_PTRACE_TRACEME, 0, nil, nil)
@@ -173,8 +162,22 @@ func forkAndExecInChild(argv0 *byte, argv, envv []*byte, chroot, dir *byte, attr
 	}
 
 	// Set process group
-	if sys.Setpgid {
-		err1 = raw_setpgid(0, 0)
+	if sys.Setpgid || sys.Foreground {
+		// Place child in process group.
+		err1 = raw_setpgid(0, sys.Pgid)
+		if err1 != 0 {
+			goto childerror
+		}
+	}
+
+	if sys.Foreground {
+		pgrp := Pid_t(sys.Pgid)
+		if pgrp == 0 {
+			pgrp = raw_getpid()
+		}
+
+		// Place process group in foreground.
+		_, err1 = raw_ioctl_ptr(sys.Ctty, TIOCSPGRP, unsafe.Pointer(&pgrp))
 		if err1 != 0 {
 			goto childerror
 		}
@@ -191,36 +194,19 @@ func forkAndExecInChild(argv0 *byte, argv, envv []*byte, chroot, dir *byte, attr
 	// User and groups
 	if cred := sys.Credential; cred != nil {
 		ngroups := len(cred.Groups)
-		if ngroups == 0 {
-			err2 := setgroups(0, nil)
-			if err2 == nil {
-				err1 = 0
-			} else {
-				err1 = err2.(Errno)
-			}
-		} else {
-			groups := make([]Gid_t, ngroups)
-			for i, v := range cred.Groups {
-				groups[i] = Gid_t(v)
-			}
-			err2 := setgroups(ngroups, &groups[0])
-			if err2 == nil {
-				err1 = 0
-			} else {
-				err1 = err2.(Errno)
+		if ngroups > 0 {
+			groups := unsafe.Pointer(&cred.Groups[0])
+			err1 = raw_setgroups(ngroups, groups)
+			if err1 != 0 {
+				goto childerror
 			}
 		}
+		err1 = raw_setgid(int(cred.Gid))
 		if err1 != 0 {
 			goto childerror
 		}
-		err2 := Setgid(int(cred.Gid))
-		if err2 != nil {
-			err1 = err2.(Errno)
-			goto childerror
-		}
-		err2 = Setuid(int(cred.Uid))
-		if err2 != nil {
-			err1 = err2.(Errno)
+		err1 = raw_setuid(int(cred.Uid))
+		if err1 != 0 {
 			goto childerror
 		}
 	}
@@ -230,6 +216,26 @@ func forkAndExecInChild(argv0 *byte, argv, envv []*byte, chroot, dir *byte, attr
 		err1 = raw_chdir(dir)
 		if err1 != 0 {
 			goto childerror
+		}
+	}
+
+	// Parent death signal
+	if sys.Pdeathsig != 0 {
+		_, err1 = raw_prctl(PR_SET_PDEATHSIG, int(sys.Pdeathsig), 0, 0, 0)
+		if err1 != 0 {
+			goto childerror
+		}
+
+		// Signal self if parent is already dead. This might cause a
+		// duplicate signal in rare cases, but it won't matter when
+		// using SIGKILL.
+		r1 := raw_getppid()
+		if r1 != ppid {
+			pid := raw_getpid()
+			err1 = raw_kill(pid, sys.Pdeathsig)
+			if err1 != 0 {
+				goto childerror
+			}
 		}
 	}
 
@@ -298,9 +304,9 @@ func forkAndExecInChild(argv0 *byte, argv, envv []*byte, chroot, dir *byte, attr
 		}
 	}
 
-	// Make fd 0 the tty
-	if sys.Setctty && sys.Ctty >= 0 {
-		_, err1 = raw_ioctl(0, TIOCSCTTY, sys.Ctty)
+	// Set the controlling TTY to Ctty
+	if sys.Setctty {
+		_, err1 = raw_ioctl(sys.Ctty, TIOCSCTTY, 0)
 		if err1 != 0 {
 			goto childerror
 		}
@@ -364,6 +370,32 @@ func writeIDMappings(path string, idMap []SysProcIDMap) error {
 	return nil
 }
 
+// writeSetgroups writes to /proc/PID/setgroups "deny" if enable is false
+// and "allow" if enable is true.
+// This is needed since kernel 3.19, because you can't write gid_map without
+// disabling setgroups() system call.
+func writeSetgroups(pid int, enable bool) error {
+	sgf := "/proc/" + itoa(pid) + "/setgroups"
+	fd, err := Open(sgf, O_RDWR, 0)
+	if err != nil {
+		return err
+	}
+
+	var data []byte
+	if enable {
+		data = []byte("allow")
+	} else {
+		data = []byte("deny")
+	}
+
+	if _, err := Write(fd, data); err != nil {
+		Close(fd)
+		return err
+	}
+
+	return Close(fd)
+}
+
 // writeUidGidMappings writes User ID and Group ID mappings for user namespaces
 // for a process and it is called from the parent process.
 func writeUidGidMappings(pid int, sys *SysProcAttr) error {
@@ -375,6 +407,10 @@ func writeUidGidMappings(pid int, sys *SysProcAttr) error {
 	}
 
 	if sys.GidMappings != nil {
+		// If the kernel is too old to support /proc/PID/setgroups, writeSetGroups will return ENOENT; this is OK.
+		if err := writeSetgroups(pid, sys.GidMappingsEnableSetgroups); err != nil && err != ENOENT {
+			return err
+		}
 		gidf := "/proc/" + itoa(pid) + "/gid_map"
 		if err := writeIDMappings(gidf, sys.GidMappings); err != nil {
 			return err

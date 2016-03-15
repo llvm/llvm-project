@@ -74,9 +74,9 @@ using namespace llvm::object;
 namespace lld {
 namespace elf {
 template <class ELFT> class ICF {
-  typedef typename ELFFile<ELFT>::Elf_Shdr Elf_Shdr;
-  typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
   typedef Elf_Rel_Impl<ELFT, false> Elf_Rel;
 
   using Comparator = std::function<bool(const InputSection<ELFT> *,

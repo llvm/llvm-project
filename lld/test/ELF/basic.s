@@ -213,4 +213,4 @@ _start:
 # DUP: duplicate symbol: _start in {{.*}} and {{.*}}
 
 # RUN: not ld.lld %t -o %t -m wrong_emul 2>&1 | FileCheck --check-prefix=UNKNOWN_EMUL %s
-# UNKNOWN_EMUL: Unknown emulation: wrong_emul
+# UNKNOWN_EMUL: unknown emulation: wrong_emul

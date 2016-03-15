@@ -73,6 +73,8 @@ public:
   bool isShared() const { return SymbolKind == SharedKind; }
   bool isLocal() const { return IsLocal; }
   bool isUsedInRegularObj() const { return IsUsedInRegularObj; }
+  bool isPreemptible() const;
+  template <class ELFT> bool isGnuIfunc() const;
 
   // Returns the symbol name.
   StringRef getName() const { return Name; }
@@ -89,16 +91,12 @@ public:
   bool isInPlt() const { return PltIndex != -1U; }
 
   template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t
-  getVA(typename llvm::object::ELFFile<ELFT>::uintX_t Addend = 0) const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getGotVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getGotPltVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getPltVA() const;
-  template <class ELFT>
-  typename llvm::object::ELFFile<ELFT>::uintX_t getSize() const;
+  typename ELFT::uint getVA(typename ELFT::uint Addend = 0) const;
+
+  template <class ELFT> typename ELFT::uint getGotVA() const;
+  template <class ELFT> typename ELFT::uint getGotPltVA() const;
+  template <class ELFT> typename ELFT::uint getPltVA() const;
+  template <class ELFT> typename ELFT::uint getSize() const;
 
   // A SymbolBody has a backreference to a Symbol. Originally they are
   // doubly-linked. A backreference will never change. But the pointer
@@ -163,7 +161,7 @@ public:
 // Any defined symbol from an ELF file.
 template <class ELFT> class DefinedElf : public Defined {
 protected:
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+  typedef typename ELFT::Sym Elf_Sym;
 
 public:
   DefinedElf(Kind K, StringRef N, const Elf_Sym &Sym)
@@ -205,7 +203,7 @@ public:
 
 // Regular defined symbols read from object file symbol tables.
 template <class ELFT> class DefinedRegular : public DefinedElf<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+  typedef typename ELFT::Sym Elf_Sym;
 
 public:
   DefinedRegular(StringRef N, const Elf_Sym &Sym,
@@ -238,8 +236,8 @@ InputSectionBase<ELFT> *DefinedRegular<ELFT>::NullInputSection;
 // takes an output section to calculate output VA, etc.
 template <class ELFT> class DefinedSynthetic : public Defined {
 public:
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
   DefinedSynthetic(StringRef N, uintX_t Value, OutputSectionBase<ELFT> &Section,
                    uint8_t Visibility);
 
@@ -269,7 +267,7 @@ public:
 };
 
 template <class ELFT> class UndefinedElf : public Undefined {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+  typedef typename ELFT::Sym Elf_Sym;
 
 public:
   UndefinedElf(StringRef N, const Elf_Sym &Sym);
@@ -281,8 +279,8 @@ public:
 };
 
 template <class ELFT> class SharedSymbol : public DefinedElf<ELFT> {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename llvm::object::ELFFile<ELFT>::uintX_t uintX_t;
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
 
 public:
   static bool classof(const SymbolBody *S) {
@@ -330,7 +328,7 @@ private:
 // DefinedRegular symbols, so they need Elf_Sym symbols.
 // Here we allocate such Elf_Sym symbols statically.
 template <class ELFT> struct ElfSym {
-  typedef typename llvm::object::ELFFile<ELFT>::Elf_Sym Elf_Sym;
+  typedef typename ELFT::Sym Elf_Sym;
 
   // Used to represent an undefined symbol which we don't want to add to the
   // output file's symbol table. It has weak binding and can be substituted.
@@ -354,14 +352,13 @@ template <class ELFT> struct ElfSym {
   static Elf_Sym RelaIpltEnd;
 };
 
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::Ignored;
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::Etext;
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::Edata;
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::End;
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::MipsGp;
-template <class ELFT>
-typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::RelaIpltStart;
-template <class ELFT> typename ElfSym<ELFT>::Elf_Sym ElfSym<ELFT>::RelaIpltEnd;
+template <class ELFT> typename ELFT::Sym ElfSym<ELFT>::Ignored;
+template <class ELFT> typename ELFT::Sym ElfSym<ELFT>::Etext;
+template <class ELFT> typename ELFT::Sym ElfSym<ELFT>::Edata;
+template <class ELFT> typename ELFT::Sym ElfSym<ELFT>::End;
+template <class ELFT> typename ELFT::Sym ElfSym<ELFT>::MipsGp;
+template <class ELFT> typename ELFT::Sym ElfSym<ELFT>::RelaIpltStart;
+template <class ELFT> typename ELFT::Sym ElfSym<ELFT>::RelaIpltEnd;
 
 } // namespace elf
 } // namespace lld

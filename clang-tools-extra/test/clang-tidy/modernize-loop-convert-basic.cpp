@@ -320,6 +320,10 @@ void f() {
   // CHECK-FIXES: for (auto & It : Uu)
   // CHECK-FIXES-NEXT: printf("s has value %d\n", It.X);
 
+  for (U::iterator It = Uu.begin(), E = Uu.end(); It != E; ++It) {
+    Val* a = It.operator->();
+  }
+
   U::iterator A;
   for (U::iterator I = Uu.begin(), E = Uu.end(); I != E; ++I)
     int K = A->X + I->X;

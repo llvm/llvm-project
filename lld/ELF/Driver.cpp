@@ -63,7 +63,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
   if (S == "i386pe" || S == "i386pep" || S == "thumb2pe")
     error("Windows targets are not supported on the ELF frontend: " + S);
   else
-    error("Unknown emulation: " + S);
+    error("unknown emulation: " + S);
   return {ELFNoneKind, 0};
 }
 
@@ -71,15 +71,15 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
 // Each slice consists of a member file in the archive.
 static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB) {
   std::unique_ptr<Archive> File =
-      check(Archive::create(MB), "Failed to parse archive");
+      check(Archive::create(MB), "failed to parse archive");
 
   std::vector<MemoryBufferRef> V;
   for (const ErrorOr<Archive::Child> &COrErr : File->children()) {
-    Archive::Child C = check(COrErr, "Could not get the child of the archive " +
+    Archive::Child C = check(COrErr, "could not get the child of the archive " +
                                          File->getFileName());
     MemoryBufferRef Mb =
         check(C.getMemoryBufferRef(),
-              "Could not get the buffer for a child of the archive " +
+              "could not get the buffer for a child of the archive " +
                   File->getFileName());
     V.push_back(Mb);
   }
@@ -92,8 +92,10 @@ void LinkerDriver::addFile(StringRef Path) {
   using namespace llvm::sys::fs;
   log(Path);
   auto MBOrErr = MemoryBuffer::getFile(Path);
-  if (error(MBOrErr, "cannot open " + Path))
+  if (!MBOrErr) {
+    error(MBOrErr, "cannot open " + Path);
     return;
+  }
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   OwningMBs.push_back(std::move(MB)); // take MB ownership
@@ -112,7 +114,7 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   case file_magic::elf_shared_object:
     if (Config->Relocatable) {
-      error("Attempted static link of dynamic object " + Path);
+      error("attempted static link of dynamic object " + Path);
       return;
     }
     Files.push_back(createSharedFile(MBRef));
@@ -126,7 +128,7 @@ void LinkerDriver::addFile(StringRef Path) {
 void LinkerDriver::addLibrary(StringRef Name) {
   std::string Path = searchLibrary(Name);
   if (Path.empty())
-    error("Unable to find library -l" + Name);
+    error("unable to find library -l" + Name);
   else
     addFile(Path);
 }
@@ -137,7 +139,7 @@ static void checkOptions(opt::InputArgList &Args) {
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (Config->EMachine == EM_MIPS && Config->GnuHash)
-    error("The .gnu.hash section is not compatible with the MIPS target.");
+    error("the .gnu.hash section is not compatible with the MIPS target.");
 
   if (Config->EMachine == EM_AMDGPU && !Config->Entry.empty())
     error("-e option is not valid for AMDGPU.");
@@ -242,6 +244,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->Threads = Args.hasArg(OPT_threads);
   Config->Verbose = Args.hasArg(OPT_verbose);
+  Config->WarnCommon = Args.hasArg(OPT_warn_common);
 
   Config->DynamicLinker = getString(Args, OPT_dynamic_linker);
   Config->Entry = getString(Args, OPT_entry);
@@ -263,7 +266,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(OPT_O)) {
     StringRef Val = Arg->getValue();
     if (Val.getAsInteger(10, Config->Optimize))
-      error("Invalid optimization level");
+      error("invalid optimization level");
   }
 
   if (auto *Arg = Args.getLastArg(OPT_hash_style)) {
@@ -274,7 +277,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     } else if (S == "both") {
       Config->GnuHash = true;
     } else if (S != "sysv")
-      error("Unknown hash style: " + S);
+      error("unknown hash style: " + S);
   }
 
   for (auto *Arg : Args.filtered(OPT_undefined))
@@ -325,16 +328,19 @@ template <class ELFT> static void initSymbols() {
 }
 
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
-  initSymbols<ELFT>();
   // For LTO
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
 
+  initSymbols<ELFT>();
+
   SymbolTable<ELFT> Symtab;
   std::unique_ptr<TargetInfo> TI(createTarget());
   Target = TI.get();
+
+  Config->Rela = ELFT::Is64Bits;
 
   if (!Config->Shared && !Config->Relocatable) {
     // Add entry symbol.

@@ -43,7 +43,7 @@ func RunExamples(matchString func(pat, str string) (bool, error), examples []Int
 
 func runExample(eg InternalExample) (ok bool) {
 	if *chatty {
-		fmt.Printf("=== RUN: %s\n", eg.Name)
+		fmt.Printf("=== RUN   %s\n", eg.Name)
 	}
 
 	// Capture stdout.
@@ -56,8 +56,8 @@ func runExample(eg InternalExample) (ok bool) {
 	os.Stdout = w
 	outC := make(chan string)
 	go func() {
-		buf := new(bytes.Buffer)
-		_, err := io.Copy(buf, r)
+		var buf bytes.Buffer
+		_, err := io.Copy(&buf, r)
 		r.Close()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "testing: copying pipe: %v\n", err)

@@ -29,10 +29,10 @@ using namespace lld;
 using namespace lld::elf;
 
 template <class ELFT>
-static typename ELFFile<ELFT>::uintX_t
-getSymVA(const SymbolBody &Body, typename ELFFile<ELFT>::uintX_t &Addend) {
-  typedef typename ELFFile<ELFT>::Elf_Sym Elf_Sym;
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+static typename ELFT::uint getSymVA(const SymbolBody &Body,
+                                    typename ELFT::uint &Addend) {
+  typedef typename ELFT::Sym Elf_Sym;
+  typedef typename ELFT::uint uintX_t;
 
   switch (Body.kind()) {
   case SymbolBody::DefinedSyntheticKind: {
@@ -66,48 +66,79 @@ getSymVA(const SymbolBody &Body, typename ELFFile<ELFT>::uintX_t &Addend) {
       return 0;
     if (SS.IsFunc)
       return Body.getPltVA<ELFT>();
-    else
-      return Out<ELFT>::Bss->getVA() + SS.OffsetInBss;
+    return Out<ELFT>::Bss->getVA() + SS.OffsetInBss;
   }
   case SymbolBody::UndefinedElfKind:
   case SymbolBody::UndefinedKind:
     return 0;
   case SymbolBody::LazyKind:
-    assert(Body.isUsedInRegularObj() && "Lazy symbol reached writer");
+    assert(Body.isUsedInRegularObj() && "lazy symbol reached writer");
     return 0;
   case SymbolBody::DefinedBitcodeKind:
-    llvm_unreachable("Should have been replaced");
+    llvm_unreachable("should have been replaced");
   }
-  llvm_unreachable("Invalid symbol kind");
+  llvm_unreachable("invalid symbol kind");
+}
+
+// Returns true if a symbol can be replaced at load-time by a symbol
+// with the same name defined in other ELF executable or DSO.
+bool SymbolBody::isPreemptible() const {
+  if (isLocal())
+    return false;
+
+  if (isShared())
+    return true;
+
+  if (isUndefined()) {
+    if (!isWeak())
+      return true;
+
+    // Ideally the static linker should see a definition for every symbol, but
+    // shared object are normally allowed to have undefined references that the
+    // static linker never sees a definition for.
+    if (Config->Shared)
+      return true;
+
+    // Otherwise, just resolve to 0.
+    return false;
+  }
+
+  if (!Config->Shared)
+    return false;
+  if (getVisibility() != STV_DEFAULT)
+    return false;
+  if (Config->Bsymbolic || (Config->BsymbolicFunctions && IsFunc))
+    return false;
+  return true;
+}
+
+template <class ELFT> bool SymbolBody::isGnuIfunc() const {
+  if (auto *D = dyn_cast<DefinedElf<ELFT>>(this))
+    return D->Sym.getType() == STT_GNU_IFUNC;
+  return false;
 }
 
 template <class ELFT>
-typename ELFFile<ELFT>::uintX_t
-SymbolBody::getVA(typename ELFFile<ELFT>::uintX_t Addend) const {
+typename ELFT::uint SymbolBody::getVA(typename ELFT::uint Addend) const {
   return getSymVA<ELFT>(*this, Addend) + Addend;
 }
 
-template <class ELFT>
-typename ELFFile<ELFT>::uintX_t SymbolBody::getGotVA() const {
+template <class ELFT> typename ELFT::uint SymbolBody::getGotVA() const {
   return Out<ELFT>::Got->getVA() +
          (Out<ELFT>::Got->getMipsLocalEntriesNum() + GotIndex) *
-             sizeof(typename ELFFile<ELFT>::uintX_t);
+             sizeof(typename ELFT::uint);
 }
 
-template <class ELFT>
-typename ELFFile<ELFT>::uintX_t SymbolBody::getGotPltVA() const {
-  return Out<ELFT>::GotPlt->getVA() +
-         GotPltIndex * sizeof(typename ELFFile<ELFT>::uintX_t);
+template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {
+  return Out<ELFT>::GotPlt->getVA() + GotPltIndex * sizeof(typename ELFT::uint);
 }
 
-template <class ELFT>
-typename ELFFile<ELFT>::uintX_t SymbolBody::getPltVA() const {
+template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {
   return Out<ELFT>::Plt->getVA() + Target->PltZeroSize +
          PltIndex * Target->PltEntrySize;
 }
 
-template <class ELFT>
-typename ELFFile<ELFT>::uintX_t SymbolBody::getSize() const {
+template <class ELFT> typename ELFT::uint SymbolBody::getSize() const {
   if (auto *B = dyn_cast<DefinedElf<ELFT>>(this))
     return B->Sym.st_size;
   return 0;
@@ -122,6 +153,8 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
 }
 
 static int compareCommons(DefinedCommon *A, DefinedCommon *B) {
+  if (Config->WarnCommon)
+    warning("multiple common of " + A->getName());
   A->Alignment = B->Alignment = std::max(A->Alignment, B->Alignment);
   if (A->Size < B->Size)
     return -1;
@@ -162,6 +195,8 @@ template <class ELFT> int SymbolBody::compare(SymbolBody *Other) {
   if (isCommon() && Other->isCommon())
     return compareCommons(cast<DefinedCommon>(this),
                           cast<DefinedCommon>(Other));
+  if (Config->WarnCommon)
+    warning("common " + this->getName() + " is overridden");
   return isCommon() ? -1 : 1;
 }
 
@@ -244,6 +279,11 @@ std::string elf::demangle(StringRef Name) {
   return S;
 #endif
 }
+
+template bool SymbolBody::template isGnuIfunc<ELF32LE>() const;
+template bool SymbolBody::template isGnuIfunc<ELF32BE>() const;
+template bool SymbolBody::template isGnuIfunc<ELF64LE>() const;
+template bool SymbolBody::template isGnuIfunc<ELF64BE>() const;
 
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;
 template uint32_t SymbolBody::template getVA<ELF32BE>(uint32_t) const;

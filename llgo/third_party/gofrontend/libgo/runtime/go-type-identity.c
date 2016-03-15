@@ -45,6 +45,9 @@ __go_type_hash_identity (const void *key, uintptr_t key_size)
   return ret;
 }
 
+const FuncVal __go_type_hash_identity_descriptor =
+  { (void *) __go_type_hash_identity };
+
 /* An identity equality function for a type.  This is used for types
    where we can check for equality by checking that the values have
    the same bits.  */
@@ -54,3 +57,6 @@ __go_type_equal_identity (const void *k1, const void *k2, uintptr_t key_size)
 {
   return __builtin_memcmp (k1, k2, key_size) == 0;
 }
+
+const FuncVal __go_type_equal_identity_descriptor =
+  { (void *) __go_type_equal_identity };

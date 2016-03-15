@@ -131,6 +131,9 @@ def verbose : Flag<["--"], "verbose">;
 def version : Flag<["--", "-"], "version">,
   HelpText<"Display the version number">;
 
+def warn_common : Flag<["--", "-"], "warn-common">,
+  HelpText<"Warn about duplicate common symbols">;
+
 def whole_archive : Flag<["--", "-"], "whole-archive">,
   HelpText<"Force load of all members in a static library">;
 
@@ -178,9 +181,9 @@ def start_group_paren: Flag<["-"], "(">;
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;
 def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;
+def no_warn_common : Flag<["--", "-"], "no-warn-common">;
 def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;
 def version_script : Separate<["--"], "version-script">;
-def warn_common : Flag<["--"], "warn-common">;
 def warn_shared_textrel : Flag<["--"], "warn-shared-textrel">;
 def G : Separate<["-"], "G">;
 

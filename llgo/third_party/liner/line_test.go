@@ -2,6 +2,7 @@ package liner
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -87,4 +88,50 @@ dingle`
 	if num != 5 {
 		t.Fatal("Wrong number of history entries read the 3rd time")
 	}
+}
+
+func TestColumns(t *testing.T) {
+	list := []string{"foo", "food", "This entry is quite a bit longer than the typical entry"}
+
+	output := []struct {
+		width, columns, rows, maxWidth int
+	}{
+		{80, 1, 3, len(list[2]) + 1},
+		{120, 2, 2, len(list[2]) + 1},
+		{800, 14, 1, 0},
+		{8, 1, 3, 7},
+	}
+
+	for i, o := range output {
+		col, row, max := calculateColumns(o.width, list)
+		if col != o.columns {
+			t.Fatalf("Wrong number of columns, %d != %d, in TestColumns %d\n", col, o.columns, i)
+		}
+		if row != o.rows {
+			t.Fatalf("Wrong number of rows, %d != %d, in TestColumns %d\n", row, o.rows, i)
+		}
+		if max != o.maxWidth {
+			t.Fatalf("Wrong column width, %d != %d, in TestColumns %d\n", max, o.maxWidth, i)
+		}
+	}
+}
+
+// This example demonstrates a way to retrieve the current
+// history buffer without using a file.
+func ExampleState_WriteHistory() {
+	var s State
+	s.AppendHistory("foo")
+	s.AppendHistory("bar")
+
+	buf := new(bytes.Buffer)
+	_, err := s.WriteHistory(buf)
+	if err == nil {
+		history := strings.Split(strings.TrimSpace(buf.String()), "\n")
+		for i, line := range history {
+			fmt.Println("History entry", i, ":", line)
+		}
+	}
+	// Output:
+	// History entry 0 : foo
+	// History entry 1 : bar
 }

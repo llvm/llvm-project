@@ -17,6 +17,12 @@ import (
 //sysnb	raw_fork() (pid Pid_t, err Errno)
 //fork() Pid_t
 
+//sysnb	raw_getpid() (pid Pid_t)
+//getpid() Pid_t
+
+//sysnb	raw_getppid() (pid Pid_t)
+//getppid() Pid_t
+
 //sysnb raw_setsid() (err Errno)
 //setsid() Pid_t
 
@@ -35,8 +41,11 @@ import (
 //sysnb	raw_close(fd int) (err Errno)
 //close(fd _C_int) _C_int
 
-//sysnb	raw_ioctl(fd int, cmd int, val int) (rval int, err Errno)
-//ioctl(fd _C_int, cmd _C_int, val _C_int) _C_int
+//sysnb	raw_ioctl(fd int, cmd uintptr, val int) (rval int, err Errno)
+//__go_ioctl(fd _C_int, cmd _C_int, val _C_int) _C_int
+
+//sysnb raw_ioctl_ptr(fd int, cmd uintptr, val unsafe.Pointer) (rval int, err Errno)
+//__go_ioctl_ptr(fd _C_int, cmd _C_int, val unsafe.Pointer) _C_int
 
 //sysnb	raw_execve(argv0 *byte, argv **byte, envv **byte) (err Errno)
 //execve(argv0 *byte, argv **byte, envv **byte) _C_int
@@ -49,6 +58,18 @@ import (
 
 //sysnb raw_dup2(oldfd int, newfd int) (err Errno)
 //dup2(oldfd _C_int, newfd _C_int) _C_int
+
+//sysnb raw_kill(pid Pid_t, sig Signal) (err Errno)
+//kill(pid Pid_t, sig _C_int) _C_int
+
+//sysnb raw_setgroups(size int, list unsafe.Pointer) (err Errno)
+//setgroups(size Size_t, list *Gid_t) _C_int
+
+//sysnb raw_setuid(uid int) (err Errno)
+//setuid(uid Uid_t) _C_int
+
+//sysnb raw_setgid(gid int) (err Errno)
+//setgid(gid Gid_t) _C_int
 
 // Lock synchronizing creation of new file descriptors with fork.
 //
@@ -99,9 +120,11 @@ import (
 
 var ForkLock sync.RWMutex
 
-// StringSlicePtr is deprecated. Use SlicePtrFromStrings instead.
-// If any string contains a NUL byte this function panics instead
-// of returning an error.
+// StringSlicePtr converts a slice of strings to a slice of pointers
+// to NUL-terminated byte arrays. If any string contains a NUL byte
+// this function panics instead of returning an error.
+//
+// Deprecated: Use SlicePtrFromStrings instead.
 func StringSlicePtr(ss []string) []*byte {
 	bb := make([]*byte, len(ss)+1)
 	for i := 0; i < len(ss); i++ {
@@ -112,7 +135,7 @@ func StringSlicePtr(ss []string) []*byte {
 }
 
 // SlicePtrFromStrings converts a slice of strings to a slice of
-// pointers to NUL-terminated byte slices. If any string contains
+// pointers to NUL-terminated byte arrays. If any string contains
 // a NUL byte, it returns (nil, EINVAL).
 func SlicePtrFromStrings(ss []string) ([]*byte, error) {
 	var err error

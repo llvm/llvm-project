@@ -48,6 +48,11 @@ OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
 }
 
 template <class ELFT>
+void OutputSectionBase<ELFT>::writeHeaderTo(Elf_Shdr *Shdr) {
+  *Shdr = Header;
+}
+
+template <class ELFT>
 GotPltSection<ELFT>::GotPltSection()
     : OutputSectionBase<ELFT>(".got.plt", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE) {
   this->Header.sh_addralign = sizeof(uintX_t);
@@ -177,7 +182,7 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
     // for detailed description:
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
     // As the first approach, we can just store addresses for all symbols.
-    if (Config->EMachine != EM_MIPS && canBePreempted(*B))
+    if (Config->EMachine != EM_MIPS && B->isPreemptible())
       continue; // The dynamic linker will take care of it.
     uintX_t VA = B->getVA<ELFT>();
     write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, VA);
@@ -223,10 +228,10 @@ template <class ELFT> void PltSection<ELFT>::finalize() {
 }
 
 template <class ELFT>
-RelocationSection<ELFT>::RelocationSection(StringRef Name, bool IsRela)
-    : OutputSectionBase<ELFT>(Name, IsRela ? SHT_RELA : SHT_REL, SHF_ALLOC),
-      IsRela(IsRela) {
-  this->Header.sh_entsize = IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+RelocationSection<ELFT>::RelocationSection(StringRef Name)
+    : OutputSectionBase<ELFT>(Name, Config->Rela ? SHT_RELA : SHT_REL,
+                              SHF_ALLOC) {
+  this->Header.sh_entsize = Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
   this->Header.sh_addralign = sizeof(uintX_t);
 }
 
@@ -239,7 +244,7 @@ void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
 }
 
 template <class ELFT>
-typename ELFFile<ELFT>::uintX_t DynamicReloc<ELFT>::getOffset() const {
+typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
   switch (OKind) {
   case Off_GTlsIndex:
     return Out<ELFT>::Got->getGlobalDynAddr(*Sym);
@@ -256,24 +261,17 @@ typename ELFFile<ELFT>::uintX_t DynamicReloc<ELFT>::getOffset() const {
   case Off_GotPlt:
     return Sym->getGotPltVA<ELFT>();
   }
-  llvm_unreachable("Invalid offset kind");
+  llvm_unreachable("invalid offset kind");
 }
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const DynamicReloc<ELFT> &Rel : Relocs) {
-    auto *P = reinterpret_cast<Elf_Rel *>(Buf);
-    Buf += IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
+    auto *P = reinterpret_cast<Elf_Rela *>(Buf);
+    Buf += Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
     SymbolBody *Sym = Rel.Sym;
 
-    if (IsRela) {
-      uintX_t VA;
-      if (Rel.UseSymVA)
-        VA = Sym->getVA<ELFT>(Rel.Addend);
-      else
-        VA = Rel.Addend;
-      reinterpret_cast<Elf_Rela *>(P)->r_addend = VA;
-    }
-
+    if (Config->Rela)
+      P->r_addend = Rel.UseSymVA ? Sym->getVA<ELFT>(Rel.Addend) : Rel.Addend;
     P->r_offset = Rel.getOffset();
     uint32_t SymIdx = (!Rel.UseSymVA && Sym) ? Sym->DynsymIndex : 0;
     P->setSymbolAndType(SymIdx, Rel.Type, Config->Mips64EL);
@@ -297,13 +295,9 @@ InterpSection<ELFT>::InterpSection()
   this->Header.sh_addralign = 1;
 }
 
-template <class ELFT>
-void OutputSectionBase<ELFT>::writeHeaderTo(Elf_Shdr *SHdr) {
-  *SHdr = Header;
-}
-
 template <class ELFT> void InterpSection<ELFT>::writeTo(uint8_t *Buf) {
-  memcpy(Buf, Config->DynamicLinker.data(), Config->DynamicLinker.size());
+  StringRef S = Config->DynamicLinker;
+  memcpy(Buf, S.data(), S.size());
 }
 
 template <class ELFT>
@@ -547,7 +541,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   Out<ELFT>::DynStrTab->finalize();
 
   if (Out<ELFT>::RelaDyn->hasRelocs()) {
-    bool IsRela = Out<ELFT>::RelaDyn->isRela();
+    bool IsRela = Config->Rela;
     Add({IsRela ? DT_RELA : DT_REL, Out<ELFT>::RelaDyn});
     Add({IsRela ? DT_RELASZ : DT_RELSZ, Out<ELFT>::RelaDyn->getSize()});
     Add({IsRela ? DT_RELAENT : DT_RELENT,
@@ -558,7 +552,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     Add({DT_PLTRELSZ, Out<ELFT>::RelaPlt->getSize()});
     Add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
          Out<ELFT>::GotPlt});
-    Add({DT_PLTREL, uint64_t(Out<ELFT>::RelaPlt->isRela() ? DT_RELA : DT_REL)});
+    Add({DT_PLTREL, uint64_t(Config->Rela ? DT_RELA : DT_REL)});
   }
 
   Add({DT_SYMTAB, Out<ELFT>::DynSymTab});
@@ -888,37 +882,6 @@ template <class ELFT> void OutputSection<ELFT>::sortCtorsDtors() {
   reassignOffsets();
 }
 
-// Returns true if a symbol can be replaced at load-time by a symbol
-// with the same name defined in other ELF executable or DSO.
-bool elf::canBePreempted(const SymbolBody &Body) {
-  if (Body.isLocal())
-    return false;
-
-  if (Body.isShared())
-    return true;
-
-  if (Body.isUndefined()) {
-    if (!Body.isWeak())
-      return true;
-
-    // Ideally the static linker should see a definition for every symbol, but
-    // shared object are normally allowed to have undefined references that the
-    // static linker never sees a definition for.
-    if (Config->Shared)
-      return true;
-
-    // Otherwise, just resolve to 0.
-    return false;
-  }
-  if (!Config->Shared)
-    return false;
-  if (Body.getVisibility() != STV_DEFAULT)
-    return false;
-  if (Config->Bsymbolic || (Config->BsymbolicFunctions && Body.IsFunc))
-    return false;
-  return true;
-}
-
 static void fill(uint8_t *Buf, size_t Size, ArrayRef<uint8_t> A) {
   size_t I = 0;
   for (; I + A.size() < Size; I += A.size())
@@ -1064,7 +1027,7 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
 }
 
 template <class ELFT>
-static typename ELFFile<ELFT>::uintX_t readEntryLength(ArrayRef<uint8_t> D) {
+static typename ELFT::uint readEntryLength(ArrayRef<uint8_t> D) {
   const endianness E = ELFT::TargetEndianness;
   if (D.size() < 4)
     fatal("CIE/FDE too small");
@@ -1089,10 +1052,9 @@ static typename ELFFile<ELFT>::uintX_t readEntryLength(ArrayRef<uint8_t> D) {
 }
 
 template <class ELFT>
-template <bool IsRela>
-void EHOutputSection<ELFT>::addSectionAux(
-    EHInputSection<ELFT> *S,
-    iterator_range<const Elf_Rel_Impl<ELFT, IsRela> *> Rels) {
+template <class RelTy>
+void EHOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *S,
+                                          iterator_range<const RelTy *> Rels) {
   const endianness E = ELFT::TargetEndianness;
 
   S->OutSec = this;
@@ -1150,7 +1112,7 @@ void EHOutputSection<ELFT>::addSectionAux(
         uint32_t CieOffset = Offset + 4 - ID;
         auto I = OffsetToIndex.find(CieOffset);
         if (I == OffsetToIndex.end())
-          fatal("Invalid CIE reference");
+          fatal("invalid CIE reference");
         Cies[I->second].Fdes.push_back(EHRegion<ELFT>(S, Index));
         Out<ELFT>::EhFrameHdr->reserveFde();
         this->Header.sh_size += alignTo(Length, sizeof(uintX_t));
@@ -1178,9 +1140,8 @@ void EHOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 }
 
 template <class ELFT>
-static typename ELFFile<ELFT>::uintX_t writeAlignedCieOrFde(StringRef Data,
-                                                            uint8_t *Buf) {
-  typedef typename ELFFile<ELFT>::uintX_t uintX_t;
+static typename ELFT::uint writeAlignedCieOrFde(StringRef Data, uint8_t *Buf) {
+  typedef typename ELFT::uint uintX_t;
   const endianness E = ELFT::TargetEndianness;
   uint64_t Len = alignTo(Data.size(), sizeof(uintX_t));
   write32<E>(Buf, Len - 4);
@@ -1266,7 +1227,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
     while (!Data.empty()) {
       size_t End = findNull(Data, EntSize);
       if (End == StringRef::npos)
-        fatal("String is not null terminated");
+        fatal("string is not null terminated");
       StringRef Entry = Data.substr(0, End + EntSize);
       uintX_t OutputOffset = Builder.add(Entry);
       if (shouldTailMerge())
@@ -1439,8 +1400,7 @@ void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
 }
 
 template <class ELFT>
-static const typename llvm::object::ELFFile<ELFT>::Elf_Sym *
-getElfSym(SymbolBody &Body) {
+static const typename ELFT::Sym *getElfSym(SymbolBody &Body) {
   if (auto *EBody = dyn_cast<DefinedElf<ELFT>>(&Body))
     return &EBody->Sym;
   if (auto *EBody = dyn_cast<UndefinedElf<ELFT>>(&Body))
@@ -1512,7 +1472,7 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::LazyKind:
     break;
   case SymbolBody::DefinedBitcodeKind:
-    llvm_unreachable("Should have been replaced");
+    llvm_unreachable("should have been replaced");
   }
   return nullptr;
 }

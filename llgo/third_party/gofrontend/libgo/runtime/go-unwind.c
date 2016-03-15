@@ -141,7 +141,7 @@ __go_check_defer (_Bool *frame)
 
   hdr = (struct _Unwind_Exception *) g->exception;
 
-#ifdef LIBGO_SJLJ_EXCEPTIONS
+#ifdef __USING_SJLJ_EXCEPTIONS__
   _Unwind_SjLj_Resume_or_Rethrow (hdr);
 #else
 #if defined(_LIBUNWIND_STD_ABI)

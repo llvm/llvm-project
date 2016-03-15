@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <bitset>
 #include <map>
+#include <set>
 
 // Other libraries and framework includes
 // Project includes
@@ -477,6 +478,7 @@ Options::GenerateOptionUsage
     CommandObject *cmd
 )
 {
+    const bool only_print_args = cmd->IsDashDashCommand();
     const uint32_t screen_width = m_interpreter.GetDebugger().GetTerminalWidth();
 
     const OptionDefinition *opt_defs = GetDefinitions();
@@ -509,203 +511,211 @@ Options::GenerateOptionUsage
     
     uint32_t i;
     
-    for (uint32_t opt_set = 0; opt_set < num_option_sets; ++opt_set)
+    if (!only_print_args)
     {
-        uint32_t opt_set_mask;
-        
-        opt_set_mask = 1 << opt_set;
-        if (opt_set > 0)
-            strm.Printf ("\n");
-        strm.Indent (name);
-
-        // Different option sets may require different args.
-        StreamString args_str;
-        if (cmd)
-            cmd->GetFormattedCommandArguments(args_str, opt_set_mask);
-
-        // First go through and print all options that take no arguments as
-        // a single string. If a command has "-a" "-b" and "-c", this will show
-        // up as [-abc]
-
-        std::set<int> options;
-        std::set<int>::const_iterator options_pos, options_end;
-        for (i = 0; i < num_options; ++i)
+        for (uint32_t opt_set = 0; opt_set < num_option_sets; ++opt_set)
         {
-            if (opt_defs[i].usage_mask & opt_set_mask && isprint8(opt_defs[i].short_option))
-            {
-                // Add current option to the end of out_stream.
-
-                if (opt_defs[i].required == true && 
-                    opt_defs[i].option_has_arg == OptionParser::eNoArgument)
-                {
-                    options.insert (opt_defs[i].short_option);
-                }
-            }
-        }
-
-        if (options.empty() == false)
-        {
-            // We have some required options with no arguments
-            strm.PutCString(" -");
-            for (i=0; i<2; ++i)            
-                for (options_pos = options.begin(), options_end = options.end();
-                     options_pos != options_end;
-                     ++options_pos)
-                {
-                    if (i==0 && ::islower (*options_pos))
-                        continue;
-                    if (i==1 && ::isupper (*options_pos))
-                        continue;
-                    strm << (char)*options_pos;
-                }
-        }
-
-        for (i = 0, options.clear(); i < num_options; ++i)
-        {
-            if (opt_defs[i].usage_mask & opt_set_mask && isprint8(opt_defs[i].short_option))
-            {
-                // Add current option to the end of out_stream.
-
-                if (opt_defs[i].required == false &&
-                    opt_defs[i].option_has_arg == OptionParser::eNoArgument)
-                {
-                    options.insert (opt_defs[i].short_option);
-                }
-            }
-        }
-
-        if (options.empty() == false)
-        {
-            // We have some required options with no arguments
-            strm.PutCString(" [-");
-            for (i=0; i<2; ++i)            
-                for (options_pos = options.begin(), options_end = options.end();
-                     options_pos != options_end;
-                     ++options_pos)
-                {
-                    if (i==0 && ::islower (*options_pos))
-                        continue;
-                    if (i==1 && ::isupper (*options_pos))
-                        continue;
-                    strm << (char)*options_pos;
-                }
-            strm.PutChar(']');
-        }
-
-        // First go through and print the required options (list them up front).
-        
-        for (i = 0; i < num_options; ++i)
-        {
-            if (opt_defs[i].usage_mask & opt_set_mask && isprint8(opt_defs[i].short_option))
-            {
-                if (opt_defs[i].required && opt_defs[i].option_has_arg != OptionParser::eNoArgument)
-                    PrintOption (opt_defs[i], eDisplayBestOption, " ", nullptr, true, strm);
-            }
-        }
-
-        // Now go through again, and this time only print the optional options.
-
-        for (i = 0; i < num_options; ++i)
-        {
-            if (opt_defs[i].usage_mask & opt_set_mask)
-            {
-                // Add current option to the end of out_stream.
-
-                if (!opt_defs[i].required && opt_defs[i].option_has_arg != OptionParser::eNoArgument)
-                    PrintOption (opt_defs[i], eDisplayBestOption, " ", nullptr, true, strm);
-            }
-        }
-        
-        if (args_str.GetSize() > 0)
-        {
-            if (cmd->WantsRawCommandString())
-                strm.Printf(" --");
+            uint32_t opt_set_mask;
             
-            strm.Printf (" %s", args_str.GetData());
+            opt_set_mask = 1 << opt_set;
+            if (opt_set > 0)
+                strm.Printf ("\n");
+            strm.Indent (name);
+
+            // Different option sets may require different args.
+            StreamString args_str;
+            if (cmd)
+                cmd->GetFormattedCommandArguments(args_str, opt_set_mask);
+
+            // First go through and print all options that take no arguments as
+            // a single string. If a command has "-a" "-b" and "-c", this will show
+            // up as [-abc]
+
+            std::set<int> options;
+            std::set<int>::const_iterator options_pos, options_end;
+            for (i = 0; i < num_options; ++i)
+            {
+                if (opt_defs[i].usage_mask & opt_set_mask && isprint8(opt_defs[i].short_option))
+                {
+                    // Add current option to the end of out_stream.
+
+                    if (opt_defs[i].required == true && 
+                        opt_defs[i].option_has_arg == OptionParser::eNoArgument)
+                    {
+                        options.insert (opt_defs[i].short_option);
+                    }
+                }
+            }
+
+            if (options.empty() == false)
+            {
+                // We have some required options with no arguments
+                strm.PutCString(" -");
+                for (i=0; i<2; ++i)            
+                    for (options_pos = options.begin(), options_end = options.end();
+                         options_pos != options_end;
+                         ++options_pos)
+                    {
+                        if (i==0 && ::islower (*options_pos))
+                            continue;
+                        if (i==1 && ::isupper (*options_pos))
+                            continue;
+                        strm << (char)*options_pos;
+                    }
+            }
+
+            for (i = 0, options.clear(); i < num_options; ++i)
+            {
+                if (opt_defs[i].usage_mask & opt_set_mask && isprint8(opt_defs[i].short_option))
+                {
+                    // Add current option to the end of out_stream.
+
+                    if (opt_defs[i].required == false &&
+                        opt_defs[i].option_has_arg == OptionParser::eNoArgument)
+                    {
+                        options.insert (opt_defs[i].short_option);
+                    }
+                }
+            }
+
+            if (options.empty() == false)
+            {
+                // We have some required options with no arguments
+                strm.PutCString(" [-");
+                for (i=0; i<2; ++i)            
+                    for (options_pos = options.begin(), options_end = options.end();
+                         options_pos != options_end;
+                         ++options_pos)
+                    {
+                        if (i==0 && ::islower (*options_pos))
+                            continue;
+                        if (i==1 && ::isupper (*options_pos))
+                            continue;
+                        strm << (char)*options_pos;
+                    }
+                strm.PutChar(']');
+            }
+
+            // First go through and print the required options (list them up front).
+            
+            for (i = 0; i < num_options; ++i)
+            {
+                if (opt_defs[i].usage_mask & opt_set_mask && isprint8(opt_defs[i].short_option))
+                {
+                    if (opt_defs[i].required && opt_defs[i].option_has_arg != OptionParser::eNoArgument)
+                        PrintOption (opt_defs[i], eDisplayBestOption, " ", nullptr, true, strm);
+                }
+            }
+
+            // Now go through again, and this time only print the optional options.
+
+            for (i = 0; i < num_options; ++i)
+            {
+                if (opt_defs[i].usage_mask & opt_set_mask)
+                {
+                    // Add current option to the end of out_stream.
+
+                    if (!opt_defs[i].required && opt_defs[i].option_has_arg != OptionParser::eNoArgument)
+                        PrintOption (opt_defs[i], eDisplayBestOption, " ", nullptr, true, strm);
+                }
+            }
+            
+            if (args_str.GetSize() > 0)
+            {
+                if (cmd->WantsRawCommandString() && !only_print_args)
+                    strm.Printf(" --");
+                
+                strm.Printf (" %s", args_str.GetData());
+                if (only_print_args)
+                    break;
+            }
         }
     }
     
     if (cmd &&
-        cmd->WantsRawCommandString() &&
+        (only_print_args || cmd->WantsRawCommandString()) &&
         arguments_str.GetSize() > 0)
     {        
-        strm.PutChar('\n');
+        if (!only_print_args) strm.PutChar('\n');
         strm.Indent(name);
         strm.Printf(" %s", arguments_str.GetData());
     }
     
     strm.Printf ("\n\n");
 
-    // Now print out all the detailed information about the various options:  long form, short form and help text:
-    //   -short <argument> ( --long_name <argument> )
-    //   help text
-
-    // This variable is used to keep track of which options' info we've printed out, because some options can be in
-    // more than one usage level, but we only want to print the long form of its information once.
-
-    std::multimap<int, uint32_t> options_seen;
-    strm.IndentMore (5);
-
-    // Put the unique command options in a vector & sort it, so we can output them alphabetically (by short_option)
-    // when writing out detailed help for each option.
-
-    for (i = 0; i < num_options; ++i)
-        options_seen.insert(std::make_pair(opt_defs[i].short_option, i));
-
-    // Go through the unique'd and alphabetically sorted vector of options, find the table entry for each option
-    // and write out the detailed help information for that option.
-
-    bool first_option_printed = false;;
-
-    for (auto pos : options_seen)
+    if (!only_print_args)
     {
-        i = pos.second;
-        //Print out the help information for this option.
+        // Now print out all the detailed information about the various options:  long form, short form and help text:
+        //   -short <argument> ( --long_name <argument> )
+        //   help text
 
-        // Put a newline separation between arguments
-        if (first_option_printed)
-            strm.EOL();
-        else
-            first_option_printed = true;
-        
-        CommandArgumentType arg_type = opt_defs[i].argument_type;
-        
-        StreamString arg_name_str;
-        arg_name_str.Printf ("<%s>", CommandObject::GetArgumentName (arg_type));
+        // This variable is used to keep track of which options' info we've printed out, because some options can be in
+        // more than one usage level, but we only want to print the long form of its information once.
 
-        strm.Indent ();
-        if (opt_defs[i].short_option && isprint8(opt_defs[i].short_option))
-        {
-            PrintOption (opt_defs[i], eDisplayShortOption, nullptr, nullptr, false, strm);
-            PrintOption (opt_defs[i], eDisplayLongOption, " ( ", " )", false, strm);
-        }
-        else
-        {
-            // Short option is not printable, just print long option
-            PrintOption (opt_defs[i], eDisplayLongOption, nullptr, nullptr, false, strm);
-        }
-        strm.EOL();
-        
+        std::multimap<int, uint32_t> options_seen;
         strm.IndentMore (5);
-        
-        if (opt_defs[i].usage_text)
-            OutputFormattedUsageText (strm,
-                                      opt_defs[i],
-                                      screen_width);
-        if (opt_defs[i].enum_values != nullptr)
+
+        // Put the unique command options in a vector & sort it, so we can output them alphabetically (by short_option)
+        // when writing out detailed help for each option.
+
+        for (i = 0; i < num_options; ++i)
+            options_seen.insert(std::make_pair(opt_defs[i].short_option, i));
+
+        // Go through the unique'd and alphabetically sorted vector of options, find the table entry for each option
+        // and write out the detailed help information for that option.
+
+        bool first_option_printed = false;;
+
+        for (auto pos : options_seen)
         {
+            i = pos.second;
+            //Print out the help information for this option.
+
+            // Put a newline separation between arguments
+            if (first_option_printed)
+                strm.EOL();
+            else
+                first_option_printed = true;
+            
+            CommandArgumentType arg_type = opt_defs[i].argument_type;
+            
+            StreamString arg_name_str;
+            arg_name_str.Printf ("<%s>", CommandObject::GetArgumentName (arg_type));
+
             strm.Indent ();
-            strm.Printf("Values: ");
-            for (int k = 0; opt_defs[i].enum_values[k].string_value != nullptr; k++)
+            if (opt_defs[i].short_option && isprint8(opt_defs[i].short_option))
             {
-                if (k == 0)
-                    strm.Printf("%s", opt_defs[i].enum_values[k].string_value);
-                else
-                    strm.Printf(" | %s", opt_defs[i].enum_values[k].string_value);
+                PrintOption (opt_defs[i], eDisplayShortOption, nullptr, nullptr, false, strm);
+                PrintOption (opt_defs[i], eDisplayLongOption, " ( ", " )", false, strm);
+            }
+            else
+            {
+                // Short option is not printable, just print long option
+                PrintOption (opt_defs[i], eDisplayLongOption, nullptr, nullptr, false, strm);
             }
             strm.EOL();
+            
+            strm.IndentMore (5);
+            
+            if (opt_defs[i].usage_text)
+                OutputFormattedUsageText (strm,
+                                          opt_defs[i],
+                                          screen_width);
+            if (opt_defs[i].enum_values != nullptr)
+            {
+                strm.Indent ();
+                strm.Printf("Values: ");
+                for (int k = 0; opt_defs[i].enum_values[k].string_value != nullptr; k++)
+                {
+                    if (k == 0)
+                        strm.Printf("%s", opt_defs[i].enum_values[k].string_value);
+                    else
+                        strm.Printf(" | %s", opt_defs[i].enum_values[k].string_value);
+                }
+                strm.EOL();
+            }
+            strm.IndentLess (5);
         }
-        strm.IndentLess (5);
     }
 
     // Restore the indent level

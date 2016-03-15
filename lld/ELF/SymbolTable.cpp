@@ -119,7 +119,7 @@ std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
   std::string ErrMsg;
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleStr, ErrMsg);
   if (!TheTarget)
-    fatal("Target not found: " + ErrMsg);
+    fatal("target not found: " + ErrMsg);
 
   TargetOptions Options;
   Reloc::Model R = Config->Shared ? Reloc::PIC_ : Reloc::Static;
@@ -130,7 +130,7 @@ std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
   legacy::PassManager CodeGenPasses;
   if (TM->addPassesToEmitFile(CodeGenPasses, OS,
                               TargetMachine::CGFT_ObjectFile))
-    fatal("Failed to setup codegen");
+    fatal("failed to setup codegen");
   CodeGenPasses.run(M);
   LtoBuffer = MemoryBuffer::getMemBuffer(OwningLTOData, "", false);
   if (Config->SaveTemps)

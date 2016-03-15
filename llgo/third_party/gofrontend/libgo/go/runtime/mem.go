@@ -41,13 +41,15 @@ type MemStats struct {
 	OtherSys    uint64 // other system allocations
 
 	// Garbage collector statistics.
-	NextGC       uint64 // next run in HeapAlloc time (bytes)
-	LastGC       uint64 // last run in absolute time (ns)
-	PauseTotalNs uint64
-	PauseNs      [256]uint64 // circular buffer of recent GC pause times, most recent at [(NumGC+255)%256]
-	NumGC        uint32
-	EnableGC     bool
-	DebugGC      bool
+	NextGC        uint64 // next run in HeapAlloc time (bytes)
+	LastGC        uint64 // last run in absolute time (ns)
+	PauseTotalNs  uint64
+	PauseNs       [256]uint64 // circular buffer of recent GC pause times, most recent at [(NumGC+255)%256]
+	PauseEnd      [256]uint64 // circular buffer of recent GC pause end times
+	NumGC         uint32
+	GCCPUFraction float64 // fraction of CPU time used by GC
+	EnableGC      bool
+	DebugGC       bool
 
 	// Per-size allocation statistics.
 	// 61 is NumSizeClasses in the C code.

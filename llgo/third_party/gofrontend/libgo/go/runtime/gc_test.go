@@ -5,7 +5,8 @@
 package runtime_test
 
 import (
-	// "os"
+	"os"
+	"reflect"
 	"runtime"
 	"runtime/debug"
 	"testing"
@@ -14,7 +15,6 @@ import (
 )
 
 func TestGcSys(t *testing.T) {
-	/* gccgo does not have a go command
 	if os.Getenv("GOGC") == "off" {
 		t.Skip("skipping test; GOGC=off in environment")
 	}
@@ -24,7 +24,6 @@ func TestGcSys(t *testing.T) {
 	if got != want {
 		t.Fatalf("expected %q, but got %q", want, got)
 	}
-	*/
 }
 
 const testGCSysSource = `
@@ -199,45 +198,166 @@ func TestHugeGCInfo(t *testing.T) {
 	}
 }
 
-func BenchmarkSetTypeNoPtr1(b *testing.B) {
-	type NoPtr1 struct {
-		p uintptr
-	}
-	var p *NoPtr1
-	for i := 0; i < b.N; i++ {
-		p = &NoPtr1{}
-	}
-	_ = p
+func BenchmarkSetTypePtr(b *testing.B) {
+	benchSetType(b, new(*byte))
 }
-func BenchmarkSetTypeNoPtr2(b *testing.B) {
-	type NoPtr2 struct {
-		p, q uintptr
-	}
-	var p *NoPtr2
-	for i := 0; i < b.N; i++ {
-		p = &NoPtr2{}
-	}
-	_ = p
+
+func BenchmarkSetTypePtr8(b *testing.B) {
+	benchSetType(b, new([8]*byte))
 }
-func BenchmarkSetTypePtr1(b *testing.B) {
-	type Ptr1 struct {
-		p *byte
-	}
-	var p *Ptr1
-	for i := 0; i < b.N; i++ {
-		p = &Ptr1{}
-	}
-	_ = p
+
+func BenchmarkSetTypePtr16(b *testing.B) {
+	benchSetType(b, new([16]*byte))
 }
-func BenchmarkSetTypePtr2(b *testing.B) {
-	type Ptr2 struct {
-		p, q *byte
+
+func BenchmarkSetTypePtr32(b *testing.B) {
+	benchSetType(b, new([32]*byte))
+}
+
+func BenchmarkSetTypePtr64(b *testing.B) {
+	benchSetType(b, new([64]*byte))
+}
+
+func BenchmarkSetTypePtr126(b *testing.B) {
+	benchSetType(b, new([126]*byte))
+}
+
+func BenchmarkSetTypePtr128(b *testing.B) {
+	benchSetType(b, new([128]*byte))
+}
+
+func BenchmarkSetTypePtrSlice(b *testing.B) {
+	benchSetType(b, make([]*byte, 1<<10))
+}
+
+type Node1 struct {
+	Value       [1]uintptr
+	Left, Right *byte
+}
+
+func BenchmarkSetTypeNode1(b *testing.B) {
+	benchSetType(b, new(Node1))
+}
+
+func BenchmarkSetTypeNode1Slice(b *testing.B) {
+	benchSetType(b, make([]Node1, 32))
+}
+
+type Node8 struct {
+	Value       [8]uintptr
+	Left, Right *byte
+}
+
+func BenchmarkSetTypeNode8(b *testing.B) {
+	benchSetType(b, new(Node8))
+}
+
+func BenchmarkSetTypeNode8Slice(b *testing.B) {
+	benchSetType(b, make([]Node8, 32))
+}
+
+type Node64 struct {
+	Value       [64]uintptr
+	Left, Right *byte
+}
+
+func BenchmarkSetTypeNode64(b *testing.B) {
+	benchSetType(b, new(Node64))
+}
+
+func BenchmarkSetTypeNode64Slice(b *testing.B) {
+	benchSetType(b, make([]Node64, 32))
+}
+
+type Node64Dead struct {
+	Left, Right *byte
+	Value       [64]uintptr
+}
+
+func BenchmarkSetTypeNode64Dead(b *testing.B) {
+	benchSetType(b, new(Node64Dead))
+}
+
+func BenchmarkSetTypeNode64DeadSlice(b *testing.B) {
+	benchSetType(b, make([]Node64Dead, 32))
+}
+
+type Node124 struct {
+	Value       [124]uintptr
+	Left, Right *byte
+}
+
+func BenchmarkSetTypeNode124(b *testing.B) {
+	benchSetType(b, new(Node124))
+}
+
+func BenchmarkSetTypeNode124Slice(b *testing.B) {
+	benchSetType(b, make([]Node124, 32))
+}
+
+type Node126 struct {
+	Value       [126]uintptr
+	Left, Right *byte
+}
+
+func BenchmarkSetTypeNode126(b *testing.B) {
+	benchSetType(b, new(Node126))
+}
+
+func BenchmarkSetTypeNode126Slice(b *testing.B) {
+	benchSetType(b, make([]Node126, 32))
+}
+
+type Node128 struct {
+	Value       [128]uintptr
+	Left, Right *byte
+}
+
+func BenchmarkSetTypeNode128(b *testing.B) {
+	benchSetType(b, new(Node128))
+}
+
+func BenchmarkSetTypeNode128Slice(b *testing.B) {
+	benchSetType(b, make([]Node128, 32))
+}
+
+type Node130 struct {
+	Value       [130]uintptr
+	Left, Right *byte
+}
+
+func BenchmarkSetTypeNode130(b *testing.B) {
+	benchSetType(b, new(Node130))
+}
+
+func BenchmarkSetTypeNode130Slice(b *testing.B) {
+	benchSetType(b, make([]Node130, 32))
+}
+
+type Node1024 struct {
+	Value       [1024]uintptr
+	Left, Right *byte
+}
+
+func BenchmarkSetTypeNode1024(b *testing.B) {
+	benchSetType(b, new(Node1024))
+}
+
+func BenchmarkSetTypeNode1024Slice(b *testing.B) {
+	benchSetType(b, make([]Node1024, 32))
+}
+
+func benchSetType(b *testing.B, x interface{}) {
+	v := reflect.ValueOf(x)
+	t := v.Type()
+	switch t.Kind() {
+	case reflect.Ptr:
+		b.SetBytes(int64(t.Elem().Size()))
+	case reflect.Slice:
+		b.SetBytes(int64(t.Elem().Size()) * int64(v.Len()))
 	}
-	var p *Ptr2
-	for i := 0; i < b.N; i++ {
-		p = &Ptr2{}
-	}
-	_ = p
+	b.ResetTimer()
+	//runtime.BenchSetType(b.N, x)
 }
 
 func BenchmarkAllocation(b *testing.B) {
@@ -292,3 +412,80 @@ func TestPrintGC(t *testing.T) {
 	}
 	close(done)
 }
+
+/*
+
+// The implicit y, ok := x.(error) for the case error
+// in testTypeSwitch used to not initialize the result y
+// before passing &y to assertE2I2GC.
+// Catch this by making assertE2I2 call runtime.GC,
+// which will force a stack scan and failure if there are
+// bad pointers, and then fill the stack with bad pointers
+// and run the type switch.
+func TestAssertE2I2Liveness(t *testing.T) {
+	// Note that this flag is defined in export_test.go
+	// and is not available to ordinary imports of runtime.
+	*runtime.TestingAssertE2I2GC = true
+	defer func() {
+		*runtime.TestingAssertE2I2GC = false
+	}()
+
+	poisonStack()
+	testTypeSwitch(io.EOF)
+	poisonStack()
+	testAssert(io.EOF)
+	poisonStack()
+	testAssertVar(io.EOF)
+}
+
+func poisonStack() uintptr {
+	var x [1000]uintptr
+	for i := range x {
+		x[i] = 0xff
+	}
+	return x[123]
+}
+
+func testTypeSwitch(x interface{}) error {
+	switch y := x.(type) {
+	case nil:
+		// ok
+	case error:
+		return y
+	}
+	return nil
+}
+
+func testAssert(x interface{}) error {
+	if y, ok := x.(error); ok {
+		return y
+	}
+	return nil
+}
+
+func testAssertVar(x interface{}) error {
+	var y, ok = x.(error)
+	if ok {
+		return y
+	}
+	return nil
+}
+
+func TestAssertE2T2Liveness(t *testing.T) {
+	*runtime.TestingAssertE2T2GC = true
+	defer func() {
+		*runtime.TestingAssertE2T2GC = false
+	}()
+
+	poisonStack()
+	testIfaceEqual(io.EOF)
+}
+
+func testIfaceEqual(x interface{}) {
+	if x == "abc" {
+		// Prevent inlining
+		panic("")
+	}
+}
+
+*/

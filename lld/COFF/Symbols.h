@@ -125,10 +125,6 @@ public:
   // writer sets and uses RVAs.
   uint64_t getRVA();
 
-  // Returns the file offset of this symbol in the final executable.
-  // The writer uses this information to apply relocations.
-  uint64_t getFileOff();
-
   // Returns the RVA relative to the beginning of the output section.
   // Used to implement SECREL relocation type.
   uint64_t getSecrel();

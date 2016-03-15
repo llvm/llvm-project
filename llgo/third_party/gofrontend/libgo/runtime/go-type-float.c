@@ -56,6 +56,9 @@ __go_type_hash_float (const void *vkey, uintptr_t key_size)
     runtime_throw ("__go_type_hash_float: invalid float size");
 }
 
+const FuncVal __go_type_hash_float_descriptor =
+  { (void *) __go_type_hash_float };
+
 /* Equality function for float types.  */
 
 _Bool
@@ -84,3 +87,6 @@ __go_type_equal_float (const void *vk1, const void *vk2, uintptr_t key_size)
   else
     runtime_throw ("__go_type_equal_float: invalid float size");
 }
+
+const FuncVal __go_type_equal_float_descriptor =
+  { (void *) __go_type_equal_float };

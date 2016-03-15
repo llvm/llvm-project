@@ -88,7 +88,8 @@ void elf::printVersion() {
   outs() << "LLD " << getLLDVersion();
   std::string S = getLLDRepositoryVersion();
   if (!S.empty())
-    outs() << " " << S << "\n";
+    outs() << " " << S;
+  outs() << "\n";
 }
 
 std::string elf::findFromSearchPaths(StringRef Path) {

@@ -69,6 +69,7 @@ struct Configuration {
   bool NoUndefined;
   bool NoinhibitExec;
   bool PrintGcSections;
+  bool Rela;
   bool Relocatable;
   bool SaveTemps;
   bool Shared;
@@ -77,6 +78,7 @@ struct Configuration {
   bool SysvHash = true;
   bool Threads;
   bool Verbose;
+  bool WarnCommon;
   bool ZExecStack;
   bool ZNodelete;
   bool ZNow;

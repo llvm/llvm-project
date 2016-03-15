@@ -81,6 +81,12 @@ go_results_size (const struct __go_func_type *func)
 
   off = (off + maxalign - 1) & ~ (maxalign - 1);
 
+  // The libffi library doesn't understand a struct with no fields.
+  // We generate a struct with a single field of type void.  When used
+  // as a return value, libffi will think that requires a byte.
+  if (off == 0)
+    off = 1;
+
   return off;
 }
 

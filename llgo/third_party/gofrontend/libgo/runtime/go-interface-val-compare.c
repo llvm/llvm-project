@@ -26,8 +26,8 @@ __go_interface_value_compare (
     return 1;
   if (__go_is_pointer_type (left_descriptor))
     return left.__object == val ? 0 : 1;
-  if (!left_descriptor->__equalfn (left.__object, val,
-				   left_descriptor->__size))
+  if (!__go_call_equalfn (left_descriptor->__equalfn, left.__object, val,
+			  left_descriptor->__size))
     return 1;
   return 0;
 }

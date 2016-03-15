@@ -166,7 +166,7 @@ Caller (int skip)
 
   runtime_memclr (&ret, sizeof ret);
   n = runtime_callers (skip + 1, &loc, 1, false);
-  if (n < 1)
+  if (n < 1 || loc.pc == 0)
     return ret;
   ret.pc = loc.pc;
   ret.file = loc.filename;
@@ -231,6 +231,8 @@ String runtime_funcname_go (Func *f)
 String
 runtime_funcname_go (Func *f)
 {
+  if (f == NULL)
+    return runtime_gostringnocopy ((const byte *) "");
   return f->name;
 }
 
