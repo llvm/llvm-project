@@ -61,14 +61,16 @@ Unit FileToVector(const std::string &Path, size_t MaxSize) {
     Printf("No such directory: %s; exiting\n", Path.c_str());
     exit(1);
   }
-  if (MaxSize) {
-    Unit Res(MaxSize);
-    T.read(reinterpret_cast<char*>(Res.data()), MaxSize);
-    Res.resize(T.gcount());
-    return Res;
-  }
-  return Unit((std::istreambuf_iterator<char>(T)),
-              std::istreambuf_iterator<char>());
+
+  T.seekg(0, T.end);
+  size_t FileLen = T.tellg();
+  if (MaxSize)
+    FileLen = std::min(FileLen, MaxSize);
+
+  T.seekg(0, T.beg);
+  Unit Res(FileLen);
+  T.read(reinterpret_cast<char *>(Res.data()), FileLen);
+  return Res;
 }
 
 std::string FileToString(const std::string &Path) {

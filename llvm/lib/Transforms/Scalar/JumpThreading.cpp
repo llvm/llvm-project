@@ -152,7 +152,6 @@ namespace {
     bool ComputeValueKnownInPredecessors(Value *V, BasicBlock *BB,
                                          PredValueInfo &Result,
                                          ConstantPreference Preference,
-                                         bool &Changed,
                                          Instruction *CxtI = nullptr);
     bool ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
                                 ConstantPreference Preference,
@@ -396,9 +395,10 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
 ///
 /// This returns true if there were any known values.
 ///
-bool JumpThreading::ComputeValueKnownInPredecessors(
-    Value *V, BasicBlock *BB, PredValueInfo &Result,
-    ConstantPreference Preference, bool &Changed, Instruction *CxtI) {
+bool JumpThreading::
+ComputeValueKnownInPredecessors(Value *V, BasicBlock *BB, PredValueInfo &Result,
+                                ConstantPreference Preference,
+                                Instruction *CxtI) {
   // This method walks up use-def chains recursively.  Because of this, we could
   // get into an infinite loop going around loops in the use-def chain.  To
   // prevent this, keep track of what (value, block) pairs we've already visited
@@ -410,16 +410,6 @@ bool JumpThreading::ComputeValueKnownInPredecessors(
   // stack pops back out again.
   RecursionSetRemover remover(RecursionSet, std::make_pair(V, BB));
 
-  // Simplify the instruction before inferring the value. 
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (I && !isa<PHINode>(I))
-    if (auto *NewV = SimplifyInstruction(I, BB->getModule()->getDataLayout())) {
-      I->replaceAllUsesWith(NewV);
-      I->eraseFromParent();
-      V = NewV;
-      Changed = true;
-    }
-
   // If V is a constant, then it is known in all predecessors.
   if (Constant *KC = getKnownConstant(V, Preference)) {
     for (BasicBlock *Pred : predecessors(BB))
@@ -430,7 +420,7 @@ bool JumpThreading::ComputeValueKnownInPredecessors(
 
   // If V is a non-instruction value, or an instruction in a different block,
   // then it can't be derived from a PHI.
-  I = dyn_cast<Instruction>(V);
+  Instruction *I = dyn_cast<Instruction>(V);
   if (!I || I->getParent() != BB) {
 
     // Okay, if this is a live-in value, see if it has a known value at the end
@@ -475,6 +465,25 @@ bool JumpThreading::ComputeValueKnownInPredecessors(
     return !Result.empty();
   }
 
+  // Handle Cast instructions.  Only see through Cast when the source operand is
+  // PHI or Cmp and the source type is i1 to save the compilation time.
+  if (CastInst *CI = dyn_cast<CastInst>(I)) {
+    Value *Source = CI->getOperand(0);
+    if (!Source->getType()->isIntegerTy(1))
+      return false;
+    if (!isa<PHINode>(Source) && !isa<CmpInst>(Source))
+      return false;
+    ComputeValueKnownInPredecessors(Source, BB, Result, Preference, CxtI);
+    if (Result.empty())
+      return false;
+
+    // Convert the known values.
+    for (auto &R : Result)
+      R.first = ConstantExpr::getCast(CI->getOpcode(), R.first, CI->getType());
+
+    return true;
+  }
+
   PredValueInfoTy LHSVals, RHSVals;
 
   // Handle some boolean conditions.
@@ -485,9 +494,9 @@ bool JumpThreading::ComputeValueKnownInPredecessors(
     if (I->getOpcode() == Instruction::Or ||
         I->getOpcode() == Instruction::And) {
       ComputeValueKnownInPredecessors(I->getOperand(0), BB, LHSVals,
-                                      WantInteger, Changed, CxtI);
+                                      WantInteger, CxtI);
       ComputeValueKnownInPredecessors(I->getOperand(1), BB, RHSVals,
-                                      WantInteger, Changed, CxtI);
+                                      WantInteger, CxtI);
 
       if (LHSVals.empty() && RHSVals.empty())
         return false;
@@ -522,8 +531,8 @@ bool JumpThreading::ComputeValueKnownInPredecessors(
     if (I->getOpcode() == Instruction::Xor &&
         isa<ConstantInt>(I->getOperand(1)) &&
         cast<ConstantInt>(I->getOperand(1))->isOne()) {
-      ComputeValueKnownInPredecessors(I->getOperand(0), BB, Result, WantInteger,
-                                      Changed, CxtI);
+      ComputeValueKnownInPredecessors(I->getOperand(0), BB, Result,
+                                      WantInteger, CxtI);
       if (Result.empty())
         return false;
 
@@ -541,7 +550,7 @@ bool JumpThreading::ComputeValueKnownInPredecessors(
     if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(1))) {
       PredValueInfoTy LHSVals;
       ComputeValueKnownInPredecessors(BO->getOperand(0), BB, LHSVals,
-                                      WantInteger, Changed, CxtI);
+                                      WantInteger, CxtI);
 
       // Try to use constant folding to simplify the binary operator.
       for (const auto &LHSVal : LHSVals) {
@@ -618,7 +627,7 @@ bool JumpThreading::ComputeValueKnownInPredecessors(
       if (Constant *CmpConst = dyn_cast<Constant>(Cmp->getOperand(1))) {
         PredValueInfoTy LHSVals;
         ComputeValueKnownInPredecessors(I->getOperand(0), BB, LHSVals,
-                                        WantInteger, Changed, CxtI);
+                                        WantInteger, CxtI);
 
         for (const auto &LHSVal : LHSVals) {
           Constant *V = LHSVal.first;
@@ -641,7 +650,7 @@ bool JumpThreading::ComputeValueKnownInPredecessors(
     PredValueInfoTy Conds;
     if ((TrueVal || FalseVal) &&
         ComputeValueKnownInPredecessors(SI->getCondition(), BB, Conds,
-                                        WantInteger, Changed, CxtI)) {
+                                        WantInteger, CxtI)) {
       for (auto &C : Conds) {
         Constant *Cond = C.first;
 
@@ -1190,10 +1199,8 @@ bool JumpThreading::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
     return false;
 
   PredValueInfoTy PredValues;
-  bool Changed = false;
-  if (!ComputeValueKnownInPredecessors(Cond, BB, PredValues, Preference,
-                                       Changed, CxtI))
-    return Changed;
+  if (!ComputeValueKnownInPredecessors(Cond, BB, PredValues, Preference, CxtI))
+    return false;
 
   assert(!PredValues.empty() &&
          "ComputeValueKnownInPredecessors returned true with no values");
@@ -1251,7 +1258,7 @@ bool JumpThreading::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
 
   // If all edges were unthreadable, we fail.
   if (PredToDestList.empty())
-    return Changed;
+    return false;
 
   // Determine which is the most common successor.  If we have many inputs and
   // this block is a switch, we want to start by threading the batch that goes
@@ -1284,8 +1291,7 @@ bool JumpThreading::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
                             getSuccessor(GetBestDestForJumpOnUndef(BB));
 
   // Ok, try to thread it!
-  Changed |= ThreadEdge(BB, PredsToFactor, MostPopularDest);
-  return Changed;
+  return ThreadEdge(BB, PredsToFactor, MostPopularDest);
 }
 
 /// ProcessBranchOnPHI - We have an otherwise unthreadable conditional branch on
@@ -1356,13 +1362,12 @@ bool JumpThreading::ProcessBranchOnXOR(BinaryOperator *BO) {
 
   PredValueInfoTy XorOpValues;
   bool isLHS = true;
-  bool Changed = false;
   if (!ComputeValueKnownInPredecessors(BO->getOperand(0), BB, XorOpValues,
-                                       WantInteger, Changed, BO)) {
+                                       WantInteger, BO)) {
     assert(XorOpValues.empty());
     if (!ComputeValueKnownInPredecessors(BO->getOperand(1), BB, XorOpValues,
-                                         WantInteger, Changed, BO))
-      return Changed;
+                                         WantInteger, BO))
+      return false;
     isLHS = false;
   }
 
@@ -1420,8 +1425,7 @@ bool JumpThreading::ProcessBranchOnXOR(BinaryOperator *BO) {
   }
 
   // Try to duplicate BB into PredBB.
-  Changed |= DuplicateCondBranchOnPHIIntoPred(BB, BlocksToFoldInto);
-  return Changed;
+  return DuplicateCondBranchOnPHIIntoPred(BB, BlocksToFoldInto);
 }
 
 

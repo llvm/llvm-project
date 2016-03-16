@@ -537,6 +537,9 @@
 /* Define to the version of this package. */
 #cmakedefine PACKAGE_VERSION "${PACKAGE_VERSION}"
 
+/* Define to the vendor of this package. */
+#cmakedefine PACKAGE_VENDOR "${PACKAGE_VENDOR}"
+
 /* Define as the return type of signal handlers (`int' or `void'). */
 #cmakedefine RETSIGTYPE ${RETSIGTYPE}
 

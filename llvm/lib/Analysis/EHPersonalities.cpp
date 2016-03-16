@@ -34,6 +34,7 @@ EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
     .Case("__C_specific_handler",  EHPersonality::MSVC_Win64SEH)
     .Case("__CxxFrameHandler3",    EHPersonality::MSVC_CXX)
     .Case("ProcessCLRException",   EHPersonality::CoreCLR)
+    .Case("rust_eh_personality",   EHPersonality::Rust)
     .Default(EHPersonality::Unknown);
 }
 

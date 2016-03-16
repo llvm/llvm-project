@@ -19233,6 +19233,11 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
         // ashr(R, 7)  === cmp_slt(R, 0)
         if (Op.getOpcode() == ISD::SRA && ShiftAmt == 7) {
           SDValue Zeros = getZeroVector(VT, Subtarget, DAG, dl);
+          if (VT.is512BitVector()) {
+            assert(VT == MVT::v64i8 && "Unexpected element type!");
+            SDValue CMP = DAG.getNode(X86ISD::PCMPGTM, dl, MVT::v64i1, Zeros, R);
+            return DAG.getNode(ISD::SIGN_EXTEND, dl, VT, CMP);
+          }
           return DAG.getNode(X86ISD::PCMPGT, dl, VT, Zeros, R);
         }
 
