@@ -190,6 +190,9 @@ static cl::opt<int> ClInstrumentationWithCallThreshold(
 static cl::opt<bool> ClCheckConstantShadow("msan-check-constant-shadow",
        cl::desc("Insert checks for constant shadow values"),
        cl::Hidden, cl::init(false));
+static cl::opt<bool> ClWithComdat("msan-with-comdat",
+       cl::desc("Place MSan constructors in comdat sections"),
+       cl::Hidden, cl::init(false));
 
 static const char *const kMsanModuleCtorName = "msan.module_ctor";
 static const char *const kMsanInitName = "__msan_init";
@@ -540,10 +543,14 @@ bool MemorySanitizer::doInitialization(Module &M) {
       createSanitizerCtorAndInitFunctions(M, kMsanModuleCtorName, kMsanInitName,
                                           /*InitArgTypes=*/{},
                                           /*InitArgs=*/{});
-  Comdat *MsanCtorComdat = M.getOrInsertComdat(kMsanModuleCtorName);
-  MsanCtorFunction->setComdat(MsanCtorComdat);
+  if (ClWithComdat) {
+    Comdat *MsanCtorComdat = M.getOrInsertComdat(kMsanModuleCtorName);
+    MsanCtorFunction->setComdat(MsanCtorComdat);
+    appendToGlobalCtors(M, MsanCtorFunction, 0, MsanCtorFunction);
+  } else {
+    appendToGlobalCtors(M, MsanCtorFunction, 0);
+  }
 
-  appendToGlobalCtors(M, MsanCtorFunction, 0, MsanCtorFunction);
 
   if (TrackOrigins)
     new GlobalVariable(M, IRB.getInt32Ty(), true, GlobalValue::WeakODRLinkage,

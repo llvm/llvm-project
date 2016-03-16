@@ -2869,9 +2869,9 @@ uint64_t SIInstrInfo::getDefaultRsrcDataFormat() const {
   if (ST.isAmdHsaOS()) {
     RsrcDataFormat |= (1ULL << 56);
 
-  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
-    // Set MTYPE = 2
-    RsrcDataFormat |= (2ULL << 59);
+    if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      // Set MTYPE = 2
+      RsrcDataFormat |= (2ULL << 59);
   }
 
   return RsrcDataFormat;

@@ -376,3 +376,21 @@ define <64 x i8> @splatconstant_shift_v64i8(<64 x i8> %a) nounwind {
   %shift = ashr <64 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <64 x i8> %shift
 }
+
+define <64 x i8> @ashr_const7_v64i8(<64 x i8> %a) {
+; AVX512DQ-LABEL: ashr_const7_v64i8:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    vpxor %ymm2, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpcmpgtb %ymm0, %ymm2, %ymm0
+; AVX512DQ-NEXT:    vpcmpgtb %ymm1, %ymm2, %ymm1
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: ashr_const7_v64i8:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpxord %zmm1, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpcmpgtb %zmm0, %zmm1, %k0
+; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512BW-NEXT:    retq
+  %res = ashr <64 x i8> %a, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  ret <64 x i8> %res
+}

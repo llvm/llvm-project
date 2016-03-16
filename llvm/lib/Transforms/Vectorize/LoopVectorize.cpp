@@ -3628,7 +3628,7 @@ void InnerLoopVectorizer::vectorizeLoop() {
     BasicBlock::iterator I(KV.first);
     auto *BB = SplitBlock(I->getParent(), &*std::next(I), DT, LI);
     auto *T = SplitBlockAndInsertIfThen(KV.second, &*I, /*Unreachable=*/false,
-                                        /*BranchWeights=*/nullptr, DT);
+                                        /*BranchWeights=*/nullptr, DT, LI);
     I->moveBefore(T);
     I->getParent()->setName("pred.store.if");
     BB->setName("pred.store.continue");

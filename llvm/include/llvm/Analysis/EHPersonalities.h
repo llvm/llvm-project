@@ -28,7 +28,8 @@ enum class EHPersonality {
   MSVC_X86SEH,
   MSVC_Win64SEH,
   MSVC_CXX,
-  CoreCLR
+  CoreCLR,
+  Rust
 };
 
 /// \brief See if the given exception handling personality function is one

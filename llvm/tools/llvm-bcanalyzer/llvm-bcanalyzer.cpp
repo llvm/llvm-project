@@ -188,6 +188,10 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
     // FIXME: Should these be different?
     case bitc::PARAMATTR_CODE_ENTRY_OLD: return "ENTRY";
     case bitc::PARAMATTR_CODE_ENTRY:     return "ENTRY";
+    }
+  case bitc::PARAMATTR_GROUP_BLOCK_ID:
+    switch (CodeID) {
+    default: return nullptr;
     case bitc::PARAMATTR_GRP_CODE_ENTRY: return "ENTRY";
     }
   case bitc::TYPE_BLOCK_ID_NEW:

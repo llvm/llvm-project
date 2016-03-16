@@ -259,11 +259,12 @@ ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 /// UnreachableInst, otherwise it branches to Tail.
 /// Returns the NewBasicBlock's terminator.
 ///
-/// Updates DT if given.
+/// Updates DT and LI if given.
 TerminatorInst *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
                                           bool Unreachable,
                                           MDNode *BranchWeights = nullptr,
-                                          DominatorTree *DT = nullptr);
+                                          DominatorTree *DT = nullptr,
+                                          LoopInfo *LI = nullptr);
 
 /// SplitBlockAndInsertIfThenElse is similar to SplitBlockAndInsertIfThen,
 /// but also creates the ElseBlock.

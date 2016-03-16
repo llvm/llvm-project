@@ -88,13 +88,13 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   const AMDGPUSubtarget &STI = MF->getSubtarget<AMDGPUSubtarget>();
   AMDGPUMCInstLower MCInstLowering(OutContext, STI);
 
-#ifdef _DEBUG
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(MI, Err)) {
-    errs() << "Warning: Illegal instruction detected: " << Err << "\n";
+    LLVMContext &C = MI->getParent()->getParent()->getFunction()->getContext();
+    C.emitError("Illegal instruction detected: " + Err);
     MI->dump();
   }
-#endif
+
   if (MI->isBundle()) {
     const MachineBasicBlock *MBB = MI->getParent();
     MachineBasicBlock::const_instr_iterator I = ++MI->getIterator();

@@ -263,7 +263,175 @@ almost never be stored or mentioned directly.  They are intended solely for use
 when defining a function which should be able to efficiently accept concatenated
 strings.
 
+.. _error_apis:
+
+Error handling
+--------------
+
+Proper error handling helps us identify bugs in our code, and helps end-users
+understand errors in their tool usage. Errors fall into two broad categories:
+*programmatic* and *recoverable*, with different strategies for handling and
+reporting.
+
+Programmatic Errors
+^^^^^^^^^^^^^^^^^^^
+
+Programmatic errors are violations of program invariants or API contracts, and
+represent bugs within the program itself. Our aim is to document invariants, and
+to abort quickly at the point of failure (providing some basic diagnostic) when
+invariants are broken at runtime.
+
+The fundamental tools for handling programmatic errors are assertions and the
+llvm_unreachable function. Assertions are used to express invariant conditions,
+and should include a message describing the invariant:
+
+.. code-block:: c++
+
+  assert(isPhysReg(R) && "All virt regs should have been allocated already.");
+
+The llvm_unreachable function can be used to document areas of control flow
+that should never be entered if the program invariants hold:
+
+.. code-block:: c++
+
+  enum { Foo, Bar, Baz } X = foo();
+
+  switch (X) {
+    case Foo: /* Handle Foo */; break;
+    case Bar: /* Handle Bar */; break;
+    default:
+      llvm_unreachable("X should be Foo or Bar here");
+  }
+
+Recoverable Errors
+^^^^^^^^^^^^^^^^^^
+
+Recoverable errors represent an error in the program's environment, for example
+a resource failure (a missing file, a dropped network connection, etc.), or
+malformed input. These errors should be detected and communicated to a level of
+the program where they can be handled appropriately. Handling the error may be
+as simple as reporting the issue to the user, or it may involve attempts at
+recovery.
+
+Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
+represents errors using function return values, similar to classic C integer
+error codes, or C++'s ``std::error_code``. However, the ``Error`` class is
+actually a lightweight wrapper for user-defined error types, allowing arbitrary
+information to be attached to describe the error. This is similar to the way C++
+exceptions allow throwing of user-defined types.
+
+Success values are created by calling ``Error::success()``:
+
+.. code-block:: c++
+
+  Error foo() {
+    // Do something.
+    // Return success.
+    return Error::success();
+  }
+
+Success values are very cheap to construct and return - they have minimal
+impact on program performance.
+
+Failure values are constructed using ``make_error<T>``, where ``T`` is any class
+that inherits from the ErrorInfo utility:
+
+.. code-block:: c++
+
+  class MyError : public ErrorInfo<MyError> {
+  public:
+    MyError(std::string Msg) : Msg(Msg) {}
+    void log(OStream &OS) const override { OS << "MyError - " << Msg; }
+  private:
+    std::string Msg;
+  };
+
+  Error bar() {
+    if (checkErrorCondition)
+      return make_error<MyError>("Error condition detected");
+
+    // No error - proceed with bar.
+
+    // Return success value.
+    return Error::success();
+  }
+
+For functions that can fail but need to return a value the ``Expected<T>``
+utility can be used. Values of this type can be constructed with either a
+``T``, or a ``Error``. Values are implicitly convertible to boolean: true
+for success, false for error. If success, the ``T`` value can be accessed via
+the dereference operator. If failure, the ``Error`` value can be extracted
+using the ``takeError()`` method:
+
+.. code-block:: c++
+
+  Expected<float> parseAndSquareRoot(IStream &IS) {
+    float f;
+    OS >> f;
+    if (f < 0)
+      return make_error<FloatingPointError>(...);
+    return sqrt(f);
+  }
+
+  Error foo(IStream &IS) {
+    if (auto SqrtOrErr = parseAndSquartRoot(IS)) {
+      float Sqrt = *SqrtOrErr;
+      // ...
+    } else
+      return SqrtOrErr.takeError();
+  }
+
+All Error instances, whether success or failure, must be either checked or
+moved from (via std::move or a return) before they are destructed. Accidentally
+discarding an unchecked error will cause a program abort at the point where the
+unchecked value's destructor is run, making it easy to identify and fix
+violations of this rule.
+
+Success values are considered checked once they have been tested (by invoking
+the boolean conversion operator):
+
+.. code-block:: c++
+
+  if (auto Err = canFail(...))
+    return Err; // Failure value - move error to caller.
+
+  // Safe to continue: Err was checked.
+
+In contrast, the following code will always cause an abort, regardless of the
+return value of ``foo``:
+
+.. code-block:: c++
+
+    canFail();
+    // Program will always abort here, even if canFail() returns Success, since
+    // the value is not checked.
+
+Failure values are considered checked once a handler for the error type has
+been activated:
+
+.. code-block:: c++
+
+  auto Err = canFail(...);
+  if (auto Err2 =
+       handleErrors(std::move(Err),
+         [](std::unique_ptr<MyError> M) {
+           // Try to handle 'M'. If successful, return a success value from
+           // the handler.
+           if (tryToHandle(M))
+             return Error::success();
+
+           // We failed to handle 'M' - return it from the handler.
+           // This value will be passed back from catchErrors and
+           // wind up in Err2, where it will be returned from this function.
+           return Error(std::move(M));
+         })))
+    return Err2;
+
+
 .. _function_apis:
+
+More information on Error and its related utilities can be found in the
+Error.h header file.
 
 Passing functions and other callable objects
 --------------------------------------------
