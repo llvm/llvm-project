@@ -4,8 +4,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/icf2.s -o %t2
 # RUN: ld.lld %t1 %t2 -o %t --icf=all --verbose | FileCheck %s
 
-# CHECK: Selected .text.f1
-# CHECK:   Removed .text.f2
+# CHECK: selected .text.f1
+# CHECK:   removed .text.f2
 
 .globl _start, f1, f2
 _start:

@@ -870,13 +870,19 @@ lldb_private::formatters::ObjCBOOLSummaryProvider (ValueObject& valobj, Stream& 
         if (!real_guy_sp)
             return false;
     }
-    uint64_t value = real_guy_sp->GetValueAsUnsigned(0);
-    if (value == 0)
+    uint8_t value = (real_guy_sp->GetValueAsUnsigned(0) & 0xFF);
+    switch (value)
     {
-        stream.Printf("NO");
-        return true;
+        case 0:
+            stream.Printf("NO");
+            break;
+        case 1:
+            stream.Printf("YES");
+            break;
+        default:
+            stream.Printf("%u",value);
+            break;
     }
-    stream.Printf("YES");
     return true;
 }
 

@@ -78,6 +78,7 @@ class GdbRemoteTestCaseBase(TestBase):
         self.setUpBaseLogging()
         self._remote_server_log_file = None
         self.debug_monitor_extra_args = []
+        self._pump_queues = socket_packet_pump.PumpQueues()
 
         if self.isVerboseLoggingRequested():
             # If requested, full logs go to a log file
@@ -109,6 +110,8 @@ class GdbRemoteTestCaseBase(TestBase):
             self.stub_hostname = "localhost"
 
     def tearDown(self):
+        self._pump_queues.verify_queues_empty()
+
         if self._remote_server_log_file is not None:
             lldb.remote_platform.Get(lldb.SBFileSpec(self._remote_server_log_file),
                     lldb.SBFileSpec(self.getLocalServerLogFile()))
@@ -629,7 +632,8 @@ class GdbRemoteTestCaseBase(TestBase):
     def expect_gdbremote_sequence(self, timeout_seconds=None):
         if not timeout_seconds:
             timeout_seconds = self._TIMEOUT_SECONDS
-        return expect_lldb_gdbserver_replay(self, self.sock, self.test_sequence, timeout_seconds, self.logger)
+        return expect_lldb_gdbserver_replay(self, self.sock, self.test_sequence,
+                self._pump_queues, timeout_seconds, self.logger)
 
     _KNOWN_REGINFO_KEYS = [
         "name",

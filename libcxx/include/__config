@@ -859,6 +859,11 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 #endif
 
+#if (defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS) && defined(__clang__) \
+      && __has_attribute(acquire_capability))
+#define _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
+#endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP_CONFIG

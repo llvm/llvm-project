@@ -13,7 +13,6 @@
 // C++ Includes
 #include <cstdio>
 #include <cstring>
-#include <limits>
 
 // Other libraries and framework includes
 // Project includes

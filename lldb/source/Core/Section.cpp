@@ -14,8 +14,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConvertEnum.h"
 
-#include <limits>
-
 using namespace lldb;
 using namespace lldb_private;
 

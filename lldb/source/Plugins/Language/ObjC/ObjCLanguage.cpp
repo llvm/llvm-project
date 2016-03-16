@@ -557,10 +557,7 @@ LoadObjCFormatters(TypeCategoryImplSP objc_category_sp)
     
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNotificationSummaryProvider, "NSNotification summary provider", ConstString("NSNotification"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNotificationSummaryProvider, "NSNotification summary provider", ConstString("NSConcreteNotification"), appkit_flags);
-    
-    AddStringSummary(objc_category_sp, "domain: ${var._domain} - code: ${var._code}", ConstString("NSError"), appkit_flags);
-    AddStringSummary(objc_category_sp,"name:${var.name%S} reason:${var.reason%S}",ConstString("NSException"),appkit_flags);
-    
+        
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider, "NSNumber summary provider", ConstString("NSNumber"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider, "CFNumberRef summary provider", ConstString("CFNumberRef"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider, "NSNumber summary provider", ConstString("__NSCFBoolean"), appkit_flags);

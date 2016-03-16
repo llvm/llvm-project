@@ -57,6 +57,8 @@
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
 #include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
 #include "Plugins/MemoryHistory/asan/MemoryHistoryASan.h"
+#include "Plugins/OperatingSystem/Python/OperatingSystemPython.h"
+#include "Plugins/OperatingSystem/Go/OperatingSystemGo.h"
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
 #include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
@@ -258,6 +260,11 @@ SystemInitializerFull::Initialize()
 {
     SystemInitializerCommon::Initialize();
     ScriptInterpreterNone::Initialize();
+
+#ifndef LLDB_DISABLE_PYTHON
+    OperatingSystemPython::Initialize();
+#endif
+    OperatingSystemGo::Initialize();
 
 #if !defined(LLDB_DISABLE_PYTHON)
     InitializeSWIG();
@@ -461,6 +468,11 @@ SystemInitializerFull::Terminate()
     platform_gdb_server::PlatformRemoteGDBServer::Terminate();
     process_gdb_remote::ProcessGDBRemote::Terminate();
     DynamicLoaderStatic::Terminate();
+
+#ifndef LLDB_DISABLE_PYTHON
+    OperatingSystemPython::Terminate();
+#endif
+    OperatingSystemGo::Terminate();
 
     // Now shutdown the common parts, in reverse order.
     SystemInitializerCommon::Terminate();

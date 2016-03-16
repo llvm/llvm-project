@@ -219,11 +219,21 @@ Defined *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
     }
     return new (Alloc) DefinedAbsolute(Name, Sym);
   }
-  if (Sym.getSectionNumber() == llvm::COFF::IMAGE_SYM_DEBUG)
+  int32_t SectionNumber = Sym.getSectionNumber();
+  if (SectionNumber == llvm::COFF::IMAGE_SYM_DEBUG)
     return nullptr;
 
+  // Reserved sections numbers don't have contents.
+  if (llvm::COFF::isReservedSectionNumber(SectionNumber))
+    error(Twine("broken object file: ") + getName());
+
+  // This symbol references a section which is not present in the section
+  // header.
+  if ((uint32_t)SectionNumber >= SparseChunks.size())
+    error(Twine("broken object file: ") + getName());
+
   // Nothing else to do without a section chunk.
-  auto *SC = cast_or_null<SectionChunk>(SparseChunks[Sym.getSectionNumber()]);
+  auto *SC = cast_or_null<SectionChunk>(SparseChunks[SectionNumber]);
   if (!SC)
     return nullptr;
 

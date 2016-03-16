@@ -1230,7 +1230,7 @@ uint32_t AArch64TargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
     return Type;
   StringRef S = getELFRelocationTypeName(EM_AARCH64, Type);
-  error("Relocation " + S + " cannot be used when making a shared object; "
+  error("relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
   // Keep it going with a dummy value so that we can find more reloc errors.
   return R_AARCH64_ABS32;
@@ -1570,7 +1570,7 @@ uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
   if (Type == R_MIPS_32 || Type == R_MIPS_64)
     return R_MIPS_REL32;
   StringRef S = getELFRelocationTypeName(EM_MIPS, Type);
-  error("Relocation " + S + " cannot be used when making a shared object; "
+  error("relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
   // Keep it going with a dummy value so that we can find more reloc errors.
   return R_MIPS_32;
@@ -1730,7 +1730,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     if (PairedLoc)
       writeMipsHi16<E>(Loc, S + readMipsAHL<E>(Loc, PairedLoc));
     else {
-      warning("Can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16");
+      warning("can't find matching R_MIPS_LO16 relocation for R_MIPS_HI16");
       writeMipsHi16<E>(Loc, S);
     }
     break;
@@ -1759,7 +1759,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
     if (PairedLoc)
       writeMipsHi16<E>(Loc, S + readMipsAHL<E>(Loc, PairedLoc) - P);
     else {
-      warning("Can't find matching R_MIPS_PCLO16 relocation for R_MIPS_PCHI16");
+      warning("can't find matching R_MIPS_PCLO16 relocation for R_MIPS_PCHI16");
       writeMipsHi16<E>(Loc, S - P);
     }
     break;

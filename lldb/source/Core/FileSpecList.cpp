@@ -12,7 +12,6 @@
 // C Includes
 // C++ Includes
 #include <algorithm>
-#include <limits>
 
 // Other libraries and framework includes
 // Project includes

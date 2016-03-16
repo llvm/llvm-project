@@ -13,7 +13,6 @@
 // C++ Includes
 #include <cassert>
 #include <cstddef>
-#include <limits>
 
 // Other libraries and framework includes
 #include "llvm/Support/MathExtras.h"

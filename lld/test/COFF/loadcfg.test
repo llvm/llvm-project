@@ -56,7 +56,7 @@ symbols:
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
   - Name:            .rdata
     Value:           0
-    SectionNumber:   4
+    SectionNumber:   3
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC

@@ -170,7 +170,8 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
 }
 
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
-  opt::InputArgList Args = parseArgs(&Alloc, ArgsArr.slice(1));
+  ELFOptTable Parser;
+  opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
   if (Args.hasArg(OPT_help)) {
     printHelp(ArgsArr[0]);
     return;
@@ -342,14 +343,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   Config->Rela = ELFT::Is64Bits;
 
-  if (!Config->Shared && !Config->Relocatable) {
+  if (Config->Entry.empty() && !Config->Shared && !Config->Relocatable &&
+      Config->EMachine != EM_AMDGPU)
     // Add entry symbol.
     //
     // There is no entry symbol for AMDGPU binaries, so skip adding one to avoid
     // having and undefined symbol.
-    if (Config->Entry.empty() && Config->EMachine != EM_AMDGPU)
-      Config->Entry = (Config->EMachine == EM_MIPS) ? "__start" : "_start";
+    Config->Entry = Config->EMachine == EM_MIPS ? "__start" : "_start";
 
+  if (!Config->Relocatable)
     // In the assembly for 32 bit x86 the _GLOBAL_OFFSET_TABLE_ symbol
     // is magical and is used to produce a R_386_GOTPC relocation.
     // The R_386_GOTPC relocation value doesn't actually depend on the
@@ -363,7 +365,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // Given that the symbol is effectively unused, we just create a dummy
     // hidden one to avoid the undefined symbol error.
     Symtab.addIgnored("_GLOBAL_OFFSET_TABLE_");
-  }
 
   if (!Config->Entry.empty()) {
     // Set either EntryAddr (if S is a number) or EntrySym (otherwise).

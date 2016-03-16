@@ -21,6 +21,7 @@
 #include <sstream>
 #include <iomanip>
 #include <stdlib.h>                             // for atexit
+#include <ctime>
 
 #define STRINGIZE2(x) #x
 #define STRINGIZE(x) STRINGIZE2(x)
@@ -337,15 +338,14 @@ void kmp_stats_output_module::setupEventColors() {
 void kmp_stats_output_module::printTimerStats(FILE *statsOut, statistic const * theStats, statistic const * totalStats)
 {
     fprintf (statsOut, "Timer,                      SampleCount,    Min,      Mean,       Max,     Total,        SD\n");
-    for (int s = 0; s<TIMER_LAST; s++) {
+    for (timer_e s = timer_e(0); s<TIMER_LAST; s = timer_e(s+1)) {
         statistic const * stat = &theStats[s];
+        char tag = timeStat::noUnits(s) ? ' ' : 'T';
 
-        char tag = timeStat::noUnits(timer_e(s)) ? ' ' : 'T';
-        fprintf (statsOut, "%-28s, %s\n", timeStat::name(timer_e(s)), stat->format(tag, true).c_str());
+        fprintf (statsOut, "%-28s, %s\n", timeStat::name(s), stat->format(tag, true).c_str());
         // Also print the Total_ versions of times.
-        if (totalStats && tag == 'T' && !timeStat::masterOnly(timer_e(s))) {
-            fprintf(statsOut, "Total_%-22s, %s\n", timeStat::name(timer_e(s)), totalStats[s].format(tag, true).c_str());
-        }
+        if (totalStats && !timeStat::noTotal(s))
+            fprintf(statsOut, "Total_%-22s, %s\n", timeStat::name(s), totalStats[s].format(tag, true).c_str());
     }
 }
 
@@ -463,36 +463,63 @@ void kmp_stats_output_module::printPloticusFile() {
     return;
 }
 
+/*
+ * Print some useful information about
+ *    * the date and time this experiment ran.
+ *    * the machine on which it ran.
+ * We output all of this as stylised comments, though we may decide to parse some of it.
+ */
+void kmp_stats_output_module::printHeaderInfo(FILE * statsOut)
+{
+    std::time_t now = std::time(0);
+    char buffer[40];
+    char hostName[80];
+
+    std::strftime(&buffer[0], sizeof(buffer), "%c", std::localtime(&now));
+    fprintf (statsOut, "# Time of run: %s\n", &buffer[0]);
+    if (gethostname(&hostName[0], sizeof(hostName)) == 0)
+        fprintf (statsOut,"# Hostname: %s\n", &hostName[0]);
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+    fprintf (statsOut, "# CPU:  %s\n", &__kmp_cpuinfo.name[0]);
+    fprintf (statsOut, "# Family: %d, Model: %d, Stepping: %d\n", __kmp_cpuinfo.family, __kmp_cpuinfo.model, __kmp_cpuinfo.stepping);
+    if (__kmp_cpuinfo.frequency == 0)
+        fprintf (statsOut, "# Nominal frequency: Unknown\n");
+    else
+        fprintf (statsOut, "# Nominal frequency: %sz\n", formatSI(double(__kmp_cpuinfo.frequency),9,'H').c_str());
+#endif
+}
+
 void kmp_stats_output_module::outputStats(const char* heading) 
 {
+    // Stop all the explicit timers in all threads
+    // Do this before declaring the local statistics because thay have constructors so will take time to create.
+    windupExplicitTimers();
+
     statistic allStats[TIMER_LAST];
     statistic totalStats[TIMER_LAST];           /* Synthesized, cross threads versions of normal timer stats */
     statistic allCounters[COUNTER_LAST];
 
-    // stop all the explicit timers for all threads
-    windupExplicitTimers();
+    FILE * statsOut = outputFileName ? fopen (outputFileName, "a+") : stderr;
+    if (!statsOut)
+        statsOut = stderr;
 
     FILE * eventsOut;
-    FILE * statsOut = outputFileName ? fopen (outputFileName, "a+") : stderr;
-
     if (eventPrintingEnabled()) {
         eventsOut = fopen(eventsFileName, "w+");
     }
 
-    if (!statsOut)
-        statsOut = stderr;
-
+    printHeaderInfo (statsOut);
     fprintf(statsOut, "%s\n",heading);
     // Accumulate across threads.
     kmp_stats_list::iterator it;
     for (it = __kmp_stats_list.begin(); it != __kmp_stats_list.end(); it++) {
         int t = (*it)->getGtid();
         // Output per thread stats if requested.
-        if (perThreadPrintingEnabled()) {
+        if (printPerThreadFlag) {
             fprintf (statsOut, "Thread %d\n", t);
-            printTimerStats(statsOut, (*it)->getTimers(), 0);
-            printCounters(statsOut, (*it)->getCounters());
-            fprintf(statsOut,"\n");
+            printTimerStats (statsOut, (*it)->getTimers(), 0);
+            printCounters   (statsOut, (*it)->getCounters());
+            fprintf (statsOut,"\n");
         }
         // Output per thread events if requested.
         if (eventPrintingEnabled()) {
@@ -501,30 +528,28 @@ void kmp_stats_output_module::outputStats(const char* heading)
         }
 
         // Accumulate timers.
-        for (int s = 0; s<TIMER_LAST; s++) {
+        for (timer_e s = timer_e(0); s<TIMER_LAST; s = timer_e(s+1)) {
             // See if we should ignore this timer when aggregating
-            if ((timeStat::masterOnly(timer_e(s)) && (t != 0)) || // Timer is only valid on the master and this thread is a worker
-                (timeStat::workerOnly(timer_e(s)) && (t == 0))    // Timer is only valid on a worker and this thread is the master
+            if ((timeStat::masterOnly(s) && (t != 0)) || // Timer is only valid on the master and this thread is a worker
+                (timeStat::workerOnly(s) && (t == 0))    // Timer is only valid on a worker and this thread is the master
                )            
             {
                 continue;
             }
 
-            statistic * threadStat = (*it)->getTimer(timer_e(s));
+            statistic * threadStat = (*it)->getTimer(s);
             allStats[s] += *threadStat;
 
-            // Add Total stats for all real times (not counts) that are valid in more than one thread
-            if (!timeStat::noUnits(timer_e(s)) && !timeStat::masterOnly(timer_e(s)))
-            {
+            // Add Total stats for timers that are valid in more than one thread
+            if (!timeStat::noTotal(s))
                 totalStats[s].addSample(threadStat->getTotal());
-            }
         }
 
         // Accumulate counters.
-        for (int c = 0; c<COUNTER_LAST; c++) {
-            if (counter::masterOnly(counter_e(c)) && t != 0)
+        for (counter_e c = counter_e(0); c<COUNTER_LAST; c = counter_e(c+1)) {
+            if (counter::masterOnly(c) && t != 0)
                 continue;
-            allCounters[c].addSample ((*it)->getCounter(counter_e(c))->getValue());
+            allCounters[c].addSample ((*it)->getCounter(c)->getValue());
         }
     }
 
@@ -540,7 +565,6 @@ void kmp_stats_output_module::outputStats(const char* heading)
 
     if (statsOut != stderr)
         fclose(statsOut);
-
 }
 
 /* ************************************************** */
@@ -589,12 +613,10 @@ void __kmp_accumulate_stats_at_exit(void)
         return;
 
     __kmp_output_stats("Statistics on exit");
-    return;
 }
 
 void __kmp_stats_init(void) 
 {
-    return;
 }
 
 } // extern "C" 

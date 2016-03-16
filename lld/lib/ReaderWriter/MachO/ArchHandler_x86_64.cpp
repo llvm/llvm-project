@@ -104,6 +104,10 @@ public:
     return imageOffsetGot;
   }
 
+  Reference::KindValue unwindRefToPersonalityFunctionKind() override {
+    return ripRel32Got;
+  }
+
   Reference::KindValue unwindRefToCIEKind() override {
     return negDelta32;
   }

@@ -26,46 +26,18 @@ def _dump_queue(the_queue):
         print(codecs.encode(the_queue.get(True), "string_escape"))
         print("\n")
 
-class SocketPacketPump(object):
-    """A threaded packet reader that partitions packets into two streams.
-
-    All incoming $O packet content is accumulated with the current accumulation
-    state put into the OutputQueue.
-
-    All other incoming packets are placed in the packet queue.
-
-    A select thread can be started and stopped, and runs to place packet
-    content into the two queues.
-    """
-
-    _GDB_REMOTE_PACKET_REGEX = re.compile(r'^\$([^\#]*)#[0-9a-fA-F]{2}')
-
-    def __init__(self, pump_socket, logger=None):
-        if not pump_socket:
-            raise Exception("pump_socket cannot be None")
-
+class PumpQueues(object):
+    def __init__(self):
         self._output_queue = queue.Queue()
         self._packet_queue = queue.Queue()
-        self._thread = None
-        self._stop_thread = False
-        self._socket = pump_socket
-        self._logger = logger
-        self._receive_buffer = ""
-        self._accumulated_output = ""
 
-    def __enter__(self):
-        """Support the python 'with' statement.
+    def output_queue(self):
+        return self._output_queue
 
-        Start the pump thread."""
-        self.start_pump_thread()
-        return self
+    def packet_queue(self):
+        return self._packet_queue
 
-    def __exit__(self, exit_type, value, the_traceback):
-        """Support the python 'with' statement.
-
-        Shut down the pump thread."""
-        self.stop_pump_thread()
-
+    def verify_queues_empty(self):
         # Warn if there is any content left in any of the queues.
         # That would represent unmatched packets.
         if not self.output_queue().empty():
@@ -80,6 +52,46 @@ class SocketPacketPump(object):
             print("from here:")
             traceback.print_stack()
 
+
+class SocketPacketPump(object):
+    """A threaded packet reader that partitions packets into two streams.
+
+    All incoming $O packet content is accumulated with the current accumulation
+    state put into the OutputQueue.
+
+    All other incoming packets are placed in the packet queue.
+
+    A select thread can be started and stopped, and runs to place packet
+    content into the two queues.
+    """
+
+    _GDB_REMOTE_PACKET_REGEX = re.compile(r'^\$([^\#]*)#[0-9a-fA-F]{2}')
+
+    def __init__(self, pump_socket, pump_queues, logger=None):
+        if not pump_socket:
+            raise Exception("pump_socket cannot be None")
+
+        self._thread = None
+        self._stop_thread = False
+        self._socket = pump_socket
+        self._logger = logger
+        self._receive_buffer = ""
+        self._accumulated_output = ""
+        self._pump_queues = pump_queues
+
+    def __enter__(self):
+        """Support the python 'with' statement.
+
+        Start the pump thread."""
+        self.start_pump_thread()
+        return self
+
+    def __exit__(self, exit_type, value, the_traceback):
+        """Support the python 'with' statement.
+
+        Shut down the pump thread."""
+        self.stop_pump_thread()
+
     def start_pump_thread(self):
         if self._thread:
             raise Exception("pump thread is already running")
@@ -91,12 +103,6 @@ class SocketPacketPump(object):
         self._stop_thread = True
         if self._thread:
             self._thread.join()
-
-    def output_queue(self):
-        return self._output_queue
-
-    def packet_queue(self):
-        return self._packet_queue
 
     def _process_new_bytes(self, new_bytes):
         if not new_bytes:
@@ -114,7 +120,7 @@ class SocketPacketPump(object):
                 has_more = False
             # handle '+' ack
             elif self._receive_buffer[0] == "+":
-                self._packet_queue.put("+")
+                self._pump_queues.packet_queue().put("+")
                 self._receive_buffer = self._receive_buffer[1:]
                 if self._logger:
                     self._logger.debug(
@@ -132,10 +138,10 @@ class SocketPacketPump(object):
                     if new_output_content:
                         # This was an $O packet with new content.
                         self._accumulated_output += new_output_content
-                        self._output_queue.put(self._accumulated_output)
+                        self._pump_queues.output_queue().put(self._accumulated_output)
                     else:
                         # Any packet other than $O.
-                        self._packet_queue.put(packet_match.group(0))
+                        self._pump_queues.packet_queue().put(packet_match.group(0))
 
                     # Remove the parsed packet from the receive
                     # buffer.

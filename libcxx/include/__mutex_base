@@ -26,7 +26,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-class _LIBCPP_TYPE_VIS mutex
+#ifndef _LIBCPP_THREAD_SAFETY_ANNOTATION
+#  ifdef _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
+#    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x) __attribute__((x))
+#  else
+#    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
+#  endif
+#endif  // _LIBCPP_THREAD_SAFETY_ANNOTATION
+
+class _LIBCPP_TYPE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(capability("mutex")) mutex
 {
     pthread_mutex_t __m_;
 
@@ -44,9 +52,9 @@ private:
     mutex& operator=(const mutex&);// = delete;
 
 public:
-    void lock();
-    bool try_lock() _NOEXCEPT;
-    void unlock() _NOEXCEPT;
+    void lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability());
+    bool try_lock() _NOEXCEPT _LIBCPP_THREAD_SAFETY_ANNOTATION(try_acquire_capability(true));
+    void unlock() _NOEXCEPT _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability());
 
     typedef pthread_mutex_t* native_handle_type;
     _LIBCPP_INLINE_VISIBILITY native_handle_type native_handle() {return &__m_;}
@@ -71,7 +79,7 @@ constexpr adopt_lock_t  adopt_lock  = adopt_lock_t();
 #endif
 
 template <class _Mutex>
-class _LIBCPP_TYPE_VIS_ONLY lock_guard
+class _LIBCPP_TYPE_VIS_ONLY _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable) lock_guard
 {
 public:
     typedef _Mutex mutex_type;
@@ -81,13 +89,13 @@ private:
 public:
 
     _LIBCPP_INLINE_VISIBILITY
-    explicit lock_guard(mutex_type& __m)
+    explicit lock_guard(mutex_type& __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
         : __m_(__m) {__m_.lock();}
     _LIBCPP_INLINE_VISIBILITY
-    lock_guard(mutex_type& __m, adopt_lock_t)
+    lock_guard(mutex_type& __m, adopt_lock_t) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
         : __m_(__m) {}
     _LIBCPP_INLINE_VISIBILITY
-    ~lock_guard() {__m_.unlock();}
+    ~lock_guard() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) {__m_.unlock();}
 
 private:
     lock_guard(lock_guard const&);// = delete;

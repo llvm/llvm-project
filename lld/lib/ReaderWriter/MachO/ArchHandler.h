@@ -78,6 +78,11 @@ public:
   /// actually be used.
   virtual uint32_t dwarfCompactUnwindType() = 0;
 
+  /// Reference from an __eh_frame CIE atom to its personality function it's
+  /// describing. Usually pointer-sized and PC-relative, but differs in whether
+  /// it needs to be in relocatable objects.
+  virtual Reference::KindValue unwindRefToPersonalityFunctionKind() = 0;
+
   /// Reference from an __eh_frame FDE to the CIE it's based on.
   virtual Reference::KindValue unwindRefToCIEKind() = 0;
 
