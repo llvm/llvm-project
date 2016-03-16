@@ -54,6 +54,10 @@ the `latest version of PrintFunctionNames.cpp
 Running the plugin
 ==================
 
+
+Using the cc1 command line
+--------------------------
+
 To run a plugin, the dynamic library containing the plugin registry must be
 loaded via the :option:`-load` command line option. This will load all plugins
 that are registered, and you can select the plugins to run by specifying the
@@ -88,3 +92,19 @@ source tree:
 Also see the print-function-name plugin example's
 `README <http://llvm.org/viewvc/llvm-project/cfe/trunk/examples/PrintFunctionNames/README.txt?view=markup>`_
 
+
+Using the clang command line
+----------------------------
+
+Using :option:`-fplugin=plugin` on the clang command line passes the plugin
+through as an argument to :option:`-load` on the cc1 command line. If the plugin
+class implements the ``getActionType`` method then the plugin is run
+automatically. For example, to run the plugin automatically after the main AST
+action (i.e. the same as using :option:`-add-plugin`):
+
+.. code-block:: c++
+
+  // Automatically run the plugin after the main AST action
+  PluginASTAction::ActionType getActionType() override {
+    return AddAfterMainAction;
+  }

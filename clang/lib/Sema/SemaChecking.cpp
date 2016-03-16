@@ -3628,19 +3628,20 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
   // If there are no arguments specified, warn with -Wformat-security, otherwise
   // warn only with -Wformat-nonliteral.
   if (Args.size() == firstDataArg) {
-    const SemaDiagnosticBuilder &D =
-      Diag(FormatLoc, diag::warn_format_nonliteral_noargs);
+    Diag(FormatLoc, diag::warn_format_nonliteral_noargs)
+      << OrigFormatExpr->getSourceRange();
     switch (Type) {
     default:
-      D << OrigFormatExpr->getSourceRange();
       break;
     case FST_Kprintf:
     case FST_FreeBSDKPrintf:
     case FST_Printf:
-      D << FixItHint::CreateInsertion(FormatLoc, "\"%s\", ");
+      Diag(FormatLoc, diag::note_format_security_fixit)
+        << FixItHint::CreateInsertion(FormatLoc, "\"%s\", ");
       break;
     case FST_NSString:
-      D << FixItHint::CreateInsertion(FormatLoc, "@\"%@\", ");
+      Diag(FormatLoc, diag::note_format_security_fixit)
+        << FixItHint::CreateInsertion(FormatLoc, "@\"%@\", ");
       break;
     }
   } else {

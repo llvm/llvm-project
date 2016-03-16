@@ -1,6 +1,6 @@
+// __cfi_check_fail codegen when not all CFI checkers are enabled.
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
-// RUN:     -fsanitize=cfi-icall,cfi-nvcall,cfi-vcall,cfi-unrelated-cast,cfi-derived-cast \
-// RUN:     -fsanitize-trap=cfi-icall,cfi-nvcall -fsanitize-recover=cfi-vcall,cfi-unrelated-cast \
+// RUN:     -fsanitize=cfi-vcall \
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 
 void caller(void (*f)()) {
@@ -31,8 +31,8 @@ void caller(void (*f)()) {
 // CHECK: [[HANDLE0]]:
 // CHECK:   %[[DATA0:.*]] = ptrtoint i8* %[[DATA]] to i64,
 // CHECK:   %[[ADDR0:.*]] = ptrtoint i8* %[[ADDR]] to i64,
-// CHECK:   call void @__ubsan_handle_cfi_check_fail(i64 %[[DATA0]], i64 %[[ADDR0]], i64 %[[VTVALID]])
-// CHECK:   br label %[[CONT1]]
+// CHECK:   call void @__ubsan_handle_cfi_check_fail_abort(i64 %[[DATA0]], i64 %[[ADDR0]], i64 %[[VTVALID]])
+// CHECK:   unreachable
 
 // CHECK: [[CONT1]]:
 // CHECK:   %[[NOT_1:.*]] = icmp ne i8 %[[KIND]], 1
@@ -44,23 +44,19 @@ void caller(void (*f)()) {
 
 // CHECK: [[CONT2]]:
 // CHECK:   %[[NOT_2:.*]] = icmp ne i8 %[[KIND]], 2
-// CHECK:   br i1 %[[NOT_2]], label %[[CONT3:.*]], label %[[HANDLE2:.*]], !prof
+// CHECK:   br i1 %[[NOT_2]], label %[[CONT3:.*]], label %[[HANDLE2:.*]], !nosanitize
 
 // CHECK: [[HANDLE2]]:
-// CHECK:   %[[DATA2:.*]] = ptrtoint i8* %[[DATA]] to i64,
-// CHECK:   %[[ADDR2:.*]] = ptrtoint i8* %[[ADDR]] to i64,
-// CHECK:   call void @__ubsan_handle_cfi_check_fail_abort(i64 %[[DATA2]], i64 %[[ADDR2]], i64 %[[VTVALID]])
-// CHECK:   unreachable
+// CHECK-NEXT:   call void @llvm.trap()
+// CHECK-NEXT:   unreachable
 
 // CHECK: [[CONT3]]:
 // CHECK:   %[[NOT_3:.*]] = icmp ne i8 %[[KIND]], 3
-// CHECK:   br i1 %[[NOT_3]], label %[[CONT4:.*]], label %[[HANDLE3:.*]], !prof
+// CHECK:   br i1 %[[NOT_3]], label %[[CONT4:.*]], label %[[HANDLE3:.*]], !nosanitize
 
 // CHECK: [[HANDLE3]]:
-// CHECK:   %[[DATA3:.*]] = ptrtoint i8* %[[DATA]] to i64,
-// CHECK:   %[[ADDR3:.*]] = ptrtoint i8* %[[ADDR]] to i64,
-// CHECK:   call void @__ubsan_handle_cfi_check_fail(i64 %[[DATA3]], i64 %[[ADDR3]], i64 %[[VTVALID]])
-// CHECK:   br label %[[CONT4]]
+// CHECK-NEXT:   call void @llvm.trap()
+// CHECK-NEXT:   unreachable
 
 // CHECK: [[CONT4]]:
 // CHECK:   %[[NOT_4:.*]] = icmp ne i8 %[[KIND]], 4

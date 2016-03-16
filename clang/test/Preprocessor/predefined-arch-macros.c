@@ -1903,8 +1903,17 @@
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparcel-unknown-linux \
 // RUN:   | FileCheck %s -check-prefix=CHECK_SPARCEL
-//
+// RUN: %clang -E -dM %s -o - -target sparcel-myriad -mcpu=myriad2 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK_MYRIAD2-1 -check-prefix=CHECK_SPARCEL
+// RUN: %clang -E -dM %s -o - -target sparcel-myriad -mcpu=myriad2.1 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK_MYRIAD2-1 -check-prefix=CHECK_SPARCEL
+// RUN: %clang -E -dM %s -o - -target sparcel-myriad -mcpu=myriad2.2 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK_MYRIAD2-2 -check-prefix=CHECK_SPARCEL
 // CHECK_SPARCEL: #define __LITTLE_ENDIAN__ 1
+// CHECK_MYRIAD2-1: #define __myriad2 1
+// CHECK_MYRIAD2-1: #define __myriad2__ 1
+// CHECK_MYRIAD2-2: #define __myriad2 2
+// CHECK_MYRIAD2-2: #define __myriad2__ 2
 // CHECK_SPARCEL: #define __sparc 1
 // CHECK_SPARCEL: #define __sparc__ 1
 // CHECK_SPARCEL: #define __sparcv8 1
