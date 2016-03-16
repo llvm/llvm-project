@@ -116,8 +116,8 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
 
 // \p FuncName is the string used as profile lookup key for the function. A
 // symbol is created to hold the name. Return the legalized symbol name.
-static std::string getPGOFuncNameVarName(StringRef FuncName,
-                                         GlobalValue::LinkageTypes Linkage) {
+std::string getPGOFuncNameVarName(StringRef FuncName,
+                                  GlobalValue::LinkageTypes Linkage) {
   std::string VarName = getInstrProfNameVarPrefix();
   VarName += FuncName;
 
