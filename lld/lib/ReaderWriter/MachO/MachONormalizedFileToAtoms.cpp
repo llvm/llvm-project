@@ -689,18 +689,21 @@ static int64_t readSPtr(bool is64, bool isBig, const uint8_t *addr) {
 
 struct CIEInfo {
   bool _augmentationDataPresent = false;
-  bool _mayHaveLSDA = false;
+  bool _mayHaveEH = false;
+  uint32_t _offsetOfLSDA = ~0U;
+  uint32_t _offsetOfPersonality = ~0U;
+  uint32_t _offsetOfFDEPointerEncoding = ~0U;
+  uint32_t _augmentationDataLength = ~0U;
 };
 
 typedef llvm::DenseMap<const MachODefinedAtom*, CIEInfo> CIEInfoMap;
 
 static std::error_code processAugmentationString(const uint8_t *augStr,
                                                  CIEInfo &cieInfo,
-                                                 unsigned *len = nullptr) {
+                                                 unsigned &len) {
 
   if (augStr[0] == '\0') {
-    if (len)
-      *len = 1;
+    len = 1;
     return std::error_code();
   }
 
@@ -711,21 +714,54 @@ static std::error_code processAugmentationString(const uint8_t *augStr,
   cieInfo._augmentationDataPresent = true;
   uint64_t idx = 1;
 
+  uint32_t offsetInAugmentationData = 0;
   while (augStr[idx] != '\0') {
     if (augStr[idx] == 'L') {
-      cieInfo._mayHaveLSDA = true;
+      cieInfo._offsetOfLSDA = offsetInAugmentationData;
+      // This adds a single byte to the augmentation data.
+      ++offsetInAugmentationData;
       ++idx;
-    } else
+      continue;
+    }
+    if (augStr[idx] == 'P') {
+      cieInfo._offsetOfPersonality = offsetInAugmentationData;
+      // This adds a single byte to the augmentation data for the encoding,
+      // then a number of bytes for the pointer data.
+      // FIXME: We are assuming 4 is correct here for the pointer size as we
+      // always currently use delta32ToGOT.
+      offsetInAugmentationData += 5;
       ++idx;
+      continue;
+    }
+    if (augStr[idx] == 'R') {
+      cieInfo._offsetOfFDEPointerEncoding = offsetInAugmentationData;
+      // This adds a single byte to the augmentation data.
+      ++offsetInAugmentationData;
+      ++idx;
+      continue;
+    }
+    if (augStr[idx] == 'e') {
+      if (augStr[idx + 1] != 'h')
+        return make_dynamic_error_code("expected 'eh' in augmentation string");
+      cieInfo._mayHaveEH = true;
+      idx += 2;
+      continue;
+    }
+    ++idx;
   }
 
-  if (len)
-    *len = idx + 1;
+  cieInfo._augmentationDataLength = offsetInAugmentationData;
+
+  len = idx + 1;
   return std::error_code();
 }
 
 static std::error_code processCIE(const NormalizedFile &normalizedFile,
+                                  MachOFile &file,
+                                  mach_o::ArchHandler &handler,
+                                  const Section *ehFrameSection,
                                   MachODefinedAtom *atom,
+                                  uint64_t offset,
                                   CIEInfoMap &cieInfos) {
   const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
   const uint8_t *frameData = atom->rawContent().data();
@@ -739,9 +775,84 @@ static std::error_code processCIE(const NormalizedFile &normalizedFile,
   uint64_t versionField = cieIDField + sizeof(uint32_t);
   uint64_t augmentationStringField = versionField + sizeof(uint8_t);
 
+  unsigned augmentationStringLength = 0;
   if (auto err = processAugmentationString(frameData + augmentationStringField,
-                                           cieInfo))
+                                           cieInfo, augmentationStringLength))
     return err;
+
+  if (cieInfo._offsetOfPersonality != ~0U) {
+    // If we have augmentation data for the personality function, then we may
+    // need to implicitly generate its relocation.
+
+    // Parse the EH Data field which is pointer sized.
+    uint64_t EHDataField = augmentationStringField + augmentationStringLength;
+    const bool is64 = MachOLinkingContext::is64Bit(normalizedFile.arch);
+    unsigned EHDataFieldSize = (cieInfo._mayHaveEH ? (is64 ? 8 : 4) : 0);
+
+    // Parse Code Align Factor which is a ULEB128.
+    uint64_t CodeAlignField = EHDataField + EHDataFieldSize;
+    unsigned lengthFieldSize = 0;
+    llvm::decodeULEB128(frameData + CodeAlignField, &lengthFieldSize);
+
+    // Parse Data Align Factor which is a SLEB128.
+    uint64_t DataAlignField = CodeAlignField + lengthFieldSize;
+    llvm::decodeSLEB128(frameData + DataAlignField, &lengthFieldSize);
+
+    // Parse Return Address Register which is a byte.
+    uint64_t ReturnAddressField = DataAlignField + lengthFieldSize;
+
+    // Parse the augmentation length which is a ULEB128.
+    uint64_t AugmentationLengthField = ReturnAddressField + 1;
+    uint64_t AugmentationLength =
+      llvm::decodeULEB128(frameData + AugmentationLengthField,
+                          &lengthFieldSize);
+
+    if (AugmentationLength != cieInfo._augmentationDataLength)
+      return make_dynamic_error_code("CIE augmentation data length mismatch");
+
+    // Get the start address of the augmentation data.
+    uint64_t AugmentationDataField = AugmentationLengthField + lengthFieldSize;
+
+    // Parse the personality function from the augmentation data.
+    uint64_t PersonalityField =
+      AugmentationDataField + cieInfo._offsetOfPersonality;
+
+    // Parse the personality encoding.
+    // FIXME: Verify that this is a 32-bit pcrel offset.
+    uint64_t PersonalityFunctionField = PersonalityField + 1;
+
+    if (atom->begin() != atom->end()) {
+      // If we have an explicit relocation, then make sure it matches this
+      // offset as this is where we'd expect it to be applied to.
+      DefinedAtom::reference_iterator CurrentRef = atom->begin();
+      if (CurrentRef->offsetInAtom() != PersonalityFunctionField)
+        return make_dynamic_error_code("CIE personality reloc at wrong offset");
+
+      if (++CurrentRef != atom->end())
+        return make_dynamic_error_code("CIE contains too many relocs");
+    } else {
+      // Implicitly generate the personality function reloc.  It's assumed to
+      // be a delta32 offset to a GOT entry.
+      // FIXME: Parse the encoding and check this.
+      int32_t funcDelta = read32(frameData + PersonalityFunctionField, isBig);
+      uint64_t funcAddress = ehFrameSection->address + offset +
+                             PersonalityFunctionField;
+      funcAddress += funcDelta;
+
+      const MachODefinedAtom *func = nullptr;
+      Reference::Addend addend;
+      func = findAtomCoveringAddress(normalizedFile, file, funcAddress,
+                                     &addend);
+      atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
+                         handler.unwindRefToPersonalityFunctionKind(),
+                         PersonalityFunctionField, func, addend);
+    }
+  } else if (atom->begin() != atom->end()) {
+    // Otherwise, we expect there to be no relocations in this atom as the only
+    // relocation would have been to the personality function.
+    return make_dynamic_error_code("unexpected relocation in CIE");
+  }
+
 
   cieInfos[atom] = std::move(cieInfo);
 
@@ -760,10 +871,72 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
   const bool is64 = MachOLinkingContext::is64Bit(normalizedFile.arch);
 
   // Compiler wasn't lazy and actually told us what it meant.
+  // Unfortunately, the compiler may not have generated references for all of
+  // [cie, func, lsda] and so we still need to parse the FDE and add references
+  // for any the compiler didn't generate.
   if (atom->begin() != atom->end())
-    return std::error_code();
+    atom->sortReferences();
 
-  const uint8_t *frameData = atom->rawContent().data();
+  DefinedAtom::reference_iterator CurrentRef = atom->begin();
+
+  // This helper returns the reference (if one exists) at the offset we are
+  // currently processing.  It automatically increments the ref iterator if we
+  // do return a ref, and throws an error if we pass over a ref without
+  // comsuming it.
+  auto currentRefGetter = [&CurrentRef,
+                           &atom](uint64_t Offset)->const Reference* {
+    // If there are no more refs found, then we are done.
+    if (CurrentRef == atom->end())
+      return nullptr;
+
+    const Reference *Ref = *CurrentRef;
+
+    // If we haven't reached the offset for this reference, then return that
+    // we don't yet have a reference to process.
+    if (Offset < Ref->offsetInAtom())
+      return nullptr;
+
+    // If the offset is equal, then we want to process this ref.
+    if (Offset == Ref->offsetInAtom()) {
+      ++CurrentRef;
+      return Ref;
+    }
+
+    // The current ref is at an offset which is earlier than the current
+    // offset, then we failed to consume it when we should have.  In this case
+    // throw an error.
+    llvm::report_fatal_error("Skipped reference when processing FDE");
+  };
+
+  // Helper to either get the reference at this current location, and verify
+  // that it is of the expected type, or add a reference of that type.
+  // Returns the reference target.
+  auto verifyOrAddReference = [&](uint64_t targetAddress,
+                                  Reference::KindValue refKind,
+                                  uint64_t refAddress,
+                                  bool allowsAddend)->const Atom* {
+    if (auto *ref = currentRefGetter(refAddress)) {
+      // The compiler already emitted a relocation for the CIE ref.  This should
+      // have been converted to the correct type of reference in
+      // get[Pair]ReferenceInfo().
+      assert(ref->kindValue() == refKind &&
+             "Incorrect EHFrame reference kind");
+      return ref->target();
+    }
+    Reference::Addend addend;
+    auto *target = findAtomCoveringAddress(normalizedFile, file,
+                                           targetAddress, &addend);
+    atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
+                       refKind, refAddress, target, addend);
+
+    if (!allowsAddend)
+      assert(!addend && "EHFrame reference cannot have addend");
+    return target;
+  };
+
+  const uint8_t *startFrameData = atom->rawContent().data();
+  const uint8_t *frameData = startFrameData;
+
   uint32_t size = read32(frameData, isBig);
   uint64_t cieFieldInFDE = size == 0xffffffffU
     ? sizeof(uint32_t) + sizeof(uint64_t)
@@ -775,13 +948,11 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
   uint64_t cieAddress = ehFrameSection->address + offset + cieFieldInFDE;
   cieAddress -= cieDelta;
 
-  Reference::Addend addend;
-  const MachODefinedAtom *cie =
-    findAtomCoveringAddress(normalizedFile, file, cieAddress, &addend);
-  atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
-                     handler.unwindRefToCIEKind(), cieFieldInFDE, cie, addend);
-
-  assert(cie && cie->contentType() == DefinedAtom::typeCFI && !addend &&
+  auto *cieRefTarget = verifyOrAddReference(cieAddress,
+                                            handler.unwindRefToCIEKind(),
+                                            cieFieldInFDE, false);
+  const MachODefinedAtom *cie = dyn_cast<MachODefinedAtom>(cieRefTarget);
+  assert(cie && cie->contentType() == DefinedAtom::typeCFI &&
          "FDE's CIE field does not point at the start of a CIE.");
 
   const CIEInfo &cieInfo = cieInfos.find(cie)->second;
@@ -797,11 +968,9 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
   uint64_t rangeStart = ehFrameSection->address + offset + rangeFieldInFDE;
   rangeStart += functionFromFDE;
 
-  const Atom *func =
-    findAtomCoveringAddress(normalizedFile, file, rangeStart, &addend);
-  atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
-                     handler.unwindRefToFunctionKind(), rangeFieldInFDE, func,
-                     addend);
+  verifyOrAddReference(rangeStart,
+                       handler.unwindRefToFunctionKind(),
+                       rangeFieldInFDE, true);
 
   // Handle the augmentation data if there is any.
   if (cieInfo._augmentationDataPresent) {
@@ -813,7 +982,7 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
       llvm::decodeULEB128(frameData + augmentationDataLengthFieldInFDE,
                           &lengthFieldSize);
 
-    if (cieInfo._mayHaveLSDA && augmentationDataLength > 0) {
+    if (cieInfo._offsetOfLSDA != ~0U && augmentationDataLength > 0) {
 
       // Look at the augmentation data field.
       uint64_t augmentationDataFieldInFDE =
@@ -824,11 +993,10 @@ static std::error_code processFDE(const NormalizedFile &normalizedFile,
       uint64_t lsdaStart =
         ehFrameSection->address + offset + augmentationDataFieldInFDE +
         lsdaFromFDE;
-      const Atom *lsda =
-        findAtomCoveringAddress(normalizedFile, file, lsdaStart, &addend);
-      atom->addReference(Reference::KindNamespace::mach_o, handler.kindArch(),
-                         handler.unwindRefToFunctionKind(),
-                         augmentationDataFieldInFDE, lsda, addend);
+
+      verifyOrAddReference(lsdaStart,
+                           handler.unwindRefToFunctionKind(),
+                           augmentationDataFieldInFDE, true);
     }
   }
 
@@ -864,7 +1032,8 @@ std::error_code addEHFrameReferences(const NormalizedFile &normalizedFile,
 
     const bool isBig = MachOLinkingContext::isBigEndian(normalizedFile.arch);
     if (ArchHandler::isDwarfCIE(isBig, atom))
-      ehFrameErr = processCIE(normalizedFile, atom, cieInfos);
+      ehFrameErr = processCIE(normalizedFile, file, handler, ehFrameSection,
+                              atom, offset, cieInfos);
     else
       ehFrameErr = processFDE(normalizedFile, file, handler, ehFrameSection,
                               atom, offset, cieInfos);

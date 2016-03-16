@@ -74,7 +74,7 @@ sections:
     address:         0x0000000000000050
     content:         [ 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                        0x01, 0x7A, 0x50, 0x4C, 0x52, 0x00, 0x01, 0x78,
-                       0x1E, 0x0B, 0x00, 0xED, 0xFF, 0xFF, 0xFF, 0xFF,
+                       0x1E, 0x07, 0x00, 0x9D, 0xFF, 0xFF, 0xFF, 0xFF,
                        0xFF, 0xFF, 0xFF, 0x00, 0x10, 0x0C, 0x1F, 0x00,
                        0x24, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
                        0x88, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -142,8 +142,8 @@ page-size:       0x00000000
 # CHECK:   - ref-name:        L{{[0-9]*}}
 # CHECK:     type:            unwind-cfi
 # CHECK:     content:         [ 1C, 00, 00, 00, 00, 00, 00, 00, 01, 7A, 50, 4C,
-# CHECK:                        52, 00, 01, 78, 1E, 0B, 00, ED, FF, FF, FF, FF,
-# CHECK:                        FF, FF, FF, 00, 10, 0C, 1F, 00 ]
+# CHECK:                        52, 00, 01, 78, 1E, 07, 00, {{..}}, {{..}}, {{..}}, {{..}}, {{..}},
+# CHECK:                        {{..}}, {{..}}, {{..}}, 00, 10, 0C, 1F, 00 ]
 # CHECK:   - type:            unwind-cfi
 # CHECK:     content:         [ 24, 00, 00, 00, 24, 00, 00, 00, {{..}}, {{..}}, {{..}}, {{..}},
 # CHECK:                        {{..}}, {{..}}, {{..}}, {{..}}, 20, 00, 00, 00, 00, 00, 00, 00,
@@ -197,7 +197,7 @@ page-size:       0x00000000
 # CODE: Contents of section __eh_frame:
 # This is the CIE:
 # CODE-NEXT: {{[0-9abcdef]*}} 1c000000 00000000 017a504c 52000178
-# CODE-NEXT: {{[0-9abcdef]*}} 1e0b00ed ffffffff ffffff00 100c1f00
+# CODE-NEXT: {{[0-9abcdef]*}} 1e0700bd ffffffff ffffff00 100c1f00
 # This is the FDE:
 # CODE-NEXT: {{[0-9abcdef]*}} 24000000 24000000 a8ffffff ffffffff
 # This is the important offset for FDE->func    ^~~~~~~~ ~~~~~~~~

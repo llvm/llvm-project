@@ -1163,15 +1163,21 @@ static string MismatchStr(const string &str) {
   return string("AddressSanitizer: alloc-dealloc-mismatch \\(") + str;
 }
 
+static string MismatchOrNewDeleteTypeStr(const string &mismatch_str) {
+  return "(" + MismatchStr(mismatch_str) +
+         ")|(AddressSanitizer: new-delete-type-mismatch)";
+}
+
 TEST(AddressSanitizer, AllocDeallocMismatch) {
   EXPECT_DEATH(free(Ident(new int)),
                MismatchStr("operator new vs free"));
   EXPECT_DEATH(free(Ident(new int[2])),
                MismatchStr("operator new \\[\\] vs free"));
-  EXPECT_DEATH(delete (Ident(new int[2])),
-               MismatchStr("operator new \\[\\] vs operator delete"));
-  EXPECT_DEATH(delete (Ident((int*)malloc(2 * sizeof(int)))),
-               MismatchStr("malloc vs operator delete"));
+  EXPECT_DEATH(
+      delete (Ident(new int[2])),
+      MismatchOrNewDeleteTypeStr("operator new \\[\\] vs operator delete"));
+  EXPECT_DEATH(delete (Ident((int *)malloc(2 * sizeof(int)))),
+               MismatchOrNewDeleteTypeStr("malloc vs operator delete"));
   EXPECT_DEATH(delete [] (Ident(new int)),
                MismatchStr("operator new vs operator delete \\[\\]"));
   EXPECT_DEATH(delete [] (Ident((int*)malloc(2 * sizeof(int)))),

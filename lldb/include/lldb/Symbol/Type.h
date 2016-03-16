@@ -428,7 +428,10 @@ public:
     SetType (lldb::TypeSP type)
     {
         type_sp = type;
-        compiler_type = type_sp->GetForwardCompilerType ();
+        if (type_sp)
+            compiler_type = type_sp->GetForwardCompilerType ();
+        else
+            compiler_type.Clear();
     }
     
     lldb::TypeSP

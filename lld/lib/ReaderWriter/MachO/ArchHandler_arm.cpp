@@ -51,6 +51,10 @@ public:
     return invalid;
   }
 
+  Reference::KindValue unwindRefToPersonalityFunctionKind() override {
+    return invalid;
+  }
+
   Reference::KindValue unwindRefToCIEKind() override {
     return invalid;
   }

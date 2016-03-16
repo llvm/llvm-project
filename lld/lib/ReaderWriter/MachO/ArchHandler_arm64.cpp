@@ -53,6 +53,9 @@ public:
     case delta32ToGOT:
       canBypassGOT = false;
       return true;
+    case unwindCIEToPersonalityFunction:
+      canBypassGOT = false;
+      return true;
     case imageOffsetGot:
       canBypassGOT = false;
       return true;
@@ -106,6 +109,10 @@ public:
   }
   Reference::KindValue imageOffsetKindIndirect() override {
     return imageOffsetGot;
+  }
+
+  Reference::KindValue unwindRefToPersonalityFunctionKind() override {
+    return unwindCIEToPersonalityFunction;
   }
 
   Reference::KindValue unwindRefToCIEKind() override {
@@ -201,6 +208,9 @@ private:
     imageOffset,           /// Location contains offset of atom in final image
     imageOffsetGot,        /// Location contains offset of GOT entry for atom in
                            /// final image (typically personality function).
+    unwindCIEToPersonalityFunction,   /// Nearly delta32ToGOT, but cannot be
+                           /// rematerialized in relocatable object
+                           /// (yay for implicit contracts!).
     unwindFDEToFunction,   /// Nearly delta64, but cannot be rematerialized in
                            /// relocatable object (yay for implicit contracts!).
     unwindInfoToEhFrame,   /// Fix low 24 bits of compact unwind encoding to
@@ -248,6 +258,7 @@ const Registry::KindStrings ArchHandler_arm64::_sKindStrings[] = {
   LLD_KIND_STRING_ENTRY(lazyImmediateLocation),
   LLD_KIND_STRING_ENTRY(imageOffset),
   LLD_KIND_STRING_ENTRY(imageOffsetGot),
+  LLD_KIND_STRING_ENTRY(unwindCIEToPersonalityFunction),
   LLD_KIND_STRING_ENTRY(unwindFDEToFunction),
   LLD_KIND_STRING_ENTRY(unwindInfoToEhFrame),
 
@@ -442,7 +453,14 @@ std::error_code ArchHandler_arm64::getReferenceInfo(
     return std::error_code();
   case ARM64_RELOC_POINTER_TO_GOT     | rPcRel | rExtern | rLength4:
     // ex: .long _foo@GOT - .
-    *kind = delta32ToGOT;
+
+    // If we are in an .eh_frame section, then the kind of the relocation should
+    // not be delta32ToGOT.  It may instead be unwindCIEToPersonalityFunction.
+    if (inAtom->contentType() == DefinedAtom::typeCFI)
+      *kind = unwindCIEToPersonalityFunction;
+    else
+      *kind = delta32ToGOT;
+
     if (auto ec = atomFromSymbolIndex(reloc.symbol, target))
       return ec;
     *addend = 0;
@@ -488,9 +506,16 @@ std::error_code ArchHandler_arm64::getPairReferenceInfo(
   case ((ARM64_RELOC_SUBTRACTOR                  | rExtern | rLength8) << 16 |
          ARM64_RELOC_UNSIGNED                    | rExtern | rLength8):
     // ex: .quad _foo - .
-    *kind = delta64;
     if (auto ec = atomFromSymbolIndex(reloc2.symbol, target))
       return ec;
+
+    // If we are in an .eh_frame section, then the kind of the relocation should
+    // not be delta64.  It may instead be unwindFDEToFunction.
+    if (inAtom->contentType() == DefinedAtom::typeCFI)
+      *kind = unwindFDEToFunction;
+    else
+      *kind = delta64;
+
     // The offsets of the 2 relocations must match
     if (reloc1.offset != reloc2.offset)
       return make_dynamic_error_code("paired relocs must have the same offset");
@@ -629,6 +654,7 @@ void ArchHandler_arm64::applyFixupFinal(const Reference &ref, uint8_t *loc,
     return;
   case delta32:
   case delta32ToGOT:
+  case unwindCIEToPersonalityFunction:
     *loc32 = (targetAddress - fixupAddress) + ref.addend();
     return;
   case negDelta32:
@@ -718,6 +744,13 @@ void ArchHandler_arm64::applyFixupRelocatable(const Reference &ref,
     return;
   case delta32ToGOT:
     *loc32 = inAtomAddress - fixupAddress;
+    return;
+  case unwindCIEToPersonalityFunction:
+    // We don't emit unwindCIEToPersonalityFunction in -r mode as they are
+    // implicitly generated from the data in the __eh_frame section.  So here we
+    // need to use the targetAddress so that we can generate the full relocation
+    // when we parse again later.
+    *loc32 = targetAddress - fixupAddress;
     return;
   case addOffset12:
     llvm_unreachable("lazy reference kind implies GOT pass was run");
@@ -841,6 +874,7 @@ void ArchHandler_arm64::appendSectionRelocations(
   case imageOffset:
   case imageOffsetGot:
     llvm_unreachable("deltas from mach_header can only be in final images");
+  case unwindCIEToPersonalityFunction:
   case unwindFDEToFunction:
   case unwindInfoToEhFrame:
   case negDelta32:

@@ -485,6 +485,7 @@ int main (int argc, const char * argv[])
 
 	    NSDictionary *error_userInfo = @{@"a": @1, @"b" : @2};
 	    NSError *nserror = [[NSError alloc] initWithDomain:@"Foobar" code:12 userInfo:error_userInfo];
+	    NSError **nserrorptr = &nserror;
 
 	    NSBundle* bundle_string = [[NSBundle alloc] initWithPath:@"/System/Library/Frameworks/Accelerate.framework"];
 	    NSBundle* bundle_url = [[NSBundle alloc] initWithURL:[[NSURL alloc] initWithString:@"file://localhost/System/Library/Frameworks/Cocoa.framework"]];

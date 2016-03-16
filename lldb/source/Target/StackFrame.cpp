@@ -12,10 +12,11 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/StackFrame.h"
-#include "lldb/Core/Module.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/FormatEntity.h"
+#include "lldb/Core/Mangled.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -1354,6 +1355,23 @@ StackFrame::GetLanguage ()
     if (cu)
         return cu->GetLanguage();
     return lldb::eLanguageTypeUnknown;
+}
+
+lldb::LanguageType
+StackFrame::GuessLanguage ()
+{
+    LanguageType lang_type = GetLanguage();
+    
+    if (lang_type == eLanguageTypeUnknown)
+    {
+        Function *f = GetSymbolContext(eSymbolContextFunction).function;
+        if (f)
+        {
+            lang_type = f->GetMangled().GuessLanguage();
+        }
+    }
+    
+    return lang_type;
 }
 
 TargetSP

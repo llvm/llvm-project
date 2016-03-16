@@ -6410,7 +6410,10 @@ Process::ModulesDidLoad (ModuleList &module_list)
             language_runtime_sp->ModulesDidLoad(module_list);
     }
 
-    LoadOperatingSystemPlugin(false);
+    // If we don't have an operating system plug-in, try to load one since
+    // loading shared libraries might cause a new one to try and load
+    if (!m_os_ap)
+        LoadOperatingSystemPlugin(false);
 }
 
 void

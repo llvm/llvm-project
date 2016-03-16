@@ -3185,7 +3185,7 @@ ClangASTContext::GetFunctionArgumentAtIndex (lldb::opaque_compiler_type_t type, 
 {
     if (type)
     {
-        clang::QualType qual_type (GetCanonicalQualType(type));
+        clang::QualType qual_type (GetQualType(type));
         const clang::FunctionProtoType* func = llvm::dyn_cast<clang::FunctionProtoType>(qual_type.getTypePtr());
         if (func)
         {

@@ -46,26 +46,21 @@ static const opt::OptTable::Info infoTable[] = {
 #undef OPTION
 };
 
-class ELFOptTable : public opt::OptTable {
-public:
-  ELFOptTable() : OptTable(infoTable) {}
-};
+ELFOptTable::ELFOptTable() : OptTable(infoTable) {}
 
 // Parses a given list of options.
-opt::InputArgList elf::parseArgs(llvm::BumpPtrAllocator *A,
-                                 ArrayRef<const char *> Argv) {
+opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   // Make InputArgList from string vectors.
-  ELFOptTable Table;
   unsigned MissingIndex;
   unsigned MissingCount;
 
   // Expand response files. '@<filename>' is replaced by the file's contents.
   SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
-  StringSaver Saver(*A);
+  StringSaver Saver(Alloc);
   llvm::cl::ExpandResponseFiles(Saver, llvm::cl::TokenizeGNUCommandLine, Vec);
 
   // Parse options and then do error checking.
-  opt::InputArgList Args = Table.ParseArgs(Vec, MissingIndex, MissingCount);
+  opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
   if (MissingCount)
     error(Twine("missing arg value for \"") + Args.getArgString(MissingIndex) +
           "\", expected " + Twine(MissingCount) +
