@@ -1954,3 +1954,70 @@ hardware design, touch the red zone.
   The system will crash if the wrong handler is used.
   }];
 }
+
+def PreserveMostDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On X86-64 and AArch64 targets, this attribute changes the calling convention of
+a function. The ``preserve_most`` calling convention attempts to make the code
+in the caller as unintrusive as possible. This convention behaves identically
+to the ``C`` calling convention on how arguments and return values are passed,
+but it uses a different set of caller/callee-saved registers. This alleviates
+the burden of saving and recovering a large register set before and after the
+call in the caller. If the arguments are passed in callee-saved registers,
+then they will be preserved by the callee across the call. This doesn't
+apply for values returned in callee-saved registers.
+
+- On X86-64 the callee preserves all general purpose registers, except for
+  R11. R11 can be used as a scratch register. Floating-point registers
+  (XMMs/YMMs) are not preserved and need to be saved by the caller.
+
+The idea behind this convention is to support calls to runtime functions
+that have a hot path and a cold path. The hot path is usually a small piece
+of code that doesn't use many registers. The cold path might need to call out to
+another function and therefore only needs to preserve the caller-saved
+registers, which haven't already been saved by the caller. The
+`preserve_most` calling convention is very similar to the ``cold`` calling
+convention in terms of caller/callee-saved registers, but they are used for
+different types of function calls. ``coldcc`` is for function calls that are
+rarely executed, whereas `preserve_most` function calls are intended to be
+on the hot path and definitely executed a lot. Furthermore ``preserve_most``
+doesn't prevent the inliner from inlining the function call.
+
+This calling convention will be used by a future version of the Objective-C
+runtime and should therefore still be considered experimental at this time.
+Although this convention was created to optimize certain runtime calls to
+the Objective-C runtime, it is not limited to this runtime and might be used
+by other runtimes in the future too. The current implementation only
+supports X86-64 and AArch64, but the intention is to support more architectures
+in the future.
+  }];
+}
+
+def PreserveAllDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On X86-64 and AArch64 targets, this attribute changes the calling convention of
+a function. The ``preserve_all`` calling convention attempts to make the code
+in the caller even less intrusive than the ``preserve_most`` calling convention.
+This calling convention also behaves identical to the ``C`` calling convention
+on how arguments and return values are passed, but it uses a different set of
+caller/callee-saved registers. This removes the burden of saving and
+recovering a large register set before and after the call in the caller. If
+the arguments are passed in callee-saved registers, then they will be
+preserved by the callee across the call. This doesn't apply for values
+returned in callee-saved registers.
+
+- On X86-64 the callee preserves all general purpose registers, except for
+  R11. R11 can be used as a scratch register. Furthermore it also preserves
+  all floating-point registers (XMMs/YMMs).
+
+The idea behind this convention is to support calls to runtime functions
+that don't need to call out to any other functions.
+
+This calling convention, like the ``preserve_most`` calling convention, will be
+used by a future version of the Objective-C runtime and should be considered
+experimental at this time.
+  }];
+}
+

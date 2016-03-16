@@ -4017,10 +4017,17 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_C ||
-            CC == CC_X86VectorCall ||
-            CC == CC_IntelOclBicc ||
-            CC == CC_X86_64Win64) ? CCCR_OK : CCCR_Warning;
+   switch (CC) {
+    case CC_C:
+    case CC_X86VectorCall:
+    case CC_IntelOclBicc:
+    case CC_X86_64Win64:
+    case CC_PreserveMost:
+    case CC_PreserveAll:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   CallingConv getDefaultCallingConv(CallingConvMethodType MT) const override {
@@ -5446,6 +5453,17 @@ public:
     setDataLayoutString();
 
     return true;
+  }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_C:
+    case CC_PreserveMost:
+    case CC_PreserveAll:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   bool isCLZForZeroUndef() const override { return false; }

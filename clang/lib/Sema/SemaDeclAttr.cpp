@@ -3760,7 +3760,14 @@ static void handleCallConvAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                IntelOclBiccAttr(Attr.getRange(), S.Context,
                                 Attr.getAttributeSpellingListIndex()));
     return;
-
+  case AttributeList::AT_PreserveMost:
+    D->addAttr(::new (S.Context) PreserveMostAttr(
+        Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+    return;
+  case AttributeList::AT_PreserveAll:
+    D->addAttr(::new (S.Context) PreserveAllAttr(
+        Attr.getRange(), S.Context, Attr.getAttributeSpellingListIndex()));
+    return;
   default:
     llvm_unreachable("unexpected attribute kind");
   }
@@ -3812,6 +3819,8 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
     return true;
   }
   case AttributeList::AT_IntelOclBicc: CC = CC_IntelOclBicc; break;
+  case AttributeList::AT_PreserveMost: CC = CC_PreserveMost; break;
+  case AttributeList::AT_PreserveAll: CC = CC_PreserveAll; break;
   default: llvm_unreachable("unexpected attribute kind");
   }
 
@@ -5784,6 +5793,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_SysVABI:
   case AttributeList::AT_Pcs:
   case AttributeList::AT_IntelOclBicc:
+  case AttributeList::AT_PreserveMost:
+  case AttributeList::AT_PreserveAll:
     handleCallConvAttr(S, D, Attr);
     break;
   case AttributeList::AT_OpenCLKernel:

@@ -1422,6 +1422,16 @@ def Pascal : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def PreserveMost : InheritableAttr {
+  let Spellings = [GNU<"preserve_most">];
+  let Documentation = [PreserveMostDocs];
+}
+
+def PreserveAll : InheritableAttr {
+  let Spellings = [GNU<"preserve_all">];
+  let Documentation = [PreserveAllDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];
