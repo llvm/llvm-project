@@ -152,6 +152,15 @@
 // RUN: FileCheck -check-prefix=LINK_NO_IOS_ARM64_CRT1 %s < %t.log
 // LINK_NO_IOS_ARM64_CRT1-NOT: crt
 
+// RUN: %clang -target x86_64-apple-ios6.0 -miphoneos-version-min=6.0 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_IOSSIM_PROFILE %s < %t.log
+// LINK_IOSSIM_PROFILE: {{ld(.exe)?"}}
+// LINK_IOSSIM_PROFILE: libclang_rt.profile_iossim.a
+
+// FIXME: Currently the builtin library is only added to the command line if it,
+// so we can't check for it here
+// FIXME_LINK_IOSSIM_PROFILE: libclang_rt.ios.a
+
 // RUN: %clang -target arm64-apple-tvos8.3 -mtvos-version-min=8.3 -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_TVOS_ARM64 %s < %t.log
 // LINK_TVOS_ARM64: {{ld(.exe)?"}}

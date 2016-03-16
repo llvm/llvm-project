@@ -707,6 +707,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
+  if (Args.hasArg(OPT_fno_objc_convert_messages_to_runtime_calls))
+    Opts.ObjCConvertMessagesToRuntimeCalls = 0;
+
   Opts.EmulatedTLS =
       Args.hasFlag(OPT_femulated_tls, OPT_fno_emulated_tls, false);
 
@@ -1052,18 +1055,10 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.Plugins.emplace_back(A->getValue(0));
     Opts.ProgramAction = frontend::PluginAction;
     Opts.ActionName = A->getValue();
-
-    for (const Arg *AA : Args.filtered(OPT_plugin_arg))
-      if (AA->getValue(0) == Opts.ActionName)
-        Opts.PluginArgs.emplace_back(AA->getValue(1));
   }
-
   Opts.AddPluginActions = Args.getAllArgValues(OPT_add_plugin);
-  Opts.AddPluginArgs.resize(Opts.AddPluginActions.size());
-  for (int i = 0, e = Opts.AddPluginActions.size(); i != e; ++i)
-    for (const Arg *A : Args.filtered(OPT_plugin_arg))
-      if (A->getValue(0) == Opts.AddPluginActions[i])
-        Opts.AddPluginArgs[i].emplace_back(A->getValue(1));
+  for (const Arg *AA : Args.filtered(OPT_plugin_arg))
+    Opts.PluginArgs[AA->getValue(0)].emplace_back(AA->getValue(1));
 
   for (const std::string &Arg :
          Args.getAllArgValues(OPT_ftest_module_file_extension_EQ)) {

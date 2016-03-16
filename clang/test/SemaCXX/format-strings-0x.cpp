@@ -15,6 +15,7 @@ void f(char **sp, float *fp) {
   scanf("%afoobar", fp);
   printf(nullptr);
   printf(*sp); // expected-warning {{not a string literal}}
+  // expected-note@-1{{treat the string as an argument to avoid this}}
 
   // PR13099
   printf(

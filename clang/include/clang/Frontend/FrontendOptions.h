@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace llvm {
 class MemoryBuffer;
@@ -227,14 +228,11 @@ public:
   /// The name of the action to run when using a plugin action.
   std::string ActionName;
 
-  /// Args to pass to the plugin
-  std::vector<std::string> PluginArgs;
+  /// Args to pass to the plugins
+  std::unordered_map<std::string,std::vector<std::string>> PluginArgs;
 
   /// The list of plugin actions to run in addition to the normal action.
   std::vector<std::string> AddPluginActions;
-
-  /// Args to pass to the additional plugins
-  std::vector<std::vector<std::string> > AddPluginArgs;
 
   /// The list of plugins to load.
   std::vector<std::string> Plugins;
