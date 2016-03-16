@@ -96,6 +96,8 @@ static const char *ReportTypeString(ReportType typ) {
     return "destroy of a locked mutex";
   if (typ == ReportTypeMutexDoubleLock)
     return "double lock of a mutex";
+  if (typ == ReportTypeMutexInvalidAccess)
+    return "use of an invalid mutex (e.g. uninitialized or destroyed)";
   if (typ == ReportTypeMutexBadUnlock)
     return "unlock of an unlocked mutex (or by a wrong thread)";
   if (typ == ReportTypeMutexBadReadLock)
