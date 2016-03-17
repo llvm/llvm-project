@@ -745,7 +745,6 @@ struct SignalContext {
 
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp);
 
-void DisableReexec();
 void MaybeReexec();
 
 }  // namespace __sanitizer
