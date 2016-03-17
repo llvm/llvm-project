@@ -339,6 +339,76 @@ Several new checks were added:
   ``-enable-checker optin.osx.cocoa.localizability``.
 
 
+Clang-tidy
+----------
+
+New checks have been added to clang-tidy:
+
+* Checks enforcing certain rules of the `CERT Secure Coding Standards
+  <https://www.securecoding.cert.org/confluence/display/seccode/SEI+CERT+Coding+Standards>`_:
+
+  * `cert-dcl03-c <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cert-dcl03-c.html>`_
+  * `cert-dcl50-cpp <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cert-dcl50-cpp.html>`_
+  * `cert-err52-cpp <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cert-err52-cpp.html>`_
+  * `cert-err58-cpp <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cert-err58-cpp.html>`_
+  * `cert-err60-cpp <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cert-err60-cpp.html>`_
+  * `cert-err61-cpp <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cert-err61-cpp.html>`_
+  * `cert-fio38-c <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cert-fio38-c.html>`_
+  * `cert-oop11-cpp <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cert-oop11-cpp.html>`_
+
+* Checks supporting the `C++ Core Guidelines
+  <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md>`_:
+
+  * `cppcoreguidelines-pro-bounds-array-to-pointer-decay <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cppcoreguidelines-pro-bounds-array-to-pointer-decay.html>`_
+  * `cppcoreguidelines-pro-bounds-constant-array-index <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cppcoreguidelines-pro-bounds-constant-array-index.html>`_
+  * `cppcoreguidelines-pro-bounds-pointer-arithmetic <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cppcoreguidelines-pro-bounds-pointer-arithmetic.html>`_
+  * `cppcoreguidelines-pro-type-const-cast <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cppcoreguidelines-pro-type-const-cast.html>`_
+  * `cppcoreguidelines-pro-type-cstyle-cast <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cppcoreguidelines-pro-type-cstyle-cast.html>`_
+  * `cppcoreguidelines-pro-type-reinterpret-cast <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cppcoreguidelines-pro-type-reinterpret-cast.html>`_
+  * `cppcoreguidelines-pro-type-static-cast-downcast <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cppcoreguidelines-pro-type-static-cast-downcast.html>`_
+  * `cppcoreguidelines-pro-type-union-access <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cppcoreguidelines-pro-type-union-access.html>`_
+  * `cppcoreguidelines-pro-type-vararg <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/cppcoreguidelines-pro-type-vararg.html>`_
+
+* The functionality of the clang-modernize tool has been moved to the new
+  ``modernize`` module in clang-tidy along with a few new checks:
+
+  * `modernize-loop-convert <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-loop-convert.html>`_
+  * `modernize-make-unique <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-make-unique.html>`_
+  * `modernize-pass-by-value <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-pass-by-value.html>`_
+  * `modernize-redundant-void-arg <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-redundant-void-arg.html>`_
+  * `modernize-replace-auto-ptr <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-replace-auto-ptr.html>`_
+  * `modernize-shrink-to-fit <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-shrink-to-fit.html>`_ (renamed from readability-shrink-to-fit)
+  * `modernize-use-auto <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-use-auto.html>`_
+  * `modernize-use-default <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-use-default.html>`_
+  * `modernize-use-nullptr <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-use-nullptr.html>`_
+  * `modernize-use-override <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/modernize-use-override.html>`_ (renamed from misc-use-override)
+
+* New checks flagging various readability-related issues:
+
+  * `readability-identifier-naming <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/readability-identifier-naming.html>`_
+  * `readability-implicit-bool-cast <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/readability-implicit-bool-cast.html>`_
+  * `readability-inconsistent-declaration-parameter-name <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/readability-inconsistent-declaration-parameter-name.html>`_
+  * `readability-uniqueptr-delete-release <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/readability-uniqueptr-delete-release.html>`_
+
+* New ``performance`` module for checks targeting potential performance issues:
+
+  * performance-unnecessary-copy-initialization
+
+* A few new checks have been added to the ``misc`` module:
+
+  * `misc-definitions-in-headers <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-definitions-in-headers.html>`_
+  * misc-move-const-arg
+  * `misc-move-constructor-init <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-move-constructor-init.html>`_
+  * `misc-new-delete-overloads <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-new-delete-overloads.html>`_
+  * `misc-non-copyable-objects <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-non-copyable-objects.html>`_
+  * `misc-sizeof-container <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-sizeof-container.html>`_
+  * `misc-string-integer-assignment <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-string-integer-assignment.html>`_
+  * `misc-throw-by-value-catch-by-reference <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-throw-by-value-catch-by-reference.html>`_
+  * `misc-unused-alias-decls <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-unused-alias-decls.html>`_
+  * `misc-unused-parameters <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-unused-parameters.html>`_
+  * `misc-virtual-near-miss <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/misc-virtual-near-miss.html>`_
+
+
 Additional Information
 ======================
 
