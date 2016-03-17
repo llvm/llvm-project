@@ -69,8 +69,8 @@ public:
   bool canRelaxTls(uint32_t Type, const SymbolBody *S) const;
   template <class ELFT>
   bool needsCopyRel(uint32_t Type, const SymbolBody &S) const;
-  virtual size_t relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
-                          uint64_t P, uint64_t SA, const SymbolBody &S) const;
+  size_t relaxTls(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type, uint64_t P,
+                  uint64_t SA, const SymbolBody &S) const;
   virtual ~TargetInfo();
 
   unsigned PageSize = 4096;
@@ -100,6 +100,15 @@ public:
 private:
   virtual bool needsCopyRelImpl(uint32_t Type) const;
   virtual bool needsPltImpl(uint32_t Type) const;
+
+  virtual size_t relaxTlsGdToIe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                uint64_t P, uint64_t SA) const;
+  virtual size_t relaxTlsGdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                uint64_t P, uint64_t SA) const;
+  virtual size_t relaxTlsIeToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                uint64_t P, uint64_t SA) const;
+  virtual size_t relaxTlsLdToLe(uint8_t *Loc, uint8_t *BufEnd, uint32_t Type,
+                                uint64_t P, uint64_t SA) const;
 };
 
 uint64_t getPPC64TocBase();

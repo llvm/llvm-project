@@ -68,6 +68,8 @@ struct Configuration {
   bool Mips64EL = false;
   bool NoUndefined;
   bool NoinhibitExec;
+  bool Pic;
+  bool Pie;
   bool PrintGcSections;
   bool Rela;
   bool Relocatable;

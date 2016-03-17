@@ -37,6 +37,14 @@
 # RUN: not ld.lld -r --icf=all %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR4 %s
 # ERR4: -r and --icf may not be used together
 
+## Attempt to use -r and -pie together
+# RUN: not ld.lld -r -pie %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR5 %s
+# ERR5: -r and -pie may not be used together
+
+## Attempt to use -shared and -pie together
+# RUN: not ld.lld -shared -pie %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR6 %s
+# ERR6: -shared and -pie may not be used together
+
 .globl _start
 _start:
   nop

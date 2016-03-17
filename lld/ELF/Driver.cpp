@@ -144,6 +144,9 @@ static void checkOptions(opt::InputArgList &Args) {
   if (Config->EMachine == EM_AMDGPU && !Config->Entry.empty())
     error("-e option is not valid for AMDGPU.");
 
+  if (Config->Pie && Config->Shared)
+    error("-shared and -pie may not be used together");
+
   if (!Config->Relocatable)
     return;
 
@@ -153,6 +156,8 @@ static void checkOptions(opt::InputArgList &Args) {
     error("-r and --gc-sections may not be used together");
   if (Config->ICF)
     error("-r and --icf may not be used together");
+  if (Config->Pie)
+    error("-r and -pie may not be used together");
 }
 
 static StringRef
@@ -238,6 +243,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ICF = Args.hasArg(OPT_icf);
   Config->NoUndefined = Args.hasArg(OPT_no_undefined);
   Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
+  Config->Pie = Args.hasArg(OPT_pie);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
@@ -260,6 +266,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZNow = hasZOption(Args, "now");
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
+
+  Config->Pic = Config->Pie || Config->Shared;
 
   if (Config->Relocatable)
     Config->StripAll = false;
@@ -343,27 +351,26 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   Config->Rela = ELFT::Is64Bits;
 
+  // Add entry symbol.
+  // There is no entry symbol for AMDGPU binaries, so skip adding one to avoid
+  // having and undefined symbol.
   if (Config->Entry.empty() && !Config->Shared && !Config->Relocatable &&
       Config->EMachine != EM_AMDGPU)
-    // Add entry symbol.
-    //
-    // There is no entry symbol for AMDGPU binaries, so skip adding one to avoid
-    // having and undefined symbol.
     Config->Entry = Config->EMachine == EM_MIPS ? "__start" : "_start";
 
+  // In the assembly for 32 bit x86 the _GLOBAL_OFFSET_TABLE_ symbol
+  // is magical and is used to produce a R_386_GOTPC relocation.
+  // The R_386_GOTPC relocation value doesn't actually depend on the
+  // symbol value, so it could use an index of STN_UNDEF which, according
+  // to the spec, means the symbol value is 0.
+  // Unfortunately both gas and MC keep the _GLOBAL_OFFSET_TABLE_ symbol in
+  // the object file.
+  // The situation is even stranger on x86_64 where the assembly doesn't
+  // need the magical symbol, but gas still puts _GLOBAL_OFFSET_TABLE_ as
+  // an undefined symbol in the .o files.
+  // Given that the symbol is effectively unused, we just create a dummy
+  // hidden one to avoid the undefined symbol error.
   if (!Config->Relocatable)
-    // In the assembly for 32 bit x86 the _GLOBAL_OFFSET_TABLE_ symbol
-    // is magical and is used to produce a R_386_GOTPC relocation.
-    // The R_386_GOTPC relocation value doesn't actually depend on the
-    // symbol value, so it could use an index of STN_UNDEF which, according
-    // to the spec, means the symbol value is 0.
-    // Unfortunately both gas and MC keep the _GLOBAL_OFFSET_TABLE_ symbol in
-    // the object file.
-    // The situation is even stranger on x86_64 where the assembly doesn't
-    // need the magical symbol, but gas still puts _GLOBAL_OFFSET_TABLE_ as
-    // an undefined symbol in the .o files.
-    // Given that the symbol is effectively unused, we just create a dummy
-    // hidden one to avoid the undefined symbol error.
     Symtab.addIgnored("_GLOBAL_OFFSET_TABLE_");
 
   if (!Config->Entry.empty()) {

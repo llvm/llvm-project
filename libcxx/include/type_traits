@@ -397,6 +397,18 @@ template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp
 #endif
 
 // addressof
+#if __has_builtin(__builtin_addressof)
+
+template <class _Tp>
+inline _LIBCPP_CONSTEXPR_AFTER_CXX14
+_LIBCPP_NO_CFI _LIBCPP_INLINE_VISIBILITY
+_Tp*
+addressof(_Tp& __x) _NOEXCEPT
+{
+    return __builtin_addressof(__x);
+}
+
+#else
 
 template <class _Tp>
 inline _LIBCPP_NO_CFI _LIBCPP_INLINE_VISIBILITY
@@ -405,6 +417,8 @@ addressof(_Tp& __x) _NOEXCEPT
 {
     return (_Tp*)&reinterpret_cast<const volatile char&>(__x);
 }
+
+#endif // __has_builtin(__builtin_addressof)
 
 #if defined(_LIBCPP_HAS_OBJC_ARC) && !defined(_LIBCPP_PREDEFINED_OBJC_ARC_ADDRESSOF)
 // Objective-C++ Automatic Reference Counting uses qualified pointers
@@ -1070,6 +1084,11 @@ declval();
 template <class _Tp>
 struct __uncvref  {
     typedef typename remove_cv<typename remove_reference<_Tp>::type>::type type;
+};
+
+template <class _Tp>
+struct __unconstref {
+    typedef typename remove_const<typename remove_reference<_Tp>::type>::type type;
 };
 
 // __is_same_uncvref

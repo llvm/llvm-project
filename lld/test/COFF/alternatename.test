@@ -25,7 +25,7 @@ sections:
     SectionData:     ''
   - Name:            .drectve
     Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
-    Alignment:       2147483648
+    Alignment:       1
     SectionData:     2f616c7465726e6174656e616d653a666f6f3d6d61696e00  # /alternatename:foo=main
 symbols:
   - Name:            '.text$mn'

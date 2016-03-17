@@ -25,9 +25,6 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string>
 #include <vector>
 

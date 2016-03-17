@@ -82,7 +82,7 @@ private:
     return !Symtab.getSharedFiles().empty() && !Config->DynamicLinker.empty();
   }
   bool isOutputDynamic() const {
-    return !Symtab.getSharedFiles().empty() || Config->Shared;
+    return !Symtab.getSharedFiles().empty() || Config->Pic;
   }
 
   void ensureBss();
@@ -417,7 +417,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
         continue;
       }
 
-      bool Dynrel = Config->Shared && !Target->isRelRelative(Type) &&
+      bool Dynrel = Config->Pic && !Target->isRelRelative(Type) &&
                     !Target->isSizeRel(Type);
       if (Preemptible || Dynrel) {
         uint32_t DynType;
@@ -466,8 +466,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C,
     // We can however do better than just copying the incoming relocation. We
     // can process some of it and and just ask the dynamic linker to add the
     // load address.
-    if (!Config->Shared || Target->isRelRelative(Type) ||
-        Target->isSizeRel(Type))
+    if (!Config->Pic || Target->isRelRelative(Type) || Target->isSizeRel(Type))
       continue;
 
     uintX_t Addend = getAddend<ELFT>(RI);
@@ -1439,7 +1438,7 @@ template <class ELFT> static uint8_t getELFEncoding() {
 }
 
 static uint16_t getELFType() {
-  if (Config->Shared)
+  if (Config->Pic)
     return ET_DYN;
   if (Config->Relocatable)
     return ET_REL;

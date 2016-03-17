@@ -779,6 +779,12 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_CONSTEXPR_AFTER_CXX11
 #endif
 
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
+#define _LIBCPP_CONSTEXPR_AFTER_CXX14 constexpr
+#else
+#define _LIBCPP_CONSTEXPR_AFTER_CXX14
+#endif
+
 #ifdef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 #  define _LIBCPP_EXPLICIT_MOVE(x) _VSTD::move(x)
 #else

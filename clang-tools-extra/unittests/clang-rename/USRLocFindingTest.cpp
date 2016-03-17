@@ -3,7 +3,6 @@
 #include "gtest/gtest.h"
 #include <map>
 #include <set>
-#include <stdio.h>
 #include <vector>
 
 namespace clang {
@@ -79,6 +78,6 @@ void fun1() {\n\
   testOffsetGroups(VarTest, VarTestOffsets);
 }
 
-}
-}
-}
+} // namespace test
+} // namespace rename
+} // namespace clang

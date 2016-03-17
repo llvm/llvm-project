@@ -4148,8 +4148,13 @@ void ScopInfo::buildAccessFunctions(Region &R, BasicBlock &BB,
     if (isIgnoredIntrinsic(&Inst))
       continue;
 
-    if (!PHI)
+    // PHI nodes have already been modeled above and TerminatorInsts that are
+    // not part of a non-affine subregion are fully modeled and regenerated
+    // from the polyhedral domains. Hence, they do not need to be modeled as
+    // explicit data dependences.
+    if (!PHI && (!isa<TerminatorInst>(&Inst) || NonAffineSubRegion))
       buildScalarDependences(&Inst);
+
     if (!IsExitBlock)
       buildEscapingDependences(&Inst);
   }
