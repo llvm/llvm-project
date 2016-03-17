@@ -239,7 +239,9 @@ namespace clang {
     CC_IntelOclBicc, // __attribute__((intel_ocl_bicc))
     CC_SpirFunction, // default for OpenCL functions on SPIR target
     CC_SpirKernel,   // inferred for OpenCL kernels on SPIR target
-    CC_Swift         // __attribute__((swiftcall))
+    CC_Swift,        // __attribute__((swiftcall))
+    CC_PreserveMost, // __attribute__((preserve_most))
+    CC_PreserveAll,  // __attribute__((preserve_all))
   };
 
   /// \brief Checks whether the given calling convention supports variadic

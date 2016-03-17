@@ -2656,6 +2656,8 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_SpirFunction: return "spir_function";
   case CC_SpirKernel: return "spir_kernel";
   case CC_Swift: return "swiftcall";
+  case CC_PreserveMost: return "preserve_most";
+  case CC_PreserveAll: return "preserve_all";
   }
 
   llvm_unreachable("Invalid calling convention.");
@@ -2999,6 +3001,8 @@ bool AttributedType::isQualifier() const {
   case AttributedType::attr_swiftcall:
   case AttributedType::attr_vectorcall:
   case AttributedType::attr_inteloclbicc:
+  case AttributedType::attr_preserve_most:
+  case AttributedType::attr_preserve_all:
   case AttributedType::attr_ms_abi:
   case AttributedType::attr_sysv_abi:
   case AttributedType::attr_ptr32:
@@ -3056,6 +3060,8 @@ bool AttributedType::isCallingConv() const {
   case attr_ms_abi:
   case attr_sysv_abi:
   case attr_inteloclbicc:
+  case attr_preserve_most:
+  case attr_preserve_all:
     return true;
   }
   llvm_unreachable("invalid attr kind");

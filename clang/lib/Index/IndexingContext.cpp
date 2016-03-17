@@ -290,14 +290,17 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
     Roles |= (unsigned)SymbolRole::Declaration;
 
   D = getCanonicalDecl(D);
-  if (D->isImplicit() && !isa<ObjCMethodDecl>(D)) {
+  if (D->isImplicit() && !isa<ObjCMethodDecl>(D) &&
+      !(isa<FunctionDecl>(D) && cast<FunctionDecl>(D)->getBuiltinID())) {
     // operator new declarations will link to the implicit one as canonical.
     return true;
   }
   Parent = adjustParent(Parent);
   if (Parent)
     Parent = getCanonicalDecl(Parent);
-  assert((!Parent || !Parent->isImplicit() || isa<FunctionDecl>(Parent) ||
+  assert((!Parent || !Parent->isImplicit() ||
+          (isa<FunctionDecl>(Parent) &&
+           cast<FunctionDecl>(Parent)->getBuiltinID()) ||
           isa<ObjCInterfaceDecl>(Parent) || isa<ObjCMethodDecl>(Parent)) &&
          "unexpected implicit parent!");
 

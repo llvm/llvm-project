@@ -174,6 +174,14 @@ private:
                &getAvailabilitySlot(ObsoletedSlot) + 1);
   }
 
+  const Expr **getReplacementSlot() {
+    return reinterpret_cast<const Expr**>(getStrictSlot() + 1);
+  }
+
+  const Expr *const *getReplacementSlot() const {
+    return reinterpret_cast<const Expr *const *>(getStrictSlot() + 1);
+  }
+
 public:
   struct TypeTagForDatatypeData {
     ParsedType *MatchingCType;
@@ -251,7 +259,8 @@ private:
                 const AvailabilityChange &obsoleted,
                 SourceLocation unavailable, 
                 const Expr *messageExpr,
-                Syntax syntaxUsed, SourceLocation strict)
+                Syntax syntaxUsed, SourceLocation strict,
+                const Expr *replacementExpr)
     : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
       ScopeLoc(scopeLoc), EllipsisLoc(), NumArgs(1), SyntaxUsed(syntaxUsed),
       Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
@@ -264,6 +273,7 @@ private:
     new (&getAvailabilitySlot(DeprecatedSlot)) AvailabilityChange(deprecated);
     new (&getAvailabilitySlot(ObsoletedSlot)) AvailabilityChange(obsoleted);
     memcpy(getStrictSlot(), &strict, sizeof(SourceLocation));
+    *getReplacementSlot() = replacementExpr;
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
 
@@ -456,6 +466,11 @@ public:
     return MessageExpr;
   }
 
+  const Expr *getReplacementExpr() const {
+    assert(getKind() == AT_Availability && "Not an availability attribute");
+    return *getReplacementSlot();
+  }
+
   const ParsedType &getMatchingCType() const {
     assert(getKind() == AT_TypeTagForDatatype &&
            "Not a type_tag_for_datatype attribute");
@@ -523,7 +538,7 @@ public:
     AvailabilityAllocSize =
       sizeof(AttributeList)
       + ((3 * sizeof(AvailabilityChange) + sizeof(void*) +
-         sizeof(ArgsUnion) + sizeof(SourceLocation) - 1)
+         sizeof(ArgsUnion) + sizeof(SourceLocation) + sizeof(const Expr *) - 1)
          / sizeof(void*) * sizeof(void*)),
     TypeTagForDatatypeAllocSize =
       sizeof(AttributeList)
@@ -642,13 +657,13 @@ public:
                         SourceLocation unavailable,
                         const Expr *MessageExpr,
                         AttributeList::Syntax syntax,
-                        SourceLocation strict) {
+                        SourceLocation strict, const Expr *ReplacementExpr) {
     void *memory = allocate(AttributeFactory::AvailabilityAllocSize);
     return add(new (memory) AttributeList(attrName, attrRange,
                                           scopeName, scopeLoc,
                                           Param, introduced, deprecated,
                                           obsoleted, unavailable, MessageExpr,
-                                          syntax, strict));
+                                          syntax, strict, ReplacementExpr));
   }
 
   AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
@@ -778,11 +793,11 @@ public:
                         SourceLocation unavailable,
                         const Expr *MessageExpr,
                         AttributeList::Syntax syntax,
-                        SourceLocation strict) {
+                        SourceLocation strict, const Expr *ReplacementExpr) {
     AttributeList *attr =
       pool.create(attrName, attrRange, scopeName, scopeLoc, Param, introduced,
                   deprecated, obsoleted, unavailable, MessageExpr, syntax,
-                  strict);
+                  strict, ReplacementExpr);
     add(attr);
     return attr;
   }

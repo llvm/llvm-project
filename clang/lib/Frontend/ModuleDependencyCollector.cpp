@@ -15,7 +15,6 @@
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,9 +59,9 @@ void ModuleDependencyCollector::writeFileMap() {
   VFSWriter.write(OS);
 }
 
-// TODO: move this to Support/Path.h?
+// TODO: move this to Support/Path.h and check for HAVE_REALPATH?
 static bool real_path(StringRef SrcPath, SmallVectorImpl<char> &RealPath) {
-#ifdef HAVE_REALPATH
+#ifdef LLVM_ON_UNIX
   char CanonicalPath[PATH_MAX];
 
   // TODO: emit a warning in case this fails...?

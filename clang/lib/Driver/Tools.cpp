@@ -417,7 +417,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     ++AI;
 
     if (getToolChain().getDriver().IsCLMode()) {
-      // In clang-cl mode, /Ycfoo.h means that all code up to a foo.h 
+      // In clang-cl mode, /Ycfoo.h means that all code up to a foo.h
       // include is compiled into foo.h, and everything after goes into
       // the .obj file. /Yufoo.h means that all includes prior to and including
       // foo.h are completely skipped and replaced with a use of the pch file

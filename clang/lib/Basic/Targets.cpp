@@ -4095,6 +4095,8 @@ public:
     case CC_X86VectorCall:
     case CC_IntelOclBicc:
     case CC_X86_64Win64:
+    case CC_PreserveMost:
+    case CC_PreserveAll:
       return CCCR_OK;
     default:
       return CCCR_Warning;
@@ -5545,6 +5547,8 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Swift:
+    case CC_PreserveMost:
+    case CC_PreserveAll:
       return CCCR_OK;
     default:
       return CCCR_Warning;
