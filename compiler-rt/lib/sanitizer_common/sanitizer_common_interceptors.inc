@@ -91,6 +91,10 @@
 #define COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m) {}
 #endif
 
+#ifndef COMMON_INTERCEPTOR_MUTEX_INVALID
+#define COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m) {}
+#endif
+
 #ifndef COMMON_INTERCEPTOR_HANDLE_RECVMSG
 #define COMMON_INTERCEPTOR_HANDLE_RECVMSG(ctx, msg) ((void)(msg))
 #endif
@@ -3346,6 +3350,8 @@ INTERCEPTOR(int, pthread_mutex_lock, void *m) {
     COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m);
   if (res == 0 || res == errno_EOWNERDEAD)
     COMMON_INTERCEPTOR_MUTEX_LOCK(ctx, m);
+  if (res == errno_EINVAL)
+    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
   return res;
 }
 
@@ -3353,7 +3359,10 @@ INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, pthread_mutex_unlock, m);
   COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m);
-  return REAL(pthread_mutex_unlock)(m);
+  int res = REAL(pthread_mutex_unlock)(m);
+  if (res == errno_EINVAL)
+    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
+  return res;
 }
 
 #define INIT_PTHREAD_MUTEX_LOCK COMMON_INTERCEPT_FUNCTION(pthread_mutex_lock)
