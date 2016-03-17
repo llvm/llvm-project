@@ -6,8 +6,8 @@ define void @_Z3foov() !dbg !9 {
   ret void
 }
 
-; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
+; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11}
 
 !0 = !{null}
 !1 = distinct !DICompositeType(tag: DW_TAG_structure_type)
@@ -31,5 +31,23 @@ define void @_Z3foov() !dbg !9 {
                             flags: DIFlagPrototyped, isOptimized: true,
                             templateParams: !5, declaration: !8, variables: !6)
 
-!10 = !{i32 1, !"Debug Info Version", i32 3}
-!llvm.module.flags = !{!10}
+; CHECK: !10 = distinct !DISubprogram
+; CHECK-SAME: virtualIndex: 0,
+!10 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
+                            file: !2, line: 7, type: !3, isLocal: true,
+                            isDefinition: true, scopeLine: 8, containingType: !4,
+                            virtuality: DW_VIRTUALITY_pure_virtual, virtualIndex: 0,
+                            flags: DIFlagPrototyped, isOptimized: true,
+                            templateParams: !5, declaration: !8, variables: !6)
+
+; CHECK: !11 = distinct !DISubprogram
+; CHECK-NOT: virtualIndex
+!11 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,
+                            file: !2, line: 7, type: !3, isLocal: true,
+                            isDefinition: true, scopeLine: 8, containingType: !4,
+                            virtuality: DW_VIRTUALITY_none,
+                            flags: DIFlagPrototyped, isOptimized: true,
+                            templateParams: !5, declaration: !8, variables: !6)
+
+!12 = !{i32 1, !"Debug Info Version", i32 3}
+!llvm.module.flags = !{!12}
