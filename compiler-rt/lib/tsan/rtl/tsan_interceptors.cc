@@ -2409,6 +2409,10 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
   MutexRepair(((TsanInterceptorContext *)ctx)->thr, \
             ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
 
+#define COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m) \
+  MutexInvalidAccess(((TsanInterceptorContext *)ctx)->thr, \
+                     ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
+
 #if !SANITIZER_MAC
 #define COMMON_INTERCEPTOR_HANDLE_RECVMSG(ctx, msg) \
   HandleRecvmsg(((TsanInterceptorContext *)ctx)->thr, \
