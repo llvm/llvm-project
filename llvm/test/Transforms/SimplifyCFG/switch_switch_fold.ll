@@ -1,8 +1,7 @@
-; RUN: opt < %s -simplifycfg -S | \
-; RUN:   grep switch | count 1
+; RUN: opt < %s -simplifycfg -S | FileCheck %s
 
-; Test that a switch going to a switch on the same value can be merged.   All 
-; three switches in this example can be merged into one big one.
+; Test that a switch going to a switch on the same value can be merged.
+; All three switches in this example can be merged into one big one.
 
 declare void @foo1()
 
@@ -43,5 +42,24 @@ F:              ; preds = %F, %T, %0, %0
 D:              ; preds = %F
         call void @foo4( )
         ret void
+
+; CHECK-LABEL: @test1(
+; CHECK-NEXT:    switch i32 %V, label %infloop [
+; CHECK-NEXT:    i32 4, label %A
+; CHECK-NEXT:    i32 17, label %B
+; CHECK-NEXT:    i32 18, label %B
+; CHECK-NEXT:    i32 42, label %D
+; CHECK-NEXT:    ]
+; CHECK:       A:
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    ret void
+; CHECK:       B:
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    ret void
+; CHECK:       D:
+; CHECK-NEXT:    call void @foo4()
+; CHECK-NEXT:    ret void
+; CHECK:       infloop:
+; CHECK-NEXT:    br label %infloop
 }
 

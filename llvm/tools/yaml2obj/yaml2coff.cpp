@@ -76,14 +76,24 @@ struct COFFParser {
         unsigned Index = getStringIndex(Name);
         std::string str = utostr(Index);
         if (str.size() > 7) {
-          errs() << "String table got too large";
+          errs() << "String table got too large\n";
           return false;
         }
         Sec.Header.Name[0] = '/';
         std::copy(str.begin(), str.end(), Sec.Header.Name + 1);
       }
 
-      Sec.Header.Characteristics |= (Log2_32(Sec.Alignment) + 1) << 20;
+      if (Sec.Alignment) {
+        if (Sec.Alignment > 8192) {
+          errs() << "Section alignment is too large\n";
+          return false;
+        }
+        if (!isPowerOf2_32(Sec.Alignment)) {
+          errs() << "Section alignment is not a power of 2\n";
+          return false;
+        }
+        Sec.Header.Characteristics |= (Log2_32(Sec.Alignment) + 1) << 20;
+      }
     }
     return true;
   }

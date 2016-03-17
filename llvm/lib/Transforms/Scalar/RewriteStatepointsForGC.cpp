@@ -1187,8 +1187,7 @@ static AttributeSet legalizeCallAttributes(AttributeSet AS) {
         // These attributes control the generation of the gc.statepoint call /
         // invoke itself; and once the gc.statepoint is in place, they're of no
         // use.
-        if (Attr.hasAttribute("statepoint-num-patch-bytes") ||
-            Attr.hasAttribute("statepoint-id"))
+        if (isStatepointDirectiveAttr(Attr))
           continue;
 
         Ret = Ret.addAttributes(
@@ -1332,17 +1331,14 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
     TransitionArgs = TransitionBundle->Inputs;
   }
 
-  Value *CallTarget = CS.getCalledValue();
-  AttributeSet OriginalAttrs = CS.getAttributes();
-  Attribute AttrID = OriginalAttrs.getAttribute(AttributeSet::FunctionIndex,
-                                                "statepoint-id");
-  if (AttrID.isStringAttribute())
-    AttrID.getValueAsString().getAsInteger(10, StatepointID);
+  StatepointDirectives SD =
+      parseStatepointDirectivesFromAttrs(CS.getAttributes());
+  if (SD.NumPatchBytes)
+    NumPatchBytes = *SD.NumPatchBytes;
+  if (SD.StatepointID)
+    StatepointID = *SD.StatepointID;
 
-  Attribute AttrNumPatchBytes = OriginalAttrs.getAttribute(
-    AttributeSet::FunctionIndex, "statepoint-num-patch-bytes");
-  if (AttrNumPatchBytes.isStringAttribute())
-    AttrNumPatchBytes.getValueAsString().getAsInteger(10, NumPatchBytes);
+  Value *CallTarget = CS.getCalledValue();
 
   // Create the statepoint given all the arguments
   Instruction *Token = nullptr;

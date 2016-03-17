@@ -99,8 +99,8 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
 
 // \p FuncName is the string used as profile lookup key for the function. A
 // symbol is created to hold the name. Return the legalized symbol name.
-static std::string getPGOFuncNameVarName(StringRef FuncName,
-                                         GlobalValue::LinkageTypes Linkage) {
+std::string getPGOFuncNameVarName(StringRef FuncName,
+                                  GlobalValue::LinkageTypes Linkage) {
   std::string VarName = getInstrProfNameVarPrefix();
   VarName += FuncName;
 
@@ -119,7 +119,7 @@ static std::string getPGOFuncNameVarName(StringRef FuncName,
 
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
-                                     StringRef FuncName) {
+                                     StringRef PGOFuncName) {
 
   // We generally want to match the function's linkage, but available_externally
   // and extern_weak both have the wrong semantics, and anything that doesn't
@@ -132,10 +132,11 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
            Linkage == GlobalValue::ExternalLinkage)
     Linkage = GlobalValue::PrivateLinkage;
 
-  auto *Value = ConstantDataArray::getString(M.getContext(), FuncName, false);
+  auto *Value =
+      ConstantDataArray::getString(M.getContext(), PGOFuncName, false);
   auto FuncNameVar =
       new GlobalVariable(M, Value->getType(), true, Linkage, Value,
-                         getPGOFuncNameVarName(FuncName, Linkage));
+                         getPGOFuncNameVarName(PGOFuncName, Linkage));
 
   // Hide the symbol so that we correctly get a copy for each executable.
   if (!GlobalValue::isLocalLinkage(FuncNameVar->getLinkage()))
@@ -144,8 +145,8 @@ GlobalVariable *createPGOFuncNameVar(Module &M,
   return FuncNameVar;
 }
 
-GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName) {
-  return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), FuncName);
+GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
+  return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), PGOFuncName);
 }
 
 void InstrProfSymtab::create(const Module &M) {

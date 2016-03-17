@@ -508,6 +508,10 @@ namespace llvm {
 
     unsigned getPrefLoopAlignment(MachineLoop *ML) const override;
 
+    bool shouldInsertFencesForAtomic(const Instruction *I) const override {
+      return true;
+    }
+
     Instruction* emitLeadingFence(IRBuilder<> &Builder, AtomicOrdering Ord,
                                   bool IsStore, bool IsLoad) const override;
     Instruction* emitTrailingFence(IRBuilder<> &Builder, AtomicOrdering Ord,

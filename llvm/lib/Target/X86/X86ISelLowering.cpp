@@ -4573,7 +4573,7 @@ static SDValue getZeroVector(MVT VT, const X86Subtarget &Subtarget,
   return DAG.getBitcast(VT, Vec);
 }
 
-static SDValue ExtractSubVector(SDValue Vec, unsigned IdxVal,
+static SDValue extractSubVector(SDValue Vec, unsigned IdxVal,
                                 SelectionDAG &DAG, SDLoc dl,
                                 unsigned vectorWidth) {
   assert((vectorWidth == 128 || vectorWidth == 256) &&
@@ -4611,21 +4611,21 @@ static SDValue ExtractSubVector(SDValue Vec, unsigned IdxVal,
 /// instructions or a simple subregister reference. Idx is an index in the
 /// 128 bits we want.  It need not be aligned to a 128-bit boundary.  That makes
 /// lowering EXTRACT_VECTOR_ELT operations easier.
-static SDValue Extract128BitVector(SDValue Vec, unsigned IdxVal,
+static SDValue extract128BitVector(SDValue Vec, unsigned IdxVal,
                                    SelectionDAG &DAG, SDLoc dl) {
   assert((Vec.getValueType().is256BitVector() ||
           Vec.getValueType().is512BitVector()) && "Unexpected vector size!");
-  return ExtractSubVector(Vec, IdxVal, DAG, dl, 128);
+  return extractSubVector(Vec, IdxVal, DAG, dl, 128);
 }
 
 /// Generate a DAG to grab 256-bits from a 512-bit vector.
-static SDValue Extract256BitVector(SDValue Vec, unsigned IdxVal,
+static SDValue extract256BitVector(SDValue Vec, unsigned IdxVal,
                                    SelectionDAG &DAG, SDLoc dl) {
   assert(Vec.getValueType().is512BitVector() && "Unexpected vector size!");
-  return ExtractSubVector(Vec, IdxVal, DAG, dl, 256);
+  return extractSubVector(Vec, IdxVal, DAG, dl, 256);
 }
 
-static SDValue InsertSubVector(SDValue Result, SDValue Vec,
+static SDValue insertSubVector(SDValue Result, SDValue Vec,
                                unsigned IdxVal, SelectionDAG &DAG,
                                SDLoc dl, unsigned vectorWidth) {
   assert((vectorWidth == 128 || vectorWidth == 256) &&
@@ -4655,7 +4655,7 @@ static SDValue InsertSubVector(SDValue Result, SDValue Vec,
 /// simple superregister reference.  Idx is an index in the 128 bits
 /// we want.  It need not be aligned to a 128-bit boundary.  That makes
 /// lowering INSERT_VECTOR_ELT operations easier.
-static SDValue Insert128BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
+static SDValue insert128BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
                                   SelectionDAG &DAG, SDLoc dl) {
   assert(Vec.getValueType().is128BitVector() && "Unexpected vector size!");
 
@@ -4702,17 +4702,17 @@ static SDValue Insert128BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
     return DAG.getBitcast(ResultVT, Vec256);
   }
 
-  return InsertSubVector(Result, Vec, IdxVal, DAG, dl, 128);
+  return insertSubVector(Result, Vec, IdxVal, DAG, dl, 128);
 }
 
-static SDValue Insert256BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
+static SDValue insert256BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
                                   SelectionDAG &DAG, SDLoc dl) {
   assert(Vec.getValueType().is256BitVector() && "Unexpected vector size!");
-  return InsertSubVector(Result, Vec, IdxVal, DAG, dl, 256);
+  return insertSubVector(Result, Vec, IdxVal, DAG, dl, 256);
 }
 
 /// Insert i1-subvector to i1-vector.
-static SDValue Insert1BitVector(SDValue Op, SelectionDAG &DAG,
+static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget) {
 
   SDLoc dl(Op);
@@ -4819,18 +4819,18 @@ static SDValue Insert1BitVector(SDValue Op, SelectionDAG &DAG,
 /// instructions. This is used because creating CONCAT_VECTOR nodes of
 /// BUILD_VECTORS returns a larger BUILD_VECTOR while we're trying to lower
 /// large BUILD_VECTORS.
-static SDValue Concat128BitVectors(SDValue V1, SDValue V2, EVT VT,
+static SDValue concat128BitVectors(SDValue V1, SDValue V2, EVT VT,
                                    unsigned NumElems, SelectionDAG &DAG,
                                    SDLoc dl) {
-  SDValue V = Insert128BitVector(DAG.getUNDEF(VT), V1, 0, DAG, dl);
-  return Insert128BitVector(V, V2, NumElems/2, DAG, dl);
+  SDValue V = insert128BitVector(DAG.getUNDEF(VT), V1, 0, DAG, dl);
+  return insert128BitVector(V, V2, NumElems / 2, DAG, dl);
 }
 
-static SDValue Concat256BitVectors(SDValue V1, SDValue V2, EVT VT,
+static SDValue concat256BitVectors(SDValue V1, SDValue V2, EVT VT,
                                    unsigned NumElems, SelectionDAG &DAG,
                                    SDLoc dl) {
-  SDValue V = Insert256BitVector(DAG.getUNDEF(VT), V1, 0, DAG, dl);
-  return Insert256BitVector(V, V2, NumElems/2, DAG, dl);
+  SDValue V = insert256BitVector(DAG.getUNDEF(VT), V1, 0, DAG, dl);
+  return insert256BitVector(V, V2, NumElems / 2, DAG, dl);
 }
 
 /// Returns a vector of specified type with all bits set.
@@ -4847,7 +4847,7 @@ static SDValue getOnesVector(EVT VT, const X86Subtarget &Subtarget,
   SDValue Vec;
   if (!Subtarget.hasInt256() && NumElts == 8) {
     Vec = DAG.getConstant(Ones, dl, MVT::v4i32);
-    Vec = Concat128BitVectors(Vec, Vec, MVT::v8i32, 8, DAG, dl);
+    Vec = concat128BitVectors(Vec, Vec, MVT::v8i32, 8, DAG, dl);
   } else {
     Vec = DAG.getConstant(Ones, dl, MVT::getVectorVT(MVT::i32, NumElts));
   }
@@ -5912,7 +5912,7 @@ static SDValue LowerVectorBroadcast(SDValue Op, const X86Subtarget &Subtarget,
 
         // Use the register form of the broadcast instruction available on AVX2.
         if (VT.getSizeInBits() >= 256)
-          Sc = Extract128BitVector(Sc, 0, DAG, dl);
+          Sc = extract128BitVector(Sc, 0, DAG, dl);
         return DAG.getNode(X86ISD::VBROADCAST, dl, VT, Sc);
       }
 
@@ -6346,10 +6346,10 @@ static SDValue ExpandHorizontalBinOp(const SDValue &V0, const SDValue &V1,
          "Invalid nodes in input!");
 
   unsigned NumElts = VT.getVectorNumElements();
-  SDValue V0_LO = Extract128BitVector(V0, 0, DAG, DL);
-  SDValue V0_HI = Extract128BitVector(V0, NumElts/2, DAG, DL);
-  SDValue V1_LO = Extract128BitVector(V1, 0, DAG, DL);
-  SDValue V1_HI = Extract128BitVector(V1, NumElts/2, DAG, DL);
+  SDValue V0_LO = extract128BitVector(V0, 0, DAG, DL);
+  SDValue V0_HI = extract128BitVector(V0, NumElts/2, DAG, DL);
+  SDValue V1_LO = extract128BitVector(V1, 0, DAG, DL);
+  SDValue V1_HI = extract128BitVector(V1, NumElts/2, DAG, DL);
   EVT NewVT = V0_LO.getValueType();
 
   SDValue LO = DAG.getUNDEF(NewVT);
@@ -6749,7 +6749,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
             // insert into the 256-bit vector.
             Item = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, Item);
             SDValue ZeroVec = getZeroVector(ShufVT, Subtarget, DAG, dl);
-            Item = Insert128BitVector(ZeroVec, Item, 0, DAG, dl);
+            Item = insert128BitVector(ZeroVec, Item, 0, DAG, dl);
           }
         } else {
           assert(VT.is128BitVector() && "Expected an SSE value type!");
@@ -6827,8 +6827,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
     // Recreate the wider vector with the lower and upper part.
     if (VT.is256BitVector())
-      return Concat128BitVectors(Lower, Upper, VT, NumElems, DAG, dl);
-    return Concat256BitVectors(Lower, Upper, VT, NumElems, DAG, dl);
+      return concat128BitVectors(Lower, Upper, VT, NumElems, DAG, dl);
+    return concat256BitVectors(Lower, Upper, VT, NumElems, DAG, dl);
   }
 
   // Let legalizer expand 2-wide build_vectors.
@@ -6969,17 +6969,19 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) {
   SDValue V2 = Op.getOperand(1);
   unsigned NumElems = ResVT.getVectorNumElements();
   if (ResVT.is256BitVector())
-    return Concat128BitVectors(V1, V2, ResVT, NumElems, DAG, dl);
+    return concat128BitVectors(V1, V2, ResVT, NumElems, DAG, dl);
 
   if (Op.getNumOperands() == 4) {
     MVT HalfVT = MVT::getVectorVT(ResVT.getVectorElementType(),
                                   ResVT.getVectorNumElements()/2);
     SDValue V3 = Op.getOperand(2);
     SDValue V4 = Op.getOperand(3);
-    return Concat256BitVectors(Concat128BitVectors(V1, V2, HalfVT, NumElems/2, DAG, dl),
-      Concat128BitVectors(V3, V4, HalfVT, NumElems/2, DAG, dl), ResVT, NumElems, DAG, dl);
+    return concat256BitVectors(
+        concat128BitVectors(V1, V2, HalfVT, NumElems / 2, DAG, dl),
+        concat128BitVectors(V3, V4, HalfVT, NumElems / 2, DAG, dl), ResVT,
+        NumElems, DAG, dl);
   }
-  return Concat256BitVectors(V1, V2, ResVT, NumElems, DAG, dl);
+  return concat256BitVectors(V1, V2, ResVT, NumElems, DAG, dl);
 }
 
 static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
@@ -12332,7 +12334,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
 
     unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
     // Get the 128-bit vector.
-    Vec = Extract128BitVector(Vec, IdxVal, DAG, dl);
+    Vec = extract128BitVector(Vec, IdxVal, DAG, dl);
     MVT EltVT = VecVT.getVectorElementType();
 
     unsigned ElemsPerChunk = 128 / EltVT.getSizeInBits();
@@ -12484,7 +12486,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     }
 
     // Get the desired 128-bit vector chunk.
-    SDValue V = Extract128BitVector(N0, IdxVal, DAG, dl);
+    SDValue V = extract128BitVector(N0, IdxVal, DAG, dl);
 
     // Insert the element into the desired chunk.
     unsigned NumEltsIn128 = 128 / EltVT.getSizeInBits();
@@ -12496,7 +12498,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
                     DAG.getConstant(IdxIn128, dl, MVT::i32));
 
     // Insert the changed part back into the bigger vector
-    return Insert128BitVector(N0, V, IdxVal, DAG, dl);
+    return insert128BitVector(N0, V, IdxVal, DAG, dl);
   }
   assert(VT.is128BitVector() && "Only 128-bit vector types should be left!");
 
@@ -12584,7 +12586,7 @@ static SDValue LowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) {
     Op = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT128, Op.getOperand(0));
 
     // Insert the 128-bit vector.
-    return Insert128BitVector(DAG.getUNDEF(OpVT), Op, 0, DAG, dl);
+    return insert128BitVector(DAG.getUNDEF(OpVT), Op, 0, DAG, dl);
   }
 
   if (OpVT == MVT::v1i64 &&
@@ -12613,11 +12615,11 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
     if (ResVT.is128BitVector() &&
         (InVT.is256BitVector() || InVT.is512BitVector()) &&
         isa<ConstantSDNode>(Idx)) {
-      return Extract128BitVector(In, IdxVal, DAG, dl);
+      return extract128BitVector(In, IdxVal, DAG, dl);
     }
     if (ResVT.is256BitVector() && InVT.is512BitVector() &&
         isa<ConstantSDNode>(Idx)) {
-      return Extract256BitVector(In, IdxVal, DAG, dl);
+      return extract256BitVector(In, IdxVal, DAG, dl);
     }
   }
   return SDValue();
@@ -12674,13 +12676,13 @@ static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
 
   if ((OpVT.is256BitVector() || OpVT.is512BitVector()) &&
       SubVecVT.is128BitVector())
-    return Insert128BitVector(Vec, SubVec, IdxVal, DAG, dl);
+    return insert128BitVector(Vec, SubVec, IdxVal, DAG, dl);
 
   if (OpVT.is512BitVector() && SubVecVT.is256BitVector())
-    return Insert256BitVector(Vec, SubVec, IdxVal, DAG, dl);
+    return insert256BitVector(Vec, SubVec, IdxVal, DAG, dl);
 
   if (OpVT.getVectorElementType() == MVT::i1)
-    return Insert1BitVector(Op, DAG, Subtarget);
+    return insert1BitVector(Op, DAG, Subtarget);
 
   return SDValue();
 }
@@ -14983,13 +14985,13 @@ static SDValue Lower256IntVSETCC(SDValue Op, SelectionDAG &DAG) {
 
   // Extract the LHS vectors
   SDValue LHS = Op.getOperand(0);
-  SDValue LHS1 = Extract128BitVector(LHS, 0, DAG, dl);
-  SDValue LHS2 = Extract128BitVector(LHS, NumElems/2, DAG, dl);
+  SDValue LHS1 = extract128BitVector(LHS, 0, DAG, dl);
+  SDValue LHS2 = extract128BitVector(LHS, NumElems / 2, DAG, dl);
 
   // Extract the RHS vectors
   SDValue RHS = Op.getOperand(1);
-  SDValue RHS1 = Extract128BitVector(RHS, 0, DAG, dl);
-  SDValue RHS2 = Extract128BitVector(RHS, NumElems/2, DAG, dl);
+  SDValue RHS1 = extract128BitVector(RHS, 0, DAG, dl);
+  SDValue RHS2 = extract128BitVector(RHS, NumElems / 2, DAG, dl);
 
   // Issue the operation on the smaller types and concatenate the result back
   MVT EltVT = VT.getVectorElementType();
@@ -18794,13 +18796,13 @@ static SDValue Lower256IntArith(SDValue Op, SelectionDAG &DAG) {
 
   // Extract the LHS vectors
   SDValue LHS = Op.getOperand(0);
-  SDValue LHS1 = Extract128BitVector(LHS, 0, DAG, dl);
-  SDValue LHS2 = Extract128BitVector(LHS, NumElems/2, DAG, dl);
+  SDValue LHS1 = extract128BitVector(LHS, 0, DAG, dl);
+  SDValue LHS2 = extract128BitVector(LHS, NumElems / 2, DAG, dl);
 
   // Extract the RHS vectors
   SDValue RHS = Op.getOperand(1);
-  SDValue RHS1 = Extract128BitVector(RHS, 0, DAG, dl);
-  SDValue RHS2 = Extract128BitVector(RHS, NumElems/2, DAG, dl);
+  SDValue RHS1 = extract128BitVector(RHS, 0, DAG, dl);
+  SDValue RHS2 = extract128BitVector(RHS, NumElems / 2, DAG, dl);
 
   MVT EltVT = VT.getVectorElementType();
   MVT NewVT = MVT::getVectorVT(EltVT, NumElems/2);
@@ -19850,12 +19852,12 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     MVT NewVT = MVT::getVectorVT(EltVT, NumElems/2);
 
     // Extract the two vectors
-    SDValue V1 = Extract128BitVector(R, 0, DAG, dl);
-    SDValue V2 = Extract128BitVector(R, NumElems/2, DAG, dl);
+    SDValue V1 = extract128BitVector(R, 0, DAG, dl);
+    SDValue V2 = extract128BitVector(R, NumElems / 2, DAG, dl);
 
     // Recreate the shift amount vectors
-    SDValue Amt1 = Extract128BitVector(Amt, 0, DAG, dl);
-    SDValue Amt2 = Extract128BitVector(Amt, NumElems/2, DAG, dl);
+    SDValue Amt1 = extract128BitVector(Amt, 0, DAG, dl);
+    SDValue Amt2 = extract128BitVector(Amt, NumElems / 2, DAG, dl);
 
     // Issue new vector shifts for the smaller types
     V1 = DAG.getNode(Op.getOpcode(), dl, NewVT, V1, Amt1);
@@ -20454,8 +20456,8 @@ static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
     unsigned NumElems = VT.getVectorNumElements();
 
     // Extract each 128-bit vector, compute pop count and concat the result.
-    SDValue LHS = Extract128BitVector(Op0, 0, DAG, DL);
-    SDValue RHS = Extract128BitVector(Op0, NumElems/2, DAG, DL);
+    SDValue LHS = extract128BitVector(Op0, 0, DAG, DL);
+    SDValue RHS = extract128BitVector(Op0, NumElems / 2, DAG, DL);
 
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
                        LowerVectorCTPOPInRegLUT(LHS, DL, Subtarget, DAG),
@@ -23781,7 +23783,7 @@ static SDValue combineShuffle256(SDNode *N, SelectionDAG &DAG,
     // Emit a zeroed vector and insert the desired subvector on its
     // first half.
     SDValue Zeros = getZeroVector(VT, Subtarget, DAG, dl);
-    SDValue InsV = Insert128BitVector(Zeros, V1.getOperand(0), 0, DAG, dl);
+    SDValue InsV = insert128BitVector(Zeros, V1.getOperand(0), 0, DAG, dl);
     return DCI.CombineTo(N, InsV);
   }
 
@@ -27279,8 +27281,8 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
                              Load2.getValue(1));
 
     SDValue NewVec = DAG.getUNDEF(RegVT);
-    NewVec = Insert128BitVector(NewVec, Load1, 0, DAG, dl);
-    NewVec = Insert128BitVector(NewVec, Load2, NumElems/2, DAG, dl);
+    NewVec = insert128BitVector(NewVec, Load1, 0, DAG, dl);
+    NewVec = insert128BitVector(NewVec, Load2, NumElems / 2, DAG, dl);
     return DCI.CombineTo(N, NewVec, TF, true);
   }
 
@@ -27647,8 +27649,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     if (NumElems < 2)
       return SDValue();
 
-    SDValue Value0 = Extract128BitVector(StoredVal, 0, DAG, dl);
-    SDValue Value1 = Extract128BitVector(StoredVal, NumElems/2, DAG, dl);
+    SDValue Value0 = extract128BitVector(StoredVal, 0, DAG, dl);
+    SDValue Value1 = extract128BitVector(StoredVal, NumElems / 2, DAG, dl);
 
     SDValue Ptr0 = St->getBasePtr();
     SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, 16, dl);

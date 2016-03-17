@@ -63,7 +63,7 @@ declare <2 x double> @llvm.masked.load.v2f64(<2 x double>* %ptrs, i32, <2 x i1> 
 define <2 x double> @tests.masked.load(<2 x double>* %ptr, <2 x i1> %mask, <2 x double> %passthru)  {
 ; CHECK-LABEL: @tests.masked.load(
 ; CHECK: @llvm.masked.load.v2f64.p0v2f64
-  %res = call <2 x double> @llvm.masked.load.v2f64(<2 x double>* %ptr, i32 1, <2 x i1> %mask, <2 x double> %passthru)
+  %res = call <2 x double> @llvm.masked.load.v2f64(<2 x double>* %ptr, i32 1, <2 x i1> %mask, <2 x double> %passthru), !tbaa !0
   ret <2 x double> %res
 }
 
@@ -72,6 +72,10 @@ declare void @llvm.masked.store.v2f64(<2 x double> %val, <2 x double>* %ptrs, i3
 define void @tests.masked.store(<2 x double>* %ptr, <2 x i1> %mask, <2 x double> %val)  {
 ; CHECK-LABEL: @tests.masked.store(
 ; CHECK: @llvm.masked.store.v2f64.p0v2f64
-  call void @llvm.masked.store.v2f64(<2 x double> %val, <2 x double>* %ptr, i32 3, <2 x i1> %mask)
+  call void @llvm.masked.store.v2f64(<2 x double> %val, <2 x double>* %ptr, i32 3, <2 x i1> %mask), !tbaa !0
   ret void
 }
+
+!0 = !{!"omnipotent char", !1}
+!1 = !{!"Simple C/C++ TBAA"}
+!2 = !{!"double", !0}
