@@ -80,7 +80,22 @@ public:
 
   /// \brief Annotate memory instructions in the versioned loop with no-alias
   /// metadata based on the memchecks issued.
+  ///
+  /// This is just wrapper that calls prepareNoAliasMetadata and
+  /// annotateInstWithNoAlias on the instructions of the versioned loop.
   void annotateLoopWithNoAlias();
+
+  /// \brief Set up the aliasing scopes based on the memchecks.  This needs to
+  /// be called before the first call to annotateInstWithNoAlias.
+  void prepareNoAliasMetadata();
+
+  /// \brief Add the noalias annotations to \p VersionedInst.
+  ///
+  /// \p OrigInst is the instruction corresponding to \p VersionedInst in the
+  /// original loop.  Initialize the aliasing scopes with
+  /// prepareNoAliasMetadata once before this can be called.
+  void annotateInstWithNoAlias(Instruction *VersionedInst,
+                               const Instruction *OrigInst);
 
 private:
   /// \brief Adds the necessary PHI nodes for the versioned loops based on the
@@ -90,13 +105,11 @@ private:
   /// that are used outside the loop.
   void addPHINodes(const SmallVectorImpl<Instruction *> &DefsUsedOutside);
 
-  /// \brief Set up the aliasing scopes based on the memchecks.  This needs to
-  /// be called before the first call to annotateInstWithNoAlias.
-  void prepareNoAliasMetadata();
-
   /// \brief Add the noalias annotations to \p I.  Initialize the aliasing
   /// scopes with prepareNoAliasMetadata once before this can be called.
-  void annotateInstWithNoAlias(Instruction *I);
+  void annotateInstWithNoAlias(Instruction *I) {
+    annotateInstWithNoAlias(I, I);
+  }
 
   /// \brief The original loop.  This becomes the "versioned" one.  I.e.,
   /// control flows here if pointers in the loop don't alias.

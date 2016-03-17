@@ -208,29 +208,33 @@ void LoopVersioning::annotateLoopWithNoAlias() {
   }
 }
 
-void LoopVersioning::annotateInstWithNoAlias(Instruction *I) {
+void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
+                                             const Instruction *OrigInst) {
   if (!AnnotateNoAlias)
     return;
 
   LLVMContext &Context = VersionedLoop->getHeader()->getContext();
-  Value *Ptr = isa<LoadInst>(I) ? cast<LoadInst>(I)->getPointerOperand()
-                                : cast<StoreInst>(I)->getPointerOperand();
+  const Value *Ptr = isa<LoadInst>(OrigInst)
+                         ? cast<LoadInst>(OrigInst)->getPointerOperand()
+                         : cast<StoreInst>(OrigInst)->getPointerOperand();
 
   // Find the group for the pointer and then add the scope metadata.
   auto Group = PtrToGroup.find(Ptr);
   if (Group != PtrToGroup.end()) {
-    I->setMetadata(
+    VersionedInst->setMetadata(
         LLVMContext::MD_alias_scope,
-        MDNode::concatenate(I->getMetadata(LLVMContext::MD_alias_scope),
-                            MDNode::get(Context, GroupToScope[Group->second])));
+        MDNode::concatenate(
+            VersionedInst->getMetadata(LLVMContext::MD_alias_scope),
+            MDNode::get(Context, GroupToScope[Group->second])));
 
     // Add the no-alias metadata.
     auto NonAliasingScopeList = GroupToNonAliasingScopeList.find(Group->second);
     if (NonAliasingScopeList != GroupToNonAliasingScopeList.end())
-      I->setMetadata(
+      VersionedInst->setMetadata(
           LLVMContext::MD_noalias,
-          MDNode::concatenate(I->getMetadata(LLVMContext::MD_noalias),
-                              NonAliasingScopeList->second));
+          MDNode::concatenate(
+              VersionedInst->getMetadata(LLVMContext::MD_noalias),
+              NonAliasingScopeList->second));
   }
 }
 
