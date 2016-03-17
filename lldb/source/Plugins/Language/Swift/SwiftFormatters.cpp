@@ -165,7 +165,7 @@ lldb_private::formatters::swift::StringCore_SummaryProvider (ValueObject& valobj
         if (hasCocoaBuffer)
         {
             static ConstString g__owner("_owner");
-            static ConstString g_Some("Some");
+            static ConstString g_Some("some");
             static ConstString g_instance_type("instance_type");
             
             ValueObjectSP dyn_inst_type0(valobj.GetChildAtNamePath({g__owner,g_Some,g_instance_type}));

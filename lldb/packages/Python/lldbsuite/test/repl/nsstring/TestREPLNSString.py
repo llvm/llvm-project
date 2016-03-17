@@ -24,7 +24,6 @@ class REPLNSStringTestCase (REPLTest):
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
     @decorators.no_debug_info_test
-    @decorators.expectedFailureDarwin("rdar://24910383")
     def testREPL(self):
         REPLTest.testREPL(self)
 
