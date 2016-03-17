@@ -165,10 +165,16 @@ std::string getPGOFuncName(StringRef RawFuncName,
                            StringRef FileName,
                            uint64_t Version = INSTR_PROF_INDEX_VERSION);
 
+/// Return the name of the global variable used to store a function
+/// name in PGO instrumentation. \c FuncName is the name of the function
+/// returned by the \c getPGOFuncName call.
+std::string getPGOFuncNameVarName(StringRef FuncName,
+                                  GlobalValue::LinkageTypes Linkage);
+
 /// Create and return the global variable for function name used in PGO
 /// instrumentation. \c FuncName is the name of the function returned
 /// by \c getPGOFuncName call.
-GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName);
+GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName);
 
 /// Create and return the global variable for function name used in PGO
 /// instrumentation.  /// \c FuncName is the name of the function
@@ -176,7 +182,7 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef FuncName);
 /// and \c Linkage is the linkage of the instrumented function.
 GlobalVariable *createPGOFuncNameVar(Module &M,
                                      GlobalValue::LinkageTypes Linkage,
-                                     StringRef FuncName);
+                                     StringRef PGOFuncName);
 /// Return the initializer in string of the PGO name var \c NameVar.
 StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar);
 

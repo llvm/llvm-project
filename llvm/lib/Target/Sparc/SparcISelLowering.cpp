@@ -1603,10 +1603,6 @@ SparcTargetLowering::SparcTargetLowering(TargetMachine &TM,
   }
 
   // ATOMICs.
-  // FIXME: We insert fences for each atomics and generate sub-optimal code
-  // for PSO/TSO. Also, implement other atomicrmw operations.
-
-  setInsertFencesForAtomic(true);
 
   setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, Legal);
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32,

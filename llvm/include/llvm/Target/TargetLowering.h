@@ -1003,12 +1003,6 @@ public:
     return PrefLoopAlignment;
   }
 
-  /// Return whether the DAG builder should automatically insert fences and
-  /// reduce ordering for atomics.
-  bool getInsertFencesForAtomic() const {
-    return InsertFencesForAtomic;
-  }
-
   /// Return true if the target stores stack protector cookies at a fixed offset
   /// in some non-standard address space, and populates the address space and
   /// offset as appropriate.
@@ -1052,6 +1046,13 @@ public:
   /// \name Helpers for atomic expansion.
   /// @{
 
+  /// Whether AtomicExpandPass should automatically insert fences and reduce
+  /// ordering for this atomic. This should be true for most architectures with
+  /// weak memory ordering. Defaults to false.
+  virtual bool shouldInsertFencesForAtomic(const Instruction *I) const {
+    return false;
+  }
+
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
   /// corresponding pointee type. This may entail some non-trivial operations to
   /// truncate or reconstruct types that will be illegal in the backend. See
@@ -1070,12 +1071,12 @@ public:
 
   /// Inserts in the IR a target-specific intrinsic specifying a fence.
   /// It is called by AtomicExpandPass before expanding an
-  ///   AtomicRMW/AtomicCmpXchg/AtomicStore/AtomicLoad.
+  ///   AtomicRMW/AtomicCmpXchg/AtomicStore/AtomicLoad
+  ///   if shouldInsertFencesForAtomic returns true.
   /// RMW and CmpXchg set both IsStore and IsLoad to true.
   /// This function should either return a nullptr, or a pointer to an IR-level
   ///   Instruction*. Even complex fence sequences can be represented by a
   ///   single Instruction* through an intrinsic to be lowered later.
-  /// Backends with !getInsertFencesForAtomic() should keep a no-op here.
   /// Backends should override this method to produce target-specific intrinsic
   ///   for their fences.
   /// FIXME: Please note that the default implementation here in terms of
@@ -1101,9 +1102,6 @@ public:
   virtual Instruction *emitLeadingFence(IRBuilder<> &Builder,
                                         AtomicOrdering Ord, bool IsStore,
                                         bool IsLoad) const {
-    if (!getInsertFencesForAtomic())
-      return nullptr;
-
     if (isAtLeastRelease(Ord) && IsStore)
       return Builder.CreateFence(Ord);
     else
@@ -1113,9 +1111,6 @@ public:
   virtual Instruction *emitTrailingFence(IRBuilder<> &Builder,
                                          AtomicOrdering Ord, bool IsStore,
                                          bool IsLoad) const {
-    if (!getInsertFencesForAtomic())
-      return nullptr;
-
     if (isAtLeastAcquire(Ord))
       return Builder.CreateFence(Ord);
     else
@@ -1439,12 +1434,6 @@ protected:
   /// Set the minimum stack alignment of an argument (in log2(bytes)).
   void setMinStackArgumentAlignment(unsigned Align) {
     MinStackArgumentAlignment = Align;
-  }
-
-  /// Set if the DAG builder should automatically insert fences and reduce the
-  /// order of atomic memory operations to Monotonic.
-  void setInsertFencesForAtomic(bool fence) {
-    InsertFencesForAtomic = fence;
   }
 
 public:
@@ -1856,10 +1845,6 @@ private:
   /// The preferred loop alignment.
   unsigned PrefLoopAlignment;
 
-  /// Whether the DAG builder should automatically insert fences and reduce
-  /// ordering for atomics.  (This will be set for for most architectures with
-  /// weak memory ordering.)
-  bool InsertFencesForAtomic;
 
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.

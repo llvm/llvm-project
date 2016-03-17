@@ -1460,6 +1460,7 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = getRegFromSubinstEncoding((inst & 0xf0) >> 4);
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
+    break;
   case Hexagon::V4_SA1_and1:
   case Hexagon::V4_SA1_dec:
   case Hexagon::V4_SA1_inc:

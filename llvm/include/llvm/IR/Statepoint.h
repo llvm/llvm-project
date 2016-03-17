@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains utility functions and a wrapper class analogous to
-// CallSite for accessing the fields of gc.statepoint, gc.relocate, and
-// gc.result intrinsics
+// CallSite for accessing the fields of gc.statepoint, gc.relocate,
+// gc.result intrinsics; and some general utilities helpful when dealing with
+// gc.statepoint.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +18,7 @@
 #define LLVM_IR_STATEPOINT_H
 
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
@@ -24,7 +26,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 /// The statepoint intrinsic accepts a set of flags as its third argument.
@@ -40,14 +41,14 @@ enum class StatepointFlags {
 class GCRelocateInst;
 class ImmutableStatepoint;
 
-bool isStatepoint(const ImmutableCallSite &CS);
+bool isStatepoint(ImmutableCallSite CS);
 bool isStatepoint(const Value *V);
 bool isStatepoint(const Value &V);
 
-bool isGCRelocate(const ImmutableCallSite &CS);
+bool isGCRelocate(ImmutableCallSite CS);
 
 bool isGCResult(const Value *V);
-bool isGCResult(const ImmutableCallSite &CS);
+bool isGCResult(ImmutableCallSite CS);
 
 /// Analogous to CallSiteBase, this provides most of the actual
 /// functionality for Statepoint and ImmutableStatepoint.  It is
@@ -400,6 +401,23 @@ StatepointBase<FunTy, InstructionTy, ValueTy, CallSiteTy>::getRelocates()
   }
   return Result;
 }
+
+/// Call sites that get wrapped by a gc.statepoint (currently only in
+/// RewriteStatepointsForGC and potentially in other passes in the future) can
+/// have attributes that describe properties of gc.statepoint call they will be
+/// eventually be wrapped in.  This struct is used represent such directives.
+struct StatepointDirectives {
+  Optional<uint32_t> NumPatchBytes;
+  Optional<uint64_t> StatepointID;
+};
+
+/// Parse out statepoint directives from the function attributes present in \p
+/// AS.
+StatepointDirectives parseStatepointDirectivesFromAttrs(AttributeSet AS);
+
+/// Return \c true if the the \p Attr is an attribute that is a statepoint
+/// directive.
+bool isStatepointDirectiveAttr(Attribute Attr);
 }
 
 #endif

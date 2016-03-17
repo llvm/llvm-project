@@ -5357,6 +5357,11 @@ std::error_code BitcodeReader::materializeModule() {
   if (!BasicBlockFwdRefs.empty())
     return error("Never resolved function from blockaddress");
 
+  // Upgrading intrinsic calls before TBAA can cause TBAA metadata to be lost,
+  // to prevent this instructions with TBAA tags should be upgraded first.
+  for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
+    UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
+
   // Upgrade any intrinsic calls that slipped through (should not happen!) and
   // delete the old functions to clean up. We can't do this unless the entire
   // module is materialized because there could always be another function body
@@ -5371,9 +5376,6 @@ std::error_code BitcodeReader::materializeModule() {
     I.first->eraseFromParent();
   }
   UpgradedIntrinsics.clear();
-
-  for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
-    UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
 
   UpgradeDebugInfo(*TheModule);
   return std::error_code();

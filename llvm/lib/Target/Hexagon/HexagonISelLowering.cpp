@@ -1724,7 +1724,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setPrefLoopAlignment(4);
   setPrefFunctionAlignment(4);
   setMinFunctionAlignment(2);
-  setInsertFencesForAtomic(false);
   setStackPointerRegisterToSaveRestore(HRI.getStackRegister());
 
   if (EnableHexSDNodeSched)

@@ -190,6 +190,9 @@ static cl::opt<int> ClInstrumentationWithCallThreshold(
 static cl::opt<bool> ClCheckConstantShadow("msan-check-constant-shadow",
        cl::desc("Insert checks for constant shadow values"),
        cl::Hidden, cl::init(false));
+
+// This is off by default because of a bug in gold:
+// https://sourceware.org/bugzilla/show_bug.cgi?id=19002
 static cl::opt<bool> ClWithComdat("msan-with-comdat",
        cl::desc("Place MSan constructors in comdat sections"),
        cl::Hidden, cl::init(false));

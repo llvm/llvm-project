@@ -916,7 +916,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     break;
   }
 
-  setInsertFencesForAtomic(true);
 
   if (Subtarget.enableMachineScheduler())
     setSchedulingPreference(Sched::Source);
