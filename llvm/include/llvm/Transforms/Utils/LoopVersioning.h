@@ -78,6 +78,10 @@ public:
   /// \brief Sets the runtime SCEV checks for versioning the loop.
   void setSCEVChecks(SCEVUnionPredicate Check);
 
+  /// \brief Annotate memory instructions in the versioned loop with no-alias
+  /// metadata based on the memchecks issued.
+  void annotateLoopWithNoAlias();
+
 private:
   /// \brief Adds the necessary PHI nodes for the versioned loops based on the
   /// loop-defined values used outside of the loop.
@@ -85,6 +89,14 @@ private:
   /// This needs to be called after versionLoop if there are defs in the loop
   /// that are used outside the loop.
   void addPHINodes(const SmallVectorImpl<Instruction *> &DefsUsedOutside);
+
+  /// \brief Set up the aliasing scopes based on the memchecks.  This needs to
+  /// be called before the first call to annotateInstWithNoAlias.
+  void prepareNoAliasMetadata();
+
+  /// \brief Add the noalias annotations to \p I.  Initialize the aliasing
+  /// scopes with prepareNoAliasMetadata once before this can be called.
+  void annotateInstWithNoAlias(Instruction *I);
 
   /// \brief The original loop.  This becomes the "versioned" one.  I.e.,
   /// control flows here if pointers in the loop don't alias.
@@ -102,6 +114,19 @@ private:
 
   /// \brief The set of SCEV checks that we are versioning for.
   SCEVUnionPredicate Preds;
+
+  /// \brief Maps a pointer to the pointer checking group that the pointer
+  /// belongs to.
+  DenseMap<const Value *, const RuntimePointerChecking::CheckingPtrGroup *>
+      PtrToGroup;
+
+  /// \brief The alias scope corresponding to a pointer checking group.
+  DenseMap<const RuntimePointerChecking::CheckingPtrGroup *, MDNode *>
+      GroupToScope;
+
+  /// \brief The list of alias scopes that a pointer checking group can't alias.
+  DenseMap<const RuntimePointerChecking::CheckingPtrGroup *, MDNode *>
+      GroupToNonAliasingScopeList;
 
   /// \brief Analyses used.
   const LoopAccessInfo &LAI;
