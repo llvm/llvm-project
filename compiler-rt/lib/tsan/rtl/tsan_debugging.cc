@@ -25,6 +25,7 @@ static const char *ReportTypeDescription(ReportType typ) {
   if (typ == ReportTypeThreadLeak) return "thread-leak";
   if (typ == ReportTypeMutexDestroyLocked) return "locked-mutex-destroy";
   if (typ == ReportTypeMutexDoubleLock) return "mutex-double-lock";
+  if (typ == ReportTypeMutexInvalidAccess) return "mutex-invalid-access";
   if (typ == ReportTypeMutexBadUnlock) return "mutex-bad-unlock";
   if (typ == ReportTypeMutexBadReadLock) return "mutex-bad-read-lock";
   if (typ == ReportTypeMutexBadReadUnlock) return "mutex-bad-read-unlock";

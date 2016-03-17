@@ -350,6 +350,14 @@ void MutexRepair(ThreadState *thr, uptr pc, uptr addr) {
   s->mtx.Unlock();
 }
 
+void MutexInvalidAccess(ThreadState *thr, uptr pc, uptr addr) {
+  DPrintf("#%d: MutexInvalidAccess %zx\n", thr->tid, addr);
+  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, true);
+  u64 mid = s->GetId();
+  s->mtx.Unlock();
+  ReportMutexMisuse(thr, pc, ReportTypeMutexInvalidAccess, addr, mid);
+}
+
 void Acquire(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: Acquire %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
