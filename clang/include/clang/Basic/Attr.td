@@ -1312,8 +1312,8 @@ def Regparm : TypeAttr {
 
 def SwiftBridge : Attr {
   let Spellings = [GNU<"swift_bridge">];
-  let Subjects = SubjectList<[Tag, TypedefName, ObjCProtocol], ErrorDiag,
-                             "ExpectedType">;
+  let Subjects = SubjectList<[Tag, TypedefName, ObjCInterface, ObjCProtocol],
+                             ErrorDiag, "ExpectedType">;
   let Args = [StringArgument<"SwiftType">];
   let Documentation = [SwiftBridgeDocs];
 }
