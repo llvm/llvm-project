@@ -726,6 +726,13 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
       break;
     case CC_Swift:
       OS << " __attribute__((swiftcall))";
+      break;
+    case CC_PreserveMost:
+      OS << " __attribute__((preserve_most))";
+      break;
+    case CC_PreserveAll:
+      OS << " __attribute__((preserve_all))";
+      break;
     }
   }
 
@@ -1345,6 +1352,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
    break;
   }
   case AttributedType::attr_inteloclbicc: OS << "inteloclbicc"; break;
+  case AttributedType::attr_preserve_most:
+    OS << "preserve_most";
+    break;
+  case AttributedType::attr_preserve_all:
+    OS << "preserve_all";
+    break;
   }
   OS << "))";
 }

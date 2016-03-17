@@ -97,6 +97,9 @@ def no_undefined : Flag<["--"], "no-undefined">,
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
+def pie : Flag<["-"], "pie">,
+  HelpText<"Create a position independent executable">;
+
 def print_gc_sections: Flag<["--"], "print-gc-sections">,
   HelpText<"List removed unused sections">;
 
@@ -159,6 +162,7 @@ def alias_hash_style_hash_style : Joined<["--", "-"], "hash-style=">, Alias<hash
 def alias_init_init : Joined<["-"], "init=">, Alias<init>;
 def alias_l__library : Joined<["--"], "library=">, Alias<l>;
 def alias_o_output : Joined<["--"], "output=">, Alias<o>;
+def alias_pie_pic_executable: Flag<["--"], "pic-executable">, Alias<pie>;
 def alias_rpath_rpath : Joined<["-"], "rpath=">, Alias<rpath>;
 def alias_relocatable_r : Flag<["-"], "r">, Alias<relocatable>;
 def alias_shared_Bshareable : Flag<["-"], "Bshareable">, Alias<shared>;

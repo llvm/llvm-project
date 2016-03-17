@@ -6,13 +6,12 @@
 ;          A[i]++;
 ;    }
 ;
-; FIXME: This test is a negative test until we have an independent blocks alternative.
+; Verify that we do not generate a value write access for the use of %cmp1 in
+; the branch condition. As _affine_ branches are fully modeled and regenerated
+; from the polyhedral information we do not need this value to be available
+; during code generation.
 ;
-; We should move operands as close to their use as possible, hence in this case
-; there should not be any scalar dependence anymore after %cmp1 is moved to 
-; %for.body (%c and %indvar.iv are synthesis able).
-;
-; CHECK:      [Scalar: 1]
+; CHECK-NOT:  Stmt_for_cond[i0] -> MemRef_cmp1[] }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

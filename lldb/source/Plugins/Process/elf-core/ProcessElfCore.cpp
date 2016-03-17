@@ -559,11 +559,10 @@ ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *
                     have_prstatus = true;
                     prstatus.Parse(note_data, arch);
                     thread_data->signo = prstatus.pr_cursig;
+                    thread_data->tid = prstatus.pr_pid;
                     header_size = ELFLinuxPrStatus::GetSize(arch);
                     len = note_data.GetByteSize() - header_size;
                     thread_data->gpregset = DataExtractor(note_data, header_size, len);
-                    // FIXME: Obtain actual tid on Linux
-                    thread_data->tid = m_thread_data.size();
                     break;
                 case NT_FPREGSET:
                     thread_data->fpregset = note_data;
@@ -572,6 +571,7 @@ ProcessElfCore::ParseThreadContextsFromNoteSegment(const elf::ELFProgramHeader *
                     have_prpsinfo = true;
                     prpsinfo.Parse(note_data, arch);
                     thread_data->name = prpsinfo.pr_fname;
+                    SetID(prpsinfo.pr_pid);
                     break;
                 case NT_AUXV:
                     m_auxv = DataExtractor(note_data);

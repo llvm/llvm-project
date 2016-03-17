@@ -1,0 +1,4 @@
+# RUN: ld.lld %p/Inputs/merge-shentsize-zero.elf -o %t2 2>&1 | \
+# RUN:   FileCheck -allow-empty %s
+# CHECK-NOT: SHF_MERGE section size must be a multiple of sh_entsize
+

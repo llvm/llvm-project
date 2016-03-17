@@ -1111,6 +1111,15 @@ static void writeAvailabilityValue(raw_ostream &OS) {
      << "  OS << \"";
 }
 
+static void writeDeprecatedAttrValue(raw_ostream &OS, std::string &Variety) {
+  OS << "\\\"\" << getMessage() << \"\\\"\";\n";
+  // Only GNU deprecated has an optional fixit argument at the second position.
+  if (Variety == "GNU")
+     OS << "    if (!getReplacement().empty()) OS << \", \\\"\""
+           " << getReplacement() << \"\\\"\";\n";
+  OS << "    OS << \"";
+}
+
 static void writeGetSpellingFunction(Record &R, raw_ostream &OS) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(R);
 
@@ -1224,6 +1233,8 @@ writePrettyPrintFunction(Record &R,
       OS << "(";
     if (Spelling == "availability") {
       writeAvailabilityValue(OS);
+    } else if (Spelling == "deprecated" || Spelling == "gnu::deprecated") {
+        writeDeprecatedAttrValue(OS, Variety);
     } else {
       unsigned index = 0;
       for (const auto &arg : Args) {

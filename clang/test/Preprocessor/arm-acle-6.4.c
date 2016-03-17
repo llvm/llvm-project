@@ -140,6 +140,7 @@
 
 // RUN: %clang -target arm-none-linux-eabi -mcpu=cortex-r5 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V7R-IDIV
 // RUN: %clang -target arm-none-linux-eabi -mcpu=cortex-r7 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V7R-IDIV
+// RUN: %clang -target arm-none-linux-eabi -mcpu=cortex-r8 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V7R-IDIV
 
 // CHECK-V7R-IDIV: __ARM_FEATURE_IDIV 1
 

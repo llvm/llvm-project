@@ -24,10 +24,6 @@
 # RUN:   FileCheck --check-prefix=INVALID-SECTION-INDEX %s
 # INVALID-SECTION-INDEX: Invalid section index
 
-# RUN: not ld.lld %p/Inputs/invalid-shentsize-zero.elf -o %t2 2>&1 | \
-# RUN:   FileCheck --check-prefix=INVALID-SHENTSIZE-ZERO %s
-# INVALID-SHENTSIZE-ZERO: SHF_MERGE section size must be a multiple of sh_entsize
-
 # RUN: not ld.lld %p/Inputs/invalid-multiple-eh-relocs.elf -o %t2 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-EH-RELOCS %s
 # INVALID-EH-RELOCS: multiple relocation sections to .eh_frame are not supported

@@ -122,7 +122,7 @@ std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
     fatal("target not found: " + ErrMsg);
 
   TargetOptions Options;
-  Reloc::Model R = Config->Shared ? Reloc::PIC_ : Reloc::Static;
+  Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
   std::unique_ptr<TargetMachine> TM(
       TheTarget->createTargetMachine(TripleStr, "", "", Options, R));
 

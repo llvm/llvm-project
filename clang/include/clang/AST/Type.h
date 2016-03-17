@@ -3740,6 +3740,8 @@ public:
     attr_inteloclbicc,
     attr_ms_abi,
     attr_sysv_abi,
+    attr_preserve_most,
+    attr_preserve_all,
     attr_ptr32,
     attr_ptr64,
     attr_sptr,

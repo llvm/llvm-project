@@ -154,6 +154,7 @@ def expect_lldb_gdbserver_replay(
     asserter,
     sock,
     test_sequence,
+    pump_queues,
     timeout_seconds,
     logger=None):
     """Replay socket communication with lldb-gdbserver and verify responses.
@@ -193,7 +194,7 @@ def expect_lldb_gdbserver_replay(
         return {}
 
     context = {"O_count":0, "O_content":""}
-    with socket_packet_pump.SocketPacketPump(sock, logger) as pump:
+    with socket_packet_pump.SocketPacketPump(sock, pump_queues, logger) as pump:
         # Grab the first sequence entry.
         sequence_entry = test_sequence.entries.pop(0)
         
@@ -220,14 +221,14 @@ def expect_lldb_gdbserver_replay(
                 if sequence_entry.is_output_matcher():
                     try:
                         # Grab next entry from the output queue.
-                        content = pump.output_queue().get(True, timeout_seconds)
+                        content = pump_queues.output_queue().get(True, timeout_seconds)
                     except queue.Empty:
                         if logger:
                             logger.warning("timeout waiting for stub output (accumulated output:{})".format(pump.get_accumulated_output()))
                         raise Exception("timed out while waiting for output match (accumulated output: {})".format(pump.get_accumulated_output()))
                 else:
                     try:
-                        content = pump.packet_queue().get(True, timeout_seconds)
+                        content = pump_queues.packet_queue().get(True, timeout_seconds)
                     except queue.Empty:
                         if logger:
                             logger.warning("timeout waiting for packet match (receive buffer: {})".format(pump.get_receive_buffer()))
