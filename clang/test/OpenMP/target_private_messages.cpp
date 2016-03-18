@@ -189,6 +189,8 @@ int main(int argc, char **argv) {
   static int si;
 #pragma omp target private(si) // OK
   {}
+#pragma omp target map(i) private(i) // expected-error {{private variable cannot be in a map clause in '#pragma omp target' directive}}
+  {}
   s6 = s6_0; // expected-note {{in instantiation of member function 'S6<float>::operator=' requested here}}
   s7 = s7_0; // expected-note {{in instantiation of member function 'S7<S6<float> >::operator=' requested here}}
   return foomain(argc, argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}

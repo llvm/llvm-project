@@ -4175,6 +4175,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
   // Emit target region as a standalone region.
   auto &&CodeGen = [&CS, &D](CodeGenFunction &CGF) {
     CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
+    (void)CGF.EmitOMPFirstprivateClause(D, PrivateScope);
     CGF.EmitOMPPrivateClause(D, PrivateScope);
     (void)PrivateScope.Privatize();
 

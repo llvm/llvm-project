@@ -119,6 +119,27 @@ static void saveBCFile(Module &M, StringRef Suffix) {
   WriteBitcodeToFile(&M, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
+static void runLTOPasses(Module &M, TargetMachine &TM) {
+  // Run LTO passes.
+  // FIXME: Reduce code duplication by sharing this code with the gold plugin.
+  legacy::PassManager LtoPasses;
+  LtoPasses.add(
+      createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
+  PassManagerBuilder PMB;
+  PMB.LibraryInfo = new TargetLibraryInfoImpl(Triple(TM.getTargetTriple()));
+  PMB.Inliner = createFunctionInliningPass();
+  PMB.VerifyInput = true;
+  PMB.VerifyOutput = true;
+  PMB.LoopVectorize = true;
+  PMB.SLPVectorize = true;
+  PMB.OptLevel = 2; // FIXME: This should be an option.
+  PMB.populateLTOPassManager(LtoPasses);
+  LtoPasses.run(M);
+
+  if (Config->SaveTemps)
+    saveBCFile(M, ".lto.opt.bc");
+}
+
 // Codegen the module M and returns the resulting InputFile.
 template <class ELFT>
 std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
@@ -139,24 +160,7 @@ std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
   std::unique_ptr<TargetMachine> TM(
       TheTarget->createTargetMachine(TripleStr, "", "", Options, R));
 
-  // Run LTO passes.
-  // FIXME: Reduce code duplication by sharing this code with the gold plugin.
-  legacy::PassManager LtoPasses;
-  LtoPasses.add(
-      createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
-  PassManagerBuilder PMB;
-  PMB.LibraryInfo = new TargetLibraryInfoImpl(Triple(TM->getTargetTriple()));
-  PMB.Inliner = createFunctionInliningPass();
-  PMB.VerifyInput = true;
-  PMB.VerifyOutput = true;
-  PMB.LoopVectorize = true;
-  PMB.SLPVectorize = true;
-  PMB.OptLevel = 2; // FIXME: This should be an option.
-  PMB.populateLTOPassManager(LtoPasses);
-  LtoPasses.run(M);
-
-  if (Config->SaveTemps)
-    saveBCFile(M, ".lto.opt.bc");
+  runLTOPasses(M, *TM);
 
   raw_svector_ostream OS(OwningLTOData);
   legacy::PassManager CodeGenPasses;
