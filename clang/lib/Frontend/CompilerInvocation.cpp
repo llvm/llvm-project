@@ -1441,6 +1441,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.LaxVectorConversions = 0;
     Opts.DefaultFPContract = 1;
     Opts.NativeHalfType = 1;
+    Opts.NativeHalfArgsAndReturns = 1;
   }
 
   Opts.CUDA = IK == IK_CUDA || IK == IK_PreprocessedCuda ||
@@ -1802,7 +1803,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ModuleFeatures = Args.getAllArgValues(OPT_fmodule_feature);
   std::sort(Opts.ModuleFeatures.begin(), Opts.ModuleFeatures.end());
   Opts.NativeHalfType |= Args.hasArg(OPT_fnative_half_type);
-  Opts.HalfArgsAndReturns = Args.hasArg(OPT_fallow_half_arguments_and_returns);
+  Opts.NativeHalfArgsAndReturns |= Args.hasArg(OPT_fnative_half_arguments_and_returns);
+  // Enable HalfArgsAndReturns if present in Args or if NativeHalfArgsAndReturns
+  // is enabled.
+  Opts.HalfArgsAndReturns = Args.hasArg(OPT_fallow_half_arguments_and_returns)
+                            | Opts.NativeHalfArgsAndReturns;
   Opts.APINotes = Args.hasArg(OPT_fapinotes);
   Opts.GNUAsm = !Args.hasArg(OPT_fno_gnu_inline_asm);
 

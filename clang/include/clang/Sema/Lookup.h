@@ -190,6 +190,44 @@ public:
   LookupResult(const LookupResult &) = delete;
   LookupResult &operator=(const LookupResult &) = delete;
 
+  LookupResult(LookupResult &&Other)
+      : ResultKind(std::move(Other.ResultKind)),
+        Ambiguity(std::move(Other.Ambiguity)), Decls(std::move(Other.Decls)),
+        Paths(std::move(Other.Paths)),
+        NamingClass(std::move(Other.NamingClass)),
+        BaseObjectType(std::move(Other.BaseObjectType)),
+        SemaPtr(std::move(Other.SemaPtr)), NameInfo(std::move(Other.NameInfo)),
+        NameContextRange(std::move(Other.NameContextRange)),
+        LookupKind(std::move(Other.LookupKind)), IDNS(std::move(Other.IDNS)),
+        Redecl(std::move(Other.Redecl)), HideTags(std::move(Other.HideTags)),
+        Diagnose(std::move(Other.Diagnose)),
+        AllowHidden(std::move(Other.AllowHidden)),
+        Shadowed(std::move(Other.Shadowed)) {
+    Other.Paths = nullptr;
+    Other.Diagnose = false;
+  }
+  LookupResult &operator=(LookupResult &&Other) {
+    ResultKind = std::move(Other.ResultKind);
+    Ambiguity = std::move(Other.Ambiguity);
+    Decls = std::move(Other.Decls);
+    Paths = std::move(Other.Paths);
+    NamingClass = std::move(Other.NamingClass);
+    BaseObjectType = std::move(Other.BaseObjectType);
+    SemaPtr = std::move(Other.SemaPtr);
+    NameInfo = std::move(Other.NameInfo);
+    NameContextRange = std::move(Other.NameContextRange);
+    LookupKind = std::move(Other.LookupKind);
+    IDNS = std::move(Other.IDNS);
+    Redecl = std::move(Other.Redecl);
+    HideTags = std::move(Other.HideTags);
+    Diagnose = std::move(Other.Diagnose);
+    AllowHidden = std::move(Other.AllowHidden);
+    Shadowed = std::move(Other.Shadowed);
+    Other.Paths = nullptr;
+    Other.Diagnose = false;
+    return *this;
+  }
+
   ~LookupResult() {
     if (Diagnose) diagnose();
     if (Paths) deletePaths(Paths);
