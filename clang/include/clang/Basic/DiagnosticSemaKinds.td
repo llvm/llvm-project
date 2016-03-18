@@ -8166,6 +8166,8 @@ def err_omp_schedule_nonmonotonic_ordered : Error<
   "'schedule' clause with 'nonmonotonic' modifier cannot be specified if an 'ordered' clause is specified">;
 def err_omp_ordered_simd : Error<
   "'ordered' clause with a parameter can not be specified in '#pragma omp %0' directive">;
+def err_omp_variable_in_map_and_dsa : Error<
+  "%0 variable cannot be in a map clause in '#pragma omp %1' directive">; 
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

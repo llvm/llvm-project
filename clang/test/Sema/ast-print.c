@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 %s -ast-print | %clang_cc1 -fsyntax-only -
 
 typedef void func_typedef();
 func_typedef xxx;
@@ -39,6 +40,7 @@ int rvarr(int n, int a[restrict static n]) {
   return a[2];
 }
 
+// CHECK: typedef struct {
 typedef struct {
   int f;
 } T __attribute__ ((__aligned__));

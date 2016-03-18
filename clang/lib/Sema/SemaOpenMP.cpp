@@ -7225,6 +7225,20 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
       continue;
     }
 
+    // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
+    // A list item cannot appear in both a map clause and a data-sharing
+    // attribute clause on the same construct
+    if (DSAStack->getCurrentDirective() == OMPD_target) {
+      if(DSAStack->checkMapInfoForVar(VD, /* CurrentRegionOnly = */ true,
+                                      [&](Expr *RE) -> bool {return true;})) {
+        Diag(ELoc, diag::err_omp_variable_in_map_and_dsa)
+            << getOpenMPClauseName(OMPC_private)
+            << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+        ReportOriginalDSA(*this, DSAStack, D, DVar);
+        continue;
+      }
+    }
+
     // OpenMP [2.9.3.3, Restrictions, C/C++, p.1]
     //  A variable of class type (or array thereof) that appears in a private
     //  clause requires an accessible, unambiguous default constructor for the
@@ -7452,6 +7466,19 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
         DVar = DSAStack->getTopDSA(D, false);
         if (DVar.CKind == OMPC_lastprivate) {
           Diag(ELoc, diag::err_omp_firstprivate_and_lastprivate_in_distribute);
+          ReportOriginalDSA(*this, DSAStack, D, DVar);
+          continue;
+        }
+      }
+      // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
+      // A list item cannot appear in both a map clause and a data-sharing
+      // attribute clause on the same construct
+      if (CurrDir == OMPD_target) {
+        if(DSAStack->checkMapInfoForVar(VD, /* CurrentRegionOnly = */ true,
+                                        [&](Expr *RE) -> bool {return true;})) {
+          Diag(ELoc, diag::err_omp_variable_in_map_and_dsa)
+              << getOpenMPClauseName(OMPC_firstprivate)
+              << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
           ReportOriginalDSA(*this, DSAStack, D, DVar);
           continue;
         }
@@ -9895,6 +9922,20 @@ Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
           << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
           << getOpenMPDirectiveName(DKind);
       continue;
+    }
+
+    // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
+    // A list item cannot appear in both a map clause and a data-sharing
+    // attribute clause on the same construct
+    if (DKind == OMPD_target && VD) {
+      auto DVar = DSAStack->getTopDSA(VD, false);
+      if (isOpenMPPrivate(DVar.CKind)) {
+        Diag(ELoc, diag::err_omp_variable_in_map_and_dsa)
+            << getOpenMPClauseName(DVar.CKind)
+            << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
+        ReportOriginalDSA(*this, DSAStack, D, DVar);
+        continue;
+      }
     }
 
     Vars.push_back(RE);

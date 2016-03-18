@@ -2237,6 +2237,11 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     CodeGenFunction(CGM)
         .GenerateCXXGlobalInitFunc(InitFunc, CXXThreadLocalInits,
                                    Address(Guard, GuardAlign));
+    // On Darwin platforms, use CXX_FAST_TLS calling convention.
+    if (CGM.getTarget().getTriple().isOSDarwin()) {
+      InitFunc->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
+      InitFunc->addFnAttr(llvm::Attribute::NoUnwind);
+    }
   }
   for (const VarDecl *VD : CXXThreadLocals) {
     llvm::GlobalVariable *Var =
@@ -2286,8 +2291,11 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
     llvm::BasicBlock *Entry = llvm::BasicBlock::Create(Context, "", Wrapper);
     CGBuilderTy Builder(CGM, Entry);
     if (InitIsInitFunc) {
-      if (Init)
-        Builder.CreateCall(Init);
+      if (Init) {
+        llvm::CallInst *CallVal = Builder.CreateCall(Init);
+        if (isThreadWrapperReplaceable(VD, CGM))
+          CallVal->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
+      }
     } else {
       // Don't know whether we have an init function. Call it if it exists.
       llvm::Value *Have = Builder.CreateIsNotNull(Init);
