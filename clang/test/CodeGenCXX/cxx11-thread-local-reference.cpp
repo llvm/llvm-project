@@ -23,11 +23,13 @@ int &g() { return r; }
 
 // LINUX: define weak_odr hidden i32* @_ZTW1r() [[ATTR0:#[0-9]+]] {
 // DARWIN: define cxx_fast_tlscc i32* @_ZTW1r() [[ATTR1:#[0-9]+]] {
-// CHECK: call void @_ZTH1r()
+// LINUX: call void @_ZTH1r()
+// DARWIN: call cxx_fast_tlscc void @_ZTH1r()
 // CHECK: load i32*, i32** @r, align 8
 // CHECK: ret i32* %{{.*}}
 
-// CHECK-LABEL: define internal void @__tls_init()
+// LINUX-LABEL: define internal void @__tls_init()
+// DARWIN-LABEL: define internal cxx_fast_tlscc void @__tls_init()
 // CHECK: call void @[[R_INIT]]()
 
 // LINUX: attributes [[ATTR0]] = { {{.*}}"target-features"{{.*}} }
