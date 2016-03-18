@@ -603,6 +603,8 @@ def fno_rtti_data : Flag<["-"], "fno-rtti-data">,
   HelpText<"Control emission of RTTI data">;
 def fnative_half_type: Flag<["-"], "fnative-half-type">,
   HelpText<"Use the native half type for __fp16 instead of promoting to float">;
+def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and-returns">,
+  HelpText<"Use the native __fp16 type for arguments and returns (and skip ABI-specific lowering)">;
 def fallow_half_arguments_and_returns : Flag<["-"], "fallow-half-arguments-and-returns">,
   HelpText<"Allow function arguments and returns of type half">;
 

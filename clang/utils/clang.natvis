@@ -73,6 +73,31 @@ or create a symbolic link so it updates automatically.
   <Type Name="clang::AttributedType">
     <DisplayString>{ModifiedType} Attribute={(clang::AttributedType::Kind)AttributedTypeBits.AttrKind}</DisplayString>
   </Type>
+  
+  <!-- Unfortunately, Visual Studio has trouble seeing the PointerBitMask member PointerIntUnion, so I hardwire it to 2 bits-->
+  <Type Name="clang::DeclContext">
+    <DisplayString>{(clang::Decl::Kind)DeclKind,en}Decl</DisplayString>
+    <Expand>
+      <Item Name="DeclKind">(clang::Decl::Kind)DeclKind,en</Item>
+      <LinkedListItems>
+        <HeadPointer>FirstDecl</HeadPointer>
+        <NextPointer>(clang::Decl *)(NextInContextAndBits.Value &amp; ~3)</NextPointer>
+        <ValueNode>*this</ValueNode>
+      </LinkedListItems>
+    </Expand>
+  </Type>
+  <Type Name="clang::FieldDecl">
+    <DisplayString>Field {{{*(clang::NamedDecl *)this,view(cpp)nd}}}</DisplayString>
+  </Type>
+  <Type Name="clang::CXXMethodDecl">
+    <DisplayString>Method {{{*(clang::NamedDecl *)this,view(cpp)nd}}}</DisplayString>
+  </Type>
+  <Type Name="clang::CXXConstructorDecl">
+    <DisplayString>Constructor {{{*(clang::NamedDecl *)this,view(cpp)nd}}}</DisplayString>
+  </Type>
+  <Type Name="clang::CXXDestructorDecl">
+    <DisplayString>Destructor {{{*(clang::NamedDecl *)this,view(cpp)nd}}}</DisplayString>
+  </Type>
   <Type Name="clang::NamedDecl" >
     <DisplayString IncludeView="cpp">{Name,view(cpp)}</DisplayString>
     <DisplayString>{Name}</DisplayString>
@@ -83,6 +108,9 @@ or create a symbolic link so it updates automatically.
     <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Union">union {Name,view(cpp)}</DisplayString>
     <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Class">class {Name,view(cpp)}</DisplayString>
     <DisplayString Condition="TagDeclKind==clang::TagTypeKind::TTK_Enum">enum {Name,view(cpp)}</DisplayString>
+    <Expand>
+      <ExpandedItem>(clang::DeclContext *)this</ExpandedItem>
+    </Expand>
   </Type>
   <Type Name="clang::TagType">
     <DisplayString>{*decl}</DisplayString>
@@ -97,7 +125,6 @@ or create a symbolic link so it updates automatically.
       <Item Name="TagType">*(clang::TagType *)this</Item>
     </Expand>
   </Type>
-
   <Type Name="clang::SubstTemplateTypeParmType">
     <DisplayString>{*Replaced,view(cpp)} &lt;= {CanonicalType,view(cpp)}</DisplayString>
     <Expand>
