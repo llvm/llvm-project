@@ -24,9 +24,6 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string>
 #include <vector>
 
@@ -86,5 +83,5 @@ std::unique_ptr<ASTConsumer> RenamingAction::newASTConsumer() {
                                                 Replaces, PrintLocations);
 }
 
-}
-}
+} // namespace rename
+} // namespace clang

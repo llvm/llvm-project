@@ -34,10 +34,7 @@ SectionChunk::SectionChunk(ObjectFile *F, const coff_section *H)
   // Initialize SectionName.
   File->getCOFFObj()->getSectionName(Header, SectionName);
 
-  // Bit [20:24] contains section alignment. Both 0 and 1 mean alignment 1.
-  unsigned Shift = (Header->Characteristics >> 20) & 0xF;
-  if (Shift > 0)
-    Align = uint32_t(1) << (Shift - 1);
+  Align = Header->getAlignment();
 
   // Only COMDAT sections are subject of dead-stripping.
   Live = !isCOMDAT();

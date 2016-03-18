@@ -109,9 +109,16 @@ static OpenMPDirectiveKind ParseOpenMPDirectiveKind(Parser &P) {
 }
 
 static DeclarationName parseOpenMPReductionId(Parser &P) {
-  const Token Tok = P.getCurToken();
+  Token Tok = P.getCurToken();
   Sema &Actions = P.getActions();
   OverloadedOperatorKind OOK = OO_None;
+  // Allow to use 'operator' keyword for C++ operators
+  bool WithOperator = false;
+  if (Tok.is(tok::kw_operator)) {
+    P.ConsumeToken();
+    Tok = P.getCurToken();
+    WithOperator = true;
+  }
   switch (Tok.getKind()) {
   case tok::plus: // '+'
     OOK = OO_Plus;
@@ -138,7 +145,8 @@ static DeclarationName parseOpenMPReductionId(Parser &P) {
     OOK = OO_PipePipe;
     break;
   case tok::identifier: // identifier
-    break;
+    if (!WithOperator)
+      break;
   default:
     P.Diag(Tok.getLocation(), diag::err_omp_expected_reduction_identifier);
     P.SkipUntil(tok::colon, tok::r_paren, tok::annot_pragma_openmp_end,
@@ -180,6 +188,8 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
 
   if (!IsCorrect && Tok.is(tok::annot_pragma_openmp_end))
     return DeclGroupPtrTy();
+
+  IsCorrect = IsCorrect && !Name.isEmpty();
 
   if (Tok.is(tok::colon) || Tok.is(tok::annot_pragma_openmp_end)) {
     Diag(Tok.getLocation(), diag::err_expected_type);
@@ -1209,9 +1219,10 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
   // Handle reduction-identifier for reduction clause.
   if (Kind == OMPC_reduction) {
     ColonProtectionRAIIObject ColonRAII(*this);
-    if (getLangOpts().CPlusPlus) {
-      ParseOptionalCXXScopeSpecifier(ReductionIdScopeSpec, nullptr, false);
-    }
+    if (getLangOpts().CPlusPlus)
+      ParseOptionalCXXScopeSpecifier(ReductionIdScopeSpec,
+                                     /*ObjectType=*/nullptr,
+                                     /*EnteringContext=*/false);
     InvalidReductionId =
         ParseReductionId(*this, ReductionIdScopeSpec, ReductionId);
     if (InvalidReductionId) {

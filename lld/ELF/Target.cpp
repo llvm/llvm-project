@@ -1677,6 +1677,10 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
                                        uint32_t Type, uint64_t P, uint64_t S,
                                        uint64_t ZA, uint8_t *PairedLoc) const {
   const endianness E = ELFT::TargetEndianness;
+  // Thread pointer and DRP offsets from the start of TLS data area.
+  // https://www.linux-mips.org/wiki/NPTL
+  const uint32_t TPOffset = 0x7000;
+  const uint32_t DTPOffset = 0x8000;
   switch (Type) {
   case R_MIPS_32:
     add32<E>(Loc, S);
@@ -1747,6 +1751,18 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint8_t *BufEnd,
   case R_MIPS_PCLO16:
     writeMipsLo16<E>(Loc, S + readSignedLo16<E>(Loc) - P);
     break;
+  case R_MIPS_TLS_DTPREL_HI16:
+    writeMipsHi16<E>(Loc, S - DTPOffset + readSignedLo16<E>(Loc));
+    break;
+  case R_MIPS_TLS_DTPREL_LO16:
+    writeMipsLo16<E>(Loc, S - DTPOffset + readSignedLo16<E>(Loc));
+    break;
+  case R_MIPS_TLS_TPREL_HI16:
+    writeMipsHi16<E>(Loc, S - TPOffset + readSignedLo16<E>(Loc));
+    break;
+  case R_MIPS_TLS_TPREL_LO16:
+    writeMipsLo16<E>(Loc, S - TPOffset + readSignedLo16<E>(Loc));
+    break;
   default:
     fatal("unrecognized reloc " + Twine(Type));
   }
@@ -1767,6 +1783,10 @@ bool MipsTargetInfo<ELFT>::isRelRelative(uint32_t Type) const {
   case R_MIPS_64:
   case R_MIPS_HI16:
   case R_MIPS_LO16:
+  case R_MIPS_TLS_DTPREL_HI16:
+  case R_MIPS_TLS_DTPREL_LO16:
+  case R_MIPS_TLS_TPREL_HI16:
+  case R_MIPS_TLS_TPREL_LO16:
     return false;
   }
 }

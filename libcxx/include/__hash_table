@@ -100,6 +100,23 @@ __next_hash_pow2(size_t __n)
     return size_t(1) << (std::numeric_limits<size_t>::digits - __clz(__n-1));
 }
 
+#ifndef _LIBCPP_CXX03_LANG
+struct __extract_key_fail_tag {};
+struct __extract_key_self_tag {};
+struct __extract_key_first_tag {};
+
+template <class _ValTy, class _Key,
+          class _RawValTy = typename __unconstref<_ValTy>::type>
+struct __can_extract_key
+    : conditional<is_same<_RawValTy, _Key>::value, __extract_key_self_tag,
+                  __extract_key_fail_tag>::type {};
+
+template <class _Pair, class _Key, class _First, class _Second>
+struct __can_extract_key<_Pair, _Key, pair<_First, _Second>>
+    : conditional<is_same<typename remove_const<_First>::type, _Key>::value,
+                  __extract_key_first_tag, __extract_key_fail_tag>::type {};
+#endif
+
 template <class _Tp, class _Hash, class _Equal, class _Alloc> class __hash_table;
 
 template <class _NodePtr>      class _LIBCPP_TYPE_VIS_ONLY __hash_iterator;
@@ -903,6 +920,7 @@ public:
 
     typedef typename _NodeTypes::__node_value_type           __node_value_type;
     typedef typename _NodeTypes::__container_value_type      __container_value_type;
+    typedef typename _NodeTypes::key_type                    key_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
     typedef typename __alloc_traits::pointer         pointer;
@@ -1041,13 +1059,49 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Key, class ..._Args>
+    _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> __emplace_unique_key_args(_Key const& __k, _Args&&... __args);
 
     template <class... _Args>
-    pair<iterator, bool> __emplace_unique(_Args&&... __args);
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool> __emplace_unique_impl(_Args&&... __args);
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool> __emplace_unique(_Pp&& __x) {
+      return __emplace_unique_extract_key(_VSTD::forward<_Pp>(__x),
+                                          __can_extract_key<_Pp, key_type>());
+    }
     template <class... _Args>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool> __emplace_unique(_Args&&... __args) {
+      return __emplace_unique_impl(_VSTD::forward<_Args>(__args)...);
+    }
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool>
+    __emplace_unique_extract_key(_Pp&& __x, __extract_key_fail_tag) {
+      return __emplace_unique_impl(_VSTD::forward<_Pp>(__x));
+    }
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool>
+    __emplace_unique_extract_key(_Pp&& __x, __extract_key_self_tag) {
+      return __emplace_unique_key_args(__x, _VSTD::forward<_Pp>(__x));
+    }
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool>
+    __emplace_unique_extract_key(_Pp&& __x, __extract_key_first_tag) {
+      return __emplace_unique_key_args(__x.first, _VSTD::forward<_Pp>(__x));
+    }
+
+    template <class... _Args>
+    _LIBCPP_INLINE_VISIBILITY
     iterator __emplace_multi(_Args&&... __args);
     template <class... _Args>
+    _LIBCPP_INLINE_VISIBILITY
     iterator __emplace_hint_multi(const_iterator __p, _Args&&... __args);
 
 
@@ -1989,7 +2043,7 @@ __done:
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class... _Args>
 pair<typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator, bool>
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique(_Args&&... __args)
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_impl(_Args&&... __args)
 {
     __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
     pair<iterator, bool> __r = __node_insert_unique(__h.get());

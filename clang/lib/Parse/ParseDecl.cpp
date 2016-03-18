@@ -833,8 +833,7 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
 /// \brief Parse the contents of the "availability" attribute.
 ///
 /// availability-attribute:
-///   'availability' '(' platform ',' opt-strict version-arg-list,
-///                      opt-replacement, opt-message')'
+///   'availability' '(' platform ',' opt-strict version-arg-list, opt-message')'
 ///
 /// platform:
 ///   identifier
@@ -851,8 +850,6 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
 ///   'deprecated' '=' version
 ///   'obsoleted' = version
 ///   'unavailable'
-/// opt-replacement:
-///   'replacement' '=' <string>
 /// opt-message:
 ///   'message' '=' <string>
 void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
@@ -864,7 +861,7 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
                                         AttributeList::Syntax Syntax) {
   enum { Introduced, Deprecated, Obsoleted, Unknown };
   AvailabilityChange Changes[Unknown];
-  ExprResult MessageExpr, ReplacementExpr;
+  ExprResult MessageExpr;
 
   // Opening '('.
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -896,10 +893,9 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
     Ident_unavailable = PP.getIdentifierInfo("unavailable");
     Ident_message = PP.getIdentifierInfo("message");
     Ident_strict = PP.getIdentifierInfo("strict");
-    Ident_replacement = PP.getIdentifierInfo("replacement");
   }
 
-  // Parse the optional "strict", the optional "replacement" and the set of
+  // Parse the optional "strict" and the set of
   // introductions/deprecations/removals.
   SourceLocation UnavailableLoc, StrictLoc;
   do {
@@ -935,17 +931,14 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
       return;
     }
     ConsumeToken();
-    if (Keyword == Ident_message || Keyword == Ident_replacement) {
+    if (Keyword == Ident_message) {
       if (Tok.isNot(tok::string_literal)) {
         Diag(Tok, diag::err_expected_string_literal)
           << /*Source='availability attribute'*/2;
         SkipUntil(tok::r_paren, StopAtSemi);
         return;
       }
-      if (Keyword == Ident_message)
-        MessageExpr = ParseStringLiteralExpression();
-      else
-        ReplacementExpr = ParseStringLiteralExpression();
+      MessageExpr = ParseStringLiteralExpression();
       // Also reject wide string literals.
       if (StringLiteral *MessageStringLiteral =
               cast_or_null<StringLiteral>(MessageExpr.get())) {
@@ -957,10 +950,7 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
           return;
         }
       }
-      if (Keyword == Ident_message)
-        break;
-      else
-        continue;
+      break;
     }
 
     // Special handling of 'NA' only when applied to introduced or
@@ -1047,7 +1037,7 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
                Changes[Deprecated],
                Changes[Obsoleted],
                UnavailableLoc, MessageExpr.get(),
-               Syntax, StrictLoc, ReplacementExpr.get());
+               Syntax, StrictLoc);
 }
 
 /// \brief Parse the contents of the "objc_bridge_related" attribute.

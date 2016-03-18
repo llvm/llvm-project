@@ -9,7 +9,7 @@
 // RUN: mkdir -p %t/i %t/m %t
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
-// RUN: %clang -fsyntax-only %s -I %S/Inputs/System -isysroot %/t/i/    \
+// RUN: %clang -fsyntax-only %s -I %S/Inputs/crash-recovery -isysroot %/t/i/    \
 // RUN: -fmodules -fmodules-cache-path=%t/m/ 2>&1 | FileCheck %s
 
 // RUN: FileCheck --check-prefix=CHECKSRC %s -input-file %t/crash-vfs-*.m
@@ -17,7 +17,7 @@
 // RUN: FileCheck --check-prefix=CHECKYAML %s -input-file \
 // RUN: %t/crash-vfs-*.cache/vfs/vfs.yaml
 // RUN: find %t/crash-vfs-*.cache/vfs | \
-// RUN:   grep "Inputs/System/usr/include/stdio.h" | count 1
+// RUN:   grep "Inputs/crash-recovery/usr/include/stdio.h" | count 1
 
 #include "usr/././//////include/../include/./././../include/stdio.h"
 
@@ -37,12 +37,12 @@
 // CHECKSH: "-ivfsoverlay" "crash-vfs-{{[^ ]*}}.cache/vfs/vfs.yaml"
 
 // CHECKYAML: 'type': 'directory'
-// CHECKYAML: 'name': "{{[^ ]*}}/Inputs/System/usr/include",
+// CHECKYAML: 'name': "{{[^ ]*}}/Inputs/crash-recovery/usr/include",
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
 // CHECKYAML-NEXT:     'name': "module.map",
-// CHECKYAML-NEXT:     'external-contents': "{{[^ ]*}}/Inputs/System/usr/include/module.map"
+// CHECKYAML-NEXT:     'external-contents': "{{[^ ]*}}/Inputs/crash-recovery/usr/include/module.map"
 // CHECKYAML-NEXT:   },
 
 // Replace the paths in the YAML files with relative ".." traversals
@@ -52,7 +52,7 @@
 // RUN: sed -e "s@usr/include@usr/include/../include@g" \
 // RUN:     %t/crash-vfs-*.cache/vfs/vfs.yaml > %t/vfs.yaml
 // RUN: unset FORCE_CLANG_DIAGNOSTICS_CRASH
-// RUN: %clang -E %s -I %S/Inputs/System -isysroot %/t/i/ \
+// RUN: %clang -E %s -I %S/Inputs/crash-recovery -isysroot %/t/i/ \
 // RUN:     -ivfsoverlay %t/vfs.yaml -fmodules \
 // RUN:     -fmodules-cache-path=%t/m/ 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=CHECKOVERLAY

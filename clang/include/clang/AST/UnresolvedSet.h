@@ -59,8 +59,13 @@ class UnresolvedSetImpl {
   // UnresolvedSet.
 private:
   template <unsigned N> friend class UnresolvedSet;
-  UnresolvedSetImpl() {}
-  UnresolvedSetImpl(const UnresolvedSetImpl &) {}
+  UnresolvedSetImpl() = default;
+  UnresolvedSetImpl(const UnresolvedSetImpl &) = default;
+  UnresolvedSetImpl &operator=(const UnresolvedSetImpl &) = default;
+
+  // FIXME: Switch these to "= default" once MSVC supports generating move ops
+  UnresolvedSetImpl(UnresolvedSetImpl &&) {}
+  UnresolvedSetImpl &operator=(UnresolvedSetImpl &&) { return *this; }
 
 public:
   // We don't currently support assignment through this iterator, so we might

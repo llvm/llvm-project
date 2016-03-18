@@ -120,7 +120,8 @@ template <class ELFT> bool SymbolBody::isGnuIfunc() const {
 
 template <class ELFT>
 typename ELFT::uint SymbolBody::getVA(typename ELFT::uint Addend) const {
-  return getSymVA<ELFT>(*this, Addend) + Addend;
+  typename ELFT::uint OutVA = getSymVA<ELFT>(*this, Addend);
+  return OutVA + Addend;
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotVA() const {

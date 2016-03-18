@@ -661,11 +661,6 @@ message=\ *string-literal*
   error about use of a deprecated or obsoleted declaration.  Useful to direct
   users to replacement APIs.
 
-replacement=\ *string-literal*
-  Additional message text that Clang will use to provide Fix-It when emitting
-  a warning about use of a deprecated declaration. The Fix-It will replace
-  the deprecated declaration with the new declaration specified.
-
 Multiple availability attributes can be placed on a declaration, which may
 correspond to different platforms.  Only the availability attribute with the
 platform corresponding to the target platform will be used; any others will be

@@ -2112,7 +2112,7 @@ public:
                                           VersionTuple Obsoleted,
                                           bool IsUnavailable,
                                           StringRef Message,
-                                          bool IsStrict, StringRef Replacement,
+                                          bool IsStrict,
                                           AvailabilityMergeKind AMK,
                                           unsigned AttrSpellingListIndex);
   TypeVisibilityAttr *mergeTypeVisibilityAttr(Decl *D, SourceRange Range,
@@ -8243,12 +8243,12 @@ public:
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc);
   /// \brief Called on well-formed 'reduction' clause.
-  OMPClause *
-  ActOnOpenMPReductionClause(ArrayRef<Expr *> VarList, SourceLocation StartLoc,
-                             SourceLocation LParenLoc, SourceLocation ColonLoc,
-                             SourceLocation EndLoc,
-                             CXXScopeSpec &ReductionIdScopeSpec,
-                             const DeclarationNameInfo &ReductionId);
+  OMPClause *ActOnOpenMPReductionClause(
+      ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation EndLoc,
+      CXXScopeSpec &ReductionIdScopeSpec,
+      const DeclarationNameInfo &ReductionId,
+      ArrayRef<Expr *> UnresolvedReductions = llvm::None);
   /// \brief Called on well-formed 'linear' clause.
   OMPClause *
   ActOnOpenMPLinearClause(ArrayRef<Expr *> VarList, Expr *Step,

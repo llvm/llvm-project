@@ -18,12 +18,16 @@
 #include "Config.h"
 #include "Error.h"
 #include "Symbols.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -106,6 +110,15 @@ static void saveLtoObjectFile(StringRef Buffer) {
   OS << Buffer;
 }
 
+// This is for use when debugging LTO.
+static void saveBCFile(Module &M, StringRef Suffix) {
+  std::error_code EC;
+  raw_fd_ostream OS(Config->OutputFile.str() + Suffix.str(), EC,
+                    sys::fs::OpenFlags::F_None);
+  check(EC);
+  WriteBitcodeToFile(&M, OS, /* ShouldPreserveUseListOrder */ true);
+}
+
 // Codegen the module M and returns the resulting InputFile.
 template <class ELFT>
 std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
@@ -125,6 +138,25 @@ std::unique_ptr<InputFile> SymbolTable<ELFT>::codegen(Module &M) {
   Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
   std::unique_ptr<TargetMachine> TM(
       TheTarget->createTargetMachine(TripleStr, "", "", Options, R));
+
+  // Run LTO passes.
+  // FIXME: Reduce code duplication by sharing this code with the gold plugin.
+  legacy::PassManager LtoPasses;
+  LtoPasses.add(
+      createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+  PassManagerBuilder PMB;
+  PMB.LibraryInfo = new TargetLibraryInfoImpl(Triple(TM->getTargetTriple()));
+  PMB.Inliner = createFunctionInliningPass();
+  PMB.VerifyInput = true;
+  PMB.VerifyOutput = true;
+  PMB.LoopVectorize = true;
+  PMB.SLPVectorize = true;
+  PMB.OptLevel = 2; // FIXME: This should be an option.
+  PMB.populateLTOPassManager(LtoPasses);
+  LtoPasses.run(M);
+
+  if (Config->SaveTemps)
+    saveBCFile(M, ".lto.opt.bc");
 
   raw_svector_ostream OS(OwningLTOData);
   legacy::PassManager CodeGenPasses;
@@ -169,15 +201,6 @@ static void addBitcodeFile(IRMover &Mover, BitcodeFile &F,
              [](GlobalValue &, IRMover::ValueAdder) {});
 }
 
-// This is for use when debugging LTO.
-static void saveBCFile(Module &M) {
-  std::error_code EC;
-  raw_fd_ostream OS(Config->OutputFile.str() + ".lto.bc", EC,
-                    sys::fs::OpenFlags::F_None);
-  check(EC);
-  WriteBitcodeToFile(&M, OS, /* ShouldPreserveUseListOrder */ true);
-}
-
 // Merge all the bitcode files we have seen, codegen the result and return
 // the resulting ObjectFile.
 template <class ELFT>
@@ -188,7 +211,7 @@ elf::ObjectFile<ELFT> *SymbolTable<ELFT>::createCombinedLtoObject() {
   for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles)
     addBitcodeFile(Mover, *F, Context);
   if (Config->SaveTemps)
-    saveBCFile(Combined);
+    saveBCFile(Combined, ".lto.bc");
   std::unique_ptr<InputFile> F = codegen(Combined);
   ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(F.release()));
   return &*ObjectFiles.back();

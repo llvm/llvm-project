@@ -8,6 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @ctor, i8* null }]
 define void @ctor() {
+  call void asm "nop", ""()
   ret void
 }
 
