@@ -343,7 +343,7 @@ void InitializeFlags() {
   ubsan_parser.ParseString(GetEnv("UBSAN_OPTIONS"));
 #endif
 
-  SetVerbosity(common_flags()->verbosity);
+  InitializeCommonFlags();
 
   if (Verbosity())
     ReportUnrecognizedFlags();

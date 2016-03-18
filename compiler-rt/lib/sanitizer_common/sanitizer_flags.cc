@@ -126,4 +126,10 @@ void RegisterCommonFlags(FlagParser *parser, CommonFlags *cf) {
   RegisterIncludeFlags(parser, cf);
 }
 
+void InitializeCommonFlags(CommonFlags *cf) {
+  // need to record coverage to generate coverage report.
+  cf->coverage |= cf->html_cov_report;
+  SetVerbosity(cf->verbosity);
+}
+
 }  // namespace __sanitizer

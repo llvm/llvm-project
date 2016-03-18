@@ -116,7 +116,7 @@ void InitializeFlags() {
   ubsan_parser.ParseString(GetEnv("UBSAN_OPTIONS"));
 #endif
 
-  SetVerbosity(common_flags()->verbosity);
+  InitializeCommonFlags();
 
   // TODO(eugenis): dump all flags at verbosity>=2?
   if (Verbosity()) ReportUnrecognizedFlags();

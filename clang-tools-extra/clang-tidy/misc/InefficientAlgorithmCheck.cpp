@@ -33,13 +33,16 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  const std::string Algorithms =
-      "^::std::(find|count|equal_range|lower_bound|upper_bound)$";
-  const auto ContainerMatcher = classTemplateSpecializationDecl(
-      matchesName("^::std::(unordered_)?(multi)?(set|map)$"));
+  const auto Algorithms =
+      hasAnyName("::std::find", "::std::count", "::std::equal_range",
+                 "::std::lower_bound", "::std::upper_bound");
+  const auto ContainerMatcher = classTemplateSpecializationDecl(hasAnyName(
+      "::std::set", "::std::map", "::std::multiset", "::std::multimap",
+      "::std::unordered_set", "::std::unordered_map"));
+
   const auto Matcher =
       callExpr(
-          callee(functionDecl(matchesName(Algorithms))),
+          callee(functionDecl(Algorithms)),
           hasArgument(
               0, cxxConstructExpr(has(cxxMemberCallExpr(
                      callee(cxxMethodDecl(hasName("begin"))),

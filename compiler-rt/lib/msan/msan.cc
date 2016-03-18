@@ -178,7 +178,7 @@ static void InitializeFlags() {
 #endif
   VPrintf(1, "MSAN_OPTIONS: %s\n", msan_options ? msan_options : "<empty>");
 
-  SetVerbosity(common_flags()->verbosity);
+  InitializeCommonFlags();
 
   if (Verbosity()) ReportUnrecognizedFlags();
 
