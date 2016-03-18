@@ -521,37 +521,6 @@ ClangUserExpression::Parse (Stream &error_stream,
                                                   exe_ctx,
                                                   m_can_interpret,
                                                   execution_policy);
-    
-    if (m_execution_unit_sp)
-    {
-        bool register_execution_unit = false;
-        
-        if (m_options.GetREPLEnabled())
-        {
-            if (!m_execution_unit_sp->GetJittedFunctions().empty() ||
-                !m_execution_unit_sp->GetJittedGlobalVariables().empty())
-            {
-                register_execution_unit = true;
-            }
-        }
-        else
-        {
-            if (m_execution_unit_sp->GetJittedFunctions().size() > 1 ||
-                m_execution_unit_sp->GetJittedGlobalVariables().size() > 1)
-            {
-                register_execution_unit = true;
-            }
-        }
-        
-        if (register_execution_unit)
-        {
-            // We currently key off there being more than one external function in the execution
-            // unit to determine whether it needs to live in the process.
-            
-            llvm::cast<ClangPersistentVariables>(exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeSwift))->RegisterExecutionUnit(m_execution_unit_sp);
-        }
-    }
-    
 
     if (m_options.GetGenerateDebugInfo())
     {
