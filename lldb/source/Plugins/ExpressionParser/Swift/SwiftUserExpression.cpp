@@ -219,6 +219,14 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
                     if (object_type.getPointer() && (object_type.getPointer() != self_type.GetOpaqueQualType()))
                         self_type = CompilerType(self_type.GetTypeSystem(), object_type.getPointer());
 
+                    if (Flags(self_type.GetTypeInfo()).AllSet(lldb::eTypeIsSwift | lldb::eTypeIsEnumeration | lldb::eTypeIsGeneric))
+                    {
+                        // Optional<T> is not something we can extend.
+                        m_needs_object_ptr = false;
+                        self_var_sp.reset();
+                        break;
+                    }
+                    
                     if (log)
                         log->Printf("  [SUE::SC] Containing class name: %s", self_type.GetTypeName().AsCString());
 
