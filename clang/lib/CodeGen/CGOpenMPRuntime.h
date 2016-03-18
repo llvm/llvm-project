@@ -383,6 +383,9 @@ public:
   /// Emit code for the specified user defined reduction construct.
   virtual void emitUserDefinedReduction(CodeGenFunction *CGF,
                                         const OMPDeclareReductionDecl *D);
+  /// Get combiner/initializer for the specified user-defined reduction, if any.
+  virtual std::pair<llvm::Function *, llvm::Function *>
+  getUserDefinedReduction(const OMPDeclareReductionDecl *D);
   /// \brief Emits outlined function for the specified OpenMP parallel directive
   /// \a D. This outlined function has type void(*)(kmp_int32 *ThreadID,
   /// kmp_int32 BoundID, struct context_vars*).

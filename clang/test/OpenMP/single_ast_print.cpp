@@ -8,15 +8,43 @@
 
 void foo() {}
 
+struct SS {
+  int a;
+  int b : 4;
+  int &c;
+  SS(int &d) : a(0), b(0), c(d) {
+#pragma omp parallel firstprivate(a, b, c)
+#pragma omp single copyprivate(a, this->b, (this)->c)
+// CHECK: #pragma omp parallel firstprivate(this->a,this->b,this->c)
+// CHECK-NEXT: #pragma omp single copyprivate(this->a,this->b,this->c)
+    ++this->a, --b, (this)->c /= 1;
+  }
+};
+
+template<typename T>
+struct SST {
+  T a;
+  SST() : a(T()) {
+// CHECK: #pragma omp parallel firstprivate(this->a)
+// CHECK-NEXT: #pragma omp single copyprivate(this->a)
+// CHECK: #pragma omp parallel firstprivate(this->a)
+// CHECK-NEXT: #pragma omp single copyprivate(this->a)
+#pragma omp parallel firstprivate(a)
+#pragma omp single copyprivate(this->a)
+    ++this->a;
+  }
+};
+
 template <class T, int N>
 T tmain(T argc) {
   T b = argc, c, d, e, f, g;
   static T a;
+  SST<T> sst;
 // CHECK: static T a;
 #pragma omp parallel private(g)
 #pragma omp single private(argc, b), firstprivate(c, d), nowait
   foo();
-  // CHECK-NEXT: #pragma omp parallel private(g)
+  // CHECK: #pragma omp parallel private(g)
   // CHECK-NEXT: #pragma omp single private(argc,b) firstprivate(c,d) nowait
   // CHECK-NEXT: foo();
 #pragma omp parallel private(g)
@@ -31,11 +59,12 @@ T tmain(T argc) {
 int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
+  SS ss(a);
 // CHECK: static int a;
 #pragma omp parallel private(g)
 #pragma omp single private(argc, b), firstprivate(argv, c), nowait
   foo();
-  // CHECK-NEXT: #pragma omp parallel private(g)
+  // CHECK: #pragma omp parallel private(g)
   // CHECK-NEXT: #pragma omp single private(argc,b) firstprivate(argv,c) nowait
   // CHECK-NEXT: foo();
 #pragma omp parallel private(g)

@@ -777,13 +777,13 @@ namespace {
 class FormatTokenLexer {
 public:
   FormatTokenLexer(SourceManager &SourceMgr, FileID ID, FormatStyle &Style,
-                   encoding::Encoding Encoding, tooling::Replacements &Replaces)
+                   encoding::Encoding Encoding)
       : FormatTok(nullptr), IsFirstToken(true), GreaterStashed(false),
         LessStashed(false), Column(0), TrailingWhitespace(0),
         SourceMgr(SourceMgr), ID(ID), Style(Style),
         IdentTable(getFormattingLangOpts(Style)), Keywords(IdentTable),
-        Encoding(Encoding), Replaces(Replaces), FirstInLineIndex(0),
-        FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
+        Encoding(Encoding), FirstInLineIndex(0), FormattingDisabled(false),
+        MacroBlockBeginRegex(Style.MacroBlockBegin),
         MacroBlockEndRegex(Style.MacroBlockEnd) {
     Lex.reset(new Lexer(ID, SourceMgr.getBuffer(ID), SourceMgr,
                         getFormattingLangOpts(Style)));
@@ -802,8 +802,6 @@ public:
       if (Style.Language == FormatStyle::LK_JavaScript)
         tryParseJSRegexLiteral();
       tryMergePreviousTokens();
-      if (Style.Language == FormatStyle::LK_JavaScript)
-        tryRequoteJSStringLiteral();
       if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
         FirstInLineIndex = Tokens.size() - 1;
     } while (Tokens.back()->Tok.isNot(tok::eof));
@@ -1072,75 +1070,6 @@ private:
       return true;
     }
     return false;
-  }
-
-  // If the last token is a double/single-quoted string literal, generates a
-  // replacement with a single/double quoted string literal, re-escaping the
-  // contents in the process.
-  void tryRequoteJSStringLiteral() {
-    if (Style.JavaScriptQuotes == FormatStyle::JSQS_Leave)
-      return;
-
-    FormatToken *FormatTok = Tokens.back();
-    StringRef Input = FormatTok->TokenText;
-    if (!FormatTok->isStringLiteral() ||
-        // NB: testing for not starting with a double quote to avoid breaking
-        // `template strings`.
-        (Style.JavaScriptQuotes == FormatStyle::JSQS_Single &&
-         !Input.startswith("\"")) ||
-        (Style.JavaScriptQuotes == FormatStyle::JSQS_Double &&
-         !Input.startswith("\'")))
-      return;
-
-    // Change start and end quote.
-    bool IsSingle = Style.JavaScriptQuotes == FormatStyle::JSQS_Single;
-    SourceLocation Start = FormatTok->Tok.getLocation();
-    auto Replace = [&](SourceLocation Start, unsigned Length,
-                       StringRef ReplacementText) {
-      Replaces.insert(
-          tooling::Replacement(SourceMgr, Start, Length, ReplacementText));
-    };
-    Replace(Start, 1, IsSingle ? "'" : "\"");
-    Replace(FormatTok->Tok.getEndLoc().getLocWithOffset(-1), 1,
-            IsSingle ? "'" : "\"");
-
-    // Escape internal quotes.
-    size_t ColumnWidth = FormatTok->TokenText.size();
-    bool Escaped = false;
-    for (size_t i = 1; i < Input.size() - 1; i++) {
-      switch (Input[i]) {
-      case '\\':
-        if (!Escaped && i + 1 < Input.size() &&
-            ((IsSingle && Input[i + 1] == '"') ||
-             (!IsSingle && Input[i + 1] == '\''))) {
-          // Remove this \, it's escaping a " or ' that no longer needs escaping
-          ColumnWidth--;
-          Replace(Start.getLocWithOffset(i), 1, "");
-          continue;
-        }
-        Escaped = !Escaped;
-        break;
-      case '\"':
-      case '\'':
-        if (!Escaped && IsSingle == (Input[i] == '\'')) {
-          // Escape the quote.
-          Replace(Start.getLocWithOffset(i), 0, "\\");
-          ColumnWidth++;
-        }
-        Escaped = false;
-        break;
-      default:
-        Escaped = false;
-        break;
-      }
-    }
-
-    // For formatting, count the number of non-escaped single quotes in them
-    // and adjust ColumnWidth to take the added escapes into account.
-    // FIXME(martinprobst): this might conflict with code breaking a long string
-    // literal (which clang-format doesn't do, yet). For that to work, this code
-    // would have to modify TokenText directly.
-    FormatTok->ColumnWidth = ColumnWidth;
   }
 
   bool tryMerge_TMacro() {
@@ -1441,7 +1370,6 @@ private:
   IdentifierTable IdentTable;
   AdditionalKeywords Keywords;
   encoding::Encoding Encoding;
-  tooling::Replacements &Replaces;
   llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
   // Index (in 'Tokens') of the last token that starts a new line.
   unsigned FirstInLineIndex;
@@ -1531,7 +1459,7 @@ public:
 
   tooling::Replacements format(bool *IncompleteFormat) {
     tooling::Replacements Result;
-    FormatTokenLexer Tokens(SourceMgr, ID, Style, Encoding, Result);
+    FormatTokenLexer Tokens(SourceMgr, ID, Style, Encoding);
 
     UnwrappedLineParser Parser(Style, Tokens.getKeywords(), Tokens.lex(),
                                *this);
@@ -1545,7 +1473,7 @@ public:
         AnnotatedLines.push_back(new AnnotatedLine(UnwrappedLines[Run][i]));
       }
       tooling::Replacements RunResult =
-          format(AnnotatedLines, Tokens, IncompleteFormat);
+          format(AnnotatedLines, Tokens, Result, IncompleteFormat);
       DEBUG({
         llvm::dbgs() << "Replacements for run " << Run << ":\n";
         for (tooling::Replacements::iterator I = RunResult.begin(),
@@ -1565,16 +1493,21 @@ public:
 
   tooling::Replacements format(SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
                                FormatTokenLexer &Tokens,
+                               tooling::Replacements &Result,
                                bool *IncompleteFormat) {
     TokenAnnotator Annotator(Style, Tokens.getKeywords());
     for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
       Annotator.annotate(*AnnotatedLines[i]);
     }
     deriveLocalStyle(AnnotatedLines);
+    computeAffectedLines(AnnotatedLines.begin(), AnnotatedLines.end());
+    if (Style.Language == FormatStyle::LK_JavaScript &&
+        Style.JavaScriptQuotes != FormatStyle::JSQS_Leave)
+      requoteJSStringLiteral(AnnotatedLines, Result);
+
     for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
       Annotator.calculateFormattingInformation(*AnnotatedLines[i]);
     }
-    computeAffectedLines(AnnotatedLines.begin(), AnnotatedLines.end());
 
     Annotator.setCommentLineLevels(AnnotatedLines);
     ContinuationIndenter Indenter(Style, Tokens.getKeywords(), SourceMgr,
@@ -1625,6 +1558,83 @@ private:
     }
     return SomeLineAffected;
   }
+ 
+  // If the last token is a double/single-quoted string literal, generates a
+  // replacement with a single/double quoted string literal, re-escaping the
+  // contents in the process.
+  void requoteJSStringLiteral(SmallVectorImpl<AnnotatedLine *> &Lines,
+                                 tooling::Replacements &Result) {
+    for (AnnotatedLine *Line : Lines) {
+      requoteJSStringLiteral(Line->Children, Result);
+      if (!Line->Affected)
+        continue;
+      for (FormatToken *FormatTok = Line->First; FormatTok;
+           FormatTok = FormatTok->Next) {
+        StringRef Input = FormatTok->TokenText;
+        if (!FormatTok->isStringLiteral() ||
+            // NB: testing for not starting with a double quote to avoid
+            // breaking
+            // `template strings`.
+            (Style.JavaScriptQuotes == FormatStyle::JSQS_Single &&
+             !Input.startswith("\"")) ||
+            (Style.JavaScriptQuotes == FormatStyle::JSQS_Double &&
+             !Input.startswith("\'")))
+          continue;
+
+        // Change start and end quote.
+        bool IsSingle = Style.JavaScriptQuotes == FormatStyle::JSQS_Single;
+        SourceLocation Start = FormatTok->Tok.getLocation();
+        auto Replace = [&](SourceLocation Start, unsigned Length,
+                           StringRef ReplacementText) {
+          Result.insert(
+              tooling::Replacement(SourceMgr, Start, Length, ReplacementText));
+        };
+        Replace(Start, 1, IsSingle ? "'" : "\"");
+        Replace(FormatTok->Tok.getEndLoc().getLocWithOffset(-1), 1,
+                IsSingle ? "'" : "\"");
+
+        // Escape internal quotes.
+        size_t ColumnWidth = FormatTok->TokenText.size();
+        bool Escaped = false;
+        for (size_t i = 1; i < Input.size() - 1; i++) {
+          switch (Input[i]) {
+            case '\\':
+              if (!Escaped && i + 1 < Input.size() &&
+                  ((IsSingle && Input[i + 1] == '"') ||
+                   (!IsSingle && Input[i + 1] == '\''))) {
+                // Remove this \, it's escaping a " or ' that no longer needs
+                // escaping
+                ColumnWidth--;
+                Replace(Start.getLocWithOffset(i), 1, "");
+                continue;
+              }
+              Escaped = !Escaped;
+              break;
+            case '\"':
+            case '\'':
+              if (!Escaped && IsSingle == (Input[i] == '\'')) {
+                // Escape the quote.
+                Replace(Start.getLocWithOffset(i), 0, "\\");
+                ColumnWidth++;
+              }
+              Escaped = false;
+              break;
+            default:
+              Escaped = false;
+              break;
+          }
+        }
+
+        // For formatting, count the number of non-escaped single quotes in them
+        // and adjust ColumnWidth to take the added escapes into account.
+        // FIXME(martinprobst): this might conflict with code breaking a long string
+        // literal (which clang-format doesn't do, yet). For that to work, this code
+        // would have to modify TokenText directly.
+        FormatTok->ColumnWidth = ColumnWidth;
+      }
+    }
+  }
+
 
   // Determines whether 'Line' is affected by the SourceRanges given as input.
   // Returns \c true if line or one if its children is affected.

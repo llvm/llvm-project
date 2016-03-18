@@ -2581,10 +2581,6 @@ std::string HexagonToolChain::getHexagonTargetDir(
   if (getVFS().exists(InstallRelDir = InstalledDir + "/../target"))
     return InstallRelDir;
 
-  std::string PrefixRelDir = std::string(LLVM_PREFIX) + "/target";
-  if (getVFS().exists(PrefixRelDir))
-    return PrefixRelDir;
-
   return InstallRelDir;
 }
 

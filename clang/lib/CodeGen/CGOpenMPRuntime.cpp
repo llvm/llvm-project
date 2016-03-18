@@ -622,12 +622,12 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   auto &C = CGM.getContext();
   QualType PtrTy = C.getPointerType(Ty).withRestrict();
   FunctionArgList Args;
-  ImplicitParamDecl OmpInParm(C, /*DC=*/nullptr, In->getLocation(),
-                              /*Id=*/nullptr, PtrTy);
   ImplicitParamDecl OmpOutParm(C, /*DC=*/nullptr, Out->getLocation(),
                                /*Id=*/nullptr, PtrTy);
-  Args.push_back(&OmpInParm);
+  ImplicitParamDecl OmpInParm(C, /*DC=*/nullptr, In->getLocation(),
+                              /*Id=*/nullptr, PtrTy);
   Args.push_back(&OmpOutParm);
+  Args.push_back(&OmpInParm);
   auto &FnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   auto *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
@@ -635,6 +635,7 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
       FnTy, llvm::GlobalValue::InternalLinkage,
       IsCombiner ? ".omp_combiner." : ".omp_initializer.", &CGM.getModule());
   CGM.SetInternalFunctionAttributes(/*D=*/nullptr, Fn, FnInfo);
+  Fn->addFnAttr(llvm::Attribute::AlwaysInline);
   CodeGenFunction CGF(CGM);
   // Map "T omp_in;" variable to "*omp_in_parm" value in all expressions.
   // Map "T omp_out;" variable to "*omp_out_parm" value in all expressions.
@@ -686,6 +687,15 @@ void CGOpenMPRuntime::emitUserDefinedReduction(
     auto &Decls = FunctionUDRMap.FindAndConstruct(CGF->CurFn);
     Decls.second.push_back(D);
   }
+}
+
+std::pair<llvm::Function *, llvm::Function *>
+CGOpenMPRuntime::getUserDefinedReduction(const OMPDeclareReductionDecl *D) {
+  auto I = UDRMap.find(D);
+  if (I != UDRMap.end())
+    return I->second;
+  emitUserDefinedReduction(/*CGF=*/nullptr, D);
+  return UDRMap.lookup(D);
 }
 
 // Layout information for ident_t.
@@ -3596,6 +3606,26 @@ static void EmitOMPAggregateReduction(
   CGF.EmitBlock(DoneBB, /*IsFinished=*/true);
 }
 
+/// Emit reduction combiner. If the combiner is a simple expression emit it as
+/// is, otherwise consider it as combiner of UDR decl and emit it as a call of
+/// UDR combiner function.
+static void emitReductionCombiner(CodeGenFunction &CGF,
+                                  const Expr *ReductionOp) {
+  if (auto *CE = dyn_cast<CallExpr>(ReductionOp))
+    if (auto *OVE = dyn_cast<OpaqueValueExpr>(CE->getCallee()))
+      if (auto *DRE =
+              dyn_cast<DeclRefExpr>(OVE->getSourceExpr()->IgnoreImpCasts()))
+        if (auto *DRD = dyn_cast<OMPDeclareReductionDecl>(DRE->getDecl())) {
+          std::pair<llvm::Function *, llvm::Function *> Reduction =
+              CGF.CGM.getOpenMPRuntime().getUserDefinedReduction(DRD);
+          RValue Func = RValue::get(Reduction.first);
+          CodeGenFunction::OpaqueValueMapping Map(CGF, OVE, Func);
+          CGF.EmitIgnoredExpr(ReductionOp);
+          return;
+        }
+  CGF.EmitIgnoredExpr(ReductionOp);
+}
+
 static llvm::Value *emitReductionFunction(CodeGenModule &CGM,
                                           llvm::Type *ArgsType,
                                           ArrayRef<const Expr *> Privates,
@@ -3667,13 +3697,14 @@ static llvm::Value *emitReductionFunction(CodeGenModule &CGM,
       // Emit reduction for array section.
       auto *LHSVar = cast<VarDecl>(cast<DeclRefExpr>(*ILHS)->getDecl());
       auto *RHSVar = cast<VarDecl>(cast<DeclRefExpr>(*IRHS)->getDecl());
-      EmitOMPAggregateReduction(CGF, (*IPriv)->getType(), LHSVar, RHSVar,
-                                [=](CodeGenFunction &CGF, const Expr *,
-                                    const Expr *,
-                                    const Expr *) { CGF.EmitIgnoredExpr(E); });
+      EmitOMPAggregateReduction(
+          CGF, (*IPriv)->getType(), LHSVar, RHSVar,
+          [=](CodeGenFunction &CGF, const Expr *, const Expr *, const Expr *) {
+            emitReductionCombiner(CGF, E);
+          });
     } else
       // Emit reduction for array subscript or single variable.
-      CGF.EmitIgnoredExpr(E);
+      emitReductionCombiner(CGF, E);
     ++IPriv;
     ++ILHS;
     ++IRHS;
@@ -3740,9 +3771,9 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
         EmitOMPAggregateReduction(
             CGF, (*IPriv)->getType(), LHSVar, RHSVar,
             [=](CodeGenFunction &CGF, const Expr *, const Expr *,
-                const Expr *) { CGF.EmitIgnoredExpr(E); });
+                const Expr *) { emitReductionCombiner(CGF, E); });
       } else
-        CGF.EmitIgnoredExpr(E);
+        emitReductionCombiner(CGF, E);
       ++IPriv;
       ++ILHS;
       ++IRHS;
@@ -3857,10 +3888,10 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
         EmitOMPAggregateReduction(
             CGF, (*IPriv)->getType(), LHSVar, RHSVar,
             [=](CodeGenFunction &CGF, const Expr *, const Expr *,
-                const Expr *) { CGF.EmitIgnoredExpr(E); });
+                const Expr *) { emitReductionCombiner(CGF, E); });
       } else
         // Emit reduction for array subscript or single variable.
-        CGF.EmitIgnoredExpr(E);
+        emitReductionCombiner(CGF, E);
       ++IPriv;
       ++ILHS;
       ++IRHS;
@@ -3962,7 +3993,8 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
                                              const Expr *, const Expr *) {
             emitCriticalRegion(
                 CGF, ".atomic_reduction",
-                [E](CodeGenFunction &CGF) { CGF.EmitIgnoredExpr(E); }, Loc);
+                [=](CodeGenFunction &CGF) { emitReductionCombiner(CGF, E); },
+                Loc);
           };
           if ((*IPriv)->getType()->isArrayType()) {
             auto *LHSVar = cast<VarDecl>(cast<DeclRefExpr>(*ILHS)->getDecl());

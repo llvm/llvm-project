@@ -59,7 +59,7 @@ class Class2 : public Class1<T> {
 #pragma omp declare reduction(fun77 : long : omp_out += omp_in) initializer(omp_priv Class2 < int > ()) // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp declare reduction(fun8 : long : omp_out += omp_in) initializer(omp_priv 23)                 // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp declare reduction(fun88 : long : omp_out += omp_in) initializer(omp_priv 23))               // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-warning {{extra tokens at the end of '#pragma omp declare reduction' are ignored}}
-#pragma omp declare reduction(fun9 : long : omp_out += omp_priv) initializer(omp_in = 23)               // expected-error {{use of undeclared identifier 'omp_priv'; did you mean 'omp_in'?}} expected-note {{'omp_in' is an implicit parameter}}
+#pragma omp declare reduction(fun9 : long : omp_out += omp_priv) initializer(omp_in = 23)               // expected-error {{use of undeclared identifier 'omp_priv'; did you mean 'omp_in'?}} expected-note {{'omp_in' declared here}}
 #pragma omp declare reduction(fun10 : long : omp_out += omp_in) initializer(omp_priv = 23)
 
 template <typename T>
@@ -75,15 +75,34 @@ T fun(T arg) {
 
 template <typename T>
 T foo(T arg) {
+  T i;
   {
 #pragma omp declare reduction(red : T : omp_out++)
 #pragma omp declare reduction(red1 : T : omp_out++)   // expected-note {{previous definition is here}}
 #pragma omp declare reduction(red1 : int : omp_out++) // expected-error {{redefinition of user-defined reduction for type 'int'}}
+  #pragma omp parallel reduction (red : i)
+  {
+  }
+  #pragma omp parallel reduction (red1 : i)
+  {
+  }
+  #pragma omp parallel reduction (red2 : i) // expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
+  {
+  }
   }
   {
 #pragma omp declare reduction(red1 : int : omp_out++) // expected-note {{previous definition is here}}
 #pragma omp declare reduction(red : T : omp_out++)
 #pragma omp declare reduction(red1 : T : omp_out++) // expected-error {{redefinition of user-defined reduction for type 'int'}}
+  #pragma omp parallel reduction (red : i)
+  {
+  }
+  #pragma omp parallel reduction (red1 : i)
+  {
+  }
+  #pragma omp parallel reduction (red2 : i) // expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
+  {
+  }
   }
   return arg;
 }
@@ -92,14 +111,13 @@ T foo(T arg) {
 int main() {
   Class1<int> c1;
   int i;
-  // TODO: Add support for scoped reduction identifiers
-  //  #pragma omp parallel reduction (::fun : c1)
+  #pragma omp parallel reduction (::fun : c1)
   {
   }
-  //  #pragma omp parallel reduction (::Class1<int>::fun : c1)
+  #pragma omp parallel reduction (::Class1<int>::fun : c1)
   {
   }
-  //  #pragma omp parallel reduction (::Class2<int>::fun : i)
+  #pragma omp parallel reduction (::Class2<int>::fun : i) // expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
   {
   }
   return fun(15) + foo(15); // expected-note {{in instantiation of function template specialization 'foo<int>' requested here}}

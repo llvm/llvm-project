@@ -512,6 +512,18 @@ TEST_F(FormatTestSelective, StopFormattingWhenLeavingScope) {
              15, 0));
 }
 
+TEST_F(FormatTestSelective, SelectivelyRequoteJavaScript) {
+  Style = getGoogleStyle(FormatStyle::LK_JavaScript);
+  EXPECT_EQ(
+      "var x = \"a\";\n"
+      "var x = 'a';\n"
+      "var x = \"a\";",
+      format("var x = \"a\";\n"
+             "var x = \"a\";\n"
+             "var x = \"a\";",
+             20, 0));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

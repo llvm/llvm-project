@@ -185,6 +185,11 @@ public:
       Shadowed(false)
   {}
 
+  // FIXME: Remove these deleted methods once the default build includes
+  // -Wdeprecated.
+  LookupResult(const LookupResult &) = delete;
+  LookupResult &operator=(const LookupResult &) = delete;
+
   ~LookupResult() {
     if (Diagnose) diagnose();
     if (Paths) deletePaths(Paths);
