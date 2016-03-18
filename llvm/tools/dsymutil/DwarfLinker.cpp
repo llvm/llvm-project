@@ -1640,22 +1640,20 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
                   File)) {
             Line = DIE->getAttributeValueAsUnsignedConstant(
                 &U.getOrigUnit(), dwarf::DW_AT_decl_line, 0);
-#ifdef HAVE_REALPATH
             // Cache the resolved paths, because calling realpath is expansive.
             StringRef ResolvedPath = U.getResolvedPath(FileNum);
             if (!ResolvedPath.empty()) {
               FileRef = ResolvedPath;
             } else {
+#ifdef HAVE_REALPATH
               char RealPath[PATH_MAX + 1];
               RealPath[PATH_MAX] = 0;
               if (::realpath(File.c_str(), RealPath))
                 File = RealPath;
+#endif
               FileRef = StringPool.internString(File);
               U.setResolvedPath(FileNum, FileRef);
             }
-#else
-            FileRef = StringPool.internString(File);
-#endif
           }
         }
       }
