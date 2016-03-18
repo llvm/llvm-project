@@ -25,6 +25,12 @@ static cl::opt<unsigned> CyclonePrefetchDistance(
     cl::desc("Number of instructions to prefetch ahead for Cyclone"),
     cl::init(280), cl::Hidden);
 
+// The HW prefetcher handles accesses with strides up to 2KB.
+static cl::opt<unsigned> CycloneMinPrefetchStride(
+    "cyclone-min-prefetch-stride",
+    cl::desc("Min stride to add prefetches for Cyclone"),
+    cl::init(2048), cl::Hidden);
+
 /// \brief Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
@@ -587,4 +593,10 @@ unsigned AArch64TTIImpl::getPrefetchDistance() {
   if (ST->isCyclone())
     return CyclonePrefetchDistance;
   return BaseT::getPrefetchDistance();
+}
+
+unsigned AArch64TTIImpl::getMinPrefetchStride() {
+  if (ST->isCyclone())
+    return CycloneMinPrefetchStride;
+  return BaseT::getMinPrefetchStride();
 }
