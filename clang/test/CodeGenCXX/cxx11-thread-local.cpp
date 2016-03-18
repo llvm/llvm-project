@@ -122,7 +122,8 @@ int f() {
 
 // LINUX-LABEL: define weak_odr hidden i32* @_ZTWN1VIiE1mE()
 // DARWIN-LABEL: define weak_odr hidden cxx_fast_tlscc i32* @_ZTWN1VIiE1mE()
-// CHECK: call void @_ZTHN1VIiE1mE()
+// LINUX: call void @_ZTHN1VIiE1mE()
+// DARWIN: call cxx_fast_tlscc void @_ZTHN1VIiE1mE()
 // CHECK: ret i32* @_ZN1VIiE1mE
 
 
@@ -212,7 +213,8 @@ void set_anon_i() {
 
 // LIUNX: define weak_odr hidden i32* @_ZTW1a() {
 // DARWIN: define cxx_fast_tlscc i32* @_ZTW1a()
-// CHECK:   call void @_ZTH1a()
+// LINUX:   call void @_ZTH1a()
+// DARWIN: call cxx_fast_tlscc void @_ZTH1a()
 // CHECK:   ret i32* @a
 // CHECK: }
 
@@ -222,12 +224,14 @@ void set_anon_i() {
 
 // LINUX-LABEL: define internal i32* @_ZTWL1d()
 // DARWIN-LABEL: define internal cxx_fast_tlscc i32* @_ZTWL1d()
-// CHECK: call void @_ZTHL1d()
+// LINUX: call void @_ZTHL1d()
+// DARWIN: call cxx_fast_tlscc void @_ZTHL1d()
 // CHECK: ret i32* @_ZL1d
 
 // LINUX-LABEL: define weak_odr hidden i32* @_ZTWN1U1mE()
 // DARWIN-LABEL: define cxx_fast_tlscc i32* @_ZTWN1U1mE()
-// CHECK: call void @_ZTHN1U1mE()
+// LINUX: call void @_ZTHN1U1mE()
+// DARWIN: call cxx_fast_tlscc void @_ZTHN1U1mE()
 // CHECK: ret i32* @_ZN1U1mE
 
 // LINUX: attributes [[ATTR]] = { {{.+}} }
