@@ -98,6 +98,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <algorithm>
@@ -449,6 +450,24 @@ protected:
   /// Emit bypass checks to check any memory assumptions we may have made.
   void emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass);
 
+  /// Add additional metadata to \p To that was not present on \p Orig.
+  ///
+  /// Currently this is used to add the noalias annotations based on the
+  /// inserted memchecks.  Use this for instructions that are *cloned* into the
+  /// vector loop.
+  void addNewMetadata(Instruction *To, const Instruction *Orig);
+
+  /// Add metadata from one instruction to another.
+  ///
+  /// This includes both the original MDs from \p From and additional ones (\see
+  /// addNewMetadata).  Use this for *newly created* instructions in the vector
+  /// loop.
+  void addMetadata(Instruction *To, const Instruction *From);
+
+  /// \brief Similar to the previous function but it adds the metadata to a
+  /// vector of instructions.
+  void addMetadata(SmallVectorImpl<Value *> &To, const Instruction *From);
+
   /// This is a helper class that holds the vectorizer state. It maps scalar
   /// instructions to vector instructions. When the code is 'unrolled' then
   /// then a single scalar value is mapped to multiple vector parts. The parts
@@ -505,6 +524,13 @@ protected:
   const TargetLibraryInfo *TLI;
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
+
+  /// \brief LoopVersioning.  It's only set up (non-null) if memchecks were
+  /// used.
+  ///
+  /// This is currently only used to add no-alias metadata based on the
+  /// memchecks.  The actually versioning is performed manually.
+  std::unique_ptr<LoopVersioning> LVer;
 
   /// The vectorization SIMD factor to use. Each vector will have this many
   /// vector elements.
@@ -646,12 +672,25 @@ static void propagateMetadata(Instruction *To, const Instruction *From) {
   }
 }
 
-/// \brief Propagate known metadata from one instruction to a vector of others.
-static void propagateMetadata(SmallVectorImpl<Value *> &To,
-                              const Instruction *From) {
+void InnerLoopVectorizer::addNewMetadata(Instruction *To,
+                                         const Instruction *Orig) {
+  // If the loop was versioned with memchecks, add the corresponding no-alias
+  // metadata.
+  if (LVer && (isa<LoadInst>(Orig) || isa<StoreInst>(Orig)))
+    LVer->annotateInstWithNoAlias(To, Orig);
+}
+
+void InnerLoopVectorizer::addMetadata(Instruction *To,
+                                      const Instruction *From) {
+  propagateMetadata(To, From);
+  addNewMetadata(To, From);
+}
+
+void InnerLoopVectorizer::addMetadata(SmallVectorImpl<Value *> &To,
+                                      const Instruction *From) {
   for (Value *V : To)
     if (Instruction *I = dyn_cast<Instruction>(V))
-      propagateMetadata(I, From);
+      addMetadata(I, From);
 }
 
 /// \brief The group of interleaved loads/stores sharing the same stride and
@@ -2335,7 +2374,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
             Group->isReverse() ? reverseVector(StridedVec) : StridedVec;
       }
 
-      propagateMetadata(NewLoadInstr, Instr);
+      addMetadata(NewLoadInstr, Instr);
     }
     return;
   }
@@ -2374,7 +2413,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
 
     Instruction *NewStoreInstr =
         Builder.CreateAlignedStore(IVec, NewPtrs[Part], Group->getAlignment());
-    propagateMetadata(NewStoreInstr, Instr);
+    addMetadata(NewStoreInstr, Instr);
   }
 }
 
@@ -2553,7 +2592,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
           NewSI = Builder.CreateAlignedStore(StoredVal[Part], VecPtr,
                                              Alignment);
       }
-      propagateMetadata(NewSI, SI);
+      addMetadata(NewSI, SI);
     }
     return;
   }
@@ -2591,7 +2630,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
         NewLI = Builder.CreateAlignedLoad(VecPtr, Alignment, "wide.load");
       Entry[Part] = Reverse ? reverseVector(NewLI) :  NewLI;
     }
-    propagateMetadata(NewLI, LI);
+    addMetadata(NewLI, LI);
   }
 }
 
@@ -2673,6 +2712,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
           Op = Builder.CreateExtractElement(Op, Builder.getInt32(Width));
         Cloned->setOperand(op, Op);
       }
+      addNewMetadata(Cloned, Instr);
 
       // Place the cloned scalar in the new loop.
       Builder.Insert(Cloned);
@@ -2893,6 +2933,12 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L,
                       BranchInst::Create(Bypass, NewBB, MemRuntimeCheck));
   LoopBypassBlocks.push_back(BB);
   AddedSafetyChecks = true;
+
+  // We currently don't use LoopVersioning for the actual loop cloning but we
+  // still use it to add the noalias metadata.
+  LVer = llvm::make_unique<LoopVersioning>(*Legal->getLAI(), OrigLoop, LI, DT,
+                                           PSE.getSE());
+  LVer->prepareNoAliasMetadata();
 }
 
 
@@ -4030,7 +4076,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
         Entry[Part] = V;
       }
 
-      propagateMetadata(Entry, &*it);
+      addMetadata(Entry, &*it);
       break;
     }
     case Instruction::Select: {
@@ -4060,7 +4106,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
           Op1[Part]);
       }
 
-      propagateMetadata(Entry, &*it);
+      addMetadata(Entry, &*it);
       break;
     }
 
@@ -4083,7 +4129,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
         Entry[Part] = C;
       }
 
-      propagateMetadata(Entry, &*it);
+      addMetadata(Entry, &*it);
       break;
     }
 
@@ -4120,7 +4166,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
             CI->getType(), II.getStepValue()->getSExtValue());
         for (unsigned Part = 0; Part < UF; ++Part)
           Entry[Part] = getStepVector(Broadcasted, VF * Part, Step);
-        propagateMetadata(Entry, &*it);
+        addMetadata(Entry, &*it);
         break;
       }
       /// Vectorize casts.
@@ -4130,7 +4176,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
       VectorParts &A = getVectorValue(it->getOperand(0));
       for (unsigned Part = 0; Part < UF; ++Part)
         Entry[Part] = Builder.CreateCast(CI->getOpcode(), A[Part], DestTy);
-      propagateMetadata(Entry, &*it);
+      addMetadata(Entry, &*it);
       break;
     }
 
@@ -4206,7 +4252,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
         Entry[Part] = Builder.CreateCall(VectorF, Args);
       }
 
-      propagateMetadata(Entry, &*it);
+      addMetadata(Entry, &*it);
       break;
     }
 

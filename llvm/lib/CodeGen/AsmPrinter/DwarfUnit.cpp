@@ -1226,10 +1226,12 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   unsigned VK = SP->getVirtuality();
   if (VK) {
     addUInt(SPDie, dwarf::DW_AT_virtuality, dwarf::DW_FORM_data1, VK);
-    DIELoc *Block = getDIELoc();
-    addUInt(*Block, dwarf::DW_FORM_data1, dwarf::DW_OP_constu);
-    addUInt(*Block, dwarf::DW_FORM_udata, SP->getVirtualIndex());
-    addBlock(SPDie, dwarf::DW_AT_vtable_elem_location, Block);
+    if (SP->getVirtualIndex() != -1u) {
+      DIELoc *Block = getDIELoc();
+      addUInt(*Block, dwarf::DW_FORM_data1, dwarf::DW_OP_constu);
+      addUInt(*Block, dwarf::DW_FORM_udata, SP->getVirtualIndex());
+      addBlock(SPDie, dwarf::DW_AT_vtable_elem_location, Block);
+    }
     ContainingTypeMap.insert(
         std::make_pair(&SPDie, resolve(SP->getContainingType())));
   }

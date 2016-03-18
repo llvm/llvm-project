@@ -22,10 +22,10 @@ define void @alloca32() noredzone {
  ; CHECK: i32.const $push[[L0:.+]]=, 0
  ; CHECK: i32.store {{.*}}=, 12([[SP]]), $pop[[L0]]
  store i32 0, i32* %retval
- ; CHECK: i32.const $push[[L5:.+]]=, 16
- ; CHECK-NEXT: i32.add [[SP]]=, [[SP]], $pop[[L5]]
- ; CHECK-NEXT: i32.const $push[[L6:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.store $discard=, 0($pop[[L6]]), [[SP]]
+ ; CHECK: i32.const $push[[L6:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 16
+ ; CHECK-NEXT: i32.add $push[[L7:.+]]=, [[SP]], $pop[[L5]]
+ ; CHECK-NEXT: i32.store $discard=, 0($pop[[L6]]), $pop[[L7]]
  ret void
 }
 
@@ -49,7 +49,7 @@ define void @alloca3264() {
 }
 
 ; CHECK-LABEL: allocarray:
-; CHECK: .local i32, i32{{$}}
+; CHECK: .local i32{{$}}
 define void @allocarray() {
  ; CHECK: i32.const $push[[L1:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.load $push[[L2:.+]]=, 0($pop[[L1]])
@@ -59,10 +59,10 @@ define void @allocarray() {
  ; CHECK-NEXT: i32.store $discard=, 0($pop[[L4]]), [[SP]]
  %r = alloca [33 x i32]
 
+ ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 12
+ ; CHECK-NEXT: i32.add $push[[L7:.+]]=, [[SP]], $pop[[L5]]
  ; CHECK-NEXT: i32.const $push[[L4:.+]]=, 12
- ; CHECK-NEXT: i32.const [[L5:.+]]=, 12
- ; CHECK-NEXT: i32.add [[L5]]=, [[SP]], [[L5]]
- ; CHECK-NEXT: i32.add $push[[L6:.+]]=, [[L5]], $pop[[L4]]
+ ; CHECK-NEXT: i32.add $push[[L6:.+]]=, $pop[[L7]], $pop[[L4]]
  ; CHECK-NEXT: i32.const $push[[L9:.+]]=, 1{{$}}
  ; CHECK-NEXT: i32.store $push[[L10:.+]]=, 12([[SP]]), $pop[[L9]]{{$}}
  ; CHECK-NEXT: i32.store $discard=, 0($pop3), $pop[[L10]]{{$}}
@@ -71,10 +71,10 @@ define void @allocarray() {
  %p2 = getelementptr [33 x i32], [33 x i32]* %r, i32 0, i32 3
  store i32 1, i32* %p2
 
- ; CHECK: i32.const $push[[L11:.+]]=, 144
- ; CHECK-NEXT: i32.add [[SP]]=, [[SP]], $pop[[L11]]
- ; CHECK-NEXT: i32.const $push[[L12:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.store $discard=, 0($pop[[L12]]), [[SP]]
+ ; CHECK: i32.const $push[[L12:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.const $push[[L11:.+]]=, 144
+ ; CHECK-NEXT: i32.add $push[[L13:.+]]=, [[SP]], $pop[[L11]]
+ ; CHECK-NEXT: i32.store $discard=, 0($pop[[L12]]), $pop[[L13]]
  ret void
 }
 
@@ -86,18 +86,18 @@ define void @non_mem_use(i8** %addr) {
  %r = alloca i64
  %r2 = alloca i64
  ; %r is at SP+8
- ; CHECK: i32.const [[OFF:.+]]=, 8
- ; CHECK-NEXT: i32.add [[ARG1:.+]]=, [[SP]], [[OFF]]
- ; CHECK-NEXT: call ext_func@FUNCTION, [[ARG1]]
+ ; CHECK: i32.const $push[[OFF:.+]]=, 8
+ ; CHECK-NEXT: i32.add $push[[ARG1:.+]]=, [[SP]], $pop[[OFF]]
+ ; CHECK-NEXT: call ext_func@FUNCTION, $pop[[ARG1]]
  call void @ext_func(i64* %r)
  ; %r2 is at SP+0, no add needed
  ; CHECK-NEXT: call ext_func@FUNCTION, [[SP]]
  call void @ext_func(i64* %r2)
  ; Use as a value, but in a store
  ; %buf is at SP+16
- ; CHECK: i32.const [[OFF:.+]]=, 16
- ; CHECK-NEXT: i32.add [[VAL:.+]]=, [[SP]], [[OFF]]
- ; CHECK-NEXT: i32.store {{.*}}=, 0($0), [[VAL]]
+ ; CHECK: i32.const $push[[OFF:.+]]=, 16
+ ; CHECK-NEXT: i32.add $push[[VAL:.+]]=, [[SP]], $pop[[OFF]]
+ ; CHECK-NEXT: i32.store {{.*}}=, 0($0), $pop[[VAL]]
  %gep = getelementptr inbounds [27 x i8], [27 x i8]* %buf, i32 0, i32 0
  store i8* %gep, i8** %addr
  ret void
@@ -120,10 +120,10 @@ define void @allocarray_inbounds() {
  %p2 = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 3
  store i32 1, i32* %p2
  call void @ext_func(i64* null);
- ; CHECK: i32.const $push[[L5:.+]]=, 32
- ; CHECK-NEXT: i32.add [[SP]]=, [[SP]], $pop[[L5]]
- ; CHECK-NEXT: i32.const $push[[L6:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.store $discard=, 0($pop[[L6]]), [[SP]]
+ ; CHECK: i32.const $push[[L6:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 32
+ ; CHECK-NEXT: i32.add $push[[L7:.+]]=, [[SP]], $pop[[L5]]
+ ; CHECK-NEXT: i32.store $discard=, 0($pop[[L6]]), $pop[[L7]]
  ret void
 }
 
@@ -143,7 +143,7 @@ define void @dynamic_alloca(i32 %alloc) {
  ; CHECK: call ext_func_i32@FUNCTION
  call void @ext_func_i32(i32* %r)
  ; CHECK: i32.const $push[[L3:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.store [[SP]]=, 0($pop[[L3]]), [[FP]]
+ ; CHECK-NEXT: i32.store $discard=, 0($pop[[L3]]), [[FP]]
  ret void
 }
 
@@ -183,10 +183,10 @@ define void @dynamic_static_alloca(i32 %alloc) noredzone {
  %r1 = alloca i32
  %r = alloca i32, i32 %alloc
  store i32 0, i32* %r
- ; CHECK: i32.const $push[[L5:.+]]=, 16
- ; CHECK-NEXT: i32.add [[SP]]=, [[FP]], $pop[[L5]]
- ; CHECK-NEXT: i32.const $push[[L6:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.store $discard=, 0($pop[[L6]]), [[SP]]
+ ; CHECK: i32.const $push[[L6:.+]]=, __stack_pointer
+ ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 16
+ ; CHECK-NEXT: i32.add $push[[L7:.+]]=, [[FP]], $pop[[L5]]
+ ; CHECK-NEXT: i32.store $discard=, 0($pop[[L6]]), $pop[[L7]]
  ret void
 }
 
@@ -198,9 +198,9 @@ entry:
  ; CHECK: i32.const $push[[L1:.+]]=, 16
  ; CHECK-NEXT: i32.sub [[SP:.+]]=, {{.+}}, $pop[[L1]]
  %addr = alloca i32
- ; CHECK: i32.const [[OFF:.+]]=, 12
- ; CHECK-NEXT: i32.add [[ADDR:.+]]=, [[SP]], [[OFF]]
- ; CHECK-NEXT: copy_local [[COPY:.+]]=, [[ADDR]]
+ ; CHECK: i32.const $push[[OFF:.+]]=, 12
+ ; CHECK-NEXT: i32.add $push[[ADDR:.+]]=, [[SP]], $pop[[OFF]]
+ ; CHECK-NEXT: copy_local [[COPY:.+]]=, $pop[[ADDR]]
  br label %body
 body:
  %a = phi i32* [%addr, %entry], [%b, %body]

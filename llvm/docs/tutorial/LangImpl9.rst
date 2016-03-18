@@ -51,10 +51,7 @@ For example, try adding:
    applications. Adding them is mostly an exercise in learning how the
    LLVM `getelementptr <../LangRef.html#getelementptr-instruction>`_ instruction
    works: it is so nifty/unconventional, it `has its own
-   FAQ <../GetElementPtr.html>`_! If you add support for recursive types
-   (e.g. linked lists), make sure to read the `section in the LLVM
-   Programmer's Manual <../ProgrammersManual.html#TypeResolve>`_ that
-   describes how to construct them.
+   FAQ <../GetElementPtr.html>`_!
 -  **standard runtime** - Our current language allows the user to access
    arbitrary external functions, and we use it for things like "printd"
    and "putchard". As you extend the language to add higher-level
@@ -103,8 +100,8 @@ LLVM's capabilities.
 Properties of the LLVM IR
 =========================
 
-We have a couple common questions about code in the LLVM IR form - lets
-just get these out of the way right now, shall we?
+We have a couple of common questions about code in the LLVM IR form -
+let's just get these out of the way right now, shall we?
 
 Target Independence
 -------------------

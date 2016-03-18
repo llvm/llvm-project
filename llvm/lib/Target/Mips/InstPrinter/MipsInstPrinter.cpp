@@ -195,7 +195,7 @@ void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (Op.isImm()) {
-    O << Op.getImm();
+    O << formatImm(Op.getImm());
     return;
   }
 
@@ -211,7 +211,7 @@ void MipsInstPrinter::printUImm(const MCInst *MI, int opNum, raw_ostream &O) {
     Imm -= Offset;
     Imm &= (1 << Bits) - 1;
     Imm += Offset;
-    O << Imm;
+    O << formatImm(Imm);
     return;
   }
 

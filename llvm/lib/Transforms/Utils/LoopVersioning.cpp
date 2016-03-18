@@ -18,10 +18,17 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
+
+static cl::opt<bool>
+    AnnotateNoAlias("loop-version-annotate-no-alias", cl::init(true),
+                    cl::Hidden,
+                    cl::desc("Add no-alias annotation for instructions that "
+                             "are disambiguated by memchecks"));
 
 LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
                                DominatorTree *DT, ScalarEvolution *SE,
@@ -145,6 +152,91 @@ void LoopVersioning::addPHINodes(
   }
 }
 
+void LoopVersioning::prepareNoAliasMetadata() {
+  // We need to turn the no-alias relation between pointer checking groups into
+  // no-aliasing annotations between instructions.
+  //
+  // We accomplish this by mapping each pointer checking group (a set of
+  // pointers memchecked together) to an alias scope and then also mapping each
+  // group to the list of scopes it can't alias.
+
+  const RuntimePointerChecking *RtPtrChecking = LAI.getRuntimePointerChecking();
+  LLVMContext &Context = VersionedLoop->getHeader()->getContext();
+
+  // First allocate an aliasing scope for each pointer checking group.
+  //
+  // While traversing through the checking groups in the loop, also create a
+  // reverse map from pointers to the pointer checking group they were assigned
+  // to.
+  MDBuilder MDB(Context);
+  MDNode *Domain = MDB.createAnonymousAliasScopeDomain("LVerDomain");
+
+  for (const auto &Group : RtPtrChecking->CheckingGroups) {
+    GroupToScope[&Group] = MDB.createAnonymousAliasScope(Domain);
+
+    for (unsigned PtrIdx : Group.Members)
+      PtrToGroup[RtPtrChecking->getPointerInfo(PtrIdx).PointerValue] = &Group;
+  }
+
+  // Go through the checks and for each pointer group, collect the scopes for
+  // each non-aliasing pointer group.
+  DenseMap<const RuntimePointerChecking::CheckingPtrGroup *,
+           SmallVector<Metadata *, 4>>
+      GroupToNonAliasingScopes;
+
+  for (const auto &Check : AliasChecks)
+    GroupToNonAliasingScopes[Check.first].push_back(GroupToScope[Check.second]);
+
+  // Finally, transform the above to actually map to scope list which is what
+  // the metadata uses.
+
+  for (auto Pair : GroupToNonAliasingScopes)
+    GroupToNonAliasingScopeList[Pair.first] = MDNode::get(Context, Pair.second);
+}
+
+void LoopVersioning::annotateLoopWithNoAlias() {
+  if (!AnnotateNoAlias)
+    return;
+
+  // First prepare the maps.
+  prepareNoAliasMetadata();
+
+  // Add the scope and no-alias metadata to the instructions.
+  for (Instruction *I : LAI.getDepChecker().getMemoryInstructions()) {
+    annotateInstWithNoAlias(I);
+  }
+}
+
+void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
+                                             const Instruction *OrigInst) {
+  if (!AnnotateNoAlias)
+    return;
+
+  LLVMContext &Context = VersionedLoop->getHeader()->getContext();
+  const Value *Ptr = isa<LoadInst>(OrigInst)
+                         ? cast<LoadInst>(OrigInst)->getPointerOperand()
+                         : cast<StoreInst>(OrigInst)->getPointerOperand();
+
+  // Find the group for the pointer and then add the scope metadata.
+  auto Group = PtrToGroup.find(Ptr);
+  if (Group != PtrToGroup.end()) {
+    VersionedInst->setMetadata(
+        LLVMContext::MD_alias_scope,
+        MDNode::concatenate(
+            VersionedInst->getMetadata(LLVMContext::MD_alias_scope),
+            MDNode::get(Context, GroupToScope[Group->second])));
+
+    // Add the no-alias metadata.
+    auto NonAliasingScopeList = GroupToNonAliasingScopeList.find(Group->second);
+    if (NonAliasingScopeList != GroupToNonAliasingScopeList.end())
+      VersionedInst->setMetadata(
+          LLVMContext::MD_noalias,
+          MDNode::concatenate(
+              VersionedInst->getMetadata(LLVMContext::MD_noalias),
+              NonAliasingScopeList->second));
+  }
+}
+
 namespace {
 /// \brief Also expose this is a pass.  Currently this is only used for
 /// unit-testing.  It adds all memchecks necessary to remove all may-aliasing
@@ -180,6 +272,7 @@ public:
           !LAI.PSE.getUnionPredicate().isAlwaysTrue()) {
         LoopVersioning LVer(LAI, L, LI, DT, SE);
         LVer.versionLoop();
+        LVer.annotateLoopWithNoAlias();
         Changed = true;
       }
     }

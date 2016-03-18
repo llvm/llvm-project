@@ -1919,7 +1919,7 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
       EVT LegalVT = getTypeToTransformTo(Context, VT);
       EltVT = LegalVT.getVectorElementType().getSimpleVT();
     }
- 
+
     if (Subtarget.hasVLX() && EltVT.getSizeInBits() >= 32)
       switch(NumElts) {
       case 2: return MVT::v2i1;
@@ -23958,23 +23958,22 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
       unsigned ShuffleSize = ShuffleVT.getVectorNumElements();
       unsigned MaskRatio = ShuffleSize / Mask.size();
 
+      if (Depth == 1 && Root.getOpcode() == X86ISD::BLENDI)
+        return false;
+
       for (unsigned i = 0; i != ShuffleSize; ++i)
         if (Mask[i / MaskRatio] < 0)
           BlendMask |= 1u << i;
 
-      if (Depth != 1 || RootVT != ShuffleVT ||
-          Root.getOpcode() != X86ISD::BLENDI ||
-          Root->getConstantOperandVal(2) != BlendMask) {
-        SDValue Zero = getZeroVector(ShuffleVT, Subtarget, DAG, DL);
-        Res = DAG.getBitcast(ShuffleVT, Input);
-        DCI.AddToWorklist(Res.getNode());
-        Res = DAG.getNode(X86ISD::BLENDI, DL, ShuffleVT, Res, Zero,
-                          DAG.getConstant(BlendMask, DL, MVT::i8));
-        DCI.AddToWorklist(Res.getNode());
-        DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
-                      /*AddTo*/ true);
-        return true;
-      }
+      SDValue Zero = getZeroVector(ShuffleVT, Subtarget, DAG, DL);
+      Res = DAG.getBitcast(ShuffleVT, Input);
+      DCI.AddToWorklist(Res.getNode());
+      Res = DAG.getNode(X86ISD::BLENDI, DL, ShuffleVT, Res, Zero,
+                        DAG.getConstant(BlendMask, DL, MVT::i8));
+      DCI.AddToWorklist(Res.getNode());
+      DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                    /*AddTo*/ true);
+      return true;
     }
   }
 

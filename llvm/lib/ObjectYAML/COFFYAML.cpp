@@ -487,7 +487,7 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
   IO.mapRequired("Characteristics", NC->Characteristics);
   IO.mapOptional("VirtualAddress", Sec.Header.VirtualAddress, 0U);
   IO.mapOptional("VirtualSize", Sec.Header.VirtualSize, 0U);
-  IO.mapOptional("Alignment", Sec.Alignment);
+  IO.mapOptional("Alignment", Sec.Alignment, 0U);
   IO.mapRequired("SectionData", Sec.SectionData);
   IO.mapOptional("Relocations", Sec.Relocations);
 }

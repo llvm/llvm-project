@@ -409,6 +409,8 @@ StatepointBase<FunTy, InstructionTy, ValueTy, CallSiteTy>::getRelocates()
 struct StatepointDirectives {
   Optional<uint32_t> NumPatchBytes;
   Optional<uint64_t> StatepointID;
+
+  static const uint64_t DefaultStatepointID = 0xABCDEF00;
 };
 
 /// Parse out statepoint directives from the function attributes present in \p

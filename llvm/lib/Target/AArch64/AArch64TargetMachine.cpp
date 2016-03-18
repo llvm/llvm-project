@@ -101,6 +101,11 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("aarch64-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
+static cl::opt<bool>
+    EnableLoopDataPrefetch("aarch64-loop-data-prefetch", cl::Hidden,
+                           cl::desc("Enable the loop data prefetch pass"),
+                           cl::init(false));
+
 extern "C" void LLVMInitializeAArch64Target() {
   // Register the target.
   RegisterTargetMachine<AArch64leTargetMachine> X(TheAArch64leTarget);
@@ -235,6 +240,14 @@ void AArch64PassConfig::addIRPasses() {
   // ldrex/strex loops to simplify this, but it needs tidying up.
   if (TM->getOptLevel() != CodeGenOpt::None && EnableAtomicTidy)
     addPass(createCFGSimplificationPass());
+
+  // Run LoopDataPrefetch for Cyclone (the only subtarget that defines a
+  // non-zero getPrefetchDistance).
+  //
+  // Run this before LSR to remove the multiplies involved in computing the
+  // pointer values N iterations ahead.
+  if (TM->getOptLevel() != CodeGenOpt::None && EnableLoopDataPrefetch)
+    addPass(createLoopDataPrefetchPass());
 
   TargetPassConfig::addIRPasses();
 

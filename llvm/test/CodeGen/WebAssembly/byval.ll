@@ -35,15 +35,15 @@ define void @byval_arg(%SmallStruct* %ptr) {
  ; CHECK-NEXT: i32.load $push[[L4:.+]]=, 0($0)
  ; CHECK-NEXT: i32.store {{.*}}=, 12([[SP]]), $pop[[L4]]
  ; Pass a pointer to the stack slot to the function
- ; CHECK-NEXT: i32.const [[L5:.+]]=, 12
- ; CHECK-NEXT: i32.add [[ARG:.+]]=, [[SP]], [[L5]]
- ; CHECK-NEXT: call ext_byval_func@FUNCTION, [[L5]]
+ ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 12
+ ; CHECK-NEXT: i32.add $push[[ARG:.+]]=, [[SP]], $pop[[L5]]
+ ; CHECK-NEXT: call ext_byval_func@FUNCTION, $pop[[ARG]]
  call void @ext_byval_func(%SmallStruct* byval %ptr)
  ; Restore the stack
- ; CHECK-NEXT: i32.const $push[[L6:.+]]=, 16
- ; CHECK-NEXT: i32.add [[SP]]=, [[SP]], $pop[[L6]]
  ; CHECK-NEXT: i32.const $push[[L7:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.store {{.*}}=, 0($pop[[L7]]), [[SP]]
+ ; CHECK-NEXT: i32.const $push[[L6:.+]]=, 16
+ ; CHECK-NEXT: i32.add $push[[L8:.+]]=, [[SP]], $pop[[L6]]
+ ; CHECK-NEXT: i32.store {{.*}}=, 0($pop[[L7]]), $pop[[L8]]
  ; CHECK-NEXT: return
  ret void
 }
@@ -58,9 +58,9 @@ define void @byval_arg_align8(%SmallStruct* %ptr) {
  ; CHECK: i32.load $push[[L4:.+]]=, 0($0):p2align=3
  ; CHECK-NEXT: i32.store {{.*}}=, 8([[SP]]):p2align=3, $pop[[L4]]
  ; Pass a pointer to the stack slot to the function
- ; CHECK-NEXT: i32.const [[L5:.+]]=, 8
- ; CHECK-NEXT: i32.add [[ARG:.+]]=, [[SP]], [[L5]]
- ; CHECK-NEXT: call ext_byval_func_align8@FUNCTION, [[L5]]
+ ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 8
+ ; CHECK-NEXT: i32.add $push[[ARG:.+]]=, [[SP]], $pop[[L5]]
+ ; CHECK-NEXT: call ext_byval_func_align8@FUNCTION, $pop[[ARG]]
  call void @ext_byval_func_align8(%SmallStruct* byval align 8 %ptr)
  ret void
 }

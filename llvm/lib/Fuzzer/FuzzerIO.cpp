@@ -34,25 +34,27 @@ static long GetEpoch(const std::string &Path) {
   return St.st_mtime;
 }
 
-static std::vector<std::string> ListFilesInDir(const std::string &Dir,
-                                               long *Epoch) {
-  std::vector<std::string> V;
-  if (Epoch) {
-    auto E = GetEpoch(Dir);
-    if (E && *Epoch >= E) return V;
-    *Epoch = E;
-  }
+static void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
+                                    std::vector<std::string> *V, bool TopDir) {
+  auto E = GetEpoch(Dir);
+  if (Epoch)
+    if (E && *Epoch >= E) return;
+
   DIR *D = opendir(Dir.c_str());
   if (!D) {
     Printf("No such directory: %s; exiting\n", Dir.c_str());
     exit(1);
   }
   while (auto E = readdir(D)) {
+    std::string Path = DirPlusFile(Dir, E->d_name);
     if (E->d_type == DT_REG || E->d_type == DT_LNK)
-      V.push_back(E->d_name);
+      V->push_back(Path);
+    else if (E->d_type == DT_DIR && *E->d_name != '.')
+      ListFilesInDirRecursive(Path, Epoch, V, false);
   }
   closedir(D);
-  return V;
+  if (Epoch && TopDir)
+    *Epoch = E;
 }
 
 Unit FileToVector(const std::string &Path, size_t MaxSize) {
@@ -94,16 +96,16 @@ void WriteToFile(const Unit &U, const std::string &Path) {
 void ReadDirToVectorOfUnits(const char *Path, std::vector<Unit> *V,
                             long *Epoch, size_t MaxSize) {
   long E = Epoch ? *Epoch : 0;
-  auto Files = ListFilesInDir(Path, Epoch);
+  std::vector<std::string> Files;
+  ListFilesInDirRecursive(Path, Epoch, &Files, /*TopDir*/true);
   size_t NumLoaded = 0;
   for (size_t i = 0; i < Files.size(); i++) {
     auto &X = Files[i];
-    auto FilePath = DirPlusFile(Path, X);
-    if (Epoch && GetEpoch(FilePath) < E) continue;
+    if (Epoch && GetEpoch(X) < E) continue;
     NumLoaded++;
     if ((NumLoaded & (NumLoaded - 1)) == 0 && NumLoaded >= 1024)
       Printf("Loaded %zd/%zd files from %s\n", NumLoaded, Files.size(), Path);
-    V->push_back(FileToVector(FilePath, MaxSize));
+    V->push_back(FileToVector(X, MaxSize));
   }
 }
 

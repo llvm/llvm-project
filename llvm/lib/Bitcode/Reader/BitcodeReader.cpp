@@ -126,7 +126,8 @@ public:
     MetadataPtrs.resize(N);
   }
 
-  Metadata *getValueFwdRef(unsigned Idx);
+  Metadata *getMetadataFwdRef(unsigned Idx);
+  MDNode *getMDNodeFwdRefOrNull(unsigned Idx);
   void assignValue(Metadata *MD, unsigned Idx);
   void tryToResolveCycles();
 };
@@ -295,7 +296,7 @@ private:
     return ValueList.getValueFwdRef(ID, Ty);
   }
   Metadata *getFnMetadataByID(unsigned ID) {
-    return MetadataList.getValueFwdRef(ID);
+    return MetadataList.getMetadataFwdRef(ID);
   }
   BasicBlock *getBasicBlock(unsigned ID) const {
     if (ID >= FunctionBBs.size()) return nullptr; // Invalid ID
@@ -1068,7 +1069,7 @@ void BitcodeReaderMetadataList::assignValue(Metadata *MD, unsigned Idx) {
   --NumFwdRefs;
 }
 
-Metadata *BitcodeReaderMetadataList::getValueFwdRef(unsigned Idx) {
+Metadata *BitcodeReaderMetadataList::getMetadataFwdRef(unsigned Idx) {
   if (Idx >= size())
     resize(Idx + 1);
 
@@ -1089,6 +1090,10 @@ Metadata *BitcodeReaderMetadataList::getValueFwdRef(unsigned Idx) {
   Metadata *MD = MDNode::getTemporary(Context, None).release();
   MetadataPtrs[Idx].reset(MD);
   return MD;
+}
+
+MDNode *BitcodeReaderMetadataList::getMDNodeFwdRefOrNull(unsigned Idx) {
+  return dyn_cast_or_null<MDNode>(getMetadataFwdRef(Idx));
 }
 
 void BitcodeReaderMetadataList::tryToResolveCycles() {
@@ -1911,7 +1916,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
   SmallVector<uint64_t, 64> Record;
 
   auto getMD = [&](unsigned ID) -> Metadata * {
-    return MetadataList.getValueFwdRef(ID);
+    return MetadataList.getMetadataFwdRef(ID);
   };
   auto getMDOrNull = [&](unsigned ID) -> Metadata *{
     if (ID)
@@ -1967,8 +1972,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       unsigned Size = Record.size();
       NamedMDNode *NMD = TheModule->getOrInsertNamedMetadata(Name);
       for (unsigned i = 0; i != Size; ++i) {
-        MDNode *MD =
-            dyn_cast_or_null<MDNode>(MetadataList.getValueFwdRef(Record[i]));
+        MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[i]);
         if (!MD)
           return error("Invalid record");
         NMD->addOperand(MD);
@@ -2015,7 +2019,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
         if (!Ty)
           return error("Invalid record");
         if (Ty->isMetadataTy())
-          Elts.push_back(MetadataList.getValueFwdRef(Record[i + 1]));
+          Elts.push_back(MetadataList.getMetadataFwdRef(Record[i + 1]));
         else if (!Ty->isVoidTy()) {
           auto *MD =
               ValueAsMetadata::get(ValueList.getValueFwdRef(Record[i + 1], Ty));
@@ -2048,7 +2052,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       SmallVector<Metadata *, 8> Elts;
       Elts.reserve(Record.size());
       for (unsigned ID : Record)
-        Elts.push_back(ID ? MetadataList.getValueFwdRef(ID - 1) : nullptr);
+        Elts.push_back(ID ? MetadataList.getMetadataFwdRef(ID - 1) : nullptr);
       MetadataList.assignValue(IsDistinct ? MDNode::getDistinct(Context, Elts)
                                           : MDNode::get(Context, Elts),
                                NextMetadataNo++);
@@ -2060,9 +2064,11 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
 
       unsigned Line = Record[1];
       unsigned Column = Record[2];
-      MDNode *Scope = cast<MDNode>(MetadataList.getValueFwdRef(Record[3]));
+      MDNode *Scope = MetadataList.getMDNodeFwdRefOrNull(Record[3]);
+      if (!Scope)
+        return error("Invalid record");
       Metadata *InlinedAt =
-          Record[4] ? MetadataList.getValueFwdRef(Record[4] - 1) : nullptr;
+          Record[4] ? MetadataList.getMetadataFwdRef(Record[4] - 1) : nullptr;
       MetadataList.assignValue(
           GET_OR_DISTINCT(DILocation, Record[0],
                           (Context, Line, Column, Scope, InlinedAt)),
@@ -2099,8 +2105,9 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       auto *Header = getMDString(Record[3]);
       SmallVector<Metadata *, 8> DwarfOps;
       for (unsigned I = 4, E = Record.size(); I != E; ++I)
-        DwarfOps.push_back(
-            Record[I] ? MetadataList.getValueFwdRef(Record[I] - 1) : nullptr);
+        DwarfOps.push_back(Record[I]
+                               ? MetadataList.getMetadataFwdRef(Record[I] - 1)
+                               : nullptr);
       MetadataList.assignValue(
           GET_OR_DISTINCT(GenericDINode, Record[0],
                           (Context, Tag, Header, DwarfOps)),
@@ -3946,8 +3953,10 @@ std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
           auto K = MDKindMap.find(Record[I]);
           if (K == MDKindMap.end())
             return error("Invalid ID");
-          Metadata *MD = MetadataList.getValueFwdRef(Record[I + 1]);
-          F.setMetadata(K->second, cast<MDNode>(MD));
+          MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[I + 1]);
+          if (!MD)
+            return error("Invalid metadata attachment");
+          F.setMetadata(K->second, MD);
         }
         continue;
       }
@@ -3960,12 +3969,15 @@ std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
           MDKindMap.find(Kind);
         if (I == MDKindMap.end())
           return error("Invalid ID");
-        Metadata *Node = MetadataList.getValueFwdRef(Record[i + 1]);
+        Metadata *Node = MetadataList.getMetadataFwdRef(Record[i + 1]);
         if (isa<LocalAsMetadata>(Node))
           // Drop the attachment.  This used to be legal, but there's no
           // upgrade path.
           break;
-        Inst->setMetadata(I->second, cast<MDNode>(Node));
+        MDNode *MD = dyn_cast_or_null<MDNode>(Node);
+        if (!MD)
+          return error("Invalid metadata attachment");
+        Inst->setMetadata(I->second, MD);
         if (I->second == LLVMContext::MD_tbaa)
           InstsWithTBAATag.push_back(Inst);
       }
@@ -4126,10 +4138,16 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       unsigned ScopeID = Record[2], IAID = Record[3];
 
       MDNode *Scope = nullptr, *IA = nullptr;
-      if (ScopeID)
-        Scope = cast<MDNode>(MetadataList.getValueFwdRef(ScopeID - 1));
-      if (IAID)
-        IA = cast<MDNode>(MetadataList.getValueFwdRef(IAID - 1));
+      if (ScopeID) {
+        Scope = MetadataList.getMDNodeFwdRefOrNull(ScopeID - 1);
+        if (!Scope)
+          return error("Invalid record");
+      }
+      if (IAID) {
+        IA = MetadataList.getMDNodeFwdRefOrNull(IAID - 1);
+        if (!IA)
+          return error("Invalid record");
+      }
       LastLoc = DebugLoc::get(Line, Col, Scope, IA);
       I->setDebugLoc(LastLoc);
       I = nullptr;

@@ -54,7 +54,7 @@ namespace COFFYAML {
 
   struct Section {
     COFF::section Header;
-    unsigned Alignment;
+    unsigned Alignment = 0;
     yaml::BinaryRef SectionData;
     std::vector<Relocation> Relocations;
     StringRef Name;
@@ -63,8 +63,8 @@ namespace COFFYAML {
 
   struct Symbol {
     COFF::symbol Header;
-    COFF::SymbolBaseType SimpleType;
-    COFF::SymbolComplexType ComplexType;
+    COFF::SymbolBaseType SimpleType = COFF::IMAGE_SYM_TYPE_NULL;
+    COFF::SymbolComplexType ComplexType = COFF::IMAGE_SYM_DTYPE_NULL;
     Optional<COFF::AuxiliaryFunctionDefinition> FunctionDefinition;
     Optional<COFF::AuxiliarybfAndefSymbol> bfAndefSymbol;
     Optional<COFF::AuxiliaryWeakExternal> WeakExternal;

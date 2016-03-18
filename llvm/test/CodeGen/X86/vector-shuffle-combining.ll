@@ -2819,6 +2819,50 @@ define <4 x float> @combine_insertps4(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %d
 }
 
+; FIXME: Failed to recognise that the VMOVSD has already zero'd the upper element
+define void @combine_scalar_load_with_blend_with_zero(double* %a0, <4 x float>* %a1) {
+; SSE2-LABEL: combine_scalar_load_with_blend_with_zero:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[3,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
+; SSE2-NEXT:    movaps %xmm0, (%rsi)
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: combine_scalar_load_with_blend_with_zero:
+; SSSE3:       # BB#0:
+; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSSE3-NEXT:    xorps %xmm1, %xmm1
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[3,0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
+; SSSE3-NEXT:    movaps %xmm0, (%rsi)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_scalar_load_with_blend_with_zero:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-NEXT:    xorpd %xmm1, %xmm1
+; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    movapd %xmm1, (%rsi)
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_scalar_load_with_blend_with_zero:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vmovapd %xmm0, (%rsi)
+; AVX-NEXT:    retq
+  %1 = load double, double* %a0, align 8
+  %2 = insertelement <2 x double> undef, double %1, i32 0
+  %3 = insertelement <2 x double> %2, double 0.000000e+00, i32 1
+  %4 = bitcast <2 x double> %3 to <4 x float>
+  %5 = shufflevector <4 x float> %4, <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, <4 x i32> <i32 0, i32 1, i32 4, i32 3>
+  store <4 x float> %5, <4 x float>* %a1, align 16
+  ret void
+}
+
 define <4 x float> @PR22377(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: PR22377:
 ; SSE:       # BB#0: # %entry
