@@ -3716,6 +3716,13 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (IsCalleeWin64 != IsCallerWin64)
     return false;
 
+  // Disable tailcall for CXX_FAST_TLS when callee and caller have different
+  // calling conventions, given that CXX_FAST_TLS has a bigger CSR set.
+  if (!CCMatch &&
+      (CallerCC == CallingConv::CXX_FAST_TLS ||
+       CalleeCC == CallingConv::CXX_FAST_TLS))
+    return false;
+
   if (DAG.getTarget().Options.GuaranteedTailCallOpt) {
     if (canGuaranteeTCO(CalleeCC) && CCMatch)
       return true;

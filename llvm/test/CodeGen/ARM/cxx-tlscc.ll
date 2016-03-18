@@ -101,5 +101,18 @@ define cxx_fast_tlscc %class.C* @tls_test2() #1 {
   call cxx_fast_tlscc void @tls_helper()
   ret %class.C* @tC
 }
+
+; Make sure we do not allow tail call when caller and callee have different
+; calling conventions.
+declare %class.C* @_ZN1CD1Ev(%class.C* readnone returned %this)
+; CHECK-LABEL: tls_test
+; CHECK: bl __tlv_atexit
+define cxx_fast_tlscc void @__tls_test() {
+entry:
+  store i32 0, i32* getelementptr inbounds (%class.C, %class.C* @tC, i64 0, i32 0), align 4
+  %0 = tail call i32 @_tlv_atexit(void (i8*)* bitcast (%class.C* (%class.C*)* @_ZN1CD1Ev to void (i8*)*), i8* bitcast (%class.C* @tC to i8*), i8* nonnull @__dso_handle) #1
+  ret void
+}
+
 attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
 attributes #1 = { nounwind }

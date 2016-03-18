@@ -2773,6 +2773,13 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   CallingConv::ID CallerCC = CallerF->getCallingConv();
   bool CCMatch = CallerCC == CalleeCC;
 
+  // Disable tailcall for CXX_FAST_TLS when callee and caller have different
+  // calling conventions, given that CXX_FAST_TLS has a bigger CSR set.
+  if (!CCMatch &&
+      (CallerCC == CallingConv::CXX_FAST_TLS ||
+       CalleeCC == CallingConv::CXX_FAST_TLS))
+    return false;
+
   // Byval parameters hand the function a pointer directly into the stack area
   // we want to reuse during a tail call. Working around this *is* possible (see
   // X86) but less efficient and uglier in LowerCall.
