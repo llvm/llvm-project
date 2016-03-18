@@ -422,6 +422,25 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
       if (SI->getNumCases() + 1 >= (unsigned)TLI->getMinimumJumpTableEntries())
         return true;
     }
+
+    if (TM->getSubtargetImpl(*BB->getParent())->getTargetLowering()->useSoftFloat()) {
+      switch(J->getOpcode()) {
+      case Instruction::FAdd:
+      case Instruction::FSub:
+      case Instruction::FMul:
+      case Instruction::FDiv:
+      case Instruction::FRem:
+      case Instruction::FPTrunc:
+      case Instruction::FPExt:
+      case Instruction::FPToUI:
+      case Instruction::FPToSI:
+      case Instruction::UIToFP:
+      case Instruction::SIToFP:
+      case Instruction::FCmp:
+        return true;
+      }
+    }
+
     for (Value *Operand : J->operands())
       if (memAddrUsesCTR(TM, Operand))
         return true;

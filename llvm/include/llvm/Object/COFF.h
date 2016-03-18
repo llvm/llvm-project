@@ -414,6 +414,18 @@ struct coff_section {
     return (Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL) &&
            NumberOfRelocations == UINT16_MAX;
   }
+  uint32_t getAlignment() const {
+    // The IMAGE_SCN_TYPE_NO_PAD bit is a legacy way of getting to
+    // IMAGE_SCN_ALIGN_1BYTES.
+    if (Characteristics & COFF::IMAGE_SCN_TYPE_NO_PAD)
+      return 1;
+
+    // Bit [20:24] contains section alignment. Both 0 and 1 mean alignment 1.
+    uint32_t Shift = (Characteristics >> 20) & 0xF;
+    if (Shift > 0)
+      return 1U << (Shift - 1);
+    return 1;
+  }
 };
 
 struct coff_relocation {
@@ -494,8 +506,11 @@ struct coff_tls_directory {
   support::ulittle32_t SizeOfZeroFill;
   support::ulittle32_t Characteristics;
   uint32_t getAlignment() const {
-    uint32_t AlignBit = (Characteristics & 0x00F00000) >> 20;
-    return AlignBit ? 1 << (AlignBit - 1) : 0;
+    // Bit [20:24] contains section alignment.
+    uint32_t Shift = (Characteristics & 0x00F00000) >> 20;
+    if (Shift > 0)
+      return 1U << (Shift - 1);
+    return 0;
   }
 };
 

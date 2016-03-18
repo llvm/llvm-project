@@ -1318,7 +1318,7 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
   IRBuilder<> Builder(InsertBefore);
 
   ArrayRef<Value *> GCArgs(LiveVariables);
-  uint64_t StatepointID = 0xABCDEF00;
+  uint64_t StatepointID = StatepointDirectives::DefaultStatepointID;
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
 

@@ -73,6 +73,10 @@ namespace {
     bool runOnFunction(Function &F) override;
     bool runOnLoop(Loop *L);
 
+    /// \brief Check if the the stride of the accesses is large enough to
+    /// warrant a prefetch.
+    bool isStrideLargeEnough(const SCEVAddRecExpr *AR);
+
   private:
     AssumptionCache *AC;
     LoopInfo *LI;
@@ -93,6 +97,22 @@ INITIALIZE_PASS_END(LoopDataPrefetch, "loop-data-prefetch",
                     "Loop Data Prefetch", false, false)
 
 FunctionPass *llvm::createLoopDataPrefetchPass() { return new LoopDataPrefetch(); }
+
+bool LoopDataPrefetch::isStrideLargeEnough(const SCEVAddRecExpr *AR) {
+  unsigned TargetMinStride = TTI->getMinPrefetchStride();
+  // No need to check if any stride goes.
+  if (TargetMinStride <= 1)
+    return true;
+
+  const auto *ConstStride = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
+  // If MinStride is set, don't prefetch unless we can ensure that stride is
+  // larger.
+  if (!ConstStride)
+    return false;
+
+  unsigned AbsStride = std::abs(ConstStride->getAPInt().getSExtValue());
+  return TargetMinStride <= AbsStride;
+}
 
 bool LoopDataPrefetch::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -151,6 +171,9 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (!ItersAhead)
     ItersAhead = 1;
 
+  if (ItersAhead > TTI->getMaxPrefetchIterationsAhead())
+    return MadeChange;
+
   DEBUG(dbgs() << "Prefetching " << ItersAhead
                << " iterations ahead (loop size: " << LoopSize << ") in "
                << L->getHeader()->getParent()->getName() << ": " << *L);
@@ -182,6 +205,11 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       const SCEV *LSCEV = SE->getSCEV(PtrValue);
       const SCEVAddRecExpr *LSCEVAddRec = dyn_cast<SCEVAddRecExpr>(LSCEV);
       if (!LSCEVAddRec)
+        continue;
+
+      // Check if the the stride of the accesses is large enough to warrant a
+      // prefetch.
+      if (!isStrideLargeEnough(LSCEVAddRec))
         continue;
 
       // We don't want to double prefetch individual cache lines. If this load

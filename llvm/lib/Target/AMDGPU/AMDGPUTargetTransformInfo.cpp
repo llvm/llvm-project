@@ -186,6 +186,13 @@ bool AMDGPUTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
     return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS;
 
+  // Atomics are divergent because they are executed sequentially: when an
+  // atomic operation refers to the same address in each thread, then each
+  // thread after the first sees the value written by the previous thread as
+  // original value.
+  if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V))
+    return true;
+
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
     const TargetMachine &TM = getTLI()->getTargetMachine();
     return isIntrinsicSourceOfDivergence(TM.getIntrinsicInfo(), Intrinsic);

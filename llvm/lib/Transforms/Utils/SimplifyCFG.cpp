@@ -1935,10 +1935,9 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     Value *TrueVal  = PN->getIncomingValue(PN->getIncomingBlock(0) == IfFalse);
     Value *FalseVal = PN->getIncomingValue(PN->getIncomingBlock(0) == IfTrue);
 
-    MDNode *MDN = InsertPt->getMetadata(LLVMContext::MD_prof);
-    Value *Select = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", MDN);
-    PN->replaceAllUsesWith(Select);
-    Select->takeName(PN);
+    Value *Sel = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", InsertPt);
+    PN->replaceAllUsesWith(Sel);
+    Sel->takeName(PN);
     PN->eraseFromParent();
   }
 

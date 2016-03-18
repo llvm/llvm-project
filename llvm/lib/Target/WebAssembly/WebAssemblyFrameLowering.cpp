@@ -78,19 +78,20 @@ bool WebAssemblyFrameLowering::needsSPWriteback(
 
 static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,
                             MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator &InsertPt,
+                            MachineBasicBlock::iterator &InsertAddr,
+                            MachineBasicBlock::iterator &InsertStore,
                             DebugLoc DL) {
   auto *SPSymbol = MF.createExternalSymbolName("__stack_pointer");
   unsigned SPAddr =
       MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
-  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), SPAddr)
+  BuildMI(MBB, InsertAddr, DL, TII->get(WebAssembly::CONST_I32), SPAddr)
       .addExternalSymbol(SPSymbol);
   auto *MMO = new MachineMemOperand(MachinePointerInfo(),
                                     MachineMemOperand::MOStore, 4, 4);
-  BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::STORE_I32),
-          WebAssembly::SP32)
+  BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::STORE_I32),
+          SrcReg)
       .addImm(0)
       .addReg(SPAddr)
       .addImm(2)  // p2align
@@ -108,7 +109,7 @@ void WebAssemblyFrameLowering::eliminateCallFramePseudoInstr(
   if (I->getOpcode() == TII->getCallFrameDestroyOpcode() &&
       needsSPWriteback(MF, *MF.getFrameInfo())) {
     DebugLoc DL = I->getDebugLoc();
-    writeSPToMemory(WebAssembly::SP32, MF, MBB, I, DL);
+    writeSPToMemory(WebAssembly::SP32, MF, MBB, I, I, DL);
   }
   MBB.erase(I);
 }
@@ -171,7 +172,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(WebAssembly::SP32);
   }
   if (StackSize && needsSPWriteback(MF, *MFI)) {
-    writeSPToMemory(WebAssembly::SP32, MF, MBB, InsertPt, DL);
+    writeSPToMemory(WebAssembly::SP32, MF, MBB, InsertPt, InsertPt, DL);
   }
 }
 
@@ -192,18 +193,24 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Restore the stack pointer. If we had fixed-size locals, add the offset
   // subtracted in the prolog.
+  unsigned SPReg = 0;
+  MachineBasicBlock::iterator InsertAddr = InsertPt;
   if (StackSize) {
     unsigned OffsetReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), OffsetReg)
-        .addImm(StackSize);
-    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::ADD_I32),
-            WebAssembly::SP32)
+    InsertAddr =
+        BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), OffsetReg)
+            .addImm(StackSize);
+    // In the epilog we don't need to write the result back to the SP32 physreg
+    // because it won't be used again. We can use a stackified register instead.
+    SPReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+    BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::ADD_I32), SPReg)
         .addReg(hasFP(MF) ? WebAssembly::FP32 : WebAssembly::SP32)
         .addReg(OffsetReg);
     WFI->stackifyVReg(OffsetReg);
+    WFI->stackifyVReg(SPReg);
+  } else {
+    SPReg = hasFP(MF) ? WebAssembly::FP32 : WebAssembly::SP32;
   }
 
-  writeSPToMemory(
-      (!StackSize && hasFP(MF)) ? WebAssembly::FP32 : WebAssembly::SP32, MF,
-      MBB, InsertPt, DL);
+  writeSPToMemory(SPReg, MF, MBB, InsertAddr, InsertPt, DL);
 }

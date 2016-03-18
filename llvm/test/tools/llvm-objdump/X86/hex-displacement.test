@@ -1,0 +1,6 @@
+# Check that target displacement has '0x' prefix
+# to accent hex format of the number.
+
+# RUN: llvm-objdump -d %p/Inputs/hello.exe.macho-i386 | FileCheck %s
+
+# CHECK: 1f47:   e8 00 00 00 00  calll   0 <_main+0xC>
