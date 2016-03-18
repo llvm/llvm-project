@@ -133,6 +133,8 @@ public:
   unsigned getPrefetchDistance();
 
   unsigned getMinPrefetchStride();
+
+  unsigned getMaxPrefetchIterationsAhead();
   /// @}
 };
 

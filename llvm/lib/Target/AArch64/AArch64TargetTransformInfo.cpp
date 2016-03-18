@@ -31,6 +31,13 @@ static cl::opt<unsigned> CycloneMinPrefetchStride(
     cl::desc("Min stride to add prefetches for Cyclone"),
     cl::init(2048), cl::Hidden);
 
+// Be conservative for now and don't prefetch ahead too much since the loop
+// may terminate early.
+static cl::opt<unsigned> CycloneMaxPrefetchIterationsAhead(
+    "cyclone-max-prefetch-iters-ahead",
+    cl::desc("Max number of iterations to prefetch ahead on Cyclone"),
+    cl::init(3), cl::Hidden);
+
 /// \brief Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
@@ -599,4 +606,10 @@ unsigned AArch64TTIImpl::getMinPrefetchStride() {
   if (ST->isCyclone())
     return CycloneMinPrefetchStride;
   return BaseT::getMinPrefetchStride();
+}
+
+unsigned AArch64TTIImpl::getMaxPrefetchIterationsAhead() {
+  if (ST->isCyclone())
+    return CycloneMaxPrefetchIterationsAhead;
+  return BaseT::getMaxPrefetchIterationsAhead();
 }
