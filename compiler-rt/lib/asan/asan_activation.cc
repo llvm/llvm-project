@@ -61,7 +61,7 @@ static struct AsanDeactivatedFlags {
       parser.ParseString(env);
     }
 
-    SetVerbosity(cf.verbosity);
+    InitializeCommonFlags(&cf);
 
     if (Verbosity()) ReportUnrecognizedFlags();
 

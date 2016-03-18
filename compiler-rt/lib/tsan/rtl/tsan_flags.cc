@@ -108,7 +108,7 @@ void InitializeFlags(Flags *f, const char *env) {
     f->report_signal_unsafe = false;
   }
 
-  SetVerbosity(common_flags()->verbosity);
+  InitializeCommonFlags();
 
   if (Verbosity()) ReportUnrecognizedFlags();
 
