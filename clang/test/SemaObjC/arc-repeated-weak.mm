@@ -439,3 +439,15 @@ void doubleLevelAccessIvar(Test *a, Test *b) {
 }
 @end
 
+// This used to crash in WeakObjectProfileTy::getBaseInfo when getBase() was
+// called on an ObjCPropertyRefExpr object whose receiver was an interface.
+
+@class NSString;
+@interface NSBundle
++(NSBundle *)foo;
+@property NSString *prop;
+@end
+
+void foo() {
+  NSString * t = NSBundle.foo.prop;
+}
