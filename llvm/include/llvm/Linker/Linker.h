@@ -51,10 +51,6 @@ public:
                     DenseSet<const GlobalValue *> *FunctionsToImport = nullptr,
                     DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr);
 
-  /// This exists to implement the deprecated LLVMLinkModules C api. Don't use
-  /// for anything else.
-  bool linkInModuleForCAPI(Module &Src);
-
   static bool linkModules(Module &Dest, std::unique_ptr<Module> Src,
                           unsigned Flags = Flags::None);
 

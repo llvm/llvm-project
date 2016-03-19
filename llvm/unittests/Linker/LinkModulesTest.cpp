@@ -202,30 +202,6 @@ TEST_F(LinkModuleTest, TypeMerge) {
             M1->getNamedGlobal("t2")->getType());
 }
 
-TEST_F(LinkModuleTest, CAPISuccess) {
-  std::unique_ptr<Module> DestM(getExternal(Ctx, "foo"));
-  std::unique_ptr<Module> SourceM(getExternal(Ctx, "bar"));
-  char *errout = nullptr;
-  LLVMBool result = LLVMLinkModules(wrap(DestM.get()), wrap(SourceM.get()),
-                                    LLVMLinkerDestroySource, &errout);
-  EXPECT_EQ(0, result);
-  EXPECT_EQ(nullptr, errout);
-  // "bar" is present in destination module
-  EXPECT_NE(nullptr, DestM->getFunction("bar"));
-}
-
-TEST_F(LinkModuleTest, CAPIFailure) {
-  // Symbol clash between two modules
-  std::unique_ptr<Module> DestM(getExternal(Ctx, "foo"));
-  std::unique_ptr<Module> SourceM(getExternal(Ctx, "foo"));
-  char *errout = nullptr;
-  LLVMBool result = LLVMLinkModules(wrap(DestM.get()), wrap(SourceM.get()),
-                                    LLVMLinkerDestroySource, &errout);
-  EXPECT_EQ(1, result);
-  EXPECT_STREQ("Linking globals named 'foo': symbol multiply defined!", errout);
-  LLVMDisposeMessage(errout);
-}
-
 TEST_F(LinkModuleTest, NewCAPISuccess) {
   std::unique_ptr<Module> DestM(getExternal(Ctx, "foo"));
   std::unique_ptr<Module> SourceM(getExternal(Ctx, "bar"));
