@@ -1,4 +1,4 @@
-// RUN: %clang -target armv7l-unknown-linux-gnueabihf -S %s -o - -emit-llvm -O1 -disable-llvm-optzns | FileCheck %s
+// RUN: %clang_cc1 -triple armv7-unknown-linux-gnueabihf %s -o - -emit-llvm -O1 | FileCheck %s
 
 // Stack should be reused when possible, no need to allocate two separate slots
 // if they have disjoint lifetime.
@@ -21,7 +21,7 @@ struct Combiner {
   S_large a, b;
 
   Combiner(S_large);
-  Combiner f();  
+  Combiner f();
 };
 
 extern S_small foo_small();

@@ -43,6 +43,7 @@ CODEGENOPT(DataSections      , 1, 0) ///< Set when -fdata-sections is enabled.
 CODEGENOPT(UniqueSectionNames, 1, 1) ///< Set for -funique-section-names.
 CODEGENOPT(DisableFPElim     , 1, 0) ///< Set when -fomit-frame-pointer is enabled.
 CODEGENOPT(DisableFree       , 1, 0) ///< Don't free memory.
+CODEGENOPT(DiscardValueNames , 1, 0) ///< Discard Value Names from the IR (LLVMContext flag)
 CODEGENOPT(DisableGCov       , 1, 0) ///< Don't run the GCov pass, for testing.
 CODEGENOPT(DisableLLVMOpts   , 1, 0) ///< Don't run any optimizations, for use in
                                      ///< getting .bc files that correspond to the

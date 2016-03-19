@@ -493,6 +493,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DisableFPElim =
       (Args.hasArg(OPT_mdisable_fp_elim) || Args.hasArg(OPT_pg));
   Opts.DisableFree = Args.hasArg(OPT_disable_free);
+  Opts.DiscardValueNames = Args.hasArg(OPT_discard_value_names);
   Opts.DisableTailCalls = Args.hasArg(OPT_mdisable_tail_calls);
   Opts.FloatABI = Args.getLastArgValue(OPT_mfloat_abi);
   if (Arg *A = Args.getLastArg(OPT_meabi)) {
