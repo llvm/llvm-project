@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Linker
   Object
   Support
+  TransformUtils
   )
 
 add_llvm_tool(llvm-link
