@@ -365,6 +365,10 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            ExtraData == RHS->getRawExtraData();
   }
   unsigned getHashValue() const {
+    // Intentionally computes the hash on a subset of the operands for
+    // performance reason. The subset has to be significant enough to avoid
+    // collision "most of the time". There is no correctness issue in case of
+    // collision because of the full check above.
     return hash_combine(Tag, Name, File, Line, Scope, BaseType, Flags);
   }
 };
@@ -421,6 +425,10 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
            Identifier == RHS->getRawIdentifier();
   }
   unsigned getHashValue() const {
+    // Intentionally computes the hash on a subset of the operands for
+    // performance reason. The subset has to be significant enough to avoid
+    // collision "most of the time". There is no correctness issue in case of
+    // collision because of the full check above.
     return hash_combine(Name, File, Line, BaseType, Scope, Elements,
                         TemplateParams);
   }
@@ -517,6 +525,10 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            Variables == RHS->getRawVariables();
   }
   unsigned getHashValue() const {
+    // Intentionally computes the hash on a subset of the operands for
+    // performance reason. The subset has to be significant enough to avoid
+    // collision "most of the time". There is no correctness issue in case of
+    // collision because of the full check above.
     return hash_combine(Name, Scope, File, Type, Line);
   }
 };
