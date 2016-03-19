@@ -440,7 +440,7 @@ void lto_codegen_set_should_embed_uselists(lto_code_gen_t cg,
 
 // ThinLTO API below
 
-thinlto_code_gen_t thinlto_create_codegen() {
+thinlto_code_gen_t thinlto_create_codegen(void) {
   lto_initialize();
   ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator();
   CodeGen->setTargetOptions(InitTargetOptionsFromCodeGenFlags());
