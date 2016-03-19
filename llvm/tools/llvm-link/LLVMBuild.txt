@@ -19,4 +19,4 @@
 type = Tool
 name = llvm-link
 parent = Tools
-required_libraries = AsmParser BitReader BitWriter IRReader Linker Object
+required_libraries = AsmParser BitReader BitWriter IRReader Linker Object TransformUtils
