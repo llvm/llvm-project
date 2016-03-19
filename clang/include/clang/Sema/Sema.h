@@ -2510,6 +2510,10 @@ public:
                                      bool *pHadMultipleCandidates = nullptr);
 
   FunctionDecl *
+  resolveAddressOfOnlyViableOverloadCandidate(Expr *E,
+                                              DeclAccessPair &FoundResult);
+
+  FunctionDecl *
   ResolveSingleFunctionTemplateSpecialization(OverloadExpr *ovl,
                                               bool Complain = false,
                                               DeclAccessPair *Found = nullptr);
