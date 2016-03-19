@@ -877,6 +877,17 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                                                   unsigned int current_id)
 {
     assert (m_ast_context);
+    
+    std::function<void (clang::FunctionDecl *)> MaybeRegisterFunctionBody =
+    [this](clang::FunctionDecl *copied_function_decl)
+    {
+        if (copied_function_decl->getBody() && m_parser_vars->m_code_gen)
+        {
+            DeclGroupRef decl_group_ref(copied_function_decl);
+            m_parser_vars->m_code_gen->HandleTopLevelDecl(decl_group_ref);
+        }
+    };
+
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
@@ -902,6 +913,52 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
     SymbolContext sym_ctx;
     if (frame != nullptr)
         sym_ctx = frame->GetSymbolContext(lldb::eSymbolContextFunction|lldb::eSymbolContextBlock);
+    
+    // Try the persistent decls, which take precedence over all else.
+    if (!namespace_decl)
+    {
+        do
+        {
+            if (!target)
+                break;
+            
+            ClangASTContext *scratch_clang_ast_context = target->GetScratchClangASTContext();
+            
+            if (!scratch_clang_ast_context)
+                break;
+            
+            ASTContext *scratch_ast_context = scratch_clang_ast_context->getASTContext();
+            
+            if (!scratch_ast_context)
+                break;
+            
+            NamedDecl *persistent_decl = m_parser_vars->m_persistent_vars->GetPersistentDecl(name);
+            
+            if (!persistent_decl)
+                break;
+            
+            Decl *parser_persistent_decl = m_ast_importer_sp->CopyDecl(m_ast_context, scratch_ast_context, persistent_decl);
+            
+            if (!parser_persistent_decl)
+                break;
+            
+            NamedDecl *parser_named_decl = dyn_cast<NamedDecl>(parser_persistent_decl);
+            
+            if (!parser_named_decl)
+                break;
+            
+            if (clang::FunctionDecl *parser_function_decl = llvm::dyn_cast<clang::FunctionDecl>(parser_named_decl))
+            {
+                MaybeRegisterFunctionBody(parser_function_decl);
+            }
+            
+            if (log)
+                log->Printf("  CEDM::FEVD[%u] Found persistent decl %s", current_id, name.GetCString());
+            
+            context.AddNamedDecl(parser_named_decl);
+        } while (0);
+    }
+    
     if (name_unique_cstr[0] == '$' && !namespace_decl)
     {
         static ConstString g_lldb_class_name ("$__lldb_class");
@@ -1152,42 +1209,6 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
         // any other $__lldb names should be weeded out now
         if (!::strncmp(name_unique_cstr, "$__lldb", sizeof("$__lldb") - 1))
             return;
-
-        do
-        {
-            if (!target)
-                break;
-
-            ClangASTContext *scratch_clang_ast_context = target->GetScratchClangASTContext();
-
-            if (!scratch_clang_ast_context)
-                break;
-
-            ASTContext *scratch_ast_context = scratch_clang_ast_context->getASTContext();
-
-            if (!scratch_ast_context)
-                break;
-
-            TypeDecl *ptype_type_decl = m_parser_vars->m_persistent_vars->GetPersistentType(name);
-
-            if (!ptype_type_decl)
-                break;
-
-            Decl *parser_ptype_decl = m_ast_importer_sp->CopyDecl(m_ast_context, scratch_ast_context, ptype_type_decl);
-
-            if (!parser_ptype_decl)
-                break;
-
-            TypeDecl *parser_ptype_type_decl = dyn_cast<TypeDecl>(parser_ptype_decl);
-
-            if (!parser_ptype_type_decl)
-                break;
-
-            if (log)
-                log->Printf("  CEDM::FEVD[%u] Found persistent type %s", current_id, name.GetCString());
-
-            context.AddNamedDecl(parser_ptype_type_decl);
-        } while (0);
 
         ExpressionVariableSP pvar_sp(m_parser_vars->m_persistent_vars->GetVariable(name));
 
@@ -1544,11 +1565,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                                 break;
                             }
                             
-                            if (copied_function_decl->getBody() && m_parser_vars->m_code_gen)
-                            {
-                                DeclGroupRef decl_group_ref(copied_function_decl);
-                                m_parser_vars->m_code_gen->HandleTopLevelDecl(decl_group_ref);
-                            }
+                            MaybeRegisterFunctionBody(copied_function_decl);
                             
                             context.AddNamedDecl(copied_function_decl);
                             

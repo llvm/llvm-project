@@ -74,11 +74,11 @@ public:
     LookupSymbol (const ConstString &name) override { return LLDB_INVALID_ADDRESS; }
 
     void
-    RegisterPersistentType (const ConstString &name,
-                            clang::TypeDecl *tag_decl);
+    RegisterPersistentDecl (const ConstString &name,
+                            clang::NamedDecl *decl);
     
-    clang::TypeDecl *
-    GetPersistentType (const ConstString &name);
+    clang::NamedDecl *
+    GetPersistentDecl (const ConstString &name);
     
     void
     AddHandLoadedClangModule(ClangModulesDeclVendor::ModuleID module)
@@ -94,8 +94,8 @@ public:
 private:
     uint32_t                                                m_next_persistent_variable_id;  ///< The counter used by GetNextResultName().
     
-    typedef llvm::DenseMap<const char *, clang::TypeDecl *> PersistentTypeMap;
-    PersistentTypeMap                                       m_persistent_types;             ///< The persistent types declared by the user.
+    typedef llvm::DenseMap<const char *, clang::NamedDecl *>    PersistentDeclMap;
+    PersistentDeclMap                                           m_persistent_decls;         ///< Persistent entities declared by the user.
     
     ClangModulesDeclVendor::ModuleVector                    m_hand_loaded_clang_modules;    ///< These are Clang modules we hand-loaded; these are the highest-
                                                                                             ///< priority source for macros.

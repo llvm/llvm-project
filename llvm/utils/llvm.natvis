@@ -46,9 +46,9 @@ or create a symbolic link so it updates automatically.
   </Type>
 
   <Type Name="llvm::PointerIntPair&lt;*,*,*,*&gt;">
-    <DisplayString>{(void*)(Value &amp; PointerBitMask)} [{($T3)((Value &gt;&gt; IntShift) &amp; IntMask)}]</DisplayString>
+    <DisplayString>{IntMask}: {($T1)(Value &amp; PointerBitMask)} [{($T3)((Value &gt;&gt; IntShift) &amp; IntMask)}]</DisplayString>
     <Expand>
-      <Item Name="[ptr]">($T1*)(Value &amp; PointerBitMask)</Item>
+      <Item Name="[ptr]">($T1)(Value &amp; PointerBitMask)</Item>
       <Item Name="[int]">($T3)((Value &gt;&gt; IntShift) &amp; IntMask)</Item>
     </Expand>
   </Type>

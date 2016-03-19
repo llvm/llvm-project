@@ -62,30 +62,31 @@ class GoPersistentExpressionState : public PersistentExpressionState
 class GoUserExpression : public UserExpression
 {
   public:
-    GoUserExpression(ExecutionContextScope &exe_scope, const char *expr, const char *expr_prefix,
-                     lldb::LanguageType language, ResultType desired_type, const EvaluateExpressionOptions &options);
+      GoUserExpression(ExecutionContextScope &exe_scope, const char *expr, const char *expr_prefix,
+                       lldb::LanguageType language, ResultType desired_type, const EvaluateExpressionOptions &options);
 
-    bool
-    Parse(Stream &error_stream, ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
-          bool keep_result_in_memory, bool generate_debug_info) override;
+      bool
+      Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+            lldb_private::ExecutionPolicy execution_policy, bool keep_result_in_memory,
+            bool generate_debug_info) override;
 
-    lldb::ExpressionResults
-    Execute(Stream &error_stream, ExecutionContext &exe_ctx,
-            const EvaluateExpressionOptions &options,
-            lldb::UserExpressionSP &shared_ptr_to_me,
-            lldb::ExpressionVariableSP &result) override;
+      lldb::ExpressionResults
+      Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+              const EvaluateExpressionOptions &options, lldb::UserExpressionSP &shared_ptr_to_me,
+              lldb::ExpressionVariableSP &result) override;
 
-    bool
-    CanInterpret() override
-    {
-        return true;
-    }
-    bool
-    FinalizeJITExecution(Stream &error_stream, ExecutionContext &exe_ctx, lldb::ExpressionVariableSP &result,
-                         lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS,
-                         lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS) override
-    {
-        return true;
+      bool
+      CanInterpret() override
+      {
+          return true;
+      }
+      bool
+      FinalizeJITExecution(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                           lldb::ExpressionVariableSP &result,
+                           lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS,
+                           lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS) override
+      {
+          return true;
     }
 
   private:

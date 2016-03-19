@@ -137,17 +137,17 @@ public:
     //------------------------------------------------------------------
     /// Compile the wrapper function
     ///
-    /// @param[in] errors
-    ///     The stream to print parser errors to.
+    /// @param[in] diagnostic_manager
+    ///     The diagnostic manager to report parser errors to.
     ///
     /// @return
     ///     The number of errors.
     //------------------------------------------------------------------
     unsigned
-    CompileFunction (Stream &errors) override;
-    
+    CompileFunction(DiagnosticManager &diagnostic_manager) override;
+
     ExpressionTypeSystemHelper *
-    GetTypeSystemHelper () override
+    GetTypeSystemHelper() override
     {
         return &m_type_system_helper;
     }

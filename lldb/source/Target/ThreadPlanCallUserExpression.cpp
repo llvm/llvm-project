@@ -19,8 +19,9 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Stream.h"
-#include "lldb/Expression/UserExpression.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRDynamicChecks.h"
+#include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -90,15 +91,16 @@ ThreadPlanCallUserExpression::MischiefManaged ()
 
             function_stack_bottom = function_stack_pointer - HostInfo::GetPageSize();
             function_stack_top = function_stack_pointer;
-            
-            StreamString  error_stream;
-            
+
+            DiagnosticManager diagnostics;
+
             ExecutionContext exe_ctx(GetThread());
 
-            m_user_expression_sp->FinalizeJITExecution(error_stream, exe_ctx, m_result_var_sp, function_stack_bottom, function_stack_top);
+            m_user_expression_sp->FinalizeJITExecution(diagnostics, exe_ctx, m_result_var_sp, function_stack_bottom,
+                                                       function_stack_top);
         }
-        
-        ThreadPlan::MischiefManaged ();
+
+        ThreadPlan::MischiefManaged();
         return true;
     }
     else

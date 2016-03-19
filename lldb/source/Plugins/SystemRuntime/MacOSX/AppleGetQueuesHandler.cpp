@@ -18,6 +18,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -146,12 +147,12 @@ AppleGetQueuesHandler::Detach ()
 lldb::addr_t
 AppleGetQueuesHandler::SetupGetQueuesFunction (Thread &thread, ValueList &get_queues_arglist)
 {
-    ExecutionContext exe_ctx (thread.shared_from_this());
+    ExecutionContext exe_ctx(thread.shared_from_this());
     Address impl_code_address;
-    StreamString errors;
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_SYSTEM_RUNTIME));
+    DiagnosticManager diagnostics;
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
     lldb::addr_t args_addr = LLDB_INVALID_ADDRESS;
-    
+
     FunctionCaller *get_queues_caller = nullptr;
 
     // Scope for mutex locker:
@@ -175,11 +176,14 @@ AppleGetQueuesHandler::SetupGetQueuesFunction (Thread &thread, ValueList &get_qu
                         log->Printf ("Failed to get UtilityFunction for queues introspection: %s.", error.AsCString());
                     return args_addr;
                 }
-                
-                if (!m_get_queues_impl_code_up->Install(errors, exe_ctx))
+
+                if (!m_get_queues_impl_code_up->Install(diagnostics, exe_ctx))
                 {
                     if (log)
-                        log->Printf ("Failed to install queues introspection: %s.", errors.GetData());
+                    {
+                        log->Printf("Failed to install queues introspection");
+                        diagnostics.Dump(log);
+                    }
                     m_get_queues_impl_code_up.reset();
                     return args_addr;
                 }
@@ -187,12 +191,14 @@ AppleGetQueuesHandler::SetupGetQueuesFunction (Thread &thread, ValueList &get_qu
             else
             {
                 if (log)
+                {
                     log->Printf("No queues introspection code found.");
-                errors.Printf ("No queues introspection code found.");
+                    diagnostics.Dump(log);
+                }
                 return LLDB_INVALID_ADDRESS;
             }
         }
-        
+
         // Next make the runner function for our implementation utility function.
         ClangASTContext *clang_ast_context = thread.GetProcess()->GetTarget().GetScratchClangASTContext();
         CompilerType get_queues_return_type = clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
@@ -207,20 +213,23 @@ AppleGetQueuesHandler::SetupGetQueuesFunction (Thread &thread, ValueList &get_qu
             return args_addr;
         }
     }
-    
-    errors.Clear();
-    
+
+    diagnostics.Clear();
+
     // Now write down the argument values for this particular call.  This looks like it might be a race condition
     // if other threads were calling into here, but actually it isn't because we allocate a new args structure for
     // this call by passing args_addr = LLDB_INVALID_ADDRESS...
 
-    if (!get_queues_caller->WriteFunctionArguments (exe_ctx, args_addr, get_queues_arglist, errors))
+    if (!get_queues_caller->WriteFunctionArguments(exe_ctx, args_addr, get_queues_arglist, diagnostics))
     {
         if (log)
-            log->Printf ("Error writing get-queues function arguments: \"%s\".", errors.GetData());
+        {
+            log->Printf("Error writing get-queues function arguments.");
+            diagnostics.Dump(log);
+        }
         return args_addr;
     }
-        
+
     return args_addr;
 }
 
@@ -332,10 +341,10 @@ AppleGetQueuesHandler::GetCurrentQueues (Thread &thread, addr_t page_to_free, ui
         return return_value;
     }
 
-    StreamString errors;
+    DiagnosticManager diagnostics;
     ExecutionContext exe_ctx;
     EvaluateExpressionOptions options;
-    options.SetUnwindOnError (true);
+    options.SetUnwindOnError(true);
     options.SetIgnoreBreakpoints (true);
     options.SetStopOthers (true);
     options.SetTimeoutUsec(500000);
@@ -344,7 +353,7 @@ AppleGetQueuesHandler::GetCurrentQueues (Thread &thread, addr_t page_to_free, ui
 
     ExpressionResults func_call_ret;
     Value results;
-    func_call_ret =  get_queues_caller->ExecuteFunction (exe_ctx, &args_addr, options, errors, results);
+    func_call_ret = get_queues_caller->ExecuteFunction(exe_ctx, &args_addr, options, diagnostics, results);
     if (func_call_ret != eExpressionCompleted || !error.Success())
     {
         if (log)

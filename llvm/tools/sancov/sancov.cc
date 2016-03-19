@@ -83,9 +83,8 @@ static cl::list<std::string>
     ClInputFiles(cl::Positional, cl::OneOrMore,
                  cl::desc("(<binary file>|<.sancov file>)..."));
 
-static cl::opt<bool>
-    ClDemangle("demangle", cl::init(true),
-        cl::desc("Print demangled function name."));
+static cl::opt<bool> ClDemangle("demangle", cl::init(true),
+                                cl::desc("Print demangled function name."));
 
 static cl::opt<std::string> ClStripPathPrefix(
     "strip_path_prefix", cl::init(""),
@@ -518,43 +517,43 @@ static ErrorOr<bool> isCoverageFile(std::string FileName) {
 }
 
 class CoverageData {
- public:
+public:
   // Read single file coverage data.
-   static ErrorOr<std::unique_ptr<CoverageData>> read(std::string FileName) {
-     ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-         MemoryBuffer::getFile(FileName);
-     if (!BufOrErr)
-       return BufOrErr.getError();
-     std::unique_ptr<MemoryBuffer> Buf = std::move(BufOrErr.get());
-     if (Buf->getBufferSize() < 8) {
-       errs() << "File too small (<8): " << Buf->getBufferSize();
-       return make_error_code(errc::illegal_byte_sequence);
-     }
-     const FileHeader *Header =
-         reinterpret_cast<const FileHeader *>(Buf->getBufferStart());
+  static ErrorOr<std::unique_ptr<CoverageData>> read(std::string FileName) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+        MemoryBuffer::getFile(FileName);
+    if (!BufOrErr)
+      return BufOrErr.getError();
+    std::unique_ptr<MemoryBuffer> Buf = std::move(BufOrErr.get());
+    if (Buf->getBufferSize() < 8) {
+      errs() << "File too small (<8): " << Buf->getBufferSize();
+      return make_error_code(errc::illegal_byte_sequence);
+    }
+    const FileHeader *Header =
+        reinterpret_cast<const FileHeader *>(Buf->getBufferStart());
 
-     if (Header->Magic != BinCoverageMagic) {
-       errs() << "Wrong magic: " << Header->Magic;
-       return make_error_code(errc::illegal_byte_sequence);
-     }
+    if (Header->Magic != BinCoverageMagic) {
+      errs() << "Wrong magic: " << Header->Magic;
+      return make_error_code(errc::illegal_byte_sequence);
+    }
 
-     auto Addrs = llvm::make_unique<std::set<uint64_t>>();
+    auto Addrs = llvm::make_unique<std::set<uint64_t>>();
 
-     switch (Header->Bitness) {
-     case Bitness64:
-       readInts<uint64_t>(Buf->getBufferStart() + 8, Buf->getBufferEnd(),
-                          Addrs.get());
-       break;
-     case Bitness32:
-       readInts<uint32_t>(Buf->getBufferStart() + 8, Buf->getBufferEnd(),
-                          Addrs.get());
-       break;
-     default:
-       errs() << "Unsupported bitness: " << Header->Bitness;
-       return make_error_code(errc::illegal_byte_sequence);
-     }
+    switch (Header->Bitness) {
+    case Bitness64:
+      readInts<uint64_t>(Buf->getBufferStart() + 8, Buf->getBufferEnd(),
+                         Addrs.get());
+      break;
+    case Bitness32:
+      readInts<uint32_t>(Buf->getBufferStart() + 8, Buf->getBufferEnd(),
+                         Addrs.get());
+      break;
+    default:
+      errs() << "Unsupported bitness: " << Header->Bitness;
+      return make_error_code(errc::illegal_byte_sequence);
+    }
 
-     return std::unique_ptr<CoverageData>(new CoverageData(std::move(Addrs)));
+    return std::unique_ptr<CoverageData>(new CoverageData(std::move(Addrs)));
   }
 
   // Merge multiple coverage data together.
@@ -1050,7 +1049,8 @@ public:
   }
 
   void printReport(raw_ostream &OS) const {
-    auto Title = llvm::sys::path::filename(MainObjFile) + " Coverage Report";
+    auto Title =
+        (llvm::sys::path::filename(MainObjFile) + " Coverage Report").str();
 
     OS << "<html>\n";
     OS << "<head>\n";

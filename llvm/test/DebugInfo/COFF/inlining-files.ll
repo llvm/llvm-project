@@ -24,7 +24,7 @@
 ; OBJ:    InlineSite {
 ; OBJ:      PtrParent: 0x0
 ; OBJ:      PtrEnd: 0x0
-; OBJ:      Inlinee: file_change (0x1003)
+; OBJ:      Inlinee: file_change (0x1002)
 ; OBJ:      BinaryAnnotations [
 ; OBJ:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
 ; OBJ:        ChangeFile: D:\src\llvm\build\t.inc (0x8)

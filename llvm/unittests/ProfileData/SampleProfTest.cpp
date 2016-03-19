@@ -126,12 +126,25 @@ struct SampleProfTest : ::testing::Test {
     SampleProfileSummary &Summary = Reader->getSummary();
     VerifySummary(Summary);
 
+    // Test that conversion of summary to and from Metadata works.
     Metadata *MD = Summary.getMD(getGlobalContext());
     ASSERT_TRUE(MD);
     ProfileSummary *PS = ProfileSummary::getFromMD(MD);
     ASSERT_TRUE(PS);
     ASSERT_TRUE(isa<SampleProfileSummary>(PS));
     SampleProfileSummary *SPS = cast<SampleProfileSummary>(PS);
+    VerifySummary(*SPS);
+    delete SPS;
+
+    // Test that summary can be attached to and read back from module.
+    Module M("my_module", getGlobalContext());
+    M.setProfileSummary(MD);
+    MD = M.getProfileSummary();
+    ASSERT_TRUE(MD);
+    PS = ProfileSummary::getFromMD(MD);
+    ASSERT_TRUE(PS);
+    ASSERT_TRUE(isa<SampleProfileSummary>(PS));
+    SPS = cast<SampleProfileSummary>(PS);
     VerifySummary(*SPS);
     delete SPS;
   }

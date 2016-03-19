@@ -35,30 +35,26 @@ namespace lldb_private
 class LLVMUserExpression : public UserExpression
 {
   public:
-    LLVMUserExpression(ExecutionContextScope &exe_scope,
-                       const char *expr,
-                       const char *expr_prefix,
-                       lldb::LanguageType language,
-                       ResultType desired_type,
-                       const EvaluateExpressionOptions &options);
-    ~LLVMUserExpression() override;
+      LLVMUserExpression(ExecutionContextScope &exe_scope, const char *expr, const char *expr_prefix,
+                         lldb::LanguageType language, ResultType desired_type,
+                         const EvaluateExpressionOptions &options);
+      ~LLVMUserExpression() override;
 
-    lldb::ExpressionResults Execute(Stream &error_stream,
-                                    ExecutionContext &exe_ctx,
-                                    const EvaluateExpressionOptions &options,
-                                    lldb::UserExpressionSP &shared_ptr_to_me,
-                                    lldb::ExpressionVariableSP &result) override;
+      lldb::ExpressionResults
+      Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+              const EvaluateExpressionOptions &options, lldb::UserExpressionSP &shared_ptr_to_me,
+              lldb::ExpressionVariableSP &result) override;
 
-    bool FinalizeJITExecution(Stream &error_stream,
-                              ExecutionContext &exe_ctx,
-                              lldb::ExpressionVariableSP &result,
-                              lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS,
-                              lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS) override;
+      bool
+      FinalizeJITExecution(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                           lldb::ExpressionVariableSP &result,
+                           lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS,
+                           lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS) override;
 
-    bool
-    CanInterpret() override
-    {
-        return m_can_interpret;
+      bool
+      CanInterpret() override
+      {
+          return m_can_interpret;
     }
 
     //------------------------------------------------------------------
@@ -73,17 +69,17 @@ class LLVMUserExpression : public UserExpression
 
     lldb::ModuleSP GetJITModule() override;
 
-  protected:
-    virtual void ScanContext(ExecutionContext &exe_ctx, lldb_private::Error &err) = 0;
+protected:
+    virtual void
+    ScanContext(ExecutionContext &exe_ctx, lldb_private::Error &err) = 0;
 
-    bool PrepareToExecuteJITExpression(Stream &error_stream, ExecutionContext &exe_ctx, lldb::addr_t &struct_address);
+    bool
+    PrepareToExecuteJITExpression(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                                  lldb::addr_t &struct_address);
 
     virtual bool
-    AddArguments (ExecutionContext &exe_ctx,
-                  std::vector<lldb::addr_t> &args,
-                  lldb::addr_t struct_address,
-                  Stream &error_stream) = 0;
-
+    AddArguments(ExecutionContext &exe_ctx, std::vector<lldb::addr_t> &args, lldb::addr_t struct_address,
+                 DiagnosticManager &diagnostic_manager) = 0;
 
     lldb::addr_t m_stack_frame_bottom; ///< The bottom of the allocated stack frame.
     lldb::addr_t m_stack_frame_top;    ///< The top of the allocated stack frame.

@@ -661,6 +661,9 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
       }
 
       if (auto *PN = dyn_cast<PHINode>(V)) {
+        // We cannot transform PHIs on unsplittable basic blocks.
+        if (isa<CatchSwitchInst>(PN->getParent()->getTerminator()))
+          return false;
         Explored.insert(PN);
         PHIs.insert(PN);
       }

@@ -163,8 +163,7 @@ public:
   /// considered unchecked. The source error becomes a checked success value,
   /// regardless of its original state.
   Error &operator=(Error &&Other) {
-    // Move assignment shouldn't drop an existing error, but we won't complain
-    // about overwriting success.
+    // Don't allow overwriting of unchecked values.
     assertIsChecked();
     setPtr(Other.getPtr());
 

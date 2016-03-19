@@ -18,30 +18,20 @@ using namespace llvm;
 /// Checks if we should import SGV as a definition, otherwise import as a
 /// declaration.
 bool FunctionImportGlobalProcessing::doImportAsDefinition(
-    const GlobalValue *SGV, DenseSet<const GlobalValue *> *FunctionsToImport) {
-  auto *GA = dyn_cast<GlobalAlias>(SGV);
-  if (GA) {
+    const GlobalValue *SGV, DenseSet<const GlobalValue *> *GlobalsToImport) {
+
+  // For alias, we tie the definition to the base object. Extract it and recurse
+  if (auto *GA = dyn_cast<GlobalAlias>(SGV)) {
     if (GA->hasWeakAnyLinkage())
       return false;
     const GlobalObject *GO = GA->getBaseObject();
     if (!GO->hasLinkOnceODRLinkage())
       return false;
     return FunctionImportGlobalProcessing::doImportAsDefinition(
-        GO, FunctionsToImport);
+        GO, GlobalsToImport);
   }
-  // Always import GlobalVariable definitions, except for the special
-  // case of WeakAny which are imported as ExternalWeak declarations
-  // (see comments in FunctionImportGlobalProcessing::getLinkage). The linkage
-  // changes described in FunctionImportGlobalProcessing::getLinkage ensure the
-  // correct behavior (e.g. global variables with external linkage are
-  // transformed to available_externally definitions, which are ultimately
-  // turned into declarations after the EliminateAvailableExternally pass).
-  if (isa<GlobalVariable>(SGV) && !SGV->isDeclaration() &&
-      !SGV->hasWeakAnyLinkage())
-    return true;
-  // Only import the function requested for importing.
-  auto *SF = dyn_cast<Function>(SGV);
-  if (SF && FunctionsToImport->count(SF))
+  // Only import the globals requested for importing.
+  if (GlobalsToImport->count(SGV))
     return true;
   // Otherwise no.
   return false;
@@ -51,8 +41,8 @@ bool FunctionImportGlobalProcessing::doImportAsDefinition(
     const GlobalValue *SGV) {
   if (!isPerformingImport())
     return false;
-  return FunctionImportGlobalProcessing::doImportAsDefinition(
-      SGV, FunctionsToImport);
+  return FunctionImportGlobalProcessing::doImportAsDefinition(SGV,
+                                                              GlobalsToImport);
 }
 
 bool FunctionImportGlobalProcessing::doPromoteLocalToGlobal(
@@ -198,8 +188,6 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     GV.setLinkage(getLinkage(&GV));
     if (!GV.hasLocalLinkage())
       GV.setVisibility(GlobalValue::HiddenVisibility);
-    if (isModuleExporting())
-      NewExportedValues.insert(&GV);
   } else
     GV.setLinkage(getLinkage(&GV));
 
@@ -231,7 +219,9 @@ bool FunctionImportGlobalProcessing::run() {
   return false;
 }
 
-bool llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index) {
-  FunctionImportGlobalProcessing ThinLTOProcessing(M, Index);
+bool llvm::renameModuleForThinLTO(
+    Module &M, const ModuleSummaryIndex &Index,
+    DenseSet<const GlobalValue *> *GlobalsToImport) {
+  FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport);
   return ThinLTOProcessing.run();
 }

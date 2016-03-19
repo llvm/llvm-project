@@ -108,12 +108,15 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
 CodeViewDebug::InlineSite &
 CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
                              const DISubprogram *Inlinee) {
-  auto Insertion = CurFn->InlineSites.insert({InlinedAt, InlineSite()});
-  InlineSite *Site = &Insertion.first->second;
-  if (Insertion.second) {
+  auto SiteInsertion = CurFn->InlineSites.insert({InlinedAt, InlineSite()});
+  InlineSite *Site = &SiteInsertion.first->second;
+  if (SiteInsertion.second) {
     Site->SiteFuncId = NextFuncId++;
     Site->Inlinee = Inlinee;
-    InlinedSubprograms.insert(Inlinee);
+    auto InlineeInsertion =
+        SubprogramIndices.insert({Inlinee, InlinedSubprograms.size()});
+    if (InlineeInsertion.second)
+      InlinedSubprograms.push_back(Inlinee);
   }
   return *Site;
 }
@@ -214,7 +217,7 @@ void CodeViewDebug::endModule() {
   // aligned.
 
   // Make a subsection for all the inlined subprograms.
-  emitInlineeLinesSubsection();
+  emitInlineeFuncIdsAndLines();
 
   // Emit per-function debug information.
   for (auto &P : FnDebugInfo)
@@ -241,20 +244,24 @@ static void emitNullTerminatedSymbolName(MCStreamer &OS, StringRef S) {
 }
 
 void CodeViewDebug::emitTypeInformation() {
+  // Do nothing if we have no debug info or no inlined subprograms.  The types
+  // we currently emit exist only to support inlined call site info.
+  NamedMDNode *CU_Nodes =
+      MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+  if (!CU_Nodes)
+    return;
+  if (InlinedSubprograms.empty())
+    return;
+
   // Start the .debug$T section with 0x4.
   OS.SwitchSection(Asm->getObjFileLowering().getCOFFDebugTypesSection());
   OS.AddComment("Debug section magic");
   OS.EmitIntValue(COFF::DEBUG_SECTION_MAGIC, 4);
 
-  NamedMDNode *CU_Nodes =
-      MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
-  if (!CU_Nodes)
-    return;
-
   // This type info currently only holds function ids for use with inline call
   // frame info. All functions are assigned a simple 'void ()' type. Emit that
   // type here.
-  TypeIndex ArgListIdx = getNextTypeIndex();
+  unsigned ArgListIndex = getNextTypeIndex();
   OS.AddComment("Type record length");
   OS.EmitIntValue(2 + sizeof(ArgList), 2);
   OS.AddComment("Leaf type: LF_ARGLIST");
@@ -262,7 +269,7 @@ void CodeViewDebug::emitTypeInformation() {
   OS.AddComment("Number of arguments");
   OS.EmitIntValue(0, 4);
 
-  TypeIndex VoidProcIdx = getNextTypeIndex();
+  unsigned VoidFnTyIdx = getNextTypeIndex();
   OS.AddComment("Type record length");
   OS.EmitIntValue(2 + sizeof(ProcedureType), 2);
   OS.AddComment("Leaf type: LF_PROCEDURE");
@@ -276,37 +283,35 @@ void CodeViewDebug::emitTypeInformation() {
   OS.AddComment("# of parameters");
   OS.EmitIntValue(0, 2);
   OS.AddComment("Argument list type index");
-  OS.EmitIntValue(ArgListIdx.getIndex(), 4);
+  OS.EmitIntValue(ArgListIndex, 4);
 
-  for (MDNode *N : CU_Nodes->operands()) {
-    auto *CUNode = cast<DICompileUnit>(N);
-    for (auto *SP : CUNode->getSubprograms()) {
-      StringRef DisplayName = SP->getDisplayName();
-      OS.AddComment("Type record length");
-      MCSymbol *FuncBegin = MMI->getContext().createTempSymbol(),
-               *FuncEnd = MMI->getContext().createTempSymbol();
-      OS.emitAbsoluteSymbolDiff(FuncEnd, FuncBegin, 2);
-      OS.EmitLabel(FuncBegin);
-      OS.AddComment("Leaf type: LF_FUNC_ID");
-      OS.EmitIntValue(LF_FUNC_ID, 2);
+  // Emit LF_FUNC_ID records for all inlined subprograms to the type stream.
+  // Allocate one type index for each func id.
+  unsigned NextIdx = getNextTypeIndex(InlinedSubprograms.size());
+  assert(NextIdx == FuncIdTypeIndexStart && "func id type indices broken");
+  for (auto *SP : InlinedSubprograms) {
+    StringRef DisplayName = SP->getDisplayName();
+    OS.AddComment("Type record length");
+    MCSymbol *FuncBegin = MMI->getContext().createTempSymbol(),
+             *FuncEnd = MMI->getContext().createTempSymbol();
+    OS.emitAbsoluteSymbolDiff(FuncEnd, FuncBegin, 2);
+    OS.EmitLabel(FuncBegin);
+    OS.AddComment("Leaf type: LF_FUNC_ID");
+    OS.EmitIntValue(LF_FUNC_ID, 2);
 
-      OS.AddComment("Scope type index");
-      OS.EmitIntValue(TypeIndex().getIndex(), 4);
-      OS.AddComment("Function type");
-      OS.EmitIntValue(VoidProcIdx.getIndex(), 4);
-      {
-        OS.AddComment("Function name");
-        emitNullTerminatedSymbolName(OS, DisplayName);
-      }
-      OS.EmitLabel(FuncEnd);
-
-      TypeIndex FuncIdIdx = getNextTypeIndex();
-      SubprogramToFuncId.insert(std::make_pair(SP, FuncIdIdx));
+    OS.AddComment("Scope type index");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("Function type");
+    OS.EmitIntValue(VoidFnTyIdx, 4);
+    {
+      OS.AddComment("Function name");
+      emitNullTerminatedSymbolName(OS, DisplayName);
     }
+    OS.EmitLabel(FuncEnd);
   }
 }
 
-void CodeViewDebug::emitInlineeLinesSubsection() {
+void CodeViewDebug::emitInlineeFuncIdsAndLines() {
   if (InlinedSubprograms.empty())
     return;
 
@@ -324,9 +329,9 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
   OS.AddComment("Inlinee lines signature");
   OS.EmitIntValue(unsigned(InlineeLinesSignature::Normal), 4);
 
+  unsigned InlineeIndex = FuncIdTypeIndexStart;
   for (const DISubprogram *SP : InlinedSubprograms) {
     OS.AddBlankLine();
-    TypeIndex TypeId = SubprogramToFuncId[SP];
     unsigned FileId = maybeRecordFile(SP->getFile());
     OS.AddComment("Inlined function " + SP->getDisplayName() + " starts at " +
                   SP->getFilename() + Twine(':') + Twine(SP->getLine()));
@@ -335,11 +340,14 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
     // 1.
     unsigned FileOffset = (FileId - 1) * 8;
     OS.AddComment("Type index of inlined function");
-    OS.EmitIntValue(TypeId.getIndex(), 4);
+    OS.EmitIntValue(InlineeIndex, 4);
     OS.AddComment("Offset into filechecksum table");
     OS.EmitIntValue(FileOffset, 4);
     OS.AddComment("Starting line number");
     OS.EmitIntValue(SP->getLine(), 4);
+
+    // The next inlined subprogram has the next function id.
+    InlineeIndex++;
   }
 
   OS.EmitLabel(InlineEnd);
@@ -362,8 +370,8 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   MCSymbol *InlineBegin = MMI->getContext().createTempSymbol(),
            *InlineEnd = MMI->getContext().createTempSymbol();
 
-  assert(SubprogramToFuncId.count(Site.Inlinee));
-  TypeIndex InlineeIdx = SubprogramToFuncId[Site.Inlinee];
+  assert(SubprogramIndices.count(Site.Inlinee));
+  unsigned InlineeIdx = FuncIdTypeIndexStart + SubprogramIndices[Site.Inlinee];
 
   // SymbolRecord
   OS.AddComment("Record length");
@@ -377,7 +385,7 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   OS.AddComment("PtrEnd");
   OS.EmitIntValue(0, 4);
   OS.AddComment("Inlinee type index");
-  OS.EmitIntValue(InlineeIdx.getIndex(), 4);
+  OS.EmitIntValue(InlineeIdx, 4);
 
   unsigned FileId = maybeRecordFile(Site.Inlinee->getFile());
   unsigned StartLineNum = Site.Inlinee->getLine();

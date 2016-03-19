@@ -260,6 +260,11 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
     return 0;
   }
 
+  if (Flags.close_fd_mask & 2)
+    DupAndCloseStderr();
+  if (Flags.close_fd_mask & 1)
+    CloseStdout();
+
   if (Flags.jobs > 0 && Flags.workers == 0) {
     Flags.workers = std::min(NumberOfCpuCores() / 2, Flags.jobs);
     if (Flags.workers > 1)

@@ -75,6 +75,8 @@ FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")
 FUZZER_FLAG_INT(handle_ill, 1, "If 1, try to intercept SIGILL.")
 FUZZER_FLAG_INT(handle_fpe, 1, "If 1, try to intercept SIGFPE.")
 FUZZER_FLAG_INT(handle_int, 1, "If 1, try to intercept SIGINT.")
+FUZZER_FLAG_INT(close_fd_mask, 0, "If 1, close stdout at startup; "
+                                       "if 2, close stderr; if 3, close both.")
 
 FUZZER_DEPRECATED_FLAG(exit_on_first)
 FUZZER_DEPRECATED_FLAG(save_minimized_corpus)

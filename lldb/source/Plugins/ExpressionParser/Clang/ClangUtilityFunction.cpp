@@ -55,8 +55,8 @@ ClangUtilityFunction::~ClangUtilityFunction ()
 //------------------------------------------------------------------
 /// Install the utility function into a process
 ///
-/// @param[in] error_stream
-///     A stream to print parse errors and warnings to.
+/// @param[in] diagnostic_manager
+///     A diagnostic manager to report errors and warnings to.
 ///
 /// @param[in] exe_ctx
 ///     The execution context to install the utility function to.
@@ -65,35 +65,34 @@ ClangUtilityFunction::~ClangUtilityFunction ()
 ///     True on success (no errors); false otherwise.
 //------------------------------------------------------------------
 bool
-ClangUtilityFunction::Install (Stream &error_stream,
-                               ExecutionContext &exe_ctx)
+ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx)
 {
     if (m_jit_start_addr != LLDB_INVALID_ADDRESS)
     {
-        error_stream.PutCString("error: already installed\n");
+        diagnostic_manager.PutCString(eDiagnosticSeverityWarning, "already installed");
         return false;
     }
-    
+
     ////////////////////////////////////
     // Set up the target and compiler
     //
     
     Target *target = exe_ctx.GetTargetPtr();
-    
+
     if (!target)
     {
-        error_stream.PutCString ("error: invalid target\n");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "invalid target");
         return false;
     }
-    
+
     Process *process = exe_ctx.GetProcessPtr();
-    
+
     if (!process)
     {
-        error_stream.PutCString ("error: invalid process\n");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "invalid process");
         return false;
     }
-        
+
     //////////////////////////
     // Parse the expression
     //
@@ -101,24 +100,26 @@ ClangUtilityFunction::Install (Stream &error_stream,
     bool keep_result_in_memory = false;
     
     ResetDeclMap(exe_ctx, keep_result_in_memory);
-    
+
     if (!DeclMap()->WillParse(exe_ctx, NULL))
     {
-        error_stream.PutCString ("error: current process state is unsuitable for expression parsing\n");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                      "current process state is unsuitable for expression parsing");
         return false;
     }
-    
+
     const bool generate_debug_info = true;
     ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this, generate_debug_info);
-    
-    unsigned num_errors = parser.Parse (error_stream);
-    
+
+    unsigned num_errors = parser.Parse(diagnostic_manager);
+
     if (num_errors)
     {
-        error_stream.Printf ("error: %d errors parsing expression\n", num_errors);
-        
+        diagnostic_manager.Printf(eDiagnosticSeverityError, "%d error%s parsing expression", num_errors,
+                                  num_errors == 1 ? "" : "s");
+
         ResetDeclMap();
-        
+
         return false;
     }
     
@@ -175,9 +176,13 @@ ClangUtilityFunction::Install (Stream &error_stream,
     {
         const char *error_cstr = jit_error.AsCString();
         if (error_cstr && error_cstr[0])
-            error_stream.Printf ("error: %s\n", error_cstr);
+        {
+            diagnostic_manager.Printf(eDiagnosticSeverityError, "%s", error_cstr);
+        }
         else
-            error_stream.Printf ("error: expression can't be interpreted or run\n");
+        {
+            diagnostic_manager.PutCString(eDiagnosticSeverityError, "expression can't be interpreted or run");
+        }
         return false;
     }
 }

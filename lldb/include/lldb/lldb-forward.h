@@ -79,6 +79,7 @@ class   DataEncoder;
 class   DataExtractor;
 class   Debugger;
 class   Declaration;
+class   DiagnosticManager;
 class   Disassembler;
 class   DumpValueObjectOptions;
 class   DynamicCheckerFunctions;

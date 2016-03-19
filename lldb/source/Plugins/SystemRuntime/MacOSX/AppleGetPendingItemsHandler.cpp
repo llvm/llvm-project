@@ -19,6 +19,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -136,14 +137,14 @@ AppleGetPendingItemsHandler::Detach ()
 // make the function call.
 
 lldb::addr_t
-AppleGetPendingItemsHandler::SetupGetPendingItemsFunction (Thread &thread, ValueList &get_pending_items_arglist)
+AppleGetPendingItemsHandler::SetupGetPendingItemsFunction(Thread &thread, ValueList &get_pending_items_arglist)
 {
-    ExecutionContext exe_ctx (thread.shared_from_this());
-    StreamString errors;
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_SYSTEM_RUNTIME));
+    ExecutionContext exe_ctx(thread.shared_from_this());
+    DiagnosticManager diagnostics;
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
     lldb::addr_t args_addr = LLDB_INVALID_ADDRESS;
     FunctionCaller *get_pending_items_caller = nullptr;
-    
+
     // Scope for mutex locker:
     {
         Mutex::Locker locker(m_get_pending_items_function_mutex);
@@ -165,11 +166,14 @@ AppleGetPendingItemsHandler::SetupGetPendingItemsFunction (Thread &thread, Value
                         log->Printf ("Failed to get UtilityFunction for pending-items introspection: %s.", error.AsCString());
                     return args_addr;
                 }
-                
-                if (!m_get_pending_items_impl_code->Install(errors, exe_ctx))
+
+                if (!m_get_pending_items_impl_code->Install(diagnostics, exe_ctx))
                 {
                     if (log)
-                        log->Printf ("Failed to install pending-items introspection: %s.", errors.GetData());
+                    {
+                        log->Printf("Failed to install pending-items introspection.");
+                        diagnostics.Dump(log);
+                    }
                     m_get_pending_items_impl_code.reset();
                     return args_addr;
                 }
@@ -196,11 +200,10 @@ AppleGetPendingItemsHandler::SetupGetPendingItemsFunction (Thread &thread, Value
                 return args_addr;
             }
         }
-
     }
-    
-    errors.Clear();
-    
+
+    diagnostics.Clear();
+
     if (get_pending_items_caller == nullptr)
     {
         if (log)
@@ -212,13 +215,17 @@ AppleGetPendingItemsHandler::SetupGetPendingItemsFunction (Thread &thread, Value
     // if other threads were calling into here, but actually it isn't because we allocate a new args structure for
     // this call by passing args_addr = LLDB_INVALID_ADDRESS...
 
-    if (!get_pending_items_caller->WriteFunctionArguments (exe_ctx, args_addr, get_pending_items_arglist, errors))
+    if (!get_pending_items_caller->WriteFunctionArguments(exe_ctx, args_addr, get_pending_items_arglist, diagnostics))
     {
         if (log)
-            log->Printf ("Error writing pending-items function arguments: \"%s\".", errors.GetData());
+        {
+            log->Printf("Error writing pending-items function arguments.");
+            diagnostics.Dump(log);
+        }
+
         return args_addr;
     }
-        
+
     return args_addr;
 }
 
@@ -322,12 +329,12 @@ AppleGetPendingItemsHandler::GetPendingItems (Thread &thread, addr_t queue, addr
     page_to_free_size_value.GetScalar() = page_to_free_size;
     argument_values.PushValue (page_to_free_size_value);
 
-    addr_t args_addr = SetupGetPendingItemsFunction (thread, argument_values);
+    addr_t args_addr = SetupGetPendingItemsFunction(thread, argument_values);
 
-    StreamString errors;
+    DiagnosticManager diagnostics;
     ExecutionContext exe_ctx;
     FunctionCaller *get_pending_items_caller = m_get_pending_items_impl_code->GetFunctionCaller();
-    
+
     EvaluateExpressionOptions options;
     options.SetUnwindOnError (true);
     options.SetIgnoreBreakpoints (true);
@@ -342,10 +349,9 @@ AppleGetPendingItemsHandler::GetPendingItems (Thread &thread, addr_t queue, addr
         return return_value;
     }
 
-
     ExpressionResults func_call_ret;
     Value results;
-    func_call_ret =  get_pending_items_caller->ExecuteFunction (exe_ctx, &args_addr, options, errors, results);
+    func_call_ret = get_pending_items_caller->ExecuteFunction(exe_ctx, &args_addr, options, diagnostics, results);
     if (func_call_ret != eExpressionCompleted || !error.Success())
     {
         if (log)

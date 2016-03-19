@@ -183,9 +183,8 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
     DeadInsts.emplace_back(ICmp);
     DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
   } else if (isa<PHINode>(IVOperand) &&
-             SE->isLoopInvariantPredicate(Pred, S, X, ICmpLoop,
-                                          InvariantPredicate, InvariantLHS,
-                                          InvariantRHS)) {
+             SE->isLoopInvariantPredicate(Pred, S, X, L, InvariantPredicate,
+                                          InvariantLHS, InvariantRHS)) {
 
     // Rewrite the comparison to a loop invariant comparison if it can be done
     // cheaply, where cheaply means "we don't need to emit any new
@@ -201,9 +200,48 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
       NewRHS =
           ICmp->getOperand(S == InvariantRHS ? IVOperIdx : (1 - IVOperIdx));
 
-    for (Value *Incoming : cast<PHINode>(IVOperand)->incoming_values()) {
-      if (NewLHS && NewRHS)
-        break;
+    auto *PN = cast<PHINode>(IVOperand);
+    for (unsigned i = 0, e = PN->getNumIncomingValues();
+         i != e && (!NewLHS || !NewRHS);
+         ++i) {
+
+      // If this is a value incoming from the backedge, then it cannot be a loop
+      // invariant value (since we know that IVOperand is an induction variable).
+      if (L->contains(PN->getIncomingBlock(i)))
+        continue;
+
+      // NB! This following assert does not fundamentally have to be true, but
+      // it is true today given how SCEV analyzes induction variables.
+      // Specifically, today SCEV will *not* recognize %iv as an induction
+      // variable in the following case:
+      //
+      // define void @f(i32 %k) {
+      // entry:
+      //   br i1 undef, label %r, label %l
+      //
+      // l:
+      //   %k.inc.l = add i32 %k, 1
+      //   br label %loop
+      //
+      // r:
+      //   %k.inc.r = add i32 %k, 1
+      //   br label %loop
+      //
+      // loop:
+      //   %iv = phi i32 [ %k.inc.l, %l ], [ %k.inc.r, %r ], [ %iv.inc, %loop ]
+      //   %iv.inc = add i32 %iv, 1
+      //   br label %loop
+      // }
+      //
+      // but if it starts to, at some point, then the assertion below will have
+      // to be changed to a runtime check.
+
+      Value *Incoming = PN->getIncomingValue(i);
+
+#ifndef NDEBUG
+      if (auto *I = dyn_cast<Instruction>(Incoming))
+        assert(DT->dominates(I, ICmp) && "Should be a unique loop dominating value!");
+#endif
 
       const SCEV *IncomingS = SE->getSCEV(Incoming);
 

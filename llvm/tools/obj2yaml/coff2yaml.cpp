@@ -109,6 +109,7 @@ void COFFDumper::dumpSections(unsigned NumSections) {
     NewYAMLSection.Header.VirtualAddress = ObjSection.getAddress();
     NewYAMLSection.Header.VirtualSize = COFFSection->VirtualSize;
     NewYAMLSection.Alignment = ObjSection.getAlignment();
+    assert(NewYAMLSection.Alignment <= 8192);
 
     ArrayRef<uint8_t> sectionData;
     if (!ObjSection.isBSS())

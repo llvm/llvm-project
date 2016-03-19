@@ -20,6 +20,14 @@
 #endif
 #endif
 
+#define NO_SANITIZE_MEMORY
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#undef NO_SANITIZE_MEMORY
+#define NO_SANITIZE_MEMORY __attribute__((no_sanitize_memory))
+#endif
+#endif
+
 extern "C" {
 // Re-declare some of the sanitizer functions as "weak" so that
 // libFuzzer can be linked w/o the sanitizers and sanitizer-coverage
@@ -92,7 +100,7 @@ void Fuzzer::DumpCurrentUnit(const char *Prefix) {
       {CurrentUnitData, CurrentUnitData + CurrentUnitSize}, Prefix);
 }
 
-__attribute__((no_sanitize_memory))
+NO_SANITIZE_MEMORY
 void Fuzzer::DeathCallback() {
   if (!CurrentUnitSize) return;
   Printf("DEATH:\n");
@@ -134,7 +142,7 @@ void Fuzzer::InterruptCallback() {
   _Exit(0);  // Stop right now, don't perform any at-exit actions.
 }
 
-__attribute__((no_sanitize_memory))
+NO_SANITIZE_MEMORY
 void Fuzzer::AlarmCallback() {
   assert(Options.UnitTimeoutSec > 0);
   if (!CurrentUnitSize)

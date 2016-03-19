@@ -1310,11 +1310,13 @@ main (int argc, char const *argv[], const char *envp[])
     
     SBHostOS::ThreadCreated ("<lldb.driver.main-thread>");
 
+    signal(SIGINT, sigint_handler);
+#ifndef _MSC_VER
     signal (SIGPIPE, SIG_IGN);
     signal (SIGWINCH, sigwinch_handler);
-    signal (SIGINT, sigint_handler);
     signal (SIGTSTP, sigtstp_handler);
     signal (SIGCONT, sigcont_handler);
+#endif
 
     // Create a scope for driver so that the driver object will destroy itself
     // before SBDebugger::Terminate() is called.

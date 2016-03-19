@@ -13,13 +13,14 @@
 // Other libraries and framework includes
 
 // Project includes
+#include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectList.h"
-#include "lldb/Expression/FunctionCaller.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Function.h"
@@ -76,11 +77,11 @@ FunctionCaller::~FunctionCaller()
         lldb::ModuleSP jit_module_sp (m_jit_module_wp.lock());
         if (jit_module_sp)
             process_sp->GetTarget().GetImages().Remove(jit_module_sp);
-    }    
+    }
 }
 
 bool
-FunctionCaller::WriteFunctionWrapper (ExecutionContext &exe_ctx, Stream &errors)
+FunctionCaller::WriteFunctionWrapper(ExecutionContext &exe_ctx, DiagnosticManager &diagnostic_manager)
 {
     Process *process = exe_ctx.GetProcessPtr();
 
@@ -133,27 +134,28 @@ FunctionCaller::WriteFunctionWrapper (ExecutionContext &exe_ctx, Stream &errors)
 }
 
 bool
-FunctionCaller::WriteFunctionArguments (ExecutionContext &exe_ctx, lldb::addr_t &args_addr_ref, Stream &errors)
+FunctionCaller::WriteFunctionArguments(ExecutionContext &exe_ctx, lldb::addr_t &args_addr_ref,
+                                       DiagnosticManager &diagnostic_manager)
 {
-    return WriteFunctionArguments(exe_ctx, args_addr_ref, m_arg_values, errors);
+    return WriteFunctionArguments(exe_ctx, args_addr_ref, m_arg_values, diagnostic_manager);
 }
 
 // FIXME: Assure that the ValueList we were passed in is consistent with the one that defined this function.
 
 bool
-FunctionCaller::WriteFunctionArguments (ExecutionContext &exe_ctx, 
-                                       lldb::addr_t &args_addr_ref, 
-                                       ValueList &arg_values,
-                                       Stream &errors)
+FunctionCaller::WriteFunctionArguments(ExecutionContext &exe_ctx, lldb::addr_t &args_addr_ref, ValueList &arg_values,
+                                       DiagnosticManager &diagnostic_manager)
 {
     // All the information to reconstruct the struct is provided by the
     // StructExtractor.
     if (!m_struct_valid)
     {
-        errors.Printf("Argument information was not correctly parsed, so the function cannot be called.");
+        diagnostic_manager.PutCString(
+            eDiagnosticSeverityError,
+            "Argument information was not correctly parsed, so the function cannot be called.");
         return false;
     }
-        
+
     Error error;
     lldb::ExpressionResults return_value = lldb::eExpressionSetupError;
 
@@ -191,14 +193,16 @@ FunctionCaller::WriteFunctionArguments (ExecutionContext &exe_ctx,
     // FIXME: We will need to extend this for Variadic functions.
 
     Error value_error;
-    
+
     size_t num_args = arg_values.GetSize();
     if (num_args != m_arg_values.GetSize())
     {
-        errors.Printf ("Wrong number of arguments - was: %" PRIu64 " should be: %" PRIu64 "", (uint64_t)num_args, (uint64_t)m_arg_values.GetSize());
+        diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                  "Wrong number of arguments - was: %" PRIu64 " should be: %" PRIu64 "",
+                                  (uint64_t)num_args, (uint64_t)m_arg_values.GetSize());
         return false;
     }
-    
+
     for (size_t i = 0; i < num_args; i++)
     {
         // FIXME: We should sanity check sizes.
@@ -225,16 +229,17 @@ FunctionCaller::WriteFunctionArguments (ExecutionContext &exe_ctx,
 }
 
 bool
-FunctionCaller::InsertFunction (ExecutionContext &exe_ctx, lldb::addr_t &args_addr_ref, Stream &errors)
+FunctionCaller::InsertFunction(ExecutionContext &exe_ctx, lldb::addr_t &args_addr_ref,
+                               DiagnosticManager &diagnostic_manager)
 {
-    if (CompileFunction(errors) != 0)
+    if (CompileFunction(diagnostic_manager) != 0)
         return false;
-    if (!WriteFunctionWrapper(exe_ctx, errors))
+    if (!WriteFunctionWrapper(exe_ctx, diagnostic_manager))
         return false;
-    if (!WriteFunctionArguments(exe_ctx, args_addr_ref, errors))
+    if (!WriteFunctionArguments(exe_ctx, args_addr_ref, diagnostic_manager))
         return false;
 
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_STEP));
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
     if (log)
         log->Printf ("Call Address: 0x%" PRIx64 " Struct Address: 0x%" PRIx64 ".\n", m_jit_start_addr, args_addr_ref);
         
@@ -242,13 +247,12 @@ FunctionCaller::InsertFunction (ExecutionContext &exe_ctx, lldb::addr_t &args_ad
 }
 
 lldb::ThreadPlanSP
-FunctionCaller::GetThreadPlanToCallFunction (ExecutionContext &exe_ctx, 
-                                            lldb::addr_t args_addr,
+FunctionCaller::GetThreadPlanToCallFunction(ExecutionContext &exe_ctx, lldb::addr_t args_addr,
                                             const EvaluateExpressionOptions &options,
-                                            Stream &errors)
+                                            DiagnosticManager &diagnostic_manager)
 {
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_STEP));
-    
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_STEP));
+
     if (log)
         log->Printf("-- [FunctionCaller::GetThreadPlanToCallFunction] Creating thread plan to call function \"%s\" --", m_name.c_str());
     
@@ -256,7 +260,7 @@ FunctionCaller::GetThreadPlanToCallFunction (ExecutionContext &exe_ctx,
     Thread *thread = exe_ctx.GetThreadPtr();
     if (thread == NULL)
     {
-        errors.Printf("Can't call a function without a valid thread.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "Can't call a function without a valid thread.");
         return NULL;
     }
 
@@ -322,15 +326,12 @@ FunctionCaller::DeallocateFunctionResults (ExecutionContext &exe_ctx, lldb::addr
 }
 
 lldb::ExpressionResults
-FunctionCaller::ExecuteFunction(
-        ExecutionContext &exe_ctx, 
-        lldb::addr_t *args_addr_ptr,
-        const EvaluateExpressionOptions &options,
-        Stream &errors, 
-        Value &results)
+FunctionCaller::ExecuteFunction(ExecutionContext &exe_ctx, lldb::addr_t *args_addr_ptr,
+                                const EvaluateExpressionOptions &options, DiagnosticManager &diagnostic_manager,
+                                Value &results)
 {
     lldb::ExpressionResults return_value = lldb::eExpressionSetupError;
-    
+
     // FunctionCaller::ExecuteFunction execution is always just to get the result.  Do make sure we ignore
     // breakpoints, unwind on error, and don't try to debug it.
     EvaluateExpressionOptions real_options = options;
@@ -344,13 +345,13 @@ FunctionCaller::ExecuteFunction(
         args_addr = *args_addr_ptr;
     else
         args_addr = LLDB_INVALID_ADDRESS;
-        
-    if (CompileFunction(errors) != 0)
+
+    if (CompileFunction(diagnostic_manager) != 0)
         return lldb::eExpressionSetupError;
-    
+
     if (args_addr == LLDB_INVALID_ADDRESS)
     {
-        if (!InsertFunction(exe_ctx, args_addr, errors))
+        if (!InsertFunction(exe_ctx, args_addr, diagnostic_manager))
             return lldb::eExpressionSetupError;
     }
 
@@ -358,24 +359,18 @@ FunctionCaller::ExecuteFunction(
 
     if (log)
         log->Printf("== [FunctionCaller::ExecuteFunction] Executing function \"%s\" ==", m_name.c_str());
-    
-    lldb::ThreadPlanSP call_plan_sp = GetThreadPlanToCallFunction (exe_ctx,
-                                                                   args_addr,
-                                                                   real_options,
-                                                                   errors);
+
+    lldb::ThreadPlanSP call_plan_sp = GetThreadPlanToCallFunction(exe_ctx, args_addr, real_options, diagnostic_manager);
     if (!call_plan_sp)
         return lldb::eExpressionSetupError;
-        
+
     // We need to make sure we record the fact that we are running an expression here
     // otherwise this fact will fail to be recorded when fetching an Objective-C object description
     if (exe_ctx.GetProcessPtr())
         exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
-    
-    return_value = exe_ctx.GetProcessRef().RunThreadPlan (exe_ctx,
-                                                          call_plan_sp,
-                                                          real_options,
-                                                          errors);
-    
+
+    return_value = exe_ctx.GetProcessRef().RunThreadPlan(exe_ctx, call_plan_sp, real_options, diagnostic_manager);
+
     if (log)
     {
         if (return_value != lldb::eExpressionCompleted)

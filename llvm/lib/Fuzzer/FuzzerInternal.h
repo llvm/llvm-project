@@ -75,6 +75,8 @@ void CopyFileToErr(const std::string &Path);
 std::string DirPlusFile(const std::string &DirPath,
                         const std::string &FileName);
 
+void DupAndCloseStderr();
+void CloseStdout();
 void Printf(const char *Fmt, ...);
 void PrintHexArray(const Unit &U, const char *PrintAfter = "");
 void PrintHexArray(const uint8_t *Data, size_t Size,

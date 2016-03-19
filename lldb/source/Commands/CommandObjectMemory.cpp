@@ -540,7 +540,7 @@ protected:
             {
                 if (ClangPersistentVariables *persistent_vars = llvm::dyn_cast_or_null<ClangPersistentVariables>(target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC)))
                 {
-                    clang::TypeDecl *tdecl = persistent_vars->GetPersistentType(ConstString(lookup_type_name));
+                    clang::TypeDecl *tdecl = llvm::dyn_cast_or_null<clang::TypeDecl>(persistent_vars->GetPersistentDecl(ConstString(lookup_type_name)));
 
                     if (tdecl)
                     {

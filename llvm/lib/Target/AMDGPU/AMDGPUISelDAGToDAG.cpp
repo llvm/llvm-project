@@ -127,6 +127,13 @@ private:
                          SDValue &TFE) const;
   bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                          SDValue &Offset, SDValue &GLC) const;
+  void SelectMUBUFConstant(SDValue Constant,
+                           SDValue &SOffset,
+                           SDValue &ImmOffset) const;
+  bool SelectMUBUFIntrinsicOffset(SDValue Offset, SDValue &SOffset,
+                                  SDValue &ImmOffset) const;
+  bool SelectMUBUFIntrinsicVOffset(SDValue Offset, SDValue &SOffset,
+                                   SDValue &ImmOffset, SDValue &VOffset) const;
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue &Offset,
                         bool &Imm) const;
   bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue &Offset,
@@ -1110,6 +1117,78 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
   SDValue SLC, TFE;
 
   return SelectMUBUFOffset(Addr, SRsrc, Soffset, Offset, GLC, SLC, TFE);
+}
+
+void AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
+                                             SDValue &SOffset,
+                                             SDValue &ImmOffset) const {
+  SDLoc DL(Constant);
+  uint32_t Imm = cast<ConstantSDNode>(Constant)->getZExtValue();
+  uint32_t Overflow = 0;
+
+  if (Imm >= 4096) {
+    if (Imm <= 4095 + 64) {
+      // Use an SOffset inline constant for 1..64
+      Overflow = Imm - 4095;
+      Imm = 4095;
+    } else {
+      // Try to keep the same value in SOffset for adjacent loads, so that
+      // the corresponding register contents can be re-used.
+      //
+      // Load values with all low-bits set into SOffset, so that a larger
+      // range of values can be covered using s_movk_i32
+      uint32_t High = (Imm + 1) & ~4095;
+      uint32_t Low = (Imm + 1) & 4095;
+      Imm = Low;
+      Overflow = High - 1;
+    }
+  }
+
+  ImmOffset = CurDAG->getTargetConstant(Imm, DL, MVT::i16);
+
+  if (Overflow <= 64)
+    SOffset = CurDAG->getTargetConstant(Overflow, DL, MVT::i32);
+  else
+    SOffset = SDValue(CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32,
+                      CurDAG->getTargetConstant(Overflow, DL, MVT::i32)),
+                      0);
+}
+
+bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicOffset(SDValue Offset,
+                                                    SDValue &SOffset,
+                                                    SDValue &ImmOffset) const {
+  SDLoc DL(Offset);
+
+  if (!isa<ConstantSDNode>(Offset))
+    return false;
+
+  SelectMUBUFConstant(Offset, SOffset, ImmOffset);
+
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicVOffset(SDValue Offset,
+                                                     SDValue &SOffset,
+                                                     SDValue &ImmOffset,
+                                                     SDValue &VOffset) const {
+  SDLoc DL(Offset);
+
+  // Don't generate an unnecessary voffset for constant offsets.
+  if (isa<ConstantSDNode>(Offset))
+    return false;
+
+  if (CurDAG->isBaseWithConstantOffset(Offset)) {
+    SDValue N0 = Offset.getOperand(0);
+    SDValue N1 = Offset.getOperand(1);
+    SelectMUBUFConstant(N1, SOffset, ImmOffset);
+    VOffset = N0;
+  } else {
+    SOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
+    ImmOffset = CurDAG->getTargetConstant(0, DL, MVT::i16);
+    VOffset = Offset;
+  }
+
+  return true;
 }
 
 ///

@@ -23,6 +23,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -151,10 +152,10 @@ AppleObjCRuntime::GetObjectDescription (Stream &strm, Value &value, ExecutionCon
             exe_ctx.SetFrameSP(thread->GetSelectedFrame());
         }
     }
-    
+
     // Now we're ready to call the function:
-    
-    StreamString error_stream;
+
+    DiagnosticManager diagnostics;
     lldb::addr_t wrapper_struct_addr = LLDB_INVALID_ADDRESS;
 
     if (!m_print_object_caller_up)
@@ -172,17 +173,12 @@ AppleObjCRuntime::GetObjectDescription (Stream &strm, Value &value, ExecutionCon
             strm.Printf("Could not get function runner to call print for debugger function: %s.", error.AsCString());
             return false;
         }
-        m_print_object_caller_up->InsertFunction(exe_ctx, wrapper_struct_addr, error_stream);
+        m_print_object_caller_up->InsertFunction(exe_ctx, wrapper_struct_addr, diagnostics);
     }
     else
     {
-        m_print_object_caller_up->WriteFunctionArguments(exe_ctx,
-                                                         wrapper_struct_addr,
-                                                         arg_value_list,
-                                                         error_stream);
+        m_print_object_caller_up->WriteFunctionArguments(exe_ctx, wrapper_struct_addr, arg_value_list, diagnostics);
     }
-
-    
 
     EvaluateExpressionOptions options;
     options.SetUnwindOnError(true);
@@ -190,12 +186,9 @@ AppleObjCRuntime::GetObjectDescription (Stream &strm, Value &value, ExecutionCon
     options.SetStopOthers(true);
     options.SetIgnoreBreakpoints(true);
     options.SetTimeoutUsec(PO_FUNCTION_TIMEOUT_USEC);
-    
-    ExpressionResults results = m_print_object_caller_up->ExecuteFunction (exe_ctx,
-                                                                           &wrapper_struct_addr,
-                                                                           options,
-                                                                           error_stream,
-                                                                           ret);
+
+    ExpressionResults results =
+        m_print_object_caller_up->ExecuteFunction(exe_ctx, &wrapper_struct_addr, options, diagnostics, ret);
     if (results != eExpressionCompleted)
     {
         strm.Printf("Error evaluating Print Object function: %d.\n", results);

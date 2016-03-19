@@ -464,7 +464,7 @@ ASTResultSynthesizer::MaybeRecordPersistentType(TypeDecl *D)
                                                                  D);
 
     if (TypeDecl *TypeDecl_scratch = dyn_cast<TypeDecl>(D_scratch))
-        llvm::cast<ClangPersistentVariables>(m_target.GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC))->RegisterPersistentType(name_cs, TypeDecl_scratch);
+        llvm::cast<ClangPersistentVariables>(m_target.GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC))->RegisterPersistentDecl(name_cs, TypeDecl_scratch);
 }
 
 void

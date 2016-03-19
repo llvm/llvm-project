@@ -469,7 +469,7 @@ LTOObjectBuffer thinlto_module_get_object(thinlto_code_gen_t cg,
                                           unsigned int index) {
   assert(index < unwrap(cg)->getProducedBinaries().size() && "Index overflow");
   auto &MemBuffer = unwrap(cg)->getProducedBinaries()[index];
-  return LTOObjectBuffer{(void *)MemBuffer->getBufferStart(),
+  return LTOObjectBuffer{const_cast<char *>(MemBuffer->getBufferStart()),
                          MemBuffer->getBufferSize()};
 }
 

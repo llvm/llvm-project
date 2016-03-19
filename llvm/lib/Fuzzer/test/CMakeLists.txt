@@ -30,6 +30,7 @@ set(Tests
   SimpleFnAdapterTest
   SimpleHashTest
   SimpleTest
+  SpamyTest
   StrcmpTest
   StrncmpTest
   SwitchTest

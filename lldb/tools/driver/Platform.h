@@ -12,12 +12,11 @@
 
 #if defined( _WIN32 )
 
-    // this will stop signal.h being included
-    #define _INC_SIGNAL
     #include "lldb/Host/HostGetOpt.h"
     #include <io.h>
 #if defined( _MSC_VER )
     #include <eh.h>
+    #include <signal.h>
 #endif
     #include <inttypes.h>
     #include "lldb/Host/windows/windows.h"
@@ -36,17 +35,6 @@
 
     // ioctls.h
     #define TIOCGWINSZ 0x5413
-
-
-    // signal handler function pointer type
-    typedef void(*sighandler_t)(int);
-
-    // signal.h
-    #define SIGINT 2
-    // default handler
-    #define SIG_DFL ( (sighandler_t) -1 )
-    // ignored
-    #define SIG_IGN ( (sighandler_t) -2 )
 
     // signal.h
     #define SIGPIPE  13
@@ -80,7 +68,6 @@
     };
     typedef long pid_t;
     #define snprintf _snprintf
-    extern sighandler_t signal( int sig, sighandler_t );
     #define PATH_MAX MAX_PATH
 #endif
 

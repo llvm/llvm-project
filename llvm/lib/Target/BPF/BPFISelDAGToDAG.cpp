@@ -130,6 +130,18 @@ SDNode *BPFDAGToDAGISel::Select(SDNode *Node) {
   // tablegen selection should be handled here.
   switch (Opcode) {
   default: break;
+  case ISD::SDIV: {
+    DebugLoc Empty;
+    const DebugLoc &DL = Node->getDebugLoc();
+    if (DL != Empty)
+      errs() << "Error at line " << DL.getLine() << ": ";
+    else
+      errs() << "Error: ";
+    errs() << "Unsupport signed division for DAG: ";
+    Node->dump(CurDAG);
+    errs() << "Please convert to unsigned div/mod.\n";
+    break;
+  }
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
     switch (IntNo) {

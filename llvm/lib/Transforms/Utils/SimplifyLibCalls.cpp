@@ -1625,9 +1625,9 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilder<> &B) {
   // Look for all compatible sinpi, cospi and sincospi calls with the same
   // argument. If there are enough (in some sense) we can make the
   // substitution.
+  Function *F = CI->getFunction();
   for (User *U : Arg->users())
-    classifyArgUse(U, CI->getParent(), IsFloat, SinCalls, CosCalls,
-                   SinCosCalls);
+    classifyArgUse(U, F, IsFloat, SinCalls, CosCalls, SinCosCalls);
 
   // It's only worthwhile if both sinpi and cospi are actually used.
   if (SinCosCalls.empty() && (SinCalls.empty() || CosCalls.empty()))
@@ -1643,14 +1643,18 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, IRBuilder<> &B) {
   return nullptr;
 }
 
-void
-LibCallSimplifier::classifyArgUse(Value *Val, BasicBlock *BB, bool IsFloat,
-                                  SmallVectorImpl<CallInst *> &SinCalls,
-                                  SmallVectorImpl<CallInst *> &CosCalls,
-                                  SmallVectorImpl<CallInst *> &SinCosCalls) {
+void LibCallSimplifier::classifyArgUse(
+    Value *Val, Function *F, bool IsFloat,
+    SmallVectorImpl<CallInst *> &SinCalls,
+    SmallVectorImpl<CallInst *> &CosCalls,
+    SmallVectorImpl<CallInst *> &SinCosCalls) {
   CallInst *CI = dyn_cast<CallInst>(Val);
 
   if (!CI)
+    return;
+
+  // Don't consider calls in other functions.
+  if (CI->getFunction() != F)
     return;
 
   Function *Callee = CI->getCalledFunction();
