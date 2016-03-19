@@ -39,6 +39,27 @@ declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
 ; CHECK-NOT: popq %r9
 ; CHECK-NOT: popq %r10
 ; CHECK-NOT: popq %r11
+
+; CHECK-O0-LABEL: _ZTW2sg
+; CHECK-O0: pushq %r11
+; CHECK-O0: pushq %r10
+; CHECK-O0: pushq %r9
+; CHECK-O0: pushq %r8
+; CHECK-O0: pushq %rsi
+; CHECK-O0: pushq %rdx
+; CHECK-O0: pushq %rcx
+; CHECK-O0: callq
+; CHECK-O0: jne
+; CHECK-O0: callq
+; CHECK-O0: tlv_atexit
+; CHECK-O0: callq
+; CHECK-O0: popq %rcx
+; CHECK-O0: popq %rdx
+; CHECK-O0: popq %rsi
+; CHECK-O0: popq %r8
+; CHECK-O0: popq %r9
+; CHECK-O0: popq %r10
+; CHECK-O0: popq %r11
 define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind {
   %.b.i = load i1, i1* @__tls_guard, align 1
   br i1 %.b.i, label %__tls_init.exit, label %init.i
@@ -63,6 +84,24 @@ __tls_init.exit:
 ; CHECK-NOT: pushq %rcx
 ; CHECK-NOT: pushq %rbx
 ; CHECK: callq
+; CHECK-O0-LABEL: _ZTW4sum1
+; CHECK-O0-NOT: pushq %r11
+; CHECK-O0-NOT: pushq %r10
+; CHECK-O0-NOT: pushq %r9
+; CHECK-O0-NOT: pushq %r8
+; CHECK-O0-NOT: pushq %rsi
+; CHECK-O0-NOT: pushq %rdx
+; CHECK-O0-NOT: pushq %rcx
+; CHECK-O0-NOT: pushq %rbx
+; CHECK-O0-NOT: movq %r11
+; CHECK-O0-NOT: movq %r10
+; CHECK-O0-NOT: movq %r9
+; CHECK-O0-NOT: movq %r8
+; CHECK-O0-NOT: movq %rsi
+; CHECK-O0-NOT: movq %rdx
+; CHECK-O0-NOT: movq %rcx
+; CHECK-O0-NOT: movq %rbx
+; CHECK-O0: callq
 define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
   ret i32* @sum1
 }
@@ -76,4 +115,28 @@ define cxx_fast_tlscc i32* @_ZTW4sum2() #0 {
   ret i32* @sum1
 }
 
+; Make sure at O0, we don't generate spilling/reloading of the CSRs.
+; CHECK-O0-LABEL: tls_test2
+; CHECK-O0-NOT: pushq %r11
+; CHECK-O0-NOT: pushq %r10
+; CHECK-O0-NOT: pushq %r9
+; CHECK-O0-NOT: pushq %r8
+; CHECK-O0-NOT: pushq %rsi
+; CHECK-O0-NOT: pushq %rdx
+; CHECK-O0: callq {{.*}}tls_helper
+; CHECK-O0-NOT: popq %rdx
+; CHECK-O0-NOT: popq %rsi
+; CHECK-O0-NOT: popq %r8
+; CHECK-O0-NOT: popq %r9
+; CHECK-O0-NOT: popq %r10
+; CHECK-O0-NOT: popq %r11
+; CHECK-O0: ret
+%class.C = type { i32 }
+@tC = internal thread_local global %class.C zeroinitializer, align 4
+declare cxx_fast_tlscc void @tls_helper()
+define cxx_fast_tlscc %class.C* @tls_test2() #1 {
+  call cxx_fast_tlscc void @tls_helper()
+  ret %class.C* @tC
+}
 attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #1 = { nounwind }

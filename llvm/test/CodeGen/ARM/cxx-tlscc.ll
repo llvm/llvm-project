@@ -3,12 +3,18 @@
 ; RUN: llc < %s -mtriple=armv7-apple-ios8.0 | FileCheck %s
 ; RUN: llc < %s -mtriple=armv7-apple-ios8.0 -enable-shrink-wrap=true | FileCheck --check-prefix=CHECK %s
 
+; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 -O0 | FileCheck --check-prefix=CHECK-O0 --check-prefix=WATCH-O0 %s
+; RUN: llc < %s -mtriple=armv7-apple-ios8.0 -O0 | FileCheck --check-prefix=CHECK-O0 --check-prefix=IOS-O0 %s
+
 %struct.S = type { i8 }
 
 @sg = internal thread_local global %struct.S zeroinitializer, align 1
 @__dso_handle = external global i8
 @__tls_guard = internal thread_local unnamed_addr global i1 false
 @sum1 = internal thread_local global i32 0, align 4
+
+%class.C = type { i32 }
+@tC = internal thread_local global %class.C zeroinitializer, align 4
 
 declare %struct.S* @_ZN1SC1Ev(%struct.S* returned)
 declare %struct.S* @_ZN1SD1Ev(%struct.S* returned)
@@ -36,7 +42,7 @@ __tls_init.exit:
 ; CHECK-NOT: vpush {d0, d1, d2, d3, d4, d5, d6, d7}
 ; CHECK: blx
 ; CHECK: bne [[BB_end:.?LBB0_[0-9]+]]
-; CHECK; blx
+; CHECK: blx
 ; CHECK: tlv_atexit
 ; CHECK: [[BB_end]]:
 ; CHECK: blx
@@ -46,12 +52,54 @@ __tls_init.exit:
 ; CHECK-NOT: pop {r1, r2, r3, r4, r7, pc}
 ; CHECK: pop {lr}
 
+; CHECK-O0-LABEL: _ZTW2sg
+; WATCH-O0: push {r1, r2, r3, r6, r7, lr}
+; IOS-O0: push {r1, r2, r3, r7, lr}
+; CHECK-O0: push {r9, r12}
+; CHECK-O0: vpush {d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31}
+; CHECK-O0: vpush {d0, d1, d2, d3, d4, d5, d6, d7}
+; CHECK-O0: blx
+; CHECK-O0: bne [[BB_end:.?LBB0_[0-9]+]]
+; CHECK-O0: blx
+; CHECK-O0: tlv_atexit
+; CHECK-O0: [[BB_end]]:
+; CHECK-O0: blx
+; CHECK-O0: vpop {d0, d1, d2, d3, d4, d5, d6, d7}
+; CHECK-O0: vpop {d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31}
+; CHECK-O0: pop {r9, r12}
+; WATCH-O0: pop {r1, r2, r3, r6, r7, pc}
+; IOS-O0: pop {r1, r2, r3, r7, pc}
+
 ; CHECK-LABEL: _ZTW4sum1
 ; CHECK-NOT: push {r1, r2, r3, r4, r7, lr}
 ; CHECK-NOT: push {r9, r12}
 ; CHECK-NOT: vpush {d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31}
 ; CHECK-NOT: vpush {d0, d1, d2, d3, d4, d5, d6, d7}
 ; CHECK: blx
+
+; CHECK-O0-LABEL: _ZTW4sum1
+; CHECK-O0-NOT: vpush
+; CHECK-O0-NOT: vstr
+; CHECK-O0-NOT: vpop
+; CHECK-O0-NOT: vldr
+; CHECK-O0: pop
 define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
   ret i32* @sum1
 }
+
+; Make sure at O0, we don't generate spilling/reloading of the CSRs.
+; CHECK-O0-LABEL: tls_test2
+; CHECK-O0: push
+; CHECK-O0-NOT: vpush
+; CHECK-O0-NOT: vstr
+; CHECK-O0: tls_helper
+; CHECK-O0-NOT: vpop
+; CHECK-O0-NOT: vldr
+; CHECK-O0: pop
+declare cxx_fast_tlscc void @tls_helper()
+define cxx_fast_tlscc %class.C* @tls_test2() #1 {
+  call cxx_fast_tlscc void @tls_helper()
+  ret %class.C* @tC
+}
+attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #1 = { nounwind }

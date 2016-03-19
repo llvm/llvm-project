@@ -3,6 +3,8 @@
 ; Shrink wrapping currently does not kick in because we have a TLS CALL
 ; in the entry block and it will clobber the link register.
 
+; RUN: llc < %s -mtriple=aarch64-apple-ios -O0 | FileCheck --check-prefix=CHECK-O0 %s
+
 %struct.S = type { i8 }
 
 @sg = internal thread_local global %struct.S zeroinitializer, align 1
@@ -76,6 +78,52 @@ __tls_init.exit:
 ; CHECK-NOT: ldp d29, d28
 ; CHECK-NOT: ldp d31, d30
 
+; CHECK-O0-LABEL: _ZTW2sg
+; CHECK-O0: stp d31, d30
+; CHECK-O0: stp d29, d28
+; CHECK-O0: stp d27, d26
+; CHECK-O0: stp d25, d24
+; CHECK-O0: stp d23, d22
+; CHECK-O0: stp d21, d20
+; CHECK-O0: stp d19, d18
+; CHECK-O0: stp d17, d16
+; CHECK-O0: stp d7, d6
+; CHECK-O0: stp d5, d4
+; CHECK-O0: stp d3, d2
+; CHECK-O0: stp d1, d0
+; CHECK-O0: stp x14, x13
+; CHECK-O0: stp x12, x11
+; CHECK-O0: stp x10, x9
+; CHECK-O0: stp x8, x7
+; CHECK-O0: stp x6, x5
+; CHECK-O0: stp x4, x3
+; CHECK-O0: stp x2, x1
+; CHECK-O0: blr
+; CHECK-O0: tbnz w{{.*}}, #0, [[BB_end:.?LBB0_[0-9]+]]
+; CHECK-O0: blr
+; CHECK-O0: tlv_atexit
+; CHECK-O0: [[BB_end]]:
+; CHECK-O0: blr
+; CHECK-O0: ldp x2, x1
+; CHECK-O0: ldp x4, x3
+; CHECK-O0: ldp x6, x5
+; CHECK-O0: ldp x8, x7
+; CHECK-O0: ldp x10, x9
+; CHECK-O0: ldp x12, x11
+; CHECK-O0: ldp x14, x13
+; CHECK-O0: ldp d1, d0
+; CHECK-O0: ldp d3, d2
+; CHECK-O0: ldp d5, d4
+; CHECK-O0: ldp d7, d6
+; CHECK-O0: ldp d17, d16
+; CHECK-O0: ldp d19, d18
+; CHECK-O0: ldp d21, d20
+; CHECK-O0: ldp d23, d22
+; CHECK-O0: ldp d25, d24
+; CHECK-O0: ldp d27, d26
+; CHECK-O0: ldp d29, d28
+; CHECK-O0: ldp d31, d30
+
 ; CHECK-LABEL: _ZTW4sum1
 ; CHECK-NOT: stp d31, d30
 ; CHECK-NOT: stp d29, d28
@@ -98,6 +146,64 @@ __tls_init.exit:
 ; CHECK-NOT: stp x4, x3
 ; CHECK-NOT: stp x2, x1
 ; CHECK: blr
+
+; CHECK-O0-LABEL: _ZTW4sum1
+; CHECK-O0-NOT: vstr
+; CHECK-O0-NOT: vldr
 define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind {
   ret i32* @sum1
 }
+
+; Make sure at O0, we don't generate spilling/reloading of the CSRs.
+; CHECK-O0-LABEL: tls_test2
+; CHECK-O0-NOT: stp d31, d30
+; CHECK-O0-NOT: stp d29, d28
+; CHECK-O0-NOT: stp d27, d26
+; CHECK-O0-NOT: stp d25, d24
+; CHECK-O0-NOT: stp d23, d22
+; CHECK-O0-NOT: stp d21, d20
+; CHECK-O0-NOT: stp d19, d18
+; CHECK-O0-NOT: stp d17, d16
+; CHECK-O0-NOT: stp d7, d6
+; CHECK-O0-NOT: stp d5, d4
+; CHECK-O0-NOT: stp d3, d2
+; CHECK-O0-NOT: stp d1, d0
+; CHECK-O0-NOT: stp x20, x19
+; CHECK-O0-NOT: stp x14, x13
+; CHECK-O0-NOT: stp x12, x11
+; CHECK-O0-NOT: stp x10, x9
+; CHECK-O0-NOT: stp x8, x7
+; CHECK-O0-NOT: stp x6, x5
+; CHECK-O0-NOT: stp x4, x3
+; CHECK-O0-NOT: stp x2, x1
+; CHECK-O0: bl {{.*}}tls_helper
+; CHECK-O0-NOT: ldp x2, x1
+; CHECK-O0-NOT: ldp x4, x3
+; CHECK-O0-NOT: ldp x6, x5
+; CHECK-O0-NOT: ldp x8, x7
+; CHECK-O0-NOT: ldp x10, x9
+; CHECK-O0-NOT: ldp x12, x11
+; CHECK-O0-NOT: ldp x14, x13
+; CHECK-O0-NOT: ldp x20, x19
+; CHECK-O0-NOT: ldp d1, d0
+; CHECK-O0-NOT: ldp d3, d2
+; CHECK-O0-NOT: ldp d5, d4
+; CHECK-O0-NOT: ldp d7, d6
+; CHECK-O0-NOT: ldp d17, d16
+; CHECK-O0-NOT: ldp d19, d18
+; CHECK-O0-NOT: ldp d21, d20
+; CHECK-O0-NOT: ldp d23, d22
+; CHECK-O0-NOT: ldp d25, d24
+; CHECK-O0-NOT: ldp d27, d26
+; CHECK-O0-NOT: ldp d29, d28
+; CHECK-O0-NOT: ldp d31, d30
+; CHECK-O0: ret
+%class.C = type { i32 }
+@tC = internal thread_local global %class.C zeroinitializer, align 4
+declare cxx_fast_tlscc void @tls_helper()
+define cxx_fast_tlscc %class.C* @tls_test2() #1 {
+  call cxx_fast_tlscc void @tls_helper()
+  ret %class.C* @tC
+}
+attributes #0 = { nounwind "no-frame-pointer-elim"="true" }
+attributes #1 = { nounwind }
