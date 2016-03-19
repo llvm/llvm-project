@@ -34,7 +34,7 @@ struct CalleeInfo {
   /// The cumulative profile count of calls to corresponding function
   /// (if using PGO, otherwise 0).
   uint64_t ProfileCount;
-  CalleeInfo() = default;
+  CalleeInfo() : CallsiteCount(0), ProfileCount(0) {}
   CalleeInfo(unsigned CallsiteCount, uint64_t ProfileCount)
       : CallsiteCount(CallsiteCount), ProfileCount(ProfileCount) {}
   CalleeInfo &operator+=(uint64_t RHSProfileCount) {
