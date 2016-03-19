@@ -152,7 +152,7 @@ public:
 };
 
 static void promoteModule(Module &TheModule, const FunctionInfoIndex &Index) {
-  if (renameModuleForThinLTO(TheModule, &Index))
+  if (renameModuleForThinLTO(TheModule, Index))
     report_fatal_error("renameModuleForThinLTO failed");
 }
 
