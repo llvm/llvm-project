@@ -127,18 +127,26 @@ ClangPersistentVariables::GetNextPersistentVariableName (bool is_error)
 }
 
 void
-ClangPersistentVariables::RegisterClangPersistentType (clang::TypeDecl *type_decl)
+ClangPersistentVariables::RegisterPersistentDecl (const ConstString &name,
+                                                  clang::NamedDecl *decl)
 {
-    ConstString name(type_decl->getName().str().c_str());
-    m_clang_persistent_types.insert(std::make_pair(name.GetCString(), type_decl));
+    m_persistent_decls.insert(std::pair<const char*, clang::NamedDecl*>(name.GetCString(), decl));
+    
+    if (clang::EnumDecl *enum_decl = llvm::dyn_cast<clang::EnumDecl>(decl))
+    {
+        for (clang::EnumConstantDecl *enumerator_decl : enum_decl->enumerators())
+        {
+            m_persistent_decls.insert(std::pair<const char*, clang::NamedDecl*>(ConstString(enumerator_decl->getNameAsString()).GetCString(), enumerator_decl));
+        }
+    }
 }
 
-clang::TypeDecl *
-ClangPersistentVariables::GetClangPersistentType (const ConstString &name)
+clang::NamedDecl *
+ClangPersistentVariables::GetPersistentDecl (const ConstString &name)
 {
-    ClangPersistentTypeMap::const_iterator i = m_clang_persistent_types.find(name.GetCString());
+    PersistentDeclMap::const_iterator i = m_persistent_decls.find(name.GetCString());
     
-    if (i == m_clang_persistent_types.end())
+    if (i == m_persistent_decls.end())
         return NULL;
     else
         return i->second;
