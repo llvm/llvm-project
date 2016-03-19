@@ -20,6 +20,7 @@
 
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/MD5.h"
 #include <system_error>
 
 namespace llvm {
@@ -311,11 +312,24 @@ public:
     return Name;
   }
 
-/// @name Materialization
-/// Materialization is used to construct functions only as they're needed. This
-/// is useful to reduce memory usage in LLVM or parsing work done by the
-/// BitcodeReader to load the Module.
-/// @{
+  /// Return the modified name for a global value suitable to be
+  /// used as the key for a global lookup (e.g. profile or ThinLTO).
+  /// The value's original name is \c Name and has linkage of type
+  /// \c Linkage. The value is defined in module \c FileName.
+  static std::string getGlobalIdentifier(StringRef Name,
+                                         GlobalValue::LinkageTypes Linkage,
+                                         StringRef FileName);
+
+  /// Return a 64-bit global unique ID constructed from global value name
+  /// (i.e. returned by getGlobalIdentifier).
+  static uint64_t getGUID(StringRef GlobalName) { return MD5Hash(GlobalName); }
+
+  /// @name Materialization
+  /// Materialization is used to construct functions only as they're needed.
+  /// This
+  /// is useful to reduce memory usage in LLVM or parsing work done by the
+  /// BitcodeReader to load the Module.
+  /// @{
 
   /// If this function's Module is being lazily streamed in functions from disk
   /// or some other source, this method can be used to check to see if the

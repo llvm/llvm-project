@@ -79,7 +79,7 @@ std::string getPGOFuncName(StringRef RawFuncName,
                            GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
                            uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
-  return Function::getGlobalIdentifier(RawFuncName, Linkage, FileName);
+  return GlobalValue::getGlobalIdentifier(RawFuncName, Linkage, FileName);
 }
 
 std::string getPGOFuncName(const Function &F, uint64_t Version) {
