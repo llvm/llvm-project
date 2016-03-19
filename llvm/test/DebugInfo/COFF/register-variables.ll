@@ -152,7 +152,7 @@
 ; OBJ:   InlineSite {
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
-; OBJ:     Inlinee: inlineinc (0x1003)
+; OBJ:     Inlinee: inlineinc (0x1002)
 ; OBJ:   }
 ; OBJ:   Local {
 ; OBJ:     Type: int (0x74)

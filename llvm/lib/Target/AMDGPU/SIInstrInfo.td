@@ -722,6 +722,8 @@ def MUBUFAddr64Atomic : ComplexPattern<i64, 5, "SelectMUBUFAddr64">;
 def MUBUFScratch : ComplexPattern<i64, 4, "SelectMUBUFScratch">;
 def MUBUFOffset : ComplexPattern<i64, 6, "SelectMUBUFOffset">;
 def MUBUFOffsetAtomic : ComplexPattern<i64, 4, "SelectMUBUFOffset">;
+def MUBUFIntrinsicOffset : ComplexPattern<i32, 2, "SelectMUBUFIntrinsicOffset">;
+def MUBUFIntrinsicVOffset : ComplexPattern<i32, 3, "SelectMUBUFIntrinsicVOffset">;
 
 def SMRDImm   : ComplexPattern<i64, 2, "SelectSMRDImm">;
 def SMRDImm32 : ComplexPattern<i64, 2, "SelectSMRDImm32">;
@@ -2812,10 +2814,25 @@ multiclass MUBUFAtomicAddr64_m <mubuf op, string opName, dag outs, dag ins,
   // for VI appropriately.
 }
 
+multiclass MUBUFAtomicOther_m <mubuf op, string opName, dag outs, dag ins,
+                               string asm, list<dag> pattern, bit is_return> {
+
+  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
+           AtomicNoRet<opName, is_return>;
+
+  let tfe = 0 in {
+    let addr64 = 0 in {
+      def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
+    }
+
+    def _vi : MUBUF_Real_vi <op, opName, outs, ins, asm>;
+  }
+}
+
 multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
                          ValueType vt, SDPatternOperator atomic> {
 
-  let mayStore = 1, mayLoad = 1, hasPostISelHook = 1 in {
+  let mayStore = 1, mayLoad = 1, hasPostISelHook = 1, hasSideEffects = 1 in {
 
     // No return variants
     let glc = 0 in {
@@ -2833,6 +2850,34 @@ multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
              slc:$slc),
         name#" $vdata, $srsrc, $soffset"#"$offset"#"$slc", [], 0
       >;
+
+      let offen = 1, idxen = 0 in {
+        defm _OFFEN : MUBUFAtomicOther_m <
+          op, name#"_offen", (outs),
+          (ins rc:$vdata, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_32:$soffset,
+                mbuf_offset:$offset, slc:$slc),
+          name#" $vdata, $vaddr, $srsrc, $soffset offen"#"$offset"#"$slc", [], 0
+        >;
+      }
+
+      let offen = 0, idxen = 1 in {
+        defm _IDXEN : MUBUFAtomicOther_m <
+          op, name#"_idxen", (outs),
+          (ins rc:$vdata, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_32:$soffset,
+                mbuf_offset:$offset, slc:$slc),
+          name#" $vdata, $vaddr, $srsrc, $soffset idxen"#"$offset"#"$slc", [], 0
+        >;
+      }
+
+      let offen = 1, idxen = 1 in {
+        defm _BOTHEN : MUBUFAtomicOther_m <
+          op, name#"_bothen", (outs),
+          (ins rc:$vdata, VReg_64:$vaddr, SReg_128:$srsrc, SCSrc_32:$soffset,
+                mbuf_offset:$offset, slc:$slc),
+          name#" $vdata, $vaddr, $srsrc, $soffset idxen offen"#"$offset"#"$slc",
+          [], 0
+        >;
+      }
     } // glc = 0
 
     // Variant that return values
@@ -2859,6 +2904,35 @@ multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
                                     i1:$slc), vt:$vdata_in))], 1
       >;
 
+      let offen = 1, idxen = 0 in {
+        defm _RTN_OFFEN : MUBUFAtomicOther_m <
+          op, name#"_rtn_offen", (outs rc:$vdata),
+          (ins rc:$vdata_in, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_32:$soffset,
+                mbuf_offset:$offset, slc:$slc),
+          name#" $vdata, $vaddr, $srsrc, $soffset offen"#"$offset"#" glc"#"$slc",
+          [], 1
+        >;
+      }
+
+      let offen = 0, idxen = 1 in {
+        defm _RTN_IDXEN : MUBUFAtomicOther_m <
+          op, name#"_rtn_idxen", (outs rc:$vdata),
+          (ins rc:$vdata_in, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_32:$soffset,
+                mbuf_offset:$offset, slc:$slc),
+          name#" $vdata, $vaddr, $srsrc, $soffset idxen"#"$offset"#" glc"#"$slc",
+          [], 1
+        >;
+      }
+
+      let offen = 1, idxen = 1 in {
+        defm _RTN_BOTHEN : MUBUFAtomicOther_m <
+          op, name#"_rtn_bothen", (outs rc:$vdata),
+          (ins rc:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc, SCSrc_32:$soffset,
+                mbuf_offset:$offset, slc:$slc),
+          name#" $vdata, $vaddr, $srsrc, $soffset idxen offen"#"$offset"#" glc"#"$slc",
+          [], 1
+        >;
+      }
     } // glc = 1
 
   } // mayStore = 1, mayLoad = 1, hasPostISelHook = 1

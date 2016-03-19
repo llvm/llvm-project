@@ -45,11 +45,11 @@
 ; ASM: [[inline_beg]]:
 ; ASM: .long   0
 ; ASM: # Inlined function bar starts at t.cpp:8
-; ASM: .long   4099
-; ASM: .long   0
-; ASM: .long   8
+; ASM: .long   4098                    # Type index of inlined function
+; ASM: .long   0                       # Offset into filechecksum table
+; ASM: .long   8                       # Starting line number
 ; ASM: # Inlined function foo starts at t.cpp:2
-; ASM: .long   4100
+; ASM: .long   4099
 ; ASM: .long   0
 ; ASM: .long   2
 ; ASM: [[inline_end]]:
@@ -69,16 +69,48 @@
 ; ASM: .short  4430
 ; ASM: .short  4430
 
+; We should only the LF_FUNC_ID records that we needed to reference.
+; OBJ: CodeViewTypes [
+; OBJ:   Section: .debug$T (4)
+; OBJ:   ArgList {
+; OBJ:     TypeLeafKind: LF_ARGLIST (0x1201)
+; OBJ:     TypeIndex: 0x1000
+; OBJ:     NumArgs: 0
+; OBJ:   }
+; OBJ:   ProcedureType {
+; OBJ:     TypeLeafKind: LF_PROCEDURE (0x1008)
+; OBJ:     TypeIndex: 0x1001
+; OBJ:     ReturnType: void (0x3)
+; OBJ:     NumParameters: 0
+; OBJ:     ArgListType: () (0x1000)
+; OBJ:   }
+; OBJ:   FuncId {
+; OBJ:     TypeLeafKind: LF_FUNC_ID (0x1601)
+; OBJ:     TypeIndex: 0x1002
+; OBJ:     ParentScope: 0x0
+; OBJ:     FunctionType: void () (0x1001)
+; OBJ:     Name: bar
+; OBJ:   }
+; OBJ:   FuncId {
+; OBJ:     TypeLeafKind: LF_FUNC_ID (0x1601)
+; OBJ:     TypeIndex: 0x1003
+; OBJ:     ParentScope: 0x0
+; OBJ:     FunctionType: void () (0x1001)
+; OBJ:     Name: foo
+; OBJ:   }
+; OBJ-NOT: TypeLeafKind: LF_FUNC_ID
+; OBJ: ]
+
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: InlineeLines (0xF6)
 ; OBJ:   SubSectionSize: 0x1C
 ; OBJ:   InlineeSourceLine {
-; OBJ:     Inlinee: bar (0x1003)
+; OBJ:     Inlinee: bar (0x1002)
 ; OBJ:     FileID: D:\src\llvm\build\t.cpp (0x0)
 ; OBJ:     SourceLineNum: 8
 ; OBJ:   }
 ; OBJ:   InlineeSourceLine {
-; OBJ:     Inlinee: foo (0x1004)
+; OBJ:     Inlinee: foo (0x1003)
 ; OBJ:     FileID: D:\src\llvm\build\t.cpp (0x0)
 ; OBJ:     SourceLineNum: 2
 ; OBJ:   }
@@ -103,7 +135,7 @@
 ; OBJ:   InlineSite {
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
-; OBJ:     Inlinee: bar (0x1003)
+; OBJ:     Inlinee: bar (0x1002)
 ; OBJ:     BinaryAnnotations [
 ; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x8, LineOffset: 1}
 ; OBJ-NEXT:  ChangeLineOffset: -6
@@ -119,7 +151,7 @@
 ; OBJ:   InlineSite {
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
-; OBJ:     Inlinee: foo (0x1004)
+; OBJ:     Inlinee: foo (0x1003)
 ; OBJ:     BinaryAnnotations [
 ; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xF, LineOffset: 1}
 ; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xA, LineOffset: 1}

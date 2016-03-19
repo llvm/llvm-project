@@ -154,7 +154,7 @@ private:
 
   // Helper methods
   Value *emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len, IRBuilder<> &B);
-  void classifyArgUse(Value *Val, BasicBlock *BB, bool IsFloat,
+  void classifyArgUse(Value *Val, Function *F, bool IsFloat,
                       SmallVectorImpl<CallInst *> &SinCalls,
                       SmallVectorImpl<CallInst *> &CosCalls,
                       SmallVectorImpl<CallInst *> &SinCosCalls);

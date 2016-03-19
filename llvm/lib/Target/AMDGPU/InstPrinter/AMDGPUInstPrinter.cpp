@@ -405,8 +405,11 @@ void AMDGPUInstPrinter::printDPPCtrlOperand(const MCInst *MI, unsigned OpNo,
                                              raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   if (Imm <= 0x0ff) {
-    O << " quad_perm:";
-    printU8ImmDecOperand(MI, OpNo, O);
+    O << " quad_perm:[";
+    O << formatDec(Imm & 0x3)         << ",";
+    O << formatDec((Imm & 0xc)  >> 2) << ",";
+    O << formatDec((Imm & 0x30) >> 4) << ",";
+    O << formatDec((Imm & 0xc0) >> 6) << "]";
   } else if ((Imm >= 0x101) && (Imm <= 0x10f)) {
     O << " row_shl:";
     printU4ImmDecOperand(MI, OpNo, O);
@@ -425,9 +428,9 @@ void AMDGPUInstPrinter::printDPPCtrlOperand(const MCInst *MI, unsigned OpNo,
   } else if (Imm == 0x13c) {
     O << " wave_ror:1";
   } else if (Imm == 0x140) {
-    O << " row_mirror:1";
+    O << " row_mirror";
   } else if (Imm == 0x141) {
-    O << " row_half_mirror:1";
+    O << " row_half_mirror";
   } else if (Imm == 0x142) {
     O << " row_bcast:15";
   } else if (Imm == 0x143) {

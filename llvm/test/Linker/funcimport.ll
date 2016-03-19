@@ -67,7 +67,7 @@
 ; Ensure that imported static variable and function references are correctly
 ; promoted and renamed (including static constant variable).
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=referencestatics:%t.bc -S | FileCheck %s --check-prefix=IMPORTSTATIC
-; IMPORTSTATIC-DAG: @staticvar.llvm.1 = available_externally hidden global
+; IMPORTSTATIC-DAG: @staticvar.llvm.1 = external hidden global
 ; IMPORTSTATIC-DAG: @staticconstvar.llvm.1 = internal unnamed_addr constant
 ; IMPORTSTATIC-DAG: define available_externally i32 @referencestatics
 ; IMPORTSTATIC-DAG: %call = call i32 @staticfunc.llvm.1
@@ -78,18 +78,18 @@
 ; are handled correctly (including referenced variable imported as
 ; available_externally definition)
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=referenceglobals:%t.bc -S | FileCheck %s --check-prefix=IMPORTGLOBALS
-; IMPORTGLOBALS-DAG: @globalvar = available_externally global
+; IMPORTGLOBALS-DAG: @globalvar = external global
 ; IMPORTGLOBALS-DAG: declare void @globalfunc1()
 ; IMPORTGLOBALS-DAG: define available_externally i32 @referenceglobals
 
 ; Ensure that common variable correctly imported as common defition.
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=referencecommon:%t.bc -S | FileCheck %s --check-prefix=IMPORTCOMMON
-; IMPORTCOMMON-DAG: @commonvar = common global
+; IMPORTCOMMON-DAG: @commonvar = external global
 ; IMPORTCOMMON-DAG: define available_externally i32 @referencecommon
 
 ; Ensure that imported static function pointer correctly promoted and renamed.
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=callfuncptr:%t.bc -S | FileCheck %s --check-prefix=IMPORTFUNCPTR
-; IMPORTFUNCPTR-DAG: @P.llvm.1 = available_externally hidden global void ()* null
+; IMPORTFUNCPTR-DAG: @P.llvm.1 = external hidden global void ()*
 ; IMPORTFUNCPTR-DAG: define available_externally void @callfuncptr
 ; IMPORTFUNCPTR-DAG: %0 = load void ()*, void ()** @P.llvm.1
 

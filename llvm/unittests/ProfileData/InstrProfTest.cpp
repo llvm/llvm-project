@@ -180,12 +180,26 @@ TEST_F(InstrProfTest, get_profile_summary) {
   };
   InstrProfSummary &PS = Reader->getSummary();
   VerifySummary(PS);
+
+  // Test that conversion of summary to and from Metadata works.
   Metadata *MD = PS.getMD(getGlobalContext());
   ASSERT_TRUE(MD);
   ProfileSummary *PSFromMD = ProfileSummary::getFromMD(MD);
   ASSERT_TRUE(PSFromMD);
   ASSERT_TRUE(isa<InstrProfSummary>(PSFromMD));
   InstrProfSummary *IPS = cast<InstrProfSummary>(PSFromMD);
+  VerifySummary(*IPS);
+  delete IPS;
+
+  // Test that summary can be attached to and read back from module.
+  Module M("my_module", getGlobalContext());
+  M.setProfileSummary(MD);
+  MD = M.getProfileSummary();
+  ASSERT_TRUE(MD);
+  PSFromMD = ProfileSummary::getFromMD(MD);
+  ASSERT_TRUE(PSFromMD);
+  ASSERT_TRUE(isa<InstrProfSummary>(PSFromMD));
+  IPS = cast<InstrProfSummary>(PSFromMD);
   VerifySummary(*IPS);
   delete IPS;
 }

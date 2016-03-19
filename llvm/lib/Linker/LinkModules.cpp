@@ -35,19 +35,9 @@ class ModuleLinker {
   /// For symbol clashes, prefer those from Src.
   unsigned Flags;
 
-  /// Module summary index passed into ModuleLinker for using in function
-  /// importing/exporting handling.
-  const ModuleSummaryIndex *ImportIndex;
-
   /// Functions to import from source module, all other functions are
   /// imported as declarations instead of definitions.
-  DenseSet<const GlobalValue *> *FunctionsToImport;
-
-  /// Set to true if the given ModuleSummaryIndex contains any functions
-  /// from this source module, in which case we must conservatively assume
-  /// that any of its functions may be imported into another module
-  /// as part of a different backend compilation process.
-  bool HasExportedFunctions = false;
+  DenseSet<const GlobalValue *> *GlobalsToImport;
 
   /// Association between metadata value id and temporary metadata that
   /// remains unmapped after function importing. Saved during function
@@ -116,7 +106,7 @@ class ModuleLinker {
 
   /// Helper method to check if we are importing from the current source
   /// module.
-  bool isPerformingImport() const { return FunctionsToImport != nullptr; }
+  bool isPerformingImport() const { return GlobalsToImport != nullptr; }
 
   /// If we are importing from the source module, checks if we should
   /// import SGV as a definition, otherwise import as a declaration.
@@ -124,21 +114,10 @@ class ModuleLinker {
 
 public:
   ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags,
-               const ModuleSummaryIndex *Index = nullptr,
-               DenseSet<const GlobalValue *> *FunctionsToImport = nullptr,
+               DenseSet<const GlobalValue *> *GlobalsToImport = nullptr,
                DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr)
-      : Mover(Mover), SrcM(std::move(SrcM)), Flags(Flags), ImportIndex(Index),
-        FunctionsToImport(FunctionsToImport),
-        ValIDToTempMDMap(ValIDToTempMDMap) {
-    assert((ImportIndex || !FunctionsToImport) &&
-           "Expect a ModuleSummaryIndex when importing");
-    // If we have a ModuleSummaryIndex but no function to import,
-    // then this is the primary module being compiled in a ThinLTO
-    // backend compilation, and we need to see if it has functions that
-    // may be exported to another backend compilation.
-    if (ImportIndex && !FunctionsToImport)
-      HasExportedFunctions = ImportIndex->hasExportedFunctions(*this->SrcM);
-  }
+      : Mover(Mover), SrcM(std::move(SrcM)), Flags(Flags),
+        GlobalsToImport(GlobalsToImport), ValIDToTempMDMap(ValIDToTempMDMap) {}
 
   bool run();
 };
@@ -147,8 +126,8 @@ public:
 bool ModuleLinker::doImportAsDefinition(const GlobalValue *SGV) {
   if (!isPerformingImport())
     return false;
-  return FunctionImportGlobalProcessing::doImportAsDefinition(
-      SGV, FunctionsToImport);
+  return FunctionImportGlobalProcessing::doImportAsDefinition(SGV,
+                                                              GlobalsToImport);
 }
 
 static GlobalValue::VisibilityTypes
@@ -297,7 +276,7 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
     if (isa<Function>(&Src)) {
       // For functions, LinkFromSrc iff this is a function requested
       // for importing. For variables, decide below normally.
-      LinkFromSrc = FunctionsToImport->count(&Src);
+      LinkFromSrc = GlobalsToImport->count(&Src);
       return false;
     }
 
@@ -423,12 +402,12 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
   if (GV.hasAppendingLinkage() && isPerformingImport())
     return false;
 
-  if (isPerformingImport() && !doImportAsDefinition(&GV))
-    return false;
-
-  if (!DGV && !shouldOverrideFromSrc() &&
-      (GV.hasLocalLinkage() || GV.hasLinkOnceLinkage() ||
-       GV.hasAvailableExternallyLinkage()))
+  if (isPerformingImport()) {
+    if (!doImportAsDefinition(&GV))
+      return false;
+  } else if (!DGV && !shouldOverrideFromSrc() &&
+             (GV.hasLocalLinkage() || GV.hasLinkOnceLinkage() ||
+              GV.hasAvailableExternallyLinkage()))
     return false;
 
   if (GV.isDeclaration())
@@ -508,15 +487,6 @@ bool ModuleLinker::run() {
     if (linkIfNeeded(GA))
       return true;
 
-  if (ImportIndex) {
-    FunctionImportGlobalProcessing ThinLTOProcessing(*SrcM, *ImportIndex,
-                                                     FunctionsToImport);
-    if (ThinLTOProcessing.run())
-      return true;
-    for (auto *GV : ThinLTOProcessing.getNewExportedValues())
-      ValuesToLink.insert(GV);
-  }
-
   for (unsigned I = 0; I < ValuesToLink.size(); ++I) {
     GlobalValue *GV = ValuesToLink[I];
     const Comdat *SC = GV->getComdat();
@@ -549,10 +519,9 @@ bool ModuleLinker::run() {
 Linker::Linker(Module &M) : Mover(M) {}
 
 bool Linker::linkInModule(std::unique_ptr<Module> Src, unsigned Flags,
-                          const ModuleSummaryIndex *Index,
-                          DenseSet<const GlobalValue *> *FunctionsToImport,
+                          DenseSet<const GlobalValue *> *GlobalsToImport,
                           DenseMap<unsigned, MDNode *> *ValIDToTempMDMap) {
-  ModuleLinker ModLinker(Mover, std::move(Src), Flags, Index, FunctionsToImport,
+  ModuleLinker ModLinker(Mover, std::move(Src), Flags, GlobalsToImport,
                          ValIDToTempMDMap);
   return ModLinker.run();
 }

@@ -901,22 +901,17 @@ static SubtargetFeatures getFeatures(Triple &TheTriple) {
 }
 
 static CodeGenOpt::Level getCGOptLevel() {
-  CodeGenOpt::Level CGOptLevel;
   switch (options::OptLevel) {
   case 0:
-    CGOptLevel = CodeGenOpt::None;
-    break;
+    return CodeGenOpt::None;
   case 1:
-    CGOptLevel = CodeGenOpt::Less;
-    break;
+    return CodeGenOpt::Less;
   case 2:
-    CGOptLevel = CodeGenOpt::Default;
-    break;
+    return CodeGenOpt::Default;
   case 3:
-    CGOptLevel = CodeGenOpt::Aggressive;
-    break;
+    return CodeGenOpt::Aggressive;
   }
-  return CGOptLevel;
+  llvm_unreachable("Invalid optimization level");
 }
 
 void CodeGen::initTargetMachine() {

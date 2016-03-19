@@ -485,3 +485,11 @@ Optional<uint64_t> Module::getMaximumFunctionCount() {
     return None;
   return cast<ConstantInt>(Val->getValue())->getZExtValue();
 }
+
+void Module::setProfileSummary(Metadata *M) {
+  addModuleFlag(ModFlagBehavior::Error, "ProfileSummary", M);
+}
+
+Metadata *Module::getProfileSummary() {
+  return getModuleFlag("ProfileSummary");
+}

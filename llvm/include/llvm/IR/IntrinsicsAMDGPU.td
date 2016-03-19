@@ -206,12 +206,10 @@ def int_amdgcn_image_atomic_cmpswap : Intrinsic <
   []>;
 
 def int_amdgcn_buffer_load_format : Intrinsic <
-  [llvm_v4f32_ty],
+  [llvm_anyfloat_ty],
   [llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // soffset(SGPR)
-   llvm_i32_ty,       // offset(imm)
    llvm_i32_ty,       // vindex(VGPR)
-   llvm_i32_ty,       // voffset(VGPR)
+   llvm_i32_ty,       // offset(SGPR/VGPR/imm)
    llvm_i1_ty,        // glc(imm)
    llvm_i1_ty],       // slc(imm)
   [IntrReadMem]>;
@@ -220,11 +218,37 @@ def int_amdgcn_buffer_store_format : Intrinsic <
   [],
   [llvm_anyfloat_ty,  // vdata(VGPR) -- can currently only select v4f32
    llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // soffset(SGPR)
-   llvm_i32_ty,       // offset(imm)
    llvm_i32_ty,       // vindex(VGPR)
-   llvm_i32_ty,       // voffset(VGPR)
+   llvm_i32_ty,       // offset(SGPR/VGPR/imm)
    llvm_i1_ty,        // glc(imm)
+   llvm_i1_ty],       // slc(imm)
+  []>;
+
+class AMDGPUBufferAtomic : Intrinsic <
+  [llvm_i32_ty],
+  [llvm_i32_ty,       // vdata(VGPR)
+   llvm_v4i32_ty,     // rsrc(SGPR)
+   llvm_i32_ty,       // vindex(VGPR)
+   llvm_i32_ty,       // offset(SGPR/VGPR/imm)
+   llvm_i1_ty],       // slc(imm)
+  []>;
+def int_amdgcn_buffer_atomic_swap : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_add : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_sub : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_smin : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_umin : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_smax : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_umax : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_and : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_or : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_xor : AMDGPUBufferAtomic;
+def int_amdgcn_buffer_atomic_cmpswap : Intrinsic<
+  [llvm_i32_ty],
+  [llvm_i32_ty,       // src(VGPR)
+   llvm_i32_ty,       // cmp(VGPR)
+   llvm_v4i32_ty,     // rsrc(SGPR)
+   llvm_i32_ty,       // vindex(VGPR)
+   llvm_i32_ty,       // offset(SGPR/VGPR/imm)
    llvm_i1_ty],       // slc(imm)
   []>;
 

@@ -637,7 +637,7 @@ public:
   void setPICLevel(PICLevel::Level PL);
 /// @}
 
-  /// @name Utility functions for querying and setting PGO counts
+  /// @name Utility functions for querying and setting PGO summary
   /// @{
 
   /// \brief Set maximum function count in PGO mode
@@ -645,6 +645,12 @@ public:
 
   /// \brief Returns maximum function count in PGO mode
   Optional<uint64_t> getMaximumFunctionCount();
+
+  /// \brief Attach profile summary metadata to this module.
+  void setProfileSummary(Metadata *M);
+
+  /// \brief Returns profile summary metadata
+  Metadata *getProfileSummary();
   /// @}
 };
 

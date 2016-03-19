@@ -266,7 +266,6 @@ GetImportList(Module &DestModule,
     if (!F && isa<GlobalAlias>(SGV)) {
       auto *SGA = dyn_cast<GlobalAlias>(SGV);
       F = dyn_cast<Function>(SGA->getBaseObject());
-      CalledFunctionName = F->getName();
     }
     assert(F && "Imported Function is ... not a Function");
 
@@ -349,8 +348,11 @@ bool FunctionImporter::importFunctions(Module &DestModule) {
     UpgradeDebugInfo(*SrcModule);
 
     // Link in the specified functions.
+    if (renameModuleForThinLTO(*SrcModule, Index, &FunctionsToImport))
+      return true;
+
     if (TheLinker.linkInModule(std::move(SrcModule), Linker::Flags::None,
-                               &Index, &FunctionsToImport))
+                               &FunctionsToImport))
       report_fatal_error("Function Import: link error");
 
     ImportedCount += FunctionsToImport.size();

@@ -162,7 +162,7 @@
 ; OBJ:    InlineSite {
 ; OBJ:      PtrParent: 0x0
 ; OBJ:      PtrEnd: 0x0
-; OBJ:      Inlinee: will_be_inlined (0x1003)
+; OBJ:      Inlinee: will_be_inlined (0x1002)
 ; OBJ:      BinaryAnnotations [
 ; OBJ:        ChangeLineOffset: 1
 ; OBJ:        ChangeCodeOffset: 0x14
@@ -192,7 +192,7 @@
 ; OBJ:    InlineSite {
 ; OBJ:      PtrParent: 0x0
 ; OBJ:      PtrEnd: 0x0
-; OBJ:      Inlinee: will_be_inlined (0x1003)
+; OBJ:      Inlinee: will_be_inlined (0x1002)
 ; OBJ:      BinaryAnnotations [
 ; OBJ:        ChangeLineOffset: 1
 ; OBJ:        ChangeCodeOffset: 0x35

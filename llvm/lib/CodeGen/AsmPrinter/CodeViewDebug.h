@@ -99,7 +99,20 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   };
   FunctionInfo *CurFn;
 
+  /// The next available function index for use with our .cv_* directives. Not
+  /// to be confused with type indices for LF_FUNC_ID records.
   unsigned NextFuncId = 0;
+
+  /// The next available type index.
+  unsigned NextTypeIndex = llvm::codeview::TypeIndex::FirstNonSimpleIndex;
+
+  /// Get the next type index and reserve it. Can be used to reserve more than
+  /// one type index.
+  unsigned getNextTypeIndex(unsigned NumRecords = 1) {
+    unsigned Result = NextTypeIndex;
+    NextTypeIndex += NumRecords;
+    return Result;
+  }
 
   InlineSite &getInlineSite(const DILocation *InlinedAt,
                             const DISubprogram *Inlinee);
@@ -115,17 +128,18 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// Map from DIFile to .cv_file id.
   DenseMap<const DIFile *, unsigned> FileIdMap;
 
-  SmallSetVector<const DISubprogram *, 4> InlinedSubprograms;
+  /// Map from subprogram to index in InlinedSubprograms.
+  DenseMap<const DISubprogram *, size_t> SubprogramIndices;
 
-  DenseMap<const DISubprogram *, codeview::TypeIndex> SubprogramToFuncId;
+  /// All inlined subprograms in the order they should be emitted.
+  SmallVector<const DISubprogram *, 4> InlinedSubprograms;
 
-  unsigned TypeCount = 0;
-
-  /// Gets the next type index and increments the count of types streamed so
-  /// far.
-  codeview::TypeIndex getNextTypeIndex() {
-    return codeview::TypeIndex(codeview::TypeIndex::FirstNonSimpleIndex + TypeCount++);
-  }
+  /// The first type index that refers to an LF_FUNC_ID record. We have one
+  /// record per inlined subprogram.
+  /// FIXME: Keep in sync with emitTypeInformation until we buffer type records
+  /// on the side as we go. Once we buffer type records, we can allocate type
+  /// indices on demand without interleaving our assembly output.
+  unsigned FuncIdTypeIndexStart = NextTypeIndex + 2;
 
   typedef std::map<const DIFile *, std::string> FileToFilepathMapTy;
   FileToFilepathMapTy FileToFilepathMap;
@@ -144,7 +158,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitTypeInformation();
 
-  void emitInlineeLinesSubsection();
+  void emitInlineeFuncIdsAndLines();
 
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
 

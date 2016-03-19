@@ -65,6 +65,7 @@ representation.
    :hidden:
 
    CMake
+   AdvancedBuilds
    HowToBuildOnARM
    HowToCrossCompileLLVM
    CommandGuide/index

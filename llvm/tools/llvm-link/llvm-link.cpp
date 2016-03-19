@@ -33,6 +33,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Transforms/Utils/FunctionImportUtils.h"
+
 #include <memory>
 using namespace llvm;
 
@@ -191,7 +193,10 @@ static bool importFunctions(const char *argv0, LLVMContext &Context,
     if (Verbose)
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
-    std::unique_ptr<ModuleSummaryIndex> Index;
+    // Link in the specified function.
+    DenseSet<const GlobalValue *> GlobalsToImport;
+    GlobalsToImport.insert(F);
+
     if (!SummaryIndex.empty()) {
       ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
           llvm::getModuleSummaryIndexForFile(SummaryIndex, diagnosticHandler);
@@ -200,7 +205,11 @@ static bool importFunctions(const char *argv0, LLVMContext &Context,
         errs() << EC.message() << '\n';
         return false;
       }
-      Index = std::move(IndexOrErr.get());
+      auto Index = std::move(IndexOrErr.get());
+
+      // Linkage Promotion and renaming
+      if (renameModuleForThinLTO(*M, *Index, &GlobalsToImport))
+        return true;
     }
 
     // Save the mapping of value ids to temporary metadata created when
@@ -210,11 +219,8 @@ static bool importFunctions(const char *argv0, LLVMContext &Context,
     if (!TempMDVals)
       TempMDVals = llvm::make_unique<DenseMap<unsigned, MDNode *>>();
 
-    // Link in the specified function.
-    DenseSet<const GlobalValue *> FunctionsToImport;
-    FunctionsToImport.insert(F);
-    if (L.linkInModule(std::move(M), Linker::Flags::None, Index.get(),
-                       &FunctionsToImport, TempMDVals.get()))
+    if (L.linkInModule(std::move(M), Linker::Flags::None, &GlobalsToImport,
+                       TempMDVals.get()))
       return false;
   }
 
@@ -260,7 +266,6 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
 
     // If a module summary index is supplied, load it so linkInModule can treat
     // local functions/variables as exported and promote if necessary.
-    std::unique_ptr<ModuleSummaryIndex> Index;
     if (!SummaryIndex.empty()) {
       ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
           llvm::getModuleSummaryIndexForFile(SummaryIndex, diagnosticHandler);
@@ -269,13 +274,17 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
         errs() << EC.message() << '\n';
         return false;
       }
-      Index = std::move(IndexOrErr.get());
+      auto Index = std::move(IndexOrErr.get());
+
+      // Promotion
+      if (renameModuleForThinLTO(*M, *Index))
+        return true;
     }
 
     if (Verbose)
       errs() << "Linking in '" << File << "'\n";
 
-    if (L.linkInModule(std::move(M), ApplicableFlags, Index.get()))
+    if (L.linkInModule(std::move(M), ApplicableFlags))
       return false;
     // All linker flags apply to linking of subsequent files.
     ApplicableFlags = Flags;

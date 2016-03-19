@@ -21,6 +21,9 @@ using namespace llvm;
 
 namespace {
 
+typedef function_ref<void(StringRef::iterator Loc, const Twine &)>
+    ErrorCallbackType;
+
 /// This class provides a way to iterate and get characters from the source
 /// string.
 class Cursor {
@@ -133,9 +136,7 @@ static std::string unescapeQuotedString(StringRef Value) {
 }
 
 /// Lex a string constant using the following regular expression: \"[^\"]*\"
-static Cursor lexStringConstant(
-    Cursor C,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor lexStringConstant(Cursor C, ErrorCallbackType ErrorCallback) {
   assert(C.peek() == '"');
   for (C.advance(); C.peek() != '"'; C.advance()) {
     if (C.isEOF() || isNewlineChar(C.peek())) {
@@ -149,9 +150,8 @@ static Cursor lexStringConstant(
   return C;
 }
 
-static Cursor lexName(
-    Cursor C, MIToken &Token, MIToken::TokenKind Type, unsigned PrefixLength,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor lexName(Cursor C, MIToken &Token, MIToken::TokenKind Type,
+                      unsigned PrefixLength, ErrorCallbackType ErrorCallback) {
   auto Range = C;
   C.advance(PrefixLength);
   if (C.peek() == '"') {
@@ -241,9 +241,8 @@ static Cursor maybeLexIdentifier(Cursor C, MIToken &Token) {
   return C;
 }
 
-static Cursor maybeLexMachineBasicBlock(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
+                                        ErrorCallbackType ErrorCallback) {
   bool IsReference = C.remaining().startswith("%bb.");
   if (!IsReference && !C.remaining().startswith("bb."))
     return None;
@@ -326,9 +325,8 @@ static Cursor maybeLexConstantPoolItem(Cursor C, MIToken &Token) {
   return maybeLexIndex(C, Token, "%const.", MIToken::ConstantPoolItem);
 }
 
-static Cursor maybeLexIRBlock(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexIRBlock(Cursor C, MIToken &Token,
+                              ErrorCallbackType ErrorCallback) {
   const StringRef Rule = "%ir-block.";
   if (!C.remaining().startswith(Rule))
     return None;
@@ -337,9 +335,8 @@ static Cursor maybeLexIRBlock(
   return lexName(C, Token, MIToken::NamedIRBlock, Rule.size(), ErrorCallback);
 }
 
-static Cursor maybeLexIRValue(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexIRValue(Cursor C, MIToken &Token,
+                              ErrorCallbackType ErrorCallback) {
   const StringRef Rule = "%ir.";
   if (!C.remaining().startswith(Rule))
     return None;
@@ -373,9 +370,8 @@ static Cursor maybeLexRegister(Cursor C, MIToken &Token) {
   return C;
 }
 
-static Cursor maybeLexGlobalValue(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexGlobalValue(Cursor C, MIToken &Token,
+                                  ErrorCallbackType ErrorCallback) {
   if (C.peek() != '@')
     return None;
   if (!isdigit(C.peek(1)))
@@ -391,9 +387,8 @@ static Cursor maybeLexGlobalValue(
   return C;
 }
 
-static Cursor maybeLexExternalSymbol(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexExternalSymbol(Cursor C, MIToken &Token,
+                                     ErrorCallbackType ErrorCallback) {
   if (C.peek() != '$')
     return None;
   return lexName(C, Token, MIToken::ExternalSymbol, /*PrefixLength=*/1,
@@ -456,9 +451,8 @@ static MIToken::TokenKind getMetadataKeywordKind(StringRef Identifier) {
       .Default(MIToken::Error);
 }
 
-static Cursor maybeLexExlaim(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexExlaim(Cursor C, MIToken &Token,
+                             ErrorCallbackType ErrorCallback) {
   if (C.peek() != '!')
     return None;
   auto Range = C;
@@ -531,9 +525,8 @@ static Cursor maybeLexNewline(Cursor C, MIToken &Token) {
   return C;
 }
 
-static Cursor maybeLexEscapedIRValue(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexEscapedIRValue(Cursor C, MIToken &Token,
+                                     ErrorCallbackType ErrorCallback) {
   if (C.peek() != '`')
     return None;
   auto Range = C;
@@ -555,9 +548,8 @@ static Cursor maybeLexEscapedIRValue(
   return C;
 }
 
-StringRef llvm::lexMIToken(
-    StringRef Source, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
+                           ErrorCallbackType ErrorCallback) {
   auto C = skipComment(skipWhitespace(Cursor(Source)));
   if (C.isEOF()) {
     Token.reset(MIToken::Eof, C.remaining());

@@ -474,6 +474,41 @@ LLVM-specific variables
             If you want to build LLVM as a shared library, you should use the
             ``LLVM_BUILD_LLVM_DYLIB`` option.
 
+CMake Caches
+============
+
+Recently LLVM and Clang have been adding some more complicated build system
+features. Utilizing these new features often involves a complicated chain of
+CMake variables passed on the command line. Clang provides a collection of CMake
+cache scripts to make these features more approachable.
+
+CMake cache files are utilized using CMake's -C flag:
+
+.. code-block:: console
+
+  $ cmake -C <path to cache file> <path to sources>
+
+CMake cache scripts are processed in an isolated scope, only cached variables
+remain set when the main configuration runs. CMake cached variables do not reset
+variables that are already set unless the FORCE option is specified.
+
+A few notes about CMake Caches:
+
+- Order of command line arguments is important
+
+  - -D arguments specified before -C are set before the cache is processed and
+    can be read inside the cache file
+  - -D arguments specified after -C are set after the cache is processed and
+    are unset inside the cache file
+
+- All -D arguments will override cache file settings
+- CMAKE_TOOLCHAIN_FILE is evaluated after both the cache file and the command
+  line arguments
+- It is recommended that all -D options should be specified *before* -C
+
+For more information about some of the advanced build configurations supported
+via Cache files see :doc:`AdvancedBuilds`.
+
 Executing the test suite
 ========================
 
