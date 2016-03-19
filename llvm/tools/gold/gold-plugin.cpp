@@ -576,7 +576,7 @@ getFunctionIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
 
   // Don't bother trying to build an index if there is no summary information
   // in this bitcode file.
-  if (!object::FunctionIndexObjectFile::hasFunctionSummaryInMemBuffer(
+  if (!object::FunctionIndexObjectFile::hasGlobalValueSummaryInMemBuffer(
           BufferRef, diagnosticHandler))
     return std::unique_ptr<FunctionInfoIndex>(nullptr);
 
@@ -880,7 +880,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
     if (EC)
       message(LDPL_FATAL, "Unable to open %s.thinlto.bc for writing: %s",
               output_name.data(), EC.message().c_str());
-    WriteFunctionSummaryToFile(CombinedIndex, OS);
+    WriteIndexToFile(CombinedIndex, OS);
     OS.close();
 
     cleanup_hook();
