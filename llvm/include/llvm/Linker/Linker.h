@@ -10,7 +10,7 @@
 #ifndef LLVM_LINKER_LINKER_H
 #define LLVM_LINKER_LINKER_H
 
-#include "llvm/IR/FunctionInfo.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Linker/IRMover.h"
 
 namespace llvm {
@@ -39,7 +39,7 @@ public:
   ///
   /// Passing OverrideSymbols as true will have symbols from Src
   /// shadow those in the Dest.
-  /// For ThinLTO function importing/exporting the \p FunctionInfoIndex
+  /// For ThinLTO function importing/exporting the \p ModuleSummaryIndex
   /// is passed. If \p FunctionsToImport is provided, only the functions that
   /// are part of the set will be imported from the source module.
   /// The \p ValIDToTempMDMap is populated by the linker when function
@@ -47,7 +47,7 @@ public:
   ///
   /// Returns true on error.
   bool linkInModule(std::unique_ptr<Module> Src, unsigned Flags = Flags::None,
-                    const FunctionInfoIndex *Index = nullptr,
+                    const ModuleSummaryIndex *Index = nullptr,
                     DenseSet<const GlobalValue *> *FunctionsToImport = nullptr,
                     DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr);
 

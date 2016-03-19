@@ -16,14 +16,14 @@
 namespace llvm {
 class LLVMContext;
 class Module;
-class FunctionInfoIndex;
+class ModuleSummaryIndex;
 
 /// The function importer is automatically importing function from other modules
 /// based on the provided summary informations.
 class FunctionImporter {
 
   /// The summaries index used to trigger importing.
-  const FunctionInfoIndex &Index;
+  const ModuleSummaryIndex &Index;
 
   /// Factory function to load a Module for a given identifier
   std::function<std::unique_ptr<Module>(StringRef Identifier)> ModuleLoader;
@@ -31,7 +31,7 @@ class FunctionImporter {
 public:
   /// Create a Function Importer.
   FunctionImporter(
-      const FunctionInfoIndex &Index,
+      const ModuleSummaryIndex &Index,
       std::function<std::unique_ptr<Module>(StringRef Identifier)> ModuleLoader)
       : Index(Index), ModuleLoader(ModuleLoader) {}
 

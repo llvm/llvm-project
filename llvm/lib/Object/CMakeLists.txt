@@ -11,12 +11,12 @@ add_llvm_library(LLVMObject
   IRObjectFile.cpp
   MachOObjectFile.cpp
   MachOUniversal.cpp
+  ModuleSummaryIndexObjectFile.cpp
   Object.cpp
   ObjectFile.cpp
   RecordStreamer.cpp
   SymbolicFile.cpp
   SymbolSize.cpp
-  FunctionIndexObjectFile.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Object

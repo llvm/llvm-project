@@ -1,9 +1,9 @@
-; RUN: llvm-as -function-summary %s -o %t.bc
-; RUN: llvm-as -function-summary %p/Inputs/funcimport_appending_global.ll -o %t2.bc
+; RUN: llvm-as -module-summary %s -o %t.bc
+; RUN: llvm-as -module-summary %p/Inputs/funcimport_appending_global.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Do the import now
-; RUN: llvm-link %t.bc -functionindex=%t3.thinlto.bc -import=foo:%t2.bc -S | FileCheck %s
+; RUN: llvm-link %t.bc -summary-index=%t3.thinlto.bc -import=foo:%t2.bc -S | FileCheck %s
 
 ; Ensure that global constructor (appending linkage) is not imported
 ; CHECK-NOT: @llvm.global_ctors = {{.*}}@foo

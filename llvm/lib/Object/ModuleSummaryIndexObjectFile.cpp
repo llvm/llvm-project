@@ -1,4 +1,4 @@
-//===- FunctionIndexObjectFile.cpp - Function index file implementation ---===//
+//===- ModuleSummaryIndexObjectFile.cpp - Summary index file implementation ==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Part of the FunctionIndexObjectFile class implementation.
+// Part of the ModuleSummaryIndexObjectFile class implementation.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Object/FunctionIndexObjectFile.h"
+#include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Bitcode/ReaderWriter.h"
-#include "llvm/IR/FunctionInfo.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -22,18 +22,19 @@
 using namespace llvm;
 using namespace object;
 
-FunctionIndexObjectFile::FunctionIndexObjectFile(
-    MemoryBufferRef Object, std::unique_ptr<FunctionInfoIndex> I)
-    : SymbolicFile(Binary::ID_FunctionIndex, Object), Index(std::move(I)) {}
+ModuleSummaryIndexObjectFile::ModuleSummaryIndexObjectFile(
+    MemoryBufferRef Object, std::unique_ptr<ModuleSummaryIndex> I)
+    : SymbolicFile(Binary::ID_ModuleSummaryIndex, Object), Index(std::move(I)) {
+}
 
-FunctionIndexObjectFile::~FunctionIndexObjectFile() {}
+ModuleSummaryIndexObjectFile::~ModuleSummaryIndexObjectFile() {}
 
-std::unique_ptr<FunctionInfoIndex> FunctionIndexObjectFile::takeIndex() {
+std::unique_ptr<ModuleSummaryIndex> ModuleSummaryIndexObjectFile::takeIndex() {
   return std::move(Index);
 }
 
 ErrorOr<MemoryBufferRef>
-FunctionIndexObjectFile::findBitcodeInObject(const ObjectFile &Obj) {
+ModuleSummaryIndexObjectFile::findBitcodeInObject(const ObjectFile &Obj) {
   for (const SectionRef &Sec : Obj.sections()) {
     StringRef SecName;
     if (std::error_code EC = Sec.getName(SecName))
@@ -50,7 +51,7 @@ FunctionIndexObjectFile::findBitcodeInObject(const ObjectFile &Obj) {
 }
 
 ErrorOr<MemoryBufferRef>
-FunctionIndexObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
+ModuleSummaryIndexObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
   sys::fs::file_magic Type = sys::fs::identify_magic(Object.getBuffer());
   switch (Type) {
   case sys::fs::file_magic::bitcode:
@@ -71,7 +72,7 @@ FunctionIndexObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
 
 // Looks for module summary index in the given memory buffer.
 // returns true if found, else false.
-bool FunctionIndexObjectFile::hasGlobalValueSummaryInMemBuffer(
+bool ModuleSummaryIndexObjectFile::hasGlobalValueSummaryInMemBuffer(
     MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler) {
   ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
   if (!BCOrErr)
@@ -80,64 +81,65 @@ bool FunctionIndexObjectFile::hasGlobalValueSummaryInMemBuffer(
   return hasGlobalValueSummary(BCOrErr.get(), DiagnosticHandler);
 }
 
-// Parse function index in the given memory buffer.
-// Return new FunctionIndexObjectFile instance containing parsed
-// function summary/index.
-ErrorOr<std::unique_ptr<FunctionIndexObjectFile>>
-FunctionIndexObjectFile::create(MemoryBufferRef Object,
-                                DiagnosticHandlerFunction DiagnosticHandler,
-                                bool IsLazy) {
-  std::unique_ptr<FunctionInfoIndex> Index;
+// Parse module summary index in the given memory buffer.
+// Return new ModuleSummaryIndexObjectFile instance containing parsed
+// module summary/index.
+ErrorOr<std::unique_ptr<ModuleSummaryIndexObjectFile>>
+ModuleSummaryIndexObjectFile::create(
+    MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler,
+    bool IsLazy) {
+  std::unique_ptr<ModuleSummaryIndex> Index;
 
   ErrorOr<MemoryBufferRef> BCOrErr = findBitcodeInMemBuffer(Object);
   if (!BCOrErr)
     return BCOrErr.getError();
 
-  ErrorOr<std::unique_ptr<FunctionInfoIndex>> IOrErr = getFunctionInfoIndex(
-      BCOrErr.get(), DiagnosticHandler, IsLazy);
+  ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IOrErr =
+      getModuleSummaryIndex(BCOrErr.get(), DiagnosticHandler, IsLazy);
 
   if (std::error_code EC = IOrErr.getError())
     return EC;
 
   Index = std::move(IOrErr.get());
 
-  return llvm::make_unique<FunctionIndexObjectFile>(Object, std::move(Index));
+  return llvm::make_unique<ModuleSummaryIndexObjectFile>(Object,
+                                                         std::move(Index));
 }
 
-// Parse the function summary information for function with the
+// Parse the summary information for value with the
 // given name out of the given buffer. Parsed information is
 // stored on the index object saved in this object.
-std::error_code FunctionIndexObjectFile::findFunctionSummaryInMemBuffer(
+std::error_code ModuleSummaryIndexObjectFile::findGlobalValueSummaryInMemBuffer(
     MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler,
-    StringRef FunctionName) {
+    StringRef ValueName) {
   sys::fs::file_magic Type = sys::fs::identify_magic(Object.getBuffer());
   switch (Type) {
   case sys::fs::file_magic::bitcode: {
-    return readFunctionSummary(Object, DiagnosticHandler, FunctionName,
-                               std::move(Index));
+    return readGlobalValueSummary(Object, DiagnosticHandler, ValueName,
+                                  std::move(Index));
   }
   default:
     return object_error::invalid_file_type;
   }
 }
 
-// Parse the function index out of an IR file and return the function
+// Parse the module summary index out of an IR file and return the summary
 // index object if found, or nullptr if not.
-ErrorOr<std::unique_ptr<FunctionInfoIndex>>
-llvm::getFunctionIndexForFile(StringRef Path,
-                              DiagnosticHandlerFunction DiagnosticHandler) {
+ErrorOr<std::unique_ptr<ModuleSummaryIndex>> llvm::getModuleSummaryIndexForFile(
+    StringRef Path, DiagnosticHandlerFunction DiagnosticHandler) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(Path);
   std::error_code EC = FileOrErr.getError();
   if (EC)
     return EC;
   MemoryBufferRef BufferRef = (FileOrErr.get())->getMemBufferRef();
-  ErrorOr<std::unique_ptr<object::FunctionIndexObjectFile>> ObjOrErr =
-      object::FunctionIndexObjectFile::create(BufferRef, DiagnosticHandler);
+  ErrorOr<std::unique_ptr<object::ModuleSummaryIndexObjectFile>> ObjOrErr =
+      object::ModuleSummaryIndexObjectFile::create(BufferRef,
+                                                   DiagnosticHandler);
   EC = ObjOrErr.getError();
   if (EC)
     return EC;
 
-  object::FunctionIndexObjectFile &Obj = **ObjOrErr;
+  object::ModuleSummaryIndexObjectFile &Obj = **ObjOrErr;
   return Obj.takeIndex();
 }

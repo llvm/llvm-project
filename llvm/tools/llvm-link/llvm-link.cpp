@@ -12,18 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Linker/Linker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IR/FunctionInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/Object/FunctionIndexObjectFile.h"
+#include "llvm/Linker/Linker.h"
+#include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -52,15 +52,14 @@ static cl::list<std::string> Imports(
     cl::desc("Pair of function name and filename, where function should be "
              "imported from bitcode in filename"));
 
-// Option to support testing of function importing. The function index
+// Option to support testing of function importing. The module summary
 // must be specified in the case were we request imports via the -import
 // option, as well as when compiling any module with functions that may be
 // exported (imported by a different llvm-link -import invocation), to ensure
 // consistent promotion and renaming of locals.
-static cl::opt<std::string> FunctionIndex("functionindex",
-                                          cl::desc("Function index filename"),
-                                          cl::init(""),
-                                          cl::value_desc("filename"));
+static cl::opt<std::string>
+    SummaryIndex("summary-index", cl::desc("Module summary index filename"),
+                 cl::init(""), cl::value_desc("filename"));
 
 static cl::opt<std::string>
 OutputFilename("o", cl::desc("Override output filename"), cl::init("-"),
@@ -196,10 +195,10 @@ static bool importFunctions(const char *argv0, LLVMContext &Context,
     if (Verbose)
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
-    std::unique_ptr<FunctionInfoIndex> Index;
-    if (!FunctionIndex.empty()) {
-      ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
-          llvm::getFunctionIndexForFile(FunctionIndex, diagnosticHandler);
+    std::unique_ptr<ModuleSummaryIndex> Index;
+    if (!SummaryIndex.empty()) {
+      ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
+          llvm::getModuleSummaryIndexForFile(SummaryIndex, diagnosticHandler);
       std::error_code EC = IndexOrErr.getError();
       if (EC) {
         errs() << EC.message() << '\n';
@@ -263,12 +262,12 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       return false;
     }
 
-    // If a function index is supplied, load it so linkInModule can treat
+    // If a module summary index is supplied, load it so linkInModule can treat
     // local functions/variables as exported and promote if necessary.
-    std::unique_ptr<FunctionInfoIndex> Index;
-    if (!FunctionIndex.empty()) {
-      ErrorOr<std::unique_ptr<FunctionInfoIndex>> IndexOrErr =
-          llvm::getFunctionIndexForFile(FunctionIndex, diagnosticHandler);
+    std::unique_ptr<ModuleSummaryIndex> Index;
+    if (!SummaryIndex.empty()) {
+      ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
+          llvm::getModuleSummaryIndexForFile(SummaryIndex, diagnosticHandler);
       std::error_code EC = IndexOrErr.getError();
       if (EC) {
         errs() << EC.message() << '\n';
