@@ -126,8 +126,8 @@ public:
     //------------------------------------------------------------------
     /// Parse the expression
     ///
-    /// @param[in] error_stream
-    ///     A stream to print parse errors and warnings to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report parse errors and warnings to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to use when looking up entities that
@@ -145,11 +145,9 @@ public:
     ///     True on success (no errors); false otherwise.
     //------------------------------------------------------------------
     bool
-    Parse (Stream &error_stream,
-           ExecutionContext &exe_ctx,
-           lldb_private::ExecutionPolicy execution_policy,
-           bool keep_result_in_memory,
-           bool generate_debug_info) override;
+    Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+          lldb_private::ExecutionPolicy execution_policy, bool keep_result_in_memory,
+          bool generate_debug_info) override;
 
     ExpressionTypeSystemHelper *
     GetTypeSystemHelper () override
@@ -188,13 +186,11 @@ private:
                  lldb_private::Error &err) override;
 
     bool
-    AddArguments (ExecutionContext &exe_ctx,
-                  std::vector<lldb::addr_t> &args,
-                  lldb::addr_t struct_address,
-                  Stream &error_stream) override;
-    
-    ClangUserExpressionHelper   m_type_system_helper;
-    
+    AddArguments(ExecutionContext &exe_ctx, std::vector<lldb::addr_t> &args, lldb::addr_t struct_address,
+                 DiagnosticManager &diagnostic_manager) override;
+
+    ClangUserExpressionHelper m_type_system_helper;
+
     class ResultDelegate : public Materializer::PersistentVariableDelegate
     {
     public:

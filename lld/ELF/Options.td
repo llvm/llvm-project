@@ -181,6 +181,16 @@ def end_group_paren: Flag<["-"], ")">;
 def start_group : Flag<["--"], "start-group">;
 def start_group_paren: Flag<["-"], "(">;
 
+// Ignore LTO plugin-related options.
+// clang -flto passes -plugin and -plugin-opt to the linker. This is required
+// for ld.gold and ld.bfd to get LTO working. But it's not for lld which doesn't
+// rely on a plugin. Instead of detecting which linker is used on clang side we
+// just ignore the option on lld side as it's easier. In fact, the linker could
+// be called 'ld' and understanding which linker is used would require parsing of
+// --version output.
+def plugin : Separate<["-"], "plugin">;
+def plugin_opt : Joined<["-"], "plugin-opt=">;
+
 // Options listed below are silently ignored for now for compatibility.
 def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;

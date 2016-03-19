@@ -201,9 +201,7 @@ CMICmdCmdVarCreate::Execute()
     }
     else 
     {
-        lldb::SBStream err;
-        if (value.GetError().GetDescription(err))
-            m_strValue = err.GetData();
+        m_strValue = value.GetError().GetCString();
     }
 
     return MIstatus::success;

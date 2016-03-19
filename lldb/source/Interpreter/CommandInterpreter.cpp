@@ -242,7 +242,13 @@ CommandInterpreter::Initialize ()
     {
         AddAlias ("s", cmd_obj_sp);
         AddAlias ("step", cmd_obj_sp);
-        AddAlias ("sif", cmd_obj_sp, "--end-linenumber block --step-in-target %1");
+        CommandAlias *sif_alias = AddAlias ("sif", cmd_obj_sp, "--end-linenumber block --step-in-target %1");
+        if (sif_alias)
+        {
+            sif_alias->SetHelp("Step through the current block, stopping if you step "
+                               "directly into a function whose name matches the TargetFunctionName.");
+            sif_alias->SetSyntax("sif <TargetFunctionName>");
+        }
     }
 
     cmd_obj_sp = GetCommandSPExact ("thread step-over", false);

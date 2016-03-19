@@ -50,8 +50,7 @@ DynamicCheckerFunctions::DynamicCheckerFunctions() = default;
 DynamicCheckerFunctions::~DynamicCheckerFunctions() = default;
 
 bool
-DynamicCheckerFunctions::Install(Stream &error_stream,
-                                 ExecutionContext &exe_ctx)
+DynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx)
 {
     Error error;
     m_valid_pointer_check.reset(exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(g_valid_pointer_check_text,
@@ -60,8 +59,8 @@ DynamicCheckerFunctions::Install(Stream &error_stream,
                                                                                      error));
     if (error.Fail())
         return false;
-        
-    if (!m_valid_pointer_check->Install(error_stream, exe_ctx))
+
+    if (!m_valid_pointer_check->Install(diagnostic_manager, exe_ctx))
         return false;
 
     Process *process = exe_ctx.GetProcessPtr();
@@ -74,7 +73,7 @@ DynamicCheckerFunctions::Install(Stream &error_stream,
         {
             m_objc_object_check.reset(objc_language_runtime->CreateObjectChecker(VALID_OBJC_OBJECT_CHECK_NAME));
 
-            if (!m_objc_object_check->Install(error_stream, exe_ctx))
+            if (!m_objc_object_check->Install(diagnostic_manager, exe_ctx))
                 return false;
         }
     }

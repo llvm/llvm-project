@@ -13,16 +13,16 @@
 // Project includes
 #include "AppleThreadPlanStepThroughObjCTrampoline.h"
 #include "AppleObjCTrampolineHandler.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/Thread.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
-#include "lldb/Core/Log.h"
-
 
 using namespace lldb;
 using namespace lldb_private;
@@ -75,9 +75,9 @@ AppleThreadPlanStepThroughObjCTrampoline::InitializeFunctionCaller ()
 {
     if (!m_func_sp)
     {
-        StreamString errors;
+        DiagnosticManager diagnostics;
         m_args_addr = m_trampoline_handler->SetupDispatchFunction(m_thread, m_input_values);
-        
+
         if (m_args_addr == LLDB_INVALID_ADDRESS)
         {
             return false;
@@ -89,12 +89,9 @@ AppleThreadPlanStepThroughObjCTrampoline::InitializeFunctionCaller ()
         options.SetIgnoreBreakpoints(true);
         options.SetStopOthers(m_stop_others);
         m_thread.CalculateExecutionContext(exc_ctx);
-        m_func_sp = m_impl_function->GetThreadPlanToCallFunction (exc_ctx,
-                                                                  m_args_addr,
-                                                                  options,
-                                                                  errors);
+        m_func_sp = m_impl_function->GetThreadPlanToCallFunction(exc_ctx, m_args_addr, options, diagnostics);
         m_func_sp->SetOkayToDiscard(true);
-        m_thread.QueueThreadPlan (m_func_sp, false);
+        m_thread.QueueThreadPlan(m_func_sp, false);
     }
     return true;
 }

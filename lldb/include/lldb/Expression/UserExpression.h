@@ -79,8 +79,8 @@ public:
     //------------------------------------------------------------------
     /// Parse the expression
     ///
-    /// @param[in] error_stream
-    ///     A stream to print parse errors and warnings to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report parse errors and warnings to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to use when looking up entities that
@@ -98,11 +98,8 @@ public:
     ///     True on success (no errors); false otherwise.
     //------------------------------------------------------------------
     virtual bool
-    Parse (Stream &error_stream,
-           ExecutionContext &exe_ctx,
-           lldb_private::ExecutionPolicy execution_policy,
-           bool keep_result_in_memory,
-           bool generate_debug_info) = 0;
+    Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+          lldb_private::ExecutionPolicy execution_policy, bool keep_result_in_memory, bool generate_debug_info) = 0;
 
     virtual bool CanInterpret() = 0;
 
@@ -112,8 +109,8 @@ public:
     //------------------------------------------------------------------
     /// Execute the parsed expression
     ///
-    /// @param[in] error_stream
-    ///     A stream to print errors to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report errors to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to use when looking up entities that
@@ -136,16 +133,15 @@ public:
     /// @return
     ///     A Process::Execution results value.
     //------------------------------------------------------------------
-    virtual lldb::ExpressionResults Execute(Stream &error_stream, ExecutionContext &exe_ctx,
-                                            const EvaluateExpressionOptions &options,
-                                            lldb::UserExpressionSP &shared_ptr_to_me,
-                                            lldb::ExpressionVariableSP &result) = 0;
+    virtual lldb::ExpressionResults
+    Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
+            lldb::UserExpressionSP &shared_ptr_to_me, lldb::ExpressionVariableSP &result) = 0;
 
     //------------------------------------------------------------------
     /// Apply the side effects of the function to program state.
     ///
-    /// @param[in] error_stream
-    ///     A stream to print errors to.
+    /// @param[in] diagnostic_manager
+    ///     A diagnostic manager to report errors to.
     ///
     /// @param[in] exe_ctx
     ///     The execution context to use when looking up entities that
@@ -164,10 +160,10 @@ public:
     /// @return
     ///     A Process::Execution results value.
     //------------------------------------------------------------------
-    virtual bool FinalizeJITExecution(Stream &error_stream, ExecutionContext &exe_ctx,
-                                      lldb::ExpressionVariableSP &result,
-                                      lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS,
-                                      lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS) = 0;
+    virtual bool
+    FinalizeJITExecution(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                         lldb::ExpressionVariableSP &result, lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS,
+                         lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS) = 0;
 
     //------------------------------------------------------------------
     /// Return the string that the parser should parse.

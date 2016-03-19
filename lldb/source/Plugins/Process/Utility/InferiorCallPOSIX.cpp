@@ -11,6 +11,8 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -18,7 +20,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
-#include "lldb/Host/Config.h"
 
 #ifndef LLDB_DISABLE_POSIX
 #include <sys/mman.h>
@@ -96,27 +97,21 @@ lldb_private::InferiorCallMmap (Process *process,
                 ClangASTContext *clang_ast_context = process->GetTarget().GetScratchClangASTContext();
                 CompilerType clang_void_ptr_type = clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
                 lldb::addr_t args[] = { addr, length, prot_arg, flags_arg, fd, offset };
-                lldb::ThreadPlanSP call_plan_sp (new ThreadPlanCallFunction (*thread,
-                                                                             mmap_range.GetBaseAddress(),
-                                                                             clang_void_ptr_type,
-                                                                             args,
-                                                                             options));
+                lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallFunction(*thread, mmap_range.GetBaseAddress(),
+                                                                           clang_void_ptr_type, args, options));
                 if (call_plan_sp)
                 {
-                    StreamFile error_strm;
-                    
-                    StackFrame *frame = thread->GetStackFrameAtIndex (0).get();
+                    DiagnosticManager diagnostics;
+
+                    StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
                     if (frame)
                     {
                         ExecutionContext exe_ctx;
                         frame->CalculateExecutionContext (exe_ctx);
-                        ExpressionResults result = process->RunThreadPlan (exe_ctx,
-                                                                          call_plan_sp,
-                                                                          options,
-                                                                          error_strm);
+                        ExpressionResults result = process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
                         if (result == eExpressionCompleted)
                         {
-                            
+
                             allocated_addr = call_plan_sp->GetReturnValueObject()->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
                             if (process->GetAddressByteSize() == 4)
                             {
@@ -179,24 +174,18 @@ lldb_private::InferiorCallMunmap (Process *process,
             if (sc.GetAddressRange(range_scope, 0, use_inline_block_range, munmap_range))
             {
                 lldb::addr_t args[] = { addr, length };
-                lldb::ThreadPlanSP call_plan_sp (new ThreadPlanCallFunction (*thread,
-                                                                            munmap_range.GetBaseAddress(),
-                                                                            CompilerType(),
-                                                                            args,
-                                                                            options));
+                lldb::ThreadPlanSP call_plan_sp(
+                    new ThreadPlanCallFunction(*thread, munmap_range.GetBaseAddress(), CompilerType(), args, options));
                 if (call_plan_sp)
                 {
-                    StreamFile error_strm;
-                   
-                    StackFrame *frame = thread->GetStackFrameAtIndex (0).get();
+                    DiagnosticManager diagnostics;
+
+                    StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
                     if (frame)
                     {
                         ExecutionContext exe_ctx;
                         frame->CalculateExecutionContext (exe_ctx);
-                        ExpressionResults result = process->RunThreadPlan (exe_ctx,
-                                                                          call_plan_sp,
-                                                                          options,
-                                                                          error_strm);
+                        ExpressionResults result = process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
                         if (result == eExpressionCompleted)
                         {
                             return true;
@@ -234,24 +223,18 @@ lldb_private::InferiorCall (Process *process,
 
     ClangASTContext *clang_ast_context = process->GetTarget().GetScratchClangASTContext();
     CompilerType clang_void_ptr_type = clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
-    lldb::ThreadPlanSP call_plan_sp (new ThreadPlanCallFunction (*thread,
-                                                                 *address,
-                                                                 clang_void_ptr_type,
-                                                                 llvm::ArrayRef<addr_t>(),
-                                                                 options));
+    lldb::ThreadPlanSP call_plan_sp(
+        new ThreadPlanCallFunction(*thread, *address, clang_void_ptr_type, llvm::ArrayRef<addr_t>(), options));
     if (call_plan_sp)
     {
-        StreamString error_strm;
+        DiagnosticManager diagnostics;
 
-        StackFrame *frame = thread->GetStackFrameAtIndex (0).get();
+        StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
         if (frame)
         {
             ExecutionContext exe_ctx;
             frame->CalculateExecutionContext (exe_ctx);
-            ExpressionResults result = process->RunThreadPlan (exe_ctx,
-                                                              call_plan_sp,
-                                                              options,
-                                                              error_strm);
+            ExpressionResults result = process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
             if (result == eExpressionCompleted)
             {
                 returned_func = call_plan_sp->GetReturnValueObject()->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);

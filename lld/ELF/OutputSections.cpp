@@ -1220,6 +1220,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   ArrayRef<uint8_t> D = S->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   uintX_t EntSize = S->getSectionHdr()->sh_entsize;
+  this->Header.sh_entsize = EntSize;
 
   // If this is of type string, the contents are null-terminated strings.
   if (this->Header.sh_flags & SHF_STRINGS) {

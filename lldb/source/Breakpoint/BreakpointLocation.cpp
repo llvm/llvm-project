@@ -19,6 +19,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -277,10 +278,10 @@ BreakpointLocation::ConditionSaysStop (ExecutionContext &exe_ctx, Error &error)
         m_user_expression_sp.reset();
         return false;
     }
-    
-    if (condition_hash != m_condition_hash ||
-        !m_user_expression_sp ||
-        !m_user_expression_sp->MatchesContext(exe_ctx))
+
+    DiagnosticManager diagnostics;
+
+    if (condition_hash != m_condition_hash || !m_user_expression_sp || !m_user_expression_sp->MatchesContext(exe_ctx))
     {
         LanguageType language = eLanguageTypeUnknown;
         // See if we can figure out the language from the frame, otherwise use the default language:
@@ -303,20 +304,14 @@ BreakpointLocation::ConditionSaysStop (ExecutionContext &exe_ctx, Error &error)
             return true;
         }
 
-        StreamString errors;
-        
-        if (!m_user_expression_sp->Parse(errors,
-                                         exe_ctx,
-                                         eExecutionPolicyOnlyWhenNeeded,
-                                         true,
-                                         false))
+        if (!m_user_expression_sp->Parse(diagnostics, exe_ctx, eExecutionPolicyOnlyWhenNeeded, true, false))
         {
             error.SetErrorStringWithFormat("Couldn't parse conditional expression:\n%s",
-                                           errors.GetData());
+                                           diagnostics.GetString().c_str());
             m_user_expression_sp.reset();
             return false;
         }
-        
+
         m_condition_hash = condition_hash;
     }
 
@@ -329,20 +324,16 @@ BreakpointLocation::ConditionSaysStop (ExecutionContext &exe_ctx, Error &error)
     options.SetUnwindOnError(true);
     options.SetIgnoreBreakpoints(true);
     options.SetTryAllThreads(true);
-    
+
     Error expr_error;
-    
-    StreamString execution_errors;
-    
+
+    diagnostics.Clear();
+
     ExpressionVariableSP result_variable_sp;
-    
+
     ExpressionResults result_code =
-    m_user_expression_sp->Execute(execution_errors,
-                                  exe_ctx,
-                                  options,
-                                  m_user_expression_sp,
-                                  result_variable_sp);
-    
+        m_user_expression_sp->Execute(diagnostics, exe_ctx, options, m_user_expression_sp, result_variable_sp);
+
     bool ret;
     
     if (result_code == eExpressionCompleted)
@@ -382,9 +373,9 @@ BreakpointLocation::ConditionSaysStop (ExecutionContext &exe_ctx, Error &error)
     else
     {
         ret = false;
-        error.SetErrorStringWithFormat("Couldn't execute expression:\n%s", execution_errors.GetData());
+        error.SetErrorStringWithFormat("Couldn't execute expression:\n%s", diagnostics.GetString().c_str());
     }
-    
+
     return ret;
 }
 

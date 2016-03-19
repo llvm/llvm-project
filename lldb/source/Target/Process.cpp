@@ -14,19 +14,20 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Target/Process.h"
-#include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
-#include "lldb/Core/Event.h"
+#include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Event.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Expression/UserExpression.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRDynamicChecks.h"
+#include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -39,17 +40,18 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/CPPLanguageRuntime.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/JITLoader.h"
 #include "lldb/Target/JITLoaderList.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Target/OperatingSystem.h"
-#include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/CPPLanguageRuntime.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
+#include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/SystemRuntime.h"
@@ -60,7 +62,6 @@
 #include "lldb/Target/ThreadPlanBase.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/NameMatches.h"
-#include "Plugins/Process/Utility/InferiorCallPOSIX.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -5194,35 +5195,33 @@ namespace
 } // anonymous namespace
 
 ExpressionResults
-Process::RunThreadPlan (ExecutionContext &exe_ctx,
-                        lldb::ThreadPlanSP &thread_plan_sp,
-                        const EvaluateExpressionOptions &options,
-                        Stream &errors)
+Process::RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_plan_sp,
+                       const EvaluateExpressionOptions &options, DiagnosticManager &diagnostic_manager)
 {
     ExpressionResults return_value = eExpressionSetupError;
 
     if (!thread_plan_sp)
     {
-        errors.Printf("RunThreadPlan called with empty thread plan.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "RunThreadPlan called with empty thread plan.");
         return eExpressionSetupError;
     }
 
     if (!thread_plan_sp->ValidatePlan(nullptr))
     {
-        errors.Printf ("RunThreadPlan called with an invalid thread plan.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "RunThreadPlan called with an invalid thread plan.");
         return eExpressionSetupError;
     }
 
     if (exe_ctx.GetProcessPtr() != this)
     {
-        errors.Printf("RunThreadPlan called on wrong process.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "RunThreadPlan called on wrong process.");
         return eExpressionSetupError;
     }
 
     Thread *thread = exe_ctx.GetThreadPtr();
     if (thread == nullptr)
     {
-        errors.Printf("RunThreadPlan called with invalid thread.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "RunThreadPlan called with invalid thread.");
         return eExpressionSetupError;
     }
 
@@ -5245,7 +5244,8 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
 
     if (m_private_state.GetValue() != eStateStopped)
     {
-        errors.Printf ("RunThreadPlan called while the private state was not stopped.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                      "RunThreadPlan called while the private state was not stopped.");
         return eExpressionSetupError;
     }
 
@@ -5258,7 +5258,8 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
         selected_frame_sp = thread->GetSelectedFrame();
         if (!selected_frame_sp)
         {
-            errors.Printf("RunThreadPlan called without a selected frame on thread %d", thread_idx_id);
+            diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                      "RunThreadPlan called without a selected frame on thread %d", thread_idx_id);
             return eExpressionSetupError;
         }
     }
@@ -5400,7 +5401,9 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
                 {
                     if (timeout_usec < option_one_thread_timeout)
                     {
-                        errors.Printf("RunThreadPlan called without one thread timeout greater than total timeout");
+                        diagnostic_manager.PutCString(
+                            eDiagnosticSeverityError,
+                            "RunThreadPlan called without one thread timeout greater than total timeout");
                         return eExpressionSetupError;
                     }
                     computed_one_thread_timeout = option_one_thread_timeout;
@@ -5431,7 +5434,8 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
         Event *other_events = listener_sp->PeekAtNextEvent();
         if (other_events != nullptr)
         {
-            errors.Printf("Calling RunThreadPlan with pending events on the queue.");
+            diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                          "RunThreadPlan called with pending events on the queue.");
             return eExpressionSetupError;
         }
 
@@ -5473,12 +5477,12 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
                 if (do_resume)
                 {
                     num_resumes++;
-                    Error resume_error = PrivateResume ();
+                    Error resume_error = PrivateResume();
                     if (!resume_error.Success())
                     {
-                        errors.Printf("Error resuming inferior the %d time: \"%s\".\n",
-                                      num_resumes,
-                                      resume_error.AsCString());
+                        diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                                  "couldn't resume inferior the %d time: \"%s\".", num_resumes,
+                                                  resume_error.AsCString());
                         return_value = eExpressionSetupError;
                         break;
                     }
@@ -5491,10 +5495,11 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
                 if (!got_event)
                 {
                     if (log)
-                        log->Printf ("Process::RunThreadPlan(): didn't get any event after resume %d, exiting.",
-                                        num_resumes);
+                        log->Printf("Process::RunThreadPlan(): didn't get any event after resume %" PRIu32 ", exiting.",
+                                    num_resumes);
 
-                    errors.Printf("Didn't get any event after resume %d, exiting.", num_resumes);
+                    diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                              "didn't get any event after resume %" PRIu32 ", exiting.", num_resumes);
                     return_value = eExpressionSetupError;
                     break;
                 }
@@ -5527,8 +5532,9 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
                         Halt(clear_thread_plans, use_run_lock);
                     }
 
-                    errors.Printf("Didn't get running event after initial resume, got %s instead.",
-                                  StateAsCString(stop_state));
+                    diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                              "didn't get running event after initial resume, got %s instead.",
+                                              StateAsCString(stop_state));
                     return_value = eExpressionSetupError;
                     break;
                 }
@@ -5622,9 +5628,10 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
                         const bool use_run_lock = false;
                         Halt(clear_thread_plans, use_run_lock);
                         return_value = eExpressionInterrupted;
-                        errors.Printf ("Execution halted by user interrupt.");
+                        diagnostic_manager.PutCString(eDiagnosticSeverityRemark, "execution halted by user interrupt.");
                         if (log)
-                            log->Printf ("Process::RunThreadPlan(): Got  interrupted by eBroadcastBitInterrupted, exiting.");
+                            log->Printf(
+                                "Process::RunThreadPlan(): Got  interrupted by eBroadcastBitInterrupted, exiting.");
                         break;
                     }
                     else
@@ -5727,7 +5734,8 @@ Process::RunThreadPlan (ExecutionContext &exe_ctx,
                             if (stop_state == eStateExited)
                                 event_to_broadcast_sp = event_sp;
 
-                            errors.Printf ("Execution stopped with unexpected state.\n");
+                            diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                                          "execution stopped with unexpected state.");
                             return_value = eExpressionInterrupted;
                             break;
                         }

@@ -73,7 +73,6 @@ set(LLDB_MI_SOURCES
   MIUtilString.cpp
   MIUtilThreadBaseStd.cpp
   MIUtilVariant.cpp
-  Platform.cpp
   )
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD" )

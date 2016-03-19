@@ -435,15 +435,16 @@ DWARFASTParserJava::CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Typ
     switch (die.Tag())
     {
         case DW_TAG_class_type:
-        {
-            if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 0)
             {
-                if (die.HasChildren())
-                    ParseChildMembers(die, java_type);
-                m_ast.CompleteObjectType(java_type);
-                return java_type.IsValid();
+                if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 0)
+                {
+                    if (die.HasChildren())
+                        ParseChildMembers(die, java_type);
+                    m_ast.CompleteObjectType(java_type);
+                    return java_type.IsValid();
+                }
             }
-        }
+            break;
         default:
             assert(false && "Not a forward java type declaration!");
             break;

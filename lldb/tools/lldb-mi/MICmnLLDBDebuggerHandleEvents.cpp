@@ -770,7 +770,8 @@ CMICmnLLDBDebuggerHandleEvents::HandleEventSBCommandInterpreter(const lldb::SBEv
         //  m_pClientDriver->SetExitApplicationFlag();
         //  vrbYesExit = true;
         //  return MIstatus::success;
-        //}     break;
+        //}
+            break;
         case lldb::SBCommandInterpreter::eBroadcastBitResetPrompt:
             pEventType = "eBroadcastBitResetPrompt";
             break;

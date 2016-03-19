@@ -26,7 +26,6 @@
 // Project includes
 #include "GoUserExpression.h"
 
-#include "lldb/lldb-private.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataEncoder.h"
@@ -37,10 +36,11 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectRegister.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
-#include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/GoASTContext.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -49,6 +49,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
+#include "lldb/lldb-private.h"
 
 #include "Plugins/ExpressionParser/Go/GoAST.h"
 #include "Plugins/ExpressionParser/Go/GoParser.h"
@@ -247,8 +248,9 @@ GoUserExpression::GoUserExpression(ExecutionContextScope &exe_scope, const char 
 }
 
 bool
-GoUserExpression::Parse(Stream &error_stream, ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
-                        bool keep_result_in_memory, bool generate_debug_info)
+GoUserExpression::Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                        lldb_private::ExecutionPolicy execution_policy, bool keep_result_in_memory,
+                        bool generate_debug_info)
 {
     InstallContext(exe_ctx);
     m_interpreter.reset(new GoInterpreter(exe_ctx, GetUserText()));
@@ -256,15 +258,16 @@ GoUserExpression::Parse(Stream &error_stream, ExecutionContext &exe_ctx, lldb_pr
         return true;
     const char *error_cstr = m_interpreter->error().AsCString();
     if (error_cstr && error_cstr[0])
-        error_stream.Printf("error: %s\n", error_cstr);
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, error_cstr);
     else
-        error_stream.Printf("error: expression can't be interpreted or run\n");
+        diagnostic_manager.Printf(eDiagnosticSeverityError, "expression can't be interpreted or run");
     return false;
 }
 
 lldb::ExpressionResults
-GoUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
-                          lldb::UserExpressionSP &shared_ptr_to_me, lldb::ExpressionVariableSP &result)
+GoUserExpression::Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                          const EvaluateExpressionOptions &options, lldb::UserExpressionSP &shared_ptr_to_me,
+                          lldb::ExpressionVariableSP &result)
 {
     Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_STEP));
 
@@ -281,7 +284,7 @@ GoUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, const
             if (log)
                 log->Printf("== [GoUserExpression::Evaluate] Expression may not run, but is not constant ==");
 
-            error_stream.Printf("expression needed to run but couldn't");
+            diagnostic_manager.PutCString(eDiagnosticSeverityError, "expression needed to run but couldn't");
 
             return execution_results;
         }
@@ -296,9 +299,9 @@ GoUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, const
     {
         const char *error_cstr = err.AsCString();
         if (error_cstr && error_cstr[0])
-            error_stream.Printf("error: %s\n", error_cstr);
+            diagnostic_manager.PutCString(eDiagnosticSeverityError, error_cstr);
         else
-            error_stream.Printf("error: expression can't be interpreted or run\n");
+            diagnostic_manager.PutCString(eDiagnosticSeverityError, "expression can't be interpreted or run");
         return lldb::eExpressionDiscarded;
     }
     result.reset(new ExpressionVariable(ExpressionVariable::eKindGo));

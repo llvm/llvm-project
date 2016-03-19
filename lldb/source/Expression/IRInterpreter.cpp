@@ -7,18 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRMemoryMap.h"
-#include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/Endian.h"
 
 #include "lldb/Target/ABI.h"
@@ -1596,7 +1597,7 @@ IRInterpreter::Interpret (llvm::Module &module,
                 }
                 lldb_private::Address funcAddr(I.ULongLong(LLDB_INVALID_ADDRESS));
 
-                lldb_private::StreamString error_stream;
+                lldb_private::DiagnosticManager diagnostics;
                 lldb_private::EvaluateExpressionOptions options;
 
                 // We generally receive a function pointer which we must dereference
@@ -1701,31 +1702,24 @@ IRInterpreter::Interpret (llvm::Module &module,
                 llvm::ArrayRef<lldb_private::ABI::CallArgument> args(rawArgs, numArgs);
 
                 // Setup a thread plan to call the target function
-                lldb::ThreadPlanSP call_plan_sp
-                (
-                    new lldb_private::ThreadPlanCallFunctionUsingABI
-                    (
-                        exe_ctx.GetThreadRef(),
-                        funcAddr,
-                        *prototype,
-                        *returnType,
-                        args,
-                        options
-                    )
-                );
+                lldb::ThreadPlanSP call_plan_sp(new lldb_private::ThreadPlanCallFunctionUsingABI(
+                    exe_ctx.GetThreadRef(), funcAddr, *prototype, *returnType, args, options));
 
                 // Check if the plan is valid
-                if (!call_plan_sp || !call_plan_sp->ValidatePlan(&error_stream))
+                lldb_private::StreamString ss;
+                if (!call_plan_sp || !call_plan_sp->ValidatePlan(&ss))
                 {
                     error.SetErrorToGenericError();
-                    error.SetErrorStringWithFormat("unable to make ThreadPlanCallFunctionUsingABI for 0x%llx", I.ULongLong());
+                    error.SetErrorStringWithFormat("unable to make ThreadPlanCallFunctionUsingABI for 0x%llx",
+                                                   I.ULongLong());
                     return false;
                 }
 
                 exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
 
                 // Execute the actual function call thread plan
-                lldb::ExpressionResults res = exe_ctx.GetProcessRef().RunThreadPlan(exe_ctx, call_plan_sp, options, error_stream);
+                lldb::ExpressionResults res =
+                    exe_ctx.GetProcessRef().RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
 
                 // Check that the thread plan completed successfully
                 if (res != lldb::ExpressionResults::eExpressionCompleted)

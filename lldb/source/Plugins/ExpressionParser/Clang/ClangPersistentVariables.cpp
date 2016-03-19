@@ -14,6 +14,8 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Value.h"
 
+#include "clang/AST/Decl.h"
+
 #include "llvm/ADT/StringMap.h"
 
 using namespace lldb;
@@ -66,18 +68,26 @@ ClangPersistentVariables::GetNextPersistentVariableName ()
 }
 
 void
-ClangPersistentVariables::RegisterPersistentType (const ConstString &name,
-                                                  clang::TypeDecl *type_decl)
+ClangPersistentVariables::RegisterPersistentDecl (const ConstString &name,
+                                                  clang::NamedDecl *decl)
 {
-    m_persistent_types.insert(std::pair<const char*, clang::TypeDecl*>(name.GetCString(), type_decl));
+    m_persistent_decls.insert(std::pair<const char*, clang::NamedDecl*>(name.GetCString(), decl));
+    
+    if (clang::EnumDecl *enum_decl = llvm::dyn_cast<clang::EnumDecl>(decl))
+    {
+        for (clang::EnumConstantDecl *enumerator_decl : enum_decl->enumerators())
+        {
+            m_persistent_decls.insert(std::pair<const char*, clang::NamedDecl*>(ConstString(enumerator_decl->getNameAsString()).GetCString(), enumerator_decl));
+        }
+    }
 }
 
-clang::TypeDecl *
-ClangPersistentVariables::GetPersistentType (const ConstString &name)
+clang::NamedDecl *
+ClangPersistentVariables::GetPersistentDecl (const ConstString &name)
 {
-    PersistentTypeMap::const_iterator i = m_persistent_types.find(name.GetCString());
+    PersistentDeclMap::const_iterator i = m_persistent_decls.find(name.GetCString());
     
-    if (i == m_persistent_types.end())
+    if (i == m_persistent_decls.end())
         return NULL;
     else
         return i->second;

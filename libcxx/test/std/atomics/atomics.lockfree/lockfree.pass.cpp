@@ -11,6 +11,7 @@
 
 // <atomic>
 
+// #define ATOMIC_BOOL_LOCK_FREE unspecified
 // #define ATOMIC_CHAR_LOCK_FREE unspecified
 // #define ATOMIC_CHAR16_T_LOCK_FREE unspecified
 // #define ATOMIC_CHAR32_T_LOCK_FREE unspecified
@@ -19,12 +20,16 @@
 // #define ATOMIC_INT_LOCK_FREE unspecified
 // #define ATOMIC_LONG_LOCK_FREE unspecified
 // #define ATOMIC_LLONG_LOCK_FREE unspecified
+// #define ATOMIC_POINTER_LOCK_FREE unspecified
 
 #include <atomic>
 #include <cassert>
 
 int main()
 {
+    assert(ATOMIC_BOOL_LOCK_FREE == 0 ||
+           ATOMIC_BOOL_LOCK_FREE == 1 ||
+           ATOMIC_BOOL_LOCK_FREE == 2);
     assert(ATOMIC_CHAR_LOCK_FREE == 0 ||
            ATOMIC_CHAR_LOCK_FREE == 1 ||
            ATOMIC_CHAR_LOCK_FREE == 2);
@@ -49,4 +54,7 @@ int main()
     assert(ATOMIC_LLONG_LOCK_FREE == 0 ||
            ATOMIC_LLONG_LOCK_FREE == 1 ||
            ATOMIC_LLONG_LOCK_FREE == 2);
+    assert(ATOMIC_POINTER_LOCK_FREE == 0 ||
+           ATOMIC_POINTER_LOCK_FREE == 1 ||
+           ATOMIC_POINTER_LOCK_FREE == 2);
 }

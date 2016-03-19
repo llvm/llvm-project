@@ -18,6 +18,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectConstResult.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -25,11 +26,11 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Type.h"
-#include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -76,8 +77,9 @@ LLVMUserExpression::~LLVMUserExpression()
 }
 
 lldb::ExpressionResults
-LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
-                            lldb::UserExpressionSP &shared_ptr_to_me, lldb::ExpressionVariableSP &result)
+LLVMUserExpression::Execute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                            const EvaluateExpressionOptions &options, lldb::UserExpressionSP &shared_ptr_to_me,
+                            lldb::ExpressionVariableSP &result)
 {
     // The expression log is quite verbose, and if you're just tracking the execution of the
     // expression, it's quite convenient to have these logs come out with the STEP log as well.
@@ -87,9 +89,10 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
     {
         lldb::addr_t struct_address = LLDB_INVALID_ADDRESS;
 
-        if (!PrepareToExecuteJITExpression(error_stream, exe_ctx, struct_address))
+        if (!PrepareToExecuteJITExpression(diagnostic_manager, exe_ctx, struct_address))
         {
-            error_stream.Printf("Errored out in %s, couldn't PrepareToExecuteJITExpression", __FUNCTION__);
+            diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                      "errored out in %s, couldn't PrepareToExecuteJITExpression", __FUNCTION__);
             return lldb::eExpressionSetupError;
         }
 
@@ -103,7 +106,7 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
 
             if (!module || !function)
             {
-                error_stream.Printf("Supposed to interpret, but nothing is there");
+                diagnostic_manager.PutCString(eDiagnosticSeverityError, "supposed to interpret, but nothing is there");
                 return lldb::eExpressionSetupError;
             }
 
@@ -111,9 +114,10 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
 
             std::vector<lldb::addr_t> args;
 
-            if (!AddArguments(exe_ctx, args, struct_address, error_stream))
+            if (!AddArguments(exe_ctx, args, struct_address, diagnostic_manager))
             {
-                error_stream.Printf("Errored out in %s, couldn't AddArguments", __FUNCTION__);
+                diagnostic_manager.Printf(eDiagnosticSeverityError, "errored out in %s, couldn't AddArguments",
+                                          __FUNCTION__);
                 return lldb::eExpressionSetupError;
             }
 
@@ -125,7 +129,8 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
 
             if (!interpreter_error.Success())
             {
-                error_stream.Printf("Supposed to interpret, but failed: %s", interpreter_error.AsCString());
+                diagnostic_manager.Printf(eDiagnosticSeverityError, "supposed to interpret, but failed: %s",
+                                          interpreter_error.AsCString());
                 return lldb::eExpressionDiscarded;
             }
         }
@@ -133,7 +138,7 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
         {
             if (!exe_ctx.HasThreadScope())
             {
-                error_stream.Printf("UserExpression::Execute called with no thread selected.");
+                diagnostic_manager.Printf(eDiagnosticSeverityError, "%s called with no thread selected", __FUNCTION__);
                 return lldb::eExpressionSetupError;
             }
 
@@ -141,17 +146,22 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
 
             std::vector<lldb::addr_t> args;
 
-            if (!AddArguments(exe_ctx, args, struct_address, error_stream))
+            if (!AddArguments(exe_ctx, args, struct_address, diagnostic_manager))
             {
-                error_stream.Printf("Errored out in %s, couldn't AddArguments", __FUNCTION__);
+                diagnostic_manager.Printf(eDiagnosticSeverityError, "errored out in %s, couldn't AddArguments",
+                                          __FUNCTION__);
                 return lldb::eExpressionSetupError;
             }
 
             lldb::ThreadPlanSP call_plan_sp(new ThreadPlanCallUserExpression(exe_ctx.GetThreadRef(), wrapper_address,
                                                                              args, options, shared_ptr_to_me));
 
-            if (!call_plan_sp || !call_plan_sp->ValidatePlan(&error_stream))
+            StreamString ss;
+            if (!call_plan_sp || !call_plan_sp->ValidatePlan(&ss))
+            {
+                diagnostic_manager.PutCString(eDiagnosticSeverityError, ss.GetData());
                 return lldb::eExpressionSetupError;
+            }
 
             ThreadPlanCallUserExpression *user_expression_plan =
                 static_cast<ThreadPlanCallUserExpression *>(call_plan_sp.get());
@@ -168,7 +178,7 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
                 exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
 
             lldb::ExpressionResults execution_result =
-                exe_ctx.GetProcessRef().RunThreadPlan(exe_ctx, call_plan_sp, options, error_stream);
+                exe_ctx.GetProcessRef().RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostic_manager);
 
             if (exe_ctx.GetProcessPtr())
                 exe_ctx.GetProcessPtr()->SetRunningUserExpression(false);
@@ -187,20 +197,21 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
                         error_desc = real_stop_info_sp->GetDescription();
                 }
                 if (error_desc)
-                    error_stream.Printf("Execution was interrupted, reason: %s.", error_desc);
+                    diagnostic_manager.Printf(eDiagnosticSeverityError, "Execution was interrupted, reason: %s.",
+                                              error_desc);
                 else
-                    error_stream.PutCString("Execution was interrupted.");
+                    diagnostic_manager.PutCString(eDiagnosticSeverityError, "Execution was interrupted.");
 
                 if ((execution_result == lldb::eExpressionInterrupted && options.DoesUnwindOnError()) ||
                     (execution_result == lldb::eExpressionHitBreakpoint && options.DoesIgnoreBreakpoints()))
-                    error_stream.PutCString(
-                        "\nThe process has been returned to the state before expression evaluation.");
+                    diagnostic_manager.AppendMessageToDiagnostic(
+                        "The process has been returned to the state before expression evaluation.");
                 else
                 {
                     if (execution_result == lldb::eExpressionHitBreakpoint)
                         user_expression_plan->TransferExpressionOwnership();
-                    error_stream.PutCString(
-                        "\nThe process has been left at the point where it was interrupted, "
+                    diagnostic_manager.AppendMessageToDiagnostic(
+                        "The process has been left at the point where it was interrupted, "
                         "use \"thread return -x\" to return to the state before expression evaluation.");
                 }
 
@@ -208,7 +219,8 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
             }
             else if (execution_result == lldb::eExpressionStoppedForDebug)
             {
-                error_stream.PutCString(
+                diagnostic_manager.PutCString(
+                    eDiagnosticSeverityRemark,
                     "Execution was halted at the first instruction of the expression "
                     "function because \"debug\" was requested.\n"
                     "Use \"thread return -x\" to return to the state before expression evaluation.");
@@ -216,13 +228,13 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
             }
             else if (execution_result != lldb::eExpressionCompleted)
             {
-                error_stream.Printf("Couldn't execute function; result was %s\n",
-                                    Process::ExecutionResultAsCString(execution_result));
+                diagnostic_manager.Printf(eDiagnosticSeverityError, "Couldn't execute function; result was %s",
+                                          Process::ExecutionResultAsCString(execution_result));
                 return execution_result;
             }
         }
 
-        if (FinalizeJITExecution(error_stream, exe_ctx, result, function_stack_bottom, function_stack_top))
+        if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result, function_stack_bottom, function_stack_top))
         {
             return lldb::eExpressionCompleted;
         }
@@ -233,13 +245,14 @@ LLVMUserExpression::Execute(Stream &error_stream, ExecutionContext &exe_ctx, con
     }
     else
     {
-        error_stream.Printf("Expression can't be run, because there is no JIT compiled function");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                      "Expression can't be run, because there is no JIT compiled function");
         return lldb::eExpressionSetupError;
     }
 }
 
 bool
-LLVMUserExpression::FinalizeJITExecution(Stream &error_stream, ExecutionContext &exe_ctx,
+LLVMUserExpression::FinalizeJITExecution(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
                                          lldb::ExpressionVariableSP &result, lldb::addr_t function_stack_bottom,
                                          lldb::addr_t function_stack_top)
 {
@@ -250,7 +263,8 @@ LLVMUserExpression::FinalizeJITExecution(Stream &error_stream, ExecutionContext 
 
     if (!m_dematerializer_sp)
     {
-        error_stream.Printf("Couldn't apply expression side effects : no dematerializer is present");
+        diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                  "Couldn't apply expression side effects : no dematerializer is present");
         return false;
     }
 
@@ -260,8 +274,8 @@ LLVMUserExpression::FinalizeJITExecution(Stream &error_stream, ExecutionContext 
 
     if (!dematerialize_error.Success())
     {
-        error_stream.Printf("Couldn't apply expression side effects : %s\n",
-                            dematerialize_error.AsCString("unknown error"));
+        diagnostic_manager.Printf(eDiagnosticSeverityError, "Couldn't apply expression side effects : %s",
+                                  dematerialize_error.AsCString("unknown error"));
         return false;
     }
 
@@ -276,7 +290,7 @@ LLVMUserExpression::FinalizeJITExecution(Stream &error_stream, ExecutionContext 
 }
 
 bool
-LLVMUserExpression::PrepareToExecuteJITExpression(Stream &error_stream, ExecutionContext &exe_ctx,
+LLVMUserExpression::PrepareToExecuteJITExpression(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
                                                   lldb::addr_t &struct_address)
 {
     lldb::TargetSP target;
@@ -285,7 +299,8 @@ LLVMUserExpression::PrepareToExecuteJITExpression(Stream &error_stream, Executio
 
     if (!LockAndCheckContext(exe_ctx, target, process, frame))
     {
-        error_stream.Printf("The context has changed before we could JIT the expression!\n");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                      "The context has changed before we could JIT the expression!");
         return false;
     }
 
@@ -309,7 +324,9 @@ LLVMUserExpression::PrepareToExecuteJITExpression(Stream &error_stream, Executio
 
             if (!alloc_error.Success())
             {
-                error_stream.Printf("Couldn't allocate space for materialized struct: %s\n", alloc_error.AsCString());
+                diagnostic_manager.Printf(eDiagnosticSeverityError,
+                                          "Couldn't allocate space for materialized struct: %s",
+                                          alloc_error.AsCString());
                 return false;
             }
         }
@@ -335,7 +352,8 @@ LLVMUserExpression::PrepareToExecuteJITExpression(Stream &error_stream, Executio
 
             if (!alloc_error.Success())
             {
-                error_stream.Printf("Couldn't allocate space for the stack frame: %s\n", alloc_error.AsCString());
+                diagnostic_manager.Printf(eDiagnosticSeverityError, "Couldn't allocate space for the stack frame: %s",
+                                          alloc_error.AsCString());
                 return false;
             }
         }
@@ -347,7 +365,8 @@ LLVMUserExpression::PrepareToExecuteJITExpression(Stream &error_stream, Executio
 
         if (!materialize_error.Success())
         {
-            error_stream.Printf("Couldn't materialize: %s\n", materialize_error.AsCString());
+            diagnostic_manager.Printf(eDiagnosticSeverityError, "Couldn't materialize: %s",
+                                      materialize_error.AsCString());
             return false;
         }
     }
