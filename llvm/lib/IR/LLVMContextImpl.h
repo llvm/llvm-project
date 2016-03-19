@@ -365,8 +365,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            ExtraData == RHS->getRawExtraData();
   }
   unsigned getHashValue() const {
-    return hash_combine(Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                        AlignInBits, OffsetInBits, Flags, ExtraData);
+    return hash_combine(Tag, Name, File, Line, Scope, BaseType, Flags);
   }
 };
 
@@ -422,9 +421,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
            Identifier == RHS->getIdentifier();
   }
   unsigned getHashValue() const {
-    return hash_combine(Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                        AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-                        VTableHolder, TemplateParams, Identifier);
+    return hash_combine(Name, File, Line, BaseType, Scope, Elements,
+                        TemplateParams);
   }
 };
 
@@ -518,10 +516,7 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            Variables == RHS->getRawVariables();
   }
   unsigned getHashValue() const {
-    return hash_combine(Scope, Name, LinkageName, File, Line, Type,
-                        IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
-                        Virtuality, VirtualIndex, Flags, IsOptimized,
-                        TemplateParams, Declaration, Variables);
+    return hash_combine(Name, Scope, File, Type, Line);
   }
 };
 
