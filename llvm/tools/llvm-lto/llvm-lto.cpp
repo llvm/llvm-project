@@ -255,6 +255,7 @@ static void createCombinedModuleSummaryIndex() {
     CurrentActivity = "loading file '" + Filename + "'";
     ErrorOr<std::unique_ptr<ModuleSummaryIndex>> IndexOrErr =
         llvm::getModuleSummaryIndexForFile(Filename, diagnosticHandler);
+    error(IndexOrErr, "error: " + CurrentActivity);
     std::unique_ptr<ModuleSummaryIndex> Index = std::move(IndexOrErr.get());
     CurrentActivity = "";
     // Skip files without a module summary.
