@@ -88,6 +88,8 @@ protected:
       : Kind(K), Linkage(Linkage) {}
 
 public:
+  virtual ~GlobalValueSummary() {}
+
   /// Which kind of summary subclass this is.
   SummaryKind getSummaryKind() const { return Kind; }
 
@@ -136,6 +138,7 @@ public:
   /// Summary constructors.
   FunctionSummary(GlobalValue::LinkageTypes Linkage, unsigned NumInsts)
       : GlobalValueSummary(FunctionKind, Linkage), InstCount(NumInsts) {}
+  virtual ~FunctionSummary() {}
 
   /// Check if this is a function summary.
   static bool classof(const GlobalValueSummary *GVS) {
